@@ -27,6 +27,10 @@ from db.orb_residential_db import (
     start_orb_trial,
     upsert_orb_user_preferences,
 )
+from services.orb_brain_selection_shadow_service import (
+    attach_brain_selection_shadow,
+    run_brain_selection_shadow,
+)
 from schemas.orb_residential_premium import (
     OrbOnboardingPreferencesRequest,
     OrbSavedOutputRequest,
@@ -222,6 +226,19 @@ async def orb_residential_conversation(
         raw_user_message=payload.message,
     )
     context_used = dict(result.get("context_used") or {})
+    live_prompt_tier = context_used.get("prompt_tier")
+    live_expert_depth = (
+        context_used.get("expert_depth")
+        or (context_used.get("indicare_intelligence_core") or {}).get("expert_depth")
+        or (context_used.get("indicare_intelligence") or {}).get("expert_depth")
+    )
+    brain_selection_shadow = run_brain_selection_shadow(
+        payload.message,
+        mode=payload.mode,
+        prompt_tier=live_prompt_tier,
+        expert_depth=live_expert_depth,
+        route="/orb/residential/conversation",
+    )
     context_used.update(
         {
             "surface": "orb_residential",
@@ -231,6 +248,7 @@ async def orb_residential_conversation(
             "premium": True,
         }
     )
+    context_used = attach_brain_selection_shadow(context_used, brain_selection_shadow)
     result["context_used"] = context_used
     result["surface"] = "orb_residential"
     result["premium"] = True

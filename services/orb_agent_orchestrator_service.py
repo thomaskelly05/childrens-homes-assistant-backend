@@ -23,6 +23,10 @@ from schemas.orb_evaluation import OrbEvaluationResult
 from services.ai_model_router_service import STANDALONE_LLM_TIMEOUT_SECONDS, ai_model_router_service
 from services.orb_agent_registry_service import LIVE_WEB_NOTE, orb_agent_registry_service
 from services.orb_brain_metadata_service import merge_context_used
+from services.orb_brain_selection_shadow_service import (
+    attach_brain_selection_shadow,
+    run_brain_selection_shadow,
+)
 from services.orb_citation_service import orb_citation_service
 from services.orb_document_understanding_service import orb_document_understanding_service
 from services.orb_evaluation_service import orb_evaluation_service
@@ -97,6 +101,25 @@ def _text(value: Any) -> str:
 
 class OrbAgentOrchestratorService:
     """Orchestrates standalone agent runs with RAG, citations and model routing."""
+
+    def _with_brain_selection_shadow(
+        self,
+        context_used: dict[str, Any],
+        request: OrbAgentRunRequest,
+        agent_type: str,
+        *,
+        expert_depth: str | None = None,
+        route: str = "/orb/standalone/agents/run",
+    ) -> dict[str, Any]:
+        shadow = run_brain_selection_shadow(
+            request.prompt,
+            mode=request.mode,
+            attachments=request.attachments,
+            agent_type=agent_type,
+            expert_depth=expert_depth,
+            route=route,
+        )
+        return attach_brain_selection_shadow(context_used, shadow)
 
     async def run_agent(self, request: OrbAgentRunRequest) -> OrbAgentRunResponse:
         route_started = time.perf_counter()
@@ -211,6 +234,18 @@ class OrbAgentOrchestratorService:
                 agent_type=agent_type,
             )
             context_used["evaluation"] = evaluation.model_dump()
+            packet = brain_context.get("intelligence_packet") or {}
+            context_used = self._with_brain_selection_shadow(
+                context_used,
+                request,
+                agent_type,
+                expert_depth=packet.get("expert_depth"),
+                route=(
+                    "/orb/standalone/agents/deep-research"
+                    if agent_type == "deep_research"
+                    else "/orb/standalone/agents/run"
+                ),
+            )
             timing.mark("explainability_complete")
             intel_warnings = self._evaluation_warnings(evaluation)
             warnings = list(dict.fromkeys(warnings + intel_warnings))
@@ -323,6 +358,29 @@ class OrbAgentOrchestratorService:
                 "Open the Documents panel to upload a file or paste text, "
                 "or attach document content when running this agent."
             )
+            context_used = merge_context_used(
+                {
+                    "standalone_only": True,
+                    "document_analysis": {
+                        "needs_document": True,
+                        "document_understanding_service": True,
+                    },
+                    "agent": {
+                        "type": "document_analysis",
+                        "name": agent.name,
+                        "classify_reason": classify_reason,
+                    },
+                },
+                surface="orb_standalone",
+                mode=request.mode,
+                feature="agent",
+                lens="document_analysis",
+            )
+            context_used = self._with_brain_selection_shadow(
+                context_used,
+                request,
+                "document_analysis",
+            )
             return OrbAgentRunResponse(
                 success=True,
                 agent_type="document_analysis",
@@ -345,24 +403,7 @@ class OrbAgentOrchestratorService:
                         detail="No document_text or source_id provided",
                     ),
                 ],
-                context_used=merge_context_used(
-                    {
-                        "standalone_only": True,
-                        "document_analysis": {
-                            "needs_document": True,
-                            "document_understanding_service": True,
-                        },
-                        "agent": {
-                            "type": "document_analysis",
-                            "name": agent.name,
-                            "classify_reason": classify_reason,
-                        },
-                    },
-                    surface="orb_standalone",
-                    mode=request.mode,
-                    feature="agent",
-                    lens="document_analysis",
-                ),
+                context_used=context_used,
                 warnings=[STANDALONE_BOUNDARY_SHORT],
                 safety_notice=self.build_safety_notice(agent, request),
             )
@@ -462,6 +503,35 @@ class OrbAgentOrchestratorService:
 
         warnings = self._evaluation_warnings_from_dict(evaluation)
 
+        doc_context_used = merge_context_used(
+            {
+                "standalone_only": True,
+                "document_analysis": {
+                    "document_understanding_service": True,
+                    "analysis_mode": analysis_mode,
+                    "source_id": understanding.source_id,
+                },
+                "agent": {
+                    "type": "document_analysis",
+                    "name": agent.name,
+                    "classify_reason": classify_reason,
+                },
+                "retrieval": self._retrieval_summary(retrieval),
+                "evaluation": evaluation,
+                "intelligence_output": intel.model_dump(),
+            },
+            surface="orb_standalone",
+            mode=request.mode,
+            feature="agent",
+            lens="document_analysis",
+            sources=understanding.sources,
+            citations=understanding.citations,
+        )
+        doc_context_used = self._with_brain_selection_shadow(
+            doc_context_used,
+            request,
+            "document_analysis",
+        )
         response = OrbAgentRunResponse(
             success=True,
             agent_type="document_analysis",
@@ -476,30 +546,7 @@ class OrbAgentOrchestratorService:
             sources=understanding.sources,
             citations=understanding.citations,
             steps=steps,
-            context_used=merge_context_used(
-                {
-                    "standalone_only": True,
-                    "document_analysis": {
-                        "document_understanding_service": True,
-                        "analysis_mode": analysis_mode,
-                        "source_id": understanding.source_id,
-                    },
-                    "agent": {
-                        "type": "document_analysis",
-                        "name": agent.name,
-                        "classify_reason": classify_reason,
-                    },
-                    "retrieval": self._retrieval_summary(retrieval),
-                    "evaluation": evaluation,
-                    "intelligence_output": intel.model_dump(),
-                },
-                surface="orb_standalone",
-                mode=request.mode,
-                feature="agent",
-                lens="document_analysis",
-                sources=understanding.sources,
-                citations=understanding.citations,
-            ),
+            context_used=doc_context_used,
             model_routing=understanding.model_routing,
             warnings=list(dict.fromkeys(warnings + [STANDALONE_BOUNDARY_SHORT])),
             safety_notice=understanding.safety_notice or self.build_safety_notice(agent, request),
@@ -975,6 +1022,20 @@ class OrbAgentOrchestratorService:
         citations = retrieval.get("citations") or []
         output_format = request.preferred_output or "answer"
 
+        fallback_context_used = merge_context_used(
+            {},
+            surface="orb_standalone",
+            mode=request.mode,
+            feature="agent",
+            lens=agent_type,
+            sources=sources,
+            citations=citations,
+        )
+        fallback_context_used = self._with_brain_selection_shadow(
+            fallback_context_used,
+            request,
+            agent_type,
+        )
         return OrbAgentRunResponse(
             success=False,
             agent_type=agent_type,
@@ -988,15 +1049,7 @@ class OrbAgentOrchestratorService:
             sources=sources,
             citations=citations,
             steps=steps or [OrbAgentStep(id="failed", label="Agent run failed", status="failed", detail=str(error))],
-            context_used=merge_context_used(
-                {},
-                surface="orb_standalone",
-                mode=request.mode,
-                feature="agent",
-                lens=agent_type,
-                sources=sources,
-                citations=citations,
-            ),
+            context_used=fallback_context_used,
             warnings=[LIVE_WEB_NOTE, f"Agent error: {type(error).__name__ if error else 'unknown'}"],
             safety_notice=agent.safety_notice if agent else LIVE_WEB_NOTE,
         )
