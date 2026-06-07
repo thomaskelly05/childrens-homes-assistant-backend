@@ -25,7 +25,11 @@ from services.indicare_intelligence_route_finalize_service import (
     merge_intelligence_into_context,
 )
 from services.indicare_intelligence_core_service import indicare_intelligence_core_service
-from services.orb_chat_timing_service import OrbChatTimingTracker, orb_chat_timing_debug_enabled
+from services.orb_chat_timing_service import (
+    OrbChatTimingTracker,
+    build_route_timing_payload,
+    log_orb_route_timing,
+)
 from services.orb_fast_opening_service import fast_opening_for_message
 from services.orb_stream_status_service import (
     stream_status_payload,
@@ -86,7 +90,13 @@ def _select_assistant_runtime():
     return orb_general_assistant_service
 
 
-def _build_standalone_request_context(payload: OrbStandaloneConversationRequest) -> dict[str, Any]:
+def _build_standalone_request_context(
+    payload: OrbStandaloneConversationRequest,
+    *,
+    timing: OrbChatTimingTracker | None = None,
+) -> dict[str, Any]:
+    if timing:
+        timing.mark("context_build_start")
     mode = orb_standalone_brain_service.normalise_mode(payload.mode or "Ask ORB")
     detail = _resolve_detail(mode, payload.detail)
     history = payload.history[-20:] if payload.history else []
@@ -105,6 +115,8 @@ def _build_standalone_request_context(payload: OrbStandaloneConversationRequest)
         attachments=image_urls[:4] or None,
         history=history,
     )
+    if timing:
+        timing.mark("retrieval_complete")
     prompt_tier = retrieval_bundle["prompt_tier"]
     grounding_context = retrieval_bundle["grounding_context"]
     retrieval_preview = retrieval_bundle["source_packs"]
@@ -141,6 +153,8 @@ def _build_standalone_request_context(payload: OrbStandaloneConversationRequest)
             operational_context=standalone_operational_context or None,
             history=history,
         )
+    if timing:
+        timing.mark("shared_cognition_complete")
 
     standalone_brain = orb_standalone_brain_service.context_payload(payload.message, mode=mode)
     project_memory_block = ""
@@ -164,6 +178,8 @@ def _build_standalone_request_context(payload: OrbStandaloneConversationRequest)
         project_memory_block=project_memory_block or None,
         expert_depth=expert_depth,
     )
+    if timing:
+        timing.mark("prompt_build_complete")
     return {
         "mode": mode,
         "detail": detail,
@@ -349,6 +365,7 @@ def _standalone_contract() -> dict[str, Any]:
         "surface": "standalone_orb_ai",
         "public_route": "/orb",
         "os_assistant_route": "/assistant",
+        "standalone": True,
         "os_linked": False,
         "care_record_access": False,
         "staff_record_access": False,
@@ -731,7 +748,9 @@ async def standalone_orb_conversation(
 ):
     _reject_standalone_os_ids(payload.model_dump())
     _enforce_conversation_abuse_guards(payload, current_user)
-    ctx = _build_standalone_request_context(payload)
+    timing = OrbChatTimingTracker()
+    timing.mark("request_received")
+    ctx = _build_standalone_request_context(payload, timing=timing)
     mode = ctx["mode"]
     detail = ctx["detail"]
     history = ctx["history"]
@@ -767,6 +786,7 @@ async def standalone_orb_conversation(
     route_started = time.perf_counter()
     try:
         assistant_runtime = _select_assistant_runtime()
+        timing.mark("model_start")
         assistant_data = await assistant_runtime.answer(
             framed_message,
             history=history,
@@ -780,6 +800,7 @@ async def standalone_orb_conversation(
             raw_user_message=payload.message,
             user=current_user,
         )
+        timing.mark("model_complete")
         elapsed_ms = int((time.perf_counter() - route_started) * 1000)
         record_standalone_orb_usage(
             user_id=int(current_user["id"]) if current_user.get("id") is not None else None,
@@ -820,6 +841,7 @@ async def standalone_orb_conversation(
             response_sources = orb_citation_service.frontend_sources_payload(response_citations)
         elif response_citations:
             response_sources.extend(orb_citation_service.frontend_sources_payload(response_citations))
+        timing.mark("citations_complete")
         confidence = str(assistant_data.get("confidence") or "medium")
         shared_explain = shared_cognition.get("explainability") or {}
         cognition_labels = _merge_cognition_labels(
@@ -839,6 +861,7 @@ async def standalone_orb_conversation(
             shared_explainability=shared_explain,
             source_anchors=list(shared_explain.get("source_anchors") or []),
         )
+        timing.mark("explainability_complete")
         response_sources = filter_display_sources(response_sources, message=payload.message, mode=mode)
         response_citations = filter_display_sources(response_citations, message=payload.message, mode=mode)
         context_used = dict(assistant_data.get("context_used") or {})
@@ -867,17 +890,11 @@ async def standalone_orb_conversation(
                 "source_count": len(retrieval_preview),
                 "document_result_count": 0,
             }
-        context_used["timing"] = {
-            "elapsed_ms": elapsed_ms,
-            "retrieval_elapsed_ms": retrieval_bundle.get("retrieval_elapsed_ms"),
-            "provider_elapsed_ms": model_routing.get("latency_ms"),
-            "prompt_tier": prompt_tier,
-            "prompt_char_estimate": len(framed_message),
-            "grounding_char_count": retrieval_bundle.get("grounding_char_count"),
-            "model": model_routing.get("model"),
-            "provider": model_routing.get("provider"),
-            "route": "/orb/standalone/conversation",
-        }
+        expert_depth = str(
+            ctx.get("expert_depth")
+            or indicare_intelligence.get("expert_depth")
+            or ""
+        )
         if indicare_intelligence:
             answer, intel_meta = finalize_standalone_intelligence(
                 indicare_intelligence=indicare_intelligence,
@@ -886,8 +903,29 @@ async def standalone_orb_conversation(
                 message=payload.message,
                 mode=mode,
                 sanitize_closer=orb_grounded_answer_style_service.sanitize_high_attention_closer,
+                timing=timing,
             )
             context_used = merge_intelligence_into_context(context_used, intel_meta)
+        timing.mark("response_sent")
+        context_used["timing"] = build_route_timing_payload(
+            timing,
+            route="/orb/standalone/conversation",
+            elapsed_ms=elapsed_ms,
+            retrieval_elapsed_ms=retrieval_bundle.get("retrieval_elapsed_ms"),
+            provider_elapsed_ms=model_routing.get("latency_ms"),
+            prompt_tier=prompt_tier,
+            prompt_char_estimate=len(framed_message),
+            grounding_char_count=retrieval_bundle.get("grounding_char_count"),
+            model=model_routing.get("model"),
+            provider=model_routing.get("provider"),
+            shared_cognition_skipped=bool(shared_cognition.get("skipped")),
+            expert_depth=expert_depth or None,
+        )
+        log_orb_route_timing(
+            "/orb/standalone/conversation",
+            context_used["timing"],
+            mode=mode,
+        )
         return _standalone_conversation_response(
             answer=answer,
             mode=mode,
@@ -1045,7 +1083,7 @@ async def standalone_orb_conversation_stream(
             yield _sse_event("token", {"delta": f"{fast_opening}\n\n"})
 
         timing.mark("core_start")
-        ctx = _build_standalone_request_context(payload)
+        ctx = _build_standalone_request_context(payload, timing=timing)
         timing.mark("core_complete")
         detail = ctx["detail"]
         history = ctx["history"]
@@ -1129,6 +1167,7 @@ async def standalone_orb_conversation_stream(
                 response_sources = orb_citation_service.frontend_sources_payload(response_citations)
             elif response_citations:
                 response_sources.extend(orb_citation_service.frontend_sources_payload(response_citations))
+            timing.mark("citations_complete")
 
             confidence = str(assistant_data.get("confidence") or "medium")
             shared_explain = shared_cognition.get("explainability") or {}
@@ -1149,6 +1188,7 @@ async def standalone_orb_conversation_stream(
                 shared_explainability=shared_explain,
                 source_anchors=list(shared_explain.get("source_anchors") or []),
             )
+            timing.mark("explainability_complete")
             response_sources = filter_display_sources(response_sources, message=payload.message, mode=mode)
             response_citations = filter_display_sources(response_citations, message=payload.message, mode=mode)
             context_used = dict(assistant_data.get("context_used") or {})
@@ -1182,24 +1222,6 @@ async def standalone_orb_conversation_stream(
             provider_elapsed_ms = (
                 int((time.perf_counter() - provider_started) * 1000) if provider_started else None
             )
-            context_used["timing"] = {
-                "request_started": True,
-                "first_token_ms": first_token_ms,
-                "provider_elapsed_ms": model_routing.get("latency_ms") or provider_elapsed_ms,
-                "total_elapsed_ms": total_elapsed_ms,
-                "elapsed_ms": total_elapsed_ms,
-                "retrieval_elapsed_ms": retrieval_bundle.get("retrieval_elapsed_ms"),
-                "shared_cognition_elapsed_ms": 0 if shared_cognition.get("skipped") else None,
-                "shared_cognition_skipped": bool(shared_cognition.get("skipped")),
-                "prompt_tier": prompt_tier,
-                "prompt_char_estimate": len(framed_message),
-                "grounding_char_count": retrieval_bundle.get("grounding_char_count"),
-                "model": model_routing.get("model"),
-                "provider": model_routing.get("provider"),
-                "route": "/orb/standalone/conversation/stream",
-                "stream_mode": "provider_tokens",
-                "expert_depth": expert_depth,
-            }
             if indicare_intelligence:
                 answer, intel_meta = finalize_standalone_intelligence(
                     indicare_intelligence=indicare_intelligence,
@@ -1212,10 +1234,28 @@ async def standalone_orb_conversation_stream(
                 )
                 context_used = merge_intelligence_into_context(context_used, intel_meta)
             timing.mark("response_sent")
-            if orb_chat_timing_debug_enabled():
-                debug_timing = timing.to_debug_metadata()
-                if debug_timing:
-                    context_used["timing"]["debug_timing"] = debug_timing
+            context_used["timing"] = build_route_timing_payload(
+                timing,
+                route="/orb/standalone/conversation/stream",
+                elapsed_ms=total_elapsed_ms,
+                retrieval_elapsed_ms=retrieval_bundle.get("retrieval_elapsed_ms"),
+                provider_elapsed_ms=model_routing.get("latency_ms") or provider_elapsed_ms,
+                prompt_tier=prompt_tier,
+                prompt_char_estimate=len(framed_message),
+                grounding_char_count=retrieval_bundle.get("grounding_char_count"),
+                model=model_routing.get("model"),
+                provider=model_routing.get("provider"),
+                first_token_ms=first_token_ms,
+                shared_cognition_skipped=bool(shared_cognition.get("skipped")),
+                expert_depth=expert_depth,
+                stream_mode="provider_tokens",
+                extra={"request_started": True},
+            )
+            log_orb_route_timing(
+                "/orb/standalone/conversation/stream",
+                context_used["timing"],
+                mode=mode,
+            )
             metadata_payload = {
                 "ok": True,
                 "standalone": True,

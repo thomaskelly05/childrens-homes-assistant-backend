@@ -31,6 +31,11 @@ from services.orb_intelligence_output_service import orb_intelligence_output_ser
 from services.indicare_intelligence_core_service import indicare_intelligence_core_service
 from services.orb_rag_retrieval_service import orb_rag_retrieval_service
 from services.orb_standalone_sources import append_sources_basis_section
+from services.orb_chat_timing_service import (
+    OrbChatTimingTracker,
+    build_route_timing_payload,
+    log_orb_route_timing,
+)
 from services.shared_institutional_cognition_runtime import shared_institutional_cognition_runtime
 
 logger = logging.getLogger("indicare.orb_agent_orchestrator")
@@ -94,6 +99,9 @@ class OrbAgentOrchestratorService:
     """Orchestrates standalone agent runs with RAG, citations and model routing."""
 
     async def run_agent(self, request: OrbAgentRunRequest) -> OrbAgentRunResponse:
+        route_started = time.perf_counter()
+        timing = OrbChatTimingTracker()
+        timing.mark("request_received")
         agent_type, classify_reason = self._resolve_agent_type(request)
         agent = orb_agent_registry_service.get_agent(agent_type)
         if not agent:
@@ -116,7 +124,9 @@ class OrbAgentOrchestratorService:
             plan = self.build_agent_plan(agent, request)
             steps.append(OrbAgentStep(id="plan", label="Build agent plan", status="completed", detail=plan.get("summary")))
 
+            timing.mark("context_build_start")
             brain_context = self._build_standalone_brain_context(request)
+            timing.mark("retrieval_complete")
             steps.append(
                 OrbAgentStep(
                     id="intelligence",
@@ -127,6 +137,7 @@ class OrbAgentOrchestratorService:
             )
 
             retrieval = self.retrieve_agent_sources(agent, request)
+            timing.mark("shared_cognition_complete")
             steps.append(
                 OrbAgentStep(
                     id="retrieve",
@@ -138,9 +149,12 @@ class OrbAgentOrchestratorService:
             )
 
             prompt = self.build_agent_prompt(agent, request, retrieval, brain_context=brain_context)
+            timing.mark("prompt_build_complete")
             steps.append(OrbAgentStep(id="prompt", label="Build evidence summary", status="completed"))
 
+            timing.mark("model_start")
             llm_result = await self._call_model(agent, request, prompt, retrieval)
+            timing.mark("model_complete")
             steps.append(OrbAgentStep(id="generate", label="Generate structured output", status="completed"))
 
             parsed = self.parse_agent_output(
@@ -189,6 +203,7 @@ class OrbAgentOrchestratorService:
                 sources=[s.model_dump() if hasattr(s, "model_dump") else s for s in sources],
                 citations=[c.model_dump() if hasattr(c, "model_dump") else c for c in citations],
             )
+            timing.mark("citations_complete")
             evaluation = self._evaluate_agent_output(
                 body,
                 sources=sources,
@@ -196,8 +211,10 @@ class OrbAgentOrchestratorService:
                 agent_type=agent_type,
             )
             context_used["evaluation"] = evaluation.model_dump()
+            timing.mark("explainability_complete")
             intel_warnings = self._evaluation_warnings(evaluation)
             warnings = list(dict.fromkeys(warnings + intel_warnings))
+            model_routing = llm_result.get("model_routing") or {}
 
             response = OrbAgentRunResponse(
                 success=True,
@@ -217,6 +234,7 @@ class OrbAgentOrchestratorService:
             try:
                 from services.indicare_ai_governance_event_service import indicare_ai_governance_event_service
 
+                timing.mark("governance_complete")
                 indicare_ai_governance_event_service.record_from_standalone_response(
                     {
                         "answer": _text(output.body) if output else "",
@@ -231,6 +249,27 @@ class OrbAgentOrchestratorService:
                 )
             except Exception:
                 pass
+            timing.mark("response_sent")
+            elapsed_ms = int((time.perf_counter() - route_started) * 1000)
+            if attached.context_used:
+                ctx = dict(attached.context_used)
+                ctx["timing"] = build_route_timing_payload(
+                    timing,
+                    route="/orb/standalone/agents/run",
+                    elapsed_ms=elapsed_ms,
+                    retrieval_elapsed_ms=(retrieval.get("retrieval_meta") or {}).get("elapsed_ms"),
+                    provider_elapsed_ms=model_routing.get("latency_ms"),
+                    prompt_char_estimate=len(prompt),
+                    model=model_routing.get("model"),
+                    provider=model_routing.get("provider"),
+                    extra={"agent_type": agent_type},
+                )
+                log_orb_route_timing(
+                    "/orb/standalone/agents/run",
+                    ctx["timing"],
+                    mode=request.mode,
+                )
+                attached = attached.model_copy(update={"context_used": ctx})
             return attached
         except Exception as exc:
             logger.warning("agent run failed type=%s error=%s", agent_type, type(exc).__name__, exc_info=True)
