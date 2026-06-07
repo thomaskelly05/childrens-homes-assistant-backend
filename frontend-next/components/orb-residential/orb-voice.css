@@ -4,7 +4,7 @@
  * OrbSphere / OrbPresence / GlassOrbMark are neutralised below — not used for Voice.
  */
 
-/* ── Voice — living head v10 (idle/engaged assets + face-plane overlays) ── */
+/* ── Voice — avatar rig v1 (Rive primary + static fallback) ── */
 
 /* Neutralise legacy sphere/blob selectors inside the voice companion */
 .orb-voice-companion .orb-living-sphere,
@@ -282,6 +282,83 @@
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+/* Rive avatar rig — primary renderer */
+.orb-voice-companion__avatar-rig {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.orb-voice-companion__avatar-rig-canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100%;
+  max-height: 100%;
+}
+
+[data-orb-voice-renderer='rive'] .orb-voice-companion__head-fallback {
+  display: none;
+}
+
+/* Static fallback head — used while rig loads, on failure, or reduced motion */
+.orb-voice-companion__head-fallback {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform-origin: 46% 58%;
+  will-change: transform;
+  transition: transform 1.1s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.orb-voice-companion__head-fallback .orb-voice-companion__head-asset-wrap {
+  position: absolute;
+  inset: 0;
+  opacity: 1;
+}
+
+.orb-voice-companion__head-fallback .orb-voice-companion__mouth-light {
+  position: absolute;
+  left: 38%;
+  top: 58%;
+  width: 22%;
+  height: 4%;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(186, 230, 253, 0.72) 18%,
+    rgba(56, 189, 248, 0.92) 50%,
+    rgba(124, 92, 255, 0.72) 82%,
+    transparent
+  );
+  transform-origin: center;
+  transform: scaleX(calc(0.88 + var(--orb-voice-speech-energy, 0) * 0.18))
+    scaleY(calc(0.42 + var(--orb-voice-mouth-open, 0) * 0.72));
+  opacity: calc(0.32 + var(--orb-voice-speech-energy, 0) * 0.42);
+  filter: drop-shadow(0 0 calc(1px + var(--orb-voice-speech-energy, 0) * 4px) rgba(186, 230, 253, 0.36));
+  transition:
+    transform 70ms ease-out,
+    opacity 90ms ease-out;
+  pointer-events: none;
+}
+
+.orb-voice-companion__head-fallback .orb-voice-companion__mouth-light--idle {
+  display: none;
+}
+
+[data-orb-voice-renderer='fallback'] .orb-voice-companion__avatar-rig {
+  visibility: hidden;
+  pointer-events: none;
 }
 
 /* Designed base head/bust assets — idle profile and engaged attentive pose */
@@ -981,6 +1058,8 @@
   .orb-voice-companion__halo,
   .orb-voice-companion__aura,
   .orb-voice-companion__head-motion,
+  .orb-voice-companion__head-fallback,
+  .orb-voice-companion__avatar-rig,
   .orb-voice-companion__orbit,
   .orb-voice-companion__orbit--inner,
   .orb-voice-companion__listen-glow,
@@ -996,8 +1075,14 @@
 
   .orb-voice-companion__listen-waves,
   .orb-voice-companion__particles,
-  .orb-voice-companion [data-orb-voice-thinking-halo] {
+  .orb-voice-companion [data-orb-voice-thinking-halo],
+  .orb-voice-companion__avatar-rig {
     display: none;
+  }
+
+  .orb-voice-companion[data-orb-voice-attention='engaged'] .orb-voice-companion__head-fallback,
+  .orb-voice-companion[data-orb-voice-attention='engaged'] .orb-voice-companion__head-motion {
+    transform: none;
   }
 
   [data-orb-voice-blink-active='true'] .orb-voice-companion__eye--blink {
