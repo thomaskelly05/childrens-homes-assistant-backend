@@ -49,6 +49,10 @@ from services.indicare_intelligence_surface_router import (
 )
 from services.orb_action_engine_service import orb_action_engine_service
 from services.orb_brain_metadata_service import attach_to_payload, merge_context_used
+from services.orb_brain_selection_shadow_service import (
+    attach_brain_selection_shadow,
+    run_brain_selection_shadow,
+)
 from services.orb_plan_enforcement_service import orb_plan_enforcement_service
 from services.orb_ai_abuse_guard_service import (
     enforce_conversation_turns,
@@ -94,6 +98,7 @@ def _build_standalone_request_context(
     payload: OrbStandaloneConversationRequest,
     *,
     timing: OrbChatTimingTracker | None = None,
+    route: str = "/orb/standalone/conversation",
 ) -> dict[str, Any]:
     if timing:
         timing.mark("context_build_start")
@@ -167,6 +172,14 @@ def _build_standalone_request_context(
         )
     indicare_intelligence = retrieval_bundle.get("indicare_intelligence") or {}
     expert_depth = retrieval_bundle.get("expert_depth") or indicare_intelligence.get("expert_depth")
+    brain_selection_shadow = run_brain_selection_shadow(
+        payload.message,
+        mode=mode,
+        attachments=image_urls[:4] or None,
+        prompt_tier=prompt_tier,
+        expert_depth=expert_depth,
+        route=route,
+    )
     framed_message = _build_framed_message(
         mode=mode,
         user_message=payload.message,
@@ -195,6 +208,7 @@ def _build_standalone_request_context(
         "framed_message": framed_message,
         "indicare_intelligence": indicare_intelligence,
         "expert_depth": expert_depth,
+        "brain_selection_shadow": brain_selection_shadow,
     }
 
 STANDALONE_ORB_MODES = [
@@ -883,6 +897,10 @@ async def standalone_orb_conversation(
             shared_cognition=shared_cognition,
             explainability=explainability,
         )
+        context_used = attach_brain_selection_shadow(
+            context_used,
+            ctx.get("brain_selection_shadow"),
+        )
         if not context_used.get("retrieval"):
             context_used["retrieval"] = {
                 "strategy": "source_pack_plus_document_rag_plus_operating_brain",
@@ -1021,6 +1039,10 @@ async def standalone_orb_conversation(
             shared_cognition=shared_cognition,
             explainability=explainability,
         )
+        context_used = attach_brain_selection_shadow(
+            context_used,
+            ctx.get("brain_selection_shadow"),
+        )
         if classification.get("research_note") and "live web" not in fallback.lower():
             fallback = f"{fallback}\n\n{classification['research_note']}"
         return _standalone_conversation_response(
@@ -1083,7 +1105,11 @@ async def standalone_orb_conversation_stream(
             yield _sse_event("token", {"delta": f"{fast_opening}\n\n"})
 
         timing.mark("core_start")
-        ctx = _build_standalone_request_context(payload, timing=timing)
+        ctx = _build_standalone_request_context(
+            payload,
+            timing=timing,
+            route="/orb/standalone/conversation/stream",
+        )
         timing.mark("core_complete")
         detail = ctx["detail"]
         history = ctx["history"]
@@ -1209,6 +1235,10 @@ async def standalone_orb_conversation_stream(
                 context_used,
                 shared_cognition=shared_cognition,
                 explainability=explainability,
+            )
+            context_used = attach_brain_selection_shadow(
+                context_used,
+                ctx.get("brain_selection_shadow"),
             )
             if not context_used.get("retrieval"):
                 context_used["retrieval"] = {
