@@ -11,6 +11,15 @@ const backendOrigin = (
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  env: {
+    NEXT_PUBLIC_ORB_BUILD_TIMESTAMP:
+      process.env.NEXT_PUBLIC_ORB_BUILD_TIMESTAMP || new Date().toISOString(),
+    NEXT_PUBLIC_ORB_GIT_COMMIT:
+      process.env.NEXT_PUBLIC_ORB_GIT_COMMIT ||
+      process.env.VERCEL_GIT_COMMIT_SHA ||
+      process.env.GIT_COMMIT ||
+      'local'
+  },
   eslint: {
     // Render deploys should not fail because of non-blocking lint warnings.
     // We still keep linting available locally/CI, but production builds should

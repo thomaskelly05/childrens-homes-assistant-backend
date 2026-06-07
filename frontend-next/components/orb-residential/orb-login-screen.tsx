@@ -19,6 +19,7 @@ import {
 import { OrbLegalLinks } from '@/components/orb-residential/orb-legal-links'
 import { beginOrbPasskeyLogin, orbPasskeysSupported } from '@/lib/orb/orb-passkey-client'
 import { ORB_CANONICAL_FRONT_DOOR, sanitizeOrbReturnUrl } from '@/lib/orb/orb-front-door-routing'
+import { ORB_LOGIN_VERSION } from '@/lib/orb/orb-visual-build'
 import { OrbAuthLoadingScreen } from '@/components/orb-residential/orb-auth-loading-screen'
 
 function formatOAuthError(raw: string): string {
@@ -231,6 +232,7 @@ function OrbLoginPanel({
     <div
       className={`orb-residential-root orb-login-root ${themeClass} min-h-[100dvh] min-h-[100svh]`}
       data-orb-login-page
+      data-orb-login-version={ORB_LOGIN_VERSION}
       data-orb-login-mobile-single-column
       data-orb-residential="true"
       data-orb-theme={resolvedTheme}
@@ -279,8 +281,8 @@ function OrbLoginPanel({
                 </li>
               ))}
             </ul>
-            <div className="orb-login-hero-sphere-wrap mt-6 flex justify-center lg:mt-8 lg:justify-start">
-              <OrbHeroSphere className="scale-[0.72] xl:scale-[0.8]" />
+            <div className="orb-login-hero-sphere-wrap mt-5 flex justify-center lg:mt-6 lg:justify-start">
+              <OrbHeroSphere className="scale-[0.62] xl:scale-[0.68]" />
             </div>
           </div>
         </div>
@@ -291,7 +293,7 @@ function OrbLoginPanel({
         >
           <div className="orb-login-card orb-login-panel-inner mx-auto w-full max-w-md rounded-[1.75rem] border border-[var(--orb-line)]/50 bg-[var(--orb-surface-elevated)]/80 p-6 shadow-xl shadow-black/10 backdrop-blur-sm sm:p-8">
             <div className="flex flex-col items-center text-center lg:hidden" data-orb-login-mobile-hero>
-              <OrbHeroSphere className="mb-2 scale-[0.52] sm:scale-[0.58]" />
+              <OrbHeroSphere className="mb-2 scale-[0.46] sm:scale-[0.5]" />
             </div>
 
             <Link href="/orb" className="orb-login-brand-link text-sm font-semibold lg:hidden" data-orb-login-brand>

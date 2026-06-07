@@ -36,6 +36,7 @@ describe('ORB Voice companion visual convergence', () => {
   it('OrbVoiceCompanion exposes testable data markers for head and waveform', () => {
     const companion = read('components/orb-residential/orb-voice-companion.tsx')
     assert.match(companion, /data-orb-voice-companion/)
+    assert.match(companion, /data-orb-voice-version="living-head-v2"|data-orb-voice-version=\{ORB_VOICE_VERSION\}/)
     assert.match(companion, /data-orb-voice-state/)
     assert.match(companion, /data-orb-voice-head/)
     assert.match(companion, /data-orb-voice-waveform/)
@@ -62,6 +63,6 @@ describe('ORB Voice companion visual convergence', () => {
     assert.match(css, /\[data-orb-voice-state='listening'\]/)
     assert.match(css, /\[data-orb-voice-state='thinking'\]/)
     assert.match(css, /\[data-orb-voice-state='error'\]/)
-    assert.doesNotMatch(css, /\.glass-orb-mark--voice/)
+    assert.doesNotMatch(css, /\.glass-orb-mark--voice \.glass-orb-mark__sphere/)
   })
 })

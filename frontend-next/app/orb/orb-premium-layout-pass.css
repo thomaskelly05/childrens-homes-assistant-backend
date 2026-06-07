@@ -188,7 +188,11 @@ html[data-orb-residential='1'] [data-orb-write-panel-toggle]:hover {
   color: var(--orb-foreground);
 }
 
-/* ── Voice — living head companion (canonical OrbVoiceCompanion) ─────────── */
+/* ── Voice — living head companion v2 (canonical OrbVoiceCompanion) ──────── */
+.orb-voice-companion {
+  --orb-voice-head-width-ratio: 0.84;
+}
+
 .orb-voice-companion__stage {
   position: relative;
   display: flex;
@@ -196,94 +200,142 @@ html[data-orb-residential='1'] [data-orb-write-panel-toggle]:hover {
   justify-content: center;
 }
 
+/* Oval head silhouette — taller than wide, not a plain circle/blob */
 .orb-voice-companion .orb-presence--voice {
   --orb-presence-size: clamp(11rem, 38vw, 17.5rem);
+  width: calc(var(--orb-presence-size) * var(--orb-voice-head-width-ratio));
+  height: var(--orb-presence-size);
 }
 
 @media (min-width: 768px) {
   .orb-voice-companion .orb-presence--voice {
     --orb-presence-size: clamp(15rem, 22vw, 22.5rem);
+    --orb-voice-head-width-ratio: 0.82;
   }
 }
 
-/* Soft abstract head/bust — not a plain circle */
+.orb-voice-companion .orb-sphere-wrap {
+  border-radius: 42% 42% 30% 30% / 48% 48% 32% 32%;
+  overflow: visible;
+}
+
 .orb-voice-companion .orb-living-sphere {
-  border-radius: 48% 48% 40% 40% / 54% 54% 44% 44%;
+  border-radius: 42% 42% 28% 28% / 48% 48% 30% 30% !important;
   animation: orb-breathe 5.5s ease-in-out infinite;
+}
+
+.orb-voice-companion .orb-living-sphere::before,
+.orb-voice-companion .orb-living-sphere::after {
+  border-radius: 42% 42% 28% 28% / 48% 48% 30% 30%;
+}
+
+/* Subtle neck / bust taper below the head */
+.orb-voice-companion__stage::before {
+  content: '';
+  position: absolute;
+  bottom: 2%;
+  left: 50%;
+  z-index: 0;
+  width: 58%;
+  height: 16%;
+  transform: translateX(-50%);
+  border-radius: 42% 42% 52% 52% / 32% 32% 68% 68%;
+  background: radial-gradient(
+    ellipse 88% 100% at 50% 0%,
+    color-mix(in srgb, var(--orb-royal-blue, #168bff) 16%, transparent),
+    transparent 74%
+  );
+  opacity: 0.62;
+  pointer-events: none;
 }
 
 .orb-voice-companion .orb-sphere-wrap::after {
   content: '';
   position: absolute;
-  inset: -8% -6% -14%;
-  border-radius: 48% 48% 38% 38% / 54% 54% 42% 42%;
-  background: radial-gradient(ellipse 72% 88% at 50% 36%, rgba(255, 255, 255, 0.1), transparent 70%);
+  inset: -6% -4% -12%;
+  border-radius: 42% 42% 28% 28% / 48% 48% 30% 30%;
+  background: radial-gradient(ellipse 68% 82% at 50% 34%, rgba(255, 255, 255, 0.12), transparent 72%);
   pointer-events: none;
-  opacity: 0.65;
+  opacity: 0.7;
   box-shadow:
-    inset 0 -18% 28% rgba(124, 92, 255, 0.12),
-    0 0 48px rgba(56, 189, 248, 0.18);
+    inset 0 -16% 24% rgba(124, 92, 255, 0.14),
+    0 0 40px rgba(56, 189, 248, 0.2);
 }
 
 .orb-voice-companion__face {
   position: absolute;
   inset: 0;
   pointer-events: none;
+  z-index: 2;
 }
 
-/* Gentle closed eyes — soft glow marks, not human features */
+/* Visible closed-eye marks — calm, abstract, non-human */
 .orb-voice-companion__eyes {
   position: absolute;
-  top: 38%;
+  top: 35%;
   left: 50%;
-  width: 42%;
-  height: 6%;
+  width: 46%;
+  height: 7%;
   transform: translateX(-50%);
   border-radius: 999px;
-  opacity: 0.72;
+  opacity: 0.88;
   background:
-    radial-gradient(ellipse 22% 100% at 28% 50%, rgba(186, 230, 253, 0.95), transparent 72%),
-    radial-gradient(ellipse 22% 100% at 72% 50%, rgba(186, 230, 253, 0.95), transparent 72%);
-  filter: blur(0.4px);
+    radial-gradient(ellipse 24% 100% at 27% 50%, rgba(186, 230, 253, 0.98), transparent 70%),
+    radial-gradient(ellipse 24% 100% at 73% 50%, rgba(186, 230, 253, 0.98), transparent 70%);
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.35);
 }
 
 .orb-voice-companion__waveform {
   position: absolute;
   left: 50%;
-  bottom: 28%;
-  width: 28%;
-  height: 8%;
+  bottom: 26%;
+  width: 32%;
+  height: 9%;
   transform: translateX(-50%);
   border-radius: 999px;
   opacity: 0;
   background: linear-gradient(
     90deg,
     transparent,
-    rgba(251, 191, 36, 0.85) 18%,
-    rgba(56, 189, 248, 0.95) 50%,
-    rgba(236, 72, 153, 0.85) 82%,
+    rgba(251, 191, 36, 0.88) 16%,
+    rgba(56, 189, 248, 0.98) 50%,
+    rgba(236, 72, 153, 0.88) 84%,
     transparent
   );
-  box-shadow: 0 0 16px rgba(56, 189, 248, 0.45);
+  box-shadow: 0 0 18px rgba(56, 189, 248, 0.5);
 }
 
 .orb-voice-companion__orbit {
   position: absolute;
-  inset: -10%;
-  border-radius: 50%;
-  border: 1px solid rgba(124, 92, 255, 0.35);
+  inset: -12% -8%;
+  border-radius: 46% 46% 38% 38% / 50% 50% 42% 42%;
+  border: 1px solid rgba(124, 92, 255, 0.42);
   box-shadow:
-    0 0 24px rgba(124, 92, 255, 0.22),
-    inset 0 0 18px rgba(56, 189, 248, 0.12);
+    0 0 28px rgba(124, 92, 255, 0.26),
+    inset 0 0 20px rgba(56, 189, 248, 0.14);
   animation: orb-voice-orbit-spin 5.5s linear infinite;
 }
 
 .orb-voice-companion__listen-glow {
   position: absolute;
-  inset: -14% -18%;
-  border-radius: 50%;
-  background: radial-gradient(ellipse 90% 70% at 50% 50%, rgba(56, 189, 248, 0.14), transparent 68%);
+  inset: -16% -20%;
+  border-radius: 46% 46% 38% 38% / 50% 50% 42% 42%;
+  border: 1px solid rgba(56, 189, 248, 0.22);
+  background: radial-gradient(ellipse 88% 68% at 50% 48%, rgba(56, 189, 248, 0.16), transparent 70%);
   animation: orb-voice-listen-aura 1.8s ease-in-out infinite;
+}
+
+/* Legacy glass-orb voice classes must not reshape the canonical companion */
+.orb-voice-companion .glass-orb-mark--voice,
+.orb-voice-companion [data-glass-orb-mark],
+[data-orb-voice-station] [data-glass-orb-mark],
+[data-orb-voice-mobile] [data-glass-orb-mark] {
+  display: none !important;
+}
+
+.orb-voice-companion .orb-presence.glass-orb-mark--voice {
+  width: calc(var(--orb-presence-size) * var(--orb-voice-head-width-ratio, 0.84)) !important;
+  height: var(--orb-presence-size) !important;
 }
 
 /* State-driven companion behaviour */
@@ -534,12 +586,12 @@ html[data-orb-residential='1'] [data-orb-document-panel] [data-orb-knowledge-lib
   }
 
   html[data-orb-residential='1'] .orb-login-hero-sphere-wrap {
-    max-width: 11rem;
-    margin-top: 1.5rem !important;
+    max-width: 9.5rem;
+    margin-top: 1.25rem !important;
   }
 
   html[data-orb-residential='1'] .orb-login-hero [data-orb-hero-sphere] {
-    max-height: min(9.5rem, 22vh);
+    max-height: min(8.5rem, 18vh);
   }
 
   html[data-orb-residential='1'] .orb-login-headline {
@@ -553,11 +605,11 @@ html[data-orb-residential='1'] [data-orb-document-panel] [data-orb-knowledge-lib
 }
 
 html[data-orb-residential='1'] [data-orb-login-mobile-hero] {
-  max-height: 5.5rem;
+  max-height: 4.75rem;
 }
 
 html[data-orb-residential='1'] [data-orb-login-mobile-hero] [data-orb-hero-sphere] {
-  max-height: 4.5rem;
+  max-height: 4rem;
 }
 
 /* Chat home — composer focal, softer hero atmosphere */
