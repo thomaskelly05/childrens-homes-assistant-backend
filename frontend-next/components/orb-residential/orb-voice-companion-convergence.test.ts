@@ -39,11 +39,11 @@ describe('ORB Voice companion visual convergence', () => {
     }
   })
 
-  it('OrbVoiceHead exposes living-head-v6 markers and custom head structure', () => {
+  it('OrbVoiceHead exposes living-head-v7 markers and SVG profile silhouette', () => {
     const head = read('components/orb-residential/orb-voice-head.tsx')
     const companion = read('components/orb-residential/orb-voice-companion.tsx')
     const visualBuild = read('lib/orb/orb-visual-build.ts')
-    assert.match(visualBuild, /ORB_VOICE_VERSION = 'living-head-v6'/)
+    assert.match(visualBuild, /ORB_VOICE_VERSION = 'living-head-v7'/)
     assert.match(companion, /OrbVoiceHead/)
     assert.match(head, /data-orb-voice-companion/)
     assert.match(head, /data-orb-voice-companion-size=\{resolvedSize\}/)
@@ -53,6 +53,8 @@ describe('ORB Voice companion visual convergence', () => {
     assert.match(head, /data-orb-voice-face/)
     assert.match(head, /data-orb-voice-waveform/)
     assert.match(head, /orb-voice-companion__head-material/)
+    assert.match(head, /orb-voice-companion__svg/)
+    assert.match(head, /viewBox="0 0 200 280"/)
     assert.match(head, /orb-voice-companion__eyes/)
     assert.doesNotMatch(head, /OrbPresence/)
     assert.doesNotMatch(head, /import.*OrbSphere/)
@@ -109,6 +111,7 @@ describe('ORB Voice companion visual convergence', () => {
     assert.doesNotMatch(head, /orb-presence--voice/)
     assert.match(css, /\.orb-voice-companion \.orb-living-sphere[\s\S]*display:\s*none/)
     assert.match(css, /\.orb-voice-companion__head-material/)
+    assert.match(css, /\.orb-voice-companion__svg/)
     assert.match(css, /border-radius: 44% 44% 36% 36%/)
   })
 
