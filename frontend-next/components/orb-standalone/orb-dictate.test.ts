@@ -36,10 +36,12 @@ describe('ORB Dictate', () => {
   it('station uses workspace shell via OrbAppModal on residential', () => {
     const station = readComponent('components/orb-standalone/orb-dictate-station.tsx')
     const transcript = readComponent('components/orb/dictate/OrbTranscriptPanel.tsx')
+    const mobile = readComponent('components/orb-standalone/orb-dictate-mobile-experience.tsx')
     assert.match(station, /OrbAppModal/)
     assert.match(station, /presentation="workspace"/)
     assert.match(station, /data-orb-dictate-station/)
-    assert.match(transcript, /data-orb-dictate-record-start/)
+    assert.match(mobile, /data-orb-dictate-start=\{id\}|data-orb-dictate-speech-start/)
+    assert.match(transcript, /data-orb-dictate-transcript-panel/)
     assert.doesNotMatch(station, /layout="drawer"/)
   })
 
@@ -118,10 +120,11 @@ describe('ORB Dictate', () => {
 
   it('copy save export still work via ORB Write', () => {
     const write = readComponent('components/orb-write/orb-write-station.tsx')
+    const toolbar = readComponent('components/orb-write/orb-write-toolbar.tsx')
     const studio = readComponent('components/orb-standalone/orb-dictate-station.tsx')
-    assert.match(write, /data-orb-write-copy/)
-    assert.match(write, /data-orb-write-save-draft/)
-    assert.match(write, /data-orb-write-export-pdf/)
+    assert.match(toolbar, /data-orb-write-copy/)
+    assert.match(toolbar, /data-orb-write-save-draft/)
+    assert.match(toolbar, /data-orb-write-export-pdf/)
     assert.match(studio, /OrbWriteStation/)
   })
 
@@ -143,21 +146,21 @@ describe('ORB Dictate', () => {
   })
 
   it('standalone boundary copy present', () => {
-    const topBar = readComponent('components/orb/dictate/OrbDictateTopBar.tsx')
+    const privacy = readComponent('components/orb/dictate/OrbDictatePrivacyStrip.tsx')
     const boundary = readComponent('components/orb-standalone/orb-dictate-boundary-copy.tsx')
     const mobile = readComponent('components/orb-standalone/orb-dictate-mobile-experience.tsx')
-    assert.match(topBar, /data-orb-dictate-privacy-banner/)
+    assert.match(privacy, /data-orb-dictate-privacy-banner/)
     assert.match(boundary, /data-orb-dictate-boundary-based-on-input/)
     assert.match(mobile, /OrbDictateBoundaryCopy|boundary/i)
   })
 
   it('Dictate product title and hero output types', () => {
     const station = readComponent('components/orb-standalone/orb-dictate-station.tsx')
-    const topBar = readComponent('components/orb/dictate/OrbDictateTopBar.tsx')
+    const selector = readComponent('components/orb/dictate/OrbDictateTemplateSelector.tsx')
     const types = readFileSync(join(root, 'lib/orb/dictate/orb-dictate-types.ts'), 'utf8')
     assert.match(types, /ORB_DICTATE_PRODUCT_TITLE = 'Dictate'/)
     assert.match(station, /ORB_DICTATE_PRODUCT_SUBTITLE/)
-    assert.match(topBar, /data-orb-dictate-template-selector/)
+    assert.match(selector, /data-orb-dictate-template-selector/)
   })
 
   it('studio split screen renders on desktop', () => {

@@ -77,7 +77,7 @@ describe('ORB Residential mobile UX', () => {
     assert.match(states, /Reconnect to continue/)
     assert.match(states, /data-orb-station-sign-in-again/)
     assert.match(saved, /No saved outputs yet/)
-    assert.match(saved, /When ORB helps you write a record, review practice or create a briefing/)
+    assert.match(saved, /When ORB helps you write a record/)
     assert.match(knowledge, /OrbKnowledgeBuiltinPanel/)
     assert.match(knowledge, /data-orb-knowledge-connected-empty/)
   })
@@ -162,7 +162,7 @@ describe('ORB Residential mobile UX', () => {
   it('passkey and auth button copy matches product wording', () => {
     const login = readComponent('components/orb-residential/orb-login-screen.tsx')
     const profile = readComponent('components/orb-standalone/orb-adult-profile-drawer.tsx')
-    assert.match(login, /Use Face ID, Touch ID or device passkey/)
+    assert.match(login, /Face ID, Touch ID or device passkey/)
     assert.match(login, /data-orb-passkey-unavailable/)
     assert.match(login, /Use authenticator app instead/)
     assert.match(profile, /Use Face ID, Touch ID or device passkey/)
@@ -238,7 +238,7 @@ describe('ORB Residential mobile UX', () => {
   it('safety modal exposes failed save state for retry', () => {
     const modal = readComponent('components/orb-residential/orb-safety-modal.tsx')
     assert.match(modal, /data-orb-safety-save-error/)
-    assert.match(modal, /Could not save\. Try again\./)
+    assert.match(modal, /Could not save your acknowledgement\. Try again\./)
     assert.match(modal, /setSubmitting\(false\)/)
   })
 

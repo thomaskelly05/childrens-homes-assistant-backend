@@ -72,10 +72,10 @@ test('documents panel exposes title subtitle lenses and policy card hero', () =>
     join(root, 'components/orb-standalone/orb-care-companion.tsx'),
     'utf8'
   )
-  assert.match(panel, /title="Documents"/)
+  assert.match(panel, /title="Documents & Guidance"/)
   assert.match(
     panel,
-    /Turn policies, reports and uploaded text into residential intelligence/
+    /Official guidance, useful links and home documents/
   )
   assert.match(panel, /data-orb-document-lens-selector/)
   assert.match(panel, /data-orb-policy-card-hero/)

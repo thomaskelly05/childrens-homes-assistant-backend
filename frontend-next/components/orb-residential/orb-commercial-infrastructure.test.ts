@@ -13,7 +13,8 @@ test('billing modal includes plan, usage, spending cap and buy more', () => {
   assert.match(billing, /data-orb-billing-buy-more/)
   assert.match(billing, /saveOrbSpendingCap/)
   assert.match(billing, /startOrbTopUpCheckout/)
-  assert.match(billing, /ORB Voice/)
+  assert.match(billing, /INDIVIDUAL_PLAN_FEATURES/)
+  assert.match(billing, /'Voice'/)
   assert.doesNotMatch(billing, /almost ready — you can manage/)
 })
 

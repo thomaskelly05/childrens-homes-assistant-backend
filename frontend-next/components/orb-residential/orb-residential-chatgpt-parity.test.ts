@@ -42,8 +42,10 @@ describe('ORB Residential ChatGPT parity', () => {
 
   it('documents modal uses centred app modal on residential', () => {
     const documents = readComponent('components/orb-standalone/orb-document-panel.tsx')
+    const premiumPage = readComponent('components/orb/premium/orb-premium-page.tsx')
     assert.match(documents, /orbStationShellProps\(residentialSurface/)
-    assert.match(documents, /data-orb-document-panel/)
+    assert.match(premiumPage, /data-orb-document-panel/)
+    assert.match(documents, /Documents & Guidance/)
   })
 
   it('account modal opens from top-right header', () => {

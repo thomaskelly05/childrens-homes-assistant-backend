@@ -61,7 +61,7 @@ test('shift builder panel exposes title subtitle focus and actions', () => {
   assert.match(panel, /data-orb-shift-builder-boundary/)
 
   assert.match(sidebar, /id: 'shift_builder'/)
-  assert.match(sidebar, /Plans, handovers and what's missing/)
+  assert.match(sidebar, /Shift Builder/)
   assert.match(companion, /OrbShiftBuilderPanel/)
   assert.match(companion, /openShiftBuilderPanel/)
   assert.match(companion, /case 'shift_builder'/)

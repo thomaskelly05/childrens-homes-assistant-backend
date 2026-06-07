@@ -706,7 +706,7 @@ export function OrbResponseActionBar({
   isLatest?: boolean
   /** Greeting / minimal local turns — hide the full action row. */
   minimal?: boolean
-  /** Icon-first action row (ChatGPT-style) with accessible labels. */
+  /** Icon-first action row with accessible labels. */
   iconOnly?: boolean
 }) {
   const [moreOpen, setMoreOpen] = useState(false)

@@ -20,8 +20,8 @@ describe('ORB Residential desktop polish', () => {
     assert.match(sidebar, /data-orb-sidebar-search/)
     assert.match(sidebar, /data-orb-sidebar-desktop-nav/)
     assert.match(sidebar, /data-orb-sidebar-section="main"/)
-    assert.match(sidebar, /data-orb-sidebar-section="practice"/)
     assert.match(sidebar, /data-orb-sidebar-section="library"/)
+    assert.match(sidebar, /data-orb-sidebar-icon-rail/)
     assert.match(sidebar, /data-orb-sidebar-account-footer/)
     assert.doesNotMatch(sidebar, /data-orb-sidebar-section="profiles"/)
     assert.match(sidebar, /Recent chats/)
@@ -33,18 +33,11 @@ describe('ORB Residential desktop polish', () => {
     const sidebar = readComponent('components/orb-residential/orb-residential-sidebar.tsx')
     const copy = readComponent('lib/orb/orb-residential-copy.ts')
 
-    for (const label of [
-      'Dictate',
-      'Voice',
-      'Documents',
-      'Saved Outputs',
-      'Safeguarding Thinking',
-      'Record This Properly'
-    ]) {
+    for (const label of ['Dictate', 'Voice', 'ORB Write', 'Documents & Guidance', 'Saved Outputs', 'Templates']) {
       assert.match(sidebar, new RegExp(label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))
     }
-    assert.match(sidebar, /Inspection Readiness|residentialModeDisplayLabel\('Ofsted Lens'\)/)
-    assert.match(sidebar, /onOpenPracticePanel/)
+    assert.match(sidebar, /DESKTOP_MAIN_NAV/)
+    assert.match(sidebar, /DESKTOP_LIBRARY_NAV/)
     assert.match(sidebar, /data-orb-sidebar-chat/)
     assert.match(copy, /ORB_RESIDENTIAL_EMPTY_HEADING_DESKTOP = 'What do you need help with\?'/)
   })

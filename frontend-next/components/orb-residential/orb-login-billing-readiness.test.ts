@@ -15,7 +15,7 @@ describe('ORB login and billing readiness', () => {
     const login = read('components/orb-residential/orb-login-screen.tsx')
     assert.match(login, /Continue with work account/)
     assert.match(login, /Continue with email/)
-    assert.match(login, /Other secure options/)
+    assert.match(login, /Use passkey/)
     assert.match(login, /Continue with Microsoft/)
     assert.match(login, /Continue with Google/)
     assert.match(login, /Continue with Apple/)
@@ -27,7 +27,8 @@ describe('ORB login and billing readiness', () => {
     const login = read('components/orb-residential/orb-login-screen.tsx')
     assert.match(login, /Use passkey if you have already set one up/)
     assert.match(login, /find your saved passkey/)
-    assert.match(login, /Other secure options[\s\S]*data-orb-passkey-sign-in/)
+    assert.match(login, /data-orb-passkey-sign-in/)
+    assert.match(login, /data-orb-passkey-toggle/)
   })
 
   it('login hero uses premium positioning copy', () => {
