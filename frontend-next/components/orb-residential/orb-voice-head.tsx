@@ -108,15 +108,14 @@ function OrbVoiceHeadAsset({ reducedMotion }: { reducedMotion: boolean }) {
   )
 }
 
-/** SVG overlay — aura, eyes, state motion; base silhouette comes from the designed asset. */
-function OrbVoiceHeadOverlaySvg({
+/** SVG backdrop — halo, aura, waves and orbit behind the designed asset. */
+function OrbVoiceHeadBackdropSvg({
   uid,
   hue,
   glow,
   state,
   pulse,
-  reducedMotion,
-  blinkActive
+  reducedMotion
 }: {
   uid: string
   hue: OrbHueProfile
@@ -124,21 +123,19 @@ function OrbVoiceHeadOverlaySvg({
   state: OrbVoiceCompanionState
   pulse: boolean
   reducedMotion: boolean
-  blinkActive: boolean
 }) {
   const g = glow
   const ha = hue.hueA
   const hb = hue.hueB
   const hc = hue.hueC
-  const warm = hue.warm
 
-  const isSpeaking = state === 'speaking'
   const isListening = state === 'listening'
   const isThinking = state === 'thinking'
 
   return (
     <svg
-      className="orb-voice-companion__svg"
+      className="orb-voice-companion__svg orb-voice-companion__svg--backdrop"
+      data-orb-voice-head-backdrop
       viewBox="0 0 200 280"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
@@ -146,19 +143,149 @@ function OrbVoiceHeadOverlaySvg({
     >
       <defs>
         <radialGradient id={`${uid}-aura`} cx="50%" cy="38%" r="62%">
-          <stop offset="0%" stopColor={`rgba(186, 230, 253, ${0.28 * g})`} />
-          <stop offset="38%" stopColor={`rgba(56, 189, 248, ${0.22 * g})`} />
-          <stop offset="54%" stopColor={`rgba(124, 92, 255, ${0.16 * g})`} />
-          <stop offset="68%" stopColor={`rgba(236, 72, 153, ${0.1 * g})`} />
+          <stop offset="0%" stopColor={`rgba(186, 230, 253, ${0.22 * g})`} />
+          <stop offset="38%" stopColor={`rgba(56, 189, 248, ${0.18 * g})`} />
+          <stop offset="54%" stopColor={`rgba(124, 92, 255, ${0.12 * g})`} />
+          <stop offset="68%" stopColor={`rgba(236, 72, 153, ${0.07 * g})`} />
           <stop offset="100%" stopColor="transparent" />
         </radialGradient>
 
         <radialGradient id={`${uid}-breathe-glow`} cx="46%" cy="40%" r="56%">
-          <stop offset="0%" stopColor={`rgba(${ha}, 0.22)`} />
-          <stop offset="48%" stopColor={`rgba(196, 181, 253, 0.12)`} />
+          <stop offset="0%" stopColor={`rgba(${ha}, 0.16)`} />
+          <stop offset="48%" stopColor={`rgba(196, 181, 253, 0.08)`} />
           <stop offset="100%" stopColor="transparent" />
         </radialGradient>
 
+        <filter id={`${uid}-halo-blur`} x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="10" />
+        </filter>
+      </defs>
+
+      <ellipse
+        className="orb-voice-companion__halo-svg"
+        cx="100"
+        cy="106"
+        rx="98"
+        ry="106"
+        fill={`url(#${uid}-aura)`}
+        filter={`url(#${uid}-halo-blur)`}
+        opacity={0.52 * g}
+      />
+
+      <ellipse
+        className="orb-voice-companion__breathe-glow"
+        data-orb-voice-breathe-bust
+        cx="100"
+        cy="116"
+        rx="78"
+        ry="92"
+        fill={`url(#${uid}-breathe-glow)`}
+        opacity="0.28"
+      />
+
+      {isListening && !reducedMotion ? (
+        <g className="orb-voice-companion__listen-waves" data-orb-voice-listening-waves aria-hidden>
+          <circle className="orb-voice-companion__listen-wave orb-voice-companion__listen-wave--1" cx="100" cy="106" r="80" stroke={`rgba(${ha}, 0.12)`} strokeWidth="0.8" fill="none" />
+          <circle className="orb-voice-companion__listen-wave orb-voice-companion__listen-wave--2" cx="100" cy="106" r="80" stroke={`rgba(${hb}, 0.09)`} strokeWidth="0.6" fill="none" />
+          <circle className="orb-voice-companion__listen-wave orb-voice-companion__listen-wave--3" cx="100" cy="106" r="80" stroke={`rgba(${hc}, 0.07)`} strokeWidth="0.5" fill="none" />
+        </g>
+      ) : null}
+
+      {isListening && !reducedMotion ? (
+        <g className="orb-voice-companion__particles" data-orb-voice-particles aria-hidden>
+          <circle className="orb-voice-companion__particle orb-voice-companion__particle--1" cx="154" cy="80" r="1.2" fill={`rgba(${ha}, 0.32)`} />
+          <circle className="orb-voice-companion__particle orb-voice-companion__particle--2" cx="162" cy="110" r="0.9" fill={`rgba(${hb}, 0.28)`} />
+          <circle className="orb-voice-companion__particle orb-voice-companion__particle--3" cx="148" cy="140" r="1" fill={`rgba(${hc}, 0.24)`} />
+          <circle className="orb-voice-companion__particle orb-voice-companion__particle--4" cx="46" cy="66" r="0.7" fill={`rgba(${ha}, 0.22)`} />
+        </g>
+      ) : null}
+
+      {isThinking && !reducedMotion ? (
+        <g className="orb-voice-companion__thinking-halo" data-orb-voice-thinking-halo aria-hidden>
+          <ellipse
+            className="orb-voice-companion__orbit"
+            data-orb-voice-orbit
+            cx="100"
+            cy="106"
+            rx="92"
+            ry="98"
+            stroke={`rgba(${hb}, 0.14)`}
+            strokeWidth="0.6"
+            fill="none"
+          />
+          <ellipse
+            className="orb-voice-companion__orbit orb-voice-companion__orbit--inner"
+            data-orb-voice-orbit-inner
+            cx="100"
+            cy="106"
+            rx="84"
+            ry="90"
+            stroke={`rgba(${ha}, 0.08)`}
+            strokeWidth="0.4"
+            fill="none"
+            strokeDasharray="4 10"
+          />
+        </g>
+      ) : null}
+
+      {isListening ? (
+        <ellipse
+          className="orb-voice-companion__listen-glow"
+          data-orb-voice-listen-glow
+          cx="100"
+          cy="106"
+          rx="94"
+          ry="100"
+          stroke={`rgba(${ha}, 0.12)`}
+          strokeWidth="0.6"
+          fill={`rgba(${ha}, 0.03)`}
+        />
+      ) : null}
+
+      {pulse && !reducedMotion ? (
+        <ellipse
+          className="orb-voice-companion__aura-svg orb-voice-companion__aura--pulse"
+          cx="100"
+          cy="106"
+          rx="90"
+          ry="96"
+          fill={`rgba(${ha}, 0.05)`}
+          opacity="0.24"
+        />
+      ) : null}
+    </svg>
+  )
+}
+
+/** SVG face overlay — subtle eyes, mouth and tiny highlights above the asset. */
+function OrbVoiceHeadFaceSvg({
+  uid,
+  hue,
+  state,
+  blinkActive
+}: {
+  uid: string
+  hue: OrbHueProfile
+  state: OrbVoiceCompanionState
+  blinkActive: boolean
+}) {
+  const ha = hue.hueA
+  const hb = hue.hueB
+  const hc = hue.hueC
+  const warm = hue.warm
+
+  const isSpeaking = state === 'speaking'
+
+  return (
+    <svg
+      className="orb-voice-companion__svg orb-voice-companion__svg--face"
+      data-orb-voice-head-face-overlay
+      viewBox="0 0 200 280"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-hidden
+    >
+      <defs>
         <radialGradient id={`${uid}-eye`} cx="50%" cy="58%" r="58%">
           <stop offset="0%" stopColor="rgba(240, 249, 255, 0.88)" />
           <stop offset="58%" stopColor={`rgba(${ha}, 0.52)`} />
@@ -174,84 +301,35 @@ function OrbVoiceHeadOverlaySvg({
         </linearGradient>
 
         <filter id={`${uid}-mouth-glow`} x="-40%" y="-80%" width="180%" height="260%">
-          <feGaussianBlur stdDeviation="1.8" />
-        </filter>
-
-        <filter id={`${uid}-halo-blur`} x="-50%" y="-50%" width="200%" height="200%">
-          <feGaussianBlur stdDeviation="12" />
+          <feGaussianBlur stdDeviation="1.2" />
         </filter>
       </defs>
 
-      {/* Halo / aura behind silhouette */}
-      <ellipse
-        className="orb-voice-companion__halo-svg"
-        cx="100"
-        cy="106"
-        rx="98"
-        ry="106"
-        fill={`url(#${uid}-aura)`}
-        filter={`url(#${uid}-halo-blur)`}
-        opacity={0.74 * g}
-      />
-
-      {/* Breathing inner glow — soft luminous wash over asset */}
-      <ellipse
-        className="orb-voice-companion__breathe-glow"
-        data-orb-voice-breathe-bust
-        cx="100"
-        cy="116"
-        rx="78"
-        ry="92"
-        fill={`url(#${uid}-breathe-glow)`}
-        opacity="0.44"
-      />
-
-      {/* Listening radial waves — outward from head */}
-      {isListening && !reducedMotion ? (
-        <g className="orb-voice-companion__listen-waves" data-orb-voice-listening-waves aria-hidden>
-          <circle className="orb-voice-companion__listen-wave orb-voice-companion__listen-wave--1" cx="100" cy="106" r="80" stroke={`rgba(${ha}, 0.12)`} strokeWidth="0.8" fill="none" />
-          <circle className="orb-voice-companion__listen-wave orb-voice-companion__listen-wave--2" cx="100" cy="106" r="80" stroke={`rgba(${hb}, 0.09)`} strokeWidth="0.6" fill="none" />
-          <circle className="orb-voice-companion__listen-wave orb-voice-companion__listen-wave--3" cx="100" cy="106" r="80" stroke={`rgba(${hc}, 0.07)`} strokeWidth="0.5" fill="none" />
-        </g>
-      ) : null}
-
-      {/* Listening particles */}
-      {isListening && !reducedMotion ? (
-        <g className="orb-voice-companion__particles" data-orb-voice-particles aria-hidden>
-          <circle className="orb-voice-companion__particle orb-voice-companion__particle--1" cx="154" cy="80" r="1.2" fill={`rgba(${ha}, 0.32)`} />
-          <circle className="orb-voice-companion__particle orb-voice-companion__particle--2" cx="162" cy="110" r="0.9" fill={`rgba(${hb}, 0.28)`} />
-          <circle className="orb-voice-companion__particle orb-voice-companion__particle--3" cx="148" cy="140" r="1" fill={`rgba(${hc}, 0.24)`} />
-          <circle className="orb-voice-companion__particle orb-voice-companion__particle--4" cx="46" cy="66" r="0.7" fill={`rgba(${ha}, 0.22)`} />
-        </g>
-      ) : null}
-
-      {/* Soft light planes — silhouette from asset; suggested face via glow only */}
-      <path
-        className="orb-voice-companion__temple-warmth"
-        d="M 112 24 C 132 20 152 30 162 48 C 148 38 130 30 112 24 Z"
-        fill={`rgba(${hc}, 0.08)`}
-        opacity="0.2"
-      />
-      <path
-        className="orb-voice-companion__nose-bridge"
-        d="M 54 52 C 52 78 54 104 58 124 C 56 96 56 72 54 52 Z"
-        fill={`rgba(${ha}, 0.05)`}
-        opacity="0.14"
-      />
-      <path
-        className="orb-voice-companion__jaw-line"
-        d="M 68 152 C 88 158 108 160 124 156 C 106 152 88 148 68 152 Z"
-        fill={`rgba(${hb}, 0.04)`}
-        opacity="0.1"
-      />
-
-      {/* Face — gentle eye glow only; no drawn anatomy */}
       <g className="orb-voice-companion__face" data-orb-voice-face>
+        <path
+          className="orb-voice-companion__temple-warmth"
+          d="M 112 24 C 132 20 152 30 162 48 C 148 38 130 30 112 24 Z"
+          fill={`rgba(${hc}, 0.08)`}
+          opacity="0.14"
+        />
+        <path
+          className="orb-voice-companion__nose-bridge"
+          d="M 54 52 C 52 78 54 104 58 124 C 56 96 56 72 54 52 Z"
+          fill={`rgba(${ha}, 0.05)`}
+          opacity="0.1"
+        />
+        <path
+          className="orb-voice-companion__jaw-line"
+          d="M 68 152 C 88 158 108 160 124 156 C 106 152 88 148 68 152 Z"
+          fill={`rgba(${hb}, 0.04)`}
+          opacity="0.08"
+        />
+
         <path
           className="orb-voice-companion__brow-bridge"
           d="M 70 62 C 66 66 64 72 66 76 C 70 72 76 68 82 66 C 78 62 74 60 70 62 Z"
           fill="rgba(255, 255, 255, 0.1)"
-          opacity="0.18"
+          opacity="0.14"
         />
 
         <g
@@ -309,62 +387,7 @@ function OrbVoiceHeadOverlaySvg({
             opacity="0.14"
           />
         )}
-
-        {isThinking ? (
-          <g className="orb-voice-companion__thinking-halo" data-orb-voice-thinking-halo aria-hidden>
-            <ellipse
-              className="orb-voice-companion__orbit"
-              data-orb-voice-orbit
-              cx="100"
-              cy="106"
-              rx="92"
-              ry="98"
-              stroke={`rgba(${hb}, 0.18)`}
-              strokeWidth="0.6"
-              fill="none"
-            />
-            <ellipse
-              className="orb-voice-companion__orbit orb-voice-companion__orbit--inner"
-              data-orb-voice-orbit-inner
-              cx="100"
-              cy="106"
-              rx="84"
-              ry="90"
-              stroke={`rgba(${ha}, 0.1)`}
-              strokeWidth="0.4"
-              fill="none"
-              strokeDasharray="4 10"
-            />
-          </g>
-        ) : null}
-
-        {isListening ? (
-          <ellipse
-            className="orb-voice-companion__listen-glow"
-            data-orb-voice-listen-glow
-            cx="100"
-            cy="106"
-            rx="94"
-            ry="100"
-            stroke={`rgba(${ha}, 0.16)`}
-            strokeWidth="0.6"
-            fill={`rgba(${ha}, 0.04)`}
-          />
-        ) : null}
       </g>
-
-      {/* CSS-driven aura pulse overlay */}
-      {pulse && !reducedMotion ? (
-        <ellipse
-          className="orb-voice-companion__aura-svg orb-voice-companion__aura--pulse"
-          cx="100"
-          cy="106"
-          rx="90"
-          ry="96"
-          fill={`rgba(${ha}, 0.06)`}
-          opacity="0.38"
-        />
-      ) : null}
     </svg>
   )
 }
@@ -464,14 +487,19 @@ export function OrbVoiceHead({
             data-orb-voice-head-motion
           >
             <div className="orb-voice-companion__head-shell" data-orb-voice-head-shell>
-              <OrbVoiceHeadAsset reducedMotion={reducedMotion} />
-              <OrbVoiceHeadOverlaySvg
+              <OrbVoiceHeadBackdropSvg
                 uid={svgUid}
                 hue={hueProfile}
                 glow={hueProfile.glow}
                 state={state}
                 pulse={pulse}
                 reducedMotion={reducedMotion}
+              />
+              <OrbVoiceHeadAsset reducedMotion={reducedMotion} />
+              <OrbVoiceHeadFaceSvg
+                uid={svgUid}
+                hue={hueProfile}
+                state={state}
                 blinkActive={blinkActive}
               />
             </div>

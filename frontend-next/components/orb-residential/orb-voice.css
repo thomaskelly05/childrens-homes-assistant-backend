@@ -100,7 +100,7 @@
 [data-orb-voice-companion-size='hero'] .orb-voice-companion__head-asset,
 .orb-voice-companion--hero .orb-voice-companion__head-asset {
   opacity: 1;
-  filter: brightness(1.1) saturate(1.06) contrast(0.92);
+  filter: brightness(1.04) saturate(1.04) contrast(0.98);
 }
 
 [data-orb-voice-companion-size='hero'] .orb-voice-companion__eye,
@@ -120,7 +120,7 @@
 
 [data-orb-voice-companion-size='hero'] .orb-voice-companion__breathe-glow,
 .orb-voice-companion--hero .orb-voice-companion__breathe-glow {
-  opacity: 0.4;
+  opacity: 0.24;
 }
 
 [data-orb-voice-companion-size='hero'][data-orb-voice-state='idle'] .orb-voice-companion__head-material,
@@ -270,6 +270,7 @@
   justify-content: center;
   transform-origin: 50% 58%;
   will-change: transform;
+  filter: none;
 }
 
 .orb-voice-companion__head-shell {
@@ -288,11 +289,12 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 0;
+  z-index: 1;
   pointer-events: none;
 }
 
-.orb-voice-companion__head-asset {
+.orb-voice-companion__head-asset,
+.orb-voice-companion__head-material {
   display: block;
   width: 100%;
   height: 100%;
@@ -300,9 +302,10 @@
   object-position: center 40%;
   user-select: none;
   -webkit-user-drag: none;
+  filter: none;
 }
 
-/* SVG overlay — eyes, aura, state motion */
+/* SVG layers — backdrop behind asset, face above asset */
 .orb-voice-companion__svg {
   position: absolute;
   inset: 0;
@@ -310,8 +313,15 @@
   width: 100%;
   height: 100%;
   overflow: visible;
-  z-index: 1;
   pointer-events: none;
+}
+
+.orb-voice-companion__svg--backdrop {
+  z-index: 0;
+}
+
+.orb-voice-companion__svg--face {
+  z-index: 2;
 }
 
 /* Head volume — glass-like layered bust with calm breathing rhythm */
@@ -379,8 +389,8 @@
 .orb-voice-companion__mouth-light {
   transform-origin: 50% 78%;
   transform: scaleY(calc(0.42 + var(--orb-voice-mouth-open, 0) * 0.72));
-  opacity: calc(0.38 + var(--orb-voice-speech-energy, 0) * 0.52);
-  filter: drop-shadow(0 0 calc(2px + var(--orb-voice-speech-energy, 0) * 6px) rgba(186, 230, 253, 0.42));
+  opacity: calc(0.32 + var(--orb-voice-speech-energy, 0) * 0.42);
+  filter: drop-shadow(0 0 calc(1px + var(--orb-voice-speech-energy, 0) * 4px) rgba(186, 230, 253, 0.36));
   transition:
     transform 70ms ease-out,
     opacity 90ms ease-out;
@@ -479,7 +489,7 @@
 
 .orb-voice-companion[data-orb-voice-state='thinking'] .orb-voice-companion__breathe-glow {
   animation-duration: 6.5s;
-  opacity: 0.46;
+  opacity: 0.3;
 }
 
 .orb-voice-companion[data-orb-voice-state='thinking'] .orb-voice-companion__halo {
@@ -503,7 +513,7 @@
 
 .orb-voice-companion[data-orb-voice-state='speaking'] .orb-voice-companion__head-material,
 .orb-voice-companion[data-orb-voice-state='speaking'] .orb-voice-companion__breathe-head {
-  animation: orb-voice-head-breathe 5s ease-in-out infinite, orb-voice-speak-glow 1.4s ease-in-out infinite;
+  animation: orb-voice-head-breathe 5s ease-in-out infinite;
 }
 
 .orb-voice-companion[data-orb-voice-state='speaking'] .orb-voice-companion__head-motion {
@@ -511,7 +521,8 @@
 }
 
 .orb-voice-companion[data-orb-voice-state='speaking'] .orb-voice-companion__halo,
-.orb-voice-companion[data-orb-voice-state='speaking'] .orb-voice-companion__aura {
+.orb-voice-companion[data-orb-voice-state='speaking'] .orb-voice-companion__aura,
+.orb-voice-companion[data-orb-voice-state='speaking'] .orb-voice-companion__breathe-glow {
   animation: orb-voice-head-aura 1.6s ease-in-out infinite;
 }
 
@@ -579,11 +590,11 @@
   0%,
   100% {
     transform: scale(1);
-    opacity: 0.44;
+    opacity: 0.24;
   }
   50% {
-    transform: scale(1.014);
-    opacity: 0.56;
+    transform: scale(1.012);
+    opacity: 0.32;
   }
 }
 
@@ -782,16 +793,6 @@
   }
 }
 
-@keyframes orb-voice-speak-glow {
-  0%,
-  100% {
-    filter: brightness(1.05) saturate(1.12);
-  }
-  50% {
-    filter: brightness(1.14) saturate(1.28);
-  }
-}
-
 @keyframes orb-voice-orbit-spin {
   from {
     transform: rotate(0deg);
@@ -862,11 +863,11 @@
   [data-orb-voice-mobile-hero-stage] [data-orb-voice-head] .orb-voice-companion__head-asset {
     opacity: 1;
     transform: scale(1);
-    filter: brightness(1.1) saturate(1.06) contrast(0.9);
+    filter: brightness(1.04) saturate(1.04) contrast(0.98);
   }
 
   [data-orb-voice-mobile-hero-stage] .orb-voice-companion__breathe-glow {
-    opacity: 0.38;
+    opacity: 0.22;
   }
 
   [data-orb-voice-mobile-hero-stage] .orb-voice-companion__halo,
