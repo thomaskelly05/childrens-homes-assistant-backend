@@ -261,16 +261,19 @@ function OrbLoginPanel({
               ORB Residential
             </Link>
             <p className="orb-login-tagline mt-1 text-xs">Powered by IndiCare Intelligence</p>
+            <div className="orb-login-hero-sphere-wrap mt-5 flex justify-center lg:mt-6 lg:justify-start" data-orb-login-hero-sphere>
+              <OrbHeroSphere className="scale-[0.52] xl:scale-[0.56]" />
+            </div>
             <h1
-              className="orb-login-headline mt-8 max-w-md text-3xl font-semibold tracking-tight xl:text-[2rem]"
+              className="orb-login-headline mt-6 max-w-md text-3xl font-semibold tracking-tight xl:text-[2rem]"
               data-orb-login-title
             >
               AI support for residential children&apos;s homes
             </h1>
-            <p className="orb-login-lead mt-4 max-w-md text-base leading-relaxed">
+            <p className="orb-login-lead mt-3 max-w-md text-base leading-relaxed">
               Record better. Reflect faster. Respond safer.
             </p>
-            <ul className="orb-login-trust mt-8 max-w-md space-y-2.5 text-sm" data-orb-login-trust-points>
+            <ul className="orb-login-trust mt-6 max-w-md space-y-2 text-sm" data-orb-login-trust-points>
               {TRUST_POINTS.map((point) => (
                 <li key={point} className="flex items-center gap-2.5">
                   <span
@@ -281,9 +284,6 @@ function OrbLoginPanel({
                 </li>
               ))}
             </ul>
-            <div className="orb-login-hero-sphere-wrap mt-5 flex justify-center lg:mt-6 lg:justify-start">
-              <OrbHeroSphere className="scale-[0.62] xl:scale-[0.68]" />
-            </div>
           </div>
         </div>
 
@@ -293,7 +293,7 @@ function OrbLoginPanel({
         >
           <div className="orb-login-card orb-login-panel-inner mx-auto w-full max-w-md rounded-[1.75rem] border border-[var(--orb-line)]/50 bg-[var(--orb-surface-elevated)]/80 p-6 shadow-xl shadow-black/10 backdrop-blur-sm sm:p-8">
             <div className="flex flex-col items-center text-center lg:hidden" data-orb-login-mobile-hero>
-              <OrbHeroSphere className="mb-2 scale-[0.46] sm:scale-[0.5]" />
+              <OrbHeroSphere className="mb-1 scale-[0.4] sm:scale-[0.44]" />
             </div>
 
             <Link href="/orb" className="orb-login-brand-link text-sm font-semibold lg:hidden" data-orb-login-brand>

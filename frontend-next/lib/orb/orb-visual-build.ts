@@ -1,7 +1,7 @@
 /** Canonical ORB Residential visual contract — bump when CSS/render paths change. */
 export const ORB_BUILD_VISUAL_VERSION = 'premium-final' as const
-export const ORB_LOGIN_VERSION = 'front-door-v3' as const
-export const ORB_VOICE_VERSION = 'living-head-v2' as const
+export const ORB_LOGIN_VERSION = 'front-door-v4' as const
+export const ORB_VOICE_VERSION = 'living-head-v3' as const
 export const ORB_CSS_CONTRACT = 'premium-viewport-final' as const
 
 export const ORB_VOICE_COMPONENT_NAME = 'OrbVoiceCompanion' as const

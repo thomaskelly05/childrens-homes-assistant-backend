@@ -33,36 +33,84 @@ describe('ORB Voice companion visual convergence', () => {
     }
   })
 
-  it('OrbVoiceCompanion exposes testable data markers for head and waveform', () => {
+  it('OrbVoiceCompanion exposes living-head-v3 markers and custom head structure', () => {
     const companion = read('components/orb-residential/orb-voice-companion.tsx')
+    const visualBuild = read('lib/orb/orb-visual-build.ts')
+    assert.match(visualBuild, /ORB_VOICE_VERSION = 'living-head-v3'/)
     assert.match(companion, /data-orb-voice-companion/)
-    assert.match(companion, /data-orb-voice-version="living-head-v2"|data-orb-voice-version=\{ORB_VOICE_VERSION\}/)
+    assert.match(companion, /data-orb-voice-version=\{ORB_VOICE_VERSION\}/)
     assert.match(companion, /data-orb-voice-state/)
     assert.match(companion, /data-orb-voice-head/)
+    assert.match(companion, /data-orb-voice-face/)
     assert.match(companion, /data-orb-voice-waveform/)
-    assert.match(companion, /variant="voice"/)
+    assert.match(companion, /orb-voice-companion__head-material/)
     assert.match(companion, /orb-voice-companion__eyes/)
-    assert.match(companion, /orb-voice-companion__waveform/)
+    assert.doesNotMatch(companion, /OrbPresence/)
+    assert.doesNotMatch(companion, /OrbSphere/)
+    assert.doesNotMatch(companion, /GlassOrbMark/)
   })
 
-  it('voice station wires companion state from transport and does not pass legacy orb classes', () => {
+  it('voice head does not use circular-only sphere class contract', () => {
+    const companion = read('components/orb-residential/orb-voice-companion.tsx')
+    const css = read('app/orb/orb-premium-layout-pass.css')
+    assert.doesNotMatch(companion, /orb-living-sphere/)
+    assert.doesNotMatch(companion, /orb-sphere/)
+    assert.doesNotMatch(companion, /orb-presence--voice/)
+    assert.match(css, /\.orb-voice-companion \.orb-living-sphere[\s\S]*display:\s*none/)
+    assert.match(css, /\.orb-voice-companion__head-material/)
+    assert.match(css, /border-radius: 44% 44% 36% 36%/)
+  })
+
+  it('voice station wires companion state from transport and renders voice studio layout', () => {
     const station = read('components/orb-standalone/orb-voice-station.tsx')
     assert.match(station, /mapOrbVoiceUiToCompanionState/)
     assert.match(station, /voiceCompanionState=\{companionState\}/)
+    assert.match(station, /data-orb-voice-studio/)
+    assert.match(station, /OrbVoiceStatePanel/)
+    assert.match(station, /OrbVoiceMobilePreviewStrip/)
+    assert.match(station, /OrbVoiceTrustStrip/)
+    assert.match(station, /OrbVoiceStudioWaveform/)
     assert.doesNotMatch(station, /orbVisualClassName/)
     assert.doesNotMatch(station, /pulseOrb/)
     assert.doesNotMatch(station, /orbVisualClassFrom/)
   })
 
-  it('voice head CSS targets orb-voice-companion not legacy glass orb sphere', () => {
+  it('voice head CSS targets custom head silhouette with state styling', () => {
     const css = read('app/orb/orb-premium-layout-pass.css')
-    assert.match(css, /\.orb-voice-companion \.orb-living-sphere/)
     assert.match(css, /\.orb-voice-companion__eyes/)
-    assert.match(css, /\.orb-voice-companion__waveform/)
+    assert.match(css, /\[data-orb-voice-waveform\]/)
     assert.match(css, /\[data-orb-voice-state='speaking'\]/)
     assert.match(css, /\[data-orb-voice-state='listening'\]/)
     assert.match(css, /\[data-orb-voice-state='thinking'\]/)
     assert.match(css, /\[data-orb-voice-state='error'\]/)
+    const studio = read('components/orb-standalone/orb-voice-studio-layout.tsx')
+    assert.match(studio, /data-orb-voice-state-panel/)
+    assert.match(studio, /data-orb-voice-mobile-preview/)
     assert.doesNotMatch(css, /\.glass-orb-mark--voice \.glass-orb-mark__sphere/)
+  })
+
+  it('mobile voice experience includes studio waveform without state panel', () => {
+    const mobile = read('components/orb-standalone/orb-voice-mobile-experience.tsx')
+    assert.match(mobile, /OrbVoiceStudioWaveform/)
+    assert.doesNotMatch(mobile, /OrbVoiceStatePanel/)
+    assert.doesNotMatch(mobile, /data-orb-voice-state-panel/)
+  })
+
+  it('login screen uses front-door-v4 marker', () => {
+    const login = read('components/orb-residential/orb-login-screen.tsx')
+    const visualBuild = read('lib/orb/orb-visual-build.ts')
+    assert.match(visualBuild, /ORB_LOGIN_VERSION = 'front-door-v4'/)
+    assert.match(login, /data-orb-login-version=\{ORB_LOGIN_VERSION\}/)
+  })
+
+  it('voice actions and realtime routes remain unchanged', () => {
+    const station = read('components/orb-standalone/orb-voice-station.tsx')
+    const realtime = read('lib/orb/voice/orb-realtime-availability.ts')
+    assert.match(station, /OrbVoiceActions/)
+    assert.match(station, /handleStart/)
+    assert.match(station, /handleEnd/)
+    assert.match(station, /requestMicrophoneAccess/)
+    assert.match(realtime, /\/orb\/voice/)
+    assert.doesNotMatch(station, /GlassOrbMark/)
   })
 })

@@ -8,8 +8,8 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '../..')
 
 const ORB_BUILD_VISUAL_VERSION = 'premium-final'
 const ORB_CSS_CONTRACT = 'premium-viewport-final'
-const ORB_LOGIN_VERSION = 'front-door-v3'
-const ORB_VOICE_VERSION = 'living-head-v2'
+const ORB_LOGIN_VERSION = 'front-door-v4'
+const ORB_VOICE_VERSION = 'living-head-v3'
 const ORB_VOICE_COMPONENT_NAME = 'OrbVoiceCompanion'
 const ORB_LOGIN_COMPONENT_NAME = 'OrbLoginScreen'
 const ORB_CANONICAL_CSS_FILES = [
@@ -77,8 +77,10 @@ const ORB_CSS_AUDIT_MAP = [
     voice: [
       '.orb-voice-companion',
       '.orb-voice-companion__eyes',
-      '.orb-voice-companion__waveform',
-      '[data-orb-voice-state]'
+      '.orb-voice-companion__head-material',
+      '[data-orb-voice-state]',
+      '[data-orb-voice-state-panel]',
+      '[data-orb-voice-mobile-preview]'
     ],
     login: ['.orb-login-shell', '.orb-login-hero', '[data-orb-login-mobile-hero]'],
     shell: ['html[data-orb-residential] .orb-chat-layout--residential'],
@@ -179,11 +181,12 @@ describe('ORB visual render audit', () => {
     assert.match(panel, /ORB_LOGIN_COMPONENT_NAME/)
   })
 
-  it('voice head CSS is oval with eyes and state rings — not legacy glass orb', () => {
+  it('voice head CSS is custom bust with eyes and state rings — not legacy glass orb', () => {
     const css = read('app/orb/orb-premium-layout-pass.css')
-    assert.match(css, /--orb-voice-head-width-ratio/)
+    assert.match(css, /--orb-voice-head-width/)
+    assert.match(css, /\.orb-voice-companion__head-material/)
     assert.match(css, /\.orb-voice-companion__eyes/)
-    assert.match(css, /\.orb-voice-companion__waveform/)
+    assert.match(css, /\[data-orb-voice-waveform\]/)
     assert.match(css, /\.orb-voice-companion__orbit/)
     assert.match(css, /\.orb-voice-companion__listen-glow/)
     assert.match(css, /\[data-glass-orb-mark\]/)

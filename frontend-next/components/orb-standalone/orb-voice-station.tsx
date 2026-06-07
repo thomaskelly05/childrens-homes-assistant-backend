@@ -9,7 +9,17 @@ import { OrbVoiceActions } from '@/components/orb-standalone/orb-voice-actions'
 import { OrbVoiceLaunchControls } from '@/components/orb-standalone/orb-voice-launch-controls'
 import { OrbVoiceTranscriptActions } from '@/components/orb-standalone/orb-voice-transcript-actions'
 import { OrbVoiceMobileExperience } from '@/components/orb-standalone/orb-voice-mobile-experience'
-import { OrbVoiceCompanion, mapOrbVoiceUiToCompanionState } from '@/components/orb-residential/orb-voice-companion'
+import {
+  OrbVoiceCompanion,
+  ORB_VOICE_COMPANION_HEADLINES,
+  mapOrbVoiceUiToCompanionState
+} from '@/components/orb-residential/orb-voice-companion'
+import {
+  OrbVoiceMobilePreviewStrip,
+  OrbVoiceStatePanel,
+  OrbVoiceStudioWaveform,
+  OrbVoiceTrustStrip
+} from '@/components/orb-standalone/orb-voice-studio-layout'
 import type { useStandaloneOrbVoice } from '@/components/orb-standalone/use-standalone-orb-voice'
 import { saveVoiceTranscript } from '@/lib/orb/voice/save-voice-transcript'
 import {
@@ -984,11 +994,32 @@ export function OrbVoiceStation({
         </div>
         ) : (
         <div
-          className="flex flex-col items-center p-6 pb-8"
+          className="orb-voice-studio flex min-h-0 flex-1 flex-col overflow-hidden"
           data-orb-desktop-branch="active"
           data-orb-voice-desktop
+          data-orb-voice-studio
         >
-          <div className="flex w-full max-w-lg flex-wrap items-center justify-center gap-2">
+          <header className="orb-voice-studio__header shrink-0">
+            <div>
+              <h2 className="orb-voice-studio__title">{ORB_VOICE_PANEL_TITLE}</h2>
+              <p className="orb-voice-studio__subtitle">{ORB_VOICE_PANEL_SUBTITLE}</p>
+            </div>
+            {onOpenVoiceSettings ? (
+              <button
+                type="button"
+                onClick={onOpenVoiceSettings}
+                className="rounded-full border border-[var(--orb-line)]/50 px-3 py-1.5 text-xs font-medium text-[var(--orb-foreground)]"
+                data-orb-voice-settings-chip
+              >
+                Voice settings
+              </button>
+            ) : null}
+          </header>
+
+          <div className="orb-voice-studio__workspace grid min-h-0 flex-1 lg:grid-cols-[minmax(0,1fr)_17.5rem]">
+            <main className="orb-voice-studio__main min-h-0 overflow-y-auto overscroll-contain">
+          <div className="orb-voice-studio__hero mx-auto flex w-full max-w-lg flex-col items-center">
+          <div className="flex w-full flex-wrap items-center justify-center gap-2">
             <label className="sr-only" htmlFor="orb-voice-mode-select">
               Voice mode
             </label>
@@ -1028,14 +1059,19 @@ export function OrbVoiceStation({
             </p>
           ) : null}
 
-          <OrbVoiceCompanion state={companionState} className="mt-6 shrink-0" />
+          <OrbVoiceCompanion state={companionState} className="mt-4 shrink-0" />
 
-          <p className="mt-6 text-center text-sm font-medium text-[var(--orb-foreground)]" data-orb-voice-status-label>
-            {statusLine}
+          <p className="mt-5 text-center text-sm font-medium text-[var(--orb-foreground)]" data-orb-voice-status-label>
+            {ORB_VOICE_COMPANION_HEADLINES[companionState]}
           </p>
-          <p className="mt-2 text-center text-sm text-[var(--orb-muted)]" data-orb-voice-mic-status>
-            {detailLine}
+          <OrbVoiceStudioWaveform state={companionState} className="mt-3" />
+          <p className="mt-2 text-center text-xs text-[var(--orb-muted)]" data-orb-voice-mic-status>
+            {detailLine ?? statusLine}
           </p>
+          <p className="orb-voice-studio__privacy" data-orb-voice-privacy-note>
+            Hands-free when your microphone is allowed. Voice stays within your ORB account.
+          </p>
+          </div>
 
           {micTestMessage ? (
             <p className="mt-2 text-center text-xs text-sky-700 dark:text-sky-200/90" role="status">
@@ -1236,7 +1272,7 @@ export function OrbVoiceStation({
             </div>
           ) : null}
 
-          <div className="mt-6 w-full max-w-sm">
+          <div className="mx-auto mt-6 w-full max-w-sm">
             {useBrowserLaunch ? (
               <OrbVoiceLaunchControls
                 launchMode={launchMode}
@@ -1302,7 +1338,7 @@ export function OrbVoiceStation({
             </p>
           ) : null}
 
-          <div className="mt-6 max-w-md space-y-1 text-center" data-orb-voice-boundary-copy>
+          <div className="mx-auto mt-6 max-w-md space-y-1 text-center" data-orb-voice-boundary-copy>
             {ORB_VOICE_BOUNDARY_COPY.map((line) => (
               <p key={line} className="text-[10px] leading-4 text-[var(--orb-muted)]">
                 {line}
@@ -1310,6 +1346,15 @@ export function OrbVoiceStation({
             ))}
             <p className="text-[10px] leading-4 text-[var(--orb-muted)]">{SAFETY_COPY}</p>
           </div>
+            </main>
+
+            <OrbVoiceStatePanel activeState={companionState} className="hidden lg:flex" />
+          </div>
+
+          <footer className="orb-voice-studio__footer hidden shrink-0 lg:flex">
+            <OrbVoiceMobilePreviewStrip activeState={companionState} />
+            <OrbVoiceTrustStrip />
+          </footer>
         </div>
         )}
       </div>
