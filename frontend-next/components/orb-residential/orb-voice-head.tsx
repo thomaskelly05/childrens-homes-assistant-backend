@@ -87,24 +87,50 @@ function useOrbVoiceNaturalBlink(active: boolean, reducedMotion: boolean) {
   return blinkActive
 }
 
-const ORB_VOICE_HEAD_ASSET_WEBP = '/assets/orb/orb-voice-head-base.webp'
-const ORB_VOICE_HEAD_ASSET_PNG = '/assets/orb/orb-voice-head-base.png'
+const ORB_VOICE_HEAD_IDLE_WEBP = '/assets/orb/orb-voice-head-idle.webp'
+const ORB_VOICE_HEAD_IDLE_PNG = '/assets/orb/orb-voice-head-idle.png'
+const ORB_VOICE_HEAD_ENGAGED_WEBP = '/assets/orb/orb-voice-head-engaged.webp'
+const ORB_VOICE_HEAD_ENGAGED_PNG = '/assets/orb/orb-voice-head-engaged.png'
 
-/** Designed base head/bust asset — soft luminous 3/4 profile silhouette. */
-function OrbVoiceHeadAsset({ reducedMotion }: { reducedMotion: boolean }) {
+function isEngagedAttention(state: OrbVoiceCompanionState): boolean {
+  return state === 'listening' || state === 'thinking' || state === 'speaking'
+}
+
+/** Designed base head/bust assets — idle 3/4 profile and engaged attentive pose. */
+function OrbVoiceHeadAsset({ engaged }: { engaged: boolean }) {
   return (
-    <picture className="orb-voice-companion__head-asset-wrap" data-orb-voice-head-asset>
-      <source srcSet={ORB_VOICE_HEAD_ASSET_WEBP} type="image/webp" />
-      <img
-        className="orb-voice-companion__head-asset orb-voice-companion__head-material orb-voice-companion__breathe-head"
-        data-orb-voice-breathe
-        src={ORB_VOICE_HEAD_ASSET_PNG}
-        alt=""
-        aria-hidden
-        draggable={false}
-        decoding="async"
-      />
-    </picture>
+    <div className="orb-voice-companion__head-asset-stack" data-orb-voice-head-asset-stack>
+      <picture
+        className={`orb-voice-companion__head-asset-wrap orb-voice-companion__head-asset-wrap--idle${engaged ? '' : ' is-active'}`}
+        data-orb-voice-head-asset="idle"
+      >
+        <source srcSet={ORB_VOICE_HEAD_IDLE_WEBP} type="image/webp" />
+        <img
+          className="orb-voice-companion__head-asset orb-voice-companion__head-material orb-voice-companion__breathe-head"
+          data-orb-voice-breathe
+          src={ORB_VOICE_HEAD_IDLE_PNG}
+          alt=""
+          aria-hidden
+          draggable={false}
+          decoding="async"
+        />
+      </picture>
+      <picture
+        className={`orb-voice-companion__head-asset-wrap orb-voice-companion__head-asset-wrap--engaged${engaged ? ' is-active' : ''}`}
+        data-orb-voice-head-asset="engaged"
+      >
+        <source srcSet={ORB_VOICE_HEAD_ENGAGED_WEBP} type="image/webp" />
+        <img
+          className="orb-voice-companion__head-asset orb-voice-companion__head-material orb-voice-companion__breathe-head"
+          data-orb-voice-breathe
+          src={ORB_VOICE_HEAD_ENGAGED_PNG}
+          alt=""
+          aria-hidden
+          draggable={false}
+          decoding="async"
+        />
+      </picture>
+    </div>
   )
 }
 
@@ -257,17 +283,58 @@ function OrbVoiceHeadBackdropSvg({
   )
 }
 
-/** SVG face overlay — subtle eyes, mouth and tiny highlights above the asset. */
+type OrbVoiceFacePose = {
+  nearEye: { cx: number; cy: number; rx: number; ry: number; rotate: number }
+  farEye: { cx: number; cy: number; rx: number; ry: number; rotate: number; opacity: number }
+  nearShimmer: { cx: number; cy: number; rx: number; ry: number }
+  farShimmer: { cx: number; cy: number; rx: number; ry: number; opacity: number }
+  mouthIdle: string
+  mouthSpeaking: string
+  brow: string
+  nose: string
+  jaw: string
+  temple: string
+}
+
+const ORB_VOICE_FACE_IDLE: OrbVoiceFacePose = {
+  nearEye: { cx: 58, cy: 100, rx: 5.8, ry: 3.3, rotate: -7 },
+  farEye: { cx: 72, cy: 97.5, rx: 3.4, ry: 2.2, rotate: -4, opacity: 0.58 },
+  nearShimmer: { cx: 56.5, cy: 99.2, rx: 1.5, ry: 0.9 },
+  farShimmer: { cx: 71.2, cy: 96.8, rx: 0.95, ry: 0.58, opacity: 0.62 },
+  mouthIdle: 'M 54 128 C 60 130 68 130 74 128',
+  mouthSpeaking: 'M 52 126 C 60 130 70 132 78 128 C 72 136 60 136 52 130 Z',
+  brow: 'M 48 72 C 44 76 42 82 44 88 C 50 84 56 80 62 78 C 58 74 54 72 48 72 Z',
+  nose: 'M 50 62 C 48 80 46 98 48 114 C 50 94 52 76 50 62 Z',
+  jaw: 'M 54 152 C 68 158 86 160 102 156 C 88 152 72 150 54 152 Z',
+  temple: 'M 96 34 C 112 30 128 38 136 52 C 124 44 110 38 96 34 Z'
+}
+
+const ORB_VOICE_FACE_ENGAGED: OrbVoiceFacePose = {
+  nearEye: { cx: 70, cy: 101, rx: 5.4, ry: 3.1, rotate: -2 },
+  farEye: { cx: 86, cy: 100, rx: 4.2, ry: 2.7, rotate: 2, opacity: 0.76 },
+  nearShimmer: { cx: 68.5, cy: 100.2, rx: 1.4, ry: 0.85 },
+  farShimmer: { cx: 85.2, cy: 99.4, rx: 1.1, ry: 0.68, opacity: 0.74 },
+  mouthIdle: 'M 64 130 C 72 132 80 132 88 130',
+  mouthSpeaking: 'M 62 128 C 72 132 84 134 92 130 C 86 138 72 138 62 132 Z',
+  brow: 'M 58 74 C 54 78 52 84 54 90 C 62 86 70 82 78 80 C 74 76 68 74 58 74 Z',
+  nose: 'M 72 64 C 70 82 68 100 70 116 C 72 96 74 78 72 64 Z',
+  jaw: 'M 62 154 C 78 160 98 162 114 158 C 100 154 82 152 62 154 Z',
+  temple: 'M 108 32 C 124 28 140 36 148 50 C 136 42 122 36 108 32 Z'
+}
+
+/** SVG face overlay — eyes, mouth and tiny highlights aligned to the face plane. */
 function OrbVoiceHeadFaceSvg({
   uid,
   hue,
   state,
-  blinkActive
+  blinkActive,
+  engaged
 }: {
   uid: string
   hue: OrbHueProfile
   state: OrbVoiceCompanionState
   blinkActive: boolean
+  engaged: boolean
 }) {
   const ha = hue.hueA
   const hb = hue.hueB
@@ -275,6 +342,7 @@ function OrbVoiceHeadFaceSvg({
   const warm = hue.warm
 
   const isSpeaking = state === 'speaking'
+  const pose = engaged ? ORB_VOICE_FACE_ENGAGED : ORB_VOICE_FACE_IDLE
 
   return (
     <svg
@@ -286,9 +354,15 @@ function OrbVoiceHeadFaceSvg({
       aria-hidden
     >
       <defs>
-        <radialGradient id={`${uid}-eye`} cx="50%" cy="58%" r="52%">
+        <radialGradient id={`${uid}-eye-near`} cx="46%" cy="62%" r="54%">
           <stop offset="0%" stopColor="rgba(240, 249, 255, 0.98)" />
-          <stop offset="62%" stopColor={`rgba(${ha}, 0.78)`} />
+          <stop offset="58%" stopColor={`rgba(${ha}, 0.82)`} />
+          <stop offset="100%" stopColor="transparent" />
+        </radialGradient>
+
+        <radialGradient id={`${uid}-eye-far`} cx="54%" cy="60%" r="50%">
+          <stop offset="0%" stopColor="rgba(240, 249, 255, 0.88)" />
+          <stop offset="64%" stopColor={`rgba(${ha}, 0.62)`} />
           <stop offset="100%" stopColor="transparent" />
         </radialGradient>
 
@@ -301,32 +375,15 @@ function OrbVoiceHeadFaceSvg({
         </linearGradient>
       </defs>
 
-      <g className="orb-voice-companion__face" data-orb-voice-face>
-        <path
-          className="orb-voice-companion__temple-warmth"
-          d="M 108 28 C 124 24 142 32 152 48 C 140 40 124 34 108 28 Z"
-          fill={`rgba(${hc}, 0.12)`}
-          opacity="0.28"
-        />
-        <path
-          className="orb-voice-companion__nose-bridge"
-          d="M 58 48 C 56 68 54 88 56 108 C 58 86 60 66 58 48 Z"
-          fill={`rgba(${ha}, 0.08)`}
-          opacity="0.22"
-        />
-        <path
-          className="orb-voice-companion__jaw-line"
-          d="M 72 148 C 86 156 104 160 120 158 C 106 154 90 150 72 148 Z"
-          fill={`rgba(${hb}, 0.06)`}
-          opacity="0.18"
-        />
-
-        <path
-          className="orb-voice-companion__brow-bridge"
-          d="M 72 58 C 66 62 62 68 64 74 C 68 70 74 66 80 64 C 76 60 74 58 72 58 Z"
-          fill="rgba(255, 255, 255, 0.18)"
-          opacity="0.36"
-        />
+      <g
+        className="orb-voice-companion__face"
+        data-orb-voice-face
+        data-orb-voice-face-pose={engaged ? 'engaged' : 'idle'}
+      >
+        <path className="orb-voice-companion__temple-warmth" d={pose.temple} fill={`rgba(${hc}, 0.12)`} opacity="0.28" />
+        <path className="orb-voice-companion__nose-bridge" d={pose.nose} fill={`rgba(${ha}, 0.08)`} opacity="0.22" />
+        <path className="orb-voice-companion__jaw-line" d={pose.jaw} fill={`rgba(${hb}, 0.06)`} opacity="0.18" />
+        <path className="orb-voice-companion__brow-bridge" d={pose.brow} fill="rgba(255, 255, 255, 0.18)" opacity="0.36" />
 
         <g
           className="orb-voice-companion__eyes"
@@ -334,26 +391,43 @@ function OrbVoiceHeadFaceSvg({
           data-orb-voice-blink-active={blinkActive ? 'true' : 'false'}
         >
           <ellipse
-            className="orb-voice-companion__eye orb-voice-companion__eye--left orb-voice-companion__eye--blink"
+            className="orb-voice-companion__eye orb-voice-companion__eye--near orb-voice-companion__eye--blink"
             data-orb-voice-eye-left
-            cx="76"
-            cy="86"
-            rx="5.2"
-            ry="3"
-            fill={`url(#${uid}-eye)`}
+            cx={pose.nearEye.cx}
+            cy={pose.nearEye.cy}
+            rx={pose.nearEye.rx}
+            ry={pose.nearEye.ry}
+            transform={`rotate(${pose.nearEye.rotate} ${pose.nearEye.cx} ${pose.nearEye.cy})`}
+            fill={`url(#${uid}-eye-near)`}
           />
           <ellipse
-            className="orb-voice-companion__eye orb-voice-companion__eye--right orb-voice-companion__eye--blink"
+            className="orb-voice-companion__eye orb-voice-companion__eye--far orb-voice-companion__eye--blink"
             data-orb-voice-eye-right
-            cx="90"
-            cy="84"
-            rx="3.8"
-            ry="2.4"
-            fill={`url(#${uid}-eye)`}
-            opacity="0.88"
+            cx={pose.farEye.cx}
+            cy={pose.farEye.cy}
+            rx={pose.farEye.rx}
+            ry={pose.farEye.ry}
+            transform={`rotate(${pose.farEye.rotate} ${pose.farEye.cx} ${pose.farEye.cy})`}
+            fill={`url(#${uid}-eye-far)`}
+            opacity={pose.farEye.opacity}
           />
-          <ellipse className="orb-voice-companion__eye-shimmer orb-voice-companion__eye-shimmer--left" cx="74.5" cy="85.2" rx="1.4" ry="0.85" fill="rgba(255, 255, 255, 0.68)" />
-          <ellipse className="orb-voice-companion__eye-shimmer orb-voice-companion__eye-shimmer--right" cx="89.2" cy="83.5" rx="1" ry="0.6" fill="rgba(255, 255, 255, 0.58)" opacity="0.82" />
+          <ellipse
+            className="orb-voice-companion__eye-shimmer orb-voice-companion__eye-shimmer--near"
+            cx={pose.nearShimmer.cx}
+            cy={pose.nearShimmer.cy}
+            rx={pose.nearShimmer.rx}
+            ry={pose.nearShimmer.ry}
+            fill="rgba(255, 255, 255, 0.68)"
+          />
+          <ellipse
+            className="orb-voice-companion__eye-shimmer orb-voice-companion__eye-shimmer--far"
+            cx={pose.farShimmer.cx}
+            cy={pose.farShimmer.cy}
+            rx={pose.farShimmer.rx}
+            ry={pose.farShimmer.ry}
+            fill="rgba(255, 255, 255, 0.58)"
+            opacity={pose.farShimmer.opacity}
+          />
         </g>
 
         {isSpeaking ? (
@@ -362,7 +436,7 @@ function OrbVoiceHeadFaceSvg({
               className="orb-voice-companion__mouth-wave orb-voice-companion__mouth-wave--speaking"
               data-orb-voice-waveform
               data-orb-voice-waveform-active="true"
-              d="M 62 132 C 68 136 76 138 84 134 C 80 140 70 142 62 138 Z"
+              d={pose.mouthSpeaking}
               stroke={`url(#${uid}-mouth)`}
               strokeWidth="2"
               strokeLinecap="round"
@@ -374,7 +448,7 @@ function OrbVoiceHeadFaceSvg({
             className="orb-voice-companion__mouth-wave orb-voice-companion__mouth-wave--idle"
             data-orb-voice-waveform
             data-orb-voice-waveform-active="false"
-            d="M 64 134 C 70 136 76 136 80 134"
+            d={pose.mouthIdle}
             stroke="rgba(186, 230, 253, 0.36)"
             strokeWidth="1.1"
             strokeLinecap="round"
@@ -454,6 +528,8 @@ export function OrbVoiceHead({
         ? 'orb-voice-companion--mobile-preview'
         : 'orb-voice-companion--hero'
 
+  const engaged = isEngagedAttention(state)
+
   return (
     <div
       className={`orb-voice-companion flex shrink-0 items-center justify-center ${sizeClass} ${className}`.trim()}
@@ -461,10 +537,11 @@ export function OrbVoiceHead({
       data-orb-voice-companion-size={resolvedSize}
       data-orb-voice-version={ORB_VOICE_VERSION}
       data-orb-voice-state={state}
+      data-orb-voice-attention={engaged ? 'engaged' : 'idle'}
       data-orb-voice-head
       data-orb-voice-head-size={resolvedSize}
       data-orb-voice-visual-authority="OrbVoiceHead"
-      data-orb-voice-behaviour="living-presence-v9"
+      data-orb-voice-behaviour="living-presence-v10"
       data-orb-voice-speech-driven={speechDriven ? 'true' : 'false'}
       style={behaviourStyle}
       aria-live="polite"
@@ -490,12 +567,13 @@ export function OrbVoiceHead({
                 pulse={pulse}
                 reducedMotion={reducedMotion}
               />
-              <OrbVoiceHeadAsset reducedMotion={reducedMotion} />
+              <OrbVoiceHeadAsset engaged={engaged} />
               <OrbVoiceHeadFaceSvg
                 uid={svgUid}
                 hue={hueProfile}
                 state={state}
                 blinkActive={blinkActive}
+                engaged={engaged}
               />
             </div>
           </div>

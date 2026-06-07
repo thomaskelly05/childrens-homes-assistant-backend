@@ -133,7 +133,7 @@ describe('ORB CSS parse and import contract', () => {
     assert.equal(ORB_LOGIN_CSS_FILE, 'app/orb/orb-login.css')
   })
 
-  it('layout and voice expose orb-style-v1 and living-head-v9 version markers', () => {
+  it('layout and voice expose orb-style-v1 and living-head-v10 version markers', () => {
     const layout = read('app/orb/layout.tsx')
     const head = read('components/orb-residential/orb-voice-head.tsx')
     const visualBuild = read('lib/orb/orb-visual-build.ts')

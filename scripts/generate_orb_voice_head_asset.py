@@ -37,7 +37,7 @@ def soft_ellipse(
     return Image.alpha_composite(base, layer)
 
 
-def build_silhouette_mask() -> Image.Image:
+def build_silhouette_mask_idle() -> Image.Image:
     """Wider, rounder 3/4 head/bust alpha mask — organic fade at shoulders."""
     mask = Image.new("L", (W, H), 0)
     draw = ImageDraw.Draw(mask)
@@ -65,7 +65,37 @@ def build_silhouette_mask() -> Image.Image:
     return mask
 
 
-def build_color_field() -> Image.Image:
+def build_silhouette_mask_engaged() -> Image.Image:
+    """Slightly more front-facing bust — attentive toward the adult."""
+    mask = Image.new("L", (W, H), 0)
+    draw = ImageDraw.Draw(mask)
+
+    # Fuller cranium — turned a little toward viewer
+    draw.ellipse((72, 10, 408, 256), fill=255)
+    draw.ellipse((208, 6, 432, 224), fill=248)
+    # Front face plane — centred, softer 3/4
+    draw.ellipse((72, 92, 248, 296), fill=238)
+    draw.ellipse((108, 46, 262, 182), fill=242)
+    # Cheek volume — both sides visible
+    draw.ellipse((48, 112, 168, 282), fill=212)
+    draw.ellipse((248, 118, 368, 272), fill=198)
+    # Chin
+    draw.ellipse((118, 214, 252, 318), fill=210)
+    # Ears — subtle glass folds
+    draw.ellipse((42, 132, 108, 218), fill=152)
+    draw.ellipse((332, 132, 398, 218), fill=152)
+    # Neck
+    draw.ellipse((178, 264, 302, 394), fill=182)
+    # Shoulders
+    draw.ellipse((22, 346, 458, 506), fill=132)
+    draw.ellipse((48, 386, 432, 546), fill=86)
+
+    mask = mask.filter(ImageFilter.GaussianBlur(16))
+    mask = mask.point(lambda p: min(255, int(p * 1.05)))
+    return mask
+
+
+def build_color_field(face_x: float = 118.0, face_y: float = 182.0) -> Image.Image:
     """Internal luminous glass colour — cyan/blue/violet/magenta, no dark shadows."""
     img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
 
@@ -98,8 +128,8 @@ def build_color_field() -> Image.Image:
                 g = lerp(blue[1], cyan[1], t * 0.85)
                 b = lerp(blue[2], cyan[2], t * 0.85)
 
-            # Face-plane highlight (left, subtle 3/4 profile read)
-            face_dist = math.hypot((x - 118) / 88, (y - 182) / 112)
+            # Face-plane highlight — subtle 3/4 profile read
+            face_dist = math.hypot((x - face_x) / 88, (y - face_y) / 112)
             face_boost = max(0.0, 1.0 - face_dist) ** 2.4 * 0.48
             r = min(255, int(r + white[0] * face_boost))
             g = min(255, int(g + white[1] * face_boost))
@@ -189,21 +219,48 @@ def write_webp_lossless_compatible(png_path: Path, webp_path: Path) -> None:
     img.save(webp_path, "WEBP", quality=92, method=6)
 
 
-def main() -> None:
-    OUT_DIR.mkdir(parents=True, exist_ok=True)
-    mask = build_silhouette_mask()
-    color = build_color_field()
+def render_variant(
+    *,
+    stem: str,
+    mask: Image.Image,
+    face_x: float,
+    face_y: float,
+) -> None:
+    color = build_color_field(face_x=face_x, face_y=face_y)
     glass = add_glass_layers(color)
     composed = apply_mask(glass, mask)
     final = fade_shoulders(composed)
     final = final.filter(ImageFilter.GaussianBlur(1.2))
 
-    png_path = OUT_DIR / "orb-voice-head-base.png"
-    webp_path = OUT_DIR / "orb-voice-head-base.webp"
+    png_path = OUT_DIR / f"{stem}.png"
+    webp_path = OUT_DIR / f"{stem}.webp"
     final.save(png_path, "PNG", optimize=True)
     write_webp_lossless_compatible(png_path, webp_path)
     print(f"Wrote {png_path} ({png_path.stat().st_size} bytes)")
     print(f"Wrote {webp_path} ({webp_path.stat().st_size} bytes)")
+
+
+def main() -> None:
+    OUT_DIR.mkdir(parents=True, exist_ok=True)
+
+    render_variant(
+        stem="orb-voice-head-idle",
+        mask=build_silhouette_mask_idle(),
+        face_x=118.0,
+        face_y=182.0,
+    )
+    render_variant(
+        stem="orb-voice-head-engaged",
+        mask=build_silhouette_mask_engaged(),
+        face_x=188.0,
+        face_y=180.0,
+    )
+
+    # Backward-compatible aliases for existing references
+    idle_png = OUT_DIR / "orb-voice-head-idle.png"
+    Image.open(idle_png).save(OUT_DIR / "orb-voice-head-base.png", "PNG", optimize=True)
+    write_webp_lossless_compatible(idle_png, OUT_DIR / "orb-voice-head-base.webp")
+    print("Wrote orb-voice-head-base.png/webp (idle alias)")
 
 
 if __name__ == "__main__":
