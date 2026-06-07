@@ -289,11 +289,31 @@ html[data-orb-residential='1'] [data-orb-workspace-panel='voice'] [data-orb-voic
   }
 }
 
+/* Mobile voice — dedicated hero stage (separate from mobile-preview strip) */
+[data-orb-voice-mobile-hero-stage] {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 0 0 auto;
+  min-height: 15rem;
+  overflow: visible;
+  z-index: 2;
+}
+
+[data-orb-voice-mobile-hero-stage] [data-orb-voice-head],
+[data-orb-voice-mobile-hero-stage] [data-orb-voice-companion-size='hero'],
+[data-orb-voice-mobile-hero-stage] .orb-voice-companion--hero {
+  flex: 0 0 auto;
+  margin-top: 0.25rem;
+  margin-bottom: 0.25rem;
+}
+
 /* Mobile voice — companion is the hero, controls stay docked */
 @media (max-width: 767px) {
-  [data-orb-voice-mobile] [data-orb-voice-companion-size='hero'] {
-    margin-top: 0.25rem;
-    margin-bottom: 0.25rem;
+  [data-orb-voice-mobile-hero-stage] {
+    width: clamp(13rem, 58vw, 19rem);
+    height: clamp(15rem, 34vh, 24rem);
+    min-height: 15rem;
   }
 
   [data-orb-voice-mobile] [data-orb-voice-status-label] {
