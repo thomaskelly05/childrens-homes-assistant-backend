@@ -9,7 +9,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '../..')
 const ORB_BUILD_VISUAL_VERSION = 'premium-final'
 const ORB_CSS_CONTRACT = 'premium-viewport-final'
 const ORB_LOGIN_VERSION = 'front-door-v4'
-const ORB_VOICE_VERSION = 'living-head-v3'
+const ORB_VOICE_VERSION = 'living-head-v4'
 const ORB_VOICE_COMPONENT_NAME = 'OrbVoiceCompanion'
 const ORB_LOGIN_COMPONENT_NAME = 'OrbLoginScreen'
 const ORB_CANONICAL_CSS_FILES = [
@@ -22,7 +22,9 @@ const ORB_CANONICAL_CSS_FILES = [
   'app/orb/orb-brand-asset.css',
   'app/orb/orb-light-layer-fix.css',
   'app/orb/orb-login-center.css',
-  'app/orb/orb-mobile.css'
+  'app/orb/orb-mobile.css',
+  'components/orb-residential/orb-voice-companion.css',
+  'components/orb-standalone/orb-voice-studio-layout.css'
 ] as const
 
 function read(relativePath: string) {
@@ -74,17 +76,36 @@ const ORB_CSS_AUDIT_MAP = [
   {
     file: 'app/orb/orb-premium-layout-pass.css',
     importedBy: ['app/orb/layout.tsx'],
+    voice: [],
+    login: ['.orb-login-shell', '.orb-login-hero', '[data-orb-login-mobile-hero]'],
+    shell: ['html[data-orb-residential] .orb-chat-layout--residential'],
+    status: 'current (viewport pass — voice visuals moved to component CSS)'
+  },
+  {
+    file: 'components/orb-residential/orb-voice-companion.css',
+    importedBy: ['components/orb-residential/orb-voice-companion.tsx'],
     voice: [
       '.orb-voice-companion',
-      '.orb-voice-companion__eyes',
       '.orb-voice-companion__head-material',
-      '[data-orb-voice-state]',
+      '[data-orb-voice-head]',
+      '[data-orb-voice-companion-size="hero"]'
+    ],
+    login: [],
+    shell: [],
+    status: 'current (canonical voice head visual authority)'
+  },
+  {
+    file: 'components/orb-standalone/orb-voice-studio-layout.css',
+    importedBy: ['components/orb-standalone/orb-voice-studio-layout.tsx'],
+    voice: [
+      '[data-orb-voice-studio]',
+      '[data-orb-voice-hero-stage]',
       '[data-orb-voice-state-panel]',
       '[data-orb-voice-mobile-preview]'
     ],
-    login: ['.orb-login-shell', '.orb-login-hero', '[data-orb-login-mobile-hero]'],
-    shell: ['html[data-orb-residential] .orb-chat-layout--residential'],
-    status: 'current (canonical voice head + login viewport pass)'
+    login: [],
+    shell: [],
+    status: 'current (voice studio layout + hero containment)'
   },
   {
     file: 'app/orb/orb-brand-asset.css',
@@ -129,16 +150,27 @@ const ORB_CSS_AUDIT_MAP = [
 ] as const
 
 describe('ORB visual render audit', () => {
-  it('canonical CSS files are imported only from app/orb/layout.tsx', () => {
+  it('canonical CSS files are imported from orb layout or voice components', () => {
     const layout = read('app/orb/layout.tsx')
+    const companion = read('components/orb-residential/orb-voice-companion.tsx')
+    const studio = read('components/orb-standalone/orb-voice-studio-layout.tsx')
+
     for (const file of ORB_CANONICAL_CSS_FILES) {
+      if (file === 'components/orb-residential/orb-voice-companion.css') {
+        assert.match(companion, /import '\.\/orb-voice-companion\.css'/)
+        continue
+      }
+      if (file === 'components/orb-standalone/orb-voice-studio-layout.css') {
+        assert.match(studio, /import '\.\/orb-voice-studio-layout\.css'/)
+        continue
+      }
       const importName = file.replace(/^app\/orb\//, './').replace(/^components\//, '@/components/')
       assert.match(layout, new RegExp(importName.replace(/\./g, '\\.')), `${file} must be imported in orb layout`)
     }
   })
 
   it('documents CSS audit map entries', () => {
-    assert.equal(ORB_CSS_AUDIT_MAP.length, 11)
+    assert.equal(ORB_CSS_AUDIT_MAP.length, 13)
     for (const entry of ORB_CSS_AUDIT_MAP) {
       assert.ok(entry.file, 'each map entry needs a file path')
       assert.ok(entry.importedBy.length > 0, `${entry.file} must list importers`)
@@ -182,7 +214,7 @@ describe('ORB visual render audit', () => {
   })
 
   it('voice head CSS is custom bust with eyes and state rings — not legacy glass orb', () => {
-    const css = read('app/orb/orb-premium-layout-pass.css')
+    const css = read('components/orb-residential/orb-voice-companion.css')
     assert.match(css, /--orb-voice-head-width/)
     assert.match(css, /\.orb-voice-companion__head-material/)
     assert.match(css, /\.orb-voice-companion__eyes/)

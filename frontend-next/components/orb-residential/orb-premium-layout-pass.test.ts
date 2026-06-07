@@ -126,7 +126,7 @@ describe('ORB Residential premium layout pass', () => {
 
   it('Voice keeps existing controls with living-head studio layout', () => {
     const voice = read('components/orb-standalone/orb-voice-station.tsx')
-    const css = read('app/orb/orb-premium-layout-pass.css')
+    const css = read('components/orb-residential/orb-voice-companion.css')
     assert.match(voice, /data-orb-voice-station/)
     assert.match(voice, /data-orb-voice-studio/)
     assert.match(voice, /OrbVoiceActions/)
