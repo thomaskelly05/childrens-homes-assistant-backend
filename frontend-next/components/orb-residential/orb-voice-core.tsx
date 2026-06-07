@@ -3,6 +3,10 @@
 import type { CSSProperties } from 'react'
 
 import type { OrbVoiceCompanionState } from '@/components/orb-residential/orb-voice-head'
+import {
+  ORB_VOICE_CORE_ASSET_PNG,
+  ORB_VOICE_CORE_ASSET_WEBP
+} from '@/lib/orb/orb-visual-build'
 
 export type OrbVoiceCoreProps = {
   state: OrbVoiceCompanionState
@@ -13,7 +17,7 @@ export type OrbVoiceCoreProps = {
 
 /**
  * Living multi-coloured ORB intelligence core for Voice.
- * Layered glass sphere with state-based colour, motion, and speech-energy response.
+ * Transparent 3D sphere asset as the body; CSS layers provide atmosphere only.
  */
 export function OrbVoiceCore({ state, speechEnergy, speechDriven, reducedMotion }: OrbVoiceCoreProps) {
   const isSpeaking = state === 'speaking'
@@ -21,7 +25,6 @@ export function OrbVoiceCore({ state, speechEnergy, speechDriven, reducedMotion 
   const isThinking = state === 'thinking'
   const showListenMotion = isListening && !reducedMotion
   const showThinkMotion = isThinking && !reducedMotion
-  const showPlasmaMotion = !reducedMotion
 
   return (
     <div className="orb-voice-core" data-orb-voice-core data-orb-voice-core-state={state} aria-hidden>
@@ -52,13 +55,12 @@ export function OrbVoiceCore({ state, speechEnergy, speechDriven, reducedMotion 
         </div>
       ) : null}
 
-      {showListenMotion ? (
-        <div className="orb-voice-core__particles" data-orb-voice-particles aria-hidden>
-          <span className="orb-voice-core__particle orb-voice-core__particle--1" />
-          <span className="orb-voice-core__particle orb-voice-core__particle--2" />
-          <span className="orb-voice-core__particle orb-voice-core__particle--3" />
-          <span className="orb-voice-core__particle orb-voice-core__particle--4" />
-        </div>
+      {showThinkMotion ? (
+        <div
+          className="orb-voice-core__thinking-glow"
+          data-orb-voice-thinking-glow
+          aria-hidden
+        />
       ) : null}
 
       <div
@@ -68,49 +70,19 @@ export function OrbVoiceCore({ state, speechEnergy, speechDriven, reducedMotion 
         aria-hidden
       >
         <div className="orb-voice-core__sphere" data-orb-voice-core-sphere>
-          <div className="orb-voice-core__sphere-clip" aria-hidden>
-            <div
-              className="orb-voice-core__inner-body orb-voice-core__depth-base"
-              data-orb-voice-inner-body
-              aria-hidden
+          <picture className="orb-voice-core__asset" data-orb-voice-orb-asset>
+            <source srcSet={ORB_VOICE_CORE_ASSET_WEBP} type="image/webp" />
+            <img
+              className="orb-voice-core__asset-img"
+              src={ORB_VOICE_CORE_ASSET_PNG}
+              alt=""
+              decoding="async"
+              draggable={false}
             />
-            <div
-              className="orb-voice-core__inner-plasma orb-voice-core__plasma-field"
-              data-orb-voice-inner-plasma
-              data-orb-voice-plasma-field
-              data-orb-voice-plasma-motion={showPlasmaMotion ? 'true' : 'false'}
-              aria-hidden
-            />
-            <div className="orb-voice-core__plasma orb-voice-core__plasma--a" aria-hidden />
-            <div className="orb-voice-core__plasma orb-voice-core__plasma--b" aria-hidden />
-            <div className="orb-voice-core__plasma orb-voice-core__plasma--c" aria-hidden />
-            <div className="orb-voice-core__field orb-voice-core__field--a" aria-hidden />
-            <div className="orb-voice-core__field orb-voice-core__field--b" aria-hidden />
-            {showThinkMotion ? (
-              <div className="orb-voice-core__swirl" data-orb-voice-thinking-swirl aria-hidden />
-            ) : null}
-            <div className="orb-voice-core__inner-shadow" aria-hidden />
-            <div className="orb-voice-core__refraction" aria-hidden />
-          </div>
-
-          <div
-            className="orb-voice-core__shell orb-voice-core__glass-shell"
-            data-orb-voice-shell
-            aria-hidden
-          />
-          <div className="orb-voice-core__specular" aria-hidden />
-          <div
-            className="orb-voice-core__secondary-highlight orb-voice-core__specular-secondary"
-            aria-hidden
-          />
-          <div className="orb-voice-core__rim orb-voice-core__rim-light" data-orb-voice-rim aria-hidden />
-          <div className="orb-voice-core__rim-bloom" aria-hidden />
-          <div
-            className="orb-voice-core__edge-glow orb-voice-core__warm-rim-bloom"
-            data-orb-voice-edge-glow
-            aria-hidden
-          />
-          <div className="orb-voice-core__glass-highlight" aria-hidden />
+          </picture>
+          {showThinkMotion ? (
+            <div className="orb-voice-core__swirl orb-voice-core__shimmer" data-orb-voice-thinking-swirl aria-hidden />
+          ) : null}
         </div>
       </div>
 

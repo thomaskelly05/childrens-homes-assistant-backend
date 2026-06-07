@@ -228,7 +228,7 @@ export function OrbVoiceHead({
       data-orb-voice-head-size={resolvedSize}
       data-orb-voice-visual-authority="OrbVoiceHead"
       data-orb-voice-behaviour="living-core-v1"
-      data-orb-voice-renderer="css"
+      data-orb-voice-renderer="asset+css"
       data-orb-voice-speech-driven={speechDriven ? 'true' : 'false'}
       style={behaviourStyle}
       aria-live="polite"
