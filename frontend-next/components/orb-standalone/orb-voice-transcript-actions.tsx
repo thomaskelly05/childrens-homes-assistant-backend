@@ -45,7 +45,7 @@ export function OrbVoiceTranscriptActions({
         className={stack ? btnStack : btnInline}
         onClick={() => void onCopy()}
       >
-        Copy transcript
+        Copy full conversation
       </button>
       {onSave ? (
         <button

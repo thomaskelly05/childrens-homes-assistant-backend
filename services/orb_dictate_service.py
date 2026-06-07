@@ -55,8 +55,10 @@ from services.orb_recording_framework_service import (
 )
 from services.orb_saved_output_service import orb_saved_output_service
 from services.orb_brain_metadata_service import build_brain_metadata
+from services.orb_document_brain_adapter_service import orb_document_brain_adapter_service
 from services.indicare_intelligence_core_service import indicare_intelligence_core_service
 from services.indicare_intelligence_route_finalize_service import intelligence_context_summary
+from services.orb_residential_quality_service import orb_residential_quality_service
 from services.recording_intelligence_service import recording_intelligence_service
 
 logger = logging.getLogger("indicare.orb_dictate")
@@ -98,21 +100,17 @@ def _dictate_brain_metadata(
     mode: str | None = None,
     transcript_text: str = "",
 ) -> dict[str, Any]:
-    intel_packet = indicare_intelligence_core_service.build_intelligence_packet(
+    ctx = orb_document_brain_adapter_service.build_document_brain_context(
         transcript_text or "dictate recording",
         mode=mode or note_type,
-    )
-    intel_summary = intelligence_context_summary(intel_packet)
-    return build_brain_metadata(
-        surface="orb_standalone",
-        mode=mode or note_type,
-        lens=note_type,
         feature="dictate",
-        extra={
-            "output_type": note_type,
-            "indicare_intelligence_core": intel_summary,
-        },
+        note_type=note_type,
     )
+    meta = dict(ctx["brain_metadata"])
+    meta["output_type"] = note_type
+    meta["indicare_intelligence_core"] = ctx["intelligence_summary"]
+    meta["brain_adapter"] = ctx["adapter"]
+    return meta
 
 
 def _resolve_note_type(request: OrbDictateGenerateRequest) -> str:
@@ -597,6 +595,10 @@ def analyze_dictate_session(request: OrbDictateAnalyzeRequest) -> OrbDictateAnal
     for item in framework_missing:
         if item not in missing:
             missing.append(item)
+
+    for prompt in orb_residential_quality_service.build_missing_capture_prompts(quality, note_type=note_type):
+        if prompt not in missing:
+            missing.append(prompt)
 
     intel_packet = indicare_intelligence_core_service.build_intelligence_packet(
         transcript,

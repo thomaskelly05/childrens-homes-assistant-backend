@@ -30,3 +30,12 @@ def test_dictate_bridge_actions():
     )
     assert "data-orb-voice-to-record" in station
     assert "data-orb-voice-handover" in station
+    assert "data-orb-voice-to-write" in station
+    assert "data-orb-voice-manager-oversight" in station
+    assert "data-orb-voice-action-list" in station
+
+
+def test_voice_syncs_orb_replies_into_transcript():
+    station = read_frontend("components/orb-standalone/orb-voice-station.tsx")
+    assert "lastSyncedReplyKeyRef" in station
+    assert "provider: 'orb_brain'" in station

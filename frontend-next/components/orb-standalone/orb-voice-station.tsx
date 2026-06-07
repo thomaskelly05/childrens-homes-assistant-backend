@@ -14,7 +14,10 @@ import {
 } from '@/components/orb-residential/orb-voice-companion'
 import { OrbVoiceDebugVisualShowcase } from '@/components/orb-standalone/orb-voice-studio-layout'
 import type { useStandaloneOrbVoice } from '@/components/orb-standalone/use-standalone-orb-voice'
-import { saveVoiceTranscript } from '@/lib/orb/voice/save-voice-transcript'
+import {
+  formatVoiceTurnsPlainText,
+  saveVoiceTranscript
+} from '@/lib/orb/voice/save-voice-transcript'
 import {
   extractAnswerQualityGate,
   extractIndicareIntelligenceCore
@@ -147,6 +150,7 @@ export function OrbVoiceStation({
   assistantReplyUserHint,
   assistantReplyContext,
   onOpenDictate,
+  onOpenWrite,
   onOpenVoiceSettings,
   subscriptionActive = true,
   isAdminUser = false,
@@ -174,11 +178,13 @@ export function OrbVoiceStation({
     noteType?: import('@/lib/orb/dictate/orb-dictate-types').OrbDictateNoteType,
     opts?: { studio?: boolean }
   ) => void
+  onOpenWrite?: (content: string, title?: string) => void
   onOpenVoiceSettings?: () => void
 }) {
   const [voiceStartStage, setVoiceStartStage] = useState<VoiceStartStage>('idle')
   const [sessionEnded, setSessionEnded] = useState(false)
   const [turns, setTurns] = useState<VoiceTurn[]>([])
+  const lastSyncedReplyKeyRef = useRef<string | null>(null)
   const [saveNotice, setSaveNotice] = useState<string | null>(null)
   const [savingTranscript, setSavingTranscript] = useState(false)
   const [micPermission, setMicPermission] = useState<MicrophonePermissionState>('unknown')
@@ -332,9 +338,11 @@ export function OrbVoiceStation({
     ? browserTranscriptText
     : formatTurnsAsTranscript(turns)
 
-  const turnsForSave = useCallback((): VoiceTurn[] => {
+  const conversationTurns = useMemo((): VoiceTurn[] => {
+    const dialogue = turns.filter((t) => t.role === 'user' || t.role === 'assistant')
+    if (dialogue.length > 0) return dialogue
     if (useBrowserLaunch && browserTranscriptText) {
-      return [
+      const browserTurns: VoiceTurn[] = [
         {
           id: newTurnId(),
           role: 'user',
@@ -344,15 +352,35 @@ export function OrbVoiceStation({
           provider: 'browser'
         }
       ]
+      const reply = (assistantReply || '').trim()
+      if (reply) {
+        browserTurns.push({
+          id: newTurnId(),
+          role: 'assistant',
+          text: reply,
+          startedAt: new Date().toISOString(),
+          mode: voice.settings.voiceMode,
+          provider: 'orb_brain'
+        })
+      }
+      return browserTurns
     }
-    return turns.filter((t) => t.role === 'user' || t.role === 'assistant')
+    return dialogue
   }, [
+    assistantReply,
     browserTranscriptText,
     sessionStartedAt,
     turns,
     useBrowserLaunch,
     voice.settings.voiceMode
   ])
+
+  const fullConversationText = useMemo(
+    () => formatVoiceTurnsPlainText(conversationTurns),
+    [conversationTurns]
+  )
+
+  const turnsForSave = useCallback((): VoiceTurn[] => conversationTurns, [conversationTurns])
 
   const browserStatusOverride =
     voiceStartError ||
@@ -406,6 +434,7 @@ export function OrbVoiceStation({
   }, [realtimeState])
 
   const resetSession = useCallback(() => {
+    lastSyncedReplyKeyRef.current = null
     clearActiveOrbRealtimeVoiceClient()
     setVoiceStartStage('idle')
     setSessionEnded(false)
@@ -445,6 +474,29 @@ export function OrbVoiceStation({
     },
     [onSendToOrb, voice.settings.voiceMode]
   )
+
+  /** Sync ORB brain replies into the two-sided voice transcript (adult + ORB turns). */
+  useEffect(() => {
+    const reply = (assistantReply || '').trim()
+    const key = assistantReplyKey ?? null
+    if (!reply || !key || key === lastSyncedReplyKeyRef.current) return
+    lastSyncedReplyKeyRef.current = key
+    setTurns((prev) => {
+      const last = prev[prev.length - 1]
+      if (last?.role === 'assistant' && last.text.trim() === reply) return prev
+      return [
+        ...prev,
+        {
+          id: newTurnId(),
+          role: 'assistant',
+          text: reply,
+          startedAt: new Date().toISOString(),
+          mode: voice.settings.voiceMode,
+          provider: 'orb_brain'
+        }
+      ]
+    })
+  }, [assistantReply, assistantReplyKey, voice.settings.voiceMode])
 
   useEffect(() => {
     if (!open) resetSession()
@@ -810,10 +862,11 @@ export function OrbVoiceStation({
   }
 
   const handleCopyTranscript = useCallback(() => {
-    void navigator.clipboard?.writeText(voiceTranscriptText)
-    setSaveNotice('Transcript copied.')
+    const text = fullConversationText || voiceTranscriptText || browserTranscriptText
+    void navigator.clipboard?.writeText(text)
+    setSaveNotice(fullConversationText.includes('ORB:') ? 'Full conversation copied.' : 'Transcript copied.')
     window.setTimeout(() => setSaveNotice(null), 3000)
-  }, [voiceTranscriptText])
+  }, [browserTranscriptText, fullConversationText, voiceTranscriptText])
 
   const handleTypeInstead = () => {
     onTypeInstead?.()
@@ -1252,13 +1305,56 @@ export function OrbVoiceStation({
                 data-orb-voice-handover
                 onClick={() =>
                   onOpenDictate(
-                    `Handover from ORB Voice session:\n\n${voiceTranscriptText || browserTranscriptText}`,
+                    `Handover from ORB Voice session:\n\n${fullConversationText || voiceTranscriptText || browserTranscriptText}`,
                     'handover_note',
                     { studio: true }
                   )
                 }
               >
                 Create handover from this conversation
+              </button>
+              {onOpenWrite ? (
+                <button
+                  type="button"
+                  className="w-full rounded-full border border-[var(--orb-line)] bg-[var(--orb-primary-soft)]/40 px-3 py-2 text-xs font-medium text-[var(--orb-primary)]"
+                  data-orb-voice-to-write
+                  onClick={() =>
+                    onOpenWrite(
+                      fullConversationText || voiceTranscriptText || browserTranscriptText,
+                      'ORB Voice conversation'
+                    )
+                  }
+                >
+                  Open in ORB Write
+                </button>
+              ) : null}
+              <button
+                type="button"
+                className="w-full rounded-full border border-[var(--orb-line)] px-3 py-2 text-xs text-[var(--orb-foreground)]"
+                data-orb-voice-manager-oversight
+                onClick={() =>
+                  onOpenDictate(
+                    `Manager oversight note from ORB Voice session:\n\n${fullConversationText || voiceTranscriptText || browserTranscriptText}`,
+                    'manager_oversight_note',
+                    { studio: true }
+                  )
+                }
+              >
+                Create manager oversight note
+              </button>
+              <button
+                type="button"
+                className="w-full rounded-full border border-[var(--orb-line)] px-3 py-2 text-xs text-[var(--orb-foreground)]"
+                data-orb-voice-action-list
+                onClick={() =>
+                  onOpenDictate(
+                    `Action list from ORB Voice session:\n\n${fullConversationText || voiceTranscriptText || browserTranscriptText}`,
+                    'daily_record',
+                    { studio: true }
+                  )
+                }
+              >
+                Create action list
               </button>
               <p className="text-[10px] leading-4 text-[var(--orb-muted)]" data-orb-voice-dictate-boundary>
                 Drafts open in Dictate for review — nothing is saved to live records automatically.

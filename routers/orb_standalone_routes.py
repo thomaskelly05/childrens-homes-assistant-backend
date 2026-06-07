@@ -49,6 +49,7 @@ from services.indicare_intelligence_surface_router import (
 )
 from services.orb_action_engine_service import orb_action_engine_service
 from services.orb_brain_metadata_service import attach_to_payload, merge_context_used
+from services.orb_residential_quality_service import orb_residential_quality_service
 from services.orb_brain_selection_shadow_service import (
     attach_brain_selection_shadow,
     run_brain_selection_shadow,
@@ -564,6 +565,33 @@ class OrbStandaloneSurfaceRouteRequest(BaseModel):
     intent: str = Field(..., min_length=1, max_length=8000)
     mode: str | None = Field(default=None, max_length=80)
     has_document_upload: bool = False
+
+
+class OrbStandaloneQualityCheckRequest(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    text: str = Field(..., min_length=1, max_length=120_000)
+    note_type: str = Field(default="daily_record", max_length=80)
+    record_type_id: str | None = Field(default=None, max_length=120)
+    template_id: str | None = Field(default=None, max_length=120)
+    surface: str = Field(default="write", max_length=40)
+
+
+@router.post("/quality-check")
+async def standalone_orb_quality_check(
+    body: OrbStandaloneQualityCheckRequest,
+    current_user=Depends(require_standalone_orb_access),
+):
+    """Shared child-centred quality layer for Voice, Dictate, Chat and Write."""
+    surface = body.surface if body.surface in {"voice", "dictate", "chat", "write", "template", "output"} else "write"
+    result = orb_residential_quality_service.run_residential_quality_check(
+        body.text,
+        note_type=body.note_type,
+        record_type_id=body.record_type_id,
+        template_id=body.template_id,
+        surface=surface,  # type: ignore[arg-type]
+    )
+    return {"success": True, "data": result}
 
 
 @router.get("/capabilities")

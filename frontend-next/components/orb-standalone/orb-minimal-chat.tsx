@@ -18,9 +18,9 @@ import {
   Sparkles
 } from 'lucide-react'
 
+import { askOrbBrain } from '@/lib/orb/orb-brain-router'
 import {
   parseStandaloneOrbSendError,
-  queryStandaloneOrbConversation,
   type StandaloneOrbCitation
 } from '@/lib/orb/standalone-client'
 
@@ -79,13 +79,16 @@ export function OrbMinimalChat() {
     setMessages((current) => [...current, userMessage, thinkingMessage])
 
     try {
-      console.info('[orb-minimal-chat] sending conversation request')
-      const response = await queryStandaloneOrbConversation({
-        message: text,
-        mode: activeMode,
-        conversation_id: conversationIdRef.current,
-        history,
-        detail: 'balanced'
+      console.info('[orb-minimal-chat] sending conversation request via askOrbBrain')
+      const response = await askOrbBrain({
+        request: {
+          message: text,
+          mode: activeMode,
+          conversation_id: conversationIdRef.current,
+          history,
+          detail: 'balanced'
+        },
+        context: { source: 'chat', mode: activeMode }
       })
       conversationIdRef.current = response.conversation_id || conversationIdRef.current
       const citations = response.citations?.length ? response.citations : response.sources
