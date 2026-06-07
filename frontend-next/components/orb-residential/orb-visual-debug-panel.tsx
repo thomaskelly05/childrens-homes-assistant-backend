@@ -9,6 +9,7 @@ import {
   ORB_BUILD_VISUAL_VERSION,
   ORB_CANONICAL_CSS_FILES,
   ORB_CSS_CONTRACT,
+  ORB_STYLE_VERSION,
   ORB_LOGIN_COMPONENT_NAME,
   ORB_LOGIN_VERSION,
   ORB_VOICE_COMPONENT_NAME,
@@ -23,6 +24,7 @@ type VisualDebugSnapshot = {
   loginComponent: string
   cssContract: string
   buildVisualVersion: string
+  styleVersion: string | null
   voiceVersion: string | null
   loginVersion: string | null
   buildCommit: string
@@ -72,7 +74,7 @@ function stylesheetHintsVoiceCss(): boolean {
   try {
     for (const sheet of Array.from(document.styleSheets)) {
       const href = sheet.href ?? ''
-      if (href.includes('orb-voice-companion') || href.includes('orb-voice-studio-layout')) {
+      if (href.includes('orb-voice') || href.includes('orb-voice-studio-layout')) {
         return true
       }
     }
@@ -158,6 +160,7 @@ function collectVisualDebugSnapshot(): VisualDebugSnapshot {
     loginComponent: loginRoot ? ORB_LOGIN_COMPONENT_NAME : '—',
     cssContract: html?.dataset.orbCssContract ?? ORB_CSS_CONTRACT,
     buildVisualVersion: html?.dataset.orbBuildVisualVersion ?? ORB_BUILD_VISUAL_VERSION,
+    styleVersion: html?.dataset.orbStyleVersion ?? ORB_STYLE_VERSION,
     voiceVersion: voiceCompanion?.getAttribute('data-orb-voice-version') ?? null,
     loginVersion: loginRoot?.getAttribute('data-orb-login-version') ?? null,
     buildCommit: build.commit,

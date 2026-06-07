@@ -1,6 +1,6 @@
 import type { OrbAppearanceMode } from '@/lib/orb/orb-appearance'
 import { getOrbThemeCssVariables } from '@/lib/orb/orb-theme'
-import { ORB_BUILD_VISUAL_VERSION, ORB_CSS_CONTRACT } from '@/lib/orb/orb-visual-build'
+import { ORB_BUILD_VISUAL_VERSION, ORB_CSS_CONTRACT, ORB_STYLE_VERSION } from '@/lib/orb/orb-visual-build'
 
 export type ApplyOrbResidentialThemeInput = {
   selectedAppearance: OrbAppearanceMode
@@ -48,6 +48,7 @@ export function applyOrbResidentialTheme({
   html.dataset.orbAppearance = selectedAppearance
   html.dataset.orbAppearanceMode = selectedAppearance
   html.dataset.orbSystemTheme = resolvedTheme
+  html.dataset.orbStyleVersion = ORB_STYLE_VERSION
   html.dataset.orbBuildVisualVersion = ORB_BUILD_VISUAL_VERSION
   html.dataset.orbCssContract = ORB_CSS_CONTRACT
   html.style.colorScheme = resolvedTheme

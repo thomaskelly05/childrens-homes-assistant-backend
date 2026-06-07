@@ -1,0 +1,8 @@
+/**
+ * ORB Residential — canonical shell layer (orb-style-v1).
+ * Sidebar, layout, viewport, workspace chrome.
+ */
+@import './orb-desktop.css';
+@import '@/components/orb/premium/orb-premium-studio-v3.css';
+@import './orb-premium-layout-pass.css';
+@import './orb-mobile.css';

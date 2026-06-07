@@ -34,11 +34,11 @@ describe('ORB Residential source-of-truth audit', () => {
     const companion = read('components/orb-residential/orb-voice-companion.tsx')
     const studio = read('components/orb-standalone/orb-voice-studio-layout.tsx')
     const layoutPass = read('app/orb/orb-premium-layout-pass.css')
-    const companionCss = read('components/orb-residential/orb-voice-companion.css')
+    const companionCss = read('components/orb-residential/orb-voice.css')
     const studioCss = read('components/orb-standalone/orb-voice-studio-layout.css')
     const visualBuild = read('lib/orb/orb-visual-build.ts')
 
-    assert.match(companion, /import '\.\/orb-voice-companion\.css'/)
+    assert.match(companion, /import '\.\/orb-voice\.css'/)
     assert.match(studio, /import '\.\/orb-voice-studio-layout\.css'/)
     assert.match(visualBuild, /ORB_VOICE_CSS_FILE/)
     assert.match(visualBuild, /living-head-v4/)
@@ -53,7 +53,7 @@ describe('ORB Residential source-of-truth audit', () => {
   })
 
   it('hero sizing contract is non-collapsed and mini/mobile cannot apply globally', () => {
-    const css = read('components/orb-residential/orb-voice-companion.css')
+    const css = read('components/orb-residential/orb-voice.css')
 
     assert.match(css, /width: clamp\(260px,\s*30vw,\s*380px\)/)
     assert.match(css, /height: clamp\(300px,\s*42vh,\s*430px\)/)
@@ -67,7 +67,7 @@ describe('ORB Residential source-of-truth audit', () => {
   })
 
   it('legacy sphere selectors are neutralised inside voice companion', () => {
-    const css = read('components/orb-residential/orb-voice-companion.css')
+    const css = read('components/orb-residential/orb-voice.css')
     assert.match(css, /\.orb-voice-companion \.orb-living-sphere[\s\S]*display:\s*none/)
     assert.match(css, /\.orb-voice-companion \.orb-sphere[\s\S]*display:\s*none/)
     assert.match(css, /\.orb-voice-companion \.orb-presence--voice[\s\S]*display:\s*none/)

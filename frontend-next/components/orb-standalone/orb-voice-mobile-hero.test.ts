@@ -20,7 +20,7 @@ describe('ORB Voice mobile hero companion', () => {
   })
 
   it('mobile hero has non-collapsed sizing contract separate from desktop hero', () => {
-    const css = read('components/orb-residential/orb-voice-companion.css')
+    const css = read('components/orb-residential/orb-voice.css')
     const studioCss = read('components/orb-standalone/orb-voice-studio-layout.css')
 
     assert.match(css, /\[data-orb-voice-mobile-hero-stage\][\s\S]*width:\s*clamp\(13rem,\s*58vw,\s*19rem\)/)
@@ -64,7 +64,7 @@ describe('ORB Voice mobile hero companion', () => {
   it('desktop Voice studio hero stage remains unchanged', () => {
     const station = read('components/orb-standalone/orb-voice-station.tsx')
     const studioCss = read('components/orb-standalone/orb-voice-studio-layout.css')
-    const css = read('components/orb-residential/orb-voice-companion.css')
+    const css = read('components/orb-residential/orb-voice.css')
 
     assert.match(station, /data-orb-voice-hero-stage/)
     assert.match(station, /<OrbVoiceCompanion state=\{companionState\} size="hero"/)

@@ -1,4 +1,7 @@
-/* Premium two-column login — desktop centred, mobile single column */
+/**
+ * ORB Login — single visual authority (OrbLoginScreen → orb-login.css).
+ * Front-door login for /login redirect, /orb/login redirect, and /orb unauthenticated gate.
+ */
 
 @media (min-width: 1024px) {
   .orb-login-shell {

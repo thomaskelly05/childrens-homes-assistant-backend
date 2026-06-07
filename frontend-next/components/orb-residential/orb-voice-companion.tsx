@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, type CSSProperties } from 'react'
 
-import './orb-voice-companion.css'
+import './orb-voice.css'
 
 import { ORB_VOICE_VERSION } from '@/lib/orb/orb-visual-build'
 import { getOrbHueProfile, type OrbVisualState } from '@/lib/orb/rendering/visual-system'

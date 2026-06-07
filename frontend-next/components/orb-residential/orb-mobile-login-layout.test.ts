@@ -13,7 +13,7 @@ function read(relativePath: string) {
 describe('ORB mobile login layout', () => {
   it('uses single-column mobile markers and scrollable shell', () => {
     const login = read('components/orb-residential/orb-login-screen.tsx')
-    const css = read('app/orb/orb-login-center.css')
+    const css = read('app/orb/orb-login.css')
     assert.match(login, /data-orb-login-mobile-single-column/)
     assert.match(login, /data-orb-login-scrollable/)
     assert.match(css, /100svh/)
@@ -23,7 +23,7 @@ describe('ORB mobile login layout', () => {
 
   it('scales down mobile sphere and adds safe bottom padding', () => {
     const login = read('components/orb-residential/orb-login-screen.tsx')
-    const css = read('app/orb/orb-login-center.css')
+    const css = read('app/orb/orb-login.css')
     assert.match(login, /data-orb-login-mobile-hero/)
     assert.match(login, /scale-\[0\.62\]/)
     assert.match(css, /data-orb-login-safe-bottom/)
@@ -33,7 +33,7 @@ describe('ORB mobile login layout', () => {
   it('OAuth buttons are readable when disabled', () => {
     const login = read('components/orb-residential/orb-login-screen.tsx')
     const button = read('components/orb-residential/ui/orb-auth-button.tsx')
-    const css = read('app/orb/orb-login-center.css')
+    const css = read('app/orb/orb-login.css')
     assert.match(login, /sign-in unavailable/)
     assert.match(button, /unavailableLabel/)
     assert.match(css, /orb-auth-button--disabled/)

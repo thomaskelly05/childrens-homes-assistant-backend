@@ -1,0 +1,5 @@
+/**
+ * ORB Residential — canonical components layer (orb-style-v1).
+ * Buttons, cards, modals, inputs, sidebar chrome.
+ */
+@import '@/components/orb/premium/orb-premium-v2.css';

@@ -34,7 +34,7 @@ describe('ORB Residential premium layout pass', () => {
     const layout = read('app/orb/layout.tsx')
     const css = read('app/orb/orb-premium-layout-pass.css')
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
-    assert.match(layout, /orb-premium-layout-pass\.css/)
+    assert.match(layout, /orb-shell\.css/)
     assert.match(css, /100dvh/)
     assert.match(css, /overflow:\s*hidden/)
     assert.match(companion, /h-\[100dvh\]/)
@@ -65,7 +65,7 @@ describe('ORB Residential premium layout pass', () => {
 
   it('login hero sphere is sized to avoid clipping', () => {
     const login = read('components/orb-residential/orb-login-screen.tsx')
-    const css = read('app/orb/orb-login-center.css')
+    const css = read('app/orb/orb-login.css')
     const passCss = read('app/orb/orb-premium-layout-pass.css')
     const visualBuild = read('lib/orb/orb-visual-build.ts')
     assert.match(visualBuild, /ORB_LOGIN_VERSION = 'front-door-v4'/)
@@ -126,7 +126,7 @@ describe('ORB Residential premium layout pass', () => {
 
   it('Voice keeps existing controls with living-head studio layout', () => {
     const voice = read('components/orb-standalone/orb-voice-station.tsx')
-    const css = read('components/orb-residential/orb-voice-companion.css')
+    const css = read('components/orb-residential/orb-voice.css')
     assert.match(voice, /data-orb-voice-station/)
     assert.match(voice, /data-orb-voice-studio/)
     assert.match(voice, /OrbVoiceActions/)
