@@ -115,7 +115,7 @@ def test_frontend_exports_stream_send():
 def test_care_companion_uses_true_streaming():
     companion = REPO_ROOT / "frontend-next" / "components" / "orb-standalone" / "orb-care-companion.tsx"
     text = companion.read_text(encoding="utf-8")
-    assert "sendStandaloneOrbMessageStream" in text
+    assert "askOrbBrain" in text
     assert "stream_fallback" in text
 
 
