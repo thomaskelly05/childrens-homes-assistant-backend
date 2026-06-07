@@ -105,6 +105,11 @@ export function OrbVoiceCore({ state, speechEnergy, speechDriven, reducedMotion 
           />
           <div className="orb-voice-core__rim orb-voice-core__rim-light" data-orb-voice-rim aria-hidden />
           <div className="orb-voice-core__rim-bloom" aria-hidden />
+          <div
+            className="orb-voice-core__edge-glow orb-voice-core__warm-rim-bloom"
+            data-orb-voice-edge-glow
+            aria-hidden
+          />
           <div className="orb-voice-core__glass-highlight" aria-hidden />
         </div>
       </div>

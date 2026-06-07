@@ -65,30 +65,30 @@ function resolveCoreScale(state: OrbVoiceCompanionState, speechEnergy: number): 
 }
 
 function resolveCoreBrightness(state: OrbVoiceCompanionState, speechEnergy: number): number {
-  if (state === 'speaking') return 1.08 + speechEnergy * 0.16
-  if (state === 'listening') return 1.12
-  if (state === 'thinking') return 1.1
-  if (state === 'paused') return 0.96
-  if (state === 'error') return 0.82
-  return 1.06
+  if (state === 'speaking') return 1.14 + speechEnergy * 0.18
+  if (state === 'listening') return 1.18
+  if (state === 'thinking') return 1.14
+  if (state === 'paused') return 1.02
+  if (state === 'error') return 0.86
+  return 1.12
 }
 
 function resolveAuraOpacity(state: OrbVoiceCompanionState, speechEnergy: number): number {
-  if (state === 'speaking') return 0.56 + speechEnergy * 0.3
-  if (state === 'listening') return 0.62
-  if (state === 'thinking') return 0.58
-  if (state === 'paused') return 0.38
+  if (state === 'speaking') return 0.62 + speechEnergy * 0.32
+  if (state === 'listening') return 0.68
+  if (state === 'thinking') return 0.64
+  if (state === 'paused') return 0.44
   if (state === 'error') return 0.28
-  return 0.52
+  return 0.58
 }
 
 function resolveWarmStrength(state: OrbVoiceCompanionState, speechEnergy: number): number {
-  if (state === 'speaking') return 0.76 + speechEnergy * 0.22
-  if (state === 'listening') return 0.62
-  if (state === 'thinking') return 0.84
-  if (state === 'paused') return 0.58
-  if (state === 'error') return 0.42
-  return 0.7
+  if (state === 'speaking') return 0.82 + speechEnergy * 0.18
+  if (state === 'listening') return 0.58
+  if (state === 'thinking') return 0.72
+  if (state === 'paused') return 0.52
+  if (state === 'error') return 0.38
+  return 0.64
 }
 
 function resolveHueShift(state: OrbVoiceCompanionState): number {
@@ -124,12 +124,12 @@ function resolveStateHue(state: OrbVoiceCompanionState): number {
 }
 
 function resolveRimStrength(state: OrbVoiceCompanionState, speechEnergy: number): number {
-  if (state === 'speaking') return 0.62 + speechEnergy * 0.34
-  if (state === 'listening') return 0.68
-  if (state === 'thinking') return 0.64
-  if (state === 'paused') return 0.42
+  if (state === 'speaking') return 0.74 + speechEnergy * 0.38
+  if (state === 'listening') return 0.78
+  if (state === 'thinking') return 0.72
+  if (state === 'paused') return 0.52
   if (state === 'error') return 0.34
-  return 0.58
+  return 0.7
 }
 
 function resolvePlasmaSpeed(state: OrbVoiceCompanionState, reducedMotion: boolean): number {
