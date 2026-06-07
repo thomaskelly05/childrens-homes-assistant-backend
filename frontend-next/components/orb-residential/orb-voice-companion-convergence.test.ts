@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, it } from 'node:test'
@@ -39,12 +39,14 @@ describe('ORB Voice companion visual convergence', () => {
     }
   })
 
-  it('OrbVoiceHead exposes living-core-v1 markers and CSS orb renderer', () => {
+  it('OrbVoiceHead exposes living-core-v1 markers and asset+css orb renderer', () => {
     const head = read('components/orb-residential/orb-voice-head.tsx')
     const core = read('components/orb-residential/orb-voice-core.tsx')
     const companion = read('components/orb-residential/orb-voice-companion.tsx')
     const visualBuild = read('lib/orb/orb-visual-build.ts')
     assert.match(visualBuild, /ORB_VOICE_VERSION = 'living-core-v1'/)
+    assert.match(visualBuild, /ORB_VOICE_CORE_ASSET_WEBP/)
+    assert.match(visualBuild, /ORB_VOICE_CORE_ASSET_PNG/)
     assert.match(companion, /OrbVoiceHead/)
     assert.match(head, /data-orb-voice-companion/)
     assert.match(head, /data-orb-voice-companion-size=\{resolvedSize\}/)
@@ -53,12 +55,14 @@ describe('ORB Voice companion visual convergence', () => {
     assert.match(head, /data-orb-voice-head/)
     assert.match(head, /OrbVoiceCore/)
     assert.match(head, /data-orb-voice-attention/)
-    assert.match(head, /data-orb-voice-renderer="css"/)
+    assert.match(head, /data-orb-voice-renderer="asset\+css"/)
     assert.match(head, /data-orb-voice-behaviour="living-core-v1"/)
     assert.match(core, /data-orb-voice-core/)
     assert.match(core, /data-orb-voice-waveform/)
     assert.match(core, /data-orb-voice-thinking-swirl/)
     assert.match(core, /data-orb-voice-listen-rings/)
+    assert.match(core, /ORB_VOICE_CORE_ASSET_WEBP/)
+    assert.match(core, /data-orb-voice-orb-asset/)
     assert.doesNotMatch(head, /OrbVoiceAvatarRig/)
     assert.doesNotMatch(head, /useRive/)
     assert.doesNotMatch(head, /orb-voice-head-base/)
@@ -156,6 +160,7 @@ describe('ORB Voice companion visual convergence', () => {
     assert.match(core, /orb-voice-core__sphere/)
     assert.match(css, /\.orb-voice-companion \.orb-living-sphere[\s\S]*display:\s*none/)
     assert.match(css, /\.orb-voice-core__sphere/)
+    assert.match(css, /\.orb-voice-core__asset-img/)
     assert.match(css, /border-radius: 50%/)
   })
 
@@ -201,6 +206,11 @@ describe('ORB Voice companion visual convergence', () => {
     const visualBuild = read('lib/orb/orb-visual-build.ts')
     assert.match(visualBuild, /ORB_LOGIN_VERSION = 'front-door-v4'/)
     assert.match(login, /data-orb-login-version=\{ORB_LOGIN_VERSION\}/)
+  })
+
+  it('orb voice core base assets exist for transparent sphere rendering', () => {
+    assert.ok(existsSync(join(root, 'public/assets/orb/orb-voice-core-base.png')))
+    assert.ok(existsSync(join(root, 'public/assets/orb/orb-voice-core-base.webp')))
   })
 
   it('voice actions and realtime routes remain unchanged', () => {
