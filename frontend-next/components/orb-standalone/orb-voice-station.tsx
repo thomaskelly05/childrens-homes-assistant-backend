@@ -952,17 +952,6 @@ export function OrbVoiceStation({
           detailLine={detailLine}
           controls={
             <>
-              {transcriptAvailable && voiceTranscriptText.trim() && !useBrowserLaunch ? (
-                <OrbVoiceTranscriptActions
-                  transcript={voiceTranscriptText}
-                  onCopy={handleCopyTranscript}
-                  onSave={voice.settings.saveTranscript ? () => void handleSaveTranscript() : undefined}
-                  saving={savingTranscript}
-                  onSendToDictate={onOpenDictate ? () => onOpenDictate(voiceTranscriptText) : undefined}
-                  onSendToOrb={() => void onSendToOrb(voiceTranscriptText)}
-                />
-              ) : null}
-
               {showPostSession ? (
                 <div className="flex flex-col gap-2" data-orb-voice-post-session>
                   {useBrowserLaunch ? (
@@ -1040,6 +1029,18 @@ export function OrbVoiceStation({
                 />
               )}
             </>
+          }
+          secondaryControls={
+            transcriptAvailable && voiceTranscriptText.trim() && !useBrowserLaunch ? (
+              <OrbVoiceTranscriptActions
+                transcript={voiceTranscriptText}
+                onCopy={handleCopyTranscript}
+                onSave={voice.settings.saveTranscript ? () => void handleSaveTranscript() : undefined}
+                saving={savingTranscript}
+                onSendToDictate={onOpenDictate ? () => onOpenDictate(voiceTranscriptText) : undefined}
+                onSendToOrb={() => void onSendToOrb(voiceTranscriptText)}
+              />
+            ) : null
           }
         >
           <div className="mt-4 flex w-full flex-wrap items-center justify-center gap-2">

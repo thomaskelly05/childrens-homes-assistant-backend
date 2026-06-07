@@ -1,5 +1,7 @@
 'use client'
 
+import type { ReactNode } from 'react'
+
 import {
   ORB_VOICE_COMPANION_HEADLINES,
   ORB_VOICE_COMPANION_SUBLINES,
@@ -8,17 +10,20 @@ import {
 } from '@/components/orb-residential/orb-voice-companion'
 import { OrbVoiceStudioWaveform } from '@/components/orb-standalone/orb-voice-studio-layout'
 
-/** Shared hero column — living head, headline, waveform, and status for Voice stations. */
+/** Shared hero column — living head, headline, waveform, CTA, and status for Voice stations. */
 export function OrbVoiceHeroStage({
   companionState,
   statusLine,
   detailLine,
+  cta,
   className = '',
   heroStageId = 'desktop'
 }: {
   companionState: OrbVoiceCompanionState
   statusLine?: string
   detailLine?: string | null
+  /** Primary voice action — anchored directly below the waveform. */
+  cta?: ReactNode
   className?: string
   /** `desktop` uses data-orb-voice-hero-stage; `mobile` uses data-orb-voice-mobile-hero-stage */
   heroStageId?: 'desktop' | 'mobile'
@@ -39,21 +44,27 @@ export function OrbVoiceHeroStage({
       <OrbVoiceCompanion state={companionState} size="hero" className="shrink-0" />
 
       <p
-        className="mt-4 text-center text-sm font-medium text-[var(--orb-text,var(--orb-foreground))]"
+        className="mt-5 text-center text-sm font-medium text-[var(--orb-text,var(--orb-foreground))]"
         data-orb-voice-status-label
       >
         {ORB_VOICE_COMPANION_HEADLINES[companionState]}
       </p>
       {subline ? (
-        <p className="mt-1 text-center text-xs text-[var(--orb-muted)]" data-orb-voice-status-subline>
+        <p className="mt-1.5 text-center text-xs text-[var(--orb-muted)]" data-orb-voice-status-subline>
           {subline}
         </p>
       ) : null}
 
-      <OrbVoiceStudioWaveform state={companionState} className="mt-3" />
+      <OrbVoiceStudioWaveform state={companionState} className="mt-4" />
+
+      {cta ? (
+        <div className="mt-5 w-full max-w-sm" data-orb-voice-hero-cta>
+          {cta}
+        </div>
+      ) : null}
 
       {micStatus ? (
-        <p className="mt-2 text-center text-xs text-[var(--orb-muted)]" data-orb-voice-mic-status>
+        <p className="mt-3 text-center text-xs text-[var(--orb-muted)]" data-orb-voice-mic-status>
           {micStatus}
         </p>
       ) : null}

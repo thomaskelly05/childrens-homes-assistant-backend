@@ -61,12 +61,12 @@ describe('ORB Voice hero companion sizing contract', () => {
     const css = read('components/orb-residential/orb-voice.css')
     const studioCss = read('components/orb-standalone/orb-voice-studio-layout.css')
 
-    assert.match(css, /\[data-orb-voice-companion-size='hero'\][\s\S]*min-height:\s*300px/)
-    assert.match(css, /width:\s*clamp\(260px,\s*30vw,\s*380px\)/)
-    assert.match(css, /height:\s*clamp\(300px,\s*42vh,\s*430px\)/)
+    assert.match(css, /\[data-orb-voice-companion-size='hero'\][\s\S]*min-height:\s*340px/)
+    assert.match(css, /width:\s*clamp\(280px,\s*36vw,\s*420px\)/)
+    assert.match(css, /height:\s*clamp\(340px,\s*48vh,\s*500px\)/)
     assert.match(css, /flex:\s*0\s*0\s*auto/)
     assert.match(css, /\[data-orb-voice-hero-stage\][\s\S]*\[data-orb-voice-companion-size='hero'\]/)
-    assert.match(studioCss, /min-height: max\(18\.75rem, 300px\)/)
+    assert.match(studioCss, /min-height: max\(21\.25rem, 340px\)/)
 
     const heroBlock = css.match(
       /\[data-orb-voice-companion-size='hero'\][\s\S]*?\/\* ── Mini/
