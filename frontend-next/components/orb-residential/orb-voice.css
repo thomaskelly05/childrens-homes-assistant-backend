@@ -26,11 +26,11 @@
   --orb-voice-core-size: var(--orb-voice-head-width);
   --orb-voice-speech-energy: 0;
   --orb-voice-core-scale: 1;
-  --orb-voice-core-brightness: 1.14;
+  --orb-voice-core-brightness: 1.22;
   --orb-voice-hue-shift: 0deg;
-  --orb-voice-aura-opacity: 0.78;
+  --orb-voice-aura-opacity: 0.88;
   --orb-voice-state-hue: 210;
-  --orb-voice-rim-strength: 0.94;
+  --orb-voice-rim-strength: 1.02;
   --orb-voice-plasma-speed: 1.08;
   --orb-voice-cool: var(--orb-hue-a, 56 189 248);
   --orb-voice-violet: var(--orb-hue-b, 168 85 247);
@@ -181,14 +181,14 @@
   background:
     radial-gradient(
       ellipse 100% 38% at 50% 50%,
-      rgb(var(--orb-voice-cool) / calc(0.34 + var(--orb-voice-speech-energy, 0) * 0.16)),
-      rgb(var(--orb-voice-violet) / 0.22) 32%,
-      rgb(var(--orb-voice-magenta) / 0.18) 48%,
-      rgb(var(--orb-voice-warm) / calc(0.24 * var(--orb-voice-warm-strength, 0.64))) 62%,
+      rgb(var(--orb-voice-cool) / calc(0.42 + var(--orb-voice-speech-energy, 0) * 0.2)),
+      rgb(var(--orb-voice-violet) / 0.28) 32%,
+      rgb(var(--orb-voice-magenta) / 0.24) 48%,
+      rgb(var(--orb-voice-warm) / calc(0.32 * var(--orb-voice-warm-strength, 0.64))) 62%,
       transparent 82%
     );
   filter: blur(14px);
-  opacity: calc(0.94 + var(--orb-voice-speech-energy, 0) * 0.22);
+  opacity: calc(1 + var(--orb-voice-speech-energy, 0) * 0.26);
   -webkit-mask-image: radial-gradient(ellipse 100% 100% at 50% 50%, #000 0%, #000 52%, transparent 88%);
   mask-image: radial-gradient(ellipse 100% 100% at 50% 50%, #000 0%, #000 52%, transparent 88%);
   pointer-events: none;
@@ -203,23 +203,23 @@
   background:
     radial-gradient(
       circle at 32% 30%,
-      rgb(var(--orb-voice-cool) / calc(0.32 * var(--orb-glow, 0.72) * var(--orb-voice-aura-opacity, 0.78) * 2.4)),
+      rgb(var(--orb-voice-cool) / calc(0.4 * var(--orb-glow, 0.82) * var(--orb-voice-aura-opacity, 0.88) * 2.6)),
       transparent 44%
     ),
     radial-gradient(
       circle at 72% 74%,
-      rgb(var(--orb-voice-warm) / calc(0.22 * var(--orb-glow, 0.72) * var(--orb-voice-warm-strength, 0.64) * var(--orb-voice-aura-opacity, 0.78) * 2.2)),
-      rgb(var(--orb-voice-magenta) / calc(0.16 * var(--orb-glow, 0.72) * var(--orb-voice-aura-opacity, 0.78) * 2)) 38%,
+      rgb(var(--orb-voice-warm) / calc(0.3 * var(--orb-glow, 0.82) * var(--orb-voice-warm-strength, 0.64) * var(--orb-voice-aura-opacity, 0.88) * 2.4)),
+      rgb(var(--orb-voice-magenta) / calc(0.22 * var(--orb-glow, 0.82) * var(--orb-voice-aura-opacity, 0.88) * 2.2)) 38%,
       transparent 50%
     ),
     radial-gradient(
       circle at 50% 50%,
-      rgb(var(--orb-voice-violet) / calc(0.2 * var(--orb-glow, 0.72) * var(--orb-voice-aura-opacity, 0.78) * 2.4)),
-      rgb(var(--orb-voice-magenta) / calc(0.14 * var(--orb-glow, 0.72) * var(--orb-voice-aura-opacity, 0.78) * 2.2)) 54%,
+      rgb(var(--orb-voice-violet) / calc(0.26 * var(--orb-glow, 0.82) * var(--orb-voice-aura-opacity, 0.88) * 2.6)),
+      rgb(var(--orb-voice-magenta) / calc(0.2 * var(--orb-glow, 0.82) * var(--orb-voice-aura-opacity, 0.88) * 2.4)) 54%,
       transparent 74%
     );
   filter: blur(22px);
-  opacity: calc(var(--orb-voice-aura-opacity, 0.78) * 1.08);
+  opacity: calc(var(--orb-voice-aura-opacity, 0.88) * 1.14);
   -webkit-mask-image: var(--orb-voice-glow-mask);
   mask-image: var(--orb-voice-glow-mask);
   pointer-events: none;
@@ -452,8 +452,8 @@
 }
 
 .orb-voice-companion[data-orb-voice-state='idle'] .orb-voice-core__asset-img {
-  filter: brightness(calc(var(--orb-voice-core-brightness, 1) * 0.98))
-    hue-rotate(var(--orb-voice-hue-shift, 0deg)) saturate(1.02);
+  filter: brightness(calc(var(--orb-voice-core-brightness, 1) * 1.04))
+    hue-rotate(var(--orb-voice-hue-shift, 0deg)) saturate(1.08);
 }
 
 .orb-voice-companion[data-orb-voice-state='listening'] {
@@ -470,8 +470,8 @@
 }
 
 .orb-voice-companion[data-orb-voice-state='listening'] .orb-voice-core__asset-img {
-  filter: brightness(calc(var(--orb-voice-core-brightness, 1) * 1.1))
-    hue-rotate(calc(var(--orb-voice-hue-shift, 0deg) - 6deg)) saturate(1.16);
+  filter: brightness(calc(var(--orb-voice-core-brightness, 1) * 1.14))
+    hue-rotate(calc(var(--orb-voice-hue-shift, 0deg) - 6deg)) saturate(1.22);
 }
 
 .orb-voice-companion[data-orb-voice-state='listening'] .orb-voice-core__aura {
@@ -492,8 +492,8 @@
 }
 
 .orb-voice-companion[data-orb-voice-state='thinking'] .orb-voice-core__asset-img {
-  filter: brightness(calc(var(--orb-voice-core-brightness, 1) * 1.14))
-    hue-rotate(calc(var(--orb-voice-hue-shift, 0deg) + 8deg)) saturate(1.2);
+  filter: brightness(calc(var(--orb-voice-core-brightness, 1) * 1.18))
+    hue-rotate(calc(var(--orb-voice-hue-shift, 0deg) + 8deg)) saturate(1.26);
 }
 
 .orb-voice-companion[data-orb-voice-state='thinking'] .orb-voice-core__thinking-glow {

@@ -70,9 +70,9 @@ export const ORB_HUE_PROFILES: Record<OrbVisualState, OrbHueProfile> = {
     hueB: '168 85 247',
     hueC: '244 114 182',
     warm: '251 146 60',
-    glow: 0.62,
+    glow: 0.78,
     motionSpeed: '8s',
-    edgeOpacity: 0.34
+    edgeOpacity: 0.42
   },
   listening: {
     hueA: '125 211 252',

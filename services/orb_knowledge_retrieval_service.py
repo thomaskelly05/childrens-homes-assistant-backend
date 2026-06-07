@@ -248,20 +248,11 @@ class OrbKnowledgeRetrievalService:
             return "residential"
         if intents.get("product_context"):
             return "residential"
-        if intents.get("general_knowledge") and len(lower.split()) <= 10:
+        if intents.get("live_lookup_intent"):
             return "fast"
-        if len(lower.split()) <= 6 and not any(
-            intents.get(flag)
-            for flag in (
-                "regulatory_framework",
-                "recording_quality",
-                "safeguarding_principles",
-                "therapeutic_practice",
-                "residential_childrens_homes",
-            )
-        ):
+        if intents.get("general_knowledge"):
             return "fast"
-        return "residential"
+        return "fast"
 
     def prepare_request_bundle(
         self,
@@ -583,6 +574,9 @@ class OrbKnowledgeRetrievalService:
         return any(term in lower for term in terms)
 
     def should_use_general_knowledge(self, message: str, *, mode: str | None = None) -> bool:
+        mode_name = _text(mode)
+        if mode_name == "General Knowledge":
+            return True
         lower = _lower(message)
         specialist = (
             self.should_use_product_knowledge(message, mode=mode)
@@ -590,21 +584,12 @@ class OrbKnowledgeRetrievalService:
             or self.should_use_recording_quality(message, mode=mode)
             or self.should_use_safeguarding_boundary(message, mode=mode)
             or self._should_use_therapeutic(message, mode=mode)
+            or self._should_use_residential_practice(message, mode=mode)
+            or self._has_live_lookup_intent(lower)
         )
         if specialist:
             return False
-        general_markers = (
-            "quantum",
-            "what is ",
-            "explain ",
-            "how does ",
-            "calculate",
-            "summarise",
-            "summarize",
-            "email",
-            "plan",
-        )
-        return any(marker in lower for marker in general_markers) or len(lower.split()) <= 12
+        return True
 
     def _should_use_therapeutic(self, message: str, *, mode: str | None = None) -> bool:
         if (mode or "").strip() in {"Behaviour Support", "Reflect", "Therapeutic Reframe"}:
@@ -787,12 +772,12 @@ class OrbKnowledgeRetrievalService:
             return "recording_quality_brain"
         if intents.get("product_context"):
             return "product_explanation_brain"
+        if intents.get("general_knowledge"):
+            return "general_assistant_brain"
         if intents.get("orb_operating_brain"):
             return "orb_operating_brain"
         if intents.get("knowledge_spine"):
             return "orb_knowledge_spine_brain"
-        if intents.get("general_knowledge"):
-            return "general_assistant_brain"
         return "general_assistant_brain"
 
 

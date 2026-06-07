@@ -78,16 +78,16 @@ def body_colour(nx: float, ny: float, nz: float) -> tuple[float, float, float]:
         colour = (colour[0] + c[0] * w, colour[1] + c[1] * w, colour[2] + c[2] * w)
         weight += w
 
-    add(CYAN, ul**1.6 * 1.15)
-    add(BLUE, ul**2.0 * 0.55)
-    add(VIOLET, ll**1.4 * 0.95)
-    add(MAGENTA, lc**1.5 * 0.88)
-    add(PINK, lc**2.2 * 0.42)
-    add(AMBER, rr**1.3 * 0.82)
-    add(ORANGE, rr**1.8 * 0.48)
+    add(CYAN, ul**1.5 * 1.42)
+    add(BLUE, ul**1.9 * 0.68)
+    add(VIOLET, ll**1.35 * 1.12)
+    add(MAGENTA, lc**1.45 * 1.05)
+    add(PINK, lc**2.0 * 0.58)
+    add(AMBER, rr**1.25 * 1.02)
+    add(ORANGE, rr**1.7 * 0.62)
 
-    # Base luminous wash — avoid muddy dark centre
-    depth = 0.38 + nz * 0.42
+    # Base luminous wash — bright inner energy, avoid muddy dark centre
+    depth = 0.48 + nz * 0.5
     base = lerp3(VIOLET, MAGENTA, clamp01(elev * 0.72))
     base = lerp3(base, CYAN, clamp01((1.0 - elev) * 0.38))
     add(base, 0.42 * depth)
@@ -137,30 +137,30 @@ def render_sphere() -> Image.Image:
 
             # Diffuse + wrap lighting for glass depth
             diffuse = max(0.0, nx * light[0] + ny * light[1] + nz * light[2])
-            wrap = diffuse**0.72
-            body = lerp3(body, WHITE, wrap * 0.22)
+            wrap = diffuse**0.68
+            body = lerp3(body, WHITE, wrap * 0.32)
 
-            # Upper-left specular highlight
+            # Upper-left specular highlight — stronger luminous core
             spec_dist = math.hypot((dx + 0.42) / 0.28, (dy + 0.38) / 0.24)
-            spec = max(0.0, 1.0 - spec_dist) ** 3.2
-            body = lerp3(body, WHITE, spec * 0.88)
+            spec = max(0.0, 1.0 - spec_dist) ** 2.9
+            body = lerp3(body, WHITE, spec * 0.96)
 
             # Secondary cool catch light
             catch_dist = math.hypot((dx - 0.12) / 0.22, (dy + 0.08) / 0.18)
-            catch = max(0.0, 1.0 - catch_dist) ** 2.8
-            body = lerp3(body, CYAN, catch * 0.28)
+            catch = max(0.0, 1.0 - catch_dist) ** 2.6
+            body = lerp3(body, CYAN, catch * 0.38)
 
-            # Rim light near edge
-            rim_t = clamp01((dist - 0.78) / 0.22)
+            # Rim light near edge — white/cyan to pink/amber circumference
+            rim_t = clamp01((dist - 0.74) / 0.26)
             if rim_t > 0:
                 angle = math.atan2(dy, dx)
                 rim = rim_colour(angle)
-                body = lerp3(body, rim, rim_t**1.4 * 0.72)
-                body = lerp3(body, WHITE, rim_t**2.2 * 0.38)
+                body = lerp3(body, rim, rim_t**1.25 * 0.86)
+                body = lerp3(body, WHITE, rim_t**2.0 * 0.48)
 
-            # Glass shell fresnel — brighter at grazing angles
-            fresnel = (1.0 - nz) ** 2.2
-            body = lerp3(body, WHITE, fresnel * 0.12)
+            # Glass shell fresnel — brighter at grazing angles, less muddy edge
+            fresnel = (1.0 - nz) ** 2.0
+            body = lerp3(body, WHITE, fresnel * 0.18)
 
             # Alpha — circular with soft outer glow falloff (no square boundary)
             if dist <= 0.98:
@@ -170,7 +170,7 @@ def render_sphere() -> Image.Image:
             else:
                 # Soft outer aura in alpha only
                 aura = max(0.0, 1.0 - (dist - 1.02) / 0.06)
-                alpha = int(aura * 48)
+                alpha = int(aura * 72)
                 body = lerp3(body, CYAN, 0.35)
 
             if alpha <= 0:
@@ -190,10 +190,10 @@ def add_outer_glow(base: Image.Image) -> Image.Image:
     """Very subtle outer bloom — circular only, composited behind sphere."""
     glow_layer = Image.new("RGBA", (SIZE, SIZE), (0, 0, 0, 0))
     draw = ImageDraw.Draw(glow_layer)
-    for colour, inset in ((CYAN, 0.04), (MAGENTA, 0.06), (AMBER, 0.05)):
+    for colour, inset, alpha in ((CYAN, 0.05, 28), (MAGENTA, 0.07, 24), (AMBER, 0.06, 26)):
         r = int(SPHERE_R * (1.0 + inset))
-        draw.ellipse((CX - r, CY - r, CX + r, CY + r), fill=(*[int(c) for c in colour], 18))
-    glow_layer = glow_layer.filter(ImageFilter.GaussianBlur(28))
+        draw.ellipse((CX - r, CY - r, CX + r, CY + r), fill=(*[int(c) for c in colour], alpha))
+    glow_layer = glow_layer.filter(ImageFilter.GaussianBlur(32))
     # Mask glow to circular falloff
     mask = Image.new("L", (SIZE, SIZE), 0)
     mdraw = ImageDraw.Draw(mask)
