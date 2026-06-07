@@ -95,43 +95,8 @@ type BrowserStartStage = 'idle' | 'starting' | 'active' | 'failed'
 const SAFETY_COPY =
   'ORB Voice supports professional judgement. If there is immediate risk, follow your home\'s procedures and contact emergency services where required.'
 
-function orbVisualClassFromLaunchState(state: string): string {
-  switch (state) {
-    case 'listening':
-      return 'glass-orb-mark--voice glass-orb-mark--listening'
-    case 'thinking':
-    case 'transcribing':
-      return 'glass-orb-mark--thinking glass-orb-mark--voice'
-    case 'speaking':
-      return 'glass-orb-mark--voice glass-orb-mark--speaking'
-    case 'error':
-    case 'unavailable':
-      return 'glass-orb-mark--voice glass-orb-mark--error'
-    default:
-      return 'glass-orb-mark--voice glass-orb-mark--idle'
-  }
-}
-
 function newTurnId() {
   return `turn_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
-}
-
-function orbVisualClassFromRealtime(state: OrbRealtimeVoiceState): string {
-  switch (state) {
-    case 'listening':
-    case 'speech_detected':
-    case 'connecting':
-      return 'glass-orb-mark--voice glass-orb-mark--listening'
-    case 'thinking':
-    case 'transcribing':
-      return 'glass-orb-mark--thinking glass-orb-mark--voice'
-    case 'speaking':
-      return 'glass-orb-mark--voice glass-orb-mark--speaking'
-    case 'error':
-      return 'glass-orb-mark--voice glass-orb-mark--error'
-    default:
-      return 'glass-orb-mark--voice glass-orb-mark--idle'
-  }
 }
 
 function formatTurnsAsTranscript(turns: VoiceTurn[]): string {
@@ -968,10 +933,6 @@ export function OrbVoiceStation({
           launchUiState={launchUiState}
           browserTranscript={browserTranscriptText}
           useBrowserLaunch={useBrowserLaunch}
-          orbVisualClassName={orbVisualClassFromLaunchState(launchUiState)}
-          pulseOrb={
-            launchUiState === 'listening' || launchUiState === 'thinking' || launchUiState === 'speaking'
-          }
           voiceCompanionState={companionState}
           statusLine={statusLine}
           detailLine={detailLine}

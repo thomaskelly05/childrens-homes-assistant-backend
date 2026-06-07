@@ -25,6 +25,7 @@ Wraps `OrbPresence` variant `voice` + existing `.orb-living-sphere` CSS animatio
 - `data-orb-voice-companion`
 - `data-orb-voice-state` — `idle|listening|thinking|speaking|error`
 - `data-orb-voice-head`
+- `data-orb-voice-waveform` — speaking light-wave mark (`data-orb-voice-waveform-active`)
 
 ## Accessibility
 
