@@ -329,6 +329,71 @@ ROUTERS: list[str] = [router for group in ROUTER_GROUPS for router in group.rout
 REQUIRED_ROUTERS: frozenset[str] = frozenset(
     router for group in ROUTER_GROUPS for router in group.required_routers
 )
+RETIRED_COMPATIBILITY_ROUTERS: frozenset[str] = frozenset(
+    (
+        "routers.profile_routes",
+        "routers.feature_flags_routes",
+        "routers.ai_routes",
+        "routers.assistant_stream_routes",
+        "routers.assistant_memory_routes",
+        "routers.assistant_mode_routes",
+        "routers.assistant_realtime_routes",
+        "routers.assistant_realtime_compat_routes",
+        "routers.assistant_upload_routes",
+        "routers.assistant_legacy_redirect_routes",
+        "routers.orb_voice_routes",
+        "routers.orb_voice_session_routes",
+        "routers.orb_voice_control_routes",
+        "routers.orb_proactive_routes",
+        "routers.orb_assistant_routes",
+        "routers.voice_routes",
+        "routers.voice_agent_routes",
+        "routers.voice_session_routes",
+        "routers.ai_memory_routes",
+        "routers.ai_sccif_routes",
+        "backend.os_command_routes",
+        "routers.os_magic_notes_routes",
+        "routers.os_command_api_routes",
+        "routers.os_safeguarding_runtime_routes",
+        "routers.os_provider_routes",
+        "routers.os_workforce_routes",
+        "routers.os_contextual_safeguarding_routes",
+        "routers.os_placement_routes",
+        "routers.os_inspection_routes",
+        "routers.os_young_person_routes",
+        "routers.os_operational_data_routes",
+        "routers.governance_routes",
+        "routers.governance_os_routes",
+        "routers.governance_reg44_routes",
+        "routers.governance_reg45_routes",
+        "routers.regulation_mapping_routes",
+        "routers.sccif_routes",
+        "routers.sccif_quality_routes",
+        "routers.sccif_regulation_routes",
+        "routers.quality_standards_routes",
+        "routers.ofsted_readiness_routes",
+        "routers.workforce_routes",
+        "routers.workforce_os_routes",
+        "routers.staff_routes",
+        "routers.training_routes",
+        "routers.supervision_lifecycle_routes",
+        "routers.probation_routes",
+        "routers.recruitment_routes",
+        "routers.academy_manager_routes",
+        "routers.academy_manager_compliance_routes",
+        "routers.document_system_routes",
+        "routers.document_instance_routes",
+        "routers.document_editor_routes",
+        "routers.document_export_routes",
+        "routers.document_templates_routes",
+        "routers.document_versions_routes",
+        "routers.document_generation_routes",
+        "routers.statutory_documents_routes",
+        "routers.upload_routes",
+        "routers.export_routes",
+        "routers.daily_notes_routes",
+    )
+)
 _LAST_LOAD_REPORT: "RouterLoadReport | None" = None
 
 
@@ -337,6 +402,8 @@ class RouterLoadReport:
     loaded: list[str] = field(default_factory=list)
     failed: list[tuple[str, str]] = field(default_factory=list)
     skipped_optional: list[tuple[str, str]] = field(default_factory=list)
+    skipped_retired_compatibility: list[tuple[str, str]] = field(default_factory=list)
+    skipped_unexpected_optional: list[tuple[str, str]] = field(default_factory=list)
     duplicate_routes: list[str] = field(default_factory=list)
     compatibility_shadows: list[str] = field(default_factory=list)
 
@@ -399,6 +466,13 @@ def get_router_registry_summary() -> dict:
             for group in ROUTER_GROUPS
         ],
         "skipped_optional_router_count": len(_LAST_LOAD_REPORT.skipped_optional) if _LAST_LOAD_REPORT else 0,
+        "retired_compatibility_router_registry_count": len(RETIRED_COMPATIBILITY_ROUTERS),
+        "skipped_retired_compatibility_router_count": (
+            len(_LAST_LOAD_REPORT.skipped_retired_compatibility) if _LAST_LOAD_REPORT else 0
+        ),
+        "skipped_unexpected_optional_router_count": (
+            len(_LAST_LOAD_REPORT.skipped_unexpected_optional) if _LAST_LOAD_REPORT else 0
+        ),
     }
 
 
@@ -412,6 +486,24 @@ def get_skipped_optional_routers() -> list[dict[str, str]]:
     if _LAST_LOAD_REPORT is None:
         return []
     return [{"router": router, "reason": reason} for router, reason in _LAST_LOAD_REPORT.skipped_optional]
+
+
+def get_skipped_retired_compatibility_routers() -> list[dict[str, str]]:
+    if _LAST_LOAD_REPORT is None:
+        return []
+    return [
+        {"router": router, "reason": reason}
+        for router, reason in _LAST_LOAD_REPORT.skipped_retired_compatibility
+    ]
+
+
+def get_skipped_unexpected_optional_routers() -> list[dict[str, str]]:
+    if _LAST_LOAD_REPORT is None:
+        return []
+    return [
+        {"router": router, "reason": reason}
+        for router, reason in _LAST_LOAD_REPORT.skipped_unexpected_optional
+    ]
 
 
 def get_route_conflicts() -> list[dict]:
@@ -466,16 +558,27 @@ def include_routers(app: FastAPI) -> RouterLoadReport:
                 raise
             if _is_missing_router_module(error, router_path):
                 report.skipped_optional.append((router_path, "module_not_present"))
-                logger.debug("Optional router %s not present; treated as compatibility-only", router_path)
+                if router_path in RETIRED_COMPATIBILITY_ROUTERS:
+                    report.skipped_retired_compatibility.append((router_path, "module_not_present"))
+                    logger.debug("Retired compatibility router %s not present", router_path)
+                else:
+                    report.skipped_unexpected_optional.append((router_path, "module_not_present"))
+                    logger.warning("Unexpected missing optional router %s", router_path)
                 continue
             report.failed.append((router_path, str(error)))
             logger.warning("Router %s failed to load: %s", router_path, error)
 
-    if report.skipped_optional:
+    if report.skipped_retired_compatibility:
         logger.info(
-            "Skipped %s optional compatibility router(s): %s",
-            len(report.skipped_optional),
-            ", ".join(router for router, _reason in report.skipped_optional),
+            "Skipped %s retired compatibility router(s): %s",
+            len(report.skipped_retired_compatibility),
+            ", ".join(router for router, _reason in report.skipped_retired_compatibility),
+        )
+    if report.skipped_unexpected_optional:
+        logger.warning(
+            "Skipped %s unexpected missing optional router(s): %s",
+            len(report.skipped_unexpected_optional),
+            ", ".join(router for router, _reason in report.skipped_unexpected_optional),
         )
 
     _LAST_LOAD_REPORT = report
