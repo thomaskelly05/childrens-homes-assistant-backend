@@ -6,9 +6,10 @@ import './orb-voice.css'
 
 import { ORB_VOICE_VERSION } from '@/lib/orb/orb-visual-build'
 import { getOrbHueProfile, type OrbHueProfile, type OrbVisualState } from '@/lib/orb/rendering/visual-system'
+import { useOrbVoiceSpeechEnergy } from '@/lib/orb/voice/use-orb-voice-speech-energy'
 
 /** Visual-only voice companion states — safe fallbacks when transport state is unavailable. */
-export type OrbVoiceCompanionState = 'idle' | 'listening' | 'thinking' | 'speaking' | 'error'
+export type OrbVoiceCompanionState = 'idle' | 'listening' | 'thinking' | 'speaking' | 'paused' | 'error'
 
 /** Scoped companion render sizes — hero is the main voice studio centre piece. */
 export type OrbVoiceCompanionSize = 'hero' | 'mini' | 'mobile-preview'
@@ -41,11 +42,49 @@ function companionToVisualState(state: OrbVoiceCompanionState): OrbVisualState {
       return 'thinking'
     case 'speaking':
       return 'speaking'
+    case 'paused':
+      return 'idle'
     case 'error':
       return 'offline'
     default:
       return 'idle'
   }
+}
+
+function useOrbVoiceNaturalBlink(active: boolean, reducedMotion: boolean) {
+  const [blinkActive, setBlinkActive] = useState(false)
+
+  useEffect(() => {
+    if (!active || reducedMotion) {
+      setBlinkActive(false)
+      return
+    }
+
+    let nextTimer = 0
+    let closeTimer = 0
+
+    const scheduleBlink = () => {
+      const delayMs = 5000 + Math.random() * 4000
+      nextTimer = window.setTimeout(() => {
+        setBlinkActive(true)
+        const durationMs = 120 + Math.random() * 60
+        closeTimer = window.setTimeout(() => {
+          setBlinkActive(false)
+          scheduleBlink()
+        }, durationMs)
+      }, delayMs)
+    }
+
+    scheduleBlink()
+
+    return () => {
+      window.clearTimeout(nextTimer)
+      window.clearTimeout(closeTimer)
+      setBlinkActive(false)
+    }
+  }, [active, reducedMotion])
+
+  return blinkActive
 }
 
 const ORB_VOICE_HEAD_ASSET_WEBP = '/assets/orb/orb-voice-head-base.webp'
@@ -57,7 +96,7 @@ function OrbVoiceHeadAsset({ reducedMotion }: { reducedMotion: boolean }) {
     <picture className="orb-voice-companion__head-asset-wrap" data-orb-voice-head-asset>
       <source srcSet={ORB_VOICE_HEAD_ASSET_WEBP} type="image/webp" />
       <img
-        className={`orb-voice-companion__head-asset orb-voice-companion__head-material orb-voice-companion__breathe-head${reducedMotion ? '' : ''}`}
+        className="orb-voice-companion__head-asset orb-voice-companion__head-material orb-voice-companion__breathe-head"
         data-orb-voice-breathe
         src={ORB_VOICE_HEAD_ASSET_PNG}
         alt=""
@@ -76,7 +115,8 @@ function OrbVoiceHeadOverlaySvg({
   glow,
   state,
   pulse,
-  reducedMotion
+  reducedMotion,
+  blinkActive
 }: {
   uid: string
   hue: OrbHueProfile
@@ -84,6 +124,7 @@ function OrbVoiceHeadOverlaySvg({
   state: OrbVoiceCompanionState
   pulse: boolean
   reducedMotion: boolean
+  blinkActive: boolean
 }) {
   const g = glow
   const ha = hue.hueA
@@ -131,6 +172,10 @@ function OrbVoiceHeadOverlaySvg({
           <stop offset="84%" stopColor={`rgba(${hc}, 0.72)`} />
           <stop offset="100%" stopColor="transparent" />
         </linearGradient>
+
+        <filter id={`${uid}-mouth-glow`} x="-40%" y="-80%" width="180%" height="260%">
+          <feGaussianBlur stdDeviation="1.8" />
+        </filter>
 
         <filter id={`${uid}-halo-blur`} x="-50%" y="-50%" width="200%" height="200%">
           <feGaussianBlur stdDeviation="12" />
@@ -209,7 +254,11 @@ function OrbVoiceHeadOverlaySvg({
           opacity="0.18"
         />
 
-        <g className="orb-voice-companion__eyes" data-orb-voice-eyes>
+        <g
+          className="orb-voice-companion__eyes"
+          data-orb-voice-eyes
+          data-orb-voice-blink-active={blinkActive ? 'true' : 'false'}
+        >
           <ellipse
             className="orb-voice-companion__eye orb-voice-companion__eye--left orb-voice-companion__eye--blink"
             data-orb-voice-eye-left
@@ -234,17 +283,19 @@ function OrbVoiceHeadOverlaySvg({
         </g>
 
         {isSpeaking ? (
-          <path
-            className="orb-voice-companion__mouth-wave"
-            data-orb-voice-waveform
-            data-orb-voice-waveform-active="true"
-            d="M 60 134 C 66 136 74 137 80 134"
-            stroke={`url(#${uid}-mouth)`}
-            strokeWidth="1.6"
-            strokeLinecap="round"
-            fill="none"
-            opacity="0.72"
-          />
+          <g className="orb-voice-companion__mouth-light" data-orb-voice-mouth-light aria-hidden>
+            <path
+              className="orb-voice-companion__mouth-wave orb-voice-companion__mouth-wave--speaking"
+              data-orb-voice-waveform
+              data-orb-voice-waveform-active="true"
+              d="M 58 134 C 64 136 72 138 80 134 C 86 130 90 134 84 136"
+              stroke={`url(#${uid}-mouth)`}
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              fill="none"
+              filter={`url(#${uid}-mouth-glow)`}
+            />
+          </g>
         ) : (
           <path
             className="orb-voice-companion__mouth-wave orb-voice-companion__mouth-wave--idle"
@@ -326,12 +377,18 @@ export function OrbVoiceHead({
   state = 'idle',
   className = '',
   label = 'ORB voice head',
-  size = 'hero'
+  size = 'hero',
+  speechEnergy: speechEnergyProp,
+  audioElement = null
 }: {
   state?: OrbVoiceCompanionState
   className?: string
   label?: string
   size?: OrbVoiceCompanionSize | OrbVoiceCompanionLegacySize
+  /** 0–1 amplitude from voice playback; CSS fallback animates when omitted or zero. */
+  speechEnergy?: number
+  /** Optional explicit audio element for amplitude sampling. */
+  audioElement?: HTMLAudioElement | null
 }) {
   const [reducedMotion, setReducedMotion] = useState(false)
   const svgUid = useId().replace(/:/g, '')
@@ -345,19 +402,30 @@ export function OrbVoiceHead({
     return () => mq.removeEventListener('change', update)
   }, [])
 
+  const isSpeaking = state === 'speaking'
+  const sampledEnergy = useOrbVoiceSpeechEnergy(isSpeaking, audioElement)
+  const speechEnergy = speechEnergyProp ?? sampledEnergy
+  const speechDriven = isSpeaking && speechEnergy > 0.04
+  const mouthOpen = isSpeaking ? Math.max(0.18, Math.min(1, speechEnergy)) : 0
+
+  const blinkEligible = state === 'idle' || state === 'listening' || state === 'thinking' || state === 'paused'
+  const blinkActive = useOrbVoiceNaturalBlink(blinkEligible, reducedMotion)
+
   const visualState = companionToVisualState(state)
   const renderState: OrbVisualState = reducedMotion ? 'reduced_motion' : visualState
   const hueProfile = useMemo(() => getOrbHueProfile(renderState, reducedMotion), [renderState, reducedMotion])
   const pulse = state === 'listening' || state === 'thinking' || state === 'speaking'
 
-  const hueStyle = {
+  const behaviourStyle = {
     '--orb-hue-a': hueProfile.hueA,
     '--orb-hue-b': hueProfile.hueB,
     '--orb-hue-c': hueProfile.hueC,
     '--orb-warm': hueProfile.warm,
     '--orb-glow': String(hueProfile.glow),
     '--orb-motion-speed': reducedMotion ? '0.001ms' : hueProfile.motionSpeed,
-    '--orb-edge-opacity': String(hueProfile.edgeOpacity)
+    '--orb-edge-opacity': String(hueProfile.edgeOpacity),
+    '--orb-voice-speech-energy': String(speechEnergy),
+    '--orb-voice-mouth-open': String(mouthOpen)
   } as CSSProperties
 
   const resolvedSize = resolveOrbVoiceCompanionSize(size)
@@ -378,6 +446,9 @@ export function OrbVoiceHead({
       data-orb-voice-head
       data-orb-voice-head-size={resolvedSize}
       data-orb-voice-visual-authority="OrbVoiceHead"
+      data-orb-voice-behaviour="living-presence-v9"
+      data-orb-voice-speech-driven={speechDriven ? 'true' : 'false'}
+      style={behaviourStyle}
       aria-live="polite"
       aria-label={label}
     >
@@ -387,17 +458,23 @@ export function OrbVoiceHead({
           className={`orb-voice-companion__aura${pulse && !reducedMotion ? ' orb-voice-companion__aura--pulse' : ''}`}
           aria-hidden
         />
-        <div className="orb-voice-companion__silhouette" style={hueStyle} aria-hidden>
-          <div className="orb-voice-companion__head-shell" data-orb-voice-head-shell>
-            <OrbVoiceHeadAsset reducedMotion={reducedMotion} />
-            <OrbVoiceHeadOverlaySvg
-              uid={svgUid}
-              hue={hueProfile}
-              glow={hueProfile.glow}
-              state={state}
-              pulse={pulse}
-              reducedMotion={reducedMotion}
-            />
+        <div className="orb-voice-companion__silhouette" aria-hidden>
+          <div
+            className="orb-voice-companion__head-motion"
+            data-orb-voice-head-motion
+          >
+            <div className="orb-voice-companion__head-shell" data-orb-voice-head-shell>
+              <OrbVoiceHeadAsset reducedMotion={reducedMotion} />
+              <OrbVoiceHeadOverlaySvg
+                uid={svgUid}
+                hue={hueProfile}
+                glow={hueProfile.glow}
+                state={state}
+                pulse={pulse}
+                reducedMotion={reducedMotion}
+                blinkActive={blinkActive}
+              />
+            </div>
           </div>
         </div>
       </div>

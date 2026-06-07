@@ -43,14 +43,17 @@ describe('ORB premium interaction pass', () => {
 
   it('voice companion visual states and markers', () => {
     const companion = read('components/orb-residential/orb-voice-companion.tsx')
+    const head = read('components/orb-residential/orb-voice-head.tsx')
     const voice = read('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(companion, /data-orb-voice-companion/)
-    assert.match(companion, /data-orb-voice-state/)
-    assert.match(companion, /data-orb-voice-head/)
-    assert.match(companion, /data-orb-voice-face/)
-    assert.match(companion, /data-orb-voice-waveform/)
+    assert.match(head, /data-orb-voice-companion/)
+    assert.match(head, /data-orb-voice-state/)
+    assert.match(head, /data-orb-voice-head/)
+    assert.match(head, /data-orb-voice-face/)
+    assert.match(head, /data-orb-voice-waveform/)
     assert.match(companion, /mapOrbVoiceUiToCompanionState/)
-    assert.match(voice, /OrbVoiceCompanion/)
+    assert.match(companion, /OrbVoiceHead/)
+    assert.match(voice, /mapOrbVoiceUiToCompanionState/)
+    assert.match(read('components/orb-standalone/orb-voice-hero-stage.tsx'), /OrbVoiceCompanion/)
   })
 
   it('documents viewport uses internal content scroll markers', () => {

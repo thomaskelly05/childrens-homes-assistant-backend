@@ -39,11 +39,11 @@ describe('ORB Voice companion visual convergence', () => {
     }
   })
 
-  it('OrbVoiceHead exposes living-head-v8 markers and SVG profile silhouette', () => {
+  it('OrbVoiceHead exposes living-head-v9 markers and SVG profile silhouette', () => {
     const head = read('components/orb-residential/orb-voice-head.tsx')
     const companion = read('components/orb-residential/orb-voice-companion.tsx')
     const visualBuild = read('lib/orb/orb-visual-build.ts')
-    assert.match(visualBuild, /ORB_VOICE_VERSION = 'living-head-v8'/)
+    assert.match(visualBuild, /ORB_VOICE_VERSION = 'living-head-v9'/)
     assert.match(companion, /OrbVoiceHead/)
     assert.match(head, /data-orb-voice-companion/)
     assert.match(head, /data-orb-voice-companion-size=\{resolvedSize\}/)
@@ -72,6 +72,9 @@ describe('ORB Voice companion visual convergence', () => {
     assert.match(head, /data-orb-voice-listening-waves/)
     assert.match(head, /data-orb-voice-particles/)
     assert.match(head, /data-orb-voice-thinking-halo/)
+    assert.match(head, /data-orb-voice-head-motion/)
+    assert.match(head, /data-orb-voice-mouth-light/)
+    assert.match(head, /data-orb-voice-blink-active/)
     assert.match(head, /orb-voice-companion__eye--blink/)
     assert.match(head, /orb-voice-companion__eye-shimmer/)
     assert.match(head, /orb-voice-companion__nose-bridge/)
@@ -81,7 +84,11 @@ describe('ORB Voice companion visual convergence', () => {
     assert.match(css, /orb-voice-head-breathe/)
     assert.match(css, /orb-voice-neck-breathe/)
     assert.match(css, /orb-voice-bust-breathe/)
-    assert.match(css, /orb-voice-eye-blink/)
+    assert.match(css, /--orb-voice-speech-energy/)
+    assert.match(css, /--orb-voice-mouth-open/)
+    assert.match(css, /--orb-head-tilt/)
+    assert.match(css, /orb-voice-mouth-fallback/)
+    assert.match(css, /orb-voice-head-speak-nod/)
     assert.match(css, /orb-voice-eye-shimmer/)
     assert.match(css, /orb-voice-listen-wave/)
     assert.match(css, /orb-voice-particle-drift/)
@@ -89,6 +96,7 @@ describe('ORB Voice companion visual convergence', () => {
     assert.match(css, /\[data-orb-voice-state='listening'\]/)
     assert.match(css, /\[data-orb-voice-state='thinking'\]/)
     assert.match(css, /\[data-orb-voice-state='speaking'\]/)
+    assert.match(css, /\[data-orb-voice-state='paused'\]/)
     assert.match(css, /prefers-reduced-motion: reduce/)
   })
 

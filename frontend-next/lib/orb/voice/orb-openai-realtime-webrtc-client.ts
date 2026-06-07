@@ -177,6 +177,11 @@ export class OrbOpenAIRealtimeWebRTCClient {
     return this.peerClient.attemptRemoteAudioPlay()
   }
 
+  /** Read-only access for voice visual amplitude sampling — does not alter playback. */
+  getAssistantAudioElement(): HTMLAudioElement | null {
+    return this.peerClient?.getRemoteAudioElement() ?? null
+  }
+
   private buildSessionInstructions(options: OrbOpenAIRealtimeConnectOptions): string {
     if (options.instructions?.trim()) return options.instructions.trim()
     if (this.transcriptionOnly) {

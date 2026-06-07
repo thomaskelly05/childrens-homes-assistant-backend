@@ -254,6 +254,11 @@ export class OrbRealtimeClient {
     stopOrbAudioElement(this.audio)
   }
 
+  /** Read-only access for voice visual amplitude sampling — does not alter playback. */
+  getRemoteAudioElement(): HTMLAudioElement | null {
+    return this.audio
+  }
+
   close() {
     this.stopped = true
     this.negotiationFailed = false
