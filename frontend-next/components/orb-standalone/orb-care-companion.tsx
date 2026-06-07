@@ -243,7 +243,6 @@ import {
   queryStandaloneOrbConversation,
   runOrbDocumentIntelligence,
   runStandaloneOrbAction,
-  sendStandaloneOrbMessageStream,
   STANDALONE_ORB_EMPTY_ANSWER_MESSAGE,
   STANDALONE_ORB_MODES,
   type StandaloneOrbAgentSuggestion,
@@ -255,6 +254,7 @@ import {
   backendOrbActionIdForFollowUp,
   isBackendSupportedOrbResponseAction
 } from '@/lib/orb/orb-response-actions'
+import { askOrbBrain } from '@/lib/orb/orb-brain-router'
 import { collectCognitionDisplayLabels } from '@/lib/orb/residential-agents'
 import {
   contextualDocumentActions,
@@ -291,6 +291,8 @@ type SendMessageOptions = {
   internalRetry?: boolean
   /** Replace conversation from an edited user message onward. */
   editMessageId?: string
+  /** When voice sends a transcript, preserve it if the brain request fails. */
+  source?: 'voice' | 'chat'
 }
 
 function buildExplainabilityFromResponse(
@@ -772,7 +774,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
           entry.role === 'assistant' &&
           entry.status !== 'thinking' &&
           entry.status !== 'error' &&
-          entry.content.trim()
+          (entry.content.trim() || entry.status === 'streaming')
       )
     if (!lastAssistant) return null
     const lastUser = [...activeChat.messages]
@@ -1249,8 +1251,9 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
       setAnsweringDepthHint(estimateTranscriptExpertDepth(trimmed || messageBody))
       composerUserEditedRef.current = false
       voiceMayFillComposerRef.current = false
-      if (STANDALONE_ORB_VOICE_CAPTURE_ENABLED) {
-        voice.clearTranscript()
+      const voiceOriginatedSend =
+        options?.source === 'voice' || activePanel === 'orb_voice'
+      if (STANDALONE_ORB_VOICE_CAPTURE_ENABLED && voiceOriginatedSend) {
         voice.markIdle()
       }
 
@@ -1535,6 +1538,9 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
             voice.speak(spoken, () => setSpeakingMessageId(null))
           }
         }
+        if (STANDALONE_ORB_VOICE_CAPTURE_ENABLED && voiceOriginatedSend) {
+          voice.clearTranscript()
+        }
       }
 
       try {
@@ -1553,9 +1559,14 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
         let streamFailedBeforeToken = false
 
         try {
-          response = await sendStandaloneOrbMessageStream(
-            conversationRequest,
-            {
+          response = await askOrbBrain({
+            request: conversationRequest,
+            context: {
+              source: voiceOriginatedSend ? 'voice' : 'chat',
+              mode
+            },
+            signal: streamSignal,
+            stream: {
               onToken: (_delta, partial) => applyStreamingPartial(partial),
               onStatus: (status) => {
                 if (status.expert_depth) {
@@ -1580,9 +1591,8 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
                     : undefined
                 })
               }
-            },
-            streamSignal
-          )
+            }
+          })
         } catch (streamTransportError) {
           if (streamTransportError instanceof DOMException && streamTransportError.name === 'AbortError') {
             throw streamTransportError
@@ -1754,7 +1764,8 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
       voiceSettings.voiceReplies,
       workspace.activeChatId,
       workspace.activeProjectId,
-      workspace.chats
+      workspace.chats,
+      activePanel
     ]
   )
 
@@ -1767,8 +1778,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
     if (shouldPauseVoiceAutoSend(text)) return
     if (autoSendTimerRef.current) clearTimeout(autoSendTimerRef.current)
     autoSendTimerRef.current = setTimeout(() => {
-      void sendMessage(text)
-      voice.clearTranscript()
+      void sendMessage(text, { source: 'voice' })
       voiceMayFillComposerRef.current = false
     }, 450)
     return () => {
@@ -3090,7 +3100,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
         assistantReplyKey={voiceStationAssistant?.key ?? null}
         assistantReplyUserHint={voiceStationAssistant?.userHint ?? null}
         assistantReplyContext={voiceStationAssistant?.contextUsed ?? null}
-        onSendToOrb={(text) => void sendMessage(text)}
+        onSendToOrb={(text) => void sendMessage(text, { source: 'voice' })}
         onSignIn={() => {
           window.location.href = account.signInUrl
         }}

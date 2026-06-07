@@ -136,13 +136,17 @@ export class OrbRealtimeVoiceClient {
   }
 
   private voiceMode: OrbVoiceModeId = 'conversational'
+  private brainRouted = false
 
   async startSession(options: {
     mode?: OrbVoiceModeId
     voice_id?: OrbVoicePresetId
     transport?: 'auto' | 'websocket' | 'webrtc' | 'browser_fallback'
+    /** Transcribe only — responses come from the shared ORB brain, not OpenAI Realtime. */
+    brainRouted?: boolean
   }): Promise<OrbVoiceSessionResponse> {
     this.voiceMode = options.mode ?? 'conversational'
+    this.brainRouted = Boolean(options.brainRouted)
     this.setState('connecting')
     const session = await startOrbRealtimeVoiceSession({
       mode: options.mode,
@@ -328,8 +332,11 @@ export class OrbRealtimeVoiceClient {
         model: this.session.openai_session?.model || DEFAULT_REALTIME_MODEL,
         voice: this.session.provider_voice,
         transcriptionModel: 'whisper-1',
+        transcriptionOnly: this.brainRouted,
         voiceMode: this.voiceMode,
-        instructions: voiceModeInstruction(this.voiceMode)
+        instructions: this.brainRouted
+          ? 'Transcribe user speech accurately. Do not speak or generate assistant audio.'
+          : voiceModeInstruction(this.voiceMode)
       })
       this.webrtcClient = client
       this.webrtcActive = true

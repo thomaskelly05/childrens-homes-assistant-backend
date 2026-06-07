@@ -197,7 +197,6 @@ export function OrbVoiceStation({
   const [listeningHint, setListeningHint] = useState(false)
   const [voiceStartError, setVoiceStartError] = useState<string | null>(null)
   const [browserStartStage, setBrowserStartStage] = useState<BrowserStartStage>('idle')
-  const assistantBufferRef = useRef('')
   const statusFetchedRef = useRef(false)
 
   const browserSpeechSupported =
@@ -264,7 +263,8 @@ export function OrbVoiceStation({
     secureContext: typeof window === 'undefined' ? true : window.isSecureContext
   })
 
-  const browserTranscriptText = (voice.transcript || voice.displayTranscript || '').trim()
+  const browserTranscriptText = voice.transcript.trim()
+  const browserDisplayTranscript = (voice.displayTranscript || browserTranscriptText).trim()
 
   const orbTextReply = (assistantReply || '').trim()
   const orbReplyFromTurns = turns
@@ -272,7 +272,9 @@ export function OrbVoiceStation({
     .map((t) => t.text.trim())
     .filter(Boolean)
     .join('\n\n')
-  const displayedOrbReply = orbTextReply || orbReplyFromTurns
+  const useBrowserLaunch = launchMode === 'browser_ptt'
+  const brainRoutedVoice = !useBrowserLaunch
+  const displayedOrbReply = brainRoutedVoice ? orbTextReply : orbTextReply || orbReplyFromTurns
 
   const replyIntelCore = extractIndicareIntelligenceCore(assistantReplyContext ?? undefined)
   const replyQualityGate = extractAnswerQualityGate(assistantReplyContext ?? undefined)
@@ -318,8 +320,6 @@ export function OrbVoiceStation({
     launchMode === 'browser_ptt' && browserStartStage === 'starting' && resolvedLaunchUiState === 'ready'
       ? 'starting'
       : resolvedLaunchUiState
-
-  const useBrowserLaunch = launchMode === 'browser_ptt'
 
   const voiceStarting = voiceStartStage === 'starting'
   const permissionDenied =
@@ -381,10 +381,13 @@ export function OrbVoiceStation({
     orbVoiceUiDetailLine(uiState, dictateRealtimeReady) ||
     (permissionDenied ? 'Microphone access was denied. You can still type to ORB.' : null)
 
+  const effectiveRealtimeState =
+    pending && voiceSessionLive ? 'thinking' : realtimeState === 'thinking' && pending ? 'thinking' : realtimeState
+
   const companionState = useBrowserLaunch
     ? mapOrbVoiceUiToCompanionState(launchUiState)
     : voiceSessionLive
-      ? mapOrbVoiceUiToCompanionState(realtimeState)
+      ? mapOrbVoiceUiToCompanionState(effectiveRealtimeState)
       : mapOrbVoiceUiToCompanionState(uiState)
 
   useEffect(() => {
@@ -417,29 +420,13 @@ export function OrbVoiceStation({
     setMicTestMessage(null)
     setVoiceStartError(null)
     setBrowserStartStage('idle')
-    assistantBufferRef.current = ''
     voice.cancelListening()
     voice.cancelSpeaking()
     voice.clearTranscript()
     voice.endVoiceSession()
   }, [voice])
 
-  const appendUserTurn = useCallback((text: string) => {
-    const trimmed = text.trim()
-    if (!trimmed) return
-    setTurns((prev) => [
-      ...prev,
-      {
-        id: newTurnId(),
-        role: 'user',
-        text: trimmed,
-        startedAt: new Date().toISOString(),
-        mode: voice.settings.voiceMode
-      }
-    ])
-  }, [voice.settings.voiceMode])
-
-  const appendAssistantTurn = useCallback(
+  const appendUserTurn = useCallback(
     (text: string) => {
       const trimmed = text.trim()
       if (!trimmed) return
@@ -447,36 +434,17 @@ export function OrbVoiceStation({
         ...prev,
         {
           id: newTurnId(),
-          role: 'assistant',
+          role: 'user',
           text: trimmed,
           startedAt: new Date().toISOString(),
           mode: voice.settings.voiceMode,
           provider: 'openai_realtime'
         }
       ])
+      void onSendToOrb(trimmed)
     },
-    [voice.settings.voiceMode]
+    [onSendToOrb, voice.settings.voiceMode]
   )
-
-  const upsertAssistantPartial = useCallback((delta: string) => {
-    assistantBufferRef.current += delta
-    const buffered = assistantBufferRef.current
-    setTurns((prev) => {
-      const last = prev[prev.length - 1]
-      if (last?.role === 'assistant') {
-        return [...prev.slice(0, -1), { ...last, text: buffered }]
-      }
-      return [
-        ...prev,
-        {
-          id: newTurnId(),
-          role: 'assistant',
-          text: buffered,
-          startedAt: new Date().toISOString()
-        }
-      ]
-    })
-  }, [])
 
   useEffect(() => {
     if (!open) resetSession()
@@ -652,18 +620,13 @@ export function OrbVoiceStation({
     setVoiceStartStage('starting')
     setSessionStartedAt(new Date().toISOString())
     voice.resumeVoiceSession()
-    assistantBufferRef.current = ''
-
     const result = await beginOrbRealtimeVoiceConversation({
       mode: voice.settings.voiceMode,
       voice_id: voice.settings.voicePresetId,
+      brainRouted: true,
       transcript: {
         onFinalTranscript: appendUserTurn,
-        onAssistantDelta: upsertAssistantPartial,
-        onAssistantDone: (text) => {
-          assistantBufferRef.current = ''
-          appendAssistantTurn(text)
-        },
+        onPartialTranscript: () => setRealtimeState('transcribing'),
         onStateChange: (state) => setRealtimeState(state)
       }
     })
@@ -1129,7 +1092,7 @@ export function OrbVoiceStation({
             </button>
           ) : null}
 
-          {(browserTranscriptText || voice.interimTranscript) && useBrowserLaunch ? (
+          {(browserDisplayTranscript || voice.interimTranscript) && useBrowserLaunch ? (
             <div
               className="orb-voice-transcript mt-6 w-full rounded-2xl border border-[var(--orb-line)]/40 bg-[var(--orb-surface-elevated)]/60 p-4 text-left backdrop-blur-md"
               data-orb-voice-transcript
@@ -1137,9 +1100,9 @@ export function OrbVoiceStation({
             >
               <p className="text-[10px] font-semibold uppercase tracking-wide text-[#5ec8ff]/90">You said</p>
               <p className="mt-2 text-xs leading-5 text-[var(--orb-foreground)]">
-                {browserTranscriptText || voice.interimTranscript}
+                {browserDisplayTranscript || voice.interimTranscript}
               </p>
-              {voice.interimTranscript && !browserTranscriptText ? (
+              {voice.interimTranscript && voice.phase === 'listening' ? (
                 <p className="mt-1 text-[10px] italic text-[var(--orb-muted)]" data-orb-voice-interim>
                   Listening…
                 </p>
@@ -1213,6 +1176,7 @@ export function OrbVoiceStation({
             <div
               className="orb-voice-reply mt-4 w-full rounded-2xl border border-[var(--orb-line)]/40 bg-[var(--orb-surface-elevated)]/40 p-4"
               data-orb-voice-reply-pending
+              data-orb-voice-thinking
             >
               <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--orb-muted)]">ORB replied</p>
               <p className="mt-2 text-xs text-[var(--orb-muted)]">Preparing answer…</p>

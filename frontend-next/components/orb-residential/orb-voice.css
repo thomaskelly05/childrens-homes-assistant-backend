@@ -26,12 +26,12 @@
   --orb-voice-core-size: var(--orb-voice-head-width);
   --orb-voice-speech-energy: 0;
   --orb-voice-core-scale: 1;
-  --orb-voice-core-brightness: 1;
+  --orb-voice-core-brightness: 1.14;
   --orb-voice-hue-shift: 0deg;
-  --orb-voice-aura-opacity: 0.58;
+  --orb-voice-aura-opacity: 0.78;
   --orb-voice-state-hue: 210;
-  --orb-voice-rim-strength: 0.7;
-  --orb-voice-plasma-speed: 1;
+  --orb-voice-rim-strength: 0.94;
+  --orb-voice-plasma-speed: 1.08;
   --orb-voice-cool: var(--orb-hue-a, 56 189 248);
   --orb-voice-violet: var(--orb-hue-b, 168 85 247);
   --orb-voice-magenta: var(--orb-hue-c, 244 114 182);
@@ -181,14 +181,14 @@
   background:
     radial-gradient(
       ellipse 100% 38% at 50% 50%,
-      rgb(var(--orb-voice-cool) / calc(0.22 + var(--orb-voice-speech-energy, 0) * 0.12)),
-      rgb(var(--orb-voice-violet) / 0.14) 32%,
-      rgb(var(--orb-voice-magenta) / 0.1) 48%,
-      rgb(var(--orb-voice-warm) / calc(0.16 * var(--orb-voice-warm-strength, 0.64))) 62%,
+      rgb(var(--orb-voice-cool) / calc(0.34 + var(--orb-voice-speech-energy, 0) * 0.16)),
+      rgb(var(--orb-voice-violet) / 0.22) 32%,
+      rgb(var(--orb-voice-magenta) / 0.18) 48%,
+      rgb(var(--orb-voice-warm) / calc(0.24 * var(--orb-voice-warm-strength, 0.64))) 62%,
       transparent 82%
     );
   filter: blur(14px);
-  opacity: calc(0.86 + var(--orb-voice-speech-energy, 0) * 0.18);
+  opacity: calc(0.94 + var(--orb-voice-speech-energy, 0) * 0.22);
   -webkit-mask-image: radial-gradient(ellipse 100% 100% at 50% 50%, #000 0%, #000 52%, transparent 88%);
   mask-image: radial-gradient(ellipse 100% 100% at 50% 50%, #000 0%, #000 52%, transparent 88%);
   pointer-events: none;
@@ -203,28 +203,28 @@
   background:
     radial-gradient(
       circle at 32% 30%,
-      rgb(var(--orb-voice-cool) / calc(0.2 * var(--orb-glow, 0.62) * var(--orb-voice-aura-opacity, 0.58) * 2.2)),
+      rgb(var(--orb-voice-cool) / calc(0.32 * var(--orb-glow, 0.72) * var(--orb-voice-aura-opacity, 0.78) * 2.4)),
       transparent 44%
     ),
     radial-gradient(
       circle at 72% 74%,
-      rgb(var(--orb-voice-warm) / calc(0.14 * var(--orb-glow, 0.62) * var(--orb-voice-warm-strength, 0.64) * var(--orb-voice-aura-opacity, 0.58) * 2)),
-      rgb(var(--orb-voice-magenta) / calc(0.08 * var(--orb-glow, 0.62) * var(--orb-voice-aura-opacity, 0.58) * 1.8)) 38%,
+      rgb(var(--orb-voice-warm) / calc(0.22 * var(--orb-glow, 0.72) * var(--orb-voice-warm-strength, 0.64) * var(--orb-voice-aura-opacity, 0.78) * 2.2)),
+      rgb(var(--orb-voice-magenta) / calc(0.16 * var(--orb-glow, 0.72) * var(--orb-voice-aura-opacity, 0.78) * 2)) 38%,
       transparent 50%
     ),
     radial-gradient(
       circle at 50% 50%,
-      rgb(var(--orb-voice-violet) / calc(0.12 * var(--orb-glow, 0.62) * var(--orb-voice-aura-opacity, 0.58) * 2.2)),
-      rgb(var(--orb-voice-magenta) / calc(0.08 * var(--orb-glow, 0.62) * var(--orb-voice-aura-opacity, 0.58) * 2)) 54%,
+      rgb(var(--orb-voice-violet) / calc(0.2 * var(--orb-glow, 0.72) * var(--orb-voice-aura-opacity, 0.78) * 2.4)),
+      rgb(var(--orb-voice-magenta) / calc(0.14 * var(--orb-glow, 0.72) * var(--orb-voice-aura-opacity, 0.78) * 2.2)) 54%,
       transparent 74%
     );
   filter: blur(22px);
-  opacity: var(--orb-voice-aura-opacity, 0.58);
+  opacity: calc(var(--orb-voice-aura-opacity, 0.78) * 1.08);
   -webkit-mask-image: var(--orb-voice-glow-mask);
   mask-image: var(--orb-voice-glow-mask);
   pointer-events: none;
   z-index: 0;
-  animation: orb-voice-core-halo 6.2s ease-in-out infinite;
+  animation: orb-voice-core-halo 5.8s ease-in-out infinite;
 }
 
 .orb-voice-core__aura {
@@ -234,13 +234,13 @@
   background:
     radial-gradient(
       circle at 36% 34%,
-      rgb(var(--orb-voice-cool) / calc(0.14 * var(--orb-glow, 0.62) * var(--orb-voice-aura-opacity, 0.58) * 2.4)),
+      rgb(var(--orb-voice-cool) / calc(0.24 * var(--orb-glow, 0.72) * var(--orb-voice-aura-opacity, 0.78) * 2.6)),
       transparent 50%
     ),
     radial-gradient(
       circle at 70% 68%,
-      rgb(var(--orb-voice-magenta) / calc(0.1 * var(--orb-glow, 0.62) * var(--orb-voice-aura-opacity, 0.58) * 2.2)),
-      rgb(var(--orb-voice-warm) / calc(0.1 * var(--orb-glow, 0.62) * var(--orb-voice-warm-strength, 0.64) * var(--orb-voice-aura-opacity, 0.58) * 2)) 42%,
+      rgb(var(--orb-voice-magenta) / calc(0.18 * var(--orb-glow, 0.72) * var(--orb-voice-aura-opacity, 0.78) * 2.4)),
+      rgb(var(--orb-voice-warm) / calc(0.16 * var(--orb-glow, 0.72) * var(--orb-voice-warm-strength, 0.64) * var(--orb-voice-aura-opacity, 0.78) * 2.2)) 42%,
       transparent 54%
     );
   filter: blur(16px);
@@ -260,16 +260,17 @@
   background:
     radial-gradient(
       circle at 42% 44%,
-      rgb(var(--orb-voice-violet) / 0.22),
-      rgb(var(--orb-voice-magenta) / 0.14) 42%,
+      rgb(var(--orb-voice-violet) / 0.34),
+      rgb(var(--orb-voice-magenta) / 0.24) 42%,
+      rgb(var(--orb-voice-warm) / 0.16) 58%,
       transparent 68%
     );
   filter: blur(18px);
-  opacity: 0.72;
+  opacity: 0.9;
   -webkit-mask-image: var(--orb-voice-glow-mask);
   mask-image: var(--orb-voice-glow-mask);
   pointer-events: none;
-  animation: orb-voice-core-thinking-glow 7.2s ease-in-out infinite;
+  animation: orb-voice-core-thinking-glow 6.4s ease-in-out infinite;
 }
 
 .orb-voice-core__sphere-wrap {
@@ -335,14 +336,14 @@
   overflow: hidden;
   background: conic-gradient(
     from 210deg at 50% 50%,
-    rgb(var(--orb-voice-cool) / 0.18),
-    rgb(var(--orb-voice-violet) / 0.12),
-    rgb(var(--orb-voice-magenta) / 0.2),
-    rgb(var(--orb-voice-warm) / calc(0.1 * var(--orb-voice-warm-strength, 0.64))),
-    rgb(var(--orb-voice-cool) / 0.18)
+    rgb(var(--orb-voice-cool) / 0.28),
+    rgb(var(--orb-voice-violet) / 0.2),
+    rgb(var(--orb-voice-magenta) / 0.3),
+    rgb(var(--orb-voice-warm) / calc(0.18 * var(--orb-voice-warm-strength, 0.64))),
+    rgb(var(--orb-voice-cool) / 0.28)
   );
   mix-blend-mode: soft-light;
-  opacity: 0.42;
+  opacity: 0.56;
   -webkit-mask: radial-gradient(circle, #000 0%, #000 72%, transparent 100%);
   mask: radial-gradient(circle, #000 0%, #000 72%, transparent 100%);
   animation: orb-voice-core-swirl calc(14s / var(--orb-voice-plasma-speed, 1)) linear infinite;
@@ -362,8 +363,8 @@
   position: absolute;
   inset: 0;
   border-radius: 50%;
-  border: 1px solid rgb(var(--orb-voice-cool) / 0.34);
-  box-shadow: 0 0 8px rgb(var(--orb-voice-cool) / 0.12);
+  border: 1px solid rgb(var(--orb-voice-cool) / 0.48);
+  box-shadow: 0 0 14px rgb(var(--orb-voice-cool) / 0.22);
   opacity: 0;
 }
 
@@ -469,8 +470,8 @@
 }
 
 .orb-voice-companion[data-orb-voice-state='listening'] .orb-voice-core__asset-img {
-  filter: brightness(calc(var(--orb-voice-core-brightness, 1) * 1.04))
-    hue-rotate(calc(var(--orb-voice-hue-shift, 0deg) - 4deg)) saturate(1.08);
+  filter: brightness(calc(var(--orb-voice-core-brightness, 1) * 1.1))
+    hue-rotate(calc(var(--orb-voice-hue-shift, 0deg) - 6deg)) saturate(1.16);
 }
 
 .orb-voice-companion[data-orb-voice-state='listening'] .orb-voice-core__aura {
@@ -491,16 +492,16 @@
 }
 
 .orb-voice-companion[data-orb-voice-state='thinking'] .orb-voice-core__asset-img {
-  filter: brightness(calc(var(--orb-voice-core-brightness, 1) * 1.06))
-    hue-rotate(calc(var(--orb-voice-hue-shift, 0deg) + 6deg)) saturate(1.12);
+  filter: brightness(calc(var(--orb-voice-core-brightness, 1) * 1.14))
+    hue-rotate(calc(var(--orb-voice-hue-shift, 0deg) + 8deg)) saturate(1.2);
 }
 
 .orb-voice-companion[data-orb-voice-state='thinking'] .orb-voice-core__thinking-glow {
-  opacity: 0.88;
+  opacity: 1;
 }
 
 .orb-voice-companion[data-orb-voice-state='thinking'] .orb-voice-core__swirl {
-  opacity: 0.56;
+  opacity: 0.72;
 }
 
 .orb-voice-companion[data-orb-voice-state='speaking'] {

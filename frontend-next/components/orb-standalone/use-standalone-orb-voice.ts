@@ -31,6 +31,10 @@ import {
 } from '@/lib/orb/voice/orb-voice-profiles'
 import { requestOrbVoiceSpeak } from '@/lib/orb/voice/orb-voice-client'
 import { requestOrbVoiceProviderSpeak } from '@/lib/orb/voice/orb-voice-provider'
+import {
+  appendOrbVoiceFinalTranscriptChunk,
+  buildOrbVoiceDisplayTranscript
+} from '@/lib/orb/voice/orb-voice-transcript'
 import type { OrbSpokenAnswerLength, OrbVoiceModeId, OrbVoicePresetId } from '@/lib/orb/voice/orb-voice-types'
 import {
   ORB_VOICE_SETTINGS_LEGACY_KEY,
@@ -530,27 +534,25 @@ export function useStandaloneOrbVoice() {
           if (event.results[i]?.isFinal) finalText += piece
           else interim += piece
         }
-        const interimTrimmed = interim.trim()
+        const interimTrimmed = stripWakePhraseFromTranscript(interim.trim())
         const finalTrimmed = stripWakePhraseFromTranscript(finalText.trim())
         if (interimTrimmed) setInterimTranscript(interimTrimmed)
         if (finalTrimmed) {
+          setTranscript((prev) => {
+            const next =
+              mode === 'continuous' && dictateSpeechCaptureRef.current
+                ? prev
+                  ? `${prev}\n${finalTrimmed}`
+                  : finalTrimmed
+                : appendOrbVoiceFinalTranscriptChunk(prev, finalTrimmed)
+            transcriptRef.current = next
+            return next
+          })
+          setInterimTranscript('')
           if (mode === 'continuous' && dictateSpeechCaptureRef.current) {
-            setTranscript((prev) => {
-              const next = prev ? `${prev}\n${finalTrimmed}` : finalTrimmed
-              transcriptRef.current = next
-              return next
-            })
-            setInterimTranscript('')
             setPhase('continuous_listening')
-          } else {
-            setTranscript(finalTrimmed)
-            setInterimTranscript('')
-            setPhase('transcript_ready')
-            recognition.stop()
-          }
-        } else if (interimTrimmed) {
-          if (!(mode === 'continuous' && dictateSpeechCaptureRef.current)) {
-            setTranscript(stripWakePhraseFromTranscript(interimTrimmed))
+          } else if (!recognition.continuous) {
+            setPhase('listening')
           }
         }
       }
@@ -580,10 +582,13 @@ export function useStandaloneOrbVoice() {
         } else {
           setVoiceCaptureState(continuous ? 'ready' : hasTranscript ? 'ready' : 'idle')
           setPhase((current) => {
-            if (current === 'listening' || current === 'continuous_listening') {
-              return hasTranscript ? 'transcript_ready' : continuous ? 'continuous_listening' : 'idle'
+            if (continuous) {
+              return hasTranscript ? 'continuous_listening' : 'continuous_listening'
             }
-            return current
+            if (current === 'listening' || current === 'continuous_listening' || current === 'transcript_ready') {
+              return hasTranscript ? 'transcript_ready' : 'idle'
+            }
+            return hasTranscript ? 'transcript_ready' : current
           })
         }
         if (!continuous) stopMediaStream()
@@ -639,9 +644,10 @@ export function useStandaloneOrbVoice() {
   const stopListening = useCallback(() => {
     recognitionRef.current?.stop()
     setListening(false)
-    if (transcript.trim() || interimTranscript.trim()) setPhase('transcript_ready')
+    setInterimTranscript('')
+    if (transcriptRef.current.trim()) setPhase('transcript_ready')
     else if (phase === 'listening' || phase === 'continuous_listening') setPhase('idle')
-  }, [interimTranscript, phase, transcript])
+  }, [phase])
 
   const interruptForListen = useCallback(() => {
     if (!settingsRef.current.allowInterruption && speaking) return
@@ -874,7 +880,7 @@ export function useStandaloneOrbVoice() {
     speaking,
     transcript,
     interimTranscript,
-    displayTranscript: transcript || interimTranscript,
+    displayTranscript: buildOrbVoiceDisplayTranscript(transcript, interimTranscript),
     error,
     preferredVoiceName,
     voiceSelectionNote,

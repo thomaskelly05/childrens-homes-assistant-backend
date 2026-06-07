@@ -32,6 +32,36 @@ RESEARCH_NOTE = (
     "Live web/source retrieval is not enabled in this standalone mode yet."
 )
 
+LIVE_LOOKUP_INTENT_TERMS = (
+    "weather",
+    "forecast",
+    "headline",
+    "headlines",
+    "news",
+    "sport",
+    "sports",
+    "score",
+    "scores",
+    "fixture",
+    "fixtures",
+    "cinema",
+    "what is on",
+    "what's on",
+    "nearby",
+    "near me",
+    "latest",
+    "today",
+    "current",
+    "right now",
+    "whitley bay",
+    "newcastle",
+)
+
+LIVE_LOOKUP_NOTE = (
+    "Live weather, news, sports scores, and local search are not connected in standalone ORB yet. "
+    "ORB will not guess current facts — check an official source or connect a web/search provider when ready."
+)
+
 HIGH_RISK_TERMS = (
     "immediate danger",
     "suicide",
@@ -127,6 +157,7 @@ class OrbKnowledgeRetrievalService:
             or has_images,
             "standalone_boundary": True,
             "research_intent": self._has_research_intent(lower),
+            "live_lookup_intent": self._has_live_lookup_intent(lower),
             "knowledge_spine": bool(selected_modules),
             "orb_operating_brain": bool(operating_sections),
         }
@@ -138,6 +169,8 @@ class OrbKnowledgeRetrievalService:
             "mode": mode_name,
             "research_intent": intents["research_intent"],
             "research_note": RESEARCH_NOTE if intents["research_intent"] else None,
+            "live_lookup_intent": intents["live_lookup_intent"],
+            "live_lookup_note": LIVE_LOOKUP_NOTE if intents["live_lookup_intent"] else None,
             "routing_hint": self._routing_hint(intents, mode=mode_name),
             "knowledge_spine": {
                 "enabled": True,
@@ -482,6 +515,8 @@ class OrbKnowledgeRetrievalService:
         )
         if classification.get("research_note") and prompt_tier != "fast":
             lines.append(f"Research note for the user: {classification['research_note']}")
+        if classification.get("live_lookup_note") and prompt_tier != "fast":
+            lines.append(f"Live lookup note for the user: {classification['live_lookup_note']}")
         return "\n".join(lines)
 
     def should_use_product_knowledge(self, message: str, *, mode: str | None = None) -> bool:
@@ -635,6 +670,9 @@ class OrbKnowledgeRetrievalService:
     def _has_research_intent(self, lower: str) -> bool:
         return any(term in lower for term in RESEARCH_INTENT_TERMS)
 
+    def _has_live_lookup_intent(self, lower: str) -> bool:
+        return any(term in lower for term in LIVE_LOOKUP_INTENT_TERMS)
+
     def _build_operating_brain_pack(self, message: str, *, mode: str | None = None) -> dict[str, Any] | None:
         sections = orb_operating_brain_service.relevant_sections(message, mode=mode)
         if not sections:
@@ -737,6 +775,8 @@ class OrbKnowledgeRetrievalService:
         return ordered
 
     def _routing_hint(self, intents: dict[str, bool], *, mode: str) -> str:
+        if intents.get("live_lookup_intent"):
+            return "live_lookup_extension"
         if intents.get("research_intent"):
             return "deep_research_foundation"
         if intents.get("safeguarding_principles") or mode == "Safeguarding":
