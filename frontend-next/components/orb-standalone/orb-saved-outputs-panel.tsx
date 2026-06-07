@@ -326,22 +326,18 @@ export function OrbSavedOutputsPanel({
               )
             ) : items.length === 0 ? (
               <OrbStudioEmptyState
-                title="No saved outputs yet"
-                description={
-                  storageMode === 'local'
-                    ? 'Records, briefings and document reviews you save will appear here. Drafts stay on this device until you reconnect.'
-                    : 'Records, briefings and document reviews you save will appear here.'
-                }
+                title="Nothing saved yet."
+                description="Save reviews, action plans and documents here."
                 actions={
                   <>
                     {onStartInOrbWrite ? (
                       <OrbPremiumButton variant="primary" onClick={onStartInOrbWrite} data-orb-saved-start-write>
-                        {ORB_PREMIUM_ACTION_LABELS.openInOrbWrite}
+                        Create document
                       </OrbPremiumButton>
                     ) : null}
                     {onStartInDictate ? (
                       <OrbPremiumButton variant="secondary" onClick={onStartInDictate} data-orb-saved-start-dictate>
-                        {ORB_PREMIUM_ACTION_LABELS.startInDictate}
+                        Start in Dictate
                       </OrbPremiumButton>
                     ) : null}
                   </>
@@ -457,30 +453,17 @@ export function OrbSavedOutputsPanel({
             >
               {items.length === 0 ? (
                 <div className="space-y-3" data-orb-saved-output-empty-state>
-                  <p>
-                    No saved outputs yet. When ORB helps you write a record, review practice or create a
-                    briefing, you can save it here and reuse it later.
-                  </p>
-                  <p className="text-xs">Start from Chat, Dictate, ORB Write or Documents &amp; Guidance.</p>
+                  <p className="font-medium text-[var(--orb-foreground)]">Nothing saved yet.</p>
+                  <p className="text-xs">Save reviews, action plans and documents here.</p>
                   <div className="flex flex-wrap justify-center gap-2">
-                    {onStartInChat ? (
-                      <OrbPremiumButton variant="secondary" onClick={onStartInChat} data-orb-saved-start-chat>
-                        Chat
+                    {onStartInOrbWrite ? (
+                      <OrbPremiumButton variant="primary" onClick={onStartInOrbWrite} data-orb-saved-start-write>
+                        Create document
                       </OrbPremiumButton>
                     ) : null}
                     {onStartInDictate ? (
                       <OrbPremiumButton variant="secondary" onClick={onStartInDictate} data-orb-saved-start-dictate>
-                        Dictate
-                      </OrbPremiumButton>
-                    ) : null}
-                    {onStartInOrbWrite ? (
-                      <OrbPremiumButton variant="secondary" onClick={onStartInOrbWrite} data-orb-saved-start-write>
-                        ORB Write
-                      </OrbPremiumButton>
-                    ) : null}
-                    {onStartInDocuments ? (
-                      <OrbPremiumButton variant="secondary" onClick={onStartInDocuments} data-orb-saved-start-documents>
-                        Documents
+                        Start in Dictate
                       </OrbPremiumButton>
                     ) : null}
                   </div>

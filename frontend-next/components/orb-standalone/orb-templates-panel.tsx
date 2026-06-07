@@ -41,6 +41,24 @@ import type { OrbRecordingRecordType } from '@/lib/orb/recording/orb-recording-t
 
 const FALLBACK_CATEGORIES = [...ORB_TEMPLATE_FALLBACK_CATEGORIES]
 
+const RECORDING_LIBRARY_FILTERS = [
+  { id: 'all', label: 'All', category: '' },
+  { id: 'popular', label: 'Popular', category: '__popular__' },
+  { id: 'safeguarding', label: 'Safeguarding', category: 'safeguarding' },
+  { id: 'recording', label: 'Recording', category: 'recording' },
+  { id: 'inspection', label: 'Inspection', category: 'regulatory' },
+  { id: 'management', label: 'Management', category: 'leadership' }
+] as const
+
+const TEMPLATE_LIBRARY_FILTERS = [
+  { id: 'all', label: 'All', category: '' },
+  { id: 'popular', label: 'Popular', category: '__popular__' },
+  { id: 'safeguarding', label: 'Safeguarding', category: 'Safeguarding' },
+  { id: 'recording', label: 'Recording', category: 'Recording' },
+  { id: 'inspection', label: 'Inspection', category: 'Ofsted / SCCIF' },
+  { id: 'management', label: 'Management', category: 'Leadership / RI' }
+] as const
+
 const TEMPLATE_CATEGORY_LABELS: Record<string, string> = {
   care_planning: 'Care planning',
   learning_academy: 'Learning',
@@ -111,6 +129,8 @@ export function OrbTemplatesPanel({
 }) {
   const [categories, setCategories] = useState<string[]>(FALLBACK_CATEGORIES)
   const [category, setCategory] = useState('')
+  const [recordingFilter, setRecordingFilter] = useState('all')
+  const [templateFilter, setTemplateFilter] = useState('all')
   const [search, setSearch] = useState(initialSearch)
   const [templates, setTemplates] = useState<OrbTemplateSummary[]>([])
   const [selected, setSelected] = useState<OrbTemplateSummary | null>(null)
@@ -161,6 +181,16 @@ export function OrbTemplatesPanel({
     })
   }
 
+  const visibleTemplates = templates.filter((template) => {
+    const active = TEMPLATE_LIBRARY_FILTERS.find((item) => item.id === templateFilter)
+    if (!active || active.id === 'all') return true
+    if (active.category === '__popular__') return isFeaturedTemplate(template.title)
+    return friendlyCategoryLabel(template.category || '') === active.category
+  })
+
+  const recordingCategory =
+    RECORDING_LIBRARY_FILTERS.find((item) => item.id === recordingFilter)?.category ?? ''
+
   async function handleUseTemplate(template: OrbTemplateSummary) {
     const prompt = buildImmediatePrompt(template)
     onUseTemplate?.(prompt, template)
@@ -203,16 +233,22 @@ export function OrbTemplatesPanel({
             searchPlaceholder="Search templates and record types…"
             onSearchSubmit={() => void load()}
             filters={
-              <>
-                <OrbPremiumPill active={!category} onClick={() => setCategory('')}>
-                  All
-                </OrbPremiumPill>
-                {categories.map((cat) => (
-                  <OrbPremiumPill key={cat} active={category === cat} onClick={() => setCategory(cat)}>
-                    {cat}
+              <div className="flex flex-wrap gap-1.5" data-orb-templates-filter-row>
+                {TEMPLATE_LIBRARY_FILTERS.map((filter) => (
+                  <OrbPremiumPill
+                    key={filter.id}
+                    active={templateFilter === filter.id}
+                    onClick={() => {
+                      setTemplateFilter(filter.id)
+                      setCategory(filter.category === '__popular__' ? '' : filter.category)
+                    }}
+                    className="min-h-[2.75rem] text-xs"
+                    data-orb-templates-filter={filter.id}
+                  >
+                    {filter.label}
                   </OrbPremiumPill>
                 ))}
-              </>
+              </div>
             }
           />
         }
@@ -220,11 +256,31 @@ export function OrbTemplatesPanel({
       >
         <section data-orb-recording-library-section>
           <h3 className="mb-2 text-sm font-semibold text-[var(--orb-foreground)]">Recording library</h3>
-          <p className="mb-3 text-xs text-[var(--orb-muted)]">
+          <p className="mb-2 text-xs text-[var(--orb-muted)]">
             Structured residential record types shared across Dictate, Write and Documents.
           </p>
+          <div className="mb-3 flex flex-wrap gap-1.5" data-orb-recording-library-filters>
+            {RECORDING_LIBRARY_FILTERS.map((filter) => (
+              <OrbPremiumPill
+                key={filter.id}
+                active={recordingFilter === filter.id}
+                onClick={() => setRecordingFilter(filter.id)}
+                className="min-h-[2.75rem] text-xs"
+                data-orb-recording-filter={filter.id}
+              >
+                {filter.label}
+              </OrbPremiumPill>
+            ))}
+          </div>
           <OrbRecordingLibraryCards
             search={search}
+            category={
+              recordingCategory === '__popular__'
+                ? undefined
+                : recordingCategory || undefined
+            }
+            popularOnly={recordingCategory === '__popular__'}
+            hideCategoryChips
             onAction={(action, recordType) => {
               if (action === 'preview') {
                 setRecordingPreview(recordType)
@@ -262,7 +318,7 @@ export function OrbTemplatesPanel({
           </div>
         ) : null}
 
-        {!loading && templates.length === 0 && !isOrbStationAuthError(error) ? (
+        {!loading && visibleTemplates.length === 0 && !isOrbStationAuthError(error) ? (
           <OrbPremiumEmptyState
             title="No templates found"
             body="Try another category or search term."
@@ -275,7 +331,7 @@ export function OrbTemplatesPanel({
           data-orb-templates-card-grid
           data-orb-template-list-scroll
         >
-          {[...templates]
+          {[...visibleTemplates]
             .sort((a, b) => {
               const af = isFeaturedTemplate(a.title) ? 0 : 1
               const bf = isFeaturedTemplate(b.title) ? 0 : 1

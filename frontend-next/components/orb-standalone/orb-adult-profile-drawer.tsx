@@ -115,22 +115,29 @@ export function OrbAdultProfileDrawer({
   return (
     <div className="orb-panel-overlay fixed inset-0 z-[60] flex justify-end bg-black/40 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="Adult profile">
       <div className="orb-panel-drawer flex h-full w-full max-w-md flex-col border-l border-[var(--orb-line)] bg-[var(--orb-surface-elevated)] shadow-2xl">
-        <header className="flex items-center justify-between border-b border-[var(--orb-line)] px-5 py-4">
+        <header
+          className="flex items-start justify-between border-b border-[var(--orb-line)] px-5 py-4"
+          data-orb-profile-header
+        >
           <div className="min-w-0 flex-1">
-            <h2 className="text-lg font-semibold tracking-tight text-[var(--orb-foreground)]">
-              {draft.name?.trim() || 'ORB Residential'}
+            <h2 className="text-lg font-semibold tracking-tight text-[var(--orb-foreground)]" data-orb-profile-name>
+              {draft.name?.trim() || account.userName?.trim() || 'Your profile'}
             </h2>
-            <p className="mt-0.5 text-xs text-[var(--orb-muted)]">ORB Residential account</p>
-            <div data-orb-profile-status-chips>
-              <span data-orb-profile-status-chip>{accountStatusLabel}</span>
-              {account.isSignedIn ? (
-                <span data-orb-profile-status-chip>
-                  {account.hasPasskeys ? 'Passkey enabled' : 'Passkey available'}
-                </span>
-              ) : null}
-              {account.isSignedIn && account.planName ? (
-                <span data-orb-profile-status-chip>{account.planName}</span>
-              ) : null}
+            {account.userEmail ? (
+              <p className="mt-0.5 truncate text-sm text-[var(--orb-muted)]" data-orb-profile-email>
+                {account.userEmail}
+              </p>
+            ) : null}
+            <p className="mt-1 text-sm text-[var(--orb-foreground)]" data-orb-profile-role>
+              {draft.roleLabel || roleLabelFor(draft.role)}
+            </p>
+            <div className="mt-2 flex flex-wrap gap-1.5" data-orb-profile-compact-badges>
+              <span className="orb-profile-compact-badge" data-orb-profile-voice-badge>
+                Voice Ready
+              </span>
+              <span className="orb-profile-compact-badge" data-orb-profile-passkey-badge>
+                {account.hasPasskeys ? 'Passkey Enabled' : 'Passkey Disabled'}
+              </span>
             </div>
             {developerMode && cognitionModeLabel ? (
               <p className="mt-2 text-xs text-[var(--orb-accent)]" data-orb-profile-cognition-mode>
@@ -145,16 +152,16 @@ export function OrbAdultProfileDrawer({
 
         <div className="orb-panel-body flex-1 space-y-3 overflow-y-auto px-5 py-5" data-orb-profile-panel-scroll>
           <section className="rounded-2xl border border-[var(--orb-line)] bg-[var(--orb-surface)] p-4" data-orb-profile-summary>
-            <p className="text-sm font-medium text-[var(--orb-foreground)]">{accountDetail}</p>
-            {account.isSignedIn && account.planName ? (
-              <p className="mt-1 text-xs text-[var(--orb-muted)]">{account.planName}</p>
-            ) : null}
-            <p className="mt-2 text-[11px] text-[var(--orb-muted)]" data-orb-passkey-hint>
+            <p className="text-xs text-[var(--orb-muted)]" data-orb-profile-account-status>
+              {accountStatusLabel}
+              {account.isSignedIn && account.planName ? ` · ${account.planName}` : ''}
+            </p>
+            <p className="mt-2 text-[11px] leading-relaxed text-[var(--orb-muted)]" data-orb-passkey-hint>
               {account.isSignedIn
                 ? account.hasPasskeys
-                  ? 'Use Face ID, Touch ID or device passkey — configured on this account.'
-                  : 'Use Face ID, Touch ID or device passkey — add one in Security below.'
-                : 'Sign in to manage Face ID, Touch ID or device passkeys.'}
+                  ? 'Face ID, Touch ID or device passkey is configured on this account.'
+                  : 'Add a passkey in Security below for faster sign-in.'
+                : 'Sign in to manage passkeys and account settings.'}
             </p>
           </section>
 

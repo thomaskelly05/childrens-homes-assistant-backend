@@ -15,9 +15,10 @@ describe('ORB settings profile and billing modals', () => {
     const settings = read('components/orb-standalone/orb-standalone-settings-panel.tsx')
     assert.match(settings, /data-orb-settings-drawer/)
     assert.match(settings, /data-orb-settings-nav/)
-    assert.match(settings, /general/)
-    assert.match(settings, /personalisation/)
-    assert.match(settings, /privacy/)
+    assert.match(settings, /appearance/)
+    assert.match(settings, /writing/)
+    assert.match(settings, /safety_privacy/)
+    assert.match(settings, /account_billing/)
   })
 
   it('account modal shows premium status chips and quick actions', () => {

@@ -114,7 +114,7 @@ describe('orb saved outputs panel UI', () => {
     assert.match(panel, /Reuse, export and improve your ORB work/)
     assert.match(panel, /data-orb-saved-outputs-list/)
     assert.match(panel, /data-orb-saved-output-detail/)
-    assert.match(panel, /No saved outputs yet/)
+    assert.match(panel, /Nothing saved yet/)
     assert.match(actions, /data-orb-saved-output-copy/)
     assert.match(actions, /data-orb-saved-output-export/)
     assert.match(actions, /data-orb-saved-output-ask-orb/)

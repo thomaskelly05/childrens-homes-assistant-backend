@@ -24,7 +24,7 @@ export function OrbPremiumTabs<T extends string>({
   return (
     <div
       className={cn(
-        'orb-premium-tabs flex flex-wrap gap-1 rounded-xl border border-[var(--orb-line)]/60 bg-[var(--orb-surface-elevated)]/80 p-1',
+        'orb-premium-tabs orb-premium-tabs--segmented flex gap-1 overflow-x-auto rounded-xl border border-[var(--orb-line)]/60 bg-[var(--orb-surface-elevated)]/80 p-1 [-webkit-overflow-scrolling:touch]',
         className
       )}
       role="tablist"
@@ -42,10 +42,10 @@ export function OrbPremiumTabs<T extends string>({
             aria-selected={active}
             onClick={() => onChange(tab.id)}
             className={cn(
-              'rounded-lg px-3 py-1.5 text-xs font-semibold transition sm:text-sm',
+              'min-h-[2.75rem] shrink-0 rounded-lg px-3 py-2 text-xs font-semibold transition sm:text-sm',
               active
-                ? 'bg-[var(--orb-surface-hover)] text-[var(--orb-foreground)] shadow-sm'
-                : 'text-[var(--orb-muted)] hover:text-[var(--orb-foreground)]'
+                ? 'bg-[var(--orb-primary-soft,var(--orb-surface-hover))] text-[var(--orb-foreground)] shadow-sm ring-1 ring-[var(--orb-primary)]/25'
+                : 'text-[var(--orb-muted)] hover:bg-[var(--orb-surface-hover)] hover:text-[var(--orb-foreground)]'
             )}
             data-orb-premium-tab={tab.id}
           >

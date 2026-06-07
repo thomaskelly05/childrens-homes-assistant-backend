@@ -146,12 +146,12 @@ describe('ORB ChatGPT UI structure', () => {
     assert.match(help, /immediate risk/)
   })
 
-  it('settings panel has voice, chat and privacy sections', () => {
+  it('settings panel has voice, recording and safety sections', () => {
     const settings = readComponent('components/orb-standalone/orb-standalone-settings-panel.tsx')
     assert.match(settings, /data-orb-settings-section=\{section\.id\}/)
     assert.match(settings, /id: 'voice'/)
-    assert.match(settings, /id: 'chat'/)
-    assert.match(settings, /id: 'privacy'/)
+    assert.match(settings, /id: 'recording'/)
+    assert.match(settings, /id: 'safety_privacy'/)
     assert.match(settings, /ORB Residential does not access IndiCare OS/)
   })
 

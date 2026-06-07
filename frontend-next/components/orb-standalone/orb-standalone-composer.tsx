@@ -256,6 +256,42 @@ export function OrbStandaloneComposer({
             </div>
           ) : null}
 
+          {compactResidential ? (
+            <div
+              className="orb-composer-quick-actions mb-2 flex flex-wrap gap-2 px-0.5"
+              data-orb-composer-quick-actions
+            >
+              <button
+                type="button"
+                onClick={onMicClick}
+                disabled={micDisabled}
+                aria-label={micLabel}
+                title={micHint}
+                className="inline-flex min-h-[2.75rem] min-w-[2.75rem] flex-1 items-center justify-center gap-1.5 rounded-full border border-[var(--orb-line)]/60 bg-[var(--orb-surface-elevated)] px-4 text-xs font-semibold text-[var(--orb-foreground)] transition hover:bg-[var(--orb-surface-hover)] disabled:cursor-not-allowed disabled:opacity-40"
+                data-orb-composer-quick-dictate
+                data-orb-composer-mic
+                data-orb-composer-mic-route={composerMicRoute}
+              >
+                <Mic className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                Dictate
+              </button>
+              {onVoiceClick ? (
+                <button
+                  type="button"
+                  onClick={onVoiceClick}
+                  aria-label={voicePanelUnavailable ? 'Open ORB Voice (unavailable)' : 'Open ORB Voice'}
+                  className={`inline-flex min-h-[2.75rem] min-w-[2.75rem] flex-1 items-center justify-center gap-1.5 rounded-full border border-[var(--orb-line)]/60 bg-[var(--orb-surface-elevated)] px-4 text-xs font-semibold transition hover:bg-[var(--orb-surface-hover)] ${voicePanelUnavailable ? 'text-[var(--orb-muted)] opacity-60' : 'text-[var(--orb-foreground)]'}`}
+                  data-orb-composer-quick-voice
+                  data-orb-composer-voice
+                  data-orb-composer-voice-unavailable={voicePanelUnavailable ? 'true' : 'false'}
+                >
+                  <AudioLines className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                  Voice
+                </button>
+              ) : null}
+            </div>
+          ) : null}
+
           <div
             className={`orb-composer-glass ${compactResidential ? 'orb-composer-glass--compact p-2 sm:p-2.5' : 'p-2.5 sm:p-3'} ${answering ? 'orb-composer-answering orb-answering-pulse' : ''}`}
             onClick={focusComposerInput}
@@ -390,8 +426,8 @@ export function OrbStandaloneComposer({
                   ? 'min-h-[2.5rem] max-h-[8.75rem] min-w-0 flex-1 resize-none overflow-y-auto bg-transparent px-1 py-2.5 text-[0.9375rem] leading-6 text-[var(--orb-foreground)] outline-none placeholder:text-[var(--orb-muted)] md:max-h-[13.75rem]'
                   : 'mt-1.5 max-h-40 min-h-[3.25rem] w-full resize-none bg-transparent px-0.5 py-2 text-[0.9375rem] leading-6 text-[var(--orb-foreground)] outline-none focus:outline-none focus-visible:outline-none placeholder:text-slate-500'
               }
-              placeholder="Ask anything"
-              data-orb-composer-placeholder="ask-anything"
+              placeholder={compactResidential ? 'Ask ORB anything...' : 'Ask anything'}
+              data-orb-composer-placeholder={compactResidential ? 'ask-orb-anything' : 'ask-anything'}
               disabled={pending}
               aria-describedby="orb-standalone-status"
               autoCapitalize="sentences"
@@ -407,45 +443,11 @@ export function OrbStandaloneComposer({
             {compactResidential ? (
               <div className="flex shrink-0 items-center gap-1.5 pb-1">
                 {answering && onStopGenerating ? (
-                  <button type="button" onClick={onStopGenerating} className="inline-flex h-9 min-w-9 items-center justify-center rounded-full border border-rose-400/30 text-rose-300" aria-label="Stop generating" data-orb-composer-stop-generating>
+                  <button type="button" onClick={onStopGenerating} className="inline-flex h-11 min-w-11 items-center justify-center rounded-full border border-rose-400/30 text-rose-300" aria-label="Stop generating" data-orb-composer-stop-generating>
                     <Square className="h-4 w-4 fill-current" aria-hidden />
                   </button>
                 ) : null}
-                <button
-                  type="button"
-                  onClick={onMicClick}
-                  disabled={micDisabled}
-                  aria-label={micLabel}
-                  title={micHint}
-                  className={`pointer-events-auto inline-flex h-9 min-w-9 items-center justify-center rounded-full transition disabled:cursor-not-allowed disabled:opacity-40 ${voiceListening ? 'text-sky-300' : 'text-[var(--orb-muted)] hover:bg-[var(--orb-surface-hover)]'}`}
-                  data-orb-composer-mic
-                  data-orb-composer-mic-route={composerMicRoute}
-                  data-orb-composer-mic-reason={composerMicReason}
-                >
-                  {voiceListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
-                </button>
-                {onVoiceClick ? (
-                  <button
-                    type="button"
-                    onClick={onVoiceClick}
-                    aria-label={
-                      voicePanelUnavailable
-                        ? 'Open ORB Voice (unavailable in this browser)'
-                        : 'Open ORB Voice'
-                    }
-                    title={
-                      voicePanelUnavailable
-                        ? 'ORB Voice is unavailable in this browser — open for alternatives'
-                        : 'Open ORB Voice for hands-free input'
-                    }
-                    className={`pointer-events-auto inline-flex h-9 min-w-9 items-center justify-center rounded-full transition hover:bg-[var(--orb-surface-hover)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--orb-royal-blue,#168bff)] ${voicePanelUnavailable ? 'text-[var(--orb-muted)] opacity-60' : 'text-[var(--orb-muted)] hover:text-[var(--orb-royal-blue,#168bff)]'}`}
-                    data-orb-composer-voice
-                    data-orb-composer-voice-unavailable={voicePanelUnavailable ? 'true' : 'false'}
-                  >
-                    <AudioLines className="h-4 w-4" aria-hidden />
-                  </button>
-                ) : null}
-                <button type="submit" disabled={sendDisabled || (answering && Boolean(onStopGenerating))} aria-label="Send message" className="orb-composer-send inline-flex h-9 min-w-9 items-center justify-center rounded-full text-white transition disabled:opacity-35" data-orb-composer-send data-testid="orb-standalone-send-clickable">
+                <button type="submit" disabled={sendDisabled || (answering && Boolean(onStopGenerating))} aria-label="Send message" className="orb-composer-send inline-flex h-11 min-w-11 items-center justify-center rounded-full text-white transition disabled:opacity-35" data-orb-composer-send data-testid="orb-standalone-send-clickable">
                   <Send className="h-4 w-4" />
                 </button>
               </div>

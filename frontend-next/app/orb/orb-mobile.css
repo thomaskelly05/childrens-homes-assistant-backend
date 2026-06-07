@@ -1102,6 +1102,107 @@
     color: var(--orb-res-text-muted, #64748b) !important;
     opacity: 0.9;
   }
+
+  /* Mobile convergence sprint — home, composer, dictate, write, profile */
+  [data-orb-empty-sphere] {
+    overflow: visible !important;
+    margin-top: 0 !important;
+    margin-bottom: 0.25rem !important;
+  }
+
+  [data-orb-residential-empty] .orb-v2-atmosphere {
+    opacity: 0.28 !important;
+    transform: scale(0.82) translateY(-0.35rem) !important;
+    pointer-events: none;
+  }
+
+  [data-orb-residential-empty] [data-orb-empty-brand-line],
+  [data-orb-residential-empty] [data-orb-brand-emotional-line] {
+    margin-top: 0.25rem !important;
+    font-size: 0.6875rem !important;
+    letter-spacing: 0.06em !important;
+    text-transform: none !important;
+  }
+
+  [data-orb-residential-empty] [data-orb-empty-heading-mobile] {
+    margin-top: 0.5rem !important;
+  }
+
+  [data-orb-starter-cards] {
+    margin-top: 0.75rem !important;
+  }
+
+  .orb-composer-quick-actions button {
+    min-height: 2.75rem !important;
+  }
+
+  .orb-composer-glass--compact {
+    min-height: 3.25rem !important;
+  }
+
+  .orb-dictate-mobile .orb-dictate-mobile-orb,
+  .orb-dictate-mobile .orb-presence--dictate {
+    --orb-presence-size: clamp(8.5rem, 34vw, 10.5rem) !important;
+    width: var(--orb-presence-size) !important;
+    height: var(--orb-presence-size) !important;
+    opacity: 0.92;
+  }
+
+  [data-orb-write-mobile='true'] [data-orb-write-toolbar] {
+    display: none !important;
+  }
+
+  .orb-write-mobile-toolbar button,
+  .orb-write-ask-orb-fab {
+    min-height: 2.75rem !important;
+  }
+
+  .orb-premium-tabs--segmented {
+    flex-wrap: nowrap !important;
+    scrollbar-width: none;
+  }
+
+  .orb-premium-tabs--segmented::-webkit-scrollbar {
+    display: none;
+  }
+
+  [data-orb-knowledge-library-tabs] button,
+  [data-orb-documents-header] [data-orb-premium-tab] {
+    min-height: 2.75rem !important;
+  }
+
+  .orb-profile-compact-badge,
+  [data-orb-profile-compact-badges] .orb-profile-compact-badge {
+    display: inline-flex;
+    align-items: center;
+    min-height: 1.5rem;
+    padding: 0.15rem 0.55rem;
+    border-radius: 9999px;
+    border: 1px solid var(--orb-line);
+    background: var(--orb-surface);
+    font-size: 0.625rem;
+    font-weight: 600;
+    color: var(--orb-muted);
+  }
+
+  .orb-panel-drawer[data-orb-profile-panel-scroll],
+  .orb-panel-body[data-orb-profile-panel-scroll] {
+    position: relative;
+    z-index: 1;
+  }
+
+  .orb-panel-overlay[aria-label='Adult profile'] {
+    background: color-mix(in srgb, var(--orb-premium-bg-deep, #05070d) 48%, transparent) !important;
+  }
+
+  [data-orb-recording-library-filters] .orb-premium-pill,
+  [data-orb-templates-filter-row] .orb-premium-pill {
+    min-height: 2.75rem !important;
+  }
+
+  [data-orb-recording-library-categories] {
+    display: none !important;
+  }
 }
 
 @media (max-width: 640px) {

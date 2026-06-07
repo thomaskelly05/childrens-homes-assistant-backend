@@ -48,26 +48,22 @@ import {
 import type { StandaloneOrbAccessibilityPreferences } from '@/lib/orb/standalone-accessibility'
 
 type SettingsSectionId =
-  | 'general'
-  | 'personalisation'
+  | 'appearance'
   | 'voice'
-  | 'chat'
-  | 'skills'
-  | 'privacy'
-  | 'security'
-  | 'billing'
+  | 'recording'
+  | 'writing'
+  | 'safety_privacy'
+  | 'account_billing'
   | 'about'
 
 const SECTION_META: Array<{ id: SettingsSectionId; label: string }> = [
-  { id: 'general', label: 'General' },
-  { id: 'personalisation', label: 'Personalisation' },
+  { id: 'appearance', label: 'Appearance' },
   { id: 'voice', label: 'Voice' },
-  { id: 'chat', label: 'Chat' },
-  { id: 'skills', label: 'Skills' },
-  { id: 'privacy', label: 'Data controls' },
-  { id: 'security', label: 'Security' },
-  { id: 'billing', label: 'Billing' },
-  { id: 'about', label: 'About' }
+  { id: 'recording', label: 'Recording Preferences' },
+  { id: 'writing', label: 'Writing Preferences' },
+  { id: 'safety_privacy', label: 'Safety & Privacy' },
+  { id: 'account_billing', label: 'Account & Billing' },
+  { id: 'about', label: 'About ORB' }
 ]
 
 type PasskeyItem = NonNullable<OrbPasskeyListResponse['items']>[number]
@@ -113,8 +109,8 @@ export function OrbStandaloneSettingsPanel({
   onClearProfiles?: () => void
   onClearProjects?: () => void
 }) {
-  const [activeSection, setActiveSection] = useState<SettingsSectionId>('general')
-  const [mobileSectionOpen, setMobileSectionOpen] = useState<SettingsSectionId | null>('general')
+  const [activeSection, setActiveSection] = useState<SettingsSectionId>('appearance')
+  const [mobileSectionOpen, setMobileSectionOpen] = useState<SettingsSectionId | null>('appearance')
   const [personalisation, setPersonalisation] = useState<OrbStandalonePersonalisation>(
     defaultOrbStandalonePersonalisation
   )
@@ -133,7 +129,7 @@ export function OrbStandaloneSettingsPanel({
   }, [open])
 
   useEffect(() => {
-    if (!open || activeSection !== 'security') return
+    if (!open || activeSection !== 'safety_privacy') return
     void import('@/lib/auth/passkey-status-cache').then(({ allowPasskeyStatusFetch }) => {
       allowPasskeyStatusFetch('settings')
     })
@@ -271,8 +267,8 @@ export function OrbStandaloneSettingsPanel({
         </nav>
 
         <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
-          {activeSection === 'general' ? (
-            <SettingsBlock title="General" description="Appearance and workspace defaults.">
+          {activeSection === 'appearance' ? (
+            <SettingsBlock title="Appearance" description="Theme, text size and motion on this device.">
               <div className="hidden md:block">
                 <OrbAppearanceControl
                   value={effectiveAppearance}
@@ -313,8 +309,8 @@ export function OrbStandaloneSettingsPanel({
             </SettingsBlock>
           ) : null}
 
-          {activeSection === 'personalisation' ? (
-            <SettingsBlock title="Personalisation" description="Role, tone and how ORB addresses you.">
+          {activeSection === 'writing' ? (
+            <SettingsBlock title="Writing Preferences" description="Role, tone and how ORB addresses you.">
               <label className="block rounded-xl border border-[var(--orb-line)] px-4 py-3" data-orb-settings-preferred-name>
                 <span className="block text-sm font-medium text-[var(--orb-foreground)]">Preferred name</span>
                 <span className="block text-xs text-[var(--orb-muted)]">How ORB greets you on the home screen</span>
@@ -358,15 +354,6 @@ export function OrbStandaloneSettingsPanel({
                   ))}
                 </div>
               </fieldset>
-              <RowButton
-                icon={<User className="h-4 w-4" />}
-                label="Manage profile"
-                hint="Role, tone and custom instructions"
-                onClick={() => {
-                  onOpenProfile?.()
-                  onClose()
-                }}
-              />
             </SettingsBlock>
           ) : null}
 
@@ -415,8 +402,8 @@ export function OrbStandaloneSettingsPanel({
             </SettingsBlock>
           ) : null}
 
-          {activeSection === 'chat' ? (
-            <SettingsBlock title="Chat" description="Default behaviour for new conversations.">
+          {activeSection === 'recording' ? (
+            <SettingsBlock title="Recording Preferences" description="Defaults for Dictate, transcripts and chat capture.">
               <ToggleRow
                 label="Temporary chat by default"
                 hint="New chats skip profile memory until you turn it off"
@@ -435,20 +422,15 @@ export function OrbStandaloneSettingsPanel({
                   />
                 </div>
               ) : null}
-            </SettingsBlock>
-          ) : null}
-
-          {activeSection === 'skills' ? (
-            <SettingsBlock title="Skills" description="Focused workflows from the sidebar Skills panel.">
               <p className="text-[11px] leading-5 text-[var(--orb-muted)]">
-                Use Practice and Library items in the sidebar for safeguarding review, handovers, inspection prep and
-                analysis with a single tap.
+                Use Dictate, Templates and Documents from the sidebar for structured recording, handovers and inspection
+                prep.
               </p>
             </SettingsBlock>
           ) : null}
 
-          {activeSection === 'security' ? (
-            <SettingsBlock title="Security" description="Use Face ID, Touch ID, fingerprint or device passkeys.">
+          {activeSection === 'safety_privacy' ? (
+            <SettingsBlock title="Safety & Privacy" description="Passkeys, data controls and how ORB protects your work.">
               <div className="rounded-xl border border-[var(--orb-line)] bg-[var(--orb-surface)] px-4 py-3">
                 <p className="flex items-center gap-2 text-sm font-semibold text-[var(--orb-foreground)]">
                   <Fingerprint className="h-4 w-4 text-[#0284C7]" aria-hidden />
@@ -508,17 +490,6 @@ export function OrbStandaloneSettingsPanel({
                   </p>
                 )}
               </div>
-            </SettingsBlock>
-          ) : null}
-
-          {activeSection === 'billing' ? (
-            <SettingsBlock title="Billing" description="ORB Residential plan and fair-use usage.">
-              <OrbBillingSettingsSection />
-            </SettingsBlock>
-          ) : null}
-
-          {activeSection === 'privacy' ? (
-            <SettingsBlock title="Data controls" description="Your workspace stays on this device unless you export it.">
               <RowButton
                 icon={<Database className="h-4 w-4" />}
                 label="Export workspace JSON"
@@ -551,6 +522,21 @@ export function OrbStandaloneSettingsPanel({
                   decisions. For permissioned OS context, use IndiCare OS ORB at /assistant/orb.
                 </p>
               </div>
+            </SettingsBlock>
+          ) : null}
+
+          {activeSection === 'account_billing' ? (
+            <SettingsBlock title="Account & Billing" description="Plan, usage and profile shortcuts.">
+              <RowButton
+                icon={<User className="h-4 w-4" />}
+                label="Manage profile"
+                hint="Role, tone and custom instructions"
+                onClick={() => {
+                  onOpenProfile?.()
+                  onClose()
+                }}
+              />
+              <OrbBillingSettingsSection />
             </SettingsBlock>
           ) : null}
 
