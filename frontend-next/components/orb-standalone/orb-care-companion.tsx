@@ -3128,6 +3128,14 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
             studio: opts?.studio
           })
         }
+        onOpenWrite={(content, title) =>
+          openOrbWriteWithContent({
+            content,
+            source: 'chat',
+            sourceLabel: title ?? 'ORB Voice conversation',
+            title: title ?? 'ORB Voice conversation'
+          })
+        }
         onOpenVoiceSettings={openVoiceSettings}
       />
       <OrbDictateStation

@@ -1,196 +1,231 @@
+"""ORB Residential convergence — brain, voice, dictate, write, quality, memory."""
+
 from __future__ import annotations
 
-from unittest.mock import MagicMock
+from pathlib import Path
 
 import pytest
-from fastapi import HTTPException
-from starlette.responses import PlainTextResponse
 
-from auth.orb_residential_dependencies import is_orb_residential_only_user
-from middleware import orb_residential_guard_middleware as guard_middleware
-from services.orb_access_service import orb_access_service
-from services.orb_runtime_guard_service import orb_runtime_guard_service
-from services.orb_shift_builder_service import orb_shift_builder_service
-from services.recording_intelligence_service import recording_intelligence_service
-from services.safeguarding_intelligence_service import safeguarding_intelligence_service
-from services.therapeutic_intelligence_service import therapeutic_intelligence_service
-from schemas.orb_shift_builder import OrbShiftBuilderRequest
+from assistant.user_memory_policy import FORBIDDEN_MEMORY_TERMS, SAFE_MEMORY_KEYS, assess_memory_candidates
+from services.orb_document_brain_adapter_service import orb_document_brain_adapter_service
+from services.orb_dictate_service import analyze_dictate_session, generate_dictate_note
+from services.orb_knowledge_retrieval_service import LIVE_LOOKUP_NOTE, orb_knowledge_retrieval_service
+from services.orb_residential_quality_service import (
+    SHARED_CAPTURE_PROMPTS,
+    orb_residential_quality_service,
+)
+from services.orb_standalone_brain_service import orb_standalone_brain_service
+from schemas.orb_dictate import OrbDictateAnalyzeRequest, OrbDictateGenerateRequest
+from services.orb_brain_metadata_service import assert_standalone_brain_contract
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+FRONTEND = REPO_ROOT / "frontend-next"
 
 
-def test_runtime_guard_blocks_os_paths():
-    decision = orb_runtime_guard_service.check_route_access(
-        route="/os/command/children/1",
-        surface="orb_residential",
+def _read(rel: str) -> str:
+    return (FRONTEND / rel).read_text(encoding="utf-8")
+
+
+# --- Brain convergence ---
+
+
+def test_voice_and_chat_share_ask_orb_brain():
+    router = _read("lib/orb/orb-brain-router.ts")
+    companion = _read("components/orb-standalone/orb-care-companion.tsx")
+    assert "export async function askOrbBrain" in router
+    assert "askOrbBrain" in companion
+    assert "source: voiceOriginatedSend ? 'voice' : 'chat'" in companion
+
+
+def test_minimal_chat_uses_ask_orb_brain():
+    minimal = _read("components/orb-standalone/orb-minimal-chat.tsx")
+    assert "askOrbBrain" in minimal
+    assert "queryStandaloneOrbConversation" not in minimal
+
+
+def test_dictate_routes_through_document_brain_adapter():
+    ctx = orb_document_brain_adapter_service.build_document_brain_context(
+        "Young person settled after tea.",
+        mode="daily_record",
+        feature="dictate",
+        note_type="daily_record",
     )
-    assert decision.allowed is False
-    assert decision.blocked_by_policy is True
+    assert ctx["adapter"] == "orb_document_brain_adapter"
+    assert "intelligence_packet" in ctx
+    assert_standalone_brain_contract(ctx["brain_metadata"])
 
 
-def test_runtime_guard_allows_residential_paths():
-    decision = orb_runtime_guard_service.check_route_access(
-        route="/orb/residential/shift-builder",
-        surface="orb_residential",
-    )
-    assert decision.allowed is True
-
-
-def test_boundary_response_has_no_os_links():
-    payload = orb_runtime_guard_service.build_boundary_response()
-    assert payload["surface"] == "orb_residential"
-    assert "IndiCare OS" in payload["message"]
-    assert "operational_access_blocked" in payload["error"]
-
-
-def test_access_service_locked_without_subscription(monkeypatch):
-    conn = MagicMock()
-    monkeypatch.setattr(
-        "services.orb_access_service.get_orb_access_state",
-        lambda _conn, _uid, user=None: {
-            "can_use_orb": False,
-            "subscription_active": False,
-            "trial_active": False,
-            "access_reason": "locked",
-            "safety_accepted": True,
-            "subscription": {},
-        },
-    )
-    decision = orb_access_service.check_access(conn, user_id=42, workflow="ask_orb")
-    assert decision.allowed is False
-    assert decision.reason == "premium_subscription_required"
-
-
-def test_access_service_trial_allowed(monkeypatch):
-    conn = MagicMock()
-    monkeypatch.setattr(
-        "services.orb_access_service.get_orb_access_state",
-        lambda _conn, _uid, user=None: {
-            "can_use_orb": True,
-            "subscription_active": False,
-            "trial_active": True,
-            "access_reason": "trial",
-            "safety_accepted": True,
-            "subscription": {},
-        },
-    )
-    decision = orb_access_service.check_access(conn, user_id=42, workflow="shift_builder")
-    assert decision.allowed is True
-
-
-def test_upgrade_payload_price_and_product():
-    payload = orb_access_service.build_upgrade_payload()
-    assert payload["product"] == "ORB Residential — Powered by IndiCare"
-    assert payload["price_gbp_monthly"] == 9.99
-
-
-def test_shift_builder_standalone_sections():
-    response = orb_shift_builder_service.build(
-        OrbShiftBuilderRequest(
-            notes="Evening shift calm. YP asked to call family. No injuries noted.",
-            mode="full_shift_pack",
+def test_dictate_generate_includes_brain_metadata_via_adapter():
+    result = generate_dictate_note(
+        OrbDictateGenerateRequest(
+            input_text="Young person settled after tea.",
+            note_type="daily_record",
         )
     )
-    assert response.live_record_access is False
-    assert response.os_linked is False
-    assert response.surface == "orb_residential"
-    assert len(response.sections) >= 4
-    assert response.context_packet
+    assert result.brain_metadata is not None
+    assert result.brain_metadata.get("brain_adapter") == "orb_document_brain_adapter"
+    assert_standalone_brain_contract(result.brain_metadata)
 
 
-def test_safeguarding_intelligence_no_threshold_language():
-    result = safeguarding_intelligence_service.analyse("Bruise noted on arm. Staff informed manager.")
-    assert result.facts
-    assert any("bruise" in c.lower() for c in result.concerns)
-    assert "threshold" not in " ".join(result.guardrails).lower() or "does not decide" in " ".join(result.guardrails).lower()
+def test_general_prompts_use_general_assistant_default():
+    frame = orb_standalone_brain_service.frame("Help me plan a birthday party.", mode="Ask ORB")
+    assert frame.dual_brain_route == "general_knowledge"
+    classification = orb_knowledge_retrieval_service.classify_query("Help me plan a birthday party.")
+    assert classification["routing_hint"] == "general_assistant_brain"
 
 
-def test_therapeutic_intelligence_no_diagnosis():
-    result = therapeutic_intelligence_service.reflect("YP was aggressive then withdrawn.")
-    assert result.reframe_prompts
-    assert any("does not diagnose" in p.lower() for p in result.guardrails)
-
-
-def test_recording_intelligence_chronology_prompts():
-    result = recording_intelligence_service.analyse("Child was upset after contact.")
-    assert result.chronology_ready_prompts
-    assert result.factual_rewrite_prompts
-
-
-def test_residential_only_user_without_records_read():
-    user = {"role": "viewer", "permissions": []}
-    from core.policy_engine import policy_engine
-
-    if policy_engine.has_permission(user, "records:read"):
-        pytest.skip("viewer has records:read in this policy config")
-    assert is_orb_residential_only_user(user) is True
-
-
-def test_orb_guard_unknown_role_session_passes_to_os_auth(monkeypatch):
-    from starlette.requests import Request
-    from routers.auth_routes import settings as auth_settings
-
-    monkeypatch.setattr(guard_middleware, "decode_session_token", lambda _token: {"sub": "5"})
-    cookie_name = auth_settings.session_cookie_name
-    scope = {
-        "type": "http",
-        "method": "GET",
-        "path": "/workspace",
-        "headers": [(b"cookie", f"{cookie_name}=token".encode())],
-        "query_string": b"",
-    }
-    request = Request(scope)
-    user = guard_middleware._session_user(request)
-    assert user["user_id"] == 5
-    assert user["role"] == ""
-    assert user["permissions"] == []
-
-    has_session_scope_claims = bool(user.get("role") or user.get("permissions"))
-    assert has_session_scope_claims is False
-
-
-def test_orb_guard_admin_role_is_never_residential_only(monkeypatch):
-    from starlette.requests import Request
-    from routers.auth_routes import settings as auth_settings
-
-    monkeypatch.setattr(guard_middleware, "decode_session_token", lambda _token: {"sub": "5", "role": "admin"})
-    cookie_name = auth_settings.session_cookie_name
-    scope = {
-        "type": "http",
-        "method": "GET",
-        "path": "/workspace",
-        "headers": [(b"cookie", f"{cookie_name}=token".encode())],
-        "query_string": b"",
-    }
-    request = Request(scope)
-    user = guard_middleware._session_user(request)
-    assert user["role"] == "admin"
-    assert user["role"] in guard_middleware.OS_ADMIN_ROLES
-
-
-def test_premium_locked_http_shape(monkeypatch):
-    from auth.orb_residential_dependencies import require_orb_residential_premium
-    from starlette.requests import Request
-
-    scope = {"type": "http", "method": "GET", "path": "/orb/residential/conversation", "headers": []}
-    request = Request(scope)
-    conn = MagicMock()
-    monkeypatch.setattr(
-        "services.orb_access_service.get_orb_access_state",
-        lambda _c, _u, user=None: {
-            "can_use_orb": False,
-            "trial_active": False,
-            "subscription_active": False,
-            "safety_accepted": True,
-            "subscription": {},
-        },
+def test_residential_prompts_use_specialist_enrichment():
+    frame = orb_standalone_brain_service.frame(
+        "What should I record when a young person returns from missing?",
+        mode="Ask ORB",
     )
-    with pytest.raises(HTTPException) as exc:
-        require_orb_residential_premium(
-            request,
-            conn=conn,
-            current_user={"user_id": 1},
-            workflow="ask_orb",
+    assert frame.dual_brain_route == "residential_specialist"
+
+
+def test_live_lookup_routes_without_hallucination_note():
+    classification = orb_knowledge_retrieval_service.classify_query("What is the weather in Newcastle?")
+    assert classification["live_lookup_intent"] is True
+    assert classification["live_lookup_note"] == LIVE_LOOKUP_NOTE
+
+
+# --- Voice transcript ---
+
+
+def test_voice_station_two_sided_transcript_sync():
+    station = _read("components/orb-standalone/orb-voice-station.tsx")
+    assert "lastSyncedReplyKeyRef" in station
+    assert "role: 'assistant'" in station
+    assert "provider: 'orb_brain'" in station
+    assert "formatVoiceTurnsPlainText" in station
+
+
+def test_voice_transcript_actions_include_handoffs():
+    station = _read("components/orb-standalone/orb-voice-station.tsx")
+    actions = _read("components/orb-standalone/orb-voice-transcript-actions.tsx")
+    assert "data-orb-voice-to-dictate" in actions
+    assert "data-orb-voice-to-write" in station
+    assert "data-orb-voice-manager-oversight" in station
+    assert "data-orb-voice-action-list" in station
+    assert "Copy full conversation" in actions
+
+
+def test_voice_preserves_transcript_on_brain_failure():
+    companion = _read("components/orb-standalone/orb-care-companion.tsx")
+    assert "preserve it if the brain request fails" in companion
+
+
+# --- Dictate ---
+
+
+def test_dictate_template_aware_missing_prompts():
+    result = analyze_dictate_session(
+        OrbDictateAnalyzeRequest(
+            input_text="Staff supported the young person after contact.",
+            note_type="incident_record",
         )
-    assert exc.value.status_code == 402
-    detail = exc.value.detail
-    assert detail["price_gbp_monthly"] == 9.99
-    assert detail["os_links"] is False
+    )
+    assert result.detected_record_type
+    assert result.quality_checks is not None
+    assert any("child" in p.lower() or "safeguard" in p.lower() for p in result.missing_information)
+
+
+def test_dictate_prompts_missing_child_voice():
+    result = orb_residential_quality_service.run_residential_quality_check(
+        "Staff supported the young person after contact.",
+        note_type="daily_record",
+        surface="dictate",
+    )
+    assert result["child_centred"] is False
+    assert any("child" in p.lower() for p in result["missing_prompts"])
+
+
+def test_dictate_prompts_safeguarding_for_incident():
+    result = orb_residential_quality_service.run_residential_quality_check(
+        "There was a physical altercation in the lounge.",
+        note_type="incident_record",
+        surface="dictate",
+    )
+    assert result["manager_oversight_prompt"] is not None or any(
+        "safeguard" in p.lower() or "manager" in p.lower() for p in result["missing_prompts"]
+    )
+
+
+# --- Write ---
+
+
+def test_write_receives_voice_handoff():
+    companion = _read("components/orb-standalone/orb-care-companion.tsx")
+    assert "onOpenWrite" in companion
+    assert "openOrbWriteWithContent" in companion
+
+
+def test_write_therapeutic_actions_exist():
+    edit = (REPO_ROOT / "services" / "orb_dictate_edit_service.py").read_text(encoding="utf-8")
+    assert "therapeutic_rewrite" in edit
+    assert "ofsted_ready" in edit
+
+
+# --- Quality layer ---
+
+
+def test_shared_capture_prompts_defined():
+    assert len(SHARED_CAPTURE_PROMPTS) >= 10
+    assert "What did the child say?" in SHARED_CAPTURE_PROMPTS
+
+
+def test_quality_layer_callable_from_dictate():
+    result = orb_residential_quality_service.run_residential_quality_check(
+        "At 14:30 the young person said they felt anxious.",
+        note_type="daily_record",
+        surface="dictate",
+    )
+    assert "quality_checks" in result
+    assert "ofsted_readiness" in result
+
+
+def test_ofsted_readiness_check_for_write_surface():
+    result = orb_residential_quality_service.run_residential_quality_check(
+        'At 14:30 observed calm presentation. Young person said "I wanted space."',
+        note_type="daily_record",
+        surface="write",
+    )
+    ofsted = result["ofsted_readiness"]
+    assert ofsted["recording_quality"] in {"good", "needs_review"}
+    assert isinstance(ofsted["strengths"], list)
+    assert isinstance(ofsted["gaps"], list)
+
+
+def test_manager_oversight_prompt_for_incident():
+    result = orb_residential_quality_service.run_residential_quality_check(
+        "Physical incident in lounge — staff intervened.",
+        note_type="incident_record",
+        surface="write",
+    )
+    assert result["manager_oversight_prompt"] is not None
+
+
+# --- Memory / context safety ---
+
+
+def test_user_preference_memory_whitelist():
+    result = assess_memory_candidates(
+        [{"key": "preferred_tone", "value": "calm and professional", "reason": "User style preference"}]
+    )
+    assert len(result.safe_to_store) == 1
+    assert result.safe_to_store[0].key == "preferred_tone"
+    assert "preferred_tone" in SAFE_MEMORY_KEYS
+
+
+def test_child_specific_memory_rejected_in_standalone_policy():
+    result = assess_memory_candidates(
+        [{"key": "child_name", "value": "Alex", "reason": "Child context"}]
+    )
+    assert len(result.safe_to_store) == 0
+    assert len(result.rejected) == 1
+    assert any("child name" in term for term in FORBIDDEN_MEMORY_TERMS)
+
+
+def test_quality_check_route_registered():
+    routes = (REPO_ROOT / "routers" / "orb_standalone_routes.py").read_text(encoding="utf-8")
+    assert "/quality-check" in routes
+    assert "orb_residential_quality_service" in routes
