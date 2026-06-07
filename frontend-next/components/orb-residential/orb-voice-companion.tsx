@@ -8,6 +8,29 @@ import { getOrbHueProfile, type OrbVisualState } from '@/lib/orb/rendering/visua
 /** Visual-only voice companion states — safe fallbacks when transport state is unavailable. */
 export type OrbVoiceCompanionState = 'idle' | 'listening' | 'thinking' | 'speaking' | 'error'
 
+/** Scoped companion render sizes — hero is the main voice studio centre piece. */
+export type OrbVoiceCompanionSize = 'hero' | 'mini' | 'mobile-preview'
+
+/** @deprecated Use `OrbVoiceCompanionSize` — kept for call-site compatibility. */
+export type OrbVoiceCompanionLegacySize = 'default' | 'preview' | 'mini'
+
+export function resolveOrbVoiceCompanionSize(
+  size: OrbVoiceCompanionSize | OrbVoiceCompanionLegacySize = 'hero'
+): OrbVoiceCompanionSize {
+  switch (size) {
+    case 'mini':
+      return 'mini'
+    case 'mobile-preview':
+      return 'mobile-preview'
+    case 'preview':
+      return 'mini'
+    case 'default':
+    case 'hero':
+    default:
+      return 'hero'
+  }
+}
+
 export const ORB_VOICE_COMPANION_STATES: readonly OrbVoiceCompanionState[] = [
   'idle',
   'listening',
@@ -76,13 +99,13 @@ export function OrbVoiceCompanion({
   state = 'idle',
   className = '',
   label = 'ORB voice companion',
-  size = 'default'
+  size = 'hero'
 }: {
   state?: OrbVoiceCompanionState
   className?: string
   label?: string
-  /** `preview` / `mini` for state panel and mobile preview cards */
-  size?: 'default' | 'preview' | 'mini'
+  /** `hero` centre companion; `mini` state cards; `mobile-preview` footer strip */
+  size?: OrbVoiceCompanionSize | OrbVoiceCompanionLegacySize
 }) {
   const [reducedMotion, setReducedMotion] = useState(false)
 
@@ -110,17 +133,23 @@ export function OrbVoiceCompanion({
     '--orb-edge-opacity': String(hueProfile.edgeOpacity)
   } as CSSProperties
 
+  const resolvedSize = resolveOrbVoiceCompanionSize(size)
   const sizeClass =
-    size === 'mini' ? 'orb-voice-companion--mini' : size === 'preview' ? 'orb-voice-companion--preview' : ''
+    resolvedSize === 'mini'
+      ? 'orb-voice-companion--mini'
+      : resolvedSize === 'mobile-preview'
+        ? 'orb-voice-companion--mobile-preview'
+        : 'orb-voice-companion--hero'
 
   return (
     <div
       className={`orb-voice-companion flex shrink-0 items-center justify-center ${sizeClass} ${className}`.trim()}
       data-orb-voice-companion
+      data-orb-voice-companion-size={resolvedSize}
       data-orb-voice-version={ORB_VOICE_VERSION}
       data-orb-voice-state={state}
       data-orb-voice-head
-      data-orb-voice-head-size={size}
+      data-orb-voice-head-size={resolvedSize}
       aria-live="polite"
       aria-label={label}
     >
