@@ -185,6 +185,8 @@ export async function beginOrbRealtimeVoiceConversation(options: {
   mode?: string
   voice_id?: string
   transcript?: OrbVoiceTranscriptCallbacks
+  /** Route answers through /orb/standalone/conversation instead of OpenAI Realtime. */
+  brainRouted?: boolean
 }): Promise<BeginOrbRealtimeVoiceResult> {
   const { emitOrbClientDebug } = await import('@/lib/orb/orb-client-debug')
   const {
@@ -253,7 +255,8 @@ export async function beginOrbRealtimeVoiceConversation(options: {
     const session = await client.startSession({
       mode: options.mode as import('./orb-voice-types').OrbVoiceModeId | undefined,
       voice_id: options.voice_id as import('./orb-voice-types').OrbVoicePresetId | undefined,
-      transport: 'auto'
+      transport: 'auto',
+      brainRouted: options.brainRouted
     })
 
     emitOrbClientDebug({

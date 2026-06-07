@@ -112,6 +112,31 @@ class OrbStandaloneBrainService:
         key = str(mode or "Ask ORB").strip().lower()
         return self.MODE_ALIASES.get(key, str(mode or "Ask ORB").strip() or "Ask ORB")
 
+    LIVE_LOCAL_TERMS = (
+        "weather",
+        "forecast",
+        "headline",
+        "headlines",
+        "news",
+        "sport",
+        "sports",
+        "score",
+        "scores",
+        "fixture",
+        "fixtures",
+        "cinema",
+        "what is on",
+        "what's on",
+        "nearby",
+        "near me",
+        "latest",
+        "today",
+        "current",
+        "right now",
+        "whitley bay",
+        "newcastle",
+    )
+
     def frame(self, message: str, *, mode: str | None = None) -> StandaloneBrainFrame:
         text = str(message or "").lower()
         resolved_mode = self.normalise_mode(mode)
@@ -120,6 +145,12 @@ class OrbStandaloneBrainService:
 
         if route == "general_knowledge":
             brains.extend(["general_knowledge_brain", "general_reasoning_brain", "writing_and_planning_brain"])
+        elif route == "live_lookup":
+            brains.extend([
+                "live_lookup_brain",
+                "web_research_extension_brain",
+                "general_knowledge_brain",
+            ])
         else:
             brains.extend(["residential_specialist_brain", "residential_children_homes_practice_brain"])
 
@@ -249,9 +280,14 @@ class OrbStandaloneBrainService:
             return "general_knowledge"
         if mode != "Ask ORB":
             return "residential_specialist"
+        if self._is_live_local_query(text):
+            return "live_lookup"
         if self._contains_residential_signal(text):
             return "residential_specialist"
         return "general_knowledge"
+
+    def _is_live_local_query(self, text: str) -> bool:
+        return any(term in text for term in self.LIVE_LOCAL_TERMS)
 
     def _contains_residential_signal(self, text: str) -> bool:
         terms = (
@@ -264,6 +300,15 @@ class OrbStandaloneBrainService:
         return any(term in text for term in terms)
 
     def _response_contract(self, brains: list[str], mode: str, route: str) -> list[str]:
+        if route == "live_lookup":
+            return [
+                "The user is asking for current, live, or location-specific facts.",
+                "Live web, weather, sports, and local search tools are not connected in standalone ORB yet.",
+                "Do not invent scores, weather, headlines, cinema listings, fixtures, or local events.",
+                "Say clearly that live lookup is unavailable and suggest checking an official source or configuring a provider later.",
+                "Offer a practical non-hallucinated fallback such as how to verify the fact or what to search for.",
+            ]
+
         if route == "general_knowledge":
             return [
                 "Answer as a capable general assistant, like ChatGPT, using clear British English.",
@@ -328,6 +373,8 @@ class OrbStandaloneBrainService:
         return self._dedupe(contract)
 
     def _knowledge_domains(self, brains: list[str], route: str) -> list[str]:
+        if route == "live_lookup":
+            return ["live_web_lookup", "weather", "news_and_headlines", "sports_scores", "local_search"]
         if route == "general_knowledge":
             return list(self.GENERAL_KNOWLEDGE_DOMAINS)
         domains = list(self.RESIDENTIAL_KNOWLEDGE_DOMAINS)
@@ -338,6 +385,12 @@ class OrbStandaloneBrainService:
         return domains
 
     def _evidence_prompts(self, brains: list[str], route: str) -> list[str]:
+        if route == "live_lookup":
+            return [
+                "What live fact does the user need?",
+                "Which tool would answer this when connected (weather, web, sports, local)?",
+                "How can ORB help without inventing current data?",
+            ]
         if route == "general_knowledge":
             return ["What is the user asking for?", "What format would be most useful?", "Is current/live information required?"]
         prompts = [
