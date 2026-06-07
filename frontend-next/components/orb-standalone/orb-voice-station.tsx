@@ -1017,8 +1017,11 @@ export function OrbVoiceStation({
           </header>
 
           <div className="orb-voice-studio__workspace grid min-h-0 flex-1 lg:grid-cols-[minmax(0,1fr)_17.5rem]">
-            <main className="orb-voice-studio__main min-h-0 overflow-y-auto overscroll-contain">
-          <div className="orb-voice-studio__hero mx-auto flex w-full max-w-lg flex-col items-center">
+            <main className="orb-voice-studio__main flex min-h-0 flex-col overflow-hidden">
+          <div
+            className="orb-voice-studio__hero mx-auto flex w-full max-w-lg shrink-0 flex-col items-center"
+            data-orb-voice-hero-stage
+          >
           <div className="flex w-full flex-wrap items-center justify-center gap-2">
             <label className="sr-only" htmlFor="orb-voice-mode-select">
               Voice mode
@@ -1073,6 +1076,7 @@ export function OrbVoiceStation({
           </p>
           </div>
 
+          <div className="orb-voice-studio__body min-h-0 flex-1 overflow-y-auto overscroll-contain">
           {micTestMessage ? (
             <p className="mt-2 text-center text-xs text-sky-700 dark:text-sky-200/90" role="status">
               {micTestMessage}
@@ -1345,6 +1349,7 @@ export function OrbVoiceStation({
               </p>
             ))}
             <p className="text-[10px] leading-4 text-[var(--orb-muted)]">{SAFETY_COPY}</p>
+          </div>
           </div>
             </main>
 

@@ -112,7 +112,11 @@ export function OrbVoiceMobilePreviewStrip({
 /** Trust feature row for voice studio. */
 export function OrbVoiceTrustStrip({ className = '' }: { className?: string }) {
   return (
-    <div className={`orb-voice-trust-strip ${className}`.trim()} data-orb-voice-trust-strip>
+    <div
+      className={`orb-voice-trust-strip ${className}`.trim()}
+      data-orb-voice-trust-strip
+      data-orb-voice-trust-cards
+    >
       {TRUST_FEATURES.map((feature) => (
         <div key={feature.id} className="orb-voice-trust-strip__card" data-orb-voice-trust={feature.id}>
           <p className="orb-voice-trust-strip__label">{feature.label}</p>
