@@ -23,6 +23,12 @@
   z-index: 1;
   --orb-voice-head-width: clamp(7.5rem, 28vw, 11.5rem);
   --orb-voice-head-height: clamp(9.5rem, 34vw, 14.5rem);
+  --orb-head-tilt: 0deg;
+  --orb-head-nod: 0px;
+  --orb-head-float: 0px;
+  --orb-head-scale: 1;
+  --orb-voice-mouth-open: 0;
+  --orb-voice-speech-energy: 0;
 }
 
 /* ── Hero — viewport-scaled centre companion (own CSS authority) ─────────── */
@@ -256,9 +262,20 @@
   height: 100%;
 }
 
-.orb-voice-companion__head-shell {
+.orb-voice-companion__head-motion {
   position: absolute;
   inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform-origin: 50% 58%;
+  will-change: transform;
+}
+
+.orb-voice-companion__head-shell {
+  position: relative;
+  width: 100%;
+  height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -304,6 +321,10 @@
   animation: orb-voice-head-breathe 6s ease-in-out infinite;
 }
 
+.orb-voice-companion[data-orb-voice-state='idle'] .orb-voice-companion__head-motion {
+  animation: orb-voice-head-idle-float 7.2s ease-in-out infinite;
+}
+
 .orb-voice-companion__breathe-glow {
   transform-origin: 50% 48%;
   animation: orb-voice-bust-breathe 6s ease-in-out infinite;
@@ -323,15 +344,19 @@
 }
 
 .orb-voice-companion__eye--blink {
-  animation:
-    orb-voice-eye-glow 4.6s ease-in-out infinite,
-    orb-voice-eye-blink 9s ease-in-out infinite;
+  transform-origin: center;
+  transition:
+    transform 140ms ease-in-out,
+    opacity 140ms ease-in-out;
 }
 
-.orb-voice-companion__eye--right.orb-voice-companion__eye--blink {
-  animation:
-    orb-voice-eye-glow 4.6s ease-in-out infinite,
-    orb-voice-eye-blink 9s ease-in-out infinite 0.4s;
+[data-orb-voice-blink-active='true'] .orb-voice-companion__eye--blink {
+  transform: scaleY(0.14);
+  opacity: 0.74;
+}
+
+[data-orb-voice-blink-active='true'] .orb-voice-companion__eye-shimmer {
+  opacity: 0.18;
 }
 
 .orb-voice-companion__eye-shimmer {
@@ -349,6 +374,20 @@
 
 .orb-voice-companion__mouth-wave--idle {
   opacity: 0.24;
+}
+
+.orb-voice-companion__mouth-light {
+  transform-origin: 50% 78%;
+  transform: scaleY(calc(0.42 + var(--orb-voice-mouth-open, 0) * 0.72));
+  opacity: calc(0.38 + var(--orb-voice-speech-energy, 0) * 0.52);
+  filter: drop-shadow(0 0 calc(2px + var(--orb-voice-speech-energy, 0) * 6px) rgba(186, 230, 253, 0.42));
+  transition:
+    transform 70ms ease-out,
+    opacity 90ms ease-out;
+}
+
+.orb-voice-companion__mouth-wave--speaking {
+  stroke-width: calc(1.2px + var(--orb-voice-speech-energy, 0) * 1.1px);
 }
 
 .orb-voice-companion__orbit {
@@ -404,18 +443,32 @@
   opacity: 0.68;
 }
 
+.orb-voice-companion[data-orb-voice-state='paused'] .orb-voice-companion__halo,
+.orb-voice-companion[data-orb-voice-state='paused'] .orb-voice-companion__aura {
+  opacity: 0.66;
+}
+
+.orb-voice-companion[data-orb-voice-state='paused'] .orb-voice-companion__head-motion {
+  animation: orb-voice-head-return-neutral 1.8s ease-out forwards;
+}
+
 .orb-voice-companion[data-orb-voice-state='listening'] .orb-voice-companion__head-material,
 .orb-voice-companion[data-orb-voice-state='listening'] .orb-voice-companion__breathe-head {
   animation: orb-voice-head-breathe 5.4s ease-in-out infinite, orb-voice-listen-pulse 2s ease-in-out infinite;
 }
 
+.orb-voice-companion[data-orb-voice-state='listening'] .orb-voice-companion__head-motion {
+  animation: orb-voice-head-listen-attention 3.6s ease-in-out infinite;
+}
+
 .orb-voice-companion[data-orb-voice-state='listening'] .orb-voice-companion__halo {
   opacity: 0.88;
-  animation: orb-voice-head-halo 4.8s ease-in-out infinite;
+  animation: orb-voice-head-halo 4.8s ease-in-out infinite, orb-voice-listen-aura-expand 2.8s ease-in-out infinite;
 }
 
 .orb-voice-companion[data-orb-voice-state='listening'] .orb-voice-companion__aura {
   opacity: 0.9;
+  animation: orb-voice-listen-aura-expand 2.8s ease-in-out infinite;
 }
 
 .orb-voice-companion[data-orb-voice-state='listening'] .orb-voice-companion__eye,
@@ -438,9 +491,23 @@
   opacity: 0.62;
 }
 
+.orb-voice-companion[data-orb-voice-state='thinking'] .orb-voice-companion__head-motion {
+  animation: orb-voice-head-thinking-tilt 5.4s ease-in-out infinite;
+}
+
+.orb-voice-companion[data-orb-voice-state='thinking'] .orb-voice-companion__eye,
+.orb-voice-companion[data-orb-voice-state='thinking'] .orb-voice-companion__eye-shimmer {
+  opacity: 0.68;
+  filter: brightness(0.96) drop-shadow(0 0 4px rgba(186, 230, 253, 0.38));
+}
+
 .orb-voice-companion[data-orb-voice-state='speaking'] .orb-voice-companion__head-material,
 .orb-voice-companion[data-orb-voice-state='speaking'] .orb-voice-companion__breathe-head {
   animation: orb-voice-head-breathe 5s ease-in-out infinite, orb-voice-speak-glow 1.4s ease-in-out infinite;
+}
+
+.orb-voice-companion[data-orb-voice-state='speaking'] .orb-voice-companion__head-motion {
+  animation: orb-voice-head-speak-nod 1.35s ease-in-out infinite;
 }
 
 .orb-voice-companion[data-orb-voice-state='speaking'] .orb-voice-companion__halo,
@@ -449,8 +516,11 @@
 }
 
 .orb-voice-companion[data-orb-voice-state='speaking'] [data-orb-voice-waveform-active='true'] {
-  opacity: 0.68;
-  animation: orb-voice-waveform-pulse 1.1s ease-in-out infinite;
+  opacity: calc(0.52 + var(--orb-voice-speech-energy, 0) * 0.38);
+}
+
+.orb-voice-companion[data-orb-voice-state='speaking'][data-orb-voice-speech-driven='false'] [data-orb-voice-mouth-light] {
+  animation: orb-voice-mouth-fallback 0.92s ease-in-out infinite;
 }
 
 .orb-voice-companion[data-orb-voice-state='error']:not([data-orb-voice-companion-size='hero']) .orb-voice-companion__head-material,
@@ -573,17 +643,91 @@
   }
 }
 
-@keyframes orb-voice-eye-blink {
+@keyframes orb-voice-head-idle-float {
   0%,
-  4%,
-  96%,
   100% {
-    transform: scaleY(1);
-    opacity: 1;
+    transform: translate3d(0, 0, 0) rotate(0deg);
   }
-  2% {
-    transform: scaleY(0.12);
+  50% {
+    transform: translate3d(0, -1px, 0) rotate(0.25deg);
+  }
+}
+
+@keyframes orb-voice-head-listen-attention {
+  0%,
+  100% {
+    transform: translate3d(0, 1px, 0) rotate(-0.6deg) scale(1.004);
+  }
+  50% {
+    transform: translate3d(0, 1.5px, 0) rotate(-0.35deg) scale(1.008);
+  }
+}
+
+@keyframes orb-voice-head-thinking-tilt {
+  0%,
+  100% {
+    transform: translate3d(0, -0.5px, 0) rotate(0.35deg);
+  }
+  50% {
+    transform: translate3d(0, 0, 0) rotate(-0.25deg);
+  }
+}
+
+@keyframes orb-voice-head-speak-nod {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) rotate(0.2deg);
+  }
+  35% {
+    transform: translate3d(0, 1.2px, 0) rotate(-0.15deg);
+  }
+  68% {
+    transform: translate3d(0, 0.4px, 0) rotate(0.3deg);
+  }
+}
+
+@keyframes orb-voice-head-return-neutral {
+  from {
+    transform: translate3d(0, 0.8px, 0) rotate(0.4deg) scale(1.006);
+  }
+  to {
+    transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
+  }
+}
+
+@keyframes orb-voice-listen-aura-expand {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.82;
+  }
+  50% {
+    transform: scale(1.03);
+    opacity: 0.94;
+  }
+}
+
+@keyframes orb-voice-mouth-fallback {
+  0%,
+  100% {
+    transform: scaleY(0.46);
+    opacity: 0.46;
+  }
+  22% {
+    transform: scaleY(0.82);
+    opacity: 0.68;
+  }
+  44% {
+    transform: scaleY(0.58);
+    opacity: 0.52;
+  }
+  66% {
+    transform: scaleY(0.9);
     opacity: 0.72;
+  }
+  82% {
+    transform: scaleY(0.62);
+    opacity: 0.56;
   }
 }
 
@@ -666,17 +810,6 @@
   }
 }
 
-@keyframes orb-voice-waveform-pulse {
-  0%,
-  100% {
-    opacity: 0.42;
-    stroke-width: 1.4;
-  }
-  50% {
-    opacity: 0.62;
-    stroke-width: 1.8;
-  }
-}
 
 /* ── Mobile hero — centre Voice companion (never mobile-preview / mini) ─── */
 @media (max-width: 767px) {
@@ -772,6 +905,7 @@
   .orb-voice-companion__breathe-glow,
   .orb-voice-companion__halo,
   .orb-voice-companion__aura,
+  .orb-voice-companion__head-motion,
   .orb-voice-companion__orbit,
   .orb-voice-companion__orbit--inner,
   .orb-voice-companion__listen-glow,
@@ -780,12 +914,24 @@
   .orb-voice-companion__ear,
   .orb-voice-companion__eye,
   .orb-voice-companion__eye-shimmer,
+  .orb-voice-companion [data-orb-voice-mouth-light],
   .orb-voice-companion [data-orb-voice-waveform-active='true'] {
     animation: none !important;
   }
 
   .orb-voice-companion__listen-waves,
-  .orb-voice-companion__particles {
+  .orb-voice-companion__particles,
+  .orb-voice-companion [data-orb-voice-thinking-halo] {
     display: none;
+  }
+
+  [data-orb-voice-blink-active='true'] .orb-voice-companion__eye--blink {
+    transform: scaleY(0.72);
+    opacity: 0.88;
+  }
+
+  .orb-voice-companion[data-orb-voice-state='speaking'] .orb-voice-companion__mouth-light {
+    transform: scaleY(0.58);
+    opacity: 0.52;
   }
 }

@@ -15,6 +15,7 @@ export const ORB_VOICE_COMPANION_STATES = [
   'listening',
   'thinking',
   'speaking',
+  'paused',
   'error'
 ] as const
 
@@ -26,6 +27,7 @@ export const ORB_VOICE_COMPANION_STATE_LABELS: Record<
   listening: 'Listening',
   thinking: 'Thinking',
   speaking: 'Speaking',
+  paused: 'Paused / Finished',
   error: 'Error / Unavailable'
 }
 
@@ -37,6 +39,7 @@ export const ORB_VOICE_COMPANION_HEADLINES: Record<
   listening: "I'm listening.",
   thinking: 'Let me think…',
   speaking: 'ORB is speaking.',
+  paused: "I'm here when you're ready.",
   error: 'Voice is unavailable right now.'
 }
 
@@ -59,6 +62,10 @@ export function mapOrbVoiceUiToCompanionState(
     case 'speaking':
     case 'responding':
       return 'speaking'
+    case 'ended':
+    case 'paused':
+    case 'interrupted':
+      return 'paused'
     case 'provider_unavailable':
     case 'webrtc_failed':
     case 'unauthenticated':
@@ -78,13 +85,26 @@ export function OrbVoiceCompanion({
   state = 'idle',
   className = '',
   label = 'ORB voice companion',
-  size = 'hero'
+  size = 'hero',
+  speechEnergy,
+  audioElement = null
 }: {
   state?: import('@/components/orb-residential/orb-voice-head').OrbVoiceCompanionState
   className?: string
   label?: string
   /** `hero` centre companion; `mini` debug cards; `mobile-preview` debug strip */
   size?: import('@/components/orb-residential/orb-voice-head').OrbVoiceCompanionSize | import('@/components/orb-residential/orb-voice-head').OrbVoiceCompanionLegacySize
+  speechEnergy?: number
+  audioElement?: HTMLAudioElement | null
 }) {
-  return <OrbVoiceHead state={state} className={className} label={label} size={size} />
+  return (
+    <OrbVoiceHead
+      state={state}
+      className={className}
+      label={label}
+      size={size}
+      speechEnergy={speechEnergy}
+      audioElement={audioElement}
+    />
+  )
 }

@@ -43,7 +43,7 @@ describe('ORB Residential source-of-truth audit', () => {
     assert.match(head, /import '\.\/orb-voice\.css'/)
     assert.match(studio, /import '\.\/orb-voice-studio-layout\.css'/)
     assert.match(visualBuild, /ORB_VOICE_CSS_FILE/)
-    assert.match(visualBuild, /living-head-v8/)
+    assert.match(visualBuild, /living-head-v9/)
 
     assert.match(companionCss, /data-orb-voice-head/)
     assert.match(companionCss, /\.orb-voice-companion__head-material/)

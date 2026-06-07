@@ -102,6 +102,11 @@ export class OrbRealtimeVoiceClient {
     return this.webrtcClient.unlockAudioPlayback()
   }
 
+  /** Read-only access for voice visual amplitude sampling — does not alter playback. */
+  getAssistantAudioElement(): HTMLAudioElement | null {
+    return this.webrtcClient?.getAssistantAudioElement() ?? null
+  }
+
   /** Debug-only manual turn commit when server VAD does not auto-create. */
   sendVoiceTurnFallback(): void {
     this.webrtcClient?.sendTurnFallback()
