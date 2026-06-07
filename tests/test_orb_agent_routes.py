@@ -83,7 +83,7 @@ def test_run_agent_rejects_operational_ids(fake_state):
     with pytest.raises(HTTPException) as exc_info:
         asyncio.run(
             agent_routes.run_agent(
-                OrbAgentRunRequest(prompt="show child_id=123"),
+                OrbAgentRunRequest(prompt="show child records", child_id=123),
                 current_user=fake_state["user"],
             )
         )

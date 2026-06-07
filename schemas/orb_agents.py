@@ -94,6 +94,13 @@ class OrbAgentRunRequest(BaseModel):
     tags: list[str] = Field(default_factory=list)
     save_title: str | None = Field(default=None, max_length=500)
     save_output_type: str | None = Field(default=None, max_length=80)
+    # OS record identifiers — rejected on standalone agent routes (boundary enforcement).
+    child_id: int | str | None = None
+    young_person_id: int | str | None = None
+    staff_id: int | str | None = None
+    home_id: int | str | None = None
+    record_id: int | str | None = None
+    chronology_id: int | str | None = None
 
 
 class OrbAgentSourceUse(BaseModel):
@@ -176,6 +183,12 @@ class OrbDeepResearchRequest(BaseModel):
     tags: list[str] = Field(default_factory=list)
     save_title: str | None = Field(default=None, max_length=500)
     save_output_type: str | None = Field(default=None, max_length=80)
+    child_id: int | str | None = None
+    young_person_id: int | str | None = None
+    staff_id: int | str | None = None
+    home_id: int | str | None = None
+    record_id: int | str | None = None
+    chronology_id: int | str | None = None
 
 
 class OrbDeepResearchResponse(BaseModel):

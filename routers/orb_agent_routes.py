@@ -15,6 +15,7 @@ from services.orb_agent_orchestrator_service import orb_agent_orchestrator_servi
 from services.orb_agent_registry_service import orb_agent_registry_service
 from services.orb_deep_research_service import orb_deep_research_service
 from services.ai_provider_registry import ai_provider_registry
+from services.orb_standalone_boundary import FORBIDDEN_STANDALONE_OS_KEYS
 
 logger = logging.getLogger("indicare.orb_agent_routes")
 
@@ -69,18 +70,11 @@ async def run_agent(
     if payload.agent_type and not orb_agent_registry_service.agent_available(payload.agent_type):
         _error(f"Agent unavailable: {payload.agent_type}", status=404)
 
-    forbidden_ids = (
-        payload.child_id,
-        payload.young_person_id,
-        payload.staff_id,
-        payload.home_id,
-        payload.record_id,
-        payload.chronology_id,
-    )
-    if any(value is not None for value in forbidden_ids):
-        _error("Standalone ORB agents must not receive OS record identifiers.")
+    for key in FORBIDDEN_STANDALONE_OS_KEYS:
+        if getattr(payload, key, None) is not None:
+            _error("Standalone ORB agents must not receive OS record identifiers.")
 
-    result = await orb_agent_orchestrator_service.run(payload)
+    result = await orb_agent_orchestrator_service.run_agent(payload)
     return _success(result.model_dump())
 
 
@@ -89,5 +83,9 @@ async def deep_research(
     payload: OrbDeepResearchRequest,
     current_user=Depends(require_standalone_orb_access),
 ):
-    result = await orb_deep_research_service.run(payload)
+    for key in FORBIDDEN_STANDALONE_OS_KEYS:
+        if getattr(payload, key, None) is not None:
+            _error("Standalone ORB deep research must not receive OS record identifiers.")
+
+    result = await orb_deep_research_service.run_deep_research(payload)
     return _success(result.model_dump())

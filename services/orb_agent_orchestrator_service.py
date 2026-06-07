@@ -28,8 +28,10 @@ from services.orb_document_understanding_service import orb_document_understandi
 from services.orb_evaluation_service import orb_evaluation_service
 from schemas.orb_intelligence_output import OrbIntelligenceOutput
 from services.orb_intelligence_output_service import orb_intelligence_output_service
+from services.indicare_intelligence_core_service import indicare_intelligence_core_service
 from services.orb_rag_retrieval_service import orb_rag_retrieval_service
 from services.orb_standalone_sources import append_sources_basis_section
+from services.shared_institutional_cognition_runtime import shared_institutional_cognition_runtime
 
 logger = logging.getLogger("indicare.orb_agent_orchestrator")
 
@@ -114,6 +116,16 @@ class OrbAgentOrchestratorService:
             plan = self.build_agent_plan(agent, request)
             steps.append(OrbAgentStep(id="plan", label="Build agent plan", status="completed", detail=plan.get("summary")))
 
+            brain_context = self._build_standalone_brain_context(request)
+            steps.append(
+                OrbAgentStep(
+                    id="intelligence",
+                    label="Build standalone intelligence context",
+                    status="completed",
+                    detail=_text((brain_context.get("intelligence_packet") or {}).get("expert_depth")),
+                )
+            )
+
             retrieval = self.retrieve_agent_sources(agent, request)
             steps.append(
                 OrbAgentStep(
@@ -125,7 +137,7 @@ class OrbAgentOrchestratorService:
                 )
             )
 
-            prompt = self.build_agent_prompt(agent, request, retrieval)
+            prompt = self.build_agent_prompt(agent, request, retrieval, brain_context=brain_context)
             steps.append(OrbAgentStep(id="prompt", label="Build evidence summary", status="completed"))
 
             llm_result = await self._call_model(agent, request, prompt, retrieval)
@@ -168,6 +180,7 @@ class OrbAgentOrchestratorService:
                         "classify_reason": classify_reason,
                     },
                     "retrieval": self._retrieval_summary(retrieval),
+                    **self._build_agent_intelligence_metadata(brain_context, retrieval),
                 },
                 surface="orb_standalone",
                 mode=request.mode,
@@ -526,6 +539,95 @@ class OrbAgentOrchestratorService:
             attachments=request.attachments,
         )
 
+    def _build_standalone_brain_context(self, request: OrbAgentRunRequest) -> dict[str, Any]:
+        """Build safe standalone intelligence packet and shared cognition (no OS records)."""
+        mode = _text(request.mode) or "Ask ORB"
+        profile_context = bool(request.profile_context)
+        intelligence_packet = indicare_intelligence_core_service.build_intelligence_packet(
+            message=request.prompt,
+            mode=mode,
+            profile_context=profile_context,
+            history=[],
+            profile_role=None,
+        )
+        shared_cognition = shared_institutional_cognition_runtime.build_context(
+            surface="standalone_orb",
+            message=request.prompt,
+            mode=mode,
+            operational_context=None,
+            history=[],
+        )
+        return {
+            "intelligence_packet": intelligence_packet,
+            "shared_cognition": shared_cognition,
+        }
+
+    def _missingness_graph_summary(self, missingness: dict[str, Any] | None) -> dict[str, Any]:
+        graph = missingness or {}
+        sequence = graph.get("sequence") or {}
+        return {
+            "node_count": len(graph.get("nodes") or []),
+            "edge_count": len(graph.get("edges") or []),
+            "sequence_id": sequence.get("sequence_id"),
+            "has_gaps": bool(graph.get("nodes")),
+        }
+
+    def _build_agent_intelligence_metadata(
+        self,
+        brain_context: dict[str, Any],
+        retrieval: dict[str, Any],
+    ) -> dict[str, Any]:
+        packet = brain_context.get("intelligence_packet") or {}
+        shared = brain_context.get("shared_cognition") or {}
+        shared_explain = shared.get("explainability") or {}
+        convergence = packet.get("convergence") or {}
+        return {
+            "standalone_brain": True,
+            "expert_depth": packet.get("expert_depth"),
+            "active_brains": list(shared.get("active_brains") or packet.get("active_brains") or []),
+            "active_intelligence_layers": list(packet.get("active_intelligence_layers") or []),
+            "active_engines": list(shared.get("active_engines") or convergence.get("active_engines") or []),
+            "cognition_display_labels": list(shared.get("cognition_display_labels") or []),
+            "reasoning_lenses": list(
+                shared_explain.get("reasoning_lenses") or shared.get("active_lenses") or []
+            ),
+            "quality_gate_preview": packet.get("quality_gate_preview"),
+            "registered_home_domains": list(packet.get("registered_home_domains") or []),
+            "whole_child_domains": list(packet.get("whole_child_domains") or []),
+            "source_basis": packet.get("source_basis"),
+            "gaps": list(packet.get("gaps") or []),
+            "missingness_graph": self._missingness_graph_summary(packet.get("missingness_graph")),
+            "shared_cognition": {
+                "surface": shared.get("surface"),
+                "explainability": shared_explain,
+                "operational_context_available": False,
+                "operational_context_used": False,
+            },
+            "official_source_grounding": bool(shared.get("citations")),
+            "indicare_intelligence_core": {
+                "version": packet.get("version"),
+                "expert_depth": packet.get("expert_depth"),
+            },
+            "os_linked": False,
+            "care_record_access": False,
+            "os_records_accessed": False,
+            "retrieval_classification": (retrieval.get("classification") or {}).get("primary_intent"),
+        }
+
+    def _brain_prompt_blocks(self, brain_context: dict[str, Any], *, message: str, mode: str | None) -> str:
+        packet = brain_context.get("intelligence_packet") or {}
+        shared = brain_context.get("shared_cognition") or {}
+        blocks: list[str] = []
+        intelligence_block = _text(packet.get("prompt_block"))
+        if intelligence_block:
+            blocks.append(intelligence_block)
+        shared_blocks = shared.get("prompt_blocks") or []
+        for block in shared_blocks:
+            text = _text(block)
+            if text:
+                blocks.append(text)
+        return "\n\n".join(blocks)
+
     def _retrieval_summary(self, retrieval: dict[str, Any]) -> dict[str, Any]:
         packs = retrieval.get("source_packs") or []
         document_results = retrieval.get("document_results") or []
@@ -628,6 +730,8 @@ class OrbAgentOrchestratorService:
         agent: OrbAgentDefinition,
         request: OrbAgentRunRequest,
         retrieval_context: dict[str, Any],
+        *,
+        brain_context: dict[str, Any] | None = None,
     ) -> str:
         output_format = request.preferred_output or orb_agent_registry_service.default_output_format(agent.type)
         format_hint = OUTPUT_FORMAT_INSTRUCTIONS.get(output_format, OUTPUT_FORMAT_INSTRUCTIONS["answer"])
@@ -649,6 +753,16 @@ class OrbAgentOrchestratorService:
             "deep": "Provide thorough findings, implications, actions, confidence notes and source gaps.",
         }.get(request.depth, "")
 
+        brain_blocks = (
+            self._brain_prompt_blocks(
+                brain_context,
+                message=request.prompt,
+                mode=request.mode,
+            )
+            if brain_context
+            else ""
+        )
+
         return "\n\n".join(
             part
             for part in [
@@ -658,6 +772,7 @@ class OrbAgentOrchestratorService:
                 agent.safety_notice,
                 format_hint,
                 depth_hint,
+                brain_blocks,
                 retrieval_context.get("grounding_context") or "",
                 LIVE_WEB_NOTE,
                 "\n".join(user_context_parts) if user_context_parts else "",
