@@ -57,16 +57,18 @@ describe('ORB Voice hero companion sizing contract', () => {
     assert.match(css, /\[data-orb-voice-hero-stage\]/)
   })
 
-  it('hero has non-collapsed sizing contract and does not inherit mini/mobile-preview dimensions', () => {
+  it('hero has viewport-scaled sizing contract and does not inherit mini/mobile-preview dimensions', () => {
     const css = read('components/orb-residential/orb-voice.css')
     const studioCss = read('components/orb-standalone/orb-voice-studio-layout.css')
 
-    assert.match(css, /\[data-orb-voice-companion-size='hero'\][\s\S]*min-height:\s*340px/)
-    assert.match(css, /width:\s*clamp\(280px,\s*36vw,\s*420px\)/)
-    assert.match(css, /height:\s*clamp\(340px,\s*48vh,\s*500px\)/)
+    assert.match(css, /--orb-voice-hero-available-h/)
+    assert.match(css, /--orb-voice-head-height: clamp\([\s\S]*var\(--orb-voice-hero-available-h/)
+    assert.match(css, /width: var\(--orb-voice-head-width\)/)
+    assert.match(css, /height: var\(--orb-voice-head-height\)/)
     assert.match(css, /flex:\s*0\s*0\s*auto/)
     assert.match(css, /\[data-orb-voice-hero-stage\][\s\S]*\[data-orb-voice-companion-size='hero'\]/)
-    assert.match(studioCss, /min-height: max\(21\.25rem, 340px\)/)
+    assert.match(studioCss, /--orb-voice-hero-available-h/)
+    assert.match(studioCss, /\[data-orb-voice-capture-active='false'\][\s\S]*overflow:\s*hidden/)
 
     const heroBlock = css.match(
       /\[data-orb-voice-companion-size='hero'\][\s\S]*?\/\* ── Mini/
@@ -81,10 +83,14 @@ describe('ORB Voice hero companion sizing contract', () => {
   it('voice station keeps hero visible and scrolls session body only when needed', () => {
     const station = read('components/orb-standalone/orb-voice-station.tsx')
     const content = read('components/orb-standalone/orb-voice-station-content.tsx')
+    const studioCss = read('components/orb-standalone/orb-voice-studio-layout.css')
 
     assert.match(content, /orb-voice-station-content__scroll/)
-    assert.match(content, /overflow-y-auto/)
+    assert.match(content, /orb-voice-station-content__hero/)
+    assert.match(studioCss, /\[data-orb-voice-capture-active='true'\][\s\S]*overflow-y:\s*auto/)
+    assert.match(studioCss, /\[data-orb-voice-capture-active='false'\][\s\S]*overflow:\s*hidden/)
     assert.match(station, /OrbVoiceStationContent/)
+    assert.match(station, /data-orb-voice-session-extras/)
     assert.doesNotMatch(station, /orb-voice-studio__body/)
     assert.doesNotMatch(station, /orb-voice-studio__workspace/)
   })

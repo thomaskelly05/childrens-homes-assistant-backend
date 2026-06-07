@@ -34,8 +34,8 @@ export function OrbVoiceStationContent({
       data-orb-voice-station-content
       data-orb-voice-mobile
     >
-      <div className="orb-voice-station-content__scroll min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pt-4 pb-2 md:px-6 md:pt-8">
-        <div className="mx-auto flex w-full max-w-lg flex-col items-center">
+      <div className="orb-voice-station-content__scroll min-h-0 flex-1 overscroll-contain px-4 py-2 md:px-6">
+        <div className="orb-voice-station-content__hero mx-auto flex w-full max-w-lg flex-col items-center">
           <OrbVoiceHeroStage
             companionState={companionState}
             statusLine={statusLine}

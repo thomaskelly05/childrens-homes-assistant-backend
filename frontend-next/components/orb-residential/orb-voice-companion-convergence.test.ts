@@ -39,11 +39,11 @@ describe('ORB Voice companion visual convergence', () => {
     }
   })
 
-  it('OrbVoiceHead exposes living-head-v5 markers and custom head structure', () => {
+  it('OrbVoiceHead exposes living-head-v6 markers and custom head structure', () => {
     const head = read('components/orb-residential/orb-voice-head.tsx')
     const companion = read('components/orb-residential/orb-voice-companion.tsx')
     const visualBuild = read('lib/orb/orb-visual-build.ts')
-    assert.match(visualBuild, /ORB_VOICE_VERSION = 'living-head-v5'/)
+    assert.match(visualBuild, /ORB_VOICE_VERSION = 'living-head-v6'/)
     assert.match(companion, /OrbVoiceHead/)
     assert.match(head, /data-orb-voice-companion/)
     assert.match(head, /data-orb-voice-companion-size=\{resolvedSize\}/)

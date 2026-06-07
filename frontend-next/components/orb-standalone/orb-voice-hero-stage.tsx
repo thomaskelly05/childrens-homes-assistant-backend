@@ -44,32 +44,32 @@ export function OrbVoiceHeroStage({
       <OrbVoiceCompanion state={companionState} size="hero" className="shrink-0" />
 
       <p
-        className="mt-5 text-center text-sm font-medium text-[var(--orb-text,var(--orb-foreground))]"
+        className="orb-voice-hero-stage__headline text-center text-sm font-medium text-[var(--orb-text,var(--orb-foreground))]"
         data-orb-voice-status-label
       >
         {ORB_VOICE_COMPANION_HEADLINES[companionState]}
       </p>
       {subline ? (
-        <p className="mt-1.5 text-center text-xs text-[var(--orb-muted)]" data-orb-voice-status-subline>
+        <p className="orb-voice-hero-stage__subline text-center text-xs text-[var(--orb-muted)]" data-orb-voice-status-subline>
           {subline}
         </p>
       ) : null}
 
-      <OrbVoiceStudioWaveform state={companionState} className="mt-4" />
+      <OrbVoiceStudioWaveform state={companionState} className="orb-voice-hero-stage__waveform" />
 
       {cta ? (
-        <div className="mt-5 w-full max-w-sm" data-orb-voice-hero-cta>
+        <div className="orb-voice-hero-stage__cta w-full max-w-sm" data-orb-voice-hero-cta>
           {cta}
         </div>
       ) : null}
 
       {micStatus ? (
-        <p className="mt-3 text-center text-xs text-[var(--orb-muted)]" data-orb-voice-mic-status>
+        <p className="orb-voice-hero-stage__mic-status text-center text-xs text-[var(--orb-muted)]" data-orb-voice-mic-status>
           {micStatus}
         </p>
       ) : null}
 
-      <p className="orb-voice-station__privacy mt-2 text-[11px] leading-4 text-[var(--orb-muted)]" data-orb-voice-privacy-note>
+      <p className="orb-voice-station__privacy orb-voice-hero-stage__privacy text-[11px] leading-4 text-[var(--orb-muted)]" data-orb-voice-privacy-note>
         Hands-free when your microphone is allowed. Voice stays within your ORB account.
       </p>
     </div>
