@@ -577,6 +577,79 @@
   }
 }
 
+/* ── Mobile hero — centre Voice companion (never mobile-preview / mini) ─── */
+@media (max-width: 767px) {
+  [data-orb-voice-mobile-hero-stage] [data-orb-voice-head],
+  [data-orb-voice-mobile] [data-orb-voice-mobile-hero-stage] [data-orb-voice-companion-size='hero'],
+  [data-orb-voice-mobile-hero-stage] .orb-voice-companion--hero {
+    --orb-voice-head-width: clamp(13rem, 58vw, 19rem);
+    --orb-voice-head-height: clamp(15rem, 34vh, 24rem);
+    position: relative;
+    width: clamp(13rem, 58vw, 19rem);
+    height: clamp(15rem, 34vh, 24rem);
+    min-height: 15rem;
+    max-height: none;
+    flex: 0 0 auto;
+    flex-shrink: 0;
+    overflow: visible;
+    opacity: 1;
+    transform: none;
+    z-index: 2;
+    isolation: isolate;
+  }
+
+  [data-orb-voice-mobile-hero-stage] .orb-voice-companion__stage {
+    width: 100%;
+    height: 100%;
+    min-width: 100%;
+    min-height: 15rem;
+    flex: 0 0 auto;
+    flex-shrink: 0;
+    overflow: visible;
+  }
+
+  [data-orb-voice-mobile-hero-stage] .orb-voice-companion__silhouette,
+  [data-orb-voice-mobile-hero-stage] .orb-voice-companion__head-shell {
+    width: 100%;
+    height: 100%;
+    min-height: 15rem;
+    overflow: visible;
+  }
+
+  [data-orb-voice-mobile-hero-stage] [data-orb-voice-head] .orb-voice-companion__head-material {
+    min-height: 9rem;
+    height: 62%;
+    max-height: none;
+    flex-shrink: 0;
+    opacity: 1;
+    transform: scale(1);
+    overflow: hidden;
+  }
+
+  [data-orb-voice-mobile-hero-stage] .orb-voice-companion__head-material::before {
+    mix-blend-mode: normal;
+    opacity: max(0.9, calc(0.52 * var(--orb-edge-opacity, 0.34) + 0.42));
+  }
+
+  [data-orb-voice-mobile-hero-stage] .orb-voice-companion__aura {
+    opacity: 0.92;
+    transform: none;
+    overflow: visible;
+  }
+
+  [data-orb-voice-mobile-hero-stage] .orb-voice-companion__eyes {
+    opacity: 0.96;
+  }
+
+  /* Block mobile-preview / mini dimensions from leaking into centre hero */
+  [data-orb-voice-mobile]:not([data-orb-voice-mobile-preview])
+    [data-orb-voice-mobile-hero-stage]
+    [data-orb-voice-companion-size='hero'] {
+    --orb-voice-head-width: clamp(13rem, 58vw, 19rem);
+    --orb-voice-head-height: clamp(15rem, 34vh, 24rem);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .orb-voice-companion__head-material,
   .orb-voice-companion__head-material::before,

@@ -135,7 +135,12 @@ export function OrbVoiceMobileExperience({
       data-orb-voice-ui-state={uiState}
     >
       <div className="flex min-h-0 flex-1 flex-col items-center overflow-y-auto overflow-x-hidden px-4 pt-4 pb-2">
-        <OrbVoiceCompanion state={resolvedCompanionState} size="hero" className="shrink-0" />
+        <div
+          className="flex shrink-0 flex-col items-center"
+          data-orb-voice-mobile-hero-stage
+        >
+          <OrbVoiceCompanion state={resolvedCompanionState} size="hero" className="shrink-0" />
+        </div>
 
         <p className="mt-4 text-center text-sm font-medium text-[var(--orb-text,var(--orb-foreground))]" data-orb-voice-status-label>
           {ORB_VOICE_COMPANION_HEADLINES[resolvedCompanionState]}
