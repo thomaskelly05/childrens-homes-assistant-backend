@@ -39,11 +39,11 @@ describe('ORB Voice companion visual convergence', () => {
     }
   })
 
-  it('OrbVoiceHead exposes living-head-v9 markers and SVG profile silhouette', () => {
+  it('OrbVoiceHead exposes living-head-v10 markers and SVG profile silhouette', () => {
     const head = read('components/orb-residential/orb-voice-head.tsx')
     const companion = read('components/orb-residential/orb-voice-companion.tsx')
     const visualBuild = read('lib/orb/orb-visual-build.ts')
-    assert.match(visualBuild, /ORB_VOICE_VERSION = 'living-head-v9'/)
+    assert.match(visualBuild, /ORB_VOICE_VERSION = 'living-head-v10'/)
     assert.match(companion, /OrbVoiceHead/)
     assert.match(head, /data-orb-voice-companion/)
     assert.match(head, /data-orb-voice-companion-size=\{resolvedSize\}/)
@@ -56,6 +56,11 @@ describe('ORB Voice companion visual convergence', () => {
     assert.match(head, /orb-voice-companion__svg/)
     assert.match(head, /viewBox="0 0 200 280"/)
     assert.match(head, /orb-voice-companion__eyes/)
+    assert.match(head, /orb-voice-head-idle/)
+    assert.match(head, /orb-voice-head-engaged/)
+    assert.match(head, /data-orb-voice-attention/)
+    assert.match(head, /ORB_VOICE_FACE_IDLE/)
+    assert.match(head, /ORB_VOICE_FACE_ENGAGED/)
     assert.doesNotMatch(head, /OrbPresence/)
     assert.doesNotMatch(head, /import.*OrbSphere/)
     assert.doesNotMatch(head, /GlassOrbMark/)
@@ -97,6 +102,11 @@ describe('ORB Voice companion visual convergence', () => {
     assert.match(css, /\[data-orb-voice-state='thinking'\]/)
     assert.match(css, /\[data-orb-voice-state='speaking'\]/)
     assert.match(css, /\[data-orb-voice-state='paused'\]/)
+    assert.match(css, /\[data-orb-voice-attention='engaged'\]/)
+    assert.match(css, /\[data-orb-voice-attention='idle'\]/)
+    assert.match(css, /orb-voice-head-listen-attention/)
+    assert.match(css, /orb-voice-head-return-neutral/)
+    assert.match(css, /orb-voice-companion__head-asset-stack/)
     assert.match(css, /prefers-reduced-motion: reduce/)
   })
 

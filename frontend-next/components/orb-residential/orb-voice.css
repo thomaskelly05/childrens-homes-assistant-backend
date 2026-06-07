@@ -4,7 +4,7 @@
  * OrbSphere / OrbPresence / GlassOrbMark are neutralised below — not used for Voice.
  */
 
-/* ── Voice — living head v8 (designed asset + SVG state overlays) ── */
+/* ── Voice — living head v10 (idle/engaged assets + face-plane overlays) ── */
 
 /* Neutralise legacy sphere/blob selectors inside the voice companion */
 .orb-voice-companion .orb-living-sphere,
@@ -27,8 +27,11 @@
   --orb-head-nod: 0px;
   --orb-head-float: 0px;
   --orb-head-scale: 1;
+  --orb-head-turn-x: 0px;
+  --orb-head-turn-rotate: 0deg;
   --orb-voice-mouth-open: 0;
   --orb-voice-speech-energy: 0;
+  perspective: 520px;
 }
 
 /* ── Hero — viewport-scaled centre companion (own CSS authority) ─────────── */
@@ -266,9 +269,10 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transform-origin: 50% 58%;
+  transform-origin: 46% 58%;
   will-change: transform;
   filter: none;
+  transition: transform 1.1s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .orb-voice-companion__head-shell {
@@ -280,15 +284,27 @@
   justify-content: center;
 }
 
-/* Designed base head/bust asset — soft luminous 3/4 profile */
+/* Designed base head/bust assets — idle profile and engaged attentive pose */
+.orb-voice-companion__head-asset-stack {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
 .orb-voice-companion__head-asset-wrap {
   position: absolute;
   inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1;
+  opacity: 0;
+  transition: opacity 0.95s cubic-bezier(0.22, 1, 0.36, 1);
   pointer-events: none;
+}
+
+.orb-voice-companion__head-asset-wrap.is-active {
+  opacity: 1;
 }
 
 .orb-voice-companion__head-asset,
@@ -342,14 +358,44 @@
 
 .orb-voice-companion__face {
   pointer-events: none;
+  transform-origin: 38% 42%;
+  transition:
+    transform 1s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.8s ease;
+}
+
+.orb-voice-companion[data-orb-voice-attention='idle'] .orb-voice-companion__face {
+  transform: rotate(-6deg) skewX(-3deg);
+}
+
+.orb-voice-companion[data-orb-voice-attention='engaged'] .orb-voice-companion__face {
+  transform: rotate(-1.5deg) translateX(1px);
+}
+
+.orb-voice-companion__eyes {
+  transform-origin: 36% 38%;
+  transition: transform 1s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.orb-voice-companion[data-orb-voice-attention='idle'] .orb-voice-companion__eyes {
+  transform: rotate(-5deg) skewX(-2deg);
+}
+
+.orb-voice-companion[data-orb-voice-attention='engaged'] .orb-voice-companion__eyes {
+  transform: rotate(-1deg) translateX(1px);
 }
 
 .orb-voice-companion__eye {
   animation: orb-voice-eye-glow 4.6s ease-in-out infinite;
 }
 
-.orb-voice-companion__eye--right {
+.orb-voice-companion__eye--near {
+  filter: drop-shadow(0 0 5px rgba(186, 230, 253, 0.72)) drop-shadow(0 0 10px rgba(56, 189, 248, 0.38));
+}
+
+.orb-voice-companion__eye--far {
   animation-delay: 0.7s;
+  filter: drop-shadow(0 0 3px rgba(186, 230, 253, 0.42)) drop-shadow(0 0 6px rgba(56, 189, 248, 0.22));
 }
 
 .orb-voice-companion__eye--blink {
@@ -373,7 +419,7 @@
   pointer-events: none;
 }
 
-.orb-voice-companion__eye-shimmer--right {
+.orb-voice-companion__eye-shimmer--far {
   animation-delay: 0.5s;
 }
 
@@ -386,13 +432,22 @@
 }
 
 .orb-voice-companion__mouth-light {
-  transform-origin: 50% 78%;
-  transform: scaleY(calc(0.42 + var(--orb-voice-mouth-open, 0) * 0.72));
+  transform-origin: 42% 72%;
+  transform: scaleX(calc(0.88 + var(--orb-voice-speech-energy, 0) * 0.18))
+    scaleY(calc(0.42 + var(--orb-voice-mouth-open, 0) * 0.72));
   opacity: calc(0.32 + var(--orb-voice-speech-energy, 0) * 0.42);
   filter: drop-shadow(0 0 calc(1px + var(--orb-voice-speech-energy, 0) * 4px) rgba(186, 230, 253, 0.36));
   transition:
     transform 70ms ease-out,
     opacity 90ms ease-out;
+}
+
+.orb-voice-companion[data-orb-voice-attention='idle'] .orb-voice-companion__mouth-light {
+  transform-origin: 34% 72%;
+}
+
+.orb-voice-companion[data-orb-voice-attention='engaged'] .orb-voice-companion__mouth-light {
+  transform-origin: 44% 72%;
 }
 
 .orb-voice-companion__mouth-wave--speaking {
@@ -461,6 +516,11 @@
   animation: orb-voice-head-return-neutral 1.8s ease-out forwards;
 }
 
+.orb-voice-companion[data-orb-voice-attention='engaged'] .orb-voice-companion__head-motion {
+  --orb-head-turn-x: 2px;
+  --orb-head-turn-rotate: -0.45deg;
+}
+
 .orb-voice-companion[data-orb-voice-state='listening'] .orb-voice-companion__head-material,
 .orb-voice-companion[data-orb-voice-state='listening'] .orb-voice-companion__breathe-head {
   animation: orb-voice-head-breathe 5.4s ease-in-out infinite;
@@ -501,6 +561,10 @@
 
 .orb-voice-companion[data-orb-voice-state='thinking'] .orb-voice-companion__head-motion {
   animation: orb-voice-head-thinking-tilt 5.4s ease-in-out infinite;
+}
+
+.orb-voice-companion[data-orb-voice-state='thinking'][data-orb-voice-attention='engaged'] .orb-voice-companion__head-shell {
+  transform: translateX(1px) scale(1.003);
 }
 
 .orb-voice-companion[data-orb-voice-state='thinking'] .orb-voice-companion__eye,
@@ -668,39 +732,45 @@
 @keyframes orb-voice-head-listen-attention {
   0%,
   100% {
-    transform: translate3d(0, 1px, 0) rotate(-0.6deg) scale(1.004);
+    transform: translate3d(var(--orb-head-turn-x, 2px), 0.5px, 0) rotate(var(--orb-head-turn-rotate, -0.45deg))
+      scale(1.004);
   }
   50% {
-    transform: translate3d(0, 1.5px, 0) rotate(-0.35deg) scale(1.008);
+    transform: translate3d(calc(var(--orb-head-turn-x, 2px) + 1px), 1px, 0)
+      rotate(calc(var(--orb-head-turn-rotate, -0.45deg) + 0.2deg)) scale(1.007);
   }
 }
 
 @keyframes orb-voice-head-thinking-tilt {
   0%,
   100% {
-    transform: translate3d(0, -0.5px, 0) rotate(0.35deg);
+    transform: translate3d(var(--orb-head-turn-x, 2px), -0.5px, 0) rotate(calc(var(--orb-head-turn-rotate, -0.45deg) + 0.3deg));
   }
   50% {
-    transform: translate3d(0, 0, 0) rotate(-0.25deg);
+    transform: translate3d(calc(var(--orb-head-turn-x, 2px) + 0.5px), 0, 0)
+      rotate(calc(var(--orb-head-turn-rotate, -0.45deg) - 0.15deg));
   }
 }
 
 @keyframes orb-voice-head-speak-nod {
   0%,
   100% {
-    transform: translate3d(0, 0, 0) rotate(0.2deg);
+    transform: translate3d(var(--orb-head-turn-x, 2px), 0, 0) rotate(calc(var(--orb-head-turn-rotate, -0.45deg) + 0.15deg));
   }
   35% {
-    transform: translate3d(0, 1.2px, 0) rotate(-0.15deg);
+    transform: translate3d(calc(var(--orb-head-turn-x, 2px) + 0.5px), 1.1px, 0)
+      rotate(calc(var(--orb-head-turn-rotate, -0.45deg) - 0.1deg));
   }
   68% {
-    transform: translate3d(0, 0.4px, 0) rotate(0.3deg);
+    transform: translate3d(calc(var(--orb-head-turn-x, 2px) + 0.25px), 0.35px, 0)
+      rotate(calc(var(--orb-head-turn-rotate, -0.45deg) + 0.25deg));
   }
 }
 
 @keyframes orb-voice-head-return-neutral {
   from {
-    transform: translate3d(0, 0.8px, 0) rotate(0.4deg) scale(1.006);
+    transform: translate3d(var(--orb-head-turn-x, 2px), 0.6px, 0) rotate(calc(var(--orb-head-turn-rotate, -0.45deg) + 0.35deg))
+      scale(1.005);
   }
   to {
     transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
@@ -722,23 +792,23 @@
 @keyframes orb-voice-mouth-fallback {
   0%,
   100% {
-    transform: scaleY(0.46);
+    transform: scaleX(0.92) scaleY(0.46);
     opacity: 0.46;
   }
   22% {
-    transform: scaleY(0.82);
+    transform: scaleX(1.02) scaleY(0.82);
     opacity: 0.68;
   }
   44% {
-    transform: scaleY(0.58);
+    transform: scaleX(0.96) scaleY(0.58);
     opacity: 0.52;
   }
   66% {
-    transform: scaleY(0.9);
+    transform: scaleX(1.06) scaleY(0.9);
     opacity: 0.72;
   }
   82% {
-    transform: scaleY(0.62);
+    transform: scaleX(0.98) scaleY(0.62);
     opacity: 0.56;
   }
 }
@@ -903,6 +973,9 @@
 @media (prefers-reduced-motion: reduce) {
   .orb-voice-companion__head-material,
   .orb-voice-companion__head-asset,
+  .orb-voice-companion__head-asset-wrap,
+  .orb-voice-companion__face,
+  .orb-voice-companion__eyes,
   .orb-voice-companion__breathe-head,
   .orb-voice-companion__breathe-glow,
   .orb-voice-companion__halo,
