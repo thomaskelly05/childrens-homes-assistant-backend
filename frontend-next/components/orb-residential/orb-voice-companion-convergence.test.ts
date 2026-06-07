@@ -39,11 +39,11 @@ describe('ORB Voice companion visual convergence', () => {
     }
   })
 
-  it('OrbVoiceHead exposes living-head-v4 markers and custom head structure', () => {
+  it('OrbVoiceHead exposes living-head-v5 markers and custom head structure', () => {
     const head = read('components/orb-residential/orb-voice-head.tsx')
     const companion = read('components/orb-residential/orb-voice-companion.tsx')
     const visualBuild = read('lib/orb/orb-visual-build.ts')
-    assert.match(visualBuild, /ORB_VOICE_VERSION = 'living-head-v4'/)
+    assert.match(visualBuild, /ORB_VOICE_VERSION = 'living-head-v5'/)
     assert.match(companion, /OrbVoiceHead/)
     assert.match(head, /data-orb-voice-companion/)
     assert.match(head, /data-orb-voice-companion-size=\{resolvedSize\}/)
@@ -139,9 +139,12 @@ describe('ORB Voice companion visual convergence', () => {
     assert.doesNotMatch(css, /\.glass-orb-mark--voice \.glass-orb-mark__sphere/)
   })
 
-  it('shared voice experience includes studio waveform without production state panel', () => {
+  it('shared voice experience includes studio waveform and hero CTA without production state panel', () => {
     const hero = read('components/orb-standalone/orb-voice-hero-stage.tsx')
+    const content = read('components/orb-standalone/orb-voice-station-content.tsx')
     assert.match(hero, /OrbVoiceStudioWaveform/)
+    assert.match(hero, /data-orb-voice-hero-cta/)
+    assert.match(content, /cta=\{controls\}/)
     assert.doesNotMatch(hero, /OrbVoiceStatePanel/)
     assert.doesNotMatch(hero, /data-orb-voice-state-panel/)
   })

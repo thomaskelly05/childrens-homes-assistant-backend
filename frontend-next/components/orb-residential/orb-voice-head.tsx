@@ -111,18 +111,27 @@ export function OrbVoiceHead({
       aria-label={label}
     >
       <div className="orb-voice-companion__stage" data-orb-voice-head-stage>
+        <div className="orb-voice-companion__halo" aria-hidden />
         <div
           className={`orb-voice-companion__aura${pulse && !reducedMotion ? ' orb-voice-companion__aura--pulse' : ''}`}
           aria-hidden
         />
         <div className="orb-voice-companion__silhouette" style={hueStyle} aria-hidden>
           <div className="orb-voice-companion__head-shell" data-orb-voice-head-shell>
-            <div className="orb-voice-companion__head-material" />
+            <div className="orb-voice-companion__head-material">
+              <div className="orb-voice-companion__head-glass" />
+              <div className="orb-voice-companion__head-core" />
+              <div className="orb-voice-companion__head-shine" />
+            </div>
             <div className="orb-voice-companion__neck" />
             <div className="orb-voice-companion__bust" />
           </div>
           <div className="orb-voice-companion__face" data-orb-voice-face>
-            <span className="orb-voice-companion__eyes" data-orb-voice-eyes />
+            <div className="orb-voice-companion__eyes" data-orb-voice-eyes>
+              <span className="orb-voice-companion__eye orb-voice-companion__eye--left" />
+              <span className="orb-voice-companion__eye orb-voice-companion__eye--right" />
+            </div>
+            <span className="orb-voice-companion__brow-bridge" aria-hidden />
             {state === 'listening' ? (
               <>
                 <span className="orb-voice-companion__ear orb-voice-companion__ear--left" data-orb-voice-ear-left />

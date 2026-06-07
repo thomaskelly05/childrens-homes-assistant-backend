@@ -43,12 +43,12 @@ describe('ORB Residential source-of-truth audit', () => {
     assert.match(head, /import '\.\/orb-voice\.css'/)
     assert.match(studio, /import '\.\/orb-voice-studio-layout\.css'/)
     assert.match(visualBuild, /ORB_VOICE_CSS_FILE/)
-    assert.match(visualBuild, /living-head-v4/)
+    assert.match(visualBuild, /living-head-v5/)
 
     assert.match(companionCss, /data-orb-voice-head/)
     assert.match(companionCss, /\.orb-voice-companion__head-material/)
     assert.match(studioCss, /\[data-orb-voice-hero-stage\]/)
-    assert.match(studioCss, /min-height: max\(18\.75rem, 300px\)/)
+    assert.match(studioCss, /min-height: max\(21\.25rem, 340px\)/)
 
     assert.doesNotMatch(layoutPass, /\.orb-voice-companion__head-material/)
     assert.doesNotMatch(layoutPass, /\[data-orb-voice-companion-size='hero'\]/)
@@ -57,9 +57,9 @@ describe('ORB Residential source-of-truth audit', () => {
   it('hero sizing contract is non-collapsed and mini/mobile cannot apply globally', () => {
     const css = read('components/orb-residential/orb-voice.css')
 
-    assert.match(css, /width: clamp\(260px,\s*30vw,\s*380px\)/)
-    assert.match(css, /height: clamp\(300px,\s*42vh,\s*430px\)/)
-    assert.match(css, /min-height: 300px/)
+    assert.match(css, /width: clamp\(280px,\s*36vw,\s*420px\)/)
+    assert.match(css, /height: clamp\(340px,\s*48vh,\s*500px\)/)
+    assert.match(css, /min-height: 340px/)
     assert.match(css, /transform: none/)
 
     assert.doesNotMatch(css, /^\[data-orb-voice-companion-size='mini'\]/m)

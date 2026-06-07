@@ -99,7 +99,7 @@ describe('ORB CSS parse and import contract', () => {
   it('voice hero has non-collapsed mobile sizing in orb-voice.css', () => {
     const css = read(ORB_VOICE_CSS_FILE)
     assert.match(css, /\[data-orb-voice-mobile-hero-stage\]/)
-    assert.match(css, /min-height:\s*15rem/)
+    assert.match(css, /min-height:\s*16rem/)
     assert.match(css, /flex-shrink:\s*0/)
     assert.match(css, /max-height:\s*none/)
     assert.match(css, /transform:\s*none/)
@@ -132,7 +132,7 @@ describe('ORB CSS parse and import contract', () => {
     assert.equal(ORB_LOGIN_CSS_FILE, 'app/orb/orb-login.css')
   })
 
-  it('layout and voice expose orb-style-v1 and living-head-v4 version markers', () => {
+  it('layout and voice expose orb-style-v1 and living-head-v5 version markers', () => {
     const layout = read('app/orb/layout.tsx')
     const head = read('components/orb-residential/orb-voice-head.tsx')
     const visualBuild = read('lib/orb/orb-visual-build.ts')
