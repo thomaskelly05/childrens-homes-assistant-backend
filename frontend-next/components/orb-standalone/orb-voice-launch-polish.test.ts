@@ -131,9 +131,10 @@ describe('ORB Voice launch polish', () => {
 
   it('mobile and desktop layout hooks remain', () => {
     const station = readComponent('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(station, /data-orb-mobile-branch/)
-    assert.match(station, /data-orb-voice-desktop/)
-    const mobile = readComponent('components/orb-standalone/orb-voice-mobile-experience.tsx')
+    assert.match(station, /OrbVoiceStationContent/)
+    const content = readComponent('components/orb-standalone/orb-voice-station-content.tsx')
+    assert.match(content, /data-orb-voice-station-content/)
+    const mobile = readComponent('components/orb-standalone/orb-voice-station-content.tsx')
     assert.match(mobile, /data-orb-voice-mobile/)
   })
 })

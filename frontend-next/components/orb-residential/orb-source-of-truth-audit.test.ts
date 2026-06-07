@@ -13,32 +13,34 @@ function read(relativePath: string) {
 const VOICE_VISUAL_FILES = [
   'components/orb-standalone/orb-voice-station.tsx',
   'components/orb-residential/orb-voice-companion.tsx',
+  'components/orb-residential/orb-voice-head.tsx',
   'components/orb-standalone/orb-voice-studio-layout.tsx'
 ] as const
 
 describe('ORB Residential source-of-truth audit', () => {
-  it('canonical voice path is OrbVoiceStation → OrbVoiceCompanion (not OrbSphere)', () => {
+  it('canonical voice path is OrbVoiceStation → OrbVoiceCompanion → OrbVoiceHead (not OrbSphere)', () => {
     const station = read('components/orb-standalone/orb-voice-station.tsx')
     const companion = read('components/orb-residential/orb-voice-companion.tsx')
+    const head = read('components/orb-residential/orb-voice-head.tsx')
 
-    assert.match(station, /OrbVoiceCompanion/)
-    assert.match(station, /size="hero"/)
+    assert.match(station, /OrbVoiceStationContent/)
+    assert.match(companion, /OrbVoiceHead/)
     assert.doesNotMatch(station, /OrbSphere/)
     assert.doesNotMatch(station, /OrbPresence/)
     assert.doesNotMatch(station, /GlassOrbMark/)
-    assert.doesNotMatch(companion, /OrbSphere/)
-    assert.doesNotMatch(companion, /orb-living-sphere/)
+    assert.doesNotMatch(head, /OrbSphere/)
+    assert.doesNotMatch(head, /orb-living-sphere/)
   })
 
-  it('voice visual CSS is owned by OrbVoiceCompanion and studio layout components', () => {
-    const companion = read('components/orb-residential/orb-voice-companion.tsx')
+  it('voice visual CSS is owned by OrbVoiceHead and studio layout components', () => {
+    const head = read('components/orb-residential/orb-voice-head.tsx')
     const studio = read('components/orb-standalone/orb-voice-studio-layout.tsx')
     const layoutPass = read('app/orb/orb-premium-layout-pass.css')
     const companionCss = read('components/orb-residential/orb-voice.css')
     const studioCss = read('components/orb-standalone/orb-voice-studio-layout.css')
     const visualBuild = read('lib/orb/orb-visual-build.ts')
 
-    assert.match(companion, /import '\.\/orb-voice\.css'/)
+    assert.match(head, /import '\.\/orb-voice\.css'/)
     assert.match(studio, /import '\.\/orb-voice-studio-layout\.css'/)
     assert.match(visualBuild, /ORB_VOICE_CSS_FILE/)
     assert.match(visualBuild, /living-head-v4/)
@@ -100,7 +102,7 @@ describe('ORB Residential source-of-truth audit', () => {
 
   it('debug visual panel exposes hero metrics behind ?debugVisual=1', () => {
     const panel = read('components/orb-residential/orb-visual-debug-panel.tsx')
-    const companion = read('components/orb-residential/orb-voice-companion.tsx')
+    const head = read('components/orb-residential/orb-voice-head.tsx')
 
     assert.match(panel, /heroWidth/)
     assert.match(panel, /heroHeight/)
@@ -109,7 +111,7 @@ describe('ORB Residential source-of-truth audit', () => {
     assert.match(panel, /heroCollapsed/)
     assert.match(panel, /orbSphereInVoice/)
     assert.match(panel, /voiceComponentTree/)
-    assert.match(companion, /data-orb-voice-visual-authority="OrbVoiceCompanion"/)
+    assert.match(head, /data-orb-voice-visual-authority="OrbVoiceHead"/)
   })
 
   it('voice visual files remain UI-only (no auth/billing/API edits)', () => {

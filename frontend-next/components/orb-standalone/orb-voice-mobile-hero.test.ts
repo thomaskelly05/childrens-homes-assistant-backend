@@ -11,15 +11,17 @@ function read(relativePath: string) {
 }
 
 describe('ORB Voice mobile hero companion', () => {
-  it('mobile Voice renders OrbVoiceCompanion with size="hero" inside mobile hero stage', () => {
-    const mobile = read('components/orb-standalone/orb-voice-mobile-experience.tsx')
-    assert.match(mobile, /data-orb-voice-mobile-hero-stage/)
-    assert.match(mobile, /<OrbVoiceCompanion state=\{resolvedCompanionState\} size="hero"/)
-    assert.doesNotMatch(mobile, /size="mini"/)
-    assert.doesNotMatch(mobile, /size="mobile-preview"/)
+  it('mobile Voice renders OrbVoiceCompanion with size="hero" inside shared hero stage', () => {
+    const content = read('components/orb-standalone/orb-voice-station-content.tsx')
+    const hero = read('components/orb-standalone/orb-voice-hero-stage.tsx')
+    assert.match(content, /data-orb-voice-mobile/)
+    assert.match(hero, /data-orb-voice-hero-stage/)
+    assert.match(hero, /<OrbVoiceCompanion state=\{companionState\} size="hero"/)
+    assert.doesNotMatch(hero, /size="mini"/)
+    assert.doesNotMatch(hero, /size="mobile-preview"/)
   })
 
-  it('mobile hero has non-collapsed sizing contract separate from desktop hero', () => {
+  it('mobile hero has non-collapsed sizing contract separate from debug preview cards', () => {
     const css = read('components/orb-residential/orb-voice.css')
     const studioCss = read('components/orb-standalone/orb-voice-studio-layout.css')
 
@@ -45,31 +47,26 @@ describe('ORB Voice mobile hero companion', () => {
   })
 
   it('mobile hero does not use GlassOrbMark or OrbSphere', () => {
-    const mobile = read('components/orb-standalone/orb-voice-mobile-experience.tsx')
+    const content = read('components/orb-standalone/orb-voice-station-content.tsx')
     const station = read('components/orb-standalone/orb-voice-station.tsx')
+    const head = read('components/orb-residential/orb-voice-head.tsx')
 
-    assert.doesNotMatch(mobile, /GlassOrbMark/)
-    assert.doesNotMatch(mobile, /OrbSphere/)
-    assert.doesNotMatch(mobile, /orb-living-sphere/)
-    assert.doesNotMatch(mobile, /orb-presence--voice/)
-
-    const mobileBranch = station.match(
-      /isMobileViewport \?[\s\S]*?data-orb-desktop-branch="active"/
-    )?.[0]
-    assert.ok(mobileBranch, 'expected mobile branch in voice station')
-    assert.doesNotMatch(mobileBranch, /GlassOrbMark/)
-    assert.doesNotMatch(mobileBranch, /OrbSphere/)
+    assert.doesNotMatch(content, /GlassOrbMark/)
+    assert.doesNotMatch(content, /OrbSphere/)
+    assert.doesNotMatch(head, /orb-living-sphere/)
+    assert.doesNotMatch(head, /orb-presence--voice/)
+    assert.doesNotMatch(station, /GlassOrbMark/)
+    assert.doesNotMatch(station, /OrbSphere/)
   })
 
-  it('desktop Voice studio hero stage remains unchanged', () => {
+  it('desktop and mobile share the same hero stage component', () => {
     const station = read('components/orb-standalone/orb-voice-station.tsx')
-    const studioCss = read('components/orb-standalone/orb-voice-studio-layout.css')
+    const hero = read('components/orb-standalone/orb-voice-hero-stage.tsx')
     const css = read('components/orb-residential/orb-voice.css')
 
-    assert.match(station, /data-orb-voice-hero-stage/)
-    assert.match(station, /<OrbVoiceCompanion state=\{companionState\} size="hero"/)
-    assert.match(studioCss, /\[data-orb-voice-hero-stage\][\s\S]*min-height: max\(18\.75rem, 300px\)/)
+    assert.match(station, /OrbVoiceStationContent/)
+    assert.match(hero, /data-orb-voice-hero-stage/)
+    assert.match(hero, /<OrbVoiceCompanion state=\{companionState\} size="hero"/)
     assert.match(css, /\[data-orb-voice-hero-stage\][\s\S]*width:\s*clamp\(260px,\s*30vw,\s*380px\)/)
-    assert.doesNotMatch(station, /data-orb-voice-mobile-hero-stage/)
   })
 })

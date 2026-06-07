@@ -1272,7 +1272,7 @@ html[data-orb-residential='1'] .orb-chat-layout {
   }
 
   /* Voice — centred column */
-  html[data-orb-residential='1'] [data-orb-voice-desktop] {
+  html[data-orb-residential='1'] [data-orb-voice-station-content] {
     max-width: var(--orb-desktop-voice-max);
     margin-inline: auto;
     width: 100%;

@@ -15,7 +15,8 @@ export function OrbWorkspaceFrame({
   children,
   panelId,
   footer,
-  compactChrome = false
+  compactChrome = false,
+  headerActions
 }: {
   open: boolean
   title: string
@@ -26,6 +27,8 @@ export function OrbWorkspaceFrame({
   footer?: ReactNode
   /** Minimal back-only header — studio tools supply their own title bar. */
   compactChrome?: boolean
+  /** Optional actions rendered in the workspace header (e.g. Voice settings). */
+  headerActions?: ReactNode
 }) {
   if (!open) return null
 
@@ -64,6 +67,11 @@ export function OrbWorkspaceFrame({
         ) : (
           <div className="min-w-0 flex-1" aria-hidden />
         )}
+        {headerActions ? (
+          <div className="flex shrink-0 items-center gap-2" data-orb-workspace-header-actions>
+            {headerActions}
+          </div>
+        ) : null}
         <button
           type="button"
           onClick={onClose}
@@ -76,7 +84,9 @@ export function OrbWorkspaceFrame({
       </header>
       <div
         className={`orb-workspace-body orb-mobile-workspace-body min-h-0 flex-1 overscroll-contain pb-[max(1rem,env(safe-area-inset-bottom))] ${
-          panelId === 'documents' || panelId === 'orb-write' ? 'flex flex-col overflow-hidden' : 'overflow-y-auto'
+          panelId === 'documents' || panelId === 'orb-write' || panelId === 'voice'
+            ? 'flex flex-col overflow-hidden'
+            : 'overflow-y-auto'
         }`}
       >
         {children}

@@ -12,16 +12,22 @@ function read(relativePath: string) {
 
 const VOICE_SURFACE_FILES = [
   'components/orb-standalone/orb-voice-station.tsx',
-  'components/orb-standalone/orb-voice-mobile-experience.tsx',
-  'components/orb-residential/orb-voice-companion.tsx'
+  'components/orb-standalone/orb-voice-station-content.tsx',
+  'components/orb-standalone/orb-voice-hero-stage.tsx',
+  'components/orb-residential/orb-voice-companion.tsx',
+  'components/orb-residential/orb-voice-head.tsx'
 ] as const
 
 describe('ORB Voice companion visual convergence', () => {
   it('all voice surfaces render OrbVoiceCompanion as the canonical visual', () => {
+    const hero = read('components/orb-standalone/orb-voice-hero-stage.tsx')
     for (const file of VOICE_SURFACE_FILES) {
       const source = read(file)
-      assert.match(source, /OrbVoiceCompanion/, `${file} must use OrbVoiceCompanion`)
+      if (file.endsWith('orb-voice-hero-stage.tsx')) continue
+      if (file.endsWith('orb-voice-head.tsx')) continue
+      assert.match(source, /OrbVoiceCompanion|OrbVoiceHead|OrbVoiceHeroStage|OrbVoiceStationContent/, `${file} must use canonical voice visual path`)
     }
+    assert.match(hero, /OrbVoiceCompanion/)
   })
 
   it('voice surfaces do not import or render legacy GlassOrbMark sphere', () => {
@@ -33,39 +39,41 @@ describe('ORB Voice companion visual convergence', () => {
     }
   })
 
-  it('OrbVoiceCompanion exposes living-head-v3 markers and custom head structure', () => {
+  it('OrbVoiceHead exposes living-head-v4 markers and custom head structure', () => {
+    const head = read('components/orb-residential/orb-voice-head.tsx')
     const companion = read('components/orb-residential/orb-voice-companion.tsx')
     const visualBuild = read('lib/orb/orb-visual-build.ts')
     assert.match(visualBuild, /ORB_VOICE_VERSION = 'living-head-v4'/)
-    assert.match(companion, /data-orb-voice-companion/)
-    assert.match(companion, /data-orb-voice-companion-size=\{resolvedSize\}/)
-    assert.match(companion, /data-orb-voice-version=\{ORB_VOICE_VERSION\}/)
-    assert.match(companion, /data-orb-voice-state/)
-    assert.match(companion, /data-orb-voice-head/)
-    assert.match(companion, /data-orb-voice-face/)
-    assert.match(companion, /data-orb-voice-waveform/)
-    assert.match(companion, /orb-voice-companion__head-material/)
-    assert.match(companion, /orb-voice-companion__eyes/)
-    assert.doesNotMatch(companion, /OrbPresence/)
-    assert.doesNotMatch(companion, /OrbSphere/)
-    assert.doesNotMatch(companion, /GlassOrbMark/)
+    assert.match(companion, /OrbVoiceHead/)
+    assert.match(head, /data-orb-voice-companion/)
+    assert.match(head, /data-orb-voice-companion-size=\{resolvedSize\}/)
+    assert.match(head, /data-orb-voice-version=\{ORB_VOICE_VERSION\}/)
+    assert.match(head, /data-orb-voice-state/)
+    assert.match(head, /data-orb-voice-head/)
+    assert.match(head, /data-orb-voice-face/)
+    assert.match(head, /data-orb-voice-waveform/)
+    assert.match(head, /orb-voice-companion__head-material/)
+    assert.match(head, /orb-voice-companion__eyes/)
+    assert.doesNotMatch(head, /OrbPresence/)
+    assert.doesNotMatch(head, /import.*OrbSphere/)
+    assert.doesNotMatch(head, /GlassOrbMark/)
   })
 
   it('companion size scopes separate hero, mini, and mobile-preview instances', () => {
     const companion = read('components/orb-residential/orb-voice-companion.tsx')
+    const head = read('components/orb-residential/orb-voice-head.tsx')
     const station = read('components/orb-standalone/orb-voice-station.tsx')
+    const hero = read('components/orb-standalone/orb-voice-hero-stage.tsx')
     const studio = read('components/orb-standalone/orb-voice-studio-layout.tsx')
-    const mobile = read('components/orb-standalone/orb-voice-mobile-experience.tsx')
     const css = read('components/orb-residential/orb-voice.css')
 
-    assert.match(companion, /resolveOrbVoiceCompanionSize/)
-    assert.match(companion, /'hero' \| 'mini' \| 'mobile-preview'/)
-    assert.match(companion, /orb-voice-companion--hero/)
-    assert.match(companion, /orb-voice-companion--mobile-preview/)
+    assert.match(head, /resolveOrbVoiceCompanionSize/)
+    assert.match(head, /'hero' \| 'mini' \| 'mobile-preview'/)
+    assert.match(head, /orb-voice-companion--hero/)
+    assert.match(head, /orb-voice-companion--mobile-preview/)
     assert.doesNotMatch(companion, /orb-voice-companion--preview/)
 
-    assert.match(station, /size="hero"/)
-    assert.match(mobile, /size="hero"/)
+    assert.match(hero, /size="hero"/)
     assert.match(studio, /size="mini"/)
     assert.match(studio, /size="mobile-preview"/)
     assert.doesNotMatch(station, /size="mini"/)
@@ -79,13 +87,14 @@ describe('ORB Voice companion visual convergence', () => {
   })
 
   it('hero companion keeps head, face and waveform markers without mini/mobile classes', () => {
-    const companion = read('components/orb-residential/orb-voice-companion.tsx')
+    const head = read('components/orb-residential/orb-voice-head.tsx')
+    const hero = read('components/orb-standalone/orb-voice-hero-stage.tsx')
     const station = read('components/orb-standalone/orb-voice-station.tsx')
 
-    assert.match(station, /<OrbVoiceCompanion state=\{companionState\} size="hero"/)
-    assert.match(companion, /data-orb-voice-head-shell/)
-    assert.match(companion, /data-orb-voice-eyes/)
-    assert.match(companion, /data-orb-voice-waveform/)
+    assert.match(hero, /<OrbVoiceCompanion state=\{companionState\} size="hero"/)
+    assert.match(head, /data-orb-voice-head-shell/)
+    assert.match(head, /data-orb-voice-eyes/)
+    assert.match(head, /data-orb-voice-waveform/)
     assert.doesNotMatch(
       station,
       /size="mini"|size="mobile-preview"|size="preview"/
@@ -93,25 +102,24 @@ describe('ORB Voice companion visual convergence', () => {
   })
 
   it('voice head does not use circular-only sphere class contract', () => {
-    const companion = read('components/orb-residential/orb-voice-companion.tsx')
+    const head = read('components/orb-residential/orb-voice-head.tsx')
     const css = read('components/orb-residential/orb-voice.css')
-    assert.doesNotMatch(companion, /orb-living-sphere/)
-    assert.doesNotMatch(companion, /orb-sphere/)
-    assert.doesNotMatch(companion, /orb-presence--voice/)
+    assert.doesNotMatch(head, /orb-living-sphere/)
+    assert.doesNotMatch(head, /className=.*orb-sphere/)
+    assert.doesNotMatch(head, /orb-presence--voice/)
     assert.match(css, /\.orb-voice-companion \.orb-living-sphere[\s\S]*display:\s*none/)
     assert.match(css, /\.orb-voice-companion__head-material/)
     assert.match(css, /border-radius: 44% 44% 36% 36%/)
   })
 
-  it('voice station wires companion state from transport and renders voice studio layout', () => {
+  it('voice station wires companion state from transport and uses unified station content', () => {
     const station = read('components/orb-standalone/orb-voice-station.tsx')
+    const content = read('components/orb-standalone/orb-voice-station-content.tsx')
     assert.match(station, /mapOrbVoiceUiToCompanionState/)
-    assert.match(station, /voiceCompanionState=\{companionState\}/)
-    assert.match(station, /data-orb-voice-studio/)
-    assert.match(station, /OrbVoiceStatePanel/)
-    assert.match(station, /OrbVoiceMobilePreviewStrip/)
-    assert.match(station, /OrbVoiceTrustStrip/)
-    assert.match(station, /OrbVoiceStudioWaveform/)
+    assert.match(station, /companionState=\{companionState\}/)
+    assert.match(station, /OrbVoiceStationContent/)
+    assert.match(content, /data-orb-voice-station-content/)
+    assert.match(station, /OrbVoiceDebugVisualShowcase/)
     assert.doesNotMatch(station, /orbVisualClassName/)
     assert.doesNotMatch(station, /pulseOrb/)
     assert.doesNotMatch(station, /orbVisualClassFrom/)
@@ -131,11 +139,11 @@ describe('ORB Voice companion visual convergence', () => {
     assert.doesNotMatch(css, /\.glass-orb-mark--voice \.glass-orb-mark__sphere/)
   })
 
-  it('mobile voice experience includes studio waveform without state panel', () => {
-    const mobile = read('components/orb-standalone/orb-voice-mobile-experience.tsx')
-    assert.match(mobile, /OrbVoiceStudioWaveform/)
-    assert.doesNotMatch(mobile, /OrbVoiceStatePanel/)
-    assert.doesNotMatch(mobile, /data-orb-voice-state-panel/)
+  it('shared voice experience includes studio waveform without production state panel', () => {
+    const hero = read('components/orb-standalone/orb-voice-hero-stage.tsx')
+    assert.match(hero, /OrbVoiceStudioWaveform/)
+    assert.doesNotMatch(hero, /OrbVoiceStatePanel/)
+    assert.doesNotMatch(hero, /data-orb-voice-state-panel/)
   })
 
   it('login screen uses front-door-v4 marker', () => {

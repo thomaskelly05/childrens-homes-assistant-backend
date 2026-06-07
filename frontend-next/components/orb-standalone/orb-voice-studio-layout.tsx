@@ -111,6 +111,27 @@ export function OrbVoiceMobilePreviewStrip({
   )
 }
 
+/** Debug-only voice state showcase — visible when ?debugVisual=1. */
+export function OrbVoiceDebugVisualShowcase({
+  activeState,
+  className = ''
+}: {
+  activeState: OrbVoiceCompanionState
+  className?: string
+}) {
+  return (
+    <div
+      className={`orb-voice-debug-showcase ${className}`.trim()}
+      data-orb-voice-debug-showcase
+      data-orb-debug-visual="1"
+    >
+      <OrbVoiceStatePanel activeState={activeState} className="hidden lg:flex" />
+      <OrbVoiceMobilePreviewStrip activeState={activeState} />
+      <OrbVoiceTrustStrip />
+    </div>
+  )
+}
+
 /** Trust feature row for voice studio. */
 export function OrbVoiceTrustStrip({ className = '' }: { className?: string }) {
   return (

@@ -19,7 +19,7 @@ html[data-orb-residential='1'] [data-orb-workspace-panel='voice'] .orb-voice-roo
   overflow: hidden;
 }
 
-html[data-orb-residential='1'] [data-orb-workspace-panel='voice'] [data-orb-voice-studio] {
+html[data-orb-residential='1'] [data-orb-workspace-panel='voice'] [data-orb-voice-station-content] {
   flex: 1 1 auto;
   min-height: 0;
 }
@@ -130,11 +130,30 @@ html[data-orb-residential='1'] [data-orb-workspace-panel='voice'] [data-orb-voic
   margin-top: 1rem;
 }
 
-.orb-voice-studio__privacy {
+.orb-voice-station__privacy {
   margin-top: 0.5rem;
   font-size: 0.6875rem;
   line-height: 1.4;
   color: var(--orb-muted);
+}
+
+[data-orb-voice-station-content] {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.orb-voice-station-content__scroll {
+  min-height: 0;
+}
+
+/* Voice debug showcase — state cards, mobile preview, trust strip (?debugVisual=1) */
+[data-orb-voice-debug-showcase] {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.75rem 1.5rem 1rem;
+  border-top: 1px solid color-mix(in srgb, var(--orb-line) 24%, transparent);
 }
 
 [data-orb-voice-state-panel],

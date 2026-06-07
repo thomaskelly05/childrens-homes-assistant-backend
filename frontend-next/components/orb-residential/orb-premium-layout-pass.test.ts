@@ -124,13 +124,13 @@ describe('ORB Residential premium layout pass', () => {
     assert.match(css, /\[data-orb-recording-writing-detail\]/)
   })
 
-  it('Voice keeps existing controls with living-head studio layout', () => {
+  it('Voice keeps existing controls with unified residential station layout', () => {
     const voice = read('components/orb-standalone/orb-voice-station.tsx')
     const css = read('components/orb-residential/orb-voice.css')
     assert.match(voice, /data-orb-voice-station/)
-    assert.match(voice, /data-orb-voice-studio/)
+    assert.match(voice, /OrbVoiceStationContent/)
     assert.match(voice, /OrbVoiceActions/)
-    assert.match(voice, /OrbVoiceStatePanel/)
+    assert.match(voice, /OrbVoiceDebugVisualShowcase/)
     assert.match(css, /\[data-orb-voice-state='listening'\]/)
     assert.match(css, /\[data-orb-voice-state='speaking'\]/)
     const studio = read('components/orb-standalone/orb-voice-studio-layout.tsx')

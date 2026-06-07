@@ -134,11 +134,11 @@ describe('ORB CSS parse and import contract', () => {
 
   it('layout and voice expose orb-style-v1 and living-head-v4 version markers', () => {
     const layout = read('app/orb/layout.tsx')
-    const companion = read('components/orb-residential/orb-voice-companion.tsx')
+    const head = read('components/orb-residential/orb-voice-head.tsx')
     const visualBuild = read('lib/orb/orb-visual-build.ts')
 
     assert.match(layout, /data-orb-style-version=\{ORB_STYLE_VERSION\}/)
-    assert.match(companion, /data-orb-voice-version=\{ORB_VOICE_VERSION\}/)
+    assert.match(head, /data-orb-voice-version=\{ORB_VOICE_VERSION\}/)
     assert.match(visualBuild, new RegExp(`ORB_STYLE_VERSION = '${ORB_STYLE_VERSION}'`))
     assert.match(visualBuild, new RegExp(`ORB_VOICE_VERSION = '${ORB_VOICE_VERSION}'`))
   })
