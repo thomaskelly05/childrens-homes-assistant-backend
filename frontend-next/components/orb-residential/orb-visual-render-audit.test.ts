@@ -109,7 +109,7 @@ const ORB_CSS_AUDIT_MAP = [
   },
   {
     file: 'components/orb-residential/orb-voice.css',
-    importedBy: ['components/orb-residential/orb-voice-companion.tsx'],
+    importedBy: ['components/orb-residential/orb-voice-head.tsx'],
     voice: [
       '.orb-voice-companion',
       '.orb-voice-companion__head-material',
@@ -124,7 +124,7 @@ const ORB_CSS_AUDIT_MAP = [
     file: 'components/orb-standalone/orb-voice-studio-layout.css',
     importedBy: ['components/orb-standalone/orb-voice-studio-layout.tsx'],
     voice: [
-      '[data-orb-voice-studio]',
+      '[data-orb-voice-station-content]',
       '[data-orb-voice-hero-stage]',
       '[data-orb-voice-state-panel]',
       '[data-orb-voice-mobile-preview]'
@@ -170,7 +170,7 @@ const ORB_CSS_AUDIT_MAP = [
 describe('ORB visual render audit', () => {
   it('canonical layout CSS files are imported from orb layout; voice CSS from components', () => {
     const layout = read('app/orb/layout.tsx')
-    const companion = read('components/orb-residential/orb-voice-companion.tsx')
+    const head = read('components/orb-residential/orb-voice-head.tsx')
     const studio = read('components/orb-standalone/orb-voice-studio-layout.tsx')
 
     for (const file of ORB_LAYOUT_CSS_FILES) {
@@ -178,7 +178,7 @@ describe('ORB visual render audit', () => {
       assert.match(layout, new RegExp(importName.replace(/\./g, '\\.')), `${file} must be imported in orb layout`)
     }
 
-    assert.match(companion, /import '\.\/orb-voice\.css'/)
+    assert.match(head, /import '\.\/orb-voice\.css'/)
     assert.match(studio, /import '\.\/orb-voice-studio-layout\.css'/)
   })
 
@@ -209,10 +209,11 @@ describe('ORB visual render audit', () => {
   })
 
   it('voice companion exposes living-head version marker', () => {
+    const head = read('components/orb-residential/orb-voice-head.tsx')
     const companion = read('components/orb-residential/orb-voice-companion.tsx')
-    assert.match(companion, /data-orb-voice-version=\{ORB_VOICE_VERSION\}/)
-    assert.match(companion, /OrbVoiceCompanion/)
-    assert.doesNotMatch(companion, /GlassOrbMark/)
+    assert.match(head, /data-orb-voice-version=\{ORB_VOICE_VERSION\}/)
+    assert.match(companion, /OrbVoiceHead/)
+    assert.doesNotMatch(head, /GlassOrbMark/)
   })
 
   it('login screen exposes front-door version marker', () => {
@@ -250,10 +251,11 @@ describe('ORB visual render audit', () => {
   it('voice render paths use OrbVoiceCompanion not GlassOrbMark', () => {
     for (const file of [
       'components/orb-standalone/orb-voice-station.tsx',
-      'components/orb-standalone/orb-voice-mobile-experience.tsx'
+      'components/orb-standalone/orb-voice-station-content.tsx',
+      'components/orb-standalone/orb-voice-hero-stage.tsx'
     ]) {
       const source = read(file)
-      assert.match(source, /OrbVoiceCompanion/)
+      assert.match(source, /OrbVoiceCompanion|OrbVoiceHeroStage|OrbVoiceStationContent/)
       assert.doesNotMatch(source, /GlassOrbMark/)
     }
   })

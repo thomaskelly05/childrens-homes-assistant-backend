@@ -197,21 +197,22 @@ describe('ORB mobile premium Voice copy', () => {
   it('idle shows one primary Start voice control', () => {
     assert.equal(voiceMobilePrimaryButton({ uiState: 'ready', sessionLive: false, starting: false }), 'Start voice')
     const voice = readComponent('components/orb-standalone/orb-voice-station.tsx')
-    const mobile = readComponent('components/orb-standalone/orb-voice-mobile-experience.tsx')
+    const content = readComponent('components/orb-standalone/orb-voice-station-content.tsx')
     const actions = readComponent('components/orb-standalone/orb-voice-actions.tsx')
-    assert.match(voice, /OrbVoiceMobileExperience/)
-    assert.match(mobile, /OrbVoiceActions/)
+    assert.match(voice, /OrbVoiceStationContent/)
+    assert.match(voice, /OrbVoiceActions/)
+    assert.match(content, /data-orb-voice-station-controls/)
     assert.match(actions, /data-orb-voice-primary-action|orbVoiceUiPrimaryLabel/)
     assert.match(voice, /ORB_VOICE_PANEL_SUBTITLE/)
   })
 
   it('provider unavailable shows Use Dictate and Type instead via shared actions', () => {
-    const mobile = readComponent('components/orb-standalone/orb-voice-mobile-experience.tsx')
+    const voice = readComponent('components/orb-standalone/orb-voice-station.tsx')
     const actions = readComponent('components/orb-standalone/orb-voice-actions.tsx')
-    assert.match(mobile, /OrbVoiceActions/)
+    assert.match(voice, /OrbVoiceActions/)
     assert.match(actions, /data-orb-voice-use-dictate/)
-    assert.match(mobile, /data-orb-voice-type-instead/)
-    assert.doesNotMatch(mobile, /data-orb-voice-open-dictate/)
+    assert.match(voice, /data-orb-voice-type-instead/)
+    assert.doesNotMatch(voice, /data-orb-voice-open-dictate/)
     assert.equal(
       voiceMobileStatusLine({ uiState: 'provider_unavailable', blockedReason: null }),
       'Live voice could not connect.'
@@ -224,10 +225,10 @@ describe('ORB mobile premium Voice copy', () => {
 
   it('does not expose env var names unless debugVoice', () => {
     const voice = readComponent('components/orb-standalone/orb-voice-station.tsx')
-    const mobile = readComponent('components/orb-standalone/orb-voice-mobile-experience.tsx')
+    const content = readComponent('components/orb-standalone/orb-voice-station-content.tsx')
     const messages = readComponent('lib/orb/voice/orb-voice-user-messages.ts')
     assert.match(voice, /sanitizeOrbVoiceUserMessage/)
-    assert.match(mobile, /resolveOrbVoiceUiState|orb-voice-ui-state/)
+    assert.match(content, /data-orb-voice-mobile/)
     assert.match(messages, /ORB_VOICE_DEBUG_CONFIG_HINT/)
     assert.equal(
       sanitizeOrbVoiceUserMessage('Set OPENAI_API_KEY and ORB_REALTIME_ENABLED=true', { debug: false }),
@@ -247,20 +248,19 @@ describe('ORB mobile premium Voice copy', () => {
 
   it('active session shows one End via primary action wiring', () => {
     assert.equal(voiceMobilePrimaryButton({ uiState: 'listening', sessionLive: true, starting: false }), 'End')
-    const mobile = readComponent('components/orb-standalone/orb-voice-mobile-experience.tsx')
-    assert.match(readComponent('components/orb-standalone/orb-voice-station.tsx'), /if \(voiceSessionLive\) handleEnd\(\)/)
+    assert.match(readComponent('components/orb-standalone/orb-voice-station.tsx'), /onPrimary=\{handleEnd\}/)
   })
 
   it('post-session shows Dictate copy and new conversation without duplicate fallbacks', () => {
-    const mobile = readComponent('components/orb-standalone/orb-voice-mobile-experience.tsx')
+    const voice = readComponent('components/orb-standalone/orb-voice-station.tsx')
     const actions = readComponent('components/orb-standalone/orb-voice-transcript-actions.tsx')
-    assert.match(mobile, /data-orb-voice-post-session/)
-    assert.match(mobile, /OrbVoiceTranscriptActions/)
+    assert.match(voice, /data-orb-voice-post-session/)
+    assert.match(voice, /OrbVoiceTranscriptActions/)
     assert.match(actions, /data-orb-voice-to-dictate/)
     assert.match(actions, /Copy transcript/)
-    assert.match(mobile, /Start new voice conversation|New conversation/)
-    assert.doesNotMatch(mobile, /Open Dictate instead/)
-    assert.doesNotMatch(mobile, /Open Dictate again/)
+    assert.match(voice, /Start new voice conversation|New conversation/)
+    assert.doesNotMatch(voice, /Open Dictate instead/)
+    assert.doesNotMatch(voice, /Open Dictate again/)
   })
 })
 

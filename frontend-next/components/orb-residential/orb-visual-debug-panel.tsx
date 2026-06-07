@@ -89,8 +89,8 @@ function buildVoiceComponentTree(): string {
   if (!station) return '(voice panel closed)'
 
   const parts: string[] = []
-  if (document.querySelector('[data-orb-voice-studio]')) {
-    parts.push('OrbVoiceStation → OrbVoiceStudioLayout')
+  if (document.querySelector('[data-orb-voice-station-content]')) {
+    parts.push('OrbVoiceStation → OrbVoiceStationContent')
   } else if (document.querySelector('[data-orb-voice-mobile]')) {
     parts.push('OrbVoiceStation → OrbVoiceMobileExperience')
   } else {

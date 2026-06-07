@@ -26,7 +26,8 @@ export function OrbAppModal({
   panelId,
   size = 'standard',
   presentation = 'modal',
-  compactChrome = false
+  compactChrome = false,
+  headerActions
 }: {
   open: boolean
   title: string
@@ -39,6 +40,7 @@ export function OrbAppModal({
   size?: OrbAppModalSize
   presentation?: OrbAppPresentation
   compactChrome?: boolean
+  headerActions?: ReactNode
 }) {
   if (presentation === 'workspace') {
     return (
@@ -50,6 +52,7 @@ export function OrbAppModal({
         panelId={panelId}
         footer={footer}
         compactChrome={compactChrome}
+        headerActions={headerActions}
       >
         {children}
       </OrbWorkspaceFrame>

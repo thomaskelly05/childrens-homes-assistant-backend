@@ -77,7 +77,7 @@ describe('ORB Residential desktop final UX regressions', () => {
 
     assert.match(desktop, /\[data-orb-document-panel\],[\s\S]*--orb-desktop-page-max/)
     assert.match(desktop, /\[data-orb-workspace-panel\][\s\S]*max-width:\s*var\(--orb-desktop-page-max/)
-    assert.match(desktop, /\[data-orb-voice-desktop\]/)
+    assert.match(desktop, /\[data-orb-voice-station-content\]/)
     assert.match(desktop, /\[data-orb-dictate-station\]\[data-orb-dictate-layout='desktop-runtime'\]/)
   })
 

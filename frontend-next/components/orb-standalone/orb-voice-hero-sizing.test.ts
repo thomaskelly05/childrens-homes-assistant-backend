@@ -14,6 +14,7 @@ const VOICE_UI_FILES = [
   'components/orb-standalone/orb-voice-station.tsx',
   'components/orb-standalone/orb-voice-studio-layout.tsx',
   'components/orb-residential/orb-voice-companion.tsx',
+  'components/orb-residential/orb-voice-head.tsx',
   'components/orb-residential/orb-voice.css',
   'components/orb-standalone/orb-voice-studio-layout.css'
 ] as const
@@ -23,25 +24,29 @@ const AUTH_BACKEND_PATTERNS = [/routers\/orb_voice/, /services\/orb_voice/, /bil
 describe('ORB Voice hero companion sizing contract', () => {
   it('hero companion uses hero size marker and dedicated hero stage', () => {
     const station = read('components/orb-standalone/orb-voice-station.tsx')
-    const companion = read('components/orb-residential/orb-voice-companion.tsx')
+    const hero = read('components/orb-standalone/orb-voice-hero-stage.tsx')
+    const head = read('components/orb-residential/orb-voice-head.tsx')
 
-    assert.match(station, /data-orb-voice-hero-stage/)
-    assert.match(station, /<OrbVoiceCompanion state=\{companionState\} size="hero"/)
-    assert.match(companion, /data-orb-voice-companion-size=\{resolvedSize\}/)
-    assert.match(companion, /data-orb-voice-head/)
-    assert.match(companion, /data-orb-voice-face/)
-    assert.match(companion, /data-orb-voice-waveform/)
+    assert.match(station, /OrbVoiceStationContent/)
+    assert.match(hero, /data-orb-voice-hero-stage/)
+    assert.match(hero, /<OrbVoiceCompanion state=\{companionState\} size="hero"/)
+    assert.match(head, /data-orb-voice-companion-size=\{resolvedSize\}/)
+    assert.match(head, /data-orb-voice-head/)
+    assert.match(head, /data-orb-voice-face/)
+    assert.match(head, /data-orb-voice-waveform/)
   })
 
-  it('hero stage is separated from state panel, mobile preview, and trust cards', () => {
+  it('debug showcase components remain available behind debugVisual gate only', () => {
     const station = read('components/orb-standalone/orb-voice-station.tsx')
     const studio = read('components/orb-standalone/orb-voice-studio-layout.tsx')
     const css = read('components/orb-residential/orb-voice.css')
     const studioCss = read('components/orb-standalone/orb-voice-studio-layout.css')
 
-    assert.match(station, /OrbVoiceStatePanel/)
-    assert.match(station, /OrbVoiceMobilePreviewStrip/)
-    assert.match(station, /OrbVoiceTrustStrip/)
+    assert.match(station, /OrbVoiceDebugVisualShowcase/)
+    assert.match(station, /debugVisual \?/)
+    assert.match(studio, /OrbVoiceStatePanel/)
+    assert.match(studio, /OrbVoiceMobilePreviewStrip/)
+    assert.match(studio, /OrbVoiceTrustStrip/)
     assert.match(studio, /data-orb-voice-state-panel/)
     assert.match(studio, /data-orb-voice-mobile-preview/)
     assert.match(studio, /data-orb-voice-trust-cards/)
@@ -49,6 +54,7 @@ describe('ORB Voice hero companion sizing contract', () => {
     assert.match(studioCss, /\[data-orb-voice-state-panel\]/)
     assert.match(studioCss, /\.orb-voice-mobile-preview/)
     assert.match(studioCss, /\[data-orb-voice-trust-cards\]/)
+    assert.match(css, /\[data-orb-voice-hero-stage\]/)
   })
 
   it('hero has non-collapsed sizing contract and does not inherit mini/mobile-preview dimensions', () => {
@@ -72,18 +78,15 @@ describe('ORB Voice hero companion sizing contract', () => {
     assert.match(heroBlock, /transform:\s*none/)
   })
 
-  it('voice studio centre column keeps hero visible and scrolls body only when needed', () => {
+  it('voice station keeps hero visible and scrolls session body only when needed', () => {
     const station = read('components/orb-standalone/orb-voice-station.tsx')
-    const css = read('components/orb-residential/orb-voice.css')
-    const studioCss = read('components/orb-standalone/orb-voice-studio-layout.css')
+    const content = read('components/orb-standalone/orb-voice-station-content.tsx')
 
-    assert.match(station, /orb-voice-studio__body/)
-    assert.match(station, /orb-voice-studio__main flex min-h-0 flex-col overflow-hidden/)
-    assert.match(station, /orb-voice-studio__body min-h-0 flex-1 overflow-y-auto/)
-    assert.doesNotMatch(station, /orb-voice-studio__main min-h-0 overflow-y-auto/)
-    assert.match(studioCss, /\.orb-voice-studio__workspace[\s\S]*grid-template-rows:\s*minmax\(0,\s*1fr\)/)
-    assert.match(studioCss, /\.orb-voice-studio__main[\s\S]*overflow:\s*hidden/)
-    assert.match(studioCss, /\[data-orb-voice-state-panel\][\s\S]*overflow-y:\s*auto/)
+    assert.match(content, /orb-voice-station-content__scroll/)
+    assert.match(content, /overflow-y-auto/)
+    assert.match(station, /OrbVoiceStationContent/)
+    assert.doesNotMatch(station, /orb-voice-studio__body/)
+    assert.doesNotMatch(station, /orb-voice-studio__workspace/)
   })
 
   it('voice surfaces do not use GlassOrbMark and auth/backend files were not touched', () => {
