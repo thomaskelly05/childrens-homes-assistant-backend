@@ -1059,7 +1059,7 @@ export function OrbVoiceStation({
             </p>
           ) : null}
 
-          <OrbVoiceCompanion state={companionState} className="mt-4 shrink-0" />
+          <OrbVoiceCompanion state={companionState} size="hero" className="mt-4 shrink-0" />
 
           <p className="mt-5 text-center text-sm font-medium text-[var(--orb-foreground)]" data-orb-voice-status-label>
             {ORB_VOICE_COMPANION_HEADLINES[companionState]}

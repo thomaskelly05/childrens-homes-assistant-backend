@@ -64,7 +64,7 @@ export function OrbVoiceStatePanel({
               data-orb-voice-state-card={state}
               data-orb-voice-state-active={activeState === state ? 'true' : 'false'}
             >
-              <OrbVoiceCompanion state={state} size="preview" label={`ORB ${ORB_VOICE_COMPANION_STATE_LABELS[state]}`} />
+              <OrbVoiceCompanion state={state} size="mini" label={`ORB ${ORB_VOICE_COMPANION_STATE_LABELS[state]}`} />
               <div className="orb-voice-state-panel__copy">
                 <p className="orb-voice-state-panel__label">{ORB_VOICE_COMPANION_STATE_LABELS[state]}</p>
                 <p className="orb-voice-state-panel__headline">{ORB_VOICE_COMPANION_HEADLINES[state]}</p>
@@ -100,7 +100,7 @@ export function OrbVoiceMobilePreviewStrip({
             data-orb-voice-mobile-preview-card={state}
             data-orb-voice-state-active={activeState === state ? 'true' : 'false'}
           >
-            <OrbVoiceCompanion state={state} size="mini" label={`Mobile ${state}`} />
+            <OrbVoiceCompanion state={state} size="mobile-preview" label={`Mobile ${state}`} />
             <span className="orb-voice-mobile-preview__label">{ORB_VOICE_COMPANION_STATE_LABELS[state]}</span>
           </div>
         ))}
