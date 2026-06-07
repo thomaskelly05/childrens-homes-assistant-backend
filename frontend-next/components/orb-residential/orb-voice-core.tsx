@@ -25,12 +25,27 @@ export function OrbVoiceCore({ state, speechEnergy, speechDriven, reducedMotion 
 
   return (
     <div className="orb-voice-core" data-orb-voice-core data-orb-voice-core-state={state} aria-hidden>
-      <div className="orb-voice-core__ground-glow" data-orb-voice-ground-glow aria-hidden />
-      <div className="orb-voice-core__outer-halo" data-orb-voice-outer-halo aria-hidden />
+      <div
+        className="orb-voice-core__floor-glow orb-voice-core__ground-glow"
+        data-orb-voice-floor-glow
+        data-orb-voice-ground-glow
+        aria-hidden
+      />
+      <div
+        className="orb-voice-core__halo orb-voice-core__outer-halo"
+        data-orb-voice-halo
+        data-orb-voice-outer-halo
+        aria-hidden
+      />
       <div className="orb-voice-core__aura" data-orb-voice-aura aria-hidden />
 
       {showListenMotion ? (
-        <div className="orb-voice-core__listen-rings" data-orb-voice-listen-rings aria-hidden>
+        <div
+          className="orb-voice-core__state-ripples orb-voice-core__listen-rings"
+          data-orb-voice-state-ripples
+          data-orb-voice-listen-rings
+          aria-hidden
+        >
           <span className="orb-voice-core__listen-ring orb-voice-core__listen-ring--1" />
           <span className="orb-voice-core__listen-ring orb-voice-core__listen-ring--2" />
           <span className="orb-voice-core__listen-ring orb-voice-core__listen-ring--3" />
@@ -53,33 +68,49 @@ export function OrbVoiceCore({ state, speechEnergy, speechDriven, reducedMotion 
         aria-hidden
       >
         <div className="orb-voice-core__sphere" data-orb-voice-core-sphere>
-          <div className="orb-voice-core__depth-base" aria-hidden />
+          <div className="orb-voice-core__sphere-clip" aria-hidden>
+            <div
+              className="orb-voice-core__inner-body orb-voice-core__depth-base"
+              data-orb-voice-inner-body
+              aria-hidden
+            />
+            <div
+              className="orb-voice-core__inner-plasma orb-voice-core__plasma-field"
+              data-orb-voice-inner-plasma
+              data-orb-voice-plasma-field
+              data-orb-voice-plasma-motion={showPlasmaMotion ? 'true' : 'false'}
+              aria-hidden
+            />
+            <div className="orb-voice-core__plasma orb-voice-core__plasma--a" aria-hidden />
+            <div className="orb-voice-core__plasma orb-voice-core__plasma--b" aria-hidden />
+            <div className="orb-voice-core__plasma orb-voice-core__plasma--c" aria-hidden />
+            <div className="orb-voice-core__field orb-voice-core__field--a" aria-hidden />
+            <div className="orb-voice-core__field orb-voice-core__field--b" aria-hidden />
+            {showThinkMotion ? (
+              <div className="orb-voice-core__swirl" data-orb-voice-thinking-swirl aria-hidden />
+            ) : null}
+            <div className="orb-voice-core__inner-shadow" aria-hidden />
+            <div className="orb-voice-core__refraction" aria-hidden />
+          </div>
+
           <div
-            className="orb-voice-core__plasma-field"
-            data-orb-voice-plasma-field
-            data-orb-voice-plasma-motion={showPlasmaMotion ? 'true' : 'false'}
+            className="orb-voice-core__shell orb-voice-core__glass-shell"
+            data-orb-voice-shell
             aria-hidden
           />
-          <div className="orb-voice-core__plasma orb-voice-core__plasma--a" aria-hidden />
-          <div className="orb-voice-core__plasma orb-voice-core__plasma--b" aria-hidden />
-          <div className="orb-voice-core__plasma orb-voice-core__plasma--c" aria-hidden />
-          <div className="orb-voice-core__field orb-voice-core__field--a" aria-hidden />
-          <div className="orb-voice-core__field orb-voice-core__field--b" aria-hidden />
-          {showThinkMotion ? (
-            <div className="orb-voice-core__swirl" data-orb-voice-thinking-swirl aria-hidden />
-          ) : null}
-          <div className="orb-voice-core__inner-shadow" aria-hidden />
-          <div className="orb-voice-core__refraction" aria-hidden />
-          <div className="orb-voice-core__glass-shell" aria-hidden />
           <div className="orb-voice-core__specular" aria-hidden />
-          <div className="orb-voice-core__specular-secondary" aria-hidden />
-          <div className="orb-voice-core__rim-light" aria-hidden />
+          <div
+            className="orb-voice-core__secondary-highlight orb-voice-core__specular-secondary"
+            aria-hidden
+          />
+          <div className="orb-voice-core__rim orb-voice-core__rim-light" data-orb-voice-rim aria-hidden />
+          <div className="orb-voice-core__rim-bloom" aria-hidden />
           <div className="orb-voice-core__glass-highlight" aria-hidden />
         </div>
       </div>
 
       <div
-        className="orb-voice-core__waveform-bridge"
+        className="orb-voice-core__waveform-bridge orb-voice-core__waveform"
         data-orb-voice-waveform
         data-orb-voice-waveform-active={isSpeaking ? 'true' : 'false'}
         data-orb-voice-speech-driven={speechDriven ? 'true' : 'false'}
