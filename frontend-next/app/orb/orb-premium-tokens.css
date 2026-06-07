@@ -663,20 +663,21 @@ html[data-orb-residential='1'] .orb-chat-layout--residential.orb-theme-light .or
   height: 8.75rem;
 }
 
-.glass-orb-mark--voice {
+/* Legacy dictate sizing — canonical voice companion uses orb-presence--voice only */
+.orb-presence.glass-orb-mark--voice:not(.orb-presence--voice) {
   width: 10rem;
   height: 10rem;
 }
 
 @media (min-width: 768px) {
-  .glass-orb-mark--voice {
+  .orb-presence.glass-orb-mark--voice:not(.orb-presence--voice) {
     width: 12.5rem;
     height: 12.5rem;
   }
 }
 
 .glass-orb-mark--hero .glass-orb-mark__sphere,
-.glass-orb-mark--voice .glass-orb-mark__sphere {
+.orb-presence.glass-orb-mark--voice:not(.orb-presence--voice) .glass-orb-mark__sphere {
   animation-duration: 3.2s;
 }
 

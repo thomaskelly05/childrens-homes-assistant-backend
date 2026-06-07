@@ -1,6 +1,7 @@
 'use client'
 
 import { OrbPresence, type OrbPresenceState } from '@/components/orb-residential/ui/orb-presence'
+import { ORB_VOICE_VERSION } from '@/lib/orb/orb-visual-build'
 
 /** Visual-only voice companion states — safe fallbacks when transport state is unavailable. */
 export type OrbVoiceCompanionState = 'idle' | 'listening' | 'thinking' | 'speaking' | 'error'
@@ -61,6 +62,7 @@ export function OrbVoiceCompanion({
     <div
       className={`orb-voice-companion flex shrink-0 items-center justify-center ${className}`.trim()}
       data-orb-voice-companion
+      data-orb-voice-version={ORB_VOICE_VERSION}
       data-orb-voice-state={state}
       data-orb-voice-head
       aria-live="polite"

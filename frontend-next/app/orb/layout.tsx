@@ -19,9 +19,21 @@ import {
   ORB_COGNITION_ROUTING_BUILD_MARKER_CLASS
 } from '@/lib/orb/orb-cognition-routing-build'
 import { ORB_LIGHT_UI_BUILD, ORB_LIGHT_UI_BUILD_MARKER_CLASS } from '@/lib/orb/orb-light-ui-build'
+import {
+  getOrbFrontendBuildInfo,
+  ORB_BUILD_VISUAL_VERSION,
+  ORB_CSS_CONTRACT
+} from '@/lib/orb/orb-visual-build'
 
 const ORB_LIGHT_UI_BUILD_SCRIPT = `window.__ORB_LIGHT_UI_BUILD__=${JSON.stringify(ORB_LIGHT_UI_BUILD)};`
 const ORB_COGNITION_ROUTING_BUILD_SCRIPT = `window.__ORB_COGNITION_ROUTING_BUILD__=${JSON.stringify(ORB_COGNITION_ROUTING_BUILD)};`
+const orbBuildInfo = getOrbFrontendBuildInfo()
+const ORB_VISUAL_BUILD_SCRIPT = `window.__ORB_VISUAL_BUILD__=${JSON.stringify({
+  visualVersion: ORB_BUILD_VISUAL_VERSION,
+  cssContract: ORB_CSS_CONTRACT,
+  commit: orbBuildInfo.commit,
+  timestamp: orbBuildInfo.timestamp
+})};`
 
 export const metadata: Metadata = {
   title: 'ORB Residential',
@@ -45,6 +57,14 @@ export default function OrbLayout({ children }: { children: ReactNode }) {
         data-orb-cognition-routing-build={ORB_COGNITION_ROUTING_BUILD}
         aria-hidden
       />
+      <span
+        className="hidden"
+        data-orb-build-visual-version={ORB_BUILD_VISUAL_VERSION}
+        data-orb-css-contract={ORB_CSS_CONTRACT}
+        data-orb-build-commit={orbBuildInfo.commit}
+        data-orb-build-timestamp={orbBuildInfo.timestamp ?? undefined}
+        aria-hidden
+      />
       <script
         id="orb-appearance-bootstrap"
         dangerouslySetInnerHTML={{ __html: ORB_APPEARANCE_BOOTSTRAP_SCRIPT }}
@@ -57,6 +77,7 @@ export default function OrbLayout({ children }: { children: ReactNode }) {
         id="orb-cognition-routing-build"
         dangerouslySetInnerHTML={{ __html: ORB_COGNITION_ROUTING_BUILD_SCRIPT }}
       />
+      <script id="orb-visual-build" dangerouslySetInnerHTML={{ __html: ORB_VISUAL_BUILD_SCRIPT }} />
       <OrbResidentialThemeRoot>{children}</OrbResidentialThemeRoot>
     </>
   )

@@ -68,9 +68,9 @@ describe('ORB Residential premium layout pass', () => {
     const css = read('app/orb/orb-login-center.css')
     const passCss = read('app/orb/orb-premium-layout-pass.css')
     assert.match(login, /orb-login-hero-sphere-wrap/)
-    assert.match(login, /scale-\[0\.72\]/)
-    assert.match(css, /max-width:\s*11rem/)
-    assert.match(css, /max-height:\s*min\(9\.5rem,\s*22vh\)/)
+    assert.match(login, /scale-\[0\.62\]/)
+    assert.match(css, /max-width:\s*9\.5rem/)
+    assert.match(css, /max-height:\s*min\(8\.5rem,\s*18vh\)/)
     assert.match(passCss, /orb-login-hero[\s\S]*max-height:\s*100dvh/)
   })
 
@@ -126,8 +126,8 @@ describe('ORB Residential premium layout pass', () => {
     const css = read('app/orb/orb-premium-layout-pass.css')
     assert.match(voice, /data-orb-voice-station/)
     assert.match(voice, /OrbVoiceActions/)
-    assert.match(css, /\.orb-presence--voice\[data-orb-presence-state='listening'\]/)
-    assert.match(css, /\.orb-presence--voice\[data-orb-presence-state='responding'\]/)
+    assert.match(css, /\[data-orb-voice-state='listening'\]/)
+    assert.match(css, /\[data-orb-voice-state='speaking'\]/)
   })
 
   it('account, settings and billing open as overlays', () => {
