@@ -18,15 +18,13 @@ describe('ORB OAuth provider diagnostics wiring', () => {
     assert.match(login, /ORB_BILLING_API\.authProviders/)
     assert.match(login, /providers\.google/)
     assert.match(login, /providers\.microsoft/)
-    assert.match(login, /providers\.apple/)
   })
 
   it('disabled OAuth buttons use professional unavailable copy', () => {
-    const login = read('components/orb-residential/orb-login-screen.tsx')
-    assert.match(login, /Google sign-in unavailable/)
-    assert.match(login, /Microsoft sign-in unavailable/)
-    assert.match(login, /Apple sign-in unavailable/)
-    assert.doesNotMatch(login, /Google — not configured/)
+    const authCard = read('components/orb-residential/orb-login-auth-card.tsx')
+    assert.match(authCard, /Google sign-in unavailable/)
+    assert.doesNotMatch(authCard, /Apple sign-in unavailable/)
+    assert.doesNotMatch(authCard, /Google — not configured/)
   })
 
   it('OAuth start URLs use API-host backend standalone routes', () => {
@@ -53,7 +51,8 @@ describe('ORB OAuth provider diagnostics wiring', () => {
     assert.match(service, /oauth_provider_diagnostics/)
     assert.match(service, /required_env_vars/)
     assert.match(service, /redirect_uri/)
-    assert.doesNotMatch(service, /client_secret/)
+    assert.doesNotMatch(service, /client_secret=/)
+    assert.match(service, /client_secret_present/)
     assert.match(routes, /oauth_diagnostics/)
   })
 })

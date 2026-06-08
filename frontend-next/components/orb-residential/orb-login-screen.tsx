@@ -75,8 +75,7 @@ function OrbLoginPanel({
 
   const [oauth, setOauth] = useState({
     google: process.env.NEXT_PUBLIC_OAUTH_GOOGLE_ENABLED === '1',
-    microsoft: process.env.NEXT_PUBLIC_OAUTH_MICROSOFT_ENABLED === '1',
-    apple: process.env.NEXT_PUBLIC_OAUTH_APPLE_ENABLED === '1'
+    microsoft: process.env.NEXT_PUBLIC_OAUTH_MICROSOFT_ENABLED === '1'
   })
 
   useEffect(() => {
@@ -119,8 +118,7 @@ function OrbLoginPanel({
         if (!providers) return
         setOauth({
           google: Boolean(providers.google),
-          microsoft: Boolean(providers.microsoft),
-          apple: Boolean(providers.apple)
+          microsoft: Boolean(providers.microsoft)
         })
       })
       .catch(() => {

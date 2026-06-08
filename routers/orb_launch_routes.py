@@ -64,11 +64,15 @@ def _success(data: Any, **extra: Any) -> dict[str, Any]:
 
 
 def _oauth_providers() -> dict[str, bool]:
-    return {
+    from services.orb_oauth_provider_env import apple_auth_enabled
+
+    providers = {
         "google": load_provider_config("google") is not None,
         "microsoft": load_provider_config("microsoft") is not None,
-        "apple": load_provider_config("apple") is not None,
     }
+    if apple_auth_enabled():
+        providers["apple"] = load_provider_config("apple") is not None
+    return providers
 
 
 def _payments_summary(conn, user_id: int, *, user: dict[str, Any]) -> dict[str, Any]:

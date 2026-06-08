@@ -1044,7 +1044,7 @@ export async function assertLoginMobileScroll(page: Page) {
     await expect(page.locator('[data-orb-login-mobile-layout]')).toBeHidden()
   }
 
-  await expect(page.locator('[data-orb-oauth-buttons] [data-orb-oauth="apple"]').first()).toBeVisible()
+  await expect(page.locator('[data-orb-oauth-buttons] [data-orb-oauth="google"]').first()).toBeVisible()
   await expect(page.locator('[data-testid="orb-login-email"]')).toBeVisible()
   await assertElementReachable(page, '[data-orb-create-account]')
 

@@ -28,18 +28,22 @@ def test_oauth_diagnostics_do_not_expose_secrets(monkeypatch):
 
 
 def test_oauth_provider_enabled_only_when_fully_configured(monkeypatch):
-    monkeypatch.setenv("OAUTH_MICROSOFT_CLIENT_ID", "ms-client-id")
-    monkeypatch.delenv("OAUTH_MICROSOFT_CLIENT_SECRET", raising=False)
-    monkeypatch.delenv("OAUTH_MICROSOFT_REDIRECT_URI", raising=False)
+    monkeypatch.setenv("MICROSOFT_AUTH_ENABLED", "true")
+    monkeypatch.setenv("MICROSOFT_CLIENT_ID", "ms-client-id")
+    monkeypatch.delenv("MICROSOFT_CLIENT_SECRET", raising=False)
+    monkeypatch.delenv("MICROSOFT_REDIRECT_URI", raising=False)
 
     payload = oauth_provider_diagnostics("microsoft")
     assert payload["enabled"] is False
     assert payload["missing_config_warnings"]
+    assert payload["client_id_present"] is True
+    assert payload["client_secret_present"] is False
 
 
-def test_oauth_providers_diagnostics_include_all_providers():
+def test_oauth_providers_diagnostics_include_launch_providers_by_default(monkeypatch):
+    monkeypatch.delenv("APPLE_AUTH_ENABLED", raising=False)
     diagnostics = oauth_providers_diagnostics()
-    assert set(diagnostics.keys()) == {"google", "microsoft", "apple"}
+    assert set(diagnostics.keys()) == {"google", "microsoft"}
 
 
 @patch("routers.orb_launch_routes.passkey_config_warnings", return_value=[])

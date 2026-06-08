@@ -131,16 +131,16 @@ test.describe('ORB register and billing E2E', () => {
       await disableE2eAutoAuth(page)
       await setupOrbAuthE2eMocks(page, {
         scenario: 'unauthenticated',
-        oauth: { apple: true, google: true, microsoft: true }
+        oauth: { google: true, microsoft: true }
       })
       await gotoOrbLogin(page)
 
-      for (const provider of ['apple', 'google', 'microsoft'] as const) {
+      for (const provider of ['google', 'microsoft'] as const) {
         const button = page.locator(`[data-orb-oauth="${provider}"]`).first()
         await expect(button).toBeVisible()
         await expect(button).not.toHaveAttribute('aria-disabled', 'true')
         const href = await button.getAttribute('href')
-        expect(href).toMatch(/\/orb\/standalone\/auth\/oauth\/(google|microsoft|apple)\/start/)
+        expect(href).toMatch(/\/orb\/standalone\/auth\/oauth\/(google|microsoft)\/start/)
         expect(href).toMatch(/return_url=/)
         expect(href).toMatch(/127\.0\.0\.1:8000|api\.indicare\.co\.uk/)
       }
@@ -150,13 +150,12 @@ test.describe('ORB register and billing E2E', () => {
       await disableE2eAutoAuth(page)
       await setupOrbAuthE2eMocks(page, {
         scenario: 'unauthenticated',
-        oauth: { apple: false, google: false, microsoft: false }
+        oauth: { google: false, microsoft: false }
       })
       await gotoOrbLogin(page)
 
-      await expect(page.getByText(/Apple sign-in unavailable/i)).toBeVisible()
       await expect(page.getByText(/Google sign-in unavailable/i)).toBeVisible()
-      await expect(page.getByText(/Microsoft sign-in unavailable/i)).toBeVisible()
+      await expect(page.locator('[data-orb-oauth="microsoft"]')).toHaveCount(0)
     })
 
     test('oauth_error query param shows friendly message', async ({ page }) => {

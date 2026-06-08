@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 import json
 import logging
 import os
@@ -11,6 +12,15 @@ from typing import Any
 import httpx
 
 from auth.passwords import hash_password
+from services.orb_oauth_provider_env import (
+    MICROSOFT_GRAPH_ME_URL,
+    apple_auth_enabled,
+    microsoft_auth_enabled,
+    microsoft_client_id,
+    microsoft_client_secret,
+    microsoft_redirect_uri,
+    microsoft_tenant_id,
+)
 from services.orb_subscription_plan_service import oauth_provider_configured
 
 logger = logging.getLogger(__name__)
@@ -90,10 +100,12 @@ def load_provider_config(provider: str) -> OrbOAuthProviderConfig | None:
             extra_authorize_params={"access_type": "online", "prompt": "select_account"},
         )
     if key == "microsoft":
-        client_id = os.getenv("OAUTH_MICROSOFT_CLIENT_ID", "").strip()
-        client_secret = os.getenv("OAUTH_MICROSOFT_CLIENT_SECRET", "").strip()
-        redirect_uri = os.getenv("OAUTH_MICROSOFT_REDIRECT_URI", "").strip()
-        tenant = os.getenv("OAUTH_MICROSOFT_TENANT", "common").strip() or "common"
+        if not microsoft_auth_enabled():
+            return None
+        client_id = microsoft_client_id()
+        client_secret = microsoft_client_secret()
+        redirect_uri = microsoft_redirect_uri()
+        tenant = microsoft_tenant_id()
         if not (client_id and client_secret and redirect_uri):
             return None
         return OrbOAuthProviderConfig(
@@ -103,10 +115,13 @@ def load_provider_config(provider: str) -> OrbOAuthProviderConfig | None:
             redirect_uri=redirect_uri,
             authorize_url=f"https://login.microsoftonline.com/{tenant}/oauth2/v2.0/authorize",
             token_url=f"https://login.microsoftonline.com/{tenant}/oauth2/v2.0/token",
-            userinfo_url="https://graph.microsoft.com/oidc/userinfo",
-            scopes=("openid", "email", "profile", "User.Read"),
+            userinfo_url=MICROSOFT_GRAPH_ME_URL,
+            scopes=("openid", "profile", "email", "User.Read"),
+            extra_authorize_params={"response_mode": "query"},
         )
     if key == "apple":
+        if not apple_auth_enabled():
+            return None
         client_id = os.getenv("OAUTH_APPLE_CLIENT_ID", "").strip()
         team_id = os.getenv("OAUTH_APPLE_TEAM_ID", "").strip()
         key_id = os.getenv("OAUTH_APPLE_KEY_ID", "").strip()
@@ -166,6 +181,42 @@ async def fetch_userinfo(config: OrbOAuthProviderConfig, access_token: str) -> d
         return response.json()
 
 
+def decode_id_token_claims_unverified(id_token: str) -> dict[str, Any]:
+    """Extract non-sensitive claims from an id_token without verifying the signature."""
+    parts = str(id_token or "").split(".")
+    if len(parts) < 2:
+        return {}
+    padded = parts[1] + "=" * (-len(parts[1]) % 4)
+    try:
+        payload = json.loads(base64.urlsafe_b64decode(padded))
+        return payload if isinstance(payload, dict) else {}
+    except Exception:
+        return {}
+
+
+async def fetch_microsoft_profile(access_token: str, *, id_token: str | None = None) -> dict[str, Any]:
+    profile: dict[str, Any] = {}
+    try:
+        profile = await fetch_userinfo(
+            OrbOAuthProviderConfig(
+                name="microsoft",
+                client_id="",
+                client_secret="",
+                redirect_uri="",
+                authorize_url="",
+                token_url="",
+                userinfo_url=MICROSOFT_GRAPH_ME_URL,
+            ),
+            access_token,
+        )
+    except Exception:
+        logger.warning("Microsoft Graph profile fetch failed; falling back to id_token claims when available")
+    if not str(profile.get("id") or "").strip() and id_token:
+        claims = decode_id_token_claims_unverified(id_token)
+        profile = {**claims, **profile}
+    return profile
+
+
 def normalise_profile(provider: str, profile: dict[str, Any]) -> dict[str, Any]:
     from services.orb_user_avatar_service import extract_provider_avatar_url
 
@@ -181,12 +232,25 @@ def normalise_profile(provider: str, profile: dict[str, Any]) -> dict[str, Any]:
             "avatar_url": avatar_url,
         }
     if key == "microsoft":
+        display_name = str(profile.get("displayName") or "").strip()
+        first_name = profile.get("given_name")
+        last_name = profile.get("family_name")
+        if not first_name and display_name:
+            parts = display_name.split(None, 1)
+            first_name = parts[0] if parts else None
+            last_name = parts[1] if len(parts) > 1 else None
         return {
-            "subject": str(profile.get("sub") or profile.get("oid") or ""),
-            "email": str(profile.get("email") or profile.get("preferred_username") or "").strip().lower(),
+            "subject": str(profile.get("id") or profile.get("sub") or profile.get("oid") or ""),
+            "email": str(
+                profile.get("mail")
+                or profile.get("userPrincipalName")
+                or profile.get("email")
+                or profile.get("preferred_username")
+                or ""
+            ).strip().lower(),
             "email_verified": True,
-            "first_name": profile.get("given_name"),
-            "last_name": profile.get("family_name"),
+            "first_name": first_name,
+            "last_name": last_name,
             "avatar_url": avatar_url,
         }
     if key == "apple":

@@ -19,6 +19,7 @@ from services.orb_oauth_service import (
     build_authorize_url,
     create_orb_residential_user,
     exchange_code,
+    fetch_microsoft_profile,
     fetch_userinfo,
     find_orb_user_by_email,
     find_orb_user_by_oauth,
@@ -265,9 +266,18 @@ async def orb_oauth_callback_get(
     code: str | None = Query(default=None),
     state: str | None = Query(default=None),
     error: str | None = Query(default=None),
+    error_description: str | None = Query(default=None),
     conn=Depends(get_db),
 ):
-    return await _orb_oauth_callback(provider, request, conn, code=code, state=state, error=error)
+    return await _orb_oauth_callback(
+        provider,
+        request,
+        conn,
+        code=code,
+        state=state,
+        error=error,
+        error_description=error_description,
+    )
 
 
 @router.post("/{provider}/callback")
@@ -384,9 +394,16 @@ async def _orb_oauth_callback(
     code: str | None,
     state: str | None,
     error: str | None,
+    error_description: str | None = None,
 ):
     key = provider.strip().lower()
     if error:
+        if error_description:
+            logger.info(
+                "ORB OAuth provider error provider=%s error_code=%s",
+                key,
+                str(error)[:80],
+            )
         return _redirect(oauth_error_redirect(_orb_oauth_app_url(), "Sign-in was cancelled or denied."))
     if not provider_enabled(key):
         return _redirect(oauth_error_redirect(_orb_oauth_app_url(), "This sign-in provider is not available."))
@@ -432,7 +449,17 @@ async def _orb_oauth_callback(
     try:
         token_payload = await exchange_code(config, code)
         access_token = str(token_payload.get("access_token") or "")
-        profile_raw = await fetch_userinfo(config, access_token) if access_token else {}
+        if key == "microsoft":
+            profile_raw = (
+                await fetch_microsoft_profile(
+                    access_token,
+                    id_token=str(token_payload.get("id_token") or "") or None,
+                )
+                if access_token
+                else {}
+            )
+        else:
+            profile_raw = await fetch_userinfo(config, access_token) if access_token else {}
         profile = normalise_profile(key, profile_raw)
         if not profile.get("subject"):
             return _redirect(oauth_error_redirect(_orb_oauth_app_url(), "Could not verify your account."))

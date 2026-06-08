@@ -7,15 +7,14 @@ import { OrbAuthButton } from '@/components/orb-residential/ui/orb-auth-button'
 import { OrbLoginLegalFooter } from '@/components/orb-residential/orb-login-legal-footer'
 import { OrbLoginMobileHeader } from '@/components/orb-residential/orb-login-mobile-header'
 
-const OAUTH_UNAVAILABLE_COPY: Record<'google' | 'microsoft' | 'apple', string> = {
+const OAUTH_UNAVAILABLE_COPY: Record<'google' | 'microsoft', string> = {
   google: 'Google sign-in unavailable',
-  microsoft: 'Microsoft sign-in unavailable',
-  apple: 'Apple sign-in unavailable'
+  microsoft: 'Microsoft sign-in unavailable'
 }
 
 export type OrbLoginAuthCardProps = {
   error: string | null
-  oauth: { google: boolean; microsoft: boolean; apple: boolean }
+  oauth: { google: boolean; microsoft: boolean }
   authBusy: boolean
   returnUrl: string
   email: string
@@ -34,7 +33,7 @@ export type OrbLoginAuthCardProps = {
   onPasskeyExpandedChange: (expanded: boolean) => void
   onSubmit: (event: FormEvent<HTMLFormElement>) => void
   onPasskeySignIn: () => void
-  orbOAuthStartUrl: (provider: 'apple' | 'google' | 'microsoft', returnUrl: string) => string
+  orbOAuthStartUrl: (provider: 'google' | 'microsoft', returnUrl: string) => string
 }
 
 /** Shared auth card — OAuth, create account, email/password, passkey and legal footer. */
@@ -92,14 +91,6 @@ export function OrbLoginAuthCard({
         </h3>
         <div className="mt-2.5 space-y-2.5" data-orb-oauth-buttons>
           <OrbAuthButton
-            provider="apple"
-            href={oauth.apple ? orbOAuthStartUrl('apple', returnUrl) : undefined}
-            disabled={!oauth.apple || authBusy}
-            unavailableLabel={OAUTH_UNAVAILABLE_COPY.apple}
-          >
-            Continue with Apple
-          </OrbAuthButton>
-          <OrbAuthButton
             provider="google"
             href={oauth.google ? orbOAuthStartUrl('google', returnUrl) : undefined}
             disabled={!oauth.google || authBusy}
@@ -107,14 +98,15 @@ export function OrbLoginAuthCard({
           >
             Continue with Google
           </OrbAuthButton>
-          <OrbAuthButton
-            provider="microsoft"
-            href={oauth.microsoft ? orbOAuthStartUrl('microsoft', returnUrl) : undefined}
-            disabled={!oauth.microsoft || authBusy}
-            unavailableLabel={OAUTH_UNAVAILABLE_COPY.microsoft}
-          >
-            Continue with Microsoft
-          </OrbAuthButton>
+          {oauth.microsoft ? (
+            <OrbAuthButton
+              provider="microsoft"
+              href={orbOAuthStartUrl('microsoft', returnUrl)}
+              disabled={authBusy}
+            >
+              Continue with Microsoft
+            </OrbAuthButton>
+          ) : null}
         </div>
       </section>
 

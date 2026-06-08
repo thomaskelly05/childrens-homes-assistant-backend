@@ -28,15 +28,20 @@ def _google_client_id_valid() -> bool:
 
 
 def oauth_provider_configured(provider: str) -> bool:
+    from services.orb_oauth_provider_env import (
+        apple_auth_enabled,
+        microsoft_auth_enabled,
+        microsoft_client_id,
+    )
+
     key = provider.strip().lower()
     if key == "google":
         return _google_client_id_valid()
-    mapping = {
-        "microsoft": "OAUTH_MICROSOFT_CLIENT_ID",
-        "apple": "OAUTH_APPLE_CLIENT_ID",
-    }
-    env_name = mapping.get(key)
-    return bool(env_name and os.getenv(env_name, "").strip())
+    if key == "microsoft":
+        return microsoft_auth_enabled() and bool(microsoft_client_id())
+    if key == "apple":
+        return apple_auth_enabled() and bool(os.getenv("OAUTH_APPLE_CLIENT_ID", "").strip())
+    return False
 
 
 def map_stripe_price_to_plan(price_id: str | None) -> str:
