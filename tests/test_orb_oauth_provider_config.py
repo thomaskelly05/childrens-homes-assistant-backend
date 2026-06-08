@@ -8,14 +8,21 @@ from services.orb_production_config_service import oauth_provider_diagnostics, o
 
 
 def test_oauth_diagnostics_do_not_expose_secrets(monkeypatch):
-    monkeypatch.setenv("OAUTH_GOOGLE_CLIENT_ID", "google-client-id")
+    monkeypatch.setenv("OAUTH_GOOGLE_CLIENT_ID", "valid-test.apps.googleusercontent.com")
     monkeypatch.setenv("OAUTH_GOOGLE_CLIENT_SECRET", "super-secret-value")
-    monkeypatch.setenv("OAUTH_GOOGLE_REDIRECT_URI", "https://app.indicare.co.uk/orb/standalone/auth/oauth/google/callback")
+    monkeypatch.setenv(
+        "OAUTH_GOOGLE_REDIRECT_URI",
+        "https://api.indicare.co.uk/orb/standalone/auth/oauth/google/callback",
+    )
 
     payload = oauth_provider_diagnostics("google")
     serialised = str(payload)
     assert payload["enabled"] is True
-    assert payload["redirect_uri"] == "https://app.indicare.co.uk/orb/standalone/auth/oauth/google/callback"
+    assert payload["client_id_present"] is True
+    assert payload["client_id_suffix_valid"] is True
+    assert payload["redirect_uri"] == (
+        "https://api.indicare.co.uk/orb/standalone/auth/oauth/google/callback"
+    )
     assert "super-secret-value" not in serialised
     assert "OAUTH_GOOGLE_CLIENT_SECRET" in payload["required_env_vars"]
 

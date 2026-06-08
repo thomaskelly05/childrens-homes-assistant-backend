@@ -22,6 +22,20 @@ ORB_OAUTH_SESSION_PROVIDER_KEY = "orb_oauth_provider"
 
 ALLOWED_RETURN_PREFIXES = ("/orb", "/orb/onboarding", "/orb/access", "/orb/billing")
 
+GOOGLE_CLIENT_ID_SUFFIX = ".apps.googleusercontent.com"
+EXPECTED_GOOGLE_REDIRECT_URI = (
+    "https://api.indicare.co.uk/orb/standalone/auth/oauth/google/callback"
+)
+
+
+def is_valid_google_client_id(client_id: str) -> bool:
+    value = (client_id or "").strip()
+    return bool(value) and value.endswith(GOOGLE_CLIENT_ID_SUFFIX) and " " not in value
+
+
+def google_redirect_uri_matches_expected(redirect_uri: str) -> bool:
+    return (redirect_uri or "").strip() == EXPECTED_GOOGLE_REDIRECT_URI
+
 
 @dataclass(frozen=True)
 class OrbOAuthProviderConfig:
@@ -61,6 +75,11 @@ def load_provider_config(provider: str) -> OrbOAuthProviderConfig | None:
         client_secret = os.getenv("OAUTH_GOOGLE_CLIENT_SECRET", "").strip()
         redirect_uri = os.getenv("OAUTH_GOOGLE_REDIRECT_URI", "").strip()
         if not (client_id and client_secret and redirect_uri):
+            return None
+        if not is_valid_google_client_id(client_id):
+            logger.warning(
+                "OAUTH_GOOGLE_CLIENT_ID is set but malformed — Google OAuth start disabled"
+            )
             return None
         return OrbOAuthProviderConfig(
             name="google",

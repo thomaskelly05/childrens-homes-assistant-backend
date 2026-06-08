@@ -22,10 +22,16 @@ def stripe_configured() -> bool:
     return bool(os.getenv("STRIPE_SECRET_KEY", "").strip() and orb_residential_stripe_price_id())
 
 
+def _google_client_id_valid() -> bool:
+    client_id = os.getenv("OAUTH_GOOGLE_CLIENT_ID", "").strip()
+    return bool(client_id) and client_id.endswith(".apps.googleusercontent.com")
+
+
 def oauth_provider_configured(provider: str) -> bool:
     key = provider.strip().lower()
+    if key == "google":
+        return _google_client_id_valid()
     mapping = {
-        "google": "OAUTH_GOOGLE_CLIENT_ID",
         "microsoft": "OAUTH_MICROSOFT_CLIENT_ID",
         "apple": "OAUTH_APPLE_CLIENT_ID",
     }
