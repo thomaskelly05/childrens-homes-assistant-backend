@@ -339,7 +339,9 @@ test.describe('ORB cookie and session E2E', () => {
     authed = false
     await page.locator('[data-testid="sign-out"], [data-orb-account-menu-signout]').first().click({ timeout: 8_000 })
     await page.goto('/orb', { waitUntil: 'domcontentloaded', timeout: 30_000 }).catch(() => undefined)
-    await expect(page.getByRole('heading', { name: 'Sign in to ORB Residential' })).toBeVisible({ timeout: 20_000 })
+    await expect(page.locator('[data-orb-login-signin-title]')).toContainText(/Sign in to continue/i, {
+      timeout: 20_000
+    })
     await expect(page.locator('[data-testid="orb-login-email"]')).toBeVisible()
     await expect(page.locator('[data-orb-shell="true"]')).toHaveCount(0)
   })

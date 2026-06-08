@@ -80,6 +80,37 @@ test.describe('ORB login scroll reachability', () => {
     expect(focusAudit.emailFocusOk).toBe(true)
   })
 
+  test('desktop hero sphere and brand tag do not overlap', async ({ page }) => {
+    await disableE2eAutoAuth(page)
+    await setupOrbAuthE2eMocks(page, { scenario: 'unauthenticated' })
+    await page.setViewportSize({ width: 1440, height: 760 })
+    await gotoOrbLogin(page)
+
+    const overlap = await page.evaluate(() => {
+      const sphere = document.querySelector('[data-orb-login-hero-sphere]')
+      const tag = document.querySelector('[data-orb-login-brand-tag]')
+      if (!sphere || !tag) return { gap: null }
+      const sphereRect = sphere.getBoundingClientRect()
+      const tagRect = tag.getBoundingClientRect()
+      return { gap: tagRect.top - sphereRect.bottom }
+    })
+    expect(overlap.gap).not.toBeNull()
+    expect(overlap.gap!).toBeGreaterThanOrEqual(4)
+  })
+
+  test('mobile uses compact layout without desktop hero', async ({ page }) => {
+    await disableE2eAutoAuth(page)
+    await setupOrbAuthE2eMocks(page, { scenario: 'unauthenticated' })
+    await page.setViewportSize({ width: 390, height: 844 })
+    await gotoOrbLogin(page)
+
+    await expect(page.locator('[data-orb-login-mobile-layout]')).toBeVisible()
+    await expect(page.locator('[data-orb-login-mobile-mark]')).toBeVisible()
+    await expect(page.locator('[data-orb-login-desktop-hero]')).toBeHidden()
+    await expect(page.locator('[data-orb-login-signin-title-mobile]')).toContainText(/sign in to continue/i)
+    await assertNoHorizontalOverflow(page)
+  })
+
   test('brand hierarchy visible on desktop without tag in login card', async ({ page }) => {
     await disableE2eAutoAuth(page)
     await setupOrbAuthE2eMocks(page, { scenario: 'unauthenticated' })
