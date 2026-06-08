@@ -20,18 +20,22 @@ export function OrbLoginDesktopHero() {
       data-orb-login-desktop-hero
     >
       <div className="orb-login-hero-glow pointer-events-none absolute inset-0" aria-hidden />
-      <div className="orb-login-hero-inner relative flex flex-col justify-center">
-        <div className="orb-login-hero-visual" data-orb-login-hero-visual>
-          <div className="orb-login-hero-sphere-wrap flex justify-center" data-orb-login-hero-sphere>
-            <OrbHeroSphere />
+      <div className="orb-login-hero-inner relative flex flex-col justify-start">
+        <div className="orb-login-hero-heading-stack" data-orb-login-hero-heading-stack>
+          <div className="orb-login-hero-visual" data-orb-login-hero-visual>
+            <div className="orb-login-hero-sphere-wrap" data-orb-login-hero-sphere>
+              <OrbHeroSphere />
+            </div>
           </div>
-        </div>
 
-        <div className="orb-login-hero-brand" data-orb-login-hero-brand>
-          <Link href="/orb" className="orb-login-brand-link text-sm font-semibold tracking-wide" data-orb-login-brand>
-            ORB Residential
-          </Link>
-          <p className="orb-login-tagline mt-0.5 text-xs">Powered by IndiCare Intelligence</p>
+          <div className="orb-login-hero-brand" data-orb-login-hero-brand>
+            <Link href="/orb" className="orb-login-brand-link text-sm font-semibold tracking-wide" data-orb-login-brand>
+              ORB Residential
+            </Link>
+            <p className="orb-login-tagline mt-0.5 text-xs" data-orb-login-engine-line>
+              Powered by IndiCare Intelligence
+            </p>
+          </div>
         </div>
 
         <h1

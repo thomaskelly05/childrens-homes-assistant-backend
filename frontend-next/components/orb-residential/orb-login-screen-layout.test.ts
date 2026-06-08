@@ -56,8 +56,11 @@ describe('ORB premium login screen layout', () => {
     assert.match(hero, /OrbHeroSphere/)
     assert.match(hero, /Safeguarding-aware support/)
     assert.match(hero, /Designed for adults working in and around children/)
+    assert.match(hero, /orb-login-hero-heading-stack/)
+    assert.match(hero, /data-orb-login-hero-heading-stack/)
     assert.match(css, /orb-login-hero-visual/)
-    assert.match(css, /justify-content:\s*center/)
+    assert.match(css, /align-items:\s*flex-start/)
+    assert.match(css, /overflow:\s*visible/)
     assert.match(css, /clamp\(1\.25rem,\s*12vh/)
   })
 

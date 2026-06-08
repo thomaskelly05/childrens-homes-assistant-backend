@@ -314,7 +314,7 @@ html[data-orb-residential='1'] [data-orb-document-panel] [data-orb-knowledge-lib
   }
 
   html[data-orb-residential='1'] .orb-login-hero-visual {
-    align-items: center;
+    align-items: flex-start;
   }
 }
 
