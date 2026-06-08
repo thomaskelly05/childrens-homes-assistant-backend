@@ -26,9 +26,19 @@ def test_checkout_creates_session_with_orb_price(monkeypatch):
     conn.cursor.return_value.__enter__.return_value = cursor
     cursor.fetchone.return_value = None
 
+    valid_price = {
+        "id": "price_orb_999",
+        "active": True,
+        "currency": "gbp",
+        "unit_amount": 999,
+        "recurring": {"interval": "month"},
+    }
+
     with patch("routers.orb_billing_routes.get_orb_subscription", return_value={}), patch(
         "routers.orb_billing_routes.stripe.Customer.create", return_value=mock_customer
     ), patch("routers.orb_billing_routes.upsert_orb_stripe_customer"), patch(
+        "routers.orb_billing_routes.stripe.Price.retrieve", return_value=valid_price
+    ), patch(
         "routers.orb_billing_routes.stripe.checkout.Session.create", return_value=mock_session
     ) as create_session:
         import asyncio
