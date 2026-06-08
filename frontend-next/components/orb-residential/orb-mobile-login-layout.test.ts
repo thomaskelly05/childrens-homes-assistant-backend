@@ -55,12 +55,13 @@ describe('ORB mobile login layout', () => {
     assert.match(css, /orb-auth-button--disabled/)
   })
 
-  it('passkey section can collapse on compact viewports', () => {
+  it('passkey section collapses by default with toggle', () => {
     const login = read('components/orb-residential/orb-login-screen.tsx')
     const authCard = read('components/orb-residential/orb-login-auth-card.tsx')
-    assert.match(login, /compactViewport/)
-    assert.match(login, /height < 760/)
+    assert.match(login, /passkeyExpanded/)
+    assert.match(login, /emailExpanded/)
     assert.match(authCard, /data-orb-passkey-toggle/)
+    assert.match(authCard, /data-orb-email-toggle/)
   })
 
   it('mobile sign-in title differs from desktop', () => {
@@ -68,6 +69,6 @@ describe('ORB mobile login layout', () => {
     assert.match(authCard, /Sign in to continue/)
     assert.match(authCard, /lg:hidden/)
     assert.match(authCard, /hidden lg:inline/)
-    assert.match(authCard, /Sign in to ORB Residential/)
+    assert.match(authCard, /Welcome to ORB Residential/)
   })
 })

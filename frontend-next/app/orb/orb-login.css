@@ -6,18 +6,47 @@
 .orb-login-root {
   overflow-x: hidden;
   background:
-    radial-gradient(ellipse 80% 55% at 15% 0%, rgba(129, 140, 248, 0.22), transparent 58%),
-    radial-gradient(ellipse 70% 50% at 85% 8%, rgba(56, 189, 248, 0.16), transparent 55%),
-    radial-gradient(ellipse 60% 45% at 50% 100%, rgba(167, 139, 250, 0.12), transparent 60%),
-    linear-gradient(180deg, var(--orb-bg, #0f172a) 0%, var(--orb-bg-elevated, #111827) 100%);
+    radial-gradient(ellipse 90% 60% at 8% -5%, rgba(129, 140, 248, 0.32), transparent 58%),
+    radial-gradient(ellipse 75% 55% at 92% 5%, rgba(167, 139, 250, 0.24), transparent 55%),
+    radial-gradient(ellipse 65% 50% at 50% 105%, rgba(56, 189, 248, 0.14), transparent 62%),
+    linear-gradient(165deg, var(--orb-bg, #0f172a) 0%, #131a35 48%, var(--orb-bg-elevated, #111827) 100%);
 }
 
 .orb-login-root--light {
   background:
-    radial-gradient(ellipse 80% 55% at 15% 0%, rgba(129, 140, 248, 0.28), transparent 58%),
-    radial-gradient(ellipse 70% 50% at 85% 8%, rgba(56, 189, 248, 0.2), transparent 55%),
-    radial-gradient(ellipse 60% 45% at 50% 100%, rgba(167, 139, 250, 0.14), transparent 60%),
-    linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%);
+    radial-gradient(ellipse 90% 60% at 8% -5%, rgba(129, 140, 248, 0.35), transparent 58%),
+    radial-gradient(ellipse 75% 55% at 92% 5%, rgba(196, 181, 253, 0.28), transparent 55%),
+    radial-gradient(ellipse 65% 50% at 50% 105%, rgba(56, 189, 248, 0.16), transparent 62%),
+    linear-gradient(165deg, #f8fafc 0%, #eef2ff 42%, #f5f3ff 100%);
+}
+
+.orb-login-trust-statement {
+  color: color-mix(in srgb, var(--orb-text, #f8fafc) 92%, var(--orb-res-primary, #818cf8));
+}
+
+.orb-login-root--light .orb-login-trust-statement {
+  color: #3730a3;
+}
+
+.orb-login-auth-section {
+  margin-top: 0.875rem;
+}
+
+.orb-login-auth-section--secondary {
+  margin-top: 0.625rem;
+}
+
+.orb-login-section-title {
+  color: var(--orb-text, #f8fafc);
+  letter-spacing: -0.01em;
+}
+
+.orb-login-secondary-toggle:focus-visible,
+.orb-login-create-account:focus-visible,
+.orb-auth-button:focus-visible,
+.orb-login-submit:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--orb-res-primary, #818cf8) 65%, white);
+  outline-offset: 2px;
 }
 
 .orb-login-legal-links .orb-legal-links-separator {
@@ -29,7 +58,12 @@
 }
 
 .orb-login-value-chip {
-  backdrop-filter: blur(6px);
+  backdrop-filter: blur(8px);
+}
+
+.orb-login-footer {
+  margin-top: 1.25rem !important;
+  padding-top: 1rem !important;
 }
 
 /* ── Desktop / tablet two-column model ─────────────────────────────────── */
@@ -41,7 +75,7 @@
   }
 
   .orb-login-shell {
-    align-items: flex-start;
+    align-items: center;
     min-height: 100dvh;
     min-height: 100svh;
     max-height: 100dvh;
@@ -54,16 +88,17 @@
   .orb-login-hero {
     min-height: 0;
     max-height: 100svh;
-    justify-content: flex-start;
-    padding-top: clamp(2.25rem, 14vh, 4.25rem);
+    justify-content: center;
+    padding-top: clamp(1.25rem, 12vh, 3.5rem);
     padding-bottom: clamp(0.75rem, 2vh, 1.25rem);
     overflow: visible;
   }
 
   .orb-login-hero-glow {
     background:
-      radial-gradient(ellipse 55% 45% at 50% 38%, rgba(56, 189, 248, 0.12), transparent 68%),
-      radial-gradient(ellipse 40% 35% at 62% 18%, rgba(99, 102, 241, 0.08), transparent 62%);
+      radial-gradient(ellipse 60% 50% at 42% 42%, rgba(129, 140, 248, 0.18), transparent 68%),
+      radial-gradient(ellipse 45% 40% at 58% 22%, rgba(56, 189, 248, 0.14), transparent 62%),
+      radial-gradient(ellipse 35% 30% at 70% 65%, rgba(167, 139, 250, 0.1), transparent 58%);
     pointer-events: none;
   }
 
@@ -88,10 +123,10 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    width: 6.5rem;
-    height: 6.5rem;
-    max-width: 6.5rem;
-    max-height: 6.5rem;
+    width: 7rem;
+    height: 7rem;
+    max-width: 7rem;
+    max-height: 7rem;
     margin: 0.5rem 0;
     overflow: hidden;
     flex-shrink: 0;
@@ -101,35 +136,25 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 6.5rem;
-    height: 6.5rem;
-    max-width: 6.5rem;
-    max-height: 6.5rem;
+    width: 7rem;
+    height: 7rem;
+    max-width: 7rem;
+    max-height: 7rem;
     overflow: hidden;
   }
 
   .orb-login-hero-sphere-wrap [data-premium-mobile-orb],
   .orb-login-hero-sphere-wrap .orb-presence--hero {
-    width: 6.5rem !important;
-    height: 6.5rem !important;
-    max-width: 6.5rem !important;
-    max-height: 6.5rem !important;
-    --orb-presence-size: 6.5rem !important;
+    width: 7rem !important;
+    height: 7rem !important;
+    max-width: 7rem !important;
+    max-height: 7rem !important;
+    --orb-presence-size: 7rem !important;
     margin: 0 !important;
   }
 
-  .orb-login-brand-tag {
-    margin: 0.75rem 0 0;
-    text-align: left;
-    line-height: 1.35;
-    position: relative;
-    z-index: 2;
-    color: var(--orb-muted);
-    max-width: 14rem;
-  }
-
   .orb-login-headline {
-    font-size: clamp(1.35rem, 2.2vw, 1.75rem);
+    font-size: clamp(1.5rem, 2.4vw, 2rem);
     margin-top: 1rem;
     position: relative;
     z-index: 2;
@@ -149,7 +174,7 @@
     min-height: 0;
     max-height: 100svh;
     align-items: center;
-    justify-content: flex-start;
+    justify-content: center;
     padding-top: clamp(0.5rem, 1.5vh, 1rem);
     padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px));
     overflow-y: auto;
@@ -165,20 +190,28 @@
   .orb-login-card {
     width: 100%;
     max-height: calc(
-      100svh - 1.5rem - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)
+      100svh - 2rem - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)
     );
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
     overscroll-behavior-y: contain;
     scrollbar-gutter: stable;
-    padding-bottom: max(2rem, calc(1.5rem + env(safe-area-inset-bottom, 0px)));
-    scroll-padding-bottom: max(2rem, calc(1.5rem + env(safe-area-inset-bottom, 0px)));
+    padding-bottom: max(1.25rem, calc(1rem + env(safe-area-inset-bottom, 0px)));
+    scroll-padding-bottom: max(1.25rem, calc(1rem + env(safe-area-inset-bottom, 0px)));
   }
 
   .orb-login-card[data-orb-login-auth-card] {
     box-shadow:
-      inset 0 -1px 0 rgba(148, 163, 184, 0.12),
-      0 20px 45px rgba(15, 23, 42, 0.12);
+      inset 0 1px 0 rgba(255, 255, 255, 0.06),
+      0 24px 60px rgba(15, 23, 42, 0.18),
+      0 0 0 1px rgba(129, 140, 248, 0.08);
+  }
+
+  .orb-login-root--light .orb-login-card[data-orb-login-auth-card] {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.9),
+      0 24px 60px rgba(99, 102, 241, 0.12),
+      0 0 0 1px rgba(129, 140, 248, 0.12);
   }
 
   .orb-login-footer {
@@ -186,7 +219,7 @@
   }
 }
 
-/* Compact desktop heights — tighter card spacing, obvious internal scroll */
+/* Compact desktop heights — tighter card spacing */
 @media (min-width: 1024px) and (max-height: 760px) {
   .orb-login-shell {
     padding-top: 0.5rem;
@@ -200,10 +233,6 @@
 
   .orb-login-hero-brand {
     margin-top: 0.75rem;
-  }
-
-  .orb-login-hero-visual {
-    margin-top: 0;
   }
 
   .orb-login-hero-sphere-wrap {
@@ -226,7 +255,7 @@
 
   .orb-login-headline {
     font-size: clamp(1.15rem, 1.8vw, 1.4rem);
-    margin-top: 1rem;
+    margin-top: 0.75rem;
   }
 
   .orb-login-lead {
@@ -248,15 +277,15 @@
     max-height: calc(
       100svh - 0.75rem - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)
     );
-    padding-bottom: max(2.25rem, calc(1.75rem + env(safe-area-inset-bottom, 0px)));
+    padding-bottom: max(1.5rem, calc(1rem + env(safe-area-inset-bottom, 0px)));
   }
 
   .orb-login-signin-title {
     font-size: 1.25rem;
   }
 
-  .orb-login-card .mt-6 {
-    margin-top: 0.875rem;
+  .orb-login-auth-section {
+    margin-top: 0.625rem;
   }
 
   .orb-login-input {
@@ -270,13 +299,9 @@
   }
 
   .orb-login-footer {
-    margin-top: 0.875rem;
-    padding-top: 0.75rem;
+    margin-top: 0.875rem !important;
+    padding-top: 0.75rem !important;
     font-size: 0.625rem;
-  }
-
-  .orb-login-footer .mt-4 {
-    margin-top: 0.625rem;
   }
 }
 
@@ -302,14 +327,18 @@
   }
 
   .orb-login-card {
-    border: none;
-    background: transparent;
-    box-shadow: none;
-    backdrop-filter: none;
-    padding-left: 0;
-    padding-right: 0;
+    border: 1px solid color-mix(in srgb, var(--orb-line, rgba(148, 163, 184, 0.35)) 35%, transparent);
+    background: color-mix(in srgb, var(--orb-surface-elevated, rgba(255, 255, 255, 0.06)) 82%, transparent);
+    box-shadow: 0 16px 40px rgba(15, 23, 42, 0.14);
+    backdrop-filter: blur(12px);
+    padding-left: 1.25rem;
+    padding-right: 1.25rem;
     max-height: none;
     overflow: visible;
+  }
+
+  .orb-login-root--light .orb-login-card {
+    box-shadow: 0 16px 40px rgba(99, 102, 241, 0.1);
   }
 
   [data-orb-login-safe-bottom] {
@@ -351,6 +380,106 @@
   }
 }
 
+/* ── Billing / access gate — shared front-door shell ─────────────────── */
+
+.orb-front-door-root {
+  min-height: 100dvh;
+  min-height: 100svh;
+  overflow-x: hidden;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: max(1.25rem, env(safe-area-inset-bottom, 0px));
+}
+
+.orb-front-door-shell {
+  margin-inline: auto;
+  width: 100%;
+  max-width: 42rem;
+  padding: clamp(1.5rem, 4vw, 3rem) clamp(1.25rem, 4vw, 2rem);
+}
+
+.orb-front-door-card {
+  border-radius: 1.75rem;
+  border: 1px solid color-mix(in srgb, var(--orb-line, rgba(148, 163, 184, 0.35)) 35%, transparent);
+  background: color-mix(in srgb, var(--orb-surface-elevated, rgba(255, 255, 255, 0.06)) 78%, transparent);
+  padding: clamp(1.5rem, 3vw, 2rem);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 24px 60px rgba(15, 23, 42, 0.16);
+  backdrop-filter: blur(12px);
+}
+
+.orb-login-root--light .orb-front-door-card {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 24px 60px rgba(99, 102, 241, 0.1);
+}
+
+.orb-front-door-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  border-radius: 9999px;
+  padding: 0.375rem 0.875rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  background: color-mix(in srgb, var(--orb-res-primary, #818cf8) 12%, transparent);
+  color: var(--orb-text, #f8fafc);
+  border: 1px solid color-mix(in srgb, var(--orb-res-primary, #818cf8) 22%, transparent);
+}
+
+.orb-login-root--light .orb-front-door-pill {
+  color: #3730a3;
+  background: rgba(99, 102, 241, 0.08);
+  border-color: rgba(99, 102, 241, 0.18);
+}
+
+.orb-front-door-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.625rem;
+}
+
+.orb-front-door-btn-primary {
+  border-radius: 0.875rem;
+  padding: 0.625rem 1.25rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  background: linear-gradient(135deg, #818cf8, #6366f1);
+  color: #ffffff;
+  box-shadow: 0 8px 24px rgba(99, 102, 241, 0.28);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.orb-front-door-btn-primary:hover:not(:disabled) {
+  box-shadow: 0 10px 28px rgba(99, 102, 241, 0.34);
+}
+
+.orb-front-door-btn-primary:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.orb-front-door-btn-secondary {
+  border-radius: 0.875rem;
+  border: 1px solid color-mix(in srgb, var(--orb-line, rgba(148, 163, 184, 0.35)) 45%, transparent);
+  padding: 0.625rem 1.25rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--orb-text, #f8fafc);
+  background: color-mix(in srgb, var(--orb-surface-elevated, rgba(255, 255, 255, 0.06)) 50%, transparent);
+  transition: border-color 0.12s ease, background 0.12s ease;
+}
+
+.orb-front-door-btn-secondary:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--orb-res-primary, #818cf8) 35%, transparent);
+}
+
+.orb-front-door-btn-secondary:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 .orb-auth-loading-root {
   min-height: 100dvh;
   min-height: 100svh;
@@ -359,4 +488,15 @@
 
 .orb-auth-loading-inner [data-orb-hero-sphere] {
   max-height: 5.5rem;
+}
+
+.orb-access-retry-card {
+  width: 100%;
+  max-width: 24rem;
+  border-radius: 1.5rem;
+  border: 1px solid color-mix(in srgb, var(--orb-line, rgba(148, 163, 184, 0.35)) 35%, transparent);
+  background: color-mix(in srgb, var(--orb-surface-elevated, rgba(255, 255, 255, 0.06)) 78%, transparent);
+  padding: 1.75rem 1.5rem;
+  box-shadow: 0 20px 48px rgba(15, 23, 42, 0.14);
+  backdrop-filter: blur(12px);
 }

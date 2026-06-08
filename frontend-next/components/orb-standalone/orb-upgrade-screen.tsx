@@ -1,9 +1,11 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { CreditCard, Lock, Sparkles } from 'lucide-react'
 
+import { useOrbResidentialThemeSync } from '@/components/orb-residential/use-orb-residential-theme-sync'
+import { useOrbAppearance } from '@/components/orb-standalone/use-orb-appearance'
 import { getOrbBillingDisplayStatus } from '@/lib/orb/orb-billing-display'
 import {
   fetchOrbAccess,
@@ -15,6 +17,7 @@ import {
 } from '@/lib/orb/orb-billing-client'
 import { orbSwitchAccountLoginUrl } from '@/lib/orb/orb-switch-account'
 import { buildOrbFrontDoorUrl } from '@/lib/orb/orb-front-door-routing'
+import { getOrbThemeCssVariables } from '@/lib/orb/orb-theme'
 import { useAuth } from '@/contexts/auth-context'
 
 function resolveAccessHeadline(
@@ -40,12 +43,18 @@ function resolveAccessHeadline(
 
 export function OrbUpgradeScreen({ initialAccess = null }: { initialAccess?: OrbAccessPayload | null }) {
   const { status, logout, user } = useAuth()
+  const { resolvedTheme, appearanceMode } = useOrbAppearance()
+  useOrbResidentialThemeSync()
   const [access, setAccess] = useState<OrbAccessPayload | null>(initialAccess)
   const [loading, setLoading] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   const authenticated = status === 'authenticated'
   const userEmail = user?.email ?? null
+  const themeClass = useMemo(
+    () => (resolvedTheme === 'light' ? 'orb-login-root--light' : 'orb-login-root--dark'),
+    [resolvedTheme]
+  )
 
   useEffect(() => {
     trackOrbAnalytics('locked_screen_viewed')
@@ -129,50 +138,60 @@ export function OrbUpgradeScreen({ initialAccess = null }: { initialAccess?: Orb
     (access?.trial?.available || billingDisplay.showUpgrade || billingDisplay.showTrialCta)
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,#E0E7FF,transparent_42%),radial-gradient(circle_at_top_right,#F5D0FE,transparent_38%),linear-gradient(180deg,#F8FAFC,#FFFFFF)] px-6 py-12 text-slate-950">
-      <div className="mx-auto max-w-3xl">
-        <div className="rounded-[2rem] border border-white/80 bg-white/90 p-8 shadow-2xl shadow-indigo-100/60 backdrop-blur">
-          <div className="mb-6 flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-2 rounded-full bg-indigo-50 px-4 py-2 text-xs font-bold uppercase tracking-[0.18em] text-indigo-700">
-              <Lock className="h-4 w-4" aria-hidden />
+    <div
+      className={`orb-residential-root orb-front-door-root orb-login-root ${themeClass}`}
+      data-orb-upgrade-screen
+      data-orb-residential="true"
+      data-orb-theme={resolvedTheme}
+      data-orb-appearance={appearanceMode}
+      style={getOrbThemeCssVariables(resolvedTheme)}
+    >
+      <main className="orb-front-door-shell">
+        <div className="orb-front-door-card">
+          <div className="mb-5 flex flex-wrap items-center gap-2">
+            <span className="orb-front-door-pill" data-orb-upgrade-access-pill>
+              <Lock className="h-3.5 w-3.5" aria-hidden />
               ORB Residential access
             </span>
             {billingDisplay.isPaidActive ? (
               <span
-                className="inline-flex rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800"
+                className="inline-flex rounded-full bg-emerald-500/15 px-3 py-1 text-xs font-semibold text-emerald-300"
                 data-orb-billing-status-pill
               >
                 Active
               </span>
             ) : billingDisplay.showTrialChip && billingDisplay.trialChipLabel ? (
-              <span className="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700" data-orb-billing-trial-chip>
+              <span
+                className="inline-flex rounded-full bg-white/8 px-3 py-1 text-xs font-semibold text-[var(--orb-muted)]"
+                data-orb-billing-trial-chip
+              >
                 {billingDisplay.trialChipLabel}
               </span>
             ) : null}
           </div>
 
-          <h1 className="text-3xl font-black tracking-tight text-slate-950 md:text-4xl" data-orb-upgrade-title>
+          <h1 className="text-2xl font-semibold tracking-tight md:text-3xl" data-orb-upgrade-title>
             {billingDisplay.isPaidActive ? 'ORB Residential' : 'Access ORB Residential'}
           </h1>
-          <p className="mt-4 text-sm leading-7 text-slate-700" data-orb-upgrade-account-status>
+          <p className="mt-3 text-sm leading-relaxed text-[var(--orb-muted)]" data-orb-upgrade-account-status>
             {headline}
           </p>
 
           {authenticated && userEmail ? (
-            <p className="mt-2 text-sm font-medium text-indigo-800" data-orb-upgrade-signed-in-email>
+            <p className="mt-2 text-sm font-medium text-[var(--orb-text)]" data-orb-upgrade-signed-in-email>
               Signed in as {userEmail}
             </p>
           ) : null}
 
           {authenticated ? (
-            <div className="mt-2 flex flex-wrap gap-2 text-xs text-slate-600">
+            <div className="mt-2 flex flex-wrap gap-2 text-xs text-[var(--orb-muted)]">
               {signedInProvider ? (
-                <span className="rounded-full bg-slate-100 px-3 py-1 font-semibold" data-orb-upgrade-signed-in-provider>
+                <span className="rounded-full bg-white/6 px-3 py-1 font-medium" data-orb-upgrade-signed-in-provider>
                   Signed in with {signedInProvider}
                 </span>
               ) : null}
               {accessState ? (
-                <span className="rounded-full bg-slate-100 px-3 py-1 font-semibold" data-orb-upgrade-access-state>
+                <span className="rounded-full bg-white/6 px-3 py-1 font-medium" data-orb-upgrade-access-state>
                   Access state: {accessState}
                 </span>
               ) : null}
@@ -181,7 +200,7 @@ export function OrbUpgradeScreen({ initialAccess = null }: { initialAccess?: Orb
 
           {showDuplicateProviderGuidance ? (
             <p
-              className="mt-3 rounded-2xl border border-indigo-100 bg-indigo-50/80 px-4 py-3 text-sm leading-6 text-indigo-950"
+              className="mt-4 rounded-xl border border-indigo-400/20 bg-indigo-500/10 px-4 py-3 text-sm leading-relaxed text-[var(--orb-text)]"
               data-orb-upgrade-duplicate-provider-guidance
             >
               Already subscribed using Google or Microsoft? Switch account and sign in with the original method you
@@ -191,10 +210,10 @@ export function OrbUpgradeScreen({ initialAccess = null }: { initialAccess?: Orb
 
           {!billingDisplay.isPaidActive ? (
             <>
-              <p className="mt-3 text-lg font-semibold text-indigo-700" data-orb-upgrade-price>
+              <p className="mt-4 text-lg font-semibold text-[var(--orb-text)]" data-orb-upgrade-price>
                 {access?.price_label ?? '£9.99/month'}
               </p>
-              <p className="mt-3 text-sm leading-7 text-slate-600" data-orb-upgrade-includes>
+              <p className="mt-2 text-sm leading-relaxed text-[var(--orb-muted)]" data-orb-upgrade-includes>
                 ORB Residential helps adults in and around children&apos;s homes record, reflect and respond with
                 safeguarding-aware AI support. Includes chat, dictate, voice, documents, templates and saved outputs.
               </p>
@@ -202,21 +221,21 @@ export function OrbUpgradeScreen({ initialAccess = null }: { initialAccess?: Orb
           ) : null}
 
           {access?.access_state === 'subscription_past_due' || access?.subscription?.status === 'past_due' ? (
-            <p className="mt-3 rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-900" data-orb-upgrade-past-due>
+            <p className="mt-3 rounded-xl bg-amber-500/12 px-4 py-3 text-sm text-amber-100" data-orb-upgrade-past-due>
               Your subscription payment is past due. Update billing to restore full ORB access.
             </p>
           ) : null}
           {access?.access_state === 'subscription_cancelled' ? (
-            <p className="mt-3 rounded-2xl bg-slate-100 px-4 py-3 text-sm text-slate-800" data-orb-upgrade-cancelled>
+            <p className="mt-3 rounded-xl bg-white/6 px-4 py-3 text-sm text-[var(--orb-muted)]" data-orb-upgrade-cancelled>
               Your subscription has been cancelled. Subscribe again to restore ORB access when your paid period ends.
             </p>
           ) : null}
           {access?.trial?.active === false && access?.trial?.available === false && !access?.can_use_orb ? (
-            <p className="mt-3 text-sm text-slate-600">Trial expired — subscribe to continue using ORB Residential.</p>
+            <p className="mt-3 text-sm text-[var(--orb-muted)]">Trial expired — subscribe to continue using ORB Residential.</p>
           ) : null}
 
           {!billingDisplay.isPaidActive ? (
-            <ul className="mt-8 grid gap-2 text-sm text-slate-700 sm:grid-cols-2" data-orb-upgrade-features>
+            <ul className="mt-6 grid gap-2 text-sm text-[var(--orb-muted)] sm:grid-cols-2" data-orb-upgrade-features>
               {(upgrade?.features ?? [
                 "Residential children's homes assistant",
                 'Safeguarding thinking',
@@ -228,23 +247,26 @@ export function OrbUpgradeScreen({ initialAccess = null }: { initialAccess?: Orb
                 'Profile and voice',
                 'Feedback-driven improvement'
               ]).map((feature) => (
-                <li key={feature} className="flex items-start gap-2 rounded-xl bg-slate-50 px-3 py-2">
-                  <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-indigo-600" aria-hidden />
+                <li
+                  key={feature}
+                  className="flex items-start gap-2 rounded-xl border border-[var(--orb-line)]/20 bg-white/4 px-3 py-2"
+                >
+                  <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-indigo-300" aria-hidden />
                   {feature}
                 </li>
               ))}
             </ul>
           ) : null}
 
-          {error ? <p className="mt-6 rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">{error}</p> : null}
+          {error ? (
+            <p className="orb-login-error mt-5 rounded-xl px-4 py-3 text-sm" role="alert">
+              {error}
+            </p>
+          ) : null}
 
-          <div className="mt-8 flex flex-wrap gap-3" data-orb-upgrade-actions>
+          <div className="orb-front-door-actions mt-6" data-orb-upgrade-actions>
             {billingDisplay.isPaidActive ? (
-              <Link
-                href="/orb"
-                className="rounded-2xl bg-indigo-600 px-5 py-3 text-sm font-bold text-white shadow-lg"
-                data-orb-return-to-orb
-              >
+              <Link href="/orb" className="orb-front-door-btn-primary no-underline" data-orb-return-to-orb>
                 Return to ORB
               </Link>
             ) : showTrialOrUpgrade && billingDisplay.showTrialCta ? (
@@ -252,7 +274,7 @@ export function OrbUpgradeScreen({ initialAccess = null }: { initialAccess?: Orb
                 type="button"
                 onClick={handleTrial}
                 disabled={!authenticated || loading !== null}
-                className="rounded-2xl bg-indigo-600 px-5 py-3 text-sm font-bold text-white shadow-lg disabled:opacity-50"
+                className="orb-front-door-btn-primary disabled:cursor-not-allowed"
                 data-orb-start-trial
               >
                 {loading === 'trial' ? 'Starting trial…' : 'Start 7-day trial'}
@@ -262,7 +284,7 @@ export function OrbUpgradeScreen({ initialAccess = null }: { initialAccess?: Orb
                 type="button"
                 onClick={handleSubscribe}
                 disabled={!stripeReady || loading !== null}
-                className="rounded-2xl bg-indigo-600 px-5 py-3 text-sm font-bold text-white shadow-lg disabled:cursor-not-allowed disabled:opacity-50"
+                className="orb-front-door-btn-primary disabled:cursor-not-allowed"
                 data-orb-subscribe
                 data-orb-billing-upgrade
                 title={stripeReady ? undefined : 'Checkout unavailable'}
@@ -272,7 +294,7 @@ export function OrbUpgradeScreen({ initialAccess = null }: { initialAccess?: Orb
             ) : !authenticated ? (
               <Link
                 href={buildOrbFrontDoorUrl('/orb/billing')}
-                className="rounded-2xl bg-indigo-600 px-5 py-3 text-sm font-bold text-white shadow-lg"
+                className="orb-front-door-btn-primary no-underline"
                 data-orb-upgrade-sign-in
               >
                 Sign in
@@ -284,7 +306,7 @@ export function OrbUpgradeScreen({ initialAccess = null }: { initialAccess?: Orb
                 type="button"
                 onClick={handlePortal}
                 disabled={loading !== null}
-                className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-5 py-3 text-sm font-bold text-slate-700"
+                className="orb-front-door-btn-secondary inline-flex items-center gap-2 disabled:cursor-not-allowed"
                 data-orb-manage-billing
               >
                 <CreditCard className="h-4 w-4" aria-hidden />
@@ -297,7 +319,7 @@ export function OrbUpgradeScreen({ initialAccess = null }: { initialAccess?: Orb
                 type="button"
                 onClick={() => void handleSwitchAccount()}
                 disabled={loading !== null}
-                className="rounded-2xl border border-slate-200 px-5 py-3 text-sm font-bold text-slate-700 disabled:opacity-50"
+                className="orb-front-door-btn-secondary disabled:cursor-not-allowed"
                 data-orb-switch-account
               >
                 {loading === 'switch' ? 'Switching account…' : 'Switch account'}
@@ -315,39 +337,38 @@ export function OrbUpgradeScreen({ initialAccess = null }: { initialAccess?: Orb
                   .finally(() => setLoading(null))
               }}
               disabled={loading !== null}
-              className="rounded-2xl border border-slate-200 px-5 py-3 text-sm font-bold text-slate-700 disabled:opacity-50"
+              className="orb-front-door-btn-secondary disabled:cursor-not-allowed"
               data-orb-billing-refresh
             >
               {loading === 'refresh' ? 'Refreshing…' : 'Refresh status'}
             </button>
 
-            <Link
-              href="/orb"
-              className="rounded-2xl border border-slate-200 px-5 py-3 text-sm font-bold text-slate-700"
-              data-orb-return-to-orb
-            >
+            <Link href="/orb" className="orb-front-door-btn-secondary no-underline" data-orb-return-to-orb>
               Return to ORB
             </Link>
           </div>
 
           {stripeReady && !billingDisplay.isPaidActive ? (
-            <p className="mt-4 text-xs leading-6 text-slate-600" data-orb-checkout-payment-methods>
+            <p className="mt-4 text-xs leading-relaxed text-[var(--orb-muted)]" data-orb-checkout-payment-methods>
               Pay securely by card, Apple Pay or Google Pay where available via Stripe Checkout.
             </p>
           ) : null}
 
           {!stripeReady && !billingDisplay.isPaidActive ? (
-            <p className="mt-4 text-xs text-slate-600" data-orb-stripe-dev-note>
+            <p className="mt-4 text-xs text-[var(--orb-muted)]" data-orb-stripe-dev-note>
               Checkout is not available right now. Please try again shortly or contact support.
             </p>
           ) : null}
 
-          <p className="mt-8 rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3 text-xs leading-6 text-slate-600" data-orb-standalone-boundary>
+          <p
+            className="mt-6 rounded-xl border border-[var(--orb-line)]/20 bg-white/4 px-4 py-3 text-xs leading-relaxed text-[var(--orb-muted)]"
+            data-orb-standalone-boundary
+          >
             ORB Residential does not access IndiCare OS records. It uses your profile, conversation, uploaded
             documents and IndiCare residential intelligence.
           </p>
         </div>
-      </div>
-    </main>
+      </main>
+    </div>
   )
 }

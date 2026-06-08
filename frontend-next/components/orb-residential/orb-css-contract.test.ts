@@ -129,7 +129,7 @@ describe('ORB CSS parse and import contract', () => {
     assert.match(layout, /import '\.\/orb-login\.css'/)
     assert.match(login, /data-orb-login-version=\{ORB_LOGIN_VERSION\}/)
     assert.match(login, new RegExp(`ORB_LOGIN_VERSION`))
-    assert.equal(ORB_LOGIN_VERSION, 'front-door-v5')
+    assert.equal(ORB_LOGIN_VERSION, 'front-door-v6')
     assert.equal(ORB_LOGIN_CSS_FILE, 'app/orb/orb-login.css')
   })
 

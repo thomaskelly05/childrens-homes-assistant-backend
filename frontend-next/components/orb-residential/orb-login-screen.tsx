@@ -73,7 +73,7 @@ function OrbLoginPanel({
   const [passkeyEmail, setPasskeyEmail] = useState('')
   const [passkeySupported, setPasskeySupported] = useState(false)
   const [passkeyExpanded, setPasskeyExpanded] = useState(false)
-  const [compactViewport, setCompactViewport] = useState(false)
+  const [emailExpanded, setEmailExpanded] = useState(false)
 
   const returnUrl = sanitizeOrbReturnUrl(returnUrlProp || searchParams.get('returnUrl') || ORB_RETURN)
   const autoRedirectAuthenticated = !embeddedGateMode
@@ -109,15 +109,8 @@ function OrbLoginPanel({
   }, [autoRedirectAuthenticated, returnUrl, router, status])
 
   useEffect(() => {
-    const updateCompact = () => {
-      const height = window.innerHeight
-      setCompactViewport(height < 760)
-      if (height >= 760) setPasskeyExpanded(true)
-    }
-    updateCompact()
-    window.addEventListener('resize', updateCompact)
-    setPasskeySupported(orbPasskeysSupported())
     trackOrbAnalytics('login_viewed')
+    setPasskeySupported(orbPasskeysSupported())
     const pendingOAuth = consumeOrbOAuthRedirect()
     if (pendingOAuth === 'google' || pendingOAuth === 'microsoft') {
       setOauthRedirecting(pendingOAuth)
@@ -153,7 +146,6 @@ function OrbLoginPanel({
       })
     }
     if (sessionError) setError(sessionError)
-    return () => window.removeEventListener('resize', updateCompact)
   }, [searchParams, sessionError])
 
   async function afterAuth() {
@@ -284,15 +276,15 @@ function OrbLoginPanel({
       }}
     >
       <div
-        className="orb-login-shell mx-auto grid min-h-0 w-full max-w-[72rem] grid-cols-1 px-5 py-4 sm:px-8 lg:grid-cols-2 lg:gap-10 lg:px-10 lg:pb-5 lg:pt-0"
+        className="orb-login-shell mx-auto grid min-h-0 w-full max-w-[76rem] grid-cols-1 px-5 py-4 sm:px-8 lg:grid-cols-[1.05fr_0.95fr] lg:gap-12 lg:px-12 lg:pb-5 lg:pt-0"
         data-orb-login-two-column
         data-orb-login-scrollable
       >
         <OrbLoginDesktopHero />
 
-        <div className="orb-login-panel flex min-h-0 flex-col lg:px-4 xl:px-8" data-orb-login-panel-centered>
-          <p className="orb-login-muted mb-3 text-xs leading-relaxed lg:hidden" data-orb-provider-email-hint>
-            Already subscribed through Google or Microsoft? Sign in with the same method you used when subscribing.
+        <div className="orb-login-panel flex min-h-0 flex-col lg:px-2 xl:px-6" data-orb-login-panel-centered>
+          <p className="orb-login-muted mb-2 text-xs leading-relaxed lg:hidden" data-orb-provider-email-hint>
+            Already subscribed? Use the same Google or Microsoft account you subscribed with.
           </p>
           <OrbLoginAuthCard
             error={error}
@@ -308,12 +300,13 @@ function OrbLoginPanel({
             passkeySupported={passkeySupported}
             passkeySubmitting={passkeySubmitting}
             passkeyEmail={passkeyEmail}
-            compactViewport={compactViewport}
+            emailExpanded={emailExpanded}
             passkeyExpanded={passkeyExpanded}
             onEmailChange={setEmail}
             onPasswordChange={setPassword}
             onRememberChange={setRemember}
             onPasskeyEmailChange={setPasskeyEmail}
+            onEmailExpandedChange={setEmailExpanded}
             onPasskeyExpandedChange={setPasskeyExpanded}
             onSubmit={handleSubmit}
             onPasskeySignIn={() => void handlePasskeySignIn()}
