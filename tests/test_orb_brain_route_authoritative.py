@@ -43,6 +43,17 @@ def test_residential_prompt_enriches_specialist():
     assert decision.dual_brain_route == "residential_specialist"
 
 
+def test_incident_report_prompt_routes_document_workspace_not_live_lookup():
+    message = (
+        "Jamie was kicking off today following family contact, help me to write the incident report"
+    )
+    decision = decide_orb_brain_route(message, mode="Ask ORB", source_surface="chat")
+    assert decision.route in {"document_workspace", "residential_specialist"}
+    assert decision.route != "live_lookup"
+    frame = orb_standalone_brain_service.frame(message, mode="Ask ORB")
+    assert frame.dual_brain_route == "residential_specialist"
+
+
 def test_live_lookup_routes_safely():
     decision = decide_orb_brain_route("What is the weather in Newcastle?", mode="Ask ORB")
     assert decision.route == "live_lookup"

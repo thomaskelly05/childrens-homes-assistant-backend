@@ -257,6 +257,10 @@ import {
   isBackendSupportedOrbResponseAction
 } from '@/lib/orb/orb-response-actions'
 import { askOrbBrain } from '@/lib/orb/orb-brain-router'
+import {
+  isOrbFastOpeningOnlyCompletion,
+  resolveOrbStreamedAnswer
+} from '@/lib/orb/orb-fast-opening'
 import { collectCognitionDisplayLabels } from '@/lib/orb/residential-agents'
 import {
   contextualDocumentActions,
@@ -1461,13 +1465,25 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
         options?: { streamErrorNote?: string }
       ) => {
         const newConversationId = response.conversation_id || sessionConversationId
+        const resolvedAnswer = resolveOrbStreamedAnswer(
+          response.answer,
+          streamPartialRef.current,
+          { errorDetail: response.error_detail }
+        )
         const answer =
-          (response.answer || '').trim() ||
-          streamPartialRef.current.trim() ||
+          resolvedAnswer.trim() ||
           STANDALONE_ORB_EMPTY_ANSWER_MESSAGE
+        const streamIncomplete =
+          Boolean(response.error_detail) ||
+          isOrbFastOpeningOnlyCompletion(answer, {
+            errorDetail: response.error_detail,
+            streamedPartial: streamPartialRef.current
+          })
         const displayAnswer = options?.streamErrorNote
           ? `${answer}\n\n*(${options.streamErrorNote})*`
-          : answer
+          : streamIncomplete && !options?.streamErrorNote
+            ? `${answer}\n\n*(ORB could not finish the full answer — please try again or ask for the next section.)*`
+            : answer
         if (lastSendHadImagesRef.current && response.image_understanding_available === false) {
           setImageUnderstandingNote(
             'Image understanding is not available in this environment. ORB answered using your text only.'
@@ -3869,7 +3885,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
                             showCognitionLabels={
                               !residentialSurface && !minimalTurn && chatUiSettings.showCognitionLabels
                             }
-                            showExplainability={!minimalTurn}
+                            showExplainability={!minimalTurn && entry.status !== 'streaming'}
                             residentialSurface={residentialSurface}
                             heading={entry.outputTitle}
                             userRole={adultProfile?.role ?? account.role ?? undefined}

@@ -280,10 +280,10 @@ class OrbStandaloneBrainService:
             return "general_knowledge"
         if mode != "Ask ORB":
             return "residential_specialist"
+        if self._contains_residential_signal(text) or self._is_recording(text, mode):
+            return "residential_specialist"
         if self._is_live_local_query(text):
             return "live_lookup"
-        if self._contains_residential_signal(text):
-            return "residential_specialist"
         return "general_knowledge"
 
     def _is_live_local_query(self, text: str) -> bool:

@@ -92,6 +92,7 @@ const DOCUMENT_WORKSPACE_TERMS = [
   'daily note',
   'daily record',
   'incident record',
+  'incident report',
   'handover note',
   'draft a letter',
   'draft document',
@@ -144,22 +145,6 @@ export function routeOrbBrainIntent(
     }
   }
 
-  if (includesAny(text, LIVE_LOCAL_TERMS)) {
-    return {
-      route: 'live_lookup',
-      reason: 'Current or location-specific facts need a live lookup tool when connected.',
-      toolExtension: resolveLiveToolExtension(text)
-    }
-  }
-
-  if (resolvedMode === 'General Knowledge') {
-    return {
-      route: 'general_assistant',
-      reason: 'General Knowledge mode uses the broad assistant brain.',
-      toolExtension: null
-    }
-  }
-
   if (resolvedMode !== 'Ask ORB' && resolvedMode.length > 0) {
     return {
       route: 'residential_specialist',
@@ -172,6 +157,22 @@ export function routeOrbBrainIntent(
     return {
       route: 'residential_specialist',
       reason: "Question relates to residential children's homes practice.",
+      toolExtension: null
+    }
+  }
+
+  if (includesAny(text, LIVE_LOCAL_TERMS)) {
+    return {
+      route: 'live_lookup',
+      reason: 'Current or location-specific facts need a live lookup tool when connected.',
+      toolExtension: resolveLiveToolExtension(text)
+    }
+  }
+
+  if (resolvedMode === 'General Knowledge') {
+    return {
+      route: 'general_assistant',
+      reason: 'General Knowledge mode uses the broad assistant brain.',
       toolExtension: null
     }
   }

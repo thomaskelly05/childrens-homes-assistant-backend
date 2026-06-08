@@ -298,14 +298,14 @@ export function OrbAssistantMessageBody({
             <OrbMarkdownAnswer content={displayContent} sources={sources} />
           ) : null}
         </div>
-        {showExplainability ? (
+        {showExplainability && !streaming ? (
           <OrbExplainabilityPanel
             explainability={explainability}
             cognitionModeLabel={cognitionLabel}
             residentialSurface={residentialSurface}
           />
         ) : null}
-        {showExplainability ? (
+        {showExplainability && !streaming ? (
           <OrbSourcesDetail content={content} sources={sources} modelRouting={modelRouting} />
         ) : null}
         {!streaming && (intelligenceCore || qualityGate) ? (

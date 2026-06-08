@@ -40,7 +40,7 @@ def test_stream_route_emits_fast_opening_before_context_build():
 
     source = inspect.getsource(orb_standalone_routes.standalone_orb_conversation_stream)
     opening_idx = source.index("fast_opening_for_message")
-    build_idx = source.index("_build_standalone_request_context(payload)")
+    build_idx = source.index("_build_standalone_request_context")
     token_idx = source.index('yield _sse_event("token"', opening_idx)
     assert opening_idx < build_idx
     assert token_idx < build_idx

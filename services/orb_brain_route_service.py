@@ -10,7 +10,10 @@ import re
 from dataclasses import asdict, dataclass, field
 from typing import Any, Literal
 
-from services.orb_knowledge_retrieval_service import orb_knowledge_retrieval_service
+from services.orb_knowledge_retrieval_service import (
+    LIVE_LOOKUP_INTENT_TERMS,
+    orb_knowledge_retrieval_service,
+)
 from services.orb_standalone_brain_service import orb_standalone_brain_service
 
 OrbBrainRoute = Literal["general_assistant", "residential_specialist", "live_lookup", "document_workspace"]
@@ -29,6 +32,7 @@ DOCUMENT_WORKSPACE_TERMS = (
     "daily note",
     "daily record",
     "incident record",
+    "incident report",
     "handover note",
     "draft a letter",
     "draft document",
@@ -72,7 +76,7 @@ def _resolve_tool_extension(text: str) -> str | None:
         for term in ("nearby", "near me", "cinema", "what is on", "what's on", "whitley bay", "newcastle")
     ):
         return "local"
-    if any(term in lower for term in orb_knowledge_retrieval_service.LIVE_LOOKUP_INTENT_TERMS):
+    if any(term in lower for term in LIVE_LOOKUP_INTENT_TERMS):
         return "web_search"
     return None
 
