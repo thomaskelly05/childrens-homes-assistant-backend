@@ -93,12 +93,13 @@ test.describe('ORB login scroll reachability', () => {
     await expect(page.locator('[data-orb-login-brand-tag]')).toContainText('Care. Connect. Empower.')
     await expect(page.locator('.orb-login-card [data-orb-login-brand-tag]')).toHaveCount(0)
 
-    const heroTop = await page.locator('[data-orb-login-hero-top-aligned]').evaluate((el) => {
+    const brandTop = await page.locator('[data-orb-login-hero-top-aligned] [data-orb-login-brand]').evaluate((el) => {
       const rect = el.getBoundingClientRect()
       return { top: rect.top, viewport: window.innerHeight }
     })
-    expect(heroTop.top).toBeGreaterThanOrEqual(24)
-    expect(heroTop.top / heroTop.viewport).toBeLessThan(0.28)
+    expect(brandTop.top).toBeGreaterThanOrEqual(48)
+    expect(brandTop.top / brandTop.viewport).toBeGreaterThanOrEqual(0.1)
+    expect(brandTop.top / brandTop.viewport).toBeLessThan(0.28)
   })
 
   test('legal footer links use www.indicare.co.uk', async ({ page }) => {
