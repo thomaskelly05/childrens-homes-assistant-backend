@@ -63,6 +63,7 @@ def test_webhook_rejects_invalid_signature():
 
 
 def test_csrf_exempt_includes_orb_webhook():
-    from middleware.security_middleware import CSRF_EXEMPT_PREFIXES
+    from middleware.security_middleware import CSRF_EXEMPT_EXACT_PATHS, CSRF_EXEMPT_PREFIXES
 
     assert "/orb/standalone/billing/webhook" in CSRF_EXEMPT_PREFIXES
+    assert "/orb/subscription/webhook" in CSRF_EXEMPT_EXACT_PATHS

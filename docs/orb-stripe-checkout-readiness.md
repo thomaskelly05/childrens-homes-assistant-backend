@@ -100,6 +100,41 @@ Coverage in `tests/test_orb_billing_routes.py`:
 10. Stripe `parameter_unknown` for `automatic_payment_methods` maps to safe error
 11. Other Stripe checkout errors return `Could not create checkout session` (no secrets)
 12. Valid mocked Stripe response returns `checkout_url`
+13. `POST /orb/subscription/webhook` is not blocked by CSRF middleware
+14. Unsigned webhook returns `400` signature error, not `403 csrf_failed`
+15. Invalid Stripe signature returns safe `400`
+16. Valid `checkout.session.completed` records `orb_stripe_events`
+17. Valid `checkout.session.completed` updates `orb_subscriptions` to active
+18. Valid `customer.subscription.created` / `updated` events process idempotently
+19. Duplicate `stripe_event_id` does not double-process
+20. Browser CSRF protection still applies to normal protected POST routes
+
+## Production finding: CSRF blocked Stripe webhook (resolved)
+
+After checkout succeeded in Stripe and the webhook endpoint was configured correctly at `POST /orb/subscription/webhook`, subscription state did not update in the database (`orb_stripe_events` empty, `orb_subscriptions` inactive).
+
+`curl -i -X POST https://api.indicare.co.uk/orb/subscription/webhook` returned:
+
+```json
+{"detail":"csrf_failed","message":"Session security check failed. Please refresh and try again."}
+```
+
+Stripe webhook requests were blocked by browser CSRF middleware before the handler could verify the `Stripe-Signature` header.
+
+### Fix
+
+A **narrow CSRF exemption** was added for the exact path `/orb/subscription/webhook` only. Other `/orb/subscription/*` routes (checkout, portal, cancel) remain CSRF-protected.
+
+The canonical handler at `POST /orb/standalone/billing/webhook` was already exempt; production Stripe Dashboard points at the `/orb/subscription/webhook` alias, which now delegates to the same handler.
+
+**Stripe signature verification remains required.** Unsigned requests return `400` with `Missing Stripe-Signature header` or `Invalid webhook signature` — not `403 csrf_failed`.
+
+After deploy, verify:
+
+```bash
+curl -i -X POST https://api.indicare.co.uk/orb/subscription/webhook
+# Expect 400 signature error, not 403 csrf_failed
+```
 
 ## Related docs
 

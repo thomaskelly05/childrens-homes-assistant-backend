@@ -27,6 +27,7 @@ PUBLIC_PREFIXES = (
     "/orb/standalone/auth/signup",
     "/orb/standalone/analytics/event",
     "/orb/standalone/billing/webhook",
+    "/orb/subscription/webhook",
     "/orb/standalone/auth/oauth",
     "/orb/login",
     "/orb/signup",
