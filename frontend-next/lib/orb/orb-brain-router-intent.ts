@@ -124,7 +124,10 @@ function resolveLiveToolExtension(text: string): OrbBrainToolExtension {
   return 'web_search'
 }
 
-/** Client-side brain routing mirror for UI metadata and tests. */
+/**
+ * Client-side brain routing mirror for UI metadata and tests only.
+ * Backend ``decide_orb_brain_route`` is authoritative — this must not change model behaviour.
+ */
 export function routeOrbBrainIntent(
   message: string,
   mode = 'Ask ORB',

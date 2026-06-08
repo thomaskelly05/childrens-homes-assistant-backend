@@ -13,7 +13,10 @@ from __future__ import annotations
 from typing import Any, Literal
 
 from services.indicare_intelligence_core_service import indicare_intelligence_core_service
-from services.indicare_intelligence_route_finalize_service import intelligence_context_summary
+from services.indicare_intelligence_route_finalize_service import (
+    finalize_standalone_intelligence,
+    intelligence_context_summary,
+)
 from services.orb_brain_metadata_service import build_brain_metadata
 
 OrbDocumentFeature = Literal["dictate", "write", "dictate_analyze", "dictate_edit"]
@@ -43,6 +46,30 @@ def build_document_brain_context(
     }
 
 
+def finalize_document_intelligence(
+    *,
+    indicare_intelligence: dict[str, Any] | None,
+    document_text: str,
+    mode: str | None = None,
+    note_type: str | None = None,
+    record_learning: bool = False,
+) -> tuple[str, dict[str, Any]]:
+    """Shared post-generation intelligence finalisation for Dictate/Write surfaces."""
+    packet = dict(indicare_intelligence or {})
+    if not packet:
+        return document_text, {}
+    answer, meta = finalize_standalone_intelligence(
+        indicare_intelligence=packet,
+        answer=document_text,
+        prompt_text=document_text,
+        message=document_text,
+        mode=mode or note_type or "Ask ORB",
+        record_learning=record_learning,
+        apply_gate_fixes=True,
+    )
+    return answer, meta
+
+
 def attach_document_brain_metadata(
     payload: dict[str, Any],
     text: str,
@@ -68,5 +95,6 @@ orb_document_brain_adapter_service = type(
     {
         "build_document_brain_context": staticmethod(build_document_brain_context),
         "attach_document_brain_metadata": staticmethod(attach_document_brain_metadata),
+        "finalize_document_intelligence": staticmethod(finalize_document_intelligence),
     },
 )()

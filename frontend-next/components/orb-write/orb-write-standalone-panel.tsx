@@ -35,6 +35,7 @@ import {
   buildLocalDictateFallback,
   editOrbDictateDocument,
   generateOrbDictateNote,
+  prepareWriteOrbDocument,
   saveOrbDictateNote
 } from '@/lib/orb/dictate/orb-dictate-client'
 import type { OrbDictateGenerateResult } from '@/lib/orb/dictate/orb-dictate-types'
@@ -141,9 +142,35 @@ export function OrbWriteStandalonePanel({
         recordTypeId: templateHandoff.record_type_id
       })
       setRecordTypeId(recordType.id)
-      setDoc(createBlankOrbWriteDocumentFromRecordType(recordType))
-      clearOrbWriteTemplateHandoff()
-      setStatusMessage(`Structured ${recordType.label} document ready — add your notes in each section.`)
+      void (async () => {
+        try {
+          const prepared = await prepareWriteOrbDocument({
+            note_type: recordType.dictate_note_type,
+            record_type_id: recordType.id,
+            template_id: recordType.studio_template_id ?? undefined,
+            transcript: templateHandoff.transcript ?? '',
+            professional_note: templateHandoff.professional_note ?? templateHandoff.structured_body ?? ''
+          })
+          const doc = createBlankOrbWriteDocumentFromRecordType(recordType, {
+            body: prepared.structured_body,
+            transcript: templateHandoff.transcript ?? ''
+          })
+          doc.title = prepared.title
+          doc.quality_checks = prepared.quality_checks
+          setDoc(doc)
+          setRoughText(templateHandoff.transcript ?? '')
+          setStatusMessage(`Structured ${recordType.label} ready — review section prompts and add your notes.`)
+        } catch {
+          setDoc(
+            createBlankOrbWriteDocumentFromRecordType(recordType, {
+              body: templateHandoff.structured_body,
+              transcript: templateHandoff.transcript
+            })
+          )
+          setStatusMessage(`Structured ${recordType.label} document ready — add your notes in each section.`)
+        }
+        clearOrbWriteTemplateHandoff()
+      })()
       return
     }
     if (initialDocument) {

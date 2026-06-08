@@ -84,4 +84,27 @@ describe('ORB mobile convergence sprint', () => {
     assert.match(doc, /IndiCare Intelligence/)
     assert.match(doc, /390×844/)
   })
+
+  it('dictate mobile landing scrolls and respects safe area', () => {
+    const mobileCss = readFileSync(join(root, 'app/orb/orb-mobile.css'), 'utf8')
+    assert.match(mobileCss, /orb-dictate-mobile/)
+    assert.match(mobileCss, /safe-area-inset-bottom/)
+    assert.match(mobileCss, /data-orb-dictate-primary-action/)
+  })
+
+  it('write mobile toolbar scrolls and ask orb fab clears content', () => {
+    const mobileCss = readFileSync(join(root, 'app/orb/orb-mobile.css'), 'utf8')
+    assert.match(mobileCss, /orb-write-mobile-toolbar/)
+    assert.match(mobileCss, /data-orb-write-ask-orb-fab/)
+  })
+
+  it('documents search is responsive on mobile', () => {
+    const mobileCss = readFileSync(join(root, 'app/orb/orb-mobile.css'), 'utf8')
+    assert.match(mobileCss, /data-orb-documents-search|data-orb-knowledge-search/)
+  })
+
+  it('settings panel scrolls inside modal on mobile', () => {
+    const mobileCss = readFileSync(join(root, 'app/orb/orb-mobile.css'), 'utf8')
+    assert.match(mobileCss, /data-orb-settings-panel|data-orb-settings-scroll/)
+  })
 })

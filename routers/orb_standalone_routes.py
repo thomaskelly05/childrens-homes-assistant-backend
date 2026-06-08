@@ -35,6 +35,7 @@ from services.orb_stream_status_service import (
     stream_status_payload,
     stream_status_sequence,
 )
+from services.orb_brain_route_service import orb_brain_route_service
 from services.orb_standalone_brain_service import orb_standalone_brain_service
 from services.orb_grounded_answer_style_service import orb_grounded_answer_style_service
 from services.orb_official_source_anchor_service import orb_official_source_anchor_service
@@ -111,11 +112,22 @@ def _build_standalone_request_context(
         for item in (payload.images or [])
         if str(item.data_url or "").startswith("data:image/")
     ]
+    user_message = orb_brain_route_service.extract_user_message(payload.message)
     profile_context = (
-        "standalone context profiles" in payload.message.lower() or "profile:" in payload.message.lower()
+        "standalone context profiles" in user_message.lower() or "profile:" in user_message.lower()
+    )
+    brain_route = orb_brain_route_service.decide_orb_brain_route(
+        payload.message,
+        mode=mode,
+        source_surface=payload.source_surface,
+        client_route_hint=payload.client_route_hint,
+        location_hint=payload.location_hint,
+        requested_action=payload.requested_action,
+        note_type=payload.note_type,
+        profile_context=profile_context,
     )
     retrieval_bundle = orb_knowledge_retrieval_service.prepare_request_bundle(
-        payload.message,
+        user_message,
         mode=mode,
         profile_context=profile_context,
         attachments=image_urls[:4] or None,
@@ -147,14 +159,14 @@ def _build_standalone_request_context(
             standalone_operational_context["document_title"] = payload.document_title
         shared_cognition = shared_institutional_cognition_runtime.build_context(
             surface="standalone_orb",
-            message=payload.message,
+            message=user_message,
             mode=mode,
             operational_context=standalone_operational_context or None,
             history=history,
         )
         shared_runtime_block = shared_institutional_cognition_runtime.prompt_addendum(
             surface="standalone_orb",
-            message=payload.message,
+            message=user_message,
             mode=mode,
             operational_context=standalone_operational_context or None,
             history=history,
@@ -162,7 +174,8 @@ def _build_standalone_request_context(
     if timing:
         timing.mark("shared_cognition_complete")
 
-    standalone_brain = orb_standalone_brain_service.context_payload(payload.message, mode=mode)
+    standalone_brain = orb_standalone_brain_service.context_payload(user_message, mode=mode)
+    standalone_brain["brain_route"] = brain_route.to_dict()
     project_memory_block = ""
     memory_text = (payload.project_memory or "").strip()
     if memory_text:
@@ -174,7 +187,7 @@ def _build_standalone_request_context(
     indicare_intelligence = retrieval_bundle.get("indicare_intelligence") or {}
     expert_depth = retrieval_bundle.get("expert_depth") or indicare_intelligence.get("expert_depth")
     brain_selection_shadow = run_brain_selection_shadow(
-        payload.message,
+        user_message,
         mode=mode,
         attachments=image_urls[:4] or None,
         prompt_tier=prompt_tier,
@@ -183,7 +196,7 @@ def _build_standalone_request_context(
     )
     framed_message = _build_framed_message(
         mode=mode,
-        user_message=payload.message,
+        user_message=user_message,
         detail=detail,
         history=history,
         grounding_context=grounding_context,
@@ -210,6 +223,8 @@ def _build_standalone_request_context(
         "indicare_intelligence": indicare_intelligence,
         "expert_depth": expert_depth,
         "brain_selection_shadow": brain_selection_shadow,
+        "brain_route": brain_route.to_dict(),
+        "user_message": user_message,
     }
 
 STANDALONE_ORB_MODES = [
@@ -367,6 +382,11 @@ class OrbStandaloneConversationRequest(BaseModel):
     document_source_id: str | None = Field(default=None, max_length=120)
     document_title: str | None = Field(default=None, max_length=500)
     project_memory: str | None = Field(default=None, max_length=20000)
+    source_surface: str | None = Field(default=None, max_length=40)
+    client_route_hint: str | None = Field(default=None, max_length=80)
+    requested_action: str | None = Field(default=None, max_length=120)
+    note_type: str | None = Field(default=None, max_length=80)
+    location_hint: str | None = Field(default=None, max_length=200)
 
 
 class OrbStandaloneActionRunRequest(BaseModel):
@@ -567,6 +587,18 @@ class OrbStandaloneSurfaceRouteRequest(BaseModel):
     has_document_upload: bool = False
 
 
+class OrbStandaloneBrainRouteRequest(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    message: str = Field(..., min_length=1, max_length=12000)
+    mode: str = Field(default="Ask ORB", max_length=80)
+    source_surface: str | None = Field(default=None, max_length=40)
+    client_route_hint: str | None = Field(default=None, max_length=80)
+    requested_action: str | None = Field(default=None, max_length=120)
+    note_type: str | None = Field(default=None, max_length=80)
+    location_hint: str | None = Field(default=None, max_length=200)
+
+
 class OrbStandaloneQualityCheckRequest(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
@@ -623,6 +655,33 @@ async def standalone_orb_surface_route(
             **decision.model_dump(),
             "standalone_boundary_message": boundary,
             "standalone_brain": orb_standalone_brain_service.context_payload(body.intent, mode=body.mode),
+        },
+    }
+
+
+@router.post("/brain-route")
+async def standalone_orb_brain_route(
+    body: OrbStandaloneBrainRouteRequest,
+    current_user=Depends(require_standalone_orb_access),
+):
+    """Canonical server-authoritative ORB brain route decision."""
+    decision = orb_brain_route_service.decide_orb_brain_route(
+        body.message,
+        mode=body.mode,
+        source_surface=body.source_surface,
+        client_route_hint=body.client_route_hint,
+        location_hint=body.location_hint,
+        requested_action=body.requested_action,
+        note_type=body.note_type,
+    )
+    user_message = orb_brain_route_service.extract_user_message(body.message)
+    return {
+        "success": True,
+        "data": {
+            **decision.to_dict(),
+            "user_message": user_message,
+            "authoritative": True,
+            "client_hint_ignored": decision.client_hint_ignored,
         },
     }
 

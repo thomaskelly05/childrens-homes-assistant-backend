@@ -1203,6 +1203,98 @@
   [data-orb-recording-library-categories] {
     display: none !important;
   }
+
+  /* Convergence pass — Dictate landing scroll + primary action visibility */
+  .orb-dictate-mobile,
+  [data-orb-dictate-mobile] {
+    min-height: 0 !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: calc(1.25rem + env(safe-area-inset-bottom, 0px)) !important;
+  }
+
+  [data-orb-dictate-primary-action] {
+    position: sticky;
+    bottom: calc(0.5rem + env(safe-area-inset-bottom, 0px));
+    z-index: 12;
+    margin-top: 0.75rem !important;
+  }
+
+  [data-orb-dictate-generate-action] {
+    margin-bottom: calc(0.5rem + env(safe-area-inset-bottom, 0px)) !important;
+  }
+
+  /* Voice landing — balanced viewport, lighter aura */
+  [data-orb-voice-hero-stage],
+  .orb-voice-hero-stage {
+    min-height: min(52dvh, 28rem) !important;
+    max-height: 58dvh !important;
+    padding-bottom: env(safe-area-inset-bottom, 0px) !important;
+  }
+
+  [data-orb-voice-hero-stage] .orb-voice-aura,
+  .orb-voice-hero-stage .orb-voice-aura {
+    opacity: 0.42 !important;
+    transform: scale(0.88) !important;
+  }
+
+  [data-orb-voice-privacy],
+  [data-orb-voice-actions] {
+    padding-bottom: calc(0.5rem + env(safe-area-inset-bottom, 0px)) !important;
+  }
+
+  /* ORB Write — mobile toolbar scroll + Ask ORB FAB clearance */
+  .orb-write-mobile-toolbar {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .orb-write-mobile-toolbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .orb-write-ask-orb-fab,
+  [data-orb-write-ask-orb-fab] {
+    bottom: calc(4.75rem + env(safe-area-inset-bottom, 0px)) !important;
+    right: max(0.75rem, env(safe-area-inset-right, 0px)) !important;
+    z-index: 18 !important;
+  }
+
+  [data-orb-write-editor-preview],
+  [data-orb-write-document-preview] {
+    max-width: 100% !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Documents & Guidance — responsive search */
+  [data-orb-documents-search],
+  [data-orb-knowledge-search] input,
+  [data-orb-knowledge-search] .orb-premium-input {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  [data-orb-documents-panel] {
+    padding-bottom: calc(5rem + env(safe-area-inset-bottom, 0px)) !important;
+  }
+
+  /* Settings modal — scroll inside, no clipped sections */
+  [data-orb-settings-panel],
+  [data-orb-settings-scroll] {
+    max-height: min(92dvh, calc(100dvh - env(safe-area-inset-top, 0px) - 2rem)) !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px)) !important;
+  }
+
+  [data-orb-settings-panel] [data-orb-settings-section-heading] {
+    position: static !important;
+  }
 }
 
 @media (max-width: 640px) {

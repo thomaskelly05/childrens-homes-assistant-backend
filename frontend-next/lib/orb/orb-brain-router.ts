@@ -35,29 +35,21 @@ export type AskOrbBrainOptions = {
   stream?: StandaloneOrbStreamCallbacks
 }
 
-/** Attach lightweight brain routing metadata for the standalone API (message body only). */
+/**
+ * Attach lightweight client route hints for telemetry — backend ``/brain-route`` is authoritative.
+ * The user message is sent unchanged; routing metadata is structured fields only.
+ */
 export function buildOrbBrainConversationRequest(
   request: StandaloneOrbConversationRequest,
   context?: AskOrbBrainContext
 ): StandaloneOrbConversationRequest {
   const route = routeOrbBrainIntent(request.message, request.mode, context)
   const source = context?.source ?? 'chat'
-  const locationLine = context?.locationHint?.trim()
-    ? `Location context (if relevant): ${context.locationHint.trim()}`
-    : null
-  const routingBlock = [
-    '[ORB brain routing]',
-    `source: ${source}`,
-    `route: ${route.route}`,
-    route.toolExtension ? `tool_extension: ${route.toolExtension}` : null,
-    locationLine
-  ]
-    .filter(Boolean)
-    .join('\n')
-
   return {
     ...request,
-    message: `${routingBlock}\n\n${request.message}`
+    source_surface: source,
+    client_route_hint: route.route,
+    location_hint: context?.locationHint?.trim() || undefined
   }
 }
 

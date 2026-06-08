@@ -185,6 +185,35 @@ export type OrbDictateFinaliseResult = {
   accepted_suggestions: OrbDictateBrainSuggestion[]
 }
 
+export type OrbDictatePrepareWriteResult = {
+  title: string
+  note_type: OrbDictateNoteType
+  record_type_id?: string | null
+  record_type_label?: string | null
+  document_headings?: string[]
+  structured_body: string
+  section_prompts?: string[]
+  quality_checks: OrbDictateQualityChecks
+  standalone_boundary: string
+  brain_metadata?: Record<string, unknown> | null
+}
+
+export async function prepareWriteOrbDocument(payload: {
+  note_type: OrbDictateNoteType
+  record_type_id?: string
+  template_id?: string
+  transcript?: string
+  professional_note?: string
+  missing_prompts?: string[]
+}): Promise<OrbDictatePrepareWriteResult> {
+  const json = await authFetch<unknown>(DICTATE_BASE + '/prepare-write', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  })
+  return parseEnvelope<OrbDictatePrepareWriteResult>(json)
+}
+
 export async function finaliseOrbDictateDocument(payload: {
   input_text: string
   note_type: OrbDictateNoteType

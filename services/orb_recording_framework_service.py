@@ -154,17 +154,90 @@ def recording_quality_guidance(record_type: dict[str, Any]) -> str:
     return "Use observable facts, name adults and times, and review before finalising."
 
 
+def _extract_section_content(body: str, heading: str) -> str | None:
+    """Return content under a markdown heading if present."""
+    pattern = re.compile(
+        rf"^##\s+{re.escape(heading)}\s*\n+(.*?)(?=^##\s+|\Z)",
+        re.MULTILINE | re.DOTALL | re.IGNORECASE,
+    )
+    match = pattern.search(body)
+    if not match:
+        return None
+    content = match.group(1).strip()
+    if not content or content.startswith("*") and "not yet captured" in content.lower():
+        return None
+    return content
+
+
+def build_structured_write_body(
+    *,
+    record_type: dict[str, Any],
+    note_type: str,
+    transcript: str = "",
+    professional_note: str = "",
+    missing_prompts: list[str] | None = None,
+) -> str:
+    """Map notes into template sections with prompts for missing information — no invented facts."""
+    from services.orb_dictate_template_registry import get_dictate_template
+
+    body = professional_note.strip()
+    if body and re.search(r"^##\s+", body, re.MULTILINE):
+        return body
+
+    try:
+        template = get_dictate_template(note_type)  # type: ignore[arg-type]
+        sections = template.sections
+    except (KeyError, ValueError):
+        return structure_document_body(
+            record_type=record_type,
+            professional_note=professional_note or transcript,
+            missing_notes=missing_prompts,
+            adult_edits_preserved=False,
+        )
+
+    source_text = f"{transcript}\n\n{professional_note}".strip()
+    blocks: list[str] = []
+    for section in sections:
+        heading = section.title
+        existing = _extract_section_content(body, heading) if body else None
+        if existing:
+            blocks.append(f"## {heading}\n\n{existing}\n")
+            continue
+        prompt = section.prompts[0] if section.prompts else f"Add {heading.lower()} from your notes."
+        if section.required:
+            blocks.append(f"## {heading}\n\n*{prompt}*\n")
+        elif source_text:
+            blocks.append(f"## {heading}\n\n*{prompt}*\n")
+    structured = "\n".join(blocks).strip()
+    if missing_prompts:
+        structured += "\n\n## Recording gaps to review\n\n"
+        structured += "\n".join(f"- {note}" for note in missing_prompts[:8])
+        structured += "\n"
+    return structured
+
+
 def structure_document_body(
     *,
     record_type: dict[str, Any],
     professional_note: str,
     missing_notes: list[str] | None = None,
     adult_edits_preserved: bool = True,
+    note_type: str | None = None,
+    transcript: str = "",
 ) -> str:
     """Apply framework headings when body is not already sectioned."""
     body = professional_note.strip()
     if adult_edits_preserved and re.search(r"^##\s+", body, re.MULTILINE):
         return body
+
+    if note_type:
+        return build_structured_write_body(
+            record_type=record_type,
+            note_type=note_type,
+            transcript=transcript,
+            professional_note=body,
+            missing_prompts=missing_notes,
+        )
 
     headings = record_type.get("final_document_headings") or record_type.get("pdf_heading_order") or []
     if not headings:

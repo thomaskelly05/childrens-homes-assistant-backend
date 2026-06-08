@@ -163,6 +163,24 @@ export function orbWriteTemplatePickerRecordTypes(search = ''): OrbRecordingReco
   })
 }
 
+export function buildOrbWriteTemplateSectionBody(
+  recordType: OrbRecordingRecordType,
+  template?: { sections?: Array<{ title: string; prompts?: string[]; required?: boolean }> }
+): string {
+  const sections = template?.sections
+  if (sections?.length) {
+    return sections
+      .map((section) => {
+        const prompt =
+          section.prompts?.[0] ?? `Add ${section.title.toLowerCase()} from your notes.`
+        return `## ${section.title}\n\n*${prompt}*\n`
+      })
+      .join('\n')
+      .trim()
+  }
+  return structureOrbWriteDocumentBody({ recordType, body: '' })
+}
+
 export function structureOrbWriteDocumentBody(opts: {
   recordType: OrbRecordingRecordType
   body: string

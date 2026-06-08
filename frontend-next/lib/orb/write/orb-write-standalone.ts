@@ -1,6 +1,7 @@
 import type { OrbDictateBrainSuggestion } from '@/lib/orb/dictate/orb-dictate-brain-analysis'
 import type { OrbDictateGenerateResult, OrbDictateNoteType } from '@/lib/orb/dictate/orb-dictate-types'
 import {
+  buildOrbWriteTemplateSectionBody,
   resolveOrbRecordingRecordType,
   structureOrbWriteDocumentBody
 } from '@/lib/orb/recording/orb-recording-framework'
@@ -146,12 +147,19 @@ export function hasOrbWriteLocalDraft(): boolean {
   return Boolean(loadOrbWriteLocalDraft())
 }
 
-/** Blank structured document from ORB Recording Framework — no Dictate handoff required. */
+/** Blank structured document from ORB Recording Framework with section prompts. */
 export function createBlankOrbWriteDocumentFromRecordType(
-  recordType: OrbRecordingRecordType
+  recordType: OrbRecordingRecordType,
+  opts?: {
+    body?: string
+    transcript?: string
+    templateSections?: Array<{ title: string; prompts?: string[]; required?: boolean }>
+  }
 ): OrbWriteDocument {
   const now = new Date().toISOString()
-  const body = structureOrbWriteDocumentBody({ recordType, body: '' })
+  const body =
+    opts?.body?.trim() ||
+    buildOrbWriteTemplateSectionBody(recordType, { sections: opts?.templateSections })
   const version: OrbWriteDocumentVersion = {
     id: 'v_blank_template',
     label: 'Structured template',
@@ -167,7 +175,7 @@ export function createBlankOrbWriteDocumentFromRecordType(
     record_type_label: recordType.label,
     document_headings: recordType.pdf_heading_order,
     body,
-    transcript: '',
+    transcript: opts?.transcript ?? '',
     template_id: recordType.studio_template_id ?? 'general',
     summary: '',
     quality_checks: {
