@@ -258,18 +258,23 @@ Write uses Dictate APIs (`analyze`, `generate`, `edit`, `save`, `export`) — no
 - [x] Minimal chat → `askOrbBrain`
 - [x] Convergence tests
 
-### Phase 2 — Deeper brain unify (future, low risk)
-- Route `orb-minimal-chat` bypasses in `app/orb/ask/page.tsx` through `askOrbBrain`
-- Wire `orb_brain_selection_service` live (exit shadow mode)
-- Collapse triple routing classifiers to server-authoritative `classify_query`
+### Phase 2 — Deeper brain unify (**this pass**)
+- [x] `services/orb_brain_route_service.py` — canonical `decide_orb_brain_route`
+- [x] `POST /orb/standalone/brain-route` — server-authoritative route preview
+- [x] Frontend sends `source_surface` + `client_route_hint` (message unchanged)
+- [x] `_build_standalone_request_context` classifies extracted user message only
+- [ ] Wire `orb_brain_selection_service` live (exit shadow mode) — future
 
-### Phase 3 — Document brain parity (future)
-- Run `finalize_standalone_intelligence` on dictate generate/edit
-- Optional: open-ended "ask ORB" in Write AI panel via `askOrbBrain`
+### Phase 3 — Document brain parity (**this pass**)
+- [x] `finalize_document_intelligence` adapter on Dictate generate/edit/analyse
+- [x] `brain_metadata` on analyse and edit responses
+- [ ] Optional: open-ended "ask ORB" in Write AI panel via `askOrbBrain` — future
 
-### Phase 4 — Template convergence (future)
-- Single source: recording framework JSON with dictate registry as view
-- Full template-to-Write section auto-fill
+### Phase 4 — Template convergence (**this pass**)
+- [x] `build_structured_write_body` — section prompts from dictate template registry
+- [x] `POST /orb/dictate/prepare-write` — template-to-Write auto-fill API
+- [x] Frontend template handoff + `prepareWriteOrbDocument`
+- [ ] Single registry source — framework JSON remains canonical structure
 
 ---
 

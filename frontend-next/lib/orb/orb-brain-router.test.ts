@@ -38,11 +38,13 @@ describe('ORB brain router convergence', () => {
     assert.match(intent, /resolveLiveToolExtension/)
   })
 
-  it('prepends brain routing metadata to conversation requests', () => {
+  it('sends structured brain routing hints without mutating the user message', () => {
     const router = readSource('lib/orb/orb-brain-router.ts')
-    assert.match(router, /\[ORB brain routing\]/)
+    assert.match(router, /source_surface/)
+    assert.match(router, /client_route_hint/)
     assert.match(router, /routeOrbBrainIntent/)
     assert.match(router, /buildOrbBrainConversationRequest/)
+    assert.doesNotMatch(router, /\[ORB brain routing\]/)
   })
 
   it('voice and chat share askOrbBrain in care companion', () => {

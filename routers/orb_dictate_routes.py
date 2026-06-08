@@ -19,6 +19,7 @@ from schemas.orb_dictate import (
     OrbDictateFinaliseRequest,
     OrbDictateGenerateRequest,
     OrbDictateNotePatch,
+    OrbDictatePrepareWriteRequest,
     OrbDictateSaveRequest,
     OrbDictateTranscribeRequest,
 )
@@ -32,6 +33,7 @@ from services.orb_dictate_service import (
     generate_dictate_note,
     get_templates_payload,
     list_dictate_notes_for_user,
+    prepare_write_document,
     save_dictate_note,
     transcribe_dictate_audio,
 )
@@ -233,6 +235,19 @@ async def dictate_analyze(
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception:
         raise HTTPException(status_code=503, detail="Analysis is temporarily unavailable.")
+    return _success(result.model_dump())
+
+
+@router.post("/prepare-write")
+async def dictate_prepare_write(
+    payload: OrbDictatePrepareWriteRequest,
+    current_user=Depends(require_orb_dictate_access),
+):
+    """Template-to-Write auto-fill — structured sections with prompts, no invented content."""
+    try:
+        result = prepare_write_document(payload)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     return _success(result.model_dump())
 
 

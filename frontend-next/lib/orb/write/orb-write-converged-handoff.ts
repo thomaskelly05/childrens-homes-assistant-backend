@@ -48,8 +48,11 @@ export function convergedDictateSessionHandoff(payload: OrbWriteHandoffPayload):
   saveOrbWriteHandoff(payload)
 }
 
-export function convergedTemplateHandoff(recordType: OrbRecordingRecordType): void {
-  saveOrbWriteTemplateHandoff(recordType)
+export function convergedTemplateHandoff(
+  recordType: OrbRecordingRecordType,
+  opts?: { transcript?: string; professionalNote?: string; structuredBody?: string }
+): void {
+  saveOrbWriteTemplateHandoff(recordType, opts)
 }
 
 export function buildSavedOutputWriteHandoff(

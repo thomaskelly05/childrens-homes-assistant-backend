@@ -8,16 +8,25 @@ export type OrbWriteTemplateHandoffPayload = {
   studio_template_id?: string | null
   dictate_note_type: string
   timestamp: string
+  transcript?: string
+  professional_note?: string
+  structured_body?: string
 }
 
-export function saveOrbWriteTemplateHandoff(recordType: OrbRecordingRecordType): void {
+export function saveOrbWriteTemplateHandoff(
+  recordType: OrbRecordingRecordType,
+  opts?: { transcript?: string; professionalNote?: string; structuredBody?: string }
+): void {
   if (typeof window === 'undefined') return
   const payload: OrbWriteTemplateHandoffPayload = {
     record_type_id: recordType.id,
     record_type_label: recordType.label,
     studio_template_id: recordType.studio_template_id ?? null,
     dictate_note_type: recordType.dictate_note_type,
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    transcript: opts?.transcript,
+    professional_note: opts?.professionalNote,
+    structured_body: opts?.structuredBody
   }
   try {
     sessionStorage.setItem(ORB_WRITE_TEMPLATE_HANDOFF_KEY, JSON.stringify(payload))

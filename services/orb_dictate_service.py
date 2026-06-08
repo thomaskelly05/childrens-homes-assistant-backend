@@ -28,6 +28,8 @@ from schemas.orb_dictate import (
     OrbDictateGenerateResponse,
     OrbDictateNotePatch,
     OrbDictateNoteSummary,
+    OrbDictatePrepareWriteRequest,
+    OrbDictatePrepareWriteResponse,
     OrbDictateSaveRequest,
     OrbDictateSaveResponse,
 )
@@ -45,6 +47,7 @@ from services.ai_note_export_service import create_docx_export, create_pdf_expor
 from services.ai_notes_service import transcribe_audio
 from services.orb_dictate_template_registry import get_dictate_template, list_dictate_templates
 from services.orb_recording_framework_service import (
+    build_structured_write_body,
     document_title_for_record_type,
     framework_missing_checks,
     orb_checks_summary,
@@ -99,18 +102,43 @@ def _dictate_brain_metadata(
     note_type: str,
     mode: str | None = None,
     transcript_text: str = "",
+    feature: str = "dictate",
+    intelligence_meta: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     ctx = orb_document_brain_adapter_service.build_document_brain_context(
         transcript_text or "dictate recording",
         mode=mode or note_type,
-        feature="dictate",
+        feature=feature,  # type: ignore[arg-type]
         note_type=note_type,
     )
     meta = dict(ctx["brain_metadata"])
+    meta["feature"] = feature if feature.startswith("dictate") else meta.get("feature", feature)
     meta["output_type"] = note_type
     meta["indicare_intelligence_core"] = ctx["intelligence_summary"]
     meta["brain_adapter"] = ctx["adapter"]
+    if intelligence_meta:
+        meta.update({k: v for k, v in intelligence_meta.items() if k not in meta})
     return meta
+
+
+def _finalize_dictate_text(
+    *,
+    text: str,
+    note_type: str,
+    mode: str | None = None,
+    intel_packet: dict[str, Any] | None = None,
+) -> tuple[str, dict[str, Any]]:
+    packet = intel_packet or indicare_intelligence_core_service.build_intelligence_packet(
+        text,
+        mode=mode or note_type,
+    )
+    return orb_document_brain_adapter_service.finalize_document_intelligence(
+        indicare_intelligence=packet,
+        document_text=text,
+        mode=mode or note_type,
+        note_type=note_type,
+        record_learning=False,
+    )
 
 
 def _resolve_note_type(request: OrbDictateGenerateRequest) -> str:
@@ -335,6 +363,16 @@ def generate_dictate_note(
         )
 
     transcript_text = segments_to_plain_text(segments) if segments else _truncate(request.input_text)
+    intel_packet = indicare_intelligence_core_service.build_intelligence_packet(
+        transcript_text or professional,
+        mode=request.mode or note_type,
+    )
+    professional, intel_meta = _finalize_dictate_text(
+        text=professional,
+        note_type=note_type,
+        mode=request.mode,
+        intel_packet=intel_packet,
+    )
     quality = compute_quality_checks(professional, note_type)
     return OrbDictateGenerateResponse(
         title=title,
@@ -355,6 +393,7 @@ def generate_dictate_note(
             note_type=note_type,
             mode=request.mode,
             transcript_text=transcript_text,
+            intelligence_meta=intel_meta,
         ),
     )
 
@@ -635,6 +674,13 @@ def analyze_dictate_session(request: OrbDictateAnalyzeRequest) -> OrbDictateAnal
     if not follow_up:
         follow_up = ["Review transcript", "Confirm facts and times", "Finalise in ORB Write"]
 
+    _, intel_meta = _finalize_dictate_text(
+        text=transcript,
+        note_type=note_type,
+        mode=request.mode,
+        intel_packet=intel_packet,
+    )
+
     return OrbDictateAnalyzeResponse(
         detected_record_type=str(record_type.get("label", template.title)),
         record_type_id=str(record_type.get("id")),
@@ -652,6 +698,13 @@ def analyze_dictate_session(request: OrbDictateAnalyzeRequest) -> OrbDictateAnal
         manager_oversight_note=manager_note,
         quality_checks=quality,
         standalone_boundary=STANDALONE_BOUNDARY,
+        brain_metadata=_dictate_brain_metadata(
+            note_type=note_type,
+            mode=request.mode,
+            transcript_text=transcript,
+            feature="dictate_analyze",
+            intelligence_meta=intel_meta,
+        ),
     )
 
 
@@ -659,6 +712,65 @@ REVIEW_REQUIRED_STATEMENT = (
     "This document requires adult review before saving or exporting as a formal record. "
     "The adult remains responsible for the final record."
 )
+
+
+def prepare_write_document(request: OrbDictatePrepareWriteRequest) -> OrbDictatePrepareWriteResponse:
+    """Build structured ORB Write body with section prompts — template-to-Write auto-fill."""
+    note_type = request.note_type
+    record_type = resolve_record_type(
+        record_type_id=request.record_type_id,
+        template_id=request.template_id,
+        note_type=note_type,
+    )
+    transcript = _truncate(request.transcript)
+    professional = _truncate(request.professional_note)
+    source_text = f"{transcript}\n\n{professional}".strip()
+    missing = list(request.missing_prompts)
+    if not missing and source_text:
+        quality = compute_quality_checks(source_text, note_type)
+        missing = orb_residential_quality_service.build_missing_capture_prompts(
+            quality,
+            note_type=note_type,
+        )
+    structured = build_structured_write_body(
+        record_type=record_type,
+        note_type=note_type,
+        transcript=transcript,
+        professional_note=professional,
+        missing_prompts=missing or None,
+    )
+    quality = compute_quality_checks(structured, note_type)
+    intel_packet = indicare_intelligence_core_service.build_intelligence_packet(
+        source_text or structured,
+        mode=note_type,
+    )
+    _, intel_meta = _finalize_dictate_text(
+        text=structured,
+        note_type=note_type,
+        intel_packet=intel_packet,
+    )
+    template = get_dictate_template(note_type)  # type: ignore[arg-type]
+    section_prompts = [
+        p for section in template.sections for p in section.prompts[:1]
+    ]
+    headings = list(record_type.get("pdf_heading_order") or record_type.get("final_document_headings") or [])
+    return OrbDictatePrepareWriteResponse(
+        title=document_title_for_record_type(record_type),
+        note_type=note_type,  # type: ignore[arg-type]
+        record_type_id=str(record_type.get("id")),
+        record_type_label=str(record_type.get("label")),
+        document_headings=headings,
+        structured_body=structured,
+        section_prompts=section_prompts[:20],
+        quality_checks=quality,
+        standalone_boundary=STANDALONE_BOUNDARY,
+        brain_metadata=_dictate_brain_metadata(
+            note_type=note_type,
+            transcript_text=source_text,
+            feature="write",
+            intelligence_meta=intel_meta,
+        ),
+    )
 
 
 def finalise_dictate_document(
@@ -717,6 +829,8 @@ def finalise_dictate_document(
         professional_note=professional,
         missing_notes=missing_notes or None,
         adult_edits_preserved=bool(request.adult_edits and request.adult_edits.strip()),
+        note_type=generated.note_type,
+        transcript=request.transcript or generated.transcript or request.input_text,
     )
 
     transcript = request.transcript or generated.transcript

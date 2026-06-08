@@ -55,7 +55,7 @@ def test_analyze_for_standalone_write(monkeypatch, dictate_client):
     assert response.status_code == 200
     data = response.json()["data"]
     assert "safeguarding_concerns" in data
-    assert "brain_metadata" not in data
+    assert data.get("brain_metadata", {}).get("brain_adapter") == "orb_document_brain_adapter"
 
 
 def test_generate_for_standalone_write(monkeypatch, dictate_client):

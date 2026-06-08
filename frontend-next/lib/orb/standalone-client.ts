@@ -51,6 +51,7 @@ export const STANDALONE_ORB_API_PATHS = {
   capabilities: '/orb/standalone/capabilities',
   capabilitiesSummary: '/orb/standalone/capabilities/summary',
   surfaceRoute: '/orb/standalone/surface-route',
+  brainRoute: '/orb/standalone/brain-route',
   actionsRegistry: '/orb/standalone/actions',
   actionsRun: '/orb/standalone/actions/run',
   feedback: '/orb/standalone/feedback'
@@ -196,6 +197,8 @@ export type StandaloneOrbImageAttachment = {
   name?: string
 }
 
+export type OrbBrainSourceSurface = 'voice' | 'chat' | 'dictate' | 'write' | 'template' | 'saved_output'
+
 export type StandaloneOrbConversationRequest = {
   message: string
   mode: StandaloneOrbMode | string
@@ -207,6 +210,12 @@ export type StandaloneOrbConversationRequest = {
   document_source_id?: string
   document_title?: string
   project_memory?: string
+  /** Client telemetry — backend brain-route is authoritative. */
+  source_surface?: OrbBrainSourceSurface | string
+  client_route_hint?: string
+  requested_action?: string
+  note_type?: string
+  location_hint?: string
 }
 
 export type StandaloneOrbSourceType =
@@ -555,18 +564,7 @@ export async function queryStandaloneOrbConversation(
       hasExternalSignal: Boolean(signal),
       hasCsrfHeader: Boolean(getCsrfToken())
     })
-    const body = JSON.stringify({
-      message: request.message,
-      mode: request.mode,
-      conversation_id: request.conversation_id,
-      history: request.history ?? [],
-      ...(request.detail ? { detail: request.detail } : {}),
-      ...(request.images?.length ? { images: request.images } : {}),
-      ...(request.document_text ? { document_text: request.document_text } : {}),
-      ...(request.document_source_id ? { document_source_id: request.document_source_id } : {}),
-      ...(request.document_title ? { document_title: request.document_title } : {}),
-      ...(request.project_memory ? { project_memory: request.project_memory } : {})
-    })
+    const body = buildStandaloneConversationBody(request)
     const headers = new Headers({ 'Content-Type': 'application/json' })
     applyCsrfHeaders(headers, 'POST')
     if (!headers.has('X-CSRF-Token') && !getCsrfToken()) {
@@ -720,7 +718,12 @@ function buildStandaloneConversationBody(request: StandaloneOrbConversationReque
     ...(request.document_text ? { document_text: request.document_text } : {}),
     ...(request.document_source_id ? { document_source_id: request.document_source_id } : {}),
     ...(request.document_title ? { document_title: request.document_title } : {}),
-    ...(request.project_memory ? { project_memory: request.project_memory } : {})
+    ...(request.project_memory ? { project_memory: request.project_memory } : {}),
+    ...(request.source_surface ? { source_surface: request.source_surface } : {}),
+    ...(request.client_route_hint ? { client_route_hint: request.client_route_hint } : {}),
+    ...(request.requested_action ? { requested_action: request.requested_action } : {}),
+    ...(request.note_type ? { note_type: request.note_type } : {}),
+    ...(request.location_hint ? { location_hint: request.location_hint } : {})
   })
 }
 

@@ -20,7 +20,9 @@ from services.ai_external_call_governance import (
     redact_plain_text,
     try_governed_draft_text,
 )
-from services.orb_dictate_service import STANDALONE_BOUNDARY
+from services.indicare_intelligence_core_service import indicare_intelligence_core_service
+from services.orb_dictate_service import STANDALONE_BOUNDARY, _dictate_brain_metadata, _finalize_dictate_text
+from services.orb_document_brain_adapter_service import orb_document_brain_adapter_service
 from services.recording_intelligence_service import recording_intelligence_service
 
 logger = logging.getLogger("indicare.orb_dictate_edit")
@@ -216,6 +218,15 @@ def _fallback_edit(request: OrbDictateEditRequest, mode: str) -> OrbDictateEditR
     else:
         change_summary.append(f"Applied {EDIT_MODE_LABELS.get(mode, mode)} guidance offline — review carefully.")
 
+    intel_packet = indicare_intelligence_core_service.build_intelligence_packet(
+        request.document_text,
+        mode=request.note_type,
+    )
+    revised, intel_meta = _finalize_dictate_text(
+        text=revised,
+        note_type=request.note_type,
+        intel_packet=intel_packet,
+    )
     quality = compute_quality_checks(revised, request.note_type)
     return OrbDictateEditResponse(
         revised_text=revised,
@@ -225,6 +236,12 @@ def _fallback_edit(request: OrbDictateEditRequest, mode: str) -> OrbDictateEditR
         suggested_actions=["Review revised draft before use", "Confirm facts against source transcript"],
         version_label=EDIT_MODE_LABELS.get(mode, mode),
         standalone_boundary=STANDALONE_BOUNDARY,
+        brain_metadata=_dictate_brain_metadata(
+            note_type=request.note_type,
+            transcript_text=request.document_text,
+            feature="dictate_edit",
+            intelligence_meta=intel_meta,
+        ),
     )
 
 
@@ -232,6 +249,18 @@ def _build_edit_prompt(request: OrbDictateEditRequest, mode: str) -> tuple[str, 
     mode_instruction = MODE_INSTRUCTIONS.get(mode, request.instruction or "Improve the document professionally.")
     intel = recording_intelligence_service.analyse(request.document_text)
     intel_block = recording_intelligence_service.build_prompt_block(request.document_text)
+    doc_ctx = orb_document_brain_adapter_service.build_document_brain_context(
+        request.document_text,
+        mode=request.note_type,
+        feature="dictate_edit",
+        note_type=request.note_type,
+    )
+    intelligence_block = doc_ctx.get("intelligence_summary", {})
+    if intelligence_block:
+        intel_block += (
+            "\n\nIndiCare Intelligence context (use for quality — do not invent facts):\n"
+            + str(intelligence_block)
+        )
 
     investigation_rules = ""
     if request.note_type == "investigation_meeting":
@@ -321,6 +350,15 @@ def edit_dictate_document(
     if not change_summary:
         change_summary = [f"Applied {EDIT_MODE_LABELS.get(mode, mode)}"]
 
+    intel_packet = indicare_intelligence_core_service.build_intelligence_packet(
+        request.document_text,
+        mode=request.note_type,
+    )
+    revised, intel_meta = _finalize_dictate_text(
+        text=revised,
+        note_type=request.note_type,
+        intel_packet=intel_packet,
+    )
     quality: OrbDictateQualityChecks = compute_quality_checks(revised, request.note_type)
 
     return OrbDictateEditResponse(
@@ -331,4 +369,10 @@ def edit_dictate_document(
         suggested_actions=suggested_actions or ["Review revised draft before saving"],
         version_label=EDIT_MODE_LABELS.get(mode, mode),
         standalone_boundary=STANDALONE_BOUNDARY,
+        brain_metadata=_dictate_brain_metadata(
+            note_type=request.note_type,
+            transcript_text=request.document_text,
+            feature="dictate_edit",
+            intelligence_meta=intel_meta,
+        ),
     )

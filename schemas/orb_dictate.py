@@ -282,6 +282,7 @@ class OrbDictateEditResponse(BaseModel):
     suggested_actions: list[str] = Field(default_factory=list)
     version_label: str
     standalone_boundary: str
+    brain_metadata: dict[str, Any] | None = None
 
 
 class OrbDictateAnalyzeRequest(BaseModel):
@@ -323,6 +324,33 @@ class OrbDictateAnalyzeResponse(BaseModel):
     manager_oversight_note: str | None = None
     quality_checks: OrbDictateQualityChecks
     standalone_boundary: str
+    brain_metadata: dict[str, Any] | None = None
+
+
+class OrbDictatePrepareWriteRequest(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    note_type: OrbDictateNoteType = "daily_record"
+    record_type_id: str | None = Field(default=None, max_length=80)
+    template_id: str | None = Field(default=None, max_length=80)
+    transcript: str = Field(default="", max_length=120_000)
+    professional_note: str = Field(default="", max_length=500_000)
+    missing_prompts: list[str] = Field(default_factory=list)
+
+
+class OrbDictatePrepareWriteResponse(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    title: str
+    note_type: OrbDictateNoteType
+    record_type_id: str | None = None
+    record_type_label: str | None = None
+    document_headings: list[str] = Field(default_factory=list)
+    structured_body: str
+    section_prompts: list[str] = Field(default_factory=list)
+    quality_checks: OrbDictateQualityChecks
+    standalone_boundary: str
+    brain_metadata: dict[str, Any] | None = None
 
 
 class OrbDictateFinaliseRequest(BaseModel):
