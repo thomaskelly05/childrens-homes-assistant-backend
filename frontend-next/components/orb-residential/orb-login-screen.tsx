@@ -19,7 +19,7 @@ import {
 import { beginOrbPasskeyLogin, orbPasskeysSupported } from '@/lib/orb/orb-passkey-client'
 import { ORB_CANONICAL_FRONT_DOOR, sanitizeOrbReturnUrl } from '@/lib/orb/orb-front-door-routing'
 import { recordOrbAuthRecoveryEvent, sessionAuthCookiePresent } from '@/lib/orb/orb-auth-recovery-diagnostics'
-import { ORB_LOGIN_VERSION } from '@/lib/orb/orb-visual-build'
+import { ORB_AUTH_BUILD_VARIANT, ORB_LOGIN_VERSION } from '@/lib/orb/orb-visual-build'
 import { OrbAuthLoadingScreen } from '@/components/orb-residential/orb-auth-loading-screen'
 import { ORB_DEFAULT_LEGAL_PATHS, type OrbLegalPaths } from '@/components/orb-residential/orb-legal-links'
 import { consumeOrbOAuthRedirect } from '@/lib/orb/orb-oauth-redirect-state'
@@ -28,6 +28,9 @@ function formatOAuthError(raw: string): string {
   const decoded = decodeURIComponent(raw.replace(/\+/g, ' '))
   if (/invalid_oauth_state|security check failed/i.test(decoded)) {
     return 'Sign-in expired or was interrupted. Start again from this page.'
+  }
+  if (/already been used/i.test(decoded)) {
+    return 'This sign-in link has already been used. Please sign in again.'
   }
   if (/not enabled|not configured/i.test(decoded)) {
     return 'That sign-in method is not available right now. Try email or another option.'
@@ -266,6 +269,7 @@ function OrbLoginPanel({
       className={`orb-residential-root orb-login-root ${themeClass} min-h-[100dvh] min-h-[100svh]`}
       data-orb-login-page
       data-orb-login-version={ORB_LOGIN_VERSION}
+      data-orb-auth-build-variant={ORB_AUTH_BUILD_VARIANT}
       data-orb-login-mobile-single-column
       data-orb-residential="true"
       data-orb-theme={resolvedTheme}

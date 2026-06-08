@@ -95,7 +95,7 @@ def test_invalid_state_rejected_on_callback():
                 )
     assert response.status_code == 302
     assert "oauth_error" in response.headers["location"]
-    assert "Security" in response.headers["location"]
+    assert "expired" in response.headers["location"] or "interrupted" in response.headers["location"]
 
 
 def test_callback_logs_state_validation_failure_reason(caplog):
@@ -196,7 +196,20 @@ def test_google_callback_success_redirects_to_app_backend_handoff():
                 with patch("routers.orb_oauth_routes.validate_oauth_state", return_value="/orb"):
                     with patch("routers.orb_oauth_routes.exchange_code", new=AsyncMock(return_value={"access_token": "at"})):
                         with patch("routers.orb_oauth_routes.fetch_userinfo", new=AsyncMock(return_value={"sub": "sub-1", "email": "oauth@test.com", "email_verified": True})):
-                            with patch("routers.orb_oauth_routes.find_orb_user_by_oauth", return_value=user):
+                            with patch(
+                                "routers.orb_oauth_routes.resolve_orb_oauth_user",
+                                return_value=__import__(
+                                    "services.orb_account_linking_service",
+                                    fromlist=["OrbOAuthResolveResult"],
+                                ).OrbOAuthResolveResult(
+                                    user=user,
+                                    user_created=False,
+                                    linked_existing_by_email=False,
+                                    rehomed_provider_from_duplicate_user=False,
+                                    canonical_user_id=42,
+                                    duplicate_user_id=None,
+                                ),
+                            ):
                                 with patch("routers.orb_oauth_routes.link_oauth_account"):
                                     with patch("routers.orb_oauth_routes.establish_browser_session", return_value=bundle):
                                         with patch("routers.orb_oauth_routes.store_oauth_session_handoff", return_value="handoff-abc"):
@@ -243,7 +256,20 @@ def test_google_callback_logs_safe_redirect_diagnostics(caplog):
             with patch("routers.orb_oauth_routes.validate_oauth_state", return_value="/orb"):
                 with patch("routers.orb_oauth_routes.exchange_code", new=AsyncMock(return_value={"access_token": "at"})):
                     with patch("routers.orb_oauth_routes.fetch_userinfo", new=AsyncMock(return_value={"sub": "sub-1", "email": "oauth@test.com", "email_verified": True})):
-                        with patch("routers.orb_oauth_routes.find_orb_user_by_oauth", return_value=user):
+                        with patch(
+                            "routers.orb_oauth_routes.resolve_orb_oauth_user",
+                            return_value=__import__(
+                                "services.orb_account_linking_service",
+                                fromlist=["OrbOAuthResolveResult"],
+                            ).OrbOAuthResolveResult(
+                                user=user,
+                                user_created=False,
+                                linked_existing_by_email=False,
+                                rehomed_provider_from_duplicate_user=False,
+                                canonical_user_id=42,
+                                duplicate_user_id=None,
+                            ),
+                        ):
                             with patch("routers.orb_oauth_routes.link_oauth_account"):
                                 with patch("routers.orb_oauth_routes.establish_browser_session", return_value=bundle):
                                     with patch("routers.orb_oauth_routes.store_oauth_session_handoff", return_value="handoff-abc"):
@@ -292,7 +318,10 @@ def test_oauth_session_complete_sets_session_cookie_and_redirects_active_user_to
     import asyncio
 
     with patch("routers.orb_oauth_routes.consume_oauth_session_handoff", return_value=payload):
-        with patch("routers.orb_oauth_routes._resolve_access_state", return_value="active"):
+        with patch(
+            "routers.orb_oauth_routes.orb_access_service.build_access_payload",
+            return_value={"access_state": "subscription_active", "can_use_orb": True},
+        ):
             response = asyncio.run(orb_oauth_session_complete(request, handoff="handoff-abc", conn=conn))
 
     assert response.status_code == 302
@@ -321,7 +350,10 @@ def test_oauth_session_complete_inactive_user_redirects_to_billing():
     import asyncio
 
     with patch("routers.orb_oauth_routes.consume_oauth_session_handoff", return_value=payload):
-        with patch("routers.orb_oauth_routes._resolve_access_state", return_value="inactive"):
+        with patch(
+            "routers.orb_oauth_routes.orb_access_service.build_access_payload",
+            return_value={"access_state": "trial_available", "can_use_orb": False},
+        ):
             response = asyncio.run(orb_oauth_session_complete(request, handoff="handoff-abc", conn=conn))
 
     assert response.status_code == 302
@@ -351,7 +383,10 @@ def test_oauth_session_complete_logs_safe_diagnostics(caplog):
     caplog.set_level(logging.INFO)
 
     with patch("routers.orb_oauth_routes.consume_oauth_session_handoff", return_value=payload):
-        with patch("routers.orb_oauth_routes._resolve_access_state", return_value="active"):
+        with patch(
+            "routers.orb_oauth_routes.orb_access_service.build_access_payload",
+            return_value={"access_state": "subscription_active", "can_use_orb": True},
+        ):
             asyncio.run(orb_oauth_session_complete(request, handoff="handoff-abc", conn=conn))
 
     log_text = caplog.text
@@ -362,7 +397,7 @@ def test_oauth_session_complete_logs_safe_diagnostics(caplog):
     assert "set_cookie_headers_present=true" in log_text
     assert "redirect_target_path=/orb" in log_text
     assert "mfa_required=false" in log_text
-    assert "access_state=active" in log_text
+    assert "access_state=subscription_active" in log_text
     assert "jwt-token" not in log_text
 
 
@@ -386,7 +421,10 @@ def test_oauth_session_complete_mfa_required_redirects_to_mfa():
     import asyncio
 
     with patch("routers.orb_oauth_routes.consume_oauth_session_handoff", return_value=payload):
-        with patch("routers.orb_oauth_routes._resolve_access_state", return_value="active"):
+        with patch(
+            "routers.orb_oauth_routes.orb_access_service.build_access_payload",
+            return_value={"access_state": "subscription_active", "can_use_orb": True},
+        ):
             response = asyncio.run(orb_oauth_session_complete(request, handoff="handoff-abc", conn=conn))
 
     assert response.status_code == 302
@@ -415,7 +453,20 @@ def test_orb_residential_google_callback_does_not_set_mfa_pending():
             with patch("routers.orb_oauth_routes.validate_oauth_state", return_value="/orb"):
                 with patch("routers.orb_oauth_routes.exchange_code", new=AsyncMock(return_value={"access_token": "at"})):
                     with patch("routers.orb_oauth_routes.fetch_userinfo", new=AsyncMock(return_value={"sub": "sub-1", "email": "oauth@test.com", "email_verified": True})):
-                        with patch("routers.orb_oauth_routes.find_orb_user_by_oauth", return_value=user):
+                        with patch(
+                            "routers.orb_oauth_routes.resolve_orb_oauth_user",
+                            return_value=__import__(
+                                "services.orb_account_linking_service",
+                                fromlist=["OrbOAuthResolveResult"],
+                            ).OrbOAuthResolveResult(
+                                user=user,
+                                user_created=False,
+                                linked_existing_by_email=False,
+                                rehomed_provider_from_duplicate_user=False,
+                                canonical_user_id=42,
+                                duplicate_user_id=None,
+                            ),
+                        ):
                             with patch("routers.orb_oauth_routes.link_oauth_account"):
                                 with patch("routers.orb_oauth_routes.oauth_mfa_pending_for_user", return_value=False) as mfa_check:
                                     with patch("routers.orb_oauth_routes.establish_browser_session", return_value=bundle) as establish:
@@ -611,7 +662,20 @@ def test_google_callback_redirects_to_app_backend_session_complete():
                 with patch("routers.orb_oauth_routes.validate_oauth_state", return_value="/orb"):
                     with patch("routers.orb_oauth_routes.exchange_code", new=AsyncMock(return_value={"access_token": "at"})):
                         with patch("routers.orb_oauth_routes.fetch_userinfo", new=AsyncMock(return_value={"sub": "sub-1", "email": "oauth@test.com", "email_verified": True})):
-                            with patch("routers.orb_oauth_routes.find_orb_user_by_oauth", return_value=user):
+                            with patch(
+                                "routers.orb_oauth_routes.resolve_orb_oauth_user",
+                                return_value=__import__(
+                                    "services.orb_account_linking_service",
+                                    fromlist=["OrbOAuthResolveResult"],
+                                ).OrbOAuthResolveResult(
+                                    user=user,
+                                    user_created=False,
+                                    linked_existing_by_email=False,
+                                    rehomed_provider_from_duplicate_user=False,
+                                    canonical_user_id=42,
+                                    duplicate_user_id=None,
+                                ),
+                            ):
                                 with patch("routers.orb_oauth_routes.link_oauth_account"):
                                     with patch("routers.orb_oauth_routes.establish_browser_session", return_value=bundle):
                                         with patch("routers.orb_oauth_routes.store_oauth_session_handoff", return_value="handoff-abc"):

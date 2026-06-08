@@ -170,7 +170,20 @@ def test_microsoft_callback_exchanges_code_and_links_account(monkeypatch):
                         }
                     ),
                 ) as fetch_profile:
-                    with patch("routers.orb_oauth_routes.find_orb_user_by_oauth", return_value=user):
+                    with patch(
+                        "routers.orb_oauth_routes.resolve_orb_oauth_user",
+                        return_value=__import__(
+                            "services.orb_account_linking_service",
+                            fromlist=["OrbOAuthResolveResult"],
+                        ).OrbOAuthResolveResult(
+                            user=user,
+                            user_created=False,
+                            linked_existing_by_email=False,
+                            rehomed_provider_from_duplicate_user=False,
+                            canonical_user_id=77,
+                            duplicate_user_id=None,
+                        ),
+                    ):
                         with patch("routers.orb_oauth_routes.link_oauth_account") as link:
                             with patch("routers.orb_oauth_routes.establish_browser_session", return_value=bundle):
                                 with patch(
@@ -238,7 +251,20 @@ def test_microsoft_callback_does_not_log_or_return_tokens(monkeypatch, caplog):
                     "routers.orb_oauth_routes.fetch_microsoft_profile",
                     new=AsyncMock(return_value={"id": "ms-subject-1", "mail": "ms@test.com"}),
                 ):
-                    with patch("routers.orb_oauth_routes.find_orb_user_by_oauth", return_value=user):
+                    with patch(
+                        "routers.orb_oauth_routes.resolve_orb_oauth_user",
+                        return_value=__import__(
+                            "services.orb_account_linking_service",
+                            fromlist=["OrbOAuthResolveResult"],
+                        ).OrbOAuthResolveResult(
+                            user=user,
+                            user_created=False,
+                            linked_existing_by_email=False,
+                            rehomed_provider_from_duplicate_user=False,
+                            canonical_user_id=77,
+                            duplicate_user_id=None,
+                        ),
+                    ):
                         with patch("routers.orb_oauth_routes.link_oauth_account"):
                             with patch("routers.orb_oauth_routes.establish_browser_session", return_value=bundle):
                                 with patch(
@@ -439,38 +465,45 @@ def test_oauth_links_existing_user_by_verified_email(monkeypatch, caplog):
                         }
                     ),
                 ):
-                    with patch("routers.orb_oauth_routes.find_orb_user_by_oauth", return_value=None):
-                        with patch(
-                            "routers.orb_oauth_routes.find_orb_user_by_email",
-                            return_value=existing_user,
-                        ):
-                            with patch("routers.orb_oauth_routes.create_orb_residential_user") as create_user:
-                                with patch("routers.orb_oauth_routes.link_oauth_account") as link:
+                    with patch(
+                        "routers.orb_oauth_routes.resolve_orb_oauth_user",
+                        return_value=__import__(
+                            "services.orb_account_linking_service",
+                            fromlist=["OrbOAuthResolveResult"],
+                        ).OrbOAuthResolveResult(
+                            user=existing_user,
+                            user_created=False,
+                            linked_existing_by_email=True,
+                            rehomed_provider_from_duplicate_user=False,
+                            canonical_user_id=42,
+                            duplicate_user_id=None,
+                        ),
+                    ):
+                        with patch("routers.orb_oauth_routes.link_oauth_account") as link:
+                            with patch(
+                                "routers.orb_oauth_routes.establish_browser_session",
+                                return_value=bundle,
+                            ):
+                                with patch(
+                                    "routers.orb_oauth_routes.store_oauth_session_handoff",
+                                    return_value="handoff-link",
+                                ):
                                     with patch(
-                                        "routers.orb_oauth_routes.establish_browser_session",
-                                        return_value=bundle,
+                                        "routers.orb_oauth_routes._resolve_access_state",
+                                        return_value="subscription_active",
                                     ):
-                                        with patch(
-                                            "routers.orb_oauth_routes.store_oauth_session_handoff",
-                                            return_value="handoff-link",
-                                        ):
-                                            with patch(
-                                                "routers.orb_oauth_routes._resolve_access_state",
-                                                return_value="subscription_active",
-                                            ):
-                                                response = asyncio.run(
-                                                    _orb_oauth_callback(
-                                                        "google",
-                                                        request,
-                                                        conn,
-                                                        code="code-1",
-                                                        state="state-1",
-                                                        error=None,
-                                                    )
-                                                )
-    create_user.assert_not_called()
+                                        response = asyncio.run(
+                                            _orb_oauth_callback(
+                                                "google",
+                                                request,
+                                                conn,
+                                                code="code-1",
+                                                state="state-1",
+                                                error=None,
+                                            )
+                                        )
     assert link.call_args.kwargs["user_id"] == 42
-    assert "linked_via=verified_email" in caplog.text
+    assert "linked_existing_by_email=true" in caplog.text
     assert response.status_code == 302
 
 

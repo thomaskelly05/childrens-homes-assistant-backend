@@ -117,9 +117,16 @@ export function OrbUpgradeScreen({ initialAccess = null }: { initialAccess?: Orb
   const upgrade = access?.upgrade
   const stripeReady = Boolean(access?.billing?.stripe_configured && upgrade?.checkout_available)
   const billingDisplay = getOrbBillingDisplayStatus(access)
+  const signedInProvider = user?.auth_provider ?? null
+  const accessState = access?.access_state ?? null
   const headline = resolveAccessHeadline(authenticated, userEmail, access, billingDisplay)
   const showDuplicateProviderGuidance =
     authenticated && !billingDisplay.isPaidActive && !access?.trial?.active
+  const showTrialOrUpgrade =
+    authenticated &&
+    !billingDisplay.isPaidActive &&
+    !access?.trial?.active &&
+    (access?.trial?.available || billingDisplay.showUpgrade || billingDisplay.showTrialCta)
 
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,#E0E7FF,transparent_42%),radial-gradient(circle_at_top_right,#F5D0FE,transparent_38%),linear-gradient(180deg,#F8FAFC,#FFFFFF)] px-6 py-12 text-slate-950">
@@ -155,6 +162,21 @@ export function OrbUpgradeScreen({ initialAccess = null }: { initialAccess?: Orb
             <p className="mt-2 text-sm font-medium text-indigo-800" data-orb-upgrade-signed-in-email>
               Signed in as {userEmail}
             </p>
+          ) : null}
+
+          {authenticated ? (
+            <div className="mt-2 flex flex-wrap gap-2 text-xs text-slate-600">
+              {signedInProvider ? (
+                <span className="rounded-full bg-slate-100 px-3 py-1 font-semibold" data-orb-upgrade-signed-in-provider>
+                  Signed in with {signedInProvider}
+                </span>
+              ) : null}
+              {accessState ? (
+                <span className="rounded-full bg-slate-100 px-3 py-1 font-semibold" data-orb-upgrade-access-state>
+                  Access state: {accessState}
+                </span>
+              ) : null}
+            </div>
           ) : null}
 
           {showDuplicateProviderGuidance ? (
@@ -225,7 +247,7 @@ export function OrbUpgradeScreen({ initialAccess = null }: { initialAccess?: Orb
               >
                 Return to ORB
               </Link>
-            ) : billingDisplay.showTrialCta ? (
+            ) : showTrialOrUpgrade && billingDisplay.showTrialCta ? (
               <button
                 type="button"
                 onClick={handleTrial}
@@ -235,7 +257,7 @@ export function OrbUpgradeScreen({ initialAccess = null }: { initialAccess?: Orb
               >
                 {loading === 'trial' ? 'Starting trial…' : 'Start 7-day trial'}
               </button>
-            ) : billingDisplay.showUpgrade ? (
+            ) : showTrialOrUpgrade && billingDisplay.showUpgrade ? (
               <button
                 type="button"
                 onClick={handleSubscribe}
@@ -299,15 +321,13 @@ export function OrbUpgradeScreen({ initialAccess = null }: { initialAccess?: Orb
               {loading === 'refresh' ? 'Refreshing…' : 'Refresh status'}
             </button>
 
-            {!billingDisplay.isPaidActive ? (
-              <Link
-                href="/orb"
-                className="rounded-2xl border border-slate-200 px-5 py-3 text-sm font-bold text-slate-700"
-                data-orb-return-to-orb
-              >
-                Return to ORB
-              </Link>
-            ) : null}
+            <Link
+              href="/orb"
+              className="rounded-2xl border border-slate-200 px-5 py-3 text-sm font-bold text-slate-700"
+              data-orb-return-to-orb
+            >
+              Return to ORB
+            </Link>
           </div>
 
           {stripeReady && !billingDisplay.isPaidActive ? (
