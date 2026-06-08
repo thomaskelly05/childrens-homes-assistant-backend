@@ -303,49 +303,19 @@ html[data-orb-residential='1'] [data-orb-document-panel] [data-orb-knowledge-lib
   overscroll-behavior: contain;
 }
 
-/* Login — calm premium front door, sphere never clipped */
+/* Login — desktop hero top-aligned; card scrolls on short viewports (see orb-login.css) */
 @media (min-width: 1024px) {
   html[data-orb-residential='1'] .orb-login-shell {
-    max-height: 100dvh;
-    overflow: hidden;
     align-items: flex-start;
   }
 
   html[data-orb-residential='1'] .orb-login-hero {
-    min-height: 0;
-    max-height: 100dvh;
-    padding-top: clamp(2rem, 14vh, 5rem);
-    padding-bottom: clamp(1rem, 3vh, 1.75rem);
     justify-content: flex-start;
   }
 
-  html[data-orb-residential='1'] .orb-login-hero-sphere-wrap {
-    max-width: 7.5rem;
-    margin-top: 1rem !important;
+  html[data-orb-residential='1'] .orb-login-hero-visual {
+    align-items: center;
   }
-
-  html[data-orb-residential='1'] .orb-login-hero [data-orb-hero-sphere] {
-    max-height: min(6.75rem, 14vh);
-  }
-
-  html[data-orb-residential='1'] .orb-login-headline {
-    font-size: clamp(1.35rem, 2.2vw, 1.75rem) !important;
-    margin-top: 1rem !important;
-  }
-
-  html[data-orb-residential='1'] .orb-login-trust {
-    margin-top: 1rem !important;
-  }
-
-  html[data-orb-residential='1'] .orb-login-panel-inner {
-    max-height: min(96dvh, 100%);
-    overflow-y: auto;
-    overscroll-behavior: contain;
-  }
-}
-
-html[data-orb-residential='1'] [data-orb-login-mobile-brand] {
-  max-height: 3.5rem;
 }
 
 /* Chat home — composer focal, softer hero atmosphere */

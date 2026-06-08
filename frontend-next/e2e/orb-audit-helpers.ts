@@ -1023,6 +1023,22 @@ export async function expandPasskeyIfNeeded(page: Page) {
 export async function assertLoginMobileScroll(page: Page) {
   await assertNoHorizontalOverflow(page)
 
+  const viewport = page.viewportSize()
+  const isMobile = viewport ? viewport.width < 1024 : false
+  const isDesktop = viewport ? viewport.width >= 1024 : false
+
+  if (isMobile) {
+    await expect(page.locator('[data-orb-login-mobile-layout]')).toBeVisible()
+    await expect(page.locator('[data-orb-login-mobile-mark]')).toBeVisible()
+    await expect(page.locator('[data-orb-login-desktop-hero]')).toBeHidden()
+    await expect(page.locator('[data-orb-login-signin-title-mobile]')).toContainText(/sign in to continue/i)
+  }
+
+  if (isDesktop) {
+    await expect(page.locator('[data-orb-login-desktop-hero]')).toBeVisible()
+    await expect(page.locator('[data-orb-login-mobile-layout]')).toBeHidden()
+  }
+
   await expect(page.locator('[data-orb-oauth-buttons] [data-orb-oauth="apple"]').first()).toBeVisible()
   await expect(page.locator('[data-testid="orb-login-email"]')).toBeVisible()
   await assertElementReachable(page, '[data-orb-create-account]')
@@ -1045,10 +1061,25 @@ export async function assertLoginMobileScroll(page: Page) {
     email?.focus()
     const focused = document.activeElement === email
     if (email) email.blur()
+
+    const sphere = document.querySelector('[data-orb-login-hero-sphere]')
+    const brandTag = document.querySelector('[data-orb-login-brand-tag]')
+    let heroOverlapGap = null as number | null
+    if (sphere && brandTag) {
+      const sphereRect = sphere.getBoundingClientRect()
+      const tagRect = brandTag.getBoundingClientRect()
+      heroOverlapGap = tagRect.top - sphereRect.bottom
+    }
+
     return {
       canScroll: canScroll || pageScrollable,
-      emailFocusOk: focused
+      emailFocusOk: focused,
+      heroOverlapGap
     }
   })
   expect(scrollAudit.emailFocusOk).toBe(true)
+
+  if (isDesktop && scrollAudit.heroOverlapGap !== null) {
+    expect(scrollAudit.heroOverlapGap).toBeGreaterThanOrEqual(4)
+  }
 }

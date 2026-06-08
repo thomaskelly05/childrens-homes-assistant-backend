@@ -1,11 +1,10 @@
 'use client'
 
 import { FormEvent, Suspense, useEffect, useMemo, useState } from 'react'
-import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 
-import { OrbAuthButton } from '@/components/orb-residential/ui/orb-auth-button'
-import { OrbHeroSphere } from '@/components/orb-residential/ui/orb-hero-sphere'
+import { OrbLoginAuthCard } from '@/components/orb-residential/orb-login-auth-card'
+import { OrbLoginDesktopHero } from '@/components/orb-residential/orb-login-desktop-hero'
 import { useOrbResidentialThemeSync } from '@/components/orb-residential/use-orb-residential-theme-sync'
 import { useOrbAppearance } from '@/components/orb-standalone/use-orb-appearance'
 import { getOrbThemeCssVariables } from '@/lib/orb/orb-theme'
@@ -16,10 +15,8 @@ import {
   orbOAuthStartUrl,
   trackOrbAnalytics
 } from '@/lib/orb/orb-billing-client'
-import { OrbLegalLinks } from '@/components/orb-residential/orb-legal-links'
 import { beginOrbPasskeyLogin, orbPasskeysSupported } from '@/lib/orb/orb-passkey-client'
 import { ORB_CANONICAL_FRONT_DOOR, sanitizeOrbReturnUrl } from '@/lib/orb/orb-front-door-routing'
-import { orbProductCopy } from '@/lib/orb/content/copy'
 import { ORB_LOGIN_VERSION } from '@/lib/orb/orb-visual-build'
 import { OrbAuthLoadingScreen } from '@/components/orb-residential/orb-auth-loading-screen'
 
@@ -35,19 +32,6 @@ function formatOAuthError(raw: string): string {
 }
 
 const ORB_RETURN = ORB_CANONICAL_FRONT_DOOR
-
-const OAUTH_UNAVAILABLE_COPY: Record<'google' | 'microsoft' | 'apple', string> = {
-  google: 'Google sign-in unavailable',
-  microsoft: 'Microsoft sign-in unavailable',
-  apple: 'Apple sign-in unavailable'
-}
-
-const TRUST_POINTS = [
-  'Human review required',
-  'Data protection controls',
-  'Provider AI settings',
-  "Designed for children's homes"
-] as const
 
 function resolvePostLoginRoute(access: Awaited<ReturnType<typeof fetchOrbAccess>> | null) {
   if (!access) return ORB_RETURN
@@ -119,8 +103,8 @@ function OrbLoginPanel({
   useEffect(() => {
     const updateCompact = () => {
       const height = window.innerHeight
-      setCompactViewport(height < 720)
-      if (height >= 720) setPasskeyExpanded(true)
+      setCompactViewport(height < 760)
+      if (height >= 760) setPasskeyExpanded(true)
     }
     updateCompact()
     window.addEventListener('resize', updateCompact)
@@ -236,263 +220,36 @@ function OrbLoginPanel({
       }}
     >
       <div
-        className="orb-login-shell mx-auto grid min-h-0 w-full max-w-[72rem] grid-cols-1 px-5 py-6 sm:px-8 lg:grid-cols-2 lg:gap-12 lg:px-10"
+        className="orb-login-shell mx-auto grid min-h-0 w-full max-w-[72rem] grid-cols-1 px-5 py-4 sm:px-8 lg:grid-cols-2 lg:gap-10 lg:px-10 lg:pb-5 lg:pt-0"
         data-orb-login-two-column
         data-orb-login-scrollable
       >
-        <div
-          className="orb-login-hero relative hidden flex-col justify-start lg:flex lg:px-4 xl:px-8"
-          data-orb-login-hero-top-aligned
-        >
-          <div className="orb-login-hero-glow pointer-events-none absolute inset-0" aria-hidden />
-          <div className="relative flex flex-col justify-start">
-            <Link href="/orb" className="orb-login-brand-link text-sm font-semibold" data-orb-login-brand>
-              ORB Residential
-            </Link>
-            <p className="orb-login-tagline mt-1 text-xs" data-orb-login-engine-line>
-              Powered by IndiCare Intelligence
-            </p>
-            <div className="orb-login-hero-sphere-wrap mt-5 flex justify-center lg:mt-5 lg:justify-start" data-orb-login-hero-sphere>
-              <OrbHeroSphere className="scale-[0.52] xl:scale-[0.56]" />
-            </div>
-            <p className="orb-login-brand-tag mt-4 text-xs tracking-wide" data-orb-login-brand-tag>
-              {orbProductCopy.brandLine}
-            </p>
-            <h1
-              className="orb-login-headline mt-4 max-w-md text-3xl font-semibold tracking-tight xl:text-[2rem]"
-              data-orb-login-title
-            >
-              AI support for residential children&apos;s homes
-            </h1>
-            <p className="orb-login-lead mt-3 max-w-md text-base leading-relaxed">
-              Record better. Reflect faster. Respond safer.
-            </p>
-            <ul className="orb-login-trust mt-6 max-w-md space-y-2 text-sm" data-orb-login-trust-points>
-              {TRUST_POINTS.map((point) => (
-                <li key={point} className="flex items-center gap-2.5">
-                  <span
-                    className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--orb-res-primary,#1677ff)]"
-                    aria-hidden
-                  />
-                  {point}
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
+        <OrbLoginDesktopHero />
 
-        <div
-          className="orb-login-panel flex min-h-0 flex-col lg:px-4 xl:px-8"
-          data-orb-login-panel-centered
-        >
-          <div className="orb-login-card orb-login-panel-inner mx-auto w-full max-w-md rounded-[1.75rem] border border-[var(--orb-line)]/50 bg-[var(--orb-surface-elevated)]/80 p-6 shadow-xl shadow-black/10 backdrop-blur-sm sm:p-8">
-            <div className="orb-login-mobile-brand mb-3 text-center lg:hidden" data-orb-login-mobile-brand>
-              <Link href="/orb" className="orb-login-brand-link text-sm font-semibold" data-orb-login-brand>
-                ORB Residential
-              </Link>
-              <p className="orb-login-tagline mt-0.5 text-xs" data-orb-login-engine-line>
-                Powered by IndiCare Intelligence
-              </p>
-            </div>
-
-            <h2 className="orb-login-signin-title mt-4 text-2xl font-bold tracking-tight lg:mt-0">
-              Sign in to ORB Residential
-            </h2>
-            <p className="orb-login-lead mt-2 text-sm" data-orb-login-mobile-lead>
-              Use your work account, email or passkey.
-            </p>
-
-            {error ? (
-              <p className="orb-login-error mt-4 rounded-2xl px-4 py-3 text-sm" role="alert">
-                {error}
-              </p>
-            ) : null}
-
-            <section className="mt-6" aria-labelledby="orb-login-oauth">
-              <h3
-                id="orb-login-oauth"
-                className="orb-login-section-title text-xs font-semibold uppercase tracking-wide"
-              >
-                Continue with
-              </h3>
-              <div className="mt-2.5 space-y-2.5" data-orb-oauth-buttons>
-                <OrbAuthButton
-                  provider="apple"
-                  href={oauth.apple ? orbOAuthStartUrl('apple', returnUrl) : undefined}
-                  disabled={!oauth.apple || authBusy}
-                  unavailableLabel={OAUTH_UNAVAILABLE_COPY.apple}
-                >
-                  Continue with Apple
-                </OrbAuthButton>
-                <OrbAuthButton
-                  provider="google"
-                  href={oauth.google ? orbOAuthStartUrl('google', returnUrl) : undefined}
-                  disabled={!oauth.google || authBusy}
-                  unavailableLabel={OAUTH_UNAVAILABLE_COPY.google}
-                >
-                  Continue with Google
-                </OrbAuthButton>
-                <OrbAuthButton
-                  provider="microsoft"
-                  href={oauth.microsoft ? orbOAuthStartUrl('microsoft', returnUrl) : undefined}
-                  disabled={!oauth.microsoft || authBusy}
-                  unavailableLabel={OAUTH_UNAVAILABLE_COPY.microsoft}
-                >
-                  Continue with Microsoft
-                </OrbAuthButton>
-              </div>
-            </section>
-
-            <section className="mt-6" aria-labelledby="orb-login-create-account" data-orb-login-account-links>
-              <h3
-                id="orb-login-create-account"
-                className="orb-login-section-title text-xs font-semibold uppercase tracking-wide"
-              >
-                New to ORB Residential?
-              </h3>
-              <Link
-                href="/orb/signup"
-                className="orb-login-submit mt-2.5 flex w-full items-center justify-center rounded-2xl py-3 text-center text-sm font-bold no-underline"
-                data-orb-create-account
-              >
-                Create account
-              </Link>
-            </section>
-
-            <section className="mt-6" aria-labelledby="orb-login-email">
-              <h3 id="orb-login-email" className="orb-login-section-title text-xs font-semibold uppercase tracking-wide">
-                Already have an account?
-              </h3>
-              <form className="mt-2.5 space-y-3" onSubmit={handleSubmit} data-testid="orb-login-form">
-                <label className="orb-login-field-label block text-sm font-medium">
-                  Email
-                  <input
-                    type="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="orb-login-input mt-2 w-full rounded-2xl px-4 py-3"
-                    data-testid="orb-login-email"
-                    autoComplete="email"
-                    disabled={authBusy}
-                  />
-                </label>
-                <label className="orb-login-field-label block text-sm font-medium">
-                  Password
-                  <input
-                    type="password"
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="orb-login-input mt-2 w-full rounded-2xl px-4 py-3"
-                    data-testid="orb-login-password"
-                    autoComplete="current-password"
-                    disabled={authBusy}
-                  />
-                </label>
-                <label className="flex items-center gap-2 text-xs text-[var(--orb-muted)]">
-                  <input
-                    type="checkbox"
-                    checked={remember}
-                    onChange={(e) => setRemember(e.target.checked)}
-                    className="rounded"
-                  />
-                  Keep me signed in on this device
-                </label>
-                <button
-                  type="submit"
-                  disabled={authBusy}
-                  className="orb-login-submit w-full rounded-2xl py-3 text-sm font-semibold disabled:opacity-60"
-                  data-testid="orb-login-submit"
-                >
-                  {submitting ? 'Signing in…' : 'Sign in with email'}
-                </button>
-                <p className="text-center text-xs">
-                  <Link href="/mfa" className="orb-login-link font-medium" data-orb-authenticator-fallback>
-                    Use authenticator app instead
-                  </Link>
-                </p>
-              </form>
-            </section>
-
-            {passkeySupported ? (
-              <section className="mt-6" aria-labelledby="orb-login-passkey" data-orb-login-passkey-section>
-                {compactViewport ? (
-                  <button
-                    type="button"
-                    className="orb-login-section-title flex w-full items-center justify-between text-left text-xs font-semibold uppercase tracking-wide"
-                    id="orb-login-passkey"
-                    onClick={() => setPasskeyExpanded((open) => !open)}
-                    aria-expanded={passkeyExpanded}
-                    data-orb-passkey-toggle
-                  >
-                    <span>Use passkey</span>
-                    <span className="text-[10px] normal-case tracking-normal text-[var(--orb-muted)]">
-                      {passkeyExpanded ? 'Hide' : 'Show'}
-                    </span>
-                  </button>
-                ) : (
-                  <h3
-                    id="orb-login-passkey"
-                    className="orb-login-section-title text-xs font-semibold uppercase tracking-wide"
-                  >
-                    Use passkey
-                  </h3>
-                )}
-                {passkeyExpanded || !compactViewport ? (
-                  <>
-                    <p className="orb-login-muted mt-2 text-xs leading-relaxed">
-                      Use Face ID, Touch ID or device passkey.
-                    </p>
-                    <label className="orb-login-field-label mt-3 block text-xs">
-                      Email
-                      <input
-                        type="email"
-                        value={passkeyEmail || email}
-                        onChange={(e) => setPasskeyEmail(e.target.value)}
-                        placeholder="you@provider.co.uk"
-                        className="orb-login-input mt-1 w-full rounded-xl px-3 py-2 text-sm"
-                        autoComplete="email webauthn"
-                        data-orb-passkey-email
-                        disabled={authBusy}
-                      />
-                    </label>
-                    <div className="mt-2.5">
-                      <OrbAuthButton
-                        provider="passkey"
-                        type="button"
-                        disabled={authBusy}
-                        onClick={() => void handlePasskeySignIn()}
-                        data-orb-passkey-sign-in
-                      >
-                        {passkeySubmitting ? 'Checking passkey…' : 'Use passkey'}
-                      </OrbAuthButton>
-                    </div>
-                  </>
-                ) : null}
-              </section>
-            ) : (
-              <p className="orb-login-muted mt-6 text-xs" data-orb-passkey-unavailable>
-                Passkeys are not available on this device.
-              </p>
-            )}
-
-            <footer
-              className="orb-login-footer mt-8 border-t border-[var(--orb-line)]/40 pt-6 text-[10px] leading-relaxed text-[var(--orb-muted)]"
-              data-orb-login-safe-bottom
-            >
-              <p data-orb-login-disclaimer>
-                ORB supports professional judgement and does not replace safeguarding procedures, managers, emergency
-                services or legal advice.
-              </p>
-              <OrbLegalLinks
-                className="mt-4 justify-start gap-4"
-                linkClassName="orb-login-link font-semibold"
-                testId="orb-login-legal-links"
-                publicUrls
-              />
-            </footer>
-          </div>
+        <div className="orb-login-panel flex min-h-0 flex-col lg:px-4 xl:px-8" data-orb-login-panel-centered>
+          <OrbLoginAuthCard
+            error={error}
+            oauth={oauth}
+            authBusy={authBusy}
+            returnUrl={returnUrl}
+            email={email}
+            password={password}
+            remember={remember}
+            submitting={submitting}
+            passkeySupported={passkeySupported}
+            passkeySubmitting={passkeySubmitting}
+            passkeyEmail={passkeyEmail}
+            compactViewport={compactViewport}
+            passkeyExpanded={passkeyExpanded}
+            onEmailChange={setEmail}
+            onPasswordChange={setPassword}
+            onRememberChange={setRemember}
+            onPasskeyEmailChange={setPasskeyEmail}
+            onPasskeyExpandedChange={setPasskeyExpanded}
+            onSubmit={handleSubmit}
+            onPasskeySignIn={() => void handlePasskeySignIn()}
+            orbOAuthStartUrl={orbOAuthStartUrl}
+          />
         </div>
       </div>
     </div>
