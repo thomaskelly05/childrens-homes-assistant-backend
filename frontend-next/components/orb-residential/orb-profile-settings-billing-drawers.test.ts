@@ -32,13 +32,14 @@ describe('ORB profile settings billing drawers', () => {
     assert.match(settings, /accessibility/)
   })
 
-  it('billing modal lists ORB Residential features and CTAs', () => {
+  it('billing modal lists ORB Residential plan and CTAs', () => {
     const billing = read('components/orb-standalone/orb-billing-modal.tsx')
-    assert.match(billing, /ORB Write/)
-    assert.match(billing, /Documents & Guidance/)
+    assert.match(billing, /ORB Residential — Individual/)
     assert.match(billing, /£9\.99\/month/)
     assert.match(billing, /data-orb-billing-refresh/)
-    assert.match(billing, /Start free trial|Subscribe/)
+    assert.match(billing, /Manage billing/)
+    assert.match(billing, /Upgrade · £9\.99\/month|Start free trial/)
+    assert.equal(billing.includes('Cancel subscription'), false)
   })
 
   it('provider AI trust settings preserved in settings', () => {

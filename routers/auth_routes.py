@@ -262,7 +262,16 @@ def _user_has_passkeys_safe(user_id: int, conn: Any | None = None) -> bool:
 def _session_user_payload(user: dict[str, Any], billing: dict[str, Any] | None) -> dict[str, Any]:
     return staff_user_payload(user, billing=billing)
 
-def _full_user_payload(user: dict[str, Any], billing: dict[str, Any] | None, *, mfa_enabled: bool, mfa_verified: bool, has_passkeys: bool) -> dict[str, Any]:
+def _full_user_payload(
+    user: dict[str, Any],
+    billing: dict[str, Any] | None,
+    *,
+    mfa_enabled: bool,
+    mfa_verified: bool,
+    has_passkeys: bool,
+    avatar_url: str | None = None,
+    auth_provider: str | None = None,
+) -> dict[str, Any]:
     return staff_user_payload(
         user,
         billing=billing,
@@ -270,6 +279,8 @@ def _full_user_payload(user: dict[str, Any], billing: dict[str, Any] | None, *, 
         mfa_verified=mfa_verified,
         has_passkeys=has_passkeys,
         include_audit_fields=True,
+        avatar_url=avatar_url,
+        auth_provider=auth_provider,
     )
 
 def _validate_active_user(user: dict[str, Any] | None) -> dict[str, Any]:
@@ -519,9 +530,24 @@ def get_me(request: Request, response: Response, authorization: str | None = Hea
         mfa_row = _get_mfa_safe(user_id, conn)
         mfa_enabled = bool(mfa_row and bool(mfa_row.get("is_enabled")))
         has_passkeys = _user_has_passkeys_safe(user_id, conn)
+        from services.orb_user_avatar_service import get_user_display_profile
+
+        display_profile = get_user_display_profile(conn, user_id)
     _ensure_csrf_cookie(request, response)
     mfa_verified = request.session.get(SESSION_MFA_VERIFIED_KEY) is True
-    return {"ok": True, "user": _full_user_payload(user, billing, mfa_enabled=mfa_enabled, mfa_verified=mfa_verified, has_passkeys=has_passkeys), "mfa_mandatory": _mfa_required_for_role(user.get("role"))}
+    return {
+        "ok": True,
+        "user": _full_user_payload(
+            user,
+            billing,
+            mfa_enabled=mfa_enabled,
+            mfa_verified=mfa_verified,
+            has_passkeys=has_passkeys,
+            avatar_url=display_profile.get("avatar_url"),
+            auth_provider=display_profile.get("auth_provider"),
+        ),
+        "mfa_mandatory": _mfa_required_for_role(user.get("role")),
+    }
 
 @router.get("/auth-policy")
 def auth_policy():

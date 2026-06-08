@@ -87,7 +87,10 @@ export function OrbStandaloneSettingsPanel({
   onClearMemory,
   onClearProfiles,
   onClearProjects,
-  residentialSurface = false
+  residentialSurface = false,
+  userName,
+  userEmail,
+  avatarUrl
 }: {
   open: boolean
   onClose: () => void
@@ -108,6 +111,9 @@ export function OrbStandaloneSettingsPanel({
   onClearMemory?: () => void
   onClearProfiles?: () => void
   onClearProjects?: () => void
+  userName?: string | null
+  userEmail?: string | null
+  avatarUrl?: string | null
 }) {
   const [activeSection, setActiveSection] = useState<SettingsSectionId>('appearance')
   const [mobileSectionOpen, setMobileSectionOpen] = useState<SettingsSectionId | null>('appearance')
@@ -526,17 +532,24 @@ export function OrbStandaloneSettingsPanel({
           ) : null}
 
           {activeSection === 'account_billing' ? (
-            <SettingsBlock title="Account & Billing" description="Plan, usage and profile shortcuts.">
+            <SettingsBlock
+              title="Account & Billing"
+              description="Plan, subscription, usage and billing management."
+            >
               <RowButton
                 icon={<User className="h-4 w-4" />}
                 label="Manage profile"
-                hint="Role, tone and custom instructions"
+                hint="Name, email, role and account preferences"
                 onClick={() => {
                   onOpenProfile?.()
                   onClose()
                 }}
               />
-              <OrbBillingSettingsSection />
+              <OrbBillingSettingsSection
+                userName={userName}
+                userEmail={userEmail}
+                avatarUrl={avatarUrl}
+              />
             </SettingsBlock>
           ) : null}
 

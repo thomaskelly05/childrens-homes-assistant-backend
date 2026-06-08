@@ -11,8 +11,9 @@ import {
   User
 } from 'lucide-react'
 
+import { OrbUserAvatar } from '@/components/orb-residential/orb-user-avatar'
 import type { AdultProfile } from '@/lib/orb/adult-profile-store'
-import { profileInitialsFromName } from '@/lib/orb/orb-profile-initials'
+import { getOrbBillingDisplayStatus } from '@/lib/orb/orb-billing-display'
 
 export type OrbAccountMenuProps = {
   open: boolean
@@ -23,8 +24,10 @@ export type OrbAccountMenuProps = {
   profile: AdultProfile | null
   userEmail?: string | null
   userName?: string | null
+  avatarUrl?: string | null
   planLabel?: string | null
   subscriptionActive?: boolean
+  access?: import('@/lib/orb/orb-billing-client').OrbAccessPayload | null
   savedOutputsCount?: number
   role?: string | null
   passkeyEnabled?: boolean
@@ -82,8 +85,10 @@ export function OrbAccountMenu({
   profile,
   userEmail,
   userName,
+  avatarUrl,
   planLabel,
   subscriptionActive = false,
+  access = null,
   savedOutputsCount = 0,
   role = null,
   passkeyEnabled = false,
@@ -99,8 +104,12 @@ export function OrbAccountMenu({
 
   const displayName = userName?.trim() || profile?.name?.trim() || 'Your account'
   const email = userEmail?.trim() || null
-  const initials = profileInitialsFromName(displayName)
-  const statusLabel = subscriptionActive ? planLabel?.trim() || 'Active' : 'Inactive'
+  const billingDisplay = getOrbBillingDisplayStatus(access)
+  const statusLabel = subscriptionActive
+    ? billingDisplay.isPaidActive
+      ? 'Active'
+      : planLabel?.trim() || billingDisplay.headline
+    : billingDisplay.headline
 
   useEffect(() => {
     if (!open) return
@@ -160,12 +169,7 @@ export function OrbAccountMenu({
     >
       <div className="rounded-xl border border-[var(--orb-line)]/40 bg-[var(--orb-surface)]/80 px-3 py-3" data-orb-account-menu-header>
         <div className="flex items-start gap-3">
-          <div
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[var(--orb-line)]/50 bg-[var(--orb-surface-elevated)] text-sm font-semibold text-[var(--orb-primary)]"
-            aria-hidden
-          >
-            {initials}
-          </div>
+          <OrbUserAvatar name={displayName} avatarUrl={avatarUrl} size="md" />
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-semibold text-[var(--orb-foreground)]" data-orb-account-menu-name>
               {displayName}

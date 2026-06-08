@@ -18,6 +18,8 @@ export type StaffUser = {
   mfa_enabled?: boolean | null
   mfa_verified?: boolean | null
   has_passkeys?: boolean | null
+  avatar_url?: string | null
+  auth_provider?: string | null
 }
 
 export type AuthErrorDetail = {

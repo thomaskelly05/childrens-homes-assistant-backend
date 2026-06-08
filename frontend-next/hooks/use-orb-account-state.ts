@@ -53,6 +53,7 @@ export type OrbAccountState = {
   profileDisplayMode: OrbProfileDisplayMode
   userEmail: string | null
   userName: string | null
+  avatarUrl: string | null
   role: string | null
   roleLabel: string | null
   planName: string | null
@@ -325,6 +326,7 @@ export function useOrbAccountStateInternal(options: UseOrbAccountStateOptions = 
 
   const userEmail = isSignedIn ? auth.user?.email ?? null : null
   const userName = isSignedIn && auth.user ? displayNameFromUser(auth.user) : null
+  const avatarUrl = isSignedIn ? auth.user?.avatar_url?.trim() || null : null
   const role = isSignedIn ? auth.user?.role ?? null : null
   const roleLabel = isSignedIn ? mergedProfile.roleLabel : null
 
@@ -359,6 +361,7 @@ export function useOrbAccountStateInternal(options: UseOrbAccountStateOptions = 
     profileDisplayMode,
     userEmail,
     userName,
+    avatarUrl,
     role,
     roleLabel,
     planName,

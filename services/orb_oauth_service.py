@@ -167,7 +167,10 @@ async def fetch_userinfo(config: OrbOAuthProviderConfig, access_token: str) -> d
 
 
 def normalise_profile(provider: str, profile: dict[str, Any]) -> dict[str, Any]:
+    from services.orb_user_avatar_service import extract_provider_avatar_url
+
     key = provider.strip().lower()
+    avatar_url = extract_provider_avatar_url(key, profile)
     if key == "google":
         return {
             "subject": str(profile.get("sub") or ""),
@@ -175,6 +178,7 @@ def normalise_profile(provider: str, profile: dict[str, Any]) -> dict[str, Any]:
             "email_verified": bool(profile.get("email_verified")),
             "first_name": profile.get("given_name"),
             "last_name": profile.get("family_name"),
+            "avatar_url": avatar_url,
         }
     if key == "microsoft":
         return {
@@ -183,6 +187,7 @@ def normalise_profile(provider: str, profile: dict[str, Any]) -> dict[str, Any]:
             "email_verified": True,
             "first_name": profile.get("given_name"),
             "last_name": profile.get("family_name"),
+            "avatar_url": avatar_url,
         }
     if key == "apple":
         return {
@@ -191,8 +196,9 @@ def normalise_profile(provider: str, profile: dict[str, Any]) -> dict[str, Any]:
             "email_verified": bool(profile.get("email_verified", True)),
             "first_name": None,
             "last_name": None,
+            "avatar_url": avatar_url,
         }
-    return {"subject": "", "email": "", "email_verified": False}
+    return {"subject": "", "email": "", "email_verified": False, "avatar_url": None}
 
 
 def find_orb_user_by_oauth(conn, *, provider: str, subject: str) -> dict[str, Any] | None:

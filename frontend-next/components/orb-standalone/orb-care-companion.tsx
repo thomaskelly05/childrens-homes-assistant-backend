@@ -3196,7 +3196,13 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
         <div className="pointer-events-none fixed inset-0 orb-cinematic-light-field opacity-35" aria-hidden />
       ) : null}
 
-      <OrbBillingModal open={activePanel === 'billing'} onClose={closePanel} />
+      <OrbBillingModal
+        open={activePanel === 'billing'}
+        onClose={closePanel}
+        userName={account.userName}
+        userEmail={account.userEmail}
+        avatarUrl={account.avatarUrl}
+      />
       {convergenceRedirectPanel ? (
         <OrbConvergedPanelRedirect
           panelId={convergenceRedirectPanel}
@@ -3265,6 +3271,9 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
           clearStandaloneCustomProjects(workspace)
           setWorkspace(readStandaloneWorkspace())
         }}
+        userName={account.userName}
+        userEmail={account.userEmail}
+        avatarUrl={account.avatarUrl}
       />
       <OrbHelpPanel open={activePanel === 'help'} onClose={closePanel} />
       <OrbVoiceSettingsPanel
@@ -4171,8 +4180,10 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
           profile={adultProfile}
           userEmail={account.userEmail}
           userName={account.userName}
+          avatarUrl={account.avatarUrl}
           planLabel={account.planName}
           subscriptionActive={account.hasConfirmedAccess}
+          access={account.access}
           savedOutputsCount={savedOutputsCount}
           role={account.role}
           passkeyEnabled={account.hasPasskeys}
@@ -4203,6 +4214,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
           onClose={closePanel}
           profile={adultProfile}
           userEmail={account.userEmail}
+          avatarUrl={account.avatarUrl}
           onOpenSettings={() => {
             closePanel()
             openSettingsPanel()
