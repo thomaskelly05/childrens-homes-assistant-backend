@@ -3,16 +3,26 @@
  * Front-door login for /login redirect, /orb/login redirect, and /orb unauthenticated gate.
  */
 
+.orb-login-root {
+  overflow-x: hidden;
+}
+
 @media (min-width: 1024px) {
+  .orb-login-root {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
   .orb-login-shell {
-    align-items: center;
-    max-height: 100dvh;
-    overflow: hidden;
+    align-items: stretch;
+    min-height: 100dvh;
+    padding-top: clamp(0.75rem, 2vh, 1.5rem);
+    padding-bottom: max(1.25rem, env(safe-area-inset-bottom, 0px));
   }
 
   .orb-login-hero {
     min-height: 0;
-    max-height: 100dvh;
+    max-height: none;
     padding-top: clamp(1.25rem, 4vh, 2rem);
     padding-bottom: clamp(1.25rem, 4vh, 2rem);
   }
@@ -24,9 +34,14 @@
   }
 
   .orb-login-panel {
-    min-height: 100dvh;
+    min-height: 0;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
+    padding-top: clamp(0.75rem, 2vh, 1.5rem);
+    padding-bottom: max(1.25rem, env(safe-area-inset-bottom, 0px));
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
   }
 
   .orb-login-panel-inner {
@@ -36,6 +51,10 @@
 
   .orb-login-card {
     width: 100%;
+    max-height: calc(100dvh - 2.5rem - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
   }
 }
 
@@ -54,8 +73,7 @@
   }
 
   [data-orb-login-scrollable] {
-    overflow-y: auto;
-    overscroll-behavior-y: contain;
+    overflow: visible;
   }
 
   .orb-login-card {

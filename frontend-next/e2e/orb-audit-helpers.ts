@@ -596,7 +596,9 @@ export const ORB_LOGIN_VIEWPORTS = [
   { width: 390, height: 844, label: '390×844' },
   { width: 390, height: 667, label: '390×667' },
   { width: 430, height: 932, label: '430×932' },
-  { width: 768, height: 1024, label: '768×1024' }
+  { width: 768, height: 1024, label: '768×1024' },
+  { width: 1440, height: 760, label: '1440×760' },
+  { width: 1440, height: 900, label: '1440×900' }
 ] as const
 
 export const E2E_CREDENTIALS = {
@@ -977,17 +979,27 @@ export async function assertElementReachable(page: Page, selector: string) {
   await target.scrollIntoViewIfNeeded()
   const metrics = await target.evaluate((node) => {
     const rect = node.getBoundingClientRect()
-    const root =
-      document.querySelector('[data-orb-login-scrollable]') ??
-      document.querySelector('.orb-login-root') ??
+    const scrollHosts = [
+      document.querySelector('.orb-login-card'),
+      document.querySelector('.orb-login-panel'),
+      document.querySelector('[data-orb-login-scrollable]'),
+      document.querySelector('.orb-login-root'),
       document.documentElement
-    const scrollable = root.scrollHeight > root.clientHeight + 4
+    ].filter(Boolean) as HTMLElement[]
+    const scrollable = scrollHosts.some((host) => host.scrollHeight > host.clientHeight + 4)
+    const pageScrollable = document.documentElement.scrollHeight > window.innerHeight + 4
     const withinViewport =
       rect.top >= -2 &&
       rect.left >= -2 &&
       rect.bottom <= window.innerHeight + 2 &&
       rect.right <= window.innerWidth + 2
-    return { scrollable, withinViewport, top: rect.top, bottom: rect.bottom, viewportHeight: window.innerHeight }
+    return {
+      scrollable: scrollable || pageScrollable,
+      withinViewport,
+      top: rect.top,
+      bottom: rect.bottom,
+      viewportHeight: window.innerHeight
+    }
   })
   expect(
     metrics.withinViewport || metrics.scrollable,
@@ -995,36 +1007,45 @@ export async function assertElementReachable(page: Page, selector: string) {
   ).toBe(true)
 }
 
+export async function expandPasskeyIfNeeded(page: Page) {
+  const passkeySignIn = page.locator('[data-orb-passkey-sign-in]')
+  const passkeyUnavailable = page.locator('[data-orb-passkey-unavailable]')
+  if (await passkeySignIn.isVisible().catch(() => false)) return
+  if (await passkeyUnavailable.isVisible().catch(() => false)) return
+  const toggle = page.locator('[data-orb-passkey-toggle]')
+  if (await toggle.isVisible().catch(() => false)) {
+    const expanded = await toggle.getAttribute('aria-expanded')
+    if (expanded === 'false') await toggle.click()
+  }
+}
+
 export async function assertLoginMobileScroll(page: Page) {
   await assertNoHorizontalOverflow(page)
 
-  const passkeySignIn = page.locator('[data-orb-passkey-sign-in]')
-  const passkeyUnavailable = page.locator('[data-orb-passkey-unavailable]')
-  if (!(await passkeySignIn.isVisible().catch(() => false)) && !(await passkeyUnavailable.isVisible().catch(() => false))) {
-    const toggle = page.locator('[data-orb-passkey-toggle]')
-    if (await toggle.isVisible().catch(() => false)) {
-      const expanded = await toggle.getAttribute('aria-expanded')
-      if (expanded === 'false') await toggle.click()
-    }
-  }
-
-  await assertElementReachable(page, '[data-orb-passkey-sign-in], [data-orb-passkey-unavailable]')
+  await expect(page.locator('[data-orb-oauth-buttons] [data-orb-oauth="apple"]').first()).toBeVisible()
+  await expect(page.locator('[data-testid="orb-login-email"]')).toBeVisible()
   await assertElementReachable(page, '[data-orb-create-account]')
+
+  await expandPasskeyIfNeeded(page)
+  await assertElementReachable(page, '[data-orb-passkey-sign-in], [data-orb-passkey-unavailable]')
   await assertElementReachable(page, '[data-orb-login-safe-bottom], [data-testid="orb-login-legal-links"]')
 
   const scrollAudit = await page.evaluate(() => {
-    const root = document.querySelector('.orb-login-root') as HTMLElement | null
-    const shell = document.querySelector('[data-orb-login-scrollable]') as HTMLElement | null
-    const scrollHost = shell ?? root ?? document.documentElement
-    const canScroll = scrollHost.scrollHeight > scrollHost.clientHeight + 8
+    const hosts = [
+      document.querySelector('.orb-login-card'),
+      document.querySelector('.orb-login-panel'),
+      document.querySelector('[data-orb-login-scrollable]'),
+      document.querySelector('.orb-login-root'),
+      document.documentElement
+    ].filter(Boolean) as HTMLElement[]
+    const canScroll = hosts.some((host) => host.scrollHeight > host.clientHeight + 8)
+    const pageScrollable = document.documentElement.scrollHeight > window.innerHeight + 8
     const email = document.querySelector('[data-testid="orb-login-email"]') as HTMLInputElement | null
     email?.focus()
     const focused = document.activeElement === email
     if (email) email.blur()
     return {
-      canScroll,
-      scrollHeight: scrollHost.scrollHeight,
-      clientHeight: scrollHost.clientHeight,
+      canScroll: canScroll || pageScrollable,
       emailFocusOk: focused
     }
   })

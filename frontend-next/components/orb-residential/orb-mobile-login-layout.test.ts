@@ -11,7 +11,7 @@ function read(relativePath: string) {
 }
 
 describe('ORB mobile login layout', () => {
-  it('uses single-column mobile markers and scrollable shell', () => {
+  it('uses single-column mobile markers and scrollable page', () => {
     const login = read('components/orb-residential/orb-login-screen.tsx')
     const css = read('app/orb/orb-login.css')
     assert.match(login, /data-orb-login-mobile-single-column/)
@@ -19,13 +19,14 @@ describe('ORB mobile login layout', () => {
     assert.match(css, /100svh/)
     assert.match(css, /safe-area-inset-bottom/)
     assert.match(css, /overflow-y:\s*auto/)
+    assert.match(css, /orb-login-card[\s\S]*overflow-y:\s*auto/)
   })
 
   it('scales down mobile sphere and adds safe bottom padding', () => {
     const login = read('components/orb-residential/orb-login-screen.tsx')
     const css = read('app/orb/orb-login.css')
     assert.match(login, /data-orb-login-mobile-hero/)
-    assert.match(login, /scale-\[0\.62\]/)
+    assert.match(login, /scale-\[0\.4\]/)
     assert.match(css, /data-orb-login-safe-bottom/)
     assert.match(css, /data-orb-login-mobile-hero/)
   })

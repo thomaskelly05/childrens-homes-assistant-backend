@@ -124,7 +124,6 @@ test.describe('ORB cookie and session E2E', () => {
     await gotoOrbLogin(page)
 
     await page.locator('[data-testid="orb-login-email"]').fill(E2E_CREDENTIALS.email)
-    await page.locator('[data-orb-login-email-continue]').click()
     await page.locator('[data-testid="orb-login-password"]').fill(E2E_CREDENTIALS.password)
 
     await page.route('**/auth/me**', (route) =>
@@ -224,7 +223,6 @@ test.describe('ORB cookie and session E2E', () => {
     await gotoOrbLogin(page)
 
     await page.locator('[data-testid="orb-login-email"]').fill(E2E_CREDENTIALS.email)
-    await page.locator('[data-orb-login-email-continue]').click()
     await page.locator('[data-testid="orb-login-password"]').fill('WrongPassword123!')
     await page.locator('[data-testid="orb-login-submit"]').click()
 
@@ -341,7 +339,7 @@ test.describe('ORB cookie and session E2E', () => {
     authed = false
     await page.locator('[data-testid="sign-out"], [data-orb-account-menu-signout]').first().click({ timeout: 8_000 })
     await page.goto('/orb', { waitUntil: 'domcontentloaded', timeout: 30_000 }).catch(() => undefined)
-    await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible({ timeout: 20_000 })
+    await expect(page.getByRole('heading', { name: 'Sign in to ORB Residential' })).toBeVisible({ timeout: 20_000 })
     await expect(page.locator('[data-testid="orb-login-email"]')).toBeVisible()
     await expect(page.locator('[data-orb-shell="true"]')).toHaveCount(0)
   })

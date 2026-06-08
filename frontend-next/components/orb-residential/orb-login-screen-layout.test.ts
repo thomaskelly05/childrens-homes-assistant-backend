@@ -54,12 +54,30 @@ describe('ORB premium login screen layout', () => {
     assert.match(login, /resolvePostLoginRoute/)
   })
 
-  it('OAuth, email, passkey and create account remain available', () => {
+  it('OAuth, email, passkey and create account remain available in launch order', () => {
     const login = read('components/orb-residential/orb-login-screen.tsx')
+    assert.match(login, /Sign in to ORB Residential/)
     assert.match(login, /Continue with Microsoft/)
+    assert.match(login, /New to ORB Residential\?/)
+    assert.match(login, /data-orb-create-account/)
+    assert.match(login, /Sign in with email/)
     assert.match(login, /data-testid="orb-login-email"/)
     assert.match(login, /data-orb-passkey-sign-in/)
     assert.match(login, /href="\/orb\/signup"/)
     assert.match(login, /OrbLegalLinks/)
+    const oauthIdx = login.indexOf('data-orb-oauth-buttons')
+    const createIdx = login.indexOf('data-orb-create-account')
+    const emailIdx = login.indexOf('data-testid="orb-login-email"')
+    const passkeyIdx = login.indexOf('data-orb-login-passkey-section')
+    assert.ok(oauthIdx < createIdx, 'OAuth should appear before create account')
+    assert.ok(createIdx < emailIdx, 'Create account should appear before email')
+    assert.ok(emailIdx < passkeyIdx, 'Email should appear before passkey')
+  })
+
+  it('does not use numbered step headings', () => {
+    const login = read('components/orb-residential/orb-login-screen.tsx')
+    assert.doesNotMatch(login, /1\. Continue with/)
+    assert.doesNotMatch(login, /2\. Continue with/)
+    assert.doesNotMatch(login, /3\. Use passkey/)
   })
 })
