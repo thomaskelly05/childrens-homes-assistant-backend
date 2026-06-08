@@ -3,7 +3,7 @@ import re
 import secrets
 import time
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, NamedTuple
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response, status
 from pydantic import BaseModel, EmailStr, field_validator
@@ -296,6 +296,71 @@ def _get_session_user_from_request(request: Request, conn: Any, authorization: s
         return None, None
     return _get_user_by_id(conn, user_id), user_id
 
+class BrowserSessionBundle(NamedTuple):
+    token: str
+    csrf_token: str
+    mfa_pending: bool
+
+
+def oauth_mfa_pending_for_user(user: dict[str, Any], conn: Any) -> bool:
+    """ORB Residential OAuth sign-in does not force MFA unless policy requires it."""
+    role = normalise_role(user.get("role"))
+    if role in {"orb_residential", "standalone_orb", "orb_user"}:
+        return False
+    if _mfa_required_for_role(role):
+        return True
+    mfa_row = _get_mfa_safe(int(user["id"]), conn)
+    return bool(mfa_row and bool(mfa_row.get("is_enabled")))
+
+
+def establish_browser_session(
+    *,
+    request: Request,
+    conn: Any,
+    user: dict[str, Any],
+    remember: bool = True,
+    mfa_pending: bool = False,
+) -> BrowserSessionBundle:
+    csrf_token = secrets.token_urlsafe(32)
+    _safe_session_reset(request)
+    _set_authenticated_session_state(
+        request,
+        user_id=int(user["id"]),
+        email=str(user.get("email") or ""),
+        csrf_token=csrf_token,
+        remember=remember,
+        mfa_pending=mfa_pending,
+    )
+    session_id = create_session_record(
+        user_id=int(user["id"]),
+        request=request,
+        mfa_verified=not mfa_pending,
+        conn=conn,
+    )
+    token = create_session_token(
+        int(user["id"]),
+        email=user.get("email"),
+        role=normalise_role(user.get("role")),
+        home_id=user.get("home_id"),
+        provider_id=user.get("provider_id"),
+        permissions=sorted(permissions_for_role(user.get("role"))),
+        mfa_verified=not mfa_pending,
+        remember=remember,
+        session_id=session_id,
+    )
+    return BrowserSessionBundle(token=token, csrf_token=csrf_token, mfa_pending=mfa_pending)
+
+
+def apply_browser_session_cookies(
+    *,
+    response: Response,
+    bundle: BrowserSessionBundle,
+    remember: bool = True,
+) -> None:
+    _set_session_cookie(response, bundle.token, remember=remember)
+    _set_csrf_cookie(response, bundle.csrf_token, remember=remember)
+
+
 def _set_authenticated_session_state(request: Request, *, user_id: int, email: str, csrf_token: str, remember: bool, mfa_pending: bool) -> None:
     request.session[SESSION_USER_ID_KEY] = int(user_id)
     request.session[SESSION_USER_EMAIL_KEY] = email
@@ -343,33 +408,24 @@ def login(payload: LoginRequest, request: Request, response: Response, conn=Depe
     if not password_ok:
         _deny_login(request=request, email=email, user_id=user["id"], log_detail="Invalid credentials")
 
-    csrf_token = secrets.token_urlsafe(32)
     mfa_row = _get_mfa_safe(int(user["id"]), conn)
     mfa_enabled = bool(mfa_row and bool(mfa_row.get("is_enabled")))
     force_mfa = _mfa_required_for_role(user.get("role"))
     mfa_pending = bool(mfa_enabled or force_mfa)
 
     try:
-        _safe_session_reset(request)
-        _set_authenticated_session_state(request, user_id=int(user["id"]), email=user["email"], csrf_token=csrf_token, remember=remember, mfa_pending=mfa_pending)
+        session_bundle = establish_browser_session(
+            request=request,
+            conn=conn,
+            user=user,
+            remember=remember,
+            mfa_pending=mfa_pending,
+        )
     except Exception:
         _safe_session_reset(request)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Session could not be created")
 
-    session_id = create_session_record(user_id=int(user["id"]), request=request, mfa_verified=not mfa_pending, conn=conn)
-    token = create_session_token(
-        user["id"],
-        email=user.get("email"),
-        role=normalise_role(user.get("role")),
-        home_id=user.get("home_id"),
-        provider_id=user.get("provider_id"),
-        permissions=sorted(permissions_for_role(user.get("role"))),
-        mfa_verified=not mfa_pending,
-        remember=remember,
-        session_id=session_id,
-    )
-    _set_session_cookie(response, token, remember=remember)
-    _set_csrf_cookie(response, csrf_token, remember=remember)
+    apply_browser_session_cookies(response=response, bundle=session_bundle, remember=remember)
     _clear_failures(_client_ip(request), email)
     billing = _get_billing_safe(conn, user["id"])
 

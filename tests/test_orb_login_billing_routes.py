@@ -28,6 +28,7 @@ def test_orb_oauth_routes_exist():
 
     paths = {getattr(route, "path", "") for route in router.routes}
     assert any("oauth" in p and "start" in p for p in paths)
+    assert "/orb/standalone/auth/oauth/session/complete" in paths
 
 
 def test_auth_login_route_unchanged():
@@ -55,7 +56,7 @@ def test_frontend_orb_login_page_exists():
     login_page = REPO_ROOT / "frontend-next" / "app" / "orb" / "login" / "page.tsx"
     assert login_page.is_file()
     text = login_page.read_text(encoding="utf-8")
-    assert "OrbLoginScreen" in text
+    assert "buildOrbFrontDoorUrl" in text
 
 
 def test_checkout_requires_stripe_configuration(monkeypatch):

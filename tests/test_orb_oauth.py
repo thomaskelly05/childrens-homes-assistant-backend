@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi import HTTPException
@@ -87,3 +87,166 @@ def test_return_url_allowlist_blocks_open_redirect():
     assert _normalise_return_url("/orb/onboarding") == "/orb/onboarding"
     assert _normalise_return_url("https://evil.example/phish") == "/orb"
     assert _normalise_return_url("//evil") == "/orb"
+
+
+def test_orb_residential_oauth_user_does_not_require_mfa():
+    from routers.auth_routes import oauth_mfa_pending_for_user
+
+    conn = MagicMock()
+    user = {"id": 9, "role": "orb_residential", "email": "orb@test.com"}
+    with patch("routers.auth_routes._get_mfa_safe", return_value={"is_enabled": True}):
+        assert oauth_mfa_pending_for_user(user, conn) is False
+
+
+def test_google_callback_success_redirects_to_app_backend_handoff():
+    from routers.orb_oauth_routes import _orb_oauth_callback
+
+    request = MagicMock()
+    request.session = {}
+    conn = MagicMock()
+    user = {
+        "id": 42,
+        "email": "oauth@test.com",
+        "role": "orb_residential",
+        "home_id": None,
+        "provider_id": None,
+    }
+    bundle = MagicMock(token="jwt-token", csrf_token="csrf-token", mfa_pending=False)
+
+    import asyncio
+
+    with patch("routers.orb_oauth_routes.provider_enabled", return_value=True):
+        with patch("routers.orb_oauth_routes.load_provider_config", return_value=MagicMock()):
+            with patch("routers.orb_oauth_routes.validate_oauth_state", return_value="/orb"):
+                with patch("routers.orb_oauth_routes.exchange_code", new=AsyncMock(return_value={"access_token": "at"})):
+                    with patch("routers.orb_oauth_routes.fetch_userinfo", new=AsyncMock(return_value={"sub": "sub-1", "email": "oauth@test.com", "email_verified": True})):
+                        with patch("routers.orb_oauth_routes.find_orb_user_by_oauth", return_value=user):
+                            with patch("routers.orb_oauth_routes.link_oauth_account"):
+                                with patch("routers.orb_oauth_routes.establish_browser_session", return_value=bundle):
+                                    with patch("routers.orb_oauth_routes.store_oauth_session_handoff", return_value="handoff-abc"):
+                                        with patch("routers.orb_oauth_routes._resolve_access_state", return_value="inactive"):
+                                            response = asyncio.run(
+                                                _orb_oauth_callback(
+                                                    "google",
+                                                    request,
+                                                    conn,
+                                                    code="code-1",
+                                                    state="state-1",
+                                                    error=None,
+                                                )
+                                            )
+    assert response.status_code == 302
+    location = response.headers["location"]
+    assert "/backend/orb/standalone/auth/oauth/session/complete" in location
+    assert "handoff=handoff-abc" in location
+    assert "set-cookie" not in {name.lower() for name in response.headers.keys()}
+
+
+def test_oauth_session_complete_sets_session_cookie_and_redirects_to_orb():
+    from routers.orb_oauth_routes import orb_oauth_session_complete
+
+    request = MagicMock()
+    request.session = {}
+    conn = MagicMock()
+    payload = {
+        "handoff_id": "handoff-abc",
+        "user_id": 42,
+        "email": "oauth@test.com",
+        "session_token": "jwt-token",
+        "csrf_token": "csrf-token",
+        "return_url": "/orb",
+        "mfa_pending": False,
+        "provider": "google",
+    }
+
+    import asyncio
+
+    with patch("routers.orb_oauth_routes.consume_oauth_session_handoff", return_value=payload):
+        response = asyncio.run(orb_oauth_session_complete(request, handoff="handoff-abc", conn=conn))
+
+    assert response.status_code == 302
+    assert response.headers["location"].endswith("/orb")
+    set_cookie = response.headers.get("set-cookie", "")
+    assert "indicare_session" in set_cookie or "__Host-indicare_session" in set_cookie
+
+
+def test_oauth_session_complete_mfa_required_redirects_to_mfa():
+    from routers.orb_oauth_routes import orb_oauth_session_complete
+
+    request = MagicMock()
+    request.session = {}
+    conn = MagicMock()
+    payload = {
+        "handoff_id": "handoff-abc",
+        "user_id": 42,
+        "email": "admin@test.com",
+        "session_token": "jwt-token",
+        "csrf_token": "csrf-token",
+        "return_url": "/orb",
+        "mfa_pending": True,
+        "provider": "google",
+    }
+
+    import asyncio
+
+    with patch("routers.orb_oauth_routes.consume_oauth_session_handoff", return_value=payload):
+        response = asyncio.run(orb_oauth_session_complete(request, handoff="handoff-abc", conn=conn))
+
+    assert response.status_code == 302
+    assert "/mfa?next=" in response.headers["location"]
+
+
+def test_oauth_session_complete_invalid_handoff_returns_login_error():
+    from routers.orb_oauth_routes import orb_oauth_session_complete
+
+    request = MagicMock()
+    request.session = {}
+    conn = MagicMock()
+
+    import asyncio
+
+    with patch("routers.orb_oauth_routes.consume_oauth_session_handoff", return_value=None):
+        response = asyncio.run(orb_oauth_session_complete(request, handoff="bad", conn=conn))
+
+    assert response.status_code == 302
+    assert "oauth_error" in response.headers["location"]
+
+
+def test_inactive_oauth_user_access_state_is_inactive_not_login():
+    from services.orb_front_door_verdict_service import VERDICT_INACTIVE, build_front_door_verdict
+
+    request = MagicMock()
+    request.cookies = {"indicare_session": "valid-token"}
+    conn = MagicMock()
+    user = {
+        "user_id": 42,
+        "id": 42,
+        "email": "oauth@test.com",
+        "role": "orb_residential",
+    }
+    access_payload = {
+        "can_use_orb": False,
+        "access_state": "inactive",
+        "access_blocker": "subscription_required",
+        "safety_accepted": True,
+        "trial": {"active": False},
+        "subscription": {"active": False},
+        "billing": {},
+    }
+
+    with patch(
+        "services.orb_front_door_verdict_service._get_request_token",
+        return_value="valid-token",
+    ):
+        with patch(
+            "services.orb_front_door_verdict_service.get_orb_residential_user",
+            return_value=user,
+        ):
+            with patch(
+                "services.orb_front_door_verdict_service.orb_access_service.build_access_payload",
+                return_value=access_payload,
+            ):
+                verdict = build_front_door_verdict(request, conn, bearer_token=None)
+
+    assert verdict["verdict"] == VERDICT_INACTIVE
+    assert verdict["authenticated"] is True
