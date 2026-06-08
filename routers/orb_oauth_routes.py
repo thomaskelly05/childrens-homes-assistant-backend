@@ -6,9 +6,14 @@ import secrets
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.responses import RedirectResponse
-from auth.tokens import create_session_token
 from db.connection import get_db
-from routers.auth_routes import _set_session_cookie, settings as auth_settings
+from routers.auth_routes import (
+    _set_authenticated_session_state,
+    _set_csrf_cookie,
+    _set_session_cookie,
+    establish_browser_session,
+    oauth_mfa_pending_for_user,
+)
 from services.orb_oauth_service import (
     build_authorize_url,
     create_orb_residential_user,
@@ -25,17 +30,61 @@ from services.orb_oauth_service import (
     store_oauth_session,
     validate_oauth_state,
 )
-from services.session_security_service import create_session_record
+from services.orb_oauth_session_handoff_service import (
+    consume_oauth_session_handoff,
+    store_oauth_session_handoff,
+)
+from services.orb_access_service import orb_access_service
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/orb/standalone/auth/oauth", tags=["ORB Standalone OAuth"])
 
 FRONTEND_APP_URL = os.getenv("FRONTEND_APP_URL", os.getenv("APP_BASE_URL", "http://localhost:3001")).strip()
+OAUTH_SESSION_COMPLETE_PROXY_PATH = "/backend/orb/standalone/auth/oauth/session/complete"
 
 
 def _redirect(url: str) -> RedirectResponse:
     return RedirectResponse(url=url, status_code=status.HTTP_302_FOUND)
+
+
+def _frontend_oauth_session_complete_url(handoff_id: str) -> str:
+    return (
+        f"{FRONTEND_APP_URL.rstrip('/')}{OAUTH_SESSION_COMPLETE_PROXY_PATH}"
+        f"?handoff={handoff_id}"
+    )
+
+
+def _resolve_access_state(conn, user_id: int, user: dict) -> str | None:
+    try:
+        access = orb_access_service.build_access_payload(int(user_id), conn=conn, user=user)
+        return str(access.get("access_state") or "") or None
+    except Exception:
+        return None
+
+
+def _log_oauth_callback_success(
+    *,
+    provider: str,
+    user_created: bool,
+    redirect_target: str,
+    mfa_required: bool,
+    access_state: str | None,
+    handoff: bool,
+    set_cookie_present: bool,
+) -> None:
+    logger.info(
+        "ORB OAuth callback success provider=%s oauth_callback_success=true user_resolved=true "
+        "user_created=%s session_created=true set_cookie_present=%s redirect_target=%s "
+        "mfa_required=%s access_state=%s handoff=%s",
+        provider,
+        user_created,
+        set_cookie_present,
+        redirect_target,
+        mfa_required,
+        access_state or "unknown",
+        handoff,
+    )
 
 
 @router.get("/{provider}/start")
@@ -90,6 +139,70 @@ async def orb_oauth_callback_post(
     )
 
 
+@router.get("/session/complete")
+async def orb_oauth_session_complete(
+    request: Request,
+    handoff: str = Query(default=""),
+    conn=Depends(get_db),
+):
+    """Complete OAuth on the app host via the Next.js /backend proxy so cookies bind to app.indicare.co.uk."""
+    payload = consume_oauth_session_handoff(conn, handoff)
+    if not payload:
+        conn.rollback()
+        return _redirect(
+            oauth_error_redirect(
+                FRONTEND_APP_URL,
+                "Sign-in could not be completed. Please try again.",
+            )
+        )
+
+    return_url = str(payload.get("return_url") or "/orb")
+    mfa_pending = bool(payload.get("mfa_pending"))
+    remember = True
+    csrf_token = str(payload.get("csrf_token") or "")
+    session_token = str(payload.get("session_token") or "")
+    user_id = int(payload["user_id"])
+    email = str(payload.get("email") or "")
+
+    try:
+        _set_authenticated_session_state(
+            request,
+            user_id=user_id,
+            email=email,
+            csrf_token=csrf_token,
+            remember=remember,
+            mfa_pending=mfa_pending,
+        )
+    except Exception:
+        conn.rollback()
+        logger.exception("ORB OAuth session complete failed to restore session state")
+        return _redirect(
+            oauth_error_redirect(
+                FRONTEND_APP_URL,
+                "Sign-in could not be completed. Please try again.",
+            )
+        )
+
+    destination = f"{FRONTEND_APP_URL.rstrip('/')}{return_url}"
+    if mfa_pending:
+        destination = f"{FRONTEND_APP_URL.rstrip('/')}/mfa?next={return_url}"
+
+    response = _redirect(destination)
+    _set_session_cookie(response, session_token, remember=remember)
+    _set_csrf_cookie(response, csrf_token, remember=remember)
+    conn.commit()
+
+    logger.info(
+        "ORB OAuth session complete provider=%s oauth_callback_success=true user_resolved=true "
+        "user_created=false session_created=true set_cookie_present=true redirect_target=%s "
+        "mfa_required=%s access_state=unknown handoff=true",
+        payload.get("provider") or "unknown",
+        destination,
+        mfa_pending,
+    )
+    return response
+
+
 async def _orb_oauth_callback(
     provider: str,
     request: Request,
@@ -115,6 +228,7 @@ async def _orb_oauth_callback(
     except ValueError:
         return _redirect(oauth_error_redirect(FRONTEND_APP_URL, "Security check failed. Please try again."))
 
+    user_created = False
     try:
         token_payload = await exchange_code(config, code)
         access_token = str(token_payload.get("access_token") or "")
@@ -147,6 +261,7 @@ async def _orb_oauth_callback(
                     first_name=profile.get("first_name"),
                     last_name=profile.get("last_name"),
                 )
+                user_created = True
 
         link_oauth_account(
             conn,
@@ -157,23 +272,39 @@ async def _orb_oauth_callback(
             email_verified=True,
             metadata={"provider": key},
         )
-        session_id = create_session_record(
-            user_id=int(user["id"]),
+
+        mfa_pending = oauth_mfa_pending_for_user(user, conn)
+        session_bundle = establish_browser_session(
             request=request,
-            mfa_verified=True,
             conn=conn,
+            user=user,
+            remember=True,
+            mfa_pending=mfa_pending,
         )
-        token = create_session_token(
+        handoff_id = store_oauth_session_handoff(
+            conn,
             user_id=int(user["id"]),
-            role=str(user.get("role") or "orb_residential"),
-            session_id=session_id,
-            permissions=[],
+            email=email,
+            session_token=session_bundle.token,
+            csrf_token=session_bundle.csrf_token,
+            return_url=return_url,
+            mfa_pending=mfa_pending,
+            provider=key,
         )
         conn.commit()
-        destination = f"{FRONTEND_APP_URL.rstrip('/')}{return_url}"
-        response = _redirect(destination)
-        _set_session_cookie(response, token, remember=True)
-        return response
+
+        redirect_target = _frontend_oauth_session_complete_url(handoff_id)
+        access_state = _resolve_access_state(conn, int(user["id"]), user)
+        _log_oauth_callback_success(
+            provider=key,
+            user_created=user_created,
+            redirect_target=redirect_target,
+            mfa_required=mfa_pending,
+            access_state=access_state,
+            handoff=True,
+            set_cookie_present=False,
+        )
+        return _redirect(redirect_target)
     except Exception:
         logger.exception("ORB OAuth callback failed provider=%s", key)
         conn.rollback()
