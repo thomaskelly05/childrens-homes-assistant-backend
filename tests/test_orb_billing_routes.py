@@ -67,6 +67,11 @@ def test_checkout_payload_excludes_automatic_payment_methods():
     assert "automatic_payment_methods" not in kwargs
 
 
+def test_checkout_payload_includes_payment_method_types_card():
+    _, create_session = _run_checkout()
+    assert create_session.call_args.kwargs["payment_method_types"] == ["card"]
+
+
 def test_checkout_payload_includes_subscription_mode():
     _, create_session = _run_checkout()
     assert create_session.call_args.kwargs["mode"] == "subscription"
@@ -159,6 +164,37 @@ def test_valid_mocked_stripe_response_returns_checkout_url():
     result, _ = _run_checkout()
     assert result["success"] is True
     assert result["checkout_url"] == "https://checkout.stripe.com/c/pay/cs_test"
+
+
+def test_generic_stripe_checkout_error_returns_safe_message(monkeypatch):
+    monkeypatch.setattr("routers.orb_billing_routes.STRIPE_SECRET_KEY", "sk_live_test")
+    monkeypatch.setattr(
+        "routers.orb_billing_routes.orb_residential_stripe_price_id",
+        lambda: "price_orb_live_999",
+    )
+
+    conn = MagicMock()
+    stripe_error = stripe.error.StripeError("Card declined")
+
+    with patch("routers.orb_billing_routes.get_orb_subscription", return_value={}), patch(
+        "routers.orb_billing_routes.stripe.Customer.create", return_value={"id": "cus_test"}
+    ), patch("routers.orb_billing_routes.upsert_orb_stripe_customer"), patch(
+        "routers.orb_billing_routes.stripe.Price.retrieve", return_value=_valid_price()
+    ), patch(
+        "routers.orb_billing_routes.stripe.checkout.Session.create", side_effect=stripe_error
+    ):
+        with pytest.raises(HTTPException) as exc:
+            asyncio.run(
+                orb_standalone_checkout(
+                    OrbCheckoutRequest(),
+                    conn=conn,
+                    current_user={"user_id": 1, "email": "u@test.com"},
+                )
+            )
+
+    assert exc.value.status_code == 400
+    assert exc.value.detail == "Could not create checkout session"
+    assert "sk_live" not in str(exc.value.detail)
 
 
 def test_invalid_price_amount_returns_safe_config_error(monkeypatch):
