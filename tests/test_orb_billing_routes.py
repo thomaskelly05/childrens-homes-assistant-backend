@@ -12,11 +12,20 @@ from fastapi import HTTPException
 from routers.orb_billing_routes import (
     ORB_CHECKOUT_CONFIG_ERROR,
     OrbCheckoutRequest,
+    _validate_orb_stripe_checkout_config,
     orb_standalone_checkout,
 )
 
 
-def _valid_price() -> dict:
+class _StripeObjectLike:
+    """Minimal StripeObject stand-in: attribute access only (no .get())."""
+
+    def __init__(self, **kwargs):
+        for key, value in kwargs.items():
+            setattr(self, key, value)
+
+
+def _valid_price_dict() -> dict:
     return {
         "id": "price_orb_live_999",
         "active": True,
@@ -24,6 +33,20 @@ def _valid_price() -> dict:
         "unit_amount": 999,
         "recurring": {"interval": "month"},
     }
+
+
+def _valid_price_stripe_object() -> _StripeObjectLike:
+    return _StripeObjectLike(
+        id="price_orb_live_999",
+        active=True,
+        currency="gbp",
+        unit_amount=999,
+        recurring=_StripeObjectLike(interval="month"),
+    )
+
+
+def _valid_price():
+    return _valid_price_dict()
 
 
 def _run_checkout(**patches):
@@ -205,8 +228,8 @@ def test_invalid_price_amount_returns_safe_config_error(monkeypatch):
     )
 
     conn = MagicMock()
-    bad_price = _valid_price()
-    bad_price["unit_amount"] = 1000
+    bad_price = _valid_price_stripe_object()
+    bad_price.unit_amount = 1000
 
     with patch("routers.orb_billing_routes.stripe.Price.retrieve", return_value=bad_price):
         with pytest.raises(HTTPException) as exc:
@@ -220,3 +243,109 @@ def test_invalid_price_amount_returns_safe_config_error(monkeypatch):
 
     assert exc.value.status_code == 503
     assert exc.value.detail == ORB_CHECKOUT_CONFIG_ERROR
+
+
+def test_validate_stripe_checkout_config_accepts_stripe_object_price(monkeypatch):
+    monkeypatch.setattr("routers.orb_billing_routes.STRIPE_SECRET_KEY", "sk_live_test")
+    monkeypatch.setattr(
+        "routers.orb_billing_routes.orb_residential_stripe_price_id",
+        lambda: "price_orb_live_999",
+    )
+    with patch(
+        "routers.orb_billing_routes.stripe.Price.retrieve",
+        return_value=_valid_price_stripe_object(),
+    ):
+        assert _validate_orb_stripe_checkout_config() == "price_orb_live_999"
+
+
+def test_validate_stripe_checkout_config_rejects_inactive_price(monkeypatch):
+    monkeypatch.setattr("routers.orb_billing_routes.STRIPE_SECRET_KEY", "sk_live_test")
+    monkeypatch.setattr(
+        "routers.orb_billing_routes.orb_residential_stripe_price_id",
+        lambda: "price_orb_live_999",
+    )
+    inactive = _valid_price_stripe_object()
+    inactive.active = False
+    with patch("routers.orb_billing_routes.stripe.Price.retrieve", return_value=inactive):
+        with pytest.raises(HTTPException) as exc:
+            _validate_orb_stripe_checkout_config()
+    assert exc.value.status_code == 503
+    assert exc.value.detail == ORB_CHECKOUT_CONFIG_ERROR
+
+
+def test_validate_stripe_checkout_config_rejects_non_gbp_price(monkeypatch):
+    monkeypatch.setattr("routers.orb_billing_routes.STRIPE_SECRET_KEY", "sk_live_test")
+    monkeypatch.setattr(
+        "routers.orb_billing_routes.orb_residential_stripe_price_id",
+        lambda: "price_orb_live_999",
+    )
+    usd_price = _valid_price_stripe_object()
+    usd_price.currency = "usd"
+    with patch("routers.orb_billing_routes.stripe.Price.retrieve", return_value=usd_price):
+        with pytest.raises(HTTPException) as exc:
+            _validate_orb_stripe_checkout_config()
+    assert exc.value.status_code == 503
+    assert exc.value.detail == ORB_CHECKOUT_CONFIG_ERROR
+
+
+def test_validate_stripe_checkout_config_rejects_wrong_amount(monkeypatch):
+    monkeypatch.setattr("routers.orb_billing_routes.STRIPE_SECRET_KEY", "sk_live_test")
+    monkeypatch.setattr(
+        "routers.orb_billing_routes.orb_residential_stripe_price_id",
+        lambda: "price_orb_live_999",
+    )
+    wrong_amount = _valid_price_stripe_object()
+    wrong_amount.unit_amount = 1000
+    with patch("routers.orb_billing_routes.stripe.Price.retrieve", return_value=wrong_amount):
+        with pytest.raises(HTTPException) as exc:
+            _validate_orb_stripe_checkout_config()
+    assert exc.value.status_code == 503
+    assert exc.value.detail == ORB_CHECKOUT_CONFIG_ERROR
+
+
+def test_validate_stripe_checkout_config_rejects_missing_recurring_interval(monkeypatch):
+    monkeypatch.setattr("routers.orb_billing_routes.STRIPE_SECRET_KEY", "sk_live_test")
+    monkeypatch.setattr(
+        "routers.orb_billing_routes.orb_residential_stripe_price_id",
+        lambda: "price_orb_live_999",
+    )
+    no_interval = _valid_price_stripe_object()
+    no_interval.recurring = _StripeObjectLike(interval=None)
+    with patch("routers.orb_billing_routes.stripe.Price.retrieve", return_value=no_interval):
+        with pytest.raises(HTTPException) as exc:
+            _validate_orb_stripe_checkout_config()
+    assert exc.value.status_code == 503
+    assert exc.value.detail == ORB_CHECKOUT_CONFIG_ERROR
+
+
+def test_validate_stripe_checkout_config_rejects_missing_recurring(monkeypatch):
+    monkeypatch.setattr("routers.orb_billing_routes.STRIPE_SECRET_KEY", "sk_live_test")
+    monkeypatch.setattr(
+        "routers.orb_billing_routes.orb_residential_stripe_price_id",
+        lambda: "price_orb_live_999",
+    )
+    no_recurring = _valid_price_stripe_object()
+    no_recurring.recurring = None
+    with patch("routers.orb_billing_routes.stripe.Price.retrieve", return_value=no_recurring):
+        with pytest.raises(HTTPException) as exc:
+            _validate_orb_stripe_checkout_config()
+    assert exc.value.status_code == 503
+    assert exc.value.detail == ORB_CHECKOUT_CONFIG_ERROR
+
+
+def test_stripe_price_retrieve_failure_returns_safe_config_error(monkeypatch):
+    monkeypatch.setattr("routers.orb_billing_routes.STRIPE_SECRET_KEY", "sk_live_test")
+    monkeypatch.setattr(
+        "routers.orb_billing_routes.orb_residential_stripe_price_id",
+        lambda: "price_orb_live_999",
+    )
+    with patch(
+        "routers.orb_billing_routes.stripe.Price.retrieve",
+        side_effect=stripe.error.StripeError("Invalid API Key provided: sk_live_secret"),
+    ):
+        with pytest.raises(HTTPException) as exc:
+            _validate_orb_stripe_checkout_config()
+    assert exc.value.status_code == 503
+    assert exc.value.detail == ORB_CHECKOUT_CONFIG_ERROR
+    assert "sk_live" not in str(exc.value.detail)
+    assert "Invalid API Key" not in str(exc.value.detail)
