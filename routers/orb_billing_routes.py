@@ -61,6 +61,9 @@ FRONTEND_APP_URL = os.getenv("FRONTEND_APP_URL", APP_BASE_URL).strip()
 if STRIPE_SECRET_KEY:
     stripe.api_key = STRIPE_SECRET_KEY
 
+ORB_CHECKOUT_CONFIG_ERROR = "Checkout is not available yet. Billing configuration needs attention."
+ORB_EXPECTED_PRICE_UNIT_AMOUNT = 999  # £9.99/month in GBP pence
+
 
 class OrbSignupRequest(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -139,6 +142,42 @@ def _require_stripe_checkout() -> None:
             status_code=503,
             detail="ORB Residential subscription price is not configured (ORB_RESIDENTIAL_STRIPE_PRICE_ID missing).",
         )
+
+
+def _validate_orb_stripe_checkout_config() -> str:
+    """Validate live Stripe checkout configuration before creating a session."""
+    if not STRIPE_SECRET_KEY.startswith("sk_"):
+        raise HTTPException(status_code=503, detail=ORB_CHECKOUT_CONFIG_ERROR)
+
+    price_id = orb_residential_stripe_price_id()
+    if not price_id.startswith("price_"):
+        raise HTTPException(status_code=503, detail=ORB_CHECKOUT_CONFIG_ERROR)
+
+    try:
+        price = stripe.Price.retrieve(price_id)
+    except stripe.error.StripeError:
+        logger.exception("ORB Stripe price validation failed")
+        raise HTTPException(status_code=503, detail=ORB_CHECKOUT_CONFIG_ERROR) from None
+
+    if not price.get("active"):
+        raise HTTPException(status_code=503, detail=ORB_CHECKOUT_CONFIG_ERROR)
+    if str(price.get("currency") or "").lower() != "gbp":
+        raise HTTPException(status_code=503, detail=ORB_CHECKOUT_CONFIG_ERROR)
+    if price.get("unit_amount") != ORB_EXPECTED_PRICE_UNIT_AMOUNT:
+        raise HTTPException(status_code=503, detail=ORB_CHECKOUT_CONFIG_ERROR)
+    recurring = price.get("recurring") or {}
+    if recurring.get("interval") != "month":
+        raise HTTPException(status_code=503, detail=ORB_CHECKOUT_CONFIG_ERROR)
+
+    return price_id
+
+
+def _safe_stripe_checkout_error(exc: stripe.error.StripeError) -> str:
+    param = getattr(exc, "param", None) or ""
+    code = getattr(exc, "code", None) or ""
+    if code == "parameter_unknown" or param == "automatic_payment_methods":
+        return ORB_CHECKOUT_CONFIG_ERROR
+    return "Could not create checkout session"
 
 
 def _record_analytics(conn, *, user_id: int | None, event: str, metadata: dict[str, Any] | None = None) -> None:
@@ -259,6 +298,7 @@ async def orb_standalone_checkout(
     current_user=Depends(require_orb_residential_auth),
 ):
     _require_stripe_checkout()
+    price_id = _validate_orb_stripe_checkout_config()
     user_id = int(current_user["user_id"])
     email = str(current_user.get("email") or "")
     subscription = get_orb_subscription(conn, user_id)
@@ -277,23 +317,26 @@ async def orb_standalone_checkout(
         session_kwargs: dict[str, Any] = {
             "mode": "subscription",
             "customer": customer_id,
-            "line_items": [{"price": orb_residential_stripe_price_id(), "quantity": 1}],
+            "line_items": [{"price": price_id, "quantity": 1}],
             "success_url": _default_success_url(payload.success_url),
             "cancel_url": _default_cancel_url(payload.cancel_url),
+            "client_reference_id": str(user_id),
             "metadata": orb_subscription_plan_service.stripe_metadata(user_id=user_id, email=email),
             "subscription_data": {
                 "metadata": orb_subscription_plan_service.stripe_metadata(user_id=user_id, email=email),
             },
+            "payment_method_types": ["card"],
             "allow_promotion_codes": True,
         }
-        session_kwargs["automatic_payment_methods"] = {"enabled": True}
         session = stripe.checkout.Session.create(**session_kwargs)
         _record_analytics(conn, user_id=user_id, event="checkout_started")
         conn.commit()
         return {"success": True, "checkout_url": session.url}
     except stripe.error.StripeError as exc:
         logger.exception("ORB checkout failed user_id=%s", user_id)
-        raise HTTPException(status_code=400, detail="Could not create checkout session") from exc
+        detail = _safe_stripe_checkout_error(exc)
+        status_code = 503 if detail == ORB_CHECKOUT_CONFIG_ERROR else 400
+        raise HTTPException(status_code=status_code, detail=detail) from exc
 
 
 @router.post("/billing/portal")

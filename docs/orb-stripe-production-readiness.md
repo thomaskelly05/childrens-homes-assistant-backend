@@ -12,7 +12,7 @@ See also: [frontend-next/docs/orb-stripe-production-setup.md](../frontend-next/d
 | Mode | `subscription` |
 | Price | `ORB_RESIDENTIAL_STRIPE_PRICE_ID` via `orb_residential_stripe_price_id()` |
 | Customer | Created on first checkout; stored in `orb_subscriptions` |
-| Payment methods | `automatic_payment_methods: { enabled: true }` |
+| Payment methods | `payment_method_types: ["card"]` (no `automatic_payment_methods` on Checkout Session) |
 | Metadata | `product: orb_residential`, `user_id`, `orb_plan` |
 
 Missing configuration returns **503** with explicit server messages (no secrets in response).
