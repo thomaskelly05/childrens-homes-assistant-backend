@@ -256,7 +256,7 @@ import {
   backendOrbActionIdForFollowUp,
   isBackendSupportedOrbResponseAction
 } from '@/lib/orb/orb-response-actions'
-import { askOrbBrain } from '@/lib/orb/orb-brain-router'
+import { askOrbBrain, buildOrbBrainConversationRequest } from '@/lib/orb/orb-brain-router'
 import {
   isOrbFastOpeningOnlyCompletion,
   resolveOrbStreamedAnswer
@@ -1407,8 +1407,13 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
         ...(projectMemory ? { project_memory: projectMemory } : {})
       }
 
-      const runConversationRequest = async () =>
-        queryStandaloneOrbConversation(conversationRequest, requestController.signal)
+      const runConversationRequest = async () => {
+        const brainRoutedRequest = buildOrbBrainConversationRequest(conversationRequest, {
+          source: voiceOriginatedSend ? 'voice' : 'chat',
+          mode
+        })
+        return queryStandaloneOrbConversation(brainRoutedRequest, requestController.signal)
+      }
 
       const assistantId = `a-${Date.now()}`
       const streamingMessage: StandaloneChatMessage = {

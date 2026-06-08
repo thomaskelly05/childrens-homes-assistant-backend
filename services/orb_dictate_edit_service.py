@@ -24,6 +24,7 @@ from services.indicare_intelligence_core_service import indicare_intelligence_co
 from services.orb_dictate_service import STANDALONE_BOUNDARY, _dictate_brain_metadata, _finalize_dictate_text
 from services.orb_document_brain_adapter_service import orb_document_brain_adapter_service
 from services.orb_recording_contract_service import build_recording_contract_prompt_block
+from services.orb_therapeutic_language_contract_service import build_therapeutic_language_contract_block
 from services.recording_intelligence_service import recording_intelligence_service
 
 logger = logging.getLogger("indicare.orb_dictate_edit")
@@ -298,6 +299,7 @@ def _build_edit_prompt(request: OrbDictateEditRequest, mode: str) -> tuple[str, 
         f"Instruction: {request.instruction or mode_instruction}\n\n"
         f"Mode guidance:\n{mode_instruction}\n\n"
         f"{contract_block}\n\n"
+        f"{build_therapeutic_language_contract_block()}\n\n"
         f"{intel_block}\n\n"
         f"Evidence gaps to consider (do not invent answers):\n"
         + "\n".join(f"- {g}" for g in intel.evidence_gaps[:6])

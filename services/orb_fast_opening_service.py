@@ -17,6 +17,15 @@ _SCENARIO_OPENINGS: list[tuple[Pattern[str], str]] = [
     ),
     (
         re.compile(
+            r"\b(kicked off|kicking off|played up)\b.*(family time|family contact|contact)|"
+            r"(family time|family contact).*\b(kicked off|kicking off|played up)\b",
+            re.I,
+        ),
+        "I can help you record this safely. I'll treat shorthand behaviour wording as something to clarify "
+        "into observable facts — and I'll only use what you've provided.",
+    ),
+    (
+        re.compile(
             r"(don'?t|doesn'?t|do not)\s+care|i don'?t care|says she doesn'?t care|keeps saying",
             re.I,
         ),
