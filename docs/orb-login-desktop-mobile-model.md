@@ -14,12 +14,17 @@ The login page was improved but not launch-ready:
 
 ### Layout fix (this pass)
 
-**Desktop left hero** — strict document flow:
+**Desktop left hero** — strict document flow (no absolute overlap):
 
-1. ORB Residential + Powered by IndiCare Intelligence
-2. ORB visual — centred, max **6.5rem** (5.5rem on heights ≤760px), `overflow: hidden` on wrap
-3. Brand tag — below sphere, muted, no overlap
-4. Headline + lead + trust points — below visual block with explicit spacing
+1. ORB sphere — centred, max **6.5rem** (5.5rem on heights ≤760px), `overflow: hidden` on wrap
+2. ORB Residential
+3. Powered by IndiCare Intelligence
+4. Care. Connect. Empower. (brand tag)
+5. AI support for residential children's homes (headline)
+6. Record better. Reflect faster. Respond safer.
+7. Trust points
+
+Hero starts ~10–16% from viewport top (`clamp(2.25rem, 14vh, 4.25rem)` padding).
 
 **Right card** — short desktop (≤760px height):
 
@@ -34,11 +39,10 @@ The login page was improved but not launch-ready:
 
 **Left hero** (`OrbLoginDesktopHero`):
 
-- Top-aligned at ~10–16% from usable viewport top (`clamp(1.25rem, 12vh, 3.5rem)`).
+- Top-aligned at ~10–16% from usable viewport top.
+- ORB sphere first in document flow (above all copy).
 - Brand block: ORB Residential → Powered by IndiCare Intelligence.
-- ORB visual centred in a dedicated visual column beneath the brand block.
-- Brand tag below the sphere with explicit gap (no overlap).
-- Hero copy and trust points below.
+- Brand tag, headline, lead, and trust points follow in normal flow — no overlap with sphere.
 
 **Right card** (`OrbLoginAuthCard`):
 
@@ -121,11 +125,17 @@ No proprietary intelligence details are exposed on the login surface.
 | 390×844 | Mobile — Safari typical |
 | 430×932 | Mobile — large phone |
 
+## Related deploy fixes
+
+- Missing `orb-auth-recovery-diagnostics` module — see `docs/orb-google-oauth-production-diagnostics.md`
+- Google OAuth env validation — malformed client ids no longer redirect to Google `invalid_client`
+
 ## Tests run
 
 ```bash
 cd frontend-next
 npm run typecheck
+npm run build
 NEXT_PUBLIC_E2E_TEST_MODE=1 npm run e2e:orb-auth
 ```
 

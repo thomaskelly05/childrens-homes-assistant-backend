@@ -51,11 +51,14 @@ def test_passkey_routes_unchanged():
 
 
 def test_login_passkey_requires_email_copy():
-    text = (REPO_ROOT / "frontend-next/components/orb-residential/orb-login-screen.tsx").read_text(
-        encoding="utf-8"
-    )
-    assert "data-orb-passkey-email" in text
-    assert "Enter your email" in text
+    auth_card = (
+        REPO_ROOT / "frontend-next/components/orb-residential/orb-login-auth-card.tsx"
+    ).read_text(encoding="utf-8")
+    login_screen = (
+        REPO_ROOT / "frontend-next/components/orb-residential/orb-login-screen.tsx"
+    ).read_text(encoding="utf-8")
+    assert "data-orb-passkey-email" in auth_card
+    assert "Enter your email" in login_screen
 
 
 def test_passkey_client_user_facing_errors():

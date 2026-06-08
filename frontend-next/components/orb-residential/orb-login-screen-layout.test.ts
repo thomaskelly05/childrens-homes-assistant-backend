@@ -37,19 +37,19 @@ describe('ORB premium login screen layout', () => {
     assert.match(authCard, /max-w-md/)
   })
 
-  it('left hero follows brand hierarchy with secondary tagline', () => {
+  it('left hero places ORB visual above brand and copy in document flow', () => {
     const hero = read('components/orb-residential/orb-login-desktop-hero.tsx')
     const css = read('app/orb/orb-login.css')
 
+    const sphereIdx = hero.indexOf('data-orb-login-hero-sphere')
     const brandIdx = hero.indexOf('data-orb-login-brand')
     const engineIdx = hero.indexOf('data-orb-login-engine-line')
-    const sphereIdx = hero.indexOf('data-orb-login-hero-sphere')
     const tagIdx = hero.indexOf('data-orb-login-brand-tag')
     const titleIdx = hero.indexOf('data-orb-login-title')
 
+    assert.ok(sphereIdx < brandIdx, 'ORB visual should precede product name')
     assert.ok(brandIdx < engineIdx, 'Product name should precede engine line')
-    assert.ok(engineIdx < sphereIdx, 'Engine line should precede ORB visual')
-    assert.ok(sphereIdx < tagIdx, 'ORB visual should precede brand tag')
+    assert.ok(engineIdx < tagIdx, 'Engine line should precede brand tag')
     assert.ok(tagIdx < titleIdx, 'Brand tag should precede functional headline')
 
     assert.match(hero, /ORB Residential/)
@@ -63,7 +63,7 @@ describe('ORB premium login screen layout', () => {
     assert.match(hero, /OrbHeroSphere/)
     assert.match(css, /orb-login-hero-visual/)
     assert.match(css, /justify-content:\s*flex-start/)
-    assert.match(css, /clamp\(1\.75rem,\s*13vh,\s*4\.25rem\)/)
+    assert.match(css, /clamp\(2\.25rem,\s*14vh,\s*4\.25rem\)/)
   })
 
   it('mobile layout is single column with separate compact header', () => {

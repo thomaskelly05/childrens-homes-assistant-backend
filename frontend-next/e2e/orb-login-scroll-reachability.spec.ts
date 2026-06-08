@@ -80,6 +80,23 @@ test.describe('ORB login scroll reachability', () => {
     expect(focusAudit.emailFocusOk).toBe(true)
   })
 
+  test('desktop hero places sphere above brand copy', async ({ page }) => {
+    await disableE2eAutoAuth(page)
+    await setupOrbAuthE2eMocks(page, { scenario: 'unauthenticated' })
+    await page.setViewportSize({ width: 1440, height: 760 })
+    await gotoOrbLogin(page)
+
+    const order = await page.evaluate(() => {
+      const sphere = document.querySelector('[data-orb-login-hero-sphere]')
+      const brand = document.querySelector('[data-orb-login-brand]')
+      if (!sphere || !brand) return { sphereAboveBrand: false }
+      const sphereRect = sphere.getBoundingClientRect()
+      const brandRect = brand.getBoundingClientRect()
+      return { sphereAboveBrand: sphereRect.bottom <= brandRect.top + 2 }
+    })
+    expect(order.sphereAboveBrand).toBe(true)
+  })
+
   test('desktop hero sphere and brand tag do not overlap', async ({ page }) => {
     await disableE2eAutoAuth(page)
     await setupOrbAuthE2eMocks(page, { scenario: 'unauthenticated' })

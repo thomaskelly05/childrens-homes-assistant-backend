@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 
+from services.orb_oauth_service import google_redirect_uri_matches_expected
 from services.orb_subscription_plan_service import oauth_provider_configured, orb_residential_stripe_price_id
 
 
@@ -24,12 +25,23 @@ def oauth_provider_config_warnings(provider: str) -> list[str]:
     key = provider.strip().lower()
     warnings: list[str] = []
     if key == "google":
-        if not os.getenv("OAUTH_GOOGLE_CLIENT_ID", "").strip():
+        client_id = os.getenv("OAUTH_GOOGLE_CLIENT_ID", "").strip()
+        if not client_id:
             warnings.append("OAUTH_GOOGLE_CLIENT_ID is not set")
+        elif not client_id.endswith(".apps.googleusercontent.com"):
+            warnings.append(
+                "OAUTH_GOOGLE_CLIENT_ID must end with .apps.googleusercontent.com"
+            )
         if not os.getenv("OAUTH_GOOGLE_CLIENT_SECRET", "").strip():
             warnings.append("OAUTH_GOOGLE_CLIENT_SECRET is not set")
-        if not os.getenv("OAUTH_GOOGLE_REDIRECT_URI", "").strip():
+        redirect_uri = os.getenv("OAUTH_GOOGLE_REDIRECT_URI", "").strip()
+        if not redirect_uri:
             warnings.append("OAUTH_GOOGLE_REDIRECT_URI is not set")
+        elif not google_redirect_uri_matches_expected(redirect_uri):
+            warnings.append(
+                "OAUTH_GOOGLE_REDIRECT_URI should be "
+                "https://api.indicare.co.uk/orb/standalone/auth/oauth/google/callback"
+            )
     elif key == "microsoft":
         if not os.getenv("OAUTH_MICROSOFT_CLIENT_ID", "").strip():
             warnings.append("OAUTH_MICROSOFT_CLIENT_ID is not set")
@@ -74,7 +86,12 @@ def _oauth_redirect_uri(provider: str) -> str | None:
 
 def oauth_provider_diagnostics(provider: str) -> dict[str, object]:
     """Non-secret OAuth wiring diagnostics for admin/development surfaces."""
-    from services.orb_oauth_service import load_provider_config
+    from services.orb_oauth_service import (
+        EXPECTED_GOOGLE_REDIRECT_URI,
+        google_redirect_uri_matches_expected,
+        is_valid_google_client_id,
+        load_provider_config,
+    )
 
     key = provider.strip().lower()
     configured = load_provider_config(key) is not None
@@ -96,7 +113,7 @@ def oauth_provider_diagnostics(provider: str) -> dict[str, object]:
             "OAUTH_APPLE_REDIRECT_URI",
         ],
     }
-    return {
+    payload: dict[str, object] = {
         "provider": key,
         "enabled": configured,
         "missing_config_warnings": warnings,
@@ -106,6 +123,22 @@ def oauth_provider_diagnostics(provider: str) -> dict[str, object]:
         "callback_route": f"/orb/standalone/auth/oauth/{key}/callback",
         "required_env_vars": env_requirements.get(key, []),
     }
+    if key == "google":
+        client_id = os.getenv("OAUTH_GOOGLE_CLIENT_ID", "").strip()
+        payload.update(
+            {
+                "client_id_present": bool(client_id),
+                "client_id_suffix_valid": is_valid_google_client_id(client_id),
+                "client_id_ends_with_googleusercontent": bool(
+                    client_id and client_id.endswith(".apps.googleusercontent.com")
+                ),
+                "redirect_uri_matches_expected": google_redirect_uri_matches_expected(
+                    redirect_uri or ""
+                ),
+                "expected_redirect_uri": EXPECTED_GOOGLE_REDIRECT_URI,
+            }
+        )
+    return payload
 
 
 def oauth_providers_diagnostics() -> dict[str, dict[str, object]]:
