@@ -78,7 +78,6 @@ function OrbLoginPanel({
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [passkeySubmitting, setPasskeySubmitting] = useState(false)
-  const [emailStepReady, setEmailStepReady] = useState(false)
   const [passkeyEmail, setPasskeyEmail] = useState('')
   const [passkeySupported, setPasskeySupported] = useState(false)
   const [passkeyExpanded, setPasskeyExpanded] = useState(false)
@@ -142,7 +141,6 @@ function OrbLoginPanel({
       })
     const oauthError = searchParams.get('oauth_error')
     if (oauthError) setError(formatOAuthError(oauthError))
-    if (searchParams.get('provider') === 'email') setEmailStepReady(true)
     if (sessionError) setError(sessionError)
     return () => window.removeEventListener('resize', updateCompact)
   }, [searchParams, sessionError])
@@ -161,16 +159,6 @@ function OrbLoginPanel({
       const target = returnUrl.startsWith('/orb') ? returnUrl : ORB_RETURN
       if (target !== window.location.pathname) router.replace(target)
     }
-  }
-
-  function handleEmailContinue(event: FormEvent) {
-    event.preventDefault()
-    if (!email.trim()) {
-      setError('Enter your email address to continue.')
-      return
-    }
-    setError(null)
-    setEmailStepReady(true)
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -247,7 +235,7 @@ function OrbLoginPanel({
       }}
     >
       <div
-        className="orb-login-shell mx-auto grid min-h-0 w-full max-w-[72rem] grid-cols-1 px-5 py-6 sm:px-8 lg:min-h-[100dvh] lg:grid-cols-2 lg:gap-12 lg:px-10 lg:py-0"
+        className="orb-login-shell mx-auto grid min-h-0 w-full max-w-[72rem] grid-cols-1 px-5 py-6 sm:px-8 lg:grid-cols-2 lg:gap-12 lg:px-10"
         data-orb-login-two-column
         data-orb-login-scrollable
       >
@@ -288,7 +276,7 @@ function OrbLoginPanel({
         </div>
 
         <div
-          className="orb-login-panel flex min-h-0 flex-col justify-center lg:px-4 xl:px-8"
+          className="orb-login-panel flex min-h-0 flex-col lg:px-4 xl:px-8"
           data-orb-login-panel-centered
         >
           <div className="orb-login-card orb-login-panel-inner mx-auto w-full max-w-md rounded-[1.75rem] border border-[var(--orb-line)]/50 bg-[var(--orb-surface-elevated)]/80 p-6 shadow-xl shadow-black/10 backdrop-blur-sm sm:p-8">
@@ -301,12 +289,11 @@ function OrbLoginPanel({
             </Link>
             <p className="orb-login-tagline mt-1 text-xs lg:hidden">Powered by IndiCare Intelligence</p>
 
-            <h2 className="orb-login-signin-title mt-4 text-2xl font-bold tracking-tight lg:mt-0">Sign in</h2>
+            <h2 className="orb-login-signin-title mt-4 text-2xl font-bold tracking-tight lg:mt-0">
+              Sign in to ORB Residential
+            </h2>
             <p className="orb-login-lead mt-2 text-sm" data-orb-login-mobile-lead>
-              <span className="hidden sm:inline">
-                Choose how you want to sign in. Your organisation may require a work account.
-              </span>
-              <span className="sm:hidden">Sign in to ORB Residential with your work account or email.</span>
+              Use your work account, email or passkey.
             </p>
 
             {error ? (
@@ -315,12 +302,12 @@ function OrbLoginPanel({
               </p>
             ) : null}
 
-            <section className="mt-6" aria-labelledby="orb-login-work-account">
+            <section className="mt-6" aria-labelledby="orb-login-oauth">
               <h3
-                id="orb-login-work-account"
+                id="orb-login-oauth"
                 className="orb-login-section-title text-xs font-semibold uppercase tracking-wide"
               >
-                1. Continue with work account
+                Continue with
               </h3>
               <div className="mt-2.5 space-y-2.5" data-orb-oauth-buttons>
                 <OrbAuthButton
@@ -350,11 +337,28 @@ function OrbLoginPanel({
               </div>
             </section>
 
+            <section className="mt-6" aria-labelledby="orb-login-create-account" data-orb-login-account-links>
+              <h3
+                id="orb-login-create-account"
+                className="orb-login-section-title text-xs font-semibold uppercase tracking-wide"
+              >
+                New to ORB Residential?
+              </h3>
+              <Link
+                href="/orb/signup"
+                className="orb-login-submit mt-2.5 flex w-full items-center justify-center rounded-2xl py-3 text-center text-sm font-bold no-underline"
+                data-orb-create-account
+              >
+                Create account
+              </Link>
+            </section>
+
             <section className="mt-6" aria-labelledby="orb-login-email">
               <h3 id="orb-login-email" className="orb-login-section-title text-xs font-semibold uppercase tracking-wide">
-                2. Continue with email
+                Sign in with email
               </h3>
-              <form className="mt-2.5 space-y-3" onSubmit={handleEmailContinue} data-testid="orb-login-email-step">
+              <p className="orb-login-muted mt-1 text-xs">Already have an account?</p>
+              <form className="mt-2.5 space-y-3" onSubmit={handleSubmit} data-testid="orb-login-form">
                 <label className="orb-login-field-label block text-sm font-medium">
                   Email
                   <input
@@ -368,83 +372,75 @@ function OrbLoginPanel({
                     disabled={authBusy}
                   />
                 </label>
-                {!emailStepReady ? (
-                  <button
-                    type="submit"
+                <label className="orb-login-field-label block text-sm font-medium">
+                  Password
+                  <input
+                    type="password"
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="orb-login-input mt-2 w-full rounded-2xl px-4 py-3"
+                    data-testid="orb-login-password"
+                    autoComplete="current-password"
                     disabled={authBusy}
-                    className="orb-login-submit w-full rounded-2xl py-2.5 text-sm font-semibold disabled:opacity-60 sm:py-3"
-                    data-orb-login-email-continue
-                  >
-                    Continue with email
-                  </button>
-                ) : null}
+                  />
+                </label>
+                <label className="flex items-center gap-2 text-xs text-[var(--orb-muted)]">
+                  <input
+                    type="checkbox"
+                    checked={remember}
+                    onChange={(e) => setRemember(e.target.checked)}
+                    className="rounded"
+                  />
+                  Keep me signed in on this device
+                </label>
+                <button
+                  type="submit"
+                  disabled={authBusy}
+                  className="orb-login-submit w-full rounded-2xl py-3 text-sm font-semibold disabled:opacity-60"
+                  data-testid="orb-login-submit"
+                >
+                  {submitting ? 'Signing in…' : 'Sign in with email'}
+                </button>
+                <p className="text-center text-xs">
+                  <Link href="/mfa" className="orb-login-link font-medium" data-orb-authenticator-fallback>
+                    Use authenticator app instead
+                  </Link>
+                </p>
               </form>
-
-              {emailStepReady ? (
-                <form className="mt-3 space-y-4" onSubmit={handleSubmit} data-testid="orb-login-form">
-                  <label className="orb-login-field-label block text-sm font-medium">
-                    Password
-                    <input
-                      type="password"
-                      required
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="orb-login-input mt-2 w-full rounded-2xl px-4 py-3"
-                      data-testid="orb-login-password"
-                      autoComplete="current-password"
-                      disabled={authBusy}
-                    />
-                  </label>
-                  <label className="flex items-center gap-2 text-xs text-[var(--orb-muted)]">
-                    <input
-                      type="checkbox"
-                      checked={remember}
-                      onChange={(e) => setRemember(e.target.checked)}
-                      className="rounded"
-                    />
-                    Keep me signed in on this device
-                  </label>
-                  <button
-                    type="submit"
-                    disabled={authBusy}
-                    className="orb-login-submit w-full rounded-2xl py-3 text-sm font-semibold disabled:opacity-60"
-                    data-testid="orb-login-submit"
-                  >
-                    {submitting ? 'Signing in…' : 'Sign in with email'}
-                  </button>
-                  <p className="text-center text-xs">
-                    <Link href="/mfa" className="orb-login-link font-medium" data-orb-authenticator-fallback>
-                      Use authenticator app instead
-                    </Link>
-                  </p>
-                </form>
-              ) : null}
             </section>
 
             {passkeySupported ? (
               <section className="mt-6" aria-labelledby="orb-login-passkey" data-orb-login-passkey-section>
-                <button
-                  type="button"
-                  className="orb-login-section-title flex w-full items-center justify-between text-left text-xs font-semibold uppercase tracking-wide"
-                  id="orb-login-passkey"
-                  onClick={() => setPasskeyExpanded((open) => !open)}
-                  aria-expanded={passkeyExpanded || !compactViewport}
-                  data-orb-passkey-toggle
-                >
-                  <span>3. Use passkey</span>
-                  {compactViewport ? (
+                {compactViewport ? (
+                  <button
+                    type="button"
+                    className="orb-login-section-title flex w-full items-center justify-between text-left text-xs font-semibold uppercase tracking-wide"
+                    id="orb-login-passkey"
+                    onClick={() => setPasskeyExpanded((open) => !open)}
+                    aria-expanded={passkeyExpanded}
+                    data-orb-passkey-toggle
+                  >
+                    <span>Use passkey</span>
                     <span className="text-[10px] normal-case tracking-normal text-[var(--orb-muted)]">
                       {passkeyExpanded ? 'Hide' : 'Show'}
                     </span>
-                  ) : null}
-                </button>
+                  </button>
+                ) : (
+                  <h3
+                    id="orb-login-passkey"
+                    className="orb-login-section-title text-xs font-semibold uppercase tracking-wide"
+                  >
+                    Use passkey
+                  </h3>
+                )}
                 {passkeyExpanded || !compactViewport ? (
                   <>
                     <p className="orb-login-muted mt-2 text-xs leading-relaxed">
-                      Use passkey if you have already set one up (Face ID, Touch ID or device passkey).
+                      Use Face ID, Touch ID or device passkey.
                     </p>
                     <label className="orb-login-field-label mt-3 block text-xs">
-                      Enter your email so we can find your saved passkey.
+                      Email
                       <input
                         type="email"
                         value={passkeyEmail || email}
@@ -475,30 +471,6 @@ function OrbLoginPanel({
                 Passkeys are not available on this device.
               </p>
             )}
-
-            <div className="mt-8 space-y-2 text-sm" data-orb-login-account-links>
-              <Link
-                href="/orb/signup"
-                className="orb-login-submit flex w-full items-center justify-center rounded-2xl py-3 text-center text-sm font-bold no-underline"
-                data-orb-create-account
-              >
-                New to ORB? Create account
-              </Link>
-              <p className="orb-login-muted text-xs leading-relaxed">
-                Already subscribed through your provider?{' '}
-                <button
-                  type="button"
-                  className="orb-login-link font-semibold"
-                  onClick={() => {
-                    setEmailStepReady(true)
-                    document.getElementById('orb-login-email')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
-                  }}
-                  data-orb-provider-email-hint
-                >
-                  Sign in with your work email
-                </button>
-              </p>
-            </div>
 
             <footer
               className="orb-login-footer mt-8 border-t border-[var(--orb-line)]/40 pt-6 text-[10px] leading-relaxed text-[var(--orb-muted)]"

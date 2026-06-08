@@ -257,7 +257,6 @@ test.describe('ORB register and billing E2E', () => {
     await gotoOrbLogin(page)
 
     await page.locator('[data-testid="orb-login-email"]').fill(E2E_CREDENTIALS.email)
-    await page.locator('[data-orb-login-email-continue]').click()
     await page.locator('[data-testid="orb-login-password"]').fill(E2E_CREDENTIALS.password)
     authed = true
     await page.locator('[data-testid="orb-login-submit"]').click()
