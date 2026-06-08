@@ -881,12 +881,20 @@ export async function sendStandaloneOrbMessageStream(
   }
 
   if (metadata) {
+    const partialTrimmed = partial.trim()
+    const metadataAnswer = (metadata.answer || '').trim()
+    if (partialTrimmed && metadataAnswer && partialTrimmed.length > metadataAnswer.length) {
+      return {
+        ...metadata,
+        answer: partialTrimmed.startsWith(metadataAnswer) ? partialTrimmed : metadata.answer
+      }
+    }
     return metadata
   }
   if (streamError) {
     if (sawToken && partial.trim()) {
       return {
-        ok: true,
+        ok: false,
         standalone: true,
         os_records_accessed: false,
         answer: partial.trim(),
@@ -897,10 +905,11 @@ export async function sendStandaloneOrbMessageStream(
   }
   if (sawToken && partial.trim()) {
     return {
-      ok: true,
+      ok: false,
       standalone: true,
       os_records_accessed: false,
-      answer: partial.trim()
+      answer: partial.trim(),
+      error_detail: 'stream_incomplete'
     }
   }
   throw new AuthApiError(503, 'ORB could not finish that response. Please try again.')

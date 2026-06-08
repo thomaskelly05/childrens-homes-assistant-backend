@@ -30,7 +30,12 @@ from services.orb_chat_timing_service import (
     build_route_timing_payload,
     log_orb_route_timing,
 )
-from services.orb_fast_opening_service import fast_opening_for_message
+from services.orb_fast_opening_service import (
+    STREAM_INCOMPLETE_FALLBACK_MESSAGE,
+    fast_opening_for_message,
+    is_fast_opening_only_answer,
+    merge_stream_answer,
+)
 from services.orb_stream_status_service import (
     stream_status_payload,
     stream_status_sequence,
@@ -1173,11 +1178,12 @@ async def standalone_orb_conversation_stream(
 
         yield _sse_event("status", stream_status_payload("received"))
 
+        user_message = orb_brain_route_service.extract_user_message(payload.message)
         profile_context = (
-            "standalone context profiles" in payload.message.lower() or "profile:" in payload.message.lower()
+            "standalone context profiles" in user_message.lower() or "profile:" in user_message.lower()
         )
         quick_depth = indicare_intelligence_core_service.estimate_expert_depth(
-            payload.message,
+            user_message,
             mode=mode,
             profile_context=profile_context,
         )
@@ -1185,11 +1191,14 @@ async def standalone_orb_conversation_stream(
             yield _sse_event("status", status_event)
 
         fast_opening = fast_opening_for_message(
-            payload.message,
+            user_message,
             expert_depth=quick_depth,
             mode=mode,
         )
+        fast_opening_emitted = False
+        model_token_count = 0
         if fast_opening:
+            fast_opening_emitted = True
             answer_parts.append(fast_opening)
             if first_token_ms is None:
                 first_token_ms = int((time.perf_counter() - request_started) * 1000)
@@ -1197,11 +1206,45 @@ async def standalone_orb_conversation_stream(
             yield _sse_event("token", {"delta": f"{fast_opening}\n\n"})
 
         timing.mark("core_start")
-        ctx = _build_standalone_request_context(
-            payload,
-            timing=timing,
-            route="/orb/standalone/conversation/stream",
-        )
+        try:
+            ctx = _build_standalone_request_context(
+                payload,
+                timing=timing,
+                route="/orb/standalone/conversation/stream",
+            )
+        except Exception as exc:
+            logger.warning(
+                "standalone_orb_conversation_stream context_build failed mode=%s error_type=%s",
+                mode,
+                type(exc).__name__,
+                exc_info=True,
+            )
+            fallback_answer = merge_stream_answer(
+                fast_opening=fast_opening,
+                model_answer=STREAM_INCOMPLETE_FALLBACK_MESSAGE,
+                streamed_text="".join(answer_parts),
+            )
+            yield _sse_event(
+                "error",
+                {
+                    "error": "stream_incomplete",
+                    "detail": type(exc).__name__,
+                    "message": STREAM_INCOMPLETE_FALLBACK_MESSAGE,
+                },
+            )
+            yield _sse_event(
+                "metadata",
+                {
+                    "ok": False,
+                    "standalone": True,
+                    "os_records_accessed": False,
+                    "answer": fallback_answer,
+                    "conversation_id": payload.conversation_id,
+                    "error_detail": "context_build_failed",
+                },
+            )
+            yield _sse_event("done", {"ok": False})
+            return
         timing.mark("core_complete")
         detail = ctx["detail"]
         history = ctx["history"]
@@ -1251,9 +1294,10 @@ async def standalone_orb_conversation_stream(
                 document_text=payload.document_text,
                 document_source_id=payload.document_source_id,
                 document_title=payload.document_title,
-                raw_user_message=payload.message,
+                raw_user_message=user_message,
                 stream_meta=stream_meta,
             ):
+                model_token_count += 1
                 if first_token_ms is None:
                     first_token_ms = int((time.perf_counter() - request_started) * 1000)
                     timing.mark("first_token")
@@ -1262,12 +1306,39 @@ async def standalone_orb_conversation_stream(
 
             timing.mark("stream_complete")
             assistant_data = dict(stream_meta)
-            if not assistant_data.get("answer"):
-                assistant_data["answer"] = "".join(answer_parts).strip()
+            streamed_text = "".join(answer_parts).strip()
+            model_answer = str(assistant_data.get("answer") or "").strip()
+            merged_answer = merge_stream_answer(
+                fast_opening=fast_opening,
+                model_answer=model_answer,
+                streamed_text=streamed_text,
+            )
+            assistant_data["answer"] = merged_answer or streamed_text
+
+            if is_fast_opening_only_answer(
+                fast_opening=fast_opening,
+                final_answer=str(assistant_data.get("answer") or ""),
+                model_token_count=model_token_count,
+            ):
+                fallback_answer = merge_stream_answer(
+                    fast_opening=fast_opening,
+                    model_answer=STREAM_INCOMPLETE_FALLBACK_MESSAGE,
+                    streamed_text=streamed_text,
+                )
+                yield _sse_event(
+                    "error",
+                    {
+                        "error": "stream_incomplete",
+                        "detail": "model_stream_empty",
+                        "message": STREAM_INCOMPLETE_FALLBACK_MESSAGE,
+                    },
+                )
+                assistant_data["answer"] = fallback_answer
+                assistant_data["error_detail"] = "model_stream_empty_after_fast_opening"
 
             answer = orb_grounded_answer_style_service.sanitize_high_attention_closer(
                 str(assistant_data.get("answer") or ""),
-                message=payload.message,
+                message=user_message,
                 mode=mode,
             )
             response_sources = list(assistant_data.get("sources") or [])
@@ -1407,8 +1478,33 @@ async def standalone_orb_conversation_stream(
                 "standalone_orb_conversation_stream failed mode=%s error_type=%s",
                 mode,
                 type(exc).__name__,
+                exc_info=True,
             )
-            yield _sse_event("error", {"error": "provider_unavailable", "detail": type(exc).__name__})
+            fallback_answer = merge_stream_answer(
+                fast_opening=fast_opening if fast_opening_emitted else None,
+                model_answer=STREAM_INCOMPLETE_FALLBACK_MESSAGE,
+                streamed_text="".join(answer_parts),
+            )
+            yield _sse_event(
+                "error",
+                {
+                    "error": "provider_unavailable",
+                    "detail": type(exc).__name__,
+                    "message": STREAM_INCOMPLETE_FALLBACK_MESSAGE,
+                },
+            )
+            yield _sse_event(
+                "metadata",
+                {
+                    "ok": False,
+                    "standalone": True,
+                    "os_records_accessed": False,
+                    "answer": fallback_answer,
+                    "conversation_id": payload.conversation_id,
+                    "error_detail": "provider_unavailable",
+                },
+            )
+            yield _sse_event("done", {"ok": False})
 
     return StreamingResponse(
         event_generator(),

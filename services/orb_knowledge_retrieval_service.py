@@ -171,6 +171,7 @@ class OrbKnowledgeRetrievalService:
             "research_note": RESEARCH_NOTE if intents["research_intent"] else None,
             "live_lookup_intent": intents["live_lookup_intent"],
             "live_lookup_note": LIVE_LOOKUP_NOTE if intents["live_lookup_intent"] else None,
+            "recording_intent": bool(intents.get("recording_quality")),
             "routing_hint": self._routing_hint(intents, mode=mode_name),
             "knowledge_spine": {
                 "enabled": True,
@@ -656,6 +657,28 @@ class OrbKnowledgeRetrievalService:
         return any(term in lower for term in RESEARCH_INTENT_TERMS)
 
     def _has_live_lookup_intent(self, lower: str) -> bool:
+        bare_temporal_terms = ("today", "current", "right now", "latest")
+        residential_context_terms = (
+            "incident",
+            "young person",
+            "child",
+            "family contact",
+            "safeguarding",
+            "children's home",
+            "childrens home",
+            "residential",
+            "kicking off",
+            "kicked off",
+            "restraint",
+            "daily note",
+            "incident report",
+            "write the",
+            "help me to write",
+            "help me write",
+        )
+        if any(term in lower for term in bare_temporal_terms):
+            if any(term in lower for term in residential_context_terms):
+                return False
         return any(term in lower for term in LIVE_LOOKUP_INTENT_TERMS)
 
     def _build_operating_brain_pack(self, message: str, *, mode: str | None = None) -> dict[str, Any] | None:
