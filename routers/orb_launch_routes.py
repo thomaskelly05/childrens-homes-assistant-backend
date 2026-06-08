@@ -12,6 +12,7 @@ from typing import Any
 
 import stripe
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -426,10 +427,14 @@ async def orb_front_door_verdict(
     if verdict.get("clear_session"):
         return JSONResponse(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            content={"success": False, "data": verdict},
+            content=jsonable_encoder({"success": False, "data": verdict}),
             headers=headers,
         )
-    return JSONResponse(status_code=status.HTTP_200_OK, content={"success": True, "data": verdict}, headers=headers)
+    return JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content=jsonable_encoder({"success": True, "data": verdict}),
+        headers=headers,
+    )
 
 
 @router.get("/auth/providers")
