@@ -308,15 +308,15 @@ html[data-orb-residential='1'] [data-orb-document-panel] [data-orb-knowledge-lib
   html[data-orb-residential='1'] .orb-login-shell {
     max-height: 100dvh;
     overflow: hidden;
-    align-items: center;
+    align-items: flex-start;
   }
 
   html[data-orb-residential='1'] .orb-login-hero {
     min-height: 0;
     max-height: 100dvh;
-    padding-top: clamp(1.25rem, 4vh, 2rem);
-    padding-bottom: clamp(1.25rem, 4vh, 2rem);
-    justify-content: center;
+    padding-top: clamp(2rem, 14vh, 5rem);
+    padding-bottom: clamp(1rem, 3vh, 1.75rem);
+    justify-content: flex-start;
   }
 
   html[data-orb-residential='1'] .orb-login-hero-sphere-wrap {
@@ -344,11 +344,7 @@ html[data-orb-residential='1'] [data-orb-document-panel] [data-orb-knowledge-lib
   }
 }
 
-html[data-orb-residential='1'] [data-orb-login-mobile-hero] {
-  max-height: 4rem;
-}
-
-html[data-orb-residential='1'] [data-orb-login-mobile-hero] [data-orb-hero-sphere] {
+html[data-orb-residential='1'] [data-orb-login-mobile-brand] {
   max-height: 3.5rem;
 }
 

@@ -22,13 +22,23 @@ describe('ORB mobile login layout', () => {
     assert.match(css, /orb-login-card[\s\S]*overflow-y:\s*auto/)
   })
 
-  it('scales down mobile sphere and adds safe bottom padding', () => {
+  it('keeps mobile brand compact without decorative hero sphere', () => {
     const login = read('components/orb-residential/orb-login-screen.tsx')
     const css = read('app/orb/orb-login.css')
-    assert.match(login, /data-orb-login-mobile-hero/)
-    assert.match(login, /scale-\[0\.4\]/)
+    assert.match(login, /data-orb-login-mobile-brand/)
+    assert.match(login, /data-orb-login-engine-line/)
+    assert.doesNotMatch(login, /data-orb-login-mobile-hero/)
+    assert.doesNotMatch(login, /lg:hidden[\s\S]*OrbHeroSphere/)
     assert.match(css, /data-orb-login-safe-bottom/)
-    assert.match(css, /data-orb-login-mobile-hero/)
+    assert.match(css, /data-orb-login-mobile-brand/)
+  })
+
+  it('short desktop viewport keeps hero top-aligned', () => {
+    const css = read('app/orb/orb-login.css')
+    const passCss = read('app/orb/orb-premium-layout-pass.css')
+    assert.match(css, /align-items:\s*flex-start/)
+    assert.match(passCss, /align-items:\s*flex-start/)
+    assert.match(passCss, /justify-content:\s*flex-start/)
   })
 
   it('OAuth buttons are readable when disabled', () => {

@@ -14,17 +14,18 @@
   }
 
   .orb-login-shell {
-    align-items: stretch;
+    align-items: flex-start;
     min-height: 100dvh;
-    padding-top: clamp(0.75rem, 2vh, 1.5rem);
+    padding-top: clamp(0.75rem, 2vh, 1.25rem);
     padding-bottom: max(1.25rem, env(safe-area-inset-bottom, 0px));
   }
 
   .orb-login-hero {
     min-height: 0;
     max-height: none;
-    padding-top: clamp(1.25rem, 4vh, 2rem);
-    padding-bottom: clamp(1.25rem, 4vh, 2rem);
+    justify-content: flex-start;
+    padding-top: clamp(2rem, 14vh, 5rem);
+    padding-bottom: clamp(1rem, 3vh, 1.75rem);
   }
 
   .orb-login-hero-glow {
@@ -89,8 +90,8 @@
     padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 0px));
   }
 
-  [data-orb-login-mobile-hero] {
-    max-height: 7.5rem;
+  [data-orb-login-mobile-brand] {
+    max-height: 3.5rem;
     overflow: hidden;
   }
 

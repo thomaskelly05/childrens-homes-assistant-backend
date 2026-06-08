@@ -80,6 +80,50 @@ test.describe('ORB login scroll reachability', () => {
     expect(focusAudit.emailFocusOk).toBe(true)
   })
 
+  test('brand hierarchy visible on desktop without tag in login card', async ({ page }) => {
+    await disableE2eAutoAuth(page)
+    await setupOrbAuthE2eMocks(page, { scenario: 'unauthenticated' })
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await gotoOrbLogin(page)
+
+    await expect(page.locator('[data-orb-login-brand]').first()).toContainText('ORB Residential')
+    await expect(page.locator('[data-orb-login-engine-line]').first()).toContainText(
+      'Powered by IndiCare Intelligence'
+    )
+    await expect(page.locator('[data-orb-login-brand-tag]')).toContainText('Care. Connect. Empower.')
+    await expect(page.locator('.orb-login-card [data-orb-login-brand-tag]')).toHaveCount(0)
+
+    const brandTop = await page.locator('[data-orb-login-hero-top-aligned] [data-orb-login-brand]').evaluate((el) => {
+      const rect = el.getBoundingClientRect()
+      return { top: rect.top, viewport: window.innerHeight }
+    })
+    expect(brandTop.top).toBeGreaterThanOrEqual(48)
+    expect(brandTop.top / brandTop.viewport).toBeGreaterThanOrEqual(0.1)
+    expect(brandTop.top / brandTop.viewport).toBeLessThan(0.28)
+  })
+
+  test('legal footer links use www.indicare.co.uk', async ({ page }) => {
+    await disableE2eAutoAuth(page)
+    await setupOrbAuthE2eMocks(page, { scenario: 'unauthenticated' })
+    await page.setViewportSize({ width: 390, height: 667 })
+    await gotoOrbLogin(page)
+
+    await assertElementReachable(page, '[data-testid="orb-login-legal-links"]')
+    await expect(page.locator('[data-orb-privacy-link]')).toHaveAttribute(
+      'href',
+      'https://www.indicare.co.uk/privacy'
+    )
+    await expect(page.locator('[data-orb-terms-link]')).toHaveAttribute('href', 'https://www.indicare.co.uk/terms')
+    await expect(page.locator('[data-orb-cookies-link]')).toHaveAttribute(
+      'href',
+      'https://www.indicare.co.uk/cookies'
+    )
+    await expect(page.locator('[data-orb-support-link]')).toHaveAttribute(
+      'href',
+      'https://www.indicare.co.uk/support'
+    )
+  })
+
   test('presentation order: OAuth, create account, email, passkey', async ({ page }) => {
     await mockWebAuthn(page, 'success')
     await disableE2eAutoAuth(page)

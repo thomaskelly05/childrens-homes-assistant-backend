@@ -19,6 +19,7 @@ import {
 import { OrbLegalLinks } from '@/components/orb-residential/orb-legal-links'
 import { beginOrbPasskeyLogin, orbPasskeysSupported } from '@/lib/orb/orb-passkey-client'
 import { ORB_CANONICAL_FRONT_DOOR, sanitizeOrbReturnUrl } from '@/lib/orb/orb-front-door-routing'
+import { orbProductCopy } from '@/lib/orb/content/copy'
 import { ORB_LOGIN_VERSION } from '@/lib/orb/orb-visual-build'
 import { OrbAuthLoadingScreen } from '@/components/orb-residential/orb-auth-loading-screen'
 
@@ -240,20 +241,25 @@ function OrbLoginPanel({
         data-orb-login-scrollable
       >
         <div
-          className="orb-login-hero relative hidden flex-col justify-center lg:flex lg:px-4 xl:px-8"
-          data-orb-login-hero-centered
+          className="orb-login-hero relative hidden flex-col justify-start lg:flex lg:px-4 xl:px-8"
+          data-orb-login-hero-top-aligned
         >
           <div className="orb-login-hero-glow pointer-events-none absolute inset-0" aria-hidden />
-          <div className="relative flex flex-col justify-center">
+          <div className="relative flex flex-col justify-start">
             <Link href="/orb" className="orb-login-brand-link text-sm font-semibold" data-orb-login-brand>
               ORB Residential
             </Link>
-            <p className="orb-login-tagline mt-1 text-xs">Powered by IndiCare Intelligence</p>
-            <div className="orb-login-hero-sphere-wrap mt-5 flex justify-center lg:mt-6 lg:justify-start" data-orb-login-hero-sphere>
+            <p className="orb-login-tagline mt-1 text-xs" data-orb-login-engine-line>
+              Powered by IndiCare Intelligence
+            </p>
+            <div className="orb-login-hero-sphere-wrap mt-5 flex justify-center lg:mt-5 lg:justify-start" data-orb-login-hero-sphere>
               <OrbHeroSphere className="scale-[0.52] xl:scale-[0.56]" />
             </div>
+            <p className="orb-login-brand-tag mt-4 text-xs tracking-wide" data-orb-login-brand-tag>
+              {orbProductCopy.brandLine}
+            </p>
             <h1
-              className="orb-login-headline mt-6 max-w-md text-3xl font-semibold tracking-tight xl:text-[2rem]"
+              className="orb-login-headline mt-4 max-w-md text-3xl font-semibold tracking-tight xl:text-[2rem]"
               data-orb-login-title
             >
               AI support for residential children&apos;s homes
@@ -280,14 +286,14 @@ function OrbLoginPanel({
           data-orb-login-panel-centered
         >
           <div className="orb-login-card orb-login-panel-inner mx-auto w-full max-w-md rounded-[1.75rem] border border-[var(--orb-line)]/50 bg-[var(--orb-surface-elevated)]/80 p-6 shadow-xl shadow-black/10 backdrop-blur-sm sm:p-8">
-            <div className="flex flex-col items-center text-center lg:hidden" data-orb-login-mobile-hero>
-              <OrbHeroSphere className="mb-1 scale-[0.4] sm:scale-[0.44]" />
+            <div className="orb-login-mobile-brand mb-3 text-center lg:hidden" data-orb-login-mobile-brand>
+              <Link href="/orb" className="orb-login-brand-link text-sm font-semibold" data-orb-login-brand>
+                ORB Residential
+              </Link>
+              <p className="orb-login-tagline mt-0.5 text-xs" data-orb-login-engine-line>
+                Powered by IndiCare Intelligence
+              </p>
             </div>
-
-            <Link href="/orb" className="orb-login-brand-link text-sm font-semibold lg:hidden" data-orb-login-brand>
-              ORB Residential
-            </Link>
-            <p className="orb-login-tagline mt-1 text-xs lg:hidden">Powered by IndiCare Intelligence</p>
 
             <h2 className="orb-login-signin-title mt-4 text-2xl font-bold tracking-tight lg:mt-0">
               Sign in to ORB Residential
@@ -355,9 +361,8 @@ function OrbLoginPanel({
 
             <section className="mt-6" aria-labelledby="orb-login-email">
               <h3 id="orb-login-email" className="orb-login-section-title text-xs font-semibold uppercase tracking-wide">
-                Sign in with email
+                Already have an account?
               </h3>
-              <p className="orb-login-muted mt-1 text-xs">Already have an account?</p>
               <form className="mt-2.5 space-y-3" onSubmit={handleSubmit} data-testid="orb-login-form">
                 <label className="orb-login-field-label block text-sm font-medium">
                   Email
@@ -484,6 +489,7 @@ function OrbLoginPanel({
                 className="mt-4 justify-start gap-4"
                 linkClassName="orb-login-link font-semibold"
                 testId="orb-login-legal-links"
+                publicUrls
               />
             </footer>
           </div>

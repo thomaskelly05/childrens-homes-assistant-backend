@@ -9,7 +9,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '../..')
 const ORB_BUILD_VISUAL_VERSION = 'premium-final'
 const ORB_STYLE_VERSION = 'orb-style-v1'
 const ORB_CSS_CONTRACT = 'premium-viewport-final'
-const ORB_LOGIN_VERSION = 'front-door-v4'
+const ORB_LOGIN_VERSION = 'front-door-v5'
 const ORB_VOICE_VERSION = 'living-core-v1'
 const ORB_VOICE_COMPONENT_NAME = 'OrbVoiceCompanion'
 const ORB_LOGIN_COMPONENT_NAME = 'OrbLoginScreen'
@@ -47,7 +47,7 @@ const ORB_CSS_AUDIT_MAP = [
     file: 'app/orb/orb-shell.css',
     importedBy: ['app/orb/layout.tsx'],
     voice: ['.orb-main-workspace .orb-voice-room', '[data-orb-voice-mobile]'],
-    login: ['.orb-login-shell', '.orb-login-hero', '[data-orb-login-mobile-hero]'],
+    login: ['.orb-login-shell', '.orb-login-hero', '[data-orb-login-mobile-brand]'],
     shell: ['.orb-chat-layout--residential', '[data-orb-shell]'],
     status: 'canonical (shell layer)'
   },
@@ -103,7 +103,7 @@ const ORB_CSS_AUDIT_MAP = [
     file: 'app/orb/orb-premium-layout-pass.css',
     importedBy: ['app/orb/orb-shell.css'],
     voice: [],
-    login: ['.orb-login-shell', '.orb-login-hero', '[data-orb-login-mobile-hero]'],
+    login: ['.orb-login-shell', '.orb-login-hero', '[data-orb-login-mobile-brand]'],
     shell: ['html[data-orb-residential] .orb-chat-layout--residential'],
     status: 'supporting (viewport pass — voice visuals in orb-voice.css)'
   },
