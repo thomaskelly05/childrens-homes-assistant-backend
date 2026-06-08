@@ -24,7 +24,7 @@ import { OrbAuthLoadingScreen } from '@/components/orb-residential/orb-auth-load
 
 function formatOAuthError(raw: string): string {
   const decoded = decodeURIComponent(raw.replace(/\+/g, ' '))
-  if (/invalid_oauth_state/i.test(decoded)) {
+  if (/invalid_oauth_state|security check failed/i.test(decoded)) {
     return 'Sign-in expired or was interrupted. Start again from this page.'
   }
   if (/not enabled|not configured/i.test(decoded)) {

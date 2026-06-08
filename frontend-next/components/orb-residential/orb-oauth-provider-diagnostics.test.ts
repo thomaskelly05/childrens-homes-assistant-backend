@@ -29,11 +29,21 @@ describe('ORB OAuth provider diagnostics wiring', () => {
     assert.doesNotMatch(login, /Google — not configured/)
   })
 
-  it('OAuth start URLs use backend standalone routes', () => {
+  it('OAuth start URLs use API-host backend standalone routes', () => {
     const client = read('lib/orb/orb-billing-client.ts')
     const nav = read('lib/orb/orb-oauth-navigation.ts')
+    const authButton = read('components/orb-residential/ui/orb-auth-button.tsx')
+    assert.match(client, /getOrbOAuthApiOrigin/)
+    assert.match(client, /api\.indicare\.co\.uk/)
     assert.match(client, /\/orb\/standalone\/auth\/oauth\//)
     assert.match(nav, /navigateOrbOAuthStart/)
+    assert.match(authButton, /<a href=\{href\}/)
+  })
+
+  it('login screen maps security check failed to friendly retry copy', () => {
+    const login = read('components/orb-residential/orb-login-screen.tsx')
+    assert.match(login, /security check failed/i)
+    assert.match(login, /Start again from this page/)
   })
 
   it('backend diagnostics endpoint documents routes without secrets', () => {

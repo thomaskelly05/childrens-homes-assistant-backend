@@ -36,8 +36,11 @@ def test_oauth_start_503_when_misconfigured(monkeypatch):
     monkeypatch.setattr("routers.orb_oauth_routes.provider_enabled", lambda _p: True)
     monkeypatch.setattr("routers.orb_oauth_routes.load_provider_config", lambda _p: None)
     request = MagicMock()
+    request.headers = {}
+    request.url.hostname = "api.indicare.co.uk"
+    conn = MagicMock()
     with pytest.raises(HTTPException) as exc:
-        asyncio.run(orb_oauth_start("google", request=request, return_url="/orb"))
+        asyncio.run(orb_oauth_start("google", request=request, return_url="/orb", conn=conn))
     assert exc.value.status_code == 503
     assert "not fully configured" in str(exc.value.detail).lower()
 

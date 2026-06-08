@@ -1,4 +1,5 @@
 import { authFetch, authFetchResponse, AuthApiError } from '@/lib/auth/api'
+import { getInternalBackendOrigin } from '@/lib/auth/api-base'
 import { isOrbAccessContractCompatible, ORB_ACCESS_CONTRACT_VERSION } from '@/lib/orb/orb-access-contract'
 
 export type OrbAccessPayload = {
@@ -323,9 +324,31 @@ export async function refreshOrbAccessAfterCheckout(options?: {
   }
 }
 
+/** OAuth start must hit the API host where Google/Microsoft redirect back (callback URI). */
+export function getOrbOAuthApiOrigin(): string {
+  if (typeof window !== 'undefined') {
+    const configured = (
+      process.env.NEXT_PUBLIC_API_BASE_URL ||
+      process.env.NEXT_PUBLIC_BACKEND_URL ||
+      ''
+    ).trim()
+    if (configured && /^https?:\/\//i.test(configured)) {
+      return configured.replace(/\/+$/, '')
+    }
+    if (window.location.hostname === 'app.indicare.co.uk') {
+      return 'https://api.indicare.co.uk'
+    }
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+      return 'http://127.0.0.1:8000'
+    }
+  }
+  return getInternalBackendOrigin()
+}
+
 export function orbOAuthStartUrl(provider: 'google' | 'microsoft' | 'apple', returnUrl = '/orb') {
   const params = new URLSearchParams({ return_url: returnUrl })
-  return `/orb/standalone/auth/oauth/${provider}/start?${params.toString()}`
+  const base = getOrbOAuthApiOrigin()
+  return `${base}/orb/standalone/auth/oauth/${provider}/start?${params.toString()}`
 }
 
 export async function orbStandaloneSignup(input: {

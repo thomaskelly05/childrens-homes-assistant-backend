@@ -16,9 +16,6 @@ from services.orb_subscription_plan_service import oauth_provider_configured
 logger = logging.getLogger(__name__)
 
 ORB_OAUTH_PROVIDERS = frozenset({"google", "microsoft", "apple"})
-ORB_OAUTH_SESSION_STATE_KEY = "orb_oauth_state"
-ORB_OAUTH_SESSION_RETURN_KEY = "orb_oauth_return_url"
-ORB_OAUTH_SESSION_PROVIDER_KEY = "orb_oauth_provider"
 
 ALLOWED_RETURN_PREFIXES = ("/orb", "/orb/onboarding", "/orb/access", "/orb/billing")
 
@@ -306,24 +303,40 @@ def is_os_scoped_user(user: dict[str, Any]) -> bool:
     return False
 
 
-def store_oauth_session(request, *, provider: str, state: str, return_url: str) -> None:
-    request.session[ORB_OAUTH_SESSION_STATE_KEY] = state
-    request.session[ORB_OAUTH_SESSION_PROVIDER_KEY] = provider
-    request.session[ORB_OAUTH_SESSION_RETURN_KEY] = _normalise_return_url(return_url)
+def store_oauth_session(
+    conn,
+    *,
+    provider: str,
+    state: str,
+    return_url: str,
+    start_host: str | None = None,
+) -> None:
+    from services.orb_oauth_state_service import store_oauth_state
+
+    normalised_return = _normalise_return_url(return_url)
+    store_oauth_state(
+        conn,
+        state_token=state,
+        provider=provider,
+        return_url=normalised_return,
+        start_host=start_host,
+    )
 
 
-def validate_oauth_state(request, *, provider: str, state: str) -> str:
-    expected = str(request.session.get(ORB_OAUTH_SESSION_STATE_KEY) or "")
-    session_provider = str(request.session.get(ORB_OAUTH_SESSION_PROVIDER_KEY) or "")
-    if not expected or not secrets.compare_digest(expected, state):
-        raise ValueError("invalid_oauth_state")
-    if session_provider != provider:
-        raise ValueError("invalid_oauth_provider")
-    return_url = _normalise_return_url(str(request.session.get(ORB_OAUTH_SESSION_RETURN_KEY) or "/orb"))
-    request.session.pop(ORB_OAUTH_SESSION_STATE_KEY, None)
-    request.session.pop(ORB_OAUTH_SESSION_PROVIDER_KEY, None)
-    request.session.pop(ORB_OAUTH_SESSION_RETURN_KEY, None)
-    return return_url
+def validate_oauth_state(
+    conn,
+    *,
+    provider: str,
+    state: str,
+) -> str:
+    from services.orb_oauth_state_service import consume_oauth_state
+
+    payload = consume_oauth_state(
+        conn,
+        state_token=state,
+        provider=provider,
+    )
+    return _normalise_return_url(str(payload.get("return_url") or "/orb"))
 
 
 def oauth_error_redirect(frontend_base: str, message: str) -> str:
