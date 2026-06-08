@@ -131,6 +131,7 @@ export function OrbAuthButton({
         type="button"
         className={base}
         data-orb-oauth={provider}
+        {...(provider === 'passkey' ? { 'data-orb-passkey-sign-in': true } : {})}
         disabled={disabled}
         onClick={onClick}
       >

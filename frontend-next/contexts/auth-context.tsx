@@ -101,6 +101,19 @@ const e2eUser: StaffUser = {
   has_passkeys: true
 }
 
+/** E2E-only: sessionStorage `e2e-auth-auto=0` disables auto-login so cookie/session flows can be tested. */
+function shouldE2eAutoAuthenticate(): boolean {
+  if (!e2eAuthEnabled) return false
+  try {
+    if (typeof window !== 'undefined' && window.sessionStorage.getItem('e2e-auth-auto') === '0') {
+      return false
+    }
+  } catch {
+    // Ignore storage failures in test harness.
+  }
+  return true
+}
+
 function isPublicPath(pathname: string) {
   if (pathname === '/') return true
   if (publicAssetPaths.has(pathname)) return true
@@ -146,7 +159,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const run = async () => {
       setError(null)
-      if (e2eAuthEnabled) {
+      if (shouldE2eAutoAuthenticate()) {
         setUser(e2eUser)
         setStatus('authenticated')
         setSessionExpired(false)
@@ -281,7 +294,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = useCallback(async (input: LoginInput) => {
     setError(null)
-    if (e2eAuthEnabled) {
+    if (shouldE2eAutoAuthenticate()) {
       const accepted = input.email === e2eEmail && input.password === e2ePassword
       if (!accepted) {
         return {
@@ -327,7 +340,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(async () => {
     const redirectToOrbLogin = isOrbSurfacePath(pathname)
     try {
-      if (!e2eAuthEnabled) {
+      if (!shouldE2eAutoAuthenticate()) {
         await authFetch('/auth/logout', { method: 'POST' })
       }
     } finally {

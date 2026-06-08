@@ -202,6 +202,12 @@ export function OrbUpgradeScreen({ initialAccess = null }: { initialAccess?: Orb
             )}
           </div>
 
+          {stripeReady ? (
+            <p className="mt-4 text-xs leading-6 text-slate-600" data-orb-checkout-payment-methods>
+              Pay securely by card, Apple Pay or Google Pay where available via Stripe Checkout.
+            </p>
+          ) : null}
+
           {!stripeReady && process.env.NODE_ENV === 'development' ? (
             <p className="mt-4 text-xs text-amber-700" data-orb-stripe-dev-note>
               Admin note: set STRIPE_SECRET_KEY and ORB_RESIDENTIAL_STRIPE_PRICE_ID to enable checkout.
