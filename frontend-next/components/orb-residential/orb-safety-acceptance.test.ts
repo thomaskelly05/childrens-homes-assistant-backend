@@ -15,12 +15,13 @@ describe('ORB safety acceptance gate', () => {
     const screen = read('components/orb-residential/orb-safety-acceptance.tsx')
     assert.match(screen, /Before using ORB Residential/)
     assert.match(screen, /ORB supports residential childcare professionals/)
-    assert.match(screen, /data-orb-safety-checkbox=/)
+    assert.match(screen, /data-orb-safety-checkbox=\{index \+ 1\}/)
     assert.match(screen, /professional judgement/)
     assert.match(screen, /safeguarding policy/)
     assert.match(screen, /review, edit and approve ORB outputs/)
     assert.match(screen, /does not access live IndiCare OS care records/)
-    assert.equal((screen.match(/data-orb-safety-checkbox/g) || []).length, 4)
+    assert.match(screen, /ORB_SAFETY_STATEMENTS\.map\(/)
+    assert.match(screen, /ORB_SAFETY_STATEMENTS\.every\(/)
   })
 
   it('requires all checkboxes before enabling accept', () => {

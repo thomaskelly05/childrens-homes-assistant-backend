@@ -3,7 +3,7 @@ from __future__ import annotations
 """Safety acceptance gate — must remain after subscription."""
 
 from pathlib import Path
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
