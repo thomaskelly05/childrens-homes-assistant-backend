@@ -17,7 +17,7 @@ describe('ORB premium login screen layout', () => {
 
     assert.match(login, /data-orb-login-two-column/)
     assert.match(login, /lg:grid-cols-2/)
-    assert.match(login, /data-orb-login-hero-centered/)
+    assert.match(login, /data-orb-login-hero-top-aligned/)
     assert.match(login, /data-orb-login-panel-centered/)
     assert.match(css, /orb-login-hero/)
     assert.match(css, /orb-login-panel/)
@@ -31,21 +31,42 @@ describe('ORB premium login screen layout', () => {
     assert.match(login, /max-w-md/)
   })
 
-  it('left hero is balanced with trust copy and sphere', () => {
+  it('left hero follows brand hierarchy with secondary tagline', () => {
     const login = read('components/orb-residential/orb-login-screen.tsx')
+    const css = read('app/orb/orb-login.css')
+
+    const brandIdx = login.indexOf('data-orb-login-brand')
+    const engineIdx = login.indexOf('data-orb-login-engine-line')
+    const sphereIdx = login.indexOf('data-orb-login-hero-sphere')
+    const tagIdx = login.indexOf('data-orb-login-brand-tag')
+    const titleIdx = login.indexOf('data-orb-login-title')
+
+    assert.ok(brandIdx < engineIdx, 'Product name should precede engine line')
+    assert.ok(engineIdx < sphereIdx, 'Engine line should precede ORB visual')
+    assert.ok(sphereIdx < tagIdx, 'ORB visual should precede brand tag')
+    assert.ok(tagIdx < titleIdx, 'Brand tag should precede functional headline')
+
     assert.match(login, /ORB Residential/)
     assert.match(login, /Powered by IndiCare Intelligence/)
+    assert.match(login, /data-orb-login-brand-tag/)
+    assert.match(login, /orbProductCopy\.brandLine/)
+    assert.match(login, /AI support for residential children/)
     assert.match(login, /Record better\. Reflect faster\. Respond safer\./)
     assert.match(login, /data-orb-login-trust-points/)
     assert.match(login, /orb-login-hero-sphere-wrap/)
     assert.match(login, /OrbHeroSphere/)
+    const loginCard = login.slice(login.indexOf('orb-login-card'))
+    assert.doesNotMatch(loginCard, /data-orb-login-brand-tag/)
+    assert.match(css, /justify-content:\s*flex-start/)
+    assert.match(css, /clamp\(2rem,\s*14vh,\s*5rem\)/)
   })
 
   it('mobile layout is single column', () => {
     const login = read('components/orb-residential/orb-login-screen.tsx')
     assert.match(login, /data-orb-login-mobile-single-column/)
     assert.match(login, /lg:hidden/)
-    assert.match(login, /hidden flex-col justify-center lg:flex/)
+    assert.match(login, /hidden flex-col justify-start lg:flex/)
+    assert.match(login, /data-orb-login-mobile-brand/)
   })
 
   it('authenticated users on login route redirect away', () => {
@@ -60,8 +81,10 @@ describe('ORB premium login screen layout', () => {
     assert.match(login, /Continue with Microsoft/)
     assert.match(login, /New to ORB Residential\?/)
     assert.match(login, /data-orb-create-account/)
+    assert.match(login, /Already have an account\?/)
     assert.match(login, /Sign in with email/)
     assert.match(login, /data-testid="orb-login-email"/)
+    assert.match(login, /publicUrls/)
     assert.match(login, /data-orb-passkey-sign-in/)
     assert.match(login, /href="\/orb\/signup"/)
     assert.match(login, /OrbLegalLinks/)

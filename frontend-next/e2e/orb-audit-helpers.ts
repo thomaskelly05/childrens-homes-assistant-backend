@@ -597,6 +597,7 @@ export const ORB_LOGIN_VIEWPORTS = [
   { width: 390, height: 667, label: '390×667' },
   { width: 430, height: 932, label: '430×932' },
   { width: 768, height: 1024, label: '768×1024' },
+  { width: 1440, height: 700, label: '1440×700' },
   { width: 1440, height: 760, label: '1440×760' },
   { width: 1440, height: 900, label: '1440×900' }
 ] as const
