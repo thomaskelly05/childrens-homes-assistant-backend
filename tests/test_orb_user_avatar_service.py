@@ -21,6 +21,19 @@ def test_validate_avatar_url_rejects_http_and_tokens():
     assert validate_avatar_url("https://lh3.googleusercontent.com/a/x?access_token=secret") is None
 
 
+def test_normalise_profile_includes_safe_microsoft_avatar():
+    profile = normalise_profile(
+        "microsoft",
+        {
+            "id": "ms-1",
+            "mail": "user@contoso.com",
+            "picture": "https://graph.microsoft.com/v1.0/me/photo",
+        },
+    )
+    assert profile["avatar_url"] == "https://graph.microsoft.com/v1.0/me/photo"
+    assert profile["subject"] == "ms-1"
+
+
 def test_normalise_profile_includes_safe_google_avatar():
     profile = normalise_profile(
         "google",

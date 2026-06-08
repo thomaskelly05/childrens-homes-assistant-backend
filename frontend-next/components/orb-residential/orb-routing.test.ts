@@ -32,21 +32,23 @@ describe('ORB Residential routing', () => {
     const shell = readApp('components/orb/orb-shell.tsx')
     const gate = readApp('components/orb-residential/orb-auth-gate.tsx')
     const login = readApp('components/orb-residential/orb-login-screen.tsx')
+    const authCard = readApp('components/orb-residential/orb-login-auth-card.tsx')
     assert.match(shell, /OrbAuthGate/)
     assert.match(gate, /OrbLoginScreen/)
-    assert.match(login, /ORB Residential/)
+    assert.match(authCard, /ORB Residential/)
     assert.match(login, /sanitizeOrbReturnUrl/)
   })
 
-  it('/orb/login shows Microsoft, Google, Apple, Email with icons and OAuth return /orb', () => {
+  it('/orb/login shows Microsoft, Google, Email with icons and OAuth return /orb', () => {
     const login = readApp('components/orb-residential/orb-login-screen.tsx')
+    const authCard = readApp('components/orb-residential/orb-login-auth-card.tsx')
     const authBtn = readApp('components/orb-residential/ui/orb-auth-button.tsx')
-    assert.match(login, /Continue with Microsoft/)
-    assert.match(login, /Continue with Google/)
-    assert.match(login, /Continue with Apple/)
-    assert.match(login, /Continue with email/)
-    assert.match(login, /orbOAuthStartUrl\('microsoft', returnUrl\)/)
-    assert.match(login, /Use passkey/)
+    assert.match(authCard, /Continue with Microsoft/)
+    assert.match(authCard, /Continue with Google/)
+    assert.doesNotMatch(authCard, /Continue with Apple/)
+    assert.match(authCard, /Sign in with email/)
+    assert.match(authCard, /orbOAuthStartUrl\('microsoft', returnUrl\)/)
+    assert.match(authCard, /Use passkey/)
     assert.match(login, /min-h-\[100dvh\]/s)
     assert.match(authBtn, /OrbAuthProviderIcon/)
     assert.match(authBtn, /MicrosoftIcon/)
@@ -54,8 +56,9 @@ describe('ORB Residential routing', () => {
 
   it('passkey option uses orbPasskeysSupported guard', () => {
     const login = readApp('components/orb-residential/orb-login-screen.tsx')
+    const authCard = readApp('components/orb-residential/orb-login-auth-card.tsx')
     assert.match(login, /orbPasskeysSupported/)
-    assert.match(login, /data-orb-passkey-sign-in/)
+    assert.match(authCard, /data-orb-passkey-sign-in/)
   })
 
   it('/orb/setup is minimal optional onboarding', () => {

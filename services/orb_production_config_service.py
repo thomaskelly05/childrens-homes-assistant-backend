@@ -4,9 +4,17 @@ from __future__ import annotations
 
 import os
 
+from services.orb_oauth_provider_env import (
+    EXPECTED_MICROSOFT_REDIRECT_URI,
+    apple_auth_enabled,
+    microsoft_auth_enabled,
+    microsoft_client_id,
+    microsoft_client_secret,
+    microsoft_redirect_uri,
+    microsoft_tenant_id,
+)
 from services.orb_oauth_service import google_redirect_uri_matches_expected
 from services.orb_subscription_plan_service import oauth_provider_configured, orb_residential_stripe_price_id
-
 
 def stripe_config_warnings() -> list[str]:
     warnings: list[str] = []
@@ -43,13 +51,17 @@ def oauth_provider_config_warnings(provider: str) -> list[str]:
                 "https://api.indicare.co.uk/orb/standalone/auth/oauth/google/callback"
             )
     elif key == "microsoft":
-        if not os.getenv("OAUTH_MICROSOFT_CLIENT_ID", "").strip():
-            warnings.append("OAUTH_MICROSOFT_CLIENT_ID is not set")
-        if not os.getenv("OAUTH_MICROSOFT_CLIENT_SECRET", "").strip():
-            warnings.append("OAUTH_MICROSOFT_CLIENT_SECRET is not set")
-        if not os.getenv("OAUTH_MICROSOFT_REDIRECT_URI", "").strip():
-            warnings.append("OAUTH_MICROSOFT_REDIRECT_URI is not set")
+        if not microsoft_auth_enabled():
+            warnings.append("MICROSOFT_AUTH_ENABLED is not true")
+        if not microsoft_client_id():
+            warnings.append("MICROSOFT_CLIENT_ID (or OAUTH_MICROSOFT_CLIENT_ID) is not set")
+        if not microsoft_client_secret():
+            warnings.append("MICROSOFT_CLIENT_SECRET (or OAUTH_MICROSOFT_CLIENT_SECRET) is not set")
+        if not microsoft_redirect_uri():
+            warnings.append("MICROSOFT_REDIRECT_URI (or OAUTH_MICROSOFT_REDIRECT_URI) is not set")
     elif key == "apple":
+        if not apple_auth_enabled():
+            return warnings
         for env_name in (
             "OAUTH_APPLE_CLIENT_ID",
             "OAUTH_APPLE_TEAM_ID",
@@ -62,19 +74,28 @@ def oauth_provider_config_warnings(provider: str) -> list[str]:
     return warnings
 
 
+def _diagnostic_providers() -> tuple[str, ...]:
+    providers: list[str] = ["google", "microsoft"]
+    if apple_auth_enabled():
+        providers.append("apple")
+    return tuple(providers)
+
+
 def oauth_config_warnings() -> dict[str, list[str]]:
     return {
         provider: oauth_provider_config_warnings(provider)
-        for provider in ("google", "microsoft", "apple")
+        for provider in _diagnostic_providers()
         if oauth_provider_configured(provider) or oauth_provider_config_warnings(provider)
     }
 
 
 def _oauth_redirect_uri(provider: str) -> str | None:
     key = provider.strip().lower()
+    if key == "microsoft":
+        value = microsoft_redirect_uri()
+        return value or None
     env_map = {
         "google": "OAUTH_GOOGLE_REDIRECT_URI",
-        "microsoft": "OAUTH_MICROSOFT_REDIRECT_URI",
         "apple": "OAUTH_APPLE_REDIRECT_URI",
     }
     env_name = env_map.get(key)
@@ -100,12 +121,14 @@ def oauth_provider_diagnostics(provider: str) -> dict[str, object]:
     env_requirements: dict[str, list[str]] = {
         "google": ["OAUTH_GOOGLE_CLIENT_ID", "OAUTH_GOOGLE_CLIENT_SECRET", "OAUTH_GOOGLE_REDIRECT_URI"],
         "microsoft": [
-            "OAUTH_MICROSOFT_CLIENT_ID",
-            "OAUTH_MICROSOFT_CLIENT_SECRET",
-            "OAUTH_MICROSOFT_REDIRECT_URI",
-            "OAUTH_MICROSOFT_TENANT",
+            "MICROSOFT_AUTH_ENABLED",
+            "MICROSOFT_CLIENT_ID",
+            "MICROSOFT_CLIENT_SECRET",
+            "MICROSOFT_REDIRECT_URI",
+            "MICROSOFT_TENANT_ID",
         ],
         "apple": [
+            "APPLE_AUTH_ENABLED",
             "OAUTH_APPLE_CLIENT_ID",
             "OAUTH_APPLE_TEAM_ID",
             "OAUTH_APPLE_KEY_ID",
@@ -123,6 +146,17 @@ def oauth_provider_diagnostics(provider: str) -> dict[str, object]:
         "callback_route": f"/orb/standalone/auth/oauth/{key}/callback",
         "required_env_vars": env_requirements.get(key, []),
     }
+    if key == "microsoft":
+        payload.update(
+            {
+                "microsoft_enabled": configured,
+                "client_id_present": bool(microsoft_client_id()),
+                "client_secret_present": bool(microsoft_client_secret()),
+                "tenant_id_present": bool(microsoft_tenant_id()),
+                "redirect_uri_present": bool(microsoft_redirect_uri()),
+                "expected_redirect_uri": EXPECTED_MICROSOFT_REDIRECT_URI,
+            }
+        )
     if key == "google":
         client_id = os.getenv("OAUTH_GOOGLE_CLIENT_ID", "").strip()
         payload.update(
@@ -142,7 +176,7 @@ def oauth_provider_diagnostics(provider: str) -> dict[str, object]:
 
 
 def oauth_providers_diagnostics() -> dict[str, dict[str, object]]:
-    return {provider: oauth_provider_diagnostics(provider) for provider in ("google", "microsoft", "apple")}
+    return {provider: oauth_provider_diagnostics(provider) for provider in _diagnostic_providers()}
 
 
 def passkey_config_warnings() -> list[str]:

@@ -13,22 +13,23 @@ function read(relativePath: string) {
 describe('ORB login and billing readiness', () => {
   it('sign-in page renders grouped auth methods', () => {
     const login = read('components/orb-residential/orb-login-screen.tsx')
-    assert.match(login, /Continue with work account/)
-    assert.match(login, /Continue with email/)
-    assert.match(login, /Use passkey/)
-    assert.match(login, /Continue with Microsoft/)
-    assert.match(login, /Continue with Google/)
-    assert.match(login, /Continue with Apple/)
-    assert.match(login, /data-testid="orb-login-email"/)
-    assert.match(login, /data-testid="orb-login-submit"/)
+    const authCard = read('components/orb-residential/orb-login-auth-card.tsx')
+    assert.match(authCard, /Use your work account, email or passkey/)
+    assert.match(authCard, /Continue with email/)
+    assert.match(authCard, /Use passkey/)
+    assert.match(authCard, /Continue with Microsoft/)
+    assert.match(authCard, /Continue with Google/)
+    assert.match(authCard, /data-testid="orb-login-email"/)
+    assert.match(authCard, /data-testid="orb-login-submit"/)
   })
 
   it('passkey is presented as existing-user option with email explanation', () => {
     const login = read('components/orb-residential/orb-login-screen.tsx')
-    assert.match(login, /Use passkey if you have already set one up/)
+    const authCard = read('components/orb-residential/orb-login-auth-card.tsx')
+    assert.match(authCard, /Use passkey/)
     assert.match(login, /find your saved passkey/)
-    assert.match(login, /data-orb-passkey-sign-in/)
-    assert.match(login, /data-orb-passkey-toggle/)
+    assert.match(authCard, /data-orb-passkey-sign-in/)
+    assert.match(authCard, /data-orb-passkey-toggle/)
   })
 
   it('login hero uses premium positioning copy', () => {
@@ -43,8 +44,9 @@ describe('ORB login and billing readiness', () => {
 
   it('create account and provider email hints exist', () => {
     const login = read('components/orb-residential/orb-login-screen.tsx')
-    assert.match(login, /href="\/orb\/signup"/)
-    assert.match(login, /Create account/)
+    const authCard = read('components/orb-residential/orb-login-auth-card.tsx')
+    assert.match(authCard, /href="\/orb\/signup"/)
+    assert.match(authCard, /Create account/)
     assert.match(login, /Already subscribed through your provider/)
     assert.match(login, /data-orb-provider-email-hint/)
   })

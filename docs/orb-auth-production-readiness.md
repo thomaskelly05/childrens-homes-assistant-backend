@@ -7,9 +7,9 @@ Production app domain: **https://app.indicare.co.uk**
 
 | Method | Start | Callback / verify | Notes |
 |--------|-------|-------------------|-------|
-| Microsoft | `GET /orb/standalone/auth/oauth/microsoft/start` | `GET/POST .../callback` | Tenant via `OAUTH_MICROSOFT_TENANT` |
+| Microsoft | `GET /orb/standalone/auth/oauth/microsoft/start` | `GET .../callback` | `MICROSOFT_TENANT_ID=common`; see `docs/orb-microsoft-login-setup.md` |
 | Google | `GET .../google/start` | `GET .../callback` | |
-| Apple | `GET .../apple/start` | `POST .../callback` (form_post) | Requires team key env vars |
+| Apple | `GET .../apple/start` | `POST .../callback` (form_post) | **Parked for launch** — `APPLE_AUTH_ENABLED=false` by default |
 | Email/password | `/auth/login` | Session cookie | MFA redirect for admin roles |
 | Passkey | `POST /auth/passkeys/authenticate/options` | `.../verify` | Email required to discover credentials |
 | Sign-up | `POST /orb/standalone/auth/signup` | Then sign in | `/orb/signup` |
@@ -29,21 +29,16 @@ OAUTH_GOOGLE_REDIRECT_URI=https://app.indicare.co.uk/orb/standalone/auth/oauth/g
 ### Microsoft
 
 ```
-OAUTH_MICROSOFT_CLIENT_ID=
-OAUTH_MICROSOFT_CLIENT_SECRET=
-OAUTH_MICROSOFT_TENANT=common
-OAUTH_MICROSOFT_REDIRECT_URI=https://app.indicare.co.uk/orb/standalone/auth/oauth/microsoft/callback
+MICROSOFT_AUTH_ENABLED=true
+MICROSOFT_CLIENT_ID=
+MICROSOFT_CLIENT_SECRET=
+MICROSOFT_TENANT_ID=common
+MICROSOFT_REDIRECT_URI=https://api.indicare.co.uk/orb/standalone/auth/oauth/microsoft/callback
 ```
 
-### Apple
+### Apple (parked)
 
-```
-OAUTH_APPLE_CLIENT_ID=
-OAUTH_APPLE_TEAM_ID=
-OAUTH_APPLE_KEY_ID=
-OAUTH_APPLE_PRIVATE_KEY=
-OAUTH_APPLE_REDIRECT_URI=https://app.indicare.co.uk/orb/standalone/auth/oauth/apple/callback
-```
+Apple Sign In is intentionally disabled for ORB launch UI. Set `APPLE_AUTH_ENABLED=true` only when Apple Developer Programme setup is complete. No Apple env vars are required for startup.
 
 ## Passkey environment variables
 

@@ -181,7 +181,7 @@ test.describe('ORB login scroll reachability', () => {
 
     const order = await page.evaluate(() => {
       const selectors = [
-        '[data-orb-oauth="apple"]',
+        '[data-orb-oauth="google"]',
         '[data-orb-create-account]',
         '[data-testid="orb-login-email"]',
         '[data-orb-passkey-toggle], #orb-login-passkey'
