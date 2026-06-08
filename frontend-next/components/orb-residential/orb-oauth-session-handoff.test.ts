@@ -19,8 +19,10 @@ describe('ORB OAuth session handoff', () => {
   it('callback redirects through app /backend session complete proxy', () => {
     const routes = readRepo('routers/orb_oauth_routes.py')
     assert.match(routes, /\/backend\/orb\/standalone\/auth\/oauth\/session\/complete/)
+    assert.match(routes, /_orb_oauth_app_url/)
     assert.match(routes, /store_oauth_session_handoff/)
     assert.match(routes, /establish_browser_session/)
+    assert.match(routes, /redirect_target_is_session_complete/)
   })
 
   it('session complete route sets auth cookies on response', () => {

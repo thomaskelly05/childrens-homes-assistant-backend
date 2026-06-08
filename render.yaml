@@ -49,7 +49,7 @@ services:
       - key: APP_BASE_URL
         value: https://app.indicare.co.uk
       - key: FRONTEND_APP_URL
-        value: https://indicare-frontend-next.onrender.com
+        value: https://app.indicare.co.uk
       - key: ALLOWED_ORIGINS
         value: https://indicare-frontend-next.onrender.com,https://app.indicare.co.uk,https://api.indicare.co.uk
       - key: CORS_ALLOWED_ORIGINS
