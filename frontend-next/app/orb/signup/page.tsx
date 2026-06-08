@@ -4,7 +4,9 @@ import { FormEvent, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 
+import { OrbLoginLegalFooter } from '@/components/orb-residential/orb-login-legal-footer'
 import { orbStandaloneSignup, trackOrbAnalytics } from '@/lib/orb/orb-billing-client'
+import { buildOrbFrontDoorUrl } from '@/lib/orb/orb-front-door-routing'
 import { useAuth } from '@/contexts/auth-context'
 
 export default function OrbSignupPage() {
@@ -69,10 +71,13 @@ export default function OrbSignupPage() {
         </form>
         <p className="mt-6 text-sm text-slate-600">
           Already have an account?{' '}
-          <Link href="/orb/login" className="font-bold text-indigo-700">
+          <Link href={buildOrbFrontDoorUrl('/orb')} className="font-bold text-indigo-700">
             Sign in
           </Link>
         </p>
+        <div className="mt-8">
+          <OrbLoginLegalFooter />
+        </div>
       </div>
     </main>
   )

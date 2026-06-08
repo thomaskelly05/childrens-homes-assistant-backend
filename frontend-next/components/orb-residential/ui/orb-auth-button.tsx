@@ -3,7 +3,12 @@ import type { ReactNode } from 'react'
 
 import { clsx } from 'clsx'
 
-import { isOrbOAuthStartPath, navigateOrbOAuthStart, type OrbOAuthProvider } from '@/lib/orb/orb-oauth-navigation'
+import {
+  isOrbOAuthStartPath,
+  navigateOrbOAuthStart,
+  type OrbOAuthProvider
+} from '@/lib/orb/orb-oauth-navigation'
+import { markOrbOAuthRedirect } from '@/lib/orb/orb-oauth-redirect-state'
 
 export type OrbAuthProvider = 'microsoft' | 'google' | 'apple' | 'email' | 'passkey'
 
@@ -99,7 +104,9 @@ export function OrbAuthButton({
   className,
   onClick,
   type = 'link',
-  unavailableLabel
+  unavailableLabel,
+  loading = false,
+  loadingLabel
 }: {
   href?: string
   disabled?: boolean
@@ -109,14 +116,19 @@ export function OrbAuthButton({
   onClick?: () => void
   type?: 'link' | 'button'
   unavailableLabel?: string
+  loading?: boolean
+  loadingLabel?: string
 }) {
+  const isDisabled = Boolean(disabled || loading)
   const base = clsx(
     'orb-auth-button flex w-full items-center justify-center gap-2.5 rounded-2xl border px-4 py-2.5 text-sm font-semibold transition min-h-[2.75rem] sm:min-h-[3rem]',
-    disabled ? 'orb-auth-button--disabled cursor-not-allowed' : 'orb-auth-button--enabled',
+    isDisabled ? 'orb-auth-button--disabled cursor-not-allowed' : 'orb-auth-button--enabled',
+    loading && 'orb-auth-button--loading',
     className
   )
 
-  const label = disabled && unavailableLabel ? unavailableLabel : children
+  const label =
+    loading && loadingLabel ? loadingLabel : isDisabled && unavailableLabel ? unavailableLabel : children
 
   const content = (
     <>
@@ -131,8 +143,9 @@ export function OrbAuthButton({
         type="button"
         className={base}
         data-orb-oauth={provider}
+        aria-busy={loading || undefined}
         {...(provider === 'passkey' ? { 'data-orb-passkey-sign-in': true } : {})}
-        disabled={disabled}
+        disabled={isDisabled}
         onClick={onClick}
       >
         {content}
@@ -140,7 +153,7 @@ export function OrbAuthButton({
     )
   }
 
-  if (disabled || !href) {
+  if (isDisabled || !href) {
     return (
       <span className={base} data-orb-oauth={provider} aria-disabled>
         {content}
@@ -152,7 +165,13 @@ export function OrbAuthButton({
     const oauthProvider = provider as OrbOAuthProvider
     if (/^https?:\/\//i.test(href)) {
       return (
-        <a href={href} className={base} data-orb-oauth={provider}>
+        <a
+          href={href}
+          className={base}
+          data-orb-oauth={provider}
+          aria-busy={loading || undefined}
+          onClick={() => markOrbOAuthRedirect(oauthProvider)}
+        >
           {content}
         </a>
       )
@@ -162,7 +181,10 @@ export function OrbAuthButton({
         type="button"
         className={base}
         data-orb-oauth={provider}
+        aria-busy={loading || undefined}
+        disabled={loading}
         onClick={() => {
+          markOrbOAuthRedirect(oauthProvider)
           try {
             const parsed = new URL(href, window.location.origin)
             const returnUrl = parsed.searchParams.get('return_url') || '/orb'

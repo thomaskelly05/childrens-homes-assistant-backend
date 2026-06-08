@@ -462,7 +462,12 @@ async def list_auth_providers(current_user=Depends(get_optional_orb_residential_
             "oauth_callback_template": "/orb/standalone/auth/oauth/{provider}/callback",
             "login_path": "/orb",
             "front_door_url": f"{FRONTEND_APP_URL.rstrip('/')}/orb",
-            "legal": {"privacy": "/privacy", "terms": "/terms"},
+            "legal": {
+                "privacy": "/privacy",
+                "terms": "/terms",
+                "cookies": "/cookies",
+                "support": "/support",
+            },
             "oauth_diagnostics": diagnostics,
             "config_warnings": {
                 "stripe": stripe_config_warnings(),

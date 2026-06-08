@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useEffect } from 'react'
 
 import { startOrbCheckout, startOrbTrial, trackOrbAnalytics } from '@/lib/orb/orb-billing-client'
+import { buildOrbFrontDoorUrl } from '@/lib/orb/orb-front-door-routing'
 import { useAuth } from '@/contexts/auth-context'
 
 export default function OrbBillingCancelPage() {
@@ -15,7 +16,7 @@ export default function OrbBillingCancelPage() {
 
   async function tryAgain() {
     if (status !== 'authenticated') {
-      window.location.href = '/orb/login?returnUrl=/orb/billing/cancel'
+      window.location.href = buildOrbFrontDoorUrl('/orb/billing/cancel')
       return
     }
     try {

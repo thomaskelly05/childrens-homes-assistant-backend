@@ -11,23 +11,35 @@ function read(relativePath: string) {
 }
 
 describe('ORB legal links', () => {
-  it('login footer uses public www.indicare.co.uk URLs', () => {
-    const login = read('components/orb-residential/orb-login-screen.tsx')
+  it('auth footer renders Privacy, Terms, Cookies and Support as separate internal links', () => {
     const legal = read('components/orb-residential/orb-legal-links.tsx')
+    const footer = read('components/orb-residential/orb-login-legal-footer.tsx')
 
-    assert.match(login, /publicUrls/)
-    assert.match(legal, /https:\/\/www\.indicare\.co\.uk\/privacy/)
-    assert.match(legal, /https:\/\/www\.indicare\.co\.uk\/terms/)
-    assert.match(legal, /https:\/\/www\.indicare\.co\.uk\/cookies/)
-    assert.match(legal, /https:\/\/www\.indicare\.co\.uk\/support/)
-    assert.match(legal, /data-orb-cookies-link/)
-    assert.match(legal, /data-orb-support-link/)
-    assert.match(legal, /rel="noopener noreferrer"/)
+    assert.match(legal, /variant === 'auth'/)
+    assert.match(legal, /paths\[item\.key\]/)
+    assert.match(legal, /cookies: '\/cookies'/)
+    assert.match(legal, /support: '\/support'/)
+    assert.match(legal, /orb-legal-links-separator/)
+    assert.match(legal, /Privacy/)
+    assert.match(legal, /Terms/)
+    assert.match(legal, /Cookies/)
+    assert.match(legal, /Support/)
+    assert.match(footer, /variant="auth"/)
+    assert.doesNotMatch(legal, /PrivacyTerms/)
   })
 
   it('in-app surfaces keep internal privacy and terms routes', () => {
     const legal = read('components/orb-residential/orb-legal-links.tsx')
-    assert.match(legal, /href="\/privacy"/)
-    assert.match(legal, /href="\/terms"/)
+    assert.match(legal, /variant = 'in-app'/)
+    assert.match(legal, /href=\{paths\.privacy\}/)
+    assert.match(legal, /href=\{paths\.terms\}/)
+  })
+
+  it('default legal paths use /privacy /terms /cookies /support', () => {
+    const legal = read('components/orb-residential/orb-legal-links.tsx')
+    assert.match(legal, /privacy: '\/privacy'/)
+    assert.match(legal, /terms: '\/terms'/)
+    assert.match(legal, /cookies: '\/cookies'/)
+    assert.match(legal, /support: '\/support'/)
   })
 })

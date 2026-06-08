@@ -5,6 +5,31 @@
 
 .orb-login-root {
   overflow-x: hidden;
+  background:
+    radial-gradient(ellipse 80% 55% at 15% 0%, rgba(129, 140, 248, 0.22), transparent 58%),
+    radial-gradient(ellipse 70% 50% at 85% 8%, rgba(56, 189, 248, 0.16), transparent 55%),
+    radial-gradient(ellipse 60% 45% at 50% 100%, rgba(167, 139, 250, 0.12), transparent 60%),
+    linear-gradient(180deg, var(--orb-bg, #0f172a) 0%, var(--orb-bg-elevated, #111827) 100%);
+}
+
+.orb-login-root--light {
+  background:
+    radial-gradient(ellipse 80% 55% at 15% 0%, rgba(129, 140, 248, 0.28), transparent 58%),
+    radial-gradient(ellipse 70% 50% at 85% 8%, rgba(56, 189, 248, 0.2), transparent 55%),
+    radial-gradient(ellipse 60% 45% at 50% 100%, rgba(167, 139, 250, 0.14), transparent 60%),
+    linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%);
+}
+
+.orb-login-legal-links .orb-legal-links-separator {
+  user-select: none;
+}
+
+.orb-login-legal-links a {
+  white-space: nowrap;
+}
+
+.orb-login-value-chip {
+  backdrop-filter: blur(6px);
 }
 
 /* ── Desktop / tablet two-column model ─────────────────────────────────── */

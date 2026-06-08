@@ -18,3 +18,5 @@ Backend routes remain in place but return 404 when Apple is not enabled.
 ## Launch UI
 
 Do not expect **Continue with Apple** on `/orb` until this document’s prerequisites are met and `APPLE_AUTH_ENABLED=true`.
+
+For the current launch auth UX (Google + Microsoft only), see [orb-auth-ux-polish.md](./orb-auth-ux-polish.md).

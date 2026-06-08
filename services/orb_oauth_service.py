@@ -25,6 +25,8 @@ from services.orb_subscription_plan_service import oauth_provider_configured
 
 logger = logging.getLogger(__name__)
 
+OAUTH_HTTP_TIMEOUT_SECONDS = 8.0
+
 ORB_OAUTH_PROVIDERS = frozenset({"google", "microsoft", "apple"})
 
 ALLOWED_RETURN_PREFIXES = ("/orb", "/orb/onboarding", "/orb/access", "/orb/billing")
@@ -155,7 +157,12 @@ def build_authorize_url(config: OrbOAuthProviderConfig, *, state: str) -> str:
     return f"{config.authorize_url}?{urllib.parse.urlencode(params)}"
 
 
-async def exchange_code(config: OrbOAuthProviderConfig, code: str) -> dict[str, Any]:
+async def exchange_code(
+    config: OrbOAuthProviderConfig,
+    code: str,
+    *,
+    client: httpx.AsyncClient | None = None,
+) -> dict[str, Any]:
     data = {
         "grant_type": "authorization_code",
         "code": code,
@@ -163,20 +170,31 @@ async def exchange_code(config: OrbOAuthProviderConfig, code: str) -> dict[str, 
         "client_id": config.client_id,
         "client_secret": config.client_secret,
     }
-    async with httpx.AsyncClient(timeout=20.0) as client:
+    if client is not None:
         response = await client.post(config.token_url, data=data)
+        response.raise_for_status()
+        return response.json()
+    async with httpx.AsyncClient(timeout=OAUTH_HTTP_TIMEOUT_SECONDS) as owned:
+        response = await owned.post(config.token_url, data=data)
         response.raise_for_status()
         return response.json()
 
 
-async def fetch_userinfo(config: OrbOAuthProviderConfig, access_token: str) -> dict[str, Any]:
+async def fetch_userinfo(
+    config: OrbOAuthProviderConfig,
+    access_token: str,
+    *,
+    client: httpx.AsyncClient | None = None,
+) -> dict[str, Any]:
     if not config.userinfo_url:
         return {}
-    async with httpx.AsyncClient(timeout=20.0) as client:
-        response = await client.get(
-            config.userinfo_url,
-            headers={"Authorization": f"Bearer {access_token}"},
-        )
+    headers = {"Authorization": f"Bearer {access_token}"}
+    if client is not None:
+        response = await client.get(config.userinfo_url, headers=headers)
+        response.raise_for_status()
+        return response.json()
+    async with httpx.AsyncClient(timeout=OAUTH_HTTP_TIMEOUT_SECONDS) as owned:
+        response = await owned.get(config.userinfo_url, headers=headers)
         response.raise_for_status()
         return response.json()
 
@@ -194,7 +212,34 @@ def decode_id_token_claims_unverified(id_token: str) -> dict[str, Any]:
         return {}
 
 
+def _microsoft_profile_from_id_token(id_token: str | None) -> dict[str, Any]:
+    claims = decode_id_token_claims_unverified(id_token or "")
+    if not claims:
+        return {}
+    subject = str(claims.get("sub") or claims.get("oid") or "").strip()
+    email = str(
+        claims.get("email")
+        or claims.get("preferred_username")
+        or claims.get("upn")
+        or ""
+    ).strip()
+    if not subject or not email:
+        return {}
+    return {
+        **claims,
+        "id": subject,
+        "sub": subject,
+        "email": email.lower(),
+        "email_verified": True,
+    }
+
+
 async def fetch_microsoft_profile(access_token: str, *, id_token: str | None = None) -> dict[str, Any]:
+    """Prefer id_token claims; call Graph /me only when required fields are missing."""
+    from_id_token = _microsoft_profile_from_id_token(id_token)
+    if from_id_token:
+        return from_id_token
+
     profile: dict[str, Any] = {}
     try:
         profile = await fetch_userinfo(
@@ -411,4 +456,4 @@ def validate_oauth_state(
 
 def oauth_error_redirect(frontend_base: str, message: str) -> str:
     encoded = urllib.parse.quote(message[:200])
-    return f"{frontend_base.rstrip('/')}/orb/login?oauth_error={encoded}"
+    return f"{frontend_base.rstrip('/')}/orb?oauth_error={encoded}"

@@ -3,7 +3,10 @@ from __future__ import annotations
 import logging
 import os
 import secrets
+import time
 from urllib.parse import urlparse
+
+import httpx
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.responses import RedirectResponse
@@ -16,6 +19,7 @@ from routers.auth_routes import (
     oauth_mfa_pending_for_user,
 )
 from services.orb_oauth_service import (
+    OAUTH_HTTP_TIMEOUT_SECONDS,
     build_authorize_url,
     create_orb_residential_user,
     exchange_code,
@@ -233,6 +237,7 @@ async def orb_oauth_start(
         )
     state = secrets.token_urlsafe(32)
     oauth_start_host = _request_host(request)
+    start_timer = time.perf_counter()
     try:
         store_oauth_session(
             conn,
@@ -251,11 +256,13 @@ async def orb_oauth_start(
         ) from None
 
     redirect_uri_host = _redirect_uri_host(key)
+    start_ms = int((time.perf_counter() - start_timer) * 1000)
     _log_oauth_start(
         provider=key,
         oauth_start_host=oauth_start_host,
         redirect_uri_host=redirect_uri_host,
     )
+    logger.info("ORB OAuth start timing provider=%s state_persist_ms=%s", key, start_ms)
     return _redirect(build_authorize_url(config, state=state))
 
 
@@ -446,20 +453,31 @@ async def _orb_oauth_callback(
         return _redirect(oauth_error_redirect(_orb_oauth_app_url(), "Security check failed. Please try again."))
 
     user_created = False
+    linked_existing_by_email = False
+    callback_started = time.perf_counter()
     try:
-        token_payload = await exchange_code(config, code)
-        access_token = str(token_payload.get("access_token") or "")
-        if key == "microsoft":
-            profile_raw = (
-                await fetch_microsoft_profile(
+        async with httpx.AsyncClient(timeout=OAUTH_HTTP_TIMEOUT_SECONDS) as http_client:
+            token_started = time.perf_counter()
+            token_payload = await exchange_code(config, code, client=http_client)
+            token_ms = int((time.perf_counter() - token_started) * 1000)
+            access_token = str(token_payload.get("access_token") or "")
+            profile_started = time.perf_counter()
+            if key == "microsoft":
+                profile_raw = await fetch_microsoft_profile(
                     access_token,
                     id_token=str(token_payload.get("id_token") or "") or None,
                 )
-                if access_token
-                else {}
-            )
-        else:
-            profile_raw = await fetch_userinfo(config, access_token) if access_token else {}
+            else:
+                profile_raw = (
+                    await fetch_userinfo(config, access_token, client=http_client) if access_token else {}
+                )
+            profile_ms = int((time.perf_counter() - profile_started) * 1000)
+        logger.info(
+            "ORB OAuth callback timing provider=%s token_exchange_ms=%s profile_fetch_ms=%s",
+            key,
+            token_ms,
+            profile_ms,
+        )
         profile = normalise_profile(key, profile_raw)
         if not profile.get("subject"):
             return _redirect(oauth_error_redirect(_orb_oauth_app_url(), "Could not verify your account."))
@@ -469,6 +487,7 @@ async def _orb_oauth_callback(
         if not email:
             return _redirect(oauth_error_redirect(_orb_oauth_app_url(), "Email was not provided by the sign-in provider."))
 
+        lookup_started = time.perf_counter()
         user = find_orb_user_by_oauth(conn, provider=key, subject=str(profile["subject"]))
         if not user:
             existing = find_orb_user_by_email(conn, email)
@@ -481,6 +500,12 @@ async def _orb_oauth_callback(
                         )
                     )
                 user = existing
+                linked_existing_by_email = True
+                logger.info(
+                    "ORB OAuth provider linked provider=%s user_id=%s linked_via=verified_email reused_existing_user=true",
+                    key,
+                    int(existing["id"]),
+                )
             else:
                 user = create_orb_residential_user(
                     conn,
@@ -489,6 +514,7 @@ async def _orb_oauth_callback(
                     last_name=profile.get("last_name"),
                 )
                 user_created = True
+        lookup_ms = int((time.perf_counter() - lookup_started) * 1000)
 
         oauth_metadata: dict[str, str] = {"provider": key}
         avatar_url = profile.get("avatar_url")
@@ -526,6 +552,17 @@ async def _orb_oauth_callback(
 
         redirect_target = _frontend_oauth_session_complete_url(handoff_id)
         access_state = _resolve_access_state(conn, int(user["id"]), user)
+        total_ms = int((time.perf_counter() - callback_started) * 1000)
+        logger.info(
+            "ORB OAuth user resolved provider=%s user_id=%s user_created=%s "
+            "linked_existing_by_email=%s user_lookup_ms=%s total_callback_ms=%s",
+            key,
+            int(user["id"]),
+            str(user_created).lower(),
+            str(linked_existing_by_email).lower(),
+            lookup_ms,
+            total_ms,
+        )
         _log_oauth_callback_redirect(
             provider=key,
             handoff_created=True,
