@@ -69,7 +69,7 @@ describe('ORB auth product redesign', () => {
     const createIdx = authCard.indexOf('data-orb-create-account')
     const emailIdx = authCard.indexOf('data-orb-email-toggle')
     const passkeyIdx = authCard.indexOf('data-orb-login-passkey-section')
-    const legalIdx = authCard.indexOf('OrbLoginLegalFooter')
+    const legalIdx = authCard.indexOf('<OrbLoginLegalFooter')
     assert.ok(oauthIdx < createIdx)
     assert.ok(createIdx < emailIdx)
     assert.ok(emailIdx < passkeyIdx)

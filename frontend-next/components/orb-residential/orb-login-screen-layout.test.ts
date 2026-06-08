@@ -70,7 +70,7 @@ describe('ORB premium login screen layout', () => {
     assert.match(mobile, /data-orb-login-mobile-layout/)
     assert.match(mobile, /data-orb-login-mobile-mark/)
     assert.match(mobile, /lg:hidden/)
-    assert.match(hero, /hidden flex-col justify-start lg:flex/)
+    assert.match(hero, /hidden flex-col justify-center lg:flex/)
     assert.match(mobile, /data-orb-login-mobile-brand/)
   })
 
