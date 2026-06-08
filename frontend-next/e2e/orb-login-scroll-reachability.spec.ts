@@ -57,28 +57,27 @@ test.describe('ORB login scroll reachability', () => {
     await assertElementReachable(page, '[data-orb-passkey-sign-in]')
   })
 
-  test('desktop short viewport card scrolls without trapping focus', async ({ page }) => {
+  test('desktop short viewport reaches CTAs without trapping focus', async ({ page }) => {
     await mockWebAuthn(page, 'success')
     await disableE2eAutoAuth(page)
     await setupOrbAuthE2eMocks(page, { scenario: 'unauthenticated' })
     await page.setViewportSize({ width: 1440, height: 760 })
     await gotoOrbLogin(page)
 
-    const scrollAudit = await page.evaluate(() => {
-      const card = document.querySelector('.orb-login-card') as HTMLElement | null
-      const panel = document.querySelector('.orb-login-panel') as HTMLElement | null
-      const root = document.querySelector('.orb-login-root') as HTMLElement | null
-      const hosts = [card, panel, root, document.documentElement].filter(Boolean) as HTMLElement[]
-      const canScroll = hosts.some((host) => host.scrollHeight > host.clientHeight + 8)
-      const pageScrollable = document.documentElement.scrollHeight > window.innerHeight + 8
-      return { canScroll: canScroll || pageScrollable }
-    })
-    expect(scrollAudit.canScroll).toBe(true)
-
     await assertElementReachable(page, '[data-orb-create-account]')
     await expandPasskeyIfNeeded(page)
     await assertElementReachable(page, '[data-orb-passkey-sign-in]')
+    await assertElementReachable(page, '[data-orb-login-safe-bottom], [data-testid="orb-login-legal-links"]')
     await assertNoHorizontalOverflow(page)
+
+    const focusAudit = await page.evaluate(() => {
+      const email = document.querySelector('[data-testid="orb-login-email"]') as HTMLInputElement | null
+      email?.focus()
+      const focused = document.activeElement === email
+      if (email) email.blur()
+      return { emailFocusOk: focused }
+    })
+    expect(focusAudit.emailFocusOk).toBe(true)
   })
 
   test('presentation order: OAuth, create account, email, passkey', async ({ page }) => {
