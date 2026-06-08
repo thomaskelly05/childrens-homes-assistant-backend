@@ -23,6 +23,7 @@ import {
   buildOrbFrontDoorUrl,
   isOrbSurfacePath
 } from '@/lib/orb/orb-front-door-routing'
+import { resetOrbFrontDoorVerdictCache } from '@/lib/orb/orb-front-door-verdict-client'
 import {
   resetOrbFrontDoorVerdictStore,
   shouldDeferOrbAuthMeProbe
@@ -221,7 +222,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return
         }
         if (authError && isAuthFailureStatus(authError.status)) {
-          clearStaleOrbSessionState('auth_401')
+          clearStaleOrbSessionState('auth_me_401', { session_refresh_attempted: true })
           clearCachedIdentity()
           setUser(null)
           setStatus('unauthenticated')
@@ -345,7 +346,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     } finally {
       logoutRedirecting.current = true
-      clearStaleOrbSessionState('auth_401')
+      clearStaleOrbSessionState('logout', { auth_state: 'unauthenticated' })
       clearCachedIdentity()
       setUser(null)
       setStatus('unauthenticated')
@@ -359,6 +360,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       resetOrbGateStateStore()
       resetOrbSessionGate()
       resetOrbFrontDoorVerdictStore()
+      resetOrbFrontDoorVerdictCache()
       if (redirectToOrbLogin && pathname === '/orb') {
         logoutRedirecting.current = false
         return

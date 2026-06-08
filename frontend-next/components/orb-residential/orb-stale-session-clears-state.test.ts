@@ -28,6 +28,6 @@ describe('ORB stale session clears state', () => {
 
   it('auth context clears stale state on auth 401', () => {
     const auth = read('contexts/auth-context.tsx')
-    assert.match(auth, /clearStaleOrbSessionState\('auth_401'\)/)
+    assert.match(auth, /clearStaleOrbSessionState\('auth_me_401'/)
   })
 })

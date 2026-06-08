@@ -17,6 +17,7 @@ import {
 } from '@/lib/orb/orb-billing-client'
 import { beginOrbPasskeyLogin, orbPasskeysSupported } from '@/lib/orb/orb-passkey-client'
 import { ORB_CANONICAL_FRONT_DOOR, sanitizeOrbReturnUrl } from '@/lib/orb/orb-front-door-routing'
+import { recordOrbAuthRecoveryEvent, sessionAuthCookiePresent } from '@/lib/orb/orb-auth-recovery-diagnostics'
 import { ORB_LOGIN_VERSION } from '@/lib/orb/orb-visual-build'
 import { OrbAuthLoadingScreen } from '@/components/orb-residential/orb-auth-loading-screen'
 
@@ -125,7 +126,17 @@ function OrbLoginPanel({
         // Keep build-time flags
       })
     const oauthError = searchParams.get('oauth_error')
-    if (oauthError) setError(formatOAuthError(oauthError))
+    if (oauthError) {
+      setError(formatOAuthError(oauthError))
+      recordOrbAuthRecoveryEvent({
+        auth_state: 'unauthenticated',
+        verdict_status: null,
+        cookie_present: sessionAuthCookiePresent(),
+        frontend_state_cleared: false,
+        session_refresh_attempted: false,
+        reason: 'oauth_error'
+      })
+    }
     if (sessionError) setError(sessionError)
     return () => window.removeEventListener('resize', updateCompact)
   }, [searchParams, sessionError])
@@ -161,8 +172,24 @@ function OrbLoginPanel({
         return
       }
       setError(response.message || 'We could not sign you in. Check your email and password.')
+      recordOrbAuthRecoveryEvent({
+        auth_state: 'unauthenticated',
+        verdict_status: null,
+        cookie_present: sessionAuthCookiePresent(),
+        frontend_state_cleared: false,
+        session_refresh_attempted: false,
+        reason: 'failed_login'
+      })
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Sign-in failed. Please try again.')
+      recordOrbAuthRecoveryEvent({
+        auth_state: 'unauthenticated',
+        verdict_status: null,
+        cookie_present: sessionAuthCookiePresent(),
+        frontend_state_cleared: false,
+        session_refresh_attempted: false,
+        reason: 'failed_login'
+      })
     } finally {
       setSubmitting(false)
     }
