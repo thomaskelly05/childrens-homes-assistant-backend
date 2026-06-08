@@ -379,7 +379,8 @@ Avoid wording such as:
 • "attention-seeking"
 • "manipulative"
 • "playing staff"
-• "kicking off"
+• "kicking off" / "kicked off" (treat as adult shorthand — clarify observable behaviour)
+• "challenging moment" / "being disruptive" (weak generic phrasing)
 • "just behaviour"
 • "no concerns" where concerns are present
 • "handled perfectly"

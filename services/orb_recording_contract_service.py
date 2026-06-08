@@ -14,7 +14,7 @@ INCIDENT_REPORT_DRAFT_RE = re.compile(
     re.I,
 )
 
-KICKING_OFF_RE = re.compile(r"\bkicking off\b", re.I)
+KICKING_OFF_RE = re.compile(r"\b(kicking off|kicked off|played up)\b", re.I)
 
 # Phrases that commonly indicate invented incident detail when absent from source.
 _INVENTED_INCIDENT_PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = (
@@ -89,9 +89,10 @@ def extract_known_incident_facts(source_text: str) -> dict[str, Any]:
         "happened_today": False,
         "wants_incident_report": is_incident_report_draft_request(text),
     }
-    if KICKING_OFF_RE.search(text):
-        facts["shorthand_behaviour"] = "kicking off"
-    if "family contact" in lowered:
+    shorthand_match = KICKING_OFF_RE.search(text)
+    if shorthand_match:
+        facts["shorthand_behaviour"] = shorthand_match.group(1).lower()
+    if "family contact" in lowered or "family time" in lowered:
         facts["followed_family_contact"] = True
     if re.search(r"\btoday\b", lowered):
         facts["happened_today"] = True
@@ -373,28 +374,31 @@ def output_includes_required_placeholders(text: str) -> bool:
 
 
 def treats_kicking_off_as_shorthand(text: str) -> bool:
+    from services.orb_therapeutic_language_contract_service import treats_shorthand_as_clarification_needed
+
     lowered = str(text or "").lower()
-    if "kicking off" not in lowered:
+    if not any(term in lowered for term in ("kicking off", "kicked off", "played up")):
         return True
-    return any(
-        phrase in lowered
-        for phrase in (
-            "observable",
-            "shorthand",
-            "clarif",
-            "what was seen",
-            "what was heard",
-            "described as",
-            "adult shorthand",
-        )
-    )
+    return treats_shorthand_as_clarification_needed(text, "kicked off")
 
 
 def build_recording_contract_prompt_block(source_text: str, *, note_type: str | None = None) -> str:
+    from services.orb_therapeutic_language_contract_service import (
+        build_residential_scenario_prompt_block,
+        build_therapeutic_language_contract_block,
+        is_residential_incident_scenario,
+    )
+
     text = str(source_text or "")
     if note_type == "incident_record" or is_incident_report_draft_request(text):
-        return build_incident_report_prompt_block(text)
-    return build_no_invented_facts_contract_block(record_kind="general")
+        return "\n\n".join(
+            [build_therapeutic_language_contract_block(), build_incident_report_prompt_block(text)]
+        )
+    if is_residential_incident_scenario(text):
+        return build_residential_scenario_prompt_block(text)
+    return "\n\n".join(
+        [build_therapeutic_language_contract_block(include_headings=False), build_no_invented_facts_contract_block()]
+    )
 
 
 orb_recording_contract_service = type(

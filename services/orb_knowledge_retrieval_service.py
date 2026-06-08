@@ -543,7 +543,11 @@ class OrbKnowledgeRetrievalService:
         return any(term in lower for term in terms)
 
     def should_use_recording_quality(self, message: str, *, mode: str | None = None) -> bool:
+        from services.orb_therapeutic_language_contract_service import is_residential_incident_scenario
+
         if (mode or "").strip() == "Record This Properly":
+            return True
+        if is_residential_incident_scenario(message):
             return True
         lower = _lower(message)
         terms = (
@@ -555,6 +559,10 @@ class OrbKnowledgeRetrievalService:
             "log entry",
             "recording quality",
             "how should i record",
+            "family time",
+            "family contact",
+            "kicked off",
+            "kicking off",
         )
         return any(term in lower for term in terms)
 
@@ -593,7 +601,11 @@ class OrbKnowledgeRetrievalService:
         return True
 
     def _should_use_therapeutic(self, message: str, *, mode: str | None = None) -> bool:
+        from services.orb_therapeutic_language_contract_service import is_residential_incident_scenario
+
         if (mode or "").strip() in {"Behaviour Support", "Reflect", "Therapeutic Reframe"}:
+            return True
+        if is_residential_incident_scenario(message):
             return True
         lower = _lower(message)
         terms = (
@@ -606,10 +618,17 @@ class OrbKnowledgeRetrievalService:
             "regulation",
             "meltdown",
             "dysregulated",
+            "kicked off",
+            "kicking off",
+            "played up",
         )
         return any(term in lower for term in terms)
 
     def _should_use_residential_practice(self, message: str, *, mode: str | None = None) -> bool:
+        from services.orb_therapeutic_language_contract_service import is_residential_incident_scenario
+
+        if is_residential_incident_scenario(message):
+            return True
         lower = _lower(message)
         terms = (
             "children's home",
@@ -622,6 +641,8 @@ class OrbKnowledgeRetrievalService:
             "child voice",
             "daily note",
             "registered home",
+            "family time",
+            "family contact",
         )
         return any(term in lower for term in terms) or (mode or "").strip() in {
             "Record This Properly",

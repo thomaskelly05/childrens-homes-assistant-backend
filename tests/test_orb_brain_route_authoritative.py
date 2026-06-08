@@ -43,6 +43,16 @@ def test_residential_prompt_enriches_specialist():
     assert decision.dual_brain_route == "residential_specialist"
 
 
+def test_jamie_shorthand_prompt_activates_residential_not_general():
+    message = "Jamie kicked off today after family time"
+    decision = decide_orb_brain_route(message, mode="Ask ORB", source_surface="chat")
+    frame = orb_standalone_brain_service.frame(message, mode="Ask ORB")
+    assert frame.dual_brain_route == "residential_specialist"
+    assert decision.route in {"residential_specialist", "document_workspace"}
+    assert decision.route != "general_assistant"
+    assert "recording_quality_brain" in frame.active_brains
+
+
 def test_incident_report_prompt_routes_document_workspace_not_live_lookup():
     message = (
         "Jamie was kicking off today following family contact, help me to write the incident report"

@@ -8,6 +8,11 @@ from services.orb_recording_contract_service import (
     build_incident_report_prompt_block,
     is_incident_report_draft_request,
 )
+from services.orb_therapeutic_language_contract_service import (
+    build_residential_scenario_prompt_block,
+    build_therapeutic_language_contract_block,
+    is_residential_incident_scenario,
+)
 from services.orb_scenario_playbook_service import orb_scenario_playbook_service
 
 
@@ -183,7 +188,7 @@ class OrbStandaloneBrainService:
                 "inspection_evidence_brain",
                 "evidence_graph_brain",
             ])
-        if self._is_recording(text, resolved_mode):
+        if self._is_recording(text, resolved_mode) or is_residential_incident_scenario(text):
             brains.extend([
                 "recording_quality_brain",
                 "child_voice_brain",
@@ -191,7 +196,7 @@ class OrbStandaloneBrainService:
                 "professional_language_brain",
                 "therapeutic_language_brain",
             ])
-        if self._is_therapeutic(text, resolved_mode):
+        if self._is_therapeutic(text, resolved_mode) or is_residential_incident_scenario(text):
             brains.extend([
                 "therapeutic_brain",
                 "trauma_informed_brain",
@@ -257,6 +262,8 @@ class OrbStandaloneBrainService:
         incident_block = ""
         if is_incident_report_draft_request(message):
             incident_block = build_incident_report_prompt_block(message)
+        elif is_residential_incident_scenario(message):
+            incident_block = build_residential_scenario_prompt_block(message)
         lines = [
             "Standalone ORB dual-brain frame:",
             f"- Mode: {frame.mode}",
@@ -289,7 +296,11 @@ class OrbStandaloneBrainService:
             return "general_knowledge"
         if mode != "Ask ORB":
             return "residential_specialist"
-        if self._contains_residential_signal(text) or self._is_recording(text, mode):
+        if (
+            self._contains_residential_signal(text)
+            or self._is_recording(text, mode)
+            or is_residential_incident_scenario(text)
+        ):
             return "residential_specialist"
         if self._is_live_local_query(text):
             return "live_lookup"
@@ -305,6 +316,8 @@ class OrbStandaloneBrainService:
             "safeguarding", "missing from care", "restraint", "physical intervention", "keywork", "daily note",
             "placement", "care plan", "risk assessment", "staff supervision", "manager review", "child voice",
             "therapeutic", "trauma", "pace", "co-regulation", "behaviour as communication", "exploitation",
+            "family time", "family contact", "contact", "on shift", "handover",
+            "kicked off", "kicking off", "played up", "dysregulated", "unsettled",
         )
         return any(term in text for term in terms)
 
@@ -361,13 +374,16 @@ class OrbStandaloneBrainService:
                 "Never invent facts, quotes, actions, outcomes, emotional states or follow-up plans.",
                 "Use placeholders and a missing-information checklist where detail is absent.",
             ])
-        if is_incident_report_draft_request(text):
+        if is_incident_report_draft_request(text) or is_residential_incident_scenario(text):
             contract.extend([
-                "This is an incident report drafting request — provide structure with placeholders only.",
-                "Use only what the adult provided; treat shorthand such as 'kicking off' as wording to clarify, not as a factual behaviour.",
+                "This is a residential recording/incident scenario — provide structure with placeholders only.",
+                "Use only what the adult provided; treat shorthand such as 'kicked off' or 'kicking off' as wording to clarify, not as a factual behaviour.",
                 "Do not assume presentation, staff actions, outcomes, manager contact or follow-up plans.",
+                "Do not use weak generic phrases such as 'challenging moment' or 'being disruptive'.",
+                "Use residential headings: Immediate safety and regulation; What is known; What needs clarifying; Recording wording scaffold; Child voice; Adult response; Safeguarding and risk lens; Follow-up and manager oversight.",
                 "Include immediate safety, draft sections, missing-information checklist and follow-up prompts.",
             ])
+            contract.append(build_therapeutic_language_contract_block(include_headings=False))
         if "therapeutic_brain" in brains or "therapeutic_language_brain" in brains:
             contract.extend([
                 "Use behaviour-as-communication thinking and trauma-informed language.",
@@ -476,6 +492,8 @@ class OrbStandaloneBrainService:
             return "General knowledge / ChatGPT-style assistant request."
         if "allegation" in text or "lado" in text:
             return "Allegation or staff-conduct safeguarding reflection in a children's home context."
+        if is_residential_incident_scenario(text):
+            return "Residential behaviour/recording scenario — therapeutic, person-centred, Ofsted-ready support."
         if "recording_quality_brain" in brains:
             return "Recording quality and professional wording support."
         if "ofsted_brain" in brains:
@@ -508,8 +526,13 @@ class OrbStandaloneBrainService:
         terms = (
             "record", "recording", "daily note", "incident", "wording", "write this", "professional", "language",
             "chronology", "keywork", "case note", "log", "manager review", "sign off", "child voice",
+            "family time", "family contact",
         )
-        return mode == "Record This Properly" or any(term in text for term in terms)
+        return (
+            mode == "Record This Properly"
+            or is_residential_incident_scenario(text)
+            or any(term in text for term in terms)
+        )
 
     def _is_therapeutic(self, text: str, mode: str) -> bool:
         terms = (

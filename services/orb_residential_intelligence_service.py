@@ -34,6 +34,10 @@ from services.orb_recording_contract_service import (
     build_incident_report_prompt_block,
     is_incident_report_draft_request,
 )
+from services.orb_therapeutic_language_contract_service import (
+    build_residential_scenario_prompt_block,
+    is_residential_incident_scenario,
+)
 from services.orb_standalone_brain_service import orb_standalone_brain_service
 from services.recording_intelligence_service import recording_intelligence_service
 from services.safeguarding_intelligence_service import safeguarding_intelligence_service
@@ -111,6 +115,10 @@ class OrbResidentialIntelligenceService:
         detected_mode = detect_mode(text)
         requested_mode = str(mode).strip() if mode else None
         contract_mode = normalise_contract_mode(requested_mode or detected_mode)
+        if is_residential_incident_scenario(text):
+            contract_mode = "incident"
+            if detected_mode == "guidance":
+                detected_mode = "incident"
         brain_frame = orb_standalone_brain_service.context_payload(text, mode=requested_mode or detected_mode)
         knowledge_modules = select_relevant_python_knowledge(text, max_modules=6)
         guardrails = self._guardrails_for_surface(surface)
@@ -190,16 +198,20 @@ class OrbResidentialIntelligenceService:
             term in mode_key for term in ("safeguarding", "safeguard")
         ):
             lines.extend(["", safeguarding_intelligence_service.build_prompt_block(message)])
-        if surface == "standalone" and any(
-            term in mode_key for term in ("therapeutic", "reframe")
-        ):
-            lines.extend(["", therapeutic_intelligence_service.build_prompt_block(message)])
-        if surface == "standalone" and any(
-            term in mode_key for term in ("record", "recording", "write up", "daily note")
+        if surface == "standalone" and (
+            any(term in mode_key for term in ("record", "recording", "write up", "daily note"))
+            or is_residential_incident_scenario(message)
         ):
             lines.extend(["", recording_intelligence_service.build_prompt_block(message)])
+        if surface == "standalone" and (
+            any(term in mode_key for term in ("therapeutic", "reframe", "behaviour"))
+            or is_residential_incident_scenario(message)
+        ):
+            lines.extend(["", therapeutic_intelligence_service.build_prompt_block(message)])
         if is_incident_report_draft_request(message):
             lines.extend(["", build_incident_report_prompt_block(message)])
+        elif is_residential_incident_scenario(message):
+            lines.extend(["", build_residential_scenario_prompt_block(message)])
 
         return "\n".join(lines).strip()
 

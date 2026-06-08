@@ -22,6 +22,10 @@ from services.indicare_intelligence_route_finalize_service import (
     is_care_related_action,
 )
 from services.orb_standalone_brain_service import orb_standalone_brain_service
+from services.orb_therapeutic_language_contract_service import (
+    build_therapeutic_language_contract_block,
+    is_residential_incident_scenario,
+)
 from services.orb_expert_answer_engine_service import orb_expert_answer_engine_service
 from services.orb_expert_scenario_bank_service import orb_expert_scenario_bank_service
 from services.orb_standalone_sources import build_standalone_sources
@@ -846,6 +850,15 @@ class OrbActionEngineService:
             parts.append(operating_block)
         if grounding_context:
             parts.append(grounding_context)
+        if definition.id in {
+            "what_am_i_missing",
+            "convert_to_recording_wording",
+            "create_manager_oversight_note",
+            "add_safeguarding_lens",
+            "therapeutic_reframe",
+            "add_child_voice_prompt",
+        } or is_residential_incident_scenario(source_text):
+            parts.append(build_therapeutic_language_contract_block())
         return "\n\n".join(parts)
 
     def _action_user_prompt(
@@ -888,7 +901,9 @@ class OrbActionEngineService:
                 "Convert the source into professional residential recording wording.\n"
                 "Rules: factual, objective, child-centred, non-punitive, no diagnosis, "
                 "no invented facts, preserve uncertainty, include child voice if provided, "
-                "flag missing child voice if absent, and list what still needs recording.\n\n"
+                "flag missing child voice if absent, and list what still needs recording.\n"
+                "Treat adult shorthand (e.g. kicked off, played up) as wording to clarify — not as final record language.\n"
+                "Do not use weak generic phrases such as 'challenging moment'.\n\n"
                 f"--- SOURCE ---\n{source_text}"
             )
         if action_id == "create_manager_oversight_note":
