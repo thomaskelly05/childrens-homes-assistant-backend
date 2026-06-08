@@ -792,7 +792,12 @@ export async function setupOrbAuthE2eMocks(page: Page, options: OrbAuthE2eMockOp
           : buildAccess()
   }
 
-  await page.route('**/orb/front-door/verdict**', (route) => json(route, verdictBody))
+  await page.route('**/orb/front-door/verdict**', (route) => {
+    if (scenario === 'stale-cookie') {
+      return json(route, { success: false, data: verdictBody.data }, 401)
+    }
+    return json(route, verdictBody)
+  })
   await page.route('**/orb/standalone/access**', (route) => json(route, accessBody))
   await page.route('**/orb/auth/providers**', (route) =>
     json(route, {

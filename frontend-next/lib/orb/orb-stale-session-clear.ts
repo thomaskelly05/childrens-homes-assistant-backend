@@ -3,8 +3,13 @@
  */
 
 import { resetOrbAccessLoadingDeadline } from '@/lib/orb/orb-access-loading-deadline'
-import { recordOrbAuthDebugEvent } from '@/lib/orb/orb-auth-debug-events'
 import { resetOrbAuthLoadingDeadline } from '@/lib/orb/orb-auth-loading-deadline'
+import {
+  recordOrbAuthRecoveryEvent,
+  sessionAuthCookiePresent,
+  type OrbAuthRecoveryReason,
+  type OrbAuthRecoverySnapshot
+} from '@/lib/orb/orb-auth-recovery-diagnostics'
 import { clearOrbRouteLoopGuard } from '@/lib/orb/orb-route-loop-guard'
 import { resetOrbSessionGate } from '@/lib/orb/orb-session-gate'
 import { clearSensitiveBrowserState } from '@/lib/security/privacy'
@@ -38,10 +43,21 @@ function clearReturnUrlLoops() {
   }
 }
 
-export function clearStaleOrbSessionState(reason: 'auth_401' | 'access_401' = 'access_401'): void {
+export function clearStaleOrbSessionState(
+  reason: OrbAuthRecoveryReason = 'access_401',
+  overrides: Partial<OrbAuthRecoverySnapshot> = {}
+): void {
   if (typeof window === 'undefined') return
 
-  recordOrbAuthDebugEvent('stale_session_clear', { reason })
+  recordOrbAuthRecoveryEvent({
+    auth_state: 'stale',
+    verdict_status: null,
+    cookie_present: sessionAuthCookiePresent(),
+    frontend_state_cleared: true,
+    session_refresh_attempted: false,
+    reason,
+    ...overrides
+  })
 
   try {
     window.sessionStorage.removeItem(AUTH_CACHE_KEY)
@@ -60,7 +76,7 @@ export function clearStaleOrbSessionState(reason: 'auth_401' | 'access_401' = 'a
     ])
   }
 
-  if (reason === 'access_401' || reason === 'auth_401') {
+  if (reason === 'access_401' || reason === 'auth_me_401' || reason === 'verdict_401') {
     for (const storage of [window.localStorage, window.sessionStorage]) {
       removeKeysMatching(storage, [new RegExp(`^${ORB_WRITE_HANDOFF_PREFIX}`)])
     }

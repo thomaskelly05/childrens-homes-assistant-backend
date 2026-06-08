@@ -9,6 +9,7 @@ import { useOrbResidentialThemeSync } from '@/components/orb-residential/use-orb
 import { useOrbAppearance } from '@/components/orb-standalone/use-orb-appearance'
 import { getOrbThemeCssVariables } from '@/lib/orb/orb-theme'
 import { useAuth } from '@/contexts/auth-context'
+import { normaliseRole } from '@/lib/auth/permissions'
 import {
   fetchOrbAccess,
   ORB_BILLING_API,
@@ -17,6 +18,7 @@ import {
 } from '@/lib/orb/orb-billing-client'
 import { beginOrbPasskeyLogin, orbPasskeysSupported } from '@/lib/orb/orb-passkey-client'
 import { ORB_CANONICAL_FRONT_DOOR, sanitizeOrbReturnUrl } from '@/lib/orb/orb-front-door-routing'
+import { recordOrbAuthRecoveryEvent, sessionAuthCookiePresent } from '@/lib/orb/orb-auth-recovery-diagnostics'
 import { ORB_LOGIN_VERSION } from '@/lib/orb/orb-visual-build'
 import { OrbAuthLoadingScreen } from '@/components/orb-residential/orb-auth-loading-screen'
 
@@ -56,7 +58,7 @@ function OrbLoginPanel({
   useOrbResidentialThemeSync()
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { login, status, refreshSession } = useAuth()
+  const { login, status, refreshSession, applySessionUser } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [remember, setRemember] = useState(true)
@@ -125,17 +127,27 @@ function OrbLoginPanel({
         // Keep build-time flags
       })
     const oauthError = searchParams.get('oauth_error')
-    if (oauthError) setError(formatOAuthError(oauthError))
+    if (oauthError) {
+      setError(formatOAuthError(oauthError))
+      recordOrbAuthRecoveryEvent({
+        auth_state: 'unauthenticated',
+        verdict_status: null,
+        cookie_present: sessionAuthCookiePresent(),
+        frontend_state_cleared: false,
+        session_refresh_attempted: false,
+        reason: 'oauth_error'
+      })
+    }
     if (sessionError) setError(sessionError)
     return () => window.removeEventListener('resize', updateCompact)
   }, [searchParams, sessionError])
 
   async function afterAuth() {
-    await refreshSession()
     if (embeddedGateMode) {
       onLoginSuccess?.()
       return
     }
+    await refreshSession()
     try {
       const access = await fetchOrbAccess()
       const target = resolvePostLoginRoute(access)
@@ -161,8 +173,24 @@ function OrbLoginPanel({
         return
       }
       setError(response.message || 'We could not sign you in. Check your email and password.')
+      recordOrbAuthRecoveryEvent({
+        auth_state: 'unauthenticated',
+        verdict_status: null,
+        cookie_present: sessionAuthCookiePresent(),
+        frontend_state_cleared: false,
+        session_refresh_attempted: false,
+        reason: 'failed_login'
+      })
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Sign-in failed. Please try again.')
+      recordOrbAuthRecoveryEvent({
+        auth_state: 'unauthenticated',
+        verdict_status: null,
+        cookie_present: sessionAuthCookiePresent(),
+        frontend_state_cleared: false,
+        session_refresh_attempted: false,
+        reason: 'failed_login'
+      })
     } finally {
       setSubmitting(false)
     }
@@ -179,6 +207,25 @@ function OrbLoginPanel({
     try {
       const result = await beginOrbPasskeyLogin(address)
       if (result.authenticated) {
+        if (result.user && typeof result.user.id !== 'undefined') {
+          applySessionUser({
+            id: Number(result.user.id),
+            email: result.user.email || address,
+            role: normaliseRole(result.user.role || 'manager'),
+            home_id: result.user.home_id ?? null,
+            provider_id: null,
+            first_name: null,
+            last_name: null,
+            is_active: true,
+            permissions: [],
+            subscription_active: Boolean(result.user.subscription_active),
+            subscription_status: result.user.subscription_status || null,
+            plan_name: result.user.plan_name ?? null,
+            mfa_enabled: Boolean(result.user.mfa_enabled),
+            mfa_verified: Boolean(result.user.mfa_verified),
+            has_passkeys: Boolean(result.user.has_passkeys)
+          })
+        }
         await afterAuth()
         return
       }

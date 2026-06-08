@@ -23,6 +23,7 @@ import {
   buildOrbFrontDoorUrl,
   isOrbSurfacePath
 } from '@/lib/orb/orb-front-door-routing'
+import { resetOrbFrontDoorVerdictCache } from '@/lib/orb/orb-front-door-verdict-client'
 import {
   resetOrbFrontDoorVerdictStore,
   shouldDeferOrbAuthMeProbe
@@ -49,6 +50,7 @@ type AuthContextValue = {
   sessionExpired: boolean
   csrfReady: boolean
   refreshSession: () => Promise<void>
+  applySessionUser: (user: StaffUser) => void
   login: (input: LoginInput) => Promise<LoginResponse>
   logout: () => Promise<void>
 }
@@ -221,7 +223,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return
         }
         if (authError && isAuthFailureStatus(authError.status)) {
-          clearStaleOrbSessionState('auth_401')
+          clearStaleOrbSessionState('auth_me_401', { session_refresh_attempted: true })
           clearCachedIdentity()
           setUser(null)
           setStatus('unauthenticated')
@@ -292,6 +294,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     router.replace(`${loginPath}${sessionExpired ? (loginPath.includes('?') ? '&' : '?') + 'expired=1' : ''}`)
   }, [pathname, router, sessionExpired, status])
 
+  const applySessionUser = useCallback((nextUser: StaffUser) => {
+    setUser(normaliseUser(nextUser))
+    setStatus('authenticated')
+    setSessionExpired(false)
+    setCsrfReady(Boolean(getCsrfToken()))
+    logoutRedirecting.current = false
+    resetOrbAuthLoadingDeadline()
+    resetOrbAccessLoadingDeadline()
+  }, [])
+
   const login = useCallback(async (input: LoginInput) => {
     setError(null)
     if (shouldE2eAutoAuthenticate()) {
@@ -321,21 +333,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       body: JSON.stringify(input)
     })
 
-    if (response.user) {
-      setUser(normaliseUser(response.user))
-    }
-
     if (response.user && response.authenticated) {
-      setStatus('authenticated')
-      setSessionExpired(false)
-      setCsrfReady(Boolean(getCsrfToken()))
-      logoutRedirecting.current = false
-      resetOrbAuthLoadingDeadline()
-      resetOrbAccessLoadingDeadline()
+      applySessionUser(response.user)
     }
 
     return response
-  }, [])
+  }, [applySessionUser])
 
   const logout = useCallback(async () => {
     const redirectToOrbLogin = isOrbSurfacePath(pathname)
@@ -345,7 +348,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     } finally {
       logoutRedirecting.current = true
-      clearStaleOrbSessionState('auth_401')
+      clearStaleOrbSessionState('logout', { auth_state: 'unauthenticated' })
       clearCachedIdentity()
       setUser(null)
       setStatus('unauthenticated')
@@ -359,6 +362,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       resetOrbGateStateStore()
       resetOrbSessionGate()
       resetOrbFrontDoorVerdictStore()
+      resetOrbFrontDoorVerdictCache()
       if (redirectToOrbLogin && pathname === '/orb') {
         logoutRedirecting.current = false
         return
@@ -375,10 +379,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       sessionExpired,
       csrfReady,
       refreshSession,
+      applySessionUser,
       login,
       logout
     }),
-    [csrfReady, error, login, logout, refreshSession, sessionExpired, status, user]
+    [applySessionUser, csrfReady, error, login, logout, refreshSession, sessionExpired, status, user]
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

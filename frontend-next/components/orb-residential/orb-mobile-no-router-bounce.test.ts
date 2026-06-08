@@ -21,7 +21,10 @@ describe('ORB mobile no router bounce', () => {
     const gate = read('components/orb-residential/orb-auth-gate.tsx')
     assert.match(gate, /case 'access_retry'/)
     assert.match(gate, /OrbAccessRetryScreen/)
-    assert.doesNotMatch(gate, /case 'checking_access'[\s\S]*OrbLoginScreen/)
+    const checkingAccessBlock =
+      gate.match(/case 'checking_access':([\s\S]*?)(?=\n\s*case '|default:)/)?.[1] ?? ''
+    assert.doesNotMatch(checkingAccessBlock, /OrbLoginScreen/)
+    assert.match(checkingAccessBlock, /OrbAuthLoadingScreen/)
   })
 
   it('auth context does not redirect from orb surface when unauthenticated', () => {

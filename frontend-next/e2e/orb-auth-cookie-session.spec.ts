@@ -235,6 +235,51 @@ test.describe('ORB cookie and session E2E', () => {
     await expect(page.locator('[data-orb-shell="true"]')).toBeVisible({ timeout: 25_000 })
   })
 
+  test('verdict HTTP 401 clears stale state and shows login', async ({ page }) => {
+    await disableE2eAutoAuth(page)
+    await setupOrbAuthE2eMocks(page, { scenario: 'stale-cookie' })
+    await page.addInitScript(() => {
+      try {
+        window.localStorage.setItem('indicare.auth.identity.v1', '{"stale":true}')
+        window.sessionStorage.setItem('orb-access-cache-v1', '{"stale":true}')
+      } catch {
+        // ignore
+      }
+    })
+    await page.context().addCookies([
+      {
+        name: 'indicare_session',
+        value: 'stale-invalid-session-token',
+        domain: '127.0.0.1',
+        path: '/',
+        httpOnly: true,
+        secure: false,
+        sameSite: 'Lax'
+      }
+    ])
+    await gotoOrbLogin(page)
+    await expect(page.locator('[data-orb-login-page]')).toBeVisible()
+    await expect(page.locator('[data-testid="orb-login-email"]')).toBeEnabled()
+    await expect(page.locator('[data-orb-shell="true"]')).not.toBeVisible()
+
+    const storageCleared = await page.evaluate(() => {
+      return (
+        window.localStorage.getItem('indicare.auth.identity.v1') === null &&
+        window.sessionStorage.getItem('orb-access-cache-v1') === null
+      )
+    })
+    expect(storageCleared).toBe(true)
+  })
+
+  test('oauth interrupted shows friendly error and allows retry', async ({ page }) => {
+    await disableE2eAutoAuth(page)
+    await setupOrbAuthE2eMocks(page, { scenario: 'unauthenticated' })
+    await page.goto('/orb?oauth_error=invalid_oauth_state')
+    await expect(page.locator('.orb-login-error').first()).toContainText(/expired|interrupted|start again/i)
+    await expect(page.locator('[data-testid="orb-login-email"]')).toBeEnabled()
+    await expect(page.locator('[data-testid="orb-login-submit"]')).toBeEnabled()
+  })
+
   test('logout clears session and revisiting /orb shows login', async ({ page }) => {
     await disableE2eAutoAuth(page)
     await setupOrbAuthE2eMocks(page, { scenario: 'ready' })

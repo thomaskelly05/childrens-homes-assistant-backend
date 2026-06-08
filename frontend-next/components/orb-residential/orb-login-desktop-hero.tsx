@@ -29,7 +29,7 @@ export function OrbLoginDesktopHero() {
           </p>
         </div>
 
-        <div className="orb-login-hero-visual mt-5" data-orb-login-hero-visual>
+        <div className="orb-login-hero-visual" data-orb-login-hero-visual>
           <div className="orb-login-hero-sphere-wrap flex justify-center" data-orb-login-hero-sphere>
             <OrbHeroSphere />
           </div>
@@ -39,7 +39,7 @@ export function OrbLoginDesktopHero() {
         </div>
 
         <h1
-          className="orb-login-headline mt-5 max-w-md text-3xl font-semibold tracking-tight xl:text-[2rem]"
+          className="orb-login-headline max-w-md text-3xl font-semibold tracking-tight xl:text-[2rem]"
           data-orb-login-title
         >
           AI support for residential children&apos;s homes

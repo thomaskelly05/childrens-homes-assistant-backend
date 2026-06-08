@@ -5,12 +5,28 @@
 The login page was improved but not launch-ready:
 
 - Desktop left hero was visually offset (too low, excessive empty space).
-- ORB logo/sphere was slightly misaligned relative to hero content.
-- Brand tag (“Care. Connect. Empower.”) partially overlapped the sphere glow.
+- ORB sphere overlapped hero copy — “Care. Connect. Empower.” and headline text sat behind the sphere.
+- Brand tag competed with the sphere glow (absolute glow + large `orb-presence--hero` sizing).
 - Right login card bottom was clipped on short desktop viewports (e.g. 1440×700).
 - Passkey and legal footer could sit below the visible area.
 - Desktop and mobile shared too much layout logic in one monolithic component.
 - Mobile needed a simpler format focused on sign-in actions, not the full desktop hero.
+
+### Layout fix (this pass)
+
+**Desktop left hero** — strict document flow:
+
+1. ORB Residential + Powered by IndiCare Intelligence
+2. ORB visual — centred, max **6.5rem** (5.5rem on heights ≤760px), `overflow: hidden` on wrap
+3. Brand tag — below sphere, muted, no overlap
+4. Headline + lead + trust points — below visual block with explicit spacing
+
+**Right card** — short desktop (≤760px height):
+
+- Tighter section margins, smaller inputs/buttons
+- Card `max-height` + internal scroll with `scrollbar-gutter: stable`
+- Extra bottom/safe-area padding so passkey + legal footer clear dock/chrome
+- Create account remains above fold on 1440×760
 
 ## Desktop / tablet model
 
