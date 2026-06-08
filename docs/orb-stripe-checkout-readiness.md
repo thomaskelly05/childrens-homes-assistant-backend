@@ -81,12 +81,14 @@ npm run build
 Coverage in `tests/test_orb_billing_routes.py`:
 
 1. Checkout payload excludes `automatic_payment_methods`
-2. Payload includes `mode=subscription`
-3. Payload includes `line_items[0].price`
-4. Payload includes `success_url` and `cancel_url`
-5. Payload includes `customer` (or creates customer on first checkout)
-6. Stripe `parameter_unknown` for `automatic_payment_methods` maps to safe error
-7. Valid mocked Stripe response returns `checkout_url`
+2. Payload includes `payment_method_types=["card"]`
+3. Payload includes `mode=subscription`
+4. Payload includes `line_items[0].price` (ORB Residential price ID)
+5. Payload includes `success_url` and `cancel_url`
+6. Payload includes `customer` (or creates customer on first checkout)
+7. Stripe `parameter_unknown` for `automatic_payment_methods` maps to safe error
+8. Other Stripe checkout errors return `Could not create checkout session` (no secrets)
+9. Valid mocked Stripe response returns `checkout_url`
 
 ## Related docs
 
