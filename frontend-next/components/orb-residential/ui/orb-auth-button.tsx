@@ -150,6 +150,13 @@ export function OrbAuthButton({
 
   if (isOrbOAuthStartPath(href)) {
     const oauthProvider = provider as OrbOAuthProvider
+    if (/^https?:\/\//i.test(href)) {
+      return (
+        <a href={href} className={base} data-orb-oauth={provider}>
+          {content}
+        </a>
+      )
+    }
     return (
       <button
         type="button"

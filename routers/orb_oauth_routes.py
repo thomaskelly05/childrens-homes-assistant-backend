@@ -31,6 +31,7 @@ from services.orb_oauth_service import (
     store_oauth_session,
     validate_oauth_state,
 )
+from services.orb_oauth_state_service import OAuthStateValidationError
 from services.orb_oauth_session_handoff_service import (
     consume_oauth_session_handoff,
     store_oauth_session_handoff,
@@ -75,6 +76,21 @@ def _redirect_target_parts(url: str) -> tuple[str, str, bool]:
     return host, path, is_session_complete
 
 
+def _request_host(request: Request) -> str:
+    forwarded = str(request.headers.get("x-forwarded-host") or "").strip()
+    if forwarded:
+        return forwarded.split(",")[0].strip().lower()
+    return str(request.url.hostname or "").strip().lower()
+
+
+def _redirect_uri_host(provider: str) -> str:
+    config = load_provider_config(provider)
+    if not config:
+        return "unknown"
+    parsed = urlparse(config.redirect_uri)
+    return parsed.netloc or "unknown"
+
+
 def _resolve_access_state(conn, user_id: int, user: dict | None = None) -> str | None:
     try:
         access = orb_access_service.build_access_payload(int(user_id), conn=conn, user=user)
@@ -104,6 +120,49 @@ def _response_has_set_cookie(response: RedirectResponse) -> bool:
     return any(key.lower() == "set-cookie" for key in response.headers.keys())
 
 
+def _authorize_redirect_host(provider: str) -> str:
+    config = load_provider_config(provider)
+    if not config:
+        return "unknown"
+    parsed = urlparse(config.authorize_url)
+    return parsed.netloc or "unknown"
+
+
+def _log_oauth_start(
+    *,
+    provider: str,
+    oauth_start_host: str,
+    redirect_uri_host: str,
+) -> None:
+    logger.info(
+        "ORB OAuth start provider=%s oauth_start_host=%s state_created=true "
+        "state_storage=server redirect_uri_host=%s start_redirect_host=%s",
+        provider,
+        oauth_start_host or "unknown",
+        redirect_uri_host,
+        _authorize_redirect_host(provider),
+    )
+
+
+def _log_oauth_callback_state(
+    *,
+    provider: str,
+    callback_host: str,
+    state_present: bool,
+    state_valid: bool,
+    failure_reason: str | None = None,
+) -> None:
+    logger.info(
+        "ORB OAuth callback state provider=%s callback_host=%s state_present=%s "
+        "state_valid=%s state_validation_failure_reason=%s",
+        provider,
+        callback_host or "unknown",
+        str(state_present).lower(),
+        str(state_valid).lower(),
+        failure_reason or "none",
+    )
+
+
 def _log_oauth_callback_redirect(
     *,
     provider: str,
@@ -115,8 +174,8 @@ def _log_oauth_callback_redirect(
     host, path, is_session_complete = _redirect_target_parts(redirect_target)
     logger.info(
         "ORB OAuth callback redirect provider=%s oauth_callback_success=true handoff_created=%s "
-        "redirect_target_host=%s redirect_target_path=%s redirect_target_is_session_complete=%s "
-        "mfa_required=%s access_state=%s response_status=302",
+        "session_complete_redirect_target_host=%s session_complete_redirect_target_path=%s "
+        "redirect_target_is_session_complete=%s mfa_required=%s access_state=%s response_status=302",
         provider,
         str(handoff_created).lower(),
         host,
@@ -157,6 +216,7 @@ async def orb_oauth_start(
     provider: str,
     request: Request,
     return_url: str = Query(default="/orb"),
+    conn=Depends(get_db),
 ):
     key = provider.strip().lower()
     if not provider_enabled(key):
@@ -171,7 +231,30 @@ async def orb_oauth_start(
             detail=f"{key.title()} sign-in is not fully configured on the server. Contact your administrator.",
         )
     state = secrets.token_urlsafe(32)
-    store_oauth_session(request, provider=key, state=state, return_url=return_url)
+    oauth_start_host = _request_host(request)
+    try:
+        store_oauth_session(
+            conn,
+            provider=key,
+            state=state,
+            return_url=return_url,
+            start_host=oauth_start_host,
+        )
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        logger.exception("ORB OAuth start failed to persist state provider=%s", key)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Sign-in could not be started. Please try again.",
+        ) from None
+
+    redirect_uri_host = _redirect_uri_host(key)
+    _log_oauth_start(
+        provider=key,
+        oauth_start_host=oauth_start_host,
+        redirect_uri_host=redirect_uri_host,
+    )
     return _redirect(build_authorize_url(config, state=state))
 
 
@@ -313,9 +396,36 @@ async def _orb_oauth_callback(
     if not code or not state:
         return _redirect(oauth_error_redirect(_orb_oauth_app_url(), "OAuth response was incomplete."))
 
+    callback_host = _request_host(request)
+    state_present = bool(str(state or "").strip())
     try:
-        return_url = validate_oauth_state(request, provider=key, state=state)
+        return_url = validate_oauth_state(conn, provider=key, state=state)
+        conn.commit()
+        _log_oauth_callback_state(
+            provider=key,
+            callback_host=callback_host,
+            state_present=state_present,
+            state_valid=True,
+        )
+    except OAuthStateValidationError as exc:
+        conn.rollback()
+        _log_oauth_callback_state(
+            provider=key,
+            callback_host=callback_host,
+            state_present=state_present,
+            state_valid=False,
+            failure_reason=exc.reason,
+        )
+        return _redirect(oauth_error_redirect(_orb_oauth_app_url(), "Security check failed. Please try again."))
     except ValueError:
+        conn.rollback()
+        _log_oauth_callback_state(
+            provider=key,
+            callback_host=callback_host,
+            state_present=state_present,
+            state_valid=False,
+            failure_reason="unknown",
+        )
         return _redirect(oauth_error_redirect(_orb_oauth_app_url(), "Security check failed. Please try again."))
 
     user_created = False

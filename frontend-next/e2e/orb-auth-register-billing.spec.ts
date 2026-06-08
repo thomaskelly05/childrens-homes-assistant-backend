@@ -127,7 +127,7 @@ test.describe('ORB register and billing E2E', () => {
   })
 
   test.describe('OAuth buttons', () => {
-    test('enabled providers point to backend OAuth start URLs', async ({ page }) => {
+    test('enabled providers point to API-host OAuth start URLs', async ({ page }) => {
       await disableE2eAutoAuth(page)
       await setupOrbAuthE2eMocks(page, {
         scenario: 'unauthenticated',
@@ -139,6 +139,10 @@ test.describe('ORB register and billing E2E', () => {
         const button = page.locator(`[data-orb-oauth="${provider}"]`).first()
         await expect(button).toBeVisible()
         await expect(button).not.toHaveAttribute('aria-disabled', 'true')
+        const href = await button.getAttribute('href')
+        expect(href).toMatch(/\/orb\/standalone\/auth\/oauth\/(google|microsoft|apple)\/start/)
+        expect(href).toMatch(/return_url=/)
+        expect(href).toMatch(/127\.0\.0\.1:8000|api\.indicare\.co\.uk/)
       }
     })
 
@@ -161,6 +165,59 @@ test.describe('ORB register and billing E2E', () => {
       await page.goto('/orb?oauth_error=invalid_oauth_state')
       await expect(page.locator('[data-orb-login-page]')).toBeVisible({ timeout: 20_000 })
       await expect(page.locator('.orb-login-error').first()).toContainText(/expired|interrupted/i)
+    })
+
+    test('oauth security check failed shows friendly retry message', async ({ page }) => {
+      await disableE2eAutoAuth(page)
+      await setupOrbAuthE2eMocks(page, { scenario: 'unauthenticated' })
+      await page.goto('/orb?oauth_error=Security%20check%20failed.%20Please%20try%20again.')
+      await expect(page.locator('[data-orb-login-page]')).toBeVisible({ timeout: 20_000 })
+      await expect(page.locator('.orb-login-error').first()).toContainText(/expired|interrupted|Start again/i)
+    })
+
+    test('mocked Google OAuth session complete reaches ORB for active user', async ({ page }) => {
+      await disableE2eAutoAuth(page)
+      await setupOrbAuthE2eMocks(page, { scenario: 'billing-active' })
+      await setupOrbE2eMocks(page)
+
+      await page.route('**/orb/standalone/auth/oauth/session/complete**', async (route) => {
+        await route.fulfill({
+          status: 302,
+          headers: {
+            Location: '/orb',
+            'Set-Cookie': 'indicare_session=e2e-oauth-session; Path=/; HttpOnly; SameSite=Lax'
+          },
+          body: ''
+        })
+      })
+
+      await page.goto(
+        '/backend/orb/standalone/auth/oauth/session/complete?handoff=e2e-mock-handoff',
+        { waitUntil: 'domcontentloaded' }
+      )
+      await expect(page).toHaveURL(/\/orb/, { timeout: 20_000 })
+    })
+
+    test('mocked Google OAuth session complete routes inactive user to billing', async ({ page }) => {
+      await disableE2eAutoAuth(page)
+      await setupOrbAuthE2eMocks(page, { scenario: 'billing-inactive' })
+
+      await page.route('**/orb/standalone/auth/oauth/session/complete**', async (route) => {
+        await route.fulfill({
+          status: 302,
+          headers: {
+            Location: '/orb/billing',
+            'Set-Cookie': 'indicare_session=e2e-oauth-session; Path=/; HttpOnly; SameSite=Lax'
+          },
+          body: ''
+        })
+      })
+
+      await page.goto(
+        '/backend/orb/standalone/auth/oauth/session/complete?handoff=e2e-mock-handoff',
+        { waitUntil: 'domcontentloaded' }
+      )
+      await expect(page).toHaveURL(/\/orb\/billing/, { timeout: 20_000 })
     })
   })
 
