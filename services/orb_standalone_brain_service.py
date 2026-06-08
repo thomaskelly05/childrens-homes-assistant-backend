@@ -4,6 +4,10 @@ from dataclasses import asdict, dataclass, field
 from typing import Any
 
 from services.orb_professional_curiosity_service import orb_professional_curiosity_service
+from services.orb_recording_contract_service import (
+    build_incident_report_prompt_block,
+    is_incident_report_draft_request,
+)
 from services.orb_scenario_playbook_service import orb_scenario_playbook_service
 
 
@@ -240,7 +244,7 @@ class OrbStandaloneBrainService:
             mode=resolved_mode,
             active_brains=brains,
             intent_summary=self._intent_summary(text, resolved_mode, brains, route),
-            response_contract=self._response_contract(brains, resolved_mode, route),
+            response_contract=self._response_contract(brains, resolved_mode, route, text),
             safety_boundaries=self.CORE_BOUNDARIES,
             reflective_questions=self._reflective_questions(brains, route, text, resolved_mode),
             evidence_prompts=self._evidence_prompts(brains, route),
@@ -250,6 +254,9 @@ class OrbStandaloneBrainService:
 
     def build_prompt_block(self, message: str, *, mode: str | None = None) -> str:
         frame = self.frame(message, mode=mode)
+        incident_block = ""
+        if is_incident_report_draft_request(message):
+            incident_block = build_incident_report_prompt_block(message)
         lines = [
             "Standalone ORB dual-brain frame:",
             f"- Mode: {frame.mode}",
@@ -270,6 +277,8 @@ class OrbStandaloneBrainService:
             "Safety boundaries:",
             *[f"- {item}" for item in frame.safety_boundaries],
         ]
+        if incident_block:
+            lines.extend(["", incident_block])
         return "\n".join(lines)
 
     def context_payload(self, message: str, *, mode: str | None = None) -> dict[str, Any]:
@@ -299,7 +308,7 @@ class OrbStandaloneBrainService:
         )
         return any(term in text for term in terms)
 
-    def _response_contract(self, brains: list[str], mode: str, route: str) -> list[str]:
+    def _response_contract(self, brains: list[str], mode: str, route: str, text: str = "") -> list[str]:
         if route == "live_lookup":
             return [
                 "The user is asking for current, live, or location-specific facts.",
@@ -349,6 +358,15 @@ class OrbStandaloneBrainService:
                 "Focus on factual, child-centred, non-punitive recording language.",
                 "Identify missing evidence such as child voice, staff response, outcome, manager review, follow-up and plan links.",
                 "Help staff avoid judgemental phrases and write in a way that is professional, clear and reviewable.",
+                "Never invent facts, quotes, actions, outcomes, emotional states or follow-up plans.",
+                "Use placeholders and a missing-information checklist where detail is absent.",
+            ])
+        if is_incident_report_draft_request(text):
+            contract.extend([
+                "This is an incident report drafting request — provide structure with placeholders only.",
+                "Use only what the adult provided; treat shorthand such as 'kicking off' as wording to clarify, not as a factual behaviour.",
+                "Do not assume presentation, staff actions, outcomes, manager contact or follow-up plans.",
+                "Include immediate safety, draft sections, missing-information checklist and follow-up prompts.",
             ])
         if "therapeutic_brain" in brains or "therapeutic_language_brain" in brains:
             contract.extend([

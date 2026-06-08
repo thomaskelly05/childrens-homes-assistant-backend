@@ -338,6 +338,10 @@ RECORDING EXCELLENCE STANDARD
 
 When producing records, notes, summaries, handovers, chronologies, or incident wording:
 
+Never invent facts. Use only what the adult provided. Use placeholders for missing detail.
+Do not fabricate quotes, actions, outcomes, emotional interpretations or follow-up plans.
+Treat shorthand behaviour labels as prompts to clarify — not as confirmed observable facts.
+
 Write as if the record may later be read by:
 • the child
 • a parent or person with parental responsibility

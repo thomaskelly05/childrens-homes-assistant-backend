@@ -895,7 +895,9 @@ class OrbActionEngineService:
             return (
                 "Draft a manager oversight note with sections: Record reviewed; Key concern; "
                 "Safeguarding/risk consideration; Child voice; Actions required; Plans/documents to review; "
-                "Staff learning; Rationale; Follow-up (only if provided in source — do not invent dates/names).\n\n"
+                "Staff learning; Rationale; Follow-up.\n"
+                "Rules: use placeholders for any section not supported by the source; do not invent manager "
+                "actions, notifications, decisions, dates, names, outcomes or follow-up plans.\n\n"
                 f"--- SOURCE ---\n{source_text}"
             )
         if action_id == "create_chronology_suggestion":

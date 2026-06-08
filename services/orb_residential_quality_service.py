@@ -12,6 +12,10 @@ from schemas.orb_dictate import OrbDictateQualityChecks
 from services.orb_dictate_quality import compute_quality_checks
 from services.orb_dictate_template_registry import get_dictate_template
 from services.orb_recording_framework_service import framework_missing_checks, resolve_record_type
+from services.orb_recording_contract_service import (
+    incident_missing_checklist,
+    is_incident_report_draft_request,
+)
 
 OrbResidentialSurface = Literal["voice", "dictate", "chat", "write", "template", "output"]
 
@@ -68,6 +72,11 @@ def build_missing_capture_prompts(
 
     if include_shared and not prompts:
         prompts.extend(SHARED_CAPTURE_PROMPTS[:5])
+
+    if note_type == "incident_record":
+        for item in incident_missing_checklist()[:8]:
+            if item not in prompts:
+                prompts.append(item)
 
     try:
         template = get_dictate_template(note_type)  # type: ignore[arg-type]
@@ -148,6 +157,10 @@ def run_residential_quality_check(
     )
     framework_gaps = framework_missing_checks(record_type, body) if body else []
 
+    incident_contract_prompts: list[str] = []
+    if note_type == "incident_record" or is_incident_report_draft_request(body):
+        incident_contract_prompts = incident_missing_checklist()
+
     manager_prompt: str | None = None
     if quality.manager_oversight in {"missing", "weak"} and note_type in {
         "incident_record",
@@ -162,6 +175,7 @@ def run_residential_quality_check(
         "note_type": note_type,
         "quality_checks": quality.model_dump(),
         "missing_prompts": missing_prompts,
+        "incident_missing_checklist": incident_contract_prompts,
         "framework_gaps": framework_gaps,
         "ofsted_readiness": ofsted,
         "manager_oversight_prompt": manager_prompt,

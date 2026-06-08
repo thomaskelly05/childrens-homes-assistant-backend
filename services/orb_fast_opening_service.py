@@ -12,8 +12,8 @@ _SCENARIO_OPENINGS: list[tuple[Pattern[str], str]] = [
             r"(help me (to )?write|draft|write).*(incident report|incident record)",
             re.I,
         ),
-        "I'll help you draft a factual incident report from what you've shared — "
-        "checking immediate safety first, then building the record structure.",
+        "I can help you structure this incident report. I'll only use what you've provided "
+        "and I'll flag what needs adding before it is finalised — checking immediate safety first.",
     ),
     (
         re.compile(
