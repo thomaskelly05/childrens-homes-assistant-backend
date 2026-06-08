@@ -20,15 +20,22 @@ VERDICT_READY = "ready"
 VERDICT_RETRY = "retry"
 
 
-def _safe_user_summary(user: dict[str, Any] | None) -> dict[str, Any] | None:
+def _safe_user_summary(user: dict[str, Any] | None, *, conn=None) -> dict[str, Any] | None:
     if not user:
         return None
+    user_id = user.get("id") or user.get("user_id")
+    if conn is not None and user_id is not None:
+        from services.orb_user_avatar_service import enrich_user_summary
+
+        return enrich_user_summary(user, conn, int(user_id))
     return {
-        "id": user.get("id") or user.get("user_id"),
+        "id": user_id,
         "email": user.get("email"),
         "first_name": user.get("first_name"),
         "last_name": user.get("last_name"),
         "role": user.get("role"),
+        "avatar_url": None,
+        "auth_provider": None,
     }
 
 
@@ -155,11 +162,11 @@ def build_front_door_verdict(
             authenticated=True,
             can_use_orb=False,
             reason="access_payload_unavailable",
-            user_summary=_safe_user_summary(current_user),
+            user_summary=_safe_user_summary(current_user, conn=conn),
         )
 
     subscription_summary = _safe_subscription_summary(access_payload)
-    user_summary = _safe_user_summary(current_user)
+    user_summary = _safe_user_summary(current_user, conn=conn)
     safety_accepted = bool(access_payload.get("safety_accepted"))
     can_use_orb = bool(access_payload.get("can_use_orb"))
     access_blocker = access_payload.get("access_blocker")

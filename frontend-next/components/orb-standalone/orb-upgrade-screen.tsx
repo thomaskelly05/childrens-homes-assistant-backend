@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { CreditCard, Lock, Sparkles } from 'lucide-react'
 
+import { getOrbBillingDisplayStatus } from '@/lib/orb/orb-billing-display'
 import {
   fetchOrbAccess,
   openOrbBillingPortal,
@@ -56,7 +57,7 @@ export function OrbUpgradeScreen({ initialAccess = null }: { initialAccess?: Orb
       )
       window.location.href = url
     } catch {
-      setError('Checkout is unavailable. Stripe may not be configured yet.')
+      setError('Checkout is not available right now. Please try again shortly or contact support.')
     } finally {
       setLoading(null)
     }
@@ -69,7 +70,7 @@ export function OrbUpgradeScreen({ initialAccess = null }: { initialAccess?: Orb
       const url = await openOrbBillingPortal()
       window.location.href = url
     } catch {
-      setError('Billing portal unavailable for this account.')
+      setError('Billing portal is not available right now. Please try again shortly or contact support.')
     } finally {
       setLoading(null)
     }
@@ -77,14 +78,29 @@ export function OrbUpgradeScreen({ initialAccess = null }: { initialAccess?: Orb
 
   const upgrade = access?.upgrade
   const stripeReady = Boolean(access?.billing?.stripe_configured && upgrade?.checkout_available)
+  const billingDisplay = getOrbBillingDisplayStatus(access)
 
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top,#EEF2FF,transparent_40%),linear-gradient(180deg,#F8FAFC,#FFFFFF)] px-6 py-12 text-slate-950">
       <div className="mx-auto max-w-3xl">
         <div className="rounded-[2rem] border border-white/80 bg-white/90 p-8 shadow-2xl shadow-indigo-100/60 backdrop-blur">
-          <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-indigo-50 px-4 py-2 text-xs font-bold uppercase tracking-[0.18em] text-indigo-700">
-            <Lock className="h-4 w-4" aria-hidden />
-            ORB Residential access
+          <div className="mb-6 flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center gap-2 rounded-full bg-indigo-50 px-4 py-2 text-xs font-bold uppercase tracking-[0.18em] text-indigo-700">
+              <Lock className="h-4 w-4" aria-hidden />
+              ORB Residential access
+            </span>
+            {billingDisplay.isPaidActive ? (
+              <span
+                className="inline-flex rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800"
+                data-orb-billing-status-pill
+              >
+                Active
+              </span>
+            ) : billingDisplay.showTrialChip && billingDisplay.trialChipLabel ? (
+              <span className="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700" data-orb-billing-trial-chip>
+                {billingDisplay.trialChipLabel}
+              </span>
+            ) : null}
           </div>
           <h1 className="text-3xl font-black tracking-tight text-slate-950 md:text-4xl" data-orb-upgrade-title>
             {status === 'authenticated' && !access?.can_use_orb
@@ -134,7 +150,7 @@ export function OrbUpgradeScreen({ initialAccess = null }: { initialAccess?: Orb
           {error ? <p className="mt-6 rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p> : null}
 
           <div className="mt-8 flex flex-wrap gap-3">
-            {access?.trial?.available !== false ? (
+            {billingDisplay.showTrialCta ? (
               <button
                 type="button"
                 onClick={handleTrial}
@@ -145,17 +161,20 @@ export function OrbUpgradeScreen({ initialAccess = null }: { initialAccess?: Orb
                 {loading === 'trial' ? 'Starting trial…' : 'Start 7-day trial'}
               </button>
             ) : null}
-            <button
-              type="button"
-              onClick={handleSubscribe}
-              disabled={!stripeReady || loading !== null}
-              className="rounded-2xl bg-slate-950 px-5 py-3 text-sm font-bold text-white shadow-lg disabled:cursor-not-allowed disabled:opacity-50"
-              data-orb-subscribe
-              title={stripeReady ? undefined : 'Stripe checkout not configured'}
-            >
-              {loading === 'checkout' ? 'Opening checkout…' : 'Subscribe for £9.99/month'}
-            </button>
-            {upgrade?.manage_billing_available ? (
+            {billingDisplay.showUpgrade ? (
+              <button
+                type="button"
+                onClick={handleSubscribe}
+                disabled={!stripeReady || loading !== null}
+                className="rounded-2xl bg-slate-950 px-5 py-3 text-sm font-bold text-white shadow-lg disabled:cursor-not-allowed disabled:opacity-50"
+                data-orb-subscribe
+                data-orb-billing-upgrade
+                title={stripeReady ? undefined : 'Checkout unavailable'}
+              >
+                {loading === 'checkout' ? 'Opening checkout…' : 'Upgrade · £9.99/month'}
+              </button>
+            ) : null}
+            {billingDisplay.showManageBilling || upgrade?.manage_billing_available ? (
               <button
                 type="button"
                 onClick={handlePortal}
@@ -208,9 +227,9 @@ export function OrbUpgradeScreen({ initialAccess = null }: { initialAccess?: Orb
             </p>
           ) : null}
 
-          {!stripeReady && process.env.NODE_ENV === 'development' ? (
-            <p className="mt-4 text-xs text-amber-700" data-orb-stripe-dev-note>
-              Admin note: set STRIPE_SECRET_KEY and ORB_RESIDENTIAL_STRIPE_PRICE_ID to enable checkout.
+          {!stripeReady ? (
+            <p className="mt-4 text-xs text-slate-600" data-orb-stripe-dev-note>
+              Checkout is not available right now. Please try again shortly or contact support.
             </p>
           ) : null}
 

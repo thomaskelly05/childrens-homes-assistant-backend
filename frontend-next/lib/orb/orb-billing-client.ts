@@ -56,7 +56,6 @@ export const ORB_BILLING_API = {
   profile: '/orb/profile',
   memory: '/orb/memory',
   subscription: '/orb/subscription',
-  subscriptionCancel: '/orb/subscription/cancel',
   subscriptionPortal: '/orb/subscription/portal',
   usage: '/orb/usage',
   spendingCap: '/orb/usage/spending-cap',

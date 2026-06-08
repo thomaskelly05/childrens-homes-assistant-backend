@@ -9,10 +9,11 @@ import {
   Save,
   Settings,
   Shield,
-  Sparkles,
-  User
+  Sparkles
 } from 'lucide-react'
 
+import { OrbUserAvatar } from '@/components/orb-residential/orb-user-avatar'
+import { getOrbBillingDisplayStatus } from '@/lib/orb/orb-billing-display'
 import { orbOverlayDrawerShellProps } from '@/components/orb-standalone/orb-app-modal'
 import { OrbStandalonePanelShell } from '@/components/orb-standalone/orb-standalone-panel-shell'
 import { fetchOrbAccess, type OrbAccessPayload } from '@/lib/orb/orb-billing-client'
@@ -24,6 +25,7 @@ export function OrbAccountModal({
   onClose,
   profile,
   userEmail,
+  avatarUrl,
   onOpenSettings,
   onOpenBilling,
   onOpenVoiceSettings,
@@ -43,6 +45,7 @@ export function OrbAccountModal({
   onClose: () => void
   profile: AdultProfile | null
   userEmail?: string | null
+  avatarUrl?: string | null
   onOpenSettings: () => void
   onOpenBilling: () => void
   onOpenVoiceSettings?: () => void
@@ -71,15 +74,16 @@ export function OrbAccountModal({
   const email = userEmail?.trim() || null
   const isSignedIn = Boolean(onLogOut || userEmail?.trim() || adminBypass)
 
+  const billingDisplay = useMemo(() => getOrbBillingDisplayStatus(access), [access])
+
   const subscriptionLabel = useMemo(() => {
     if (adminBypass && realtimeVoiceEnabled) return 'Admin · voice enabled'
-    if (access?.subscription?.status) return access.subscription.status.replace(/_/g, ' ')
-    if (access?.trial?.active) return 'Trial active'
-    if (access?.can_use_orb || subscriptionActive) return 'Subscribed'
-    return 'Inactive'
-  }, [access, adminBypass, realtimeVoiceEnabled, subscriptionActive])
+    return billingDisplay.subscriptionLabel
+  }, [adminBypass, billingDisplay.subscriptionLabel, realtimeVoiceEnabled])
 
-  const planLabel = access?.subscription?.plan_name?.trim() || (access?.trial?.active ? 'ORB trial' : 'Individual')
+  const planLabel =
+    access?.subscription?.plan_name?.trim() ||
+    (billingDisplay.showTrialChip ? 'ORB trial' : 'ORB Residential — Individual')
 
   const statusChips = [
     { id: 'signed-in', label: 'Signed in', show: isSignedIn, tone: 'neutral' as const },
@@ -114,9 +118,7 @@ export function OrbAccountModal({
       <div className="space-y-4 p-3 sm:p-4" data-orb-account-modal>
         <div className="orb-studio-modal-section orb-mobile-workspace-card rounded-2xl border border-[var(--orb-line)]/60 bg-[var(--orb-surface-elevated)] px-3 py-4 sm:px-4">
           <div className="flex items-start gap-3">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-[var(--orb-line)]/50 bg-[var(--orb-surface)]">
-              <User className="h-5 w-5 text-[var(--orb-primary)]" aria-hidden />
-            </div>
+            <OrbUserAvatar name={displayName} avatarUrl={avatarUrl} size="lg" />
             <div className="min-w-0 flex-1">
               <p className="text-lg font-semibold text-[var(--orb-foreground)]" data-orb-account-name>
                 {displayName}
@@ -209,7 +211,7 @@ export function OrbAccountModal({
           <p className="px-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--orb-muted)]">
             Quick actions
           </p>
-          {!subscriptionActive && isSignedIn ? (
+          {!billingDisplay.isPaidActive && !access?.trial?.active && isSignedIn ? (
             <button
               type="button"
               onClick={() => {
@@ -220,7 +222,7 @@ export function OrbAccountModal({
               data-orb-account-subscribe
             >
               <CreditCard className="h-4 w-4" />
-              <span>Start free trial / Subscribe</span>
+              <span>Upgrade · £9.99/month</span>
             </button>
           ) : null}
           <button

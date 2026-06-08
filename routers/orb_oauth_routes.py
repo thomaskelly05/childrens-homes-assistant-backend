@@ -463,6 +463,10 @@ async def _orb_oauth_callback(
                 )
                 user_created = True
 
+        oauth_metadata: dict[str, str] = {"provider": key}
+        avatar_url = profile.get("avatar_url")
+        if avatar_url:
+            oauth_metadata["avatar_url"] = str(avatar_url)
         link_oauth_account(
             conn,
             user_id=int(user["id"]),
@@ -470,7 +474,7 @@ async def _orb_oauth_callback(
             subject=str(profile["subject"]),
             email=email,
             email_verified=True,
-            metadata={"provider": key},
+            metadata=oauth_metadata,
         )
 
         mfa_pending = oauth_mfa_pending_for_user(user, conn)

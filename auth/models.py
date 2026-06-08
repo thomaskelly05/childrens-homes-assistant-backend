@@ -52,6 +52,8 @@ def staff_user_payload(
     mfa_verified: bool | None = None,
     has_passkeys: bool | None = None,
     include_audit_fields: bool = False,
+    avatar_url: str | None = None,
+    auth_provider: str | None = None,
 ) -> dict[str, Any]:
     role = normalise_role(user.get("role"))
     home_id = user.get("home_id")
@@ -85,6 +87,10 @@ def staff_user_payload(
         payload["mfa_verified"] = mfa_verified
     if has_passkeys is not None:
         payload["has_passkeys"] = has_passkeys
+    if avatar_url:
+        payload["avatar_url"] = avatar_url
+    if auth_provider:
+        payload["auth_provider"] = auth_provider
     if include_audit_fields:
         payload.update(
             {
