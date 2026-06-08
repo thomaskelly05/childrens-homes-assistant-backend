@@ -1,10 +1,10 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { CreditCard } from 'lucide-react'
+import { CreditCard, Settings } from 'lucide-react'
 
 import { OrbUserAvatar } from '@/components/orb-residential/orb-user-avatar'
-import { getOrbBillingDisplayStatus } from '@/lib/orb/orb-billing-display'
+import { formatOrbPlanLabel, getOrbBillingDisplayStatus } from '@/lib/orb/orb-billing-display'
 import {
   fetchOrbAccess,
   fetchOrbBillingMeter,
@@ -18,11 +18,13 @@ import {
 export function OrbBillingSettingsSection({
   userName,
   userEmail,
-  avatarUrl
+  avatarUrl,
+  onOpenProfile
 }: {
   userName?: string | null
   userEmail?: string | null
   avatarUrl?: string | null
+  onOpenProfile?: () => void
 }) {
   const [access, setAccess] = useState<OrbAccessPayload | null>(null)
   const [meter, setMeter] = useState<Record<string, unknown> | null>(null)
@@ -41,6 +43,10 @@ export function OrbBillingSettingsSection({
   const stripeReady = Boolean(access?.billing?.stripe_configured)
   const display = useMemo(() => getOrbBillingDisplayStatus(access), [access])
   const usageRequests = meter?.total_requests != null ? String(meter.total_requests) : '0'
+  const displayName = userName?.trim() || userEmail?.trim() || 'Your account'
+  const email = userEmail?.trim() || null
+  const planName = formatOrbPlanLabel(access?.subscription?.plan_name)
+  const priceLabel = access?.price_label ?? '£9.99/month'
 
   async function handleCheckout() {
     setLoading(true)
@@ -101,40 +107,51 @@ export function OrbBillingSettingsSection({
   }
 
   return (
-    <div className="space-y-4" data-orb-billing-settings>
-      <div className="flex items-start gap-3 rounded-xl border border-[var(--orb-line)]/40 bg-[var(--orb-surface)]/60 px-3 py-3">
-        <OrbUserAvatar name={userName || userEmail} avatarUrl={avatarUrl} size="md" />
-        <div className="min-w-0">
-          <p className="text-xs font-semibold text-[var(--orb-foreground)]">Manage profile</p>
-          <p className="mt-0.5 text-[11px] leading-5 text-[var(--orb-muted)]">
-            Name, email, role and account preferences
-          </p>
+    <div className="space-y-3" data-orb-billing-settings>
+      <div className="flex items-start gap-3 rounded-xl border border-[var(--orb-line)]/40 bg-[var(--orb-surface)]/60 px-3 py-2.5">
+        <OrbUserAvatar name={displayName} avatarUrl={avatarUrl} size="md" />
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-semibold text-[var(--orb-foreground)]">{displayName}</p>
+          {email ? (
+            <p className="truncate text-xs text-[var(--orb-muted)]">{email}</p>
+          ) : null}
+          {onOpenProfile ? (
+            <button
+              type="button"
+              onClick={onOpenProfile}
+              className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-medium text-[var(--orb-res-primary,#1677ff)] hover:underline"
+              data-orb-billing-settings-profile
+            >
+              <Settings className="h-3 w-3" aria-hidden />
+              Role and preferences
+            </button>
+          ) : null}
         </div>
       </div>
 
-      <dl className="grid gap-2.5 text-xs">
-        <div className="flex justify-between gap-4">
+      <dl className="grid gap-2 text-xs sm:grid-cols-2">
+        <div className="flex justify-between gap-3 sm:block">
           <dt className="text-[var(--orb-muted)]">Plan</dt>
-          <dd className="font-medium">ORB Residential — Individual</dd>
+          <dd className="font-medium sm:mt-0.5">{planName}</dd>
         </div>
-        <div className="flex justify-between gap-4">
+        <div className="flex justify-between gap-3 sm:block">
           <dt className="text-[var(--orb-muted)]">Subscription</dt>
-          <dd className="font-medium capitalize" data-orb-billing-subscription-status>
+          <dd className="font-medium capitalize sm:mt-0.5" data-orb-billing-subscription-status>
             {display.subscriptionLabel}
           </dd>
         </div>
-        <div className="flex justify-between gap-4">
+        <div className="flex justify-between gap-3 sm:block">
           <dt className="text-[var(--orb-muted)]">Billing</dt>
-          <dd className="font-medium">{access?.price_label ?? '£9.99/month'}</dd>
+          <dd className="font-medium sm:mt-0.5">{priceLabel}</dd>
         </div>
-        <div className="flex justify-between gap-4">
-          <dt className="text-[var(--orb-muted)]">Usage this period</dt>
-          <dd className="font-medium">{usageRequests} requests</dd>
+        <div className="flex justify-between gap-3 sm:block">
+          <dt className="text-[var(--orb-muted)]">Usage</dt>
+          <dd className="font-medium sm:mt-0.5">{usageRequests} requests</dd>
         </div>
         {display.showTrialChip ? (
-          <div className="flex justify-between gap-4" data-orb-billing-trial-chip>
+          <div className="flex justify-between gap-3 sm:col-span-2 sm:block" data-orb-billing-trial-chip>
             <dt className="text-[var(--orb-muted)]">Trial</dt>
-            <dd className="font-medium">{display.trialChipLabel}</dd>
+            <dd className="font-medium sm:mt-0.5">{display.trialChipLabel}</dd>
           </div>
         ) : null}
       </dl>
@@ -188,7 +205,7 @@ export function OrbBillingSettingsSection({
       </div>
 
       <p className="text-[10px] leading-5 text-[var(--orb-muted)]">
-        ORB Residential billing is separate from IndiCare OS. ORB Residential does not grant IndiCare OS access.
+        ORB Residential billing is separate from IndiCare OS.
       </p>
     </div>
   )

@@ -13,9 +13,9 @@ type OrbUserAvatarProps = {
 }
 
 const SIZE_CLASSES = {
-  sm: 'h-8 w-8 text-xs rounded-lg',
-  md: 'h-10 w-10 text-sm rounded-xl',
-  lg: 'h-11 w-11 text-sm rounded-2xl'
+  sm: 'h-8 w-8 text-xs rounded-full',
+  md: 'h-10 w-10 text-sm rounded-full',
+  lg: 'h-11 w-11 text-sm rounded-full'
 } as const
 
 export function OrbUserAvatar({

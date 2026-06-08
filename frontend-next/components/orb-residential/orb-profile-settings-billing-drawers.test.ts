@@ -34,7 +34,7 @@ describe('ORB profile settings billing drawers', () => {
 
   it('billing modal lists ORB Residential plan and CTAs', () => {
     const billing = read('components/orb-standalone/orb-billing-modal.tsx')
-    assert.match(billing, /ORB Residential — Individual/)
+    assert.match(billing, /formatOrbPlanLabel/)
     assert.match(billing, /£9\.99\/month/)
     assert.match(billing, /data-orb-billing-refresh/)
     assert.match(billing, /Manage billing/)

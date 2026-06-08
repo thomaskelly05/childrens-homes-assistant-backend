@@ -13,7 +13,7 @@ import {
 } from 'lucide-react'
 
 import { OrbUserAvatar } from '@/components/orb-residential/orb-user-avatar'
-import { getOrbBillingDisplayStatus } from '@/lib/orb/orb-billing-display'
+import { formatOrbPlanLabel, getOrbBillingDisplayStatus } from '@/lib/orb/orb-billing-display'
 import { orbOverlayDrawerShellProps } from '@/components/orb-standalone/orb-app-modal'
 import { OrbStandalonePanelShell } from '@/components/orb-standalone/orb-standalone-panel-shell'
 import { fetchOrbAccess, type OrbAccessPayload } from '@/lib/orb/orb-billing-client'
@@ -81,9 +81,7 @@ export function OrbAccountModal({
     return billingDisplay.subscriptionLabel
   }, [adminBypass, billingDisplay.subscriptionLabel, realtimeVoiceEnabled])
 
-  const planLabel =
-    access?.subscription?.plan_name?.trim() ||
-    (billingDisplay.showTrialChip ? 'ORB trial' : 'ORB Residential — Individual')
+  const planLabel = formatOrbPlanLabel(access?.subscription?.plan_name)
 
   const statusChips = [
     { id: 'signed-in', label: 'Signed in', show: isSignedIn, tone: 'neutral' as const },
@@ -225,18 +223,20 @@ export function OrbAccountModal({
               <span>Upgrade · £9.99/month</span>
             </button>
           ) : null}
-          <button
-            type="button"
-            onClick={() => {
-              onClose()
-              onOpenBilling()
-            }}
-            className="orb-sidebar-nav-item w-full justify-start rounded-xl px-3 py-2.5"
-            data-orb-account-billing
-          >
-            <CreditCard className="h-4 w-4" />
-            <span>Manage billing</span>
-          </button>
+          {billingDisplay.showManageBilling ? (
+            <button
+              type="button"
+              onClick={() => {
+                onClose()
+                onOpenBilling()
+              }}
+              className="orb-sidebar-nav-item w-full justify-start rounded-xl px-3 py-2.5"
+              data-orb-account-billing
+            >
+              <CreditCard className="h-4 w-4" />
+              <span>Manage billing</span>
+            </button>
+          ) : null}
           <button
             type="button"
             onClick={() => {

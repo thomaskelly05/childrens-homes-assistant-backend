@@ -1,5 +1,25 @@
 import type { OrbAccessPayload } from '@/lib/orb/orb-billing-client'
 
+const ORB_PLAN_LABELS: Record<string, string> = {
+  orb_residential_individual: 'ORB Residential — Individual',
+  orb_residential: 'ORB Residential — Individual'
+}
+
+/** Human-friendly plan label — raw plan IDs stay in diagnostics only. */
+export function formatOrbPlanLabel(planIdOrName: string | null | undefined): string {
+  const raw = planIdOrName?.trim()
+  if (!raw) return 'ORB Residential — Individual'
+  const mapped = ORB_PLAN_LABELS[raw.toLowerCase()]
+  if (mapped) return mapped
+  if (raw.includes(' — ')) return raw
+  if (/^orb[_\s]/i.test(raw)) {
+    const normalised = raw.replace(/_/g, ' ').replace(/\s+/g, ' ').trim()
+    if (/individual/i.test(normalised)) return 'ORB Residential — Individual'
+    return normalised.replace(/\b\w/g, (char) => char.toUpperCase())
+  }
+  return raw
+}
+
 export type OrbBillingDisplayStatus = {
   headline: string
   subscriptionLabel: string

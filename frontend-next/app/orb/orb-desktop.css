@@ -1559,10 +1559,17 @@ html[data-orb-residential='1'] .orb-chat-layout {
   }
 
   html[data-orb-residential='1'] [data-orb-billing-modal] [data-orb-billing-cta-bar] {
-    position: sticky;
-    bottom: 0;
-    z-index: 3;
+    position: static;
     flex-shrink: 0;
+  }
+
+  html[data-orb-residential='1'] [data-orb-app-panel-name='billing'] .orb-panel-modal {
+    max-height: min(720px, calc(100vh - 48px));
+  }
+
+  html[data-orb-residential='1'] [data-orb-app-panel-name='settings'] .orb-panel-drawer,
+  html[data-orb-residential='1'] [data-orb-app-panel-name='settings'] .orb-panel-modal {
+    max-height: min(720px, calc(100vh - 48px));
   }
 
   html[data-orb-residential='1'] [data-orb-account-modal] {

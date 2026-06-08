@@ -105,11 +105,14 @@ export function OrbAccountMenu({
   const displayName = userName?.trim() || profile?.name?.trim() || 'Your account'
   const email = userEmail?.trim() || null
   const billingDisplay = getOrbBillingDisplayStatus(access)
-  const statusLabel = subscriptionActive
-    ? billingDisplay.isPaidActive
-      ? 'Active'
-      : planLabel?.trim() || billingDisplay.headline
-    : billingDisplay.headline
+  const statusLabel = billingDisplay.headline
+  const statusTone = billingDisplay.isPaidActive
+    ? 'success'
+    : access?.trial?.active
+      ? 'trial'
+      : subscriptionActive
+        ? 'neutral'
+        : 'warn'
 
   useEffect(() => {
     if (!open) return
@@ -182,9 +185,13 @@ export function OrbAccountMenu({
             <div className="mt-1.5 flex flex-wrap items-center gap-1.5" data-orb-account-menu-status-row>
               <span
                 className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-medium capitalize ${
-                  subscriptionActive
+                  statusTone === 'success'
                     ? 'border-emerald-200/40 bg-emerald-500/10 text-emerald-200'
-                    : 'border-amber-200/40 bg-amber-500/10 text-amber-100'
+                    : statusTone === 'trial'
+                      ? 'border-sky-200/40 bg-sky-500/10 text-sky-100'
+                      : statusTone === 'warn'
+                        ? 'border-amber-200/40 bg-amber-500/10 text-amber-100'
+                        : 'border-[var(--orb-line)]/45 bg-[var(--orb-surface-hover)] text-[var(--orb-muted)]'
                 }`}
                 data-orb-account-menu-plan
               >
@@ -208,7 +215,7 @@ export function OrbAccountMenu({
             </div>
             <div className="mt-2 flex flex-wrap gap-1.5" data-orb-account-menu-quick-status>
               <span className="orb-profile-compact-badge" data-orb-account-menu-voice>
-                {realtimeVoiceEnabled ? 'Voice Ready' : 'Voice Ready'}
+                {realtimeVoiceEnabled ? 'Voice ready' : 'Voice off'}
               </span>
               <span className="orb-profile-compact-badge" data-orb-account-menu-passkey>
                 {passkeyEnabled ? 'Passkey Enabled' : 'Passkey Disabled'}
