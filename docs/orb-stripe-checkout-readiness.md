@@ -28,6 +28,12 @@ Google OAuth and ORB safety acceptance are working in production.
 
 Server-side validation runs before checkout session creation and rejects misconfigured prices with a safe user message (no secrets exposed).
 
+### Production finding: StripeObject vs dict (resolved)
+
+`stripe.Price.retrieve(price_id)` returns a **StripeObject**, not a plain `dict`. StripeObject does not implement `.get()`, so validation that used `price.get("active")` crashed with `AttributeError: get` before checkout session creation.
+
+Validation now reads price fields via `_stripe_attr()` (attribute access with dict fallback), including nested `recurring.interval` on StripeObject instances. The same helper is used for other Stripe API responses in `orb_billing_routes.py` (subscriptions, webhook payloads).
+
 ## Checkout failure (resolved)
 
 `POST /orb/subscription/checkout` (alias `POST /orb/standalone/billing/checkout`) failed with:
@@ -58,6 +64,8 @@ session_kwargs = {
 
 `automatic_payment_methods` is **not** included.
 
+A live shell-created Checkout Session using this payload remains the reference implementation for production.
+
 ## Safe errors
 
 | Condition | HTTP | User message |
@@ -80,15 +88,18 @@ npm run build
 
 Coverage in `tests/test_orb_billing_routes.py`:
 
-1. Checkout payload excludes `automatic_payment_methods`
-2. Payload includes `payment_method_types=["card"]`
-3. Payload includes `mode=subscription`
-4. Payload includes `line_items[0].price` (ORB Residential price ID)
-5. Payload includes `success_url` and `cancel_url`
-6. Payload includes `customer` (or creates customer on first checkout)
-7. Stripe `parameter_unknown` for `automatic_payment_methods` maps to safe error
-8. Other Stripe checkout errors return `Could not create checkout session` (no secrets)
-9. Valid mocked Stripe response returns `checkout_url`
+1. `_validate_orb_stripe_checkout_config` accepts StripeObject-like price (attribute access)
+2. Validation rejects inactive price, non-GBP currency, wrong amount, missing recurring interval
+3. Stripe `Price.retrieve` failure returns safe config error (no secrets leaked)
+4. Checkout payload excludes `automatic_payment_methods`
+5. Payload includes `payment_method_types=["card"]`
+6. Payload includes `mode=subscription`
+7. Payload includes `line_items[0].price` (ORB Residential price ID)
+8. Payload includes `success_url` and `cancel_url`
+9. Payload includes `customer` (or creates customer on first checkout)
+10. Stripe `parameter_unknown` for `automatic_payment_methods` maps to safe error
+11. Other Stripe checkout errors return `Could not create checkout session` (no secrets)
+12. Valid mocked Stripe response returns `checkout_url`
 
 ## Related docs
 

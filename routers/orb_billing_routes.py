@@ -123,12 +123,22 @@ def _dt_from_unix(ts: int | None) -> datetime | None:
     return datetime.fromtimestamp(ts, tz=timezone.utc)
 
 
+def _stripe_attr(obj: Any, key: str, default: Any = None) -> Any:
+    """Read a field from a Stripe API object or plain dict safely."""
+    if obj is None:
+        return default
+    if isinstance(obj, dict):
+        return obj.get(key, default)
+    return getattr(obj, key, default)
+
+
 def _extract_price_id(subscription_obj: dict[str, Any] | Any) -> str | None:
-    items = subscription_obj.get("items", {}).get("data", [])
+    items_container = _stripe_attr(subscription_obj, "items") or {}
+    items = _stripe_attr(items_container, "data") or []
     if not items:
         return None
-    price_obj = items[0].get("price", {}) or {}
-    return price_obj.get("id")
+    price_obj = _stripe_attr(items[0], "price") or {}
+    return _stripe_attr(price_obj, "id")
 
 
 def _require_stripe_checkout() -> None:
@@ -159,14 +169,19 @@ def _validate_orb_stripe_checkout_config() -> str:
         logger.exception("ORB Stripe price validation failed")
         raise HTTPException(status_code=503, detail=ORB_CHECKOUT_CONFIG_ERROR) from None
 
-    if not price.get("active"):
+    active = bool(_stripe_attr(price, "active", False))
+    currency = _stripe_attr(price, "currency")
+    unit_amount = _stripe_attr(price, "unit_amount")
+    recurring = _stripe_attr(price, "recurring")
+    interval = _stripe_attr(recurring, "interval") if recurring else None
+
+    if not active:
         raise HTTPException(status_code=503, detail=ORB_CHECKOUT_CONFIG_ERROR)
-    if str(price.get("currency") or "").lower() != "gbp":
+    if str(currency or "").lower() != "gbp":
         raise HTTPException(status_code=503, detail=ORB_CHECKOUT_CONFIG_ERROR)
-    if price.get("unit_amount") != ORB_EXPECTED_PRICE_UNIT_AMOUNT:
+    if unit_amount != ORB_EXPECTED_PRICE_UNIT_AMOUNT:
         raise HTTPException(status_code=503, detail=ORB_CHECKOUT_CONFIG_ERROR)
-    recurring = price.get("recurring") or {}
-    if recurring.get("interval") != "month":
+    if interval != "month":
         raise HTTPException(status_code=503, detail=ORB_CHECKOUT_CONFIG_ERROR)
 
     return price_id
@@ -524,7 +539,7 @@ async def orb_standalone_stripe_webhook(request: Request, conn=Depends(get_db)):
         raise HTTPException(status_code=400, detail="Invalid webhook signature")
 
     event_type = event["type"]
-    stripe_event_id = str(event.get("id") or "").strip()
+    stripe_event_id = str(_stripe_attr(event, "id") or "").strip()
     data_object = event["data"]["object"]
 
     if stripe_event_id and is_orb_stripe_event_processed(conn, stripe_event_id):
@@ -532,13 +547,13 @@ async def orb_standalone_stripe_webhook(request: Request, conn=Depends(get_db)):
 
     try:
         if event_type == "checkout.session.completed":
-            metadata = data_object.get("metadata") or {}
-            if metadata.get("product") not in {None, "orb_residential"}:
+            metadata = _stripe_attr(data_object, "metadata") or {}
+            if _stripe_attr(metadata, "product") not in {None, "orb_residential"}:
                 return JSONResponse({"ok": True, "ignored": True})
-            if metadata.get("purchase_type") == "usage_topup":
-                user_id_raw = metadata.get("user_id")
-                session_id = str(data_object.get("id") or "")
-                amount_raw = metadata.get("amount_pence") or data_object.get("amount_total")
+            if _stripe_attr(metadata, "purchase_type") == "usage_topup":
+                user_id_raw = _stripe_attr(metadata, "user_id")
+                session_id = str(_stripe_attr(data_object, "id") or "")
+                amount_raw = _stripe_attr(metadata, "amount_pence") or _stripe_attr(data_object, "amount_total")
                 if user_id_raw and session_id:
                     from db.orb_usage_commercial_db import record_orb_usage_credit_purchase
 
@@ -551,13 +566,13 @@ async def orb_standalone_stripe_webhook(request: Request, conn=Depends(get_db)):
                         status="completed",
                     )
                 return JSONResponse({"ok": True, "topup": True})
-            user_id = metadata.get("user_id")
-            customer_id = data_object.get("customer")
-            subscription_id = data_object.get("subscription")
+            user_id = _stripe_attr(metadata, "user_id")
+            customer_id = _stripe_attr(data_object, "customer")
+            subscription_id = _stripe_attr(data_object, "subscription")
             if user_id and customer_id:
                 subscription = stripe.Subscription.retrieve(subscription_id) if subscription_id else None
                 price_id = _extract_price_id(subscription) if subscription else orb_residential_stripe_price_id()
-                status_value = subscription.get("status") if subscription else "active"
+                status_value = _stripe_attr(subscription, "status") if subscription else "active"
                 update_orb_subscription_state(
                     conn,
                     user_id=int(user_id),
@@ -566,42 +581,42 @@ async def orb_standalone_stripe_webhook(request: Request, conn=Depends(get_db)):
                     stripe_price_id=price_id,
                     orb_plan=map_stripe_price_to_plan(price_id),
                     subscription_status=str(status_value),
-                    current_period_start=_dt_from_unix(subscription.get("current_period_start")) if subscription else None,
-                    current_period_end=_dt_from_unix(subscription.get("current_period_end")) if subscription else None,
-                    cancel_at_period_end=bool(subscription.get("cancel_at_period_end")) if subscription else False,
+                    current_period_start=_dt_from_unix(_stripe_attr(subscription, "current_period_start")) if subscription else None,
+                    current_period_end=_dt_from_unix(_stripe_attr(subscription, "current_period_end")) if subscription else None,
+                    cancel_at_period_end=bool(_stripe_attr(subscription, "cancel_at_period_end")) if subscription else False,
                     clear_payment_failed=True,
                 )
                 _record_analytics(conn, user_id=int(user_id), event="checkout_completed")
 
         elif event_type in {"customer.subscription.created", "customer.subscription.updated"}:
-            metadata = data_object.get("metadata") or {}
-            if metadata.get("product") not in {None, "orb_residential"} and metadata.get("user_id") is None:
-                customer_id = data_object.get("customer")
+            metadata = _stripe_attr(data_object, "metadata") or {}
+            if _stripe_attr(metadata, "product") not in {None, "orb_residential"} and _stripe_attr(metadata, "user_id") is None:
+                customer_id = _stripe_attr(data_object, "customer")
                 existing = get_orb_subscription_by_customer_id(conn, str(customer_id)) if customer_id else None
                 if not existing:
                     return JSONResponse({"ok": True, "ignored": True})
-            user_id = metadata.get("user_id")
-            customer_id = data_object.get("customer")
+            user_id = _stripe_attr(metadata, "user_id")
+            customer_id = _stripe_attr(data_object, "customer")
             price_id = _extract_price_id(data_object)
             resolved_user_id = int(user_id) if user_id else None
             update_orb_subscription_state(
                 conn,
                 user_id=resolved_user_id,
                 stripe_customer_id=str(customer_id) if customer_id else None,
-                stripe_subscription_id=str(data_object.get("id")),
+                stripe_subscription_id=str(_stripe_attr(data_object, "id")),
                 stripe_price_id=price_id,
                 orb_plan=map_stripe_price_to_plan(price_id),
-                subscription_status=str(data_object.get("status") or "inactive"),
-                current_period_start=_dt_from_unix(data_object.get("current_period_start")),
-                current_period_end=_dt_from_unix(data_object.get("current_period_end")),
-                cancel_at_period_end=bool(data_object.get("cancel_at_period_end")),
-                clear_payment_failed=str(data_object.get("status") or "") in {"active", "trialing"},
+                subscription_status=str(_stripe_attr(data_object, "status") or "inactive"),
+                current_period_start=_dt_from_unix(_stripe_attr(data_object, "current_period_start")),
+                current_period_end=_dt_from_unix(_stripe_attr(data_object, "current_period_end")),
+                cancel_at_period_end=bool(_stripe_attr(data_object, "cancel_at_period_end")),
+                clear_payment_failed=str(_stripe_attr(data_object, "status") or "") in {"active", "trialing"},
             )
-            if subscription_grants_orb_access(data_object.get("status")) and resolved_user_id:
+            if subscription_grants_orb_access(_stripe_attr(data_object, "status")) and resolved_user_id:
                 _record_analytics(conn, user_id=resolved_user_id, event="subscription_active")
 
         elif event_type == "customer.subscription.deleted":
-            customer_id = data_object.get("customer")
+            customer_id = _stripe_attr(data_object, "customer")
             if customer_id:
                 update_orb_subscription_state(
                     conn,
@@ -612,7 +627,7 @@ async def orb_standalone_stripe_webhook(request: Request, conn=Depends(get_db)):
                 )
 
         elif event_type == "invoice.payment_failed":
-            customer_id = data_object.get("customer")
+            customer_id = _stripe_attr(data_object, "customer")
             if customer_id:
                 update_orb_subscription_state(
                     conn,
@@ -622,8 +637,8 @@ async def orb_standalone_stripe_webhook(request: Request, conn=Depends(get_db)):
                 )
 
         elif event_type == "invoice.payment_succeeded":
-            customer_id = data_object.get("customer")
-            subscription_id = data_object.get("subscription")
+            customer_id = _stripe_attr(data_object, "customer")
+            subscription_id = _stripe_attr(data_object, "subscription")
             if customer_id and subscription_id:
                 subscription = stripe.Subscription.retrieve(subscription_id)
                 price_id = _extract_price_id(subscription)
@@ -633,9 +648,9 @@ async def orb_standalone_stripe_webhook(request: Request, conn=Depends(get_db)):
                     stripe_subscription_id=str(subscription_id),
                     stripe_price_id=price_id,
                     orb_plan=map_stripe_price_to_plan(price_id),
-                    subscription_status=str(subscription.get("status") or "active"),
-                    current_period_start=_dt_from_unix(subscription.get("current_period_start")),
-                    current_period_end=_dt_from_unix(subscription.get("current_period_end")),
+                    subscription_status=str(_stripe_attr(subscription, "status") or "active"),
+                    current_period_start=_dt_from_unix(_stripe_attr(subscription, "current_period_start")),
+                    current_period_end=_dt_from_unix(_stripe_attr(subscription, "current_period_end")),
                     clear_payment_failed=True,
                 )
         if stripe_event_id:
