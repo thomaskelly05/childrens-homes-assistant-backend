@@ -12,10 +12,9 @@ function read(relativePath: string) {
 
 describe('ORB login and billing readiness', () => {
   it('sign-in page renders grouped auth methods', () => {
-    const login = read('components/orb-residential/orb-login-screen.tsx')
     const authCard = read('components/orb-residential/orb-login-auth-card.tsx')
-    assert.match(authCard, /Use your work account, email or passkey/)
-    assert.match(authCard, /Continue with email/)
+    assert.match(authCard, /Sign in or create your account to continue/)
+    assert.match(authCard, /Sign in with email/)
     assert.match(authCard, /Use passkey/)
     assert.match(authCard, /Continue with Microsoft/)
     assert.match(authCard, /Continue with Google/)
@@ -33,13 +32,12 @@ describe('ORB login and billing readiness', () => {
   })
 
   it('login hero uses premium positioning copy', () => {
-    const login = read('components/orb-residential/orb-login-screen.tsx')
-    assert.match(login, /ORB Residential/)
-    assert.match(login, /Powered by IndiCare Intelligence/)
-    assert.match(login, /AI support for residential children/)
-    assert.match(login, /Record better\. Reflect faster\. Respond safer\./)
-    assert.match(login, /professional judgement/)
-    assert.match(login, /Human review required/)
+    const hero = read('components/orb-residential/orb-login-desktop-hero.tsx')
+    assert.match(hero, /ORB Residential — Powered by IndiCare/)
+    assert.match(hero, /AI support for residential children/)
+    assert.match(hero, /Record better\. Reflect faster\. Respond safer\./)
+    assert.match(hero, /professional judgement/)
+    assert.match(hero, /Human review required/)
   })
 
   it('create account and provider email hints exist', () => {
@@ -47,27 +45,27 @@ describe('ORB login and billing readiness', () => {
     const authCard = read('components/orb-residential/orb-login-auth-card.tsx')
     assert.match(authCard, /href="\/orb\/signup"/)
     assert.match(authCard, /Create account/)
-    assert.match(login, /Already subscribed through your provider/)
+    assert.match(login, /Already subscribed through Google or Microsoft/)
     assert.match(login, /data-orb-provider-email-hint/)
   })
 
-  it('inactive user upgrade screen shows subscribe path and refresh', () => {
+  it('inactive user upgrade screen shows subscribe path, refresh and switch account', () => {
     const upgrade = read('components/orb-standalone/orb-upgrade-screen.tsx')
-    assert.match(upgrade, /Start ORB Residential/)
     assert.match(upgrade, /data-orb-subscribe/)
     assert.match(upgrade, /data-orb-billing-refresh/)
-    assert.match(upgrade, /data-orb-upgrade-sign-out/)
+    assert.match(upgrade, /data-orb-switch-account/)
+    assert.match(upgrade, /data-orb-return-to-orb/)
   })
 
   it('active billing modal shows manage subscription and individual plan', () => {
     const billing = read('components/orb-standalone/orb-billing-modal.tsx')
-    assert.match(billing, /ORB Residential — Individual/)
+    assert.match(billing, /ORB Residential — individual subscription/)
     assert.match(billing, /£9\.99\/month/)
     assert.match(billing, /data-orb-billing-portal/)
     assert.match(billing, /data-orb-billing-upgrade/)
     assert.match(billing, /data-orb-billing-refresh/)
     assert.match(billing, /Opening checkout/)
-    assert.match(billing, /Refreshing…/)
+    assert.match(billing, /Refresh status/)
   })
 
   it('billing modal does not expose internal AI brain metadata', () => {
@@ -81,15 +79,15 @@ describe('ORB login and billing readiness', () => {
   it('standalone boundary and provider team CTA appear in billing', () => {
     const billing = read('components/orb-standalone/orb-billing-modal.tsx')
     assert.match(billing, /does not access IndiCare OS records/)
-    assert.match(billing, /data-orb-billing-provider-cta/)
-    assert.match(billing, /Contact IndiCare/)
+    assert.match(billing, /data-orb-billing-provider-team/)
+    assert.match(billing, /support@indicare\.co\.uk/)
   })
 
   it('billing trust copy is concise', () => {
     const billing = read('components/orb-standalone/orb-billing-modal.tsx')
     assert.match(billing, /data-orb-billing-trust/)
-    assert.match(billing, /Provider AI settings|Providers can control AI settings/)
-    assert.match(billing, /professional judgement/)
+    assert.match(billing, /IndiCare residential intelligence/)
+    assert.match(billing, /Trust &amp; data|Trust & data/)
   })
 
   it('stripe client does not hardcode secret keys', () => {

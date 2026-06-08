@@ -1,16 +1,17 @@
 import Link from 'next/link'
 
 import { OrbHeroSphere } from '@/components/orb-residential/ui/orb-hero-sphere'
-import { orbProductCopy } from '@/lib/orb/content/copy'
 
-const TRUST_POINTS = [
+const VALUE_CHIPS = [
   'Human review required',
   'Data protection controls',
-  'Provider AI settings',
-  "Designed for children's homes"
+  'Safeguarding-aware support',
+  'Recording and reporting support',
+  "Built for adults in children's homes",
+  'Powered by IndiCare Intelligence'
 ] as const
 
-/** Desktop/tablet left hero — ORB visual above brand, tagline, copy and trust points. */
+/** Desktop/tablet left hero — ORB visual, product story and trust chips. */
 export function OrbLoginDesktopHero() {
   return (
     <div
@@ -28,16 +29,9 @@ export function OrbLoginDesktopHero() {
 
         <div className="orb-login-hero-brand" data-orb-login-hero-brand>
           <Link href="/orb" className="orb-login-brand-link text-sm font-semibold" data-orb-login-brand>
-            ORB Residential
+            ORB Residential — Powered by IndiCare
           </Link>
-          <p className="orb-login-tagline mt-1 text-xs" data-orb-login-engine-line>
-            Powered by IndiCare Intelligence
-          </p>
         </div>
-
-        <p className="orb-login-brand-tag text-xs tracking-wide" data-orb-login-brand-tag>
-          {orbProductCopy.brandLine}
-        </p>
 
         <h1
           className="orb-login-headline max-w-md text-3xl font-semibold tracking-tight xl:text-[2rem]"
@@ -48,17 +42,28 @@ export function OrbLoginDesktopHero() {
         <p className="orb-login-lead mt-3 max-w-md text-base leading-relaxed">
           Record better. Reflect faster. Respond safer.
         </p>
-        <ul className="orb-login-trust mt-5 max-w-md space-y-2 text-sm" data-orb-login-trust-points>
-          {TRUST_POINTS.map((point) => (
-            <li key={point} className="flex items-center gap-2.5">
+
+        <ul
+          className="orb-login-trust mt-5 grid max-w-md gap-2 text-sm sm:grid-cols-2"
+          data-orb-login-trust-points
+        >
+          {VALUE_CHIPS.map((point) => (
+            <li
+              key={point}
+              className="orb-login-value-chip flex items-center gap-2 rounded-xl border border-[var(--orb-line)]/30 bg-[var(--orb-surface-elevated)]/40 px-3 py-2"
+            >
               <span
-                className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--orb-res-primary,#1677ff)]"
+                className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--orb-res-primary,#6366f1)]"
                 aria-hidden
               />
               {point}
             </li>
           ))}
         </ul>
+
+        <p className="orb-login-muted mt-5 max-w-md text-xs leading-relaxed" data-orb-login-trust-note>
+          ORB Residential does not replace professional judgement, safeguarding procedures or legal advice.
+        </p>
       </div>
     </div>
   )

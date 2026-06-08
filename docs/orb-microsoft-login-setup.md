@@ -8,6 +8,12 @@ Microsoft Entra (Azure AD) OAuth is the preferred second social login for ORB Re
 - ORB safety acceptance and access verdict flow unchanged
 - no IndiCare OS access granted through ORB Residential
 
+See also [orb-auth-ux-polish.md](./orb-auth-ux-polish.md) for login UX, loading states and verified-email provider linking.
+
+## Performance note
+
+Microsoft login prefers `id_token` claims for subject and email. Microsoft Graph `/me` is called only when required fields are missing from the token. Profile photo fetch is not used on the login path.
+
 ## Entra app registration
 
 1. Sign in to [Microsoft Entra admin center](https://entra.microsoft.com/).

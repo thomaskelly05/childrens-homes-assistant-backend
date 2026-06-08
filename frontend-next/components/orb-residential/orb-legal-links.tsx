@@ -1,76 +1,72 @@
 import Link from 'next/link'
 
-const ORB_PUBLIC_LEGAL_URLS = {
-  privacy: 'https://www.indicare.co.uk/privacy',
-  terms: 'https://www.indicare.co.uk/terms',
-  cookies: 'https://www.indicare.co.uk/cookies',
-  support: 'https://www.indicare.co.uk/support'
+export const ORB_DEFAULT_LEGAL_PATHS = {
+  privacy: '/privacy',
+  terms: '/terms',
+  cookies: '/cookies',
+  support: '/support'
 } as const
+
+export type OrbLegalPaths = typeof ORB_DEFAULT_LEGAL_PATHS
 
 type OrbLegalLinksProps = {
   className?: string
   linkClassName?: string
   testId?: string
-  /** Use public www.indicare.co.uk URLs (login footer). Default: in-app /privacy and /terms. */
-  publicUrls?: boolean
+  /** Auth/login footer: all four links with separators. In-app: privacy + terms only. */
+  variant?: 'auth' | 'in-app'
+  legalPaths?: Partial<OrbLegalPaths>
 }
 
-/** Shared Privacy and Terms links for ORB Residential surfaces. */
+const AUTH_LINKS: Array<{ key: keyof OrbLegalPaths; label: string; testId: string }> = [
+  { key: 'privacy', label: 'Privacy', testId: 'orb-privacy-link' },
+  { key: 'terms', label: 'Terms', testId: 'orb-terms-link' },
+  { key: 'cookies', label: 'Cookies', testId: 'orb-cookies-link' },
+  { key: 'support', label: 'Support', testId: 'orb-support-link' }
+]
+
+/** Shared Privacy, Terms, Cookies and Support links for ORB Residential surfaces. */
 export function OrbLegalLinks({
-  className = 'flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs',
+  className = 'orb-legal-links flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-xs',
   linkClassName = 'font-medium text-[var(--orb-res-primary,#1677ff)] underline-offset-2 hover:underline',
   testId = 'orb-legal-links',
-  publicUrls = false
+  variant = 'in-app',
+  legalPaths
 }: OrbLegalLinksProps) {
-  if (publicUrls) {
+  const paths = { ...ORB_DEFAULT_LEGAL_PATHS, ...legalPaths }
+
+  if (variant === 'auth') {
     return (
       <nav className={className} aria-label="Legal and support" data-testid={testId}>
-        <a
-          href={ORB_PUBLIC_LEGAL_URLS.privacy}
-          className={linkClassName}
-          data-orb-privacy-link
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Privacy
-        </a>
-        <a
-          href={ORB_PUBLIC_LEGAL_URLS.terms}
-          className={linkClassName}
-          data-orb-terms-link
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Terms
-        </a>
-        <a
-          href={ORB_PUBLIC_LEGAL_URLS.cookies}
-          className={linkClassName}
-          data-orb-cookies-link
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Cookies
-        </a>
-        <a
-          href={ORB_PUBLIC_LEGAL_URLS.support}
-          className={linkClassName}
-          data-orb-support-link
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Support
-        </a>
+        <ul className="flex list-none flex-wrap items-center gap-x-1 gap-y-1 p-0 m-0">
+          {AUTH_LINKS.map((item, index) => (
+            <li key={item.key} className="inline-flex items-center">
+              {index > 0 ? (
+                <span className="orb-legal-links-separator mx-2 text-[var(--orb-muted)]" aria-hidden>
+                  ·
+                </span>
+              ) : null}
+              <Link
+                href={paths[item.key]}
+                className={linkClassName}
+                data-orb={item.testId}
+                data-orb-legal-link={item.key}
+              >
+                {item.label}
+              </Link>
+            </li>
+          ))}
+        </ul>
       </nav>
     )
   }
 
   return (
     <nav className={className} aria-label="Legal" data-testid={testId}>
-      <Link href="/privacy" className={linkClassName} data-orb-privacy-link>
+      <Link href={paths.privacy} className={linkClassName} data-orb-privacy-link>
         Privacy
       </Link>
-      <Link href="/terms" className={linkClassName} data-orb-terms-link>
+      <Link href={paths.terms} className={linkClassName} data-orb-terms-link>
         Terms
       </Link>
     </nav>

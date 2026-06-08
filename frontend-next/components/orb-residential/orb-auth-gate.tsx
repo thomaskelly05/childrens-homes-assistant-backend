@@ -45,6 +45,7 @@ import {
   wrapOrbRouter
 } from '@/lib/orb/orb-route-loop-guard'
 import { clearStaleOrbSessionState } from '@/lib/orb/orb-stale-session-clear'
+import { peekOrbOAuthRedirect } from '@/lib/orb/orb-oauth-redirect-state'
 import { AuthApiError } from '@/lib/auth/api'
 
 export type OrbAuthGateMode = 'product' | 'billing'
@@ -348,6 +349,7 @@ function OrbAuthGateInner({
     }
   }, [gateState])
 
+  const oauthFinishing = peekOrbOAuthRedirect() !== null
   const bootstrapCounts = getOrbBootstrapNetworkCounts()
   const bootstrapLockDebug = getOrbBootstrapLockDebugSnapshot()
   const stormCounts = getOrbBootstrapRequestCounts()
@@ -393,7 +395,12 @@ function OrbAuthGateInner({
             onRetry={handleVerdictRetry}
             onBackToSignIn={handleBackToSignIn}
             timeoutMs={ORB_AUTH_GATE_FALLBACK_MS}
-            message="Checking ORB access…"
+            message={oauthFinishing ? 'Finishing sign in…' : 'Checking ORB access…'}
+            submessage={
+              oauthFinishing
+                ? 'Setting up your ORB Residential session'
+                : 'Securing your ORB Residential access'
+            }
           />
           {debugPanel}
         </>

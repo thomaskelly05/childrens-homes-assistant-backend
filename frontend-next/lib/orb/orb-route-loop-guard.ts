@@ -12,7 +12,7 @@ import {
 const LOOP_WINDOW_MS = 10_000
 const LOOP_THRESHOLD = 2
 
-const GUARDED_PREFIXES = ['/orb', '/login', '/orb/login'] as const
+const GUARDED_PREFIXES = ['/orb', '/login', '/orb/login', '/orb/billing'] as const
 
 const EXEMPT_PREFIXES = [
   '/orb/billing/success',

@@ -6,6 +6,8 @@ import Link from 'next/link'
 import { OrbAuthButton } from '@/components/orb-residential/ui/orb-auth-button'
 import { OrbLoginLegalFooter } from '@/components/orb-residential/orb-login-legal-footer'
 import { OrbLoginMobileHeader } from '@/components/orb-residential/orb-login-mobile-header'
+import type { OrbLegalPaths } from '@/components/orb-residential/orb-legal-links'
+import { orbOAuthRedirectMessage } from '@/lib/orb/orb-oauth-redirect-state'
 
 const OAUTH_UNAVAILABLE_COPY: Record<'google' | 'microsoft', string> = {
   google: 'Google sign-in unavailable',
@@ -16,6 +18,7 @@ export type OrbLoginAuthCardProps = {
   error: string | null
   oauth: { google: boolean; microsoft: boolean }
   authBusy: boolean
+  oauthRedirecting: 'google' | 'microsoft' | null
   returnUrl: string
   email: string
   password: string
@@ -26,6 +29,7 @@ export type OrbLoginAuthCardProps = {
   passkeyEmail: string
   compactViewport: boolean
   passkeyExpanded: boolean
+  legalPaths?: Partial<OrbLegalPaths>
   onEmailChange: (value: string) => void
   onPasswordChange: (value: string) => void
   onRememberChange: (value: boolean) => void
@@ -41,6 +45,7 @@ export function OrbLoginAuthCard({
   error,
   oauth,
   authBusy,
+  oauthRedirecting,
   returnUrl,
   email,
   password,
@@ -51,6 +56,7 @@ export function OrbLoginAuthCard({
   passkeyEmail,
   compactViewport,
   passkeyExpanded,
+  legalPaths,
   onEmailChange,
   onPasswordChange,
   onRememberChange,
@@ -60,9 +66,11 @@ export function OrbLoginAuthCard({
   onPasskeySignIn,
   orbOAuthStartUrl
 }: OrbLoginAuthCardProps) {
+  const oauthBusy = authBusy || oauthRedirecting !== null
+
   return (
     <div
-      className="orb-login-card orb-login-panel-inner mx-auto w-full max-w-md rounded-[1.75rem] border border-[var(--orb-line)]/50 bg-[var(--orb-surface-elevated)]/80 p-6 shadow-xl shadow-black/10 backdrop-blur-sm sm:p-8"
+      className="orb-login-card orb-login-panel-inner mx-auto w-full max-w-md rounded-[1.75rem] border border-[var(--orb-line)]/50 bg-[var(--orb-surface-elevated)]/80 p-6 shadow-xl shadow-indigo-500/10 backdrop-blur-sm sm:p-8"
       data-orb-login-auth-card
     >
       <OrbLoginMobileHeader />
@@ -72,11 +80,10 @@ export function OrbLoginAuthCard({
         data-orb-login-signin-title
         data-orb-login-signin-title-mobile
       >
-        <span className="lg:hidden">Sign in to continue</span>
-        <span className="hidden lg:inline">Sign in to ORB Residential</span>
+        Welcome to ORB Residential
       </h2>
       <p className="orb-login-lead mt-2 text-sm" data-orb-login-mobile-lead>
-        Use your work account, email or passkey.
+        Sign in or create your account to continue.
       </p>
 
       {error ? (
@@ -86,27 +93,30 @@ export function OrbLoginAuthCard({
       ) : null}
 
       <section className="mt-6" aria-labelledby="orb-login-oauth">
-        <h3 id="orb-login-oauth" className="orb-login-section-title text-xs font-semibold uppercase tracking-wide">
-          Continue with
+        <h3 id="orb-login-oauth" className="sr-only">
+          Social sign-in
         </h3>
         <div className="mt-2.5 space-y-2.5" data-orb-oauth-buttons>
           <OrbAuthButton
             provider="google"
             href={oauth.google ? orbOAuthStartUrl('google', returnUrl) : undefined}
-            disabled={!oauth.google || authBusy}
+            disabled={!oauth.google || oauthBusy}
+            loading={oauthRedirecting === 'google'}
+            loadingLabel={orbOAuthRedirectMessage('google') ?? 'Redirecting to Google…'}
             unavailableLabel={OAUTH_UNAVAILABLE_COPY.google}
           >
             Continue with Google
           </OrbAuthButton>
-          {oauth.microsoft ? (
-            <OrbAuthButton
-              provider="microsoft"
-              href={orbOAuthStartUrl('microsoft', returnUrl)}
-              disabled={authBusy}
-            >
-              Continue with Microsoft
-            </OrbAuthButton>
-          ) : null}
+          <OrbAuthButton
+            provider="microsoft"
+            href={oauth.microsoft ? orbOAuthStartUrl('microsoft', returnUrl) : undefined}
+            disabled={!oauth.microsoft || oauthBusy}
+            loading={oauthRedirecting === 'microsoft'}
+            loadingLabel={orbOAuthRedirectMessage('microsoft') ?? 'Redirecting to Microsoft…'}
+            unavailableLabel={OAUTH_UNAVAILABLE_COPY.microsoft}
+          >
+            Continue with Microsoft
+          </OrbAuthButton>
         </div>
       </section>
 
@@ -128,7 +138,7 @@ export function OrbLoginAuthCard({
 
       <section className="mt-6" aria-labelledby="orb-login-email">
         <h3 id="orb-login-email" className="orb-login-section-title text-xs font-semibold uppercase tracking-wide">
-          Already have an account?
+          Sign in with email
         </h3>
         <form className="mt-2.5 space-y-3" onSubmit={onSubmit} data-testid="orb-login-form">
           <label className="orb-login-field-label block text-sm font-medium">
@@ -141,7 +151,7 @@ export function OrbLoginAuthCard({
               className="orb-login-input mt-2 w-full rounded-2xl px-4 py-3"
               data-testid="orb-login-email"
               autoComplete="email"
-              disabled={authBusy}
+              disabled={oauthBusy}
             />
           </label>
           <label className="orb-login-field-label block text-sm font-medium">
@@ -154,7 +164,7 @@ export function OrbLoginAuthCard({
               className="orb-login-input mt-2 w-full rounded-2xl px-4 py-3"
               data-testid="orb-login-password"
               autoComplete="current-password"
-              disabled={authBusy}
+              disabled={oauthBusy}
             />
           </label>
           <label className="flex items-center gap-2 text-xs text-[var(--orb-muted)]">
@@ -163,12 +173,13 @@ export function OrbLoginAuthCard({
               checked={remember}
               onChange={(e) => onRememberChange(e.target.checked)}
               className="rounded"
+              disabled={oauthBusy}
             />
             Keep me signed in on this device
           </label>
           <button
             type="submit"
-            disabled={authBusy}
+            disabled={oauthBusy}
             className="orb-login-submit w-full rounded-2xl py-3 text-sm font-semibold disabled:opacity-60"
             data-testid="orb-login-submit"
           >
@@ -218,14 +229,14 @@ export function OrbLoginAuthCard({
                   className="orb-login-input mt-1 w-full rounded-xl px-3 py-2 text-sm"
                   autoComplete="email webauthn"
                   data-orb-passkey-email
-                  disabled={authBusy}
+                  disabled={oauthBusy}
                 />
               </label>
               <div className="mt-2.5">
                 <OrbAuthButton
                   provider="passkey"
                   type="button"
-                  disabled={authBusy}
+                  disabled={oauthBusy}
                   onClick={onPasskeySignIn}
                   data-orb-passkey-sign-in
                 >
@@ -241,7 +252,7 @@ export function OrbLoginAuthCard({
         </p>
       )}
 
-      <OrbLoginLegalFooter />
+      <OrbLoginLegalFooter legalPaths={legalPaths} />
     </div>
   )
 }

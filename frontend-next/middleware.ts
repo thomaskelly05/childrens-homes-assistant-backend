@@ -18,7 +18,9 @@ const publicPrefixes = [
   '/components',
   '/build-live',
   '/privacy',
-  '/terms'
+  '/terms',
+  '/cookies',
+  '/support'
 ]
 
 /** ORB paths reachable without a session cookie (signup, billing, callbacks). Login is on /orb via OrbAuthGate. */

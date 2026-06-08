@@ -21,6 +21,8 @@ import { ORB_CANONICAL_FRONT_DOOR, sanitizeOrbReturnUrl } from '@/lib/orb/orb-fr
 import { recordOrbAuthRecoveryEvent, sessionAuthCookiePresent } from '@/lib/orb/orb-auth-recovery-diagnostics'
 import { ORB_LOGIN_VERSION } from '@/lib/orb/orb-visual-build'
 import { OrbAuthLoadingScreen } from '@/components/orb-residential/orb-auth-loading-screen'
+import { ORB_DEFAULT_LEGAL_PATHS, type OrbLegalPaths } from '@/components/orb-residential/orb-legal-links'
+import { consumeOrbOAuthRedirect } from '@/lib/orb/orb-oauth-redirect-state'
 
 function formatOAuthError(raw: string): string {
   const decoded = decodeURIComponent(raw.replace(/\+/g, ' '))
@@ -77,6 +79,8 @@ function OrbLoginPanel({
     google: process.env.NEXT_PUBLIC_OAUTH_GOOGLE_ENABLED === '1',
     microsoft: process.env.NEXT_PUBLIC_OAUTH_MICROSOFT_ENABLED === '1'
   })
+  const [legalPaths, setLegalPaths] = useState<Partial<OrbLegalPaths>>(ORB_DEFAULT_LEGAL_PATHS)
+  const [oauthRedirecting, setOauthRedirecting] = useState<'google' | 'microsoft' | null>(null)
 
   useEffect(() => {
     if (!autoRedirectAuthenticated) return
@@ -111,15 +115,24 @@ function OrbLoginPanel({
     window.addEventListener('resize', updateCompact)
     setPasskeySupported(orbPasskeysSupported())
     trackOrbAnalytics('login_viewed')
+    const pendingOAuth = consumeOrbOAuthRedirect()
+    if (pendingOAuth === 'google' || pendingOAuth === 'microsoft') {
+      setOauthRedirecting(pendingOAuth)
+    }
     void fetch(ORB_BILLING_API.authProviders, { credentials: 'include' })
       .then((res) => (res.ok ? res.json() : null))
       .then((body) => {
-        const providers = (body as { data?: { oauth?: Record<string, boolean> } })?.data?.oauth
-        if (!providers) return
-        setOauth({
-          google: Boolean(providers.google),
-          microsoft: Boolean(providers.microsoft)
-        })
+        const data = (body as { data?: { oauth?: Record<string, boolean>; legal?: Partial<OrbLegalPaths> } })?.data
+        const providers = data?.oauth
+        if (providers) {
+          setOauth({
+            google: Boolean(providers.google),
+            microsoft: Boolean(providers.microsoft)
+          })
+        }
+        if (data?.legal) {
+          setLegalPaths({ ...ORB_DEFAULT_LEGAL_PATHS, ...data.legal })
+        }
       })
       .catch(() => {
         // Keep build-time flags
@@ -243,7 +256,9 @@ function OrbLoginPanel({
   const authBusy = submitting || passkeySubmitting || status === 'loading'
 
   if (autoRedirectAuthenticated && status === 'authenticated') {
-    return <OrbAuthLoadingScreen />
+    return (
+      <OrbAuthLoadingScreen message="Finishing sign in…" submessage="Securing your ORB Residential access" />
+    )
   }
 
   return (
@@ -272,10 +287,15 @@ function OrbLoginPanel({
         <OrbLoginDesktopHero />
 
         <div className="orb-login-panel flex min-h-0 flex-col lg:px-4 xl:px-8" data-orb-login-panel-centered>
+          <p className="orb-login-muted mb-3 text-xs leading-relaxed lg:hidden" data-orb-provider-email-hint>
+            Already subscribed through Google or Microsoft? Sign in with the same method you used when subscribing.
+          </p>
           <OrbLoginAuthCard
             error={error}
             oauth={oauth}
             authBusy={authBusy}
+            oauthRedirecting={oauthRedirecting}
+            legalPaths={legalPaths}
             returnUrl={returnUrl}
             email={email}
             password={password}

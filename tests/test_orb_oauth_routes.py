@@ -382,3 +382,116 @@ def test_microsoft_profile_falls_back_to_user_principal_name():
         {"id": "graph-id-2", "userPrincipalName": "user@contoso.onmicrosoft.com"},
     )
     assert profile["email"] == "user@contoso.onmicrosoft.com"
+
+
+def test_auth_providers_legal_config_includes_cookies_and_support(monkeypatch):
+    from routers.orb_launch_routes import list_auth_providers
+
+    monkeypatch.delenv("APPLE_AUTH_ENABLED", raising=False)
+    import asyncio
+
+    result = asyncio.run(list_auth_providers(current_user=None))
+    legal = result["data"]["legal"]
+    assert legal["privacy"] == "/privacy"
+    assert legal["terms"] == "/terms"
+    assert legal["cookies"] == "/cookies"
+    assert legal["support"] == "/support"
+
+
+def test_oauth_links_existing_user_by_verified_email(monkeypatch, caplog):
+    from routers.orb_oauth_routes import _orb_oauth_callback
+
+    monkeypatch.setenv("OAUTH_GOOGLE_CLIENT_ID", "valid-test.apps.googleusercontent.com")
+    monkeypatch.setenv("OAUTH_GOOGLE_CLIENT_SECRET", "secret")
+    monkeypatch.setenv(
+        "OAUTH_GOOGLE_REDIRECT_URI",
+        "https://api.indicare.co.uk/orb/standalone/auth/oauth/google/callback",
+    )
+    request = MagicMock()
+    request.session = {}
+    conn = MagicMock()
+    existing_user = {
+        "id": 42,
+        "email": "shared@test.com",
+        "role": "orb_residential",
+        "home_id": None,
+        "provider_id": None,
+    }
+    bundle = MagicMock(token="jwt-token", csrf_token="csrf-token", mfa_pending=False)
+    import asyncio
+    import logging
+
+    caplog.set_level(logging.INFO)
+
+    with patch("routers.orb_oauth_routes._orb_oauth_app_url", return_value="https://app.indicare.co.uk"):
+        with patch("routers.orb_oauth_routes.validate_oauth_state", return_value="/orb"):
+            with patch(
+                "routers.orb_oauth_routes.exchange_code",
+                new=AsyncMock(return_value={"access_token": "at"}),
+            ):
+                with patch(
+                    "routers.orb_oauth_routes.fetch_userinfo",
+                    new=AsyncMock(
+                        return_value={
+                            "sub": "google-subject-new",
+                            "email": "shared@test.com",
+                            "email_verified": True,
+                        }
+                    ),
+                ):
+                    with patch("routers.orb_oauth_routes.find_orb_user_by_oauth", return_value=None):
+                        with patch(
+                            "routers.orb_oauth_routes.find_orb_user_by_email",
+                            return_value=existing_user,
+                        ):
+                            with patch("routers.orb_oauth_routes.create_orb_residential_user") as create_user:
+                                with patch("routers.orb_oauth_routes.link_oauth_account") as link:
+                                    with patch(
+                                        "routers.orb_oauth_routes.establish_browser_session",
+                                        return_value=bundle,
+                                    ):
+                                        with patch(
+                                            "routers.orb_oauth_routes.store_oauth_session_handoff",
+                                            return_value="handoff-link",
+                                        ):
+                                            with patch(
+                                                "routers.orb_oauth_routes._resolve_access_state",
+                                                return_value="subscription_active",
+                                            ):
+                                                response = asyncio.run(
+                                                    _orb_oauth_callback(
+                                                        "google",
+                                                        request,
+                                                        conn,
+                                                        code="code-1",
+                                                        state="state-1",
+                                                        error=None,
+                                                    )
+                                                )
+    create_user.assert_not_called()
+    assert link.call_args.kwargs["user_id"] == 42
+    assert "linked_via=verified_email" in caplog.text
+    assert response.status_code == 302
+
+
+def test_microsoft_profile_prefers_id_token_without_graph_call():
+    import asyncio
+
+    from services.orb_oauth_service import fetch_microsoft_profile
+
+    import base64
+    import json
+
+    payload = {
+        "sub": "ms-subject-id",
+        "email": "user@contoso.com",
+        "preferred_username": "user@contoso.com",
+    }
+    encoded = base64.urlsafe_b64encode(json.dumps(payload).encode()).decode().rstrip("=")
+    id_token = f"header.{encoded}.sig"
+
+    with patch("services.orb_oauth_service.fetch_userinfo", new=AsyncMock()) as graph_fetch:
+        profile = asyncio.run(fetch_microsoft_profile("access-token", id_token=id_token))
+    graph_fetch.assert_not_awaited()
+    assert profile["id"] == "ms-subject-id"
+    assert profile["email"] == "user@contoso.com"
