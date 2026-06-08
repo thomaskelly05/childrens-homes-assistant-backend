@@ -324,12 +324,12 @@ function OrbLoginPanel({
               </h3>
               <div className="mt-2.5 space-y-2.5" data-orb-oauth-buttons>
                 <OrbAuthButton
-                  provider="microsoft"
-                  href={oauth.microsoft ? orbOAuthStartUrl('microsoft', returnUrl) : undefined}
-                  disabled={!oauth.microsoft || authBusy}
-                  unavailableLabel={OAUTH_UNAVAILABLE_COPY.microsoft}
+                  provider="apple"
+                  href={oauth.apple ? orbOAuthStartUrl('apple', returnUrl) : undefined}
+                  disabled={!oauth.apple || authBusy}
+                  unavailableLabel={OAUTH_UNAVAILABLE_COPY.apple}
                 >
-                  Continue with Microsoft
+                  Continue with Apple
                 </OrbAuthButton>
                 <OrbAuthButton
                   provider="google"
@@ -340,12 +340,12 @@ function OrbLoginPanel({
                   Continue with Google
                 </OrbAuthButton>
                 <OrbAuthButton
-                  provider="apple"
-                  href={oauth.apple ? orbOAuthStartUrl('apple', returnUrl) : undefined}
-                  disabled={!oauth.apple || authBusy}
-                  unavailableLabel={OAUTH_UNAVAILABLE_COPY.apple}
+                  provider="microsoft"
+                  href={oauth.microsoft ? orbOAuthStartUrl('microsoft', returnUrl) : undefined}
+                  disabled={!oauth.microsoft || authBusy}
+                  unavailableLabel={OAUTH_UNAVAILABLE_COPY.microsoft}
                 >
-                  Continue with Apple
+                  Continue with Microsoft
                 </OrbAuthButton>
               </div>
             </section>
@@ -477,12 +477,13 @@ function OrbLoginPanel({
             )}
 
             <div className="mt-8 space-y-2 text-sm" data-orb-login-account-links>
-              <p>
-                New to ORB?{' '}
-                <Link href="/orb/signup" className="orb-login-link-trial font-semibold" data-orb-create-account>
-                  Create account
-                </Link>
-              </p>
+              <Link
+                href="/orb/signup"
+                className="orb-login-submit flex w-full items-center justify-center rounded-2xl py-3 text-center text-sm font-bold no-underline"
+                data-orb-create-account
+              >
+                New to ORB? Create account
+              </Link>
               <p className="orb-login-muted text-xs leading-relaxed">
                 Already subscribed through your provider?{' '}
                 <button

@@ -1,4 +1,4 @@
-import type { Page, Route } from '@playwright/test'
+import { expect, type Page, Route } from '@playwright/test'
 
 export const ORB_AUDIT_VIEWPORTS = {
   mobile: { width: 390, height: 844, label: 'mobile (390×844)' },
@@ -77,7 +77,7 @@ const MOCK_VERDICT = {
     backend_build: 'e2e-audit',
     reason: 'e2e_mock_ready',
     access: {
-      contract_version: 'orb_access_v1',
+      contract_version: 'orb_access_v2',
       product: 'orb_residential',
       price_label: '£9.99/month',
       can_use_orb: true,
@@ -586,4 +586,447 @@ export function renderAuditMarkdown(
   )
 
   return lines.join('\n')
+}
+
+// ---------------------------------------------------------------------------
+// ORB auth / register / billing / passkey E2E helpers
+// ---------------------------------------------------------------------------
+
+export const ORB_LOGIN_VIEWPORTS = [
+  { width: 390, height: 844, label: '390×844' },
+  { width: 390, height: 667, label: '390×667' },
+  { width: 430, height: 932, label: '430×932' },
+  { width: 768, height: 1024, label: '768×1024' }
+] as const
+
+export const E2E_CREDENTIALS = {
+  email: process.env.NEXT_PUBLIC_E2E_USER_EMAIL || 'e2e.manager@indicare.local',
+  password: process.env.NEXT_PUBLIC_E2E_USER_PASSWORD || 'ChangeMeForE2E123!'
+}
+
+export type OrbAuthE2eScenario =
+  | 'ready'
+  | 'unauthenticated'
+  | 'inactive'
+  | 'stale-cookie'
+  | 'billing-active'
+  | 'billing-inactive'
+
+const MOCK_USER = {
+  id: 9001,
+  email: E2E_CREDENTIALS.email,
+  first_name: 'E2E',
+  last_name: 'Manager',
+  role: 'manager'
+}
+
+function buildAccess(overrides: Record<string, unknown> = {}) {
+  return {
+    contract_version: 'orb_access_v2',
+    product: 'orb_residential',
+    price_label: '£9.99/month',
+    can_use_orb: true,
+    access_state: 'active',
+    trial: { available: true, active: true, days_left: 14, expires_at: null },
+    subscription: { active: true, status: 'active', plan_name: 'ORB Residential' },
+    billing: { stripe_configured: true, price_gbp_monthly: 9.99 },
+    standalone: true,
+    os_records_accessed: false,
+    os_access_granted: false,
+    safety_accepted: true,
+    onboarding_completed: true,
+    upgrade: {
+      checkout_available: true,
+      trial_available: true,
+      manage_billing_available: false
+    },
+    ...overrides
+  }
+}
+
+function buildVerdict(
+  verdict: 'ready' | 'unauthenticated' | 'inactive' | 'retry',
+  overrides: Record<string, unknown> = {}
+) {
+  const access =
+    verdict === 'inactive'
+      ? buildAccess({
+          can_use_orb: false,
+          access_state: 'inactive',
+          trial: { available: true, active: false, days_left: 0, expires_at: null },
+          subscription: { active: false, status: 'inactive', plan_name: null }
+        })
+      : verdict === 'ready'
+        ? buildAccess()
+        : null
+
+  return {
+    success: true,
+    data: {
+      contract_version: 'orb_front_door_v1',
+      verdict,
+      authenticated: verdict !== 'unauthenticated',
+      can_use_orb: verdict === 'ready',
+      access_blocker: verdict === 'inactive' ? 'subscription_required' : null,
+      safety_accepted: verdict === 'ready',
+      subscription:
+        verdict === 'ready'
+          ? { active: true, status: 'active', plan_name: 'ORB Residential' }
+          : { active: false, status: 'inactive', plan_name: null },
+      user: verdict === 'unauthenticated' ? null : MOCK_USER,
+      frontend_should_mount_product: verdict === 'ready',
+      allowed_bootstrap: verdict === 'ready',
+      backend_build: 'e2e-auth',
+      reason: `e2e_mock_${verdict}`,
+      clear_session: verdict === 'unauthenticated',
+      access,
+      ...overrides
+    }
+  }
+}
+
+const MOCK_AUTH_ME_AUTHENTICATED = {
+  user: {
+    id: 9001,
+    email: E2E_CREDENTIALS.email,
+    role: 'manager',
+    home_id: 1,
+    provider_id: 1,
+    first_name: 'E2E',
+    last_name: 'Manager',
+    is_active: true,
+    permissions: [],
+    subscription_active: true,
+    subscription_status: 'active',
+    plan_name: 'ORB Residential',
+    mfa_enabled: false,
+    mfa_verified: false,
+    has_passkeys: true
+  }
+}
+
+const authMockPages = new WeakSet<Page>()
+
+/** Disable compile-time E2E auto-login so /auth/me and login flows can be exercised. */
+export async function disableE2eAutoAuth(page: Page) {
+  await page.addInitScript(() => {
+    try {
+      window.sessionStorage.setItem('e2e-auth-auto', '0')
+    } catch {
+      // ignore
+    }
+  })
+}
+
+export async function enableE2eAutoAuth(page: Page) {
+  await page.addInitScript(() => {
+    try {
+      window.sessionStorage.removeItem('e2e-auth-auto')
+    } catch {
+      // ignore
+    }
+  })
+}
+
+export type OrbAuthE2eMockOptions = {
+  scenario?: OrbAuthE2eScenario
+  oauth?: { google?: boolean; microsoft?: boolean; apple?: boolean }
+  passkeysSupported?: boolean
+  checkoutUrl?: string
+}
+
+/** Auth-aware ORB mocks for login, register, billing, cookie and passkey E2E. */
+export async function setupOrbAuthE2eMocks(page: Page, options: OrbAuthE2eMockOptions = {}) {
+  const scenario = options.scenario ?? 'unauthenticated'
+  const oauth = options.oauth ?? { google: true, microsoft: true, apple: true }
+  const passkeysSupported = options.passkeysSupported ?? true
+  const checkoutUrl = options.checkoutUrl ?? 'https://checkout.stripe.com/e2e-mock-session'
+
+  if (!authMockPages.has(page)) {
+    authMockPages.add(page)
+    await page.route('**/orb/standalone/analytics/**', (route) => json(route, { success: true }))
+    await page.route('**/orb/standalone/config**', (route) => json(route, MOCK_CONFIG))
+    await page.route('**/orb/standalone/outputs/summary**', (route) => json(route, MOCK_OUTPUTS_SUMMARY))
+    await page.route('**/orb/standalone/voice/status**', (route) => json(route, MOCK_VOICE_STATUS))
+    await page.route('**/orb/standalone/projects**', (route) => json(route, MOCK_PROJECTS))
+    await page.route('**/orb/standalone/safety/status**', (route) =>
+      json(route, { success: true, data: { accepted: true } })
+    )
+  }
+
+  const verdictBody =
+    scenario === 'ready' || scenario === 'billing-active'
+      ? buildVerdict('ready')
+      : scenario === 'inactive' || scenario === 'billing-inactive'
+        ? buildVerdict('inactive')
+        : scenario === 'stale-cookie'
+          ? buildVerdict('unauthenticated', { clear_session: true })
+          : buildVerdict('unauthenticated')
+
+  const accessBody = {
+    success: true,
+    data:
+      scenario === 'inactive' || scenario === 'billing-inactive'
+        ? buildAccess({
+            can_use_orb: false,
+            access_state: 'inactive',
+            trial: { available: true, active: false, days_left: 0, expires_at: null },
+            subscription: { active: false, status: 'inactive', plan_name: null },
+            upgrade: {
+              checkout_available: true,
+              trial_available: true,
+              manage_billing_available: false
+            }
+          })
+        : scenario === 'billing-active'
+          ? buildAccess({
+              upgrade: {
+                checkout_available: true,
+                trial_available: false,
+                manage_billing_available: true
+              }
+            })
+          : buildAccess()
+  }
+
+  await page.route('**/orb/front-door/verdict**', (route) => json(route, verdictBody))
+  await page.route('**/orb/standalone/access**', (route) => json(route, accessBody))
+  await page.route('**/orb/auth/providers**', (route) =>
+    json(route, {
+      success: true,
+      data: {
+        email: true,
+        oauth,
+        passkeys: passkeysSupported,
+        login_path: '/orb'
+      }
+    })
+  )
+  await page.route('**/orb/standalone/passkeys**', (route) =>
+    json(route, { success: true, data: { supported: passkeysSupported, items: [] } })
+  )
+
+  const authed = scenario === 'ready' || scenario === 'billing-active' || scenario === 'inactive' || scenario === 'billing-inactive'
+
+  const fulfillAuthMe = (route: Route) => {
+    if (scenario === 'stale-cookie' || scenario === 'unauthenticated') {
+      return json(route, { detail: 'Not authenticated' }, 401)
+    }
+    if (authed) {
+      return json(route, MOCK_AUTH_ME_AUTHENTICATED)
+    }
+    return json(route, { detail: 'Not authenticated' }, 401)
+  }
+
+  await page.route('**/auth/me**', fulfillAuthMe)
+  await page.route('**/backend/auth/me**', fulfillAuthMe)
+
+  const fulfillLogin = async (route: Route) => {
+    if (route.request().method() !== 'POST') return route.continue()
+    const body = route.request().postDataJSON() as { email?: string; password?: string } | null
+    const accepted =
+      body?.email === E2E_CREDENTIALS.email && body?.password === E2E_CREDENTIALS.password
+    if (!accepted) {
+      return json(
+        route,
+        { ok: false, authenticated: false, message: 'Invalid email or password.' },
+        401
+      )
+    }
+    return json(route, {
+      ok: true,
+      authenticated: true,
+      message: 'Signed in.',
+      user: MOCK_AUTH_ME_AUTHENTICATED.user
+    })
+  }
+
+  await page.route(
+    (url) => /\/auth\/login\/?$/.test(url.pathname) || url.pathname.endsWith('/auth/login'),
+    fulfillLogin
+  )
+
+  await page.route('**/auth/logout**', (route) => json(route, { ok: true }))
+  await page.route('**/backend/auth/logout**', (route) => json(route, { ok: true }))
+
+  await page.route('**/orb/standalone/auth/signup**', async (route) => {
+    if (route.request().method() !== 'POST') return route.continue()
+    return json(route, { success: true, data: { user_id: 9002 } })
+  })
+
+  await page.route('**/orb/subscription/checkout**', async (route) => {
+    if (route.request().method() !== 'POST') return route.continue()
+    return json(route, { checkout_url: checkoutUrl, success: true })
+  })
+
+  await page.route('**/orb/standalone/billing/checkout**', async (route) => {
+    if (route.request().method() !== 'POST') return route.continue()
+    return json(route, { checkout_url: checkoutUrl, success: true })
+  })
+
+  await page.route('**/orb/standalone/trial/start**', async (route) => {
+    if (route.request().method() !== 'POST') return route.continue()
+    return json(route, { success: true, data: { access: buildAccess({ trial: { available: true, active: true, days_left: 7, expires_at: null } }) } })
+  })
+
+  await page.route('**/orb/standalone/billing/portal**', async (route) => {
+    if (route.request().method() !== 'POST') return route.continue()
+    return json(route, { portal_url: 'https://billing.stripe.com/e2e-portal' })
+  })
+
+  await page.route('**/orb/subscription/portal**', async (route) => {
+    if (route.request().method() !== 'POST') return route.continue()
+    return json(route, { portal_url: 'https://billing.stripe.com/e2e-portal' })
+  })
+
+  const fulfillPasskeyOptions = async (route: Route) => {
+    if (route.request().method() !== 'POST') return route.continue()
+    return json(route, {
+      ok: true,
+      options: {
+        challenge: 'AQIDBAUGBwgJCgsMDQ4PEA',
+        rpId: 'localhost',
+        allowCredentials: [],
+        userVerification: 'preferred',
+        timeout: 60000
+      }
+    })
+  }
+
+  const fulfillPasskeyVerify = async (route: Route) => {
+    if (route.request().method() !== 'POST') return route.continue()
+    return json(route, {
+      ok: true,
+      authenticated: true,
+      message: 'Passkey sign-in succeeded.',
+      user: MOCK_AUTH_ME_AUTHENTICATED.user
+    })
+  }
+
+  await page.route('**/auth/passkeys/authenticate/options**', fulfillPasskeyOptions)
+  await page.route('**/backend/auth/passkeys/authenticate/options**', fulfillPasskeyOptions)
+  await page.route('**/auth/passkeys/authenticate/verify**', fulfillPasskeyVerify)
+  await page.route('**/backend/auth/passkeys/authenticate/verify**', fulfillPasskeyVerify)
+}
+
+/** Mock WebAuthn for passkey E2E without real biometrics. */
+export async function mockWebAuthn(page: Page, mode: 'success' | 'cancel' | 'unsupported' = 'success') {
+  await page.addInitScript((authMode) => {
+    if (authMode === 'unsupported') {
+      // @ts-expect-error test shim
+      delete window.PublicKeyCredential
+      return
+    }
+
+    class MockCredential {
+      id = 'e2e-passkey'
+      type = 'public-key'
+      toJSON() {
+        return { id: this.id, type: this.type, response: {} }
+      }
+    }
+
+    class MockPublicKeyCredential extends MockCredential {
+      static isUserVerifyingPlatformAuthenticatorAvailable() {
+        return Promise.resolve(true)
+      }
+    }
+
+    // @ts-expect-error test shim
+    window.PublicKeyCredential = MockPublicKeyCredential
+
+    navigator.credentials.get = async () => {
+      if (authMode === 'cancel') {
+        throw new DOMException('The operation either timed out or was not allowed.', 'NotAllowedError')
+      }
+      return new MockCredential()
+    }
+    navigator.credentials.create = async () => new MockCredential()
+  }, mode)
+}
+
+export async function gotoOrbLogin(page: Page, options?: { returnUrl?: string }) {
+  const query = options?.returnUrl ? `?returnUrl=${encodeURIComponent(options.returnUrl)}` : ''
+  await page.goto(`/orb${query}`, { waitUntil: 'domcontentloaded', timeout: 30_000 })
+  await page.locator('[data-orb-login-page]').waitFor({ state: 'visible', timeout: 20_000 })
+}
+
+export async function assertNoHorizontalOverflow(page: Page) {
+  const audit = await page.evaluate(() => {
+    const tolerance = 2
+    const viewportWidth = window.innerWidth
+    const offenders: string[] = []
+    if (document.documentElement.scrollWidth > viewportWidth + tolerance) {
+      offenders.push(`document scrollWidth=${document.documentElement.scrollWidth}`)
+    }
+    document.querySelectorAll('[data-orb-login-page], .orb-login-card, [data-orb-oauth-buttons]').forEach((el) => {
+      if (!(el instanceof HTMLElement)) return
+      const rect = el.getBoundingClientRect()
+      if (rect.right > viewportWidth + tolerance) {
+        offenders.push(`${el.tagName} right=${Math.round(rect.right)}`)
+      }
+    })
+    return { ok: offenders.length === 0, offenders, scrollWidth: document.documentElement.scrollWidth, viewportWidth }
+  })
+  expect(audit.ok, JSON.stringify(audit)).toBe(true)
+}
+
+export async function assertElementReachable(page: Page, selector: string) {
+  const target = page.locator(selector).first()
+  await expect(target).toBeVisible({ timeout: 10_000 })
+  await target.scrollIntoViewIfNeeded()
+  const metrics = await target.evaluate((node) => {
+    const rect = node.getBoundingClientRect()
+    const root =
+      document.querySelector('[data-orb-login-scrollable]') ??
+      document.querySelector('.orb-login-root') ??
+      document.documentElement
+    const scrollable = root.scrollHeight > root.clientHeight + 4
+    const withinViewport =
+      rect.top >= -2 &&
+      rect.left >= -2 &&
+      rect.bottom <= window.innerHeight + 2 &&
+      rect.right <= window.innerWidth + 2
+    return { scrollable, withinViewport, top: rect.top, bottom: rect.bottom, viewportHeight: window.innerHeight }
+  })
+  expect(
+    metrics.withinViewport || metrics.scrollable,
+    `Element ${selector} not reachable: ${JSON.stringify(metrics)}`
+  ).toBe(true)
+}
+
+export async function assertLoginMobileScroll(page: Page) {
+  await assertNoHorizontalOverflow(page)
+
+  const passkeySignIn = page.locator('[data-orb-passkey-sign-in]')
+  const passkeyUnavailable = page.locator('[data-orb-passkey-unavailable]')
+  if (!(await passkeySignIn.isVisible().catch(() => false)) && !(await passkeyUnavailable.isVisible().catch(() => false))) {
+    const toggle = page.locator('[data-orb-passkey-toggle]')
+    if (await toggle.isVisible().catch(() => false)) {
+      const expanded = await toggle.getAttribute('aria-expanded')
+      if (expanded === 'false') await toggle.click()
+    }
+  }
+
+  await assertElementReachable(page, '[data-orb-passkey-sign-in], [data-orb-passkey-unavailable]')
+  await assertElementReachable(page, '[data-orb-create-account]')
+  await assertElementReachable(page, '[data-orb-login-safe-bottom], [data-testid="orb-login-legal-links"]')
+
+  const scrollAudit = await page.evaluate(() => {
+    const root = document.querySelector('.orb-login-root') as HTMLElement | null
+    const shell = document.querySelector('[data-orb-login-scrollable]') as HTMLElement | null
+    const scrollHost = shell ?? root ?? document.documentElement
+    const canScroll = scrollHost.scrollHeight > scrollHost.clientHeight + 8
+    const email = document.querySelector('[data-testid="orb-login-email"]') as HTMLInputElement | null
+    email?.focus()
+    const focused = document.activeElement === email
+    if (email) email.blur()
+    return {
+      canScroll,
+      scrollHeight: scrollHost.scrollHeight,
+      clientHeight: scrollHost.clientHeight,
+      emailFocusOk: focused
+    }
+  })
+  expect(scrollAudit.emailFocusOk).toBe(true)
 }
