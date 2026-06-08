@@ -12,22 +12,20 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.responses import RedirectResponse
 from db.connection import get_db
 from routers.auth_routes import (
+    _get_session_user_from_request,
     _set_authenticated_session_state,
     _set_csrf_cookie,
     _set_session_cookie,
     establish_browser_session,
     oauth_mfa_pending_for_user,
 )
+from services.orb_account_linking_service import resolve_orb_oauth_user
 from services.orb_oauth_service import (
     OAUTH_HTTP_TIMEOUT_SECONDS,
     build_authorize_url,
-    create_orb_residential_user,
     exchange_code,
     fetch_microsoft_profile,
     fetch_userinfo,
-    find_orb_user_by_email,
-    find_orb_user_by_oauth,
-    is_os_scoped_user,
     link_oauth_account,
     load_provider_config,
     normalise_profile,
@@ -39,6 +37,7 @@ from services.orb_oauth_service import (
 from services.orb_oauth_state_service import OAuthStateValidationError
 from services.orb_oauth_session_handoff_service import (
     consume_oauth_session_handoff,
+    inspect_oauth_session_handoff,
     store_oauth_session_handoff,
 )
 from services.orb_access_service import orb_access_service
@@ -104,18 +103,45 @@ def _resolve_access_state(conn, user_id: int, user: dict | None = None) -> str |
         return None
 
 
+def _billing_redirect_access_states() -> frozenset[str]:
+    return frozenset(
+        {
+            "inactive",
+            "trial_available",
+            "authenticated_no_subscription",
+            "locked",
+            "subscription_past_due",
+            "subscription_cancelled",
+            "subscription_incomplete",
+        }
+    )
+
+
 def _resolve_post_oauth_destination(
     *,
     return_url: str,
     mfa_pending: bool,
     access_state: str | None,
+    can_use_orb: bool = False,
 ) -> str:
     app_url = _orb_oauth_app_url()
     if mfa_pending:
         return f"{app_url}/mfa?next={return_url}"
-    if access_state == "inactive":
+    if can_use_orb:
+        return f"{app_url}{return_url}"
+    if access_state in _billing_redirect_access_states():
         return f"{app_url}/orb/billing"
     return f"{app_url}{return_url}"
+
+
+def _oauth_friendly_login_redirect(message: str) -> str:
+    encoded = __import__("urllib.parse").parse.quote(message[:200])
+    return f"{_orb_oauth_app_url()}/orb?oauth_error={encoded}"
+
+
+def _request_has_valid_session(request: Request, conn) -> tuple[bool, int | None]:
+    user, user_id = _get_session_user_from_request(request, conn, None, raise_on_missing=False)
+    return user is not None and user_id is not None, user_id
 
 
 def _response_has_set_cookie(response: RedirectResponse) -> bool:
@@ -316,11 +342,33 @@ async def orb_oauth_session_complete(
     handoff_consumed = payload is not None
 
     if not payload:
+        has_session, session_user_id = _request_has_valid_session(request, conn)
+        inspection = inspect_oauth_session_handoff(conn, handoff) if handoff_present else None
         conn.rollback()
-        error_target = oauth_error_redirect(
-            _orb_oauth_app_url(),
-            "Sign-in could not be completed. Please try again.",
-        )
+        if has_session:
+            destination = f"{_orb_oauth_app_url()}/orb"
+            _log_oauth_session_complete(
+                handoff_present=handoff_present,
+                handoff_consumed=False,
+                session_created=False,
+                set_cookie_headers_present=False,
+                redirect_target=destination,
+                mfa_required=False,
+                access_state=_resolve_access_state(conn, int(session_user_id or 0)) if session_user_id else None,
+            )
+            return _redirect(destination)
+        if inspection and inspection.get("status") == "consumed":
+            error_target = _oauth_friendly_login_redirect(
+                "This sign-in link has already been used. Please sign in again."
+            )
+        elif inspection and inspection.get("status") == "expired":
+            error_target = _oauth_friendly_login_redirect(
+                "This sign-in link has expired. Please sign in again."
+            )
+        else:
+            error_target = _oauth_friendly_login_redirect(
+                "Sign-in could not be completed. Please try again from the ORB login page."
+            )
         _log_oauth_session_complete(
             handoff_present=handoff_present,
             handoff_consumed=False,
@@ -369,11 +417,13 @@ async def orb_oauth_session_complete(
         )
         return _redirect(error_target)
 
-    access_state = _resolve_access_state(conn, user_id)
+    access_payload = orb_access_service.build_access_payload(user_id, conn=conn)
+    access_state = str(access_payload.get("access_state") or "") or None
     destination = _resolve_post_oauth_destination(
         return_url=return_url,
         mfa_pending=mfa_pending,
         access_state=access_state,
+        can_use_orb=bool(access_payload.get("can_use_orb")),
     )
 
     response = _redirect(destination)
@@ -440,7 +490,9 @@ async def _orb_oauth_callback(
             state_valid=False,
             failure_reason=exc.reason,
         )
-        return _redirect(oauth_error_redirect(_orb_oauth_app_url(), "Security check failed. Please try again."))
+        return _redirect(
+            _oauth_friendly_login_redirect("Sign-in expired or was interrupted. Please start again from the ORB login page.")
+        )
     except ValueError:
         conn.rollback()
         _log_oauth_callback_state(
@@ -450,7 +502,9 @@ async def _orb_oauth_callback(
             state_valid=False,
             failure_reason="unknown",
         )
-        return _redirect(oauth_error_redirect(_orb_oauth_app_url(), "Security check failed. Please try again."))
+        return _redirect(
+            _oauth_friendly_login_redirect("Sign-in expired or was interrupted. Please start again from the ORB login page.")
+        )
 
     user_created = False
     linked_existing_by_email = False
@@ -488,32 +542,29 @@ async def _orb_oauth_callback(
             return _redirect(oauth_error_redirect(_orb_oauth_app_url(), "Email was not provided by the sign-in provider."))
 
         lookup_started = time.perf_counter()
-        user = find_orb_user_by_oauth(conn, provider=key, subject=str(profile["subject"]))
-        if not user:
-            existing = find_orb_user_by_email(conn, email)
-            if existing:
-                if is_os_scoped_user(existing):
-                    return _redirect(
-                        oauth_error_redirect(
-                            _orb_oauth_app_url(),
-                            "This email is linked to IndiCare OS. Use ORB email signup or a dedicated ORB account.",
-                        )
+        try:
+            resolved = resolve_orb_oauth_user(
+                conn,
+                provider=key,
+                subject=str(profile["subject"]),
+                email=email,
+                email_verified=bool(profile.get("email_verified")),
+                first_name=profile.get("first_name"),
+                last_name=profile.get("last_name"),
+            )
+        except ValueError as exc:
+            reason = str(exc)
+            if reason in {"canonical_user_os_scoped", "existing_user_os_scoped"}:
+                return _redirect(
+                    oauth_error_redirect(
+                        _orb_oauth_app_url(),
+                        "This email is linked to IndiCare OS. Use ORB email signup or a dedicated ORB account.",
                     )
-                user = existing
-                linked_existing_by_email = True
-                logger.info(
-                    "ORB OAuth provider linked provider=%s user_id=%s linked_via=verified_email reused_existing_user=true",
-                    key,
-                    int(existing["id"]),
                 )
-            else:
-                user = create_orb_residential_user(
-                    conn,
-                    email=email,
-                    first_name=profile.get("first_name"),
-                    last_name=profile.get("last_name"),
-                )
-                user_created = True
+            raise
+        user = resolved.user
+        user_created = resolved.user_created
+        linked_existing_by_email = resolved.linked_existing_by_email
         lookup_ms = int((time.perf_counter() - lookup_started) * 1000)
 
         oauth_metadata: dict[str, str] = {"provider": key}
@@ -555,11 +606,15 @@ async def _orb_oauth_callback(
         total_ms = int((time.perf_counter() - callback_started) * 1000)
         logger.info(
             "ORB OAuth user resolved provider=%s user_id=%s user_created=%s "
-            "linked_existing_by_email=%s user_lookup_ms=%s total_callback_ms=%s",
+            "linked_existing_by_email=%s rehomed_provider_from_duplicate_user=%s "
+            "canonical_user_id=%s duplicate_user_id=%s user_lookup_ms=%s total_callback_ms=%s",
             key,
             int(user["id"]),
             str(user_created).lower(),
             str(linked_existing_by_email).lower(),
+            str(resolved.rehomed_provider_from_duplicate_user).lower(),
+            resolved.canonical_user_id or "none",
+            resolved.duplicate_user_id or "none",
             lookup_ms,
             total_ms,
         )

@@ -45,6 +45,15 @@ describe('ORB auth UX polish', () => {
     assert.match(upgrade, /data-orb-billing-refresh/)
     assert.match(upgrade, /data-orb-upgrade-duplicate-provider-guidance/)
     assert.match(upgrade, /does not currently have an active ORB Residential subscription/)
+    assert.match(upgrade, /data-orb-upgrade-signed-in-provider/)
+    assert.match(upgrade, /data-orb-upgrade-access-state/)
+  })
+
+  it('login screen exposes auth build variant marker for deploy verification', () => {
+    const login = read('components/orb-residential/orb-login-screen.tsx')
+    const visualBuild = read('lib/orb/orb-visual-build.ts')
+    assert.match(visualBuild, /ORB_AUTH_BUILD_VARIANT = 'orb-auth-ux-polish'/)
+    assert.match(login, /data-orb-auth-build-variant=\{ORB_AUTH_BUILD_VARIANT\}/)
   })
 
   it('route loop guard covers billing redirects', () => {

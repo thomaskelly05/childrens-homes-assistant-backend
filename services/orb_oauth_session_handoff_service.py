@@ -112,6 +112,50 @@ def store_oauth_session_handoff(
     return handoff_id
 
 
+def inspect_oauth_session_handoff(conn, handoff_id: str) -> dict[str, Any] | None:
+    """Return handoff metadata without consuming it."""
+    ensure_handoff_table(conn)
+    token = str(handoff_id or "").strip()
+    if not token:
+        return None
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT handoff_id, user_id, email, return_url, mfa_pending, provider,
+                   expires_at, consumed_at
+            FROM orb_oauth_session_handoffs
+            WHERE handoff_id = %s
+            LIMIT 1
+            """,
+            (token,),
+        )
+        row = cur.fetchone()
+        if not row:
+            return None
+        payload = dict(row) if isinstance(row, dict) else {
+            "handoff_id": row[0],
+            "user_id": row[1],
+            "email": row[2],
+            "return_url": row[3],
+            "mfa_pending": row[4],
+            "provider": row[5],
+            "expires_at": row[6],
+            "consumed_at": row[7],
+        }
+    expires_at = payload.get("expires_at")
+    if expires_at is not None and isinstance(expires_at, datetime):
+        if expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=timezone.utc)
+        if expires_at <= datetime.now(timezone.utc):
+            payload["status"] = "expired"
+            return payload
+    if payload.get("consumed_at") is not None:
+        payload["status"] = "consumed"
+        return payload
+    payload["status"] = "valid"
+    return payload
+
+
 def consume_oauth_session_handoff(conn, handoff_id: str) -> dict[str, Any] | None:
     ensure_handoff_table(conn)
     token = str(handoff_id or "").strip()

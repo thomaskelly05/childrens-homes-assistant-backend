@@ -448,6 +448,60 @@ async def orb_front_door_verdict(
     )
 
 
+def _auth_launch_health_payload(*, email: str | None = None, conn=None) -> dict[str, Any]:
+    oauth = _oauth_providers()
+    stripe_warnings = stripe_config_warnings()
+    oauth_warnings = oauth_config_warnings()
+    payload: dict[str, Any] = {
+        "auth_ui_build_variant": "orb-auth-ux-polish",
+        "providers": {
+            "google": bool(oauth.get("google")),
+            "microsoft": bool(oauth.get("microsoft")),
+            "apple": bool(oauth.get("apple")),
+        },
+        "legal": {
+            "privacy": "/privacy",
+            "terms": "/terms",
+            "cookies": "/cookies",
+            "support": "/support",
+        },
+        "oauth_callbacks": {
+            "google": "/orb/standalone/auth/oauth/google/callback",
+            "microsoft": "/orb/standalone/auth/oauth/microsoft/callback",
+        },
+        "oauth_diagnostics": oauth_providers_diagnostics(),
+        "config_warnings": {
+            "stripe": stripe_warnings,
+            "oauth": oauth_warnings,
+            "passkeys": passkey_config_warnings(),
+        },
+        "stripe_config_warnings_empty": len(stripe_warnings) == 0,
+        "oauth_config_warnings_empty": all(len(items) == 0 for items in oauth_warnings.values()),
+    }
+    if email and conn is not None:
+        from services.orb_account_linking_service import diagnose_duplicate_accounts, normalise_orb_email
+
+        normalised = normalise_orb_email(email)
+        if normalised:
+            diagnosis = diagnose_duplicate_accounts(conn, normalised)
+            payload["duplicate_account_dry_run"] = {
+                "normalised_email": diagnosis["normalised_email"],
+                "user_count": diagnosis["user_count"],
+                "canonical_user_id": diagnosis["canonical_user_id"],
+                "duplicate_user_ids": diagnosis["duplicate_user_ids"],
+            }
+    return payload
+
+
+@router.get("/auth/launch-health")
+async def orb_auth_launch_health(
+    email: str | None = Query(default=None, max_length=320),
+    conn=Depends(get_db),
+):
+    """Config-only ORB auth launch health — no private user data unless email dry-run is supplied."""
+    return _success(_auth_launch_health_payload(email=email, conn=conn))
+
+
 @router.get("/auth/providers")
 async def list_auth_providers(current_user=Depends(get_optional_orb_residential_user)):
     """OAuth availability for the unified sign-in screen."""
@@ -462,6 +516,7 @@ async def list_auth_providers(current_user=Depends(get_optional_orb_residential_
             "oauth_callback_template": "/orb/standalone/auth/oauth/{provider}/callback",
             "login_path": "/orb",
             "front_door_url": f"{FRONTEND_APP_URL.rstrip('/')}/orb",
+            "auth_ui_build_variant": "orb-auth-ux-polish",
             "legal": {
                 "privacy": "/privacy",
                 "terms": "/terms",

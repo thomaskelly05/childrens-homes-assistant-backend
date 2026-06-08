@@ -8,7 +8,7 @@ Microsoft Entra (Azure AD) OAuth is the preferred second social login for ORB Re
 - ORB safety acceptance and access verdict flow unchanged
 - no IndiCare OS access granted through ORB Residential
 
-See also [orb-auth-ux-polish.md](./orb-auth-ux-polish.md) for login UX, loading states and verified-email provider linking.
+See also [orb-auth-ux-polish.md](./orb-auth-ux-polish.md) for login UX, loading states and verified-email provider linking, and [orb-account-linking-repair.md](./orb-account-linking-repair.md) when Microsoft login lands on the billing gate for a user who already subscribed with Google.
 
 ## Performance note
 
@@ -81,6 +81,8 @@ Entra shows both a **Secret ID** (GUID) and a **Value** (the actual secret). Onl
 | Manual shell test with `shell-test-state` | Only validates redirect wiring — production always uses server-created state |
 | Missing email after login | Some tenants omit `mail`; backend falls back to `userPrincipalName` |
 | Microsoft button hidden | `MICROSOFT_AUTH_ENABLED` not `true`, or a required env var is missing — check `GET /orb/auth/providers` diagnostics |
+| Paid user lands on billing gate after Microsoft login (`access_state=trial_available`, `linked_existing_by_email=false`) | Duplicate ORB user created before verified-email repair — run `scripts/orb_diagnose_duplicate_accounts.py` and `scripts/orb_repair_duplicate_accounts.py` |
+| `oauth_error=Security check failed` after successful sign-in | Safari/back-button replay of consumed handoff — sign in again; consumed handoff with an existing session redirects to `/orb` |
 
 ## Security notes
 

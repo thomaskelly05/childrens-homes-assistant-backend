@@ -58,10 +58,22 @@ Copy explains the signed-in email, subscription state, and duplicate-provider gu
 When Google or Microsoft OAuth completes:
 
 1. Provider email is normalised.
-2. If an existing ORB Residential user has the same verified email, the new provider is linked to that user.
-3. Subscription/trial state is preserved on the existing user record.
-4. IndiCare OS-scoped accounts are still rejected.
-5. Audit logs record `linked_via=verified_email` without tokens or secrets.
+2. The canonical subscribed ORB Residential user is identified for that email (active subscription wins).
+3. If a provider account already exists on a duplicate unpaid user, it is re-homed to the canonical user.
+4. If no provider account exists, the provider is linked to the canonical user when verified email matches.
+5. Subscription/trial state is preserved on the canonical user record.
+6. IndiCare OS-scoped accounts are still rejected.
+7. Audit logs record `linked_via=verified_email`, `rehomed_provider_from_duplicate_user`, `canonical_user_id`, and `duplicate_user_id` without tokens or secrets.
+
+See [orb-account-linking-repair.md](./orb-account-linking-repair.md) for diagnostic and repair commands.
+
+## Deploy verification marker
+
+The polished login UI exposes `data-orb-auth-build-variant="orb-auth-ux-polish"` and backend `/orb/auth/providers` returns `auth_ui_build_variant: orb-auth-ux-polish`. Use `GET /orb/auth/launch-health` for config-only launch diagnostics.
+
+## Consumed OAuth handoff
+
+Replaying a consumed session-complete URL shows a friendly retry message. If the browser already has a valid ORB session, the user is redirected to `/orb` instead of a security error.
 
 ## Route loop safety
 
