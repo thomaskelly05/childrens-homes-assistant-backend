@@ -30,6 +30,10 @@ from assistant.response_contracts import (
     get_required_sections,
     normalise_contract_mode,
 )
+from services.orb_recording_contract_service import (
+    build_incident_report_prompt_block,
+    is_incident_report_draft_request,
+)
 from services.orb_standalone_brain_service import orb_standalone_brain_service
 from services.recording_intelligence_service import recording_intelligence_service
 from services.safeguarding_intelligence_service import safeguarding_intelligence_service
@@ -194,6 +198,8 @@ class OrbResidentialIntelligenceService:
             term in mode_key for term in ("record", "recording", "write up", "daily note")
         ):
             lines.extend(["", recording_intelligence_service.build_prompt_block(message)])
+        if is_incident_report_draft_request(message):
+            lines.extend(["", build_incident_report_prompt_block(message)])
 
         return "\n".join(lines).strip()
 

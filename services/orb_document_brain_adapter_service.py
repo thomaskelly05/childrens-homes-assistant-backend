@@ -18,6 +18,7 @@ from services.indicare_intelligence_route_finalize_service import (
     intelligence_context_summary,
 )
 from services.orb_brain_metadata_service import build_brain_metadata
+from services.orb_recording_contract_service import build_recording_contract_prompt_block
 
 OrbDocumentFeature = Literal["dictate", "write", "dictate_analyze", "dictate_edit"]
 
@@ -36,10 +37,12 @@ def build_document_brain_context(
         feature="dictate" if feature.startswith("dictate") else "write",
         lens=note_type,
     )
+    recording_contract_block = build_recording_contract_prompt_block(text, note_type=note_type)
     return {
         "intelligence_packet": intel_packet,
         "intelligence_summary": intelligence_context_summary(intel_packet),
         "brain_metadata": brain_metadata,
+        "recording_contract_block": recording_contract_block,
         "adapter": "orb_document_brain_adapter",
         "conversational_brain": "askOrbBrain via /orb/standalone/conversation/stream",
         "document_brain": "/orb/dictate/*",

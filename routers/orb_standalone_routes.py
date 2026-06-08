@@ -41,6 +41,7 @@ from services.orb_stream_status_service import (
     stream_status_sequence,
 )
 from services.orb_brain_route_service import orb_brain_route_service
+from services.orb_recording_contract_service import build_incident_report_prompt_block, is_incident_report_draft_request
 from services.orb_standalone_brain_service import orb_standalone_brain_service
 from services.orb_grounded_answer_style_service import orb_grounded_answer_style_service
 from services.orb_official_source_anchor_service import orb_official_source_anchor_service
@@ -330,7 +331,8 @@ MODE_BEHAVIOUR = {
     ),
     "Record This Properly": (
         "Mode behaviour — Record This Properly: help create factual, child-centred, non-punitive wording; "
-        "avoid terms like bad behaviour, attention seeking or manipulative; suggest what evidence to include."
+        "avoid terms like bad behaviour, attention seeking or manipulative; suggest what evidence to include; "
+        "never invent facts, quotes, actions or outcomes; use placeholders and missing-information checklists."
     ),
     "Ofsted Lens": (
         "Mode behaviour — Ofsted Lens: explain what evidence may be expected; do not predict inspection grades."
@@ -509,6 +511,9 @@ def _build_framed_message(
         return "\n\n".join(part for part in parts if part)
 
     brain_block = orb_standalone_brain_service.build_prompt_block(user_message, mode=resolved_mode)
+    incident_contract_block = ""
+    if is_incident_report_draft_request(user_message):
+        incident_contract_block = build_incident_report_prompt_block(user_message)
     if shared_runtime_block is None:
         shared_runtime_block = shared_institutional_cognition_runtime.prompt_addendum(
             surface="standalone_orb",
@@ -529,6 +534,7 @@ def _build_framed_message(
             grounding_context or "",
             STANDALONE_ORB_TONE,
             brain_block,
+            incident_contract_block,
             mode_hint,
             detail_hint,
             f"Mode: {resolved_mode}",
@@ -546,6 +552,7 @@ def _build_framed_message(
         grounding_context or "",
         STANDALONE_ORB_TONE,
         brain_block,
+        incident_contract_block,
         mode_hint,
         detail_hint,
         f"Mode: {resolved_mode}",

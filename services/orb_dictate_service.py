@@ -62,6 +62,10 @@ from services.orb_document_brain_adapter_service import orb_document_brain_adapt
 from services.indicare_intelligence_core_service import indicare_intelligence_core_service
 from services.indicare_intelligence_route_finalize_service import intelligence_context_summary
 from services.orb_residential_quality_service import orb_residential_quality_service
+from services.orb_recording_contract_service import (
+    build_recording_contract_prompt_block,
+    build_safe_incident_report_scaffold,
+)
 from services.recording_intelligence_service import recording_intelligence_service
 
 logger = logging.getLogger("indicare.orb_dictate")
@@ -162,15 +166,18 @@ def _fallback_generate(request: OrbDictateGenerateRequest) -> OrbDictateGenerate
     note_type = _resolve_note_type(request)
     template = get_dictate_template(note_type)  # type: ignore[arg-type]
     transcript = _truncate(request.input_text)
-    section_lines = []
-    for section in template.sections:
-        section_lines.append(f"## {section.title}\n\n[Add detail from your dictation]\n")
-    professional = (
-        f"# {template.export_label}\n\n"
-        f"*Draft generated from your input — please review and edit before use.*\n\n"
-        f"## Source material\n\n{transcript}\n\n"
-        + "\n".join(section_lines)
-    )
+    if note_type == "incident_record":
+        professional = build_safe_incident_report_scaffold(transcript)
+    else:
+        section_lines = []
+        for section in template.sections:
+            section_lines.append(f"## {section.title}\n\n[Add detail from your dictation]\n")
+        professional = (
+            f"# {template.export_label}\n\n"
+            f"*Draft generated from your input — please review and edit before use.*\n\n"
+            f"## Source material\n\n{transcript}\n\n"
+            + "\n".join(section_lines)
+        )
     summary = f"Draft {template.title.lower()} prepared for review. Check child voice, safeguarding and manager oversight before use."
     actions: list[str] = []
     if request.include_actions:
@@ -222,10 +229,15 @@ def _build_generate_prompt(request: OrbDictateGenerateRequest, note_type: str) -
         transcript_body,
         mode=request.mode or note_type,
     )
+    recording_contract_block = build_recording_contract_prompt_block(
+        transcript_body,
+        note_type=note_type,
+    )
     intelligence_block = "\n\n".join(
         part
         for part in (
             intel_packet.get("prompt_block"),
+            recording_contract_block,
             recording_intelligence_service.build_prompt_block(transcript_body),
         )
         if part
@@ -265,7 +277,8 @@ def _build_generate_prompt(request: OrbDictateGenerateRequest, note_type: str) -
         "Turn rough spoken notes into professional, factual recording wording. "
         "Return JSON only with keys: title, professional_note, summary, actions (array of strings), "
         "ofsted_lens (string or null). "
-        "Never invent facts. Use [not stated] where detail is missing. "
+        "Never invent facts. Use [not stated] or section placeholders where detail is missing. "
+        "Do not fabricate quotes, actions, outcomes, emotional states or follow-up plans. "
         "Use non-judgemental, child-centred language. "
         "Do not claim submission to any care system. "
         "When speakers are identified, attribute key points by name/role where useful — do not over-attribute."

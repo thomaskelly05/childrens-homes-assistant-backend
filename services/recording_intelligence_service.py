@@ -20,6 +20,8 @@ class RecordingIntelligenceResult:
         default_factory=lambda: [
             "Records must be factual, attributable and child-centred.",
             "Do not include opinion, diagnosis or threshold language in formal records.",
+            "Never invent facts, quotes, actions, outcomes or follow-up plans.",
+            "Use placeholders and missing-information checklists where detail is absent.",
         ]
     )
 
@@ -66,9 +68,14 @@ class RecordingIntelligenceService:
         )
 
     def build_prompt_block(self, notes: str) -> str:
+        from services.orb_recording_contract_service import build_recording_contract_prompt_block
+
         result = self.analyse(notes)
+        contract_block = build_recording_contract_prompt_block(notes)
         lines = [
             "RECORD THIS PROPERLY FRAME (supplied notes only):",
+            "",
+            contract_block,
             "",
             "Factual rewrite prompts:",
             *[f"- {item}" for item in result.factual_rewrite_prompts],
@@ -81,6 +88,9 @@ class RecordingIntelligenceService:
                 [f"- {item}" for item in result.evidence_gaps]
                 or ["- Review times, witnesses and child's voice"]
             ),
+            "",
+            "Guardrails:",
+            *[f"- {item}" for item in result.guardrails],
         ]
         return "\n".join(lines)
 

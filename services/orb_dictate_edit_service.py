@@ -23,6 +23,7 @@ from services.ai_external_call_governance import (
 from services.indicare_intelligence_core_service import indicare_intelligence_core_service
 from services.orb_dictate_service import STANDALONE_BOUNDARY, _dictate_brain_metadata, _finalize_dictate_text
 from services.orb_document_brain_adapter_service import orb_document_brain_adapter_service
+from services.orb_recording_contract_service import build_recording_contract_prompt_block
 from services.recording_intelligence_service import recording_intelligence_service
 
 logger = logging.getLogger("indicare.orb_dictate_edit")
@@ -249,6 +250,10 @@ def _build_edit_prompt(request: OrbDictateEditRequest, mode: str) -> tuple[str, 
     mode_instruction = MODE_INSTRUCTIONS.get(mode, request.instruction or "Improve the document professionally.")
     intel = recording_intelligence_service.analyse(request.document_text)
     intel_block = recording_intelligence_service.build_prompt_block(request.document_text)
+    contract_block = build_recording_contract_prompt_block(
+        request.document_text,
+        note_type=request.note_type,
+    )
     doc_ctx = orb_document_brain_adapter_service.build_document_brain_context(
         request.document_text,
         mode=request.note_type,
@@ -292,6 +297,7 @@ def _build_edit_prompt(request: OrbDictateEditRequest, mode: str) -> tuple[str, 
         f"Note type: {request.note_type}\n"
         f"Instruction: {request.instruction or mode_instruction}\n\n"
         f"Mode guidance:\n{mode_instruction}\n\n"
+        f"{contract_block}\n\n"
         f"{intel_block}\n\n"
         f"Evidence gaps to consider (do not invent answers):\n"
         + "\n".join(f"- {g}" for g in intel.evidence_gaps[:6])

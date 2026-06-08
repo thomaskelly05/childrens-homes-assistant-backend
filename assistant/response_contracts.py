@@ -161,6 +161,9 @@ RESPONSE_CONTRACTS: dict[str, dict[str, Any]] = {
             "Do not invent triggers, intent, motives, or outcomes.",
             "Separate what happened before, during, and after.",
             "Include what is unknown.",
+            "Never invent quotes, staff actions, emotional states, injuries, damage or follow-up plans.",
+            "Treat adult shorthand (e.g. 'kicking off') as wording to clarify into observable behaviour.",
+            "Use placeholders and a missing-information checklist where detail is absent.",
         ],
         "citation_rules": [
             "Cite incident or record evidence where supplied.",
