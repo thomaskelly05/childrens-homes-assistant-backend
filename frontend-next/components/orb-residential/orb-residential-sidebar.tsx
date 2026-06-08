@@ -21,11 +21,11 @@ import {
   Search,
   Settings,
   Sparkles,
-  User,
   X
 } from 'lucide-react'
 
 import { GlassOrbMark } from '@/components/orb-residential/ui/glass-orb-mark'
+import { OrbUserAvatar } from '@/components/orb-residential/orb-user-avatar'
 import { OrbProjectMemoryModal } from '@/components/orb-residential/orb-project-memory-modal'
 import { ORB_RESIDENTIAL_TAGLINE } from '@/lib/orb/orb-residential-copy'
 import type { StandaloneOrbMode } from '@/lib/orb/standalone-client'
@@ -295,6 +295,10 @@ export function OrbResidentialSidebar({
   onToggleCollapse,
   adultProfile,
   savedOutputsCount,
+  userName,
+  userEmail,
+  avatarUrl,
+  subscriptionStatusLabel,
   onClose
 }: {
   workspace: StandaloneWorkspace
@@ -318,6 +322,10 @@ export function OrbResidentialSidebar({
   onToggleCollapse?: () => void
   adultProfile?: AdultProfile | null
   savedOutputsCount?: number
+  userName?: string | null
+  userEmail?: string | null
+  avatarUrl?: string | null
+  subscriptionStatusLabel?: string | null
   onClose?: () => void
 }) {
   const [projectsCollapsed, setProjectsCollapsed] = useState(() => readOrbSidebarSectionCollapsed('projects'))
@@ -327,6 +335,9 @@ export function OrbResidentialSidebar({
   const [newProjectName, setNewProjectName] = useState('')
   const [memoryModalProject, setMemoryModalProject] = useState<StandaloneProject | null>(null)
   const isMobile = useOrbMobileViewport()
+  const accountDisplayName = userName?.trim() || adultProfile?.name?.trim() || 'Your account'
+  const accountEmail = userEmail?.trim() || null
+  const accountStatus = subscriptionStatusLabel?.trim() || null
 
   /** Desktop first visit — collapse Projects/Recents for a calmer menu (mobile defaults unchanged). */
   useEffect(() => {
@@ -513,7 +524,13 @@ export function OrbResidentialSidebar({
             onClick={(e) => onOpenProfile?.(e.currentTarget)}
             dataOrb="orb-sidebar-profile"
           >
-            <User className="h-4 w-4 shrink-0" />
+            <OrbUserAvatar
+              name={accountDisplayName}
+              avatarUrl={avatarUrl}
+              size="sm"
+              className="!h-8 !w-8 !rounded-full"
+              testId="orb-sidebar-account-avatar"
+            />
           </SidebarIconButton>
         </div>
       </div>
@@ -877,12 +894,33 @@ export function OrbResidentialSidebar({
               <button
                 type="button"
                 onClick={(e) => onOpenProfile?.(e.currentTarget)}
-                className="orb-sidebar-nav-item w-full"
+                className="orb-sidebar-nav-item w-full items-start gap-2.5 py-2"
                 data-orb-sidebar-profile
                 aria-label="Open account menu"
               >
-                <User className="h-4 w-4" aria-hidden />
-                <span className="truncate">{adultProfile?.name?.trim() || 'Profile'}</span>
+                <OrbUserAvatar
+                  name={accountDisplayName}
+                  avatarUrl={avatarUrl}
+                  size="sm"
+                  className="!rounded-full"
+                  testId="orb-sidebar-account-avatar"
+                />
+                <span className="min-w-0 flex-1 text-left">
+                  <span className="block truncate text-sm font-medium text-[var(--orb-foreground)]">
+                    {accountDisplayName}
+                  </span>
+                  {accountEmail ? (
+                    <span className="block truncate text-[11px] text-[var(--orb-muted)]">{accountEmail}</span>
+                  ) : null}
+                  {accountStatus ? (
+                    <span
+                      className="mt-0.5 block text-[10px] font-medium capitalize text-emerald-300/90"
+                      data-orb-sidebar-account-status
+                    >
+                      {accountStatus}
+                    </span>
+                  ) : null}
+                </span>
               </button>
               <button
                 type="button"
@@ -921,12 +959,34 @@ export function OrbResidentialSidebar({
             <button
               type="button"
               onClick={(e) => onOpenProfile?.(e.currentTarget)}
-              className="orb-sidebar-nav-item w-full"
+              className="orb-sidebar-nav-item w-full items-start gap-2.5 py-2"
               data-orb-sidebar-profile
               aria-label="Open account menu"
+              data-orb-sidebar-account-trigger
             >
-              <User className="h-4 w-4" aria-hidden />
-              <span className="truncate">{adultProfile?.name?.trim() || 'Profile'}</span>
+              <OrbUserAvatar
+                name={accountDisplayName}
+                avatarUrl={avatarUrl}
+                size="sm"
+                className="!rounded-full"
+                testId="orb-sidebar-account-avatar"
+              />
+              <span className="min-w-0 flex-1 text-left">
+                <span className="block truncate text-sm font-medium text-[var(--orb-foreground)]">
+                  {accountDisplayName}
+                </span>
+                {accountEmail ? (
+                  <span className="block truncate text-[11px] text-[var(--orb-muted)]">{accountEmail}</span>
+                ) : null}
+                {accountStatus ? (
+                  <span
+                    className="mt-0.5 block text-[10px] font-medium capitalize text-emerald-300/90"
+                    data-orb-sidebar-account-status
+                  >
+                    {accountStatus}
+                  </span>
+                ) : null}
+              </span>
             </button>
             <button
               type="button"

@@ -498,23 +498,29 @@ html[data-orb-residential='1'] [data-orb-account-menu] {
 }
 
 html[data-orb-residential='1'] [data-orb-settings-drawer] {
-  max-height: min(88dvh, 40rem);
+  max-height: min(720px, calc(100vh - 48px));
 }
 
 html[data-orb-residential='1'] [data-orb-settings-drawer] .orb-premium-settings-card {
   padding: 0.75rem;
 }
 
-html[data-orb-residential='1'] [data-orb-billing-modal] {
-  display: flex;
-  max-height: min(85dvh, 36rem);
-  flex-direction: column;
-  overflow: hidden;
-}
-
-html[data-orb-residential='1'] [data-orb-billing-modal] > :not([data-orb-billing-sticky-footer]) {
+html[data-orb-residential='1'] [data-orb-app-panel-name='billing'] .orb-panel-body {
   overflow-y: auto;
   overscroll-behavior: contain;
+}
+
+html[data-orb-residential='1'] [data-orb-billing-modal] {
+  display: flex;
+  flex-direction: column;
+}
+
+html[data-orb-residential='1'] [data-orb-billing-modal] [data-orb-billing-cta-bar] {
+  position: static;
+}
+
+html[data-orb-residential='1'] [data-orb-sidebar-account-card] [data-orb-sidebar-profile] {
+  align-items: flex-start;
 }
 
 html[data-orb-residential='1'] [data-orb-documents-content-scroll] {

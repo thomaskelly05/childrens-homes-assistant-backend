@@ -37,17 +37,49 @@ When trial has ended and there is no active subscription:
 
 - Show **Trial ended** and **Upgrade · £9.99/month**
 
-## Billing layout
+Paid subscribers must never see both **Active** and a trial chip at the same time.
 
-Billing modal and Settings → Account & Billing use a calmer, card-based layout:
+## Desktop layout standard
 
-1. Top plan card — status, price, boundary note, primary actions
-2. Subscription — plan, status, renewal period, Stripe note
-3. Usage — requests this period
-4. Trust & data — ORB / IndiCare OS boundary
-5. Provider team plans — **Coming soon** / **Speak to us**
+Billing modal and Settings → Account & Billing target a compact desktop viewport:
 
-Spending cap and buy-more packs are marked **coming soon** until backed by live product flows.
+- Modal max height: `min(720px, calc(100vh - 48px))`
+- Internal modal body scrolls when needed; header stays visible
+- No overlapping action buttons on plan cards
+- Two-column plan card on desktop: identity left, price and actions right
+- Compact card padding and reduced vertical gaps
+
+### Billing modal sections
+
+1. **Account & plan** — avatar, name, email, plan, status, price, Manage billing, Refresh status
+2. **Subscription** — plan, status, billing amount, managed by Stripe
+3. **Usage** — requests this period; spending cap / buy-more marked coming soon
+4. **Trust & data** — ORB / IndiCare OS boundary
+5. **Provider team plans** — **Coming soon** / **Speak to us**
+
+### Settings → Account & Billing
+
+- Profile row with avatar, name, email and role/preferences shortcut
+- Two-column billing summary where space allows
+- Manage billing and Refresh billing status actions
+- No duplicate footer copy when the settings drawer footer already states the boundary
+
+## Sidebar avatar behaviour
+
+The left sidebar account card shows:
+
+- Circular provider avatar when `avatar_url` is available
+- Initials fallback when missing or when the image fails to load
+- Name, email and subscription headline (e.g. **Active**)
+
+The same `OrbUserAvatar` component is used in:
+
+- Left sidebar account area
+- Account menu header
+- Settings → Account & Billing profile row
+- Billing modal account & plan card
+
+Avatar data comes from the shared account state (`auth.user.avatar_url` via `useOrbAccountState`), not a separate stale sidebar payload.
 
 ## IndiCare OS boundary
 
@@ -77,6 +109,10 @@ If `avatar_url` is missing or the image fails to load:
 
 - Show initials in a soft neutral circle
 - Do not render broken image placeholders
+
+## Plan labels
+
+Raw plan IDs such as `orb_residential_individual` are mapped to friendly labels (e.g. **ORB Residential — Individual**) in normal UI via `formatOrbPlanLabel`. Raw IDs remain in diagnostics only.
 
 ## Tests
 

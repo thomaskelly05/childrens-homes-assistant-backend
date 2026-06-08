@@ -175,6 +175,7 @@ import {
 } from '@/lib/orb/standalone-accessibility'
 import { useAuth } from '@/contexts/auth-context'
 import { useOrbAccountState } from '@/contexts/orb-account-context'
+import { getOrbBillingDisplayStatus } from '@/lib/orb/orb-billing-display'
 import { shouldAllowOrbProductFetch } from '@/lib/orb/orb-product-bootstrap-guard'
 import { normaliseRole } from '@/lib/auth/permissions'
 import { isOrbDeveloperMode } from '@/lib/orb/orb-developer-mode'
@@ -579,6 +580,10 @@ function orbErrorCallToAction(message: string, className = 'mt-3') {
 export function OrbCareCompanion({ residentialSurface = false }: { residentialSurface?: boolean } = {}) {
   const { status, csrfReady, refreshSession, logout } = useAuth()
   const account = useOrbAccountState()
+  const subscriptionStatusLabel = useMemo(
+    () => (account.isSignedIn ? getOrbBillingDisplayStatus(account.access).headline : null),
+    [account.access, account.isSignedIn]
+  )
   const sessionGate = useOrbSessionGate()
   const orbSessionReady = account.isSignedIn && csrfReady && !account.isLoading
   const mounted = useMounted()
@@ -3400,6 +3405,10 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
               activeMode={mode}
               adultProfile={adultProfile}
               savedOutputsCount={savedOutputsCount}
+              userName={account.userName}
+              userEmail={account.userEmail}
+              avatarUrl={account.avatarUrl}
+              subscriptionStatusLabel={subscriptionStatusLabel}
               onClose={() => setSidebarOpen(false)}
             />
           ) : (

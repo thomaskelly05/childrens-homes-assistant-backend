@@ -536,19 +536,14 @@ export function OrbStandaloneSettingsPanel({
               title="Account & Billing"
               description="Plan, subscription, usage and billing management."
             >
-              <RowButton
-                icon={<User className="h-4 w-4" />}
-                label="Manage profile"
-                hint="Name, email, role and account preferences"
-                onClick={() => {
-                  onOpenProfile?.()
-                  onClose()
-                }}
-              />
               <OrbBillingSettingsSection
                 userName={userName}
                 userEmail={userEmail}
                 avatarUrl={avatarUrl}
+                onOpenProfile={() => {
+                  onOpenProfile?.()
+                  onClose()
+                }}
               />
             </SettingsBlock>
           ) : null}
