@@ -12,6 +12,7 @@ from services.orb_therapeutic_language_contract_service import (
     build_residential_scenario_prompt_block,
     build_therapeutic_language_contract_block,
     is_residential_incident_scenario,
+    is_short_residential_scenario,
 )
 from services.orb_scenario_playbook_service import orb_scenario_playbook_service
 
@@ -375,14 +376,24 @@ class OrbStandaloneBrainService:
                 "Use placeholders and a missing-information checklist where detail is absent.",
             ])
         if is_incident_report_draft_request(text) or is_residential_incident_scenario(text):
-            contract.extend([
-                "This is a residential recording/incident scenario — provide structure with placeholders only.",
-                "Use only what the adult provided; treat shorthand such as 'kicked off' or 'kicking off' as wording to clarify, not as a factual behaviour.",
-                "Do not assume presentation, staff actions, outcomes, manager contact or follow-up plans.",
-                "Do not use weak generic phrases such as 'challenging moment' or 'being disruptive'.",
-                "Use residential headings: Immediate safety and regulation; What is known; What needs clarifying; Recording wording scaffold; Child voice; Adult response; Safeguarding and risk lens; Follow-up and manager oversight.",
-                "Include immediate safety, draft sections, missing-information checklist and follow-up prompts.",
-            ])
+            if is_short_residential_scenario(text):
+                contract.extend([
+                    "This is a SHORT residential behaviour scenario — respond concisely like a skilled residential manager helping record safely.",
+                    "Format: safety (one sentence); shorthand warning; What is known (2–4 bullets); What to clarify (checklist); Recording wording scaffold (placeholders); brief follow-up if relevant.",
+                    "Do not produce a long essay, generic advice headings, or repeated missing-info lists.",
+                    "Use only what the adult provided; treat shorthand as wording to clarify, not final record language.",
+                    "Do not state emotional dysregulation as fact — use appeared / was described as / may have / if observed.",
+                    "Avoid: 'It is essential…', 'challenging moment', 'therapeutic interventions', 'subsequent escalation', 'safeguarding practices'.",
+                ])
+            else:
+                contract.extend([
+                    "This is a residential recording/incident scenario — provide structure with placeholders only.",
+                    "Use only what the adult provided; treat shorthand such as 'kicked off' or 'kicking off' as wording to clarify, not as a factual behaviour.",
+                    "Do not assume presentation, staff actions, outcomes, manager contact or follow-up plans.",
+                    "Do not use weak generic phrases such as 'challenging moment' or 'being disruptive'.",
+                    "Use headings: What is known; What to clarify; Recording wording scaffold; Follow-up.",
+                    "Include immediate safety, draft sections, missing-information checklist and follow-up prompts.",
+                ])
             contract.append(build_therapeutic_language_contract_block(include_headings=False))
         if "therapeutic_brain" in brains or "therapeutic_language_brain" in brains:
             contract.extend([

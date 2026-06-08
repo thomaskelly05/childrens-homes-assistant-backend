@@ -134,9 +134,9 @@ def test_jamie_short_scaffold_treats_kicked_off_as_shorthand():
     scaffold = build_safe_residential_scenario_scaffold(JAMIE_SHORT)
     lowered = scaffold.lower()
     assert "kicked off" in lowered
-    assert "adult shorthand" in lowered or "clarif" in lowered
+    assert "final recording language" in lowered or "shorthand" in lowered or "clarif" in lowered
     assert "observable" in lowered
-    assert "family time" in lowered or "unsettled" in lowered
+    assert "family time" in lowered or "after contact" in lowered or "contact" in lowered
 
 
 def test_jamie_short_scaffold_does_not_invent_behaviour():

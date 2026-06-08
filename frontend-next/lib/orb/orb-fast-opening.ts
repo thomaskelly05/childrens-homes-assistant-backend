@@ -6,8 +6,36 @@ const FAST_OPENING_PLACEHOLDERS = [
   "I'll help you draft a factual incident report from what you've shared — checking immediate safety first, then building the record structure."
 ] as const
 
+const JOINED_OPENING_BUG_PATTERNS: RegExp[] = [
+  /(on the way\.)(Immediate)/i,
+  /(provided\.)(Immediate)/i,
+  /(on the way\.)(###)/i,
+  /(provided\.)(###)/i,
+  /(on the way\.)(First,)/i,
+  /(provided\.)(First,)/
+]
+
 export const ORB_STREAM_INCOMPLETE_FALLBACK_HINT =
   'ORB could not finish generating the full answer after the opening preview.'
+
+export function ensureFastOpeningSpacing(text: string, fastOpening?: string | null): string {
+  let cleaned = (text || '').trim()
+  if (!cleaned) return cleaned
+
+  for (const pattern of JOINED_OPENING_BUG_PATTERNS) {
+    cleaned = cleaned.replace(pattern, '$1\n\n$2')
+  }
+
+  const opening = (fastOpening || '').trim()
+  if (opening && cleaned.startsWith(opening) && cleaned.length > opening.length) {
+    const remainder = cleaned.slice(opening.length)
+    if (remainder && !/^\s/.test(remainder)) {
+      cleaned = `${opening}\n\n${remainder.trimStart()}`
+    }
+  }
+
+  return cleaned
+}
 
 export function isOrbFastOpeningPlaceholder(text: string): boolean {
   const cleaned = (text || '').trim()
@@ -26,10 +54,10 @@ export function isOrbFastOpeningPlaceholder(text: string): boolean {
 export function resolveOrbStreamedAnswer(
   responseAnswer: string | undefined,
   streamedPartial: string,
-  options?: { errorDetail?: string | null }
+  options?: { errorDetail?: string | null; fastOpening?: string | null }
 ): string {
-  const partial = (streamedPartial || '').trim()
-  const metadataAnswer = (responseAnswer || '').trim()
+  const partial = ensureFastOpeningSpacing(streamedPartial || '', options?.fastOpening)
+  const metadataAnswer = ensureFastOpeningSpacing(responseAnswer || '', options?.fastOpening)
 
   if (metadataAnswer && partial) {
     if (partial.length > metadataAnswer.length && partial.startsWith(metadataAnswer)) {
@@ -52,9 +80,11 @@ export function resolveOrbStreamedAnswer(
 
 export function isOrbFastOpeningOnlyCompletion(
   answer: string,
-  options?: { errorDetail?: string | null; streamedPartial?: string }
+  options?: { errorDetail?: string | null; streamedPartial?: string; fastOpening?: string | null }
 ): boolean {
-  const resolved = resolveOrbStreamedAnswer(answer, options?.streamedPartial || '')
+  const resolved = resolveOrbStreamedAnswer(answer, options?.streamedPartial || '', {
+    fastOpening: options?.fastOpening
+  })
   if (options?.errorDetail) {
     return isOrbFastOpeningPlaceholder(resolved)
   }

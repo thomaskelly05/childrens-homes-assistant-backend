@@ -1206,7 +1206,7 @@ async def standalone_orb_conversation_stream(
         model_token_count = 0
         if fast_opening:
             fast_opening_emitted = True
-            answer_parts.append(fast_opening)
+            answer_parts.append(f"{fast_opening}\n\n")
             if first_token_ms is None:
                 first_token_ms = int((time.perf_counter() - request_started) * 1000)
                 timing.mark("first_token")
