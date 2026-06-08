@@ -42,6 +42,7 @@ describe('ORB access verification hotfix', () => {
     assert.match(gate, /case 'safety_required'/)
     assert.match(gate, /case 'access_retry'/)
     assert.match(gate, /deriveOrbGateState/)
+    assert.match(gate, /OrbSafetyAcceptance/)
     assert.match(gate, /OrbAccessRetryScreen/)
   })
 })

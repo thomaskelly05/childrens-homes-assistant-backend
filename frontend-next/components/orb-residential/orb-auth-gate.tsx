@@ -4,6 +4,7 @@ import { ReactNode, Suspense, useCallback, useEffect, useMemo, useRef, useState 
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 
 import { OrbAccessRetryScreen } from '@/components/orb-residential/orb-access-retry-screen'
+import { OrbSafetyAcceptance } from '@/components/orb-residential/orb-safety-acceptance'
 import { OrbAuthDebugPanel } from '@/components/orb-residential/orb-auth-debug-panel'
 import { OrbAuthLoadingScreen } from '@/components/orb-residential/orb-auth-loading-screen'
 import { OrbLoginScreen } from '@/components/orb-residential/orb-login-screen'
@@ -70,7 +71,7 @@ function OrbAuthGateAccessPhase({
   onStaleAccess,
   onBackToSignIn,
   onManageBilling,
-  onSafetySetup,
+  onSafetyAccepted,
   debugPanel
 }: {
   children: ReactNode
@@ -80,7 +81,7 @@ function OrbAuthGateAccessPhase({
   onStaleAccess: () => void
   onBackToSignIn: () => void
   onManageBilling: () => void
-  onSafetySetup: () => void
+  onSafetyAccepted: () => void
   debugPanel: ReactNode
 }) {
   const auth = useAuth()
@@ -150,10 +151,11 @@ function OrbAuthGateAccessPhase({
     case 'safety_required':
       return (
         <>
-          <OrbAccessRetryScreen
-            message="Safety acceptance is required before using ORB Residential."
-            detail="Complete the safety statements to continue."
-            onRetry={onSafetySetup}
+          <OrbSafetyAcceptance
+            onAccepted={() => {
+              onSafetyAccepted()
+              void account.retry()
+            }}
             onBackToSignIn={onBackToSignIn}
           />
           {debugPanel}
@@ -334,9 +336,11 @@ function OrbAuthGateInner({
     router.push('/orb/billing')
   }, [router])
 
-  const handleSafetySetup = useCallback(() => {
-    router.push('/orb/setup')
-  }, [router])
+  const handleSafetyAccepted = useCallback(() => {
+    resetOrbFrontDoorVerdictCache()
+    verdictFetchedRef.current = false
+    void loadVerdict({ force: true })
+  }, [loadVerdict])
 
   useEffect(() => {
     if (gateState === 'ready') {
@@ -412,12 +416,7 @@ function OrbAuthGateInner({
     case 'safety_required':
       return (
         <>
-          <OrbAccessRetryScreen
-            message="Safety acceptance is required before using ORB Residential."
-            detail="Complete the safety statements to continue."
-            onRetry={() => router.push('/orb/setup')}
-            onBackToSignIn={handleBackToSignIn}
-          />
+          <OrbSafetyAcceptance onAccepted={handleSafetyAccepted} onBackToSignIn={handleBackToSignIn} />
           {debugPanel}
         </>
       )
@@ -456,7 +455,7 @@ function OrbAuthGateInner({
               onStaleAccess={handleStaleAccessRecovery}
               onBackToSignIn={handleBackToSignIn}
               onManageBilling={handleManageBilling}
-              onSafetySetup={handleSafetySetup}
+              onSafetyAccepted={handleSafetyAccepted}
               debugPanel={debugPanel}
             >
               {children}
