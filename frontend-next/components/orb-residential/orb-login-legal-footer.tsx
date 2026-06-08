@@ -4,7 +4,7 @@ import { OrbLegalLinks, type OrbLegalPaths } from '@/components/orb-residential/
 export function OrbLoginLegalFooter({ legalPaths }: { legalPaths?: Partial<OrbLegalPaths> }) {
   return (
     <footer
-      className="orb-login-footer mt-8 border-t border-[var(--orb-line)]/40 pt-6 text-[10px] leading-relaxed text-[var(--orb-muted)]"
+      className="orb-login-footer mt-6 border-t border-[var(--orb-line)]/30 pt-4 text-[10px] leading-relaxed text-[var(--orb-muted)]"
       data-orb-login-safe-bottom
     >
       <p data-orb-login-disclaimer>

@@ -36,8 +36,9 @@ describe('ORB auth UX polish', () => {
     assert.ok(emailIdx < passkeyIdx)
   })
 
-  it('access screen always shows Return to ORB and Switch account when authenticated', () => {
+  it('access screen uses front-door styling with recovery actions', () => {
     const upgrade = read('components/orb-standalone/orb-upgrade-screen.tsx')
+    const css = read('app/orb/orb-login.css')
     assert.match(upgrade, /data-orb-return-to-orb/)
     assert.match(upgrade, /data-orb-switch-account/)
     assert.match(upgrade, /Switch account/)
@@ -47,12 +48,15 @@ describe('ORB auth UX polish', () => {
     assert.match(upgrade, /does not currently have an active ORB Residential subscription/)
     assert.match(upgrade, /data-orb-upgrade-signed-in-provider/)
     assert.match(upgrade, /data-orb-upgrade-access-state/)
+    assert.match(upgrade, /orb-front-door-root/)
+    assert.match(upgrade, /orb-front-door-card/)
+    assert.match(css, /orb-front-door-card/)
   })
 
   it('login screen exposes auth build variant marker for deploy verification', () => {
     const login = read('components/orb-residential/orb-login-screen.tsx')
     const visualBuild = read('lib/orb/orb-visual-build.ts')
-    assert.match(visualBuild, /ORB_AUTH_BUILD_VARIANT = 'orb-auth-ux-polish'/)
+    assert.match(visualBuild, /ORB_AUTH_BUILD_VARIANT = 'orb-auth-product-redesign'/)
     assert.match(login, /data-orb-auth-build-variant=\{ORB_AUTH_BUILD_VARIANT\}/)
   })
 

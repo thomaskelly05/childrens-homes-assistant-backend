@@ -201,10 +201,10 @@ describe('ORB Voice companion visual convergence', () => {
     assert.doesNotMatch(hero, /data-orb-voice-state-panel/)
   })
 
-  it('login screen uses front-door-v5 marker', () => {
+  it('login screen uses front-door-v6 marker', () => {
     const login = read('components/orb-residential/orb-login-screen.tsx')
     const visualBuild = read('lib/orb/orb-visual-build.ts')
-    assert.match(visualBuild, /ORB_LOGIN_VERSION = 'front-door-v5'/)
+    assert.match(visualBuild, /ORB_LOGIN_VERSION = 'front-door-v6'/)
     assert.match(login, /data-orb-login-version=\{ORB_LOGIN_VERSION\}/)
   })
 

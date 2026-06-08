@@ -68,7 +68,7 @@ describe('ORB Residential premium layout pass', () => {
     const css = read('app/orb/orb-login.css')
     const passCss = read('app/orb/orb-premium-layout-pass.css')
     const visualBuild = read('lib/orb/orb-visual-build.ts')
-    assert.match(visualBuild, /ORB_LOGIN_VERSION = 'front-door-v5'/)
+    assert.match(visualBuild, /ORB_LOGIN_VERSION = 'front-door-v6'/)
     assert.match(login, /data-orb-login-version=\{ORB_LOGIN_VERSION\}/)
     assert.match(login, /orb-login-hero-sphere-wrap/)
     assert.match(login, /scale-\[0\.52\]/)

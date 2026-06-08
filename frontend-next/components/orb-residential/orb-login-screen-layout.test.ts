@@ -17,7 +17,7 @@ describe('ORB premium login screen layout', () => {
     const css = read('app/orb/orb-login.css')
 
     assert.match(login, /data-orb-login-two-column/)
-    assert.match(login, /lg:grid-cols-2/)
+    assert.match(login, /lg:grid-cols-\[1\.05fr_0\.95fr\]/)
     assert.match(login, /OrbLoginDesktopHero/)
     assert.match(hero, /data-orb-login-hero-top-aligned/)
     assert.match(hero, /data-orb-login-desktop-hero/)
@@ -34,7 +34,6 @@ describe('ORB premium login screen layout', () => {
     assert.match(authCard, /orb-login-card/)
     assert.match(authCard, /orb-login-panel-inner/)
     assert.match(css, /align-items:\s*center/)
-    assert.match(authCard, /max-w-md/)
   })
 
   it('left hero places ORB visual above brand and copy in document flow', () => {
@@ -48,16 +47,18 @@ describe('ORB premium login screen layout', () => {
     assert.ok(sphereIdx < brandIdx, 'ORB visual should precede product name')
     assert.ok(brandIdx < titleIdx, 'Product name should precede functional headline')
 
-    assert.match(hero, /ORB Residential — Powered by IndiCare/)
+    assert.match(hero, /ORB Residential/)
+    assert.match(hero, /Powered by IndiCare Intelligence/)
     assert.match(hero, /AI support for residential children/)
     assert.match(hero, /Record better\. Reflect faster\. Respond safer\./)
     assert.match(hero, /data-orb-login-trust-points/)
     assert.match(hero, /orb-login-hero-visual/)
     assert.match(hero, /OrbHeroSphere/)
     assert.match(hero, /Safeguarding-aware support/)
+    assert.match(hero, /Designed for adults working in and around children/)
     assert.match(css, /orb-login-hero-visual/)
-    assert.match(css, /justify-content:\s*flex-start/)
-    assert.match(css, /clamp\(2\.25rem,\s*14vh,\s*4\.25rem\)/)
+    assert.match(css, /justify-content:\s*center/)
+    assert.match(css, /clamp\(1\.25rem,\s*12vh/)
   })
 
   it('mobile layout is single column with separate compact header', () => {
@@ -69,7 +70,7 @@ describe('ORB premium login screen layout', () => {
     assert.match(mobile, /data-orb-login-mobile-layout/)
     assert.match(mobile, /data-orb-login-mobile-mark/)
     assert.match(mobile, /lg:hidden/)
-    assert.match(hero, /hidden flex-col justify-start lg:flex/)
+    assert.match(hero, /hidden flex-col justify-center lg:flex/)
     assert.match(mobile, /data-orb-login-mobile-brand/)
   })
 
@@ -84,12 +85,13 @@ describe('ORB premium login screen layout', () => {
     const footer = read('components/orb-residential/orb-login-legal-footer.tsx')
 
     assert.match(authCard, /Welcome to ORB Residential/)
+    assert.match(authCard, /Sign in to continue/)
     assert.match(authCard, /Sign in or create your account to continue/)
     assert.match(authCard, /Continue with Microsoft/)
-    assert.match(authCard, /New to ORB Residential\?/)
     assert.match(authCard, /data-orb-create-account/)
     assert.match(authCard, /Sign in with email/)
     assert.match(authCard, /data-testid="orb-login-email"/)
+    assert.match(authCard, /data-orb-email-toggle/)
     assert.match(footer, /variant="auth"/)
     assert.match(authCard, /data-orb-passkey-sign-in/)
     assert.match(authCard, /href="\/orb\/signup"/)
@@ -97,7 +99,7 @@ describe('ORB premium login screen layout', () => {
 
     const oauthIdx = authCard.indexOf('data-orb-oauth-buttons')
     const createIdx = authCard.indexOf('data-orb-create-account')
-    const emailIdx = authCard.indexOf('data-testid="orb-login-email"')
+    const emailIdx = authCard.indexOf('data-orb-email-toggle')
     const passkeyIdx = authCard.indexOf('data-orb-login-passkey-section')
     assert.ok(oauthIdx < createIdx, 'OAuth should appear before create account')
     assert.ok(createIdx < emailIdx, 'Create account should appear before email')

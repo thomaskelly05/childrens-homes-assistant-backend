@@ -42,7 +42,7 @@ export function OrbAccessRetryScreen({
       role="status"
       aria-live="polite"
     >
-      <div className="orb-auth-loading-inner my-auto flex max-w-sm flex-col items-center gap-4 px-6 py-8 text-center">
+      <div className="orb-access-retry-card my-auto flex flex-col items-center gap-4 px-6 py-8 text-center">
         <OrbHeroSphere className="scale-[0.55] sm:scale-[0.65]" />
         <p className="text-sm font-medium text-[var(--orb-text,#f8fafc)]">{message}</p>
         {detail ? <p className="text-xs text-[var(--orb-muted,#94a3b8)]">{detail}</p> : null}
@@ -50,7 +50,7 @@ export function OrbAccessRetryScreen({
           {onRetry ? (
             <button
               type="button"
-              className="orb-login-submit rounded-2xl px-5 py-2.5 text-sm font-semibold"
+              className="orb-login-submit rounded-xl px-5 py-2.5 text-sm font-semibold"
               data-orb-access-retry-action
               onClick={onRetry}
             >
@@ -60,7 +60,7 @@ export function OrbAccessRetryScreen({
           {showManageBilling && onManageBilling ? (
             <button
               type="button"
-              className="rounded-2xl border border-[var(--orb-line)]/40 px-5 py-2.5 text-sm font-semibold text-[var(--orb-text,#f8fafc)]"
+              className="orb-front-door-btn-secondary"
               data-orb-access-manage-billing
               onClick={onManageBilling}
             >
@@ -69,7 +69,7 @@ export function OrbAccessRetryScreen({
           ) : null}
           <button
             type="button"
-            className="rounded-2xl border border-[var(--orb-line)]/40 px-5 py-2.5 text-sm font-semibold text-[var(--orb-text,#f8fafc)]"
+            className="orb-front-door-btn-secondary"
             data-orb-access-back-to-sign-in
             onClick={handleBackToSignIn}
           >

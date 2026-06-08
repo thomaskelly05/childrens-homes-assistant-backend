@@ -33,11 +33,13 @@ describe('ORB login and billing readiness', () => {
 
   it('login hero uses premium positioning copy', () => {
     const hero = read('components/orb-residential/orb-login-desktop-hero.tsx')
-    assert.match(hero, /ORB Residential — Powered by IndiCare/)
+    assert.match(hero, /ORB Residential/)
+    assert.match(hero, /Powered by IndiCare Intelligence/)
     assert.match(hero, /AI support for residential children/)
     assert.match(hero, /Record better\. Reflect faster\. Respond safer\./)
     assert.match(hero, /professional judgement/)
-    assert.match(hero, /Human review required/)
+    assert.match(hero, /Designed for adults working in and around children/)
+    assert.match(hero, /Safeguarding-aware support/)
   })
 
   it('create account and provider email hints exist', () => {
@@ -45,7 +47,7 @@ describe('ORB login and billing readiness', () => {
     const authCard = read('components/orb-residential/orb-login-auth-card.tsx')
     assert.match(authCard, /href="\/orb\/signup"/)
     assert.match(authCard, /Create account/)
-    assert.match(login, /Already subscribed through Google or Microsoft/)
+    assert.match(login, /Already subscribed/)
     assert.match(login, /data-orb-provider-email-hint/)
   })
 
