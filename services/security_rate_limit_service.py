@@ -294,6 +294,7 @@ RATE_LIMIT_RULES: tuple[RateLimitRule, ...] = (
 EXEMPT_PATH_PREFIXES = (
     "/health",
     "/orb/standalone/billing/webhook",
+    "/orb/subscription/webhook",
     "/css",
     "/js",
     "/assets",

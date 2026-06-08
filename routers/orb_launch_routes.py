@@ -324,6 +324,13 @@ async def orb_subscription_portal(
     return await orb_standalone_billing_portal(conn=conn, current_user=current_user)
 
 
+@router.post("/subscription/webhook")
+async def orb_subscription_stripe_webhook(request: Request, conn=Depends(get_db)):
+    from routers.orb_billing_routes import orb_standalone_stripe_webhook
+
+    return await orb_standalone_stripe_webhook(request, conn=conn)
+
+
 @router.post("/subscription/cancel")
 async def orb_subscription_cancel(
     payload: OrbSubscriptionCancelRequest,

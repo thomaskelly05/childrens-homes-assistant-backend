@@ -51,6 +51,13 @@ CSRF_EXEMPT_PREFIXES = (
     "/orb/standalone/auth/oauth/",
 )
 
+# Exact paths only — do not use startswith so sibling /orb/subscription/* routes stay protected.
+CSRF_EXEMPT_EXACT_PATHS = frozenset(
+    {
+        "/orb/subscription/webhook",
+    }
+)
+
 TRUSTED_ORIGIN_ORB_BOOTSTRAP_PATHS = (
     "/orb/realtime/session",
     "/orb/session/start",
@@ -153,6 +160,9 @@ class CsrfProtectionMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
         path = request.url.path
         if request.method.upper() not in UNSAFE_METHODS:
+            return await call_next(request)
+        if path in CSRF_EXEMPT_EXACT_PATHS:
+            logger.info("webhook_csrf_exempt path=%s", path)
             return await call_next(request)
         if any(path.startswith(prefix) for prefix in CSRF_EXEMPT_PREFIXES):
             return await call_next(request)

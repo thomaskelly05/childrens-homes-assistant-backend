@@ -531,6 +531,8 @@ async def orb_standalone_stripe_webhook(request: Request, conn=Depends(get_db)):
         raise HTTPException(status_code=503, detail="Stripe webhook is not configured")
     payload = await request.body()
     sig_header = request.headers.get("stripe-signature", "")
+    if not sig_header:
+        raise HTTPException(status_code=400, detail="Missing Stripe-Signature header")
     try:
         event = stripe.Webhook.construct_event(payload=payload, sig_header=sig_header, secret=STRIPE_WEBHOOK_SECRET)
     except ValueError:
@@ -539,6 +541,8 @@ async def orb_standalone_stripe_webhook(request: Request, conn=Depends(get_db)):
         raise HTTPException(status_code=400, detail="Invalid webhook signature")
 
     event_type = event["type"]
+    logger.info("stripe_webhook_received event_type=%s", event_type)
+    logger.info("stripe_webhook_signature_valid=true")
     stripe_event_id = str(_stripe_attr(event, "id") or "").strip()
     data_object = event["data"]["object"]
 
@@ -660,6 +664,10 @@ async def orb_standalone_stripe_webhook(request: Request, conn=Depends(get_db)):
                 event_type=event_type,
                 status="processed",
                 metadata={"product": "orb_residential"},
+            )
+            logger.info(
+                "stripe_webhook_processed event_id=%s status=processed",
+                stripe_event_id,
             )
         conn.commit()
         return JSONResponse({"ok": True})
