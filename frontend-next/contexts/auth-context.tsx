@@ -50,6 +50,7 @@ type AuthContextValue = {
   sessionExpired: boolean
   csrfReady: boolean
   refreshSession: () => Promise<void>
+  applySessionUser: (user: StaffUser) => void
   login: (input: LoginInput) => Promise<LoginResponse>
   logout: () => Promise<void>
 }
@@ -293,6 +294,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     router.replace(`${loginPath}${sessionExpired ? (loginPath.includes('?') ? '&' : '?') + 'expired=1' : ''}`)
   }, [pathname, router, sessionExpired, status])
 
+  const applySessionUser = useCallback((nextUser: StaffUser) => {
+    setUser(normaliseUser(nextUser))
+    setStatus('authenticated')
+    setSessionExpired(false)
+    setCsrfReady(Boolean(getCsrfToken()))
+    logoutRedirecting.current = false
+    resetOrbAuthLoadingDeadline()
+    resetOrbAccessLoadingDeadline()
+  }, [])
+
   const login = useCallback(async (input: LoginInput) => {
     setError(null)
     if (shouldE2eAutoAuthenticate()) {
@@ -322,21 +333,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       body: JSON.stringify(input)
     })
 
-    if (response.user) {
-      setUser(normaliseUser(response.user))
-    }
-
     if (response.user && response.authenticated) {
-      setStatus('authenticated')
-      setSessionExpired(false)
-      setCsrfReady(Boolean(getCsrfToken()))
-      logoutRedirecting.current = false
-      resetOrbAuthLoadingDeadline()
-      resetOrbAccessLoadingDeadline()
+      applySessionUser(response.user)
     }
 
     return response
-  }, [])
+  }, [applySessionUser])
 
   const logout = useCallback(async () => {
     const redirectToOrbLogin = isOrbSurfacePath(pathname)
@@ -377,10 +379,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       sessionExpired,
       csrfReady,
       refreshSession,
+      applySessionUser,
       login,
       logout
     }),
-    [csrfReady, error, login, logout, refreshSession, sessionExpired, status, user]
+    [applySessionUser, csrfReady, error, login, logout, refreshSession, sessionExpired, status, user]
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

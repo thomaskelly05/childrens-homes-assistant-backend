@@ -251,7 +251,7 @@ function OrbAuthGateInner({
           verdict: payload.verdict,
           clear_session: Boolean(payload.clear_session)
         })
-        if (payload.verdict === 'ready') {
+        if (payload.verdict === 'ready' && auth.status !== 'authenticated') {
           await auth.refreshSession()
         } else if (payload.clear_session || payload.verdict === 'unauthenticated') {
           if (auth.status === 'authenticated') {

@@ -88,6 +88,7 @@ node --experimental-strip-types --test \
   components/orb-residential/orb-access-verification-hotfix.test.ts \
   components/orb-residential/orb-mobile-no-router-bounce.test.ts
 NEXT_PUBLIC_E2E_TEST_MODE=1 npm run e2e:orb-auth
+# 50 passed (orb-auth-register-billing, orb-auth-cookie-session, orb-passkey-mobile, orb-login-scroll-reachability)
 ```
 
 ## Remaining provider-console tasks

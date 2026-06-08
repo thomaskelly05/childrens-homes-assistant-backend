@@ -274,7 +274,7 @@ test.describe('ORB cookie and session E2E', () => {
   test('oauth interrupted shows friendly error and allows retry', async ({ page }) => {
     await disableE2eAutoAuth(page)
     await setupOrbAuthE2eMocks(page, { scenario: 'unauthenticated' })
-    await page.goto('/orb/login?oauth_error=invalid_oauth_state')
+    await page.goto('/orb?oauth_error=invalid_oauth_state')
     await expect(page.locator('.orb-login-error').first()).toContainText(/expired|interrupted|start again/i)
     await expect(page.locator('[data-testid="orb-login-email"]')).toBeEnabled()
     await expect(page.locator('[data-testid="orb-login-submit"]')).toBeEnabled()

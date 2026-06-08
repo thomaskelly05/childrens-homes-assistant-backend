@@ -9,6 +9,7 @@ import { useOrbResidentialThemeSync } from '@/components/orb-residential/use-orb
 import { useOrbAppearance } from '@/components/orb-standalone/use-orb-appearance'
 import { getOrbThemeCssVariables } from '@/lib/orb/orb-theme'
 import { useAuth } from '@/contexts/auth-context'
+import { normaliseRole } from '@/lib/auth/permissions'
 import {
   fetchOrbAccess,
   ORB_BILLING_API,
@@ -57,7 +58,7 @@ function OrbLoginPanel({
   useOrbResidentialThemeSync()
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { login, status, refreshSession } = useAuth()
+  const { login, status, refreshSession, applySessionUser } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [remember, setRemember] = useState(true)
@@ -142,11 +143,11 @@ function OrbLoginPanel({
   }, [searchParams, sessionError])
 
   async function afterAuth() {
-    await refreshSession()
     if (embeddedGateMode) {
       onLoginSuccess?.()
       return
     }
+    await refreshSession()
     try {
       const access = await fetchOrbAccess()
       const target = resolvePostLoginRoute(access)
@@ -206,6 +207,25 @@ function OrbLoginPanel({
     try {
       const result = await beginOrbPasskeyLogin(address)
       if (result.authenticated) {
+        if (result.user && typeof result.user.id !== 'undefined') {
+          applySessionUser({
+            id: Number(result.user.id),
+            email: result.user.email || address,
+            role: normaliseRole(result.user.role || 'manager'),
+            home_id: result.user.home_id ?? null,
+            provider_id: null,
+            first_name: null,
+            last_name: null,
+            is_active: true,
+            permissions: [],
+            subscription_active: Boolean(result.user.subscription_active),
+            subscription_status: result.user.subscription_status || null,
+            plan_name: result.user.plan_name ?? null,
+            mfa_enabled: Boolean(result.user.mfa_enabled),
+            mfa_verified: Boolean(result.user.mfa_verified),
+            has_passkeys: Boolean(result.user.has_passkeys)
+          })
+        }
         await afterAuth()
         return
       }

@@ -30,7 +30,7 @@
     min-height: 0;
     max-height: 100svh;
     justify-content: flex-start;
-    padding-top: clamp(1.25rem, 10vh, 3rem);
+    padding-top: clamp(2.25rem, 14vh, 4.25rem);
     padding-bottom: clamp(0.75rem, 2vh, 1.25rem);
     overflow: visible;
   }
