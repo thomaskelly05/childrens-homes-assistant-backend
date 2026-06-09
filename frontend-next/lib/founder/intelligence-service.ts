@@ -4,6 +4,12 @@
  */
 
 import { getAllAgents, runAgent } from '@/lib/founder/agents'
+import {
+  getFounderLiveMetricsSync,
+  invalidateFounderLiveMetricsCache,
+  loadFounderLiveMetrics,
+  type FounderLiveMetrics
+} from '@/lib/founder/data/founder-live-metrics'
 import type {
   FounderActivityItem,
   FounderAgent,
@@ -21,12 +27,7 @@ import {
   calculateHoursReturned,
   calculateOfstedReadiness,
   calculateOrbIntelligence,
-  generateFounderInsightsSync,
-  mockBillingMetrics,
-  mockOrbAnalytics,
-  mockProviderAnalytics,
-  mockReadinessMetrics,
-  mockUsageMetrics
+  generateFounderInsightsSync
 } from '@/lib/founder/intelligence'
 
 const PRIORITY_TO_NUMBER: Record<InsightPriority, number> = { high: 1, medium: 2, low: 3 }
@@ -53,18 +54,19 @@ function demandFromTrend(trend: number): FounderProductFeature['demand'] {
 }
 
 function buildKpis(
+  metrics: FounderLiveMetrics,
   hoursReturned: ReturnType<typeof calculateHoursReturned>,
   orbIntelligence: ReturnType<typeof calculateOrbIntelligence>,
   aiCost: ReturnType<typeof calculateAiCost>
 ): FounderKpi[] {
-  const { totalMrr, mrrTrendPercent, totalProviders, totalHomes, activeUsers, activeUsersTrendPercent } = {
-    totalMrr: mockProviderAnalytics.totalMrr,
-    mrrTrendPercent: mockProviderAnalytics.mrrTrendPercent,
-    totalProviders: mockProviderAnalytics.totalProviders,
-    totalHomes: mockProviderAnalytics.totalHomes,
-    activeUsers: mockUsageMetrics.activeUsers,
-    activeUsersTrendPercent: mockUsageMetrics.activeUsersTrendPercent
-  }
+  const { providerAnalytics, usageMetrics } = metrics
+  const {
+    totalMrr,
+    mrrTrendPercent,
+    totalProviders,
+    totalHomes
+  } = providerAnalytics
+  const { activeUsers, activeUsersTrendPercent } = usageMetrics
 
   return [
     {
@@ -177,21 +179,24 @@ function buildHomes(homes: ReturnType<typeof calculateOfstedReadiness>['homes'])
   }))
 }
 
-export function generateFounderDashboardData(): FounderDashboardData {
-  const usageMetrics = mockUsageMetrics
-  const orbAnalytics = mockOrbAnalytics
-  const providerAnalytics = mockProviderAnalytics
-  const readinessMetrics = mockReadinessMetrics
-  const billingMetrics = mockBillingMetrics
+export function generateFounderDashboardData(metrics = getFounderLiveMetricsSync()): FounderDashboardData {
+  const {
+    usageMetrics,
+    orbConversationAnalytics,
+    providerAnalytics,
+    readinessMetrics,
+    billingMetrics,
+    dataSourceStatus
+  } = metrics
 
-  const orbIntelligence = calculateOrbIntelligence(orbAnalytics)
+  const orbIntelligence = calculateOrbIntelligence(orbConversationAnalytics)
   const ofstedReadiness = calculateOfstedReadiness(readinessMetrics)
   const aiCost = calculateAiCost(billingMetrics)
-  const hoursReturned = calculateHoursReturned(usageMetrics, orbAnalytics, 4435)
+  const hoursReturned = calculateHoursReturned(usageMetrics, orbConversationAnalytics, 4435)
 
   const insights = generateFounderInsightsSync({
     usageMetrics,
-    orbAnalytics,
+    orbAnalytics: orbConversationAnalytics,
     providerAnalytics,
     readinessMetrics
   })
@@ -211,7 +216,8 @@ export function generateFounderDashboardData(): FounderDashboardData {
   })
 
   return {
-    kpis: buildKpis(hoursReturned, orbIntelligence, aiCost),
+    dataSourceStatus,
+    kpis: buildKpis(metrics, hoursReturned, orbIntelligence, aiCost),
     activityFeed: buildActivityFeed(),
     orbIntelligence: {
       categories: orbIntelligence.categories,
@@ -248,6 +254,29 @@ export function getFounderDashboardData(): FounderDashboardData {
   return cachedDashboardData
 }
 
+export function invalidateFounderDashboardCache() {
+  cachedDashboardData = null
+  invalidateFounderLiveMetricsCache()
+}
+
+export async function refreshFounderDashboardData(): Promise<FounderDashboardData> {
+  const metrics = await loadFounderLiveMetrics()
+  cachedDashboardData = generateFounderDashboardData(metrics)
+  return cachedDashboardData
+}
+
 export function getChiefOfStaffBriefing() {
   return runAgent('chief-of-staff')
+}
+
+export function getFounderContractInputs() {
+  const metrics = getFounderLiveMetricsSync()
+  return {
+    usageMetrics: metrics.usageMetrics,
+    orbConversationAnalytics: metrics.orbConversationAnalytics,
+    providerAnalytics: metrics.providerAnalytics,
+    readinessMetrics: metrics.readinessMetrics,
+    billingMetrics: metrics.billingMetrics,
+    dataSourceStatus: metrics.dataSourceStatus
+  }
 }

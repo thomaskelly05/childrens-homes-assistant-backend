@@ -19,7 +19,9 @@ export function FounderOrbContextPanel() {
     <aside className="founder-surface flex h-full flex-col rounded-[28px] border border-white/10 bg-white/[0.04] backdrop-blur-xl">
       <div className="border-b border-white/10 p-5">
         <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-cyan-300">Founder Context</p>
-        <p className="mt-1 text-xs text-slate-500">Live intelligence snapshot</p>
+        <p className="mt-1 text-xs text-slate-500">
+          {snapshot.dataMode} intelligence snapshot
+        </p>
       </div>
 
       <div className="flex-1 space-y-3 overflow-y-auto p-4">
@@ -62,6 +64,14 @@ export function FounderOrbContextPanel() {
           <p className="mt-2 text-lg font-bold text-white">{snapshot.highestDemandFeature}</p>
         </div>
       </div>
+
+      {snapshot.dataMode !== 'Live' ? (
+        <div className="border-t border-white/10 px-4 py-3">
+          <p className="text-xs leading-5 text-amber-200/90">
+            Some figures are estimated or mocked. ORB Founder will not present them as verified live truth.
+          </p>
+        </div>
+      ) : null}
 
       <div className="border-t border-white/10 p-4">
         <div className="flex items-center gap-2 text-[11px] text-slate-600">

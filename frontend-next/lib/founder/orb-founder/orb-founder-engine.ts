@@ -5,18 +5,13 @@
  */
 
 import { getAgentDetail, getAllAgents, isValidAgentId, type AgentId } from '@/lib/founder/agents'
-import { getFounderDashboardData } from '@/lib/founder/intelligence-service'
+import { getFounderContractInputs, getFounderDashboardData } from '@/lib/founder/intelligence-service'
 import {
   calculateAiCost,
   calculateHoursReturned,
   calculateOfstedReadiness,
   calculateOrbIntelligence,
-  generateFounderInsightsSync,
-  mockBillingMetrics,
-  mockOrbAnalytics,
-  mockProviderAnalytics,
-  mockReadinessMetrics,
-  mockUsageMetrics
+  generateFounderInsightsSync
 } from '@/lib/founder/intelligence'
 import { runChiefOfStaffAgent } from '@/lib/founder/agents/chief-of-staff-agent'
 
@@ -43,15 +38,25 @@ function matches(question: string, patterns: RegExp[]): boolean {
 
 function buildIntelligenceContext() {
   const dashboard = getFounderDashboardData()
-  const orbIntelligence = calculateOrbIntelligence(mockOrbAnalytics)
-  const ofstedReadiness = calculateOfstedReadiness(mockReadinessMetrics)
-  const aiCost = calculateAiCost(mockBillingMetrics)
-  const hoursReturned = calculateHoursReturned(mockUsageMetrics, mockOrbAnalytics)
+  const contractInputs = getFounderContractInputs()
+  const {
+    usageMetrics,
+    orbConversationAnalytics,
+    providerAnalytics,
+    readinessMetrics,
+    billingMetrics,
+    dataSourceStatus
+  } = contractInputs
+
+  const orbIntelligence = calculateOrbIntelligence(orbConversationAnalytics)
+  const ofstedReadiness = calculateOfstedReadiness(readinessMetrics)
+  const aiCost = calculateAiCost(billingMetrics)
+  const hoursReturned = calculateHoursReturned(usageMetrics, orbConversationAnalytics)
   const insights = generateFounderInsightsSync({
-    usageMetrics: mockUsageMetrics,
-    orbAnalytics: mockOrbAnalytics,
-    providerAnalytics: mockProviderAnalytics,
-    readinessMetrics: mockReadinessMetrics
+    usageMetrics,
+    orbAnalytics: orbConversationAnalytics,
+    providerAnalytics,
+    readinessMetrics
   })
   const chiefOfStaff = runChiefOfStaffAgent()
   const topRecommendation = dashboard.recommendations[0]
@@ -67,15 +72,17 @@ function buildIntelligenceContext() {
     chiefOfStaff,
     topRecommendation,
     secondRecommendation,
-    mrr: mockProviderAnalytics.totalMrr,
-    mrrTrend: mockProviderAnalytics.mrrTrendPercent,
-    activeUsers: mockUsageMetrics.activeUsers,
-    providers: mockProviderAnalytics.totalProviders,
-    homes: mockProviderAnalytics.totalHomes,
+    dataSourceStatus,
+    mrr: providerAnalytics.totalMrr,
+    mrrTrend: providerAnalytics.mrrTrendPercent,
+    activeUsers: usageMetrics.activeUsers,
+    activeUsersTrendPercent: usageMetrics.activeUsersTrendPercent,
+    providers: providerAnalytics.totalProviders,
+    homes: providerAnalytics.totalHomes,
     topDemand: dashboard.productIntelligence.topDemand,
     mostUsed: dashboard.productIntelligence.mostUsed,
-    chronology: mockUsageMetrics.featureUsage.find((f) => f.featureId === 'chronology'),
-    dictate: mockUsageMetrics.featureUsage.find((f) => f.featureId === 'dictate')
+    chronology: usageMetrics.featureUsage.find((f) => f.featureId === 'chronology'),
+    dictate: usageMetrics.featureUsage.find((f) => f.featureId === 'dictate')
   }
 }
 
@@ -165,7 +172,7 @@ function answerOrbUsage(ctx: ReturnType<typeof buildIntelligenceContext>): Found
 
 function answerInvestorQuestions(ctx: ReturnType<typeof buildIntelligenceContext>): FounderOrbAnswer {
   return {
-    answer: `An investor would likely ask: What is the retention rate? What is the gross margin after AI costs (currently ${ctx.aiCost.grossMargin})? How many active users return weekly (${ctx.activeUsers} active, +${mockUsageMetrics.activeUsersTrendPercent}%)? How defensible is the Ofsted intelligence model? What evidence proves time is being returned to direct care (${ctx.hoursReturned.totalHoursFormatted} hours this month)?`,
+    answer: `An investor would likely ask: What is the retention rate? What is the gross margin after AI costs (currently ${ctx.aiCost.grossMargin})? How many active users return weekly (${ctx.activeUsers} active, +${ctx.activeUsersTrendPercent}%)? How defensible is the Ofsted intelligence model? What evidence proves time is being returned to direct care (${ctx.hoursReturned.totalHoursFormatted} hours this month)?`,
     usedSources: ['AI Cost Engine', 'Hours Returned Engine', 'Provider Analytics', 'Ofsted Readiness Engine'],
     suggestedFollowUps: [
       'How many hours have we returned to direct care?',
@@ -251,7 +258,7 @@ function answerFocusTomorrow(ctx: ReturnType<typeof buildIntelligenceContext>): 
 
 function answerRevenue(ctx: ReturnType<typeof buildIntelligenceContext>): FounderOrbAnswer {
   return {
-    answer: `MRR is £${ctx.mrr.toLocaleString('en-GB')} (+${ctx.mrrTrend}% month-on-month) across ${ctx.providers} providers and ${ctx.homes} children's homes. ${ctx.activeUsers} active users (+${mockUsageMetrics.activeUsersTrendPercent}%). Gross margin is ${ctx.aiCost.grossMargin} with revenue per provider at ${ctx.aiCost.revenuePerProvider}.`,
+    answer: `MRR is £${ctx.mrr.toLocaleString('en-GB')} (+${ctx.mrrTrend}% month-on-month) across ${ctx.providers} providers and ${ctx.homes} children's homes. ${ctx.activeUsers} active users (+${ctx.activeUsersTrendPercent}%). Gross margin is ${ctx.aiCost.grossMargin} with revenue per provider at ${ctx.aiCost.revenuePerProvider}.`,
     usedSources: ['Provider Analytics', 'AI Cost Engine', 'Founder Dashboard'],
     suggestedFollowUps: [
       'What would an investor ask about these numbers?',
@@ -403,24 +410,36 @@ export const FOUNDER_ORB_SUGGESTED_QUESTIONS = [
 /** Build context panel snapshot for the ORB Founder UI */
 export function getFounderOrbContextSnapshot() {
   const dashboard = getFounderDashboardData()
-  const hoursReturned = calculateHoursReturned(mockUsageMetrics, mockOrbAnalytics)
-  const aiCost = calculateAiCost(mockBillingMetrics)
+  const contractInputs = getFounderContractInputs()
+  const hoursReturned = calculateHoursReturned(
+    contractInputs.usageMetrics,
+    contractInputs.orbConversationAnalytics
+  )
+  const aiCost = calculateAiCost(contractInputs.billingMetrics)
   const topRec = dashboard.recommendations[0]
+  const { dataSourceStatus } = contractInputs
 
   const mrrKpi = dashboard.kpis.find((k) => k.id === 'mrr')
   const usersKpi = dashboard.kpis.find((k) => k.id === 'active-users')
   const providersKpi = dashboard.kpis.find((k) => k.id === 'providers')
 
+  const dataModeLabel =
+    dataSourceStatus.source === 'live' ? 'Live' : dataSourceStatus.source === 'hybrid' ? 'Hybrid' : 'Mock'
+
   return {
-    mrr: mrrKpi?.value ?? `£${mockProviderAnalytics.totalMrr.toLocaleString('en-GB')}`,
-    activeUsers: usersKpi?.value ?? String(mockUsageMetrics.activeUsers),
-    providers: providersKpi?.value ?? String(mockProviderAnalytics.totalProviders),
+    mrr: mrrKpi?.value ?? `£${contractInputs.providerAnalytics.totalMrr.toLocaleString('en-GB')}`,
+    activeUsers: usersKpi?.value ?? String(contractInputs.usageMetrics.activeUsers),
+    providers: providersKpi?.value ?? String(contractInputs.providerAnalytics.totalProviders),
     hoursReturned: hoursReturned.totalHoursFormatted,
     topRecommendation: topRec?.title ?? 'No recommendation available',
     currentRisk:
-      aiCost.usageWarning === 'critical'
-        ? 'AI cost critical — quality monitoring required'
-        : 'Quality consistency as safeguarding volume grows',
-    highestDemandFeature: dashboard.productIntelligence.topDemand
+      dataSourceStatus.source !== 'live'
+        ? `Data mode ${dataModeLabel} — some figures are estimated or mocked`
+        : aiCost.usageWarning === 'critical'
+          ? 'AI cost critical — quality monitoring required'
+          : 'Quality consistency as safeguarding volume grows',
+    highestDemandFeature: dashboard.productIntelligence.topDemand,
+    dataMode: dataModeLabel,
+    dataLimitations: dataSourceStatus.limitations
   }
 }

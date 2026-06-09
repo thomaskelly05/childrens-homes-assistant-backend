@@ -5,16 +5,17 @@
 
 import { getAllAgents, type AgentId } from '@/lib/founder/agents'
 import type { AgentRunResult } from '@/lib/founder/agents/types'
-import { getChiefOfStaffBriefing, getFounderDashboardData } from '@/lib/founder/intelligence-service'
+import type { FounderDataSourceStatus } from '@/lib/founder/data/founder-live-metrics'
+import {
+  getChiefOfStaffBriefing,
+  getFounderContractInputs,
+  getFounderDashboardData
+} from '@/lib/founder/intelligence-service'
 import {
   calculateAiCost,
   calculateHoursReturned,
   calculateOfstedReadiness,
   calculateOrbIntelligence,
-  mockBillingMetrics,
-  mockOrbAnalytics,
-  mockReadinessMetrics,
-  mockUsageMetrics,
   type AiCostIntelligence,
   type HoursReturnedResult,
   type OfstedReadinessResult,
@@ -39,14 +40,24 @@ export type OrbFounderContext = {
   ofstedReadiness: OfstedReadinessResult
   aiCost: AiCostIntelligence
   hoursReturned: HoursReturnedResult
+  dataSourceStatus: FounderDataSourceStatus
+  dataLimitations: string[]
+  answerDataBasis: FounderDataSourceStatus['source']
 }
 
 function buildCurrentRisks(
   aiCost: AiCostIntelligence,
   orbIntelligence: OrbIntelligence,
-  ofstedReadiness: OfstedReadinessResult
+  ofstedReadiness: OfstedReadinessResult,
+  dataSourceStatus: FounderDataSourceStatus
 ): string[] {
   const risks: string[] = []
+
+  if (dataSourceStatus.source !== 'live') {
+    risks.push(
+      `Founder intelligence is running in ${dataSourceStatus.source} mode — verify figures against live billing and usage before external decisions.`
+    )
+  }
 
   if (aiCost.usageWarning === 'critical') {
     risks.push('AI cost critical — review model routing and per-provider caps before scaling')
@@ -73,15 +84,21 @@ function buildCurrentRisks(
 
 /**
  * Gather founder intelligence context from existing engines.
- * Data is derived from mock/estimated inputs until live metrics are connected.
+ * Contract inputs combine live aggregates with mock fallback where sources are unavailable.
  */
 export function getOrbFounderContext(): OrbFounderContext {
   const founderDashboard = getFounderDashboardData()
   const briefing = getChiefOfStaffBriefing()
-  const orbIntelligence = calculateOrbIntelligence(mockOrbAnalytics)
-  const ofstedReadiness = calculateOfstedReadiness(mockReadinessMetrics)
-  const aiCost = calculateAiCost(mockBillingMetrics)
-  const hoursReturned = calculateHoursReturned(mockUsageMetrics, mockOrbAnalytics)
+  const contractInputs = getFounderContractInputs()
+  const { dataSourceStatus } = contractInputs
+
+  const orbIntelligence = calculateOrbIntelligence(contractInputs.orbConversationAnalytics)
+  const ofstedReadiness = calculateOfstedReadiness(contractInputs.readinessMetrics)
+  const aiCost = calculateAiCost(contractInputs.billingMetrics)
+  const hoursReturned = calculateHoursReturned(
+    contractInputs.usageMetrics,
+    contractInputs.orbConversationAnalytics
+  )
 
   const agents: OrbFounderAgentContext[] = getAllAgents().map((agent) => ({
     id: agent.id as AgentId,
@@ -91,7 +108,7 @@ export function getOrbFounderContext(): OrbFounderContext {
   }))
 
   const currentRecommendations = founderDashboard.recommendations
-  const currentRisks = buildCurrentRisks(aiCost, orbIntelligence, ofstedReadiness)
+  const currentRisks = buildCurrentRisks(aiCost, orbIntelligence, ofstedReadiness, dataSourceStatus)
 
   return {
     founderDashboard,
@@ -102,7 +119,10 @@ export function getOrbFounderContext(): OrbFounderContext {
     orbIntelligence,
     ofstedReadiness,
     aiCost,
-    hoursReturned
+    hoursReturned,
+    dataSourceStatus,
+    dataLimitations: dataSourceStatus.limitations,
+    answerDataBasis: dataSourceStatus.source
   }
 }
 
@@ -111,14 +131,24 @@ export function getOrbFounderContext(): OrbFounderContext {
  * and activity feed entries that could imply provider identity.
  */
 export function serializeOrbFounderContextForAi(context: OrbFounderContext): string {
+  const isLive = context.answerDataBasis === 'live'
+
   const anonymised = {
-    dataSourceNote:
-      'All figures below are anonymised operational intelligence. Some values are mock or estimated until live billing and usage feeds are connected.',
+    dataSourceStatus: {
+      mode: context.answerDataBasis,
+      generatedAt: context.dataSourceStatus.generatedAt,
+      limitations: context.dataLimitations,
+      availability: context.dataSourceStatus.availability,
+      instruction: isLive
+        ? 'Figures below are drawn from connected live aggregates. Still avoid naming children, staff, or providers.'
+        : 'IMPORTANT: Figures below include mock or estimated data. Do NOT present them as verified live platform truth. State uncertainty when answering.'
+    },
     kpis: context.founderDashboard.kpis.map((k) => ({
       label: k.label,
       value: k.value,
       change: k.change,
-      hint: k.hint
+      hint: k.hint,
+      dataBasis: context.answerDataBasis
     })),
     briefing: {
       title: context.briefing.title,

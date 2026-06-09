@@ -4,6 +4,7 @@
  */
 
 import { generateFounderDashboardData } from '@/lib/founder/intelligence-service'
+import type { FounderDataSourceStatus } from '@/lib/founder/data/founder-live-metrics'
 
 export type FounderKpi = {
   id: string
@@ -79,6 +80,7 @@ export type FounderCostCentre = {
 }
 
 export type FounderDashboardData = {
+  dataSourceStatus: FounderDataSourceStatus
   kpis: FounderKpi[]
   activityFeed: FounderActivityItem[]
   orbIntelligence: {
@@ -107,6 +109,21 @@ export type FounderDashboardData = {
 
 /** @deprecated Use getFounderDashboardData() from intelligence-service instead */
 const _legacyFounderMockData: FounderDashboardData = {
+  dataSourceStatus: {
+    source: 'mock',
+    generatedAt: '2026-06-09T00:00:00.000Z',
+    limitations: ['Legacy static mock dashboard data.'],
+    availability: {
+      usersAvailable: false,
+      providersAvailable: false,
+      homesAvailable: false,
+      orbConversationsAvailable: false,
+      featureEventsAvailable: false,
+      billingAvailable: false,
+      aiUsageAvailable: false,
+      readinessAvailable: false
+    }
+  },
   kpis: [
     { id: 'mrr', label: 'Monthly Recurring Revenue', value: '£2,483', change: '+14%', changeDirection: 'up', hint: 'vs last month' },
     { id: 'active-users', label: 'Active Users', value: '182', change: '+9%', changeDirection: 'up', hint: '30-day active' },
