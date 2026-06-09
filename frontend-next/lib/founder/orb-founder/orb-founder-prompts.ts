@@ -64,16 +64,32 @@ export const FOUNDER_ORB_PROMPT_CATEGORIES: FounderOrbPromptCategory[] = [
     id: 'founder-story',
     label: 'Founder Story',
     prompts: ["Turn this week's product progress into a LinkedIn post."]
+  },
+  {
+    id: 'staff-team',
+    label: 'Founder Staff Team',
+    prompts: [
+      'What should my CTO focus on?',
+      'Ask the Brand Ambassador to draft a LinkedIn post.',
+      'What should the developer build next?',
+      'Run my founder staff team.',
+      'What approvals are waiting?',
+      'Create a Cursor brief for the next build.',
+      'What should I post this week?',
+      'What is my biggest technical risk?',
+      'What is my biggest brand opportunity?'
+    ]
   }
 ]
 
 /** Flat list of featured example prompts for quick access */
 export const FOUNDER_ORB_FEATURED_PROMPTS = [
-  'Give me the honest investor view of IndiCare right now.',
-  'What is the biggest operational risk before provider rollout?',
-  'What would Ofsted likely challenge in this product?',
-  'What should I build next and why?',
-  "Turn this week's product progress into a LinkedIn post.",
-  'What do these numbers say about product-market fit?',
-  'How do I reduce AI cost without weakening ORB quality?'
+  'What should my CTO focus on?',
+  'Ask the Brand Ambassador to draft a LinkedIn post.',
+  'What should the developer build next?',
+  'Run my founder staff team.',
+  'What approvals are waiting?',
+  'Create a Cursor brief for the next build.',
+  'What should I post this week?',
+  'What is my biggest technical risk?'
 ] as const

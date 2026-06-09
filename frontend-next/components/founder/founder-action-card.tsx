@@ -81,7 +81,15 @@ export function FounderActionCard({ action, onStatusChange, compact = false }: F
 
       <div className="mt-4 flex flex-wrap items-center gap-3 text-xs text-slate-500">
         <span>Source: {action.source}</span>
-        {action.linkedAgent ? (
+        {action.staffAgentId ? (
+          <Link
+            href={`/founder/team/${action.staffAgentId}`}
+            className="inline-flex items-center gap-1 font-semibold text-violet-300 transition hover:text-violet-200"
+          >
+            <Bot className="h-3 w-3" aria-hidden />
+            {action.staffAgentId.replace(/-/g, ' ')}
+          </Link>
+        ) : action.linkedAgent ? (
           <Link
             href={`/founder/agents/${action.linkedAgent}`}
             className="inline-flex items-center gap-1 font-semibold text-violet-300 transition hover:text-violet-200"

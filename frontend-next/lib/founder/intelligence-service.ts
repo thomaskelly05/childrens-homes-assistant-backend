@@ -22,6 +22,10 @@ import {
   loadFounderLiveMetrics,
   type FounderLiveMetrics
 } from '@/lib/founder/data/founder-live-metrics'
+import {
+  getFounderTelemetryEvents,
+  hydrateFounderTelemetryFromLiveData
+} from '@/lib/founder/telemetry'
 import type {
   FounderActivityItem,
   FounderAgent,
@@ -156,9 +160,18 @@ function buildKpis(
   return [mrrKpi, activeUsersKpi, providersKpi, homesKpi, hoursKpi, satisfactionKpi, conversationsKpi, aiCostKpi]
 }
 
-function buildActivityFeed(metrics: FounderLiveMetrics): FounderActivityItem[] {
-  if (!hasAnyLiveFounderIntelligence(metrics)) return []
-  return []
+function buildActivityFeed(_metrics: FounderLiveMetrics): FounderActivityItem[] {
+  const events = getFounderTelemetryEvents()
+  if (events.length === 0) return []
+
+  return events.slice(0, 20).map((event) => ({
+    id: event.id,
+    time: new Date(event.timestamp).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
+    role: event.userRole ?? 'platform',
+    region: event.organisationType ?? '—',
+    action: event.type.replace(/-/g, ' '),
+    category: event.category
+  }))
 }
 
 function buildSectorIntelligence(metrics: FounderLiveMetrics): FounderSectorTrend[] {
@@ -312,6 +325,7 @@ export function invalidateFounderDashboardCache() {
 
 export async function refreshFounderDashboardData(): Promise<FounderDashboardData> {
   const metrics = await loadFounderLiveMetrics()
+  hydrateFounderTelemetryFromLiveData()
   cachedDashboardData = generateFounderDashboardData(metrics)
   return cachedDashboardData
 }
