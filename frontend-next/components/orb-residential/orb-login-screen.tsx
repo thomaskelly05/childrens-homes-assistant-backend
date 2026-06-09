@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 
 import { OrbLoginAuthCard } from '@/components/orb-residential/orb-login-auth-card'
 import { OrbLoginDesktopHero } from '@/components/orb-residential/orb-login-desktop-hero'
+import { OrbLoginMobileHeader } from '@/components/orb-residential/orb-login-mobile-header'
 import { useOrbResidentialThemeSync } from '@/components/orb-residential/use-orb-residential-theme-sync'
 import { useOrbAppearance } from '@/components/orb-standalone/use-orb-appearance'
 import { getOrbThemeCssVariables } from '@/lib/orb/orb-theme'
@@ -283,9 +284,7 @@ function OrbLoginPanel({
         <OrbLoginDesktopHero />
 
         <div className="orb-login-panel flex min-h-0 flex-col lg:px-2 xl:px-6" data-orb-login-panel-centered>
-          <p className="orb-login-muted mb-2 text-xs leading-relaxed lg:hidden" data-orb-provider-email-hint>
-            Already subscribed? Use the same Google or Microsoft account you subscribed with.
-          </p>
+          <OrbLoginMobileHeader />
           <OrbLoginAuthCard
             error={error}
             oauth={oauth}

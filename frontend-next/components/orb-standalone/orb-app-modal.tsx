@@ -7,6 +7,7 @@ import {
   OrbStandalonePanelShell,
   type OrbAppModalSize
 } from '@/components/orb-standalone/orb-standalone-panel-shell'
+import type { OrbAppPanelMobileMode } from '@/components/orb-standalone/orb-app-panel-shell'
 
 export type { OrbAppModalSize }
 
@@ -27,7 +28,8 @@ export function OrbAppModal({
   size = 'standard',
   presentation = 'modal',
   compactChrome = false,
-  headerActions
+  headerActions,
+  mobileMode
 }: {
   open: boolean
   title: string
@@ -41,6 +43,7 @@ export function OrbAppModal({
   presentation?: OrbAppPresentation
   compactChrome?: boolean
   headerActions?: ReactNode
+  mobileMode?: OrbAppPanelMobileMode
 }) {
   if (presentation === 'workspace') {
     return (
@@ -70,6 +73,7 @@ export function OrbAppModal({
       panelId={panelId}
       layout="center"
       modalSize={size}
+      mobileMode={mobileMode ?? 'sheet'}
       appModal
     >
       {children}

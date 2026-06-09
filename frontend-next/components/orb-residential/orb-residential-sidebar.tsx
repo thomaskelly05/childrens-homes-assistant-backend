@@ -880,8 +880,9 @@ export function OrbResidentialSidebar({
       </div>
 
       <div
-        className="orb-sidebar-footer mt-auto shrink-0 border-t border-[var(--orb-line)]/40 px-2 py-2"
+        className="orb-sidebar-footer mt-auto shrink-0 border-t border-[var(--orb-line)]/40 px-2 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]"
         data-orb-sidebar-account-footer
+        data-orb-sidebar-sign-out-reachable
       >
         {isMobile ? (
           <SidebarCollapsibleSection
@@ -914,7 +915,7 @@ export function OrbResidentialSidebar({
                   ) : null}
                   {accountStatus ? (
                     <span
-                      className="mt-0.5 block text-[10px] font-medium capitalize text-emerald-300/90"
+                      className="orb-sidebar-account-status-pill mt-1 inline-flex rounded-full border border-emerald-400/40 bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold capitalize text-emerald-100"
                       data-orb-sidebar-account-status
                     >
                       {accountStatus}
@@ -951,7 +952,7 @@ export function OrbResidentialSidebar({
           </SidebarCollapsibleSection>
         ) : (
           <nav
-            className="space-y-0.5 rounded-xl p-1.5"
+            className="space-y-0.5 rounded-xl p-1"
             aria-label="Account and settings"
             data-orb-sidebar-bottom
             data-orb-sidebar-account-card
@@ -980,7 +981,7 @@ export function OrbResidentialSidebar({
                 ) : null}
                 {accountStatus ? (
                   <span
-                    className="mt-0.5 block text-[10px] font-medium capitalize text-emerald-300/90"
+                    className="orb-sidebar-account-status-pill mt-1 inline-flex rounded-full border border-emerald-400/40 bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold capitalize text-emerald-100"
                     data-orb-sidebar-account-status
                   >
                     {accountStatus}
