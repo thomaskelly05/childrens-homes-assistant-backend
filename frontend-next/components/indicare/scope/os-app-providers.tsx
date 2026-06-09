@@ -10,6 +10,7 @@ import { OsScopeGate } from '@/components/indicare/scope/os-scope-gate'
 import { OsScopeProvider } from '@/components/indicare/scope/os-scope-provider'
 import { ActiveChildProvider } from '@/lib/context/active-child-context'
 import { OperationalContextProvider } from '@/lib/operational/operational-context'
+import { isFounderDashboardRoute } from '@/lib/founder/access'
 import { isStandaloneOrbSurfaceRoute } from '@/lib/orb/product-mode'
 
 function OsProvidersFallback() {
@@ -24,7 +25,7 @@ function OsProvidersFallback() {
 export function OsAppProviders({ children }: { children: ReactNode }) {
   const pathname = usePathname() || '/'
 
-  if (isStandaloneOrbSurfaceRoute(pathname)) {
+  if (isStandaloneOrbSurfaceRoute(pathname) || isFounderDashboardRoute(pathname)) {
     return <>{children}</>
   }
 

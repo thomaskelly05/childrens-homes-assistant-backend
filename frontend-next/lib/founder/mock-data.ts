@@ -1,0 +1,287 @@
+/**
+ * Central mock data for the founder command centre.
+ * Replace individual sections with live API calls when backend projections are ready.
+ */
+
+export type FounderKpi = {
+  id: string
+  label: string
+  value: string
+  change?: string
+  changeDirection?: 'up' | 'down' | 'neutral'
+  hint?: string
+}
+
+export type FounderActivityItem = {
+  id: string
+  time: string
+  role: string
+  region: string
+  action: string
+  category: string
+}
+
+export type FounderOrbCategory = {
+  name: string
+  volume: number
+  trend?: number
+}
+
+export type FounderProductFeature = {
+  name: string
+  usage: number
+  trend: number
+  abandonmentRisk: 'low' | 'medium' | 'high'
+  demand: 'rising' | 'stable' | 'falling'
+}
+
+export type FounderHomeReadiness = {
+  id: string
+  name: string
+  score: number
+  status: string
+  statusTone: 'emerald' | 'amber' | 'red'
+}
+
+export type FounderSectorTrend = {
+  id: string
+  label: string
+  change: string
+  direction: 'up' | 'down'
+  tone: 'amber' | 'emerald' | 'blue' | 'purple' | 'red'
+}
+
+export type FounderRecommendation = {
+  id: string
+  priority: number
+  title: string
+  detail: string
+}
+
+export type FounderAgent = {
+  id: string
+  name: string
+  status: 'active' | 'idle' | 'monitoring'
+  purpose: string
+  latestInsight: string
+}
+
+export type FounderCostCentre = {
+  openAiSpend: string
+  costPerUser: string
+  costPerConversation: string
+  revenuePerProvider: string
+  grossMargin: string
+  usageWarning: 'normal' | 'elevated' | 'critical'
+  usageWarningLabel: string
+}
+
+export type FounderDashboardData = {
+  kpis: FounderKpi[]
+  activityFeed: FounderActivityItem[]
+  orbIntelligence: {
+    categories: FounderOrbCategory[]
+    fastestGrowing: string
+    emergingThemes: string[]
+    safeguardingVolume: number
+    reportGenerationVolume: number
+  }
+  productIntelligence: {
+    features: FounderProductFeature[]
+    mostUsed: string
+    leastUsed: string
+    highestAbandonmentRisk: string
+    topDemand: string
+  }
+  ofstedIntelligence: {
+    homes: FounderHomeReadiness[]
+    commonGaps: string[]
+  }
+  sectorIntelligence: FounderSectorTrend[]
+  recommendations: FounderRecommendation[]
+  agents: FounderAgent[]
+  costCentre: FounderCostCentre
+}
+
+export const founderMockData: FounderDashboardData = {
+  kpis: [
+    { id: 'mrr', label: 'Monthly Recurring Revenue', value: '£2,483', change: '+14%', changeDirection: 'up', hint: 'vs last month' },
+    { id: 'active-users', label: 'Active Users', value: '182', change: '+9%', changeDirection: 'up', hint: '30-day active' },
+    { id: 'providers', label: 'Providers', value: '12', changeDirection: 'neutral' },
+    { id: 'homes', label: "Children's Homes", value: '27', changeDirection: 'neutral' },
+    { id: 'hours', label: 'Hours Returned to Direct Care', value: '4,923', change: '+11%', changeDirection: 'up', hint: 'estimated this month' },
+    { id: 'satisfaction', label: 'Average ORB Satisfaction', value: '96%', change: '+2%', changeDirection: 'up' },
+    { id: 'conversations', label: 'ORB Conversations This Month', value: '1,847', change: '+18%', changeDirection: 'up' },
+    { id: 'ai-cost', label: 'Current AI Cost', value: '£184', change: '+22%', changeDirection: 'up', hint: 'this month' }
+  ],
+  activityFeed: [
+    { id: '1', time: '2 min ago', role: 'Registered Manager', region: 'South East · Residential', action: 'Opened Ofsted Readiness Review', category: 'Inspection' },
+    { id: '2', time: '6 min ago', role: 'Manager', region: 'Midlands · Residential', action: 'Generated Missing From Home Report', category: 'Reporting' },
+    { id: '3', time: '11 min ago', role: 'Senior Staff', region: 'North West · Residential', action: 'Used Dictate for 14 minutes', category: 'Dictate' },
+    { id: '4', time: '18 min ago', role: 'Deputy Manager', region: 'London · Supported Living', action: 'Reviewed risk assessment', category: 'Risk' },
+    { id: '5', time: '24 min ago', role: 'Support Worker', region: 'Yorkshire · Residential', action: 'Used ORB Chat for safeguarding guidance', category: 'Safeguarding' },
+    { id: '6', time: '31 min ago', role: 'Manager', region: 'East · Residential', action: 'Exported supervision record to PDF', category: 'Export' },
+    { id: '7', time: '38 min ago', role: 'Registered Manager', region: 'South West · Residential', action: 'Built chronology timeline segment', category: 'Chronology' },
+    { id: '8', time: '45 min ago', role: 'Deputy Manager', region: 'Scotland · Residential', action: 'Completed key work session notes via ORB Chat', category: 'Key Work' }
+  ],
+  orbIntelligence: {
+    categories: [
+      { name: 'Missing from Home', volume: 312, trend: 12 },
+      { name: 'Safeguarding', volume: 489, trend: 24 },
+      { name: 'Risk Assessments', volume: 276, trend: 8 },
+      { name: 'Key Work', volume: 198, trend: 6 },
+      { name: 'Behaviour Support', volume: 164, trend: 4 },
+      { name: 'Child Exploitation', volume: 142, trend: 21 },
+      { name: 'Online Safety', volume: 128, trend: 27 },
+      { name: 'Substance Misuse', volume: 97, trend: 9 }
+    ],
+    fastestGrowing: 'Online Safety',
+    emergingThemes: [
+      'County lines exploitation queries rising across adolescent homes',
+      'Managers requesting stronger chronology linkage in safeguarding outputs',
+      'Increased demand for Reg 44-aligned evaluation language',
+      'Dictate-led incident narratives reducing late record completion'
+    ],
+    safeguardingVolume: 489,
+    reportGenerationVolume: 734
+  },
+  productIntelligence: {
+    features: [
+      { name: 'Dictate', usage: 94, trend: 28, abandonmentRisk: 'low', demand: 'rising' },
+      { name: 'ORB Chat', usage: 88, trend: 18, abandonmentRisk: 'low', demand: 'rising' },
+      { name: 'Report Builder', usage: 72, trend: 11, abandonmentRisk: 'medium', demand: 'stable' },
+      { name: 'Risk Assessment Review', usage: 61, trend: 7, abandonmentRisk: 'medium', demand: 'stable' },
+      { name: 'Ofsted Readiness', usage: 58, trend: 14, abandonmentRisk: 'low', demand: 'rising' },
+      { name: 'Export to PDF', usage: 54, trend: 5, abandonmentRisk: 'low', demand: 'stable' },
+      { name: 'Chronology Builder', usage: 41, trend: 19, abandonmentRisk: 'high', demand: 'rising' },
+      { name: 'Supervision Builder', usage: 33, trend: 3, abandonmentRisk: 'high', demand: 'falling' }
+    ],
+    mostUsed: 'Dictate',
+    leastUsed: 'Supervision Builder',
+    highestAbandonmentRisk: 'Chronology Builder',
+    topDemand: 'Dictate V2'
+  },
+  ofstedIntelligence: {
+    homes: [
+      { id: 'a', name: 'Home A', score: 94, status: 'Outstanding Ready', statusTone: 'emerald' },
+      { id: 'b', name: 'Home B', score: 81, status: 'Good', statusTone: 'emerald' },
+      { id: 'c', name: 'Home C', score: 69, status: 'Attention Required', statusTone: 'amber' }
+    ],
+    commonGaps: [
+      'Missing child voice',
+      'Late records',
+      'Weak evaluation',
+      'Chronology gaps',
+      'Unsigned records',
+      'Incomplete safeguarding follow-up',
+      'Weak management oversight'
+    ]
+  },
+  sectorIntelligence: [
+    { id: 'missing', label: 'Missing episodes', change: '+12%', direction: 'up', tone: 'amber' },
+    { id: 'physical', label: 'Physical intervention', change: '-4%', direction: 'down', tone: 'emerald' },
+    { id: 'cannabis', label: 'Cannabis concerns', change: '+18%', direction: 'up', tone: 'amber' },
+    { id: 'online', label: 'Online harm', change: '+27%', direction: 'up', tone: 'red' },
+    { id: 'exploitation', label: 'Child exploitation', change: '+21%', direction: 'up', tone: 'red' },
+    { id: 'complaints', label: 'Complaints', change: '-6%', direction: 'down', tone: 'emerald' }
+  ],
+  recommendations: [
+    {
+      id: 'r1',
+      priority: 1,
+      title: 'Users are heavily using Dictate. Build Dictate V2.',
+      detail: 'Dictate sessions are up 28% month-on-month with strong completion rates. Prioritise multi-speaker capture, template-aware structuring, and offline resilience.'
+    },
+    {
+      id: 'r2',
+      priority: 2,
+      title: 'Managers are requesting chronology support. Improve Chronology Builder.',
+      detail: 'Chronology Builder shows high demand but elevated abandonment. Focus on guided timeline assembly and safeguarding linkage.'
+    },
+    {
+      id: 'r3',
+      priority: 3,
+      title: 'High safeguarding query volume. Expand ORB safeguarding knowledge.',
+      detail: 'Safeguarding is the second-largest ORB category. Extend county lines, CSE, and online harm guidance with Ofsted-aligned outputs.'
+    },
+    {
+      id: 'r4',
+      priority: 4,
+      title: 'Ofsted readiness gaps show weak child voice. Add child voice prompts across templates.',
+      detail: 'Child voice remains the most common inspection gap across lower-scoring homes. Embed prompts in reports, key work, and daily logs.'
+    },
+    {
+      id: 'r5',
+      priority: 5,
+      title: 'AI cost is rising. Add usage monitoring and model-routing.',
+      detail: 'AI spend is up 22% against 14% MRR growth. Introduce per-provider caps, conversation tiering, and cheaper routing for low-risk tasks.'
+    }
+  ],
+  agents: [
+    {
+      id: 'chief-of-staff',
+      name: 'Chief of Staff Agent',
+      status: 'active',
+      purpose: 'Gives daily founder briefing across revenue, growth, product, risk and recommendations.',
+      latestInsight: 'MRR up 14%. Dictate and safeguarding are the dominant growth drivers this week.'
+    },
+    {
+      id: 'product',
+      name: 'Product Agent',
+      status: 'active',
+      purpose: 'Analyses usage and tells us what to build next.',
+      latestInsight: 'Dictate V2 and Chronology Builder improvements are the highest-impact product bets.'
+    },
+    {
+      id: 'ofsted',
+      name: 'Ofsted Agent',
+      status: 'monitoring',
+      purpose: 'Tracks Ofsted, SCCIF, regulations, inspection themes and updates ORB requirements.',
+      latestInsight: 'Child voice and evaluation quality are recurring readiness gaps across three homes.'
+    },
+    {
+      id: 'customer-success',
+      name: 'Customer Success Agent',
+      status: 'active',
+      purpose: 'Finds power users, inactive users and churn risk.',
+      latestInsight: 'Two providers show declining weekly active usage. Schedule founder outreach.'
+    },
+    {
+      id: 'orb-quality',
+      name: 'ORB Quality Agent',
+      status: 'monitoring',
+      purpose: 'Reviews ORB outputs for therapeutic, safeguarding, child-centred and Ofsted-aligned quality.',
+      latestInsight: 'Safeguarding outputs score 96% satisfaction; chronology outputs need stronger evaluation language.'
+    },
+    {
+      id: 'growth',
+      name: 'Growth Agent',
+      status: 'idle',
+      purpose: 'Tracks signups, demos, LinkedIn activity, website performance and investor interest.',
+      latestInsight: 'Demo requests up 9% this fortnight. LinkedIn engagement strongest on safeguarding content.'
+    },
+    {
+      id: 'sector',
+      name: 'Sector Intelligence Agent',
+      status: 'active',
+      purpose: "Aggregates anonymised patterns across children's homes.",
+      latestInsight: 'Online harm and child exploitation themes are accelerating across adolescent placements.'
+    },
+    {
+      id: 'founder-story',
+      name: 'Founder Story Agent',
+      status: 'idle',
+      purpose: 'Turns product milestones and impact into LinkedIn posts, newsletters and investor updates.',
+      latestInsight: '4,923 hours returned to direct care is the strongest impact narrative this month.'
+    }
+  ],
+  costCentre: {
+    openAiSpend: '£184',
+    costPerUser: '£1.01',
+    costPerConversation: '£0.10',
+    revenuePerProvider: '£207',
+    grossMargin: '91.2%',
+    usageWarning: 'elevated',
+    usageWarningLabel: 'Usage elevated — monitor model routing'
+  }
+}

@@ -144,6 +144,7 @@ export function routeRequiresScope(pathname: string) {
   if (pathname === '/assistant/voice' || pathname.startsWith('/assistant/settings/')) return false
   if (pathname === '/profile' || pathname.startsWith('/settings')) return false
   if (pathname.startsWith('/mfa')) return false
+  if (pathname === '/founder' || pathname.startsWith('/founder/')) return false
   return true
 }
 
