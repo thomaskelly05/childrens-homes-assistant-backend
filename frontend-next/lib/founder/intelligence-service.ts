@@ -24,7 +24,9 @@ import {
 } from '@/lib/founder/data/founder-live-metrics'
 import {
   getFounderTelemetryEvents,
-  hydrateFounderTelemetryFromLiveData
+  getFounderTelemetrySummary,
+  hydrateFounderTelemetryFromLiveData,
+  refreshFounderTelemetrySummary
 } from '@/lib/founder/telemetry'
 import type {
   FounderActivityItem,
@@ -169,7 +171,7 @@ function buildActivityFeed(_metrics: FounderLiveMetrics): FounderActivityItem[] 
     time: new Date(event.timestamp).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
     role: event.userRole ?? 'platform',
     region: event.organisationType ?? '—',
-    action: event.type.replace(/-/g, ' '),
+    action: event.eventType.replace(/-/g, ' '),
     category: event.category
   }))
 }
@@ -325,9 +327,14 @@ export function invalidateFounderDashboardCache() {
 
 export async function refreshFounderDashboardData(): Promise<FounderDashboardData> {
   const metrics = await loadFounderLiveMetrics()
-  hydrateFounderTelemetryFromLiveData()
+  await hydrateFounderTelemetryFromLiveData()
+  await refreshFounderTelemetrySummary()
   cachedDashboardData = generateFounderDashboardData(metrics)
   return cachedDashboardData
+}
+
+export function getFounderTelemetrySummaryForDashboard() {
+  return getFounderTelemetrySummary()
 }
 
 export function getChiefOfStaffBriefing() {

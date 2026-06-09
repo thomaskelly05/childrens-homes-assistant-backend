@@ -17,6 +17,14 @@ import {
   isStandaloneOrbSafetyAcceptanceCode,
   ORB_SAFETY_ACCEPTANCE_MESSAGE
 } from '@/lib/orb/standalone-error-payload'
+import {
+  instrumentAiRequest,
+  instrumentErrorEncountered,
+  instrumentFeedbackSubmitted,
+  instrumentOrbChatSubmitted,
+  instrumentOrbModeUsed,
+  instrumentOrbResponseGenerated
+} from '@/lib/founder/telemetry/founder-telemetry-instrumentation'
 
 export {
   extractOrbErrorPayload,
@@ -124,6 +132,14 @@ export async function submitStandaloneOrbFeedback(request: StandaloneOrbFeedback
     body: JSON.stringify(request),
     credentials: 'include'
   })
+  if (response.ok) {
+    instrumentFeedbackSubmitted({
+      rating: request.rating,
+      reason: request.reason,
+      mode: request.mode,
+      promptTier: request.prompt_tier
+    })
+  }
   if (!response.ok) {
     let message = 'Feedback not sent. Try again.'
     try {
@@ -778,6 +794,13 @@ export async function sendStandaloneOrbMessageStream(
     })
   }
   recordOrbBootstrapRequest('conversation_stream')
+  instrumentOrbChatSubmitted({
+    mode: request.mode,
+    hasDocument: Boolean(request.document_text || request.document_source_id),
+    sourceSurface: request.source_surface
+  })
+  if (request.mode) instrumentOrbModeUsed(request.mode)
+  instrumentAiRequest({ surface: 'orb-standalone-stream', mode: request.mode })
   const endpoint = STANDALONE_ORB_API_PATHS.conversationStream
   const requestSignal = withTimeout(signal)
   const headers = new Headers({ 'Content-Type': 'application/json', Accept: 'text/event-stream' })
@@ -881,6 +904,11 @@ export async function sendStandaloneOrbMessageStream(
   }
 
   if (metadata) {
+    instrumentOrbResponseGenerated({
+      mode: request.mode,
+      confidence: metadata.confidence,
+      conversationId: metadata.conversation_id
+    })
     const partialTrimmed = partial.trim()
     const metadataAnswer = (metadata.answer || '').trim()
     if (partialTrimmed && metadataAnswer && partialTrimmed.length > metadataAnswer.length) {
@@ -892,6 +920,7 @@ export async function sendStandaloneOrbMessageStream(
     return metadata
   }
   if (streamError) {
+    instrumentErrorEncountered('orb_stream_error', { mode: request.mode })
     if (sawToken && partial.trim()) {
       return {
         ok: false,

@@ -335,6 +335,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     if (response.user && response.authenticated) {
       applySessionUser(response.user)
+      void import('@/lib/founder/telemetry/founder-telemetry-instrumentation').then(({ instrumentUserLogin }) => {
+        instrumentUserLogin(response.user?.role)
+      })
     }
 
     return response

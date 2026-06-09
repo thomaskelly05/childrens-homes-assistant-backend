@@ -1,4 +1,9 @@
 import { authFetch, authFetchResponse } from '@/lib/auth/api'
+import {
+  instrumentDictateCompleted,
+  instrumentDictateStarted,
+  instrumentPdfExport
+} from '@/lib/founder/telemetry/founder-telemetry-instrumentation'
 import type {
   OrbDictateMode,
   OrbDictateParticipant,
@@ -100,6 +105,7 @@ export async function transcribeOrbDictateAudio(
   file: File,
   opts?: { conversation_consent_confirmed?: boolean }
 ): Promise<TranscribeAudioResult> {
+  instrumentDictateStarted({ phase: 'transcribe', fileType: file.type || 'unknown' })
   const form = new FormData()
   form.append('file', file)
   if (opts?.conversation_consent_confirmed !== undefined) {
@@ -258,13 +264,16 @@ export async function finaliseOrbDictateDocument(payload: {
 export async function generateOrbDictateNote(
   payload: GenerateOrbDictatePayload
 ): Promise<OrbDictateGenerateResult> {
+  instrumentDictateStarted({ phase: 'generate', noteType: payload.note_type })
   try {
     const json = await authFetch<unknown>(DICTATE_BASE + '/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(serializeGeneratePayload(payload))
     })
-    return parseEnvelope<OrbDictateGenerateResult>(json)
+    const result = parseEnvelope<OrbDictateGenerateResult>(json)
+    instrumentDictateCompleted({ phase: 'generate', noteType: payload.note_type })
+    return result
   } catch {
     throw new Error('Could not generate note')
   }
@@ -423,6 +432,7 @@ export async function exportOrbDictateNote(payload: {
   format: 'pdf' | 'docx' | 'markdown'
   note_type?: OrbDictateNoteType
 }): Promise<Blob | { format: 'markdown'; content: string }> {
+  instrumentPdfExport(payload.format, 'dictate-export')
   if (payload.format === 'markdown') {
     const json = await authFetch<unknown>(DICTATE_BASE + '/export', {
       method: 'POST',

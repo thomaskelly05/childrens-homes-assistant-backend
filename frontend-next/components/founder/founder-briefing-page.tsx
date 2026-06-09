@@ -11,6 +11,7 @@ import { FounderActionCard } from '@/components/founder/founder-action-card'
 import {
   getChiefOfStaffBriefing,
   getFounderContractInputs,
+  getFounderTelemetrySummaryForDashboard,
   hasLiveFounderIntelligence,
   refreshFounderDashboardData
 } from '@/lib/founder/intelligence-service'
@@ -58,6 +59,7 @@ export function FounderBriefingPage() {
     ? calculateHoursReturned(contractInputs.usageMetrics, contractInputs.orbConversationAnalytics)
     : null
   const { providerAnalytics } = contractInputs
+  const telemetry = getFounderTelemetrySummaryForDashboard()
 
   const snapshotSections = hasLive
     ? [
@@ -115,6 +117,13 @@ export function FounderBriefingPage() {
               <span className="h-2 w-2 rounded-full bg-emerald-400" />
               {hoursReturned.totalHoursFormatted} hours returned to direct care this month
             </div>
+          ) : null}
+          {telemetry.totalEvents > 0 ? (
+            <p className="mt-3 text-sm text-slate-400">
+              Live telemetry: {telemetry.eventsToday} events today · {telemetry.orbConversations} ORB conversations ·{' '}
+              {telemetry.feedbackCount} feedback signals
+              {telemetry.lastUpdated ? ` · updated ${new Date(telemetry.lastUpdated).toLocaleString('en-GB')}` : ''}
+            </p>
           ) : null}
           <Link
             href="/founder/orb"

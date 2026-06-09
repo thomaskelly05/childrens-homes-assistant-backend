@@ -14,7 +14,11 @@ import {
 import { Shield } from 'lucide-react'
 
 import { FounderNavHeader } from '@/components/founder/founder-nav-header'
-import { getFounderDashboardData, refreshFounderDashboardData } from '@/lib/founder/intelligence-service'
+import {
+  getFounderDashboardData,
+  getFounderTelemetrySummaryForDashboard,
+  refreshFounderDashboardData
+} from '@/lib/founder/intelligence-service'
 import type { FounderDashboardData } from '@/lib/founder/mock-data'
 import { FounderActionsPanel } from '@/components/founder/founder-actions-panel'
 import { FounderActivityFeed } from '@/components/founder/founder-activity-feed'
@@ -72,6 +76,7 @@ export function FounderDashboardPage() {
     () => data.orbIntelligence.categories.map((category) => ({ name: category.name, volume: category.volume })),
     [data.orbIntelligence.categories]
   )
+  const telemetry = useMemo(() => getFounderTelemetrySummaryForDashboard(), [data])
 
   return (
     <div className="founder-dashboard min-h-screen">
@@ -89,6 +94,21 @@ export function FounderDashboardPage() {
               <FounderKpiCard key={kpi.id} kpi={kpi} />
             ))}
           </div>
+          {telemetry.totalEvents > 0 ? (
+            <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              {[
+                { label: 'Telemetry events', value: telemetry.totalEvents },
+                { label: 'Events today', value: telemetry.eventsToday },
+                { label: 'ORB conversations', value: telemetry.orbConversations },
+                { label: 'AI cost estimate', value: telemetry.estimatedAiCost > 0 ? `£${telemetry.estimatedAiCost.toFixed(2)}` : '—' }
+              ].map((item) => (
+                <div key={item.label} className="rounded-xl border border-white/10 bg-black/20 px-4 py-3">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">{item.label}</p>
+                  <p className="mt-1 text-xl font-bold text-white">{item.value}</p>
+                </div>
+              ))}
+            </div>
+          ) : null}
         </FounderSectionCard>
 
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_420px]">

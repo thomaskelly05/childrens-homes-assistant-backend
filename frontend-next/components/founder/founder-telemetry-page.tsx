@@ -8,7 +8,8 @@ import { refreshFounderDashboardData } from '@/lib/founder/intelligence-service'
 import {
   getFounderTelemetryEvents,
   getFounderTelemetrySummary,
-  hydrateFounderTelemetryFromLiveData
+  hydrateFounderTelemetryFromLiveData,
+  refreshFounderTelemetrySummary
 } from '@/lib/founder/telemetry'
 
 export function FounderTelemetryPage() {
@@ -16,10 +17,9 @@ export function FounderTelemetryPage() {
 
   useEffect(() => {
     refreshFounderDashboardData()
-      .then(() => {
-        hydrateFounderTelemetryFromLiveData()
-        setTick((t) => t + 1)
-      })
+      .then(() => hydrateFounderTelemetryFromLiveData())
+      .then(() => refreshFounderTelemetrySummary())
+      .then(() => setTick((t) => t + 1))
       .catch(() => undefined)
   }, [])
 
@@ -47,11 +47,12 @@ export function FounderTelemetryPage() {
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
               {[
                 { label: 'Total events', value: summary.totalEvents },
-                { label: 'Active users', value: summary.activeUsers },
+                { label: 'Events today', value: summary.eventsToday },
                 { label: 'ORB conversations', value: summary.orbConversations },
-                { label: 'Error rate', value: `${summary.errorRate}%` },
-                { label: 'AI cost estimate', value: summary.aiCostsGbp > 0 ? `£${summary.aiCostsGbp.toFixed(2)}` : '—' },
-                { label: 'Conversion events', value: summary.conversionEvents },
+                { label: 'AI requests', value: summary.aiRequests },
+                { label: 'Errors', value: summary.errors },
+                { label: 'Feedback', value: summary.feedbackCount },
+                { label: 'AI cost estimate', value: summary.estimatedAiCost > 0 ? `£${summary.estimatedAiCost.toFixed(2)}` : '—' },
                 { label: 'Last updated', value: summary.lastUpdated ? new Date(summary.lastUpdated).toLocaleString('en-GB') : '—' }
               ].map((item) => (
                 <div key={item.label} className="founder-surface rounded-2xl border border-white/10 bg-white/[0.04] p-5">
@@ -92,7 +93,7 @@ export function FounderTelemetryPage() {
                 {events.slice(0, 50).map((event) => (
                   <div key={event.id} className="flex flex-wrap items-center gap-3 rounded-xl border border-white/8 bg-black/20 px-4 py-3 text-sm">
                     <span className="rounded-full border border-cyan-400/30 bg-cyan-500/10 px-2 py-0.5 text-[10px] font-bold uppercase text-cyan-200">
-                      {event.type}
+                      {event.eventType}
                     </span>
                     <span className="text-slate-500">{new Date(event.timestamp).toLocaleString('en-GB')}</span>
                     <span className="text-slate-400">{event.source}</span>

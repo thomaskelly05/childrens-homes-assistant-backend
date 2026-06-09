@@ -30,6 +30,8 @@ export default function OrbSignupPage() {
     try {
       await orbStandaloneSignup({ email, password, first_name: firstName, last_name: lastName })
       await login({ email, password, remember: true })
+      const { instrumentUserSignup } = await import('@/lib/founder/telemetry/founder-telemetry-instrumentation')
+      instrumentUserSignup('orb_residential')
       router.replace('/orb/setup')
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Signup failed')
