@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   Bar,
   BarChart,
@@ -14,8 +14,10 @@ import {
 } from 'recharts'
 import { Bot, Lock, Shield, Sun } from 'lucide-react'
 
-import { getFounderDashboardData } from '@/lib/founder/intelligence-service'
+import { getFounderDashboardData, refreshFounderDashboardData } from '@/lib/founder/intelligence-service'
+import type { FounderDashboardData } from '@/lib/founder/mock-data'
 import { FounderActivityFeed } from '@/components/founder/founder-activity-feed'
+import { FounderDataStatusCard } from '@/components/founder/founder-data-status-card'
 import { FounderAgentCard } from '@/components/founder/founder-agent-card'
 import { FounderCostCentre } from '@/components/founder/founder-cost-centre'
 import { FounderKpiCard } from '@/components/founder/founder-kpi-card'
@@ -49,7 +51,21 @@ function DarkTooltip({ active, payload, label }: { active?: boolean; payload?: A
 }
 
 export function FounderDashboardPage() {
-  const data = useMemo(() => getFounderDashboardData(), [])
+  const [data, setData] = useState<FounderDashboardData>(() => getFounderDashboardData())
+
+  useEffect(() => {
+    let active = true
+    refreshFounderDashboardData()
+      .then((fresh) => {
+        if (active) setData(fresh)
+      })
+      .catch(() => {
+        /* keep mock/hybrid fallback */
+      })
+    return () => {
+      active = false
+    }
+  }, [])
 
   const orbChartData = useMemo(
     () => data.orbIntelligence.categories.map((category) => ({ name: category.name, volume: category.volume })),
@@ -116,12 +132,15 @@ export function FounderDashboardPage() {
             <FounderActivityFeed items={data.activityFeed} />
           </FounderSectionCard>
 
-          <FounderSectionCard eyebrow="Data Safety" title="Private intelligence notice">
-            <div className="flex gap-4 rounded-2xl border border-cyan-400/20 bg-cyan-500/5 p-5">
-              <Shield className="mt-0.5 h-5 w-5 shrink-0 text-cyan-300" aria-hidden />
-              <p className="text-sm leading-7 text-slate-300">
-                This dashboard uses anonymised operational intelligence only. It must not expose child names, staff names, personal records, addresses, or identifiable safeguarding details.
-              </p>
+          <FounderSectionCard eyebrow="Data Pipeline" title="Founder data status">
+            <div className="space-y-4">
+              <FounderDataStatusCard status={data.dataSourceStatus} />
+              <div className="flex gap-4 rounded-2xl border border-cyan-400/20 bg-cyan-500/5 p-5">
+                <Shield className="mt-0.5 h-5 w-5 shrink-0 text-cyan-300" aria-hidden />
+                <p className="text-sm leading-7 text-slate-300">
+                  This dashboard uses anonymised operational intelligence only. It must not expose child names, staff names, personal records, addresses, or identifiable safeguarding details.
+                </p>
+              </div>
             </div>
           </FounderSectionCard>
         </div>
