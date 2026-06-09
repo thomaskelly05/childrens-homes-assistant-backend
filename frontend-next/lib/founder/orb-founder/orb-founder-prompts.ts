@@ -13,8 +13,18 @@ export const FOUNDER_ORB_PROMPT_CATEGORIES: FounderOrbPromptCategory[] = [
     id: 'strategy',
     label: 'Strategy',
     prompts: [
-      'What is the biggest operational risk before provider rollout?',
-      'What should I focus on tomorrow?'
+      'What should I do today?',
+      'Show my top actions',
+      'Create actions from this',
+      'What is the biggest operational risk before provider rollout?'
+    ]
+  },
+  {
+    id: 'actions',
+    label: 'Founder Actions',
+    prompts: [
+      'What actions are linked to Ofsted?',
+      'What actions are linked to AI cost?'
     ]
   },
   {

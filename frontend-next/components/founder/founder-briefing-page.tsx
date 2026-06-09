@@ -1,8 +1,12 @@
 'use client'
 
 import Link from 'next/link'
+import { useCallback, useState } from 'react'
 import { ArrowLeft, Bot, Briefcase, Shield, Sparkles, TrendingUp, TriangleAlert } from 'lucide-react'
 
+import { getTopFounderActions } from '@/lib/founder/actions'
+import type { FounderActionStatus } from '@/lib/founder/actions'
+import { FounderActionCard } from '@/components/founder/founder-action-card'
 import { getChiefOfStaffBriefing, getFounderContractInputs } from '@/lib/founder/intelligence-service'
 import { calculateAiCost, calculateHoursReturned, calculateOfstedReadiness } from '@/lib/founder/intelligence'
 import { runGrowthAgent } from '@/lib/founder/agents/growth-agent'
@@ -17,6 +21,10 @@ function getGreeting() {
 }
 
 export function FounderBriefingPage() {
+  const [, setTick] = useState(0)
+  const refresh = useCallback(() => setTick((t) => t + 1), [])
+  const todaysActions = getTopFounderActions(5)
+
   const briefing = getChiefOfStaffBriefing()
   const product = runProductAgent()
   const growth = runGrowthAgent()
@@ -127,6 +135,28 @@ export function FounderBriefingPage() {
           <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-cyan-300">Chief of Staff Summary</p>
           <h2 className="mt-3 text-2xl font-bold text-white">{briefing.title}</h2>
           <p className="mt-4 text-base leading-8 text-slate-300">{briefing.summary}</p>
+        </section>
+
+        <section className="founder-surface rounded-[28px] border border-emerald-400/20 bg-gradient-to-br from-emerald-500/5 to-transparent p-8 backdrop-blur-xl">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-emerald-300">Today&apos;s Founder Actions</p>
+            <Link
+              href="/founder/actions"
+              className="text-xs font-bold text-emerald-200 transition hover:text-emerald-100"
+            >
+              View all actions
+            </Link>
+          </div>
+          <div className="mt-6 space-y-4">
+            {todaysActions.map((action) => (
+              <FounderActionCard
+                key={action.id}
+                action={action}
+                compact
+                onStatusChange={(_id: string, _status: FounderActionStatus) => refresh()}
+              />
+            ))}
+          </div>
         </section>
 
         <section className="founder-surface rounded-[28px] border border-white/10 bg-white/[0.04] p-8 backdrop-blur-xl">

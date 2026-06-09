@@ -5,6 +5,12 @@
  */
 
 import { getAgentDetail, getAllAgents, isValidAgentId, type AgentId } from '@/lib/founder/agents'
+import {
+  getActionsByCategory,
+  getOpenFounderActions,
+  getTopFounderActions,
+  refreshFounderActions
+} from '@/lib/founder/actions'
 import { getFounderContractInputs, getFounderDashboardData } from '@/lib/founder/intelligence-service'
 import {
   calculateAiCost,
@@ -297,6 +303,89 @@ function answerBriefing(ctx: ReturnType<typeof buildIntelligenceContext>): Found
   }
 }
 
+function formatActionList(actions: ReturnType<typeof getTopFounderActions>): string {
+  if (actions.length === 0) return 'No open founder actions right now.'
+  return actions
+    .map((action, index) => `${index + 1}. [${action.priority.toUpperCase()}] ${action.title} — ${action.recommendedNextStep}`)
+    .join(' ')
+}
+
+function answerTopActions(): FounderOrbAnswer {
+  const actions = getTopFounderActions(5)
+  return {
+    answer: `Your top ${actions.length} founder actions: ${formatActionList(actions)}`,
+    usedSources: ['Founder Action Layer', 'Founder Insight Engine'],
+    suggestedFollowUps: [
+      'What should I do today?',
+      'What actions are linked to Ofsted?',
+      'What actions are linked to AI cost?'
+    ],
+    confidence: 'high'
+  }
+}
+
+function answerCreateActions(): FounderOrbAnswer {
+  const refreshed = refreshFounderActions()
+  const open = getOpenFounderActions()
+  return {
+    answer: `Created ${refreshed.length} founder actions from current intelligence (${open.length} open). Top priorities: ${formatActionList(getTopFounderActions(3))} Review and track them at /founder/actions.`,
+    usedSources: ['Founder Action Generator', 'Founder Insight Engine', 'ORB Intelligence Engine'],
+    suggestedFollowUps: [
+      'Show my top actions',
+      'What should I do today?',
+      'What actions are linked to Ofsted?'
+    ],
+    confidence: 'high'
+  }
+}
+
+function answerTodayActions(): FounderOrbAnswer {
+  const today = getOpenFounderActions().filter((a) => a.dueLabel === 'Today' || a.dueLabel === 'This week').slice(0, 5)
+  const actions = today.length > 0 ? today : getTopFounderActions(5)
+  return {
+    answer: `Today's focus: ${formatActionList(actions)}`,
+    usedSources: ['Founder Action Layer', 'Chief of Staff Agent'],
+    suggestedFollowUps: [
+      'Show my top actions',
+      'What actions are linked to AI cost?',
+      'What should IndiCare build next?'
+    ],
+    confidence: 'high'
+  }
+}
+
+function answerOfstedActions(): FounderOrbAnswer {
+  const actions = getActionsByCategory().ofsted.slice(0, 5)
+  return {
+    answer: actions.length > 0
+      ? `Ofsted-linked actions: ${formatActionList(actions)}`
+      : 'No open Ofsted actions right now. Review readiness gaps on the founder dashboard.',
+    usedSources: ['Founder Action Layer', 'Ofsted Readiness Engine', 'Ofsted Agent'],
+    suggestedFollowUps: [
+      'What would Ofsted be concerned about?',
+      'What should I do today?',
+      'Show my top actions'
+    ],
+    confidence: 'high'
+  }
+}
+
+function answerAiCostActions(): FounderOrbAnswer {
+  const actions = getActionsByCategory()['ai-cost'].slice(0, 5)
+  return {
+    answer: actions.length > 0
+      ? `AI cost actions: ${formatActionList(actions)}`
+      : 'No open AI cost actions. Spend is within normal guardrails.',
+    usedSources: ['Founder Action Layer', 'AI Cost Engine'],
+    suggestedFollowUps: [
+      'Where is AI cost becoming a risk?',
+      'What should I do today?',
+      'Show my top actions'
+    ],
+    confidence: 'high'
+  }
+}
+
 function answerFallback(ctx: ReturnType<typeof buildIntelligenceContext>): FounderOrbAnswer {
   const top = ctx.topRecommendation
 
@@ -365,6 +454,26 @@ export function answerFounderQuestion(question: string, context?: FounderOrbCont
     return answerLinkedIn(ctx)
   }
 
+  if (matches(q, [/create actions/, /generate actions/, /actions from this/])) {
+    return answerCreateActions()
+  }
+
+  if (matches(q, [/top actions/, /show my actions/, /my founder actions/, /action queue/])) {
+    return answerTopActions()
+  }
+
+  if (matches(q, [/actions.*ofsted/, /ofsted.*actions/, /linked to ofsted/])) {
+    return answerOfstedActions()
+  }
+
+  if (matches(q, [/actions.*ai cost/, /ai cost.*actions/, /linked to ai cost/])) {
+    return answerAiCostActions()
+  }
+
+  if (matches(q, [/what should i do today/, /do today/, /today.*actions/])) {
+    return answerTodayActions()
+  }
+
   if (matches(q, [/tomorrow/, /focus on/, /today.*priorit/, /daily focus/, /what should i do/])) {
     return answerFocusTomorrow(ctx)
   }
@@ -395,16 +504,16 @@ export function answerFounderQuestion(question: string, context?: FounderOrbCont
 
 /** Suggested founder questions for the sidebar */
 export const FOUNDER_ORB_SUGGESTED_QUESTIONS = [
+  'What should I do today?',
+  'Show my top actions',
+  'Create actions from this',
   'What should IndiCare build next?',
   'What is the biggest risk this month?',
-  'Which agent has the most important recommendation?',
-  'What is ORB usage telling us?',
+  'What actions are linked to Ofsted?',
+  'What actions are linked to AI cost?',
   'What would an investor ask about these numbers?',
-  'What would Ofsted be concerned about?',
   'How many hours have we returned to direct care?',
-  'Where is AI cost becoming a risk?',
-  'What should I post on LinkedIn this week?',
-  'What should I focus on tomorrow?'
+  'Where is AI cost becoming a risk?'
 ] as const
 
 /** Build context panel snapshot for the ORB Founder UI */

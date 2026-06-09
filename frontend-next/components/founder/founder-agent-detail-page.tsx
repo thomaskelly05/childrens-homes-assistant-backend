@@ -1,9 +1,13 @@
 'use client'
 
 import Link from 'next/link'
+import { useCallback, useState } from 'react'
 import { ArrowLeft, Bot, Circle, MessageSquare, Terminal } from 'lucide-react'
 
 import type { AgentDetail } from '@/lib/founder/agents'
+import { getActionsForAgent } from '@/lib/founder/actions'
+import type { FounderActionStatus } from '@/lib/founder/actions'
+import { FounderActionCard } from '@/components/founder/founder-action-card'
 
 const statusTone: Record<AgentDetail['latestRun']['status'], string> = {
   active: 'text-emerald-400',
@@ -34,6 +38,10 @@ function formatLastRun(iso: string) {
 }
 
 export function FounderAgentDetailPage({ agent }: { agent: AgentDetail }) {
+  const [, setTick] = useState(0)
+  const refresh = useCallback(() => setTick((t) => t + 1), [])
+  const agentActions = getActionsForAgent(agent.id)
+
   return (
     <div className="founder-dashboard min-h-screen">
       <div className="founder-dashboard-bg pointer-events-none fixed inset-0 -z-10" aria-hidden />
@@ -85,6 +93,28 @@ export function FounderAgentDetailPage({ agent }: { agent: AgentDetail }) {
           <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-500">Latest insight</p>
           <h2 className="mt-3 text-xl font-bold text-white">{agent.latestRun.title}</h2>
           <p className="mt-3 text-sm leading-7 text-slate-300">{agent.latestRun.summary}</p>
+        </section>
+
+        <section className="founder-surface rounded-[28px] border border-emerald-400/20 bg-gradient-to-br from-emerald-500/5 to-transparent p-6 backdrop-blur-xl">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-emerald-300">Actions from this agent</p>
+            <Link href="/founder/actions" className="text-xs font-bold text-emerald-200 transition hover:text-emerald-100">
+              View all actions
+            </Link>
+          </div>
+          <div className="mt-4 space-y-4">
+            {agentActions.length > 0 ? (
+              agentActions.map((action) => (
+                <FounderActionCard
+                  key={action.id}
+                  action={action}
+                  onStatusChange={(_id: string, _status: FounderActionStatus) => refresh()}
+                />
+              ))
+            ) : (
+              <p className="text-sm text-slate-400">No actions generated from this agent yet.</p>
+            )}
+          </div>
         </section>
 
         <section className="founder-surface rounded-[28px] border border-white/10 bg-white/[0.04] p-6 backdrop-blur-xl">
