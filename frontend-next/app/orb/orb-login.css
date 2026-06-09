@@ -201,8 +201,9 @@
     min-height: 0;
     max-height: 100svh;
     align-items: center;
-    justify-content: center;
-    padding-top: clamp(0.5rem, 1.5vh, 1rem);
+    justify-content: flex-start;
+    /* Align card top with hero heading block — not viewport-centred (too high on laptop) */
+    padding-top: clamp(2.75rem, 11vh, 4.5rem);
     padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px));
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
@@ -286,7 +287,7 @@
   }
 
   .orb-login-panel {
-    padding-top: 0.25rem;
+    padding-top: clamp(1.5rem, 8vh, 2.5rem);
   }
 
   .orb-login-card {
