@@ -1,14 +1,18 @@
+import { agentResultWithoutLiveData, isAgentLiveDataAvailable } from './agent-live-data'
 import type { AgentRunResult } from './types'
 
 export function runOrbQualityAgent(): AgentRunResult {
+  if (!isAgentLiveDataAvailable()) {
+    return agentResultWithoutLiveData('ORB Quality Review')
+  }
+
   return {
     title: 'ORB Quality Review',
-    summary: 'Safeguarding outputs score 96% satisfaction. Chronology outputs need stronger evaluation language. Online Safety category growing fastest at +27%.',
+    summary: 'Live ORB analytics are connected. Review satisfaction scores and category demand from connected ORB data.',
     recommendations: [
+      'Audit safeguarding output quality from live ORB conversation patterns',
       'Strengthen evaluation language in chronology ORB outputs',
-      'Expand county lines and CSE guidance in safeguarding responses',
-      'Review Online Safety response templates for adolescent placements',
-      'Add Reg 44-aligned evaluation prompts to report generation'
+      'Expand guidance for fastest-growing live ORB categories'
     ],
     status: 'monitoring'
   }

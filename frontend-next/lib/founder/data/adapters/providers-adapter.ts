@@ -1,6 +1,8 @@
+import { isFounderMockFallbackAllowed } from '@/lib/founder/data/founder-data-mode'
 import { mockProviderAnalytics } from '@/lib/founder/intelligence/mock-inputs'
 import type { ProviderAnalytics } from '@/lib/founder/contracts/provider-analytics'
 import type { FounderAdapterResult } from './adapter-types'
+import { getProvidersAdapterUnavailable } from './adapter-unavailable'
 import { anonymiseProviderLabel, currentPeriodBounds, fetchJson } from './adapter-utils'
 
 type ProvidersApiResponse = {
@@ -14,7 +16,7 @@ export async function fetchProvidersAdapter(): Promise<FounderAdapterResult<Prov
   const payload = await fetchJson<ProvidersApiResponse>('/api/providers')
 
   if (!payload) {
-    return getProvidersAdapterFallback()
+    return isFounderMockFallbackAllowed() ? getProvidersAdapterFallback() : getProvidersAdapterUnavailable()
   }
 
   const rows = payload.providers ?? payload.items ?? []
@@ -53,18 +55,20 @@ export async function fetchProvidersAdapter(): Promise<FounderAdapterResult<Prov
       periodEnd,
       totalProviders: payload.count ?? providers.length,
       totalHomes: providers.reduce((sum, p) => sum + p.homesCount, 0),
-      totalMrr: mockProviderAnalytics.totalMrr,
-      mrrTrendPercent: mockProviderAnalytics.mrrTrendPercent,
+      totalMrr: 0,
+      mrrTrendPercent: 0,
       providers
     },
     source: 'live',
     limitations: [
-      'Provider names anonymised. Per-provider MRR and activity metrics still estimated until billing rollups are connected.'
+      'Provider names anonymised. MRR requires a live billing rollup — not yet connected.'
     ]
   }
 }
 
 export function getProvidersAdapterFallback(): FounderAdapterResult<ProviderAnalytics> {
+  if (!isFounderMockFallbackAllowed()) return getProvidersAdapterUnavailable()
+
   const anonymisedProviders = mockProviderAnalytics.providers.map((provider, index) => ({
     ...provider,
     providerName: anonymiseProviderLabel(index)

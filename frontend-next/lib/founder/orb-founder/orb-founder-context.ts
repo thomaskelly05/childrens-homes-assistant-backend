@@ -53,7 +53,16 @@ function buildCurrentRisks(
 ): string[] {
   const risks: string[] = []
 
-  if (dataSourceStatus.source !== 'live') {
+  if (dataSourceStatus.source === 'live-only') {
+    const disconnected = Object.values(dataSourceStatus.sourceConnections).filter(
+      (s) => s !== 'connected'
+    ).length
+    if (disconnected > 0) {
+      risks.push(
+        `Live-only mode — ${disconnected} data source(s) not yet connected. Unavailable metrics are hidden.`
+      )
+    }
+  } else if (dataSourceStatus.source !== 'live') {
     risks.push(
       `Founder intelligence is running in ${dataSourceStatus.source} mode — verify figures against live billing and usage before external decisions.`
     )
@@ -131,7 +140,7 @@ export function getOrbFounderContext(): OrbFounderContext {
  * and activity feed entries that could imply provider identity.
  */
 export function serializeOrbFounderContextForAi(context: OrbFounderContext): string {
-  const isLive = context.answerDataBasis === 'live'
+  const isLiveOnly = context.answerDataBasis === 'live-only' || context.answerDataBasis === 'live'
 
   const anonymised = {
     dataSourceStatus: {
@@ -139,9 +148,10 @@ export function serializeOrbFounderContextForAi(context: OrbFounderContext): str
       generatedAt: context.dataSourceStatus.generatedAt,
       limitations: context.dataLimitations,
       availability: context.dataSourceStatus.availability,
-      instruction: isLive
-        ? 'Figures below are drawn from connected live aggregates. Still avoid naming children, staff, or providers.'
-        : 'IMPORTANT: Figures below include mock or estimated data. Do NOT present them as verified live platform truth. State uncertainty when answering.'
+      sourceConnections: context.dataSourceStatus.sourceConnections,
+      instruction: isLiveOnly
+        ? 'Live-only mode: only present metrics marked as available from connected sources. If a metric is missing or shows "—", say "I do not have live data for that yet." Never invent numbers.'
+        : 'IMPORTANT: Figures below may include mock or estimated data. Do NOT present them as verified live platform truth. State uncertainty when answering.'
     },
     kpis: context.founderDashboard.kpis.map((k) => ({
       label: k.label,

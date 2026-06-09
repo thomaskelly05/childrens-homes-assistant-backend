@@ -18,7 +18,11 @@ const nextConfig: NextConfig = {
       process.env.NEXT_PUBLIC_ORB_GIT_COMMIT ||
       process.env.VERCEL_GIT_COMMIT_SHA ||
       process.env.GIT_COMMIT ||
-      'local'
+      'local',
+    NEXT_PUBLIC_FOUNDER_DATA_MODE:
+      process.env.FOUNDER_DATA_MODE ||
+      process.env.NEXT_PUBLIC_FOUNDER_DATA_MODE ||
+      (process.env.NODE_ENV === 'production' ? 'live-only' : 'live-only')
   },
   eslint: {
     // Render deploys should not fail because of non-blocking lint warnings.

@@ -1,8 +1,10 @@
 import type { OrbAdminUsageSummary } from '@/lib/orb/admin-quality-client'
 import { ORB_ADMIN_API_PATHS } from '@/lib/orb/admin-quality-client'
+import { isFounderMockFallbackAllowed } from '@/lib/founder/data/founder-data-mode'
 import { mockBillingMetrics } from '@/lib/founder/intelligence/mock-inputs'
 import type { BillingMetrics } from '@/lib/founder/contracts/billing-metrics'
 import type { FounderAdapterResult } from './adapter-types'
+import { getBillingAdapterUnavailable } from './adapter-unavailable'
 import { currentPeriodBounds, fetchJson } from './adapter-utils'
 
 export async function fetchBillingAdapter(
@@ -12,29 +14,36 @@ export async function fetchBillingAdapter(
   const usage = await fetchJson<OrbAdminUsageSummary>(`${ORB_ADMIN_API_PATHS.billingUsage}?days=30`)
 
   if (!usage) {
-    return getBillingAdapterFallback()
+    return isFounderMockFallbackAllowed() ? getBillingAdapterFallback() : getBillingAdapterUnavailable()
   }
 
-  const totalProviders = providerTotals?.totalProviders ?? mockBillingMetrics.totalProviders
-  const totalMrr = providerTotals?.totalMrr ?? mockBillingMetrics.totalMrrGbp
-  const openAiSpendGbp = usage.estimated_total_cost ?? mockBillingMetrics.openAiSpendGbp
-  const totalConversations = usage.total_requests ?? mockBillingMetrics.totalConversations
-  const totalActiveUsers = usage.total_active_users ?? mockBillingMetrics.totalActiveUsers
+  const totalProviders = providerTotals?.totalProviders ?? 0
+  const totalMrr = providerTotals?.totalMrr ?? 0
+  const openAiSpendGbp = usage.estimated_total_cost ?? 0
+  const totalConversations = usage.total_requests ?? 0
+  const totalActiveUsers = usage.total_active_users ?? 0
 
   const costPerUserGbp =
-    totalActiveUsers > 0 ? Number((openAiSpendGbp / totalActiveUsers).toFixed(2)) : mockBillingMetrics.costPerUserGbp
+    totalActiveUsers > 0 ? Number((openAiSpendGbp / totalActiveUsers).toFixed(2)) : 0
   const costPerProviderGbp =
-    totalProviders > 0
-      ? Number((openAiSpendGbp / totalProviders).toFixed(2))
-      : mockBillingMetrics.costPerProviderGbp
+    totalProviders > 0 ? Number((openAiSpendGbp / totalProviders).toFixed(2)) : 0
   const costPerConversationGbp =
-    totalConversations > 0
-      ? Number((openAiSpendGbp / totalConversations).toFixed(2))
-      : mockBillingMetrics.costPerConversationGbp
+    totalConversations > 0 ? Number((openAiSpendGbp / totalConversations).toFixed(2)) : 0
   const grossMarginPercent =
-    totalMrr > 0
-      ? Number((((totalMrr - openAiSpendGbp) / totalMrr) * 100).toFixed(1))
-      : mockBillingMetrics.grossMarginPercent
+    totalMrr > 0 ? Number((((totalMrr - openAiSpendGbp) / totalMrr) * 100).toFixed(1)) : 0
+
+  const tierSplit = usage.prompt_tier_split ?? {}
+  const modelBreakdown = Object.entries(tierSplit).map(([tier, count]) => ({
+    modelId: tier,
+    modelName: tier,
+    requestCount: count,
+    inputTokens: 0,
+    outputTokens: 0,
+    estimatedCostGbp:
+      totalConversations > 0
+        ? Number(((openAiSpendGbp * count) / totalConversations).toFixed(2))
+        : 0
+  }))
 
   return {
     data: {
@@ -49,17 +58,16 @@ export async function fetchBillingAdapter(
       costPerProviderGbp,
       costPerConversationGbp,
       grossMarginPercent,
-      modelBreakdown: mockBillingMetrics.modelBreakdown
+      modelBreakdown
     },
     source: 'live',
-    limitations: [
-      'MRR still estimated until subscription billing rollups are connected to founder analytics.',
-      'Model-level breakdown retained from mock inputs until token routing telemetry is aggregated.'
-    ]
+    limitations: totalMrr <= 0 ? ['MRR requires a live billing rollup — not yet connected.'] : []
   }
 }
 
 export function getBillingAdapterFallback(): FounderAdapterResult<BillingMetrics> {
+  if (!isFounderMockFallbackAllowed()) return getBillingAdapterUnavailable()
+
   return {
     data: mockBillingMetrics,
     source: 'mock',

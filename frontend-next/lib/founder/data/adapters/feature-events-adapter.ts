@@ -1,6 +1,8 @@
+import { isFounderMockFallbackAllowed } from '@/lib/founder/data/founder-data-mode'
 import { mockUsageMetrics } from '@/lib/founder/intelligence/mock-inputs'
 import type { FeatureUsageMetric } from '@/lib/founder/contracts/usage-metrics'
 import type { FounderAdapterResult } from './adapter-types'
+import { getFeatureEventsAdapterUnavailable } from './adapter-unavailable'
 import { currentPeriodBounds } from './adapter-utils'
 
 /**
@@ -8,10 +10,12 @@ import { currentPeriodBounds } from './adapter-utils'
  * TODO: Connect to platform analytics event stream when a founder-safe aggregate endpoint exists.
  */
 export async function fetchFeatureEventsAdapter(): Promise<FounderAdapterResult<FeatureUsageMetric[]>> {
-  return getFeatureEventsAdapterFallback()
+  return isFounderMockFallbackAllowed() ? getFeatureEventsAdapterFallback() : getFeatureEventsAdapterUnavailable()
 }
 
 export function getFeatureEventsAdapterFallback(): FounderAdapterResult<FeatureUsageMetric[]> {
+  if (!isFounderMockFallbackAllowed()) return getFeatureEventsAdapterUnavailable()
+
   const { periodStart, periodEnd } = currentPeriodBounds()
   return {
     data: mockUsageMetrics.featureUsage.map((feature) => ({

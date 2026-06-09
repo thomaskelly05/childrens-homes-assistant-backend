@@ -16,21 +16,24 @@ function ChangeIcon({ direction }: { direction: NonNullable<FounderKpi['changeDi
 
 export function FounderKpiCard({ kpi }: { kpi: FounderKpi }) {
   const direction = kpi.changeDirection || 'neutral'
+  const unavailable = kpi.unavailable === true
 
   return (
     <article className="founder-surface group relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] p-5 shadow-[0_12px_40px_rgba(0,0,0,0.35)] backdrop-blur-xl transition hover:border-cyan-400/30 hover:bg-white/[0.06]">
       <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-400/40 to-transparent opacity-0 transition group-hover:opacity-100" />
       <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">{kpi.label}</p>
       <div className="mt-3 flex items-end justify-between gap-3">
-        <p className="text-3xl font-black tracking-[-0.04em] text-white">{kpi.value}</p>
-        {kpi.change ? (
+        <p className={`text-3xl font-black tracking-[-0.04em] ${unavailable ? 'text-slate-500' : 'text-white'}`}>{kpi.value}</p>
+        {!unavailable && kpi.change ? (
           <span className={`inline-flex items-center gap-1 text-sm font-bold ${changeTone[direction]}`}>
             <ChangeIcon direction={direction} />
             {kpi.change}
           </span>
         ) : null}
       </div>
-      {kpi.hint ? <p className="mt-2 text-xs font-medium text-slate-500">{kpi.hint}</p> : null}
+      {kpi.hint ? (
+        <p className={`mt-2 text-xs font-medium ${unavailable ? 'text-amber-200/80' : 'text-slate-500'}`}>{kpi.hint}</p>
+      ) : null}
     </article>
   )
 }

@@ -1,5 +1,7 @@
+import { isFounderMockFallbackAllowed } from '@/lib/founder/data/founder-data-mode'
 import { mockProviderAnalytics } from '@/lib/founder/intelligence/mock-inputs'
 import type { FounderAdapterResult, FounderHomesAggregate } from './adapter-types'
+import { getHomesAdapterUnavailable } from './adapter-unavailable'
 import { fetchJson } from './adapter-utils'
 
 type HomesApiResponse = {
@@ -12,7 +14,7 @@ export async function fetchHomesAdapter(): Promise<FounderAdapterResult<FounderH
   const payload = await fetchJson<HomesApiResponse>('/api/homes')
 
   if (!payload) {
-    return getHomesAdapterFallback()
+    return isFounderMockFallbackAllowed() ? getHomesAdapterFallback() : getHomesAdapterUnavailable()
   }
 
   const rows = payload.homes ?? payload.items ?? []
@@ -29,6 +31,8 @@ export async function fetchHomesAdapter(): Promise<FounderAdapterResult<FounderH
 }
 
 export function getHomesAdapterFallback(): FounderAdapterResult<FounderHomesAggregate> {
+  if (!isFounderMockFallbackAllowed()) return getHomesAdapterUnavailable()
+
   return {
     data: { totalHomes: mockProviderAnalytics.totalHomes },
     source: 'mock',

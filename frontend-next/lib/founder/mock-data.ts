@@ -13,6 +13,8 @@ export type FounderKpi = {
   change?: string
   changeDirection?: 'up' | 'down' | 'neutral'
   hint?: string
+  /** When true, value is an em dash and hint explains the missing live source. */
+  unavailable?: boolean
 }
 
 export type FounderActivityItem = {
@@ -122,6 +124,16 @@ const _legacyFounderMockData: FounderDashboardData = {
       billingAvailable: false,
       aiUsageAvailable: false,
       readinessAvailable: false
+    },
+    sourceConnections: {
+      users: 'not-connected',
+      providers: 'not-connected',
+      homes: 'not-connected',
+      orbConversations: 'not-connected',
+      featureEvents: 'not-connected',
+      billing: 'not-connected',
+      aiUsage: 'not-connected',
+      readiness: 'not-connected'
     }
   },
   kpis: [
