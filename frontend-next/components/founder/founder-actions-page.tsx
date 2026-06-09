@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { ArrowLeft, ListChecks } from 'lucide-react'
 
 import type { FounderAction, FounderActionStatus } from '@/lib/founder/actions'
@@ -10,10 +10,12 @@ import {
   getActionsByPriority,
   getCompletedFounderActions,
   getFounderActions,
-  getOpenFounderActions
+  getOpenFounderActions,
+  resetFounderActionStore
 } from '@/lib/founder/actions'
 import { FounderActionCard } from '@/components/founder/founder-action-card'
 import { FounderSectionCard } from '@/components/founder/founder-section-card'
+import { hasLiveFounderIntelligence, refreshFounderDashboardData } from '@/lib/founder/intelligence-service'
 
 function ActionSection({
   title,
@@ -40,6 +42,24 @@ function ActionSection({
 export function FounderActionsPage() {
   const [, setTick] = useState(0)
   const refresh = useCallback(() => setTick((t) => t + 1), [])
+  const [hasLive, setHasLive] = useState(() => hasLiveFounderIntelligence())
+
+  useEffect(() => {
+    let active = true
+    resetFounderActionStore()
+    refreshFounderDashboardData()
+      .then(() => {
+        if (active) {
+          resetFounderActionStore()
+          setHasLive(hasLiveFounderIntelligence())
+          refresh()
+        }
+      })
+      .catch(() => undefined)
+    return () => {
+      active = false
+    }
+  }, [refresh])
 
   const handleStatusChange = useCallback(
     (_id: string, _status: FounderActionStatus) => {
@@ -52,7 +72,6 @@ export function FounderActionsPage() {
   const byPriority = getActionsByPriority()
   const byCategory = getActionsByCategory()
   const completed = getCompletedFounderActions()
-
   const thisWeekActions = openActions.filter((a) => a.dueLabel === 'This week' || a.dueLabel === 'Today')
 
   return (
@@ -77,7 +96,7 @@ export function FounderActionsPage() {
               </div>
               <h1 className="mt-4 text-4xl font-black tracking-[-0.05em] text-white md:text-5xl">Founder Actions</h1>
               <p className="mt-3 max-w-3xl text-base leading-7 text-slate-400">
-                Strategic work generated from IndiCare Intelligence.
+                Strategic work generated from live IndiCare Intelligence only.
               </p>
             </div>
             <div className="rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-right">
@@ -88,29 +107,37 @@ export function FounderActionsPage() {
           </div>
         </header>
 
-        <ActionSection
-          title="Critical / High Priority"
-          actions={[...byPriority.critical, ...byPriority.high]}
-          onStatusChange={handleStatusChange}
-        />
-
-        <ActionSection title="This Week" actions={thisWeekActions} onStatusChange={handleStatusChange} />
-
-        <ActionSection title="Product" actions={byCategory.product} onStatusChange={handleStatusChange} />
-
-        <ActionSection title="Ofsted" actions={byCategory.ofsted} onStatusChange={handleStatusChange} />
-
-        <ActionSection title="Growth" actions={byCategory.growth} onStatusChange={handleStatusChange} />
-
-        <ActionSection title="AI Cost" actions={byCategory['ai-cost']} onStatusChange={handleStatusChange} />
-
-        <ActionSection title="Completed" actions={completed} onStatusChange={handleStatusChange} />
-
-        {getFounderActions().length === 0 ? (
-          <FounderSectionCard eyebrow="Actions" title="No actions yet" description="Intelligence signals will generate founder actions automatically.">
-            <p className="text-sm text-slate-400">Check back after the dashboard refreshes live metrics.</p>
+        {!hasLive || getFounderActions().length === 0 ? (
+          <FounderSectionCard
+            eyebrow="Actions"
+            title="No live founder actions yet"
+            description="Actions will appear once live usage, Ofsted readiness, billing or ORB analytics data is connected."
+          >
+            <p className="text-sm leading-7 text-slate-400">
+              Connect live data sources on the founder dashboard. Founder actions are generated only from connected live intelligence — never from mock or estimated figures.
+            </p>
           </FounderSectionCard>
-        ) : null}
+        ) : (
+          <>
+            <ActionSection
+              title="Critical / High Priority"
+              actions={[...byPriority.critical, ...byPriority.high]}
+              onStatusChange={handleStatusChange}
+            />
+
+            <ActionSection title="This Week" actions={thisWeekActions} onStatusChange={handleStatusChange} />
+
+            <ActionSection title="Product" actions={byCategory.product} onStatusChange={handleStatusChange} />
+
+            <ActionSection title="Ofsted" actions={byCategory.ofsted} onStatusChange={handleStatusChange} />
+
+            <ActionSection title="Growth" actions={byCategory.growth} onStatusChange={handleStatusChange} />
+
+            <ActionSection title="AI Cost" actions={byCategory['ai-cost']} onStatusChange={handleStatusChange} />
+
+            <ActionSection title="Completed" actions={completed} onStatusChange={handleStatusChange} />
+          </>
+        )}
       </div>
     </div>
   )

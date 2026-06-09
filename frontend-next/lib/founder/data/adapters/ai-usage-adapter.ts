@@ -1,8 +1,10 @@
 import type { OrbAdminUsageSummary } from '@/lib/orb/admin-quality-client'
 import { ORB_ADMIN_API_PATHS } from '@/lib/orb/admin-quality-client'
+import { isFounderMockFallbackAllowed } from '@/lib/founder/data/founder-data-mode'
 import { mockBillingMetrics } from '@/lib/founder/intelligence/mock-inputs'
 import type { ModelUsageBreakdown } from '@/lib/founder/contracts/billing-metrics'
 import type { FounderAdapterResult } from './adapter-types'
+import { getAiUsageAdapterUnavailable } from './adapter-unavailable'
 import { fetchJson } from './adapter-utils'
 
 export type FounderAiUsageAggregate = {
@@ -15,7 +17,7 @@ export async function fetchAiUsageAdapter(): Promise<FounderAdapterResult<Founde
   const usage = await fetchJson<OrbAdminUsageSummary>(`${ORB_ADMIN_API_PATHS.billingUsage}?days=30`)
 
   if (!usage) {
-    return getAiUsageAdapterFallback()
+    return isFounderMockFallbackAllowed() ? getAiUsageAdapterFallback() : getAiUsageAdapterUnavailable()
   }
 
   const tierSplit = usage.prompt_tier_split ?? {}
@@ -33,9 +35,9 @@ export async function fetchAiUsageAdapter(): Promise<FounderAdapterResult<Founde
 
   return {
     data: {
-      openAiSpendGbp: usage.estimated_total_cost ?? mockBillingMetrics.openAiSpendGbp,
-      totalRequests: usage.total_requests ?? mockBillingMetrics.totalConversations,
-      modelBreakdown: modelBreakdown.length ? modelBreakdown : mockBillingMetrics.modelBreakdown
+      openAiSpendGbp: usage.estimated_total_cost ?? 0,
+      totalRequests: usage.total_requests ?? 0,
+      modelBreakdown
     },
     source: 'live',
     limitations: [
@@ -45,6 +47,8 @@ export async function fetchAiUsageAdapter(): Promise<FounderAdapterResult<Founde
 }
 
 export function getAiUsageAdapterFallback(): FounderAdapterResult<FounderAiUsageAggregate> {
+  if (!isFounderMockFallbackAllowed()) return getAiUsageAdapterUnavailable()
+
   return {
     data: {
       openAiSpendGbp: mockBillingMetrics.openAiSpendGbp,

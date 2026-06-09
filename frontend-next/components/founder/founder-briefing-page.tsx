@@ -1,13 +1,18 @@
 'use client'
 
 import Link from 'next/link'
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { ArrowLeft, Bot, Briefcase, Shield, Sparkles, TrendingUp, TriangleAlert } from 'lucide-react'
 
 import { getTopFounderActions } from '@/lib/founder/actions'
 import type { FounderActionStatus } from '@/lib/founder/actions'
 import { FounderActionCard } from '@/components/founder/founder-action-card'
-import { getChiefOfStaffBriefing, getFounderContractInputs } from '@/lib/founder/intelligence-service'
+import {
+  getChiefOfStaffBriefing,
+  getFounderContractInputs,
+  hasLiveFounderIntelligence,
+  refreshFounderDashboardData
+} from '@/lib/founder/intelligence-service'
 import { calculateAiCost, calculateHoursReturned, calculateOfstedReadiness } from '@/lib/founder/intelligence'
 import { runGrowthAgent } from '@/lib/founder/agents/growth-agent'
 import { runProductAgent } from '@/lib/founder/agents/product-agent'
@@ -20,56 +25,75 @@ function getGreeting() {
   return 'Good Evening'
 }
 
+const WAITING_MESSAGE =
+  'This briefing is waiting for live founder data. Connect live usage, revenue, ORB analytics and readiness sources to generate a real briefing.'
+
 export function FounderBriefingPage() {
   const [, setTick] = useState(0)
   const refresh = useCallback(() => setTick((t) => t + 1), [])
-  const todaysActions = getTopFounderActions(5)
+  const [hasLive, setHasLive] = useState(() => hasLiveFounderIntelligence())
 
+  useEffect(() => {
+    let active = true
+    refreshFounderDashboardData()
+      .then(() => {
+        if (active) setHasLive(hasLiveFounderIntelligence())
+      })
+      .catch(() => undefined)
+    return () => {
+      active = false
+    }
+  }, [])
+
+  const todaysActions = getTopFounderActions(5)
   const briefing = getChiefOfStaffBriefing()
   const product = runProductAgent()
   const growth = runGrowthAgent()
   const sector = runSectorIntelligenceAgent()
   const contractInputs = getFounderContractInputs()
-  const readiness = calculateOfstedReadiness(contractInputs.readinessMetrics)
-  const aiCost = calculateAiCost(contractInputs.billingMetrics)
-  const hoursReturned = calculateHoursReturned(
-    contractInputs.usageMetrics,
-    contractInputs.orbConversationAnalytics
-  )
-  const { providerAnalytics, dataSourceStatus } = contractInputs
+  const readiness = hasLive ? calculateOfstedReadiness(contractInputs.readinessMetrics) : null
+  const aiCost = hasLive ? calculateAiCost(contractInputs.billingMetrics) : null
+  const hoursReturned = hasLive
+    ? calculateHoursReturned(contractInputs.usageMetrics, contractInputs.orbConversationAnalytics)
+    : null
+  const { providerAnalytics } = contractInputs
 
-  const snapshotSections = [
-    {
-      icon: TrendingUp,
-      title: 'Revenue',
-      tone: 'text-emerald-300',
-      content: `MRR at £${providerAnalytics.totalMrr.toLocaleString('en-GB')} (+${providerAnalytics.mrrTrendPercent}% MoM). ${providerAnalytics.totalProviders} providers across ${providerAnalytics.totalHomes} homes. Gross margin ${aiCost.grossMargin}.`
-    },
-    {
-      icon: Briefcase,
-      title: 'Growth',
-      tone: 'text-cyan-300',
-      content: growth.summary
-    },
-    {
-      icon: Sparkles,
-      title: 'Product',
-      tone: 'text-violet-300',
-      content: product.summary
-    },
-    {
-      icon: TriangleAlert,
-      title: 'Risk',
-      tone: 'text-amber-300',
-      content: `Platform readiness at ${readiness.score}% (${readiness.status}). AI spend ${aiCost.openAiSpend} — ${aiCost.usageWarningLabel}. ${readiness.gaps.filter((g) => g.severity === 'critical').length} critical readiness gaps.`
-    },
-    {
-      icon: Shield,
-      title: 'Sector Trends',
-      tone: 'text-rose-300',
-      content: sector.summary
-    }
-  ]
+  const snapshotSections = hasLive
+    ? [
+        {
+          icon: TrendingUp,
+          title: 'Revenue',
+          tone: 'text-emerald-300',
+          content: `MRR at £${providerAnalytics.totalMrr.toLocaleString('en-GB')} (${providerAnalytics.mrrTrendPercent >= 0 ? '+' : ''}${providerAnalytics.mrrTrendPercent}% MoM). ${providerAnalytics.totalProviders} providers across ${providerAnalytics.totalHomes} homes.${aiCost ? ` Gross margin ${aiCost.grossMargin}.` : ''}`
+        },
+        {
+          icon: Briefcase,
+          title: 'Growth',
+          tone: 'text-cyan-300',
+          content: growth.summary
+        },
+        {
+          icon: Sparkles,
+          title: 'Product',
+          tone: 'text-violet-300',
+          content: product.summary
+        },
+        {
+          icon: TriangleAlert,
+          title: 'Risk',
+          tone: 'text-amber-300',
+          content: readiness && aiCost
+            ? `Platform readiness at ${readiness.score}% (${readiness.status}). AI spend ${aiCost.openAiSpend} — ${aiCost.usageWarningLabel}. ${readiness.gaps.filter((g) => g.severity === 'critical').length} critical readiness gaps.`
+            : 'Live risk signals require connected readiness and AI usage sources.'
+        },
+        {
+          icon: Shield,
+          title: 'Sector Trends',
+          tone: 'text-rose-300',
+          content: sector.summary
+        }
+      ]
+    : []
 
   return (
     <div className="founder-dashboard min-h-screen">
@@ -92,19 +116,17 @@ export function FounderBriefingPage() {
                 {getGreeting()}, Thomas
               </h1>
               <p className="mt-4 max-w-2xl text-base leading-7 text-slate-400">
-                Your daily intelligence briefing, generated by the Chief of Staff Agent from{' '}
-                {dataSourceStatus.source === 'live' ? 'live' : dataSourceStatus.source === 'hybrid' ? 'hybrid' : 'estimated'}{' '}
-                platform signals.
+                Your daily intelligence briefing, generated by the Chief of Staff Agent from live platform signals only.
               </p>
-              {dataSourceStatus.source !== 'live' ? (
-                <p className="mt-3 text-sm text-amber-200/90">
-                  Some figures in this briefing are estimated or mocked until all live data sources are connected.
-                </p>
+              {!hasLive ? (
+                <p className="mt-3 text-sm leading-7 text-amber-200/90">{WAITING_MESSAGE}</p>
               ) : null}
-              <div className="mt-6 inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/30 px-4 py-2 text-xs font-semibold text-slate-400">
-                <span className="h-2 w-2 rounded-full bg-emerald-400" />
-                {hoursReturned.totalHoursFormatted} hours returned to direct care this month
-              </div>
+              {hasLive && hoursReturned && hoursReturned.totalHours > 0 ? (
+                <div className="mt-6 inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/30 px-4 py-2 text-xs font-semibold text-slate-400">
+                  <span className="h-2 w-2 rounded-full bg-emerald-400" />
+                  {hoursReturned.totalHoursFormatted} hours returned to direct care this month
+                </div>
+              ) : null}
             </div>
             <Link
               href="/founder/orb"
@@ -116,20 +138,27 @@ export function FounderBriefingPage() {
           </div>
         </header>
 
-        <section className="founder-surface rounded-[28px] border border-white/10 bg-white/[0.04] p-8 backdrop-blur-xl">
-          <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500">Today&apos;s Snapshot</p>
-          <div className="mt-6 space-y-5">
-            {snapshotSections.map((section) => (
-              <article key={section.title} className="rounded-2xl border border-white/8 bg-black/20 p-5">
-                <div className="flex items-center gap-3">
-                  <section.icon className={`h-5 w-5 ${section.tone}`} aria-hidden />
-                  <h2 className="text-sm font-bold uppercase tracking-[0.14em] text-white">{section.title}</h2>
-                </div>
-                <p className="mt-3 text-sm leading-7 text-slate-300">{section.content}</p>
-              </article>
-            ))}
-          </div>
-        </section>
+        {!hasLive ? (
+          <section className="founder-surface rounded-[28px] border border-amber-400/20 bg-amber-500/5 p-8 backdrop-blur-xl">
+            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-amber-300">Awaiting live data</p>
+            <p className="mt-4 text-base leading-8 text-slate-300">{WAITING_MESSAGE}</p>
+          </section>
+        ) : (
+          <section className="founder-surface rounded-[28px] border border-white/10 bg-white/[0.04] p-8 backdrop-blur-xl">
+            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500">Today&apos;s Snapshot</p>
+            <div className="mt-6 space-y-5">
+              {snapshotSections.map((section) => (
+                <article key={section.title} className="rounded-2xl border border-white/8 bg-black/20 p-5">
+                  <div className="flex items-center gap-3">
+                    <section.icon className={`h-5 w-5 ${section.tone}`} aria-hidden />
+                    <h2 className="text-sm font-bold uppercase tracking-[0.14em] text-white">{section.title}</h2>
+                  </div>
+                  <p className="mt-3 text-sm leading-7 text-slate-300">{section.content}</p>
+                </article>
+              ))}
+            </div>
+          </section>
+        )}
 
         <section className="founder-surface rounded-[28px] border border-cyan-400/20 bg-gradient-to-br from-cyan-500/5 to-transparent p-8 backdrop-blur-xl">
           <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-cyan-300">Chief of Staff Summary</p>
@@ -137,41 +166,45 @@ export function FounderBriefingPage() {
           <p className="mt-4 text-base leading-8 text-slate-300">{briefing.summary}</p>
         </section>
 
-        <section className="founder-surface rounded-[28px] border border-emerald-400/20 bg-gradient-to-br from-emerald-500/5 to-transparent p-8 backdrop-blur-xl">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-emerald-300">Today&apos;s Founder Actions</p>
-            <Link
-              href="/founder/actions"
-              className="text-xs font-bold text-emerald-200 transition hover:text-emerald-100"
-            >
-              View all actions
-            </Link>
-          </div>
-          <div className="mt-6 space-y-4">
-            {todaysActions.map((action) => (
-              <FounderActionCard
-                key={action.id}
-                action={action}
-                compact
-                onStatusChange={(_id: string, _status: FounderActionStatus) => refresh()}
-              />
-            ))}
-          </div>
-        </section>
+        {hasLive && todaysActions.length > 0 ? (
+          <section className="founder-surface rounded-[28px] border border-emerald-400/20 bg-gradient-to-br from-emerald-500/5 to-transparent p-8 backdrop-blur-xl">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-emerald-300">Today&apos;s Founder Actions</p>
+              <Link
+                href="/founder/actions"
+                className="text-xs font-bold text-emerald-200 transition hover:text-emerald-100"
+              >
+                View all actions
+              </Link>
+            </div>
+            <div className="mt-6 space-y-4">
+              {todaysActions.map((action) => (
+                <FounderActionCard
+                  key={action.id}
+                  action={action}
+                  compact
+                  onStatusChange={(_id: string, _status: FounderActionStatus) => refresh()}
+                />
+              ))}
+            </div>
+          </section>
+        ) : null}
 
-        <section className="founder-surface rounded-[28px] border border-white/10 bg-white/[0.04] p-8 backdrop-blur-xl">
-          <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500">Recommended Actions</p>
-          <ol className="mt-6 space-y-4">
-            {briefing.recommendations.map((action, index) => (
-              <li key={action} className="flex items-start gap-4 rounded-2xl border border-white/8 bg-black/20 p-5">
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-violet-400/30 bg-violet-500/10 text-sm font-black text-violet-200">
-                  {index + 1}
-                </span>
-                <p className="text-sm leading-7 text-slate-200">{action}</p>
-              </li>
-            ))}
-          </ol>
-        </section>
+        {hasLive && briefing.recommendations.length > 0 ? (
+          <section className="founder-surface rounded-[28px] border border-white/10 bg-white/[0.04] p-8 backdrop-blur-xl">
+            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500">Recommended Actions</p>
+            <ol className="mt-6 space-y-4">
+              {briefing.recommendations.map((action, index) => (
+                <li key={action} className="flex items-start gap-4 rounded-2xl border border-white/8 bg-black/20 p-5">
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-violet-400/30 bg-violet-500/10 text-sm font-black text-violet-200">
+                    {index + 1}
+                  </span>
+                  <p className="text-sm leading-7 text-slate-200">{action}</p>
+                </li>
+              ))}
+            </ol>
+          </section>
+        ) : null}
 
         <p className="text-center text-xs text-slate-600">
           Generated {new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}

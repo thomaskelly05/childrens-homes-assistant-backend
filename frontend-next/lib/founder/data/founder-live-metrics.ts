@@ -1,19 +1,24 @@
 /**
- * Builds founder contract inputs from live adapters with safe mock fallback.
+ * Builds founder contract inputs from live adapters.
+ * In live-only mode, unavailable sources return empty data — never mock fallback.
  */
 
-import { mockUsageMetrics } from '@/lib/founder/intelligence/mock-inputs'
+import { currentPeriodBounds } from './adapters/adapter-utils'
 import type { BillingMetrics } from '@/lib/founder/contracts/billing-metrics'
 import type { OrbConversationAnalytics } from '@/lib/founder/contracts/orb-conversation-analytics'
 import type { ProviderAnalytics } from '@/lib/founder/contracts/provider-analytics'
 import type { ReadinessMetrics } from '@/lib/founder/contracts/readiness-metrics'
 import type { UsageMetrics } from '@/lib/founder/contracts/usage-metrics'
 import {
+  deriveSourceConnectionStatuses,
   detectFounderDataSourcesSync,
   probeFounderDataSources,
   type FounderDataSourceAvailability,
+  type FounderDataSourceKey,
+  type FounderSourceConnectionStatus,
   type FounderSourceMode
 } from './founder-data-source'
+import { isFounderLiveOnlyMode, resolveFounderSourceMode } from './founder-data-mode'
 import {
   fetchAiUsageAdapter,
   fetchBillingAdapter,
@@ -39,6 +44,7 @@ export type FounderDataSourceStatus = {
   generatedAt: string
   limitations: string[]
   availability: Omit<FounderDataSourceAvailability, 'sourceMode'>
+  sourceConnections: Record<FounderDataSourceKey, FounderSourceConnectionStatus>
 }
 
 export type FounderLiveMetrics = {
@@ -54,10 +60,9 @@ let cachedLiveMetrics: FounderLiveMetrics | null = null
 let loadPromise: Promise<FounderLiveMetrics> | null = null
 
 function mergeAdapterSources(sources: FounderAdapterSource[]): FounderSourceMode {
+  if (isFounderLiveOnlyMode()) return 'live-only'
   const liveCount = sources.filter((s) => s === 'live').length
-  if (liveCount === 0) return 'mock'
-  if (liveCount === sources.length) return 'live'
-  return 'hybrid'
+  return resolveFounderSourceMode(liveCount, sources.length)
 }
 
 function buildUsageMetrics(
@@ -65,27 +70,26 @@ function buildUsageMetrics(
   features: ReturnType<typeof getFeatureEventsAdapterFallback>,
   orb: OrbConversationAnalytics
 ): UsageMetrics {
-  const { periodStart, periodEnd } = mockUsageMetrics
+  const { periodStart, periodEnd } = currentPeriodBounds()
   return {
     periodStart,
     periodEnd,
     activeUsers: users.data.activeUsers,
     activeUsersTrendPercent: users.data.activeUsersTrendPercent,
     totalSessions: users.data.totalSessions,
-    dictateMinutes: mockUsageMetrics.dictateMinutes,
-    reportBuilderGenerations: mockUsageMetrics.reportBuilderGenerations,
-    chronologyBuilds: mockUsageMetrics.chronologyBuilds,
-    riskAssessmentReviews: mockUsageMetrics.riskAssessmentReviews,
+    dictateMinutes: 0,
+    reportBuilderGenerations: 0,
+    chronologyBuilds: 0,
+    riskAssessmentReviews: 0,
     orbConversations: orb.totalConversations,
     featureUsage: features.data
   }
 }
 
 function applyHomesCount(providerAnalytics: ProviderAnalytics, totalHomes: number): ProviderAnalytics {
-  if (totalHomes <= 0) return providerAnalytics
   return {
     ...providerAnalytics,
-    totalHomes
+    totalHomes: totalHomes > 0 ? totalHomes : providerAnalytics.totalHomes
   }
 }
 
@@ -93,12 +97,35 @@ function applyAiUsageToBilling(
   billing: BillingMetrics,
   aiUsage: ReturnType<typeof getAiUsageAdapterFallback>
 ): BillingMetrics {
+  if (aiUsage.source !== 'live') return billing
+
   return {
     ...billing,
     openAiSpendGbp: aiUsage.data.openAiSpendGbp,
     totalConversations: aiUsage.data.totalRequests || billing.totalConversations,
     modelBreakdown: aiUsage.data.modelBreakdown
   }
+}
+
+function buildRecordCounts(
+  users: ReturnType<typeof getUsersAdapterFallback>,
+  providers: ReturnType<typeof getProvidersAdapterFallback>,
+  homes: ReturnType<typeof getHomesAdapterFallback>,
+  orb: ReturnType<typeof getOrbConversationsAdapterFallback>,
+  billing: ReturnType<typeof getBillingAdapterFallback>,
+  aiUsage: ReturnType<typeof getAiUsageAdapterFallback>,
+  readiness: ReturnType<typeof getReadinessAdapterFallback>
+) {
+  return {
+    users: users.data.activeUsers,
+    providers: providers.data.totalProviders,
+    homes: homes.data.totalHomes,
+    orbConversations: orb.data.totalConversations,
+    featureEvents: 0,
+    billing: billing.data.openAiSpendGbp > 0 || billing.data.totalMrrGbp > 0 ? 1 : 0,
+    aiUsage: aiUsage.data.totalRequests,
+    readiness: readiness.data.commonGaps.length + readiness.data.homes.length
+  } satisfies Partial<Record<FounderDataSourceKey, number>>
 }
 
 function buildLiveMetricsFromAdapters(
@@ -115,6 +142,9 @@ function buildLiveMetricsFromAdapters(
   const providerAnalytics = applyHomesCount(providers.data, homes.data.totalHomes)
   const usageMetrics = buildUsageMetrics(users, features, orb.data)
   const billingMetrics = applyAiUsageToBilling(billing.data, aiUsage)
+
+  const recordCounts = buildRecordCounts(users, providers, homes, orb, billing, aiUsage, readiness)
+  const sourceConnections = deriveSourceConnectionStatuses(availability, recordCounts)
 
   const limitations = [
     ...users.limitations,
@@ -148,12 +178,13 @@ function buildLiveMetricsFromAdapters(
       source,
       generatedAt: new Date().toISOString(),
       limitations: [...new Set(limitations)],
-      availability
+      availability,
+      sourceConnections
     }
   }
 }
 
-/** Synchronous metrics — uses cache or mock fallbacks for first paint. */
+/** Synchronous metrics — uses cache or empty/unavailable adapters for first paint. */
 export function getFounderLiveMetricsSync(): FounderLiveMetrics {
   if (cachedLiveMetrics) return cachedLiveMetrics
 
@@ -176,7 +207,7 @@ export function getFounderLiveMetricsSync(): FounderLiveMetrics {
   return cachedLiveMetrics
 }
 
-/** Loads live metrics from adapters, merging with mock fallback where needed. */
+/** Loads live metrics from adapters. Mock fallback only when data mode allows it. */
 export async function loadFounderLiveMetrics(): Promise<FounderLiveMetrics> {
   if (loadPromise) return loadPromise
 

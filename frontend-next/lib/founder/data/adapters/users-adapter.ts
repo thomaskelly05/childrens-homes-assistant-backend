@@ -1,7 +1,9 @@
 import type { OrbAdminUsageSummary } from '@/lib/orb/admin-quality-client'
 import { ORB_ADMIN_API_PATHS } from '@/lib/orb/admin-quality-client'
+import { isFounderMockFallbackAllowed } from '@/lib/founder/data/founder-data-mode'
 import { mockUsageMetrics } from '@/lib/founder/intelligence/mock-inputs'
 import type { FounderAdapterResult, FounderUsersAggregate } from './adapter-types'
+import { getUsersAdapterUnavailable } from './adapter-unavailable'
 import { currentPeriodBounds, fetchJson } from './adapter-utils'
 
 export async function fetchUsersAdapter(): Promise<FounderAdapterResult<FounderUsersAggregate>> {
@@ -9,15 +11,7 @@ export async function fetchUsersAdapter(): Promise<FounderAdapterResult<FounderU
 
   const usage = await fetchJson<OrbAdminUsageSummary>(`${ORB_ADMIN_API_PATHS.billingUsage}?days=30`)
   if (!usage || typeof usage.total_active_users !== 'number') {
-    return {
-      data: {
-        activeUsers: mockUsageMetrics.activeUsers,
-        activeUsersTrendPercent: mockUsageMetrics.activeUsersTrendPercent,
-        totalSessions: mockUsageMetrics.totalSessions
-      },
-      source: 'mock',
-      limitations: ['User counts unavailable — using estimated mock active user metrics.']
-    }
+    return isFounderMockFallbackAllowed() ? getUsersAdapterFallback() : getUsersAdapterUnavailable()
   }
 
   const trend =
@@ -28,12 +22,12 @@ export async function fetchUsersAdapter(): Promise<FounderAdapterResult<FounderU
             1) *
             100
         )
-      : mockUsageMetrics.activeUsersTrendPercent
+      : 0
 
-  const totalSessions = usage.total_requests || mockUsageMetrics.totalSessions
+  const totalSessions = usage.total_requests ?? 0
 
   if (usage.total_active_users === 0) {
-    limitations.push('Live user feed returned zero active users — counts may be incomplete.')
+    limitations.push('Live user feed returned zero active users.')
   }
 
   return {
@@ -49,6 +43,8 @@ export async function fetchUsersAdapter(): Promise<FounderAdapterResult<FounderU
 
 /** Sync fallback for server render or pre-probe state. */
 export function getUsersAdapterFallback(): FounderAdapterResult<FounderUsersAggregate> {
+  if (!isFounderMockFallbackAllowed()) return getUsersAdapterUnavailable()
+
   const { periodStart, periodEnd } = currentPeriodBounds()
   return {
     data: {
@@ -62,3 +58,5 @@ export function getUsersAdapterFallback(): FounderAdapterResult<FounderUsersAggr
     ]
   }
 }
+
+export { getUsersAdapterUnavailable } from './adapter-unavailable'

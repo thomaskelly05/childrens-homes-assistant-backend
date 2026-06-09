@@ -20,6 +20,7 @@ import {
   generateFounderInsightsSync
 } from '@/lib/founder/intelligence'
 import { runChiefOfStaffAgent } from '@/lib/founder/agents/chief-of-staff-agent'
+import { orbFounderLiveInputs, orbFounderNoLiveDataAnswer } from './orb-founder-live-guard'
 
 export type FounderOrbConfidence = 'high' | 'medium' | 'low'
 
@@ -109,6 +110,9 @@ function answerAboutAgent(agentId: AgentId): FounderOrbAnswer {
 }
 
 function answerBuildNext(ctx: ReturnType<typeof buildIntelligenceContext>): FounderOrbAnswer {
+  const live = orbFounderLiveInputs()
+  if (!live.hasFeatureEvents) return orbFounderNoLiveDataAnswer(['Product Intelligence'])
+
   const chronologyNote = ctx.chronology
     ? ` The second priority is Chronology Builder because chronology-related demand is increasing (+${ctx.chronology.trendPercent}%) and Ofsted readiness gaps show chronology weaknesses.`
     : ''
@@ -126,6 +130,9 @@ function answerBuildNext(ctx: ReturnType<typeof buildIntelligenceContext>): Foun
 }
 
 function answerBiggestRisk(ctx: ReturnType<typeof buildIntelligenceContext>): FounderOrbAnswer {
+  const live = orbFounderLiveInputs()
+  if (!live.hasOrb && !live.hasAiUsage) return orbFounderNoLiveDataAnswer(['ORB Intelligence Engine', 'AI Cost Engine'])
+
   return {
     answer: `The current biggest risk is quality consistency as usage grows. Safeguarding and Ofsted-related queries are increasing (${ctx.orbIntelligence.safeguardingQueryVolume} safeguarding conversations this month), so ORB output quality needs stronger monitoring. ORB Quality Agent should be prioritised before large-scale provider rollout. AI cost is also ${ctx.aiCost.usageWarningLabel.toLowerCase()}.`,
     usedSources: ['ORB Intelligence Engine', 'ORB Quality Agent', 'AI Cost Engine'],
@@ -161,6 +168,8 @@ function answerAgentRecommendation(ctx: ReturnType<typeof buildIntelligenceConte
 }
 
 function answerOrbUsage(ctx: ReturnType<typeof buildIntelligenceContext>): FounderOrbAnswer {
+  if (!orbFounderLiveInputs().hasOrb) return orbFounderNoLiveDataAnswer(['ORB Intelligence Engine'])
+
   const themes = ctx.orbIntelligence.emergingThemes.slice(0, 2).join(' ')
   const fastest = ctx.orbIntelligence.fastestGrowingCategory
 
@@ -177,6 +186,11 @@ function answerOrbUsage(ctx: ReturnType<typeof buildIntelligenceContext>): Found
 }
 
 function answerInvestorQuestions(ctx: ReturnType<typeof buildIntelligenceContext>): FounderOrbAnswer {
+  const live = orbFounderLiveInputs()
+  if (!live.hasBilling && !live.hasUsers && !live.canCalculateHours) {
+    return orbFounderNoLiveDataAnswer(['Provider Analytics', 'Hours Returned Engine'])
+  }
+
   return {
     answer: `An investor would likely ask: What is the retention rate? What is the gross margin after AI costs (currently ${ctx.aiCost.grossMargin})? How many active users return weekly (${ctx.activeUsers} active, +${ctx.activeUsersTrendPercent}%)? How defensible is the Ofsted intelligence model? What evidence proves time is being returned to direct care (${ctx.hoursReturned.totalHoursFormatted} hours this month)?`,
     usedSources: ['AI Cost Engine', 'Hours Returned Engine', 'Provider Analytics', 'Ofsted Readiness Engine'],
@@ -190,6 +204,8 @@ function answerInvestorQuestions(ctx: ReturnType<typeof buildIntelligenceContext
 }
 
 function answerOfstedConcerns(ctx: ReturnType<typeof buildIntelligenceContext>): FounderOrbAnswer {
+  if (!orbFounderLiveInputs().hasReadiness) return orbFounderNoLiveDataAnswer(['Ofsted Readiness Engine'])
+
   const gaps = ctx.ofstedReadiness.commonGaps.slice(0, 4).join(', ')
 
   return {
@@ -205,6 +221,10 @@ function answerOfstedConcerns(ctx: ReturnType<typeof buildIntelligenceContext>):
 }
 
 function answerHoursReturned(ctx: ReturnType<typeof buildIntelligenceContext>): FounderOrbAnswer {
+  if (!orbFounderLiveInputs().canCalculateHours || ctx.hoursReturned.totalHours <= 0) {
+    return orbFounderNoLiveDataAnswer(['Hours Returned Engine'])
+  }
+
   const { breakdown } = ctx.hoursReturned
 
   return {
@@ -220,8 +240,10 @@ function answerHoursReturned(ctx: ReturnType<typeof buildIntelligenceContext>): 
 }
 
 function answerAiCostRisk(ctx: ReturnType<typeof buildIntelligenceContext>): FounderOrbAnswer {
+  if (!orbFounderLiveInputs().hasAiUsage) return orbFounderNoLiveDataAnswer(['AI Cost Engine'])
+
   return {
-    answer: `AI cost is becoming a risk because spend is ${ctx.aiCost.openAiSpend} this month (+22%) while MRR grew only ${ctx.mrrTrend}%. Gross margin is ${ctx.aiCost.grossMargin} but ${ctx.aiCost.usageWarningLabel.toLowerCase()}. Cost per conversation is ${ctx.aiCost.costPerConversation} across ${ctx.orbIntelligence.totalConversations.toLocaleString('en-GB')} ORB conversations. Introduce model routing and per-provider caps before scaling further.`,
+    answer: `AI cost is becoming a risk because spend is ${ctx.aiCost.openAiSpend} this month while MRR grew ${ctx.mrrTrend}%. Gross margin is ${ctx.aiCost.grossMargin} but ${ctx.aiCost.usageWarningLabel.toLowerCase()}. Cost per conversation is ${ctx.aiCost.costPerConversation} across ${ctx.orbIntelligence.totalConversations.toLocaleString('en-GB')} ORB conversations. Introduce model routing and per-provider caps before scaling further.`,
     usedSources: ['AI Cost Engine', 'ORB Intelligence Engine', 'Founder Insight Engine'],
     suggestedFollowUps: [
       'What would an investor ask about these numbers?',
@@ -233,6 +255,10 @@ function answerAiCostRisk(ctx: ReturnType<typeof buildIntelligenceContext>): Fou
 }
 
 function answerLinkedIn(ctx: ReturnType<typeof buildIntelligenceContext>): FounderOrbAnswer {
+  if (!orbFounderLiveInputs().canCalculateHours || ctx.hoursReturned.totalHours <= 0) {
+    return orbFounderNoLiveDataAnswer(['Hours Returned Engine', 'Founder Story Agent'])
+  }
+
   const founderStory = getAgentDetail('founder-story')
 
   return {
@@ -248,6 +274,11 @@ function answerLinkedIn(ctx: ReturnType<typeof buildIntelligenceContext>): Found
 }
 
 function answerFocusTomorrow(ctx: ReturnType<typeof buildIntelligenceContext>): FounderOrbAnswer {
+  const live = orbFounderLiveInputs()
+  if (!live.hasBilling && ctx.chiefOfStaff.recommendations.length === 0) {
+    return orbFounderNoLiveDataAnswer(['Chief of Staff Agent'])
+  }
+
   const actions = ctx.chiefOfStaff.recommendations.slice(0, 3)
 
   return {
@@ -263,6 +294,9 @@ function answerFocusTomorrow(ctx: ReturnType<typeof buildIntelligenceContext>): 
 }
 
 function answerRevenue(ctx: ReturnType<typeof buildIntelligenceContext>): FounderOrbAnswer {
+  const live = orbFounderLiveInputs()
+  if (!live.hasBilling || ctx.mrr <= 0) return orbFounderNoLiveDataAnswer(['Provider Analytics', 'Billing'])
+
   return {
     answer: `MRR is £${ctx.mrr.toLocaleString('en-GB')} (+${ctx.mrrTrend}% month-on-month) across ${ctx.providers} providers and ${ctx.homes} children's homes. ${ctx.activeUsers} active users (+${ctx.activeUsersTrendPercent}%). Gross margin is ${ctx.aiCost.grossMargin} with revenue per provider at ${ctx.aiCost.revenuePerProvider}.`,
     usedSources: ['Provider Analytics', 'AI Cost Engine', 'Founder Dashboard'],
@@ -276,6 +310,10 @@ function answerRevenue(ctx: ReturnType<typeof buildIntelligenceContext>): Founde
 }
 
 function answerSectorTrends(ctx: ReturnType<typeof buildIntelligenceContext>): FounderOrbAnswer {
+  if (ctx.dashboard.sectorIntelligence.length === 0) {
+    return orbFounderNoLiveDataAnswer(['Sector Intelligence Agent'])
+  }
+
   const trends = ctx.dashboard.sectorIntelligence
     .filter((t) => t.direction === 'up' && (t.tone === 'red' || t.tone === 'amber'))
     .slice(0, 3)
@@ -533,17 +571,24 @@ export function getFounderOrbContextSnapshot() {
   const providersKpi = dashboard.kpis.find((k) => k.id === 'providers')
 
   const dataModeLabel =
-    dataSourceStatus.source === 'live' ? 'Live' : dataSourceStatus.source === 'hybrid' ? 'Hybrid' : 'Mock'
+    dataSourceStatus.source === 'live-only'
+      ? 'Live only'
+      : dataSourceStatus.source === 'live'
+        ? 'Live'
+        : dataSourceStatus.source === 'hybrid'
+          ? 'Hybrid'
+          : 'Mock'
 
   return {
-    mrr: mrrKpi?.value ?? `£${contractInputs.providerAnalytics.totalMrr.toLocaleString('en-GB')}`,
-    activeUsers: usersKpi?.value ?? String(contractInputs.usageMetrics.activeUsers),
-    providers: providersKpi?.value ?? String(contractInputs.providerAnalytics.totalProviders),
-    hoursReturned: hoursReturned.totalHoursFormatted,
-    topRecommendation: topRec?.title ?? 'No recommendation available',
+    mrr: mrrKpi?.unavailable ? '—' : (mrrKpi?.value ?? '—'),
+    activeUsers: usersKpi?.unavailable ? '—' : (usersKpi?.value ?? '—'),
+    providers: providersKpi?.unavailable ? '—' : (providersKpi?.value ?? '—'),
+    hoursReturned:
+      hoursReturned.totalHours > 0 ? hoursReturned.totalHoursFormatted : '—',
+    topRecommendation: topRec?.title ?? 'No live recommendations yet',
     currentRisk:
-      dataSourceStatus.source !== 'live'
-        ? `Data mode ${dataModeLabel} — some figures are estimated or mocked`
+      dataSourceStatus.source === 'live-only'
+        ? 'Live-only mode — unavailable metrics are not shown'
         : aiCost.usageWarning === 'critical'
           ? 'AI cost critical — quality monitoring required'
           : 'Quality consistency as safeguarding volume grows',

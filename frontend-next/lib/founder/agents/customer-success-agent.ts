@@ -1,14 +1,18 @@
+import { agentResultWithoutLiveData, isAgentLiveDataAvailable } from './agent-live-data'
 import type { AgentRunResult } from './types'
 
 export function runCustomerSuccessAgent(): AgentRunResult {
+  if (!isAgentLiveDataAvailable()) {
+    return agentResultWithoutLiveData('Customer Success Pulse')
+  }
+
   return {
     title: 'Customer Success Pulse',
-    summary: 'Two providers show declining weekly active usage. Provider B weekly active users down from 29 to 22. Power users concentrated in Dictate and ORB Chat features.',
+    summary: 'Live user and provider analytics are connected. Review engagement trends from connected sources on the command centre.',
     recommendations: [
-      'Schedule founder outreach with Provider B this week',
-      'Identify and celebrate power users for case study content',
-      'Review onboarding flow for chronology and supervision features',
-      'Send personalised feature tips to inactive users'
+      'Schedule outreach with providers showing declining live usage',
+      'Identify power users from connected adoption data',
+      'Review onboarding flow for low-adoption features'
     ],
     status: 'active'
   }

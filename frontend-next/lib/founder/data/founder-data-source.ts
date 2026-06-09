@@ -1,12 +1,19 @@
 /**
  * Detects which real founder data sources are available in the current app.
- * Missing sources return false and allow mock fallback downstream.
+ * In live-only mode, missing sources return empty/unavailable data — never mock fallback.
  */
 
 import { ORB_ADMIN_API_PATHS } from '@/lib/orb/admin-quality-client'
+import {
+  formatSourceConnectionStatus,
+  isFounderLiveOnlyMode,
+  resolveFounderSourceMode,
+  type FounderSourceConnectionStatus,
+  type FounderSourceMode
+} from './founder-data-mode'
 import { probeEndpoint } from './adapters/adapter-utils'
 
-export type FounderSourceMode = 'live' | 'hybrid' | 'mock'
+export type { FounderSourceConnectionStatus, FounderSourceMode } from './founder-data-mode'
 
 export type FounderDataSourceAvailability = {
   usersAvailable: boolean
@@ -41,7 +48,20 @@ const KNOWN_ENDPOINTS: Record<FounderDataSourceKey, string[]> = {
   readiness: ['/api/inspection-readiness/health']
 }
 
+const AVAILABILITY_FIELDS: Record<FounderDataSourceKey, keyof Omit<FounderDataSourceAvailability, 'sourceMode'>> = {
+  users: 'usersAvailable',
+  providers: 'providersAvailable',
+  homes: 'homesAvailable',
+  orbConversations: 'orbConversationsAvailable',
+  featureEvents: 'featureEventsAvailable',
+  billing: 'billingAvailable',
+  aiUsage: 'aiUsageAvailable',
+  readiness: 'readinessAvailable'
+}
+
 function deriveSourceMode(availability: Omit<FounderDataSourceAvailability, 'sourceMode'>): FounderSourceMode {
+  if (isFounderLiveOnlyMode()) return 'live-only'
+
   const flags = [
     availability.usersAvailable,
     availability.providersAvailable,
@@ -54,10 +74,37 @@ function deriveSourceMode(availability: Omit<FounderDataSourceAvailability, 'sou
   ]
 
   const liveCount = flags.filter(Boolean).length
-  if (liveCount === 0) return 'mock'
-  if (liveCount === flags.length) return 'live'
-  return 'hybrid'
+  return resolveFounderSourceMode(liveCount, flags.length)
 }
+
+export type FounderSourceRecordCounts = Partial<Record<FounderDataSourceKey, number>>
+
+/** Per-source connection status for the Founder Data Status card. */
+export function deriveSourceConnectionStatuses(
+  availability: Omit<FounderDataSourceAvailability, 'sourceMode'>,
+  recordCounts: FounderSourceRecordCounts = {}
+): Record<FounderDataSourceKey, FounderSourceConnectionStatus> {
+  const statuses = {} as Record<FounderDataSourceKey, FounderSourceConnectionStatus>
+
+  for (const key of Object.keys(KNOWN_ENDPOINTS) as FounderDataSourceKey[]) {
+    const connected = availability[AVAILABILITY_FIELDS[key]]
+    if (!connected) {
+      statuses[key] = 'not-connected'
+      continue
+    }
+
+    const count = recordCounts[key]
+    if (typeof count === 'number' && count <= 0) {
+      statuses[key] = 'no-records'
+    } else {
+      statuses[key] = 'connected'
+    }
+  }
+
+  return statuses
+}
+
+export { formatSourceConnectionStatus }
 
 /** Synchronous capability check — whether endpoints are defined for this app build. */
 export function detectFounderDataSourcesSync(): FounderDataSourceAvailability {

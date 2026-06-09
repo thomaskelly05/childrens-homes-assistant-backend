@@ -1,9 +1,21 @@
 /**
  * Intelligence Service — orchestrates all engines to produce founder dashboard data.
- * Replaces static mock data with generated intelligence while preserving V1 UI shapes.
+ * In live-only mode, missing sources show honest empty states — never mock metrics.
  */
 
 import { getAllAgents, runAgent } from '@/lib/founder/agents'
+import {
+  canCalculateLiveHoursReturned,
+  hasAnyLiveFounderIntelligence,
+  hasLiveAiUsage,
+  hasLiveBillingData,
+  hasLiveFeatureEvents,
+  hasLiveHomesData,
+  hasLiveOrbAnalytics,
+  hasLiveProvidersData,
+  hasLiveReadinessData,
+  hasLiveUserAnalytics
+} from '@/lib/founder/data/founder-live-availability'
 import {
   getFounderLiveMetricsSync,
   invalidateFounderLiveMetricsCache,
@@ -32,6 +44,12 @@ import {
 
 const PRIORITY_TO_NUMBER: Record<InsightPriority, number> = { high: 1, medium: 2, low: 3 }
 
+const UNAVAILABLE_VALUE = '—'
+
+function unavailableKpi(id: string, label: string, hint: string): FounderKpi {
+  return { id, label, value: UNAVAILABLE_VALUE, hint, unavailable: true, changeDirection: 'neutral' }
+}
+
 function insightToRecommendation(insight: FounderInsight, index: number): FounderRecommendation {
   return {
     id: `insight-${index}`,
@@ -55,96 +73,101 @@ function demandFromTrend(trend: number): FounderProductFeature['demand'] {
 
 function buildKpis(
   metrics: FounderLiveMetrics,
-  hoursReturned: ReturnType<typeof calculateHoursReturned>,
-  orbIntelligence: ReturnType<typeof calculateOrbIntelligence>,
-  aiCost: ReturnType<typeof calculateAiCost>
+  hoursReturned: ReturnType<typeof calculateHoursReturned> | null,
+  orbIntelligence: ReturnType<typeof calculateOrbIntelligence> | null,
+  aiCost: ReturnType<typeof calculateAiCost> | null
 ): FounderKpi[] {
-  const { providerAnalytics, usageMetrics } = metrics
-  const {
-    totalMrr,
-    mrrTrendPercent,
-    totalProviders,
-    totalHomes
-  } = providerAnalytics
-  const { activeUsers, activeUsersTrendPercent } = usageMetrics
+  const { providerAnalytics, usageMetrics, dataSourceStatus } = metrics
+  const status = dataSourceStatus
 
-  return [
-    {
-      id: 'mrr',
-      label: 'Monthly Recurring Revenue',
-      value: `£${totalMrr.toLocaleString('en-GB')}`,
-      change: `+${mrrTrendPercent}%`,
-      changeDirection: 'up',
-      hint: 'vs last month'
-    },
-    {
-      id: 'active-users',
-      label: 'Active Users',
-      value: String(activeUsers),
-      change: `+${activeUsersTrendPercent}%`,
-      changeDirection: 'up',
-      hint: '30-day active'
-    },
-    { id: 'providers', label: 'Providers', value: String(totalProviders), changeDirection: 'neutral' },
-    { id: 'homes', label: "Children's Homes", value: String(totalHomes), changeDirection: 'neutral' },
-    {
-      id: 'hours',
-      label: 'Hours Returned to Direct Care',
-      value: hoursReturned.totalHoursFormatted,
-      change: `+${hoursReturned.trendPercent}%`,
-      changeDirection: 'up',
-      hint: 'estimated this month'
-    },
-    {
-      id: 'satisfaction',
-      label: 'Average ORB Satisfaction',
-      value: `${orbIntelligence.satisfactionScore}%`,
-      change: '+2%',
-      changeDirection: 'up'
-    },
-    {
-      id: 'conversations',
-      label: 'ORB Conversations This Month',
-      value: orbIntelligence.totalConversations.toLocaleString('en-GB'),
-      change: '+18%',
-      changeDirection: 'up'
-    },
-    {
-      id: 'ai-cost',
-      label: 'Current AI Cost',
-      value: aiCost.openAiSpend,
-      change: '+22%',
-      changeDirection: 'up',
-      hint: 'this month'
-    }
-  ]
+  const mrrKpi: FounderKpi = hasLiveBillingData(status) && providerAnalytics.totalMrr > 0
+    ? {
+        id: 'mrr',
+        label: 'Monthly Recurring Revenue',
+        value: `£${providerAnalytics.totalMrr.toLocaleString('en-GB')}`,
+        change: providerAnalytics.mrrTrendPercent !== 0 ? `${providerAnalytics.mrrTrendPercent > 0 ? '+' : ''}${providerAnalytics.mrrTrendPercent}%` : undefined,
+        changeDirection: providerAnalytics.mrrTrendPercent > 0 ? 'up' : providerAnalytics.mrrTrendPercent < 0 ? 'down' : 'neutral',
+        hint: 'vs last month'
+      }
+    : unavailableKpi('mrr', 'Monthly Recurring Revenue', 'Live billing source not connected')
+
+  const activeUsersKpi: FounderKpi = hasLiveUserAnalytics(status) && usageMetrics.activeUsers > 0
+    ? {
+        id: 'active-users',
+        label: 'Active Users',
+        value: String(usageMetrics.activeUsers),
+        change: usageMetrics.activeUsersTrendPercent !== 0 ? `${usageMetrics.activeUsersTrendPercent > 0 ? '+' : ''}${usageMetrics.activeUsersTrendPercent}%` : undefined,
+        changeDirection: usageMetrics.activeUsersTrendPercent > 0 ? 'up' : usageMetrics.activeUsersTrendPercent < 0 ? 'down' : 'neutral',
+        hint: '30-day active'
+      }
+    : unavailableKpi('active-users', 'Active Users', 'Live user analytics not connected')
+
+  const providersKpi: FounderKpi = hasLiveProvidersData(status) && providerAnalytics.totalProviders > 0
+    ? { id: 'providers', label: 'Providers', value: String(providerAnalytics.totalProviders), changeDirection: 'neutral' }
+    : unavailableKpi('providers', 'Providers', 'Live provider source not connected')
+
+  const homesKpi: FounderKpi = hasLiveHomesData(status) && providerAnalytics.totalHomes > 0
+    ? { id: 'homes', label: "Children's Homes", value: String(providerAnalytics.totalHomes), changeDirection: 'neutral' }
+    : unavailableKpi('homes', "Children's Homes", 'Live homes source not connected')
+
+  const hoursKpi: FounderKpi =
+    hoursReturned && canCalculateLiveHoursReturned(metrics) && hoursReturned.totalHours > 0
+      ? {
+          id: 'hours',
+          label: 'Hours Returned to Direct Care',
+          value: hoursReturned.totalHoursFormatted,
+          change: hoursReturned.trendPercent !== 0 ? `${hoursReturned.trendPercent > 0 ? '+' : ''}${hoursReturned.trendPercent}%` : undefined,
+          changeDirection: hoursReturned.trendPercent > 0 ? 'up' : hoursReturned.trendPercent < 0 ? 'down' : 'neutral',
+          hint: 'estimated this month'
+        }
+      : unavailableKpi('hours', 'Hours Returned to Direct Care', 'Requires live feature usage events')
+
+  const satisfactionKpi: FounderKpi =
+    orbIntelligence && hasLiveOrbAnalytics(status) && orbIntelligence.satisfactionScore > 0
+      ? {
+          id: 'satisfaction',
+          label: 'Average ORB Satisfaction',
+          value: `${orbIntelligence.satisfactionScore}%`,
+          changeDirection: 'neutral'
+        }
+      : unavailableKpi('satisfaction', 'Average ORB Satisfaction', 'Live ORB analytics not connected')
+
+  const conversationsKpi: FounderKpi =
+    orbIntelligence && hasLiveOrbAnalytics(status) && orbIntelligence.totalConversations > 0
+      ? {
+          id: 'conversations',
+          label: 'ORB Conversations This Month',
+          value: orbIntelligence.totalConversations.toLocaleString('en-GB'),
+          changeDirection: 'neutral'
+        }
+      : unavailableKpi('conversations', 'ORB Conversations This Month', 'Live ORB analytics not connected')
+
+  const aiCostKpi: FounderKpi =
+    aiCost && hasLiveAiUsage(status) && aiCost.raw.openAiSpendGbp > 0
+      ? {
+          id: 'ai-cost',
+          label: 'Current AI Cost',
+          value: aiCost.openAiSpend,
+          changeDirection: 'neutral',
+          hint: 'this month'
+        }
+      : unavailableKpi('ai-cost', 'Current AI Cost', 'Live AI usage source not connected')
+
+  return [mrrKpi, activeUsersKpi, providersKpi, homesKpi, hoursKpi, satisfactionKpi, conversationsKpi, aiCostKpi]
 }
 
-function buildActivityFeed(): FounderActivityItem[] {
-  return [
-    { id: '1', time: '2 min ago', role: 'Registered Manager', region: 'South East · Residential', action: 'Opened Ofsted Readiness Review', category: 'Inspection' },
-    { id: '2', time: '6 min ago', role: 'Manager', region: 'Midlands · Residential', action: 'Generated Missing From Home Report', category: 'Reporting' },
-    { id: '3', time: '11 min ago', role: 'Senior Staff', region: 'North West · Residential', action: 'Used Dictate for 14 minutes', category: 'Dictate' },
-    { id: '4', time: '18 min ago', role: 'Deputy Manager', region: 'London · Supported Living', action: 'Reviewed risk assessment', category: 'Risk' },
-    { id: '5', time: '24 min ago', role: 'Support Worker', region: 'Yorkshire · Residential', action: 'Used ORB Chat for safeguarding guidance', category: 'Safeguarding' },
-    { id: '6', time: '31 min ago', role: 'Manager', region: 'East · Residential', action: 'Exported supervision record to PDF', category: 'Export' },
-    { id: '7', time: '38 min ago', role: 'Registered Manager', region: 'South West · Residential', action: 'Built chronology timeline segment', category: 'Chronology' },
-    { id: '8', time: '45 min ago', role: 'Deputy Manager', region: 'Scotland · Residential', action: 'Completed key work session notes via ORB Chat', category: 'Key Work' }
-  ]
+function buildActivityFeed(metrics: FounderLiveMetrics): FounderActivityItem[] {
+  if (!hasAnyLiveFounderIntelligence(metrics)) return []
+  return []
 }
 
-function buildSectorIntelligence(): FounderSectorTrend[] {
-  return [
-    { id: 'missing', label: 'Missing episodes', change: '+12%', direction: 'up', tone: 'amber' },
-    { id: 'physical', label: 'Physical intervention', change: '-4%', direction: 'down', tone: 'emerald' },
-    { id: 'cannabis', label: 'Cannabis concerns', change: '+18%', direction: 'up', tone: 'amber' },
-    { id: 'online', label: 'Online harm', change: '+27%', direction: 'up', tone: 'red' },
-    { id: 'exploitation', label: 'Child exploitation', change: '+21%', direction: 'up', tone: 'red' },
-    { id: 'complaints', label: 'Complaints', change: '-6%', direction: 'down', tone: 'emerald' }
-  ]
+function buildSectorIntelligence(metrics: FounderLiveMetrics): FounderSectorTrend[] {
+  if (!hasAnyLiveFounderIntelligence(metrics)) return []
+  return []
 }
 
-function buildAgents(): FounderAgent[] {
+function buildAgents(metrics: FounderLiveMetrics): FounderAgent[] {
+  const hasLive = hasAnyLiveFounderIntelligence(metrics)
   return getAllAgents().map((agent) => {
     const result = agent.run()
     return {
@@ -152,12 +175,27 @@ function buildAgents(): FounderAgent[] {
       name: agent.name,
       status: result.status,
       purpose: agent.purpose,
-      latestInsight: result.summary
+      latestInsight: hasLive ? result.summary : 'Waiting for live founder data.'
     }
   })
 }
 
-function buildCostCentre(aiCost: ReturnType<typeof calculateAiCost>): FounderCostCentre {
+function buildCostCentre(
+  aiCost: ReturnType<typeof calculateAiCost> | null,
+  metrics: FounderLiveMetrics
+): FounderCostCentre {
+  if (!aiCost || !hasLiveAiUsage(metrics.dataSourceStatus)) {
+    return {
+      openAiSpend: UNAVAILABLE_VALUE,
+      costPerUser: UNAVAILABLE_VALUE,
+      costPerConversation: UNAVAILABLE_VALUE,
+      revenuePerProvider: UNAVAILABLE_VALUE,
+      grossMargin: UNAVAILABLE_VALUE,
+      usageWarning: 'normal',
+      usageWarningLabel: 'Live AI usage source not connected'
+    }
+  }
+
   return {
     openAiSpend: aiCost.openAiSpend,
     costPerUser: aiCost.costPerUser,
@@ -189,25 +227,38 @@ export function generateFounderDashboardData(metrics = getFounderLiveMetricsSync
     dataSourceStatus
   } = metrics
 
-  const orbIntelligence = calculateOrbIntelligence(orbConversationAnalytics)
-  const ofstedReadiness = calculateOfstedReadiness(readinessMetrics)
-  const aiCost = calculateAiCost(billingMetrics)
-  const hoursReturned = calculateHoursReturned(usageMetrics, orbConversationAnalytics, 4435)
+  const hasLive = hasAnyLiveFounderIntelligence(metrics)
 
-  const insights = generateFounderInsightsSync({
-    usageMetrics,
-    orbAnalytics: orbConversationAnalytics,
-    providerAnalytics,
-    readinessMetrics
-  })
+  const orbIntelligence = hasLiveOrbAnalytics(dataSourceStatus)
+    ? calculateOrbIntelligence(orbConversationAnalytics)
+    : null
+  const ofstedReadiness = hasLiveReadinessData(dataSourceStatus)
+    ? calculateOfstedReadiness(readinessMetrics)
+    : null
+  const aiCost = hasLiveAiUsage(dataSourceStatus) ? calculateAiCost(billingMetrics) : null
+  const hoursReturned =
+    canCalculateLiveHoursReturned(metrics) && hasLive
+      ? calculateHoursReturned(usageMetrics, orbConversationAnalytics)
+      : null
 
-  const features: FounderProductFeature[] = usageMetrics.featureUsage.map((f) => ({
-    name: f.featureName,
-    usage: f.adoptionRate,
-    trend: f.trendPercent,
-    abandonmentRisk: abandonmentFromRate(f.abandonmentRate),
-    demand: demandFromTrend(f.trendPercent)
-  }))
+  const insights = hasLive
+    ? generateFounderInsightsSync({
+        usageMetrics,
+        orbAnalytics: orbConversationAnalytics,
+        providerAnalytics,
+        readinessMetrics
+      })
+    : []
+
+  const features: FounderProductFeature[] = hasLiveFeatureEvents(dataSourceStatus)
+    ? usageMetrics.featureUsage.map((f) => ({
+        name: f.featureName,
+        usage: f.adoptionRate,
+        trend: f.trendPercent,
+        abandonmentRisk: abandonmentFromRate(f.abandonmentRate),
+        demand: demandFromTrend(f.trendPercent)
+      }))
+    : []
 
   const sortedByUsage = [...features].sort((a, b) => b.usage - a.usage)
   const sortedByAbandonment = [...features].sort((a, b) => {
@@ -218,29 +269,29 @@ export function generateFounderDashboardData(metrics = getFounderLiveMetricsSync
   return {
     dataSourceStatus,
     kpis: buildKpis(metrics, hoursReturned, orbIntelligence, aiCost),
-    activityFeed: buildActivityFeed(),
+    activityFeed: buildActivityFeed(metrics),
     orbIntelligence: {
-      categories: orbIntelligence.categories,
-      fastestGrowing: orbIntelligence.fastestGrowingCategory,
-      emergingThemes: orbIntelligence.emergingThemes,
-      safeguardingVolume: orbIntelligence.safeguardingQueryVolume,
-      reportGenerationVolume: orbIntelligence.reportGenerationVolume
+      categories: orbIntelligence?.categories ?? [],
+      fastestGrowing: orbIntelligence?.fastestGrowingCategory ?? '—',
+      emergingThemes: orbIntelligence?.emergingThemes ?? [],
+      safeguardingVolume: orbIntelligence?.safeguardingQueryVolume ?? 0,
+      reportGenerationVolume: orbIntelligence?.reportGenerationVolume ?? 0
     },
     productIntelligence: {
       features,
-      mostUsed: sortedByUsage[0]?.name ?? 'Unknown',
-      leastUsed: sortedByUsage[sortedByUsage.length - 1]?.name ?? 'Unknown',
-      highestAbandonmentRisk: sortedByAbandonment[0]?.name ?? 'Unknown',
-      topDemand: 'Dictate V2'
+      mostUsed: sortedByUsage[0]?.name ?? '—',
+      leastUsed: sortedByUsage[sortedByUsage.length - 1]?.name ?? '—',
+      highestAbandonmentRisk: sortedByAbandonment[0]?.name ?? '—',
+      topDemand: hasLiveFeatureEvents(dataSourceStatus) ? (sortedByUsage[0]?.name ?? '—') : '—'
     },
     ofstedIntelligence: {
-      homes: buildHomes(ofstedReadiness.homes),
-      commonGaps: ofstedReadiness.commonGaps
+      homes: ofstedReadiness ? buildHomes(ofstedReadiness.homes) : [],
+      commonGaps: ofstedReadiness?.commonGaps ?? []
     },
-    sectorIntelligence: buildSectorIntelligence(),
+    sectorIntelligence: buildSectorIntelligence(metrics),
     recommendations: insights.slice(0, 5).map(insightToRecommendation),
-    agents: buildAgents(),
-    costCentre: buildCostCentre(aiCost)
+    agents: buildAgents(metrics),
+    costCentre: buildCostCentre(aiCost, metrics)
   }
 }
 
@@ -279,4 +330,8 @@ export function getFounderContractInputs() {
     billingMetrics: metrics.billingMetrics,
     dataSourceStatus: metrics.dataSourceStatus
   }
+}
+
+export function hasLiveFounderIntelligence(): boolean {
+  return hasAnyLiveFounderIntelligence(getFounderLiveMetricsSync())
 }

@@ -65,7 +65,13 @@ export function FounderOrbContextPanel() {
         </div>
       </div>
 
-      {snapshot.dataMode !== 'Live' ? (
+      {snapshot.dataMode === 'Live only' ? (
+        <div className="border-t border-white/10 px-4 py-3">
+          <p className="text-xs leading-5 text-cyan-200/90">
+            Live-only mode. Unavailable metrics show as —. ORB Founder will say when live data is not available.
+          </p>
+        </div>
+      ) : snapshot.dataMode !== 'Live' ? (
         <div className="border-t border-white/10 px-4 py-3">
           <p className="text-xs leading-5 text-amber-200/90">
             Some figures are estimated or mocked. ORB Founder will not present them as verified live truth.

@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url'
 import { describe, it } from 'node:test'
 
 import { FOUNDER_ALLOWED_ROLES, userHasFounderAccess } from '../../access.ts'
+import { getFounderDataMode, isFounderLiveOnlyMode } from '../founder-data-mode.ts'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '../../../..')
 
@@ -21,6 +22,11 @@ describe('founder data safety', () => {
     assert.equal(userHasFounderAccess('staff'), false)
     assert.equal(userHasFounderAccess(undefined), false)
     assert.ok(FOUNDER_ALLOWED_ROLES.has('administrator'))
+  })
+
+  it('defaults founder data mode to live-only', () => {
+    assert.equal(getFounderDataMode(), 'live-only')
+    assert.equal(isFounderLiveOnlyMode(), true)
   })
 
   it('founder routes are guarded in the UI layer', () => {
@@ -47,37 +53,51 @@ describe('founder data safety', () => {
     const contextModule = read('lib/founder/orb-founder/orb-founder-context.ts')
     assert.match(contextModule, /dataSourceStatus/)
     assert.match(contextModule, /answerDataBasis/)
-    assert.match(contextModule, /Do NOT present them as verified live platform truth/)
+    assert.match(contextModule, /I do not have live data for that yet/)
     assert.match(contextModule, /homeCount/)
     assert.doesNotMatch(contextModule, /homes:\s*context\.ofstedReadiness\.homes/)
   })
 
-  it('intelligence service preserves mock fallback via live metrics pipeline', () => {
-    const service = read('lib/founder/intelligence-service.ts')
+  it('live-only mode uses unavailable adapters instead of mock fallback in production paths', () => {
     const liveMetrics = read('lib/founder/data/founder-live-metrics.ts')
-    const mockInputs = read('lib/founder/intelligence/mock-inputs.ts')
+    const unavailable = read('lib/founder/data/adapters/adapter-unavailable.ts')
+    const dataMode = read('lib/founder/data/founder-data-mode.ts')
 
-    assert.match(service, /loadFounderLiveMetrics/)
-    assert.match(service, /getFounderLiveMetricsSync/)
-    assert.match(liveMetrics, /getUsersAdapterFallback/)
-    assert.match(liveMetrics, /mockUsageMetrics/)
-    assert.match(mockInputs, /export const mockUsageMetrics/)
+    assert.match(liveMetrics, /isFounderLiveOnlyMode/)
+    assert.match(unavailable, /getUsersAdapterUnavailable/)
+    assert.match(dataMode, /live-only/)
+    assert.match(dataMode, /FOUNDER_DATA_MODE/)
   })
 
-  it('data source detection exposes hybrid and mock modes with feature event placeholder', () => {
+  it('data source detection exposes live-only mode and per-source connection status', () => {
     const detectionModule = read('lib/founder/data/founder-data-source.ts')
     assert.match(detectionModule, /sourceMode/)
-    assert.match(detectionModule, /featureEventsAvailable: false/)
-    assert.match(detectionModule, /deriveSourceMode/)
+    assert.match(detectionModule, /deriveSourceConnectionStatuses/)
+    assert.match(detectionModule, /no-records/)
   })
 
-  it('dashboard surfaces data mode and connected sources to founders', () => {
+  it('dashboard surfaces live-only data mode and honest source status to founders', () => {
     const dashboard = read('components/founder/founder-dashboard-page.tsx')
     const statusCard = read('components/founder/founder-data-status-card.tsx')
+    const kpiCard = read('components/founder/founder-kpi-card.tsx')
 
     assert.match(dashboard, /FounderDataStatusCard/)
     assert.match(dashboard, /refreshFounderDashboardData/)
-    assert.match(statusCard, /Some founder intelligence is currently estimated or mocked/)
-    assert.match(statusCard, /Sources connected/)
+    assert.match(statusCard, /formatFounderSourceModeLabel/)
+    assert.match(statusCard, /live-only/)
+    assert.match(statusCard, /formatSourceConnectionStatus/)
+    assert.match(statusCard, /no-records/)
+    assert.match(kpiCard, /unavailable/)
+  })
+
+  it('founder actions page shows empty state without mock actions', () => {
+    const actionsPage = read('components/founder/founder-actions-page.tsx')
+    assert.match(actionsPage, /No live founder actions yet/)
+    assert.match(actionsPage, /hasLiveFounderIntelligence/)
+  })
+
+  it('mock inputs remain available for development testing only', () => {
+    const mockInputs = read('lib/founder/intelligence/mock-inputs.ts')
+    assert.match(mockInputs, /export const mockUsageMetrics/)
   })
 })

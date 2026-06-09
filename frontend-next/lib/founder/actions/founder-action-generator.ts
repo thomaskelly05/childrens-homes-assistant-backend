@@ -4,7 +4,8 @@
 
 import { getAllAgents } from '@/lib/founder/agents'
 import type { AgentId } from '@/lib/founder/agents'
-import { getFounderContractInputs, getFounderDashboardData } from '@/lib/founder/intelligence-service'
+import { hasAnyLiveFounderIntelligence } from '@/lib/founder/data/founder-live-availability'
+import { getFounderContractInputs, getFounderDashboardData, hasLiveFounderIntelligence } from '@/lib/founder/intelligence-service'
 import {
   calculateAiCost,
   calculateOfstedReadiness,
@@ -253,11 +254,15 @@ function actionsFromAiCost(): FounderAction[] {
   return actions
 }
 
+function isMeaningfulLabel(value: string | undefined): boolean {
+  return Boolean(value && value !== '—')
+}
+
 function actionsFromGrowthAndProduct(): FounderAction[] {
   const dashboard = getFounderDashboardData()
   const actions: FounderAction[] = []
 
-  if (dashboard.productIntelligence.topDemand) {
+  if (isMeaningfulLabel(dashboard.productIntelligence.topDemand)) {
     actions.push(
       buildAction({
         id: 'product-top-demand',
@@ -274,7 +279,7 @@ function actionsFromGrowthAndProduct(): FounderAction[] {
     )
   }
 
-  if (dashboard.productIntelligence.highestAbandonmentRisk) {
+  if (isMeaningfulLabel(dashboard.productIntelligence.highestAbandonmentRisk)) {
     actions.push(
       buildAction({
         id: 'product-chronology',
@@ -292,7 +297,7 @@ function actionsFromGrowthAndProduct(): FounderAction[] {
   }
 
   const risingSector = dashboard.sectorIntelligence.filter((t) => t.direction === 'up' && t.tone === 'red')[0]
-  if (risingSector) {
+  if (risingSector && dashboard.sectorIntelligence.length > 0) {
     actions.push(
       buildAction({
         id: 'sector-rising-trend',
@@ -310,37 +315,41 @@ function actionsFromGrowthAndProduct(): FounderAction[] {
   }
 
   const contractInputs = getFounderContractInputs()
-  const hoursReturned = contractInputs.usageMetrics.activeUsers
+  const activeUsers = contractInputs.usageMetrics.activeUsers
 
-  actions.push(
-    buildAction({
-      id: 'founder-story-linkedin',
-      title: 'Create LinkedIn post about hours returned to direct care',
-      description: `Platform impact narrative is strong this month with growing adoption across ${hoursReturned} active users.`,
-      source: 'Founder Story Agent',
-      priority: 'medium',
-      category: 'founder-story',
-      dueLabel: 'This week',
-      recommendedNextStep: 'Draft a LinkedIn post highlighting hours returned to direct care without identifiable case detail.',
-      linkedAgent: 'founder-story',
-      linkedMetric: 'hours-returned'
-    })
-  )
+  if (activeUsers > 0) {
+    actions.push(
+      buildAction({
+        id: 'founder-story-linkedin',
+        title: 'Create LinkedIn post about hours returned to direct care',
+        description: `Platform impact narrative is available from live usage across ${activeUsers} active users.`,
+        source: 'Founder Story Agent',
+        priority: 'medium',
+        category: 'founder-story',
+        dueLabel: 'This week',
+        recommendedNextStep: 'Draft a LinkedIn post highlighting hours returned to direct care without identifiable case detail.',
+        linkedAgent: 'founder-story',
+        linkedMetric: 'hours-returned'
+      })
+    )
+  }
 
-  actions.push(
-    buildAction({
-      id: 'growth-investor-pack',
-      title: 'Prepare investor evidence pack',
-      description: 'MRR, hours returned, and Ofsted readiness signals are strong enough for an investor update.',
-      source: 'Growth Agent',
-      priority: 'medium',
-      category: 'growth',
-      dueLabel: 'Next 2 weeks',
-      recommendedNextStep: 'Compile MRR trend, gross margin, active users, and hours-returned impact into a concise evidence pack.',
-      linkedAgent: 'growth',
-      linkedMetric: 'investor-readiness'
-    })
-  )
+  if (contractInputs.providerAnalytics.totalMrr > 0) {
+    actions.push(
+      buildAction({
+        id: 'growth-investor-pack',
+        title: 'Prepare investor evidence pack',
+        description: 'Live MRR and readiness signals are available for an investor update.',
+        source: 'Growth Agent',
+        priority: 'medium',
+        category: 'growth',
+        dueLabel: 'Next 2 weeks',
+        recommendedNextStep: 'Compile live MRR trend, gross margin, active users, and hours-returned impact into a concise evidence pack.',
+        linkedAgent: 'growth',
+        linkedMetric: 'investor-readiness'
+      })
+    )
+  }
 
   return actions
 }
@@ -357,6 +366,18 @@ function deduplicateActions(actions: FounderAction[]): FounderAction[] {
 
 /** Generate founder actions from all intelligence sources. */
 export function generateFounderActions(): FounderAction[] {
+  const contractInputs = getFounderContractInputs()
+  if (!hasLiveFounderIntelligence() || !hasAnyLiveFounderIntelligence({
+    usageMetrics: contractInputs.usageMetrics,
+    orbConversationAnalytics: contractInputs.orbConversationAnalytics,
+    providerAnalytics: contractInputs.providerAnalytics,
+    readinessMetrics: contractInputs.readinessMetrics,
+    billingMetrics: contractInputs.billingMetrics,
+    dataSourceStatus: contractInputs.dataSourceStatus
+  })) {
+    return []
+  }
+
   const all = [
     ...actionsFromInsights(),
     ...actionsFromAgents(),

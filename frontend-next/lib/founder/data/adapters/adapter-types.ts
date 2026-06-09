@@ -4,7 +4,7 @@ import type { ProviderAnalytics } from '@/lib/founder/contracts/provider-analyti
 import type { ReadinessMetrics } from '@/lib/founder/contracts/readiness-metrics'
 import type { UsageMetrics } from '@/lib/founder/contracts/usage-metrics'
 
-export type FounderAdapterSource = 'live' | 'mock'
+export type FounderAdapterSource = 'live' | 'mock' | 'unavailable'
 
 export type FounderAdapterResult<T> = {
   data: T

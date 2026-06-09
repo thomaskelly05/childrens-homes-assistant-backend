@@ -1,14 +1,18 @@
+import { agentResultWithoutLiveData, isAgentLiveDataAvailable } from './agent-live-data'
 import type { AgentRunResult } from './types'
 
 export function runSectorIntelligenceAgent(): AgentRunResult {
+  if (!isAgentLiveDataAvailable()) {
+    return agentResultWithoutLiveData('Sector Intelligence Brief')
+  }
+
   return {
     title: 'Sector Intelligence Brief',
-    summary: 'Online harm and child exploitation themes are accelerating across adolescent placements. Cannabis concerns up 18%. Physical intervention incidents down 4%.',
+    summary: 'Live sector intelligence requires connected anonymised aggregate sources. Review sector trends on the command centre when available.',
     recommendations: [
-      'Update ORB knowledge for online harm and county lines trends',
-      'Prepare sector trend report for provider network',
-      'Flag rising cannabis concerns to safeguarding agent for template updates',
-      'Highlight physical intervention reduction as positive impact narrative'
+      'Update ORB knowledge when live sector trend data is connected',
+      'Prepare sector trend report from anonymised live aggregates only',
+      'Align product roadmap with connected sector signals'
     ],
     status: 'active'
   }

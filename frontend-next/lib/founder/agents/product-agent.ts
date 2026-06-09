@@ -1,14 +1,18 @@
+import { agentResultWithoutLiveData, isAgentLiveDataAvailable } from './agent-live-data'
 import type { AgentRunResult } from './types'
 
 export function runProductAgent(): AgentRunResult {
+  if (!isAgentLiveDataAvailable()) {
+    return agentResultWithoutLiveData('Product Intelligence Report')
+  }
+
   return {
     title: 'Product Intelligence Report',
-    summary: 'Dictate V2 and Chronology Builder improvements are the highest-impact product bets. Dictate adoption at 94% (+28%). Chronology Builder shows high demand but 34% abandonment.',
+    summary: 'Live feature usage events are connected. Review adoption, abandonment and demand signals on the command centre.',
     recommendations: [
-      'Prioritise Dictate V2 with multi-speaker capture and offline resilience',
-      'Redesign Chronology Builder onboarding to reduce 34% abandonment',
-      'Add guided timeline assembly with safeguarding linkage',
-      'Deprioritise Supervision Builder — falling demand and high abandonment'
+      'Prioritise the highest-adoption live feature for the next build cycle',
+      'Address features with elevated abandonment from live usage data',
+      'Deprioritise low-adoption features until live demand increases'
     ],
     status: 'active'
   }

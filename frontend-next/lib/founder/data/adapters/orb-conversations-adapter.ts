@@ -1,8 +1,10 @@
 import type { OrbAdminFeedbackSummary } from '@/lib/orb/admin-quality-client'
 import { ORB_ADMIN_API_PATHS } from '@/lib/orb/admin-quality-client'
+import { isFounderMockFallbackAllowed } from '@/lib/founder/data/founder-data-mode'
 import { mockOrbAnalytics } from '@/lib/founder/intelligence/mock-inputs'
 import type { OrbConversationAnalytics } from '@/lib/founder/contracts/orb-conversation-analytics'
 import type { FounderAdapterResult } from './adapter-types'
+import { getOrbConversationsAdapterUnavailable } from './adapter-unavailable'
 import { currentPeriodBounds, fetchJson } from './adapter-utils'
 
 function helpfulRatioToSatisfaction(ratio: number): number {
@@ -14,12 +16,12 @@ export async function fetchOrbConversationsAdapter(): Promise<FounderAdapterResu
   const summary = await fetchJson<OrbAdminFeedbackSummary>(`${ORB_ADMIN_API_PATHS.feedbackSummary}?days=30`)
 
   if (!summary) {
-    return getOrbConversationsAdapterFallback()
+    return isFounderMockFallbackAllowed() ? getOrbConversationsAdapterFallback() : getOrbConversationsAdapterUnavailable()
   }
 
   const usage = summary.usage_summary
-  const totalConversations = usage?.total_requests ?? summary.total_feedback ?? mockOrbAnalytics.totalConversations
-  const satisfactionScore = helpfulRatioToSatisfaction(summary.helpful_ratio ?? 0.96)
+  const totalConversations = usage?.total_requests ?? summary.total_feedback ?? 0
+  const satisfactionScore = helpfulRatioToSatisfaction(summary.helpful_ratio ?? 0)
 
   const categories = (summary.top_modes_with_downvotes ?? []).map((mode, index) => ({
     categoryId: `mode-${index + 1}`,
@@ -44,7 +46,7 @@ export async function fetchOrbConversationsAdapter(): Promise<FounderAdapterResu
   ]
 
   if (!categories.length) {
-    limitations.push('Category breakdown unavailable — partial mock category mix retained for dashboard charts.')
+    limitations.push('Category breakdown unavailable from live ORB analytics.')
   }
 
   return {
@@ -53,12 +55,12 @@ export async function fetchOrbConversationsAdapter(): Promise<FounderAdapterResu
       periodEnd,
       totalConversations,
       totalMessages: totalConversations * 5,
-      averageConversationLength: 5,
-      satisfactionScore: satisfactionScore || mockOrbAnalytics.satisfactionScore,
-      safeguardingQueryCount: summary.unsafe_answer_complaints ?? mockOrbAnalytics.safeguardingQueryCount,
-      reportGenerationCount: mockOrbAnalytics.reportGenerationCount,
-      categories: categories.length ? categories : mockOrbAnalytics.categories,
-      emergingThemes: emergingThemes.length ? emergingThemes : mockOrbAnalytics.emergingThemes
+      averageConversationLength: totalConversations > 0 ? 5 : 0,
+      satisfactionScore,
+      safeguardingQueryCount: summary.unsafe_answer_complaints ?? 0,
+      reportGenerationCount: 0,
+      categories,
+      emergingThemes
     },
     source: 'live',
     limitations
@@ -66,6 +68,8 @@ export async function fetchOrbConversationsAdapter(): Promise<FounderAdapterResu
 }
 
 export function getOrbConversationsAdapterFallback(): FounderAdapterResult<OrbConversationAnalytics> {
+  if (!isFounderMockFallbackAllowed()) return getOrbConversationsAdapterUnavailable()
+
   return {
     data: mockOrbAnalytics,
     source: 'mock',

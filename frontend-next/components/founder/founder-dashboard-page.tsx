@@ -61,7 +61,7 @@ export function FounderDashboardPage() {
         if (active) setData(fresh)
       })
       .catch(() => {
-        /* keep mock/hybrid fallback */
+        /* keep current live-only empty state */
       })
     return () => {
       active = false
@@ -136,7 +136,11 @@ export function FounderDashboardPage() {
             title="Platform activity"
             description="Anonymised operational events only. No child names, staff names, or identifiable safeguarding details."
           >
-            <FounderActivityFeed items={data.activityFeed} />
+            {data.activityFeed.length > 0 ? (
+              <FounderActivityFeed items={data.activityFeed} />
+            ) : (
+              <p className="text-sm leading-7 text-slate-400">No live data yet. Activity events will appear once a live activity source is connected.</p>
+            )}
           </FounderSectionCard>
 
           <FounderSectionCard eyebrow="Data Pipeline" title="Founder data status">
@@ -164,21 +168,25 @@ export function FounderDashboardPage() {
                 <p className="mt-2 text-3xl font-black text-white">{data.orbIntelligence.reportGenerationVolume}</p>
               </div>
             </div>
-            <div className="h-72 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={orbChartData} margin={{ top: 8, right: 8, left: -18, bottom: 48 }}>
-                  <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} />
-                  <XAxis dataKey="name" tick={{ fill: '#94a3b8', fontSize: 11 }} angle={-24} textAnchor="end" height={70} />
-                  <YAxis tick={{ fill: '#94a3b8', fontSize: 11 }} />
-                  <Tooltip content={<DarkTooltip />} cursor={{ fill: 'rgba(255,255,255,0.04)' }} />
-                  <Bar dataKey="volume" radius={[8, 8, 0, 0]}>
-                    {orbChartData.map((entry, index) => (
-                      <Cell key={entry.name} fill={chartColours[index % chartColours.length]} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+            {orbChartData.length > 0 ? (
+              <div className="h-72 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={orbChartData} margin={{ top: 8, right: 8, left: -18, bottom: 48 }}>
+                    <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} />
+                    <XAxis dataKey="name" tick={{ fill: '#94a3b8', fontSize: 11 }} angle={-24} textAnchor="end" height={70} />
+                    <YAxis tick={{ fill: '#94a3b8', fontSize: 11 }} />
+                    <Tooltip content={<DarkTooltip />} cursor={{ fill: 'rgba(255,255,255,0.04)' }} />
+                    <Bar dataKey="volume" radius={[8, 8, 0, 0]}>
+                      {orbChartData.map((entry, index) => (
+                        <Cell key={entry.name} fill={chartColours[index % chartColours.length]} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <p className="text-sm leading-7 text-slate-400">Live ORB analytics not connected. Category charts will appear once ORB conversation data is available.</p>
+            )}
             <div className="mt-5 grid gap-4 md:grid-cols-2">
               <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
                 <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-500">Fastest growing category</p>
@@ -217,6 +225,9 @@ export function FounderDashboardPage() {
               </div>
             </div>
             <div className="space-y-3">
+              {data.productIntelligence.features.length === 0 ? (
+                <p className="text-sm leading-7 text-slate-400">Live feature usage events not connected. Product adoption metrics will appear once the feature event stream is available.</p>
+              ) : null}
               {data.productIntelligence.features.map((feature) => (
                 <article key={feature.name} className="rounded-2xl border border-white/10 bg-black/20 p-4">
                   <div className="flex flex-wrap items-center justify-between gap-3">
@@ -242,11 +253,15 @@ export function FounderDashboardPage() {
         </FounderSectionCard>
 
         <FounderSectionCard eyebrow="Sector Intelligence" title="Anonymous aggregated trends" description="Sector-wide patterns across children's homes with no identifiable child or staff information.">
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {data.sectorIntelligence.map((trend) => (
-              <FounderTrendCard key={trend.id} trend={trend} />
-            ))}
-          </div>
+          {data.sectorIntelligence.length > 0 ? (
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              {data.sectorIntelligence.map((trend) => (
+                <FounderTrendCard key={trend.id} trend={trend} />
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm leading-7 text-slate-400">No live sector intelligence yet. Aggregated trend data will appear once live sector sources are connected.</p>
+          )}
         </FounderSectionCard>
 
         <FounderSectionCard
@@ -258,11 +273,15 @@ export function FounderDashboardPage() {
         </FounderSectionCard>
 
         <FounderSectionCard eyebrow="Founder Recommendations" title="What to build next" description="AI-style prioritisation based on usage, risk, readiness, and unit economics.">
-          <div className="grid gap-4 xl:grid-cols-2">
-            {data.recommendations.map((recommendation) => (
-              <FounderRecommendationCard key={recommendation.id} recommendation={recommendation} />
-            ))}
-          </div>
+          {data.recommendations.length > 0 ? (
+            <div className="grid gap-4 xl:grid-cols-2">
+              {data.recommendations.map((recommendation) => (
+                <FounderRecommendationCard key={recommendation.id} recommendation={recommendation} />
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm leading-7 text-slate-400">No live recommendations yet. Insights will appear once live usage, ORB analytics and readiness sources are connected.</p>
+          )}
         </FounderSectionCard>
 
         <FounderSectionCard eyebrow="Agent Command Centre" title="Founder agents" description="Specialist agents for briefing, product, Ofsted, growth, quality, and storytelling.">
