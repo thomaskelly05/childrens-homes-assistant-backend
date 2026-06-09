@@ -67,14 +67,17 @@ describe('ORB premium login screen layout', () => {
   it('mobile layout is single column with separate compact header', () => {
     const login = read('components/orb-residential/orb-login-screen.tsx')
     const mobile = read('components/orb-residential/orb-login-mobile-header.tsx')
+    const authCard = read('components/orb-residential/orb-login-auth-card.tsx')
     const hero = read('components/orb-residential/orb-login-desktop-hero.tsx')
 
     assert.match(login, /data-orb-login-mobile-single-column/)
+    assert.match(login, /OrbLoginMobileHeader/)
     assert.match(mobile, /data-orb-login-mobile-layout/)
     assert.match(mobile, /data-orb-login-mobile-mark/)
     assert.match(mobile, /lg:hidden/)
     assert.match(hero, /hidden flex-col justify-center lg:flex/)
     assert.match(mobile, /data-orb-login-mobile-brand/)
+    assert.doesNotMatch(authCard, /OrbLoginMobileHeader/)
   })
 
   it('authenticated users on login route redirect away', () => {
@@ -89,7 +92,7 @@ describe('ORB premium login screen layout', () => {
 
     assert.match(authCard, /Welcome to ORB Residential/)
     assert.match(authCard, /Sign in to continue/)
-    assert.match(authCard, /Sign in or create your account to continue/)
+    assert.match(authCard, /Sign in or create your account to continue|Use Google, Microsoft, email or passkey/)
     assert.match(authCard, /Continue with Microsoft/)
     assert.match(authCard, /data-orb-create-account/)
     assert.match(authCard, /Sign in with email/)

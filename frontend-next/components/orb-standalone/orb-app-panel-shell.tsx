@@ -65,6 +65,7 @@ export function OrbAppPanelShell({
   const isSide = mode === 'side'
   const isFull = mode === 'full'
   const mobileSheet = responsiveMode === 'mobile' && mobileMode === 'sheet' && !isSide
+  const mobileFull = responsiveMode === 'mobile' && mobileMode === 'full'
 
   const sizeClass = SIZE_CLASS[size]
 
@@ -77,7 +78,9 @@ export function OrbAppPanelShell({
       data-orb-app-panel-name={appId}
       data-orb-panel-debug={debugName || appId}
       data-orb-responsive-mode={responsiveMode}
+      data-orb-app-panel-mobile-mode={mobileMode}
       {...(appModal ? { 'data-orb-app-modal': 'true' as const } : {})}
+      {...(mobileFull ? { 'data-orb-app-panel-mobile-full': 'true' as const } : {})}
     >
       <button
         type="button"
@@ -100,13 +103,15 @@ export function OrbAppPanelShell({
           className={
             isSide
               ? `orb-panel-drawer pointer-events-auto flex h-full w-full flex-col border-l border-[var(--orb-line)] bg-[var(--orb-surface)] shadow-2xl max-md:max-h-[100dvh] md:max-h-[100dvh] ${
-                  size === 'wide' || size === 'workstation' ? 'max-w-4xl' : 'max-w-xl'
-                }`
+                  mobileFull
+                    ? 'max-md:h-[100dvh] max-md:max-h-[100dvh] max-md:w-full max-md:max-w-none max-md:rounded-none max-md:border-0'
+                    : ''
+                } ${size === 'wide' || size === 'workstation' ? 'max-w-4xl' : 'max-w-xl'}`
               : isFull
                 ? `orb-panel-full pointer-events-auto flex h-full w-full flex-col bg-[var(--orb-surface)]`
                 : `orb-panel-modal pointer-events-auto flex max-h-[min(calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-1rem),56rem)] w-[min(calc(100vw-1rem),47.5rem)] max-w-[min(calc(100vw-1rem),47.5rem)] flex-col overflow-hidden rounded-3xl border border-[var(--orb-line)] bg-[var(--orb-surface)] shadow-2xl max-sm:mt-auto max-sm:max-h-[min(92dvh,calc(100dvh-env(safe-area-inset-top)-0.5rem))] max-sm:w-[calc(100vw-0.75rem)] ${
-                    mobileSheet ? 'max-sm:rounded-t-[1.35rem] max-sm:rounded-b-none' : 'max-sm:rounded-b-none'
-                  } ${sizeClass}`
+                    mobileSheet ? 'max-sm:rounded-t-[1.35rem] max-sm:rounded-b-none max-sm:max-h-[min(96dvh,calc(100dvh-env(safe-area-inset-top)-0.25rem))]' : 'max-sm:rounded-b-none'
+                  } ${mobileFull ? 'max-sm:h-[100dvh] max-sm:max-h-[100dvh] max-sm:w-full max-sm:max-w-none max-sm:rounded-none max-sm:border-0' : ''} ${sizeClass}`
           }
           data-orb-app-panel
           data-orb-app-panel-content

@@ -84,7 +84,7 @@ describe('ORB billing UI polish', () => {
   it('billing modal plan card uses flex layout without absolute-positioned actions', () => {
     const billing = read('components/orb-standalone/orb-billing-modal.tsx')
     assert.match(billing, /data-orb-billing-plan-card/)
-    assert.match(billing, /flex flex-col gap-4 lg:flex-row/)
+    assert.match(billing, /flex flex-col gap-3 lg:flex-row/)
     assert.doesNotMatch(billing, /absolute/)
   })
 

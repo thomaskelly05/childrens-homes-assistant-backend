@@ -4,6 +4,7 @@ import type { ReactNode } from 'react'
 
 import {
   OrbAppPanelShell,
+  type OrbAppPanelMobileMode,
   type OrbAppPanelMode,
   type OrbAppPanelSize
 } from '@/components/orb-standalone/orb-app-panel-shell'
@@ -37,7 +38,8 @@ export function OrbStandalonePanelShell({
   modalSize,
   appModal,
   presentation,
-  compactChrome = false
+  compactChrome = false,
+  mobileMode
 }: {
   open: boolean
   title: string
@@ -53,6 +55,7 @@ export function OrbStandalonePanelShell({
   appModal?: boolean
   presentation?: 'modal' | 'workspace'
   compactChrome?: boolean
+  mobileMode?: OrbAppPanelMobileMode
 }) {
   if (layout === 'workspace' || presentation === 'workspace') {
     return (
@@ -74,6 +77,9 @@ export function OrbStandalonePanelShell({
   const resolvedSize = modalSize ? LEGACY_SIZE_MAP[modalSize] : wide ? 'wide' : 'standard'
   const mode: OrbAppPanelMode = isCenter ? 'modal' : 'side'
 
+  const resolvedMobileMode =
+    mobileMode ?? (layout === 'drawer' ? 'full' : appModal ? 'sheet' : 'sheet')
+
   return (
     <OrbAppPanelShell
       appId={panelId || 'panel'}
@@ -84,6 +90,7 @@ export function OrbStandalonePanelShell({
       onClose={onClose}
       mode={mode}
       size={resolvedSize}
+      mobileMode={resolvedMobileMode}
       footer={footer}
       debugName={panelId}
     >

@@ -5,7 +5,6 @@ import Link from 'next/link'
 
 import { OrbAuthButton } from '@/components/orb-residential/ui/orb-auth-button'
 import { OrbLoginLegalFooter } from '@/components/orb-residential/orb-login-legal-footer'
-import { OrbLoginMobileHeader } from '@/components/orb-residential/orb-login-mobile-header'
 import type { OrbLegalPaths } from '@/components/orb-residential/orb-legal-links'
 import { orbOAuthRedirectMessage } from '@/lib/orb/orb-oauth-redirect-state'
 
@@ -72,21 +71,25 @@ export function OrbLoginAuthCard({
 
   return (
     <div
-      className="orb-login-card orb-login-panel-inner mx-auto w-full max-w-md rounded-[1.75rem] border border-[var(--orb-line)]/35 bg-[var(--orb-surface-elevated)]/75 p-5 shadow-2xl shadow-indigo-500/10 backdrop-blur-md sm:p-7"
+      className="orb-login-card orb-login-panel-inner mx-auto w-full max-w-md rounded-[1.75rem] border border-[var(--orb-line)]/35 bg-[var(--orb-surface-elevated)]/75 p-5 shadow-2xl shadow-indigo-500/10 backdrop-blur-md sm:p-7 lg:rounded-[1.75rem]"
       data-orb-login-auth-card
     >
-      <OrbLoginMobileHeader />
-
       <h2
-        className="orb-login-signin-title mt-1 text-[1.625rem] font-semibold tracking-tight lg:mt-0"
+        className="orb-login-signin-title text-left text-[1.375rem] font-semibold leading-tight tracking-tight lg:mt-0 lg:text-[1.625rem]"
         data-orb-login-signin-title
         data-orb-login-signin-title-mobile
       >
         <span className="lg:hidden">Sign in to continue</span>
         <span className="hidden lg:inline">Welcome to ORB Residential</span>
       </h2>
-      <p className="orb-login-lead mt-1.5 text-sm leading-relaxed" data-orb-login-mobile-lead>
-        Sign in or create your account to continue.
+      <p
+        className="orb-login-lead mt-1.5 text-left text-sm leading-relaxed text-[var(--orb-muted)]"
+        data-orb-login-mobile-lead
+      >
+        <span className="lg:hidden">
+          Use Google, Microsoft, email or passkey to access ORB Residential.
+        </span>
+        <span className="hidden lg:inline">Sign in or create your account to continue.</span>
       </p>
 
       {error ? (
@@ -95,7 +98,7 @@ export function OrbLoginAuthCard({
         </p>
       ) : null}
 
-      <section className="orb-login-auth-section" aria-labelledby="orb-login-oauth">
+      <section className="orb-login-auth-section" aria-labelledby="orb-login-oauth" data-orb-login-auth-actions>
         <h3 id="orb-login-oauth" className="sr-only">
           Social sign-in
         </h3>
@@ -213,6 +216,7 @@ export function OrbLoginAuthCard({
             onClick={() => onEmailExpandedChange(true)}
             aria-expanded={false}
             data-orb-email-toggle
+            data-orb-email-collapsed
             disabled={oauthBusy}
           >
             <span>Sign in with email</span>
@@ -230,6 +234,7 @@ export function OrbLoginAuthCard({
             onClick={() => onPasskeyExpandedChange(!passkeyExpanded)}
             aria-expanded={passkeyExpanded}
             data-orb-passkey-toggle
+            data-orb-passkey-collapsed={passkeyExpanded ? undefined : 'true'}
           >
             <span>Use passkey</span>
             <span className="text-xs font-normal">{passkeyExpanded ? 'Hide' : 'Show'}</span>

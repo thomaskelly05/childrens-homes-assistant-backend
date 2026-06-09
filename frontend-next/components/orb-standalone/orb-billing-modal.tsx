@@ -22,7 +22,7 @@ import {
 } from '@/lib/orb/orb-billing-client'
 
 function sectionClassName() {
-  return 'orb-billing-card rounded-xl border border-[var(--orb-line)]/40 bg-[var(--orb-surface-elevated)]/80 p-3 sm:p-3.5'
+  return 'orb-billing-card orb-mobile-workspace-card rounded-xl border border-[var(--orb-mobile-ws-card-border,var(--orb-line))]/40 bg-[var(--orb-mobile-ws-card,var(--orb-surface-elevated))]/80 p-2.5 sm:p-3.5'
 }
 
 export function OrbBillingModal({
@@ -156,10 +156,12 @@ export function OrbBillingModal({
       onClose={onClose}
       panelId="billing"
       size="wide"
+      mobileMode="sheet"
     >
       <div
-        className="space-y-3 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:p-4"
+        className="space-y-2.5 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:space-y-3 sm:p-4"
         data-orb-billing-modal
+        data-orb-billing-mobile-layout="compact"
       >
         {loading && !access ? (
           <p className="text-sm text-[var(--orb-muted)]" data-orb-billing-loading>
@@ -168,9 +170,10 @@ export function OrbBillingModal({
         ) : null}
 
         <section className={sectionClassName()} data-orb-billing-plan-card>
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-            <div className="flex min-w-0 items-start gap-3">
-              <OrbUserAvatar name={displayName} avatarUrl={avatarUrl} size="md" />
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+            <div className="flex min-w-0 items-start gap-2.5">
+              <OrbUserAvatar name={displayName} avatarUrl={avatarUrl} size="sm" className="sm:hidden" />
+              <OrbUserAvatar name={displayName} avatarUrl={avatarUrl} size="md" className="hidden sm:block" />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-semibold text-[var(--orb-foreground)]">
                   {displayName}
@@ -178,14 +181,14 @@ export function OrbBillingModal({
                 {email ? (
                   <p className="truncate text-xs text-[var(--orb-muted)]">{email}</p>
                 ) : null}
-                <p className="mt-2 text-sm font-semibold text-[var(--orb-foreground)]">{planName}</p>
+                <p className="mt-1.5 text-sm font-semibold text-[var(--orb-foreground)]">{planName}</p>
                 <span
-                  className={`mt-1.5 inline-flex rounded-full border px-2 py-0.5 text-[10px] font-medium capitalize ${
+                  className={`mt-1 inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold capitalize ${
                     display.isPaidActive
-                      ? 'border-emerald-200/40 bg-emerald-500/10 text-emerald-200'
+                      ? 'border-emerald-400/50 bg-emerald-500/15 text-emerald-100'
                       : access?.trial?.active
-                        ? 'border-sky-200/40 bg-sky-500/10 text-sky-100'
-                        : 'border-amber-200/40 bg-amber-500/10 text-amber-100'
+                        ? 'border-sky-300/45 bg-sky-500/15 text-sky-50'
+                        : 'border-amber-300/45 bg-amber-500/15 text-amber-50'
                   }`}
                   data-orb-billing-status-pill
                 >
@@ -195,11 +198,11 @@ export function OrbBillingModal({
             </div>
 
             <div className="flex w-full shrink-0 flex-col gap-2 lg:w-auto lg:min-w-[11rem] lg:items-end">
-              <p className="text-lg font-semibold tracking-tight text-[var(--orb-res-primary,#1677ff)] lg:text-right">
+              <p className="text-base font-semibold tracking-tight text-[var(--orb-res-primary,#1677ff)] sm:text-lg lg:text-right">
                 {priceLabel}
               </p>
               <div
-                className="flex w-full flex-col gap-2 sm:flex-row sm:flex-wrap lg:flex-col lg:items-stretch"
+                className="flex w-full flex-col gap-2 lg:flex-col lg:items-stretch"
                 data-orb-billing-cta-bar
               >
                 {display.showTrialCta ? (

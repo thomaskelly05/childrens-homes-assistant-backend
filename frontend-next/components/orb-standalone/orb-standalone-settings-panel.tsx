@@ -4,6 +4,7 @@ import { useEffect, useState, type ReactNode } from 'react'
 import {
   Accessibility,
   Bell,
+  ChevronLeft,
   Database,
   Fingerprint,
   HelpCircle,
@@ -20,6 +21,7 @@ import {
   User
 } from 'lucide-react'
 
+import { useOrbResponsiveMode } from '@/components/orb-standalone/use-orb-responsive-mode'
 import { OrbAppearanceControl } from '@/components/orb-standalone/orb-appearance-control'
 import { OrbBillingSettingsSection } from '@/components/orb-standalone/orb-billing-settings-section'
 import { orbOverlayDrawerShellProps } from '@/components/orb-standalone/orb-app-modal'
@@ -115,8 +117,9 @@ export function OrbStandaloneSettingsPanel({
   userEmail?: string | null
   avatarUrl?: string | null
 }) {
+  const { isMobile } = useOrbResponsiveMode()
   const [activeSection, setActiveSection] = useState<SettingsSectionId>('appearance')
-  const [mobileSectionOpen, setMobileSectionOpen] = useState<SettingsSectionId | null>('appearance')
+  const [mobileSectionOpen, setMobileSectionOpen] = useState<SettingsSectionId | null>(null)
   const [personalisation, setPersonalisation] = useState<OrbStandalonePersonalisation>(
     defaultOrbStandalonePersonalisation
   )
@@ -128,7 +131,10 @@ export function OrbStandaloneSettingsPanel({
   const developerMode = isOrbDeveloperMode()
 
   useEffect(() => {
-    if (!open) return
+    if (!open) {
+      setMobileSectionOpen(null)
+      return
+    }
     setChatSettings(loadOrbStandaloneChatSettings())
     setPersonalisation(loadOrbStandalonePersonalisation())
     setPasskeysSupported(orbPasskeysSupported())
@@ -200,6 +206,9 @@ export function OrbStandaloneSettingsPanel({
 
   const textSize = a11yPrefs?.largeText ? 'large' : 'comfortable'
   const effectiveAppearance = appearanceMode ?? 'system'
+  const showMobileList = isMobile && mobileSectionOpen === null
+  const showMobileDetail = isMobile && mobileSectionOpen !== null
+  const activeSectionLabel = SECTION_META.find((section) => section.id === activeSection)?.label ?? 'Settings'
 
   return (
     <OrbStandalonePanelShell
@@ -219,25 +228,25 @@ export function OrbStandaloneSettingsPanel({
         data-orb-settings-panel
         data-orb-settings-drawer
         data-orb-settings-layout="premium-cards"
+        data-orb-settings-mobile-layout={isMobile ? 'stack' : 'desktop'}
         data-orb-studio-shell="settings"
       >
-        <div className="orb-premium-settings-card shrink-0 border-b border-[var(--orb-line)] p-4 md:hidden">
-          <OrbAppearanceControl
-            value={effectiveAppearance}
-            onChange={(mode) => onAppearanceChange?.(mode)}
-          />
-        </div>
-
         <nav
-          className="hidden shrink-0 border-b border-[var(--orb-line)] p-2 md:block md:w-44 md:border-b-0 md:border-r"
+          className={`shrink-0 border-b border-[var(--orb-line)] p-2 md:w-44 md:border-b-0 md:border-r ${
+            showMobileList ? 'flex flex-col gap-1' : 'hidden md:block'
+          }`}
           data-orb-settings-nav
+          data-orb-settings-nav-mobile={showMobileList ? 'true' : undefined}
         >
           {SECTION_META.map((section) => (
             <button
               key={section.id}
               type="button"
-              onClick={() => setActiveSection(section.id)}
-              className={`orb-settings-nav-item mb-0.5 flex w-full rounded-lg px-3 py-2 text-left text-xs transition ${
+              onClick={() => {
+                setActiveSection(section.id)
+                if (isMobile) setMobileSectionOpen(section.id)
+              }}
+              className={`orb-settings-nav-item mb-0.5 flex w-full rounded-lg px-3 py-2.5 text-left text-sm font-medium transition md:px-3 md:py-2 md:text-xs ${
                 activeSection === section.id
                   ? 'orb-settings-nav-item--active font-semibold'
                   : 'text-[var(--orb-muted)] hover:bg-[var(--orb-surface-hover)] hover:text-[var(--orb-foreground)]'
@@ -250,37 +259,35 @@ export function OrbStandaloneSettingsPanel({
           ))}
         </nav>
 
-        <nav className="flex shrink-0 flex-col gap-1 border-b border-[var(--orb-line)] p-2 md:hidden" data-orb-settings-nav-mobile>
-          {SECTION_META.map((section) => (
+        <div
+          className={`flex-1 overflow-y-auto overflow-x-hidden p-4 pb-[max(1rem,env(safe-area-inset-bottom))] ${showMobileList ? 'hidden' : ''}`}
+          data-orb-settings-scroll
+        >
+          {showMobileDetail ? (
             <button
-              key={section.id}
               type="button"
-              onClick={() => {
-                setActiveSection(section.id)
-                setMobileSectionOpen(section.id)
-              }}
-              className={`flex w-full rounded-lg border px-3 py-2 text-left text-xs font-medium transition ${
-                activeSection === section.id
-                  ? 'orb-settings-nav-item--active border-[var(--orb-primary)] bg-[var(--orb-primary-soft)] text-[var(--orb-foreground)]'
-                  : 'border-transparent text-[var(--orb-muted)] hover:bg-[var(--orb-surface-hover)] hover:text-[var(--orb-foreground)]'
-              }`}
-              data-orb-settings-section={section.id}
-              data-orb-settings-nav-active={activeSection === section.id ? 'true' : 'false'}
+              onClick={() => setMobileSectionOpen(null)}
+              className="mb-3 inline-flex items-center gap-1 rounded-lg px-1 py-1 text-sm font-medium text-[var(--orb-muted)] transition hover:text-[var(--orb-foreground)]"
+              data-orb-settings-mobile-back
             >
-              {section.label}
+              <ChevronLeft className="h-4 w-4 shrink-0" aria-hidden />
+              Back to settings
             </button>
-          ))}
-        </nav>
-
-        <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+          ) : null}
+          {showMobileDetail ? (
+            <h3
+              className="mb-3 text-sm font-semibold text-[var(--orb-foreground)]"
+              data-orb-settings-section-heading
+            >
+              {activeSectionLabel}
+            </h3>
+          ) : null}
           {activeSection === 'appearance' ? (
             <SettingsBlock title="Appearance" description="Theme, text size and motion on this device.">
-              <div className="hidden md:block">
-                <OrbAppearanceControl
-                  value={effectiveAppearance}
-                  onChange={(mode) => onAppearanceChange?.(mode)}
-                />
-              </div>
+              <OrbAppearanceControl
+                value={effectiveAppearance}
+                onChange={(mode) => onAppearanceChange?.(mode)}
+              />
               {!residentialSurface ? (
                 <p className="text-[11px] leading-5 text-[var(--orb-muted)]">
                   System follows your device. You can override it here.
