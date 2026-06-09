@@ -36,11 +36,11 @@ def test_stream_route_yields_status_before_context_build():
 
     source = inspect.getsource(orb_standalone_routes.standalone_orb_conversation_stream)
     assert 'yield _sse_event("status"' in source
-    assert "_build_standalone_request_context(payload)" in source
+    assert "_build_standalone_request_context(" in source
     assert "fast_opening_for_message" in source
     # Status received is yielded before full context build inside generator
     received_idx = source.index('stream_status_payload("received")')
-    build_idx = source.index("_build_standalone_request_context(payload)")
+    build_idx = source.index("_build_standalone_request_context(")
     assert received_idx < build_idx
     opening_idx = source.index("fast_opening_for_message")
     assert opening_idx < build_idx

@@ -18,6 +18,10 @@ from services.orb_mandatory_response_contract_service import (
 )
 from services.orb_multi_scenario_detector_service import SCENARIO_SIGNATURES
 from services.orb_scenario_playbook_service import orb_scenario_playbook_service
+from services.orb_universal_answer_contract_map_service import (
+    run_golden_prompt_routing_qa,
+    validate_contract_answer,
+)
 
 ORB_BRAIN_DEBUG_ROLES = frozenset(
     {"admin", "administrator", "super_admin", "superadmin", "founder", "owner"}
@@ -419,6 +423,23 @@ def get_safety_pack_map() -> dict[str, Any]:
     }
 
 
+def run_contract_quality_pack() -> dict[str, Any]:
+    """Founder/admin golden prompt routing QA — no live LLM calls."""
+    return run_golden_prompt_routing_qa()
+
+
+def evaluate_answer_contract_quality(
+    message: str,
+    answer: str,
+    *,
+    fast_opening: str | None = None,
+) -> dict[str, Any]:
+    from services.orb_universal_answer_contract_map_service import detect_contract_family
+
+    family_id = detect_contract_family(message)
+    return validate_contract_answer(answer, family_id=family_id, fast_opening=fast_opening)
+
+
 def evaluate_converged_route_qa(
     message: str,
     *,
@@ -466,5 +487,7 @@ orb_brain_visibility_service = type(
         "build_public_explainability": staticmethod(build_public_explainability),
         "safety_pack_map": staticmethod(get_safety_pack_map),
         "evaluate_converged_route_qa": staticmethod(evaluate_converged_route_qa),
+        "run_contract_quality_pack": staticmethod(run_contract_quality_pack),
+        "evaluate_answer_contract_quality": staticmethod(evaluate_answer_contract_quality),
     },
 )()

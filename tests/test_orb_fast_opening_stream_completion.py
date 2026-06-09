@@ -74,7 +74,7 @@ def test_incident_prompt_gets_incident_fast_opening_for_residential_depth():
     assert "incident report" in opening.lower()
 
 
-def test_merge_stream_answer_keeps_fast_opening_and_model_body():
+def test_merge_stream_answer_drops_fast_opening_when_model_substantial():
     opening = fast_opening_for_message(INCIDENT_PROMPT, expert_depth="residential_deep")
     model = "### Draft incident report\n\n**Summary**\nJamie was dysregulated after family contact."
     merged = merge_stream_answer(
@@ -82,11 +82,11 @@ def test_merge_stream_answer_keeps_fast_opening_and_model_body():
         model_answer=model,
         streamed_text=f"{opening}\n\n{model}",
     )
-    assert merged.startswith(opening)
+    assert opening not in merged or merged.startswith("###")
     assert "Draft incident report" in merged
 
 
-def test_merge_stream_answer_never_joins_opening_to_heading_without_spacing():
+def test_merge_stream_answer_strips_generic_opening_from_final_answer():
     opening = _RESIDENTIAL_DEEP_DEFAULT_OPENING
     model = "Immediate Safety\nCheck everyone is safe."
     merged = merge_stream_answer(
@@ -95,7 +95,8 @@ def test_merge_stream_answer_never_joins_opening_to_heading_without_spacing():
         streamed_text=f"{opening}{model}",
     )
     assert "way.Immediate" not in merged
-    assert "on the way.\n\nImmediate" in merged
+    assert "start with what is safest" not in merged.lower()
+    assert merged.startswith("Immediate Safety")
 
 
 def test_ensure_fast_opening_spacing_fixes_concatenated_stream():

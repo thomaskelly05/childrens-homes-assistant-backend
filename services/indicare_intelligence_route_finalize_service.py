@@ -6,6 +6,10 @@ import logging
 from typing import Any
 
 from services.indicare_intelligence_core_service import indicare_intelligence_core_service
+from services.orb_universal_answer_contract_map_service import (
+    detect_contract_family,
+    sanitize_final_answer,
+)
 from services.orb_chat_timing_service import OrbChatTimingTracker
 from services.orb_response_support_service import build_response_support_chips
 
@@ -164,6 +168,9 @@ def finalize_standalone_intelligence(
             mode=mode or "Ask ORB",
             sanitize_closer=sanitize_closer,
         )
+
+    family_id = detect_contract_family(message or prompt_text)
+    answer = sanitize_final_answer(answer, family_id=family_id)
 
     if record_learning:
         try:

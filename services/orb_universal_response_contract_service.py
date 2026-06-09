@@ -10,6 +10,10 @@ from __future__ import annotations
 from typing import Any
 
 from assistant.response_contracts import build_contract_prompt_block, get_contract, normalise_contract_mode
+from services.orb_universal_answer_contract_map_service import (
+    detect_contract_family,
+    get_contract_family,
+)
 
 # Extra shape hints per resolved contract mode (orchestrator-selected, not separate brains).
 SURFACE_CONTRACT_HINTS: dict[str, list[str]] = {
@@ -129,6 +133,8 @@ PUBLIC_CONSIDERATION_MAP: dict[str, str] = {
     "reflection": "Therapeutic language",
     "supervision": "Professional accountability",
     "chronology": "Recording quality",
+    "accessible_child_support_plan": "Child-centred planning",
+    "template_generation": "Child-centred planning",
 }
 
 DEFAULT_PUBLIC = (
@@ -244,8 +250,25 @@ class OrbUniversalResponseContractService:
         scenario_types: list[str] | None = None,
         risk_level: str = "low",
         active_brains: list[str] | None = None,
+        contract_family: str | None = None,
+        message: str | None = None,
+        requested_action: str | None = None,
+        note_type: str | None = None,
+        source_surface: str | None = None,
+        feature: str | None = None,
     ) -> list[str]:
         considerations: list[str] = []
+        family_id = contract_family or detect_contract_family(
+            message or "",
+            scenario_types=scenario_types,
+            requested_action=requested_action,
+            note_type=note_type,
+            source_surface=source_surface,
+            feature=feature,
+        )
+        family = get_contract_family(family_id)
+        if family:
+            considerations.extend(family.get("public_considerations") or [])
         if scenario_types or risk_level in {"high", "critical"}:
             considerations.append("Safeguarding responsibilities")
         if contract_mode:
@@ -265,6 +288,25 @@ class OrbUniversalResponseContractService:
             considerations.append(item)
         return _dedupe(considerations)[:8]
 
+    def resolve_contract_family(
+        self,
+        *,
+        message: str,
+        scenario_types: list[str] | None = None,
+        requested_action: str | None = None,
+        note_type: str | None = None,
+        source_surface: str | None = None,
+        feature: str | None = None,
+    ) -> str | None:
+        return detect_contract_family(
+            message,
+            scenario_types=scenario_types,
+            requested_action=requested_action,
+            note_type=note_type,
+            source_surface=source_surface,
+            feature=feature,
+        )
+
     def depth_tier_for(
         self,
         *,
@@ -273,7 +315,21 @@ class OrbUniversalResponseContractService:
         contract_mode: str | None = None,
         feature: str | None = None,
         requested_action: str | None = None,
+        message: str | None = None,
+        source_surface: str | None = None,
+        note_type: str | None = None,
     ) -> str:
+        family_id = detect_contract_family(
+            message or "",
+            scenario_types=scenario_types,
+            requested_action=requested_action,
+            note_type=note_type,
+            source_surface=source_surface,
+            feature=feature,
+        )
+        family = get_contract_family(family_id)
+        if family and family.get("depth_tier"):
+            return str(family["depth_tier"])
         if scenario_types:
             return "mandatory"
         if risk_level == "critical":
