@@ -43,7 +43,7 @@ import {
   shouldShowRecordProperlyCta,
   buildIntelligenceContextActionChips
 } from '@/lib/orb/indicare-intelligence-core'
-import { isOrbDeveloperMode } from '@/lib/orb/orb-developer-mode'
+import { userHasFounderAccess } from '@/lib/founder/access'
 import { sanitiseOrbUserFacingStatus } from '@/lib/orb/orb-user-facing-copy'
 import { OrbIntelligenceActionCtas } from '@/components/orb-standalone/orb-intelligence-core-panel'
 
@@ -246,7 +246,7 @@ export function OrbAssistantMessageBody({
   const qualityGate = extractAnswerQualityGate(
     cognitionContext?.context_used as Record<string, unknown> | undefined
   )
-  const developerMode = isOrbDeveloperMode()
+  const founderDebugAccess = userHasFounderAccess(userRole)
   const displayContent = stripSourcesBasisSection(content)
   const displayStreamStatus = sanitiseOrbUserFacingStatus(streamStatus)
   const [showSkeleton, setShowSkeleton] = useState(false)
@@ -303,6 +303,7 @@ export function OrbAssistantMessageBody({
             explainability={explainability}
             cognitionModeLabel={cognitionLabel}
             residentialSurface={residentialSurface}
+            userRole={userRole}
           />
         ) : null}
         {showExplainability && !streaming ? (
@@ -319,7 +320,7 @@ export function OrbAssistantMessageBody({
             <OrbIntelligenceCorePanel
               core={intelligenceCore}
               qualityGate={qualityGate}
-              showTechnicalDetails={developerMode}
+              showTechnicalDetails={founderDebugAccess}
               userRole={userRole}
             />
           </>
