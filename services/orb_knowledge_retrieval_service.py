@@ -334,16 +334,45 @@ class OrbKnowledgeRetrievalService:
         expert_brain_9 = indicare_intelligence.get("orb9_packet") or expert_brain_9
         expert_packet = expert_brain_9.get("expert_packet") or expert_packet
         expert_block = indicare_intelligence.get("prompt_block") or ""
-        if not expert_block and prompt_tier != "fast":
+        depth = indicare_intelligence.get("expert_depth") or "general_light"
+        from services.orb_universal_answer_contract_map_service import (
+            detect_contract_family,
+            get_contract_family,
+        )
+
+        family_id = detect_contract_family(message)
+        simple_contract_families = {
+            "accessible_child_support_plan",
+            "template_generation",
+            "daily_record",
+            "policy_practice_question",
+            "make_more_concise",
+            "convert_to_recording_wording",
+        }
+        skip_expert_bank = family_id in simple_contract_families and prompt_tier != "deep"
+        if not expert_block and prompt_tier != "fast" and not skip_expert_bank:
             expert_block = orb_expert_answer_engine_service.build_prompt_block(expert_packet)
             if not expert_block:
                 expert_block = orb_expert_scenario_bank_service.expert_prompt_block(message)
         if expert_block:
             grounding_context = f"{expert_block}\n\n{grounding_context}".strip()
-        depth = indicare_intelligence.get("expert_depth") or "general_light"
+        family = get_contract_family(family_id)
+        family_prompt_cap = (family or {}).get("prompt_tier_cap")
+        tier_order = ("fast", "residential", "deep")
         if depth in ("residential_deep", "safeguarding_critical") and prompt_tier != "deep":
-            prompt_tier = "deep"
+            if family_prompt_cap != "residential":
+                prompt_tier = "deep"
         elif depth in ("residential_light", "residential_standard") and prompt_tier == "fast":
+            prompt_tier = "residential"
+        if family_prompt_cap and tier_order.index(prompt_tier) > tier_order.index(str(family_prompt_cap)):
+            prompt_tier = str(family_prompt_cap)
+        if family_id in {
+            "accessible_child_support_plan",
+            "template_generation",
+            "daily_record",
+            "keywork_session",
+            "policy_practice_question",
+        } and prompt_tier == "deep":
             prompt_tier = "residential"
         return {
             "classification": classification,

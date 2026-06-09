@@ -458,20 +458,44 @@ class IndicareIntelligenceCoreService:
         care_score: int,
         classification: dict[str, Any],
     ) -> str:
+        from services.orb_universal_answer_contract_map_service import (
+            detect_contract_family,
+            get_contract_family,
+        )
+
         lower = str(message or "").lower()
         if any(t in lower for t in SAFEGUARDING_CRITICAL_TERMS):
             return "safeguarding_critical"
+
+        family_id = detect_contract_family(message)
+        family = get_contract_family(family_id)
+        family_cap = (family or {}).get("expert_depth_cap")
+
         if mode in RESIDENTIAL_MODES or mode in ("Safeguarding Thinking", "Safeguarding"):
             if care_score >= 60 or classification.get("intents", {}).get("safeguarding_principles"):
-                return "residential_deep" if care_score >= 70 else "residential_standard"
-            return "residential_standard"
-        if care_score >= 70:
-            return "residential_deep"
-        if care_score >= 35:
-            return "residential_light"
-        if care_score >= 20:
-            return "residential_light"
-        return "general_light"
+                depth = "residential_deep" if care_score >= 70 else "residential_standard"
+            else:
+                depth = "residential_standard"
+        elif care_score >= 70:
+            depth = "residential_deep"
+        elif care_score >= 35:
+            depth = "residential_light"
+        elif care_score >= 20:
+            depth = "residential_light"
+        else:
+            depth = "general_light"
+
+        if family_cap and depth != "safeguarding_critical":
+            cap_order = (
+                "general_light",
+                "residential_light",
+                "residential_standard",
+                "residential_deep",
+                "safeguarding_critical",
+            )
+            if cap_order.index(depth) > cap_order.index(str(family_cap)):
+                depth = str(family_cap)
+        return depth
 
     def _active_brains(
         self,

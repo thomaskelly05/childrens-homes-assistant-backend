@@ -70,7 +70,7 @@ def test_ensure_fast_opening_spacing_fixes_provided_immediate_join():
     assert "provided.\n\nImmediate" in fixed
 
 
-def test_merge_stream_answer_inserts_paragraph_break_after_opening():
+def test_merge_stream_answer_removes_generic_opening_for_substantial_model():
     opening = _RESIDENTIAL_DEEP_DEFAULT_OPENING
     model = "### Immediate Safety\nCheck everyone is safe."
     merged = merge_stream_answer(
@@ -79,8 +79,8 @@ def test_merge_stream_answer_inserts_paragraph_break_after_opening():
         streamed_text=f"{opening}{model}",
     )
     _assert_no_joined_opening_bug(merged)
-    assert merged.startswith(opening)
-    assert "\n\n" in merged
+    assert opening not in merged
+    assert merged.startswith("### Immediate Safety")
 
 
 def test_merge_stream_answer_replaces_generic_opening_when_model_substantial():

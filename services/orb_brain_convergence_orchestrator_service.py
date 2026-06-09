@@ -20,6 +20,10 @@ from services.orb_mandatory_response_contract_service import orb_mandatory_respo
 from services.orb_multi_scenario_detector_service import orb_multi_scenario_detector_service
 from services.orb_residential_cognition_router import orb_residential_cognition_router
 from services.orb_standalone_brain_service import orb_standalone_brain_service
+from services.orb_universal_answer_contract_map_service import (
+    build_contract_prompt_block as build_family_contract_prompt_block,
+    detect_contract_family,
+)
 from services.orb_universal_response_contract_service import orb_universal_response_contract_service
 from services.shared_institutional_cognition_runtime import shared_institutional_cognition_runtime
 
@@ -65,6 +69,7 @@ class OrbBrainConvergenceDecision:
     feature: str | None = None
     depth_tier: str = "standard"
     contract_mode: str | None = None
+    contract_family: str | None = None
     public_considerations: list[str] = field(default_factory=list)
     universal_contract_block: str = ""
 
@@ -159,18 +164,35 @@ class OrbBrainConvergenceOrchestratorService:
         soft_contract = list(standalone_brain.get("response_contract") or [])
         response_contract = self._dedupe(soft_contract + mandatory_lines + universal_lines)
 
+        contract_family = detect_contract_family(
+            user_message,
+            scenario_types=scenario_types,
+            requested_action=requested_action,
+            note_type=resolved_note_type,
+            source_surface=source_surface,
+            feature=feature,
+        )
         depth_tier = orb_universal_response_contract_service.depth_tier_for(
             scenario_types=scenario_types,
             risk_level=risk_level,
             contract_mode=contract_mode,
             feature=feature,
             requested_action=requested_action,
+            message=user_message,
+            source_surface=source_surface,
+            note_type=resolved_note_type,
         )
         public_considerations = orb_universal_response_contract_service.public_considerations_for(
             contract_mode=contract_mode,
             scenario_types=scenario_types,
             risk_level=risk_level,
             active_brains=list(standalone_brain.get("active_brains") or []),
+            contract_family=contract_family,
+            message=user_message,
+            requested_action=requested_action,
+            note_type=resolved_note_type,
+            source_surface=source_surface,
+            feature=feature,
         )
 
         active_brains = self._merge_brain_ids(
@@ -199,8 +221,14 @@ class OrbBrainConvergenceOrchestratorService:
             document_lens=document_lens,
             source_surface=source_surface,
         )
+        family_block = build_family_contract_prompt_block(contract_family)
         depth_hint = f"ORB answer depth tier: {depth_tier} — adapt length and structure accordingly."
-        prompt_addendum = self._join_prompt_blocks(mandatory_block, universal_block, depth_hint)
+        prompt_addendum = self._join_prompt_blocks(
+            mandatory_block,
+            universal_block,
+            family_block,
+            depth_hint,
+        )
 
         decision = OrbBrainConvergenceDecision(
             surface="orb_standalone",
@@ -226,6 +254,7 @@ class OrbBrainConvergenceOrchestratorService:
             feature=feature,
             depth_tier=depth_tier,
             contract_mode=contract_mode,
+            contract_family=contract_family,
             public_considerations=public_considerations,
             universal_contract_block=universal_block,
         )
@@ -263,6 +292,7 @@ class OrbBrainConvergenceOrchestratorService:
             "feature": decision.feature,
             "depth_tier": decision.depth_tier,
             "contract_mode": decision.contract_mode,
+            "contract_family": decision.contract_family,
             "detected_topic": decision.detected_topic,
             "risk_level": decision.risk_level,
             "multi_scenario": decision.multi_scenario,

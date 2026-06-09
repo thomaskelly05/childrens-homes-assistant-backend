@@ -35,6 +35,7 @@ from services.orb_fast_opening_service import (
     fast_opening_for_message,
     is_fast_opening_only_answer,
     merge_stream_answer,
+    strip_streaming_artifacts_from_answer,
 )
 from services.orb_stream_status_service import (
     stream_status_payload,
@@ -62,6 +63,7 @@ from services.orb_brain_metadata_service import attach_to_payload, merge_context
 from services.orb_brain_visibility_service import (
     build_public_explainability,
     get_safety_pack_map,
+    run_contract_quality_pack,
     sanitize_orb_brain_metadata_for_user,
     sanitize_orb_brain_route_preview,
     user_can_view_orb_brain_debug,
@@ -188,21 +190,10 @@ def _build_standalone_request_context(
         timing.mark("shared_cognition_complete")
 
     standalone_brain = dict(brain_convergence.standalone_brain)
-    standalone_brain["brain_convergence"] = {
-        "surface": brain_convergence.surface,
-        "mode": brain_convergence.mode,
-        "detected_topic": brain_convergence.detected_topic,
-        "risk_level": brain_convergence.risk_level,
-        "multi_scenario": brain_convergence.multi_scenario,
-        "scenario_types": brain_convergence.scenario_types,
-        "active_brains": brain_convergence.active_brains,
-        "active_lenses": brain_convergence.active_lenses,
-        "active_intelligence_layers": brain_convergence.active_intelligence_layers,
-        "knowledge_vaults": brain_convergence.knowledge_vaults,
-        "response_contract": brain_convergence.response_contract,
-        "boundaries": brain_convergence.boundaries,
-        "standalone_boundary": brain_convergence.standalone_boundary,
-    }
+    standalone_brain["brain_convergence"] = orb_brain_convergence_orchestrator_service.convergence_metadata(
+        brain_convergence,
+        route=route,
+    )
     project_memory_block = ""
     memory_text = (payload.project_memory or "").strip()
     if memory_text:
@@ -791,6 +782,15 @@ async def standalone_orb_brain_route_map(
     }
 
 
+@router.post("/brain-route/qa-run")
+async def standalone_orb_brain_route_qa_run(
+    current_user=Depends(_require_orb_brain_route_debug_access),
+):
+    """Founder/admin-only golden prompt contract QA pack."""
+    _ = current_user
+    return {"success": True, "data": run_contract_quality_pack()}
+
+
 def _merge_cognition_labels(
     *,
     shared_cognition: dict[str, Any],
@@ -1036,8 +1036,11 @@ async def standalone_orb_conversation(
             elapsed_ms,
             retrieval_bundle.get("retrieval_elapsed_ms"),
         )
-        answer = orb_grounded_answer_style_service.sanitize_high_attention_closer(
+        answer = strip_streaming_artifacts_from_answer(
             str(assistant_data.get("answer") or "I can help with that, but I could not form a response just now."),
+        )
+        answer = orb_grounded_answer_style_service.sanitize_high_attention_closer(
+            answer,
             message=payload.message,
             mode=mode,
         )
@@ -1442,8 +1445,12 @@ async def standalone_orb_conversation_stream(
                 assistant_data["answer"] = fallback_answer
                 assistant_data["error_detail"] = "model_stream_empty_after_fast_opening"
 
-            answer = orb_grounded_answer_style_service.sanitize_high_attention_closer(
+            answer = strip_streaming_artifacts_from_answer(
                 str(assistant_data.get("answer") or ""),
+                fast_opening=fast_opening,
+            )
+            answer = orb_grounded_answer_style_service.sanitize_high_attention_closer(
+                answer,
                 message=user_message,
                 mode=mode,
             )

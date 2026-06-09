@@ -34,7 +34,8 @@ _SCENARIO_OPENINGS: list[tuple[Pattern[str], str]] = [
     ),
     (
         re.compile(
-            r"missing.*(cannabis|smell|drugs|substance)|cannabis.*missing|returned after missing",
+            r"missing.*(cannabis|smell|drugs|substance)|cannabis.*missing|"
+            r"returned\s+(?:from|after)\s+missing",
             re.I,
         ),
         "First, make sure they are physically safe and approach them calmly. "
@@ -57,6 +58,23 @@ _SCENARIO_OPENINGS: list[tuple[Pattern[str], str]] = [
         "First, confirm they are safe and follow your missing-from-care procedure. "
         "Approach calmly when they return.",
     ),
+    (
+        re.compile(
+            r"(support\s+plan|child[- ]friendly\s+plan).*(template|widgets?|aac|gdd|"
+            r"dreams?|aspirations?)|"
+            r"(template|give\s+me).*(support\s+plan|child[- ]friendly)",
+            re.I,
+        ),
+        "I'll draft a child-friendly support plan you can adapt — with communication widgets/AAC at the centre.",
+    ),
+    (
+        re.compile(
+            r"\btemplate\b.*(handover|daily|incident|keywork|record)|"
+            r"give\s+me\s+a\s+template",
+            re.I,
+        ),
+        "I'll build a clear template with editable sections you can complete straight away.",
+    ),
 ]
 
 _SAFEGUARDING_DEFAULT_OPENING = (
@@ -64,6 +82,7 @@ _SAFEGUARDING_DEFAULT_OPENING = (
     "I'm preparing the full steps now."
 )
 
+# Deprecated generic residential opener — must never appear in final answers.
 _RESIDENTIAL_DEEP_DEFAULT_OPENING = (
     "Start with what is safest and most practical right now — the full guidance is on the way."
 )
@@ -81,12 +100,17 @@ STREAM_INCOMPLETE_FALLBACK_MESSAGE = (
     "Your question is still here — please try again, or ask ORB to draft the incident report step by step."
 )
 
-# Generic openings that should be dropped once a substantial model answer arrives.
+# Generic openings that must be stripped from final answers once model content arrives.
 _REPLACEABLE_GENERIC_OPENINGS: frozenset[str] = frozenset(
     {
         _SAFEGUARDING_DEFAULT_OPENING,
         _RESIDENTIAL_DEEP_DEFAULT_OPENING,
     }
+)
+
+# Task-specific openings that should be removed once the authoritative model answer arrives.
+_TASK_SPECIFIC_REPLACEABLE_OPENINGS: frozenset[str] = frozenset(
+    {opening for _, opening in _SCENARIO_OPENINGS}
 )
 
 # Known bad joins when streamed tokens concatenate opening to the next heading.
@@ -97,9 +121,18 @@ _JOINED_OPENING_BUG_PATTERNS: tuple[re.Pattern[str], ...] = (
     re.compile(r"(provided\.)(###)", re.I),
     re.compile(r"(on the way\.)(First,)", re.I),
     re.compile(r"(provided\.)(First,)", re.I),
+    re.compile(r"(centre\.)(#)", re.I),
+    re.compile(r"(away\.)(#)", re.I),
 )
 
-_MIN_SUBSTANTIAL_MODEL_LEN = 120
+_MIN_SUBSTANTIAL_MODEL_LEN = 40
+
+_STREAMING_ARTIFACT_PATTERNS: tuple[re.Pattern[str], ...] = (
+    re.compile(re.escape(_RESIDENTIAL_DEEP_DEFAULT_OPENING), re.I),
+    re.compile(r"the full guidance is on the way\.?", re.I),
+    re.compile(r"start with what is safest and most practical right now\.?", re.I),
+    re.compile(r"i'm preparing the full steps now\.?", re.I),
+)
 
 
 def ensure_fast_opening_spacing(text: str, *, fast_opening: str | None = None) -> str:
@@ -118,6 +151,42 @@ def ensure_fast_opening_spacing(text: str, *, fast_opening: str | None = None) -
             cleaned = f"{opening}\n\n{remainder.lstrip()}"
 
     return cleaned
+
+
+def _is_non_risk_prompt(message: str) -> bool:
+    """True when the prompt is a template/plan/recording task without safeguarding risk."""
+    lower = (message or "").lower()
+    risk_markers = (
+        "suicid",
+        "self-harm",
+        "self harm",
+        "abuse",
+        "allegation",
+        "missing from",
+        "returned after missing",
+        "exploitation",
+        "weapon",
+        "lado",
+        "forced removal",
+        "hurt myself",
+        "blade",
+        "overdose",
+    )
+    if any(marker in lower for marker in risk_markers):
+        return False
+    plan_template_markers = (
+        "template",
+        "support plan",
+        "child-friendly plan",
+        "give me a plan",
+        "widgets",
+        "aac",
+        "dreams",
+        "aspirations",
+        "handover note",
+        "daily record",
+    )
+    return any(marker in lower for marker in plan_template_markers)
 
 
 def fast_opening_for_message(
@@ -141,9 +210,11 @@ def fast_opening_for_message(
     if depth == "safeguarding_critical" or "safeguarding" in mode_name:
         return _SAFEGUARDING_DEFAULT_OPENING
 
-    if depth in {"residential_deep", "residential_standard", "residential_light"}:
-        return _RESIDENTIAL_DEEP_DEFAULT_OPENING
+    # Non-risk template/plan prompts must not receive generic safety-biased fast openings.
+    if _is_non_risk_prompt(text):
+        return None
 
+    # Generic residential deep opening removed — no safety-biased filler for ordinary residential depth.
     return None
 
 
@@ -163,31 +234,79 @@ def is_fast_opening_placeholder(text: str) -> bool:
     return False
 
 
+def _strip_opening_prefix(text: str, opening: str) -> str:
+    cleaned = (text or "").strip()
+    if not opening or not cleaned:
+        return cleaned
+    if cleaned.startswith(opening):
+        return cleaned[len(opening) :].lstrip(" \n\t-—")
+    return cleaned
+
+
+def strip_streaming_artifacts_from_answer(
+    answer: str,
+    *,
+    fast_opening: str | None = None,
+) -> str:
+    """Remove status/fast-opening leakage and duplicate generic openers from final answers."""
+    cleaned = ensure_fast_opening_spacing((answer or "").strip(), fast_opening=fast_opening)
+    opening = (fast_opening or "").strip()
+
+    if opening and cleaned.startswith(opening):
+        remainder = _strip_opening_prefix(cleaned, opening)
+        if len(remainder) >= _MIN_SUBSTANTIAL_MODEL_LEN:
+            cleaned = remainder
+
+    for pattern in _STREAMING_ARTIFACT_PATTERNS:
+        cleaned = pattern.sub("", cleaned).strip()
+
+    for generic in _REPLACEABLE_GENERIC_OPENINGS:
+        if generic in cleaned:
+            without = cleaned.replace(generic, "").strip(" \n\t-—")
+            if len(without) >= _MIN_SUBSTANTIAL_MODEL_LEN:
+                cleaned = without
+
+    if opening in _TASK_SPECIFIC_REPLACEABLE_OPENINGS and opening in cleaned:
+        without = _strip_opening_prefix(cleaned, opening)
+        if len(without) >= _MIN_SUBSTANTIAL_MODEL_LEN:
+            cleaned = without
+
+    cleaned = re.sub(r"\n{3,}", "\n\n", cleaned).strip()
+    return cleaned
+
+
 def merge_stream_answer(
     *,
     fast_opening: str | None,
     model_answer: str,
     streamed_text: str,
 ) -> str:
-    """Merge fast opening with the authoritative model answer without dropping either."""
+    """Merge fast opening with the authoritative model answer without leaking status text."""
     model = ensure_fast_opening_spacing((model_answer or "").strip(), fast_opening=fast_opening)
     streamed = ensure_fast_opening_spacing((streamed_text or "").strip(), fast_opening=fast_opening)
     opening = (fast_opening or "").strip()
 
     if not opening:
-        return model or streamed
+        return strip_streaming_artifacts_from_answer(model or streamed)
 
     if model:
         if model.startswith(opening):
-            return ensure_fast_opening_spacing(model, fast_opening=opening)
-        if opening in _REPLACEABLE_GENERIC_OPENINGS and len(model) >= _MIN_SUBSTANTIAL_MODEL_LEN:
-            return model
-        if streamed and len(streamed) > len(model) and streamed.startswith(opening):
-            return ensure_fast_opening_spacing(streamed, fast_opening=opening)
-        return ensure_fast_opening_spacing(f"{opening}\n\n{model}", fast_opening=opening)
+            merged = ensure_fast_opening_spacing(model, fast_opening=opening)
+        elif opening in _REPLACEABLE_GENERIC_OPENINGS or opening in _TASK_SPECIFIC_REPLACEABLE_OPENINGS:
+            merged = model if len(model) >= _MIN_SUBSTANTIAL_MODEL_LEN else ensure_fast_opening_spacing(
+                f"{opening}\n\n{model}", fast_opening=opening
+            )
+        elif streamed and len(streamed) > len(model) and streamed.startswith(opening):
+            merged = ensure_fast_opening_spacing(streamed, fast_opening=opening)
+        else:
+            merged = ensure_fast_opening_spacing(f"{opening}\n\n{model}", fast_opening=opening)
+        return strip_streaming_artifacts_from_answer(merged, fast_opening=opening)
 
     if streamed:
-        return ensure_fast_opening_spacing(streamed, fast_opening=opening)
+        return strip_streaming_artifacts_from_answer(
+            ensure_fast_opening_spacing(streamed, fast_opening=opening),
+            fast_opening=opening,
+        )
 
     return opening
 
