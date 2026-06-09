@@ -41,6 +41,9 @@ from services.orb_stream_status_service import (
     stream_status_sequence,
 )
 from services.orb_brain_route_service import orb_brain_route_service
+from services.orb_brain_convergence_orchestrator_service import orb_brain_convergence_orchestrator_service
+from services.orb_brain_route_map_service import orb_brain_route_map_service
+from auth.current_user import get_current_user
 from services.orb_recording_contract_service import build_incident_report_prompt_block, is_incident_report_draft_request
 from services.orb_standalone_brain_service import orb_standalone_brain_service
 from services.orb_grounded_answer_style_service import orb_grounded_answer_style_service
@@ -122,16 +125,6 @@ def _build_standalone_request_context(
     profile_context = (
         "standalone context profiles" in user_message.lower() or "profile:" in user_message.lower()
     )
-    brain_route = orb_brain_route_service.decide_orb_brain_route(
-        payload.message,
-        mode=mode,
-        source_surface=payload.source_surface,
-        client_route_hint=payload.client_route_hint,
-        location_hint=payload.location_hint,
-        requested_action=payload.requested_action,
-        note_type=payload.note_type,
-        profile_context=profile_context,
-    )
     retrieval_bundle = orb_knowledge_retrieval_service.prepare_request_bundle(
         user_message,
         mode=mode,
@@ -145,31 +138,38 @@ def _build_standalone_request_context(
     grounding_context = retrieval_bundle["grounding_context"]
     retrieval_preview = retrieval_bundle["source_packs"]
 
+    standalone_operational_context: dict[str, Any] = {}
+    if payload.document_text:
+        standalone_operational_context["document_text"] = payload.document_text
+    if payload.document_title:
+        standalone_operational_context["document_title"] = payload.document_title
+
+    brain_convergence = orb_brain_convergence_orchestrator_service.build_brain_decision(
+        payload.message,
+        mode=mode,
+        source_surface=payload.source_surface,
+        client_route_hint=payload.client_route_hint,
+        location_hint=payload.location_hint,
+        requested_action=payload.requested_action,
+        note_type=payload.note_type,
+        profile_context=profile_context,
+        route=route,
+        prompt_tier=prompt_tier,
+        history=history,
+        operational_context=standalone_operational_context or None,
+    )
+    brain_route = brain_convergence.brain_route
+
+    shared_cognition = orb_brain_convergence_orchestrator_service.build_shared_cognition(
+        message=user_message,
+        mode=mode,
+        prompt_tier=prompt_tier,
+        history=history,
+        operational_context=standalone_operational_context or None,
+    )
     if prompt_tier == "fast":
-        shared_cognition = {
-            "surface": "standalone_orb",
-            "mode": mode,
-            "active_brains": ["general_assistant"],
-            "cognition_display_labels": ["ORB"],
-            "explainability": {"cognition_display_labels": ["ORB"]},
-            "citations": [],
-            "prompt_blocks": [],
-            "skipped": True,
-        }
         shared_runtime_block = ""
     else:
-        standalone_operational_context: dict[str, Any] = {}
-        if payload.document_text:
-            standalone_operational_context["document_text"] = payload.document_text
-        if payload.document_title:
-            standalone_operational_context["document_title"] = payload.document_title
-        shared_cognition = shared_institutional_cognition_runtime.build_context(
-            surface="standalone_orb",
-            message=user_message,
-            mode=mode,
-            operational_context=standalone_operational_context or None,
-            history=history,
-        )
         shared_runtime_block = shared_institutional_cognition_runtime.prompt_addendum(
             surface="standalone_orb",
             message=user_message,
@@ -180,8 +180,22 @@ def _build_standalone_request_context(
     if timing:
         timing.mark("shared_cognition_complete")
 
-    standalone_brain = orb_standalone_brain_service.context_payload(user_message, mode=mode)
-    standalone_brain["brain_route"] = brain_route.to_dict()
+    standalone_brain = dict(brain_convergence.standalone_brain)
+    standalone_brain["brain_convergence"] = {
+        "surface": brain_convergence.surface,
+        "mode": brain_convergence.mode,
+        "detected_topic": brain_convergence.detected_topic,
+        "risk_level": brain_convergence.risk_level,
+        "multi_scenario": brain_convergence.multi_scenario,
+        "scenario_types": brain_convergence.scenario_types,
+        "active_brains": brain_convergence.active_brains,
+        "active_lenses": brain_convergence.active_lenses,
+        "active_intelligence_layers": brain_convergence.active_intelligence_layers,
+        "knowledge_vaults": brain_convergence.knowledge_vaults,
+        "response_contract": brain_convergence.response_contract,
+        "boundaries": brain_convergence.boundaries,
+        "standalone_boundary": brain_convergence.standalone_boundary,
+    }
     project_memory_block = ""
     memory_text = (payload.project_memory or "").strip()
     if memory_text:
@@ -210,6 +224,7 @@ def _build_standalone_request_context(
         shared_runtime_block=shared_runtime_block,
         project_memory_block=project_memory_block or None,
         expert_depth=expert_depth,
+        mandatory_contract_block=brain_convergence.prompt_addendum or None,
     )
     if timing:
         timing.mark("prompt_build_complete")
@@ -229,7 +244,8 @@ def _build_standalone_request_context(
         "indicare_intelligence": indicare_intelligence,
         "expert_depth": expert_depth,
         "brain_selection_shadow": brain_selection_shadow,
-        "brain_route": brain_route.to_dict(),
+        "brain_route": brain_route,
+        "brain_convergence": brain_convergence.to_dict(),
         "user_message": user_message,
     }
 
@@ -476,6 +492,7 @@ def _build_framed_message(
     shared_runtime_block: str | None = None,
     project_memory_block: str | None = None,
     expert_depth: str | None = None,
+    mandatory_contract_block: str | None = None,
 ) -> str:
     resolved_mode = orb_standalone_brain_service.normalise_mode(mode)
     mode_hint = MODE_BEHAVIOUR.get(resolved_mode) or MODE_BEHAVIOUR.get(mode, "")
@@ -511,6 +528,7 @@ def _build_framed_message(
         return "\n\n".join(part for part in parts if part)
 
     brain_block = orb_standalone_brain_service.build_prompt_block(user_message, mode=resolved_mode)
+    mandatory_block = (mandatory_contract_block or "").strip()
     incident_contract_block = ""
     if is_incident_report_draft_request(user_message):
         incident_contract_block = build_incident_report_prompt_block(user_message)
@@ -534,6 +552,7 @@ def _build_framed_message(
             grounding_context or "",
             STANDALONE_ORB_TONE,
             brain_block,
+            mandatory_block,
             incident_contract_block,
             mode_hint,
             detail_hint,
@@ -552,6 +571,7 @@ def _build_framed_message(
         grounding_context or "",
         STANDALONE_ORB_TONE,
         brain_block,
+        mandatory_block,
         incident_contract_block,
         mode_hint,
         detail_hint,
@@ -677,7 +697,7 @@ async def standalone_orb_brain_route(
     current_user=Depends(require_standalone_orb_access),
 ):
     """Canonical server-authoritative ORB brain route decision."""
-    decision = orb_brain_route_service.decide_orb_brain_route(
+    decision = orb_brain_convergence_orchestrator_service.build_brain_decision(
         body.message,
         mode=body.mode,
         source_surface=body.source_surface,
@@ -685,15 +705,73 @@ async def standalone_orb_brain_route(
         location_hint=body.location_hint,
         requested_action=body.requested_action,
         note_type=body.note_type,
+        route="/orb/standalone/brain-route",
     )
     user_message = orb_brain_route_service.extract_user_message(body.message)
     return {
         "success": True,
         "data": {
-            **decision.to_dict(),
+            **decision.brain_route,
             "user_message": user_message,
             "authoritative": True,
-            "client_hint_ignored": decision.client_hint_ignored,
+            "client_hint_ignored": decision.brain_route.get("client_hint_ignored"),
+            "active_brains": decision.active_brains,
+            "scenario_types": decision.scenario_types,
+            "multi_scenario": decision.multi_scenario,
+            "standalone_boundary": decision.standalone_boundary,
+        },
+    }
+
+
+_ORB_BRAIN_DEBUG_ROLES = frozenset(
+    {"admin", "administrator", "super_admin", "superadmin", "founder", "owner"}
+)
+
+
+def _require_orb_brain_route_debug_access(
+    current_user: dict[str, Any] = Depends(get_current_user),
+) -> dict[str, Any]:
+    role = str(
+        current_user.get("role")
+        or current_user.get("user_role")
+        or current_user.get("account_role")
+        or ""
+    ).strip().lower()
+    if role not in _ORB_BRAIN_DEBUG_ROLES:
+        raise HTTPException(status_code=403, detail="Brain-route debug is restricted to founder/admin QA.")
+    return current_user
+
+
+@router.post("/brain-route/debug")
+async def standalone_orb_brain_route_debug(
+    body: OrbStandaloneBrainRouteRequest,
+    current_user=Depends(_require_orb_brain_route_debug_access),
+):
+    """Founder/admin QA — brain convergence visibility without secrets or live OS records."""
+    _ = current_user
+    payload = orb_brain_convergence_orchestrator_service.build_debug_payload(
+        body.message,
+        mode=body.mode,
+    )
+    payload["route_map"] = orb_brain_route_map_service.trace_live_route(
+        route="/orb/standalone/conversation"
+    )
+    return {"success": True, "data": payload}
+
+
+@router.get("/brain-route/map")
+async def standalone_orb_brain_route_map(
+    current_user=Depends(_require_orb_brain_route_debug_access),
+):
+    """Documented canonical standalone ORB brain route (founder/admin)."""
+    _ = current_user
+    return {
+        "success": True,
+        "data": {
+            "surface": "orb_standalone",
+            "canonical_route": orb_brain_route_map_service.canonical_route(),
+            "audit_gaps": orb_brain_route_map_service.audit_gaps(),
+            "parallel_non_authoritative": orb_brain_route_map_service.parallel_layers(),
         },
     }
 

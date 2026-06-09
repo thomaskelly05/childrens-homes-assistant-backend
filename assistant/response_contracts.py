@@ -459,6 +459,7 @@ MODE_ALIASES = {
     "structured_record": "recording",
     "daily_note": "recording",
     "daily_log": "recording",
+    "record this properly": "recording",
     "handover_note": "handover",
     "incident_record": "incident",
     "incident_summary": "incident",
