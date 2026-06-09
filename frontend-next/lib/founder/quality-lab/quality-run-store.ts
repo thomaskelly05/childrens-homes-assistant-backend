@@ -1,6 +1,7 @@
-import type { QualityRun, QualityRunItemResult, QualityRunStatus, QualityRunType } from './quality-lab-types'
+import type { QualityRun, QualityRunItemResult, QualityRunStatus } from './quality-lab-types'
+import { persistQualityRun } from './persistence-bridge'
+import { getQualityRunsCache, prependQualityRun } from './quality-persistence-cache'
 
-let runs: QualityRun[] = []
 let runCounter = 0
 
 function nextRunId(): string {
@@ -9,15 +10,15 @@ function nextRunId(): string {
 }
 
 export function getQualityRuns(): QualityRun[] {
-  return [...runs]
+  return getQualityRunsCache()
 }
 
 export function getQualityRun(id: string): QualityRun | undefined {
-  return runs.find((r) => r.id === id)
+  return getQualityRunsCache().find((r) => r.id === id)
 }
 
 export function getLatestQualityRun(): QualityRun | undefined {
-  return runs[0]
+  return getQualityRunsCache()[0]
 }
 
 export function addQualityRun(
@@ -50,7 +51,8 @@ export function addQualityRun(
     passRate,
     completedAt: partial.completedAt ?? new Date().toISOString()
   }
-  runs = [stored, ...runs]
+  prependQualityRun(stored)
+  void persistQualityRun(stored).catch(() => undefined)
   return stored
 }
 
@@ -87,6 +89,5 @@ export function mapApiRunItem(item: {
 }
 
 export function resetQualityRunStore(): void {
-  runs = []
   runCounter = 0
 }

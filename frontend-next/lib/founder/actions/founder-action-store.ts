@@ -1,8 +1,10 @@
 /**
- * Founder Action Store — in-memory persistence with deterministic generation.
- * Designed for future replacement with API/database persistence.
+ * Founder Action Store — live intelligence with persisted custom actions and status overrides.
  */
 
+import { actionRepository } from '@/lib/founder/persistence'
+import type { FounderActionRecord } from '@/lib/founder/persistence/founder-persistence-types'
+import { baseTimestamps } from '@/lib/founder/persistence/repositories/repository-base'
 import type { FounderAction, FounderActionCategory, FounderActionPriority, FounderActionStatus } from './founder-action-types'
 import { FOUNDER_ACTION_PRIORITY_ORDER } from './founder-action-types'
 import { generateFounderActions, createActionFromRecommendation } from './founder-action-generator'
@@ -19,6 +21,28 @@ const store: FounderActionStoreState = {
 
 const statusOverrides = new Map<string, FounderActionStatus>()
 const customActions: FounderAction[] = []
+
+export async function hydrateActionsFromPersistence(): Promise<void> {
+  try {
+    const records = await actionRepository.list()
+    for (const record of records) {
+      customActions.push(record.action)
+      if (record.status) statusOverrides.set(record.action.id, record.status)
+    }
+  } catch {
+    /* intelligence layer remains default */
+  }
+}
+
+function persistAction(action: FounderAction, status: FounderActionStatus): void {
+  const record: FounderActionRecord = {
+    id: action.id,
+    ...baseTimestamps('founder', 'founder-ui'),
+    status,
+    action: { ...action, status }
+  }
+  void actionRepository.create(record, { actor: 'founder', auditSummary: `Action saved: ${action.title}` }).catch(() => undefined)
+}
 
 function sortByPriority(actions: FounderAction[]): FounderAction[] {
   return [...actions].sort((a, b) => {
@@ -71,7 +95,9 @@ export function updateFounderActionStatus(id: string, status: FounderActionStatu
   if (!action) return null
 
   statusOverrides.set(id, status)
-  return { ...action, status }
+  const updated = { ...action, status }
+  persistAction(updated, status)
+  return updated
 }
 
 /** Get open (non-done, non-dismissed) actions. */
@@ -138,6 +164,7 @@ export function addFounderAction(input: {
     linkedAgent: input.linkedAgent
   })
   customActions.push(action)
+  persistAction(action, action.status)
   return action
 }
 

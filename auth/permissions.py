@@ -89,10 +89,27 @@ def require_authenticated_user(
     return current_user
 
 
+FOUNDER_ROLES = {
+    "founder",
+    "owner",
+    "super_admin",
+    "superadmin",
+    StaffRole.ADMIN.value,
+    "administrator",
+}
+
+
 def require_admin(
     current_user: dict[str, Any] = Depends(get_current_user),
 ) -> dict[str, Any]:
     return _ensure_role(current_user, {StaffRole.ADMIN.value, "super_admin", "superadmin"})
+
+
+def require_founder(
+    current_user: dict[str, Any] = Depends(get_current_user),
+) -> dict[str, Any]:
+    """Founder command centre — founder and administrator roles only."""
+    return _ensure_role(current_user, FOUNDER_ROLES)
 
 
 def require_provider_admin(

@@ -1,4 +1,10 @@
-export type BuildBriefStatus = 'draft' | 'sent-to-cursor' | 'complete'
+export type BuildBriefStatus =
+  | 'draft'
+  | 'approved'
+  | 'sent-to-cursor'
+  | 'in-progress'
+  | 'completed'
+  | 'dismissed'
 
 export type BuildBrief = {
   id: string

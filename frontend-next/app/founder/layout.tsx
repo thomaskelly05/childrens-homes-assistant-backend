@@ -1,5 +1,7 @@
 import type { Metadata } from 'next'
 
+import { FounderPersistenceHydrator } from '@/components/founder/founder-persistence-hydrator'
+
 import './founder-dashboard.css'
 
 export const metadata: Metadata = {
@@ -12,5 +14,10 @@ export const metadata: Metadata = {
 }
 
 export default function FounderLayout({ children }: { children: React.ReactNode }) {
-  return <div className="founder-route-root min-h-screen bg-[#05070d] text-slate-100">{children}</div>
+  return (
+    <div className="founder-route-root min-h-screen bg-[#05070d] text-slate-100">
+      <FounderPersistenceHydrator />
+      {children}
+    </div>
+  )
 }
