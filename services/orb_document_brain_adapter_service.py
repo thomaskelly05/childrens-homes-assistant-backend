@@ -1,6 +1,7 @@
-"""Document brain adapter — converges Dictate and Write on shared intelligence metadata.
+"""Document brain adapter — converges Dictate and Write on the canonical ORB orchestrator.
 
 Dictate/Write use specialised document generation paths (/orb/dictate/*) but share:
+- orb_brain_convergence_orchestrator_service.build_brain_decision (canonical routing)
 - indicare_intelligence_core_service.build_intelligence_packet (pre-LLM)
 - orb_brain_metadata_service.build_brain_metadata (contract)
 - orb_residential_quality_service (post-generation quality)
@@ -17,10 +18,19 @@ from services.indicare_intelligence_route_finalize_service import (
     finalize_standalone_intelligence,
     intelligence_context_summary,
 )
+from services.orb_brain_convergence_orchestrator_service import orb_brain_convergence_orchestrator_service
 from services.orb_brain_metadata_service import build_brain_metadata
+from services.orb_brain_visibility_service import build_public_explainability
 from services.orb_recording_contract_service import build_recording_contract_prompt_block
 
 OrbDocumentFeature = Literal["dictate", "write", "dictate_analyze", "dictate_edit"]
+
+_FEATURE_ROUTES: dict[str, str] = {
+    "dictate": "/orb/dictate/generate",
+    "dictate_analyze": "/orb/dictate/analyze",
+    "dictate_edit": "/orb/dictate/edit",
+    "write": "/orb/dictate/prepare-write",
+}
 
 
 def build_document_brain_context(
@@ -30,22 +40,54 @@ def build_document_brain_context(
     feature: OrbDocumentFeature = "dictate",
     note_type: str | None = None,
 ) -> dict[str, Any]:
-    """Shared pre-LLM intelligence packet + brain metadata for document surfaces."""
-    intel_packet = indicare_intelligence_core_service.build_intelligence_packet(text, mode=mode or note_type or "Ask ORB")
+    """Shared pre-LLM intelligence packet + canonical brain convergence for document surfaces."""
+    resolved_mode = mode or note_type or "Ask ORB"
+    route = _FEATURE_ROUTES.get(feature, "/orb/dictate/generate")
+    brain_convergence = orb_brain_convergence_orchestrator_service.build_brain_decision(
+        text,
+        mode=resolved_mode,
+        feature=feature,
+        note_type=note_type,
+        document_type=note_type,
+        source_surface=feature,
+        route=route,
+    )
+    intel_packet = indicare_intelligence_core_service.build_intelligence_packet(text, mode=resolved_mode)
     brain_metadata = build_brain_metadata(
-        mode=mode,
+        mode=resolved_mode,
         feature="dictate" if feature.startswith("dictate") else "write",
         lens=note_type,
+        extra={
+            "brain_convergence": orb_brain_convergence_orchestrator_service.convergence_metadata(
+                brain_convergence,
+                route=route,
+            ),
+            "depth_tier": brain_convergence.depth_tier,
+            "contract_mode": brain_convergence.contract_mode,
+        },
     )
     recording_contract_block = build_recording_contract_prompt_block(text, note_type=note_type)
+    convergence_block = orb_brain_convergence_orchestrator_service.build_convergence_prompt_block(
+        brain_convergence
+    )
     return {
         "intelligence_packet": intel_packet,
         "intelligence_summary": intelligence_context_summary(intel_packet),
         "brain_metadata": brain_metadata,
+        "brain_convergence": brain_convergence,
+        "convergence_block": convergence_block,
         "recording_contract_block": recording_contract_block,
+        "public_explainability": build_public_explainability(
+            {
+                "standalone_only_reasoning": True,
+                "public_considerations": brain_convergence.public_considerations,
+            },
+            mode=resolved_mode,
+        ),
         "adapter": "orb_document_brain_adapter",
         "conversational_brain": "askOrbBrain via /orb/standalone/conversation/stream",
-        "document_brain": "/orb/dictate/*",
+        "document_brain": route,
+        "orchestrator": orb_brain_convergence_orchestrator_service.VERSION,
     }
 
 
@@ -85,10 +127,15 @@ def attach_document_brain_metadata(
     ctx = build_document_brain_context(text, mode=mode, feature=feature, note_type=note_type)
     payload = dict(payload)
     payload["brain_metadata"] = ctx["brain_metadata"]
+    payload["explainability"] = ctx.get("public_explainability")
     if "context_used" not in payload:
         payload["context_used"] = {}
     payload["context_used"]["brain_adapter"] = ctx["adapter"]
     payload["context_used"]["intelligence_summary"] = ctx["intelligence_summary"]
+    payload["context_used"]["brain_convergence"] = orb_brain_convergence_orchestrator_service.convergence_metadata(
+        ctx["brain_convergence"],
+        route=ctx["document_brain"],
+    )
     return payload
 
 

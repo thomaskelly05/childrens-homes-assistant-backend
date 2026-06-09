@@ -60,6 +60,7 @@ from services.indicare_intelligence_surface_router import (
 from services.orb_action_engine_service import orb_action_engine_service
 from services.orb_brain_metadata_service import attach_to_payload, merge_context_used
 from services.orb_brain_visibility_service import (
+    build_public_explainability,
     get_safety_pack_map,
     sanitize_orb_brain_metadata_for_user,
     sanitize_orb_brain_route_preview,
@@ -687,12 +688,29 @@ async def standalone_orb_surface_route(
         mode=body.mode,
     )
     boundary = standalone_os_boundary_message(body.intent)
+    brain_convergence = orb_brain_convergence_orchestrator_service.build_brain_decision(
+        body.intent,
+        mode=body.mode,
+        source_surface="surface_route",
+        route="/orb/standalone/surface-route",
+        feature="conversation",
+    )
     return {
         "success": True,
         "data": {
             **decision.model_dump(),
             "standalone_boundary_message": boundary,
             "standalone_brain": orb_standalone_brain_service.context_payload(body.intent, mode=body.mode),
+            "brain_convergence": orb_brain_convergence_orchestrator_service.convergence_metadata(
+                brain_convergence,
+                route="/orb/standalone/surface-route",
+            ),
+            "public_explainability": build_public_explainability(
+                brain_convergence=orb_brain_convergence_orchestrator_service.convergence_metadata(
+                    brain_convergence
+                ),
+                mode=body.mode,
+            ),
         },
     }
 
