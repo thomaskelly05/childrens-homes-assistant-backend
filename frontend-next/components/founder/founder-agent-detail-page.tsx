@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { ArrowLeft, Bot, Circle, Terminal } from 'lucide-react'
+import { ArrowLeft, Bot, Circle, MessageSquare, Terminal } from 'lucide-react'
 
 import type { AgentDetail } from '@/lib/founder/agents'
 
@@ -60,9 +60,18 @@ export function FounderAgentDetailPage({ agent }: { agent: AgentDetail }) {
                 {statusLabel[agent.latestRun.status]}
               </div>
             </div>
-            <div className="rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-right">
-              <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-500">Last run</p>
-              <p className="mt-1 text-sm font-bold text-white">{formatLastRun(agent.lastRunAt)}</p>
+            <div className="flex flex-col items-end gap-3">
+              <Link
+                href={`/founder/orb?agent=${agent.id}`}
+                className="inline-flex items-center gap-2 rounded-xl border border-violet-400/30 bg-violet-500/10 px-4 py-2.5 text-sm font-bold text-violet-200 transition hover:border-violet-400/50 hover:bg-violet-500/15"
+              >
+                <MessageSquare className="h-4 w-4" aria-hidden />
+                Ask ORB Founder about this agent
+              </Link>
+              <div className="rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-right">
+                <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-500">Last run</p>
+                <p className="mt-1 text-sm font-bold text-white">{formatLastRun(agent.lastRunAt)}</p>
+              </div>
             </div>
           </div>
         </header>
