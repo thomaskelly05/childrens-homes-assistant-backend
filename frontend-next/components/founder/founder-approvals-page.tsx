@@ -15,6 +15,7 @@ import {
 
 export function FounderApprovalsPage() {
   const [, setTick] = useState(0)
+  const [notes, setNotes] = useState<Record<string, string>>({})
   const refresh = useCallback(() => setTick((t) => t + 1), [])
 
   const pending = getPendingApprovals()
@@ -56,11 +57,21 @@ export function FounderApprovalsPage() {
                       </div>
                       <p className="mt-4 whitespace-pre-wrap text-sm leading-6 text-slate-300">{item.content}</p>
                       <p className="mt-3 text-xs text-slate-500">Safety check: {item.safetyCheck}</p>
+                      <label className="mt-4 block text-xs font-bold uppercase text-slate-500">
+                        Founder note (optional)
+                        <textarea
+                          value={notes[item.id] ?? ''}
+                          onChange={(e) => setNotes((prev) => ({ ...prev, [item.id]: e.target.value }))}
+                          rows={2}
+                          className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-slate-200"
+                          placeholder="Note for audit trail — not sent externally"
+                        />
+                      </label>
                       <div className="mt-4 flex flex-wrap gap-2">
                         <button
                           type="button"
                           onClick={() => {
-                            approveItem(item.id)
+                            approveItem(item.id, notes[item.id])
                             refresh()
                           }}
                           className="rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-2 text-sm font-bold text-emerald-200"
@@ -70,7 +81,7 @@ export function FounderApprovalsPage() {
                         <button
                           type="button"
                           onClick={() => {
-                            requestChanges(item.id)
+                            requestChanges(item.id, notes[item.id])
                             refresh()
                           }}
                           className="rounded-xl border border-amber-400/30 bg-amber-500/10 px-4 py-2 text-sm font-bold text-amber-200"
@@ -80,7 +91,7 @@ export function FounderApprovalsPage() {
                         <button
                           type="button"
                           onClick={() => {
-                            rejectApprovalItem(item.id)
+                            rejectApprovalItem(item.id, notes[item.id])
                             refresh()
                           }}
                           className="rounded-xl border border-rose-400/30 bg-rose-500/10 px-4 py-2 text-sm font-bold text-rose-200"

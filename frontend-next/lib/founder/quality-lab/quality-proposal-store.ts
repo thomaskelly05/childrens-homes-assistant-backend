@@ -1,6 +1,12 @@
 import type { QualityProposal, QualityProposalStatus } from './quality-lab-types'
+import { persistQualityProposal } from './persistence-bridge'
+import {
+  getQualityProposalsCache,
+  prependQualityProposal,
+  updateQualityProposalInCache
+} from './quality-persistence-cache'
+import { qualityProposalRepository } from '@/lib/founder/persistence'
 
-let proposals: QualityProposal[] = []
 let proposalCounter = 0
 
 function nextProposalId(): string {
@@ -9,15 +15,15 @@ function nextProposalId(): string {
 }
 
 export function getQualityProposals(): QualityProposal[] {
-  return [...proposals]
+  return getQualityProposalsCache()
 }
 
 export function getOpenQualityProposals(): QualityProposal[] {
-  return proposals.filter((p) => p.status === 'draft' || p.status === 'approved')
+  return getQualityProposalsCache().filter((p) => p.status === 'draft' || p.status === 'approved')
 }
 
 export function getQualityProposal(id: string): QualityProposal | undefined {
-  return proposals.find((p) => p.id === id)
+  return getQualityProposalsCache().find((p) => p.id === id)
 }
 
 export function addQualityProposal(
@@ -33,7 +39,8 @@ export function addQualityProposal(
     status: partial.status ?? 'draft',
     createdAt: partial.createdAt ?? new Date().toISOString()
   }
-  proposals = [stored, ...proposals]
+  prependQualityProposal(stored)
+  void persistQualityProposal(stored).catch(() => undefined)
   return stored
 }
 
@@ -42,14 +49,19 @@ export function updateQualityProposalStatus(
   status: QualityProposalStatus,
   extras?: Partial<Pick<QualityProposal, 'linkedBuildBriefId' | 'linkedApprovalId'>>
 ): QualityProposal | undefined {
-  const index = proposals.findIndex((p) => p.id === id)
-  if (index === -1) return undefined
-  const updated: QualityProposal = { ...proposals[index], status, ...extras }
-  proposals = [...proposals.slice(0, index), updated, ...proposals.slice(index + 1)]
+  const existing = getQualityProposal(id)
+  if (!existing) return undefined
+  const updated: QualityProposal = { ...existing, status, ...extras }
+  updateQualityProposalInCache(id, updated)
+  void qualityProposalRepository
+    .updateProposalStatus(id, status, 'founder', {
+      proposal: updated,
+      linkedApprovalId: extras?.linkedApprovalId
+    })
+    .catch(() => undefined)
   return updated
 }
 
 export function resetQualityProposalStore(): void {
-  proposals = []
   proposalCounter = 0
 }

@@ -88,11 +88,11 @@ function BriefCard({ brief, onUpdate }: { brief: BuildBrief; onUpdate: () => voi
             Mark as Sent to Cursor
           </button>
         ) : null}
-        {brief.status === 'sent-to-cursor' ? (
+        {brief.status === 'sent-to-cursor' || brief.status === 'in-progress' ? (
           <button
             type="button"
             onClick={() => {
-              updateBuildBriefStatus(brief.id, 'complete')
+              updateBuildBriefStatus(brief.id, 'completed')
               onUpdate()
             }}
             className="rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-3 py-2 text-xs font-bold text-emerald-200"

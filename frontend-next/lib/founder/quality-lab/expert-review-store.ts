@@ -1,6 +1,7 @@
 import type { ExpertReview } from './quality-lab-types'
+import { persistExpertReview } from './persistence-bridge'
+import { getExpertReviewsCache, prependExpertReview } from './quality-persistence-cache'
 
-let reviews: ExpertReview[] = []
 let reviewCounter = 0
 
 function nextReviewId(): string {
@@ -9,11 +10,11 @@ function nextReviewId(): string {
 }
 
 export function getExpertReviews(): ExpertReview[] {
-  return [...reviews]
+  return getExpertReviewsCache()
 }
 
 export function getExpertReviewsForScenario(scenarioId: string): ExpertReview[] {
-  return reviews.filter((r) => r.scenarioId === scenarioId)
+  return getExpertReviewsCache().filter((r) => r.scenarioId === scenarioId)
 }
 
 export function addExpertReview(
@@ -24,11 +25,11 @@ export function addExpertReview(
     id: partial.id ?? nextReviewId(),
     createdAt: partial.createdAt ?? new Date().toISOString()
   }
-  reviews = [stored, ...reviews]
+  prependExpertReview(stored)
+  void persistExpertReview(stored, 'founder', partial.runId).catch(() => undefined)
   return stored
 }
 
 export function resetExpertReviewStore(): void {
-  reviews = []
   reviewCounter = 0
 }
