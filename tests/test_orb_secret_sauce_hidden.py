@@ -59,10 +59,10 @@ def test_stream_status_messages_are_plain_language():
         assert forbidden.lower() not in joined, forbidden
 
 
-def test_technical_drawer_gated_to_developer_mode():
+def test_technical_drawer_gated_to_founder_admin():
     assistant = ASSISTANT.read_text(encoding="utf-8")
-    assert "isOrbDeveloperMode" in assistant
-    assert "showTechnicalDetails={developerMode}" in assistant
+    assert "userHasFounderAccess" in assistant
+    assert "showTechnicalDetails={founderDebugAccess}" in assistant
 
 
 def test_forbidden_terms_listed_for_sanitisation():

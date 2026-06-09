@@ -3,8 +3,8 @@
 import { useState } from 'react'
 import { ChevronDown, Sparkles } from 'lucide-react'
 
+import { userHasFounderAccess } from '@/lib/founder/access'
 import { ORB_USER_EXPLAINABILITY_CONSIDERATIONS } from '@/lib/orb/orb-residential-copy'
-import { isOrbDeveloperMode } from '@/lib/orb/orb-developer-mode'
 
 export type OrbExplainabilityView = {
   active_brains?: string[]
@@ -25,22 +25,28 @@ export type OrbExplainabilityView = {
   cognition_display_labels?: string[]
   vault_domains?: string[]
   safeguarding_boundaries?: string[]
+  public_considerations?: string[]
 }
 
 export function OrbExplainabilityPanel({
   explainability,
   cognitionModeLabel,
-  residentialSurface = false
+  residentialSurface = false,
+  userRole
 }: {
   explainability?: OrbExplainabilityView
   cognitionModeLabel?: string
   residentialSurface?: boolean
+  userRole?: string | null
 }) {
   const [open, setOpen] = useState(false)
   if (!explainability) return null
 
-  const developerMode = isOrbDeveloperMode()
-  const showInternal = developerMode && !residentialSurface
+  const showInternal = userHasFounderAccess(userRole) && !residentialSurface
+  const publicConsiderations =
+    explainability.public_considerations?.length
+      ? explainability.public_considerations
+      : ORB_USER_EXPLAINABILITY_CONSIDERATIONS
 
   const brains = explainability.active_brains ?? []
   const frameworks = explainability.frameworks_used ?? []
@@ -80,13 +86,13 @@ export function OrbExplainabilityPanel({
             </p>
           ) : null}
 
-          {residentialSurface && !showInternal ? (
+          {residentialSurface || !showInternal ? (
             <div data-orb-explainability-user-facing>
               <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--orb-muted)]">
                 This response considered
               </p>
               <ul className="mt-2 list-disc space-y-1 pl-4 text-[var(--orb-foreground)]/90">
-                {ORB_USER_EXPLAINABILITY_CONSIDERATIONS.map((item) => (
+                {publicConsiderations.map((item) => (
                   <li key={item}>{item}</li>
                 ))}
               </ul>

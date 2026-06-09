@@ -60,12 +60,13 @@ export function residentialModeDisplayLabel(mode: string): string {
 
 /** Simplified “why ORB answered this way” — no internal architecture labels. */
 export const ORB_USER_EXPLAINABILITY_CONSIDERATIONS = [
-  'Residential childcare practice',
   'Safeguarding responsibilities',
-  'Regulatory expectations',
+  'Residential childcare practice',
   'Child-centred recording',
-  'Reflective practice',
-  'Professional accountability'
+  'Professional accountability',
+  'Therapeutic language',
+  'Recording quality',
+  'Relevant escalation boundaries'
 ] as const
 
 export const ORB_KNOWLEDGE_CENTRE_TITLE = 'Knowledge Centre'

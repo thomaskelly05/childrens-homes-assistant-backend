@@ -59,6 +59,12 @@ from services.indicare_intelligence_surface_router import (
 )
 from services.orb_action_engine_service import orb_action_engine_service
 from services.orb_brain_metadata_service import attach_to_payload, merge_context_used
+from services.orb_brain_visibility_service import (
+    get_safety_pack_map,
+    sanitize_orb_brain_metadata_for_user,
+    sanitize_orb_brain_route_preview,
+    user_can_view_orb_brain_debug,
+)
 from services.orb_residential_quality_service import orb_residential_quality_service
 from services.orb_brain_selection_shadow_service import (
     attach_brain_selection_shadow,
@@ -708,36 +714,26 @@ async def standalone_orb_brain_route(
         route="/orb/standalone/brain-route",
     )
     user_message = orb_brain_route_service.extract_user_message(body.message)
+    preview = {
+        **decision.brain_route,
+        "user_message": user_message,
+        "authoritative": True,
+        "client_hint_ignored": decision.brain_route.get("client_hint_ignored"),
+        "active_brains": decision.active_brains,
+        "scenario_types": decision.scenario_types,
+        "multi_scenario": decision.multi_scenario,
+        "standalone_boundary": decision.standalone_boundary,
+    }
     return {
         "success": True,
-        "data": {
-            **decision.brain_route,
-            "user_message": user_message,
-            "authoritative": True,
-            "client_hint_ignored": decision.brain_route.get("client_hint_ignored"),
-            "active_brains": decision.active_brains,
-            "scenario_types": decision.scenario_types,
-            "multi_scenario": decision.multi_scenario,
-            "standalone_boundary": decision.standalone_boundary,
-        },
+        "data": sanitize_orb_brain_route_preview(preview, current_user),
     }
-
-
-_ORB_BRAIN_DEBUG_ROLES = frozenset(
-    {"admin", "administrator", "super_admin", "superadmin", "founder", "owner"}
-)
 
 
 def _require_orb_brain_route_debug_access(
     current_user: dict[str, Any] = Depends(get_current_user),
 ) -> dict[str, Any]:
-    role = str(
-        current_user.get("role")
-        or current_user.get("user_role")
-        or current_user.get("account_role")
-        or ""
-    ).strip().lower()
-    if role not in _ORB_BRAIN_DEBUG_ROLES:
+    if not user_can_view_orb_brain_debug(current_user):
         raise HTTPException(status_code=403, detail="Brain-route debug is restricted to founder/admin QA.")
     return current_user
 
@@ -772,6 +768,7 @@ async def standalone_orb_brain_route_map(
             "canonical_route": orb_brain_route_map_service.canonical_route(),
             "audit_gaps": orb_brain_route_map_service.audit_gaps(),
             "parallel_non_authoritative": orb_brain_route_map_service.parallel_layers(),
+            "safety_pack": get_safety_pack_map(),
         },
     }
 
@@ -824,6 +821,7 @@ def _standalone_conversation_response(
     citations: list[dict[str, Any]] | None = None,
     context_used: dict[str, Any] | None = None,
     cognition_display_labels: list[str] | None = None,
+    current_user: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     resolved_sources = sources or []
     resolved_citations = citations or orb_citation_service.normalise_sources(resolved_sources)
@@ -856,6 +854,8 @@ def _standalone_conversation_response(
     )
     if resolved_labels:
         base_context["cognition_display_labels"] = resolved_labels
+    base_context = sanitize_orb_brain_metadata_for_user(base_context, current_user)
+    resolved_labels = list(base_context.get("cognition_display_labels") or resolved_labels)
     payload: dict[str, Any] = attach_to_payload(
         {
             "ok": True,
@@ -976,6 +976,7 @@ async def standalone_orb_conversation(
                 conversation_id=payload.conversation_id,
                 confidence=str(limited.get("confidence") or "medium"),
                 context_used=limited.get("context_used"),
+                current_user=current_user,
             ),
         }
 
@@ -1138,6 +1139,7 @@ async def standalone_orb_conversation(
             citations=response_citations,
             context_used=context_used,
             cognition_display_labels=cognition_labels,
+            current_user=current_user,
         )
     except Exception as exc:
         elapsed_ms = int((time.perf_counter() - route_started) * 1000)
@@ -1239,6 +1241,7 @@ async def standalone_orb_conversation(
             citations=citations,
             context_used=context_used,
             cognition_display_labels=cognition_labels,
+            current_user=current_user,
         )
 
 
@@ -1534,6 +1537,7 @@ async def standalone_orb_conversation_stream(
                 context_used["timing"],
                 mode=mode,
             )
+            sanitized_context = sanitize_orb_brain_metadata_for_user(context_used, current_user)
             metadata_payload = {
                 "ok": True,
                 "standalone": True,
@@ -1544,8 +1548,10 @@ async def standalone_orb_conversation_stream(
                 "conversation_id": payload.conversation_id,
                 "sources": response_sources,
                 "citations": response_citations,
-                "context_used": context_used,
-                "cognition_display_labels": cognition_labels,
+                "context_used": sanitized_context,
+                "cognition_display_labels": list(
+                    sanitized_context.get("cognition_display_labels") or cognition_labels
+                ),
                 "image_understanding_available": assistant_data.get("image_understanding_available"),
                 "error_detail": assistant_data.get("error_detail"),
             }
