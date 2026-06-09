@@ -1,4 +1,5 @@
 import type { AgentId } from '@/lib/founder/agents'
+import type { FounderStaffAgentId } from '@/lib/founder/team'
 
 export type FounderActionPriority = 'critical' | 'high' | 'medium' | 'low'
 
@@ -26,6 +27,7 @@ export type FounderAction = {
   dueLabel: string
   recommendedNextStep: string
   linkedAgent?: AgentId
+  staffAgentId?: FounderStaffAgentId
   linkedMetric?: string
 }
 

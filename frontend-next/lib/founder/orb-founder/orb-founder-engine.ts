@@ -20,6 +20,11 @@ import {
   generateFounderInsightsSync
 } from '@/lib/founder/intelligence'
 import { runChiefOfStaffAgent } from '@/lib/founder/agents/chief-of-staff-agent'
+import { getPendingApprovals } from '@/lib/founder/approvals'
+import { generateBuildBriefFromCto } from '@/lib/founder/build-briefs'
+import { generateLinkedInDraft } from '@/lib/founder/content'
+import { runFounderOperatingLoop } from '@/lib/founder/operating-loop'
+import { runStaffAgent } from '@/lib/founder/team'
 import { orbFounderLiveInputs, orbFounderNoLiveDataAnswer } from './orb-founder-live-guard'
 
 export type FounderOrbConfidence = 'high' | 'medium' | 'low'
@@ -424,6 +429,136 @@ function answerAiCostActions(): FounderOrbAnswer {
   }
 }
 
+function answerCtoFocus(): FounderOrbAnswer {
+  const output = runStaffAgent('cto')
+  return {
+    answer: `${output.summary} ${output.recommendations.join(' ')}`,
+    usedSources: ['CTO Agent', 'Founder Telemetry'],
+    suggestedFollowUps: [
+      'What is my biggest technical risk?',
+      'Create a Cursor brief for the next build.',
+      'What should the developer build next?'
+    ],
+    confidence: output.confidence
+  }
+}
+
+function answerBrandAmbassadorDraft(): FounderOrbAnswer {
+  const draft = generateLinkedInDraft('weekly-progress')
+  return {
+    answer: `I've created a LinkedIn draft titled "${draft.title}" and queued it in Approvals. Review it at /founder/approvals before copying to LinkedIn. I will never auto-post.`,
+    usedSources: ['Brand Ambassador Agent', 'Data Protection and Safety', 'Approval Centre'],
+    suggestedFollowUps: [
+      'What approvals are waiting?',
+      'What should I post this week?',
+      'What is my biggest brand opportunity?'
+    ],
+    confidence: 'high'
+  }
+}
+
+function answerDeveloperBuildNext(): FounderOrbAnswer {
+  const output = runStaffAgent('lead-developer')
+  return {
+    answer: `${output.summary} Recommended: ${output.recommendations.join('; ')}. Create a full Cursor brief at /founder/build-briefs.`,
+    usedSources: ['Lead Developer Agent', 'CTO Agent'],
+    suggestedFollowUps: [
+      'Create a Cursor brief for the next build.',
+      'What should my CTO focus on?',
+      'What is my biggest technical risk?'
+    ],
+    confidence: output.confidence
+  }
+}
+
+function answerRunStaffTeam(): FounderOrbAnswer {
+  void runFounderOperatingLoop()
+  refreshFounderActions()
+  return {
+    answer: 'Founder Staff Team operating loop complete. Actions, content drafts, and build briefs have been generated. External-facing items are queued in Approvals. No emails sent and no posts published.',
+    usedSources: ['Founder Operating Loop', 'Chief of Staff Agent'],
+    suggestedFollowUps: [
+      'What approvals are waiting?',
+      'Show my top actions',
+      'What should I post this week?'
+    ],
+    confidence: 'high'
+  }
+}
+
+function answerPendingApprovals(): FounderOrbAnswer {
+  const pending = getPendingApprovals()
+  return {
+    answer: pending.length > 0
+      ? `${pending.length} approval(s) waiting: ${pending.map((p) => p.title).join('; ')}. Review at /founder/approvals.`
+      : 'No approvals waiting. External-facing drafts will appear here when staff agents generate content.',
+    usedSources: ['Approval Centre'],
+    suggestedFollowUps: [
+      'Ask the Brand Ambassador to draft a LinkedIn post.',
+      'Create a Cursor brief for the next build.',
+      'Run my founder staff team.'
+    ],
+    confidence: 'high'
+  }
+}
+
+function answerCursorBrief(): FounderOrbAnswer {
+  const brief = generateBuildBriefFromCto()
+  return {
+    answer: `Build brief created: "${brief.title}". Copy the Cursor prompt at /founder/build-briefs. It is also queued in Approvals for your review.`,
+    usedSources: ['Lead Developer Agent', 'CTO Agent', 'Build Briefs'],
+    suggestedFollowUps: [
+      'What should the developer build next?',
+      'What should my CTO focus on?',
+      'What approvals are waiting?'
+    ],
+    confidence: 'high'
+  }
+}
+
+function answerPostThisWeek(): FounderOrbAnswer {
+  const output = runStaffAgent('brand-ambassador')
+  return {
+    answer: `${output.summary} Suggested focus: ${output.recommendations.join('; ')}. I can draft a LinkedIn post — it will require your approval before publishing.`,
+    usedSources: ['Brand Ambassador Agent'],
+    suggestedFollowUps: [
+      'Ask the Brand Ambassador to draft a LinkedIn post.',
+      'What is my biggest brand opportunity?',
+      'What approvals are waiting?'
+    ],
+    confidence: output.confidence
+  }
+}
+
+function answerTechnicalRisk(): FounderOrbAnswer {
+  const output = runStaffAgent('cto')
+  const risks = output.risks.length > 0 ? output.risks.join(' ') : output.findings.join(' ')
+  return {
+    answer: risks || output.summary,
+    usedSources: ['CTO Agent', 'Founder Telemetry'],
+    suggestedFollowUps: [
+      'What should my CTO focus on?',
+      'Create a Cursor brief for the next build.',
+      'Where is AI cost becoming a risk?'
+    ],
+    confidence: output.confidence
+  }
+}
+
+function answerBrandOpportunity(): FounderOrbAnswer {
+  const output = runStaffAgent('brand-ambassador')
+  return {
+    answer: `${output.summary} Opportunities: ${output.recommendations.join('; ')}. All content requires your approval — I will create drafts only.`,
+    usedSources: ['Brand Ambassador Agent', 'Founder Telemetry'],
+    suggestedFollowUps: [
+      'Ask the Brand Ambassador to draft a LinkedIn post.',
+      'What should I post this week?',
+      'What approvals are waiting?'
+    ],
+    confidence: output.confidence
+  }
+}
+
 function answerFallback(ctx: ReturnType<typeof buildIntelligenceContext>): FounderOrbAnswer {
   const top = ctx.topRecommendation
 
@@ -528,6 +663,42 @@ export function answerFounderQuestion(question: string, context?: FounderOrbCont
     return answerBriefing(ctx)
   }
 
+  if (matches(q, [/cto focus/, /what should my cto/, /cto agent/, /technical priorit/])) {
+    return answerCtoFocus()
+  }
+
+  if (matches(q, [/brand ambassador.*draft/, /draft a linkedin/, /draft linkedin post/, /ask the brand ambassador/])) {
+    return answerBrandAmbassadorDraft()
+  }
+
+  if (matches(q, [/developer build next/, /what should the developer/, /lead developer/])) {
+    return answerDeveloperBuildNext()
+  }
+
+  if (matches(q, [/run my founder staff/, /run founder staff team/, /run staff team/])) {
+    return answerRunStaffTeam()
+  }
+
+  if (matches(q, [/approvals waiting/, /what approvals/, /pending approval/])) {
+    return answerPendingApprovals()
+  }
+
+  if (matches(q, [/cursor brief/, /create a cursor brief/, /build brief/])) {
+    return answerCursorBrief()
+  }
+
+  if (matches(q, [/post this week/, /what should i post/])) {
+    return answerPostThisWeek()
+  }
+
+  if (matches(q, [/biggest technical risk/, /technical risk/])) {
+    return answerTechnicalRisk()
+  }
+
+  if (matches(q, [/brand opportunity/, /biggest brand/])) {
+    return answerBrandOpportunity()
+  }
+
   if (matches(q, [/chronology/, /dictate/, /safeguarding/, /quality/, /churn/, /customer success/, /growth/])) {
     for (const agent of getAllAgents()) {
       const keywords = agent.id.replace(/-/g, ' ')
@@ -543,15 +714,15 @@ export function answerFounderQuestion(question: string, context?: FounderOrbCont
 /** Suggested founder questions for the sidebar */
 export const FOUNDER_ORB_SUGGESTED_QUESTIONS = [
   'What should I do today?',
-  'Show my top actions',
-  'Create actions from this',
-  'What should IndiCare build next?',
-  'What is the biggest risk this month?',
-  'What actions are linked to Ofsted?',
-  'What actions are linked to AI cost?',
-  'What would an investor ask about these numbers?',
-  'How many hours have we returned to direct care?',
-  'Where is AI cost becoming a risk?'
+  'What should my CTO focus on?',
+  'Ask the Brand Ambassador to draft a LinkedIn post.',
+  'What should the developer build next?',
+  'Run my founder staff team.',
+  'What approvals are waiting?',
+  'Create a Cursor brief for the next build.',
+  'What should I post this week?',
+  'What is my biggest technical risk?',
+  'What is my biggest brand opportunity?'
 ] as const
 
 /** Build context panel snapshot for the ORB Founder UI */

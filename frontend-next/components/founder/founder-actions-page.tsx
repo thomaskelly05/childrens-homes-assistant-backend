@@ -1,9 +1,8 @@
 'use client'
 
-import Link from 'next/link'
 import { useCallback, useEffect, useState } from 'react'
-import { ArrowLeft, ListChecks } from 'lucide-react'
 
+import { FounderNavHeader } from '@/components/founder/founder-nav-header'
 import type { FounderAction, FounderActionStatus } from '@/lib/founder/actions'
 import {
   getActionsByCategory,
@@ -79,33 +78,16 @@ export function FounderActionsPage() {
       <div className="founder-dashboard-bg pointer-events-none fixed inset-0 -z-10" aria-hidden />
 
       <div className="mx-auto max-w-[1600px] space-y-8 px-4 py-8 pb-16 md:px-8">
-        <Link
-          href="/founder"
-          className="inline-flex items-center gap-2 text-sm font-semibold text-cyan-300 transition hover:text-cyan-200"
-        >
-          <ArrowLeft className="h-4 w-4" aria-hidden />
-          Back to Command Centre
-        </Link>
+        <FounderNavHeader
+          title="Founder Actions"
+          subtitle="Strategic work generated from live IndiCare Intelligence and founder staff agents."
+        />
 
-        <header className="founder-surface rounded-[32px] border border-white/10 bg-white/[0.04] p-8 shadow-[0_28px_90px_rgba(0,0,0,0.45)] backdrop-blur-xl">
-          <div className="flex flex-wrap items-start justify-between gap-6">
-            <div>
-              <div className="inline-flex items-center gap-2 rounded-full border border-cyan-400/20 bg-cyan-500/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-cyan-200">
-                <ListChecks className="h-3.5 w-3.5" aria-hidden />
-                Founder Action Layer
-              </div>
-              <h1 className="mt-4 text-4xl font-black tracking-[-0.05em] text-white md:text-5xl">Founder Actions</h1>
-              <p className="mt-3 max-w-3xl text-base leading-7 text-slate-400">
-                Strategic work generated from live IndiCare Intelligence only.
-              </p>
-            </div>
-            <div className="rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-right">
-              <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-500">Open actions</p>
-              <p className="mt-1 text-3xl font-black text-white">{openActions.length}</p>
-              <p className="text-xs text-slate-500">{byPriority.critical.length + byPriority.high.length} critical / high</p>
-            </div>
-          </div>
-        </header>
+        <div className="founder-surface rounded-2xl border border-white/10 bg-white/[0.04] px-6 py-4">
+          <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-500">Open actions</p>
+          <p className="mt-1 text-3xl font-black text-white">{openActions.length}</p>
+          <p className="text-xs text-slate-500">{byPriority.critical.length + byPriority.high.length} critical / high</p>
+        </div>
 
         {!hasLive || getFounderActions().length === 0 ? (
           <FounderSectionCard

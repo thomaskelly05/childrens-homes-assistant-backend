@@ -1,6 +1,5 @@
 'use client'
 
-import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import {
   Bar,
@@ -12,8 +11,9 @@ import {
   XAxis,
   YAxis
 } from 'recharts'
-import { Bot, Lock, Shield, Sun } from 'lucide-react'
+import { Shield } from 'lucide-react'
 
+import { FounderNavHeader } from '@/components/founder/founder-nav-header'
 import { getFounderDashboardData, refreshFounderDashboardData } from '@/lib/founder/intelligence-service'
 import type { FounderDashboardData } from '@/lib/founder/mock-data'
 import { FounderActionsPanel } from '@/components/founder/founder-actions-panel'
@@ -78,49 +78,10 @@ export function FounderDashboardPage() {
       <div className="founder-dashboard-bg pointer-events-none fixed inset-0 -z-10" aria-hidden />
 
       <div className="mx-auto max-w-[1600px] space-y-8 px-4 py-8 pb-16 md:px-8">
-        <header className="founder-surface rounded-[32px] border border-white/10 bg-white/[0.04] p-8 shadow-[0_28px_90px_rgba(0,0,0,0.45)] backdrop-blur-xl">
-          <div className="flex flex-wrap items-start justify-between gap-6">
-            <div>
-              <div className="inline-flex items-center gap-2 rounded-full border border-cyan-400/20 bg-cyan-500/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-cyan-200">
-                <Lock className="h-3.5 w-3.5" aria-hidden />
-                Founder-only operating dashboard
-              </div>
-              <h1 className="mt-4 text-4xl font-black tracking-[-0.05em] text-white md:text-5xl">IndiCare Intelligence Command Centre</h1>
-              <p className="mt-3 max-w-3xl text-base leading-7 text-slate-400">
-                Private live overview of business performance, ORB usage, risk, revenue, Ofsted readiness, and what to build next.
-              </p>
-            </div>
-            <div className="flex flex-col items-end gap-3">
-              <div className="flex flex-wrap justify-end gap-2">
-                <Link
-                  href="/founder/orb"
-                  className="inline-flex items-center gap-2 rounded-xl border border-violet-400/30 bg-violet-500/10 px-4 py-2.5 text-sm font-bold text-violet-200 transition hover:border-violet-400/50 hover:bg-violet-500/15"
-                >
-                  <Bot className="h-4 w-4" aria-hidden />
-                  Open ORB Founder
-                </Link>
-                <Link
-                  href="/founder/briefing"
-                  className="inline-flex items-center gap-2 rounded-xl border border-cyan-400/30 bg-cyan-500/10 px-4 py-2.5 text-sm font-bold text-cyan-200 transition hover:border-cyan-400/50 hover:bg-cyan-500/15"
-                >
-                  <Sun className="h-4 w-4" aria-hidden />
-                  Daily Briefing
-                </Link>
-                <Link
-                  href="/founder/actions"
-                  className="inline-flex items-center gap-2 rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-2.5 text-sm font-bold text-emerald-200 transition hover:border-emerald-400/50 hover:bg-emerald-500/15"
-                >
-                  Founder Actions
-                </Link>
-              </div>
-              <div className="rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-right">
-                <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-500">Prepared for</p>
-                <p className="mt-1 text-sm font-bold text-white">Thomas Kelly</p>
-                <p className="text-xs text-slate-500">Founder · IndiCare Intelligence</p>
-              </div>
-            </div>
-          </div>
-        </header>
+        <FounderNavHeader
+          title="IndiCare Intelligence Command Centre"
+          subtitle="Private live overview of business performance, ORB usage, risk, revenue, Ofsted readiness, and what to build next."
+        />
 
         <FounderSectionCard eyebrow="Mission Control" title="Executive KPIs" description="Live business and product signals across revenue, adoption, impact, and AI cost.">
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">

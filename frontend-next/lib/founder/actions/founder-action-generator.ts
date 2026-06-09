@@ -4,6 +4,8 @@
 
 import { getAllAgents } from '@/lib/founder/agents'
 import type { AgentId } from '@/lib/founder/agents'
+import { getAllStaffAgents } from '@/lib/founder/team'
+import type { FounderStaffAgentId } from '@/lib/founder/team'
 import { hasAnyLiveFounderIntelligence } from '@/lib/founder/data/founder-live-availability'
 import { getFounderContractInputs, getFounderDashboardData, hasLiveFounderIntelligence } from '@/lib/founder/intelligence-service'
 import {
@@ -80,6 +82,7 @@ function buildAction(
     dueLabel: partial.dueLabel,
     recommendedNextStep: sanitiseFounderActionText(partial.recommendedNextStep),
     linkedAgent: partial.linkedAgent,
+    staffAgentId: partial.staffAgentId,
     linkedMetric: partial.linkedMetric
   }
   assertFounderActionSafety(action)
@@ -354,6 +357,52 @@ function actionsFromGrowthAndProduct(): FounderAction[] {
   return actions
 }
 
+function staffCategoryFromAgent(id: FounderStaffAgentId): FounderActionCategory {
+  const map: Partial<Record<FounderStaffAgentId, FounderActionCategory>> = {
+    cto: 'operations',
+    'lead-developer': 'product',
+    'product-director': 'product',
+    'ofsted-regulation': 'ofsted',
+    'orb-quality': 'product',
+    'customer-success': 'customer-success',
+    growth: 'growth',
+    'brand-ambassador': 'founder-story',
+    'investor-relations': 'growth',
+    'finance-ai-cost': 'ai-cost',
+    'sector-intelligence': 'sector-intelligence',
+    partnerships: 'growth',
+    'evidence-pack': 'operations'
+  }
+  return map[id] ?? 'operations'
+}
+
+function actionsFromStaffAgents(): FounderAction[] {
+  const actions: FounderAction[] = []
+
+  for (const agent of getAllStaffAgents()) {
+    const output = agent.run()
+    output.actions.forEach((actionTitle, index) => {
+      const priority: FounderActionPriority = output.requiresApproval ? 'medium' : index === 0 ? 'high' : 'medium'
+      actions.push(
+        buildAction({
+          id: `staff-${agent.id}-${index}`,
+          title: actionTitle.length > 72 ? `${actionTitle.slice(0, 69)}…` : actionTitle,
+          description: output.summary,
+          source: agent.name,
+          priority,
+          category: staffCategoryFromAgent(agent.id),
+          dueLabel: inferDueLabel(priority),
+          recommendedNextStep: actionTitle,
+          staffAgentId: agent.id,
+          linkedMetric: 'staff-team'
+        })
+      )
+    })
+  }
+
+  return actions
+}
+
 function deduplicateActions(actions: FounderAction[]): FounderAction[] {
   const seen = new Set<string>()
   return actions.filter((action) => {
@@ -381,6 +430,7 @@ export function generateFounderActions(): FounderAction[] {
   const all = [
     ...actionsFromInsights(),
     ...actionsFromAgents(),
+    ...actionsFromStaffAgents(),
     ...actionsFromOrbIntelligence(),
     ...actionsFromOfstedReadiness(),
     ...actionsFromAiCost(),
