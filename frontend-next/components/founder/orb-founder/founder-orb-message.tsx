@@ -2,13 +2,13 @@
 
 import { Bot, User } from 'lucide-react'
 
-import type { FounderOrbAnswer } from '@/lib/founder/orb-founder'
+import type { FounderOrbAiAnswer } from '@/lib/founder/orb-founder'
 
 export type FounderOrbChatMessage = {
   id: string
   role: 'user' | 'assistant'
   content: string
-  answer?: FounderOrbAnswer
+  answer?: FounderOrbAiAnswer
 }
 
 const confidenceTone = {
@@ -48,6 +48,11 @@ export function FounderOrbMessage({ message }: { message: FounderOrbChatMessage 
         {!isUser && message.answer && (
           <div className="space-y-2 text-left">
             <div className="flex flex-wrap items-center gap-2 text-[11px]">
+              {message.answer.responseMode === 'fallback' && (
+                <span className="rounded-full border border-amber-400/30 bg-amber-500/10 px-2 py-0.5 font-bold uppercase tracking-[0.12em] text-amber-300">
+                  Rule-based fallback used
+                </span>
+              )}
               <span className={`font-bold uppercase tracking-[0.12em] ${confidenceTone[message.answer.confidence]}`}>
                 {message.answer.confidence} confidence
               </span>

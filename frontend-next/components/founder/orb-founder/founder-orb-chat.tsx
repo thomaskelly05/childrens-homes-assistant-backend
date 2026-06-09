@@ -31,11 +31,24 @@ export function FounderOrbChat({ messages, input, onInputChange, onSend, pending
             <h2 className="mt-3 text-2xl font-black tracking-[-0.04em] text-white">Your private CEO copilot</h2>
             <p className="mt-3 max-w-md text-sm leading-7 text-slate-400">
               Ask strategic questions about product, risk, Ofsted readiness, ORB usage, investor narratives, and what to
-              focus on next. Responses are generated from the Founder Intelligence Layer.
+              focus on next. Hybrid intelligence uses the Founder Intelligence Layer with AI — falling back to
+              rule-based responses if AI is unavailable.
             </p>
           </div>
         ) : (
-          messages.map((message) => <FounderOrbMessage key={message.id} message={message} />)
+          <>
+            {messages.map((message) => (
+              <FounderOrbMessage key={message.id} message={message} />
+            ))}
+            {pending && (
+              <div className="flex items-center gap-3 text-sm text-slate-500">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-cyan-400/30 bg-cyan-500/10">
+                  <span className="h-2 w-2 animate-pulse rounded-full bg-cyan-300" />
+                </div>
+                <span>ORB Founder is thinking…</span>
+              </div>
+            )}
+          </>
         )}
       </div>
 
