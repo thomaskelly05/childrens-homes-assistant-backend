@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useCallback, useState } from 'react'
-import { Bot, FileText, Hammer, Linkedin } from 'lucide-react'
+import { Beaker, Bot, FileText, Hammer, Linkedin } from 'lucide-react'
 
 import { FounderNavHeader } from '@/components/founder/founder-nav-header'
 import { FounderSectionCard } from '@/components/founder/founder-section-card'
@@ -62,7 +62,8 @@ export function FounderTeamRolePage({ roleId }: FounderTeamRolePageProps) {
     refresh()
   }
 
-  const showCursorBrief = ['cto', 'lead-developer', 'product-director'].includes(roleId)
+  const showCursorBrief = ['cto', 'lead-developer', 'product-director', 'orb-quality'].includes(roleId)
+  const showQualityLab = roleId === 'orb-quality'
   const showLinkedIn = roleId === 'brand-ambassador'
   const showInvestor = roleId === 'investor-relations'
   const showProvider = roleId === 'partnerships'
@@ -180,6 +181,15 @@ export function FounderTeamRolePage({ roleId }: FounderTeamRolePageProps) {
             <Bot className="h-4 w-4" aria-hidden />
             Ask ORB Founder
           </Link>
+          {showQualityLab ? (
+            <Link
+              href="/founder/quality-lab"
+              className="inline-flex items-center gap-2 rounded-xl border border-cyan-400/30 bg-cyan-500/10 px-4 py-2.5 text-sm font-bold text-cyan-200 transition hover:bg-cyan-500/15"
+            >
+              <Beaker className="h-4 w-4" aria-hidden />
+              Open Quality Lab
+            </Link>
+          ) : null}
           {showCursorBrief ? (
             <button
               type="button"
