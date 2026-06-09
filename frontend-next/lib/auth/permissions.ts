@@ -84,6 +84,7 @@ const roleAliases: Record<string, StaffRole> = {
   administrator: 'admin',
   provider_admin: 'provider',
   ri: 'responsible_individual',
+  founder: 'admin',
   owner: 'admin',
   super_admin: 'admin',
   superadmin: 'admin',
