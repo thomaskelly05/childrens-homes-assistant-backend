@@ -14,6 +14,11 @@ import {
   answerFounderQuestionWithAI,
   FOUNDER_ORB_PROMPT_CATEGORIES
 } from '@/lib/founder/orb-founder'
+import {
+  instrumentOrbChatSubmitted,
+  instrumentOrbResponseGenerated
+} from '@/lib/founder/telemetry/founder-telemetry-instrumentation'
+import { getFounderTelemetrySummary } from '@/lib/founder/telemetry'
 
 function createMessageId(prefix: string) {
   return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`
@@ -31,6 +36,7 @@ export function FounderOrbPage() {
   const [expandedCategory, setExpandedCategory] = useState<string | null>('strategy')
 
   const agentShortcuts = useMemo(() => getAllAgents().slice(0, 6), [])
+  const telemetry = useMemo(() => getFounderTelemetrySummary(), [messages.length])
 
   const sendQuestion = useCallback(
     async (question: string, agentId?: AgentId) => {
@@ -46,6 +52,7 @@ export function FounderOrbPage() {
       setMessages((current) => [...current, userMessage])
       setInput('')
       setPending(true)
+      instrumentOrbChatSubmitted({ surface: 'founder-orb', agentId: agentId ?? null })
 
       const history = [...messages, userMessage]
         .filter((m) => m.role === 'user' || m.role === 'assistant')
@@ -68,6 +75,7 @@ export function FounderOrbPage() {
       }
 
       setMessages((current) => [...current, assistantMessage])
+      instrumentOrbResponseGenerated({ surface: 'founder-orb', agentId: agentId ?? null })
       setPending(false)
     },
     [messages, pending]
@@ -137,6 +145,18 @@ export function FounderOrbPage() {
 
         <div className="grid gap-6 xl:grid-cols-[280px_minmax(0,1fr)_300px]">
           <aside className="space-y-4">
+            {telemetry.totalEvents > 0 ? (
+              <section className="founder-surface rounded-[28px] border border-white/10 bg-white/[0.04] p-4 backdrop-blur-xl">
+                <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500">Platform telemetry</p>
+                <div className="mt-3 space-y-2 text-sm text-slate-300">
+                  <p>{telemetry.orbConversations} ORB conversations recorded</p>
+                  <p>{telemetry.aiRequests} AI requests · {telemetry.errors} errors</p>
+                  {telemetry.topOrbModes[0] ? (
+                    <p className="text-xs text-slate-500">Top mode: {telemetry.topOrbModes[0].mode}</p>
+                  ) : null}
+                </div>
+              </section>
+            ) : null}
             <section className="founder-surface rounded-[28px] border border-white/10 bg-white/[0.04] p-4 backdrop-blur-xl">
               <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500">Suggested prompts</p>
               <div className="mt-3 space-y-2">

@@ -9,7 +9,11 @@ import { FounderSectionCard } from '@/components/founder/founder-section-card'
 import { refreshFounderDashboardData } from '@/lib/founder/intelligence-service'
 import { runFounderOperatingLoop, getLastOperatingLoopResult } from '@/lib/founder/operating-loop'
 import { getAllStaffAgents, getStaffTeamOverview, runStaffAgent } from '@/lib/founder/team'
-import { hydrateFounderTelemetryFromLiveData } from '@/lib/founder/telemetry'
+import {
+  getFounderTelemetrySummary,
+  hydrateFounderTelemetryFromLiveData,
+  refreshFounderTelemetrySummary
+} from '@/lib/founder/telemetry'
 import { refreshFounderActions } from '@/lib/founder/actions'
 
 const departmentTone: Record<string, string> = {
@@ -39,14 +43,14 @@ export function FounderTeamPage() {
 
   useEffect(() => {
     refreshFounderDashboardData()
-      .then(() => {
-        hydrateFounderTelemetryFromLiveData()
-        refresh()
-      })
+      .then(() => hydrateFounderTelemetryFromLiveData())
+      .then(() => refreshFounderTelemetrySummary())
+      .then(() => refresh())
       .catch(() => undefined)
   }, [refresh])
 
   const overview = getStaffTeamOverview()
+  const telemetry = getFounderTelemetrySummary()
   const agents = getAllStaffAgents()
   const lastLoop = getLastOperatingLoopResult()
 
@@ -86,7 +90,7 @@ export function FounderTeamPage() {
             { label: 'Active agents', value: overview.activeAgents },
             { label: 'Pending approvals', value: overview.pendingApprovals },
             { label: 'Open actions', value: overview.openActions },
-            { label: 'Telemetry', value: overview.telemetryStatus === 'live' ? 'Live' : 'Empty' },
+            { label: 'Telemetry events', value: telemetry.totalEvents > 0 ? telemetry.totalEvents : '—' },
             { label: "Today's priority", value: overview.topPriority.slice(0, 40) + (overview.topPriority.length > 40 ? '…' : '') }
           ].map((item) => (
             <div key={item.label} className="founder-surface rounded-2xl border border-white/10 bg-white/[0.04] p-5">

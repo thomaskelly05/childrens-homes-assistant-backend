@@ -1,16 +1,6 @@
-export type {
-  FounderTelemetryCategory,
-  FounderTelemetryEvent,
-  FounderTelemetryEventType,
-  FounderTelemetrySummary
-} from './founder-telemetry-types'
-export { getFounderTelemetrySummary } from './founder-telemetry-aggregator'
-export {
-  getFounderTelemetryEvents,
-  getFounderTelemetryEventsByCategory,
-  getFounderTelemetryEventsByType
-} from './founder-telemetry-store'
-export {
-  hydrateFounderTelemetryFromLiveData,
-  recordFounderTelemetryEvent
-} from './founder-telemetry-service'
+export * from './founder-telemetry-types'
+export * from './founder-telemetry-redaction'
+export * from './founder-telemetry-client'
+export * from './founder-telemetry-service'
+export * from './founder-telemetry-aggregator'
+export * from './founder-telemetry-store'

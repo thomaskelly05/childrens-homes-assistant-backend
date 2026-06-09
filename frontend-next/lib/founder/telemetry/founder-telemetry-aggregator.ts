@@ -1,76 +1,89 @@
-import { getFounderTelemetryEvents } from './founder-telemetry-store'
-import type { FounderTelemetrySummary } from './founder-telemetry-types'
+import type { FounderTelemetryEvent, FounderTelemetrySummary } from './founder-telemetry-types'
+import { EMPTY_FOUNDER_TELEMETRY_SUMMARY } from './founder-telemetry-types'
 
-export function getFounderTelemetrySummary(): FounderTelemetrySummary {
-  const events = getFounderTelemetryEvents()
+function isToday(iso: string): boolean {
+  const date = new Date(iso)
+  const now = new Date()
+  return (
+    date.getUTCFullYear() === now.getUTCFullYear() &&
+    date.getUTCMonth() === now.getUTCMonth() &&
+    date.getUTCDate() === now.getUTCDate()
+  )
+}
 
-  if (events.length === 0) {
-    return {
-      totalEvents: 0,
-      activeUsers: 0,
-      orbConversations: 0,
-      topOrbModes: [],
-      featureUsage: [],
-      aiCostsGbp: 0,
-      errorRate: 0,
-      conversionEvents: 0,
-      lastUpdated: null
+export function aggregateFounderTelemetry(events: FounderTelemetryEvent[]): FounderTelemetrySummary {
+  if (!events.length) return { ...EMPTY_FOUNDER_TELEMETRY_SUMMARY }
+
+  const orbTypes = new Set([
+    'orb-chat-submitted',
+    'orb-response-generated',
+    'orb-conversation'
+  ])
+  const modeCounts = new Map<string, number>()
+  const featureCounts = new Map<string, number>()
+
+  let aiRequests = 0
+  let estimatedAiCost = 0
+  let errors = 0
+  let feedbackCount = 0
+  let eventsToday = 0
+  let conversionEvents = 0
+  let lastUpdated: string | null = null
+  const sessions = new Set<string>()
+
+  for (const event of events) {
+    if (isToday(event.timestamp)) eventsToday += 1
+    if (!lastUpdated || event.timestamp > lastUpdated) lastUpdated = event.timestamp
+
+    if (event.eventType === 'error') errors += 1
+    if (event.eventType === 'feedback') feedbackCount += 1
+    if (event.eventType === 'user-login' || event.eventType === 'user-signup') conversionEvents += 1
+    if (event.sessionId) sessions.add(event.sessionId)
+    if (event.eventType === 'ai-request' || event.eventType === 'ai-token-usage') aiRequests += 1
+    if (event.eventType === 'ai-cost-estimate') {
+      const cost = Number(event.metadata.estimatedCostGbp ?? event.metadata.costGbp ?? 0)
+      if (!Number.isNaN(cost)) estimatedAiCost += cost
+    }
+
+    const mode = String(event.metadata.mode ?? event.metadata.orbMode ?? '')
+    if (mode && (event.eventType === 'orb-mode-usage' || orbTypes.has(event.eventType))) {
+      modeCounts.set(mode, (modeCounts.get(mode) ?? 0) + 1)
+    }
+
+    const feature = String(event.metadata.feature ?? event.category ?? event.eventType)
+    if (feature) {
+      featureCounts.set(feature, (featureCounts.get(feature) ?? 0) + 1)
     }
   }
 
-  const orbConversations = events
-    .filter((e) => e.type === 'orb-conversation')
-    .reduce((sum, e) => sum + Number(e.metadata.totalConversations ?? 1), 0)
-
-  const activeUsers = Math.max(
-    ...events
-      .filter((e) => e.type === 'user-login' || e.type === 'user-signup')
-      .map((e) => Number(e.metadata.activeUsers ?? e.metadata.count ?? 0)),
-    0
-  )
-
-  const modeCounts = new Map<string, number>()
-  for (const e of events.filter((ev) => ev.type === 'orb-mode-usage')) {
-    const mode = String(e.metadata.mode ?? 'unknown')
-    modeCounts.set(mode, (modeCounts.get(mode) ?? 0) + Number(e.metadata.count ?? 1))
-  }
   const topOrbModes = [...modeCounts.entries()]
-    .map(([mode, count]) => ({ mode, count }))
-    .sort((a, b) => b.count - a.count)
+    .sort((a, b) => b[1] - a[1])
     .slice(0, 8)
+    .map(([mode, count]) => ({ mode, count }))
 
-  const featureCounts = new Map<string, number>()
-  for (const e of events.filter((ev) => ev.category === 'features')) {
-    const feature = String(e.metadata.feature ?? e.type)
-    featureCounts.set(feature, (featureCounts.get(feature) ?? 0) + 1)
-  }
   const featureUsage = [...featureCounts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 12)
     .map(([feature, count]) => ({ feature, count }))
-    .sort((a, b) => b.count - a.count)
 
-  const aiCostsGbp = events
-    .filter((e) => e.type === 'ai-cost-estimate')
-    .reduce((sum, e) => sum + Number(e.metadata.spendGbp ?? 0), 0)
-
-  const errorCount = events.filter((e) => e.type === 'error').length
-  const errorRate = events.length > 0 ? Math.round((errorCount / events.length) * 100) : 0
-
-  const conversionEvents = events.filter(
-    (e) => e.type === 'user-signup' || e.type === 'subscription-event' || e.type === 'billing-event'
-  ).length
-
-  const timestamps = events.map((e) => e.timestamp).sort()
-  const lastUpdated = timestamps[timestamps.length - 1] ?? null
+  const totalEvents = events.length
+  const errorRate = totalEvents > 0 ? Math.round((errors / totalEvents) * 100) : 0
+  const roundedCost = Number(estimatedAiCost.toFixed(4))
 
   return {
-    totalEvents: events.length,
-    activeUsers,
-    orbConversations,
+    totalEvents,
+    eventsToday,
+    orbConversations: events.filter((event) => orbTypes.has(event.eventType)).length,
     topOrbModes,
     featureUsage,
-    aiCostsGbp,
+    aiRequests,
+    estimatedAiCost: roundedCost,
+    errors,
+    feedbackCount,
+    lastUpdated,
     errorRate,
-    conversionEvents,
-    lastUpdated
+    aiCostsGbp: roundedCost,
+    activeUsers: sessions.size,
+    conversionEvents
   }
 }

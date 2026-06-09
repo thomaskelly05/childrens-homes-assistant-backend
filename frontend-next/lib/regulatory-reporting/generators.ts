@@ -10,6 +10,11 @@ import { ChronologyEvent } from '@/lib/chronology/types'
 import { getEvidenceItems } from '@/lib/evidence/selectors'
 import { mapEventToRegulatoryReferences } from '@/lib/regulatory-framework/mapping'
 
+import {
+  instrumentChronologyGenerated,
+  instrumentReportGenerated,
+  instrumentRiskAssessmentGenerated
+} from '@/lib/founder/telemetry/founder-telemetry-instrumentation'
 import { getReportTemplate, reportTemplates } from './templates'
 import { GeneratedReport, ReportGenerationContext, ReportSection, ReportSourceCitation, ReportTemplateId } from './types'
 
@@ -146,6 +151,13 @@ export function generateReport(context: ReportGenerationContext): GeneratedRepor
   const template = getReportTemplate(context.templateId) ?? reportTemplates[0]
   const events = scopedEvents({ ...context, regulation: context.regulation || template.regulation })
   const sections = buildSections(context.templateId, events)
+  instrumentReportGenerated(context.templateId)
+  if (context.templateId === 'safeguarding_chronology') {
+    instrumentChronologyGenerated()
+  }
+  if (context.regulation === 'risk_assessment' || context.templateId === 'incident_pattern_review') {
+    instrumentRiskAssessmentGenerated()
+  }
   const citations = sections.flatMap((item) => item.citations)
   const citationIds = new Set<string>()
 

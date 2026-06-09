@@ -12,8 +12,8 @@ function getFeatureEventsFromTelemetry(): FounderAdapterResult<FeatureUsageMetri
 
   const { periodStart, periodEnd } = currentPeriodBounds()
   const data: FeatureUsageMetric[] = events.map((event) => ({
-    featureId: String(event.metadata.feature ?? event.type).toLowerCase().replace(/\s+/g, '-'),
-    featureName: String(event.metadata.feature ?? event.type),
+    featureId: String(event.metadata.feature ?? event.eventType).toLowerCase().replace(/\s+/g, '-'),
+    featureName: String(event.metadata.feature ?? event.eventType),
     activeUsers: 0,
     sessions: Number(event.metadata.count ?? 1),
     adoptionRate: Number(event.metadata.adoptionRate ?? 1),
