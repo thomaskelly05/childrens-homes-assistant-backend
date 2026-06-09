@@ -99,6 +99,7 @@ export function orbOverlayDrawerShellProps(size: OrbAppModalSize = 'wide') {
   return {
     layout: 'drawer' as const,
     wide: size === 'wide' || size === 'workstation' || size === 'standard',
-    appModal: true
+    appModal: true,
+    mobileMode: 'full' as const
   }
 }

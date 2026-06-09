@@ -119,7 +119,7 @@ export function OrbAppPanelShell({
           data-orb-panel-shell={appId}
           onClick={(event) => event.stopPropagation()}
         >
-          <header className="sticky top-0 z-10 flex shrink-0 items-center justify-between gap-3 border-b border-cyan-500/10 bg-[var(--orb-surface)] px-5 py-4 pt-[max(0.75rem,env(safe-area-inset-top))]">
+          <header className="sticky top-0 z-10 flex shrink-0 items-center justify-between gap-3 border-b border-[var(--orb-line)]/40 bg-[var(--orb-surface)] px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] sm:px-5 sm:py-4">
             <div className="min-w-0 flex-1">
               <h2 className="text-base font-semibold tracking-tight text-[var(--orb-foreground)]">{title}</h2>
               {subtitle ? (

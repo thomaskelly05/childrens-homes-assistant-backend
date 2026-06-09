@@ -22,6 +22,7 @@ import { ORB_CANONICAL_FRONT_DOOR, sanitizeOrbReturnUrl } from '@/lib/orb/orb-fr
 import { recordOrbAuthRecoveryEvent, sessionAuthCookiePresent } from '@/lib/orb/orb-auth-recovery-diagnostics'
 import { ORB_AUTH_BUILD_VARIANT, ORB_LOGIN_VERSION } from '@/lib/orb/orb-visual-build'
 import { OrbAuthLoadingScreen } from '@/components/orb-residential/orb-auth-loading-screen'
+import { ORB_MOBILE_VIEWPORT_CLASS } from '@/components/orb-residential/orb-mobile-shell'
 import { ORB_DEFAULT_LEGAL_PATHS, type OrbLegalPaths } from '@/components/orb-residential/orb-legal-links'
 import { consumeOrbOAuthRedirect } from '@/lib/orb/orb-oauth-redirect-state'
 
@@ -259,7 +260,7 @@ function OrbLoginPanel({
 
   return (
     <div
-      className={`orb-residential-root orb-login-root ${themeClass} min-h-[100dvh] min-h-[100svh]`}
+      className={`orb-residential-root orb-login-root ${ORB_MOBILE_VIEWPORT_CLASS} ${themeClass} min-h-[100dvh] min-h-[100svh]`}
       data-orb-login-page
       data-orb-login-version={ORB_LOGIN_VERSION}
       data-orb-auth-build-variant={ORB_AUTH_BUILD_VARIANT}

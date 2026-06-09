@@ -6,18 +6,18 @@
 .orb-login-root {
   overflow-x: hidden;
   background:
-    radial-gradient(ellipse 90% 60% at 8% -5%, rgba(129, 140, 248, 0.32), transparent 58%),
-    radial-gradient(ellipse 75% 55% at 92% 5%, rgba(167, 139, 250, 0.24), transparent 55%),
-    radial-gradient(ellipse 65% 50% at 50% 105%, rgba(56, 189, 248, 0.14), transparent 62%),
+    radial-gradient(ellipse 90% 60% at 8% -5%, rgba(129, 140, 248, 0.2), transparent 58%),
+    radial-gradient(ellipse 75% 55% at 92% 5%, rgba(167, 139, 250, 0.14), transparent 55%),
+    radial-gradient(ellipse 65% 50% at 50% 105%, rgba(56, 189, 248, 0.08), transparent 62%),
     linear-gradient(165deg, var(--orb-bg, #0f172a) 0%, #131a35 48%, var(--orb-bg-elevated, #111827) 100%);
 }
 
 .orb-login-root--light {
   background:
-    radial-gradient(ellipse 90% 60% at 8% -5%, rgba(129, 140, 248, 0.35), transparent 58%),
-    radial-gradient(ellipse 75% 55% at 92% 5%, rgba(196, 181, 253, 0.28), transparent 55%),
-    radial-gradient(ellipse 65% 50% at 50% 105%, rgba(56, 189, 248, 0.16), transparent 62%),
-    linear-gradient(165deg, #f8fafc 0%, #eef2ff 42%, #f5f3ff 100%);
+    radial-gradient(ellipse 90% 60% at 8% -5%, rgba(129, 140, 248, 0.22), transparent 58%),
+    radial-gradient(ellipse 75% 55% at 92% 5%, rgba(196, 181, 253, 0.16), transparent 55%),
+    radial-gradient(ellipse 65% 50% at 50% 105%, rgba(56, 189, 248, 0.1), transparent 62%),
+    linear-gradient(165deg, #f8fafc 0%, #f4f6fb 42%, #f8fafc 100%);
 }
 
 .orb-login-trust-statement {

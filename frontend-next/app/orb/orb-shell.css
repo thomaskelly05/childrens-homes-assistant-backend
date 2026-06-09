@@ -5,4 +5,5 @@
 @import './orb-desktop.css';
 @import '@/components/orb/premium/orb-premium-studio-v3.css';
 @import './orb-premium-layout-pass.css';
+@import './orb-mobile-shell.css';
 @import './orb-mobile.css';
