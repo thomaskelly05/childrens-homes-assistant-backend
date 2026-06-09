@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useMemo } from 'react'
 import {
   Bar,
@@ -11,9 +12,9 @@ import {
   XAxis,
   YAxis
 } from 'recharts'
-import { Lock, Shield } from 'lucide-react'
+import { Lock, Shield, Sun } from 'lucide-react'
 
-import { founderMockData } from '@/lib/founder/mock-data'
+import { getFounderDashboardData } from '@/lib/founder/intelligence-service'
 import { FounderActivityFeed } from '@/components/founder/founder-activity-feed'
 import { FounderAgentCard } from '@/components/founder/founder-agent-card'
 import { FounderCostCentre } from '@/components/founder/founder-cost-centre'
@@ -48,7 +49,7 @@ function DarkTooltip({ active, payload, label }: { active?: boolean; payload?: A
 }
 
 export function FounderDashboardPage() {
-  const data = founderMockData
+  const data = useMemo(() => getFounderDashboardData(), [])
 
   const orbChartData = useMemo(
     () => data.orbIntelligence.categories.map((category) => ({ name: category.name, volume: category.volume })),
@@ -72,10 +73,19 @@ export function FounderDashboardPage() {
                 Private live overview of business performance, ORB usage, risk, revenue, Ofsted readiness, and what to build next.
               </p>
             </div>
-            <div className="rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-right">
-              <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-500">Prepared for</p>
-              <p className="mt-1 text-sm font-bold text-white">Thomas Kelly</p>
-              <p className="text-xs text-slate-500">Founder · IndiCare Intelligence</p>
+            <div className="flex flex-col items-end gap-3">
+              <Link
+                href="/founder/briefing"
+                className="inline-flex items-center gap-2 rounded-xl border border-cyan-400/30 bg-cyan-500/10 px-4 py-2.5 text-sm font-bold text-cyan-200 transition hover:border-cyan-400/50 hover:bg-cyan-500/15"
+              >
+                <Sun className="h-4 w-4" aria-hidden />
+                Daily Briefing
+              </Link>
+              <div className="rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-right">
+                <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-500">Prepared for</p>
+                <p className="mt-1 text-sm font-bold text-white">Thomas Kelly</p>
+                <p className="text-xs text-slate-500">Founder · IndiCare Intelligence</p>
+              </div>
             </div>
           </div>
         </header>
@@ -192,7 +202,7 @@ export function FounderDashboardPage() {
           </FounderSectionCard>
         </div>
 
-        <FounderSectionCard eyebrow="Ofsted Intelligence" title="Inspection readiness across homes" description="Mocked readiness scores and recurring evidence gaps.">
+        <FounderSectionCard eyebrow="Ofsted Intelligence" title="Inspection readiness across homes" description="Readiness scores calculated by the Ofsted Readiness Engine with recurring evidence gaps.">
           <FounderReadinessPanel homes={data.ofstedIntelligence.homes} commonGaps={data.ofstedIntelligence.commonGaps} />
         </FounderSectionCard>
 
