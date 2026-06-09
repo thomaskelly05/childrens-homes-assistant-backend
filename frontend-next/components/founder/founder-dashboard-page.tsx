@@ -16,6 +16,7 @@ import { Bot, Lock, Shield, Sun } from 'lucide-react'
 
 import { getFounderDashboardData, refreshFounderDashboardData } from '@/lib/founder/intelligence-service'
 import type { FounderDashboardData } from '@/lib/founder/mock-data'
+import { FounderActionsPanel } from '@/components/founder/founder-actions-panel'
 import { FounderActivityFeed } from '@/components/founder/founder-activity-feed'
 import { FounderDataStatusCard } from '@/components/founder/founder-data-status-card'
 import { FounderAgentCard } from '@/components/founder/founder-agent-card'
@@ -104,6 +105,12 @@ export function FounderDashboardPage() {
                 >
                   <Sun className="h-4 w-4" aria-hidden />
                   Daily Briefing
+                </Link>
+                <Link
+                  href="/founder/actions"
+                  className="inline-flex items-center gap-2 rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-2.5 text-sm font-bold text-emerald-200 transition hover:border-emerald-400/50 hover:bg-emerald-500/15"
+                >
+                  Founder Actions
                 </Link>
               </div>
               <div className="rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-right">
@@ -240,6 +247,14 @@ export function FounderDashboardPage() {
               <FounderTrendCard key={trend.id} trend={trend} />
             ))}
           </div>
+        </FounderSectionCard>
+
+        <FounderSectionCard
+          eyebrow="Founder Actions"
+          title="Strategic work queue"
+          description="Prioritised actions generated from intelligence across product, Ofsted, growth, and AI cost."
+        >
+          <FounderActionsPanel />
         </FounderSectionCard>
 
         <FounderSectionCard eyebrow="Founder Recommendations" title="What to build next" description="AI-style prioritisation based on usage, risk, readiness, and unit economics.">
