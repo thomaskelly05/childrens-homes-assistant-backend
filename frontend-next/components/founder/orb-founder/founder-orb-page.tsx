@@ -12,8 +12,13 @@ import type { FounderOrbChatMessage } from '@/components/founder/orb-founder/fou
 import { getAllAgents, isValidAgentId, type AgentId } from '@/lib/founder/agents'
 import {
   answerFounderQuestionWithAI,
-  FOUNDER_ORB_PROMPT_CATEGORIES
+  FOUNDER_ORB_PROMPT_CATEGORIES,
+  isExplicitOperatingLoopRequest
 } from '@/lib/founder/orb-founder'
+import {
+  getOperatingLoopPlanForQuestion,
+  postOperatingLoopRun
+} from '@/lib/founder/operating-loop'
 import {
   instrumentOrbChatSubmitted,
   instrumentOrbResponseGenerated
@@ -62,10 +67,27 @@ export function FounderOrbPage() {
           content: m.content
         }))
 
-      const answer = await answerFounderQuestionWithAI(trimmed, {
-        context: agentId ? { agentId } : undefined,
-        history
-      })
+      let answer
+      if (isExplicitOperatingLoopRequest(trimmed)) {
+        const plan = getOperatingLoopPlanForQuestion(trimmed)
+        const result = await postOperatingLoopRun(plan)
+        answer = {
+          answer: `Operating loop ${result.status}. ${result.summary} Created ${result.created.actions} actions, ${result.created.drafts} drafts, ${result.created.buildBriefs} build briefs, and ${result.created.approvals} approvals. ${result.warnings.length > 0 ? `Warnings: ${result.warnings.join('; ')}` : 'No warnings.'} Review at /founder/operating-loop/${result.runId}. I did not post, email, deploy, or change ORB production knowledge.`,
+          usedSources: ['Founder Operating Loop API', 'Chief of Staff Agent'],
+          suggestedFollowUps: [
+            'What happened in the last operating loop?',
+            'What approvals are waiting?',
+            'What should I decide today?'
+          ],
+          confidence: 'high' as const,
+          responseMode: 'ai' as const
+        }
+      } else {
+        answer = await answerFounderQuestionWithAI(trimmed, {
+          context: agentId ? { agentId } : undefined,
+          history
+        })
+      }
 
       const assistantMessage: FounderOrbChatMessage = {
         id: createMessageId('assistant'),

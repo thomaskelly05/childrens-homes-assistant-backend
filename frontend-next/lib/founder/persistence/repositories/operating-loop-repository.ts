@@ -14,16 +14,19 @@ class OperatingLoopRepository extends BaseFounderRepository<FounderOperatingLoop
       actor,
       auditSummary: 'Operating loop run persisted'
     })
+    const runStatus = record.run?.status
     await appendAuditLog({
       actor,
-      eventType: record.status === 'failed' ? 'run_failed' : 'run_completed',
+      eventType: record.status === 'failed' || runStatus === 'failed' ? 'run_failed' : 'run_completed',
       entityType: 'operating_loop_run',
       entityId: record.id,
       summary:
-        record.status === 'failed'
-          ? record.errorSummary ?? 'Operating loop failed'
-          : 'Operating loop completed',
-      status: record.status
+        record.status === 'failed' || runStatus === 'failed'
+          ? record.errorSummary ?? record.run?.errors?.[0] ?? 'Operating loop failed'
+          : runStatus === 'completed_with_warnings'
+            ? 'Operating loop completed with warnings'
+            : 'Operating loop completed',
+      status: runStatus ?? record.status
     })
     return saved
   }

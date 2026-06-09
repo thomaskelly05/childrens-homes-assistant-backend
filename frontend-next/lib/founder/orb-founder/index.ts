@@ -2,10 +2,13 @@ export {
   answerFounderQuestion,
   FOUNDER_ORB_SUGGESTED_QUESTIONS,
   getFounderOrbContextSnapshot,
+  isExplicitOperatingLoopRequest,
   type FounderOrbAnswer,
   type FounderOrbConfidence,
   type FounderOrbContext
 } from './orb-founder-engine'
+
+export { getOperatingLoopPlanForQuestion } from './orb-founder-operating-loop'
 
 export { getOrbFounderContext, serializeOrbFounderContextForAi, type OrbFounderContext } from './orb-founder-context'
 

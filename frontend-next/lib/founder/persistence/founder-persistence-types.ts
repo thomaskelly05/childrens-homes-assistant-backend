@@ -17,7 +17,10 @@ import type { FounderAction, FounderActionStatus } from '@/lib/founder/actions/f
 import type { ApprovalItem, ApprovalStatus, ApprovalType } from '@/lib/founder/approvals/approval-types'
 import type { BuildBrief } from '@/lib/founder/build-briefs/build-brief-types'
 import type { ContentDraft, ContentDraftStatus } from '@/lib/founder/content/founder-content-types'
-import type { OperatingLoopResult } from '@/lib/founder/operating-loop/operating-loop-types'
+import type {
+  FounderOperatingLoopRun,
+  OperatingLoopResult
+} from '@/lib/founder/operating-loop/operating-loop-types'
 import type { FounderStaffAgentId } from '@/lib/founder/team/founder-team-types'
 
 export type FounderPersistenceSource =
@@ -126,8 +129,10 @@ export type FounderAgentRunRecord = FounderPersistedBase & {
 }
 
 export type FounderOperatingLoopRunRecord = FounderPersistedBase & {
-  status: 'running' | 'complete' | 'failed'
-  result: OperatingLoopResult
+  status: 'queued' | 'running' | 'complete' | 'failed'
+  run: FounderOperatingLoopRun
+  /** @deprecated Legacy shape — prefer `run` */
+  result?: OperatingLoopResult
   staffTeamRunId?: string
   errorSummary?: string
 }

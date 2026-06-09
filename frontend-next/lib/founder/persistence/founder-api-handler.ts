@@ -3,6 +3,11 @@ import { NextResponse } from 'next/server'
 
 import { getInternalBackendOrigin } from '@/lib/auth/api-base'
 import { userHasFounderAccess } from '@/lib/founder/access'
+import {
+  handleOperatingLoopRunGet,
+  handleOperatingLoopRunPost,
+  handleOperatingLoopRunsGet
+} from '@/lib/founder/operating-loop/operating-loop-api'
 import { sanitiseFounderPayload } from '@/lib/founder/persistence/persistence-safety'
 
 const ROUTE_ENTITY_MAP: Record<string, string> = {
@@ -165,6 +170,19 @@ async function proxyToBackend(request: Request, backendPath: string): Promise<Ne
 export async function handleFounderApi(request: Request, segments: string[]): Promise<NextResponse> {
   if (segments.length === 0) {
     return NextResponse.json({ ok: true, service: 'founder-persistence' })
+  }
+
+  if (segments[0] === 'operating-loop') {
+    if (segments[1] === 'run' && request.method.toUpperCase() === 'POST') {
+      return handleOperatingLoopRunPost(request)
+    }
+    if (segments[1] === 'runs' && segments.length === 2 && request.method.toUpperCase() === 'GET') {
+      return handleOperatingLoopRunsGet()
+    }
+    if (segments[1] === 'runs' && segments.length === 3 && request.method.toUpperCase() === 'GET') {
+      return handleOperatingLoopRunGet(segments[2])
+    }
+    return NextResponse.json({ error: 'Not found' }, { status: 404 })
   }
 
   if (segments[0] === 'persistence') {
