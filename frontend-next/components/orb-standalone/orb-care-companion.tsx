@@ -108,6 +108,7 @@ import { isOrbCoreWorkspacePanel } from '@/components/orb-standalone/orb-core-wo
 import { OrbAmbientCognition, type OrbCognitionAmbientState } from '@/components/orb-standalone/orb-ambient-cognition'
 import { OrbIntelligenceMicroStatus } from '@/components/orb-standalone/orb-intelligence-micro-status'
 import { OrbAccountMenu } from '@/components/orb-residential/orb-account-menu'
+import { ORB_MOBILE_SHELL_CLASS } from '@/components/orb-residential/orb-mobile-shell'
 import { OrbAccountModal } from '@/components/orb-standalone/orb-account-modal'
 import { OrbAdultProfileDrawer } from '@/components/orb-standalone/orb-adult-profile-drawer'
 import { OrbBillingModal } from '@/components/orb-standalone/orb-billing-modal'
@@ -3194,7 +3195,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
 
   return (
     <main
-      className={`orb-chat-layout relative flex h-[100dvh] max-h-[100dvh] flex-col overflow-hidden ${layoutA11yClass} ${atmosphereClass} ${themeClass} ${isAnswering ? 'orb-response-active' : ''} ${residentialSurface ? 'orb-chat-layout--residential' : ''}`}
+      className={`orb-chat-layout relative flex h-[100dvh] max-h-[100dvh] flex-col overflow-hidden ${layoutA11yClass} ${atmosphereClass} ${themeClass} ${isAnswering ? 'orb-response-active' : ''} ${residentialSurface ? 'orb-chat-layout--residential' : ''} ${isMobileViewport ? ORB_MOBILE_SHELL_CLASS : ''}`}
       data-orb-companion-root="true"
       data-orb-theme={effectiveTheme}
       data-orb-appearance={appearanceMode}

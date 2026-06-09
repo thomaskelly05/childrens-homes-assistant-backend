@@ -220,8 +220,8 @@ export function OrbStandaloneSettingsPanel({
       panelId="settings"
       footer="ORB Residential does not access IndiCare OS records. It uses your profile, conversation, uploaded documents and IndiCare residential intelligence."
       {...(residentialSurface
-        ? orbOverlayDrawerShellProps('workstation')
-        : { layout: 'center' as const, wide: true })}
+        ? { ...orbOverlayDrawerShellProps('workstation'), mobileMode: 'full' as const }
+        : { layout: 'center' as const, wide: true, mobileMode: 'full' as const })}
     >
       <div
         className="orb-studio-shell flex min-h-0 flex-1 flex-col overflow-hidden md:flex-row"

@@ -482,4 +482,9 @@ export function orbResidentialRootStyle(mode: OrbThemeMode = ORB_RESIDENTIAL_DEF
 
 /** Root class names for the canonical ORB residential shell. */
 export const ORB_SHELL_ROOT_CLASS =
-  'orb-residential-root min-h-[100dvh] w-full max-w-[100vw] overflow-x-hidden bg-[var(--orb-page-bg,var(--orb-bg,#f7fbff))] text-[var(--orb-text-primary,var(--orb-foreground,#0f172a))]'
+  'orb-residential-root orb-mobile-viewport min-h-[100dvh] w-full max-w-[100vw] overflow-x-hidden bg-[var(--orb-page-bg,var(--orb-bg,#f7fbff))] text-[var(--orb-text-primary,var(--orb-foreground,#0f172a))]'
+
+/** Shared mobile shell class names (see `components/orb-residential/orb-mobile-shell.tsx`). */
+export const ORB_MOBILE_SHELL_CLASS = 'orb-mobile-shell'
+export const ORB_MOBILE_SAFE_AREA_CLASS = 'orb-mobile-safe-area'
+export const ORB_MOBILE_VIEWPORT_CLASS = 'orb-mobile-viewport'

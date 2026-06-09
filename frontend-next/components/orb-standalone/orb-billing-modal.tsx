@@ -21,8 +21,11 @@ import {
   type OrbAccessPayload
 } from '@/lib/orb/orb-billing-client'
 
-function sectionClassName() {
-  return 'orb-billing-card orb-mobile-workspace-card rounded-xl border border-[var(--orb-mobile-ws-card-border,var(--orb-line))]/40 bg-[var(--orb-mobile-ws-card,var(--orb-surface-elevated))]/80 p-2.5 sm:p-3.5'
+function sectionClassName(compact = false) {
+  if (compact) {
+    return 'orb-billing-card orb-billing-card--flat rounded-lg border-0 border-b border-[var(--orb-line)]/25 bg-transparent p-0 pb-2.5 sm:rounded-xl sm:border sm:border-[var(--orb-mobile-ws-card-border,var(--orb-line))]/30 sm:bg-[var(--orb-mobile-ws-card,var(--orb-surface-elevated))]/60 sm:p-3.5'
+  }
+  return 'orb-billing-card orb-mobile-workspace-card rounded-lg border border-[var(--orb-mobile-ws-card-border,var(--orb-line))]/30 bg-[var(--orb-mobile-ws-card,var(--orb-surface-elevated))]/60 p-2.5 sm:rounded-xl sm:p-3.5'
 }
 
 export function OrbBillingModal({
@@ -152,14 +155,14 @@ export function OrbBillingModal({
     <OrbAppModal
       open={open}
       title="Billing"
-      subtitle="ORB Residential — individual subscription and usage."
+      subtitle="ORB Residential — Individual"
       onClose={onClose}
       panelId="billing"
       size="wide"
-      mobileMode="sheet"
+      mobileMode="full"
     >
       <div
-        className="space-y-2.5 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:space-y-3 sm:p-4"
+        className="space-y-2 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:space-y-3 sm:p-4"
         data-orb-billing-modal
         data-orb-billing-mobile-layout="compact"
       >
@@ -169,11 +172,34 @@ export function OrbBillingModal({
           </p>
         ) : null}
 
+        <div
+          className="flex items-center justify-between gap-3 border-b border-[var(--orb-line)]/25 pb-2.5 sm:hidden"
+          data-orb-billing-status-row
+        >
+          <span
+            className={`inline-flex rounded-full border px-2.5 py-0.5 text-xs font-semibold capitalize ${
+              display.isPaidActive
+                ? 'border-emerald-400/40 bg-emerald-500/12 text-emerald-700'
+                : access?.trial?.active
+                  ? 'border-sky-300/40 bg-sky-500/12 text-sky-800'
+                  : 'border-amber-300/40 bg-amber-500/12 text-amber-800'
+            }`}
+            data-orb-billing-status-pill
+          >
+            {display.headline}
+          </span>
+          <p
+            className="text-sm font-semibold tracking-tight text-[var(--orb-res-primary,#1677ff)]"
+            data-orb-billing-price-row
+          >
+            {priceLabel}
+          </p>
+        </div>
+
         <section className={sectionClassName()} data-orb-billing-plan-card>
           <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-            <div className="flex min-w-0 items-start gap-2.5">
-              <OrbUserAvatar name={displayName} avatarUrl={avatarUrl} size="sm" className="sm:hidden" />
-              <OrbUserAvatar name={displayName} avatarUrl={avatarUrl} size="md" className="hidden sm:block" />
+            <div className="flex min-w-0 items-start gap-2.5" data-orb-billing-account>
+              <OrbUserAvatar name={displayName} avatarUrl={avatarUrl} size="sm" />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-semibold text-[var(--orb-foreground)]">
                   {displayName}
@@ -181,16 +207,16 @@ export function OrbBillingModal({
                 {email ? (
                   <p className="truncate text-xs text-[var(--orb-muted)]">{email}</p>
                 ) : null}
-                <p className="mt-1.5 text-sm font-semibold text-[var(--orb-foreground)]">{planName}</p>
+                <p className="mt-1 hidden text-sm font-medium text-[var(--orb-muted)] sm:block">{planName}</p>
                 <span
-                  className={`mt-1 inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold capitalize ${
+                  className={`mt-1 hidden rounded-full border px-2 py-0.5 text-[10px] font-semibold capitalize sm:inline-flex ${
                     display.isPaidActive
                       ? 'border-emerald-400/50 bg-emerald-500/15 text-emerald-100'
                       : access?.trial?.active
                         ? 'border-sky-300/45 bg-sky-500/15 text-sky-50'
                         : 'border-amber-300/45 bg-amber-500/15 text-amber-50'
                   }`}
-                  data-orb-billing-status-pill
+                  data-orb-billing-status-pill-desktop
                 >
                   {display.headline}
                 </span>
@@ -198,7 +224,7 @@ export function OrbBillingModal({
             </div>
 
             <div className="flex w-full shrink-0 flex-col gap-2 lg:w-auto lg:min-w-[11rem] lg:items-end">
-              <p className="text-base font-semibold tracking-tight text-[var(--orb-res-primary,#1677ff)] sm:text-lg lg:text-right">
+              <p className="hidden text-base font-semibold tracking-tight text-[var(--orb-res-primary,#1677ff)] sm:block sm:text-lg lg:text-right">
                 {priceLabel}
               </p>
               <div
@@ -263,7 +289,7 @@ export function OrbBillingModal({
           ) : null}
         </section>
 
-        <section className={sectionClassName()} data-orb-billing-status>
+        <section className={sectionClassName(true)} data-orb-billing-status>
           <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--orb-muted)]">
             Subscription
           </h3>
@@ -297,7 +323,7 @@ export function OrbBillingModal({
           </dl>
         </section>
 
-        <section className={sectionClassName()} data-orb-billing-usage>
+        <section className={`${sectionClassName(true)} hidden sm:block`} data-orb-billing-usage>
           <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--orb-muted)]">Usage</h3>
           <dl className="mt-2 grid gap-2 text-xs sm:grid-cols-2">
             <div>
@@ -316,7 +342,7 @@ export function OrbBillingModal({
           </p>
         </section>
 
-        <section className={sectionClassName()} data-orb-billing-trust>
+        <section className={sectionClassName(true)} data-orb-billing-trust>
           <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--orb-muted)]">
             Trust &amp; data
           </h3>
@@ -328,7 +354,7 @@ export function OrbBillingModal({
           </ul>
         </section>
 
-        <section className={sectionClassName()} data-orb-billing-provider-team>
+        <section className={`${sectionClassName(true)} hidden sm:block`} data-orb-billing-provider-team>
           <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--orb-muted)]">
             Provider team plans
           </h3>

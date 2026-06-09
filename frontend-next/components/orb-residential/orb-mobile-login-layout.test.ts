@@ -158,7 +158,7 @@ describe('ORB mobile login layout', () => {
 
   it('mobile supporting copy mentions Google Microsoft email and passkey', () => {
     const authCard = read('components/orb-residential/orb-login-auth-card.tsx')
-    assert.match(authCard, /Use Google, Microsoft, email or passkey to access ORB Residential/)
+    assert.match(authCard, /Use Google, Microsoft, email or passkey to access ORB/)
   })
 
   it('mobile login avoids modal card chrome', () => {
@@ -166,5 +166,75 @@ describe('ORB mobile login layout', () => {
     assert.match(css, /Flat mobile surface/)
     assert.match(css, /border:\s*none/)
     assert.match(css, /box-shadow:\s*none/)
+  })
+
+  it('mobile login does not render large hero ORB in mobile header', () => {
+    const mobile = read('components/orb-residential/orb-login-mobile-header.tsx')
+    const hero = read('components/orb-residential/orb-login-desktop-hero.tsx')
+    assert.doesNotMatch(mobile, /OrbHeroSphere/)
+    assert.doesNotMatch(mobile, /orb-presence--hero/)
+    assert.match(hero, /lg:flex/)
+  })
+
+  it('email and passkey options are available', () => {
+    const authCard = read('components/orb-residential/orb-login-auth-card.tsx')
+    assert.match(authCard, /data-orb-email-toggle/)
+    assert.match(authCard, /data-orb-passkey-toggle/)
+    assert.match(authCard, /Use passkey/)
+  })
+
+  it('mobile shell applies shared safe-area class', () => {
+    const shell = read('components/orb-residential/orb-mobile-shell.tsx')
+    const shellCss = read('app/orb/orb-mobile-shell.css')
+    const login = read('components/orb-residential/orb-login-screen.tsx')
+    const theme = read('lib/orb/orb-theme.ts')
+    assert.match(shell, /ORB_MOBILE_SAFE_AREA_CLASS/)
+    assert.match(shellCss, /\.orb-mobile-safe-area/)
+    assert.match(login, /ORB_MOBILE_VIEWPORT_CLASS/)
+    assert.match(theme, /ORB_MOBILE_SAFE_AREA_CLASS/)
+  })
+
+  it('settings mobile uses full-screen native sheet mode', () => {
+    const settings = read('components/orb-standalone/orb-standalone-settings-panel.tsx')
+    const modal = read('components/orb-standalone/orb-app-modal.tsx')
+    assert.match(settings, /mobileMode:\s*'full'/)
+    assert.match(modal, /mobileMode:\s*'full'/)
+  })
+
+  it('billing mobile shows active status and price compactly', () => {
+    const billing = read('components/orb-standalone/orb-billing-modal.tsx')
+    assert.match(billing, /data-orb-billing-status-row/)
+    assert.match(billing, /data-orb-billing-price-row/)
+    assert.match(billing, /mobileMode="full"/)
+  })
+
+  it('account menu keeps Sign out reachable', () => {
+    const menu = read('components/orb-residential/orb-account-menu.tsx')
+    const css = read('app/orb/orb-mobile.css')
+    assert.match(menu, /data-orb-account-menu-sign-out-wrap/)
+    assert.match(menu, /Sign out/)
+    assert.match(css, /data-orb-account-menu-sign-out-wrap/)
+  })
+
+  it('Dictate and Voice CTAs remain reachable on mobile', () => {
+    const css = read('app/orb/orb-mobile.css')
+    assert.match(css, /data-orb-dictate-primary-action/)
+    assert.match(css, /data-orb-voice-actions/)
+    assert.match(css, /safe-area-inset-bottom/)
+  })
+
+  it('document view action remains reachable on mobile', () => {
+    const css = read('app/orb/orb-mobile.css')
+    assert.match(css, /orb-write-ask-orb-fab/)
+    assert.match(css, /safe-area-inset-bottom/)
+  })
+
+  it('mobile viewport utilities avoid browser-specific regression', () => {
+    const shellCss = read('app/orb/orb-mobile-shell.css')
+    assert.match(shellCss, /100dvh/)
+    assert.match(shellCss, /100svh/)
+    assert.match(shellCss, /-webkit-fill-available/)
+    assert.match(shellCss, /safe-area-inset-top/)
+    assert.match(shellCss, /safe-area-inset-bottom/)
   })
 })

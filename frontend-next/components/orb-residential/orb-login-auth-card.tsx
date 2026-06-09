@@ -71,7 +71,7 @@ export function OrbLoginAuthCard({
 
   return (
     <div
-      className="orb-login-card orb-login-panel-inner mx-auto w-full max-w-md rounded-[1.75rem] border border-[var(--orb-line)]/35 bg-[var(--orb-surface-elevated)]/75 p-5 shadow-2xl shadow-indigo-500/10 backdrop-blur-md sm:p-7 lg:rounded-[1.75rem]"
+      className="orb-login-card orb-login-panel-inner mx-auto w-full max-w-md p-0 lg:rounded-[1.75rem] lg:border lg:border-[var(--orb-line)]/30 lg:bg-[var(--orb-surface-elevated)]/75 lg:p-7 lg:shadow-xl lg:shadow-indigo-500/8 lg:backdrop-blur-md"
       data-orb-login-auth-card
     >
       <h2
@@ -87,7 +87,7 @@ export function OrbLoginAuthCard({
         data-orb-login-mobile-lead
       >
         <span className="lg:hidden">
-          Use Google, Microsoft, email or passkey to access ORB Residential.
+          Use Google, Microsoft, email or passkey to access ORB.
         </span>
         <span className="hidden lg:inline">Sign in or create your account to continue.</span>
       </p>
@@ -132,7 +132,7 @@ export function OrbLoginAuthCard({
         </h3>
         <Link
           href="/orb/signup"
-          className="orb-login-create-account flex w-full items-center justify-center rounded-2xl border border-[var(--orb-line)]/45 bg-[var(--orb-surface-elevated)]/50 py-2.5 text-center text-sm font-semibold no-underline transition hover:border-[var(--orb-res-primary,#6366f1)]/40"
+          className="orb-login-create-account flex w-full items-center justify-center rounded-xl border border-[var(--orb-line)]/35 bg-transparent py-2.5 text-center text-sm font-semibold no-underline transition hover:border-[var(--orb-res-primary,#6366f1)]/30 hover:bg-[var(--orb-surface-elevated)]/30 lg:rounded-2xl lg:bg-[var(--orb-surface-elevated)]/50"
           data-orb-create-account
         >
           Create account
