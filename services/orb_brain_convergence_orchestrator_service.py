@@ -20,6 +20,7 @@ from services.orb_mandatory_response_contract_service import orb_mandatory_respo
 from services.orb_multi_scenario_detector_service import orb_multi_scenario_detector_service
 from services.orb_residential_cognition_router import orb_residential_cognition_router
 from services.orb_standalone_brain_service import orb_standalone_brain_service
+from services.orb_universal_response_contract_service import orb_universal_response_contract_service
 from services.shared_institutional_cognition_runtime import shared_institutional_cognition_runtime
 
 _SENSITIVE_KEYS = frozenset(
@@ -61,6 +62,11 @@ class OrbBrainConvergenceDecision:
     standalone_boundary: bool = True
     route_map: dict[str, Any] = field(default_factory=dict)
     prompt_addendum: str = ""
+    feature: str | None = None
+    depth_tier: str = "standard"
+    contract_mode: str | None = None
+    public_considerations: list[str] = field(default_factory=list)
+    universal_contract_block: str = ""
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -87,6 +93,9 @@ class OrbBrainConvergenceOrchestratorService:
         history: list[dict[str, Any]] | None = None,
         operational_context: dict[str, Any] | None = None,
         include_route_map: bool = False,
+        feature: str | None = None,
+        document_type: str | None = None,
+        document_lens: str | None = None,
     ) -> OrbBrainConvergenceDecision:
         normalised_mode = orb_standalone_brain_service.normalise_mode(mode)
         user_message = orb_brain_route_service.extract_user_message(message)
@@ -130,8 +139,39 @@ class OrbBrainConvergenceOrchestratorService:
             multi_scenario=bool(multi.get("multi_scenario")),
         )
 
+        resolved_note_type = note_type or document_type
+        contract_mode = orb_universal_response_contract_service.resolve_contract_mode(
+            mode=normalised_mode,
+            feature=feature,
+            requested_action=requested_action,
+            note_type=resolved_note_type,
+            document_lens=document_lens,
+            source_surface=source_surface,
+        )
+        universal_lines = orb_universal_response_contract_service.contract_lines_for_surface(
+            mode=normalised_mode,
+            feature=feature,
+            requested_action=requested_action,
+            note_type=resolved_note_type,
+            document_lens=document_lens,
+            source_surface=source_surface,
+        )
         soft_contract = list(standalone_brain.get("response_contract") or [])
-        response_contract = self._dedupe(soft_contract + mandatory_lines)
+        response_contract = self._dedupe(soft_contract + mandatory_lines + universal_lines)
+
+        depth_tier = orb_universal_response_contract_service.depth_tier_for(
+            scenario_types=scenario_types,
+            risk_level=risk_level,
+            contract_mode=contract_mode,
+            feature=feature,
+            requested_action=requested_action,
+        )
+        public_considerations = orb_universal_response_contract_service.public_considerations_for(
+            contract_mode=contract_mode,
+            scenario_types=scenario_types,
+            risk_level=risk_level,
+            active_brains=list(standalone_brain.get("active_brains") or []),
+        )
 
         active_brains = self._merge_brain_ids(
             standalone_brain.get("active_brains") or [],
@@ -147,10 +187,20 @@ class OrbBrainConvergenceOrchestratorService:
 
         boundaries = list(standalone_brain.get("safety_boundaries") or orb_standalone_brain_service.CORE_BOUNDARIES)
 
-        prompt_addendum = orb_mandatory_response_contract_service.prompt_block(
+        mandatory_block = orb_mandatory_response_contract_service.prompt_block(
             scenario_types,
             multi_scenario=bool(multi.get("multi_scenario")),
         )
+        universal_block = orb_universal_response_contract_service.build_prompt_block(
+            mode=normalised_mode,
+            feature=feature,
+            requested_action=requested_action,
+            note_type=resolved_note_type,
+            document_lens=document_lens,
+            source_surface=source_surface,
+        )
+        depth_hint = f"ORB answer depth tier: {depth_tier} — adapt length and structure accordingly."
+        prompt_addendum = self._join_prompt_blocks(mandatory_block, universal_block, depth_hint)
 
         decision = OrbBrainConvergenceDecision(
             surface="orb_standalone",
@@ -173,12 +223,63 @@ class OrbBrainConvergenceOrchestratorService:
             boundaries=boundaries,
             standalone_boundary=True,
             prompt_addendum=prompt_addendum,
+            feature=feature,
+            depth_tier=depth_tier,
+            contract_mode=contract_mode,
+            public_considerations=public_considerations,
+            universal_contract_block=universal_block,
         )
 
         if include_route_map:
             decision.route_map = orb_brain_route_map_service.trace_live_route(route=route)
 
         return decision
+
+    def build_convergence_prompt_block(self, decision: OrbBrainConvergenceDecision) -> str:
+        """Prompt addendum from a convergence decision — boundaries, contracts and depth."""
+        parts = [
+            "ORB brain convergence (canonical orchestrator-selected):",
+            f"Depth tier: {decision.depth_tier}",
+            "Boundaries:",
+            *[f"- {line}" for line in (decision.boundaries or [])[:8]],
+        ]
+        if decision.response_contract:
+            parts.append("Response contract:")
+            parts.extend(f"- {line}" for line in decision.response_contract[:16])
+        if decision.prompt_addendum:
+            parts.append(decision.prompt_addendum)
+        return "\n".join(part for part in parts if part).strip()
+
+    def convergence_metadata(
+        self,
+        decision: OrbBrainConvergenceDecision,
+        *,
+        route: str | None = None,
+    ) -> dict[str, Any]:
+        """Safe-to-merge convergence summary for feature payloads (sanitised for clients)."""
+        payload = {
+            "surface": decision.surface,
+            "mode": decision.mode,
+            "feature": decision.feature,
+            "depth_tier": decision.depth_tier,
+            "contract_mode": decision.contract_mode,
+            "detected_topic": decision.detected_topic,
+            "risk_level": decision.risk_level,
+            "multi_scenario": decision.multi_scenario,
+            "scenario_types": list(decision.scenario_types),
+            "active_brains": list(decision.active_brains),
+            "active_lenses": list(decision.active_lenses),
+            "active_intelligence_layers": list(decision.active_intelligence_layers),
+            "knowledge_vaults": list(decision.knowledge_vaults),
+            "response_contract": list(decision.response_contract),
+            "boundaries": list(decision.boundaries),
+            "standalone_boundary": decision.standalone_boundary,
+            "public_considerations": list(decision.public_considerations),
+            "orchestrator": self.VERSION,
+        }
+        if route:
+            payload["route"] = route
+        return payload
 
     def build_shared_cognition(
         self,
@@ -290,6 +391,12 @@ class OrbBrainConvergenceOrchestratorService:
             seen.add(item)
             out.append(item)
         return out
+
+    def _join_prompt_blocks(self, *blocks: str) -> str:
+        parts = [block.strip() for block in blocks if block and block.strip()]
+        if not parts:
+            return ""
+        return "\n\n".join(parts)
 
     def _sanitize_debug_payload(self, payload: dict[str, Any]) -> dict[str, Any]:
         def scrub(value: Any) -> Any:

@@ -10,8 +10,10 @@ from pydantic import BaseModel, Field
 from auth.orb_standalone_premium_dependency import (
     require_rich_orb_premium_access as require_standalone_orb_access,
 )
+from services.orb_brain_convergence_orchestrator_service import orb_brain_convergence_orchestrator_service
+from services.orb_brain_visibility_service import build_public_explainability
 from services.orb_learning_micro_service import orb_learning_micro_service
-from services.orb_review_this_service import orb_review_this_service
+from services.orb_review_this_service import REVIEW_SECTIONS, orb_review_this_service
 from services.orb_template_generation_service import orb_template_generation_service
 from services.orb_template_library_registry import orb_template_library_registry
 from services.shared_institutional_cognition_runtime import shared_institutional_cognition_runtime
@@ -141,6 +143,14 @@ async def review_this(
     current_user=Depends(require_standalone_orb_access),
 ):
     message = f"Review this {body.document_type or 'document'} for practice quality."
+    brain_convergence = orb_brain_convergence_orchestrator_service.build_brain_decision(
+        message,
+        mode=body.mode,
+        feature="review_this",
+        document_type=body.document_type,
+        source_surface="template",
+        route="/orb/standalone/review-this",
+    )
     context = shared_institutional_cognition_runtime.build_context(
         surface="standalone_orb",
         message=message,
@@ -153,7 +163,7 @@ async def review_this(
     )
     return _success(
         {
-            "review_sections": orb_review_this_service.REVIEW_SECTIONS,
+            "review_sections": REVIEW_SECTIONS,
             "document_type": orb_review_this_service.detect_document_type(
                 message, explicit=body.document_type
             ),
@@ -167,6 +177,16 @@ async def review_this(
             "standalone": True,
             "os_records_accessed": False,
             "usage_hint": "Send the same content via POST /orb/standalone/conversation with document_text for a full ORB review answer.",
+            "brain_convergence": orb_brain_convergence_orchestrator_service.convergence_metadata(
+                brain_convergence,
+                route="/orb/standalone/review-this",
+            ),
+            "public_explainability": build_public_explainability(
+                brain_convergence=orb_brain_convergence_orchestrator_service.convergence_metadata(
+                    brain_convergence
+                ),
+                mode=body.mode,
+            ),
         }
     )
 
@@ -177,6 +197,13 @@ async def learning_micro_session(
     current_user=Depends(require_standalone_orb_access),
 ):
     message = f"Turn this into a 5-minute staff learning session: {body.topic}"
+    brain_convergence = orb_brain_convergence_orchestrator_service.build_brain_decision(
+        message,
+        mode="Ask ORB",
+        feature="learning_micro",
+        source_surface="template",
+        route="/orb/standalone/learn/micro-session",
+    )
     structure = orb_learning_micro_service.build_structure(message, topic=body.topic)
     context = shared_institutional_cognition_runtime.build_context(
         surface="standalone_orb",
@@ -191,5 +218,15 @@ async def learning_micro_session(
             ),
             "cognition": context,
             "usage_hint": "Use POST /orb/standalone/conversation with the learning request for a full generated session.",
+            "brain_convergence": orb_brain_convergence_orchestrator_service.convergence_metadata(
+                brain_convergence,
+                route="/orb/standalone/learn/micro-session",
+            ),
+            "public_explainability": build_public_explainability(
+                brain_convergence=orb_brain_convergence_orchestrator_service.convergence_metadata(
+                    brain_convergence
+                ),
+                mode="Ask ORB",
+            ),
         }
     )

@@ -164,12 +164,111 @@ AUDIT_GAPS: list[dict[str, str]] = [
         "finding": "orb_answer_quality_gate_service scores answers; mandatory marker checks added for scenario contracts.",
         "canonical": "orb_mandatory_response_contract_service.validate_answer_markers",
     },
+    {
+        "area": "universal_convergence",
+        "finding": "Action engine, dictate/write adapter, document intelligence and template review routes now call build_brain_decision.",
+        "canonical": "orb_brain_convergence_orchestrator_service + orb_universal_response_contract_service",
+    },
 ]
 
 PARALLEL_NON_CANONICAL = [
     "orb_unified_cognition_runtime — broader alternate orchestrator, not on live standalone path",
     "run_brain_selection_shadow — non-authoritative comparison only",
     "frontend routeOrbBrainIntent — display metadata only",
+]
+
+# Internal audit map — user-facing ORB Residential entrypoints vs converged orchestrator.
+ORB_ENTRYPOINT_AUDIT: list[dict[str, Any]] = [
+    {
+        "entrypoint": "/orb/standalone/conversation",
+        "user_visible": True,
+        "uses_converged_orchestrator": True,
+        "current_route": "orb_brain_convergence_orchestrator_service.build_brain_decision",
+        "risk": "low",
+        "fix_needed": False,
+        "notes": "Canonical sync chat entrypoint.",
+    },
+    {
+        "entrypoint": "/orb/standalone/conversation/stream",
+        "user_visible": True,
+        "uses_converged_orchestrator": True,
+        "current_route": "_build_standalone_request_context → build_brain_decision",
+        "risk": "low",
+        "fix_needed": False,
+        "notes": "Same brain decision as sync conversation.",
+    },
+    {
+        "entrypoint": "/orb/standalone/actions/run",
+        "user_visible": True,
+        "uses_converged_orchestrator": True,
+        "current_route": "orb_action_engine_service.run_action → build_brain_decision",
+        "risk": "medium",
+        "fix_needed": False,
+        "notes": "Response support chips route through action engine convergence.",
+    },
+    {
+        "entrypoint": "/orb/standalone/brain-route",
+        "user_visible": True,
+        "uses_converged_orchestrator": True,
+        "current_route": "build_brain_decision (preview sanitised for normal users)",
+        "risk": "low",
+        "fix_needed": False,
+        "notes": "Authoritative brain-route preview.",
+    },
+    {
+        "entrypoint": "/orb/dictate/analyze|finalise|generate",
+        "user_visible": True,
+        "uses_converged_orchestrator": True,
+        "current_route": "orb_document_brain_adapter_service → build_brain_decision",
+        "risk": "medium",
+        "fix_needed": False,
+        "notes": "Dictate document path shares orchestrator with Write.",
+    },
+    {
+        "entrypoint": "/orb/voice/* transport",
+        "user_visible": True,
+        "uses_converged_orchestrator": False,
+        "current_route": "Session/STT/TTS transport; cognition via conversation/stream",
+        "risk": "low",
+        "fix_needed": False,
+        "notes": "Voice answers use /orb/standalone/conversation/stream with source_surface=voice.",
+    },
+    {
+        "entrypoint": "/orb/standalone/documents/intelligence",
+        "user_visible": True,
+        "uses_converged_orchestrator": True,
+        "current_route": "orb_document_intelligence_service._with_brain_metadata → build_brain_decision",
+        "risk": "medium",
+        "fix_needed": False,
+        "notes": "Document lenses attach convergence metadata.",
+    },
+    {
+        "entrypoint": "/orb/standalone/review-this",
+        "user_visible": True,
+        "uses_converged_orchestrator": True,
+        "current_route": "build_brain_decision before shared cognition",
+        "risk": "low",
+        "fix_needed": False,
+        "notes": "Full answer still via conversation with document_text.",
+    },
+    {
+        "entrypoint": "frontend response support chips",
+        "user_visible": True,
+        "uses_converged_orchestrator": True,
+        "current_route": "/orb/standalone/actions/run",
+        "risk": "medium",
+        "fix_needed": False,
+        "notes": "Backend-supported chips use action engine; UI prefill is fallback only.",
+    },
+    {
+        "entrypoint": "/orb/standalone/knowledge/search",
+        "user_visible": True,
+        "uses_converged_orchestrator": False,
+        "current_route": "orb_rag_retrieval_service.search (retrieval only)",
+        "risk": "low",
+        "fix_needed": False,
+        "notes": "No LLM answer — RAG index search only.",
+    },
 ]
 
 
@@ -182,6 +281,9 @@ class OrbBrainRouteMapService:
 
     def parallel_layers(self) -> list[str]:
         return list(PARALLEL_NON_CANONICAL)
+
+    def entrypoint_audit(self) -> list[dict[str, Any]]:
+        return list(ORB_ENTRYPOINT_AUDIT)
 
     def trace_live_route(self, *, route: str = "/orb/standalone/conversation") -> dict[str, Any]:
         stream = route.endswith("/stream")

@@ -167,6 +167,7 @@ SAFETY_PACK_TESTS = (
     "tests/test_orb_expert_scenario_evaluator.py",
     "tests/test_orb_brain_convergence_orchestrator.py",
     "tests/test_orb_brain_routing_convergence.py",
+    "tests/test_orb_universal_convergence_entrypoints.py",
     "tests/test_safeguarding_escalation.py",
     "tests/test_orb_safety_pack_reuse.py",
     "tests/test_orb_brain_debug_visibility.py",
@@ -211,26 +212,48 @@ def build_public_explainability(
     explainability: dict[str, Any] | None = None,
     *,
     mode: str | None = None,
+    brain_convergence: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Safe explainability payload for normal premium users."""
     base = dict(explainability or {})
+    convergence = dict(brain_convergence or {})
     confidence = base.get("confidence")
     standalone_only = bool(
         base.get("standalone_only_reasoning")
         or (base.get("standalone_boundary") or {}).get("standalone_only")
+        or convergence.get("standalone_boundary")
     )
+    considerations = list(convergence.get("public_considerations") or [])
+    if not considerations:
+        considerations = list(base.get("public_considerations") or [])
+    if not considerations:
+        considerations = list(PUBLIC_EXPLAINABILITY_CONSIDERATIONS)
+    depth_tier = convergence.get("depth_tier")
+    how_thought = (
+        "ORB shaped this answer using residential practice guidance and your question — "
+        "not live IndiCare OS records unless you connected them."
+    )
+    if depth_tier == "light":
+        how_thought = (
+            "ORB gave a concise practice-aware answer through the same intelligence system — "
+            "not live IndiCare OS records."
+        )
+    elif depth_tier in {"enhanced", "mandatory"}:
+        how_thought = (
+            "ORB applied structured residential practice and safety boundaries through the "
+            "same intelligence system — not live IndiCare OS records."
+        )
     payload: dict[str, Any] = {
         "standalone_only_reasoning": standalone_only,
-        "public_considerations": list(PUBLIC_EXPLAINABILITY_CONSIDERATIONS),
-        "how_orb_thought": (
-            "ORB shaped this answer using residential practice guidance and your question — "
-            "not live IndiCare OS records unless you connected them."
-        ),
+        "public_considerations": considerations[:8],
+        "how_orb_thought": how_thought,
     }
     if confidence:
         payload["confidence"] = confidence
     if mode:
         payload["mode"] = mode
+    if depth_tier:
+        payload["depth_tier"] = depth_tier
     return payload
 
 
@@ -364,9 +387,23 @@ def get_safety_pack_map() -> dict[str, Any]:
         "converged_route": {
             "orchestrator": "services/orb_brain_convergence_orchestrator_service.py",
             "route_map": "services/orb_brain_route_map_service.py",
+            "universal_contracts": "services/orb_universal_response_contract_service.py",
             "canonical_endpoints": (
                 "/orb/standalone/conversation",
                 "/orb/standalone/conversation/stream",
+                "/orb/standalone/brain-route",
+                "/orb/standalone/actions/run",
+                "/orb/standalone/surface-route",
+                "/orb/dictate/analyze",
+                "/orb/dictate/finalise",
+                "/orb/dictate/generate",
+                "/orb/standalone/documents/intelligence",
+                "/orb/standalone/review-this",
+                "/orb/standalone/learn/micro-session",
+            ),
+            "voice_note": (
+                "Voice transport (/orb/voice/*) delegates cognition to "
+                "/orb/standalone/conversation/stream with source_surface=voice."
             ),
         },
         "high_risk_rollout_scenarios": HIGH_RISK_ROLLOUT_SCENARIOS,

@@ -25,7 +25,9 @@ from services.orb_document_understanding_service import (
 )
 from services.orb_knowledge_library_service import orb_knowledge_library_service
 from services.orb_expert_answer_engine_service import orb_expert_answer_engine_service
+from services.orb_brain_convergence_orchestrator_service import orb_brain_convergence_orchestrator_service
 from services.orb_brain_metadata_service import build_brain_metadata
+from services.orb_brain_visibility_service import build_public_explainability
 from services.orb_reg44_document_extraction import NOT_STATED, extract_reg44_report
 
 logger = logging.getLogger("indicare.orb_document_intelligence")
@@ -323,12 +325,35 @@ class OrbDocumentIntelligenceService:
         *,
         request: OrbDocumentIntelligenceRequest,
     ) -> OrbDocumentIntelligenceData:
+        document_text = request.document_text or ""
+        brain_convergence = orb_brain_convergence_orchestrator_service.build_brain_decision(
+            document_text or data.title or "document analysis",
+            mode=request.mode or "Ask ORB",
+            feature="document_intelligence",
+            document_lens=data.lens,
+            source_surface="document_intelligence",
+            route="/orb/standalone/documents/intelligence",
+        )
         brain = build_brain_metadata(
             surface="orb_residential",
             mode=request.mode,
             lens=data.lens,
             feature="document_intelligence",
             sources=data.sources,
+            extra={
+                "brain_convergence": orb_brain_convergence_orchestrator_service.convergence_metadata(
+                    brain_convergence,
+                    route="/orb/standalone/documents/intelligence",
+                ),
+                "depth_tier": brain_convergence.depth_tier,
+                "contract_mode": brain_convergence.contract_mode,
+                "explainability": build_public_explainability(
+                    brain_convergence=orb_brain_convergence_orchestrator_service.convergence_metadata(
+                        brain_convergence
+                    ),
+                    mode=request.mode,
+                ),
+            },
         )
         return data.model_copy(update={"brain_metadata": brain})
 

@@ -21,6 +21,8 @@ from services.indicare_intelligence_route_finalize_service import (
     intelligence_context_summary,
     is_care_related_action,
 )
+from services.orb_brain_convergence_orchestrator_service import orb_brain_convergence_orchestrator_service
+from services.orb_brain_visibility_service import build_public_explainability
 from services.orb_standalone_brain_service import orb_standalone_brain_service
 from services.orb_therapeutic_language_contract_service import (
     build_therapeutic_language_contract_block,
@@ -812,6 +814,7 @@ class OrbActionEngineService:
         prompt_tier: str,
         profile_role: str | None = None,
         source_text: str = "",
+        convergence_block: str = "",
     ) -> str:
         parts = [
             "You are ORB Care Companion running a structured residential children's homes action.",
@@ -847,6 +850,8 @@ class OrbActionEngineService:
             expert_block = orb_expert_scenario_bank_service.expert_prompt_block(source_for_expert)
         if expert_block:
             parts.append(expert_block)
+        if convergence_block:
+            parts.append(convergence_block)
         if operating_block:
             parts.append(operating_block)
         if grounding_context:
@@ -1093,6 +1098,8 @@ class OrbActionEngineService:
         prompt_tier: str,
         indicare_intelligence: dict[str, Any] | None = None,
         intelligence_meta: dict[str, Any] | None = None,
+        brain_convergence: dict[str, Any] | None = None,
+        public_explainability: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         sections = self._parse_sections_from_answer(answer)
         if action_id == "what_am_i_missing" and gaps and not sections:
@@ -1148,11 +1155,16 @@ class OrbActionEngineService:
             "suggested_next_actions": suggested,
             "action_engine": {
                 "prompt_tier": prompt_tier,
+                "depth_tier": (brain_convergence or {}).get("depth_tier"),
                 "safety_level": definition.safety_level,
                 "backend_supported": definition.backend_supported,
                 "heuristic_gaps": [g.id for g in (gaps or [])],
             },
         }
+        if brain_convergence:
+            payload["brain_convergence"] = brain_convergence
+        if public_explainability:
+            payload["explainability"] = public_explainability
         if indicare_intelligence:
             summary = intelligence_context_summary(indicare_intelligence)
             payload["indicare_intelligence_core"] = summary
@@ -1246,7 +1258,20 @@ class OrbActionEngineService:
         if action_id == "what_am_i_missing":
             gaps = analyse_what_missing_gaps(source_text, profile_role=profile_role)
 
+        brain_convergence = orb_brain_convergence_orchestrator_service.build_brain_decision(
+            source_text,
+            mode=mode_name,
+            requested_action=action_id,
+            feature="action_engine",
+            source_surface="action_engine",
+            route="/orb/standalone/actions/run",
+        )
+        depth_tier = brain_convergence.depth_tier
         prompt_tier = self.resolve_prompt_tier(action_id, source_text=source_text, mode=mode_name)
+        if depth_tier == "mandatory":
+            prompt_tier = "deep"
+        elif depth_tier == "enhanced" and prompt_tier == "fast":
+            prompt_tier = "residential"
         retrieval = orb_knowledge_retrieval_service.prepare_request_bundle(
             source_text,
             mode=mode_name,
@@ -1257,6 +1282,9 @@ class OrbActionEngineService:
             operating_block = orb_operating_brain_service.build_prompt_block(source_text, mode=mode_name)
         elif max_modules:
             operating_block = orb_operating_brain_service.build_prompt_block(source_text, mode=mode_name)
+        convergence_block = orb_brain_convergence_orchestrator_service.build_convergence_prompt_block(
+            brain_convergence
+        )
 
         system = self._build_action_system_prompt(
             definition=definition,
@@ -1266,6 +1294,7 @@ class OrbActionEngineService:
             prompt_tier=prompt_tier,
             profile_role=profile_role,
             source_text=source_text,
+            convergence_block=convergence_block,
         )
         user_prompt = self._action_user_prompt(
             action_id,
@@ -1310,6 +1339,18 @@ class OrbActionEngineService:
                 apply_gate_fixes=True,
             )
 
+        convergence_meta = orb_brain_convergence_orchestrator_service.convergence_metadata(
+            brain_convergence,
+            route="/orb/standalone/actions/run",
+        )
+        public_explainability = build_public_explainability(
+            {
+                "standalone_only_reasoning": True,
+                "public_considerations": brain_convergence.public_considerations,
+            },
+            mode=mode_name,
+        )
+
         return self._build_structured_payload(
             action_id,
             answer=answer,
@@ -1318,6 +1359,8 @@ class OrbActionEngineService:
             prompt_tier=prompt_tier,
             indicare_intelligence=indicare_intelligence if indicare_intelligence else None,
             intelligence_meta=intelligence_meta or None,
+            brain_convergence=convergence_meta,
+            public_explainability=public_explainability,
         )
 
 
