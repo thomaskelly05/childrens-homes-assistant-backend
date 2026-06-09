@@ -14,7 +14,18 @@ INCIDENT_REPORT_DRAFT_RE = re.compile(
     re.I,
 )
 
-KICKING_OFF_RE = re.compile(r"\b(kicking off|kicked off|played up)\b", re.I)
+KICKING_OFF_RE = re.compile(
+    r"\b("
+    r"kicked off|kicking off|played up|attention[\s-]?seeking|had a meltdown|"
+    r"was aggressive|refused meds|refused medication"
+    r")\b",
+    re.I,
+)
+
+AFTER_CONTACT_RE = re.compile(
+    r"\bafter\s+(contact|family time|family contact|a phone call|phone call)\b",
+    re.I,
+)
 
 # Phrases that commonly indicate invented incident detail when absent from source.
 _INVENTED_INCIDENT_PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = (
@@ -70,11 +81,37 @@ def is_incident_report_draft_request(text: str) -> bool:
 
 
 def extract_young_person_name(text: str) -> str | None:
-    match = re.search(
-        r"\b([A-Z][a-z]+)\b(?=\s+was\b|\s+became\b|\s+is\b|\s+had\b)",
-        str(text or ""),
+    value = str(text or "").strip()
+    if not value:
+        return None
+    _NON_NAMES = frozenset(
+        {
+            "help",
+            "please",
+            "young",
+            "the",
+            "after",
+            "today",
+            "this",
+            "following",
+            "turn",
+            "create",
+            "what",
+            "how",
+        }
     )
-    return match.group(1) if match else None
+    patterns = (
+        r"\b([A-Z][a-z]+)\b(?=\s+(?:was|is|had|became|refused|played|kicked|did|has|have)\b)",
+        r"^([A-Z][a-z]+)\b",
+    )
+    for pattern in patterns:
+        match = re.search(pattern, value)
+        if not match:
+            continue
+        name = match.group(1)
+        if name.lower() not in _NON_NAMES:
+            return name
+    return None
 
 
 def extract_known_incident_facts(source_text: str) -> dict[str, Any]:
@@ -86,16 +123,41 @@ def extract_known_incident_facts(source_text: str) -> dict[str, Any]:
         "young_person": name,
         "shorthand_behaviour": None,
         "followed_family_contact": False,
+        "followed_contact": False,
+        "refused_school": False,
         "happened_today": False,
+        "happened_morning": False,
         "wants_incident_report": is_incident_report_draft_request(text),
     }
-    shorthand_match = KICKING_OFF_RE.search(text)
-    if shorthand_match:
-        facts["shorthand_behaviour"] = shorthand_match.group(1).lower()
+    behaviour_priority = (
+        "kicked off",
+        "kicking off",
+        "played up",
+        "had a meltdown",
+        "attention seeking",
+        "attention-seeking",
+        "was aggressive",
+        "refused meds",
+        "refused medication",
+    )
+    for term in behaviour_priority:
+        if term in lowered:
+            facts["shorthand_behaviour"] = term
+            break
+    if not facts["shorthand_behaviour"]:
+        shorthand_match = KICKING_OFF_RE.search(text)
+        if shorthand_match:
+            facts["shorthand_behaviour"] = shorthand_match.group(1).lower()
     if "family contact" in lowered or "family time" in lowered:
         facts["followed_family_contact"] = True
+    if AFTER_CONTACT_RE.search(text) or "after contact" in lowered:
+        facts["followed_contact"] = True
+    if "refused school" in lowered or re.search(r"\brefused\s+school\b", lowered):
+        facts["refused_school"] = True
     if re.search(r"\btoday\b", lowered):
         facts["happened_today"] = True
+    if re.search(r"\bthis morning\b|\bmorning\b", lowered):
+        facts["happened_morning"] = True
     return facts
 
 

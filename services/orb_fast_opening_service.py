@@ -81,6 +81,44 @@ STREAM_INCOMPLETE_FALLBACK_MESSAGE = (
     "Your question is still here — please try again, or ask ORB to draft the incident report step by step."
 )
 
+# Generic openings that should be dropped once a substantial model answer arrives.
+_REPLACEABLE_GENERIC_OPENINGS: frozenset[str] = frozenset(
+    {
+        _SAFEGUARDING_DEFAULT_OPENING,
+        _RESIDENTIAL_DEEP_DEFAULT_OPENING,
+    }
+)
+
+# Known bad joins when streamed tokens concatenate opening to the next heading.
+_JOINED_OPENING_BUG_PATTERNS: tuple[re.Pattern[str], ...] = (
+    re.compile(r"(on the way\.)(Immediate)", re.I),
+    re.compile(r"(provided\.)(Immediate)", re.I),
+    re.compile(r"(on the way\.)(###)", re.I),
+    re.compile(r"(provided\.)(###)", re.I),
+    re.compile(r"(on the way\.)(First,)", re.I),
+    re.compile(r"(provided\.)(First,)", re.I),
+)
+
+_MIN_SUBSTANTIAL_MODEL_LEN = 120
+
+
+def ensure_fast_opening_spacing(text: str, *, fast_opening: str | None = None) -> str:
+    """Ensure paragraph break between fast opening and the rest of the answer."""
+    cleaned = (text or "").strip()
+    if not cleaned:
+        return cleaned
+
+    for pattern in _JOINED_OPENING_BUG_PATTERNS:
+        cleaned = pattern.sub(r"\1\n\n\2", cleaned)
+
+    opening = (fast_opening or "").strip()
+    if opening and cleaned.startswith(opening) and len(cleaned) > len(opening):
+        remainder = cleaned[len(opening) :]
+        if remainder and not remainder[0].isspace():
+            cleaned = f"{opening}\n\n{remainder.lstrip()}"
+
+    return cleaned
+
 
 def fast_opening_for_message(
     message: str,
@@ -132,8 +170,8 @@ def merge_stream_answer(
     streamed_text: str,
 ) -> str:
     """Merge fast opening with the authoritative model answer without dropping either."""
-    model = (model_answer or "").strip()
-    streamed = (streamed_text or "").strip()
+    model = ensure_fast_opening_spacing((model_answer or "").strip(), fast_opening=fast_opening)
+    streamed = ensure_fast_opening_spacing((streamed_text or "").strip(), fast_opening=fast_opening)
     opening = (fast_opening or "").strip()
 
     if not opening:
@@ -141,13 +179,15 @@ def merge_stream_answer(
 
     if model:
         if model.startswith(opening):
+            return ensure_fast_opening_spacing(model, fast_opening=opening)
+        if opening in _REPLACEABLE_GENERIC_OPENINGS and len(model) >= _MIN_SUBSTANTIAL_MODEL_LEN:
             return model
         if streamed and len(streamed) > len(model) and streamed.startswith(opening):
-            return streamed
-        return f"{opening}\n\n{model}"
+            return ensure_fast_opening_spacing(streamed, fast_opening=opening)
+        return ensure_fast_opening_spacing(f"{opening}\n\n{model}", fast_opening=opening)
 
     if streamed:
-        return streamed
+        return ensure_fast_opening_spacing(streamed, fast_opening=opening)
 
     return opening
 

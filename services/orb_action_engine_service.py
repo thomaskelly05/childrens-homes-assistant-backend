@@ -25,6 +25,7 @@ from services.orb_standalone_brain_service import orb_standalone_brain_service
 from services.orb_therapeutic_language_contract_service import (
     build_therapeutic_language_contract_block,
     is_residential_incident_scenario,
+    is_short_residential_scenario,
 )
 from services.orb_expert_answer_engine_service import orb_expert_answer_engine_service
 from services.orb_expert_scenario_bank_service import orb_expert_scenario_bank_service
@@ -881,6 +882,15 @@ class OrbActionEngineService:
                     f"\nShape gaps for a {profile.label}: {profile.needs_from_orb}\n"
                     f"Prioritise: {profile.priorities}"
                 )
+            if is_short_residential_scenario(source_text):
+                return (
+                    "Review what is missing before this residential record can be finalised.\n"
+                    "Respond concisely with a checklist only — no long essay.\n"
+                    "Cover: observable behaviour, child voice, staff response, risk/harm/damage, outcome, "
+                    "manager oversight if relevant. Do not invent facts.\n"
+                    f"{role_note}{gap_block}\n\n"
+                    f"--- SOURCE MATERIAL ---\n{source_text}"
+                )
             return (
                 "Review the source material for what may be missing in residential recording and oversight.\n"
                 "Structure your response with these sections (use markdown headings):\n"
@@ -897,17 +907,31 @@ class OrbActionEngineService:
         if action_id in ACADEMY_NVQ_ACTION_IDS:
             return orb_academy_nvq_anchor_service.action_user_prompt(action_id, source_text=source_text)
         if action_id == "convert_to_recording_wording":
+            concise_note = ""
+            if is_short_residential_scenario(source_text) or is_residential_incident_scenario(source_text):
+                concise_note = (
+                    "Keep output short and recording-ready. Use bracketed placeholders for missing facts.\n"
+                    "Do not state dysregulation or motivation as fact. Use appeared / was described as where needed.\n"
+                )
             return (
                 "Convert the source into professional residential recording wording.\n"
                 "Rules: factual, objective, child-centred, non-punitive, no diagnosis, "
                 "no invented facts, preserve uncertainty, include child voice if provided, "
                 "flag missing child voice if absent, and list what still needs recording.\n"
                 "Treat adult shorthand (e.g. kicked off, played up) as wording to clarify — not as final record language.\n"
-                "Do not use weak generic phrases such as 'challenging moment'.\n\n"
+                "Do not use weak generic phrases such as 'challenging moment', 'therapeutic interventions', "
+                "'It is essential…', or 'subsequent escalation'.\n"
+                f"{concise_note}\n"
                 f"--- SOURCE ---\n{source_text}"
             )
         if action_id == "create_manager_oversight_note":
+            concise = (
+                "Keep this concise — short manager lens only, with placeholders for missing detail.\n"
+                if is_short_residential_scenario(source_text)
+                else ""
+            )
             return (
+                f"{concise}"
                 "Draft a manager oversight note with sections: Record reviewed; Key concern; "
                 "Safeguarding/risk consideration; Child voice; Actions required; Plans/documents to review; "
                 "Staff learning; Rationale; Follow-up.\n"
@@ -923,9 +947,16 @@ class OrbActionEngineService:
                 f"--- SOURCE ---\n{source_text}"
             )
         if action_id == "add_safeguarding_lens":
+            concise = (
+                "Keep this concise — practical risk lens for a busy shift, not a generic safeguarding essay.\n"
+                if is_short_residential_scenario(source_text)
+                else ""
+            )
             return (
+                f"{concise}"
                 "Apply a safeguarding lens covering: immediate safety; facts; concerns; gaps; escalation; "
-                "manager/DSL/LADO/police/medical considerations; recording requirements; professional boundary.\n\n"
+                "manager/DSL/LADO/police/medical considerations; recording requirements; professional boundary.\n"
+                "Do not invent facts or outcomes. Use placeholders where detail is missing.\n\n"
                 f"--- SOURCE ---\n{source_text}"
             )
         if action_id == "add_ofsted_lens":
@@ -943,9 +974,12 @@ class OrbActionEngineService:
         if action_id == "make_more_concise":
             return (
                 "Make the source more concise for a busy residential shift.\n"
-                "Rules: preserve meaning; remove waffle; keep all safeguarding, escalation, and "
-                "regulatory boundaries if present; do not invent facts; do not remove concerns "
-                "or hide poor practice; preserve uncertainty.\n\n"
+                "Rules: produce a SHORTER version — not another long essay; preserve meaning; remove waffle "
+                "and generic headings; keep safeguarding/risk points; do not invent facts; do not remove "
+                "concerns or hide poor practice; preserve uncertainty and placeholders where facts are missing.\n"
+                "For residential recording support, keep: safety line, shorthand warning if present, "
+                "What is known, What to clarify, Recording wording scaffold.\n"
+                "Avoid: 'It is essential…', 'therapeutic interventions', 'challenging moment'.\n\n"
                 f"--- SOURCE ---\n{source_text}"
             )
         if action_id == "make_more_detailed":

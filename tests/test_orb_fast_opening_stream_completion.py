@@ -13,6 +13,8 @@ from routers import orb_standalone_routes
 from services.orb_brain_route_service import decide_orb_brain_route
 from services.orb_fast_opening_service import (
     STREAM_INCOMPLETE_FALLBACK_MESSAGE,
+    _RESIDENTIAL_DEEP_DEFAULT_OPENING,
+    ensure_fast_opening_spacing,
     fast_opening_for_message,
     is_fast_opening_only_answer,
     is_fast_opening_placeholder,
@@ -82,6 +84,25 @@ def test_merge_stream_answer_keeps_fast_opening_and_model_body():
     )
     assert merged.startswith(opening)
     assert "Draft incident report" in merged
+
+
+def test_merge_stream_answer_never_joins_opening_to_heading_without_spacing():
+    opening = _RESIDENTIAL_DEEP_DEFAULT_OPENING
+    model = "Immediate Safety\nCheck everyone is safe."
+    merged = merge_stream_answer(
+        fast_opening=opening,
+        model_answer=model,
+        streamed_text=f"{opening}{model}",
+    )
+    assert "way.Immediate" not in merged
+    assert "on the way.\n\nImmediate" in merged
+
+
+def test_ensure_fast_opening_spacing_fixes_concatenated_stream():
+    glued = f"{_RESIDENTIAL_DEEP_DEFAULT_OPENING}Immediate Safety"
+    fixed = ensure_fast_opening_spacing(glued, fast_opening=_RESIDENTIAL_DEEP_DEFAULT_OPENING)
+    assert "way.Immediate" not in fixed
+    assert "\n\n" in fixed
 
 
 def test_fast_opening_only_detection():

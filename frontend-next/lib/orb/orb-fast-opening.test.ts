@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url'
 import { describe, it } from 'node:test'
 
 import {
+  ensureFastOpeningSpacing,
   isOrbFastOpeningOnlyCompletion,
   isOrbFastOpeningPlaceholder,
   resolveOrbStreamedAnswer
@@ -34,6 +35,15 @@ describe('orb fast opening helpers', () => {
       'Opening line.\n\n### Incident report draft\nSummary and structured sections follow.'
     const resolved = resolveOrbStreamedAnswer('Opening line.', partial)
     assert.equal(resolved, partial)
+  })
+
+  it('fixes joined fast opening and immediate heading', () => {
+    const glued =
+      'Start with what is safest and most practical right now — the full guidance is on the way.' +
+      'Immediate Safety'
+    const fixed = ensureFastOpeningSpacing(glued)
+    assert.ok(!fixed.includes('way.Immediate'))
+    assert.ok(fixed.includes('on the way.\n\nImmediate'))
   })
 
   it('flags placeholder-only completion when error detail is present', () => {
