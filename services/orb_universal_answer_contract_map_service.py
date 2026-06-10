@@ -895,15 +895,32 @@ def run_golden_prompt_routing_qa() -> dict[str, Any]:
     }
 
 
-def run_golden_prompt_full_qa(*, include_answer_quality: bool = True) -> dict[str, Any]:
-    """Golden prompt QA — routing selection plus optional final-answer quality checks."""
+def run_golden_prompt_full_qa(
+    *,
+    include_answer_quality: bool = True,
+    qa_mode: str = "default",
+) -> dict[str, Any]:
+    """Golden prompt QA — routing selection plus optional final-answer quality checks.
+
+    qa_mode:
+      - ``routing_only``: routing checks only; skipped answer quality is not evaluated.
+      - ``default``: honest reporting — skipped canonical samples are not counted as passed.
+      - ``full_answer_quality``: strict — missing canonical samples count as failures.
+    """
     from services.orb_final_answer_repair_service import canonical_answer_for_qa
+
+    if qa_mode == "routing_only":
+        include_answer_quality = False
+    strict_answer_quality = qa_mode == "full_answer_quality"
 
     results: list[dict[str, Any]] = []
     routing_passed = 0
     routing_failed = 0
     answer_passed = 0
     answer_failed = 0
+    answer_skipped = 0
+    fully_passed = 0
+    partially_passed = 0
     needs_review = 0
     failures: list[dict[str, Any]] = []
 
@@ -930,10 +947,13 @@ def run_golden_prompt_full_qa(*, include_answer_quality: bool = True) -> dict[st
         else:
             routing_failed += 1
 
+        answer_quality_state: str | bool | None = None
+
         if include_answer_quality and contract_ok:
             canonical = canonical_answer_for_qa(expected, message=item["prompt"])
             if canonical:
                 validation = validate_contract_answer(canonical, family_id=expected)
+                answer_quality_state = validation["passed"]
                 entry["final_answer_quality_passed"] = validation["passed"]
                 entry["missing_markers"] = validation.get("missing_markers") or []
                 entry["forbidden_patterns"] = validation.get("forbidden_patterns") or []
@@ -944,14 +964,37 @@ def run_golden_prompt_full_qa(*, include_answer_quality: bool = True) -> dict[st
                 else:
                     answer_failed += 1
             else:
-                entry["final_answer_quality_passed"] = True
+                answer_quality_state = "skipped"
+                entry["final_answer_quality_passed"] = "skipped"
                 entry["missing_markers"] = []
                 entry["forbidden_patterns"] = []
                 entry["placeholder_issues"] = []
                 entry["notes"] = ["answer quality skipped — no canonical sample for family"]
-                answer_passed += 1
+                answer_skipped += 1
+                if strict_answer_quality:
+                    answer_failed += 1
+                    entry["notes"].append("strict mode: missing canonical sample counts as failure")
 
-        entry["passed"] = contract_ok and entry.get("final_answer_quality_passed", True)
+        entry_fully_passed = contract_ok and answer_quality_state is True
+        entry_partially_passed = contract_ok and answer_quality_state == "skipped"
+
+        if entry_fully_passed:
+            fully_passed += 1
+        elif entry_partially_passed:
+            partially_passed += 1
+
+        entry["fully_passed"] = entry_fully_passed
+        entry["partially_passed"] = entry_partially_passed
+
+        if not include_answer_quality:
+            entry["passed"] = contract_ok
+        elif entry_fully_passed:
+            entry["passed"] = True
+        elif entry_partially_passed:
+            entry["passed"] = False
+        else:
+            entry["passed"] = contract_ok and answer_quality_state is not False
+
         results.append(entry)
 
         if not entry["passed"]:
@@ -961,6 +1004,8 @@ def run_golden_prompt_full_qa(*, include_answer_quality: bool = True) -> dict[st
                     "contract": routing.get("contract_family"),
                     "contract_selection_passed": contract_ok,
                     "final_answer_quality_passed": entry.get("final_answer_quality_passed"),
+                    "fully_passed": entry_fully_passed,
+                    "partially_passed": entry_partially_passed,
                     "missing_markers": entry.get("missing_markers") or [],
                     "forbidden_patterns": entry.get("forbidden_patterns") or [],
                     "placeholder_issues": entry.get("placeholder_issues") or [],
@@ -978,21 +1023,38 @@ def run_golden_prompt_full_qa(*, include_answer_quality: bool = True) -> dict[st
         }:
             needs_review += 1
 
-    combined_failed = routing_failed + (answer_failed if include_answer_quality else 0)
-    combined_passed = len(GOLDEN_PROMPT_QA_PACK) - combined_failed if include_answer_quality else routing_passed
+    if not include_answer_quality:
+        combined_passed = routing_passed
+        combined_failed = routing_failed
+    elif strict_answer_quality:
+        combined_passed = fully_passed
+        combined_failed = routing_failed + answer_failed
+    else:
+        combined_passed = fully_passed
+        combined_failed = routing_failed + answer_failed
 
-    return {
+    report: dict[str, Any] = {
         "total": len(GOLDEN_PROMPT_QA_PACK),
         "passed": combined_passed,
         "failed": combined_failed,
         "routing_passed": routing_passed,
         "routing_failed": routing_failed,
-        "answer_quality_passed": answer_passed,
-        "answer_quality_failed": answer_failed,
         "needs_review": needs_review,
         "failures": failures,
         "results": results,
+        "qa_mode": qa_mode,
     }
+    if include_answer_quality:
+        report.update(
+            {
+                "answer_quality_passed": answer_passed,
+                "answer_quality_failed": answer_failed,
+                "answer_quality_skipped": answer_skipped,
+                "fully_passed": fully_passed,
+                "partially_passed": partially_passed,
+            }
+        )
+    return report
 
 
 orb_universal_answer_contract_map_service = type(

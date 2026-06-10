@@ -258,6 +258,87 @@ def test_contract_quality_pack_passes_routing_and_answer_qa():
     gdd = next(r for r in report["results"] if r["prompt_id"] == "accessible_child_support_plan")
     assert gdd["contract_selection_passed"] is True
     assert gdd["final_answer_quality_passed"] is True
+    assert gdd["fully_passed"] is True
+    assert gdd["partially_passed"] is False
+
+
+def test_skipped_answer_quality_not_counted_as_passed():
+    from services.orb_universal_answer_contract_map_service import run_golden_prompt_full_qa
+
+    report = run_golden_prompt_full_qa(qa_mode="default")
+    assert report["answer_quality_passed"] + report["answer_quality_skipped"] + report[
+        "answer_quality_failed"
+    ] == report["routing_passed"]
+    skipped = [r for r in report["results"] if r.get("final_answer_quality_passed") == "skipped"]
+    assert skipped, "expected some families without canonical samples"
+    for entry in skipped:
+        assert entry["final_answer_quality_passed"] == "skipped"
+        assert entry["fully_passed"] is False
+        assert entry["partially_passed"] is True
+        assert entry["passed"] is False
+        assert "answer quality skipped" in " ".join(entry.get("notes") or []).lower()
+    assert report["answer_quality_passed"] == report["fully_passed"]
+    assert report["partially_passed"] == len(skipped)
+    assert report["answer_quality_skipped"] == len(skipped)
+    assert report["answer_quality_passed"] not in {report["routing_passed"]}
+
+
+def test_accessible_support_plan_remains_full_pass():
+    from services.orb_universal_answer_contract_map_service import run_golden_prompt_full_qa
+
+    report = run_golden_prompt_full_qa(qa_mode="default")
+    gdd = next(r for r in report["results"] if r["prompt_id"] == "accessible_child_support_plan")
+    assert gdd["contract_selection_passed"] is True
+    assert gdd["final_answer_quality_passed"] is True
+    assert gdd["fully_passed"] is True
+    assert gdd["passed"] is True
+
+
+def test_priority_families_with_canonical_samples_pass_answer_quality():
+    from services.orb_universal_answer_contract_map_service import run_golden_prompt_full_qa
+
+    priority_ids = {
+        "daily_record",
+        "incident_record",
+        "missing_return_record",
+        "allegation_lado",
+        "abuse_disclosure",
+        "suicidal_self_harm",
+        "parent_removal_conflict",
+        "manager_oversight_note",
+        "reg44_visitor",
+        "what_am_i_missing",
+        "convert_to_recording_wording",
+    }
+    report = run_golden_prompt_full_qa(qa_mode="default")
+    for prompt_id in priority_ids:
+        entry = next(r for r in report["results"] if r["prompt_id"] == prompt_id)
+        assert entry["final_answer_quality_passed"] is True, prompt_id
+        assert entry["fully_passed"] is True, prompt_id
+
+
+def test_full_answer_quality_mode_fails_on_missing_canonical_samples():
+    from services.orb_universal_answer_contract_map_service import run_golden_prompt_full_qa
+
+    report = run_golden_prompt_full_qa(qa_mode="full_answer_quality")
+    assert report["answer_quality_skipped"] > 0
+    assert report["answer_quality_failed"] >= report["answer_quality_skipped"]
+    assert report["failed"] > 0
+    skipped = [r for r in report["results"] if r.get("final_answer_quality_passed") == "skipped"]
+    for entry in skipped:
+        assert any("strict mode" in note.lower() for note in (entry.get("notes") or []))
+
+
+def test_routing_only_mode_ignores_answer_quality():
+    from services.orb_universal_answer_contract_map_service import run_golden_prompt_full_qa
+
+    report = run_golden_prompt_full_qa(qa_mode="routing_only")
+    assert report["qa_mode"] == "routing_only"
+    assert "answer_quality_passed" not in report
+    assert report["passed"] == report["routing_passed"]
+    for entry in report["results"]:
+        assert entry["passed"] == entry["contract_selection_passed"]
+        assert "final_answer_quality_passed" not in entry
 
 
 def test_qa_run_endpoint_restricted_to_founder_admin():
