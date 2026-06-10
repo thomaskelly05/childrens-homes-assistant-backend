@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 from typing import Any
 from uuid import uuid4
 
+import psycopg2
 from psycopg2.extras import Json, RealDictCursor
 
 from repositories.os_repository_utils import MANAGER_ROLES, table_exists
@@ -87,6 +88,20 @@ def _pack_id() -> str:
     return f"pack_{uuid4().hex[:12]}"
 
 
+def _db_rollback(conn: Any | None) -> None:
+    if conn is None:
+        return
+    try:
+        conn.rollback()
+    except Exception:
+        pass
+
+
+def _handle_db_failure(conn: Any | None, exc: BaseException) -> None:
+    if conn is not None and isinstance(exc, psycopg2.Error):
+        _db_rollback(conn)
+
+
 class InspectionReadinessService:
     def enforce_access(self, current_user: dict[str, Any]) -> bool:
         role = _user_role(current_user)
@@ -99,7 +114,8 @@ class InspectionReadinessService:
         if conn is not None:
             try:
                 persistence = table_exists(conn, "inspection_readiness_packs")
-            except Exception:
+            except Exception as exc:
+                _handle_db_failure(conn, exc)
                 persistence = False
         return InspectionReadinessHealth(
             status="ok",
@@ -202,6 +218,7 @@ class InspectionReadinessService:
                         converted = self._from_sccif_item(raw, pack_types)
                         items.append(converted)
                 except Exception as exc:
+                    _handle_db_failure(conn, exc)
                     logger.debug("inspection_collect_%s_skipped: %s", src.__name__, exc)
             if filters and filters.staff_id:
                 try:
@@ -230,8 +247,10 @@ class InspectionReadinessService:
                         )
                     )
                 except Exception as exc:
+                    _handle_db_failure(conn, exc)
                     logger.debug("inspection_staff_profile_skipped: %s", exc)
         except Exception as exc:
+            _handle_db_failure(conn, exc)
             logger.debug("inspection_sccif_collect_skipped: %s", exc)
 
         # Reg 44 / Reg 45 route hints
@@ -530,14 +549,41 @@ class InspectionReadinessService:
     ) -> InspectionEvidencePack:
         return self._build_pack("quality_standards", current_user, filters, conn)
 
+    def build_degraded_dashboard(
+        self,
+        *,
+        reason: str = "Inspection readiness temporarily unavailable",
+    ) -> InspectionReadinessDashboard:
+        return InspectionReadinessDashboard(
+            generated_at=_now_iso(),
+            summary=reason,
+            reg44_summary="Reg 44 pack unavailable — try again shortly.",
+            reg45_summary="Reg 45 pack unavailable — try again shortly.",
+            sccif_summary="SCCIF alignment temporarily unavailable.",
+            quality_standards_summary="Quality Standards alignment temporarily unavailable.",
+            recent_packs=[],
+            key_gaps=[],
+            recommendations=["Retry shortly or open the inspection readiness workspace directly."],
+            limitations=LIMITATIONS + [reason],
+            privacy_notice=PRIVACY_NOTICE,
+            routes=ROUTES,
+            metadata={"degraded": True, "error": reason},
+        )
+
     def build_dashboard(
         self,
         current_user: dict[str, Any],
         filters: InspectionReadinessFilters | None = None,
         conn: Any | None = None,
     ) -> InspectionReadinessDashboard:
-        reg44 = self.generate_reg44_pack(current_user, filters, conn)
-        reg45 = self.generate_reg45_pack(current_user, filters, conn)
+        try:
+            reg44 = self.generate_reg44_pack(current_user, filters, conn)
+            reg45 = self.generate_reg45_pack(current_user, filters, conn)
+        except Exception as exc:
+            _handle_db_failure(conn, exc)
+            logger.warning("inspection_readiness_dashboard_pack_build_failed: %s", exc)
+            return self.build_degraded_dashboard(reason="Inspection readiness pack build temporarily unavailable")
+
         all_gaps = reg44.sections[0].gaps if reg44.sections else []
         for section in reg44.sections + reg45.sections:
             all_gaps = list({g.id: g for g in all_gaps + section.gaps}.values())
@@ -584,7 +630,14 @@ class InspectionReadinessService:
         current_user: dict[str, Any],
         conn: Any | None,
     ) -> tuple[bool, str | None]:
-        if conn is None or not table_exists(conn, "inspection_readiness_packs"):
+        packs_table_available = False
+        if conn is not None:
+            try:
+                packs_table_available = table_exists(conn, "inspection_readiness_packs")
+            except Exception as exc:
+                _handle_db_failure(conn, exc)
+                packs_table_available = False
+        if conn is None or not packs_table_available:
             _memory_packs[pack.id] = {
                 "id": pack.id,
                 "pack_type": pack.pack_type,
@@ -633,35 +686,10 @@ class InspectionReadinessService:
             return True, None
         except Exception as exc:
             logger.debug("inspection_pack_persist_failed: %s", exc)
-            try:
-                conn.rollback()
-            except Exception:
-                pass
+            _db_rollback(conn)
             return False, str(exc)
 
-    def list_pack_history(
-        self,
-        current_user: dict[str, Any],
-        limit: int = 20,
-        conn: Any | None = None,
-    ) -> list[dict[str, Any]]:
-        if conn is not None and table_exists(conn, "inspection_readiness_packs"):
-            try:
-                with conn.cursor(cursor_factory=RealDictCursor) as cur:
-                    cur.execute(
-                        """
-                        SELECT id, pack_type, title, evidence_count, gap_count,
-                               draft_only_count, created_at, status
-                        FROM inspection_readiness_packs
-                        WHERE generated_by_user_id = %s OR home_id = %s
-                        ORDER BY created_at DESC
-                        LIMIT %s
-                        """,
-                        (_user_id(current_user), current_user.get("home_id"), limit),
-                    )
-                    return [dict(row) for row in cur.fetchall()]
-            except Exception as exc:
-                logger.debug("inspection_history_db_failed: %s", exc)
+    def _memory_pack_history(self, limit: int) -> list[dict[str, Any]]:
         limit_n = int(limit) if limit is not None else 20
         return [
             {
@@ -680,23 +708,55 @@ class InspectionReadinessService:
             )[:limit_n]
         ]
 
+    def list_pack_history(
+        self,
+        current_user: dict[str, Any],
+        limit: int = 20,
+        conn: Any | None = None,
+    ) -> list[dict[str, Any]]:
+        if conn is None:
+            return self._memory_pack_history(limit)
+
+        try:
+            if not table_exists(conn, "inspection_readiness_packs"):
+                return self._memory_pack_history(limit)
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute(
+                    """
+                    SELECT id, pack_type, title, evidence_count, gap_count,
+                           draft_only_count, created_at, status
+                    FROM inspection_readiness_packs
+                    WHERE generated_by_user_id = %s OR home_id = %s
+                    ORDER BY created_at DESC
+                    LIMIT %s
+                    """,
+                    (_user_id(current_user), current_user.get("home_id"), limit),
+                )
+                return [dict(row) for row in cur.fetchall()]
+        except Exception as exc:
+            _handle_db_failure(conn, exc)
+            logger.warning("inspection_history_db_failed: %s", exc)
+        return self._memory_pack_history(limit)
+
     def get_pack_by_id(
         self,
         pack_id: str,
         current_user: dict[str, Any],
         conn: Any | None = None,
     ) -> InspectionEvidencePack | None:
-        if conn is not None and table_exists(conn, "inspection_readiness_packs"):
+        if conn is not None:
             try:
-                with conn.cursor(cursor_factory=RealDictCursor) as cur:
-                    cur.execute(
-                        "SELECT pack_json FROM inspection_readiness_packs WHERE id = %s LIMIT 1",
-                        (pack_id,),
-                    )
-                    row = cur.fetchone()
-                    if row:
-                        return InspectionEvidencePack.model_validate(row["pack_json"])
+                if table_exists(conn, "inspection_readiness_packs"):
+                    with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                        cur.execute(
+                            "SELECT pack_json FROM inspection_readiness_packs WHERE id = %s LIMIT 1",
+                            (pack_id,),
+                        )
+                        row = cur.fetchone()
+                        if row:
+                            return InspectionEvidencePack.model_validate(row["pack_json"])
             except Exception as exc:
+                _handle_db_failure(conn, exc)
                 logger.debug("inspection_pack_fetch_failed: %s", exc)
         stored = _memory_packs.get(pack_id)
         if stored:
@@ -717,8 +777,17 @@ class InspectionReadinessService:
         ok, err = self._persist_pack(pack, current_user, conn)
         if not ok:
             warnings.append(f"Pack history not persisted: {err or 'table unavailable'}.")
-        elif conn is None or not table_exists(conn, "inspection_readiness_packs"):
-            warnings.append("Pack saved in session memory — apply sql/091_inspection_readiness_packs.sql for persistence.")
+        else:
+            packs_table_available = False
+            if conn is not None:
+                try:
+                    packs_table_available = table_exists(conn, "inspection_readiness_packs")
+                except Exception as exc:
+                    _handle_db_failure(conn, exc)
+            if conn is None or not packs_table_available:
+                warnings.append(
+                    "Pack saved in session memory — apply sql/091_inspection_readiness_packs.sql for persistence."
+                )
 
         if request.save_output:
             try:

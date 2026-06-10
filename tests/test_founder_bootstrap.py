@@ -77,6 +77,12 @@ def test_founder_bootstrap_returns_200_with_empty_stores(admin_client):
     assert persistence["operatingLoopRuns"] == []
 
 
+def test_founder_bootstrap_still_returns_200_when_inspection_readiness_fails(admin_client):
+    bootstrap = admin_client.get("/founder-os/bootstrap")
+    assert bootstrap.status_code == 200
+    assert bootstrap.json()["success"] is True
+
+
 def test_founder_bootstrap_tolerates_failed_persistence_section(admin_client, monkeypatch):
     def _fail_bootstrap(**kwargs):
         raise RuntimeError("database pool is busy")
