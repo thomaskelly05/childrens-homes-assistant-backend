@@ -52,6 +52,7 @@ INTERNAL_METADATA_RE = re.compile(
 
 SCENARIO_TO_FAMILY: dict[str, str] = {
     "missing_return_substance_risk": "missing_return_record",
+    "missing_from_home": "missing_return_record",
     "allegation_against_staff": "allegation_lado",
     "suicide_self_harm": "suicidal_self_harm",
     "parent_forced_removal": "parent_removal_conflict",
@@ -59,7 +60,9 @@ SCENARIO_TO_FAMILY: dict[str, str] = {
     "exploitation_county_lines": "abuse_disclosure",
     "peer_on_peer_harm": "incident_record",
     "medication_error": "incident_record",
+    "restraint_physical_intervention": "incident_record",
     "restraint_intervention": "incident_record",
+    "online_harm_image_sharing": "incident_record",
     "online_harm": "incident_record",
 }
 
@@ -138,7 +141,11 @@ ORB_ANSWER_CONTRACT_FAMILIES: dict[str, dict[str, Any]] = {
         "trigger_patterns": [
             re.compile(
                 r"daily\s+(record|note|log)|shift\s+note|write\s+(a\s+)?daily|"
-                r"help\s+me\s+record\s+today",
+                r"help\s+me\s+record\s+today|health\s+appointment|"
+                r"refused\s+school|education\s+concern|family\s+contact|"
+                r"contact\s+was|behaviour\s+support|sensory\s+support|"
+                r"consequences\s+and\s+boundaries|boundaries\s+fairly|"
+                r"evidence\s+quality\s+of\s+care|quality\s+of\s+care\s+in\s+daily",
                 re.I,
             ),
         ],
@@ -161,7 +168,9 @@ ORB_ANSWER_CONTRACT_FAMILIES: dict[str, dict[str, Any]] = {
         "orb_write_handoff": True,
         "trigger_patterns": [
             re.compile(
-                r"incident\s+(report|record)|write.*incident|help\s+me.*incident",
+                r"incident\s+(report|record)|write.*incident|help\s+me.*incident|"
+                r"restorative\s+repair|nude\s+image|blackmail\s+online|online\s+safety|"
+                r"physical\s+intervention|restraint",
                 re.I,
             ),
         ],
@@ -185,7 +194,8 @@ ORB_ANSWER_CONTRACT_FAMILIES: dict[str, dict[str, Any]] = {
         "orb_write_handoff": True,
         "trigger_patterns": [
             re.compile(
-                r"returned\s+(?:from|after)\s+missing|missing\s+from\s+care|"
+                r"returned\s+(?:from|after)\s+missing|missing\s+from\s+(?:care|the\s+home|home)|"
+                r"young\s+person\s+is\s+missing|missing\s+right\s+now|gone\s+missing|"
                 r"\bawol\b|late\s+return|whereabouts",
                 re.I,
             ),
@@ -275,12 +285,13 @@ ORB_ANSWER_CONTRACT_FAMILIES: dict[str, dict[str, Any]] = {
         "streamable": True,
         "orb_write_handoff": True,
         "trigger_patterns": [
-            re.compile(r"key\s*work|keywork\s+session|1:1\s+session", re.I),
+            re.compile(r"key\s*[- ]?work|keywork\s+session|1:1\s+session", re.I),
         ],
-        "required_markers": ["purpose", "views", "actions", "follow"],
+        "required_markers": ["child voice", "session", "purpose", "views", "actions", "follow"],
         "required_sections": [
-            "Purpose; child's views; strengths and worries",
-            "Agreed actions; emotional meaning; follow-up",
+            "Purpose of session; child's views and voice",
+            "Strengths, worries, emotional meaning",
+            "Agreed actions; follow-up",
         ],
         "forbidden_patterns": list(UNIVERSAL_FORBIDDEN_PATTERNS[:4]),
         "public_considerations": ["Child-centred planning", "Therapeutic language"],
@@ -295,8 +306,11 @@ ORB_ANSWER_CONTRACT_FAMILIES: dict[str, dict[str, Any]] = {
         "orb_write_handoff": True,
         "trigger_patterns": [
             re.compile(
-                r"manager\s+oversight|oversight\s+note|manager\s+review\s+note|"
-                r"create_manager_oversight",
+                r"manager\s+oversight|management\s+oversight|oversight\s+note|"
+                r"manager\s+review\s+note|create_manager_oversight|reg\s*45|"
+                r"placement\s+plan\s+review|risk\s+assessment\s+review|"
+                r"leadership\s+record|leadership\s+and\s+management|"
+                r"safer\s+recruitment|workforce\s+compliance",
                 re.I,
             ),
         ],
@@ -320,10 +334,11 @@ ORB_ANSWER_CONTRACT_FAMILIES: dict[str, dict[str, Any]] = {
         "trigger_patterns": [
             re.compile(r"reg\s*44|independent\s+visitor|regulation\s+44", re.I),
         ],
-        "required_markers": ["child", "safeguarding", "evidence"],
+        "required_markers": ["reg 44", "child", "safeguarding", "evidence"],
         "required_sections": [
-            "Child experience; safeguarding effectiveness",
-            "Leadership and management; evidence not assertion",
+            "Reg 44 child experience; safeguarding effectiveness",
+            "Records reviewed; children and staff spoken with",
+            "Leadership oversight; evidence not assertion",
         ],
         "forbidden_patterns": list(UNIVERSAL_FORBIDDEN_PATTERNS[:4]) + ["outstanding grade"],
         "public_considerations": ["Inspection readiness", "Leadership and oversight"],
@@ -339,13 +354,22 @@ ORB_ANSWER_CONTRACT_FAMILIES: dict[str, dict[str, Any]] = {
         "trigger_patterns": [
             re.compile(r"ofsted|reg\s*45|inspection\s+prep|inspection\s+readiness", re.I),
         ],
-        "required_markers": ["evidence", "child", "safeguarding"],
+        "required_markers": ["ofsted", "evidence", "child", "safeguarding"],
         "required_sections": [
-            "Child experience; safeguarding effectiveness",
-            "Quality of care; shortfalls/actions",
+            "Evidence readiness; child experience; safeguarding",
+            "Quality of care; leadership and management; workforce",
+            "Shortfalls/actions; how leaders know impact",
             "No prediction of judgement grade",
         ],
-        "forbidden_patterns": list(UNIVERSAL_FORBIDDEN_PATTERNS[:4]) + ["will be rated"],
+        "forbidden_patterns": list(UNIVERSAL_FORBIDDEN_PATTERNS[:4])
+        + [
+            "will be rated",
+            "will predict",
+            "predicted grade",
+            "outstanding grade",
+            "good grade",
+            "requires improvement grade",
+        ],
         "public_considerations": ["Inspection readiness"],
     },
     "policy_practice_question": {
@@ -359,11 +383,27 @@ ORB_ANSWER_CONTRACT_FAMILIES: dict[str, dict[str, Any]] = {
         "trigger_patterns": [
             re.compile(
                 r"what\s+(is|does)\s+(the\s+)?(policy|procedure|regulation)|"
-                r"best\s+practice\s+for|how\s+should\s+we\s+handle",
+                r"best\s+practice\s+for|how\s+should\s+we\s+handle|"
+                r"staff\s+supervision|professional\s+curiosity|complaint\s+about\s+staff|"
+                r"notify\s+ofsted|serious\s+event|sccif",
                 re.I,
             ),
         ],
-        "required_markers": ["practice", "local", "judgement"],
+        "required_markers": [
+            "practice",
+            "local",
+            "judgement",
+            "supervision",
+            "reflection",
+            "complaint",
+            "child voice",
+            "notification",
+            "ofsted",
+            "sccif",
+            "evidence",
+            "professional curiosity",
+            "safeguarding",
+        ],
         "required_sections": [
             "Direct answer in residential context",
             "Standalone limitation if policy not provided",

@@ -165,8 +165,22 @@ MANDATORY_CONTRACTS: dict[str, dict[str, Any]] = {
             "Specialist / police routes where required",
             "Factual recording",
         ],
-        "validation_markers": ["safeguarding", "record", "police", "evidence"],
+        "validation_markers": ["online", "safeguarding", "record", "police", "evidence"],
         "playbook_ids": ["online_nude_image_or_sextortion"],
+    },
+    "missing_from_home": {
+        "id": "missing_from_home",
+        "label": "Missing from home — active episode",
+        "mandatory_sections": [
+            "Immediate welfare and safety actions",
+            "Search / missing procedure under local policy",
+            "Manager / on-call notification",
+            "Police / social worker / placing authority where required",
+            "Record times, actions, rationale and who was notified",
+            "Risk / missing plan review when located",
+        ],
+        "validation_markers": ["missing", "welfare", "manager", "record", "safeguarding"],
+        "playbook_ids": ["missing_now"],
     },
 }
 

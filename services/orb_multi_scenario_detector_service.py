@@ -9,6 +9,15 @@ MULTI_SCENARIO_OPENING = (
 )
 
 SCENARIO_SIGNATURES: dict[str, tuple[str, ...]] = {
+    "missing_from_home": (
+        "missing from the home",
+        "missing from home",
+        "missing right now",
+        "young person is missing",
+        "gone missing",
+        "cannot find them",
+        "where are they",
+    ),
     "missing_return_substance_risk": (
         "returned from missing",
         "came back missing",

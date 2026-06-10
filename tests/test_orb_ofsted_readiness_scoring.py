@@ -59,6 +59,21 @@ def test_ofsted_ready_requires_no_invented_facts():
     assert score["ofsted_ready"] is False
 
 
+def test_reg44_template_scores_ofsted_ready():
+    from services.orb_execution_policy_service import REG44_CHECKLIST_DETERMINISTIC_ANSWER
+
+    score = orb_ofsted_readiness_scoring_service.score_answer(
+        REG44_CHECKLIST_DETERMINISTIC_ANSWER,
+        prompt="Give me a Reg 44 evidence checklist",
+        contract_family="reg44_visitor",
+        execution_policy="deterministic_only",
+        openai_called=False,
+        deterministic_available=True,
+    )
+    assert score["evidence-based"] >= 3
+    assert score["ofsted_ready"] is True
+
+
 def test_mandatory_safeguarding_high_risk_scoring():
     score = orb_ofsted_readiness_scoring_service.score_answer(
         "Listen calmly, keep them safe, notify the manager immediately, record factually, "
