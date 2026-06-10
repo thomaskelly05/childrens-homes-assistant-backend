@@ -11,7 +11,8 @@ import {
   XAxis,
   YAxis
 } from 'recharts'
-import { Shield } from 'lucide-react'
+import Link from 'next/link'
+import { Shield, Sparkles } from 'lucide-react'
 
 import { FounderNavHeader } from '@/components/founder/founder-nav-header'
 import {
@@ -88,6 +89,25 @@ export function FounderDashboardPage() {
           title="IndiCare Intelligence Command Centre"
           subtitle="Private live overview of business performance, ORB usage, risk, revenue, Ofsted readiness, and what to build next."
         />
+
+        <FounderSectionCard
+          eyebrow="Strategic layer"
+          title="Founder Intelligence Centre"
+          description="Executive priorities, risks, opportunities, readiness score and briefings — what matters and what to do next."
+        >
+          <p className="text-sm leading-7 text-slate-300">
+            Combines Founder Memory, revenue, relationships, evidence, Quality Lab, telemetry, approvals, actions and
+            operating loop outputs into one decision layer. Not another dashboard.
+          </p>
+          <Link
+            href="/founder/intelligence"
+            className="mt-4 inline-flex items-center gap-2 rounded-xl border border-violet-400/40 bg-violet-500/15 px-4 py-2.5 text-sm font-bold text-violet-200 transition hover:bg-violet-500/25"
+            data-testid="founder-intelligence-centre-link"
+          >
+            <Sparkles className="h-4 w-4" aria-hidden />
+            Open Founder Intelligence Centre
+          </Link>
+        </FounderSectionCard>
 
         <FounderSectionCard eyebrow="Mission Control" title="Executive KPIs" description="Live business and product signals across revenue, adoption, impact, and AI cost.">
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">

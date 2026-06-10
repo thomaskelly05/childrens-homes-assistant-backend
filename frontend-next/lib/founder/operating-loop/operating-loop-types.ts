@@ -14,6 +14,8 @@ export type FounderOperatingLoopPlan = {
   generateContentDrafts: boolean
   generateBuildBriefs: boolean
   generateApprovals: boolean
+  generateIntelligenceSnapshot?: boolean
+  generateDailyBriefing?: boolean
 }
 
 export type FounderOperatingLoopStaffAgentRun = {
@@ -85,7 +87,9 @@ export const FULL_OPERATING_LOOP_PLAN: FounderOperatingLoopPlan = {
   generateActions: true,
   generateContentDrafts: true,
   generateBuildBriefs: true,
-  generateApprovals: true
+  generateApprovals: true,
+  generateIntelligenceSnapshot: true,
+  generateDailyBriefing: false
 }
 
 export const PRODUCT_OPERATING_LOOP_PLAN: FounderOperatingLoopPlan = {

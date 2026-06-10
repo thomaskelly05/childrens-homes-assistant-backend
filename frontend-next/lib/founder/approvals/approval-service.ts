@@ -126,7 +126,9 @@ export function getApprovalTypeLabel(type: ApprovalType): string {
     'public-claim': 'Public Claim',
     'revenue-claim': 'Revenue Claim',
     'product-action': 'Product Action',
-    'relationship-message': 'Relationship Message'
+    'relationship-message': 'Relationship Message',
+    'founder-briefing': 'Founder Briefing',
+    'founder-narrative': 'Founder Narrative'
   }
   return labels[type]
 }

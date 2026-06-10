@@ -36,7 +36,16 @@ import {
   hasLiveTelemetry,
   liveDataSources
 } from './founder-staff-agent-base'
+import { generateFounderIntelligenceSnapshotSync } from '@/lib/founder/intelligence-centre/intelligence-sync'
 import type { FounderStaffAgent, FounderStaffAgentOutput } from './founder-team-types'
+
+function intelligenceSnapshot() {
+  try {
+    return generateFounderIntelligenceSnapshotSync()
+  } catch {
+    return null
+  }
+}
 
 function telemetryContext(): { summary: ReturnType<typeof getFounderTelemetrySummary>; hasLive: boolean } {
   return { summary: getFounderTelemetrySummary(), hasLive: hasLiveTelemetry() }
@@ -76,7 +85,8 @@ export const chiefOfStaffAgent = buildStaffAgent({
   run(): FounderStaffAgentOutput {
     const memory = getStaffStrategicMemory()
     const { hasLive } = telemetryContext()
-    if (!hasLive && !hasLiveStaffData()) {
+    const intel = intelligenceSnapshot()
+    if (!hasLive && !hasLiveStaffData() && !intel) {
       return emptyStaffOutput('Waiting for live telemetry and founder data before producing a briefing.')
     }
     const { insights } = contractContext()
@@ -84,14 +94,18 @@ export const chiefOfStaffAgent = buildStaffAgent({
     const memoryNote = strategicMemorySummary()
     const relationshipSummary = summariseRelationshipIntelligence()
     const followUps = getRelationshipFollowUpsForBriefing()
+    const topPriority = intel?.topPriorities[0]
     return {
-      summary: memory.primaryObjective
-        ? `${memory.primaryObjective.split(':')[0]}. ${topInsight ? topInsight.title : 'Review connected sources.'}`
-        : topInsight
-          ? `Today's priority: ${topInsight.title}. ${topInsight.action}`
-          : 'Live founder data is connected. Review connected sources and pending approvals.',
+      summary: topPriority
+        ? `Intelligence priority: ${topPriority.title}. Readiness ${intel?.founderScore.overall ?? '—'}/100.`
+        : memory.primaryObjective
+          ? `${memory.primaryObjective.split(':')[0]}. ${topInsight ? topInsight.title : 'Review connected sources.'}`
+          : topInsight
+            ? `Today's priority: ${topInsight.title}. ${topInsight.action}`
+            : 'Live founder data is connected. Review connected sources and pending approvals.',
       findings: [
         memoryNote,
+        intel ? `Founder Intelligence Centre: ${intel.topPriorities.length} priorities, ${intel.risks.length} risks` : '',
         ...insights.slice(0, 2).map((i) => i.explanation),
         `Evidence readiness: ${getEvidencePacks().length} pack(s); ${getPacksNeedingApproval().length} awaiting approval`,
         (() => {
@@ -106,15 +120,20 @@ export const chiefOfStaffAgent = buildStaffAgent({
         ...followUps.slice(0, 2)
       ].filter(Boolean),
       recommendations: filterDeferredRecommendations(
-        insights.slice(0, 3).map((i) => i.action),
+        intel
+          ? intel.topPriorities.slice(0, 3).map((p) => p.recommendedAction)
+          : insights.slice(0, 3).map((i) => i.action),
         memory.deferredObjectives
       ),
-      actions: insights.slice(0, 2).map((i) => i.title),
+      actions: intel
+        ? intel.topPriorities.slice(0, 2).map((p) => p.title)
+        : insights.slice(0, 2).map((i) => i.title),
       risks: [
         'External content requires Thomas approval before publishing.',
+        ...(intel?.risks.slice(0, 2).map((r) => r.title) ?? []),
         ...(memory.currentRisks.length > 0 ? memory.currentRisks.slice(0, 2) : [])
       ],
-      confidence: hasLive ? 'high' : 'medium',
+      confidence: hasLive || intel ? 'high' : 'medium',
       requiresApproval: false
     }
   }
@@ -137,10 +156,15 @@ export const ctoAgent = buildStaffAgent({
   dataSources: ['telemetry', 'errors', 'ai-usage', 'founder-data-sources'],
   run(): FounderStaffAgentOutput {
     const memory = getStaffStrategicMemory()
+    const intel = intelligenceSnapshot()
     const { summary, hasLive } = telemetryContext()
     if (!hasLive) return emptyStaffOutput('No live telemetry yet. Connect platform event sources for technical monitoring.')
     const findings: string[] = []
     const recommendations: string[] = []
+    if (intel) {
+      findings.push(...intel.risks.filter((r) => r.riskType === 'product' || r.riskType === 'operational').slice(0, 2).map((r) => r.title))
+      recommendations.push(...intel.topPriorities.filter((p) => p.category === 'product').slice(0, 2).map((p) => p.recommendedAction))
+    }
     if (memory.currentProductFocus) findings.push(`Build aligned to product focus: ${memory.currentProductFocus}`)
     if (summary.errorRate > 10) findings.push(`Error rate is ${summary.errorRate}% across telemetry events.`)
     if (summary.aiCostsGbp > 0) findings.push(`AI spend estimate: £${summary.aiCostsGbp.toFixed(2)} from live billing data.`)
@@ -221,14 +245,19 @@ export const productDirectorAgent = buildStaffAgent({
   dataSources: ['feature-usage', 'orb-analytics', 'readiness'],
   run(): FounderStaffAgentOutput {
     const memory = getStaffStrategicMemory()
+    const intel = intelligenceSnapshot()
     const { summary, hasLive } = telemetryContext()
     if (!hasLive) return emptyStaffOutput('No live feature usage telemetry yet.')
     const topFeatures = summary.featureUsage.slice(0, 3)
     const productFocus = memory.currentProductFocus || 'ORB Residential first'
+    const alignment = intel?.strategicAlignment.aligned.filter((a) => a.entityType === 'build_brief').slice(0, 2) ?? []
     return {
-      summary: `Product roadmap aligned to founder focus: ${productFocus.split(':')[0]}.`,
+      summary: intel
+        ? `Strategic alignment: ${intel.strategicAlignment.aligned.length} aligned items. Product focus: ${productFocus.split(':')[0]}.`
+        : `Product roadmap aligned to founder focus: ${productFocus.split(':')[0]}.`,
       findings: [
         productFocus,
+        ...alignment.map((a) => `Aligned: ${a.title} → ${a.alignedTo}`),
         ...topFeatures.map((f) => `${f.feature}: ${f.count} usage events`)
       ],
       recommendations: filterDeferredRecommendations(
@@ -538,12 +567,21 @@ export const financeAiCostAgent = buildStaffAgent({
   permissions: defaultPermissions(),
   dataSources: ['billing', 'ai-usage', 'telemetry', 'revenue-intelligence'],
   run(): FounderStaffAgentOutput {
+    const intel = intelligenceSnapshot()
     const { aiCost, inputs } = contractContext()
     const revenue = buildRevenueSources()
     const margin = calculateAiMargin(inputs.billingMetrics, {
       revenueAvailable: revenue.snapshot.mrr !== null
     })
-    const risks = buildCommercialRisks(revenue.snapshot, margin)
+    const risks = [
+      ...buildCommercialRisks(revenue.snapshot, margin),
+      ...(intel?.risks.filter((r) => r.riskType === 'financial').map((r) => ({
+        id: r.id,
+        title: r.title,
+        detail: r.summary,
+        severity: r.severity === 'critical' ? ('high' as const) : r.severity === 'high' ? ('high' as const) : ('medium' as const)
+      })) ?? [])
+    ]
     const recommendations = buildFinanceRecommendations(revenue.snapshot, margin)
 
     if (aiCost.raw.openAiSpendGbp === 0 && revenue.snapshot.mrr === null) {
@@ -619,10 +657,14 @@ export const dataProtectionSafetyAgent = buildStaffAgent({
   dataSources: ['content-drafts', 'approvals'],
   run(): FounderStaffAgentOutput {
     const memory = getStaffStrategicMemory()
+    const intel = intelligenceSnapshot()
     const needingReview = getPacksNeedingApproval()
     return {
-      summary: 'All external-facing content and evidence packs require safety review before approval.',
+      summary: 'All external-facing content, narratives and briefings require safety review before approval.',
       findings: [
+        intel
+          ? `Intelligence narratives are internal by default; ${intel.narrative.daily.safeForExternalUse ? 'daily narrative flagged external' : 'external use requires approval'}`
+          : '',
         'No child, staff or provider names in external drafts',
         'No safeguarding narrative in public content',
         'Live data claims must be verified',
@@ -661,10 +703,14 @@ export const partnershipsAgent = buildStaffAgent({
   permissions: defaultPermissions({ draftEmail: true, draftContent: true }),
   dataSources: ['readiness', 'evidence-packs'],
   run(): FounderStaffAgentOutput {
+    const intel = intelligenceSnapshot()
     const relationships = getActiveRelationships().filter((r) =>
       ['provider', 'partner', 'technology-partner', 'local-authority', 'government'].includes(r.relationshipType)
     )
     const followUps = getFollowUpRecommendations().slice(0, 3)
+    const opportunities = intel?.opportunities.filter((o) =>
+      ['provider', 'partner', 'grant', 'technology'].includes(o.opportunityType)
+    ).slice(0, 3) ?? []
     const audiences: EvidenceAudience[] = ['provider', 'openai', 'microsoft', 'dfe']
     const packs = audiences.map((audience) => {
       const pack = generateEvidencePack(audience, 'partnerships-agent')
@@ -682,7 +728,8 @@ export const partnershipsAgent = buildStaffAgent({
         ...(relationships.length > 0
           ? relationships.slice(0, 3).map((r) => `${r.organisation}: ${r.status}, next — ${r.nextAction}`)
           : ['No partnership relationships recorded yet']),
-        ...followUps.map((f) => `Follow-up due: ${f.relationship.organisation}`)
+        ...followUps.map((f) => `Follow-up due: ${f.relationship.organisation}`),
+        ...opportunities.map((o) => `Opportunity: ${o.title}`)
       ],
       recommendations: [
         'Prepare ethical intelligence narrative for sector partners',
@@ -713,6 +760,7 @@ export const evidencePackAgent = buildStaffAgent({
   dataSources: ['telemetry', 'readiness', 'billing', 'orb-analytics'],
   run(): FounderStaffAgentOutput {
     const memory = getStaffStrategicMemory()
+    const intel = intelligenceSnapshot()
     const sources = buildEvidenceSources()
     const relationships = getActiveRelationships()
     const pack = generateEvidencePack('general', 'evidence-pack-agent')
@@ -725,11 +773,13 @@ export const evidencePackAgent = buildStaffAgent({
       return `${r.organisation} → ${evidenceAudienceLabel(audience)}`
     })
     return {
-      summary: objectives.length > 0
-        ? `Evidence pack aligned to strategic objective: ${objectives[0].split(':')[0]}`
-        : summary.totalEvents > 0
-          ? `Evidence pack includes ${summary.totalEvents} telemetry events and connected founder metrics.`
-          : 'Evidence pack generated with stated limitations — live data limited.',
+      summary: intel
+        ? `Evidence readiness score ${intel.founderScore.evidenceReadiness}/100. ${getEvidencePacks().length} pack(s) on file.`
+        : objectives.length > 0
+          ? `Evidence pack aligned to strategic objective: ${objectives[0].split(':')[0]}`
+          : summary.totalEvents > 0
+            ? `Evidence pack includes ${summary.totalEvents} telemetry events and connected founder metrics.`
+            : 'Evidence pack generated with stated limitations — live data limited.',
       findings: [
         ...objectives.slice(0, 2),
         `Data basis: ${pack.dataBasis}`,

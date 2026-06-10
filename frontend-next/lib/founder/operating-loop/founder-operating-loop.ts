@@ -36,6 +36,10 @@ import type {
   OperatingLoopRunResponse,
   OperatingLoopRunStatus
 } from './operating-loop-types'
+import {
+  generateFounderBriefing,
+  generateFounderIntelligenceSnapshot
+} from '@/lib/founder/intelligence-centre/intelligence-store'
 import { agentsForPlan, FULL_OPERATING_LOOP_PLAN } from './operating-loop-types'
 
 export { getLastOperatingLoopRun, getOperatingLoopRun, getOperatingLoopRuns }
@@ -281,9 +285,32 @@ export async function runFounderOperatingLoop(
       }
     }
 
-    const actionsCreated = plan.generateActions ? generateActionsFromFindings(agentOutputs) : []
+    let actionsCreated = plan.generateActions ? generateActionsFromFindings(agentOutputs) : []
     const draftsCreated: string[] = []
     const buildBriefsCreated: string[] = []
+    let intelligenceSnapshotId: string | undefined
+
+    if (plan.generateIntelligenceSnapshot) {
+      try {
+        const snapshot = await generateFounderIntelligenceSnapshot(triggeredBy)
+        intelligenceSnapshotId = snapshot.id
+        if (plan.generateActions) {
+          for (const priority of snapshot.topPriorities.slice(0, 3)) {
+            const action = addFounderAction({
+              title: priority.title.slice(0, 120),
+              detail: priority.recommendedAction,
+              source: 'Founder Intelligence Centre'
+            })
+            if (!actionsCreated.includes(action.id)) actionsCreated.push(action.id)
+          }
+        }
+        if (plan.generateDailyBriefing) {
+          await generateFounderBriefing('daily', triggeredBy)
+        }
+      } catch (error) {
+        errors.push(`Intelligence snapshot: ${safeErrorSummary(error)}`)
+      }
+    }
 
     if (plan.generateContentDrafts) {
       try {
@@ -388,7 +415,8 @@ export async function runFounderOperatingLoop(
         actions: actionsCreated.length,
         approvals: approvalsCreated.length,
         drafts: draftsCreated.length,
-        buildBriefs: buildBriefsCreated.length
+        buildBriefs: buildBriefsCreated.length,
+        intelligenceSnapshotId
       }
     }).catch(() => null)
     if (completedAudit?.id) auditLogIds.push(completedAudit.id)
