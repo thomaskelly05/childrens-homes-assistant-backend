@@ -1,0 +1,1271 @@
+{
+  "version": "orb-knowledge-gap-audit-v1",
+  "generated_at": "2026-06-10T10:52:34.883135+00:00",
+  "total": 40,
+  "internal_knowledge_passed": 14,
+  "internal_knowledge_failed": 26,
+  "openai_avoided": 5,
+  "openai_required": 33,
+  "unexpected_openai_calls": 2,
+  "embedding_calls_avoided": 36,
+  "unexpected_embedding_calls": 4,
+  "missing_knowledge_markers": [
+    "adulthood",
+    "behaviour",
+    "boundaries",
+    "child voice",
+    "child-centred",
+    "complaint",
+    "contact",
+    "debrief",
+    "do not investigate",
+    "education",
+    "evidence",
+    "exploitation",
+    "fair",
+    "health",
+    "immediate",
+    "independence",
+    "lado",
+    "leadership",
+    "learning",
+    "listen",
+    "manager",
+    "medication",
+    "missing",
+    "notification",
+    "ofsted",
+    "online",
+    "oversight",
+    "placement",
+    "professional curiosity",
+    "quality",
+    "record",
+    "reflection",
+    "reg 44",
+    "reg 45",
+    "repair",
+    "restorative",
+    "restraint",
+    "return",
+    "review",
+    "risk",
+    "safeguarding",
+    "safer recruitment",
+    "safety",
+    "sccif",
+    "sensory",
+    "session",
+    "supervision",
+    "support",
+    "therapeutic",
+    "welfare",
+    "widgets",
+    "workforce"
+  ],
+  "repeated_missing_markers": [
+    {
+      "marker": "child voice",
+      "count": 3
+    },
+    {
+      "marker": "evidence",
+      "count": 3
+    },
+    {
+      "marker": "missing",
+      "count": 2
+    },
+    {
+      "marker": "welfare",
+      "count": 2
+    },
+    {
+      "marker": "notification",
+      "count": 2
+    },
+    {
+      "marker": "record",
+      "count": 2
+    },
+    {
+      "marker": "review",
+      "count": 2
+    },
+    {
+      "marker": "ofsted",
+      "count": 2
+    }
+  ],
+  "overall_readiness_score": 35.0,
+  "gaps": [
+    {
+      "domain": "Key-work sessions",
+      "gap": "Expected contract keywork_session but got None; Expected policy deterministic_only but got openai_compact; OpenAI would be called when internal path expected; Missing internal markers: child voice, session; Missing answer markers: key-work, child",
+      "severity": "medium",
+      "recommended_internal_knowledge_addition": "Add internal knowledge markers for Key-work sessions: child voice, session"
+    },
+    {
+      "domain": "Missing from home",
+      "gap": "Expected contract missing_return_record but got None; Missing internal markers: missing, welfare; Missing answer markers: missing, welfare",
+      "severity": "high",
+      "recommended_internal_knowledge_addition": "Add internal knowledge markers for Missing from home: missing, welfare"
+    },
+    {
+      "domain": "Online safety",
+      "gap": "Expected contract incident_record but got None; Missing internal markers: online; Missing answer markers: online, safeguard",
+      "severity": "high",
+      "recommended_internal_knowledge_addition": "Add internal knowledge markers for Online safety: online"
+    },
+    {
+      "domain": "Physical intervention / restraint",
+      "gap": "Expected contract incident_record but got None; Expected policy openai_enhanced but got openai_mandatory_safeguarding; Missing internal markers: restraint, safety; Missing answer markers: restraint, safety",
+      "severity": "medium",
+      "recommended_internal_knowledge_addition": "Add internal knowledge markers for Physical intervention / restraint: restraint, safety"
+    },
+    {
+      "domain": "Health appointment",
+      "gap": "Expected contract daily_record but got None; Missing internal markers: health, record; Missing answer markers: health, record",
+      "severity": "medium",
+      "recommended_internal_knowledge_addition": "Add internal knowledge markers for Health appointment: health, record"
+    },
+    {
+      "domain": "Education concern",
+      "gap": "Expected contract daily_record but got None; Missing internal markers: education, record; Missing answer markers: education, record",
+      "severity": "medium",
+      "recommended_internal_knowledge_addition": "Add internal knowledge markers for Education concern: education, record"
+    },
+    {
+      "domain": "Family time / contact",
+      "gap": "Expected contract daily_record but got None; Missing internal markers: contact, child voice; Missing answer markers: contact, child",
+      "severity": "medium",
+      "recommended_internal_knowledge_addition": "Add internal knowledge markers for Family time / contact: contact, child voice"
+    },
+    {
+      "domain": "Complaints",
+      "gap": "Expected policy openai_enhanced but got openai_mandatory_safeguarding; Missing internal markers: complaint, child voice; Missing answer markers: complaint, record",
+      "severity": "medium",
+      "recommended_internal_knowledge_addition": "Add internal knowledge markers for Complaints: complaint, child voice"
+    },
+    {
+      "domain": "GDD / communication support",
+      "gap": "Missing internal markers: widgets; Missing answer markers: communication, plan",
+      "severity": "low",
+      "recommended_internal_knowledge_addition": "Add internal knowledge markers for GDD / communication support: widgets"
+    },
+    {
+      "domain": "Autism / sensory support",
+      "gap": "Expected contract daily_record but got None; Missing internal markers: sensory, support; Missing answer markers: sensory, record",
+      "severity": "medium",
+      "recommended_internal_knowledge_addition": "Add internal knowledge markers for Autism / sensory support: sensory, support"
+    },
+    {
+      "domain": "Support planning",
+      "gap": "Expected policy openai_compact but got openai_enhanced; Missing internal markers: child-centred; Missing answer markers: support, plan",
+      "severity": "medium",
+      "recommended_internal_knowledge_addition": "Add internal knowledge markers for Support planning: child-centred"
+    },
+    {
+      "domain": "Risk assessment review",
+      "gap": "Expected contract manager_oversight_note but got None; Missing internal markers: risk, review; Missing answer markers: risk, review",
+      "severity": "medium",
+      "recommended_internal_knowledge_addition": "Add internal knowledge markers for Risk assessment review: risk, review"
+    },
+    {
+      "domain": "Placement plan review",
+      "gap": "Expected contract manager_oversight_note but got None; Missing internal markers: placement, review; Missing answer markers: placement, review",
+      "severity": "medium",
+      "recommended_internal_knowledge_addition": "Add internal knowledge markers for Placement plan review: placement, review"
+    },
+    {
+      "domain": "Behaviour support",
+      "gap": "Expected contract daily_record but got None; Missing internal markers: behaviour, therapeutic; Missing answer markers: behaviour, support",
+      "severity": "medium",
+      "recommended_internal_knowledge_addition": "Add internal knowledge markers for Behaviour support: behaviour, therapeutic"
+    },
+    {
+      "domain": "Restorative repair",
+      "gap": "Expected contract incident_record but got None; Missing internal markers: repair, restorative; Missing answer markers: repair, record",
+      "severity": "medium",
+      "recommended_internal_knowledge_addition": "Add internal knowledge markers for Restorative repair: repair, restorative"
+    },
+    {
+      "domain": "Consequences / boundaries",
+      "gap": "Expected contract daily_record but got None; Missing internal markers: boundaries, fair; Missing answer markers: boundaries, record",
+      "severity": "medium",
+      "recommended_internal_knowledge_addition": "Add internal knowledge markers for Consequences / boundaries: boundaries, fair"
+    },
+    {
+      "domain": "Staff supervision",
+      "gap": "Expected policy openai_compact but got openai_mandatory_safeguarding; Missing internal markers: supervision, reflection; Missing answer markers: supervision",
+      "severity": "medium",
+      "recommended_internal_knowledge_addition": "Add internal knowledge markers for Staff supervision: supervision, reflection"
+    },
+    {
+      "domain": "Team learning",
+      "gap": "Expected policy openai_enhanced but got internal_template_plus_validator; Missing internal markers: learning, debrief; Missing answer markers: learning, team",
+      "severity": "medium",
+      "recommended_internal_knowledge_addition": "Add internal knowledge markers for Team learning: learning, debrief"
+    },
+    {
+      "domain": "Reg 44",
+      "gap": "Expected policy deterministic_only but got openai_mandatory_safeguarding; OpenAI would be called when internal path expected; Missing internal markers: reg 44, evidence; Missing answer markers: reg 44, evidence",
+      "severity": "medium",
+      "recommended_internal_knowledge_addition": "Add internal knowledge markers for Reg 44: reg 44, evidence"
+    },
+    {
+      "domain": "Reg 45",
+      "gap": "Expected contract manager_oversight_note but got ofsted_preparation; Expected policy openai_compact but got openai_mandatory_safeguarding; Missing internal markers: reg 45, manager; Missing answer markers: reg 45, manager",
+      "severity": "medium",
+      "recommended_internal_knowledge_addition": "Add internal knowledge markers for Reg 45: reg 45, manager"
+    },
+    {
+      "domain": "Ofsted preparation",
+      "gap": "Expected contract manager_oversight_note but got ofsted_preparation; Expected policy openai_enhanced but got openai_mandatory_safeguarding; Missing internal markers: ofsted, evidence; Missing answer markers: ofsted, evidence",
+      "severity": "medium",
+      "recommended_internal_knowledge_addition": "Add internal knowledge markers for Ofsted preparation: ofsted, evidence"
+    },
+    {
+      "domain": "SCCIF-style evidence",
+      "gap": "Expected policy openai_enhanced but got openai_mandatory_safeguarding; Missing internal markers: sccif, evidence; Missing answer markers: sccif, evidence",
+      "severity": "medium",
+      "recommended_internal_knowledge_addition": "Add internal knowledge markers for SCCIF-style evidence: sccif, evidence"
+    },
+    {
+      "domain": "Leadership and management",
+      "gap": "Expected contract manager_oversight_note but got None; Expected policy openai_enhanced but got openai_compact; Missing internal markers: leadership, oversight; Missing answer markers: leadership, management",
+      "severity": "medium",
+      "recommended_internal_knowledge_addition": "Add internal knowledge markers for Leadership and management: leadership, oversight"
+    },
+    {
+      "domain": "Quality of care",
+      "gap": "Expected policy openai_compact but got internal_template_plus_validator; Missing internal markers: quality; Missing answer markers: quality, care",
+      "severity": "medium",
+      "recommended_internal_knowledge_addition": "Add internal knowledge markers for Quality of care: quality"
+    },
+    {
+      "domain": "Safer recruitment / workforce",
+      "gap": "Expected contract manager_oversight_note but got None; Missing internal markers: safer recruitment, workforce; Missing answer markers: recruitment, workforce",
+      "severity": "medium",
+      "recommended_internal_knowledge_addition": "Add internal knowledge markers for Safer recruitment / workforce: safer recruitment, workforce"
+    },
+    {
+      "domain": "Notifications / serious events",
+      "gap": "Expected policy openai_enhanced but got openai_mandatory_safeguarding; Missing internal markers: notification, ofsted; Missing answer markers: notify, ofsted",
+      "severity": "medium",
+      "recommended_internal_knowledge_addition": "Add internal knowledge markers for Notifications / serious events: notification, ofsted"
+    }
+  ],
+  "domain_results": [
+    {
+      "domain": "Daily recording",
+      "prompt_id": "daily_recording",
+      "selected_contract": "daily_record",
+      "execution_policy": "deterministic_only",
+      "expected_execution_policy": "deterministic_only",
+      "openai_would_be_called": false,
+      "embeddings_would_be_called": false,
+      "scenario_bank_loaded": false,
+      "internal_knowledge_passed": true,
+      "missing_internal_markers": [],
+      "missing_answer_markers": [],
+      "ofsted_readiness_score": 3,
+      "ofsted_ready": true,
+      "pilot_ready": true,
+      "gap": null
+    },
+    {
+      "domain": "Incident recording",
+      "prompt_id": "incident_recording",
+      "selected_contract": "incident_record",
+      "execution_policy": "deterministic_only",
+      "expected_execution_policy": "deterministic_only",
+      "openai_would_be_called": false,
+      "embeddings_would_be_called": false,
+      "scenario_bank_loaded": false,
+      "internal_knowledge_passed": true,
+      "missing_internal_markers": [],
+      "missing_answer_markers": [],
+      "ofsted_readiness_score": 3,
+      "ofsted_ready": true,
+      "pilot_ready": true,
+      "gap": null
+    },
+    {
+      "domain": "Key-work sessions",
+      "prompt_id": "keywork_sessions",
+      "selected_contract": null,
+      "execution_policy": "openai_compact",
+      "expected_execution_policy": "deterministic_only",
+      "openai_would_be_called": true,
+      "embeddings_would_be_called": false,
+      "scenario_bank_loaded": false,
+      "internal_knowledge_passed": false,
+      "missing_internal_markers": [
+        "child voice",
+        "session"
+      ],
+      "missing_answer_markers": [
+        "key-work",
+        "child"
+      ],
+      "ofsted_readiness_score": null,
+      "ofsted_ready": null,
+      "pilot_ready": false,
+      "gap": {
+        "domain": "Key-work sessions",
+        "gap": "Expected contract keywork_session but got None; Expected policy deterministic_only but got openai_compact; OpenAI would be called when internal path expected; Missing internal markers: child voice, session; Missing answer markers: key-work, child",
+        "severity": "medium",
+        "recommended_internal_knowledge_addition": "Add internal knowledge markers for Key-work sessions: child voice, session"
+      }
+    },
+    {
+      "domain": "Handover",
+      "prompt_id": "handover",
+      "selected_contract": "handover",
+      "execution_policy": "deterministic_only",
+      "expected_execution_policy": "deterministic_only",
+      "openai_would_be_called": false,
+      "embeddings_would_be_called": false,
+      "scenario_bank_loaded": false,
+      "internal_knowledge_passed": true,
+      "missing_internal_markers": [],
+      "missing_answer_markers": [],
+      "ofsted_readiness_score": 2,
+      "ofsted_ready": false,
+      "pilot_ready": false,
+      "gap": null
+    },
+    {
+      "domain": "Manager oversight",
+      "prompt_id": "manager_oversight",
+      "selected_contract": "manager_oversight_note",
+      "execution_policy": "deterministic_only",
+      "expected_execution_policy": "deterministic_only",
+      "openai_would_be_called": false,
+      "embeddings_would_be_called": false,
+      "scenario_bank_loaded": false,
+      "internal_knowledge_passed": true,
+      "missing_internal_markers": [],
+      "missing_answer_markers": [],
+      "ofsted_readiness_score": 2,
+      "ofsted_ready": false,
+      "pilot_ready": false,
+      "gap": null
+    },
+    {
+      "domain": "Safeguarding concern",
+      "prompt_id": "safeguarding_concern",
+      "selected_contract": null,
+      "execution_policy": "openai_mandatory_safeguarding",
+      "expected_execution_policy": "openai_mandatory_safeguarding",
+      "openai_would_be_called": true,
+      "embeddings_would_be_called": false,
+      "scenario_bank_loaded": false,
+      "internal_knowledge_passed": true,
+      "missing_internal_markers": [],
+      "missing_answer_markers": [
+        "safeguard",
+        "record"
+      ],
+      "ofsted_readiness_score": null,
+      "ofsted_ready": null,
+      "pilot_ready": true,
+      "gap": null
+    },
+    {
+      "domain": "Missing from home",
+      "prompt_id": "missing_from_home",
+      "selected_contract": null,
+      "execution_policy": "openai_mandatory_safeguarding",
+      "expected_execution_policy": "openai_mandatory_safeguarding",
+      "openai_would_be_called": true,
+      "embeddings_would_be_called": false,
+      "scenario_bank_loaded": false,
+      "internal_knowledge_passed": false,
+      "missing_internal_markers": [
+        "missing",
+        "welfare"
+      ],
+      "missing_answer_markers": [
+        "missing",
+        "welfare"
+      ],
+      "ofsted_readiness_score": null,
+      "ofsted_ready": null,
+      "pilot_ready": false,
+      "gap": {
+        "domain": "Missing from home",
+        "gap": "Expected contract missing_return_record but got None; Missing internal markers: missing, welfare; Missing answer markers: missing, welfare",
+        "severity": "high",
+        "recommended_internal_knowledge_addition": "Add internal knowledge markers for Missing from home: missing, welfare"
+      }
+    },
+    {
+      "domain": "Return after missing",
+      "prompt_id": "return_after_missing",
+      "selected_contract": "missing_return_record",
+      "execution_policy": "openai_mandatory_safeguarding",
+      "expected_execution_policy": "openai_mandatory_safeguarding",
+      "openai_would_be_called": true,
+      "embeddings_would_be_called": false,
+      "scenario_bank_loaded": false,
+      "internal_knowledge_passed": true,
+      "missing_internal_markers": [
+        "return",
+        "welfare",
+        "missing"
+      ],
+      "missing_answer_markers": [
+        "return",
+        "welfare"
+      ],
+      "ofsted_readiness_score": null,
+      "ofsted_ready": null,
+      "pilot_ready": true,
+      "gap": null
+    },
+    {
+      "domain": "Allegation against staff / LADO",
+      "prompt_id": "allegation_lado",
+      "selected_contract": "allegation_lado",
+      "execution_policy": "openai_mandatory_safeguarding",
+      "expected_execution_policy": "openai_mandatory_safeguarding",
+      "openai_would_be_called": true,
+      "embeddings_would_be_called": false,
+      "scenario_bank_loaded": false,
+      "internal_knowledge_passed": true,
+      "missing_internal_markers": [
+        "lado",
+        "do not investigate"
+      ],
+      "missing_answer_markers": [
+        "do not investigate",
+        "record"
+      ],
+      "ofsted_readiness_score": null,
+      "ofsted_ready": null,
+      "pilot_ready": true,
+      "gap": null
+    },
+    {
+      "domain": "Abuse disclosure",
+      "prompt_id": "abuse_disclosure",
+      "selected_contract": "abuse_disclosure",
+      "execution_policy": "openai_mandatory_safeguarding",
+      "expected_execution_policy": "openai_mandatory_safeguarding",
+      "openai_would_be_called": true,
+      "embeddings_would_be_called": false,
+      "scenario_bank_loaded": false,
+      "internal_knowledge_passed": true,
+      "missing_internal_markers": [
+        "listen"
+      ],
+      "missing_answer_markers": [
+        "listen",
+        "record"
+      ],
+      "ofsted_readiness_score": null,
+      "ofsted_ready": null,
+      "pilot_ready": true,
+      "gap": null
+    },
+    {
+      "domain": "Suicidal ideation / self-harm",
+      "prompt_id": "suicidal_self_harm",
+      "selected_contract": "suicidal_self_harm",
+      "execution_policy": "openai_mandatory_safeguarding",
+      "expected_execution_policy": "openai_mandatory_safeguarding",
+      "openai_would_be_called": true,
+      "embeddings_would_be_called": false,
+      "scenario_bank_loaded": false,
+      "internal_knowledge_passed": true,
+      "missing_internal_markers": [
+        "immediate"
+      ],
+      "missing_answer_markers": [
+        "immediate",
+        "safeguard"
+      ],
+      "ofsted_readiness_score": null,
+      "ofsted_ready": null,
+      "pilot_ready": true,
+      "gap": null
+    },
+    {
+      "domain": "Exploitation / contextual safeguarding",
+      "prompt_id": "exploitation",
+      "selected_contract": "abuse_disclosure",
+      "execution_policy": "openai_mandatory_safeguarding",
+      "expected_execution_policy": "openai_mandatory_safeguarding",
+      "openai_would_be_called": true,
+      "embeddings_would_be_called": false,
+      "scenario_bank_loaded": false,
+      "internal_knowledge_passed": true,
+      "missing_internal_markers": [
+        "exploitation"
+      ],
+      "missing_answer_markers": [
+        "exploitation",
+        "safeguard"
+      ],
+      "ofsted_readiness_score": null,
+      "ofsted_ready": null,
+      "pilot_ready": true,
+      "gap": null
+    },
+    {
+      "domain": "Online safety",
+      "prompt_id": "online_safety",
+      "selected_contract": null,
+      "execution_policy": "openai_mandatory_safeguarding",
+      "expected_execution_policy": "openai_mandatory_safeguarding",
+      "openai_would_be_called": true,
+      "embeddings_would_be_called": false,
+      "scenario_bank_loaded": false,
+      "internal_knowledge_passed": false,
+      "missing_internal_markers": [
+        "online"
+      ],
+      "missing_answer_markers": [
+        "online",
+        "safeguard"
+      ],
+      "ofsted_readiness_score": null,
+      "ofsted_ready": null,
+      "pilot_ready": false,
+      "gap": {
+        "domain": "Online safety",
+        "gap": "Expected contract incident_record but got None; Missing internal markers: online; Missing answer markers: online, safeguard",
+        "severity": "high",
+        "recommended_internal_knowledge_addition": "Add internal knowledge markers for Online safety: online"
+      }
+    },
+    {
+      "domain": "Physical intervention / restraint",
+      "prompt_id": "physical_intervention",
+      "selected_contract": null,
+      "execution_policy": "openai_mandatory_safeguarding",
+      "expected_execution_policy": "openai_enhanced",
+      "openai_would_be_called": true,
+      "embeddings_would_be_called": false,
+      "scenario_bank_loaded": false,
+      "internal_knowledge_passed": false,
+      "missing_internal_markers": [
+        "restraint",
+        "safety"
+      ],
+      "missing_answer_markers": [
+        "restraint",
+        "safety"
+      ],
+      "ofsted_readiness_score": null,
+      "ofsted_ready": null,
+      "pilot_ready": false,
+      "gap": {
+        "domain": "Physical intervention / restraint",
+        "gap": "Expected contract incident_record but got None; Expected policy openai_enhanced but got openai_mandatory_safeguarding; Missing internal markers: restraint, safety; Missing answer markers: restraint, safety",
+        "severity": "medium",
+        "recommended_internal_knowledge_addition": "Add internal knowledge markers for Physical intervention / restraint: restraint, safety"
+      }
+    },
+    {
+      "domain": "Medication error",
+      "prompt_id": "medication_error",
+      "selected_contract": "incident_record",
+      "execution_policy": "openai_mandatory_safeguarding",
+      "expected_execution_policy": "openai_mandatory_safeguarding",
+      "openai_would_be_called": true,
+      "embeddings_would_be_called": false,
+      "scenario_bank_loaded": false,
+      "internal_knowledge_passed": true,
+      "missing_internal_markers": [
+        "medication",
+        "notification"
+      ],
+      "missing_answer_markers": [
+        "medication",
+        "notify"
+      ],
+      "ofsted_readiness_score": null,
+      "ofsted_ready": null,
+      "pilot_ready": true,
+      "gap": null
+    },
+    {
+      "domain": "Health appointment",
+      "prompt_id": "health_appointment",
+      "selected_contract": null,
+      "execution_policy": "openai_compact",
+      "expected_execution_policy": "openai_compact",
+      "openai_would_be_called": true,
+      "embeddings_would_be_called": false,
+      "scenario_bank_loaded": false,
+      "internal_knowledge_passed": false,
+      "missing_internal_markers": [
+        "health",
+        "record"
+      ],
+      "missing_answer_markers": [
+        "health",
+        "record"
+      ],
+      "ofsted_readiness_score": null,
+      "ofsted_ready": null,
+      "pilot_ready": false,
+      "gap": {
+        "domain": "Health appointment",
+        "gap": "Expected contract daily_record but got None; Missing internal markers: health, record; Missing answer markers: health, record",
+        "severity": "medium",
+        "recommended_internal_knowledge_addition": "Add internal knowledge markers for Health appointment: health, record"
+      }
+    },
+    {
+      "domain": "Education concern",
+      "prompt_id": "education_concern",
+      "selected_contract": null,
+      "execution_policy": "openai_compact",
+      "expected_execution_policy": "openai_compact",
+      "openai_would_be_called": true,
+      "embeddings_would_be_called": false,
+      "scenario_bank_loaded": false,
+      "internal_knowledge_passed": false,
+      "missing_internal_markers": [
+        "education",
+        "record"
+      ],
+      "missing_answer_markers": [
+        "education",
+        "record"
+      ],
+      "ofsted_readiness_score": null,
+      "ofsted_ready": null,
+      "pilot_ready": false,
+      "gap": {
+        "domain": "Education concern",
+        "gap": "Expected contract daily_record but got None; Missing internal markers: education, record; Missing answer markers: education, record",
+        "severity": "medium",
+        "recommended_internal_knowledge_addition": "Add internal knowledge markers for Education concern: education, record"
+      }
+    },
+    {
+      "domain": "Family time / contact",
+      "prompt_id": "family_contact",
+      "selected_contract": null,
+      "execution_policy": "openai_compact",
+      "expected_execution_policy": "openai_compact",
+      "openai_would_be_called": true,
+      "embeddings_would_be_called": false,
+      "scenario_bank_loaded": false,
+      "internal_knowledge_passed": false,
+      "missing_internal_markers": [
+        "contact",
+        "child voice"
+      ],
+      "missing_answer_markers": [
+        "contact",
+        "child"
+      ],
+      "ofsted_readiness_score": null,
+      "ofsted_ready": null,
+      "pilot_ready": false,
+      "gap": {
+        "domain": "Family time / contact",
+        "gap": "Expected contract daily_record but got None; Missing internal markers: contact, child voice; Missing answer markers: contact, child",
+        "severity": "medium",
+        "recommended_internal_knowledge_addition": "Add internal knowledge markers for Family time / contact: contact, child voice"
+      }
+    },
+    {
+      "domain": "Complaints",
+      "prompt_id": "complaints",
+      "selected_contract": null,
+      "execution_policy": "openai_mandatory_safeguarding",
+      "expected_execution_policy": "openai_enhanced",
+      "openai_would_be_called": true,
+      "embeddings_would_be_called": false,
+      "scenario_bank_loaded": false,
+      "internal_knowledge_passed": false,
+      "missing_internal_markers": [
+        "complaint",
+        "child voice"
+      ],
+      "missing_answer_markers": [
+        "complaint",
+        "record"
+      ],
+      "ofsted_readiness_score": null,
+      "ofsted_ready": null,
+      "pilot_ready": false,
+      "gap": {
+        "domain": "Complaints",
+        "gap": "Expected policy openai_enhanced but got openai_mandatory_safeguarding; Missing internal markers: complaint, child voice; Missing answer markers: complaint, record",
+        "severity": "medium",
+        "recommended_internal_knowledge_addition": "Add internal knowledge markers for Complaints: complaint, child voice"
+      }
+    },
+    {
+      "domain": "Child voice",
+      "prompt_id": "child_voice",
+      "selected_contract": "daily_record",
+      "execution_policy": "internal_template_plus_validator",
+      "expected_execution_policy": "internal_template_plus_validator",
+      "openai_would_be_called": false,
+      "embeddings_would_be_called": false,
+      "scenario_bank_loaded": false,
+      "internal_knowledge_passed": true,
+      "missing_internal_markers": [],
+      "missing_answer_markers": [],
+      "ofsted_readiness_score": 3,
+      "ofsted_ready": true,
+      "pilot_ready": true,
+      "gap": null
+    },
+    {
+      "domain": "GDD / communication support",
+      "prompt_id": "gdd_communication",
+      "selected_contract": "accessible_child_support_plan",
+      "execution_policy": "openai_enhanced",
+      "expected_execution_policy": "openai_enhanced",
+      "openai_would_be_called": true,
+      "embeddings_would_be_called": true,
+      "scenario_bank_loaded": false,
+      "internal_knowledge_passed": false,
+      "missing_internal_markers": [
+        "widgets"
+      ],
+      "missing_answer_markers": [
+        "communication",
+        "plan"
+      ],
+      "ofsted_readiness_score": null,
+      "ofsted_ready": null,
+      "pilot_ready": false,
+      "gap": {
+        "domain": "GDD / communication support",
+        "gap": "Missing internal markers: widgets; Missing answer markers: communication, plan",
+        "severity": "low",
+        "recommended_internal_knowledge_addition": "Add internal knowledge markers for GDD / communication support: widgets"
+      }
+    },
+    {
+      "domain": "Autism / sensory support",
+      "prompt_id": "autism_sensory",
+      "selected_contract": null,
+      "execution_policy": "openai_compact",
+      "expected_execution_policy": "openai_compact",
+      "openai_would_be_called": true,
+      "embeddings_would_be_called": false,
+      "scenario_bank_loaded": false,
+      "internal_knowledge_passed": false,
+      "missing_internal_markers": [
+        "sensory",
+        "support"
+      ],
+      "missing_answer_markers": [
+        "sensory",
+        "record"
+      ],
+      "ofsted_readiness_score": null,
+      "ofsted_ready": null,
+      "pilot_ready": false,
+      "gap": {
+        "domain": "Autism / sensory support",
+        "gap": "Expected contract daily_record but got None; Missing internal markers: sensory, support; Missing answer markers: sensory, record",
+        "severity": "medium",
+        "recommended_internal_knowledge_addition": "Add internal knowledge markers for Autism / sensory support: sensory, support"
+      }
+    },
+    {
+      "domain": "Independence / preparing for adulthood",
+      "prompt_id": "independence_pfa",
+      "selected_contract": "accessible_child_support_plan",
+      "execution_policy": "openai_compact",
+      "expected_execution_policy": "openai_compact",
+      "openai_would_be_called": true,
+      "embeddings_would_be_called": false,
+      "scenario_bank_loaded": false,
+      "internal_knowledge_passed": true,
+      "missing_internal_markers": [
+        "independence",
+        "adulthood"
+      ],
+      "missing_answer_markers": [
+        "independence",
+        "goal"
+      ],
+      "ofsted_readiness_score": null,
+      "ofsted_ready": null,
+      "pilot_ready": true,
+      "gap": null
+    },
+    {
+      "domain": "Support planning",
+      "prompt_id": "support_planning",
+      "selected_contract": "accessible_child_support_plan",
+      "execution_policy": "openai_enhanced",
+      "expected_execution_policy": "openai_compact",
+      "openai_would_be_called": true,
+      "embeddings_would_be_called": true,
+      "scenario_bank_loaded": false,
+      "internal_knowledge_passed": false,
+      "missing_internal_markers": [
+        "child-centred"
+      ],
+      "missing_answer_markers": [
+        "support",
+        "plan"
+      ],
+      "ofsted_readiness_score": null,
+      "ofsted_ready": null,
+      "pilot_ready": false,
+      "gap": {
+        "domain": "Support planning",
+        "gap": "Expected policy openai_compact but got openai_enhanced; Missing internal markers: child-centred; Missing answer markers: support, plan",
+        "severity": "medium",
+        "recommended_internal_knowledge_addition": "Add internal knowledge markers for Support planning: child-centred"
+      }
+    },
+    {
+      "domain": "Risk assessment review",
+      "prompt_id": "risk_assessment_review",
+      "selected_contract": null,
+      "execution_policy": "openai_enhanced",
+      "expected_execution_policy": "openai_enhanced",
+      "openai_would_be_called": true,
+      "embeddings_would_be_called": true,
+      "scenario_bank_loaded": false,
+      "internal_knowledge_passed": false,
+      "missing_internal_markers": [
+        "risk",
+        "review"
+      ],
+      "missing_answer_markers": [
+        "risk",
+        "review"
+      ],
+      "ofsted_readiness_score": null,
+      "ofsted_ready": null,
+      "pilot_ready": false,
+      "gap": {
+        "domain": "Risk assessment review",
+        "gap": "Expected contract manager_oversight_note but got None; Missing internal markers: risk, review; Missing answer markers: risk, review",
+        "severity": "medium",
+        "recommended_internal_knowledge_addition": "Add internal knowledge markers for Risk assessment review: risk, review"
+      }
+    },
+    {
+      "domain": "Placement plan review",
+      "prompt_id": "placement_plan_review",
+      "selected_contract": null,
+      "execution_policy": "openai_enhanced",
+      "expected_execution_policy": "openai_enhanced",
+      "openai_would_be_called": true,
+      "embeddings_would_be_called": true,
+      "scenario_bank_loaded": false,
+      "internal_knowledge_passed": false,
+      "missing_internal_markers": [
+        "placement",
+        "review"
+      ],
+      "missing_answer_markers": [
+        "placement",
+        "review"
+      ],
+      "ofsted_readiness_score": null,
+      "ofsted_ready": null,
+      "pilot_ready": false,
+      "gap": {
+        "domain": "Placement plan review",
+        "gap": "Expected contract manager_oversight_note but got None; Missing internal markers: placement, review; Missing answer markers: placement, review",
+        "severity": "medium",
+        "recommended_internal_knowledge_addition": "Add internal knowledge markers for Placement plan review: placement, review"
+      }
+    },
+    {
+      "domain": "Behaviour support",
+      "prompt_id": "behaviour_support",
+      "selected_contract": null,
+      "execution_policy": "openai_compact",
+      "expected_execution_policy": "openai_compact",
+      "openai_would_be_called": true,
+      "embeddings_would_be_called": false,
+      "scenario_bank_loaded": false,
+      "internal_knowledge_passed": false,
+      "missing_internal_markers": [
+        "behaviour",
+        "therapeutic"
+      ],
+      "missing_answer_markers": [
+        "behaviour",
+        "support"
+      ],
+      "ofsted_readiness_score": null,
+      "ofsted_ready": null,
+      "pilot_ready": false,
+      "gap": {
+        "domain": "Behaviour support",
+        "gap": "Expected contract daily_record but got None; Missing internal markers: behaviour, therapeutic; Missing answer markers: behaviour, support",
+        "severity": "medium",
+        "recommended_internal_knowledge_addition": "Add internal knowledge markers for Behaviour support: behaviour, therapeutic"
+      }
+    },
+    {
+      "domain": "Restorative repair",
+      "prompt_id": "restorative_repair",
+      "selected_contract": null,
+      "execution_policy": "openai_compact",
+      "expected_execution_policy": "openai_compact",
+      "openai_would_be_called": true,
+      "embeddings_would_be_called": false,
+      "scenario_bank_loaded": false,
+      "internal_knowledge_passed": false,
+      "missing_internal_markers": [
+        "repair",
+        "restorative"
+      ],
+      "missing_answer_markers": [
+        "repair",
+        "record"
+      ],
+      "ofsted_readiness_score": null,
+      "ofsted_ready": null,
+      "pilot_ready": false,
+      "gap": {
+        "domain": "Restorative repair",
+        "gap": "Expected contract incident_record but got None; Missing internal markers: repair, restorative; Missing answer markers: repair, record",
+        "severity": "medium",
+        "recommended_internal_knowledge_addition": "Add internal knowledge markers for Restorative repair: repair, restorative"
+      }
+    },
+    {
+      "domain": "Consequences / boundaries",
+      "prompt_id": "consequences_boundaries",
+      "selected_contract": null,
+      "execution_policy": "openai_compact",
+      "expected_execution_policy": "openai_compact",
+      "openai_would_be_called": true,
+      "embeddings_would_be_called": false,
+      "scenario_bank_loaded": false,
+      "internal_knowledge_passed": false,
+      "missing_internal_markers": [
+        "boundaries",
+        "fair"
+      ],
+      "missing_answer_markers": [
+        "boundaries",
+        "record"
+      ],
+      "ofsted_readiness_score": null,
+      "ofsted_ready": null,
+      "pilot_ready": false,
+      "gap": {
+        "domain": "Consequences / boundaries",
+        "gap": "Expected contract daily_record but got None; Missing internal markers: boundaries, fair; Missing answer markers: boundaries, record",
+        "severity": "medium",
+        "recommended_internal_knowledge_addition": "Add internal knowledge markers for Consequences / boundaries: boundaries, fair"
+      }
+    },
+    {
+      "domain": "Staff supervision",
+      "prompt_id": "staff_supervision",
+      "selected_contract": null,
+      "execution_policy": "openai_mandatory_safeguarding",
+      "expected_execution_policy": "openai_compact",
+      "openai_would_be_called": true,
+      "embeddings_would_be_called": false,
+      "scenario_bank_loaded": false,
+      "internal_knowledge_passed": false,
+      "missing_internal_markers": [
+        "supervision",
+        "reflection"
+      ],
+      "missing_answer_markers": [
+        "supervision"
+      ],
+      "ofsted_readiness_score": null,
+      "ofsted_ready": null,
+      "pilot_ready": false,
+      "gap": {
+        "domain": "Staff supervision",
+        "gap": "Expected policy openai_compact but got openai_mandatory_safeguarding; Missing internal markers: supervision, reflection; Missing answer markers: supervision",
+        "severity": "medium",
+        "recommended_internal_knowledge_addition": "Add internal knowledge markers for Staff supervision: supervision, reflection"
+      }
+    },
+    {
+      "domain": "Team learning",
+      "prompt_id": "team_learning",
+      "selected_contract": "incident_record",
+      "execution_policy": "internal_template_plus_validator",
+      "expected_execution_policy": "openai_enhanced",
+      "openai_would_be_called": false,
+      "embeddings_would_be_called": false,
+      "scenario_bank_loaded": false,
+      "internal_knowledge_passed": false,
+      "missing_internal_markers": [
+        "learning",
+        "debrief"
+      ],
+      "missing_answer_markers": [
+        "learning",
+        "team"
+      ],
+      "ofsted_readiness_score": 3,
+      "ofsted_ready": true,
+      "pilot_ready": false,
+      "gap": {
+        "domain": "Team learning",
+        "gap": "Expected policy openai_enhanced but got internal_template_plus_validator; Missing internal markers: learning, debrief; Missing answer markers: learning, team",
+        "severity": "medium",
+        "recommended_internal_knowledge_addition": "Add internal knowledge markers for Team learning: learning, debrief"
+      }
+    },
+    {
+      "domain": "Reg 44",
+      "prompt_id": "reg44",
+      "selected_contract": "reg44_visitor",
+      "execution_policy": "openai_mandatory_safeguarding",
+      "expected_execution_policy": "deterministic_only",
+      "openai_would_be_called": true,
+      "embeddings_would_be_called": false,
+      "scenario_bank_loaded": false,
+      "internal_knowledge_passed": false,
+      "missing_internal_markers": [
+        "reg 44",
+        "evidence"
+      ],
+      "missing_answer_markers": [
+        "reg 44",
+        "evidence"
+      ],
+      "ofsted_readiness_score": null,
+      "ofsted_ready": null,
+      "pilot_ready": false,
+      "gap": {
+        "domain": "Reg 44",
+        "gap": "Expected policy deterministic_only but got openai_mandatory_safeguarding; OpenAI would be called when internal path expected; Missing internal markers: reg 44, evidence; Missing answer markers: reg 44, evidence",
+        "severity": "medium",
+        "recommended_internal_knowledge_addition": "Add internal knowledge markers for Reg 44: reg 44, evidence"
+      }
+    },
+    {
+      "domain": "Reg 45",
+      "prompt_id": "reg45",
+      "selected_contract": "ofsted_preparation",
+      "execution_policy": "openai_mandatory_safeguarding",
+      "expected_execution_policy": "openai_compact",
+      "openai_would_be_called": true,
+      "embeddings_would_be_called": false,
+      "scenario_bank_loaded": false,
+      "internal_knowledge_passed": false,
+      "missing_internal_markers": [
+        "reg 45",
+        "manager"
+      ],
+      "missing_answer_markers": [
+        "reg 45",
+        "manager"
+      ],
+      "ofsted_readiness_score": null,
+      "ofsted_ready": null,
+      "pilot_ready": false,
+      "gap": {
+        "domain": "Reg 45",
+        "gap": "Expected contract manager_oversight_note but got ofsted_preparation; Expected policy openai_compact but got openai_mandatory_safeguarding; Missing internal markers: reg 45, manager; Missing answer markers: reg 45, manager",
+        "severity": "medium",
+        "recommended_internal_knowledge_addition": "Add internal knowledge markers for Reg 45: reg 45, manager"
+      }
+    },
+    {
+      "domain": "Ofsted preparation",
+      "prompt_id": "ofsted_preparation",
+      "selected_contract": "ofsted_preparation",
+      "execution_policy": "openai_mandatory_safeguarding",
+      "expected_execution_policy": "openai_enhanced",
+      "openai_would_be_called": true,
+      "embeddings_would_be_called": false,
+      "scenario_bank_loaded": false,
+      "internal_knowledge_passed": false,
+      "missing_internal_markers": [
+        "ofsted",
+        "evidence"
+      ],
+      "missing_answer_markers": [
+        "ofsted",
+        "evidence"
+      ],
+      "ofsted_readiness_score": null,
+      "ofsted_ready": null,
+      "pilot_ready": false,
+      "gap": {
+        "domain": "Ofsted preparation",
+        "gap": "Expected contract manager_oversight_note but got ofsted_preparation; Expected policy openai_enhanced but got openai_mandatory_safeguarding; Missing internal markers: ofsted, evidence; Missing answer markers: ofsted, evidence",
+        "severity": "medium",
+        "recommended_internal_knowledge_addition": "Add internal knowledge markers for Ofsted preparation: ofsted, evidence"
+      }
+    },
+    {
+      "domain": "SCCIF-style evidence",
+      "prompt_id": "sccif_evidence",
+      "selected_contract": null,
+      "execution_policy": "openai_mandatory_safeguarding",
+      "expected_execution_policy": "openai_enhanced",
+      "openai_would_be_called": true,
+      "embeddings_would_be_called": false,
+      "scenario_bank_loaded": false,
+      "internal_knowledge_passed": false,
+      "missing_internal_markers": [
+        "sccif",
+        "evidence"
+      ],
+      "missing_answer_markers": [
+        "sccif",
+        "evidence"
+      ],
+      "ofsted_readiness_score": null,
+      "ofsted_ready": null,
+      "pilot_ready": false,
+      "gap": {
+        "domain": "SCCIF-style evidence",
+        "gap": "Expected policy openai_enhanced but got openai_mandatory_safeguarding; Missing internal markers: sccif, evidence; Missing answer markers: sccif, evidence",
+        "severity": "medium",
+        "recommended_internal_knowledge_addition": "Add internal knowledge markers for SCCIF-style evidence: sccif, evidence"
+      }
+    },
+    {
+      "domain": "Leadership and management",
+      "prompt_id": "leadership_management",
+      "selected_contract": null,
+      "execution_policy": "openai_compact",
+      "expected_execution_policy": "openai_enhanced",
+      "openai_would_be_called": true,
+      "embeddings_would_be_called": false,
+      "scenario_bank_loaded": false,
+      "internal_knowledge_passed": false,
+      "missing_internal_markers": [
+        "leadership",
+        "oversight"
+      ],
+      "missing_answer_markers": [
+        "leadership",
+        "management"
+      ],
+      "ofsted_readiness_score": null,
+      "ofsted_ready": null,
+      "pilot_ready": false,
+      "gap": {
+        "domain": "Leadership and management",
+        "gap": "Expected contract manager_oversight_note but got None; Expected policy openai_enhanced but got openai_compact; Missing internal markers: leadership, oversight; Missing answer markers: leadership, management",
+        "severity": "medium",
+        "recommended_internal_knowledge_addition": "Add internal knowledge markers for Leadership and management: leadership, oversight"
+      }
+    },
+    {
+      "domain": "Quality of care",
+      "prompt_id": "quality_of_care",
+      "selected_contract": "daily_record",
+      "execution_policy": "internal_template_plus_validator",
+      "expected_execution_policy": "openai_compact",
+      "openai_would_be_called": false,
+      "embeddings_would_be_called": false,
+      "scenario_bank_loaded": false,
+      "internal_knowledge_passed": false,
+      "missing_internal_markers": [
+        "quality"
+      ],
+      "missing_answer_markers": [
+        "quality",
+        "care"
+      ],
+      "ofsted_readiness_score": 3,
+      "ofsted_ready": true,
+      "pilot_ready": false,
+      "gap": {
+        "domain": "Quality of care",
+        "gap": "Expected policy openai_compact but got internal_template_plus_validator; Missing internal markers: quality; Missing answer markers: quality, care",
+        "severity": "medium",
+        "recommended_internal_knowledge_addition": "Add internal knowledge markers for Quality of care: quality"
+      }
+    },
+    {
+      "domain": "Safer recruitment / workforce",
+      "prompt_id": "safer_recruitment",
+      "selected_contract": null,
+      "execution_policy": "openai_compact",
+      "expected_execution_policy": "openai_compact",
+      "openai_would_be_called": true,
+      "embeddings_would_be_called": false,
+      "scenario_bank_loaded": false,
+      "internal_knowledge_passed": false,
+      "missing_internal_markers": [
+        "safer recruitment",
+        "workforce"
+      ],
+      "missing_answer_markers": [
+        "recruitment",
+        "workforce"
+      ],
+      "ofsted_readiness_score": null,
+      "ofsted_ready": null,
+      "pilot_ready": false,
+      "gap": {
+        "domain": "Safer recruitment / workforce",
+        "gap": "Expected contract manager_oversight_note but got None; Missing internal markers: safer recruitment, workforce; Missing answer markers: recruitment, workforce",
+        "severity": "medium",
+        "recommended_internal_knowledge_addition": "Add internal knowledge markers for Safer recruitment / workforce: safer recruitment, workforce"
+      }
+    },
+    {
+      "domain": "Notifications / serious events",
+      "prompt_id": "notifications_serious_events",
+      "selected_contract": "ofsted_preparation",
+      "execution_policy": "openai_mandatory_safeguarding",
+      "expected_execution_policy": "openai_enhanced",
+      "openai_would_be_called": true,
+      "embeddings_would_be_called": false,
+      "scenario_bank_loaded": false,
+      "internal_knowledge_passed": false,
+      "missing_internal_markers": [
+        "notification",
+        "ofsted"
+      ],
+      "missing_answer_markers": [
+        "notify",
+        "ofsted"
+      ],
+      "ofsted_readiness_score": null,
+      "ofsted_ready": null,
+      "pilot_ready": false,
+      "gap": {
+        "domain": "Notifications / serious events",
+        "gap": "Expected policy openai_enhanced but got openai_mandatory_safeguarding; Missing internal markers: notification, ofsted; Missing answer markers: notify, ofsted",
+        "severity": "medium",
+        "recommended_internal_knowledge_addition": "Add internal knowledge markers for Notifications / serious events: notification, ofsted"
+      }
+    },
+    {
+      "domain": "Professional curiosity",
+      "prompt_id": "professional_curiosity",
+      "selected_contract": null,
+      "execution_policy": "openai_compact",
+      "expected_execution_policy": "openai_compact",
+      "openai_would_be_called": true,
+      "embeddings_would_be_called": false,
+      "scenario_bank_loaded": false,
+      "internal_knowledge_passed": true,
+      "missing_internal_markers": [
+        "professional curiosity",
+        "safeguarding"
+      ],
+      "missing_answer_markers": [
+        "curiosity",
+        "record"
+      ],
+      "ofsted_readiness_score": null,
+      "ofsted_ready": null,
+      "pilot_ready": true,
+      "gap": null
+    }
+  ]
+}

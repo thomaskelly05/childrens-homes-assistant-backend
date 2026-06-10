@@ -70,6 +70,11 @@ _INTERNAL_CONTEXT_KEYS = frozenset(
         "active_intelligence_layers",
         "route_map",
         "prompt_addendum",
+        "execution_policy",
+        "execution_telemetry",
+        "selected_contract",
+        "local_template",
+        "optimisation_gap",
     }
 )
 

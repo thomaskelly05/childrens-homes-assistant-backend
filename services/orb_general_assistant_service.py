@@ -414,6 +414,8 @@ class OrbGeneralAssistantService:
         document_title: str | None = None,
         raw_user_message: str | None = None,
         user: dict[str, Any] | None = None,
+        brain_convergence: dict[str, Any] | None = None,
+        execution_policy: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         started = time.perf_counter()
         images = image_data_urls or []
@@ -488,7 +490,61 @@ class OrbGeneralAssistantService:
                 return result
 
         if not images:
+            from services.orb_execution_policy_service import (
+                OrbExecutionPolicyDecision,
+                orb_execution_policy_service,
+            )
             from services.orb_local_response_service import orb_local_response_service
+
+            if execution_policy:
+                policy = OrbExecutionPolicyDecision(
+                    **{
+                        k: v
+                        for k, v in execution_policy.items()
+                        if k in OrbExecutionPolicyDecision.__dataclass_fields__
+                    }
+                )
+            else:
+                policy = orb_execution_policy_service.resolve(
+                    user_message,
+                    mode=mode,
+                    brain_convergence=brain_convergence,
+                )
+            deterministic = orb_execution_policy_service.try_deterministic_answer(
+                user_message,
+                policy=policy,
+            )
+            if deterministic is not None:
+                elapsed_ms = int((time.perf_counter() - started) * 1000)
+                validation = deterministic.get("validation") or {}
+                telemetry = orb_execution_policy_service.build_execution_telemetry(
+                    policy=policy,
+                    openai_called=False,
+                    embeddings_called=False,
+                    scenario_bank_loaded=False,
+                    prompt_chars=len(deterministic.get("answer") or ""),
+                    total_ms=elapsed_ms,
+                    final_answer_validation_passed=validation.get("passed"),
+                )
+                result = {
+                    "answer": _finalize_standalone_answer(
+                        deterministic["answer"], message=user_message, mode=mode
+                    ),
+                    "sources": deterministic.get("sources") or [],
+                    "citations": deterministic.get("citations") or [],
+                    "context_used": {
+                        **self._fast_path_context_used(mode=mode),
+                        "execution_policy": policy.to_dict(),
+                        "execution_telemetry": telemetry,
+                        "local_template": f"execution_policy:{policy.execution_policy}",
+                        "selected_contract": policy.selected_contract,
+                    },
+                    "tools_used": ["orb_execution_policy_deterministic"],
+                    "internal_data_access": False,
+                    "no_llm": True,
+                }
+                _track_standalone_governance(result, message=user_message)
+                return result
 
             local = orb_local_response_service.try_local_response(user_message, mode=mode)
             if local is not None:

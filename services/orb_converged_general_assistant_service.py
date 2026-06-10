@@ -47,6 +47,8 @@ class OrbConvergedGeneralAssistantService:
         document_title: str | None = None,
         raw_user_message: str | None = None,
         user: dict[str, Any] | None = None,
+        brain_convergence: dict[str, Any] | None = None,
+        execution_policy: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         user_message = _safe_text(raw_user_message) or _safe_text(message)
         supplied_context_types: list[str] = []
@@ -60,14 +62,23 @@ class OrbConvergedGeneralAssistantService:
             supplied_context_types.append("conversation_history")
 
         surface = "standalone"
-        retrieval_bundle = orb_knowledge_retrieval_service.prepare_request_bundle(
-            user_message,
-            mode=mode,
-            profile_context=profile_context,
-            attachments=["image"] if image_data_urls else None,
-            history=history,
-        )
-        prompt_tier = retrieval_bundle["prompt_tier"]
+        policy_name = str((execution_policy or {}).get("execution_policy") or "")
+        skip_heavy_enrichment = policy_name in {
+            "deterministic_only",
+            "internal_template_plus_validator",
+        }
+        if skip_heavy_enrichment:
+            retrieval_bundle = {"prompt_tier": "fast", "indicare_intelligence": {}}
+            prompt_tier = "fast"
+        else:
+            retrieval_bundle = orb_knowledge_retrieval_service.prepare_request_bundle(
+                user_message,
+                mode=mode,
+                profile_context=profile_context,
+                attachments=["image"] if image_data_urls else None,
+                history=history,
+            )
+            prompt_tier = retrieval_bundle["prompt_tier"]
 
         context_packet = orb_residential_intelligence_service.build_context_packet(
             user_message,
@@ -108,6 +119,8 @@ class OrbConvergedGeneralAssistantService:
             document_title=document_title,
             raw_user_message=user_message,
             user=user,
+            brain_convergence=brain_convergence,
+            execution_policy=execution_policy,
         )
 
         answer_text = _safe_text(result.get("answer"))
