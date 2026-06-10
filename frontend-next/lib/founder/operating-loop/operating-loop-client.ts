@@ -1,8 +1,20 @@
+import { getCsrfToken } from '@/lib/auth/api'
+
 import type {
   FounderOperatingLoopPlan,
   FounderOperatingLoopRun,
   OperatingLoopRunResponse
 } from './operating-loop-types'
+
+function operatingLoopHeaders(): HeadersInit {
+  const headers = new Headers({
+    'content-type': 'application/json',
+    accept: 'application/json'
+  })
+  const csrf = getCsrfToken()
+  if (csrf) headers.set('x-csrf-token', csrf)
+  return headers
+}
 
 export async function postOperatingLoopRun(
   plan: FounderOperatingLoopPlan,
@@ -10,7 +22,7 @@ export async function postOperatingLoopRun(
 ): Promise<OperatingLoopRunResponse> {
   const response = await fetch('/api/founder/operating-loop/run', {
     method: 'POST',
-    headers: { 'content-type': 'application/json', accept: 'application/json' },
+    headers: operatingLoopHeaders(),
     credentials: 'include',
     body: JSON.stringify({ plan }),
     signal

@@ -1,6 +1,10 @@
 import { getCsrfToken } from '@/lib/auth/api'
 import { sanitiseFounderPayload } from '@/lib/founder/persistence/persistence-safety'
-import type { FounderTelemetryEventInput, FounderTelemetrySummary } from './founder-telemetry-types'
+import {
+  EMPTY_FOUNDER_TELEMETRY_SUMMARY,
+  type FounderTelemetryEventInput,
+  type FounderTelemetrySummary
+} from './founder-telemetry-types'
 import { findBlockedTelemetryKeys, redactTelemetryMetadata } from './founder-telemetry-redaction'
 
 type ApiEnvelope<T> = { success?: boolean; data?: T; error?: string; detail?: string }
@@ -55,6 +59,10 @@ export async function fetchFounderTelemetrySummary(
 
   if (response.status === 403 || response.status === 401) {
     return null
+  }
+
+  if (response.status === 404) {
+    return { ...EMPTY_FOUNDER_TELEMETRY_SUMMARY }
   }
 
   if (!response.ok) {

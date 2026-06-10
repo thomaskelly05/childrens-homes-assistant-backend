@@ -23,7 +23,12 @@ import {
   handleOperatingLoopRunPost,
   handleOperatingLoopRunsGet
 } from '@/lib/founder/operating-loop/operating-loop-api'
+import {
+  isKnownPersistenceEntitySlug,
+  unknownPersistenceEntityMessage
+} from '@/lib/founder/persistence/founder-api-entities'
 import { sanitiseFounderPayload } from '@/lib/founder/persistence/persistence-safety'
+import { EMPTY_FOUNDER_TELEMETRY_SUMMARY } from '@/lib/founder/telemetry/founder-telemetry-types'
 
 const ROUTE_ENTITY_MAP: Record<string, string> = {
   actions: 'actions',
@@ -114,7 +119,18 @@ function resolveEntitySlug(segments: string[]): { entitySlug: string; rest: stri
   return null
 }
 
-async function proxyToBackendTelemetry(
+function buildProxyHeaders(request: Request, cookieHeader: string): Headers {
+  const headers = new Headers()
+  headers.set('cookie', cookieHeader)
+  headers.set('accept', 'application/json')
+  const contentType = request.headers.get('content-type')
+  if (contentType) headers.set('content-type', contentType)
+  const csrf = request.headers.get('x-csrf-token')
+  if (csrf) headers.set('x-csrf-token', csrf)
+  return headers
+}
+
+export async function proxyToBackendTelemetry(
   request: Request,
   backendPath: string,
   auth: 'founder' | 'authenticated'
@@ -128,32 +144,40 @@ async function proxyToBackendTelemetry(
   const target = new URL(`${backendOrigin}/founder-os/telemetry/${backendPath}`)
   url.searchParams.forEach((value, key) => target.searchParams.append(key, value))
 
-  const headers = new Headers()
-  headers.set('cookie', cookieHeader)
-  headers.set('accept', 'application/json')
-  const contentType = request.headers.get('content-type')
-  if (contentType) headers.set('content-type', contentType)
-  const csrf = request.headers.get('x-csrf-token')
-  if (csrf) headers.set('x-csrf-token', csrf)
-
   const method = request.method.toUpperCase()
   const hasBody = method !== 'GET' && method !== 'HEAD'
 
   const upstream = await fetch(target.toString(), {
     method,
-    headers,
+    headers: buildProxyHeaders(request, cookieHeader),
     body: hasBody ? await request.text() : undefined,
     cache: 'no-store'
-  })
+  }).catch(() => null)
+
+  if (!upstream) {
+    if (backendPath === 'summary' && method === 'GET') {
+      return NextResponse.json({ success: true, data: EMPTY_FOUNDER_TELEMETRY_SUMMARY }, { status: 200 })
+    }
+    return NextResponse.json({ error: 'Founder telemetry backend unavailable' }, { status: 503 })
+  }
+
+  if (upstream.status === 404 && backendPath === 'summary' && method === 'GET') {
+    return NextResponse.json({ success: true, data: EMPTY_FOUNDER_TELEMETRY_SUMMARY }, { status: 200 })
+  }
 
   const payload = await upstream.json().catch(() => ({}))
   const sanitised = sanitiseFounderPayload(payload)
   return NextResponse.json(sanitised, { status: upstream.status })
 }
 
-async function proxyToBackend(request: Request, backendPath: string): Promise<NextResponse> {
+export async function proxyToBackend(request: Request, backendPath: string): Promise<NextResponse> {
   const session = await requireFounderSession()
   if (!session.ok) return session.response
+
+  const [entitySlug] = backendPath.split('/')
+  if (entitySlug && !isKnownPersistenceEntitySlug(entitySlug)) {
+    return NextResponse.json({ error: unknownPersistenceEntityMessage(entitySlug) }, { status: 404 })
+  }
 
   const cookieHeader = (await cookies()).toString()
   const backendOrigin = getInternalBackendOrigin()
@@ -161,23 +185,32 @@ async function proxyToBackend(request: Request, backendPath: string): Promise<Ne
   const target = new URL(`${backendOrigin}/founder-os/persistence/${backendPath}`)
   url.searchParams.forEach((value, key) => target.searchParams.append(key, value))
 
-  const headers = new Headers()
-  headers.set('cookie', cookieHeader)
-  headers.set('accept', 'application/json')
-  const contentType = request.headers.get('content-type')
-  if (contentType) headers.set('content-type', contentType)
-  const csrf = request.headers.get('x-csrf-token')
-  if (csrf) headers.set('x-csrf-token', csrf)
-
   const method = request.method.toUpperCase()
   const hasBody = method !== 'GET' && method !== 'HEAD'
 
   const upstream = await fetch(target.toString(), {
     method,
-    headers,
+    headers: buildProxyHeaders(request, cookieHeader),
     body: hasBody ? await request.text() : undefined,
     cache: 'no-store'
-  })
+  }).catch(() => null)
+
+  if (!upstream) {
+    if (method === 'GET' && entitySlug && backendPath === entitySlug) {
+      return NextResponse.json({ success: true, data: { items: [], count: 0 } }, { status: 200 })
+    }
+    return NextResponse.json({ error: 'Founder persistence backend unavailable' }, { status: 503 })
+  }
+
+  if (
+    upstream.status === 404 &&
+    method === 'GET' &&
+    entitySlug &&
+    isKnownPersistenceEntitySlug(entitySlug) &&
+    backendPath === entitySlug
+  ) {
+    return NextResponse.json({ success: true, data: { items: [], count: 0 } }, { status: 200 })
+  }
 
   const payload = await upstream.json().catch(() => ({}))
   const sanitised = sanitiseFounderPayload(payload)

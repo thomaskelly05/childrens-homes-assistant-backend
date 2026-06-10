@@ -1,8 +1,27 @@
 import { getCsrfToken } from '@/lib/auth/api'
+import {
+  isKnownPersistenceEntitySlug,
+  unknownPersistenceEntityMessage
+} from '@/lib/founder/persistence/founder-api-entities'
 import { getFounderPersistenceApiBase } from './persistence-config'
 import { sanitiseFounderPayload } from './persistence-safety'
 
 type ApiEnvelope<T> = { success?: boolean; data?: T; error?: string }
+
+export class FounderPersistenceApiError extends Error {
+  status: number
+
+  constructor(status: number, message: string) {
+    super(message)
+    this.name = 'FounderPersistenceApiError'
+    this.status = status
+  }
+}
+
+function persistenceEntityFromPath(path: string): string | null {
+  const match = path.match(/^\/persistence\/([^/?]+)/)
+  return match?.[1] ?? null
+}
 
 async function founderFetch<T>(
   path: string,
@@ -15,22 +34,41 @@ async function founderFetch<T>(
   const csrf = getCsrfToken()
   if (csrf) headers.set('x-csrf-token', csrf)
 
-  const response = await fetch(`${getFounderPersistenceApiBase()}${path}`, {
-    ...init,
-    headers,
-    credentials: 'same-origin',
-    cache: 'no-store'
-  })
+  let response: Response
+  try {
+    response = await fetch(`${getFounderPersistenceApiBase()}${path}`, {
+      ...init,
+      headers,
+      credentials: 'same-origin',
+      cache: 'no-store'
+    })
+  } catch {
+    throw new FounderPersistenceApiError(503, 'Founder persistence backend unavailable')
+  }
 
   const payload = (await response.json().catch(() => ({}))) as ApiEnvelope<T> & T
   if (!response.ok) {
+    const entitySlug = persistenceEntityFromPath(path)
+    const method = (init?.method ?? 'GET').toUpperCase()
+    if (
+      response.status === 404 &&
+      method === 'GET' &&
+      entitySlug &&
+      isKnownPersistenceEntitySlug(entitySlug) &&
+      path === `/persistence/${entitySlug}`
+    ) {
+      return sanitiseFounderPayload({ items: [], count: 0 }) as T
+    }
+
     const record = payload as ApiEnvelope<T> & { detail?: unknown; error?: string }
     const message =
       record.error ||
       (typeof record.detail === 'string'
         ? record.detail
-        : 'Founder persistence request failed')
-    throw new Error(message)
+        : entitySlug && !isKnownPersistenceEntitySlug(entitySlug)
+          ? unknownPersistenceEntityMessage(entitySlug)
+          : 'Founder persistence request failed')
+    throw new FounderPersistenceApiError(response.status, message)
   }
 
   const data = (payload as ApiEnvelope<T>).data ?? payload
