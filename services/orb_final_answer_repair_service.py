@@ -8,6 +8,7 @@ from typing import Any
 from services.orb_fast_opening_service import strip_streaming_artifacts_from_answer
 from services.orb_final_answer_contract_validator_service import validate_final_answer_contract
 from services.orb_placeholder_quality_guard_service import sanitize_placeholders_in_answer
+from services.orb_therapeutic_language_contract_service import apply_deterministic_therapeutic_repairs
 
 ACCESSIBLE_CHILD_SUPPORT_PLAN_TEMPLATE = """
 # My Support Plan
@@ -152,10 +153,15 @@ def apply_deterministic_repairs(
     contract_family: str | None,
     message: str = "",
     fast_opening: str | None = None,
-) -> str:
+) -> tuple[str, dict[str, Any]]:
     """Apply lightweight deterministic fixes before validation retry."""
+    repair_meta: dict[str, Any] = {"therapeutic_repairs": []}
     cleaned = strip_streaming_artifacts_from_answer(answer, fast_opening=fast_opening)
     cleaned, _ = sanitize_placeholders_in_answer(cleaned)
+    cleaned, therapeutic_repairs = apply_deterministic_therapeutic_repairs(cleaned)
+    if therapeutic_repairs:
+        repair_meta["therapeutic_repairs"] = therapeutic_repairs
+        repair_meta["repair_reason"] = "therapeutic_language"
     if contract_family == "accessible_child_support_plan":
         lower = cleaned.lower()
         needs_full_rewrite = any(
@@ -169,8 +175,8 @@ def apply_deterministic_repairs(
             )
         ) or len(cleaned) < 400
         if needs_full_rewrite:
-            return repair_accessible_child_support_plan(cleaned, message=message)
-    return cleaned
+            return repair_accessible_child_support_plan(cleaned, message=message), repair_meta
+    return cleaned, repair_meta
 
 
 def repair_and_validate_final_answer(
@@ -189,42 +195,62 @@ def repair_and_validate_final_answer(
         depth_tier=depth_tier,
         mode=mode,
         fast_opening=fast_opening,
+        source_text=message,
+    )
+    original_had_judgemental = bool(
+        (validation.get("therapeutic_validation") or {}).get("judgemental_phrases")
     )
     if validation["passed"]:
         return validation["sanitized_answer"], {
             "final_answer_validation_passed": True,
-            "repair_applied": False,
+            "repair_applied": original_had_judgemental,
+            "answer_repaired": original_had_judgemental,
+            "repair_reason": "therapeutic_language" if original_had_judgemental else None,
             "validation": validation,
         }
 
-    repaired = apply_deterministic_repairs(
+    repaired, repair_meta = apply_deterministic_repairs(
         answer,
         contract_family=contract_family,
         message=message,
         fast_opening=fast_opening,
     )
-    if contract_family == "accessible_child_support_plan" and not validation["passed"]:
+    revalidation = validate_final_answer_contract(
+        repaired,
+        contract_family=contract_family,
+        depth_tier=depth_tier,
+        mode=mode,
+        fast_opening=fast_opening,
+        source_text=message,
+    )
+    if contract_family == "accessible_child_support_plan" and not revalidation["passed"]:
+        repaired = repair_accessible_child_support_plan(repaired, message=message)
         revalidation = validate_final_answer_contract(
             repaired,
             contract_family=contract_family,
             depth_tier=depth_tier,
             mode=mode,
             fast_opening=fast_opening,
+            source_text=message,
         )
-        if not revalidation["passed"]:
-            repaired = repair_accessible_child_support_plan(repaired, message=message)
-            revalidation = validate_final_answer_contract(
-                repaired,
-                contract_family=contract_family,
-                depth_tier=depth_tier,
-                mode=mode,
-                fast_opening=fast_opening,
-            )
-        validation = revalidation
+    validation = revalidation
 
+    repair_reason = (
+        repair_meta.get("repair_reason")
+        or validation.get("repair_reason")
+        or ("therapeutic_language" if original_had_judgemental else None)
+    )
+    answer_repaired = bool(
+        repair_meta.get("therapeutic_repairs")
+        or original_had_judgemental
+        or repair_reason == "therapeutic_language"
+    )
     return validation["sanitized_answer"], {
         "final_answer_validation_passed": validation["passed"],
-        "repair_applied": True,
+        "repair_applied": answer_repaired or not validation["passed"],
+        "answer_repaired": answer_repaired,
+        "repair_reason": repair_reason,
+        "therapeutic_repairs": repair_meta.get("therapeutic_repairs") or [],
         "validation": validation,
     }
 

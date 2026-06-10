@@ -1,6 +1,6 @@
 {
-  "version": "orb-knowledge-gap-audit-v2",
-  "generated_at": "2026-06-10T11:21:32.842768+00:00",
+  "version": "orb-knowledge-gap-audit-v3",
+  "generated_at": "2026-06-10T11:36:02.804068+00:00",
   "total": 40,
   "internal_knowledge_passed": 40,
   "internal_knowledge_failed": 0,
@@ -14,6 +14,84 @@
   ],
   "repeated_missing_markers": [],
   "overall_readiness_score": 100.0,
+  "therapeutic_readiness_score": 14.2,
+  "therapeutic_pilot_ready": false,
+  "therapeutic_language_gap_domains": [
+    "Abuse disclosure",
+    "Allegation against staff / LADO",
+    "Behaviour support",
+    "Child voice",
+    "Complaints",
+    "Daily recording",
+    "Education concern",
+    "Exploitation / contextual safeguarding",
+    "Family time / contact",
+    "GDD / communication support",
+    "Handover",
+    "Health appointment",
+    "Independence / preparing for adulthood",
+    "Key-work sessions",
+    "Leadership and management",
+    "Manager oversight",
+    "Medication error",
+    "Missing from home",
+    "Notifications / serious events",
+    "Ofsted preparation",
+    "Online safety",
+    "Physical intervention / restraint",
+    "Placement plan review",
+    "Professional curiosity",
+    "Quality of care",
+    "Reg 44",
+    "Reg 45",
+    "Return after missing",
+    "Risk assessment review",
+    "SCCIF-style evidence",
+    "Safeguarding concern",
+    "Safer recruitment / workforce",
+    "Staff supervision",
+    "Suicidal ideation / self-harm",
+    "Support planning",
+    "Team learning"
+  ],
+  "child_voice_gap_domains": [
+    "Abuse disclosure",
+    "Allegation against staff / LADO",
+    "Autism / sensory support",
+    "Behaviour support",
+    "Consequences / boundaries",
+    "Education concern",
+    "Exploitation / contextual safeguarding",
+    "Family time / contact",
+    "GDD / communication support",
+    "Handover",
+    "Health appointment",
+    "Independence / preparing for adulthood",
+    "Leadership and management",
+    "Manager oversight",
+    "Medication error",
+    "Missing from home",
+    "Notifications / serious events",
+    "Ofsted preparation",
+    "Online safety",
+    "Physical intervention / restraint",
+    "Placement plan review",
+    "Professional curiosity",
+    "Quality of care",
+    "Reg 45",
+    "Restorative repair",
+    "Return after missing",
+    "Risk assessment review",
+    "SCCIF-style evidence",
+    "Safeguarding concern",
+    "Safer recruitment / workforce",
+    "Staff supervision",
+    "Suicidal ideation / self-harm",
+    "Support planning",
+    "Team learning"
+  ],
+  "compliance_led_wording_domains": [],
+  "openai_therapeutic_rewrite_domains": [],
   "gaps": [],
   "domain_results": [
     {
@@ -31,6 +109,20 @@
       "ofsted_readiness_score": 3,
       "ofsted_ready": true,
       "pilot_ready": true,
+      "therapeutic_scoring": {
+        "therapeutic_language": 2,
+        "trauma_informed": 1,
+        "relational_practice": 1,
+        "child_voice": 2,
+        "non_shaming_language": "pass",
+        "co_regulation_present": "fail",
+        "restorative_repair_present": "n/a",
+        "professional_curiosity_present": "n/a",
+        "therapeutic_readiness_score": 30.0,
+        "judgemental_phrases": [],
+        "openai_needed_for_therapeutic_rewrite": false
+      },
+      "therapeutic_pilot_ready": false,
       "gap": null
     },
     {
@@ -48,6 +140,20 @@
       "ofsted_readiness_score": 3,
       "ofsted_ready": true,
       "pilot_ready": true,
+      "therapeutic_scoring": {
+        "therapeutic_language": 3,
+        "trauma_informed": 3,
+        "relational_practice": 2,
+        "child_voice": 2,
+        "non_shaming_language": "pass",
+        "co_regulation_present": "pass",
+        "restorative_repair_present": "pass",
+        "professional_curiosity_present": "n/a",
+        "therapeutic_readiness_score": 50.0,
+        "judgemental_phrases": [],
+        "openai_needed_for_therapeutic_rewrite": false
+      },
+      "therapeutic_pilot_ready": true,
       "gap": null
     },
     {
@@ -65,6 +171,20 @@
       "ofsted_readiness_score": 3,
       "ofsted_ready": true,
       "pilot_ready": true,
+      "therapeutic_scoring": {
+        "therapeutic_language": 2,
+        "trauma_informed": 1,
+        "relational_practice": 1,
+        "child_voice": 3,
+        "non_shaming_language": "pass",
+        "co_regulation_present": "n/a",
+        "restorative_repair_present": "n/a",
+        "professional_curiosity_present": "n/a",
+        "therapeutic_readiness_score": 35.0,
+        "judgemental_phrases": [],
+        "openai_needed_for_therapeutic_rewrite": false
+      },
+      "therapeutic_pilot_ready": false,
       "gap": null
     },
     {
@@ -82,6 +202,20 @@
       "ofsted_readiness_score": 3,
       "ofsted_ready": true,
       "pilot_ready": true,
+      "therapeutic_scoring": {
+        "therapeutic_language": 2,
+        "trauma_informed": 1,
+        "relational_practice": 1,
+        "child_voice": 0,
+        "non_shaming_language": "pass",
+        "co_regulation_present": "n/a",
+        "restorative_repair_present": "n/a",
+        "professional_curiosity_present": "n/a",
+        "therapeutic_readiness_score": 20.0,
+        "judgemental_phrases": [],
+        "openai_needed_for_therapeutic_rewrite": false
+      },
+      "therapeutic_pilot_ready": false,
       "gap": null
     },
     {
@@ -99,6 +233,20 @@
       "ofsted_readiness_score": 3,
       "ofsted_ready": true,
       "pilot_ready": true,
+      "therapeutic_scoring": {
+        "therapeutic_language": 2,
+        "trauma_informed": 1,
+        "relational_practice": 1,
+        "child_voice": 0,
+        "non_shaming_language": "pass",
+        "co_regulation_present": "n/a",
+        "restorative_repair_present": "n/a",
+        "professional_curiosity_present": "pass",
+        "therapeutic_readiness_score": 20.0,
+        "judgemental_phrases": [],
+        "openai_needed_for_therapeutic_rewrite": false
+      },
+      "therapeutic_pilot_ready": false,
       "gap": null
     },
     {
@@ -116,6 +264,20 @@
       "ofsted_readiness_score": null,
       "ofsted_ready": null,
       "pilot_ready": true,
+      "therapeutic_scoring": {
+        "therapeutic_language": 0,
+        "trauma_informed": 0,
+        "relational_practice": 0,
+        "child_voice": 0,
+        "non_shaming_language": "pass",
+        "co_regulation_present": "n/a",
+        "restorative_repair_present": "n/a",
+        "professional_curiosity_present": "n/a",
+        "therapeutic_readiness_score": 0.0,
+        "judgemental_phrases": [],
+        "openai_needed_for_therapeutic_rewrite": false
+      },
+      "therapeutic_pilot_ready": false,
       "gap": null
     },
     {
@@ -133,6 +295,20 @@
       "ofsted_readiness_score": null,
       "ofsted_ready": null,
       "pilot_ready": true,
+      "therapeutic_scoring": {
+        "therapeutic_language": 0,
+        "trauma_informed": 0,
+        "relational_practice": 0,
+        "child_voice": 0,
+        "non_shaming_language": "pass",
+        "co_regulation_present": "fail",
+        "restorative_repair_present": "fail",
+        "professional_curiosity_present": "fail",
+        "therapeutic_readiness_score": 0.0,
+        "judgemental_phrases": [],
+        "openai_needed_for_therapeutic_rewrite": false
+      },
+      "therapeutic_pilot_ready": false,
       "gap": null
     },
     {
@@ -150,6 +326,20 @@
       "ofsted_readiness_score": null,
       "ofsted_ready": null,
       "pilot_ready": true,
+      "therapeutic_scoring": {
+        "therapeutic_language": 0,
+        "trauma_informed": 0,
+        "relational_practice": 0,
+        "child_voice": 0,
+        "non_shaming_language": "pass",
+        "co_regulation_present": "fail",
+        "restorative_repair_present": "fail",
+        "professional_curiosity_present": "fail",
+        "therapeutic_readiness_score": 0.0,
+        "judgemental_phrases": [],
+        "openai_needed_for_therapeutic_rewrite": false
+      },
+      "therapeutic_pilot_ready": false,
       "gap": null
     },
     {
@@ -167,6 +357,20 @@
       "ofsted_readiness_score": null,
       "ofsted_ready": null,
       "pilot_ready": true,
+      "therapeutic_scoring": {
+        "therapeutic_language": 0,
+        "trauma_informed": 0,
+        "relational_practice": 0,
+        "child_voice": 0,
+        "non_shaming_language": "pass",
+        "co_regulation_present": "n/a",
+        "restorative_repair_present": "n/a",
+        "professional_curiosity_present": "n/a",
+        "therapeutic_readiness_score": 0.0,
+        "judgemental_phrases": [],
+        "openai_needed_for_therapeutic_rewrite": false
+      },
+      "therapeutic_pilot_ready": false,
       "gap": null
     },
     {
@@ -184,6 +388,20 @@
       "ofsted_readiness_score": null,
       "ofsted_ready": null,
       "pilot_ready": true,
+      "therapeutic_scoring": {
+        "therapeutic_language": 0,
+        "trauma_informed": 0,
+        "relational_practice": 0,
+        "child_voice": 0,
+        "non_shaming_language": "pass",
+        "co_regulation_present": "n/a",
+        "restorative_repair_present": "n/a",
+        "professional_curiosity_present": "n/a",
+        "therapeutic_readiness_score": 0.0,
+        "judgemental_phrases": [],
+        "openai_needed_for_therapeutic_rewrite": false
+      },
+      "therapeutic_pilot_ready": false,
       "gap": null
     },
     {
@@ -201,6 +419,20 @@
       "ofsted_readiness_score": null,
       "ofsted_ready": null,
       "pilot_ready": true,
+      "therapeutic_scoring": {
+        "therapeutic_language": 0,
+        "trauma_informed": 0,
+        "relational_practice": 0,
+        "child_voice": 0,
+        "non_shaming_language": "pass",
+        "co_regulation_present": "fail",
+        "restorative_repair_present": "n/a",
+        "professional_curiosity_present": "n/a",
+        "therapeutic_readiness_score": 0.0,
+        "judgemental_phrases": [],
+        "openai_needed_for_therapeutic_rewrite": false
+      },
+      "therapeutic_pilot_ready": false,
       "gap": null
     },
     {
@@ -218,6 +450,20 @@
       "ofsted_readiness_score": null,
       "ofsted_ready": null,
       "pilot_ready": true,
+      "therapeutic_scoring": {
+        "therapeutic_language": 0,
+        "trauma_informed": 0,
+        "relational_practice": 0,
+        "child_voice": 0,
+        "non_shaming_language": "pass",
+        "co_regulation_present": "n/a",
+        "restorative_repair_present": "n/a",
+        "professional_curiosity_present": "n/a",
+        "therapeutic_readiness_score": 0.0,
+        "judgemental_phrases": [],
+        "openai_needed_for_therapeutic_rewrite": false
+      },
+      "therapeutic_pilot_ready": false,
       "gap": null
     },
     {
@@ -235,6 +481,20 @@
       "ofsted_readiness_score": null,
       "ofsted_ready": null,
       "pilot_ready": true,
+      "therapeutic_scoring": {
+        "therapeutic_language": 0,
+        "trauma_informed": 0,
+        "relational_practice": 0,
+        "child_voice": 0,
+        "non_shaming_language": "pass",
+        "co_regulation_present": "fail",
+        "restorative_repair_present": "fail",
+        "professional_curiosity_present": "n/a",
+        "therapeutic_readiness_score": 0.0,
+        "judgemental_phrases": [],
+        "openai_needed_for_therapeutic_rewrite": false
+      },
+      "therapeutic_pilot_ready": false,
       "gap": null
     },
     {
@@ -252,6 +512,20 @@
       "ofsted_readiness_score": null,
       "ofsted_ready": null,
       "pilot_ready": true,
+      "therapeutic_scoring": {
+        "therapeutic_language": 0,
+        "trauma_informed": 0,
+        "relational_practice": 0,
+        "child_voice": 0,
+        "non_shaming_language": "pass",
+        "co_regulation_present": "fail",
+        "restorative_repair_present": "fail",
+        "professional_curiosity_present": "n/a",
+        "therapeutic_readiness_score": 0.0,
+        "judgemental_phrases": [],
+        "openai_needed_for_therapeutic_rewrite": false
+      },
+      "therapeutic_pilot_ready": false,
       "gap": null
     },
     {
@@ -269,6 +543,20 @@
       "ofsted_readiness_score": null,
       "ofsted_ready": null,
       "pilot_ready": true,
+      "therapeutic_scoring": {
+        "therapeutic_language": 0,
+        "trauma_informed": 0,
+        "relational_practice": 0,
+        "child_voice": 0,
+        "non_shaming_language": "pass",
+        "co_regulation_present": "fail",
+        "restorative_repair_present": "fail",
+        "professional_curiosity_present": "n/a",
+        "therapeutic_readiness_score": 0.0,
+        "judgemental_phrases": [],
+        "openai_needed_for_therapeutic_rewrite": false
+      },
+      "therapeutic_pilot_ready": false,
       "gap": null
     },
     {
@@ -286,6 +574,20 @@
       "ofsted_readiness_score": 2,
       "ofsted_ready": false,
       "pilot_ready": false,
+      "therapeutic_scoring": {
+        "therapeutic_language": 2,
+        "trauma_informed": 1,
+        "relational_practice": 1,
+        "child_voice": 0,
+        "non_shaming_language": "pass",
+        "co_regulation_present": "fail",
+        "restorative_repair_present": "n/a",
+        "professional_curiosity_present": "n/a",
+        "therapeutic_readiness_score": 20.0,
+        "judgemental_phrases": [],
+        "openai_needed_for_therapeutic_rewrite": false
+      },
+      "therapeutic_pilot_ready": false,
       "gap": null
     },
     {
@@ -303,6 +605,20 @@
       "ofsted_readiness_score": null,
       "ofsted_ready": null,
       "pilot_ready": true,
+      "therapeutic_scoring": {
+        "therapeutic_language": 0,
+        "trauma_informed": 0,
+        "relational_practice": 0,
+        "child_voice": 0,
+        "non_shaming_language": "pass",
+        "co_regulation_present": "fail",
+        "restorative_repair_present": "n/a",
+        "professional_curiosity_present": "n/a",
+        "therapeutic_readiness_score": 0.0,
+        "judgemental_phrases": [],
+        "openai_needed_for_therapeutic_rewrite": false
+      },
+      "therapeutic_pilot_ready": false,
       "gap": null
     },
     {
@@ -320,6 +636,20 @@
       "ofsted_readiness_score": 2,
       "ofsted_ready": false,
       "pilot_ready": false,
+      "therapeutic_scoring": {
+        "therapeutic_language": 2,
+        "trauma_informed": 1,
+        "relational_practice": 1,
+        "child_voice": 0,
+        "non_shaming_language": "pass",
+        "co_regulation_present": "fail",
+        "restorative_repair_present": "n/a",
+        "professional_curiosity_present": "n/a",
+        "therapeutic_readiness_score": 20.0,
+        "judgemental_phrases": [],
+        "openai_needed_for_therapeutic_rewrite": false
+      },
+      "therapeutic_pilot_ready": false,
       "gap": null
     },
     {
@@ -337,6 +667,20 @@
       "ofsted_readiness_score": 3,
       "ofsted_ready": true,
       "pilot_ready": true,
+      "therapeutic_scoring": {
+        "therapeutic_language": 2,
+        "trauma_informed": 2,
+        "relational_practice": 1,
+        "child_voice": 2,
+        "non_shaming_language": "pass",
+        "co_regulation_present": "n/a",
+        "restorative_repair_present": "n/a",
+        "professional_curiosity_present": "fail",
+        "therapeutic_readiness_score": 35.0,
+        "judgemental_phrases": [],
+        "openai_needed_for_therapeutic_rewrite": false
+      },
+      "therapeutic_pilot_ready": false,
       "gap": null
     },
     {
@@ -354,6 +698,20 @@
       "ofsted_readiness_score": 3,
       "ofsted_ready": true,
       "pilot_ready": true,
+      "therapeutic_scoring": {
+        "therapeutic_language": 2,
+        "trauma_informed": 1,
+        "relational_practice": 1,
+        "child_voice": 2,
+        "non_shaming_language": "pass",
+        "co_regulation_present": "fail",
+        "restorative_repair_present": "n/a",
+        "professional_curiosity_present": "n/a",
+        "therapeutic_readiness_score": 30.0,
+        "judgemental_phrases": [],
+        "openai_needed_for_therapeutic_rewrite": false
+      },
+      "therapeutic_pilot_ready": false,
       "gap": null
     },
     {
@@ -371,6 +729,20 @@
       "ofsted_readiness_score": null,
       "ofsted_ready": null,
       "pilot_ready": true,
+      "therapeutic_scoring": {
+        "therapeutic_language": 0,
+        "trauma_informed": 0,
+        "relational_practice": 0,
+        "child_voice": 0,
+        "non_shaming_language": "pass",
+        "co_regulation_present": "n/a",
+        "restorative_repair_present": "n/a",
+        "professional_curiosity_present": "n/a",
+        "therapeutic_readiness_score": 0.0,
+        "judgemental_phrases": [],
+        "openai_needed_for_therapeutic_rewrite": false
+      },
+      "therapeutic_pilot_ready": false,
       "gap": null
     },
     {
@@ -388,6 +760,20 @@
       "ofsted_readiness_score": 2,
       "ofsted_ready": false,
       "pilot_ready": false,
+      "therapeutic_scoring": {
+        "therapeutic_language": 3,
+        "trauma_informed": 3,
+        "relational_practice": 1,
+        "child_voice": 0,
+        "non_shaming_language": "pass",
+        "co_regulation_present": "pass",
+        "restorative_repair_present": "n/a",
+        "professional_curiosity_present": "n/a",
+        "therapeutic_readiness_score": 35.0,
+        "judgemental_phrases": [],
+        "openai_needed_for_therapeutic_rewrite": false
+      },
+      "therapeutic_pilot_ready": false,
       "gap": null
     },
     {
@@ -405,6 +791,20 @@
       "ofsted_readiness_score": null,
       "ofsted_ready": null,
       "pilot_ready": true,
+      "therapeutic_scoring": {
+        "therapeutic_language": 0,
+        "trauma_informed": 0,
+        "relational_practice": 0,
+        "child_voice": 0,
+        "non_shaming_language": "pass",
+        "co_regulation_present": "n/a",
+        "restorative_repair_present": "n/a",
+        "professional_curiosity_present": "n/a",
+        "therapeutic_readiness_score": 0.0,
+        "judgemental_phrases": [],
+        "openai_needed_for_therapeutic_rewrite": false
+      },
+      "therapeutic_pilot_ready": false,
       "gap": null
     },
     {
@@ -424,6 +824,20 @@
       "ofsted_readiness_score": null,
       "ofsted_ready": null,
       "pilot_ready": true,
+      "therapeutic_scoring": {
+        "therapeutic_language": 0,
+        "trauma_informed": 0,
+        "relational_practice": 0,
+        "child_voice": 0,
+        "non_shaming_language": "pass",
+        "co_regulation_present": "n/a",
+        "restorative_repair_present": "n/a",
+        "professional_curiosity_present": "n/a",
+        "therapeutic_readiness_score": 0.0,
+        "judgemental_phrases": [],
+        "openai_needed_for_therapeutic_rewrite": false
+      },
+      "therapeutic_pilot_ready": false,
       "gap": null
     },
     {
@@ -441,6 +855,20 @@
       "ofsted_readiness_score": 1,
       "ofsted_ready": false,
       "pilot_ready": false,
+      "therapeutic_scoring": {
+        "therapeutic_language": 2,
+        "trauma_informed": 1,
+        "relational_practice": 1,
+        "child_voice": 0,
+        "non_shaming_language": "pass",
+        "co_regulation_present": "n/a",
+        "restorative_repair_present": "n/a",
+        "professional_curiosity_present": "fail",
+        "therapeutic_readiness_score": 20.0,
+        "judgemental_phrases": [],
+        "openai_needed_for_therapeutic_rewrite": false
+      },
+      "therapeutic_pilot_ready": false,
       "gap": null
     },
     {
@@ -458,6 +886,20 @@
       "ofsted_readiness_score": 1,
       "ofsted_ready": false,
       "pilot_ready": false,
+      "therapeutic_scoring": {
+        "therapeutic_language": 2,
+        "trauma_informed": 1,
+        "relational_practice": 1,
+        "child_voice": 0,
+        "non_shaming_language": "pass",
+        "co_regulation_present": "n/a",
+        "restorative_repair_present": "n/a",
+        "professional_curiosity_present": "fail",
+        "therapeutic_readiness_score": 20.0,
+        "judgemental_phrases": [],
+        "openai_needed_for_therapeutic_rewrite": false
+      },
+      "therapeutic_pilot_ready": false,
       "gap": null
     },
     {
@@ -475,6 +917,20 @@
       "ofsted_readiness_score": null,
       "ofsted_ready": null,
       "pilot_ready": true,
+      "therapeutic_scoring": {
+        "therapeutic_language": 0,
+        "trauma_informed": 0,
+        "relational_practice": 0,
+        "child_voice": 0,
+        "non_shaming_language": "pass",
+        "co_regulation_present": "fail",
+        "restorative_repair_present": "n/a",
+        "professional_curiosity_present": "n/a",
+        "therapeutic_readiness_score": 0.0,
+        "judgemental_phrases": [],
+        "openai_needed_for_therapeutic_rewrite": false
+      },
+      "therapeutic_pilot_ready": false,
       "gap": null
     },
     {
@@ -492,6 +948,20 @@
       "ofsted_readiness_score": 2,
       "ofsted_ready": false,
       "pilot_ready": false,
+      "therapeutic_scoring": {
+        "therapeutic_language": 3,
+        "trauma_informed": 2,
+        "relational_practice": 2,
+        "child_voice": 0,
+        "non_shaming_language": "pass",
+        "co_regulation_present": "fail",
+        "restorative_repair_present": "pass",
+        "professional_curiosity_present": "n/a",
+        "therapeutic_readiness_score": 35.0,
+        "judgemental_phrases": [],
+        "openai_needed_for_therapeutic_rewrite": false
+      },
+      "therapeutic_pilot_ready": false,
       "gap": null
     },
     {
@@ -509,6 +979,20 @@
       "ofsted_readiness_score": 2,
       "ofsted_ready": false,
       "pilot_ready": false,
+      "therapeutic_scoring": {
+        "therapeutic_language": 3,
+        "trauma_informed": 2,
+        "relational_practice": 2,
+        "child_voice": 0,
+        "non_shaming_language": "pass",
+        "co_regulation_present": "fail",
+        "restorative_repair_present": "pass",
+        "professional_curiosity_present": "n/a",
+        "therapeutic_readiness_score": 35.0,
+        "judgemental_phrases": [],
+        "openai_needed_for_therapeutic_rewrite": false
+      },
+      "therapeutic_pilot_ready": false,
       "gap": null
     },
     {
@@ -526,6 +1010,20 @@
       "ofsted_readiness_score": null,
       "ofsted_ready": null,
       "pilot_ready": true,
+      "therapeutic_scoring": {
+        "therapeutic_language": 0,
+        "trauma_informed": 0,
+        "relational_practice": 0,
+        "child_voice": 0,
+        "non_shaming_language": "pass",
+        "co_regulation_present": "n/a",
+        "restorative_repair_present": "n/a",
+        "professional_curiosity_present": "fail",
+        "therapeutic_readiness_score": 0.0,
+        "judgemental_phrases": [],
+        "openai_needed_for_therapeutic_rewrite": false
+      },
+      "therapeutic_pilot_ready": false,
       "gap": null
     },
     {
@@ -543,6 +1041,20 @@
       "ofsted_readiness_score": 2,
       "ofsted_ready": false,
       "pilot_ready": false,
+      "therapeutic_scoring": {
+        "therapeutic_language": 2,
+        "trauma_informed": 1,
+        "relational_practice": 1,
+        "child_voice": 0,
+        "non_shaming_language": "pass",
+        "co_regulation_present": "fail",
+        "restorative_repair_present": "pass",
+        "professional_curiosity_present": "n/a",
+        "therapeutic_readiness_score": 20.0,
+        "judgemental_phrases": [],
+        "openai_needed_for_therapeutic_rewrite": false
+      },
+      "therapeutic_pilot_ready": false,
       "gap": null
     },
     {
@@ -560,6 +1072,20 @@
       "ofsted_readiness_score": 3,
       "ofsted_ready": true,
       "pilot_ready": true,
+      "therapeutic_scoring": {
+        "therapeutic_language": 2,
+        "trauma_informed": 1,
+        "relational_practice": 1,
+        "child_voice": 2,
+        "non_shaming_language": "pass",
+        "co_regulation_present": "n/a",
+        "restorative_repair_present": "n/a",
+        "professional_curiosity_present": "n/a",
+        "therapeutic_readiness_score": 30.0,
+        "judgemental_phrases": [],
+        "openai_needed_for_therapeutic_rewrite": false
+      },
+      "therapeutic_pilot_ready": false,
       "gap": null
     },
     {
@@ -577,6 +1103,20 @@
       "ofsted_readiness_score": 2,
       "ofsted_ready": false,
       "pilot_ready": false,
+      "therapeutic_scoring": {
+        "therapeutic_language": 1,
+        "trauma_informed": 1,
+        "relational_practice": 1,
+        "child_voice": 0,
+        "non_shaming_language": "pass",
+        "co_regulation_present": "n/a",
+        "restorative_repair_present": "n/a",
+        "professional_curiosity_present": "pass",
+        "therapeutic_readiness_score": 15.0,
+        "judgemental_phrases": [],
+        "openai_needed_for_therapeutic_rewrite": false
+      },
+      "therapeutic_pilot_ready": false,
       "gap": null
     },
     {
@@ -594,6 +1134,20 @@
       "ofsted_readiness_score": 2,
       "ofsted_ready": false,
       "pilot_ready": false,
+      "therapeutic_scoring": {
+        "therapeutic_language": 2,
+        "trauma_informed": 1,
+        "relational_practice": 1,
+        "child_voice": 0,
+        "non_shaming_language": "pass",
+        "co_regulation_present": "n/a",
+        "restorative_repair_present": "n/a",
+        "professional_curiosity_present": "pass",
+        "therapeutic_readiness_score": 20.0,
+        "judgemental_phrases": [],
+        "openai_needed_for_therapeutic_rewrite": false
+      },
+      "therapeutic_pilot_ready": false,
       "gap": null
     },
     {
@@ -611,6 +1165,20 @@
       "ofsted_readiness_score": 2,
       "ofsted_ready": false,
       "pilot_ready": false,
+      "therapeutic_scoring": {
+        "therapeutic_language": 1,
+        "trauma_informed": 1,
+        "relational_practice": 1,
+        "child_voice": 0,
+        "non_shaming_language": "pass",
+        "co_regulation_present": "n/a",
+        "restorative_repair_present": "n/a",
+        "professional_curiosity_present": "fail",
+        "therapeutic_readiness_score": 15.0,
+        "judgemental_phrases": [],
+        "openai_needed_for_therapeutic_rewrite": false
+      },
+      "therapeutic_pilot_ready": false,
       "gap": null
     },
     {
@@ -628,6 +1196,20 @@
       "ofsted_readiness_score": 1,
       "ofsted_ready": false,
       "pilot_ready": false,
+      "therapeutic_scoring": {
+        "therapeutic_language": 1,
+        "trauma_informed": 1,
+        "relational_practice": 1,
+        "child_voice": 0,
+        "non_shaming_language": "pass",
+        "co_regulation_present": "n/a",
+        "restorative_repair_present": "n/a",
+        "professional_curiosity_present": "pass",
+        "therapeutic_readiness_score": 15.0,
+        "judgemental_phrases": [],
+        "openai_needed_for_therapeutic_rewrite": false
+      },
+      "therapeutic_pilot_ready": false,
       "gap": null
     },
     {
@@ -645,6 +1227,20 @@
       "ofsted_readiness_score": 3,
       "ofsted_ready": true,
       "pilot_ready": true,
+      "therapeutic_scoring": {
+        "therapeutic_language": 2,
+        "trauma_informed": 1,
+        "relational_practice": 1,
+        "child_voice": 0,
+        "non_shaming_language": "pass",
+        "co_regulation_present": "fail",
+        "restorative_repair_present": "n/a",
+        "professional_curiosity_present": "n/a",
+        "therapeutic_readiness_score": 20.0,
+        "judgemental_phrases": [],
+        "openai_needed_for_therapeutic_rewrite": false
+      },
+      "therapeutic_pilot_ready": false,
       "gap": null
     },
     {
@@ -662,6 +1258,20 @@
       "ofsted_readiness_score": 1,
       "ofsted_ready": false,
       "pilot_ready": false,
+      "therapeutic_scoring": {
+        "therapeutic_language": 1,
+        "trauma_informed": 1,
+        "relational_practice": 1,
+        "child_voice": 0,
+        "non_shaming_language": "pass",
+        "co_regulation_present": "n/a",
+        "restorative_repair_present": "n/a",
+        "professional_curiosity_present": "fail",
+        "therapeutic_readiness_score": 15.0,
+        "judgemental_phrases": [],
+        "openai_needed_for_therapeutic_rewrite": false
+      },
+      "therapeutic_pilot_ready": false,
       "gap": null
     },
     {
@@ -679,6 +1289,20 @@
       "ofsted_readiness_score": 2,
       "ofsted_ready": false,
       "pilot_ready": false,
+      "therapeutic_scoring": {
+        "therapeutic_language": 1,
+        "trauma_informed": 1,
+        "relational_practice": 1,
+        "child_voice": 0,
+        "non_shaming_language": "pass",
+        "co_regulation_present": "n/a",
+        "restorative_repair_present": "n/a",
+        "professional_curiosity_present": "n/a",
+        "therapeutic_readiness_score": 15.0,
+        "judgemental_phrases": [],
+        "openai_needed_for_therapeutic_rewrite": false
+      },
+      "therapeutic_pilot_ready": false,
       "gap": null
     },
     {
@@ -696,6 +1320,20 @@
       "ofsted_readiness_score": null,
       "ofsted_ready": null,
       "pilot_ready": true,
+      "therapeutic_scoring": {
+        "therapeutic_language": 0,
+        "trauma_informed": 0,
+        "relational_practice": 0,
+        "child_voice": 0,
+        "non_shaming_language": "pass",
+        "co_regulation_present": "n/a",
+        "restorative_repair_present": "n/a",
+        "professional_curiosity_present": "fail",
+        "therapeutic_readiness_score": 0.0,
+        "judgemental_phrases": [],
+        "openai_needed_for_therapeutic_rewrite": false
+      },
+      "therapeutic_pilot_ready": false,
       "gap": null
     }
   ]

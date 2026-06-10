@@ -32,10 +32,13 @@ PUBLIC_EXPLAINABILITY_CONSIDERATIONS = (
     "Safeguarding responsibilities",
     "Residential childcare practice",
     "Child-centred recording",
-    "Professional accountability",
     "Therapeutic language",
+    "Trauma-informed practice",
+    "Relational support",
+    "Child's voice considered",
+    "Professional curiosity",
     "Recording quality",
-    "Relevant escalation boundaries",
+    "Professional judgement needed",
 )
 
 # Internal keys stripped from conversation/stream context_used for non-debug users.
@@ -75,6 +78,13 @@ _INTERNAL_CONTEXT_KEYS = frozenset(
         "selected_contract",
         "local_template",
         "optimisation_gap",
+        "answer_repaired",
+        "repair_reason",
+        "final_answer_repair_applied",
+        "final_answer_validation_passed",
+        "therapeutic_repairs",
+        "therapeutic_validation",
+        "missing_therapeutic_markers",
     }
 )
 

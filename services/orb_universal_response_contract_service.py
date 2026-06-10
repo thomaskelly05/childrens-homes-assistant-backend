@@ -139,8 +139,10 @@ PUBLIC_CONSIDERATION_MAP: dict[str, str] = {
 
 DEFAULT_PUBLIC = (
     "Residential childcare practice",
-    "Professional accountability",
     "Therapeutic language",
+    "Trauma-informed practice",
+    "Child-centred recording",
+    "Professional curiosity",
     "Recording quality",
 )
 
