@@ -1,5 +1,6 @@
 import {
   ENTITY_API_SLUGS,
+  FounderPersistenceApiError,
   founderPersistenceApi
 } from '@/lib/founder/persistence/founder-api-client'
 import {
@@ -73,8 +74,18 @@ export abstract class BaseFounderRepository<T extends { id: string }> {
       }
       return items
     }
-    const result = await founderPersistenceApi.list<T>(this.slug(), filters?.status ? { status: filters.status } : undefined)
-    return result.items
+    try {
+      const result = await founderPersistenceApi.list<T>(
+        this.slug(),
+        filters?.status ? { status: filters.status } : undefined
+      )
+      return result.items ?? []
+    } catch (error) {
+      if (error instanceof FounderPersistenceApiError && (error.status === 404 || error.status === 503)) {
+        return []
+      }
+      throw error
+    }
   }
 
   async getById(id: string): Promise<T | undefined> {

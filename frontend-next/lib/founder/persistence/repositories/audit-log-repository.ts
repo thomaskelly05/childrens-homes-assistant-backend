@@ -1,4 +1,7 @@
-import { founderPersistenceApi } from '@/lib/founder/persistence/founder-api-client'
+import {
+  FounderPersistenceApiError,
+  founderPersistenceApi
+} from '@/lib/founder/persistence/founder-api-client'
 import {
   FOUNDER_PERSISTENCE_DEV_FALLBACK_WARNING,
   isFounderPersistenceDevFallback
@@ -73,8 +76,15 @@ export async function listAuditLog(filters?: {
   const params: Record<string, string> = {}
   if (filters?.entityType) params.entity_type = filters.entityType
   if (filters?.limit) params.limit = String(filters.limit)
-  const result = await founderPersistenceApi.auditList(params)
-  return result.items as FounderAuditLogRecord[]
+  try {
+    const result = await founderPersistenceApi.auditList(params)
+    return (result.items ?? []) as FounderAuditLogRecord[]
+  } catch (error) {
+    if (error instanceof FounderPersistenceApiError && (error.status === 404 || error.status === 503)) {
+      return []
+    }
+    throw error
+  }
 }
 
 export function resetAuditLogMemory(): void {

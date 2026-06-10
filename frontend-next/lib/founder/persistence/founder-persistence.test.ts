@@ -24,6 +24,11 @@ describe('Founder persistence V1', () => {
     assert.match(handler, /founder-os\/persistence/)
   })
 
+  it('next.config keeps /api/founder on the Next.js proxy', () => {
+    const config = read('next.config.ts')
+    assert.match(config, /\/api\/\(\(\?!founder/)
+  })
+
   it('sanitise strips identifiable fields from payloads', () => {
     const safety = read('lib/founder/persistence/persistence-safety.ts')
     assert.match(safety, /child_name/)

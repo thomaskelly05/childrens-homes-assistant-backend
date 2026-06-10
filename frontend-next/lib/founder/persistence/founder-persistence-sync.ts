@@ -17,7 +17,7 @@ import { hydrateOperatingLoopRunsFromPersistence } from '@/lib/founder/operating
 import { operatingLoopRepository } from '@/lib/founder/persistence'
 
 export async function hydrateAllFounderPersistence(): Promise<void> {
-  await Promise.all([
+  await Promise.allSettled([
     hydrateActionsFromPersistence(),
     hydrateApprovalsFromPersistence(),
     hydrateContentFromPersistence(),
@@ -25,7 +25,10 @@ export async function hydrateAllFounderPersistence(): Promise<void> {
     hydrateQualityRunsFromPersistence(),
     hydrateQualityProposalsFromPersistence(),
     hydrateExpertReviewsFromPersistence(),
-    operatingLoopRepository.list().then((records) => hydrateOperatingLoopRunsFromPersistence(records)),
+    operatingLoopRepository
+      .list()
+      .then((records) => hydrateOperatingLoopRunsFromPersistence(records))
+      .catch(() => undefined),
     hydrateFounderMemoryFromPersistence(),
     hydrateEvidencePacksFromPersistence()
   ])

@@ -28,19 +28,33 @@ router = APIRouter(prefix="/founder-os/persistence", tags=["Founder Persistence"
 
 ENTITY_ALIASES: dict[str, str] = {
     "actions": "action",
+    "action": "action",
     "approvals": "approval",
+    "approval": "approval",
     "content": "content",
+    "content-drafts": "content",
     "build-briefs": "build_brief",
+    "build_briefs": "build_brief",
     "staff-team-runs": "staff_team_run",
+    "staff_team_runs": "staff_team_run",
     "agent-runs": "agent_run",
+    "agent_runs": "agent_run",
     "operating-loop-runs": "operating_loop_run",
+    "operating_loop_runs": "operating_loop_run",
     "quality-runs": "quality_run",
+    "quality_runs": "quality_run",
     "quality-results": "quality_result",
+    "quality_results": "quality_result",
     "quality-proposals": "quality_proposal",
+    "quality_proposals": "quality_proposal",
     "expert-reviews": "expert_review",
+    "expert_reviews": "expert_review",
     "safety-reviews": "safety_review",
+    "safety_reviews": "safety_review",
     "memories": "founder_memory",
+    "memory": "founder_memory",
     "evidence-packs": "evidence_pack",
+    "evidence_packs": "evidence_pack",
 }
 
 

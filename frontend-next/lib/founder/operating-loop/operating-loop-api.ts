@@ -36,7 +36,12 @@ export async function handleOperatingLoopRunsGet(): Promise<NextResponse> {
   const session = await requireFounderSession()
   if (!session.ok) return session.response
 
-  const persisted = await operatingLoopRepository.list()
+  let persisted: FounderOperatingLoopRunRecord[] = []
+  try {
+    persisted = await operatingLoopRepository.list()
+  } catch {
+    persisted = []
+  }
   hydrateOperatingLoopRunsFromPersistence(persisted)
 
   const runs =

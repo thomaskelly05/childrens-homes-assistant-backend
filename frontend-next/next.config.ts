@@ -33,9 +33,10 @@ const nextConfig: NextConfig = {
   async rewrites() {
     return [
       // Auth-sensitive traffic should use the `/backend/*` App Router proxy (Set-Cookie + SSE).
+      // Founder routes are handled by App Router proxies under /api/founder/*.
       {
-        source: '/api/:path*',
-        destination: `${backendOrigin}/api/:path*`
+        source: '/api/((?!founder(?:/|$)).*)',
+        destination: `${backendOrigin}/api/$1`
       },
       {
         source: '/auth/:path*',
