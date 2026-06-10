@@ -1,10 +1,10 @@
-import { applyCsrfHeaders, authFetchResponse, AuthApiError } from '@/lib/auth/api'
+import { FounderPersistenceApiError, founderGet, founderPost } from '@/lib/founder/api/founder-api-client'
 
 export const ORB_QUALITY_LAB_API_PATHS = {
-  overview: '/orb/admin/quality-lab/overview',
-  scenarios: '/orb/admin/quality-lab/scenarios',
-  runs: '/orb/admin/quality-lab/runs',
-  evaluate: '/orb/admin/quality-lab/evaluate'
+  overview: '/quality-lab/overview',
+  scenarios: '/quality-lab/scenarios',
+  runs: '/quality-lab/runs',
+  evaluate: '/quality-lab/evaluate'
 } as const
 
 export type OrbQualityLabOverview = {
@@ -57,24 +57,12 @@ export type OrbQualityLabEvaluateApiResponse = {
   }
 }
 
-async function parseResponse<T>(response: Response): Promise<T> {
-  if (!response.ok) {
-    let message = 'Request failed'
-    try {
-      const body = (await response.json()) as { detail?: unknown }
-      if (typeof body.detail === 'string') message = body.detail
-    } catch {
-      /* ignore */
-    }
-    throw new AuthApiError(response.status, message)
-  }
-  const body = (await response.json()) as { success?: boolean; data?: T }
-  return (body.data ?? body) as T
-}
-
 export async function fetchQualityLabOverview() {
-  const response = await authFetchResponse(ORB_QUALITY_LAB_API_PATHS.overview, { credentials: 'include' })
-  return parseResponse<OrbQualityLabOverview>(response)
+  const result = await founderGet<OrbQualityLabOverview>(ORB_QUALITY_LAB_API_PATHS.overview)
+  if (!result.ok) {
+    throw new FounderPersistenceApiError(result.status, result.error)
+  }
+  return result.data
 }
 
 export async function runQualityLabPack(input: {
@@ -84,31 +72,26 @@ export async function runQualityLabPack(input: {
   limit?: number
   useSampleAnswers?: boolean
 }) {
-  const headers = new Headers({ 'Content-Type': 'application/json' })
-  applyCsrfHeaders(headers, 'POST')
-  const response = await authFetchResponse(ORB_QUALITY_LAB_API_PATHS.runs, {
-    method: 'POST',
-    headers,
-    credentials: 'include',
-    body: JSON.stringify({
-      title: input.title,
-      family: input.family,
-      role: input.role,
-      limit: input.limit ?? 20,
-      use_sample_answers: input.useSampleAnswers ?? true
-    })
+  const result = await founderPost<OrbQualityLabRunApiResponse>(ORB_QUALITY_LAB_API_PATHS.runs, {
+    title: input.title,
+    family: input.family,
+    role: input.role,
+    limit: input.limit ?? 20,
+    use_sample_answers: input.useSampleAnswers ?? true
   })
-  return parseResponse<OrbQualityLabRunApiResponse>(response)
+  if (!result.ok) {
+    throw new FounderPersistenceApiError(result.status, result.error)
+  }
+  return result.data
 }
 
 export async function evaluateQualityLabAnswer(scenarioId: string, answer: string) {
-  const headers = new Headers({ 'Content-Type': 'application/json' })
-  applyCsrfHeaders(headers, 'POST')
-  const response = await authFetchResponse(ORB_QUALITY_LAB_API_PATHS.evaluate, {
-    method: 'POST',
-    headers,
-    credentials: 'include',
-    body: JSON.stringify({ scenario_id: scenarioId, answer })
+  const result = await founderPost<OrbQualityLabEvaluateApiResponse>(ORB_QUALITY_LAB_API_PATHS.evaluate, {
+    scenario_id: scenarioId,
+    answer
   })
-  return parseResponse<OrbQualityLabEvaluateApiResponse>(response)
+  if (!result.ok) {
+    throw new FounderPersistenceApiError(result.status, result.error)
+  }
+  return result.data
 }

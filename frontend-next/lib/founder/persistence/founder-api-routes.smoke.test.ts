@@ -118,6 +118,15 @@ describe('Founder API route smoke contract', () => {
     assert.doesNotMatch(orb, /\/orb\/admin\//)
   })
 
+  it('quality lab routes proxy through founder API', () => {
+    assert.equal(routeExists('app/api/founder/quality-lab/overview/route.ts'), true)
+    assert.equal(routeExists('app/api/founder/quality-lab/runs/route.ts'), true)
+    assert.equal(routeExists('app/api/founder/quality-lab/evaluate/route.ts'), true)
+    const client = read('lib/founder/quality-lab/quality-lab-client.ts')
+    assert.match(client, /founderGet/)
+    assert.doesNotMatch(client, /\/orb\/admin\//)
+  })
+
   it('operating loop client uses founder API proxy for POST', () => {
     const client = read('lib/founder/operating-loop/operating-loop-client.ts')
     const apiClient = read('lib/founder/api/founder-api-client.ts')

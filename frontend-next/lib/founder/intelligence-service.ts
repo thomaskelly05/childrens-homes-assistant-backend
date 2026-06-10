@@ -326,9 +326,10 @@ export function invalidateFounderDashboardCache() {
 
 export async function refreshFounderDashboardData(): Promise<FounderDashboardData> {
   const { loadFounderBootstrap } = await import('@/lib/founder/bootstrap/founder-bootstrap-client')
+  const { seedLiveMetricsFromBootstrap } = await import('@/lib/founder/data/founder-live-metrics')
   const bootstrap = await loadFounderBootstrap()
   seedFounderTelemetrySummary(bootstrap.telemetrySummary)
-  const metrics = await loadFounderLiveMetrics()
+  const metrics = seedLiveMetricsFromBootstrap(bootstrap)
   cachedDashboardData = generateFounderDashboardData(metrics)
   return cachedDashboardData
 }

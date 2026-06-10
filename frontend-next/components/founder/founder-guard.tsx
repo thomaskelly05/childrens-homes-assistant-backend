@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { ShieldAlert } from 'lucide-react'
 
 import { useAuth } from '@/contexts/auth-context'
@@ -10,13 +10,15 @@ import { userHasFounderAccessFromProfile } from '@/lib/founder/access'
 export function FounderGuard({ children }: { children: React.ReactNode }) {
   const { user, status } = useAuth()
   const router = useRouter()
+  const pathname = usePathname()
   const allowed = userHasFounderAccessFromProfile(user)
+  const returnTarget = pathname?.startsWith('/founder') ? pathname : '/founder'
 
   useEffect(() => {
     if (status === 'unauthenticated') {
-      router.replace('/orb?returnUrl=/founder')
+      router.replace(`/orb?returnUrl=${encodeURIComponent(returnTarget)}`)
     }
-  }, [router, status])
+  }, [router, status, returnTarget])
 
   if (status === 'loading') {
     return (

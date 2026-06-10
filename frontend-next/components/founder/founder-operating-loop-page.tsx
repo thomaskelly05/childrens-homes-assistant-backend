@@ -12,6 +12,7 @@ import {
   fetchOperatingLoopRuns,
   FULL_OPERATING_LOOP_PLAN,
   getLastOperatingLoopRun,
+  getOperatingLoopRuns,
   postOperatingLoopRun,
   PRODUCT_OPERATING_LOOP_PLAN,
   QUALITY_OPERATING_LOOP_PLAN,
@@ -19,8 +20,9 @@ import {
   type FounderOperatingLoopPlan,
   type FounderOperatingLoopRun
 } from '@/lib/founder/operating-loop'
-import { hydrateFounderTelemetryFromLiveData, refreshFounderTelemetrySummary } from '@/lib/founder/telemetry'
 import { refreshFounderDashboardData } from '@/lib/founder/intelligence-service'
+import { getLastFounderBootstrap } from '@/lib/founder/persistence/founder-persistence-sync'
+import { hydrateOperatingLoopRunsFromPersistence } from '@/lib/founder/operating-loop/operating-loop-store'
 import { FounderEvidenceQuickLink } from '@/components/founder/founder-evidence-quick-link'
 
 const STATUS_TONE: Record<string, string> = {
@@ -42,11 +44,20 @@ export function FounderOperatingLoopPage() {
   const [runs, setRuns] = useState<FounderOperatingLoopRun[]>([])
 
   useEffect(() => {
+    const bootstrap = getLastFounderBootstrap()
+    const hasBootstrapRuns = Boolean(bootstrap?.operatingLoopRuns?.length)
+
     refreshFounderDashboardData()
-      .then(() => hydrateFounderTelemetryFromLiveData())
-      .then(() => refreshFounderTelemetrySummary())
-      .then(() => fetchOperatingLoopRuns())
-      .then(setRuns)
+      .then(async () => {
+        if (hasBootstrapRuns && bootstrap?.operatingLoopRuns) {
+          hydrateOperatingLoopRunsFromPersistence(
+            bootstrap.operatingLoopRuns as Parameters<typeof hydrateOperatingLoopRunsFromPersistence>[0]
+          )
+          setRuns(getOperatingLoopRuns())
+          return
+        }
+        setRuns(await fetchOperatingLoopRuns())
+      })
       .catch(() => undefined)
   }, [])
 
@@ -58,7 +69,6 @@ export function FounderOperatingLoopPage() {
     setError(null)
     try {
       await refreshFounderDashboardData()
-      hydrateFounderTelemetryFromLiveData()
       await postOperatingLoopRun(selectedPlan)
       const latest = await fetchOperatingLoopRuns()
       setRuns(latest)

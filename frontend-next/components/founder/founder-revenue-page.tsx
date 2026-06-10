@@ -102,7 +102,8 @@ export function FounderRevenuePage() {
   const unavailable = snapshot?.source === 'unavailable'
 
   return (
-    <div className="space-y-8">
+    <div className="founder-dashboard min-h-screen space-y-8">
+      <div className="founder-dashboard-bg pointer-events-none fixed inset-0 -z-10" aria-hidden />
       <FounderNavHeader
         title="Founder Revenue Intelligence"
         subtitle="Live commercial intelligence for IndiCare Intelligence."

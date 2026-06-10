@@ -25,7 +25,7 @@ describe('Founder Operating Loop V1', () => {
     assert.match(handler, /operating-loop/)
     assert.match(handler, /handleOperatingLoopRunPost/)
     assert.match(handler, /requireFounderSession/)
-    assert.match(handler, /status: 403/)
+    assert.match(read('lib/founder/auth/founder-session.ts'), /status: 403/)
   })
 
   it('operating loop orchestrator persists runs and audit logs', () => {

@@ -30,7 +30,7 @@ describe('Founder Intelligence Centre V1', () => {
     const builder = read('lib/founder/intelligence-centre/intelligence-source-builder.ts')
     assert.match(builder, /Live telemetry not available/)
     assert.match(builder, /No evidence packs generated yet/)
-    assert.match(builder, /do not invent/)
+    assert.match(builder, /does not invent/i)
   })
 
   it('score is conservative when data is missing', () => {
@@ -42,8 +42,8 @@ describe('Founder Intelligence Centre V1', () => {
 
   it('priorities are based on real persisted data paths', () => {
     const source = read('lib/founder/intelligence-centre/founder-priority-engine.ts')
-    assert.match(source, /getFollowUpRecommendations/)
-    assert.match(source, /getPacksNeedingApproval/)
+    assert.match(source, /sources\.relationships\.followUps/)
+    assert.match(source, /sources\.evidence\.needingApproval/)
     assert.match(source, /snapshot\.source === 'unavailable'/)
     assert.match(source, /\.slice\(0, 7\)/)
   })
@@ -91,7 +91,7 @@ describe('Founder Intelligence Centre V1', () => {
 
   it('narrative external copy requires approval', () => {
     const detail = read('components/founder/founder-intelligence-briefing-detail-page.tsx')
-    assert.match(detail, /external copy requires approval/i)
+    assert.match(detail, /external briefing copy requires approval/i)
     const store = read('lib/founder/intelligence-centre/intelligence-store.ts')
     assert.match(store, /queueNarrativeForApproval/)
     assert.match(store, /founder-narrative/)

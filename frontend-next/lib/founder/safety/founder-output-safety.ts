@@ -47,7 +47,21 @@ const FABRICATED_TRACTION = [
   /\bseveral\s+providers?\s+(?:have\s+)?signed\b/gi,
   /\bmultiple\s+LA[s]?\s+(?:are\s+)?interested\b/gi,
   /\bconfirmed\s+customer[s]?\b/gi,
-  /\b\d+\s+paying\s+customers?\b/gi
+  /\b\d+\s+paying\s+customers?\b/gi,
+  /\bopenai\s+(?:is\s+)?interested\b/gi,
+  /\bmicrosoft\s+(?:is\s+)?interested\b/gi,
+  /\bofsted\s+(?:has\s+)?endorsed\b/gi,
+  /\bofsted\s+endorsement\b/gi,
+  /\binvestor\s+interest\s+confirmed\b/gi,
+  /\bprovider\s+interest\s+confirmed\b/gi,
+  /\bpilot\s+(?:is\s+)?(?:live|confirmed|signed)\b/gi
+]
+
+const INVENTED_METRICS = [
+  /\b£\s*\d[\d,]*\s*(?:mrr|arr)\b/gi,
+  /\b\d[\d,]*\s*(?:paid\s+)?users?\s+(?:on\s+)?(?:the\s+)?platform\b/gi,
+  /\b\d[\d,]*\s*paying\s+users?\b/gi,
+  /\bmarket\s+traction\b/gi
 ]
 
 const LEGAL_ADVICE = [/\byou\s+must\s+legally\b/gi, /\bguaranteed\s+compliance\b/gi, /\blegal\s+requirement\s+is\b/gi]
@@ -141,6 +155,16 @@ export function checkFounderOutputSafety(content: string): FounderSafetyResult {
         code: 'unsupported-live-data',
         message: 'Content may claim live metrics without verified data basis.',
         severity: 'medium'
+      })
+    }
+  }
+
+  for (const pattern of INVENTED_METRICS) {
+    if (pattern.test(content)) {
+      issues.push({
+        code: 'invented-metric',
+        message: 'Content may invent revenue, user counts or traction metrics.',
+        severity: 'high'
       })
     }
   }

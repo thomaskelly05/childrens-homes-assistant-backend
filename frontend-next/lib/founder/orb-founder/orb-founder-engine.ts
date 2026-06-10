@@ -189,11 +189,18 @@ function answerAgentRecommendation(ctx: ReturnType<typeof buildIntelligenceConte
 function answerOrbUsage(ctx: ReturnType<typeof buildIntelligenceContext>): FounderOrbAnswer {
   if (!orbFounderLiveInputs().hasOrb) return orbFounderNoLiveDataAnswer(['ORB Intelligence Engine'])
 
-  const themes = ctx.orbIntelligence.emergingThemes.slice(0, 2).join(' ')
+  const themes = ctx.orbIntelligence.emergingThemes.slice(0, 2).join(' ') || 'none recorded yet'
   const fastest = ctx.orbIntelligence.fastestGrowingCategory
+  const fastestCategory = ctx.orbIntelligence.categories.find((category) => category.name === fastest)
+  const trendClause =
+    fastestCategory && fastestCategory.trend !== 0
+      ? ` The fastest-growing category is ${fastest} (${fastestCategory.trend > 0 ? '+' : ''}${fastestCategory.trend}%).`
+      : fastest !== 'Unknown'
+        ? ` The fastest-growing category is ${fastest}.`
+        : ''
 
   return {
-    answer: `ORB usage is up 18% this month with ${ctx.orbIntelligence.totalConversations.toLocaleString('en-GB')} conversations and ${ctx.orbIntelligence.satisfactionScore}% satisfaction. Safeguarding is the dominant category (${ctx.orbIntelligence.safeguardingQueryVolume} queries). The fastest-growing category is ${fastest}. Emerging themes: ${themes}.`,
+    answer: `ORB recorded ${ctx.orbIntelligence.totalConversations.toLocaleString('en-GB')} conversations with ${ctx.orbIntelligence.satisfactionScore}% satisfaction. Safeguarding is a dominant category (${ctx.orbIntelligence.safeguardingQueryVolume} queries).${trendClause} Emerging themes: ${themes}.`,
     usedSources: ['ORB Intelligence Engine', 'Founder Dashboard'],
     suggestedFollowUps: [
       'What is the biggest risk this month?',
@@ -300,8 +307,13 @@ function answerFocusTomorrow(ctx: ReturnType<typeof buildIntelligenceContext>): 
 
   const actions = ctx.chiefOfStaff.recommendations.slice(0, 3)
 
+  const revenueNote =
+    live.hasBilling && ctx.mrr > 0
+      ? ` Live MRR is £${ctx.mrr.toLocaleString('en-GB')} (+${ctx.mrrTrend}%) across ${ctx.providers} providers — protect momentum while addressing ${ctx.topRecommendation?.title.toLowerCase() ?? 'top product priority'}.`
+      : ` Address ${ctx.topRecommendation?.title.toLowerCase() ?? 'top product priority'} while live revenue data is connected.`
+
   return {
-    answer: `Tomorrow, focus on: 1) ${actions[0]}. 2) ${actions[1]}. 3) ${actions[2]}. Revenue is at £${ctx.mrr.toLocaleString('en-GB')} (+${ctx.mrrTrend}%) with ${ctx.providers} providers — protect momentum while addressing ${ctx.topRecommendation?.title.toLowerCase() ?? 'top product priority'}.`,
+    answer: `Tomorrow, focus on: 1) ${actions[0]}. 2) ${actions[1]}. 3) ${actions[2]}.${revenueNote}`,
     usedSources: ['Chief of Staff Agent', 'Founder Insight Engine', 'Founder Dashboard'],
     suggestedFollowUps: [
       'What should IndiCare build next?',
@@ -572,6 +584,20 @@ function answerBrandOpportunity(): FounderOrbAnswer {
   }
 }
 
+function answerExternalPostBlocked(): FounderOrbAnswer {
+  return {
+    answer:
+      'I cannot post, send, publish or deploy externally. I can create drafts and queue them in Approvals for your review. Approve at /founder/approvals before any manual copy or send.',
+    usedSources: ['Approval Centre', 'Data Protection and Safety'],
+    suggestedFollowUps: [
+      'Ask the Brand Ambassador to draft a LinkedIn post.',
+      'What approvals are waiting?',
+      'Create a follow-up draft for this relationship.'
+    ],
+    confidence: 'high'
+  }
+}
+
 function answerFallback(ctx: ReturnType<typeof buildIntelligenceContext>): FounderOrbAnswer {
   const top = ctx.topRecommendation
 
@@ -600,6 +626,19 @@ export function answerFounderQuestion(question: string, context?: FounderOrbCont
   const q = normalise(question)
   if (!q) {
     return answerFallback(buildIntelligenceContext())
+  }
+
+  if (
+    matches(q, [
+      /post to linkedin/,
+      /publish (?:this |to |on )/,
+      /send (?:this |the )?(?:email|message|linkedin)/,
+      /post externally/,
+      /auto-?post/,
+      /deploy (?:this |to production)/
+    ])
+  ) {
+    return answerExternalPostBlocked()
   }
 
   const ctx = buildIntelligenceContext()
