@@ -6,6 +6,7 @@ import { getContentDrafts, updateContentDraftStatus } from '@/lib/founder/conten
 import { getQualityProposals, updateQualityProposalStatus } from '@/lib/founder/quality-lab/quality-proposal-store'
 import type { ApprovalItem, ApprovalType } from './approval-types'
 import { syncPackOnApprovalDecision } from '@/lib/founder/evidence/evidence-store'
+import { markForecastApprovalStatusByApprovalId } from '@/lib/founder/revenue/revenue-store'
 import {
   addApprovalItem,
   getApprovalItem,
@@ -66,6 +67,10 @@ function syncLinkedEntitiesOnDecision(
     void syncPackOnApprovalDecision(item.id, status).catch(() => undefined)
   }
 
+  if (item.type === 'revenue-claim') {
+    markForecastApprovalStatusByApprovalId(item.id, status)
+  }
+
   void appendAuditLog({
     actor: 'founder',
     eventType: status === 'approved' ? 'approved' : status === 'rejected' ? 'rejected' : 'needs_changes',
@@ -119,6 +124,7 @@ export function getApprovalTypeLabel(type: ApprovalType): string {
     'technical-build-brief': 'Technical Build Brief',
     'evidence-pack': 'Evidence Pack',
     'public-claim': 'Public Claim',
+    'revenue-claim': 'Revenue Claim',
     'product-action': 'Product Action',
     'relationship-message': 'Relationship Message'
   }

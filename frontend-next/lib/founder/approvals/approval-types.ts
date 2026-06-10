@@ -6,6 +6,7 @@ export type ApprovalType =
   | 'technical-build-brief'
   | 'evidence-pack'
   | 'public-claim'
+  | 'revenue-claim'
   | 'product-action'
   | 'relationship-message'
 

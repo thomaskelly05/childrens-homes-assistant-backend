@@ -305,12 +305,52 @@ export function FounderRelationshipDetailPage({ relationshipId }: FounderRelatio
                 <p className="text-slate-400">
                   {opp.opportunityType} — {opp.status} ({opp.confidence} confidence)
                 </p>
+                {opp.valueEstimate ? (
+                  <p className="mt-1 text-cyan-200">Commercial value estimate: {opp.valueEstimate}</p>
+                ) : null}
                 <p className="mt-1 text-slate-300">Next: {opp.nextStep}</p>
               </article>
             ))
           )}
         </div>
       </FounderSectionCard>
+
+      {opportunities.some((o) => o.valueEstimate || o.opportunityType === 'investment' || o.opportunityType === 'provider-sale') ? (
+        <FounderSectionCard
+          title="Commercial intelligence"
+          description="Revenue forecasts are modelled assumptions — approve before external commercial claims."
+        >
+          <ul className="space-y-2 text-sm text-slate-300">
+            {opportunities
+              .filter((o) => o.valueEstimate)
+              .map((o) => (
+                <li key={o.id}>
+                  <strong className="text-white">{o.title}:</strong> {o.valueEstimate}
+                </li>
+              ))}
+            {(relationship.relationshipType === 'investor' || relationship.relationshipType === 'provider') && (
+              <li>Consider a conservative revenue forecast for this relationship before investor or provider conversations.</li>
+            )}
+          </ul>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <Link
+              href="/founder/revenue/forecast"
+              className="rounded-xl border border-cyan-400/30 bg-cyan-500/10 px-3 py-2 text-xs font-bold text-cyan-200"
+            >
+              Build revenue forecast
+            </Link>
+            {intelligence.evidencePackRecommended ? (
+              <button
+                type="button"
+                onClick={() => void runAction(`/relationships/${relationshipId}/evidence-pack`, 'Evidence pack queued.')}
+                className="rounded-xl border border-white/10 px-3 py-2 text-xs font-bold text-slate-200"
+              >
+                Generate evidence pack
+              </button>
+            ) : null}
+          </div>
+        </FounderSectionCard>
+      ) : null}
 
       {evidenceNeeded.length > 0 ? (
         <FounderSectionCard title="Evidence needed">

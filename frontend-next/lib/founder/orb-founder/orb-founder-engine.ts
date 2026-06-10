@@ -33,6 +33,7 @@ import {
 } from './orb-founder-operating-loop'
 import { answerEvidenceQuestion, matchesEvidenceQuestion } from './orb-founder-evidence'
 import { answerRelationshipQuestion, matchesRelationshipQuestion } from './orb-founder-relationships'
+import { answerRevenueQuestion, matchesRevenueQuestion } from './orb-founder-revenue'
 import { orbFounderLiveInputs, orbFounderNoLiveDataAnswer } from './orb-founder-live-guard'
 
 export type FounderOrbConfidence = 'high' | 'medium' | 'low'
@@ -659,6 +660,8 @@ export function answerFounderQuestion(question: string, context?: FounderOrbCont
   }
 
   if (matches(q, [/mrr/, /revenue/, /recurring revenue/, /how much.*making/])) {
+    const revenueAnswer = answerRevenueQuestion(q)
+    if (revenueAnswer) return revenueAnswer
     return answerRevenue(ctx)
   }
 
@@ -725,6 +728,11 @@ export function answerFounderQuestion(question: string, context?: FounderOrbCont
   if (matchesRelationshipQuestion(q)) {
     const relationshipAnswer = answerRelationshipQuestion(q)
     if (relationshipAnswer) return relationshipAnswer
+  }
+
+  if (matchesRevenueQuestion(q)) {
+    const revenueAnswer = answerRevenueQuestion(q)
+    if (revenueAnswer) return revenueAnswer
   }
 
   if (matchesEvidenceQuestion(q)) {
