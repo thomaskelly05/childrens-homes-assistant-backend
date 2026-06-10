@@ -20,6 +20,10 @@ import {
 import { runStaffAgent, type FounderStaffAgentId } from '@/lib/founder/team'
 import type { FounderStaffAgentOutput } from '@/lib/founder/team/founder-team-types'
 import { persistStaffTeamRun } from '@/lib/founder/team/staff-team-run-service'
+import { buildRevenueSources } from '@/lib/founder/revenue/revenue-source-builder'
+import { buildCommercialRisks } from '@/lib/founder/revenue/revenue-risks'
+import { calculateAiMargin } from '@/lib/founder/revenue/ai-margin-engine'
+import { getFounderContractInputs } from '@/lib/founder/intelligence-service'
 import {
   addOperatingLoopRun,
   getLastOperatingLoopRun,
@@ -151,6 +155,20 @@ function generateActionsFromFindings(
       created.push(action.id)
     }
   }
+  const revenue = buildRevenueSources()
+  const margin = calculateAiMargin(getFounderContractInputs().billingMetrics, {
+    revenueAvailable: revenue.snapshot.mrr !== null
+  })
+  const commercialRisks = buildCommercialRisks(revenue.snapshot, margin)
+  for (const risk of commercialRisks.slice(0, 2)) {
+    const action = addFounderAction({
+      title: `Commercial: ${risk.title}`.slice(0, 120),
+      detail: `${risk.detail} — review in Revenue Intelligence.`,
+      source: 'Revenue Intelligence'
+    })
+    created.push(action.id)
+  }
+
   const followUps = getFollowUpRecommendations().slice(0, 3)
   for (const followUp of followUps) {
     const title = `Follow up: ${followUp.relationship.organisation}`

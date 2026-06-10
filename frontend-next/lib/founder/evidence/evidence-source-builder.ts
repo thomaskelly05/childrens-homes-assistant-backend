@@ -21,6 +21,9 @@ import { getQualityLabSummary } from '@/lib/founder/quality-lab/quality-run-serv
 import { getFounderTelemetrySummary } from '@/lib/founder/telemetry'
 import { getAuditLogMemorySnapshot } from '@/lib/founder/persistence/repositories/audit-log-repository'
 import { nextId } from '@/lib/founder/persistence/repositories/repository-base'
+import { buildRevenueSources } from '@/lib/founder/revenue/revenue-source-builder'
+import { getApprovedRevenueForecasts } from '@/lib/founder/revenue/revenue-store'
+import { REVENUE_FORECAST_DISCLAIMER } from '@/lib/founder/revenue/revenue-types'
 import type { EvidencePoint, EvidenceSourceBundle } from './evidence-types'
 
 const LIVE_DATA_UNAVAILABLE = 'Live data not yet available.'
@@ -177,6 +180,7 @@ export function buildEvidenceSources(): EvidenceSourceBundle {
     }
 
     const aiCost = calculateAiCost(inputs.billingMetrics)
+    const revenueIntel = buildRevenueSources()
     if (inputs.dataSourceStatus.sourceConnections.billing === 'connected') {
       commercialEvidence.push(
         point(
@@ -190,6 +194,37 @@ export function buildEvidenceSources(): EvidenceSourceBundle {
     } else {
       limitations.push('Billing and revenue data not connected — do not quote MRR or revenue.')
     }
+
+    if (revenueIntel.snapshot.source === 'live' && revenueIntel.snapshot.mrr !== null) {
+      commercialEvidence.push(
+        point(
+          'Live MRR is connected via Revenue Intelligence.',
+          `MRR £${revenueIntel.snapshot.mrr.toLocaleString('en-GB')}; ARR £${(revenueIntel.snapshot.arr ?? 0).toLocaleString('en-GB')}.`,
+          'Revenue Intelligence',
+          'live-telemetry',
+          'high'
+        )
+      )
+    } else {
+      limitations.push('Live MRR unavailable — do not present forecasts as traction.')
+    }
+
+    const approvedForecasts = getApprovedRevenueForecasts()
+    if (approvedForecasts.length > 0) {
+      const latest = approvedForecasts[0]
+      commercialEvidence.push(
+        point(
+          'Approved revenue forecast available for external narrative.',
+          `${REVENUE_FORECAST_DISCLAIMER} Approved ${latest.scenario} scenario: 12-month MRR £${latest.projectedMRR.toLocaleString('en-GB')}.`,
+          'Revenue Intelligence',
+          'manual',
+          'medium',
+          REVENUE_FORECAST_DISCLAIMER
+        )
+      )
+    }
+
+    limitations.push(...revenueIntel.limitations.filter((item) => /MRR|billing|churn|paid user/i.test(item)).slice(0, 3))
 
     if (inputs.dataSourceStatus.sourceConnections.providers === 'connected' && inputs.providerAnalytics.totalProviders > 0) {
       growthEvidence.push(

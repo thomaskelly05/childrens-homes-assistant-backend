@@ -21,6 +21,11 @@ import {
   summariseRelationshipIntelligence
 } from '@/lib/founder/relationships/relationship-intelligence-engine'
 import { getActiveRelationships, getRelationshipFollowUpsForBriefing } from '@/lib/founder/relationships/relationship-store'
+import { buildRevenueSources } from '@/lib/founder/revenue/revenue-source-builder'
+import { buildCommercialRisks, buildFinanceRecommendations } from '@/lib/founder/revenue/revenue-risks'
+import { calculateAiMargin } from '@/lib/founder/revenue/ai-margin-engine'
+import { getApprovedRevenueForecasts } from '@/lib/founder/revenue/revenue-store'
+import { REVENUE_FORECAST_DISCLAIMER } from '@/lib/founder/revenue/revenue-types'
 import type { EvidenceAudience } from '@/lib/founder/evidence/evidence-types'
 import {
   buildStaffAgent,
@@ -89,6 +94,12 @@ export const chiefOfStaffAgent = buildStaffAgent({
         memoryNote,
         ...insights.slice(0, 2).map((i) => i.explanation),
         `Evidence readiness: ${getEvidencePacks().length} pack(s); ${getPacksNeedingApproval().length} awaiting approval`,
+        (() => {
+          const revenue = buildRevenueSources()
+          return revenue.snapshot.source === 'live' && revenue.snapshot.mrr !== null
+            ? `Revenue: live MRR £${revenue.snapshot.mrr.toLocaleString('en-GB')}`
+            : 'Revenue: live billing not connected — review /founder/revenue'
+        })(),
         relationshipSummary.totalActive > 0
           ? `Relationships: ${relationshipSummary.followUpsDue} follow-up(s) due; ${relationshipSummary.activeOpportunities} active opportunities`
           : 'Relationships: no contacts recorded yet — add at /founder/relationships',
@@ -451,6 +462,14 @@ export const brandAmbassadorAgent = buildStaffAgent({
   }
 })
 
+function revenueBriefingLine(): string {
+  const revenue = buildRevenueSources()
+  if (revenue.snapshot.source === 'live' && revenue.snapshot.mrr !== null) {
+    return `Live MRR £${revenue.snapshot.mrr.toLocaleString('en-GB')} — approved forecasts only for external narrative.`
+  }
+  return 'Live MRR unavailable — do not quote revenue in investor materials.'
+}
+
 export const investorRelationsAgent = buildStaffAgent({
   id: 'investor-relations',
   name: 'Investor Relations Agent',
@@ -484,9 +503,10 @@ export const investorRelationsAgent = buildStaffAgent({
         investorRelationships.length > 0
           ? `Investor relationships on file: ${investorRelationships.map((r) => r.organisation).join(', ')}`
           : 'No investor relationships recorded — add contacts at /founder/relationships',
-        inputs.dataSourceStatus.sourceConnections.billing === 'connected'
-          ? `MRR signal: £${inputs.providerAnalytics.totalMrr}`
-          : 'MRR not connected — do not quote revenue.',
+        revenueBriefingLine(),
+        getApprovedRevenueForecasts().length > 0
+          ? `${getApprovedRevenueForecasts().length} approved revenue forecast(s) available — ${REVENUE_FORECAST_DISCLAIMER}`
+          : 'No approved revenue forecasts — modelled scenarios require approval before external use.',
         `AI spend: ${aiCost.openAiSpend}`,
         `Pack data basis: ${pack.dataBasis}`
       ],
@@ -516,22 +536,39 @@ export const financeAiCostAgent = buildStaffAgent({
     'Flag margin risks'
   ],
   permissions: defaultPermissions(),
-  dataSources: ['billing', 'ai-usage', 'telemetry'],
+  dataSources: ['billing', 'ai-usage', 'telemetry', 'revenue-intelligence'],
   run(): FounderStaffAgentOutput {
     const { aiCost, inputs } = contractContext()
-    if (aiCost.raw.openAiSpendGbp === 0 && inputs.providerAnalytics.totalMrr === 0) {
+    const revenue = buildRevenueSources()
+    const margin = calculateAiMargin(inputs.billingMetrics, {
+      revenueAvailable: revenue.snapshot.mrr !== null
+    })
+    const risks = buildCommercialRisks(revenue.snapshot, margin)
+    const recommendations = buildFinanceRecommendations(revenue.snapshot, margin)
+
+    if (aiCost.raw.openAiSpendGbp === 0 && revenue.snapshot.mrr === null) {
       return emptyStaffOutput('No live billing or AI cost data connected.')
     }
+
     return {
-      summary: `AI spend: ${aiCost.openAiSpend}. Cost per conversation: ${aiCost.costPerConversation}.`,
+      summary:
+        revenue.snapshot.mrr !== null
+          ? `Live MRR £${revenue.snapshot.mrr.toLocaleString('en-GB')}. AI spend: ${aiCost.openAiSpend}.`
+          : `AI spend: ${aiCost.openAiSpend}. Live MRR unavailable.`,
       findings: [
-        `Gross margin signal: ${aiCost.grossMargin}`,
-        `Usage warning: ${aiCost.usageWarningLabel}`
+        revenue.snapshot.mrr !== null
+          ? `ARR signal: £${(revenue.snapshot.arr ?? 0).toLocaleString('en-GB')}`
+          : 'Live billing source not connected.',
+        margin.grossMarginPercent !== null
+          ? `Gross margin: ${margin.grossMarginPercent}%`
+          : 'Gross margin unavailable without live revenue.',
+        `Usage warning: ${margin.marginWarningLabel}`,
+        `Revenue Intelligence: /founder/revenue`
       ],
-      recommendations: aiCost.usageWarning !== 'normal' ? ['Review model routing to reduce AI cost.'] : ['Continue monitoring unit economics.'],
-      actions: aiCost.usageWarning !== 'normal' ? ['Review AI cost optimisation options'] : [],
-      risks: aiCost.usageWarning === 'critical' ? ['AI cost is at critical level.'] : [],
-      confidence: 'high',
+      recommendations,
+      actions: risks.length > 0 ? ['Review commercial risks in Revenue Intelligence'] : [],
+      risks: risks.map((r) => r.title),
+      confidence: revenue.snapshot.mrr !== null ? 'high' : 'medium',
       requiresApproval: false
     }
   }
@@ -589,6 +626,9 @@ export const dataProtectionSafetyAgent = buildStaffAgent({
         'No child, staff or provider names in external drafts',
         'No safeguarding narrative in public content',
         'Live data claims must be verified',
+        buildRevenueSources().snapshot.mrr === null
+          ? 'Revenue claims blocked — live MRR not connected'
+          : 'Revenue claims require approval as revenue-claim items',
         `${needingReview.length} evidence pack(s) awaiting review`,
         ...memory.operatingPrinciples.filter((p) =>
           /safeguarding|privacy|children|approval/i.test(p)
@@ -694,6 +734,9 @@ export const evidencePackAgent = buildStaffAgent({
         ...objectives.slice(0, 2),
         `Data basis: ${pack.dataBasis}`,
         ...sources.limitations.slice(0, 2),
+        buildRevenueSources().snapshot.mrr === null
+          ? 'Revenue traction not included — live billing not connected'
+          : 'Revenue included only where live or approved forecast',
         ...(relationshipPacks.length > 0
           ? [`Relationship pack recommendations: ${relationshipPacks.join('; ')}`]
           : ['Add relationships to receive audience-specific pack recommendations'])
