@@ -60,6 +60,7 @@ NO_DELETE_ENTITY_TYPES = frozenset({
     "quality_proposal",
     "expert_review",
     "safety_review",
+    "founder_memory",
     "audit_log",
 })
 

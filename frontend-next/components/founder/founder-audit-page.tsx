@@ -19,7 +19,8 @@ const FILTER_OPTIONS: Array<{ id: string; label: string; entityType?: FounderEnt
   { id: 'loop', label: 'Operating loop', entityType: 'operating_loop_run' },
   { id: 'safety', label: 'Safety', entityType: 'safety_review' },
   { id: 'staff', label: 'Staff team', entityType: 'staff_team_run' },
-  { id: 'agents', label: 'Agent runs', entityType: 'agent_run' }
+  { id: 'agents', label: 'Agent runs', entityType: 'agent_run' },
+  { id: 'memory', label: 'Founder memory', entityType: 'founder_memory' }
 ]
 
 function AuditRow({ entry }: { entry: FounderAuditLogRecord }) {

@@ -40,6 +40,7 @@ export type FounderOperatingLoopRun = {
   buildBriefsCreated: string[]
   risksIdentified: string[]
   recommendedFounderDecisions: string[]
+  strategicAlignment: string[]
   auditLogIds: string[]
   errors: string[]
 }

@@ -61,6 +61,7 @@ function legacyToRun(record: { run?: FounderOperatingLoopRun; result?: unknown; 
     buildBriefsCreated: Array.from({ length: legacy.briefsGenerated ?? 0 }, (_, index) => `legacy-brief-${index + 1}`),
     risksIdentified: [],
     recommendedFounderDecisions: legacy.summary ? [legacy.summary] : [],
+    strategicAlignment: [],
     auditLogIds: [],
     errors: []
   }

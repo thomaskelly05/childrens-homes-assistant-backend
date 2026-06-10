@@ -6,6 +6,7 @@ import { AlertTriangle } from 'lucide-react'
 
 import { FounderNavHeader } from '@/components/founder/founder-nav-header'
 import { FounderSectionCard } from '@/components/founder/founder-section-card'
+import { SaveToFounderMemoryButton } from '@/components/founder/save-to-founder-memory-button'
 import { fetchOperatingLoopRun, type FounderOperatingLoopRun } from '@/lib/founder/operating-loop'
 
 const STATUS_TONE: Record<string, string> = {
@@ -97,11 +98,31 @@ export function FounderOperatingLoopDetailPage({ runId }: { runId: string }) {
           </FounderSectionCard>
         ) : null}
 
+        {run.strategicAlignment && run.strategicAlignment.length > 0 ? (
+          <FounderSectionCard eyebrow="Alignment" title="Strategic Alignment">
+            <ul className="space-y-2 text-sm text-slate-300">
+              {run.strategicAlignment.map((line) => (
+                <li key={line}>{line}</li>
+              ))}
+            </ul>
+          </FounderSectionCard>
+        ) : null}
+
         {run.recommendedFounderDecisions.length > 0 ? (
           <FounderSectionCard eyebrow="Decisions" title="Recommended Founder Decisions">
             <ul className="space-y-2 text-sm text-slate-300">
               {run.recommendedFounderDecisions.map((decision) => (
-                <li key={decision}>{decision}</li>
+                <li key={decision} className="flex flex-wrap items-start justify-between gap-3">
+                  <span>{decision}</span>
+                  <SaveToFounderMemoryButton
+                    type="decision"
+                    title={decision.slice(0, 120)}
+                    content={decision}
+                    linkedEntityId={run.id}
+                    linkedEntityType="operating_loop_run"
+                    source="operating-loop"
+                  />
+                </li>
               ))}
             </ul>
           </FounderSectionCard>

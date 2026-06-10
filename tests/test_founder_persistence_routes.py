@@ -186,6 +186,37 @@ def test_api_response_strips_identifiable_fields(admin_client):
     assert "child_name" not in str(payload)
 
 
+def test_founder_memory_create(admin_client):
+    response = admin_client.post(
+        "/founder-os/persistence/memories",
+        json={
+            "record": {
+                "status": "active",
+                "item": {
+                    "id": "memory-1",
+                    "type": "principle",
+                    "title": "Live-only metrics",
+                    "content": "Use live founder metrics only.",
+                    "status": "active",
+                    "importance": "critical",
+                    "tags": ["principle"],
+                    "source": "founder-ui",
+                    "createdAt": "2026-06-09T12:00:00+00:00",
+                    "updatedAt": "2026-06-09T12:00:00+00:00",
+                    "createdBy": "founder",
+                },
+            }
+        },
+    )
+    assert response.status_code == 200
+    assert response.json()["data"]["item"]["type"] == "principle"
+
+
+def test_founder_memory_requires_founder_role(staff_client):
+    response = staff_client.get("/founder-os/persistence/memories")
+    assert response.status_code == 403
+
+
 def test_quality_proposal_create(admin_client):
     response = admin_client.post(
         "/founder-os/persistence/quality-proposals",

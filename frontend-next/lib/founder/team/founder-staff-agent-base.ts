@@ -1,3 +1,5 @@
+import { getFounderStrategicContext } from '@/lib/founder/memory/founder-memory-store'
+import type { FounderStrategicContext } from '@/lib/founder/memory/founder-memory-types'
 import { getFounderContractInputs } from '@/lib/founder/intelligence-service'
 import { hasAnyLiveFounderIntelligence } from '@/lib/founder/data/founder-live-availability'
 import { getFounderTelemetrySummary } from '@/lib/founder/telemetry'
@@ -65,6 +67,10 @@ export function buildStaffAgent(
     generateActions: config.generateActions ?? (() => config.run().actions),
     generateBriefing: config.generateBriefing ?? (() => config.run().summary)
   }
+}
+
+export function getStaffStrategicMemory(): FounderStrategicContext {
+  return getFounderStrategicContext()
 }
 
 export function liveDataSources(): string[] {

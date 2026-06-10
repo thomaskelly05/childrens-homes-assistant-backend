@@ -4,6 +4,13 @@ import { NextResponse } from 'next/server'
 import { getInternalBackendOrigin } from '@/lib/auth/api-base'
 import { userHasFounderAccess } from '@/lib/founder/access'
 import {
+  handleFounderMemoryContextGet,
+  handleFounderMemoryItemGet,
+  handleFounderMemoryItemPatch,
+  handleFounderMemoryListGet,
+  handleFounderMemoryPost
+} from '@/lib/founder/memory/founder-memory-api'
+import {
   handleOperatingLoopRunGet,
   handleOperatingLoopRunPost,
   handleOperatingLoopRunsGet
@@ -22,7 +29,8 @@ const ROUTE_ENTITY_MAP: Record<string, string> = {
   'quality-lab/proposals': 'quality-proposals',
   'quality-lab/expert-reviews': 'expert-reviews',
   'safety-reviews': 'safety-reviews',
-  'audit-log': 'audit-log'
+  'audit-log': 'audit-log',
+  memories: 'memories'
 }
 
 type FounderSession =
@@ -170,6 +178,25 @@ async function proxyToBackend(request: Request, backendPath: string): Promise<Ne
 export async function handleFounderApi(request: Request, segments: string[]): Promise<NextResponse> {
   if (segments.length === 0) {
     return NextResponse.json({ ok: true, service: 'founder-persistence' })
+  }
+
+  if (segments[0] === 'memory') {
+    if (segments.length === 1 && request.method.toUpperCase() === 'GET') {
+      return handleFounderMemoryListGet(request)
+    }
+    if (segments.length === 1 && request.method.toUpperCase() === 'POST') {
+      return handleFounderMemoryPost(request)
+    }
+    if (segments.length === 2 && segments[1] === 'context' && request.method.toUpperCase() === 'GET') {
+      return handleFounderMemoryContextGet()
+    }
+    if (segments.length === 2 && segments[1] !== 'context' && request.method.toUpperCase() === 'GET') {
+      return handleFounderMemoryItemGet(segments[1])
+    }
+    if (segments.length === 2 && segments[1] !== 'context' && request.method.toUpperCase() === 'PATCH') {
+      return handleFounderMemoryItemPatch(request, segments[1])
+    }
+    return NextResponse.json({ error: 'Not found' }, { status: 404 })
   }
 
   if (segments[0] === 'operating-loop') {

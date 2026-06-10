@@ -7,9 +7,15 @@ import {
 } from '@/lib/founder/intelligence'
 import { getFounderTelemetrySummary } from '@/lib/founder/telemetry'
 import {
+  alignRecommendationToProductFocus,
+  filterDeferredRecommendations,
+  strategicMemorySummary
+} from '@/lib/founder/memory/founder-memory-staff-context'
+import {
   buildStaffAgent,
   defaultPermissions,
   emptyStaffOutput,
+  getStaffStrategicMemory,
   hasLiveStaffData,
   hasLiveTelemetry,
   liveDataSources
@@ -52,20 +58,33 @@ export const chiefOfStaffAgent = buildStaffAgent({
   permissions: defaultPermissions({ draftContent: true, recommendProduct: true }),
   dataSources: ['telemetry', 'founder-intelligence', 'actions', 'approvals'],
   run(): FounderStaffAgentOutput {
+    const memory = getStaffStrategicMemory()
     const { hasLive } = telemetryContext()
     if (!hasLive && !hasLiveStaffData()) {
       return emptyStaffOutput('Waiting for live telemetry and founder data before producing a briefing.')
     }
     const { insights } = contractContext()
     const topInsight = insights[0]
+    const memoryNote = strategicMemorySummary()
     return {
-      summary: topInsight
-        ? `Today's priority: ${topInsight.title}. ${topInsight.action}`
-        : 'Live founder data is connected. Review connected sources and pending approvals.',
-      findings: insights.slice(0, 3).map((i) => i.explanation),
-      recommendations: insights.slice(0, 3).map((i) => i.action),
+      summary: memory.primaryObjective
+        ? `${memory.primaryObjective.split(':')[0]}. ${topInsight ? topInsight.title : 'Review connected sources.'}`
+        : topInsight
+          ? `Today's priority: ${topInsight.title}. ${topInsight.action}`
+          : 'Live founder data is connected. Review connected sources and pending approvals.',
+      findings: [
+        memoryNote,
+        ...insights.slice(0, 2).map((i) => i.explanation)
+      ].filter(Boolean),
+      recommendations: filterDeferredRecommendations(
+        insights.slice(0, 3).map((i) => i.action),
+        memory.deferredObjectives
+      ),
       actions: insights.slice(0, 2).map((i) => i.title),
-      risks: ['External content requires Thomas approval before publishing.'],
+      risks: [
+        'External content requires Thomas approval before publishing.',
+        ...(memory.currentRisks.length > 0 ? memory.currentRisks.slice(0, 2) : [])
+      ],
       confidence: hasLive ? 'high' : 'medium',
       requiresApproval: false
     }
@@ -88,20 +107,31 @@ export const ctoAgent = buildStaffAgent({
   permissions: defaultPermissions({ recommendTechnicalWork: true, reviewQuality: true }),
   dataSources: ['telemetry', 'errors', 'ai-usage', 'founder-data-sources'],
   run(): FounderStaffAgentOutput {
+    const memory = getStaffStrategicMemory()
     const { summary, hasLive } = telemetryContext()
     if (!hasLive) return emptyStaffOutput('No live telemetry yet. Connect platform event sources for technical monitoring.')
     const findings: string[] = []
     const recommendations: string[] = []
+    if (memory.currentProductFocus) findings.push(`Build aligned to product focus: ${memory.currentProductFocus}`)
     if (summary.errorRate > 10) findings.push(`Error rate is ${summary.errorRate}% across telemetry events.`)
     if (summary.aiCostsGbp > 0) findings.push(`AI spend estimate: £${summary.aiCostsGbp.toFixed(2)} from live billing data.`)
     const disconnected = liveDataSources().length < 4
     if (disconnected) recommendations.push('Connect missing live data adapters before scaling provider rollout.')
     if (summary.errorRate > 10) recommendations.push('Prioritise error monitoring and founder-safe telemetry aggregation.')
-    recommendations.push('Review AI cost per conversation before increasing ORB usage limits.')
+    recommendations.push(
+      alignRecommendationToProductFocus(
+        'Review AI cost per conversation before increasing ORB usage limits.',
+        memory.currentProductFocus
+      )
+    )
     return {
-      summary: findings.length > 0 ? findings[0] : 'Technical platform signals are within normal range from live telemetry.',
+      summary: memory.currentProductFocus
+        ? `Technical priorities aligned to: ${memory.currentProductFocus.split(':')[0]}`
+        : findings.length > 0
+          ? findings[0]
+          : 'Technical platform signals are within normal range from live telemetry.',
       findings,
-      recommendations,
+      recommendations: filterDeferredRecommendations(recommendations, memory.deferredObjectives),
       actions: recommendations.slice(0, 2),
       risks: summary.errorRate > 15 ? ['Elevated error rate may affect ORB reliability.'] : [],
       confidence: hasLive ? 'medium' : 'low',
@@ -161,21 +191,27 @@ export const productDirectorAgent = buildStaffAgent({
   permissions: defaultPermissions({ recommendProduct: true }),
   dataSources: ['feature-usage', 'orb-analytics', 'readiness'],
   run(): FounderStaffAgentOutput {
+    const memory = getStaffStrategicMemory()
     const { summary, hasLive } = telemetryContext()
     if (!hasLive) return emptyStaffOutput('No live feature usage telemetry yet.')
     const topFeatures = summary.featureUsage.slice(0, 3)
+    const productFocus = memory.currentProductFocus || 'ORB Residential first'
     return {
-      summary: topFeatures.length > 0
-        ? `Top feature signal: ${topFeatures[0].feature} (${topFeatures[0].count} events).`
-        : 'Feature usage telemetry is connected but sparse.',
-      findings: topFeatures.map((f) => `${f.feature}: ${f.count} usage events`),
-      recommendations: [
-        'Prioritise features with rising adoption and direct care impact',
-        'Review abandonment risk on least-used workflows',
-        'Align roadmap with Ofsted readiness gaps'
+      summary: `Product roadmap aligned to founder focus: ${productFocus.split(':')[0]}.`,
+      findings: [
+        productFocus,
+        ...topFeatures.map((f) => `${f.feature}: ${f.count} usage events`)
       ],
+      recommendations: filterDeferredRecommendations(
+        [
+          alignRecommendationToProductFocus('Prioritise ORB Residential features with direct care impact', productFocus),
+          'Review abandonment risk on least-used workflows',
+          'Align roadmap with Ofsted readiness gaps'
+        ],
+        memory.deferredObjectives
+      ),
       actions: topFeatures.length > 0 ? [`Review product priority for ${topFeatures[0].feature}`] : [],
-      risks: [],
+      risks: memory.deferredObjectives.length > 0 ? [`Deferred: ${memory.deferredObjectives[0]}`] : [],
       confidence: 'medium',
       requiresApproval: false
     }
@@ -343,20 +379,27 @@ export const brandAmbassadorAgent = buildStaffAgent({
   }),
   dataSources: ['telemetry', 'founder-actions', 'product-milestones'],
   run(): FounderStaffAgentOutput {
+    const memory = getStaffStrategicMemory()
     const { summary, hasLive } = telemetryContext()
     const dataNote = hasLive
       ? `Based on live telemetry: ${summary.totalEvents} events, ${summary.orbConversations} ORB conversations.`
       : 'No live metrics available — draft will use principles only, not fabricated numbers.'
     return {
       summary: `Content draft ready for review. ${dataNote}`,
-      findings: ['All external posts require Thomas approval before publishing.'],
+      findings: [
+        'All external posts require Thomas approval before publishing.',
+        ...memory.operatingPrinciples.slice(0, 2)
+      ],
       recommendations: [
-        'Draft LinkedIn post from verified progress only',
+        'Draft LinkedIn post from verified progress only — no fake traction',
         'Mark estimated claims clearly when live data is limited',
         'Route through Data Protection and Safety review'
       ],
       actions: ['Create LinkedIn draft in Content Centre'],
-      risks: ['External content must not include identifiable child, staff or provider details.'],
+      risks: [
+        'External content must not include identifiable child, staff or provider details.',
+        'Never claim traction not supported by live data.'
+      ],
       confidence: hasLive ? 'medium' : 'low',
       requiresApproval: true
     }
@@ -378,11 +421,15 @@ export const investorRelationsAgent = buildStaffAgent({
   permissions: defaultPermissions({ draftContent: true, draftEmail: true }),
   dataSources: ['billing', 'telemetry', 'readiness'],
   run(): FounderStaffAgentOutput {
+    const memory = getStaffStrategicMemory()
     if (!hasLiveStaffData()) return emptyStaffOutput('No live traction data for investor materials.')
     const { aiCost, inputs } = contractContext()
     return {
-      summary: 'Investor update draft can be prepared from connected live aggregates only.',
+      summary: memory.currentCommercialFocus
+        ? `Investor narrative aligned to commercial focus: ${memory.currentCommercialFocus.split(':')[0]}`
+        : 'Investor update draft can be prepared from connected live aggregates only.',
       findings: [
+        memory.currentCommercialFocus || 'No commercial focus recorded in founder memory.',
         `MRR signal: £${inputs.providerAnalytics.totalMrr}`,
         `AI spend: ${aiCost.openAiSpend}`
       ],
@@ -477,12 +524,16 @@ export const dataProtectionSafetyAgent = buildStaffAgent({
   permissions: defaultPermissions({ reviewQuality: true }),
   dataSources: ['content-drafts', 'approvals'],
   run(): FounderStaffAgentOutput {
+    const memory = getStaffStrategicMemory()
     return {
       summary: 'All external-facing content requires safety review before approval.',
       findings: [
         'No child, staff or provider names in external drafts',
         'No safeguarding narrative in public content',
-        'Live data claims must be verified'
+        'Live data claims must be verified',
+        ...memory.operatingPrinciples.filter((p) =>
+          /safeguarding|privacy|children|approval/i.test(p)
+        ).slice(0, 2)
       ],
       recommendations: [
         'Run founder-output-safety check on all drafts',
@@ -542,13 +593,20 @@ export const evidencePackAgent = buildStaffAgent({
   permissions: defaultPermissions({ draftContent: true }),
   dataSources: ['telemetry', 'readiness', 'billing', 'orb-analytics'],
   run(): FounderStaffAgentOutput {
+    const memory = getStaffStrategicMemory()
     if (!hasLiveStaffData() && !hasLiveTelemetry()) {
       return emptyStaffOutput('No live data for evidence packs yet.')
     }
     const { summary } = telemetryContext()
+    const objectives = [memory.primaryObjective, ...memory.secondaryObjectives].filter(Boolean)
     return {
-      summary: `Evidence pack can include ${summary.totalEvents} telemetry events and connected founder metrics.`,
-      findings: ['All figures must come from live connected sources.'],
+      summary: objectives.length > 0
+        ? `Evidence pack aligned to strategic objective: ${objectives[0].split(':')[0]}`
+        : `Evidence pack can include ${summary.totalEvents} telemetry events and connected founder metrics.`,
+      findings: [
+        ...objectives.slice(0, 2),
+        'All figures must come from live connected sources.'
+      ],
       recommendations: [
         'Include data basis and limitations in every pack',
         'Route packs through approvals before external sharing'

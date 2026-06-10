@@ -11,6 +11,7 @@ import {
   hydrateQualityProposalsFromPersistence,
   hydrateQualityRunsFromPersistence
 } from '@/lib/founder/quality-lab/persistence-bridge'
+import { hydrateFounderMemoryFromPersistence } from '@/lib/founder/memory/founder-memory-store'
 import { hydrateOperatingLoopRunsFromPersistence } from '@/lib/founder/operating-loop/operating-loop-store'
 import { operatingLoopRepository } from '@/lib/founder/persistence'
 
@@ -23,6 +24,7 @@ export async function hydrateAllFounderPersistence(): Promise<void> {
     hydrateQualityRunsFromPersistence(),
     hydrateQualityProposalsFromPersistence(),
     hydrateExpertReviewsFromPersistence(),
-    operatingLoopRepository.list().then((records) => hydrateOperatingLoopRunsFromPersistence(records))
+    operatingLoopRepository.list().then((records) => hydrateOperatingLoopRunsFromPersistence(records)),
+    hydrateFounderMemoryFromPersistence()
   ])
 }

@@ -39,6 +39,7 @@ ENTITY_ALIASES: dict[str, str] = {
     "quality-proposals": "quality_proposal",
     "expert-reviews": "expert_review",
     "safety-reviews": "safety_review",
+    "memories": "founder_memory",
 }
 
 
