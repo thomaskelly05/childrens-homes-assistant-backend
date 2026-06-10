@@ -3,6 +3,7 @@ import {
   FounderPersistenceApiError,
   founderPersistenceApi
 } from '@/lib/founder/persistence/founder-api-client'
+import { getBootstrapRecordsForSlug } from '@/lib/founder/bootstrap/founder-bootstrap-cache'
 import {
   FOUNDER_PERSISTENCE_DEV_FALLBACK_WARNING,
   isFounderPersistenceDevFallback
@@ -66,6 +67,15 @@ export abstract class BaseFounderRepository<T extends { id: string }> {
   }
 
   async list(filters?: { status?: string }): Promise<T[]> {
+    const bootstrapItems = getBootstrapRecordsForSlug(this.slug())
+    if (bootstrapItems) {
+      const items = bootstrapItems as T[]
+      if (filters?.status) {
+        return items.filter((item) => (item as { status?: string }).status === filters.status)
+      }
+      return items
+    }
+
     if (isFounderPersistenceDevFallback()) {
       warnDevFallback(this.memory)
       const items = [...this.memory.items]

@@ -160,13 +160,12 @@ async def founder_summary(
     current_user: dict[str, Any] = Depends(get_current_user),
 ):
     require_founder(current_user)
-    await ensure_founder_tables()
-
     user_id = require_user_id(current_user)
 
-    leads = await list_founder_leads(user_id)
-    tasks = await list_founder_tasks(user_id)
-    notes = await list_founder_strategy_notes(user_id)
+    ensure_founder_tables()
+    leads = list_founder_leads(user_id)
+    tasks = list_founder_tasks(user_id)
+    notes = list_founder_strategy_notes(user_id)
 
     response = await run_founder_quick_action(
         action="dashboard_brain",
@@ -204,23 +203,22 @@ async def founder_ai_chat(
     current_user: dict[str, Any] = Depends(get_current_user),
 ):
     require_founder(current_user)
-    await ensure_founder_tables()
-
+    ensure_founder_tables()
     user_id = require_user_id(current_user)
     mode = normalise_founder_mode(payload.mode)
 
     thread_id = payload.thread_id
 
     if not thread_id:
-        thread_id = await create_founder_thread(
+        thread_id = create_founder_thread(
             user_id=user_id,
             title=payload.title or f"Founder {mode.title()} Chat",
             mode=mode,
         )
 
-    history = await get_founder_messages(user_id, thread_id)
+    history = get_founder_messages(user_id, thread_id)
 
-    await save_founder_message(
+    save_founder_message(
         thread_id=thread_id,
         user_id=user_id,
         role="user",
@@ -234,7 +232,7 @@ async def founder_ai_chat(
         history=history,
     )
 
-    await save_founder_message(
+    save_founder_message(
         thread_id=thread_id,
         user_id=user_id,
         role="assistant",
@@ -258,8 +256,6 @@ async def founder_quick_action(
     current_user: dict[str, Any] = Depends(get_current_user),
 ):
     require_founder(current_user)
-    await ensure_founder_tables()
-
     response = await run_founder_quick_action(
         action=payload.action,
         user=current_user,
@@ -281,12 +277,11 @@ async def founder_threads(
     current_user: dict[str, Any] = Depends(get_current_user),
 ):
     require_founder(current_user)
-    await ensure_founder_tables()
-
+    ensure_founder_tables()
     user_id = require_user_id(current_user)
 
     return {
-        "threads": await list_founder_threads(user_id),
+        "threads": list_founder_threads(user_id),
     }
 
 
@@ -296,12 +291,11 @@ async def founder_thread_messages(
     current_user: dict[str, Any] = Depends(get_current_user),
 ):
     require_founder(current_user)
-    await ensure_founder_tables()
-
+    ensure_founder_tables()
     user_id = require_user_id(current_user)
 
     return {
-        "messages": await get_founder_messages(user_id, thread_id),
+        "messages": get_founder_messages(user_id, thread_id),
     }
 
 
@@ -314,12 +308,11 @@ async def founder_leads(
     current_user: dict[str, Any] = Depends(get_current_user),
 ):
     require_founder(current_user)
-    await ensure_founder_tables()
-
+    ensure_founder_tables()
     user_id = require_user_id(current_user)
 
     return {
-        "leads": await list_founder_leads(user_id),
+        "leads": list_founder_leads(user_id),
     }
 
 
@@ -329,11 +322,10 @@ async def founder_create_lead(
     current_user: dict[str, Any] = Depends(get_current_user),
 ):
     require_founder(current_user)
-    await ensure_founder_tables()
-
+    ensure_founder_tables()
     user_id = require_user_id(current_user)
 
-    lead = await create_founder_lead(
+    lead = create_founder_lead(
         user_id=user_id,
         organisation_name=payload.organisation_name,
         contact_name=payload.contact_name,
@@ -358,11 +350,10 @@ async def founder_update_lead_status_route(
     current_user: dict[str, Any] = Depends(get_current_user),
 ):
     require_founder(current_user)
-    await ensure_founder_tables()
-
+    ensure_founder_tables()
     user_id = require_user_id(current_user)
 
-    lead = await update_founder_lead_status(
+    lead = update_founder_lead_status(
         user_id=user_id,
         lead_id=lead_id,
         status=payload.status,
@@ -386,12 +377,11 @@ async def founder_tasks(
     current_user: dict[str, Any] = Depends(get_current_user),
 ):
     require_founder(current_user)
-    await ensure_founder_tables()
-
+    ensure_founder_tables()
     user_id = require_user_id(current_user)
 
     return {
-        "tasks": await list_founder_tasks(user_id),
+        "tasks": list_founder_tasks(user_id),
     }
 
 
@@ -401,11 +391,10 @@ async def founder_create_task(
     current_user: dict[str, Any] = Depends(get_current_user),
 ):
     require_founder(current_user)
-    await ensure_founder_tables()
-
+    ensure_founder_tables()
     user_id = require_user_id(current_user)
 
-    task = await create_founder_task(
+    task = create_founder_task(
         user_id=user_id,
         title=payload.title,
         status=payload.status,
@@ -427,11 +416,10 @@ async def founder_update_task_status_route(
     current_user: dict[str, Any] = Depends(get_current_user),
 ):
     require_founder(current_user)
-    await ensure_founder_tables()
-
+    ensure_founder_tables()
     user_id = require_user_id(current_user)
 
-    task = await update_founder_task_status(
+    task = update_founder_task_status(
         user_id=user_id,
         task_id=task_id,
         status=payload.status,
@@ -455,12 +443,11 @@ async def founder_strategy_notes(
     current_user: dict[str, Any] = Depends(get_current_user),
 ):
     require_founder(current_user)
-    await ensure_founder_tables()
-
+    ensure_founder_tables()
     user_id = require_user_id(current_user)
 
     return {
-        "notes": await list_founder_strategy_notes(user_id),
+        "notes": list_founder_strategy_notes(user_id),
     }
 
 
@@ -470,11 +457,10 @@ async def founder_create_strategy_note(
     current_user: dict[str, Any] = Depends(get_current_user),
 ):
     require_founder(current_user)
-    await ensure_founder_tables()
-
+    ensure_founder_tables()
     user_id = require_user_id(current_user)
 
-    note = await create_founder_strategy_note(
+    note = create_founder_strategy_note(
         user_id=user_id,
         title=payload.title,
         content=payload.content,

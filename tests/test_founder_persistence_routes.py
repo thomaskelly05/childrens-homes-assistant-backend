@@ -17,7 +17,7 @@ def admin_client(monkeypatch):
     monkeypatch.setattr(app_module, "init_db_pool", lambda: None, raising=False)
     monkeypatch.setattr(app_module, "close_db_pool", lambda: None, raising=False)
 
-    async def _ensure_tables():
+    def _ensure_tables(*args, **kwargs):
         return None
 
     monkeypatch.setattr(
@@ -27,13 +27,13 @@ def admin_client(monkeypatch):
 
     stored: dict[str, list] = {"records": [], "audit": []}
 
-    async def _create_record(**kwargs):
+    def _create_record(**kwargs):
         record = dict(kwargs["record"])
         record.setdefault("id", f"rec-{len(stored['records']) + 1}")
         stored["records"].append({"entity_type": kwargs["entity_type"], "record": record})
         return record
 
-    async def _list_records(**kwargs):
+    def _list_records(**kwargs):
         items = [
             row["record"]
             for row in stored["records"]
@@ -41,20 +41,20 @@ def admin_client(monkeypatch):
         ]
         return items
 
-    async def _get_record(**kwargs):
+    def _get_record(**kwargs):
         for row in stored["records"]:
             if row["entity_type"] == kwargs["entity_type"] and row["record"].get("id") == kwargs["record_id"]:
                 return row["record"]
         return None
 
-    async def _update_record(**kwargs):
+    def _update_record(**kwargs):
         for row in stored["records"]:
             if row["entity_type"] == kwargs["entity_type"] and row["record"].get("id") == kwargs["record_id"]:
                 row["record"].update(kwargs["patch"])
                 return row["record"]
         return None
 
-    async def _append_audit_log(**kwargs):
+    def _append_audit_log(**kwargs):
         entry = {
             "id": f"audit-{len(stored['audit']) + 1}",
             "createdAt": "2026-06-09T12:00:00+00:00",
@@ -69,7 +69,7 @@ def admin_client(monkeypatch):
         stored["audit"].append(entry)
         return entry
 
-    async def _list_audit_log(**kwargs):
+    def _list_audit_log(**kwargs):
         return list(stored["audit"])
 
     target = "routers.founder_persistence_routes"

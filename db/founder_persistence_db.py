@@ -3,11 +3,16 @@
 from __future__ import annotations
 
 import json
+import logging
 import uuid
 from datetime import datetime, timezone
 from typing import Any
 
+from psycopg2.extras import RealDictCursor
+
 from db.connection import get_db_connection, release_db_connection
+
+logger = logging.getLogger(__name__)
 
 CREATE_FOUNDER_PERSISTENCE_SQL = """
 CREATE TABLE IF NOT EXISTS founder_os_records (
@@ -64,6 +69,19 @@ NO_DELETE_ENTITY_TYPES = frozenset({
     "audit_log",
 })
 
+BOOTSTRAP_ENTITY_TYPES = (
+    "action",
+    "approval",
+    "content",
+    "build_brief",
+    "quality_run",
+    "quality_proposal",
+    "expert_review",
+    "founder_memory",
+    "evidence_pack",
+    "operating_loop_run",
+)
+
 IDENTIFIABLE_FIELD_KEYS = frozenset({
     "child_name",
     "childName",
@@ -77,6 +95,8 @@ IDENTIFIABLE_FIELD_KEYS = frozenset({
     "last_name",
     "display_name",
 })
+
+_tables_ready = False
 
 
 def _utc_now() -> datetime:
@@ -135,15 +155,26 @@ def sanitise_payload(value: Any) -> Any:
     return value
 
 
-async def ensure_founder_persistence_tables() -> None:
-    conn = await get_db_connection()
+def ensure_founder_persistence_tables(*, conn: Any | None = None) -> None:
+    global _tables_ready
+    if _tables_ready and conn is None:
+        return
+
+    owned = conn is None
+    if owned:
+        conn = get_db_connection()
     try:
-        await conn.execute(CREATE_FOUNDER_PERSISTENCE_SQL)
+        with conn.cursor() as cur:
+            cur.execute(CREATE_FOUNDER_PERSISTENCE_SQL)
+        if owned:
+            conn.commit()
+            _tables_ready = True
     finally:
-        await release_db_connection(conn)
+        if owned:
+            release_db_connection(conn)
 
 
-async def create_record(
+def create_record(
     *,
     user_id: int,
     entity_type: str,
@@ -151,7 +182,7 @@ async def create_record(
     actor: str,
     source: str = "founder-ui",
 ) -> dict[str, Any]:
-    await ensure_founder_persistence_tables()
+    ensure_founder_persistence_tables()
     record_id = str(record.get("id") or f"founder-{entity_type}-{uuid.uuid4().hex[:12]}")
     now = _utc_now()
     safe_payload = sanitise_payload(record)
@@ -162,31 +193,35 @@ async def create_record(
     safe_payload["source"] = safe_payload.get("source") or source
     status = safe_payload.get("status")
 
-    conn = await get_db_connection()
+    conn = get_db_connection()
     try:
-        await conn.execute(
-            """
-            INSERT INTO founder_os_records (
-                id, entity_type, user_id, status, created_by, source, payload, created_at, updated_at
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                """
+                INSERT INTO founder_os_records (
+                    id, entity_type, user_id, status, created_by, source, payload, created_at, updated_at
+                )
+                VALUES (%s, %s, %s, %s, %s, %s, %s::jsonb, %s, %s)
+                """,
+                (
+                    record_id,
+                    entity_type,
+                    user_id,
+                    status,
+                    safe_payload["createdBy"],
+                    safe_payload["source"],
+                    json.dumps(safe_payload),
+                    now,
+                    now,
+                ),
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9)
-            """,
-            record_id,
-            entity_type,
-            user_id,
-            status,
-            safe_payload["createdBy"],
-            safe_payload["source"],
-            json.dumps(safe_payload),
-            now,
-            now,
-        )
+        conn.commit()
     finally:
-        await release_db_connection(conn)
+        release_db_connection(conn)
     return safe_payload
 
 
-async def list_records(
+def list_records(
     *,
     user_id: int,
     entity_type: str,
@@ -194,63 +229,91 @@ async def list_records(
     limit: int = 200,
     offset: int = 0,
 ) -> list[dict[str, Any]]:
-    await ensure_founder_persistence_tables()
-    conn = await get_db_connection()
+    ensure_founder_persistence_tables()
+    conn = get_db_connection()
     try:
-        if status:
-            rows = await conn.fetch(
-                """
-                SELECT id, entity_type, user_id, status, created_by, source, payload, created_at, updated_at
-                FROM founder_os_records
-                WHERE user_id = $1 AND entity_type = $2 AND status = $3
-                ORDER BY created_at DESC
-                LIMIT $4 OFFSET $5
-                """,
-                user_id,
-                entity_type,
-                status,
-                limit,
-                offset,
-            )
-        else:
-            rows = await conn.fetch(
-                """
-                SELECT id, entity_type, user_id, status, created_by, source, payload, created_at, updated_at
-                FROM founder_os_records
-                WHERE user_id = $1 AND entity_type = $2
-                ORDER BY created_at DESC
-                LIMIT $3 OFFSET $4
-                """,
-                user_id,
-                entity_type,
-                limit,
-                offset,
-            )
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            if status:
+                cur.execute(
+                    """
+                    SELECT id, entity_type, user_id, status, created_by, source, payload, created_at, updated_at
+                    FROM founder_os_records
+                    WHERE user_id = %s AND entity_type = %s AND status = %s
+                    ORDER BY created_at DESC
+                    LIMIT %s OFFSET %s
+                    """,
+                    (user_id, entity_type, status, limit, offset),
+                )
+            else:
+                cur.execute(
+                    """
+                    SELECT id, entity_type, user_id, status, created_by, source, payload, created_at, updated_at
+                    FROM founder_os_records
+                    WHERE user_id = %s AND entity_type = %s
+                    ORDER BY created_at DESC
+                    LIMIT %s OFFSET %s
+                    """,
+                    (user_id, entity_type, limit, offset),
+                )
+            rows = cur.fetchall()
         return [_row_to_record(row) for row in rows]
     finally:
-        await release_db_connection(conn)
+        release_db_connection(conn)
 
 
-async def get_record(*, user_id: int, entity_type: str, record_id: str) -> dict[str, Any] | None:
-    await ensure_founder_persistence_tables()
-    conn = await get_db_connection()
+def list_bootstrap_persistence(
+    *,
+    user_id: int,
+    entity_types: tuple[str, ...] = BOOTSTRAP_ENTITY_TYPES,
+    limit_per_type: int = 200,
+    conn: Any | None = None,
+) -> dict[str, list[dict[str, Any]]]:
+    """Load all founder persistence entity lists using a single DB connection."""
+    ensure_founder_persistence_tables(conn=conn)
+    grouped: dict[str, list[dict[str, Any]]] = {entity_type: [] for entity_type in entity_types}
+    owned = conn is None
+    if owned:
+        conn = get_db_connection()
     try:
-        row = await conn.fetchrow(
-            """
-            SELECT id, entity_type, user_id, status, created_by, source, payload, created_at, updated_at
-            FROM founder_os_records
-            WHERE user_id = $1 AND entity_type = $2 AND id = $3
-            """,
-            user_id,
-            entity_type,
-            record_id,
-        )
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            for entity_type in entity_types:
+                cur.execute(
+                    """
+                    SELECT id, entity_type, user_id, status, created_by, source, payload, created_at, updated_at
+                    FROM founder_os_records
+                    WHERE user_id = %s AND entity_type = %s
+                    ORDER BY created_at DESC
+                    LIMIT %s
+                    """,
+                    (user_id, entity_type, limit_per_type),
+                )
+                grouped[entity_type] = [_row_to_record(row) for row in cur.fetchall()]
+        return grouped
+    finally:
+        if owned:
+            release_db_connection(conn)
+
+
+def get_record(*, user_id: int, entity_type: str, record_id: str) -> dict[str, Any] | None:
+    ensure_founder_persistence_tables()
+    conn = get_db_connection()
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                """
+                SELECT id, entity_type, user_id, status, created_by, source, payload, created_at, updated_at
+                FROM founder_os_records
+                WHERE user_id = %s AND entity_type = %s AND id = %s
+                """,
+                (user_id, entity_type, record_id),
+            )
+            row = cur.fetchone()
         return _row_to_record(row) if row else None
     finally:
-        await release_db_connection(conn)
+        release_db_connection(conn)
 
 
-async def update_record(
+def update_record(
     *,
     user_id: int,
     entity_type: str,
@@ -258,7 +321,7 @@ async def update_record(
     patch: dict[str, Any],
     actor: str,
 ) -> dict[str, Any] | None:
-    existing = await get_record(user_id=user_id, entity_type=entity_type, record_id=record_id)
+    existing = get_record(user_id=user_id, entity_type=entity_type, record_id=record_id)
     if not existing:
         return None
 
@@ -269,49 +332,48 @@ async def update_record(
     merged["createdBy"] = existing.get("createdBy") or actor
     status = merged.get("status")
 
-    conn = await get_db_connection()
+    conn = get_db_connection()
     try:
-        row = await conn.fetchrow(
-            """
-            UPDATE founder_os_records
-            SET status = $4,
-                payload = $5::jsonb,
-                updated_at = $6
-            WHERE user_id = $1 AND entity_type = $2 AND id = $3
-            RETURNING id, entity_type, user_id, status, created_by, source, payload, created_at, updated_at
-            """,
-            user_id,
-            entity_type,
-            record_id,
-            status,
-            json.dumps(merged),
-            now,
-        )
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                """
+                UPDATE founder_os_records
+                SET status = %s,
+                    payload = %s::jsonb,
+                    updated_at = %s
+                WHERE user_id = %s AND entity_type = %s AND id = %s
+                RETURNING id, entity_type, user_id, status, created_by, source, payload, created_at, updated_at
+                """,
+                (status, json.dumps(merged), now, user_id, entity_type, record_id),
+            )
+            row = cur.fetchone()
+        conn.commit()
         return _row_to_record(row) if row else None
     finally:
-        await release_db_connection(conn)
+        release_db_connection(conn)
 
 
-async def delete_record(*, user_id: int, entity_type: str, record_id: str) -> bool:
+def delete_record(*, user_id: int, entity_type: str, record_id: str) -> bool:
     if entity_type in NO_DELETE_ENTITY_TYPES:
         return False
-    conn = await get_db_connection()
+    conn = get_db_connection()
     try:
-        result = await conn.execute(
-            """
-            DELETE FROM founder_os_records
-            WHERE user_id = $1 AND entity_type = $2 AND id = $3
-            """,
-            user_id,
-            entity_type,
-            record_id,
-        )
-        return result.endswith("1")
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                DELETE FROM founder_os_records
+                WHERE user_id = %s AND entity_type = %s AND id = %s
+                """,
+                (user_id, entity_type, record_id),
+            )
+            deleted = cur.rowcount == 1
+        conn.commit()
+        return deleted
     finally:
-        await release_db_connection(conn)
+        release_db_connection(conn)
 
 
-async def append_audit_log(
+def append_audit_log(
     *,
     user_id: int,
     actor: str,
@@ -323,78 +385,88 @@ async def append_audit_log(
     metadata: dict[str, Any] | None = None,
     linked_entity_id: str | None = None,
     linked_entity_type: str | None = None,
-) -> dict[str, Any]:
-    await ensure_founder_persistence_tables()
+) -> dict[str, Any] | None:
+    """Append audit log entry. Returns None when audit logging fails (must not block callers)."""
+    ensure_founder_persistence_tables()
     audit_id = f"audit-{uuid.uuid4().hex[:16]}"
     now = _utc_now()
     safe_metadata = sanitise_payload(metadata or {})
 
-    conn = await get_db_connection()
+    conn = get_db_connection()
     try:
-        row = await conn.fetchrow(
-            """
-            INSERT INTO founder_os_audit_log (
-                id, user_id, actor, event_type, entity_type, entity_id,
-                summary, status, metadata, linked_entity_id, linked_entity_type, created_at
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                """
+                INSERT INTO founder_os_audit_log (
+                    id, user_id, actor, event_type, entity_type, entity_id,
+                    summary, status, metadata, linked_entity_id, linked_entity_type, created_at
+                )
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s::jsonb, %s, %s, %s)
+                RETURNING *
+                """,
+                (
+                    audit_id,
+                    user_id,
+                    actor,
+                    event_type,
+                    entity_type,
+                    entity_id,
+                    summary,
+                    status,
+                    json.dumps(safe_metadata),
+                    linked_entity_id,
+                    linked_entity_type,
+                    now,
+                ),
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, $10, $11, $12)
-            RETURNING *
-            """,
-            audit_id,
-            user_id,
-            actor,
-            event_type,
-            entity_type,
-            entity_id,
-            summary,
-            status,
-            json.dumps(safe_metadata),
-            linked_entity_id,
-            linked_entity_type,
-            now,
-        )
+            row = cur.fetchone()
+        conn.commit()
+        return _audit_row(row) if row else None
+    except Exception as exc:
+        logger.warning("founder_audit_log_failed: %s", exc)
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        return None
     finally:
-        await release_db_connection(conn)
-    return _audit_row(row)
+        release_db_connection(conn)
 
 
-async def list_audit_log(
+def list_audit_log(
     *,
     user_id: int,
     entity_type: str | None = None,
     limit: int = 200,
     offset: int = 0,
 ) -> list[dict[str, Any]]:
-    await ensure_founder_persistence_tables()
-    conn = await get_db_connection()
+    ensure_founder_persistence_tables()
+    conn = get_db_connection()
     try:
-        if entity_type:
-            rows = await conn.fetch(
-                """
-                SELECT *
-                FROM founder_os_audit_log
-                WHERE user_id = $1 AND entity_type = $2
-                ORDER BY created_at DESC
-                LIMIT $3 OFFSET $4
-                """,
-                user_id,
-                entity_type,
-                limit,
-                offset,
-            )
-        else:
-            rows = await conn.fetch(
-                """
-                SELECT *
-                FROM founder_os_audit_log
-                WHERE user_id = $1
-                ORDER BY created_at DESC
-                LIMIT $2 OFFSET $3
-                """,
-                user_id,
-                limit,
-                offset,
-            )
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            if entity_type:
+                cur.execute(
+                    """
+                    SELECT *
+                    FROM founder_os_audit_log
+                    WHERE user_id = %s AND entity_type = %s
+                    ORDER BY created_at DESC
+                    LIMIT %s OFFSET %s
+                    """,
+                    (user_id, entity_type, limit, offset),
+                )
+            else:
+                cur.execute(
+                    """
+                    SELECT *
+                    FROM founder_os_audit_log
+                    WHERE user_id = %s
+                    ORDER BY created_at DESC
+                    LIMIT %s OFFSET %s
+                    """,
+                    (user_id, limit, offset),
+                )
+            rows = cur.fetchall()
         return [_audit_row(row) for row in rows]
     finally:
-        await release_db_connection(conn)
+        release_db_connection(conn)

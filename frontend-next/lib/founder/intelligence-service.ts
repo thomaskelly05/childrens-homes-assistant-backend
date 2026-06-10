@@ -25,8 +25,7 @@ import {
 import {
   getFounderTelemetryEvents,
   getFounderTelemetrySummary,
-  hydrateFounderTelemetryFromLiveData,
-  refreshFounderTelemetrySummary
+  seedFounderTelemetrySummary
 } from '@/lib/founder/telemetry'
 import type {
   FounderActivityItem,
@@ -326,9 +325,10 @@ export function invalidateFounderDashboardCache() {
 }
 
 export async function refreshFounderDashboardData(): Promise<FounderDashboardData> {
+  const { loadFounderBootstrap } = await import('@/lib/founder/bootstrap/founder-bootstrap-client')
+  const bootstrap = await loadFounderBootstrap()
+  seedFounderTelemetrySummary(bootstrap.telemetrySummary)
   const metrics = await loadFounderLiveMetrics()
-  await hydrateFounderTelemetryFromLiveData()
-  await refreshFounderTelemetrySummary()
   cachedDashboardData = generateFounderDashboardData(metrics)
   return cachedDashboardData
 }

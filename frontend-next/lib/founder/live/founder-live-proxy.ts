@@ -3,7 +3,19 @@ import { NextResponse } from 'next/server'
 
 import { getInternalBackendOrigin } from '@/lib/auth/api-base'
 import { buildFounderProxyHeaders, requireFounderSession } from '@/lib/founder/auth/founder-session'
+import { EMPTY_FOUNDER_TELEMETRY_SUMMARY } from '@/lib/founder/telemetry/founder-telemetry-types'
 import { sanitiseFounderPayload } from '@/lib/founder/persistence/persistence-safety'
+
+const BOOTSTRAP_CACHE_TTL_MS = 20_000
+const LIVE_CACHE_TTL: Record<string, number> = {
+  'orb-billing-usage': 30_000,
+  'orb-feedback-summary': 30_000,
+  providers: 60_000,
+  homes: 60_000,
+  'inspection-readiness': 60_000
+}
+
+const MAX_LIVE_CONCURRENCY = 3
 
 type LiveProxyTarget = {
   backendPath: string
@@ -61,6 +73,106 @@ const LIVE_PROXY_TARGETS: Record<string, LiveProxyTarget> = {
   }
 }
 
+const bootstrapCache = new Map<string, { expiresAt: number; payload: unknown }>()
+const liveDataCache = new Map<string, { expiresAt: number; payload: unknown }>()
+
+function cacheGet<T>(store: Map<string, { expiresAt: number; payload: unknown }>, key: string): T | null {
+  const entry = store.get(key)
+  if (!entry) return null
+  if (Date.now() > entry.expiresAt) {
+    store.delete(key)
+    return null
+  }
+  return entry.payload as T
+}
+
+function cacheSet(
+  store: Map<string, { expiresAt: number; payload: unknown }>,
+  key: string,
+  payload: unknown,
+  ttlMs: number
+): void {
+  store.set(key, { expiresAt: Date.now() + ttlMs, payload })
+}
+
+async function fetchLiveTarget(
+  request: Request,
+  cookieHeader: string,
+  targetKey: keyof typeof LIVE_PROXY_TARGETS,
+  query?: Record<string, string>
+): Promise<{ key: string; data: unknown; error?: string }> {
+  const target = LIVE_PROXY_TARGETS[targetKey]
+  const queryKey = query ? JSON.stringify(query) : ''
+  const cacheKey = `${targetKey}:${queryKey}`
+  const ttl = LIVE_CACHE_TTL[targetKey] ?? 30_000
+  const cached = cacheGet<unknown>(liveDataCache, cacheKey)
+  if (cached !== null) {
+    return { key: targetKey, data: cached }
+  }
+
+  const backendOrigin = getInternalBackendOrigin()
+  const upstreamUrl = new URL(`${backendOrigin}${target.backendPath}`)
+  if (query) {
+    for (const [key, value] of Object.entries(query)) {
+      upstreamUrl.searchParams.set(key, value)
+    }
+  }
+
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), 8_000)
+
+  try {
+    const upstream = await fetch(upstreamUrl.toString(), {
+      method: 'GET',
+      headers: buildFounderProxyHeaders(request, cookieHeader),
+      cache: 'no-store',
+      signal: controller.signal
+    })
+
+    if (!upstream.ok) {
+      if (target.treat404AsEmpty && upstream.status === 404) {
+        cacheSet(liveDataCache, cacheKey, target.emptyState ?? {}, ttl)
+        return { key: targetKey, data: target.emptyState ?? {} }
+      }
+      return { key: targetKey, data: target.emptyState ?? {}, error: 'busy' }
+    }
+
+    const payload = await upstream.json().catch(() => target.emptyState ?? {})
+    const data =
+      payload && typeof payload === 'object' && 'data' in payload
+        ? (payload as { data: unknown }).data
+        : payload
+
+    cacheSet(liveDataCache, cacheKey, data, ttl)
+    return { key: targetKey, data }
+  } catch {
+    return { key: targetKey, data: target.emptyState ?? {}, error: 'busy' }
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  limit: number,
+  worker: (item: T) => Promise<R>
+): Promise<R[]> {
+  const results: R[] = new Array(items.length)
+  let index = 0
+
+  async function runWorker() {
+    while (index < items.length) {
+      const current = index
+      index += 1
+      results[current] = await worker(items[current])
+    }
+  }
+
+  const workers = Array.from({ length: Math.min(limit, items.length) }, () => runWorker())
+  await Promise.all(workers)
+  return results
+}
+
 export async function proxyFounderLiveData(
   request: Request,
   targetKey: keyof typeof LIVE_PROXY_TARGETS
@@ -74,48 +186,112 @@ export async function proxyFounderLiveData(
   }
 
   const cookieHeader = (await cookies()).toString()
-  const backendOrigin = getInternalBackendOrigin()
   const url = new URL(request.url)
-  const upstreamUrl = new URL(`${backendOrigin}${target.backendPath}`)
-  url.searchParams.forEach((value, key) => upstreamUrl.searchParams.append(key, value))
+  const query: Record<string, string> = {}
+  url.searchParams.forEach((value, key) => {
+    query[key] = value
+  })
 
-  const upstream = await fetch(upstreamUrl.toString(), {
-    method: 'GET',
-    headers: buildFounderProxyHeaders(request, cookieHeader),
-    cache: 'no-store'
-  }).catch(() => null)
+  const result = await fetchLiveTarget(request, cookieHeader, targetKey, query)
+  return NextResponse.json(sanitiseFounderPayload({ success: true, data: result.data }), { status: 200 })
+}
 
-  if (!upstream) {
-    return NextResponse.json(
-      sanitiseFounderPayload({ success: true, data: target.emptyState ?? {} }),
-      { status: 200 }
-    )
+export async function buildFounderBootstrapResponse(request: Request): Promise<NextResponse> {
+  const session = await requireFounderSession()
+  if (!session.ok) return session.response
+
+  const url = new URL(request.url)
+  const days = url.searchParams.get('days') ?? '30'
+  const cacheKey = `bootstrap:${session.user?.id ?? 'founder'}:${days}`
+  const cached = cacheGet<unknown>(bootstrapCache, cacheKey)
+  if (cached) {
+    return NextResponse.json(sanitiseFounderPayload({ success: true, data: cached }), { status: 200 })
   }
 
-  if (!upstream.ok) {
-    if (target.treat404AsEmpty && upstream.status === 404) {
-      return NextResponse.json(
-        sanitiseFounderPayload({ success: true, data: target.emptyState ?? {} }),
-        { status: 200 }
-      )
-    }
-    if (upstream.status === 401) {
-      return NextResponse.json({ error: 'Unauthorised' }, { status: 401 })
-    }
-    if (upstream.status === 403) {
-      return NextResponse.json({ error: 'Founder access required' }, { status: 403 })
-    }
-    return NextResponse.json(
-      sanitiseFounderPayload({ success: true, data: target.emptyState ?? {} }),
-      { status: 200 }
-    )
+  const cookieHeader = (await cookies()).toString()
+  const backendOrigin = getInternalBackendOrigin()
+
+  const backendController = new AbortController()
+  const backendTimer = setTimeout(() => backendController.abort(), 8_000)
+
+  let backendPayload: Record<string, unknown> = {
+    persistence: {},
+    telemetrySummary: EMPTY_FOUNDER_TELEMETRY_SUMMARY,
+    operatingLoopRuns: [],
+    sectionErrors: {}
   }
 
-  const payload = await upstream.json().catch(() => target.emptyState ?? {})
-  const data =
-    payload && typeof payload === 'object' && 'data' in payload
-      ? (payload as { data: unknown }).data
-      : payload
+  try {
+    const upstream = await fetch(`${backendOrigin}/founder-os/bootstrap?days=${days}`, {
+      method: 'GET',
+      headers: buildFounderProxyHeaders(request, cookieHeader),
+      cache: 'no-store',
+      signal: backendController.signal
+    })
+    if (upstream.ok) {
+      const body = await upstream.json().catch(() => ({}))
+      backendPayload =
+        body && typeof body === 'object' && 'data' in body
+          ? ((body as { data: Record<string, unknown> }).data ?? backendPayload)
+          : (body as Record<string, unknown>)
+    } else {
+      backendPayload.sectionErrors = { persistence: 'busy', telemetrySummary: 'busy' }
+    }
+  } catch {
+    backendPayload.sectionErrors = { persistence: 'busy', telemetrySummary: 'busy' }
+  } finally {
+    clearTimeout(backendTimer)
+  }
 
-  return NextResponse.json(sanitiseFounderPayload({ success: true, data }), { status: 200 })
+  const liveJobs: Array<{ key: keyof typeof LIVE_PROXY_TARGETS; query?: Record<string, string> }> = [
+    { key: 'providers' },
+    { key: 'homes' },
+    { key: 'inspection-readiness' },
+    { key: 'orb-billing-usage', query: { days: '30' } },
+    { key: 'orb-feedback-summary', query: { days: '30' } }
+  ]
+
+  const liveResults = await mapWithConcurrency(liveJobs, MAX_LIVE_CONCURRENCY, (job) =>
+    fetchLiveTarget(request, cookieHeader, job.key, job.query)
+  )
+
+  const liveSectionErrors: Record<string, string> = {}
+  const liveSummary: Record<string, unknown> = {
+    providers: {},
+    homes: {},
+    inspectionReadiness: {},
+    billingUsage: {},
+    feedbackSummary: {},
+    sectionErrors: liveSectionErrors
+  }
+
+  for (const result of liveResults) {
+    if (result.error) liveSectionErrors[result.key] = 'busy'
+    if (result.key === 'providers') liveSummary.providers = result.data
+    if (result.key === 'homes') liveSummary.homes = result.data
+    if (result.key === 'inspection-readiness') liveSummary.inspectionReadiness = result.data
+    if (result.key === 'orb-billing-usage') liveSummary.billingUsage = result.data
+    if (result.key === 'orb-feedback-summary') liveSummary.feedbackSummary = result.data
+  }
+
+  const dataSourceStatus = {
+    providers: liveSectionErrors.providers ? 'busy' : 'ok',
+    homes: liveSectionErrors.homes ? 'busy' : 'ok',
+    readiness: liveSectionErrors['inspection-readiness'] ? 'busy' : 'ok',
+    billing: liveSectionErrors['orb-billing-usage'] ? 'busy' : 'ok',
+    feedback: liveSectionErrors['orb-feedback-summary'] ? 'busy' : 'ok'
+  }
+
+  const payload = sanitiseFounderPayload({
+    ...backendPayload,
+    liveSummary,
+    dataSourceStatus,
+    sectionErrors: {
+      ...((backendPayload.sectionErrors as Record<string, string>) ?? {}),
+      ...liveSectionErrors
+    }
+  })
+
+  cacheSet(bootstrapCache, cacheKey, payload, BOOTSTRAP_CACHE_TTL_MS)
+  return NextResponse.json({ success: true, data: payload }, { status: 200 })
 }

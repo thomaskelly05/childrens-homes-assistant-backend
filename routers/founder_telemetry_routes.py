@@ -35,7 +35,7 @@ def _user_role(user: dict[str, Any]) -> str | None:
 
 
 @router.post("/event")
-async def record_telemetry_event(
+def record_telemetry_event(
     body: FounderTelemetryEventCreate,
     user=Depends(require_authenticated_user),
 ):
@@ -47,7 +47,7 @@ async def record_telemetry_event(
             detail="Telemetry metadata contains identifiable or unsafe fields.",
         )
     try:
-        row = await append_telemetry_event(
+        row = append_telemetry_event(
             user_id=_user_id(user),
             event_type=body.event_type,
             category=body.category,
@@ -69,10 +69,10 @@ async def record_telemetry_event(
 
 
 @router.get("/summary")
-async def telemetry_summary(
+def telemetry_summary(
     days: int = Query(default=30, ge=1, le=90),
     user=Depends(require_founder),
 ):
     """Founder/admin analytics aggregate — not available to normal staff users."""
-    summary = await build_telemetry_summary(days=days)
+    summary = build_telemetry_summary(days=days)
     return _success(summary)

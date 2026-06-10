@@ -19,16 +19,16 @@ def admin_client(monkeypatch):
     monkeypatch.setattr(app_module, "init_db_pool", lambda: None, raising=False)
     monkeypatch.setattr(app_module, "close_db_pool", lambda: None, raising=False)
 
-    async def _ensure_tables():
+    def _ensure_tables(*args, **kwargs):
         return None
 
-    async def _list_records(**_kwargs):
+    def _list_records(**_kwargs):
         return []
 
-    async def _list_audit_log(**_kwargs):
+    def _list_audit_log(**_kwargs):
         return []
 
-    async def _build_telemetry_summary(**_kwargs):
+    def _build_telemetry_summary(**_kwargs):
         return {
             "totalEvents": 0,
             "eventsToday": 0,
@@ -112,12 +112,12 @@ def test_founder_telemetry_summary_returns_200_when_empty(admin_client):
 
 
 def test_founder_persistence_post_does_not_404_for_memories(admin_client, monkeypatch):
-    async def _create_record(**kwargs):
+    def _create_record(**kwargs):
         record = dict(kwargs["record"])
         record.setdefault("id", "memory-1")
         return record
 
-    async def _append_audit_log(**kwargs):
+    def _append_audit_log(**kwargs):
         return {"id": "audit-1", **kwargs}
 
     monkeypatch.setattr("routers.founder_persistence_routes.create_record", _create_record)
@@ -148,12 +148,12 @@ def test_founder_persistence_post_does_not_404_for_memories(admin_client, monkey
 
 
 def test_founder_persistence_post_does_not_404_for_approvals(admin_client, monkeypatch):
-    async def _create_record(**kwargs):
+    def _create_record(**kwargs):
         record = dict(kwargs["record"])
         record.setdefault("id", "approval-1")
         return record
 
-    async def _append_audit_log(**kwargs):
+    def _append_audit_log(**kwargs):
         return {"id": "audit-1", **kwargs}
 
     monkeypatch.setattr("routers.founder_persistence_routes.create_record", _create_record)
