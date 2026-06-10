@@ -23,6 +23,11 @@ let cachedSummary: FounderTelemetrySummary | null = null
 let summaryFetchedAt = 0
 const SUMMARY_TTL_MS = 30_000
 
+export function seedFounderTelemetrySummary(summary: FounderTelemetrySummary): void {
+  cachedSummary = summary
+  summaryFetchedAt = Date.now()
+}
+
 function createEventId() {
   if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) return `tel-${crypto.randomUUID()}`
   return `tel-${Date.now()}-${Math.random().toString(16).slice(2)}`

@@ -8,6 +8,8 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any
 
+from psycopg2.extras import RealDictCursor
+
 from db.connection import get_db_connection, release_db_connection
 from db.founder_persistence_db import IDENTIFIABLE_FIELD_KEYS, sanitise_payload
 
@@ -81,6 +83,8 @@ IDENTIFIABLE_VALUE_PATTERNS = (
     re.compile(r"\bprovider\s+name[s]?\b", re.I),
     re.compile(r"\byoung\s+person['']?s?\s+name\b", re.I),
 )
+
+_tables_ready = False
 
 
 def _utc_now() -> datetime:
@@ -156,15 +160,26 @@ def _row_to_event(row: Any) -> dict[str, Any]:
     }
 
 
-async def ensure_founder_telemetry_tables() -> None:
-    conn = await get_db_connection()
+def ensure_founder_telemetry_tables(*, conn: Any | None = None) -> None:
+    global _tables_ready
+    if _tables_ready and conn is None:
+        return
+
+    owned = conn is None
+    if owned:
+        conn = get_db_connection()
     try:
-        await conn.execute(CREATE_FOUNDER_TELEMETRY_SQL)
+        with conn.cursor() as cur:
+            cur.execute(CREATE_FOUNDER_TELEMETRY_SQL)
+        if owned:
+            conn.commit()
+            _tables_ready = True
     finally:
-        await release_db_connection(conn)
+        if owned:
+            release_db_connection(conn)
 
 
-async def append_telemetry_event(
+def append_telemetry_event(
     *,
     user_id: int | None,
     event_type: str,
@@ -175,7 +190,7 @@ async def append_telemetry_event(
     session_id: str | None,
     metadata: dict[str, Any],
 ) -> dict[str, Any]:
-    await ensure_founder_telemetry_tables()
+    ensure_founder_telemetry_tables()
     violations = reject_identifiable_metadata(metadata)
     if violations:
         raise ValueError(f"identifiable_metadata:{','.join(violations[:5])}")
@@ -185,94 +200,105 @@ async def append_telemetry_event(
         redacted = {}
 
     event_id = f"tel-{uuid.uuid4().hex[:16]}"
-    conn = await get_db_connection()
+    conn = get_db_connection()
     try:
-        row = await conn.fetchrow(
-            """
-            INSERT INTO founder_os_telemetry_events (
-                id, user_id, event_type, category, source, route, user_role, session_id, metadata
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                """
+                INSERT INTO founder_os_telemetry_events (
+                    id, user_id, event_type, category, source, route, user_role, session_id, metadata
+                )
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s::jsonb)
+                RETURNING *
+                """,
+                (
+                    event_id,
+                    user_id,
+                    event_type,
+                    category,
+                    source,
+                    route,
+                    user_role,
+                    session_id,
+                    json.dumps(redacted),
+                ),
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb)
-            RETURNING *
-            """,
-            event_id,
-            user_id,
-            event_type,
-            category,
-            source,
-            route,
-            user_role,
-            session_id,
-            json.dumps(redacted),
-        )
+            row = cur.fetchone()
+        conn.commit()
         return sanitise_payload(_row_to_event(row))
     finally:
-        await release_db_connection(conn)
+        release_db_connection(conn)
 
 
-async def build_telemetry_summary(*, days: int = 30) -> dict[str, Any]:
-    await ensure_founder_telemetry_tables()
-    conn = await get_db_connection()
+def build_telemetry_summary(*, days: int = 30, conn: Any | None = None) -> dict[str, Any]:
+    ensure_founder_telemetry_tables()
+    owned = conn is None
+    if owned:
+        conn = get_db_connection()
     try:
-        totals = await conn.fetchrow(
-            """
-            SELECT
-                COUNT(*)::int AS total_events,
-                COUNT(*) FILTER (
-                    WHERE created_at >= date_trunc('day', NOW() AT TIME ZONE 'UTC')
-                )::int AS events_today,
-                COUNT(*) FILTER (
-                    WHERE event_type IN ('orb-conversation', 'orb-chat-submitted', 'orb-response-generated')
-                )::int AS orb_conversations,
-                COUNT(*) FILTER (
-                    WHERE event_type IN ('ai-request', 'ai-token-usage')
-                )::int AS ai_requests,
-                COUNT(*) FILTER (WHERE event_type = 'error')::int AS errors,
-                COUNT(*) FILTER (WHERE event_type = 'feedback')::int AS feedback_count,
-                COALESCE(
-                    SUM(
-                        CASE
-                            WHEN event_type = 'ai-cost-estimate'
-                                THEN COALESCE((metadata->>'estimatedCostGbp')::float, 0)
-                            ELSE 0
-                        END
-                    ),
-                    0
-                )::float AS estimated_ai_cost,
-                MAX(created_at) AS last_updated
-            FROM founder_os_telemetry_events
-            WHERE created_at >= NOW() - ($1::int || ' days')::interval
-            """,
-            days,
-        )
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                """
+                SELECT
+                    COUNT(*)::int AS total_events,
+                    COUNT(*) FILTER (
+                        WHERE created_at >= date_trunc('day', NOW() AT TIME ZONE 'UTC')
+                    )::int AS events_today,
+                    COUNT(*) FILTER (
+                        WHERE event_type IN ('orb-conversation', 'orb-chat-submitted', 'orb-response-generated')
+                    )::int AS orb_conversations,
+                    COUNT(*) FILTER (
+                        WHERE event_type IN ('ai-request', 'ai-token-usage')
+                    )::int AS ai_requests,
+                    COUNT(*) FILTER (WHERE event_type = 'error')::int AS errors,
+                    COUNT(*) FILTER (WHERE event_type = 'feedback')::int AS feedback_count,
+                    COALESCE(
+                        SUM(
+                            CASE
+                                WHEN event_type = 'ai-cost-estimate'
+                                    THEN COALESCE((metadata->>'estimatedCostGbp')::float, 0)
+                                ELSE 0
+                            END
+                        ),
+                        0
+                    )::float AS estimated_ai_cost,
+                    MAX(created_at) AS last_updated
+                FROM founder_os_telemetry_events
+                WHERE created_at >= NOW() - (%s::int || ' days')::interval
+                """,
+                (days,),
+            )
+            totals = cur.fetchone()
 
-        mode_rows = await conn.fetch(
-            """
-            SELECT COALESCE(metadata->>'mode', metadata->>'orbMode', 'unknown') AS mode,
-                   COUNT(*)::int AS count
-            FROM founder_os_telemetry_events
-            WHERE event_type IN ('orb-mode-usage', 'orb-conversation', 'orb-chat-submitted')
-              AND created_at >= NOW() - ($1::int || ' days')::interval
-            GROUP BY 1
-            ORDER BY count DESC
-            LIMIT 8
-            """,
-            days,
-        )
+            cur.execute(
+                """
+                SELECT COALESCE(metadata->>'mode', metadata->>'orbMode', 'unknown') AS mode,
+                       COUNT(*)::int AS count
+                FROM founder_os_telemetry_events
+                WHERE event_type IN ('orb-mode-usage', 'orb-conversation', 'orb-chat-submitted')
+                  AND created_at >= NOW() - (%s::int || ' days')::interval
+                GROUP BY 1
+                ORDER BY count DESC
+                LIMIT 8
+                """,
+                (days,),
+            )
+            mode_rows = cur.fetchall()
 
-        feature_rows = await conn.fetch(
-            """
-            SELECT COALESCE(metadata->>'feature', category, event_type) AS feature,
-                   COUNT(*)::int AS count
-            FROM founder_os_telemetry_events
-            WHERE category IN ('features', 'platform', 'orb', 'ai', 'auth')
-              AND created_at >= NOW() - ($1::int || ' days')::interval
-            GROUP BY 1
-            ORDER BY count DESC
-            LIMIT 12
-            """,
-            days,
-        )
+            cur.execute(
+                """
+                SELECT COALESCE(metadata->>'feature', category, event_type) AS feature,
+                       COUNT(*)::int AS count
+                FROM founder_os_telemetry_events
+                WHERE category IN ('features', 'platform', 'orb', 'ai', 'auth')
+                  AND created_at >= NOW() - (%s::int || ' days')::interval
+                GROUP BY 1
+                ORDER BY count DESC
+                LIMIT 12
+                """,
+                (days,),
+            )
+            feature_rows = cur.fetchall()
 
         return sanitise_payload(
             {
@@ -295,4 +321,5 @@ async def build_telemetry_summary(*, days: int = 30) -> dict[str, Any]:
             }
         )
     finally:
-        await release_db_connection(conn)
+        if owned:
+            release_db_connection(conn)

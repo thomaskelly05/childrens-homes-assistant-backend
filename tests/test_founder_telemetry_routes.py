@@ -19,10 +19,10 @@ def admin_client(monkeypatch):
 
     stored: list[dict] = []
 
-    async def _ensure_tables():
+    def _ensure_tables(*args, **kwargs):
         return None
 
-    async def _append_telemetry_event(**kwargs):
+    def _append_telemetry_event(**kwargs):
         metadata = kwargs.get("metadata") or {}
         row = {
             "id": f"tel-{len(stored) + 1}",
@@ -38,7 +38,7 @@ def admin_client(monkeypatch):
         stored.append(row)
         return row
 
-    async def _build_telemetry_summary(**_kwargs):
+    def _build_telemetry_summary(**_kwargs):
         orb = sum(1 for row in stored if row["eventType"] in {"orb-chat-submitted", "orb-conversation"})
         return {
             "totalEvents": len(stored),
@@ -77,7 +77,7 @@ def staff_client(monkeypatch):
     monkeypatch.setattr(app_module, "init_db_pool", lambda: None, raising=False)
     monkeypatch.setattr(app_module, "close_db_pool", lambda: None, raising=False)
 
-    async def _append_telemetry_event(**kwargs):
+    def _append_telemetry_event(**kwargs):
         return {
             "id": "tel-staff-1",
             "eventType": kwargs["event_type"],
@@ -87,7 +87,7 @@ def staff_client(monkeypatch):
             "timestamp": "2026-06-09T12:00:00+00:00",
         }
 
-    async def _build_telemetry_summary(**_kwargs):
+    def _build_telemetry_summary(**_kwargs):
         return {"totalEvents": 0, "eventsToday": 0, "orbConversations": 0, "topOrbModes": [], "featureUsage": [], "aiRequests": 0, "estimatedAiCost": 0, "errors": 0, "feedbackCount": 0, "lastUpdated": None}
 
     target = "routers.founder_telemetry_routes"
@@ -146,7 +146,7 @@ def test_telemetry_rejects_identifiable_metadata(staff_client):
 def test_telemetry_stores_redacted_metadata_only(admin_client, monkeypatch):
     captured: dict = {}
 
-    async def _append(**kwargs):
+    def _append(**kwargs):
         captured.update(kwargs)
         return {
             "id": "tel-1",
@@ -159,9 +159,9 @@ def test_telemetry_stores_redacted_metadata_only(admin_client, monkeypatch):
 
     from db import founder_telemetry_db as telemetry_db
 
-    async def _append_with_sanitise(**kwargs):
+    def _append_with_sanitise(**kwargs):
         kwargs["metadata"] = telemetry_db.sanitise_telemetry_metadata(kwargs.get("metadata") or {})
-        return await _append(**kwargs)
+        return _append(**kwargs)
 
     monkeypatch.setattr("routers.founder_telemetry_routes.append_telemetry_event", _append_with_sanitise)
 

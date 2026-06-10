@@ -36,6 +36,7 @@ const REQUIRED_GET_ROUTES = [
   '/api/founder/persistence/memories',
   '/api/founder/persistence/evidence-packs',
   '/api/founder/persistence/operating-loop-runs',
+  '/api/founder/bootstrap',
   '/api/founder/telemetry/summary?days=30',
   '/api/founder/operating-loop/runs',
   '/api/founder/live/providers',
@@ -106,6 +107,7 @@ describe('Founder API route smoke contract', () => {
   })
 
   it('live data proxies exist and adapters use /api/founder/live', () => {
+    assert.equal(routeExists('app/api/founder/bootstrap/route.ts'), true)
     assert.equal(routeExists('app/api/founder/live/[target]/route.ts'), true)
     assert.equal(routeExists('app/api/founder/session/route.ts'), true)
     const providers = read('lib/founder/data/adapters/providers-adapter.ts')

@@ -17,6 +17,9 @@ const BLOCKED_BROWSER_PATH_PREFIXES = [
   '/api/inspection-readiness/'
 ] as const
 
+const GET_CACHE_TTL_MS = 10_000
+const REQUEST_TIMEOUT_MS = 8_000
+
 type ApiEnvelope<T> = { success?: boolean; data?: T; error?: string; detail?: string }
 
 export type FounderApiResult<T> =
@@ -32,6 +35,11 @@ export class FounderPersistenceApiError extends Error {
     this.status = status
   }
 }
+
+type CacheEntry = { expiresAt: number; result: FounderApiResult<unknown> }
+
+const inFlightGetRequests = new Map<string, Promise<FounderApiResult<unknown>>>()
+const getResponseCache = new Map<string, CacheEntry>()
 
 function normaliseFounderPath(path: string): string {
   const trimmed = path.trim()
@@ -63,6 +71,7 @@ function parseErrorMessage(
 ): string {
   if (status === 403) return 'Founder access required'
   if (status === 401) return 'Unauthorised'
+  if (status >= 500) return 'Founder data source is busy'
 
   const entitySlug = persistenceEntityFromPath(path)
   return (
@@ -79,57 +88,108 @@ function emptyPersistenceList<T>(): T {
   return sanitiseFounderPayload({ items: [], count: 0 }) as T
 }
 
+function cacheKey(method: string, url: string): string {
+  return `${method}:${url}`
+}
+
+function readCachedGet<T>(key: string): FounderApiResult<T> | null {
+  const entry = getResponseCache.get(key)
+  if (!entry) return null
+  if (Date.now() > entry.expiresAt) {
+    getResponseCache.delete(key)
+    return null
+  }
+  return entry.result as FounderApiResult<T>
+}
+
+function writeCachedGet(key: string, result: FounderApiResult<unknown>): void {
+  if (!result.ok || result.status >= 500) return
+  getResponseCache.set(key, { expiresAt: Date.now() + GET_CACHE_TTL_MS, result })
+}
+
 async function founderRequest<T>(
   path: string,
   init?: RequestInit
 ): Promise<FounderApiResult<T>> {
   const url = normaliseFounderPath(path)
-  const headers = new Headers(init?.headers)
-  if (!headers.has('Content-Type') && init?.body) {
-    headers.set('Content-Type', 'application/json')
-  }
   const method = (init?.method ?? 'GET').toUpperCase()
-  if (method !== 'GET' && method !== 'HEAD') {
-    const csrf = getCsrfToken()
-    if (csrf) headers.set('x-csrf-token', csrf)
+  const key = cacheKey(method, url)
+
+  if (method === 'GET') {
+    const cached = readCachedGet<T>(key)
+    if (cached) return cached
+
+    const inFlight = inFlightGetRequests.get(key)
+    if (inFlight) return inFlight as Promise<FounderApiResult<T>>
   }
 
-  let response: Response
-  try {
-    response = await fetch(url, {
-      ...init,
-      method,
-      headers,
-      credentials: 'include',
-      cache: 'no-store'
+  const run = async (): Promise<FounderApiResult<T>> => {
+    const headers = new Headers(init?.headers)
+    if (!headers.has('Content-Type') && init?.body) {
+      headers.set('Content-Type', 'application/json')
+    }
+    if (method !== 'GET' && method !== 'HEAD') {
+      const csrf = getCsrfToken()
+      if (csrf) headers.set('x-csrf-token', csrf)
+    }
+
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
+
+    let response: Response
+    try {
+      response = await fetch(url, {
+        ...init,
+        method,
+        headers,
+        credentials: 'include',
+        cache: 'no-store',
+        signal: controller.signal
+      })
+    } catch {
+      return { ok: false, status: 503, error: 'Founder API unavailable' }
+    } finally {
+      clearTimeout(timer)
+    }
+
+    const payload = (await response.json().catch(() => ({}))) as ApiEnvelope<T> & T
+
+    if (!response.ok) {
+      const entitySlug = persistenceEntityFromPath(url)
+      if (
+        response.status === 404 &&
+        method === 'GET' &&
+        entitySlug &&
+        isKnownPersistenceEntitySlug(entitySlug) &&
+        url.endsWith(`/persistence/${entitySlug}`)
+      ) {
+        const empty = { ok: true as const, status: 200, data: emptyPersistenceList<T>() }
+        writeCachedGet(key, empty)
+        return empty
+      }
+
+      return {
+        ok: false,
+        status: response.status,
+        error: parseErrorMessage(response.status, payload, url)
+      }
+    }
+
+    const data = sanitiseFounderPayload(((payload as ApiEnvelope<T>).data ?? payload) as T)
+    const success = { ok: true as const, status: response.status, data }
+    if (method === 'GET') writeCachedGet(key, success)
+    return success
+  }
+
+  if (method === 'GET') {
+    const promise = run().finally(() => {
+      inFlightGetRequests.delete(key)
     })
-  } catch {
-    return { ok: false, status: 503, error: 'Founder API unavailable' }
+    inFlightGetRequests.set(key, promise as Promise<FounderApiResult<unknown>>)
+    return promise
   }
 
-  const payload = (await response.json().catch(() => ({}))) as ApiEnvelope<T> & T
-
-  if (!response.ok) {
-    const entitySlug = persistenceEntityFromPath(url)
-    if (
-      response.status === 404 &&
-      method === 'GET' &&
-      entitySlug &&
-      isKnownPersistenceEntitySlug(entitySlug) &&
-      url.endsWith(`/persistence/${entitySlug}`)
-    ) {
-      return { ok: true, status: 200, data: emptyPersistenceList<T>() }
-    }
-
-    return {
-      ok: false,
-      status: response.status,
-      error: parseErrorMessage(response.status, payload, url)
-    }
-  }
-
-  const data = sanitiseFounderPayload(((payload as ApiEnvelope<T>).data ?? payload) as T)
-  return { ok: true, status: response.status, data }
+  return run()
 }
 
 export async function founderGet<T>(path: string): Promise<FounderApiResult<T>> {
@@ -222,5 +282,18 @@ export const founderPersistenceApi = {
       method: 'POST',
       body: JSON.stringify(entry)
     })
+  }
+}
+
+export function clearFounderApiClientCache(): void {
+  getResponseCache.clear()
+  inFlightGetRequests.clear()
+}
+
+/** @internal test helper */
+export function __founderApiClientTestState() {
+  return {
+    inFlightCount: inFlightGetRequests.size,
+    cacheSize: getResponseCache.size
   }
 }
