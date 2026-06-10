@@ -87,6 +87,10 @@ export async function listAuditLog(filters?: {
   }
 }
 
+export function getAuditLogMemorySnapshot(limit = 10): FounderAuditLogRecord[] {
+  return memory.slice(0, limit)
+}
+
 export function resetAuditLogMemory(): void {
   memory.length = 0
   warned = false

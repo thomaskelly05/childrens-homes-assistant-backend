@@ -6,10 +6,14 @@ import { FileCheck, Loader2 } from 'lucide-react'
 
 import { FounderNavHeader } from '@/components/founder/founder-nav-header'
 import { FounderSectionCard } from '@/components/founder/founder-section-card'
-import { founderGet, founderPost } from '@/lib/founder/api/founder-api-client'
+import { founderPost } from '@/lib/founder/api/founder-api-client'
 import { buildEvidenceSources } from '@/lib/founder/evidence/evidence-source-builder'
 import { EVIDENCE_AUDIENCE_LABELS, type EvidenceAudience, type EvidencePack } from '@/lib/founder/evidence/evidence-types'
-import { getPackConfidence } from '@/lib/founder/evidence/evidence-store'
+import {
+  getEvidencePacks,
+  getPackConfidence,
+  hydrateEvidencePacksFromPersistence
+} from '@/lib/founder/evidence/evidence-store'
 
 const GENERATE_BUTTONS: Array<{ audience: EvidenceAudience; label: string }> = [
   { audience: 'investor', label: 'Investor Pack' },
@@ -59,42 +63,38 @@ function PackCard({ pack }: { pack: EvidencePack }) {
 }
 
 export function FounderEvidencePage() {
-  const [packs, setPacks] = useState<EvidencePack[]>([])
-  const [loading, setLoading] = useState(true)
+  const [, setTick] = useState(0)
+  const [hydrating, setHydrating] = useState(true)
   const [generating, setGenerating] = useState<EvidenceAudience | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  const loadPacks = useCallback(async () => {
-    setLoading(true)
-    setError(null)
-    try {
-      const result = await founderGet<{ packs: EvidencePack[] }>('/evidence')
-      if (!result.ok) {
-        setError(result.error)
-        return
-      }
-      setPacks(result.data.packs ?? [])
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load')
-    } finally {
-      setLoading(false)
-    }
-  }, [])
+  const refresh = useCallback(() => setTick((t) => t + 1), [])
 
   useEffect(() => {
-    void loadPacks()
-  }, [loadPacks])
+    let active = true
+    void hydrateEvidencePacksFromPersistence()
+      .then(() => {
+        if (active) refresh()
+      })
+      .finally(() => {
+        if (active) setHydrating(false)
+      })
+    return () => {
+      active = false
+    }
+  }, [refresh])
 
   async function handleGenerate(audience: EvidenceAudience) {
     setGenerating(audience)
     setError(null)
     try {
-      const result = await founderPost('/evidence/generate', { audience })
+      const result = await founderPost<{ pack: EvidencePack }>('/evidence/generate', { audience })
       if (!result.ok) {
         setError(result.error)
         return
       }
-      await loadPacks()
+      await hydrateEvidencePacksFromPersistence()
+      refresh()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Generation failed')
     } finally {
@@ -102,6 +102,7 @@ export function FounderEvidencePage() {
     }
   }
 
+  const packs = getEvidencePacks()
   const sources = buildEvidenceSources()
   const needingApproval = packs.filter((p) => p.status === 'needs-review' || p.status === 'draft')
 
@@ -138,8 +139,8 @@ export function FounderEvidencePage() {
       </FounderSectionCard>
 
       <FounderSectionCard eyebrow="Packs" title="Existing Packs">
-        {loading ? (
-          <p className="text-sm text-slate-400">Loading evidence packs…</p>
+        {hydrating ? (
+          <p className="text-sm text-slate-400">Loading evidence packs from founder persistence…</p>
         ) : packs.length === 0 ? (
           <p className="text-sm text-slate-400">No evidence packs yet. Generate one above.</p>
         ) : (

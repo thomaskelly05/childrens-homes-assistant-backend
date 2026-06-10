@@ -30,6 +30,7 @@ import { FounderReadinessPanel } from '@/components/founder/founder-readiness-pa
 import { FounderRecommendationCard } from '@/components/founder/founder-recommendation-card'
 import { FounderSectionCard } from '@/components/founder/founder-section-card'
 import { FounderTrendCard } from '@/components/founder/founder-trend-card'
+import { FounderEvidenceQuickLink } from '@/components/founder/founder-evidence-quick-link'
 
 const chartColours = ['#22d3ee', '#38bdf8', '#818cf8', '#a78bfa', '#34d399', '#fbbf24', '#fb7185', '#94a3b8']
 
@@ -263,6 +264,20 @@ export function FounderDashboardPage() {
           ) : (
             <p className="text-sm leading-7 text-slate-400">No live recommendations yet. Insights will appear once live usage, ORB analytics and readiness sources are connected.</p>
           )}
+        </FounderSectionCard>
+
+        <FounderSectionCard
+          eyebrow="Evidence"
+          title="Founder Evidence Engine"
+          description="Generate honest, approval-gated evidence packs for investors, providers, grants and pilot partners."
+        >
+          <p className="text-sm leading-7 text-slate-300">
+            Turn live telemetry, Quality Lab results, founder memory and audit-backed governance into structured evidence packs.
+            No invented traction or revenue.
+          </p>
+          <div className="mt-4">
+            <FounderEvidenceQuickLink />
+          </div>
         </FounderSectionCard>
 
         <FounderSectionCard eyebrow="Agent Command Centre" title="Founder agents" description="Specialist agents for briefing, product, Ofsted, growth, quality, and storytelling.">

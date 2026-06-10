@@ -8,10 +8,14 @@ import { Archive, Check, Copy, Send } from 'lucide-react'
 import { FounderNavHeader } from '@/components/founder/founder-nav-header'
 import { FounderSectionCard } from '@/components/founder/founder-section-card'
 import { SaveToFounderMemoryButton } from '@/components/founder/save-to-founder-memory-button'
-import { founderGet, founderPost } from '@/lib/founder/api/founder-api-client'
+import { founderPost } from '@/lib/founder/api/founder-api-client'
 import { formatEvidencePackText } from '@/lib/founder/evidence/evidence-pack-generator'
 import { EVIDENCE_AUDIENCE_LABELS, type EvidencePack } from '@/lib/founder/evidence/evidence-types'
-import { canCopyEvidencePack } from '@/lib/founder/evidence/evidence-store'
+import {
+  canCopyEvidencePack,
+  getEvidencePack,
+  hydrateEvidencePacksFromPersistence
+} from '@/lib/founder/evidence/evidence-store'
 
 type Props = {
   packId: string
@@ -29,12 +33,18 @@ export function FounderEvidenceDetailPage({ packId }: Props) {
     setLoading(true)
     setError(null)
     try {
-      const result = await founderGet<{ pack: EvidencePack }>(`/evidence/${encodeURIComponent(packId)}`)
-      if (!result.ok) {
-        setError(result.error)
+      const cached = getEvidencePack(packId)
+      if (cached) {
+        setPack(cached)
         return
       }
-      setPack(result.data.pack)
+      await hydrateEvidencePacksFromPersistence()
+      const hydrated = getEvidencePack(packId)
+      if (!hydrated) {
+        setError('Pack not found')
+        return
+      }
+      setPack(hydrated)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load pack')
     } finally {
