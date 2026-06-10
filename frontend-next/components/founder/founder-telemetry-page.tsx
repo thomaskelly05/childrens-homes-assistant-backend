@@ -5,20 +5,13 @@ import { useEffect, useState } from 'react'
 import { FounderNavHeader } from '@/components/founder/founder-nav-header'
 import { FounderSectionCard } from '@/components/founder/founder-section-card'
 import { refreshFounderDashboardData } from '@/lib/founder/intelligence-service'
-import {
-  getFounderTelemetryEvents,
-  getFounderTelemetrySummary,
-  hydrateFounderTelemetryFromLiveData,
-  refreshFounderTelemetrySummary
-} from '@/lib/founder/telemetry'
+import { getFounderTelemetryEvents, getFounderTelemetrySummary } from '@/lib/founder/telemetry'
 
 export function FounderTelemetryPage() {
   const [, setTick] = useState(0)
 
   useEffect(() => {
     refreshFounderDashboardData()
-      .then(() => hydrateFounderTelemetryFromLiveData())
-      .then(() => refreshFounderTelemetrySummary())
       .then(() => setTick((t) => t + 1))
       .catch(() => undefined)
   }, [])

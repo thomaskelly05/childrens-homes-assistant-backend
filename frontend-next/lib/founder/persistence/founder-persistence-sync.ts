@@ -42,7 +42,11 @@ export async function hydrateAllFounderPersistence(): Promise<FounderBootstrapPa
     hydrateQualityRunsFromPersistence(),
     hydrateQualityProposalsFromPersistence(),
     hydrateExpertReviewsFromPersistence(),
-    operatingLoopRepository.list().then((records) => hydrateOperatingLoopRunsFromPersistence(records)).catch(() => undefined),
+    Promise.resolve(
+      bootstrap.operatingLoopRuns?.length
+        ? hydrateOperatingLoopRunsFromPersistence(bootstrap.operatingLoopRuns as Parameters<typeof hydrateOperatingLoopRunsFromPersistence>[0])
+        : operatingLoopRepository.list().then((records) => hydrateOperatingLoopRunsFromPersistence(records))
+    ).catch(() => undefined),
     hydrateFounderMemoryFromPersistence(),
     hydrateEvidencePacksFromPersistence(),
     hydrateRelationshipsFromPersistence()

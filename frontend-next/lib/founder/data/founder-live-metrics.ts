@@ -9,10 +9,11 @@ import type { OrbConversationAnalytics } from '@/lib/founder/contracts/orb-conve
 import type { ProviderAnalytics } from '@/lib/founder/contracts/provider-analytics'
 import type { ReadinessMetrics } from '@/lib/founder/contracts/readiness-metrics'
 import type { UsageMetrics } from '@/lib/founder/contracts/usage-metrics'
+import { buildLiveMetricsFromBootstrap } from '@/lib/founder/bootstrap/founder-bootstrap-metrics'
+import type { FounderBootstrapPayload } from '@/lib/founder/bootstrap/founder-bootstrap-client'
 import {
   deriveSourceConnectionStatuses,
   detectFounderDataSourcesSync,
-  probeFounderDataSources,
   type FounderDataSourceAvailability,
   type FounderDataSourceKey,
   type FounderSourceConnectionStatus,
@@ -128,7 +129,7 @@ function buildRecordCounts(
   } satisfies Partial<Record<FounderDataSourceKey, number>>
 }
 
-function buildLiveMetricsFromAdapters(
+export function buildLiveMetricsFromAdapters(
   users: ReturnType<typeof getUsersAdapterFallback>,
   providers: ReturnType<typeof getProvidersAdapterFallback>,
   homes: ReturnType<typeof getHomesAdapterFallback>,
@@ -207,29 +208,46 @@ export function getFounderLiveMetricsSync(): FounderLiveMetrics {
   return cachedLiveMetrics
 }
 
-/** Loads live metrics from adapters. Mock fallback only when data mode allows it. */
+/** Hydrate live metrics cache from bootstrap without additional live fetches. */
+export function seedLiveMetricsFromBootstrap(bootstrap: FounderBootstrapPayload): FounderLiveMetrics {
+  const metrics = buildLiveMetricsFromBootstrap(bootstrap)
+  cachedLiveMetrics = metrics
+  return metrics
+}
+
+/** Loads live metrics — prefers bootstrap cache, then adapters. Mock fallback only when data mode allows it. */
 export async function loadFounderLiveMetrics(): Promise<FounderLiveMetrics> {
+  if (cachedLiveMetrics) return cachedLiveMetrics
   if (loadPromise) return loadPromise
 
   loadPromise = (async () => {
-    const probed = await probeFounderDataSources()
-    const { sourceMode, ...availability } = probed
+    try {
+      const { getLastFounderBootstrap } = await import('@/lib/founder/persistence/founder-persistence-sync')
+      const bootstrap = getLastFounderBootstrap()
+      if (bootstrap) {
+        return seedLiveMetricsFromBootstrap(bootstrap)
+      }
+    } catch {
+      /* fall through to adapter fetch */
+    }
+
+    const { sourceMode, ...availability } = detectFounderDataSourcesSync()
 
     const [users, providers, homes, orb, features, aiUsage, readiness] = await Promise.all([
-      probed.usersAvailable ? fetchUsersAdapter() : Promise.resolve(getUsersAdapterFallback()),
-      probed.providersAvailable ? fetchProvidersAdapter() : Promise.resolve(getProvidersAdapterFallback()),
-      probed.homesAvailable ? fetchHomesAdapter() : Promise.resolve(getHomesAdapterFallback()),
-      probed.orbConversationsAvailable
+      availability.usersAvailable ? fetchUsersAdapter() : Promise.resolve(getUsersAdapterFallback()),
+      availability.providersAvailable ? fetchProvidersAdapter() : Promise.resolve(getProvidersAdapterFallback()),
+      availability.homesAvailable ? fetchHomesAdapter() : Promise.resolve(getHomesAdapterFallback()),
+      availability.orbConversationsAvailable
         ? fetchOrbConversationsAdapter()
         : Promise.resolve(getOrbConversationsAdapterFallback()),
-      probed.featureEventsAvailable
+      availability.featureEventsAvailable
         ? fetchFeatureEventsAdapter()
         : Promise.resolve(getFeatureEventsAdapterFallback()),
-      probed.aiUsageAvailable ? fetchAiUsageAdapter() : Promise.resolve(getAiUsageAdapterFallback()),
-      probed.readinessAvailable ? fetchReadinessAdapter() : Promise.resolve(getReadinessAdapterFallback())
+      availability.aiUsageAvailable ? fetchAiUsageAdapter() : Promise.resolve(getAiUsageAdapterFallback()),
+      availability.readinessAvailable ? fetchReadinessAdapter() : Promise.resolve(getReadinessAdapterFallback())
     ])
 
-    const billing = probed.billingAvailable
+    const billing = availability.billingAvailable
       ? await fetchBillingAdapter({
           totalProviders: providers.data.totalProviders,
           totalMrr: providers.data.totalMrr

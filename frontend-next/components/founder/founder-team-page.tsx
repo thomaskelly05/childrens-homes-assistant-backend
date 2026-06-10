@@ -16,11 +16,8 @@ import {
 } from '@/lib/founder/operating-loop'
 import { getAllStaffAgents, getStaffTeamOverview, runStaffAgent } from '@/lib/founder/team'
 import { FounderEvidenceQuickLink } from '@/components/founder/founder-evidence-quick-link'
-import {
-  getFounderTelemetrySummary,
-  hydrateFounderTelemetryFromLiveData,
-  refreshFounderTelemetrySummary
-} from '@/lib/founder/telemetry'
+import { getFounderTelemetrySummary } from '@/lib/founder/telemetry'
+import { getLastFounderBootstrap } from '@/lib/founder/persistence/founder-persistence-sync'
 import { refreshFounderActions } from '@/lib/founder/actions'
 
 const departmentTone: Record<string, string> = {
@@ -49,10 +46,14 @@ export function FounderTeamPage() {
   const [loopMessage, setLoopMessage] = useState<string | null>(null)
 
   useEffect(() => {
-    refreshFounderDashboardData()
-      .then(() => hydrateFounderTelemetryFromLiveData())
-      .then(() => refreshFounderTelemetrySummary())
-      .then(() => fetchOperatingLoopRuns())
+    const bootstrap = getLastFounderBootstrap()
+    const dashboardRefresh = refreshFounderDashboardData()
+    dashboardRefresh
+      .then(async () => {
+        if (!bootstrap?.operatingLoopRuns?.length) {
+          await fetchOperatingLoopRuns()
+        }
+      })
       .then(() => refresh())
       .catch(() => undefined)
   }, [refresh])
@@ -68,7 +69,6 @@ export function FounderTeamPage() {
     setLoopMessage(null)
     try {
       await refreshFounderDashboardData()
-      hydrateFounderTelemetryFromLiveData()
       const result = await postOperatingLoopRun(FULL_OPERATING_LOOP_PLAN)
       refreshFounderActions()
       setLoopMessage(result.summary)
