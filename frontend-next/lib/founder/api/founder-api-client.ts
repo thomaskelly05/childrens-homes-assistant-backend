@@ -233,7 +233,8 @@ export const ENTITY_API_SLUGS = {
   expert_review: 'expert-reviews',
   safety_review: 'safety-reviews',
   founder_memory: 'memories',
-  evidence_pack: 'evidence-packs'
+  evidence_pack: 'evidence-packs',
+  relationship: 'relationships'
 } as const
 
 export const founderPersistenceApi = {

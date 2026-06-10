@@ -15,6 +15,7 @@ export const FOUNDER_PERSISTENCE_ENTITY_SLUGS = [
   'safety-reviews',
   'memories',
   'evidence-packs',
+  'relationships',
   'audit-log'
 ] as const
 

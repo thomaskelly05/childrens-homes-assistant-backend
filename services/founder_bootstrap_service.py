@@ -39,6 +39,7 @@ PERSISTENCE_RESPONSE_KEYS = {
     "expert_review": "expertReviews",
     "founder_memory": "memories",
     "evidence_pack": "evidencePacks",
+    "relationship": "relationships",
     "operating_loop_run": "operatingLoopRuns",
 }
 

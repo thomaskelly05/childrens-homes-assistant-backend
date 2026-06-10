@@ -9,6 +9,7 @@ import type { FounderOperatingLoopRunRecord } from '@/lib/founder/persistence/fo
 import { appendAuditLog } from '@/lib/founder/persistence/repositories/audit-log-repository'
 import { baseTimestamps, nextId } from '@/lib/founder/persistence/repositories/repository-base'
 import { generateEvidencePackForAudience } from '@/lib/founder/evidence/evidence-store'
+import { getFollowUpRecommendations } from '@/lib/founder/relationships/relationship-intelligence-engine'
 import { executeQualityRun, getQualityLabSummary } from '@/lib/founder/quality-lab/quality-run-service'
 import { checkFounderOutputSafety } from '@/lib/founder/safety/founder-output-safety'
 import {
@@ -150,6 +151,20 @@ function generateActionsFromFindings(
       created.push(action.id)
     }
   }
+  const followUps = getFollowUpRecommendations().slice(0, 3)
+  for (const followUp of followUps) {
+    const title = `Follow up: ${followUp.relationship.organisation}`
+    const detail = `${followUp.intelligence.followUpReason ?? followUp.relationship.nextAction} — relationship intelligence`
+    const safety = checkFounderOutputSafety(`${title} ${detail}`)
+    if (!safety.safe && safety.requiresReview) continue
+    const action = addFounderAction({
+      title: title.slice(0, 120),
+      detail,
+      source: 'Relationship Intelligence'
+    })
+    created.push(action.id)
+  }
+
   return created
 }
 

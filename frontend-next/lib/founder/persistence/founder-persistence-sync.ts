@@ -12,6 +12,7 @@ import {
 } from '@/lib/founder/bootstrap/founder-bootstrap-client'
 import { setBootstrapPersistenceCache } from '@/lib/founder/bootstrap/founder-bootstrap-cache'
 import { hydrateEvidencePacksFromPersistence } from '@/lib/founder/evidence/evidence-store'
+import { hydrateRelationshipsFromPersistence } from '@/lib/founder/relationships/relationship-store'
 import { hydrateFounderMemoryFromPersistence } from '@/lib/founder/memory/founder-memory-store'
 import { operatingLoopRepository } from '@/lib/founder/persistence'
 import { hydrateOperatingLoopRunsFromPersistence } from '@/lib/founder/operating-loop/operating-loop-store'
@@ -43,7 +44,8 @@ export async function hydrateAllFounderPersistence(): Promise<FounderBootstrapPa
     hydrateExpertReviewsFromPersistence(),
     operatingLoopRepository.list().then((records) => hydrateOperatingLoopRunsFromPersistence(records)).catch(() => undefined),
     hydrateFounderMemoryFromPersistence(),
-    hydrateEvidencePacksFromPersistence()
+    hydrateEvidencePacksFromPersistence(),
+    hydrateRelationshipsFromPersistence()
   ])
 
   if (bootstrap.telemetrySummary) {

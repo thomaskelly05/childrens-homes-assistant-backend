@@ -66,6 +66,21 @@ export const FOUNDER_ORB_PROMPT_CATEGORIES: FounderOrbPromptCategory[] = [
     prompts: ["Turn this week's product progress into a LinkedIn post."]
   },
   {
+    id: 'relationships',
+    label: 'Relationships',
+    prompts: [
+      'Who should I follow up with today?',
+      'Which relationships matter most right now?',
+      'What relationships are going cold?',
+      'Which pilot opportunities should I prioritise?',
+      'What should I send this provider?',
+      'What should I send this investor?',
+      'What should I say to OpenAI?',
+      'What should I say to Microsoft?',
+      'What should I say to Innovate UK?'
+    ]
+  },
+  {
     id: 'operating-loop',
     label: 'Operating Loop',
     prompts: [

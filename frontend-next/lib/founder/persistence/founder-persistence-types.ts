@@ -23,6 +23,7 @@ import type {
 } from '@/lib/founder/operating-loop/operating-loop-types'
 import type { EvidencePack } from '@/lib/founder/evidence/evidence-types'
 import type { FounderMemoryItem } from '@/lib/founder/memory/founder-memory-types'
+import type { RelationshipBundle } from '@/lib/founder/relationships/relationship-types'
 import type { FounderStaffAgentId } from '@/lib/founder/team/founder-team-types'
 
 export type FounderPersistenceSource =
@@ -57,6 +58,7 @@ export type FounderEntityType =
   | 'safety_review'
   | 'founder_memory'
   | 'evidence_pack'
+  | 'relationship'
   | 'audit_log'
 
 export type FounderActionRecord = FounderPersistedBase & {
@@ -191,6 +193,11 @@ export type FounderEvidencePackRecord = FounderPersistedBase & {
   status: FounderEvidencePackStatus
   pack: EvidencePack
   linkedApprovalId?: string
+}
+
+export type FounderRelationshipRecord = FounderPersistedBase & {
+  status: RelationshipBundle['relationship']['status']
+  bundle: RelationshipBundle
 }
 
 export type FounderAuditEventType =

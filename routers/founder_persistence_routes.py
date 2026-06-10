@@ -58,6 +58,8 @@ ENTITY_ALIASES: dict[str, str] = {
     "memory": "founder_memory",
     "evidence-packs": "evidence_pack",
     "evidence_packs": "evidence_pack",
+    "relationships": "relationship",
+    "relationship": "relationship",
 }
 
 

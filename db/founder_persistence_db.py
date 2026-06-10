@@ -79,6 +79,7 @@ BOOTSTRAP_ENTITY_TYPES = (
     "expert_review",
     "founder_memory",
     "evidence_pack",
+    "relationship",
     "operating_loop_run",
 )
 
