@@ -69,6 +69,8 @@ describe('Founder persistence V1', () => {
     const loop = read('lib/founder/operating-loop/founder-operating-loop.ts')
     assert.match(loop, /persistStaffTeamRun/)
     assert.match(loop, /operatingLoopRepository/)
+    assert.match(loop, /appendAuditLog/)
+    assert.match(read('lib/founder/operating-loop/operating-loop-api.ts'), /requireFounderSession/)
     const staff = read('lib/founder/team/staff-team-run-service.ts')
     assert.match(staff, /checkFounderOutputSafety/)
     assert.match(staff, /safetyReviewRepository/)

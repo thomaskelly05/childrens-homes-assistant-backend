@@ -1,159 +1,402 @@
-import { refreshFounderActions } from '@/lib/founder/actions'
+import { addFounderAction, refreshFounderActions } from '@/lib/founder/actions'
 import { getPendingApprovals } from '@/lib/founder/approvals'
 import { generateBuildBriefFromCto } from '@/lib/founder/build-briefs'
 import { generateLinkedInDraft } from '@/lib/founder/content'
 import { operatingLoopRepository } from '@/lib/founder/persistence'
 import type { FounderOperatingLoopRunRecord } from '@/lib/founder/persistence/founder-persistence-types'
+import { appendAuditLog } from '@/lib/founder/persistence/repositories/audit-log-repository'
 import { baseTimestamps, nextId } from '@/lib/founder/persistence/repositories/repository-base'
-import { hydrateFounderTelemetryFromLiveData } from '@/lib/founder/telemetry'
+import { executeQualityRun, getQualityLabSummary } from '@/lib/founder/quality-lab/quality-run-service'
+import { checkFounderOutputSafety } from '@/lib/founder/safety/founder-output-safety'
+import {
+  getFounderTelemetrySummary,
+  hydrateFounderTelemetryFromLiveData,
+  refreshFounderTelemetrySummary
+} from '@/lib/founder/telemetry'
 import { runStaffAgent, type FounderStaffAgentId } from '@/lib/founder/team'
+import type { FounderStaffAgentOutput } from '@/lib/founder/team/founder-team-types'
 import { persistStaffTeamRun } from '@/lib/founder/team/staff-team-run-service'
-import type { OperatingLoopResult, OperatingLoopStep } from './operating-loop-types'
+import {
+  addOperatingLoopRun,
+  getLastOperatingLoopRun,
+  getOperatingLoopRun,
+  getOperatingLoopRuns
+} from './operating-loop-store'
+import type {
+  FounderOperatingLoopPlan,
+  FounderOperatingLoopRun,
+  OperatingLoopRunResponse,
+  OperatingLoopRunStatus
+} from './operating-loop-types'
+import { agentsForPlan, FULL_OPERATING_LOOP_PLAN } from './operating-loop-types'
 
-const LOOP_AGENT_SEQUENCE: Array<{ id: FounderStaffAgentId; label: string }> = [
-  { id: 'chief-of-staff', label: 'Chief of Staff' },
-  { id: 'cto', label: 'CTO' },
-  { id: 'product-director', label: 'Product Director' },
-  { id: 'ofsted-regulation', label: 'Ofsted and Regulation' },
-  { id: 'customer-success', label: 'Customer Success' },
-  { id: 'growth', label: 'Growth' },
-  { id: 'brand-ambassador', label: 'Brand Ambassador' },
-  { id: 'finance-ai-cost', label: 'Finance and AI Cost' },
-  { id: 'data-protection-safety', label: 'Data Protection and Safety' }
-]
+export { getLastOperatingLoopRun, getOperatingLoopRun, getOperatingLoopRuns }
 
-let lastLoopResult: OperatingLoopResult | null = null
+function buildDataBasis(): string {
+  const telemetry = getFounderTelemetrySummary()
+  const quality = getQualityLabSummary()
+  const parts: string[] = []
 
-export function getLastOperatingLoopResult(): OperatingLoopResult | null {
-  return lastLoopResult
+  if (telemetry.totalEvents > 0) {
+    parts.push(`Live telemetry: ${telemetry.totalEvents} events, ${telemetry.orbConversations} ORB conversations`)
+  } else {
+    parts.push('Telemetry: no live events — agents use connected founder intelligence only')
+  }
+
+  if (quality.latestRun) {
+    parts.push(
+      `Quality Lab: latest run ${quality.latestRun.title} (${quality.latestRun.passRate}% pass, ${quality.openProposals} open proposals)`
+    )
+  } else {
+    parts.push('Quality Lab: no persisted runs — quality sample may run if enabled')
+  }
+
+  return parts.join('. ')
+}
+
+function buildTelemetrySummary(): string {
+  const telemetry = getFounderTelemetrySummary()
+  if (telemetry.totalEvents === 0) {
+    return 'No live telemetry events recorded yet.'
+  }
+  const modes = telemetry.topOrbModes.map((mode) => `${mode.mode} (${mode.count})`).join(', ')
+  return `${telemetry.totalEvents} events; ${telemetry.orbConversations} ORB conversations; top modes: ${modes || '—'}`
+}
+
+function buildQualityLabSummary(): string {
+  const summary = getQualityLabSummary()
+  if (!summary.latestRun) {
+    return 'No Quality Lab runs persisted. Run Quality Lab or enable quality sample in the operating loop.'
+  }
+  return `${summary.totalRuns} runs; latest "${summary.latestRun.title}" at ${summary.latestRun.passRate}% pass; ${summary.openProposals} open proposals (${summary.criticalProposals} critical)`
+}
+
+function safeErrorSummary(error: unknown): string {
+  return (error instanceof Error ? error.message : 'Agent step failed').slice(0, 240)
+}
+
+function collectDecisions(outputs: Array<{ output: FounderStaffAgentOutput }>): string[] {
+  const decisions = outputs.flatMap(({ output }) => output.recommendations.slice(0, 2))
+  return [...new Set(decisions)].slice(0, 8)
+}
+
+function collectRisks(outputs: Array<{ output: FounderStaffAgentOutput }>): string[] {
+  const risks = outputs.flatMap(({ output }) => output.risks)
+  return [...new Set(risks)].slice(0, 12)
+}
+
+async function runQualitySampleIfNeeded(plan: FounderOperatingLoopPlan, errors: string[]): Promise<void> {
+  if (!plan.runQualitySample) return
+  try {
+    await executeQualityRun({
+      title: 'Operating loop quality sample',
+      limit: 5,
+      triggeredBy: 'operating-loop'
+    })
+  } catch (error) {
+    errors.push(`Quality sample skipped: ${safeErrorSummary(error)}`)
+  }
+}
+
+function generateActionsFromFindings(
+  agentOutputs: Array<{ agentId: FounderStaffAgentId; output: FounderStaffAgentOutput }>
+): string[] {
+  const created: string[] = []
+  const baseline = refreshFounderActions()
+  const baselineIds = new Set(baseline.map((action) => action.id))
+
+  for (const { output } of agentOutputs) {
+    for (const recommendation of output.recommendations.slice(0, 2)) {
+      const safety = checkFounderOutputSafety(recommendation)
+      if (!safety.safe && safety.requiresReview) continue
+      const action = addFounderAction({
+        title: recommendation.slice(0, 120),
+        detail: recommendation,
+        source: 'Operating Loop'
+      })
+      created.push(action.id)
+    }
+  }
+
+  const refreshed = refreshFounderActions()
+  for (const action of refreshed) {
+    if (!baselineIds.has(action.id) && !created.includes(action.id)) {
+      created.push(action.id)
+    }
+  }
+  return created
+}
+
+function countNewApprovals(beforeIds: Set<string>): string[] {
+  return getPendingApprovals()
+    .filter((item) => !beforeIds.has(item.id))
+    .map((item) => item.id)
 }
 
 /**
- * Manual founder operating loop — no scheduled automation, no external posting.
+ * Manual founder operating loop — approval-based autonomy only.
+ * Never posts, emails, deploys, or changes ORB production knowledge.
  */
-export async function runFounderOperatingLoop(): Promise<OperatingLoopResult> {
+export async function runFounderOperatingLoop(
+  plan: FounderOperatingLoopPlan = FULL_OPERATING_LOOP_PLAN,
+  triggeredBy = 'founder'
+): Promise<OperatingLoopRunResponse> {
+  const runId = nextId('loop-run')
   const startedAt = new Date().toISOString()
-  const steps: OperatingLoopStep[] = []
-  const loopId = nextId('loop-run')
-  const agentOutputs: Array<{
-    agentId: FounderStaffAgentId
-    output: ReturnType<typeof runStaffAgent>
-  }> = []
+  const errors: string[] = []
+  const auditLogIds: string[] = []
+  const staffAgentsRun: FounderOperatingLoopRun['staffAgentsRun'] = []
+  const agentOutputs: Array<{ agentId: FounderStaffAgentId; output: FounderStaffAgentOutput }> = []
+
+  const startedAudit = await appendAuditLog({
+    actor: triggeredBy,
+    eventType: 'run_started',
+    entityType: 'operating_loop_run',
+    entityId: runId,
+    summary: 'Founder operating loop started',
+    status: 'running'
+  }).catch(() => null)
+  if (startedAudit?.id) auditLogIds.push(startedAudit.id)
+
+  let status: OperatingLoopRunStatus = 'running'
+
+  const runningRecord: FounderOperatingLoopRun = {
+    id: runId,
+    status,
+    startedAt,
+    triggeredBy,
+    dataBasis: 'Initialising…',
+    telemetrySummary: '—',
+    qualityLabSummary: '—',
+    staffAgentsRun,
+    actionsCreated: [],
+    approvalsCreated: [],
+    draftsCreated: [],
+    buildBriefsCreated: [],
+    risksIdentified: [],
+    recommendedFounderDecisions: [],
+    auditLogIds,
+    errors
+  }
+  addOperatingLoopRun(runningRecord)
 
   try {
+    await refreshFounderTelemetrySummary().catch(() => undefined)
     hydrateFounderTelemetryFromLiveData()
-    steps.push({
-      id: 'telemetry',
-      agentId: 'telemetry',
-      label: 'Pull live telemetry',
-      status: 'complete',
-      completedAt: new Date().toISOString()
-    })
 
-    for (const { id, label } of LOOP_AGENT_SEQUENCE) {
-      steps.push({ id, agentId: id, label: `Run ${label}`, status: 'running' })
-      const output = runStaffAgent(id)
-      agentOutputs.push({ agentId: id, output })
-      const stepIndex = steps.findIndex((s) => s.id === id)
-      if (stepIndex >= 0) {
-        steps[stepIndex] = {
-          ...steps[stepIndex],
+    const dataBasis = buildDataBasis()
+    const telemetrySummary = buildTelemetrySummary()
+    let qualityLabSummary = buildQualityLabSummary()
+
+    await runQualitySampleIfNeeded(plan, errors)
+    if (plan.runQualitySample) {
+      qualityLabSummary = buildQualityLabSummary()
+    }
+
+    const approvalIdsBefore = new Set(getPendingApprovals().map((item) => item.id))
+    const agentSequence = agentsForPlan(plan)
+
+    for (const { id, label } of agentSequence) {
+      try {
+        const output = runStaffAgent(id)
+        agentOutputs.push({ agentId: id, output })
+        staffAgentsRun.push({
+          agentId: id,
+          label,
           status: 'complete',
           completedAt: new Date().toISOString()
-        }
+        })
+      } catch (error) {
+        const errorSummary = safeErrorSummary(error)
+        errors.push(`${label}: ${errorSummary}`)
+        staffAgentsRun.push({
+          agentId: id,
+          label,
+          status: 'failed',
+          completedAt: new Date().toISOString(),
+          errorSummary
+        })
       }
     }
 
-    const actions = refreshFounderActions()
-    steps.push({
-      id: 'actions',
-      agentId: 'actions',
-      label: 'Generate actions',
-      status: 'complete',
-      completedAt: new Date().toISOString()
-    })
+    const actionsCreated = plan.generateActions ? generateActionsFromFindings(agentOutputs) : []
+    const draftsCreated: string[] = []
+    const buildBriefsCreated: string[] = []
 
-    const linkedInDraft = generateLinkedInDraft('weekly-progress')
-    steps.push({
-      id: 'content',
-      agentId: 'brand-ambassador',
-      label: 'Generate content drafts',
-      status: 'complete',
-      completedAt: new Date().toISOString()
-    })
+    if (plan.generateContentDrafts) {
+      try {
+        const draft = generateLinkedInDraft('weekly-progress')
+        draftsCreated.push(draft.id)
+      } catch (error) {
+        errors.push(`Content draft: ${safeErrorSummary(error)}`)
+      }
+    }
 
-    const brief = generateBuildBriefFromCto()
-    steps.push({
-      id: 'build-briefs',
-      agentId: 'lead-developer',
-      label: 'Generate build briefs',
-      status: 'complete',
-      completedAt: new Date().toISOString()
-    })
+    if (plan.generateBuildBriefs) {
+      try {
+        const brief = generateBuildBriefFromCto()
+        buildBriefsCreated.push(brief.id)
+      } catch (error) {
+        errors.push(`Build brief: ${safeErrorSummary(error)}`)
+      }
+    }
 
-    const pendingApprovals = getPendingApprovals()
-    steps.push({
-      id: 'approvals',
-      agentId: 'data-protection-safety',
-      label: 'Queue external-facing approvals',
-      status: 'complete',
-      completedAt: new Date().toISOString()
-    })
+    const approvalsCreated = plan.generateApprovals ? countNewApprovals(approvalIdsBefore) : []
 
-    const chief = runStaffAgent('chief-of-staff')
+    const risksIdentified = collectRisks(agentOutputs)
+    const recommendedFounderDecisions = collectDecisions(agentOutputs)
+    const chiefOutput = agentOutputs.find((entry) => entry.agentId === 'chief-of-staff')?.output
+    const summary =
+      chiefOutput?.summary ??
+      recommendedFounderDecisions[0] ??
+      'Operating loop complete. Review outputs and pending approvals.'
+
+    const agentFailures = staffAgentsRun.filter((agent) => agent.status === 'failed').length
+    status =
+      agentFailures > 0 && agentFailures === staffAgentsRun.length
+        ? 'failed'
+        : errors.length > 0 || agentFailures > 0
+          ? 'completed_with_warnings'
+          : 'completed'
+
     const completedAt = new Date().toISOString()
-
-    lastLoopResult = {
+    const completedRun: FounderOperatingLoopRun = {
+      id: runId,
+      status,
       startedAt,
       completedAt,
-      steps,
-      actionsGenerated: actions.length,
-      draftsGenerated: linkedInDraft ? 1 : 0,
-      briefsGenerated: brief ? 1 : 0,
-      approvalsQueued: pendingApprovals.length,
-      summary: chief.summary
+      triggeredBy,
+      dataBasis,
+      telemetrySummary,
+      qualityLabSummary,
+      staffAgentsRun,
+      actionsCreated,
+      approvalsCreated,
+      draftsCreated,
+      buildBriefsCreated,
+      risksIdentified,
+      recommendedFounderDecisions,
+      auditLogIds,
+      errors
     }
 
     const staffRun = await persistStaffTeamRun({
       agentOutputs,
-      actionsGenerated: actions.length,
-      draftsGenerated: linkedInDraft ? 1 : 0,
-      briefsGenerated: brief ? 1 : 0,
-      approvalsQueued: pendingApprovals.length,
-      summary: chief.summary
+      actionsGenerated: actionsCreated.length,
+      draftsGenerated: draftsCreated.length,
+      briefsGenerated: buildBriefsCreated.length,
+      approvalsQueued: approvalsCreated.length,
+      summary,
+      actor: triggeredBy
     })
 
     const loopRecord: FounderOperatingLoopRunRecord = {
-      id: loopId,
-      ...baseTimestamps('founder', 'operating-loop'),
-      status: 'complete',
-      result: lastLoopResult,
-      staffTeamRunId: staffRun.id
+      id: runId,
+      ...baseTimestamps(triggeredBy, 'operating-loop'),
+      status: status === 'completed_with_warnings' ? 'complete' : status === 'completed' ? 'complete' : status,
+      run: completedRun,
+      staffTeamRunId: staffRun.id,
+      errorSummary: errors.length > 0 ? errors.join('; ').slice(0, 500) : undefined
     }
-    await operatingLoopRepository.persistResult(loopRecord)
+    await operatingLoopRepository.persistResult(loopRecord, triggeredBy)
 
-    return lastLoopResult
-  } catch (error) {
-    const completedAt = new Date().toISOString()
-    const safeSummary = (error instanceof Error ? error.message : 'Operating loop failed').slice(0, 240)
-    lastLoopResult = {
-      startedAt,
-      completedAt,
-      steps,
-      actionsGenerated: 0,
-      draftsGenerated: 0,
-      briefsGenerated: 0,
-      approvalsQueued: 0,
-      summary: safeSummary
+    const completedAudit = await appendAuditLog({
+      actor: triggeredBy,
+      eventType: status === 'failed' ? 'run_failed' : 'run_completed',
+      entityType: 'operating_loop_run',
+      entityId: runId,
+      summary:
+        status === 'failed'
+          ? errors[0] ?? 'Operating loop failed'
+          : `Operating loop ${status.replace(/_/g, ' ')}`,
+      status,
+      metadata: {
+        actions: actionsCreated.length,
+        approvals: approvalsCreated.length,
+        drafts: draftsCreated.length,
+        buildBriefs: buildBriefsCreated.length
+      }
+    }).catch(() => null)
+    if (completedAudit?.id) auditLogIds.push(completedAudit.id)
+
+    completedRun.auditLogIds = auditLogIds
+    addOperatingLoopRun(completedRun)
+
+    return {
+      runId,
+      status,
+      summary,
+      created: {
+        actions: actionsCreated.length,
+        approvals: approvalsCreated.length,
+        drafts: draftsCreated.length,
+        buildBriefs: buildBriefsCreated.length
+      },
+      warnings: errors
     }
+  } catch (error) {
+    const safeSummary = safeErrorSummary(error)
+    errors.push(safeSummary)
+    status = 'failed'
+
+    const failedRun: FounderOperatingLoopRun = {
+      id: runId,
+      status,
+      startedAt,
+      completedAt: new Date().toISOString(),
+      triggeredBy,
+      dataBasis: buildDataBasis(),
+      telemetrySummary: buildTelemetrySummary(),
+      qualityLabSummary: buildQualityLabSummary(),
+      staffAgentsRun,
+      actionsCreated: [],
+      approvalsCreated: [],
+      draftsCreated: [],
+      buildBriefsCreated: [],
+      risksIdentified: [],
+      recommendedFounderDecisions: [],
+      auditLogIds,
+      errors
+    }
+
     const loopRecord: FounderOperatingLoopRunRecord = {
-      id: loopId,
-      ...baseTimestamps('founder', 'operating-loop'),
+      id: runId,
+      ...baseTimestamps(triggeredBy, 'operating-loop'),
       status: 'failed',
-      result: lastLoopResult,
+      run: failedRun,
       errorSummary: safeSummary
     }
-    await operatingLoopRepository.persistResult(loopRecord)
-    return lastLoopResult
+    await operatingLoopRepository.persistResult(loopRecord, triggeredBy)
+    addOperatingLoopRun(failedRun)
+
+    return {
+      runId,
+      status,
+      summary: safeSummary,
+      created: { actions: 0, approvals: 0, drafts: 0, buildBriefs: 0 },
+      warnings: errors
+    }
+  }
+}
+
+/** @deprecated Use getLastOperatingLoopRun */
+export function getLastOperatingLoopResult() {
+  const run = getLastOperatingLoopRun()
+  if (!run) return null
+  return {
+    startedAt: run.startedAt,
+    completedAt: run.completedAt ?? run.startedAt,
+    steps: run.staffAgentsRun.map((agent) => ({
+      id: agent.agentId,
+      agentId: agent.agentId,
+      label: agent.label,
+      status: agent.status === 'complete' ? ('complete' as const) : agent.status === 'failed' ? ('skipped' as const) : ('skipped' as const),
+      completedAt: agent.completedAt
+    })),
+    actionsGenerated: run.actionsCreated.length,
+    draftsGenerated: run.draftsCreated.length,
+    briefsGenerated: run.buildBriefsCreated.length,
+    approvalsQueued: run.approvalsCreated.length,
+    summary: run.recommendedFounderDecisions[0] ?? 'Operating loop complete'
   }
 }

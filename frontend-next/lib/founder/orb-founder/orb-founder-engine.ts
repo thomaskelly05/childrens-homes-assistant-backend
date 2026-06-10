@@ -23,8 +23,14 @@ import { runChiefOfStaffAgent } from '@/lib/founder/agents/chief-of-staff-agent'
 import { getPendingApprovals } from '@/lib/founder/approvals'
 import { generateBuildBriefFromCto } from '@/lib/founder/build-briefs'
 import { generateLinkedInDraft } from '@/lib/founder/content'
-import { runFounderOperatingLoop } from '@/lib/founder/operating-loop'
 import { runStaffAgent } from '@/lib/founder/team'
+import {
+  answerBuildBriefsCreated,
+  answerCtoRecommendation,
+  answerFounderDecisionsToday,
+  answerLastOperatingLoop,
+  isExplicitOperatingLoopRequest
+} from './orb-founder-operating-loop'
 import { orbFounderLiveInputs, orbFounderNoLiveDataAnswer } from './orb-founder-live-guard'
 
 export type FounderOrbConfidence = 'high' | 'medium' | 'low'
@@ -472,15 +478,14 @@ function answerDeveloperBuildNext(): FounderOrbAnswer {
 }
 
 function answerRunStaffTeam(): FounderOrbAnswer {
-  void runFounderOperatingLoop()
-  refreshFounderActions()
   return {
-    answer: 'Founder Staff Team operating loop complete. Actions, content drafts, and build briefs have been generated. External-facing items are queued in Approvals. No emails sent and no posts published.',
+    answer:
+      'Starting the Founder Operating Loop via the approval-based API. The staff team will analyse live telemetry and Quality Lab results, create actions, drafts, build briefs, and queue approvals. I will never auto-post, auto-email, or change ORB production knowledge.',
     usedSources: ['Founder Operating Loop', 'Chief of Staff Agent'],
     suggestedFollowUps: [
+      'What happened in the last operating loop?',
       'What approvals are waiting?',
-      'Show my top actions',
-      'What should I post this week?'
+      'What should I decide today?'
     ],
     confidence: 'high'
   }
@@ -675,8 +680,24 @@ export function answerFounderQuestion(question: string, context?: FounderOrbCont
     return answerDeveloperBuildNext()
   }
 
-  if (matches(q, [/run my founder staff/, /run founder staff team/, /run staff team/])) {
+  if (matches(q, [/run my operating loop/, /run (?:the |a )?operating loop/, /run (?:my )?founder staff/, /run founder staff team/, /run staff team/, /run (?:a |the )?(?:brand|quality|technical|product) loop/])) {
     return answerRunStaffTeam()
+  }
+
+  if (matches(q, [/last operating loop/, /what happened in the last operating loop/, /previous operating loop/])) {
+    return answerLastOperatingLoop()
+  }
+
+  if (matches(q, [/what did the cto recommend/, /cto recommend/])) {
+    return answerCtoRecommendation()
+  }
+
+  if (matches(q, [/what build briefs were created/, /build briefs were created/, /briefs were created/])) {
+    return answerBuildBriefsCreated()
+  }
+
+  if (matches(q, [/what should i decide today/, /decide today/, /founder decisions today/])) {
+    return answerFounderDecisionsToday()
   }
 
   if (matches(q, [/approvals waiting/, /what approvals/, /pending approval/])) {
@@ -714,16 +735,18 @@ export function answerFounderQuestion(question: string, context?: FounderOrbCont
 /** Suggested founder questions for the sidebar */
 export const FOUNDER_ORB_SUGGESTED_QUESTIONS = [
   'What should I do today?',
-  'What should my CTO focus on?',
-  'Ask the Brand Ambassador to draft a LinkedIn post.',
-  'What should the developer build next?',
-  'Run my founder staff team.',
+  'Run my operating loop.',
+  'What happened in the last operating loop?',
+  'What did the CTO recommend?',
+  'What build briefs were created?',
   'What approvals are waiting?',
-  'Create a Cursor brief for the next build.',
-  'What should I post this week?',
-  'What is my biggest technical risk?',
-  'What is my biggest brand opportunity?'
+  'What should I decide today?',
+  'Run a brand loop.',
+  'Run a quality loop.',
+  'Run a technical loop.'
 ] as const
+
+export { isExplicitOperatingLoopRequest }
 
 /** Build context panel snapshot for the ORB Founder UI */
 export function getFounderOrbContextSnapshot() {

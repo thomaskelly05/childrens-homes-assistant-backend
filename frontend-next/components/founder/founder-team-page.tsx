@@ -2,12 +2,18 @@
 
 import Link from 'next/link'
 import { useCallback, useEffect, useState } from 'react'
-import { Bot, Play, Zap } from 'lucide-react'
+import { AlertTriangle, Bot, Play, Zap } from 'lucide-react'
 
 import { FounderNavHeader } from '@/components/founder/founder-nav-header'
 import { FounderSectionCard } from '@/components/founder/founder-section-card'
+import { getPendingApprovals } from '@/lib/founder/approvals'
 import { refreshFounderDashboardData } from '@/lib/founder/intelligence-service'
-import { runFounderOperatingLoop, getLastOperatingLoopResult } from '@/lib/founder/operating-loop'
+import {
+  fetchOperatingLoopRuns,
+  getLastOperatingLoopRun,
+  postOperatingLoopRun,
+  FULL_OPERATING_LOOP_PLAN
+} from '@/lib/founder/operating-loop'
 import { getAllStaffAgents, getStaffTeamOverview, runStaffAgent } from '@/lib/founder/team'
 import {
   getFounderTelemetrySummary,
@@ -45,6 +51,7 @@ export function FounderTeamPage() {
     refreshFounderDashboardData()
       .then(() => hydrateFounderTelemetryFromLiveData())
       .then(() => refreshFounderTelemetrySummary())
+      .then(() => fetchOperatingLoopRuns())
       .then(() => refresh())
       .catch(() => undefined)
   }, [refresh])
@@ -52,17 +59,19 @@ export function FounderTeamPage() {
   const overview = getStaffTeamOverview()
   const telemetry = getFounderTelemetrySummary()
   const agents = getAllStaffAgents()
-  const lastLoop = getLastOperatingLoopResult()
+  const lastLoop = getLastOperatingLoopRun()
+  const pendingApprovals = getPendingApprovals()
 
-  async function handleRunTeam() {
+  async function handleRunLoop() {
     setRunning(true)
     setLoopMessage(null)
     try {
       await refreshFounderDashboardData()
       hydrateFounderTelemetryFromLiveData()
-      const result = await runFounderOperatingLoop()
+      const result = await postOperatingLoopRun(FULL_OPERATING_LOOP_PLAN)
       refreshFounderActions()
       setLoopMessage(result.summary)
+      await fetchOperatingLoopRuns()
       refresh()
     } finally {
       setRunning(false)
@@ -100,24 +109,45 @@ export function FounderTeamPage() {
           ))}
         </div>
 
-        <FounderSectionCard eyebrow="Operating loop" title="Run Founder Staff Team">
+        <FounderSectionCard eyebrow="Operating loop" title="Run Operating Loop">
           <p className="mb-4 text-sm text-slate-400">
-            Manually run the approval-based operating loop. No scheduled automation. No external posting or emails.
+            Run the approval-based operating loop against live telemetry and Quality Lab results. No scheduled automation.
+            No external posting or emails.
           </p>
-          <button
-            type="button"
-            onClick={handleRunTeam}
-            disabled={running}
-            className="inline-flex items-center gap-2 rounded-xl border border-violet-400/30 bg-violet-500/10 px-5 py-3 text-sm font-bold text-violet-200 transition hover:border-violet-400/50 hover:bg-violet-500/15 disabled:opacity-50"
-          >
-            <Play className="h-4 w-4" aria-hidden />
-            {running ? 'Running team…' : 'Run Founder Staff Team'}
-          </button>
+          <div className="flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={handleRunLoop}
+              disabled={running}
+              className="inline-flex items-center gap-2 rounded-xl border border-violet-400/30 bg-violet-500/10 px-5 py-3 text-sm font-bold text-violet-200 transition hover:border-violet-400/50 hover:bg-violet-500/15 disabled:opacity-50"
+            >
+              <Play className="h-4 w-4" aria-hidden />
+              {running ? 'Running loop…' : 'Run Operating Loop'}
+            </button>
+            <Link
+              href="/founder/operating-loop"
+              className="inline-flex items-center rounded-xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-bold text-slate-200"
+            >
+              Open Operating Loop →
+            </Link>
+          </div>
           {loopMessage ? <p className="mt-4 text-sm text-emerald-300">{loopMessage}</p> : null}
           {lastLoop ? (
-            <p className="mt-2 text-xs text-slate-500">
-              Last run: {lastLoop.actionsGenerated} actions, {lastLoop.draftsGenerated} drafts, {lastLoop.approvalsQueued} approvals queued
-            </p>
+            <div className="mt-4 space-y-2 text-sm text-slate-400">
+              <p>
+                Last loop ({lastLoop.status}): {lastLoop.actionsCreated.length} actions, {lastLoop.draftsCreated.length}{' '}
+                drafts, {lastLoop.buildBriefsCreated.length} briefs, {lastLoop.approvalsCreated.length} approvals
+              </p>
+              {lastLoop.errors.length > 0 ? (
+                <p className="flex items-start gap-2 text-amber-200">
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+                  {lastLoop.errors[0]}
+                </p>
+              ) : null}
+              {pendingApprovals.length > 0 ? (
+                <p>{pendingApprovals.length} approval(s) waiting — review at /founder/approvals</p>
+              ) : null}
+            </div>
           ) : null}
         </FounderSectionCard>
 

@@ -66,30 +66,29 @@ export const FOUNDER_ORB_PROMPT_CATEGORIES: FounderOrbPromptCategory[] = [
     prompts: ["Turn this week's product progress into a LinkedIn post."]
   },
   {
-    id: 'staff-team',
-    label: 'Founder Staff Team',
+    id: 'operating-loop',
+    label: 'Operating Loop',
     prompts: [
-      'What should my CTO focus on?',
-      'Ask the Brand Ambassador to draft a LinkedIn post.',
-      'What should the developer build next?',
-      'Run my founder staff team.',
+      'Run my operating loop.',
+      'What happened in the last operating loop?',
+      'What did the CTO recommend?',
+      'What build briefs were created?',
       'What approvals are waiting?',
-      'Create a Cursor brief for the next build.',
-      'What should I post this week?',
-      'What is my biggest technical risk?',
-      'What is my biggest brand opportunity?'
+      'What should I decide today?',
+      'Run a brand loop.',
+      'Run a quality loop.',
+      'Run a technical loop.'
     ]
   }
 ]
 
 /** Flat list of featured example prompts for quick access */
 export const FOUNDER_ORB_FEATURED_PROMPTS = [
-  'What should my CTO focus on?',
-  'Ask the Brand Ambassador to draft a LinkedIn post.',
-  'What should the developer build next?',
-  'Run my founder staff team.',
+  'Run my operating loop.',
+  'What happened in the last operating loop?',
+  'What did the CTO recommend?',
   'What approvals are waiting?',
-  'Create a Cursor brief for the next build.',
-  'What should I post this week?',
-  'What is my biggest technical risk?'
+  'What should I decide today?',
+  'Run a quality loop.',
+  'Run a technical loop.'
 ] as const
