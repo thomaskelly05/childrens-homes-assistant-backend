@@ -3,7 +3,6 @@
  * In live-only mode, missing sources return empty/unavailable data — never mock fallback.
  */
 
-import { ORB_ADMIN_API_PATHS } from '@/lib/orb/admin-quality-client'
 import {
   formatSourceConnectionStatus,
   isFounderLiveOnlyMode,
@@ -11,7 +10,7 @@ import {
   type FounderSourceConnectionStatus,
   type FounderSourceMode
 } from './founder-data-mode'
-import { probeEndpoint } from './adapters/adapter-utils'
+import { probeFounderLiveEndpoint } from './adapters/adapter-utils'
 
 export type { FounderSourceConnectionStatus, FounderSourceMode } from './founder-data-mode'
 
@@ -37,15 +36,15 @@ export type FounderDataSourceKey =
   | 'aiUsage'
   | 'readiness'
 
-const KNOWN_ENDPOINTS: Record<FounderDataSourceKey, string[]> = {
-  users: [ORB_ADMIN_API_PATHS.billingUsage],
-  providers: ['/api/providers'],
-  homes: ['/api/homes'],
-  orbConversations: [ORB_ADMIN_API_PATHS.feedbackSummary],
-  featureEvents: [],
-  billing: [ORB_ADMIN_API_PATHS.billingUsage],
-  aiUsage: [ORB_ADMIN_API_PATHS.billingUsage],
-  readiness: ['/api/inspection-readiness/health']
+const FOUNDER_LIVE_TARGETS: Record<FounderDataSourceKey, string | null> = {
+  users: 'orb-billing-usage',
+  providers: 'providers',
+  homes: 'homes',
+  orbConversations: 'orb-feedback-summary',
+  featureEvents: null,
+  billing: 'orb-billing-usage',
+  aiUsage: 'orb-billing-usage',
+  readiness: 'inspection-readiness'
 }
 
 const AVAILABILITY_FIELDS: Record<FounderDataSourceKey, keyof Omit<FounderDataSourceAvailability, 'sourceMode'>> = {
@@ -86,7 +85,7 @@ export function deriveSourceConnectionStatuses(
 ): Record<FounderDataSourceKey, FounderSourceConnectionStatus> {
   const statuses = {} as Record<FounderDataSourceKey, FounderSourceConnectionStatus>
 
-  for (const key of Object.keys(KNOWN_ENDPOINTS) as FounderDataSourceKey[]) {
+  for (const key of Object.keys(FOUNDER_LIVE_TARGETS) as FounderDataSourceKey[]) {
     const connected = availability[AVAILABILITY_FIELDS[key]]
     if (!connected) {
       statuses[key] = 'not-connected'
@@ -109,14 +108,14 @@ export { formatSourceConnectionStatus }
 /** Synchronous capability check — whether endpoints are defined for this app build. */
 export function detectFounderDataSourcesSync(): FounderDataSourceAvailability {
   const availability = {
-    usersAvailable: KNOWN_ENDPOINTS.users.length > 0,
-    providersAvailable: KNOWN_ENDPOINTS.providers.length > 0,
-    homesAvailable: KNOWN_ENDPOINTS.homes.length > 0,
-    orbConversationsAvailable: KNOWN_ENDPOINTS.orbConversations.length > 0,
+    usersAvailable: Boolean(FOUNDER_LIVE_TARGETS.users),
+    providersAvailable: Boolean(FOUNDER_LIVE_TARGETS.providers),
+    homesAvailable: Boolean(FOUNDER_LIVE_TARGETS.homes),
+    orbConversationsAvailable: Boolean(FOUNDER_LIVE_TARGETS.orbConversations),
     featureEventsAvailable: false,
-    billingAvailable: KNOWN_ENDPOINTS.billing.length > 0,
-    aiUsageAvailable: KNOWN_ENDPOINTS.aiUsage.length > 0,
-    readinessAvailable: KNOWN_ENDPOINTS.readiness.length > 0
+    billingAvailable: Boolean(FOUNDER_LIVE_TARGETS.billing),
+    aiUsageAvailable: Boolean(FOUNDER_LIVE_TARGETS.aiUsage),
+    readinessAvailable: Boolean(FOUNDER_LIVE_TARGETS.readiness)
   }
 
   return {
@@ -134,14 +133,22 @@ export async function probeFounderDataSources(): Promise<FounderDataSourceAvaila
   }
 
   const [users, providers, homes, orb, billing, readiness] = await Promise.all([
-    sync.usersAvailable ? probeEndpoint(`${KNOWN_ENDPOINTS.users[0]}?days=7`) : Promise.resolve(false),
-    sync.providersAvailable ? probeEndpoint(KNOWN_ENDPOINTS.providers[0]) : Promise.resolve(false),
-    sync.homesAvailable ? probeEndpoint(KNOWN_ENDPOINTS.homes[0]) : Promise.resolve(false),
-    sync.orbConversationsAvailable
-      ? probeEndpoint(`${KNOWN_ENDPOINTS.orbConversations[0]}?days=7`)
+    sync.usersAvailable
+      ? probeFounderLiveEndpoint(FOUNDER_LIVE_TARGETS.users!, { days: '7' })
       : Promise.resolve(false),
-    sync.billingAvailable ? probeEndpoint(`${KNOWN_ENDPOINTS.billing[0]}?days=7`) : Promise.resolve(false),
-    sync.readinessAvailable ? probeEndpoint(KNOWN_ENDPOINTS.readiness[0]) : Promise.resolve(false)
+    sync.providersAvailable
+      ? probeFounderLiveEndpoint(FOUNDER_LIVE_TARGETS.providers!)
+      : Promise.resolve(false),
+    sync.homesAvailable ? probeFounderLiveEndpoint(FOUNDER_LIVE_TARGETS.homes!) : Promise.resolve(false),
+    sync.orbConversationsAvailable
+      ? probeFounderLiveEndpoint(FOUNDER_LIVE_TARGETS.orbConversations!, { days: '7' })
+      : Promise.resolve(false),
+    sync.billingAvailable
+      ? probeFounderLiveEndpoint(FOUNDER_LIVE_TARGETS.billing!, { days: '7' })
+      : Promise.resolve(false),
+    sync.readinessAvailable
+      ? probeFounderLiveEndpoint(FOUNDER_LIVE_TARGETS.readiness!)
+      : Promise.resolve(false)
   ])
 
   const availability = {

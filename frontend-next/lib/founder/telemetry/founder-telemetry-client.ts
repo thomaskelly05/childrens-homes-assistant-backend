@@ -1,15 +1,10 @@
-import { getCsrfToken } from '@/lib/auth/api'
-import { sanitiseFounderPayload } from '@/lib/founder/persistence/persistence-safety'
+import { founderGet, founderPost } from '@/lib/founder/api/founder-api-client'
 import {
   EMPTY_FOUNDER_TELEMETRY_SUMMARY,
   type FounderTelemetryEventInput,
   type FounderTelemetrySummary
 } from './founder-telemetry-types'
 import { findBlockedTelemetryKeys, redactTelemetryMetadata } from './founder-telemetry-redaction'
-
-type ApiEnvelope<T> = { success?: boolean; data?: T; error?: string; detail?: string }
-
-const TELEMETRY_API_BASE = '/api/founder/telemetry'
 
 function buildEventPayload(input: FounderTelemetryEventInput) {
   const metadata = redactTelemetryMetadata(input.metadata ?? {}) as Record<string, unknown>
@@ -31,46 +26,31 @@ function buildEventPayload(input: FounderTelemetryEventInput) {
 }
 
 export async function postFounderTelemetryEvent(input: FounderTelemetryEventInput): Promise<void> {
-  const headers = new Headers({ 'Content-Type': 'application/json' })
-  const csrf = getCsrfToken()
-  if (csrf) headers.set('x-csrf-token', csrf)
-
-  const response = await fetch(`${TELEMETRY_API_BASE}/event`, {
-    method: 'POST',
-    headers,
-    credentials: 'same-origin',
-    body: JSON.stringify(buildEventPayload(input)),
-    cache: 'no-store'
-  })
-
-  if (!response.ok) {
-    const payload = (await response.json().catch(() => ({}))) as ApiEnvelope<unknown>
-    throw new Error(payload.detail || payload.error || 'Telemetry event rejected')
+  const result = await founderPost('/telemetry/event', buildEventPayload(input))
+  if (!result.ok) {
+    throw new Error(result.error)
   }
 }
 
 export async function fetchFounderTelemetrySummary(
   days = 30
 ): Promise<FounderTelemetrySummary | null> {
-  const response = await fetch(`${TELEMETRY_API_BASE}/summary?days=${days}`, {
-    credentials: 'same-origin',
-    cache: 'no-store'
-  })
+  const result = await founderGet<{ data?: FounderTelemetrySummary } & FounderTelemetrySummary>(
+    `/telemetry/summary?days=${days}`
+  )
 
-  if (response.status === 403 || response.status === 401) {
-    return null
-  }
-
-  if (response.status === 404) {
+  if (!result.ok) {
+    if (result.status === 403 || result.status === 401) return null
     return { ...EMPTY_FOUNDER_TELEMETRY_SUMMARY }
   }
 
-  if (!response.ok) {
-    throw new Error('Failed to load founder telemetry summary')
-  }
+  const payload = result.data
+  const summary =
+    payload && typeof payload === 'object' && 'data' in payload
+      ? (payload as { data?: FounderTelemetrySummary }).data
+      : payload
 
-  const payload = (await response.json()) as ApiEnvelope<FounderTelemetrySummary>
-  return sanitiseFounderPayload(payload.data ?? null) as FounderTelemetrySummary | null
+  return (summary ?? EMPTY_FOUNDER_TELEMETRY_SUMMARY) as FounderTelemetrySummary
 }
 
 /** Fire-and-forget telemetry — never blocks UX. */

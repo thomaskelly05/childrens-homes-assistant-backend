@@ -8,6 +8,7 @@ import { Archive, Check, Copy, Send } from 'lucide-react'
 import { FounderNavHeader } from '@/components/founder/founder-nav-header'
 import { FounderSectionCard } from '@/components/founder/founder-section-card'
 import { SaveToFounderMemoryButton } from '@/components/founder/save-to-founder-memory-button'
+import { founderGet, founderPost } from '@/lib/founder/api/founder-api-client'
 import { formatEvidencePackText } from '@/lib/founder/evidence/evidence-pack-generator'
 import { EVIDENCE_AUDIENCE_LABELS, type EvidencePack } from '@/lib/founder/evidence/evidence-types'
 import { canCopyEvidencePack } from '@/lib/founder/evidence/evidence-store'
@@ -28,12 +29,12 @@ export function FounderEvidenceDetailPage({ packId }: Props) {
     setLoading(true)
     setError(null)
     try {
-      const response = await fetch(`/api/founder/evidence/${encodeURIComponent(packId)}`, {
-        credentials: 'same-origin'
-      })
-      if (!response.ok) throw new Error('Evidence pack not found')
-      const data = (await response.json()) as { pack: EvidencePack }
-      setPack(data.pack)
+      const result = await founderGet<{ pack: EvidencePack }>(`/evidence/${encodeURIComponent(packId)}`)
+      if (!result.ok) {
+        setError(result.error)
+        return
+      }
+      setPack(result.data.pack)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load pack')
     } finally {
@@ -57,24 +58,22 @@ export function FounderEvidenceDetailPage({ packId }: Props) {
 
   async function handleSendToApprovals() {
     if (!pack) return
-    const response = await fetch(`/api/founder/evidence/${encodeURIComponent(pack.id)}/approve`, {
-      method: 'POST',
-      credentials: 'same-origin'
-    })
-    if (response.ok) {
+    const result = await founderPost(`/evidence/${encodeURIComponent(pack.id)}/approve`)
+    if (result.ok) {
       setActionMessage('Pack queued for approval.')
       await loadPack()
+    } else {
+      setActionMessage(result.error)
     }
   }
 
   async function handleArchive() {
     if (!pack) return
-    const response = await fetch(`/api/founder/evidence/${encodeURIComponent(pack.id)}/archive`, {
-      method: 'POST',
-      credentials: 'same-origin'
-    })
-    if (response.ok) {
+    const result = await founderPost(`/evidence/${encodeURIComponent(pack.id)}/archive`)
+    if (result.ok) {
       router.push('/founder/evidence')
+    } else {
+      setActionMessage(result.error)
     }
   }
 

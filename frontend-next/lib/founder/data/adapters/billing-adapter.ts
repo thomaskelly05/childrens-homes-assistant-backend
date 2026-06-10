@@ -1,17 +1,16 @@
 import type { OrbAdminUsageSummary } from '@/lib/orb/admin-quality-client'
-import { ORB_ADMIN_API_PATHS } from '@/lib/orb/admin-quality-client'
 import { isFounderMockFallbackAllowed } from '@/lib/founder/data/founder-data-mode'
 import { mockBillingMetrics } from '@/lib/founder/intelligence/mock-inputs'
 import type { BillingMetrics } from '@/lib/founder/contracts/billing-metrics'
 import type { FounderAdapterResult } from './adapter-types'
 import { getBillingAdapterUnavailable } from './adapter-unavailable'
-import { currentPeriodBounds, fetchJson } from './adapter-utils'
+import { currentPeriodBounds, fetchFounderLiveJson } from './adapter-utils'
 
 export async function fetchBillingAdapter(
   providerTotals?: { totalProviders: number; totalMrr: number }
 ): Promise<FounderAdapterResult<BillingMetrics>> {
   const { periodStart, periodEnd } = currentPeriodBounds()
-  const usage = await fetchJson<OrbAdminUsageSummary>(`${ORB_ADMIN_API_PATHS.billingUsage}?days=30`)
+  const usage = await fetchFounderLiveJson<OrbAdminUsageSummary>('orb-billing-usage', { days: '30' })
 
   if (!usage) {
     return isFounderMockFallbackAllowed() ? getBillingAdapterFallback() : getBillingAdapterUnavailable()

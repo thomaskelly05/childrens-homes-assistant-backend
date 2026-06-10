@@ -4,10 +4,10 @@ import { mockReadinessMetrics } from '@/lib/founder/intelligence/mock-inputs'
 import type { ReadinessMetrics } from '@/lib/founder/contracts/readiness-metrics'
 import type { FounderAdapterResult } from './adapter-types'
 import { getReadinessAdapterUnavailable } from './adapter-unavailable'
-import { anonymiseHomeLabel, currentPeriodBounds, fetchJson } from './adapter-utils'
+import { anonymiseHomeLabel, currentPeriodBounds, fetchFounderLiveJson } from './adapter-utils'
 
 export async function fetchReadinessAdapter(): Promise<FounderAdapterResult<ReadinessMetrics>> {
-  const dashboard = await fetchJson<InspectionReadinessDashboard>('/api/inspection-readiness/dashboard')
+  const dashboard = await fetchFounderLiveJson<InspectionReadinessDashboard>('inspection-readiness')
 
   if (!dashboard) {
     return isFounderMockFallbackAllowed() ? getReadinessAdapterFallback() : getReadinessAdapterUnavailable()

@@ -5,12 +5,12 @@ import { useRouter } from 'next/navigation'
 import { ShieldAlert } from 'lucide-react'
 
 import { useAuth } from '@/contexts/auth-context'
-import { userHasFounderAccess } from '@/lib/founder/access'
+import { userHasFounderAccessFromProfile } from '@/lib/founder/access'
 
 export function FounderGuard({ children }: { children: React.ReactNode }) {
   const { user, status } = useAuth()
   const router = useRouter()
-  const allowed = userHasFounderAccess(user?.role)
+  const allowed = userHasFounderAccessFromProfile(user)
 
   useEffect(() => {
     if (status === 'unauthenticated') {

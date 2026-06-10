@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
+import { isFounderDashboardRoute } from './lib/founder/access'
 import { buildOrbFrontDoorUrl, isOrbSurfacePath, sanitizeOrbReturnUrl } from './lib/orb/orb-front-door-routing'
 
 const publicPrefixes = [
@@ -92,6 +93,12 @@ export function middleware(request: NextRequest) {
   response.headers.set('X-Content-Type-Options', 'nosniff')
   response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin')
   response.headers.set('Permissions-Policy', 'camera=(), microphone=(self), geolocation=(), payment=()')
+  if (isFounderDashboardRoute(pathname)) {
+    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, private')
+    response.headers.set('Pragma', 'no-cache')
+    response.headers.set('X-Frame-Options', 'SAMEORIGIN')
+  }
+
   if (isOrbProductPath(pathname)) {
     response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, private')
     response.headers.set('Pragma', 'no-cache')

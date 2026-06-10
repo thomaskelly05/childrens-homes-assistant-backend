@@ -1,4 +1,4 @@
-import { getCsrfToken } from '@/lib/auth/api'
+import { founderGet, founderPost } from '@/lib/founder/api/founder-api-client'
 
 import type {
   FounderOperatingLoopPlan,
@@ -6,70 +6,38 @@ import type {
   OperatingLoopRunResponse
 } from './operating-loop-types'
 
-function operatingLoopHeaders(): HeadersInit {
-  const headers = new Headers({
-    'content-type': 'application/json',
-    accept: 'application/json'
-  })
-  const csrf = getCsrfToken()
-  if (csrf) headers.set('x-csrf-token', csrf)
-  return headers
-}
-
 export async function postOperatingLoopRun(
   plan: FounderOperatingLoopPlan,
   signal?: AbortSignal
 ): Promise<OperatingLoopRunResponse> {
-  const response = await fetch('/api/founder/operating-loop/run', {
-    method: 'POST',
-    headers: operatingLoopHeaders(),
-    credentials: 'include',
-    body: JSON.stringify({ plan }),
-    signal
-  })
-
-  if (!response.ok) {
-    const payload = (await response.json().catch(() => ({}))) as { error?: string }
-    throw new Error(payload.error ?? `Operating loop failed (${response.status})`)
+  const result = await founderPost<OperatingLoopRunResponse>('/operating-loop/run', { plan })
+  if (!result.ok) {
+    throw new Error(result.error)
   }
-
-  return (await response.json()) as OperatingLoopRunResponse
+  return result.data
 }
 
-export async function fetchOperatingLoopRuns(signal?: AbortSignal): Promise<FounderOperatingLoopRun[]> {
-  const response = await fetch('/api/founder/operating-loop/runs', {
-    method: 'GET',
-    headers: { accept: 'application/json' },
-    credentials: 'include',
-    signal
-  })
-
-  if (!response.ok) {
-    const payload = (await response.json().catch(() => ({}))) as { error?: string }
-    throw new Error(payload.error ?? `Failed to load operating loop runs (${response.status})`)
+export async function fetchOperatingLoopRuns(_signal?: AbortSignal): Promise<FounderOperatingLoopRun[]> {
+  const result = await founderGet<{ runs?: FounderOperatingLoopRun[] }>('/operating-loop/runs')
+  if (!result.ok) {
+    throw new Error(result.error)
   }
-
-  const payload = (await response.json()) as { runs?: FounderOperatingLoopRun[] }
-  return payload.runs ?? []
+  return result.data.runs ?? []
 }
 
 export async function fetchOperatingLoopRun(
   runId: string,
   signal?: AbortSignal
 ): Promise<FounderOperatingLoopRun | null> {
-  const response = await fetch(`/api/founder/operating-loop/runs/${encodeURIComponent(runId)}`, {
-    method: 'GET',
-    headers: { accept: 'application/json' },
-    credentials: 'include',
-    signal
-  })
-
-  if (response.status === 404) return null
-  if (!response.ok) {
-    const payload = (await response.json().catch(() => ({}))) as { error?: string }
-    throw new Error(payload.error ?? `Failed to load operating loop run (${response.status})`)
+  const result = await founderGet<{ run?: FounderOperatingLoopRun }>(`/operating-loop/runs/${encodeURIComponent(runId)}`)
+  if (!result.ok) {
+    if (result.status === 404) return null
+    throw new Error(result.error)
   }
 
-  const payload = (await response.json()) as { run?: FounderOperatingLoopRun }
-  return payload.run ?? null
+  const payload = result.data
+  if (payload && typeof payload === 'object' && 'run' in payload) {
+    return (payload as { run?: FounderOperatingLoopRun }).run ?? null
+  }
+  return null
 }

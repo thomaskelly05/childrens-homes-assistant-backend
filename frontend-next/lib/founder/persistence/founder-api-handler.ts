@@ -2,7 +2,13 @@ import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 
 import { getInternalBackendOrigin } from '@/lib/auth/api-base'
-import { userHasFounderAccess } from '@/lib/founder/access'
+import {
+  buildFounderProxyHeaders,
+  requireAuthenticatedSession,
+  requireFounderSession
+} from '@/lib/founder/auth/founder-session'
+
+export { requireAuthenticatedSession, requireFounderSession } from '@/lib/founder/auth/founder-session'
 import {
   handleFounderMemoryContextGet,
   handleFounderMemoryItemGet,
@@ -47,68 +53,6 @@ const ROUTE_ENTITY_MAP: Record<string, string> = {
   evidence: 'evidence-packs'
 }
 
-type FounderSession =
-  | { ok: true; user: { id?: number; email?: string; role?: string } }
-  | { ok: false; response: NextResponse }
-
-type AuthenticatedSession =
-  | { ok: true; user: { id?: number; email?: string; role?: string } }
-  | { ok: false; response: NextResponse }
-
-export async function requireAuthenticatedSession(): Promise<AuthenticatedSession> {
-  const cookieHeader = (await cookies()).toString()
-  if (!cookieHeader) {
-    return { ok: false, response: NextResponse.json({ error: 'Unauthorised' }, { status: 401 }) }
-  }
-
-  const backendOrigin = getInternalBackendOrigin()
-  const meResponse = await fetch(`${backendOrigin}/auth/me`, {
-    headers: { cookie: cookieHeader, accept: 'application/json' },
-    cache: 'no-store'
-  }).catch(() => null)
-
-  if (!meResponse?.ok) {
-    return { ok: false, response: NextResponse.json({ error: 'Unauthorised' }, { status: 401 }) }
-  }
-
-  const user = (await meResponse.json().catch(() => ({}))) as {
-    id?: number
-    email?: string
-    role?: string
-  }
-
-  return { ok: true, user }
-}
-
-export async function requireFounderSession(): Promise<FounderSession> {
-  const cookieHeader = (await cookies()).toString()
-  if (!cookieHeader) {
-    return { ok: false, response: NextResponse.json({ error: 'Unauthorised' }, { status: 401 }) }
-  }
-
-  const backendOrigin = getInternalBackendOrigin()
-  const meResponse = await fetch(`${backendOrigin}/auth/me`, {
-    headers: { cookie: cookieHeader, accept: 'application/json' },
-    cache: 'no-store'
-  }).catch(() => null)
-
-  if (!meResponse?.ok) {
-    return { ok: false, response: NextResponse.json({ error: 'Unauthorised' }, { status: 401 }) }
-  }
-
-  const user = (await meResponse.json().catch(() => ({}))) as {
-    id?: number
-    email?: string
-    role?: string
-  }
-
-  if (!userHasFounderAccess(user.role)) {
-    return { ok: false, response: NextResponse.json({ error: 'Forbidden' }, { status: 403 }) }
-  }
-
-  return { ok: true, user }
-}
-
 function resolveEntitySlug(segments: string[]): { entitySlug: string; rest: string[] } | null {
   for (const [routeKey, entitySlug] of Object.entries(ROUTE_ENTITY_MAP)) {
     const parts = routeKey.split('/')
@@ -117,17 +61,6 @@ function resolveEntitySlug(segments: string[]): { entitySlug: string; rest: stri
     }
   }
   return null
-}
-
-function buildProxyHeaders(request: Request, cookieHeader: string): Headers {
-  const headers = new Headers()
-  headers.set('cookie', cookieHeader)
-  headers.set('accept', 'application/json')
-  const contentType = request.headers.get('content-type')
-  if (contentType) headers.set('content-type', contentType)
-  const csrf = request.headers.get('x-csrf-token')
-  if (csrf) headers.set('x-csrf-token', csrf)
-  return headers
 }
 
 export async function proxyToBackendTelemetry(
@@ -149,7 +82,7 @@ export async function proxyToBackendTelemetry(
 
   const upstream = await fetch(target.toString(), {
     method,
-    headers: buildProxyHeaders(request, cookieHeader),
+    headers: buildFounderProxyHeaders(request, cookieHeader),
     body: hasBody ? await request.text() : undefined,
     cache: 'no-store'
   }).catch(() => null)
@@ -190,7 +123,7 @@ export async function proxyToBackend(request: Request, backendPath: string): Pro
 
   const upstream = await fetch(target.toString(), {
     method,
-    headers: buildProxyHeaders(request, cookieHeader),
+    headers: buildFounderProxyHeaders(request, cookieHeader),
     body: hasBody ? await request.text() : undefined,
     cache: 'no-store'
   }).catch(() => null)
