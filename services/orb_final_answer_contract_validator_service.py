@@ -10,6 +10,10 @@ from services.orb_placeholder_quality_guard_service import (
     find_placeholder_issues,
     sanitize_placeholders_in_answer,
 )
+from services.orb_therapeutic_language_contract_service import (
+    find_missing_therapeutic_markers,
+    validate_therapeutic_wording,
+)
 from services.orb_universal_answer_contract_map_service import (
     UNIVERSAL_FORBIDDEN_PATTERNS,
     find_forbidden_patterns,
@@ -89,6 +93,8 @@ def _build_repair_instructions(
     missing_markers: list[str],
     forbidden_patterns: list[str],
     placeholder_issues: list[str],
+    therapeutic_issues: list[str] | None = None,
+    missing_therapeutic_markers: list[str] | None = None,
 ) -> list[str]:
     instructions: list[str] = []
     family = get_contract_family(family_id) or {}
@@ -109,6 +115,10 @@ def _build_repair_instructions(
         instructions.append(f"Remove forbidden phrasing: {pattern}")
     for issue in placeholder_issues:
         instructions.append(f"Fix placeholder: {issue}")
+    for issue in therapeutic_issues or []:
+        instructions.append(f"Replace judgemental therapeutic wording: {issue}")
+    for marker in missing_therapeutic_markers or []:
+        instructions.append(f"Add therapeutic content: {marker.replace('_', ' ')}")
     if not instructions and family:
         for section in (family.get("required_sections") or [])[:6]:
             instructions.append(f"Include section: {section}")
@@ -124,9 +134,15 @@ def validate_final_answer_contract(
     public_explainability: bool = True,
     fast_opening: str | None = None,
     current_user_role: str | None = None,
+    source_text: str | None = None,
 ) -> dict[str, Any]:
     """Validate final answer text against the selected answer contract."""
     _ = (depth_tier, mode, public_explainability, current_user_role)
+    therapeutic = validate_therapeutic_wording(
+        answer,
+        family_id=contract_family,
+        source_text=source_text,
+    )
     sanitized = sanitize_final_answer(
         answer,
         family_id=contract_family,
@@ -148,12 +164,26 @@ def validate_final_answer_contract(
         forbidden.append("broken_truncated_placeholder")
         placeholder_issues.append("broken_truncated_placeholder_remaining")
 
-    passed = not forbidden and not missing_markers and not placeholder_issues
+    therapeutic_issues = list(therapeutic.get("judgemental_phrases") or [])
+    missing_therapeutic = find_missing_therapeutic_markers(sanitized, family_id=contract_family)
+    if therapeutic_issues:
+        forbidden.extend(f"therapeutic:{issue}" for issue in therapeutic_issues)
+    if not therapeutic.get("safeguarding_clarity_preserved"):
+        forbidden.append("therapeutic:safeguarding_softened")
+
+    passed = (
+        not forbidden
+        and not missing_markers
+        and not placeholder_issues
+        and therapeutic.get("passed", True)
+    )
     repair_instructions = [] if passed else _build_repair_instructions(
         family_id=contract_family,
         missing_markers=missing_markers,
         forbidden_patterns=forbidden,
         placeholder_issues=placeholder_issues,
+        therapeutic_issues=therapeutic_issues,
+        missing_therapeutic_markers=missing_therapeutic if not therapeutic.get("passed") else [],
     )
 
     return {
@@ -163,7 +193,10 @@ def validate_final_answer_contract(
         "missing_required_markers": missing_markers,
         "forbidden_patterns": forbidden,
         "placeholder_issues": placeholder_issues,
+        "therapeutic_validation": therapeutic,
+        "missing_therapeutic_markers": missing_therapeutic,
         "repair_instructions": repair_instructions,
+        "repair_reason": "therapeutic_language" if therapeutic_issues else None,
     }
 
 

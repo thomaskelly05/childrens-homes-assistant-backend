@@ -12,6 +12,7 @@ from services.orb_brain_convergence_orchestrator_service import orb_brain_conver
 from services.orb_execution_policy_service import orb_execution_policy_service
 from services.orb_knowledge_retrieval_service import orb_knowledge_retrieval_service
 from services.orb_ofsted_readiness_scoring_service import orb_ofsted_readiness_scoring_service
+from services.orb_therapeutic_language_contract_service import score_therapeutic_readiness
 from services.orb_universal_answer_contract_map_service import (
     find_missing_markers,
     validate_contract_answer,
@@ -588,7 +589,7 @@ ORB_KNOWLEDGE_GAP_DOMAINS: list[dict[str, Any]] = [
 class OrbKnowledgeGapAuditService:
     """Founder/admin knowledge QA — tests internal knowledge before OpenAI reliance."""
 
-    VERSION = "orb-knowledge-gap-audit-v2"
+    VERSION = "orb-knowledge-gap-audit-v3"
     DOMAINS = ORB_KNOWLEDGE_GAP_DOMAINS
 
     def run_audit(self) -> dict[str, Any]:
@@ -602,6 +603,11 @@ class OrbKnowledgeGapAuditService:
         missing_knowledge_markers: list[str] = []
         gaps: list[dict[str, Any]] = []
         domain_results: list[dict[str, Any]] = []
+        therapeutic_scores: list[float] = []
+        therapeutic_language_gaps: list[str] = []
+        child_voice_gaps: list[str] = []
+        compliance_led_gaps: list[str] = []
+        openai_therapeutic_rewrite_domains: list[str] = []
 
         for item in self.DOMAINS:
             result = self._evaluate_domain(item)
@@ -624,6 +630,17 @@ class OrbKnowledgeGapAuditService:
             missing_knowledge_markers.extend(result.get("missing_internal_markers") or [])
             if result.get("gap"):
                 gaps.append(result["gap"])
+            therapeutic = result.get("therapeutic_scoring") or {}
+            if therapeutic.get("therapeutic_readiness_score") is not None:
+                therapeutic_scores.append(float(therapeutic["therapeutic_readiness_score"]))
+            if (therapeutic.get("therapeutic_language") or 0) < 3:
+                therapeutic_language_gaps.append(item["domain"])
+            if (therapeutic.get("child_voice") or 0) < 2:
+                child_voice_gaps.append(item["domain"])
+            if therapeutic.get("non_shaming_language") == "fail":
+                compliance_led_gaps.append(item["domain"])
+            if therapeutic.get("openai_needed_for_therapeutic_rewrite"):
+                openai_therapeutic_rewrite_domains.append(item["domain"])
 
         marker_counts: dict[str, int] = {}
         for marker in missing_knowledge_markers:
@@ -636,6 +653,15 @@ class OrbKnowledgeGapAuditService:
         overall_readiness = round(
             (internal_passed / max(len(self.DOMAINS), 1)) * 100,
             1,
+        )
+        therapeutic_readiness_score = round(
+            sum(therapeutic_scores) / max(len(therapeutic_scores), 1),
+            1,
+        )
+        therapeutic_pilot_ready = (
+            therapeutic_readiness_score >= 60.0
+            and len(compliance_led_gaps) == 0
+            and overall_readiness >= 70.0
         )
 
         report = {
@@ -652,6 +678,12 @@ class OrbKnowledgeGapAuditService:
             "missing_knowledge_markers": sorted(set(missing_knowledge_markers)),
             "repeated_missing_markers": repeated_missing,
             "overall_readiness_score": overall_readiness,
+            "therapeutic_readiness_score": therapeutic_readiness_score,
+            "therapeutic_pilot_ready": therapeutic_pilot_ready,
+            "therapeutic_language_gap_domains": sorted(set(therapeutic_language_gaps)),
+            "child_voice_gap_domains": sorted(set(child_voice_gaps)),
+            "compliance_led_wording_domains": sorted(set(compliance_led_gaps)),
+            "openai_therapeutic_rewrite_domains": sorted(set(openai_therapeutic_rewrite_domains)),
             "gaps": gaps,
             "domain_results": domain_results,
         }
@@ -732,6 +764,11 @@ class OrbKnowledgeGapAuditService:
         ] if answer else []
 
         ofsted_score = None
+        therapeutic_scoring = score_therapeutic_readiness(
+            answer,
+            family_id=policy.selected_contract,
+            prompt=prompt,
+        )
         if answer:
             ofsted_score = orb_ofsted_readiness_scoring_service.score_answer(
                 answer,
@@ -792,6 +829,12 @@ class OrbKnowledgeGapAuditService:
             "ofsted_readiness_score": (ofsted_score or {}).get("Ofsted-readiness"),
             "ofsted_ready": (ofsted_score or {}).get("ofsted_ready"),
             "pilot_ready": internal_passed and (ofsted_score is None or ofsted_score.get("ofsted_ready", True)),
+            "therapeutic_scoring": therapeutic_scoring,
+            "therapeutic_pilot_ready": (
+                internal_passed
+                and therapeutic_scoring.get("non_shaming_language") == "pass"
+                and (therapeutic_scoring.get("therapeutic_readiness_score") or 0) >= 40.0
+            ),
             "gap": gap,
         }
 
@@ -843,6 +886,8 @@ class OrbKnowledgeGapAuditService:
             f"Version: {report.get('version', '')}",
             "",
             f"## Overall readiness score: {report.get('overall_readiness_score', 0)}%",
+            f"## Therapeutic readiness score: {report.get('therapeutic_readiness_score', 0)}%",
+            f"## Therapeutic pilot ready: {'yes' if report.get('therapeutic_pilot_ready') else 'no'}",
             "",
             f"- Domains passed: {report.get('internal_knowledge_passed', 0)}/{report.get('total', 0)}",
             f"- Domains needing work: {report.get('internal_knowledge_failed', 0)}",
@@ -852,9 +897,41 @@ class OrbKnowledgeGapAuditService:
             f"- Embedding calls avoided: {report.get('embedding_calls_avoided', 0)}",
             f"- Unexpected embedding calls: {report.get('unexpected_embedding_calls', 0)}",
             "",
-            "## High-risk knowledge gaps",
+            "## Therapeutic language gaps",
             "",
         ]
+        therapeutic_gaps = report.get("therapeutic_language_gap_domains") or []
+        if therapeutic_gaps:
+            for domain in therapeutic_gaps[:20]:
+                lines.append(f"- {domain}")
+        else:
+            lines.append("- None detected")
+
+        lines.extend(["", "## Domains with missing child voice", ""])
+        child_voice_gaps = report.get("child_voice_gap_domains") or []
+        if child_voice_gaps:
+            for domain in child_voice_gaps[:20]:
+                lines.append(f"- {domain}")
+        else:
+            lines.append("- None detected")
+
+        lines.extend(["", "## Compliance-led / shaming wording domains", ""])
+        compliance_gaps = report.get("compliance_led_wording_domains") or []
+        if compliance_gaps:
+            for domain in compliance_gaps:
+                lines.append(f"- {domain}")
+        else:
+            lines.append("- None detected")
+
+        lines.extend(["", "## Domains where OpenAI may still be needed for therapeutic rewriting", ""])
+        rewrite_domains = report.get("openai_therapeutic_rewrite_domains") or []
+        if rewrite_domains:
+            for domain in rewrite_domains:
+                lines.append(f"- {domain}")
+        else:
+            lines.append("- None")
+
+        lines.extend(["", "## High-risk knowledge gaps", ""])
         high_gaps = [g for g in report.get("gaps", []) if g.get("severity") == "high"]
         if high_gaps:
             for gap in high_gaps:
@@ -902,9 +979,12 @@ class OrbKnowledgeGapAuditService:
         lines.extend(["", "## Domain pilot readiness", ""])
         for r in report.get("domain_results", []):
             status = "pilot-ready" if r.get("pilot_ready") else "needs work"
+            therapeutic_status = "therapeutic-ready" if r.get("therapeutic_pilot_ready") else "therapeutic-needs-work"
+            score = (r.get("therapeutic_scoring") or {}).get("therapeutic_readiness_score")
             lines.append(
-                f"- {r['domain']}: {status} "
-                f"(policy={r.get('execution_policy')}, contract={r.get('selected_contract')})"
+                f"- {r['domain']}: {status} / {therapeutic_status} "
+                f"(policy={r.get('execution_policy')}, contract={r.get('selected_contract')}, "
+                f"therapeutic={score})"
             )
         lines.append("")
         return "\n".join(lines)

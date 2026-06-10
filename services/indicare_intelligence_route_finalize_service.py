@@ -7,10 +7,7 @@ from typing import Any
 
 from services.indicare_intelligence_core_service import indicare_intelligence_core_service
 from services.orb_final_answer_repair_service import repair_and_validate_final_answer
-from services.orb_universal_answer_contract_map_service import (
-    detect_contract_family,
-    sanitize_final_answer,
-)
+from services.orb_universal_answer_contract_map_service import detect_contract_family
 from services.orb_chat_timing_service import OrbChatTimingTracker
 from services.orb_response_support_service import build_response_support_chips
 
@@ -171,7 +168,6 @@ def finalize_standalone_intelligence(
         )
 
     family_id = detect_contract_family(message or prompt_text)
-    answer = sanitize_final_answer(answer, family_id=family_id)
 
     repaired_answer, contract_meta = repair_and_validate_final_answer(
         answer,
@@ -184,6 +180,9 @@ def finalize_standalone_intelligence(
     meta["selected_contract"] = family_id
     meta["final_answer_validation_passed"] = contract_meta.get("final_answer_validation_passed")
     meta["final_answer_repair_applied"] = contract_meta.get("repair_applied", False)
+    meta["answer_repaired"] = contract_meta.get("answer_repaired", False)
+    if contract_meta.get("repair_reason"):
+        meta["repair_reason"] = contract_meta.get("repair_reason")
     if packet.get("prompt_char_estimate") is not None:
         meta["prompt_chars"] = packet.get("prompt_char_estimate")
     if packet.get("retrieval_count") is not None:

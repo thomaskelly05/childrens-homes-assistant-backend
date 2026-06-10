@@ -13,7 +13,10 @@ from typing import Any, Pattern
 from services.orb_fast_opening_service import strip_streaming_artifacts_from_answer
 from services.orb_mandatory_response_contract_service import MANDATORY_CONTRACTS
 from services.orb_placeholder_quality_guard_service import sanitize_placeholders_in_answer
-from services.orb_therapeutic_language_contract_service import GENERIC_WEAK_PHRASES
+from services.orb_therapeutic_language_contract_service import (
+    GENERIC_WEAK_PHRASES,
+    apply_deterministic_therapeutic_repairs,
+)
 
 # Warn in QA/tests when standard non-risk prompt assembly exceeds this size.
 STANDARD_DEPTH_PROMPT_CHAR_CAP = 25000
@@ -156,7 +159,13 @@ ORB_ANSWER_CONTRACT_FAMILIES: dict[str, dict[str, Any]] = {
             "Choices/offers; outcome; follow-up if needed",
         ],
         "forbidden_patterns": list(UNIVERSAL_FORBIDDEN_PATTERNS[:4]),
-        "public_considerations": ["Recording quality", "Child-centred recording"],
+        "public_considerations": [
+            "Recording quality",
+            "Child-centred recording",
+            "Therapeutic language",
+            "Child's voice considered",
+            "Trauma-informed practice",
+        ],
     },
     "incident_record": {
         "label": "Incident record",
@@ -182,7 +191,13 @@ ORB_ANSWER_CONTRACT_FAMILIES: dict[str, dict[str, Any]] = {
             "Outcome; repair/follow-up",
         ],
         "forbidden_patterns": list(UNIVERSAL_FORBIDDEN_PATTERNS[:4]),
-        "public_considerations": ["Recording quality", "Safeguarding responsibilities"],
+        "public_considerations": [
+            "Recording quality",
+            "Safeguarding responsibilities",
+            "Therapeutic language",
+            "Relational support",
+            "Professional curiosity",
+        ],
     },
     "missing_return_record": {
         "label": "Missing-from-home / return record",
@@ -203,7 +218,12 @@ ORB_ANSWER_CONTRACT_FAMILIES: dict[str, dict[str, Any]] = {
         "required_markers": ["welfare", "missing", "return", "record"],
         "required_sections": MANDATORY_CONTRACTS["missing_return_substance_risk"]["mandatory_sections"],
         "forbidden_patterns": list(UNIVERSAL_FORBIDDEN_PATTERNS[:4]),
-        "public_considerations": ["Safeguarding responsibilities", "Recording quality"],
+        "public_considerations": [
+            "Safeguarding responsibilities",
+            "Recording quality",
+            "Therapeutic language",
+            "Relational support",
+        ],
     },
     "allegation_lado": {
         "label": "Allegation against staff / LADO",
@@ -294,7 +314,12 @@ ORB_ANSWER_CONTRACT_FAMILIES: dict[str, dict[str, Any]] = {
             "Agreed actions; follow-up",
         ],
         "forbidden_patterns": list(UNIVERSAL_FORBIDDEN_PATTERNS[:4]),
-        "public_considerations": ["Child-centred planning", "Therapeutic language"],
+        "public_considerations": [
+            "Child-centred planning",
+            "Therapeutic language",
+            "Child's voice considered",
+            "Professional curiosity",
+        ],
     },
     "manager_oversight_note": {
         "label": "Manager oversight note",
@@ -321,7 +346,13 @@ ORB_ANSWER_CONTRACT_FAMILIES: dict[str, dict[str, Any]] = {
             "Plan updates; patterns; staff learning; evidence trail",
         ],
         "forbidden_patterns": list(UNIVERSAL_FORBIDDEN_PATTERNS[:4]),
-        "public_considerations": ["Leadership and oversight", "Professional accountability"],
+        "public_considerations": [
+            "Leadership and oversight",
+            "Professional accountability",
+            "Therapeutic language",
+            "Relational support",
+            "Professional curiosity",
+        ],
     },
     "reg44_visitor": {
         "label": "Reg 44 / visitor support",
@@ -341,7 +372,13 @@ ORB_ANSWER_CONTRACT_FAMILIES: dict[str, dict[str, Any]] = {
             "Leadership oversight; evidence not assertion",
         ],
         "forbidden_patterns": list(UNIVERSAL_FORBIDDEN_PATTERNS[:4]) + ["outstanding grade"],
-        "public_considerations": ["Inspection readiness", "Leadership and oversight"],
+        "public_considerations": [
+            "Inspection readiness",
+            "Leadership and oversight",
+            "Therapeutic language",
+            "Relational support",
+            "Child's voice considered",
+        ],
     },
     "ofsted_preparation": {
         "label": "Ofsted / Reg 45 preparation",
@@ -567,7 +604,12 @@ ORB_ANSWER_CONTRACT_FAMILIES: dict[str, dict[str, Any]] = {
             "No blame/shame; no invented facts",
         ],
         "forbidden_patterns": list(UNIVERSAL_FORBIDDEN_PATTERNS[:4]) + list(GENERIC_WEAK_PHRASES[:6]),
-        "public_considerations": ["Recording quality", "Child-centred recording"],
+        "public_considerations": [
+            "Recording quality",
+            "Child-centred recording",
+            "Therapeutic language",
+            "Trauma-informed practice",
+        ],
     },
 }
 
@@ -833,11 +875,14 @@ def sanitize_final_answer(
     *,
     family_id: str | None = None,
     fast_opening: str | None = None,
+    apply_therapeutic_repairs: bool = True,
 ) -> str:
     """Strip streaming artifacts, broken placeholders, and universal forbidden leakage."""
     cleaned = strip_streaming_artifacts_from_answer(answer, fast_opening=fast_opening)
     cleaned, _ = sanitize_placeholders_in_answer(cleaned)
     cleaned = INTERNAL_METADATA_RE.sub("", cleaned)
+    if apply_therapeutic_repairs:
+        cleaned, _ = apply_deterministic_therapeutic_repairs(cleaned)
     cleaned = re.sub(r"\n{3,}", "\n\n", cleaned).strip()
     return cleaned
 
