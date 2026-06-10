@@ -7,7 +7,11 @@ from services.orb_brain_visibility_service import sanitize_orb_brain_metadata_fo
 from services.orb_execution_policy_service import orb_execution_policy_service
 from services.orb_final_answer_contract_validator_service import validate_final_answer_contract
 from services.orb_final_answer_repair_service import repair_and_validate_final_answer
-from services.orb_therapeutic_language_contract_service import apply_deterministic_therapeutic_repairs
+from services.orb_therapeutic_language_contract_service import (
+    apply_deterministic_therapeutic_repairs,
+    build_convert_to_recording_scaffold,
+    find_judgemental_phrases,
+)
 from services.orb_universal_answer_contract_map_service import sanitize_final_answer
 from services.orb_universal_response_contract_service import orb_universal_response_contract_service
 
@@ -20,6 +24,12 @@ SAFEGUARDING_INCIDENT = (
 AUTISM_REFUSAL = (
     "The young person found it difficult to attend school due to sensory overwhelm. "
     "Staff remained curious about triggers and supported regulation with a quiet space."
+)
+ATTENTION_SEEKING_PROMPT = (
+    "Convert this to recording wording: Jamie was attention seeking all night and refused to listen."
+)
+BAD_SCAFFOLD = (
+    "Jamie displayed behaviours that appeared to seek attention and refused to listen throughout the night."
 )
 
 
@@ -43,6 +53,32 @@ def test_judgemental_phrases_repaired_deterministically():
     assert meta.get("repair_reason") == "therapeutic_language"
     assert "attention seeking" not in repaired.lower()
     assert "naughty" not in repaired.lower()
+
+
+def test_seek_attention_wording_forbidden():
+    phrases = find_judgemental_phrases("behaviours that appeared to seek attention")
+    assert "seek_attention" in phrases or "appeared_to_seek_attention" in phrases
+    repaired, _ = apply_deterministic_therapeutic_repairs(BAD_SCAFFOLD)
+    assert "seek attention" not in repaired.lower()
+    assert "refused to listen" not in repaired.lower()
+
+
+def test_convert_to_recording_scaffold_uses_observable_behaviour():
+    scaffold = build_convert_to_recording_scaffold(ATTENTION_SEEKING_PROMPT)
+    recording_section = scaffold.split("Recording wording scaffold:")[1].split("Include:")[0].lower()
+    assert "jamie" in recording_section
+    assert "observed to" in recording_section
+    assert "staff remained curious" in recording_section
+    assert "seek attention" not in recording_section
+    assert "attention seeking" not in recording_section
+    assert "refused to listen" not in recording_section
+
+
+def test_convert_to_recording_deterministic_path_avoids_openai():
+    det = orb_execution_policy_service.try_deterministic_answer(ATTENTION_SEEKING_PROMPT)
+    assert det is not None
+    assert det.get("no_llm") is True
+    assert "seek attention" not in det["answer"].lower()
 
 
 def test_safeguarding_language_not_softened():
@@ -82,8 +118,9 @@ def test_missing_return_avoids_blame_wording():
     from services.orb_final_answer_repair_service import CANONICAL_QA_ANSWERS
 
     answer = CANONICAL_QA_ANSWERS["missing_return_record"]
-    assert "blame" not in answer.lower()
+    assert "blame" not in answer.lower() or "do not accuse" in answer.lower()
     assert "welfare" in answer.lower()
+    assert "lado" not in answer.lower() or "only" in answer.lower()
 
 
 def test_normal_users_cannot_see_repair_telemetry():

@@ -1,10 +1,10 @@
 # ORB Knowledge Gap Audit
 
-Generated: 2026-06-10T11:36:02.804068+00:00
+Generated: 2026-06-10T13:30:38.355515+00:00
 Version: orb-knowledge-gap-audit-v3
 
 ## Overall readiness score: 100.0%
-## Therapeutic readiness score: 14.2%
+## Therapeutic readiness score: 14.4%
 ## Therapeutic pilot ready: no
 
 - Domains passed: 40/40
@@ -121,7 +121,7 @@ Version: orb-knowledge-gap-audit-v3
 - Consequences / boundaries: needs work / therapeutic-needs-work (policy=internal_template_plus_validator, contract=daily_record, therapeutic=35.0)
 - Staff supervision: pilot-ready / therapeutic-needs-work (policy=internal_template_plus_validator, contract=policy_practice_question, therapeutic=0.0)
 - Team learning: needs work / therapeutic-needs-work (policy=internal_template_plus_validator, contract=incident_record, therapeutic=20.0)
-- Reg 44: pilot-ready / therapeutic-needs-work (policy=deterministic_only, contract=reg44_visitor, therapeutic=30.0)
+- Reg 44: pilot-ready / therapeutic-needs-work (policy=deterministic_only, contract=reg44_visitor, therapeutic=35.0)
 - Reg 45: needs work / therapeutic-needs-work (policy=deterministic_only, contract=manager_oversight_note, therapeutic=15.0)
 - Ofsted preparation: needs work / therapeutic-needs-work (policy=deterministic_only, contract=ofsted_preparation, therapeutic=20.0)
 - SCCIF-style evidence: needs work / therapeutic-needs-work (policy=internal_template_plus_validator, contract=policy_practice_question, therapeutic=15.0)

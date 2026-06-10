@@ -2,23 +2,71 @@
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from services.orb_scenario_playbook_service import orb_scenario_playbook_service
+
+ADULT_POSITION_OF_TRUST_TRIGGERS: tuple[str, ...] = (
+    "staff member",
+    "member of staff",
+    "staff",
+    "adult in a position of trust",
+    "position of trust",
+    "volunteer",
+    "professional",
+    "allegation against",
+    "touched them",
+    "hurt them",
+    "inappropriately",
+)
+
+LADO_FORBIDDEN_WITHOUT_ADULT_TRIGGER = re.compile(r"\blado\b", re.I)
+
+
+def lado_appropriate_for_prompt(message: str) -> bool:
+    """LADO should only appear when the prompt concerns an adult in a position of trust."""
+    lower = str(message or "").lower()
+    return any(trigger in lower for trigger in ADULT_POSITION_OF_TRUST_TRIGGERS)
+
+
+def find_inappropriate_lado_reference(answer: str, message: str) -> bool:
+    """True when LADO appears in an answer but the prompt has no adult-position-of-trust trigger."""
+    if not LADO_FORBIDDEN_WITHOUT_ADULT_TRIGGER.search(str(answer or "")):
+        return False
+    if lado_appropriate_for_prompt(message):
+        return False
+    lower = str(answer or "").lower()
+    explanatory_phrases = (
+        "lado is only",
+        "lado only",
+        "do not rely on lado",
+        "not for a young person",
+        "unless there is an allegation",
+        "unless the prompt includes an adult",
+        "adult in a position of trust",
+        "not a default route",
+    )
+    if any(phrase in lower for phrase in explanatory_phrases):
+        return False
+    return True
+
 
 MANDATORY_CONTRACTS: dict[str, dict[str, Any]] = {
     "missing_return_substance_risk": {
         "id": "missing_return_substance_risk",
         "label": "Missing return with substance indicators",
         "mandatory_sections": [
-            "Immediate welfare check",
-            "Injury / intoxication / distress check",
-            "Local missing procedure",
-            "Police / social worker / manager notifications where required",
-            "Return conversation / RHI where appropriate",
+            "Immediate welfare check and calm welcome back",
+            "Injury, distress, intoxication, hunger, fatigue and immediate medical need",
+            "Follow missing procedure; update police if episode was active",
+            "Notify manager/on-call and social worker/placing authority; EDT if out of hours",
+            "Health advice — 111/999 if unwell or intoxicated",
             "Exploitation / contextual safeguarding curiosity",
-            "Risk assessment, missing plan, placement plan and chronology update",
-            "Factual recording",
+            "Return home interview / local missing procedure",
+            "Record exact words and observations; update missing/risk/placement plans",
+            "Manager oversight; do not accuse or shame",
+            "LADO only if allegation/concern about adult in position of trust",
         ],
         "validation_markers": [
             "welfare",
@@ -27,7 +75,9 @@ MANDATORY_CONTRACTS: dict[str, dict[str, Any]] = {
             "record",
             "manager",
             "exploitation",
+            "social worker",
         ],
+        "forbidden_without_adult_trigger": ["lado"],
         "playbook_ids": ["return_from_missing", "intoxicated_child"],
     },
     "allegation_against_staff": {
@@ -232,6 +282,8 @@ class OrbMandatoryResponseContractService:
         self,
         answer_text: str,
         scenario_types: list[str],
+        *,
+        source_message: str = "",
     ) -> dict[str, Any]:
         lower = str(answer_text or "").lower()
         results: list[dict[str, Any]] = []
@@ -241,11 +293,16 @@ class OrbMandatoryResponseContractService:
                 continue
             markers = list(spec.get("validation_markers") or [])
             missing = [marker for marker in markers if marker.lower() not in lower]
+            inappropriate_lado = False
+            if find_inappropriate_lado_reference(answer_text, source_message):
+                inappropriate_lado = True
+                missing.append("inappropriate_lado_reference")
             results.append(
                 {
                     "scenario_type": scenario_type,
                     "passed": not missing,
                     "missing_markers": missing,
+                    "inappropriate_lado": inappropriate_lado,
                 }
             )
         return {

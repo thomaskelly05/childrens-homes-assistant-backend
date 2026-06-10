@@ -47,6 +47,25 @@ def test_audit_v3_reports_improved_readiness():
     assert not high_gaps
 
 
+def test_return_after_missing_forbids_inappropriate_lado():
+    report = orb_knowledge_gap_audit_service.run_audit()
+    domain = next(r for r in report["domain_results"] if r["prompt_id"] == "return_after_missing")
+    assert domain["selected_contract"] == "missing_return_record"
+    canonical = domain.get("canonical_answer") or ""
+    if canonical:
+        assert "lado" not in canonical.lower() or "only" in canonical.lower()
+
+
+def test_gdd_support_plan_audit_has_no_truncated_placeholders():
+    report = orb_knowledge_gap_audit_service.run_audit()
+    domain = next(
+        (r for r in report["domain_results"] if "gdd" in r.get("prompt_id", "").lower() or "support plan" in r.get("domain", "").lower()),
+        None,
+    )
+    if domain and domain.get("canonical_answer"):
+        assert "…]" not in domain["canonical_answer"]
+
+
 def test_audit_writes_report_files(tmp_path, monkeypatch):
     monkeypatch.setattr(
         "services.orb_knowledge_gap_audit_service.REPORTS_DIR",

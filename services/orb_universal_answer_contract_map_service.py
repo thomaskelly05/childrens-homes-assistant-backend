@@ -11,7 +11,10 @@ import re
 from typing import Any, Pattern
 
 from services.orb_fast_opening_service import strip_streaming_artifacts_from_answer
-from services.orb_mandatory_response_contract_service import MANDATORY_CONTRACTS
+from services.orb_mandatory_response_contract_service import (
+    MANDATORY_CONTRACTS,
+    find_inappropriate_lado_reference,
+)
 from services.orb_placeholder_quality_guard_service import sanitize_placeholders_in_answer
 from services.orb_therapeutic_language_contract_service import (
     GENERIC_WEAK_PHRASES,
@@ -209,15 +212,17 @@ ORB_ANSWER_CONTRACT_FAMILIES: dict[str, dict[str, Any]] = {
         "orb_write_handoff": True,
         "trigger_patterns": [
             re.compile(
-                r"returned\s+(?:from|after)\s+missing|missing\s+from\s+(?:care|the\s+home|home)|"
+                r"returned\s+(?:from|after)\s+missing|(?:come|came)\s+back\s+from\s+missing|"
+                r"back\s+from\s+missing|missing\s+from\s+(?:care|the\s+home|home)|"
                 r"young\s+person\s+is\s+missing|missing\s+right\s+now|gone\s+missing|"
+                r"smells?\s+of\s+cannabis|smell\s+of\s+cannabis|"
                 r"\bawol\b|late\s+return|whereabouts",
                 re.I,
             ),
         ],
-        "required_markers": ["welfare", "missing", "return", "record"],
+        "required_markers": ["welfare", "missing", "return", "record", "manager", "social worker"],
         "required_sections": MANDATORY_CONTRACTS["missing_return_substance_risk"]["mandatory_sections"],
-        "forbidden_patterns": list(UNIVERSAL_FORBIDDEN_PATTERNS[:4]),
+        "forbidden_patterns": list(UNIVERSAL_FORBIDDEN_PATTERNS[:4]) + ["inappropriate_lado"],
         "public_considerations": [
             "Safeguarding responsibilities",
             "Recording quality",
@@ -365,13 +370,25 @@ ORB_ANSWER_CONTRACT_FAMILIES: dict[str, dict[str, Any]] = {
         "trigger_patterns": [
             re.compile(r"reg\s*44|independent\s+visitor|regulation\s+44", re.I),
         ],
-        "required_markers": ["reg 44", "child", "safeguarding", "evidence"],
-        "required_sections": [
-            "Reg 44 child experience; safeguarding effectiveness",
-            "Records reviewed; children and staff spoken with",
-            "Leadership oversight; evidence not assertion",
+        "required_markers": [
+            "reg 44",
+            "child",
+            "safeguarding",
+            "evidence",
+            "relationship",
+            "consultation",
+            "previous",
+            "manager",
         ],
-        "forbidden_patterns": list(UNIVERSAL_FORBIDDEN_PATTERNS[:4]) + ["outstanding grade"],
+        "required_sections": [
+            "Lived experience of children; relationships and warmth",
+            "Safeguarding effectiveness — missing, restraints, incidents, complaints, medication where relevant",
+            "Records matching practice; child voice and influence",
+            "Consultation with children, staff, parents/carers, placing authorities and professionals",
+            "Action from previous Regulation 44 visits; shortfalls/actions with owner and timescale",
+            "Manager oversight and learning; evidence not assertion",
+        ],
+        "forbidden_patterns": list(UNIVERSAL_FORBIDDEN_PATTERNS[:4]) + ["outstanding grade", "inadequate grade"],
         "public_considerations": [
             "Inspection readiness",
             "Leadership and oversight",

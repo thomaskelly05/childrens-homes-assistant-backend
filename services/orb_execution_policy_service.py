@@ -135,7 +135,8 @@ STRUCTURE_ONLY_PATTERNS: dict[str, re.Pattern[str]] = {
     ),
     "reg44_visitor": re.compile(
         r"^(give\s+me\s+)?(a\s+)?reg\s*44\s+(evidence\s+)?checklist|"
-        r"^reg\s*44\s+(structure|template|headings?|evidence)\??$",
+        r"^reg\s*44\s+(structure|template|headings?|evidence)\??$|"
+        r"what\s+should\s+(a\s+)?reg\s*44\s+visitor\s+(be\s+)?(looking\s+for|focus\s+on|look\s+(?:for|at))",
         re.I,
     ),
     "ofsted_preparation": re.compile(
@@ -168,8 +169,6 @@ GENERATION_REQUIRED_PATTERNS = re.compile(
 DAILY_NOTE_DETERMINISTIC_ANSWER = """Absolutely — paste your rough notes and I'll turn them into a clear, factual, child-centred daily note.
 
 Use this structure:
-
-Daily note
 Date/time:
 Young person:
 Mood/presentation:
@@ -260,24 +259,27 @@ Follow-up/repair:
 
 Do not invent facts — include only what was seen, heard and done."""
 
-REG44_CHECKLIST_DETERMINISTIC_ANSWER = """Reg 44 evidence checklist — use this to structure your visitor note:
+REG44_CHECKLIST_DETERMINISTIC_ANSWER = """What a Reg 44 visitor should look for in a children's home — evidence-focused:
 
-Reg 44 visit evidence
-Date of visit:
-Visitor name/role:
-Child experience observed:
-Young people spoken to (initials only unless authorised):
-Child voice / views captured:
-Records reviewed:
-Safeguarding effectiveness observations:
-Quality of care observations:
-Leadership oversight seen:
-Staff spoken with:
-Shortfalls/actions identified:
-Follow-up from last visit:
-Follow-up required:
+Lived experience of children
+* Do children feel safe, listened to and involved in decisions?
+* Quality of relationships, warmth and nurture
+* Child voice and influence in daily life
 
-Keep Reg 44 evidence factual, child-centred and based on what you actually saw, heard and reviewed — evidence not assertion."""
+Safeguarding effectiveness
+* Missing episodes, restraints, consequences/sanctions, incidents, complaints, medication where relevant
+* Staff responses to behaviour and distress
+* Whether records match practice
+
+Consultation and triangulation
+* Speak with children, staff, parents/carers, placing authorities and professionals
+* Review records, chronologies and plans sampled
+
+Manager oversight and learning
+* Action from previous Regulation 44 visits — shortfalls, actions, owner and timescale
+* Whether the home is learning and improving
+
+Record factually what you saw, heard and reviewed — evidence not assertion. Do not predict Ofsted judgement grades."""
 
 REG45_REVIEW_DETERMINISTIC_ANSWER = """Reg 45 manager review — use this structure:
 
@@ -569,6 +571,29 @@ CHILD_VOICE_GUIDANCE_ANSWER = """To capture the child's voice in daily recording
 
 Paste your rough notes and I can help turn them into clear, factual, child-centred recording wording."""
 
+MISSING_RETURN_SUBSTANCE_DETERMINISTIC_ANSWER = """Missing return — immediate actions on shift:
+
+Immediate welfare check
+* Calm welcome back — check injuries, distress, intoxication, hunger, fatigue and immediate medical need
+* Do not accuse or shame
+
+Missing procedure
+* Follow local missing procedure
+* Update police if the missing episode was still active
+* Notify manager/on-call
+* Notify social worker/placing authority; EDT if out of hours
+
+Health and safety
+* Consider health advice — 111 or 999 if unwell or intoxicated
+
+Contextual safeguarding
+* Remain curious about exploitation/contextual safeguarding
+* Return home interview / local missing procedure as required
+* Record exact words and observations
+* Update missing, risk and placement plans with manager oversight
+
+LADO is only relevant if there is an allegation or concern about an adult in a position of trust — not for a young person's risky behaviour on return."""
+
 DETERMINISTIC_ANSWERS: dict[str, str] = {
     "daily_record": DAILY_NOTE_DETERMINISTIC_ANSWER,
     "keywork_session": KEYWORK_SESSION_DETERMINISTIC_ANSWER,
@@ -577,6 +602,7 @@ DETERMINISTIC_ANSWERS: dict[str, str] = {
     "incident_record": INCIDENT_TEMPLATE_DETERMINISTIC_ANSWER,
     "reg44_visitor": REG44_CHECKLIST_DETERMINISTIC_ANSWER,
     "ofsted_preparation": OFSTED_PREPARATION_DETERMINISTIC_ANSWER,
+    "missing_return_record": MISSING_RETURN_SUBSTANCE_DETERMINISTIC_ANSWER,
 }
 
 
@@ -784,6 +810,28 @@ class OrbExecutionPolicyService:
             })
         if decision is None:
             decision = self.resolve(message, brain_convergence=brain_convergence)
+
+        from services.orb_recording_contract_service import extract_known_incident_facts
+        from services.orb_therapeutic_language_contract_service import (
+            build_convert_to_recording_scaffold,
+            detect_adult_shorthand,
+            is_convert_to_recording_request,
+        )
+
+        if is_convert_to_recording_request(message):
+            facts = extract_known_incident_facts(message)
+            if detect_adult_shorthand(message) or facts.get("shorthand_behaviour"):
+                answer = build_convert_to_recording_scaffold(message)
+                family_id = "convert_to_recording_wording"
+                validation = validate_contract_answer(answer, family_id=family_id)
+                return {
+                    "answer": validation.get("sanitized_answer") or answer,
+                    "sources": [],
+                    "citations": [],
+                    "no_llm": True,
+                    "execution_policy": "internal_template_plus_validator",
+                    "validation": validation,
+                }
 
         if decision.execution_policy not in {
             "deterministic_only",
@@ -1047,8 +1095,10 @@ class OrbExecutionPolicyService:
             return "handover"
         if re.search(r"key\s*[- ]?work", text, re.I):
             return "keywork_session"
-        if STRUCTURE_ONLY_PATTERNS["reg44_visitor"].search(text) or re.search(
-            r"\breg\s*44\b", text, re.I
+        if STRUCTURE_ONLY_PATTERNS["reg44_visitor"].search(text):
+            return "reg44_visitor"
+        if re.search(r"\breg\s*44\b", text, re.I) and re.search(
+            r"\b(checklist|structure|template|headings?|evidence)\b", text, re.I
         ):
             return "reg44_visitor"
         if re.search(r"child'?s?\s+voice", text, re.I) and re.search(

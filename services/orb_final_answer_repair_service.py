@@ -8,7 +8,15 @@ from typing import Any
 from services.orb_fast_opening_service import strip_streaming_artifacts_from_answer
 from services.orb_final_answer_contract_validator_service import validate_final_answer_contract
 from services.orb_placeholder_quality_guard_service import sanitize_placeholders_in_answer
-from services.orb_therapeutic_language_contract_service import apply_deterministic_therapeutic_repairs
+from services.orb_execution_policy_service import MISSING_RETURN_SUBSTANCE_DETERMINISTIC_ANSWER
+from services.orb_mandatory_response_contract_service import find_inappropriate_lado_reference
+from services.orb_recording_contract_service import extract_known_incident_facts
+from services.orb_therapeutic_language_contract_service import (
+    apply_deterministic_therapeutic_repairs,
+    build_convert_to_recording_scaffold,
+    detect_adult_shorthand,
+    is_convert_to_recording_request,
+)
 
 ACCESSIBLE_CHILD_SUPPORT_PLAN_TEMPLATE = """
 # My Support Plan
@@ -19,14 +27,14 @@ This is my plan. It helps adults understand me, listen to me and support my futu
 
 My name is: [Add my preferred name]
 I am 17.
-Things I like: [Add my interests, people, places, activities, sensory likes]
+Things I like: [Add my interests, favourite people, places, activities and sensory likes]
 Things I want adults to know about me: [Add what matters to me]
 
 ## 2. My dreams and future
 
 Things I would like to do:
 
-* [Add dream or aspiration using my widget/symbol/photo]
+* [Add a dream or aspiration using my widget, symbol, photo or words]
 * [Add another dream or aspiration]
 
 Things I want to learn:
@@ -51,7 +59,7 @@ Yes: [Add how I show yes]
 No: [Add how I show no]
 Stop: [Add how I show stop]
 Help: [Add how I ask for help]
-Pain/unwell: [Add how I show pain or discomfort]
+Pain/unwell: [Add how I show pain, discomfort or feeling unwell]
 Worried/upset: [Add how I show worry or upset]
 Happy/calm: [Add how I show I am happy or calm]
 
@@ -161,6 +169,13 @@ def apply_deterministic_repairs(
     cleaned, therapeutic_repairs = apply_deterministic_therapeutic_repairs(cleaned)
     if therapeutic_repairs:
         repair_meta["therapeutic_repairs"] = therapeutic_repairs
+        repair_meta["repair_reason"] = "therapeutic_language"
+    if contract_family == "missing_return_record":
+        cleaned = repair_missing_return_record(cleaned, message=message)
+    if is_convert_to_recording_request(message) and (
+        detect_adult_shorthand(message) or extract_known_incident_facts(message).get("shorthand_behaviour")
+    ):
+        cleaned = build_convert_to_recording_scaffold(message)
         repair_meta["repair_reason"] = "therapeutic_language"
     if contract_family == "accessible_child_support_plan":
         lower = cleaned.lower()
@@ -284,19 +299,7 @@ Two staff responded calmly, offered space, and used agreed strategies. Manager n
 Outcome:
 Jamie settled within 20 minutes. Repair conversation planned with key worker.
 """.strip(),
-    "missing_return_record": """
-Missing return record
-
-Immediate welfare check:
-On return, her welfare was checked for injury, distress and intoxication. She appeared tired but physically unharmed.
-
-Missing and return:
-She had been missing from care. Staff recorded time away, last known whereabouts and return details.
-
-Record:
-A factual chronology entry will be completed. Manager, police and social worker notified per local missing procedure.
-Risk assessment, missing plan and placement plan will be updated.
-""".strip(),
+    "missing_return_record": MISSING_RETURN_SUBSTANCE_DETERMINISTIC_ANSWER,
     "allegation_lado": """
 Allegation against staff — immediate actions
 
@@ -354,16 +357,27 @@ Follow-up:
 Staff briefing on recording standards. Evidence trail for Reg 44 and Ofsted chronology.
 """.strip(),
     "reg44_visitor": """
-Reg 44 visitor focus areas
+What a Reg 44 visitor should look for in a children's home — evidence-focused:
 
-Child experience:
-Speak with children about feeling safe, listened to and involved in decisions.
+Lived experience of children
+* Do children feel safe, listened to and involved in decisions?
+* Quality of relationships, warmth and nurture
+* Child voice and influence in daily life
 
-Safeguarding:
-Review evidence of safeguarding effectiveness — not assertion. Check missing, incidents and escalation records.
+Safeguarding effectiveness
+* Missing episodes, restraints, consequences/sanctions, incidents, complaints, medication where relevant
+* Staff responses to behaviour and distress
+* Whether records match practice
 
-Leadership:
-Review manager oversight, staff supervision and quality of recording.
+Consultation and triangulation
+* Speak with children, staff, parents/carers, placing authorities and professionals
+* Review records, chronologies and plans sampled
+
+Manager oversight and learning
+* Action from previous Regulation 44 visits — shortfalls, actions, owner and timescale
+* Whether the home is learning and improving
+
+Record factually what you saw, heard and reviewed — evidence not assertion. Do not predict Ofsted judgement grades.
 """.strip(),
     "what_am_i_missing": """
 Gaps in this incident note
@@ -379,24 +393,40 @@ Add staff response, outcome, manager notification and follow-up actions.
 Professional curiosity: any pattern, contextual risk or plan update needed?
 """.strip(),
     "convert_to_recording_wording": """
-Daily log entry (neutral recording wording)
+Recording wording scaffold:
 
-Observation (factual):
-At approximately 18:30 the young person returned to the home. Staff observed calm presentation.
+On [add date/time], the young person was observed to [add specific behaviours].
+Staff remained curious about what the young person may have been communicating and
+supported them by [add staff response]. The young person responded by [add outcome].
 
-Staff actions:
-Staff greeted the young person and offered a drink. No concerns noted at handover.
-
-Outcome:
-Evening routine continued as planned.
+Observation (factual): record what was seen and heard in observable terms.
+Include child voice, staff response and outcome.
+Use appeared / was observed where facts are not yet confirmed.
 """.strip(),
 }
+
+
+def repair_missing_return_record(answer: str, *, message: str = "") -> str:
+    """Replace answers that wrongly route to LADO or miss mandatory missing-return markers."""
+    if find_inappropriate_lado_reference(answer, message):
+        return MISSING_RETURN_SUBSTANCE_DETERMINISTIC_ANSWER
+    lower = (answer or "").lower()
+    required = ("welfare", "missing", "manager", "social worker", "exploitation")
+    if sum(1 for marker in required if marker in lower) < 4:
+        return MISSING_RETURN_SUBSTANCE_DETERMINISTIC_ANSWER
+    return answer
 
 
 def canonical_answer_for_qa(contract_family: str, *, message: str = "") -> str | None:
     """Deterministic canonical answer for offline QA validation."""
     if contract_family == "accessible_child_support_plan":
         return repair_accessible_child_support_plan("", message=message)
+    if contract_family == "convert_to_recording_wording" and is_convert_to_recording_request(message):
+        facts = extract_known_incident_facts(message)
+        if detect_adult_shorthand(message) or facts.get("shorthand_behaviour"):
+            return build_convert_to_recording_scaffold(message)
+    if contract_family == "missing_return_record":
+        return MISSING_RETURN_SUBSTANCE_DETERMINISTIC_ANSWER
     return CANONICAL_QA_ANSWERS.get(contract_family)
 
 

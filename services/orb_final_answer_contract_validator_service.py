@@ -14,6 +14,7 @@ from services.orb_therapeutic_language_contract_service import (
     find_missing_therapeutic_markers,
     validate_therapeutic_wording,
 )
+from services.orb_mandatory_response_contract_service import find_inappropriate_lado_reference
 from services.orb_universal_answer_contract_map_service import (
     UNIVERSAL_FORBIDDEN_PATTERNS,
     find_forbidden_patterns,
@@ -51,6 +52,11 @@ FAMILY_EXTRA_FORBIDDEN: dict[str, tuple[str, ...]] = {
         "tailored to the young person's individual needs",
         "requires a focus on",
         "support strategies without",
+    ),
+    "daily_record": (
+        "what this means in practice",
+        "in this context",
+        "it is important to remember",
     ),
 }
 
@@ -170,6 +176,10 @@ def validate_final_answer_contract(
         forbidden.extend(f"therapeutic:{issue}" for issue in therapeutic_issues)
     if not therapeutic.get("safeguarding_clarity_preserved"):
         forbidden.append("therapeutic:safeguarding_softened")
+    if contract_family == "missing_return_record" and find_inappropriate_lado_reference(
+        sanitized, source_text or ""
+    ):
+        forbidden.append("inappropriate_lado_reference")
 
     passed = (
         not forbidden

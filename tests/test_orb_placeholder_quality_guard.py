@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from services.orb_final_answer_repair_service import repair_accessible_child_support_plan
 from services.orb_placeholder_quality_guard_service import (
     clean_placeholders,
     find_placeholder_issues,
@@ -15,6 +16,8 @@ BROKEN_SAMPLES = [
     "[A brief introduction about…]",
     "[Use widgets to express dre…]",
     "[Goal 1: Specific, measurab…]",
+    "[Add dream or aspiration us…]",
+    "[Add how I show pain or dis…]",
 ]
 
 
@@ -59,3 +62,21 @@ def test_final_answer_sanitize_removes_streaming_and_broken_placeholders():
 def test_find_placeholder_issues_reports_broken():
     issues = find_placeholder_issues("[Goal 1: Specific, measurab…]")
     assert issues
+
+
+def test_gdd_support_plan_has_no_truncated_placeholders():
+    message = (
+        "Create a child-friendly support plan for a 17-year-old with GDD who uses widgets to communicate."
+    )
+    plan = repair_accessible_child_support_plan("", message=message)
+    assert "…]" not in plan
+    assert "...]" not in plan
+    assert "[Add my interests, favourite people, places, activities and sensory likes]" in plan
+    assert "[Add a dream or aspiration using my widget, symbol, photo or words]" in plan
+    assert "[Add how I show pain, discomfort or feeling unwell]" in plan
+
+
+def test_broken_placeholder_hints_produce_full_clean_text():
+    cleaned, _ = clean_placeholders("[Add dream or aspiration us…]")
+    assert "…" not in cleaned
+    assert "widget" in cleaned.lower() or "aspiration" in cleaned.lower()

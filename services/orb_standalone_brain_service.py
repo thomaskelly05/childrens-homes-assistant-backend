@@ -352,7 +352,8 @@ class OrbStandaloneBrainService:
         if "safeguarding_brain" in brains:
             contract.extend([
                 "Separate known facts, concerns, missing information and escalation considerations.",
-                "Consider LADO, social worker, police, health, Ofsted notification and local safeguarding procedures where relevant without making the decision for the user.",
+                "Consider social worker, police, health, manager and local safeguarding procedures where relevant without making the decision for the user.",
+                "LADO is only for allegations or concerns about adults in a position of trust — not for missing returns, cannabis smell, exploitation involving peers/unknown adults, or young person risky behaviour unless the prompt includes an adult allegation.",
                 "Protect the child while maintaining fairness, confidentiality and procedural integrity for adults involved.",
             ])
         if "allegations_lado_brain" in brains:

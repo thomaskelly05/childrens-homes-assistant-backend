@@ -47,6 +47,9 @@ JUDGEMENTAL_PHRASE_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("behaved_perfectly", re.compile(r"\bbehaved perfectly\b", re.I)),
     ("failed_to_engage", re.compile(r"\bfailed to engage\b", re.I)),
     ("would_not_listen", re.compile(r"\bwould not listen\b", re.I)),
+    ("refused_to_listen", re.compile(r"\brefused to listen\b", re.I)),
+    ("seek_attention", re.compile(r"\bseek(?:ing)?\s+attention\b", re.I)),
+    ("appeared_to_seek_attention", re.compile(r"\bappeared to seek attention\b", re.I)),
     ("overreacted", re.compile(r"\boverreacted\b", re.I)),
     ("lied_unqualified", re.compile(r"\b(lied|lying)\b(?![\s\S]{0,60}\b(recorded|evidence|said|stated|reported)\b)", re.I)),
     ("absconded", re.compile(r"\babsconded\b", re.I)),
@@ -64,11 +67,14 @@ THERAPEUTIC_PHRASE_REPLACEMENTS: tuple[tuple[re.Pattern[str], str], ...] = (
     (re.compile(r"\bchallenging behaviour\b", re.I), "behaviour that may have communicated distress"),
     (re.compile(r"\bwas aggressive\b", re.I), "showed behaviour that staff observed and responded to"),
     (re.compile(r"\bchose to misbehave\b", re.I), "behaviour occurred"),
-    (re.compile(r"\bjust wanted attention\b", re.I), "may have been seeking connection or support"),
+    (re.compile(r"\bjust wanted attention\b", re.I), "may have been communicating an unmet need"),
     (re.compile(r"\bbeing difficult\b", re.I), "found the situation difficult"),
     (re.compile(r"\bbehaved perfectly\b", re.I), "presented calmly"),
     (re.compile(r"\bfailed to engage\b", re.I), "was not ready to engage"),
     (re.compile(r"\bwould not listen\b", re.I), "was not ready to respond"),
+    (re.compile(r"\brefused to listen\b", re.I), "was not ready to respond"),
+    (re.compile(r"\bappeared to seek attention\b", re.I), "was observed to [add specific behaviour]"),
+    (re.compile(r"\bseek(?:ing)?\s+attention\b", re.I), "communicating distress"),
     (re.compile(r"\boverreacted\b", re.I), "appeared distressed"),
     (re.compile(r"\babsconded\b", re.I), "went missing"),
     (re.compile(r"\bcalmed down\b", re.I), "settled with staff support"),
@@ -668,6 +674,65 @@ def build_safe_residential_scenario_scaffold(source_text: str) -> str:
     if follow_up:
         parts.extend(["", "Follow-up:", follow_up])
     return "\n".join(parts)
+
+
+CONVERT_TO_RECORDING_RE = re.compile(
+    r"\bconvert\s+(?:this\s+)?to\s+recording|recording\s+wording|turn\s+(?:this\s+)?into\s+(?:a\s+)?record",
+    re.I,
+)
+
+FORBIDDEN_RECORDING_CONCEPTS: tuple[str, ...] = (
+    "attention seeking",
+    "appeared to seek attention",
+    "seeking attention",
+    "refused to listen",
+    "non-compliant",
+    "challenging behaviour without context",
+)
+
+
+def is_convert_to_recording_request(text: str) -> bool:
+    return bool(CONVERT_TO_RECORDING_RE.search(str(text or "")))
+
+
+def build_convert_to_recording_scaffold(source_text: str) -> str:
+    """Deterministic therapeutic recording scaffold for convert-to-recording prompts."""
+    facts = extract_known_incident_facts(source_text)
+    shorthand_terms = detect_adult_shorthand(source_text)
+    shorthand = facts.get("shorthand_behaviour") or (shorthand_terms[0] if shorthand_terms else None)
+    name = facts.get("young_person") or "the young person"
+    pronoun = "him" if name.lower().endswith(("m", "n", "r")) and name.lower() not in {"kim", "sam"} else "them"
+    if name.lower() in {"jamie", "james", "liam", "ryan", "ethan", "noah", "jack", "luke", "mason", "harry"}:
+        pronoun = "him"
+    elif name.lower() in {"sarah", "emma", "lily", "grace", "mia", "chloe", "lucy", "amy", "katie", "jade"}:
+        pronoun = "her"
+    elif name != "the young person":
+        pronoun = "them"
+
+    warning = _concise_shorthand_warning(shorthand)
+
+    scaffold = (
+        f"On [add date/time], {name} was observed to [add specific behaviours]. "
+        f"Staff remained curious about what {name} may have been communicating and "
+        f"supported {pronoun} by [add staff response]. {name} responded by [add outcome]."
+    )
+
+    return "\n".join(
+        [
+            warning,
+            "",
+            "Recording wording scaffold:",
+            scaffold,
+            "",
+            "Include:",
+            "* observable behaviour (what was seen/heard)",
+            f"* {name}'s voice (their words where known)",
+            "* staff response",
+            "* outcome",
+            "",
+            "Use observable behaviour and therapeutic curiosity — avoid judgemental labels.",
+        ]
+    )
 
 
 def uses_weak_generic_phrasing(text: str) -> bool:
