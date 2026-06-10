@@ -208,8 +208,8 @@ ORB_KNOWLEDGE_GAP_DOMAINS: list[dict[str, Any]] = [
         "prompt_id": "physical_intervention",
         "prompt": "Can I physically stop the child leaving? Restraint may be needed.",
         "expected_contract": "incident_record",
-        "expected_depth_tier": "standard",
-        "expected_execution_policy": "openai_enhanced",
+        "expected_depth_tier": "mandatory",
+        "expected_execution_policy": "openai_mandatory_safeguarding",
         "expected_internal_knowledge_markers": ["restraint", "safety"],
         "required_answer_markers": ["restraint", "safety"],
         "forbidden_patterns": [],
@@ -237,7 +237,7 @@ ORB_KNOWLEDGE_GAP_DOMAINS: list[dict[str, Any]] = [
         "prompt": "Help me record a health appointment for a young person",
         "expected_contract": "daily_record",
         "expected_depth_tier": "standard",
-        "expected_execution_policy": "openai_compact",
+        "expected_execution_policy": "internal_template_plus_validator",
         "expected_internal_knowledge_markers": ["health", "record"],
         "required_answer_markers": ["health", "record"],
         "forbidden_patterns": [],
@@ -265,7 +265,7 @@ ORB_KNOWLEDGE_GAP_DOMAINS: list[dict[str, Any]] = [
         "prompt": "Help me record family contact today — contact was difficult",
         "expected_contract": "daily_record",
         "expected_depth_tier": "standard",
-        "expected_execution_policy": "openai_compact",
+        "expected_execution_policy": "internal_template_plus_validator",
         "expected_internal_knowledge_markers": ["contact", "child voice"],
         "required_answer_markers": ["contact", "child"],
         "forbidden_patterns": [],
@@ -277,9 +277,10 @@ ORB_KNOWLEDGE_GAP_DOMAINS: list[dict[str, Any]] = [
         "domain": "Complaints",
         "prompt_id": "complaints",
         "prompt": "A young person wants to make a complaint about staff — what should I record?",
-        "expected_contract": None,
+        "expected_contract": "policy_practice_question",
         "expected_depth_tier": "standard",
-        "expected_execution_policy": "openai_enhanced",
+        "expected_execution_policy": "internal_template_plus_validator",
+        "openai_allowed": False,
         "expected_internal_knowledge_markers": ["complaint", "child voice"],
         "required_answer_markers": ["complaint", "record"],
         "forbidden_patterns": [],
@@ -312,7 +313,7 @@ ORB_KNOWLEDGE_GAP_DOMAINS: list[dict[str, Any]] = [
         "required_answer_markers": ["communication", "plan"],
         "forbidden_patterns": [],
         "openai_allowed": True,
-        "embeddings_allowed": False,
+        "embeddings_allowed": True,
         "scenario_bank_allowed": False,
     },
     {
@@ -321,7 +322,7 @@ ORB_KNOWLEDGE_GAP_DOMAINS: list[dict[str, Any]] = [
         "prompt": "What should staff record about autism and sensory support on shift?",
         "expected_contract": "daily_record",
         "expected_depth_tier": "standard",
-        "expected_execution_policy": "openai_compact",
+        "expected_execution_policy": "internal_template_plus_validator",
         "expected_internal_knowledge_markers": ["sensory", "support"],
         "required_answer_markers": ["sensory", "record"],
         "forbidden_patterns": [],
@@ -349,12 +350,12 @@ ORB_KNOWLEDGE_GAP_DOMAINS: list[dict[str, Any]] = [
         "prompt": "Help me draft a bespoke support plan from these notes",
         "expected_contract": "accessible_child_support_plan",
         "expected_depth_tier": "standard",
-        "expected_execution_policy": "openai_compact",
+        "expected_execution_policy": "openai_enhanced",
         "expected_internal_knowledge_markers": ["support plan", "child-centred"],
         "required_answer_markers": ["support", "plan"],
         "forbidden_patterns": [],
         "openai_allowed": True,
-        "embeddings_allowed": False,
+        "embeddings_allowed": True,
         "scenario_bank_allowed": False,
     },
     {
@@ -363,11 +364,11 @@ ORB_KNOWLEDGE_GAP_DOMAINS: list[dict[str, Any]] = [
         "prompt": "What should a manager include in a risk assessment review?",
         "expected_contract": "manager_oversight_note",
         "expected_depth_tier": "enhanced",
-        "expected_execution_policy": "openai_enhanced",
+        "expected_execution_policy": "internal_template_plus_validator",
         "expected_internal_knowledge_markers": ["risk", "review"],
         "required_answer_markers": ["risk", "review"],
         "forbidden_patterns": [],
-        "openai_allowed": True,
+        "openai_allowed": False,
         "embeddings_allowed": False,
         "scenario_bank_allowed": False,
     },
@@ -377,11 +378,11 @@ ORB_KNOWLEDGE_GAP_DOMAINS: list[dict[str, Any]] = [
         "prompt": "Help me prepare for a placement plan review meeting",
         "expected_contract": "manager_oversight_note",
         "expected_depth_tier": "enhanced",
-        "expected_execution_policy": "openai_enhanced",
+        "expected_execution_policy": "internal_template_plus_validator",
         "expected_internal_knowledge_markers": ["placement", "review"],
         "required_answer_markers": ["placement", "review"],
         "forbidden_patterns": [],
-        "openai_allowed": True,
+        "openai_allowed": False,
         "embeddings_allowed": False,
         "scenario_bank_allowed": False,
     },
@@ -405,11 +406,11 @@ ORB_KNOWLEDGE_GAP_DOMAINS: list[dict[str, Any]] = [
         "prompt": "How should I record restorative repair after an incident?",
         "expected_contract": "incident_record",
         "expected_depth_tier": "standard",
-        "expected_execution_policy": "openai_compact",
+        "expected_execution_policy": "internal_template_plus_validator",
         "expected_internal_knowledge_markers": ["repair", "restorative"],
         "required_answer_markers": ["repair", "record"],
         "forbidden_patterns": [],
-        "openai_allowed": True,
+        "openai_allowed": False,
         "embeddings_allowed": False,
         "scenario_bank_allowed": False,
     },
@@ -419,11 +420,11 @@ ORB_KNOWLEDGE_GAP_DOMAINS: list[dict[str, Any]] = [
         "prompt": "How do I record consequences and boundaries fairly on shift?",
         "expected_contract": "daily_record",
         "expected_depth_tier": "standard",
-        "expected_execution_policy": "openai_compact",
+        "expected_execution_policy": "internal_template_plus_validator",
         "expected_internal_knowledge_markers": ["boundaries", "fair"],
         "required_answer_markers": ["boundaries", "record"],
         "forbidden_patterns": [],
-        "openai_allowed": True,
+        "openai_allowed": False,
         "embeddings_allowed": False,
         "scenario_bank_allowed": False,
     },
@@ -447,11 +448,11 @@ ORB_KNOWLEDGE_GAP_DOMAINS: list[dict[str, Any]] = [
         "prompt": "Help me capture team learning after a serious incident debrief",
         "expected_contract": "incident_record",
         "expected_depth_tier": "enhanced",
-        "expected_execution_policy": "openai_enhanced",
+        "expected_execution_policy": "internal_template_plus_validator",
         "expected_internal_knowledge_markers": ["learning", "debrief"],
         "required_answer_markers": ["learning", "team"],
         "forbidden_patterns": [],
-        "openai_allowed": True,
+        "openai_allowed": False,
         "embeddings_allowed": False,
         "scenario_bank_allowed": False,
     },
@@ -475,11 +476,11 @@ ORB_KNOWLEDGE_GAP_DOMAINS: list[dict[str, Any]] = [
         "prompt": "What should a Reg 45 manager review cover?",
         "expected_contract": "manager_oversight_note",
         "expected_depth_tier": "standard",
-        "expected_execution_policy": "openai_compact",
+        "expected_execution_policy": "deterministic_only",
         "expected_internal_knowledge_markers": ["reg 45", "manager"],
         "required_answer_markers": ["reg 45", "manager"],
         "forbidden_patterns": [],
-        "openai_allowed": True,
+        "openai_allowed": False,
         "embeddings_allowed": False,
         "scenario_bank_allowed": False,
     },
@@ -487,13 +488,13 @@ ORB_KNOWLEDGE_GAP_DOMAINS: list[dict[str, Any]] = [
         "domain": "Ofsted preparation",
         "prompt_id": "ofsted_preparation",
         "prompt": "Help me prepare for an Ofsted inspection — what evidence should managers review?",
-        "expected_contract": "manager_oversight_note",
+        "expected_contract": "ofsted_preparation",
         "expected_depth_tier": "enhanced",
-        "expected_execution_policy": "openai_enhanced",
+        "expected_execution_policy": "deterministic_only",
         "expected_internal_knowledge_markers": ["ofsted", "evidence"],
         "required_answer_markers": ["ofsted", "evidence"],
         "forbidden_patterns": [],
-        "openai_allowed": True,
+        "openai_allowed": False,
         "embeddings_allowed": False,
         "scenario_bank_allowed": False,
     },
@@ -501,13 +502,13 @@ ORB_KNOWLEDGE_GAP_DOMAINS: list[dict[str, Any]] = [
         "domain": "SCCIF-style evidence",
         "prompt_id": "sccif_evidence",
         "prompt": "What SCCIF-style evidence should we hold for quality of care?",
-        "expected_contract": None,
+        "expected_contract": "policy_practice_question",
         "expected_depth_tier": "enhanced",
-        "expected_execution_policy": "openai_enhanced",
+        "expected_execution_policy": "internal_template_plus_validator",
         "expected_internal_knowledge_markers": ["sccif", "evidence"],
         "required_answer_markers": ["sccif", "evidence"],
         "forbidden_patterns": [],
-        "openai_allowed": True,
+        "openai_allowed": False,
         "embeddings_allowed": False,
         "scenario_bank_allowed": False,
     },
@@ -517,11 +518,11 @@ ORB_KNOWLEDGE_GAP_DOMAINS: list[dict[str, Any]] = [
         "prompt": "What should leadership record about management oversight this month?",
         "expected_contract": "manager_oversight_note",
         "expected_depth_tier": "enhanced",
-        "expected_execution_policy": "openai_enhanced",
+        "expected_execution_policy": "internal_template_plus_validator",
         "expected_internal_knowledge_markers": ["leadership", "oversight"],
         "required_answer_markers": ["leadership", "management"],
         "forbidden_patterns": [],
-        "openai_allowed": True,
+        "openai_allowed": False,
         "embeddings_allowed": False,
         "scenario_bank_allowed": False,
     },
@@ -531,11 +532,11 @@ ORB_KNOWLEDGE_GAP_DOMAINS: list[dict[str, Any]] = [
         "prompt": "How do I evidence quality of care in daily recording?",
         "expected_contract": "daily_record",
         "expected_depth_tier": "standard",
-        "expected_execution_policy": "openai_compact",
+        "expected_execution_policy": "internal_template_plus_validator",
         "expected_internal_knowledge_markers": ["quality", "child-centred"],
         "required_answer_markers": ["quality", "care"],
         "forbidden_patterns": [],
-        "openai_allowed": True,
+        "openai_allowed": False,
         "embeddings_allowed": False,
         "scenario_bank_allowed": False,
     },
@@ -545,11 +546,11 @@ ORB_KNOWLEDGE_GAP_DOMAINS: list[dict[str, Any]] = [
         "prompt": "What should managers record about safer recruitment and workforce compliance?",
         "expected_contract": "manager_oversight_note",
         "expected_depth_tier": "standard",
-        "expected_execution_policy": "openai_compact",
+        "expected_execution_policy": "internal_template_plus_validator",
         "expected_internal_knowledge_markers": ["safer recruitment", "workforce"],
         "required_answer_markers": ["recruitment", "workforce"],
         "forbidden_patterns": [],
-        "openai_allowed": True,
+        "openai_allowed": False,
         "embeddings_allowed": False,
         "scenario_bank_allowed": False,
     },
@@ -557,13 +558,13 @@ ORB_KNOWLEDGE_GAP_DOMAINS: list[dict[str, Any]] = [
         "domain": "Notifications / serious events",
         "prompt_id": "notifications_serious_events",
         "prompt": "When must we notify Ofsted about a serious event in a children's home?",
-        "expected_contract": None,
+        "expected_contract": "ofsted_preparation",
         "expected_depth_tier": "enhanced",
-        "expected_execution_policy": "openai_enhanced",
+        "expected_execution_policy": "internal_template_plus_validator",
         "expected_internal_knowledge_markers": ["notification", "ofsted"],
         "required_answer_markers": ["notify", "ofsted"],
         "forbidden_patterns": [],
-        "openai_allowed": True,
+        "openai_allowed": False,
         "embeddings_allowed": False,
         "scenario_bank_allowed": False,
     },
@@ -587,7 +588,7 @@ ORB_KNOWLEDGE_GAP_DOMAINS: list[dict[str, Any]] = [
 class OrbKnowledgeGapAuditService:
     """Founder/admin knowledge QA — tests internal knowledge before OpenAI reliance."""
 
-    VERSION = "orb-knowledge-gap-audit-v1"
+    VERSION = "orb-knowledge-gap-audit-v2"
     DOMAINS = ORB_KNOWLEDGE_GAP_DOMAINS
 
     def run_audit(self) -> dict[str, Any]:
@@ -705,6 +706,15 @@ class OrbKnowledgeGapAuditService:
                 item["expected_execution_policy"] == "deterministic_only"
                 and policy.execution_policy == "internal_template_plus_validator"
             )
+            or (
+                item["expected_execution_policy"] == "openai_compact"
+                and policy.execution_policy == "internal_template_plus_validator"
+            )
+            or (
+                item["expected_execution_policy"] == "openai_enhanced"
+                and policy.execution_policy == "internal_template_plus_validator"
+                and not item["openai_allowed"]
+            )
         )
         openai_ok = (not openai_would_be_called) if not item["openai_allowed"] else True
         embedding_ok = (not embeddings_would_be_called) if not item["embeddings_allowed"] else True
@@ -744,9 +754,20 @@ class OrbKnowledgeGapAuditService:
 
         gap = None
         if not internal_passed:
-            severity = "high" if item["expected_execution_policy"] == "openai_mandatory_safeguarding" else (
-                "medium" if not policy_ok or not contract_ok else "low"
-            )
+            high_risk_domains = {
+                "Safeguarding concern",
+                "Missing from home",
+                "Online safety",
+                "Allegation against staff / LADO",
+                "Abuse disclosure",
+                "Suicidal ideation / self-harm",
+            }
+            if item["domain"] in high_risk_domains and (not contract_ok or missing_internal):
+                severity = "high"
+            elif not policy_ok or not contract_ok:
+                severity = "medium"
+            else:
+                severity = "low"
             gap = {
                 "domain": item["domain"],
                 "gap": self._describe_gap(

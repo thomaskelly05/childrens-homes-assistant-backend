@@ -42,14 +42,54 @@ MANDATORY_SAFEGUARDING_FAMILIES = frozenset(
 MANDATORY_SAFEGUARDING_SCENARIOS = frozenset(
     {
         "missing_return_substance_risk",
+        "missing_from_home",
         "allegation_against_staff",
         "historic_sexual_abuse_disclosure",
         "suicide_self_harm",
         "parent_forced_removal",
         "exploitation_county_lines",
         "peer_on_peer_harm",
+        "online_harm_image_sharing",
+        "medication_error",
+        "restraint_physical_intervention",
     }
 )
+
+SCENARIO_INTERNAL_MARKERS: dict[str, list[str]] = {
+    "missing_from_home": ["missing", "welfare", "safeguarding", "escalation"],
+    "missing_return_substance_risk": ["missing", "welfare", "return", "safeguarding"],
+    "online_harm_image_sharing": ["online", "safeguarding", "evidence"],
+    "restraint_physical_intervention": ["restraint", "safety", "safeguarding"],
+    "medication_error": ["medication", "notification", "safeguarding"],
+    "allegation_against_staff": ["lado", "do not investigate", "safeguarding"],
+    "historic_sexual_abuse_disclosure": ["listen", "safeguarding", "do not investigate"],
+    "suicide_self_harm": ["immediate", "safeguarding"],
+    "exploitation_county_lines": ["exploitation", "safeguarding"],
+}
+
+PROMPT_DOMAIN_INTERNAL_MARKERS: list[tuple[re.Pattern[str], list[str]]] = [
+    (re.compile(r"safeguarding\s+concern", re.I), ["safeguarding", "escalation"]),
+    (re.compile(r"health\s+appointment", re.I), ["health", "record"]),
+    (re.compile(r"refused\s+school|education\s+concern", re.I), ["education", "record"]),
+    (re.compile(r"family\s+contact|contact\s+was", re.I), ["contact", "child voice"]),
+    (re.compile(r"complaint", re.I), ["complaint", "child voice"]),
+    (re.compile(r"\bgdd\b|widgets?|\baac\b", re.I), ["communication", "widgets", "plan"]),
+    (re.compile(r"sensory|autism", re.I), ["sensory", "support", "record"]),
+    (re.compile(r"child[- ]centred|support\s+plan", re.I), ["child-centred", "support", "plan"]),
+    (re.compile(r"behaviour\s+support", re.I), ["behaviour", "therapeutic", "support"]),
+    (re.compile(r"restorative\s+repair", re.I), ["repair", "restorative", "record"]),
+    (re.compile(r"boundaries|consequences", re.I), ["boundaries", "fair", "record"]),
+    (re.compile(r"staff\s+supervision", re.I), ["supervision", "reflection"]),
+    (re.compile(r"team\s+learning|debrief", re.I), ["learning", "debrief", "team"]),
+    (re.compile(r"reg\s*45", re.I), ["reg 45", "manager", "quality", "safeguarding"]),
+    (re.compile(r"ofsted|inspection\s+prep", re.I), ["ofsted", "evidence"]),
+    (re.compile(r"sccif", re.I), ["sccif", "evidence"]),
+    (re.compile(r"leadership|management\s+oversight", re.I), ["leadership", "oversight", "management"]),
+    (re.compile(r"quality\s+of\s+care", re.I), ["quality", "care", "child-centred"]),
+    (re.compile(r"safer\s+recruitment|workforce", re.I), ["safer recruitment", "workforce", "recruitment"]),
+    (re.compile(r"notify\s+ofsted|serious\s+event", re.I), ["notification", "ofsted", "notify"]),
+    (re.compile(r"professional\s+curiosity", re.I), ["professional curiosity", "safeguarding", "record"]),
+]
 
 DETERMINISTIC_TEMPLATE_FAMILIES = frozenset(
     {
@@ -58,6 +98,8 @@ DETERMINISTIC_TEMPLATE_FAMILIES = frozenset(
         "handover",
         "manager_oversight_note",
         "reg44_visitor",
+        "ofsted_preparation",
+        "policy_practice_question",
         "template_generation",
         "incident_record",
     }
@@ -86,12 +128,20 @@ STRUCTURE_ONLY_PATTERNS: dict[str, re.Pattern[str]] = {
     "manager_oversight_note": re.compile(
         r"^(help\s+me\s+)?(write|word|draft)\s+(a\s+)?manager\s+oversight|"
         r"^what\s+should\s+a\s+manager\s+oversight\s+note\s+include|"
-        r"^manager\s+oversight\s+(structure|template|headings?)\??$",
+        r"^manager\s+oversight\s+(structure|template|headings?)\??$|"
+        r"^what\s+should\s+a\s+reg\s*45\s+manager\s+review\s+cover\??$|"
+        r"^reg\s*45\s+(structure|template|headings?|review)\??$",
         re.I,
     ),
     "reg44_visitor": re.compile(
         r"^(give\s+me\s+)?(a\s+)?reg\s*44\s+(evidence\s+)?checklist|"
         r"^reg\s*44\s+(structure|template|headings?|evidence)\??$",
+        re.I,
+    ),
+    "ofsted_preparation": re.compile(
+        r"help\s+me\s+prepare\s+for\s+an\s+ofsted\s+inspection|"
+        r"what\s+evidence\s+should\s+managers\s+review|"
+        r"ofsted\s+(prep|preparation|evidence\s+readiness)",
         re.I,
     ),
     "incident_record": re.compile(
@@ -138,16 +188,18 @@ Use this structure:
 Key-work session
 Date/time:
 Young person:
-Focus/theme:
-What we talked about:
-Child's voice:
+Purpose of session:
+Focus/theme explored:
+Child voice (their words where possible):
+Wishes, feelings, strengths and worries:
 What mattered to them:
 Staff support offered:
 Progress/observations:
-Agreed next steps:
+Agreed actions:
+Emotional meaning:
 Follow-up:
 
-When you send rough notes, include what the young person said in their own words, what you explored together, and any agreed actions."""
+Keep it factual — record what was seen and heard, capture child voice in their words, and note agreed actions and follow-up."""
 
 HANDOVER_DETERMINISTIC_ANSWER = """Absolutely — paste your shift notes and I'll help you shape a clear handover.
 
@@ -158,6 +210,7 @@ Date/time:
 Young person(s):
 Overall presentation/mood:
 Key events this shift:
+Child voice / what mattered to them:
 Safeguarding/welfare updates:
 Medication/health:
 Contact/education:
@@ -165,7 +218,7 @@ Outstanding tasks:
 Risks to watch:
 Follow-up for incoming staff:
 
-Keep it factual, child-centred and focused on what incoming staff need to know."""
+Keep it factual, evidence-based and child-centred — record what happened, staff response and outcome for incoming staff."""
 
 MANAGER_OVERSIGHT_DETERMINISTIC_ANSWER = """Absolutely — paste your rough notes and I'll help you shape a manager oversight note.
 
@@ -175,14 +228,18 @@ Manager oversight note
 Date/time:
 Young person/home:
 Reason for oversight:
-What was reviewed:
+What is known:
+What is missing:
+Threshold/rationale:
 Patterns/themes noticed:
-Child's voice considered:
-Actions/decisions taken:
+Child voice considered:
+Decisions made and actions required (owner/date):
 Escalation/safeguarding considerations:
+Plan/risk/care plan updates:
+Learning for staff/team:
 Follow-up and review date:
 
-Include what you observed, what you checked, and what difference your oversight made."""
+Record factual evidence of what was reviewed, decisions made, and follow-up required."""
 
 INCIDENT_TEMPLATE_DETERMINISTIC_ANSWER = """Absolutely — paste what happened and I'll help you draft a factual incident record.
 
@@ -208,16 +265,299 @@ REG44_CHECKLIST_DETERMINISTIC_ANSWER = """Reg 44 evidence checklist — use this
 Reg 44 visit evidence
 Date of visit:
 Visitor name/role:
+Child experience observed:
 Young people spoken to (initials only unless authorised):
-Views of young people captured:
+Child voice / views captured:
 Records reviewed:
-Safeguarding/welfare observations:
+Safeguarding effectiveness observations:
 Quality of care observations:
-Staff supervision/training seen:
-Actions/recommendations:
+Leadership oversight seen:
+Staff spoken with:
+Shortfalls/actions identified:
+Follow-up from last visit:
 Follow-up required:
 
-Keep evidence factual, child-centred and linked to what you actually saw and heard."""
+Keep Reg 44 evidence factual, child-centred and based on what you actually saw, heard and reviewed — evidence not assertion."""
+
+REG45_REVIEW_DETERMINISTIC_ANSWER = """Reg 45 manager review — use this structure:
+
+Reg 45 manager review
+Review period:
+Registered manager:
+Quality of care review:
+Children's progress and experiences:
+Safeguarding review:
+Leadership and management review:
+Feedback from children/families/staff/professionals:
+Patterns/trends noticed:
+Improvement plan actions (owner/date):
+Evidence of learning:
+Follow-up review date:
+
+Record what is known, decisions made, and evidence of impact — do not predict Ofsted judgement grades."""
+
+OFSTED_PREPARATION_DETERMINISTIC_ANSWER = """Ofsted inspection preparation — evidence managers should review:
+
+Ofsted evidence readiness
+Child experience and voice:
+Safeguarding effectiveness:
+Quality of care:
+Leadership and management:
+Workforce/safer recruitment:
+Records and chronology sampled:
+Impact evidence — how leaders know what difference is made:
+Shortfalls/actions with owners and dates:
+Professional curiosity questions still open:
+
+Prepare evidence readiness — do not predict inspection judgement grades or ratings."""
+
+CONTEXTUAL_PRACTICE_TEMPLATES: list[tuple[re.Pattern[str], str, str]] = [
+    (
+        re.compile(r"health\s+appointment", re.I),
+        "daily_record",
+        """Help me record a health appointment — use this structure:
+
+Health appointment record
+Date/time:
+Young person:
+Appointment/location:
+Health concern discussed:
+Child voice:
+Outcome/plan from clinician:
+Staff support/actions:
+Follow-up:
+Record factually in the health record and daily log.""",
+    ),
+    (
+        re.compile(r"refused\s+school|education\s+concern", re.I),
+        "daily_record",
+        """Education concern record — use this structure:
+
+Education record
+Date/time:
+Young person:
+What happened (refusal/attendance/barriers):
+Child voice:
+School/college contact:
+Staff support offered:
+Outcome:
+Follow-up/plan:
+Record factually for education and daily records.""",
+    ),
+    (
+        re.compile(r"family\s+contact|contact\s+was", re.I),
+        "daily_record",
+        """Family contact record — use this structure:
+
+Family contact
+Date/time:
+Young person:
+Who was involved:
+Child voice before/during/after:
+What happened:
+Impact on the young person:
+Staff support:
+Outcome:
+Follow-up:
+Capture child voice and contact impact factually.""",
+    ),
+    (
+        re.compile(r"sensory|autism", re.I),
+        "daily_record",
+        """Autism / sensory support record — use this structure:
+
+Sensory support observation
+Date/time:
+Young person:
+Sensory triggers/profile noticed:
+Communication preferences:
+Strategies used (routine, transition, co-regulation):
+Child voice:
+Staff support:
+Outcome:
+Follow-up/plan:
+Record sensory support and child voice factually.""",
+    ),
+    (
+        re.compile(r"behaviour\s+support", re.I),
+        "daily_record",
+        """Behaviour support reflection — use this structure:
+
+Behaviour support reflection
+Date/time:
+Young person:
+What happened (observable behaviour):
+Antecedents/context:
+Child voice:
+Therapeutic/co-regulation support used:
+Outcome:
+Repair/follow-up:
+Record without blame — focus on support and child voice.""",
+    ),
+    (
+        re.compile(r"restorative\s+repair", re.I),
+        "incident_record",
+        """Restorative repair record — use this structure:
+
+Restorative repair
+Date/time:
+Young person:
+Linked incident reference:
+What happened:
+Child voice:
+Repair/restorative conversation:
+Agreed actions:
+Outcome:
+Follow-up:
+Record repair factually after the incident.""",
+    ),
+    (
+        re.compile(r"boundaries|consequences", re.I),
+        "daily_record",
+        """Consequences and boundaries record — use this structure:
+
+Boundaries and consequences
+Date/time:
+Young person:
+Boundary/context:
+What happened:
+Child voice:
+Fair, proportionate staff response:
+Outcome:
+Repair/follow-up:
+Record boundaries fairly without shame language.""",
+    ),
+    (
+        re.compile(r"team\s+learning|debrief", re.I),
+        "incident_record",
+        """Team learning after debrief — use this structure:
+
+Team learning / debrief
+Date/time:
+Incident reference:
+What the team reviewed:
+Child voice/welfare considered:
+Safeguarding learning:
+What worked / what to improve:
+Agreed team actions:
+Owner/date:
+Record learning for staff and team improvement.""",
+    ),
+    (
+        re.compile(r"sccif", re.I),
+        "policy_practice_question",
+        """SCCIF-style evidence checklist:
+
+- Child experience and progress evidence
+- Safeguarding effectiveness
+- Quality of care records
+- Leadership and management oversight
+- Workforce/training evidence
+- Impact — how leaders know outcomes
+- Shortfalls and improvement actions
+
+Hold SCCIF-style evidence that is factual and child-centred — not assertion.""",
+    ),
+    (
+        re.compile(r"quality\s+of\s+care", re.I),
+        "daily_record",
+        """Quality of care in daily recording — include:
+
+- Child voice and what mattered to them
+- Factual description of care provided
+- Choices offered and dignity/respect shown
+- Outcome and follow-up
+- How this evidences quality of care
+
+Paste rough notes and I will help turn them into clear, child-centred recording.""",
+    ),
+    (
+        re.compile(r"risk\s+assessment\s+review", re.I),
+        "manager_oversight_note",
+        """Risk assessment review — manager structure:
+
+Risk assessment review
+Review date:
+Young person:
+Current risks known:
+What is missing:
+Child voice considered:
+Threshold/rationale:
+Decisions and plan updates:
+Owner/date:
+Follow-up review:""",
+    ),
+    (
+        re.compile(r"placement\s+plan\s+review", re.I),
+        "manager_oversight_note",
+        """Placement plan review — structure:
+
+Placement plan review
+Review date:
+Young person:
+Placement stability/progress:
+Child voice:
+Multi-agency feedback:
+Risks and support needed:
+Agreed actions:
+Owner/date:""",
+    ),
+    (
+        re.compile(r"safer\s+recruitment|workforce\s+compliance", re.I),
+        "manager_oversight_note",
+        """Safer recruitment / workforce compliance record:
+
+Review date:
+Workforce checks/training sampled:
+Safer recruitment compliance:
+Gaps/risks identified:
+Actions required:
+Owner/date:
+Follow-up:""",
+    ),
+    (
+        re.compile(r"leadership.*management|management\s+oversight", re.I),
+        "manager_oversight_note",
+        """Leadership and management oversight record:
+
+Period:
+What leadership reviewed:
+Oversight of safeguarding and quality:
+Patterns/trends:
+Decisions and actions:
+Staff learning:
+Evidence trail:
+Follow-up:""",
+    ),
+    (
+        re.compile(r"complaint", re.I),
+        "policy_practice_question",
+        """Complaint record — capture:
+
+- Child voice and exact words where possible
+- What the young person is complaining about
+- When and where
+- Immediate welfare/safety
+- Manager notification
+- Factual record without judgement
+- Follow local complaints policy
+
+Record the complaint factually and escalate to management.""",
+    ),
+    (
+        re.compile(r"notify\s+ofsted|serious\s+event", re.I),
+        "ofsted_preparation",
+        """Serious event / Ofsted notification — record:
+
+- What happened (factual)
+- Immediate safeguarding actions
+- Who to notify (manager, placing authority, Ofsted if required under local policy)
+- Times and rationale
+- Follow-up actions
+
+Follow local notification policy — this does not replace manager/DSL judgement.""",
+    ),
+]
 
 CHILD_VOICE_GUIDANCE_ANSWER = """To capture the child's voice in daily recording:
 
@@ -236,6 +576,7 @@ DETERMINISTIC_ANSWERS: dict[str, str] = {
     "manager_oversight_note": MANAGER_OVERSIGHT_DETERMINISTIC_ANSWER,
     "incident_record": INCIDENT_TEMPLATE_DETERMINISTIC_ANSWER,
     "reg44_visitor": REG44_CHECKLIST_DETERMINISTIC_ANSWER,
+    "ofsted_preparation": OFSTED_PREPARATION_DETERMINISTIC_ANSWER,
 }
 
 
@@ -298,31 +639,32 @@ class OrbExecutionPolicyService:
             convergence.get("depth_tier") or family.get("depth_tier") or "standard"
         )
 
-        if scenario_types and any(s in MANDATORY_SAFEGUARDING_SCENARIOS for s in scenario_types):
+        if self._requires_mandatory_safeguarding(
+            message,
+            scenario_types=scenario_types,
+            risk_level=risk_level,
+            contract_family=contract_family,
+        ):
+            resolved_contract = contract_family or detect_contract_family(
+                message,
+                scenario_types=scenario_types,
+            )
             return self._mandatory_safeguarding_decision(
-                contract_family=contract_family,
+                contract_family=resolved_contract,
                 depth_tier=depth_tier,
                 scenario_types=scenario_types,
+                message=message,
             )
         if contract_family in MANDATORY_SAFEGUARDING_FAMILIES or depth_tier == "mandatory":
             return self._mandatory_safeguarding_decision(
                 contract_family=contract_family,
                 depth_tier=depth_tier,
                 scenario_types=scenario_types,
-            )
-        if (
-            risk_level in {"high", "critical", "safeguarding"}
-            and scenario_types
-            and not self._is_structure_only_request(message, contract_family)
-        ):
-            return self._mandatory_safeguarding_decision(
-                contract_family=contract_family,
-                depth_tier="mandatory",
-                scenario_types=scenario_types,
+                message=message,
             )
 
         if self._is_child_voice_guidance(message):
-            markers = self._internal_markers_for_family("daily_record")
+            markers = self._internal_markers_for_family("daily_record", message=message)
             return OrbExecutionPolicyDecision(
                 selected_contract="daily_record",
                 depth_tier=depth_tier,
@@ -342,7 +684,7 @@ class OrbExecutionPolicyService:
             )
 
         if self._is_structure_only_request(message, contract_family):
-            markers = self._internal_markers_for_family(contract_family)
+            markers = self._internal_markers_for_family(contract_family, message=message)
             return OrbExecutionPolicyDecision(
                 selected_contract=contract_family,
                 depth_tier=depth_tier,
@@ -363,14 +705,17 @@ class OrbExecutionPolicyService:
             )
 
         if contract_family in DETERMINISTIC_TEMPLATE_FAMILIES and not self._has_generation_content(message):
-            markers = self._internal_markers_for_family(contract_family)
+            markers = self._internal_markers_for_family(contract_family, message=message)
+            contextual = self._contextual_practice_template(message)
             return OrbExecutionPolicyDecision(
-                selected_contract=contract_family,
+                selected_contract=contextual[1] if contextual else contract_family,
                 depth_tier=depth_tier,
                 execution_policy="internal_template_plus_validator",
                 retrieval_policy="contract_only",
                 openai_policy="never",
-                deterministic_answer_available=contract_family in DETERMINISTIC_ANSWERS,
+                deterministic_answer_available=(
+                    contract_family in DETERMINISTIC_ANSWERS or contextual is not None
+                ),
                 scenario_bank_policy="skip",
                 embedding_policy="skip",
                 repair_policy="local_validator_first",
@@ -398,7 +743,10 @@ class OrbExecutionPolicyService:
                 embeddings_allowed=True,
                 scenario_bank_allowed=True,
                 openai_reason="complex_professional_reasoning",
-                internal_knowledge_markers=self._internal_markers_for_family(contract_family),
+                internal_knowledge_markers=self._internal_markers_for_family(
+                    contract_family,
+                    message=message,
+                ),
             )
 
         return OrbExecutionPolicyDecision(
@@ -416,7 +764,10 @@ class OrbExecutionPolicyService:
             embeddings_allowed=False,
             scenario_bank_allowed=False,
             openai_reason="generation_required",
-            internal_knowledge_markers=self._internal_markers_for_family(contract_family),
+            internal_knowledge_markers=self._internal_markers_for_family(
+                contract_family,
+                message=message,
+            ),
         )
 
     def try_deterministic_answer(
@@ -443,7 +794,19 @@ class OrbExecutionPolicyService:
             return None
 
         family_id = decision.selected_contract
-        answer = DETERMINISTIC_ANSWERS.get(family_id or "")
+        answer = ""
+        if (
+            re.search(r"\breg\s*45\b", str(message or ""), re.I)
+            and re.search(r"\b(review|cover|structure|headings?)\b", str(message or ""), re.I)
+        ):
+            answer = REG45_REVIEW_DETERMINISTIC_ANSWER
+            family_id = family_id or "manager_oversight_note"
+        if not answer:
+            contextual = self._contextual_practice_template(message)
+            if contextual:
+                answer, family_id = contextual
+        if not answer:
+            answer = DETERMINISTIC_ANSWERS.get(family_id or "")
         if not answer and self._is_child_voice_guidance(message):
             answer = CHILD_VOICE_GUIDANCE_ANSWER
             family_id = family_id or "daily_record"
@@ -510,13 +873,60 @@ class OrbExecutionPolicyService:
             telemetry["optimisation_gap"] = policy_dict.get("optimisation_gap")
         return telemetry
 
+    def _contextual_practice_template(self, message: str) -> tuple[str, str] | None:
+        text = str(message or "").strip()
+        if not text or self._has_generation_content(text):
+            return None
+        for pattern, family_id, template in CONTEXTUAL_PRACTICE_TEMPLATES:
+            if pattern.search(text):
+                return template, family_id
+        return None
+
+    def _requires_mandatory_safeguarding(
+        self,
+        message: str,
+        *,
+        scenario_types: list[str],
+        risk_level: str,
+        contract_family: str | None,
+    ) -> bool:
+        if scenario_types and any(s in MANDATORY_SAFEGUARDING_SCENARIOS for s in scenario_types):
+            return True
+        if contract_family in MANDATORY_SAFEGUARDING_FAMILIES:
+            return True
+        lower = str(message or "").lower()
+        if re.search(r"\bsafeguarding\s+concern\b", lower):
+            return True
+        if risk_level in {"high", "critical", "safeguarding"} and re.search(
+            r"\b(safeguard|missing from|disclosed|allegation|self[- ]?harm|suicid|"
+            r"exploitation|blackmail|nude|restraint|medication error)\b",
+            lower,
+        ):
+            if self._is_structure_only_request(message, contract_family):
+                return False
+            return True
+        return False
+
     def _mandatory_safeguarding_decision(
         self,
         *,
         contract_family: str | None,
         depth_tier: str,
         scenario_types: list[str],
+        message: str = "",
     ) -> OrbExecutionPolicyDecision:
+        markers = self._internal_markers_for_family(contract_family, message=message)
+        for scenario in scenario_types:
+            markers.extend(SCENARIO_INTERNAL_MARKERS.get(scenario) or [])
+        markers.extend(["safeguarding", "escalation"])
+        deduped_markers: list[str] = []
+        seen: set[str] = set()
+        for marker in markers:
+            key = marker.lower()
+            if key in seen:
+                continue
+            seen.add(key)
+            deduped_markers.append(marker)
         return OrbExecutionPolicyDecision(
             selected_contract=contract_family,
             depth_tier="mandatory",
@@ -532,7 +942,7 @@ class OrbExecutionPolicyService:
             embeddings_allowed=False,
             scenario_bank_allowed=True,
             openai_reason="mandatory_safeguarding_generation",
-            internal_knowledge_markers=["safeguarding", "escalation_boundary", "do_not_investigate"],
+            internal_knowledge_markers=deduped_markers[:16],
         )
 
     def _is_structure_only_request(self, message: str, family_id: str | None) -> bool:
@@ -552,6 +962,13 @@ class OrbExecutionPolicyService:
 
     def _has_generation_content(self, message: str) -> bool:
         text = str(message or "").strip()
+        if re.search(
+            r"^(when\s+must|what\s+should|how\s+should|what\s+sccif|"
+            r"what\s+evidence|help\s+me\s+prepare\s+for|what\s+should\s+leadership)",
+            text,
+            re.I,
+        ) and not GENERATION_REQUIRED_PATTERNS.search(text):
+            return False
         if len(text.split()) > 18:
             return True
         if GENERATION_REQUIRED_PATTERNS.search(text):
@@ -607,6 +1024,8 @@ class OrbExecutionPolicyService:
             "quality of care",
             "leadership and management",
             "sccif",
+            "complaint about staff",
+            "make a complaint",
         )
         return any(term in lower for term in enhanced_terms)
 
@@ -636,18 +1055,57 @@ class OrbExecutionPolicyService:
             r"\b(record|recording|capture|daily)\b", text, re.I
         ):
             return "daily_record"
+        if re.search(r"\breg\s*45\b", text, re.I):
+            return "manager_oversight_note"
+        if re.search(r"\bsccif\b", text, re.I):
+            return "policy_practice_question"
+        if re.search(r"leadership.*management|management\s+oversight", text, re.I):
+            return "manager_oversight_note"
+        if re.search(r"ofsted\s+inspection|ofsted\s+prep", text, re.I) and re.search(
+            r"\b(evidence|prepare|readiness)\b", text, re.I
+        ):
+            return "ofsted_preparation"
         return None
 
-    def _internal_markers_for_family(self, family_id: str | None) -> list[str]:
+    def _internal_markers_for_family(
+        self,
+        family_id: str | None,
+        *,
+        message: str = "",
+    ) -> list[str]:
         family = get_contract_family(family_id) or {}
         markers = list(family.get("required_markers") or [])
         if family_id == "daily_record":
             markers.extend(["child voice", "factual", "structure"])
+        elif family_id == "keywork_session":
+            markers.extend(["child voice", "session", "purpose", "follow-up"])
         elif family_id == "handover":
             markers.extend(["handover", "shift", "follow-up"])
+        elif family_id == "manager_oversight_note":
+            markers.extend(["oversight", "pattern", "manager", "known", "missing"])
+        elif family_id == "reg44_visitor":
+            markers.extend(["reg 44", "evidence", "child voice"])
+        elif family_id == "ofsted_preparation":
+            markers.extend(["ofsted", "evidence", "safeguarding"])
+        elif family_id == "incident_record":
+            markers.extend(["safety", "online", "restraint", "repair"])
+        elif family_id == "accessible_child_support_plan":
+            markers.extend(["communication", "widgets", "plan", "child-centred"])
         elif family_id in MANDATORY_SAFEGUARDING_FAMILIES:
             markers.extend(["safeguarding", "escalation"])
-        return markers[:12]
+        lower = str(message or "").lower()
+        for pattern, extra in PROMPT_DOMAIN_INTERNAL_MARKERS:
+            if pattern.search(lower):
+                markers.extend(extra)
+        deduped: list[str] = []
+        seen: set[str] = set()
+        for marker in markers:
+            key = marker.lower()
+            if key in seen:
+                continue
+            seen.add(key)
+            deduped.append(marker)
+        return deduped[:16]
 
 
 orb_execution_policy_service = OrbExecutionPolicyService()

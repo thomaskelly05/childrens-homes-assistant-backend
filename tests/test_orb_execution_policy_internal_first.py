@@ -76,6 +76,35 @@ def test_daily_note_selects_daily_record_contract():
     assert policy.selected_contract == "daily_record"
 
 
+def test_keywork_headings_use_deterministic_execution():
+    policy = orb_execution_policy_service.resolve("Give me headings for a key-work session")
+    assert policy.selected_contract == "keywork_session"
+    assert policy.execution_policy == "deterministic_only"
+    assert policy.openai_allowed is False
+    det = orb_execution_policy_service.try_deterministic_answer(
+        "Give me headings for a key-work session",
+        policy=policy,
+    )
+    assert det is not None
+    assert "child voice" in det["answer"].lower()
+
+
+def test_reg44_checklist_uses_deterministic_execution():
+    policy = orb_execution_policy_service.resolve("Give me a Reg 44 evidence checklist")
+    assert policy.selected_contract == "reg44_visitor"
+    assert policy.execution_policy == "deterministic_only"
+    assert policy.openai_allowed is False
+
+
+def test_missing_from_home_maps_contract_and_markers():
+    prompt = "A young person is missing from the home right now — what do I do?"
+    policy = orb_execution_policy_service.resolve(prompt)
+    assert policy.execution_policy == "openai_mandatory_safeguarding"
+    assert policy.selected_contract == "missing_return_record"
+    markers = " ".join(policy.internal_knowledge_markers).lower()
+    assert "missing" in markers and "welfare" in markers
+
+
 def test_daily_note_uses_deterministic_execution():
     policy = orb_execution_policy_service.resolve("Help me write a daily note", mode="Ask ORB")
     assert policy.execution_policy in {"deterministic_only", "internal_template_plus_validator"}

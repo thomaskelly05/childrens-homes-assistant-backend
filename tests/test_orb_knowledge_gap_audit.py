@@ -35,6 +35,16 @@ def test_audit_report_identifies_missing_knowledge_markers():
     assert daily["openai_would_be_called"] is False
 
 
+def test_audit_v2_reports_improved_readiness():
+    report = orb_knowledge_gap_audit_service.run_audit()
+    assert report["version"] == "orb-knowledge-gap-audit-v2"
+    assert report["overall_readiness_score"] >= 70.0
+    assert report["internal_knowledge_passed"] >= 28
+    assert report["unexpected_openai_calls"] == 0
+    high_gaps = [g for g in report["gaps"] if g.get("severity") == "high"]
+    assert not high_gaps
+
+
 def test_audit_writes_report_files(tmp_path, monkeypatch):
     monkeypatch.setattr(
         "services.orb_knowledge_gap_audit_service.REPORTS_DIR",
