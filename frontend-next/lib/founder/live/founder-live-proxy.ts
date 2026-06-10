@@ -17,6 +17,23 @@ const LIVE_CACHE_TTL: Record<string, number> = {
 
 const MAX_LIVE_CONCURRENCY = 3
 
+const INSPECTION_READINESS_UNAVAILABLE = {
+  available: false,
+  source: 'inspection-readiness',
+  items: [] as unknown[],
+  error: 'Inspection readiness temporarily unavailable'
+}
+
+export const INSPECTION_READINESS_LIMITATION = 'Inspection readiness source temporarily unavailable'
+
+export const FOUNDER_OPTIONAL_LIVE_SECTIONS = new Set([
+  'inspection-readiness',
+  'orb-billing-usage',
+  'orb-feedback-summary',
+  'providers',
+  'homes'
+])
+
 type LiveProxyTarget = {
   backendPath: string
   emptyState?: unknown
@@ -130,6 +147,13 @@ async function fetchLiveTarget(
     })
 
     if (!upstream.ok) {
+      if (targetKey === 'inspection-readiness') {
+        return {
+          key: targetKey,
+          data: INSPECTION_READINESS_UNAVAILABLE,
+          error: 'unavailable'
+        }
+      }
       if (target.treat404AsEmpty && upstream.status === 404) {
         cacheSet(liveDataCache, cacheKey, target.emptyState ?? {}, ttl)
         return { key: targetKey, data: target.emptyState ?? {} }
@@ -146,6 +170,13 @@ async function fetchLiveTarget(
     cacheSet(liveDataCache, cacheKey, data, ttl)
     return { key: targetKey, data }
   } catch {
+    if (targetKey === 'inspection-readiness') {
+      return {
+        key: targetKey,
+        data: INSPECTION_READINESS_UNAVAILABLE,
+        error: 'unavailable'
+      }
+    }
     return { key: targetKey, data: target.emptyState ?? {}, error: 'busy' }
   } finally {
     clearTimeout(timer)
@@ -193,7 +224,11 @@ export async function proxyFounderLiveData(
   })
 
   const result = await fetchLiveTarget(request, cookieHeader, targetKey, query)
-  return NextResponse.json(sanitiseFounderPayload({ success: true, data: result.data }), { status: 200 })
+  const data =
+    targetKey === 'inspection-readiness' && result.error === 'unavailable'
+      ? INSPECTION_READINESS_UNAVAILABLE
+      : result.data
+  return NextResponse.json(sanitiseFounderPayload({ success: true, data }), { status: 200 })
 }
 
 export async function buildFounderBootstrapResponse(request: Request): Promise<NextResponse> {
@@ -256,6 +291,7 @@ export async function buildFounderBootstrapResponse(request: Request): Promise<N
   )
 
   const liveSectionErrors: Record<string, string> = {}
+  const limitations: string[] = []
   const liveSummary: Record<string, unknown> = {
     providers: {},
     homes: {},
@@ -266,18 +302,32 @@ export async function buildFounderBootstrapResponse(request: Request): Promise<N
   }
 
   for (const result of liveResults) {
+    if (result.key === 'inspection-readiness') {
+      if (result.error === 'unavailable') {
+        liveSummary.inspectionReadiness = INSPECTION_READINESS_UNAVAILABLE
+        limitations.push(INSPECTION_READINESS_LIMITATION)
+      } else {
+        liveSummary.inspectionReadiness = result.data
+      }
+      continue
+    }
+
     if (result.error) liveSectionErrors[result.key] = 'busy'
     if (result.key === 'providers') liveSummary.providers = result.data
     if (result.key === 'homes') liveSummary.homes = result.data
-    if (result.key === 'inspection-readiness') liveSummary.inspectionReadiness = result.data
     if (result.key === 'orb-billing-usage') liveSummary.billingUsage = result.data
     if (result.key === 'orb-feedback-summary') liveSummary.feedbackSummary = result.data
   }
 
+  const inspectionReadinessUnavailable =
+    typeof liveSummary.inspectionReadiness === 'object' &&
+    liveSummary.inspectionReadiness !== null &&
+    (liveSummary.inspectionReadiness as { available?: boolean }).available === false
+
   const dataSourceStatus = {
     providers: liveSectionErrors.providers ? 'busy' : 'ok',
     homes: liveSectionErrors.homes ? 'busy' : 'ok',
-    readiness: liveSectionErrors['inspection-readiness'] ? 'busy' : 'ok',
+    readiness: inspectionReadinessUnavailable ? 'unavailable' : 'ok',
     billing: liveSectionErrors['orb-billing-usage'] ? 'busy' : 'ok',
     feedback: liveSectionErrors['orb-feedback-summary'] ? 'busy' : 'ok'
   }
@@ -286,6 +336,7 @@ export async function buildFounderBootstrapResponse(request: Request): Promise<N
     ...backendPayload,
     liveSummary,
     dataSourceStatus,
+    limitations,
     sectionErrors: {
       ...((backendPayload.sectionErrors as Record<string, string>) ?? {}),
       ...liveSectionErrors

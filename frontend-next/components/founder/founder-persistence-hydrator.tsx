@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 
 import { FounderDegradedBanner } from '@/components/founder/founder-degraded-banner'
+import { hasFounderCriticalSectionError } from '@/lib/founder/bootstrap/founder-bootstrap-client'
 import {
   getLastFounderBootstrap,
   hydrateAllFounderPersistence
@@ -15,8 +16,7 @@ export function FounderPersistenceHydrator() {
   useEffect(() => {
     void hydrateAllFounderPersistence()
       .then((bootstrap) => {
-        const errors = bootstrap.sectionErrors ?? {}
-        setDegraded(Object.keys(errors).length > 0)
+        setDegraded(hasFounderCriticalSectionError(bootstrap))
       })
       .catch(() => {
         setDegraded(true)
@@ -24,8 +24,7 @@ export function FounderPersistenceHydrator() {
   }, [])
 
   const bootstrap = getLastFounderBootstrap()
-  const showBusy =
-    degraded || Boolean(bootstrap?.sectionErrors && Object.keys(bootstrap.sectionErrors).length > 0)
+  const showBusy = degraded || hasFounderCriticalSectionError(bootstrap)
 
   return (
     <>

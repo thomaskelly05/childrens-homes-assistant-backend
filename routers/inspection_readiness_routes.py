@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import logging
 from datetime import datetime, timezone
 from typing import Any
 
+import psycopg2
 from fastapi import APIRouter, Body, Depends, HTTPException, Query
 
 from auth.dependencies import get_current_user
@@ -19,6 +21,8 @@ from services.document_os_inspection_readiness import (
 )
 from services.inspection_pack_service import inspection_pack_service
 from services.inspection_readiness_service import inspection_readiness_service
+
+logger = logging.getLogger(__name__)
 
 # Legacy document OS / inspection prefix
 legacy_router = APIRouter(prefix="/inspection", tags=["Inspection readiness (legacy)"])
@@ -181,7 +185,16 @@ async def inspection_readiness_dashboard(
     user = _user_dict(current_user)
     _ensure_manager_access(user)
     filters = _filters_from_query(child_id=child_id, staff_id=staff_id, home_id=home_id, limit=limit)
-    dashboard = inspection_readiness_service.build_dashboard(user, filters, conn=conn)
+    try:
+        dashboard = inspection_readiness_service.build_dashboard(user, filters, conn=conn)
+    except Exception as exc:
+        logger.warning("inspection_readiness_dashboard_route_degraded: %s", exc)
+        if conn is not None and isinstance(exc, psycopg2.Error):
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+        dashboard = inspection_readiness_service.build_degraded_dashboard()
     return _success(dashboard.model_dump(mode="json"))
 
 

@@ -1,10 +1,14 @@
 from __future__ import annotations
 
+import logging
 from datetime import date, datetime
 from typing import Any
 from urllib.parse import unquote
 
+import psycopg2
 from psycopg2.extras import RealDictCursor
+
+logger = logging.getLogger(__name__)
 
 from core.policy_engine import context_from_user, policy_engine
 
@@ -118,10 +122,30 @@ def can_write_records(current_user: dict[str, Any]) -> bool:
     return policy_engine.has_permission(current_user, "records:write") or current_role(current_user) in WRITER_ROLES
 
 
-def _table_exists_live(conn: Any, table_name: str) -> bool:
-    with conn.cursor() as cur:
-        cur.execute("SELECT to_regclass(%s) IS NOT NULL AS exists", (f"public.{table_name}",))
-        return row_bool(cur.fetchone(), key="exists")
+def _rollback_connection(conn: Any) -> None:
+    if conn is None:
+        return
+    try:
+        conn.rollback()
+    except Exception:
+        pass
+
+
+def _table_exists_live(conn: Any, table_name: str, *, _retrying: bool = False) -> bool:
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT to_regclass(%s) IS NOT NULL AS exists", (f"public.{table_name}",))
+            return row_bool(cur.fetchone(), key="exists")
+    except psycopg2.errors.InFailedSqlTransaction:
+        if _retrying:
+            logger.warning("table_exists retry failed for %s after rollback", table_name)
+            return False
+        _rollback_connection(conn)
+        return _table_exists_live(conn, table_name, _retrying=True)
+    except psycopg2.Error as exc:
+        logger.warning("table_exists query failed for %s: %s", table_name, exc)
+        _rollback_connection(conn)
+        return False
 
 
 _TABLE_EXISTS_CACHE: dict[str, bool] = {}

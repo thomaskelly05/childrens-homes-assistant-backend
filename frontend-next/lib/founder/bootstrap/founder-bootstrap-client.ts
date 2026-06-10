@@ -128,4 +128,13 @@ export function hasFounderBootstrapSectionError(
   return Boolean(payload?.sectionErrors?.[section])
 }
 
+export const FOUNDER_CRITICAL_SECTIONS = new Set(['persistence', 'telemetrySummary', 'bootstrap'])
+
+export function hasFounderCriticalSectionError(payload: FounderBootstrapPayload | null): boolean {
+  if (!payload?.sectionErrors) return false
+  return Object.entries(payload.sectionErrors).some(
+    ([section, error]) => Boolean(error) && FOUNDER_CRITICAL_SECTIONS.has(section)
+  )
+}
+
 export const FOUNDER_BUSY_MESSAGE = 'Temporarily unavailable. Founder data source is busy.'
