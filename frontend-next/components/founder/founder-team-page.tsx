@@ -15,6 +15,7 @@ import {
   FULL_OPERATING_LOOP_PLAN
 } from '@/lib/founder/operating-loop'
 import { getAllStaffAgents, getStaffTeamOverview, runStaffAgent } from '@/lib/founder/team'
+import { FounderEvidenceQuickLink } from '@/components/founder/founder-evidence-quick-link'
 import {
   getFounderTelemetrySummary,
   hydrateFounderTelemetryFromLiveData,
@@ -93,6 +94,11 @@ export function FounderTeamPage() {
           title="Founder Staff Team"
           subtitle="Private operating team for IndiCare Intelligence. All external-facing outputs require your approval before publishing."
         />
+
+        <p className="text-sm text-slate-400">
+          Investor Relations, Partnerships and Evidence Pack agents generate packs through the{' '}
+          <FounderEvidenceQuickLink className="inline-flex items-center gap-1 font-semibold text-cyan-300 hover:text-cyan-200" label="Evidence Engine" />.
+        </p>
 
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
           {[

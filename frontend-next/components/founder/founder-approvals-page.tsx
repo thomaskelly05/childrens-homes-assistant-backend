@@ -13,6 +13,7 @@ import {
   rejectApprovalItem,
   requestChanges
 } from '@/lib/founder/approvals'
+import { FounderEvidenceQuickLink } from '@/components/founder/founder-evidence-quick-link'
 
 export function FounderApprovalsPage() {
   const [, setTick] = useState(0)
@@ -31,6 +32,11 @@ export function FounderApprovalsPage() {
           title="Approval Centre"
           subtitle="Review anything before it goes external or affects the platform. No external action can happen unless approved."
         />
+
+        <p className="text-sm text-slate-400">
+          Evidence packs require approval before external copy or sharing. Review generated packs in the{' '}
+          <FounderEvidenceQuickLink className="inline-flex items-center gap-1 font-semibold text-cyan-300 hover:text-cyan-200" label="Evidence Engine" />.
+        </p>
 
         {all.length === 0 ? (
           <div className="founder-surface rounded-[28px] border border-white/10 bg-white/[0.04] p-12 text-center">

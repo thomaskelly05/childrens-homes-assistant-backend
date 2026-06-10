@@ -19,6 +19,7 @@ import { getFounderStrategicContext } from '@/lib/founder/memory/founder-memory-
 import { getOperatingLoopRuns } from '@/lib/founder/operating-loop/operating-loop-store'
 import { getQualityLabSummary } from '@/lib/founder/quality-lab/quality-run-service'
 import { getFounderTelemetrySummary } from '@/lib/founder/telemetry'
+import { getAuditLogMemorySnapshot } from '@/lib/founder/persistence/repositories/audit-log-repository'
 import { nextId } from '@/lib/founder/persistence/repositories/repository-base'
 import type { EvidencePoint, EvidenceSourceBundle } from './evidence-types'
 
@@ -333,6 +334,19 @@ export function buildEvidenceSources(): EvidenceSourceBundle {
         'Operating loop runs coordinate founder staff agents.',
         loopRuns.map((r) => `${r.status} run ${new Date(r.startedAt).toLocaleDateString('en-GB')}`).join('; '),
         'Operating Loop',
+        'audit-log',
+        'medium'
+      )
+    )
+  }
+
+  const recentAudit = getAuditLogMemorySnapshot(5)
+  if (recentAudit.length > 0) {
+    governanceEvidence.push(
+      point(
+        'Audit trail records founder actions and approval decisions.',
+        recentAudit.map((e) => e.summary).join('; '),
+        'Audit Trail',
         'audit-log',
         'medium'
       )

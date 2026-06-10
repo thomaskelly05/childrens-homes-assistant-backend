@@ -21,6 +21,7 @@ import {
 } from '@/lib/founder/operating-loop'
 import { hydrateFounderTelemetryFromLiveData, refreshFounderTelemetrySummary } from '@/lib/founder/telemetry'
 import { refreshFounderDashboardData } from '@/lib/founder/intelligence-service'
+import { FounderEvidenceQuickLink } from '@/components/founder/founder-evidence-quick-link'
 
 const STATUS_TONE: Record<string, string> = {
   completed: 'text-emerald-300',
@@ -212,9 +213,12 @@ export function FounderOperatingLoopPage() {
             ) : (
               <p className="text-sm text-slate-500">No pending approvals.</p>
             )}
-            <Link href="/founder/approvals" className="mt-3 inline-flex text-sm font-semibold text-cyan-300">
-              Open Approvals →
-            </Link>
+            <div className="mt-3 flex flex-wrap gap-4">
+              <Link href="/founder/approvals" className="inline-flex text-sm font-semibold text-cyan-300">
+                Open Approvals →
+              </Link>
+              <FounderEvidenceQuickLink />
+            </div>
           </FounderSectionCard>
         </div>
 

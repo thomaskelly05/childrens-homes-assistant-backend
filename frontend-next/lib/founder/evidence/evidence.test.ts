@@ -80,8 +80,26 @@ describe('Founder Evidence Engine V1', () => {
     const types = read('lib/founder/persistence/founder-persistence-types.ts')
     assert.match(types, /evidence_pack/)
     assert.match(types, /FounderEvidencePackRecord/)
-    const client = read('lib/founder/persistence/founder-api-client.ts')
-    assert.match(client, /evidence-packs/)
+    const entities = read('lib/founder/persistence/founder-api-entities.ts')
+    assert.match(entities, /evidence-packs/)
+    const apiClient = read('lib/founder/api/founder-api-client.ts')
+    assert.match(apiClient, /evidence_pack: 'evidence-packs'/)
+  })
+
+  it('evidence page does not create a founder request storm on load', () => {
+    const page = read('components/founder/founder-evidence-page.tsx')
+    assert.doesNotMatch(page, /founderGet/)
+    assert.match(page, /hydrateEvidencePacksFromPersistence/)
+    assert.match(page, /getEvidencePacks\(\)/)
+  })
+
+  it('evidence page uses bootstrap persistence cache', () => {
+    const page = read('components/founder/founder-evidence-page.tsx')
+    const sync = read('lib/founder/persistence/founder-persistence-sync.ts')
+    const store = read('lib/founder/evidence/evidence-store.ts')
+    assert.match(sync, /hydrateEvidencePacksFromPersistence/)
+    assert.match(store, /evidencePackRepository\.list/)
+    assert.match(page, /buildEvidenceSources/)
   })
 
   it('approval service syncs evidence pack decisions', () => {

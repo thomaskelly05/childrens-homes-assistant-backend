@@ -24,6 +24,7 @@ import {
   instrumentOrbResponseGenerated
 } from '@/lib/founder/telemetry/founder-telemetry-instrumentation'
 import { getFounderTelemetrySummary } from '@/lib/founder/telemetry'
+import { FounderEvidenceQuickLink } from '@/components/founder/founder-evidence-quick-link'
 
 function createMessageId(prefix: string) {
   return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`
@@ -179,6 +180,15 @@ export function FounderOrbPage() {
                 </div>
               </section>
             ) : null}
+            <section className="founder-surface rounded-[28px] border border-white/10 bg-white/[0.04] p-4 backdrop-blur-xl">
+              <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500">Evidence Engine</p>
+              <p className="mt-2 text-xs leading-6 text-slate-400">
+                Ask about investor packs, provider evidence, limitations or unsafe claims — or open the dashboard.
+              </p>
+              <div className="mt-3">
+                <FounderEvidenceQuickLink className="inline-flex items-center gap-1.5 text-xs font-bold text-cyan-300 hover:text-cyan-200" />
+              </div>
+            </section>
             <section className="founder-surface rounded-[28px] border border-white/10 bg-white/[0.04] p-4 backdrop-blur-xl">
               <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500">Suggested prompts</p>
               <div className="mt-3 space-y-2">

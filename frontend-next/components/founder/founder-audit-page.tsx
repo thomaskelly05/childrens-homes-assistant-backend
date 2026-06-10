@@ -5,6 +5,7 @@ import { ChevronDown, ChevronUp } from 'lucide-react'
 
 import { FounderNavHeader } from '@/components/founder/founder-nav-header'
 import { FounderSectionCard } from '@/components/founder/founder-section-card'
+import { FounderEvidenceQuickLink } from '@/components/founder/founder-evidence-quick-link'
 import { listAuditLog } from '@/lib/founder/persistence'
 import type { FounderAuditLogRecord, FounderEntityType } from '@/lib/founder/persistence/founder-persistence-types'
 
@@ -20,7 +21,8 @@ const FILTER_OPTIONS: Array<{ id: string; label: string; entityType?: FounderEnt
   { id: 'safety', label: 'Safety', entityType: 'safety_review' },
   { id: 'staff', label: 'Staff team', entityType: 'staff_team_run' },
   { id: 'agents', label: 'Agent runs', entityType: 'agent_run' },
-  { id: 'memory', label: 'Founder memory', entityType: 'founder_memory' }
+  { id: 'memory', label: 'Founder memory', entityType: 'founder_memory' },
+  { id: 'evidence', label: 'Evidence packs', entityType: 'evidence_pack' }
 ]
 
 function AuditRow({ entry }: { entry: FounderAuditLogRecord }) {
@@ -90,6 +92,12 @@ export function FounderAuditPage() {
           title="Founder Audit Trail"
           subtitle="Private record of agent outputs, approvals, quality reviews and founder decisions."
         />
+
+        <p className="text-sm text-slate-400">
+          Evidence pack create, update and approval events are recorded here. Open the{' '}
+          <FounderEvidenceQuickLink className="inline-flex items-center gap-1 font-semibold text-cyan-300 hover:text-cyan-200" label="Evidence Engine" />{' '}
+          to review packs.
+        </p>
 
         <FounderSectionCard eyebrow="Filters" title="Audit events">
           <div className="mb-4 flex flex-wrap gap-2">

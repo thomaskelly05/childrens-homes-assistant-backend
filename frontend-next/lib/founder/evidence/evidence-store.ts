@@ -6,7 +6,7 @@ import { baseTimestamps } from '@/lib/founder/persistence/repositories/repositor
 import { checkFounderOutputSafety } from '@/lib/founder/safety/founder-output-safety'
 import {
   formatEvidencePackText,
-  generateEvidencePack,
+  generateEvidencePack as buildEvidencePackDraft,
   overallPackConfidence
 } from './evidence-pack-generator'
 import type { EvidenceAudience, EvidencePack } from './evidence-types'
@@ -174,13 +174,16 @@ export async function archiveEvidencePack(id: string, actor = 'founder'): Promis
   return archived
 }
 
-export async function generateEvidencePackForAudience(
+export async function generateEvidencePack(
   audience: EvidenceAudience,
   createdBy = 'founder'
 ): Promise<EvidencePack> {
-  const pack = generateEvidencePack(audience, createdBy)
+  const pack = buildEvidencePackDraft(audience, createdBy)
   return createEvidencePack(pack, { actor: createdBy })
 }
+
+/** @deprecated Use generateEvidencePack */
+export const generateEvidencePackForAudience = generateEvidencePack
 
 export async function submitPackForApproval(id: string, actor = 'founder'): Promise<EvidencePack | undefined> {
   const pack = getEvidencePack(id)

@@ -5,6 +5,7 @@ import { Archive, Search } from 'lucide-react'
 
 import { FounderNavHeader } from '@/components/founder/founder-nav-header'
 import { FounderSectionCard } from '@/components/founder/founder-section-card'
+import { FounderEvidenceQuickLink } from '@/components/founder/founder-evidence-quick-link'
 import {
   FOUNDER_MEMORY_TYPE_LABELS,
   archiveFounderMemoryItem,
@@ -132,6 +133,12 @@ export function FounderMemoryPage() {
           title="Founder Memory"
           subtitle="Private strategic memory for IndiCare Intelligence."
         />
+
+        <p className="text-sm text-slate-400">
+          Strategic memory feeds the{' '}
+          <FounderEvidenceQuickLink className="inline-flex items-center gap-1 font-semibold text-cyan-300 hover:text-cyan-200" label="Evidence Engine" />{' '}
+          for honest investor and partner packs.
+        </p>
 
         <FounderSectionCard eyebrow="Strategic context" title="Strategic Context">
           <div className="grid gap-4 md:grid-cols-2">
