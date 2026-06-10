@@ -21,8 +21,28 @@ describe('Founder Revenue Intelligence V1', () => {
   it('unavailable billing shows unavailable snapshot source in builder', () => {
     const builder = read('lib/founder/revenue/revenue-source-builder.ts')
     assert.match(builder, /Live billing source not connected/)
-    assert.match(builder, /source === 'unavailable' \? null/)
+    assert.doesNotMatch(builder, /next\/headers/)
+    assert.doesNotMatch(builder, /revenue-server-context/)
+    assert.match(read('lib/founder/revenue/revenue-snapshot-utils.ts'), /source === 'unavailable' \? null/)
     assert.match(builder, /do not invent paid users/)
+  })
+
+  it('server-only revenue modules are isolated from client import chains', () => {
+    const clientBuilder = read('lib/founder/revenue/revenue-source-builder.ts')
+    const evidenceBuilder = read('lib/founder/evidence/evidence-source-builder.ts')
+    const serverBuilder = read('lib/founder/revenue/revenue-source-builder.server.ts')
+    const serverContext = read('lib/founder/revenue/revenue-server-context.ts')
+    const serverStore = read('lib/founder/revenue/revenue-store.server.ts')
+    const revenueApi = read('lib/founder/revenue/revenue-api.ts')
+
+    assert.doesNotMatch(clientBuilder, /next\/headers/)
+    assert.doesNotMatch(evidenceBuilder, /revenue-server-context/)
+    assert.doesNotMatch(evidenceBuilder, /revenue-source-builder\.server/)
+    assert.match(serverBuilder, /server-only/)
+    assert.match(serverContext, /server-only/)
+    assert.match(serverStore, /getRevenueSnapshotServer/)
+    assert.match(revenueApi, /getRevenueSnapshotServer/)
+    assert.doesNotMatch(read('components/founder/founder-evidence-page.tsx'), /revenue-server-context/)
   })
 
   it('forecasts are labelled as assumptions', () => {

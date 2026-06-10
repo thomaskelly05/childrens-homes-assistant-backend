@@ -2,6 +2,8 @@
  * Server-side revenue context — fetches live founder data without browser fetch.
  */
 
+import 'server-only'
+
 import { cookies } from 'next/headers'
 
 import { getInternalBackendOrigin } from '@/lib/auth/api-base'

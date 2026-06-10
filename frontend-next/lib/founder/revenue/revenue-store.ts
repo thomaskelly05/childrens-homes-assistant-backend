@@ -13,7 +13,7 @@ import {
   type ForecastInput
 } from './revenue-forecast-engine'
 import { buildCommercialRisks, buildFinanceRecommendations } from './revenue-risks'
-import { buildRevenueSources, buildRevenueSourcesServer } from './revenue-source-builder'
+import { buildRevenueSources } from './revenue-source-builder'
 import type {
   ForecastScenario,
   PricingModel,
@@ -44,8 +44,6 @@ function defaultForecastInput(): ForecastInput {
 }
 
 export async function getRevenueSnapshot(options?: {
-  server?: boolean
-  request?: Request
   forceRefresh?: boolean
 }): Promise<{
   snapshot: RevenueSnapshot
@@ -69,9 +67,7 @@ export async function getRevenueSnapshot(options?: {
     }
   }
 
-  const built = options?.server
-    ? await buildRevenueSourcesServer(options.request)
-    : buildRevenueSources()
+  const built = buildRevenueSources()
 
   cachedSnapshot = built.snapshot
   snapshotCachedAt = now
