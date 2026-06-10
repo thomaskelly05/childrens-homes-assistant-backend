@@ -21,6 +21,7 @@ import type {
   FounderOperatingLoopRun,
   OperatingLoopResult
 } from '@/lib/founder/operating-loop/operating-loop-types'
+import type { EvidencePack } from '@/lib/founder/evidence/evidence-types'
 import type { FounderMemoryItem } from '@/lib/founder/memory/founder-memory-types'
 import type { FounderStaffAgentId } from '@/lib/founder/team/founder-team-types'
 
@@ -55,6 +56,7 @@ export type FounderEntityType =
   | 'expert_review'
   | 'safety_review'
   | 'founder_memory'
+  | 'evidence_pack'
   | 'audit_log'
 
 export type FounderActionRecord = FounderPersistedBase & {
@@ -73,6 +75,7 @@ export type FounderApprovalRecord = FounderPersistedBase & {
   linkedContentId?: string
   linkedBuildBriefId?: string
   linkedQualityProposalId?: string
+  linkedEvidencePackId?: string
 }
 
 export type FounderContentDraftRecord = FounderPersistedBase & {
@@ -180,6 +183,14 @@ export type FounderSafetyReviewRecord = FounderPersistedBase & {
 export type FounderMemoryRecord = FounderPersistedBase & {
   status: FounderMemoryItem['status']
   item: FounderMemoryItem
+}
+
+export type FounderEvidencePackStatus = EvidencePack['status']
+
+export type FounderEvidencePackRecord = FounderPersistedBase & {
+  status: FounderEvidencePackStatus
+  pack: EvidencePack
+  linkedApprovalId?: string
 }
 
 export type FounderAuditEventType =

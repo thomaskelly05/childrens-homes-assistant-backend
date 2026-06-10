@@ -217,6 +217,43 @@ def test_founder_memory_requires_founder_role(staff_client):
     assert response.status_code == 403
 
 
+def test_evidence_pack_create(admin_client):
+    response = admin_client.post(
+        "/founder-os/persistence/evidence-packs",
+        json={
+            "record": {
+                "status": "needs-review",
+                "pack": {
+                    "id": "pack-1",
+                    "title": "Investor Evidence Pack",
+                    "audience": "investor",
+                    "purpose": "Honest investor narrative",
+                    "status": "needs-review",
+                    "dataBasis": "founder memory only",
+                    "createdAt": "2026-06-09T12:00:00+00:00",
+                    "updatedAt": "2026-06-09T12:00:00+00:00",
+                    "createdBy": "founder",
+                    "sections": [],
+                    "safetyReview": {
+                        "safe": True,
+                        "issues": [],
+                        "requiresReview": False,
+                        "reviewedAt": "2026-06-09T12:00:00+00:00",
+                    },
+                    "limitations": ["Live data not yet available."],
+                },
+            }
+        },
+    )
+    assert response.status_code == 200
+    assert response.json()["data"]["pack"]["audience"] == "investor"
+
+
+def test_evidence_pack_requires_founder_role(staff_client):
+    response = staff_client.get("/founder-os/persistence/evidence-packs")
+    assert response.status_code == 403
+
+
 def test_quality_proposal_create(admin_client):
     response = admin_client.post(
         "/founder-os/persistence/quality-proposals",

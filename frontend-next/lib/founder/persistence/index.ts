@@ -16,4 +16,5 @@ export {
 export { expertReviewRepository } from './repositories/expert-review-repository'
 export { safetyReviewRepository } from './repositories/safety-review-repository'
 export { memoryRepository } from './repositories/memory-repository'
+export { evidencePackRepository } from './repositories/evidence-pack-repository'
 export { appendAuditLog, listAuditLog } from './repositories/audit-log-repository'
