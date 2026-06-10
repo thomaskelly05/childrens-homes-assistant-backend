@@ -12,7 +12,11 @@ from typing import Any, Pattern
 
 from services.orb_fast_opening_service import strip_streaming_artifacts_from_answer
 from services.orb_mandatory_response_contract_service import MANDATORY_CONTRACTS
+from services.orb_placeholder_quality_guard_service import sanitize_placeholders_in_answer
 from services.orb_therapeutic_language_contract_service import GENERIC_WEAK_PHRASES
+
+# Warn in QA/tests when standard non-risk prompt assembly exceeds this size.
+STANDARD_DEPTH_PROMPT_CHAR_CAP = 25000
 
 # Universal forbidden patterns in final answers (streaming leakage, generic AI filler, broken placeholders).
 UNIVERSAL_FORBIDDEN_PATTERNS: tuple[str, ...] = (
@@ -78,12 +82,21 @@ ORB_ANSWER_CONTRACT_FAMILIES: dict[str, dict[str, Any]] = {
             ),
         ],
         "required_markers": [
-            "communication",
+            "my support plan",
             "dream",
             "aspiration",
+            "widget",
+            "communication",
+            "yes",
+            "no",
+            "stop",
+            "help",
+            "pain",
+            "worried",
             "adult",
-            "review",
             "independence",
+            "adulthood",
+            "review",
         ],
         "required_sections": [
             "Child-facing plan first",
@@ -104,6 +117,8 @@ ORB_ANSWER_CONTRACT_FAMILIES: dict[str, dict[str, Any]] = {
             "full guidance is on the way",
             "it is essential to",
             "here's a structured template you can adapt",
+            "creating a child-friendly support plan",
+            "tailored to their individual needs",
         ],
         "public_considerations": [
             "Child-centred planning",
@@ -716,6 +731,22 @@ def build_contract_prompt_block(family_id: str | None) -> str:
         "Required answer shape:",
         *[f"- {section}" for section in (family.get("required_sections") or [])[:14]],
     ]
+    if family_id == "accessible_child_support_plan":
+        lines.extend(
+            [
+                "",
+                "Output structure (child-facing first):",
+                "- Title: My Support Plan",
+                "- Opening: This plan helps adults understand me, listen to me and support my future.",
+                "- Sections: About me; My dreams and future; My widgets and how I communicate;",
+                "  How I tell people yes/no/stop/help/pain/worried/happy; What helps me;",
+                "  What makes things hard; Daily support; Independence goals; People who help me;",
+                "  How adults should support me; Things adults should not do; Reviewing my plan;",
+                "  Adult guidance for using this plan.",
+                "- Use clean [Add ...] placeholders only — never truncate with ellipsis inside brackets.",
+                "- Do not begin with generic AI introductions.",
+            ]
+        )
     forbidden = family.get("forbidden_patterns") or []
     if forbidden:
         lines.append("Forbidden in final answer:")
@@ -765,7 +796,7 @@ def sanitize_final_answer(
 ) -> str:
     """Strip streaming artifacts, broken placeholders, and universal forbidden leakage."""
     cleaned = strip_streaming_artifacts_from_answer(answer, fast_opening=fast_opening)
-    cleaned = BROKEN_PLACEHOLDER_RE.sub("[add detail here]", cleaned)
+    cleaned, _ = sanitize_placeholders_in_answer(cleaned)
     cleaned = INTERNAL_METADATA_RE.sub("", cleaned)
     cleaned = re.sub(r"\n{3,}", "\n\n", cleaned).strip()
     return cleaned
@@ -777,18 +808,25 @@ def validate_contract_answer(
     family_id: str | None,
     fast_opening: str | None = None,
 ) -> dict[str, Any]:
-    sanitized = sanitize_final_answer(answer, family_id=family_id, fast_opening=fast_opening)
-    forbidden = find_forbidden_patterns(sanitized, family_id=family_id)
-    missing = find_missing_markers(sanitized, family_id=family_id)
+    from services.orb_final_answer_contract_validator_service import validate_final_answer_contract
+
+    validation = validate_final_answer_contract(
+        answer,
+        contract_family=family_id,
+        fast_opening=fast_opening,
+    )
     family = get_contract_family(family_id) or {}
+    missing = validation.get("missing_required_markers") or []
+    forbidden = validation.get("forbidden_patterns") or []
     return {
         "family_id": family_id,
         "contract_label": family.get("label"),
         "depth_tier": family.get("depth_tier"),
-        "sanitized_answer": sanitized,
+        "sanitized_answer": validation.get("sanitized_answer") or "",
         "forbidden_patterns": forbidden,
         "missing_markers": missing,
-        "passed": not forbidden,
+        "placeholder_issues": validation.get("placeholder_issues") or [],
+        "passed": validation.get("passed", False),
         "needs_review": bool(missing) and family_id not in {
             "voice_response",
             "make_more_concise",
@@ -833,9 +871,39 @@ def evaluate_routing_contract(
 
 def run_golden_prompt_routing_qa() -> dict[str, Any]:
     """Founder/admin QA pack — routing contract activation without live LLM calls."""
+    report = run_golden_prompt_full_qa(include_answer_quality=False)
+    return {
+        "total": report["total"],
+        "passed": report["routing_passed"],
+        "failed": report["routing_failed"],
+        "needs_review": report["needs_review"],
+        "failures": [
+            f
+            for f in report["failures"]
+            if not f.get("contract_selection_passed", True)
+        ],
+        "results": [
+            {
+                "prompt_id": r["prompt_id"],
+                "contract": r.get("contract_family"),
+                "expected_contract": r.get("expected_contract"),
+                "depth_tier": r.get("depth_tier"),
+                "passed": r.get("contract_selection_passed"),
+            }
+            for r in report["results"]
+        ],
+    }
+
+
+def run_golden_prompt_full_qa(*, include_answer_quality: bool = True) -> dict[str, Any]:
+    """Golden prompt QA — routing selection plus optional final-answer quality checks."""
+    from services.orb_final_answer_repair_service import canonical_answer_for_qa
+
     results: list[dict[str, Any]] = []
-    passed = 0
-    failed = 0
+    routing_passed = 0
+    routing_failed = 0
+    answer_passed = 0
+    answer_failed = 0
     needs_review = 0
     failures: list[dict[str, Any]] = []
 
@@ -848,29 +916,59 @@ def run_golden_prompt_routing_qa() -> dict[str, Any]:
             feature=item.get("feature"),
         )
         expected = item["contract"]
-        ok = routing.get("contract_family") == expected
-        entry = {
+        contract_ok = routing.get("contract_family") == expected
+        entry: dict[str, Any] = {
             "prompt_id": item["prompt_id"],
-            "contract": routing.get("contract_family"),
+            "contract_family": routing.get("contract_family"),
             "expected_contract": expected,
             "depth_tier": routing.get("depth_tier"),
-            "passed": ok,
+            "contract_selection_passed": contract_ok,
         }
-        results.append(entry)
-        if ok:
-            passed += 1
+
+        if contract_ok:
+            routing_passed += 1
         else:
-            failed += 1
+            routing_failed += 1
+
+        if include_answer_quality and contract_ok:
+            canonical = canonical_answer_for_qa(expected, message=item["prompt"])
+            if canonical:
+                validation = validate_contract_answer(canonical, family_id=expected)
+                entry["final_answer_quality_passed"] = validation["passed"]
+                entry["missing_markers"] = validation.get("missing_markers") or []
+                entry["forbidden_patterns"] = validation.get("forbidden_patterns") or []
+                entry["placeholder_issues"] = validation.get("placeholder_issues") or []
+                entry["notes"] = [] if validation["passed"] else ["canonical answer failed validation"]
+                if validation["passed"]:
+                    answer_passed += 1
+                else:
+                    answer_failed += 1
+            else:
+                entry["final_answer_quality_passed"] = True
+                entry["missing_markers"] = []
+                entry["forbidden_patterns"] = []
+                entry["placeholder_issues"] = []
+                entry["notes"] = ["answer quality skipped — no canonical sample for family"]
+                answer_passed += 1
+
+        entry["passed"] = contract_ok and entry.get("final_answer_quality_passed", True)
+        results.append(entry)
+
+        if not entry["passed"]:
             failures.append(
                 {
                     "prompt_id": item["prompt_id"],
                     "contract": routing.get("contract_family"),
-                    "missing_markers": [f"expected {expected}"],
-                    "forbidden_patterns": [],
+                    "contract_selection_passed": contract_ok,
+                    "final_answer_quality_passed": entry.get("final_answer_quality_passed"),
+                    "missing_markers": entry.get("missing_markers") or [],
+                    "forbidden_patterns": entry.get("forbidden_patterns") or [],
+                    "placeholder_issues": entry.get("placeholder_issues") or [],
                     "depth_tier": routing.get("depth_tier"),
-                    "notes": f"Expected {expected}, got {routing.get('contract_family')}",
+                    "notes": entry.get("notes") or [],
                 }
             )
+
         if routing.get("depth_tier") == "mandatory" and expected not in {
             "missing_return_record",
             "allegation_lado",
@@ -880,10 +978,17 @@ def run_golden_prompt_routing_qa() -> dict[str, Any]:
         }:
             needs_review += 1
 
+    combined_failed = routing_failed + (answer_failed if include_answer_quality else 0)
+    combined_passed = len(GOLDEN_PROMPT_QA_PACK) - combined_failed if include_answer_quality else routing_passed
+
     return {
         "total": len(GOLDEN_PROMPT_QA_PACK),
-        "passed": passed,
-        "failed": failed,
+        "passed": combined_passed,
+        "failed": combined_failed,
+        "routing_passed": routing_passed,
+        "routing_failed": routing_failed,
+        "answer_quality_passed": answer_passed,
+        "answer_quality_failed": answer_failed,
         "needs_review": needs_review,
         "failures": failures,
         "results": results,
@@ -907,5 +1012,7 @@ orb_universal_answer_contract_map_service = type(
         "validate_contract_answer": staticmethod(validate_contract_answer),
         "evaluate_routing_contract": staticmethod(evaluate_routing_contract),
         "run_golden_prompt_routing_qa": staticmethod(run_golden_prompt_routing_qa),
+        "run_golden_prompt_full_qa": staticmethod(run_golden_prompt_full_qa),
+        "STANDARD_DEPTH_PROMPT_CHAR_CAP": STANDARD_DEPTH_PROMPT_CHAR_CAP,
     },
 )()

@@ -19,6 +19,7 @@ from services.orb_mandatory_response_contract_service import (
 from services.orb_multi_scenario_detector_service import SCENARIO_SIGNATURES
 from services.orb_scenario_playbook_service import orb_scenario_playbook_service
 from services.orb_universal_answer_contract_map_service import (
+    run_golden_prompt_full_qa,
     run_golden_prompt_routing_qa,
     validate_contract_answer,
 )
@@ -424,8 +425,8 @@ def get_safety_pack_map() -> dict[str, Any]:
 
 
 def run_contract_quality_pack() -> dict[str, Any]:
-    """Founder/admin golden prompt routing QA — no live LLM calls."""
-    return run_golden_prompt_routing_qa()
+    """Founder/admin golden prompt QA — routing plus final-answer quality (canonical samples)."""
+    return run_golden_prompt_full_qa(include_answer_quality=True)
 
 
 def evaluate_answer_contract_quality(
@@ -434,10 +435,9 @@ def evaluate_answer_contract_quality(
     *,
     fast_opening: str | None = None,
 ) -> dict[str, Any]:
-    from services.orb_universal_answer_contract_map_service import detect_contract_family
+    from services.orb_final_answer_contract_validator_service import evaluate_answer_quality_report
 
-    family_id = detect_contract_family(message)
-    return validate_contract_answer(answer, family_id=family_id, fast_opening=fast_opening)
+    return evaluate_answer_quality_report(message, answer, fast_opening=fast_opening)
 
 
 def evaluate_converged_route_qa(

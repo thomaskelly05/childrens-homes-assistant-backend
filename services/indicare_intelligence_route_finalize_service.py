@@ -6,6 +6,7 @@ import logging
 from typing import Any
 
 from services.indicare_intelligence_core_service import indicare_intelligence_core_service
+from services.orb_final_answer_repair_service import repair_and_validate_final_answer
 from services.orb_universal_answer_contract_map_service import (
     detect_contract_family,
     sanitize_final_answer,
@@ -171,6 +172,24 @@ def finalize_standalone_intelligence(
 
     family_id = detect_contract_family(message or prompt_text)
     answer = sanitize_final_answer(answer, family_id=family_id)
+
+    repaired_answer, contract_meta = repair_and_validate_final_answer(
+        answer,
+        contract_family=family_id,
+        message=message or prompt_text,
+        mode=mode,
+        fast_opening=None,
+    )
+    answer = repaired_answer
+    meta["selected_contract"] = family_id
+    meta["final_answer_validation_passed"] = contract_meta.get("final_answer_validation_passed")
+    meta["final_answer_repair_applied"] = contract_meta.get("repair_applied", False)
+    if packet.get("prompt_char_estimate") is not None:
+        meta["prompt_chars"] = packet.get("prompt_char_estimate")
+    if packet.get("retrieval_count") is not None:
+        meta["retrieval_count"] = packet.get("retrieval_count")
+    if packet.get("embedding_calls") is not None:
+        meta["embedding_calls"] = packet.get("embedding_calls")
 
     if record_learning:
         try:

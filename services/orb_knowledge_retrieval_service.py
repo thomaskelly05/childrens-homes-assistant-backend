@@ -102,6 +102,19 @@ DEEP_SAFETY_MODES = {
 KNOWLEDGE_SPINE_PACK_TYPE = "orb_knowledge_spine"
 ORB_OPERATING_BRAIN_PACK_TYPE = "orb_operating_brain"
 
+SIMPLE_STANDARD_CONTRACT_FAMILIES = frozenset(
+    {
+        "accessible_child_support_plan",
+        "template_generation",
+        "daily_record",
+        "keywork_session",
+        "policy_practice_question",
+        "make_more_concise",
+        "convert_to_recording_wording",
+        "voice_response",
+    }
+)
+
 
 def _text(value: Any) -> str:
     return str(value or "").strip()
@@ -138,18 +151,33 @@ class OrbKnowledgeRetrievalService:
         lower = _lower(message)
         mode_name = _text(mode) or "Ask ORB"
         has_images = bool(attachments)
-        selected_modules = select_relevant_python_knowledge(message, max_modules=8)
+        from services.orb_universal_answer_contract_map_service import (
+            detect_contract_family,
+            get_contract_family,
+        )
+
+        family_id = detect_contract_family(message)
+        family = get_contract_family(family_id) or {}
+        is_simple_standard = (
+            family_id in SIMPLE_STANDARD_CONTRACT_FAMILIES
+            and family.get("depth_tier") == "standard"
+            and not any(term in lower for term in HIGH_RISK_TERMS)
+        )
+        module_cap = 1 if is_simple_standard else 8
+        selected_modules = select_relevant_python_knowledge(message, max_modules=module_cap)
         module_sources = build_knowledge_source_summary(selected_modules)
         operating_sections = orb_operating_brain_service.relevant_sections(message, mode=mode_name)
 
         intents = {
             "product_context": self.should_use_product_knowledge(message, mode=mode_name),
-            "regulatory_framework": self.should_use_regulatory_knowledge(message, mode=mode_name),
+            "regulatory_framework": False if is_simple_standard else self.should_use_regulatory_knowledge(message, mode=mode_name),
             "recording_quality": self.should_use_recording_quality(message, mode=mode_name),
-            "safeguarding_principles": self.should_use_safeguarding_boundary(message, mode=mode_name),
-            "therapeutic_practice": self._should_use_therapeutic(message, mode=mode_name),
+            "safeguarding_principles": False if is_simple_standard else self.should_use_safeguarding_boundary(message, mode=mode_name),
+            "therapeutic_practice": self._should_use_therapeutic(message, mode=mode_name) if not is_simple_standard else bool(
+                family_id == "accessible_child_support_plan"
+            ),
             "residential_childrens_homes": self._should_use_residential_practice(message, mode=mode_name),
-            "academy_nvq_learning": self._should_use_academy_nvq_learning(message, mode=mode_name),
+            "academy_nvq_learning": False if is_simple_standard else self._should_use_academy_nvq_learning(message, mode=mode_name),
             "general_knowledge": self.should_use_general_knowledge(message, mode=mode_name),
             "user_provided_context": profile_context
             or "standalone context profiles" in lower
@@ -159,7 +187,9 @@ class OrbKnowledgeRetrievalService:
             "research_intent": self._has_research_intent(lower),
             "live_lookup_intent": self._has_live_lookup_intent(lower),
             "knowledge_spine": bool(selected_modules),
-            "orb_operating_brain": bool(operating_sections),
+            "orb_operating_brain": bool(operating_sections) and not is_simple_standard,
+            "simple_standard_contract": is_simple_standard,
+            "contract_family": family_id,
         }
 
         pack_keys = self._pack_keys_from_intents(intents, mode=mode_name)
@@ -291,6 +321,10 @@ class OrbKnowledgeRetrievalService:
                 classification=classification,
             )
         max_modules = {"fast": 0, "residential": 3, "deep": 8}.get(prompt_tier, 3)
+        is_simple_standard = bool((classification.get("intents") or {}).get("simple_standard_contract"))
+        if is_simple_standard:
+            max_modules = min(max_modules, 1)
+            prompt_tier = "residential" if prompt_tier == "deep" else prompt_tier
         if max_modules:
             spine = self.retrieve_knowledge_spine(message, mode=mode, max_modules=max_modules)
         else:
@@ -315,6 +349,7 @@ class OrbKnowledgeRetrievalService:
             message=message,
             mode=mode,
             prompt_tier=prompt_tier,
+            simple_standard_contract=is_simple_standard,
         )
         retrieval_elapsed_ms = int((time.perf_counter() - started) * 1000)
         expert_context = orb_expert_scenario_bank_service.detect_expert_context(message)
@@ -341,14 +376,11 @@ class OrbKnowledgeRetrievalService:
         )
 
         family_id = detect_contract_family(message)
-        simple_contract_families = {
-            "accessible_child_support_plan",
-            "template_generation",
-            "daily_record",
-            "policy_practice_question",
-            "make_more_concise",
-            "convert_to_recording_wording",
-        }
+        family = get_contract_family(family_id)
+        if is_simple_standard and expert_block:
+            expert_block = self._trim_prompt_block_for_simple_contract(expert_block, family_id=family_id)
+            indicare_intelligence = {**indicare_intelligence, "prompt_block": expert_block}
+        simple_contract_families = SIMPLE_STANDARD_CONTRACT_FAMILIES
         skip_expert_bank = family_id in simple_contract_families and prompt_tier != "deep"
         if not expert_block and prompt_tier != "fast" and not skip_expert_bank:
             expert_block = orb_expert_answer_engine_service.build_prompt_block(expert_packet)
@@ -374,6 +406,17 @@ class OrbKnowledgeRetrievalService:
             "policy_practice_question",
         } and prompt_tier == "deep":
             prompt_tier = "residential"
+        retrieval_count = len(packs) + len((spine.get("modules") or {}))
+        if expert_block:
+            retrieval_count += 1
+        prompt_char_estimate = len(grounding_context) + len(expert_block)
+        indicare_intelligence = {
+            **indicare_intelligence,
+            "selected_contract": family_id,
+            "prompt_char_estimate": prompt_char_estimate,
+            "retrieval_count": retrieval_count,
+            "embedding_calls": 0,
+        }
         return {
             "classification": classification,
             "prompt_tier": prompt_tier,
@@ -387,6 +430,11 @@ class OrbKnowledgeRetrievalService:
             "indicare_intelligence": indicare_intelligence,
             "expert_depth": indicare_intelligence.get("expert_depth"),
             "care_relevance_score": indicare_intelligence.get("care_relevance_score"),
+            "selected_contract": family_id,
+            "retrieval_count": retrieval_count,
+            "embedding_calls": 0,
+            "prompt_char_estimate": prompt_char_estimate,
+            "simple_standard_contract": is_simple_standard,
         }
 
     def retrieve_sources(
@@ -479,6 +527,50 @@ class OrbKnowledgeRetrievalService:
             )
         return bundle["grounding_context"]
 
+    def _trim_prompt_block_for_simple_contract(self, block: str, *, family_id: str | None) -> str:
+        """Keep only concise standalone + contract-relevant guidance for simple templates."""
+        from services.orb_universal_answer_contract_map_service import build_contract_prompt_block
+
+        contract_block = build_contract_prompt_block(family_id)
+        lines = [
+            "IndiCare Intelligence (simple standard contract — concise path):",
+            "- ORB does not diagnose, predict Ofsted grades, or claim live OS access.",
+            "- Child-centred, communication-aware residential guidance only.",
+        ]
+        if contract_block:
+            lines.append(contract_block)
+        trimmed = "\n".join(lines)
+        return trimmed if len(trimmed) < len(block) else _clip(block, 1200)
+
+    def estimate_prompt_assembly_chars(
+        self,
+        message: str,
+        *,
+        mode: str | None = None,
+        contract_prompt_block: str = "",
+        standalone_framing: str = "",
+    ) -> dict[str, Any]:
+        """Estimate prompt assembly size for QA/tests (retrieval bundle + contract block)."""
+        bundle = self.prepare_request_bundle(message, mode=mode)
+        total = (
+            bundle.get("prompt_char_estimate", 0)
+            + len(contract_prompt_block)
+            + len(standalone_framing)
+        )
+        from services.orb_universal_answer_contract_map_service import STANDARD_DEPTH_PROMPT_CHAR_CAP
+
+        return {
+            "prompt_chars": total,
+            "grounding_chars": bundle.get("grounding_char_count", 0),
+            "retrieval_count": bundle.get("retrieval_count", 0),
+            "embedding_calls": bundle.get("embedding_calls", 0),
+            "selected_contract": bundle.get("selected_contract"),
+            "prompt_tier": bundle.get("prompt_tier"),
+            "simple_standard_contract": bundle.get("simple_standard_contract"),
+            "exceeds_standard_cap": total > STANDARD_DEPTH_PROMPT_CHAR_CAP,
+            "standard_cap": STANDARD_DEPTH_PROMPT_CHAR_CAP,
+        }
+
     def _build_grounding_for_tier(
         self,
         *,
@@ -488,12 +580,24 @@ class OrbKnowledgeRetrievalService:
         message: str,
         mode: str | None,
         prompt_tier: str,
+        simple_standard_contract: bool = False,
     ) -> str:
         if prompt_tier == "fast":
             return (
                 "Grounding (fast path): standalone ORB only — no live IndiCare OS records or web browsing. "
                 "Use concise, accurate answers; add residential care boundaries only when the question needs them."
             )
+
+        if simple_standard_contract:
+            lines = [
+                "Grounding (simple standard contract — concise residential framing only):",
+                "- Standalone ORB: no live OS records, no web browsing.",
+                "- Child-centred planning and communication-aware practice.",
+                "- Use the answer contract shape; do not load deep safeguarding or regulatory banks.",
+            ]
+            for pack in packs[:2]:
+                lines.append(f"- {pack['source_label']}: {pack['description']}")
+            return "\n".join(lines)
 
         from services.orb_knowledge_answer_priority_service import orb_knowledge_answer_priority_service
 
