@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useCallback, useEffect, useState } from 'react'
-import { Bot, Loader2, RefreshCw, Sparkles } from 'lucide-react'
+import { Bot, Building2, Loader2, RefreshCw, Sparkles } from 'lucide-react'
 
 import { FounderNavHeader } from '@/components/founder/founder-nav-header'
 import { FounderSectionCard } from '@/components/founder/founder-section-card'
@@ -207,6 +207,45 @@ export function FounderIntelligencePage() {
               </div>
               <p className="mt-4 text-xs text-slate-500">Generated {new Date(snapshot.generatedAt).toLocaleString('en-GB')}</p>
             </FounderSectionCard>
+
+            {snapshot.company ? (
+              <FounderSectionCard
+                eyebrow="Company operating model"
+                title="Executive company layer"
+                description="Company score, department scorecards, CEO agenda and board report status."
+              >
+                <div className="grid gap-4 md:grid-cols-3">
+                  <div className="rounded-xl border border-cyan-400/30 bg-cyan-500/10 p-4">
+                    <p className="text-xs uppercase text-slate-500">Company score</p>
+                    <p className="mt-1 text-3xl font-black text-white">{snapshot.company.companyScore}/100</p>
+                    <p className="text-xs text-slate-400">Confidence {snapshot.company.companyConfidence}%</p>
+                  </div>
+                  <div className="rounded-xl border border-white/10 bg-black/20 p-4">
+                    <p className="text-xs uppercase text-slate-500">CEO agenda items</p>
+                    <p className="mt-1 text-3xl font-black text-white">{snapshot.company.ceoAgendaCount}</p>
+                  </div>
+                  <div className="rounded-xl border border-white/10 bg-black/20 p-4">
+                    <p className="text-xs uppercase text-slate-500">Board report</p>
+                    <p className="mt-1 text-lg font-bold text-white">{snapshot.company.boardReportStatus}</p>
+                  </div>
+                </div>
+                <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                  {snapshot.company.departmentScores.slice(0, 6).map((d) => (
+                    <div key={d.departmentId} className="rounded-lg border border-white/10 px-3 py-2 text-sm">
+                      <span className="text-slate-300">{d.name}</span>
+                      <span className="float-right font-bold text-cyan-300">{d.score}</span>
+                    </div>
+                  ))}
+                </div>
+                <Link
+                  href="/founder/company"
+                  className="mt-4 inline-flex items-center gap-2 rounded-xl border border-cyan-400/40 bg-cyan-500/15 px-4 py-2 text-sm font-bold text-cyan-200"
+                >
+                  <Building2 className="h-4 w-4" />
+                  Open Company Operating Model
+                </Link>
+              </FounderSectionCard>
+            ) : null}
 
             <FounderSectionCard eyebrow="Priorities" title="Today's priorities">
               <div className="space-y-4">

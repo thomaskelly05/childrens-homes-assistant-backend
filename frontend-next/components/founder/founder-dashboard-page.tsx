@@ -12,7 +12,7 @@ import {
   YAxis
 } from 'recharts'
 import Link from 'next/link'
-import { Shield, Sparkles } from 'lucide-react'
+import { Building2, Shield, Sparkles } from 'lucide-react'
 
 import { FounderNavHeader } from '@/components/founder/founder-nav-header'
 import {
@@ -106,6 +106,25 @@ export function FounderDashboardPage() {
           >
             <Sparkles className="h-4 w-4" aria-hidden />
             Open Founder Intelligence Centre
+          </Link>
+        </FounderSectionCard>
+
+        <FounderSectionCard
+          eyebrow="Executive operating system"
+          title="Company Operating Model"
+          description="Live company score, department owners, CEO agenda, scorecard, cadence and board reporting."
+        >
+          <p className="text-sm leading-7 text-slate-300">
+            Thomas at the helm with AI agents as the executive team. Live KPIs only — unavailable where sources are not
+            connected. No mock metrics.
+          </p>
+          <Link
+            href="/founder/company"
+            className="mt-4 inline-flex items-center gap-2 rounded-xl border border-cyan-400/40 bg-cyan-500/15 px-4 py-2.5 text-sm font-bold text-cyan-200 transition hover:bg-cyan-500/25"
+            data-testid="founder-company-operating-model-link"
+          >
+            <Building2 className="h-4 w-4" aria-hidden />
+            Open Company Operating Model
           </Link>
         </FounderSectionCard>
 

@@ -151,6 +151,16 @@ export type FounderBriefing = {
   limitations: string[]
 }
 
+export type FounderIntelligenceCompanySummary = {
+  companyScore: number
+  companyConfidence: number
+  departmentScores: Array<{ departmentId: string; name: string; score: number; confidence: number }>
+  ceoAgendaCount: number
+  boardReportStatus: 'not-generated' | 'draft' | 'needs-review'
+  departmentRisks: string[]
+  departmentOpportunities: string[]
+}
+
 export type FounderIntelligenceSnapshot = {
   id: string
   generatedAt: string
@@ -169,6 +179,7 @@ export type FounderIntelligenceSnapshot = {
   recommendedDecisions: string[]
   briefingIds: string[]
   limitations: string[]
+  company?: FounderIntelligenceCompanySummary
 }
 
 export const EXTERNAL_BRIEFING_TYPES: FounderBriefingType[] = [

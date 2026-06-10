@@ -40,6 +40,19 @@ export type FounderStaffAgentId =
 
 export type FounderStaffAgentStatus = 'active' | 'idle' | 'monitoring' | 'awaiting-approval'
 
+export type FounderStaffDepartmentStatus = 'healthy' | 'watch' | 'at-risk' | 'unavailable' | 'unknown'
+
+export type FounderStaffDepartmentOwnership = {
+  departmentId: string
+  departmentName: string
+  departmentStatus: FounderStaffDepartmentStatus
+  kpiInterpretation: string[]
+  recommendedDecisions: string[]
+  actionsCreated: string[]
+  blockers: string[]
+  thomasDecisions: string[]
+}
+
 export type FounderStaffAgentOutput = {
   summary: string
   findings: string[]
@@ -48,6 +61,7 @@ export type FounderStaffAgentOutput = {
   risks: string[]
   confidence: 'high' | 'medium' | 'low'
   requiresApproval: boolean
+  departmentOwnership?: FounderStaffDepartmentOwnership
 }
 
 export type FounderStaffAgent = {

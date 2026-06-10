@@ -40,6 +40,7 @@ import {
   answerIntelligenceQuestion,
   matchesIntelligenceQuestion
 } from './orb-founder-intelligence'
+import { answerCompanyQuestion, matchesCompanyQuestion } from './orb-founder-company'
 
 export type FounderOrbConfidence = 'high' | 'medium' | 'low'
 
@@ -658,6 +659,11 @@ export function answerFounderQuestion(question: string, context?: FounderOrbCont
     if (intelligenceAnswer) return intelligenceAnswer
   }
 
+  if (matchesCompanyQuestion(q)) {
+    const companyAnswer = answerCompanyQuestion(q)
+    if (companyAnswer) return companyAnswer
+  }
+
   if (matches(q, [/which agent/, /most important recommendation/, /agent.*recommend/, /important recommendation/])) {
     return answerAgentRecommendation(ctx)
   }
@@ -825,7 +831,12 @@ export const FOUNDER_ORB_SUGGESTED_QUESTIONS = [
   'Who should I follow up with today?',
   'Which relationships matter most right now?',
   'What relationships are going cold?',
-  'Which pilot opportunities should I prioritise?'
+  'Which pilot opportunities should I prioritise?',
+  'How is the company performing today?',
+  'What should I do as CEO today?',
+  'What is the current company score?',
+  'Which department needs my attention?',
+  'Generate a board report.'
 ] as const
 
 export { isExplicitOperatingLoopRequest }
