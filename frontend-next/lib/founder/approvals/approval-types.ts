@@ -9,6 +9,8 @@ export type ApprovalType =
   | 'revenue-claim'
   | 'product-action'
   | 'relationship-message'
+  | 'founder-briefing'
+  | 'founder-narrative'
 
 export type ApprovalStatus = 'pending' | 'approved' | 'rejected' | 'needs-changes'
 

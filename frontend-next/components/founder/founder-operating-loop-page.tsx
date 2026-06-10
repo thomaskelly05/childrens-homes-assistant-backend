@@ -98,7 +98,9 @@ export function FounderOperatingLoopPage() {
                 ['generateActions', 'Actions'],
                 ['generateContentDrafts', 'Content drafts'],
                 ['generateBuildBriefs', 'Build briefs'],
-                ['generateApprovals', 'Approvals']
+                ['generateApprovals', 'Approvals'],
+                ['generateIntelligenceSnapshot', 'Intelligence snapshot'],
+                ['generateDailyBriefing', 'Daily briefing']
               ] as const
             ).map(([key, label]) => (
               <label

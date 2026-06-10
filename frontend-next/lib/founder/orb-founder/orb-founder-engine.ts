@@ -35,6 +35,11 @@ import { answerEvidenceQuestion, matchesEvidenceQuestion } from './orb-founder-e
 import { answerRelationshipQuestion, matchesRelationshipQuestion } from './orb-founder-relationships'
 import { answerRevenueQuestion, matchesRevenueQuestion } from './orb-founder-revenue'
 import { orbFounderLiveInputs, orbFounderNoLiveDataAnswer } from './orb-founder-live-guard'
+import {
+  answerBiggestRiskFromIntelligence,
+  answerIntelligenceQuestion,
+  matchesIntelligenceQuestion
+} from './orb-founder-intelligence'
 
 export type FounderOrbConfidence = 'high' | 'medium' | 'low'
 
@@ -604,7 +609,14 @@ export function answerFounderQuestion(question: string, context?: FounderOrbCont
   }
 
   if (matches(q, [/biggest risk/, /main risk/, /top risk/, /risk this month/, /what.*risk/])) {
+    const intelligenceRisk = answerBiggestRiskFromIntelligence()
+    if (intelligenceRisk) return intelligenceRisk
     return answerBiggestRisk(ctx)
+  }
+
+  if (matchesIntelligenceQuestion(q)) {
+    const intelligenceAnswer = answerIntelligenceQuestion(q)
+    if (intelligenceAnswer) return intelligenceAnswer
   }
 
   if (matches(q, [/which agent/, /most important recommendation/, /agent.*recommend/, /important recommendation/])) {
@@ -754,6 +766,10 @@ export function answerFounderQuestion(question: string, context?: FounderOrbCont
 
 /** Suggested founder questions for the sidebar */
 export const FOUNDER_ORB_SUGGESTED_QUESTIONS = [
+  'What should I focus on today?',
+  'What is blocking IndiCare?',
+  'What is our founder readiness score?',
+  'What is misaligned with our current strategy?',
   'What should I do today?',
   'Run my operating loop.',
   'What happened in the last operating loop?',

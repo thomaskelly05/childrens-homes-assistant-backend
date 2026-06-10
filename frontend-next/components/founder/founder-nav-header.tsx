@@ -2,17 +2,18 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { ArrowLeft, Beaker, Bot, Brain, CheckSquare, Contact, FileCheck, FileText, Lock, PoundSterling, Radio, RefreshCw, ScrollText, Users } from 'lucide-react'
+import { ArrowLeft, Beaker, Bot, Brain, CheckSquare, Contact, FileCheck, FileText, Lock, PoundSterling, Radio, RefreshCw, ScrollText, Sparkles, Users } from 'lucide-react'
 
 type NavLink = {
   href: string
   label: string
-  icon: typeof Users | typeof FileText | typeof CheckSquare | typeof Radio | typeof Bot | typeof RefreshCw | typeof Brain | typeof Contact | null
+  icon: typeof Users | typeof FileText | typeof CheckSquare | typeof Radio | typeof Bot | typeof RefreshCw | typeof Brain | typeof Contact | typeof Sparkles | null
   exact?: boolean
 }
 
 const NAV_LINKS: NavLink[] = [
   { href: '/founder', label: 'Command Centre', icon: null, exact: true },
+  { href: '/founder/intelligence', label: 'Intelligence', icon: Sparkles },
   { href: '/founder/team', label: 'Founder Team', icon: Users },
   { href: '/founder/operating-loop', label: 'Operating Loop', icon: RefreshCw },
   { href: '/founder/content', label: 'Content', icon: FileText },
