@@ -10,6 +10,7 @@ const SLUG_TO_BOOTSTRAP_KEY: Record<string, keyof FounderBootstrapPersistence> =
   'expert-reviews': 'expertReviews',
   memories: 'memories',
   'evidence-packs': 'evidencePacks',
+  relationships: 'relationships',
   'operating-loop-runs': 'operatingLoopRuns'
 }
 

@@ -14,6 +14,13 @@ import {
 import { buildEvidenceSources } from '@/lib/founder/evidence/evidence-source-builder'
 import { generateEvidencePack, overallPackConfidence } from '@/lib/founder/evidence/evidence-pack-generator'
 import { createEvidencePack, getEvidencePacks, getPacksNeedingApproval } from '@/lib/founder/evidence/evidence-store'
+import { evidenceAudienceLabel, recommendEvidenceAudienceForRelationship } from '@/lib/founder/relationships/relationship-evidence'
+import {
+  getFollowUpRecommendations,
+  getPilotOpportunityPriorities,
+  summariseRelationshipIntelligence
+} from '@/lib/founder/relationships/relationship-intelligence-engine'
+import { getActiveRelationships, getRelationshipFollowUpsForBriefing } from '@/lib/founder/relationships/relationship-store'
 import type { EvidenceAudience } from '@/lib/founder/evidence/evidence-types'
 import {
   buildStaffAgent,
@@ -70,6 +77,8 @@ export const chiefOfStaffAgent = buildStaffAgent({
     const { insights } = contractContext()
     const topInsight = insights[0]
     const memoryNote = strategicMemorySummary()
+    const relationshipSummary = summariseRelationshipIntelligence()
+    const followUps = getRelationshipFollowUpsForBriefing()
     return {
       summary: memory.primaryObjective
         ? `${memory.primaryObjective.split(':')[0]}. ${topInsight ? topInsight.title : 'Review connected sources.'}`
@@ -79,7 +88,11 @@ export const chiefOfStaffAgent = buildStaffAgent({
       findings: [
         memoryNote,
         ...insights.slice(0, 2).map((i) => i.explanation),
-        `Evidence readiness: ${getEvidencePacks().length} pack(s); ${getPacksNeedingApproval().length} awaiting approval`
+        `Evidence readiness: ${getEvidencePacks().length} pack(s); ${getPacksNeedingApproval().length} awaiting approval`,
+        relationshipSummary.totalActive > 0
+          ? `Relationships: ${relationshipSummary.followUpsDue} follow-up(s) due; ${relationshipSummary.activeOpportunities} active opportunities`
+          : 'Relationships: no contacts recorded yet — add at /founder/relationships',
+        ...followUps.slice(0, 2)
       ].filter(Boolean),
       recommendations: filterDeferredRecommendations(
         insights.slice(0, 3).map((i) => i.action),
@@ -347,18 +360,36 @@ export const growthAgent = buildStaffAgent({
   dataSources: ['telemetry', 'users', 'billing'],
   run(): FounderStaffAgentOutput {
     const { summary, hasLive } = telemetryContext()
-    if (!hasLive) return emptyStaffOutput('No live conversion telemetry yet.')
+    const relationships = getActiveRelationships()
+    const testerOpps = relationships.filter((r) => r.relationshipType === 'tester' || r.relationshipType === 'provider')
+    const pilots = getPilotOpportunityPriorities()
+    if (!hasLive && relationships.length === 0) {
+      return emptyStaffOutput('No live conversion telemetry or relationship records yet.')
+    }
     return {
-      summary: `${summary.conversionEvents} conversion-related events recorded.`,
-      findings: [`Active users signal: ${summary.activeUsers}`, `Total telemetry events: ${summary.totalEvents}`],
+      summary:
+        testerOpps.length > 0
+          ? `${testerOpps.length} tester/provider relationship(s) on file; ${pilots.length} pilot opportunity(ies) recorded.`
+          : `${summary.conversionEvents} conversion-related events recorded.`,
+      findings: [
+        `Active users signal: ${summary.activeUsers}`,
+        `Total telemetry events: ${summary.totalEvents}`,
+        relationships.length > 0
+          ? `Growth pipeline: ${relationships.filter((r) => r.relationshipType === 'tester').length} testers, ${relationships.filter((r) => r.relationshipType === 'provider').length} providers`
+          : 'No relationship records — add testers and providers at /founder/relationships'
+      ],
       recommendations: [
         'Focus on founder-approved outreach to sector testers',
         'Track signup-to-activation conversion when live',
-        'Prepare ethical growth narrative — no fabricated traction'
+        'Prepare ethical growth narrative — no fabricated traction',
+        ...(pilots.length > 0 ? [`Prioritise pilot: ${pilots[0].relationship.organisation}`] : [])
       ],
-      actions: ['Review conversion events from live telemetry'],
-      risks: ['Never claim provider interest without live evidence.'],
-      confidence: 'low',
+      actions: [
+        'Review conversion events from live telemetry',
+        ...(testerOpps[0] ? [`Follow up with ${testerOpps[0].name} (${testerOpps[0].organisation})`] : [])
+      ],
+      risks: ['Never claim provider interest without live evidence or recorded relationships.'],
+      confidence: relationships.length > 0 ? 'medium' : 'low',
       requiresApproval: true
     }
   }
@@ -389,16 +420,25 @@ export const brandAmbassadorAgent = buildStaffAgent({
     const dataNote = hasLive
       ? `Based on live telemetry: ${summary.totalEvents} events, ${summary.orbConversations} ORB conversations.`
       : 'No live metrics available — draft will use principles only, not fabricated numbers.'
+    const strategicContacts = getActiveRelationships().filter((r) =>
+      ['investor', 'champion', 'sector-expert', 'government', 'local-authority'].includes(r.relationshipType)
+    )
     return {
       summary: `Content draft ready for review. ${dataNote}`,
       findings: [
         'All external posts require Thomas approval before publishing.',
-        ...memory.operatingPrinciples.slice(0, 2)
+        ...memory.operatingPrinciples.slice(0, 2),
+        strategicContacts.length > 0
+          ? `Strategic audiences on file: ${strategicContacts.slice(0, 3).map((r) => r.organisation).join(', ')}`
+          : 'No strategic relationship records for audience targeting'
       ],
       recommendations: [
         'Draft LinkedIn post from verified progress only — no fake traction',
         'Mark estimated claims clearly when live data is limited',
-        'Route through Data Protection and Safety review'
+        'Route through Data Protection and Safety review',
+        ...(strategicContacts[0]
+          ? [`Consider content angle for ${strategicContacts[0].organisation} (${strategicContacts[0].relationshipType})`]
+          : [])
       ],
       actions: ['Create LinkedIn draft in Content Centre'],
       risks: [
@@ -432,6 +472,7 @@ export const investorRelationsAgent = buildStaffAgent({
       return emptyStaffOutput('No live traction data for investor materials.')
     }
     const { aiCost, inputs } = contractContext()
+    const investorRelationships = getActiveRelationships().filter((r) => r.relationshipType === 'investor')
     const pack = generateEvidencePack('investor', 'investor-relations-agent')
     void createEvidencePack(pack, { actor: 'investor-relations-agent' }).catch(() => undefined)
     return {
@@ -440,6 +481,9 @@ export const investorRelationsAgent = buildStaffAgent({
         : `Investor evidence pack generated (${overallPackConfidence(pack)} confidence).`,
       findings: [
         memory.currentCommercialFocus || 'No commercial focus recorded in founder memory.',
+        investorRelationships.length > 0
+          ? `Investor relationships on file: ${investorRelationships.map((r) => r.organisation).join(', ')}`
+          : 'No investor relationships recorded — add contacts at /founder/relationships',
         inputs.dataSourceStatus.sourceConnections.billing === 'connected'
           ? `MRR signal: £${inputs.providerAnalytics.totalMrr}`
           : 'MRR not connected — do not quote revenue.',
@@ -577,6 +621,10 @@ export const partnershipsAgent = buildStaffAgent({
   permissions: defaultPermissions({ draftEmail: true, draftContent: true }),
   dataSources: ['readiness', 'evidence-packs'],
   run(): FounderStaffAgentOutput {
+    const relationships = getActiveRelationships().filter((r) =>
+      ['provider', 'partner', 'technology-partner', 'local-authority', 'government'].includes(r.relationshipType)
+    )
+    const followUps = getFollowUpRecommendations().slice(0, 3)
     const audiences: EvidenceAudience[] = ['provider', 'openai', 'microsoft', 'dfe']
     const packs = audiences.map((audience) => {
       const pack = generateEvidencePack(audience, 'partnerships-agent')
@@ -584,10 +632,17 @@ export const partnershipsAgent = buildStaffAgent({
       return pack
     })
     return {
-      summary: 'Partnership evidence packs generated for provider, OpenAI, Microsoft and DfE audiences.',
+      summary:
+        relationships.length > 0
+          ? `${relationships.length} partnership relationship(s) on file; evidence packs generated for key audiences.`
+          : 'Partnership evidence packs generated for provider, OpenAI, Microsoft and DfE audiences.',
       findings: [
         'No automated provider messaging — drafts only.',
-        ...packs.map((p) => `${p.title}: ${p.dataBasis}`)
+        ...packs.map((p) => `${p.title}: ${p.dataBasis}`),
+        ...(relationships.length > 0
+          ? relationships.slice(0, 3).map((r) => `${r.organisation}: ${r.status}, next — ${r.nextAction}`)
+          : ['No partnership relationships recorded yet']),
+        ...followUps.map((f) => `Follow-up due: ${f.relationship.organisation}`)
       ],
       recommendations: [
         'Prepare ethical intelligence narrative for sector partners',
@@ -619,11 +674,16 @@ export const evidencePackAgent = buildStaffAgent({
   run(): FounderStaffAgentOutput {
     const memory = getStaffStrategicMemory()
     const sources = buildEvidenceSources()
+    const relationships = getActiveRelationships()
     const pack = generateEvidencePack('general', 'evidence-pack-agent')
     void createEvidencePack(pack, { actor: 'evidence-pack-agent' }).catch(() => undefined)
     const { summary } = telemetryContext()
     const objectives = [memory.primaryObjective, ...memory.secondaryObjectives].filter(Boolean)
     const confidence = overallPackConfidence(pack)
+    const relationshipPacks = relationships.slice(0, 4).map((r) => {
+      const audience = recommendEvidenceAudienceForRelationship(r)
+      return `${r.organisation} → ${evidenceAudienceLabel(audience)}`
+    })
     return {
       summary: objectives.length > 0
         ? `Evidence pack aligned to strategic objective: ${objectives[0].split(':')[0]}`
@@ -633,7 +693,10 @@ export const evidencePackAgent = buildStaffAgent({
       findings: [
         ...objectives.slice(0, 2),
         `Data basis: ${pack.dataBasis}`,
-        ...sources.limitations.slice(0, 2)
+        ...sources.limitations.slice(0, 2),
+        ...(relationshipPacks.length > 0
+          ? [`Relationship pack recommendations: ${relationshipPacks.join('; ')}`]
+          : ['Add relationships to receive audience-specific pack recommendations'])
       ],
       recommendations: [
         'Include data basis and limitations in every pack',

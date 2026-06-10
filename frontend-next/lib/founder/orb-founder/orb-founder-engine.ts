@@ -32,6 +32,7 @@ import {
   isExplicitOperatingLoopRequest
 } from './orb-founder-operating-loop'
 import { answerEvidenceQuestion, matchesEvidenceQuestion } from './orb-founder-evidence'
+import { answerRelationshipQuestion, matchesRelationshipQuestion } from './orb-founder-relationships'
 import { orbFounderLiveInputs, orbFounderNoLiveDataAnswer } from './orb-founder-live-guard'
 
 export type FounderOrbConfidence = 'high' | 'medium' | 'low'
@@ -721,6 +722,11 @@ export function answerFounderQuestion(question: string, context?: FounderOrbCont
     return answerBrandOpportunity()
   }
 
+  if (matchesRelationshipQuestion(q)) {
+    const relationshipAnswer = answerRelationshipQuestion(q)
+    if (relationshipAnswer) return relationshipAnswer
+  }
+
   if (matchesEvidenceQuestion(q)) {
     const evidenceAnswer = answerEvidenceQuestion(q)
     if (evidenceAnswer) return evidenceAnswer
@@ -752,7 +758,11 @@ export const FOUNDER_ORB_SUGGESTED_QUESTIONS = [
   'Run a technical loop.',
   'Generate an investor evidence pack.',
   'What evidence is missing?',
-  'What are the current limitations?'
+  'What are the current limitations?',
+  'Who should I follow up with today?',
+  'Which relationships matter most right now?',
+  'What relationships are going cold?',
+  'Which pilot opportunities should I prioritise?'
 ] as const
 
 export { isExplicitOperatingLoopRequest }

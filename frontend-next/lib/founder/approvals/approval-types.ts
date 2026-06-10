@@ -7,6 +7,7 @@ export type ApprovalType =
   | 'evidence-pack'
   | 'public-claim'
   | 'product-action'
+  | 'relationship-message'
 
 export type ApprovalStatus = 'pending' | 'approved' | 'rejected' | 'needs-changes'
 

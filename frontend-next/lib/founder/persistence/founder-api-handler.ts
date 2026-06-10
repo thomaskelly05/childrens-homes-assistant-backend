@@ -25,6 +25,18 @@ import {
   handleEvidencePackPatch
 } from '@/lib/founder/evidence/evidence-api'
 import {
+  handleRelationshipArchivePost,
+  handleRelationshipEvidencePackPost,
+  handleRelationshipFollowUpDraftPost,
+  handleRelationshipGet,
+  handleRelationshipInteractionsPost,
+  handleRelationshipOpportunitiesPost,
+  handleRelationshipOpportunityPatch,
+  handleRelationshipPatch,
+  handleRelationshipsListGet,
+  handleRelationshipsPost
+} from '@/lib/founder/relationships/relationship-api'
+import {
   handleOperatingLoopRunGet,
   handleOperatingLoopRunPost,
   handleOperatingLoopRunsGet
@@ -170,6 +182,44 @@ export async function handleFounderApi(request: Request, segments: string[]): Pr
     }
     if (segments.length === 2 && segments[1] !== 'context' && request.method.toUpperCase() === 'PATCH') {
       return handleFounderMemoryItemPatch(request, segments[1])
+    }
+    return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  }
+
+  if (segments[0] === 'relationships') {
+    if (segments.length === 1 && request.method.toUpperCase() === 'GET') {
+      return handleRelationshipsListGet(request)
+    }
+    if (segments.length === 1 && request.method.toUpperCase() === 'POST') {
+      return handleRelationshipsPost(request)
+    }
+    if (segments.length === 2 && request.method.toUpperCase() === 'GET') {
+      return handleRelationshipGet(segments[1])
+    }
+    if (segments.length === 2 && request.method.toUpperCase() === 'PATCH') {
+      return handleRelationshipPatch(request, segments[1])
+    }
+    if (segments.length === 3 && segments[2] === 'interactions' && request.method.toUpperCase() === 'POST') {
+      return handleRelationshipInteractionsPost(request, segments[1])
+    }
+    if (segments.length === 3 && segments[2] === 'opportunities' && request.method.toUpperCase() === 'POST') {
+      return handleRelationshipOpportunitiesPost(request, segments[1])
+    }
+    if (
+      segments.length === 4 &&
+      segments[2] === 'opportunities' &&
+      request.method.toUpperCase() === 'PATCH'
+    ) {
+      return handleRelationshipOpportunityPatch(request, segments[1], segments[3])
+    }
+    if (segments.length === 3 && segments[2] === 'archive' && request.method.toUpperCase() === 'POST') {
+      return handleRelationshipArchivePost(segments[1])
+    }
+    if (segments.length === 3 && segments[2] === 'follow-up-draft' && request.method.toUpperCase() === 'POST') {
+      return handleRelationshipFollowUpDraftPost(segments[1])
+    }
+    if (segments.length === 3 && segments[2] === 'evidence-pack' && request.method.toUpperCase() === 'POST') {
+      return handleRelationshipEvidencePackPost(segments[1])
     }
     return NextResponse.json({ error: 'Not found' }, { status: 404 })
   }

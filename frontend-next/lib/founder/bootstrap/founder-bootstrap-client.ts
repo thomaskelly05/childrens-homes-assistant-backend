@@ -15,6 +15,7 @@ export type FounderBootstrapPersistence = {
   expertReviews: unknown[]
   memories: unknown[]
   evidencePacks: unknown[]
+  relationships: unknown[]
   operatingLoopRuns: unknown[]
 }
 
@@ -46,6 +47,7 @@ const EMPTY_PERSISTENCE: FounderBootstrapPersistence = {
   expertReviews: [],
   memories: [],
   evidencePacks: [],
+  relationships: [],
   operatingLoopRuns: []
 }
 

@@ -33,7 +33,13 @@ function syncLinkedEntitiesOnDecision(
   status: 'approved' | 'rejected' | 'needs-changes',
   founderNote?: string
 ): void {
-  if (item.type === 'linkedin-post' || item.type === 'email-draft' || item.type === 'investor-update') {
+  if (
+    item.type === 'linkedin-post' ||
+    item.type === 'email-draft' ||
+    item.type === 'investor-update' ||
+    item.type === 'relationship-message' ||
+    item.type === 'provider-message'
+  ) {
     const linkedDraft = getContentDrafts().find((d) => d.title === item.title)
     if (linkedDraft) {
       if (status === 'approved') updateContentDraftStatus(linkedDraft.id, 'approved')
@@ -113,7 +119,8 @@ export function getApprovalTypeLabel(type: ApprovalType): string {
     'technical-build-brief': 'Technical Build Brief',
     'evidence-pack': 'Evidence Pack',
     'public-claim': 'Public Claim',
-    'product-action': 'Product Action'
+    'product-action': 'Product Action',
+    'relationship-message': 'Relationship Message'
   }
   return labels[type]
 }
