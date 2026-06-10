@@ -40,32 +40,50 @@ GDD_SUPPORT_PLAN_PROMPT = (
 )
 
 SAMPLE_SUPPORT_PLAN_ANSWER = """
-## My support plan
+# My Support Plan
 
-### How I communicate
+This is my plan. It helps adults understand me, listen to me and support my future.
+
+## My widgets and how I communicate
 I use widgets on my device to tell people what I need.
 
-### Dreams and aspirations
+## My dreams and future
 I want to learn to travel independently and work with animals.
 
-### What matters to me
+## What matters to me
 Being listened to and having time to answer.
 
-### Daily routine
+## Daily routine
 Morning: choose breakfast using widgets.
 Evening: calm time with music.
 
-### How adults should support me
+## How I tell people important things
+Yes: I nod and point to my yes widget.
+No: I push the no symbol away.
+Stop: I hold up my stop card.
+Help: I tap my help widget.
+Pain/unwell: I hold my stomach and show my pain symbol.
+Worried/upset: I use my worried face widget.
+Happy/calm: I smile and relax my shoulders.
+
+## What helps me feel calm and safe
+Music, quiet time, and my favourite blanket.
+
+## How adults should support me
 Give me time. Show me options on my board.
 
-### Independence / preparing for adulthood
-Help me practise college visits with my key worker.
+## Things adults should not do
+Do not rush me or guess without checking.
 
-### Review
+## My independence goals
+Help me practise college visits with my key worker.
+Before adulthood I would like to travel independently.
+
+## Reviewing my plan
 We will review this using my widget board every month.
 
-### For staff
-Use my communication board. Do not rush me.
+## Adult guidance for using this plan
+Use my communication board. Do not rush me. Record my views clearly.
 """.strip()
 
 
@@ -116,7 +134,7 @@ def test_sanitize_final_answer_removes_broken_placeholders():
     broken = "Intro [A brief introduction about…] and [add dreams here]."
     cleaned = sanitize_final_answer(broken, family_id="accessible_child_support_plan")
     assert "…]" not in cleaned
-    assert "[add detail here]" in cleaned or "[add dreams here]" in cleaned
+    assert "[add dreams here]" in cleaned or "add detail" in cleaned.lower()
 
 
 def test_forbidden_patterns_detect_streaming_leakage():
@@ -170,14 +188,17 @@ def test_gdd_support_plan_expert_depth_capped():
     assert depth != "safeguarding_critical"
 
 
-def test_gdd_support_plan_prompt_tier_not_deep():
+def test_gdd_support_plan_prompt_char_cap():
     from services.orb_knowledge_retrieval_service import orb_knowledge_retrieval_service
+    from services.orb_universal_answer_contract_map_service import STANDARD_DEPTH_PROMPT_CHAR_CAP
 
-    bundle = orb_knowledge_retrieval_service.prepare_request_bundle(
+    estimate = orb_knowledge_retrieval_service.estimate_prompt_assembly_chars(
         GDD_SUPPORT_PLAN_PROMPT,
         mode="Ask ORB",
     )
-    assert bundle["prompt_tier"] != "deep"
+    assert estimate["prompt_chars"] <= STANDARD_DEPTH_PROMPT_CHAR_CAP
+    assert estimate["simple_standard_contract"] is True
+    assert estimate["prompt_tier"] != "deep"
 
 
 def test_support_plan_answer_validation_passes_clean_sample():
@@ -228,11 +249,15 @@ def test_founder_debug_visibility_preserved():
 # --- Golden QA pack runner ---
 
 
-def test_contract_quality_pack_passes_routing_qa():
+def test_contract_quality_pack_passes_routing_and_answer_qa():
     report = run_contract_quality_pack()
     assert report["total"] == 20
-    assert report["failed"] == 0
-    assert report["passed"] == 20
+    assert report["routing_failed"] == 0
+    assert report["routing_passed"] == 20
+    assert report.get("answer_quality_failed", 0) == 0
+    gdd = next(r for r in report["results"] if r["prompt_id"] == "accessible_child_support_plan")
+    assert gdd["contract_selection_passed"] is True
+    assert gdd["final_answer_quality_passed"] is True
 
 
 def test_qa_run_endpoint_restricted_to_founder_admin():
