@@ -44,6 +44,7 @@ from services.orb_stream_status_service import (
 from services.orb_brain_route_service import orb_brain_route_service
 from services.orb_brain_convergence_orchestrator_service import orb_brain_convergence_orchestrator_service
 from services.orb_brain_route_map_service import orb_brain_route_map_service
+from services.orb_execution_policy_service import orb_execution_policy_service
 from auth.current_user import get_current_user
 from services.orb_recording_contract_service import build_incident_report_prompt_block, is_incident_report_draft_request
 from services.orb_standalone_brain_service import orb_standalone_brain_service
@@ -226,6 +227,14 @@ def _build_standalone_request_context(
     )
     if timing:
         timing.mark("prompt_build_complete")
+    execution_policy = orb_execution_policy_service.resolve(
+        user_message,
+        brain_convergence=brain_convergence.to_dict(),
+        retrieval_bundle=retrieval_bundle,
+        mode=mode,
+        note_type=payload.note_type,
+        requested_action=payload.requested_action,
+    )
     return {
         "mode": mode,
         "detail": detail,
@@ -244,8 +253,55 @@ def _build_standalone_request_context(
         "brain_selection_shadow": brain_selection_shadow,
         "brain_route": brain_route,
         "brain_convergence": brain_convergence.to_dict(),
+        "execution_policy": execution_policy.to_dict(),
         "user_message": user_message,
     }
+
+def _attach_execution_policy_context(
+    context_used: dict[str, Any],
+    *,
+    ctx: dict[str, Any],
+    assistant_data: dict[str, Any],
+    model_routing: dict[str, Any] | None = None,
+    elapsed_ms: int | None = None,
+    framed_message: str = "",
+    retrieval_bundle: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Merge execution policy and cost/speed telemetry for founder/admin debug."""
+    execution_policy_dict = dict(ctx.get("execution_policy") or {})
+    if execution_policy_dict:
+        context_used["execution_policy"] = execution_policy_dict
+        context_used["selected_contract"] = execution_policy_dict.get("selected_contract")
+    tools = assistant_data.get("tools_used") or []
+    openai_called = "ai_model_router" in tools or (
+        bool((model_routing or {}).get("provider"))
+        and str((model_routing or {}).get("provider")).lower() not in {"local", "template", ""}
+    )
+    if assistant_data.get("no_llm"):
+        openai_called = False
+    bundle = dict(retrieval_bundle or ctx.get("retrieval_bundle") or {})
+    telemetry = orb_execution_policy_service.build_execution_telemetry(
+        policy=execution_policy_dict or {},
+        openai_called=openai_called,
+        embeddings_called=int(bundle.get("embedding_calls") or 0) > 0,
+        embeddings_count=int(bundle.get("embedding_calls") or 0),
+        scenario_bank_loaded=bool(
+            (bundle.get("expert_scenario_context") or {}).get("matched")
+        ),
+        prompt_chars=len(framed_message or ""),
+        total_ms=elapsed_ms,
+        final_answer_validation_passed=(assistant_data.get("context_used") or {}).get(
+            "execution_telemetry", {}
+        ).get("final_answer_validation_passed"),
+        public_explainability_labels=list(
+            (ctx.get("brain_convergence") or {}).get("public_considerations") or []
+        )[:6],
+    )
+    context_used["execution_telemetry"] = telemetry
+    if telemetry.get("optimisation_gap"):
+        context_used["optimisation_gap"] = telemetry["optimisation_gap"]
+    return context_used
+
 
 STANDALONE_ORB_MODES = [
     "Ask ORB",
@@ -1014,6 +1070,8 @@ async def standalone_orb_conversation(
             document_title=payload.document_title,
             raw_user_message=payload.message,
             user=current_user,
+            brain_convergence=ctx.get("brain_convergence"),
+            execution_policy=ctx.get("execution_policy"),
         )
         timing.mark("model_complete")
         elapsed_ms = int((time.perf_counter() - route_started) * 1000)
@@ -1128,6 +1186,15 @@ async def standalone_orb_conversation(
                 timing=timing,
             )
             context_used = merge_intelligence_into_context(context_used, intel_meta)
+        context_used = _attach_execution_policy_context(
+            context_used,
+            ctx=ctx,
+            assistant_data=assistant_data,
+            model_routing=model_routing,
+            elapsed_ms=elapsed_ms,
+            framed_message=framed_message,
+            retrieval_bundle=retrieval_bundle,
+        )
         timing.mark("response_sent")
         context_used["timing"] = build_route_timing_payload(
             timing,
@@ -1539,6 +1606,15 @@ async def standalone_orb_conversation_stream(
                     timing=timing,
                 )
                 context_used = merge_intelligence_into_context(context_used, intel_meta)
+            context_used = _attach_execution_policy_context(
+                context_used,
+                ctx=ctx,
+                assistant_data=assistant_data,
+                model_routing=model_routing,
+                elapsed_ms=total_elapsed_ms,
+                framed_message=framed_message,
+                retrieval_bundle=retrieval_bundle,
+            )
             timing.mark("response_sent")
             context_used["timing"] = build_route_timing_payload(
                 timing,
