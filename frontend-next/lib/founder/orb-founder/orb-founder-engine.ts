@@ -31,6 +31,7 @@ import {
   answerLastOperatingLoop,
   isExplicitOperatingLoopRequest
 } from './orb-founder-operating-loop'
+import { answerEvidenceQuestion, matchesEvidenceQuestion } from './orb-founder-evidence'
 import { orbFounderLiveInputs, orbFounderNoLiveDataAnswer } from './orb-founder-live-guard'
 
 export type FounderOrbConfidence = 'high' | 'medium' | 'low'
@@ -720,6 +721,11 @@ export function answerFounderQuestion(question: string, context?: FounderOrbCont
     return answerBrandOpportunity()
   }
 
+  if (matchesEvidenceQuestion(q)) {
+    const evidenceAnswer = answerEvidenceQuestion(q)
+    if (evidenceAnswer) return evidenceAnswer
+  }
+
   if (matches(q, [/chronology/, /dictate/, /safeguarding/, /quality/, /churn/, /customer success/, /growth/])) {
     for (const agent of getAllAgents()) {
       const keywords = agent.id.replace(/-/g, ' ')
@@ -743,7 +749,10 @@ export const FOUNDER_ORB_SUGGESTED_QUESTIONS = [
   'What should I decide today?',
   'Run a brand loop.',
   'Run a quality loop.',
-  'Run a technical loop.'
+  'Run a technical loop.',
+  'Generate an investor evidence pack.',
+  'What evidence is missing?',
+  'What are the current limitations?'
 ] as const
 
 export { isExplicitOperatingLoopRequest }

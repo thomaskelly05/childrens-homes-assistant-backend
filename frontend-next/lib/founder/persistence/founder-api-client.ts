@@ -95,5 +95,6 @@ export const ENTITY_API_SLUGS = {
   quality_proposal: 'quality-proposals',
   expert_review: 'expert-reviews',
   safety_review: 'safety-reviews',
-  founder_memory: 'memories'
+  founder_memory: 'memories',
+  evidence_pack: 'evidence-packs'
 } as const

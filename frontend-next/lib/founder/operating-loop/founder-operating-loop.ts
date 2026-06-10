@@ -8,6 +8,7 @@ import { operatingLoopRepository } from '@/lib/founder/persistence'
 import type { FounderOperatingLoopRunRecord } from '@/lib/founder/persistence/founder-persistence-types'
 import { appendAuditLog } from '@/lib/founder/persistence/repositories/audit-log-repository'
 import { baseTimestamps, nextId } from '@/lib/founder/persistence/repositories/repository-base'
+import { generateEvidencePackForAudience } from '@/lib/founder/evidence/evidence-store'
 import { executeQualityRun, getQualityLabSummary } from '@/lib/founder/quality-lab/quality-run-service'
 import { checkFounderOutputSafety } from '@/lib/founder/safety/founder-output-safety'
 import {
@@ -270,6 +271,14 @@ export async function runFounderOperatingLoop(
     }
 
     const approvalsCreated = plan.generateApprovals ? countNewApprovals(approvalIdsBefore) : []
+
+    if (plan.generateApprovals && plan.runStaffAgents) {
+      try {
+        await generateEvidencePackForAudience('general', triggeredBy)
+      } catch (error) {
+        errors.push(`Evidence pack: ${safeErrorSummary(error)}`)
+      }
+    }
 
     const risksIdentified = collectRisks(agentOutputs)
     const recommendedFounderDecisions = filterDeferredRecommendations(

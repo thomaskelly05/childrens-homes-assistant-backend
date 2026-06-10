@@ -11,6 +11,10 @@ import {
   filterDeferredRecommendations,
   strategicMemorySummary
 } from '@/lib/founder/memory/founder-memory-staff-context'
+import { buildEvidenceSources } from '@/lib/founder/evidence/evidence-source-builder'
+import { generateEvidencePack, overallPackConfidence } from '@/lib/founder/evidence/evidence-pack-generator'
+import { createEvidencePack, getEvidencePacks, getPacksNeedingApproval } from '@/lib/founder/evidence/evidence-store'
+import type { EvidenceAudience } from '@/lib/founder/evidence/evidence-types'
 import {
   buildStaffAgent,
   defaultPermissions,
@@ -74,7 +78,8 @@ export const chiefOfStaffAgent = buildStaffAgent({
           : 'Live founder data is connected. Review connected sources and pending approvals.',
       findings: [
         memoryNote,
-        ...insights.slice(0, 2).map((i) => i.explanation)
+        ...insights.slice(0, 2).map((i) => i.explanation),
+        `Evidence readiness: ${getEvidencePacks().length} pack(s); ${getPacksNeedingApproval().length} awaiting approval`
       ].filter(Boolean),
       recommendations: filterDeferredRecommendations(
         insights.slice(0, 3).map((i) => i.action),
@@ -422,25 +427,33 @@ export const investorRelationsAgent = buildStaffAgent({
   dataSources: ['billing', 'telemetry', 'readiness'],
   run(): FounderStaffAgentOutput {
     const memory = getStaffStrategicMemory()
-    if (!hasLiveStaffData()) return emptyStaffOutput('No live traction data for investor materials.')
+    const sources = buildEvidenceSources()
+    if (!hasLiveStaffData() && sources.telemetryEvidence.every((p) => p.confidence === 'low')) {
+      return emptyStaffOutput('No live traction data for investor materials.')
+    }
     const { aiCost, inputs } = contractContext()
+    const pack = generateEvidencePack('investor', 'investor-relations-agent')
+    void createEvidencePack(pack, { actor: 'investor-relations-agent' }).catch(() => undefined)
     return {
       summary: memory.currentCommercialFocus
-        ? `Investor narrative aligned to commercial focus: ${memory.currentCommercialFocus.split(':')[0]}`
-        : 'Investor update draft can be prepared from connected live aggregates only.',
+        ? `Investor evidence pack aligned to commercial focus: ${memory.currentCommercialFocus.split(':')[0]}`
+        : `Investor evidence pack generated (${overallPackConfidence(pack)} confidence).`,
       findings: [
         memory.currentCommercialFocus || 'No commercial focus recorded in founder memory.',
-        `MRR signal: £${inputs.providerAnalytics.totalMrr}`,
-        `AI spend: ${aiCost.openAiSpend}`
+        inputs.dataSourceStatus.sourceConnections.billing === 'connected'
+          ? `MRR signal: £${inputs.providerAnalytics.totalMrr}`
+          : 'MRR not connected — do not quote revenue.',
+        `AI spend: ${aiCost.openAiSpend}`,
+        `Pack data basis: ${pack.dataBasis}`
       ],
       recommendations: [
         'Lead with ethical intelligence and children\'s homes impact',
         'Include honest data limitations',
-        'Route update through approvals before sharing'
+        'Route evidence pack through approvals before sharing'
       ],
-      actions: ['Draft investor update for Thomas review'],
-      risks: ['Never invent customer claims or provider interest.'],
-      confidence: 'medium',
+      actions: ['Review investor evidence pack in Evidence Engine'],
+      risks: ['Never invent customer claims or provider interest.', ...pack.limitations.slice(0, 2)],
+      confidence: overallPackConfidence(pack),
       requiresApproval: true
     }
   }
@@ -525,21 +538,23 @@ export const dataProtectionSafetyAgent = buildStaffAgent({
   dataSources: ['content-drafts', 'approvals'],
   run(): FounderStaffAgentOutput {
     const memory = getStaffStrategicMemory()
+    const needingReview = getPacksNeedingApproval()
     return {
-      summary: 'All external-facing content requires safety review before approval.',
+      summary: 'All external-facing content and evidence packs require safety review before approval.',
       findings: [
         'No child, staff or provider names in external drafts',
         'No safeguarding narrative in public content',
         'Live data claims must be verified',
+        `${needingReview.length} evidence pack(s) awaiting review`,
         ...memory.operatingPrinciples.filter((p) =>
           /safeguarding|privacy|children|approval/i.test(p)
         ).slice(0, 2)
       ],
       recommendations: [
-        'Run founder-output-safety check on all drafts',
+        'Run founder-output-safety check on all drafts and evidence packs',
         'Route high-risk content to Thomas for final approval'
       ],
-      actions: ['Review pending content in Approvals Centre'],
+      actions: ['Review evidence packs in Evidence Engine and Approvals Centre'],
       risks: ['Publishing without safety review is blocked by design.'],
       confidence: 'high',
       requiresApproval: false
@@ -562,15 +577,24 @@ export const partnershipsAgent = buildStaffAgent({
   permissions: defaultPermissions({ draftEmail: true, draftContent: true }),
   dataSources: ['readiness', 'evidence-packs'],
   run(): FounderStaffAgentOutput {
+    const audiences: EvidenceAudience[] = ['provider', 'openai', 'microsoft', 'dfe']
+    const packs = audiences.map((audience) => {
+      const pack = generateEvidencePack(audience, 'partnerships-agent')
+      void createEvidencePack(pack, { actor: 'partnerships-agent' }).catch(() => undefined)
+      return pack
+    })
     return {
-      summary: 'Partnership outreach drafts require Thomas approval before sending.',
-      findings: ['No automated provider messaging — drafts only.'],
+      summary: 'Partnership evidence packs generated for provider, OpenAI, Microsoft and DfE audiences.',
+      findings: [
+        'No automated provider messaging — drafts only.',
+        ...packs.map((p) => `${p.title}: ${p.dataBasis}`)
+      ],
       recommendations: [
         'Prepare ethical intelligence narrative for sector partners',
         'Use evidence packs with live data only',
-        'Route provider messages through approvals'
+        'Route provider and partnership packs through approvals'
       ],
-      actions: ['Draft provider message for review'],
+      actions: ['Review partnership evidence packs in Evidence Engine'],
       risks: ['External messages must not contain identifiable operational data.'],
       confidence: 'medium',
       requiresApproval: true
@@ -594,26 +618,30 @@ export const evidencePackAgent = buildStaffAgent({
   dataSources: ['telemetry', 'readiness', 'billing', 'orb-analytics'],
   run(): FounderStaffAgentOutput {
     const memory = getStaffStrategicMemory()
-    if (!hasLiveStaffData() && !hasLiveTelemetry()) {
-      return emptyStaffOutput('No live data for evidence packs yet.')
-    }
+    const sources = buildEvidenceSources()
+    const pack = generateEvidencePack('general', 'evidence-pack-agent')
+    void createEvidencePack(pack, { actor: 'evidence-pack-agent' }).catch(() => undefined)
     const { summary } = telemetryContext()
     const objectives = [memory.primaryObjective, ...memory.secondaryObjectives].filter(Boolean)
+    const confidence = overallPackConfidence(pack)
     return {
       summary: objectives.length > 0
         ? `Evidence pack aligned to strategic objective: ${objectives[0].split(':')[0]}`
-        : `Evidence pack can include ${summary.totalEvents} telemetry events and connected founder metrics.`,
+        : summary.totalEvents > 0
+          ? `Evidence pack includes ${summary.totalEvents} telemetry events and connected founder metrics.`
+          : 'Evidence pack generated with stated limitations — live data limited.',
       findings: [
         ...objectives.slice(0, 2),
-        'All figures must come from live connected sources.'
+        `Data basis: ${pack.dataBasis}`,
+        ...sources.limitations.slice(0, 2)
       ],
       recommendations: [
         'Include data basis and limitations in every pack',
         'Route packs through approvals before external sharing'
       ],
-      actions: ['Prepare evidence pack draft for Thomas review'],
-      risks: ['Never include identifiable child or safeguarding records.'],
-      confidence: 'medium',
+      actions: ['Review evidence pack in Evidence Engine'],
+      risks: ['Never include identifiable child or safeguarding records.', ...pack.limitations.slice(0, 1)],
+      confidence,
       requiresApproval: true
     }
   }

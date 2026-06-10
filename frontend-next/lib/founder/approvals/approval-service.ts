@@ -5,6 +5,7 @@ import { getBuildBriefs, updateBuildBriefStatus } from '@/lib/founder/build-brie
 import { getContentDrafts, updateContentDraftStatus } from '@/lib/founder/content/content-draft-store'
 import { getQualityProposals, updateQualityProposalStatus } from '@/lib/founder/quality-lab/quality-proposal-store'
 import type { ApprovalItem, ApprovalType } from './approval-types'
+import { syncPackOnApprovalDecision } from '@/lib/founder/evidence/evidence-store'
 import {
   addApprovalItem,
   getApprovalItem,
@@ -53,6 +54,10 @@ function syncLinkedEntitiesOnDecision(
   if (proposal) {
     if (status === 'approved') updateQualityProposalStatus(proposal.id, 'approved')
     else if (status === 'rejected') updateQualityProposalStatus(proposal.id, 'rejected')
+  }
+
+  if (item.type === 'evidence-pack') {
+    void syncPackOnApprovalDecision(item.id, status).catch(() => undefined)
   }
 
   void appendAuditLog({

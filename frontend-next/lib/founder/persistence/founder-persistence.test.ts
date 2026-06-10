@@ -49,6 +49,7 @@ describe('Founder persistence V1', () => {
     assert.match(repos, /approvalRepository/)
     assert.match(repos, /qualityRunRepository/)
     assert.match(repos, /expertReviewRepository/)
+    assert.match(repos, /evidencePackRepository/)
     assert.match(repos, /appendAuditLog/)
   })
 

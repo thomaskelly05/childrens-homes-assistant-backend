@@ -11,6 +11,14 @@ import {
   handleFounderMemoryPost
 } from '@/lib/founder/memory/founder-memory-api'
 import {
+  handleEvidenceGeneratePost,
+  handleEvidenceListGet,
+  handleEvidencePackApprovePost,
+  handleEvidencePackArchivePost,
+  handleEvidencePackGet,
+  handleEvidencePackPatch
+} from '@/lib/founder/evidence/evidence-api'
+import {
   handleOperatingLoopRunGet,
   handleOperatingLoopRunPost,
   handleOperatingLoopRunsGet
@@ -30,7 +38,8 @@ const ROUTE_ENTITY_MAP: Record<string, string> = {
   'quality-lab/expert-reviews': 'expert-reviews',
   'safety-reviews': 'safety-reviews',
   'audit-log': 'audit-log',
-  memories: 'memories'
+  memories: 'memories',
+  evidence: 'evidence-packs'
 }
 
 type FounderSession =
@@ -195,6 +204,28 @@ export async function handleFounderApi(request: Request, segments: string[]): Pr
     }
     if (segments.length === 2 && segments[1] !== 'context' && request.method.toUpperCase() === 'PATCH') {
       return handleFounderMemoryItemPatch(request, segments[1])
+    }
+    return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  }
+
+  if (segments[0] === 'evidence') {
+    if (segments.length === 1 && request.method.toUpperCase() === 'GET') {
+      return handleEvidenceListGet()
+    }
+    if (segments.length === 2 && segments[1] === 'generate' && request.method.toUpperCase() === 'POST') {
+      return handleEvidenceGeneratePost(request)
+    }
+    if (segments.length === 2 && request.method.toUpperCase() === 'GET') {
+      return handleEvidencePackGet(segments[1])
+    }
+    if (segments.length === 2 && request.method.toUpperCase() === 'PATCH') {
+      return handleEvidencePackPatch(request, segments[1])
+    }
+    if (segments.length === 3 && segments[2] === 'approve' && request.method.toUpperCase() === 'POST') {
+      return handleEvidencePackApprovePost(segments[1])
+    }
+    if (segments.length === 3 && segments[2] === 'archive' && request.method.toUpperCase() === 'POST') {
+      return handleEvidencePackArchivePost(segments[1])
     }
     return NextResponse.json({ error: 'Not found' }, { status: 404 })
   }
