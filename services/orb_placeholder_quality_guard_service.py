@@ -33,12 +33,15 @@ _PLACEHOLDER_HINTS: tuple[tuple[re.Pattern[str], str], ...] = (
     (re.compile(r"name|preferred", re.I), "[Add the young person's preferred name]"),
     (re.compile(r"intro|about|know about", re.I), "[Add what the young person wants adults to know]"),
     (re.compile(r"widget|symbol|aac|photo|communicat", re.I), "[Add the widget/symbol/photo the young person uses for this]"),
-    (re.compile(r"dream|aspir|goal|future|learn|independ", re.I), "[Add what the young person is working towards]"),
+    (re.compile(r"dream|aspir", re.I), "[Add a dream or aspiration using my widget, symbol, photo or words]"),
+    (re.compile(r"goal|future|learn|independ", re.I), "[Add what the young person is working towards]"),
     (re.compile(r"yes|no|stop|help|pain|worried|happy|upset|calm", re.I), "[Add how the young person shows this using their communication method]"),
     (re.compile(r"trigger|hard|difficult", re.I), "[Add what makes things hard for the young person]"),
     (re.compile(r"calm|safe|helps", re.I), "[Add what helps the young person feel calm and safe]"),
     (re.compile(r"review|date", re.I), "[Add review date]"),
-    (re.compile(r"interest|like", re.I), "[Add interests, people, places or activities the young person likes]"),
+    (re.compile(r"interest|like|sensory", re.I), "[Add my interests, favourite people, places, activities and sensory likes]"),
+    (re.compile(r"dream|aspir", re.I), "[Add a dream or aspiration using my widget, symbol, photo or words]"),
+    (re.compile(r"pain|discomfort|unwell|dis\b", re.I), "[Add how I show pain, discomfort or feeling unwell]"),
 )
 
 _DEFAULT_CLEAN_PLACEHOLDER = "[Add detail here]"
