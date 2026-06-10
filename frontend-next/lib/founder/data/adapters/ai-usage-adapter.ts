@@ -1,11 +1,10 @@
 import type { OrbAdminUsageSummary } from '@/lib/orb/admin-quality-client'
-import { ORB_ADMIN_API_PATHS } from '@/lib/orb/admin-quality-client'
 import { isFounderMockFallbackAllowed } from '@/lib/founder/data/founder-data-mode'
 import { mockBillingMetrics } from '@/lib/founder/intelligence/mock-inputs'
 import type { ModelUsageBreakdown } from '@/lib/founder/contracts/billing-metrics'
 import type { FounderAdapterResult } from './adapter-types'
 import { getAiUsageAdapterUnavailable } from './adapter-unavailable'
-import { fetchJson } from './adapter-utils'
+import { fetchFounderLiveJson } from './adapter-utils'
 
 export type FounderAiUsageAggregate = {
   openAiSpendGbp: number
@@ -14,7 +13,7 @@ export type FounderAiUsageAggregate = {
 }
 
 export async function fetchAiUsageAdapter(): Promise<FounderAdapterResult<FounderAiUsageAggregate>> {
-  const usage = await fetchJson<OrbAdminUsageSummary>(`${ORB_ADMIN_API_PATHS.billingUsage}?days=30`)
+  const usage = await fetchFounderLiveJson<OrbAdminUsageSummary>('orb-billing-usage', { days: '30' })
 
   if (!usage) {
     return isFounderMockFallbackAllowed() ? getAiUsageAdapterFallback() : getAiUsageAdapterUnavailable()

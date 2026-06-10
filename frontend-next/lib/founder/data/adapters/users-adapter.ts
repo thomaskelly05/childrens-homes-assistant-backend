@@ -1,15 +1,14 @@
 import type { OrbAdminUsageSummary } from '@/lib/orb/admin-quality-client'
-import { ORB_ADMIN_API_PATHS } from '@/lib/orb/admin-quality-client'
 import { isFounderMockFallbackAllowed } from '@/lib/founder/data/founder-data-mode'
 import { mockUsageMetrics } from '@/lib/founder/intelligence/mock-inputs'
 import type { FounderAdapterResult, FounderUsersAggregate } from './adapter-types'
 import { getUsersAdapterUnavailable } from './adapter-unavailable'
-import { currentPeriodBounds, fetchJson } from './adapter-utils'
+import { currentPeriodBounds, fetchFounderLiveJson } from './adapter-utils'
 
 export async function fetchUsersAdapter(): Promise<FounderAdapterResult<FounderUsersAggregate>> {
   const limitations: string[] = []
 
-  const usage = await fetchJson<OrbAdminUsageSummary>(`${ORB_ADMIN_API_PATHS.billingUsage}?days=30`)
+  const usage = await fetchFounderLiveJson<OrbAdminUsageSummary>('orb-billing-usage', { days: '30' })
   if (!usage || typeof usage.total_active_users !== 'number') {
     return isFounderMockFallbackAllowed() ? getUsersAdapterFallback() : getUsersAdapterUnavailable()
   }

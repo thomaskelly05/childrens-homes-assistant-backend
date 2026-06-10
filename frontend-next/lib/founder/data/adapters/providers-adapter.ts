@@ -3,7 +3,7 @@ import { mockProviderAnalytics } from '@/lib/founder/intelligence/mock-inputs'
 import type { ProviderAnalytics } from '@/lib/founder/contracts/provider-analytics'
 import type { FounderAdapterResult } from './adapter-types'
 import { getProvidersAdapterUnavailable } from './adapter-unavailable'
-import { anonymiseProviderLabel, currentPeriodBounds, fetchJson } from './adapter-utils'
+import { anonymiseProviderLabel, currentPeriodBounds, fetchFounderLiveJson } from './adapter-utils'
 
 type ProvidersApiResponse = {
   providers?: Array<Record<string, unknown>>
@@ -13,7 +13,7 @@ type ProvidersApiResponse = {
 
 export async function fetchProvidersAdapter(): Promise<FounderAdapterResult<ProviderAnalytics>> {
   const { periodStart, periodEnd } = currentPeriodBounds()
-  const payload = await fetchJson<ProvidersApiResponse>('/api/providers')
+  const payload = await fetchFounderLiveJson<ProvidersApiResponse>('providers')
 
   if (!payload) {
     return isFounderMockFallbackAllowed() ? getProvidersAdapterFallback() : getProvidersAdapterUnavailable()

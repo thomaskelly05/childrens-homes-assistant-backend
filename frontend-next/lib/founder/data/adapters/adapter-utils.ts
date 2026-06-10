@@ -17,6 +17,28 @@ export function anonymiseHomeLabel(index: number): string {
   return `Home ${String.fromCharCode(65 + (index % 26))}`
 }
 
+export async function probeFounderLiveEndpoint(target: string, query?: Record<string, string>): Promise<boolean> {
+  if (typeof window === 'undefined') return false
+
+  const params = query ? `?${new URLSearchParams(query).toString()}` : ''
+  const path = `/api/founder/live/${target}${params}`
+
+  try {
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), PROBE_TIMEOUT_MS)
+    const response = await fetch(path, {
+      credentials: 'include',
+      cache: 'no-store',
+      signal: controller.signal
+    })
+    clearTimeout(timer)
+    return response.ok
+  } catch {
+    return false
+  }
+}
+
+/** @deprecated Founder probes should use probeFounderLiveEndpoint. */
 export async function probeEndpoint(path: string): Promise<boolean> {
   if (typeof window === 'undefined') return false
 
@@ -35,6 +57,37 @@ export async function probeEndpoint(path: string): Promise<boolean> {
   }
 }
 
+function unwrapFounderLivePayload<T>(body: unknown): T | null {
+  if (!body || typeof body !== 'object') return null
+  if ('data' in body && (body as { data?: T }).data !== undefined) {
+    return (body as { data: T }).data
+  }
+  return body as T
+}
+
+export async function fetchFounderLiveJson<T>(target: string, query?: Record<string, string>): Promise<T | null> {
+  if (typeof window === 'undefined') return null
+
+  const params = query ? `?${new URLSearchParams(query).toString()}` : ''
+  const path = `/api/founder/live/${target}${params}`
+
+  try {
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), PROBE_TIMEOUT_MS)
+    const response = await fetch(path, {
+      credentials: 'include',
+      cache: 'no-store',
+      signal: controller.signal
+    })
+    clearTimeout(timer)
+    if (!response.ok) return null
+    return unwrapFounderLivePayload<T>(await response.json())
+  } catch {
+    return null
+  }
+}
+
+/** @deprecated Founder adapters should use fetchFounderLiveJson instead of direct backend paths. */
 export async function fetchJson<T>(path: string): Promise<T | null> {
   if (typeof window === 'undefined') return null
 
@@ -48,11 +101,7 @@ export async function fetchJson<T>(path: string): Promise<T | null> {
     })
     clearTimeout(timer)
     if (!response.ok) return null
-    const body = (await response.json()) as { data?: T } | T
-    if (body && typeof body === 'object' && 'data' in body && body.data !== undefined) {
-      return body.data as T
-    }
-    return body as T
+    return unwrapFounderLivePayload<T>(await response.json())
   } catch {
     return null
   }

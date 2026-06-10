@@ -19,8 +19,9 @@ describe('Founder persistence V1', () => {
 
   it('API handler rejects non-founder access', () => {
     const handler = read('lib/founder/persistence/founder-api-handler.ts')
-    assert.match(handler, /userHasFounderAccess/)
-    assert.match(handler, /status: 403/)
+    const session = read('lib/founder/auth/founder-session.ts')
+    assert.match(session, /userHasFounderAccessFromProfile/)
+    assert.match(session, /status: 403/)
     assert.match(handler, /founder-os\/persistence/)
   })
 

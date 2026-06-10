@@ -2,7 +2,7 @@ import { isFounderMockFallbackAllowed } from '@/lib/founder/data/founder-data-mo
 import { mockProviderAnalytics } from '@/lib/founder/intelligence/mock-inputs'
 import type { FounderAdapterResult, FounderHomesAggregate } from './adapter-types'
 import { getHomesAdapterUnavailable } from './adapter-unavailable'
-import { fetchJson } from './adapter-utils'
+import { fetchFounderLiveJson } from './adapter-utils'
 
 type HomesApiResponse = {
   homes?: Array<Record<string, unknown>>
@@ -11,7 +11,7 @@ type HomesApiResponse = {
 }
 
 export async function fetchHomesAdapter(): Promise<FounderAdapterResult<FounderHomesAggregate>> {
-  const payload = await fetchJson<HomesApiResponse>('/api/homes')
+  const payload = await fetchFounderLiveJson<HomesApiResponse>('homes')
 
   if (!payload) {
     return isFounderMockFallbackAllowed() ? getHomesAdapterFallback() : getHomesAdapterUnavailable()

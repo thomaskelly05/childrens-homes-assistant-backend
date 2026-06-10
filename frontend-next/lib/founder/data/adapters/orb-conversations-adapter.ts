@@ -1,11 +1,10 @@
 import type { OrbAdminFeedbackSummary } from '@/lib/orb/admin-quality-client'
-import { ORB_ADMIN_API_PATHS } from '@/lib/orb/admin-quality-client'
 import { isFounderMockFallbackAllowed } from '@/lib/founder/data/founder-data-mode'
 import { mockOrbAnalytics } from '@/lib/founder/intelligence/mock-inputs'
 import type { OrbConversationAnalytics } from '@/lib/founder/contracts/orb-conversation-analytics'
 import type { FounderAdapterResult } from './adapter-types'
 import { getOrbConversationsAdapterUnavailable } from './adapter-unavailable'
-import { currentPeriodBounds, fetchJson } from './adapter-utils'
+import { currentPeriodBounds, fetchFounderLiveJson } from './adapter-utils'
 
 function helpfulRatioToSatisfaction(ratio: number): number {
   return Math.round(Math.min(100, Math.max(0, ratio * 100)))
@@ -13,7 +12,7 @@ function helpfulRatioToSatisfaction(ratio: number): number {
 
 export async function fetchOrbConversationsAdapter(): Promise<FounderAdapterResult<OrbConversationAnalytics>> {
   const { periodStart, periodEnd } = currentPeriodBounds()
-  const summary = await fetchJson<OrbAdminFeedbackSummary>(`${ORB_ADMIN_API_PATHS.feedbackSummary}?days=30`)
+  const summary = await fetchFounderLiveJson<OrbAdminFeedbackSummary>('orb-feedback-summary', { days: '30' })
 
   if (!summary) {
     return isFounderMockFallbackAllowed() ? getOrbConversationsAdapterFallback() : getOrbConversationsAdapterUnavailable()

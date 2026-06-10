@@ -6,6 +6,7 @@ import { FileCheck, Loader2 } from 'lucide-react'
 
 import { FounderNavHeader } from '@/components/founder/founder-nav-header'
 import { FounderSectionCard } from '@/components/founder/founder-section-card'
+import { founderGet, founderPost } from '@/lib/founder/api/founder-api-client'
 import { buildEvidenceSources } from '@/lib/founder/evidence/evidence-source-builder'
 import { EVIDENCE_AUDIENCE_LABELS, type EvidenceAudience, type EvidencePack } from '@/lib/founder/evidence/evidence-types'
 import { getPackConfidence } from '@/lib/founder/evidence/evidence-store'
@@ -67,10 +68,12 @@ export function FounderEvidencePage() {
     setLoading(true)
     setError(null)
     try {
-      const response = await fetch('/api/founder/evidence', { credentials: 'same-origin' })
-      if (!response.ok) throw new Error('Failed to load evidence packs')
-      const data = (await response.json()) as { packs: EvidencePack[] }
-      setPacks(data.packs ?? [])
+      const result = await founderGet<{ packs: EvidencePack[] }>('/evidence')
+      if (!result.ok) {
+        setError(result.error)
+        return
+      }
+      setPacks(result.data.packs ?? [])
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load')
     } finally {
@@ -86,13 +89,11 @@ export function FounderEvidencePage() {
     setGenerating(audience)
     setError(null)
     try {
-      const response = await fetch('/api/founder/evidence/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'same-origin',
-        body: JSON.stringify({ audience })
-      })
-      if (!response.ok) throw new Error('Failed to generate evidence pack')
+      const result = await founderPost('/evidence/generate', { audience })
+      if (!result.ok) {
+        setError(result.error)
+        return
+      }
       await loadPacks()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Generation failed')

@@ -34,9 +34,22 @@ const REQUIRED_GET_ROUTES = [
   '/api/founder/persistence/quality-proposals',
   '/api/founder/persistence/expert-reviews',
   '/api/founder/persistence/memories',
+  '/api/founder/persistence/evidence-packs',
   '/api/founder/persistence/operating-loop-runs',
   '/api/founder/telemetry/summary?days=30',
-  '/api/founder/operating-loop/runs'
+  '/api/founder/operating-loop/runs',
+  '/api/founder/live/providers',
+  '/api/founder/live/homes',
+  '/api/founder/live/inspection-readiness',
+  '/api/founder/live/orb-feedback-summary?days=30',
+  '/api/founder/live/orb-billing-usage?days=30',
+  '/api/founder/session'
+] as const
+
+const REQUIRED_POST_ROUTES = [
+  '/api/founder/persistence/memories',
+  '/api/founder/persistence/approvals',
+  '/api/founder/operating-loop/run'
 ] as const
 
 describe('Founder API route smoke contract', () => {
@@ -84,20 +97,40 @@ describe('Founder API route smoke contract', () => {
 
   it('handler proxies to /founder-os backend namespace', () => {
     const handler = read('lib/founder/persistence/founder-api-handler.ts')
+    const session = read('lib/founder/auth/founder-session.ts')
     assert.match(handler, /founder-os\/persistence/)
     assert.match(handler, /founder-os\/telemetry/)
-    assert.match(handler, /status: 403/)
+    assert.match(session, /Founder access required/)
+    assert.match(session, /body\.user/)
     assert.match(handler, /items: \[\], count: 0/)
   })
 
-  it('operating loop client sends CSRF token on POST', () => {
+  it('live data proxies exist and adapters use /api/founder/live', () => {
+    assert.equal(routeExists('app/api/founder/live/[target]/route.ts'), true)
+    assert.equal(routeExists('app/api/founder/session/route.ts'), true)
+    const providers = read('lib/founder/data/adapters/providers-adapter.ts')
+    assert.match(providers, /fetchFounderLiveJson<.*>\('providers'\)/)
+    const billing = read('lib/founder/data/adapters/billing-adapter.ts')
+    assert.match(billing, /orb-billing-usage/)
+    const orb = read('lib/founder/data/adapters/orb-conversations-adapter.ts')
+    assert.doesNotMatch(orb, /\/orb\/admin\//)
+  })
+
+  it('operating loop client uses founder API proxy for POST', () => {
     const client = read('lib/founder/operating-loop/operating-loop-client.ts')
-    assert.match(client, /getCsrfToken/)
-    assert.match(client, /x-csrf-token/)
+    const apiClient = read('lib/founder/api/founder-api-client.ts')
+    assert.match(client, /founderPost/)
+    assert.match(apiClient, /x-csrf-token/)
   })
 
   it('documents required GET smoke endpoints', () => {
     for (const route of REQUIRED_GET_ROUTES) {
+      assert.match(route, /^\/api\/founder\//)
+    }
+  })
+
+  it('documents required POST smoke endpoints', () => {
+    for (const route of REQUIRED_POST_ROUTES) {
       assert.match(route, /^\/api\/founder\//)
     }
   })
