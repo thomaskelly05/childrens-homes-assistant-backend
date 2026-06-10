@@ -128,7 +128,11 @@ export function getApprovalTypeLabel(type: ApprovalType): string {
     'product-action': 'Product Action',
     'relationship-message': 'Relationship Message',
     'founder-briefing': 'Founder Briefing',
-    'founder-narrative': 'Founder Narrative'
+    'founder-narrative': 'Founder Narrative',
+    'company-board-report': 'Company Board Report',
+    'weekly-executive-pack': 'Weekly Executive Pack',
+    'investor-ready-scorecard': 'Investor-Ready Scorecard',
+    'public-company-narrative': 'Public Company Narrative'
   }
   return labels[type]
 }

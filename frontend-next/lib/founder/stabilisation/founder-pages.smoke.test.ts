@@ -54,7 +54,28 @@ const FOUNDER_PAGES = [
     page: 'app/founder/telemetry/page.tsx',
     component: 'components/founder/founder-telemetry-page.tsx'
   },
-  { route: '/founder/audit', page: 'app/founder/audit/page.tsx', component: 'components/founder/founder-audit-page.tsx' }
+  { route: '/founder/audit', page: 'app/founder/audit/page.tsx', component: 'components/founder/founder-audit-page.tsx' },
+  { route: '/founder/company', page: 'app/founder/company/page.tsx', component: 'components/founder/founder-company-page.tsx' },
+  {
+    route: '/founder/company/departments',
+    page: 'app/founder/company/departments/page.tsx',
+    component: 'components/founder/founder-company-departments-page.tsx'
+  },
+  {
+    route: '/founder/company/scorecard',
+    page: 'app/founder/company/scorecard/page.tsx',
+    component: 'components/founder/founder-company-scorecard-page.tsx'
+  },
+  {
+    route: '/founder/company/cadence',
+    page: 'app/founder/company/cadence/page.tsx',
+    component: 'components/founder/founder-company-cadence-page.tsx'
+  },
+  {
+    route: '/founder/company/board-report',
+    page: 'app/founder/company/board-report/page.tsx',
+    component: 'components/founder/founder-company-board-report-page.tsx'
+  }
 ] as const
 
 const BLOCKED_BROWSER_PATTERNS = [
@@ -74,7 +95,8 @@ describe('Founder OS page smoke suite', () => {
   it('founder nav header exposes core routes', () => {
     const nav = read('components/founder/founder-nav-header.tsx')
     for (const { route } of FOUNDER_PAGES) {
-      const slug = route === '/founder/audit' ? '/founder/audit' : route
+      const slug =
+        route.startsWith('/founder/company/') ? '/founder/company' : route === '/founder/audit' ? '/founder/audit' : route
       assert.match(nav, new RegExp(slug.replace(/\//g, '\\/')))
     }
   })

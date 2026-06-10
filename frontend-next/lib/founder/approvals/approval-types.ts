@@ -11,6 +11,10 @@ export type ApprovalType =
   | 'relationship-message'
   | 'founder-briefing'
   | 'founder-narrative'
+  | 'company-board-report'
+  | 'weekly-executive-pack'
+  | 'investor-ready-scorecard'
+  | 'public-company-narrative'
 
 export type ApprovalStatus = 'pending' | 'approved' | 'rejected' | 'needs-changes'
 

@@ -19,6 +19,7 @@ import type {
   FounderIntelligenceSnapshot
 } from './intelligence-centre-types'
 import { nextId } from '@/lib/founder/persistence/repositories/repository-base'
+import { buildCompanyOperatingModel } from '@/lib/founder/company/company-service'
 
 export function generateFounderIntelligenceSnapshotSync(): FounderIntelligenceSnapshot {
   const sources = buildIntelligenceSourcesSync()
@@ -30,6 +31,13 @@ export function generateFounderIntelligenceSnapshotSync(): FounderIntelligenceSn
 
   const partial = { founderScore, topPriorities, risks, opportunities, limitations: sources.limitations }
   const narrative = generateFounderNarratives(sources, partial)
+
+  let company: ReturnType<typeof buildCompanyOperatingModel> | null = null
+  try {
+    company = buildCompanyOperatingModel()
+  } catch {
+    /* company model optional */
+  }
 
   return {
     id: nextId('intel-snap'),
@@ -44,7 +52,23 @@ export function generateFounderIntelligenceSnapshotSync(): FounderIntelligenceSn
     narrative,
     recommendedDecisions: topPriorities.slice(0, 3).map((p) => p.recommendedAction),
     briefingIds: [],
-    limitations: sources.limitations
+    limitations: sources.limitations,
+    company: company
+      ? {
+          companyScore: company.scorecard.overallCompanyScore,
+          companyConfidence: company.scorecard.overallConfidence,
+          departmentScores: company.departments.map((d) => ({
+            departmentId: d.id,
+            name: d.name,
+            score: d.score ?? 0,
+            confidence: d.confidence ?? 0
+          })),
+          ceoAgendaCount: company.ceoAgenda.length,
+          boardReportStatus: 'not-generated',
+          departmentRisks: company.scorecard.risks,
+          departmentOpportunities: company.scorecard.opportunities
+        }
+      : undefined
   }
 }
 
