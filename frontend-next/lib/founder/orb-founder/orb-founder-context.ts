@@ -21,6 +21,8 @@ import {
   type OfstedReadinessResult,
   type OrbIntelligence
 } from '@/lib/founder/intelligence'
+import { getFounderStrategicContext } from '@/lib/founder/memory/founder-memory-store'
+import type { FounderStrategicContext } from '@/lib/founder/memory/founder-memory-types'
 import type { FounderDashboardData, FounderRecommendation } from '@/lib/founder/mock-data'
 
 export type OrbFounderAgentContext = {
@@ -43,6 +45,7 @@ export type OrbFounderContext = {
   dataSourceStatus: FounderDataSourceStatus
   dataLimitations: string[]
   answerDataBasis: FounderDataSourceStatus['source']
+  strategicMemory: FounderStrategicContext
 }
 
 function buildCurrentRisks(
@@ -131,7 +134,8 @@ export function getOrbFounderContext(): OrbFounderContext {
     hoursReturned,
     dataSourceStatus,
     dataLimitations: dataSourceStatus.limitations,
-    answerDataBasis: dataSourceStatus.source
+    answerDataBasis: dataSourceStatus.source,
+    strategicMemory: getFounderStrategicContext()
   }
 }
 
@@ -222,7 +226,22 @@ export function serializeOrbFounderContextForAi(context: OrbFounderContext): str
       change: t.change,
       direction: t.direction,
       tone: t.tone
-    }))
+    })),
+    founderStrategicMemory: {
+      instruction:
+        'Use only the founder strategic memory below for strategy, decisions, principles and deferred work. Do not invent memory. If a field is empty, say it is not recorded yet.',
+      primaryObjective: context.strategicMemory.primaryObjective || null,
+      secondaryObjectives: context.strategicMemory.secondaryObjectives,
+      deferredObjectives: context.strategicMemory.deferredObjectives,
+      currentProductFocus: context.strategicMemory.currentProductFocus || null,
+      currentCommercialFocus: context.strategicMemory.currentCommercialFocus || null,
+      currentRisks: context.strategicMemory.currentRisks,
+      operatingPrinciples: context.strategicMemory.operatingPrinciples,
+      importantDecisions: context.strategicMemory.importantDecisions,
+      keyRelationships: context.strategicMemory.keyRelationships,
+      memoryUpdatedAt: context.strategicMemory.memoryUpdatedAt || null,
+      activeMemoryCount: context.strategicMemory.activeMemoryCount
+    }
   }
 
   return JSON.stringify(anonymised, null, 2)

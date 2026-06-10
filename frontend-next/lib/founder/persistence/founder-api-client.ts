@@ -94,5 +94,6 @@ export const ENTITY_API_SLUGS = {
   quality_result: 'quality-results',
   quality_proposal: 'quality-proposals',
   expert_review: 'expert-reviews',
-  safety_review: 'safety-reviews'
+  safety_review: 'safety-reviews',
+  founder_memory: 'memories'
 } as const

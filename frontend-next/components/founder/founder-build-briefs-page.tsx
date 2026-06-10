@@ -5,6 +5,7 @@ import { Check, Copy, Hammer } from 'lucide-react'
 
 import { FounderNavHeader } from '@/components/founder/founder-nav-header'
 import { FounderSectionCard } from '@/components/founder/founder-section-card'
+import { SaveToFounderMemoryButton } from '@/components/founder/save-to-founder-memory-button'
 import {
   generateBuildBriefFromCto,
   getBuildBriefs,
@@ -76,6 +77,15 @@ function BriefCard({ brief, onUpdate }: { brief: BuildBrief; onUpdate: () => voi
           {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
           Copy Cursor Prompt
         </button>
+        <SaveToFounderMemoryButton
+          type="decision"
+          title={brief.title}
+          content={`Problem: ${brief.problem}\n\nGoal: ${brief.goal}`}
+          tags={['build-brief', brief.priority]}
+          linkedEntityId={brief.id}
+          linkedEntityType="build_brief"
+          source="founder-ui"
+        />
         {brief.status === 'draft' ? (
           <button
             type="button"

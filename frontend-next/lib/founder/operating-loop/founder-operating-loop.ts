@@ -1,4 +1,6 @@
 import { addFounderAction, refreshFounderActions } from '@/lib/founder/actions'
+import { getFounderStrategicContext } from '@/lib/founder/memory/founder-memory-store'
+import { filterDeferredRecommendations } from '@/lib/founder/memory/founder-memory-staff-context'
 import { getPendingApprovals } from '@/lib/founder/approvals'
 import { generateBuildBriefFromCto } from '@/lib/founder/build-briefs'
 import { generateLinkedInDraft } from '@/lib/founder/content'
@@ -35,6 +37,7 @@ export { getLastOperatingLoopRun, getOperatingLoopRun, getOperatingLoopRuns }
 function buildDataBasis(): string {
   const telemetry = getFounderTelemetrySummary()
   const quality = getQualityLabSummary()
+  const memory = getFounderStrategicContext()
   const parts: string[] = []
 
   if (telemetry.totalEvents > 0) {
@@ -51,7 +54,29 @@ function buildDataBasis(): string {
     parts.push('Quality Lab: no persisted runs — quality sample may run if enabled')
   }
 
+  if (memory.activeMemoryCount > 0) {
+    parts.push(
+      `Founder memory: ${memory.activeMemoryCount} active items (updated ${memory.memoryUpdatedAt ? new Date(memory.memoryUpdatedAt).toLocaleString('en-GB') : '—'})`
+    )
+  } else {
+    parts.push('Founder memory: no strategic memory recorded yet')
+  }
+
   return parts.join('. ')
+}
+
+function buildStrategicAlignment(memory = getFounderStrategicContext()): string[] {
+  const alignment: string[] = []
+  if (memory.primaryObjective) alignment.push(`Primary objective: ${memory.primaryObjective}`)
+  if (memory.currentProductFocus) alignment.push(`Product focus: ${memory.currentProductFocus}`)
+  if (memory.currentCommercialFocus) alignment.push(`Commercial focus: ${memory.currentCommercialFocus}`)
+  if (memory.operatingPrinciples.length > 0) {
+    alignment.push(`Operating principles: ${memory.operatingPrinciples.slice(0, 2).join('; ')}`)
+  }
+  if (memory.deferredObjectives.length > 0) {
+    alignment.push(`Deferred work excluded unless requested: ${memory.deferredObjectives.slice(0, 2).join('; ')}`)
+  }
+  return alignment
 }
 
 function buildTelemetrySummary(): string {
@@ -175,6 +200,7 @@ export async function runFounderOperatingLoop(
     buildBriefsCreated: [],
     risksIdentified: [],
     recommendedFounderDecisions: [],
+    strategicAlignment: [],
     auditLogIds,
     errors
   }
@@ -184,6 +210,8 @@ export async function runFounderOperatingLoop(
     await refreshFounderTelemetrySummary().catch(() => undefined)
     hydrateFounderTelemetryFromLiveData()
 
+    const strategicMemory = getFounderStrategicContext()
+    const strategicAlignment = buildStrategicAlignment(strategicMemory)
     const dataBasis = buildDataBasis()
     const telemetrySummary = buildTelemetrySummary()
     let qualityLabSummary = buildQualityLabSummary()
@@ -244,7 +272,10 @@ export async function runFounderOperatingLoop(
     const approvalsCreated = plan.generateApprovals ? countNewApprovals(approvalIdsBefore) : []
 
     const risksIdentified = collectRisks(agentOutputs)
-    const recommendedFounderDecisions = collectDecisions(agentOutputs)
+    const recommendedFounderDecisions = filterDeferredRecommendations(
+      collectDecisions(agentOutputs),
+      strategicMemory.deferredObjectives
+    )
     const chiefOutput = agentOutputs.find((entry) => entry.agentId === 'chief-of-staff')?.output
     const summary =
       chiefOutput?.summary ??
@@ -276,6 +307,7 @@ export async function runFounderOperatingLoop(
       buildBriefsCreated,
       risksIdentified,
       recommendedFounderDecisions,
+      strategicAlignment,
       auditLogIds,
       errors
     }
@@ -355,6 +387,7 @@ export async function runFounderOperatingLoop(
       buildBriefsCreated: [],
       risksIdentified: [],
       recommendedFounderDecisions: [],
+      strategicAlignment: buildStrategicAlignment(),
       auditLogIds,
       errors
     }

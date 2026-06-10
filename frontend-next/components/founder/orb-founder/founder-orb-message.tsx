@@ -2,6 +2,7 @@
 
 import { Bot, User } from 'lucide-react'
 
+import { SaveToFounderMemoryButton } from '@/components/founder/save-to-founder-memory-button'
 import type { FounderOrbAiAnswer } from '@/lib/founder/orb-founder'
 
 export type FounderOrbChatMessage = {
@@ -71,6 +72,14 @@ export function FounderOrbMessage({ message }: { message: FounderOrbChatMessage 
                 Suggested follow-ups available in the sidebar
               </p>
             )}
+
+            <SaveToFounderMemoryButton
+              type="decision"
+              title="ORB Founder answer"
+              content={message.content}
+              tags={['orb-founder']}
+              source="founder-ui"
+            />
           </div>
         )}
       </div>

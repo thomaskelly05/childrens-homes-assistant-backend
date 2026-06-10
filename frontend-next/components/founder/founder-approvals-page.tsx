@@ -4,6 +4,7 @@ import { useCallback, useState } from 'react'
 
 import { FounderNavHeader } from '@/components/founder/founder-nav-header'
 import { FounderSectionCard } from '@/components/founder/founder-section-card'
+import { SaveToFounderMemoryButton } from '@/components/founder/save-to-founder-memory-button'
 import {
   approveItem,
   getApprovalItems,
@@ -98,6 +99,15 @@ export function FounderApprovalsPage() {
                         >
                           Reject
                         </button>
+                        <SaveToFounderMemoryButton
+                          type="decision"
+                          title={`Approval decision: ${item.title}`}
+                          content={`${item.title}\n\n${item.content}`}
+                          tags={['approval', item.type]}
+                          linkedEntityId={item.id}
+                          linkedEntityType="approval"
+                          source="approval-centre"
+                        />
                       </div>
                     </article>
                   ))}

@@ -21,6 +21,7 @@ import type {
   FounderOperatingLoopRun,
   OperatingLoopResult
 } from '@/lib/founder/operating-loop/operating-loop-types'
+import type { FounderMemoryItem } from '@/lib/founder/memory/founder-memory-types'
 import type { FounderStaffAgentId } from '@/lib/founder/team/founder-team-types'
 
 export type FounderPersistenceSource =
@@ -53,6 +54,7 @@ export type FounderEntityType =
   | 'quality_proposal'
   | 'expert_review'
   | 'safety_review'
+  | 'founder_memory'
   | 'audit_log'
 
 export type FounderActionRecord = FounderPersistedBase & {
@@ -173,6 +175,11 @@ export type FounderSafetyReviewRecord = FounderPersistedBase & {
   safe: boolean
   requiresReview: boolean
   redactedExcerpt?: string
+}
+
+export type FounderMemoryRecord = FounderPersistedBase & {
+  status: FounderMemoryItem['status']
+  item: FounderMemoryItem
 }
 
 export type FounderAuditEventType =
