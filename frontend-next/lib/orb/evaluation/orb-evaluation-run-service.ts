@@ -1,6 +1,7 @@
 import { addBuildBrief } from '@/lib/founder/build-briefs/build-brief-store'
 import { addQualityProposal } from '@/lib/founder/quality-lab/quality-proposal-store'
 import { founderPost } from '@/lib/founder/api/founder-api-client'
+import { postEvaluationRun } from '@/lib/orb/evaluation/orb-evaluation-client'
 
 import type {
   OrbEvaluationFixProposal,
@@ -113,21 +114,15 @@ async function callBackendRun(
   options: EvaluationRunOptions
 ): Promise<BackendRunResponse | null> {
   try {
-    const response = await fetch('/api/orb/evaluation/runs', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        title: options.title,
-        mode: options.mode ?? 'live-llm',
-        pack_type: options.packType ?? 'standard',
-        scenarios,
-        limit: options.limit ?? scenarios.length,
-        created_by: options.createdBy ?? 'founder'
-      })
+    const payload = await postEvaluationRun({
+      title: options.title,
+      mode: options.mode ?? 'live-llm',
+      pack_type: options.packType ?? 'standard',
+      scenarios,
+      limit: options.limit ?? scenarios.length,
+      created_by: options.createdBy ?? 'founder'
     })
-    if (!response.ok) return null
-    const payload = await response.json()
-    return (payload?.data ?? payload) as BackendRunResponse
+    return payload as BackendRunResponse
   } catch {
     return null
   }

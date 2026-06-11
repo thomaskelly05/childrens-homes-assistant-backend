@@ -116,13 +116,36 @@ def test_live_llm_unavailable_marks_failed_without_fabrication(monkeypatch):
     assert result.scenario_results == []
 
 
-def test_evaluation_routes_require_admin(admin_client):
+def test_evaluation_routes_require_founder(admin_client):
     response = admin_client.get("/orb/admin/evaluation/overview")
     assert response.status_code == 200
     payload = response.json()
     assert payload.get("success") is True
 
 
-def test_non_admin_blocked(staff_client):
+@pytest.fixture()
+def founder_client(monkeypatch):
+    async def _bypass_csrf_dispatch(self, request, call_next):
+        return await call_next(request)
+
+    monkeypatch.setattr(CsrfProtectionMiddleware, "dispatch", _bypass_csrf_dispatch)
+    monkeypatch.setattr(app_module, "init_db_pool", lambda: None, raising=False)
+    monkeypatch.setattr(app_module, "close_db_pool", lambda: None, raising=False)
+
+    def founder_user():
+        return {"id": 9, "role": "founder", "email": "founder@test.com", "home_id": 1}
+
+    app_module.app.dependency_overrides[get_current_user] = founder_user
+    yield TestClient(app_module.app)
+    app_module.app.dependency_overrides.clear()
+
+
+def test_founder_role_can_access_evaluation_overview(founder_client):
+    response = founder_client.get("/orb/admin/evaluation/overview")
+    assert response.status_code == 200
+    assert response.json().get("success") is True
+
+
+def test_non_founder_blocked(staff_client):
     response = staff_client.get("/orb/admin/evaluation/overview")
     assert response.status_code == 403

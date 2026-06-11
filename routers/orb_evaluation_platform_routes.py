@@ -6,7 +6,7 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
-from auth.permissions import require_admin
+from auth.permissions import require_founder
 from schemas.orb_evaluation_platform import (
     OrbEvaluationGenerateRequest,
     OrbEvaluationRunRequest,
@@ -22,14 +22,14 @@ def _success(data: Any) -> dict[str, Any]:
 
 
 @router.get("/overview")
-async def evaluation_overview(_admin=Depends(require_admin)):
+async def evaluation_overview(_founder=Depends(require_founder)):
     return _success(orb_evaluation_platform_service.build_overview())
 
 
 @router.get("/scenarios")
 async def evaluation_scenarios(
     limit: int = Query(default=500, ge=1, le=5000),
-    _admin=Depends(require_admin),
+    _founder=Depends(require_founder),
 ):
     scenarios = orb_evaluation_platform_service.list_scenarios(limit=limit)
     return _success({"scenarios": scenarios, "count": len(scenarios)})
@@ -38,7 +38,7 @@ async def evaluation_scenarios(
 @router.post("/scenarios/generate")
 async def evaluation_generate_scenarios(
     body: OrbEvaluationGenerateRequest,
-    _admin=Depends(require_admin),
+    _founder=Depends(require_founder),
 ):
     return _success(
         {
@@ -52,7 +52,7 @@ async def evaluation_generate_scenarios(
 @router.post("/scenarios")
 async def evaluation_store_scenarios(
     scenarios: list[OrbEvaluationScenarioPayload],
-    _admin=Depends(require_admin),
+    _founder=Depends(require_founder),
 ):
     stored = orb_evaluation_platform_service.store_scenarios(
         [s.model_dump(by_alias=True) for s in scenarios]
@@ -63,7 +63,7 @@ async def evaluation_store_scenarios(
 @router.post("/runs")
 async def evaluation_run(
     body: OrbEvaluationRunRequest,
-    _admin=Depends(require_admin),
+    _founder=Depends(require_founder),
 ):
     result = orb_evaluation_platform_service.run_evaluation(body)
     if result.error and result.status == "failed" and result.scenario_count == 0:
@@ -75,7 +75,7 @@ async def evaluation_run(
 async def evaluation_retest(
     run_id: str,
     body: OrbEvaluationRunRequest,
-    _admin=Depends(require_admin),
+    _founder=Depends(require_founder),
 ):
     body.title = body.title or f"Retest of {run_id}"
     body.pack_type = "retest"
