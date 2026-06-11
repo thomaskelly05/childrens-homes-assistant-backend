@@ -7,11 +7,9 @@ from fastapi.testclient import TestClient
 
 import app as app_module
 from auth.current_user import get_current_user
-from middleware.security_middleware import CsrfProtectionMiddleware
-
 
 @pytest.fixture()
-def founder_client(monkeypatch):
+def csrf_enforced_founder_client(monkeypatch):
     monkeypatch.setattr(app_module, "init_db_pool", lambda: None, raising=False)
     monkeypatch.setattr(app_module, "close_db_pool", lambda: None, raising=False)
 
@@ -49,11 +47,11 @@ def _run_payload() -> dict:
     }
 
 
-def test_internal_brain_post_succeeds_with_valid_session_and_csrf(founder_client: TestClient):
+def test_internal_brain_post_succeeds_with_valid_session_and_csrf(csrf_enforced_founder_client: TestClient):
     csrf_token = "test-csrf-token-valid"
-    founder_client.cookies.set("indicare_csrf", csrf_token)
+    csrf_enforced_founder_client.cookies.set("indicare_csrf", csrf_token)
 
-    response = founder_client.post(
+    response = csrf_enforced_founder_client.post(
         "/orb/admin/evaluation/runs",
         headers={"x-csrf-token": csrf_token},
         json=_run_payload(),
@@ -67,10 +65,10 @@ def test_internal_brain_post_succeeds_with_valid_session_and_csrf(founder_client
     assert data.get("scenario_count", 0) >= 1
 
 
-def test_internal_brain_post_fails_with_missing_csrf(founder_client: TestClient):
-    founder_client.cookies.set("indicare_csrf", "test-csrf-token-missing-header")
+def test_internal_brain_post_fails_with_missing_csrf(csrf_enforced_founder_client: TestClient):
+    csrf_enforced_founder_client.cookies.set("indicare_csrf", "test-csrf-token-missing-header")
 
-    response = founder_client.post(
+    response = csrf_enforced_founder_client.post(
         "/orb/admin/evaluation/runs",
         json=_run_payload(),
     )
@@ -79,10 +77,10 @@ def test_internal_brain_post_fails_with_missing_csrf(founder_client: TestClient)
     assert response.json().get("detail") == "csrf_failed"
 
 
-def test_internal_brain_post_fails_with_invalid_csrf(founder_client: TestClient):
-    founder_client.cookies.set("indicare_csrf", "cookie-token")
+def test_internal_brain_post_fails_with_invalid_csrf(csrf_enforced_founder_client: TestClient):
+    csrf_enforced_founder_client.cookies.set("indicare_csrf", "cookie-token")
 
-    response = founder_client.post(
+    response = csrf_enforced_founder_client.post(
         "/orb/admin/evaluation/runs",
         headers={"x-csrf-token": "wrong-token"},
         json=_run_payload(),
@@ -92,16 +90,19 @@ def test_internal_brain_post_fails_with_invalid_csrf(founder_client: TestClient)
     assert response.json().get("detail") == "csrf_failed"
 
 
-def test_live_llm_csrf_expectations_unchanged(founder_client: TestClient, monkeypatch):
-    async def _bypass_csrf_dispatch(self, request, call_next):
-        return await call_next(request)
+def test_live_llm_post_with_valid_csrf_is_not_csrf_blocked(csrf_enforced_founder_client: TestClient, monkeypatch):
+    monkeypatch.setattr(
+        "services.orb_evaluation_platform_service.live_llm_available",
+        lambda: False,
+    )
+    csrf_token = "live-llm-csrf-token"
+    csrf_enforced_founder_client.cookies.set("indicare_csrf", csrf_token)
 
-    monkeypatch.setattr(CsrfProtectionMiddleware, "dispatch", _bypass_csrf_dispatch)
-
-    response = founder_client.post(
+    response = csrf_enforced_founder_client.post(
         "/orb/admin/evaluation/runs",
+        headers={"x-csrf-token": csrf_token},
         json={
-            "title": "Live LLM CSRF bypass fixture",
+            "title": "Live LLM with valid CSRF",
             "mode": "live-llm",
             "pack_type": "standard",
             "scenarios": [_scenario_payload()],
@@ -110,6 +111,7 @@ def test_live_llm_csrf_expectations_unchanged(founder_client: TestClient, monkey
     )
 
     assert response.status_code in {200, 400}
+    assert response.json().get("detail") != "csrf_failed"
     if response.status_code == 200:
         data = response.json().get("data") or {}
         assert data.get("mode") == "live-llm"
