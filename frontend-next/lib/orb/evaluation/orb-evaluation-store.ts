@@ -26,7 +26,11 @@ export function addEvaluationScenarios(items: OrbEvaluationScenario[]): OrbEvalu
 }
 
 export function getEvaluationRuns(): OrbEvaluationRun[] {
-  return [...runs].sort((a, b) => b.startedAt.localeCompare(a.startedAt))
+  return [...runs].sort((a, b) => {
+    const aTime = a.completedAt ?? a.startedAt
+    const bTime = b.completedAt ?? b.startedAt
+    return bTime.localeCompare(aTime)
+  })
 }
 
 export function getEvaluationRun(runId: string): OrbEvaluationRun | undefined {
@@ -133,4 +137,8 @@ export function getLatestInternalBrainAdversarialRun(): OrbEvaluationRun | undef
       run.mode === 'internal-brain' &&
       run.packType === 'adversarial'
   )
+}
+
+export function getLatestLiveLlmRun(): OrbEvaluationRun | undefined {
+  return getEvaluationRuns().find((run) => run.status === 'completed' && run.mode === 'live-llm')
 }

@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Hammer, RefreshCw } from 'lucide-react'
 
 import { FounderNavHeader } from '@/components/founder/founder-nav-header'
@@ -9,15 +9,67 @@ import { FounderSectionCard } from '@/components/founder/founder-section-card'
 import {
   createBuildBriefFromEvaluationResult,
   createFixFromResult,
+  fetchEvaluationRun,
   getEvaluationRun,
+  hydrateEvaluationStore,
   retestFailedScenarios
 } from '@/lib/orb/evaluation'
+import type { OrbEvaluationRun } from '@/lib/orb/evaluation/orb-evaluation-types'
 
 export function FounderOrbEvaluationRunDetailPage({ runId }: { runId: string }) {
-  const run = useMemo(() => getEvaluationRun(runId), [runId])
-  const results = run?.results ?? []
+  const [run, setRun] = useState<OrbEvaluationRun | undefined>(() => getEvaluationRun(runId))
+  const [loadState, setLoadState] = useState<'loading' | 'ready' | 'error'>(() =>
+    getEvaluationRun(runId) ? 'ready' : 'loading'
+  )
 
-  if (!run) {
+  useEffect(() => {
+    let cancelled = false
+
+    async function loadRun() {
+      const cached = getEvaluationRun(runId)
+      if (cached) {
+        setRun(cached)
+        setLoadState('ready')
+        return
+      }
+
+      setLoadState('loading')
+      try {
+        const payload = await fetchEvaluationRun(runId)
+        if (cancelled) return
+        hydrateEvaluationStore({ runs: [payload.run] })
+        setRun(payload.run)
+        setLoadState('ready')
+      } catch {
+        if (cancelled) return
+        setRun(undefined)
+        setLoadState('error')
+      }
+    }
+
+    void loadRun()
+    return () => {
+      cancelled = true
+    }
+  }, [runId])
+
+  const results = useMemo(() => run?.results ?? [], [run])
+
+  if (loadState === 'loading') {
+    return (
+      <div className="founder-page mx-auto max-w-5xl px-4 py-8 md:px-8">
+        <FounderNavHeader
+          title="Loading evaluation run"
+          subtitle="Fetching persisted run details…"
+          showBack
+          backHref="/founder/orb-evaluation"
+        />
+        <p className="mt-6 text-slate-400">Loading evaluation run…</p>
+      </div>
+    )
+  }
+
+  if (!run || loadState === 'error') {
     return (
       <div className="founder-page mx-auto max-w-5xl px-4 py-8 md:px-8">
         <FounderNavHeader

@@ -287,10 +287,95 @@ test('founder-only access enforced on evaluation API routes', () => {
   const generateRoute = readFileSync(join(process.cwd(), 'app/api/orb/evaluation/scenarios/generate/route.ts'), 'utf8')
   const apiModule = readFileSync(join(apiRoot, 'orb-evaluation-api.ts'), 'utf8')
   const client = readFileSync(join(apiRoot, 'orb-evaluation-client.ts'), 'utf8')
+  const runService = readFileSync(join(apiRoot, 'orb-evaluation-run-service.ts'), 'utf8')
   const page = readFileSync(join(process.cwd(), 'app/founder/orb-evaluation/page.tsx'), 'utf8')
   assert.match(generateRoute, /requireFounderSession/)
   assert.match(apiModule, /requireFounderSession/)
   assert.match(apiModule, /mergeFounderProxyHeaders/)
   assert.match(client, /credentials:\s*'include'/)
   assert.match(page, /FounderGuard/)
+  assert.match(runService, /\/persistence\/orb-evaluation-runs/)
+  assert.doesNotMatch(runService, /\/quality-lab\/runs/)
+})
+
+test('internal brain high-risk button posts internal-brain mode and high-risk pack', () => {
+  const page = readFileSync(
+    join(process.cwd(), 'components/founder/founder-orb-evaluation-page.tsx'),
+    'utf8'
+  )
+  const runService = readFileSync(
+    join(process.cwd(), 'lib/orb/evaluation/orb-evaluation-run-service.ts'),
+    'utf8'
+  )
+  assert.match(page, /mode:\s*'internal-brain'/)
+  assert.match(page, /packType:\s*'high-risk'/)
+  assert.match(page, /requireSavedRun:\s*true/)
+  assert.match(runService, /pack_type: options\.packType/)
+  assert.match(runService, /await persistEvaluationRun/)
+})
+
+test('success requires saved completed run with id', () => {
+  const page = readFileSync(
+    join(process.cwd(), 'components/founder/founder-orb-evaluation-page.tsx'),
+    'utf8'
+  )
+  const runService = readFileSync(
+    join(process.cwd(), 'lib/orb/evaluation/orb-evaluation-run-service.ts'),
+    'utf8'
+  )
+  assert.match(page, /assertCompletedEvaluationRunSaved/)
+  assert.match(page, /No result was saved/)
+  assert.match(runService, /assertCompletedEvaluationRunSaved/)
+  assert.match(runService, /EvaluationRunError/)
+})
+
+test('blocker clears after completed internal-brain high-risk run with zero critical failures', () => {
+  const internalRun: OrbEvaluationRun = {
+    id: 'ib-clear',
+    mode: 'internal-brain',
+    status: 'completed',
+    scenarioCount: 10,
+    completedCount: 10,
+    passRate: 100,
+    averageScore: 90,
+    criticalFailures: 0,
+    startedAt: new Date().toISOString(),
+    completedAt: new Date().toISOString(),
+    createdBy: 'test',
+    summary: 'internal brain high-risk complete',
+    packType: 'high-risk'
+  }
+  const gate = computeOrbLaunchQualityGate({
+    runs: [],
+    evaluationRuns: [internalRun],
+    whistleblowingCovered: true,
+    privacyRetentionReviewed: true
+  })
+  assert.equal(gate.internalBrainHighRiskCompleted, true)
+  assert.ok(!gate.blockers.some((b) => b.includes('No completed internal-brain high-risk run')))
+})
+
+test('blocker remains when internal-brain high-risk run has critical failures', () => {
+  const internalRun: OrbEvaluationRun = {
+    id: 'ib-fail',
+    mode: 'internal-brain',
+    status: 'completed',
+    scenarioCount: 5,
+    completedCount: 5,
+    passRate: 40,
+    averageScore: 45,
+    criticalFailures: 2,
+    startedAt: new Date().toISOString(),
+    completedAt: new Date().toISOString(),
+    createdBy: 'test',
+    summary: 'internal brain high-risk with failures',
+    packType: 'high-risk'
+  }
+  const gate = computeOrbLaunchQualityGate({
+    runs: [],
+    evaluationRuns: [internalRun],
+    whistleblowingCovered: true,
+    privacyRetentionReviewed: true
+  })
+  assert.ok(gate.blockers.some((b) => b.includes('internal-brain high-risk')))
 })
