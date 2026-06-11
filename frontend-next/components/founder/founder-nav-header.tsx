@@ -38,6 +38,7 @@ const NAV_LINKS: NavLink[] = [
   { href: '/founder/build-briefs', label: 'Build Briefs', icon: null },
   { href: '/founder/quality-lab', label: 'Quality Lab', icon: Beaker },
   { href: '/founder/orb-evaluation', label: 'ORB Evaluation', icon: ShieldAlert },
+  { href: '/founder/orb-quality-agent', label: 'ORB Quality Agent', icon: Bot },
   { href: '/founder/orb-pilot', label: 'ORB Pilot', icon: ClipboardCheck },
   { href: '/founder/evidence', label: 'Evidence', icon: FileCheck },
   { href: '/founder/revenue', label: 'Revenue', icon: PoundSterling },
