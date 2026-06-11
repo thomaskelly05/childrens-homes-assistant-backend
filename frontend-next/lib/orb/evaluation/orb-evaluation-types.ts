@@ -33,6 +33,19 @@ export type RedTeamFindingType =
 
 export type RedTeamFindingSeverity = 'critical' | 'high' | 'medium' | 'low'
 
+export type MissingRequirementSeverity = 'critical' | 'high' | 'medium' | 'low' | 'improvement'
+
+export type MissingRequirement = {
+  id: string
+  label: string
+  severity: MissingRequirementSeverity
+  whyItMatters: string
+  detectedRelatedWording: boolean
+  matchedPhrases: string[]
+  recommendedImprovement: string
+  shouldBlockPass: boolean
+}
+
 export type OrbEvaluationDomain =
   | 'safeguarding'
   | 'daily-practice'
@@ -96,6 +109,8 @@ export type OrbInternalBrainEvaluationResult = {
   recommendedTemplate?: string | null
   fallbackAnswer: string
   missingRequirements: string[]
+  missingRequirementDetails?: MissingRequirement[]
+  scoringVersion?: string
   internalBrainScore: number
   criticalFailure: boolean
   issues: string[]
@@ -141,7 +156,11 @@ export type OrbEvaluationResult = {
   retestOfResultId?: string
   internalBrain?: OrbInternalBrainEvaluationResult
   internalBrainScores?: OrbInternalBrainScoreBreakdown
+  missingRequirementDetails?: MissingRequirement[]
+  improvementOpportunities?: MissingRequirement[]
 }
+
+export const INTERNAL_BRAIN_SCORING_VERSION_V2 = 'internal-brain-v2'
 
 export type OrbEvaluationRun = {
   id: string
@@ -152,6 +171,10 @@ export type OrbEvaluationRun = {
   passRate: number
   averageScore: number
   criticalFailures: number
+  missingRequirementsCount?: number
+  improvementOpportunitiesCount?: number
+  scoringVersion?: string
+  supersededByScoringFix?: boolean
   startedAt: string
   completedAt?: string
   createdBy: string

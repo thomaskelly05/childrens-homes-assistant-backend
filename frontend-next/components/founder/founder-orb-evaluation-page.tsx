@@ -24,6 +24,7 @@ import {
   getEvaluationRuns,
   getEvaluationSummary,
   getFindingsByType,
+  getInternalBrainSeveritySummary,
   hydrateEvaluationStore,
   isEvaluationCsrfError,
   isFounderDataSourceBusyError,
@@ -74,6 +75,7 @@ export function FounderOrbEvaluationPage() {
 
   const summary = useMemo(() => getEvaluationSummary(), [runs])
   const findings = useMemo(() => getFindingsByType(), [runs])
+  const internalBrainSeverity = useMemo(() => getInternalBrainSeveritySummary(), [runs])
   const agentCounts = useMemo(() => getAgentIssueCounts(), [runs])
   const latestRun = runs[0]
 
@@ -526,7 +528,37 @@ export function FounderOrbEvaluationPage() {
         </FounderSectionCard>
       </div>
 
-      <FounderSectionCard eyebrow="Findings" title="Latest evaluation findings">
+      <FounderSectionCard
+        eyebrow="Findings"
+        title="Latest evaluation findings"
+        description="Red team findings come from live-llm runs. Internal-brain runs use severity-classified missing requirements."
+      >
+        <div className="mb-6 grid gap-4 md:grid-cols-3">
+          <div className="rounded-2xl border border-rose-400/20 bg-rose-500/10 p-4">
+            <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-rose-200/80">
+              Critical failures (internal brain)
+            </p>
+            <p className="mt-2 text-xl font-black text-rose-200">
+              {internalBrainSeverity.criticalFailures}
+            </p>
+          </div>
+          <div className="rounded-2xl border border-amber-400/20 bg-amber-500/10 p-4">
+            <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-amber-200/80">
+              Missing requirements
+            </p>
+            <p className="mt-2 text-xl font-black text-amber-100">
+              {internalBrainSeverity.missingRequirements}
+            </p>
+          </div>
+          <div className="rounded-2xl border border-cyan-400/20 bg-cyan-500/10 p-4">
+            <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-cyan-200/80">
+              Improvement opportunities
+            </p>
+            <p className="mt-2 text-xl font-black text-cyan-100">
+              {internalBrainSeverity.improvementOpportunities}
+            </p>
+          </div>
+        </div>
         <div className="grid gap-4 md:grid-cols-3">
           {Object.entries(FINDING_LABELS).map(([type, label]) => (
             <div key={type} className="rounded-2xl border border-white/10 bg-black/20 p-4">
@@ -563,6 +595,7 @@ export function FounderOrbEvaluationPage() {
                 <th className="px-3 py-2">Status</th>
                 <th className="px-3 py-2">Mode</th>
                 <th className="px-3 py-2">Progress</th>
+                <th className="px-3 py-2">Scoring</th>
                 <th className="px-3 py-2">Pass rate</th>
                 <th className="px-3 py-2">Critical</th>
                 <th className="px-3 py-2">Actions</th>
@@ -571,19 +604,19 @@ export function FounderOrbEvaluationPage() {
             <tbody>
               {loadState === 'loading' ? (
                 <tr>
-                  <td colSpan={7} className="px-3 py-6 text-slate-500">
+                  <td colSpan={8} className="px-3 py-6 text-slate-500">
                     Loading evaluation runs…
                   </td>
                 </tr>
               ) : loadState === 'error' ? (
                 <tr>
-                  <td colSpan={7} className="px-3 py-6 text-rose-200">
+                  <td colSpan={8} className="px-3 py-6 text-rose-200">
                     {LOAD_ERROR_MESSAGE}
                   </td>
                 </tr>
               ) : runs.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-3 py-6 text-slate-500" data-testid="orb-eval-no-runs">
+                  <td colSpan={8} className="px-3 py-6 text-slate-500" data-testid="orb-eval-no-runs">
                     No evaluation runs yet.
                   </td>
                 </tr>
@@ -596,6 +629,9 @@ export function FounderOrbEvaluationPage() {
                       {run.packType ? (
                         <p className="text-xs text-slate-600">{run.packType}</p>
                       ) : null}
+                      <p className="text-xs text-slate-600">
+                        {new Date(run.startedAt).toLocaleString('en-GB')}
+                      </p>
                     </td>
                     <td className="px-3 py-3 text-slate-400">{run.status}</td>
                     <td className="px-3 py-3 text-slate-400">
@@ -603,6 +639,14 @@ export function FounderOrbEvaluationPage() {
                     </td>
                     <td className="px-3 py-3 text-slate-400">
                       {run.completedCount}/{run.scenarioCount}
+                    </td>
+                    <td className="px-3 py-3 text-slate-400">
+                      {run.mode === 'internal-brain'
+                        ? run.scoringVersion ?? 'internal-brain-v1'
+                        : 'live/template'}
+                      {run.supersededByScoringFix ? (
+                        <span className="mt-1 block text-[10px] text-amber-300">superseded by scoring fix</span>
+                      ) : null}
                     </td>
                     <td className="px-3 py-3 text-emerald-300">
                       {run.status === 'completed' ? `${run.passRate}%` : '—'}

@@ -38,6 +38,19 @@ Internal-brain mode lets ORB Residential test its own IndiCare Intelligence rout
 
 Before V1, adversarial runs could pass with missing safeguards (anti-stigmatising language, accurate legal framing, emergency proportionality, disclaimer) because generic safeguarding fallback text did not satisfy phrase detection. V1 adds category-specific structured fallbacks and phrase-map detection.
 
+## Scoring version internal-brain-v2 (June 2026)
+
+After V1, the **frontend** scoring layer incorrectly inflated critical failure counts while red-team findings stayed at zero. See `docs/audits/orb-internal-brain-critical-failure-regression.md`.
+
+**V2 changes:**
+
+- Critical failure detection aligned between backend and frontend (`services/orb_internal_brain_severity.py`, `orb-internal-brain-severity.ts`)
+- Escalation detection uses substring matching (fixes false negatives on “escalation” / “Escalate”)
+- Missing requirements carry severity; only `critical` + `shouldBlockPass` fails a scenario
+- Pass no longer requires score ≥ 70 when the fallback is genuinely safe
+- Dashboard separates critical failures, missing requirements and improvement opportunities
+- New runs use `scoringVersion: internal-brain-v2`; older runs remain viewable as superseded
+
 Re-run full UI packs (30 high-risk / 10 adversarial / 39 full) from `/founder/orb-evaluation` for founder-recorded evidence. Frontend weighted scores may differ slightly from backend `internal_brain_score`.
 
 ## Fallback Strengthening V1 (2026-06-11)

@@ -128,3 +128,15 @@ Live-LLM evidence remains required for public launch and full answer-generation 
 ## Live-LLM behaviour
 
 No changes were made to live-LLM routing, prompts or OpenAI calls.
+
+## Follow-up: critical failure regression fix (internal-brain-v2)
+
+After V1 fallback strengthening, the **frontend** scoring layer incorrectly inflated critical failure counts (see `docs/audits/orb-internal-brain-critical-failure-regression.md`).
+
+**V2 scoring** (June 2026) separates:
+
+- **Critical failures** — genuine safety defects only
+- **Missing requirements** — severity-classified gaps (critical / high / medium / low / improvement)
+- **Improvement opportunities** — safe fallbacks that could be sharper
+
+Backend fallback content from V1 is unchanged. New runs use `scoringVersion: internal-brain-v2`.

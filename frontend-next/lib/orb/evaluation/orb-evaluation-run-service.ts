@@ -47,11 +47,13 @@ import {
   setEvaluationScenarios,
   updateEvaluationRun
 } from './orb-evaluation-store'
+import { INTERNAL_BRAIN_SCORING_VERSION } from './orb-internal-brain-severity'
 import {
   detectInternalBrainCriticalFailure,
   normaliseInternalBrainPayload,
   scoreInternalBrainResult
 } from './orb-internal-brain-scoring-engine'
+import { INTERNAL_BRAIN_SCORING_VERSION_V2 } from './orb-evaluation-types'
 import { buildTemplateAnswer, scoreOrbEvaluationAnswer } from './orb-evaluation-scoring-engine'
 import { mergeRedTeamFindings, runRedTeamAgents } from './red-team-agents'
 
@@ -138,6 +140,17 @@ function newRunId(): string {
   return `eval-run-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
 }
 
+function aggregateMissingRequirementCounts(evalResults: OrbEvaluationResult[]) {
+  let missingRequirementsCount = 0
+  let improvementOpportunitiesCount = 0
+  for (const result of evalResults) {
+    const details = result.missingRequirementDetails ?? []
+    missingRequirementsCount += details.filter((d) => d.severity !== 'improvement').length
+    improvementOpportunitiesCount += details.filter((d) => d.severity === 'improvement').length
+  }
+  return { missingRequirementsCount, improvementOpportunitiesCount }
+}
+
 function summariseRun(
   run: OrbEvaluationRun,
   evalResults: OrbEvaluationResult[]
@@ -151,6 +164,8 @@ function summariseRun(
         )
       : 0
   const passRate = evalResults.length > 0 ? Math.round((passed / evalResults.length) * 1000) / 10 : 0
+  const { missingRequirementsCount, improvementOpportunitiesCount } =
+    aggregateMissingRequirementCounts(evalResults)
 
   return {
     ...run,
@@ -159,6 +174,8 @@ function summariseRun(
     passRate,
     averageScore,
     criticalFailures,
+    missingRequirementsCount,
+    improvementOpportunitiesCount,
     completedAt: new Date().toISOString(),
     results: evalResults,
     summary: `${passed}/${evalResults.length} passed · ${criticalFailures} critical · avg ${averageScore}`
@@ -240,9 +257,28 @@ function scoreInternalBrainBatch(
           issues: item.error ? [item.error] : []
         })
     const internalBrainScores = scoreInternalBrainResult(scenario, internalBrain)
-    const { critical, reasons } = detectInternalBrainCriticalFailure(scenario, internalBrain)
-    const passThreshold = scenario.riskLevel === 'critical' ? 75 : scenario.riskLevel === 'high' ? 70 : 65
-    const pass = !critical && internalBrainScores.overall >= passThreshold && item.ok
+    const { critical, reasons, missingRequirements } = detectInternalBrainCriticalFailure(
+      scenario,
+      internalBrain
+    )
+    const criticalFailure = critical || internalBrain.criticalFailure
+    const hasCriticalMissing = missingRequirements.some(
+      (req) => req.severity === 'critical' && req.shouldBlockPass
+    )
+    const pass =
+      !criticalFailure &&
+      !hasCriticalMissing &&
+      Boolean((internalBrain.fallbackAnswer || item.answer).trim()) &&
+      item.ok
+
+    const enrichedInternalBrain = {
+      ...internalBrain,
+      missingRequirementDetails: missingRequirements,
+      scoringVersion: INTERNAL_BRAIN_SCORING_VERSION
+    }
+    const improvementOpportunities = missingRequirements.filter(
+      (req) => req.severity === 'improvement'
+    )
 
     evalResults.push({
       id: `result-${runId}-${scenario.id}`,
@@ -266,18 +302,20 @@ function scoreInternalBrainBatch(
         overall: internalBrainScores.overall
       },
       pass,
-      criticalFailure: critical || internalBrain.criticalFailure,
+      criticalFailure,
       issues: [...new Set([...reasons, ...internalBrain.issues])],
       redTeamFindings: [],
       recommendedFix:
-        critical || !pass
+        criticalFailure || !pass
           ? `Internal brain gap: ${reasons[0] ?? internalBrain.issues[0] ?? 'review routing and safeguards'}`
           : undefined,
       createdAt: new Date().toISOString(),
       answerSource: 'internal-brain',
       modelRoute: item.model_route,
-      internalBrain,
-      internalBrainScores
+      internalBrain: enrichedInternalBrain,
+      internalBrainScores,
+      missingRequirementDetails: missingRequirements,
+      improvementOpportunities
     })
   }
 
@@ -295,6 +333,8 @@ function summariseInternalBrainRun(
       ? Math.round(evalResults.reduce((sum, r) => sum + r.scores.overall, 0) / evalResults.length)
       : 0
   const passRate = evalResults.length > 0 ? Math.round((passed / evalResults.length) * 1000) / 10 : 0
+  const { missingRequirementsCount, improvementOpportunitiesCount } =
+    aggregateMissingRequirementCounts(evalResults)
 
   return {
     ...run,
@@ -303,9 +343,13 @@ function summariseInternalBrainRun(
     passRate,
     averageScore,
     criticalFailures,
+    missingRequirementsCount,
+    improvementOpportunitiesCount,
+    scoringVersion: INTERNAL_BRAIN_SCORING_VERSION_V2,
+    supersededByScoringFix: false,
     completedAt: new Date().toISOString(),
     results: evalResults,
-    summary: `${passed}/${evalResults.length} passed · ${criticalFailures} critical · avg ${averageScore}`
+    summary: `${passed}/${evalResults.length} passed · ${criticalFailures} critical · ${missingRequirementsCount} missing · ${improvementOpportunitiesCount} improvements · avg ${averageScore}`
   }
 }
 
@@ -366,6 +410,9 @@ export async function executeInternalBrainEvaluationRun(
     passRate: 0,
     averageScore: 0,
     criticalFailures: 0,
+    missingRequirementsCount: 0,
+    improvementOpportunitiesCount: 0,
+    scoringVersion: INTERNAL_BRAIN_SCORING_VERSION_V2,
     startedAt,
     createdBy: options.createdBy ?? 'founder',
     summary: 'Queued…',
@@ -782,6 +829,24 @@ export function getFindingsByType(runId?: string) {
     grouped[f.type] = (grouped[f.type] ?? 0) + 1
   }
   return grouped
+}
+
+export function getInternalBrainSeveritySummary(runId?: string) {
+  const items = runId ? getEvaluationResults(runId) : getEvaluationResults()
+  const internalItems = items.filter((r) => r.answerSource === 'internal-brain')
+  const summary = {
+    criticalFailures: internalItems.filter((r) => r.criticalFailure).length,
+    missingRequirements: 0,
+    improvementOpportunities: 0,
+    highSeverityMissing: 0
+  }
+  for (const result of internalItems) {
+    const details = result.missingRequirementDetails ?? []
+    summary.missingRequirements += details.filter((d) => d.severity !== 'improvement').length
+    summary.improvementOpportunities += details.filter((d) => d.severity === 'improvement').length
+    summary.highSeverityMissing += details.filter((d) => d.severity === 'high').length
+  }
+  return summary
 }
 
 export function getAgentIssueCounts(runId?: string) {
