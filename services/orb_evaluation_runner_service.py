@@ -18,6 +18,7 @@ from services.orb_adversarial_safety_firewall import (
     should_firewall_before_llm,
 )
 from services.orb_live_guardrail_service import (
+    LIVE_LLM_GUARDED_SCORING_VERSION,
     enforce_live_guardrails,
     identifiable_data_response,
     should_skip_identifier_validation,
@@ -48,6 +49,44 @@ _TRANSIENT_ERROR_MARKERS = (
 def _is_transient_error(exc: BaseException) -> bool:
     message = f"{type(exc).__name__}: {exc}".lower()
     return any(marker in message for marker in _TRANSIENT_ERROR_MARKERS)
+
+
+def _log_scoring_version_trace(
+    *,
+    scenario: dict[str, Any],
+    mode: str,
+    live_guardrail: dict[str, Any] | None,
+    assigned_scoring_version: str | None = None,
+) -> None:
+    """Structured trace for live-LLM scoring version wiring (synthetic scenario IDs only)."""
+    scenario_id = str(scenario.get("id") or scenario.get("scenario_id") or "unknown")
+    guardrail = live_guardrail or {}
+    answer_source = str(guardrail.get("answer_source") or "")
+    safety_firewall_used = bool(guardrail.get("safety_firewall_used"))
+    scorer_used = (
+        "FirewallAdversarialRubric"
+        if answer_source in {"safety_firewall", "privacy_block"} or safety_firewall_used
+        else "GenericLiveLlmRubric"
+    )
+    scoring_version = assigned_scoring_version
+    if scoring_version is None and (
+        answer_source in {"safety_firewall", "privacy_block"} or safety_firewall_used
+    ):
+        scoring_version = LIVE_LLM_GUARDED_SCORING_VERSION
+    logger.info(
+        "orb_eval_scoring_version_trace run_id=n/a mode=%s pack=scenario scenario_category=%s "
+        "scenario_id=%s requested_scoring_version=%s assigned_scoring_version=%s "
+        "persisted_scoring_version=n/a answer_source=%s safety_firewall_used=%s scorer_used=%s "
+        "frontend_display_version=n/a",
+        mode,
+        str(scenario.get("category") or guardrail.get("safety_scaffold_category") or "unknown"),
+        scenario_id,
+        LIVE_LLM_GUARDED_SCORING_VERSION,
+        scoring_version,
+        answer_source or "unknown",
+        safety_firewall_used,
+        scorer_used,
+    )
 
 
 class OrbEvaluationRunnerService:
@@ -131,6 +170,12 @@ class OrbEvaluationRunnerService:
         )
         if firewall.should_firewall:
             live_guardrail = firewall_decision_to_live_guardrail(firewall)
+            _log_scoring_version_trace(
+                scenario=scenario,
+                mode=mode_for_scenario(scenario),
+                live_guardrail=live_guardrail,
+                assigned_scoring_version=LIVE_LLM_GUARDED_SCORING_VERSION,
+            )
             return {
                 "ok": True,
                 "scenario_id": scenario_id,
@@ -182,6 +227,13 @@ class OrbEvaluationRunnerService:
                     result["retried"] = retried
                     result["scenario_id"] = scenario_id
                     result["safety_scaffold_category"] = safety_scaffold.detected_category
+                    _log_scoring_version_trace(
+                        scenario=scenario,
+                        mode=mode,
+                        live_guardrail=result.get("live_guardrail")
+                        if isinstance(result.get("live_guardrail"), dict)
+                        else None,
+                    )
                     return result
                 last_error = str(result.get("error") or "Unknown ORB brain failure")
                 if attempt == 0 and _is_transient_error(Exception(last_error)):

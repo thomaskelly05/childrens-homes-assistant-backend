@@ -1,4 +1,20 @@
 export * from './orb-evaluation-types'
+export {
+  FIREWALL_ADVERSARIAL_SCORER,
+  GENERIC_LIVE_LLM_SCORER,
+  LIVE_LLM_FIREWALL_SCORING_VERSION,
+  LIVE_LLM_GUARDED_V3_SCORING_VERSION,
+  LIVE_LLM_LEGACY_SCORING_VERSION,
+  formatLiveLlmScoringVersionForDisplay,
+  formatResultScoringVersionForDisplay,
+  inferResultScoringVersion,
+  isFirewallScoredAnswerSource,
+  resolveLiveLlmResultScoringVersion,
+  resolveLiveLlmRunScoringVersion,
+  resolveLiveLlmScorerUsed,
+  shouldUseFirewallAdversarialScorer,
+  traceOrbEvalScoringVersion
+} from './orb-scoring-version'
 export * from './orb-evaluation-store'
 export * from './orb-evaluation-run-service'
 export * from './orb-evaluation-scoring-engine'

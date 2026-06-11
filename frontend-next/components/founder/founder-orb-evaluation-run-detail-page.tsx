@@ -12,7 +12,9 @@ import {
   fetchEvaluationRun,
   getEvaluationRun,
   hydrateEvaluationStore,
-  retestFailedScenarios
+  retestFailedScenarios,
+  formatLiveLlmScoringVersionForDisplay,
+  formatResultScoringVersionForDisplay
 } from '@/lib/orb/evaluation'
 import { explainMissingRequirements } from '@/lib/orb/evaluation/orb-internal-brain-missing-requirements'
 import type { OrbEvaluationRun } from '@/lib/orb/evaluation/orb-evaluation-types'
@@ -178,14 +180,14 @@ export function FounderOrbEvaluationRunDetailPage({ runId }: { runId: string }) 
           <div className="founder-surface rounded-2xl border border-white/10 p-5">
             <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">Scoring version</p>
             <p className="mt-2 text-lg font-bold text-violet-200" data-testid="orb-eval-live-scoring-version">
-              {run.scoringVersion === 'live-llm-guarded-v4-firewall'
-                ? 'live-llm-guarded-v4-firewall'
-                : run.scoringVersion === 'live-llm-guarded-v3'
-                  ? 'live-llm-guarded-v3'
-                  : 'legacy live/template'}
+              {formatLiveLlmScoringVersionForDisplay(run, results)}
+            </p>
+            <p className="mt-2 text-xs text-slate-400">
+              <span className="text-slate-500">Persisted scoring version:</span>{' '}
+              {run.scoringVersion ?? 'not set'}
             </p>
             <p className="mt-1 text-xs text-slate-500">
-              Older failed live runs remain visible for audit. Latest guarded runs are the readiness signal.
+              Older failed live runs remain visible for audit. Missing versions display as unknown / legacy, not v3.
             </p>
           </div>
         </div>
@@ -423,6 +425,14 @@ export function FounderOrbEvaluationRunDetailPage({ runId }: { runId: string }) 
                     Live guardrail / safety firewall (V4)
                   </p>
                   <p className="mt-2">
+                    <span className="text-slate-500">Scenario scoring version:</span>{' '}
+                    {formatResultScoringVersionForDisplay(run, result)}
+                  </p>
+                  <p>
+                    <span className="text-slate-500">Scorer used:</span>{' '}
+                    {result.scorerUsed ?? (result.firewallScoring?.applies ? 'FirewallAdversarialRubric' : 'GenericLiveLlmRubric')}
+                  </p>
+                  <p>
                     <span className="text-slate-500">Answer source:</span>{' '}
                     {result.liveGuardrail.answerSource ?? (result.liveGuardrail.fallbackUsed ? 'fallback' : 'raw')}
                   </p>
