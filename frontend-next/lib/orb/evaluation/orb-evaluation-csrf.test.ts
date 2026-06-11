@@ -16,8 +16,7 @@ test('evaluation client uses shared CSRF helper and correct cookie pattern', () 
   const csrfClient = read(join(securityRoot, 'csrf-client.ts'))
   const authApi = read(join(process.cwd(), 'lib/auth/api.ts'))
 
-  assert.match(client, /buildUnsafeMethodHeaders/)
-  assert.match(client, /getCsrfToken/)
+  assert.match(client, /applyCsrfHeaders/)
   assert.match(client, /credentials:\s*'include'/)
   assert.doesNotMatch(client, /csrf_token=/)
   assert.match(authApi, /__Host-indicare_csrf|indicare_csrf/)
@@ -27,8 +26,7 @@ test('evaluation client uses shared CSRF helper and correct cookie pattern', () 
 test('internal brain high-risk POST includes CSRF header', () => {
   const client = read(join(root, 'orb-evaluation-client.ts'))
   assert.match(client, /postEvaluationRun/)
-  assert.match(client, /buildUnsafeMethodHeaders\(method/)
-  assert.match(client, /assertCsrfBeforePost/)
+  assert.match(client, /applyCsrfHeaders/)
   assert.match(client, /\/api\/orb\/evaluation\/runs/)
 })
 
@@ -59,7 +57,7 @@ test('csrf_failed shows clear refresh sign-in message', () => {
   assert.match(client, /EVALUATION_CSRF_REFRESH_MESSAGE/)
   assert.match(page, /isEvaluationCsrfError/)
   assert.match(page, /EVALUATION_CSRF_REFRESH_MESSAGE/)
-  assert.match(csrfClient, /refresh, sign in again, and retry/)
+  assert.match(csrfClient, /not being forwarded correctly/)
 })
 
 test('success path requires saved run before complete toast', () => {
@@ -72,11 +70,14 @@ test('success path requires saved run before complete toast', () => {
 test('POST proxy forwards Cookie and CSRF via mergeFounderProxyHeaders', () => {
   const api = read(join(root, 'orb-evaluation-api.ts'))
   const founderSession = read(join(process.cwd(), 'lib/founder/auth/founder-session.ts'))
+  const csrfServer = read(join(securityRoot, 'csrf-server.ts'))
   const runsRoute = read(join(appRoot, 'runs/route.ts'))
 
   assert.match(api, /mergeFounderProxyHeaders/)
+  assert.match(api, /cookieStore/)
   assert.match(founderSession, /headers\.set\('cookie', cookieHeader\)/)
-  assert.match(founderSession, /x-csrf-token/)
+  assert.match(founderSession, /resolveProxyCsrfToken/)
+  assert.match(csrfServer, /x-csrf-token/)
   assert.match(runsRoute, /handleEvaluationRunsPost/)
 })
 

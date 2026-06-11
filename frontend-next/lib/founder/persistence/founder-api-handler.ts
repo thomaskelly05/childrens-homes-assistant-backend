@@ -86,7 +86,8 @@ export async function proxyToBackendTelemetry(
   const session = auth === 'founder' ? await requireFounderSession() : await requireAuthenticatedSession()
   if (!session.ok) return session.response
 
-  const cookieHeader = (await cookies()).toString()
+  const cookieStore = await cookies()
+  const cookieHeader = cookieStore.toString()
   const backendOrigin = getInternalBackendOrigin()
   const url = new URL(request.url)
   const target = new URL(`${backendOrigin}/founder-os/telemetry/${backendPath}`)
@@ -97,7 +98,7 @@ export async function proxyToBackendTelemetry(
 
   const upstream = await fetch(target.toString(), {
     method,
-    headers: buildFounderProxyHeaders(request, cookieHeader),
+    headers: buildFounderProxyHeaders(request, cookieHeader, cookieStore),
     body: hasBody ? await request.text() : undefined,
     cache: 'no-store'
   }).catch(() => null)
@@ -127,7 +128,8 @@ export async function proxyToBackend(request: Request, backendPath: string): Pro
     return NextResponse.json({ error: unknownPersistenceEntityMessage(entitySlug) }, { status: 404 })
   }
 
-  const cookieHeader = (await cookies()).toString()
+  const cookieStore = await cookies()
+  const cookieHeader = cookieStore.toString()
   const backendOrigin = getInternalBackendOrigin()
   const url = new URL(request.url)
   const target = new URL(`${backendOrigin}/founder-os/persistence/${backendPath}`)
@@ -138,7 +140,7 @@ export async function proxyToBackend(request: Request, backendPath: string): Pro
 
   const upstream = await fetch(target.toString(), {
     method,
-    headers: buildFounderProxyHeaders(request, cookieHeader),
+    headers: buildFounderProxyHeaders(request, cookieHeader, cookieStore),
     body: hasBody ? await request.text() : undefined,
     cache: 'no-store'
   }).catch(() => null)

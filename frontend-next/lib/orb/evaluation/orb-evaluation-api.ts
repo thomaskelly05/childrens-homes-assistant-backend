@@ -14,7 +14,7 @@ const BACKEND_PREFIX = '/orb/admin/evaluation'
 const PERSISTENCE_RUNS = '/founder-os/persistence/orb-evaluation-runs'
 
 const EVALUATION_CSRF_REFRESH_MESSAGE =
-  'Session security check failed. Please refresh, sign in again, and retry.'
+  'Session security check failed. Please refresh, sign in again, and retry. If this continues, the evaluation CSRF token is not being forwarded correctly.'
 
 type UpstreamJson = Record<string, unknown> & { success?: boolean; data?: unknown }
 
@@ -87,12 +87,13 @@ async function upstreamJson(
   request: Request,
   cookieHeader: string,
   backendPath: string,
-  init?: RequestInit
+  init?: RequestInit,
+  cookieStore?: Awaited<ReturnType<typeof cookies>>
 ): Promise<{ ok: true; status: number; payload: unknown } | UpstreamFailure> {
   const backendOrigin = getInternalBackendOrigin()
   const upstream = await fetch(`${backendOrigin}${backendPath}`, {
     ...init,
-    headers: mergeFounderProxyHeaders(request, cookieHeader, init?.headers),
+    headers: mergeFounderProxyHeaders(request, cookieHeader, init?.headers, cookieStore),
     cache: 'no-store'
   })
 
@@ -113,16 +114,23 @@ async function proxyEvaluation(
   const session = await requireFounderSession()
   if (!session.ok) return session.response
 
-  const cookieHeader = (await cookies()).toString()
+  const cookieStore = await cookies()
+  const cookieHeader = cookieStore.toString()
   const controller = new AbortController()
   const isLongRun = backendPath.includes('/runs') && init?.method === 'POST'
   const timer = setTimeout(() => controller.abort(), isLongRun ? 300_000 : 12_000)
 
   try {
-    const result = await upstreamJson(request, cookieHeader, backendPath, {
-      ...init,
-      signal: controller.signal
-    })
+    const result = await upstreamJson(
+      request,
+      cookieHeader,
+      backendPath,
+      {
+        ...init,
+        signal: controller.signal
+      },
+      cookieStore
+    )
 
     if (!result.ok) {
       return NextResponse.json(
@@ -147,8 +155,12 @@ async function proxyEvaluation(
   }
 }
 
-async function fetchPersistedRuns(request: Request, cookieHeader: string): Promise<OrbEvaluationRun[]> {
-  const result = await upstreamJson(request, cookieHeader, PERSISTENCE_RUNS)
+async function fetchPersistedRuns(
+  request: Request,
+  cookieHeader: string,
+  cookieStore?: Awaited<ReturnType<typeof cookies>>
+): Promise<OrbEvaluationRun[]> {
+  const result = await upstreamJson(request, cookieHeader, PERSISTENCE_RUNS, undefined, cookieStore)
   if (!result.ok) return []
   const data = unwrapData(result.payload) as UpstreamJson | undefined
   const items = data && typeof data === 'object' && 'items' in data ? data.items : []
@@ -172,16 +184,23 @@ export async function handleEvaluationRunsGet(request: Request): Promise<NextRes
   const session = await requireFounderSession()
   if (!session.ok) return session.response
 
-  const cookieHeader = (await cookies()).toString()
+  const cookieStore = await cookies()
+  const cookieHeader = cookieStore.toString()
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), 12_000)
 
   try {
     const [overviewResult, runs] = await Promise.all([
-      upstreamJson(request, cookieHeader, `${BACKEND_PREFIX}/overview`, {
-        signal: controller.signal
-      }),
-      fetchPersistedRuns(request, cookieHeader)
+      upstreamJson(
+        request,
+        cookieHeader,
+        `${BACKEND_PREFIX}/overview`,
+        {
+          signal: controller.signal
+        },
+        cookieStore
+      ),
+      fetchPersistedRuns(request, cookieHeader, cookieStore)
     ])
 
     if (!overviewResult.ok) {
@@ -255,9 +274,16 @@ export async function handleEvaluationRunGet(request: Request, runId: string): P
   const session = await requireFounderSession()
   if (!session.ok) return session.response
 
-  const cookieHeader = (await cookies()).toString()
+  const cookieStore = await cookies()
+  const cookieHeader = cookieStore.toString()
   const encoded = encodeURIComponent(runId)
-  const result = await upstreamJson(request, cookieHeader, `${PERSISTENCE_RUNS}/${encoded}`)
+  const result = await upstreamJson(
+    request,
+    cookieHeader,
+    `${PERSISTENCE_RUNS}/${encoded}`,
+    undefined,
+    cookieStore
+  )
 
   if (!result.ok) {
     return NextResponse.json({ error: result.detail }, { status: result.status })

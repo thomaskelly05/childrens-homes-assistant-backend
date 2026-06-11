@@ -8,7 +8,7 @@ import { applyCsrfHeaders, getCsrfToken, STANDALONE_ORB_CSRF_REFRESH_MESSAGE } f
 export { applyCsrfHeaders, getCsrfToken, STANDALONE_ORB_CSRF_REFRESH_MESSAGE }
 
 export const EVALUATION_CSRF_REFRESH_MESSAGE =
-  'Session security check failed. Please refresh, sign in again, and retry.'
+  'Session security check failed. Please refresh, sign in again, and retry. If this continues, the evaluation CSRF token is not being forwarded correctly.'
 
 /** Build headers for an unsafe same-origin evaluation API request. */
 export function buildUnsafeMethodHeaders(
