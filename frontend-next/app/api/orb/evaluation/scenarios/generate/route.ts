@@ -24,16 +24,23 @@ export async function POST(request: Request) {
   else if (packType === 'adversarial') scenarios = generateAdversarialPack()
   else scenarios = generateOrbEvaluationScenarios(count)
 
+  const storeHeaders = new Headers({ 'Content-Type': 'application/json' })
+  const csrf = request.headers.get('x-csrf-token')
+  if (csrf) storeHeaders.set('x-csrf-token', csrf)
+  const authorization = request.headers.get('authorization')
+  if (authorization) storeHeaders.set('authorization', authorization)
+
   const storeResponse = await handleEvaluationScenariosGeneratePost(
     new Request(request.url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: storeHeaders,
       body: JSON.stringify(scenarios)
     })
   )
 
   if (!storeResponse.ok) {
-    return NextResponse.json({ success: true, data: { scenarios, count: scenarios.length, stored: false } })
+    const payload = await storeResponse.json().catch(() => ({}))
+    return NextResponse.json(payload, { status: storeResponse.status })
   }
 
   return NextResponse.json({

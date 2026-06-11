@@ -21,8 +21,10 @@ import {
   getEvaluationSummary,
   getFindingsByType,
   hydrateEvaluationStore,
+  isEvaluationCsrfError,
   retestFailedScenarios
 } from '@/lib/orb/evaluation'
+import { EVALUATION_CSRF_REFRESH_MESSAGE } from '@/lib/security/csrf-client'
 import { RED_TEAM_AGENTS } from '@/lib/orb/evaluation/red-team-agents'
 import type { OrbEvaluationRun } from '@/lib/orb/evaluation/orb-evaluation-types'
 
@@ -109,6 +111,10 @@ export function FounderOrbEvaluationPage() {
 
         setMessage(`${label} complete`)
       } catch (err) {
+        if (isEvaluationCsrfError(err)) {
+          setMessage(EVALUATION_CSRF_REFRESH_MESSAGE)
+          return
+        }
         setMessage(`${label} failed: ${err instanceof Error ? err.message : 'unknown error'}`)
       } finally {
         setBusy(null)

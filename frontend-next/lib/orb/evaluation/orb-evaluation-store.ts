@@ -49,6 +49,13 @@ export function updateEvaluationRun(runId: string, patch: Partial<OrbEvaluationR
   return runs[index]
 }
 
+export function removeEvaluationRun(runId: string): boolean {
+  const index = runs.findIndex((run) => run.id === runId)
+  if (index < 0) return false
+  runs.splice(index, 1)
+  return true
+}
+
 export function getEvaluationResults(runId?: string): OrbEvaluationResult[] {
   const items = runId ? results.filter((r) => r.runId === runId) : results
   return [...items].sort((a, b) => b.createdAt.localeCompare(a.createdAt))

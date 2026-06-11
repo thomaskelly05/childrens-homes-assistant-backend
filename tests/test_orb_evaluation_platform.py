@@ -240,8 +240,11 @@ def test_internal_brain_high_risk_api_route(founder_client, monkeypatch):
             "adversarialFlags": [],
         }
     ]
+    csrf_token = "founder-eval-csrf-token"
+    founder_client.cookies.set("indicare_csrf", csrf_token)
     response = founder_client.post(
         "/orb/admin/evaluation/runs",
+        headers={"x-csrf-token": csrf_token},
         json={
             "title": "ORB Evaluation — internal brain high-risk",
             "mode": "internal-brain",

@@ -27,7 +27,9 @@ test('evaluation client uses same-origin proxy only', () => {
   const client = read('orb-evaluation-client.ts')
   assert.match(client, /\/api\/orb\/evaluation\/runs/)
   assert.match(client, /credentials:\s*'include'/)
+  assert.match(client, /buildUnsafeMethodHeaders/)
   assert.doesNotMatch(client, /\/orb\/admin\/evaluation/)
+  assert.doesNotMatch(client, /csrf_token=/)
 })
 
 test('evaluation run detail can fetch persisted run by id', () => {

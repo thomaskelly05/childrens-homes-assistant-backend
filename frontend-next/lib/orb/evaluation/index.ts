@@ -5,4 +5,14 @@ export * from './orb-evaluation-scoring-engine'
 export * from './orb-internal-brain-scoring-engine'
 export * from './orb-scenario-generator'
 export * from './red-team-agents'
-export { fetchEvaluationRuns, fetchEvaluationScenarios, fetchEvaluationRun, postEvaluationRun } from './orb-evaluation-client'
+export {
+  EvaluationApiError,
+  fetchEvaluationRuns,
+  fetchEvaluationScenarios,
+  fetchEvaluationRun,
+  isEvaluationCsrfError,
+  postEvaluationCreateFix,
+  postEvaluationRetest,
+  postEvaluationRun,
+  postEvaluationScenariosGenerate
+} from './orb-evaluation-client'
