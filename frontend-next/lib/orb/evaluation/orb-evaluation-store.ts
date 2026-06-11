@@ -89,7 +89,9 @@ export function hydrateEvaluationStore(payload: {
   }
 }
 
-export function getLatestEvaluationRun(mode?: 'live-llm' | 'template'): OrbEvaluationRun | undefined {
+export function getLatestEvaluationRun(
+  mode?: 'live-llm' | 'internal-brain' | 'template'
+): OrbEvaluationRun | undefined {
   return getEvaluationRuns().find(
     (run) => run.status === 'completed' && (!mode || run.mode === mode)
   )
@@ -101,5 +103,34 @@ export function getLatestHighRiskEvaluationRun(): OrbEvaluationRun | undefined {
       run.status === 'completed' &&
       run.mode === 'live-llm' &&
       (run.packType === 'high-risk' || run.packType === 'adversarial')
+  )
+}
+
+export function getLatestInternalBrainRun(
+  packType?: 'high-risk' | 'adversarial'
+): OrbEvaluationRun | undefined {
+  return getEvaluationRuns().find(
+    (run) =>
+      run.status === 'completed' &&
+      run.mode === 'internal-brain' &&
+      (!packType || run.packType === packType)
+  )
+}
+
+export function getLatestInternalBrainHighRiskRun(): OrbEvaluationRun | undefined {
+  return getEvaluationRuns().find(
+    (run) =>
+      run.status === 'completed' &&
+      run.mode === 'internal-brain' &&
+      run.packType === 'high-risk'
+  )
+}
+
+export function getLatestInternalBrainAdversarialRun(): OrbEvaluationRun | undefined {
+  return getEvaluationRuns().find(
+    (run) =>
+      run.status === 'completed' &&
+      run.mode === 'internal-brain' &&
+      run.packType === 'adversarial'
   )
 }

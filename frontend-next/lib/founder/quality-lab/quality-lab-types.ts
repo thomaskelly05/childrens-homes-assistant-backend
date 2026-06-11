@@ -154,6 +154,10 @@ export type QualityLabSummary = {
 
 export type OrbLaunchQualityGate = {
   liveRunCompleted: boolean
+  internalBrainHighRiskCompleted?: boolean
+  internalBrainAdversarialCompleted?: boolean
+  internalBrainCriticalFailures?: number
+  latestInternalBrainRunId?: string
   highRiskScenariosPassed: boolean
   criticalFailures: number
   redTeamCriticalFailures?: number

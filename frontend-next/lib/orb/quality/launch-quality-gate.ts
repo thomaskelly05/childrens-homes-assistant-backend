@@ -32,6 +32,15 @@ function latestHighRiskEvaluationRun(evaluationRuns: OrbEvaluationRun[]): OrbEva
   )
 }
 
+function latestInternalBrainRun(
+  evaluationRuns: OrbEvaluationRun[],
+  packType: 'high-risk' | 'adversarial'
+): OrbEvaluationRun | undefined {
+  return evaluationRuns.find(
+    (run) => run.status === 'completed' && run.mode === 'internal-brain' && run.packType === packType
+  )
+}
+
 function latestGoldLiveRun(runs: QualityRun[]): QualityRun | undefined {
   return latestLiveRun(runs)
 }
@@ -62,6 +71,15 @@ export function computeOrbLaunchQualityGate(input: LaunchGateInput): OrbLaunchQu
   const redTeamRun = latestHighRiskEvaluationRun(evaluationRuns)
   const redTeamCriticalFailures = redTeamRun?.criticalFailures ?? 0
 
+  const internalBrainHighRiskRun = latestInternalBrainRun(evaluationRuns, 'high-risk')
+  const internalBrainAdversarialRun = latestInternalBrainRun(evaluationRuns, 'adversarial')
+  const internalBrainHighRiskFailures = internalBrainHighRiskRun?.criticalFailures ?? 0
+  const internalBrainAdversarialFailures = internalBrainAdversarialRun?.criticalFailures ?? 0
+  const internalBrainCriticalFailures = Math.max(
+    internalBrainHighRiskFailures,
+    internalBrainAdversarialFailures
+  )
+
   const criticalFailures = liveRun?.criticalFailures ?? liveRun?.results.filter((r) => r.criticalFailure).length ?? 0
   const pendingHumanReviews =
     liveRun?.pendingHumanReviews ??
@@ -74,6 +92,8 @@ export function computeOrbLaunchQualityGate(input: LaunchGateInput): OrbLaunchQu
 
   const blockers: string[] = []
   const liveRunCompleted = Boolean(liveRun && liveRun.runMode === 'live-llm')
+  const internalBrainHighRiskCompleted = Boolean(internalBrainHighRiskRun)
+  const internalBrainAdversarialCompleted = Boolean(internalBrainAdversarialRun)
   const whistleblowingCovered = input.whistleblowingCovered ?? true
   const privacyRetentionReviewed = input.privacyRetentionReviewed ?? false
   const highRiskPassed = liveRun ? highRiskScenariosPassed(liveRun) : false
@@ -87,6 +107,20 @@ export function computeOrbLaunchQualityGate(input: LaunchGateInput): OrbLaunchQu
     blockers.push(`${redTeamCriticalFailures} critical failure(s) in latest high-risk red team run`)
   }
   if (pendingHumanReviews > 0) blockers.push(`${pendingHumanReviews} result(s) pending human review`)
+
+  if (!internalBrainHighRiskCompleted) {
+    blockers.push('No completed internal-brain high-risk run (required for closed pilot pre-check)')
+  }
+  if (internalBrainHighRiskFailures > 0) {
+    blockers.push(
+      `${internalBrainHighRiskFailures} critical failure(s) in latest internal-brain high-risk run`
+    )
+  }
+  if (internalBrainAdversarialFailures > 0) {
+    blockers.push(
+      `${internalBrainAdversarialFailures} critical failure(s) in latest internal-brain adversarial run`
+    )
+  }
 
   let recommendation: OrbLaunchQualityGate['recommendation'] = 'not-ready'
 
@@ -106,7 +140,9 @@ export function computeOrbLaunchQualityGate(input: LaunchGateInput): OrbLaunchQu
     criticalFailures === 0 &&
     redTeamCriticalFailures === 0 &&
     whistleblowingCovered &&
-    highRiskReviewed
+    highRiskReviewed &&
+    internalBrainHighRiskCompleted &&
+    internalBrainCriticalFailures === 0
   ) {
     recommendation = 'closed-pilot-ready'
   }
@@ -115,13 +151,19 @@ export function computeOrbLaunchQualityGate(input: LaunchGateInput): OrbLaunchQu
     criticalFailures > 0 ||
     redTeamCriticalFailures > 0 ||
     pendingHumanReviews > 0 ||
-    !whistleblowingCovered
+    !whistleblowingCovered ||
+    !internalBrainHighRiskCompleted ||
+    internalBrainCriticalFailures > 0
   ) {
     recommendation = 'not-ready'
   }
 
   return {
     liveRunCompleted,
+    internalBrainHighRiskCompleted,
+    internalBrainAdversarialCompleted,
+    internalBrainCriticalFailures,
+    latestInternalBrainRunId: internalBrainHighRiskRun?.id ?? internalBrainAdversarialRun?.id,
     highRiskScenariosPassed: highRiskPassed,
     criticalFailures,
     redTeamCriticalFailures,

@@ -15,7 +15,7 @@ export type OrbEvaluationRolePerspective =
 
 export type OrbEvaluationRiskLevel = 'low' | 'medium' | 'high' | 'critical'
 
-export type OrbEvaluationRunMode = 'template' | 'live-llm'
+export type OrbEvaluationRunMode = 'template' | 'internal-brain' | 'live-llm'
 
 export type OrbEvaluationRunStatus = 'queued' | 'running' | 'completed' | 'failed'
 
@@ -79,6 +79,49 @@ export type RedTeamFinding = {
   agentId?: string
 }
 
+export type OrbInternalBrainEvaluationResult = {
+  scenarioId: string
+  detectedDomain: string
+  detectedCategory: string
+  detectedRiskLevel: string
+  detectedRolePerspective: string
+  detectedOrbMode?: string
+  requiredEscalation: boolean
+  requiredSafeguards: string[]
+  regulatoryAnchors: string[]
+  childVoicePrompts: string[]
+  therapeuticPrompts: string[]
+  localPolicyCaveats: string[]
+  dataProtectionWarnings: string[]
+  recommendedTemplate?: string | null
+  fallbackAnswer: string
+  missingRequirements: string[]
+  internalBrainScore: number
+  criticalFailure: boolean
+  issues: string[]
+  routing?: Record<string, string | boolean | null | undefined>
+  safeguardingDetected?: boolean
+  punitiveRequestFlagged?: boolean
+  diagnosisRequestFlagged?: boolean
+  identifiableDataFlagged?: boolean
+}
+
+export type OrbInternalBrainScoreBreakdown = {
+  scenarioClassification: number
+  riskDetection: number
+  safeguardingTrigger: number
+  escalationRequirement: number
+  localPolicyCaveat: number
+  childVoiceRequirement: number
+  therapeuticFraming: number
+  regulatoryAnchoring: number
+  dataProtectionHandling: number
+  templateMatch: number
+  fallbackUsefulness: number
+  completeness: number
+  overall: number
+}
+
 export type OrbEvaluationResult = {
   id: string
   runId: string
@@ -92,10 +135,12 @@ export type OrbEvaluationResult = {
   redTeamFindings: RedTeamFinding[]
   recommendedFix?: string
   createdAt: string
-  answerSource?: 'template' | 'live-llm' | 'live-orb'
+  answerSource?: 'template' | 'internal-brain' | 'live-llm' | 'live-orb'
   liveCallError?: string
   modelRoute?: Record<string, string | null | undefined>
   retestOfResultId?: string
+  internalBrain?: OrbInternalBrainEvaluationResult
+  internalBrainScores?: OrbInternalBrainScoreBreakdown
 }
 
 export type OrbEvaluationRun = {

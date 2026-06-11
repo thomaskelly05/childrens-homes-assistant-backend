@@ -6,7 +6,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
-OrbEvaluationRunMode = Literal["template", "live-llm"]
+OrbEvaluationRunMode = Literal["template", "internal-brain", "live-llm"]
 OrbEvaluationPackType = Literal["standard", "high-risk", "adversarial", "custom", "retest"]
 
 
@@ -50,6 +50,7 @@ class OrbEvaluationScenarioResult(BaseModel):
     error: str | None = None
     model_route: dict[str, Any] | None = None
     retried: bool = False
+    internal_brain: dict[str, Any] | None = None
 
 
 class OrbEvaluationRunResponse(BaseModel):
@@ -72,6 +73,10 @@ class OrbEvaluationRetestRequest(BaseModel):
 
 class OrbEvaluationOverview(BaseModel):
     live_llm_available: bool
+    internal_brain_available: bool = True
     scenario_template_count: int
     supported_pack_types: list[str]
+    supported_modes: list[str] = Field(
+        default_factory=lambda: ["template", "internal-brain", "live-llm"]
+    )
     limitations: list[str] = Field(default_factory=list)

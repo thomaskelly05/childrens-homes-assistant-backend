@@ -119,6 +119,47 @@ test('red team critical failures block public launch', () => {
   assert.ok((gate.redTeamCriticalFailures ?? 0) > 0)
 })
 
+test('missing internal-brain high-risk run blocks closed pilot', () => {
+  const gate = computeOrbLaunchQualityGate({
+    runs: [
+      makeRun({
+        results: [],
+        criticalFailures: 0
+      })
+    ],
+    evaluationRuns: [],
+    whistleblowingCovered: true,
+    privacyRetentionReviewed: false
+  })
+  assert.equal(gate.recommendation, 'not-ready')
+  assert.ok(gate.blockers.some((b) => b.includes('internal-brain high-risk')))
+})
+
+test('internal-brain alone does not unlock public launch', () => {
+  const gate = computeOrbLaunchQualityGate({
+    runs: [],
+    evaluationRuns: [
+      {
+        id: 'ib-only',
+        mode: 'internal-brain',
+        status: 'completed',
+        scenarioCount: 10,
+        completedCount: 10,
+        passRate: 100,
+        averageScore: 95,
+        criticalFailures: 0,
+        startedAt: new Date().toISOString(),
+        createdBy: 'test',
+        summary: 'internal only',
+        packType: 'high-risk'
+      }
+    ],
+    whistleblowingCovered: true,
+    privacyRetentionReviewed: true
+  })
+  assert.equal(gate.recommendation, 'not-ready')
+})
+
 test('missing whistleblowing coverage blocks public launch', () => {
   const gate = computeOrbLaunchQualityGate({
     runs: [makeRun({ results: [] })],
