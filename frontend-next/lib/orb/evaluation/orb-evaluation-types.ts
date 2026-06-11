@@ -174,6 +174,11 @@ export type OrbLiveGuardrailCheck = {
   openaiCalled?: boolean
   safetyFirewallUsed?: boolean
   safetyFirewallReason?: string
+  requiredSafeguardsChecked?: string[]
+  missingSafeguardsBeforeRepair?: string[]
+  repairedMissingMarkers?: string[]
+  finalMissingSafeguards?: string[]
+  highRiskScaffoldVersion?: string
 }
 
 export const LIVE_LLM_GUARDED_SCORING_VERSION_V3 = 'live-llm-guarded-v3'

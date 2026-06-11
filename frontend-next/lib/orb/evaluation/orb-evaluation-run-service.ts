@@ -762,7 +762,13 @@ export async function executeEvaluationRun(
             minimumRequiredPhrases: (item.live_guardrail.minimum_required_phrases as string[]) ?? [],
             forbiddenPhrasesDetected: (item.live_guardrail.forbidden_phrases_detected as string[]) ?? [],
             answerUsedForScoring: scoringAnswer,
-            answerUsedForDisplay: finalAnswer
+            answerUsedForDisplay: finalAnswer,
+            requiredSafeguardsChecked: (item.live_guardrail.required_safeguards_checked as string[]) ?? [],
+            missingSafeguardsBeforeRepair:
+              (item.live_guardrail.missing_safeguards_before_repair as string[]) ?? [],
+            repairedMissingMarkers: (item.live_guardrail.repaired_missing_markers as string[]) ?? [],
+            finalMissingSafeguards: (item.live_guardrail.final_missing_safeguards as string[]) ?? [],
+            highRiskScaffoldVersion: String(item.live_guardrail.high_risk_scaffold_version ?? '')
           }
         : undefined
       evalResults.push({

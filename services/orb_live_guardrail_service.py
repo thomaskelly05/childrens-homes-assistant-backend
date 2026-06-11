@@ -4,9 +4,19 @@ from __future__ import annotations
 
 import logging
 import re
+from collections.abc import Awaitable, Callable
 from dataclasses import asdict, dataclass, field
-from typing import Any, Callable, Literal
+from typing import Any, Literal
 
+from services.orb_high_risk_required_safeguards import (
+    build_high_risk_deterministic_fallback,
+    build_high_risk_prompt_block,
+    build_high_risk_repair_prompt,
+    check_high_risk_markers,
+    high_risk_metadata_for_guardrail,
+    is_high_risk_safeguard_category,
+    should_use_deterministic_fallback,
+)
 from services.orb_safety_scaffold_service import OrbSafetyScaffold
 
 logger = logging.getLogger("indicare.orb_live_guardrail")
@@ -146,13 +156,14 @@ class GuardedAnswerResult:
     forbidden_phrases_detected: list[str] = field(default_factory=list)
     scoring_answer: str = ""
     check: LiveGuardrailCheckResult = field(default_factory=LiveGuardrailCheckResult)
+    high_risk_metadata: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         if not self.scoring_answer:
             self.scoring_answer = self.final_answer
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        payload = {
             "raw_answer": self.raw_answer,
             "final_answer": self.final_answer,
             "answer_source": self.answer_source,
@@ -173,7 +184,11 @@ class GuardedAnswerResult:
             "scaffold_category": self.safety_scaffold_category,
             "prompt_tier": self.check.prompt_tier,
             "expert_depth": self.check.expert_depth,
+            "post_check_passed": self.guardrail_passed,
         }
+        if self.high_risk_metadata:
+            payload.update(self.high_risk_metadata)
+        return payload
 
 
 @dataclass
@@ -312,7 +327,12 @@ def _collect_forbidden_phrases(scaffold: OrbSafetyScaffold, answer: str) -> list
     return list(dict.fromkeys(detected))
 
 
-def _check_category_requirements(scaffold: OrbSafetyScaffold, answer: str) -> list[str]:
+def _check_category_requirements(
+    scaffold: OrbSafetyScaffold,
+    answer: str,
+    *,
+    scenario: dict[str, Any] | None = None,
+) -> list[str]:
     """Return list of missing safeguard ids."""
     missing: list[str] = []
     lower = answer.lower()
@@ -460,7 +480,12 @@ def _check_category_requirements(scaffold: OrbSafetyScaffold, answer: str) -> li
     if is_raw_privacy_blocker(answer):
         missing.append("raw-privacy-blocker")
 
-    return missing
+    if is_high_risk_safeguard_category(category):
+        hr_check = check_high_risk_markers(category, answer, scenario=scenario)
+        missing.extend(hr_check.missing_markers)
+        missing.extend(hr_check.prohibited_violations)
+
+    return list(dict.fromkeys(missing))
 
 
 def _check_forbidden_violations(scaffold: OrbSafetyScaffold, answer: str) -> list[str]:
@@ -520,6 +545,7 @@ def check_live_answer(
     *,
     prompt_tier: str | None = None,
     expert_depth: str | None = None,
+    scenario: dict[str, Any] | None = None,
 ) -> LiveGuardrailCheckResult:
     """Deterministic post-answer check against the safety scaffold."""
     if not scaffold.guardrail_active:
@@ -541,7 +567,7 @@ def check_live_answer(
                 expert_depth=expert_depth,
             )
 
-    missing = _check_category_requirements(scaffold, answer)
+    missing = _check_category_requirements(scaffold, answer, scenario=scenario)
     forbidden = _check_forbidden_violations(scaffold, answer)
     passed = not missing and not forbidden
     return LiveGuardrailCheckResult(
@@ -554,9 +580,21 @@ def check_live_answer(
     )
 
 
-def _build_fallback_answer(scaffold: OrbSafetyScaffold) -> str:
+def _build_fallback_answer(scaffold: OrbSafetyScaffold, *, category: str = "") -> str:
+    resolved = category or _resolved_category(scaffold)
+    if is_high_risk_safeguard_category(resolved) and should_use_deterministic_fallback(resolved):
+        category_fallback = build_high_risk_deterministic_fallback(resolved, scaffold)
+        if category_fallback.strip():
+            prefix = _LIVE_GUARDRAIL_FALLBACK_PREFIX if scaffold.guardrail_active else ""
+            return f"{prefix}{category_fallback}".strip()
+
     fallback = scaffold.safe_fallback_answer.strip()
     if not fallback:
+        if is_high_risk_safeguard_category(resolved):
+            category_fallback = build_high_risk_deterministic_fallback(resolved, scaffold)
+            if category_fallback.strip():
+                prefix = _LIVE_GUARDRAIL_FALLBACK_PREFIX if scaffold.guardrail_active else ""
+                return f"{prefix}{category_fallback}".strip()
         return ""
     prefix = _LIVE_GUARDRAIL_FALLBACK_PREFIX if scaffold.guardrail_active else ""
     return f"{prefix}{fallback}".strip()
@@ -590,19 +628,72 @@ def _log_guardrail_enforcement(
     )
 
 
-def enforce_live_guardrails(
+def _high_risk_guardrail_metadata(
+    category: str,
+    answer: str,
+    *,
+    missing_before_repair: list[str] | None = None,
+    repaired_missing_markers: list[str] | None = None,
+) -> dict[str, Any]:
+    if not is_high_risk_safeguard_category(category):
+        return {}
+    hr_check = check_high_risk_markers(category, answer)
+    return high_risk_metadata_for_guardrail(
+        category=category,
+        check=hr_check,
+        missing_before_repair=missing_before_repair,
+        repaired_missing_markers=repaired_missing_markers,
+    )
+
+
+def _attach_high_risk_metadata(
+    guarded: GuardedAnswerResult,
+    *,
+    hr_category: str,
+    missing_before_repair: list[str] | None = None,
+    repaired_missing_markers: list[str] | None = None,
+) -> GuardedAnswerResult:
+    guarded.high_risk_metadata = _high_risk_guardrail_metadata(
+        hr_category,
+        guarded.final_answer,
+        missing_before_repair=missing_before_repair,
+        repaired_missing_markers=repaired_missing_markers,
+    )
+    return guarded
+
+
+def _repair_prompt_for_check(
+    *,
+    safety_scaffold: OrbSafetyScaffold,
+    check: LiveGuardrailCheckResult,
+    raw_answer: str,
+    hr_category: str,
+) -> str:
+    if is_high_risk_safeguard_category(hr_category):
+        return build_high_risk_repair_prompt(
+            raw_answer=raw_answer,
+            category=hr_category,
+            missing_marker_ids=check.missing_safeguards,
+        )
+    return build_repair_prompt_block(safety_scaffold, check)
+
+
+async def _run_guardrail_enforcement_async(
     scenario: dict[str, Any] | None,
     raw_answer: str,
     safety_scaffold: OrbSafetyScaffold,
-    mode: str | None = None,
+    mode: str | None,
     *,
     prompt_tier: str | None = None,
     expert_depth: str | None = None,
     repair_fn: Callable[[str], str] | None = None,
+    async_repair_fn: Callable[[str], Awaitable[str]] | None = None,
 ) -> GuardedAnswerResult:
-    """Hard-enforce live guardrails — final_answer is always safe for display, persistence and scoring."""
+    """Async enforcement with optional OpenAI repair for high-risk categories."""
     category = _resolved_category(safety_scaffold)
     minimum_phrases = list(safety_scaffold.minimum_required_phrases or [])
+    scenario_category = str((scenario or {}).get("category") or category)
+    hr_category = scenario_category if is_high_risk_safeguard_category(scenario_category) else category
 
     if category == "identifiable-data" or safety_scaffold.fallback_category == "identifiable-data":
         if is_raw_privacy_blocker(raw_answer) or not raw_answer.strip():
@@ -637,24 +728,34 @@ def enforce_live_guardrails(
         safety_scaffold,
         prompt_tier=prompt_tier,
         expert_depth=expert_depth,
+        scenario=scenario,
     )
     forbidden_detected = _collect_forbidden_phrases(safety_scaffold, raw_answer)
     fail_reasons = list(dict.fromkeys(check.missing_safeguards + check.forbidden_violations))
 
+    hr_missing_before = (
+        check_high_risk_markers(hr_category, raw_answer, scenario=scenario).missing_markers
+        if is_high_risk_safeguard_category(hr_category)
+        else []
+    )
+
     if check.passed:
-        guarded = GuardedAnswerResult(
-            raw_answer=raw_answer,
-            final_answer=raw_answer,
-            answer_source="raw",
-            guardrail_passed=True,
-            repair_attempted=False,
-            fallback_used=False,
-            fail_reasons=[],
-            safety_scaffold_category=category,
-            minimum_required_phrases=minimum_phrases,
-            forbidden_phrases_detected=[],
-            scoring_answer=raw_answer,
-            check=check,
+        guarded = _attach_high_risk_metadata(
+            GuardedAnswerResult(
+                raw_answer=raw_answer,
+                final_answer=raw_answer,
+                answer_source="raw",
+                guardrail_passed=True,
+                repair_attempted=False,
+                fallback_used=False,
+                fail_reasons=[],
+                safety_scaffold_category=category,
+                minimum_required_phrases=minimum_phrases,
+                forbidden_phrases_detected=[],
+                scoring_answer=raw_answer,
+                check=check,
+            ),
+            hr_category=hr_category,
         )
         _log_guardrail_enforcement(scenario=scenario, guarded=guarded, mode=mode)
         return guarded
@@ -662,58 +763,90 @@ def enforce_live_guardrails(
     immediate_fallback = _requires_immediate_fallback(safety_scaffold, check, answer=raw_answer)
     repaired_answer = raw_answer
     repair_attempted = False
+    repaired_missing: list[str] = []
+    can_repair = not immediate_fallback and (
+        repair_fn is not None or async_repair_fn is not None
+    )
 
-    if not immediate_fallback and repair_fn is not None:
-        repair_prompt = build_repair_prompt_block(safety_scaffold, check)
+    if can_repair:
+        repair_prompt = _repair_prompt_for_check(
+            safety_scaffold=safety_scaffold,
+            check=check,
+            raw_answer=raw_answer,
+            hr_category=hr_category,
+        )
         try:
-            repaired_answer = repair_fn(repair_prompt)
+            if async_repair_fn is not None:
+                repaired_answer = await async_repair_fn(repair_prompt)
+            elif repair_fn is not None:
+                repaired_answer = repair_fn(repair_prompt)
             repair_attempted = True
         except Exception:
-            logger.warning("live_guardrail repair_fn failed", exc_info=True)
+            logger.warning("live_guardrail repair failed", exc_info=True)
 
-        recheck = check_live_answer(
-            repaired_answer,
-            safety_scaffold,
-            prompt_tier=prompt_tier,
-            expert_depth=expert_depth,
-        )
-        recheck.repair_attempted = True
-        if recheck.passed:
-            guarded = GuardedAnswerResult(
+        if repaired_answer.strip():
+            recheck = check_live_answer(
+                repaired_answer,
+                safety_scaffold,
+                prompt_tier=prompt_tier,
+                expert_depth=expert_depth,
+                scenario=scenario,
+            )
+            recheck.repair_attempted = True
+            if recheck.passed:
+                repaired_missing = hr_missing_before
+                guarded = _attach_high_risk_metadata(
+                    GuardedAnswerResult(
+                        raw_answer=raw_answer,
+                        final_answer=repaired_answer,
+                        answer_source="repaired",
+                        guardrail_passed=True,
+                        repair_attempted=True,
+                        fallback_used=False,
+                        fail_reasons=fail_reasons,
+                        safety_scaffold_category=category,
+                        minimum_required_phrases=minimum_phrases,
+                        forbidden_phrases_detected=forbidden_detected,
+                        scoring_answer=repaired_answer,
+                        check=recheck,
+                    ),
+                    hr_category=hr_category,
+                    missing_before_repair=hr_missing_before,
+                    repaired_missing_markers=repaired_missing,
+                )
+                _log_guardrail_enforcement(scenario=scenario, guarded=guarded, mode=mode)
+                return guarded
+            check = recheck
+            fail_reasons = list(dict.fromkeys(check.missing_safeguards + check.forbidden_violations))
+
+    use_category_fallback = (
+        is_high_risk_safeguard_category(hr_category)
+        and should_use_deterministic_fallback(hr_category)
+        and (repair_attempted or immediate_fallback)
+    )
+    fallback_text = _build_fallback_answer(safety_scaffold, category=hr_category if use_category_fallback else category)
+    if not fallback_text and is_high_risk_safeguard_category(hr_category):
+        fallback_text = _build_fallback_answer(safety_scaffold, category=hr_category)
+    if fallback_text:
+        check.fallback_used = True
+        guarded = _attach_high_risk_metadata(
+            GuardedAnswerResult(
                 raw_answer=raw_answer,
-                final_answer=repaired_answer,
-                answer_source="repaired",
+                final_answer=fallback_text,
+                answer_source="fallback",
                 guardrail_passed=False,
-                repair_attempted=True,
-                fallback_used=False,
+                repair_attempted=repair_attempted,
+                fallback_used=True,
                 fail_reasons=fail_reasons,
                 safety_scaffold_category=category,
                 minimum_required_phrases=minimum_phrases,
                 forbidden_phrases_detected=forbidden_detected,
-                scoring_answer=repaired_answer,
-                check=recheck,
-            )
-            _log_guardrail_enforcement(scenario=scenario, guarded=guarded, mode=mode)
-            return guarded
-        check = recheck
-        fail_reasons = list(dict.fromkeys(check.missing_safeguards + check.forbidden_violations))
-
-    fallback_text = _build_fallback_answer(safety_scaffold)
-    if fallback_text:
-        check.fallback_used = True
-        guarded = GuardedAnswerResult(
-            raw_answer=raw_answer,
-            final_answer=fallback_text,
-            answer_source="fallback",
-            guardrail_passed=False,
-            repair_attempted=repair_attempted,
-            fallback_used=True,
-            fail_reasons=fail_reasons,
-            safety_scaffold_category=category,
-            minimum_required_phrases=minimum_phrases,
-            forbidden_phrases_detected=forbidden_detected,
-            scoring_answer=fallback_text,
-            check=check,
+                scoring_answer=fallback_text,
+                check=check,
+            ),
+            hr_category=hr_category,
+            missing_before_repair=hr_missing_before,
+            repaired_missing_markers=repaired_missing,
         )
         _log_guardrail_enforcement(scenario=scenario, guarded=guarded, mode=mode)
         return guarded
@@ -737,20 +870,23 @@ def enforce_live_guardrails(
         _log_guardrail_enforcement(scenario=scenario, guarded=guarded, mode=mode)
         return guarded
 
-    # Last resort — should not happen when scaffold has safe_fallback_answer
-    guarded = GuardedAnswerResult(
-        raw_answer=raw_answer,
-        final_answer=raw_answer,
-        answer_source="raw",
-        guardrail_passed=False,
-        repair_attempted=repair_attempted,
-        fallback_used=False,
-        fail_reasons=fail_reasons,
-        safety_scaffold_category=category,
-        minimum_required_phrases=minimum_phrases,
-        forbidden_phrases_detected=forbidden_detected,
-        scoring_answer=raw_answer,
-        check=check,
+    guarded = _attach_high_risk_metadata(
+        GuardedAnswerResult(
+            raw_answer=raw_answer,
+            final_answer=raw_answer,
+            answer_source="raw",
+            guardrail_passed=False,
+            repair_attempted=repair_attempted,
+            fallback_used=False,
+            fail_reasons=fail_reasons,
+            safety_scaffold_category=category,
+            minimum_required_phrases=minimum_phrases,
+            forbidden_phrases_detected=forbidden_detected,
+            scoring_answer=raw_answer,
+            check=check,
+        ),
+        hr_category=hr_category,
+        missing_before_repair=hr_missing_before,
     )
     logger.warning(
         "orb_live_guardrail_enforcement_no_fallback scenario_id=%s category=%s fail_reasons=%s",
@@ -760,6 +896,76 @@ def enforce_live_guardrails(
     )
     _log_guardrail_enforcement(scenario=scenario, guarded=guarded, mode=mode)
     return guarded
+
+
+def enforce_live_guardrails(
+    scenario: dict[str, Any] | None,
+    raw_answer: str,
+    safety_scaffold: OrbSafetyScaffold,
+    mode: str | None = None,
+    *,
+    prompt_tier: str | None = None,
+    expert_depth: str | None = None,
+    repair_fn: Callable[[str], str] | None = None,
+) -> GuardedAnswerResult:
+    """Hard-enforce live guardrails — final_answer is always safe for display, persistence and scoring."""
+    import asyncio
+
+    coro = _run_guardrail_enforcement_async(
+        scenario,
+        raw_answer,
+        safety_scaffold,
+        mode,
+        prompt_tier=prompt_tier,
+        expert_depth=expert_depth,
+        repair_fn=repair_fn,
+    )
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        return asyncio.run(coro)
+
+    raise RuntimeError(
+        "enforce_live_guardrails cannot be called from a running event loop; "
+        "use enforce_live_guardrails_async instead."
+    )
+
+
+async def enforce_live_guardrails_async(
+    scenario: dict[str, Any] | None,
+    raw_answer: str,
+    safety_scaffold: OrbSafetyScaffold,
+    mode: str | None = None,
+    *,
+    prompt_tier: str | None = None,
+    expert_depth: str | None = None,
+    user_message: str | None = None,
+    allow_openai_repair: bool = True,
+    repair_fn: Callable[[str], str] | None = None,
+) -> GuardedAnswerResult:
+    """Async guardrail enforcement with one-shot OpenAI repair for high-risk marker gaps."""
+    async_repair_fn = None
+    if allow_openai_repair and repair_fn is None:
+        from services.orb_live_guardrail_repair_service import repair_guardrail_answer
+
+        async def _openai_repair(prompt: str) -> str:
+            return await repair_guardrail_answer(
+                repair_prompt=prompt,
+                user_message=user_message,
+            )
+
+        async_repair_fn = _openai_repair
+
+    return await _run_guardrail_enforcement_async(
+        scenario,
+        raw_answer,
+        safety_scaffold,
+        mode,
+        prompt_tier=prompt_tier,
+        expert_depth=expert_depth,
+        repair_fn=repair_fn,
+        async_repair_fn=async_repair_fn,
+    )
 
 
 def build_guardrail_prompt_block(scaffold: OrbSafetyScaffold) -> str:
@@ -845,6 +1051,11 @@ def build_guardrail_prompt_block(scaffold: OrbSafetyScaffold) -> str:
             + ", ".join(dict.fromkeys(scaffold.minimum_required_phrases[:8]))
         )
     lines.append("============================================================")
+
+    hr_category = scaffold.detected_category or scaffold.fallback_category or ""
+    hr_block = build_high_risk_prompt_block(hr_category)
+    if hr_block:
+        return f"{chr(10).join(lines)}\n\n{hr_block}"
     return "\n".join(lines)
 
 
@@ -907,6 +1118,7 @@ orb_live_guardrail_service = type(
     {
         "check_live_answer": staticmethod(check_live_answer),
         "enforce_live_guardrails": staticmethod(enforce_live_guardrails),
+        "enforce_live_guardrails_async": staticmethod(enforce_live_guardrails_async),
         "apply_live_guardrails": staticmethod(apply_live_guardrails),
         "build_guardrail_prompt_block": staticmethod(build_guardrail_prompt_block),
         "build_repair_prompt_block": staticmethod(build_repair_prompt_block),
