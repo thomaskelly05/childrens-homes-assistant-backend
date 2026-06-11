@@ -20,19 +20,21 @@ const BLOCKED_BROWSER_PATH_PREFIXES = [
 const GET_CACHE_TTL_MS = 10_000
 const REQUEST_TIMEOUT_MS = 8_000
 
-type ApiEnvelope<T> = { success?: boolean; data?: T; error?: string; detail?: string }
+type ApiEnvelope<T> = { success?: boolean; data?: T; error?: string; detail?: string; code?: string }
 
 export type FounderApiResult<T> =
   | { ok: true; data: T; status: number }
-  | { ok: false; error: string; status: number }
+  | { ok: false; error: string; status: number; code?: string }
 
 export class FounderPersistenceApiError extends Error {
   status: number
+  code?: string
 
-  constructor(status: number, message: string) {
+  constructor(status: number, message: string, code?: string) {
     super(message)
     this.name = 'FounderPersistenceApiError'
     this.status = status
+    this.code = code
   }
 }
 
@@ -66,9 +68,12 @@ function persistenceEntityFromPath(path: string): string | null {
 
 function parseErrorMessage(
   status: number,
-  payload: ApiEnvelope<unknown> & { detail?: unknown },
+  payload: ApiEnvelope<unknown> & { detail?: unknown; code?: string },
   path: string
 ): string {
+  if (typeof payload.code === 'string' && payload.code === 'founder_data_source_busy') {
+    return 'Founder data source is busy. Please wait a moment and try again.'
+  }
   if (status === 403) return 'Founder access required'
   if (status === 401) return 'Unauthorised'
   if (status >= 500) return 'Founder data source is busy'
@@ -171,8 +176,9 @@ async function founderRequest<T>(
       return {
         ok: false,
         status: response.status,
-        error: parseErrorMessage(response.status, payload, url)
-      }
+        error: parseErrorMessage(response.status, payload, url),
+        code: typeof payload.code === 'string' ? payload.code : undefined
+      } as FounderApiResult<T>
     }
 
     const data = sanitiseFounderPayload(((payload as ApiEnvelope<T>).data ?? payload) as T)

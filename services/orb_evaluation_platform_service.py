@@ -7,7 +7,7 @@ import concurrent.futures
 import uuid
 from collections.abc import Coroutine
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, TypeVar
 
 from schemas.orb_evaluation_platform import (
@@ -29,6 +29,8 @@ _T = TypeVar("_T")
 _in_memory_scenarios: list[dict[str, Any]] = []
 
 INTERNAL_BRAIN_BATCH_SIZE = 5
+STALE_RUN_THRESHOLD_MINUTES = 10
+PROCESS_BUSY_RETRY_AFTER_MS = 1000
 
 
 @dataclass
@@ -50,6 +52,7 @@ class _AsyncEvaluationRun:
 
 
 _in_memory_runs: dict[str, _AsyncEvaluationRun] = {}
+_processing_run_ids: set[str] = set()
 
 
 def _run_coro_sync(coro: Coroutine[Any, Any, _T]) -> _T:
@@ -92,7 +95,52 @@ class OrbEvaluationPlatformService:
       _in_memory_scenarios = safe[-5000:]
       return {"count": len(_in_memory_scenarios), "stored": len(safe)}
 
+  def recover_stale_internal_brain_runs(
+      self,
+      *,
+      threshold_minutes: int = STALE_RUN_THRESHOLD_MINUTES,
+  ) -> list[OrbEvaluationRunRecord]:
+      cutoff = datetime.now(timezone.utc) - timedelta(minutes=threshold_minutes)
+      recovered: list[OrbEvaluationRunRecord] = []
+      for stored in list(_in_memory_runs.values()):
+          if stored.mode != "internal-brain":
+              continue
+          if stored.status not in ("queued", "running"):
+              continue
+          started = datetime.fromisoformat(stored.started_at.replace("Z", "+00:00"))
+          if started >= cutoff:
+              continue
+          stored.status = "interrupted"
+          stored.error = "Run interrupted — exceeded safe processing window"
+          stored.completed_at = datetime.now(timezone.utc).isoformat()
+          recovered.append(
+              OrbEvaluationRunRecord(
+                  id=stored.run_id,
+                  status="interrupted",
+                  mode="internal-brain",
+                  pack=stored.pack_type,
+                  title=stored.title,
+                  scenario_count=len(stored.scenarios),
+                  completed_count=stored.process_index,
+                  critical_failures=stored.critical_failures,
+                  started_at=stored.started_at,
+                  completed_at=stored.completed_at,
+                  created_by=stored.created_by,
+                  error=stored.error,
+              )
+          )
+      return recovered
+
   def create_internal_brain_run(self, request: OrbEvaluationRunRequest) -> OrbEvaluationRunCreateResponse:
+      self.recover_stale_internal_brain_runs()
+      active = self.find_active_internal_brain_run()
+      if active:
+          if active.pack == request.pack_type:
+              return OrbEvaluationRunCreateResponse(run=active)
+          raise ValueError(
+              "Another internal-brain evaluation is still finishing. Please wait for it to complete."
+          )
+
       scenarios = self._resolve_scenarios(request)
       if not scenarios:
           raise ValueError("No scenarios to evaluate")
@@ -136,12 +184,13 @@ class OrbEvaluationPlatformService:
       *,
       batch_size: int = INTERNAL_BRAIN_BATCH_SIZE,
   ) -> OrbEvaluationProcessResponse:
+      self.recover_stale_internal_brain_runs()
       stored = _in_memory_runs.get(run_id)
       if not stored:
           raise KeyError(f"Evaluation run not found: {run_id}")
       if stored.mode != "internal-brain":
           raise ValueError("Only internal-brain runs support batched processing")
-      if stored.status in ("completed", "failed"):
+      if stored.status in ("completed", "failed", "interrupted"):
           return OrbEvaluationProcessResponse(
               run_id=stored.run_id,
               status=stored.status,
@@ -153,73 +202,93 @@ class OrbEvaluationPlatformService:
               error=stored.error,
           )
 
-      if stored.status == "queued":
-          stored.status = "running"
-
-      llm_available = live_llm_available()
-      batch_results: list[OrbEvaluationScenarioResult] = []
-      end_index = min(stored.process_index + batch_size, len(stored.scenarios))
-
-      try:
-          for scenario in stored.scenarios[stored.process_index : end_index]:
-              try:
-                  item = self._run_single_scenario(
-                      scenario,
-                      mode="internal-brain",
-                      llm_available=llm_available,
-                  )
-              except Exception as exc:  # noqa: BLE001 — record per-scenario failure and continue
-                  scenario_id = str(scenario.get("id") or "")
-                  item = OrbEvaluationScenarioResult(
-                      scenario_id=scenario_id,
-                      question=str(scenario.get("question") or ""),
-                      answer="",
-                      ok=False,
-                      error=str(exc)[:240],
-                  )
-              batch_results.append(item)
-              stored.scenario_results.append(item)
-              if item.internal_brain and item.internal_brain.get("critical_failure"):
-                  stored.critical_failures += 1
-      except Exception as exc:  # noqa: BLE001
-          stored.status = "failed"
-          stored.error = str(exc)[:240]
-          stored.completed_at = datetime.now(timezone.utc).isoformat()
+      if run_id in _processing_run_ids:
           return OrbEvaluationProcessResponse(
               run_id=stored.run_id,
-              status="failed",
+              status=stored.status,
               completed_count=stored.process_index,
               scenario_count=len(stored.scenarios),
               critical_failures=stored.critical_failures,
-              next_batch_available=False,
-              batch_results=batch_results,
-              error=stored.error,
+              next_batch_available=stored.process_index < len(stored.scenarios),
+              batch_results=[],
+              success=False,
+              code="busy",
+              retryable=True,
+              retry_after_ms=PROCESS_BUSY_RETRY_AFTER_MS,
           )
 
-      stored.process_index = end_index
-      next_batch_available = stored.process_index < len(stored.scenarios)
+      _processing_run_ids.add(run_id)
+      try:
+          if stored.status == "queued":
+              stored.status = "running"
 
-      if not next_batch_available:
-          stored.status = "completed"
-          stored.completed_at = datetime.now(timezone.utc).isoformat()
-      else:
-          stored.status = "running"
+          llm_available = live_llm_available()
+          batch_results: list[OrbEvaluationScenarioResult] = []
+          end_index = min(stored.process_index + batch_size, len(stored.scenarios))
 
-      return OrbEvaluationProcessResponse(
-          run_id=stored.run_id,
-          status=stored.status,
-          completed_count=stored.process_index,
-          scenario_count=len(stored.scenarios),
-          critical_failures=stored.critical_failures,
-          next_batch_available=next_batch_available,
-          batch_results=batch_results,
-      )
+          try:
+              for scenario in stored.scenarios[stored.process_index : end_index]:
+                  try:
+                      item = self._run_single_scenario(
+                          scenario,
+                          mode="internal-brain",
+                          llm_available=llm_available,
+                      )
+                  except Exception as exc:  # noqa: BLE001 — record per-scenario failure and continue
+                      scenario_id = str(scenario.get("id") or "")
+                      item = OrbEvaluationScenarioResult(
+                          scenario_id=scenario_id,
+                          question=str(scenario.get("question") or ""),
+                          answer="",
+                          ok=False,
+                          error=str(exc)[:240],
+                      )
+                  batch_results.append(item)
+                  stored.scenario_results.append(item)
+                  if item.internal_brain and item.internal_brain.get("critical_failure"):
+                      stored.critical_failures += 1
+          except Exception as exc:  # noqa: BLE001
+              stored.status = "failed"
+              stored.error = str(exc)[:240]
+              stored.completed_at = datetime.now(timezone.utc).isoformat()
+              return OrbEvaluationProcessResponse(
+                  run_id=stored.run_id,
+                  status="failed",
+                  completed_count=stored.process_index,
+                  scenario_count=len(stored.scenarios),
+                  critical_failures=stored.critical_failures,
+                  next_batch_available=False,
+                  batch_results=batch_results,
+                  error=stored.error,
+              )
+
+          stored.process_index = end_index
+          next_batch_available = stored.process_index < len(stored.scenarios)
+
+          if not next_batch_available:
+              stored.status = "completed"
+              stored.completed_at = datetime.now(timezone.utc).isoformat()
+          else:
+              stored.status = "running"
+
+          return OrbEvaluationProcessResponse(
+              run_id=stored.run_id,
+              status=stored.status,
+              completed_count=stored.process_index,
+              scenario_count=len(stored.scenarios),
+              critical_failures=stored.critical_failures,
+              next_batch_available=next_batch_available,
+              batch_results=batch_results,
+          )
+      finally:
+          _processing_run_ids.discard(run_id)
 
   def find_active_internal_brain_run(
       self,
       *,
       pack_type: str | None = None,
   ) -> OrbEvaluationRunRecord | None:
+      self.recover_stale_internal_brain_runs()
       for stored in reversed(list(_in_memory_runs.values())):
           if stored.mode != "internal-brain":
               continue

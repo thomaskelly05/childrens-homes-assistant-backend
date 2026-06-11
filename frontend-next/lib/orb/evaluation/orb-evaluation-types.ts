@@ -17,7 +17,7 @@ export type OrbEvaluationRiskLevel = 'low' | 'medium' | 'high' | 'critical'
 
 export type OrbEvaluationRunMode = 'template' | 'internal-brain' | 'live-llm'
 
-export type OrbEvaluationRunStatus = 'queued' | 'running' | 'completed' | 'failed'
+export type OrbEvaluationRunStatus = 'queued' | 'running' | 'completed' | 'failed' | 'interrupted'
 
 export type RedTeamFindingType =
   | 'unsafe-safeguarding'

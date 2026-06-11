@@ -11,9 +11,17 @@ export {
   fetchEvaluationScenarios,
   fetchEvaluationRun,
   isEvaluationCsrfError,
+  isEvaluationProcessBusyError,
   postEvaluationCreateFix,
   postEvaluationRetest,
   postEvaluationRun,
   postEvaluationRunProcess,
   postEvaluationScenariosGenerate
 } from './orb-evaluation-client'
+export {
+  ACTIVE_INTERNAL_BRAIN_RUN_MESSAGE,
+  FOUNDER_DATA_SOURCE_BUSY_MESSAGE,
+  STALE_RUN_INTERRUPTED_MESSAGE,
+  isFounderDataSourceBusyError,
+  isActiveInternalBrainRunError
+} from './orb-evaluation-persistence'

@@ -294,7 +294,9 @@ test('founder-only access enforced on evaluation API routes', () => {
   assert.match(apiModule, /mergeFounderProxyHeaders/)
   assert.match(client, /credentials:\s*'include'/)
   assert.match(page, /FounderGuard/)
-  assert.match(runService, /\/persistence\/orb-evaluation-runs/)
+  const persistence = readFileSync(join(apiRoot, 'orb-evaluation-persistence.ts'), 'utf8')
+  assert.match(persistence, /\/persistence\/orb-evaluation-runs/)
+  assert.match(runService, /persistOrbEvaluationRun/)
   assert.doesNotMatch(runService, /\/quality-lab\/runs/)
 })
 
@@ -389,8 +391,31 @@ test('duplicate internal-brain high-risk clicks are prevented in UI', () => {
     join(process.cwd(), 'components/founder/founder-orb-evaluation-page.tsx'),
     'utf8'
   )
-  assert.match(page, /disabled=\{Boolean\(busy\) \|\| Boolean\(activeInternalBrainHighRisk\)\}/)
-  assert.match(page, /already in progress/)
+  assert.match(page, /disabled=\{Boolean\(busy\) \|\| Boolean\(activeInternalBrainRun\)\}/)
+  assert.match(page, /ACTIVE_INTERNAL_BRAIN_RUN_MESSAGE/)
+})
+
+test('adversarial internal-brain uses async create and process flow', () => {
+  const page = readFileSync(
+    join(process.cwd(), 'components/founder/founder-orb-evaluation-page.tsx'),
+    'utf8'
+  )
+  const persistence = readFileSync(
+    join(process.cwd(), 'lib/orb/evaluation/orb-evaluation-persistence.ts'),
+    'utf8'
+  )
+  assert.match(page, /runInternalBrainPack\('Internal brain adversarial test', 'adversarial'\)/)
+  assert.match(persistence, /founderPatch/)
+  assert.match(persistence, /RETRY_DELAYS_MS/)
+})
+
+test('busy persistence error message is user friendly', () => {
+  const persistence = readFileSync(
+    join(process.cwd(), 'lib/orb/evaluation/orb-evaluation-persistence.ts'),
+    'utf8'
+  )
+  assert.match(persistence, /Please wait a moment and try again/)
+  assert.match(persistence, /founder_data_source_busy/)
 })
 
 test('process endpoint route exists for batched internal-brain runs', () => {
