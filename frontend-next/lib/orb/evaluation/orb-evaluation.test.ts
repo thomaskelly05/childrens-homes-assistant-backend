@@ -298,7 +298,7 @@ test('founder-only access enforced on evaluation API routes', () => {
   assert.doesNotMatch(runService, /\/quality-lab\/runs/)
 })
 
-test('internal brain high-risk button posts internal-brain mode and high-risk pack', () => {
+test('internal brain high-risk button uses async create and process flow', () => {
   const page = readFileSync(
     join(process.cwd(), 'components/founder/founder-orb-evaluation-page.tsx'),
     'utf8'
@@ -307,11 +307,16 @@ test('internal brain high-risk button posts internal-brain mode and high-risk pa
     join(process.cwd(), 'lib/orb/evaluation/orb-evaluation-run-service.ts'),
     'utf8'
   )
-  assert.match(page, /mode:\s*'internal-brain'/)
-  assert.match(page, /packType:\s*'high-risk'/)
-  assert.match(page, /requireSavedRun:\s*true/)
-  assert.match(runService, /pack_type: options\.packType/)
-  assert.match(runService, /await persistEvaluationRun/)
+  const client = readFileSync(
+    join(process.cwd(), 'lib/orb/evaluation/orb-evaluation-client.ts'),
+    'utf8'
+  )
+  assert.match(page, /executeInternalBrainEvaluationRun/)
+  assert.match(page, /Internal brain high-risk test started/)
+  assert.match(page, /activeInternalBrainHighRisk/)
+  assert.match(runService, /postEvaluationRunProcess/)
+  assert.match(runService, /processInternalBrainRunToCompletion/)
+  assert.match(client, /postEvaluationRunProcess/)
 })
 
 test('success requires saved completed run with id', () => {
@@ -353,6 +358,49 @@ test('blocker clears after completed internal-brain high-risk run with zero crit
   })
   assert.equal(gate.internalBrainHighRiskCompleted, true)
   assert.ok(!gate.blockers.some((b) => b.includes('No completed internal-brain high-risk run')))
+})
+
+test('blocker remains while internal-brain high-risk run is in progress', () => {
+  const runningRun: OrbEvaluationRun = {
+    id: 'ib-running',
+    mode: 'internal-brain',
+    status: 'running',
+    scenarioCount: 30,
+    completedCount: 10,
+    passRate: 0,
+    averageScore: 0,
+    criticalFailures: 0,
+    startedAt: new Date().toISOString(),
+    createdBy: 'test',
+    summary: 'Running 10/30',
+    packType: 'high-risk'
+  }
+  const gate = computeOrbLaunchQualityGate({
+    runs: [],
+    evaluationRuns: [runningRun],
+    whistleblowingCovered: true,
+    privacyRetentionReviewed: true
+  })
+  assert.ok(gate.blockers.some((b) => b.includes('in progress')))
+})
+
+test('duplicate internal-brain high-risk clicks are prevented in UI', () => {
+  const page = readFileSync(
+    join(process.cwd(), 'components/founder/founder-orb-evaluation-page.tsx'),
+    'utf8'
+  )
+  assert.match(page, /disabled=\{Boolean\(busy\) \|\| Boolean\(activeInternalBrainHighRisk\)\}/)
+  assert.match(page, /already in progress/)
+})
+
+test('process endpoint route exists for batched internal-brain runs', () => {
+  const route = readFileSync(
+    join(process.cwd(), 'app/api/orb/evaluation/runs/[runId]/process/route.ts'),
+    'utf8'
+  )
+  const api = readFileSync(join(process.cwd(), 'lib/orb/evaluation/orb-evaluation-api.ts'), 'utf8')
+  assert.match(route, /handleEvaluationRunProcessPost/)
+  assert.match(api, /\/process/)
 })
 
 test('blocker remains when internal-brain high-risk run has critical failures', () => {

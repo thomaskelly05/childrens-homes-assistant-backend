@@ -24,16 +24,17 @@ export function FounderOrbEvaluationRunDetailPage({ runId }: { runId: string }) 
 
   useEffect(() => {
     let cancelled = false
+    let pollTimer: ReturnType<typeof setInterval> | undefined
 
     async function loadRun() {
       const cached = getEvaluationRun(runId)
       if (cached) {
         setRun(cached)
         setLoadState('ready')
-        return
+      } else {
+        setLoadState('loading')
       }
 
-      setLoadState('loading')
       try {
         const payload = await fetchEvaluationRun(runId)
         if (cancelled) return
@@ -42,14 +43,32 @@ export function FounderOrbEvaluationRunDetailPage({ runId }: { runId: string }) 
         setLoadState('ready')
       } catch {
         if (cancelled) return
-        setRun(undefined)
-        setLoadState('error')
+        if (!cached) {
+          setRun(undefined)
+          setLoadState('error')
+        }
       }
     }
 
     void loadRun()
+
+    pollTimer = setInterval(() => {
+      const current = getEvaluationRun(runId)
+      if (current?.status === 'queued' || current?.status === 'running') {
+        void fetchEvaluationRun(runId)
+          .then((payload) => {
+            if (cancelled) return
+            hydrateEvaluationStore({ runs: [payload.run] })
+            setRun(payload.run)
+            setLoadState('ready')
+          })
+          .catch(() => undefined)
+      }
+    }, 4000)
+
     return () => {
       cancelled = true
+      if (pollTimer) clearInterval(pollTimer)
     }
   }, [runId])
 
@@ -94,24 +113,45 @@ export function FounderOrbEvaluationRunDetailPage({ runId }: { runId: string }) 
         backHref="/founder/orb-evaluation"
       />
 
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+        <div className="founder-surface rounded-2xl border border-white/10 p-5">
+          <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">Status</p>
+          <p className="mt-2 text-lg font-bold text-cyan-200" data-testid="orb-eval-run-status">
+            {run.status}
+          </p>
+        </div>
+        <div className="founder-surface rounded-2xl border border-white/10 p-5">
+          <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">Progress</p>
+          <p className="mt-2 text-3xl font-black text-white" data-testid="orb-eval-run-progress">
+            {run.completedCount}/{run.scenarioCount}
+          </p>
+        </div>
         <div className="founder-surface rounded-2xl border border-white/10 p-5">
           <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">Pass rate</p>
-          <p className="mt-2 text-3xl font-black text-emerald-300">{run.passRate}%</p>
+          <p className="mt-2 text-3xl font-black text-emerald-300">
+            {run.status === 'completed' ? `${run.passRate}%` : '—'}
+          </p>
         </div>
         <div className="founder-surface rounded-2xl border border-white/10 p-5">
           <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">Average score</p>
-          <p className="mt-2 text-3xl font-black text-white">{run.averageScore}</p>
+          <p className="mt-2 text-3xl font-black text-white">
+            {run.status === 'completed' ? run.averageScore : '—'}
+          </p>
         </div>
         <div className="founder-surface rounded-2xl border border-white/10 p-5">
           <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">Critical failures</p>
           <p className="mt-2 text-3xl font-black text-rose-300">{run.criticalFailures}</p>
         </div>
-        <div className="founder-surface rounded-2xl border border-white/10 p-5">
-          <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">Mode</p>
-          <p className="mt-2 text-lg font-bold text-slate-200">{run.mode}</p>
-        </div>
       </div>
+
+      {run.status === 'queued' || run.status === 'running' ? (
+        <p
+          className="rounded-2xl border border-amber-400/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-100"
+          data-testid="orb-eval-run-in-progress"
+        >
+          Run in progress — showing completed results so far. Final scores appear when the run completes.
+        </p>
+      ) : null}
 
       {run.mode === 'internal-brain' ? (
         <p

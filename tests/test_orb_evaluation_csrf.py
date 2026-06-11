@@ -7,9 +7,22 @@ from fastapi.testclient import TestClient
 
 import app as app_module
 from auth.current_user import get_current_user
+from middleware.security_middleware import CsrfProtectionMiddleware
+from services.orb_evaluation_platform_service import _in_memory_runs
+
+_ORIGINAL_CSRF_DISPATCH = CsrfProtectionMiddleware.dispatch
+
+
+@pytest.fixture(autouse=True)
+def clear_in_memory_evaluation_runs():
+    _in_memory_runs.clear()
+    yield
+    _in_memory_runs.clear()
+
 
 @pytest.fixture()
 def csrf_enforced_founder_client(monkeypatch):
+    monkeypatch.setattr(CsrfProtectionMiddleware, "dispatch", _ORIGINAL_CSRF_DISPATCH)
     monkeypatch.setattr(app_module, "init_db_pool", lambda: None, raising=False)
     monkeypatch.setattr(app_module, "close_db_pool", lambda: None, raising=False)
 
@@ -61,8 +74,9 @@ def test_internal_brain_post_succeeds_with_valid_session_and_csrf(csrf_enforced_
     payload = response.json()
     assert payload.get("success") is True
     data = payload.get("data") or {}
-    assert data.get("mode") == "internal-brain"
-    assert data.get("scenario_count", 0) >= 1
+    run = data.get("run") or data
+    assert run.get("mode") == "internal-brain"
+    assert run.get("scenario_count", 0) >= 1
 
 
 def test_internal_brain_post_fails_with_missing_csrf(csrf_enforced_founder_client: TestClient):
@@ -86,6 +100,25 @@ def test_internal_brain_post_fails_with_invalid_csrf(csrf_enforced_founder_clien
         json=_run_payload(),
     )
 
+    assert response.status_code == 403
+    assert response.json().get("detail") == "csrf_failed"
+
+
+def test_internal_brain_process_fails_with_missing_csrf(csrf_enforced_founder_client: TestClient):
+    csrf_token = "process-csrf-token-valid"
+    csrf_enforced_founder_client.cookies.set("indicare_csrf", csrf_token)
+    create = csrf_enforced_founder_client.post(
+        "/orb/admin/evaluation/runs",
+        headers={"x-csrf-token": csrf_token},
+        json=_run_payload(),
+    )
+    run_id = (create.json().get("data") or {}).get("run", {}).get("id")
+    assert run_id
+
+    response = csrf_enforced_founder_client.post(
+        f"/orb/admin/evaluation/runs/{run_id}/process",
+        json={},
+    )
     assert response.status_code == 403
     assert response.json().get("detail") == "csrf_failed"
 

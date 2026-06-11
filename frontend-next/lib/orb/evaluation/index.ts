@@ -14,5 +14,6 @@ export {
   postEvaluationCreateFix,
   postEvaluationRetest,
   postEvaluationRun,
+  postEvaluationRunProcess,
   postEvaluationScenariosGenerate
 } from './orb-evaluation-client'

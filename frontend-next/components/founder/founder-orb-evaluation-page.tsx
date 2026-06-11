@@ -12,10 +12,12 @@ import {
   assertCompletedEvaluationRunSaved,
   createBuildBriefFromEvaluationResult,
   executeEvaluationRun,
+  executeInternalBrainEvaluationRun,
   fetchEvaluationRuns,
   fetchEvaluationScenarios,
   generateScenarioPack,
   generateScenarios,
+  getActiveInternalBrainRun,
   getAgentIssueCounts,
   getEvaluationRuns,
   getEvaluationSummary,
@@ -24,6 +26,7 @@ import {
   isEvaluationCsrfError,
   retestFailedScenarios
 } from '@/lib/orb/evaluation'
+import type { InternalBrainRunProgress } from '@/lib/orb/evaluation/orb-evaluation-run-service'
 import { EVALUATION_CSRF_REFRESH_MESSAGE } from '@/lib/security/csrf-client'
 import { RED_TEAM_AGENTS } from '@/lib/orb/evaluation/red-team-agents'
 import type { OrbEvaluationRun } from '@/lib/orb/evaluation/orb-evaluation-types'
@@ -50,6 +53,12 @@ export function FounderOrbEvaluationPage() {
   const [loadError, setLoadError] = useState<string | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
+  const [runProgress, setRunProgress] = useState<InternalBrainRunProgress | null>(null)
+
+  const activeInternalBrainHighRisk = useMemo(
+    () => getActiveInternalBrainRun('high-risk'),
+    [runs, runProgress]
+  )
 
   const summary = useMemo(() => getEvaluationSummary(), [runs])
   const findings = useMemo(() => getFindingsByType(), [runs])
@@ -96,6 +105,7 @@ export function FounderOrbEvaluationPage() {
     async (label: string, action: () => Promise<unknown>, options?: { requireSavedRun?: boolean }) => {
       setBusy(label)
       setMessage(null)
+      setRunProgress(null)
       try {
         const result = await action()
         const refreshedRuns = await loadEvaluationData()
@@ -118,10 +128,62 @@ export function FounderOrbEvaluationPage() {
         setMessage(`${label} failed: ${err instanceof Error ? err.message : 'unknown error'}`)
       } finally {
         setBusy(null)
+        setRunProgress(null)
       }
     },
     [loadEvaluationData]
   )
+
+  const runInternalBrainHighRisk = useCallback(async () => {
+    if (activeInternalBrainHighRisk) {
+      setMessage('Internal-brain high-risk run already in progress.')
+      return
+    }
+
+    setBusy('Internal brain high-risk test')
+    setMessage('Internal brain high-risk test started')
+    setRunProgress(null)
+
+    try {
+      generateScenarioPack('high-risk')
+      const result = await executeInternalBrainEvaluationRun(
+        {
+          title: 'ORB Evaluation — internal brain high-risk',
+          packType: 'high-risk',
+          mode: 'internal-brain',
+          limit: 30
+        },
+        {
+          onProgress: (progress) => {
+            setRunProgress(progress)
+            setMessage(
+              `Internal brain high-risk test running ${progress.completedCount}/${progress.scenarioCount}`
+            )
+          }
+        }
+      )
+
+      const refreshedRuns = await loadEvaluationData()
+      assertCompletedEvaluationRunSaved(result)
+      const persisted = refreshedRuns.find((item) => item.id === result.id)
+      if (!persisted) {
+        throw new Error('Internal brain run did not complete. No result was saved.')
+      }
+
+      setMessage('Internal brain high-risk test complete')
+    } catch (err) {
+      if (isEvaluationCsrfError(err)) {
+        setMessage(EVALUATION_CSRF_REFRESH_MESSAGE)
+        return
+      }
+      setMessage(
+        `Internal brain high-risk test failed: ${err instanceof Error ? err.message : 'unknown error'}`
+      )
+    } finally {
+      setBusy(null)
+      setRunProgress(null)
+    }
+  }, [activeInternalBrainHighRisk, loadEvaluationData])
 
   const topAgent = Object.entries(agentCounts).sort((a, b) => b[1] - a[1])[0]
 
@@ -149,16 +211,30 @@ export function FounderOrbEvaluationPage() {
         <div className="founder-surface rounded-2xl border border-white/10 bg-white/[0.04] p-5">
           <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">Latest internal-brain run</p>
           <p className="mt-2 text-lg font-bold text-cyan-200" data-testid="orb-eval-internal-brain-status">
-            {summary.latestInternalBrainRun ? summary.latestInternalBrainRun.title ?? 'Completed' : 'None yet'}
+            {activeInternalBrainHighRisk
+              ? `Running ${activeInternalBrainHighRisk.completedCount}/${activeInternalBrainHighRisk.scenarioCount}`
+              : summary.latestInternalBrainRun
+                ? summary.latestInternalBrainRun.title ?? 'Completed'
+                : 'None yet'}
           </p>
-          <p className="mt-1 text-xs text-slate-500">
-            High-risk failures: {summary.latestInternalBrainHighRiskFailures}
+          <p className="mt-1 text-xs text-slate-500" data-testid="orb-eval-internal-brain-progress">
+            {activeInternalBrainHighRisk
+              ? `Status: ${activeInternalBrainHighRisk.status} · Critical so far: ${activeInternalBrainHighRisk.criticalFailures}`
+              : `High-risk failures: ${summary.latestInternalBrainHighRiskFailures}`}
           </p>
-          {summary.latestInternalBrainHighRiskRun ? (
+          {summary.latestInternalBrainHighRiskRun && !activeInternalBrainHighRisk ? (
             <p className="mt-2 text-xs text-slate-400">
               Pass rate: {summary.latestInternalBrainHighRiskRun.passRate}% · Critical:{' '}
               {summary.latestInternalBrainHighRiskRun.criticalFailures}
             </p>
+          ) : null}
+          {activeInternalBrainHighRisk ? (
+            <Link
+              href={`/founder/orb-evaluation/runs/${activeInternalBrainHighRisk.id}`}
+              className="mt-2 inline-block text-xs font-bold text-cyan-300 hover:text-cyan-200"
+            >
+              View details
+            </Link>
           ) : null}
         </div>
         <div className="founder-surface rounded-2xl border border-white/10 bg-white/[0.04] p-5">
@@ -206,24 +282,10 @@ export function FounderOrbEvaluationPage() {
             </button>
             <button
               type="button"
-              disabled={Boolean(busy)}
-              className="rounded-full border border-cyan-400/30 bg-cyan-500/10 px-4 py-2 text-xs font-bold text-cyan-100"
+              disabled={Boolean(busy) || Boolean(activeInternalBrainHighRisk)}
+              className="rounded-full border border-cyan-400/30 bg-cyan-500/10 px-4 py-2 text-xs font-bold text-cyan-100 disabled:opacity-50"
               data-testid="orb-eval-internal-brain-high-risk"
-              onClick={() =>
-                runAction(
-                  'Internal brain high-risk test',
-                  async () => {
-                    generateScenarioPack('high-risk')
-                    return executeEvaluationRun({
-                      title: 'ORB Evaluation — internal brain high-risk',
-                      packType: 'high-risk',
-                      mode: 'internal-brain',
-                      limit: 30
-                    })
-                  },
-                  { requireSavedRun: true }
-                )
-              }
+              onClick={() => void runInternalBrainHighRisk()}
             >
               <Shield className="mr-1 inline h-3.5 w-3.5" aria-hidden />
               Run internal brain high-risk test
@@ -319,9 +381,11 @@ export function FounderOrbEvaluationPage() {
         }
       >
         {busy ? (
-          <p className="text-sm text-slate-400">
+          <p className="text-sm text-slate-400" data-testid="orb-eval-run-progress">
             <RefreshCw className="mr-2 inline h-4 w-4 animate-spin" aria-hidden />
-            {busy}…
+            {runProgress
+              ? `${busy} — ${runProgress.completedCount}/${runProgress.scenarioCount}`
+              : `${busy}…`}
           </p>
         ) : (
           <p className="text-sm text-slate-500">
@@ -396,7 +460,9 @@ export function FounderOrbEvaluationPage() {
             <thead>
               <tr className="border-b border-white/10 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">
                 <th className="px-3 py-2">Run</th>
+                <th className="px-3 py-2">Status</th>
                 <th className="px-3 py-2">Mode</th>
+                <th className="px-3 py-2">Progress</th>
                 <th className="px-3 py-2">Pass rate</th>
                 <th className="px-3 py-2">Critical</th>
                 <th className="px-3 py-2">Actions</th>
@@ -405,19 +471,19 @@ export function FounderOrbEvaluationPage() {
             <tbody>
               {loadState === 'loading' ? (
                 <tr>
-                  <td colSpan={5} className="px-3 py-6 text-slate-500">
+                  <td colSpan={7} className="px-3 py-6 text-slate-500">
                     Loading evaluation runs…
                   </td>
                 </tr>
               ) : loadState === 'error' ? (
                 <tr>
-                  <td colSpan={5} className="px-3 py-6 text-rose-200">
+                  <td colSpan={7} className="px-3 py-6 text-rose-200">
                     {LOAD_ERROR_MESSAGE}
                   </td>
                 </tr>
               ) : runs.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-3 py-6 text-slate-500" data-testid="orb-eval-no-runs">
+                  <td colSpan={7} className="px-3 py-6 text-slate-500" data-testid="orb-eval-no-runs">
                     No evaluation runs yet.
                   </td>
                 </tr>
@@ -427,11 +493,20 @@ export function FounderOrbEvaluationPage() {
                     <td className="px-3 py-3">
                       <p className="font-semibold text-white">{run.title ?? run.id}</p>
                       <p className="text-xs text-slate-500">{run.summary}</p>
+                      {run.packType ? (
+                        <p className="text-xs text-slate-600">{run.packType}</p>
+                      ) : null}
                     </td>
+                    <td className="px-3 py-3 text-slate-400">{run.status}</td>
                     <td className="px-3 py-3 text-slate-400">
                       {run.mode === 'internal-brain' ? 'internal-brain (routing)' : run.mode}
                     </td>
-                    <td className="px-3 py-3 text-emerald-300">{run.passRate}%</td>
+                    <td className="px-3 py-3 text-slate-400">
+                      {run.completedCount}/{run.scenarioCount}
+                    </td>
+                    <td className="px-3 py-3 text-emerald-300">
+                      {run.status === 'completed' ? `${run.passRate}%` : '—'}
+                    </td>
                     <td className="px-3 py-3 text-rose-300">{run.criticalFailures}</td>
                     <td className="px-3 py-3">
                       <Link
@@ -466,7 +541,12 @@ export function FounderOrbEvaluationPage() {
               <span className="text-xs font-bold uppercase tracking-[0.14em]">Internal brain</span>
             </div>
             <p className="mt-2 text-sm text-slate-300">
-              High-risk run: {launchGate.internalBrainHighRiskCompleted ? 'completed' : 'not completed'}
+              High-risk run:{' '}
+              {activeInternalBrainHighRisk
+                ? 'in progress'
+                : launchGate.internalBrainHighRiskCompleted
+                  ? 'completed'
+                  : 'not completed'}
             </p>
             <p className="text-xs text-slate-500">
               Critical failures: {launchGate.internalBrainCriticalFailures ?? 0}

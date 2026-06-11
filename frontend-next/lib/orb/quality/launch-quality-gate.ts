@@ -116,6 +116,15 @@ export function computeOrbLaunchQualityGate(input: LaunchGateInput): OrbLaunchQu
   }
   if (pendingHumanReviews > 0) blockers.push(`${pendingHumanReviews} result(s) pending human review`)
 
+  const internalBrainHighRiskInProgress = sortEvaluationRuns(evaluationRuns).some(
+    (run) =>
+      run.mode === 'internal-brain' &&
+      run.packType === 'high-risk' &&
+      (run.status === 'queued' || run.status === 'running')
+  )
+  if (internalBrainHighRiskInProgress) {
+    blockers.push('Internal-brain high-risk run in progress')
+  }
   if (!internalBrainHighRiskCompleted) {
     blockers.push('No completed internal-brain high-risk run (required for closed pilot pre-check)')
   }
@@ -160,6 +169,7 @@ export function computeOrbLaunchQualityGate(input: LaunchGateInput): OrbLaunchQu
     redTeamCriticalFailures > 0 ||
     pendingHumanReviews > 0 ||
     !whistleblowingCovered ||
+    internalBrainHighRiskInProgress ||
     !internalBrainHighRiskCompleted ||
     internalBrainCriticalFailures > 0
   ) {

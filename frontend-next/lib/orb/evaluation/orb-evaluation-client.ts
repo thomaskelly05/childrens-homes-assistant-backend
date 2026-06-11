@@ -106,6 +106,42 @@ export async function postEvaluationRun(body: Record<string, unknown>): Promise<
   })
 }
 
+export type EvaluationProcessPayload = {
+  runId: string
+  status: 'queued' | 'running' | 'completed' | 'failed'
+  completedCount: number
+  scenarioCount: number
+  criticalFailures: number
+  nextBatchAvailable: boolean
+  batchResults?: Array<{
+    scenario_id: string
+    question: string
+    answer: string
+    ok: boolean
+    error?: string
+    model_route?: Record<string, string | null | undefined>
+    internal_brain?: Record<string, unknown>
+  }>
+  error?: string
+}
+
+export async function postEvaluationRunProcess(runId: string): Promise<EvaluationProcessPayload> {
+  const data = await evaluationFetch<Record<string, unknown>>(
+    `/api/orb/evaluation/runs/${encodeURIComponent(runId)}/process`,
+    { method: 'POST', body: JSON.stringify({}) }
+  )
+  return {
+    runId: String(data.run_id ?? data.runId ?? runId),
+    status: (data.status as EvaluationProcessPayload['status']) ?? 'failed',
+    completedCount: Number(data.completed_count ?? data.completedCount ?? 0),
+    scenarioCount: Number(data.scenario_count ?? data.scenarioCount ?? 0),
+    criticalFailures: Number(data.critical_failures ?? data.criticalFailures ?? 0),
+    nextBatchAvailable: Boolean(data.next_batch_available ?? data.nextBatchAvailable),
+    batchResults: (data.batch_results ?? data.batchResults ?? []) as EvaluationProcessPayload['batchResults'],
+    error: typeof data.error === 'string' ? data.error : undefined
+  }
+}
+
 export async function postEvaluationScenariosGenerate(body: {
   count?: number
   pack_type?: string
