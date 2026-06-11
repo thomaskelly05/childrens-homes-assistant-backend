@@ -6,7 +6,7 @@ export type MissingRequirementDetail = {
   recommendedImprovement: string
 }
 
-const SAFEGUARD_PHRASE_MAP: Record<string, string[]> = {
+export const SAFEGUARD_PHRASE_MAP: Record<string, string[]> = {
   'anti-stigmatising language': [
     'non-shaming',
     'non-blaming',

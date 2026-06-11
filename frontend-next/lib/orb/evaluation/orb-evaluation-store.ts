@@ -4,6 +4,7 @@ import type {
   OrbEvaluationRun,
   OrbEvaluationScenario
 } from './orb-evaluation-types'
+import { INTERNAL_BRAIN_SCORING_VERSION_V2 } from './orb-evaluation-types'
 
 const scenarios: OrbEvaluationScenario[] = []
 const runs: OrbEvaluationRun[] = []
@@ -88,7 +89,13 @@ export function hydrateEvaluationStore(payload: {
   if (payload.scenarios) setEvaluationScenarios(payload.scenarios)
   if (payload.runs) {
     runs.length = 0
-    runs.push(...payload.runs)
+    runs.push(
+      ...payload.runs.map((run) =>
+        run.mode === 'internal-brain' && run.scoringVersion !== INTERNAL_BRAIN_SCORING_VERSION_V2
+          ? { ...run, supersededByScoringFix: run.supersededByScoringFix ?? true }
+          : run
+      )
+    )
   }
   if (payload.results) {
     results.length = 0
@@ -117,24 +124,32 @@ export function getLatestHighRiskEvaluationRun(): OrbEvaluationRun | undefined {
   )
 }
 
+function preferV2InternalBrainRun(
+  items: OrbEvaluationRun[]
+): OrbEvaluationRun | undefined {
+  return (
+    items.find((run) => run.scoringVersion === INTERNAL_BRAIN_SCORING_VERSION_V2) ?? items[0]
+  )
+}
+
 export function getLatestInternalBrainRun(
   packType?: 'high-risk' | 'adversarial'
 ): OrbEvaluationRun | undefined {
-  return getEvaluationRuns().find(
+  const matches = getEvaluationRuns().filter(
     (run) =>
       run.status === 'completed' &&
       run.mode === 'internal-brain' &&
       (!packType || run.packType === packType)
   )
+  return preferV2InternalBrainRun(matches)
 }
 
 export function getLatestInternalBrainHighRiskRun(): OrbEvaluationRun | undefined {
-  return getEvaluationRuns().find(
+  const matches = getEvaluationRuns().filter(
     (run) =>
-      run.status === 'completed' &&
-      run.mode === 'internal-brain' &&
-      run.packType === 'high-risk'
+      run.status === 'completed' && run.mode === 'internal-brain' && run.packType === 'high-risk'
   )
+  return preferV2InternalBrainRun(matches)
 }
 
 export function getActiveInternalBrainRun(
@@ -183,12 +198,11 @@ export function recoverStaleInternalBrainRuns(
 }
 
 export function getLatestInternalBrainAdversarialRun(): OrbEvaluationRun | undefined {
-  return getEvaluationRuns().find(
+  const matches = getEvaluationRuns().filter(
     (run) =>
-      run.status === 'completed' &&
-      run.mode === 'internal-brain' &&
-      run.packType === 'adversarial'
+      run.status === 'completed' && run.mode === 'internal-brain' && run.packType === 'adversarial'
   )
+  return preferV2InternalBrainRun(matches)
 }
 
 export function getLatestLiveLlmRun(): OrbEvaluationRun | undefined {

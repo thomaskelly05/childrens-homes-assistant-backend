@@ -4,6 +4,7 @@ import type {
   ReviewStatus
 } from '@/lib/founder/quality-lab/quality-lab-types'
 import type { OrbEvaluationRun } from '@/lib/orb/evaluation/orb-evaluation-types'
+import { INTERNAL_BRAIN_SCORING_VERSION_V2 } from '@/lib/orb/evaluation/orb-evaluation-types'
 
 export type LaunchGateInput = {
   runs: QualityRun[]
@@ -44,8 +45,11 @@ function latestInternalBrainRun(
   evaluationRuns: OrbEvaluationRun[],
   packType: 'high-risk' | 'adversarial'
 ): OrbEvaluationRun | undefined {
-  return sortEvaluationRuns(evaluationRuns).find(
+  const matches = sortEvaluationRuns(evaluationRuns).filter(
     (run) => run.status === 'completed' && run.mode === 'internal-brain' && run.packType === packType
+  )
+  return (
+    matches.find((run) => run.scoringVersion === INTERNAL_BRAIN_SCORING_VERSION_V2) ?? matches[0]
   )
 }
 

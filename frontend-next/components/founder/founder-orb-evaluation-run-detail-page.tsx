@@ -114,7 +114,7 @@ export function FounderOrbEvaluationRunDetailPage({ runId }: { runId: string }) 
         backHref="/founder/orb-evaluation"
       />
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-6">
         <div className="founder-surface rounded-2xl border border-white/10 p-5">
           <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">Status</p>
           <p className="mt-2 text-lg font-bold text-cyan-200" data-testid="orb-eval-run-status">
@@ -143,7 +143,48 @@ export function FounderOrbEvaluationRunDetailPage({ runId }: { runId: string }) 
           <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">Critical failures</p>
           <p className="mt-2 text-3xl font-black text-rose-300">{run.criticalFailures}</p>
         </div>
+        {run.mode === 'internal-brain' ? (
+          <>
+            <div className="founder-surface rounded-2xl border border-white/10 p-5">
+              <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">
+                Missing requirements
+              </p>
+              <p className="mt-2 text-3xl font-black text-amber-200">{run.missingRequirementsCount ?? 0}</p>
+            </div>
+          </>
+        ) : null}
       </div>
+
+      {run.mode === 'internal-brain' ? (
+        <div className="grid gap-4 md:grid-cols-3">
+          <div className="founder-surface rounded-2xl border border-white/10 p-5">
+            <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">Scoring version</p>
+            <p className="mt-2 text-lg font-bold text-cyan-200">
+              {run.scoringVersion ?? 'internal-brain-v1'}
+            </p>
+            {run.supersededByScoringFix ? (
+              <p className="mt-1 text-xs text-amber-300">Superseded by scoring fix — kept for audit history.</p>
+            ) : null}
+          </div>
+          <div className="founder-surface rounded-2xl border border-white/10 p-5">
+            <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">
+              Improvement opportunities
+            </p>
+            <p className="mt-2 text-3xl font-black text-cyan-200">
+              {run.improvementOpportunitiesCount ?? 0}
+            </p>
+          </div>
+          <div className="founder-surface rounded-2xl border border-white/10 p-5">
+            <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">Red team findings</p>
+            <p className="mt-2 text-3xl font-black text-white">
+              {results.reduce((sum, r) => sum + r.redTeamFindings.length, 0)}
+            </p>
+            <p className="mt-1 text-xs text-slate-500">
+              Internal-brain critical failures use safety rules, not red-team agents.
+            </p>
+          </div>
+        </div>
+      ) : null}
 
       {run.status === 'queued' || run.status === 'running' ? (
         <p
@@ -204,9 +245,9 @@ export function FounderOrbEvaluationRunDetailPage({ runId }: { runId: string }) 
                   <p className={result.pass ? 'text-emerald-300' : 'text-rose-300'}>
                     {result.pass ? 'Pass' : 'Fail'} · {result.scores.overall}
                   </p>
-                  {result.criticalFailure ? (
-                    <p className="text-xs text-rose-300">Critical failure</p>
-                  ) : null}
+                  <p className="text-xs text-slate-400">
+                    Critical failure: {result.criticalFailure ? 'yes' : 'no'}
+                  </p>
                 </div>
               </div>
 
@@ -330,15 +371,65 @@ export function FounderOrbEvaluationRunDetailPage({ runId }: { runId: string }) 
                 </div>
               </div>
 
+              {run.mode === 'internal-brain' && result.criticalFailure && result.redTeamFindings.length === 0 ? (
+                <p className="mt-4 rounded-xl border border-rose-400/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
+                  Critical failure without red-team findings:{' '}
+                  {result.issues.slice(0, 3).join(' · ') || 'see safety rules below'}.
+                </p>
+              ) : null}
+
               {run.mode === 'internal-brain' && result.internalBrain ? (
-                <div className="mt-4" data-testid="orb-eval-missing-requirements">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">
-                    Missing requirements
-                  </p>
-                  {result.internalBrain.missingRequirements.length === 0 ? (
-                    <p className="mt-2 text-sm text-emerald-200">No missing requirements detected.</p>
+                <div className="mt-4 space-y-4" data-testid="orb-eval-missing-requirements">
+                  {(result.missingRequirementDetails ?? result.internalBrain.missingRequirementDetails ?? [])
+                    .length > 0 ? (
+                    <>
+                      <div>
+                        <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">
+                          Missing requirements by severity
+                        </p>
+                        <ul className="mt-2 space-y-3">
+                          {(result.missingRequirementDetails ??
+                            result.internalBrain.missingRequirementDetails ??
+                            []
+                          )
+                            .filter((detail) => detail.severity !== 'improvement')
+                            .map((detail) => (
+                              <li
+                                key={detail.id}
+                                className="rounded-xl border border-amber-400/20 bg-amber-500/5 px-4 py-3 text-sm"
+                              >
+                                <p className="font-semibold text-amber-100">
+                                  {detail.label}{' '}
+                                  <span className="text-xs uppercase text-amber-300/80">({detail.severity})</span>
+                                </p>
+                                <p className="mt-1 text-slate-400">{detail.whyItMatters}</p>
+                                <p className="mt-1 text-amber-100/90">{detail.recommendedImprovement}</p>
+                              </li>
+                            ))}
+                        </ul>
+                      </div>
+                      {(result.improvementOpportunities ?? []).length > 0 ? (
+                        <div>
+                          <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">
+                            Improvement opportunities
+                          </p>
+                          <ul className="mt-2 space-y-2">
+                            {(result.improvementOpportunities ?? []).map((detail) => (
+                              <li
+                                key={detail.id}
+                                className="rounded-xl border border-cyan-400/20 bg-cyan-500/5 px-4 py-3 text-sm text-cyan-100"
+                              >
+                                {detail.label}: {detail.recommendedImprovement}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      ) : null}
+                    </>
+                  ) : result.internalBrain.missingRequirements.length === 0 ? (
+                    <p className="text-sm text-emerald-200">No missing requirements detected.</p>
                   ) : (
-                    <ul className="mt-2 space-y-3">
+                    <ul className="space-y-3">
                       {explainMissingRequirements(
                         result.internalBrain.missingRequirements,
                         result.orbAnswer || result.internalBrain.fallbackAnswer
@@ -348,19 +439,7 @@ export function FounderOrbEvaluationRunDetailPage({ runId }: { runId: string }) 
                           className="rounded-xl border border-amber-400/20 bg-amber-500/5 px-4 py-3 text-sm"
                         >
                           <p className="font-semibold text-amber-100">{detail.requirement}</p>
-                          <p className="mt-1 text-slate-400">
-                            <span className="text-slate-500">Why it matters:</span> {detail.whyItMatters}
-                          </p>
-                          <p className="mt-1 text-slate-400">
-                            <span className="text-slate-500">Fallback wording:</span>{' '}
-                            {detail.fallbackContainedWording
-                              ? `Related phrasing detected (${detail.matchedPhrases.join(', ')}) — review detection alignment.`
-                              : 'No related phrasing detected in fallback answer.'}
-                          </p>
-                          <p className="mt-1 text-amber-100/90">
-                            <span className="text-slate-500">Recommended improvement:</span>{' '}
-                            {detail.recommendedImprovement}
-                          </p>
+                          <p className="mt-1 text-slate-400">{detail.whyItMatters}</p>
                         </li>
                       ))}
                     </ul>
