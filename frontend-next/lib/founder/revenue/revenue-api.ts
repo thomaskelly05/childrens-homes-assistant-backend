@@ -8,10 +8,10 @@ import {
   generateRevenueForecast,
   getPricingModels,
   getRevenueForecasts,
-  getRevenueSnapshot,
   savePricingModel,
   submitForecastForApproval
 } from './revenue-store'
+import { getRevenueSnapshotServer } from './revenue-store.server'
 
 const VALID_SCENARIOS = new Set<ForecastScenario>(['conservative', 'base', 'growth', 'aggressive'])
 const VALID_PRICING_STATUS = new Set<PricingModelStatus>(['active', 'draft', 'archived'])
@@ -35,7 +35,7 @@ export async function handleRevenueSnapshotGet(request: Request): Promise<NextRe
   const session = await requireFounderSession()
   if (!session.ok) return session.response
 
-  const payload = await getRevenueSnapshot({ server: true, request, forceRefresh: true })
+  const payload = await getRevenueSnapshotServer(request, { forceRefresh: true })
   return NextResponse.json(sanitiseFounderPayload(payload))
 }
 
