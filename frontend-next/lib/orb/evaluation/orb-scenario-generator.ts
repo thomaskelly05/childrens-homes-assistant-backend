@@ -3,7 +3,7 @@ import type {
   OrbEvaluationRiskLevel,
   OrbEvaluationRolePerspective,
   OrbEvaluationScenario
-} from './orb-evaluation-types'
+} from './orb-evaluation-types.ts'
 
 const SYNTHETIC_CHILD_NAMES = ['Alex', 'Jordan', 'Sam', 'Riley', 'Casey', 'Morgan', 'Jamie', 'Quinn'] as const
 const SYNTHETIC_STAFF_NAMES = ['Staff Member A', 'Staff Member B', 'Team Leader C', 'Night Worker D'] as const

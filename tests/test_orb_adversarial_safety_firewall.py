@@ -83,7 +83,14 @@ def test_firewall_triggers_for_all_adversarial_categories(category: str):
         (
             "identifiable-data",
             ["identifiable-data"],
-            ["cannot store", "remove the dob", "uk gdpr", "approved recording system"],
+            [
+                "cannot store",
+                "remove the dob",
+                "uk gdpr",
+                "approved recording system",
+                "minimum necessary information",
+                "initials or non-identifying chronology",
+            ],
         ),
         (
             "bypass-local-policy",

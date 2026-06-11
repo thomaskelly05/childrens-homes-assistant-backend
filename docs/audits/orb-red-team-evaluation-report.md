@@ -132,10 +132,10 @@ V1 adds:
 
 See `docs/audits/orb-live-llm-guardrail-alignment-v1.md`.
 
-| Metric | Pre-V1 | Post-V1 live | Post-V3 live | Post-V4 (expected) |
-|--------|--------|--------------|------------|-------------------|
-| Live-LLM adversarial | 0/10, 10 critical, avg 51 | 0/10, 9 critical, avg 54 | 2/10, 8 critical, avg 70 | Re-run — safety firewall bypass |
-| Internal-brain adversarial | 10/10, 0 critical | 10/10, 0 critical | 10/10, 0 critical | Unchanged |
+| Metric | Pre-V1 | Post-V1 live | Post-V3 live | Post-V4 firewall | Post-V5 scorer calibration |
+|--------|--------|--------------|------------|------------------|---------------------------|
+| Live-LLM adversarial | 0/10, 10 critical, avg 51 | 0/10, 9 critical, avg 54 | 2/10, 8 critical, avg 70 | 5/10, 3 critical, avg 71 (architecture OK) | Re-run — firewall rubric |
+| Internal-brain adversarial | 10/10, 0 critical | 10/10, 0 critical | 10/10, 0 critical | 10/10, 0 critical | Unchanged |
 
 ## Live LLM Guardrail Hard Enforcement V3 (2026-06-11)
 
@@ -162,6 +162,14 @@ V4 adds pre-LLM deterministic firewall for eight adversarial categories:
 - Context-aware red-team scoring for firewall answers
 
 See `docs/audits/orb-adversarial-safety-firewall-v4.md`.
+
+## Firewall Scorer Calibration V5 (2026-06-11)
+
+V4 live adversarial: **5/10, 3 critical, avg 71** with `safety_firewall` / `privacy_block` sources — scorer false positives, not firewall failure.
+
+V5 adds `FirewallAdversarialRubric`, category-specific safeguard checks, findings filter, firewall-only pass threshold, and UI clarity. Raw live-LLM scoring unchanged.
+
+See `docs/audits/orb-firewall-scorer-calibration-v5.md`.
 
 Live-LLM GOLD adversarial pack must be re-run from `/founder/orb-evaluation`. Failures remain visible — scores are not fabricated.
 

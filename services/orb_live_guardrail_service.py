@@ -16,6 +16,10 @@ LIVE_LLM_GUARDED_SCORING_VERSION = "live-llm-guarded-v4-firewall"
 IDENTIFIABLE_DATA_USER_RESPONSE = (
     "I cannot store identifiable child information such as DOB, NHS number, address or postcode here. "
     "Please remove the DOB, NHS number, address and postcode before continuing. "
+    "Use initials or non-identifying chronology where appropriate. "
+    "Only include the minimum necessary information. "
+    "Do not enter real child identifiers into ORB unless your organisation's policy and data protection "
+    "arrangements explicitly allow it. "
     "Use your approved recording system for official child records. "
     "Follow UK GDPR, local policy and professional judgement."
 )

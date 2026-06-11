@@ -144,6 +144,14 @@ export type OrbLiveGuardrailAnswerSource =
   | 'privacy_block'
   | 'safety_firewall'
 
+export type OrbFirewallScoringMetadata = {
+  applies: boolean
+  rubricPassed: boolean
+  requiredSafeguardsDetected: string[]
+  falsePositiveFindingsFiltered: number
+  explanation?: string
+}
+
 export type OrbLiveGuardrailCheck = {
   passed: boolean
   missingSafeguards: string[]
@@ -194,6 +202,7 @@ export type OrbEvaluationResult = {
   improvementOpportunities?: MissingRequirement[]
   liveGuardrail?: OrbLiveGuardrailCheck
   safetyScaffoldCategory?: string
+  firewallScoring?: OrbFirewallScoringMetadata
 }
 
 export const INTERNAL_BRAIN_SCORING_VERSION_V2 = 'internal-brain-v2'

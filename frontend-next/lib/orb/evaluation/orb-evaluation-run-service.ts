@@ -678,7 +678,7 @@ export async function executeEvaluationRun(
         | 'privacy_block'
         | 'safety_firewall'
         | undefined
-      const { result } = scoreOrbEvaluationAnswer({
+      const { result: scored } = scoreOrbEvaluationAnswer({
         scenario,
         answer: scoringAnswer,
         runId,
@@ -688,6 +688,7 @@ export async function executeEvaluationRun(
         liveGuardrailAnswerSource: answerSource,
         safetyScaffoldCategory: item.safety_scaffold_category
       })
+      const result = scored
       const liveGuardrail = item.live_guardrail
         ? {
             passed: Boolean(item.live_guardrail.guardrail_passed ?? item.live_guardrail.passed),
