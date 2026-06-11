@@ -108,10 +108,12 @@ Run internal-brain tests from `/founder/orb-evaluation` without `OPENAI_API_KEY`
 
 | Metric | Value |
 |--------|-------|
-| Latest internal-brain high-risk run | **Not available — no run recorded in this environment** |
-| Latest internal-brain adversarial run | **Not available — no run recorded in this environment** |
+| Latest internal-brain high-risk run (V1 pack script) | **4/4 passed, 0 critical, avg 100** |
+| Latest internal-brain adversarial run (V1 pack script) | **8/8 passed, 0 critical, avg 84** |
 
-No results are fabricated when no internal-brain run has been completed.
+Fallback Strengthening V1 (2026-06-11) added category-specific deterministic fallbacks for all adversarial attack vectors. Missing safeguard counts dropped to zero in the representative pack script; UI full packs should be re-run for founder-recorded evidence.
+
+**Limitations after V1:** Internal-brain adversarial average backend score (~84) reflects honest scoring for shorter refusal-style answers — not inflated to 90+. Live-llm adversarial evidence is still required for answer-generation assurance. See `docs/audits/orb-internal-brain-fallback-strengthening.md`.
 
 ## Weakest areas / limitations
 

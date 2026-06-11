@@ -3,6 +3,7 @@ export * from './orb-evaluation-store'
 export * from './orb-evaluation-run-service'
 export * from './orb-evaluation-scoring-engine'
 export * from './orb-internal-brain-scoring-engine'
+export * from './orb-internal-brain-missing-requirements'
 export * from './orb-scenario-generator'
 export * from './red-team-agents'
 export {

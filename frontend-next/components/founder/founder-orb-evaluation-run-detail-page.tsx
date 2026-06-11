@@ -14,6 +14,7 @@ import {
   hydrateEvaluationStore,
   retestFailedScenarios
 } from '@/lib/orb/evaluation'
+import { explainMissingRequirements } from '@/lib/orb/evaluation/orb-internal-brain-missing-requirements'
 import type { OrbEvaluationRun } from '@/lib/orb/evaluation/orb-evaluation-types'
 
 export function FounderOrbEvaluationRunDetailPage({ runId }: { runId: string }) {
@@ -329,16 +330,41 @@ export function FounderOrbEvaluationRunDetailPage({ runId }: { runId: string }) 
                 </div>
               </div>
 
-              {run.mode === 'internal-brain' && result.internalBrain?.missingRequirements.length ? (
-                <div className="mt-4">
+              {run.mode === 'internal-brain' && result.internalBrain ? (
+                <div className="mt-4" data-testid="orb-eval-missing-requirements">
                   <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">
                     Missing requirements
                   </p>
-                  <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-amber-200">
-                    {result.internalBrain.missingRequirements.map((item) => (
-                      <li key={item}>{item}</li>
-                    ))}
-                  </ul>
+                  {result.internalBrain.missingRequirements.length === 0 ? (
+                    <p className="mt-2 text-sm text-emerald-200">No missing requirements detected.</p>
+                  ) : (
+                    <ul className="mt-2 space-y-3">
+                      {explainMissingRequirements(
+                        result.internalBrain.missingRequirements,
+                        result.orbAnswer || result.internalBrain.fallbackAnswer
+                      ).map((detail) => (
+                        <li
+                          key={detail.requirement}
+                          className="rounded-xl border border-amber-400/20 bg-amber-500/5 px-4 py-3 text-sm"
+                        >
+                          <p className="font-semibold text-amber-100">{detail.requirement}</p>
+                          <p className="mt-1 text-slate-400">
+                            <span className="text-slate-500">Why it matters:</span> {detail.whyItMatters}
+                          </p>
+                          <p className="mt-1 text-slate-400">
+                            <span className="text-slate-500">Fallback wording:</span>{' '}
+                            {detail.fallbackContainedWording
+                              ? `Related phrasing detected (${detail.matchedPhrases.join(', ')}) — review detection alignment.`
+                              : 'No related phrasing detected in fallback answer.'}
+                          </p>
+                          <p className="mt-1 text-amber-100/90">
+                            <span className="text-slate-500">Recommended improvement:</span>{' '}
+                            {detail.recommendedImprovement}
+                          </p>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
               ) : null}
 
