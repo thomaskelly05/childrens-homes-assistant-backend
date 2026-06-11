@@ -13,19 +13,20 @@ from routers.orb_standalone_routes import (
     _select_assistant_runtime,
 )
 from services.ai_provider_registry import ai_provider_registry
+from services.orb_live_guardrail_service import (
+    apply_live_guardrails,
+    identifiable_data_response,
+    should_skip_identifier_validation,
+)
+from services.orb_evaluation_message_service import build_evaluation_message, mode_for_scenario
 from services.orb_quality_lab_live_runner_service import (
     live_llm_available,
     validate_synthetic_scenario_text,
 )
+from services.orb_safety_scaffold_service import orb_safety_scaffold_service
 from schemas.ai_models import AiProviderName
 
 logger = logging.getLogger("indicare.orb_evaluation_runner")
-
-EVALUATION_SYNTHETIC_PREFIX = (
-    "[ORB Evaluation Platform — synthetic scenario only. "
-    "No real child, staff, or provider records. "
-    "Do not invent live IndiCare OS data.]\n\n"
-)
 
 _TRANSIENT_ERROR_MARKERS = (
     "timeout",
@@ -38,49 +39,6 @@ _TRANSIENT_ERROR_MARKERS = (
     "502",
     "429",
 )
-
-
-def build_evaluation_message(scenario: dict[str, Any]) -> str:
-    role = str(scenario.get("rolePerspective") or scenario.get("role") or "residential-worker").replace(
-        "_", " "
-    )
-    risk = str(scenario.get("riskLevel") or scenario.get("risk_level") or "medium")
-    question = str(scenario.get("question") or scenario.get("prompt") or "").strip()
-    category = str(scenario.get("category") or "").strip()
-    domain = str(scenario.get("domain") or "").strip()
-    lines = [
-        EVALUATION_SYNTHETIC_PREFIX.strip(),
-        f"Domain: {domain}",
-        f"Category: {category}",
-        f"Role perspective: {role}",
-        f"Risk level: {risk}",
-        "",
-        question,
-        "",
-        (
-            "Provide practical children's home guidance for this synthetic scenario. "
-            "Include a local policy/professional judgement caveat where risk is elevated."
-        ),
-    ]
-    return "\n".join(lines)
-
-
-def _mode_for_scenario(scenario: dict[str, Any]) -> str:
-    risk = str(scenario.get("riskLevel") or scenario.get("risk_level") or "").lower()
-    domain = str(scenario.get("domain") or "").lower()
-    category = str(scenario.get("category") or "").lower()
-    role = str(scenario.get("rolePerspective") or scenario.get("role") or "").lower()
-    if risk in ("high", "critical") or domain == "safeguarding":
-        return "Safeguarding Thinking"
-    if "reg44" in category or "regulation-44" in category or role == "reg-44-visitor":
-        return "Reg 44 / Reg 45 Prep"
-    if role in ("registered-manager", "responsible-individual") or domain == "management":
-        return "Manager Copilot"
-    if domain == "daily-practice" and ("record" in category or "handover" in category):
-        return "Record This Properly"
-    if domain == "adversarial":
-        return "Safeguarding Thinking"
-    return "Ask ORB"
 
 
 def _is_transient_error(exc: BaseException) -> bool:
@@ -102,8 +60,9 @@ class OrbEvaluationRunnerService:
     ) -> dict[str, Any]:
         scenario_id = str(scenario.get("id") or scenario.get("scenario_id") or "")
         message = build_evaluation_message(scenario)
+        safety_scaffold = orb_safety_scaffold_service.build_from_scenario(scenario)
         identifier_violations = validate_synthetic_scenario_text(message)
-        if identifier_violations:
+        if identifier_violations and not should_skip_identifier_validation(scenario):
             return {
                 "ok": False,
                 "scenario_id": scenario_id,
@@ -112,6 +71,29 @@ class OrbEvaluationRunnerService:
                 "route": None,
                 "model_route": None,
                 "retried": False,
+                "live_guardrail": {
+                    "passed": False,
+                    "missing_safeguards": ["raw-privacy-blocker"],
+                    "fallback_used": True,
+                },
+            }
+        if identifier_violations and should_skip_identifier_validation(scenario):
+            guarded = apply_live_guardrails("", safety_scaffold)
+            return {
+                "ok": True,
+                "scenario_id": scenario_id,
+                "answer": guarded.answer or identifiable_data_response(),
+                "error": None,
+                "route": "/orb/standalone/conversation",
+                "model_route": {
+                    "provider": "indicare-intelligence",
+                    "model": "live-guardrail-fallback",
+                    "brain_route": "identifiable-data-guardrail",
+                    "mode": mode_for_scenario(scenario),
+                },
+                "retried": False,
+                "live_guardrail": guarded.check.to_dict(),
+                "safety_scaffold_category": safety_scaffold.detected_category,
             }
 
         if not live_llm_available():
@@ -125,7 +107,7 @@ class OrbEvaluationRunnerService:
                 "retried": False,
             }
 
-        mode = _mode_for_scenario(scenario)
+        mode = mode_for_scenario(scenario)
         payload = OrbStandaloneConversationRequest(
             message=message,
             mode=mode,
@@ -147,12 +129,18 @@ class OrbEvaluationRunnerService:
                 retried = True
             try:
                 result = await asyncio.wait_for(
-                    self._invoke_orb_brain(payload, user=user),
+                    self._invoke_orb_brain(
+                        payload,
+                        user=user,
+                        scenario=scenario,
+                        safety_scaffold=safety_scaffold,
+                    ),
                     timeout=self.scenario_timeout_seconds,
                 )
                 if result.get("ok"):
                     result["retried"] = retried
                     result["scenario_id"] = scenario_id
+                    result["safety_scaffold_category"] = safety_scaffold.detected_category
                     return result
                 last_error = str(result.get("error") or "Unknown ORB brain failure")
                 if attempt == 0 and _is_transient_error(Exception(last_error)):
@@ -192,10 +180,13 @@ class OrbEvaluationRunnerService:
         payload: OrbStandaloneConversationRequest,
         *,
         user: dict[str, Any],
+        scenario: dict[str, Any] | None = None,
+        safety_scaffold: Any | None = None,
     ) -> dict[str, Any]:
         ctx = _build_standalone_request_context(
             payload,
             route="/orb/standalone/conversation",
+            safety_scaffold=safety_scaffold.to_dict() if safety_scaffold else None,
         )
         assistant_runtime = _select_assistant_runtime()
         assistant_data = await assistant_runtime.answer(
@@ -209,17 +200,52 @@ class OrbEvaluationRunnerService:
             user=user,
             brain_convergence=ctx.get("brain_convergence"),
             execution_policy=ctx.get("execution_policy"),
+            safety_scaffold=safety_scaffold.to_dict() if safety_scaffold else ctx.get("safety_scaffold"),
         )
         answer = str(assistant_data.get("answer") or "").strip()
         context_used = assistant_data.get("context_used") or {}
         model_routing = context_used.get("model_routing") or {}
+        live_guardrail = context_used.get("live_guardrail_check") or assistant_data.get("live_guardrail_check")
+        prompt_tier = ctx.get("prompt_tier")
+        expert_depth = ctx.get("expert_depth")
+
+        if safety_scaffold and answer and not assistant_data.get("no_llm"):
+            guarded = apply_live_guardrails(
+                answer,
+                safety_scaffold,
+                prompt_tier=prompt_tier,
+                expert_depth=expert_depth,
+            )
+            answer = guarded.answer
+            live_guardrail = guarded.check.to_dict()
+
         if assistant_data.get("no_llm"):
+            if safety_scaffold and safety_scaffold.guardrail_active and safety_scaffold.safe_fallback_answer:
+                guarded = apply_live_guardrails(
+                    answer or "",
+                    safety_scaffold,
+                    prompt_tier=prompt_tier,
+                    expert_depth=expert_depth,
+                )
+                return {
+                    "ok": True,
+                    "answer": guarded.answer,
+                    "error": None,
+                    "route": "/orb/standalone/conversation",
+                    "model_route": {
+                        **model_routing,
+                        "brain_route": "live-guardrail-fallback",
+                        "mode": ctx.get("mode"),
+                    },
+                    "live_guardrail": guarded.check.to_dict(),
+                }
             return {
                 "ok": False,
                 "answer": answer,
                 "error": "ORB brain returned a non-LLM deterministic response",
                 "route": "/orb/standalone/conversation",
                 "model_route": model_routing,
+                "live_guardrail": live_guardrail,
             }
         if not answer:
             return {
@@ -228,6 +254,7 @@ class OrbEvaluationRunnerService:
                 "error": "ORB brain returned an empty answer",
                 "route": "/orb/standalone/conversation",
                 "model_route": model_routing,
+                "live_guardrail": live_guardrail,
             }
         brain_route = ctx.get("brain_route") or (ctx.get("brain_convergence") or {}).get("brain_route")
         return {
@@ -240,7 +267,10 @@ class OrbEvaluationRunnerService:
                 "model": model_routing.get("model"),
                 "brain_route": brain_route,
                 "mode": ctx.get("mode"),
+                "prompt_tier": prompt_tier,
+                "expert_depth": expert_depth,
             },
+            "live_guardrail": live_guardrail,
         }
 
 

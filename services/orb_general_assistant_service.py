@@ -416,6 +416,7 @@ class OrbGeneralAssistantService:
         user: dict[str, Any] | None = None,
         brain_convergence: dict[str, Any] | None = None,
         execution_policy: dict[str, Any] | None = None,
+        safety_scaffold: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         started = time.perf_counter()
         images = image_data_urls or []
@@ -649,10 +650,27 @@ class OrbGeneralAssistantService:
                     image_data_urls=images,
                     retrieval=retrieval,
                     mode=mode,
+                    safety_scaffold=safety_scaffold,
                 ),
                 timeout=STANDALONE_LLM_TIMEOUT_SECONDS,
             )
             if result.get("answer"):
+                if safety_scaffold and safety_scaffold.get("guardrail_active"):
+                    from services.orb_live_guardrail_service import apply_live_guardrails
+                    from services.orb_safety_scaffold_service import OrbSafetyScaffold
+
+                    scaffold_obj = OrbSafetyScaffold(
+                        **{
+                            k: v
+                            for k, v in safety_scaffold.items()
+                            if k in OrbSafetyScaffold.__dataclass_fields__
+                        }
+                    )
+                    guarded = apply_live_guardrails(result["answer"], scaffold_obj)
+                    result["answer"] = guarded.answer
+                    ctx = result.get("context_used") or {}
+                    ctx["live_guardrail_check"] = guarded.check.to_dict()
+                    result["context_used"] = ctx
                 logger.info(
                     "standalone_orb_answer llm ok detail=%s images=%s elapsed_ms=%s",
                     detail,
@@ -867,9 +885,18 @@ class OrbGeneralAssistantService:
         has_images: bool,
         message: str | None = None,
         history: list[dict[str, Any]] | None = None,
+        safety_scaffold: dict[str, Any] | None = None,
     ) -> str:
         system = GENERAL_ORB_SYSTEM_PROMPT
         system += f"\n\n{self._mode_behaviour_hint(mode)}"
+        if safety_scaffold and safety_scaffold.get("guardrail_active"):
+            from services.orb_live_guardrail_service import build_guardrail_prompt_block
+            from services.orb_safety_scaffold_service import OrbSafetyScaffold
+
+            scaffold_obj = OrbSafetyScaffold(
+                **{k: v for k, v in safety_scaffold.items() if k in OrbSafetyScaffold.__dataclass_fields__}
+            )
+            system += f"\n\n{build_guardrail_prompt_block(scaffold_obj)}"
         if message:
             system += self._nvq_prompt_supplement(message, history=history)
         system += f"\n\n{retrieval['grounding_context']}"
@@ -917,6 +944,7 @@ class OrbGeneralAssistantService:
         image_data_urls: list[str],
         retrieval: dict[str, Any] | None = None,
         mode: str | None = None,
+        safety_scaffold: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         retrieval = retrieval or self.prepare_retrieval(message, mode=mode, has_images=bool(image_data_urls))
         user_message = self._query_message(message, raw_user_message=None)
@@ -927,6 +955,7 @@ class OrbGeneralAssistantService:
             has_images=bool(image_data_urls),
             message=user_message,
             history=history,
+            safety_scaffold=safety_scaffold,
         )
         nvq_context = orb_academy_nvq_anchor_service.conversation_context_for_message(
             user_message,

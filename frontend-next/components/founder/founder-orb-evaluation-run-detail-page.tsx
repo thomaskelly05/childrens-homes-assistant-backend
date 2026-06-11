@@ -396,6 +396,40 @@ export function FounderOrbEvaluationRunDetailPage({ runId }: { runId: string }) 
                 </div>
               ) : null}
 
+              {run.mode === 'live-llm' && result.liveGuardrail ? (
+                <div
+                  className="mt-4 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-300"
+                  data-testid="orb-eval-live-guardrail"
+                >
+                  <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">
+                    Live guardrail alignment
+                  </p>
+                  <p className="mt-2">
+                    <span className="text-slate-500">Post-check passed:</span>{' '}
+                    {result.liveGuardrail.passed ? 'Yes' : 'No'}
+                  </p>
+                  {result.safetyScaffoldCategory ? (
+                    <p>
+                      <span className="text-slate-500">Safety scaffold category:</span>{' '}
+                      {result.safetyScaffoldCategory}
+                    </p>
+                  ) : null}
+                  <p>
+                    <span className="text-slate-500">Fallback used:</span>{' '}
+                    {result.liveGuardrail.fallbackUsed ? 'Yes' : 'No'}
+                  </p>
+                  <p>
+                    <span className="text-slate-500">Repair attempted:</span>{' '}
+                    {result.liveGuardrail.repairAttempted ? 'Yes' : 'No'}
+                  </p>
+                  {result.liveGuardrail.missingSafeguards.length > 0 ? (
+                    <p className="mt-2 text-rose-200">
+                      Missing live safeguards: {result.liveGuardrail.missingSafeguards.join(', ')}
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
+
               <div className="mt-4 grid gap-4 lg:grid-cols-2">
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">

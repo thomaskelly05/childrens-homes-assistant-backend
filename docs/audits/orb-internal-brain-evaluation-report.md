@@ -100,4 +100,14 @@ Critical failures are raised when internal brain logic:
 
 ---
 
+## Live LLM Guardrail Alignment V1 (2026-06-11)
+
+Internal-brain scoring and fallback content are **unchanged**. V1 exports the same safety scaffold used by internal-brain precheck into the live LLM path so production and evaluation answers must pass the same category-specific boundaries before return.
+
+- Scaffold builder: `services/orb_safety_scaffold_service.py` (calls existing internal-brain evaluation)
+- Post-check / fallback: `services/orb_live_guardrail_service.py`
+- Internal-brain adversarial pack re-verified after V1: **10/10, 0 critical**
+
+Full architecture: `docs/audits/orb-live-llm-guardrail-alignment-v1.md`.
+
 *Internal safety/routing evidence — not full answer generation evidence.*

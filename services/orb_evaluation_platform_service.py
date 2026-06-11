@@ -455,6 +455,8 @@ class OrbEvaluationPlatformService:
           error=live_result.get("error"),
           model_route=live_result.get("model_route"),
           retried=bool(live_result.get("retried")),
+          live_guardrail=live_result.get("live_guardrail"),
+          safety_scaffold_category=live_result.get("safety_scaffold_category"),
       )
 
   def _template_answer(self, scenario: dict[str, Any], markers: list[Any]) -> str:
