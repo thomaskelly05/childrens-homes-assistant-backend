@@ -5,9 +5,12 @@ export {
   evaluateManualAnswer,
   getQualityLabSummary,
   loadQualityLabOverview,
+  retestQualityScenario,
   submitExpertReview,
+  submitHumanReview,
   syncFeedbackGapProposals
 } from './quality-run-service'
+export { markHumanReviewDecision } from './human-review-store'
 export { createBuildBriefFromProposal } from './quality-proposal-generator'
 export {
   getQualityRuns,

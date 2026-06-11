@@ -1,6 +1,41 @@
+export type QualityRunMode = 'template' | 'live-llm'
+
+export type ReviewStatus =
+  | 'pending-human-review'
+  | 'reviewed-pass'
+  | 'reviewed-concern'
+  | 'reviewed-fail'
+  | 'needs-retest'
+
+export type LaunchRecommendation = 'not-ready' | 'closed-pilot-ready' | 'public-launch-ready'
+
 export type QualityRunStatus = 'pending' | 'running' | 'complete' | 'failed'
 
-export type QualityRunType = 'gold-pack' | 'family-sample' | 'manual-eval' | 'feedback-sync'
+export type QualityRunType = 'gold-pack' | 'family-sample' | 'manual-eval' | 'feedback-sync' | 'retest'
+
+export type QualityScoringBreakdown = {
+  safeguardingAccuracy: number
+  escalationAppropriateness: number
+  localPolicyCaveat: number
+  therapeuticTone: number
+  childCentredLanguage: number
+  childVoice: number
+  managementOversight: number
+  ofstedSccifAlignment: number
+  practicalUsefulness: number
+  evidenceRecordingQuality: number
+  hallucinationRisk: number
+  completeness: number
+}
+
+export type HumanReview = {
+  reviewStatus: ReviewStatus
+  reviewer?: string
+  reviewNotes?: string
+  reviewedAt?: string
+  reviewerDecision?: string
+  requiredFix?: string
+}
 
 export type QualityRunItemResult = {
   scenarioId: string
@@ -14,8 +49,18 @@ export type QualityRunItemResult = {
   unsafePhrases: string[]
   overclaims: string[]
   notes: string[]
-  answerSource: 'sample-template' | 'live-orb' | 'manual-paste'
+  answerSource: 'sample-template' | 'live-orb' | 'live-llm' | 'manual-paste'
   answerExcerpt?: string
+  generatedAnswer?: string
+  runMode?: QualityRunMode
+  criticalFailure?: boolean
+  criticalFailureReasons?: string[]
+  requiresHumanReview?: boolean
+  scoringBreakdown?: QualityScoringBreakdown
+  humanReview?: HumanReview
+  liveCallError?: string
+  modelRoute?: Record<string, string | null | undefined>
+  retestOfScenarioId?: string
 }
 
 export type QualityRun = {
@@ -23,6 +68,7 @@ export type QualityRun = {
   title: string
   type: QualityRunType
   status: QualityRunStatus
+  runMode?: QualityRunMode
   familyFilter?: string
   roleFilter?: string
   limit?: number
@@ -37,6 +83,11 @@ export type QualityRun = {
   limitations: string[]
   triggeredBy: string
   routeCallSkipped?: boolean
+  liveLlmAvailable?: boolean
+  modelRouteUsed?: string
+  criticalFailures?: number
+  pendingHumanReviews?: number
+  retestOfRunId?: string
 }
 
 export type QualityProposalStatus =
@@ -52,6 +103,7 @@ export type QualityProposalType =
   | 'feedback-gap'
   | 'expert-review'
   | 'regression'
+  | 'live-llm-failure'
 
 export type QualityProposal = {
   id: string
@@ -95,4 +147,18 @@ export type QualityLabSummary = {
   criticalProposals: number
   expertReviewCount: number
   goldScenarioCount: number
+  liveRunCompleted: boolean
+  pendingHumanReviews: number
+  criticalFailures: number
+}
+
+export type OrbLaunchQualityGate = {
+  liveRunCompleted: boolean
+  highRiskScenariosPassed: boolean
+  criticalFailures: number
+  pendingHumanReviews: number
+  whistleblowingCovered: boolean
+  privacyRetentionReviewed: boolean
+  recommendation: LaunchRecommendation
+  blockers: string[]
 }
