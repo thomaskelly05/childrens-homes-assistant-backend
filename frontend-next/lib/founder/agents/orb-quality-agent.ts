@@ -1,19 +1,15 @@
-import { agentResultWithoutLiveData, isAgentLiveDataAvailable } from './agent-live-data'
 import type { AgentRunResult } from './types'
 
 export function runOrbQualityAgent(): AgentRunResult {
-  if (!isAgentLiveDataAvailable()) {
-    return agentResultWithoutLiveData('ORB Quality Review')
-  }
-
   return {
-    title: 'ORB Quality Review',
-    summary: 'Live ORB analytics are connected. Review satisfaction scores and category demand from connected ORB data.',
+    title: 'ORB Quality Agent',
+    summary:
+      'Monitors ORB Evaluation failures, classifies root causes, and prepares founder-approved remediation work at /founder/orb-quality-agent.',
     recommendations: [
-      'Audit safeguarding output quality from live ORB conversation patterns',
-      'Strengthen evaluation language in chronology ORB outputs',
-      'Expand guidance for fastest-growing live ORB categories'
+      'Review latest failed ORB evaluation run in the Quality Agent dashboard',
+      'Generate a focused build brief for classified failure groups',
+      'Prepare draft PR for founder approval — do not auto-merge'
     ],
-    status: 'monitoring'
+    status: 'active'
   }
 }

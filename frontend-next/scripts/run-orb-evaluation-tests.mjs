@@ -7,7 +7,13 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const testFiles = [
   join(root, 'lib/orb/evaluation/orb-evaluation-infrastructure-errors.test.ts'),
   join(root, 'lib/orb/evaluation/orb-scoring-version.test.ts'),
-  join(root, 'lib/orb/evaluation/orb-high-risk-safeguard-scaffold.test.ts')
+  join(root, 'lib/orb/evaluation/orb-high-risk-safeguard-scaffold.test.ts'),
+  join(root, 'lib/orb/quality-agent/orb-failure-classifier.test.ts'),
+  join(root, 'lib/orb/quality-agent/orb-quality-safety-rules.test.ts'),
+  join(root, 'lib/orb/quality-agent/orb-quality-build-brief-generator.test.ts'),
+  join(root, 'lib/orb/quality-agent/orb-quality-pr-workflow.test.ts'),
+  join(root, 'lib/orb/quality-agent/orb-quality-agent-service.test.ts'),
+  join(root, 'components/founder/founder-orb-quality-agent-page.test.ts')
 ]
 
 const result = spawnSync(

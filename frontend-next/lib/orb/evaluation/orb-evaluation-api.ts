@@ -69,7 +69,7 @@ function unwrapData(payload: unknown): unknown {
   return payload
 }
 
-function normalisePersistedRuns(items: unknown): OrbEvaluationRun[] {
+export function normalisePersistedRuns(items: unknown): OrbEvaluationRun[] {
   if (!Array.isArray(items)) return []
   const runs: OrbEvaluationRun[] = []
   for (const item of items) {
