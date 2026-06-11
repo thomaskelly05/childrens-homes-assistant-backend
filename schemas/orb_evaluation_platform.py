@@ -54,6 +54,8 @@ class OrbEvaluationScenarioResult(BaseModel):
     internal_brain: dict[str, Any] | None = None
     live_guardrail: dict[str, Any] | None = None
     safety_scaffold_category: str | None = None
+    infrastructure_error: bool = False
+    metadata: dict[str, Any] | None = None
 
 
 class OrbEvaluationRunRecord(BaseModel):

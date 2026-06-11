@@ -5,6 +5,11 @@ import {
   isCsrfFailedPayload
 } from '@/lib/security/csrf-client'
 
+import {
+  EvaluationInfrastructureError,
+  isHtmlErrorBody,
+  mapEvaluationInfrastructureError
+} from './orb-evaluation-infrastructure-errors.ts'
 import type { EvaluationRunsPayload, EvaluationScenariosPayload, OrbEvaluationRun } from './orb-evaluation-types'
 
 type ApiEnvelope<T> = {
@@ -52,20 +57,42 @@ export function isEvaluationCsrfError(error: unknown): boolean {
 }
 
 async function parseEnvelope<T>(response: Response): Promise<T> {
-  const payload = (await response.json().catch(() => ({}))) as ApiEnvelope<T> & {
+  const rawText = await response.text().catch(() => '')
+  let payload = {} as ApiEnvelope<T> & {
     retryable?: boolean
     retryAfterMs?: number
     retry_after_ms?: number
   }
+  if (rawText.trim()) {
+    try {
+      payload = JSON.parse(rawText) as typeof payload
+    } catch {
+      if (!response.ok) {
+        const mapped = mapEvaluationInfrastructureError(rawText, response.status)
+        throw new EvaluationInfrastructureError(mapped.message, mapped.code)
+      }
+      throw new EvaluationApiError(response.status, 'Evaluation API returned invalid JSON')
+    }
+  }
+
   if (!response.ok) {
     if (isCsrfFailedPayload(payload)) {
       throw new EvaluationApiError(403, csrfFailureMessage(payload), 'csrf_failed')
     }
     const retryAfterMs = Number(payload.retryAfterMs ?? payload.retry_after_ms ?? 0) || undefined
+    const rawMessage =
+      payload.error ??
+      payload.message ??
+      (typeof payload.detail === 'string' ? payload.detail : '') ??
+      rawText
+    const mapped = mapEvaluationInfrastructureError(String(rawMessage || ''), response.status)
+    if (isHtmlErrorBody(String(rawMessage || rawText))) {
+      throw new EvaluationInfrastructureError(mapped.message, mapped.code)
+    }
     throw new EvaluationApiError(
       response.status,
-      payload.error ?? payload.message ?? `Evaluation API error (${response.status})`,
-      payload.code ?? (typeof payload.detail === 'string' ? payload.detail : undefined),
+      mapped.message || `Evaluation API error (${response.status})`,
+      payload.code ?? mapped.code,
       {
         retryable: payload.retryable === true || payload.code === 'busy',
         retryAfterMs

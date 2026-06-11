@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const testFiles = [
-  join(root, 'lib/orb/evaluation/orb-firewall-scorer-calibration.test.ts'),
+  join(root, 'lib/orb/evaluation/orb-evaluation-infrastructure-errors.test.ts'),
   join(root, 'lib/orb/evaluation/orb-scoring-version.test.ts')
 ]
 

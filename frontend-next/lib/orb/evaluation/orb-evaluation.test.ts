@@ -614,3 +614,18 @@ test('v3 scoring uses privacy response not raw uk_postcode blocker', () => {
 test('live-llm guarded scoring version constant is v3', () => {
   assert.equal(LIVE_LLM_GUARDED_SCORING_VERSION_V3, 'live-llm-guarded-v3')
 })
+
+test('infrastructure live call errors are not counted as critical failures', () => {
+  const scenario = generateHighRiskPack()[0]!
+  const { result } = scoreOrbEvaluationAnswer({
+    scenario,
+    answer: '',
+    runId: 'infra-test',
+    mode: 'live-llm',
+    packType: 'high-risk',
+    liveCallError: 'infrastructure_error: openai_request_headers_too_large'
+  })
+  assert.equal(result.infrastructureError, true)
+  assert.equal(result.criticalFailure, false)
+  assert.equal(result.pass, false)
+})

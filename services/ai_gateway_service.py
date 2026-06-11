@@ -11,6 +11,7 @@ from fastapi import HTTPException
 from openai import OpenAI
 
 from schemas.data_protection import DataClassification
+from services.openai_header_sanitisation import create_sync_openai_client
 from services.ai_external_call_governance import record_model_usage
 from services.ai_privacy_decision_service import AIPrivacyDecisionRequest, ai_privacy_decision_service
 from services.ai_redaction_service import ai_redaction_service
@@ -130,7 +131,7 @@ class AIGatewayService:
         if not os.getenv("OPENAI_API_KEY"):
             raise HTTPException(status_code=503, detail="External AI is not configured")
         if self._client is None:
-            self._client = OpenAI()
+            self._client = create_sync_openai_client()
         return self._client
 
     def _govern_request(self, request: AIGatewayRequest) -> tuple[dict[str, Any], Any]:

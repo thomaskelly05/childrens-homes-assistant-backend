@@ -17,6 +17,7 @@ from services.ai_privacy_decision_service import (
 )
 from services.ai_redaction_service import ai_redaction_service
 from services.ai_usage_audit_service import ai_usage_audit_service
+from services.openai_header_sanitisation import create_sync_openai_client
 
 # Feature keys used by legacy route convergence (allowlisted when external AI is enabled).
 FEATURE_DOCUMENT_GENERATION = "document_generation"
@@ -313,9 +314,7 @@ def governed_embeddings_create(
         }
 
     try:
-        from openai import OpenAI
-
-        client = OpenAI(api_key=api_key)
+        client = create_sync_openai_client(api_key=api_key)
         response = client.embeddings.create(model=embedding_model, input=redacted_inputs)
         ordered = sorted(response.data, key=lambda item: item.index)
         vectors = [list(item.embedding) for item in ordered]
@@ -378,9 +377,7 @@ def governed_transcribe_audio_file(
     filename = os.path.basename(file_path)
     mime_type = mimetypes.guess_type(filename)[0] or "audio/webm"
 
-    from openai import OpenAI
-
-    client = OpenAI(api_key=api_key)
+    client = create_sync_openai_client(api_key=api_key)
     with open(file_path, "rb") as audio_file:
         result = client.audio.transcriptions.create(
             model=os.getenv("AI_NOTES_TRANSCRIBE_MODEL", "gpt-4o-transcribe"),

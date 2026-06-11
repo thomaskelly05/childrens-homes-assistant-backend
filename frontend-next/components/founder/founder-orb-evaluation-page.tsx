@@ -12,9 +12,13 @@ import {
   ACTIVE_INTERNAL_BRAIN_RUN_MESSAGE,
   assertCompletedEvaluationRunSaved,
   createBuildBriefFromEvaluationResult,
+  EvaluationRunError,
   executeEvaluationRun,
   executeInternalBrainEvaluationRun,
   fetchEvaluationRuns,
+  isHtmlErrorBody,
+  LIVE_LLM_PROVIDER_FAILURE_MESSAGE,
+  mapEvaluationInfrastructureError,
   fetchEvaluationScenarios,
   FOUNDER_DATA_SOURCE_BUSY_MESSAGE,
   generateScenarioPack,
@@ -60,6 +64,7 @@ export function FounderOrbEvaluationPage() {
   const [loadError, setLoadError] = useState<string | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
+  const [infrastructureErrorCode, setInfrastructureErrorCode] = useState<string | null>(null)
   const [runProgress, setRunProgress] = useState<InternalBrainRunProgress | null>(null)
   const [refreshStatus, setRefreshStatus] = useState<string | null>(null)
 
@@ -132,6 +137,7 @@ export function FounderOrbEvaluationPage() {
     async (label: string, action: () => Promise<unknown>, options?: { requireSavedRun?: boolean }) => {
       setBusy(label)
       setMessage(null)
+      setInfrastructureErrorCode(null)
       setRunProgress(null)
       try {
         const result = await action()
@@ -160,7 +166,19 @@ export function FounderOrbEvaluationPage() {
           setMessage(ACTIVE_INTERNAL_BRAIN_RUN_MESSAGE)
           return
         }
-        setMessage(`${label} failed: ${err instanceof Error ? err.message : 'unknown error'}`)
+        if (err instanceof EvaluationRunError && err.run?.infrastructureErrorCode) {
+          setMessage(err.message || LIVE_LLM_PROVIDER_FAILURE_MESSAGE)
+          setInfrastructureErrorCode(err.run.infrastructureErrorCode)
+          return
+        }
+        const rawMessage = err instanceof Error ? err.message : 'unknown error'
+        if (isHtmlErrorBody(rawMessage)) {
+          const mapped = mapEvaluationInfrastructureError(rawMessage, 502)
+          setMessage(mapped.message)
+          setInfrastructureErrorCode(mapped.code)
+          return
+        }
+        setMessage(`${label} failed: ${rawMessage}`)
       } finally {
         setBusy(null)
         setRunProgress(null)
@@ -305,12 +323,21 @@ export function FounderOrbEvaluationPage() {
       ) : null}
 
       {message ? (
-        <p
-          className="rounded-2xl border border-cyan-400/20 bg-cyan-500/10 px-4 py-3 text-sm text-cyan-100"
+        <div
+          className={
+            infrastructureErrorCode
+              ? 'rounded-2xl border border-rose-400/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-100'
+              : 'rounded-2xl border border-cyan-400/20 bg-cyan-500/10 px-4 py-3 text-sm text-cyan-100'
+          }
           data-testid="orb-eval-status-message"
         >
-          {message}
-        </p>
+          <p>{message}</p>
+          {infrastructureErrorCode ? (
+            <p className="mt-2 text-xs uppercase tracking-[0.14em] text-rose-200/80">
+              Technical code: {infrastructureErrorCode}
+            </p>
+          ) : null}
+        </div>
       ) : null}
 
       {activeInternalBrainRun ? (

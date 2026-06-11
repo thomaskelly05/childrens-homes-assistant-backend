@@ -8,6 +8,7 @@ import {
 } from '@/lib/founder/auth/founder-session'
 import { sanitiseFounderPayload } from '@/lib/founder/persistence/persistence-safety'
 
+import { mapEvaluationInfrastructureError } from './orb-evaluation-infrastructure-errors.ts'
 import type { OrbEvaluationRun } from './orb-evaluation-types'
 
 const BACKEND_PREFIX = '/orb/admin/evaluation'
@@ -43,16 +44,20 @@ function parseUpstreamFailure(status: number, bodyText: string): UpstreamFailure
           : typeof parsed.error === 'string'
             ? parsed.error
             : trimmed
+    const mapped = mapEvaluationInfrastructureError(message, status)
     return {
       ok: false,
       status: status >= 500 ? 503 : status,
-      detail: message.slice(0, 240) || 'ORB Evaluation upstream unavailable'
+      detail: mapped.message,
+      code: mapped.code
     }
   } catch {
+    const mapped = mapEvaluationInfrastructureError(trimmed, status)
     return {
       ok: false,
       status: status >= 500 ? 503 : status,
-      detail: trimmed.slice(0, 240) || 'ORB Evaluation upstream unavailable'
+      detail: mapped.message,
+      code: mapped.code
     }
   }
 }
