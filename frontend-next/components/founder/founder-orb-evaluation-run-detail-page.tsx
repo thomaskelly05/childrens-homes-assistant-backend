@@ -173,6 +173,22 @@ export function FounderOrbEvaluationRunDetailPage({ runId }: { runId: string }) 
         ) : null}
       </div>
 
+      {run.mode === 'live-llm' ? (
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="founder-surface rounded-2xl border border-white/10 p-5">
+            <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">Scoring version</p>
+            <p className="mt-2 text-lg font-bold text-violet-200" data-testid="orb-eval-live-scoring-version">
+              {run.scoringVersion === 'live-llm-guarded-v3'
+                ? 'live-llm-guarded-v3'
+                : 'legacy live/template'}
+            </p>
+            <p className="mt-1 text-xs text-slate-500">
+              Older failed live runs remain visible for audit. Latest guarded runs are the readiness signal.
+            </p>
+          </div>
+        </div>
+      ) : null}
+
       {run.mode === 'internal-brain' ? (
         <div className="grid gap-4 md:grid-cols-3">
           <div className="founder-surface rounded-2xl border border-white/10 p-5">
@@ -402,11 +418,17 @@ export function FounderOrbEvaluationRunDetailPage({ runId }: { runId: string }) 
                   data-testid="orb-eval-live-guardrail"
                 >
                   <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">
-                    Live guardrail alignment
+                    Live guardrail hard enforcement (V3)
                   </p>
                   <p className="mt-2">
-                    <span className="text-slate-500">Post-check passed:</span>{' '}
-                    {result.liveGuardrail.passed ? 'Yes' : 'No'}
+                    <span className="text-slate-500">Answer source:</span>{' '}
+                    {result.liveGuardrail.answerSource ?? (result.liveGuardrail.fallbackUsed ? 'fallback' : 'raw')}
+                  </p>
+                  <p>
+                    <span className="text-slate-500">Guardrail passed raw answer:</span>{' '}
+                    {(result.liveGuardrail.guardrailPassedRaw ?? result.liveGuardrail.passed)
+                      ? 'Yes'
+                      : 'No'}
                   </p>
                   {result.safetyScaffoldCategory ? (
                     <p>
@@ -422,10 +444,41 @@ export function FounderOrbEvaluationRunDetailPage({ runId }: { runId: string }) 
                     <span className="text-slate-500">Repair attempted:</span>{' '}
                     {result.liveGuardrail.repairAttempted ? 'Yes' : 'No'}
                   </p>
+                  <p>
+                    <span className="text-slate-500">Scored answer source:</span>{' '}
+                    {result.liveGuardrail.answerSource ?? 'final_answer'}
+                  </p>
+                  {(result.liveGuardrail.failReasons ?? []).length > 0 ? (
+                    <p className="mt-2 text-rose-200">
+                      Fail reasons: {(result.liveGuardrail.failReasons ?? []).join(', ')}
+                    </p>
+                  ) : null}
                   {result.liveGuardrail.missingSafeguards.length > 0 ? (
                     <p className="mt-2 text-rose-200">
                       Missing live safeguards: {result.liveGuardrail.missingSafeguards.join(', ')}
                     </p>
+                  ) : null}
+                  {result.liveGuardrail.answerSource === 'fallback' ? (
+                    <p className="mt-2 text-amber-200">
+                      Internal-brain safety fallback used because live answer failed deterministic guardrails.
+                    </p>
+                  ) : null}
+                  {result.liveGuardrail.answerSource === 'privacy_block' ? (
+                    <p className="mt-2 text-amber-200">
+                      Privacy/data minimisation response used before live LLM processing.
+                    </p>
+                  ) : null}
+                  {result.liveGuardrail.rawAnswer &&
+                  result.liveGuardrail.rawAnswer !== result.orbAnswer &&
+                  (result.liveGuardrail.fallbackUsed || result.liveGuardrail.answerSource === 'privacy_block') ? (
+                    <details className="mt-3 rounded-lg border border-white/10 bg-black/20 px-3 py-2">
+                      <summary className="cursor-pointer text-xs text-slate-500">
+                        Debug: raw live LLM answer (not scored or displayed)
+                      </summary>
+                      <p className="mt-2 whitespace-pre-wrap text-xs text-slate-500">
+                        {result.liveGuardrail.rawAnswer}
+                      </p>
+                    </details>
                   ) : null}
                 </div>
               ) : null}

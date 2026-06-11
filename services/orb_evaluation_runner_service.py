@@ -14,7 +14,7 @@ from routers.orb_standalone_routes import (
 )
 from services.ai_provider_registry import ai_provider_registry
 from services.orb_live_guardrail_service import (
-    apply_live_guardrails,
+    enforce_live_guardrails,
     identifiable_data_response,
     should_skip_identifier_validation,
 )
@@ -62,27 +62,17 @@ class OrbEvaluationRunnerService:
         message = build_evaluation_message(scenario)
         safety_scaffold = orb_safety_scaffold_service.build_from_scenario(scenario)
         identifier_violations = validate_synthetic_scenario_text(message)
-        if identifier_violations and not should_skip_identifier_validation(scenario):
-            return {
-                "ok": False,
-                "scenario_id": scenario_id,
-                "answer": "",
-                "error": f"Scenario contains disallowed identifiers: {', '.join(identifier_violations)}",
-                "route": None,
-                "model_route": None,
-                "retried": False,
-                "live_guardrail": {
-                    "passed": False,
-                    "missing_safeguards": ["raw-privacy-blocker"],
-                    "fallback_used": True,
-                },
-            }
         if identifier_violations and should_skip_identifier_validation(scenario):
-            guarded = apply_live_guardrails("", safety_scaffold)
+            guarded = enforce_live_guardrails(
+                scenario,
+                "",
+                safety_scaffold,
+                mode_for_scenario(scenario),
+            )
             return {
                 "ok": True,
                 "scenario_id": scenario_id,
-                "answer": guarded.answer or identifiable_data_response(),
+                "answer": guarded.final_answer or identifiable_data_response(),
                 "error": None,
                 "route": "/orb/standalone/conversation",
                 "model_route": {
@@ -92,7 +82,30 @@ class OrbEvaluationRunnerService:
                     "mode": mode_for_scenario(scenario),
                 },
                 "retried": False,
-                "live_guardrail": guarded.check.to_dict(),
+                "live_guardrail": guarded.to_dict(),
+                "safety_scaffold_category": safety_scaffold.detected_category,
+            }
+        if identifier_violations and not should_skip_identifier_validation(scenario):
+            guarded = enforce_live_guardrails(
+                scenario,
+                f"Scenario contains disallowed identifiers: {', '.join(identifier_violations)}",
+                safety_scaffold,
+                mode_for_scenario(scenario),
+            )
+            return {
+                "ok": True,
+                "scenario_id": scenario_id,
+                "answer": guarded.final_answer,
+                "error": None,
+                "route": "/orb/standalone/conversation",
+                "model_route": {
+                    "provider": "indicare-intelligence",
+                    "model": "live-guardrail-fallback",
+                    "brain_route": "privacy-block-guardrail",
+                    "mode": mode_for_scenario(scenario),
+                },
+                "retried": False,
+                "live_guardrail": guarded.to_dict(),
                 "safety_scaffold_category": safety_scaffold.detected_category,
             }
 
@@ -209,27 +222,34 @@ class OrbEvaluationRunnerService:
         prompt_tier = ctx.get("prompt_tier")
         expert_depth = ctx.get("expert_depth")
 
+        scenario_dict = scenario if isinstance(scenario, dict) else None
+        eval_mode = mode_for_scenario(scenario_dict) if scenario_dict else ctx.get("mode")
+
         if safety_scaffold and answer and not assistant_data.get("no_llm"):
-            guarded = apply_live_guardrails(
+            guarded_result = enforce_live_guardrails(
+                scenario_dict,
                 answer,
                 safety_scaffold,
+                eval_mode,
                 prompt_tier=prompt_tier,
                 expert_depth=expert_depth,
             )
-            answer = guarded.answer
-            live_guardrail = guarded.check.to_dict()
+            answer = guarded_result.final_answer
+            live_guardrail = guarded_result.to_dict()
 
         if assistant_data.get("no_llm"):
             if safety_scaffold and safety_scaffold.guardrail_active and safety_scaffold.safe_fallback_answer:
-                guarded = apply_live_guardrails(
+                guarded_result = enforce_live_guardrails(
+                    scenario_dict,
                     answer or "",
                     safety_scaffold,
+                    eval_mode,
                     prompt_tier=prompt_tier,
                     expert_depth=expert_depth,
                 )
                 return {
                     "ok": True,
-                    "answer": guarded.answer,
+                    "answer": guarded_result.final_answer,
                     "error": None,
                     "route": "/orb/standalone/conversation",
                     "model_route": {
@@ -237,7 +257,7 @@ class OrbEvaluationRunnerService:
                         "brain_route": "live-guardrail-fallback",
                         "mode": ctx.get("mode"),
                     },
-                    "live_guardrail": guarded.check.to_dict(),
+                    "live_guardrail": guarded_result.to_dict(),
                 }
             return {
                 "ok": False,

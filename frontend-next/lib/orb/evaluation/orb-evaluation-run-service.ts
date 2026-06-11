@@ -53,7 +53,10 @@ import {
   normaliseInternalBrainPayload,
   scoreInternalBrainResult
 } from './orb-internal-brain-scoring-engine'
-import { INTERNAL_BRAIN_SCORING_VERSION_V2 } from './orb-evaluation-types'
+import {
+  INTERNAL_BRAIN_SCORING_VERSION_V2,
+  LIVE_LLM_GUARDED_SCORING_VERSION_V3
+} from './orb-evaluation-types'
 import { buildTemplateAnswer, scoreOrbEvaluationAnswer } from './orb-evaluation-scoring-engine'
 import { mergeRedTeamFindings, runRedTeamAgents } from './red-team-agents'
 
@@ -178,6 +181,10 @@ function summariseRun(
     criticalFailures,
     missingRequirementsCount,
     improvementOpportunitiesCount,
+    scoringVersion:
+      run.mode === 'live-llm'
+        ? LIVE_LLM_GUARDED_SCORING_VERSION_V3
+        : run.scoringVersion,
     completedAt: new Date().toISOString(),
     results: evalResults,
     summary: `${passed}/${evalResults.length} passed · ${criticalFailures} critical · avg ${averageScore}`
@@ -606,7 +613,8 @@ export async function executeEvaluationRun(
     summary: 'Running…',
     title: options.title ?? `ORB Evaluation — ${packType}`,
     packType,
-    limitations: []
+    limitations: [],
+    scoringVersion: mode === 'live-llm' ? LIVE_LLM_GUARDED_SCORING_VERSION_V3 : undefined
   }
   addEvaluationRun(pendingRun)
 
@@ -658,9 +666,14 @@ export async function executeEvaluationRun(
     for (const item of backend.scenario_results) {
       const scenario = scenarioMap.get(item.scenario_id)
       if (!scenario) continue
+      const guardrailMeta = item.live_guardrail ?? {}
+      const scoringAnswer = String(
+        guardrailMeta.scoring_answer ?? guardrailMeta.final_answer ?? item.answer ?? ''
+      )
+      const finalAnswer = String(guardrailMeta.final_answer ?? item.answer ?? scoringAnswer)
       const { result } = scoreOrbEvaluationAnswer({
         scenario,
-        answer: item.answer,
+        answer: scoringAnswer,
         runId,
         mode: 'live-llm',
         liveCallError: item.ok ? undefined : item.error,
@@ -668,18 +681,40 @@ export async function executeEvaluationRun(
       })
       const liveGuardrail = item.live_guardrail
         ? {
-            passed: Boolean(item.live_guardrail.passed),
+            passed: Boolean(item.live_guardrail.guardrail_passed ?? item.live_guardrail.passed),
             missingSafeguards: (item.live_guardrail.missing_safeguards as string[]) ?? [],
             forbiddenViolations: (item.live_guardrail.forbidden_violations as string[]) ?? [],
             repairAttempted: Boolean(item.live_guardrail.repair_attempted),
             fallbackUsed: Boolean(item.live_guardrail.fallback_used),
-            scaffoldCategory: String(item.live_guardrail.scaffold_category ?? ''),
+            scaffoldCategory: String(
+              item.live_guardrail.safety_scaffold_category ??
+                item.live_guardrail.scaffold_category ??
+                ''
+            ),
             promptTier: (item.model_route?.prompt_tier as string | null) ?? null,
-            expertDepth: (item.model_route?.expert_depth as string | null) ?? null
+            expertDepth: (item.model_route?.expert_depth as string | null) ?? null,
+            answerSource: item.live_guardrail.answer_source as
+              | 'raw'
+              | 'repaired'
+              | 'fallback'
+              | 'privacy_block'
+              | undefined,
+            guardrailPassedRaw: Boolean(
+              item.live_guardrail.guardrail_passed ?? item.live_guardrail.passed
+            ),
+            rawAnswer: String(item.live_guardrail.raw_answer ?? ''),
+            finalAnswer,
+            scoringAnswer,
+            failReasons: (item.live_guardrail.fail_reasons as string[]) ?? [],
+            minimumRequiredPhrases: (item.live_guardrail.minimum_required_phrases as string[]) ?? [],
+            forbiddenPhrasesDetected: (item.live_guardrail.forbidden_phrases_detected as string[]) ?? [],
+            answerUsedForScoring: scoringAnswer,
+            answerUsedForDisplay: finalAnswer
           }
         : undefined
       evalResults.push({
         ...result,
+        orbAnswer: finalAnswer,
         createdAt: new Date().toISOString(),
         liveGuardrail,
         safetyScaffoldCategory: item.safety_scaffold_category
