@@ -25,6 +25,7 @@ import {
   type QualityRunMode
 } from '@/lib/founder/quality-lab'
 import type { OrbQualityLabOverview } from '@/lib/founder/quality-lab/quality-lab-client'
+import { assessOrbPilotPrivacyStatus, computeOrbPilotReadinessGate } from '@/lib/orb/pilot'
 import { computeOrbLaunchQualityGate } from '@/lib/orb/quality/launch-quality-gate'
 
 const PRIORITY_TONE: Record<string, string> = {
@@ -177,6 +178,8 @@ export function FounderQualityLabPage() {
   const proposals = getQualityProposals()
   const openProposals = getOpenQualityProposals()
 
+  const privacyStatus = useMemo(() => assessOrbPilotPrivacyStatus(), [])
+
   const launchGate = useMemo(
     () =>
       computeOrbLaunchQualityGate({
@@ -185,6 +188,18 @@ export function FounderQualityLabPage() {
         privacyRetentionReviewed: false
       }),
     [runs, overview]
+  )
+
+  const pilotReadinessGate = useMemo(
+    () =>
+      computeOrbPilotReadinessGate({
+        runs,
+        whistleblowingCovered: overview?.coverage?.whistleblowing_covered ?? false,
+        privacyUxCompleted: privacyStatus.privacyUxCompleted,
+        privacyNoticeAvailable: privacyStatus.privacyNoticeAvailable,
+        buildPassing: true
+      }),
+    [runs, overview, privacyStatus]
   )
 
   async function handleRunPack() {
@@ -329,6 +344,34 @@ export function FounderQualityLabPage() {
           {launchGate.blockers.length > 0 ? (
             <ul className="mt-3 list-inside list-disc text-sm text-rose-200">
               {launchGate.blockers.map((blocker) => (
+                <li key={blocker}>{blocker}</li>
+              ))}
+            </ul>
+          ) : null}
+        </FounderSectionCard>
+
+        <FounderSectionCard eyebrow="Closed pilot" title="ORB closed-pilot readiness gate">
+          <div className="flex flex-wrap items-center gap-3" data-testid="quality-lab-pilot-readiness-gate">
+            <span
+              className={`rounded-full border px-3 py-1 text-xs font-bold uppercase ${
+                GATE_TONE[pilotReadinessGate.recommendation] ?? GATE_TONE['not-ready']
+              }`}
+            >
+              {pilotReadinessGate.recommendation}
+            </span>
+            <Link href="/founder/orb-pilot" className="text-xs font-bold text-cyan-300 hover:text-cyan-200">
+              Open ORB Pilot dashboard →
+            </Link>
+          </div>
+          <div className="mt-3 grid gap-2 text-sm text-slate-400 sm:grid-cols-2">
+            <p>Build: {pilotReadinessGate.buildPassing === null ? 'unavailable' : pilotReadinessGate.buildPassing ? 'passing' : 'failing'}</p>
+            <p>Privacy UX: {pilotReadinessGate.privacyUxCompleted ? 'complete' : 'incomplete'}</p>
+            <p>Quality Lab live run: {pilotReadinessGate.qualityLabLiveRunCompleted ? 'complete' : 'missing'}</p>
+            <p>Whistleblowing: {pilotReadinessGate.whistleblowingCovered ? 'covered' : 'missing'}</p>
+          </div>
+          {pilotReadinessGate.blockers.length > 0 ? (
+            <ul className="mt-3 list-inside list-disc text-sm text-rose-200">
+              {pilotReadinessGate.blockers.map((blocker) => (
                 <li key={blocker}>{blocker}</li>
               ))}
             </ul>
