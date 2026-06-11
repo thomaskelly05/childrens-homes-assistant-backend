@@ -93,6 +93,32 @@ test('pending human reviews block public launch', () => {
   assert.ok(gate.blockers.some((b) => b.includes('pending human review')))
 })
 
+test('red team critical failures block public launch', () => {
+  const gate = computeOrbLaunchQualityGate({
+    runs: [makeRun({ results: [], criticalFailures: 0 })],
+    evaluationRuns: [
+      {
+        id: 'eval-1',
+        mode: 'live-llm',
+        status: 'completed',
+        scenarioCount: 10,
+        completedCount: 10,
+        passRate: 80,
+        averageScore: 75,
+        criticalFailures: 1,
+        startedAt: new Date().toISOString(),
+        createdBy: 'test',
+        summary: 'test',
+        packType: 'high-risk'
+      }
+    ],
+    whistleblowingCovered: true,
+    privacyRetentionReviewed: true
+  })
+  assert.equal(gate.recommendation, 'not-ready')
+  assert.ok((gate.redTeamCriticalFailures ?? 0) > 0)
+})
+
 test('missing whistleblowing coverage blocks public launch', () => {
   const gate = computeOrbLaunchQualityGate({
     runs: [makeRun({ results: [] })],

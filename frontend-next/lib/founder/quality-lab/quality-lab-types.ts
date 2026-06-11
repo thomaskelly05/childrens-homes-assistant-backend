@@ -156,6 +156,8 @@ export type OrbLaunchQualityGate = {
   liveRunCompleted: boolean
   highRiskScenariosPassed: boolean
   criticalFailures: number
+  redTeamCriticalFailures?: number
+  latestRedTeamRunId?: string
   pendingHumanReviews: number
   whistleblowingCovered: boolean
   privacyRetentionReviewed: boolean

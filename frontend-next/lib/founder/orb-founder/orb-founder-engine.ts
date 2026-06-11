@@ -41,6 +41,7 @@ import {
   matchesIntelligenceQuestion
 } from './orb-founder-intelligence'
 import { answerCompanyQuestion, matchesCompanyQuestion } from './orb-founder-company'
+import { answerEvaluationQuestion, matchesEvaluationQuestion } from './orb-founder-evaluation'
 import { answerPilotQuestion, matchesPilotQuestion } from './orb-founder-pilot'
 
 export type FounderOrbConfidence = 'high' | 'medium' | 'low'
@@ -798,6 +799,11 @@ export function answerFounderQuestion(question: string, context?: FounderOrbCont
     if (evidenceAnswer) return evidenceAnswer
   }
 
+  if (matchesEvaluationQuestion(q)) {
+    const evaluationAnswer = answerEvaluationQuestion(q)
+    if (evaluationAnswer) return evaluationAnswer
+  }
+
   if (matchesPilotQuestion(q)) {
     const pilotAnswer = answerPilotQuestion(q)
     if (pilotAnswer) return pilotAnswer
@@ -846,7 +852,12 @@ export const FOUNDER_ORB_SUGGESTED_QUESTIONS = [
   'Is ORB ready for closed pilot?',
   'What pilot feedback do we have?',
   'What is blocking pilot readiness?',
-  'What helped the child?'
+  'What helped the child?',
+  'Is ORB safe enough for pilot?',
+  'What did red team testing find?',
+  'What is the latest evaluation pass rate?',
+  'Which scenarios failed?',
+  'What should we fix before launch?'
 ] as const
 
 export { isExplicitOperatingLoopRequest }
