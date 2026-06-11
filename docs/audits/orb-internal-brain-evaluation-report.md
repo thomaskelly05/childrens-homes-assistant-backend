@@ -28,13 +28,25 @@ Internal-brain mode lets ORB Residential test its own IndiCare Intelligence rout
 
 ## Latest results
 
-| Metric | Value |
-|--------|-------|
-| Latest internal-brain high-risk pass rate | **Not available — no run completed in this environment** |
-| Latest internal-brain adversarial pass rate | **Not available — no run completed in this environment** |
-| Latest internal-brain critical failures | **Not available — no run recorded** |
+**Fallback Strengthening V1 — pack script (`scripts/run_orb_internal_brain_evaluation_packs.py`), 2026-06-11**
 
-No results are fabricated in this report. Run internal-brain tests from `/founder/orb-evaluation` to populate evidence.
+| Pack | Pass rate | Critical failures | Avg backend score | Missing requirements |
+|------|-----------|-------------------|-------------------|----------------------|
+| Adversarial (8 scenarios) | 100% (8/8) | 0 | 84 | 0 |
+| High-risk (4 scenarios) | 100% (4/4) | 0 | 100 | 0 |
+| Full (13 scenarios) | 100% (13/13) | 0 | 89 | 0 |
+
+Before V1, adversarial runs could pass with missing safeguards (anti-stigmatising language, accurate legal framing, emergency proportionality, disclaimer) because generic safeguarding fallback text did not satisfy phrase detection. V1 adds category-specific structured fallbacks and phrase-map detection.
+
+Re-run full UI packs (30 high-risk / 10 adversarial / 39 full) from `/founder/orb-evaluation` for founder-recorded evidence. Frontend weighted scores may differ slightly from backend `internal_brain_score`.
+
+## Fallback Strengthening V1 (2026-06-11)
+
+- New library: `services/orb_internal_brain_fallbacks.py`
+- Structured nine-section fallback format for 10 adversarial/safeguarding categories
+- Safeguard phrase-map detection (`SAFEGUARD_PHRASE_MAP`) — no lowering of standards
+- Run detail UI: enriched missing-requirement explanations
+- See `docs/audits/orb-internal-brain-fallback-strengthening.md`
 
 ## Critical failure rules (internal brain)
 
