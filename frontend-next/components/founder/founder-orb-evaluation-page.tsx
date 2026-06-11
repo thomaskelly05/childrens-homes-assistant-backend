@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { AlertTriangle, Beaker, Play, RefreshCw, Shield, Target } from 'lucide-react'
 
 import { FounderNavHeader } from '@/components/founder/founder-nav-header'
@@ -11,15 +11,19 @@ import { computeOrbLaunchQualityGate } from '@/lib/orb/quality/launch-quality-ga
 import {
   createBuildBriefFromEvaluationResult,
   executeEvaluationRun,
+  fetchEvaluationRuns,
+  fetchEvaluationScenarios,
   generateScenarioPack,
   generateScenarios,
   getAgentIssueCounts,
   getEvaluationRuns,
   getEvaluationSummary,
   getFindingsByType,
+  hydrateEvaluationStore,
   retestFailedScenarios
 } from '@/lib/orb/evaluation'
 import { RED_TEAM_AGENTS } from '@/lib/orb/evaluation/red-team-agents'
+import type { OrbEvaluationRun } from '@/lib/orb/evaluation/orb-evaluation-types'
 
 const FINDING_LABELS: Record<string, string> = {
   'unsafe-safeguarding': 'Safeguarding',
@@ -34,8 +38,13 @@ const FINDING_LABELS: Record<string, string> = {
   hallucination: 'Hallucination'
 }
 
+const LOAD_ERROR_MESSAGE =
+  'Evaluation data could not be loaded. Please refresh or sign in again.'
+
 export function FounderOrbEvaluationPage() {
-  const [runs, setRuns] = useState(getEvaluationRuns)
+  const [runs, setRuns] = useState<OrbEvaluationRun[]>([])
+  const [loadState, setLoadState] = useState<'loading' | 'ready' | 'error'>('loading')
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
 
@@ -53,9 +62,34 @@ export function FounderOrbEvaluationPage() {
     [runs]
   )
 
-  const refresh = useCallback(() => {
-    setRuns(getEvaluationRuns())
+  const loadEvaluationData = useCallback(async () => {
+    setLoadState('loading')
+    setLoadError(null)
+    try {
+      const [runsPayload, scenariosPayload] = await Promise.all([
+        fetchEvaluationRuns(),
+        fetchEvaluationScenarios().catch(() => ({ scenarios: [], count: 0 }))
+      ])
+      hydrateEvaluationStore({
+        runs: runsPayload.runs,
+        scenarios: scenariosPayload.scenarios
+      })
+      setRuns(getEvaluationRuns())
+      setLoadState('ready')
+    } catch {
+      setRuns([])
+      setLoadState('error')
+      setLoadError(LOAD_ERROR_MESSAGE)
+    }
   }, [])
+
+  useEffect(() => {
+    void loadEvaluationData()
+  }, [loadEvaluationData])
+
+  const refresh = useCallback(() => {
+    void loadEvaluationData()
+  }, [loadEvaluationData])
 
   const runAction = useCallback(
     async (label: string, action: () => Promise<unknown>) => {
@@ -82,6 +116,15 @@ export function FounderOrbEvaluationPage() {
         title="ORB Evaluation & Red Team"
         subtitle="Internal safety and quality testing for ORB Residential."
       />
+
+      {loadState === 'error' && loadError ? (
+        <p
+          className="rounded-2xl border border-rose-400/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-100"
+          data-testid="orb-eval-load-error"
+        >
+          {loadError}
+        </p>
+      ) : null}
 
       {message ? (
         <p className="rounded-2xl border border-cyan-400/20 bg-cyan-500/10 px-4 py-3 text-sm text-cyan-100">{message}</p>
@@ -264,10 +307,22 @@ export function FounderOrbEvaluationPage() {
               </tr>
             </thead>
             <tbody>
-              {runs.length === 0 ? (
+              {loadState === 'loading' ? (
                 <tr>
                   <td colSpan={5} className="px-3 py-6 text-slate-500">
-                    No evaluation run exists yet. Run live LLM evaluation to begin.
+                    Loading evaluation runs…
+                  </td>
+                </tr>
+              ) : loadState === 'error' ? (
+                <tr>
+                  <td colSpan={5} className="px-3 py-6 text-rose-200">
+                    {LOAD_ERROR_MESSAGE}
+                  </td>
+                </tr>
+              ) : runs.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="px-3 py-6 text-slate-500" data-testid="orb-eval-no-runs">
+                    No evaluation runs yet.
                   </td>
                 </tr>
               ) : (

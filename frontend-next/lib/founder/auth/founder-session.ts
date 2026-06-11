@@ -95,3 +95,16 @@ export function buildFounderProxyHeaders(request: Request, cookieHeader: string)
   if (authorization) headers.set('authorization', authorization)
   return headers
 }
+
+/** Merge proxy headers without spreading a Headers instance (spread drops cookie forwarding). */
+export function mergeFounderProxyHeaders(
+  request: Request,
+  cookieHeader: string,
+  extra?: HeadersInit
+): Headers {
+  const merged = buildFounderProxyHeaders(request, cookieHeader)
+  if (!extra) return merged
+  const extraHeaders = extra instanceof Headers ? extra : new Headers(extra)
+  extraHeaders.forEach((value, key) => merged.set(key, value))
+  return merged
+}

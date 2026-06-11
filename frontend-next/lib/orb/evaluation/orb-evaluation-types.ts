@@ -133,3 +133,14 @@ export type OrbEvaluationFixProposal = {
   linkedBuildBriefId?: string
   linkedQualityLabScenarioId?: string
 }
+
+export type EvaluationRunsPayload = {
+  overview: unknown
+  runs: OrbEvaluationRun[]
+  count: number
+}
+
+export type EvaluationScenariosPayload = {
+  scenarios: OrbEvaluationScenario[]
+  count: number
+}
