@@ -1,8 +1,7 @@
+import { applyCsrfHeaders } from '@/lib/auth/api'
 import {
-  buildUnsafeMethodHeaders,
   csrfFailureMessage,
   EVALUATION_CSRF_REFRESH_MESSAGE,
-  getCsrfToken,
   isCsrfFailedPayload
 } from '@/lib/security/csrf-client'
 
@@ -57,11 +56,23 @@ async function parseEnvelope<T>(response: Response): Promise<T> {
   return payload as T
 }
 
-function assertCsrfBeforePost(): void {
-  if (typeof document === 'undefined') return
-  if (!getCsrfToken()) {
-    throw new EvaluationApiError(403, EVALUATION_CSRF_REFRESH_MESSAGE, 'csrf_failed')
+function buildEvaluationHeaders(
+  method: string,
+  initHeaders?: HeadersInit
+): Record<string, string> {
+  const headers = new Headers(initHeaders)
+  if (!headers.has('Accept')) {
+    headers.set('Accept', 'application/json')
   }
+  if (method !== 'GET' && method !== 'HEAD' && initHeaders && !headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json')
+  }
+  applyCsrfHeaders(headers, method)
+  const record: Record<string, string> = {}
+  headers.forEach((value, key) => {
+    record[key] = value
+  })
+  return record
 }
 
 async function evaluationFetch<T>(
@@ -69,14 +80,7 @@ async function evaluationFetch<T>(
   init: RequestInit & { method?: string }
 ): Promise<T> {
   const method = (init.method ?? 'GET').toUpperCase()
-  const headers =
-    method === 'GET' || method === 'HEAD'
-      ? { Accept: 'application/json', ...(init.headers as Record<string, string> | undefined) }
-      : buildUnsafeMethodHeaders(method, init.headers as Record<string, string> | undefined)
-
-  if (method !== 'GET' && method !== 'HEAD') {
-    assertCsrfBeforePost()
-  }
+  const headers = buildEvaluationHeaders(method, init.headers)
 
   const response = await fetch(path, {
     ...init,

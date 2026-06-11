@@ -4,6 +4,15 @@ import { NextResponse } from 'next/server'
 
 import { getInternalBackendOrigin } from '@/lib/auth/api-base'
 import { userHasFounderAccessFromProfile } from '@/lib/founder/access'
+import {
+  CSRF_COOKIE_NAMES,
+  CSRF_HEADER_NAMES,
+  getCsrfTokenFromCookieStore,
+  getCsrfTokenFromCookieString,
+  getIncomingCsrfHeader,
+  hasSessionCookie,
+  resolveProxyCsrfToken
+} from '@/lib/security/csrf-server'
 
 export type FounderAuthUser = {
   id?: number
@@ -83,13 +92,17 @@ export async function requireFounderSession(): Promise<FounderSessionResult> {
   return { ok: true, user }
 }
 
-export function buildFounderProxyHeaders(request: Request, cookieHeader: string): Headers {
+export function buildFounderProxyHeaders(
+  request: Request,
+  cookieHeader: string,
+  cookieStore?: Parameters<typeof resolveProxyCsrfToken>[2]
+): Headers {
   const headers = new Headers()
   headers.set('cookie', cookieHeader)
   headers.set('accept', 'application/json')
   const contentType = request.headers.get('content-type')
   if (contentType) headers.set('content-type', contentType)
-  const csrf = request.headers.get('x-csrf-token')
+  const csrf = resolveProxyCsrfToken(request, cookieHeader, cookieStore)
   if (csrf) headers.set('x-csrf-token', csrf)
   const authorization = request.headers.get('authorization')
   if (authorization) headers.set('authorization', authorization)
@@ -100,11 +113,21 @@ export function buildFounderProxyHeaders(request: Request, cookieHeader: string)
 export function mergeFounderProxyHeaders(
   request: Request,
   cookieHeader: string,
-  extra?: HeadersInit
+  extra?: HeadersInit,
+  cookieStore?: Parameters<typeof resolveProxyCsrfToken>[2]
 ): Headers {
-  const merged = buildFounderProxyHeaders(request, cookieHeader)
+  const merged = buildFounderProxyHeaders(request, cookieHeader, cookieStore)
   if (!extra) return merged
   const extraHeaders = extra instanceof Headers ? extra : new Headers(extra)
   extraHeaders.forEach((value, key) => merged.set(key, value))
   return merged
+}
+
+export {
+  CSRF_COOKIE_NAMES,
+  CSRF_HEADER_NAMES,
+  getCsrfTokenFromCookieStore,
+  getCsrfTokenFromCookieString,
+  getIncomingCsrfHeader,
+  hasSessionCookie
 }
