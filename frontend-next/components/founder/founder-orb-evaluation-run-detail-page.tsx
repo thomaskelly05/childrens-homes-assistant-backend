@@ -27,7 +27,7 @@ export function FounderOrbEvaluationRunDetailPage({ runId }: { runId: string }) 
           backHref="/founder/orb-evaluation"
         />
         <p className="mt-6 text-slate-400" data-testid="orb-eval-no-run">
-          No evaluation run exists. Return to the evaluation dashboard to start a live LLM run.
+          No evaluation run exists. Return to the evaluation dashboard to start an internal-brain or live-llm run.
         </p>
       </div>
     )
@@ -60,6 +60,16 @@ export function FounderOrbEvaluationRunDetailPage({ runId }: { runId: string }) 
           <p className="mt-2 text-lg font-bold text-slate-200">{run.mode}</p>
         </div>
       </div>
+
+      {run.mode === 'internal-brain' ? (
+        <p
+          className="rounded-2xl border border-cyan-400/20 bg-cyan-500/10 px-4 py-3 text-sm text-cyan-100"
+          data-testid="orb-eval-internal-brain-label"
+        >
+          This run tested ORB&apos;s internal IndiCare Intelligence logic without an external LLM.
+          Internal safety/routing evidence — not full answer generation evidence.
+        </p>
+      ) : null}
 
       {run.limitations?.length ? (
         <FounderSectionCard eyebrow="Limitations" title="Run limitations">
@@ -107,24 +117,138 @@ export function FounderOrbEvaluationRunDetailPage({ runId }: { runId: string }) 
                 </div>
               </div>
 
+              {run.mode === 'internal-brain' && result.internalBrain ? (
+                <div className="mt-4 grid gap-4 lg:grid-cols-2">
+                  <div className="space-y-3 text-sm text-slate-300">
+                    <p>
+                      <span className="text-slate-500">Detected domain:</span>{' '}
+                      {result.internalBrain.detectedDomain}
+                    </p>
+                    <p>
+                      <span className="text-slate-500">Detected category:</span>{' '}
+                      {result.internalBrain.detectedCategory}
+                    </p>
+                    <p>
+                      <span className="text-slate-500">Detected risk level:</span>{' '}
+                      {result.internalBrain.detectedRiskLevel}
+                    </p>
+                    <p>
+                      <span className="text-slate-500">Escalation required:</span>{' '}
+                      {result.internalBrain.requiredEscalation ? 'Yes' : 'No'}
+                    </p>
+                    {result.internalBrain.requiredSafeguards.length > 0 ? (
+                      <div>
+                        <p className="text-slate-500">Required safeguards</p>
+                        <ul className="mt-1 list-disc pl-5">
+                          {result.internalBrain.requiredSafeguards.map((s) => (
+                            <li key={s}>{s}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : null}
+                    {result.internalBrain.regulatoryAnchors.length > 0 ? (
+                      <div>
+                        <p className="text-slate-500">Regulatory anchors</p>
+                        <ul className="mt-1 list-disc pl-5">
+                          {result.internalBrain.regulatoryAnchors.map((a) => (
+                            <li key={a}>{a}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : null}
+                  </div>
+                  <div className="space-y-3 text-sm text-slate-300">
+                    {result.internalBrain.localPolicyCaveats.length > 0 ? (
+                      <div>
+                        <p className="text-slate-500">Local policy caveats</p>
+                        <ul className="mt-1 list-disc pl-5">
+                          {result.internalBrain.localPolicyCaveats.map((c) => (
+                            <li key={c}>{c}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : null}
+                    {result.internalBrain.childVoicePrompts.length > 0 ? (
+                      <div>
+                        <p className="text-slate-500">Child voice prompts</p>
+                        <ul className="mt-1 list-disc pl-5">
+                          {result.internalBrain.childVoicePrompts.map((c) => (
+                            <li key={c}>{c}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : null}
+                    {result.internalBrain.therapeuticPrompts.length > 0 ? (
+                      <div>
+                        <p className="text-slate-500">Therapeutic prompts</p>
+                        <ul className="mt-1 list-disc pl-5">
+                          {result.internalBrain.therapeuticPrompts.map((t) => (
+                            <li key={t}>{t}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : null}
+                    {result.internalBrain.dataProtectionWarnings.length > 0 ? (
+                      <div>
+                        <p className="text-slate-500">Data protection warnings</p>
+                        <ul className="mt-1 list-disc pl-5">
+                          {result.internalBrain.dataProtectionWarnings.map((w) => (
+                            <li key={w}>{w}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : null}
+                    {result.internalBrain.recommendedTemplate ? (
+                      <p>
+                        <span className="text-slate-500">Recommended template:</span>{' '}
+                        {result.internalBrain.recommendedTemplate}
+                      </p>
+                    ) : null}
+                  </div>
+                </div>
+              ) : null}
+
               <div className="mt-4 grid gap-4 lg:grid-cols-2">
                 <div>
-                  <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">ORB answer</p>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">
+                    {run.mode === 'internal-brain' ? 'Fallback answer' : 'ORB answer'}
+                  </p>
                   <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-300">
                     {result.orbAnswer || result.liveCallError || 'No answer captured'}
                   </p>
                 </div>
                 <div>
-                  <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">Scoring breakdown</p>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">
+                    {run.mode === 'internal-brain' ? 'Internal brain score breakdown' : 'Scoring breakdown'}
+                  </p>
                   <ul className="mt-2 grid grid-cols-2 gap-1 text-xs text-slate-400">
-                    {Object.entries(result.scores).map(([key, value]) => (
-                      <li key={key}>
-                        {key}: <span className="text-slate-200">{value}</span>
-                      </li>
-                    ))}
+                    {run.mode === 'internal-brain' && result.internalBrainScores
+                      ? Object.entries(result.internalBrainScores).map(([key, value]) => (
+                          <li key={key}>
+                            {key}: <span className="text-slate-200">{value}</span>
+                          </li>
+                        ))
+                      : Object.entries(result.scores).map(([key, value]) => (
+                          <li key={key}>
+                            {key}: <span className="text-slate-200">{value}</span>
+                          </li>
+                        ))}
                   </ul>
                 </div>
               </div>
+
+              {run.mode === 'internal-brain' && result.internalBrain?.missingRequirements.length ? (
+                <div className="mt-4">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">
+                    Missing requirements
+                  </p>
+                  <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-amber-200">
+                    {result.internalBrain.missingRequirements.map((item) => (
+                      <li key={item}>{item}</li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
 
               {result.redTeamFindings.length > 0 ? (
                 <div className="mt-4">

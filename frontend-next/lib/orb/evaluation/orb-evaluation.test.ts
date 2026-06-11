@@ -5,12 +5,17 @@ import test from 'node:test'
 
 import { computeOrbLaunchQualityGate } from '../quality/launch-quality-gate.ts'
 import {
+  detectInternalBrainCriticalFailure,
+  scoreInternalBrainResult
+} from './orb-internal-brain-scoring-engine.ts'
+import {
   generateAdversarialPack,
+  generateHighRiskPack,
   generateOrbEvaluationScenarios,
   validateScenarioSyntheticSafety
 } from './orb-scenario-generator.ts'
 import { runRedTeamAgents } from './red-team-agents.ts'
-import type { OrbEvaluationRun } from './orb-evaluation-types.ts'
+import type { OrbEvaluationRun, OrbInternalBrainEvaluationResult } from './orb-evaluation-types.ts'
 import type { QualityRun } from '../../founder/quality-lab/quality-lab-types.ts'
 
 const REAL_NAME_RE = /\b(Smith|Jones|Patel|Williams|Brown|Taylor|Davies|Evans)\b/
@@ -133,6 +138,148 @@ test('no fake evaluation results are displayed when no run exists', () => {
   const evaluation = readFileSync(join(root, 'founder/orb-founder/orb-founder-evaluation.ts'), 'utf8')
   assert.match(evaluation, /No evaluation run exists/i)
   assert.match(evaluation, /cannot invent results/i)
+})
+
+test('internal-brain critical failure when safeguarding not detected on high-risk', () => {
+  const scenario = generateHighRiskPack().find((s) => s.category === 'self-harm')!
+  const internalBrain: OrbInternalBrainEvaluationResult = {
+    scenarioId: scenario.id,
+    detectedDomain: scenario.domain,
+    detectedCategory: scenario.category,
+    detectedRiskLevel: 'low',
+    detectedRolePerspective: scenario.rolePerspective,
+    requiredEscalation: false,
+    requiredSafeguards: scenario.requiredSafeguards,
+    regulatoryAnchors: scenario.requiredRegulatoryAnchors,
+    childVoicePrompts: [],
+    therapeuticPrompts: [],
+    localPolicyCaveats: [],
+    dataProtectionWarnings: [],
+    fallbackAnswer: 'Generic guidance only.',
+    missingRequirements: [],
+    internalBrainScore: 30,
+    criticalFailure: false,
+    issues: [],
+    safeguardingDetected: false
+  }
+  const { critical, reasons } = detectInternalBrainCriticalFailure(scenario, internalBrain)
+  assert.equal(critical, true)
+  assert.ok(reasons.some((r) => r.includes('safeguarding')))
+})
+
+test('internal-brain scoring rewards escalation signalling', () => {
+  const scenario = generateHighRiskPack()[0]!
+  const internalBrain: OrbInternalBrainEvaluationResult = {
+    scenarioId: scenario.id,
+    detectedDomain: scenario.domain,
+    detectedCategory: scenario.category,
+    detectedRiskLevel: scenario.riskLevel,
+    detectedRolePerspective: scenario.rolePerspective,
+    requiredEscalation: true,
+    requiredSafeguards: scenario.requiredSafeguards,
+    regulatoryAnchors: scenario.requiredRegulatoryAnchors,
+    childVoicePrompts: ['Record child voice'],
+    therapeuticPrompts: ['Behaviour is communication'],
+    localPolicyCaveats: ['Apply local policy and professional judgement'],
+    dataProtectionWarnings: [],
+    fallbackAnswer:
+      'Escalate to manager and follow safeguarding protocol. Apply local policy and professional judgement. Record child voice.',
+    missingRequirements: [],
+    internalBrainScore: 80,
+    criticalFailure: false,
+    issues: [],
+    safeguardingDetected: true
+  }
+  const scores = scoreInternalBrainResult(scenario, internalBrain)
+  assert.ok(scores.escalationRequirement >= 80)
+  assert.ok(scores.overall >= 70)
+})
+
+test('internal-brain does not unlock public launch alone', () => {
+  const internalRun: OrbEvaluationRun = {
+    id: 'ib-1',
+    mode: 'internal-brain',
+    status: 'completed',
+    scenarioCount: 10,
+    completedCount: 10,
+    passRate: 100,
+    averageScore: 90,
+    criticalFailures: 0,
+    startedAt: new Date().toISOString(),
+    createdBy: 'test',
+    summary: 'internal brain only',
+    packType: 'high-risk'
+  }
+  const gate = computeOrbLaunchQualityGate({
+    runs: [],
+    evaluationRuns: [internalRun],
+    whistleblowingCovered: true,
+    privacyRetentionReviewed: true
+  })
+  assert.notEqual(gate.recommendation, 'public-launch-ready')
+  assert.ok(gate.blockers.some((b) => b.includes('live-llm GOLD')))
+})
+
+test('internal-brain critical failures block closed-pilot readiness', () => {
+  const goldRun: QualityRun = {
+    id: 'gold-2',
+    title: 'GOLD',
+    type: 'gold-pack',
+    status: 'complete',
+    runMode: 'live-llm',
+    startedAt: new Date().toISOString(),
+    passCount: 1,
+    failCount: 0,
+    totalCount: 1,
+    passRate: 100,
+    results: [],
+    dataSource: 'live',
+    limitations: [],
+    triggeredBy: 'test',
+    criticalFailures: 0
+  }
+  const internalRun: OrbEvaluationRun = {
+    id: 'ib-2',
+    mode: 'internal-brain',
+    status: 'completed',
+    scenarioCount: 5,
+    completedCount: 5,
+    passRate: 60,
+    averageScore: 55,
+    criticalFailures: 2,
+    startedAt: new Date().toISOString(),
+    createdBy: 'test',
+    summary: 'failed internal brain',
+    packType: 'high-risk'
+  }
+  const gate = computeOrbLaunchQualityGate({
+    runs: [goldRun],
+    evaluationRuns: [internalRun],
+    whistleblowingCovered: true,
+    privacyRetentionReviewed: false
+  })
+  assert.equal(gate.recommendation, 'not-ready')
+  assert.ok(gate.blockers.some((b) => b.includes('internal-brain')))
+})
+
+test('UI labels internal-brain separately from live-llm', () => {
+  const page = readFileSync(
+    join(process.cwd(), 'components/founder/founder-orb-evaluation-page.tsx'),
+    'utf8'
+  )
+  assert.match(page, /internal brain high-risk test/i)
+  assert.match(page, /Run live LLM evaluation/i)
+  assert.match(page, /Internal safety\/routing evidence/)
+  assert.match(page, /internal-brain \(routing\)/)
+})
+
+test('founder evaluation mentions internal brain mode', () => {
+  const evaluation = readFileSync(
+    join(process.cwd(), 'lib/founder/orb-founder/orb-founder-evaluation.ts'),
+    'utf8'
+  )
+  assert.match(evaluation, /No internal brain evaluation has been run/i)
+  assert.match(evaluation, /does not require OPENAI_API_KEY/i)
 })
 
 test('founder-only access enforced on evaluation API routes', () => {

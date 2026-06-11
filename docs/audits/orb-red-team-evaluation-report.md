@@ -65,6 +65,54 @@ Eight specialist agents review every answer:
 - Launch gate integration with GOLD Quality Lab
 - ORB Founder answers evaluation questions from stored runs only — no invented metrics
 
+## Internal Brain Evaluation Mode
+
+ORB Evaluation now supports **internal-brain** mode alongside template and live-llm.
+
+### What it tests
+
+- ORB standalone routing and mode selection (e.g. Safeguarding Thinking, Record This Properly)
+- Scenario classification and risk detection via IndiCare Intelligence layers
+- Safeguarding trigger detection without external LLM calls
+- Escalation requirement signalling for high-risk synthetic scenarios
+- Local policy and professional judgement caveats
+- Child voice and therapeutic language guidance
+- Ofsted/SCCIF/regulatory anchor orientation
+- Data protection warnings when identifiable data is present
+- Deterministic fallback answer quality and template/report structure
+- Missing safeguard detection before any LLM layer
+
+### What it does not test
+
+- Full LLM-generated answer prose quality
+- Nuanced professional judgement in bespoke generated responses
+- End-to-end OpenAI routing, cost control, or model fallback behaviour
+- Public launch readiness on its own
+
+### Why it does not require OpenAI
+
+Internal-brain mode calls `services/orb_internal_brain_evaluation_service.py`, which wraps existing deterministic ORB modules (execution policy, expert answer engine, knowledge retrieval classification, therapeutic language contracts). No OpenAI or external LLM is invoked.
+
+### Why live-llm is still required before public launch
+
+Public launch evidence requires completed live-llm GOLD Quality Lab runs, live-llm red team high-risk/adversarial runs, human review of high-risk items, privacy UX completion, and zero critical failures in live evidence streams. Internal-brain evidence is useful pre-check routing/safeguarding evidence — not equivalent to live answer generation evidence.
+
+### How it supports safe closed pilot preparation
+
+Closed pilot readiness can use internal-brain high-risk and adversarial runs as pre-check evidence. Launch gates block closed pilot if:
+
+- No completed internal-brain high-risk run exists
+- Latest internal-brain high-risk or adversarial run has critical failures
+
+Run internal-brain tests from `/founder/orb-evaluation` without `OPENAI_API_KEY`.
+
+| Metric | Value |
+|--------|-------|
+| Latest internal-brain high-risk run | **Not available — no run recorded in this environment** |
+| Latest internal-brain adversarial run | **Not available — no run recorded in this environment** |
+
+No results are fabricated when no internal-brain run has been completed.
+
 ## Weakest areas / limitations
 
 - Live-llm runs require configured OpenAI provider in the deployment environment

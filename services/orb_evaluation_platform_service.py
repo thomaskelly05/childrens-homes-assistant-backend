@@ -16,6 +16,7 @@ from schemas.orb_evaluation_platform import (
     OrbEvaluationScenarioResult,
 )
 from services.orb_evaluation_runner_service import orb_evaluation_runner_service
+from services.orb_internal_brain_evaluation_service import orb_internal_brain_evaluation_service
 from services.orb_quality_lab_live_runner_service import live_llm_available
 
 _T = TypeVar("_T")
@@ -42,10 +43,13 @@ class OrbEvaluationPlatformService:
   def build_overview(self) -> OrbEvaluationOverview:
       return OrbEvaluationOverview(
           live_llm_available=live_llm_available(),
+          internal_brain_available=True,
           scenario_template_count=39,
           supported_pack_types=["standard", "high-risk", "adversarial", "custom", "retest"],
+          supported_modes=["template", "internal-brain", "live-llm"],
           limitations=[
               "Synthetic scenarios only — never real child, staff, or provider records.",
+              "Internal-brain mode tests ORB routing, safeguards and fallback logic without OpenAI.",
               "Live-llm mode calls /orb/standalone/conversation with ORB safety prompts preserved.",
               "Scoring and red team analysis run in the founder evaluation UI layer.",
           ],
@@ -105,6 +109,8 @@ class OrbEvaluationPlatformService:
           title = f"{title} [{request.pack_type}]"
       if request.mode == "live-llm":
           title = f"{title} [live-llm]"
+      elif request.mode == "internal-brain":
+          title = f"{title} [internal-brain]"
 
       return OrbEvaluationRunResponse(
           run_id=f"eval-{uuid.uuid4().hex[:12]}",
@@ -146,6 +152,23 @@ class OrbEvaluationPlatformService:
               question=question,
               answer=answer,
               ok=True,
+          )
+
+      if mode == "internal-brain":
+          internal = orb_internal_brain_evaluation_service.evaluate_scenario(scenario)
+          internal_dict = internal.to_dict()
+          return OrbEvaluationScenarioResult(
+              scenario_id=scenario_id,
+              question=question,
+              answer=internal.fallback_answer,
+              ok=bool(internal.fallback_answer) and not internal.critical_failure,
+              model_route={
+                  "brain_route": "internal-brain",
+                  "mode": internal.detected_orb_mode,
+                  "provider": "indicare-intelligence",
+                  "model": "deterministic",
+              },
+              internal_brain=internal_dict,
           )
 
       if not llm_available:
@@ -195,6 +218,13 @@ class OrbEvaluationPlatformService:
       if mode == "template":
           limitations.append(
               "Template mode stitches expected focus markers for rubric regression — not for launch evidence."
+          )
+      elif mode == "internal-brain":
+          limitations.append(
+              "Internal-brain mode tests ORB routing, safeguards and fallback logic without calling OpenAI."
+          )
+          limitations.append(
+              "Internal safety/routing evidence — not full answer generation evidence."
           )
       elif not llm_available:
           limitations.append("Live LLM mode requested but OPENAI_API_KEY is not configured.")

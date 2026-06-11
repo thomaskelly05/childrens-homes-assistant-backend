@@ -218,7 +218,8 @@ export function scoreOrbEvaluationAnswer(input: ScoreEvaluationInput): {
       issues,
       redTeamFindings: findings,
       recommendedFix: buildRecommendedFix(scenario, findings, reasons),
-      answerSource: mode === 'template' ? 'template' : 'live-llm',
+      answerSource:
+        mode === 'template' ? 'template' : mode === 'internal-brain' ? 'internal-brain' : 'live-llm',
       liveCallError,
       modelRoute
     },

@@ -73,8 +73,8 @@ async function proxyEvaluation(
 
   const cookieHeader = (await cookies()).toString()
   const controller = new AbortController()
-  const isLiveRun = backendPath.includes('/runs') && init?.method === 'POST'
-  const timer = setTimeout(() => controller.abort(), isLiveRun ? 300_000 : 12_000)
+  const isLongRun = backendPath.includes('/runs') && init?.method === 'POST'
+  const timer = setTimeout(() => controller.abort(), isLongRun ? 300_000 : 12_000)
 
   try {
     const result = await upstreamJson(request, cookieHeader, backendPath, {

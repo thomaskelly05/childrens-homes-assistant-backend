@@ -114,7 +114,7 @@ export function FounderOrbEvaluationPage() {
     <div className="founder-page mx-auto max-w-7xl space-y-8 px-4 py-8 md:px-8">
       <FounderNavHeader
         title="ORB Evaluation & Red Team"
-        subtitle="Internal safety and quality testing for ORB Residential."
+        subtitle="Internal safety and quality testing for ORB Residential — synthetic scenarios only."
       />
 
       {loadState === 'error' && loadError ? (
@@ -130,24 +130,29 @@ export function FounderOrbEvaluationPage() {
         <p className="rounded-2xl border border-cyan-400/20 bg-cyan-500/10 px-4 py-3 text-sm text-cyan-100">{message}</p>
       ) : null}
 
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <div className="founder-surface rounded-2xl border border-white/10 bg-white/[0.04] p-5">
-          <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">Evaluation status</p>
-          <p className="mt-2 text-2xl font-black text-white" data-testid="orb-eval-status">
-            {summary.liveRunCompleted ? 'Live runs recorded' : 'No live run yet'}
+          <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">Latest internal-brain run</p>
+          <p className="mt-2 text-lg font-bold text-cyan-200" data-testid="orb-eval-internal-brain-status">
+            {summary.latestInternalBrainRun ? summary.latestInternalBrainRun.title ?? 'Completed' : 'None yet'}
           </p>
-          <p className="mt-1 text-xs text-slate-500">{summary.scenarioCount} scenarios in bank</p>
+          <p className="mt-1 text-xs text-slate-500">
+            High-risk failures: {summary.latestInternalBrainHighRiskFailures ?? 0}
+          </p>
+        </div>
+        <div className="founder-surface rounded-2xl border border-white/10 bg-white/[0.04] p-5">
+          <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">Latest live-llm run</p>
+          <p className="mt-2 text-lg font-bold text-violet-200" data-testid="orb-eval-status">
+            {summary.liveRunCompleted ? summary.latestLiveLlmRun?.title ?? 'Completed' : 'None yet'}
+          </p>
+          <p className="mt-1 text-xs text-slate-500">
+            Live failures: {summary.latestLiveLlmFailures ?? 0}
+          </p>
         </div>
         <div className="founder-surface rounded-2xl border border-white/10 bg-white/[0.04] p-5">
           <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">Latest pass rate</p>
           <p className="mt-2 text-2xl font-black text-emerald-300">
             {summary.latestPassRate !== null ? `${summary.latestPassRate}%` : '—'}
-          </p>
-        </div>
-        <div className="founder-surface rounded-2xl border border-white/10 bg-white/[0.04] p-5">
-          <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">Critical failures</p>
-          <p className="mt-2 text-2xl font-black text-rose-300">
-            {summary.latestCriticalFailures ?? '—'}
           </p>
         </div>
         <div className="founder-surface rounded-2xl border border-white/10 bg-white/[0.04] p-5">
@@ -159,7 +164,7 @@ export function FounderOrbEvaluationPage() {
       <FounderSectionCard
         eyebrow="Actions"
         title="Run new evaluation"
-        description="Synthetic scenarios only. Live-llm mode uses the real ORB Residential brain — no fabricated answers."
+        description="Internal brain mode tests ORB's own residential care routing, safeguards and fallback logic without calling OpenAI. Live LLM mode tests the full generated answer and requires OPENAI_API_KEY."
         action={
           <div className="flex flex-wrap gap-2">
             <button
@@ -181,6 +186,63 @@ export function FounderOrbEvaluationPage() {
             <button
               type="button"
               disabled={Boolean(busy)}
+              className="rounded-full border border-cyan-400/30 bg-cyan-500/10 px-4 py-2 text-xs font-bold text-cyan-100"
+              data-testid="orb-eval-internal-brain-high-risk"
+              onClick={() =>
+                runAction('Internal brain high-risk test', async () => {
+                  generateScenarioPack('high-risk')
+                  await executeEvaluationRun({
+                    title: 'Internal brain high-risk test',
+                    packType: 'high-risk',
+                    mode: 'internal-brain',
+                    limit: 30
+                  })
+                })
+              }
+            >
+              <Shield className="mr-1 inline h-3.5 w-3.5" aria-hidden />
+              Run internal brain high-risk test
+            </button>
+            <button
+              type="button"
+              disabled={Boolean(busy)}
+              className="rounded-full border border-cyan-400/30 bg-cyan-500/10 px-4 py-2 text-xs font-bold text-cyan-100"
+              data-testid="orb-eval-internal-brain-adversarial"
+              onClick={() =>
+                runAction('Internal brain adversarial test', async () => {
+                  generateScenarioPack('adversarial')
+                  await executeEvaluationRun({
+                    title: 'Internal brain adversarial test',
+                    packType: 'adversarial',
+                    mode: 'internal-brain'
+                  })
+                })
+              }
+            >
+              Run internal brain adversarial test
+            </button>
+            <button
+              type="button"
+              disabled={Boolean(busy)}
+              className="rounded-full border border-cyan-400/30 bg-cyan-500/10 px-4 py-2 text-xs font-bold text-cyan-100"
+              data-testid="orb-eval-internal-brain-full"
+              onClick={() =>
+                runAction('Internal brain full test', async () => {
+                  generateScenarioPack('standard')
+                  await executeEvaluationRun({
+                    title: 'Internal brain full test',
+                    mode: 'internal-brain',
+                    limit: 39,
+                    packType: 'standard'
+                  })
+                })
+              }
+            >
+              Run internal brain full test
+            </button>
+            <button
+              type="button"
+              disabled={Boolean(busy)}
               className="rounded-full border border-amber-400/30 bg-amber-500/10 px-4 py-2 text-xs font-bold text-amber-100"
               data-testid="orb-eval-high-risk-pack"
               onClick={() =>
@@ -191,7 +253,7 @@ export function FounderOrbEvaluationPage() {
               }
             >
               <Play className="mr-1 inline h-3.5 w-3.5" aria-hidden />
-              Run high-risk pack
+              Run high-risk pack (live-llm)
             </button>
             <button
               type="button"
@@ -205,7 +267,7 @@ export function FounderOrbEvaluationPage() {
                 })
               }
             >
-              Run adversarial pack
+              Run adversarial pack (live-llm)
             </button>
             <button
               type="button"
@@ -230,7 +292,8 @@ export function FounderOrbEvaluationPage() {
           </p>
         ) : (
           <p className="text-sm text-slate-500">
-            Template mode is available for rubric regression only. Launch evidence requires live-llm runs with no critical failures.
+            Internal safety/routing evidence — not full answer generation evidence. Template mode is for rubric regression only.
+            Public launch still requires completed live-llm GOLD and red team runs with no critical failures.
           </p>
         )}
       </FounderSectionCard>
@@ -332,7 +395,9 @@ export function FounderOrbEvaluationPage() {
                       <p className="font-semibold text-white">{run.title ?? run.id}</p>
                       <p className="text-xs text-slate-500">{run.summary}</p>
                     </td>
-                    <td className="px-3 py-3 text-slate-400">{run.mode}</td>
+                    <td className="px-3 py-3 text-slate-400">
+                      {run.mode === 'internal-brain' ? 'internal-brain (routing)' : run.mode}
+                    </td>
                     <td className="px-3 py-3 text-emerald-300">{run.passRate}%</td>
                     <td className="px-3 py-3 text-rose-300">{run.criticalFailures}</td>
                     <td className="px-3 py-3">
@@ -363,9 +428,21 @@ export function FounderOrbEvaluationPage() {
             </p>
           </div>
           <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+            <div className="flex items-center gap-2 text-cyan-300">
+              <Shield className="h-4 w-4" aria-hidden />
+              <span className="text-xs font-bold uppercase tracking-[0.14em]">Internal brain</span>
+            </div>
+            <p className="mt-2 text-sm text-slate-300">
+              High-risk run: {launchGate.internalBrainHighRiskCompleted ? 'completed' : 'not completed'}
+            </p>
+            <p className="text-xs text-slate-500">
+              Critical failures: {launchGate.internalBrainCriticalFailures ?? 0}
+            </p>
+          </div>
+          <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
             <div className="flex items-center gap-2 text-violet-300">
               <Shield className="h-4 w-4" aria-hidden />
-              <span className="text-xs font-bold uppercase tracking-[0.14em]">Red team evaluation</span>
+              <span className="text-xs font-bold uppercase tracking-[0.14em]">Live-llm red team</span>
             </div>
             <p className="mt-2 text-sm text-slate-300">
               Latest high-risk run critical failures: {launchGate.redTeamCriticalFailures ?? 0}
