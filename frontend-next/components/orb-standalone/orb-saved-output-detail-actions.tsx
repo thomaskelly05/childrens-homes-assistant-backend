@@ -12,6 +12,7 @@ import {
   Sparkles
 } from 'lucide-react'
 
+import { OrbPrivacyNotice } from '@/components/orb/privacy/orb-privacy-notice'
 import {
   buildAskOrbAboutSavedOutputPrompt,
   buildSavedOutputExportMarkdown,
@@ -230,6 +231,8 @@ export function OrbSavedOutputDetailActions({
           {rerun.reason}
         </p>
       ) : null}
+
+      <OrbPrivacyNotice surface="export" className="text-left" />
 
       <ul className="space-y-1 text-[11px] leading-relaxed text-slate-500" data-orb-saved-output-boundary>
         {ORB_SAVED_OUTPUT_BOUNDARY_LINES.map((line) => (

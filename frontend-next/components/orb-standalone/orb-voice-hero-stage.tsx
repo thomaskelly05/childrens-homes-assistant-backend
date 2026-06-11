@@ -8,6 +8,8 @@ import {
   OrbVoiceCompanion,
   type OrbVoiceCompanionState
 } from '@/components/orb-residential/orb-voice-companion'
+import { OrbPrivacyNotice } from '@/components/orb/privacy/orb-privacy-notice'
+import { getOrbDataClassificationNotice } from '@/lib/orb/privacy/orb-data-classification'
 import { OrbVoiceStudioWaveform } from '@/components/orb-standalone/orb-voice-studio-layout'
 
 /** Shared hero column — living head, headline, waveform, CTA, and status for Voice stations. */
@@ -69,9 +71,12 @@ export function OrbVoiceHeroStage({
         </p>
       ) : null}
 
-      <p className="orb-voice-station__privacy orb-voice-hero-stage__privacy text-[11px] leading-4 text-[var(--orb-muted)]" data-orb-voice-privacy-note>
-        Hands-free when your microphone is allowed. Voice stays within your ORB account.
-      </p>
+      <div className="orb-voice-station__privacy orb-voice-hero-stage__privacy w-full max-w-sm space-y-2">
+        <p className="text-[11px] leading-4 text-[var(--orb-muted)]" data-orb-voice-privacy-note>
+          {getOrbDataClassificationNotice('voice')}
+        </p>
+        <OrbPrivacyNotice surface="voice" className="text-left" />
+      </div>
     </div>
   )
 }

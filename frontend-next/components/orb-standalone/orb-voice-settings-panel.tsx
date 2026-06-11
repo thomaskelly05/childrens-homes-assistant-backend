@@ -352,8 +352,16 @@ export function OrbVoiceSettingsPanel({
         ) : null}
 
         <p className="text-[11px] leading-5 text-[var(--orb-muted)]" data-orb-voice-settings-privacy>
-          Privacy: audio and transcripts stay in this session unless you save or send them elsewhere.
+          Privacy: audio and transcripts stay in this session unless you save or send them elsewhere. Retention controls
+          are being finalised for closed pilot.
         </p>
+        <a
+          href="/orb/privacy"
+          className="text-[11px] font-semibold text-[var(--orb-primary,#1677ff)] hover:underline"
+          data-orb-voice-settings-privacy-link
+        >
+          ORB Privacy &amp; Data Handling
+        </a>
         <div className="space-y-1" data-orb-voice-settings-boundary>
           {ORB_VOICE_BOUNDARY_COPY.map((line) => (
             <p key={line} className="text-[10px] leading-4 text-[var(--orb-muted)]">

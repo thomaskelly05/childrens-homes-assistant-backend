@@ -1,7 +1,7 @@
 import Link from 'next/link'
 
 export const ORB_DEFAULT_LEGAL_PATHS = {
-  privacy: '/privacy',
+  privacy: '/orb/privacy',
   terms: '/terms',
   cookies: '/cookies',
   support: '/support'

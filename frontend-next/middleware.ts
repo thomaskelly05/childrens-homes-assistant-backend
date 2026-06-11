@@ -34,6 +34,10 @@ const orbPublicPrefixes = [
   '/orb/onboarding'
 ]
 
+function isOrbPrivacyPublicPath(pathname: string) {
+  return pathname === '/orb/privacy' || pathname === '/orb/privacy/'
+}
+
 const sessionCookieNames = ['indicare_session', '__Host-indicare_session']
 const e2eAuthEnabled = process.env.NEXT_PUBLIC_E2E_TEST_MODE === '1' && process.env.NODE_ENV !== 'production'
 
@@ -42,6 +46,7 @@ function isPublicPath(pathname: string) {
 }
 
 function isOrbPublicPath(pathname: string) {
+  if (isOrbPrivacyPublicPath(pathname)) return true
   return orbPublicPrefixes.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`))
 }
 

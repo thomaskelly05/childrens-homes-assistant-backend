@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Copy, Download, FolderPlus, MessageSquarePlus, Save } from 'lucide-react'
 
+import { OrbPrivacyNotice } from '@/components/orb/privacy/orb-privacy-notice'
 import {
   buildCopyMarkdown,
   type OrbIntelligenceOutputView
@@ -253,6 +254,8 @@ export function OrbOutputSaveActions({
           </button>
         </div>
       ) : null}
+
+      <OrbPrivacyNotice surface="export" className="text-left" />
     </div>
   )
 }
