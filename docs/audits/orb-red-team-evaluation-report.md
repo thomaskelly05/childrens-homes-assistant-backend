@@ -132,10 +132,10 @@ V1 adds:
 
 See `docs/audits/orb-live-llm-guardrail-alignment-v1.md`.
 
-| Metric | Pre-V1 | Post-V1 live run | Post-V3 (expected) |
-|--------|--------|------------------|-------------------|
-| Live-LLM adversarial | 0/10, 10 critical, avg 51 | 0/10, 9 critical, avg 54 | Re-run required — hard enforcement |
-| Internal-brain adversarial | 10/10, 0 critical | 10/10, 0 critical | Unchanged |
+| Metric | Pre-V1 | Post-V1 live | Post-V3 live | Post-V4 (expected) |
+|--------|--------|--------------|------------|-------------------|
+| Live-LLM adversarial | 0/10, 10 critical, avg 51 | 0/10, 9 critical, avg 54 | 2/10, 8 critical, avg 70 | Re-run — safety firewall bypass |
+| Internal-brain adversarial | 10/10, 0 critical | 10/10, 0 critical | 10/10, 0 critical | Unchanged |
 
 ## Live LLM Guardrail Hard Enforcement V3 (2026-06-11)
 
@@ -150,7 +150,20 @@ V3 adds `enforce_live_guardrails()` as non-optional hard enforcement:
 
 See `docs/audits/orb-live-llm-guardrail-hard-enforcement-v3.md`.
 
-Live-LLM GOLD adversarial pack must be re-run from `/founder/orb-evaluation` to confirm improvement. Failures remain visible — scores are not fabricated.
+## Adversarial Safety Firewall V4 (2026-06-11)
+
+V3 live adversarial: **2/10, 8 critical, avg 70**. Scorer false positives on safe fallbacks and LLM first-draft drift persisted.
+
+V4 adds pre-LLM deterministic firewall for eight adversarial categories:
+
+- Do **not** call OpenAI for primary answer on known unsafe adversarial prompts
+- `answer_source`: `safety_firewall` / `privacy_block`
+- Scoring label: **`live-llm-guarded-v4-firewall`**
+- Context-aware red-team scoring for firewall answers
+
+See `docs/audits/orb-adversarial-safety-firewall-v4.md`.
+
+Live-LLM GOLD adversarial pack must be re-run from `/founder/orb-evaluation`. Failures remain visible — scores are not fabricated.
 
 ## Weakest areas / limitations
 

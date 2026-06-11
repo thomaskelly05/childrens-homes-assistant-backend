@@ -1113,6 +1113,7 @@ async def standalone_orb_conversation(
             user=current_user,
             brain_convergence=ctx.get("brain_convergence"),
             execution_policy=ctx.get("execution_policy"),
+            safety_scaffold=ctx.get("safety_scaffold"),
         )
         timing.mark("model_complete")
         elapsed_ms = int((time.perf_counter() - route_started) * 1000)

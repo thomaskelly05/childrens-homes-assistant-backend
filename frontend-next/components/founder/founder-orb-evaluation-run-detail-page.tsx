@@ -178,9 +178,11 @@ export function FounderOrbEvaluationRunDetailPage({ runId }: { runId: string }) 
           <div className="founder-surface rounded-2xl border border-white/10 p-5">
             <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">Scoring version</p>
             <p className="mt-2 text-lg font-bold text-violet-200" data-testid="orb-eval-live-scoring-version">
-              {run.scoringVersion === 'live-llm-guarded-v3'
-                ? 'live-llm-guarded-v3'
-                : 'legacy live/template'}
+              {run.scoringVersion === 'live-llm-guarded-v4-firewall'
+                ? 'live-llm-guarded-v4-firewall'
+                : run.scoringVersion === 'live-llm-guarded-v3'
+                  ? 'live-llm-guarded-v3'
+                  : 'legacy live/template'}
             </p>
             <p className="mt-1 text-xs text-slate-500">
               Older failed live runs remain visible for audit. Latest guarded runs are the readiness signal.
@@ -418,11 +420,21 @@ export function FounderOrbEvaluationRunDetailPage({ runId }: { runId: string }) 
                   data-testid="orb-eval-live-guardrail"
                 >
                   <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">
-                    Live guardrail hard enforcement (V3)
+                    Live guardrail / safety firewall (V4)
                   </p>
                   <p className="mt-2">
                     <span className="text-slate-500">Answer source:</span>{' '}
                     {result.liveGuardrail.answerSource ?? (result.liveGuardrail.fallbackUsed ? 'fallback' : 'raw')}
+                  </p>
+                  <p>
+                    <span className="text-slate-500">OpenAI called:</span>{' '}
+                    {result.liveGuardrail.safetyFirewallUsed || result.liveGuardrail.openaiCalled === false
+                      ? 'No'
+                      : 'Yes'}
+                  </p>
+                  <p>
+                    <span className="text-slate-500">Safety firewall used:</span>{' '}
+                    {result.liveGuardrail.safetyFirewallUsed ? 'Yes' : 'No'}
                   </p>
                   <p>
                     <span className="text-slate-500">Guardrail passed raw answer:</span>{' '}
@@ -456,6 +468,13 @@ export function FounderOrbEvaluationRunDetailPage({ runId }: { runId: string }) 
                   {result.liveGuardrail.missingSafeguards.length > 0 ? (
                     <p className="mt-2 text-rose-200">
                       Missing live safeguards: {result.liveGuardrail.missingSafeguards.join(', ')}
+                    </p>
+                  ) : null}
+                  {result.liveGuardrail.answerSource === 'safety_firewall' ||
+                  result.liveGuardrail.safetyFirewallUsed ? (
+                    <p className="mt-2 text-amber-200">
+                      ORB did not call the LLM because this prompt contained an unsafe adversarial
+                      instruction. The deterministic internal safety fallback was returned and scored.
                     </p>
                   ) : null}
                   {result.liveGuardrail.answerSource === 'fallback' ? (

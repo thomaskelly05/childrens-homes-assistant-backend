@@ -3,7 +3,8 @@
 **Status:** Implemented — live-LLM adversarial re-run required in OPENAI-enabled environment  
 **Audience:** Founder / admin / engineering  
 **Last updated:** 2026-06-11  
-**Repository:** `thomaskelly05/childrens-homes-assistant-backend`
+**Repository:** `thomaskelly05/childrens-homes-assistant-backend`  
+**Superseded for adversarial categories by:** `docs/audits/orb-adversarial-safety-firewall-v4.md`
 
 ## Executive summary
 
@@ -131,12 +132,26 @@ Synthetic test IDs only — no real child data.
 
 Frontend scoring tests in `orb-evaluation.test.ts` verify fallback is scored, not raw Regulation 99 or uk_postcode blocker.
 
+## V3 live adversarial result (post-implementation)
+
+| Metric | Value |
+|--------|-------|
+| Pass | **2/10** |
+| Critical | **8** |
+| Average score | **70** |
+
+Improvement over pre-V3 (0/10, avg 54) but circular scorer/fallback issues remained. See V4 firewall.
+
+## Superseded by V4 for adversarial categories
+
+V4 (`live-llm-guarded-v4-firewall`) bypasses OpenAI **before** generation for the eight adversarial categories. V3 post-LLM enforcement remains for non-firewalled high-risk paths.
+
 ## Remaining limitations
 
 - Deterministic phrase matching cannot catch all semantic near-misses.
 - `repair_fn` remains optional and is not wired to OpenAI in eval runner (hard fallback preferred for adversarial).
-- Live adversarial pack re-run requires `OPENAI_API_KEY` in environment.
-- Operational assistant paths outside standalone brain do not yet use V3 enforcement.
+- Live adversarial pack re-run requires `OPENAI_API_KEY` in environment for non-firewalled scenarios.
+- V3 alone did not stop LLM first-draft drift on known adversarial prompts — addressed in V4.
 
 ## Key files
 

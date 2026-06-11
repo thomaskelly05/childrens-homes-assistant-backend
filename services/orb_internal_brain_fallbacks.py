@@ -35,11 +35,11 @@ class CategoryFallbackContent:
 _CATEGORY_FALLBACKS: dict[str, CategoryFallbackContent] = {
     "do-not-report": CategoryFallbackContent(
         safety_position=(
-            "A safeguarding concern has been raised — the young person's immediate safety comes first "
-            "and this cannot be kept secret."
+            "A safeguarding concern has been raised — the young person's immediate safety comes first. "
+            "Safeguarding concerns cannot be kept secret."
         ),
         cannot_do=[
-            "ORB cannot promise secrecy or confidentiality about safeguarding concerns.",
+            "ORB cannot promise secrecy or confidentiality about safeguarding concerns — do not promise secrecy.",
             "ORB cannot help you avoid reporting abuse, neglect or serious harm.",
             "Safeguarding concerns cannot be kept hidden from the manager, DSL or safeguarding lead.",
         ],
@@ -47,6 +47,7 @@ _CATEGORY_FALLBACKS: dict[str, CategoryFallbackContent] = {
             "Prioritise immediate safety for the young person now.",
             "Escalate promptly to your on-call manager, designated safeguarding lead (DSL) or safeguarding lead.",
             "Follow your local safeguarding procedure and multi-agency reporting routes.",
+            "Record the child's words where known — do not invent quotes.",
             "Reassure the young person they have done the right thing by telling someone.",
         ],
         recording_guidance=[
@@ -78,7 +79,9 @@ _CATEGORY_FALLBACKS: dict[str, CategoryFallbackContent] = {
         ),
         cannot_do=[
             "ORB will not write punitive, shaming or blaming records.",
-            "Avoid labels such as manipulative, attention-seeking, defiant or naughty.",
+            "Do not use character labels or motive-based language.",
+            "Do not describe the child as trying to get attention.",
+            "Words the record must not use: character labels, motive-based language, or stigmatising terms.",
         ],
         what_to_do=[
             "Describe observable behaviour, context, triggers and what staff did.",
@@ -106,11 +109,13 @@ _CATEGORY_FALLBACKS: dict[str, CategoryFallbackContent] = {
     ),
     "diagnosis-request": CategoryFallbackContent(
         safety_position=(
-            "ORB cannot diagnose ADHD, conduct disorder, autism, mental health conditions or trauma disorders."
+            "ORB cannot provide a clinical diagnosis — ADHD, conduct disorder, autism, mental health "
+            "conditions or trauma disorders must be assessed by a qualified professional."
         ),
         cannot_do=[
-            "ORB cannot diagnose conditions or supply clinical labels for chronology wording.",
-            "Avoid clinical labels unless already formally recorded by qualified professionals.",
+            "ORB cannot provide a clinical diagnosis or supply clinical labels for chronology wording.",
+            "Diagnosis must come from a qualified professional.",
+            "Avoid clinical labels unless formally assessed or recorded by a qualified professional.",
         ],
         what_to_do=[
             "Record observations only — what was seen, heard, said and done.",
@@ -139,6 +144,7 @@ _CATEGORY_FALLBACKS: dict[str, CategoryFallbackContent] = {
             "ORB cannot invent or quote fake law — restrictions must be lawful, necessary and proportionate."
         ),
         cannot_do=[
+            "I cannot verify or rely on the regulation number in the prompt. ORB will not invent or quote legislation.",
             "ORB cannot invent or quote regulations that do not exist.",
             "Do not rely on non-existent regulations to justify restrictions.",
         ],
@@ -167,16 +173,17 @@ _CATEGORY_FALLBACKS: dict[str, CategoryFallbackContent] = {
     ),
     "identifiable-data": CategoryFallbackContent(
         safety_position=(
-            "Do not enter identifiable child, staff, address, date of birth, NHS number or placement data "
-            "into ORB unless your organisation's policy permits it."
+            "I cannot store identifiable child, staff, address, date of birth, NHS number or placement data here."
         ),
         cannot_do=[
-            "Do not store sensitive personal data unnecessarily in prompts or ORB chat.",
-            "Do not enter identifiable data unless policy explicitly allows it.",
+            "I cannot store or process identifiable child information in ORB chat.",
+            "Please remove the DOB, NHS number, address and postcode before continuing.",
+            "Do not enter identifiable data unless your organisation's policy explicitly allows it.",
         ],
         what_to_do=[
             "Minimise personal data — use initials or pseudonyms if your policy allows.",
-            "Follow UK GDPR and your organisation's data protection policy.",
+            "Follow UK GDPR, local policy and professional judgement.",
+            "Use your approved recording system for official child records.",
             "Keep safeguarding records in the approved recording system, not ad hoc notes in ORB.",
         ],
         recording_guidance=[
@@ -201,11 +208,12 @@ _CATEGORY_FALLBACKS: dict[str, CategoryFallbackContent] = {
             "ORB will not advise ignoring local policy — emergency action and local policy both matter."
         ),
         cannot_do=[
-            "ORB will not advise staff to ignore local policy or bypass governance routes.",
+            "I will not advise you to ignore local policy or bypass governance routes.",
         ],
         what_to_do=[
-            "Follow local policy unless there is immediate risk to life requiring emergency action.",
-            "If immediate danger, call 999 first — then inform manager/on-call/DSL as soon as it is safe.",
+            "Follow local policy unless immediate risk to life requires emergency action.",
+            "Call 999 immediately if there is immediate danger.",
+            "Notify manager/on-call/DSL as soon as it is safe.",
             "Record rationale, actions taken and who was informed.",
         ],
         recording_guidance=[
@@ -227,14 +235,15 @@ _CATEGORY_FALLBACKS: dict[str, CategoryFallbackContent] = {
     ),
     "legal-certainty": CategoryFallbackContent(
         safety_position=(
-            "ORB cannot give legally binding guarantees or guarantee inspection outcomes."
+            "ORB cannot provide a legally binding guarantee or guarantee an Ofsted or inspection outcome."
         ),
         cannot_do=[
-            "ORB cannot give legally binding guarantees.",
-            "ORB cannot guarantee you will not be found inadequate or that inspectors will reach a set outcome.",
+            "I cannot provide a legally binding guarantee.",
+            "I cannot guarantee an Ofsted or inspection outcome.",
+            "This is not legal advice.",
         ],
         what_to_do=[
-            "ORB can support preparation, reflection and evidence quality — not predict inspector judgements.",
+            "ORB supports reflection, recording and evidence — it does not determine compliance.",
             "Seek manager, legal, safeguarding or provider advice where required.",
         ],
         recording_guidance=[
@@ -250,13 +259,14 @@ _CATEGORY_FALLBACKS: dict[str, CategoryFallbackContent] = {
             "Escalate governance concerns through your registered manager or responsible individual.",
         ],
         regulatory_orientation=[
-            "Final judgement sits with inspectors, courts, regulators or qualified professionals.",
-            "This is not legal advice — verify against statutory guidance and local policy.",
+            "Final judgement rests with inspectors, regulators, courts or qualified professionals.",
+            "Verify against statutory guidance and local policy.",
         ],
     ),
     "emergency-instead-of-999": CategoryFallbackContent(
         safety_position=(
-            "If a child is unconscious or there is immediate risk to life, call 999 immediately."
+            "Call 999 immediately. If a child is unconscious or there is immediate risk to life, "
+            "emergency services come first."
         ),
         cannot_do=[
             "Do not prioritise recording or Ofsted evidence over emergency response.",
