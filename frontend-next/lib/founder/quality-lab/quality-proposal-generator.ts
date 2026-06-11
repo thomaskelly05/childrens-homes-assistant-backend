@@ -16,7 +16,12 @@ function priorityFromResult(item: QualityRunItemResult): QualityProposal['priori
 function proposalFromFailedItem(run: QualityRun, item: QualityRunItemResult): QualityProposal | null {
   if (item.passed) return null
 
-  const type = item.unsafePhrases.length > 0 ? 'unsafe-pattern' : 'marker-gap'
+  const type =
+    item.liveCallError || item.criticalFailure
+      ? 'live-llm-failure'
+      : item.unsafePhrases.length > 0
+        ? 'unsafe-pattern'
+        : 'marker-gap'
   const title =
     type === 'unsafe-pattern'
       ? `Unsafe pattern in ${item.scenarioTitle}`

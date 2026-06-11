@@ -43,7 +43,9 @@ async def quality_lab_run(
         family=body.family,
         role=body.role,
         limit=body.limit,
+        scenario_ids=body.scenario_ids,
         use_sample_answers=body.use_sample_answers,
+        run_mode=body.run_mode,
     )
     return _success(result)
 

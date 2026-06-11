@@ -18,7 +18,8 @@ async function proxyQualityLab(
   const cookieHeader = (await cookies()).toString()
   const backendOrigin = getInternalBackendOrigin()
   const controller = new AbortController()
-  const timer = setTimeout(() => controller.abort(), 12_000)
+  const isLiveRun = backendPath.endsWith('/runs') && init?.method === 'POST'
+  const timer = setTimeout(() => controller.abort(), isLiveRun ? 300_000 : 12_000)
 
   try {
     const upstream = await fetch(`${backendOrigin}${backendPath}`, {

@@ -69,13 +69,14 @@ def test_quality_lab_list_scenarios(admin_client):
 def test_quality_lab_run_gold_pack(admin_client):
     response = admin_client.post(
         "/orb/admin/quality-lab/runs",
-        json={"limit": 3, "use_sample_answers": True},
+        json={"limit": 3, "use_sample_answers": True, "run_mode": "template"},
     )
     assert response.status_code == 200
     body = response.json()["data"]
     assert body["scenario_count"] == 3
     assert len(body["results"]) == 3
     assert "run_id" in body
+    assert body["run_mode"] == "template"
     assert body["route_call_skipped"] is True
 
 

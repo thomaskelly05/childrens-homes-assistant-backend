@@ -16,6 +16,9 @@ import {
 } from '@/lib/orb/admin-quality-client'
 import { AuthApiError } from '@/lib/auth/api'
 import { useAuth } from '@/contexts/auth-context'
+import { getQualityRuns } from '@/lib/founder/quality-lab'
+import { computeOrbLaunchQualityGate } from '@/lib/orb/quality/launch-quality-gate'
+import Link from 'next/link'
 
 const REASON_LABELS: Record<string, string> = {
   too_generic: 'Too generic',
@@ -131,9 +134,43 @@ export function OrbQualityDashboard() {
   }
 
   const helpfulPct = summary ? `${Math.round((summary.helpful_ratio || 0) * 1000) / 10}%` : '—'
+  const launchGate = computeOrbLaunchQualityGate({ runs: getQualityRuns(), privacyRetentionReviewed: false })
 
   return (
     <div className="space-y-8" data-orb-admin-quality-dashboard>
+      <section className="rounded-2xl border border-slate-200 bg-white p-5" data-orb-admin-launch-gate>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-black text-slate-950">ORB launch quality gate</h2>
+            <p className="mt-1 text-sm text-slate-600">
+              Live LLM GOLD verification summary from Quality Lab session memory.
+            </p>
+          </div>
+          <Link
+            href="/founder/quality-lab"
+            className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-800"
+          >
+            Open Quality Lab
+          </Link>
+        </div>
+        <p className="mt-4 text-sm font-bold uppercase tracking-wide text-slate-500">Recommendation</p>
+        <p className="mt-1 text-2xl font-black text-slate-950">{launchGate.recommendation}</p>
+        <p className="mt-2 text-sm text-slate-600">
+          Critical failures: {launchGate.criticalFailures} · Pending human reviews: {launchGate.pendingHumanReviews} ·
+          Whistleblowing covered: {launchGate.whistleblowingCovered ? 'yes' : 'no'}
+        </p>
+        {launchGate.blockers.length > 0 ? (
+          <ul className="mt-3 list-inside list-disc text-sm text-rose-800">
+            {launchGate.blockers.map((blocker) => (
+              <li key={blocker}>{blocker}</li>
+            ))}
+          </ul>
+        ) : null}
+        <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+          Live LLM Quality Lab uses synthetic scenarios only. It must not include real child records.
+        </p>
+      </section>
+
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4" data-orb-admin-overview-cards>
         <StatCard label="Total feedback" value={summary?.total_feedback ?? 0} />
         <StatCard label="Helpful ratio" value={helpfulPct} />

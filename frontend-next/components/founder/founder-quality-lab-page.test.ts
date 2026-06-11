@@ -2,47 +2,46 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { describe, it } from 'node:test'
+import test from 'node:test'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '../..')
 
-function read(relativePath: string) {
+function read(relativePath: string): string {
   return readFileSync(join(root, relativePath), 'utf8')
 }
 
-describe('ORB Quality Lab founder UI', () => {
-  it('quality lab page renders founder guard and dashboard', () => {
-    const page = read('app/founder/quality-lab/page.tsx')
-    const dashboard = read('components/founder/founder-quality-lab-page.tsx')
-    assert.match(page, /FounderQualityLabPage/)
-    assert.match(page, /FounderGuard/)
-    assert.match(dashboard, /ORB Quality Lab/)
-  })
+test('founder quality lab page exports guarded route', () => {
+  const page = read('app/founder/quality-lab/page.tsx')
+  const dashboard = read('components/founder/founder-quality-lab-page.tsx')
+  assert.match(page, /FounderQualityLabPage/)
+  assert.match(page, /FounderGuard/)
+  assert.match(dashboard, /executeQualityRun/)
+})
 
-  it('overview cards and run controls render', () => {
-    const dashboard = read('components/founder/founder-quality-lab-page.tsx')
-    assert.match(dashboard, /data-testid="quality-lab-overview-cards"/)
-    assert.match(dashboard, /data-testid="quality-lab-run-pack"/)
-    assert.match(dashboard, /data-testid="quality-lab-sync-feedback"/)
-  })
+test('founder quality lab page has overview and run controls', () => {
+  const dashboard = read('components/founder/founder-quality-lab-page.tsx')
+  assert.match(dashboard, /data-testid="quality-lab-overview-cards"/)
+  assert.match(dashboard, /data-testid="quality-lab-run-pack"/)
+  assert.match(dashboard, /data-testid="quality-lab-sync-feedback"/)
+  assert.match(dashboard, /data-testid="quality-lab-run-mode"/)
+  assert.match(dashboard, /data-testid="quality-lab-synthetic-warning"/)
+  assert.match(dashboard, /data-testid="quality-lab-launch-gate"/)
+})
 
-  it('proposals and build brief actions render', () => {
-    const dashboard = read('components/founder/founder-quality-lab-page.tsx')
-    assert.match(dashboard, /data-testid="quality-lab-proposals"/)
-    assert.match(dashboard, /createBuildBriefFromProposal/)
-    assert.match(dashboard, /data-testid="quality-lab-proposal-brief"/)
-  })
+test('founder quality lab page has proposals and build brief actions', () => {
+  const dashboard = read('components/founder/founder-quality-lab-page.tsx')
+  assert.match(dashboard, /data-testid="quality-lab-proposals"/)
+  assert.match(dashboard, /data-testid="quality-lab-proposal-brief"/)
+})
 
-  it('founder nav includes quality lab route', () => {
-    const nav = read('components/founder/founder-nav-header.tsx')
-    assert.match(nav, /\/founder\/quality-lab/)
-    assert.match(nav, /Quality Lab/)
-  })
+test('founder nav links to quality lab', () => {
+  const nav = read('components/founder/founder-nav-header.tsx')
+  assert.match(nav, /\/founder\/quality-lab/)
+})
 
-  it('quality lab lib exports in-memory stores', () => {
-    const index = read('lib/founder/quality-lab/index.ts')
-    assert.match(index, /executeQualityRun/)
-    assert.match(index, /getQualityProposals/)
-    assert.match(index, /getExpertReviews/)
-  })
+test('quality lab index exports live run helpers', () => {
+  const index = read('lib/founder/quality-lab/index.ts')
+  assert.match(index, /executeQualityRun/)
+  assert.match(index, /retestQualityScenario/)
+  assert.match(index, /submitHumanReview/)
 })
