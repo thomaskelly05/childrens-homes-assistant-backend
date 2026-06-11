@@ -2,12 +2,24 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { ArrowLeft, Beaker, Bot, Brain, Building2, CheckSquare, Contact, FileCheck, FileText, Lock, PoundSterling, Radio, RefreshCw, ScrollText, Sparkles, Users } from 'lucide-react'
+import { ArrowLeft, Beaker, Bot, Brain, Building2, CheckSquare, ClipboardCheck, Contact, FileCheck, FileText, Lock, PoundSterling, Radio, RefreshCw, ScrollText, Sparkles, Users } from 'lucide-react'
 
 type NavLink = {
   href: string
   label: string
-  icon: typeof Users | typeof FileText | typeof CheckSquare | typeof Radio | typeof Bot | typeof RefreshCw | typeof Brain | typeof Contact | typeof Sparkles | null
+  icon:
+    | typeof Users
+    | typeof FileText
+    | typeof CheckSquare
+    | typeof Radio
+    | typeof Bot
+    | typeof RefreshCw
+    | typeof Brain
+    | typeof Contact
+    | typeof Sparkles
+    | typeof Beaker
+    | typeof ClipboardCheck
+    | null
   exact?: boolean
 }
 
@@ -24,6 +36,7 @@ const NAV_LINKS: NavLink[] = [
   { href: '/founder/actions', label: 'Actions', icon: null },
   { href: '/founder/build-briefs', label: 'Build Briefs', icon: null },
   { href: '/founder/quality-lab', label: 'Quality Lab', icon: Beaker },
+  { href: '/founder/orb-pilot', label: 'ORB Pilot', icon: ClipboardCheck },
   { href: '/founder/evidence', label: 'Evidence', icon: FileCheck },
   { href: '/founder/revenue', label: 'Revenue', icon: PoundSterling },
   { href: '/founder/relationships', label: 'Relationships', icon: Contact },

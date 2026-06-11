@@ -41,6 +41,7 @@ import {
   matchesIntelligenceQuestion
 } from './orb-founder-intelligence'
 import { answerCompanyQuestion, matchesCompanyQuestion } from './orb-founder-company'
+import { answerPilotQuestion, matchesPilotQuestion } from './orb-founder-pilot'
 
 export type FounderOrbConfidence = 'high' | 'medium' | 'low'
 
@@ -797,6 +798,11 @@ export function answerFounderQuestion(question: string, context?: FounderOrbCont
     if (evidenceAnswer) return evidenceAnswer
   }
 
+  if (matchesPilotQuestion(q)) {
+    const pilotAnswer = answerPilotQuestion(q)
+    if (pilotAnswer) return pilotAnswer
+  }
+
   if (matches(q, [/chronology/, /dictate/, /safeguarding/, /quality/, /churn/, /customer success/, /growth/])) {
     for (const agent of getAllAgents()) {
       const keywords = agent.id.replace(/-/g, ' ')
@@ -836,7 +842,11 @@ export const FOUNDER_ORB_SUGGESTED_QUESTIONS = [
   'What should I do as CEO today?',
   'What is the current company score?',
   'Which department needs my attention?',
-  'Generate a board report.'
+  'Generate a board report.',
+  'Is ORB ready for closed pilot?',
+  'What pilot feedback do we have?',
+  'What is blocking pilot readiness?',
+  'What helped the child?'
 ] as const
 
 export { isExplicitOperatingLoopRequest }

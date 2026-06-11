@@ -37,6 +37,11 @@ const FOUNDER_PAGES = [
     page: 'app/founder/quality-lab/page.tsx',
     component: 'components/founder/founder-quality-lab-page.tsx'
   },
+  {
+    route: '/founder/orb-pilot',
+    page: 'app/founder/orb-pilot/page.tsx',
+    component: 'components/founder/founder-orb-pilot-page.tsx'
+  },
   { route: '/founder/actions', page: 'app/founder/actions/page.tsx', component: 'components/founder/founder-actions-page.tsx' },
   {
     route: '/founder/approvals',
