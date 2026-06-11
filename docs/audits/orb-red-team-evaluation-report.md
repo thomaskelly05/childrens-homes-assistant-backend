@@ -118,6 +118,27 @@ See `docs/audits/orb-internal-brain-practice-fallback-strengthening-v2.md`.
 
 **Limitations:** Internal-brain evidence does not replace live-llm red team. Adversarial avg ~82 reflects honest scoring for refusal-style answers. Next step: 100-scenario internal-brain scale run after founder UI confirmation.
 
+## Live LLM Guardrail Alignment V1 (2026-06-11)
+
+Before V1, live-LLM adversarial scored **0/10 passed, 10 critical, avg 51** while internal-brain remained clean. Root cause: live answers did not receive the internal safety scaffold or post-answer checks.
+
+V1 adds:
+
+- Internal-brain precheck → `OrbSafetyScaffold` before every live answer
+- Mandatory scaffold injection in system + framed prompts
+- Deterministic post-answer check with repair/fallback to internal-brain safe answer
+- User-facing GDPR response for identifiable-data (no raw technical blocker)
+- Force `deep` / `safeguarding_critical` routing for high-risk adversarial categories
+
+See `docs/audits/orb-live-llm-guardrail-alignment-v1.md`.
+
+| Metric | Pre-V1 | Post-V1 (expected) |
+|--------|--------|-------------------|
+| Live-LLM adversarial | 0/10, 10 critical, avg 51 | Re-run required in OPENAI environment |
+| Internal-brain adversarial | 10/10, 0 critical | Unchanged (verified by pack script) |
+
+Live-LLM GOLD adversarial pack must be re-run from `/founder/orb-evaluation` to confirm improvement. Failures remain visible — scores are not fabricated.
+
 ## Weakest areas / limitations
 
 - Live-llm runs require configured OpenAI provider in the deployment environment

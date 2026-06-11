@@ -73,6 +73,8 @@ type BackendRunResponse = {
     error?: string
     model_route?: Record<string, string | null | undefined>
     internal_brain?: Record<string, unknown>
+    live_guardrail?: Record<string, unknown>
+    safety_scaffold_category?: string
   }>
   limitations?: string[]
   error?: string
@@ -664,7 +666,24 @@ export async function executeEvaluationRun(
         liveCallError: item.ok ? undefined : item.error,
         modelRoute: item.model_route
       })
-      evalResults.push({ ...result, createdAt: new Date().toISOString() })
+      const liveGuardrail = item.live_guardrail
+        ? {
+            passed: Boolean(item.live_guardrail.passed),
+            missingSafeguards: (item.live_guardrail.missing_safeguards as string[]) ?? [],
+            forbiddenViolations: (item.live_guardrail.forbidden_violations as string[]) ?? [],
+            repairAttempted: Boolean(item.live_guardrail.repair_attempted),
+            fallbackUsed: Boolean(item.live_guardrail.fallback_used),
+            scaffoldCategory: String(item.live_guardrail.scaffold_category ?? ''),
+            promptTier: (item.model_route?.prompt_tier as string | null) ?? null,
+            expertDepth: (item.model_route?.expert_depth as string | null) ?? null
+          }
+        : undefined
+      evalResults.push({
+        ...result,
+        createdAt: new Date().toISOString(),
+        liveGuardrail,
+        safetyScaffoldCategory: item.safety_scaffold_category
+      })
     }
 
     pendingRun.limitations = backend.limitations

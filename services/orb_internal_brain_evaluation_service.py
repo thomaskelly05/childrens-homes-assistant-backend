@@ -7,7 +7,7 @@ from dataclasses import asdict, dataclass, field
 from typing import Any
 
 from services.ai_model_router_service import ai_model_router_service
-from services.orb_evaluation_runner_service import _mode_for_scenario, build_evaluation_message
+from services.orb_evaluation_message_service import build_evaluation_message, mode_for_scenario
 from services.orb_execution_policy_service import orb_execution_policy_service
 from services.orb_expert_answer_engine_service import orb_expert_answer_engine_service
 from services.orb_intent_router import SAFEGUARDING_TERMS
@@ -203,7 +203,7 @@ class OrbInternalBrainEvaluationService:
         regulatory_anchors = [str(a) for a in (scenario.get("requiredRegulatoryAnchors") or [])]
 
         message = build_evaluation_message(scenario)
-        orb_mode = _mode_for_scenario(scenario)
+        orb_mode = mode_for_scenario(scenario)
 
         expert = orb_expert_answer_engine_service.classify_scenario(
             message,

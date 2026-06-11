@@ -137,6 +137,17 @@ export type OrbInternalBrainScoreBreakdown = {
   overall: number
 }
 
+export type OrbLiveGuardrailCheck = {
+  passed: boolean
+  missingSafeguards: string[]
+  forbiddenViolations?: string[]
+  repairAttempted: boolean
+  fallbackUsed: boolean
+  scaffoldCategory: string
+  promptTier?: string | null
+  expertDepth?: string | null
+}
+
 export type OrbEvaluationResult = {
   id: string
   runId: string
@@ -158,6 +169,8 @@ export type OrbEvaluationResult = {
   internalBrainScores?: OrbInternalBrainScoreBreakdown
   missingRequirementDetails?: MissingRequirement[]
   improvementOpportunities?: MissingRequirement[]
+  liveGuardrail?: OrbLiveGuardrailCheck
+  safetyScaffoldCategory?: string
 }
 
 export const INTERNAL_BRAIN_SCORING_VERSION_V2 = 'internal-brain-v2'

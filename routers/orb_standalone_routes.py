@@ -120,6 +120,7 @@ def _build_standalone_request_context(
     *,
     timing: OrbChatTimingTracker | None = None,
     route: str = "/orb/standalone/conversation",
+    safety_scaffold: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     if timing:
         timing.mark("context_build_start")
@@ -144,9 +145,29 @@ def _build_standalone_request_context(
     )
     if timing:
         timing.mark("retrieval_complete")
+    from services.orb_safety_scaffold_service import orb_safety_scaffold_service
+
     prompt_tier = retrieval_bundle["prompt_tier"]
     grounding_context = retrieval_bundle["grounding_context"]
     retrieval_preview = retrieval_bundle["source_packs"]
+
+    scaffold_obj = (
+        orb_safety_scaffold_service.build_from_message(user_message, mode=mode)
+        if safety_scaffold is None
+        else None
+    )
+    scaffold = safety_scaffold if safety_scaffold is not None else (scaffold_obj.to_dict() if scaffold_obj else {})
+    if scaffold_obj and orb_safety_scaffold_service.requires_deep_routing(scaffold_obj):
+        prompt_tier = "deep"
+        retrieval_bundle["prompt_tier"] = "deep"
+    elif scaffold.get("guardrail_active") and scaffold.get("risk_level") in ("high", "critical"):
+        prompt_tier = "deep"
+        retrieval_bundle["prompt_tier"] = "deep"
+    expert_depth_override = (
+        "safeguarding_critical"
+        if scaffold.get("guardrail_active") and scaffold.get("risk_level") in ("high", "critical")
+        else None
+    )
 
     standalone_operational_context: dict[str, Any] = {}
     if payload.document_text:
@@ -205,6 +226,9 @@ def _build_standalone_request_context(
         )
     indicare_intelligence = retrieval_bundle.get("indicare_intelligence") or {}
     expert_depth = retrieval_bundle.get("expert_depth") or indicare_intelligence.get("expert_depth")
+    if expert_depth_override:
+        expert_depth = expert_depth_override
+        retrieval_bundle["expert_depth"] = expert_depth_override
     brain_selection_shadow = run_brain_selection_shadow(
         user_message,
         mode=mode,
@@ -213,6 +237,15 @@ def _build_standalone_request_context(
         expert_depth=expert_depth,
         route=route,
     )
+    from services.orb_live_guardrail_service import build_guardrail_prompt_block
+    from services.orb_safety_scaffold_service import OrbSafetyScaffold
+
+    guardrail_block = ""
+    if scaffold.get("guardrail_active"):
+        scaffold_for_prompt = scaffold_obj or OrbSafetyScaffold(
+            **{k: v for k, v in scaffold.items() if k in OrbSafetyScaffold.__dataclass_fields__}
+        )
+        guardrail_block = build_guardrail_prompt_block(scaffold_for_prompt)
     framed_message = _build_framed_message(
         mode=mode,
         user_message=user_message,
@@ -224,6 +257,7 @@ def _build_standalone_request_context(
         project_memory_block=project_memory_block or None,
         expert_depth=expert_depth,
         mandatory_contract_block=brain_convergence.prompt_addendum or None,
+        guardrail_block=guardrail_block or None,
     )
     if timing:
         timing.mark("prompt_build_complete")
@@ -255,6 +289,7 @@ def _build_standalone_request_context(
         "brain_convergence": brain_convergence.to_dict(),
         "execution_policy": execution_policy.to_dict(),
         "user_message": user_message,
+        "safety_scaffold": scaffold,
     }
 
 def _attach_execution_policy_context(
@@ -547,6 +582,7 @@ def _build_framed_message(
     project_memory_block: str | None = None,
     expert_depth: str | None = None,
     mandatory_contract_block: str | None = None,
+    guardrail_block: str | None = None,
 ) -> str:
     resolved_mode = orb_standalone_brain_service.normalise_mode(mode)
     mode_hint = MODE_BEHAVIOUR.get(resolved_mode) or MODE_BEHAVIOUR.get(mode, "")
@@ -572,6 +608,7 @@ def _build_framed_message(
             STANDALONE_ORB_IDENTITY,
             STANDALONE_ORB_BOUNDARIES,
             depth_hint,
+            guardrail_block or "",
             project_memory_block or "",
             grounding_context or "",
             mode_hint,
@@ -602,6 +639,7 @@ def _build_framed_message(
             STANDALONE_ORB_BOUNDARIES,
             STANDALONE_ORB_CITATIONS,
             shared_runtime_block,
+            guardrail_block or "",
             project_memory_block or "",
             grounding_context or "",
             STANDALONE_ORB_TONE,
@@ -610,6 +648,7 @@ def _build_framed_message(
             incident_contract_block,
             mode_hint,
             detail_hint,
+            depth_hint,
             f"Mode: {resolved_mode}",
             f"User message: {user_message}",
         ]
@@ -621,6 +660,7 @@ def _build_framed_message(
         STANDALONE_ORB_BOUNDARIES,
         STANDALONE_ORB_CAPABILITIES,
         shared_runtime_block,
+        guardrail_block or "",
         project_memory_block or "",
         grounding_context or "",
         STANDALONE_ORB_TONE,
@@ -629,6 +669,7 @@ def _build_framed_message(
         incident_contract_block,
         mode_hint,
         detail_hint,
+        depth_hint,
         f"Mode: {resolved_mode}",
         f"User message: {user_message}",
     ]

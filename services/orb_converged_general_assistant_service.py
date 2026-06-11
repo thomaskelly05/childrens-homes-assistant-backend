@@ -49,6 +49,7 @@ class OrbConvergedGeneralAssistantService:
         user: dict[str, Any] | None = None,
         brain_convergence: dict[str, Any] | None = None,
         execution_policy: dict[str, Any] | None = None,
+        safety_scaffold: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         user_message = _safe_text(raw_user_message) or _safe_text(message)
         supplied_context_types: list[str] = []
@@ -121,6 +122,7 @@ class OrbConvergedGeneralAssistantService:
             user=user,
             brain_convergence=brain_convergence,
             execution_policy=execution_policy,
+            safety_scaffold=safety_scaffold,
         )
 
         answer_text = _safe_text(result.get("answer"))
