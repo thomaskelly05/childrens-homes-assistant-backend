@@ -7,6 +7,8 @@ import {
   OrbComposerPlusMenu,
   type OrbComposerPlusAction
 } from '@/components/orb-standalone/orb-composer-plus-menu'
+import { OrbPrivacyInputWarning } from '@/components/orb/privacy/orb-privacy-input-warning'
+import { OrbPrivacyNotice } from '@/components/orb/privacy/orb-privacy-notice'
 import { OrbComposerCopyright } from '@/components/orb-standalone/orb-composer-copyright'
 import { OrbFooter } from '@/components/orb-standalone/orb-footer'
 import { logTapTarget } from '@/lib/interaction/mobile-tap-debug'
@@ -524,6 +526,11 @@ export function OrbStandaloneComposer({
             </div>
           ) : null}
         </form>
+
+        <div className="mt-2 space-y-2 px-2">
+          <OrbPrivacyInputWarning text={value} />
+          <OrbPrivacyNotice surface="chat" />
+        </div>
 
         {!compactResidential ? (
           <OrbFooter

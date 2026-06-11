@@ -522,6 +522,18 @@ export function OrbStandaloneSettingsPanel({
                 hint="Chats move to General"
                 onClick={onClearProjects}
               />
+              <div className="rounded-xl border border-[var(--orb-line)] bg-[var(--orb-surface)] px-3 py-2.5" data-orb-settings-privacy-link>
+                <a
+                  href="/orb/privacy"
+                  className="text-xs font-semibold text-[var(--orb-primary,#1677ff)] hover:underline"
+                  data-orb-settings-privacy-page-link
+                >
+                  ORB Privacy &amp; Data Handling
+                </a>
+                <p className="mt-1 text-[11px] leading-5 text-[var(--orb-muted)]">
+                  Green / Amber / Red guidance, retention status and privacy requests.
+                </p>
+              </div>
               <div className="rounded-xl border border-[var(--orb-line)] bg-[var(--orb-surface)] px-3 py-2.5" data-orb-settings-privacy>
                 <p className="flex items-center gap-2 text-[11px] font-medium text-[var(--orb-foreground)]">
                   <Shield className="h-3.5 w-3.5 shrink-0" aria-hidden />

@@ -58,7 +58,9 @@ export function isOrbPublicAuthPath(pathname: string): boolean {
     pathname === '/orb/access' ||
     pathname.startsWith('/orb/access/') ||
     pathname === '/orb/onboarding' ||
-    pathname.startsWith('/orb/onboarding/')
+    pathname.startsWith('/orb/onboarding/') ||
+    pathname === '/orb/privacy' ||
+    pathname === '/orb/privacy/'
   )
 }
 

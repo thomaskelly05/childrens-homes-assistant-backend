@@ -2,13 +2,13 @@
 
 import { Shield } from 'lucide-react'
 
-import {
-  ORB_WRITE_PRIVACY_NOTICE,
-  ORB_WRITE_SAFETY_COPY
-} from '@/lib/orb/write/orb-write-types'
+import { OrbPrivacyClassificationLink } from '@/components/orb/privacy/orb-privacy-classification-link'
+import { getOrbDataClassificationNotice } from '@/lib/orb/privacy/orb-data-classification'
+import { ORB_WRITE_SAFETY_COPY } from '@/lib/orb/write/orb-write-types'
 
 const TRUST_STRIP =
   'Session-only transcript · No child profile stored · Adult review required'
+const DICTATE_NOTICE = getOrbDataClassificationNotice('dictate')
 
 export function OrbDictatePrivacyStrip() {
   return (
@@ -27,10 +27,17 @@ export function OrbDictatePrivacyStrip() {
             className="mt-2 space-y-1 rounded-md border border-[var(--orb-line)]/30 bg-[var(--orb-surface-elevated)]/80 p-2.5 text-[10px] leading-relaxed text-[var(--orb-muted)]"
             data-orb-dictate-privacy-banner
           >
-            <p data-orb-dictate-privacy-notice>{ORB_WRITE_PRIVACY_NOTICE}</p>
+            <p data-orb-dictate-privacy-notice>{DICTATE_NOTICE}</p>
             <p data-orb-dictate-safety-review>{ORB_WRITE_SAFETY_COPY.review}</p>
             <p data-orb-dictate-safety-judgement>{ORB_WRITE_SAFETY_COPY.judgement}</p>
             <p data-orb-dictate-safety-responsibility>{ORB_WRITE_SAFETY_COPY.responsibility}</p>
+            <p className="pt-1">
+              <OrbPrivacyClassificationLink />
+              {' · '}
+              <a href="/orb/privacy" className="font-medium text-[var(--orb-primary)] hover:underline" data-orb-dictate-privacy-page-link>
+                Full privacy notice
+              </a>
+            </p>
           </div>
         </details>
       </div>

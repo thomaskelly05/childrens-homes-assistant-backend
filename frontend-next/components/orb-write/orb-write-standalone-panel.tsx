@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { FileEdit, PanelLeft, PanelRight, Sparkles } from 'lucide-react'
 
+import { OrbPrivacyNotice } from '@/components/orb/privacy/orb-privacy-notice'
 import { OrbAppModal } from '@/components/orb-standalone/orb-app-modal'
 import { OrbDictateBrainPanel } from '@/components/orb/dictate/OrbDictateBrainPanel'
 import { OrbWriteAiPanel } from '@/components/orb-write/orb-write-ai-panel'
@@ -573,6 +574,7 @@ export function OrbWriteStandalonePanel({
               <span>{doc.is_finalised ? 'Approved' : 'Draft'}</span>
               <span>{lastEdited ? `Last edited ${lastEdited}` : null}</span>
             </footer>
+            <OrbPrivacyNotice surface="write" className="shrink-0" />
             <p className="shrink-0 text-[10px] text-[var(--orb-muted)]">{ORB_WRITE_SAFETY_COPY.responsibility}</p>
             {statusMessage ? (
               <p className="text-xs text-[var(--orb-primary)]" role="status">
