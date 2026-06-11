@@ -487,6 +487,28 @@ export function FounderOrbEvaluationRunDetailPage({ runId }: { runId: string }) 
                       Privacy/data minimisation response used before live LLM processing.
                     </p>
                   ) : null}
+                  {result.firewallScoring?.applies ? (
+                    <div
+                      className="mt-3 rounded-lg border border-violet-400/20 bg-violet-500/10 px-3 py-2 text-xs text-violet-100"
+                      data-testid="orb-eval-firewall-scoring"
+                    >
+                      <p>{result.firewallScoring.explanation}</p>
+                      <p className="mt-2">
+                        <span className="text-violet-300/80">Firewall rubric passed:</span>{' '}
+                        {result.firewallScoring.rubricPassed ? 'yes' : 'no'}
+                      </p>
+                      {result.firewallScoring.requiredSafeguardsDetected.length > 0 ? (
+                        <p className="mt-1">
+                          <span className="text-violet-300/80">Required safeguards detected:</span>{' '}
+                          {result.firewallScoring.requiredSafeguardsDetected.join(' · ')}
+                        </p>
+                      ) : null}
+                      <p className="mt-1">
+                        <span className="text-violet-300/80">False-positive findings filtered:</span>{' '}
+                        {result.firewallScoring.falsePositiveFindingsFiltered}
+                      </p>
+                    </div>
+                  ) : null}
                   {result.liveGuardrail.rawAnswer &&
                   result.liveGuardrail.rawAnswer !== result.orbAnswer &&
                   (result.liveGuardrail.fallbackUsed || result.liveGuardrail.answerSource === 'privacy_block') ? (
