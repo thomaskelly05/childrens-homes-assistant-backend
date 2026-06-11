@@ -1,7 +1,10 @@
 import { addBuildBrief } from '@/lib/founder/build-briefs/build-brief-store'
 import { addQualityProposal } from '@/lib/founder/quality-lab/quality-proposal-store'
 import { FounderPersistenceApiError, founderPost } from '@/lib/founder/api/founder-api-client'
-import { postEvaluationRun } from '@/lib/orb/evaluation/orb-evaluation-client'
+import {
+  isEvaluationCsrfError,
+  postEvaluationRun
+} from '@/lib/orb/evaluation/orb-evaluation-client'
 
 import type {
   OrbEvaluationFixProposal,
@@ -29,6 +32,7 @@ import {
   getLatestInternalBrainHighRiskRun,
   getLatestInternalBrainRun,
   getLatestLiveLlmRun,
+  removeEvaluationRun,
   setEvaluationScenarios,
   updateEvaluationRun
 } from './orb-evaluation-store'
@@ -191,6 +195,13 @@ export async function executeEvaluationRun(options: EvaluationRunOptions = {}): 
 
   const evalResults: OrbEvaluationResult[] = []
 
+  const abortPendingRun = (error: unknown): never => {
+    if (pendingRun.status === 'running') {
+      removeEvaluationRun(runId)
+    }
+    throw error
+  }
+
   if (mode === 'template') {
     for (const scenario of scenarios) {
       const answer = buildTemplateAnswer(scenario)
@@ -203,7 +214,15 @@ export async function executeEvaluationRun(options: EvaluationRunOptions = {}): 
       evalResults.push({ ...result, createdAt: new Date().toISOString() })
     }
   } else if (mode === 'internal-brain') {
-    const backend = await callBackendRun(scenarios, options)
+    let backend: BackendRunResponse
+    try {
+      backend = await callBackendRun(scenarios, options)
+    } catch (error) {
+      if (isEvaluationCsrfError(error)) {
+        abortPendingRun(error)
+      }
+      throw error
+    }
 
     if (backend.error && backend.scenario_results.length === 0) {
       const failed: OrbEvaluationRun = {
@@ -284,7 +303,15 @@ export async function executeEvaluationRun(options: EvaluationRunOptions = {}): 
     ]
     pendingRun.liveLlmAvailable = backend.live_llm_available
   } else {
-    const backend = await callBackendRun(scenarios, options)
+    let backend: BackendRunResponse
+    try {
+      backend = await callBackendRun(scenarios, options)
+    } catch (error) {
+      if (isEvaluationCsrfError(error)) {
+        abortPendingRun(error)
+      }
+      throw error
+    }
 
     if (backend.error && backend.scenario_count === 0) {
       const failed: OrbEvaluationRun = {

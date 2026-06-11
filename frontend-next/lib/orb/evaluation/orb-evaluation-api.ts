@@ -13,7 +13,49 @@ import type { OrbEvaluationRun } from './orb-evaluation-types'
 const BACKEND_PREFIX = '/orb/admin/evaluation'
 const PERSISTENCE_RUNS = '/founder-os/persistence/orb-evaluation-runs'
 
+const EVALUATION_CSRF_REFRESH_MESSAGE =
+  'Session security check failed. Please refresh, sign in again, and retry.'
+
 type UpstreamJson = Record<string, unknown> & { success?: boolean; data?: unknown }
+
+type UpstreamFailure = { ok: false; status: number; detail: string; code?: string }
+
+function parseUpstreamFailure(status: number, bodyText: string): UpstreamFailure {
+  const trimmed = bodyText.trim()
+  try {
+    const parsed = JSON.parse(trimmed) as Record<string, unknown>
+    if (parsed.detail === 'csrf_failed') {
+      return {
+        ok: false,
+        status: 403,
+        detail:
+          typeof parsed.message === 'string' && parsed.message.trim()
+            ? parsed.message
+            : EVALUATION_CSRF_REFRESH_MESSAGE,
+        code: 'csrf_failed'
+      }
+    }
+    const message =
+      typeof parsed.message === 'string'
+        ? parsed.message
+        : typeof parsed.detail === 'string'
+          ? parsed.detail
+          : typeof parsed.error === 'string'
+            ? parsed.error
+            : trimmed
+    return {
+      ok: false,
+      status: status >= 500 ? 503 : status,
+      detail: message.slice(0, 240) || 'ORB Evaluation upstream unavailable'
+    }
+  } catch {
+    return {
+      ok: false,
+      status: status >= 500 ? 503 : status,
+      detail: trimmed.slice(0, 240) || 'ORB Evaluation upstream unavailable'
+    }
+  }
+}
 
 function unwrapData(payload: unknown): unknown {
   if (payload && typeof payload === 'object' && 'data' in payload) {
@@ -46,7 +88,7 @@ async function upstreamJson(
   cookieHeader: string,
   backendPath: string,
   init?: RequestInit
-): Promise<{ ok: true; status: number; payload: unknown } | { ok: false; status: number; detail: string }> {
+): Promise<{ ok: true; status: number; payload: unknown } | UpstreamFailure> {
   const backendOrigin = getInternalBackendOrigin()
   const upstream = await fetch(`${backendOrigin}${backendPath}`, {
     ...init,
@@ -56,11 +98,7 @@ async function upstreamJson(
 
   if (!upstream.ok) {
     const detail = await upstream.text().catch(() => 'ORB Evaluation upstream unavailable')
-    return {
-      ok: false,
-      status: upstream.status >= 500 ? 503 : upstream.status,
-      detail: detail.slice(0, 240) || 'ORB Evaluation upstream unavailable'
-    }
+    return parseUpstreamFailure(upstream.status, detail)
   }
 
   const payload = await upstream.json().catch(() => ({}))
@@ -87,7 +125,15 @@ async function proxyEvaluation(
     })
 
     if (!result.ok) {
-      return NextResponse.json({ error: result.detail }, { status: result.status })
+      return NextResponse.json(
+        {
+          error: result.detail,
+          detail: result.code,
+          message: result.detail,
+          code: result.code
+        },
+        { status: result.status }
+      )
     }
 
     const data = unwrapData(result.payload)
