@@ -14,6 +14,7 @@ const FOUNDER_PAGES = [
   { route: '/founder', page: 'app/founder/page.tsx', component: 'components/founder/founder-dashboard-page.tsx' },
   { route: '/founder/orb', page: 'app/founder/orb/page.tsx', component: 'components/founder/orb-founder/founder-orb-page.tsx' },
   { route: '/founder/team', page: 'app/founder/team/page.tsx', component: 'components/founder/founder-team-page.tsx' },
+  { route: '/founder/agents', page: 'app/founder/agents/page.tsx', component: 'components/founder/founder-agents-page.tsx' },
   {
     route: '/founder/operating-loop',
     page: 'app/founder/operating-loop/page.tsx',

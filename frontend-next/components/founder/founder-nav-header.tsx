@@ -29,6 +29,7 @@ const NAV_LINKS: NavLink[] = [
   { href: '/founder/intelligence', label: 'Intelligence', icon: Sparkles },
   { href: '/founder/company', label: 'Company', icon: Building2 },
   { href: '/founder/team', label: 'Founder Team', icon: Users },
+  { href: '/founder/agents', label: 'Agents', icon: Bot },
   { href: '/founder/operating-loop', label: 'Operating Loop', icon: RefreshCw },
   { href: '/founder/content', label: 'Content', icon: FileText },
   { href: '/founder/approvals', label: 'Approvals', icon: CheckSquare },

@@ -13,7 +13,8 @@ const testFiles = [
   join(root, 'lib/orb/quality-agent/orb-quality-build-brief-generator.test.ts'),
   join(root, 'lib/orb/quality-agent/orb-quality-pr-workflow.test.ts'),
   join(root, 'lib/orb/quality-agent/orb-quality-agent-service.test.ts'),
-  join(root, 'components/founder/founder-orb-quality-agent-page.test.ts')
+  join(root, 'components/founder/founder-orb-quality-agent-page.test.ts'),
+  join(root, 'lib/founder/agents/autonomous/founder-agents.test.ts')
 ]
 
 const result = spawnSync(
