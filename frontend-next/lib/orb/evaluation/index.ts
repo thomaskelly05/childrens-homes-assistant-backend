@@ -3,6 +3,7 @@ export {
   FIREWALL_ADVERSARIAL_SCORER,
   GENERIC_LIVE_LLM_SCORER,
   LIVE_LLM_FIREWALL_SCORING_VERSION,
+  LIVE_LLM_GUARDED_STANDARD_SCORING_VERSION,
   LIVE_LLM_GUARDED_V3_SCORING_VERSION,
   LIVE_LLM_LEGACY_SCORING_VERSION,
   formatLiveLlmScoringVersionForDisplay,
@@ -21,6 +22,7 @@ export * from './orb-evaluation-scoring-engine'
 export * from './orb-internal-brain-scoring-engine'
 export * from './orb-internal-brain-missing-requirements'
 export * from './orb-internal-brain-severity'
+export * from './orb-evaluation-infrastructure-errors'
 export * from './orb-scenario-generator'
 export * from './red-team-agents'
 export {

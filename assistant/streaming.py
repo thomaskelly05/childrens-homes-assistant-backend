@@ -87,9 +87,9 @@ def run_chat_stream(
         return
 
     try:
-        from openai import OpenAI
+        from services.openai_header_sanitisation import create_sync_openai_client
 
-        client = OpenAI(api_key=api_key)
+        client = create_sync_openai_client(api_key=api_key)
         stream = client.chat.completions.create(
             model=model,
             messages=formatted_messages,

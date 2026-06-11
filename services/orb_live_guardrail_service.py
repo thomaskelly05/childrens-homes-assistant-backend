@@ -11,7 +11,9 @@ from services.orb_safety_scaffold_service import OrbSafetyScaffold
 
 logger = logging.getLogger("indicare.orb_live_guardrail")
 
-LIVE_LLM_GUARDED_SCORING_VERSION = "live-llm-guarded-v4-firewall"
+LIVE_LLM_GUARDED_FIREWALL_SCORING_VERSION = "live-llm-guarded-v4-firewall"
+LIVE_LLM_GUARDED_STANDARD_SCORING_VERSION = "live-llm-guarded-standard"
+LIVE_LLM_GUARDED_SCORING_VERSION = LIVE_LLM_GUARDED_FIREWALL_SCORING_VERSION
 
 IDENTIFIABLE_DATA_USER_RESPONSE = (
     "I cannot store identifiable child information such as DOB, NHS number, address or postcode here. "
@@ -913,5 +915,7 @@ orb_live_guardrail_service = type(
         "is_bare_refusal": staticmethod(is_bare_refusal),
         "is_raw_privacy_blocker": staticmethod(is_raw_privacy_blocker),
         "LIVE_LLM_GUARDED_SCORING_VERSION": LIVE_LLM_GUARDED_SCORING_VERSION,
+        "LIVE_LLM_GUARDED_FIREWALL_SCORING_VERSION": LIVE_LLM_GUARDED_FIREWALL_SCORING_VERSION,
+        "LIVE_LLM_GUARDED_STANDARD_SCORING_VERSION": LIVE_LLM_GUARDED_STANDARD_SCORING_VERSION,
     },
 )()

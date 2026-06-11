@@ -177,6 +177,7 @@ export type OrbLiveGuardrailCheck = {
 }
 
 export const LIVE_LLM_GUARDED_SCORING_VERSION_V3 = 'live-llm-guarded-v3'
+export const LIVE_LLM_GUARDED_SCORING_VERSION_STANDARD = 'live-llm-guarded-standard'
 export const LIVE_LLM_GUARDED_SCORING_VERSION_V4 = 'live-llm-guarded-v4-firewall'
 
 export type OrbEvaluationResult = {
@@ -194,6 +195,8 @@ export type OrbEvaluationResult = {
   createdAt: string
   answerSource?: 'template' | 'internal-brain' | 'live-llm' | 'live-orb'
   liveCallError?: string
+  infrastructureError?: boolean
+  infrastructureErrorCode?: string
   modelRoute?: Record<string, string | null | undefined>
   retestOfResultId?: string
   internalBrain?: OrbInternalBrainEvaluationResult
@@ -226,6 +229,7 @@ export type OrbEvaluationRun = {
   completedAt?: string
   createdBy: string
   summary: string
+  infrastructureErrorCode?: string
   title?: string
   packType?: 'standard' | 'high-risk' | 'adversarial' | 'custom' | 'retest'
   results?: OrbEvaluationResult[]

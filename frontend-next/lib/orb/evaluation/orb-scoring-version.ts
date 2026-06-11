@@ -9,6 +9,7 @@ import type {
 export const INTERNAL_BRAIN_SCORING_VERSION = 'internal-brain-v2'
 export const LIVE_LLM_LEGACY_SCORING_VERSION = 'legacy live/template'
 export const LIVE_LLM_GUARDED_V3_SCORING_VERSION = 'live-llm-guarded-v3'
+export const LIVE_LLM_GUARDED_STANDARD_SCORING_VERSION = 'live-llm-guarded-standard'
 export const LIVE_LLM_FIREWALL_SCORING_VERSION = 'live-llm-guarded-v4-firewall'
 
 export const FIREWALL_ADVERSARIAL_SCORER = 'FirewallAdversarialRubric'
@@ -74,7 +75,7 @@ export function resolveLiveLlmResultScoringVersion(input: {
     return LIVE_LLM_FIREWALL_SCORING_VERSION
   }
   if (input.answerSource === 'raw' || input.answerSource === 'repaired' || input.answerSource === 'fallback') {
-    return LIVE_LLM_GUARDED_V3_SCORING_VERSION
+    return LIVE_LLM_GUARDED_STANDARD_SCORING_VERSION
   }
   return undefined
 }
@@ -118,6 +119,9 @@ export function resolveLiveLlmRunScoringVersion(
     if (allFirewall) return LIVE_LLM_FIREWALL_SCORING_VERSION
   }
 
+  if (resultVersions.includes(LIVE_LLM_GUARDED_STANDARD_SCORING_VERSION)) {
+    return LIVE_LLM_GUARDED_STANDARD_SCORING_VERSION
+  }
   if (resultVersions.includes(LIVE_LLM_GUARDED_V3_SCORING_VERSION)) {
     return LIVE_LLM_GUARDED_V3_SCORING_VERSION
   }
@@ -154,6 +158,9 @@ export function formatLiveLlmScoringVersionForDisplay(
 
   const persisted = run.scoringVersion
   if (persisted === LIVE_LLM_FIREWALL_SCORING_VERSION) return LIVE_LLM_FIREWALL_SCORING_VERSION
+  if (persisted === LIVE_LLM_GUARDED_STANDARD_SCORING_VERSION) {
+    return LIVE_LLM_GUARDED_STANDARD_SCORING_VERSION
+  }
   if (persisted === LIVE_LLM_GUARDED_V3_SCORING_VERSION) return LIVE_LLM_GUARDED_V3_SCORING_VERSION
   if (persisted === LIVE_LLM_LEGACY_SCORING_VERSION) return LIVE_LLM_LEGACY_SCORING_VERSION
   if (persisted) return persisted
@@ -185,6 +192,9 @@ export function formatResultScoringVersionForDisplay(
 ): string {
   const persisted = result.scoringVersion
   if (persisted === LIVE_LLM_FIREWALL_SCORING_VERSION) return LIVE_LLM_FIREWALL_SCORING_VERSION
+  if (persisted === LIVE_LLM_GUARDED_STANDARD_SCORING_VERSION) {
+    return LIVE_LLM_GUARDED_STANDARD_SCORING_VERSION
+  }
   if (persisted === LIVE_LLM_GUARDED_V3_SCORING_VERSION) return LIVE_LLM_GUARDED_V3_SCORING_VERSION
   if (persisted) return persisted
 

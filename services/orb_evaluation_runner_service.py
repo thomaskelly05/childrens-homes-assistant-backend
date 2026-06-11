@@ -18,10 +18,18 @@ from services.orb_adversarial_safety_firewall import (
     should_firewall_before_llm,
 )
 from services.orb_live_guardrail_service import (
-    LIVE_LLM_GUARDED_SCORING_VERSION,
+    LIVE_LLM_GUARDED_FIREWALL_SCORING_VERSION,
+    LIVE_LLM_GUARDED_STANDARD_SCORING_VERSION,
     enforce_live_guardrails,
     identifiable_data_response,
     should_skip_identifier_validation,
+)
+from services.openai_header_sanitisation import (
+    infrastructure_error_message,
+    is_openai_headers_too_large_error,
+    log_orb_openai_header_too_large,
+    openai_header_error_metadata,
+    reset_cached_openai_clients,
 )
 from services.orb_evaluation_message_service import build_evaluation_message, mode_for_scenario
 from services.orb_quality_lab_live_runner_service import (
@@ -68,11 +76,17 @@ def _log_scoring_version_trace(
         if answer_source in {"safety_firewall", "privacy_block"} or safety_firewall_used
         else "GenericLiveLlmRubric"
     )
+    firewall_scored = answer_source in {"safety_firewall", "privacy_block"} or safety_firewall_used
+    requested_scoring_version = (
+        LIVE_LLM_GUARDED_FIREWALL_SCORING_VERSION
+        if firewall_scored
+        else LIVE_LLM_GUARDED_STANDARD_SCORING_VERSION
+    )
     scoring_version = assigned_scoring_version
-    if scoring_version is None and (
-        answer_source in {"safety_firewall", "privacy_block"} or safety_firewall_used
-    ):
-        scoring_version = LIVE_LLM_GUARDED_SCORING_VERSION
+    if scoring_version is None and firewall_scored:
+        scoring_version = LIVE_LLM_GUARDED_FIREWALL_SCORING_VERSION
+    elif scoring_version is None and answer_source in {"raw", "repaired", "fallback"}:
+        scoring_version = LIVE_LLM_GUARDED_STANDARD_SCORING_VERSION
     logger.info(
         "orb_eval_scoring_version_trace run_id=n/a mode=%s pack=scenario scenario_category=%s "
         "scenario_id=%s requested_scoring_version=%s assigned_scoring_version=%s "
@@ -81,12 +95,57 @@ def _log_scoring_version_trace(
         mode,
         str(scenario.get("category") or guardrail.get("safety_scaffold_category") or "unknown"),
         scenario_id,
-        LIVE_LLM_GUARDED_SCORING_VERSION,
+        requested_scoring_version,
         scoring_version,
         answer_source or "unknown",
         safety_firewall_used,
         scorer_used,
     )
+
+
+def _resolve_assigned_scoring_version(live_guardrail: dict[str, Any] | None) -> str | None:
+    guardrail = live_guardrail or {}
+    answer_source = str(guardrail.get("answer_source") or "")
+    safety_firewall_used = bool(guardrail.get("safety_firewall_used"))
+    if answer_source in {"safety_firewall", "privacy_block"} or safety_firewall_used:
+        return LIVE_LLM_GUARDED_FIREWALL_SCORING_VERSION
+    if answer_source in {"raw", "repaired", "fallback"}:
+        return LIVE_LLM_GUARDED_STANDARD_SCORING_VERSION
+    return None
+
+
+def _pack_for_scenario(scenario: dict[str, Any]) -> str:
+    category = str(scenario.get("category") or "").lower()
+    domain = str(scenario.get("domain") or "").lower()
+    if domain == "adversarial" or scenario.get("adversarialFlags") or scenario.get("adversarial_flags"):
+        return "adversarial"
+    if str(scenario.get("riskLevel") or scenario.get("risk_level") or "").lower() in {"high", "critical"}:
+        return "high-risk"
+    return "standard"
+
+
+def _infrastructure_failure(
+    *,
+    scenario_id: str,
+    mode: str,
+    error: str,
+    retried: bool,
+    metadata: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "ok": False,
+        "scenario_id": scenario_id,
+        "answer": "",
+        "error": error,
+        "route": "/orb/standalone/conversation",
+        "model_route": None,
+        "retried": retried,
+        "infrastructure_error": True,
+    }
+    if metadata:
+        payload["metadata"] = metadata
+    payload["mode"] = mode
+    return payload
 
 
 class OrbEvaluationRunnerService:
@@ -174,7 +233,7 @@ class OrbEvaluationRunnerService:
                 scenario=scenario,
                 mode=mode_for_scenario(scenario),
                 live_guardrail=live_guardrail,
-                assigned_scoring_version=LIVE_LLM_GUARDED_SCORING_VERSION,
+                assigned_scoring_version=LIVE_LLM_GUARDED_FIREWALL_SCORING_VERSION,
             )
             return {
                 "ok": True,
@@ -210,6 +269,9 @@ class OrbEvaluationRunnerService:
 
         last_error: str | None = None
         retried = False
+        header_retry_done = False
+        openai_header_retry = False
+        pack = _pack_for_scenario(scenario)
         for attempt in range(2):
             if attempt == 1:
                 retried = True
@@ -227,12 +289,18 @@ class OrbEvaluationRunnerService:
                     result["retried"] = retried
                     result["scenario_id"] = scenario_id
                     result["safety_scaffold_category"] = safety_scaffold.detected_category
+                    if openai_header_retry:
+                        metadata = result.get("metadata")
+                        if not isinstance(metadata, dict):
+                            metadata = {}
+                        metadata["openai_retry_after_header_sanitise"] = True
+                        result["metadata"] = metadata
+                    live_guardrail = result.get("live_guardrail") if isinstance(result.get("live_guardrail"), dict) else None
                     _log_scoring_version_trace(
                         scenario=scenario,
                         mode=mode,
-                        live_guardrail=result.get("live_guardrail")
-                        if isinstance(result.get("live_guardrail"), dict)
-                        else None,
+                        live_guardrail=live_guardrail,
+                        assigned_scoring_version=_resolve_assigned_scoring_version(live_guardrail),
                     )
                     return result
                 last_error = str(result.get("error") or "Unknown ORB brain failure")
@@ -247,6 +315,30 @@ class OrbEvaluationRunnerService:
                 if attempt == 0:
                     continue
             except Exception as exc:
+                if is_openai_headers_too_large_error(exc):
+                    header_meta = openai_header_error_metadata(exc)
+                    log_orb_openai_header_too_large(
+                        scenario_id=scenario_id,
+                        scenario_category=str(scenario.get("category") or "unknown"),
+                        pack=pack,
+                        mode=mode,
+                        header_count=header_meta.get("header_count"),
+                        safe_header_total_size=header_meta.get("safe_header_total_size"),
+                    )
+                    if not header_retry_done:
+                        header_retry_done = True
+                        openai_header_retry = True
+                        reset_cached_openai_clients()
+                        await asyncio.sleep(0.5)
+                        continue
+                    return _infrastructure_failure(
+                        scenario_id=scenario_id,
+                        mode=mode,
+                        error=infrastructure_error_message(),
+                        retried=retried,
+                        metadata=header_meta,
+                    )
+
                 last_error = f"{type(exc).__name__}: {exc}"
                 logger.warning(
                     "orb_evaluation_runner failed scenario=%s attempt=%s error=%s",

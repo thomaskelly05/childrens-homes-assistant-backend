@@ -60,6 +60,7 @@ import {
   resolveLiveLlmRunScoringVersion,
   traceOrbEvalScoringVersion
 } from './orb-scoring-version'
+import { EvaluationInfrastructureError } from './orb-evaluation-infrastructure-errors'
 import { mergeRedTeamFindings, runRedTeamAgents } from './red-team-agents'
 
 type BackendRunResponse = {
@@ -80,6 +81,8 @@ type BackendRunResponse = {
     internal_brain?: Record<string, unknown>
     live_guardrail?: Record<string, unknown>
     safety_scaffold_category?: string
+    infrastructure_error?: boolean
+    metadata?: Record<string, unknown>
   }>
   limitations?: string[]
   error?: string
@@ -648,6 +651,18 @@ export async function executeEvaluationRun(
       if (isEvaluationCsrfError(error)) {
         abortPendingRun(error)
       }
+      if (error instanceof EvaluationInfrastructureError) {
+        const failed: OrbEvaluationRun = {
+          ...pendingRun,
+          status: 'failed',
+          completedAt: new Date().toISOString(),
+          summary: error.message,
+          limitations: [],
+          infrastructureErrorCode: error.code
+        }
+        updateEvaluationRun(runId, failed)
+        throw new EvaluationRunError(error.message, failed)
+      }
       throw error
     }
 
@@ -681,6 +696,7 @@ export async function executeEvaluationRun(
         | 'safety_firewall'
         | undefined
       const safetyFirewallUsed = Boolean(item.live_guardrail?.safety_firewall_used)
+      const infrastructureError = Boolean(item.infrastructure_error)
       const { result: scored } = scoreOrbEvaluationAnswer({
         scenario,
         answer: scoringAnswer,
@@ -693,6 +709,9 @@ export async function executeEvaluationRun(
         safetyScaffoldCategory: item.safety_scaffold_category,
         safetyFirewallUsed
       })
+      if (infrastructureError) {
+        scored.infrastructureError = true
+      }
       const result = scored
       traceOrbEvalScoringVersion({
         runId,

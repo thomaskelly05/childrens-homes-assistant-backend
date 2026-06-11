@@ -7,9 +7,8 @@ import os
 from dataclasses import dataclass, field
 from typing import Any, AsyncIterator, Protocol
 
-from openai import AsyncOpenAI
-
 from schemas.data_protection import DataClassification
+from services.openai_header_sanitisation import create_async_openai_client
 from services.ai_external_call_governance import (
     evaluate_external_call,
     governance_context_from_metadata,
@@ -228,16 +227,12 @@ class OpenAIProvider:
         if not config.api_key:
             raise RuntimeError("OPENAI_API_KEY is missing")
 
-        client_kwargs: dict[str, Any] = {"api_key": config.api_key}
-
-        if config.base_url:
-            client_kwargs["base_url"] = config.base_url
-        if config.organisation:
-            client_kwargs["organization"] = config.organisation
-        if config.project:
-            client_kwargs["project"] = config.project
-
-        self._client = AsyncOpenAI(**client_kwargs)
+        self._client = create_async_openai_client(
+            api_key=config.api_key,
+            base_url=config.base_url,
+            organisation=config.organisation,
+            project=config.project,
+        )
         self._provider_name = "openai"
 
     async def _stream_text_chat(

@@ -13,6 +13,7 @@ from schemas.ai_models import (
     AiUsageEstimate,
 )
 from services.ai_providers.base import AiProviderBase
+from services.openai_header_sanitisation import create_async_openai_client
 
 logger = logging.getLogger("indicare.ai_provider.openai")
 
@@ -55,9 +56,7 @@ class OpenAiProvider(AiProviderBase):
         timeout = request.timeout_seconds or _default_timeout()
 
         try:
-            from openai import AsyncOpenAI
-
-            client = AsyncOpenAI(api_key=api_key, timeout=timeout)
+            client = create_async_openai_client(api_key=api_key, timeout=timeout)
             messages = self._build_messages(request)
             response = await client.chat.completions.create(
                 model=request.model,
@@ -124,9 +123,7 @@ class OpenAiProvider(AiProviderBase):
 
         timeout = request.timeout_seconds or _default_timeout()
         try:
-            from openai import AsyncOpenAI
-
-            client = AsyncOpenAI(api_key=api_key, timeout=timeout)
+            client = create_async_openai_client(api_key=api_key, timeout=timeout)
             messages = self._build_messages(request)
             stream = await client.chat.completions.create(
                 model=request.model,

@@ -446,7 +446,31 @@ class OrbEvaluationPlatformService:
               error="Live LLM unavailable — OPENAI_API_KEY not configured.",
           )
 
-      live_result = _run_coro_sync(orb_evaluation_runner_service.run_scenario(scenario))
+      try:
+          live_result = _run_coro_sync(orb_evaluation_runner_service.run_scenario(scenario))
+      except Exception as exc:  # noqa: BLE001 — keep pack running with controlled infrastructure failure
+          from services.openai_header_sanitisation import (
+              infrastructure_error_message,
+              is_openai_headers_too_large_error,
+          )
+
+          if is_openai_headers_too_large_error(exc):
+              live_result = {
+                  "ok": False,
+                  "answer": "",
+                  "error": infrastructure_error_message(),
+                  "infrastructure_error": True,
+                  "retried": False,
+              }
+          else:
+              live_result = {
+                  "ok": False,
+                  "answer": "",
+                  "error": f"{type(exc).__name__}: {str(exc)[:200]}",
+                  "retried": False,
+              }
+
+      infrastructure_error = bool(live_result.get("infrastructure_error"))
       return OrbEvaluationScenarioResult(
           scenario_id=scenario_id,
           question=question,
@@ -457,6 +481,8 @@ class OrbEvaluationPlatformService:
           retried=bool(live_result.get("retried")),
           live_guardrail=live_result.get("live_guardrail"),
           safety_scaffold_category=live_result.get("safety_scaffold_category"),
+          infrastructure_error=infrastructure_error,
+          metadata=live_result.get("metadata") if isinstance(live_result.get("metadata"), dict) else None,
       )
 
   def _template_answer(self, scenario: dict[str, Any], markers: list[Any]) -> str:
