@@ -1,12 +1,18 @@
 import { addBuildBrief } from '@/lib/founder/build-briefs/build-brief-store'
 import { addQualityProposal } from '@/lib/founder/quality-lab/quality-proposal-store'
-import { FounderPersistenceApiError, founderPost } from '@/lib/founder/api/founder-api-client'
+import { FounderPersistenceApiError } from '@/lib/founder/api/founder-api-client'
 import {
   EvaluationApiError,
   isEvaluationCsrfError,
+  isEvaluationProcessBusyError,
   postEvaluationRun,
   postEvaluationRunProcess
 } from '@/lib/orb/evaluation/orb-evaluation-client'
+import {
+  ACTIVE_INTERNAL_BRAIN_RUN_MESSAGE,
+  isFounderDataSourceBusyError,
+  persistOrbEvaluationRun
+} from '@/lib/orb/evaluation/orb-evaluation-persistence'
 
 import type {
   OrbEvaluationFixProposal,
@@ -32,7 +38,9 @@ import {
   getEvaluationRuns,
   getEvaluationScenarios,
   getActiveInternalBrainRun,
+  getAnyActiveInternalBrainRun,
   getLatestInternalBrainHighRiskRun,
+  recoverStaleInternalBrainRuns,
   getLatestInternalBrainRun,
   getLatestLiveLlmRun,
   removeEvaluationRun,
@@ -305,10 +313,17 @@ export async function executeInternalBrainEvaluationRun(
   options: EvaluationRunOptions = {},
   callbacks: InternalBrainRunCallbacks = {}
 ): Promise<OrbEvaluationRun> {
+  recoverStaleInternalBrainRuns()
+
   const packType = options.packType ?? 'standard'
-  const active = getActiveInternalBrainRun(packType)
-  if (active) {
-    return processInternalBrainRunToCompletion(active.id, callbacks)
+  const activeForPack = getActiveInternalBrainRun(packType)
+  if (activeForPack) {
+    return processInternalBrainRunToCompletion(activeForPack.id, callbacks)
+  }
+
+  const activeAny = getAnyActiveInternalBrainRun()
+  if (activeAny && activeAny.packType !== packType) {
+    throw new EvaluationRunError(ACTIVE_INTERNAL_BRAIN_RUN_MESSAGE, activeAny)
   }
 
   let scenarios = getEvaluationScenarios()
@@ -325,6 +340,13 @@ export async function executeInternalBrainEvaluationRun(
     backend = await callBackendRun(scenarios, { ...options, mode: 'internal-brain' })
   } catch (error) {
     if (isEvaluationCsrfError(error)) throw error
+    if (error instanceof EvaluationApiError && error.status === 409) {
+      throw new EvaluationRunError(
+        error.message.includes('internal-brain') ?
+          error.message
+        : ACTIVE_INTERNAL_BRAIN_RUN_MESSAGE
+      )
+    }
     throw error
   }
 
@@ -392,6 +414,12 @@ export async function processInternalBrainRunToCompletion(
       processResult = await postEvaluationRunProcess(runId)
     } catch (error) {
       if (isEvaluationCsrfError(error)) throw error
+      if (isEvaluationProcessBusyError(error)) {
+        const retryAfterMs =
+          error instanceof EvaluationApiError && error.retryAfterMs ? error.retryAfterMs : 1000
+        await new Promise((resolve) => setTimeout(resolve, retryAfterMs))
+        continue
+      }
       const message =
         error instanceof EvaluationApiError
           ? error.message
@@ -706,22 +734,21 @@ export function createQualityLabCandidateFromResult(resultId: string): string | 
 }
 
 async function persistEvaluationRun(run: OrbEvaluationRun): Promise<void> {
-  const result = await founderPost('/persistence/orb-evaluation-runs', {
-    record: {
-      id: run.id,
-      status: run.status,
-      run
-    },
-    source: 'orb-evaluation-platform'
-  })
-
-  if (!result.ok) {
-    throw new FounderPersistenceApiError(
-      result.status,
-      result.error || 'Evaluation run could not be saved.'
-    )
+  try {
+    await persistOrbEvaluationRun(run)
+  } catch (error) {
+    if (isFounderDataSourceBusyError(error)) throw error
+    if (error instanceof FounderPersistenceApiError) throw error
+    throw error
   }
 }
+
+export { recoverStaleInternalBrainRuns, getAnyActiveInternalBrainRun }
+export {
+  FOUNDER_DATA_SOURCE_BUSY_MESSAGE,
+  isFounderDataSourceBusyError,
+  ACTIVE_INTERNAL_BRAIN_RUN_MESSAGE
+} from '@/lib/orb/evaluation/orb-evaluation-persistence'
 
 export function getEvaluationSummary() {
   const runs = getEvaluationRuns()

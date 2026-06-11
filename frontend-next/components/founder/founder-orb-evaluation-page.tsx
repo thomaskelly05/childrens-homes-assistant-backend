@@ -9,22 +9,27 @@ import { FounderSectionCard } from '@/components/founder/founder-section-card'
 import { getQualityRuns } from '@/lib/founder/quality-lab'
 import { computeOrbLaunchQualityGate } from '@/lib/orb/quality/launch-quality-gate'
 import {
+  ACTIVE_INTERNAL_BRAIN_RUN_MESSAGE,
   assertCompletedEvaluationRunSaved,
   createBuildBriefFromEvaluationResult,
   executeEvaluationRun,
   executeInternalBrainEvaluationRun,
   fetchEvaluationRuns,
   fetchEvaluationScenarios,
+  FOUNDER_DATA_SOURCE_BUSY_MESSAGE,
   generateScenarioPack,
   generateScenarios,
-  getActiveInternalBrainRun,
   getAgentIssueCounts,
+  getAnyActiveInternalBrainRun,
   getEvaluationRuns,
   getEvaluationSummary,
   getFindingsByType,
   hydrateEvaluationStore,
   isEvaluationCsrfError,
-  retestFailedScenarios
+  isFounderDataSourceBusyError,
+  recoverStaleInternalBrainRuns,
+  retestFailedScenarios,
+  STALE_RUN_INTERRUPTED_MESSAGE
 } from '@/lib/orb/evaluation'
 import type { InternalBrainRunProgress } from '@/lib/orb/evaluation/orb-evaluation-run-service'
 import { EVALUATION_CSRF_REFRESH_MESSAGE } from '@/lib/security/csrf-client'
@@ -54,10 +59,17 @@ export function FounderOrbEvaluationPage() {
   const [busy, setBusy] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
   const [runProgress, setRunProgress] = useState<InternalBrainRunProgress | null>(null)
+  const [refreshStatus, setRefreshStatus] = useState<string | null>(null)
+
+  const activeInternalBrainRun = useMemo(
+    () => getAnyActiveInternalBrainRun(),
+    [runs, runProgress]
+  )
 
   const activeInternalBrainHighRisk = useMemo(
-    () => getActiveInternalBrainRun('high-risk'),
-    [runs, runProgress]
+    () =>
+      activeInternalBrainRun?.packType === 'high-risk' ? activeInternalBrainRun : undefined,
+    [activeInternalBrainRun]
   )
 
   const summary = useMemo(() => getEvaluationSummary(), [runs])
@@ -77,6 +89,7 @@ export function FounderOrbEvaluationPage() {
   const loadEvaluationData = useCallback(async (): Promise<OrbEvaluationRun[]> => {
     setLoadState('loading')
     setLoadError(null)
+    setRefreshStatus('Refreshing evaluation runs…')
     try {
       const [runsPayload, scenariosPayload] = await Promise.all([
         fetchEvaluationRuns(),
@@ -86,13 +99,24 @@ export function FounderOrbEvaluationPage() {
         runs: runsPayload.runs,
         scenarios: scenariosPayload.scenarios
       })
+      const recovered = recoverStaleInternalBrainRuns()
+      if (recovered.length > 0) {
+        setMessage(STALE_RUN_INTERRUPTED_MESSAGE)
+      }
       const nextRuns = getEvaluationRuns()
       setRuns(nextRuns)
       setLoadState('ready')
+      setRefreshStatus(`Runs refreshed at ${new Date().toLocaleTimeString('en-GB')}`)
       return nextRuns
-    } catch {
+    } catch (error) {
+      if (isFounderDataSourceBusyError(error)) {
+        setLoadState('ready')
+        setRefreshStatus('Founder data source is busy — showing cached runs')
+        return getEvaluationRuns()
+      }
       setLoadState('error')
       setLoadError(LOAD_ERROR_MESSAGE)
+      setRefreshStatus(null)
       throw new Error(LOAD_ERROR_MESSAGE)
     }
   }, [])
@@ -125,6 +149,14 @@ export function FounderOrbEvaluationPage() {
           setMessage(EVALUATION_CSRF_REFRESH_MESSAGE)
           return
         }
+        if (isFounderDataSourceBusyError(err)) {
+          setMessage(FOUNDER_DATA_SOURCE_BUSY_MESSAGE)
+          return
+        }
+        if (err instanceof Error && err.message.includes(ACTIVE_INTERNAL_BRAIN_RUN_MESSAGE)) {
+          setMessage(ACTIVE_INTERNAL_BRAIN_RUN_MESSAGE)
+          return
+        }
         setMessage(`${label} failed: ${err instanceof Error ? err.message : 'unknown error'}`)
       } finally {
         setBusy(null)
@@ -134,9 +166,71 @@ export function FounderOrbEvaluationPage() {
     [loadEvaluationData]
   )
 
+  const runInternalBrainPack = useCallback(
+    async (
+      label: string,
+      packType: NonNullable<OrbEvaluationRun['packType']>,
+      options?: { limit?: number }
+    ) => {
+      if (activeInternalBrainRun) {
+        setMessage(ACTIVE_INTERNAL_BRAIN_RUN_MESSAGE)
+        return
+      }
+
+      setBusy(label)
+      setMessage(`${label} started`)
+      setRunProgress(null)
+
+      try {
+        generateScenarioPack(packType)
+        const result = await executeInternalBrainEvaluationRun(
+          {
+            title: label,
+            packType,
+            mode: 'internal-brain',
+            limit: options?.limit
+          },
+          {
+            onProgress: (progress) => {
+              setRunProgress(progress)
+              setMessage(`${label} running ${progress.completedCount}/${progress.scenarioCount}`)
+            }
+          }
+        )
+
+        const refreshedRuns = await loadEvaluationData()
+        assertCompletedEvaluationRunSaved(result)
+        const persisted = refreshedRuns.find((item) => item.id === result.id)
+        if (!persisted) {
+          throw new Error('Internal brain run did not complete. No result was saved.')
+        }
+
+        setMessage(`${label} complete`)
+      } catch (err) {
+        if (isEvaluationCsrfError(err)) {
+          setMessage(EVALUATION_CSRF_REFRESH_MESSAGE)
+          return
+        }
+        if (isFounderDataSourceBusyError(err)) {
+          setMessage(FOUNDER_DATA_SOURCE_BUSY_MESSAGE)
+          return
+        }
+        if (err instanceof Error && err.message.includes(ACTIVE_INTERNAL_BRAIN_RUN_MESSAGE)) {
+          setMessage(ACTIVE_INTERNAL_BRAIN_RUN_MESSAGE)
+          return
+        }
+        setMessage(`${label} failed: ${err instanceof Error ? err.message : 'unknown error'}`)
+      } finally {
+        setBusy(null)
+        setRunProgress(null)
+      }
+    },
+    [activeInternalBrainRun, loadEvaluationData]
+  )
+
   const runInternalBrainHighRisk = useCallback(async () => {
-    if (activeInternalBrainHighRisk) {
-      setMessage('Internal-brain high-risk run already in progress.')
+    if (activeInternalBrainRun) {
+      setMessage(ACTIVE_INTERNAL_BRAIN_RUN_MESSAGE)
       return
     }
 
@@ -176,6 +270,10 @@ export function FounderOrbEvaluationPage() {
         setMessage(EVALUATION_CSRF_REFRESH_MESSAGE)
         return
       }
+      if (isFounderDataSourceBusyError(err)) {
+        setMessage(FOUNDER_DATA_SOURCE_BUSY_MESSAGE)
+        return
+      }
       setMessage(
         `Internal brain high-risk test failed: ${err instanceof Error ? err.message : 'unknown error'}`
       )
@@ -183,7 +281,7 @@ export function FounderOrbEvaluationPage() {
       setBusy(null)
       setRunProgress(null)
     }
-  }, [activeInternalBrainHighRisk, loadEvaluationData])
+  }, [activeInternalBrainRun, loadEvaluationData])
 
   const topAgent = Object.entries(agentCounts).sort((a, b) => b[1] - a[1])[0]
 
@@ -204,7 +302,32 @@ export function FounderOrbEvaluationPage() {
       ) : null}
 
       {message ? (
-        <p className="rounded-2xl border border-cyan-400/20 bg-cyan-500/10 px-4 py-3 text-sm text-cyan-100">{message}</p>
+        <p
+          className="rounded-2xl border border-cyan-400/20 bg-cyan-500/10 px-4 py-3 text-sm text-cyan-100"
+          data-testid="orb-eval-status-message"
+        >
+          {message}
+        </p>
+      ) : null}
+
+      {activeInternalBrainRun ? (
+        <div
+          className="rounded-2xl border border-amber-400/25 bg-amber-500/10 px-4 py-3 text-sm text-amber-100"
+          data-testid="orb-eval-active-run-banner"
+        >
+          <p className="font-semibold">{activeInternalBrainRun.title ?? 'Internal-brain evaluation'}</p>
+          <p className="mt-1 text-xs text-amber-200/90">
+            Status: {activeInternalBrainRun.status} · Progress:{' '}
+            {runProgress?.completedCount ?? activeInternalBrainRun.completedCount}/
+            {runProgress?.scenarioCount ?? activeInternalBrainRun.scenarioCount} · Started:{' '}
+            {new Date(activeInternalBrainRun.startedAt).toLocaleString('en-GB')}
+          </p>
+          {refreshStatus ? <p className="mt-1 text-xs text-amber-200/70">{refreshStatus}</p> : null}
+        </div>
+      ) : refreshStatus ? (
+        <p className="text-xs text-slate-500" data-testid="orb-eval-refresh-status">
+          {refreshStatus}
+        </p>
       ) : null}
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -282,7 +405,7 @@ export function FounderOrbEvaluationPage() {
             </button>
             <button
               type="button"
-              disabled={Boolean(busy) || Boolean(activeInternalBrainHighRisk)}
+              disabled={Boolean(busy) || Boolean(activeInternalBrainRun)}
               className="rounded-full border border-cyan-400/30 bg-cyan-500/10 px-4 py-2 text-xs font-bold text-cyan-100 disabled:opacity-50"
               data-testid="orb-eval-internal-brain-high-risk"
               onClick={() => void runInternalBrainHighRisk()}
@@ -292,45 +415,22 @@ export function FounderOrbEvaluationPage() {
             </button>
             <button
               type="button"
-              disabled={Boolean(busy)}
-              className="rounded-full border border-cyan-400/30 bg-cyan-500/10 px-4 py-2 text-xs font-bold text-cyan-100"
+              disabled={Boolean(busy) || Boolean(activeInternalBrainRun)}
+              className="rounded-full border border-cyan-400/30 bg-cyan-500/10 px-4 py-2 text-xs font-bold text-cyan-100 disabled:opacity-50"
               data-testid="orb-eval-internal-brain-adversarial"
               onClick={() =>
-                runAction(
-                  'Internal brain adversarial test',
-                  async () => {
-                    generateScenarioPack('adversarial')
-                    return executeEvaluationRun({
-                      title: 'Internal brain adversarial test',
-                      packType: 'adversarial',
-                      mode: 'internal-brain'
-                    })
-                  },
-                  { requireSavedRun: true }
-                )
+                void runInternalBrainPack('Internal brain adversarial test', 'adversarial')
               }
             >
               Run internal brain adversarial test
             </button>
             <button
               type="button"
-              disabled={Boolean(busy)}
-              className="rounded-full border border-cyan-400/30 bg-cyan-500/10 px-4 py-2 text-xs font-bold text-cyan-100"
+              disabled={Boolean(busy) || Boolean(activeInternalBrainRun)}
+              className="rounded-full border border-cyan-400/30 bg-cyan-500/10 px-4 py-2 text-xs font-bold text-cyan-100 disabled:opacity-50"
               data-testid="orb-eval-internal-brain-full"
               onClick={() =>
-                runAction(
-                  'Internal brain full test',
-                  async () => {
-                    generateScenarioPack('standard')
-                    return executeEvaluationRun({
-                      title: 'Internal brain full test',
-                      mode: 'internal-brain',
-                      limit: 39,
-                      packType: 'standard'
-                    })
-                  },
-                  { requireSavedRun: true }
-                )
+                void runInternalBrainPack('Internal brain full test', 'standard', { limit: 39 })
               }
             >
               Run internal brain full test

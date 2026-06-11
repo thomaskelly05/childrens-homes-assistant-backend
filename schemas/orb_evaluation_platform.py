@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 
 OrbEvaluationRunMode = Literal["template", "internal-brain", "live-llm"]
 OrbEvaluationPackType = Literal["standard", "high-risk", "adversarial", "custom", "retest"]
-OrbEvaluationRunStatus = Literal["queued", "running", "completed", "failed"]
+OrbEvaluationRunStatus = Literal["queued", "running", "completed", "failed", "interrupted"]
 
 
 class OrbEvaluationScenarioPayload(BaseModel):
@@ -82,6 +82,12 @@ class OrbEvaluationProcessResponse(BaseModel):
     next_batch_available: bool
     batch_results: list[OrbEvaluationScenarioResult] = Field(default_factory=list)
     error: str | None = None
+    success: bool = True
+    code: str | None = None
+    retryable: bool = False
+    retry_after_ms: int | None = Field(default=None, alias="retryAfterMs")
+
+    model_config = {"populate_by_name": True}
 
 
 class OrbEvaluationRunResponse(BaseModel):

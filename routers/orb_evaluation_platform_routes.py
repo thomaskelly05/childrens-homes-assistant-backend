@@ -66,15 +66,29 @@ async def evaluation_run(
     _founder=Depends(require_founder),
 ):
     if body.mode == "internal-brain":
-        active = orb_evaluation_platform_service.find_active_internal_brain_run(
+        orb_evaluation_platform_service.recover_stale_internal_brain_runs()
+        active_same_pack = orb_evaluation_platform_service.find_active_internal_brain_run(
             pack_type=body.pack_type,
         )
-        if active:
-            return _success({"run": active.model_dump(), "reused_active_run": True})
+        if active_same_pack:
+            return _success({"run": active_same_pack.model_dump(), "reused_active_run": True})
+        active_any = orb_evaluation_platform_service.find_active_internal_brain_run()
+        if active_any:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail={
+                    "code": "active_internal_brain_run",
+                    "message": (
+                        "Another internal-brain evaluation is still finishing. "
+                        "Please wait for it to complete."
+                    ),
+                    "run": active_any.model_dump(),
+                },
+            )
         try:
             created = orb_evaluation_platform_service.create_internal_brain_run(body)
         except ValueError as exc:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
         return _success({"run": created.run.model_dump()})
 
     result = orb_evaluation_platform_service.run_evaluation(body)
@@ -94,7 +108,16 @@ async def evaluation_process_run(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
-    return _success(result.model_dump(by_alias=True))
+    payload = result.model_dump(by_alias=True)
+    if result.success is False and result.code == "busy":
+        return {
+            "success": False,
+            "code": result.code,
+            "retryable": result.retryable,
+            "retryAfterMs": result.retry_after_ms,
+            "data": payload,
+        }
+    return _success(payload)
 
 
 @router.post("/runs/{run_id}/retest")

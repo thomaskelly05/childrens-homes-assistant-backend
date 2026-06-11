@@ -19,13 +19,26 @@ type ApiEnvelope<T> = {
 export class EvaluationApiError extends Error {
   status: number
   code?: string
+  retryable?: boolean
+  retryAfterMs?: number
 
-  constructor(status: number, message: string, code?: string) {
+  constructor(
+    status: number,
+    message: string,
+    code?: string,
+    options?: { retryable?: boolean; retryAfterMs?: number }
+  ) {
     super(message)
     this.name = 'EvaluationApiError'
     this.status = status
     this.code = code
+    this.retryable = options?.retryable
+    this.retryAfterMs = options?.retryAfterMs
   }
+}
+
+export function isEvaluationProcessBusyError(error: unknown): boolean {
+  return error instanceof EvaluationApiError && error.code === 'busy' && error.retryable === true
 }
 
 export function isEvaluationCsrfError(error: unknown): boolean {
@@ -39,16 +52,28 @@ export function isEvaluationCsrfError(error: unknown): boolean {
 }
 
 async function parseEnvelope<T>(response: Response): Promise<T> {
-  const payload = (await response.json().catch(() => ({}))) as ApiEnvelope<T>
+  const payload = (await response.json().catch(() => ({}))) as ApiEnvelope<T> & {
+    retryable?: boolean
+    retryAfterMs?: number
+    retry_after_ms?: number
+  }
   if (!response.ok) {
     if (isCsrfFailedPayload(payload)) {
       throw new EvaluationApiError(403, csrfFailureMessage(payload), 'csrf_failed')
     }
+    const retryAfterMs = Number(payload.retryAfterMs ?? payload.retry_after_ms ?? 0) || undefined
     throw new EvaluationApiError(
       response.status,
       payload.error ?? payload.message ?? `Evaluation API error (${response.status})`,
-      payload.code ?? (typeof payload.detail === 'string' ? payload.detail : undefined)
+      payload.code ?? (typeof payload.detail === 'string' ? payload.detail : undefined),
+      {
+        retryable: payload.retryable === true || payload.code === 'busy',
+        retryAfterMs
+      }
     )
+  }
+  if (payload.success === false) {
+    return payload as T
   }
   if (payload.data !== undefined) {
     return payload.data
@@ -113,6 +138,10 @@ export type EvaluationProcessPayload = {
   scenarioCount: number
   criticalFailures: number
   nextBatchAvailable: boolean
+  success?: boolean
+  code?: string
+  retryable?: boolean
+  retryAfterMs?: number
   batchResults?: Array<{
     scenario_id: string
     question: string
@@ -125,21 +154,64 @@ export type EvaluationProcessPayload = {
   error?: string
 }
 
+const PROCESS_RETRY_DELAYS_MS = [250, 500, 1000] as const
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
 export async function postEvaluationRunProcess(runId: string): Promise<EvaluationProcessPayload> {
-  const data = await evaluationFetch<Record<string, unknown>>(
-    `/api/orb/evaluation/runs/${encodeURIComponent(runId)}/process`,
-    { method: 'POST', body: JSON.stringify({}) }
-  )
-  return {
-    runId: String(data.run_id ?? data.runId ?? runId),
-    status: (data.status as EvaluationProcessPayload['status']) ?? 'failed',
-    completedCount: Number(data.completed_count ?? data.completedCount ?? 0),
-    scenarioCount: Number(data.scenario_count ?? data.scenarioCount ?? 0),
-    criticalFailures: Number(data.critical_failures ?? data.criticalFailures ?? 0),
-    nextBatchAvailable: Boolean(data.next_batch_available ?? data.nextBatchAvailable),
-    batchResults: (data.batch_results ?? data.batchResults ?? []) as EvaluationProcessPayload['batchResults'],
-    error: typeof data.error === 'string' ? data.error : undefined
+  let lastError: unknown
+
+  for (let attempt = 0; attempt <= PROCESS_RETRY_DELAYS_MS.length; attempt += 1) {
+    try {
+      const data = await evaluationFetch<Record<string, unknown>>(
+        `/api/orb/evaluation/runs/${encodeURIComponent(runId)}/process`,
+        { method: 'POST', body: JSON.stringify({}) }
+      )
+
+      if (data.success === false && data.code === 'busy' && data.retryable === true) {
+        const retryAfterMs = Number(data.retryAfterMs ?? data.retry_after_ms ?? 1000)
+        if (attempt < PROCESS_RETRY_DELAYS_MS.length) {
+          await sleep(retryAfterMs > 0 ? retryAfterMs : PROCESS_RETRY_DELAYS_MS[attempt] ?? 1000)
+          continue
+        }
+        throw new EvaluationApiError(503, 'Process batch temporarily busy', 'busy', {
+          retryable: true,
+          retryAfterMs
+        })
+      }
+
+      return {
+        runId: String(data.run_id ?? data.runId ?? runId),
+        status: (data.status as EvaluationProcessPayload['status']) ?? 'failed',
+        completedCount: Number(data.completed_count ?? data.completedCount ?? 0),
+        scenarioCount: Number(data.scenario_count ?? data.scenarioCount ?? 0),
+        criticalFailures: Number(data.critical_failures ?? data.criticalFailures ?? 0),
+        nextBatchAvailable: Boolean(data.next_batch_available ?? data.nextBatchAvailable),
+        batchResults: (data.batch_results ?? data.batchResults ?? []) as EvaluationProcessPayload['batchResults'],
+        error: typeof data.error === 'string' ? data.error : undefined,
+        success: data.success !== false,
+        code: typeof data.code === 'string' ? data.code : undefined,
+        retryable: data.retryable === true,
+        retryAfterMs: Number(data.retryAfterMs ?? data.retry_after_ms ?? 0) || undefined
+      }
+    } catch (error) {
+      lastError = error
+      if (isEvaluationCsrfError(error)) throw error
+      if (isEvaluationProcessBusyError(error) && attempt < PROCESS_RETRY_DELAYS_MS.length) {
+        const retryAfterMs =
+          error instanceof EvaluationApiError && error.retryAfterMs ?
+            error.retryAfterMs
+          : PROCESS_RETRY_DELAYS_MS[attempt] ?? 1000
+        await sleep(retryAfterMs)
+        continue
+      }
+      throw error
+    }
   }
+
+  throw lastError instanceof Error ? lastError : new Error('Process request failed')
 }
 
 export async function postEvaluationScenariosGenerate(body: {

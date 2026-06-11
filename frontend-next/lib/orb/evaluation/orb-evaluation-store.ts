@@ -148,6 +148,40 @@ export function getActiveInternalBrainRun(
   )
 }
 
+export function getAnyActiveInternalBrainRun(): OrbEvaluationRun | undefined {
+  return getEvaluationRuns().find(
+    (run) =>
+      run.mode === 'internal-brain' && (run.status === 'queued' || run.status === 'running')
+  )
+}
+
+const STALE_RUN_THRESHOLD_MS = 10 * 60 * 1000
+
+export function recoverStaleInternalBrainRuns(
+  nowMs: number = Date.now()
+): OrbEvaluationRun[] {
+  const recovered: OrbEvaluationRun[] = []
+  for (const run of getEvaluationRuns()) {
+    if (run.mode !== 'internal-brain') continue
+    if (run.status !== 'queued' && run.status !== 'running') continue
+    const updatedAt = run.completedAt ?? run.startedAt
+    const ageMs = nowMs - Date.parse(updatedAt)
+    if (!Number.isFinite(ageMs) || ageMs < STALE_RUN_THRESHOLD_MS) continue
+    const interrupted: OrbEvaluationRun = {
+      ...run,
+      status: 'interrupted',
+      completedAt: new Date(nowMs).toISOString(),
+      summary:
+        run.summary?.includes('interrupted') ?
+          run.summary
+        : `Interrupted — ${run.completedCount}/${run.scenarioCount} completed before timeout`
+    }
+    updateEvaluationRun(run.id, interrupted)
+    recovered.push(interrupted)
+  }
+  return recovered
+}
+
 export function getLatestInternalBrainAdversarialRun(): OrbEvaluationRun | undefined {
   return getEvaluationRuns().find(
     (run) =>

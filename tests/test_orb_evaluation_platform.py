@@ -8,14 +8,20 @@ from fastapi.testclient import TestClient
 import app as app_module
 from auth.current_user import get_current_user
 from schemas.orb_evaluation_platform import OrbEvaluationRunRequest
-from services.orb_evaluation_platform_service import _in_memory_runs, orb_evaluation_platform_service
+from services.orb_evaluation_platform_service import (
+    _in_memory_runs,
+    _processing_run_ids,
+    orb_evaluation_platform_service,
+)
 
 
 @pytest.fixture(autouse=True)
 def clear_in_memory_evaluation_runs():
     _in_memory_runs.clear()
+    _processing_run_ids.clear()
     yield
     _in_memory_runs.clear()
+    _processing_run_ids.clear()
 
 
 @pytest.fixture()
@@ -388,3 +394,182 @@ def test_internal_brain_process_persists_progress_after_batch(monkeypatch):
     assert second.completed_count == 6
     assert second.status == "completed"
     assert second.next_batch_available is False
+
+
+def _internal_brain_scenario(scenario_id: str) -> dict:
+    return {
+        "id": scenario_id,
+        "domain": "safeguarding",
+        "rolePerspective": "residential-worker",
+        "category": "self-harm",
+        "question": f"Synthetic scenario {scenario_id}.",
+        "expectedResponseFocus": ["escalation"],
+        "requiredSafeguards": ["safeguarding"],
+        "requiredRegulatoryAnchors": ["Regulation 27"],
+        "requiredTone": ["calm"],
+        "riskLevel": "critical",
+        "adversarialFlags": [],
+    }
+
+
+def test_only_one_internal_brain_run_active_at_a_time(monkeypatch):
+    monkeypatch.setattr(
+        "services.orb_evaluation_platform_service.live_llm_available",
+        lambda: False,
+    )
+    high_risk = orb_evaluation_platform_service.create_internal_brain_run(
+        OrbEvaluationRunRequest(
+            title="High-risk",
+            mode="internal-brain",
+            pack_type="high-risk",
+            scenarios=[_internal_brain_scenario("HR-1")],
+            limit=1,
+        )
+    )
+    assert high_risk.run.status == "queued"
+
+    with pytest.raises(ValueError, match="Another internal-brain evaluation"):
+        orb_evaluation_platform_service.create_internal_brain_run(
+            OrbEvaluationRunRequest(
+                title="Adversarial",
+                mode="internal-brain",
+                pack_type="adversarial",
+                scenarios=[_internal_brain_scenario("ADV-1")],
+                limit=1,
+            )
+        )
+
+
+def test_same_pack_reuses_active_internal_brain_run(monkeypatch):
+    monkeypatch.setattr(
+        "services.orb_evaluation_platform_service.live_llm_available",
+        lambda: False,
+    )
+    first = orb_evaluation_platform_service.create_internal_brain_run(
+        OrbEvaluationRunRequest(
+            title="Adversarial",
+            mode="internal-brain",
+            pack_type="adversarial",
+            scenarios=[_internal_brain_scenario("ADV-2")],
+            limit=1,
+        )
+    )
+    second = orb_evaluation_platform_service.create_internal_brain_run(
+        OrbEvaluationRunRequest(
+            title="Adversarial duplicate",
+            mode="internal-brain",
+            pack_type="adversarial",
+            scenarios=[_internal_brain_scenario("ADV-3")],
+            limit=1,
+        )
+    )
+    assert second.run.id == first.run.id
+
+
+def test_stale_internal_brain_run_is_recovered(monkeypatch):
+    monkeypatch.setattr(
+        "services.orb_evaluation_platform_service.live_llm_available",
+        lambda: False,
+    )
+    from datetime import datetime, timedelta, timezone
+
+    created = orb_evaluation_platform_service.create_internal_brain_run(
+        OrbEvaluationRunRequest(
+            title="Stale run",
+            mode="internal-brain",
+            pack_type="adversarial",
+            scenarios=[_internal_brain_scenario("STALE-1")],
+            limit=1,
+        )
+    )
+    stored = orb_evaluation_platform_service.get_async_run(created.run.id)
+    assert stored is not None
+    stored.started_at = (datetime.now(timezone.utc) - timedelta(minutes=15)).isoformat()
+
+    recovered = orb_evaluation_platform_service.recover_stale_internal_brain_runs()
+    assert len(recovered) == 1
+    assert recovered[0].status == "interrupted"
+    assert stored.status == "interrupted"
+
+
+def test_process_endpoint_resumes_from_completed_count(monkeypatch):
+    monkeypatch.setattr(
+        "services.orb_evaluation_platform_service.live_llm_available",
+        lambda: False,
+    )
+    scenarios = [_internal_brain_scenario(f"RESUME-{index}") for index in range(4)]
+    created = orb_evaluation_platform_service.create_internal_brain_run(
+        OrbEvaluationRunRequest(
+            title="Resume test",
+            mode="internal-brain",
+            pack_type="standard",
+            scenarios=scenarios,
+            limit=4,
+        )
+    )
+    first = orb_evaluation_platform_service.process_internal_brain_run(
+        created.run.id,
+        batch_size=2,
+    )
+    assert first.completed_count == 2
+    second = orb_evaluation_platform_service.process_internal_brain_run(
+        created.run.id,
+        batch_size=2,
+    )
+    assert second.completed_count == 4
+    assert second.status == "completed"
+
+
+def test_process_returns_busy_when_run_already_processing(monkeypatch):
+    monkeypatch.setattr(
+        "services.orb_evaluation_platform_service.live_llm_available",
+        lambda: False,
+    )
+    created = orb_evaluation_platform_service.create_internal_brain_run(
+        OrbEvaluationRunRequest(
+            title="Busy test",
+            mode="internal-brain",
+            pack_type="adversarial",
+            scenarios=[_internal_brain_scenario("BUSY-1")],
+            limit=1,
+        )
+    )
+    _processing_run_ids.add(created.run.id)
+    try:
+        busy = orb_evaluation_platform_service.process_internal_brain_run(created.run.id)
+        assert busy.success is False
+        assert busy.code == "busy"
+        assert busy.retryable is True
+        assert busy.retry_after_ms == 1000
+    finally:
+        _processing_run_ids.discard(created.run.id)
+
+
+def test_internal_brain_create_after_completed_run(monkeypatch):
+    monkeypatch.setattr(
+        "services.orb_evaluation_platform_service.live_llm_available",
+        lambda: False,
+    )
+    first = orb_evaluation_platform_service.create_internal_brain_run(
+        OrbEvaluationRunRequest(
+            title="Completed adversarial",
+            mode="internal-brain",
+            pack_type="adversarial",
+            scenarios=[_internal_brain_scenario("DONE-1")],
+            limit=1,
+        )
+    )
+    completed = orb_evaluation_platform_service.process_internal_brain_run(first.run.id)
+    assert completed.status == "completed"
+
+    second = orb_evaluation_platform_service.create_internal_brain_run(
+        OrbEvaluationRunRequest(
+            title="Next adversarial",
+            mode="internal-brain",
+            pack_type="adversarial",
+            scenarios=[_internal_brain_scenario("DONE-2")],
+            limit=1,
+        )
+    )
+    assert second.run.id != first.run.id
+    assert second.run.status == "queued"

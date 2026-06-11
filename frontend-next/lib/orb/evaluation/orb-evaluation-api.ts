@@ -158,16 +158,32 @@ async function proxyEvaluation(
   }
 }
 
-async function fetchPersistedRuns(
+async function fetchPersistedRunsWithRetry(
   request: Request,
   cookieHeader: string,
   cookieStore?: Awaited<ReturnType<typeof cookies>>
 ): Promise<OrbEvaluationRun[]> {
-  const result = await upstreamJson(request, cookieHeader, PERSISTENCE_RUNS, undefined, cookieStore)
-  if (!result.ok) return []
-  const data = unwrapData(result.payload) as UpstreamJson | undefined
-  const items = data && typeof data === 'object' && 'items' in data ? data.items : []
-  return normalisePersistedRuns(items)
+  const delays = [250, 500, 1000]
+  let lastStatus = 503
+
+  for (let attempt = 0; attempt <= delays.length; attempt += 1) {
+    const result = await upstreamJson(request, cookieHeader, PERSISTENCE_RUNS, undefined, cookieStore)
+    if (result.ok) {
+      const data = unwrapData(result.payload) as UpstreamJson | undefined
+      const items = data && typeof data === 'object' && 'items' in data ? data.items : []
+      return normalisePersistedRuns(items)
+    }
+
+    lastStatus = result.status
+    const retryable = result.status >= 500 || result.status === 503 || result.status === 429
+    if (!retryable || attempt >= delays.length) break
+    await new Promise((resolve) => setTimeout(resolve, delays[attempt] ?? 1000))
+  }
+
+  if (lastStatus >= 500) {
+    throw new Error('Founder data source is busy. Please wait a moment and try again.')
+  }
+  return []
 }
 
 export async function handleEvaluationScenariosGet(request: Request): Promise<NextResponse> {
@@ -203,7 +219,7 @@ export async function handleEvaluationRunsGet(request: Request): Promise<NextRes
         },
         cookieStore
       ),
-      fetchPersistedRuns(request, cookieHeader, cookieStore)
+      fetchPersistedRunsWithRetry(request, cookieHeader, cookieStore)
     ])
 
     if (!overviewResult.ok) {
@@ -309,15 +325,64 @@ export async function handleEvaluationRunProcessPost(
   request: Request,
   runId: string
 ): Promise<NextResponse> {
-  return proxyEvaluation(
-    request,
-    `${BACKEND_PREFIX}/runs/${encodeURIComponent(runId)}/process`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({})
+  const session = await requireFounderSession()
+  if (!session.ok) return session.response
+
+  const cookieStore = await cookies()
+  const cookieHeader = cookieStore.toString()
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), 60_000)
+
+  try {
+    const result = await upstreamJson(
+      request,
+      cookieHeader,
+      `${BACKEND_PREFIX}/runs/${encodeURIComponent(runId)}/process`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+        signal: controller.signal
+      },
+      cookieStore
+    )
+
+    if (!result.ok) {
+      return NextResponse.json(
+        {
+          error: result.detail,
+          detail: result.code,
+          message: result.detail,
+          code: result.code
+        },
+        { status: result.status }
+      )
     }
-  )
+
+    const payload = (result.payload ?? {}) as Record<string, unknown>
+    if (payload.success === false && payload.code === 'busy') {
+      const data = (payload.data ?? {}) as Record<string, unknown>
+      return NextResponse.json(
+        sanitiseFounderPayload({
+          success: false,
+          code: 'busy',
+          retryable: payload.retryable === true,
+          retryAfterMs: payload.retryAfterMs ?? payload.retry_after_ms ?? 1000,
+          data
+        }),
+        { status: 200 }
+      )
+    }
+
+    const data = unwrapData(result.payload)
+    return NextResponse.json(sanitiseFounderPayload({ success: true, data }), {
+      status: result.status
+    })
+  } catch {
+    return NextResponse.json({ error: 'ORB Evaluation temporarily unavailable' }, { status: 503 })
+  } finally {
+    clearTimeout(timer)
+  }
 }
 
 export async function handleEvaluationRetestPost(
