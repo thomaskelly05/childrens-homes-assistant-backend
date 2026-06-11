@@ -3,9 +3,11 @@ import type {
   QualityRun,
   ReviewStatus
 } from '@/lib/founder/quality-lab/quality-lab-types'
+import type { OrbEvaluationRun } from '@/lib/orb/evaluation/orb-evaluation-types'
 
 export type LaunchGateInput = {
   runs: QualityRun[]
+  evaluationRuns?: OrbEvaluationRun[]
   whistleblowingCovered?: boolean
   privacyRetentionReviewed?: boolean
 }
@@ -19,6 +21,19 @@ const REVIEWED_STATUSES: ReviewStatus[] = [
 
 function latestLiveRun(runs: QualityRun[]): QualityRun | undefined {
   return runs.find((run) => run.runMode === 'live-llm' && run.status === 'complete')
+}
+
+function latestHighRiskEvaluationRun(evaluationRuns: OrbEvaluationRun[]): OrbEvaluationRun | undefined {
+  return evaluationRuns.find(
+    (run) =>
+      run.status === 'completed' &&
+      run.mode === 'live-llm' &&
+      (run.packType === 'high-risk' || run.packType === 'adversarial')
+  )
+}
+
+function latestGoldLiveRun(runs: QualityRun[]): QualityRun | undefined {
+  return latestLiveRun(runs)
 }
 
 function highRiskScenariosReviewed(run: QualityRun): boolean {
@@ -42,7 +57,11 @@ function highRiskScenariosPassed(run: QualityRun): boolean {
 }
 
 export function computeOrbLaunchQualityGate(input: LaunchGateInput): OrbLaunchQualityGate {
-  const liveRun = latestLiveRun(input.runs)
+  const liveRun = latestGoldLiveRun(input.runs)
+  const evaluationRuns = input.evaluationRuns ?? []
+  const redTeamRun = latestHighRiskEvaluationRun(evaluationRuns)
+  const redTeamCriticalFailures = redTeamRun?.criticalFailures ?? 0
+
   const criticalFailures = liveRun?.criticalFailures ?? liveRun?.results.filter((r) => r.criticalFailure).length ?? 0
   const pendingHumanReviews =
     liveRun?.pendingHumanReviews ??
@@ -63,7 +82,10 @@ export function computeOrbLaunchQualityGate(input: LaunchGateInput): OrbLaunchQu
   if (!liveRunCompleted) blockers.push('No completed live-llm GOLD verification run')
   if (!whistleblowingCovered) blockers.push('Whistleblowing scenario not covered in GOLD bank')
   if (!privacyRetentionReviewed) blockers.push('Privacy and retention review not recorded')
-  if (criticalFailures > 0) blockers.push(`${criticalFailures} critical failure(s) in latest live run`)
+  if (criticalFailures > 0) blockers.push(`${criticalFailures} critical failure(s) in latest GOLD live run`)
+  if (redTeamCriticalFailures > 0) {
+    blockers.push(`${redTeamCriticalFailures} critical failure(s) in latest high-risk red team run`)
+  }
   if (pendingHumanReviews > 0) blockers.push(`${pendingHumanReviews} result(s) pending human review`)
 
   let recommendation: OrbLaunchQualityGate['recommendation'] = 'not-ready'
@@ -71,6 +93,7 @@ export function computeOrbLaunchQualityGate(input: LaunchGateInput): OrbLaunchQu
   if (
     liveRunCompleted &&
     criticalFailures === 0 &&
+    redTeamCriticalFailures === 0 &&
     pendingHumanReviews === 0 &&
     whistleblowingCovered &&
     privacyRetentionReviewed &&
@@ -81,13 +104,19 @@ export function computeOrbLaunchQualityGate(input: LaunchGateInput): OrbLaunchQu
   } else if (
     liveRunCompleted &&
     criticalFailures === 0 &&
+    redTeamCriticalFailures === 0 &&
     whistleblowingCovered &&
     highRiskReviewed
   ) {
     recommendation = 'closed-pilot-ready'
   }
 
-  if (criticalFailures > 0 || pendingHumanReviews > 0 || !whistleblowingCovered) {
+  if (
+    criticalFailures > 0 ||
+    redTeamCriticalFailures > 0 ||
+    pendingHumanReviews > 0 ||
+    !whistleblowingCovered
+  ) {
     recommendation = 'not-ready'
   }
 
@@ -95,6 +124,8 @@ export function computeOrbLaunchQualityGate(input: LaunchGateInput): OrbLaunchQu
     liveRunCompleted,
     highRiskScenariosPassed: highRiskPassed,
     criticalFailures,
+    redTeamCriticalFailures,
+    latestRedTeamRunId: redTeamRun?.id,
     pendingHumanReviews,
     whistleblowingCovered,
     privacyRetentionReviewed,

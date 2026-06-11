@@ -26,6 +26,7 @@ import {
 } from '@/lib/founder/quality-lab'
 import type { OrbQualityLabOverview } from '@/lib/founder/quality-lab/quality-lab-client'
 import { assessOrbPilotPrivacyStatus, computeOrbPilotReadinessGate } from '@/lib/orb/pilot'
+import { getEvaluationRuns } from '@/lib/orb/evaluation'
 import { computeOrbLaunchQualityGate } from '@/lib/orb/quality/launch-quality-gate'
 
 const PRIORITY_TONE: Record<string, string> = {
@@ -184,6 +185,7 @@ export function FounderQualityLabPage() {
     () =>
       computeOrbLaunchQualityGate({
         runs,
+        evaluationRuns: getEvaluationRuns(),
         whistleblowingCovered: overview?.coverage?.whistleblowing_covered ?? true,
         privacyRetentionReviewed: false
       }),
@@ -337,9 +339,13 @@ export function FounderQualityLabPage() {
               {launchGate.recommendation}
             </span>
             <span className="text-sm text-slate-400">
-              Live run: {launchGate.liveRunCompleted ? 'yes' : 'no'} · Critical failures: {launchGate.criticalFailures}{' '}
-              · Pending reviews: {launchGate.pendingHumanReviews}
+              GOLD live run: {launchGate.liveRunCompleted ? 'yes' : 'no'} · GOLD critical: {launchGate.criticalFailures}{' '}
+              · Red team critical: {launchGate.redTeamCriticalFailures ?? 0} · Pending reviews:{' '}
+              {launchGate.pendingHumanReviews}
             </span>
+            <Link href="/founder/orb-evaluation" className="text-xs font-bold text-cyan-300 hover:text-cyan-200">
+              Open ORB Evaluation →
+            </Link>
           </div>
           {launchGate.blockers.length > 0 ? (
             <ul className="mt-3 list-inside list-disc text-sm text-rose-200">
@@ -348,6 +354,10 @@ export function FounderQualityLabPage() {
               ))}
             </ul>
           ) : null}
+          <p className="mt-3 text-xs text-slate-500">
+            Quality Lab = curated GOLD scenarios. ORB Evaluation = broad synthetic and adversarial red team testing.
+            Public launch is blocked if either latest GOLD or high-risk red team live run has critical failures.
+          </p>
         </FounderSectionCard>
 
         <FounderSectionCard eyebrow="Closed pilot" title="ORB closed-pilot readiness gate">

@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { ArrowLeft, Beaker, Bot, Brain, Building2, CheckSquare, ClipboardCheck, Contact, FileCheck, FileText, Lock, PoundSterling, Radio, RefreshCw, ScrollText, Sparkles, Users } from 'lucide-react'
+import { ArrowLeft, Beaker, Bot, Brain, Building2, CheckSquare, ClipboardCheck, Contact, FileCheck, FileText, Lock, PoundSterling, Radio, RefreshCw, ScrollText, ShieldAlert, Sparkles, Users } from 'lucide-react'
 
 type NavLink = {
   href: string
@@ -19,6 +19,7 @@ type NavLink = {
     | typeof Sparkles
     | typeof Beaker
     | typeof ClipboardCheck
+    | typeof ShieldAlert
     | null
   exact?: boolean
 }
@@ -36,6 +37,7 @@ const NAV_LINKS: NavLink[] = [
   { href: '/founder/actions', label: 'Actions', icon: null },
   { href: '/founder/build-briefs', label: 'Build Briefs', icon: null },
   { href: '/founder/quality-lab', label: 'Quality Lab', icon: Beaker },
+  { href: '/founder/orb-evaluation', label: 'ORB Evaluation', icon: ShieldAlert },
   { href: '/founder/orb-pilot', label: 'ORB Pilot', icon: ClipboardCheck },
   { href: '/founder/evidence', label: 'Evidence', icon: FileCheck },
   { href: '/founder/revenue', label: 'Revenue', icon: PoundSterling },
