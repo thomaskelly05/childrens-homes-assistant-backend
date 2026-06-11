@@ -21,6 +21,7 @@ from services.orb_live_guardrail_service import (
     LIVE_LLM_GUARDED_FIREWALL_SCORING_VERSION,
     LIVE_LLM_GUARDED_STANDARD_SCORING_VERSION,
     enforce_live_guardrails,
+    enforce_live_guardrails_async,
     identifiable_data_response,
     should_skip_identifier_validation,
 )
@@ -398,13 +399,17 @@ class OrbEvaluationRunnerService:
         eval_mode = mode_for_scenario(scenario_dict) if scenario_dict else ctx.get("mode")
 
         if safety_scaffold and answer and not assistant_data.get("no_llm"):
-            guarded_result = enforce_live_guardrails(
+            eval_message = None
+            if scenario_dict:
+                eval_message = build_evaluation_message(scenario_dict)
+            guarded_result = await enforce_live_guardrails_async(
                 scenario_dict,
                 answer,
                 safety_scaffold,
                 eval_mode,
                 prompt_tier=prompt_tier,
                 expert_depth=expert_depth,
+                user_message=eval_message,
             )
             answer = guarded_result.final_answer
             live_guardrail = guarded_result.to_dict()

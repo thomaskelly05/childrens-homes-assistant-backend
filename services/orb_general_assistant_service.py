@@ -705,7 +705,7 @@ class OrbGeneralAssistantService:
             )
             if result.get("answer"):
                 if safety_scaffold and safety_scaffold.get("guardrail_active"):
-                    from services.orb_live_guardrail_service import enforce_live_guardrails
+                    from services.orb_live_guardrail_service import enforce_live_guardrails_async
                     from services.orb_safety_scaffold_service import (
                         OrbSafetyScaffold,
                         build_scenario_dict_from_message,
@@ -722,11 +722,12 @@ class OrbGeneralAssistantService:
                         user_message or message,
                         mode=mode,
                     )
-                    guarded = enforce_live_guardrails(
+                    guarded = await enforce_live_guardrails_async(
                         scenario_ctx,
                         result["answer"],
                         scaffold_obj,
                         mode,
+                        user_message=user_message or message,
                     )
                     result["answer"] = guarded.final_answer
                     ctx = result.get("context_used") or {}

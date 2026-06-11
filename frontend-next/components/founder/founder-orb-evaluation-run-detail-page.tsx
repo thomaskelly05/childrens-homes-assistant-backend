@@ -475,6 +475,36 @@ export function FounderOrbEvaluationRunDetailPage({ runId }: { runId: string }) 
                       Fail reasons: {(result.liveGuardrail.failReasons ?? []).join(', ')}
                     </p>
                   ) : null}
+                  {(result.liveGuardrail.requiredSafeguardsChecked ?? []).length > 0 ? (
+                    <p className="mt-2">
+                      <span className="text-slate-500">Required safeguards checked:</span>{' '}
+                      {(result.liveGuardrail.requiredSafeguardsChecked ?? []).length}
+                    </p>
+                  ) : null}
+                  {(result.liveGuardrail.missingSafeguardsBeforeRepair ?? []).length > 0 ? (
+                    <p className="mt-2 text-amber-200">
+                      Missing before repair:{' '}
+                      {(result.liveGuardrail.missingSafeguardsBeforeRepair ?? []).join(', ')}
+                    </p>
+                  ) : null}
+                  {(result.liveGuardrail.repairedMissingMarkers ?? []).length > 0 ? (
+                    <p className="mt-2 text-emerald-200">
+                      Repaired markers:{' '}
+                      {(result.liveGuardrail.repairedMissingMarkers ?? []).join(', ')}
+                    </p>
+                  ) : null}
+                  {(result.liveGuardrail.finalMissingSafeguards ?? []).length > 0 ? (
+                    <p className="mt-2 text-rose-200">
+                      Final missing safeguards:{' '}
+                      {(result.liveGuardrail.finalMissingSafeguards ?? []).join(', ')}
+                    </p>
+                  ) : null}
+                  {result.liveGuardrail.highRiskScaffoldVersion ? (
+                    <p>
+                      <span className="text-slate-500">High-risk scaffold:</span>{' '}
+                      {result.liveGuardrail.highRiskScaffoldVersion}
+                    </p>
+                  ) : null}
                   {result.liveGuardrail.missingSafeguards.length > 0 ? (
                     <p className="mt-2 text-rose-200">
                       Missing live safeguards: {result.liveGuardrail.missingSafeguards.join(', ')}
