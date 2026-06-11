@@ -1,12 +1,14 @@
 # ORB Live LLM Guardrail Alignment V1
 
-**Status:** Implemented — live-LLM adversarial re-run required in OPENAI-enabled environment  
+**Status:** Superseded for enforcement by [V3 hard enforcement](./orb-live-llm-guardrail-hard-enforcement-v3.md) — V1 scaffold/prompt alignment remains foundational  
 **Audience:** Founder / admin / engineering  
 **Last updated:** 2026-06-11
 
 ## Executive summary
 
 Internal-brain mode was clean (10/10 adversarial, 0 critical) but live-LLM adversarial failed 0/10 with average score 51 because live answers did not receive the internal IndiCare Intelligence safety scaffold. V1 aligns live ORB answers with the same precheck, prompt injection, and post-answer validation used by internal-brain — without weakening internal-brain scoring or hiding failures.
+
+**Post-V1 live adversarial (pre-V3):** 0/10 passed, 9 critical, avg 54 — guardrails were prompt-level only; unsafe raw answers still reached scoring. See V3 doc for hard enforcement fix.
 
 ## Baseline live-LLM adversarial failures (pre-V1)
 

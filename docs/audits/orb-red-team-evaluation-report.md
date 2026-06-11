@@ -1,6 +1,6 @@
 # ORB Red Team Evaluation Report
 
-**Status:** Platform V1 implemented — awaiting live-llm evidence in configured environments  
+**Status:** Platform V1 implemented; live-LLM guardrail hard enforcement V3 added 2026-06-11  
 **Audience:** Founder / admin internal only  
 **Last updated:** 2026-06-11
 
@@ -132,10 +132,23 @@ V1 adds:
 
 See `docs/audits/orb-live-llm-guardrail-alignment-v1.md`.
 
-| Metric | Pre-V1 | Post-V1 (expected) |
-|--------|--------|-------------------|
-| Live-LLM adversarial | 0/10, 10 critical, avg 51 | Re-run required in OPENAI environment |
-| Internal-brain adversarial | 10/10, 0 critical | Unchanged (verified by pack script) |
+| Metric | Pre-V1 | Post-V1 live run | Post-V3 (expected) |
+|--------|--------|------------------|-------------------|
+| Live-LLM adversarial | 0/10, 10 critical, avg 51 | 0/10, 9 critical, avg 54 | Re-run required — hard enforcement |
+| Internal-brain adversarial | 10/10, 0 critical | 10/10, 0 critical | Unchanged |
+
+## Live LLM Guardrail Hard Enforcement V3 (2026-06-11)
+
+Post-V1 live adversarial still failed **0/10, 9 critical, avg 54** because guardrails were advisory — unsafe raw answers reached scoring.
+
+V3 adds `enforce_live_guardrails()` as non-optional hard enforcement:
+
+- `final_answer` = single source of truth for display, persistence and scoring
+- Immediate fallback for adversarial hard failures (Regulation 99, privacy blocker, punitive language, documentation-before-999, etc.)
+- Scoring label: **`live-llm-guarded-v3`** (legacy runs remain `legacy live/template`)
+- Founder UI shows answer source, fail reasons, and raw answer in collapsed debug when fallback used
+
+See `docs/audits/orb-live-llm-guardrail-hard-enforcement-v3.md`.
 
 Live-LLM GOLD adversarial pack must be re-run from `/founder/orb-evaluation` to confirm improvement. Failures remain visible — scores are not fabricated.
 

@@ -656,8 +656,11 @@ class OrbGeneralAssistantService:
             )
             if result.get("answer"):
                 if safety_scaffold and safety_scaffold.get("guardrail_active"):
-                    from services.orb_live_guardrail_service import apply_live_guardrails
-                    from services.orb_safety_scaffold_service import OrbSafetyScaffold
+                    from services.orb_live_guardrail_service import enforce_live_guardrails
+                    from services.orb_safety_scaffold_service import (
+                        OrbSafetyScaffold,
+                        build_scenario_dict_from_message,
+                    )
 
                     scaffold_obj = OrbSafetyScaffold(
                         **{
@@ -666,10 +669,19 @@ class OrbGeneralAssistantService:
                             if k in OrbSafetyScaffold.__dataclass_fields__
                         }
                     )
-                    guarded = apply_live_guardrails(result["answer"], scaffold_obj)
-                    result["answer"] = guarded.answer
+                    scenario_ctx = build_scenario_dict_from_message(
+                        user_message or message,
+                        mode=mode,
+                    )
+                    guarded = enforce_live_guardrails(
+                        scenario_ctx,
+                        result["answer"],
+                        scaffold_obj,
+                        mode,
+                    )
+                    result["answer"] = guarded.final_answer
                     ctx = result.get("context_used") or {}
-                    ctx["live_guardrail_check"] = guarded.check.to_dict()
+                    ctx["live_guardrail_check"] = guarded.to_dict()
                     result["context_used"] = ctx
                 logger.info(
                     "standalone_orb_answer llm ok detail=%s images=%s elapsed_ms=%s",
