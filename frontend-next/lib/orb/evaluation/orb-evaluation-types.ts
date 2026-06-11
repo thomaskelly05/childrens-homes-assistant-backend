@@ -137,7 +137,12 @@ export type OrbInternalBrainScoreBreakdown = {
   overall: number
 }
 
-export type OrbLiveGuardrailAnswerSource = 'raw' | 'repaired' | 'fallback' | 'privacy_block'
+export type OrbLiveGuardrailAnswerSource =
+  | 'raw'
+  | 'repaired'
+  | 'fallback'
+  | 'privacy_block'
+  | 'safety_firewall'
 
 export type OrbLiveGuardrailCheck = {
   passed: boolean
@@ -158,9 +163,13 @@ export type OrbLiveGuardrailCheck = {
   forbiddenPhrasesDetected?: string[]
   answerUsedForScoring?: string
   answerUsedForDisplay?: string
+  openaiCalled?: boolean
+  safetyFirewallUsed?: boolean
+  safetyFirewallReason?: string
 }
 
 export const LIVE_LLM_GUARDED_SCORING_VERSION_V3 = 'live-llm-guarded-v3'
+export const LIVE_LLM_GUARDED_SCORING_VERSION_V4 = 'live-llm-guarded-v4-firewall'
 
 export type OrbEvaluationResult = {
   id: string

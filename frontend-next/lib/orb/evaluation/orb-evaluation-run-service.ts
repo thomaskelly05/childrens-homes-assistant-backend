@@ -55,7 +55,7 @@ import {
 } from './orb-internal-brain-scoring-engine'
 import {
   INTERNAL_BRAIN_SCORING_VERSION_V2,
-  LIVE_LLM_GUARDED_SCORING_VERSION_V3
+  LIVE_LLM_GUARDED_SCORING_VERSION_V4
 } from './orb-evaluation-types'
 import { buildTemplateAnswer, scoreOrbEvaluationAnswer } from './orb-evaluation-scoring-engine'
 import { mergeRedTeamFindings, runRedTeamAgents } from './red-team-agents'
@@ -183,7 +183,7 @@ function summariseRun(
     improvementOpportunitiesCount,
     scoringVersion:
       run.mode === 'live-llm'
-        ? LIVE_LLM_GUARDED_SCORING_VERSION_V3
+        ? LIVE_LLM_GUARDED_SCORING_VERSION_V4
         : run.scoringVersion,
     completedAt: new Date().toISOString(),
     results: evalResults,
@@ -614,7 +614,7 @@ export async function executeEvaluationRun(
     title: options.title ?? `ORB Evaluation — ${packType}`,
     packType,
     limitations: [],
-    scoringVersion: mode === 'live-llm' ? LIVE_LLM_GUARDED_SCORING_VERSION_V3 : undefined
+    scoringVersion: mode === 'live-llm' ? LIVE_LLM_GUARDED_SCORING_VERSION_V4 : undefined
   }
   addEvaluationRun(pendingRun)
 
@@ -671,13 +671,22 @@ export async function executeEvaluationRun(
         guardrailMeta.scoring_answer ?? guardrailMeta.final_answer ?? item.answer ?? ''
       )
       const finalAnswer = String(guardrailMeta.final_answer ?? item.answer ?? scoringAnswer)
+      const answerSource = item.live_guardrail?.answer_source as
+        | 'raw'
+        | 'repaired'
+        | 'fallback'
+        | 'privacy_block'
+        | 'safety_firewall'
+        | undefined
       const { result } = scoreOrbEvaluationAnswer({
         scenario,
         answer: scoringAnswer,
         runId,
         mode: 'live-llm',
         liveCallError: item.ok ? undefined : item.error,
-        modelRoute: item.model_route
+        modelRoute: item.model_route,
+        liveGuardrailAnswerSource: answerSource,
+        safetyScaffoldCategory: item.safety_scaffold_category
       })
       const liveGuardrail = item.live_guardrail
         ? {
@@ -698,7 +707,14 @@ export async function executeEvaluationRun(
               | 'repaired'
               | 'fallback'
               | 'privacy_block'
+              | 'safety_firewall'
               | undefined,
+            openaiCalled: !(
+              item.live_guardrail.safety_firewall_used ||
+              item.live_guardrail.openai_called === false
+            ),
+            safetyFirewallUsed: Boolean(item.live_guardrail.safety_firewall_used),
+            safetyFirewallReason: String(item.live_guardrail.safety_firewall_reason ?? ''),
             guardrailPassedRaw: Boolean(
               item.live_guardrail.guardrail_passed ?? item.live_guardrail.passed
             ),

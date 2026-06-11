@@ -13,6 +13,10 @@ from routers.orb_standalone_routes import (
     _select_assistant_runtime,
 )
 from services.ai_provider_registry import ai_provider_registry
+from services.orb_adversarial_safety_firewall import (
+    firewall_decision_to_live_guardrail,
+    should_firewall_before_llm,
+)
 from services.orb_live_guardrail_service import (
     enforce_live_guardrails,
     identifiable_data_response,
@@ -118,6 +122,30 @@ class OrbEvaluationRunnerService:
                 "route": "/orb/standalone/conversation",
                 "model_route": None,
                 "retried": False,
+            }
+
+        firewall = should_firewall_before_llm(
+            message,
+            safety_scaffold,
+            str(scenario.get("category") or ""),
+        )
+        if firewall.should_firewall:
+            live_guardrail = firewall_decision_to_live_guardrail(firewall)
+            return {
+                "ok": True,
+                "scenario_id": scenario_id,
+                "answer": firewall.final_answer,
+                "error": None,
+                "route": "/orb/standalone/conversation",
+                "model_route": {
+                    "provider": "indicare-intelligence",
+                    "model": "adversarial-safety-firewall-v4",
+                    "brain_route": "safety-firewall",
+                    "mode": mode_for_scenario(scenario),
+                },
+                "retried": False,
+                "live_guardrail": live_guardrail,
+                "safety_scaffold_category": firewall.category,
             }
 
         mode = mode_for_scenario(scenario)

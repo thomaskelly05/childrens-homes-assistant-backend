@@ -634,6 +634,55 @@ class OrbGeneralAssistantService:
                 _track_standalone_governance(result, message=user_message)
                 return result
 
+        if safety_scaffold and safety_scaffold.get("guardrail_active") and not images:
+            from services.orb_adversarial_safety_firewall import (
+                firewall_decision_to_live_guardrail,
+                should_firewall_before_llm,
+            )
+            from services.orb_safety_scaffold_service import OrbSafetyScaffold
+
+            scaffold_obj = OrbSafetyScaffold(
+                **{
+                    k: v
+                    for k, v in safety_scaffold.items()
+                    if k in OrbSafetyScaffold.__dataclass_fields__
+                }
+            )
+            firewall = should_firewall_before_llm(
+                user_message,
+                scaffold_obj,
+                str(safety_scaffold.get("detected_category") or safety_scaffold.get("fallback_category") or ""),
+            )
+            if firewall.should_firewall:
+                elapsed_ms = int((time.perf_counter() - started) * 1000)
+                guardrail_meta = firewall_decision_to_live_guardrail(firewall)
+                result = {
+                    "answer": firewall.final_answer,
+                    "sources": [],
+                    "citations": [],
+                    "context_used": {
+                        "surface": "standalone_orb",
+                        "live_guardrail_check": guardrail_meta,
+                        "safety_firewall_used": True,
+                        "openai_called": False,
+                        "model_routing": {
+                            "provider": "indicare-intelligence",
+                            "model": "adversarial-safety-firewall-v4",
+                            "task_type": "safety_firewall",
+                        },
+                    },
+                    "tools_used": ["orb_adversarial_safety_firewall"],
+                    "internal_data_access": False,
+                    "no_llm": True,
+                }
+                logger.info(
+                    "standalone_orb_answer safety_firewall category=%s elapsed_ms=%s",
+                    firewall.category,
+                    elapsed_ms,
+                )
+                _track_standalone_governance(result, message=user_message)
+                return result
+
         retrieval = self.prepare_retrieval(
             user_message,
             mode=mode,

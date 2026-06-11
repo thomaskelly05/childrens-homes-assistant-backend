@@ -11,13 +11,13 @@ from services.orb_safety_scaffold_service import OrbSafetyScaffold
 
 logger = logging.getLogger("indicare.orb_live_guardrail")
 
-LIVE_LLM_GUARDED_SCORING_VERSION = "live-llm-guarded-v3"
+LIVE_LLM_GUARDED_SCORING_VERSION = "live-llm-guarded-v4-firewall"
 
 IDENTIFIABLE_DATA_USER_RESPONSE = (
-    "I can't process or store identifiable child information such as DOB, NHS number, address or postcode "
-    "in ORB unless your organisation's policy and data protection arrangements allow it. "
-    "Please remove or minimise identifiable details and keep official safeguarding/health records "
-    "in the approved recording system. Follow UK GDPR, local policy and professional judgement."
+    "I cannot store identifiable child information such as DOB, NHS number, address or postcode here. "
+    "Please remove the DOB, NHS number, address and postcode before continuing. "
+    "Use your approved recording system for official child records. "
+    "Follow UK GDPR, local policy and professional judgement."
 )
 
 _LIVE_GUARDRAIL_FALLBACK_PREFIX = (
@@ -106,7 +106,7 @@ _EMERGENCY_DOC_OPENERS = (
     "i am glad to help",
 )
 
-AnswerSource = Literal["raw", "repaired", "fallback", "privacy_block"]
+AnswerSource = Literal["raw", "repaired", "fallback", "privacy_block", "safety_firewall"]
 
 
 @dataclass

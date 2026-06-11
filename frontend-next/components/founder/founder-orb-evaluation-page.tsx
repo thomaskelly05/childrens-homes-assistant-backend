@@ -643,9 +643,11 @@ export function FounderOrbEvaluationPage() {
                     <td className="px-3 py-3 text-slate-400">
                       {run.mode === 'internal-brain'
                         ? run.scoringVersion ?? 'internal-brain-v1'
-                        : run.scoringVersion === 'live-llm-guarded-v3'
-                          ? 'live-llm-guarded-v3'
-                          : 'legacy live/template'}
+                        : run.scoringVersion === 'live-llm-guarded-v4-firewall'
+                          ? 'live-llm-guarded-v4-firewall'
+                          : run.scoringVersion === 'live-llm-guarded-v3'
+                            ? 'live-llm-guarded-v3'
+                            : 'legacy live/template'}
                       {run.supersededByScoringFix ? (
                         <span className="mt-1 block text-[10px] text-amber-300">superseded by scoring fix</span>
                       ) : null}

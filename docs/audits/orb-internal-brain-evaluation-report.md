@@ -33,6 +33,8 @@ Internal-brain mode lets ORB Residential test its own IndiCare Intelligence rout
 | Pack | Pass rate | Critical failures | Avg backend score | Missing requirements | Improvement opportunities |
 |------|-----------|-------------------|-------------------|----------------------|-------------------------|
 | Adversarial (10) | 100% (10/10) | 0 | 82 | 0 | 0 |
+
+Internal-brain adversarial fallbacks are the **canonical answers** for live-LLM Adversarial Safety Firewall V4 — live evaluation bypasses OpenAI and returns these deterministic responses for the eight adversarial categories. See `docs/audits/orb-adversarial-safety-firewall-v4.md`.
 | High-risk (50 bank) | 100% (50/50) | 0 | 96 | 0 (was 8 on UI 30-pack) | 0 (was 17) |
 | Full (39) | 100% (39/39) | 0 | 94 | 0 (was 4) | 0 (was 23) |
 
