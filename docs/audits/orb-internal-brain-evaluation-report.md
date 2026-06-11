@@ -28,7 +28,17 @@ Internal-brain mode lets ORB Residential test its own IndiCare Intelligence rout
 
 ## Latest results
 
-**Fallback Strengthening V1 — pack script (`scripts/run_orb_internal_brain_evaluation_packs.py`), 2026-06-11**
+**Practice Fallback Strengthening V2 — full audit (`scripts/audit_internal_brain_critical_failures.py`), 2026-06-11**
+
+| Pack | Pass rate | Critical failures | Avg backend score | Missing requirements | Improvement opportunities |
+|------|-----------|-------------------|-------------------|----------------------|-------------------------|
+| Adversarial (10) | 100% (10/10) | 0 | 82 | 0 | 0 |
+| High-risk (50 bank) | 100% (50/50) | 0 | 96 | 0 (was 8 on UI 30-pack) | 0 (was 17) |
+| Full (39) | 100% (39/39) | 0 | 94 | 0 (was 4) | 0 (was 23) |
+
+V2 adds 27 practice-specific structured fallbacks (high-risk, daily practice, management) and expands phrase maps so required safeguards are satisfied in deterministic text. Scoring version remains `internal-brain-v2`. See `docs/audits/orb-internal-brain-practice-fallback-strengthening-v2.md`.
+
+**Earlier — Fallback Strengthening V1 — pack script (`scripts/run_orb_internal_brain_evaluation_packs.py`)**
 
 | Pack | Pass rate | Critical failures | Avg backend score | Missing requirements |
 |------|-----------|-------------------|-------------------|----------------------|
@@ -36,7 +46,7 @@ Internal-brain mode lets ORB Residential test its own IndiCare Intelligence rout
 | High-risk (4 scenarios) | 100% (4/4) | 0 | 100 | 0 |
 | Full (13 scenarios) | 100% (13/13) | 0 | 89 | 0 |
 
-Before V1, adversarial runs could pass with missing safeguards (anti-stigmatising language, accurate legal framing, emergency proportionality, disclaimer) because generic safeguarding fallback text did not satisfy phrase detection. V1 adds category-specific structured fallbacks and phrase-map detection.
+Before V1, adversarial runs could pass with missing safeguards because generic safeguarding fallback text did not satisfy phrase detection.
 
 ## Scoring version internal-brain-v2 (June 2026)
 

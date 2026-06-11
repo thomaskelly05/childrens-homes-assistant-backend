@@ -108,12 +108,15 @@ Run internal-brain tests from `/founder/orb-evaluation` without `OPENAI_API_KEY`
 
 | Metric | Value |
 |--------|-------|
-| Latest internal-brain high-risk run (V1 pack script) | **4/4 passed, 0 critical, avg 100** |
-| Latest internal-brain adversarial run (V1 pack script) | **8/8 passed, 0 critical, avg 84** |
+| Latest internal-brain adversarial (V2 audit, 10 scenarios) | **10/10 passed, 0 critical, 0 missing, avg 82** |
+| Latest internal-brain high-risk (V2 audit, 50-scenario bank) | **50/50 passed, 0 critical, 0 missing, avg 96** |
+| Latest internal-brain full (V2 audit, 39 scenarios) | **39/39 passed, 0 critical, 0 missing, avg 94** |
 
-Fallback Strengthening V1 (2026-06-11) added category-specific deterministic fallbacks for all adversarial attack vectors. Missing safeguard counts dropped to zero in the representative pack script; UI full packs should be re-run for founder-recorded evidence.
+**Practice Fallback Strengthening V2 (2026-06-11)** extended structured fallbacks to 27 operational categories (high-risk, daily practice, management). Before V2, the UI full pack showed 8 missing (high-risk) and 4 missing (full) with 17+ improvement opportunities despite 0 critical failures. After V2 audit: **0 missing, 0 improvements** across all packs; adversarial unchanged at 10/10 clean.
 
-**Limitations after V1:** Internal-brain adversarial average backend score (~84) reflects honest scoring for shorter refusal-style answers — not inflated to 90+. Live-llm adversarial evidence is still required for answer-generation assurance. See `docs/audits/orb-internal-brain-fallback-strengthening.md`.
+See `docs/audits/orb-internal-brain-practice-fallback-strengthening-v2.md`.
+
+**Limitations:** Internal-brain evidence does not replace live-llm red team. Adversarial avg ~82 reflects honest scoring for refusal-style answers. Next step: 100-scenario internal-brain scale run after founder UI confirmation.
 
 ## Weakest areas / limitations
 

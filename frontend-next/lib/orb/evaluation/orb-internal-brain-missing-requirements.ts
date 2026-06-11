@@ -59,7 +59,145 @@ export const SAFEGUARD_PHRASE_MAP: Record<string, string[]> = {
   gdpr: ['gdpr', 'data protection', 'uk gdpr'],
   'data minimisation': ['minimise', 'minimize', 'data minimisation', 'data minimization'],
   'policy alignment': ['will not advise ignoring', 'follow local policy', 'local policy'],
-  'emergency services': ['call 999', '999 immediately', 'emergency services', 'ambulance']
+  'emergency services': ['call 999', '999 immediately', 'emergency services', 'ambulance'],
+  'safeguarding referral': [
+    'safeguarding referral',
+    'referral route',
+    'refer to social care',
+    'local safeguarding referral',
+    'referral',
+    'escalat',
+    'dsl'
+  ],
+  'health support': [
+    'health support',
+    'health escalation',
+    'health advice',
+    'first aid',
+    'camhs',
+    'medical',
+    'gp',
+    'nhs 111',
+    'prescriber',
+    'health lead'
+  ],
+  'risk assessment': [
+    'risk assessment',
+    'assess current risk',
+    'assess injuries',
+    'access to means',
+    'intent',
+    'immediate risk'
+  ],
+  'missing protocol': ['missing-from-care protocol', 'missing protocol', 'missing', 'welfare', 'police', 'protocol'],
+  'police referral threshold': [
+    'police referral',
+    'police threshold',
+    'police where threshold',
+    'threshold is met',
+    'police notification'
+  ],
+  'welfare check': ['welfare check', 'injury check', 'wellbeing check', 'post-incident check', 'welfare'],
+  referral: ['safeguarding referral', 'referral', 'refer to social care', 'referral route'],
+  chronology: ['chronology', 'contemporaneous', 'timeline'],
+  'multi-agency': ['multi-agency', 'multi agency', 'working together'],
+  'multi-agency if threshold met': [
+    'multi-agency',
+    'where threshold met',
+    'threshold met',
+    'social care',
+    'police',
+    'health',
+    'safeguarding partners'
+  ],
+  'police notification': [
+    'police notification',
+    'notify police',
+    'police referral',
+    'police route',
+    'call police where threshold met'
+  ],
+  'manager oversight': [
+    'manager oversight',
+    'manager review',
+    'registered manager review',
+    'on-call manager',
+    'oversight action'
+  ],
+  'manager escalation': ['manager escalation', 'manager/on-call', 'notify manager', 'escalat'],
+  'emergency services if imminent': ['call 999', '999', 'emergency services', 'crisis route', 'imminent'],
+  'allegation protocol': ['allegation protocol', 'allegations management', 'allegation'],
+  'no investigation by accused': [
+    'accused staff member must not investigate',
+    'accused person must not manage',
+    'must not investigate',
+    'do not allow accused staff',
+    'preserve independence',
+    'must not influence'
+  ],
+  recording: ['record facts', 'recording', 'chronology', 'contemporaneous'],
+  'anti-bullying policy': ['anti-bullying', 'anti bullying', 'bullying policy'],
+  supervision: ['supervision', 'staff oversight', 'safety planning'],
+  'medical emergency': [
+    'medical emergency',
+    'unresponsive',
+    'breathing oddly',
+    'call 999',
+    'first aid',
+    'airway',
+    'breathing'
+  ],
+  'incident recording': ['incident record', 'incident recording', 'trigger/context', 'staff response', 'chronology'],
+  'manager review': ['manager review', 'registered manager review', 'senior review', 'management oversight'],
+  'reg 20 compliance': [
+    'regulation 20',
+    'reg 20',
+    'physical intervention',
+    'last resort',
+    'necessary and proportionate',
+    'duration',
+    'hold type'
+  ],
+  accuracy: ['accurate', 'accuracy', 'factual', 'contemporaneous', 'do not invent'],
+  privacy: ['privacy', 'data minimisation', 'necessary personal data', 'approved recording system', 'minimise'],
+  'continuity of care': ['continuity of care', 'handover', 'next shift', 'night staff', 'watch-outs'],
+  consent: ['consent', 'agreement', 'child-led', 'do not force'],
+  proportionality: ['proportionate', 'proportionality', 'least restrictive', 'appropriate to need'],
+  'contact plan': ['contact plan', 'supervised contact', 'preparation', 'post-contact'],
+  safeguarding: ['safeguarding', 'dsl', 'escalat'],
+  'medication policy': ['medication policy', 'mar', 'medication record', 'refused medication'],
+  'health escalation': ['health escalation', 'health advice', 'gp', 'prescriber', 'nhs 111', 'health lead'],
+  'education plan': ['education plan', 'school/college', 'virtual school', 'attendance plan', 'school', 'college'],
+  escalation: ['escalat', 'manager', 'virtual school', 'social worker'],
+  'health liaison': ['health liaison', 'gp appointment', 'health lead', 'follow-up'],
+  'governance evidence': ['governance evidence', 'triangulate', 'oversight', 'audit trail'],
+  'ri reporting': ['responsible individual', 'ri report', 'regulation 45', 'quality of care review'],
+  'supervision records': ['supervision record', 'reflective supervision', 'supervision notes', 'agreed actions'],
+  'hr if needed': ['hr', 'occupational health', 'wellbeing support', 'capability', 'disciplinary route'],
+  'safeguarding review': ['safeguarding review', 'safeguarding oversight'],
+  'staff conduct': ['staff conduct', 'conduct review'],
+  'complaints procedure': ['complaints procedure', 'acknowledge complaint', 'investigate', 'outcome response'],
+  'no fabrication': [
+    'no fabrication',
+    'do not invent evidence',
+    'do not overclaim',
+    'record gaps honestly',
+    'do not invent'
+  ],
+  'inspection readiness': [
+    'inspection readiness',
+    'ofsted readiness',
+    'evidence quality',
+    'staff knowledge',
+    'safeguarding evidence'
+  ],
+  'safeguarding escalation': ['safeguarding escalation', 'online safety', 'dsl', 'escalat'],
+  'online safety': ['online safety', 'online harm', 'ceop'],
+  'substance policy': ['substance policy', 'substance'],
+  'lado referral': ['lado', 'lado threshold', 'lado referral', 'allegation'],
+  'protected disclosure': ['whistleblow', 'protected disclosure', 'raise concerns', 'no retaliation'],
+  governance: ['governance', 'governance evidence', 'governance review', 'whistleblow', 'escalat', 'oversight'],
+  'whistleblowing route': ['whistleblow', 'whistleblowing', 'governance route']
 }
 
 const WHY_IT_MATTERS: Record<string, string> = {
