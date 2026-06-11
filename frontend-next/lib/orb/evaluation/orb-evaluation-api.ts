@@ -117,8 +117,11 @@ async function proxyEvaluation(
   const cookieStore = await cookies()
   const cookieHeader = cookieStore.toString()
   const controller = new AbortController()
-  const isLongRun = backendPath.includes('/runs') && init?.method === 'POST'
-  const timer = setTimeout(() => controller.abort(), isLongRun ? 300_000 : 12_000)
+  const isProcessBatch = backendPath.includes('/process') && init?.method === 'POST'
+  const isLongRun =
+    backendPath.endsWith('/runs') && init?.method === 'POST' && !backendPath.includes('/process')
+  const timeoutMs = isProcessBatch ? 60_000 : isLongRun ? 300_000 : 12_000
+  const timer = setTimeout(() => controller.abort(), timeoutMs)
 
   try {
     const result = await upstreamJson(
@@ -300,6 +303,21 @@ export async function handleEvaluationRunGet(request: Request, runId: string): P
   }
 
   return NextResponse.json(sanitiseFounderPayload({ success: true, data: { run } }), { status: 200 })
+}
+
+export async function handleEvaluationRunProcessPost(
+  request: Request,
+  runId: string
+): Promise<NextResponse> {
+  return proxyEvaluation(
+    request,
+    `${BACKEND_PREFIX}/runs/${encodeURIComponent(runId)}/process`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({})
+    }
+  )
 }
 
 export async function handleEvaluationRetestPost(

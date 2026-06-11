@@ -137,6 +137,17 @@ export function getLatestInternalBrainHighRiskRun(): OrbEvaluationRun | undefine
   )
 }
 
+export function getActiveInternalBrainRun(
+  packType?: NonNullable<OrbEvaluationRun['packType']>
+): OrbEvaluationRun | undefined {
+  return getEvaluationRuns().find(
+    (run) =>
+      run.mode === 'internal-brain' &&
+      (run.status === 'queued' || run.status === 'running') &&
+      (!packType || run.packType === packType)
+  )
+}
+
 export function getLatestInternalBrainAdversarialRun(): OrbEvaluationRun | undefined {
   return getEvaluationRuns().find(
     (run) =>

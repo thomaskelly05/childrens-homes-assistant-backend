@@ -5,8 +5,15 @@ from __future__ import annotations
 import pytest
 
 from schemas.orb_evaluation_platform import OrbEvaluationRunRequest
-from services.orb_evaluation_platform_service import orb_evaluation_platform_service
+from services.orb_evaluation_platform_service import _in_memory_runs, orb_evaluation_platform_service
 from services.orb_internal_brain_evaluation_service import orb_internal_brain_evaluation_service
+
+
+@pytest.fixture(autouse=True)
+def clear_in_memory_evaluation_runs():
+    _in_memory_runs.clear()
+    yield
+    _in_memory_runs.clear()
 
 
 def _self_harm_scenario() -> dict:
@@ -143,7 +150,7 @@ def test_internal_brain_mode_runs_without_openai(monkeypatch):
         lambda: False,
     )
     scenarios = [_self_harm_scenario()]
-    result = orb_evaluation_platform_service.run_evaluation(
+    created = orb_evaluation_platform_service.create_internal_brain_run(
         OrbEvaluationRunRequest(
             title="Internal brain test",
             mode="internal-brain",
@@ -151,13 +158,17 @@ def test_internal_brain_mode_runs_without_openai(monkeypatch):
             limit=1,
         )
     )
-    assert result.status == "completed"
-    assert result.mode == "internal-brain"
-    assert len(result.scenario_results) == 1
-    assert result.scenario_results[0].ok is True
-    assert result.scenario_results[0].answer
-    assert result.scenario_results[0].internal_brain is not None
-    assert "No external LLM" in result.scenario_results[0].answer or "ORB Internal Brain" in result.scenario_results[0].answer
+    assert created.run.status == "queued"
+    processed = orb_evaluation_platform_service.process_internal_brain_run(created.run.id)
+    assert processed.status == "completed"
+    assert len(processed.batch_results) == 1
+    assert processed.batch_results[0].ok is True
+    assert processed.batch_results[0].answer
+    assert processed.batch_results[0].internal_brain is not None
+    assert (
+        "No external LLM" in processed.batch_results[0].answer
+        or "ORB Internal Brain" in processed.batch_results[0].answer
+    )
 
 
 def test_live_llm_still_fails_without_openai(monkeypatch):

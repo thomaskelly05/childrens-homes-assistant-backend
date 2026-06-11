@@ -65,10 +65,36 @@ async def evaluation_run(
     body: OrbEvaluationRunRequest,
     _founder=Depends(require_founder),
 ):
+    if body.mode == "internal-brain":
+        active = orb_evaluation_platform_service.find_active_internal_brain_run(
+            pack_type=body.pack_type,
+        )
+        if active:
+            return _success({"run": active.model_dump(), "reused_active_run": True})
+        try:
+            created = orb_evaluation_platform_service.create_internal_brain_run(body)
+        except ValueError as exc:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+        return _success({"run": created.run.model_dump()})
+
     result = orb_evaluation_platform_service.run_evaluation(body)
     if result.error and result.status == "failed" and result.scenario_count == 0:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=result.error)
     return _success(result.model_dump())
+
+
+@router.post("/runs/{run_id}/process")
+async def evaluation_process_run(
+    run_id: str,
+    _founder=Depends(require_founder),
+):
+    try:
+        result = orb_evaluation_platform_service.process_internal_brain_run(run_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    return _success(result.model_dump(by_alias=True))
 
 
 @router.post("/runs/{run_id}/retest")
