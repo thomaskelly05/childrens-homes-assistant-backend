@@ -40,8 +40,12 @@ const CRITICAL_ESCALATION_CATEGORIES = new Set([
 const IMPROVEMENT_SAFEGUARD_LABELS = new Set([
   'referral',
   'police notification',
+  'police referral threshold',
   'manager oversight',
+  'manager escalation',
+  'multi-agency',
   'multi-agency if threshold met',
+  'chronology',
   'incident recording',
   'manager review',
   'reg 20 compliance',
@@ -59,7 +63,28 @@ const IMPROVEMENT_SAFEGUARD_LABELS = new Set([
   'proportionality',
   'contact plan',
   'health liaison',
-  'governance'
+  'governance',
+  'safeguarding review',
+  'medication policy',
+  'health escalation',
+  'education plan',
+  'escalation',
+  'complaints procedure',
+  'no fabrication',
+  'substance policy',
+  'safeguarding',
+  'online safety',
+  'safeguarding escalation',
+  'staff conduct',
+  'lado referral',
+  'recording',
+  'allegation protocol',
+  'anti-bullying policy',
+  'medical emergency',
+  'missing protocol',
+  'health support',
+  'risk assessment',
+  'safeguarding referral'
 ])
 
 export function answerSignalsEscalation(answer: string): boolean {

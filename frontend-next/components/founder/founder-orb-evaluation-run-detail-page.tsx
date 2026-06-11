@@ -75,6 +75,24 @@ export function FounderOrbEvaluationRunDetailPage({ runId }: { runId: string }) 
 
   const results = useMemo(() => run?.results ?? [], [run])
 
+  const improvementsByCategory = useMemo(() => {
+    if (run?.mode !== 'internal-brain') return []
+    const grouped = new Map<string, Array<{ label: string; recommendation: string; scenarioId: string }>>()
+    for (const result of results) {
+      const category = result.internalBrain?.detectedCategory ?? 'unknown'
+      for (const detail of result.improvementOpportunities ?? []) {
+        const items = grouped.get(category) ?? []
+        items.push({
+          label: detail.label,
+          recommendation: detail.recommendedImprovement,
+          scenarioId: result.scenarioId
+        })
+        grouped.set(category, items)
+      }
+    }
+    return [...grouped.entries()].sort(([a], [b]) => a.localeCompare(b))
+  }, [run?.mode, results])
+
   if (loadState === 'loading') {
     return (
       <div className="founder-page mx-auto max-w-5xl px-4 py-8 md:px-8">
@@ -173,6 +191,9 @@ export function FounderOrbEvaluationRunDetailPage({ runId }: { runId: string }) 
             <p className="mt-2 text-3xl font-black text-cyan-200">
               {run.improvementOpportunitiesCount ?? 0}
             </p>
+            <p className="mt-1 text-xs text-slate-500">
+              Improvements do not block readiness unless severity is critical or high.
+            </p>
           </div>
           <div className="founder-surface rounded-2xl border border-white/10 p-5">
             <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">Red team findings</p>
@@ -184,6 +205,31 @@ export function FounderOrbEvaluationRunDetailPage({ runId }: { runId: string }) 
             </p>
           </div>
         </div>
+      ) : null}
+
+      {run.mode === 'internal-brain' && improvementsByCategory.length > 0 ? (
+        <FounderSectionCard eyebrow="Improvements" title="Improvement opportunities by category">
+          <p className="mb-4 text-sm text-slate-400">
+            Grouped by scenario category — these sharpen fallback wording but do not block pass unless marked
+            critical or high.
+          </p>
+          <div className="space-y-4">
+            {improvementsByCategory.map(([category, items]) => (
+              <div key={category} className="rounded-xl border border-white/10 bg-black/20 p-4">
+                <p className="text-sm font-semibold text-cyan-200">{category}</p>
+                <ul className="mt-2 space-y-2">
+                  {items.map((item) => (
+                    <li key={`${item.scenarioId}-${item.label}`} className="text-sm text-slate-400">
+                      <span className="text-cyan-100">{item.label}</span>
+                      <span className="text-slate-600"> · {item.scenarioId}</span>
+                      <p className="mt-0.5 text-slate-500">{item.recommendation}</p>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </FounderSectionCard>
       ) : null}
 
       {run.status === 'queued' || run.status === 'running' ? (
@@ -261,6 +307,14 @@ export function FounderOrbEvaluationRunDetailPage({ runId }: { runId: string }) 
                     <p>
                       <span className="text-slate-500">Detected category:</span>{' '}
                       {result.internalBrain.detectedCategory}
+                      {result.internalBrain.routing?.practice_specific_fallback_used ? (
+                        <span
+                          className="ml-2 rounded-full border border-emerald-400/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-200"
+                          data-testid="orb-eval-practice-fallback-badge"
+                        >
+                          Practice-specific fallback used
+                        </span>
+                      ) : null}
                     </p>
                     <p>
                       <span className="text-slate-500">Detected risk level:</span>{' '}
