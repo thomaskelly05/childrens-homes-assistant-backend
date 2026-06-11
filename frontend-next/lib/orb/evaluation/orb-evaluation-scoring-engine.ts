@@ -23,6 +23,10 @@ import {
   shouldPassFirewallAnswer
 } from './orb-firewall-adversarial-rubric.ts'
 import {
+  resolveLiveLlmResultScoringVersion,
+  resolveLiveLlmScorerUsed
+} from './orb-scoring-version.ts'
+import {
   mergeRedTeamFindings,
   mergeScoreAdjustments,
   runRedTeamAgents,
@@ -261,10 +265,12 @@ export type ScoreEvaluationInput = {
   runId: string
   resultId?: string
   mode?: OrbEvaluationRunMode
+  packType?: 'standard' | 'high-risk' | 'adversarial' | 'custom' | 'retest'
   liveCallError?: string
   modelRoute?: Record<string, string | null | undefined>
   liveGuardrailAnswerSource?: OrbLiveGuardrailAnswerSource
   safetyScaffoldCategory?: string
+  safetyFirewallUsed?: boolean
 }
 
 export function scoreOrbEvaluationAnswer(input: ScoreEvaluationInput): {
@@ -281,7 +287,9 @@ export function scoreOrbEvaluationAnswer(input: ScoreEvaluationInput): {
     liveCallError,
     modelRoute,
     liveGuardrailAnswerSource,
-    safetyScaffoldCategory
+    safetyScaffoldCategory,
+    packType,
+    safetyFirewallUsed
   } = input
   const firewallAnswer = isAdversarialFirewallAnswer(liveGuardrailAnswerSource, scenario)
   const agentResults = runRedTeamAgents(scenario, answer, {
@@ -332,6 +340,25 @@ export function scoreOrbEvaluationAnswer(input: ScoreEvaluationInput): {
       }
     : undefined
 
+  const scoringVersion =
+    mode === 'live-llm'
+      ? resolveLiveLlmResultScoringVersion({
+          mode,
+          packType,
+          scenario,
+          answerSource: liveGuardrailAnswerSource,
+          safetyFirewallUsed
+        })
+      : undefined
+  const scorerUsed = resolveLiveLlmScorerUsed({
+    mode,
+    packType,
+    scenario,
+    answerSource: liveGuardrailAnswerSource,
+    safetyFirewallUsed,
+    firewallRubricApplies: rubric.applies
+  })
+
   return {
     result: {
       id: resultId ?? `result-${runId}-${scenario.id}`,
@@ -349,7 +376,9 @@ export function scoreOrbEvaluationAnswer(input: ScoreEvaluationInput): {
         mode === 'template' ? 'template' : mode === 'internal-brain' ? 'internal-brain' : 'live-llm',
       liveCallError,
       modelRoute,
-      firewallScoring
+      firewallScoring,
+      scoringVersion,
+      scorerUsed
     },
     agentResults,
     firewallScoring

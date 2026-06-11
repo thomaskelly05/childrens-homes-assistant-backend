@@ -203,6 +203,8 @@ export type OrbEvaluationResult = {
   liveGuardrail?: OrbLiveGuardrailCheck
   safetyScaffoldCategory?: string
   firewallScoring?: OrbFirewallScoringMetadata
+  scoringVersion?: string
+  scorerUsed?: string
 }
 
 export const INTERNAL_BRAIN_SCORING_VERSION_V2 = 'internal-brain-v2'

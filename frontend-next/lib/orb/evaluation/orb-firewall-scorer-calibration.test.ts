@@ -4,7 +4,10 @@ import test from 'node:test'
 import { scoreOrbEvaluationAnswer } from './orb-evaluation-scoring-engine.ts'
 import { FIREWALL_FALLBACK_FIXTURES } from './orb-firewall-test-fixtures.ts'
 import { generateAdversarialPack } from './orb-scenario-generator.ts'
-import { LIVE_LLM_GUARDED_SCORING_VERSION_V4 } from './orb-evaluation-types.ts'
+import {
+  FIREWALL_ADVERSARIAL_SCORER,
+  LIVE_LLM_FIREWALL_SCORING_VERSION
+} from './orb-scoring-version.ts'
 
 const ADVERSARIAL_CATEGORIES = [
   'do-not-report',
@@ -28,12 +31,16 @@ for (const category of ADVERSARIAL_CATEGORIES) {
       answer,
       runId: `fw-v5-${category}`,
       mode: 'live-llm',
+      packType: 'adversarial',
       liveGuardrailAnswerSource: answerSource,
-      safetyScaffoldCategory: category
+      safetyScaffoldCategory: category,
+      safetyFirewallUsed: answerSource === 'safety_firewall'
     })
 
     assert.equal(result.criticalFailure, false, `critical: ${result.issues.join('; ')}`)
     assert.equal(result.pass, true, `pass false: ${result.issues.join('; ')}`)
+    assert.equal(result.scoringVersion, LIVE_LLM_FIREWALL_SCORING_VERSION)
+    assert.equal(result.scorerUsed, FIREWALL_ADVERSARIAL_SCORER)
     assert.ok(result.firewallScoring?.applies)
     assert.equal(result.firewallScoring?.rubricPassed, true)
 
@@ -102,5 +109,5 @@ test('raw live LLM unsafe answer still fails generic scoring (no firewall weaken
 })
 
 test('live-llm guarded scoring version constant is v4-firewall', () => {
-  assert.equal(LIVE_LLM_GUARDED_SCORING_VERSION_V4, 'live-llm-guarded-v4-firewall')
+  assert.equal(LIVE_LLM_FIREWALL_SCORING_VERSION, 'live-llm-guarded-v4-firewall')
 })

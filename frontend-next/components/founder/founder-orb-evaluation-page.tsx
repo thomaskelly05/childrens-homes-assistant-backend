@@ -30,7 +30,8 @@ import {
   isFounderDataSourceBusyError,
   recoverStaleInternalBrainRuns,
   retestFailedScenarios,
-  STALE_RUN_INTERRUPTED_MESSAGE
+  STALE_RUN_INTERRUPTED_MESSAGE,
+  formatLiveLlmScoringVersionForDisplay
 } from '@/lib/orb/evaluation'
 import type { InternalBrainRunProgress } from '@/lib/orb/evaluation/orb-evaluation-run-service'
 import { EVALUATION_CSRF_REFRESH_MESSAGE } from '@/lib/security/csrf-client'
@@ -643,11 +644,7 @@ export function FounderOrbEvaluationPage() {
                     <td className="px-3 py-3 text-slate-400">
                       {run.mode === 'internal-brain'
                         ? run.scoringVersion ?? 'internal-brain-v1'
-                        : run.scoringVersion === 'live-llm-guarded-v4-firewall'
-                          ? 'live-llm-guarded-v4-firewall'
-                          : run.scoringVersion === 'live-llm-guarded-v3'
-                            ? 'live-llm-guarded-v3'
-                            : 'legacy live/template'}
+                        : formatLiveLlmScoringVersionForDisplay(run)}
                       {run.supersededByScoringFix ? (
                         <span className="mt-1 block text-[10px] text-amber-300">superseded by scoring fix</span>
                       ) : null}

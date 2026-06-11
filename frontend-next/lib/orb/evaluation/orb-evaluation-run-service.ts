@@ -53,11 +53,13 @@ import {
   normaliseInternalBrainPayload,
   scoreInternalBrainResult
 } from './orb-internal-brain-scoring-engine'
-import {
-  INTERNAL_BRAIN_SCORING_VERSION_V2,
-  LIVE_LLM_GUARDED_SCORING_VERSION_V4
-} from './orb-evaluation-types'
+import { INTERNAL_BRAIN_SCORING_VERSION_V2 } from './orb-evaluation-types'
 import { buildTemplateAnswer, scoreOrbEvaluationAnswer } from './orb-evaluation-scoring-engine'
+import {
+  formatLiveLlmScoringVersionForDisplay,
+  resolveLiveLlmRunScoringVersion,
+  traceOrbEvalScoringVersion
+} from './orb-scoring-version'
 import { mergeRedTeamFindings, runRedTeamAgents } from './red-team-agents'
 
 type BackendRunResponse = {
@@ -183,7 +185,7 @@ function summariseRun(
     improvementOpportunitiesCount,
     scoringVersion:
       run.mode === 'live-llm'
-        ? LIVE_LLM_GUARDED_SCORING_VERSION_V4
+        ? resolveLiveLlmRunScoringVersion(run, evalResults)
         : run.scoringVersion,
     completedAt: new Date().toISOString(),
     results: evalResults,
@@ -614,7 +616,7 @@ export async function executeEvaluationRun(
     title: options.title ?? `ORB Evaluation — ${packType}`,
     packType,
     limitations: [],
-    scoringVersion: mode === 'live-llm' ? LIVE_LLM_GUARDED_SCORING_VERSION_V4 : undefined
+    scoringVersion: undefined
   }
   addEvaluationRun(pendingRun)
 
@@ -678,17 +680,32 @@ export async function executeEvaluationRun(
         | 'privacy_block'
         | 'safety_firewall'
         | undefined
+      const safetyFirewallUsed = Boolean(item.live_guardrail?.safety_firewall_used)
       const { result: scored } = scoreOrbEvaluationAnswer({
         scenario,
         answer: scoringAnswer,
         runId,
         mode: 'live-llm',
+        packType,
         liveCallError: item.ok ? undefined : item.error,
         modelRoute: item.model_route,
         liveGuardrailAnswerSource: answerSource,
-        safetyScaffoldCategory: item.safety_scaffold_category
+        safetyScaffoldCategory: item.safety_scaffold_category,
+        safetyFirewallUsed
       })
       const result = scored
+      traceOrbEvalScoringVersion({
+        runId,
+        mode: 'live-llm',
+        pack: packType,
+        scenarioCategory: scenario.category,
+        scenarioId: scenario.id,
+        requestedScoringVersion: pendingRun.scoringVersion,
+        assignedScoringVersion: result.scoringVersion,
+        answerSource,
+        safetyFirewallUsed,
+        scorerUsed: result.scorerUsed
+      })
       const liveGuardrail = item.live_guardrail
         ? {
             passed: Boolean(item.live_guardrail.guardrail_passed ?? item.live_guardrail.passed),
@@ -744,6 +761,14 @@ export async function executeEvaluationRun(
 
   addEvaluationResults(evalResults)
   const completed = summariseRun(pendingRun, evalResults)
+  traceOrbEvalScoringVersion({
+    runId,
+    mode: completed.mode,
+    pack: completed.packType,
+    assignedScoringVersion: completed.scoringVersion,
+    persistedScoringVersion: completed.scoringVersion,
+    frontendDisplayVersion: formatLiveLlmScoringVersionForDisplay(completed, evalResults)
+  })
   updateEvaluationRun(runId, completed)
   await persistEvaluationRun(completed)
   assertCompletedEvaluationRunSaved(completed)

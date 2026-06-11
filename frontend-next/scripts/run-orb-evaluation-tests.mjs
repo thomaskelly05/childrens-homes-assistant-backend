@@ -4,11 +4,14 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
-const testFile = join(root, 'lib/orb/evaluation/orb-firewall-scorer-calibration.test.ts')
+const testFiles = [
+  join(root, 'lib/orb/evaluation/orb-firewall-scorer-calibration.test.ts'),
+  join(root, 'lib/orb/evaluation/orb-scoring-version.test.ts')
+]
 
 const result = spawnSync(
   process.execPath,
-  ['--experimental-strip-types', '--test', testFile],
+  ['--experimental-strip-types', '--test', ...testFiles],
   { cwd: root, stdio: 'inherit' }
 )
 
