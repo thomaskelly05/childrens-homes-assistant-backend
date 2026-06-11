@@ -34,7 +34,11 @@ function normalisePersistedRuns(items: unknown): OrbEvaluationRun[] {
       runs.push(run)
     }
   }
-  return runs.sort((a, b) => b.startedAt.localeCompare(a.startedAt))
+  return runs.sort((a, b) => {
+    const aTime = a.completedAt ?? a.startedAt
+    const bTime = b.completedAt ?? b.startedAt
+    return bTime.localeCompare(aTime)
+  })
 }
 
 async function upstreamJson(
@@ -135,6 +139,20 @@ export async function handleEvaluationRunsGet(request: Request): Promise<NextRes
     ])
 
     if (!overviewResult.ok) {
+      if (runs.length > 0) {
+        return NextResponse.json(
+          sanitiseFounderPayload({
+            success: true,
+            data: {
+              overview: null,
+              runs,
+              count: runs.length,
+              overviewError: overviewResult.detail
+            }
+          }),
+          { status: 200 }
+        )
+      }
       return NextResponse.json({ error: overviewResult.detail }, { status: overviewResult.status })
     }
 
@@ -158,12 +176,33 @@ export async function handleEvaluationRunsGet(request: Request): Promise<NextRes
 }
 
 export async function handleEvaluationRunsPost(request: Request): Promise<NextResponse> {
-  const body = await request.text()
-  return proxyEvaluation(request, `${BACKEND_PREFIX}/runs`, {
+  const bodyText = await request.text()
+  let parsedBody: Record<string, unknown> = {}
+  try {
+    parsedBody = JSON.parse(bodyText) as Record<string, unknown>
+  } catch {
+    parsedBody = {}
+  }
+
+  const response = await proxyEvaluation(request, `${BACKEND_PREFIX}/runs`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body
+    body: bodyText
   })
+
+  if (process.env.NODE_ENV === 'development') {
+    const payload = await response.clone().json().catch(() => ({})) as {
+      data?: { run_id?: string; mode?: string; status?: string }
+    }
+    console.info('[orb-evaluation] POST /runs', {
+      mode: parsedBody.mode ?? parsedBody.pack_type ?? parsedBody.pack,
+      pack: parsedBody.pack_type ?? parsedBody.pack,
+      backendStatus: response.status,
+      runId: payload.data?.run_id
+    })
+  }
+
+  return response
 }
 
 export async function handleEvaluationRunGet(request: Request, runId: string): Promise<NextResponse> {

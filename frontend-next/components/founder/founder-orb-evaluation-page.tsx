@@ -9,6 +9,7 @@ import { FounderSectionCard } from '@/components/founder/founder-section-card'
 import { getQualityRuns } from '@/lib/founder/quality-lab'
 import { computeOrbLaunchQualityGate } from '@/lib/orb/quality/launch-quality-gate'
 import {
+  assertCompletedEvaluationRunSaved,
   createBuildBriefFromEvaluationResult,
   executeEvaluationRun,
   fetchEvaluationRuns,
@@ -62,7 +63,7 @@ export function FounderOrbEvaluationPage() {
     [runs]
   )
 
-  const loadEvaluationData = useCallback(async () => {
+  const loadEvaluationData = useCallback(async (): Promise<OrbEvaluationRun[]> => {
     setLoadState('loading')
     setLoadError(null)
     try {
@@ -74,30 +75,38 @@ export function FounderOrbEvaluationPage() {
         runs: runsPayload.runs,
         scenarios: scenariosPayload.scenarios
       })
-      setRuns(getEvaluationRuns())
+      const nextRuns = getEvaluationRuns()
+      setRuns(nextRuns)
       setLoadState('ready')
+      return nextRuns
     } catch {
-      setRuns([])
       setLoadState('error')
       setLoadError(LOAD_ERROR_MESSAGE)
+      throw new Error(LOAD_ERROR_MESSAGE)
     }
   }, [])
 
   useEffect(() => {
-    void loadEvaluationData()
-  }, [loadEvaluationData])
-
-  const refresh = useCallback(() => {
-    void loadEvaluationData()
+    void loadEvaluationData().catch(() => undefined)
   }, [loadEvaluationData])
 
   const runAction = useCallback(
-    async (label: string, action: () => Promise<unknown>) => {
+    async (label: string, action: () => Promise<unknown>, options?: { requireSavedRun?: boolean }) => {
       setBusy(label)
       setMessage(null)
       try {
-        await action()
-        refresh()
+        const result = await action()
+        const refreshedRuns = await loadEvaluationData()
+
+        if (options?.requireSavedRun && result && typeof result === 'object' && 'id' in result) {
+          const run = result as OrbEvaluationRun
+          assertCompletedEvaluationRunSaved(run)
+          const persisted = refreshedRuns.find((item) => item.id === run.id)
+          if (!persisted) {
+            throw new Error('Internal brain run did not complete. No result was saved.')
+          }
+        }
+
         setMessage(`${label} complete`)
       } catch (err) {
         setMessage(`${label} failed: ${err instanceof Error ? err.message : 'unknown error'}`)
@@ -105,7 +114,7 @@ export function FounderOrbEvaluationPage() {
         setBusy(null)
       }
     },
-    [refresh]
+    [loadEvaluationData]
   )
 
   const topAgent = Object.entries(agentCounts).sort((a, b) => b[1] - a[1])[0]
@@ -137,8 +146,14 @@ export function FounderOrbEvaluationPage() {
             {summary.latestInternalBrainRun ? summary.latestInternalBrainRun.title ?? 'Completed' : 'None yet'}
           </p>
           <p className="mt-1 text-xs text-slate-500">
-            High-risk failures: {summary.latestInternalBrainHighRiskFailures ?? 0}
+            High-risk failures: {summary.latestInternalBrainHighRiskFailures}
           </p>
+          {summary.latestInternalBrainHighRiskRun ? (
+            <p className="mt-2 text-xs text-slate-400">
+              Pass rate: {summary.latestInternalBrainHighRiskRun.passRate}% · Critical:{' '}
+              {summary.latestInternalBrainHighRiskRun.criticalFailures}
+            </p>
+          ) : null}
         </div>
         <div className="founder-surface rounded-2xl border border-white/10 bg-white/[0.04] p-5">
           <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">Latest live-llm run</p>
@@ -189,15 +204,19 @@ export function FounderOrbEvaluationPage() {
               className="rounded-full border border-cyan-400/30 bg-cyan-500/10 px-4 py-2 text-xs font-bold text-cyan-100"
               data-testid="orb-eval-internal-brain-high-risk"
               onClick={() =>
-                runAction('Internal brain high-risk test', async () => {
-                  generateScenarioPack('high-risk')
-                  await executeEvaluationRun({
-                    title: 'Internal brain high-risk test',
-                    packType: 'high-risk',
-                    mode: 'internal-brain',
-                    limit: 30
-                  })
-                })
+                runAction(
+                  'Internal brain high-risk test',
+                  async () => {
+                    generateScenarioPack('high-risk')
+                    return executeEvaluationRun({
+                      title: 'ORB Evaluation — internal brain high-risk',
+                      packType: 'high-risk',
+                      mode: 'internal-brain',
+                      limit: 30
+                    })
+                  },
+                  { requireSavedRun: true }
+                )
               }
             >
               <Shield className="mr-1 inline h-3.5 w-3.5" aria-hidden />
@@ -209,14 +228,18 @@ export function FounderOrbEvaluationPage() {
               className="rounded-full border border-cyan-400/30 bg-cyan-500/10 px-4 py-2 text-xs font-bold text-cyan-100"
               data-testid="orb-eval-internal-brain-adversarial"
               onClick={() =>
-                runAction('Internal brain adversarial test', async () => {
-                  generateScenarioPack('adversarial')
-                  await executeEvaluationRun({
-                    title: 'Internal brain adversarial test',
-                    packType: 'adversarial',
-                    mode: 'internal-brain'
-                  })
-                })
+                runAction(
+                  'Internal brain adversarial test',
+                  async () => {
+                    generateScenarioPack('adversarial')
+                    return executeEvaluationRun({
+                      title: 'Internal brain adversarial test',
+                      packType: 'adversarial',
+                      mode: 'internal-brain'
+                    })
+                  },
+                  { requireSavedRun: true }
+                )
               }
             >
               Run internal brain adversarial test
@@ -227,15 +250,19 @@ export function FounderOrbEvaluationPage() {
               className="rounded-full border border-cyan-400/30 bg-cyan-500/10 px-4 py-2 text-xs font-bold text-cyan-100"
               data-testid="orb-eval-internal-brain-full"
               onClick={() =>
-                runAction('Internal brain full test', async () => {
-                  generateScenarioPack('standard')
-                  await executeEvaluationRun({
-                    title: 'Internal brain full test',
-                    mode: 'internal-brain',
-                    limit: 39,
-                    packType: 'standard'
-                  })
-                })
+                runAction(
+                  'Internal brain full test',
+                  async () => {
+                    generateScenarioPack('standard')
+                    return executeEvaluationRun({
+                      title: 'Internal brain full test',
+                      mode: 'internal-brain',
+                      limit: 39,
+                      packType: 'standard'
+                    })
+                  },
+                  { requireSavedRun: true }
+                )
               }
             >
               Run internal brain full test

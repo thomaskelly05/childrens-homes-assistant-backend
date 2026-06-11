@@ -1,6 +1,6 @@
 import { addBuildBrief } from '@/lib/founder/build-briefs/build-brief-store'
 import { addQualityProposal } from '@/lib/founder/quality-lab/quality-proposal-store'
-import { founderPost } from '@/lib/founder/api/founder-api-client'
+import { FounderPersistenceApiError, founderPost } from '@/lib/founder/api/founder-api-client'
 import { postEvaluationRun } from '@/lib/orb/evaluation/orb-evaluation-client'
 
 import type {
@@ -26,6 +26,9 @@ import {
   getEvaluationRun,
   getEvaluationRuns,
   getEvaluationScenarios,
+  getLatestInternalBrainHighRiskRun,
+  getLatestInternalBrainRun,
+  getLatestLiveLlmRun,
   setEvaluationScenarios,
   updateEvaluationRun
 } from './orb-evaluation-store'
@@ -65,6 +68,28 @@ export type EvaluationRunOptions = {
   limit?: number
   scenarioIds?: string[]
   createdBy?: string
+}
+
+export class EvaluationRunError extends Error {
+  run?: OrbEvaluationRun
+
+  constructor(message: string, run?: OrbEvaluationRun) {
+    super(message)
+    this.name = 'EvaluationRunError'
+    this.run = run
+  }
+}
+
+export function assertCompletedEvaluationRunSaved(run: OrbEvaluationRun): void {
+  if (!run.id) {
+    throw new EvaluationRunError('Internal brain run did not complete. No result was saved.')
+  }
+  if (run.status !== 'completed') {
+    throw new EvaluationRunError(run.summary || 'Evaluation run did not complete.', run)
+  }
+  if (run.mode === 'internal-brain' && run.completedCount === 0) {
+    throw new EvaluationRunError('Internal brain run did not complete. No result was saved.', run)
+  }
 }
 
 function newRunId(): string {
@@ -118,20 +143,16 @@ export function generateScenarioPack(
 async function callBackendRun(
   scenarios: OrbEvaluationScenario[],
   options: EvaluationRunOptions
-): Promise<BackendRunResponse | null> {
-  try {
-    const payload = await postEvaluationRun({
-      title: options.title,
-      mode: options.mode ?? 'live-llm',
-      pack_type: options.packType ?? 'standard',
-      scenarios,
-      limit: options.limit ?? scenarios.length,
-      created_by: options.createdBy ?? 'founder'
-    })
-    return payload as BackendRunResponse
-  } catch {
-    return null
-  }
+): Promise<BackendRunResponse> {
+  const payload = await postEvaluationRun({
+    title: options.title,
+    mode: options.mode ?? 'live-llm',
+    pack_type: options.packType ?? 'standard',
+    scenarios,
+    limit: options.limit ?? scenarios.length,
+    created_by: options.createdBy ?? 'founder'
+  })
+  return payload as BackendRunResponse
 }
 
 export async function executeEvaluationRun(options: EvaluationRunOptions = {}): Promise<OrbEvaluationRun> {
@@ -183,17 +204,6 @@ export async function executeEvaluationRun(options: EvaluationRunOptions = {}): 
     }
   } else if (mode === 'internal-brain') {
     const backend = await callBackendRun(scenarios, options)
-    if (!backend) {
-      const failed: OrbEvaluationRun = {
-        ...pendingRun,
-        status: 'failed',
-        completedAt: new Date().toISOString(),
-        summary: 'Internal brain evaluation unavailable — backend runner not reachable.',
-        limitations: ['Backend evaluation runner unavailable.']
-      }
-      updateEvaluationRun(runId, failed)
-      return failed
-    }
 
     if (backend.error && backend.scenario_results.length === 0) {
       const failed: OrbEvaluationRun = {
@@ -205,7 +215,7 @@ export async function executeEvaluationRun(options: EvaluationRunOptions = {}): 
         liveLlmAvailable: backend.live_llm_available
       }
       updateEvaluationRun(runId, failed)
-      return failed
+      throw new EvaluationRunError(backend.error, failed)
     }
 
     const scenarioMap = new Map(scenarios.map((s) => [s.id, s]))
@@ -275,18 +285,6 @@ export async function executeEvaluationRun(options: EvaluationRunOptions = {}): 
     pendingRun.liveLlmAvailable = backend.live_llm_available
   } else {
     const backend = await callBackendRun(scenarios, options)
-    if (!backend) {
-      const failed: OrbEvaluationRun = {
-        ...pendingRun,
-        status: 'failed',
-        completedAt: new Date().toISOString(),
-        summary: 'Live LLM evaluation unavailable — no results fabricated.',
-        limitations: ['Backend evaluation runner unavailable or OPENAI_API_KEY missing.'],
-        liveLlmAvailable: false
-      }
-      updateEvaluationRun(runId, failed)
-      return failed
-    }
 
     if (backend.error && backend.scenario_count === 0) {
       const failed: OrbEvaluationRun = {
@@ -298,7 +296,7 @@ export async function executeEvaluationRun(options: EvaluationRunOptions = {}): 
         liveLlmAvailable: backend.live_llm_available
       }
       updateEvaluationRun(runId, failed)
-      return failed
+      throw new EvaluationRunError(backend.error, failed)
     }
 
     const scenarioMap = new Map(scenarios.map((s) => [s.id, s]))
@@ -323,7 +321,8 @@ export async function executeEvaluationRun(options: EvaluationRunOptions = {}): 
   addEvaluationResults(evalResults)
   const completed = summariseRun(pendingRun, evalResults)
   updateEvaluationRun(runId, completed)
-  void persistEvaluationRun(completed).catch(() => undefined)
+  await persistEvaluationRun(completed)
+  assertCompletedEvaluationRunSaved(completed)
   return completed
 }
 
@@ -429,49 +428,45 @@ export function createQualityLabCandidateFromResult(resultId: string): string | 
 }
 
 async function persistEvaluationRun(run: OrbEvaluationRun): Promise<void> {
-  try {
-    await founderPost('/quality-lab/runs', {
-      entity: 'orb-evaluation-run',
+  const result = await founderPost('/persistence/orb-evaluation-runs', {
+    record: {
+      id: run.id,
+      status: run.status,
       run
-    })
-  } catch {
-    // Best-effort persistence
+    },
+    source: 'orb-evaluation-platform'
+  })
+
+  if (!result.ok) {
+    throw new FounderPersistenceApiError(
+      result.status,
+      result.error || 'Evaluation run could not be saved.'
+    )
   }
 }
 
 export function getEvaluationSummary() {
   const runs = getEvaluationRuns()
   const latest = runs.find((r) => r.status === 'completed')
+  const latestInternalBrainRun = getLatestInternalBrainRun()
+  const latestInternalBrainHighRiskRun = getLatestInternalBrainHighRiskRun()
+  const latestLiveLlmRun = getLatestLiveLlmRun()
   const scenarios = getEvaluationScenarios()
   return {
     totalRuns: runs.length,
     latestRun: latest,
     scenarioCount: scenarios.length,
     coverage: getScenarioCoverageSummary(scenarios),
-    liveRunCompleted: runs.some((r) => r.status === 'completed' && r.mode === 'live-llm'),
-    internalBrainRunCompleted: runs.some((r) => r.status === 'completed' && r.mode === 'internal-brain'),
-    latestInternalBrainRun: runs.find((r) => r.status === 'completed' && r.mode === 'internal-brain'),
-    latestLiveLlmRun: runs.find((r) => r.status === 'completed' && r.mode === 'live-llm'),
-    latestInternalBrainHighRiskFailures: getLatestInternalBrainHighRiskFailures(),
-    latestLiveLlmFailures: getLatestLiveLlmFailures(),
+    liveRunCompleted: Boolean(latestLiveLlmRun),
+    internalBrainRunCompleted: Boolean(latestInternalBrainRun),
+    latestInternalBrainRun,
+    latestInternalBrainHighRiskRun,
+    latestLiveLlmRun,
+    latestInternalBrainHighRiskFailures: latestInternalBrainHighRiskRun?.criticalFailures ?? 0,
+    latestLiveLlmFailures: latestLiveLlmRun?.criticalFailures ?? 0,
     latestPassRate: latest?.passRate ?? null,
     latestCriticalFailures: latest?.criticalFailures ?? null
   }
-}
-
-function getLatestInternalBrainHighRiskFailures(): number {
-  const run = getEvaluationRuns().find(
-    (r) =>
-      r.status === 'completed' &&
-      r.mode === 'internal-brain' &&
-      (r.packType === 'high-risk' || r.packType === 'adversarial')
-  )
-  return run?.criticalFailures ?? 0
-}
-
-function getLatestLiveLlmFailures(): number {
-  const run = getEvaluationRuns().find((r) => r.status === 'completed' && r.mode === 'live-llm')
-  return run?.criticalFailures ?? 0
 }
 
 export function getFindingsByType(runId?: string) {

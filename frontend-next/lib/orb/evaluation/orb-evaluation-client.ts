@@ -1,4 +1,4 @@
-import type { EvaluationRunsPayload, EvaluationScenariosPayload } from './orb-evaluation-types'
+import type { EvaluationRunsPayload, EvaluationScenariosPayload, OrbEvaluationRun } from './orb-evaluation-types'
 
 type ApiEnvelope<T> = { success?: boolean; data?: T; error?: string }
 
@@ -60,4 +60,17 @@ export async function postEvaluationRun(body: Record<string, unknown>): Promise<
     body: JSON.stringify(body)
   })
   return parseEnvelope<unknown>(response)
+}
+
+export async function fetchEvaluationRun(runId: string): Promise<{ run: OrbEvaluationRun }> {
+  const headers: Record<string, string> = { Accept: 'application/json' }
+  const token = csrfToken()
+  if (token) headers['X-CSRF-Token'] = token
+
+  const response = await fetch(`/api/orb/evaluation/runs/${encodeURIComponent(runId)}`, {
+    method: 'GET',
+    credentials: 'include',
+    headers
+  })
+  return parseEnvelope<{ run: OrbEvaluationRun }>(response)
 }

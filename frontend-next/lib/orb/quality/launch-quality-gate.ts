@@ -23,8 +23,16 @@ function latestLiveRun(runs: QualityRun[]): QualityRun | undefined {
   return runs.find((run) => run.runMode === 'live-llm' && run.status === 'complete')
 }
 
+function sortEvaluationRuns(runs: OrbEvaluationRun[]): OrbEvaluationRun[] {
+  return [...runs].sort((a, b) => {
+    const aTime = a.completedAt ?? a.startedAt
+    const bTime = b.completedAt ?? b.startedAt
+    return bTime.localeCompare(aTime)
+  })
+}
+
 function latestHighRiskEvaluationRun(evaluationRuns: OrbEvaluationRun[]): OrbEvaluationRun | undefined {
-  return evaluationRuns.find(
+  return sortEvaluationRuns(evaluationRuns).find(
     (run) =>
       run.status === 'completed' &&
       run.mode === 'live-llm' &&
@@ -36,7 +44,7 @@ function latestInternalBrainRun(
   evaluationRuns: OrbEvaluationRun[],
   packType: 'high-risk' | 'adversarial'
 ): OrbEvaluationRun | undefined {
-  return evaluationRuns.find(
+  return sortEvaluationRuns(evaluationRuns).find(
     (run) => run.status === 'completed' && run.mode === 'internal-brain' && run.packType === packType
   )
 }
