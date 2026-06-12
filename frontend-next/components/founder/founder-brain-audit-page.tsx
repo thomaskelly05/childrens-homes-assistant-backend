@@ -113,6 +113,17 @@ export function FounderBrainAuditPage() {
               title="Coverage summary"
               description={`${payload?.domainCount ?? 0} residential childcare domains tracked. Internal brain only.`}
             >
+              <p className="mb-4 text-sm text-slate-400" data-testid="brain-audit-last-updated">
+                Latest audit: {new Date(audit.generatedAt).toLocaleString('en-GB')}
+                {audit.lastUpdatedFrom ? (
+                  <>
+                    {' '}
+                    · Last updated from: <span className="text-cyan-300">{audit.lastUpdatedFrom}</span>
+                    {audit.lastUpdatedRunId ? ` (run ${audit.lastUpdatedRunId.slice(0, 12)}…)` : ''}
+                  </>
+                ) : null}
+              </p>
+
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4" data-testid="brain-audit-summary">
                 <div className="rounded-xl border border-white/10 bg-black/20 p-4">
                   <p className="text-[10px] font-bold uppercase text-slate-500">Overall coverage</p>

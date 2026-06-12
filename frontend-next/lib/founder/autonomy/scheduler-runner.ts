@@ -138,12 +138,16 @@ function runRotatingMicroCheckTask(task: SchedulerTask): SchedulerTaskRunResult 
   const startedAt = new Date().toISOString()
   const auditId = auditTaskStart(task)
 
-  const outcome = runRotatingMicroCheck()
+  const outcome = runRotatingMicroCheck({ task })
 
   auditTaskCompleted(
     task,
     `Micro-check: ${outcome.record.scenarioCount} scenarios across ${outcome.record.areasTested.length} areas. Internal brain only.`
   )
+
+  const summary = outcome.resultPayload.weaknessDetected
+    ? `Rotating micro-check: ${outcome.record.scenarioCount} synthetic scenarios, ${outcome.record.criticalFailures} critical. Weakness detected.`
+    : `Rotating micro-check: ${outcome.resultPayload.noWeaknessMessage ?? 'No weakness detected in this run.'}`
 
   const result: SchedulerTaskRunResult = {
     taskId: task.id,
@@ -151,13 +155,13 @@ function runRotatingMicroCheckTask(task: SchedulerTask): SchedulerTaskRunResult 
     startedAt,
     completedAt: new Date().toISOString(),
     status: outcome.record.approvalItemCreated ? 'awaiting_approval' : 'completed',
-    summary: `Rotating micro-check: ${outcome.record.scenarioCount} synthetic scenarios, ${outcome.record.criticalFailures} critical. Areas: ${outcome.record.areasTested.join(', ')}.`,
+    summary,
     eventIds: [],
     auditRecordIds: [auditId, ...outcome.auditRecordIds],
     approvalItemIds: outcome.approvalItemId ? [outcome.approvalItemId] : [],
     criticalFailures: outcome.record.criticalFailures,
     weaknessesDetected: outcome.record.weakMarkers.length,
-    proposalsCreated: outcome.record.learningProposalRecommended ? 1 : 0
+    proposalsCreated: outcome.proposalId ? 1 : 0
   }
 
   recordTaskRun(task.id, result)
@@ -168,7 +172,7 @@ function runFocusedCheckTask(task: SchedulerTask): SchedulerTaskRunResult {
   const startedAt = new Date().toISOString()
   const auditId = auditTaskStart(task)
 
-  const outcome = runFocusedWeakAreaCheck(task.maxScenarioCount || 25)
+  const outcome = runFocusedWeakAreaCheck(task.maxScenarioCount || 25, { task })
 
   auditTaskCompleted(
     task,
@@ -180,14 +184,14 @@ function runFocusedCheckTask(task: SchedulerTask): SchedulerTaskRunResult {
     taskType: task.taskType,
     startedAt,
     completedAt: new Date().toISOString(),
-    status: 'completed',
+    status: outcome.record.approvalItemCreated ? 'awaiting_approval' : 'completed',
     summary: `Focused weak-area check: ${outcome.record.scenarioCount} scenarios across ${outcome.record.areasTested.length} weak area(s).`,
     eventIds: [],
     auditRecordIds: [auditId, ...outcome.auditRecordIds],
-    approvalItemIds: [],
+    approvalItemIds: outcome.approvalItemId ? [outcome.approvalItemId] : [],
     criticalFailures: outcome.record.criticalFailures,
     weaknessesDetected: outcome.record.areasTested.length,
-    proposalsCreated: 0
+    proposalsCreated: outcome.proposalId ? 1 : 0
   }
 
   recordTaskRun(task.id, result)
@@ -522,9 +526,9 @@ function runEmailReport(task: SchedulerTask, type: 'daily' | 'weekly'): Schedule
 
   const summary =
     safetyStatus === 'redacted'
-      ? `redacted — Preview generated. ${redactionCount} section(s) redacted by safety checker. No email sent.`
+      ? `Preview generated with ${redactionCount} section(s) redacted. No email sent.`
       : status === 'dry_run'
-        ? `Completed — Dry run preview generated. No email sent.`
+        ? 'Dry run preview generated. No email sent.'
         : `Email report ${status}: ${record.subject}`
 
   const result: SchedulerTaskRunResult = {

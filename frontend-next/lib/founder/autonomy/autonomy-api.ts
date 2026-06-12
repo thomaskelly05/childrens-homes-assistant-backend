@@ -135,6 +135,9 @@ export async function handleAutonomyEmailSettingsPatch(request: Request): Promis
     weeklyEnabled?: boolean
     dailyHourUtc?: number
     dailyMinuteUtc?: number
+    dailyHourLocal?: number
+    dailyMinuteLocal?: number
+    dailyTimezone?: string
     provider?: 'smtp' | 'resend' | 'sendgrid' | 'postmark' | 'dry_run'
     dryRun?: boolean
     businessReportEnabled?: boolean

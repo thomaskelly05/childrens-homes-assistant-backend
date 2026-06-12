@@ -9,9 +9,11 @@ import { getContentDrafts } from '../content/content-draft-store.ts'
 import { getRelationships } from '../relationships/relationship-store.ts'
 import { getEvaluationRuns } from '../../orb/evaluation/orb-evaluation-store.ts'
 import { generateFinanceForecast } from '../finance/finance-forecast-engine.ts'
+import { buildAutonomousIntelligenceLoopReportSection } from './autonomous-loop-service.ts'
 import { getLatestBrainAudit } from '../brain-audit/brain-audit-service.ts'
 import { getLatestMicroCheck } from '../brain-audit/brain-audit-store.ts'
 import { getTaskRunHistory } from './scheduler-store.ts'
+import { formatDailyLocalSchedule } from './scheduler-timezone.ts'
 
 import { getLiveLlmGateStatus } from './live-llm-gate.ts'
 import { DEFAULT_FOUNDER_EMAIL } from './scheduler-defaults.ts'
@@ -133,6 +135,7 @@ function buildDailyBusinessReportSections(): Record<DailyBusinessReportSectionKe
       'Top 5 actions for Tom:',
       ...buildTopActions().map((a, i) => `${i + 1}. ${a}`)
     ],
+    autonomousIntelligenceLoop: buildAutonomousIntelligenceLoopReportSection(),
     orbInternalBrain: [
       `Latest micro-check: ${microCheck ? `${microCheck.scenarioCount} scenarios, ${microCheck.criticalFailures} critical, areas: ${microCheck.areasTested.slice(0, 3).join(', ')}` : 'None yet'}`,
       `Latest full benchmark: ${fullBenchmark ? `${fullBenchmark.passRate ?? '—'}% pass, ${fullBenchmark.criticalFailures ?? 0} critical` : 'Scheduled nightly at 02:00 UTC'}`,
@@ -264,17 +267,18 @@ function sectionHeaders(type: EmailReportType): Array<{ key: string; title: stri
 
   const dailyHeaders: Array<{ key: DailyBusinessReportSectionKey; title: string }> = [
     { key: 'executiveSummary', title: '1. EXECUTIVE SUMMARY' },
-    { key: 'orbInternalBrain', title: '2. ORB INTERNAL BRAIN' },
-    { key: 'liveLlmGate', title: '3. LIVE LLM GATE' },
-    { key: 'qualityLab', title: '4. QUALITY LAB AND LEARNING LOOP' },
-    { key: 'prsAndBuild', title: '5. PRs AND BUILD WORK' },
-    { key: 'governance', title: '6. GOVERNANCE AND LAUNCH READINESS' },
-    { key: 'revenue', title: '7. REVENUE' },
-    { key: 'finance', title: '8. FINANCE' },
-    { key: 'relationships', title: '9. RELATIONSHIPS AND PILOTS' },
-    { key: 'contentBrand', title: '10. CONTENT AND BRAND' },
-    { key: 'technical', title: '11. TECHNICAL' },
-    { key: 'tomApproval', title: '12. TOM APPROVAL SECTION' }
+    { key: 'autonomousIntelligenceLoop', title: '2. AUTONOMOUS INTELLIGENCE LOOP' },
+    { key: 'orbInternalBrain', title: '3. ORB INTERNAL BRAIN' },
+    { key: 'liveLlmGate', title: '4. LIVE LLM GATE' },
+    { key: 'qualityLab', title: '5. QUALITY LAB AND LEARNING LOOP' },
+    { key: 'prsAndBuild', title: '6. PRs AND BUILD WORK' },
+    { key: 'governance', title: '7. GOVERNANCE AND LAUNCH READINESS' },
+    { key: 'revenue', title: '8. REVENUE' },
+    { key: 'finance', title: '9. FINANCE' },
+    { key: 'relationships', title: '10. RELATIONSHIPS AND PILOTS' },
+    { key: 'contentBrand', title: '11. CONTENT AND BRAND' },
+    { key: 'technical', title: '12. TECHNICAL' },
+    { key: 'tomApproval', title: '13. TOM APPROVAL SECTION' }
   ]
   const settings = getEmailSettings()
   return dailyHeaders.filter((h) => settings.includedSections.includes(h.key))

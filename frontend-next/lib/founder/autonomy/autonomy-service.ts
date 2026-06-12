@@ -1,3 +1,4 @@
+import { buildAutonomousLoopHealth } from './autonomous-loop-service.ts'
 import { SCHEDULER_SAFETY_GATES, type AutonomyOverview } from './scheduler-types'
 import {
   getEmailReportHistory,
@@ -17,7 +18,8 @@ export function buildAutonomyOverview(): AutonomyOverview {
     emailSettings: getEmailSettings(),
     emailHistory: getEmailReportHistory(),
     safetyGates: [...SCHEDULER_SAFETY_GATES],
-    lastSchedulerTick: getLastSchedulerTick()
+    lastSchedulerTick: getLastSchedulerTick(),
+    loopHealth: buildAutonomousLoopHealth()
   }
 }
 

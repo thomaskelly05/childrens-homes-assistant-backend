@@ -196,17 +196,20 @@ describe('Autonomous Intelligence Scheduler', () => {
     assert.match(emailSource, /recipient/)
   })
 
-  it('daily business report scheduled at 16:00', () => {
+  it('daily business report scheduled at 16:00 Europe/London', () => {
     const tasks = createDefaultSchedulerTasks()
     const report = tasks.find((t) => t.taskType === 'daily_business_report')
     assert.ok(report)
     assert.equal(report!.enabled, true)
-    assert.equal(report!.frequency.kind, 'daily')
-    if (report!.frequency.kind === 'daily') {
-      assert.equal(report!.frequency.hourUtc, 16)
-      assert.equal(report!.frequency.minuteUtc, 0)
+    assert.equal(report!.frequency.kind, 'daily_local')
+    if (report!.frequency.kind === 'daily_local') {
+      assert.equal(report!.frequency.hour, 16)
+      assert.equal(report!.frequency.minute, 0)
+      assert.equal(report!.frequency.timezone, 'Europe/London')
     }
-    assert.equal(DEFAULT_EMAIL_SETTINGS.dailyHourUtc, 16)
+    assert.equal(DEFAULT_EMAIL_SETTINGS.dailyHourLocal, 16)
+    assert.equal(DEFAULT_EMAIL_SETTINGS.dailyTimezone, 'Europe/London')
+    assert.match(report!.metadata?.localScheduleLabel ?? '', /16:00 Europe\/London/)
   })
 
   it('daily business report includes business finance revenue quality governance sections', () => {

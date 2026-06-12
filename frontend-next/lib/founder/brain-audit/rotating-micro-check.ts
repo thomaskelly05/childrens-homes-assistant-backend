@@ -1,10 +1,15 @@
-import { queueApprovalFromRecommendation } from '../agents/autonomous/founder-agent-actions.ts'
 import { recordAgentAuditEntry } from '../agents/autonomous/founder-agent-audit.ts'
 import { addFounderAgentEvent } from '../agents/autonomous/founder-agent-event-store.ts'
+import { signalWeaknessFromCheck } from '../learning-loop/learning-loop-signal-handler.ts'
 import { getAllBenchmarkScenarios } from '../learning-loop/learning-loop-store.ts'
 import { addEvaluationRun } from '../../orb/evaluation/orb-evaluation-store.ts'
 import type { OrbEvaluationRun } from '../../orb/evaluation/orb-evaluation-types.ts'
 import { INTERNAL_BRAIN_SCORING_VERSION_V2 } from '../../orb/evaluation/orb-evaluation-types.ts'
+import {
+  buildMicroCheckResultPayload,
+  processAutonomousCheckResult
+} from '../autonomy/autonomous-loop-service.ts'
+import type { SchedulerTask } from '../autonomy/scheduler-types.ts'
 
 import { BRAIN_AUDIT_DOMAIN_DEFINITIONS } from './brain-audit-domains.ts'
 import { buildBrainCoverageAudit } from './brain-audit-service.ts'
@@ -104,9 +109,10 @@ function createInternalBrainMicroCheckRun(input: {
   areaIds: BrainAuditAreaId[]
   scenarioCount: number
   criticalFailures: number
+  passRateOverride?: number
 }): OrbEvaluationRun {
   const now = new Date().toISOString()
-  const passRate = input.criticalFailures === 0 ? 92 : 68
+  const passRate = input.passRateOverride ?? (input.criticalFailures === 0 ? 92 : 68)
   const labels = input.areaIds
     .map((id) => BRAIN_AUDIT_DOMAIN_DEFINITIONS.find((d) => d.id === id)?.label ?? id)
     .join(', ')
@@ -138,42 +144,39 @@ export type MicroCheckRunOutcome = {
   run: OrbEvaluationRun
   auditRecordIds: string[]
   approvalItemId?: string
+  proposalId?: string
+  resultPayload: ReturnType<typeof buildMicroCheckResultPayload>
 }
 
-export function runRotatingMicroCheck(): MicroCheckRunOutcome {
+export type MicroCheckRunOptions = {
+  task?: SchedulerTask
+  injectCriticalFailures?: number
+  injectFailedCount?: number
+}
+
+export function runRotatingMicroCheck(options: MicroCheckRunOptions = {}): MicroCheckRunOutcome {
   const startedAt = new Date().toISOString()
   const areaIds = selectRotatingMicroCheckAreas()
   const scenarioCount = MIN_SCENARIOS + Math.floor(Math.random() * (MAX_SCENARIOS - MIN_SCENARIOS + 1))
-  const criticalFailures = 0
+  const criticalFailures = options.injectCriticalFailures ?? 0
 
   const run = createInternalBrainMicroCheckRun({ areaIds, scenarioCount, criticalFailures })
   const passed = Math.round((scenarioCount * (run.passRate ?? 90)) / 100)
-  const failed = scenarioCount - passed
+  const failed = options.injectFailedCount ?? scenarioCount - passed
 
   const weakMarkers =
-    criticalFailures > 0
+    criticalFailures > 0 || failed > 2
       ? areaIds.map((id) => BRAIN_AUDIT_DOMAIN_DEFINITIONS.find((d) => d.id === id)?.label ?? id)
       : []
 
-  const learningProposalRecommended = weakMarkers.length > 0 || failed > 2
-  let approvalItemId: string | undefined
-
-  if (learningProposalRecommended) {
-    const approval = queueApprovalFromRecommendation({
-      agentId: 'orb-quality-agent',
-      eventId: run.id,
-      actionType: 'generate_build_brief',
-      title: `Micro-check learning proposal (${areaIds.length} areas)`,
-      summary: `Weak markers detected during rotating micro-check: ${weakMarkers.join(', ') || 'review recommended'}.`,
-      rationale: 'Brain change requires Tom approval.',
-      riskLevel: criticalFailures > 0 ? 'high' : 'medium',
-      safetyNotes: 'Synthetic evidence only. No live LLM.'
-    })
-    approvalItemId = approval?.id
-  }
+  const task = options.task ?? ({
+    id: 'scheduler-internal_brain_rotating_micro_check',
+    taskType: 'internal_brain_rotating_micro_check'
+  } as SchedulerTask)
 
   const record: MicroCheckRunRecord = {
     id: run.id,
+    taskId: task.id,
     startedAt,
     completedAt: new Date().toISOString(),
     areasTested: areaIds,
@@ -182,16 +185,14 @@ export function runRotatingMicroCheck(): MicroCheckRunOutcome {
     failed,
     criticalFailures,
     weakMarkers,
-    learningProposalRecommended,
-    approvalItemCreated: Boolean(approvalItemId),
+    learningProposalRecommended: weakMarkers.length > 0 || failed > 2,
+    approvalItemCreated: false,
     syntheticOnly: true,
     mode: 'internal-brain'
   }
 
   addMicroCheckRecord(record)
   updateMicroCheckRotationState({ lastAreaIds: areaIds, lastRunAt: record.completedAt })
-
-  buildBrainCoverageAudit({ triggerType: 'micro_check', evaluationRuns: [run] })
 
   const auditStart = recordAgentAuditEntry({
     agentId: 'orb-quality-agent',
@@ -201,52 +202,73 @@ export function runRotatingMicroCheck(): MicroCheckRunOutcome {
     relatedRunId: run.id
   })
 
-  addFounderAgentEvent({
-    type: 'evaluation_run_completed',
-    severity: criticalFailures > 0 ? 'high' : 'info',
-    source: 'orb_evaluation',
-    createdAt: record.completedAt,
-    title: 'Rotating internal-brain micro-check completed',
-    summary: `${scenarioCount} synthetic scenarios across ${areaIds.length} areas. ${criticalFailures} critical.`,
-    relatedRunId: run.id,
-    affectedAgents: ['orb-quality-agent'],
-    payload: { areaIds, syntheticOnly: true, mode: 'internal-brain', liveLlm: false },
-    requiresReview: criticalFailures > 0
+  const { payload, signalResult } = processAutonomousCheckResult({
+    record,
+    task,
+    source: 'micro-check',
+    auditTrigger: 'micro_check',
+    evaluationRunId: run.id
   })
+
+  record.recommendedNextAction = payload.recommendedNextAction
+  record.noWeaknessMessage = payload.noWeaknessMessage
+  record.proposalId = payload.proposalId
+  record.learningProposalRecommended = payload.weaknessDetected
+  record.approvalItemCreated = Boolean(payload.approvalItemId)
 
   const auditComplete = recordAgentAuditEntry({
     agentId: 'orb-quality-agent',
     actionType: 'run_synthetic_evaluation',
-    summary: `Rotating micro-check completed. Areas: ${areaIds.join(', ')}. No live LLM.`,
-    approvalStatus: approvalItemId ? 'pending' : 'not_required',
+    summary: payload.weaknessDetected
+      ? `Rotating micro-check completed with weakness. Areas: ${areaIds.join(', ')}.`
+      : `Rotating micro-check completed. ${payload.noWeaknessMessage}`,
+    approvalStatus: payload.approvalItemId ? 'pending' : 'not_required',
     relatedRunId: run.id
   })
 
-  return { record, run, auditRecordIds: [auditStart.id, auditComplete.id], approvalItemId }
+  return {
+    record,
+    run,
+    auditRecordIds: [auditStart.id, auditComplete.id],
+    approvalItemId: payload.approvalItemId ?? signalResult?.approvalItemId,
+    proposalId: payload.proposalId,
+    resultPayload: payload
+  }
 }
 
-export function runFocusedWeakAreaCheck(scenarioCount = 25): MicroCheckRunOutcome {
-  const audit = buildBrainCoverageAudit({ triggerType: 'micro_check' })
+export function runFocusedWeakAreaCheck(
+  scenarioCount = 25,
+  options: MicroCheckRunOptions = {}
+): MicroCheckRunOutcome {
+  const audit = buildBrainCoverageAudit({ triggerType: 'focused_check' })
   const weakAreas = [...audit.weakAreas, ...audit.untestedAreas].slice(0, 6)
   const areaIds = weakAreas.length > 0 ? weakAreas : selectRotatingMicroCheckAreas({ maxAreas: 5 })
 
   const run = createInternalBrainMicroCheckRun({
     areaIds,
     scenarioCount: Math.min(Math.max(scenarioCount, 20), 30),
-    criticalFailures: 0
+    criticalFailures: options.injectCriticalFailures ?? 0,
+    passRateOverride: 75
   })
 
   const passed = Math.round((run.scenarioCount * (run.passRate ?? 85)) / 100)
+  const failed = options.injectFailedCount ?? run.scenarioCount - passed
+
+  const task = options.task ?? ({
+    id: 'scheduler-internal_brain_focused_check',
+    taskType: 'internal_brain_focused_check'
+  } as SchedulerTask)
 
   const record: MicroCheckRunRecord = {
     id: run.id,
+    taskId: task.id,
     startedAt: run.startedAt,
     completedAt: run.completedAt ?? new Date().toISOString(),
     areasTested: areaIds,
     scenarioCount: run.scenarioCount,
     passed,
-    failed: run.scenarioCount - passed,
-    criticalFailures: 0,
+    failed,
+    criticalFailures: options.injectCriticalFailures ?? 0,
     weakMarkers: areaIds.map((id) => BRAIN_AUDIT_DOMAIN_DEFINITIONS.find((d) => d.id === id)?.label ?? id),
     learningProposalRecommended: areaIds.length > 0,
     approvalItemCreated: false,
@@ -255,7 +277,6 @@ export function runFocusedWeakAreaCheck(scenarioCount = 25): MicroCheckRunOutcom
   }
 
   addMicroCheckRecord(record)
-  buildBrainCoverageAudit({ triggerType: 'micro_check', evaluationRuns: [run] })
 
   const auditId = recordAgentAuditEntry({
     agentId: 'orb-quality-agent',
@@ -265,14 +286,36 @@ export function runFocusedWeakAreaCheck(scenarioCount = 25): MicroCheckRunOutcom
     relatedRunId: run.id
   })
 
-  return { record, run, auditRecordIds: [auditId.id] }
+  const { payload, signalResult } = processAutonomousCheckResult({
+    record,
+    task,
+    source: 'focused-check',
+    auditTrigger: 'focused_check',
+    evaluationRunId: run.id
+  })
+
+  record.recommendedNextAction = payload.recommendedNextAction
+  record.proposalId = payload.proposalId
+  record.approvalItemCreated = Boolean(payload.approvalItemId)
+
+  return {
+    record,
+    run,
+    auditRecordIds: [auditId.id],
+    approvalItemId: payload.approvalItemId ?? signalResult?.approvalItemId,
+    proposalId: payload.proposalId,
+    resultPayload: payload
+  }
 }
 
 export function runWeeklyResidentialAudit(): {
   audit: ReturnType<typeof buildBrainCoverageAudit>
   auditRecordIds: string[]
 } {
-  const audit = buildBrainCoverageAudit({ triggerType: 'weekly_deep_audit' })
+  const audit = buildBrainCoverageAudit({
+    triggerType: 'weekly_deep_audit',
+    lastUpdatedFrom: 'weekly_audit'
+  })
 
   const auditId = recordAgentAuditEntry({
     agentId: 'orb-quality-agent',
@@ -295,6 +338,19 @@ export function runWeeklyResidentialAudit(): {
     payload: { topMissing: audit.topMissingWeakAreas, syntheticOnly: true },
     requiresReview: audit.weakAreas.length > 0
   })
+
+  if (audit.topMissingWeakAreas[0]) {
+    const top = audit.topMissingWeakAreas[0]
+    signalWeaknessFromCheck({
+      source: 'weekly_audit',
+      runId: audit.id,
+      area: top.id,
+      category: 'coverage',
+      marker: top.reason,
+      severity: audit.criticalFailureCount > 0 ? 'critical' : 'high',
+      recommendedAction: `Address weekly audit gap: ${top.label}`
+    })
+  }
 
   return { audit, auditRecordIds: [auditId.id] }
 }

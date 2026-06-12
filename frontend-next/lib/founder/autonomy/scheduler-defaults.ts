@@ -1,9 +1,15 @@
 import type { DailyBusinessReportSectionKey, EmailReportSettings, SchedulerTask } from './scheduler-types.ts'
+import {
+  computeNextDailyLocalRunAt,
+  DEFAULT_BUSINESS_REPORT_TIMEZONE,
+  formatDailyLocalSchedule
+} from './scheduler-timezone.ts'
 
 export const DEFAULT_FOUNDER_EMAIL = 'Thomas.kelly@indicare.co.uk'
 
 export const DEFAULT_BUSINESS_REPORT_SECTIONS: DailyBusinessReportSectionKey[] = [
   'executiveSummary',
+  'autonomousIntelligenceLoop',
   'orbInternalBrain',
   'liveLlmGate',
   'qualityLab',
@@ -23,6 +29,9 @@ export const DEFAULT_EMAIL_SETTINGS: EmailReportSettings = {
   weeklyEnabled: true,
   dailyHourUtc: 16,
   dailyMinuteUtc: 0,
+  dailyHourLocal: 16,
+  dailyMinuteLocal: 0,
+  dailyTimezone: DEFAULT_BUSINESS_REPORT_TIMEZONE,
   weeklyDayOfWeek: 1,
   weeklyHourUtc: 8,
   provider: 'dry_run',
@@ -55,6 +64,13 @@ function computeNextRunAt(frequency: SchedulerTask['frequency'], from = new Date
     next.setUTCHours(frequency.hourUtc, frequency.minuteUtc ?? 0, 0, 0)
     if (next <= from) next.setUTCDate(next.getUTCDate() + 1)
     return next.toISOString()
+  }
+
+  if (frequency.kind === 'daily_local') {
+    return computeNextDailyLocalRunAt(
+      { hour: frequency.hour, minute: frequency.minute, timezone: frequency.timezone },
+      from
+    )
   }
 
   if (frequency.kind === 'weekly') {
@@ -177,7 +193,20 @@ export function createDefaultSchedulerTasks(): SchedulerTask[] {
       name: 'IndiCare Intelligence Daily Business Report',
       taskType: 'daily_business_report',
       enabled: true,
-      frequency: { kind: 'daily', hourUtc: 16, minuteUtc: 0 },
+      frequency: {
+        kind: 'daily_local',
+        hour: DEFAULT_EMAIL_SETTINGS.dailyHourLocal,
+        minute: DEFAULT_EMAIL_SETTINGS.dailyMinuteLocal,
+        timezone: DEFAULT_EMAIL_SETTINGS.dailyTimezone
+      },
+      metadata: {
+        timezone: DEFAULT_EMAIL_SETTINGS.dailyTimezone,
+        localScheduleLabel: formatDailyLocalSchedule({
+          hour: DEFAULT_EMAIL_SETTINGS.dailyHourLocal,
+          minute: DEFAULT_EMAIL_SETTINGS.dailyMinuteLocal,
+          timezone: DEFAULT_EMAIL_SETTINGS.dailyTimezone
+        })
+      },
       lastRunAt: null,
       status: 'idle',
       allowedMode: 'report_only',

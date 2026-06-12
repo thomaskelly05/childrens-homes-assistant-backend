@@ -89,12 +89,50 @@ export function getTasksDueForRun(now = new Date()): SchedulerTask[] {
   )
 }
 
+function normaliseEmailSettings(settings: EmailReportSettings): EmailReportSettings {
+  return {
+    ...settings,
+    dailyHourLocal: settings.dailyHourLocal ?? settings.dailyHourUtc ?? 16,
+    dailyMinuteLocal: settings.dailyMinuteLocal ?? settings.dailyMinuteUtc ?? 0,
+    dailyTimezone: settings.dailyTimezone ?? 'Europe/London',
+    dailyHourUtc: settings.dailyHourUtc ?? settings.dailyHourLocal ?? 16,
+    dailyMinuteUtc: settings.dailyMinuteUtc ?? settings.dailyMinuteLocal ?? 0
+  }
+}
+
 export function getEmailSettings(): EmailReportSettings {
-  return { ...emailSettings }
+  return normaliseEmailSettings(emailSettings)
 }
 
 export function updateEmailSettings(patch: Partial<EmailReportSettings>): EmailReportSettings {
-  emailSettings = { ...emailSettings, ...patch }
+  emailSettings = normaliseEmailSettings({ ...emailSettings, ...patch })
+
+  const reportTask = tasks.find((t) => t.taskType === 'daily_business_report')
+  if (reportTask && emailSettings.businessReportEnabled) {
+    const index = tasks.findIndex((t) => t.id === reportTask.id)
+    if (index >= 0) {
+      tasks[index] = {
+        ...tasks[index]!,
+        frequency: {
+          kind: 'daily_local',
+          hour: emailSettings.dailyHourLocal,
+          minute: emailSettings.dailyMinuteLocal,
+          timezone: emailSettings.dailyTimezone
+        },
+        metadata: {
+          timezone: emailSettings.dailyTimezone,
+          localScheduleLabel: `${String(emailSettings.dailyHourLocal).padStart(2, '0')}:${String(emailSettings.dailyMinuteLocal).padStart(2, '0')} ${emailSettings.dailyTimezone}`
+        },
+        nextRunAt: computeNextRunAt({
+          kind: 'daily_local',
+          hour: emailSettings.dailyHourLocal,
+          minute: emailSettings.dailyMinuteLocal,
+          timezone: emailSettings.dailyTimezone
+        })
+      }
+    }
+  }
+
   return getEmailSettings()
 }
 
