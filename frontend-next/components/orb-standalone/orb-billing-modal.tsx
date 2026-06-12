@@ -154,6 +154,8 @@ export function OrbBillingModal({
 
   const actionBusy = loading || refreshing || checkoutOpening
   const usageRequests = meter?.total_requests != null ? String(meter.total_requests) : '0'
+  const showMobileStickyActions =
+    display.showTrialCta || display.showUpgrade || display.showManageBilling
 
   return (
     <OrbAppModal
@@ -406,6 +408,48 @@ export function OrbBillingModal({
           >
             {error}
           </p>
+        ) : null}
+
+        {showMobileStickyActions ? (
+          <div
+            className="sticky bottom-0 -mx-3 flex flex-col gap-2 border-t border-[var(--orb-line)]/25 bg-[var(--orb-surface-elevated)]/96 px-3 py-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))] backdrop-blur-md sm:hidden"
+            data-orb-billing-sticky-footer
+          >
+            {display.showTrialCta ? (
+              <button
+                type="button"
+                disabled={actionBusy}
+                onClick={() => void handleTrial()}
+                className="inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-cyan-600 px-3 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
+                data-orb-billing-trial
+              >
+                {loading ? 'Starting trial…' : 'Start free trial'}
+              </button>
+            ) : null}
+            {display.showUpgrade ? (
+              <button
+                type="button"
+                disabled={actionBusy || !stripeReady}
+                onClick={() => void handleCheckout()}
+                className="inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-gradient-to-r from-[#168bff] to-[#0d5fcc] px-3 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
+                data-orb-billing-upgrade
+              >
+                {checkoutOpening ? 'Opening checkout…' : 'Upgrade · £9.99/month'}
+              </button>
+            ) : null}
+            {display.showManageBilling ? (
+              <button
+                type="button"
+                disabled={actionBusy || !stripeReady}
+                onClick={() => void handlePortal()}
+                className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-[var(--orb-line)] px-3 py-2.5 text-sm font-semibold disabled:opacity-50"
+                data-orb-billing-portal
+              >
+                <CreditCard className="h-4 w-4 shrink-0" aria-hidden />
+                Manage billing
+              </button>
+            ) : null}
+          </div>
         ) : null}
 
         <OrbLegalLinks
