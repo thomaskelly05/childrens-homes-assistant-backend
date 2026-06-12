@@ -168,6 +168,8 @@
     max-height: 100dvh;
     overflow-x: hidden;
     overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
   }
 
   .orb-chat-thread {
@@ -1215,13 +1217,15 @@
     display: none !important;
   }
 
-  /* Convergence pass — Dictate landing scroll + primary action visibility */
+  /* Dictate landing — contained capture screen with internal scroll when needed */
   .orb-dictate-mobile,
   [data-orb-dictate-mobile] {
     min-height: 0 !important;
+    max-height: 100% !important;
     overflow-y: auto !important;
+    overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
-    padding-bottom: calc(1.25rem + env(safe-area-inset-bottom, 0px)) !important;
+    padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px)) !important;
   }
 
   [data-orb-dictate-primary-action] {
@@ -1354,6 +1358,51 @@
     border-color: rgba(16, 185, 129, 0.35) !important;
     background: rgba(16, 185, 129, 0.12) !important;
     color: #047857 !important;
+  }
+}
+
+/* Short mobile height — compact home hero so composer stays in view */
+@media (max-width: 1023px) and (max-height: 780px) {
+  html[data-orb-residential='1'] [data-orb-residential-empty] {
+    min-height: 0 !important;
+    padding-top: 0.35rem !important;
+  }
+
+  [data-orb-empty-sphere] {
+    max-width: min(8rem, 34vw) !important;
+    max-height: min(8rem, 34vw) !important;
+  }
+
+  [data-orb-empty-sphere] .premium-mobile-orb,
+  [data-premium-mobile-orb] {
+    max-width: min(8rem, 34vw) !important;
+    max-height: min(8rem, 34vw) !important;
+  }
+
+  [data-orb-residential-empty] [data-orb-empty-heading-mobile] {
+    margin-top: 0.35rem !important;
+    font-size: 1.125rem !important;
+  }
+
+  [data-orb-residential-empty] [data-orb-empty-subline] {
+    margin-top: 0.35rem !important;
+    font-size: 0.75rem !important;
+    line-height: 1.35 !important;
+  }
+
+  [data-orb-starter-pills],
+  [data-orb-starter-cards] {
+    margin-top: 0.5rem !important;
+  }
+
+  [data-orb-more-examples] {
+    margin-top: 0.5rem !important;
+  }
+
+  [data-orb-voice-hero-stage],
+  .orb-voice-hero-stage {
+    min-height: min(44dvh, 20rem) !important;
+    max-height: 48dvh !important;
   }
 }
 

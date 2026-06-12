@@ -135,6 +135,8 @@ const MOCK_VOICE_STATUS = {
   data: { realtime_enabled: false, provider: 'openai', status: 'ready' }
 }
 
+const MOCK_BILLING_METER = { success: true, data: { total_requests: 0 } }
+
 const MOCK_PROJECTS = { success: true, data: { projects: [] } }
 
 function json(route: Route, body: unknown, status = 200) {
@@ -158,6 +160,7 @@ export async function setupOrbE2eMocks(page: Page) {
   await page.route('**/orb/standalone/passkeys**', (route) => json(route, MOCK_PASSKEYS))
   await page.route('**/orb/standalone/outputs/summary**', (route) => json(route, MOCK_OUTPUTS_SUMMARY))
   await page.route('**/orb/standalone/voice/status**', (route) => json(route, MOCK_VOICE_STATUS))
+  await page.route('**/orb/standalone/billing/meter**', (route) => json(route, MOCK_BILLING_METER))
   await page.route('**/orb/standalone/projects**', (route) => json(route, MOCK_PROJECTS))
   await page.route('**/orb/standalone/safety/status**', (route) =>
     json(route, { success: true, data: { accepted: true } })
@@ -751,6 +754,7 @@ export async function setupOrbAuthE2eMocks(page: Page, options: OrbAuthE2eMockOp
     await page.route('**/orb/standalone/config**', (route) => json(route, MOCK_CONFIG))
     await page.route('**/orb/standalone/outputs/summary**', (route) => json(route, MOCK_OUTPUTS_SUMMARY))
     await page.route('**/orb/standalone/voice/status**', (route) => json(route, MOCK_VOICE_STATUS))
+    await page.route('**/orb/standalone/billing/meter**', (route) => json(route, MOCK_BILLING_METER))
     await page.route('**/orb/standalone/projects**', (route) => json(route, MOCK_PROJECTS))
     await page.route('**/orb/standalone/safety/status**', (route) =>
       json(route, { success: true, data: { accepted: true } })
