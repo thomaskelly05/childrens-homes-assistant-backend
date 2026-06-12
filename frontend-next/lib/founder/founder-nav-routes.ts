@@ -1,0 +1,28 @@
+/** All founder navigation routes — used for nav rendering and deep-link validation. */
+export const FOUNDER_NAV_ROUTES = [
+  '/founder',
+  '/founder/briefing',
+  '/founder/approvals',
+  '/founder/actions',
+  '/founder/orb-evaluation',
+  '/founder/quality-lab',
+  '/founder/learning-loop',
+  '/founder/orb-quality-agent',
+  '/founder/autonomy',
+  '/founder/agents',
+  '/founder/intelligence',
+  '/founder/revenue',
+  '/founder/finance',
+  '/founder/relationships',
+  '/founder/orb-pilot',
+  '/founder/company',
+  '/founder/team',
+  '/founder/evidence',
+  '/founder/audit',
+  '/founder/memory',
+  '/founder/content',
+  '/founder/build-briefs',
+  '/founder/telemetry',
+  '/founder/operating-loop',
+  '/founder/orb'
+] as const
