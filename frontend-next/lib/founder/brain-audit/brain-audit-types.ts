@@ -43,10 +43,20 @@ export type BrainAuditAreaResult = {
   confidenceLevel: BrainAuditConfidence
 }
 
+export type BrainAuditUpdateSource =
+  | 'micro-check'
+  | 'focused-check'
+  | 'nightly_benchmark'
+  | 'weekly_audit'
+  | 'manual_refresh'
+
 export type BrainAuditSummary = {
   id: string
   generatedAt: string
-  triggerType: 'manual' | 'nightly_benchmark' | 'weekly_deep_audit' | 'coverage_gap_scan' | 'micro_check'
+  triggerType: 'manual' | 'nightly_benchmark' | 'weekly_deep_audit' | 'coverage_gap_scan' | 'micro_check' | 'focused_check'
+  lastUpdatedFrom?: BrainAuditUpdateSource
+  lastUpdatedTaskId?: string
+  lastUpdatedRunId?: string
   overallCoveragePercent: number
   areas: BrainAuditAreaResult[]
   weakAreas: BrainAuditAreaId[]
@@ -59,6 +69,7 @@ export type BrainAuditSummary = {
 
 export type MicroCheckRunRecord = {
   id: string
+  taskId?: string
   startedAt: string
   completedAt: string
   areasTested: BrainAuditAreaId[]
@@ -67,8 +78,11 @@ export type MicroCheckRunRecord = {
   failed: number
   criticalFailures: number
   weakMarkers: string[]
+  recommendedNextAction?: string
   learningProposalRecommended: boolean
   approvalItemCreated: boolean
+  proposalId?: string
+  noWeaknessMessage?: string
   syntheticOnly: true
   mode: 'internal-brain'
 }

@@ -16,6 +16,7 @@ import {
 
 import { founderGet } from '@/lib/founder/api/founder-api-client'
 import type { AutonomyOverview, EmailReportPreview } from '@/lib/founder/autonomy/scheduler-types'
+import { formatDailyLocalSchedule } from '@/lib/founder/autonomy/scheduler-timezone'
 
 type ShortcutCard = {
   id: string
@@ -34,6 +35,13 @@ const TONE_CLASSES = {
   rose: 'border-rose-400/30 bg-rose-500/10 text-rose-200',
   violet: 'border-violet-400/30 bg-violet-500/10 text-violet-200'
 } as const
+
+const LOOP_STATUS_LABEL: Record<string, string> = {
+  healthy: 'Healthy',
+  needs_attention: 'Needs attention',
+  blocked: 'Blocked',
+  untested: 'Untested'
+}
 
 export function FounderCommandCentreShortcuts() {
   const [cards, setCards] = useState<ShortcutCard[]>([])
@@ -59,15 +67,39 @@ export function FounderCommandCentreShortcuts() {
       const businessReport = overview?.tasks.find((t) => t.taskType === 'daily_business_report')
       const liveGate = overview?.liveLlmGate
       const emailRecord = preview?.record
+      const loopHealth = overview?.loopHealth
+      const scheduleLabel = overview?.emailSettings
+        ? formatDailyLocalSchedule({
+            hour: overview.emailSettings.dailyHourLocal,
+            minute: overview.emailSettings.dailyMinuteLocal,
+            timezone: overview.emailSettings.dailyTimezone
+          })
+        : '16:00 Europe/London'
 
       const built: ShortcutCard[] = [
         {
+          id: 'loop-health',
+          title: 'Autonomous Intelligence Loop Health',
+          value: LOOP_STATUS_LABEL[loopHealth?.status ?? 'untested'] ?? 'Untested',
+          detail: loopHealth
+            ? `Micro-check: ${loopHealth.latestMicroCheck.status} · Approvals: ${loopHealth.approvalQueueCount} · Proposals: ${loopHealth.openLearningProposals}`
+            : 'Review autonomy loop status',
+          href: loopHealth?.href ?? '/founder/autonomy',
+          tone:
+            loopHealth?.status === 'healthy'
+              ? 'emerald'
+              : loopHealth?.status === 'blocked'
+                ? 'rose'
+                : 'amber',
+          icon: Workflow
+        },
+        {
           id: 'business-report',
           title: "Today's Business Report",
-          value: businessReport?.status ?? 'Scheduled 16:00',
+          value: businessReport?.status ?? 'Scheduled',
           detail: emailRecord?.subject
             ? `Latest: ${emailRecord.safetyStatus ?? 'dry_run'}`
-            : `Daily at ${overview?.emailSettings.dailyHourUtc ?? 16}:00 UTC`,
+            : `Daily at ${scheduleLabel}`,
           href: '/founder/autonomy',
           tone: 'violet',
           icon: Mail
@@ -75,8 +107,13 @@ export function FounderCommandCentreShortcuts() {
         {
           id: 'brain-audit',
           title: 'Brain audit status',
-          value: 'Coverage audit',
-          detail: 'Review internal brain domains',
+          value:
+            loopHealth?.latestBrainAudit.coveragePercent != null
+              ? `${loopHealth.latestBrainAudit.coveragePercent}% coverage`
+              : 'Coverage audit',
+          detail: loopHealth?.latestBrainAudit.lastUpdatedFrom
+            ? `Updated from ${loopHealth.latestBrainAudit.lastUpdatedFrom}`
+            : 'Review internal brain domains',
           href: '/founder/intelligence-centre/brain-audit',
           tone: 'emerald',
           icon: Shield
@@ -84,7 +121,7 @@ export function FounderCommandCentreShortcuts() {
         {
           id: 'approvals',
           title: 'Approvals needing Tom',
-          value: `${overview?.liveLlmGate.pendingApprovals.length ?? 0} pending`,
+          value: `${loopHealth?.approvalQueueCount ?? overview?.liveLlmGate.pendingApprovals.length ?? 0} pending`,
           detail: liveGate?.currentRecommendation
             ? `Live LLM: ${liveGate.currentRecommendation.replace(/_/g, ' ')}`
             : 'Review approval queue',
@@ -142,7 +179,7 @@ export function FounderCommandCentreShortcuts() {
         {
           id: 'learning',
           title: 'Learning proposals',
-          value: 'Review proposals',
+          value: `${loopHealth?.openLearningProposals ?? 0} open`,
           detail: 'Approval-gated brain improvements',
           href: '/founder/learning-loop',
           tone: 'cyan',

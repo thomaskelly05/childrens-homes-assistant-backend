@@ -21,6 +21,7 @@ import {
   hydrateQualityProposalsFromPersistence,
   hydrateQualityRunsFromPersistence
 } from '@/lib/founder/quality-lab/persistence-bridge'
+import { hydrateAutonomyLoopState } from '@/lib/founder/autonomy/autonomy-loop-persistence'
 import { seedFounderTelemetrySummary } from '@/lib/founder/telemetry/founder-telemetry-service'
 
 let lastBootstrap: FounderBootstrapPayload | null = null
@@ -49,7 +50,8 @@ export async function hydrateAllFounderPersistence(): Promise<FounderBootstrapPa
     ).catch(() => undefined),
     hydrateFounderMemoryFromPersistence(),
     hydrateEvidencePacksFromPersistence(),
-    hydrateRelationshipsFromPersistence()
+    hydrateRelationshipsFromPersistence(),
+    hydrateAutonomyLoopState()
   ])
 
   if (bootstrap.telemetrySummary) {

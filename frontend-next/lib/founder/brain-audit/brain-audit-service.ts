@@ -3,13 +3,15 @@ import { getEvaluationRuns } from '../../orb/evaluation/orb-evaluation-store.ts'
 import type { OrbEvaluationRun } from '../../orb/evaluation/orb-evaluation-types.ts'
 
 import { BRAIN_AUDIT_DOMAIN_DEFINITIONS } from './brain-audit-domains.ts'
+import { scheduleAutonomyLoopPersistence } from '../autonomy/autonomy-loop-persistence.ts'
 import { getLatestBrainAudit, setLatestBrainAudit } from './brain-audit-store.ts'
 import type {
   BrainAuditAreaResult,
   BrainAuditBenchmarkStatus,
   BrainAuditConfidence,
   BrainAuditSummary,
-  BrainAuditAreaId
+  BrainAuditAreaId,
+  BrainAuditUpdateSource
 } from './brain-audit-types.ts'
 
 type ScenarioResult = { text: string; passed: boolean; critical: boolean; testedAt: string }
@@ -72,9 +74,20 @@ function confidenceFromMetrics(
   return 'low'
 }
 
+function mapTriggerToUpdateSource(trigger: BrainAuditSummary['triggerType']): BrainAuditUpdateSource {
+  if (trigger === 'micro_check') return 'micro-check'
+  if (trigger === 'focused_check') return 'focused-check'
+  if (trigger === 'nightly_benchmark') return 'nightly_benchmark'
+  if (trigger === 'weekly_deep_audit') return 'weekly_audit'
+  return 'manual_refresh'
+}
+
 export function buildBrainCoverageAudit(input?: {
   evaluationRuns?: OrbEvaluationRun[]
   triggerType?: BrainAuditSummary['triggerType']
+  lastUpdatedFrom?: BrainAuditUpdateSource
+  lastUpdatedTaskId?: string
+  lastUpdatedRunId?: string
 }): BrainAuditSummary {
   const runs = input?.evaluationRuns ?? getEvaluationRuns().filter((r) => r.mode === 'internal-brain')
   const scenarioResults = collectScenarioResults(runs)
@@ -167,10 +180,14 @@ export function buildBrainCoverageAudit(input?: {
           : a.weakMarkers.join('; ') || 'Weak coverage'
     }))
 
+  const previous = getLatestBrainAudit()
   const audit: BrainAuditSummary = {
     id: `brain-audit-${Date.now()}`,
     generatedAt: new Date().toISOString(),
     triggerType: input?.triggerType ?? 'manual',
+    lastUpdatedFrom: input?.lastUpdatedFrom ?? mapTriggerToUpdateSource(input?.triggerType ?? 'manual'),
+    lastUpdatedTaskId: input?.lastUpdatedTaskId ?? previous?.lastUpdatedTaskId,
+    lastUpdatedRunId: input?.lastUpdatedRunId ?? previous?.lastUpdatedRunId,
     overallCoveragePercent,
     areas,
     weakAreas,
@@ -182,6 +199,7 @@ export function buildBrainCoverageAudit(input?: {
   }
 
   setLatestBrainAudit(audit)
+  scheduleAutonomyLoopPersistence()
   return audit
 }
 

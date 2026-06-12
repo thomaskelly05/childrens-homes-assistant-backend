@@ -32,8 +32,15 @@ export type SchedulerFrequency =
   | { kind: 'interval'; hours: number }
   | { kind: 'interval_minutes'; minutes: number }
   | { kind: 'daily'; hourUtc: number; minuteUtc?: number }
+  | { kind: 'daily_local'; hour: number; minute: number; timezone: string }
   | { kind: 'weekly'; dayOfWeek: number; hourUtc: number; minuteUtc?: number }
   | { kind: 'manual_only' }
+
+export type SchedulerTaskMetadata = {
+  timezone?: string
+  localScheduleLabel?: string
+  description?: string
+}
 
 export type SchedulerTask = {
   id: string
@@ -41,6 +48,7 @@ export type SchedulerTask = {
   taskType: SchedulerTaskType
   enabled: boolean
   frequency: SchedulerFrequency
+  metadata?: SchedulerTaskMetadata
   lastRunAt: string | null
   nextRunAt: string | null
   status: SchedulerTaskStatus
@@ -179,6 +187,7 @@ export type EmailReportRecord = {
 
 export type DailyBusinessReportSectionKey =
   | 'executiveSummary'
+  | 'autonomousIntelligenceLoop'
   | 'orbInternalBrain'
   | 'liveLlmGate'
   | 'qualityLab'
@@ -195,8 +204,13 @@ export type EmailReportSettings = {
   recipient: string
   dailyEnabled: boolean
   weeklyEnabled: boolean
+  /** @deprecated Use dailyHourLocal with dailyTimezone */
   dailyHourUtc: number
+  /** @deprecated Use dailyMinuteLocal with dailyTimezone */
   dailyMinuteUtc: number
+  dailyHourLocal: number
+  dailyMinuteLocal: number
+  dailyTimezone: string
   weeklyDayOfWeek: number
   weeklyHourUtc: number
   provider: 'smtp' | 'resend' | 'sendgrid' | 'postmark' | 'dry_run'
@@ -206,6 +220,22 @@ export type EmailReportSettings = {
   founderConfirmedSend: boolean
 }
 
+export type AutonomousLoopHealthStatus = 'healthy' | 'needs_attention' | 'blocked' | 'untested'
+
+export type AutonomousLoopHealthSummary = {
+  status: AutonomousLoopHealthStatus
+  latestMicroCheck: { status: string; completedAt: string | null; summary: string }
+  latestFocusedCheck: { status: string; completedAt: string | null; summary: string }
+  latestFullBenchmark: { status: string; completedAt: string | null; summary: string }
+  latestBrainAudit: { updatedAt: string | null; lastUpdatedFrom: string | null; coveragePercent: number | null }
+  openLearningProposals: number
+  approvalQueueCount: number
+  nextScheduledRun: string | null
+  failedTasks: string[]
+  businessReportStatus: string
+  href: '/founder/autonomy' | '/founder/intelligence-centre/brain-audit'
+}
+
 export type AutonomyOverview = {
   tasks: SchedulerTask[]
   liveLlmGate: LiveLlmGateStatus
@@ -213,6 +243,7 @@ export type AutonomyOverview = {
   emailHistory: EmailReportRecord[]
   safetyGates: string[]
   lastSchedulerTick: string | null
+  loopHealth: AutonomousLoopHealthSummary
 }
 
 export const SCHEDULER_SAFETY_GATES = [

@@ -2,7 +2,20 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
-import { AlertTriangle, Clock, ExternalLink, Loader2, Mail, Play, RefreshCw, Shield, X } from 'lucide-react'
+import {
+  AlertTriangle,
+  ChevronDown,
+  Clock,
+  ExternalLink,
+  Loader2,
+  Mail,
+  Play,
+  RefreshCw,
+  Shield,
+  X
+} from 'lucide-react'
+import { formatDailyLocalSchedule } from '@/lib/founder/autonomy/scheduler-timezone'
+import type { DailyBusinessReportSectionKey } from '@/lib/founder/autonomy/scheduler-types'
 
 import { FounderNavHeader } from '@/components/founder/founder-nav-header'
 import { FounderSectionCard } from '@/components/founder/founder-section-card'
@@ -60,18 +73,93 @@ const RUN_STATUS_TONE: Record<string, string> = {
   awaiting_approval: 'text-amber-300/90'
 }
 
+const LOOP_STATUS_LABEL: Record<string, string> = {
+  healthy: 'Healthy',
+  needs_attention: 'Needs attention',
+  blocked: 'Blocked',
+  untested: 'Untested'
+}
+
+const TASK_SECTIONS: Array<{
+  id: string
+  title: string
+  testId: string
+  taskTypes: string[]
+}> = [
+  {
+    id: 'internal-brain',
+    title: 'Internal Brain Automation',
+    testId: 'autonomy-section-internal-brain',
+    taskTypes: [
+      'internal_brain_rotating_micro_check',
+      'internal_brain_focused_check',
+      'internal_brain_quick_check',
+      'internal_brain_full',
+      'coverage_gap_scan',
+      'weekly_internal_brain_residential_audit',
+      'internal_brain_adversarial',
+      'internal_brain_high_risk'
+    ]
+  },
+  {
+    id: 'reports',
+    title: 'Reports',
+    testId: 'autonomy-section-reports',
+    taskTypes: ['daily_business_report', 'daily_founder_email_report', 'weekly_founder_email_report', 'finance_snapshot', 'revenue_pipeline_review']
+  },
+  {
+    id: 'live-llm',
+    title: 'Live LLM Gates',
+    testId: 'autonomy-section-live-llm',
+    taskTypes: [
+      'live_llm_adversarial_recommendation',
+      'live_llm_high_risk_recommendation',
+      'live_llm_gold_recommendation'
+    ]
+  },
+  {
+    id: 'scenario-benchmark',
+    title: 'Scenario & Benchmark Management',
+    testId: 'autonomy-section-scenario-benchmark',
+    taskTypes: ['synthetic_scenario_generation', 'learning_proposal_creation', 'benchmark_bank_review']
+  }
+]
+
+function formatTaskCompletionMessage(summary?: string, safeMessage?: string): string {
+  const text = summary ?? safeMessage ?? 'Task finished'
+  if (/^(completed|failed|dry run|preview generated|rotating|focused|email report)/i.test(text)) {
+    return text
+  }
+  return text
+}
+
+function formatNextRunLabel(task: SchedulerTask): string {
+  if (task.frequency.kind === 'daily_local') {
+    return formatDailyLocalSchedule({
+      hour: task.frequency.hour,
+      minute: task.frequency.minute,
+      timezone: task.frequency.timezone
+    })
+  }
+  if (task.metadata?.localScheduleLabel) return task.metadata.localScheduleLabel
+  return task.nextRunAt ? new Date(task.nextRunAt).toLocaleString('en-GB') : 'Manual'
+}
+
 function TaskRow({
   task,
   runState,
   onToggle,
-  onRun
+  onRun,
+  expanded
 }: {
   task: SchedulerTask
   runState?: TaskRunState
   onToggle: (id: string, enabled: boolean) => void
   onRun: (id: string) => void
+  expanded?: boolean
 }) {
   const isRunning = runState?.loading ?? false
+  const [showDetails, setShowDetails] = useState(false)
 
   return (
     <article className="rounded-xl border border-white/10 bg-black/20 p-4" data-testid={`scheduler-task-${task.taskType}`}>
@@ -96,11 +184,26 @@ function TaskRow({
       </div>
       <dl className="mt-3 grid gap-1 text-xs text-slate-400 sm:grid-cols-2">
         <div>Last run: {task.lastRunAt ? new Date(task.lastRunAt).toLocaleString('en-GB') : 'Never'}</div>
-        <div>Next run: {task.nextRunAt ? new Date(task.nextRunAt).toLocaleString('en-GB') : 'Manual'}</div>
-        <div>
-          Daily limit: {task.runsToday}/{task.maxRunsPerDay}
-        </div>
-        <div>Mode: {task.allowedMode.replace(/_/g, ' ')}</div>
+        <div>Next run: {formatNextRunLabel(task)}</div>
+        {expanded || showDetails ? (
+          <>
+            <div>
+              Daily limit: {task.runsToday}/{task.maxRunsPerDay}
+            </div>
+            <div>Mode: {task.allowedMode.replace(/_/g, ' ')}</div>
+            <div className="sm:col-span-2 font-mono text-[10px] text-slate-500">{task.id}</div>
+          </>
+        ) : (
+          <div className="sm:col-span-2">
+            <button
+              type="button"
+              onClick={() => setShowDetails(true)}
+              className="text-[10px] font-bold uppercase tracking-wider text-cyan-400/80 hover:text-cyan-300"
+            >
+              Show technical details
+            </button>
+          </div>
+        )}
       </dl>
 
       {runState?.message && !isRunning ? (
@@ -248,6 +351,13 @@ export function FounderAutonomyPage() {
   const [actionMessage, setActionMessage] = useState<string | null>(null)
   const [taskRunStates, setTaskRunStates] = useState<Record<string, TaskRunState>>({})
   const [preview, setPreview] = useState<EmailReportPreview | null>(null)
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
+    'internal-brain': true,
+    reports: true,
+    'live-llm': false,
+    'scenario-benchmark': false
+  })
+  const [settingsSaving, setSettingsSaving] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -310,26 +420,31 @@ export function FounderAutonomyPage() {
       }))
       setActionMessage(`Failed — ${data.safeMessage ?? 'Task error, see audit trail'}`)
     } else if (data.status === 'redacted') {
+      const message = formatTaskCompletionMessage(
+        data.result?.summary,
+        `Dry run preview generated (${data.redactionCount ?? 0} section(s) redacted).`
+      )
       setTaskRunStates((prev) => ({
         ...prev,
         [taskId]: {
           loading: false,
-          message: `Completed — Dry run preview generated (${data.redactionCount ?? 0} section(s) redacted).`,
+          message,
           tone: 'warning',
           technicalMessage: data.technicalMessage
         }
       }))
-      setActionMessage(data.result?.summary ?? 'Preview generated with redactions.')
+      setActionMessage(message)
     } else {
+      const message = formatTaskCompletionMessage(data.result?.summary, data.safeMessage)
       setTaskRunStates((prev) => ({
         ...prev,
         [taskId]: {
           loading: false,
-          message: `Completed — ${data.result?.summary ?? data.safeMessage ?? 'Task finished'}`,
+          message,
           tone: 'success'
         }
       }))
-      setActionMessage(data.result?.summary ?? data.safeMessage ?? 'Task completed.')
+      setActionMessage(message)
     }
 
     await load()
@@ -363,6 +478,24 @@ export function FounderAutonomyPage() {
 
   const overview = payload?.overview
   const latestEmail = overview?.emailHistory?.[0]
+  const loopHealth = overview?.loopHealth
+  const scheduleLabel = overview?.emailSettings
+    ? formatDailyLocalSchedule({
+        hour: overview.emailSettings.dailyHourLocal,
+        minute: overview.emailSettings.dailyMinuteLocal,
+        timezone: overview.emailSettings.dailyTimezone
+      })
+    : '16:00 Europe/London'
+
+  const saveEmailSettings = async (patch: Record<string, unknown>) => {
+    setSettingsSaving(true)
+    const result = await founderPatch('/autonomy/email-settings', patch)
+    setSettingsSaving(false)
+    if (result.ok) {
+      setActionMessage('Business report settings updated.')
+      await load()
+    }
+  }
 
   return (
     <div className="founder-dashboard min-h-screen">
@@ -406,23 +539,78 @@ export function FounderAutonomyPage() {
           </button>
         </div>
 
-        <FounderSectionCard eyebrow="Scheduler" title="Scheduled tasks" description="Enabled tasks run on their schedule. Disabled by default: live LLM, synthetic scenario generation, auto PR creation.">
-          {loading ? (
-            <p className="text-sm text-slate-400">Loading scheduler…</p>
-          ) : (
-            <div className="grid gap-4 lg:grid-cols-2">
-              {(overview?.tasks ?? []).map((task) => (
-                <TaskRow
-                  key={task.id}
-                  task={task}
-                  runState={taskRunStates[task.id]}
-                  onToggle={toggleTask}
-                  onRun={runTask}
-                />
-              ))}
+        {loopHealth ? (
+          <FounderSectionCard
+            eyebrow="Loop health"
+            title="Autonomous Intelligence Loop — latest status"
+            description="Connected micro-checks, brain audit, learning loop and business report."
+            data-testid="autonomy-loop-health-summary"
+          >
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 text-sm text-slate-300">
+              <div>
+                <p className="text-[10px] font-bold uppercase text-slate-500">Overall</p>
+                <p className="mt-1 font-bold text-white">{LOOP_STATUS_LABEL[loopHealth.status] ?? loopHealth.status}</p>
+              </div>
+              <div>
+                <p className="text-[10px] font-bold uppercase text-slate-500">Micro-check</p>
+                <p className="mt-1">{loopHealth.latestMicroCheck.summary.slice(0, 80)}</p>
+              </div>
+              <div>
+                <p className="text-[10px] font-bold uppercase text-slate-500">Approvals</p>
+                <p className="mt-1">{loopHealth.approvalQueueCount} in queue · {loopHealth.openLearningProposals} proposals</p>
+              </div>
+              <div>
+                <p className="text-[10px] font-bold uppercase text-slate-500">Business report</p>
+                <p className="mt-1">{loopHealth.businessReportStatus}</p>
+              </div>
             </div>
-          )}
-        </FounderSectionCard>
+          </FounderSectionCard>
+        ) : null}
+
+        {loading ? (
+          <p className="text-sm text-slate-400">Loading scheduler…</p>
+        ) : (
+          TASK_SECTIONS.map((section) => {
+            const sectionTasks = (overview?.tasks ?? []).filter((task) => section.taskTypes.includes(task.taskType))
+            if (sectionTasks.length === 0) return null
+            const isOpen = expandedSections[section.id] ?? false
+            return (
+              <FounderSectionCard
+                key={section.id}
+                eyebrow="Scheduler"
+                title={section.title}
+                description={`${sectionTasks.filter((t) => t.enabled).length} enabled · ${sectionTasks.length} tasks`}
+                data-testid={section.testId}
+              >
+                <button
+                  type="button"
+                  onClick={() => setExpandedSections((prev) => ({ ...prev, [section.id]: !isOpen }))}
+                  className="mb-4 inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-400 hover:text-white"
+                >
+                  <ChevronDown className={`h-4 w-4 transition ${isOpen ? 'rotate-180' : ''}`} aria-hidden />
+                  {isOpen ? 'Collapse section' : 'Expand section'}
+                </button>
+                {isOpen ? (
+                  <div className="grid gap-4 lg:grid-cols-2">
+                    {sectionTasks.map((task) => (
+                      <TaskRow
+                        key={task.id}
+                        task={task}
+                        runState={taskRunStates[task.id]}
+                        onToggle={toggleTask}
+                        onRun={runTask}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-slate-500">
+                    {sectionTasks.map((t) => t.name).join(' · ')}
+                  </p>
+                )}
+              </FounderSectionCard>
+            )
+          })
+        )}
 
         <FounderSectionCard eyebrow="Live LLM" title="Approval gates" description="Live LLM runs require Tom approval. Recommendations only — no auto-execution.">
           <div className="space-y-3 text-sm" data-testid="live-llm-gate-status">
@@ -462,40 +650,63 @@ export function FounderAutonomyPage() {
 
         <FounderSectionCard
           eyebrow="Email"
-          title="Daily Business Report"
-          description={`IndiCare Intelligence Daily Business Report at 16:00 to ${overview?.emailSettings.recipient ?? 'Thomas.kelly@indicare.co.uk'}. Dry-run by default.`}
+          title="Daily Business Report settings"
+          description={`IndiCare Intelligence Daily Business Report at ${scheduleLabel} to ${overview?.emailSettings.recipient ?? 'Thomas.kelly@indicare.co.uk'}. Dry-run by default.`}
           data-testid="daily-business-report-settings"
         >
           <dl className="grid gap-2 text-sm text-slate-300 sm:grid-cols-2" data-testid="business-report-settings-grid">
             <div>
-              <dt className="text-xs text-slate-500">Daily Business Report</dt>
-              <dd>{overview?.emailSettings.businessReportEnabled !== false ? 'On' : 'Off'}</dd>
+              <dt className="text-xs text-slate-500">Enabled</dt>
+              <dd>
+                <label className="inline-flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={overview?.emailSettings.businessReportEnabled !== false}
+                    onChange={(e) => void saveEmailSettings({ businessReportEnabled: e.target.checked, dailyEnabled: e.target.checked })}
+                    disabled={settingsSaving}
+                  />
+                  {overview?.emailSettings.businessReportEnabled !== false ? 'On' : 'Off'}
+                </label>
+              </dd>
             </div>
             <div>
-              <dt className="text-xs text-slate-500">Send time (UTC)</dt>
-              <dd>
-                {String(overview?.emailSettings.dailyHourUtc ?? 16).padStart(2, '0')}:
-                {String(overview?.emailSettings.dailyMinuteUtc ?? 0).padStart(2, '0')}
-              </dd>
+              <dt className="text-xs text-slate-500">Send time</dt>
+              <dd data-testid="business-report-schedule-label">{scheduleLabel}</dd>
             </div>
             <div>
               <dt className="text-xs text-slate-500">Recipient</dt>
-              <dd>{overview?.emailSettings.recipient}</dd>
-            </div>
-            <div>
-              <dt className="text-xs text-slate-500">Provider / dry_run</dt>
               <dd>
-                {overview?.emailSettings.provider ?? 'dry_run'}
-                {overview?.emailSettings.dryRun !== false ? ' · dry_run active' : ''}
+                <input
+                  type="email"
+                  defaultValue={overview?.emailSettings.recipient}
+                  onBlur={(e) => void saveEmailSettings({ recipient: e.target.value })}
+                  className="w-full rounded border border-white/10 bg-black/30 px-2 py-1 text-sm"
+                />
               </dd>
             </div>
             <div>
-              <dt className="text-xs text-slate-500">Sections included</dt>
-              <dd>{overview?.emailSettings.includedSections?.length ?? 12} of 12</dd>
+              <dt className="text-xs text-slate-500">Provider</dt>
+              <dd>
+                <select
+                  defaultValue={overview?.emailSettings.provider ?? 'dry_run'}
+                  onChange={(e) => void saveEmailSettings({ provider: e.target.value, dryRun: e.target.value === 'dry_run' })}
+                  className="rounded border border-white/10 bg-black/30 px-2 py-1 text-sm"
+                >
+                  <option value="dry_run">dry_run</option>
+                  <option value="resend">resend</option>
+                  <option value="sendgrid">sendgrid</option>
+                  <option value="postmark">postmark</option>
+                  <option value="smtp">smtp</option>
+                </select>
+              </dd>
+            </div>
+            <div>
+              <dt className="text-xs text-slate-500">Timezone</dt>
+              <dd>{overview?.emailSettings.dailyTimezone ?? 'Europe/London'}</dd>
             </div>
             <div>
               <dt className="text-xs text-slate-500">Safety status</dt>
-              <dd>{latestEmail?.safetyStatus ?? 'Not generated yet'}</dd>
+              <dd className="capitalize">{latestEmail?.safetyStatus ?? 'Not generated yet'}</dd>
             </div>
           </dl>
 
@@ -507,11 +718,11 @@ export function FounderAutonomyPage() {
             <button
               type="button"
               onClick={() => void openLatestPreview()}
-              className="inline-flex items-center gap-1 rounded-lg border border-cyan-400/30 bg-cyan-500/10 px-3 py-1.5 text-xs font-bold text-cyan-200"
+              className="inline-flex items-center gap-2 rounded-lg border-2 border-cyan-400/50 bg-cyan-500/15 px-4 py-2 text-sm font-bold text-cyan-100 shadow-sm shadow-cyan-500/10"
               data-testid="view-latest-report-preview"
             >
-              <ExternalLink className="h-3 w-3" aria-hidden />
-              Preview report
+              <ExternalLink className="h-4 w-4" aria-hidden />
+              View latest report preview
             </button>
             <button
               type="button"
@@ -520,18 +731,19 @@ export function FounderAutonomyPage() {
               data-testid="send-test-business-report"
             >
               <Play className="h-3 w-3" aria-hidden />
-              Generate test report
+              Generate dry-run
             </button>
           </div>
 
           {latestEmail ? (
-            <div className="mt-4 rounded-xl border border-white/10 bg-black/20 p-4 text-xs text-slate-400">
-              <p className="font-bold text-slate-300">Latest preview</p>
+            <div className="mt-4 rounded-xl border border-white/10 bg-black/20 p-4 text-xs text-slate-400" data-testid="business-report-last-generated">
+              <p className="font-bold text-slate-300">Last generated</p>
               <p className="mt-1">
-                {latestEmail.subject} — {latestEmail.status}
+                {new Date(latestEmail.generatedAt).toLocaleString('en-GB')} — {latestEmail.status}
                 {latestEmail.safetyStatus ? ` · Safety: ${latestEmail.safetyStatus}` : ''}
                 {latestEmail.redactionCount ? ` · ${latestEmail.redactionCount} redaction(s)` : ''}
               </p>
+              <p className="mt-1 text-slate-500">{latestEmail.subject}</p>
             </div>
           ) : null}
 
