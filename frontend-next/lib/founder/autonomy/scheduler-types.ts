@@ -5,6 +5,8 @@
 
 export type SchedulerTaskType =
   | 'internal_brain_quick_check'
+  | 'internal_brain_rotating_micro_check'
+  | 'internal_brain_focused_check'
   | 'internal_brain_adversarial'
   | 'internal_brain_high_risk'
   | 'internal_brain_full'
@@ -15,8 +17,10 @@ export type SchedulerTaskType =
   | 'live_llm_adversarial_recommendation'
   | 'live_llm_high_risk_recommendation'
   | 'live_llm_gold_recommendation'
+  | 'daily_business_report'
   | 'daily_founder_email_report'
   | 'weekly_founder_email_report'
+  | 'weekly_internal_brain_residential_audit'
   | 'finance_snapshot'
   | 'revenue_pipeline_review'
 
@@ -26,6 +30,7 @@ export type SchedulerTaskStatus = 'idle' | 'scheduled' | 'running' | 'completed'
 
 export type SchedulerFrequency =
   | { kind: 'interval'; hours: number }
+  | { kind: 'interval_minutes'; minutes: number }
   | { kind: 'daily'; hourUtc: number; minuteUtc?: number }
   | { kind: 'weekly'; dayOfWeek: number; hourUtc: number; minuteUtc?: number }
   | { kind: 'manual_only' }
@@ -172,14 +177,33 @@ export type EmailReportRecord = {
   preview?: EmailReportPreview
 }
 
+export type DailyBusinessReportSectionKey =
+  | 'executiveSummary'
+  | 'orbInternalBrain'
+  | 'liveLlmGate'
+  | 'qualityLab'
+  | 'prsAndBuild'
+  | 'governance'
+  | 'revenue'
+  | 'finance'
+  | 'relationships'
+  | 'contentBrand'
+  | 'technical'
+  | 'tomApproval'
+
 export type EmailReportSettings = {
   recipient: string
   dailyEnabled: boolean
   weeklyEnabled: boolean
   dailyHourUtc: number
+  dailyMinuteUtc: number
   weeklyDayOfWeek: number
   weeklyHourUtc: number
   provider: 'smtp' | 'resend' | 'sendgrid' | 'postmark' | 'dry_run'
+  dryRun: boolean
+  businessReportEnabled: boolean
+  includedSections: DailyBusinessReportSectionKey[]
+  founderConfirmedSend: boolean
 }
 
 export type AutonomyOverview = {

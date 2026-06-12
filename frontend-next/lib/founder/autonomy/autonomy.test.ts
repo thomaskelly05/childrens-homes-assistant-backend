@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url'
 import { beforeEach, describe, it } from 'node:test'
 
 import { autonomyDefaultsAreSafe } from './scheduler-store.ts'
-import { DEFAULT_FOUNDER_EMAIL, createDefaultSchedulerTasks } from './scheduler-defaults.ts'
+import { DEFAULT_EMAIL_SETTINGS, DEFAULT_FOUNDER_EMAIL, createDefaultSchedulerTasks } from './scheduler-defaults.ts'
 import {
   canRunTaskToday,
   getSchedulerTask,
@@ -30,17 +30,17 @@ beforeEach(() => {
 })
 
 describe('Autonomous Intelligence Scheduler', () => {
-  it('internal brain quick check can run automatically', () => {
+  it('internal brain rotating micro-check can run automatically', () => {
     const tasks = createDefaultSchedulerTasks()
-    const quickCheck = tasks.find((t) => t.taskType === 'internal_brain_quick_check')
-    assert.ok(quickCheck)
-    assert.equal(quickCheck!.enabled, true)
-    assert.equal(quickCheck!.approvalRequired, false)
-    assert.equal(quickCheck!.allowedMode, 'internal_brain_only')
+    const microCheck = tasks.find((t) => t.taskType === 'internal_brain_rotating_micro_check')
+    assert.ok(microCheck)
+    assert.equal(microCheck!.enabled, true)
+    assert.equal(microCheck!.approvalRequired, false)
+    assert.equal(microCheck!.allowedMode, 'internal_brain_only')
 
     const runnerSource = readSource('lib/founder/autonomy/scheduler-runner.ts')
-    assert.match(runnerSource, /internal_brain_quick_check/)
-    assert.match(runnerSource, /runInternalBrainTask/)
+    assert.match(runnerSource, /internal_brain_rotating_micro_check/)
+    assert.match(runnerSource, /runRotatingMicroCheck/)
   })
 
   it('live LLM run requires approval by default', () => {
@@ -194,6 +194,83 @@ describe('Autonomous Intelligence Scheduler', () => {
     const emailSource = readSource('lib/founder/autonomy/scheduler-defaults.ts')
     assert.match(emailSource, /Thomas\.kelly@indicare\.co\.uk/)
     assert.match(emailSource, /recipient/)
+  })
+
+  it('daily business report scheduled at 16:00', () => {
+    const tasks = createDefaultSchedulerTasks()
+    const report = tasks.find((t) => t.taskType === 'daily_business_report')
+    assert.ok(report)
+    assert.equal(report!.enabled, true)
+    assert.equal(report!.frequency.kind, 'daily')
+    if (report!.frequency.kind === 'daily') {
+      assert.equal(report!.frequency.hourUtc, 16)
+      assert.equal(report!.frequency.minuteUtc, 0)
+    }
+    assert.equal(DEFAULT_EMAIL_SETTINGS.dailyHourUtc, 16)
+  })
+
+  it('daily business report includes business finance revenue quality governance sections', () => {
+    const emailSource = readSource('lib/founder/autonomy/email-report-service.ts')
+    assert.match(emailSource, /buildDailyBusinessReportSections/)
+    assert.match(emailSource, /executiveSummary/)
+    assert.match(emailSource, /orbInternalBrain/)
+    assert.match(emailSource, /qualityLab/)
+    assert.match(emailSource, /governance/)
+    assert.match(emailSource, /revenue/)
+    assert.match(emailSource, /finance/)
+    assert.match(emailSource, /tomApproval/)
+  })
+
+  it('rotating micro-check scheduler task enabled every 15 minutes', () => {
+    const tasks = createDefaultSchedulerTasks()
+    const micro = tasks.find((t) => t.taskType === 'internal_brain_rotating_micro_check')
+    assert.ok(micro)
+    assert.equal(micro!.enabled, true)
+    assert.equal(micro!.frequency.kind, 'interval_minutes')
+    if (micro!.frequency.kind === 'interval_minutes') {
+      assert.equal(micro!.frequency.minutes, 15)
+    }
+    assert.equal(micro!.allowedMode, 'internal_brain_only')
+  })
+
+  it('business report settings support preview and dry_run', () => {
+    const emailSource = readSource('lib/founder/autonomy/email-report-service.ts')
+    assert.match(emailSource, /dryRun/)
+    assert.match(emailSource, /founderConfirmedSend/)
+    assert.match(emailSource, /generateEmailReportWithSafety/)
+  })
+
+  it('real send requires configured provider and founder confirmation', () => {
+    const emailSource = readSource('lib/founder/autonomy/email-report-service.ts')
+    assert.match(emailSource, /founderConfirmedSend/)
+    assert.match(emailSource, /providerEnvMap/)
+    assert.match(emailSource, /Real send requires founder confirmation/)
+  })
+
+  it('scheduler history records micro-check and focused-check runs', () => {
+    const runnerSource = readSource('lib/founder/autonomy/scheduler-runner.ts')
+    assert.match(runnerSource, /runRotatingMicroCheckTask/)
+    assert.match(runnerSource, /runFocusedCheckTask/)
+    assert.match(runnerSource, /recordTaskRun/)
+  })
+
+  it('audit trail records business report generation', () => {
+    const emailSource = readSource('lib/founder/autonomy/email-report-service.ts')
+    assert.match(emailSource, /daily_business_report_generated/)
+    assert.match(emailSource, /recordAgentAuditEntry/)
+  })
+
+  it('command centre shows brain audit and business report status', () => {
+    const shortcutsSource = readSource('components/founder/founder-command-centre-shortcuts.tsx')
+    assert.match(shortcutsSource, /business-report/)
+    assert.match(shortcutsSource, /brain-audit/)
+    assert.match(shortcutsSource, /daily_business_report/)
+  })
+
+  it('nightly benchmark updates coverage audit', () => {
+    const runnerSource = readSource('lib/founder/autonomy/scheduler-runner.ts')
+    assert.match(runnerSource, /buildBrainCoverageAudit/)
+    assert.match(runnerSource, /nightly_benchmark/)
   })
 
   it('autonomy settings default to safe', () => {
