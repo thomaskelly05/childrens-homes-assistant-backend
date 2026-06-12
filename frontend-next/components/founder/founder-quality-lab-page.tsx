@@ -27,6 +27,7 @@ import {
 import type { OrbQualityLabOverview } from '@/lib/founder/quality-lab/quality-lab-client'
 import { assessOrbPilotPrivacyStatus, computeOrbPilotReadinessGate } from '@/lib/orb/pilot'
 import { getEvaluationRuns } from '@/lib/orb/evaluation'
+import { getQualityLabAgentIntegration } from '@/lib/founder/agents/autonomous/founder-agent-service'
 import { computeOrbLaunchQualityGate } from '@/lib/orb/quality/launch-quality-gate'
 
 const PRIORITY_TONE: Record<string, string> = {
@@ -204,6 +205,17 @@ export function FounderQualityLabPage() {
     [runs, overview, privacyStatus]
   )
 
+  const agentIntegration = useMemo(
+    () =>
+      getQualityLabAgentIntegration({
+        qualityRuns: runs,
+        evaluationRuns: getEvaluationRuns(),
+        whistleblowingCovered: overview?.coverage?.whistleblowing_covered ?? true,
+        privacyRetentionReviewed: false
+      }),
+    [runs, overview]
+  )
+
   async function handleRunPack() {
     setLoading(true)
     setError(null)
@@ -358,6 +370,47 @@ export function FounderQualityLabPage() {
             Quality Lab = curated GOLD scenarios. ORB Evaluation = broad synthetic and adversarial red team testing.
             Public launch is blocked if either latest GOLD or high-risk red team live run has critical failures.
           </p>
+        </FounderSectionCard>
+
+        <FounderSectionCard eyebrow="Agent OS" title="Quality Lab agent integration">
+          <div className="space-y-3 text-sm" data-testid="quality-lab-agent-integration">
+            <p className="text-slate-300">
+              Latest evaluation:{' '}
+              {agentIntegration.latestEvaluationState
+                ? `${agentIntegration.latestEvaluationState.runId} (${agentIntegration.latestEvaluationState.criticalFailures} critical)`
+                : 'no failed runs'}
+              · High-risk: {agentIntegration.liveHighRiskState} · GOLD: {agentIntegration.goldState}
+            </p>
+            <p className="text-slate-400">
+              Coverage strength: {agentIntegration.coverageMap.overallStrength} · Weak categories:{' '}
+              {agentIntegration.weakCategories.slice(0, 4).join(', ') || 'none'}
+            </p>
+            {agentIntegration.agentRecommendations.length > 0 ? (
+              <ul className="list-inside list-disc text-cyan-200">
+                {agentIntegration.agentRecommendations.map((rec) => (
+                  <li key={rec}>{rec}</li>
+                ))}
+              </ul>
+            ) : null}
+            {agentIntegration.chiefOfStaffPriorities.length > 0 ? (
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">Chief of Staff priorities</p>
+                <ol className="mt-1 list-decimal pl-5 text-amber-200">
+                  {agentIntegration.chiefOfStaffPriorities.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ol>
+              </div>
+            ) : null}
+            <div className="flex flex-wrap gap-3">
+              <Link href="/founder/agents" className="text-xs font-bold text-violet-300 hover:text-violet-200">
+                Founder Agents →
+              </Link>
+              <Link href="/founder/orb-quality-agent" className="text-xs font-bold text-cyan-300 hover:text-cyan-200">
+                ORB Quality Agent →
+              </Link>
+            </div>
+          </div>
         </FounderSectionCard>
 
         <FounderSectionCard eyebrow="Closed pilot" title="ORB closed-pilot readiness gate">
