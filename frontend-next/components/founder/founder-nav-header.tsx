@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { ArrowLeft, Beaker, Bot, Brain, Building2, CheckSquare, ClipboardCheck, Contact, FileCheck, FileText, Lock, PoundSterling, Radio, RefreshCw, ScrollText, ShieldAlert, Sparkles, Users, Workflow } from 'lucide-react'
+import { ArrowLeft, Beaker, Bot, Brain, Building2, CheckSquare, ClipboardCheck, Contact, FileCheck, FileText, Lock, PoundSterling, Radio, RefreshCw, ScrollText, ShieldAlert, Sparkles, Timer, Users, Wallet, Workflow } from 'lucide-react'
 
 type NavLink = {
   href: string
@@ -31,6 +31,7 @@ const NAV_LINKS: NavLink[] = [
   { href: '/founder/company', label: 'Company', icon: Building2 },
   { href: '/founder/team', label: 'Founder Team', icon: Users },
   { href: '/founder/agents', label: 'Agents', icon: Bot },
+  { href: '/founder/autonomy', label: 'Autonomy', icon: Timer },
   { href: '/founder/operating-loop', label: 'Operating Loop', icon: RefreshCw },
   { href: '/founder/content', label: 'Content', icon: FileText },
   { href: '/founder/approvals', label: 'Approvals', icon: CheckSquare },
@@ -45,6 +46,7 @@ const NAV_LINKS: NavLink[] = [
   { href: '/founder/orb-pilot', label: 'ORB Pilot', icon: ClipboardCheck },
   { href: '/founder/evidence', label: 'Evidence', icon: FileCheck },
   { href: '/founder/revenue', label: 'Revenue', icon: PoundSterling },
+  { href: '/founder/finance', label: 'Finance', icon: Wallet },
   { href: '/founder/relationships', label: 'Relationships', icon: Contact },
   { href: '/founder/audit', label: 'Audit Trail', icon: ScrollText },
   { href: '/founder/memory', label: 'Memory', icon: Brain },

@@ -4,6 +4,10 @@ import { getEvaluationRuns } from '@/lib/orb/evaluation/orb-evaluation-store'
 import { computeOrbLaunchQualityGate } from '@/lib/orb/quality/launch-quality-gate'
 import { findLatestFailedRun } from '@/lib/orb/quality-agent/orb-quality-agent-service'
 
+import { getLiveLlmGateStatus } from '../../autonomy/live-llm-gate.ts'
+import { getLastSchedulerTick, getSchedulerTasks } from '../../autonomy/scheduler-store.ts'
+import { getFinanceSnapshot } from '../../finance/finance-service.ts'
+import { getRevenuePipelineSnapshot } from '../../revenue/revenue-agent-service.ts'
 import { getLearningLoopChiefOfStaffPriorities } from '../../learning-loop/learning-loop-agent-integration.ts'
 import { getAwaitingApprovalScenarios } from '../../learning-loop/learning-loop-benchmark-bank.ts'
 import { getAllWeaknesses, getPendingProposals } from '../../learning-loop/learning-loop-store.ts'
@@ -48,6 +52,23 @@ export function generateFounderChiefOfStaffBrief(context: FounderAgentContext = 
     whatChanged.push(`Coverage map: ${coverage.weakAreas.length} weak area(s) identified.`)
   }
 
+  const schedulerTasks = getSchedulerTasks()
+  const recentInternalBrain = schedulerTasks.find((t) => t.taskType === 'internal_brain_quick_check')
+  if (recentInternalBrain?.lastRunAt) {
+    whatChanged.push(
+      `Autonomous scheduler: last internal-brain quick check at ${new Date(recentInternalBrain.lastRunAt).toLocaleString('en-GB')}.`
+    )
+  } else if (getLastSchedulerTick()) {
+    whatChanged.push(`Autonomous scheduler last tick: ${new Date(getLastSchedulerTick()!).toLocaleString('en-GB')}.`)
+  }
+
+  const liveLlmGate = getLiveLlmGateStatus()
+  const finance = getFinanceSnapshot()
+  const revenue = getRevenuePipelineSnapshot()
+  whatChanged.push(
+    `Finance snapshot: burn £${finance.monthlyBurn}/mo (${finance.monthlyBurnLabel}). Pipeline: £${revenue.pipelineValue} (${revenue.pipelineLabel}).`
+  )
+
   const whatIsBlocked = [...launchGate.blockers]
   if (!context.privacyRetentionReviewed) {
     whatIsBlocked.push('Privacy and retention review not recorded.')
@@ -57,6 +78,13 @@ export function generateFounderChiefOfStaffBrief(context: FounderAgentContext = 
     ...pendingAgentApprovals.map((a) => `${a.title} (${a.riskLevel} risk)`),
     ...pendingFounderApprovals.map((a) => `${a.title} — ${a.type}`)
   ]
+
+  if (liveLlmGate.currentRecommendation) {
+    whatNeedsApproval.push(`Live LLM: ${liveLlmGate.currentRecommendation.replace(/_/g, ' ')} — Tom approval required.`)
+  }
+  for (const item of liveLlmGate.pendingApprovals) {
+    whatNeedsApproval.push(`${item.title} (est. £${item.estimatedCostGbp ?? '—'})`)
+  }
 
   const whatIsRisky: string[] = []
   if ((latestLive?.criticalFailures ?? 0) > 0) {

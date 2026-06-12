@@ -91,6 +91,32 @@ export function FounderDashboardPage() {
         />
 
         <FounderSectionCard
+          eyebrow="Autonomous intelligence"
+          title="Scheduler, approvals and finance"
+          description="Internal-brain tests run automatically. Live LLM, launch and external actions remain approval-gated."
+        >
+          <p className="text-sm leading-7 text-slate-300">
+            Review scheduled tasks, live LLM gates, daily founder email reports, and finance/revenue snapshots. Tom remains
+            the approval gate for safety, money, launch and external action.
+          </p>
+          <div className="mt-4 flex flex-wrap gap-3">
+            <Link
+              href="/founder/autonomy"
+              className="inline-flex items-center gap-2 rounded-xl border border-emerald-400/40 bg-emerald-500/15 px-4 py-2.5 text-sm font-bold text-emerald-200 transition hover:bg-emerald-500/25"
+              data-testid="founder-autonomy-link"
+            >
+              Open Autonomy Scheduler
+            </Link>
+            <Link
+              href="/founder/finance"
+              className="inline-flex items-center gap-2 rounded-xl border border-violet-400/40 bg-violet-500/15 px-4 py-2.5 text-sm font-bold text-violet-200 transition hover:bg-violet-500/25"
+            >
+              Open Finance Agent
+            </Link>
+          </div>
+        </FounderSectionCard>
+
+        <FounderSectionCard
           eyebrow="Strategic layer"
           title="Founder Intelligence Centre"
           description="Executive priorities, risks, opportunities, readiness score and briefings — what matters and what to do next."

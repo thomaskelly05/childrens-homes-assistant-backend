@@ -345,6 +345,13 @@ export function FounderAgentsPage() {
           >
             Founder Team
           </Link>
+          <Link
+            href="/founder/autonomy"
+            className="inline-flex items-center gap-2 rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-2 text-sm font-bold text-emerald-200"
+            data-testid="founder-agents-autonomy-link"
+          >
+            Autonomy Scheduler
+          </Link>
         </div>
 
         {message ? <p className="text-sm text-emerald-300">{message}</p> : null}
