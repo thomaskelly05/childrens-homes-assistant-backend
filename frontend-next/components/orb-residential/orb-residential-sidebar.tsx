@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useMemo, useState, type ReactNode, type RefObject } from 'react'
-import Link from 'next/link'
 import {
   BookOpen,
   ChevronDown,
@@ -271,6 +270,61 @@ function SidebarIconButton({
       {children}
       <span className="orb-sidebar-nav-item__label sr-only">{label}</span>
     </button>
+  )
+}
+
+function IndiCareOsComingLaterButton({ className = '' }: { className?: string }) {
+  const [open, setOpen] = useState(false)
+
+  return (
+    <>
+      <button
+        type="button"
+        className={`orb-sidebar-nav-item w-full items-start gap-0.5 py-2 opacity-80 ${className}`.trim()}
+        data-orb-sidebar-os-link
+        data-orb-sidebar-os-coming-later
+        aria-label="IndiCare OS — coming later"
+        onClick={() => setOpen(true)}
+      >
+        <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--orb-muted)]">
+          IndiCare OS
+        </span>
+        <span className="text-[10px] text-[var(--orb-muted)]/80">Coming later</span>
+      </button>
+      {open ? (
+        <div
+          className="fixed inset-0 z-[90] flex items-end justify-center bg-black/40 p-4 sm:items-center"
+          role="presentation"
+          onClick={() => setOpen(false)}
+          data-orb-sidebar-os-coming-later-backdrop
+        >
+          <div
+            role="dialog"
+            aria-labelledby="orb-os-coming-later-title"
+            aria-modal="true"
+            className="w-full max-w-sm rounded-2xl border border-[var(--orb-line)]/45 bg-[var(--orb-surface-elevated)] p-5 shadow-xl"
+            onClick={(event) => event.stopPropagation()}
+            data-orb-sidebar-os-coming-later-dialog
+          >
+            <h2 id="orb-os-coming-later-title" className="text-sm font-semibold text-[var(--orb-foreground)]">
+              IndiCare OS — coming later
+            </h2>
+            <p className="mt-2 text-sm leading-relaxed text-[var(--orb-muted)]">
+              The full IndiCare operating system for children&apos;s homes is still in development. ORB Residential
+              is available now for recording, reflection and safer wording.
+            </p>
+            <button
+              type="button"
+              className="mt-4 w-full rounded-full bg-[var(--orb-primary)] px-4 py-2.5 text-sm font-semibold text-white"
+              onClick={() => setOpen(false)}
+              data-orb-sidebar-os-coming-later-close
+            >
+              Continue with ORB Residential
+            </button>
+          </div>
+        </div>
+      ) : null}
+    </>
   )
 }
 
@@ -943,12 +997,7 @@ export function OrbResidentialSidebar({
                 <CreditCard className="h-4 w-4" aria-hidden />
                 <span>Billing</span>
               </button>
-              <Link href="/os" className="orb-sidebar-nav-item w-full items-start gap-0.5 py-2" data-orb-sidebar-os-link>
-                <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--orb-muted)]">
-                  IndiCare OS
-                </span>
-                <span className="text-[10px] text-[var(--orb-muted)]/80">Coming later</span>
-              </Link>
+              <IndiCareOsComingLaterButton />
             </div>
           </SidebarCollapsibleSection>
         ) : (
@@ -1010,17 +1059,7 @@ export function OrbResidentialSidebar({
               <CreditCard className="h-4 w-4" aria-hidden />
               <span>Billing</span>
             </button>
-            <Link
-              href="/os"
-              className="orb-sidebar-nav-item w-full items-start gap-0.5 py-2"
-              data-orb-sidebar-os-link
-              aria-label="IndiCare OS — coming later"
-            >
-              <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--orb-muted)]">
-                IndiCare OS
-              </span>
-              <span className="text-[10px] text-[var(--orb-muted)]/80">Coming later</span>
-            </Link>
+            <IndiCareOsComingLaterButton />
           </nav>
         )}
       </div>

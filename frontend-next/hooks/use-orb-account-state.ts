@@ -17,6 +17,7 @@ import {
 } from '@/lib/orb/orb-access-request-cache'
 import { ORB_AUTH_LOADING_TIMEOUT_MS } from '@/lib/orb/orb-front-door-routing'
 import type { OrbAccessPayload } from '@/lib/orb/orb-billing-client'
+import { formatOrbPlanLabel } from '@/lib/orb/orb-billing-display'
 import {
   allowPasskeyStatusFetch,
   fetchPasskeyStatusCached
@@ -331,9 +332,11 @@ export function useOrbAccountStateInternal(options: UseOrbAccountStateOptions = 
   const roleLabel = isSignedIn ? mergedProfile.roleLabel : null
 
   const planName = isSignedIn
-    ? access?.subscription?.plan_name?.trim() ||
-      auth.user?.plan_name?.trim() ||
-      (access?.trial?.active ? 'ORB trial' : null)
+    ? formatOrbPlanLabel(
+        access?.subscription?.plan_name?.trim() ||
+          auth.user?.plan_name?.trim() ||
+          (access?.trial?.active ? 'ORB trial' : null)
+      )
     : null
 
   const accessState = isSignedIn ? access?.access_state ?? null : null

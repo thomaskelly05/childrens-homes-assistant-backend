@@ -157,9 +157,26 @@ export function OrbWriteEditor({
             data-orb-write-print-page
           >
             <header className="mb-6 border-b border-slate-200 pb-4">
-              <h1 className="text-xl font-semibold text-slate-900" data-orb-write-page-title>
-                {doc.title}
-              </h1>
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <h1 className="text-xl font-semibold text-slate-900" data-orb-write-page-title>
+                  {doc.title}
+                </h1>
+                {doc.is_finalised ? (
+                  <span
+                    className="inline-flex shrink-0 items-center rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-800"
+                    data-orb-write-approved-badge
+                  >
+                    Adult approved
+                  </span>
+                ) : (
+                  <span
+                    className="inline-flex shrink-0 items-center rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-900"
+                    data-orb-write-review-badge
+                  >
+                    Review required
+                  </span>
+                )}
+              </div>
               <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-500">
                 <span
                   className="inline-flex rounded-full border border-sky-200 bg-sky-50 px-2 py-0.5 font-medium text-sky-800"

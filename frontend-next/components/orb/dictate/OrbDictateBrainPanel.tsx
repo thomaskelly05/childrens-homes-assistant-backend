@@ -4,7 +4,7 @@ import { useState, type ReactNode } from 'react'
 import { Loader2, PanelRightClose, PanelRightOpen, Sparkles } from 'lucide-react'
 
 import type { OrbDictateBrainAnalysis, OrbDictateBrainSuggestion } from '@/lib/orb/dictate/orb-dictate-brain-analysis'
-import { ORB_DICTATE_REVIEW_CHECKS } from '@/lib/orb/orb-residential-copy'
+import { orbResidentialReviewChecks } from '@/lib/orb/orb-residential-copy'
 import {
   orbRecordingSuggestedOutputs,
   resolveOrbRecordingRecordType
@@ -96,7 +96,7 @@ function BrainEmptyState({
   analysing?: boolean
 }) {
   const recordType = resolveOrbRecordingRecordType({ studioTemplateId, recordTypeId })
-  const orbChecks = [...ORB_DICTATE_REVIEW_CHECKS]
+  const orbChecks = orbResidentialReviewChecks(recordType.id)
   const outputs = orbRecordingSuggestedOutputs(recordType.id)
 
   return (

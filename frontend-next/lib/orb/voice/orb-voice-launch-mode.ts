@@ -28,7 +28,9 @@ export const ORB_VOICE_PANEL_SUBTITLE =
 export const ORB_VOICE_BOUNDARY_COPY = [
   'Voice is for live support and reflection. Dictate is for turning speech into a structured record.',
   'Voice sessions may create transcripts for drafting and support purposes.',
-  'Review before relying on them. ORB Residential does not access live care records.'
+  'ORB can support your thinking, but it does not replace safeguarding procedures, management oversight or professional judgement.',
+  'Do not use ORB for emergencies. Follow local safeguarding and emergency procedures.',
+  'Review before relying on transcripts. ORB Residential does not access live care records.'
 ] as const
 
 export type OrbVoiceLaunchMode = 'browser_ptt' | 'openai_realtime' | 'unavailable'

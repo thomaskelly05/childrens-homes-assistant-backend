@@ -166,7 +166,7 @@ export function orbWriteTemplatePickerRecordTypes(search = ''): OrbRecordingReco
 const GENERAL_DICTATION_WRITE_SECTIONS: Array<{ title: string; prompt: string }> = [
   { title: 'Summary', prompt: 'Brief overview of the situation or note.' },
   { title: 'What was observed or shared', prompt: 'Factual account without judgement.' },
-  { title: "Child's voice and presentation", prompt: 'What the child said, showed or communicated.' },
+  { title: `Child\u2019s voice and presentation`, prompt: 'What the child said, showed or communicated.' },
   { title: 'Adult response', prompt: 'How staff responded and supported the child.' },
   { title: 'Outcome', prompt: 'What changed by the end.' },
   { title: 'Follow-up / management oversight', prompt: 'Actions, notifications, review or escalation.' }

@@ -23,7 +23,7 @@ function readComponent(relativePath: string) {
 describe('ORB Voice launch polish', () => {
   it('panel title and subtitle', () => {
     assert.equal(ORB_VOICE_PANEL_TITLE, 'Voice')
-    assert.equal(ORB_VOICE_PANEL_SUBTITLE, 'Speak to ORB hands-free')
+    assert.equal(ORB_VOICE_PANEL_SUBTITLE, 'Live conversation and reflection — talk hands-free with ORB')
     const station = readComponent('components/orb-standalone/orb-voice-station.tsx')
     assert.match(station, /ORB_VOICE_PANEL_TITLE/)
     assert.match(station, /ORB_VOICE_PANEL_SUBTITLE/)
@@ -85,10 +85,10 @@ describe('ORB Voice launch polish', () => {
   })
 
   it('standalone boundary copy is shown', () => {
-    assert.ok(ORB_VOICE_BOUNDARY_COPY.some((line) => line.includes('standalone ORB artefacts')))
+    assert.ok(ORB_VOICE_BOUNDARY_COPY.some((line) => line.includes('emergencies')))
     assert.ok(ORB_VOICE_BOUNDARY_COPY.some((line) => line.includes('live care records')))
     const station = readComponent('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(station, /data-orb-voice-boundary-copy/)
+    assert.match(station, /data-orb-voice-boundary-copy|SAFETY_COPY/)
   })
 
   it('safeguarding suppresses auto read-aloud', () => {

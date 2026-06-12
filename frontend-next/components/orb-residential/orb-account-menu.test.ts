@@ -19,9 +19,12 @@ describe('ORB ChatGPT-style account menu', () => {
     assert.match(menu, /testId="billing"/)
     assert.match(menu, /testId="sign-out"/)
     assert.match(menu, /data-orb-account-menu-item=\{testId\}/)
-    assert.match(menu, /label="Privacy"/)
-    assert.match(menu, /label="Voice"/)
-    assert.match(menu, /Passkey Enabled/)
+    assert.match(menu, /label="Privacy & data"/)
+    assert.match(menu, /label="Voice settings"/)
+    assert.match(menu, /formatOrbPlanLabel/)
+    assert.match(menu, /onOpenSettings\('safety_privacy'\)/)
+    assert.match(menu, /onOpenSettings\('appearance'\)/)
+    assert.match(menu, /onOpenSettings\('voice'\)/)
     assert.match(menu, /role="menu"/)
     assert.match(menu, /Escape/)
   })
@@ -44,8 +47,9 @@ describe('ORB ChatGPT-style account menu', () => {
 
   it('settings and billing open from menu handlers', () => {
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
-    assert.match(companion, /onOpenSettings=\{\(\) => \{[\s\S]*openSettingsPanel/)
+    assert.match(companion, /openSettingsPanel\(section/)
     assert.match(companion, /onOpenBilling=\{\(\) => \{[\s\S]*openBillingPanel/)
+    assert.match(companion, /initialSection=\{settingsInitialSection\}/)
   })
 
   it('no child profile selector in account menu', () => {

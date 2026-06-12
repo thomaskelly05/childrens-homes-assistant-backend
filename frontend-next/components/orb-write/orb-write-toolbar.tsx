@@ -77,6 +77,7 @@ export function OrbWriteToolbar({
       role="toolbar"
       aria-label="Document formatting and actions"
     >
+      <div className="flex flex-wrap items-center gap-1" data-orb-write-toolbar-format>
       <button type="button" className={btn} disabled={!canUndo} data-orb-write-undo onClick={() => onCommand('undo')} aria-label="Undo">
         <Undo2 className="h-3.5 w-3.5" />
       </button>
@@ -139,6 +140,7 @@ export function OrbWriteToolbar({
       <button type="button" className={btn} data-orb-write-clear-format onClick={() => onCommand('removeFormat')} aria-label="Clear formatting">
         <Eraser className="h-3.5 w-3.5" />
       </button>
+      </div>
 
       <span className="mx-0.5 hidden h-5 w-px bg-[var(--orb-line)]/40 sm:block" aria-hidden />
 
@@ -153,7 +155,7 @@ export function OrbWriteToolbar({
         </span>
       ) : null}
 
-      <div className="ml-auto flex flex-wrap items-center gap-1">
+      <div className="ml-auto flex flex-wrap items-center gap-1" data-orb-write-toolbar-record>
         <OrbWriteZoomControls
           zoomMode={zoomMode}
           zoomPercent={zoomPercent}
@@ -187,7 +189,7 @@ export function OrbWriteToolbar({
             type="button"
             data-orb-write-approve
             data-orb-write-finalise
-            className="inline-flex items-center gap-1 rounded-lg bg-[var(--orb-primary)] px-2 py-1.5 text-[10px] font-medium text-white"
+            className="inline-flex items-center gap-1 rounded-lg bg-[var(--orb-primary)] px-2.5 py-1.5 text-[10px] font-semibold text-white shadow-sm shadow-sky-500/15"
             onClick={onApprove}
           >
             <Check className="h-3.5 w-3.5" />
