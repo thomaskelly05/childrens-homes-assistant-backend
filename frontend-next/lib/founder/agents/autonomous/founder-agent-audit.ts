@@ -14,13 +14,14 @@ function nextAuditId(): string {
 
 export function recordAgentAuditEntry(input: {
   agentId: FounderAgentId
-  actionType: FounderAgentActionType | 'orchestrate' | 'approval_decision'
+  actionType: FounderAgentActionType | 'orchestrate' | 'approval_decision' | 'event_received' | 'recommendation_created'
   summary: string
   decision?: FounderAgentAuditEntry['decision']
   approvalStatus?: FounderAgentAuditEntry['approvalStatus']
   relatedRunId?: string
   relatedPrId?: string
   relatedDocumentId?: string
+  relatedEventId?: string
   actor?: string
 }): FounderAgentAuditEntry {
   const entry: FounderAgentAuditEntry = {
@@ -34,6 +35,7 @@ export function recordAgentAuditEntry(input: {
     relatedRunId: input.relatedRunId,
     relatedPrId: input.relatedPrId,
     relatedDocumentId: input.relatedDocumentId,
+    relatedEventId: input.relatedEventId,
     actor: input.actor
   }
   auditEntries = [entry, ...auditEntries].slice(0, 500)

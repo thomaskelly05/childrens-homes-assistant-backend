@@ -10,7 +10,10 @@ import {
 } from './founder-agent-actions'
 import { getAgentAuditTrail } from './founder-agent-audit'
 import { buildFounderCoverageMap } from './founder-agent-coverage-map'
+import { getAgentRecommendationsGrouped, getLiveEventFeed } from './founder-agent-event-engine'
+import { getFounderAgentRecommendations } from './founder-agent-event-store'
 import { generateFounderChiefOfStaffBrief } from './founder-chief-of-staff'
+import { getAutonomyLoopStatus } from './founder-autonomous-loop'
 import { getAllFounderAgentDefinitions, getFounderAgentDefinition } from './founder-agent-registry'
 import type {
   FounderAgentActionType,
@@ -156,6 +159,9 @@ export function getQualityLabAgentIntegration(context: FounderAgentContext = bui
     }
   }
 
+  const eventRecommendations = getFounderAgentRecommendations()
+  const liveEvents = getLiveEventFeed(10)
+
   return {
     latestEvaluationState: failed
       ? { runId: failed.id, status: failed.status, criticalFailures: failed.criticalFailures ?? 0 }
@@ -172,9 +178,25 @@ export function getQualityLabAgentIntegration(context: FounderAgentContext = bui
     prRecommendations: getPendingAgentApprovals()
       .filter((a) => a.actionType === 'create_draft_pr_summary')
       .map((a) => a.summary),
-    agentRecommendations: recommendations.length > 0 ? recommendations : qualityAgent.recommendedNextAction.split('. '),
+    agentRecommendations:
+      eventRecommendations.length > 0
+        ? eventRecommendations.slice(0, 8).map((r) => `${r.agentId}: ${r.recommendation}`)
+        : recommendations.length > 0
+          ? recommendations
+          : qualityAgent.recommendedNextAction.split('. '),
+    agentAnalysisAvailable: liveEvents.length > 0 || eventRecommendations.length > 0,
     launchGateEvidence: launchGate.blockers.length === 0 ? 'Ready for evidence compilation' : launchGate.blockers,
-    chiefOfStaffPriorities: chiefBrief.topPriorities
+    chiefOfStaffPriorities: chiefBrief.topPriorities,
+    liveEvents: liveEvents.slice(0, 5)
+  }
+}
+
+export function getFounderAgentsEventOverview() {
+  return {
+    liveEvents: getLiveEventFeed(30),
+    recommendations: getFounderAgentRecommendations(),
+    recommendationsByAgent: getAgentRecommendationsGrouped(),
+    autonomyStatus: getAutonomyLoopStatus()
   }
 }
 

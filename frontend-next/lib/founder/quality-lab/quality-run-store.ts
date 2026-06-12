@@ -68,6 +68,14 @@ export function addQualityRun(
   }
   prependQualityRun(stored)
   void persistQualityRun(stored).catch(() => undefined)
+  if (stored.status === 'complete') {
+    try {
+      const { onQualityRunCompleted } = require('@/lib/founder/agents/autonomous/founder-agent-event-hooks') as typeof import('@/lib/founder/agents/autonomous/founder-agent-event-hooks')
+      onQualityRunCompleted(stored)
+    } catch {
+      // Non-fatal.
+    }
+  }
   return stored
 }
 

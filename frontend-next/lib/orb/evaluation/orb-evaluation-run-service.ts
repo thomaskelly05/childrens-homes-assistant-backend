@@ -909,6 +909,17 @@ async function persistEvaluationRun(run: OrbEvaluationRun): Promise<void> {
     if (error instanceof FounderPersistenceApiError) throw error
     throw error
   }
+
+  if (run.status === 'completed' || run.status === 'failed') {
+    try {
+      const { onEvaluationRunPersisted } = await import(
+        '@/lib/founder/agents/autonomous/founder-agent-event-hooks'
+      )
+      onEvaluationRunPersisted(run)
+    } catch {
+      // Agent event engine must not break evaluation persistence.
+    }
+  }
 }
 
 export { recoverStaleInternalBrainRuns, getAnyActiveInternalBrainRun }

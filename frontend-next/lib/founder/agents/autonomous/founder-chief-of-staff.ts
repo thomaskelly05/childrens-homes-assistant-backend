@@ -7,6 +7,7 @@ import { findLatestFailedRun } from '@/lib/orb/quality-agent/orb-quality-agent-s
 import { getPendingAgentApprovals } from './founder-agent-actions'
 import { recordAgentAuditEntry } from './founder-agent-audit'
 import { buildFounderCoverageMap } from './founder-agent-coverage-map'
+import { getFounderAgentEvents } from './founder-agent-event-store'
 import type { FounderAgentContext, FounderChiefOfStaffBrief } from './founder-agent-types'
 
 function prioritise(items: string[], max = 5): string[] {
@@ -91,7 +92,29 @@ export function generateFounderChiefOfStaffBrief(context: FounderAgentContext = 
     )
     .map((a) => a.title)
 
+  const liveEvents = getFounderAgentEvents(20)
+  const unprocessedHighSeverity = liveEvents.filter(
+    (e) => !e.processed && (e.severity === 'critical' || e.severity === 'high')
+  )
+  const blockersFromEvents = liveEvents
+    .filter((e) => e.type === 'launch_gate_blocked' || e.type === 'privacy_review_missing')
+    .map((e) => e.title)
+  const testsRecommended = liveEvents
+    .filter((e) =>
+      ['evaluation_run_failed', 'critical_failure_detected', 'deploy_completed', 'gold_run_missing'].includes(e.type)
+    )
+    .map((e) => e.summary)
+    .slice(0, 5)
+
   const priorityCandidates: string[] = []
+
+  for (const event of liveEvents.filter((e) => e.requiresReview).slice(0, 3)) {
+    priorityCandidates.push(`[${event.severity}] ${event.title}`)
+  }
+
+  if (unprocessedHighSeverity.length > 0) {
+    priorityCandidates.push(`${unprocessedHighSeverity.length} high-severity live event(s) awaiting review.`)
+  }
 
   if ((latestFailed?.criticalFailures ?? 0) > 0 || (latestLive?.criticalFailures ?? 0) > 0) {
     const criticalCount = Math.max(latestFailed?.criticalFailures ?? 0, latestLive?.criticalFailures ?? 0)
@@ -119,6 +142,10 @@ export function generateFounderChiefOfStaffBrief(context: FounderAgentContext = 
   }
 
   const topPriorities = prioritise(priorityCandidates, 5)
+  const liveEventPriorities = prioritise(
+    liveEvents.slice(0, 5).map((e) => `${e.title} (${e.source})`),
+    5
+  )
 
   const brief: FounderChiefOfStaffBrief = {
     generatedAt: new Date().toISOString(),
@@ -130,7 +157,10 @@ export function generateFounderChiefOfStaffBrief(context: FounderAgentContext = 
     prsAwaitingReview: prioritise(prsAwaitingReview, 5),
     launchGateBlockers: prioritise(launchGate.blockers, 5),
     commercialRelationshipActionsWaiting: prioritise(commercialRelationshipActionsWaiting, 5),
-    topPriorities
+    topPriorities,
+    liveEventPriorities,
+    blockersFromEvents: prioritise(blockersFromEvents, 5),
+    testsRecommended: prioritise(testsRecommended, 5)
   }
 
   recordAgentAuditEntry({

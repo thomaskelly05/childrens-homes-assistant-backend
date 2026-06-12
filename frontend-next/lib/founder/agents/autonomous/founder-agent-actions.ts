@@ -65,8 +65,10 @@ function queueApprovalIfNeeded(
     title: `${agent.name}: ${actionType.replace(/_/g, ' ')}`,
     summary: result.summary,
     riskLevel: result.riskLevel,
+    approvalRequired: true,
     status: 'pending',
-    createdAt: new Date().toISOString()
+    createdAt: new Date().toISOString(),
+    safetyNotes: 'Autonomous agent prepared — founder approval required before execution.'
   }
   approvalQueue = [item, ...approvalQueue]
 
@@ -77,6 +79,54 @@ function queueApprovalIfNeeded(
     requestedByAgent: agentId,
     riskLevel: result.riskLevel === 'critical' ? 'high' : result.riskLevel,
     safetyCheck: 'Autonomous agent prepared — founder approval required before execution.'
+  })
+
+  return item
+}
+
+export function queueApprovalFromRecommendation(input: {
+  agentId: FounderAgentId
+  eventId: string
+  actionType: FounderAgentActionType
+  title: string
+  summary: string
+  rationale: string
+  riskLevel: FounderAgentActionResult['riskLevel']
+  safetyNotes: string
+  proposedPayload?: Record<string, unknown>
+}): FounderAgentApprovalItem | undefined {
+  const agent = getFounderAgentDefinition(input.agentId)
+  const item: FounderAgentApprovalItem = {
+    id: nextApprovalId(),
+    agentId: input.agentId,
+    eventId: input.eventId,
+    actionType: input.actionType,
+    title: input.title,
+    summary: input.summary,
+    riskLevel: input.riskLevel,
+    approvalRequired: true,
+    status: 'pending',
+    createdAt: new Date().toISOString(),
+    proposedPayload: input.proposedPayload,
+    safetyNotes: input.safetyNotes
+  }
+  approvalQueue = [item, ...approvalQueue]
+
+  addApprovalItem({
+    type: mapActionToApprovalType(input.actionType),
+    title: item.title,
+    content: `${input.summary}\n\nRationale: ${input.rationale}\n\nSafety: ${input.safetyNotes}`,
+    requestedByAgent: input.agentId,
+    riskLevel: input.riskLevel === 'critical' ? 'high' : input.riskLevel,
+    safetyCheck: input.safetyNotes
+  })
+
+  recordAgentAuditEntry({
+    agentId: input.agentId,
+    actionType: input.actionType,
+    summary: `Approval queue item created: ${item.title}`,
+    approvalStatus: 'pending',
+    relatedEventId: input.eventId
   })
 
   return item
@@ -312,12 +362,27 @@ export function executeFounderAgentAction(input: {
   return result
 }
 
+function approvalOutcomeStatus(
+  actionType: FounderAgentActionType,
+  outcome: 'approved' | 'reviewed'
+): FounderAgentApprovalItem['status'] {
+  if (outcome === 'reviewed') return 'reviewed'
+  if (['draft_linkedin_post', 'draft_founder_update'].includes(actionType)) return 'approved'
+  if (['draft_provider_email', 'draft_partner_follow_up'].includes(actionType)) return 'approved'
+  if (actionType === 'create_draft_pr_summary') return 'approved'
+  if (actionType === 'generate_build_brief' || actionType === 'create_product_build_brief') return 'approved'
+  if (actionType === 'run_synthetic_evaluation') return 'approved'
+  return 'completed'
+}
+
 export function approveAgentAction(approvalId: string, actor: string): FounderAgentApprovalItem | undefined {
   const index = approvalQueue.findIndex((a) => a.id === approvalId)
   if (index === -1) return undefined
+  const current = approvalQueue[index]
   const updated: FounderAgentApprovalItem = {
-    ...approvalQueue[index],
-    status: 'approved',
+    ...current,
+    status: approvalOutcomeStatus(current.actionType, 'approved'),
+    founderDecision: 'approved',
     decidedAt: new Date().toISOString(),
     decidedBy: actor
   }
@@ -325,9 +390,10 @@ export function approveAgentAction(approvalId: string, actor: string): FounderAg
   recordAgentAuditEntry({
     agentId: updated.agentId,
     actionType: updated.actionType,
-    summary: `Approved: ${updated.title}`,
+    summary: `Approved: ${updated.title} — no auto-merge, auto-send or auto-publish.`,
     decision: 'approved',
     approvalStatus: 'approved',
+    relatedEventId: updated.eventId,
     actor
   })
   return updated
@@ -339,6 +405,7 @@ export function rejectAgentAction(approvalId: string, actor: string): FounderAge
   const updated: FounderAgentApprovalItem = {
     ...approvalQueue[index],
     status: 'rejected',
+    founderDecision: 'rejected',
     decidedAt: new Date().toISOString(),
     decidedBy: actor
   }
@@ -349,6 +416,31 @@ export function rejectAgentAction(approvalId: string, actor: string): FounderAge
     summary: `Rejected: ${updated.title}`,
     decision: 'rejected',
     approvalStatus: 'rejected',
+    relatedEventId: updated.eventId,
+    actor
+  })
+  return updated
+}
+
+export function markReviewedAgentAction(approvalId: string, actor: string): FounderAgentApprovalItem | undefined {
+  const index = approvalQueue.findIndex((a) => a.id === approvalId)
+  if (index === -1) return undefined
+  const current = approvalQueue[index]
+  const updated: FounderAgentApprovalItem = {
+    ...current,
+    status: 'reviewed',
+    founderDecision: 'reviewed',
+    decidedAt: new Date().toISOString(),
+    decidedBy: actor
+  }
+  approvalQueue = [...approvalQueue.slice(0, index), updated, ...approvalQueue.slice(index + 1)]
+  recordAgentAuditEntry({
+    agentId: updated.agentId,
+    actionType: updated.actionType,
+    summary: `Marked reviewed: ${updated.title}`,
+    decision: 'reviewed',
+    approvalStatus: 'approved',
+    relatedEventId: updated.eventId,
     actor
   })
   return updated
@@ -360,6 +452,7 @@ export function requestChangesOnAgentAction(approvalId: string, actor: string): 
   const updated: FounderAgentApprovalItem = {
     ...approvalQueue[index],
     status: 'changes_requested',
+    founderDecision: 'changes_requested',
     decidedAt: new Date().toISOString(),
     decidedBy: actor
   }
@@ -370,7 +463,12 @@ export function requestChangesOnAgentAction(approvalId: string, actor: string): 
     summary: `Changes requested: ${updated.title}`,
     decision: 'changes_requested',
     approvalStatus: 'pending',
+    relatedEventId: updated.eventId,
     actor
   })
   return updated
+}
+
+export function clearAgentApprovalQueue(): void {
+  approvalQueue = []
 }

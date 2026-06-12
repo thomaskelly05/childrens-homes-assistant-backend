@@ -179,5 +179,38 @@ describe('Founder agents UI', () => {
     const source = readSource('components/founder/founder-quality-lab-page.tsx')
     assert.match(source, /quality-lab-agent-integration/)
     assert.match(source, /getQualityLabAgentIntegration/)
+    assert.match(source, /quality-lab-agent-analysis-available/)
+    assert.match(source, /quality-lab-create-build-brief/)
+    assert.match(source, /quality-lab-send-approval-queue/)
+  })
+
+  it('founder agents page shows live events feed and recommendations', () => {
+    const source = readSource('components/founder/founder-agents-page.tsx')
+    assert.match(source, /founder-agent-live-events-feed/)
+    assert.match(source, /founder-agent-recommendations/)
+    assert.match(source, /founder-autonomy-status/)
+    assert.match(source, /founder-agent-mark-reviewed-btn/)
+    assert.match(source, /founder-agent-safety-notes/)
+  })
+
+  it('event engine modules exist', () => {
+    const modules = [
+      'lib/founder/agents/autonomous/founder-agent-event-types.ts',
+      'lib/founder/agents/autonomous/founder-agent-event-store.ts',
+      'lib/founder/agents/autonomous/founder-agent-event-ingestion.ts',
+      'lib/founder/agents/autonomous/founder-agent-router.ts',
+      'lib/founder/agents/autonomous/founder-agent-recommendation-engine.ts',
+      'lib/founder/agents/autonomous/founder-agent-event-engine.ts',
+      'lib/founder/agents/autonomous/founder-agent-event-hooks.ts'
+    ]
+    for (const mod of modules) {
+      assert.ok(readSource(mod).length > 0, `missing ${mod}`)
+    }
+  })
+
+  it('evaluation run service hooks agent event engine', () => {
+    const source = readSource('lib/orb/evaluation/orb-evaluation-run-service.ts')
+    assert.match(source, /founder-agent-event-hooks/)
+    assert.match(source, /onEvaluationRunPersisted/)
   })
 })

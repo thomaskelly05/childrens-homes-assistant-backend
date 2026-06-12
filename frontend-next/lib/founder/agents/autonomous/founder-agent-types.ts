@@ -56,14 +56,15 @@ export type FounderAgentConfidence = 'high' | 'medium' | 'low'
 export type FounderAgentAuditEntry = {
   id: string
   agentId: FounderAgentId
-  actionType: FounderAgentActionType | 'orchestrate' | 'approval_decision'
+  actionType: FounderAgentActionType | 'orchestrate' | 'approval_decision' | 'event_received' | 'recommendation_created'
   timestamp: string
   summary: string
-  decision?: 'approved' | 'rejected' | 'pending' | 'changes_requested'
+  decision?: 'approved' | 'rejected' | 'pending' | 'changes_requested' | 'reviewed'
   approvalStatus: 'not_required' | 'pending' | 'approved' | 'rejected'
   relatedRunId?: string
   relatedPrId?: string
   relatedDocumentId?: string
+  relatedEventId?: string
   actor?: string
 }
 
@@ -112,17 +113,25 @@ export type FounderChiefOfStaffBrief = {
   launchGateBlockers: string[]
   commercialRelationshipActionsWaiting: string[]
   topPriorities: string[]
+  liveEventPriorities?: string[]
+  blockersFromEvents?: string[]
+  testsRecommended?: string[]
 }
 
 export type FounderAgentApprovalItem = {
   id: string
   agentId: FounderAgentId
+  eventId?: string
   actionType: FounderAgentActionType
   title: string
   summary: string
   riskLevel: FounderAgentRiskLevel
-  status: 'pending' | 'approved' | 'rejected' | 'changes_requested'
+  approvalRequired: boolean
+  status: 'pending' | 'approved' | 'rejected' | 'changes_requested' | 'completed' | 'reviewed'
   createdAt: string
+  proposedPayload?: Record<string, unknown>
+  safetyNotes?: string
+  founderDecision?: string
   decidedAt?: string
   decidedBy?: string
 }
