@@ -15,7 +15,9 @@ const testFiles = [
   join(root, 'lib/orb/quality-agent/orb-quality-agent-service.test.ts'),
   join(root, 'components/founder/founder-orb-quality-agent-page.test.ts'),
   join(root, 'lib/founder/agents/autonomous/founder-agents.test.ts'),
-  join(root, 'lib/founder/agents/autonomous/founder-agent-event-engine.test.ts')
+  join(root, 'lib/founder/agents/autonomous/founder-agent-event-engine.test.ts'),
+  join(root, 'lib/founder/learning-loop/learning-loop.test.ts'),
+  join(root, 'components/founder/founder-learning-loop-page.test.ts')
 ]
 
 const result = spawnSync(

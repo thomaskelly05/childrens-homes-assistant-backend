@@ -61,8 +61,8 @@ export function generateRecommendationForAgent(
   if (isEvaluationFailure(event)) {
     if (agentId === 'orb-quality-agent') {
       return {
-        recommendation: 'Classify evaluation failure cause and prepare remediation path.',
-        rationale: `Event ${event.type} on run ${event.relatedRunId ?? 'unknown'}. Do not weaken safety thresholds.`,
+        recommendation: 'Detect evaluation weakness and recommend IndiCare Learning Loop.',
+        rationale: `Event ${event.type} on run ${event.relatedRunId ?? 'unknown'}. Start learning loop for synthetic evidence analysis. Do not weaken safety thresholds.`,
         riskLevel: event.severity === 'critical' ? 'critical' : 'high',
         proposedAction: 'generate_build_brief',
         approvalRequired: true

@@ -4,6 +4,10 @@ import { getEvaluationRuns } from '@/lib/orb/evaluation/orb-evaluation-store'
 import { computeOrbLaunchQualityGate } from '@/lib/orb/quality/launch-quality-gate'
 import { findLatestFailedRun } from '@/lib/orb/quality-agent/orb-quality-agent-service'
 
+import { getLearningLoopChiefOfStaffPriorities } from '../../learning-loop/learning-loop-agent-integration.ts'
+import { getAwaitingApprovalScenarios } from '../../learning-loop/learning-loop-benchmark-bank.ts'
+import { getAllWeaknesses, getPendingProposals } from '../../learning-loop/learning-loop-store.ts'
+
 import { getPendingAgentApprovals } from './founder-agent-actions'
 import { recordAgentAuditEntry } from './founder-agent-audit'
 import { buildFounderCoverageMap } from './founder-agent-coverage-map'
@@ -139,6 +143,15 @@ export function generateFounderChiefOfStaffBrief(context: FounderAgentContext = 
 
   if (launchGate.blockers.length > 0) {
     priorityCandidates.push(`Launch gate: ${launchGate.blockers[0]}`)
+  }
+
+  const learningLoopPriorities = getLearningLoopChiefOfStaffPriorities({
+    pendingProposals: getPendingProposals().length,
+    criticalWeaknesses: getAllWeaknesses().filter((w) => w.severity === 'critical').length,
+    awaitingApprovalScenarios: getAwaitingApprovalScenarios().length
+  })
+  for (const lp of learningLoopPriorities) {
+    priorityCandidates.push(lp)
   }
 
   const topPriorities = prioritise(priorityCandidates, 5)
