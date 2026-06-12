@@ -104,9 +104,13 @@ export abstract class BaseFounderRepository<T extends { id: string }> {
       return this.memory.items.find((item) => item.id === id)
     }
     try {
-      return await founderPersistenceApi.get<T>(this.slug(), id)
-    } catch {
-      return undefined
+      const record = await founderPersistenceApi.get<T | null>(this.slug(), id)
+      return record ?? undefined
+    } catch (error) {
+      if (error instanceof FounderPersistenceApiError && error.status === 404) {
+        return undefined
+      }
+      throw error
     }
   }
 

@@ -152,14 +152,13 @@ export async function proxyToBackend(request: Request, backendPath: string): Pro
     return NextResponse.json({ error: 'Founder persistence backend unavailable' }, { status: 503 })
   }
 
-  if (
-    upstream.status === 404 &&
-    method === 'GET' &&
-    entitySlug &&
-    isKnownPersistenceEntitySlug(entitySlug) &&
-    backendPath === entitySlug
-  ) {
-    return NextResponse.json({ success: true, data: { items: [], count: 0 } }, { status: 200 })
+  if (upstream.status === 404 && method === 'GET' && entitySlug && isKnownPersistenceEntitySlug(entitySlug)) {
+    if (backendPath === entitySlug) {
+      return NextResponse.json({ success: true, data: { items: [], count: 0 } }, { status: 200 })
+    }
+    if (backendPath.startsWith(`${entitySlug}/`)) {
+      return NextResponse.json({ success: true, data: null }, { status: 200 })
+    }
   }
 
   const payload = await upstream.json().catch(() => ({}))

@@ -161,16 +161,17 @@ async function founderRequest<T>(
 
     if (!response.ok) {
       const entitySlug = persistenceEntityFromPath(url)
-      if (
-        response.status === 404 &&
-        method === 'GET' &&
-        entitySlug &&
-        isKnownPersistenceEntitySlug(entitySlug) &&
-        url.endsWith(`/persistence/${entitySlug}`)
-      ) {
-        const empty = { ok: true as const, status: 200, data: emptyPersistenceList<T>() }
-        writeCachedGet(key, empty)
-        return empty
+      if (response.status === 404 && method === 'GET' && entitySlug && isKnownPersistenceEntitySlug(entitySlug)) {
+        if (url.endsWith(`/persistence/${entitySlug}`)) {
+          const empty = { ok: true as const, status: 200, data: emptyPersistenceList<T>() }
+          writeCachedGet(key, empty)
+          return empty
+        }
+        if (url.includes(`/persistence/${entitySlug}/`)) {
+          const missing = { ok: true as const, status: 200, data: null as T }
+          writeCachedGet(key, missing)
+          return missing
+        }
       }
 
       return {

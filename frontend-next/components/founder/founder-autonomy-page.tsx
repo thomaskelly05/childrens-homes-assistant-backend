@@ -479,6 +479,7 @@ export function FounderAutonomyPage() {
   const overview = payload?.overview
   const latestEmail = overview?.emailHistory?.[0]
   const loopHealth = overview?.loopHealth
+  const loopStateStatus = overview?.loopState
   const scheduleLabel = overview?.emailSettings
     ? formatDailyLocalSchedule({
         hour: overview.emailSettings.dailyHourLocal,
@@ -511,6 +512,27 @@ export function FounderAutonomyPage() {
         ) : null}
         {actionMessage ? (
           <div className="rounded-xl border border-cyan-400/30 bg-cyan-500/10 p-4 text-sm text-cyan-200">{actionMessage}</div>
+        ) : null}
+
+        {loopStateStatus?.loadWarning ? (
+          <div
+            className="rounded-xl border border-amber-400/30 bg-amber-500/10 p-4 text-sm text-amber-200"
+            data-testid="autonomy-loop-state-warning"
+          >
+            {loopStateStatus.loadWarning}
+          </div>
+        ) : null}
+
+        {loopStateStatus?.seeded ? (
+          <div
+            className="rounded-xl border border-white/10 bg-black/20 p-4 text-sm text-slate-300"
+            data-testid="autonomy-loop-state-seeded"
+          >
+            <p>First run state created. Run a micro-check to begin the autonomous loop.</p>
+            {loopStateStatus.statusMessage ? (
+              <p className="mt-1 text-xs text-slate-500">{loopStateStatus.statusMessage}</p>
+            ) : null}
+          </div>
         ) : null}
 
         <FounderSectionCard eyebrow="Safety" title="Governance gates" description="These constraints cannot be overridden by the scheduler.">

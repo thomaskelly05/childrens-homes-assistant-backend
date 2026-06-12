@@ -220,7 +220,7 @@ describe('Autonomous loop stabilisation', () => {
   it('18. Brain audit persists across page reload', () => {
     const persistenceSource = readSource('lib/founder/autonomy/autonomy-loop-persistence.ts')
     assert.match(persistenceSource, /persistAutonomyLoopState/)
-    assert.match(persistenceSource, /hydrateAutonomyLoopState/)
+    assert.match(persistenceSource, /loadOrCreateAutonomyLoopState/)
     const syncSource = readSource('lib/founder/persistence/founder-persistence-sync.ts')
     assert.match(syncSource, /hydrateAutonomyLoopState/)
   })

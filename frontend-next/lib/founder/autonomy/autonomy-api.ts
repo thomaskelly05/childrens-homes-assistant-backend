@@ -3,6 +3,11 @@ import { NextResponse } from 'next/server'
 import { requireFounderSession } from '@/lib/founder/auth/founder-session'
 import { sanitiseFounderPayload } from '@/lib/founder/persistence/persistence-safety'
 
+import {
+  ensureAutonomyLoopStateForTask,
+  loadOrCreateAutonomyLoopState,
+  syncAndPersistAutonomyLoopState
+} from './autonomy-loop-persistence'
 import { buildAutonomyOverview, getSchedulerStatus, tickScheduler } from './autonomy-service'
 import { approveLiveLlmRun, rejectLiveLlmRun } from './live-llm-gate'
 import { executeSchedulerTask } from './scheduler-runner'
@@ -14,6 +19,7 @@ export async function handleAutonomyGet(): Promise<NextResponse> {
   const session = await requireFounderSession()
   if (!session.ok) return session.response
 
+  await loadOrCreateAutonomyLoopState()
   return NextResponse.json(sanitiseFounderPayload(getSchedulerStatus()))
 }
 
@@ -73,7 +79,9 @@ export async function handleAutonomyTaskRunPost(request: Request): Promise<NextR
   }
 
   try {
+    await ensureAutonomyLoopStateForTask(task.taskType)
     const result = executeSchedulerTask(task)
+    await syncAndPersistAutonomyLoopState('task_run')
     const payload = buildTaskRunResponse(body.taskId, result)
 
     if (payload.status === 'failed') {

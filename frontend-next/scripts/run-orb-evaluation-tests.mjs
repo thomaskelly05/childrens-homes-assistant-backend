@@ -22,6 +22,7 @@ const testFiles = [
   join(root, 'lib/founder/autonomy/email-report-safety.test.ts'),
   join(root, 'lib/founder/autonomy/autonomy-feedback.test.ts'),
   join(root, 'lib/founder/autonomy/autonomous-loop-stabilisation.test.ts'),
+  join(root, 'lib/founder/autonomy/autonomy-loop-persistence.test.ts'),
   join(root, 'lib/founder/brain-audit/brain-audit.test.ts'),
   join(root, 'lib/founder/finance/finance.test.ts')
 ]
