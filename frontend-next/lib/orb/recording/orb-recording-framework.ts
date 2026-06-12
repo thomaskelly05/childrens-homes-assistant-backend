@@ -163,10 +163,27 @@ export function orbWriteTemplatePickerRecordTypes(search = ''): OrbRecordingReco
   })
 }
 
+const GENERAL_DICTATION_WRITE_SECTIONS: Array<{ title: string; prompt: string }> = [
+  { title: 'Summary', prompt: 'Brief overview of the situation or note.' },
+  { title: 'What was observed or shared', prompt: 'Factual account without judgement.' },
+  { title: "Child's voice and presentation", prompt: 'What the child said, showed or communicated.' },
+  { title: 'Adult response', prompt: 'How staff responded and supported the child.' },
+  { title: 'Outcome', prompt: 'What changed by the end.' },
+  { title: 'Follow-up / management oversight', prompt: 'Actions, notifications, review or escalation.' }
+]
+
 export function buildOrbWriteTemplateSectionBody(
   recordType: OrbRecordingRecordType,
   template?: { sections?: Array<{ title: string; prompts?: string[]; required?: boolean }> }
 ): string {
+  if (recordType.id === 'general_dictation' && !template?.sections?.length) {
+    return GENERAL_DICTATION_WRITE_SECTIONS.map(
+      (section) => `## ${section.title}\n\n*${section.prompt}*\n`
+    )
+      .join('\n')
+      .trim()
+  }
+
   const sections = template?.sections
   if (sections?.length) {
     return sections

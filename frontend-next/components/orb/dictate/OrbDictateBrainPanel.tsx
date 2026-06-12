@@ -4,8 +4,8 @@ import { useState, type ReactNode } from 'react'
 import { Loader2, PanelRightClose, PanelRightOpen, Sparkles } from 'lucide-react'
 
 import type { OrbDictateBrainAnalysis, OrbDictateBrainSuggestion } from '@/lib/orb/dictate/orb-dictate-brain-analysis'
+import { ORB_DICTATE_REVIEW_CHECKS } from '@/lib/orb/orb-residential-copy'
 import {
-  orbRecordingChecksSummary,
   orbRecordingSuggestedOutputs,
   resolveOrbRecordingRecordType
 } from '@/lib/orb/recording/orb-recording-framework'
@@ -96,7 +96,7 @@ function BrainEmptyState({
   analysing?: boolean
 }) {
   const recordType = resolveOrbRecordingRecordType({ studioTemplateId, recordTypeId })
-  const orbChecks = orbRecordingChecksSummary(recordType)
+  const orbChecks = [...ORB_DICTATE_REVIEW_CHECKS]
   const outputs = orbRecordingSuggestedOutputs(recordType.id)
 
   return (
@@ -109,7 +109,7 @@ function BrainEmptyState({
 
       <section className="mt-4" data-orb-brain-empty-orb-checks>
         <h4 className="text-[10px] font-semibold uppercase tracking-wider text-[var(--orb-muted)]">
-          What ORB will check
+          What ORB will help you check
         </h4>
         <ul className="mt-1.5 space-y-1.5 text-xs text-[var(--orb-foreground)]">
           {orbChecks.map((check) => (
@@ -146,11 +146,11 @@ function BrainEmptyState({
           onClick={onAnalyse}
         >
           <Sparkles className="h-4 w-4 shrink-0" aria-hidden />
-          {analysing ? 'Analysing transcript…' : 'Analyse transcript with ORB'}
+          {analysing ? 'Reviewing…' : 'Review with ORB'}
         </button>
       ) : (
         <p className="mt-4 text-xs text-[var(--orb-muted)]">
-          Record or paste a transcript, then choose Analyse with ORB in the top bar.
+          Add speech or notes, then choose Review with ORB in the top bar.
         </p>
       )}
     </div>
@@ -186,9 +186,11 @@ export function OrbDictateBrainPanel({
       <header className="flex shrink-0 items-center gap-2 border-b border-[var(--orb-line)]/25 px-3 py-2">
         <Sparkles className="h-4 w-4 shrink-0 text-[var(--orb-primary)]" aria-hidden />
         <div className="min-w-0 flex-1">
-          <h3 className="truncate text-sm font-semibold text-[var(--orb-foreground)]">ORB analysis</h3>
+          <h3 className="truncate text-sm font-semibold text-[var(--orb-foreground)]">ORB Review</h3>
           {!collapsed ? (
-            <p className="truncate text-[10px] text-[var(--orb-muted)]">Review support — you remain responsible</p>
+            <p className="truncate text-[10px] text-[var(--orb-muted)]">
+              ORB helps you check what may be missing. You remain responsible for the final record.
+            </p>
           ) : null}
         </div>
         <button
@@ -208,7 +210,7 @@ export function OrbDictateBrainPanel({
         {loading ? (
           <div className="flex items-center gap-2 text-[var(--orb-muted)]" data-orb-brain-loading>
             <Loader2 className="h-4 w-4 animate-spin" />
-            Analysing transcript…
+            Reviewing with ORB…
           </div>
         ) : !analysis ? (
           studioTemplateId && recordTypeId ? (
@@ -221,7 +223,7 @@ export function OrbDictateBrainPanel({
           ) : (
             <div data-orb-brain-empty>
               <p className="text-sm text-[var(--orb-muted)]">
-                Record or paste a transcript, then analyse with ORB before drafting.
+                Add speech or notes, then review with ORB before creating a draft record.
               </p>
             </div>
           )
@@ -242,7 +244,7 @@ export function OrbDictateBrainPanel({
             ) : null}
 
             {analysis.orb_will_check?.length ? (
-              <AnalysisSection title="What ORB will check" dataAttr="orb-checks">
+              <AnalysisSection title="What ORB will help you check" dataAttr="orb-checks">
                 <ul className="space-y-1.5 text-xs">
                   {analysis.orb_will_check.map((c) => (
                     <li key={c} data-orb-brain-orb-check data-orb-brain-check-item>

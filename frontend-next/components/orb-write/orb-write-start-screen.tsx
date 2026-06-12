@@ -177,7 +177,7 @@ export function OrbWriteStartScreen({
           data-orb-write-analyse
         >
           <Sparkles className="h-3.5 w-3.5" />
-          {analysing ? 'Analysing…' : 'Analyse with ORB'}
+          {analysing ? 'Reviewing…' : 'Review with ORB'}
         </button>
         <OrbStudioPrimaryAction
           disabled={!hasText || generating}
@@ -185,7 +185,7 @@ export function OrbWriteStartScreen({
           working={generating}
           data-orb-write-generate
         >
-          {generating ? 'Generating…' : 'Generate draft'}
+          {generating ? 'Creating…' : 'Create draft record'}
         </OrbStudioPrimaryAction>
         {hasDraft && onOpenDocument ? (
           <button

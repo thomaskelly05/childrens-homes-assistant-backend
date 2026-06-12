@@ -19,8 +19,22 @@
       "regulatory_evidence_points": ["Factual clarity", "Professional tone"],
       "related_quality_standards": ["recording_quality"],
       "suggested_outputs": ["daily_record", "handover", "chronology_entry"],
-      "final_document_headings": ["Summary", "What happened", "Outcome", "Follow-up"],
-      "pdf_heading_order": ["Summary", "What happened", "Outcome", "Follow-up"],
+      "final_document_headings": [
+        "Summary",
+        "What was observed or shared",
+        "Child's voice and presentation",
+        "Adult response",
+        "Outcome",
+        "Follow-up / management oversight"
+      ],
+      "pdf_heading_order": [
+        "Summary",
+        "What was observed or shared",
+        "Child's voice and presentation",
+        "Adult response",
+        "Outcome",
+        "Follow-up / management oversight"
+      ],
       "related_templates": ["daily_record"],
       "related_document_lenses": ["explain", "extract_actions"],
       "suggested_follow_up_actions": ["Review wording", "Choose a specific record type if needed"],

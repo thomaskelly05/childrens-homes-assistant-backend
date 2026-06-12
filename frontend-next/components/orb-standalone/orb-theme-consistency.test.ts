@@ -35,7 +35,7 @@ describe('ORB theme consistency across station panels', () => {
     assert.match(doc, /Documents & Guidance/)
     assert.match(doc, /OrbPremiumTabs/)
     assert.match(doc, /OrbPremiumToolbar/)
-    assert.match(doc, /ORB_PREMIUM_ACTION_LABELS\.analyseWithOrb|Analyse with ORB/)
+    assert.match(doc, /ORB_PREMIUM_ACTION_LABELS\.analyseWithOrb|Review with ORB/)
     assert.match(doc, /data-orb-knowledge-library-tabs/)
   })
 

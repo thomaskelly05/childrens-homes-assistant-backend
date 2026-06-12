@@ -7,6 +7,10 @@ import { OrbUserAvatar } from '@/components/orb-residential/orb-user-avatar'
 import { OrbLegalLinks } from '@/components/orb-residential/orb-legal-links'
 import { OrbAppModal } from '@/components/orb-standalone/orb-app-modal'
 import {
+  ORB_RESIDENTIAL_BILLING_TRUST_COPY,
+  ORB_RESIDENTIAL_BILLING_VALUE_ITEMS
+} from '@/lib/orb/orb-residential-copy'
+import {
   formatOrbPlanLabel,
   getOrbBillingDisplayStatus,
   isPaidSubscriptionActive
@@ -342,11 +346,28 @@ export function OrbBillingModal({
           </p>
         </section>
 
+        <section className={sectionClassName()} data-orb-billing-value>
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--orb-muted)]">
+            Included with ORB Residential Individual
+          </h3>
+          <ul className="mt-2 space-y-1.5 text-xs leading-5 text-[var(--orb-foreground)]">
+            {ORB_RESIDENTIAL_BILLING_VALUE_ITEMS.map((item) => (
+              <li key={item} className="flex gap-2">
+                <span className="text-[var(--orb-primary)]" aria-hidden>
+                  ✓
+                </span>
+                <span>{item}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+
         <section className={sectionClassName(true)} data-orb-billing-trust>
           <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--orb-muted)]">
             Trust &amp; data
           </h3>
-          <ul className="mt-1.5 space-y-1 text-[11px] leading-5 text-[var(--orb-muted)]">
+          <p className="mt-1.5 text-xs leading-5 text-[var(--orb-foreground)]">{ORB_RESIDENTIAL_BILLING_TRUST_COPY}</p>
+          <ul className="mt-2 space-y-1 text-[11px] leading-5 text-[var(--orb-muted)]">
             <li>ORB Residential does not access IndiCare OS records.</li>
             <li>
               Uses your profile, conversation, uploaded documents and IndiCare residential intelligence.

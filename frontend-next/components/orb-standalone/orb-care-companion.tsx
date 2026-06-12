@@ -84,7 +84,8 @@ import {
   ORB_RESIDENTIAL_MOBILE_EMPTY_HEADING,
   ORB_RESIDENTIAL_MOBILE_EMPTY_STARTERS,
   ORB_RESIDENTIAL_MORE_STARTERS,
-  ORB_RESIDENTIAL_PRIMARY_STARTER_COUNT
+  ORB_RESIDENTIAL_PRIMARY_STARTER_COUNT,
+  ORB_RESIDENTIAL_STARTER_GROUPS
 } from '@/lib/orb/orb-residential-copy'
 import { OrbStandaloneAccessibilityPanel } from '@/components/orb-standalone/orb-accessibility-panel'
 import { OrbIntelligenceMapPanel } from '@/components/orb-standalone/orb-intelligence-map-panel'
@@ -3750,7 +3751,14 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
                         {emptyHeadingMobile}
                       </h2>
                     )}
-                    {!residentialSurface && (emptyWelcome.subline || ORB_RESIDENTIAL_EMPTY_SUBLINE) ? (
+                    {residentialSurface ? (
+                      <p
+                        className="mt-2 max-w-lg text-sm leading-relaxed text-[var(--orb-muted)]"
+                        data-orb-empty-subline
+                      >
+                        {ORB_RESIDENTIAL_EMPTY_SUBLINE}
+                      </p>
+                    ) : (emptyWelcome.subline || ORB_RESIDENTIAL_EMPTY_SUBLINE) ? (
                       <p className="mt-2 max-w-lg text-sm leading-7 text-slate-600" data-orb-empty-subline>
                         {emptyWelcome.subline || ORB_RESIDENTIAL_EMPTY_SUBLINE}
                       </p>
@@ -3768,39 +3776,55 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
                         Pick a starter, choose a mode, or type in the composer below.
                       </p>
                     ) : null}
-                    <div
-                      className={`mt-5 flex w-full flex-wrap justify-center gap-2 ${
-                        residentialSurface ? 'max-w-[var(--orb-composer-max,46rem)]' : 'max-w-2xl lg:max-w-3xl'
-                      }`}
-                      data-orb-starter-cards
-                      data-orb-starter-pills
-                      data-orb-empty-starter-chips
-                      data-orb-starter-count={emptyStarters.length}
-                    >
-                      {emptyStarters.map((starter) => (
-                        <button
-                          key={starter.text}
-                          type="button"
-                          onClick={() => {
-                            if (residentialSurface && starter.text === 'Analyse a document') {
-                              openDocumentsPanel()
-                              setSidebarOpen(false)
-                              return
-                            }
-                            applyPrompt(starter)
-                          }}
-                          className={
-                            residentialSurface
-                              ? 'orb-starter-pill orb-starter-card rounded-full px-4 py-2 text-left text-sm leading-snug'
-                              : 'orb-starter-card px-4 py-3.5 text-left text-sm leading-snug'
-                          }
-                          data-orb-starter-card
-                          data-orb-starter-pill={residentialSurface ? 'true' : undefined}
-                        >
-                          {starter.text}
-                        </button>
-                      ))}
-                    </div>
+                    {residentialSurface ? (
+                      <div
+                        className="mt-5 w-full max-w-[var(--orb-composer-max,46rem)] space-y-4 text-left"
+                        data-orb-starter-groups
+                        data-orb-empty-starter-chips
+                      >
+                        {ORB_RESIDENTIAL_STARTER_GROUPS.map((group) => (
+                          <section key={group.id} data-orb-starter-group={group.id}>
+                            <h3 className="mb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--orb-muted)]">
+                              {group.label}
+                            </h3>
+                            <div className="flex flex-wrap gap-1.5" data-orb-starter-pills>
+                              {group.starters.map((starter) => (
+                                <button
+                                  key={starter.text}
+                                  type="button"
+                                  onClick={() => applyPrompt(starter)}
+                                  className="orb-starter-pill orb-starter-card rounded-full border border-[var(--orb-line)]/35 bg-[var(--orb-surface)]/40 px-3.5 py-1.5 text-left text-[13px] leading-snug text-[var(--orb-foreground)] transition hover:border-[var(--orb-primary)]/30 hover:bg-[var(--orb-surface-elevated)]/80"
+                                  data-orb-starter-card
+                                  data-orb-starter-pill="true"
+                                >
+                                  {starter.text}
+                                </button>
+                              ))}
+                            </div>
+                          </section>
+                        ))}
+                      </div>
+                    ) : (
+                      <div
+                        className="mt-5 flex w-full max-w-2xl flex-wrap justify-center gap-2 lg:max-w-3xl"
+                        data-orb-starter-cards
+                        data-orb-starter-pills
+                        data-orb-empty-starter-chips
+                        data-orb-starter-count={emptyStarters.length}
+                      >
+                        {emptyStarters.map((starter) => (
+                          <button
+                            key={starter.text}
+                            type="button"
+                            onClick={() => applyPrompt(starter)}
+                            className="orb-starter-card px-4 py-3.5 text-left text-sm leading-snug"
+                            data-orb-starter-card
+                          >
+                            {starter.text}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                     <button
                       type="button"
                       onClick={() => setPromptDrawerOpen(true)}

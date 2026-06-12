@@ -76,6 +76,12 @@ function MenuItem({
   )
 }
 
+function formatRoleLabel(profile: AdultProfile | null, role: string | null | undefined): string | null {
+  if (profile?.roleLabel?.trim()) return profile.roleLabel.trim()
+  if (!role?.trim()) return null
+  return role.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase())
+}
+
 /** ChatGPT-style compact account popover for ORB Residential. */
 export function OrbAccountMenu({
   open,
@@ -91,8 +97,6 @@ export function OrbAccountMenu({
   access = null,
   savedOutputsCount = 0,
   role = null,
-  passkeyEnabled = false,
-  realtimeVoiceEnabled = false,
   onOpenProfile,
   onOpenSettings,
   onOpenBilling,
@@ -105,14 +109,9 @@ export function OrbAccountMenu({
   const displayName = userName?.trim() || profile?.name?.trim() || 'Your account'
   const email = userEmail?.trim() || null
   const billingDisplay = getOrbBillingDisplayStatus(access)
-  const statusLabel = billingDisplay.headline
-  const statusTone = billingDisplay.isPaidActive
-    ? 'success'
-    : access?.trial?.active
-      ? 'trial'
-      : subscriptionActive
-        ? 'neutral'
-        : 'warn'
+  const subscriptionStatus = billingDisplay.headline
+  const roleLabel = formatRoleLabel(profile, role)
+  const planDisplay = planLabel?.trim() || 'Individual'
 
   useEffect(() => {
     if (!open) return
@@ -182,50 +181,31 @@ export function OrbAccountMenu({
                 {email}
               </p>
             ) : null}
-            <div className="mt-1.5 flex flex-wrap items-center gap-1.5" data-orb-account-menu-status-row>
-              <span
-                className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-medium capitalize ${
-                  statusTone === 'success'
-                    ? 'border-emerald-200/40 bg-emerald-500/10 text-emerald-200'
-                    : statusTone === 'trial'
-                      ? 'border-sky-200/40 bg-sky-500/10 text-sky-100'
-                      : statusTone === 'warn'
-                        ? 'border-amber-200/40 bg-amber-500/10 text-amber-100'
-                        : 'border-[var(--orb-line)]/45 bg-[var(--orb-surface-hover)] text-[var(--orb-muted)]'
-                }`}
-                data-orb-account-menu-plan
-              >
-                {statusLabel}
-              </span>
-              {profile?.roleLabel ? (
-                <span
-                  className="inline-flex rounded-full border border-[var(--orb-line)]/45 px-2 py-0.5 text-[10px] font-medium text-[var(--orb-muted)]"
-                  data-orb-account-menu-role
-                >
-                  {profile.roleLabel}
-                </span>
-              ) : role ? (
-                <span
-                  className="inline-flex rounded-full border border-[var(--orb-line)]/45 px-2 py-0.5 text-[10px] font-medium capitalize text-[var(--orb-muted)]"
-                  data-orb-account-menu-role
-                >
-                  {role.replace(/_/g, ' ')}
-                </span>
+            <dl className="mt-2 space-y-1 text-[11px] text-[var(--orb-muted)]" data-orb-account-menu-summary>
+              {roleLabel ? (
+                <div className="flex gap-1.5">
+                  <dt className="shrink-0">Role:</dt>
+                  <dd className="font-medium capitalize text-[var(--orb-foreground)]" data-orb-account-menu-role>
+                    {roleLabel}
+                  </dd>
+                </div>
               ) : null}
-            </div>
-            <div className="mt-1.5 hidden flex-wrap gap-1 sm:flex" data-orb-account-menu-quick-status>
-              <span className="orb-profile-compact-badge" data-orb-account-menu-voice>
-                {realtimeVoiceEnabled ? 'Voice ready' : 'Voice off'}
-              </span>
-              <span className="orb-profile-compact-badge" data-orb-account-menu-passkey>
-                {passkeyEnabled ? 'Passkey Enabled' : 'Passkey Disabled'}
-              </span>
-              {savedOutputsCount > 0 ? (
-                <span className="rounded-md bg-[var(--orb-surface)]/80 px-1.5 py-0.5 text-[9px] text-[var(--orb-muted)]" data-orb-account-menu-saved-count>
-                  {savedOutputsCount} saved
-                </span>
-              ) : null}
-            </div>
+              <div className="flex gap-1.5">
+                <dt className="shrink-0">Plan:</dt>
+                <dd className="font-medium text-[var(--orb-foreground)]" data-orb-account-menu-plan>
+                  {planDisplay}
+                </dd>
+              </div>
+              <div className="flex gap-1.5">
+                <dt className="shrink-0">Subscription:</dt>
+                <dd
+                  className="font-medium capitalize text-[var(--orb-foreground)]"
+                  data-orb-account-menu-subscription
+                >
+                  {subscriptionActive && billingDisplay.isPaidActive ? 'Active' : subscriptionStatus}
+                </dd>
+              </div>
+            </dl>
           </div>
         </div>
       </div>
@@ -240,10 +220,32 @@ export function OrbAccountMenu({
             onOpenProfile()
           }}
         />
+        {onOpenSavedOutputs ? (
+          <MenuItem
+            icon={<Save className="h-4 w-4" />}
+            label="Saved outputs"
+            testId="saved-outputs"
+            onClick={() => {
+              onClose()
+              onOpenSavedOutputs()
+            }}
+          />
+        ) : null}
+        {onOpenVoiceSettings ? (
+          <MenuItem
+            icon={<Mic className="h-4 w-4" />}
+            label="Voice settings"
+            testId="voice-settings"
+            onClick={() => {
+              onClose()
+              onOpenVoiceSettings()
+            }}
+          />
+        ) : null}
         <MenuItem
-          icon={<Settings className="h-4 w-4" />}
-          label="Settings"
-          testId="settings"
+          icon={<Database className="h-4 w-4" />}
+          label="Privacy & data"
+          testId="privacy"
           onClick={() => {
             onClose()
             onOpenSettings()
@@ -259,36 +261,14 @@ export function OrbAccountMenu({
           }}
         />
         <MenuItem
-          icon={<Database className="h-4 w-4" />}
-          label="Privacy"
-          testId="privacy"
+          icon={<Settings className="h-4 w-4" />}
+          label="Settings"
+          testId="settings"
           onClick={() => {
             onClose()
             onOpenSettings()
           }}
         />
-        {onOpenVoiceSettings ? (
-          <MenuItem
-            icon={<Mic className="h-4 w-4" />}
-            label="Voice"
-            testId="voice"
-            onClick={() => {
-              onClose()
-              onOpenVoiceSettings()
-            }}
-          />
-        ) : null}
-        {onOpenSavedOutputs ? (
-          <MenuItem
-            icon={<Save className="h-4 w-4" />}
-            label="Saved Outputs"
-            testId="saved-outputs"
-            onClick={() => {
-              onClose()
-              onOpenSavedOutputs()
-            }}
-          />
-        ) : null}
       </div>
 
       <div className="mt-1 border-t border-[var(--orb-line)]/40 pt-1" data-orb-account-menu-sign-out-wrap>
@@ -304,6 +284,11 @@ export function OrbAccountMenu({
           dataOrbSignOut
         />
       </div>
+      {savedOutputsCount > 0 ? (
+        <p className="sr-only" data-orb-account-menu-saved-count>
+          {savedOutputsCount} saved outputs
+        </p>
+      ) : null}
     </div>
   )
 }

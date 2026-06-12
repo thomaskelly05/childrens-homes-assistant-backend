@@ -14,7 +14,7 @@ function read(relativePath: string) {
 
 describe('ORB premium design system components', () => {
   it('exports shared action labels', () => {
-    assert.equal(ORB_PREMIUM_ACTION_LABELS.analyseWithOrb, 'Analyse with ORB')
+    assert.equal(ORB_PREMIUM_ACTION_LABELS.analyseWithOrb, 'Review with ORB')
     assert.equal(ORB_PREMIUM_ACTION_LABELS.continueInChat, 'Continue in chat')
     assert.equal(ORB_PREMIUM_ACTION_LABELS.startInDictate, 'Start in Dictate')
     assert.equal(ORB_PREMIUM_ACTION_LABELS.openInOrbWrite, 'Open in ORB Write')

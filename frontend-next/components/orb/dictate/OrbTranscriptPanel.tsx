@@ -46,7 +46,10 @@ export function OrbTranscriptPanel({
       <header className="flex shrink-0 items-center justify-between gap-3 border-b border-[var(--orb-line)]/40 px-4 py-3">
         <div>
           <h3 className="text-sm font-semibold text-[var(--orb-foreground)]">Live Transcript</h3>
-          <p className="mt-0.5 text-[11px] text-[var(--orb-muted)]" data-orb-dictate-recording-status>
+          <p className="mt-0.5 text-[11px] text-[var(--orb-muted)]">
+            Record, paste or edit rough notes before review.
+          </p>
+          <p className="text-[10px] text-[var(--orb-muted)]/80" data-orb-dictate-recording-status>
             {recordingActive ? (recordingPaused ? 'Paused' : 'Recording') : 'Ready to capture'}
             {recordingActive ? ` · ${formatTimer(timerSec)}` : ''}
           </p>
@@ -70,9 +73,9 @@ export function OrbTranscriptPanel({
             data-orb-dictate-transcript-empty
           >
             <Mic className="mb-2 h-7 w-7 text-[var(--orb-primary)]/70" aria-hidden />
-            <p className="text-sm font-medium text-[var(--orb-foreground)]">Start with speech or paste</p>
+            <p className="text-sm font-medium text-[var(--orb-foreground)]">Start with speech or paste notes</p>
             <p className="mt-1.5 max-w-sm text-xs leading-relaxed text-[var(--orb-muted)]">
-              Press Record in the top bar, or paste rough notes in the editor below.
+              Press Record above, or paste rough notes into the editor.
             </p>
           </div>
         ) : null}

@@ -8,15 +8,18 @@ const ORB_PLAN_LABELS: Record<string, string> = {
 /** Human-friendly plan label — raw plan IDs stay in diagnostics only. */
 export function formatOrbPlanLabel(planIdOrName: string | null | undefined): string {
   const raw = planIdOrName?.trim()
-  if (!raw) return 'ORB Residential — Individual'
+  if (!raw) return 'Individual'
+  const roleLike = /^(admin|manager|staff|user|owner)$/i.test(raw)
+  if (roleLike) return 'Individual'
   const mapped = ORB_PLAN_LABELS[raw.toLowerCase()]
-  if (mapped) return mapped
+  if (mapped) return mapped.replace(/^ORB Residential — /, '')
   if (raw.includes(' — ')) return raw
   if (/^orb[_\s]/i.test(raw)) {
     const normalised = raw.replace(/_/g, ' ').replace(/\s+/g, ' ').trim()
-    if (/individual/i.test(normalised)) return 'ORB Residential — Individual'
+    if (/individual/i.test(normalised)) return 'Individual'
     return normalised.replace(/\b\w/g, (char) => char.toUpperCase())
   }
+  if (/individual/i.test(raw)) return 'Individual'
   return raw
 }
 

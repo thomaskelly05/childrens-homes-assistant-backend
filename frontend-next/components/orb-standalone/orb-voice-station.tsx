@@ -100,7 +100,7 @@ type VoiceStartStage = 'idle' | 'starting' | 'active' | 'failed'
 type BrowserStartStage = 'idle' | 'starting' | 'active' | 'failed'
 
 const SAFETY_COPY =
-  'ORB Voice supports professional judgement. If there is immediate risk, follow your home\'s procedures and contact emergency services where required.'
+  'ORB can support your thinking, but it does not replace safeguarding procedures, management oversight or professional judgement.'
 
 function newTurnId() {
   return `turn_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`

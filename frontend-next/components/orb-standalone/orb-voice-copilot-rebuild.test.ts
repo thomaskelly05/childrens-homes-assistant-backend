@@ -58,7 +58,7 @@ describe('ORB Voice copilot rebuild — ready', () => {
   it('ready state does not render Open Dictate as primary', () => {
     const actions = readComponent('components/orb-standalone/orb-voice-actions.tsx')
     assert.doesNotMatch(actions, /Open Dictate/)
-    assert.match(actions, /Use Dictate/)
+    assert.match(actions, /Turn speech into a record/)
     const station = readComponent('components/orb-standalone/orb-voice-station.tsx')
     assert.doesNotMatch(station, /Open Dictate instead/)
     assert.doesNotMatch(station, /Open Dictate again/)
@@ -71,7 +71,7 @@ describe('ORB Voice copilot rebuild — fallback', () => {
     const actions = readComponent('components/orb-standalone/orb-voice-actions.tsx')
     assert.match(actions, /Try voice again/)
     assert.match(actions, /Type instead/)
-    assert.match(actions, /Use Dictate/)
+    assert.match(actions, /Turn speech into a record/)
   })
 
   it('only one Dictate fallback control component', () => {

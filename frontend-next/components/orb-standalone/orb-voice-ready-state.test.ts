@@ -141,7 +141,7 @@ describe('ORB Voice UI state — auth and fallback', () => {
     assert.match(readLib('orb/voice/orb-voice-ui-state.ts'), /Try voice again/)
     const actions = readComponent('components/orb-standalone/orb-voice-actions.tsx')
     assert.match(actions, /Type instead/)
-    assert.match(actions, /Use Dictate/)
+    assert.match(actions, /Turn speech into a record/)
     assert.match(actions, /provider_unavailable/)
   })
 
