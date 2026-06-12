@@ -1,4 +1,5 @@
 import { buildAutonomousLoopHealth } from './autonomous-loop-service.ts'
+import { getAutonomyLoopLoadStatus } from './autonomy-loop-persistence.ts'
 import { SCHEDULER_SAFETY_GATES, type AutonomyOverview } from './scheduler-types'
 import {
   getEmailReportHistory,
@@ -12,6 +13,7 @@ import { runDueSchedulerTasks } from './scheduler-runner'
 export { autonomyDefaultsAreSafe } from './scheduler-store'
 
 export function buildAutonomyOverview(): AutonomyOverview {
+  const loopState = getAutonomyLoopLoadStatus()
   return {
     tasks: getSchedulerTasks(),
     liveLlmGate: getLiveLlmGateStatus(),
@@ -19,7 +21,8 @@ export function buildAutonomyOverview(): AutonomyOverview {
     emailHistory: getEmailReportHistory(),
     safetyGates: [...SCHEDULER_SAFETY_GATES],
     lastSchedulerTick: getLastSchedulerTick(),
-    loopHealth: buildAutonomousLoopHealth()
+    loopHealth: buildAutonomousLoopHealth(),
+    loopState
   }
 }
 

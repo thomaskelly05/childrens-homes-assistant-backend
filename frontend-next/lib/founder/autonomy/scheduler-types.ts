@@ -236,6 +236,12 @@ export type AutonomousLoopHealthSummary = {
   href: '/founder/autonomy' | '/founder/intelligence-centre/brain-audit'
 }
 
+export type AutonomyLoopStateStatus = {
+  seeded: boolean
+  loadWarning?: string
+  statusMessage?: string
+}
+
 export type AutonomyOverview = {
   tasks: SchedulerTask[]
   liveLlmGate: LiveLlmGateStatus
@@ -244,6 +250,7 @@ export type AutonomyOverview = {
   safetyGates: string[]
   lastSchedulerTick: string | null
   loopHealth: AutonomousLoopHealthSummary
+  loopState?: AutonomyLoopStateStatus
 }
 
 export const SCHEDULER_SAFETY_GATES = [
