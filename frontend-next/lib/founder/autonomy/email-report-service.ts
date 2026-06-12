@@ -1,15 +1,23 @@
 import { getPendingApprovals } from '../approvals/approval-store.ts'
 import { getPendingAgentApprovals } from '../agents/autonomous/founder-agent-actions.ts'
-import { getAgentAuditTrail } from '../agents/autonomous/founder-agent-audit.ts'
+import { getAgentAuditTrail, recordAgentAuditEntry } from '../agents/autonomous/founder-agent-audit.ts'
 import { generateFounderChiefOfStaffBrief } from '../agents/autonomous/founder-chief-of-staff.ts'
 import { buildFounderCoverageMap } from '../agents/autonomous/founder-agent-coverage-map.ts'
-import { getPendingProposals } from '../learning-loop/learning-loop-store.ts'
+import { getAwaitingApprovalScenarios } from '../learning-loop/learning-loop-benchmark-bank.ts'
+import { getAllWeaknesses, getPendingProposals } from '../learning-loop/learning-loop-store.ts'
+import { getContentDrafts } from '../content/content-draft-store.ts'
+import { getRelationships } from '../relationships/relationship-store.ts'
 import { getEvaluationRuns } from '../../orb/evaluation/orb-evaluation-store.ts'
+import { generateFinanceForecast } from '../finance/finance-forecast-engine.ts'
+import { getLatestBrainAudit } from '../brain-audit/brain-audit-service.ts'
+import { getLatestMicroCheck } from '../brain-audit/brain-audit-store.ts'
+import { getTaskRunHistory } from './scheduler-store.ts'
 
 import { getLiveLlmGateStatus } from './live-llm-gate.ts'
 import { DEFAULT_FOUNDER_EMAIL } from './scheduler-defaults.ts'
 import { addEmailReportRecord, getEmailSettings, getLatestEmailReportPreview } from './scheduler-store.ts'
 import type {
+  DailyBusinessReportSectionKey,
   EmailReportContent,
   EmailReportPreview,
   EmailReportRecord,
@@ -95,7 +103,116 @@ function buildLiveLlmGateSection(): string[] {
 
 function buildTopActions(): string[] {
   const brief = generateFounderChiefOfStaffBrief()
-  return brief.topPriorities.slice(0, 3)
+  return brief.topPriorities.slice(0, 5)
+}
+
+function buildDailyBusinessReportSections(): Record<DailyBusinessReportSectionKey, string[]> {
+  const brief = generateFounderChiefOfStaffBrief()
+  const coverage = buildFounderCoverageMap({})
+  const brainAudit = getLatestBrainAudit()
+  const microCheck = getLatestMicroCheck()
+  const finance = getFinanceSnapshot()
+  const revenue = getRevenuePipelineSnapshot()
+  const forecast = generateFinanceForecast({}, 'daily-business-report')
+  const gate = getLiveLlmGateStatus()
+  const weaknesses = getAllWeaknesses()
+  const pendingBenchmarks = getAwaitingApprovalScenarios()
+  const relationships = getRelationships().filter((r) => r.status !== 'archived')
+  const contentDrafts = getContentDrafts().filter((d) => d.status === 'draft' || d.status === 'needs-review')
+  const schedulerRuns = getTaskRunHistory(20)
+  const fullBenchmark = getEvaluationRuns().find((r) => r.title?.includes('Full Benchmark') || r.packType === 'standard')
+
+  return {
+    executiveSummary: [
+      'What changed today:',
+      ...(brief.whatChanged.length > 0 ? brief.whatChanged.map((l) => `• ${l}`) : ['• Steady operations — see sections below.']),
+      '',
+      'What matters most:',
+      ...(brief.whatIsRisky.length > 0 ? brief.whatIsRisky.slice(0, 3).map((l) => `• ${l}`) : ['• No elevated risks flagged.']),
+      '',
+      'Top 5 actions for Tom:',
+      ...buildTopActions().map((a, i) => `${i + 1}. ${a}`)
+    ],
+    orbInternalBrain: [
+      `Latest micro-check: ${microCheck ? `${microCheck.scenarioCount} scenarios, ${microCheck.criticalFailures} critical, areas: ${microCheck.areasTested.slice(0, 3).join(', ')}` : 'None yet'}`,
+      `Latest full benchmark: ${fullBenchmark ? `${fullBenchmark.passRate ?? '—'}% pass, ${fullBenchmark.criticalFailures ?? 0} critical` : 'Scheduled nightly at 02:00 UTC'}`,
+      `Critical failures: ${brainAudit?.criticalFailureCount ?? 0}`,
+      `Weak areas: ${brainAudit?.weakAreas.length ?? coverage.weakAreas.length}`,
+      `Coverage: ${brainAudit?.overallCoveragePercent ?? '—'}% across ${brainAudit?.areas.length ?? '—'} domains`,
+      `Learning proposals recommended: ${brainAudit?.recommendedLearningProposalCount ?? 0}`
+    ],
+    liveLlmGate: buildLiveLlmGateSection(),
+    qualityLab: [
+      `New weaknesses detected: ${weaknesses.length}`,
+      `Coverage gaps: ${coverage.untestedAreas.length} untested area(s)`,
+      `Synthetic scenarios generated (pending): ${pendingBenchmarks.length}`,
+      `Proposals awaiting approval: ${getPendingProposals().length}`,
+      `Benchmark additions awaiting approval: ${pendingBenchmarks.length}`
+    ],
+    prsAndBuild: [
+      ...(brief.prsAwaitingReview.length > 0 ? brief.prsAwaitingReview.map((p) => `• PR: ${p}`) : ['No PRs awaiting review.']),
+      `Build briefs: review /founder/build-briefs`,
+      `Agent recommendations: ${brief.whatShouldBeTestedNext.slice(0, 3).join('; ') || 'None pending'}`
+    ],
+    governance: [
+      `Privacy review: ${brief.launchGateBlockers.some((b) => b.toLowerCase().includes('privacy')) ? 'Action needed' : 'Monitor'}`,
+      `Retention review: ${brief.launchGateBlockers.some((b) => b.toLowerCase().includes('retention')) ? 'Action needed' : 'Monitor'}`,
+      ...(brief.launchGateBlockers.length > 0 ? brief.launchGateBlockers.map((b) => `• Blocker: ${b}`) : ['No launch gate blockers.']),
+      'Audit trail: all scheduler runs recorded.',
+      `Safety gate: live LLM ${gate.liveAdversarialPassed ? 'adversarial passed' : 'approval-gated'}`
+    ],
+    revenue: [
+      `Actual revenue (MRR): ${revenue.actualMrr !== null ? `£${revenue.actualMrr}` : 'Not connected'} [${revenue.forecastLabel ?? 'actual'}]`,
+      `Demo requests: ${revenue.demoRequests}`,
+      `Pilot requests: ${revenue.pilotRequests}`,
+      `Pipeline value: £${revenue.pipelineValue} [${revenue.pipelineLabel ?? 'pipeline'}]`,
+      `Forecast: ${forecast.projectedMrr.value !== null ? `£${forecast.projectedMrr.value}` : '—'} [${forecast.projectedMrr.label}]`,
+      `Confidence: ${revenue.confidenceLevel}`,
+      'Assumptions: synthetic pipeline data where sources not connected.'
+    ],
+    finance: [
+      `Monthly burn: £${finance.monthlyBurn} [${finance.monthlyBurnLabel}]`,
+      `Hosting/API/software: OpenAI £${finance.estimatedCosts.openAiApi ?? '—'}, hosting £${finance.estimatedCosts.hosting ?? '—'}`,
+      `Gross margin: ${finance.grossMarginPercent !== null ? `${finance.grossMarginPercent}%` : '—'}`,
+      `Runway: ${finance.runwayMonths !== null ? `${finance.runwayMonths} months` : 'Unknown'}`,
+      `Break-even users: ${forecast.breakEvenUsers ?? '—'}`,
+      `Break-even MRR: £${forecast.breakEvenMrr ?? '—'}`,
+      ...(finance.warnings?.length ? finance.warnings.map((w) => `⚠ ${w}`) : ['No finance warnings.'])
+    ],
+    relationships: [
+      `Potential partners: ${relationships.filter((r) => r.relationshipType === 'partner' || r.status === 'new').length}`,
+      `Pilot interest: ${relationships.filter((r) => r.relationshipType === 'tester' || r.tags.includes('pilot')).length}`,
+      `Follow-ups awaiting approval: ${relationships.filter((r) => r.status === 'follow-up-needed' || r.status === 'waiting').length}`,
+      'Sector expert/audit board: review /founder/relationships'
+    ],
+    contentBrand: [
+      `Content drafts awaiting approval: ${contentDrafts.length}`,
+      'LinkedIn/post opportunities: review /founder/content',
+      'Website/demo improvements: review product agent recommendations'
+    ],
+    technical: [
+      `Scheduler failures today: ${schedulerRuns.filter((r) => r.status === 'failed').length}`,
+      `Latest micro-check: ${microCheck?.completedAt ? new Date(microCheck.completedAt).toLocaleString('en-GB') : 'None'}`,
+      'API/provider errors: monitor telemetry',
+      `Email report safety: dry_run by default — no real child data`
+    ],
+    tomApproval: [
+      ...buildApprovalSection(),
+      'Links: /founder/approvals · /founder/agents · /founder/learning-loop'
+    ]
+  }
+}
+
+function filterBusinessReportSections(
+  sections: Record<DailyBusinessReportSectionKey, string[]>
+): Record<string, string[]> {
+  const settings = getEmailSettings()
+  const included = new Set(settings.includedSections)
+  const filtered: Record<string, string[]> = {}
+  for (const key of settings.includedSections) {
+    if (included.has(key)) filtered[key] = sections[key] ?? []
+  }
+  return filtered
 }
 
 function buildRawSections(type: EmailReportType, now: Date): Record<string, string[]> {
@@ -128,38 +245,7 @@ function buildRawSections(type: EmailReportType, now: Date): Record<string, stri
     }
   }
 
-  return {
-    internalBrain: buildInternalBrainSummary(),
-    liveLlmGate: buildLiveLlmGateSection(),
-    criticalFailures: brief.whatIsRisky.length > 0 ? brief.whatIsRisky : ['No critical failures flagged.'],
-    weaknesses:
-      coverage.weakAreas.length > 0
-        ? coverage.weakAreas.slice(0, 5).map((a) => `• ${a.replace(/_/g, ' ')}`)
-        : ['No new weaknesses detected.'],
-    coverageGaps:
-      coverage.untestedAreas.length > 0
-        ? coverage.untestedAreas.slice(0, 5).map((a) => `• ${a.replace(/_/g, ' ')}`)
-        : ['Coverage gaps within acceptable range.'],
-    learningProposals:
-      getPendingProposals().length > 0
-        ? getPendingProposals().slice(0, 5).map((p) => `• ${p.whatBrainShouldLearn.slice(0, 100)}`)
-        : ['No learning proposals awaiting approval.'],
-    prsAwaiting: brief.prsAwaitingReview.length > 0 ? brief.prsAwaitingReview : ['No PRs awaiting review.'],
-    launchBlockers: brief.launchGateBlockers.length > 0 ? brief.launchGateBlockers : ['No launch gate blockers.'],
-    finance: [
-      `Monthly burn (estimated): £${finance.monthlyBurn}`,
-      `MRR (actual): ${finance.actualRevenue.mrr !== null ? `£${finance.actualRevenue.mrr}` : 'Not connected'}`,
-      `Runway: ${finance.runwayMonths !== null ? `${finance.runwayMonths} months` : 'Unknown'}`
-    ],
-    revenue: [
-      `Demo requests: ${revenue.demoRequests}`,
-      `Pilot requests: ${revenue.pilotRequests}`,
-      `Pipeline value: £${revenue.pipelineValue}`,
-      `Confidence: ${revenue.confidenceLevel}`
-    ],
-    tomApproval: buildApprovalSection(),
-    topActions: buildTopActions()
-  }
+  return filterBusinessReportSections(buildDailyBusinessReportSections())
 }
 
 function sectionHeaders(type: EmailReportType): Array<{ key: string; title: string }> {
@@ -176,16 +262,22 @@ function sectionHeaders(type: EmailReportType): Array<{ key: string; title: stri
     ]
   }
 
-  return [
-    { key: 'internalBrain', title: 'INTERNAL BRAIN TEST SUMMARY' },
-    { key: 'liveLlmGate', title: 'LIVE LLM GATE STATUS' },
-    { key: 'criticalFailures', title: 'CRITICAL FAILURES' },
-    { key: 'coverageGaps', title: 'COVERAGE GAPS' },
-    { key: 'finance', title: 'FINANCE SNAPSHOT' },
-    { key: 'revenue', title: 'REVENUE SNAPSHOT' },
-    { key: 'tomApproval', title: 'TOM APPROVAL REQUIRED' },
-    { key: 'topActions', title: 'TOP 3 ACTIONS' }
+  const dailyHeaders: Array<{ key: DailyBusinessReportSectionKey; title: string }> = [
+    { key: 'executiveSummary', title: '1. EXECUTIVE SUMMARY' },
+    { key: 'orbInternalBrain', title: '2. ORB INTERNAL BRAIN' },
+    { key: 'liveLlmGate', title: '3. LIVE LLM GATE' },
+    { key: 'qualityLab', title: '4. QUALITY LAB AND LEARNING LOOP' },
+    { key: 'prsAndBuild', title: '5. PRs AND BUILD WORK' },
+    { key: 'governance', title: '6. GOVERNANCE AND LAUNCH READINESS' },
+    { key: 'revenue', title: '7. REVENUE' },
+    { key: 'finance', title: '8. FINANCE' },
+    { key: 'relationships', title: '9. RELATIONSHIPS AND PILOTS' },
+    { key: 'contentBrand', title: '10. CONTENT AND BRAND' },
+    { key: 'technical', title: '11. TECHNICAL' },
+    { key: 'tomApproval', title: '12. TOM APPROVAL SECTION' }
   ]
+  const settings = getEmailSettings()
+  return dailyHeaders.filter((h) => settings.includedSections.includes(h.key))
 }
 
 function buildTextBody(
@@ -196,7 +288,7 @@ function buildTextBody(
 ): string {
   const title =
     type === 'daily'
-      ? `IndiCare Intelligence Daily Report — ${formatDate(now)}`
+      ? `IndiCare Intelligence Daily Business Report — ${formatDate(now)}`
       : `IndiCare Intelligence Weekly Founder Report — ${formatWeek(now)}`
 
   const parts: string[] = [title, '']
@@ -267,8 +359,15 @@ export function generateEmailReportWithSafety(type: EmailReportType, now = new D
   const sections = safety.sanitizedSections
   const subject =
     type === 'daily'
-      ? `IndiCare Intelligence Daily Report — ${formatDate(now)}`
+      ? `IndiCare Intelligence Daily Business Report — ${formatDate(now)}`
       : `IndiCare Intelligence Weekly Founder Report — ${formatWeek(now)}`
+
+  recordAgentAuditEntry({
+    agentId: 'founder-chief-of-staff',
+    actionType: 'orchestrate',
+    summary: `daily_business_report_generated: ${subject}. Synthetic evidence only. No real child data.`,
+    approvalStatus: 'not_required'
+  })
   const recipient = settings.recipient || DEFAULT_FOUNDER_EMAIL
   const textBody = buildTextBody(type, now, sections, safety)
 
@@ -340,11 +439,18 @@ export function sendFounderEmailReport(
     preview
   }
 
-  if (settings.provider === 'dry_run') {
+  if (settings.provider === 'dry_run' || settings.dryRun) {
     record.status = safetyStatus === 'redacted' ? 'redacted' : 'dry_run'
     record.sentAt = new Date().toISOString()
     addEmailReportRecord(record)
     return { record, status: record.status as 'dry_run' | 'redacted', safetyStatus, redactionCount }
+  }
+
+  if (!settings.founderConfirmedSend) {
+    record.status = 'failed'
+    record.error = 'Real send requires founder confirmation. Set founderConfirmedSend and configure provider.'
+    addEmailReportRecord(record)
+    return { record, status: 'failed', error: record.error, safetyStatus, redactionCount }
   }
 
   const providerEnvMap: Record<string, string[]> = {

@@ -11,6 +11,7 @@ export const FOUNDER_NAV_ROUTES = [
   '/founder/autonomy',
   '/founder/agents',
   '/founder/intelligence',
+  '/founder/intelligence-centre/brain-audit',
   '/founder/revenue',
   '/founder/finance',
   '/founder/relationships',

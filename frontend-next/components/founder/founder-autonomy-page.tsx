@@ -462,15 +462,47 @@ export function FounderAutonomyPage() {
 
         <FounderSectionCard
           eyebrow="Email"
-          title="Founder email reports"
-          description={`Daily and weekly reports to ${overview?.emailSettings.recipient ?? 'Thomas.kelly@indicare.co.uk'}.`}
+          title="Daily Business Report"
+          description={`IndiCare Intelligence Daily Business Report at 16:00 to ${overview?.emailSettings.recipient ?? 'Thomas.kelly@indicare.co.uk'}. Dry-run by default.`}
+          data-testid="daily-business-report-settings"
         >
-          <div className="flex flex-wrap items-center gap-3 text-sm text-slate-300">
+          <dl className="grid gap-2 text-sm text-slate-300 sm:grid-cols-2" data-testid="business-report-settings-grid">
+            <div>
+              <dt className="text-xs text-slate-500">Daily Business Report</dt>
+              <dd>{overview?.emailSettings.businessReportEnabled !== false ? 'On' : 'Off'}</dd>
+            </div>
+            <div>
+              <dt className="text-xs text-slate-500">Send time (UTC)</dt>
+              <dd>
+                {String(overview?.emailSettings.dailyHourUtc ?? 16).padStart(2, '0')}:
+                {String(overview?.emailSettings.dailyMinuteUtc ?? 0).padStart(2, '0')}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-xs text-slate-500">Recipient</dt>
+              <dd>{overview?.emailSettings.recipient}</dd>
+            </div>
+            <div>
+              <dt className="text-xs text-slate-500">Provider / dry_run</dt>
+              <dd>
+                {overview?.emailSettings.provider ?? 'dry_run'}
+                {overview?.emailSettings.dryRun !== false ? ' · dry_run active' : ''}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-xs text-slate-500">Sections included</dt>
+              <dd>{overview?.emailSettings.includedSections?.length ?? 12} of 12</dd>
+            </div>
+            <div>
+              <dt className="text-xs text-slate-500">Safety status</dt>
+              <dd>{latestEmail?.safetyStatus ?? 'Not generated yet'}</dd>
+            </div>
+          </dl>
+
+          <div className="mt-4 flex flex-wrap items-center gap-3 text-sm text-slate-300">
             <div className="flex items-center gap-2">
               <Mail className="h-4 w-4 text-cyan-400" aria-hidden />
-              Provider: {overview?.emailSettings.provider ?? 'dry_run'} · Daily:{' '}
-              {overview?.emailSettings.dailyEnabled ? 'On' : 'Off'} · Weekly:{' '}
-              {overview?.emailSettings.weeklyEnabled ? 'On' : 'Off'}
+              Weekly report: {overview?.emailSettings.weeklyEnabled ? 'On' : 'Off'}
             </div>
             <button
               type="button"
@@ -479,7 +511,16 @@ export function FounderAutonomyPage() {
               data-testid="view-latest-report-preview"
             >
               <ExternalLink className="h-3 w-3" aria-hidden />
-              View latest report preview
+              Preview report
+            </button>
+            <button
+              type="button"
+              onClick={() => void runTask('scheduler-daily_business_report')}
+              className="inline-flex items-center gap-1 rounded-lg border border-emerald-400/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-bold text-emerald-200"
+              data-testid="send-test-business-report"
+            >
+              <Play className="h-3 w-3" aria-hidden />
+              Generate test report
             </button>
           </div>
 

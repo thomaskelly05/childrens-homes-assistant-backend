@@ -9,6 +9,9 @@ import { addEvaluationRun } from '../../orb/evaluation/orb-evaluation-store.ts'
 import type { OrbEvaluationRun } from '../../orb/evaluation/orb-evaluation-types.ts'
 import { INTERNAL_BRAIN_SCORING_VERSION_V2 } from '../../orb/evaluation/orb-evaluation-types.ts'
 
+import { runFocusedWeakAreaCheck, runRotatingMicroCheck, runWeeklyResidentialAudit } from '../brain-audit/rotating-micro-check.ts'
+import { buildBrainCoverageAudit } from '../brain-audit/brain-audit-service.ts'
+
 import { generateAndSendFounderEmailReport } from './email-report-service'
 import { evaluateAndRecommendLiveLlmGates, recommendLiveLlmRun } from './live-llm-gate'
 import { canRunTaskToday, getTasksDueForRun, recordTaskRun, setLastSchedulerTick } from './scheduler-store'
@@ -131,6 +134,93 @@ function buildFailedResult(
   return result
 }
 
+function runRotatingMicroCheckTask(task: SchedulerTask): SchedulerTaskRunResult {
+  const startedAt = new Date().toISOString()
+  const auditId = auditTaskStart(task)
+
+  const outcome = runRotatingMicroCheck()
+
+  auditTaskCompleted(
+    task,
+    `Micro-check: ${outcome.record.scenarioCount} scenarios across ${outcome.record.areasTested.length} areas. Internal brain only.`
+  )
+
+  const result: SchedulerTaskRunResult = {
+    taskId: task.id,
+    taskType: task.taskType,
+    startedAt,
+    completedAt: new Date().toISOString(),
+    status: outcome.record.approvalItemCreated ? 'awaiting_approval' : 'completed',
+    summary: `Rotating micro-check: ${outcome.record.scenarioCount} synthetic scenarios, ${outcome.record.criticalFailures} critical. Areas: ${outcome.record.areasTested.join(', ')}.`,
+    eventIds: [],
+    auditRecordIds: [auditId, ...outcome.auditRecordIds],
+    approvalItemIds: outcome.approvalItemId ? [outcome.approvalItemId] : [],
+    criticalFailures: outcome.record.criticalFailures,
+    weaknessesDetected: outcome.record.weakMarkers.length,
+    proposalsCreated: outcome.record.learningProposalRecommended ? 1 : 0
+  }
+
+  recordTaskRun(task.id, result)
+  return result
+}
+
+function runFocusedCheckTask(task: SchedulerTask): SchedulerTaskRunResult {
+  const startedAt = new Date().toISOString()
+  const auditId = auditTaskStart(task)
+
+  const outcome = runFocusedWeakAreaCheck(task.maxScenarioCount || 25)
+
+  auditTaskCompleted(
+    task,
+    `Focused check: ${outcome.record.scenarioCount} scenarios on weak areas. Internal brain only.`
+  )
+
+  const result: SchedulerTaskRunResult = {
+    taskId: task.id,
+    taskType: task.taskType,
+    startedAt,
+    completedAt: new Date().toISOString(),
+    status: 'completed',
+    summary: `Focused weak-area check: ${outcome.record.scenarioCount} scenarios across ${outcome.record.areasTested.length} weak area(s).`,
+    eventIds: [],
+    auditRecordIds: [auditId, ...outcome.auditRecordIds],
+    approvalItemIds: [],
+    criticalFailures: outcome.record.criticalFailures,
+    weaknessesDetected: outcome.record.areasTested.length,
+    proposalsCreated: 0
+  }
+
+  recordTaskRun(task.id, result)
+  return result
+}
+
+function runWeeklyResidentialAuditTask(task: SchedulerTask): SchedulerTaskRunResult {
+  const startedAt = new Date().toISOString()
+  const auditId = auditTaskStart(task)
+
+  const { audit, auditRecordIds } = runWeeklyResidentialAudit()
+
+  auditTaskCompleted(task, `Weekly audit: ${audit.topMissingWeakAreas.length} top weak/missing areas identified.`)
+
+  const result: SchedulerTaskRunResult = {
+    taskId: task.id,
+    taskType: task.taskType,
+    startedAt,
+    completedAt: new Date().toISOString(),
+    status: 'completed',
+    summary: `Weekly deep audit: coverage ${audit.overallCoveragePercent}%, ${audit.weakAreas.length} weak, ${audit.untestedAreas.length} untested.`,
+    eventIds: [],
+    auditRecordIds: [auditId, ...auditRecordIds],
+    approvalItemIds: [],
+    criticalFailures: audit.criticalFailureCount,
+    weaknessesDetected: audit.topMissingWeakAreas.length,
+    proposalsCreated: audit.recommendedLearningProposalCount
+  }
+
+  recordTaskRun(task.id, result)
+  return result
+}
+
 function runInternalBrainTask(
   task: SchedulerTask,
   packType: OrbEvaluationRun['packType'],
@@ -160,6 +250,7 @@ function runInternalBrainTask(
   })
 
   buildFounderCoverageMap({ evaluationRuns: [run] })
+  buildBrainCoverageAudit({ evaluationRuns: [run], triggerType: 'nightly_benchmark' })
   generateFounderChiefOfStaffBrief({ evaluationRuns: [run] })
 
   const auditComplete = recordAgentAuditEntry({
@@ -590,6 +681,8 @@ export function executeSchedulerTask(task: SchedulerTask): SchedulerTaskRunResul
 
   const handlers: Record<SchedulerTaskType, () => SchedulerTaskRunResult> = {
     internal_brain_quick_check: () => runInternalBrainTask(task, 'standard', 15),
+    internal_brain_rotating_micro_check: () => runRotatingMicroCheckTask(task),
+    internal_brain_focused_check: () => runFocusedCheckTask(task),
     internal_brain_adversarial: () => runInternalBrainTask(task, 'adversarial', 30),
     internal_brain_high_risk: () => runInternalBrainTask(task, 'high-risk', 25),
     internal_brain_full: () => runInternalBrainTask(task, 'standard', 80),
@@ -600,8 +693,10 @@ export function executeSchedulerTask(task: SchedulerTask): SchedulerTaskRunResul
     live_llm_adversarial_recommendation: () => runLiveLlmRecommendation(task, 'approve_live_adversarial'),
     live_llm_high_risk_recommendation: () => runLiveLlmRecommendation(task, 'approve_live_high_risk'),
     live_llm_gold_recommendation: () => runLiveLlmRecommendation(task, 'approve_live_gold'),
+    daily_business_report: () => runEmailReport(task, 'daily'),
     daily_founder_email_report: () => runEmailReport(task, 'daily'),
     weekly_founder_email_report: () => runEmailReport(task, 'weekly'),
+    weekly_internal_brain_residential_audit: () => runWeeklyResidentialAuditTask(task),
     finance_snapshot: () => runFinanceSnapshot(task),
     revenue_pipeline_review: () => runRevenuePipelineReview(task)
   }

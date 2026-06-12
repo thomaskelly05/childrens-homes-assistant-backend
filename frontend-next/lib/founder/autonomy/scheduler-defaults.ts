@@ -1,15 +1,35 @@
-import type { EmailReportSettings, SchedulerTask } from './scheduler-types.ts'
+import type { DailyBusinessReportSectionKey, EmailReportSettings, SchedulerTask } from './scheduler-types.ts'
 
 export const DEFAULT_FOUNDER_EMAIL = 'Thomas.kelly@indicare.co.uk'
+
+export const DEFAULT_BUSINESS_REPORT_SECTIONS: DailyBusinessReportSectionKey[] = [
+  'executiveSummary',
+  'orbInternalBrain',
+  'liveLlmGate',
+  'qualityLab',
+  'prsAndBuild',
+  'governance',
+  'revenue',
+  'finance',
+  'relationships',
+  'contentBrand',
+  'technical',
+  'tomApproval'
+]
 
 export const DEFAULT_EMAIL_SETTINGS: EmailReportSettings = {
   recipient: DEFAULT_FOUNDER_EMAIL,
   dailyEnabled: true,
   weeklyEnabled: true,
-  dailyHourUtc: 8,
+  dailyHourUtc: 16,
+  dailyMinuteUtc: 0,
   weeklyDayOfWeek: 1,
   weeklyHourUtc: 8,
-  provider: 'dry_run'
+  provider: 'dry_run',
+  dryRun: true,
+  businessReportEnabled: true,
+  includedSections: [...DEFAULT_BUSINESS_REPORT_SECTIONS],
+  founderConfirmedSend: false
 }
 
 function taskId(type: string): string {
@@ -23,6 +43,11 @@ function computeNextRunAt(frequency: SchedulerTask['frequency'], from = new Date
 
   if (frequency.kind === 'interval') {
     next.setTime(next.getTime() + frequency.hours * 60 * 60 * 1000)
+    return next.toISOString()
+  }
+
+  if (frequency.kind === 'interval_minutes') {
+    next.setTime(next.getTime() + frequency.minutes * 60 * 1000)
     return next.toISOString()
   }
 
@@ -58,10 +83,40 @@ function baseTask(
 export function createDefaultSchedulerTasks(): SchedulerTask[] {
   return [
     baseTask({
+      id: taskId('internal_brain_rotating_micro_check'),
+      name: 'Internal Brain Rotating Micro-Check',
+      taskType: 'internal_brain_rotating_micro_check',
+      enabled: true,
+      frequency: { kind: 'interval_minutes', minutes: 15 },
+      lastRunAt: null,
+      status: 'idle',
+      allowedMode: 'internal_brain_only',
+      approvalRequired: false,
+      maxRunsPerDay: 96,
+      maxScenarioCount: 10,
+      createdEvents: [],
+      auditRecordIds: []
+    }),
+    baseTask({
+      id: taskId('internal_brain_focused_check'),
+      name: 'Internal Brain Focused Weak-Area Check',
+      taskType: 'internal_brain_focused_check',
+      enabled: true,
+      frequency: { kind: 'interval', hours: 1 },
+      lastRunAt: null,
+      status: 'idle',
+      allowedMode: 'internal_brain_only',
+      approvalRequired: false,
+      maxRunsPerDay: 24,
+      maxScenarioCount: 30,
+      createdEvents: [],
+      auditRecordIds: []
+    }),
+    baseTask({
       id: taskId('internal_brain_quick_check'),
       name: 'Internal Brain Quick Safety Check',
       taskType: 'internal_brain_quick_check',
-      enabled: true,
+      enabled: false,
       frequency: { kind: 'interval', hours: 3 },
       lastRunAt: null,
       status: 'idle',
@@ -118,11 +173,26 @@ export function createDefaultSchedulerTasks(): SchedulerTask[] {
       auditRecordIds: []
     }),
     baseTask({
-      id: taskId('daily_founder_email_report'),
-      name: 'Daily Founder Email Report',
-      taskType: 'daily_founder_email_report',
+      id: taskId('daily_business_report'),
+      name: 'IndiCare Intelligence Daily Business Report',
+      taskType: 'daily_business_report',
       enabled: true,
-      frequency: { kind: 'daily', hourUtc: 8, minuteUtc: 0 },
+      frequency: { kind: 'daily', hourUtc: 16, minuteUtc: 0 },
+      lastRunAt: null,
+      status: 'idle',
+      allowedMode: 'report_only',
+      approvalRequired: false,
+      maxRunsPerDay: 1,
+      maxScenarioCount: 0,
+      createdEvents: [],
+      auditRecordIds: []
+    }),
+    baseTask({
+      id: taskId('daily_founder_email_report'),
+      name: 'Daily Founder Email Report (legacy)',
+      taskType: 'daily_founder_email_report',
+      enabled: false,
+      frequency: { kind: 'daily', hourUtc: 16, minuteUtc: 0 },
       lastRunAt: null,
       status: 'idle',
       allowedMode: 'report_only',
@@ -277,6 +347,21 @@ export function createDefaultSchedulerTasks(): SchedulerTask[] {
       status: 'idle',
       allowedMode: 'internal_brain_only',
       approvalRequired: true,
+      maxRunsPerDay: 1,
+      maxScenarioCount: 0,
+      createdEvents: [],
+      auditRecordIds: []
+    }),
+    baseTask({
+      id: taskId('weekly_internal_brain_residential_audit'),
+      name: 'Weekly Deep Residential Children\'s Home Audit',
+      taskType: 'weekly_internal_brain_residential_audit',
+      enabled: true,
+      frequency: { kind: 'weekly', dayOfWeek: 0, hourUtc: 3, minuteUtc: 0 },
+      lastRunAt: null,
+      status: 'idle',
+      allowedMode: 'internal_brain_only',
+      approvalRequired: false,
       maxRunsPerDay: 1,
       maxScenarioCount: 0,
       createdEvents: [],

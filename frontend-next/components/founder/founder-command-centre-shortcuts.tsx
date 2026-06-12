@@ -55,11 +55,32 @@ export function FounderCommandCentreShortcuts() {
       const overview = autonomyResult.ok ? autonomyResult.data.overview : null
       const preview = previewResult.ok ? previewResult.data : null
 
-      const quickCheck = overview?.tasks.find((t) => t.taskType === 'internal_brain_quick_check')
+      const microCheck = overview?.tasks.find((t) => t.taskType === 'internal_brain_rotating_micro_check')
+      const businessReport = overview?.tasks.find((t) => t.taskType === 'daily_business_report')
       const liveGate = overview?.liveLlmGate
       const emailRecord = preview?.record
 
       const built: ShortcutCard[] = [
+        {
+          id: 'business-report',
+          title: "Today's Business Report",
+          value: businessReport?.status ?? 'Scheduled 16:00',
+          detail: emailRecord?.subject
+            ? `Latest: ${emailRecord.safetyStatus ?? 'dry_run'}`
+            : `Daily at ${overview?.emailSettings.dailyHourUtc ?? 16}:00 UTC`,
+          href: '/founder/autonomy',
+          tone: 'violet',
+          icon: Mail
+        },
+        {
+          id: 'brain-audit',
+          title: 'Brain audit status',
+          value: 'Coverage audit',
+          detail: 'Review internal brain domains',
+          href: '/founder/intelligence-centre/brain-audit',
+          tone: 'emerald',
+          icon: Shield
+        },
         {
           id: 'approvals',
           title: 'Approvals needing Tom',
@@ -73,12 +94,12 @@ export function FounderCommandCentreShortcuts() {
         },
         {
           id: 'internal-brain',
-          title: 'Latest internal brain status',
-          value: quickCheck?.status ?? 'Unknown',
-          detail: quickCheck?.lastRunAt
-            ? `Last run ${new Date(quickCheck.lastRunAt).toLocaleString('en-GB')}`
-            : 'No runs yet',
-          href: '/founder/orb-evaluation',
+          title: 'Latest rotating micro-check',
+          value: microCheck?.status ?? 'Unknown',
+          detail: microCheck?.lastRunAt
+            ? `Last run ${new Date(microCheck.lastRunAt).toLocaleString('en-GB')}`
+            : 'Every 15 minutes',
+          href: '/founder/intelligence-centre/brain-audit',
           tone: 'emerald',
           icon: Shield
         },
@@ -92,15 +113,13 @@ export function FounderCommandCentreShortcuts() {
           icon: Timer
         },
         {
-          id: 'email-preview',
-          title: 'Latest email report preview',
-          value: emailRecord?.subject ? 'Preview available' : 'None yet',
-          detail: emailRecord?.safetyStatus
-            ? `Safety: ${emailRecord.safetyStatus} · dry_run`
-            : 'Run daily founder email report',
-          href: '/founder/autonomy',
-          tone: 'violet',
-          icon: Mail
+          id: 'weakest-areas',
+          title: 'Current weakest areas',
+          value: 'Review audit',
+          detail: 'Brain coverage gaps and weak domains',
+          href: '/founder/intelligence-centre/brain-audit',
+          tone: 'amber',
+          icon: AlertTriangle
         },
         {
           id: 'revenue',

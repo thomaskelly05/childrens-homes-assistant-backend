@@ -133,7 +133,13 @@ export async function handleAutonomyEmailSettingsPatch(request: Request): Promis
     recipient?: string
     dailyEnabled?: boolean
     weeklyEnabled?: boolean
+    dailyHourUtc?: number
+    dailyMinuteUtc?: number
     provider?: 'smtp' | 'resend' | 'sendgrid' | 'postmark' | 'dry_run'
+    dryRun?: boolean
+    businessReportEnabled?: boolean
+    includedSections?: import('./scheduler-types.ts').DailyBusinessReportSectionKey[]
+    founderConfirmedSend?: boolean
   }
 
   const settings = updateEmailSettings(body)
