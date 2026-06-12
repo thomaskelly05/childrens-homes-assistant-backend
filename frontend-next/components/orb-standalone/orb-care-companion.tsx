@@ -84,8 +84,11 @@ import {
   ORB_RESIDENTIAL_MOBILE_EMPTY_HEADING,
   ORB_RESIDENTIAL_MOBILE_EMPTY_STARTERS,
   ORB_RESIDENTIAL_MORE_STARTERS,
+  ORB_RESIDENTIAL_MOBILE_PRIMARY_STARTERS,
   ORB_RESIDENTIAL_PRIMARY_STARTER_COUNT,
-  ORB_RESIDENTIAL_STARTER_GROUPS
+  ORB_RESIDENTIAL_STARTER_GROUPS,
+  residentialStarterPrompt,
+  type ResidentialStarter
 } from '@/lib/orb/orb-residential-copy'
 import { OrbStandaloneAccessibilityPanel } from '@/components/orb-standalone/orb-accessibility-panel'
 import { OrbIntelligenceMapPanel } from '@/components/orb-standalone/orb-intelligence-map-panel'
@@ -100,7 +103,10 @@ import { OrbWriteStandalonePanel } from '@/components/orb-write/orb-write-standa
 import { OrbVoiceStation } from '@/components/orb-standalone/orb-voice-station'
 import type { OrbDictateNoteType } from '@/lib/orb/dictate/orb-dictate-types'
 import type { OrbComposerPlusAction } from '@/components/orb-standalone/orb-composer-plus-menu'
-import { OrbStandaloneSettingsPanel } from '@/components/orb-standalone/orb-standalone-settings-panel'
+import {
+  OrbStandaloneSettingsPanel,
+  type OrbSettingsSectionId
+} from '@/components/orb-standalone/orb-standalone-settings-panel'
 import {
   ORB_TOOL_TO_PANEL,
   type OrbStandalonePanel
@@ -108,7 +114,7 @@ import {
 import { isOrbCoreWorkspacePanel } from '@/components/orb-standalone/orb-core-workspace-panels'
 import { OrbAmbientCognition, type OrbCognitionAmbientState } from '@/components/orb-standalone/orb-ambient-cognition'
 import { OrbIntelligenceMicroStatus } from '@/components/orb-standalone/orb-intelligence-micro-status'
-import { OrbAccountMenu } from '@/components/orb-residential/orb-account-menu'
+import { OrbAccountMenu, type OrbAccountMenuSettingsSection } from '@/components/orb-residential/orb-account-menu'
 import { ORB_MOBILE_SHELL_CLASS } from '@/components/orb-residential/orb-mobile-shell'
 import { OrbAccountModal } from '@/components/orb-standalone/orb-account-modal'
 import { OrbAdultProfileDrawer } from '@/components/orb-standalone/orb-adult-profile-drawer'
@@ -655,6 +661,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
   const [adultProfile, setAdultProfile] = useState<AdultProfile | null>(null)
   const [profileDrawerOpen, setProfileDrawerOpen] = useState(false)
   const [accountMenuOpen, setAccountMenuOpen] = useState(false)
+  const [settingsInitialSection, setSettingsInitialSection] = useState<OrbSettingsSectionId>('appearance')
   const accountMenuAnchorRef = useRef<HTMLElement | null>(null)
   const [showScrollFab, setShowScrollFab] = useState(false)
   const [savedOutputMessageIds, setSavedOutputMessageIds] = useState<Set<string>>(() => new Set())
@@ -835,7 +842,13 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
     [openPanel]
   )
   const openToolsPanel = useCallback(() => openPanel('tools'), [openPanel])
-  const openSettingsPanel = useCallback(() => openPanel('settings'), [openPanel])
+  const openSettingsPanel = useCallback(
+    (section: OrbSettingsSectionId = 'appearance') => {
+      setSettingsInitialSection(section)
+      openPanel('settings')
+    },
+    [openPanel]
+  )
   const openDocumentsPanel = useCallback(() => openPanel('documents'), [openPanel])
   const openShiftBuilderPanel = useCallback(() => openPanel('shift_builder'), [openPanel])
   const openAgentsPanel = useCallback(() => openPanel('agents'), [openPanel])
@@ -2300,7 +2313,11 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
   }
 
   function applyPrompt(entry: PromptEntry) {
-    setMessage(entry.text)
+    const promptText =
+      residentialSurface && 'prompt' in entry
+        ? residentialStarterPrompt(entry as ResidentialStarter)
+        : entry.text
+    setMessage(promptText)
     if (entry.mode) handleModeChange(entry.mode)
     inputRef.current?.focus()
     setSidebarOpen(false)
@@ -2871,8 +2888,12 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
 
   const emptyStarters = useMemo(() => {
     if (residentialSurface) {
-      const starters = isMobileViewport ? ORB_RESIDENTIAL_MOBILE_EMPTY_STARTERS : ORB_RESIDENTIAL_EMPTY_STARTERS
-      return starters.slice(0, ORB_RESIDENTIAL_PRIMARY_STARTER_COUNT)
+      const starters = isMobileViewport
+        ? ORB_RESIDENTIAL_MOBILE_PRIMARY_STARTERS
+        : ORB_RESIDENTIAL_EMPTY_STARTERS
+      return isMobileViewport
+        ? starters
+        : starters.slice(0, ORB_RESIDENTIAL_PRIMARY_STARTER_COUNT)
     }
     if (adultProfile?.name || adultProfile?.role !== 'residential_support_worker') {
       return roleBasedEmptyStarters(adultProfile ?? readAdultProfile()).map((text) => ({ text }))
@@ -3245,6 +3266,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
       {!residentialSurface ? renderResidentialCorePanels() : null}
       <OrbStandaloneSettingsPanel
         open={activePanel === 'settings'}
+        initialSection={settingsInitialSection}
         residentialSurface={residentialSurface}
         onClose={() => {
           setChatUiSettings(loadOrbStandaloneChatSettings())
@@ -3777,33 +3799,57 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
                       </p>
                     ) : null}
                     {residentialSurface ? (
-                      <div
-                        className="mt-5 w-full max-w-[var(--orb-composer-max,46rem)] space-y-4 text-left"
-                        data-orb-starter-groups
-                        data-orb-empty-starter-chips
-                      >
-                        {ORB_RESIDENTIAL_STARTER_GROUPS.map((group) => (
-                          <section key={group.id} data-orb-starter-group={group.id}>
-                            <h3 className="mb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--orb-muted)]">
-                              {group.label}
-                            </h3>
-                            <div className="flex flex-wrap gap-1.5" data-orb-starter-pills>
-                              {group.starters.map((starter) => (
-                                <button
-                                  key={starter.text}
-                                  type="button"
-                                  onClick={() => applyPrompt(starter)}
-                                  className="orb-starter-pill orb-starter-card rounded-full border border-[var(--orb-line)]/35 bg-[var(--orb-surface)]/40 px-3.5 py-1.5 text-left text-[13px] leading-snug text-[var(--orb-foreground)] transition hover:border-[var(--orb-primary)]/30 hover:bg-[var(--orb-surface-elevated)]/80"
-                                  data-orb-starter-card
-                                  data-orb-starter-pill="true"
-                                >
-                                  {starter.text}
-                                </button>
-                              ))}
-                            </div>
-                          </section>
-                        ))}
-                      </div>
+                      isMobileViewport ? (
+                        <div
+                          className="mt-5 w-full max-w-[var(--orb-composer-max,46rem)] text-left"
+                          data-orb-starter-pills
+                          data-orb-empty-starter-chips
+                          data-orb-starter-count={ORB_RESIDENTIAL_MOBILE_PRIMARY_STARTERS.length}
+                        >
+                          <div className="flex flex-wrap gap-1.5">
+                            {ORB_RESIDENTIAL_MOBILE_PRIMARY_STARTERS.map((starter) => (
+                              <button
+                                key={starter.text}
+                                type="button"
+                                onClick={() => applyPrompt(starter)}
+                                className="orb-starter-pill orb-starter-card rounded-full border border-[var(--orb-line)]/35 bg-[var(--orb-surface)]/40 px-3.5 py-1.5 text-left text-[13px] leading-snug text-[var(--orb-foreground)] transition hover:border-[var(--orb-primary)]/30 hover:bg-[var(--orb-surface-elevated)]/80"
+                                data-orb-starter-card
+                                data-orb-starter-pill="true"
+                              >
+                                {starter.text}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      ) : (
+                        <div
+                          className="mt-5 w-full max-w-[var(--orb-composer-max,46rem)] space-y-4 text-left"
+                          data-orb-starter-groups
+                          data-orb-empty-starter-chips
+                        >
+                          {ORB_RESIDENTIAL_STARTER_GROUPS.map((group) => (
+                            <section key={group.id} data-orb-starter-group={group.id}>
+                              <h3 className="mb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--orb-muted)]">
+                                {group.label}
+                              </h3>
+                              <div className="flex flex-wrap gap-1.5" data-orb-starter-pills>
+                                {group.starters.map((starter) => (
+                                  <button
+                                    key={starter.text}
+                                    type="button"
+                                    onClick={() => applyPrompt(starter)}
+                                    className="orb-starter-pill orb-starter-card rounded-full border border-[var(--orb-line)]/35 bg-[var(--orb-surface)]/40 px-3.5 py-1.5 text-left text-[13px] leading-snug text-[var(--orb-foreground)] transition hover:border-[var(--orb-primary)]/30 hover:bg-[var(--orb-surface-elevated)]/80"
+                                    data-orb-starter-card
+                                    data-orb-starter-pill="true"
+                                  >
+                                    {starter.text}
+                                  </button>
+                                ))}
+                              </div>
+                            </section>
+                          ))}
+                        </div>
+                      )
                     ) : (
                       <div
                         className="mt-5 flex w-full max-w-2xl flex-wrap justify-center gap-2 lg:max-w-3xl"
@@ -4244,9 +4290,9 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
           passkeyEnabled={account.hasPasskeys}
           realtimeVoiceEnabled={realtimeVoiceAvailable}
           onOpenProfile={openResidentialProfile}
-          onOpenSettings={() => {
+          onOpenSettings={(section) => {
             setAccountMenuOpen(false)
-            openSettingsPanel()
+            openSettingsPanel(section ?? 'appearance')
           }}
           onOpenBilling={() => {
             setAccountMenuOpen(false)

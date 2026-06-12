@@ -342,6 +342,28 @@ html[data-orb-residential='1'] [data-orb-starter-pills] {
   margin-inline: auto;
 }
 
+@media (max-width: 767px) {
+  html[data-orb-residential='1'] [data-orb-starter-pills] {
+    max-width: 100%;
+    padding-inline: 0.125rem;
+  }
+
+  html[data-orb-residential='1'] .orb-starter-pill,
+  html[data-orb-residential='1'] [data-orb-starter-pill='true'] {
+    max-width: 100%;
+    white-space: normal;
+  }
+
+  html[data-orb-residential='1'] .orb-account-menu {
+    max-height: min(24rem, calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 1rem));
+  }
+
+  html[data-orb-residential='1'] [data-orb-write-toolbar-record] button[data-orb-write-approve] {
+    min-height: 2.25rem;
+    padding-inline: 0.75rem;
+  }
+}
+
 /* Dictate — transcript-first, softer ORB analysis rail */
 html[data-orb-residential='1'] [data-orb-dictate-brain-panel] {
   border-color: color-mix(in srgb, var(--orb-line) 18%, transparent) !important;

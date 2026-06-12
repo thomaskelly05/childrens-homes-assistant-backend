@@ -58,6 +58,8 @@ type SettingsSectionId =
   | 'account_billing'
   | 'about'
 
+export type OrbSettingsSectionId = SettingsSectionId
+
 const SECTION_META: Array<{ id: SettingsSectionId; label: string }> = [
   { id: 'appearance', label: 'Appearance' },
   { id: 'voice', label: 'Voice' },
@@ -73,6 +75,7 @@ type PasskeyItem = NonNullable<OrbPasskeyListResponse['items']>[number]
 export function OrbStandaloneSettingsPanel({
   open,
   onClose,
+  initialSection = 'appearance',
   appearanceMode = 'system',
   onAppearanceChange,
   a11yPrefs,
@@ -96,6 +99,7 @@ export function OrbStandaloneSettingsPanel({
 }: {
   open: boolean
   onClose: () => void
+  initialSection?: OrbSettingsSectionId
   residentialSurface?: boolean
   appearanceMode?: OrbAppearanceMode
   onAppearanceChange?: (mode: OrbAppearanceMode) => void
@@ -135,10 +139,12 @@ export function OrbStandaloneSettingsPanel({
       setMobileSectionOpen(null)
       return
     }
+    setActiveSection(initialSection)
+    setMobileSectionOpen(isMobile ? initialSection : null)
     setChatSettings(loadOrbStandaloneChatSettings())
     setPersonalisation(loadOrbStandalonePersonalisation())
     setPasskeysSupported(orbPasskeysSupported())
-  }, [open])
+  }, [open, initialSection, isMobile])
 
   useEffect(() => {
     if (!open || activeSection !== 'safety_privacy') return

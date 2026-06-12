@@ -13,7 +13,9 @@ import {
 
 import { OrbUserAvatar } from '@/components/orb-residential/orb-user-avatar'
 import type { AdultProfile } from '@/lib/orb/adult-profile-store'
-import { getOrbBillingDisplayStatus } from '@/lib/orb/orb-billing-display'
+import { formatOrbPlanLabel, getOrbBillingDisplayStatus } from '@/lib/orb/orb-billing-display'
+
+export type OrbAccountMenuSettingsSection = 'appearance' | 'voice' | 'safety_privacy'
 
 export type OrbAccountMenuProps = {
   open: boolean
@@ -33,7 +35,7 @@ export type OrbAccountMenuProps = {
   passkeyEnabled?: boolean
   realtimeVoiceEnabled?: boolean
   onOpenProfile: () => void
-  onOpenSettings: () => void
+  onOpenSettings: (section?: OrbAccountMenuSettingsSection) => void
   onOpenBilling: () => void
   onOpenVoiceSettings?: () => void
   onOpenSavedOutputs?: () => void
@@ -111,7 +113,7 @@ export function OrbAccountMenu({
   const billingDisplay = getOrbBillingDisplayStatus(access)
   const subscriptionStatus = billingDisplay.headline
   const roleLabel = formatRoleLabel(profile, role)
-  const planDisplay = planLabel?.trim() || 'Individual'
+  const planDisplay = formatOrbPlanLabel(planLabel?.trim() || access?.subscription?.plan_name)
 
   useEffect(() => {
     if (!open) return
@@ -238,7 +240,7 @@ export function OrbAccountMenu({
             testId="voice-settings"
             onClick={() => {
               onClose()
-              onOpenVoiceSettings()
+              onOpenSettings('voice')
             }}
           />
         ) : null}
@@ -248,7 +250,7 @@ export function OrbAccountMenu({
           testId="privacy"
           onClick={() => {
             onClose()
-            onOpenSettings()
+            onOpenSettings('safety_privacy')
           }}
         />
         <MenuItem
@@ -266,7 +268,7 @@ export function OrbAccountMenu({
           testId="settings"
           onClick={() => {
             onClose()
-            onOpenSettings()
+            onOpenSettings('appearance')
           }}
         />
       </div>

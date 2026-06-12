@@ -2,7 +2,7 @@
 
 import { cn } from '@/components/orb/premium/orb-premium-theme'
 
-export const ORB_RECORDING_WORKFLOW_STEPS = ['Capture', 'Review', 'Draft', 'Approve'] as const
+export const ORB_RECORDING_WORKFLOW_STEPS = ['Capture', 'Review', 'Draft', 'Finalise'] as const
 
 export type OrbRecordingWorkflowStep = (typeof ORB_RECORDING_WORKFLOW_STEPS)[number]
 
@@ -10,15 +10,19 @@ function stepIndex(step: OrbRecordingWorkflowStep): number {
   return ORB_RECORDING_WORKFLOW_STEPS.indexOf(step)
 }
 
-/** Compact workflow strip for Dictate and ORB Write — Choose → Capture → Review → Draft → Approve. */
+/** Compact workflow strip for Dictate and ORB Write — Capture → Review → Draft → Finalise. */
 export function OrbWorkflowStrip({
   activeStep,
+  isApproved = false,
   className
 }: {
   activeStep: OrbRecordingWorkflowStep
+  /** When true, the Finalise step is shown as complete (adult has explicitly approved). */
+  isApproved?: boolean
   className?: string
 }) {
   const activeIdx = stepIndex(activeStep)
+  const finaliseComplete = isApproved && activeStep === 'Finalise'
 
   return (
     <nav
@@ -29,10 +33,12 @@ export function OrbWorkflowStrip({
       aria-label="Recording workflow"
       data-orb-workflow-strip
       data-orb-workflow-active={activeStep}
+      data-orb-workflow-approved={isApproved ? 'true' : undefined}
     >
       {ORB_RECORDING_WORKFLOW_STEPS.map((step, index) => {
-        const isActive = index === activeIdx
-        const isComplete = index < activeIdx
+        const isFinalise = step === 'Finalise'
+        const isActive = index === activeIdx && !(isFinalise && finaliseComplete)
+        const isComplete = index < activeIdx || (isFinalise && finaliseComplete)
         return (
           <div key={step} className="flex items-center gap-1">
             {index > 0 ? (
@@ -51,6 +57,7 @@ export function OrbWorkflowStrip({
               )}
               data-orb-workflow-step={step.toLowerCase()}
               data-orb-workflow-step-active={isActive ? 'true' : undefined}
+              data-orb-workflow-step-complete={isComplete ? 'true' : undefined}
             >
               {step}
             </span>
@@ -65,8 +72,10 @@ export function resolveDictateWorkflowStep(opts: {
   hasTranscript: boolean
   hasAnalysis: boolean
   hasDraft: boolean
+  isApproved?: boolean
 }): OrbRecordingWorkflowStep {
-  if (opts.hasDraft) return 'Approve'
+  if (opts.isApproved) return 'Finalise'
+  if (opts.hasDraft) return 'Finalise'
   if (opts.hasAnalysis) return 'Draft'
   if (opts.hasTranscript) return 'Review'
   return 'Capture'

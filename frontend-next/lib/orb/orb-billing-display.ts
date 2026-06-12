@@ -9,7 +9,7 @@ const ORB_PLAN_LABELS: Record<string, string> = {
 export function formatOrbPlanLabel(planIdOrName: string | null | undefined): string {
   const raw = planIdOrName?.trim()
   if (!raw) return 'Individual'
-  const roleLike = /^(admin|manager|staff|user|owner)$/i.test(raw)
+  const roleLike = /^(admin|manager|staff|user|owner|residential_support_worker)$/i.test(raw)
   if (roleLike) return 'Individual'
   const mapped = ORB_PLAN_LABELS[raw.toLowerCase()]
   if (mapped) return mapped.replace(/^ORB Residential — /, '')

@@ -20,11 +20,11 @@ describe('ORB Residential premium layout pass', () => {
     assert.match(companion, /data-orb-starter-count=\{emptyStarters\.length\}/)
     for (const label of [
       'Review written practice',
-      'Create a handover',
-      'Think through a safeguarding concern',
-      'Record this properly',
-      'Prepare for inspection',
-      'Build an action plan'
+      'Daily record',
+      'Incident reflection',
+      'Safeguarding reflection',
+      'Handover note',
+      'Prepare for inspection'
     ]) {
       assert.match(copy, new RegExp(label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))
     }

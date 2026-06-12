@@ -100,7 +100,7 @@ type VoiceStartStage = 'idle' | 'starting' | 'active' | 'failed'
 type BrowserStartStage = 'idle' | 'starting' | 'active' | 'failed'
 
 const SAFETY_COPY =
-  'ORB can support your thinking, but it does not replace safeguarding procedures, management oversight or professional judgement.'
+  'ORB can support your thinking, but it does not replace safeguarding procedures, management oversight or professional judgement. Do not use ORB for emergencies — follow local safeguarding and emergency procedures.'
 
 function newTurnId() {
   return `turn_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
