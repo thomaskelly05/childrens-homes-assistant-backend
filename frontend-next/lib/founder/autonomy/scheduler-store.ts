@@ -54,7 +54,14 @@ export function recordTaskRun(taskId: string, result: SchedulerTaskRunResult): v
     ...task,
     lastRunAt: result.completedAt,
     nextRunAt: computeNextRunAt(task.frequency, new Date(result.completedAt)),
-    status: result.status === 'failed' ? 'failed' : result.status === 'awaiting_approval' ? 'awaiting_approval' : 'completed',
+    status:
+      result.status === 'failed' || result.status === 'blocked'
+        ? 'failed'
+        : result.status === 'awaiting_approval'
+          ? 'awaiting_approval'
+          : result.status === 'redacted'
+            ? 'completed'
+            : 'completed',
     runsToday: task.runsToday + 1,
     lastRunDate: today,
     createdEvents: [...task.createdEvents, ...result.eventIds],
@@ -98,6 +105,10 @@ export function addEmailReportRecord(record: EmailReportRecord): void {
 
 export function getEmailReportHistory(): EmailReportRecord[] {
   return [...emailHistory]
+}
+
+export function getLatestEmailReportPreview(): EmailReportRecord | null {
+  return emailHistory.find((r) => r.preview != null) ?? emailHistory[0] ?? null
 }
 
 export function getTaskRunHistory(limit = 50): SchedulerTaskRunResult[] {

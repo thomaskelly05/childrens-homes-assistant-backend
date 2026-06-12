@@ -74,9 +74,11 @@ describe('Autonomous Intelligence Scheduler', () => {
 
   it('email report does not include real child data', () => {
     const emailSource = readSource('lib/founder/autonomy/email-report-service.ts')
-    assert.match(emailSource, /containsRealChildData/)
+    const safetySource = readSource('lib/founder/autonomy/email-report-safety.ts')
+    assert.match(emailSource, /sanitizeEmailReportSections/)
     assert.match(emailSource, /Synthetic evidence only/)
-    assert.match(emailSource, /CHILD_DATA_PATTERNS/)
+    assert.match(safetySource, /containsRealChildData/)
+    assert.match(safetySource, /CRITICAL_BLOCK_PATTERNS/)
   })
 
   it('scheduler respects max runs per day', () => {
@@ -154,6 +156,7 @@ describe('Autonomous Intelligence Scheduler', () => {
     assert.match(chiefSource, /getLiveLlmGateStatus/)
     const dashboardSource = readSource('components/founder/founder-dashboard-page.tsx')
     assert.match(dashboardSource, /founder-autonomy-link/)
+    assert.match(dashboardSource, /FounderCommandCentreShortcuts/)
   })
 
   it('no auto-merge pathway exists', () => {

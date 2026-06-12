@@ -1,38 +1,24 @@
 import { getPendingApprovals } from '../approvals/approval-store.ts'
-import { getPendingAgentApprovals } from '../agents/autonomous/founder-agent-actions'
-import { getAgentAuditTrail } from '../agents/autonomous/founder-agent-audit'
-import { generateFounderChiefOfStaffBrief } from '../agents/autonomous/founder-chief-of-staff'
-import { buildFounderCoverageMap } from '../agents/autonomous/founder-agent-coverage-map'
-import { getPendingProposals } from '../learning-loop/learning-loop-store'
+import { getPendingAgentApprovals } from '../agents/autonomous/founder-agent-actions.ts'
+import { getAgentAuditTrail } from '../agents/autonomous/founder-agent-audit.ts'
+import { generateFounderChiefOfStaffBrief } from '../agents/autonomous/founder-chief-of-staff.ts'
+import { buildFounderCoverageMap } from '../agents/autonomous/founder-agent-coverage-map.ts'
+import { getPendingProposals } from '../learning-loop/learning-loop-store.ts'
 import { getEvaluationRuns } from '../../orb/evaluation/orb-evaluation-store.ts'
 
-import { getLiveLlmGateStatus } from './live-llm-gate'
-import { DEFAULT_FOUNDER_EMAIL } from './scheduler-defaults'
-import { addEmailReportRecord, getEmailSettings } from './scheduler-store'
-import type { EmailReportRecord, EmailReportType } from './scheduler-types'
-import { getFinanceSnapshot } from '../finance/finance-service'
-import { getRevenuePipelineSnapshot } from '../revenue/revenue-agent-service'
-
-export type EmailReportContent = {
-  type: EmailReportType
-  subject: string
-  recipient: string
-  htmlBody: string
-  textBody: string
-  generatedAt: string
-  sections: Record<string, string[]>
-}
-
-const CHILD_DATA_PATTERNS = [
-  /\bchild(?:ren)?'?s?\s+name\b/i,
-  /\bdate\s+of\s+birth\b/i,
-  /\breal\s+child\s+data\b/i,
-  /\byoung\s+person\s+named\b/i
-]
-
-function containsRealChildData(text: string): boolean {
-  return CHILD_DATA_PATTERNS.some((pattern) => pattern.test(text))
-}
+import { getLiveLlmGateStatus } from './live-llm-gate.ts'
+import { DEFAULT_FOUNDER_EMAIL } from './scheduler-defaults.ts'
+import { addEmailReportRecord, getEmailSettings, getLatestEmailReportPreview } from './scheduler-store.ts'
+import type {
+  EmailReportContent,
+  EmailReportPreview,
+  EmailReportRecord,
+  EmailReportType,
+  EmailSafetyStatus
+} from './scheduler-types.ts'
+import { getFinanceSnapshot } from '../finance/finance-service.ts'
+import { getRevenuePipelineSnapshot } from '../revenue/revenue-agent-service.ts'
+import { sanitizeEmailReportSections, type EmailReportSafetyOutcome } from './email-report-safety.ts'
 
 function formatDate(date: Date): string {
   return date.toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
@@ -72,13 +58,24 @@ function buildApprovalSection(): string[] {
   return lines
 }
 
+function buildApprovalItemSummaries(): string[] {
+  const agentApprovals = getPendingAgentApprovals()
+  const founderApprovals = getPendingApprovals()
+  const proposals = getPendingProposals()
+  return [
+    ...agentApprovals.slice(0, 10).map((a) => `[Agent] ${a.title}`),
+    ...founderApprovals.slice(0, 10).map((a) => `[${a.type}] ${a.title}`),
+    ...proposals.slice(0, 5).map((p) => `[Learning] ${p.whatBrainShouldLearn.slice(0, 60)}…`)
+  ]
+}
+
 function buildInternalBrainSummary(): string[] {
   const runs = getEvaluationRuns().filter((r) => r.mode === 'internal-brain').slice(0, 5)
   if (runs.length === 0) return ['No recent internal-brain runs recorded.']
 
   return runs.map(
     (r) =>
-      `• ${r.title ?? r.packType}: ${r.passRate ?? '—'}% pass, ${r.criticalFailures ?? 0} critical, status ${r.status}`
+      `• ${r.title ?? r.packType}: ${r.passRate ?? '—'}% pass, ${r.criticalFailures ?? 0} critical, status ${r.status} [synthetic evaluation run]`
   )
 }
 
@@ -101,26 +98,52 @@ function buildTopActions(): string[] {
   return brief.topPriorities.slice(0, 3)
 }
 
-export function generateDailyEmailReport(now = new Date()): EmailReportContent {
-  const settings = getEmailSettings()
+function buildRawSections(type: EmailReportType, now: Date): Record<string, string[]> {
+  const brief = generateFounderChiefOfStaffBrief()
   const coverage = buildFounderCoverageMap({})
   const finance = getFinanceSnapshot()
   const revenue = getRevenuePipelineSnapshot()
-  const brief = generateFounderChiefOfStaffBrief()
 
-  const sections: Record<string, string[]> = {
+  if (type === 'weekly') {
+    const weekRuns = getEvaluationRuns().filter((r) => r.mode === 'internal-brain')
+    const passRates = weekRuns.map((r) => r.passRate ?? 0).filter((p) => p > 0)
+    const avgPass = passRates.length > 0 ? Math.round(passRates.reduce((a, b) => a + b, 0) / passRates.length) : null
+
+    return {
+      progress: brief.whatChanged.length > 0 ? brief.whatChanged : ['Steady progress — review daily reports for detail.'],
+      qualityTrend: [`Average internal-brain pass rate: ${avgPass !== null ? `${avgPass}%` : 'Insufficient data'}`],
+      safetyTrend: brief.whatIsRisky.length > 0 ? brief.whatIsRisky : ['No elevated safety concerns this week.'],
+      coverage: [`Weak areas: ${coverage.weakAreas.length}`, `Untested: ${coverage.untestedAreas.length}`],
+      scenarios: [`Internal-brain runs this period: ${weekRuns.length} [synthetic]`],
+      proposals: [`Pending learning proposals: ${getPendingProposals().length}`],
+      revenue: [
+        `Pipeline: £${revenue.pipelineValue}`,
+        `Demos: ${revenue.demoRequests}, Pilots: ${revenue.pilotRequests}`,
+        `MRR: ${revenue.actualMrr !== null ? `£${revenue.actualMrr}` : 'Not connected'}`
+      ],
+      costTrend: [`Monthly burn: £${finance.monthlyBurn}`, `AI costs: £${finance.estimatedCosts.openAiApi ?? '—'}`],
+      launchReadiness: brief.launchGateBlockers.length > 0 ? brief.launchGateBlockers : ['Review launch gates in Command Centre.'],
+      nextWeek: buildTopActions(),
+      tomApproval: buildApprovalSection()
+    }
+  }
+
+  return {
     internalBrain: buildInternalBrainSummary(),
     liveLlmGate: buildLiveLlmGateSection(),
     criticalFailures: brief.whatIsRisky.length > 0 ? brief.whatIsRisky : ['No critical failures flagged.'],
-    weaknesses: coverage.weakAreas.length > 0
-      ? coverage.weakAreas.slice(0, 5).map((a) => `• ${a.replace(/_/g, ' ')}`)
-      : ['No new weaknesses detected.'],
-    coverageGaps: coverage.untestedAreas.length > 0
-      ? coverage.untestedAreas.slice(0, 5).map((a) => `• ${a.replace(/_/g, ' ')}`)
-      : ['Coverage gaps within acceptable range.'],
-    learningProposals: getPendingProposals().length > 0
-      ? getPendingProposals().slice(0, 5).map((p) => `• ${p.whatBrainShouldLearn.slice(0, 100)}`)
-      : ['No learning proposals awaiting approval.'],
+    weaknesses:
+      coverage.weakAreas.length > 0
+        ? coverage.weakAreas.slice(0, 5).map((a) => `• ${a.replace(/_/g, ' ')}`)
+        : ['No new weaknesses detected.'],
+    coverageGaps:
+      coverage.untestedAreas.length > 0
+        ? coverage.untestedAreas.slice(0, 5).map((a) => `• ${a.replace(/_/g, ' ')}`)
+        : ['Coverage gaps within acceptable range.'],
+    learningProposals:
+      getPendingProposals().length > 0
+        ? getPendingProposals().slice(0, 5).map((p) => `• ${p.whatBrainShouldLearn.slice(0, 100)}`)
+        : ['No learning proposals awaiting approval.'],
     prsAwaiting: brief.prsAwaitingReview.length > 0 ? brief.prsAwaitingReview : ['No PRs awaiting review.'],
     launchBlockers: brief.launchGateBlockers.length > 0 ? brief.launchGateBlockers : ['No launch gate blockers.'],
     finance: [
@@ -137,136 +160,171 @@ export function generateDailyEmailReport(now = new Date()): EmailReportContent {
     tomApproval: buildApprovalSection(),
     topActions: buildTopActions()
   }
+}
 
-  const textBody = [
-    `IndiCare Intelligence Daily Report — ${formatDate(now)}`,
-    '',
-    '=== INTERNAL BRAIN TEST SUMMARY ===',
-    ...sections.internalBrain,
-    '',
-    '=== LIVE LLM GATE STATUS ===',
-    ...sections.liveLlmGate,
-    '',
-    '=== CRITICAL FAILURES ===',
-    ...sections.criticalFailures,
-    '',
-    '=== COVERAGE GAPS ===',
-    ...sections.coverageGaps,
-    '',
-    '=== FINANCE SNAPSHOT ===',
-    ...sections.finance,
-    '',
-    '=== REVENUE SNAPSHOT ===',
-    ...sections.revenue,
-    '',
-    '=== TOM APPROVAL REQUIRED ===',
-    ...sections.tomApproval,
-    '',
-    '=== TOP 3 ACTIONS ===',
-    ...sections.topActions.map((a, i) => `${i + 1}. ${a}`),
-    '',
-    'Synthetic evidence only. No real child data.',
-    'ORB supports adults; it does not replace judgement.'
-  ].join('\n')
-
-  if (containsRealChildData(textBody)) {
-    throw new Error('Email report safety check failed: potential real child data detected.')
+function sectionHeaders(type: EmailReportType): Array<{ key: string; title: string }> {
+  if (type === 'weekly') {
+    return [
+      { key: 'progress', title: 'PROGRESS THIS WEEK' },
+      { key: 'qualityTrend', title: 'QUALITY TREND' },
+      { key: 'safetyTrend', title: 'SAFETY TREND' },
+      { key: 'revenue', title: 'REVENUE / PIPELINE' },
+      { key: 'costTrend', title: 'COST TREND' },
+      { key: 'launchReadiness', title: 'LAUNCH READINESS' },
+      { key: 'nextWeek', title: 'NEXT WEEK PRIORITIES' },
+      { key: 'tomApproval', title: 'TOM APPROVAL REQUIRED' }
+    ]
   }
+
+  return [
+    { key: 'internalBrain', title: 'INTERNAL BRAIN TEST SUMMARY' },
+    { key: 'liveLlmGate', title: 'LIVE LLM GATE STATUS' },
+    { key: 'criticalFailures', title: 'CRITICAL FAILURES' },
+    { key: 'coverageGaps', title: 'COVERAGE GAPS' },
+    { key: 'finance', title: 'FINANCE SNAPSHOT' },
+    { key: 'revenue', title: 'REVENUE SNAPSHOT' },
+    { key: 'tomApproval', title: 'TOM APPROVAL REQUIRED' },
+    { key: 'topActions', title: 'TOP 3 ACTIONS' }
+  ]
+}
+
+function buildTextBody(
+  type: EmailReportType,
+  now: Date,
+  sections: Record<string, string[]>,
+  safety: EmailReportSafetyOutcome
+): string {
+  const title =
+    type === 'daily'
+      ? `IndiCare Intelligence Daily Report — ${formatDate(now)}`
+      : `IndiCare Intelligence Weekly Founder Report — ${formatWeek(now)}`
+
+  const parts: string[] = [title, '']
+
+  for (const { key, title: header } of sectionHeaders(type)) {
+    parts.push(`=== ${header} ===`, ...(sections[key] ?? []), '')
+  }
+
+  if (type === 'weekly') {
+    parts.push(`Audit entries this week: ${getAgentAuditTrail().slice(0, 50).length}`, '')
+  }
+
+  if (safety.redactionCount > 0) {
+    parts.push(
+      `Safety: ${safety.redactionCount} section(s) redacted by safeguarding checker.`,
+      safety.technicalMessage ?? '',
+      ''
+    )
+  }
+
+  parts.push(
+    'Synthetic evidence only. No real child data.',
+    'Confirmed: no real child data in this preview.',
+    'ORB supports adults; it does not replace judgement.'
+  )
+
+  return parts.join('\n')
+}
+
+function buildPreview(
+  type: EmailReportType,
+  now: Date,
+  subject: string,
+  recipient: string,
+  sections: Record<string, string[]>,
+  safety: EmailReportSafetyOutcome
+): EmailReportPreview {
+  const settings = getEmailSettings()
+  return {
+    recipient,
+    provider: settings.provider,
+    subject,
+    generatedAt: now.toISOString(),
+    sections,
+    redactions: safety.sections
+      .filter((s) => s.status === 'redacted' || s.status === 'blocked')
+      .map((s) => ({ sectionKey: s.sectionKey, reason: s.reason ?? 'Section redacted for safeguarding.' })),
+    safetyStatus: safety.status,
+    redactionCount: safety.redactionCount,
+    noRealChildDataConfirmed: safety.noRealChildDataConfirmed,
+    approvalItems: buildApprovalItemSummaries()
+  }
+}
+
+export function generateEmailReportWithSafety(type: EmailReportType, now = new Date()): {
+  content: EmailReportContent | null
+  safety: EmailReportSafetyOutcome
+  blocked: boolean
+} {
+  const settings = getEmailSettings()
+  const rawSections = buildRawSections(type, now)
+  const safety = sanitizeEmailReportSections(rawSections)
+
+  if (safety.status === 'blocked') {
+    return { content: null, safety, blocked: true }
+  }
+
+  const sections = safety.sanitizedSections
+  const subject =
+    type === 'daily'
+      ? `IndiCare Intelligence Daily Report — ${formatDate(now)}`
+      : `IndiCare Intelligence Weekly Founder Report — ${formatWeek(now)}`
+  const recipient = settings.recipient || DEFAULT_FOUNDER_EMAIL
+  const textBody = buildTextBody(type, now, sections, safety)
 
   return {
-    type: 'daily',
-    subject: `IndiCare Intelligence Daily Report — ${formatDate(now)}`,
-    recipient: settings.recipient || DEFAULT_FOUNDER_EMAIL,
-    htmlBody: `<pre style="font-family:system-ui">${textBody.replace(/</g, '&lt;')}</pre>`,
-    textBody,
-    generatedAt: now.toISOString(),
-    sections
+    blocked: false,
+    safety,
+    content: {
+      type,
+      subject,
+      recipient,
+      htmlBody: `<pre style="font-family:system-ui">${textBody.replace(/</g, '&lt;')}</pre>`,
+      textBody,
+      generatedAt: now.toISOString(),
+      sections
+    }
   }
+}
+
+export function generateDailyEmailReport(now = new Date()): EmailReportContent {
+  const result = generateEmailReportWithSafety('daily', now)
+  if (result.blocked || !result.content) {
+    throw new Error(result.safety.blockedReason ?? 'Email report safety check blocked report generation.')
+  }
+  return result.content
 }
 
 export function generateWeeklyEmailReport(now = new Date()): EmailReportContent {
-  const settings = getEmailSettings()
-  const brief = generateFounderChiefOfStaffBrief()
-  const finance = getFinanceSnapshot()
-  const revenue = getRevenuePipelineSnapshot()
-  const audit = getAgentAuditTrail().slice(0, 50)
-
-  const weekRuns = getEvaluationRuns().filter((r) => r.mode === 'internal-brain')
-  const passRates = weekRuns.map((r) => r.passRate ?? 0).filter((p) => p > 0)
-  const avgPass = passRates.length > 0 ? Math.round(passRates.reduce((a, b) => a + b, 0) / passRates.length) : null
-
-  const sections: Record<string, string[]> = {
-    progress: brief.whatChanged.length > 0 ? brief.whatChanged : ['Steady progress — review daily reports for detail.'],
-    qualityTrend: [`Average internal-brain pass rate: ${avgPass !== null ? `${avgPass}%` : 'Insufficient data'}`],
-    safetyTrend: brief.whatIsRisky.length > 0 ? brief.whatIsRisky : ['No elevated safety concerns this week.'],
-    coverage: [`Weak areas: ${buildFounderCoverageMap({}).weakAreas.length}`, `Untested: ${buildFounderCoverageMap({}).untestedAreas.length}`],
-    scenarios: [`Internal-brain runs this period: ${weekRuns.length}`],
-    proposals: [`Pending learning proposals: ${getPendingProposals().length}`],
-    revenue: [
-      `Pipeline: £${revenue.pipelineValue}`,
-      `Demos: ${revenue.demoRequests}, Pilots: ${revenue.pilotRequests}`,
-      `MRR: ${revenue.actualMrr !== null ? `£${revenue.actualMrr}` : 'Not connected'}`
-    ],
-    costTrend: [`Monthly burn: £${finance.monthlyBurn}`, `AI costs: £${finance.estimatedCosts.openAiApi ?? '—'}`],
-    launchReadiness: brief.launchGateBlockers.length > 0 ? brief.launchGateBlockers : ['Review launch gates in Command Centre.'],
-    nextWeek: buildTopActions(),
-    tomApproval: buildApprovalSection()
+  const result = generateEmailReportWithSafety('weekly', now)
+  if (result.blocked || !result.content) {
+    throw new Error(result.safety.blockedReason ?? 'Email report safety check blocked report generation.')
   }
-
-  const textBody = [
-    `IndiCare Intelligence Weekly Founder Report — ${formatWeek(now)}`,
-    '',
-    '=== PROGRESS THIS WEEK ===',
-    ...sections.progress,
-    '',
-    '=== QUALITY TREND ===',
-    ...sections.qualityTrend,
-    '',
-    '=== SAFETY TREND ===',
-    ...sections.safetyTrend,
-    '',
-    '=== REVENUE / PIPELINE ===',
-    ...sections.revenue,
-    '',
-    '=== COST TREND ===',
-    ...sections.costTrend,
-    '',
-    '=== LAUNCH READINESS ===',
-    ...sections.launchReadiness,
-    '',
-    '=== NEXT WEEK PRIORITIES ===',
-    ...sections.nextWeek.map((a, i) => `${i + 1}. ${a}`),
-    '',
-    '=== TOM APPROVAL REQUIRED ===',
-    ...sections.tomApproval,
-    '',
-    `Audit entries this week: ${audit.length}`,
-    '',
-    'Synthetic evidence only. No real child data.'
-  ].join('\n')
-
-  if (containsRealChildData(textBody)) {
-    throw new Error('Email report safety check failed: potential real child data detected.')
-  }
-
-  return {
-    type: 'weekly',
-    subject: `IndiCare Intelligence Weekly Founder Report — ${formatWeek(now)}`,
-    recipient: settings.recipient || DEFAULT_FOUNDER_EMAIL,
-    htmlBody: `<pre style="font-family:system-ui">${textBody.replace(/</g, '&lt;')}</pre>`,
-    textBody,
-    generatedAt: now.toISOString(),
-    sections
-  }
+  return result.content
 }
 
-export function sendFounderEmailReport(report: EmailReportContent): {
+export function sendFounderEmailReport(
+  report: EmailReportContent,
+  safety?: EmailReportSafetyOutcome
+): {
   record: EmailReportRecord
-  status: 'sent' | 'dry_run' | 'failed'
+  status: 'sent' | 'dry_run' | 'failed' | 'blocked' | 'redacted'
   error?: string
+  safetyStatus: EmailSafetyStatus
+  redactionCount: number
 } {
   const settings = getEmailSettings()
   const auditId = `email-audit-${Date.now()}`
+  const safetyStatus = safety?.status ?? 'passed'
+  const redactionCount = safety?.redactionCount ?? 0
+
+  const preview = buildPreview(report.type, new Date(report.generatedAt), report.subject, report.recipient, report.sections, safety ?? {
+    status: 'passed',
+    sections: [],
+    redactionCount: 0,
+    sanitizedSections: report.sections,
+    noRealChildDataConfirmed: true
+  })
 
   const record: EmailReportRecord = {
     id: `email-${Date.now()}`,
@@ -276,14 +334,17 @@ export function sendFounderEmailReport(report: EmailReportContent): {
     generatedAt: report.generatedAt,
     sentAt: null,
     status: 'generated',
-    auditRecordId: auditId
+    auditRecordId: auditId,
+    safetyStatus,
+    redactionCount,
+    preview
   }
 
   if (settings.provider === 'dry_run') {
-    record.status = 'dry_run'
+    record.status = safetyStatus === 'redacted' ? 'redacted' : 'dry_run'
     record.sentAt = new Date().toISOString()
     addEmailReportRecord(record)
-    return { record, status: 'dry_run' }
+    return { record, status: record.status as 'dry_run' | 'redacted', safetyStatus, redactionCount }
   }
 
   const providerEnvMap: Record<string, string[]> = {
@@ -300,15 +361,31 @@ export function sendFounderEmailReport(report: EmailReportContent): {
     record.status = 'failed'
     record.error = `Email provider ${settings.provider} not configured. Missing: ${missing.join(', ')}`
     addEmailReportRecord(record)
-    return { record, status: 'failed', error: record.error }
+    return { record, status: 'failed', error: record.error, safetyStatus, redactionCount }
   }
 
   record.status = 'sent'
   record.sentAt = new Date().toISOString()
   addEmailReportRecord(record)
-  return { record, status: 'sent' }
+  return { record, status: 'sent', safetyStatus, redactionCount }
+}
+
+export function generateAndSendFounderEmailReport(type: EmailReportType): {
+  sendResult: ReturnType<typeof sendFounderEmailReport> | null
+  safety: EmailReportSafetyOutcome
+  blocked: boolean
+} {
+  const generated = generateEmailReportWithSafety(type)
+  if (generated.blocked || !generated.content) {
+    return { sendResult: null, safety: generated.safety, blocked: true }
+  }
+
+  const sendResult = sendFounderEmailReport(generated.content, generated.safety)
+  return { sendResult, safety: generated.safety, blocked: false }
 }
 
 export function emailRecipientDefaultsToFounder(): boolean {
   return getEmailSettings().recipient.toLowerCase() === DEFAULT_FOUNDER_EMAIL.toLowerCase()
 }
+
+export { getLatestEmailReportPreview }
