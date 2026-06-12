@@ -45,14 +45,20 @@ describe('ORB Dictate studio premium polish', () => {
 
   it('analyse button appears when transcript exists', () => {
     const topBar = readComponent('components/orb/dictate/OrbDictateTopBar.tsx')
-    assert.match(topBar, /Analyse with ORB/)
-    assert.match(topBar, /Generate draft/)
+    assert.match(topBar, /Review with ORB/)
+    assert.match(topBar, /Create draft record/)
   })
 
   it('open in ORB Write is disabled until draft is available', () => {
     const topBar = readComponent('components/orb/dictate/OrbDictateTopBar.tsx')
     assert.match(topBar, /writeDisabled = !hasDraft/)
     assert.match(topBar, /data-orb-dictate-finalise/)
+  })
+
+  it('workflow strip shows capture to approve journey', () => {
+    const workspace = readComponent('components/orb/dictate/OrbDictateStudioWorkspace.tsx')
+    assert.match(workspace, /OrbWorkflowStrip/)
+    assert.match(workspace, /data-orb-dictate-responsibility-strip/)
   })
 
   it('panels render side by side via resizable workspace', () => {

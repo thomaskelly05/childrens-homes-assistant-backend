@@ -74,10 +74,10 @@ const DESKTOP_MAIN_NAV: Array<{
   icon: (typeof NAV_ITEMS)[number]['icon']
   magicNotes?: boolean
 }> = [
-  { id: 'chat', label: 'Chat', icon: MessageSquare },
-  { id: 'orb_dictate', label: 'Dictate', helper: 'Rough notes to records', icon: PenLine, magicNotes: true },
-  { id: 'orb_voice', label: 'Voice', helper: 'Hands-free copilot', icon: Mic },
-  { id: 'orb_write', label: 'ORB Write', helper: 'Document studio', icon: FileEdit }
+  { id: 'chat', label: 'Chat', helper: 'Ask, reflect and plan', icon: MessageSquare },
+  { id: 'orb_dictate', label: 'Dictate', helper: 'Turn rough speech into records', icon: PenLine, magicNotes: true },
+  { id: 'orb_voice', label: 'Voice', helper: 'Talk hands-free with ORB', icon: Mic },
+  { id: 'orb_write', label: 'ORB Write', helper: 'Create and finalise documents', icon: FileEdit }
 ]
 
 const DESKTOP_LIBRARY_NAV: Array<{
@@ -123,10 +123,10 @@ const MOBILE_DRAWER_QUICK_NAV: Array<{
   helper?: string
   icon: (typeof NAV_ITEMS)[number]['icon']
 }> = [
-  { id: 'chat', label: 'Chat', icon: MessageSquare },
-  { id: 'orb_dictate', label: 'Dictate', helper: 'Rough notes to records', icon: PenLine },
-  { id: 'orb_voice', label: 'Voice', helper: 'Hands-free copilot', icon: Mic },
-  { id: 'orb_write', label: 'ORB Write', helper: 'Document studio', icon: FileEdit },
+  { id: 'chat', label: 'Chat', helper: 'Ask, reflect and plan', icon: MessageSquare },
+  { id: 'orb_dictate', label: 'Dictate', helper: 'Turn rough speech into records', icon: PenLine },
+  { id: 'orb_voice', label: 'Voice', helper: 'Talk hands-free with ORB', icon: Mic },
+  { id: 'orb_write', label: 'ORB Write', helper: 'Create and finalise documents', icon: FileEdit },
   { id: 'templates', label: 'Templates', helper: 'Recording library', icon: FileText },
   { id: 'documents', label: 'Documents & Guidance', icon: FolderOpen },
   { id: 'saved', label: 'Saved Outputs', helper: 'Your records and drafts', icon: Save },
@@ -943,10 +943,11 @@ export function OrbResidentialSidebar({
                 <CreditCard className="h-4 w-4" aria-hidden />
                 <span>Billing</span>
               </button>
-              <Link href="/os" className="orb-sidebar-nav-item w-full" data-orb-sidebar-os-link>
-                <span className="text-[10px] font-semibold uppercase tracking-wide text-sky-400/90">
+              <Link href="/os" className="orb-sidebar-nav-item w-full items-start gap-0.5 py-2" data-orb-sidebar-os-link>
+                <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--orb-muted)]">
                   IndiCare OS
                 </span>
+                <span className="text-[10px] text-[var(--orb-muted)]/80">Coming later</span>
               </Link>
             </div>
           </SidebarCollapsibleSection>
@@ -1011,13 +1012,14 @@ export function OrbResidentialSidebar({
             </button>
             <Link
               href="/os"
-              className="orb-sidebar-nav-item w-full"
+              className="orb-sidebar-nav-item w-full items-start gap-0.5 py-2"
               data-orb-sidebar-os-link
-              aria-label="Open IndiCare OS"
+              aria-label="IndiCare OS — coming later"
             >
-              <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--orb-royal-blue,#168bff)]/90">
+              <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--orb-muted)]">
                 IndiCare OS
               </span>
+              <span className="text-[10px] text-[var(--orb-muted)]/80">Coming later</span>
             </Link>
           </nav>
         )}

@@ -53,9 +53,9 @@ describe('ORB Write standalone studio', () => {
   it('analyse and generate buttons appear', () => {
     const start = readComponent('components/orb-write/orb-write-start-screen.tsx')
     assert.match(start, /data-orb-write-analyse/)
-    assert.match(start, /Analyse with ORB/)
+    assert.match(start, /Review with ORB/)
     assert.match(start, /data-orb-write-generate/)
-    assert.match(start, /Generate draft/)
+    assert.match(start, /Create draft record/)
   })
 
   it('print-style document canvas renders', () => {

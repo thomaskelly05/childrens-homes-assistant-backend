@@ -18,7 +18,7 @@ describe('ORB Dictate + Write convergence', () => {
     const workspace = readComponent('components/orb/dictate/OrbDictateStudioWorkspace.tsx')
     assert.match(topBar, /data-orb-dictate-top-record/)
     assert.match(topBar, /data-orb-dictate-generate/)
-    assert.match(topBar, /Analyse with ORB/)
+    assert.match(topBar, /Review with ORB/)
     assert.match(topBar, /data-orb-dictate-finalise/)
     assert.match(topBar, /OrbDictateTemplateSelector/)
     assert.match(workspace, /OrbDictatePrivacyStrip/)

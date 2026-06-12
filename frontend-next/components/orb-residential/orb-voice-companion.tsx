@@ -46,8 +46,10 @@ export const ORB_VOICE_COMPANION_HEADLINES: Record<
 export const ORB_VOICE_COMPANION_SUBLINES: Partial<
   Record<import('@/components/orb-residential/orb-voice-head').OrbVoiceCompanionState, string>
 > = {
-  idle: "Speak naturally and I'll help.",
-  listening: "Speak naturally and I'll help."
+  idle:
+    'Talk through a situation, rough note or concern. ORB will help you reflect, structure your thinking and decide what may need recording.',
+  listening:
+    'Talk through a situation, rough note or concern. ORB will help you reflect, structure your thinking and decide what may need recording.'
 }
 
 export function mapOrbVoiceUiToCompanionState(

@@ -136,7 +136,7 @@ export function OrbAdultProfileDrawer({
                 Voice Ready
               </span>
               <span className="orb-profile-compact-badge" data-orb-profile-passkey-badge>
-                {account.hasPasskeys ? 'Passkey Enabled' : 'Passkey Disabled'}
+                {account.hasPasskeys ? 'Passkey enabled' : 'Passkey not set up'}
               </span>
             </div>
             {developerMode && cognitionModeLabel ? (

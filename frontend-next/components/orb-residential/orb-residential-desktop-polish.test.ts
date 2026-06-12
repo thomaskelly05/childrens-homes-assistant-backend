@@ -40,6 +40,8 @@ describe('ORB Residential desktop polish', () => {
     assert.match(sidebar, /DESKTOP_LIBRARY_NAV/)
     assert.match(sidebar, /data-orb-sidebar-chat/)
     assert.match(copy, /ORB_RESIDENTIAL_EMPTY_HEADING_DESKTOP = 'What do you need help with\?'/)
+    assert.match(copy, /ORB_RESIDENTIAL_EMPTY_SUBLINE/)
+    assert.match(copy, /ORB_RESIDENTIAL_STARTER_GROUPS/)
   })
 
   it('empty state, composer, and layout markers exist without OS route coupling', () => {

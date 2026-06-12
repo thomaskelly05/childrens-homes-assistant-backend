@@ -11,16 +11,16 @@ export type OrbDictatePrimaryAction = 'analyse' | 'generate' | 'disabled'
 
 function primaryActionLabel(action: OrbDictatePrimaryAction, generating: boolean): string {
   if (generating) return 'Working…'
-  if (action === 'analyse') return 'Analyse with ORB'
-  if (action === 'generate') return 'Generate draft'
-  return 'Analyse with ORB'
+  if (action === 'analyse') return 'Review with ORB'
+  if (action === 'generate') return 'Create draft record'
+  return 'Review with ORB'
 }
 
 function primaryActionHint(action: OrbDictatePrimaryAction, hasTranscript: boolean): string {
-  if (!hasTranscript) return 'Record or paste a transcript first'
-  if (action === 'analyse') return 'Review transcript quality and safeguarding before drafting'
-  if (action === 'generate') return 'Create a draft record from your transcript and analysis'
-  return 'Add a transcript to continue'
+  if (!hasTranscript) return 'Add speech or notes to activate ORB review'
+  if (action === 'analyse') return 'Check what may be missing before drafting'
+  if (action === 'generate') return 'Prepare a safer record from your notes and review'
+  return 'Add speech or notes to activate ORB review'
 }
 
 function writeButtonHint(hasDraft: boolean): string {
@@ -193,7 +193,7 @@ export function OrbDictateTopBar({
           >
             <Sparkles className="h-3.5 w-3.5 shrink-0" aria-hidden />
             <span className="hidden sm:inline">{primaryLabel}</span>
-            <span className="sm:hidden">Analyse</span>
+            <span className="sm:hidden">Review</span>
           </button>
 
           <button

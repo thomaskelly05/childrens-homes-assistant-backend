@@ -484,7 +484,7 @@ export function OrbWriteStandalonePanel({
                   data-orb-write-analyse
                 >
                   <Sparkles className="h-3.5 w-3.5" aria-hidden />
-                  Analyse with ORB
+                  Review with ORB
                 </button>
                 <button
                   type="button"
@@ -493,7 +493,7 @@ export function OrbWriteStandalonePanel({
                   className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--orb-primary)] px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
                   data-orb-write-generate
                 >
-                  Generate draft
+                  Create draft record
                 </button>
               </div>
             </header>

@@ -22,12 +22,13 @@ export type OrbRealtimeVoiceStatusLite = {
 }
 
 export const ORB_VOICE_PANEL_TITLE = 'Voice'
-export const ORB_VOICE_PANEL_SUBTITLE = 'Speak to ORB hands-free'
+export const ORB_VOICE_PANEL_SUBTITLE =
+  'Live conversation and reflection — talk hands-free with ORB'
 
 export const ORB_VOICE_BOUNDARY_COPY = [
-  'Voice transcripts are saved as standalone ORB artefacts.',
-  'Review before relying on them.',
-  'Standalone ORB does not access live care records.'
+  'Voice is for live support and reflection. Dictate is for turning speech into a structured record.',
+  'Voice sessions may create transcripts for drafting and support purposes.',
+  'Review before relying on them. ORB Residential does not access live care records.'
 ] as const
 
 export type OrbVoiceLaunchMode = 'browser_ptt' | 'openai_realtime' | 'unavailable'

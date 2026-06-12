@@ -54,7 +54,7 @@ describe('ORB mic gating and routing', () => {
     assert.equal(ui.showTypeInstead, true)
     const actions = readComponent('components/orb-standalone/orb-voice-actions.tsx')
     assert.match(actions, /data-orb-voice-use-dictate/)
-    assert.match(actions, /Use Dictate/)
+    assert.match(actions, /Turn speech into a record/)
     assert.doesNotMatch(actions, /data-orb-voice-use-dictate[\s\S]*disabled=/)
   })
 
@@ -108,7 +108,7 @@ describe('ORB mic gating and routing', () => {
   it('voice routes to dictate when realtime voice unavailable', () => {
     const station = readComponent('components/orb-standalone/orb-voice-station.tsx')
     const actions = readComponent('components/orb-standalone/orb-voice-actions.tsx')
-    assert.match(actions, /Use Dictate/)
+    assert.match(actions, /Turn speech into a record/)
     assert.match(actions, /data-orb-voice-use-dictate/)
     assert.match(station, /resolveOrbVoiceUiState|ORB_VOICE_UNAVAILABLE_HEADLINE|provider_unavailable/)
   })

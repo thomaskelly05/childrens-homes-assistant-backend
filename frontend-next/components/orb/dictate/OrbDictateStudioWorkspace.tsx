@@ -12,6 +12,8 @@ import {
 } from '@/components/orb/dictate/OrbDictateTopBar'
 import { OrbTranscriptPanel } from '@/components/orb/dictate/OrbTranscriptPanel'
 import { OrbStudioShell } from '@/components/orb/premium'
+import { OrbWorkflowStrip, resolveDictateWorkflowStep } from '@/components/orb/premium/orb-workflow-strip'
+import { ORB_RESIDENTIAL_DICTATE_RESPONSIBILITY_STRIP } from '@/lib/orb/orb-residential-copy'
 import { OrbResizableWorkspace } from '@/components/orb/resizable-panels/orb-resizable-workspace'
 import {
   OrbDictateAudioUpload,
@@ -262,6 +264,18 @@ export function OrbDictateStudioWorkspace(props: OrbDictateStudioWorkspaceProps)
       data-orb-dictate-empty={!hasTranscript ? 'true' : undefined}
       style={{ minHeight: 'min(100dvh - 4.5rem, calc(100svh - 4.5rem))' }}
     >
+      <div className="shrink-0 px-1 sm:px-0">
+        <OrbWorkflowStrip
+          activeStep={resolveDictateWorkflowStep({ hasTranscript, hasAnalysis, hasDraft })}
+        />
+        <p
+          className="mt-1.5 text-[10px] leading-relaxed text-[var(--orb-muted)]"
+          data-orb-dictate-responsibility-strip
+        >
+          {ORB_RESIDENTIAL_DICTATE_RESPONSIBILITY_STRIP}
+        </p>
+      </div>
+
       <OrbDictateTopBar
         selectedTemplateId={props.selectedTemplateId}
         onTemplateChange={props.onTemplateChange}

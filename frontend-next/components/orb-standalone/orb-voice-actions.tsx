@@ -108,7 +108,7 @@ export function OrbVoiceActions({
               : 'rounded-full border border-[var(--orb-line)] px-4 py-2 text-xs font-medium text-[var(--orb-muted)] hover:text-[var(--orb-foreground)]'
           }
         >
-          Use Dictate
+          Turn speech into a record
         </button>
       ) : null}
     </div>

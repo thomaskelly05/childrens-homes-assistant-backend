@@ -318,12 +318,19 @@ export function OrbStandaloneSettingsPanel({
                 onChange={(value) => onA11yChange?.({ reducedMotion: value })}
                 dataAttr="reduce-motion"
               />
-              <ComingSoonRow icon={<Bell className="h-4 w-4" />} label="Safeguarding reminders (coming soon)" />
+              <ComingSoonRow
+                icon={<Bell className="h-4 w-4" />}
+                label="Practice reminders"
+                hint="Optional prompts to support safer recording and escalation awareness."
+              />
             </SettingsBlock>
           ) : null}
 
           {activeSection === 'writing' ? (
-            <SettingsBlock title="Writing Preferences" description="Role, tone and how ORB addresses you.">
+            <SettingsBlock
+              title="Writing Preferences"
+              description="Set the tone ORB uses when supporting professional recording."
+            >
               <label className="block rounded-xl border border-[var(--orb-line)] px-4 py-3" data-orb-settings-preferred-name>
                 <span className="block text-sm font-medium text-[var(--orb-foreground)]">Preferred name</span>
                 <span className="block text-xs text-[var(--orb-muted)]">How ORB greets you on the home screen</span>
@@ -416,7 +423,10 @@ export function OrbStandaloneSettingsPanel({
           ) : null}
 
           {activeSection === 'recording' ? (
-            <SettingsBlock title="Recording Preferences" description="Defaults for Dictate, transcripts and chat capture.">
+            <SettingsBlock
+              title="Recording Preferences"
+              description="Choose how ORB helps structure daily records, incidents, handovers and reflective notes."
+            >
               <ToggleRow
                 label="Temporary chat by default"
                 hint="New chats skip profile memory until you turn it off"
@@ -443,7 +453,10 @@ export function OrbStandaloneSettingsPanel({
           ) : null}
 
           {activeSection === 'safety_privacy' ? (
-            <SettingsBlock title="Safety & Privacy" description="Passkeys, data controls and how ORB protects your work.">
+            <SettingsBlock
+              title="Safety & Privacy"
+              description="Understand what ORB can and cannot process, and how to use anonymised or minimal information safely."
+            >
               <div className="rounded-xl border border-[var(--orb-line)] bg-[var(--orb-surface)] px-4 py-3">
                 <p className="flex items-center gap-2 text-sm font-semibold text-[var(--orb-foreground)]">
                   <Fingerprint className="h-4 w-4 text-[#0284C7]" aria-hidden />
@@ -568,7 +581,10 @@ export function OrbStandaloneSettingsPanel({
           ) : null}
 
           {activeSection === 'about' ? (
-            <SettingsBlock title="About ORB" description="Standalone Care Companion">
+            <SettingsBlock
+              title="About ORB"
+              description="ORB Residential — ethical intelligence for children’s homes."
+            >
               <div className="flex items-center gap-2 text-xs text-[var(--orb-muted)]">
                 <Sun className="h-4 w-4" aria-hidden />
                 <Moon className="h-4 w-4" aria-hidden />
@@ -698,14 +714,17 @@ function RowButton({
   )
 }
 
-function ComingSoonRow({ icon, label }: { icon: ReactNode; label: string }) {
+function ComingSoonRow({ icon, label, hint }: { icon: ReactNode; label: string; hint?: string }) {
   return (
-    <div className="flex items-center justify-between rounded-xl border border-[var(--orb-line)] px-4 py-3 opacity-70">
-      <span className="flex items-center gap-2 text-sm text-[var(--orb-muted)]">
-        {icon}
-        {label}
-      </span>
-      <span className="text-[10px] text-[var(--orb-muted)]">Coming soon</span>
+    <div className="rounded-xl border border-[var(--orb-line)] px-4 py-3 opacity-80">
+      <div className="flex items-center justify-between gap-2">
+        <span className="flex items-center gap-2 text-sm text-[var(--orb-muted)]">
+          {icon}
+          {label}
+        </span>
+        <span className="shrink-0 text-[10px] text-[var(--orb-muted)]">Coming soon</span>
+      </div>
+      {hint ? <p className="mt-1.5 text-[11px] leading-5 text-[var(--orb-muted)]">{hint}</p> : null}
     </div>
   )
 }

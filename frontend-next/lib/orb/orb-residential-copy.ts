@@ -8,18 +8,63 @@ export const ORB_RESIDENTIAL_PRIMARY_STARTER_COUNT = 6
 
 type ResidentialStarter = { text: string; mode?: StandaloneOrbMode }
 
-/** Calm ChatGPT-style primary starters — six visible pills on empty Chat. */
+export type OrbResidentialStarterGroup = {
+  id: string
+  label: string
+  starters: ResidentialStarter[]
+}
+
+/** Home prompt groups — organised around children’s home workflows. */
+export const ORB_RESIDENTIAL_STARTER_GROUPS: OrbResidentialStarterGroup[] = [
+  {
+    id: 'recording',
+    label: 'Recording',
+    starters: [
+      { text: 'Daily record', mode: 'Record This Properly' },
+      { text: 'Incident reflection' },
+      { text: 'Key-work summary' },
+      { text: 'Handover note' },
+      { text: 'Chronology entry' }
+    ]
+  },
+  {
+    id: 'thinking',
+    label: 'Thinking',
+    starters: [
+      { text: 'Safeguarding reflection', mode: 'Safeguarding Thinking' },
+      { text: 'Understand behaviour' },
+      { text: 'Prepare for supervision' },
+      { text: 'Manager oversight' },
+      { text: 'Build an action plan', mode: 'Reg 44 / Reg 45 Prep' }
+    ]
+  },
+  {
+    id: 'evidence',
+    label: 'Evidence',
+    starters: [
+      { text: 'Prepare for inspection', mode: 'Ofsted Lens' },
+      { text: 'Regulation 44 support', mode: 'Reg 44 / Reg 45 Prep' },
+      { text: 'Regulation 45 reflection', mode: 'Reg 44 / Reg 45 Prep' },
+      { text: 'Review written practice' }
+    ]
+  }
+]
+
+/** Flat primary starters — first chips shown before “More examples”. */
 export const ORB_RESIDENTIAL_PRIMARY_STARTERS: ResidentialStarter[] = [
-  { text: 'Review written practice' },
-  { text: 'Create a handover' },
-  { text: 'Think through a safeguarding concern', mode: 'Safeguarding Thinking' },
-  { text: 'Record this properly', mode: 'Record This Properly' },
+  { text: 'Daily record', mode: 'Record This Properly' },
+  { text: 'Incident reflection' },
+  { text: 'Safeguarding reflection', mode: 'Safeguarding Thinking' },
+  { text: 'Handover note' },
   { text: 'Prepare for inspection', mode: 'Ofsted Lens' },
-  { text: 'Build an action plan', mode: 'Reg 44 / Reg 45 Prep' }
+  { text: 'Review written practice' }
 ]
 
 const PRIMARY_STARTER_TEXTS = new Set(
-  ORB_RESIDENTIAL_PRIMARY_STARTERS.map((s) => s.text.trim().toLowerCase())
+  [
+    ...ORB_RESIDENTIAL_PRIMARY_STARTERS,
+    ...ORB_RESIDENTIAL_STARTER_GROUPS.flatMap((group) => group.starters)
+  ].map((s) => s.text.trim().toLowerCase())
 )
 
 /** Additional starters surfaced via “More examples” drawer. */
@@ -40,13 +85,56 @@ export const ORB_RESIDENTIAL_MOBILE_EMPTY_HEADING = 'What do you need help with?
 /** Functional product line — hero / first-run only, not global chrome. */
 export const ORB_RESIDENTIAL_BRAND_EMOTIONAL_LINE = 'IndiCare Intelligence'
 
-/** Intentionally empty — keep the home screen calm; starters carry the guidance. */
-export const ORB_RESIDENTIAL_EMPTY_SUBLINE = ''
+/** Specialist residential childcare positioning on the home screen. */
+export const ORB_RESIDENTIAL_EMPTY_SUBLINE =
+  'Built for safer recording, stronger reflection and clearer evidence.'
 
 /** Compact residential starters — same six primary pills on mobile and desktop. */
 export const ORB_RESIDENTIAL_MOBILE_EMPTY_STARTERS = ORB_RESIDENTIAL_PRIMARY_STARTERS
 
 export const ORB_RESIDENTIAL_EMPTY_STARTERS = ORB_RESIDENTIAL_PRIMARY_STARTERS
+
+/** Calm adult-responsibility strip used across ORB Residential surfaces. */
+export const ORB_RESIDENTIAL_SAFETY_STRIP =
+  'ORB can help you reflect and improve wording. You remain responsible for accuracy, escalation and final approval.'
+
+export const ORB_RESIDENTIAL_PRIVACY_STRIP =
+  'Use anonymised or minimal identifiable information where possible. Follow your organisation’s policy and local safeguarding procedures.'
+
+export const ORB_RESIDENTIAL_VOICE_PRIVACY_STRIP =
+  'Voice sessions may create transcripts for drafting and support purposes. Do not use ORB for emergencies — follow local safeguarding and emergency procedures.'
+
+export const ORB_RESIDENTIAL_VOICE_SAFETY_STRIP =
+  'ORB can support your thinking, but it does not replace safeguarding procedures, management oversight or professional judgement.'
+
+export const ORB_RESIDENTIAL_DICTATE_RESPONSIBILITY_STRIP =
+  'ORB can help structure and improve wording. You remain responsible for accuracy, escalation and final approval.'
+
+/** What ORB Review checks in Dictate — care-aware, not generic “analysis”. */
+export const ORB_DICTATE_REVIEW_CHECKS = [
+  'Time, date and sequence',
+  'What was seen or heard',
+  'Who was present',
+  'Child’s voice, wishes or feelings',
+  'Actions taken by adults',
+  'Any safeguarding indicators',
+  'Who was informed',
+  'Whether management oversight is needed',
+  'Follow-up or review required'
+] as const
+
+export const ORB_RESIDENTIAL_BILLING_VALUE_ITEMS = [
+  'Chat with ORB',
+  'Dictate rough notes into records',
+  'Use Voice support',
+  'Create documents in ORB Write',
+  'Review wording before final approval',
+  'Safety and privacy reminders',
+  'Residential childcare-specific guidance'
+] as const
+
+export const ORB_RESIDENTIAL_BILLING_TRUST_COPY =
+  'ORB Residential does not replace your organisation’s recording system. It helps you prepare clearer, safer wording before you copy, export or save records where appropriate.'
 
 /** Visible mode labels — internal mode ids may still use legacy names for API compatibility. */
 export const ORB_RESIDENTIAL_MODE_DISPLAY: Partial<Record<StandaloneOrbMode, string>> = {
