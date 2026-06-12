@@ -32,6 +32,7 @@ import { FounderRecommendationCard } from '@/components/founder/founder-recommen
 import { FounderSectionCard } from '@/components/founder/founder-section-card'
 import { FounderTrendCard } from '@/components/founder/founder-trend-card'
 import { FounderEvidenceQuickLink } from '@/components/founder/founder-evidence-quick-link'
+import { FounderCommandCentreShortcuts } from '@/components/founder/founder-command-centre-shortcuts'
 
 const chartColours = ['#22d3ee', '#38bdf8', '#818cf8', '#a78bfa', '#34d399', '#fbbf24', '#fb7185', '#94a3b8']
 
@@ -89,6 +90,14 @@ export function FounderDashboardPage() {
           title="IndiCare Intelligence Command Centre"
           subtitle="Private live overview of business performance, ORB usage, risk, revenue, Ofsted readiness, and what to build next."
         />
+
+        <FounderSectionCard
+          eyebrow="Operating shortcuts"
+          title="Command Centre at a glance"
+          description="Key signals and shortcuts — approvals, brain status, email preview, finance, quality and launch gates."
+        >
+          <FounderCommandCentreShortcuts />
+        </FounderSectionCard>
 
         <FounderSectionCard
           eyebrow="Autonomous intelligence"

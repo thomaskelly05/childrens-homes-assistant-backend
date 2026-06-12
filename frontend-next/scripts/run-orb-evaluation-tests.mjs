@@ -19,6 +19,8 @@ const testFiles = [
   join(root, 'lib/founder/learning-loop/learning-loop.test.ts'),
   join(root, 'components/founder/founder-learning-loop-page.test.ts'),
   join(root, 'lib/founder/autonomy/autonomy.test.ts'),
+  join(root, 'lib/founder/autonomy/email-report-safety.test.ts'),
+  join(root, 'lib/founder/autonomy/autonomy-feedback.test.ts'),
   join(root, 'lib/founder/finance/finance.test.ts')
 ]
 

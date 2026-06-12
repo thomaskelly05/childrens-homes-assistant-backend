@@ -9,12 +9,21 @@ import { addEvaluationRun } from '../../orb/evaluation/orb-evaluation-store.ts'
 import type { OrbEvaluationRun } from '../../orb/evaluation/orb-evaluation-types.ts'
 import { INTERNAL_BRAIN_SCORING_VERSION_V2 } from '../../orb/evaluation/orb-evaluation-types.ts'
 
-import { generateDailyEmailReport, generateWeeklyEmailReport, sendFounderEmailReport } from './email-report-service'
+import { generateAndSendFounderEmailReport } from './email-report-service'
 import { evaluateAndRecommendLiveLlmGates, recommendLiveLlmRun } from './live-llm-gate'
 import { canRunTaskToday, getTasksDueForRun, recordTaskRun, setLastSchedulerTick } from './scheduler-store'
 import type { SchedulerTask, SchedulerTaskRunResult, SchedulerTaskType } from './scheduler-types'
 import { createFinanceSnapshot } from '../finance/finance-service'
 import { createRevenuePipelineSnapshot } from '../revenue/revenue-agent-service'
+
+export type SchedulerTaskRunError = {
+  taskId: string
+  taskType: SchedulerTaskType
+  errorCode: string
+  safeMessage: string
+  technicalMessage: string
+  auditRecordId?: string
+}
 
 function createSyntheticInternalBrainRun(input: {
   packType: OrbEvaluationRun['packType']
@@ -49,11 +58,77 @@ function auditTaskStart(task: SchedulerTask): string {
   const entry = recordAgentAuditEntry({
     agentId: 'founder-chief-of-staff',
     actionType: 'orchestrate',
-    summary: `Scheduled task started: ${task.name}`,
+    summary: `task_started: ${task.name} (${task.taskType})`,
     approvalStatus: 'not_required',
     relatedEventId: task.id
   })
   return entry.id
+}
+
+function auditTaskCompleted(task: SchedulerTask, summary: string, relatedEventId?: string): string {
+  const entry = recordAgentAuditEntry({
+    agentId: 'founder-chief-of-staff',
+    actionType: 'orchestrate',
+    summary: `task_completed: ${summary}`,
+    approvalStatus: 'not_required',
+    relatedEventId: relatedEventId ?? task.id
+  })
+  return entry.id
+}
+
+function auditTaskFailed(
+  task: SchedulerTask,
+  safeMessage: string,
+  technicalMessage: string,
+  errorCode: string
+): string {
+  const entry = recordAgentAuditEntry({
+    agentId: 'founder-chief-of-staff',
+    actionType: 'create_audit_note',
+    summary: `task_failed: ${safeMessage} [${errorCode}] — ${technicalMessage}`,
+    approvalStatus: 'not_required',
+    relatedEventId: task.id
+  })
+  return entry.id
+}
+
+function buildFailedResult(
+  task: SchedulerTask,
+  startedAt: string,
+  input: {
+    errorCode: string
+    safeMessage: string
+    technicalMessage: string
+    auditRecordIds: string[]
+    summary?: string
+    emailReportId?: string
+    redactionCount?: number
+    safetyStatus?: SchedulerTaskRunResult['safetyStatus']
+  }
+): SchedulerTaskRunResult {
+  const result: SchedulerTaskRunResult = {
+    taskId: task.id,
+    taskType: task.taskType,
+    startedAt,
+    completedAt: new Date().toISOString(),
+    status: 'failed',
+    summary: input.summary ?? `Failed — ${input.safeMessage}`,
+    eventIds: [],
+    auditRecordIds: input.auditRecordIds,
+    approvalItemIds: [],
+    criticalFailures: 0,
+    weaknessesDetected: 0,
+    proposalsCreated: 0,
+    error: input.safeMessage,
+    errorCode: input.errorCode,
+    safeMessage: input.safeMessage,
+    technicalMessage: input.technicalMessage,
+    emailReportId: input.emailReportId,
+    redactionCount: input.redactionCount,
+    safetyStatus: input.safetyStatus
+  }
+  recordTaskRun(task.id, result)
+  return result
 }
 
 function runInternalBrainTask(
@@ -87,7 +162,6 @@ function runInternalBrainTask(
   buildFounderCoverageMap({ evaluationRuns: [run] })
   generateFounderChiefOfStaffBrief({ evaluationRuns: [run] })
 
-  const completedAt = new Date().toISOString()
   const auditComplete = recordAgentAuditEntry({
     agentId: 'orb-quality-agent',
     actionType: 'run_synthetic_evaluation',
@@ -97,11 +171,13 @@ function runInternalBrainTask(
     relatedEventId: event.id
   })
 
+  auditTaskCompleted(task, `${task.name} completed. ${run.scenarioCount} synthetic scenarios.`)
+
   const result: SchedulerTaskRunResult = {
     taskId: task.id,
     taskType: task.taskType,
     startedAt,
-    completedAt,
+    completedAt: new Date().toISOString(),
     status: 'completed',
     summary: `${task.name} completed. ${run.scenarioCount} synthetic scenarios, ${run.criticalFailures} critical failures.`,
     eventIds: [event.id],
@@ -135,7 +211,6 @@ function runCoverageGapScan(task: SchedulerTask): SchedulerTaskRunResult {
     requiresReview: gaps.length > 0
   })
 
-  const completedAt = new Date().toISOString()
   const auditComplete = recordAgentAuditEntry({
     agentId: 'orb-quality-agent',
     actionType: 'update_coverage_map',
@@ -144,11 +219,13 @@ function runCoverageGapScan(task: SchedulerTask): SchedulerTaskRunResult {
     relatedEventId: event.id
   })
 
+  auditTaskCompleted(task, `Coverage scan found ${gaps.length} gap(s).`)
+
   const result: SchedulerTaskRunResult = {
     taskId: task.id,
     taskType: task.taskType,
     startedAt,
-    completedAt,
+    completedAt: new Date().toISOString(),
     status: 'completed',
     summary: `Coverage scan found ${gaps.length} gap(s). Strength: ${coverage.overallStrength}.`,
     eventIds: [event.id],
@@ -202,7 +279,6 @@ function runLearningProposalCreation(task: SchedulerTask): SchedulerTaskRunResul
     requiresReview: proposalsCreated > 0
   })
 
-  const completedAt = new Date().toISOString()
   const auditComplete = recordAgentAuditEntry({
     agentId: 'founder-chief-of-staff',
     actionType: 'orchestrate',
@@ -211,11 +287,13 @@ function runLearningProposalCreation(task: SchedulerTask): SchedulerTaskRunResul
     relatedEventId: event.id
   })
 
+  auditTaskCompleted(task, `Detected ${weaknessesCount} weakness(es), created ${proposalsCreated} proposal(s).`)
+
   const result: SchedulerTaskRunResult = {
     taskId: task.id,
     taskType: task.taskType,
     startedAt,
-    completedAt,
+    completedAt: new Date().toISOString(),
     status: proposalsCreated > 0 ? 'awaiting_approval' : 'completed',
     summary: `Detected ${weaknessesCount} weakness(es), created ${proposalsCreated} proposal(s).`,
     eventIds: [event.id],
@@ -239,7 +317,6 @@ function runLiveLlmRecommendation(
 
   const item = recommendLiveLlmRun(recommendation) ?? evaluateAndRecommendLiveLlmGates()
 
-  const completedAt = new Date().toISOString()
   const auditComplete = recordAgentAuditEntry({
     agentId: 'orb-quality-agent',
     actionType: 'create_audit_note',
@@ -253,7 +330,7 @@ function runLiveLlmRecommendation(
     taskId: task.id,
     taskType: task.taskType,
     startedAt,
-    completedAt,
+    completedAt: new Date().toISOString(),
     status: item ? 'awaiting_approval' : 'skipped',
     summary: item
       ? `Recommendation queued: ${item.title}. Live LLM will NOT execute without approval.`
@@ -274,31 +351,111 @@ function runEmailReport(task: SchedulerTask, type: 'daily' | 'weekly'): Schedule
   const startedAt = new Date().toISOString()
   const auditId = auditTaskStart(task)
 
-  const report = type === 'daily' ? generateDailyEmailReport() : generateWeeklyEmailReport()
-  const sendResult = sendFounderEmailReport(report)
+  const { sendResult, safety, blocked } = generateAndSendFounderEmailReport(type)
 
-  const auditComplete = recordAgentAuditEntry({
+  if (blocked || !sendResult) {
+    const failedAudit = auditTaskFailed(
+      task,
+      'Email report blocked because potential identifiable data was detected.',
+      safety.technicalMessage ?? safety.blockedReason ?? 'Safety checker blocked report.',
+      'EMAIL_REPORT_SAFETY_BLOCKED'
+    )
+
+    recordAgentAuditEntry({
+      agentId: 'founder-chief-of-staff',
+      actionType: 'create_audit_note',
+      summary: `email_report_safety_blocked: ${task.name}. No email sent. Confirmed: safeguarding block applied.`,
+      approvalStatus: 'not_required',
+      relatedEventId: task.id
+    })
+
+    return buildFailedResult(task, startedAt, {
+      errorCode: 'EMAIL_REPORT_SAFETY_BLOCKED',
+      safeMessage: 'Email report blocked because potential identifiable data was detected.',
+      technicalMessage: safety.technicalMessage ?? safety.blockedReason ?? 'Safety checker blocked report.',
+      auditRecordIds: [auditId, failedAudit],
+      summary: `Failed — Safety checker blocked report. No email sent.`,
+      safetyStatus: 'blocked',
+      redactionCount: safety.redactionCount
+    })
+  }
+
+  const { record, status, safetyStatus, redactionCount } = sendResult
+
+  if (status === 'failed') {
+    const failedAudit = auditTaskFailed(
+      task,
+      sendResult.error ?? 'Email report delivery failed.',
+      sendResult.error ?? 'Provider error',
+      'EMAIL_REPORT_SEND_FAILED'
+    )
+    return buildFailedResult(task, startedAt, {
+      errorCode: 'EMAIL_REPORT_SEND_FAILED',
+      safeMessage: sendResult.error ?? 'Email report delivery failed.',
+      technicalMessage: sendResult.error ?? 'Provider configuration error',
+      auditRecordIds: [auditId, failedAudit, record.auditRecordId],
+      summary: `Failed — ${sendResult.error}`,
+      emailReportId: record.id,
+      safetyStatus,
+      redactionCount
+    })
+  }
+
+  const previewAudit = recordAgentAuditEntry({
     agentId: 'founder-chief-of-staff',
     actionType: 'orchestrate',
-    summary: `Email report ${sendResult.status}: ${report.subject}`,
+    summary: `email_report_preview_generated: ${record.subject}. Provider: dry_run. Safety: ${safetyStatus}. Redactions: ${redactionCount}. No real child data confirmed.`,
     approvalStatus: 'not_required',
-    relatedEventId: sendResult.record.id
+    relatedEventId: record.id
   })
+
+  if (safetyStatus === 'redacted') {
+    recordAgentAuditEntry({
+      agentId: 'founder-chief-of-staff',
+      actionType: 'create_audit_note',
+      summary: `email_report_safety_redacted: ${redactionCount} section(s) redacted. Preview generated. No email sent.`,
+      approvalStatus: 'not_required',
+      relatedEventId: record.id
+    })
+  }
+
+  auditTaskCompleted(
+    task,
+    status === 'dry_run'
+      ? `Dry run preview generated. ${redactionCount} redaction(s).`
+      : `Email report ${status}: ${record.subject}`
+  )
+
+  const runStatus: SchedulerTaskRunResult['status'] =
+    safetyStatus === 'redacted' ? 'redacted' : 'completed'
+
+  const summary =
+    safetyStatus === 'redacted'
+      ? `redacted — Preview generated. ${redactionCount} section(s) redacted by safety checker. No email sent.`
+      : status === 'dry_run'
+        ? `Completed — Dry run preview generated. No email sent.`
+        : `Email report ${status}: ${record.subject}`
 
   const result: SchedulerTaskRunResult = {
     taskId: task.id,
     taskType: task.taskType,
     startedAt,
     completedAt: new Date().toISOString(),
-    status: sendResult.status === 'failed' ? 'failed' : 'completed',
-    summary: `Email report ${sendResult.status}: ${report.subject}`,
+    status: runStatus,
+    summary,
     eventIds: [],
-    auditRecordIds: [auditId, auditComplete.id, sendResult.record.auditRecordId],
+    auditRecordIds: [auditId, previewAudit.id, record.auditRecordId],
     approvalItemIds: [],
     criticalFailures: 0,
     weaknessesDetected: 0,
     proposalsCreated: 0,
-    error: sendResult.error
+    emailReportId: record.id,
+    redactionCount,
+    safetyStatus,
+    safeMessage:
+      safetyStatus === 'redacted'
+        ? `${redactionCount} section(s) redacted. Preview available.`
+        : 'Dry run preview generated successfully.'
   }
 
   recordTaskRun(task.id, result)
@@ -317,6 +474,8 @@ function runFinanceSnapshot(task: SchedulerTask): SchedulerTaskRunResult {
     summary: `Finance snapshot created. Burn: £${snapshot.monthlyBurn}, runway: ${snapshot.runwayMonths ?? 'unknown'} months.`,
     approvalStatus: 'not_required'
   })
+
+  auditTaskCompleted(task, `Finance snapshot: burn £${snapshot.monthlyBurn}/mo.`)
 
   const result: SchedulerTaskRunResult = {
     taskId: task.id,
@@ -349,6 +508,8 @@ function runRevenuePipelineReview(task: SchedulerTask): SchedulerTaskRunResult {
     summary: `Revenue pipeline review: ${snapshot.demoRequests} demo requests, pipeline £${snapshot.pipelineValue}.`,
     approvalStatus: 'not_required'
   })
+
+  auditTaskCompleted(task, `Pipeline: ${snapshot.demoRequests} demos.`)
 
   const result: SchedulerTaskRunResult = {
     taskId: task.id,
@@ -445,7 +606,27 @@ export function executeSchedulerTask(task: SchedulerTask): SchedulerTaskRunResul
     revenue_pipeline_review: () => runRevenuePipelineReview(task)
   }
 
-  return handlers[task.taskType]()
+  const startedAt = new Date().toISOString()
+
+  try {
+    return handlers[task.taskType]()
+  } catch (error) {
+    const technicalMessage = error instanceof Error ? error.message : 'Unknown scheduler error'
+    const failedAudit = auditTaskFailed(
+      task,
+      'Task error — see audit trail for details.',
+      technicalMessage,
+      'SCHEDULER_TASK_ERROR'
+    )
+
+    return buildFailedResult(task, startedAt, {
+      errorCode: 'SCHEDULER_TASK_ERROR',
+      safeMessage: 'Task error — see audit trail for details.',
+      technicalMessage,
+      auditRecordIds: [failedAudit],
+      summary: `Failed — task error, see audit trail.`
+    })
+  }
 }
 
 export function runDueSchedulerTasks(now = new Date()): SchedulerTaskRunResult[] {

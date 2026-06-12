@@ -49,12 +49,20 @@ export type SchedulerTask = {
   lastRunDate: string | null
 }
 
+export type SchedulerTaskRunStatus =
+  | 'completed'
+  | 'failed'
+  | 'skipped'
+  | 'awaiting_approval'
+  | 'redacted'
+  | 'blocked'
+
 export type SchedulerTaskRunResult = {
   taskId: string
   taskType: SchedulerTaskType
   startedAt: string
   completedAt: string
-  status: 'completed' | 'failed' | 'skipped' | 'awaiting_approval'
+  status: SchedulerTaskRunStatus
   summary: string
   eventIds: string[]
   auditRecordIds: string[]
@@ -63,6 +71,32 @@ export type SchedulerTaskRunResult = {
   weaknessesDetected: number
   proposalsCreated: number
   error?: string
+  errorCode?: string
+  safeMessage?: string
+  technicalMessage?: string
+  emailReportId?: string
+  redactionCount?: number
+  safetyStatus?: EmailSafetyStatus
+}
+
+export type EmailSafetyStatus = 'passed' | 'redacted' | 'blocked'
+
+export type EmailReportRedaction = {
+  sectionKey: string
+  reason: string
+}
+
+export type EmailReportPreview = {
+  recipient: string
+  provider: EmailReportSettings['provider']
+  subject: string
+  generatedAt: string
+  sections: Record<string, string[]>
+  redactions: EmailReportRedaction[]
+  safetyStatus: EmailSafetyStatus
+  redactionCount: number
+  noRealChildDataConfirmed: boolean
+  approvalItems: string[]
 }
 
 export type LiveLlmGateStatus = {
@@ -113,6 +147,16 @@ export type ApprovalCategory =
 
 export type EmailReportType = 'daily' | 'weekly'
 
+export type EmailReportContent = {
+  type: EmailReportType
+  subject: string
+  recipient: string
+  htmlBody: string
+  textBody: string
+  generatedAt: string
+  sections: Record<string, string[]>
+}
+
 export type EmailReportRecord = {
   id: string
   type: EmailReportType
@@ -120,9 +164,12 @@ export type EmailReportRecord = {
   subject: string
   generatedAt: string
   sentAt: string | null
-  status: 'generated' | 'sent' | 'failed' | 'dry_run'
+  status: 'generated' | 'sent' | 'failed' | 'dry_run' | 'blocked' | 'redacted'
   auditRecordId: string
   error?: string
+  safetyStatus?: EmailSafetyStatus
+  redactionCount?: number
+  preview?: EmailReportPreview
 }
 
 export type EmailReportSettings = {
