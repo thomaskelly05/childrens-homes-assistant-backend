@@ -1,4 +1,9 @@
 import type {
+  FounderAgentRecommendation,
+  FounderAgentEvent,
+  FounderAutonomyLoopStatus
+} from './founder-agent-event-types'
+import type {
   FounderAgentActionResult,
   FounderAgentLiveState,
   FounderAgentApprovalItem,
@@ -39,6 +44,10 @@ export type FounderAgentsOverview = {
   qualityLabIntegration: ReturnType<
     typeof import('./founder-agent-service').getQualityLabAgentIntegration
   >
+  liveEvents: FounderAgentEvent[]
+  recommendations: FounderAgentRecommendation[]
+  recommendationsByAgent: Record<string, FounderAgentRecommendation[]>
+  autonomyStatus: FounderAutonomyLoopStatus
 }
 
 export async function fetchFounderAgents(): Promise<FounderAgentsOverview> {
@@ -72,7 +81,14 @@ export async function postFounderAutonomousLoop(
 export async function approveFounderAgentAction(approvalId: string): Promise<FounderAgentApprovalItem> {
   return founderAgentsFetch('/api/founder/agents/approve', {
     method: 'POST',
-    body: JSON.stringify({ approvalId })
+    body: JSON.stringify({ approvalId, action: 'approve' })
+  })
+}
+
+export async function markReviewedFounderAgentAction(approvalId: string): Promise<FounderAgentApprovalItem> {
+  return founderAgentsFetch('/api/founder/agents/approve', {
+    method: 'POST',
+    body: JSON.stringify({ approvalId, action: 'mark_reviewed' })
   })
 }
 

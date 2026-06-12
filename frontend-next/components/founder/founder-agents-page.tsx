@@ -12,6 +12,7 @@ import {
   fetchFounderAgentAudit,
   fetchFounderAgents,
   fetchFounderAgentsBrief,
+  markReviewedFounderAgentAction,
   postFounderAgentAction,
   postFounderAutonomousLoop,
   rejectFounderAgentAction,
@@ -19,6 +20,7 @@ import {
   type FounderAgentsOverview
 } from '@/lib/founder/agents/autonomous/founder-agents-client'
 import { GOVERNANCE_COPY } from '@/lib/founder/agents/autonomous/founder-agent-safety'
+import type { FounderAgentEvent, FounderAgentRecommendation } from '@/lib/founder/agents/autonomous/founder-agent-event-types'
 import type {
   FounderAgentApprovalItem,
   FounderAgentAuditEntry,
@@ -97,12 +99,14 @@ function ApprovalQueueItem({
   item,
   onApprove,
   onReject,
-  onRequestChanges
+  onRequestChanges,
+  onMarkReviewed
 }: {
   item: FounderAgentApprovalItem
   onApprove: (id: string) => void
   onReject: (id: string) => void
   onRequestChanges: (id: string) => void
+  onMarkReviewed: (id: string) => void
 }) {
   if (item.status !== 'pending' && item.status !== 'changes_requested') return null
 
@@ -115,8 +119,14 @@ function ApprovalQueueItem({
         <div>
           <p className="font-semibold text-white">{item.title}</p>
           <p className="mt-1 text-sm text-slate-400">{item.summary}</p>
+          {item.safetyNotes ? (
+            <p className="mt-2 text-xs text-amber-200/80" data-testid="founder-agent-safety-notes">
+              {item.safetyNotes}
+            </p>
+          ) : null}
           <p className="mt-2 text-xs text-slate-500">
             {item.agentId} · {item.actionType.replace(/_/g, ' ')} · {item.riskLevel} risk
+            {item.eventId ? ` · event ${item.eventId}` : ''}
           </p>
         </div>
         <ApprovalBadge required />
@@ -146,7 +156,46 @@ function ApprovalQueueItem({
         >
           Request changes
         </button>
+        <button
+          type="button"
+          onClick={() => onMarkReviewed(item.id)}
+          className="rounded-lg border border-slate-400/30 bg-slate-500/10 px-3 py-1.5 text-xs font-bold text-slate-200"
+          data-testid="founder-agent-mark-reviewed-btn"
+        >
+          Mark reviewed
+        </button>
       </div>
+    </div>
+  )
+}
+
+function LiveEventRow({ event }: { event: FounderAgentEvent }) {
+  return (
+    <div className="rounded-lg border border-white/5 bg-white/[0.02] px-3 py-2 text-sm" data-testid="founder-agent-live-event">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="font-semibold text-white">{event.title}</p>
+        <span className={`rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase ${RISK_TONE[event.severity] ?? RISK_TONE.low}`}>
+          {event.severity}
+        </span>
+      </div>
+      <p className="mt-1 text-slate-400">{event.summary}</p>
+      <p className="mt-1 text-xs text-slate-500">
+        {event.source} · {event.type.replace(/_/g, ' ')} ·{' '}
+        {event.processed ? 'processed' : 'pending'} · agents: {event.affectedAgents.join(', ')}
+      </p>
+    </div>
+  )
+}
+
+function RecommendationRow({ rec }: { rec: FounderAgentRecommendation }) {
+  return (
+    <div className="rounded-lg border border-white/5 bg-white/[0.02] px-3 py-2 text-sm" data-testid="founder-agent-recommendation">
+      <p className="font-semibold text-white">{rec.agentId}</p>
+      <p className="text-slate-300">{rec.recommendation}</p>
+      <p className="mt-1 text-xs text-slate-500">
+        {rec.riskLevel} risk · {rec.proposedAction.replace(/_/g, ' ')} ·{' '}
+        {rec.approvalRequired ? 'approval required' : 'observe only'}
+      </p>
     </div>
   )
 }
@@ -211,6 +260,11 @@ export function FounderAgentsPage() {
 
   async function handleRequestChanges(id: string) {
     await rejectFounderAgentAction(id, true)
+    await load()
+  }
+
+  async function handleMarkReviewed(id: string) {
+    await markReviewedFounderAgentAction(id)
     await load()
   }
 
@@ -295,6 +349,37 @@ export function FounderAgentsPage() {
 
         {message ? <p className="text-sm text-emerald-300">{message}</p> : null}
 
+        <FounderSectionCard eyebrow="Live events" title="Agent event feed">
+          {(overview?.liveEvents ?? []).length === 0 ? (
+            <p className="text-sm text-slate-400">No live events yet. Events appear when evaluation runs complete, deploys occur, or governance blockers are detected.</p>
+          ) : (
+            <div className="space-y-2" data-testid="founder-agent-live-events-feed">
+              {(overview?.liveEvents ?? []).slice(0, 15).map((event) => (
+                <LiveEventRow key={event.id} event={event} />
+              ))}
+            </div>
+          )}
+        </FounderSectionCard>
+
+        <FounderSectionCard eyebrow="Recommendations" title="Agent recommendations">
+          {(overview?.recommendations ?? []).length === 0 ? (
+            <p className="text-sm text-slate-400">No recommendations from live events yet.</p>
+          ) : (
+            <div className="space-y-4" data-testid="founder-agent-recommendations">
+              {Object.entries(overview?.recommendationsByAgent ?? {}).map(([agentId, recs]) => (
+                <div key={agentId}>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">{agentId}</p>
+                  <div className="mt-2 space-y-2">
+                    {recs.slice(0, 5).map((rec) => (
+                      <RecommendationRow key={rec.id} rec={rec} />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </FounderSectionCard>
+
         <FounderSectionCard eyebrow="Chief of Staff" title="Today's Founder Brief">
           {brief ? (
             <div className="space-y-4 text-sm" data-testid="founder-chief-of-staff-brief">
@@ -306,6 +391,26 @@ export function FounderAgentsPage() {
                   ))}
                 </ol>
               </div>
+              {brief.testsRecommended && brief.testsRecommended.length > 0 ? (
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">Tests recommended</p>
+                  <ul className="mt-2 list-disc space-y-1 pl-5 text-cyan-200">
+                    {brief.testsRecommended.map((item) => (
+                      <li key={item}>{item}</li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+              {brief.blockersFromEvents && brief.blockersFromEvents.length > 0 ? (
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">Blockers from events</p>
+                  <ul className="mt-2 list-disc space-y-1 pl-5 text-rose-200">
+                    {brief.blockersFromEvents.map((item) => (
+                      <li key={item}>{item}</li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
               {brief.whatNeedsApproval.length > 0 ? (
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">Needs approval</p>
@@ -340,6 +445,7 @@ export function FounderAgentsPage() {
                   onApprove={handleApprove}
                   onReject={handleReject}
                   onRequestChanges={handleRequestChanges}
+                  onMarkReviewed={handleMarkReviewed}
                 />
               ))}
             </div>
@@ -396,7 +502,26 @@ export function FounderAgentsPage() {
           )}
         </FounderSectionCard>
 
-        <FounderSectionCard eyebrow="Autonomy" title="Autonomy settings">
+        <FounderSectionCard eyebrow="Autonomy" title="Autonomy status">
+          {overview?.autonomyStatus ? (
+            <div className="mb-4 space-y-2 text-sm" data-testid="founder-autonomy-status">
+              <p className="text-slate-300">
+                Last loop:{' '}
+                {overview.autonomyStatus.lastAutonomousLoopRun
+                  ? new Date(overview.autonomyStatus.lastAutonomousLoopRun).toLocaleString()
+                  : 'never'}
+                {overview.autonomyStatus.lastAutonomousLoopTrigger
+                  ? ` (${overview.autonomyStatus.lastAutonomousLoopTrigger.replace(/_/g, ' ')})`
+                  : ''}
+              </p>
+              <p className="text-cyan-200">Next: {overview.autonomyStatus.nextSuggestedAction}</p>
+              <ul className="list-disc pl-5 text-xs text-emerald-200/80">
+                {overview.autonomyStatus.safetyGatesActive.map((gate) => (
+                  <li key={gate}>{gate}</li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
           {settings ? (
             <div className="space-y-4 text-sm" data-testid="founder-autonomy-settings">
               <p className="text-slate-400">

@@ -5,11 +5,13 @@ import { executeFounderAgentAction } from './founder-agent-actions'
 import { recordAgentAuditEntry } from './founder-agent-audit'
 import { buildFounderCoverageMap } from './founder-agent-coverage-map'
 import { generateFounderChiefOfStaffBrief } from './founder-chief-of-staff'
+import type { FounderAgentEvent } from './founder-agent-event-types'
 import type {
   FounderAutonomousLoopResult,
   FounderAutonomousLoopTrigger,
   FounderAutonomySettings
 } from './founder-agent-types'
+import type { FounderAutonomyLoopStatus } from './founder-agent-event-types'
 
 export const DEFAULT_AUTONOMY_SETTINGS: FounderAutonomySettings = {
   autoRunAfterDeploy: false,
@@ -21,6 +23,8 @@ export const DEFAULT_AUTONOMY_SETTINGS: FounderAutonomySettings = {
 }
 
 let autonomySettings: FounderAutonomySettings = { ...DEFAULT_AUTONOMY_SETTINGS }
+let lastAutonomousLoopRun: string | null = null
+let lastAutonomousLoopTrigger: FounderAutonomousLoopTrigger | null = null
 
 export function getAutonomySettings(): FounderAutonomySettings {
   return { ...autonomySettings }
@@ -48,6 +52,61 @@ function triggerAllowed(trigger: FounderAutonomousLoopTrigger, settings: Founder
   if (trigger === 'scheduled_nightly_synthetic') return settings.autoRunNightly
   if (trigger === 'after_pr_merged') return settings.autoRunAfterDeploy
   return false
+}
+
+export function getAutonomyLoopStatus(): FounderAutonomyLoopStatus {
+  const settings = getAutonomySettings()
+  return {
+    settings,
+    lastAutonomousLoopRun,
+    lastAutonomousLoopTrigger,
+    nextSuggestedAction: lastAutonomousLoopRun
+      ? 'Review agent recommendations and approval queue.'
+      : 'Run manual founder trigger or wait for live events.',
+    safetyGatesActive: [
+      'No auto-merge',
+      'No auto-send',
+      'No auto-publish',
+      'Launch gates cannot be overridden',
+      'Failed runs remain visible',
+      'Tom remains approval gate'
+    ]
+  }
+}
+
+export function handleAutonomyEvent(event: FounderAgentEvent): void {
+  const settings = getAutonomySettings()
+
+  if (event.type === 'deploy_completed' && settings.autoRunAfterDeploy) {
+    const packs = settings.allowedPacks
+    if (packs.includes('adversarial-sample') || packs.includes('high-risk-sample')) {
+      executeFounderAgentAction({
+        agentId: 'orb-quality-agent',
+        actionType: 'run_synthetic_evaluation',
+        context: { qualityRuns: getQualityRuns(), evaluationRuns: getEvaluationRuns() }
+      })
+      recordAgentAuditEntry({
+        agentId: 'founder-chief-of-staff',
+        actionType: 'orchestrate',
+        summary: 'Post-deploy: recommended adversarial then high-risk evaluation — approval required.',
+        approvalStatus: 'pending',
+        relatedEventId: event.id
+      })
+    }
+  }
+
+  if (event.type === 'evaluation_run_failed' || event.type === 'critical_failure_detected') {
+    if (settings.autoCreateDraftPR) {
+      recordAgentAuditEntry({
+        agentId: 'orb-quality-agent',
+        actionType: 'create_draft_pr_summary',
+        summary: 'autoCreateDraftPR: draft PR summary prepared — no auto-merge.',
+        approvalStatus: 'pending',
+        relatedEventId: event.id,
+        relatedRunId: event.relatedRunId
+      })
+    }
+  }
 }
 
 export function runAutonomousLoop(trigger: FounderAutonomousLoopTrigger): FounderAutonomousLoopResult {
@@ -151,6 +210,9 @@ export function runAutonomousLoop(trigger: FounderAutonomousLoopTrigger): Founde
     summary: `Autonomous loop completed for ${trigger}. Founder approval required: ${founderApprovalRequired}.`,
     approvalStatus: founderApprovalRequired ? 'pending' : 'not_required'
   })
+
+  lastAutonomousLoopRun = new Date().toISOString()
+  lastAutonomousLoopTrigger = trigger
 
   return {
     trigger,

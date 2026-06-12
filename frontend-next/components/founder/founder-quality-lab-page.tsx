@@ -402,6 +402,41 @@ export function FounderQualityLabPage() {
                 </ol>
               </div>
             ) : null}
+            {agentIntegration.agentAnalysisAvailable ? (
+              <p className="text-xs font-bold text-emerald-300" data-testid="quality-lab-agent-analysis-available">
+                Agent analysis available
+              </p>
+            ) : null}
+            <div className="flex flex-wrap gap-2">
+              <Link
+                href="/founder/orb-quality-agent"
+                className="rounded-lg border border-emerald-400/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-bold text-emerald-200"
+                data-testid="quality-lab-create-build-brief"
+              >
+                Create build brief
+              </Link>
+              <Link
+                href="/founder/orb-quality-agent"
+                className="rounded-lg border border-violet-400/30 bg-violet-500/10 px-3 py-1.5 text-xs font-bold text-violet-200"
+                data-testid="quality-lab-create-draft-pr"
+              >
+                Create draft PR summary
+              </Link>
+              <Link
+                href="/founder/agents"
+                className="rounded-lg border border-cyan-400/30 bg-cyan-500/10 px-3 py-1.5 text-xs font-bold text-cyan-200"
+                data-testid="quality-lab-generate-scenarios"
+              >
+                Generate new scenarios for weak areas
+              </Link>
+              <Link
+                href="/founder/agents"
+                className="rounded-lg border border-amber-400/30 bg-amber-500/10 px-3 py-1.5 text-xs font-bold text-amber-200"
+                data-testid="quality-lab-send-approval-queue"
+              >
+                Send to approval queue
+              </Link>
+            </div>
             <div className="flex flex-wrap gap-3">
               <Link href="/founder/agents" className="text-xs font-bold text-violet-300 hover:text-violet-200">
                 Founder Agents →

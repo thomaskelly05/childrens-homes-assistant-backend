@@ -5,6 +5,7 @@ import { sanitiseFounderPayload } from '@/lib/founder/persistence/persistence-sa
 
 import {
   approveAgentAction,
+  markReviewedAgentAction,
   rejectAgentAction,
   requestChangesOnAgentAction
 } from './founder-agent-actions'
@@ -16,6 +17,7 @@ import {
   getAgentApprovalQueue,
   getAgentAuditTrail,
   getFounderAgentLiveStates,
+  getFounderAgentsEventOverview,
   getQualityLabAgentIntegration,
   runAgentAction
 } from './founder-agent-service'
@@ -34,11 +36,17 @@ export async function handleFounderAgentsGet(): Promise<NextResponse> {
   const context = buildAgentContext()
   const agents = getFounderAgentLiveStates(context)
   const approvalQueue = getAgentApprovalQueue()
+  const eventOverview = getFounderAgentsEventOverview()
 
   return NextResponse.json(
     sanitiseFounderPayload({
       success: true,
-      data: { agents, approvalQueue, qualityLabIntegration: getQualityLabAgentIntegration(context) }
+      data: {
+        agents,
+        approvalQueue,
+        qualityLabIntegration: getQualityLabAgentIntegration(context),
+        ...eventOverview
+      }
     })
   )
 }
@@ -96,12 +104,26 @@ export async function handleFounderAgentsApprovePost(request: Request): Promise<
   const session = await requireFounderSession()
   if (!session.ok) return session.response
 
-  const body = (await request.json().catch(() => ({}))) as { approvalId?: string }
+  const body = (await request.json().catch(() => ({}))) as {
+    approvalId?: string
+    action?: 'approve' | 'reject' | 'request_changes' | 'mark_reviewed'
+  }
   if (!body.approvalId) {
     return NextResponse.json({ error: 'approvalId required' }, { status: 400 })
   }
 
-  const updated = approveAgentAction(body.approvalId, founderActor(session))
+  const actor = founderActor(session)
+  let updated
+  if (body.action === 'mark_reviewed') {
+    updated = markReviewedAgentAction(body.approvalId, actor)
+  } else if (body.action === 'reject') {
+    updated = rejectAgentAction(body.approvalId, actor)
+  } else if (body.action === 'request_changes') {
+    updated = requestChangesOnAgentAction(body.approvalId, actor)
+  } else {
+    updated = approveAgentAction(body.approvalId, actor)
+  }
+
   if (!updated) {
     return NextResponse.json({ error: 'Approval not found' }, { status: 404 })
   }
