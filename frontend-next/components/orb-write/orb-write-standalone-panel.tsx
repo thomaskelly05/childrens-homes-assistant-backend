@@ -41,7 +41,7 @@ import {
   saveOrbDictateNote
 } from '@/lib/orb/dictate/orb-dictate-client'
 import type { OrbDictateGenerateResult } from '@/lib/orb/dictate/orb-dictate-types'
-import { resolveOrbRecordingRecordType } from '@/lib/orb/recording/orb-recording-framework'
+import { resolveOrbRecordingRecordType, buildOrbWriteTemplateSectionBody } from '@/lib/orb/recording/orb-recording-framework'
 import { copyOrbWriteText, exportOrbWritePdf, printOrbWriteDocument } from '@/lib/orb/write/orb-write-export'
 import {
   clearOrbWriteHandoff,
@@ -423,6 +423,23 @@ export function OrbWriteStandalonePanel({
   )
 
   const hasExistingContent = Boolean(doc?.body.replace(/<[^>]+>/g, '').trim())
+
+  const requestRecordTypeChange = useCallback(
+    (nextRecordTypeId: string) => {
+      if (nextRecordTypeId === recordTypeId) return
+      const nextRecordType = resolveOrbRecordingRecordType({ recordTypeId: nextRecordTypeId })
+      if (hasExistingContent) {
+        setTemplatePickerOpen(true)
+        return
+      }
+      applyTemplate({
+        recordType: nextRecordType,
+        mode: 'full',
+        structuredBody: buildOrbWriteTemplateSectionBody(nextRecordType)
+      })
+    },
+    [applyTemplate, hasExistingContent, recordTypeId]
+  )
   const documentFirst = !sourcePanelOpen && !guidancePanelOpen
 
   return (
@@ -535,6 +552,8 @@ export function OrbWriteStandalonePanel({
                   onAskOrb={() => void runAnalysis()}
                   onOpenSource={() => setSourcePanelOpen(true)}
                   onOpenGuidance={() => setGuidancePanelOpen(true)}
+                  onOpenTemplatePicker={() => setTemplatePickerOpen(true)}
+                  onRecordTypeSelect={requestRecordTypeChange}
                 />
               </div>
               {guidancePanelOpen ? (

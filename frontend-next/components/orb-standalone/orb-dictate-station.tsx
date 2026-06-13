@@ -1386,6 +1386,8 @@ export function OrbDictateStation({
           onGenerate={() => void runGenerate()}
           mobileRecordingOpen={mobileRecordingOpen}
           onToggleRecordingOptions={() => setMobileRecordingOpen((o) => !o)}
+          selectedTemplateId={selectedTemplateId}
+          onTemplateChange={handleTemplateChange}
           dictateMode={dictateMode}
           onDictateModeChange={setDictateMode}
           noteType={noteType}

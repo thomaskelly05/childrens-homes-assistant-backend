@@ -16,12 +16,16 @@ const FEATURED_RECORD_TYPE_IDS = new Set([
   'general_dictation',
   'daily_record',
   'incident_report',
-  'missing_from_home_record',
-  'safeguarding_concern',
-  'physical_intervention',
+  'handover',
   'key_work_session',
+  'chronology_entry',
+  'safeguarding_concern',
+  'behaviour_reflection',
+  'supervision_preparation',
   'manager_summary',
-  'chronology_entry'
+  'reg_44_evidence_summary',
+  'reg_45_reflection',
+  'action_plan'
 ])
 
 export function orbWriteRecordTypeOptions(): OrbRecordingRecordType[] {

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { OrbWriteMobileToolbar } from '@/components/orb-write/orb-write-mobile-toolbar'
+import { OrbWriteRecordTypeSelector } from '@/components/orb-write/orb-write-record-type-selector'
 import { OrbWriteToolbar } from '@/components/orb-write/orb-write-toolbar'
 import { useOrbWriteZoomHandlers } from '@/components/orb-write/orb-write-zoom-controls'
 import { useOrbResponsiveMode } from '@/components/orb-standalone/use-orb-responsive-mode'
@@ -49,6 +50,8 @@ export function OrbWriteEditor({
   onAskOrb,
   onOpenSource,
   onOpenGuidance,
+  onOpenTemplatePicker,
+  onRecordTypeSelect,
   lastEdited
 }: {
   document: OrbWriteDocument
@@ -62,6 +65,8 @@ export function OrbWriteEditor({
   onAskOrb?: () => void
   onOpenSource?: () => void
   onOpenGuidance?: () => void
+  onOpenTemplatePicker?: () => void
+  onRecordTypeSelect?: (recordTypeId: string) => void
   lastEdited?: string
 }) {
   const { isMobile } = useOrbResponsiveMode()
@@ -179,12 +184,12 @@ export function OrbWriteEditor({
             className="flex shrink-0 flex-wrap items-center gap-1.5 border-b border-[var(--orb-line)]/40 px-3 py-1.5 text-[10px] text-[var(--orb-muted)]"
             data-orb-write-notepad-meta
           >
-            <span
-              className="inline-flex rounded-full border border-[var(--orb-line)]/50 px-2 py-0.5 font-medium text-[var(--orb-foreground)]"
-              data-orb-write-record-type-badge
-            >
-              {doc.record_type_label}
-            </span>
+            <OrbWriteRecordTypeSelector
+              recordTypeId={doc.record_type_id ?? 'general_dictation'}
+              variant="badge"
+              onOpenFullPicker={onOpenTemplatePicker}
+              onSelect={(recordType) => onRecordTypeSelect?.(recordType.id)}
+            />
             {doc.is_finalised ? (
               <span
                 className="inline-flex shrink-0 items-center rounded-full border border-emerald-400/40 bg-emerald-500/10 px-2 py-0.5 font-semibold uppercase tracking-wide text-emerald-800"
@@ -292,6 +297,7 @@ export function OrbWriteEditor({
           onAskOrb={onAskOrb}
           onOpenSource={onOpenSource}
           onOpenGuidance={onOpenGuidance}
+          onOpenTemplatePicker={onOpenTemplatePicker}
         />
       ) : null}
     </div>

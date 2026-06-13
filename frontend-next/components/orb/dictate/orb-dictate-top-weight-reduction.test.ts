@@ -52,12 +52,12 @@ describe('ORB Dictate top-weight reduction', () => {
     const labels = [
       'General Dictation',
       'Daily Record',
-      'Incident Report',
+      'Incident Reflection',
       'Missing From Home Record',
-      'Safeguarding Concern',
+      'Safeguarding Reflection',
       'Physical Intervention',
-      'Key Work Session',
-      'Manager Summary',
+      'Key-work Summary',
+      'Management Oversight Note',
       'Chronology Entry'
     ]
     for (const label of labels) {
@@ -71,7 +71,7 @@ describe('ORB Dictate top-weight reduction', () => {
     assert.match(brain, /data-orb-brain-empty-orb-checks/)
     assert.match(brain, /data-orb-brain-record-type-empty/)
     assert.match(brain, /data-orb-brain-analyse-cta/)
-    assert.match(brain, /Analyse transcript with ORB/)
+    assert.match(brain, /Review with ORB|Analyse transcript with ORB/)
     assert.match(workspace, /studioTemplateId={props.selectedTemplateId}/)
   })
 

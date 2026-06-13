@@ -4,6 +4,7 @@ import { useRef } from 'react'
 import { Upload } from 'lucide-react'
 
 import { OrbDictateBoundaryCopy } from '@/components/orb-standalone/orb-dictate-boundary-copy'
+import { OrbDictateTemplateSelector } from '@/components/orb/dictate/OrbDictateTemplateSelector'
 import { OrbDictateOutputTypeSelector } from '@/components/orb-standalone/orb-dictate-output-type-selector'
 import {
   OrbDictateModeSelect,
@@ -22,6 +23,7 @@ import {
   type DictateMobileAiActionId,
   type DictateRecordingUiState
 } from '@/lib/orb/dictate/orb-dictate-mobile-copy'
+import type { OrbDictateStudioTemplate } from '@/lib/orb/dictate/orb-dictate-studio-templates'
 import {
   ORB_DICTATE_PRODUCT_SUBTITLE,
   ORB_DICTATE_PRODUCT_TITLE,
@@ -65,6 +67,8 @@ export function OrbDictateMobileExperience({
   onGenerate,
   mobileRecordingOpen,
   onToggleRecordingOptions,
+  selectedTemplateId,
+  onTemplateChange,
   dictateMode,
   onDictateModeChange,
   noteType,
@@ -117,6 +121,8 @@ export function OrbDictateMobileExperience({
   onGenerate: () => void
   mobileRecordingOpen: boolean
   onToggleRecordingOptions: () => void
+  selectedTemplateId: string
+  onTemplateChange: (template: OrbDictateStudioTemplate) => void
   dictateMode: OrbDictateMode
   onDictateModeChange: (mode: OrbDictateMode) => void
   noteType: OrbDictateNoteType
@@ -166,6 +172,15 @@ export function OrbDictateMobileExperience({
         data-orb-dictate-mobile-capture
         data-orb-dictate-capture-panel={showCapturedCard ? undefined : 'true'}
       >
+        {!showCapturedCard ? (
+          <div className="mb-2 w-full max-w-xs" data-orb-dictate-mobile-record-type>
+            <OrbDictateTemplateSelector
+              selectedTemplateId={selectedTemplateId}
+              onTemplateChange={onTemplateChange}
+              variant="compact"
+            />
+          </div>
+        ) : null}
         <p className="text-sm font-semibold text-[var(--orb-text,var(--orb-foreground))]" data-orb-dictate-status-line>
           {mobileStatusLine}
         </p>
@@ -258,6 +273,11 @@ export function OrbDictateMobileExperience({
                   data-orb-dictate-recording-options
                 >
                   <OrbDictateModeSelect mode={dictateMode} onChange={onDictateModeChange} />
+                  <OrbDictateTemplateSelector
+                    selectedTemplateId={selectedTemplateId}
+                    onTemplateChange={onTemplateChange}
+                    variant="compact"
+                  />
                   <OrbDictateOutputTypeSelector value={noteType} onChange={onNoteTypeChange} compact />
                   <OrbDictateParticipantsPanel
                     participants={participants}

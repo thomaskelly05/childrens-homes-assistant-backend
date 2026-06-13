@@ -31,8 +31,8 @@ const MOBILE_TOOL_ITEMS: Array<{
   },
   {
     id: 'use_template',
-    label: 'Templates',
-    description: 'Recording library',
+    label: 'Record type',
+    description: 'Choose a recording template',
     icon: FileText
   },
   {
