@@ -23,8 +23,9 @@ ADULT_SHORTHAND_RE = re.compile(
     r"kicked off|kicking off|played up|attention[\s-]?seeking|manipulative|"
     r"had a meltdown|was difficult|refused|aggressive|challenging moment|"
     r"bad behaviour|naughty|defiant|non-?compliant|challenging behaviour|"
-    r"chose to misbehave|just wanted attention|being difficult|behaved perfectly|"
-    r"failed to engage|would not listen|overreacted|absconded|non compliant"
+    r"chose to behave|deliberately caused|deliberately|just wanted attention|being difficult|"
+    r"failed to engage|would not listen|overreacted|absconded|non compliant|"
+    r"making allegations|lied|lying"
     r")\b",
     re.I,
 )
@@ -41,7 +42,10 @@ JUDGEMENTAL_PHRASE_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("challenging_behaviour_bare", re.compile(r"\bchallenging behaviour\b(?!\s+(plan|support|approach|strategy))", re.I)),
     ("was_aggressive_bare", re.compile(r"\bwas aggressive\b(?!\s+(towards|to|when|after|because))", re.I)),
     ("calmed_down_bare", re.compile(r"\bcalmed down\b(?![\s\S]{0,80}\b(staff|supported|helped|offered|regulation)\b)", re.I)),
-    ("chose_to_misbehave", re.compile(r"\bchose to misbehave\b", re.I)),
+    ("chose_to_behave", re.compile(r"\bchose to behave\b", re.I)),
+    ("deliberately_caused", re.compile(r"\bdeliberately caused\b", re.I)),
+    ("deliberately_bare", re.compile(r"\bdeliberately\b(?!\s+(recorded|observed|stated))", re.I)),
+    ("making_allegations", re.compile(r"\bmaking allegations\b", re.I)),
     ("just_wanted_attention", re.compile(r"\bjust wanted attention\b", re.I)),
     ("being_difficult", re.compile(r"\bbeing difficult\b", re.I)),
     ("behaved_perfectly", re.compile(r"\bbehaved perfectly\b", re.I)),
@@ -66,7 +70,10 @@ THERAPEUTIC_PHRASE_REPLACEMENTS: tuple[tuple[re.Pattern[str], str], ...] = (
     (re.compile(r"\bnon-?compliant\b", re.I), "found it difficult to follow the request"),
     (re.compile(r"\bchallenging behaviour\b", re.I), "behaviour that may have communicated distress"),
     (re.compile(r"\bwas aggressive\b", re.I), "showed behaviour that staff observed and responded to"),
+    (re.compile(r"\bchose to behave\b", re.I), "behaviour occurred / may have been communicating"),
     (re.compile(r"\bchose to misbehave\b", re.I), "behaviour occurred"),
+    (re.compile(r"\bdeliberately caused\b", re.I), "it is not clear from the information provided"),
+    (re.compile(r"\bmaking allegations\b", re.I), "shared concerns / disclosed"),
     (re.compile(r"\bjust wanted attention\b", re.I), "may have been communicating an unmet need"),
     (re.compile(r"\bbeing difficult\b", re.I), "found the situation difficult"),
     (re.compile(r"\bbehaved perfectly\b", re.I), "presented calmly"),
@@ -869,13 +876,16 @@ def build_universal_therapeutic_language_contract_block(*, include_principles: b
             "Forbidden or discouraged as final record language:",
             "attention seeking, manipulative, naughty, bad behaviour, kicked off, refused for no reason,",
             "non-compliant, challenging behaviour (without context), was aggressive (without observable detail),",
-            "calmed down (without what helped), chose to misbehave, just wanted attention, being difficult,",
-            "behaved perfectly, failed to engage, would not listen, overreacted, lied (unless evidenced), absconded.",
+            "calmed down (without what helped), chose to behave, deliberately caused, just wanted attention, being difficult,",
+            "behaved perfectly, failed to engage, would not listen, overreacted, lied (unless evidenced), absconded,",
+            "making allegations (unless contextually appropriate for safeguarding records).",
             "",
             "Preferred therapeutic wording:",
             "appeared distressed; communicated distress through…; found it difficult to…; was not ready to…;",
             "needed time and space; staff offered…; staff supported regulation by…; the young person said…;",
-            "this may indicate…; staff should remain curious about…; repair was supported by….",
+            "this may indicate…; staff should remain curious about…; repair was supported by…;",
+            "it is not clear from the information provided; further management review may be needed;",
+            "follow local safeguarding procedures; record factual observations separately from interpretation.",
             "",
             "Do not diagnose trauma, intent or motivation. Do not replace managers, therapists or statutory roles.",
         ]

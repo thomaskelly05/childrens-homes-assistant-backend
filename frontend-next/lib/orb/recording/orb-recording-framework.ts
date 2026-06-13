@@ -1,13 +1,23 @@
-import frameworkData from '@/lib/orb/recording/orb-recording-framework.json'
+/**
+ * ORB Residential recording framework — single frontend source for record types.
+ * JSON: `orb-recording-framework.json`. Supplements: `orb-therapeutic-writing.ts`, `orb-recording-section-prompts.ts`.
+ * Backend mirror: `assistant/knowledge/orb_recording_framework.json` + `services/orb_recording_framework_service.py`.
+ */
 
 import type { OrbDictateNoteType } from '@/lib/orb/dictate/orb-dictate-types'
 import {
   buildSectionPromptBody,
   ORB_PRIMARY_RECORD_TYPE_IDS,
+  ORB_REFLECTIVE_CAPTURE_PROMPTS,
+  ORB_STRUCTURED_FORMAT_RULES,
   ORB_THERAPEUTIC_RECORDING_PRINCIPLES,
   sectionPromptsForRecordType
 } from '@/lib/orb/recording/orb-recording-section-prompts'
-import { therapeuticWritingForRecordType } from '@/lib/orb/recording/orb-therapeutic-writing'
+import {
+  buildTherapeuticWritingPromptBlock,
+  structuredFormatHintForRecordType,
+  therapeuticWritingForRecordType
+} from '@/lib/orb/recording/orb-therapeutic-writing'
 import type {
   OrbRecordingBrainFrameworkContext,
   OrbRecordingFrameworkPayload,
@@ -15,6 +25,8 @@ import type {
   OrbRecordingRecordTypeId,
   OrbRecordingSuggestedOutput
 } from '@/lib/orb/recording/orb-recording-types'
+
+import frameworkData from '@/lib/orb/recording/orb-recording-framework.json'
 
 const payload = frameworkData as OrbRecordingFrameworkPayload
 
@@ -34,7 +46,7 @@ export const ORB_RECORDING_RECORD_TYPES: readonly OrbRecordingRecordType[] = mer
 
 import { ORB_RECOMMENDED_RECORD_TYPE_IDS } from '@/lib/orb/orb-navigation-convergence'
 
-export { ORB_RECOMMENDED_RECORD_TYPE_IDS, ORB_PRIMARY_RECORD_TYPE_IDS, ORB_THERAPEUTIC_RECORDING_PRINCIPLES }
+export { ORB_RECOMMENDED_RECORD_TYPE_IDS, ORB_PRIMARY_RECORD_TYPE_IDS, ORB_THERAPEUTIC_RECORDING_PRINCIPLES, ORB_REFLECTIVE_CAPTURE_PROMPTS, ORB_STRUCTURED_FORMAT_RULES }
 
 export function isRecommendedRecordingType(id: string): boolean {
   return (ORB_RECOMMENDED_RECORD_TYPE_IDS as readonly string[]).includes(id)
@@ -131,20 +143,59 @@ export function buildOrbRecordingBrainContext(
   recordType: OrbRecordingRecordType
 ): OrbRecordingBrainFrameworkContext {
   const wf = recordType.writing_framework
-  const therapeuticChecks = wf?.quality_checks?.slice(0, 2) ?? []
+  const therapeuticChecks = wf?.quality_checks?.slice(0, 3) ?? []
+  const safeguardingChecks = [
+    ...(recordType.safeguarding_checks ?? []).slice(0, 2),
+    ...(wf?.safeguarding_checks ?? []).slice(0, 2)
+  ]
+  const seen = new Set<string>()
+  const dedupedSafeguarding = safeguardingChecks.filter((check) => {
+    const key = check.toLowerCase()
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
   return {
     record_type_id: recordType.id,
     record_type_label: recordType.label,
     required_sections: recordType.required_sections,
-    orb_will_check: [...orbRecordingChecksSummary(recordType), ...therapeuticChecks].slice(0, 6),
+    orb_will_check: [
+      ...orbRecordingChecksSummary(recordType),
+      ...therapeuticChecks,
+      ...dedupedSafeguarding.slice(0, 2)
+    ].slice(0, 8),
     missing_evidence_checks: recordType.missing_evidence_checks,
-    safeguarding_checks: recordType.safeguarding_checks,
+    safeguarding_checks: dedupedSafeguarding,
     child_voice_checks: recordType.child_voice_checks,
     manager_oversight_checks: recordType.manager_oversight_checks,
     suggested_outputs: orbRecordingSuggestedOutputs(recordType.id),
     suggested_follow_up_actions: recordType.suggested_follow_up_actions,
     recording_quality_guidance: wf?.writing_guidance ?? recordType.professional_language_guidance
   }
+}
+
+/** Full prompt block for Chat, Dictate, Write and Voice — same residential brain. */
+export function buildOrbRecordingBrainPromptBlock(recordType: OrbRecordingRecordType): string {
+  const context = buildOrbRecordingBrainContext(recordType)
+  const formatHint = structuredFormatHintForRecordType(recordType.id)
+  const lines = [
+    `Record type: ${context.record_type_label} (${context.record_type_id})`,
+    '',
+    'Residential recording principles:',
+    ...ORB_THERAPEUTIC_RECORDING_PRINCIPLES.map((principle) => `• ${principle}`),
+    '',
+    'ORB will check:',
+    ...context.orb_will_check.map((check) => `• ${check}`),
+    '',
+    buildTherapeuticWritingPromptBlock(recordType.id),
+    '',
+    `Structured format preference: ${formatHint}`,
+    ...ORB_STRUCTURED_FORMAT_RULES.map((rule) => `• ${rule}`),
+    '',
+    'Required sections:',
+    ...context.required_sections.map((section) => `• ${section}`)
+  ]
+  return lines.join('\n').trim()
 }
 
 /** Template groups for ORB Write template picker — mirrors recording framework categories. */

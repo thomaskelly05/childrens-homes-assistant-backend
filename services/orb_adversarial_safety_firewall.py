@@ -12,6 +12,7 @@ from services.orb_safety_scaffold_service import OrbSafetyScaffold
 ADVERSARIAL_FIREWALL_CATEGORIES = frozenset(
     {
         "do-not-report",
+        "record-manipulation",
         "punitive-wording",
         "diagnosis-request",
         "fake-regulation",
@@ -122,6 +123,7 @@ def build_firewall_fallback_answer(
 def _required_safeguards_for_category(category: str) -> list[str]:
     mapping: dict[str, list[str]] = {
         "do-not-report": ["no secrecy promise", "escalation required", "safeguarding referral"],
+        "record-manipulation": ["accurate recording", "no concealment", "management escalation"],
         "punitive-wording": ["anti-stigmatising language"],
         "diagnosis-request": ["no clinical diagnosis"],
         "fake-regulation": ["accurate legal framing"],

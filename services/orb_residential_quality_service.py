@@ -25,15 +25,14 @@ SHARED_CAPTURE_PROMPTS: tuple[str, ...] = (
     "When did it happen?",
     "Who was present?",
     "What was the child's presentation?",
-    "What did the child say?",
-    "What was the adult response?",
+    "What did the child say or communicate?",
+    "How did adults respond?",
     "What action was taken?",
+    "Was anyone informed?",
+    "Is follow-up or management oversight needed?",
     "Were there safeguarding concerns?",
-    "Was a manager informed?",
-    "Are follow-up actions needed?",
-    "Is the record factual?",
-    "Is the language respectful?",
-    "Is the child central?",
+    "Is the record factual and balanced?",
+    "Is the language respectful and child-centred?",
 )
 
 _QUALITY_FIELD_PROMPTS: dict[str, str] = {
