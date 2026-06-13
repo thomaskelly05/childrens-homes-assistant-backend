@@ -76,6 +76,34 @@ export function OrbVoiceAfterCallPanel({
         )}
       </div>
 
+      {content.childVoicePresentation ? (
+        <div data-orb-voice-child-voice>
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--orb-muted)]">
+            Child&apos;s voice / presentation
+          </p>
+          <p className="mt-1 text-sm leading-6 text-[var(--orb-foreground)]">{content.childVoicePresentation}</p>
+        </div>
+      ) : content.hasTranscript ? (
+        <div data-orb-voice-child-voice>
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--orb-muted)]">
+            Child&apos;s voice / presentation
+          </p>
+          <p className="mt-1 text-sm text-[var(--orb-muted)]">Not clear</p>
+        </div>
+      ) : null}
+
+      {content.adultResponse ? (
+        <div data-orb-voice-adult-response>
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--orb-muted)]">Adult response</p>
+          <p className="mt-1 text-sm leading-6 text-[var(--orb-foreground)]">{content.adultResponse}</p>
+        </div>
+      ) : content.hasTranscript ? (
+        <div data-orb-voice-adult-response>
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--orb-muted)]">Adult response</p>
+          <p className="mt-1 text-sm text-[var(--orb-muted)]">Not clear</p>
+        </div>
+      ) : null}
+
       {needsEscalation ? (
         <p
           className="rounded-xl border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-[11px] leading-5 text-amber-900 dark:text-amber-100"
@@ -127,6 +155,21 @@ export function OrbVoiceAfterCallPanel({
         )}
       </div>
 
+      <div data-orb-voice-missing-information>
+        <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--orb-muted)]">
+          Missing information / not clear
+        </p>
+        {content.missingInformation.length ? (
+          <ul className="mt-2 space-y-1 text-xs leading-5 text-[var(--orb-muted)]">
+            {content.missingInformation.map((item) => (
+              <li key={item}>• {item}</li>
+            ))}
+          </ul>
+        ) : (
+          <p className="mt-1 text-sm text-[var(--orb-muted)]">Not clear from this session.</p>
+        )}
+      </div>
+
       <div data-orb-voice-follow-up-questions>
         <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--orb-muted)]">
           Possible follow-up questions
@@ -155,6 +198,11 @@ export function OrbVoiceAfterCallPanel({
         </button>
         {recordTypeOpen ? (
           <div className="space-y-2 rounded-xl border border-[var(--orb-line)]/40 bg-[var(--orb-surface-elevated)]/60 p-3" data-orb-voice-record-type-picker>
+            {content.suggestedRecordTypeLabel ? (
+              <p className="text-xs text-[var(--orb-foreground)]" data-orb-voice-suggested-record-type>
+                Suggested: {content.suggestedRecordTypeLabel}
+              </p>
+            ) : null}
             <p className="text-[10px] leading-4 text-[var(--orb-muted)]" data-orb-voice-adult-review>
               Adult review required before saving or sharing.
             </p>

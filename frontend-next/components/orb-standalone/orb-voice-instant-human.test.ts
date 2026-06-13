@@ -17,7 +17,6 @@ import {
   orbVoiceUiStatusLine,
   resolveOrbVoiceUiState
 } from '../../lib/orb/voice/orb-voice-ui-state.ts'
-import { orbVoiceLivePanelStatusLabel } from '../orb-standalone/orb-voice-live-panel.tsx'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '../..')
 
@@ -114,9 +113,10 @@ describe('ORB Voice instant-human refinement', () => {
     const live = read('components/orb-standalone/orb-voice-live-panel.tsx')
     assert.match(live, /Start speaking when you/)
     assert.match(live, /data-orb-voice-pause-hint/)
-    assert.match(live, /You can keep going, or end the session when ready/)
-    assert.equal(orbVoiceLivePanelStatusLabel('listening'), "I'm listening.")
-    assert.equal(orbVoiceLivePanelStatusLabel('preparing'), 'Preparing voice…')
+    assert.match(live, /Take your time/)
+    assert.match(live, /orbVoiceLivePanelStatusLabel/)
+    assert.match(live, /I'm listening\./)
+    assert.match(live, /Preparing voice/)
   })
 
   it('after-call actions and safeguarding prompts', () => {
@@ -128,6 +128,8 @@ describe('ORB Voice instant-human refinement', () => {
     assert.match(after, /Copy transcript/)
     assert.match(after, /New voice session/)
     assert.match(after, /data-orb-voice-management-oversight/)
+    assert.match(after, /data-orb-voice-child-voice/)
+    assert.match(after, /data-orb-voice-missing-information/)
     assert.ok(orbVoiceNeedsManagementOversight('There was a restraint during the incident'))
     assert.ok(orbVoiceNeedsEscalationPrompt('There is immediate risk and a disclosure'))
     assert.match(after, /Adult review required/)

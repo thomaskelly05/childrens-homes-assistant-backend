@@ -100,6 +100,17 @@ import {
   type OrbVoiceLaunchMode
 } from '@/lib/orb/voice/orb-voice-launch-mode'
 import { isOrbDebugVisualEnabled } from '@/lib/orb/orb-visual-build'
+import {
+  evaluateOrbVoiceConversation,
+  orbVoiceConversationHasEnoughTranscript,
+  recommendOrbVoiceRecordType
+} from '@/lib/orb/voice/orb-voice-conversation-engine'
+import {
+  logOrbVoiceLatencyIfEnabled,
+  markOrbVoiceLatency,
+  resetOrbVoiceLatencyMarks,
+  setOrbVoiceLatencyLogging
+} from '@/lib/orb/voice/latency'
 
 type VoiceApi = ReturnType<typeof useStandaloneOrbVoice>
 type VoiceStartStage = 'idle' | 'starting' | 'active' | 'failed'
@@ -207,6 +218,8 @@ export function OrbVoiceStation({
   const [voiceStartError, setVoiceStartError] = useState<string | null>(null)
   const [browserStartStage, setBrowserStartStage] = useState<BrowserStartStage>('idle')
   const [voiceRecordTemplateId, setVoiceRecordTemplateId] = useState('general')
+  const [silenceDurationMs, setSilenceDurationMs] = useState(0)
+  const silenceStartedAtRef = useRef<number | null>(null)
   const statusFetchedRef = useRef(false)
   const isMobileViewport = useOrbMobileViewport()
 
@@ -436,6 +449,31 @@ export function OrbVoiceStation({
                 ? 'paused'
                 : 'listening'
 
+  const conversationEngine = useMemo(
+    () =>
+      evaluateOrbVoiceConversation({
+        turns: conversationTurns,
+        latestUtterance: voice.interimTranscript || browserDisplayTranscript || undefined,
+        voiceState: livePanelState,
+        selectedRecordTypeId: voiceRecordTemplateId,
+        silenceDurationMs,
+        hasAskedFollowUp: conversationTurns.some((t) => t.role === 'assistant' && /\?/.test(t.text)),
+        userWantsRecord: voiceWorkspaceMode === 'after_call',
+        bargeInSupported: voiceSessionLive && !useBrowserLaunch
+      }),
+    [
+      browserDisplayTranscript,
+      conversationTurns,
+      livePanelState,
+      silenceDurationMs,
+      useBrowserLaunch,
+      voice.interimTranscript,
+      voiceRecordTemplateId,
+      voiceSessionLive,
+      voiceWorkspaceMode
+    ]
+  )
+
   const handleCreateDraftFromVoice = useCallback(
     (templateId: string) => {
       const template = templateById(templateId)
@@ -447,13 +485,39 @@ export function OrbVoiceStation({
   )
 
   useEffect(() => {
-    if (!voiceSessionLive || realtimeState !== 'listening') {
+    setOrbVoiceLatencyLogging(voiceDebug)
+  }, [voiceDebug])
+
+  useEffect(() => {
+    const activeListening =
+      voiceWorkspaceMode === 'live' &&
+      (livePanelState === 'listening' || realtimeState === 'listening')
+    if (!activeListening) {
+      silenceStartedAtRef.current = null
+      setSilenceDurationMs(0)
       setListeningHint(false)
       return
     }
-    const timer = window.setTimeout(() => setListeningHint(true), 3500)
-    return () => window.clearTimeout(timer)
-  }, [voiceSessionLive, realtimeState])
+    silenceStartedAtRef.current = Date.now()
+    const tick = window.setInterval(() => {
+      if (silenceStartedAtRef.current) {
+        setSilenceDurationMs(Date.now() - silenceStartedAtRef.current)
+      }
+    }, 500)
+    const hintTimer = window.setTimeout(() => setListeningHint(true), 8000)
+    return () => {
+      window.clearInterval(tick)
+      window.clearTimeout(hintTimer)
+    }
+  }, [livePanelState, realtimeState, voiceWorkspaceMode])
+
+  useEffect(() => {
+    if (realtimeState === 'speech_detected' || realtimeState === 'speaking' || realtimeState === 'thinking') {
+      silenceStartedAtRef.current = null
+      setSilenceDurationMs(0)
+      setListeningHint(false)
+    }
+  }, [realtimeState])
 
   useEffect(() => {
     if (realtimeState === 'speech_detected' || realtimeState === 'speaking' || realtimeState === 'thinking') {
@@ -463,6 +527,7 @@ export function OrbVoiceStation({
 
   const resetSession = useCallback(() => {
     lastSyncedReplyKeyRef.current = null
+    resetOrbVoiceLatencyMarks()
     clearActiveOrbRealtimeVoiceClient()
     setVoiceStartStage('idle')
     setSessionEnded(false)
@@ -487,6 +552,7 @@ export function OrbVoiceStation({
     (text: string) => {
       const trimmed = text.trim()
       if (!trimmed) return
+      markOrbVoiceLatency('first_transcript')
       setTurns((prev) => [
         ...prev,
         {
@@ -509,6 +575,7 @@ export function OrbVoiceStation({
     const key = assistantReplyKey ?? null
     if (!reply || !key || key === lastSyncedReplyKeyRef.current) return
     lastSyncedReplyKeyRef.current = key
+    markOrbVoiceLatency('first_response')
     setTurns((prev) => {
       const last = prev[prev.length - 1]
       if (last?.role === 'assistant' && last.text.trim() === reply) return prev
@@ -636,6 +703,8 @@ export function OrbVoiceStation({
   }
 
   async function handleStart() {
+    resetOrbVoiceLatencyMarks()
+    markOrbVoiceLatency('start_tap')
     emitOrbClientDebug({ area: 'voice', event: 'voice_start_clicked', detail: {} })
     emitOrbClientDebug({ area: 'voice', event: 'voice_start_handle_start_called', detail: { uiState, useBrowserLaunch } })
     if (voiceStartStage === 'starting' || browserStartStage === 'starting') {
@@ -704,6 +773,7 @@ export function OrbVoiceStation({
     })
     emitOrbClientDebug({ area: 'voice', event: 'voice_start_realtime_attempt', detail: {} })
     setVoiceStartStage('starting')
+    markOrbVoiceLatency('preparing')
     setSessionStartedAt(new Date().toISOString())
     voice.resumeVoiceSession()
     const result = await beginOrbRealtimeVoiceConversation({
@@ -776,6 +846,7 @@ export function OrbVoiceStation({
     ])
     setVoiceStartStage('active')
     setRealtimeState('listening')
+    markOrbVoiceLatency('listening')
     emitOrbClientDebug({
       area: 'voice',
       event: 'voice_session_started',
@@ -851,6 +922,15 @@ export function OrbVoiceStation({
 
   function handleEnd() {
     emitOrbClientDebug({ area: 'voice', event: 'voice_session_ended', detail: {} })
+    markOrbVoiceLatency('after_call_ready')
+    logOrbVoiceLatencyIfEnabled((detail) =>
+      emitOrbClientDebug({ area: 'voice', event: String(detail.event ?? 'voice_latency'), detail })
+    )
+    const transcriptForSuggestion = fullConversationText || voiceTranscriptText || browserTranscriptText
+    const suggestion = recommendOrbVoiceRecordType(transcriptForSuggestion)
+    if (suggestion && voiceRecordTemplateId === 'general') {
+      setVoiceRecordTemplateId(suggestion.templateId)
+    }
     clearActiveOrbRealtimeVoiceClient()
     setVoiceStartStage('idle')
     setBrowserStartStage('idle')
@@ -992,6 +1072,15 @@ export function OrbVoiceStation({
       interimTranscript={voice.interimTranscript || browserDisplayTranscript}
       liveState={livePanelState}
       pauseHint={listeningHint}
+      acknowledgement={conversationEngine.acknowledgement}
+      livePrompt={conversationEngine.livePrompt}
+      suggestedQuestion={conversationEngine.followUpQuestion || conversationEngine.clarificationQuestion}
+      safetyPrompt={conversationEngine.safetyPrompt}
+      bargeInFallback={conversationEngine.bargeInFallback}
+      showTurnIntoRecord={
+        Boolean(onOpenDictate) &&
+        (conversationEngine.suggestRecordCreation || orbVoiceConversationHasEnoughTranscript(conversationTurns))
+      }
       onEnd={handleEnd}
       onTurnIntoRecord={onOpenDictate ? () => handleCreateDraftFromVoice(voiceRecordTemplateId) : undefined}
     />
