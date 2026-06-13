@@ -71,4 +71,27 @@ test.describe('ORB home composer reach', () => {
     expect(audit.sendBottom).toBeLessThanOrEqual(audit.vh + 4)
     expect(audit.textareaScrollable, JSON.stringify(audit)).toBe(true)
   })
+
+  test('home shows compact privacy guidance link not large privacy card', async ({ page }) => {
+    await setupOrbE2eMocks(page)
+    await page.goto('/orb')
+    await page.locator('[data-orb-shell="true"]').waitFor({ state: 'visible', timeout: 20_000 })
+
+    await expect(page.locator('[data-orb-privacy-guidance-link]')).toBeVisible()
+    await expect(page.locator('[data-orb-privacy-notice="chat"]')).toHaveCount(0)
+
+    await page.locator('[data-orb-privacy-guidance-link]').click()
+    await expect(page.locator('[data-orb-privacy-guidance-sheet]')).toBeVisible()
+    await expect(page.locator('[data-orb-privacy-guidance-list] li')).toHaveCount(4)
+  })
+
+  test('more examples opens grouped starter bottom sheet', async ({ page }) => {
+    await setupOrbE2eMocks(page)
+    await page.goto('/orb')
+    await page.locator('[data-orb-shell="true"]').waitFor({ state: 'visible', timeout: 20_000 })
+
+    await page.locator('[data-orb-more-examples]').click()
+    await expect(page.locator('[data-orb-more-examples-sheet]')).toBeVisible()
+    await expect(page.locator('[data-orb-starter-group]')).toHaveCount(3)
+  })
 })

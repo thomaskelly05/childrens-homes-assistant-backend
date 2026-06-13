@@ -143,7 +143,11 @@ export function OrbDictateMobileExperience({
   const uploadInputRef = useRef<HTMLInputElement>(null)
 
   return (
-    <div className="orb-dictate-mobile flex min-h-0 flex-1 flex-col" data-orb-dictate-mobile>
+    <div
+      className="orb-dictate-mobile flex min-h-0 flex-1 flex-col"
+      data-orb-dictate-mobile
+      data-orb-dictate-capture-idle={showCapturedCard ? undefined : 'true'}
+    >
       <header className="shrink-0 px-2 pt-1 text-center">
         <h2 className="text-base font-semibold text-[var(--orb-text,var(--orb-foreground))]" data-orb-dictate-title>
           {ORB_DICTATE_PRODUCT_TITLE}
@@ -151,7 +155,6 @@ export function OrbDictateMobileExperience({
         <p className="mt-0.5 text-[11px] text-[var(--orb-muted)]" data-orb-dictate-subtitle>
           {ORB_DICTATE_PRODUCT_SUBTITLE}
         </p>
-        <OrbDictateBoundaryCopy compact />
       </header>
       <section
         className="flex shrink-0 flex-col items-center px-2 pt-2 text-center"
@@ -181,13 +184,6 @@ export function OrbDictateMobileExperience({
         >
           {captureStarting ? 'Starting…' : mobilePrimaryLabel}
         </button>
-        <div className="mt-3 shrink-0" data-orb-dictate-orb-accent>
-          <GlassOrbMark
-            variant="dictate"
-            pulse={recordingActive}
-            className={`orb-dictate-mobile-orb shrink-0 ${orbClass}`}
-          />
-        </div>
 
         <div className="mt-3 flex flex-wrap justify-center gap-2" data-orb-dictate-mobile-secondary>
           {!showCapturedCard ? (
@@ -233,6 +229,18 @@ export function OrbDictateMobileExperience({
               Clear
             </button>
           )}
+        </div>
+        {!showCapturedCard ? (
+          <div className="mt-2 w-full max-w-xs" data-orb-dictate-orb-accent>
+            <GlassOrbMark
+              variant="dictate"
+              pulse={recordingActive}
+              className={`orb-dictate-mobile-orb orb-dictate-mobile-orb--compact mx-auto shrink-0 ${orbClass}`}
+            />
+          </div>
+        ) : null}
+        <div className="mt-2 w-full max-w-xs text-left">
+          <OrbDictateBoundaryCopy compact collapsible />
         </div>
       </section>
 

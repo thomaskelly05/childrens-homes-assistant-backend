@@ -8,7 +8,8 @@ import { OrbLegalLinks } from '@/components/orb-residential/orb-legal-links'
 import { OrbAppModal } from '@/components/orb-standalone/orb-app-modal'
 import {
   ORB_RESIDENTIAL_BILLING_TRUST_COPY,
-  ORB_RESIDENTIAL_BILLING_VALUE_ITEMS
+  ORB_RESIDENTIAL_BILLING_VALUE_ITEMS,
+  ORB_RESIDENTIAL_BILLING_VALUE_SUMMARY
 } from '@/lib/orb/orb-residential-copy'
 import {
   formatOrbPlanLabel,
@@ -234,7 +235,7 @@ export function OrbBillingModal({
                 {priceLabel}
               </p>
               <div
-                className="flex w-full flex-col gap-2 lg:flex-col lg:items-stretch"
+                className={`flex w-full flex-col gap-2 lg:flex-col lg:items-stretch ${showMobileStickyActions ? 'hidden sm:flex' : ''}`}
                 data-orb-billing-cta-bar
               >
                 {display.showTrialCta ? (
@@ -296,37 +297,39 @@ export function OrbBillingModal({
         </section>
 
         <section className={sectionClassName(true)} data-orb-billing-status>
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--orb-muted)]">
-            Subscription
-          </h3>
-          <dl className="mt-2 grid gap-2 text-xs sm:grid-cols-2">
-            <div>
-              <dt className="text-[var(--orb-muted)]">Plan</dt>
-              <dd className="mt-0.5 font-medium">{planName}</dd>
-            </div>
-            <div>
-              <dt className="text-[var(--orb-muted)]">Status</dt>
-              <dd className="mt-0.5 font-medium capitalize" data-orb-billing-subscription-status>
-                {display.subscriptionLabel}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-[var(--orb-muted)]">Billing</dt>
-              <dd className="mt-0.5 font-medium">{priceLabel}</dd>
-            </div>
-            <div>
-              <dt className="text-[var(--orb-muted)]">Managed by</dt>
-              <dd className="mt-0.5 font-medium">Stripe</dd>
-            </div>
-            {access?.subscription?.current_period_end ? (
-              <div className="sm:col-span-2">
-                <dt className="text-[var(--orb-muted)]">Current period ends</dt>
-                <dd className="mt-0.5 font-medium">
-                  {String(access.subscription.current_period_end).slice(0, 10)}
+          <details className="group" data-orb-billing-collapsible="subscription">
+            <summary className="cursor-pointer list-none text-xs font-semibold uppercase tracking-wide text-[var(--orb-muted)] [&::-webkit-details-marker]:hidden">
+              Subscription details
+            </summary>
+            <dl className="mt-2 grid gap-2 text-xs sm:grid-cols-2">
+              <div>
+                <dt className="text-[var(--orb-muted)]">Plan</dt>
+                <dd className="mt-0.5 font-medium">{planName}</dd>
+              </div>
+              <div>
+                <dt className="text-[var(--orb-muted)]">Status</dt>
+                <dd className="mt-0.5 font-medium capitalize" data-orb-billing-subscription-status>
+                  {display.subscriptionLabel}
                 </dd>
               </div>
-            ) : null}
-          </dl>
+              <div>
+                <dt className="text-[var(--orb-muted)]">Billing</dt>
+                <dd className="mt-0.5 font-medium">{priceLabel}</dd>
+              </div>
+              <div>
+                <dt className="text-[var(--orb-muted)]">Managed by</dt>
+                <dd className="mt-0.5 font-medium">Stripe</dd>
+              </div>
+              {access?.subscription?.current_period_end ? (
+                <div className="sm:col-span-2">
+                  <dt className="text-[var(--orb-muted)]">Current period ends</dt>
+                  <dd className="mt-0.5 font-medium">
+                    {String(access.subscription.current_period_end).slice(0, 10)}
+                  </dd>
+                </div>
+              ) : null}
+            </dl>
+          </details>
         </section>
 
         <section className={`${sectionClassName(true)} hidden sm:block`} data-orb-billing-usage>
@@ -350,9 +353,37 @@ export function OrbBillingModal({
 
         <section className={sectionClassName()} data-orb-billing-value>
           <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--orb-muted)]">
-            Included with ORB Residential Individual
+            What&apos;s included
           </h3>
-          <ul className="mt-2 space-y-1.5 text-xs leading-5 text-[var(--orb-foreground)]">
+          <ul
+            className="mt-2 space-y-1.5 text-xs leading-5 text-[var(--orb-foreground)] sm:hidden"
+            data-orb-billing-included-summary
+          >
+            {ORB_RESIDENTIAL_BILLING_VALUE_SUMMARY.map((item) => (
+              <li key={item} className="flex gap-2">
+                <span className="text-[var(--orb-primary)]" aria-hidden>
+                  ✓
+                </span>
+                <span>{item}</span>
+              </li>
+            ))}
+          </ul>
+          <details className="group mt-2 sm:mt-2" data-orb-billing-collapsible="included">
+            <summary className="cursor-pointer list-none text-xs font-medium text-[var(--orb-muted)] sm:hidden [&::-webkit-details-marker]:hidden">
+              Full included list
+            </summary>
+            <ul className="mt-2 space-y-1.5 text-xs leading-5 text-[var(--orb-foreground)] sm:mt-2">
+              {ORB_RESIDENTIAL_BILLING_VALUE_ITEMS.map((item) => (
+                <li key={item} className="flex gap-2">
+                  <span className="text-[var(--orb-primary)]" aria-hidden>
+                    ✓
+                  </span>
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
+          </details>
+          <ul className="mt-2 hidden space-y-1.5 text-xs leading-5 text-[var(--orb-foreground)] sm:block">
             {ORB_RESIDENTIAL_BILLING_VALUE_ITEMS.map((item) => (
               <li key={item} className="flex gap-2">
                 <span className="text-[var(--orb-primary)]" aria-hidden>
@@ -365,35 +396,57 @@ export function OrbBillingModal({
         </section>
 
         <section className={sectionClassName(true)} data-orb-billing-trust>
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--orb-muted)]">
-            Trust &amp; data
-          </h3>
-          <p className="mt-1.5 text-xs leading-5 text-[var(--orb-foreground)]">{ORB_RESIDENTIAL_BILLING_TRUST_COPY}</p>
-          <ul className="mt-2 space-y-1 text-[11px] leading-5 text-[var(--orb-muted)]">
-            <li>ORB Residential does not access IndiCare OS records.</li>
-            <li>
-              Uses your profile, conversation, uploaded documents and IndiCare residential intelligence.
-            </li>
-          </ul>
+          <details className="group" data-orb-billing-collapsible="trust">
+            <summary className="cursor-pointer list-none text-xs font-semibold uppercase tracking-wide text-[var(--orb-muted)] [&::-webkit-details-marker]:hidden">
+              Trust &amp; data
+            </summary>
+            <p className="mt-1.5 text-xs leading-5 text-[var(--orb-foreground)]">{ORB_RESIDENTIAL_BILLING_TRUST_COPY}</p>
+            <ul className="mt-2 space-y-1 text-[11px] leading-5 text-[var(--orb-muted)]">
+              <li>ORB Residential does not access IndiCare OS records.</li>
+              <li>
+                Uses your profile, conversation, uploaded documents and IndiCare residential intelligence.
+              </li>
+            </ul>
+          </details>
         </section>
 
-        <section className={`${sectionClassName(true)} hidden sm:block`} data-orb-billing-provider-team>
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--orb-muted)]">
-            Provider team plans
-          </h3>
-          <p className="mt-1.5 text-xs leading-5 text-[var(--orb-muted)]">
-            Team billing and seat management for provider organisations.
-          </p>
-          <p className="mt-1 text-[10px] font-medium uppercase tracking-wide text-[var(--orb-muted)]">
-            Coming soon
-          </p>
-          <a
-            href="mailto:support@indicare.co.uk?subject=ORB%20Residential%20provider%20team"
-            className="mt-2 inline-block text-xs font-semibold text-[var(--orb-res-primary,#1677ff)]"
-            data-orb-billing-provider-cta
-          >
-            Speak to us
-          </a>
+        <section className={`${sectionClassName(true)} sm:block`} data-orb-billing-provider-team>
+          <details className="group sm:hidden" data-orb-billing-collapsible="provider">
+            <summary className="cursor-pointer list-none text-xs font-semibold uppercase tracking-wide text-[var(--orb-muted)] [&::-webkit-details-marker]:hidden">
+              Provider team plans
+            </summary>
+            <p className="mt-1.5 text-xs leading-5 text-[var(--orb-muted)]">
+              Team billing and seat management for provider organisations.
+            </p>
+            <p className="mt-1 text-[10px] font-medium uppercase tracking-wide text-[var(--orb-muted)]">
+              Coming soon
+            </p>
+            <a
+              href="mailto:support@indicare.co.uk?subject=ORB%20Residential%20provider%20team"
+              className="mt-2 inline-block text-xs font-semibold text-[var(--orb-res-primary,#1677ff)]"
+              data-orb-billing-provider-cta
+            >
+              Speak to us
+            </a>
+          </details>
+          <div className="hidden sm:block">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--orb-muted)]">
+              Provider team plans
+            </h3>
+            <p className="mt-1.5 text-xs leading-5 text-[var(--orb-muted)]">
+              Team billing and seat management for provider organisations.
+            </p>
+            <p className="mt-1 text-[10px] font-medium uppercase tracking-wide text-[var(--orb-muted)]">
+              Coming soon
+            </p>
+            <a
+              href="mailto:support@indicare.co.uk?subject=ORB%20Residential%20provider%20team"
+              className="mt-2 inline-block text-xs font-semibold text-[var(--orb-res-primary,#1677ff)]"
+              data-orb-billing-provider-cta
+            >
+              Speak to us
+            </a>
+          </div>
         </section>
 
         {notice ? (

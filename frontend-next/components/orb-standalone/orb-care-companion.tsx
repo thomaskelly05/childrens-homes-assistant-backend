@@ -2871,6 +2871,8 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
       answering={isAnswering}
       onStopGenerating={isAnswering ? handleStopGeneration : undefined}
       residentialSurface={residentialSurface}
+      mobileViewport={isMobileViewport}
+      chatHasMessages={visibleMessages.length > 0}
       onPlusMenuAction={residentialSurface ? handleComposerPlusAction : undefined}
     />
     </div>
@@ -4260,8 +4262,15 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
 
       {promptDrawerOpen ? (
         <OrbPromptDrawer
-          groups={residentialSurface ? [] : SUGGESTED_PROMPT_GROUPS}
-          moreStarters={residentialSurface ? ORB_RESIDENTIAL_MORE_STARTERS : MORE_EMPTY_STARTERS}
+          groups={
+            residentialSurface
+              ? ORB_RESIDENTIAL_STARTER_GROUPS.map((group) => ({
+                  title: group.label,
+                  prompts: group.starters
+                }))
+              : SUGGESTED_PROMPT_GROUPS
+          }
+          moreStarters={residentialSurface ? [] : ORB_RESIDENTIAL_MORE_STARTERS}
           moreExpanded={moreExamplesExpanded}
           onToggleMore={() => setMoreExamplesExpanded((o) => !o)}
           onApply={(entry) => {
@@ -4269,6 +4278,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
             setPromptDrawerOpen(false)
           }}
           onClose={() => setPromptDrawerOpen(false)}
+          residentialSurface={residentialSurface}
         />
       ) : null}
 
@@ -4365,7 +4375,8 @@ function OrbPromptDrawer({
   moreExpanded,
   onToggleMore,
   onApply,
-  onClose
+  onClose,
+  residentialSurface = false
 }: {
   groups: Array<{ title: string; prompts: PromptEntry[] }>
   moreStarters: PromptEntry[]
@@ -4373,29 +4384,41 @@ function OrbPromptDrawer({
   onToggleMore: () => void
   onApply: (entry: PromptEntry) => void
   onClose: () => void
+  residentialSurface?: boolean
 }) {
   const safeGroups = Array.isArray(groups) ? groups : []
   const safeMoreStarters = Array.isArray(moreStarters) ? moreStarters : []
 
   return (
-    <div className="fixed inset-0 z-[68] flex items-end justify-center bg-black/60 p-4 sm:items-center" role="dialog" aria-label="Example prompts">
-      <div className="max-h-[85dvh] w-full max-w-lg overflow-y-auto rounded-2xl border border-[var(--orb-line)] bg-[var(--orb-surface-elevated)] p-4 text-[var(--orb-foreground)] shadow-2xl">
+    <div
+      className="fixed inset-0 z-[68] flex items-end justify-center bg-black/60 p-0 sm:items-center sm:p-4"
+      role="dialog"
+      aria-label="Example prompts"
+      data-orb-more-examples-sheet
+      onClick={(event) => {
+        if (event.target === event.currentTarget) onClose()
+      }}
+    >
+      <div className="max-h-[85dvh] w-full max-w-lg overflow-y-auto rounded-t-2xl border border-[var(--orb-line)] bg-[var(--orb-surface-elevated)] p-4 text-[var(--orb-foreground)] shadow-2xl sm:rounded-2xl">
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-[var(--orb-foreground)]">Example prompts</h2>
+          <h2 className="text-sm font-semibold text-[var(--orb-foreground)]">
+            {residentialSurface ? 'More examples' : 'Example prompts'}
+          </h2>
           <button type="button" onClick={onClose} className="rounded-lg p-1.5 text-slate-400 hover:bg-white/[0.06]" aria-label="Close">
             <X className="h-5 w-5" />
           </button>
         </div>
         {safeGroups.map((group) => (
-          <div key={group.title} className="mb-4">
-            <p className="mb-1 text-[10px] font-medium uppercase tracking-wide text-slate-500">{group.title}</p>
+          <div key={group.title} className="mb-4" data-orb-starter-group={group.title.toLowerCase()}>
+            <p className="mb-1 text-[10px] font-medium uppercase tracking-wide text-[var(--orb-muted)]">{group.title}</p>
             <ul className="space-y-1">
               {(Array.isArray(group.prompts) ? group.prompts : []).map((prompt) => (
                 <li key={prompt.text}>
                   <button
                     type="button"
                     onClick={() => onApply(prompt)}
-                    className="w-full rounded-lg px-3 py-2 text-left text-sm text-slate-300 hover:bg-white/[0.04]"
+                    className="w-full rounded-lg px-3 py-2.5 text-left text-sm text-[var(--orb-foreground)] hover:bg-[var(--orb-surface-hover)]"
+                    data-orb-starter-drawer-item
                   >
                     {prompt.text}
                   </button>
@@ -4419,9 +4442,11 @@ function OrbPromptDrawer({
             ))}
           </ul>
         ) : null}
-        <button type="button" onClick={onToggleMore} className="text-xs text-slate-500 hover:text-slate-300">
-          {moreExpanded ? 'Fewer examples' : 'More examples'}
-        </button>
+        {!residentialSurface ? (
+          <button type="button" onClick={onToggleMore} className="text-xs text-[var(--orb-muted)] hover:text-[var(--orb-foreground)]">
+            {moreExpanded ? 'Fewer examples' : 'More examples'}
+          </button>
+        ) : null}
       </div>
     </div>
   )

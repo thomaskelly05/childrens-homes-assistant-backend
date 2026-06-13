@@ -9,8 +9,8 @@ const APOS = '\u2019'
 /** Maximum visible prompt pills on Chat home desktop — extras live behind “More examples”. */
 export const ORB_RESIDENTIAL_PRIMARY_STARTER_COUNT = 6
 
-/** Mobile first-view chip count — fewer starters for a calmer phone home screen. */
-export const ORB_RESIDENTIAL_MOBILE_PRIMARY_STARTER_COUNT = 5
+/** Mobile first-view chip count — three core starters for a calmer phone home screen. */
+export const ORB_RESIDENTIAL_MOBILE_PRIMARY_STARTER_COUNT = 3
 
 export type ResidentialStarter = {
   text: string
@@ -190,11 +190,26 @@ export const ORB_RESIDENTIAL_PRIMARY_STARTERS: ResidentialStarter[] = [
   }
 ]
 
-/** Mobile first-view starters — five most useful actions on phone. */
+/** Mobile first-view starters — three most useful actions on phone. */
 export const ORB_RESIDENTIAL_MOBILE_PRIMARY_STARTERS: ResidentialStarter[] = ORB_RESIDENTIAL_PRIMARY_STARTERS.slice(
   0,
   ORB_RESIDENTIAL_MOBILE_PRIMARY_STARTER_COUNT
 )
+
+/** Compact privacy guidance shown on mobile home — full detail in bottom sheet. */
+export const ORB_RESIDENTIAL_PRIVACY_GUIDANCE_ITEMS = [
+  'Use anonymised or minimal details where possible.',
+  `Follow your organisation${APOS}s safeguarding procedures.`,
+  'Do not use ORB for emergencies.',
+  'Adult remains responsible.'
+] as const
+
+/** Short billing value bullets for mobile default view. */
+export const ORB_RESIDENTIAL_BILLING_VALUE_SUMMARY = [
+  'Chat, Dictate and Voice support',
+  'ORB Write documents and review',
+  'Built-in safety and privacy prompts'
+] as const
 
 const PRIMARY_STARTER_TEXTS = new Set(
   [
