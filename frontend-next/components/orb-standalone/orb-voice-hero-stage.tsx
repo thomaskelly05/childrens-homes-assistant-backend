@@ -38,8 +38,9 @@ export function OrbVoiceHeroStage({
       ? ({ 'data-orb-voice-mobile-hero-stage': true, 'data-orb-voice-hero-stage': true } as const)
       : ({ 'data-orb-voice-hero-stage': true } as const)
 
-  const subline = ORB_VOICE_COMPANION_SUBLINES[companionState]
-  const micStatus = detailLine ?? statusLine
+  const subline = detailLine ?? ORB_VOICE_COMPANION_SUBLINES[companionState]
+  const headline = statusLine ?? ORB_VOICE_COMPANION_HEADLINES[companionState]
+  const showSubline = Boolean(subline) && (isMobile || companionState !== 'paused')
 
   return (
     <div
@@ -52,9 +53,9 @@ export function OrbVoiceHeroStage({
         className="orb-voice-hero-stage__headline text-center text-sm font-medium text-[var(--orb-text,var(--orb-foreground))]"
         data-orb-voice-status-label
       >
-        {ORB_VOICE_COMPANION_HEADLINES[companionState]}
+        {headline}
       </p>
-      {subline && (isMobile || companionState === 'idle') ? (
+      {showSubline ? (
         <p className="orb-voice-hero-stage__subline text-center text-xs text-[var(--orb-muted)]" data-orb-voice-status-subline>
           {subline}
         </p>
@@ -66,12 +67,6 @@ export function OrbVoiceHeroStage({
         <div className="orb-voice-hero-stage__cta w-full max-w-sm" data-orb-voice-hero-cta>
           {cta}
         </div>
-      ) : null}
-
-      {micStatus && !subline ? (
-        <p className="orb-voice-hero-stage__mic-status text-center text-xs text-[var(--orb-muted)]" data-orb-voice-mic-status>
-          {micStatus}
-        </p>
       ) : null}
 
       <div

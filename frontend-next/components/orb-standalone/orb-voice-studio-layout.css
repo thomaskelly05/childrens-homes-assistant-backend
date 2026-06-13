@@ -120,6 +120,18 @@ html[data-orb-residential='1'] [data-orb-workspace-panel='voice'] [data-orb-voic
   animation-delay: calc(var(--orb-bar-index, 0) * 0.12s);
 }
 
+.orb-voice-studio-waveform[data-orb-voice-state='idle'] .orb-voice-studio-waveform__bar {
+  opacity: 0.55;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .orb-voice-studio-waveform[data-orb-voice-waveform-active='true'] .orb-voice-studio-waveform__bar,
+  .orb-voice-studio-waveform[data-orb-voice-state='thinking'] .orb-voice-studio-waveform__bar {
+    animation: none;
+    opacity: 0.65;
+  }
+}
+
 /* Voice studio desktop layout */
 [data-orb-voice-studio] {
   display: flex;

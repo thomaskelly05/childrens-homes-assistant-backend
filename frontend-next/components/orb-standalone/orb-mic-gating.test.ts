@@ -110,7 +110,7 @@ describe('ORB mic gating and routing', () => {
     const actions = readComponent('components/orb-standalone/orb-voice-actions.tsx')
     assert.match(actions, /Turn speech into a record/)
     assert.match(actions, /data-orb-voice-use-dictate/)
-    assert.match(station, /resolveOrbVoiceUiState|ORB_VOICE_UNAVAILABLE_HEADLINE|provider_unavailable/)
+    assert.match(station, /resolveOrbVoiceUiState|unsupported/)
   })
 
   it('composer mic supports forced mic query routing', () => {

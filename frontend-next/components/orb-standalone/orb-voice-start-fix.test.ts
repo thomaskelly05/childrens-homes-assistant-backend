@@ -109,9 +109,8 @@ describe('ORB Voice start fix — start click path', () => {
     assert.match(hook(), /ORB_VOICE_MIC_BLOCKED_MESSAGE/)
   })
 
-  it('immediate UI uses starting and checking microphone copy', () => {
-    assert.match(station(), /Checking microphone…/)
-    assert.match(station(), /Starting voice…/)
+  it('immediate UI uses preparing copy', () => {
+    assert.match(station(), /Preparing voice…/)
     assert.match(hook(), /setVoiceCaptureState\('starting'\)/)
   })
 

@@ -1,8 +1,12 @@
 'use client'
 
 import { emitOrbClientDebug } from '@/lib/orb/orb-client-debug'
-import type { OrbVoiceUiState } from '@/lib/orb/voice/orb-voice-ui-state'
-import { orbVoiceUiPrimaryLabel } from '@/lib/orb/voice/orb-voice-ui-state'
+import {
+  isOrbVoiceFailureState,
+  normaliseOrbVoiceUiState,
+  orbVoiceUiPrimaryLabel,
+  type OrbVoiceUiState
+} from '@/lib/orb/voice/orb-voice-ui-state'
 
 export type OrbVoiceActionsProps = {
   uiState: OrbVoiceUiState
@@ -33,19 +37,18 @@ export function OrbVoiceActions({
   const stack = layout === 'stack'
   const wrap = stack ? 'flex flex-col gap-2' : 'flex flex-wrap items-center justify-center gap-2'
 
+  const normalisedState = normaliseOrbVoiceUiState(uiState)
   const primaryLabel = orbVoiceUiPrimaryLabel(uiState)
   const isStartVoice = primaryLabel === 'Start voice'
 
   const showTypeInstead =
-    uiState === 'unauthenticated' ||
-    uiState === 'ready' ||
-    uiState === 'provider_unavailable' ||
-    uiState === 'webrtc_failed' ||
-    uiState === 'ended'
+    normalisedState === 'unauthenticated' ||
+    normalisedState === 'ready' ||
+    isOrbVoiceFailureState(uiState) ||
+    normalisedState === 'ended'
 
   const showUseDictate =
-    (uiState === 'ready' || uiState === 'provider_unavailable' || uiState === 'webrtc_failed') &&
-    Boolean(onUseDictate)
+    (normalisedState === 'ready' || isOrbVoiceFailureState(uiState)) && Boolean(onUseDictate)
 
   const handlePrimary = () => {
     emitOrbClientDebug({ area: 'voice', event: 'voice_start_click_received', detail: { uiState } })
@@ -54,7 +57,7 @@ export function OrbVoiceActions({
       onSignIn?.()
       return
     }
-    if (uiState === 'provider_unavailable' || uiState === 'webrtc_failed') {
+    if (isOrbVoiceFailureState(uiState)) {
       onTryAgain?.()
       return
     }

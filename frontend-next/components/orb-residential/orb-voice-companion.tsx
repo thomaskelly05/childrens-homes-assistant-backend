@@ -35,22 +35,22 @@ export const ORB_VOICE_COMPANION_HEADLINES: Record<
   import('@/components/orb-residential/orb-voice-head').OrbVoiceCompanionState,
   string
 > = {
-  idle: "I'm ORB. I'm listening when you're ready.",
-  listening: 'Listening…',
-  thinking: 'ORB is responding…',
-  speaking: 'ORB is responding…',
-  paused: "I'm here when you're ready.",
+  idle: "I'm ready when you are.",
+  listening: "I'm listening.",
+  thinking: 'Give me a moment.',
+  speaking: 'ORB is responding.',
+  paused: 'Voice session captured',
   error: 'Voice is unavailable right now.'
 }
 
 export const ORB_VOICE_COMPANION_SUBLINES: Partial<
   Record<import('@/components/orb-residential/orb-voice-head').OrbVoiceCompanionState, string>
 > = {
-  idle: 'Talk through a situation, rough note or concern.',
-  listening: 'Speak naturally — ORB is with you.',
-  thinking: 'ORB is preparing a response…',
-  speaking: 'ORB is speaking…',
-  paused: 'Review your conversation or start again when ready.'
+  idle: 'Talk through a situation, rough note or concern. ORB will help you reflect and decide what may need recording.',
+  listening: 'Speak naturally. You can pause.',
+  thinking: "I'm structuring what you shared.",
+  speaking: 'You can continue when I finish.',
+  paused: 'Review what was discussed before turning it into a record.'
 }
 
 export function mapOrbVoiceUiToCompanionState(
@@ -58,9 +58,12 @@ export function mapOrbVoiceUiToCompanionState(
 ): import('@/components/orb-residential/orb-voice-head').OrbVoiceCompanionState {
   switch (input) {
     case 'listening':
+    case 'user_speaking':
       return 'listening'
     case 'thinking':
+    case 'preparing':
     case 'connecting':
+    case 'reconnecting':
       return 'thinking'
     case 'speaking':
     case 'responding':
@@ -71,6 +74,9 @@ export function mapOrbVoiceUiToCompanionState(
       return 'paused'
     case 'provider_unavailable':
     case 'webrtc_failed':
+    case 'failed_permission':
+    case 'failed_connection':
+    case 'unsupported':
     case 'unauthenticated':
     case 'error':
     case 'offline':

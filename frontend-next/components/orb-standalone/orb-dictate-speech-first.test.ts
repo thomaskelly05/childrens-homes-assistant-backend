@@ -67,7 +67,7 @@ describe('ORB Voice realtime availability', () => {
     const station = readComponent('components/orb-standalone/orb-voice-station.tsx')
     assert.match(station, /fetchOrbVoiceRealtimeStatus|isRealtimeVoiceProvider/)
     assert.match(station, /realtimeVoiceReady/)
-    assert.match(station, /resolveOrbVoiceUiState|ORB_VOICE_UNAVAILABLE_HEADLINE|provider_unavailable/)
+    assert.match(station, /resolveOrbVoiceUiState|unsupported/)
     assert.match(station, /voiceTransportLive/)
     assert.match(station, /data-orb-voice-transport-live/)
   })

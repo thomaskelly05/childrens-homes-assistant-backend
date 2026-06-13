@@ -67,7 +67,7 @@ describe('ORB Voice copilot rebuild — ready', () => {
 
 describe('ORB Voice copilot rebuild — fallback', () => {
   it('WebRTC fail renders Try voice again, Type instead, Use Dictate', () => {
-    assert.equal(orbVoiceUiPrimaryLabel('webrtc_failed'), 'Try voice again')
+    assert.equal(orbVoiceUiPrimaryLabel('failed_connection'), 'Try voice again')
     const actions = readComponent('components/orb-standalone/orb-voice-actions.tsx')
     assert.match(actions, /Try voice again/)
     assert.match(actions, /Type instead/)
@@ -182,7 +182,7 @@ describe('ORB Voice copilot rebuild — UI state machine', () => {
     )
   })
 
-  it('provider_unavailable when not configured', () => {
+  it('unsupported when not configured', () => {
     assert.equal(
       resolveOrbVoiceUiState({
         authStatus: 'authenticated',
@@ -194,7 +194,7 @@ describe('ORB Voice copilot rebuild — UI state machine', () => {
         realtimeState: 'idle',
         webrtcFailed: false
       }),
-      'provider_unavailable'
+      'unsupported'
     )
   })
 

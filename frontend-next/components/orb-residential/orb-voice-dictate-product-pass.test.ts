@@ -6,7 +6,8 @@ import { describe, it } from 'node:test'
 
 import {
   buildOrbVoiceAfterCallContent,
-  orbVoiceNeedsEscalationPrompt
+  orbVoiceNeedsEscalationPrompt,
+  orbVoiceNeedsManagementOversight
 } from '../../lib/orb/voice/orb-voice-after-call.ts'
 import { dictateMobileStatusLine } from '../../lib/orb/dictate/orb-dictate-mobile-copy.ts'
 
@@ -86,7 +87,7 @@ describe('ORB Voice + Dictate product pass', () => {
     const actions = read('components/orb-standalone/orb-voice-actions.tsx')
     const companion = read('components/orb-residential/orb-voice-companion.tsx')
     const hero = read('components/orb-standalone/orb-voice-hero-stage.tsx')
-    assert.match(companion, /I'm ORB\. I'm listening when you're ready\./)
+    assert.match(companion, /I'm ready when you are\./)
     assert.match(actions, /Start voice/)
     assert.match(actions, /Type instead/)
     assert.match(actions, /Turn speech into a record/)
@@ -123,6 +124,7 @@ describe('ORB Voice + Dictate product pass', () => {
     ])
     assert.ok(withTurn.summary?.includes('handover'))
     assert.ok(orbVoiceNeedsEscalationPrompt('There is immediate risk and a disclosure'))
+    assert.ok(orbVoiceNeedsManagementOversight('Concern about restraint during handover'))
   })
 
   it('mobile safe-area action dock and voice modes use workspace scroll containment', () => {

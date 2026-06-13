@@ -7,6 +7,8 @@ import { OrbDictateTemplateSelector } from '@/components/orb/dictate/OrbDictateT
 import {
   buildOrbVoiceAfterCallContent,
   orbVoiceNeedsEscalationPrompt,
+  orbVoiceNeedsManagementOversight,
+  orbVoiceManagementOversightTopics,
   type OrbVoiceAfterCallContent
 } from '@/lib/orb/voice/orb-voice-after-call'
 import type { OrbDictateStudioTemplate } from '@/lib/orb/dictate/orb-dictate-studio-templates'
@@ -16,6 +18,7 @@ export function OrbVoiceAfterCallPanel({
   turns,
   transcriptText,
   voiceSummary,
+  summaryPending = false,
   selectedTemplateId,
   onTemplateChange,
   onCreateDraftRecord,
@@ -28,6 +31,7 @@ export function OrbVoiceAfterCallPanel({
   turns: VoiceTurn[]
   transcriptText: string
   voiceSummary?: string | null
+  summaryPending?: boolean
   selectedTemplateId: string
   onTemplateChange: (template: OrbDictateStudioTemplate) => void
   onCreateDraftRecord: (templateId: string) => void
@@ -39,8 +43,10 @@ export function OrbVoiceAfterCallPanel({
 }) {
   const [transcriptOpen, setTranscriptOpen] = useState(false)
   const [recordTypeOpen, setRecordTypeOpen] = useState(false)
-  const content: OrbVoiceAfterCallContent = buildOrbVoiceAfterCallContent(turns, voiceSummary)
+  const content: OrbVoiceAfterCallContent = buildOrbVoiceAfterCallContent(turns, voiceSummary, { summaryPending })
   const needsEscalation = orbVoiceNeedsEscalationPrompt(transcriptText)
+  const needsManagementOversight = orbVoiceNeedsManagementOversight(transcriptText)
+  const oversightTopics = orbVoiceManagementOversightTopics(transcriptText)
 
   return (
     <section
@@ -48,13 +54,24 @@ export function OrbVoiceAfterCallPanel({
       data-orb-voice-after-call
       data-orb-voice-mode="after_call"
     >
+      <div className="space-y-1" data-orb-voice-after-call-header>
+        <p className="text-sm font-semibold text-[var(--orb-foreground)]">Voice session captured</p>
+        <p className="text-xs leading-5 text-[var(--orb-muted)]">
+          Review what was discussed before turning it into a record.
+        </p>
+      </div>
+
       <div className="space-y-1" data-orb-voice-after-call-summary>
         <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--orb-muted)]">Conversation summary</p>
-        {content.summary ? (
+        {content.summaryPending ? (
+          <p className="text-sm text-[var(--orb-muted)]" data-orb-voice-summary-pending>
+            Preparing summary…
+          </p>
+        ) : content.summary ? (
           <p className="text-sm leading-6 text-[var(--orb-foreground)]">{content.summary}</p>
         ) : (
-          <p className="text-sm text-[var(--orb-muted)]">
-            No transcript was captured. You can start a new voice session or type instead.
+          <p className="text-sm text-[var(--orb-muted)]" data-orb-voice-no-transcript>
+            No speech was captured. You can continue talking or start again.
           </p>
         )}
       </div>
@@ -67,6 +84,28 @@ export function OrbVoiceAfterCallPanel({
           If there is immediate risk, follow your local safeguarding and emergency procedures. ORB supports
           reflection and recording but does not replace management oversight.
         </p>
+      ) : null}
+
+      {needsManagementOversight ? (
+        <div
+          className="rounded-xl border border-sky-400/25 bg-sky-500/8 px-3 py-2"
+          data-orb-voice-management-oversight
+        >
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--orb-muted)]">
+            May need management oversight
+          </p>
+          <p className="mt-1 text-[11px] leading-5 text-[var(--orb-foreground)]">
+            Your conversation mentioned topics that may need a manager or safeguarding lead to review. ORB does not
+            decide — please use your local procedures.
+          </p>
+          {oversightTopics.length ? (
+            <ul className="mt-2 space-y-0.5 text-[10px] text-[var(--orb-muted)]">
+              {oversightTopics.map((topic) => (
+                <li key={topic}>• Mentioned: {topic}</li>
+              ))}
+            </ul>
+          ) : null}
+        </div>
       ) : null}
 
       <div data-orb-voice-recording-hints>
@@ -99,7 +138,7 @@ export function OrbVoiceAfterCallPanel({
             ))}
           </ul>
         ) : (
-          <p className="mt-1 text-sm text-[var(--orb-muted)]">Start a conversation to see reflection prompts.</p>
+          <p className="mt-1 text-sm text-[var(--orb-muted)]">Not clear from this session.</p>
         )}
       </div>
 
@@ -116,6 +155,9 @@ export function OrbVoiceAfterCallPanel({
         </button>
         {recordTypeOpen ? (
           <div className="space-y-2 rounded-xl border border-[var(--orb-line)]/40 bg-[var(--orb-surface-elevated)]/60 p-3" data-orb-voice-record-type-picker>
+            <p className="text-[10px] leading-4 text-[var(--orb-muted)]" data-orb-voice-adult-review>
+              Adult review required before saving or sharing.
+            </p>
             <OrbDictateTemplateSelector
               selectedTemplateId={selectedTemplateId}
               onTemplateChange={onTemplateChange}

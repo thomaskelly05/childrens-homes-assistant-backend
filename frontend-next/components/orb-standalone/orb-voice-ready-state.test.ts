@@ -6,6 +6,7 @@ import { describe, it } from 'node:test'
 
 import {
   isOrbRealtimeStatusConfigured,
+  normaliseOrbVoiceUiState,
   orbVoiceUiPrimaryLabel,
   orbVoiceUiStatusLine,
   resolveOrbVoiceUiState
@@ -51,7 +52,7 @@ const baseInput = {
 describe('ORB Voice UI state — ready before session', () => {
   it('authenticated + status configured + no session renders Start voice', () => {
     assert.equal(resolveOrbVoiceUiState(baseInput), 'ready')
-    assert.equal(orbVoiceUiStatusLine('ready'), 'Tap to start')
+    assert.equal(orbVoiceUiStatusLine('ready'), "I'm ready when you are.")
     assert.equal(orbVoiceUiPrimaryLabel('ready'), 'Start voice')
     const station = readComponent('components/orb-standalone/orb-voice-station.tsx')
     assert.match(station, /data-orb-voice-ui-state=\{uiState\}/)
@@ -86,10 +87,10 @@ describe('ORB Voice UI state — ready before session', () => {
     )
   })
 
-  it('Start click requests realtime session and moves to connecting', () => {
+  it('Start click requests realtime session and moves to preparing', () => {
     assert.equal(
       resolveOrbVoiceUiState({ ...baseInput, startStage: 'starting', transportLive: false }),
-      'connecting'
+      'preparing'
     )
     const availability = readLib('orb/voice/orb-realtime-availability.ts')
     assert.match(availability, /beginOrbRealtimeVoiceConversation/)
@@ -104,14 +105,14 @@ describe('ORB Voice UI state — ready before session', () => {
     )
     assert.notEqual(
       resolveOrbVoiceUiState({ ...baseInput, transportLive: false, startStage: 'idle' }),
-      'provider_unavailable'
+      'unsupported'
     )
   })
 
-  it('session/client secret is only required after Start (active without transport is connecting)', () => {
+  it('session/client secret is only required after Start (active without transport is reconnecting)', () => {
     assert.equal(
       resolveOrbVoiceUiState({ ...baseInput, startStage: 'active', transportLive: false }),
-      'connecting'
+      'reconnecting'
     )
     assert.equal(
       resolveOrbVoiceUiState({ ...baseInput, startStage: 'active', transportLive: true, realtimeState: 'listening' }),
@@ -129,30 +130,28 @@ describe('ORB Voice UI state — auth and fallback', () => {
     assert.equal(orbVoiceUiPrimaryLabel('unauthenticated'), 'Sign in')
   })
 
-  it('provider unavailable still shows Try voice again / Type instead / Use Dictate', () => {
+  it('unsupported still shows Try voice again / Type instead / Use Dictate', () => {
     assert.equal(
       resolveOrbVoiceUiState({
         ...baseInput,
         realtimeStatus: { ok: true, realtime_enabled: false, provider: null, reason: 'not_configured' }
       }),
-      'provider_unavailable'
+      'unsupported'
     )
+    assert.equal(orbVoiceUiPrimaryLabel('unsupported'), 'Try voice again')
     assert.equal(orbVoiceUiPrimaryLabel('provider_unavailable'), 'Try voice again')
     assert.match(readLib('orb/voice/orb-voice-ui-state.ts'), /Try voice again/)
     const actions = readComponent('components/orb-standalone/orb-voice-actions.tsx')
     assert.match(actions, /Type instead/)
     assert.match(actions, /Turn speech into a record/)
-    assert.match(actions, /provider_unavailable/)
+    assert.match(actions, /isOrbVoiceFailureState/)
   })
 
-  it('webrtc_failed when session attempt failed but status was configured', () => {
+  it('failed_connection when session attempt failed but status was configured', () => {
     assert.equal(
       resolveOrbVoiceUiState({ ...baseInput, startStage: 'failed', webrtcFailed: true }),
-      'webrtc_failed'
+      'failed_connection'
     )
-    assert.equal(
-      resolveOrbVoiceUiState({ ...baseInput, startStage: 'failed', webrtcFailed: false }),
-      'webrtc_failed'
-    )
+    assert.equal(normaliseOrbVoiceUiState('webrtc_failed'), 'failed_connection')
   })
 })

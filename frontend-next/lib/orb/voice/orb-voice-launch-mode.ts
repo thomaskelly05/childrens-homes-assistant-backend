@@ -22,8 +22,7 @@ export type OrbRealtimeVoiceStatusLite = {
 }
 
 export const ORB_VOICE_PANEL_TITLE = 'Voice'
-export const ORB_VOICE_PANEL_SUBTITLE =
-  'Live conversation and reflection — talk hands-free with ORB'
+export const ORB_VOICE_PANEL_SUBTITLE = 'Talk hands-free with ORB'
 export const ORB_VOICE_PANEL_MOBILE_SUBTITLE = 'Talk hands-free with ORB'
 
 export const ORB_VOICE_BOUNDARY_COPY = [
@@ -123,24 +122,24 @@ export function orbVoiceLaunchHeadline(
 ): string {
   switch (state) {
     case 'ready':
-      if (options?.realtimeConfigured) return 'Tap to start live voice'
-      return options?.pushToTalk !== false ? 'Hold or tap to speak' : 'Tap to speak'
+      if (options?.realtimeConfigured) return "I'm ready when you are."
+      return options?.pushToTalk !== false ? 'Hold or tap to speak' : "I'm ready when you are."
     case 'starting':
-      return 'Starting voice…'
+      return 'Preparing voice…'
     case 'listening':
-      return 'Listening…'
+      return "I'm listening."
     case 'transcribing':
-      return 'Transcribing…'
+      return 'I heard that.'
     case 'thinking':
-      return 'ORB is responding…'
+      return 'Give me a moment.'
     case 'speaking':
-      return 'ORB is responding…'
+      return 'ORB is responding.'
     case 'unavailable':
-      return 'Voice is not available in this browser'
+      return 'Voice is not available in this browser.'
     case 'error':
-      return 'Voice could not start'
+      return 'Voice could not connect.'
     default:
-      return 'Ready'
+      return "I'm ready when you are."
   }
 }
 

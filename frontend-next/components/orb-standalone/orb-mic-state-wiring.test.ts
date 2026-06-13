@@ -130,9 +130,9 @@ describe('ORB mic state wiring', () => {
   it('Voice does not show Speak/End during start stage', () => {
     const station = readComponent('components/orb-standalone/orb-voice-station.tsx')
     assert.match(station, /voiceSessionLive \?/)
-    assert.match(station, /voiceStarting \?/)
+    assert.match(station, /uiState === 'preparing' \|\| uiState === 'reconnecting'/)
     assert.match(station, /handleCancelStart/)
-    const startBlock = station.match(/voiceStarting \?[\s\S]*? : voiceSessionLive/)?.[0] ?? ''
+    const startBlock = station.match(/uiState === 'preparing'[\s\S]*? : \([\s\S]*?\) : \([\s\S]*?voiceSessionLive/)?.[0] ?? ''
     assert.doesNotMatch(startBlock, /\bSpeak\b/)
   })
 

@@ -27,7 +27,7 @@ export function OrbVoiceStudioWaveform({
   state: OrbVoiceCompanionState
   className?: string
 }) {
-  const active = state === 'listening' || state === 'speaking'
+  const active = state === 'listening' || state === 'speaking' || state === 'thinking'
   return (
     <div
       className={`orb-voice-studio-waveform ${className}`.trim()}
