@@ -161,12 +161,12 @@ describe('ORB Residential mobile UX', () => {
   })
 
   it('passkey and auth button copy matches product wording', () => {
-    const login = readComponent('components/orb-residential/orb-login-screen.tsx')
+    const authCard = readComponent('components/orb-residential/orb-login-auth-card.tsx')
     const profile = readComponent('components/orb-standalone/orb-adult-profile-drawer.tsx')
-    assert.match(login, /Face ID, Touch ID or device passkey/)
-    assert.match(login, /data-orb-passkey-unavailable/)
-    assert.match(login, /Use authenticator app instead/)
-    assert.match(profile, /Use Face ID, Touch ID or device passkey/)
+    assert.match(authCard, /Face ID.*Touch ID.*device passkey/i)
+    assert.match(authCard, /data-orb-passkey-unavailable/)
+    assert.match(authCard, /Use authenticator app instead/)
+    assert.match(profile, /Face ID.*Touch ID.*device passkey/i)
     const auth = readComponent('components/orb-residential/ui/orb-auth-button.tsx')
     assert.match(auth, /OrbAuthProviderIcon/)
     assert.match(auth, /MicrosoftIcon/)

@@ -65,16 +65,19 @@ describe('ORB Residential premium layout pass', () => {
 
   it('login hero sphere is sized to avoid clipping', () => {
     const login = read('components/orb-residential/orb-login-screen.tsx')
+    const desktopHero = read('components/orb-residential/orb-login-desktop-hero.tsx')
     const css = read('app/orb/orb-login.css')
     const passCss = read('app/orb/orb-premium-layout-pass.css')
     const visualBuild = read('lib/orb/orb-visual-build.ts')
     assert.match(visualBuild, /ORB_LOGIN_VERSION = 'front-door-v6'/)
     assert.match(login, /data-orb-login-version=\{ORB_LOGIN_VERSION\}/)
-    assert.match(login, /orb-login-hero-sphere-wrap/)
-    assert.match(login, /scale-\[0\.52\]/)
-    assert.match(css, /max-width:\s*7\.5rem/)
-    assert.match(css, /max-height:\s*min\(6\.75rem,\s*14vh\)/)
-    assert.match(passCss, /orb-login-hero[\s\S]*max-height:\s*100dvh/)
+    assert.match(login, /OrbLoginDesktopHero/)
+    assert.match(desktopHero, /orb-login-hero-sphere-wrap/)
+    assert.match(desktopHero, /OrbHeroSphere/)
+    assert.match(css, /\.orb-login-hero-sphere-wrap[\s\S]*overflow:\s*visible/)
+    assert.match(css, /--orb-presence-size:\s*clamp\(4\.75rem, 7\.5vw, 6rem\)/)
+    assert.match(css, /max-height:\s*100dvh/)
+    assert.match(passCss, /html\[data-orb-residential='1'\] \.orb-login-hero/)
   })
 
   it('chat home uses prompt pills and more examples drawer', () => {

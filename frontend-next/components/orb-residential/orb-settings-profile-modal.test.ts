@@ -35,12 +35,18 @@ describe('ORB settings profile and billing modals', () => {
   })
 
   it('billing modal lists full ORB Residential feature set with sticky footer', () => {
+    const copy = read('lib/orb/orb-residential-copy.ts')
     const billing = read('components/orb-standalone/orb-billing-modal.tsx')
-    assert.match(billing, /ORB Write/)
-    assert.match(billing, /Documents & Guidance/)
+    assert.match(copy, /ORB_RESIDENTIAL_BILLING_VALUE_ITEMS/)
+    assert.match(copy, /Create documents in ORB Write/)
+    assert.match(copy, /Use Voice support/)
+    assert.match(billing, /ORB_RESIDENTIAL_BILLING_VALUE_ITEMS/)
+    assert.match(billing, /ORB_RESIDENTIAL_BILLING_VALUE_ITEMS\.map\(\(item\)/)
+    assert.match(billing, /data-orb-billing-value/)
     assert.match(billing, /data-orb-billing-cta-bar/)
     assert.match(billing, /Start free trial/)
-    assert.match(billing, /Subscribe/)
+    assert.match(billing, /data-orb-billing-upgrade/)
+    assert.match(billing, /data-orb-billing-sticky-footer/)
     assert.match(billing, /data-orb-billing-refresh/)
   })
 

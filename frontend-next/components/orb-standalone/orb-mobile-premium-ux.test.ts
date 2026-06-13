@@ -257,7 +257,7 @@ describe('ORB mobile premium Voice copy', () => {
     assert.match(voice, /data-orb-voice-post-session/)
     assert.match(voice, /OrbVoiceTranscriptActions/)
     assert.match(actions, /data-orb-voice-to-dictate/)
-    assert.match(actions, /Copy transcript/)
+    assert.match(actions, /Copy full conversation/)
     assert.match(voice, /Start new voice conversation|New conversation/)
     assert.doesNotMatch(voice, /Open Dictate instead/)
     assert.doesNotMatch(voice, /Open Dictate again/)
