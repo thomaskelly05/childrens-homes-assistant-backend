@@ -224,7 +224,11 @@ export function OrbStandaloneSettingsPanel({
       onClose={onClose}
       ariaLabel="ORB settings"
       panelId="settings"
-      footer="ORB Residential does not access IndiCare OS records. It uses your profile, conversation, uploaded documents and IndiCare residential intelligence."
+      footer={
+        isMobile
+          ? undefined
+          : 'ORB Residential does not access IndiCare OS records. It uses your profile, conversation, uploaded documents and IndiCare residential intelligence.'
+      }
       {...(residentialSurface
         ? { ...orbOverlayDrawerShellProps('workstation'), mobileMode: 'full' as const }
         : { layout: 'center' as const, wide: true, mobileMode: 'full' as const })}
@@ -282,14 +286,23 @@ export function OrbStandaloneSettingsPanel({
           ) : null}
           {showMobileDetail ? (
             <h3
-              className="mb-3 text-sm font-semibold text-[var(--orb-foreground)]"
+              className="mb-1 text-sm font-semibold text-[var(--orb-foreground)]"
               data-orb-settings-section-heading
             >
               {activeSectionLabel}
             </h3>
           ) : null}
+          {showMobileDetail && activeSection === 'appearance' ? (
+            <p className="mb-3 text-xs text-[var(--orb-muted)]" data-orb-settings-section-description>
+              Theme, text size and motion
+            </p>
+          ) : null}
           {activeSection === 'appearance' ? (
-            <SettingsBlock title="Appearance" description="Theme, text size and motion on this device.">
+            <SettingsBlock
+              title="Appearance"
+              description="Theme, text size and motion on this device."
+              suppressHeader={showMobileDetail}
+            >
               <OrbAppearanceControl
                 value={effectiveAppearance}
                 onChange={(mode) => onAppearanceChange?.(mode)}
@@ -336,6 +349,7 @@ export function OrbStandaloneSettingsPanel({
             <SettingsBlock
               title="Writing Preferences"
               description="Set the tone ORB uses when supporting professional recording."
+              suppressHeader={showMobileDetail}
             >
               <label className="block rounded-xl border border-[var(--orb-line)] px-4 py-3" data-orb-settings-preferred-name>
                 <span className="block text-sm font-medium text-[var(--orb-foreground)]">Preferred name</span>
@@ -384,7 +398,11 @@ export function OrbStandaloneSettingsPanel({
           ) : null}
 
           {activeSection === 'voice' ? (
-            <SettingsBlock title="Voice" description="Speech input and read-aloud preferences.">
+            <SettingsBlock
+              title="Voice"
+              description="Speech input and read-aloud preferences."
+              suppressHeader={showMobileDetail}
+            >
               <p className="text-[11px] leading-6 text-[var(--orb-muted)]" data-orb-settings-voice-help>
                 ORB can read responses aloud using your device/browser voices. Voice quality depends on Safari,
                 Chrome, macOS, iOS, Windows or Android. Choose the voice that feels most natural for you. Where
@@ -432,6 +450,7 @@ export function OrbStandaloneSettingsPanel({
             <SettingsBlock
               title="Recording Preferences"
               description="Choose how ORB helps structure daily records, incidents, handovers and reflective notes."
+              suppressHeader={showMobileDetail}
             >
               <ToggleRow
                 label="Temporary chat by default"
@@ -462,6 +481,7 @@ export function OrbStandaloneSettingsPanel({
             <SettingsBlock
               title="Safety & Privacy"
               description="Understand what ORB can and cannot process, and how to use anonymised or minimal information safely."
+              suppressHeader={showMobileDetail}
             >
               <div className="rounded-xl border border-[var(--orb-line)] bg-[var(--orb-surface)] px-4 py-3">
                 <p className="flex items-center gap-2 text-sm font-semibold text-[var(--orb-foreground)]">
@@ -573,6 +593,7 @@ export function OrbStandaloneSettingsPanel({
             <SettingsBlock
               title="Account & Billing"
               description="Plan, subscription, usage and billing management."
+              suppressHeader={showMobileDetail}
             >
               <OrbBillingSettingsSection
                 userName={userName}
@@ -590,6 +611,7 @@ export function OrbStandaloneSettingsPanel({
             <SettingsBlock
               title="About ORB"
               description="ORB Residential — ethical intelligence for children’s homes."
+              suppressHeader={showMobileDetail}
             >
               <div className="flex items-center gap-2 text-xs text-[var(--orb-muted)]">
                 <Sun className="h-4 w-4" aria-hidden />
@@ -624,12 +646,26 @@ export function OrbStandaloneSettingsPanel({
   )
 }
 
-function SettingsBlock({ title, description, children }: { title: string; description: string; children: ReactNode }) {
+function SettingsBlock({
+  title,
+  description,
+  children,
+  suppressHeader = false
+}: {
+  title: string
+  description: string
+  children: ReactNode
+  suppressHeader?: boolean
+}) {
   return (
     <section>
-      <h3 className="text-sm font-semibold text-[var(--orb-foreground)]">{title}</h3>
-      <p className="mt-0.5 text-xs text-[var(--orb-muted)]">{description}</p>
-      <div className="mt-3 space-y-3">{children}</div>
+      {!suppressHeader ? (
+        <>
+          <h3 className="text-sm font-semibold text-[var(--orb-foreground)]">{title}</h3>
+          <p className="mt-0.5 text-xs text-[var(--orb-muted)]">{description}</p>
+        </>
+      ) : null}
+      <div className={`space-y-3 ${suppressHeader ? '' : 'mt-3'}`}>{children}</div>
     </section>
   )
 }

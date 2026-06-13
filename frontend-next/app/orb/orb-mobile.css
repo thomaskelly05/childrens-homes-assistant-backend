@@ -1359,6 +1359,90 @@
     background: rgba(16, 185, 129, 0.12) !important;
     color: #047857 !important;
   }
+
+  /* Mobile simplification pass — home, dictate, voice, write, billing, settings */
+  [data-orb-composer-privacy-zone] [data-orb-privacy-notice='chat'] {
+    display: none !important;
+  }
+
+  [data-orb-composer-copyright],
+  [data-orb-composer-disclaimer] {
+    display: none !important;
+  }
+
+  [data-orb-starter-pills] {
+    margin-top: 0.5rem !important;
+  }
+
+  [data-orb-more-examples] {
+    margin-top: 0.35rem !important;
+    font-size: 0.75rem !important;
+  }
+
+  [data-orb-dictate-mobile][data-orb-dictate-capture-idle='true'] {
+    overflow: hidden !important;
+  }
+
+  .orb-dictate-mobile-orb--compact,
+  .orb-dictate-mobile .orb-dictate-mobile-orb {
+    --orb-presence-size: clamp(4.5rem, 18vw, 5.5rem) !important;
+    width: var(--orb-presence-size) !important;
+    height: var(--orb-presence-size) !important;
+    opacity: 0.85;
+  }
+
+  [data-orb-dictate-boundary-disclosure] summary {
+    min-height: 2.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  [data-orb-voice-mobile] [data-orb-voice-hero-stage],
+  [data-orb-voice-mobile] .orb-voice-hero-stage {
+    min-height: min(40dvh, 18rem) !important;
+    max-height: 44dvh !important;
+    padding-bottom: 0.25rem !important;
+  }
+
+  [data-orb-voice-mobile] .orb-voice-hero-stage__privacy [data-orb-privacy-notice='voice'] {
+    display: none !important;
+  }
+
+  [data-orb-write-ask-orb-fab] {
+    width: 2.75rem !important;
+    max-width: 2.75rem !important;
+    padding: 0 !important;
+  }
+
+  [data-orb-billing-modal] [data-orb-billing-collapsible] summary {
+    min-height: 2.75rem;
+    display: flex;
+    align-items: center;
+  }
+
+  [data-orb-billing-modal] [data-orb-billing-sticky-footer] {
+    position: sticky;
+    bottom: 0;
+    z-index: 5;
+  }
+
+  [data-orb-settings-panel][data-orb-settings-mobile-layout='stack'] [data-orb-settings-section-heading] {
+    margin-bottom: 0.25rem;
+  }
+
+  .orb-account-menu {
+    max-height: min(22rem, calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 2rem)) !important;
+    padding-bottom: max(0.25rem, env(safe-area-inset-bottom, 0px)) !important;
+  }
+
+  [data-orb-account-menu-header] {
+    padding-block: 0.5rem !important;
+  }
+
+  [data-orb-account-menu-summary] {
+    display: none !important;
+  }
 }
 
 /* Short mobile height — compact home hero so composer stays in view */

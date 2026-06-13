@@ -120,13 +120,11 @@ describe('ORB Residential mobile UX', () => {
     assert.match(companion, /mobileHeader=/)
     assert.match(copy, /ORB_RESIDENTIAL_MOBILE_EMPTY_HEADING/)
     assert.match(copy, /What do you need help with\?/)
-    assert.match(copy, /ORB_RESIDENTIAL_MOBILE_PRIMARY_STARTER_COUNT = 5/)
+    assert.match(copy, /ORB_RESIDENTIAL_MOBILE_PRIMARY_STARTER_COUNT = 3/)
     for (const starter of [
       'Daily record',
       'Incident reflection',
-      'Safeguarding reflection',
-      'Handover note',
-      'Prepare for inspection'
+      'Safeguarding reflection'
     ]) {
       assert.match(copy, new RegExp(starter.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))
     }

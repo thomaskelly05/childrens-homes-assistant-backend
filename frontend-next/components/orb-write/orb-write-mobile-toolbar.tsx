@@ -13,6 +13,7 @@ import {
   Italic,
   List,
   ListOrdered,
+  MessageCircle,
   Minus,
   MoreHorizontal,
   Printer,
@@ -221,11 +222,12 @@ export function OrbWriteMobileToolbar({
       {onAskOrb ? (
         <button
           type="button"
-          className="orb-write-ask-orb-fab fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom,0px))] right-4 z-[65] inline-flex min-h-[2.75rem] max-w-[calc(100vw-2rem)] items-center gap-2 rounded-full bg-[var(--orb-primary)] px-4 py-2 text-xs font-semibold text-white shadow-lg md:hidden"
+          className="orb-write-ask-orb-fab fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom,0px))] right-4 z-[18] inline-flex h-11 w-11 min-h-[2.75rem] min-w-[2.75rem] items-center justify-center rounded-full bg-[var(--orb-primary)] text-white shadow-lg md:hidden"
           onClick={onAskOrb}
           data-orb-write-ask-orb-fab
+          aria-label="Ask ORB about this document"
         >
-          Ask ORB about this document
+          <MessageCircle className="h-5 w-5" aria-hidden />
         </button>
       ) : null}
     </>

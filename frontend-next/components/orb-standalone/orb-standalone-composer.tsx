@@ -1,6 +1,6 @@
 'use client'
 
-import { FormEvent, useEffect, useRef, type DragEvent } from 'react'
+import { FormEvent, useEffect, useRef, useState, type DragEvent } from 'react'
 import { AudioLines, Camera, ChevronDown, FileText, Mic, MicOff, Plus, Send, Square, Wrench, X } from 'lucide-react'
 
 import {
@@ -9,6 +9,10 @@ import {
 } from '@/components/orb-standalone/orb-composer-plus-menu'
 import { OrbPrivacyInputWarning } from '@/components/orb/privacy/orb-privacy-input-warning'
 import { OrbPrivacyNotice } from '@/components/orb/privacy/orb-privacy-notice'
+import {
+  OrbResidentialPrivacyGuidanceLink,
+  OrbResidentialPrivacyGuidanceSheet
+} from '@/components/orb-residential/orb-privacy-guidance-sheet'
 import { OrbComposerCopyright } from '@/components/orb-standalone/orb-composer-copyright'
 import { OrbFooter } from '@/components/orb-standalone/orb-footer'
 import { logTapTarget } from '@/lib/interaction/mobile-tap-debug'
@@ -77,6 +81,8 @@ export function OrbStandaloneComposer({
   answering,
   onStopGenerating,
   residentialSurface = false,
+  mobileViewport = false,
+  chatHasMessages = false,
   onPlusMenuAction
 }: {
   value: string
@@ -128,6 +134,8 @@ export function OrbStandaloneComposer({
   answering?: boolean
   onStopGenerating?: () => void
   residentialSurface?: boolean
+  mobileViewport?: boolean
+  chatHasMessages?: boolean
   onPlusMenuAction?: (action: OrbComposerPlusAction) => void
 }) {
   const fileInputRef = useRef<HTMLInputElement | null>(null)
@@ -198,6 +206,8 @@ export function OrbStandaloneComposer({
   }, [value, residentialSurface])
 
   const compactResidential = residentialSurface
+  const showMobilePrivacyLink = compactResidential && mobileViewport && !chatHasMessages
+  const [privacyGuidanceOpen, setPrivacyGuidanceOpen] = useState(false)
 
   return (
     <div
@@ -527,9 +537,12 @@ export function OrbStandaloneComposer({
           ) : null}
         </form>
 
-        <div className="mt-2 space-y-2 px-2">
+        <div className="mt-2 space-y-2 px-2" data-orb-composer-privacy-zone>
           <OrbPrivacyInputWarning text={value} />
-          <OrbPrivacyNotice surface="chat" />
+          {showMobilePrivacyLink ? (
+            <OrbResidentialPrivacyGuidanceLink onOpen={() => setPrivacyGuidanceOpen(true)} />
+          ) : null}
+          {!compactResidential || !mobileViewport ? <OrbPrivacyNotice surface="chat" /> : null}
         </div>
 
         {!compactResidential ? (
@@ -538,10 +551,16 @@ export function OrbStandaloneComposer({
             disclaimer="ORB Residential can make mistakes. ORB Residential does not access IndiCare OS records."
             copyright=""
           />
-        ) : (
+        ) : compactResidential && !mobileViewport ? (
           <OrbComposerCopyright className="mt-2 px-2 pb-1" />
-        )}
+        ) : null}
       </div>
+      {showMobilePrivacyLink ? (
+        <OrbResidentialPrivacyGuidanceSheet
+          open={privacyGuidanceOpen}
+          onClose={() => setPrivacyGuidanceOpen(false)}
+        />
+      ) : null}
     </div>
   )
 }
