@@ -3,7 +3,15 @@
  * Safe to import from tests without React.
  */
 
+import {
+  ORB_VOICE_BOUNDARY_COPY,
+  ORB_RESIDENTIAL_VOICE_SAFETY_STRIP
+} from '../orb-residential-safety-copy.ts'
+import { orbResidentialStation } from '../orb-residential-stations.ts'
+
 const ORB_REALTIME_CONFIGURED_PROVIDERS = ['openai', 'openai_realtime'] as const
+
+const voiceStation = orbResidentialStation('orb_voice')
 
 function isOrbRealtimeStatusConfigured(
   status: OrbRealtimeVoiceStatusLite | null | undefined
@@ -21,17 +29,11 @@ export type OrbRealtimeVoiceStatusLite = {
   reason: 'configured' | 'not_configured' | 'endpoint_failed'
 }
 
-export const ORB_VOICE_PANEL_TITLE = 'Voice'
-export const ORB_VOICE_PANEL_SUBTITLE = 'Talk hands-free with ORB'
-export const ORB_VOICE_PANEL_MOBILE_SUBTITLE = 'Talk hands-free with ORB'
+export const ORB_VOICE_PANEL_TITLE = voiceStation.label
+export const ORB_VOICE_PANEL_SUBTITLE = voiceStation.tagline
+export const ORB_VOICE_PANEL_MOBILE_SUBTITLE = voiceStation.tagline
 
-export const ORB_VOICE_BOUNDARY_COPY = [
-  'Voice is for live support and reflection. Dictate is for turning speech into a structured record.',
-  'Voice sessions may create transcripts for drafting and support purposes.',
-  'ORB can support your thinking, but it does not replace safeguarding procedures, management oversight or professional judgement.',
-  'Do not use ORB for emergencies. Follow local safeguarding and emergency procedures.',
-  'Review before relying on transcripts. ORB Residential does not access live care records.'
-] as const
+export { ORB_VOICE_BOUNDARY_COPY, ORB_RESIDENTIAL_VOICE_SAFETY_STRIP }
 
 export type OrbVoiceLaunchMode = 'browser_ptt' | 'openai_realtime' | 'unavailable'
 

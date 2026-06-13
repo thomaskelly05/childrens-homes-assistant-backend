@@ -192,7 +192,7 @@ export function OrbVoiceStation({
     noteType?: import('@/lib/orb/dictate/orb-dictate-types').OrbDictateNoteType,
     opts?: { studio?: boolean }
   ) => void
-  onOpenWrite?: (content: string, title?: string) => void
+  onOpenWrite?: (content: string, opts?: { title?: string; recordTypeId?: string }) => void
   onOpenVoiceSettings?: () => void
 }) {
   const [voiceStartStage, setVoiceStartStage] = useState<VoiceStartStage>('idle')
@@ -1058,7 +1058,15 @@ export function OrbVoiceStation({
       onTemplateChange={(t) => setVoiceRecordTemplateId(t.id)}
       onCreateDraftRecord={handleCreateDraftFromVoice}
       onSendToWrite={
-        onOpenWrite ? () => onOpenWrite(afterCallTranscript, 'ORB Voice conversation') : undefined
+        onOpenWrite
+          ? () => {
+              const template = templateById(voiceRecordTemplateId)
+              onOpenWrite(afterCallTranscript, {
+                title: 'ORB Voice conversation',
+                recordTypeId: template?.recordTypeId
+              })
+            }
+          : undefined
       }
       onContinueTalking={handleContinueTalking}
       onCopyTranscript={handleCopyTranscript}
@@ -1454,12 +1462,16 @@ export function OrbVoiceStation({
                   type="button"
                   className="w-full rounded-full border border-[var(--orb-line)] bg-[var(--orb-primary-soft)]/40 px-3 py-2 text-xs font-medium text-[var(--orb-primary)]"
                   data-orb-voice-to-write
-                  onClick={() =>
+                  onClick={() => {
+                    const template = templateById(voiceRecordTemplateId)
                     onOpenWrite(
                       fullConversationText || voiceTranscriptText || browserTranscriptText,
-                      'ORB Voice conversation'
+                      {
+                        title: 'ORB Voice conversation',
+                        recordTypeId: template?.recordTypeId
+                      }
                     )
-                  }
+                  }}
                 >
                   Open in ORB Write
                 </button>

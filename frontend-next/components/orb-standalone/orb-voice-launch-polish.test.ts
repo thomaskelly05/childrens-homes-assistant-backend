@@ -24,8 +24,8 @@ function readComponent(relativePath: string) {
 describe('ORB Voice launch polish', () => {
   it('panel title and subtitle', () => {
     assert.equal(ORB_VOICE_PANEL_TITLE, 'Voice')
-    assert.equal(ORB_VOICE_PANEL_SUBTITLE, 'Talk hands-free with ORB')
-    assert.equal(ORB_VOICE_PANEL_MOBILE_SUBTITLE, 'Talk hands-free with ORB')
+    assert.equal(ORB_VOICE_PANEL_SUBTITLE, 'Talk it through.')
+    assert.equal(ORB_VOICE_PANEL_MOBILE_SUBTITLE, 'Talk it through.')
     const station = readComponent('components/orb-standalone/orb-voice-station.tsx')
     assert.match(station, /ORB_VOICE_PANEL_TITLE/)
     assert.match(station, /ORB_VOICE_PANEL_SUBTITLE/)

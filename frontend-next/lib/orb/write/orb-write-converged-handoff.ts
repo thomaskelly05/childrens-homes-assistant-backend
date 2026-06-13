@@ -66,6 +66,7 @@ export function buildSavedOutputWriteHandoff(
   const sourceFeature = String(meta.source_feature || record.created_from || 'saved_output')
   const sourceMap: Record<string, OrbWriteContentHandoffSource> = {
     chat: 'chat',
+    voice: 'voice',
     dictate: 'dictate',
     document_intelligence: 'document',
     document_analysis: 'document',

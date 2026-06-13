@@ -894,7 +894,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
   const openOrbWriteWithContent = useCallback(
     (opts: {
       content: string
-      source: 'chat' | 'document' | 'saved_output' | 'unknown'
+      source: 'chat' | 'voice' | 'document' | 'saved_output' | 'unknown'
       sourceLabel: string
       recordTypeId?: string
       title?: string
@@ -3198,12 +3198,13 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
             studio: opts?.studio
           })
         }
-        onOpenWrite={(content, title) =>
+        onOpenWrite={(content, opts) =>
           openOrbWriteWithContent({
             content,
-            source: 'chat',
-            sourceLabel: title ?? 'ORB Voice conversation',
-            title: title ?? 'ORB Voice conversation'
+            source: 'voice',
+            sourceLabel: opts?.title ?? 'ORB Voice conversation',
+            title: opts?.title ?? 'ORB Voice conversation',
+            recordTypeId: opts?.recordTypeId
           })
         }
         onOpenVoiceSettings={openVoiceSettings}
