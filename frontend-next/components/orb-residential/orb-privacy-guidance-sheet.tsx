@@ -5,6 +5,29 @@ import { Shield, X } from 'lucide-react'
 
 import { ORB_RESIDENTIAL_PRIVACY_GUIDANCE_ITEMS, ORB_RESIDENTIAL_PRIVACY_STRIP } from '@/lib/orb/orb-residential-copy'
 
+/** Icon-only privacy trigger for composer chrome — no extra vertical space. */
+export function OrbResidentialPrivacyGuidanceIcon({
+  onOpen,
+  className = ''
+}: {
+  onOpen: () => void
+  className?: string
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className={`inline-flex h-9 min-w-9 shrink-0 items-center justify-center rounded-full text-[var(--orb-muted)] transition hover:bg-[var(--orb-surface-hover)] hover:text-[var(--orb-foreground)] ${className}`.trim()}
+      data-orb-privacy-guidance-trigger
+      aria-label="Privacy guidance"
+      aria-haspopup="dialog"
+      title="Privacy guidance"
+    >
+      <Shield className="h-4 w-4 shrink-0 text-[var(--orb-primary)]" aria-hidden />
+    </button>
+  )
+}
+
 /** Compact privacy link + bottom sheet for ORB Residential mobile home. */
 export function OrbResidentialPrivacyGuidanceLink({
   onOpen,

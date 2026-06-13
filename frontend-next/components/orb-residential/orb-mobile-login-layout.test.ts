@@ -225,7 +225,9 @@ describe('ORB mobile login layout', () => {
 
   it('document view action remains reachable on mobile', () => {
     const css = read('app/orb/orb-mobile.css')
-    assert.match(css, /orb-write-ask-orb-fab/)
+    const toolbar = read('components/orb-write/orb-write-mobile-toolbar.tsx')
+    assert.match(css, /orb-write-mobile-toolbar/)
+    assert.match(toolbar, /data-orb-write-approve/)
     assert.match(css, /safe-area-inset-bottom/)
   })
 

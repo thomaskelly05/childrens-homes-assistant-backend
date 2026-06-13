@@ -1443,6 +1443,92 @@
   [data-orb-account-menu-summary] {
     display: none !important;
   }
+
+  /* Mobile minimalism pass — ChatGPT-light home, notepad write, lighter chrome */
+  .orb-mobile-chat-header {
+    min-height: calc(var(--orb-mobile-header-height, 2.875rem) + env(safe-area-inset-top, 0px)) !important;
+    padding-top: max(0.35rem, env(safe-area-inset-top, 0px)) !important;
+    padding-bottom: 0.35rem !important;
+  }
+
+  [data-orb-empty-sphere] {
+    max-width: min(7.5rem, 36vw) !important;
+    max-height: min(7.5rem, 36vw) !important;
+  }
+
+  [data-orb-empty-sphere] .orb-presence--hero,
+  [data-orb-empty-sphere] .premium-mobile-orb,
+  [data-premium-mobile-orb] {
+    max-width: min(7.5rem, 36vw) !important;
+    max-height: min(7.5rem, 36vw) !important;
+  }
+
+  [data-orb-empty-heading-mobile] {
+    margin-top: 0.625rem !important;
+    font-size: clamp(1.125rem, 5vw, 1.375rem) !important;
+  }
+
+  [data-orb-starter-pills-scroll] {
+    flex-wrap: nowrap !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  [data-orb-composer-privacy-zone] [data-orb-privacy-guidance-link] {
+    display: none !important;
+  }
+
+  [data-orb-composer-quick-actions] {
+    display: none !important;
+  }
+
+  [data-orb-dictate-generate-idle] {
+    display: none !important;
+  }
+
+  [data-orb-write-notepad='true'] {
+    border: none !important;
+    border-radius: 0 !important;
+    background: var(--orb-surface-elevated) !important;
+  }
+
+  [data-orb-write-notepad='true'] [data-orb-write-canvas-workspace],
+  [data-orb-write-notepad='true'] [data-orb-write-print-page] {
+    display: none !important;
+  }
+
+  [data-orb-write-notepad-surface] {
+    min-height: 0 !important;
+    flex: 1 1 auto !important;
+  }
+
+  [data-orb-write-notepad-body] {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  [data-orb-write-ask-orb-fab] {
+    display: none !important;
+  }
+
+  [data-orb-voice-mobile] [data-orb-voice-hero-stage],
+  [data-orb-voice-mobile] .orb-voice-hero-stage {
+    min-height: min(34dvh, 15rem) !important;
+    max-height: 38dvh !important;
+  }
+
+  .orb-account-menu {
+    background: var(--orb-surface-elevated) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    width: min(16rem, calc(100vw - 1.5rem)) !important;
+  }
+
+  [data-orb-settings-panel][data-orb-settings-mobile-layout='stack'] .orb-settings-row {
+    padding-block: 0.5rem !important;
+  }
+
+  [data-orb-settings-coming-soon] {
+    padding-block: 0.5rem !important;
+  }
 }
 
 /* Short mobile height — compact home hero so composer stays in view */
@@ -1487,6 +1573,14 @@
   .orb-voice-hero-stage {
     min-height: min(44dvh, 20rem) !important;
     max-height: 48dvh !important;
+  }
+
+  [data-orb-residential-empty] [data-orb-empty-sphere] {
+    display: none !important;
+  }
+
+  [data-orb-residential-empty] [data-orb-empty-heading-mobile] {
+    margin-top: 0.25rem !important;
   }
 }
 

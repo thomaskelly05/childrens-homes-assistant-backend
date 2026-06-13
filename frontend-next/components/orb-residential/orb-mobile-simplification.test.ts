@@ -11,23 +11,36 @@ function read(relativePath: string) {
 }
 
 describe('ORB Residential mobile simplification pass', () => {
-  it('mobile home shows three primary starters and privacy guidance link', () => {
+  it('mobile home hides visible privacy link and uses composer shield trigger', () => {
     const copy = read('lib/orb/orb-residential-copy.ts')
     const composer = read('components/orb-standalone/orb-standalone-composer.tsx')
     const privacy = read('components/orb-residential/orb-privacy-guidance-sheet.tsx')
+    const mobileCss = read('app/orb/orb-mobile.css')
     assert.equal(copy.match(/ORB_RESIDENTIAL_MOBILE_PRIMARY_STARTER_COUNT = 3/)?.[0], 'ORB_RESIDENTIAL_MOBILE_PRIMARY_STARTER_COUNT = 3')
     assert.match(composer, /mobileViewport/)
     assert.match(composer, /chatHasMessages/)
-    assert.match(composer, /OrbResidentialPrivacyGuidanceLink/)
-    assert.match(privacy, /data-orb-privacy-guidance-link/)
+    assert.match(composer, /OrbResidentialPrivacyGuidanceIcon/)
+    assert.match(privacy, /data-orb-privacy-guidance-trigger/)
     assert.match(privacy, /data-orb-privacy-guidance-sheet/)
+    assert.match(mobileCss, /\[data-orb-composer-privacy-zone\] \[data-orb-privacy-guidance-link\]/)
   })
 
-  it('more examples opens grouped residential bottom sheet', () => {
+  it('mobile home uses horizontal starter row with More chip', () => {
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
+    assert.match(companion, /data-orb-starter-pills-scroll/)
+    assert.match(companion, /data-orb-more-examples/)
     assert.match(companion, /data-orb-more-examples-sheet/)
     assert.match(companion, /ORB_RESIDENTIAL_STARTER_GROUPS\.map/)
     assert.match(companion, /data-orb-starter-group=/)
+  })
+
+  it('mobile header hides tagline and brand clutter on phone home', () => {
+    const layout = read('components/orb/orb-layout.tsx')
+    const companion = read('components/orb-standalone/orb-care-companion.tsx')
+    assert.match(layout, /showTagline/)
+    assert.match(companion, /showTagline=\{false\}/)
+    assert.match(companion, /hidden text-\[11px\].*data-orb-empty-brand-line/s)
+    assert.match(companion, /hidden max-w-lg text-sm.*data-orb-empty-subline/s)
   })
 
   it('billing uses collapsible sections and avoids duplicate mobile CTAs', () => {
@@ -45,12 +58,13 @@ describe('ORB Residential mobile simplification pass', () => {
     assert.match(settings, /isMobile\s*\?\s*undefined/)
   })
 
-  it('dictate mobile uses collapsible privacy and compact orb', () => {
+  it('dictate mobile uses collapsible privacy, compact orb, and no idle generate panel', () => {
     const dictate = read('components/orb-standalone/orb-dictate-mobile-experience.tsx')
     const boundary = read('components/orb-standalone/orb-dictate-boundary-copy.tsx')
     const mobileCss = read('app/orb/orb-mobile.css')
     assert.match(dictate, /data-orb-dictate-capture-idle/)
     assert.match(dictate, /collapsible/)
+    assert.doesNotMatch(dictate, /data-orb-dictate-generate-idle/)
     assert.match(boundary, /data-orb-dictate-boundary-disclosure/)
     assert.match(mobileCss, /orb-dictate-mobile-orb--compact/)
   })
@@ -61,12 +75,19 @@ describe('ORB Residential mobile simplification pass', () => {
     assert.match(voice, /Not for emergencies/)
   })
 
-  it('write mobile ask orb uses icon fab and compact safety disclosure', () => {
+  it('write mobile uses notepad surface and Review Approve More toolbar', () => {
     const toolbar = read('components/orb-write/orb-write-mobile-toolbar.tsx')
+    const editor = read('components/orb-write/orb-write-editor.tsx')
     const panel = read('components/orb-write/orb-write-standalone-panel.tsx')
-    assert.match(toolbar, /aria-label="Ask ORB about this document"/)
-    assert.match(toolbar, /MessageCircle/)
+    const mobileCss = read('app/orb/orb-mobile.css')
+    assert.match(toolbar, /data-orb-write-mobile-tab="review"/)
+    assert.match(toolbar, /data-orb-write-approve/)
+    assert.match(toolbar, /data-orb-write-mobile-tab="more"/)
+    assert.match(toolbar, /data-orb-write-mobile-format-entry/)
+    assert.match(editor, /data-orb-write-notepad/)
+    assert.match(editor, /data-orb-write-notepad-body/)
     assert.match(panel, /data-orb-write-safety-disclosure/)
     assert.match(panel, /Adult approval required/)
+    assert.match(mobileCss, /\[data-orb-write-notepad='true'\]/)
   })
 })

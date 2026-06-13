@@ -20,13 +20,14 @@ import {
   Quote,
   Redo2,
   Save,
+  Sparkles,
   Table,
   Underline,
   Undo2,
   X
 } from 'lucide-react'
 
-type MobileSheet = 'format' | 'insert' | 'review' | 'more' | null
+type MobileSheet = 'review' | 'format' | 'insert' | 'more' | null
 
 export function OrbWriteMobileToolbar({
   onCommand,
@@ -71,25 +72,36 @@ export function OrbWriteMobileToolbar({
         role="toolbar"
         aria-label="Document tools"
       >
-        {(
-          [
-            { id: 'format' as const, label: 'Format' },
-            { id: 'insert' as const, label: 'Insert' },
-            { id: 'review' as const, label: 'Review' },
-            { id: 'more' as const, label: 'More' }
-          ] as const
-        ).map((item) => (
+        <button
+          type="button"
+          className={`${btn} flex-1 gap-1.5`}
+          data-orb-write-mobile-tab="review"
+          aria-expanded={sheet === 'review'}
+          onClick={() => setSheet((current) => (current === 'review' ? null : 'review'))}
+        >
+          <Sparkles className="h-4 w-4 shrink-0" aria-hidden />
+          Review
+        </button>
+        {onApprove ? (
           <button
-            key={item.id}
             type="button"
-            className={`${btn} flex-1`}
-            data-orb-write-mobile-tab={item.id}
-            aria-expanded={sheet === item.id}
-            onClick={() => setSheet((current) => (current === item.id ? null : item.id))}
+            className={`${btn} flex-1 gap-1.5 border-emerald-400/40 bg-emerald-500/10 text-emerald-800`}
+            data-orb-write-approve
+            onClick={onApprove}
           >
-            {item.label}
+            <Check className="h-4 w-4 shrink-0" aria-hidden />
+            Approve
           </button>
-        ))}
+        ) : null}
+        <button
+          type="button"
+          className={`${btn} flex-1`}
+          data-orb-write-mobile-tab="more"
+          aria-expanded={sheet === 'more' || sheet === 'format' || sheet === 'insert'}
+          onClick={() => setSheet((current) => (current === 'more' ? null : 'more'))}
+        >
+          More
+        </button>
       </div>
 
       {sheet ? (
@@ -100,7 +112,9 @@ export function OrbWriteMobileToolbar({
           aria-label={`${sheet} tools`}
         >
           <div className="flex items-center justify-between border-b border-[var(--orb-line)]/40 px-4 py-3">
-            <p className="text-sm font-semibold capitalize text-[var(--orb-foreground)]">{sheet}</p>
+            <p className="text-sm font-semibold capitalize text-[var(--orb-foreground)]">
+              {sheet === 'review' ? 'Review & export' : sheet === 'format' ? 'Format' : sheet === 'insert' ? 'Insert' : 'More'}
+            </p>
             <button
               type="button"
               onClick={closeSheet}
@@ -111,6 +125,66 @@ export function OrbWriteMobileToolbar({
             </button>
           </div>
           <div className="flex max-h-[min(42dvh,20rem)] flex-wrap gap-2 overflow-y-auto p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+            {sheet === 'review' ? (
+              <>
+                {onSaveDraft ? (
+                  <button type="button" className={btn} onClick={() => { onSaveDraft(); closeSheet() }} data-orb-write-save-draft>
+                    <Save className="h-4 w-4" />
+                    Save draft
+                  </button>
+                ) : null}
+                {onCopy ? (
+                  <button type="button" className={btn} onClick={() => { onCopy(); closeSheet() }} data-orb-write-copy>
+                    <ClipboardCopy className="h-4 w-4" />
+                    Copy
+                  </button>
+                ) : null}
+                {onPrint ? (
+                  <button type="button" className={btn} onClick={() => { onPrint(); closeSheet() }} data-orb-write-print>
+                    <Printer className="h-4 w-4" />
+                    Print
+                  </button>
+                ) : null}
+                {onExportPdf ? (
+                  <button type="button" className={btn} onClick={() => { onExportPdf(); closeSheet() }} data-orb-write-export-pdf>
+                    <Download className="h-4 w-4" />
+                    Export PDF
+                  </button>
+                ) : null}
+                {onAskOrb ? (
+                  <button
+                    type="button"
+                    className={`${btn} w-full justify-center gap-2`}
+                    onClick={() => { onAskOrb(); closeSheet() }}
+                    data-orb-write-ask-orb
+                  >
+                    <MessageCircle className="h-4 w-4" />
+                    Ask ORB
+                  </button>
+                ) : null}
+              </>
+            ) : null}
+            {sheet === 'more' ? (
+              <>
+                <button type="button" className={btn} onClick={() => setSheet('format')} data-orb-write-mobile-format-entry>
+                  Format
+                </button>
+                <button type="button" className={btn} onClick={() => setSheet('insert')} data-orb-write-mobile-insert-entry>
+                  Insert
+                </button>
+                {onAskOrb ? (
+                  <button
+                    type="button"
+                    className={`${btn} w-full justify-center gap-2`}
+                    onClick={() => { onAskOrb(); closeSheet() }}
+                    data-orb-write-ask-orb
+                  >
+                    <MessageCircle className="h-4 w-4" />
+                    Ask ORB
+                  </button>
+                ) : null}
+              </>
+            ) : null}
             {sheet === 'format' ? (
               <>
                 <button type="button" className={btn} disabled={!canUndo} onClick={() => run('undo')} aria-label="Undo">
@@ -156,79 +230,13 @@ export function OrbWriteMobileToolbar({
                 <button type="button" className={btn} onClick={() => run('insertHorizontalRule')} aria-label="Divider">
                   <Minus className="h-4 w-4" />
                 </button>
-                <button type="button" className={btn} onClick={() => run('insertTable')} aria-label="Insert table">
+                <button type="button" className={btn} onClick={() => run('insertTable')} aria-label="Table">
                   <Table className="h-4 w-4" />
                 </button>
               </>
             ) : null}
-            {sheet === 'review' ? (
-              <>
-                {onSaveDraft ? (
-                  <button type="button" className={btn} onClick={() => { onSaveDraft(); closeSheet() }} data-orb-write-save-draft>
-                    <Save className="h-4 w-4" />
-                    Save draft
-                  </button>
-                ) : null}
-                {onApprove ? (
-                  <button
-                    type="button"
-                    className={`${btn} bg-[var(--orb-primary)] text-white`}
-                    onClick={() => { onApprove(); closeSheet() }}
-                    data-orb-write-approve
-                  >
-                    <Check className="h-4 w-4" />
-                    Approve
-                  </button>
-                ) : null}
-                {onCopy ? (
-                  <button type="button" className={btn} onClick={() => { onCopy(); closeSheet() }} data-orb-write-copy>
-                    <ClipboardCopy className="h-4 w-4" />
-                    Copy
-                  </button>
-                ) : null}
-              </>
-            ) : null}
-            {sheet === 'more' ? (
-              <>
-                {onPrint ? (
-                  <button type="button" className={btn} onClick={() => { onPrint(); closeSheet() }} data-orb-write-print>
-                    <Printer className="h-4 w-4" />
-                    Print
-                  </button>
-                ) : null}
-                {onExportPdf ? (
-                  <button type="button" className={btn} onClick={() => { onExportPdf(); closeSheet() }} data-orb-write-export-pdf>
-                    <Download className="h-4 w-4" />
-                    Export PDF
-                  </button>
-                ) : null}
-                {onAskOrb ? (
-                  <button
-                    type="button"
-                    className={`${btn} w-full justify-center gap-2`}
-                    onClick={() => { onAskOrb(); closeSheet() }}
-                    data-orb-write-ask-orb
-                  >
-                    <MoreHorizontal className="h-4 w-4" />
-                    Ask ORB about this document
-                  </button>
-                ) : null}
-              </>
-            ) : null}
           </div>
         </div>
-      ) : null}
-
-      {onAskOrb ? (
-        <button
-          type="button"
-          className="orb-write-ask-orb-fab fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom,0px))] right-4 z-[18] inline-flex h-11 w-11 min-h-[2.75rem] min-w-[2.75rem] items-center justify-center rounded-full bg-[var(--orb-primary)] text-white shadow-lg md:hidden"
-          onClick={onAskOrb}
-          data-orb-write-ask-orb-fab
-          aria-label="Ask ORB about this document"
-        >
-          <MessageCircle className="h-5 w-5" aria-hidden />
-        </button>
       ) : null}
     </>
   )

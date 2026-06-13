@@ -10,7 +10,7 @@ import {
 import { OrbPrivacyInputWarning } from '@/components/orb/privacy/orb-privacy-input-warning'
 import { OrbPrivacyNotice } from '@/components/orb/privacy/orb-privacy-notice'
 import {
-  OrbResidentialPrivacyGuidanceLink,
+  OrbResidentialPrivacyGuidanceIcon,
   OrbResidentialPrivacyGuidanceSheet
 } from '@/components/orb-residential/orb-privacy-guidance-sheet'
 import { OrbComposerCopyright } from '@/components/orb-standalone/orb-composer-copyright'
@@ -206,8 +206,9 @@ export function OrbStandaloneComposer({
   }, [value, residentialSurface])
 
   const compactResidential = residentialSurface
-  const showMobilePrivacyLink = compactResidential && mobileViewport && !chatHasMessages
+  const showMobilePrivacyIcon = compactResidential && mobileViewport && !chatHasMessages
   const [privacyGuidanceOpen, setPrivacyGuidanceOpen] = useState(false)
+  const showComposerQuickActions = compactResidential && !mobileViewport
 
   return (
     <div
@@ -268,7 +269,7 @@ export function OrbStandaloneComposer({
             </div>
           ) : null}
 
-          {compactResidential ? (
+          {showComposerQuickActions ? (
             <div
               className="orb-composer-quick-actions mb-2 flex flex-wrap gap-2 px-0.5"
               data-orb-composer-quick-actions
@@ -391,6 +392,39 @@ export function OrbStandaloneComposer({
             <div className={compactResidential ? 'flex items-end gap-1.5' : ''}>
             {compactResidential ? (
               <div className="orb-composer-action-rail flex shrink-0 items-center gap-0.5 pb-1">
+                {mobileViewport ? (
+                  <>
+                    {showMobilePrivacyIcon ? (
+                      <OrbResidentialPrivacyGuidanceIcon onOpen={() => setPrivacyGuidanceOpen(true)} />
+                    ) : null}
+                    <button
+                      type="button"
+                      onClick={onMicClick}
+                      disabled={micDisabled}
+                      aria-label={micLabel}
+                      title={micHint}
+                      className={`inline-flex h-9 min-w-9 shrink-0 items-center justify-center rounded-full transition disabled:cursor-not-allowed disabled:opacity-40 ${voiceListening ? 'bg-[var(--orb-primary-soft)] text-[var(--orb-primary)]' : 'text-[var(--orb-muted)] hover:bg-[var(--orb-surface-hover)] hover:text-[var(--orb-foreground)]'}`}
+                      data-orb-composer-quick-dictate
+                      data-orb-composer-mic
+                      data-orb-composer-mic-route={composerMicRoute}
+                    >
+                      <Mic className="h-4 w-4" aria-hidden />
+                    </button>
+                    {onVoiceClick ? (
+                      <button
+                        type="button"
+                        onClick={onVoiceClick}
+                        aria-label={voicePanelUnavailable ? 'Open ORB Voice (unavailable)' : 'Open ORB Voice'}
+                        className={`inline-flex h-9 min-w-9 shrink-0 items-center justify-center rounded-full transition ${voicePanelUnavailable ? 'text-[var(--orb-muted)] opacity-60' : 'text-[var(--orb-muted)] hover:bg-[var(--orb-surface-hover)] hover:text-[var(--orb-foreground)]'}`}
+                        data-orb-composer-quick-voice
+                        data-orb-composer-voice
+                        data-orb-composer-voice-unavailable={voicePanelUnavailable ? 'true' : 'false'}
+                      >
+                        <AudioLines className="h-4 w-4" aria-hidden />
+                      </button>
+                    ) : null}
+                  </>
+                ) : null}
                 {onPlusMenuAction ? (
                   <OrbComposerPlusMenu
                     onSelect={onPlusMenuAction}
@@ -401,8 +435,8 @@ export function OrbStandaloneComposer({
                     <Plus className="h-4 w-4" aria-hidden />
                   </button>
                 )}
-                {onAttachDocumentClick ? <button type="button" onClick={onAttachDocumentClick} className="inline-flex h-9 min-w-9 shrink-0 items-center justify-center rounded-full text-[var(--orb-muted)] transition hover:bg-[var(--orb-surface-hover)]" aria-label="Attach document" data-orb-composer-document><FileText className="h-4 w-4" aria-hidden /></button> : null}
-                {onToolsClick ? <button type="button" onClick={onToolsClick} className="inline-flex h-9 min-w-9 shrink-0 items-center justify-center rounded-full text-[var(--orb-muted)] transition hover:bg-[var(--orb-surface-hover)]" aria-label="Tools" data-orb-composer-tools><Wrench className="h-4 w-4" aria-hidden /></button> : null}
+                {!mobileViewport && onAttachDocumentClick ? <button type="button" onClick={onAttachDocumentClick} className="inline-flex h-9 min-w-9 shrink-0 items-center justify-center rounded-full text-[var(--orb-muted)] transition hover:bg-[var(--orb-surface-hover)]" aria-label="Attach document" data-orb-composer-document><FileText className="h-4 w-4" aria-hidden /></button> : null}
+                {!mobileViewport && onToolsClick ? <button type="button" onClick={onToolsClick} className="inline-flex h-9 min-w-9 shrink-0 items-center justify-center rounded-full text-[var(--orb-muted)] transition hover:bg-[var(--orb-surface-hover)]" aria-label="Tools" data-orb-composer-tools><Wrench className="h-4 w-4" aria-hidden /></button> : null}
               </div>
             ) : null}
 
@@ -539,9 +573,6 @@ export function OrbStandaloneComposer({
 
         <div className="mt-2 space-y-2 px-2" data-orb-composer-privacy-zone>
           <OrbPrivacyInputWarning text={value} />
-          {showMobilePrivacyLink ? (
-            <OrbResidentialPrivacyGuidanceLink onOpen={() => setPrivacyGuidanceOpen(true)} />
-          ) : null}
           {!compactResidential || !mobileViewport ? <OrbPrivacyNotice surface="chat" /> : null}
         </div>
 
@@ -555,7 +586,7 @@ export function OrbStandaloneComposer({
           <OrbComposerCopyright className="mt-2 px-2 pb-1" />
         ) : null}
       </div>
-      {showMobilePrivacyLink ? (
+      {showMobilePrivacyIcon ? (
         <OrbResidentialPrivacyGuidanceSheet
           open={privacyGuidanceOpen}
           onClose={() => setPrivacyGuidanceOpen(false)}

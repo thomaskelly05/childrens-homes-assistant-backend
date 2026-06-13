@@ -10,6 +10,8 @@ export type OrbMobileChatHeaderProps = {
   onOpenAccount: (anchor: HTMLElement) => void
   productName?: string
   tagline?: string
+  /** Hide the secondary tagline row on phone for calmer chrome. */
+  showTagline?: boolean
   /** Prefer settings icon when true; defaults to user icon. */
   accountUsesSettingsIcon?: boolean
 }
@@ -20,6 +22,7 @@ export function OrbMobileChatHeader({
   onOpenAccount,
   productName = 'ORB',
   tagline = ORB_RESIDENTIAL_TAGLINE,
+  showTagline = true,
   accountUsesSettingsIcon = false
 }: OrbMobileChatHeaderProps) {
   const AccountIcon = accountUsesSettingsIcon ? Settings : User
@@ -50,12 +53,14 @@ export function OrbMobileChatHeader({
         >
           {productName}
         </p>
-        <p
-          className="mt-0.5 max-w-[14rem] truncate text-[10px] font-semibold leading-snug text-[var(--orb-muted)]"
-          data-orb-mobile-header-tagline
-        >
-          {tagline}
-        </p>
+        {showTagline && tagline ? (
+          <p
+            className="mt-0.5 max-w-[14rem] truncate text-[10px] font-semibold leading-snug text-[var(--orb-muted)]"
+            data-orb-mobile-header-tagline
+          >
+            {tagline}
+          </p>
+        ) : null}
       </div>
 
       <button

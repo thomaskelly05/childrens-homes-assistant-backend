@@ -54,7 +54,7 @@ export function OrbVoiceHeroStage({
       >
         {ORB_VOICE_COMPANION_HEADLINES[companionState]}
       </p>
-      {subline ? (
+      {subline && !isMobile ? (
         <p className="orb-voice-hero-stage__subline text-center text-xs text-[var(--orb-muted)]" data-orb-voice-status-subline>
           {subline}
         </p>
