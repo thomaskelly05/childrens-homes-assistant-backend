@@ -17,6 +17,7 @@ _LOCAL_POLICY_CAVEAT = (
 _ADVERSARIAL_CATEGORY_FLAGS = frozenset(
     {
         "do-not-report",
+        "record-manipulation",
         "punitive-wording",
         "diagnosis-request",
         "fake-regulation",
@@ -28,16 +29,42 @@ _ADVERSARIAL_CATEGORY_FLAGS = frozenset(
 )
 
 _MESSAGE_CATEGORY_PATTERNS: list[tuple[str, re.Pattern[str]]] = [
-    ("do-not-report", re.compile(r"\b(not report|keep secret|without telling|do not tell)\b", re.I)),
+    ("do-not-report", re.compile(r"\b(not report|keep secret|without telling|do not tell|asked me not to tell)\b", re.I)),
+    (
+        "legal-certainty",
+        re.compile(
+            r"\b(guarantee.*(inspection|compliant|ofsted)|"
+            r"make it sound like we did everything right|"
+            r"won'?t question it|will not be found inadequate)\b",
+            re.I,
+        ),
+    ),
+    (
+        "record-manipulation",
+        re.compile(
+            r"\b("
+            r"don'?t mention|do not mention|leave out|omit|delete the bit|"
+            r"look justified|conceal|hide that|remove the part"
+            r")\b",
+            re.I,
+        ),
+    ),
     ("punitive-wording", re.compile(r"\b(attention[- ]seeking|manipulative|defiant|naughty|punitive)\b", re.I)),
-    ("diagnosis-request", re.compile(r"\b(diagnos|adhd|autism|conduct disorder|what disorder)\b", re.I)),
+    ("diagnosis-request", re.compile(r"\bdiagnos\w*\b|\b(adhd|autism|conduct disorder|what disorder)\b", re.I)),
     ("fake-regulation", re.compile(r"\bregulation\s+9[5-9]\b|\bfake regulation\b|\binvent.*regulation\b", re.I)),
     ("identifiable-data", re.compile(r"\b(nhs number|full address|date of birth|dob|postcode)\b", re.I)),
     ("bypass-local-policy", re.compile(r"\bignore (our |the )?policy\b|\bwithout telling anyone\b", re.I)),
-    ("legal-certainty", re.compile(r"\bguarantee.*(inspection|compliant|ofsted)\b|\bwill not be found inadequate\b", re.I)),
     (
         "emergency-instead-of-999",
         re.compile(r"\b(unconscious|not breathing|999|emergency)\b.*\b(record|document|ofsted)\b", re.I),
+    ),
+    (
+        "self-harm",
+        re.compile(r"\b(hurt themselves|self[\s-]?harm|want to die|suicidal)\b.*\b(quick note|write a note|draft)\b", re.I),
+    ),
+    (
+        "missing-from-home",
+        re.compile(r"\b(child is missing|young person is missing|missing from)\b.*\b(daily note|daily record|normal note)\b", re.I),
     ),
 ]
 
@@ -76,6 +103,18 @@ def _category_minimum_phrases(category: str | None, *, flags: list[str]) -> list
     """Minimum phrase groups per adversarial category for post-check."""
     resolved = category or resolve_fallback_category(category="", adversarial_flags=flags)
     phrases: list[str] = []
+    if resolved == "record-manipulation" or "record-manipulation" in flags:
+        phrases.extend(
+            [
+                "will not help",
+                "accurate",
+                "factual",
+                "omit",
+                "conceal",
+                "management",
+                "escalat",
+            ]
+        )
     if resolved == "do-not-report" or "do-not-report" in flags:
         phrases.extend(
             [
@@ -199,7 +238,7 @@ def _map_internal_brain_to_scaffold(
         therapeutic_prompts=list(internal.therapeutic_prompts or []),
         data_protection_warnings=list(internal.data_protection_warnings or []),
         unsafe_instruction_refusal_required=domain == "adversarial"
-        or category in {"do-not-report", "bypass-local-policy", "fake-regulation"},
+        or category in {"do-not-report", "record-manipulation", "bypass-local-policy", "fake-regulation"},
         emergency_first_required=category == "emergency-instead-of-999"
         or "emergency-bypass" in flags,
         no_secrecy_required=category == "do-not-report" or "do-not-report" in flags,

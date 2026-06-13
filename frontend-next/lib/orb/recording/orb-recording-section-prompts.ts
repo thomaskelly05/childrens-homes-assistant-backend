@@ -1,7 +1,93 @@
 /**
  * Child-centred section prompts for residential recording templates.
  * Single supplement merged into ORB Write / Dictate — not a duplicate template source.
+ *
+ * Developer note: `buildSectionPromptBody` feeds ORB Write scaffolds and Dictate template structure.
+ * Record-type behaviour changes via section prompts + `orb-therapeutic-writing.ts` quality checks.
  */
+
+export const ORB_REFLECTIVE_CAPTURE_PROMPTS: readonly string[] = [
+  'What happened before?',
+  'What did the child say or communicate?',
+  'How did adults respond?',
+  'Was anyone informed?',
+  'Is follow-up or management oversight needed?'
+]
+
+export const ORB_STRUCTURED_FORMAT_RULES = [
+  'Use tables for action plans, chronologies, evidence matrices, Reg 44/45 preparation and management oversight actions.',
+  'Use narrative therapeutic sections for daily records, incident reflections, behaviour reflections and key-work summaries.',
+  'Use checklists for missing information, review questions and manager follow-up.',
+  'Use charts only when numerical data exists — never invent data.',
+  'Do not force everything into tables — residential records still need human, therapeutic narrative.'
+] as const
+
+/** Per record-type quality themes the brain should check — used by audit tests and brain context. */
+export const ORB_RECORD_TYPE_QUALITY_EXPECTATIONS: Record<
+  string,
+  { requiredSectionThemes: string[]; qualityThemes: string[]; unsafePhrases: string[] }
+> = {
+  daily_record: {
+    requiredSectionThemes: ['presentation', 'interaction', 'voice', 'follow-up'],
+    qualityThemes: ['child', 'routine', 'positive', 'concern'],
+    unsafePhrases: ['manipulative', 'attention-seeking', 'kicked off']
+  },
+  incident_report: {
+    requiredSectionThemes: ['before', 'observed', 'de-escalation', 'harm', 'notification', 'repair', 'management'],
+    qualityThemes: ['context', 'adult response', 'safeguarding', 'follow-up'],
+    unsafePhrases: ['chose to behave', 'bad behaviour', 'non-compliant']
+  },
+  handover: {
+    requiredSectionThemes: ['presentation', 'risk', 'helped', 'avoid', 'safeguarding'],
+    qualityThemes: ['current', 'task', 'monitor'],
+    unsafePhrases: ['manipulative', 'attention-seeking']
+  },
+  safeguarding_concern: {
+    requiredSectionThemes: ['safety', 'known', 'unclear', 'voice', 'policy', 'informed', 'escalation'],
+    qualityThemes: ['factual', 'immediate', 'management'],
+    unsafePhrases: ['minimis', 'keep secret', 'do not tell']
+  },
+  behaviour_reflection: {
+    requiredSectionThemes: ['observed', 'context', 'communication', 'adult response', 'learning'],
+    qualityThemes: ['communication', 'unmet need', 'repair'],
+    unsafePhrases: ['manipulative', 'attention-seeking', 'bad behaviour']
+  },
+  key_work_session: {
+    requiredSectionThemes: ['purpose', 'shared', 'wishes', 'strengths', 'follow-up'],
+    qualityThemes: ['child', 'voice', 'progress'],
+    unsafePhrases: ['failed to engage', 'non-compliant']
+  },
+  chronology_entry: {
+    requiredSectionThemes: ['date', 'event', 'source', 'impact', 'action', 'follow-up'],
+    qualityThemes: ['timeline', 'child impact'],
+    unsafePhrases: []
+  },
+  action_plan: {
+    requiredSectionThemes: ['action', 'responsible', 'timescale', 'evidence', 'review'],
+    qualityThemes: ['outcome', 'owner'],
+    unsafePhrases: []
+  },
+  manager_summary: {
+    requiredSectionThemes: ['evidence', 'child impact', 'gaps', 'decision', 'actions'],
+    qualityThemes: ['oversight', 'professional curiosity'],
+    unsafePhrases: ['compliant', 'ofsted ready']
+  },
+  reg_44_evidence_summary: {
+    requiredSectionThemes: ['evidence', 'experience', 'strengths', 'gaps', 'actions'],
+    qualityThemes: ['balanced', 'child experience'],
+    unsafePhrases: ['compliant', 'perfect']
+  },
+  reg_45_reflection: {
+    requiredSectionThemes: ['quality', 'outcomes', 'views', 'safeguarding', 'leadership', 'actions'],
+    qualityThemes: ['reflection', 'development'],
+    unsafePhrases: ['defensive', 'compliant']
+  },
+  general_dictation: {
+    requiredSectionThemes: ['observed', 'voice', 'adult response', 'outcome', 'follow-up'],
+    qualityThemes: ['factual', 'child'],
+    unsafePhrases: ['manipulative', 'diagnos']
+  }
+}
 
 export const ORB_THERAPEUTIC_RECORDING_PRINCIPLES: readonly string[] = [
   'The child remains central',
@@ -248,7 +334,23 @@ export function buildSectionPromptBody(recordTypeId: string): string | undefined
     .join('\n')
     .trim()
   const scaffold = structuredOutputScaffoldForRecordType(recordTypeId)
-  return scaffold ? `${base}\n\n${scaffold}`.trim() : base
+  const formatRules = ORB_STRUCTURED_FORMAT_RULES.map((rule) => `• ${rule}`).join('\n')
+  const gapPrompts = ORB_REFLECTIVE_CAPTURE_PROMPTS.map((prompt) => `• ${prompt}`).join('\n')
+  const footer = [
+    '## Recording guidance',
+    '',
+    '*Use British English. Separate observation from interpretation. Do not invent facts or diagnose. Adult remains responsible for final wording.*',
+    '',
+    '**If information is missing:** use "not provided" or "not clear from the information given" — do not invent details.',
+    '',
+    '**Reflective prompts if gaps remain:**',
+    gapPrompts,
+    '',
+    '**Structured format:**',
+    formatRules
+  ].join('\n')
+  const body = scaffold ? `${base}\n\n${scaffold}` : base
+  return `${body}\n\n${footer}`.trim()
 }
 
 /** Optional markdown table scaffolds for record types that benefit from structured outputs. */

@@ -81,11 +81,13 @@ _CATEGORY_FALLBACKS: dict[str, CategoryFallbackContent] = {
             "ORB will not write punitive, shaming or blaming records.",
             "Do not use character labels or motive-based language.",
             "Do not describe the child as trying to get attention.",
+            "ORB will not use stigmatising labels as final record language.",
             "Words the record must not use: character labels, motive-based language, or stigmatising terms.",
         ],
         what_to_do=[
             "Describe observable behaviour, context, triggers and what staff did.",
             "Include de-escalation, repair, support offered and any follow-up plan.",
+            "Use respectful wording such as appeared distressed or communicated distress through behaviour.",
         ],
         recording_guidance=[
             "Record what was seen, heard, said and done — not character judgements.",
@@ -105,6 +107,47 @@ _CATEGORY_FALLBACKS: dict[str, CategoryFallbackContent] = {
         ],
         regulatory_orientation=[
             "SCCIF and Regulation 35 expect proportionate, child-centred recording.",
+        ],
+    ),
+    "record-manipulation": CategoryFallbackContent(
+        safety_position=(
+            "ORB will not help conceal, omit, minimise or manipulate safeguarding or practice information. "
+            "Accurate factual recording protects children and adults."
+        ),
+        cannot_do=[
+            "ORB will not help omit material safeguarding or practice information from a record.",
+            "ORB will not help delete relevant facts to make practice look better.",
+            "ORB will not help frame restraint, incidents or notifications to mislead reviewers.",
+            "ORB cannot guarantee inspection outcomes or help records avoid scrutiny.",
+        ],
+        what_to_do=[
+            "Record facts accurately, including staff actions that may need management review.",
+            "Notify manager, DSL or on-call where policy requires — especially if notification was missed.",
+            "Use balanced, chronological, child-centred wording rather than defensive framing.",
+            "For restraint records: document proportionality, injury checks, notifications, debrief and management review.",
+            "Escalate safeguarding concerns through local policy without delay.",
+        ],
+        recording_guidance=[
+            "Separate known facts, child voice, adult response, harm, notifications and follow-up.",
+            "If information is missing, use 'not provided' or 'not clear from the information given'.",
+            "Do not invent details to complete a favourable narrative.",
+            "For restraint: record proportionality, injury checks, notifications, debrief and management review factually.",
+        ],
+        child_voice=[
+            "Record the child's words where known — do not invent quotes.",
+            "Keep the child central even when the record is difficult.",
+        ],
+        therapeutic_framing=[
+            "Honest records support learning, safeguarding and trust — not shame.",
+            "Use observable, respectful language; behaviour is communication.",
+        ],
+        escalation_policy=[
+            "Management oversight and safeguarding escalation where thresholds are met.",
+            "Follow missing-from-care, restraint, allegation and notification procedures locally.",
+        ],
+        regulatory_orientation=[
+            "Regulation 27 safeguarding and accurate recording duties apply — verify locally.",
+            "Final judgement rests with managers, inspectors and qualified professionals.",
         ],
     ),
     "diagnosis-request": CategoryFallbackContent(
@@ -371,6 +414,9 @@ _CATEGORY_FALLBACKS.update(PRACTICE_CATEGORY_FALLBACKS)
 # Map adversarial flags and aliases to canonical category keys.
 _FLAG_TO_CATEGORY: dict[str, str] = {
     "do-not-report": "do-not-report",
+    "record-manipulation": "record-manipulation",
+    "omit-record": "record-manipulation",
+    "conceal-record": "record-manipulation",
     "punitive-wording": "punitive-wording",
     "blame-child": "punitive-wording",
     "diagnosis-request": "diagnosis-request",
@@ -440,6 +486,27 @@ SAFEGUARD_PHRASE_MAP: dict[str, list[str]] = {
         "safeguarding lead",
         "on-call",
         "notify",
+    ],
+    "accurate recording": [
+        "accurate",
+        "factual",
+        "honest",
+        "balanced",
+        "known facts",
+    ],
+    "no concealment": [
+        "will not help",
+        "omit",
+        "conceal",
+        "delete relevant",
+        "not help omit",
+    ],
+    "management escalation": [
+        "management",
+        "manager",
+        "dsl",
+        "escalat",
+        "oversight",
     ],
     "no secrecy promise": [
         "cannot promise secrecy",
