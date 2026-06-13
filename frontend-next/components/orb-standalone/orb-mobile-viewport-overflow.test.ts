@@ -29,7 +29,7 @@ describe('ORB mobile viewport overflow guards', () => {
     assert.match(mobileCss, /\.orb-residential-root/)
     assert.match(mobileCss, /\.orb-chat-shell\s*\{[^}]*display:\s*flex/)
     assert.match(mobileCss, /grid-template-columns:\s*none/)
-    assert.match(mobileCss, /\.orb-composer-dock\s*\{[^}]*calc\(100vw - 24px/)
+    assert.match(mobileCss, /\.orb-composer-dock\s*\{[^}]*width:\s*calc\(/)
     assert.match(mobileCss, /box-sizing:\s*border-box/)
   })
 

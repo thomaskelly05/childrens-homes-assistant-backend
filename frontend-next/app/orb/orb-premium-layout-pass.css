@@ -564,6 +564,17 @@ html[data-orb-residential='1'] [data-orb-app-panel-name='billing'] .orb-panel-bo
 html[data-orb-residential='1'] [data-orb-billing-modal] {
   display: flex;
   flex-direction: column;
+  min-height: 0;
+}
+
+html[data-orb-residential='1'] [data-orb-app-panel-name='billing'] .orb-panel-body {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+html[data-orb-residential='1'] [data-orb-billing-modal] [data-orb-billing-sticky-footer] {
+  flex-shrink: 0;
 }
 
 html[data-orb-residential='1'] [data-orb-billing-modal] [data-orb-billing-cta-bar] {
