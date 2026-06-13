@@ -19,7 +19,7 @@ export function OrbShell({
       <header className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
         <Link href="/" className="group flex flex-col gap-0.5" data-orb-brand>
           <span className="text-sm font-semibold tracking-tight text-white">ORB Residential</span>
-          <span className="text-[11px] font-medium text-sky-300/80">Powered by IndiCare Intelligence</span>
+          <span className="text-[11px] font-medium text-[var(--orb-brand-navy,#0B1F3A)]" data-orb-powered-indicare>Powered by IndiCare Intelligence</span>
         </Link>
         <div className="flex items-center gap-3">
           {headerRight}

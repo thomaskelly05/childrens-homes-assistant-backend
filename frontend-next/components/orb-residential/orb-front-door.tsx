@@ -26,7 +26,7 @@ export function OrbFrontDoor() {
       <header className="mx-auto flex w-full max-w-[68rem] shrink-0 items-center justify-between px-6 py-5 lg:px-8">
         <Link href="/" className="flex flex-col gap-0.5" data-orb-brand>
           <span className="text-sm font-semibold tracking-tight text-white">ORB Residential</span>
-          <span className="text-[11px] font-medium text-sky-300/80">Powered by IndiCare Intelligence</span>
+          <span className="text-[11px] font-medium text-[var(--orb-brand-navy,#0B1F3A)]" data-orb-powered-indicare>Powered by IndiCare Intelligence</span>
         </Link>
         <Link href="/os" className="text-xs font-medium text-slate-400 transition hover:text-sky-300" data-orb-os-link>
           IndiCare OS

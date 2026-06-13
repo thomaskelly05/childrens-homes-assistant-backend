@@ -215,6 +215,14 @@ export function OrbStandaloneComposer({
       setPrivacyGuidanceOpen(true)
       return
     }
+    if (action === 'attach_image') {
+      fileInputRef.current?.click()
+      return
+    }
+    if (action === 'attach_photo') {
+      cameraInputRef.current?.click()
+      return
+    }
     onPlusMenuAction?.(action)
   }
 

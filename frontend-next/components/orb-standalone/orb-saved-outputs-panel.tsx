@@ -239,7 +239,7 @@ export function OrbSavedOutputsPanel({
         <div className="flex w-full shrink-0 flex-col border-b border-[var(--orb-mobile-ws-card-border,var(--orb-line))] lg:w-[var(--orb-desktop-saved-list-width,27.5rem)] lg:max-w-[var(--orb-desktop-saved-list-width,27.5rem)] lg:border-b-0 lg:border-r">
           <OrbStudioHeader
             title="Document archive"
-            subtitle="Reuse, export and improve your ORB work"
+            subtitle="Saved ORB work — not templates or the recording library"
             className="px-2 pb-2 lg:px-3"
           />
           {reconnectSuggested && items.length ? (

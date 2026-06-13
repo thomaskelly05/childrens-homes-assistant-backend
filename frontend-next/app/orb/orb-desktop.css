@@ -605,6 +605,33 @@ html[data-orb-theme='dark'] .orb-action-chip:hover {
   color: inherit;
 }
 
+.orb-markdown-answer .orb-md-table-wrap {
+  margin: 0.65rem 0 0.85rem;
+}
+
+.orb-markdown-answer .orb-md-table {
+  border-collapse: collapse;
+  width: 100%;
+  min-width: 16rem;
+  font-size: 0.875rem;
+}
+
+.orb-markdown-answer .orb-md-th,
+.orb-markdown-answer .orb-md-td {
+  border: 1px solid var(--orb-line, rgba(15, 23, 42, 0.12));
+  padding: 0.45rem 0.65rem;
+  vertical-align: top;
+}
+
+.orb-markdown-answer .orb-md-thead {
+  background: var(--orb-surface-hover, #f1f5f9);
+}
+
+.orb-markdown-answer input[type='checkbox'] {
+  margin-right: 0.35rem;
+  vertical-align: middle;
+}
+
 .orb-document-panel {
   border-color: var(--orb-line);
   background: var(--orb-surface);

@@ -24,7 +24,7 @@ export function OrbResidentialShell({ children }: { children: ReactNode }) {
             </div>
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold tracking-tight text-[#111827]">ORB Residential</p>
-              <p className="truncate text-xs text-[#6B7280]">Powered by IndiCare Intelligence</p>
+              <p className="truncate text-xs text-[var(--orb-brand-navy,#0B1F3A)]" data-orb-powered-indicare>Powered by IndiCare Intelligence</p>
             </div>
           </Link>
 
