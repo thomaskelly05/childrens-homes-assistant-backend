@@ -20,6 +20,8 @@ export type OrbComposerPlusAction =
   | 'knowledge'
   | 'orb_voice'
   | 'orb_dictate'
+  | 'orb_write'
+  | 'privacy_guidance'
   | 'learning_session'
   | 'saved_outputs'
 

@@ -9,8 +9,8 @@ const APOS = '\u2019'
 /** Maximum visible prompt pills on Chat home desktop — extras live behind “More examples”. */
 export const ORB_RESIDENTIAL_PRIMARY_STARTER_COUNT = 6
 
-/** Mobile first-view chip count — three core starters for a calmer phone home screen. */
-export const ORB_RESIDENTIAL_MOBILE_PRIMARY_STARTER_COUNT = 3
+/** Mobile first-view suggestion count — two light cards for a calmer phone home screen. */
+export const ORB_RESIDENTIAL_MOBILE_PRIMARY_STARTER_COUNT = 2
 
 export type ResidentialStarter = {
   text: string
@@ -237,6 +237,9 @@ export const ORB_RESIDENTIAL_EMPTY_HEADING_DESKTOP = 'What do you need help with
 
 /** Calm ChatGPT-style empty heading on phone (`/orb`). */
 export const ORB_RESIDENTIAL_MOBILE_EMPTY_HEADING = 'What do you need help with?'
+
+/** Optional compact subline on mobile home — kept short to avoid clutter. */
+export const ORB_RESIDENTIAL_MOBILE_EMPTY_SUBLINE = 'Record, reflect or prepare a safer note.'
 
 /** Functional product line — hero / first-run only, not global chrome. */
 export const ORB_RESIDENTIAL_BRAND_EMOTIONAL_LINE = 'IndiCare Intelligence'

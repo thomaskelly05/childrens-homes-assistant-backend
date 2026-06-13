@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
+import { useOrbMobileViewport } from '@/components/orb-standalone/use-orb-mobile-viewport'
 import { FileText, Loader2 } from 'lucide-react'
 
 import {
@@ -127,6 +128,7 @@ export function OrbTemplatesPanel({
   sessionReady?: boolean
   initialSearch?: string
 }) {
+  const isMobileViewport = useOrbMobileViewport()
   const [categories, setCategories] = useState<string[]>(FALLBACK_CATEGORIES)
   const [category, setCategory] = useState('')
   const [recordingFilter, setRecordingFilter] = useState('all')
@@ -211,19 +213,25 @@ export function OrbTemplatesPanel({
     <OrbStandalonePanelShell
       open={open}
       title="Templates"
-      subtitle="Recording library and prompt templates — start in Dictate, ORB Write or chat."
+      subtitle={
+        isMobileViewport
+          ? 'Recording library and templates'
+          : 'Recording library and prompt templates — start in Dictate, ORB Write or chat.'
+      }
       onClose={onClose}
       panelId="templates"
       ariaLabel="ORB template library"
       {...orbStationShellProps(residentialSurface, 'wide')}
     >
       <OrbStudioShell studioId="templates" className="min-h-0 flex-1 gap-3 p-3 sm:p-4">
-        <OrbStudioHero
-          title="Recording library"
-          subtitle="Structured residential record types — start in Dictate, ORB Write or chat."
-          icon={<FileText className="h-5 w-5" />}
-          compact
-        />
+        {!isMobileViewport ? (
+          <OrbStudioHero
+            title="Recording library"
+            subtitle="Structured residential record types — start in Dictate, ORB Write or chat."
+            icon={<FileText className="h-5 w-5" />}
+            compact
+          />
+        ) : null}
       <OrbPremiumPage
         panelId="templates"
         toolbar={
@@ -233,6 +241,7 @@ export function OrbTemplatesPanel({
             searchPlaceholder="Search templates and record types…"
             onSearchSubmit={() => void load()}
             filters={
+              !isMobileViewport ? (
               <div className="flex flex-wrap gap-1.5" data-orb-templates-filter-row>
                 {TEMPLATE_LIBRARY_FILTERS.map((filter) => (
                   <OrbPremiumPill
@@ -249,16 +258,22 @@ export function OrbTemplatesPanel({
                   </OrbPremiumPill>
                 ))}
               </div>
+              ) : null
             }
           />
         }
         className="orb-templates-panel"
       >
         <section data-orb-recording-library-section>
-          <h3 className="mb-2 text-sm font-semibold text-[var(--orb-foreground)]">Recording library</h3>
-          <p className="mb-2 text-xs text-[var(--orb-muted)]">
-            Structured residential record types shared across Dictate, Write and Documents.
-          </p>
+          {!isMobileViewport ? (
+            <>
+              <h3 className="mb-2 text-sm font-semibold text-[var(--orb-foreground)]">Recording library</h3>
+              <p className="mb-2 text-xs text-[var(--orb-muted)]">
+                Structured residential record types shared across Dictate, Write and Documents.
+              </p>
+            </>
+          ) : null}
+          {!isMobileViewport ? (
           <div className="mb-3 flex flex-wrap gap-1.5" data-orb-recording-library-filters>
             {RECORDING_LIBRARY_FILTERS.map((filter) => (
               <OrbPremiumPill
@@ -272,6 +287,25 @@ export function OrbTemplatesPanel({
               </OrbPremiumPill>
             ))}
           </div>
+          ) : (
+            <div
+              className="mb-2 flex gap-1.5 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+              data-orb-recording-library-filters
+              data-orb-recording-library-filters-mobile
+            >
+              {RECORDING_LIBRARY_FILTERS.map((filter) => (
+                <OrbPremiumPill
+                  key={filter.id}
+                  active={recordingFilter === filter.id}
+                  onClick={() => setRecordingFilter(filter.id)}
+                  className="min-h-[2.25rem] shrink-0 text-xs"
+                  data-orb-recording-filter={filter.id}
+                >
+                  {filter.label}
+                </OrbPremiumPill>
+              ))}
+            </div>
+          )}
           <OrbRecordingLibraryCards
             search={search}
             category={
@@ -302,7 +336,9 @@ export function OrbTemplatesPanel({
           </div>
         ) : null}
 
-        <h3 className="text-sm font-semibold text-[var(--orb-foreground)]">Prompt templates</h3>
+        <h3 className={`text-sm font-semibold text-[var(--orb-foreground)] ${isMobileViewport ? 'mt-2' : ''}`}>
+          Prompt templates
+        </h3>
 
         {error && shouldBlockStationForAuth(sessionReady, error) ? (
           <OrbStationAuthError detail={error} />
