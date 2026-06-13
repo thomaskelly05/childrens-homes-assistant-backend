@@ -119,8 +119,7 @@ export const REFLECTIVE_DEBRIEF_QUESTIONS = [
 ] as const
 
 export const ORB_DICTATE_PRODUCT_TITLE = 'Dictate'
-export const ORB_DICTATE_PRODUCT_SUBTITLE =
-  'Turn rough shift notes into professional residential records'
+export const ORB_DICTATE_PRODUCT_SUBTITLE = 'Turn rough notes into a safer record.'
 
 export const ORB_DICTATE_GOVERNANCE_COPY = {
   draft:

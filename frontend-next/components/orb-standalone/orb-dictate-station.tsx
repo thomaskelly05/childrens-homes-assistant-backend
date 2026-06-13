@@ -1227,6 +1227,7 @@ export function OrbDictateStation({
     dictateState,
     recordingUiState,
     hasTranscript: effectiveInputText.length > 0,
+    hasGeneratedOutput: Boolean(output),
     speechError,
     userStatus: userFacingStatus,
     listening: recordingActive && !recordingPaused

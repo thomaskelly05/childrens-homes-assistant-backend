@@ -86,13 +86,13 @@ export function orbVoiceUiStatusLine(state: OrbVoiceUiState): string {
     case 'ready':
       return 'Tap to start'
     case 'connecting':
-      return 'Connecting…'
+      return 'Reconnecting…'
     case 'listening':
-      return "I'm listening"
+      return 'Listening…'
     case 'thinking':
-      return 'Thinking…'
+      return 'ORB is responding…'
     case 'speaking':
-      return 'ORB is speaking'
+      return 'ORB is responding…'
     case 'ended':
       return 'Conversation ended'
     case 'provider_unavailable':

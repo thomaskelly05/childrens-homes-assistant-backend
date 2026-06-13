@@ -55,6 +55,7 @@ export function dictateMobileStatusLine(input: {
   dictateState: DictateState
   recordingUiState: DictateRecordingUiState
   hasTranscript: boolean
+  hasGeneratedOutput?: boolean
   speechError: string | null
   userStatus: string | null
   listening: boolean
@@ -64,8 +65,15 @@ export function dictateMobileStatusLine(input: {
     return input.userStatus?.trim() || 'Recording could not start. Try again or paste a transcript.'
   }
   if (input.listening || input.dictateState === 'listening') return 'Listening…'
-  if (input.dictateState === 'stopping' || input.recordingUiState === 'stopping') return 'Finishing…'
-  if (input.dictateState === 'generating') return 'Generating…'
+  if (
+    input.dictateState === 'stopping' ||
+    input.recordingUiState === 'stopping' ||
+    input.recordingUiState === 'processing'
+  ) {
+    return 'Structuring your note…'
+  }
+  if (input.dictateState === 'generating') return 'Structuring your note…'
+  if (input.hasGeneratedOutput || input.dictateState === 'generated') return 'Ready to review'
   if (input.hasTranscript && input.dictateState === 'transcript_ready') return 'Transcript captured'
   if (input.userStatus && !isTechnicalDictateStatus(input.userStatus)) return input.userStatus
   return 'Ready to capture'

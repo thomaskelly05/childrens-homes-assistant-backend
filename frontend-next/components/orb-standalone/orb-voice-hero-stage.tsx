@@ -33,7 +33,6 @@ export function OrbVoiceHeroStage({
   heroStageId?: 'desktop' | 'mobile'
 }) {
   const { isMobile } = useOrbResponsiveMode()
-  const companionSize = heroStageId === 'mobile' ? 'mobile-preview' : 'hero'
   const stageAttr =
     heroStageId === 'mobile'
       ? ({ 'data-orb-voice-mobile-hero-stage': true, 'data-orb-voice-hero-stage': true } as const)
@@ -47,7 +46,7 @@ export function OrbVoiceHeroStage({
       className={`orb-voice-hero-stage flex shrink-0 flex-col items-center text-center ${className}`.trim()}
       {...stageAttr}
     >
-      <OrbVoiceCompanion state={companionState} size={companionSize} className="shrink-0" />
+      <OrbVoiceCompanion state={companionState} size="hero" className="shrink-0" />
 
       <p
         className="orb-voice-hero-stage__headline text-center text-sm font-medium text-[var(--orb-text,var(--orb-foreground))]"
@@ -55,7 +54,7 @@ export function OrbVoiceHeroStage({
       >
         {ORB_VOICE_COMPANION_HEADLINES[companionState]}
       </p>
-      {subline && !isMobile ? (
+      {subline && (isMobile || companionState === 'idle') ? (
         <p className="orb-voice-hero-stage__subline text-center text-xs text-[var(--orb-muted)]" data-orb-voice-status-subline>
           {subline}
         </p>
@@ -69,7 +68,7 @@ export function OrbVoiceHeroStage({
         </div>
       ) : null}
 
-      {micStatus ? (
+      {micStatus && !subline ? (
         <p className="orb-voice-hero-stage__mic-status text-center text-xs text-[var(--orb-muted)]" data-orb-voice-mic-status>
           {micStatus}
         </p>

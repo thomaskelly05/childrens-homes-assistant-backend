@@ -6,7 +6,9 @@ import { Square } from 'lucide-react'
 
 import { OrbAppModal } from '@/components/orb-standalone/orb-app-modal'
 import { OrbVoiceActions } from '@/components/orb-standalone/orb-voice-actions'
+import { OrbVoiceAfterCallPanel } from '@/components/orb-standalone/orb-voice-after-call-panel'
 import { OrbVoiceLaunchControls } from '@/components/orb-standalone/orb-voice-launch-controls'
+import { OrbVoiceLivePanel } from '@/components/orb-standalone/orb-voice-live-panel'
 import { OrbVoiceTranscriptActions } from '@/components/orb-standalone/orb-voice-transcript-actions'
 import { OrbVoiceStationContent } from '@/components/orb-standalone/orb-voice-station-content'
 import { useOrbMobileViewport } from '@/components/orb-standalone/use-orb-mobile-viewport'
@@ -70,6 +72,7 @@ import {
   sanitizeOrbVoiceUserMessage
 } from '@/lib/orb/voice/orb-voice-user-messages'
 import { isOrbDictateRealtimeAvailable } from '@/lib/orb/dictate/orb-dictate-realtime'
+import { templateById } from '@/lib/orb/dictate/orb-dictate-studio-templates'
 import {
   assessOrbVoiceReadiness,
   detectSpeechRecognitionSupported,
@@ -100,9 +103,6 @@ import { isOrbDebugVisualEnabled } from '@/lib/orb/orb-visual-build'
 type VoiceApi = ReturnType<typeof useStandaloneOrbVoice>
 type VoiceStartStage = 'idle' | 'starting' | 'active' | 'failed'
 type BrowserStartStage = 'idle' | 'starting' | 'active' | 'failed'
-
-const SAFETY_COPY =
-  'ORB can support your thinking, but it does not replace safeguarding procedures, management oversight or professional judgement. Do not use ORB for emergencies — follow local safeguarding and emergency procedures.'
 
 function newTurnId() {
   return `turn_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
@@ -205,6 +205,7 @@ export function OrbVoiceStation({
   const [listeningHint, setListeningHint] = useState(false)
   const [voiceStartError, setVoiceStartError] = useState<string | null>(null)
   const [browserStartStage, setBrowserStartStage] = useState<BrowserStartStage>('idle')
+  const [voiceRecordTemplateId, setVoiceRecordTemplateId] = useState('general')
   const statusFetchedRef = useRef(false)
   const isMobileViewport = useOrbMobileViewport()
 
@@ -420,6 +421,34 @@ export function OrbVoiceStation({
     : voiceSessionLive
       ? mapOrbVoiceUiToCompanionState(effectiveRealtimeState)
       : mapOrbVoiceUiToCompanionState(uiState)
+
+  const voiceWorkspaceMode: 'idle' | 'live' | 'after_call' =
+    uiState === 'ended' || (sessionEnded && !voiceSessionLive)
+      ? 'after_call'
+      : voiceSessionLive || (useBrowserLaunch && (launchUiState === 'listening' || launchUiState === 'thinking' || launchUiState === 'speaking'))
+        ? 'live'
+        : 'idle'
+
+  const livePanelState: 'listening' | 'thinking' | 'speaking' | 'connecting' | 'paused' =
+    uiState === 'connecting' || voiceStarting
+      ? 'connecting'
+      : companionState === 'thinking'
+        ? 'thinking'
+        : companionState === 'speaking'
+          ? 'speaking'
+          : companionState === 'paused'
+            ? 'paused'
+            : 'listening'
+
+  const handleCreateDraftFromVoice = useCallback(
+    (templateId: string) => {
+      const template = templateById(templateId)
+      const transcript = fullConversationText || voiceTranscriptText || browserTranscriptText
+      if (!transcript.trim() || !onOpenDictate) return
+      onOpenDictate(transcript, template?.noteType, { studio: true })
+    },
+    [browserTranscriptText, fullConversationText, onOpenDictate, voiceTranscriptText]
+  )
 
   useEffect(() => {
     if (!voiceSessionLive || realtimeState !== 'listening') {
@@ -836,6 +865,11 @@ export function OrbVoiceStation({
     setStatusProbe('done')
   }
 
+  function handleContinueTalking() {
+    setSessionEnded(false)
+    void handleStart()
+  }
+
   async function handleRetryVoice() {
     resetSession()
     if (authStatus === 'authenticated' || isSignedIn === true) {
@@ -889,12 +923,6 @@ export function OrbVoiceStation({
       ? launchUiState === 'ready' && permissionDenied
       : uiState === 'ready' && (!liveVoiceAllowed || permissionDenied)
 
-  const showPostSession =
-    (uiState === 'ended' || (transcriptAvailable && !voiceSessionLive && !useBrowserLaunch)) &&
-    uiState !== 'unauthenticated' &&
-    uiState !== 'checking' &&
-    (useBrowserLaunch || (uiState !== 'provider_unavailable' && uiState !== 'webrtc_failed'))
-
   const readiness = assessOrbVoiceReadiness({
     recognitionAvailable: voice.recognitionAvailable || detectSpeechRecognitionSupported(),
     synthesisAvailable: voice.synthesisAvailable,
@@ -916,7 +944,7 @@ export function OrbVoiceStation({
     'data-orb-voice-ui-state': uiState,
     'data-orb-voice-state': uiState,
     'data-orb-voice-start-stage': voiceStartStage,
-    'data-orb-voice-capture-active': voiceSessionLive ? 'true' : 'false',
+    'data-orb-voice-capture-active': voiceWorkspaceMode === 'live' ? 'true' : 'false',
     'data-orb-voice-auth': authStatus,
     'data-orb-voice-realtime-available': realtimeVoiceReady ? 'true' : 'false',
     'data-orb-voice-session-connected': realtimeSessionConnected ? 'true' : 'false',
@@ -934,6 +962,38 @@ export function OrbVoiceStation({
     voiceDebug && voiceSessionLive
       ? () => getActiveOrbRealtimeVoiceClient()?.sendVoiceTurnFallback()
       : undefined
+
+  const afterCallTranscript = fullConversationText || voiceTranscriptText || browserTranscriptText
+
+  const afterCallPanel = (
+    <OrbVoiceAfterCallPanel
+      turns={conversationTurns}
+      transcriptText={afterCallTranscript}
+      voiceSummary={assistantReply}
+      selectedTemplateId={voiceRecordTemplateId}
+      onTemplateChange={(t) => setVoiceRecordTemplateId(t.id)}
+      onCreateDraftRecord={handleCreateDraftFromVoice}
+      onSendToWrite={
+        onOpenWrite ? () => onOpenWrite(afterCallTranscript, 'ORB Voice conversation') : undefined
+      }
+      onContinueTalking={handleContinueTalking}
+      onCopyTranscript={handleCopyTranscript}
+      onNewSession={handleNewConversation}
+    />
+  )
+
+  const livePanel = (
+    <OrbVoiceLivePanel
+      turns={conversationTurns}
+      interimTranscript={voice.interimTranscript || browserDisplayTranscript}
+      liveState={livePanelState}
+      onEnd={handleEnd}
+      onTurnIntoRecord={onOpenDictate ? () => handleCreateDraftFromVoice(voiceRecordTemplateId) : undefined}
+    />
+  )
+
+  const voiceSidePanel =
+    voiceWorkspaceMode === 'after_call' ? afterCallPanel : voiceWorkspaceMode === 'live' ? livePanel : null
 
   return (
     <OrbAppModal
@@ -968,40 +1028,13 @@ export function OrbVoiceStation({
         <OrbVoiceStationContent
           companionState={companionState}
           statusLine={statusLine}
-          detailLine={detailLine}
+          detailLine={voiceWorkspaceMode === 'idle' ? detailLine : null}
+          workspaceMode={voiceWorkspaceMode}
+          sidePanel={voiceSidePanel}
           controls={
+            voiceWorkspaceMode === 'after_call' || (voiceWorkspaceMode === 'live' && isMobileViewport) ? null : (
             <>
-              {showPostSession ? (
-                <div className="flex flex-col gap-2" data-orb-voice-post-session>
-                  {useBrowserLaunch ? (
-                    <button
-                      type="button"
-                      data-orb-voice-new-conversation
-                      className="w-full rounded-full bg-gradient-to-r from-[var(--orb-primary-blue,#168bff)] to-[var(--orb-primary-blue-2,#0d5fcc)] py-3 text-sm font-semibold text-white"
-                      onClick={handleNewConversation}
-                    >
-                      Start new voice conversation
-                    </button>
-                  ) : (
-                    <OrbVoiceActions
-                      uiState="ended"
-                      onPrimary={() => void handleRetryVoice()}
-                      onTypeInstead={handleTypeInstead}
-                      layout="stack"
-                    />
-                  )}
-                  {onTypeInstead ? (
-                    <button
-                      type="button"
-                      data-orb-voice-type-instead
-                      onClick={handleTypeInstead}
-                      className="w-full rounded-full border border-[var(--orb-line)] py-2.5 text-sm text-[var(--orb-muted)]"
-                    >
-                      Type instead
-                    </button>
-                  ) : null}
-                </div>
-              ) : useBrowserLaunch ? (
+              {useBrowserLaunch ? (
                 <OrbVoiceLaunchControls
                   launchMode={launchMode}
                   launchUiState={launchUiState}
@@ -1048,9 +1081,10 @@ export function OrbVoiceStation({
                 />
               )}
             </>
+            )
           }
           secondaryControls={
-            transcriptAvailable && voiceTranscriptText.trim() && !useBrowserLaunch ? (
+            voiceWorkspaceMode === 'after_call' ? null : transcriptAvailable && voiceTranscriptText.trim() && !useBrowserLaunch ? (
               <OrbVoiceTranscriptActions
                 transcript={voiceTranscriptText}
                 onCopy={handleCopyTranscript}
@@ -1062,7 +1096,11 @@ export function OrbVoiceStation({
             ) : null
           }
         >
+          {voiceWorkspaceMode === 'after_call' && isMobileViewport ? afterCallPanel : null}
+          {voiceWorkspaceMode === 'live' && isMobileViewport ? livePanel : null}
+          {voiceWorkspaceMode === 'idle' ? (
           <div className="orb-voice-session-extras w-full" data-orb-voice-session-extras>
+          {!isMobileViewport ? (
           <div className="mt-4 flex w-full flex-wrap items-center justify-center gap-2">
             <label className="sr-only" htmlFor="orb-voice-mode-select">
               Voice mode
@@ -1096,8 +1134,9 @@ export function OrbVoiceStation({
               ))}
             </select>
           </div>
+          ) : null}
 
-          {!voiceSessionLive ? (
+          {!isMobileViewport && !voiceSessionLive ? (
             <p className="mt-2 text-center text-[11px] text-[var(--orb-muted)]">
               Voice: {selectedProfileLabel} — {getOrbVoiceProfile(voice.settings.voicePresetId).description}
             </p>
@@ -1382,15 +1421,15 @@ export function OrbVoiceStation({
             </button>
           ) : null}
 
-          <div className="mx-auto mt-6 max-w-md space-y-1 text-center" data-orb-voice-boundary-copy>
-            {ORB_VOICE_BOUNDARY_COPY.map((line) => (
+          <div className="mx-auto mt-6 hidden max-w-md space-y-1 text-center md:block" data-orb-voice-boundary-copy>
+            {ORB_VOICE_BOUNDARY_COPY.slice(0, 2).map((line) => (
               <p key={line} className="text-[10px] leading-4 text-[var(--orb-muted)]">
                 {line}
               </p>
             ))}
-            <p className="text-[10px] leading-4 text-[var(--orb-muted)]">{SAFETY_COPY}</p>
           </div>
           </div>
+          ) : null}
         </OrbVoiceStationContent>
 
         {debugVisual ? (
