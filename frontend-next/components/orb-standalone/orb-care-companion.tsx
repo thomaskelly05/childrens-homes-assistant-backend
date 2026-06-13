@@ -76,6 +76,7 @@ import {
   handoffSavedOutputToOrbWrite
 } from '@/lib/orb/write/orb-write-converged-handoff'
 import type { OrbRecordingRecordType } from '@/lib/orb/recording/orb-recording-types'
+import { buildOrbWriteTemplateSectionBody } from '@/lib/orb/recording/orb-recording-framework'
 import {
   ORB_RESIDENTIAL_BRAND_EMOTIONAL_LINE,
   ORB_RESIDENTIAL_EMPTY_HEADING_DESKTOP,
@@ -101,6 +102,10 @@ import { OrbSkillsPanel } from '@/components/orb-standalone/orb-skills-panel'
 import type { OrbSkillDefinition } from '@/lib/orb/orb-skills-catalog'
 import { OrbDictateStation } from '@/components/orb-standalone/orb-dictate-station'
 import { OrbWriteStandalonePanel } from '@/components/orb-write/orb-write-standalone-panel'
+import {
+  OrbWriteTemplatePicker,
+  type OrbWriteTemplateApplyMode
+} from '@/components/orb-write/orb-write-template-picker'
 import { OrbVoiceStation } from '@/components/orb-standalone/orb-voice-station'
 import type { OrbDictateNoteType } from '@/lib/orb/dictate/orb-dictate-types'
 import type { OrbComposerPlusAction } from '@/components/orb-standalone/orb-composer-plus-menu'
@@ -631,6 +636,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
   const [documentImportText, setDocumentImportText] = useState<string | undefined>()
   const [documentImportLens, setDocumentImportLens] = useState<OrbDocumentLens | undefined>()
   const [templatesImportSearch, setTemplatesImportSearch] = useState('')
+  const [composerRecordTypePickerOpen, setComposerRecordTypePickerOpen] = useState(false)
   const [convergenceRedirectPanel, setConvergenceRedirectPanel] =
     useState<OrbDeprecatedPrimaryNavPanelId | null>(null)
   const [convergenceNotice, setConvergenceNotice] = useState<string | null>(null)
@@ -2180,6 +2186,10 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
         inputRef.current?.focus()
         break
       case 'use_template':
+        if (residentialSurface && isMobileViewport) {
+          setComposerRecordTypePickerOpen(true)
+          break
+        }
         openTemplatesPanel()
         break
       case 'knowledge':
@@ -3219,6 +3229,29 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
         onOpenTemplates={openTemplatesPanel}
         onOpenDictate={() => openOrbDictatePanel()}
         onOpenSavedOutputs={openSavedOutputsPanel}
+      />
+      <OrbWriteTemplatePicker
+        open={composerRecordTypePickerOpen}
+        currentRecordTypeId="general_dictation"
+        hasExistingContent={false}
+        onClose={() => setComposerRecordTypePickerOpen(false)}
+        onApply={({
+          recordType,
+          mode
+        }: {
+          recordType: OrbRecordingRecordType
+          mode: OrbWriteTemplateApplyMode
+        }) => {
+          if (mode === 'style_guidance') {
+            setComposerRecordTypePickerOpen(false)
+            return
+          }
+          convergedTemplateHandoff(recordType, {
+            structuredBody: buildOrbWriteTemplateSectionBody(recordType)
+          })
+          setComposerRecordTypePickerOpen(false)
+          openOrbWritePanel()
+        }}
       />
     </>
   )

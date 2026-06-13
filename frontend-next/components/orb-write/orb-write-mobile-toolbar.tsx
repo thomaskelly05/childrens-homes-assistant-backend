@@ -40,7 +40,8 @@ export function OrbWriteMobileToolbar({
   onApprove,
   onAskOrb,
   onOpenSource,
-  onOpenGuidance
+  onOpenGuidance,
+  onOpenTemplatePicker
 }: {
   onCommand: (command: string, value?: string) => void
   canUndo: boolean
@@ -53,6 +54,7 @@ export function OrbWriteMobileToolbar({
   onAskOrb?: () => void
   onOpenSource?: () => void
   onOpenGuidance?: () => void
+  onOpenTemplatePicker?: () => void
 }) {
   const [sheet, setSheet] = useState<MobileSheet>(null)
 
@@ -194,6 +196,19 @@ export function OrbWriteMobileToolbar({
                     data-orb-write-mobile-guidance-entry
                   >
                     Guidance
+                  </button>
+                ) : null}
+                {onOpenTemplatePicker ? (
+                  <button
+                    type="button"
+                    className={btn}
+                    onClick={() => {
+                      onOpenTemplatePicker()
+                      closeSheet()
+                    }}
+                    data-orb-write-mobile-record-type-entry
+                  >
+                    Record type
                   </button>
                 ) : null}
                 <button type="button" className={btn} onClick={() => setSheet('format')} data-orb-write-mobile-format-entry>

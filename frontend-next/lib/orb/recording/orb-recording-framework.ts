@@ -1,6 +1,12 @@
 import frameworkData from '@/lib/orb/recording/orb-recording-framework.json'
 
 import type { OrbDictateNoteType } from '@/lib/orb/dictate/orb-dictate-types'
+import {
+  buildSectionPromptBody,
+  ORB_PRIMARY_RECORD_TYPE_IDS,
+  ORB_THERAPEUTIC_RECORDING_PRINCIPLES,
+  sectionPromptsForRecordType
+} from '@/lib/orb/recording/orb-recording-section-prompts'
 import { therapeuticWritingForRecordType } from '@/lib/orb/recording/orb-therapeutic-writing'
 import type {
   OrbRecordingBrainFrameworkContext,
@@ -28,7 +34,7 @@ export const ORB_RECORDING_RECORD_TYPES: readonly OrbRecordingRecordType[] = mer
 
 import { ORB_RECOMMENDED_RECORD_TYPE_IDS } from '@/lib/orb/orb-navigation-convergence'
 
-export { ORB_RECOMMENDED_RECORD_TYPE_IDS }
+export { ORB_RECOMMENDED_RECORD_TYPE_IDS, ORB_PRIMARY_RECORD_TYPE_IDS, ORB_THERAPEUTIC_RECORDING_PRINCIPLES }
 
 export function isRecommendedRecordingType(id: string): boolean {
   return (ORB_RECOMMENDED_RECORD_TYPE_IDS as readonly string[]).includes(id)
@@ -163,26 +169,12 @@ export function orbWriteTemplatePickerRecordTypes(search = ''): OrbRecordingReco
   })
 }
 
-const GENERAL_DICTATION_WRITE_SECTIONS: Array<{ title: string; prompt: string }> = [
-  { title: 'Summary', prompt: 'Brief overview of the situation or note.' },
-  { title: 'What was observed or shared', prompt: 'Factual account without judgement.' },
-  { title: `Child\u2019s voice and presentation`, prompt: 'What the child said, showed or communicated.' },
-  { title: 'Adult response', prompt: 'How staff responded and supported the child.' },
-  { title: 'Outcome', prompt: 'What changed by the end.' },
-  { title: 'Follow-up / management oversight', prompt: 'Actions, notifications, review or escalation.' }
-]
-
 export function buildOrbWriteTemplateSectionBody(
   recordType: OrbRecordingRecordType,
   template?: { sections?: Array<{ title: string; prompts?: string[]; required?: boolean }> }
 ): string {
-  if (recordType.id === 'general_dictation' && !template?.sections?.length) {
-    return GENERAL_DICTATION_WRITE_SECTIONS.map(
-      (section) => `## ${section.title}\n\n*${section.prompt}*\n`
-    )
-      .join('\n')
-      .trim()
-  }
+  const frameworkBody = buildSectionPromptBody(recordType.id)
+  if (frameworkBody && !template?.sections?.length) return frameworkBody
 
   const sections = template?.sections
   if (sections?.length) {
@@ -206,8 +198,15 @@ export function structureOrbWriteDocumentBody(opts: {
   const body = opts.body.trim()
   if (/^##\s+/m.test(body)) return body
 
+  const sectionPrompts = sectionPromptsForRecordType(opts.recordType.id)
   const headings = opts.recordType.final_document_headings
-  let structured = headings.map((h) => `## ${h}\n\n`).join('').trimEnd()
+  let structured = headings
+    .map((h) => {
+      const prompt = sectionPrompts?.find((s) => s.title === h)?.prompt
+      return prompt ? `## ${h}\n\n*${prompt}*\n` : `## ${h}\n\n`
+    })
+    .join('')
+    .trimEnd()
   if (body) {
     structured += `\n\n---\n\n${body}`
   }

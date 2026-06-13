@@ -15,9 +15,9 @@ function readJson(relativePath: string) {
 }
 
 describe('ORB recording framework frontend', () => {
-  it('defines 21 record types in shared JSON', () => {
+  it('defines 24 record types in shared JSON', () => {
     const data = readJson('orb-recording-framework.json')
-    assert.equal(data.record_types.length, 21)
+    assert.equal(data.record_types.length, 24)
   })
 
   it('studio templates derive from shared framework', () => {
@@ -26,7 +26,7 @@ describe('ORB recording framework frontend', () => {
     assert.match(studio, /recordTypeId/)
     const data = readJson('orb-recording-framework.json')
     const studioCount = data.record_types.filter((r: { studio_template_id: string | null }) => r.studio_template_id).length
-    assert.ok(studioCount >= 9)
+    assert.ok(studioCount >= 13)
   })
 
   it('selected template card renders framework fields', () => {

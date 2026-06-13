@@ -85,6 +85,7 @@ export function OrbDictateTemplateSelector({
             setDetailsOpen(false)
           }}
         >
+          <span className="shrink-0 text-[10px] font-medium text-[var(--orb-muted)]">Record type:</span>
           <span className="truncate" data-orb-dictate-selected-template>
             {selected?.label ?? recordType.label}
           </span>

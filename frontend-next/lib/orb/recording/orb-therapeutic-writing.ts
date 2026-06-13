@@ -96,7 +96,7 @@ export const ORB_THERAPEUTIC_WRITING_BY_RECORD_TYPE: Partial<
   }),
   incident_report: framework({
     writing_guidance:
-      'Chronological, factual incident account — antecedents, child voice, de-escalation, injuries, notifications. Non-blaming.',
+      'Chronological, factual incident reflection — context, child voice, de-escalation, harm, notifications, repair. Non-blaming.',
     trauma_informed_prompts: [
       'What might dysregulation have been communicating?',
       'What helped the child return to safety?'
@@ -118,7 +118,7 @@ export const ORB_THERAPEUTIC_WRITING_BY_RECORD_TYPE: Partial<
   }),
   safeguarding_concern: framework({
     writing_guidance:
-      'Facts-led concern record — child words in quotes, immediate safety, decision rationale, escalation pathway.',
+      'Facts-led safeguarding reflection — child words in quotes, immediate safety, decision rationale, escalation pathway.',
     safeguarding_checks: [
       'Immediate safety actions documented?',
       'DSL / manager informed?',
@@ -166,6 +166,29 @@ export const ORB_THERAPEUTIC_WRITING_BY_RECORD_TYPE: Partial<
     writing_guidance: 'Practical actions with owners, timescales, review dates — linked to evidence from records or comparison.',
     manager_oversight_checks: ['Each action has an owner and review point?'],
     writing_style_ids: ['professional', 'manager_summary', 'concise']
+  }),
+  behaviour_reflection: framework({
+    writing_guidance:
+      'Reflect on behaviour as possible communication — context, adult response, learning. Non-blaming, trauma-informed.',
+    therapeutic_prompts: [
+      'What might this behaviour have been communicating?',
+      'What unmet need may have been present?',
+      'How did adults respond to help the child feel safe?'
+    ],
+    trauma_informed_prompts: [
+      'What context or triggers preceded the behaviour?',
+      'What helped regulation or repair afterwards?'
+    ],
+    writing_style_ids: ['therapeutic', 'child_centred', 'factual', 'professional']
+  }),
+  supervision_preparation: framework({
+    writing_guidance:
+      'Honest preparation for supervision — practice reflection, child-centred concerns, support needed.',
+    person_centred_prompts: [
+      'Which child-centred concerns need supervisor attention?',
+      'What support do you need to practise safely?'
+    ],
+    writing_style_ids: ['therapeutic', 'professional', 'reflective']
   }),
   reg_44_evidence_summary: framework({
     writing_guidance: 'Balanced evidence summary — child experience, strengths, development areas, actions from visit.',

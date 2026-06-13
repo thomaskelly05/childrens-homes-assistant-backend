@@ -89,7 +89,7 @@ export function OrbWriteTemplatePicker({
         <header className="flex items-center justify-between border-b border-[var(--orb-line)]/50 px-4 py-3">
           <div className="flex items-center gap-2">
             <FileText className="h-4 w-4 text-[var(--orb-primary)]" aria-hidden />
-            <h2 className="text-sm font-semibold text-[var(--orb-foreground)]">Choose template</h2>
+            <h2 className="text-sm font-semibold text-[var(--orb-foreground)]">Choose record type</h2>
           </div>
           <button
             type="button"
