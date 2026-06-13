@@ -10,7 +10,38 @@ export type OrbVoiceAfterCallContent = {
   recordingHints: string[]
   followUpQuestions: string[]
   hasTranscript: boolean
+  summaryPending: boolean
 }
+
+const MANAGEMENT_OVERSIGHT_KEYWORDS = [
+  'restraint',
+  'missing from home',
+  'missing from',
+  'self-harm',
+  'self harm',
+  'disclosure',
+  'allegation',
+  'injury',
+  'police',
+  'ambulance',
+  'bullying',
+  'exploitation',
+  'medication',
+  'significant incident'
+] as const
+
+const URGENT_ESCALATION_PATTERNS = [
+  'immediate risk',
+  'abuse',
+  'disclosure',
+  'missing child',
+  'missing from',
+  'self-harm',
+  'self harm',
+  'serious injury',
+  'exploitation',
+  'emergency'
+] as const
 
 function userTurns(turns: VoiceTurn[]): VoiceTurn[] {
   return turns.filter((t) => t.role === 'user' && t.text.trim())
@@ -46,7 +77,8 @@ function recordingHintsFromTurns(turns: VoiceTurn[]): string[] {
     'concern',
     'risk',
     'child',
-    'young person'
+    'young person',
+    ...MANAGEMENT_OVERSIGHT_KEYWORDS
   ]
   for (const turn of users) {
     const lower = turn.text.toLowerCase()
@@ -63,8 +95,13 @@ function recordingHintsFromTurns(turns: VoiceTurn[]): string[] {
   return hints.slice(0, 3)
 }
 
-export function buildOrbVoiceAfterCallContent(turns: VoiceTurn[], voiceSummary?: string | null): OrbVoiceAfterCallContent {
+export function buildOrbVoiceAfterCallContent(
+  turns: VoiceTurn[],
+  voiceSummary?: string | null,
+  options?: { summaryPending?: boolean }
+): OrbVoiceAfterCallContent {
   const hasTranscript = turns.some((t) => (t.role === 'user' || t.role === 'assistant') && t.text.trim())
+  const summaryPending = Boolean(options?.summaryPending) && !voiceSummary?.trim()
   const summary = voiceSummary?.trim() || excerptSummary(turns)
   const recordingHints = recordingHintsFromTurns(turns)
   const followUpQuestions = hasTranscript ? [...REFLECTIVE_DEBRIEF_QUESTIONS].slice(0, 4) : []
@@ -73,24 +110,24 @@ export function buildOrbVoiceAfterCallContent(turns: VoiceTurn[], voiceSummary?:
     summary,
     recordingHints,
     followUpQuestions,
-    hasTranscript
+    hasTranscript,
+    summaryPending
   }
 }
 
 /** Whether urgent safeguarding language appears — encourage escalation copy only. */
 export function orbVoiceNeedsEscalationPrompt(text: string): boolean {
   const lower = text.toLowerCase()
-  const patterns = [
-    'immediate risk',
-    'abuse',
-    'disclosure',
-    'missing child',
-    'missing from',
-    'self-harm',
-    'self harm',
-    'serious injury',
-    'exploitation',
-    'emergency'
-  ]
-  return patterns.some((p) => lower.includes(p))
+  return URGENT_ESCALATION_PATTERNS.some((p) => lower.includes(p))
+}
+
+/** Calm management oversight prompt — keyword match only; ORB does not decide. */
+export function orbVoiceNeedsManagementOversight(text: string): boolean {
+  const lower = text.toLowerCase()
+  return MANAGEMENT_OVERSIGHT_KEYWORDS.some((p) => lower.includes(p))
+}
+
+export function orbVoiceManagementOversightTopics(text: string): string[] {
+  const lower = text.toLowerCase()
+  return MANAGEMENT_OVERSIGHT_KEYWORDS.filter((p) => lower.includes(p)).slice(0, 4)
 }

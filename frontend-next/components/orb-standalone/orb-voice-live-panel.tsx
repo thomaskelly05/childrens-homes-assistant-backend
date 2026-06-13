@@ -4,11 +4,40 @@ import { Mic, MicOff, Square } from 'lucide-react'
 
 import type { VoiceTurn } from '@/lib/orb/voice/orb-voice-types'
 
+export type OrbVoiceLivePanelState =
+  | 'listening'
+  | 'user_speaking'
+  | 'thinking'
+  | 'speaking'
+  | 'preparing'
+  | 'connecting'
+  | 'paused'
+
+export function orbVoiceLivePanelStatusLabel(state: OrbVoiceLivePanelState): string {
+  switch (state) {
+    case 'preparing':
+      return 'Preparing voice…'
+    case 'connecting':
+      return 'Reconnecting…'
+    case 'user_speaking':
+      return 'I heard that.'
+    case 'thinking':
+      return 'Give me a moment.'
+    case 'speaking':
+      return 'ORB is responding.'
+    case 'paused':
+      return 'Paused'
+    default:
+      return "I'm listening."
+  }
+}
+
 export function OrbVoiceLivePanel({
   turns,
   interimTranscript,
   liveState,
   muted = false,
+  pauseHint = false,
   onToggleMute,
   onEnd,
   onTurnIntoRecord,
@@ -16,24 +45,17 @@ export function OrbVoiceLivePanel({
 }: {
   turns: VoiceTurn[]
   interimTranscript?: string
-  liveState: 'listening' | 'thinking' | 'speaking' | 'connecting' | 'paused'
+  liveState: OrbVoiceLivePanelState
   muted?: boolean
+  /** Shown after a long pause — encourages the adult without ending the session. */
+  pauseHint?: boolean
   onToggleMute?: () => void
   onEnd: () => void
   onTurnIntoRecord?: () => void
   className?: string
 }) {
   const dialogue = turns.filter((t) => t.role === 'user' || t.role === 'assistant')
-  const stateLabel =
-    liveState === 'connecting'
-      ? 'Reconnecting…'
-      : liveState === 'thinking'
-        ? 'ORB is responding…'
-        : liveState === 'speaking'
-          ? 'ORB is responding…'
-          : liveState === 'paused'
-            ? 'Paused'
-            : 'Listening…'
+  const stateLabel = orbVoiceLivePanelStatusLabel(liveState)
 
   return (
     <div
@@ -63,7 +85,7 @@ export function OrbVoiceLivePanel({
                 data-orb-voice-transcript-turn={line.role}
               >
                 <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--orb-muted)]">
-                  {line.role === 'user' ? 'You' : 'ORB'}
+                  {line.role === 'user' ? 'Adult' : 'ORB'}
                 </span>
                 <p className="mt-0.5 whitespace-pre-wrap">{line.text}</p>
               </div>
@@ -72,11 +94,18 @@ export function OrbVoiceLivePanel({
         ) : interimTranscript?.trim() ? (
           <p className="text-xs leading-5 text-[var(--orb-foreground)]">{interimTranscript}</p>
         ) : (
-          <p className="text-xs text-[var(--orb-muted)]">Your words will appear here as you speak…</p>
+          <p className="text-xs text-[var(--orb-muted)]" data-orb-voice-live-empty>
+            Start speaking when you&apos;re ready.
+          </p>
         )}
         {interimTranscript?.trim() && dialogue.length ? (
           <p className="mt-2 text-[10px] italic text-[var(--orb-muted)]" data-orb-voice-interim>
             {interimTranscript}
+          </p>
+        ) : null}
+        {pauseHint && liveState === 'listening' ? (
+          <p className="mt-3 text-[11px] leading-5 text-[var(--orb-muted)]" data-orb-voice-pause-hint>
+            You can keep going, or end the session when ready.
           </p>
         ) : null}
       </div>

@@ -38,7 +38,7 @@ function voiceMobileStatusLine(input: {
 }
 
 function voiceMobileUnavailableDetail(dictateRealtimeReady?: boolean): string {
-  return orbVoiceUiDetailLine('provider_unavailable', dictateRealtimeReady) ?? 'You can still type to ORB or use Dictate.'
+  return orbVoiceUiDetailLine('unsupported', dictateRealtimeReady) ?? 'Try typing, Dictate, or another browser.'
 }
 import {
   ORB_VOICE_DEBUG_CONFIG_HINT,
@@ -214,12 +214,12 @@ describe('ORB mobile premium Voice copy', () => {
     assert.match(actions, /data-orb-voice-type-instead/)
     assert.doesNotMatch(voice, /data-orb-voice-open-dictate/)
     assert.equal(
-      voiceMobileStatusLine({ uiState: 'provider_unavailable', blockedReason: null }),
-      'Live voice could not connect.'
+      voiceMobileStatusLine({ uiState: 'unsupported', blockedReason: null }),
+      'Voice is not available in this browser.'
     )
     assert.equal(
       voiceMobileUnavailableDetail(true),
-      'You can still type to ORB or use Dictate.'
+      'Try typing, Dictate, or another browser.'
     )
   })
 

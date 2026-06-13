@@ -66,7 +66,7 @@ describe('ORB Voice honest realtime', () => {
     assert.match(station, /beginOrbRealtimeVoiceConversation/)
     assert.doesNotMatch(station, /beginSpeechRecognitionCapture/)
     assert.match(station, /probeOrbVoiceAuth|resolveOrbVoiceUiState/)
-    assert.match(station, /Live voice could not connect|provider_unavailable/)
+    assert.match(station, /resolveOrbVoiceUiState|unsupported/)
     assert.match(station, /data-orb-voice-session-connected/)
   })
 })

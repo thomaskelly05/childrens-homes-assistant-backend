@@ -67,6 +67,7 @@ import {
   type OrbVoiceAuthStatus,
   type OrbVoiceUiState
 } from '@/lib/orb/voice/orb-voice-ui-state'
+import type { OrbVoiceLivePanelState } from '@/components/orb-standalone/orb-voice-live-panel'
 import {
   ORB_VOICE_WEBRTC_FAILED_HEADLINE,
   sanitizeOrbVoiceUserMessage
@@ -240,6 +241,8 @@ export function OrbVoiceStation({
   }
   const liveVoiceAllowed = canUseLiveVoice(micAccess)
   const realtimeVoiceReady = isOrbRealtimeStatusConfigured(realtimeStatus)
+  const permissionDenied =
+    micPermission === 'denied' || Boolean(voice.error?.toLowerCase().includes('microphone'))
 
   const voiceSessionLive =
     realtimeVoiceReady &&
@@ -252,17 +255,18 @@ export function OrbVoiceStation({
     statusProbe,
     realtimeStatus,
     startStage:
-      voiceStartStage === 'starting'
+      voiceStartStage === 'starting' || browserStartStage === 'starting'
         ? 'starting'
-        : voiceStartStage === 'active'
+        : voiceStartStage === 'active' || browserStartStage === 'active'
           ? 'active'
-          : voiceStartStage === 'failed'
+          : voiceStartStage === 'failed' || browserStartStage === 'failed'
             ? 'failed'
             : 'idle',
     sessionEnded,
     transportLive: voiceTransportLive,
     realtimeState: pending && voiceSessionLive ? 'thinking' : realtimeState,
-    webrtcFailed
+    webrtcFailed,
+    permissionDenied
   })
 
   const launchMode: OrbVoiceLaunchMode = resolveOrbVoiceLaunchMode({
@@ -332,8 +336,6 @@ export function OrbVoiceStation({
       : resolvedLaunchUiState
 
   const voiceStarting = voiceStartStage === 'starting'
-  const permissionDenied =
-    micPermission === 'denied' || Boolean(voice.error?.toLowerCase().includes('microphone'))
   const selectedProfileLabel = orbVoiceProfileLabel(voice.settings.voicePresetId)
   const transcriptAvailable =
     hasUserFacingTranscript(turns) || (useBrowserLaunch && Boolean(browserTranscriptText))
@@ -389,8 +391,8 @@ export function OrbVoiceStation({
   const browserStatusOverride =
     voiceStartError ||
     voice.error ||
-    (voice.voiceCaptureState === 'requesting_permission' ? 'Checking microphone…' : null) ||
-    (voice.voiceCaptureState === 'starting' || browserStartStage === 'starting' ? 'Starting voice…' : null)
+    (voice.voiceCaptureState === 'requesting_permission' ? 'Preparing voice…' : null) ||
+    (voice.voiceCaptureState === 'starting' || browserStartStage === 'starting' ? 'Preparing voice…' : null)
 
   const statusLine =
     browserStatusOverride ||
@@ -399,28 +401,18 @@ export function OrbVoiceStation({
           pushToTalk: voice.settings.pushToTalk,
           realtimeConfigured: false
         })
-      : launchMode === 'unavailable'
-        ? ORB_VOICE_UNSUPPORTED_MESSAGE
-        : voiceStartStage === 'starting' && !voiceSessionLive
-          ? 'Starting voice…'
-          : orbVoiceUiStatusLine(uiState))
+      : orbVoiceUiStatusLine(uiState))
   const detailLine =
     startBlockedMessage ||
     (audioPlaybackBlocked ? 'Tap to hear ORB' : null) ||
-    (listeningHint && voiceSessionLive && realtimeState === 'listening'
-      ? "I'm listening — speak now."
-      : null) ||
     orbVoiceUiDetailLine(uiState, dictateRealtimeReady) ||
-    (permissionDenied ? 'Microphone access was denied. You can still type to ORB.' : null)
-
-  const effectiveRealtimeState =
-    pending && voiceSessionLive ? 'thinking' : realtimeState === 'thinking' && pending ? 'thinking' : realtimeState
+    (permissionDenied && uiState === 'ready'
+      ? 'Microphone access is needed to use Voice. You can still type or use Dictate.'
+      : null)
 
   const companionState = useBrowserLaunch
     ? mapOrbVoiceUiToCompanionState(launchUiState)
-    : voiceSessionLive
-      ? mapOrbVoiceUiToCompanionState(effectiveRealtimeState)
-      : mapOrbVoiceUiToCompanionState(uiState)
+    : mapOrbVoiceUiToCompanionState(uiState)
 
   const voiceWorkspaceMode: 'idle' | 'live' | 'after_call' =
     uiState === 'ended' || (sessionEnded && !voiceSessionLive)
@@ -429,16 +421,20 @@ export function OrbVoiceStation({
         ? 'live'
         : 'idle'
 
-  const livePanelState: 'listening' | 'thinking' | 'speaking' | 'connecting' | 'paused' =
-    uiState === 'connecting' || voiceStarting
-      ? 'connecting'
-      : companionState === 'thinking'
-        ? 'thinking'
-        : companionState === 'speaking'
-          ? 'speaking'
-          : companionState === 'paused'
-            ? 'paused'
-            : 'listening'
+  const livePanelState: OrbVoiceLivePanelState =
+    uiState === 'preparing' || voiceStarting
+      ? 'preparing'
+      : uiState === 'reconnecting'
+        ? 'connecting'
+        : uiState === 'user_speaking'
+          ? 'user_speaking'
+          : uiState === 'thinking' || (pending && voiceSessionLive)
+            ? 'thinking'
+            : uiState === 'speaking'
+              ? 'speaking'
+              : companionState === 'paused'
+                ? 'paused'
+                : 'listening'
 
   const handleCreateDraftFromVoice = useCallback(
     (templateId: string) => {
@@ -642,6 +638,10 @@ export function OrbVoiceStation({
   async function handleStart() {
     emitOrbClientDebug({ area: 'voice', event: 'voice_start_clicked', detail: {} })
     emitOrbClientDebug({ area: 'voice', event: 'voice_start_handle_start_called', detail: { uiState, useBrowserLaunch } })
+    if (voiceStartStage === 'starting' || browserStartStage === 'starting') {
+      emitOrbClientDebug({ area: 'voice', event: 'voice_start_noop_prevented', detail: { reason: 'start_in_flight' } })
+      return
+    }
     emitVoiceStartCapabilities()
     if (voiceDebug) {
       clearOrbVoiceDebugEvents()
@@ -674,6 +674,7 @@ export function OrbVoiceStation({
         event: 'voice_start_branch_selected',
         detail: { branch: 'browser_launch' }
       })
+      setBrowserStartStage('starting')
       await handleBrowserVoicePrimary()
       return
     }
@@ -685,6 +686,7 @@ export function OrbVoiceStation({
           event: 'voice_start_branch_selected',
           detail: { branch: 'browser_fallback_no_realtime' }
         })
+        setBrowserStartStage('starting')
         await handleBrowserVoicePrimary()
         return
       }
@@ -738,6 +740,7 @@ export function OrbVoiceStation({
           detail: { afterRealtimeFailure: true }
         })
         setVoiceStartStage('idle')
+        setBrowserStartStage('starting')
         await handleBrowserVoicePrimary()
         return
       }
@@ -819,7 +822,7 @@ export function OrbVoiceStation({
     setBrowserStartStage('failed')
     const message =
       voice.error ||
-      (micPermission === 'denied' ? ORB_VOICE_MIC_BLOCKED_MESSAGE : 'Voice could not start.')
+      (micPermission === 'denied' ? ORB_VOICE_MIC_BLOCKED_MESSAGE : 'Voice could not connect.')
     setVoiceStartError(message)
     emitOrbClientDebug({
       area: 'voice',
@@ -970,6 +973,7 @@ export function OrbVoiceStation({
       turns={conversationTurns}
       transcriptText={afterCallTranscript}
       voiceSummary={assistantReply}
+      summaryPending={pending && !assistantReply?.trim() && Boolean(afterCallTranscript.trim())}
       selectedTemplateId={voiceRecordTemplateId}
       onTemplateChange={(t) => setVoiceRecordTemplateId(t.id)}
       onCreateDraftRecord={handleCreateDraftFromVoice}
@@ -987,6 +991,7 @@ export function OrbVoiceStation({
       turns={conversationTurns}
       interimTranscript={voice.interimTranscript || browserDisplayTranscript}
       liveState={livePanelState}
+      pauseHint={listeningHint}
       onEnd={handleEnd}
       onTurnIntoRecord={onOpenDictate ? () => handleCreateDraftFromVoice(voiceRecordTemplateId) : undefined}
     />
@@ -1028,7 +1033,7 @@ export function OrbVoiceStation({
         <OrbVoiceStationContent
           companionState={companionState}
           statusLine={statusLine}
-          detailLine={voiceWorkspaceMode === 'idle' ? detailLine : null}
+          detailLine={voiceWorkspaceMode === 'after_call' ? null : detailLine}
           workspaceMode={voiceWorkspaceMode}
           sidePanel={voiceSidePanel}
           controls={
@@ -1066,11 +1071,11 @@ export function OrbVoiceStation({
                   ) : null}
                   <OrbVoiceActions uiState="listening" onPrimary={handleEnd} layout="stack" />
                 </div>
-              ) : voiceStarting ? (
-                <OrbVoiceActions uiState="connecting" onPrimary={handleCancelStart} layout="stack" />
+              ) : uiState === 'preparing' || uiState === 'reconnecting' ? (
+                <OrbVoiceActions uiState={uiState} onPrimary={handleCancelStart} layout="stack" />
               ) : (
                 <OrbVoiceActions
-                  uiState={launchMode === 'unavailable' ? 'provider_unavailable' : uiState}
+                  uiState={launchMode === 'unavailable' ? 'unsupported' : uiState}
                   primaryDisabled={primaryDisabled}
                   onPrimary={() => void handleStart()}
                   onSignIn={handleSignIn}

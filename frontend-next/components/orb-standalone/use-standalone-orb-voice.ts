@@ -152,8 +152,10 @@ const SAFARI_KEEPALIVE_MS = 140
 export const RECOGNITION_START_TIMEOUT_MS = 2500
 export const ORB_VOICE_NO_HEAR_MESSAGE =
   "I didn't hear anything — try again or use Dictate."
-export const ORB_VOICE_MIC_BLOCKED_MESSAGE = 'Microphone permission blocked'
-export const ORB_VOICE_UNSUPPORTED_MESSAGE = 'Voice input is not supported in this browser'
+export const ORB_VOICE_MIC_BLOCKED_MESSAGE =
+  'Microphone access is needed to use Voice. You can still type or use Dictate.'
+export const ORB_VOICE_UNSUPPORTED_MESSAGE =
+  'Voice may not be supported in this browser. Try typing, Dictate, or another browser.'
 
 function readStoredSettings(): StandaloneOrbVoiceSettings {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS
