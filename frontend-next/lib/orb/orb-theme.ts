@@ -11,6 +11,9 @@ import { ORB_DESIGN } from '@/lib/orb/design-tokens'
 /** Royal blue brand accent used across residential ORB (`#168bff`). */
 export const ORB_ROYAL_BLUE = '#168bff' as const
 
+/** Premium navy for “Powered by IndiCare Intelligence” brand line. */
+export const ORB_BRAND_NAVY = '#0B1F3A' as const
+
 /** Deep blue for gradients and pressed states (`#0d5fcc`). */
 export const ORB_DEEP_BLUE = ORB_DESIGN.primary.blueDeep
 
@@ -412,6 +415,7 @@ export function getOrbThemeCssVariables(mode: OrbThemeMode = ORB_RESIDENTIAL_DEF
     [ORB_THEME_CSS_VARS.softBlue]: colors.softBlue,
     [ORB_THEME_CSS_VARS.brandBlue]: colors.royalBlue,
     [ORB_THEME_CSS_VARS.brandCyan]: colors.cyan,
+    '--orb-brand-navy': ORB_BRAND_NAVY,
     [ORB_THEME_CSS_VARS.glow]: colors.glowElectric,
     [ORB_THEME_CSS_VARS.glass]: colors.glass,
     [ORB_THEME_CSS_VARS.glassStrong]: colors.glassStrong,

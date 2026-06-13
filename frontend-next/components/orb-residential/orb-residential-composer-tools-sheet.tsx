@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
-import { AudioLines, FileText, Mic, PenLine, Shield, X } from 'lucide-react'
+import { AudioLines, Camera, FileText, ImagePlus, Mic, PenLine, Shield, Upload, X } from 'lucide-react'
 
 import type { OrbComposerPlusAction } from '@/components/orb-standalone/orb-composer-plus-menu'
 
@@ -11,6 +11,24 @@ const MOBILE_TOOL_ITEMS: Array<{
   description: string
   icon: typeof Mic
 }> = [
+  {
+    id: 'attach_photo',
+    label: 'Add photo',
+    description: 'Take or choose a photo for this chat',
+    icon: Camera
+  },
+  {
+    id: 'upload_document',
+    label: 'Upload document',
+    description: 'Analyse a document with ORB',
+    icon: Upload
+  },
+  {
+    id: 'attach_image',
+    label: 'Add file',
+    description: 'Attach an image or screenshot',
+    icon: ImagePlus
+  },
   {
     id: 'orb_dictate',
     label: 'Dictate',
@@ -91,11 +109,14 @@ export function OrbResidentialComposerToolsSheet({
             <X className="h-5 w-5" />
           </button>
         </div>
+        <p className="mb-2 px-0.5 text-[10px] leading-snug text-[var(--orb-muted)]" data-orb-composer-tools-privacy-hint>
+          Use anonymised or minimal details where possible.
+        </p>
         <ul className="space-y-1" data-orb-composer-tools-list>
-          {MOBILE_TOOL_ITEMS.map((item) => {
+          {MOBILE_TOOL_ITEMS.map((item, index) => {
             const Icon = item.icon
             return (
-              <li key={item.id}>
+              <li key={`${item.id}-${index}`}>
                 <button
                   type="button"
                   role="menuitem"

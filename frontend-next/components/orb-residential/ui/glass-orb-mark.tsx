@@ -58,7 +58,7 @@ export function OrbResidentialLogoLockup({
       <p className={`mt-3 font-semibold tracking-tight text-[var(--orb-foreground,#f7faff)] ${titleClass}`}>
         ORB Residential
       </p>
-      <p className="mt-1 text-[10px] font-medium tracking-[0.12em] text-[#5ec8ff]/90">
+      <p className="mt-1 text-[10px] font-medium tracking-[0.12em] text-[var(--orb-brand-navy,#0B1F3A)]" data-orb-powered-indicare>
         Powered by IndiCare Intelligence
       </p>
     </div>

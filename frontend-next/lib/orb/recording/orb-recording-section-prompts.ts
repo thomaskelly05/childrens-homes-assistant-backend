@@ -243,8 +243,66 @@ export function sectionPromptsForRecordType(recordTypeId: string): OrbRecordingS
 export function buildSectionPromptBody(recordTypeId: string): string | undefined {
   const sections = sectionPromptsForRecordType(recordTypeId)
   if (!sections?.length) return undefined
-  return sections
+  const base = sections
     .map((section) => `## ${section.title}\n\n*${section.prompt}*\n`)
     .join('\n')
     .trim()
+  const scaffold = structuredOutputScaffoldForRecordType(recordTypeId)
+  return scaffold ? `${base}\n\n${scaffold}`.trim() : base
+}
+
+/** Optional markdown table scaffolds for record types that benefit from structured outputs. */
+function structuredOutputScaffoldForRecordType(recordTypeId: string): string | undefined {
+  switch (recordTypeId) {
+    case 'action_plan':
+      return [
+        '## Action table',
+        '',
+        '| Action | Responsible person | Timescale | Evidence needed | Review date |',
+        '| --- | --- | --- | --- | --- |',
+        '| *Add each action* | | | | |'
+      ].join('\n')
+    case 'chronology_entry':
+      return [
+        '## Chronology table',
+        '',
+        '| Date/time | Event | Source | Child impact | Action taken | Follow-up |',
+        '| --- | --- | --- | --- | --- | --- |',
+        '| | | | | | |'
+      ].join('\n')
+    case 'safeguarding_concern':
+      return [
+        '## Escalation and actions',
+        '',
+        '| Action | Responsible person | Timescale | Evidence needed | Review date |',
+        '| --- | --- | --- | --- | --- |',
+        '| | | | | |'
+      ].join('\n')
+    case 'reg_44_evidence_summary':
+      return [
+        '## Evidence summary table',
+        '',
+        '| Evidence available | Strengths | Gaps/risks | Actions |',
+        '| --- | --- | --- | --- |',
+        '| | | | |'
+      ].join('\n')
+    case 'reg_45_reflection':
+      return [
+        '## Reflection summary table',
+        '',
+        '| Evidence available | Strengths | Gaps/risks | Actions |',
+        '| --- | --- | --- | --- |',
+        '| | | | |'
+      ].join('\n')
+    case 'handover':
+      return [
+        '## Tasks and risks',
+        '',
+        '| Task or risk | Owner | Priority | Notes |',
+        '| --- | --- | --- | --- |',
+        '| | | | |'
+      ].join('\n')
+    default:
+      return undefined
+  }
 }

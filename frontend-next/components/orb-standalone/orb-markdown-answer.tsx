@@ -80,6 +80,39 @@ function buildMarkdownComponents(sources?: StandaloneOrbSource[]): Components {
       </pre>
     ),
     hr: () => <hr className="my-4 border-[var(--orb-line)]" />,
+    table: ({ children }) => (
+      <div className="orb-md-table-wrap mb-3 overflow-x-auto last:mb-0">
+        <table className="orb-md-table w-full min-w-[16rem] border-collapse text-left text-[14px]">{children}</table>
+      </div>
+    ),
+    thead: ({ children }) => <thead className="orb-md-thead bg-[var(--orb-surface-hover,#F1F5F9)]">{children}</thead>,
+    tbody: ({ children }) => <tbody className="orb-md-tbody">{children}</tbody>,
+    tr: ({ children }) => <tr className="orb-md-tr border-b border-[var(--orb-line)]">{children}</tr>,
+    th: ({ children }) => (
+      <th className="orb-md-th border border-[var(--orb-line)] px-3 py-2 text-[13px] font-semibold text-[var(--orb-foreground,#0F172A)]">
+        {children}
+      </th>
+    ),
+    td: ({ children }) => (
+      <td className="orb-md-td border border-[var(--orb-line)] px-3 py-2 align-top text-[14px] leading-[1.6] text-[var(--orb-foreground)]">
+        {children}
+      </td>
+    ),
+    input: ({ checked, disabled, type }) => {
+      if (type === 'checkbox') {
+        return (
+          <input
+            type="checkbox"
+            checked={Boolean(checked)}
+            disabled={Boolean(disabled)}
+            readOnly
+            className="mr-2 align-middle"
+            aria-label="Checklist item"
+          />
+        )
+      }
+      return <input type={type} checked={checked} disabled={disabled} readOnly />
+    },
     a: ({ href, children }) => {
       if (href?.startsWith(CITE_PREFIX)) {
         const label = decodeURIComponent(href.slice(CITE_PREFIX.length))

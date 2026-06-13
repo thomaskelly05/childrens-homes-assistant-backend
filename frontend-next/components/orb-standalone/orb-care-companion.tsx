@@ -2178,6 +2178,9 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
       case 'upload_document':
         openDocumentsPanel()
         break
+      case 'attach_image':
+      case 'attach_photo':
+        break
       case 'review_text':
         setMessage(
           'Review this text for safeguarding, child voice, recording quality and inspection readiness:\n\n'
@@ -3221,7 +3224,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
         initialStudioTemplateId={dictateImportStudioTemplateId}
         onSendToChat={(text) => void sendMessage(text)}
         onOpenOrbVoice={openOrbVoicePanel}
-        onOpenTemplates={openTemplatesPanel}
+        onOpenTemplates={residentialSurface && isMobileViewport ? undefined : openTemplatesPanel}
       />
       <OrbWriteStandalonePanel
         open={activePanel === 'orb_write'}

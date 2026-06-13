@@ -314,8 +314,8 @@ export function OrbAccountModal({
           ) : null}
         </div>
 
-        <p className="flex items-center gap-2 px-1 text-[10px] leading-4 text-[var(--orb-muted)]">
-          <Sparkles className="h-3.5 w-3.5 text-[#5ec8ff]" aria-hidden />
+        <p className="flex items-center gap-2 px-1 text-[10px] leading-4 text-[var(--orb-brand-navy,#0B1F3A)]" data-orb-powered-indicare>
+          <Sparkles className="h-3.5 w-3.5 text-[var(--orb-primary)]" aria-hidden />
           Powered by IndiCare Intelligence
         </p>
         <span className="sr-only" data-orb-account-voice-status>
