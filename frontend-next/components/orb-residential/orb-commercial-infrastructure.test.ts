@@ -28,9 +28,10 @@ test('billing client exposes usage and top-up endpoints', () => {
 
 test('login uses auth providers discovery', () => {
   const login = readFileSync(new URL('./orb-login-screen.tsx', import.meta.url), 'utf8')
-  assert.match(login, /authProviders/)
-  assert.match(login, /orbOAuthStartUrl\('microsoft'/)
-  assert.match(login, /data-orb-passkey-sign-in/)
+  const authCard = readFileSync(new URL('./orb-login-auth-card.tsx', import.meta.url), 'utf8')
+  assert.match(login, /ORB_BILLING_API\.authProviders/)
+  assert.match(authCard, /orbOAuthStartUrl\('microsoft', returnUrl\)/)
+  assert.match(authCard, /data-orb-passkey-sign-in/)
 })
 
 test('standalone conversation sends project_memory', () => {

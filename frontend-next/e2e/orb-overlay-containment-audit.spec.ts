@@ -109,16 +109,43 @@ test.describe('ORB overlay containment', () => {
 
   test('billing modal sticky footer visible', async ({ page }) => {
     await setupOrbE2eMocks(page)
+    await page.route('**/orb/standalone/access**', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          success: true,
+          data: {
+            contract_version: 'orb_access_v2',
+            can_use_orb: false,
+            access_state: 'inactive',
+            trial: { available: false, active: false, days_left: null, expires_at: null },
+            subscription: { active: false, status: 'inactive', plan_name: null },
+            billing: { stripe_configured: true, price_gbp_monthly: 9.99 },
+            price_label: '£9.99/month',
+            os_records_accessed: false,
+            os_access_granted: false,
+            display: {
+              show_upgrade: true,
+              show_manage_billing: false,
+              show_trial_chip: false,
+              manage_billing_available: false
+            }
+          }
+        })
+      })
+    )
     await page.goto('/orb')
     await page.locator('[data-orb-shell="true"]').waitFor({ state: 'visible', timeout: 20_000 })
     await page.locator('[data-orb-mobile-account]').click()
     await page.locator('[data-orb-account-menu-item="billing"]').click()
     await page.locator('[data-orb-billing-modal]').waitFor({ state: 'visible', timeout: 10_000 })
+    await page.locator('[data-orb-billing-loading]').waitFor({ state: 'detached', timeout: 10_000 })
     await page
-      .locator('[data-orb-billing-subscription-status]')
-      .filter({ hasNotText: '—' })
+      .locator('[data-orb-billing-status-pill], [data-orb-billing-status-pill-desktop]')
       .first()
       .waitFor({ state: 'visible', timeout: 10_000 })
+    await page.locator('[data-orb-billing-sticky-footer]').waitFor({ state: 'visible', timeout: 10_000 })
 
     const audit = await page.evaluate(() => {
       const vh = window.innerHeight
@@ -142,7 +169,7 @@ test.describe('ORB overlay containment', () => {
       }
     })
 
-    expect(audit.footerVisible, JSON.stringify(audit)).toBe(true)
     expect(audit.issues, JSON.stringify(audit)).toEqual([])
+    expect(audit.footerVisible, JSON.stringify(audit)).toBe(true)
   })
 })

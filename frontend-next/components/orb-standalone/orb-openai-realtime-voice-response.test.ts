@@ -128,12 +128,12 @@ describe('ORB OpenAI realtime voice response flow', () => {
   })
 
   it('voice station unlocks audio on Start voice and offers Tap to hear ORB', () => {
-    const mobile = readFileSync(join(root, 'components/orb-standalone/orb-voice-mobile-experience.tsx'), 'utf8')
+    const content = readFileSync(join(root, 'components/orb-standalone/orb-voice-station-content.tsx'), 'utf8')
     assert.match(station, /unlockAssistantAudio/)
     assert.match(station, /Tap to hear ORB/)
     assert.match(station, /clearOrbVoiceDebugEvents/)
-    assert.match(mobile, /Send turn \(debug\)/)
-    assert.match(mobile, /data-orb-voice-tap-to-hear/)
+    assert.match(station, /Send turn \(debug\)/)
+    assert.match(content, /data-orb-voice-station-content/)
   })
 
   it('flight recorder events exist after transport live', () => {

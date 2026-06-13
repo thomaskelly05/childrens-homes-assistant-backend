@@ -589,13 +589,14 @@
     border-radius: 9999px !important;
   }
 
-  .orb-composer-action-rail button:not([data-orb-composer-attach]):not([data-orb-composer-tools]):not([data-orb-composer-tools-trigger]) {
+  .orb-composer-action-rail button:not([data-orb-composer-attach]):not([data-orb-composer-tools]):not([data-orb-composer-tools-trigger]):not([data-orb-privacy-guidance-trigger]) {
     display: none !important;
   }
 
   [data-orb-composer-attach],
   [data-orb-composer-tools],
   [data-orb-composer-tools-trigger],
+  [data-orb-privacy-guidance-trigger],
   [data-orb-composer-mic],
   [data-orb-composer-voice] {
     min-width: 2.75rem !important;
@@ -1662,8 +1663,7 @@
   }
 
   [data-orb-composer-action-rail] [data-orb-composer-mic],
-  [data-orb-composer-action-rail] [data-orb-composer-voice],
-  [data-orb-composer-action-rail] [data-orb-privacy-guidance-trigger] {
+  [data-orb-composer-action-rail] [data-orb-composer-voice] {
     display: none !important;
   }
 

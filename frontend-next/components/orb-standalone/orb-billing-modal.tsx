@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { CreditCard, RefreshCw } from 'lucide-react'
+import { CreditCard, RefreshCw, Wallet } from 'lucide-react'
 
 import { OrbUserAvatar } from '@/components/orb-residential/orb-user-avatar'
 import { OrbLegalLinks } from '@/components/orb-residential/orb-legal-links'
@@ -19,12 +19,32 @@ import {
 import {
   fetchOrbAccess,
   fetchOrbBillingMeter,
+  fetchOrbUsage,
   openOrbBillingPortal,
   refreshOrbAccessAfterCheckout,
+  saveOrbSpendingCap,
   startOrbCheckout,
+  startOrbTopUpCheckout,
   startOrbTrial,
-  type OrbAccessPayload
+  type OrbAccessPayload,
+  type OrbUsageSummary
 } from '@/lib/orb/orb-billing-client'
+
+const INDIVIDUAL_PLAN_FEATURES = [
+  'ORB chat',
+  'Dictate',
+  'Voice',
+  'Documents',
+  'Templates',
+  'Saved outputs'
+] as const
+
+const TOP_UP_OPTIONS = [
+  { label: '£5', pence: 500 },
+  { label: '£10', pence: 1000 },
+  { label: '£25', pence: 2500 },
+  { label: '£50', pence: 5000 }
+] as const
 
 function sectionClassName(compact = false) {
   if (compact) {
@@ -48,19 +68,32 @@ export function OrbBillingModal({
 }) {
   const [access, setAccess] = useState<OrbAccessPayload | null>(null)
   const [meter, setMeter] = useState<Record<string, unknown> | null>(null)
+  const [usage, setUsage] = useState<OrbUsageSummary | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
   const [checkoutOpening, setCheckoutOpening] = useState(false)
+  const [monthlyCapPounds, setMonthlyCapPounds] = useState('')
+  const [warningPercent, setWarningPercent] = useState('80')
+  const [allowOverage, setAllowOverage] = useState(false)
 
   async function loadBilling() {
-    const [accessPayload, meterPayload] = await Promise.all([
+    const [accessPayload, meterPayload, usagePayload] = await Promise.all([
       fetchOrbAccess(),
-      fetchOrbBillingMeter().catch(() => null)
+      fetchOrbBillingMeter().catch(() => null),
+      fetchOrbUsage().catch(() => null)
     ])
     setAccess(accessPayload)
     setMeter(meterPayload)
+    setUsage(usagePayload)
+    if (usagePayload?.monthly_cap_pence != null) {
+      setMonthlyCapPounds(String(Math.round(usagePayload.monthly_cap_pence / 100)))
+    }
+    if (usagePayload?.warning_threshold_percent != null) {
+      setWarningPercent(String(usagePayload.warning_threshold_percent))
+    }
+    setAllowOverage(Boolean(usagePayload?.allow_overage))
   }
 
   useEffect(() => {
@@ -129,6 +162,43 @@ export function OrbBillingModal({
     }
   }
 
+  async function handleSaveCap() {
+    setLoading(true)
+    setError(null)
+    try {
+      const pounds = monthlyCapPounds.trim()
+      const monthly_cap_pence = pounds ? Math.round(Number(pounds) * 100) : null
+      await saveOrbSpendingCap({
+        monthly_cap_pence,
+        warning_threshold_percent: Math.min(100, Math.max(0, Number(warningPercent) || 80)),
+        allow_overage: allowOverage
+      })
+      setUsage(await fetchOrbUsage())
+      setNotice('Spending cap saved.')
+    } catch {
+      setError('Could not save spending cap.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function handleTopUp(amountPence: number) {
+    setLoading(true)
+    setError(null)
+    try {
+      const url = await startOrbTopUpCheckout(amountPence)
+      window.location.href = url
+    } catch {
+      setError(
+        stripeReady
+          ? 'Top-up checkout could not be started.'
+          : 'Top-up requires Stripe to be configured.'
+      )
+    } finally {
+      setLoading(false)
+    }
+  }
+
   async function handleRefreshStatus() {
     setRefreshing(true)
     setError(null)
@@ -138,6 +208,11 @@ export function OrbBillingModal({
       setAccess(result.access)
       if (result.meter) setMeter(result.meter)
       else setMeter(await fetchOrbBillingMeter().catch(() => null))
+      try {
+        setUsage(await fetchOrbUsage())
+      } catch {
+        // keep prior usage
+      }
       if (result.confirmed || isPaidSubscriptionActive(result.access)) {
         setNotice('Subscription is active.')
       } else {
@@ -204,7 +279,7 @@ export function OrbBillingModal({
         </div>
 
         <section className={sectionClassName()} data-orb-billing-plan-card>
-          <div className="hidden flex-col gap-3 sm:flex lg:flex-row lg:items-start lg:justify-between">
+          <div className="flex flex-col gap-3 sm:flex lg:flex-row lg:items-start lg:justify-between">
             <div className="flex min-w-0 items-start gap-2.5" data-orb-billing-account>
               <OrbUserAvatar name={displayName} avatarUrl={avatarUrl} size="sm" />
               <div className="min-w-0 flex-1">
@@ -346,9 +421,96 @@ export function OrbBillingModal({
               </div>
             ) : null}
           </dl>
-          <p className="mt-2 text-[10px] text-[var(--orb-muted)]" data-orb-billing-usage-coming-soon>
-            Spending cap and additional usage packs — coming soon.
-          </p>
+        </section>
+
+        <section className={sectionClassName(true)} data-orb-billing-spending-cap>
+          <details className="group sm:open" data-orb-billing-collapsible="spending-cap">
+            <summary className="cursor-pointer list-none text-xs font-semibold uppercase tracking-wide text-[var(--orb-muted)] sm:cursor-default sm:[&::-webkit-details-marker]:hidden [&::-webkit-details-marker]:hidden">
+              Spending cap
+            </summary>
+            <p className="mt-1.5 text-xs leading-5 text-[var(--orb-muted)]">
+              Set a monthly cap for additional usage beyond your plan allowance.
+            </p>
+            <div className="mt-3 grid gap-3 sm:grid-cols-3">
+              <label className="block text-xs text-[var(--orb-muted)] sm:col-span-1">
+                Monthly cap (£)
+                <input
+                  type="number"
+                  min={0}
+                  value={monthlyCapPounds}
+                  onChange={(e) => setMonthlyCapPounds(e.target.value)}
+                  placeholder="e.g. 10"
+                  className="mt-1 w-full rounded-xl border border-[var(--orb-line)] bg-[var(--orb-surface-elevated)] px-3 py-2 text-sm text-[var(--orb-foreground)]"
+                  disabled={actionBusy}
+                />
+              </label>
+              <label className="block text-xs text-[var(--orb-muted)]">
+                Warning at (%)
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={warningPercent}
+                  onChange={(e) => setWarningPercent(e.target.value)}
+                  className="mt-1 w-full rounded-xl border border-[var(--orb-line)] bg-[var(--orb-surface-elevated)] px-3 py-2 text-sm text-[var(--orb-foreground)]"
+                  disabled={actionBusy}
+                />
+              </label>
+              <label className="flex items-end gap-2 pb-1 text-sm text-[var(--orb-foreground)]">
+                <input
+                  type="checkbox"
+                  checked={allowOverage}
+                  onChange={(e) => setAllowOverage(e.target.checked)}
+                  className="rounded border-[var(--orb-line)]"
+                  disabled={actionBusy}
+                />
+                Allow overage
+              </label>
+            </div>
+            <button
+              type="button"
+              disabled={actionBusy}
+              onClick={() => void handleSaveCap()}
+              className="mt-3 inline-flex min-h-9 items-center justify-center rounded-xl border border-cyan-500/30 bg-cyan-500/10 px-4 py-2 text-sm font-semibold text-cyan-700 disabled:opacity-50 dark:text-cyan-100"
+              data-orb-billing-save-cap
+            >
+              Save cap
+            </button>
+            {usage?.estimated_spend_pence != null ? (
+              <p className="mt-2 text-[10px] text-[var(--orb-muted)]">
+                Estimated spend this period: £{(usage.estimated_spend_pence / 100).toFixed(2)}
+              </p>
+            ) : null}
+          </details>
+        </section>
+
+        <section className={sectionClassName(true)} data-orb-billing-buy-more>
+          <details className="group sm:open" data-orb-billing-collapsible="buy-more">
+            <summary className="cursor-pointer list-none text-xs font-semibold uppercase tracking-wide text-[var(--orb-muted)] sm:cursor-default sm:[&::-webkit-details-marker]:hidden [&::-webkit-details-marker]:hidden">
+              Buy more
+            </summary>
+            <p className="mt-1.5 text-xs leading-5 text-[var(--orb-muted)]">
+              Top up with extra usage credits via Stripe Checkout.
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {TOP_UP_OPTIONS.map((option) => (
+                <button
+                  key={option.pence}
+                  type="button"
+                  disabled={actionBusy || !stripeReady}
+                  onClick={() => void handleTopUp(option.pence)}
+                  className="rounded-xl border border-[var(--orb-line)] bg-[var(--orb-surface-elevated)] px-4 py-2 text-sm font-semibold hover:border-cyan-500/40 disabled:opacity-50"
+                  data-orb-billing-topup={option.pence}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+            <p className="mt-2 flex items-center gap-2 text-[10px] text-[var(--orb-muted)]">
+              <Wallet className="h-3.5 w-3.5 shrink-0" aria-hidden />
+              Buy credits
+            </p>
+          </details>
         </section>
 
         <section className={sectionClassName()} data-orb-billing-value>
@@ -383,8 +545,8 @@ export function OrbBillingModal({
               ))}
             </ul>
           </details>
-          <ul className="mt-2 hidden space-y-1.5 text-xs leading-5 text-[var(--orb-foreground)] sm:block">
-            {ORB_RESIDENTIAL_BILLING_VALUE_ITEMS.map((item) => (
+          <ul className="mt-2 hidden space-y-1.5 text-xs leading-5 text-[var(--orb-foreground)] sm:block" data-orb-billing-plan-features>
+            {INDIVIDUAL_PLAN_FEATURES.map((item) => (
               <li key={item} className="flex gap-2">
                 <span className="text-[var(--orb-primary)]" aria-hidden>
                   ✓

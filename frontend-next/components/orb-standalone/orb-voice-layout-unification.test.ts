@@ -18,7 +18,7 @@ describe('ORB Voice residential layout unification', () => {
     assert.match(station, /presentation="workspace"/)
     assert.match(station, /panelId="voice"/)
     assert.match(station, /title=\{ORB_VOICE_PANEL_TITLE\}/)
-    assert.match(station, /subtitle=\{ORB_VOICE_PANEL_SUBTITLE\}/)
+    assert.match(station, /subtitle=\{isMobileViewport \? ORB_VOICE_PANEL_MOBILE_SUBTITLE : ORB_VOICE_PANEL_SUBTITLE\}/)
     assert.match(station, /headerActions=/)
     assert.match(station, /data-orb-voice-settings-chip/)
     assert.doesNotMatch(station, /orb-voice-studio__header/)
@@ -58,7 +58,7 @@ describe('ORB Voice residential layout unification', () => {
     const content = read('components/orb-standalone/orb-voice-station-content.tsx')
 
     assert.match(station, /OrbVoiceStationContent/)
-    assert.doesNotMatch(station, /isMobileViewport/)
+    assert.match(station, /useOrbMobileViewport/)
     assert.doesNotMatch(station, /data-orb-desktop-branch/)
     assert.doesNotMatch(station, /data-orb-mobile-branch/)
     assert.match(content, /data-orb-voice-station-content/)

@@ -13,11 +13,11 @@ function read(relativePath: string) {
 describe('ORB UI source of truth — overlays and responsive branches', () => {
   it('Voice uses runtime responsive branch — not simultaneous mobile and desktop controls', () => {
     const station = read('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(station, /useOrbResponsiveMode/)
-    assert.match(station, /isMobileViewport \?/)
+    const content = read('components/orb-standalone/orb-voice-station-content.tsx')
+    assert.match(station, /useOrbMobileViewport/)
+    assert.match(content, /useOrbMobileViewport/)
+    assert.match(station, /OrbVoiceStationContent/)
     assert.doesNotMatch(station, /md:hidden[\s\S]*OrbVoiceMobileExperience[\s\S]*hidden flex-col items-center p-6 pb-8 md:flex/)
-    assert.match(station, /data-orb-mobile-branch="active"/)
-    assert.match(station, /data-orb-desktop-branch="active"/)
     assert.match(station, /OrbAppModal/)
   })
 

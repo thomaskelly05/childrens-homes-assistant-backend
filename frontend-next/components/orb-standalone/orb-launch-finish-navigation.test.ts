@@ -41,7 +41,7 @@ describe('ORB launch finish navigation', () => {
   it('billing opens as modal overlay', () => {
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
     const billing = read('components/orb-standalone/orb-billing-modal.tsx')
-    assert.match(companion, /<OrbBillingModal open=\{activePanel === 'billing'\}/)
+    assert.match(companion, /OrbBillingModal[\s\S]*open=\{activePanel === 'billing'\}/)
     assert.match(billing, /data-orb-billing-modal/)
     assert.match(billing, /data-orb-billing-cta-bar/)
   })

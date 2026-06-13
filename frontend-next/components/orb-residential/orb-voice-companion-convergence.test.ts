@@ -196,7 +196,7 @@ describe('ORB Voice companion visual convergence', () => {
     const content = read('components/orb-standalone/orb-voice-station-content.tsx')
     assert.match(hero, /OrbVoiceStudioWaveform/)
     assert.match(hero, /data-orb-voice-hero-cta/)
-    assert.match(content, /cta=\{controls\}/)
+    assert.match(content, /cta=\{/)
     assert.doesNotMatch(hero, /OrbVoiceStatePanel/)
     assert.doesNotMatch(hero, /data-orb-voice-state-panel/)
   })

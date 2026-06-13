@@ -100,9 +100,13 @@ describe('ORB residential theme runtime', () => {
 
   it('voice and dictate stations use living companion or glass orb marks', () => {
     const voice = read('components/orb-standalone/orb-voice-station.tsx')
-    const dictate = read('components/orb-standalone/orb-dictate-station.tsx')
-    assert.match(voice, /OrbVoiceCompanion/)
-    assert.match(dictate, /GlassOrbMark/)
+    const voiceHero = read('components/orb-standalone/orb-voice-hero-stage.tsx')
+    const dictateMobile = read('components/orb-standalone/orb-dictate-mobile-experience.tsx')
+    assert.match(voice, /OrbVoiceStationContent/)
+    assert.match(voice, /mapOrbVoiceUiToCompanionState/)
+    assert.match(voiceHero, /OrbVoiceCompanion/)
+    assert.match(dictateMobile, /variant="dictate"/)
+    assert.doesNotMatch(voice, /variant="hero"/)
   })
 
   it('no unscoped residential dark lock on workspace inputs', () => {

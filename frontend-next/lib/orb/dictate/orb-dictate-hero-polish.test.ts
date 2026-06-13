@@ -65,7 +65,7 @@ describe('ORB Dictate hero polish', () => {
 
   it('sidebar nav uses Dictate label with helper text', () => {
     const sidebar = readComponent('components/orb-residential/orb-residential-sidebar.tsx')
-    assert.match(sidebar, /label: 'Dictate', helper: 'Rough notes to records'/)
+    assert.match(sidebar, /label: 'Dictate', helper: 'Turn rough speech into records'/)
     assert.doesNotMatch(sidebar, /label: 'Magic Notes'/)
   })
 })

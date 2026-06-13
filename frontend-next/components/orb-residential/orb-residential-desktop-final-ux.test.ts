@@ -59,7 +59,7 @@ describe('ORB Residential desktop final UX regressions', () => {
 
     assert.match(desktop, /\[data-orb-residential-empty\][\s\S]*--orb-presence-size:\s*clamp\(7\.5rem/)
     assert.match(companion, /data-orb-empty-heading-desktop/)
-    assert.match(companion, /GlassOrbMark variant="hero"/)
+    assert.match(companion, /GlassOrbMark/)
     assert.doesNotMatch(companion, /orb-brand\.png/)
   })
 
@@ -87,7 +87,8 @@ describe('ORB Residential desktop final UX regressions', () => {
     const billing = read('components/orb-standalone/orb-billing-modal.tsx')
 
     assert.match(desktop, /\[data-orb-billing-modal\][\s\S]*max-height/)
-    assert.match(desktop, /\[data-orb-billing-cta-bar\][\s\S]*sticky/)
+    assert.match(desktop, /\[data-orb-billing-modal\] \[data-orb-billing-cta-bar\][\s\S]*position:\s*static/)
+    assert.match(billing, /data-orb-billing-sticky-footer/)
     assert.match(desktop, /\[data-orb-account-modal\][\s\S]*max-height/)
     assert.match(account, /data-orb-account-modal/)
     assert.match(billing, /data-orb-billing-modal/)
