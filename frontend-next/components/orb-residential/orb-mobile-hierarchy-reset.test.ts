@@ -32,6 +32,7 @@ describe('ORB Residential mobile hierarchy reset', () => {
     const mobileCss = read('app/orb/orb-mobile.css')
     assert.match(composer, /OrbResidentialComposerToolsSheet/)
     assert.match(composer, /data-orb-composer-tools-trigger/)
+    assert.match(composer, /data-orb-composer-attach/)
     assert.doesNotMatch(composer, /OrbResidentialPrivacyGuidanceIcon/)
     assert.match(tools, /data-orb-composer-tools-sheet/)
     assert.match(tools, /orb_dictate/)
@@ -40,6 +41,7 @@ describe('ORB Residential mobile hierarchy reset', () => {
     assert.match(tools, /use_template/)
     assert.match(tools, /privacy_guidance/)
     assert.match(mobileCss, /\[data-orb-composer-quick-actions\]/)
+    assert.match(mobileCss, /\[data-orb-composer-tools-trigger\]/)
   })
 
   it('dictate mobile idle removes decorative orb clutter', () => {
@@ -53,6 +55,7 @@ describe('ORB Residential mobile hierarchy reset', () => {
     const voiceHero = read('components/orb-standalone/orb-voice-hero-stage.tsx')
     const mobileCss = read('app/orb/orb-mobile.css')
     assert.match(voiceContent, /heroStageId=\{isMobileViewport \? 'mobile' : 'desktop'\}/)
+    assert.match(voiceContent, /data-orb-voice-mobile-action-dock/)
     assert.match(voiceHero, /mobile-preview/)
     assert.match(mobileCss, /\[data-orb-voice-mobile-hero-stage\]/)
   })
@@ -62,6 +65,8 @@ describe('ORB Residential mobile hierarchy reset', () => {
     assert.match(templates, /useOrbMobileViewport/)
     assert.match(templates, /!isMobileViewport \?/)
     assert.match(templates, /data-orb-recording-library-filters-mobile/)
+    assert.match(templates, /data-orb-templates-mobile-header/)
+    assert.match(templates, /data-orb-templates-mobile-record-list/)
   })
 
   it('billing mobile hides duplicate account card while keeping compact layout', () => {

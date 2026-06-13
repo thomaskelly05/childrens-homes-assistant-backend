@@ -405,9 +405,10 @@ export function OrbStandaloneComposer({
                     <button
                       type="button"
                       onClick={() => setToolsSheetOpen(true)}
-                      className="inline-flex h-9 min-w-9 shrink-0 items-center justify-center rounded-full text-[var(--orb-muted)] transition hover:bg-[var(--orb-surface-hover)] hover:text-[var(--orb-foreground)]"
+                      className="inline-flex h-9 min-w-9 shrink-0 items-center justify-center rounded-full border border-[var(--orb-line)]/55 bg-[var(--orb-surface-elevated)] text-[var(--orb-foreground)] shadow-sm transition hover:bg-[var(--orb-surface-hover)]"
                       aria-label="Tools"
                       aria-haspopup="dialog"
+                      data-orb-composer-attach
                       data-orb-composer-plus-trigger
                       data-orb-composer-tools-trigger
                     >

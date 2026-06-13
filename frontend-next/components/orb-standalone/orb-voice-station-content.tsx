@@ -37,18 +37,27 @@ export function OrbVoiceStationContent({
       data-orb-voice-station-content
       data-orb-voice-mobile
     >
-      <div className="orb-voice-station-content__scroll min-h-0 flex-1 overscroll-contain px-4 py-2 md:px-6">
+      <div className="orb-voice-station-content__scroll min-h-0 flex-1 overscroll-contain px-4 py-1 md:px-6 md:py-2">
         <div className="orb-voice-station-content__hero mx-auto flex w-full max-w-lg flex-col items-center">
           <OrbVoiceHeroStage
             companionState={companionState}
             statusLine={statusLine}
             detailLine={detailLine}
-            cta={controls}
+            cta={isMobileViewport ? undefined : controls}
             heroStageId={isMobileViewport ? 'mobile' : 'desktop'}
           />
           {children}
         </div>
       </div>
+
+      {isMobileViewport && controls ? (
+        <div
+          className="orb-voice-station-content__mobile-dock shrink-0 border-t border-[var(--orb-line)]/30 px-4 py-2.5 pb-[max(0.75rem,env(safe-area-inset-bottom))]"
+          data-orb-voice-mobile-action-dock
+        >
+          <div className="mx-auto w-full max-w-lg space-y-2">{controls}</div>
+        </div>
+      ) : null}
 
       {secondaryControls ? (
         <div

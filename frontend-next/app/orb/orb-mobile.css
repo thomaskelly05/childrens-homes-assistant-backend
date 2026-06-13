@@ -176,13 +176,13 @@
     padding-left: max(var(--orb-spacing-mobile-inline, 0.75rem), env(safe-area-inset-left, 0px)) !important;
     padding-right: max(var(--orb-spacing-mobile-inline, 0.75rem), env(safe-area-inset-right, 0px)) !important;
     padding-top: 0.75rem !important;
-    padding-bottom: calc(7.5rem + env(safe-area-inset-bottom, 0px)) !important;
+    padding-bottom: calc(6.25rem + env(safe-area-inset-bottom, 0px)) !important;
     -webkit-overflow-scrolling: touch;
     overscroll-behavior: contain;
   }
 
   html[data-orb-residential='1'] [data-orb-residential-empty] {
-    min-height: min(42dvh, 22rem) !important;
+    min-height: min(36dvh, 18rem) !important;
     padding-inline: 0.5rem !important;
   }
 
@@ -279,13 +279,23 @@
   }
 
   [data-orb-starter-cards] {
-    display: grid !important;
+    display: block !important;
     width: 100% !important;
     max-width: 100% !important;
-    grid-template-columns: minmax(0, 1fr);
-    gap: 0.5rem !important;
-    margin-top: 1.25rem !important;
+    margin-top: 0.75rem !important;
     padding-inline: 0.25rem;
+  }
+
+  [data-orb-starter-pills-grid] {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 0.5rem !important;
+  }
+
+  [data-orb-starter-pills-grid] [data-orb-starter-suggestion-card] {
+    min-width: 0 !important;
+    max-width: none !important;
+    width: 100% !important;
   }
 
   [data-orb-starter-card] {
@@ -337,9 +347,10 @@
   }
 
   [data-orb-more-examples] {
-    display: inline-block !important;
-    margin-top: 0.75rem !important;
-    color: #52657a !important;
+    display: block !important;
+    margin-top: 0.5rem !important;
+    min-height: 2.25rem !important;
+    color: var(--orb-muted) !important;
   }
 
   [data-orb-composer-send],
@@ -555,12 +566,13 @@
     border-radius: 9999px !important;
   }
 
-  .orb-composer-action-rail button:not([data-orb-composer-attach]):not([data-orb-composer-tools]) {
+  .orb-composer-action-rail button:not([data-orb-composer-attach]):not([data-orb-composer-tools]):not([data-orb-composer-tools-trigger]) {
     display: none !important;
   }
 
   [data-orb-composer-attach],
   [data-orb-composer-tools],
+  [data-orb-composer-tools-trigger],
   [data-orb-composer-mic],
   [data-orb-composer-voice] {
     min-width: 2.75rem !important;
@@ -1492,8 +1504,16 @@
     justify-content: center !important;
   }
 
+  /* Legacy horizontal starter scroll — superseded by grid on mobile home */
+  [data-orb-starter-pills-scroll]:not(:empty) {
+    display: none !important;
+  }
+
   [data-orb-composer-tools-trigger] {
-    color: var(--orb-muted) !important;
+    color: var(--orb-foreground) !important;
+    border: 1px solid color-mix(in srgb, var(--orb-line) 65%, transparent) !important;
+    background: color-mix(in srgb, var(--orb-surface-elevated) 92%, transparent) !important;
+    box-shadow: 0 1px 2px color-mix(in srgb, var(--orb-line) 35%, transparent) !important;
   }
 
   [data-orb-composer-action-rail] [data-orb-composer-mic],
@@ -1505,6 +1525,17 @@
   [data-orb-starter-pills-scroll] {
     flex-wrap: nowrap !important;
     -webkit-overflow-scrolling: touch;
+  }
+
+  [data-orb-starter-pills-grid] [data-orb-starter-suggestion-card] {
+    min-height: 2.35rem !important;
+    padding: 0.5rem 0.65rem !important;
+    font-size: 0.8125rem !important;
+    border-radius: 0.875rem !important;
+    border: 1px solid color-mix(in srgb, var(--orb-line) 55%, transparent) !important;
+    background: color-mix(in srgb, var(--orb-surface-elevated) 72%, transparent) !important;
+    box-shadow: none !important;
+    font-weight: 500 !important;
   }
 
   [data-orb-empty-subline-mobile] {
@@ -1591,6 +1622,51 @@
   [data-orb-settings-coming-soon] {
     padding-block: 0.5rem !important;
   }
+
+  [data-orb-voice-mobile-action-dock] {
+    background: color-mix(in srgb, var(--orb-surface-elevated) 96%, transparent) !important;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+
+  [data-orb-voice-mobile] .orb-voice-station-content__scroll {
+    padding-bottom: 0 !important;
+  }
+
+  [data-orb-dictate-options-chip] {
+    min-height: 2rem !important;
+  }
+
+  [data-orb-dictate-recording-options-toggle] {
+    display: none !important;
+  }
+
+  [data-orb-dictate-idle-disclosures] {
+    max-width: 20rem !important;
+    margin-inline: auto !important;
+  }
+
+  [data-orb-write-notepad-body] .orb-write-section-hint {
+    margin-top: 0.15rem !important;
+    margin-bottom: 0.35rem !important;
+    font-size: 0.8125rem !important;
+    line-height: 1.45 !important;
+    color: var(--orb-muted) !important;
+    font-style: italic !important;
+  }
+
+  [data-orb-templates-mobile-header] + [data-orb-recording-library-section] {
+    margin-top: 0 !important;
+  }
+
+  [data-orb-templates-panel] [data-orb-recording-library-section] [data-orb-recording-card] {
+    display: none !important;
+  }
+
+  [data-orb-templates-mobile-record-list] button,
+  [data-orb-templates-mobile-template] {
+    min-height: 2.75rem !important;
+  }
 }
 
 /* Short mobile height — compact home hero so composer stays in view */
@@ -1620,6 +1696,10 @@
     margin-top: 0.35rem !important;
     font-size: 0.75rem !important;
     line-height: 1.35 !important;
+  }
+
+  [data-orb-residential-empty] [data-orb-empty-subline-mobile] {
+    display: none !important;
   }
 
   [data-orb-starter-pills],

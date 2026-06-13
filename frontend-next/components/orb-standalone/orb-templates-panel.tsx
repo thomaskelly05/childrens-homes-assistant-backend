@@ -39,6 +39,10 @@ import {
   type OrbTemplateSummary
 } from '@/lib/orb/orb-billing-client'
 import type { OrbRecordingRecordType } from '@/lib/orb/recording/orb-recording-types'
+import {
+  isRecommendedRecordingType,
+  ORB_RECORDING_RECORD_TYPES
+} from '@/lib/orb/recording/orb-recording-framework'
 
 const FALLBACK_CATEGORIES = [...ORB_TEMPLATE_FALLBACK_CATEGORIES]
 
@@ -193,6 +197,17 @@ export function OrbTemplatesPanel({
   const recordingCategory =
     RECORDING_LIBRARY_FILTERS.find((item) => item.id === recordingFilter)?.category ?? ''
 
+  const mobileRecordTypes = ORB_RECORDING_RECORD_TYPES.filter((recordType) => {
+    if (recordingCategory === '__popular__' && !isRecommendedRecordingType(recordType.id)) return false
+    if (recordingCategory && recordingCategory !== '__popular__' && recordType.category !== recordingCategory) {
+      return false
+    }
+    const needle = search.trim().toLowerCase()
+    if (!needle) return true
+    const hay = `${recordType.label} ${recordType.purpose} ${recordType.when_to_use}`.toLowerCase()
+    return hay.includes(needle)
+  })
+
   async function handleUseTemplate(template: OrbTemplateSummary) {
     const prompt = buildImmediatePrompt(template)
     onUseTemplate?.(prompt, template)
@@ -238,7 +253,7 @@ export function OrbTemplatesPanel({
           <OrbPremiumToolbar
             searchValue={search}
             onSearchChange={setSearch}
-            searchPlaceholder="Search templates and record types…"
+            searchPlaceholder={isMobileViewport ? 'Search record types…' : 'Search templates and record types…'}
             onSearchSubmit={() => void load()}
             filters={
               !isMobileViewport ? (
@@ -264,6 +279,12 @@ export function OrbTemplatesPanel({
         }
         className="orb-templates-panel"
       >
+        {isMobileViewport ? (
+          <header className="mb-2 px-0.5" data-orb-templates-mobile-header>
+            <h2 className="text-base font-semibold text-[var(--orb-foreground)]">Recording library</h2>
+            <p className="mt-0.5 text-xs text-[var(--orb-muted)]">Choose a record type or template.</p>
+          </header>
+        ) : null}
         <section data-orb-recording-library-section>
           {!isMobileViewport ? (
             <>
@@ -306,6 +327,28 @@ export function OrbTemplatesPanel({
               ))}
             </div>
           )}
+          {isMobileViewport ? (
+            <ul className="space-y-1" data-orb-templates-mobile-record-list>
+              {mobileRecordTypes.map((recordType) => (
+                <li key={recordType.id}>
+                  <button
+                    type="button"
+                    className="flex w-full items-center justify-between gap-2 rounded-xl border border-[var(--orb-line)]/45 bg-[var(--orb-surface-elevated)] px-3 py-2.5 text-left transition active:bg-[var(--orb-surface-hover)]"
+                    data-orb-templates-mobile-record={recordType.id}
+                    onClick={() => onRecordingAction?.('write', recordType)}
+                  >
+                    <span className="min-w-0">
+                      <span className="block text-sm font-medium text-[var(--orb-foreground)]">{recordType.label}</span>
+                      <span className="block truncate text-xs text-[var(--orb-muted)]">{recordType.purpose}</span>
+                    </span>
+                    <span className="shrink-0 text-[10px] font-medium uppercase tracking-wide text-[var(--orb-muted)]">
+                      Open
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : (
           <OrbRecordingLibraryCards
             search={search}
             category={
@@ -323,9 +366,10 @@ export function OrbTemplatesPanel({
               onRecordingAction?.(action, recordType)
             }}
           />
+          )}
         </section>
 
-        {recordingPreview ? (
+        {!isMobileViewport && recordingPreview ? (
           <div className="orb-premium-card rounded-2xl border border-[var(--orb-line)] p-4" data-orb-recording-structure-preview>
             <p className="text-sm font-semibold">{recordingPreview.label} — structure</p>
             <ul className="mt-2 list-disc space-y-1 pl-4 text-xs text-[var(--orb-muted)]">
@@ -336,9 +380,15 @@ export function OrbTemplatesPanel({
           </div>
         ) : null}
 
-        <h3 className={`text-sm font-semibold text-[var(--orb-foreground)] ${isMobileViewport ? 'mt-2' : ''}`}>
+        {!isMobileViewport ? (
+        <h3 className="text-sm font-semibold text-[var(--orb-foreground)]">
           Prompt templates
         </h3>
+        ) : (
+          <h3 className="mt-4 text-xs font-semibold uppercase tracking-wide text-[var(--orb-muted)]" data-orb-templates-mobile-prompts-heading>
+            Prompt templates
+          </h3>
+        )}
 
         {error && shouldBlockStationForAuth(sessionReady, error) ? (
           <OrbStationAuthError detail={error} />
@@ -363,7 +413,11 @@ export function OrbTemplatesPanel({
         ) : null}
 
         <ul
-          className="grid max-h-none grid-cols-1 gap-2.5 overflow-y-auto sm:grid-cols-2"
+          className={
+            isMobileViewport
+              ? 'mt-1 max-h-none space-y-1 overflow-y-auto'
+              : 'grid max-h-none grid-cols-1 gap-2.5 overflow-y-auto sm:grid-cols-2'
+          }
           data-orb-templates-card-grid
           data-orb-template-list-scroll
         >
@@ -375,6 +429,26 @@ export function OrbTemplatesPanel({
             })
             .map((tpl) => (
             <li key={tpl.id}>
+              {isMobileViewport ? (
+                <button
+                  type="button"
+                  className="flex w-full items-center justify-between gap-2 rounded-xl border border-[var(--orb-line)]/45 bg-[var(--orb-surface-elevated)] px-3 py-2.5 text-left transition active:bg-[var(--orb-surface-hover)]"
+                  data-orb-template-item={tpl.id}
+                  data-orb-templates-mobile-template={tpl.id}
+                  disabled={generating}
+                  onClick={() => void handleUseTemplate(tpl)}
+                >
+                  <span className="min-w-0">
+                    <span className="block text-sm font-medium text-[var(--orb-foreground)]">{tpl.title}</span>
+                    {tpl.description ? (
+                      <span className="block truncate text-xs text-[var(--orb-muted)]">{tpl.description}</span>
+                    ) : null}
+                  </span>
+                  <span className="shrink-0 text-[10px] font-medium uppercase tracking-wide text-[var(--orb-muted)]">
+                    Use
+                  </span>
+                </button>
+              ) : (
               <article
                 className={`orb-studio-source-card orb-doc-glass-card orb-template-card flex h-full flex-col rounded-2xl border px-3.5 py-3.5 transition ${
                   selected?.id === tpl.id
@@ -418,11 +492,12 @@ export function OrbTemplatesPanel({
                   </OrbPremiumButton>
                 </div>
               </article>
+              )}
             </li>
           ))}
         </ul>
 
-        {selected ? (
+        {!isMobileViewport && selected ? (
           <div className="orb-doc-glass-card rounded-xl border border-[var(--orb-line)] p-4">
             <p className="text-sm font-semibold text-[var(--orb-foreground)]">{selected.title}</p>
             <p className="mt-1 text-xs text-[var(--orb-muted)]">
