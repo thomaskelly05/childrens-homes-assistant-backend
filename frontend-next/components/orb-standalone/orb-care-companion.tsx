@@ -3824,37 +3824,36 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
                     {residentialSurface ? (
                       isMobileViewport ? (
                         <div
-                          className="mt-3 w-full max-w-[var(--orb-composer-max,46rem)] text-left"
+                          className="mt-2.5 w-full max-w-[var(--orb-composer-max,46rem)]"
                           data-orb-starter-cards
                           data-orb-empty-starter-chips
                           data-orb-starter-count={ORB_RESIDENTIAL_MOBILE_PRIMARY_STARTERS.length}
                         >
                           <div
-                            className="flex gap-2 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-                            data-orb-starter-pills-scroll
+                            className="grid grid-cols-2 gap-2"
+                            data-orb-starter-pills-grid
                           >
                             {ORB_RESIDENTIAL_MOBILE_PRIMARY_STARTERS.map((starter) => (
                               <button
                                 key={starter.text}
                                 type="button"
                                 onClick={() => applyPrompt(starter)}
-                                className="orb-starter-card shrink-0 px-3.5 py-2.5 text-left text-[13px] leading-snug"
+                                className="orb-starter-card px-3 py-2 text-left text-[13px] leading-snug"
                                 data-orb-starter-card
                                 data-orb-starter-suggestion-card="true"
                               >
                                 {starter.text}
                               </button>
                             ))}
-                            <button
-                              type="button"
-                              onClick={() => setPromptDrawerOpen(true)}
-                              className="orb-starter-card shrink-0 border-dashed px-3.5 py-2.5 text-left text-[13px] font-medium leading-snug text-[var(--orb-muted)]"
-                              data-orb-more-examples
-                              data-orb-starter-suggestion-card="true"
-                            >
-                              More
-                            </button>
                           </div>
+                          <button
+                            type="button"
+                            onClick={() => setPromptDrawerOpen(true)}
+                            className="orb-starter-card mt-2 w-full border-dashed px-3 py-1.5 text-center text-xs font-medium text-[var(--orb-muted)]"
+                            data-orb-more-examples
+                          >
+                            More examples
+                          </button>
                         </div>
                       ) : (
                         <div

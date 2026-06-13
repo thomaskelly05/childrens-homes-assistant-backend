@@ -9,11 +9,24 @@ import { useOrbResponsiveMode } from '@/components/orb-standalone/use-orb-respon
 import type { OrbWriteDocument } from '@/lib/orb/write/orb-write-types'
 import { sanitizeOrbWriteHtml } from '@/lib/orb/write/orb-write-sanitize'
 import {
+  orbWriteBodyLooksLikeMarkdownTemplate,
+  orbWriteBodyToMobileNotepadHtml
+} from '@/lib/orb/write/orb-write-mobile-body'
+import {
   readOrbWriteZoomPreference,
   writeOrbWriteZoomPreference,
   type OrbWriteZoomLevel,
   type OrbWriteZoomMode
 } from '@/lib/orb/write/orb-write-zoom'
+
+function orbWriteBodyForEditor(body: string, mobile: boolean): string {
+  if (!body.trim()) return ''
+  if (body.includes('<')) return body
+  if (mobile && orbWriteBodyLooksLikeMarkdownTemplate(body)) {
+    return orbWriteBodyToMobileNotepadHtml(body)
+  }
+  return body.replace(/\n/g, '<br/>')
+}
 
 const PDF_FOOTER = 'Generated with ORB Residential, powered by IndiCare Intelligence'
 
@@ -64,10 +77,11 @@ export function OrbWriteEditor({
 
   useEffect(() => {
     if (!editorRef.current) return
-    if (editorRef.current.innerHTML !== doc.body && !editorRef.current.matches(':focus')) {
-      editorRef.current.innerHTML = doc.body.includes('<') ? doc.body : doc.body.replace(/\n/g, '<br/>')
+    const nextHtml = orbWriteBodyForEditor(doc.body, isMobile)
+    if (editorRef.current.innerHTML !== nextHtml && !editorRef.current.matches(':focus')) {
+      editorRef.current.innerHTML = nextHtml
     }
-  }, [doc.body])
+  }, [doc.body, isMobile])
 
   const syncContent = useCallback(() => {
     if (!editorRef.current) return
@@ -127,7 +141,7 @@ export function OrbWriteEditor({
       data-orb-write-body
       className={
         isMobile
-          ? 'min-h-[12rem] flex-1 text-[0.9375rem] leading-relaxed text-[var(--orb-foreground)] focus:outline-none [&_h1]:mb-2 [&_h1]:text-lg [&_h1]:font-semibold [&_h2]:mb-2 [&_h2]:text-base [&_h2]:font-semibold [&_li]:ml-4 [&_ol]:list-decimal [&_table]:my-2 [&_table]:w-full [&_table]:border-collapse [&_td]:border [&_td]:border-[var(--orb-line)]/40 [&_td]:p-2 [&_ul]:list-disc'
+          ? 'min-h-[12rem] flex-1 text-[0.9375rem] leading-relaxed text-[var(--orb-foreground)] focus:outline-none [&_.orb-write-section-hint]:pointer-events-none [&_.orb-write-section-hint]:text-[var(--orb-muted)] [&_.orb-write-section-hint]:italic [&_h1]:mb-2 [&_h1]:mt-3 [&_h1]:text-lg [&_h1]:font-semibold [&_h2]:mb-1 [&_h2]:mt-4 [&_h2]:text-base [&_h2]:font-semibold [&_h2]:tracking-tight [&_li]:ml-4 [&_ol]:list-decimal [&_table]:my-2 [&_table]:w-full [&_table]:border-collapse [&_td]:border [&_td]:border-[var(--orb-line)]/40 [&_td]:p-2 [&_ul]:list-disc'
           : 'min-h-[180mm] text-sm leading-relaxed text-slate-800 focus:outline-none [&_h1]:mb-2 [&_h1]:text-lg [&_h1]:font-semibold [&_h2]:mb-2 [&_h2]:text-base [&_h2]:font-semibold [&_li]:ml-4 [&_ol]:list-decimal [&_table]:my-2 [&_table]:w-full [&_table]:border-collapse [&_td]:border [&_td]:border-slate-200 [&_td]:p-2 [&_ul]:list-disc'
       }
       onInput={syncContent}

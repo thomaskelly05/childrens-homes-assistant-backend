@@ -229,8 +229,78 @@ export function OrbDictateMobileExperience({
             </button>
           )}
         </div>
-        <div className="mt-2 w-full max-w-xs text-left">
+        <div
+          className="mt-2 flex w-full max-w-xs flex-wrap items-center justify-center gap-2"
+          data-orb-dictate-idle-disclosures
+        >
           <OrbDictateBoundaryCopy compact collapsible />
+          {!showCapturedCard ? (
+            <>
+              <button
+                type="button"
+                className="rounded-full border border-[var(--orb-mobile-line,var(--orb-line))]/60 bg-[var(--orb-mobile-card,var(--orb-surface-elevated))] px-3 py-1 text-xs font-medium text-[var(--orb-muted)]"
+                onClick={onToggleRecordingOptions}
+                data-orb-dictate-options-chip
+                aria-expanded={mobileRecordingOpen}
+              >
+                Options
+              </button>
+              {mobileRecordingOpen ? (
+                <div
+                  className="w-full space-y-2 rounded-xl border border-[var(--orb-line)]/40 p-2 text-left"
+                  data-orb-dictate-recording-options
+                >
+                  <OrbDictateModeSelect mode={dictateMode} onChange={onDictateModeChange} />
+                  <OrbDictateOutputTypeSelector value={noteType} onChange={onNoteTypeChange} compact />
+                  <OrbDictateParticipantsPanel
+                    participants={participants}
+                    onChange={onParticipantsChange}
+                    transcript={effectiveInputText}
+                    onImportFromTranscript={onImportParticipants}
+                  />
+                  {startMode === 'paste' ? (
+                    <div>
+                      <textarea
+                        data-orb-dictate-paste
+                        value={pasteText}
+                        onChange={(e) => onPasteTextChange(e.target.value)}
+                        rows={3}
+                        placeholder="Paste transcript…"
+                        className="w-full rounded-lg border border-[var(--orb-line)]/60 bg-[var(--orb-surface)] px-2 py-2 text-sm"
+                      />
+                      <button type="button" className="mt-2 text-xs text-[var(--orb-primary)]" onClick={onApplyPaste}>
+                        Use pasted text
+                      </button>
+                    </div>
+                  ) : null}
+                  <div className="grid grid-cols-2 gap-2">
+                    {(
+                      [
+                        ['record_note', 'Record note'],
+                        ['record_debrief', 'Record debrief'],
+                        ['paste', 'Paste transcript'],
+                        ['import_voice', 'Import voice']
+                      ] as const
+                    ).map(([id, label]) => (
+                      <button
+                        key={id}
+                        type="button"
+                        data-orb-dictate-start={id}
+                        className={`rounded-lg border px-2 py-2 text-left text-[11px] ${
+                          startMode === id
+                            ? 'border-[var(--orb-primary)]/40 bg-[var(--orb-primary-soft)]'
+                            : 'border-[var(--orb-line)]/50'
+                        }`}
+                        onClick={() => onSelectStartMode(id)}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+            </>
+          ) : null}
         </div>
       </section>
 
@@ -304,70 +374,31 @@ export function OrbDictateMobileExperience({
           </div>
         ) : null}
 
-        <div className="mt-4">
-          <button
-            type="button"
-            className="flex w-full items-center justify-between rounded-xl border border-[var(--orb-mobile-line,var(--orb-line))]/50 px-3 py-2 text-xs text-[var(--orb-muted)]"
-            onClick={onToggleRecordingOptions}
-            data-orb-dictate-recording-options-toggle
-            aria-expanded={mobileRecordingOpen}
-          >
-            <span>Recording options</span>
-            <span>{mobileRecordingOpen ? '−' : '+'}</span>
-          </button>
-          {mobileRecordingOpen ? (
-            <div className="mt-2 space-y-2 rounded-xl border border-[var(--orb-line)]/40 p-2" data-orb-dictate-recording-options>
-              <OrbDictateModeSelect mode={dictateMode} onChange={onDictateModeChange} />
-              <OrbDictateOutputTypeSelector value={noteType} onChange={onNoteTypeChange} compact />
-              <OrbDictateParticipantsPanel
-                participants={participants}
-                onChange={onParticipantsChange}
-                transcript={effectiveInputText}
-                onImportFromTranscript={onImportParticipants}
-              />
-              {startMode === 'paste' ? (
-                <div>
-                  <textarea
-                    data-orb-dictate-paste
-                    value={pasteText}
-                    onChange={(e) => onPasteTextChange(e.target.value)}
-                    rows={3}
-                    placeholder="Paste transcript…"
-                    className="w-full rounded-lg border border-[var(--orb-line)]/60 bg-[var(--orb-surface)] px-2 py-2 text-sm"
-                  />
-                  <button type="button" className="mt-2 text-xs text-[var(--orb-primary)]" onClick={onApplyPaste}>
-                    Use pasted text
-                  </button>
-                </div>
-              ) : null}
-              <div className="grid grid-cols-2 gap-2">
-                {(
-                  [
-                    ['record_note', 'Record note'],
-                    ['record_debrief', 'Record debrief'],
-                    ['paste', 'Paste transcript'],
-                    ['import_voice', 'Import voice'],
-                    ['template', 'Use template']
-                  ] as const
-                ).map(([id, label]) => (
-                  <button
-                    key={id}
-                    type="button"
-                    data-orb-dictate-start={id}
-                    className={`rounded-lg border px-2 py-2 text-left text-[11px] ${
-                      startMode === id
-                        ? 'border-[var(--orb-primary)]/40 bg-[var(--orb-primary-soft)]'
-                        : 'border-[var(--orb-line)]/50'
-                    }`}
-                    onClick={() => onSelectStartMode(id)}
-                  >
-                    {label}
-                  </button>
-                ))}
+        {showCapturedCard ? (
+          <div className="mt-4">
+            <button
+              type="button"
+              className="rounded-full border border-[var(--orb-mobile-line,var(--orb-line))]/60 px-3 py-1 text-xs font-medium text-[var(--orb-muted)]"
+              onClick={onToggleRecordingOptions}
+              data-orb-dictate-options-chip
+              aria-expanded={mobileRecordingOpen}
+            >
+              Options
+            </button>
+            {mobileRecordingOpen ? (
+              <div className="mt-2 space-y-2 rounded-xl border border-[var(--orb-line)]/40 p-2" data-orb-dictate-recording-options>
+                <OrbDictateModeSelect mode={dictateMode} onChange={onDictateModeChange} />
+                <OrbDictateOutputTypeSelector value={noteType} onChange={onNoteTypeChange} compact />
+                <OrbDictateParticipantsPanel
+                  participants={participants}
+                  onChange={onParticipantsChange}
+                  transcript={effectiveInputText}
+                  onImportFromTranscript={onImportParticipants}
+                />
               </div>
-            </div>
-          ) : null}
-        </div>
+            ) : null}
+          </div>
+        ) : null}
 
         {output ? (
           <div className="mt-4">
