@@ -3518,6 +3518,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
                 openResidentialAccountMenu(anchor)
                 setSidebarOpen(false)
               }}
+              showTagline={false}
               accountUsesSettingsIcon
             />
           ) : undefined
@@ -3727,7 +3728,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
                     {residentialSurface ? (
                       <>
                         <p
-                          className="mt-2 text-[11px] font-semibold tracking-[0.04em] text-[var(--orb-res-text-soft,var(--orb-muted))]"
+                          className="mt-2 hidden text-[11px] font-semibold tracking-[0.04em] text-[var(--orb-res-text-soft,var(--orb-muted))] md:block"
                           data-orb-brand-emotional-line
                           data-orb-empty-emotional-line
                           data-orb-empty-brand-line
@@ -3777,7 +3778,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
                     )}
                     {residentialSurface ? (
                       <p
-                        className="mt-2 max-w-lg text-sm leading-relaxed text-[var(--orb-muted)]"
+                        className="mt-2 hidden max-w-lg text-sm leading-relaxed text-[var(--orb-muted)] md:block"
                         data-orb-empty-subline
                       >
                         {ORB_RESIDENTIAL_EMPTY_SUBLINE}
@@ -3803,24 +3804,36 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
                     {residentialSurface ? (
                       isMobileViewport ? (
                         <div
-                          className="mt-5 w-full max-w-[var(--orb-composer-max,46rem)] text-left"
+                          className="mt-3 w-full max-w-[var(--orb-composer-max,46rem)] text-left"
                           data-orb-starter-pills
                           data-orb-empty-starter-chips
                           data-orb-starter-count={ORB_RESIDENTIAL_MOBILE_PRIMARY_STARTERS.length}
                         >
-                          <div className="flex flex-wrap gap-1.5">
+                          <div
+                            className="flex gap-1.5 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                            data-orb-starter-pills-scroll
+                          >
                             {ORB_RESIDENTIAL_MOBILE_PRIMARY_STARTERS.map((starter) => (
                               <button
                                 key={starter.text}
                                 type="button"
                                 onClick={() => applyPrompt(starter)}
-                                className="orb-starter-pill orb-starter-card rounded-full border border-[var(--orb-line)]/35 bg-[var(--orb-surface)]/40 px-3.5 py-1.5 text-left text-[13px] leading-snug text-[var(--orb-foreground)] transition hover:border-[var(--orb-primary)]/30 hover:bg-[var(--orb-surface-elevated)]/80"
+                                className="orb-starter-pill orb-starter-card shrink-0 rounded-full border border-[var(--orb-line)]/35 bg-[var(--orb-surface)]/40 px-3.5 py-1.5 text-left text-[13px] leading-snug text-[var(--orb-foreground)] transition hover:border-[var(--orb-primary)]/30 hover:bg-[var(--orb-surface-elevated)]/80"
                                 data-orb-starter-card
                                 data-orb-starter-pill="true"
                               >
                                 {starter.text}
                               </button>
                             ))}
+                            <button
+                              type="button"
+                              onClick={() => setPromptDrawerOpen(true)}
+                              className="orb-starter-pill orb-starter-card shrink-0 rounded-full border border-dashed border-[var(--orb-line)]/50 bg-transparent px-3.5 py-1.5 text-left text-[13px] font-medium leading-snug text-[var(--orb-muted)] transition hover:border-[var(--orb-primary)]/30 hover:text-[var(--orb-foreground)]"
+                              data-orb-more-examples
+                              data-orb-starter-pill="true"
+                            >
+                              More
+                            </button>
                           </div>
                         </div>
                       ) : (
@@ -3873,6 +3886,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
                         ))}
                       </div>
                     )}
+                    {!residentialSurface || !isMobileViewport ? (
                     <button
                       type="button"
                       onClick={() => setPromptDrawerOpen(true)}
@@ -3881,6 +3895,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
                     >
                       More examples
                     </button>
+                    ) : null}
                   </div>
                 ) : (
                   <div className="space-y-6 pb-6">

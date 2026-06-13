@@ -489,18 +489,7 @@ export function OrbDictateMobileExperience({
             {generating ? 'Generating…' : 'Generate professional note'}
           </button>
         </div>
-      ) : (
-        <div className="shrink-0 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]" data-orb-dictate-generate-idle>
-          <button
-            type="button"
-            data-orb-dictate-generate
-            disabled
-            className="w-full rounded-full border border-[var(--orb-line)]/40 py-2 text-xs font-medium text-[var(--orb-muted)] opacity-70"
-          >
-            Generate professional note
-          </button>
-        </div>
-      )}
+      ) : null}
     </div>
   )
 }

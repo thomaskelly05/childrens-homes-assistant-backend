@@ -29,6 +29,7 @@ describe('ORB mobile convergence sprint', () => {
     assert.match(composer, /data-orb-composer-quick-actions/)
     assert.match(composer, /data-orb-composer-quick-dictate/)
     assert.match(composer, /data-orb-composer-quick-voice/)
+    assert.match(composer, /showComposerQuickActions/)
     assert.match(composer, /Ask ORB anything/)
   })
 
@@ -46,12 +47,12 @@ describe('ORB mobile convergence sprint', () => {
     const toolbar = read('components/orb-write/orb-write-mobile-toolbar.tsx')
     assert.match(editor, /OrbWriteMobileToolbar/)
     assert.match(editor, /useOrbResponsiveMode/)
+    assert.match(editor, /data-orb-write-notepad/)
     assert.match(toolbar, /data-orb-write-mobile-toolbar/)
-    assert.match(toolbar, /data-orb-write-ask-orb-fab/)
-    for (const tab of ['format', 'insert', 'review', 'more']) {
-      assert.match(toolbar, new RegExp(`id: '${tab}'`))
-      assert.match(toolbar, /data-orb-write-mobile-tab=\{item\.id\}/)
-    }
+    assert.match(toolbar, /data-orb-write-mobile-tab="review"/)
+    assert.match(toolbar, /data-orb-write-approve/)
+    assert.match(toolbar, /data-orb-write-mobile-tab="more"/)
+    assert.match(toolbar, /data-orb-write-mobile-format-entry/)
   })
 
   it('recording library uses five primary filter chips', () => {
@@ -92,10 +93,12 @@ describe('ORB mobile convergence sprint', () => {
     assert.match(mobileCss, /data-orb-dictate-primary-action/)
   })
 
-  it('write mobile toolbar scrolls and ask orb fab clears content', () => {
+  it('write mobile toolbar scrolls and ask orb stays in action sheets', () => {
     const mobileCss = readFileSync(join(root, 'app/orb/orb-mobile.css'), 'utf8')
+    const toolbar = read('components/orb-write/orb-write-mobile-toolbar.tsx')
     assert.match(mobileCss, /orb-write-mobile-toolbar/)
-    assert.match(mobileCss, /data-orb-write-ask-orb-fab/)
+    assert.match(toolbar, /data-orb-write-ask-orb/)
+    assert.match(mobileCss, /data-orb-write-notepad/)
   })
 
   it('documents search is responsive on mobile', () => {

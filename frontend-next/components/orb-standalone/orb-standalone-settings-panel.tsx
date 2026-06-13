@@ -758,7 +758,10 @@ function RowButton({
 
 function ComingSoonRow({ icon, label, hint }: { icon: ReactNode; label: string; hint?: string }) {
   return (
-    <div className="rounded-xl border border-[var(--orb-line)] px-4 py-3 opacity-80">
+    <div
+      className="rounded-xl border border-[var(--orb-line)] px-3 py-2 opacity-80 md:px-4 md:py-3"
+      data-orb-settings-coming-soon
+    >
       <div className="flex items-center justify-between gap-2">
         <span className="flex items-center gap-2 text-sm text-[var(--orb-muted)]">
           {icon}
@@ -766,7 +769,7 @@ function ComingSoonRow({ icon, label, hint }: { icon: ReactNode; label: string; 
         </span>
         <span className="shrink-0 text-[10px] text-[var(--orb-muted)]">Coming soon</span>
       </div>
-      {hint ? <p className="mt-1.5 text-[11px] leading-5 text-[var(--orb-muted)]">{hint}</p> : null}
+      {hint ? <p className="mt-1 hidden text-[11px] leading-5 text-[var(--orb-muted)] md:block">{hint}</p> : null}
     </div>
   )
 }

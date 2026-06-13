@@ -118,8 +118,26 @@ export function OrbWriteEditor({
 
   const scale = zoomMode === 'fit-width' ? undefined : zoomPercent / 100
 
+  const editorBody = (
+    <div
+      ref={editorRef}
+      contentEditable
+      suppressContentEditableWarning
+      spellCheck
+      data-orb-write-body
+      className={
+        isMobile
+          ? 'min-h-[12rem] flex-1 text-[0.9375rem] leading-relaxed text-[var(--orb-foreground)] focus:outline-none [&_h1]:mb-2 [&_h1]:text-lg [&_h1]:font-semibold [&_h2]:mb-2 [&_h2]:text-base [&_h2]:font-semibold [&_li]:ml-4 [&_ol]:list-decimal [&_table]:my-2 [&_table]:w-full [&_table]:border-collapse [&_td]:border [&_td]:border-[var(--orb-line)]/40 [&_td]:p-2 [&_ul]:list-disc'
+          : 'min-h-[180mm] text-sm leading-relaxed text-slate-800 focus:outline-none [&_h1]:mb-2 [&_h1]:text-lg [&_h1]:font-semibold [&_h2]:mb-2 [&_h2]:text-base [&_h2]:font-semibold [&_li]:ml-4 [&_ol]:list-decimal [&_table]:my-2 [&_table]:w-full [&_table]:border-collapse [&_td]:border [&_td]:border-slate-200 [&_td]:p-2 [&_ul]:list-disc'
+      }
+      onInput={syncContent}
+      onBlur={syncContent}
+      aria-label="Document body"
+    />
+  )
+
   return (
-    <div className="orb-write-studio-editor relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-[var(--orb-line)]/50 bg-[var(--orb-surface-elevated)]" data-orb-write-editor data-orb-write-mobile={isMobile ? 'true' : 'false'}>
+    <div className="orb-write-studio-editor relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-[var(--orb-line)]/50 bg-[var(--orb-surface-elevated)]" data-orb-write-editor data-orb-write-mobile={isMobile ? 'true' : 'false'} data-orb-write-notepad={isMobile ? 'true' : 'false'}>
       <div className="hidden md:block">
         <OrbWriteToolbar
           onCommand={runCommand}
@@ -137,6 +155,45 @@ export function OrbWriteEditor({
           {...zoomHandlers}
         />
       </div>
+      {isMobile ? (
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden" data-orb-write-notepad-surface>
+          <div
+            className="flex shrink-0 flex-wrap items-center gap-2 border-b border-[var(--orb-line)]/40 px-3 py-2 text-[10px] text-[var(--orb-muted)]"
+            data-orb-write-notepad-meta
+          >
+            <span
+              className="inline-flex rounded-full border border-[var(--orb-line)]/50 px-2 py-0.5 font-medium text-[var(--orb-foreground)]"
+              data-orb-write-record-type-badge
+            >
+              {doc.record_type_label}
+            </span>
+            {doc.is_finalised ? (
+              <span
+                className="inline-flex shrink-0 items-center rounded-full border border-emerald-400/40 bg-emerald-500/10 px-2 py-0.5 font-semibold uppercase tracking-wide text-emerald-800"
+                data-orb-write-approved-badge
+              >
+                Approved
+              </span>
+            ) : (
+              <span
+                className="inline-flex shrink-0 items-center rounded-full border border-amber-300/40 bg-amber-500/10 px-2 py-0.5 font-semibold uppercase tracking-wide text-amber-900"
+                data-orb-write-review-badge
+              >
+                Review
+              </span>
+            )}
+            <span className="ml-auto" data-orb-write-word-count-display>
+              {wordCount} words
+            </span>
+          </div>
+          <div
+            className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-3 py-3 pb-[max(0.5rem,env(safe-area-inset-bottom))]"
+            data-orb-write-notepad-body
+          >
+            {editorBody}
+          </div>
+        </div>
+      ) : (
       <div
         ref={canvasRef}
         className="orb-studio-document-canvas-workspace min-h-0 flex-1 overflow-auto bg-[#e8eaed] p-4 md:p-6"
@@ -190,17 +247,7 @@ export function OrbWriteEditor({
               </div>
             </header>
 
-            <div
-              ref={editorRef}
-              contentEditable
-              suppressContentEditableWarning
-              spellCheck
-              data-orb-write-body
-              className="min-h-[180mm] text-sm leading-relaxed text-slate-800 focus:outline-none [&_h1]:mb-2 [&_h1]:text-lg [&_h1]:font-semibold [&_h2]:mb-2 [&_h2]:text-base [&_h2]:font-semibold [&_li]:ml-4 [&_ol]:list-decimal [&_table]:my-2 [&_table]:w-full [&_table]:border-collapse [&_td]:border [&_td]:border-slate-200 [&_td]:p-2 [&_ul]:list-disc"
-              onInput={syncContent}
-              onBlur={syncContent}
-              aria-label="Document body"
-            />
+            {editorBody}
 
             <footer className="mt-8 border-t border-slate-200 pt-4">
               <p className="text-xs leading-relaxed text-slate-600" data-orb-write-review-notice>
@@ -213,6 +260,7 @@ export function OrbWriteEditor({
           </article>
         </div>
       </div>
+      )}
       {isMobile ? (
         <OrbWriteMobileToolbar
           onCommand={runCommand}

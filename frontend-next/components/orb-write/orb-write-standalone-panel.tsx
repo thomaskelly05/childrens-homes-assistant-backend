@@ -482,7 +482,7 @@ export function OrbWriteStandalonePanel({
                   type="button"
                   onClick={() => void runAnalysis()}
                   disabled={analysing || !roughText.trim()}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--orb-line)] px-3 py-1.5 text-xs font-semibold disabled:opacity-50"
+                  className="hidden items-center gap-1.5 rounded-lg border border-[var(--orb-line)] px-3 py-1.5 text-xs font-semibold disabled:opacity-50 md:inline-flex"
                   data-orb-write-analyse
                 >
                   <Sparkles className="h-3.5 w-3.5" aria-hidden />
@@ -492,7 +492,7 @@ export function OrbWriteStandalonePanel({
                   type="button"
                   onClick={() => void runGenerate()}
                   disabled={generating || !roughText.trim()}
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--orb-primary)] px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
+                  className="hidden items-center gap-1.5 rounded-lg bg-[var(--orb-primary)] px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50 md:inline-flex"
                   data-orb-write-generate
                 >
                   Create draft record
@@ -569,7 +569,7 @@ export function OrbWriteStandalonePanel({
               ) : null}
             </div>
             <footer
-              className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-t border-[var(--orb-line)]/40 pt-2 text-[10px] text-[var(--orb-muted)]"
+              className={`flex shrink-0 flex-wrap items-center justify-between gap-2 border-t border-[var(--orb-line)]/40 pt-2 text-[10px] text-[var(--orb-muted)] ${isMobile ? 'hidden' : ''}`}
               data-orb-write-status-footer
             >
               <span data-orb-write-word-count-display>{wordCount} words</span>
