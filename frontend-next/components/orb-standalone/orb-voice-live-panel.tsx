@@ -38,6 +38,12 @@ export function OrbVoiceLivePanel({
   liveState,
   muted = false,
   pauseHint = false,
+  acknowledgement,
+  livePrompt,
+  suggestedQuestion,
+  safetyPrompt,
+  bargeInFallback,
+  showTurnIntoRecord = false,
   onToggleMute,
   onEnd,
   onTurnIntoRecord,
@@ -49,13 +55,25 @@ export function OrbVoiceLivePanel({
   muted?: boolean
   /** Shown after a long pause — encourages the adult without ending the session. */
   pauseHint?: boolean
+  acknowledgement?: string | null
+  livePrompt?: string | null
+  suggestedQuestion?: string | null
+  safetyPrompt?: string | null
+  /** Browser fallback when realtime barge-in is unavailable. */
+  bargeInFallback?: string | null
+  showTurnIntoRecord?: boolean
   onToggleMute?: () => void
   onEnd: () => void
   onTurnIntoRecord?: () => void
   className?: string
 }) {
   const dialogue = turns.filter((t) => t.role === 'user' || t.role === 'assistant')
-  const stateLabel = orbVoiceLivePanelStatusLabel(liveState)
+  const stateLabel = acknowledgement?.trim() || orbVoiceLivePanelStatusLabel(liveState)
+  const promptLine =
+    livePrompt?.trim() ||
+    (pauseHint && liveState === 'listening'
+      ? "You can keep going, or I can help turn what you've said into a record."
+      : null)
 
   return (
     <div
@@ -67,6 +85,33 @@ export function OrbVoiceLivePanel({
       <p className="text-center text-xs font-medium text-[var(--orb-muted)]" data-orb-voice-live-status>
         {stateLabel}
       </p>
+
+      {promptLine ? (
+        <p className="text-center text-[11px] leading-5 text-[var(--orb-muted)]" data-orb-voice-live-prompt>
+          {promptLine}
+        </p>
+      ) : null}
+
+      {safetyPrompt ? (
+        <p
+          className="rounded-xl border border-amber-400/25 bg-amber-500/8 px-3 py-2 text-[10px] leading-5 text-amber-900 dark:text-amber-100"
+          data-orb-voice-live-safety
+        >
+          {safetyPrompt}
+        </p>
+      ) : null}
+
+      {suggestedQuestion ? (
+        <p className="text-center text-[11px] leading-5 text-[var(--orb-foreground)]/90" data-orb-voice-suggested-question>
+          {suggestedQuestion}
+        </p>
+      ) : null}
+
+      {bargeInFallback && liveState === 'speaking' ? (
+        <p className="text-center text-[10px] text-[var(--orb-muted)]" data-orb-voice-barge-in-fallback>
+          {bargeInFallback}
+        </p>
+      ) : null}
 
       <div
         className="max-h-[min(36dvh,18rem)] overflow-y-auto rounded-2xl border border-[var(--orb-line)]/25 bg-[var(--orb-surface-elevated)]/40 p-3 backdrop-blur-sm"
@@ -103,9 +148,9 @@ export function OrbVoiceLivePanel({
             {interimTranscript}
           </p>
         ) : null}
-        {pauseHint && liveState === 'listening' ? (
+        {pauseHint && liveState === 'listening' && !promptLine ? (
           <p className="mt-3 text-[11px] leading-5 text-[var(--orb-muted)]" data-orb-voice-pause-hint>
-            You can keep going, or end the session when ready.
+            Take your time.
           </p>
         ) : null}
       </div>
@@ -123,7 +168,7 @@ export function OrbVoiceLivePanel({
             {muted ? 'Unmute' : 'Mute'}
           </button>
         ) : null}
-        {onTurnIntoRecord ? (
+        {showTurnIntoRecord && onTurnIntoRecord ? (
           <button
             type="button"
             className="inline-flex min-h-[2.75rem] items-center rounded-full border border-[var(--orb-line)]/60 px-4 py-2 text-xs font-medium text-[var(--orb-muted)]"

@@ -1,9 +1,10 @@
 import { getOrbVoiceProfile } from '@/lib/orb/voice/orb-voice-profiles'
+import { ORB_VOICE_CONVERSATION_STYLE_INSTRUCTIONS } from '@/lib/orb/voice/orb-voice-conversation-engine'
 import type { OrbVoiceModeId, OrbSpokenAnswerLength } from '@/lib/orb/voice/orb-voice-types'
 
 const MODE_INSTRUCTIONS: Record<OrbVoiceModeId, string> = {
   conversational:
-    'Respond as a warm British professional colleague in a children\'s home. Keep spoken answers concise (about 20–60 seconds). Use natural phrasing, one useful follow-up question, and avoid long lists unless asked.',
+    "I'm ORB. Respond as a calm British professional colleague in a children's home. Keep spoken turns short (about 10–30 seconds). One idea at a time. One follow-up question at a time. Acknowledge briefly, then ask thoughtfully.",
   reflective_practice:
     'Support reflective practice: separate facts, staff actions, child voice, and learning points. Ask one curious question at a time. Do not replace professional judgement.',
   recording_support:
@@ -22,8 +23,11 @@ const LENGTH_HINTS: Record<OrbSpokenAnswerLength, string> = {
   detailed: 'The user asked for more detail; still avoid reading huge templates aloud — offer written output in chat.'
 }
 
+export { ORB_VOICE_CONVERSATION_STYLE_INSTRUCTIONS }
+
 export function voiceModeInstruction(mode: OrbVoiceModeId): string {
-  return MODE_INSTRUCTIONS[mode] ?? MODE_INSTRUCTIONS.conversational
+  const modeLine = MODE_INSTRUCTIONS[mode] ?? MODE_INSTRUCTIONS.conversational
+  return `${modeLine} ${ORB_VOICE_CONVERSATION_STYLE_INSTRUCTIONS}`
 }
 
 export function frameMessageForOrbVoice(

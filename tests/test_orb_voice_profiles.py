@@ -40,6 +40,8 @@ def test_session_resolution_includes_profile_metadata():
 
 def test_voice_instructions_include_profile_and_mode():
     text = build_residential_voice_instructions(profile_id="orb_british_female", mode="recording_support")
-    assert "ORB Voice" in text
+    assert "ORB" in text
     assert "warm British female" in text.lower() or "British" in text
     assert "Recording Support" in text
+    assert "one question at a time" in text.lower()
+    assert "professional judgement" in text.lower()
