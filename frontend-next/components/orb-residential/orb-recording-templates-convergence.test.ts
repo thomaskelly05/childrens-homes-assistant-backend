@@ -81,9 +81,9 @@ describe('ORB recording templates convergence', () => {
     assert.match(panel, /hasExistingContent/)
   })
 
-  it('framework JSON has 24 record types with studio templates for primary set', () => {
+  it('framework JSON has 31 record types with studio templates for primary set', () => {
     const json = JSON.parse(readComponent('lib/orb/recording/orb-recording-framework.json'))
-    assert.equal(json.record_types.length, 24)
+    assert.equal(json.record_types.length, 31)
     const studioCount = json.record_types.filter((r: { studio_template_id: string | null }) => r.studio_template_id).length
     assert.ok(studioCount >= 13)
     const incident = json.record_types.find((r: { id: string }) => r.id === 'incident_report')

@@ -12,6 +12,9 @@ import {
   OrbDictateParticipantsPanel,
   OrbDictateTranscriptSegmentsEditor
 } from '@/components/orb-standalone/orb-dictate-station-extras'
+import { OrbDictateSpeakerLabelling } from '@/components/orb/dictate/OrbDictateSpeakerLabelling'
+import { OrbDictateActionPointsPanel } from '@/components/orb/dictate/OrbDictateActionPointsPanel'
+import { SOURCE_CHECK_COPY, TRANSCRIPT_ONLY_COPY } from '@/lib/orb/dictate/orb-dictate-source-check'
 import type { DictateState } from '@/lib/orb/dictate/orb-dictate-state'
 import {
   ORB_DICTATE_MODE_LABELS,
@@ -32,6 +35,7 @@ import {
   type OrbDictateNoteType,
   type OrbDictateStartMode
 } from '@/lib/orb/dictate/orb-dictate-types'
+import { ORB_DICTATE_CAPTURE_MODE_COPY } from '@/lib/orb/dictate/orb-dictate-capability-map'
 import { isOrbVoiceDebugMode } from '@/lib/orb/orb-voice-debug'
 
 type OutputTab = 'professional' | 'summary' | 'actions' | 'transcript' | 'evidence'
@@ -168,6 +172,9 @@ export function OrbDictateMobileExperience({
         </h2>
         <p className="mt-0.5 text-[11px] text-[var(--orb-muted)]" data-orb-dictate-subtitle>
           {ORB_DICTATE_PRODUCT_SUBTITLE}
+        </p>
+        <p className="mt-1 text-[10px] text-[var(--orb-muted)]/90" data-orb-dictate-capture-mode>
+          {ORB_DICTATE_CAPTURE_MODE_COPY}
         </p>
       </header>
       <div
@@ -400,6 +407,20 @@ export function OrbDictateMobileExperience({
               className="mt-2 w-full resize-y rounded-2xl border border-[var(--orb-mobile-line,var(--orb-line))]/60 bg-[var(--orb-mobile-card,var(--orb-surface))] px-3 py-2.5 text-sm leading-6 text-[var(--orb-text,var(--orb-foreground))]"
               data-orb-dictate-captured-text
             />
+            <p className="mt-1.5 text-[10px] text-[var(--orb-muted)]" data-orb-dictate-transcript-availability>
+              {TRANSCRIPT_ONLY_COPY}
+            </p>
+            {segments.length ? (
+              <div className="mt-2">
+                <OrbDictateSpeakerLabelling
+                  compact
+                  segments={segments}
+                  participants={participants}
+                  onSegmentsChange={onSegmentsChange}
+                  onParticipantsChange={onParticipantsChange}
+                />
+              </div>
+            ) : null}
             <button
               type="button"
               className="mt-2 text-xs text-[var(--orb-primary)]"
@@ -543,13 +564,18 @@ export function OrbDictateMobileExperience({
                   ) : outputTab === 'summary' ? (
                     <p>{output.summary}</p>
                   ) : outputTab === 'actions' ? (
-                    <ul className="list-disc space-y-1 pl-4">
-                      {output.actions.map((a) => (
-                        <li key={a}>{a}</li>
-                      ))}
-                    </ul>
+                    <OrbDictateActionPointsPanel
+                      actions={output.actions}
+                      structuredActions={output.structured_actions}
+                      segments={segments}
+                    />
                   ) : outputTab === 'transcript' ? (
-                    <p className="whitespace-pre-wrap">{output.transcript}</p>
+                    <div className="space-y-2">
+                      <p className="whitespace-pre-wrap">{output.transcript}</p>
+                      <p className="text-[10px] text-[var(--orb-muted)]" data-orb-dictate-source-check-disclosure>
+                        {SOURCE_CHECK_COPY}
+                      </p>
+                    </div>
                   ) : (
                     <div className="space-y-2">
                       {output.ofsted_lens ? <p>{output.ofsted_lens}</p> : null}

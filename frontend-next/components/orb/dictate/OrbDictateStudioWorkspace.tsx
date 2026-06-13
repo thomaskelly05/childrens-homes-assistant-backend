@@ -21,6 +21,7 @@ import {
   OrbDictateParticipantsPanel,
   consentReadyForGenerate
 } from '@/components/orb-standalone/orb-dictate-station-extras'
+import { OrbDictateDocumentReference } from '@/components/orb-standalone/orb-dictate-document-reference'
 import {
   buildBrainAnalysisFromGenerate,
   type OrbDictateBrainAnalysis,
@@ -112,6 +113,7 @@ function OrbDictateAdvancedOptions(props: OrbDictateStudioWorkspaceProps & { eff
           fileLabel={props.uploadFileLabel}
           error={props.uploadError}
         />
+        <OrbDictateDocumentReference />
         <OrbDictateGovernanceConsent
           mode={props.dictateMode}
           authorityConsent={props.authorityConsent}
@@ -318,6 +320,7 @@ export function OrbDictateStudioWorkspace(props: OrbDictateStudioWorkspaceProps)
             segments={props.segments}
             participants={props.participants}
             onSegmentsChange={props.onSegmentsChange}
+            onParticipantsChange={props.onParticipantsChange}
             recordingActive={props.recordingActive}
             recordingPaused={props.recordingPaused}
             timerSec={props.timerSec}

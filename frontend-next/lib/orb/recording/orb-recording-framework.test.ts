@@ -15,9 +15,9 @@ function readJson(relativePath: string) {
 }
 
 describe('ORB recording framework frontend', () => {
-  it('defines 24 record types in shared JSON', () => {
+  it('defines 31 record types in shared JSON', () => {
     const data = readJson('orb-recording-framework.json')
-    assert.equal(data.record_types.length, 24)
+    assert.equal(data.record_types.length, 31)
   })
 
   it('studio templates derive from shared framework', () => {

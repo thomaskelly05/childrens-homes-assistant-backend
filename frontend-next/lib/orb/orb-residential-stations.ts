@@ -33,8 +33,8 @@ export const ORB_RESIDENTIAL_STATION_DEFINITIONS: Record<
   orb_dictate: {
     id: 'orb_dictate',
     label: 'Dictate',
-    tagline: 'Capture rough notes.',
-    helper: 'Structure rough speech into records'
+    tagline: 'Record, upload or paste conversations and turn them into safer notes.',
+    helper: 'Record meetings, visits and conversations for safer notes'
   },
   orb_write: {
     id: 'orb_write',

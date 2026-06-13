@@ -4,8 +4,9 @@ import type { ReactNode } from 'react'
 import { Mic, Trash2 } from 'lucide-react'
 
 import { OrbDictateTranscriptSegmentsEditor } from '@/components/orb-standalone/orb-dictate-station-extras'
+import { OrbDictateSpeakerLabelling } from '@/components/orb/dictate/OrbDictateSpeakerLabelling'
 import type { OrbDictateParticipant, OrbDictateTranscriptSegment } from '@/lib/orb/dictate/orb-dictate-speaker'
-import { SPEAKER_BOUNDARY_COPY } from '@/lib/orb/dictate/orb-dictate-speaker'
+import { SPEAKER_BOUNDARY_COPY } from '@/lib/orb/dictate/orb-dictate-speaker-model'
 
 export function OrbTranscriptPanel({
   liveTranscript,
@@ -14,6 +15,7 @@ export function OrbTranscriptPanel({
   segments,
   participants,
   onSegmentsChange,
+  onParticipantsChange,
   recordingActive,
   recordingPaused,
   timerSec,
@@ -29,6 +31,7 @@ export function OrbTranscriptPanel({
   segments: OrbDictateTranscriptSegment[]
   participants: OrbDictateParticipant[]
   onSegmentsChange: (segments: OrbDictateTranscriptSegment[]) => void
+  onParticipantsChange: (participants: OrbDictateParticipant[]) => void
   recordingActive: boolean
   recordingPaused: boolean
   timerSec: number
@@ -102,7 +105,13 @@ export function OrbTranscriptPanel({
           {SPEAKER_BOUNDARY_COPY}
         </p>
         {segments.length ? (
-          <div className="mt-2">
+          <div className="mt-2 space-y-2">
+            <OrbDictateSpeakerLabelling
+              segments={segments}
+              participants={participants}
+              onSegmentsChange={onSegmentsChange}
+              onParticipantsChange={onParticipantsChange}
+            />
             <OrbDictateTranscriptSegmentsEditor
               segments={segments}
               participants={participants}

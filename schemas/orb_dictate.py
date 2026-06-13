@@ -22,7 +22,18 @@ OrbDictateNoteType = Literal[
     "team_meeting",
     "investigation_meeting",
     "strategy_multi_agency_prep",
+    "meeting_notes",
+    "professional_consultation",
+    "home_visit_note",
+    "assessment_notes",
+    "supervision_discussion",
+    "multi_agency_discussion",
+    "strategy_safeguarding_discussion",
 ]
+
+OrbDictateSpeakerSource = Literal["diarised", "manual", "transcript_named", "unknown"]
+
+OrbDictateActionPointStatus = Literal["pending", "confirmed", "dismissed"]
 
 OrbDictateMode = Literal[
     "rough_note",
@@ -125,6 +136,33 @@ class OrbDictateSpeakerSummary(BaseModel):
     needs_review: bool = True
 
 
+class OrbDictateSpeaker(BaseModel):
+    """Converged speaker model — detection vs adult-confirmed identification."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    speaker_id: str
+    display_label: str
+    confirmed_name: str | None = None
+    confirmed_role: str | None = None
+    confidence: float | None = None
+    source: OrbDictateSpeakerSource = "unknown"
+    is_confirmed: bool = False
+
+
+class OrbDictateActionPoint(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    id: str
+    action: str
+    owner: str = "Not stated"
+    deadline: str = "Not stated"
+    status: OrbDictateActionPointStatus = "pending"
+    source_segment_id: str | None = None
+    source_label: str | None = None
+    management_oversight: bool = False
+
+
 class OrbDictateGenerateRequest(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
@@ -175,6 +213,8 @@ class OrbDictateGenerateResponse(BaseModel):
     professional_note: str
     summary: str
     actions: list[str] = Field(default_factory=list)
+    structured_actions: list[OrbDictateActionPoint] = Field(default_factory=list)
+    speakers: list[OrbDictateSpeaker] = Field(default_factory=list)
     transcript: str
     ofsted_lens: str | None = None
     quality_checks: OrbDictateQualityChecks

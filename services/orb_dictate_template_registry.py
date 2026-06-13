@@ -12,6 +12,21 @@ def _sections(*pairs: tuple[str, str, list[str], bool]) -> list[OrbDictateTempla
     ]
 
 
+def _meeting_capture_sections() -> list[OrbDictateTemplateSection]:
+    return _sections(
+        ("purpose", "Purpose of discussion", ["What was the purpose of the discussion?"], True),
+        ("present", "People present", ["Who was present or contributing?"], True),
+        ("child_voice", "Child's voice / wishes / presentation", ["Child voice, wishes or presentation"], True),
+        ("key_info", "Key information shared", ["Key information shared — attribute speakers where known"], True),
+        ("views", "Adult/professional views", ["Professional views expressed"], True),
+        ("decisions", "Decisions or agreed actions", ["Decisions or agreed actions — do not invent"], True),
+        ("risks", "Risks / safeguarding considerations", ["Risks or safeguarding themes"], True),
+        ("oversight", "Management oversight", ["Management oversight required"], True),
+        ("follow_up", "Follow-up required", ["Follow-up required"], True),
+        ("missing", "Missing information / not clear", ["What is missing or unclear?"], False),
+    )
+
+
 _DICTATE_TEMPLATES: dict[OrbDictateNoteType, OrbDictateTemplate] = {
     "daily_record": OrbDictateTemplate(
         note_type="daily_record",
@@ -326,6 +341,69 @@ _DICTATE_TEMPLATES: dict[OrbDictateNoteType, OrbDictateTemplate] = {
         quality_checks=["Child impact", "Evidence specific"],
         export_label="Ofsted evidence summary",
     ),
+    "meeting_notes": OrbDictateTemplate(
+        note_type="meeting_notes",
+        title="Meeting notes",
+        purpose="Capture team meetings and shift discussions with child-centred structure.",
+        when_to_use="After team meetings, shift discussions or internal practice meetings.",
+        sections=_meeting_capture_sections(),
+        quality_checks=["People present", "Child voice where relevant", "Actions with owners where stated"],
+        export_label="Meeting notes",
+    ),
+    "professional_consultation": OrbDictateTemplate(
+        note_type="professional_consultation",
+        title="Professional consultation",
+        purpose="Document professional consultations with clinicians, education or specialists.",
+        when_to_use="After clinical, educational, therapeutic or specialist consultations.",
+        sections=_meeting_capture_sections(),
+        quality_checks=["Consultation purpose clear", "Child voice", "Follow-up actions"],
+        export_label="Professional consultation",
+    ),
+    "home_visit_note": OrbDictateTemplate(
+        note_type="home_visit_note",
+        title="Home visit note",
+        purpose="Record home visits and family contact with child voice and safeguarding focus.",
+        when_to_use="After home visits, family contact sessions or community visits.",
+        sections=_meeting_capture_sections(),
+        quality_checks=["Visit purpose", "Child voice", "Safeguarding considered"],
+        export_label="Home visit note",
+    ),
+    "assessment_notes": OrbDictateTemplate(
+        note_type="assessment_notes",
+        title="Assessment notes",
+        purpose="Structure assessment discussions with evidence-led, child-centred headings.",
+        when_to_use="After assessment meetings or structured professional assessments.",
+        sections=_meeting_capture_sections(),
+        quality_checks=["Assessment focus clear", "Child voice", "Missing information flagged"],
+        export_label="Assessment notes",
+    ),
+    "supervision_discussion": OrbDictateTemplate(
+        note_type="supervision_discussion",
+        title="Supervision discussion",
+        purpose="Capture reflective supervision with practice reflection and child-centred focus.",
+        when_to_use="After supervision sessions or practice supervision discussions.",
+        sections=_meeting_capture_sections(),
+        quality_checks=["Reflective practice", "Child-centred themes", "Actions agreed"],
+        export_label="Supervision discussion",
+    ),
+    "multi_agency_discussion": OrbDictateTemplate(
+        note_type="multi_agency_discussion",
+        title="Multi-agency discussion",
+        purpose="Document multi-agency meetings with child voice and agreed actions.",
+        when_to_use="After LAC reviews, multi-agency meetings or partner strategy discussions.",
+        sections=_meeting_capture_sections(),
+        quality_checks=["Agencies represented", "Child voice", "Actions with owners where stated"],
+        export_label="Multi-agency discussion",
+    ),
+    "strategy_safeguarding_discussion": OrbDictateTemplate(
+        note_type="strategy_safeguarding_discussion",
+        title="Strategy / safeguarding discussion",
+        purpose="Capture strategy or safeguarding discussion themes — draft for careful adult review.",
+        when_to_use="After strategy or safeguarding meetings you are authorised to record.",
+        sections=_meeting_capture_sections(),
+        quality_checks=["Safeguarding themes", "Management oversight", "No findings unless stated"],
+        export_label="Strategy / safeguarding discussion",
+    ),
 }
 
 
@@ -340,6 +418,9 @@ ORB_DICTATE_HERO_OUTPUT_TYPES: tuple[OrbDictateNoteType, ...] = (
     "supervision_reflection",
     "safeguarding_concern_record",
     "manager_oversight_note",
+    "meeting_notes",
+    "home_visit_note",
+    "multi_agency_discussion",
 )
 
 

@@ -12,9 +12,9 @@ from services.orb_recording_framework_service import (
 )
 
 
-def test_framework_has_24_record_types():
+def test_framework_has_31_record_types():
     types = list_record_types()
-    assert len(types) == 24
+    assert len(types) == 31
     ids = {t["id"] for t in types}
     assert "missing_from_home_record" in ids
     assert "reg_45_reflection" in ids
@@ -62,4 +62,4 @@ def test_match_policy_document_to_record_types():
 def test_framework_payload_version():
     payload = get_framework_payload()
     assert payload["version"]
-    assert len(payload["record_types"]) == 24
+    assert len(payload["record_types"]) == 31

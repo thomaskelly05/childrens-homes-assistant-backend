@@ -33,10 +33,12 @@ from schemas.orb_dictate import (
     OrbDictateSaveRequest,
     OrbDictateSaveResponse,
 )
+from services.orb_dictate_action_points import normalize_structured_actions
 from services.orb_dictate_quality import MULTI_PERSON_NOTE_TYPES, compute_quality_checks
 from services.orb_dictate_speaker import (
     SPEAKER_BOUNDARY_COPY,
     build_speaker_summary,
+    build_speakers_from_segments,
     participants_block_for_prompt,
     segments_to_plain_text,
     suggest_participants_from_text,
@@ -162,6 +164,27 @@ def _truncate(text: str, max_len: int = 120_000) -> str:
     return (text or "").strip()[:max_len]
 
 
+def _enrich_meeting_metadata(
+    response: OrbDictateGenerateResponse,
+    *,
+    parsed_actions: list[dict] | None = None,
+) -> OrbDictateGenerateResponse:
+    speakers = build_speakers_from_segments(response.segments, response.participants)
+    structured = normalize_structured_actions(
+        parsed_actions,
+        fallback_strings=response.actions,
+        segments=response.segments,
+    )
+    return response.model_copy(
+        update={
+            "speakers": speakers,
+            "structured_actions": structured,
+            "speaker_summary": build_speaker_summary(response.participants, response.segments),
+            "speaker_boundary_notice": SPEAKER_BOUNDARY_COPY,
+        }
+    )
+
+
 def _fallback_generate(request: OrbDictateGenerateRequest) -> OrbDictateGenerateResponse:
     note_type = _resolve_note_type(request)
     template = get_dictate_template(note_type)  # type: ignore[arg-type]
@@ -195,7 +218,8 @@ def _fallback_generate(request: OrbDictateGenerateRequest) -> OrbDictateGenerate
             "Inspection lens: link observable practice to child impact and Quality Standards evidence. "
             "This is preparation support only — not a regulatory judgement."
         )
-    return OrbDictateGenerateResponse(
+    return _enrich_meeting_metadata(
+        OrbDictateGenerateResponse(
         title=template.export_label,
         note_type=note_type,  # type: ignore[arg-type]
         professional_note=professional,
@@ -215,6 +239,7 @@ def _fallback_generate(request: OrbDictateGenerateRequest) -> OrbDictateGenerate
             mode=request.mode,
             transcript_text=transcript,
         ),
+    )
     )
 
 
@@ -276,7 +301,10 @@ def _build_generate_prompt(request: OrbDictateGenerateRequest, note_type: str) -
         "You are ORB Dictate for ORB Residential — Powered by IndiCare Intelligence. "
         "Turn rough spoken notes into professional, factual recording wording. "
         "Return JSON only with keys: title, professional_note, summary, actions (array of strings), "
+        "structured_actions (optional array of {action, owner, deadline, management_oversight}), "
         "ofsted_lens (string or null). "
+        "For structured_actions: use owner/deadline only when explicitly stated in the transcript; "
+        "otherwise omit or use 'Not stated'. Do not invent owners or deadlines. "
         "Never invent facts. Use [not stated] or section placeholders where detail is missing. "
         "Do not fabricate quotes, actions, outcomes, emotional states or follow-up plans. "
         "Use non-judgemental, child-centred language. "
@@ -367,6 +395,8 @@ def generate_dictate_note(
     summary = _truncate(str(parsed.get("summary") or ""), 4000)
     actions_raw = parsed.get("actions") or []
     actions = [str(a).strip() for a in actions_raw if str(a).strip()][:20]
+    structured_raw = parsed.get("structured_actions")
+    parsed_structured = structured_raw if isinstance(structured_raw, list) else None
     ofsted = parsed.get("ofsted_lens")
     ofsted_text = _truncate(str(ofsted), 4000) if ofsted else None
     if request.include_ofsted_lens and not ofsted_text:
@@ -387,7 +417,8 @@ def generate_dictate_note(
         intel_packet=intel_packet,
     )
     quality = compute_quality_checks(professional, note_type)
-    return OrbDictateGenerateResponse(
+    return _enrich_meeting_metadata(
+        OrbDictateGenerateResponse(
         title=title,
         note_type=note_type,  # type: ignore[arg-type]
         professional_note=professional,
@@ -408,6 +439,8 @@ def generate_dictate_note(
             transcript_text=transcript_text,
             intelligence_meta=intel_meta,
         ),
+    ),
+        parsed_actions=parsed_structured,
     )
 
 
