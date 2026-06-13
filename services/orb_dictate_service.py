@@ -445,17 +445,42 @@ def generate_dictate_note(
 
 
 async def transcribe_dictate_audio(file_path: str) -> dict[str, Any]:
+    from services.orb_dictate_diarisation import (
+        diarisation_confidence_warnings,
+        map_diarisation_to_orb_transcript_segments,
+    )
+
     result = await transcribe_audio(file_path)
     transcript = str(result.get("transcript") or result.get("text") or "").strip()
-    participants = suggest_participants_from_text(transcript)
-    segments = text_to_segments(transcript, source="upload", participants=participants)
-    return {
+    raw_segments = result.get("segments") or []
+    diarisation_warnings: list[str] = []
+    has_provider_diarisation = False
+
+    if raw_segments and any(
+        isinstance(s, dict) and (s.get("speaker") or s.get("speaker_id")) for s in raw_segments
+    ):
+        segments, diarisation_warnings, has_provider_diarisation = map_diarisation_to_orb_transcript_segments(
+            raw_segments,
+            source="upload",
+        )
+        participants = suggest_participants_from_text(transcript)
+    else:
+        participants = suggest_participants_from_text(transcript)
+        segments = text_to_segments(transcript, source="upload", participants=participants)
+
+    diarisation_warnings.extend(diarisation_confidence_warnings(segments))
+    payload: dict[str, Any] = {
         "transcript": transcript,
         "segments": [s.model_dump() for s in segments],
         "participants": [p.model_dump() for p in participants],
         "speaker_summary": build_speaker_summary(participants, segments).model_dump(),
         "speaker_boundary_notice": SPEAKER_BOUNDARY_COPY,
     }
+    if diarisation_warnings:
+        payload["diarisation_warnings"] = diarisation_warnings
+    if has_provider_diarisation:
+        payload["has_provider_diarisation"] = True
+    return payload
 
 
 def _user_can_access_os_ai_notes(user: dict[str, Any]) -> bool:
