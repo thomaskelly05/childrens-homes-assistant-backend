@@ -78,6 +78,13 @@ MULTI_PERSON_NOTE_TYPES = frozenset(
         "investigation_meeting",
         "supervision_reflection",
         "handover_note",
+        "meeting_notes",
+        "professional_consultation",
+        "home_visit_note",
+        "assessment_notes",
+        "supervision_discussion",
+        "multi_agency_discussion",
+        "strategy_safeguarding_discussion",
     }
 )
 

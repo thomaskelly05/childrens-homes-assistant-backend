@@ -1,4 +1,5 @@
 import type { OrbDictateBrainMetadata } from '@/lib/orb/dictate/orb-dictate-brain-metadata'
+import type { OrbDictateActionPoint } from '@/lib/orb/dictate/orb-dictate-action-points'
 
 export type OrbDictateNoteType =
   | 'daily_record'
@@ -18,6 +19,13 @@ export type OrbDictateNoteType =
   | 'team_meeting'
   | 'investigation_meeting'
   | 'strategy_multi_agency_prep'
+  | 'meeting_notes'
+  | 'professional_consultation'
+  | 'home_visit_note'
+  | 'assessment_notes'
+  | 'supervision_discussion'
+  | 'multi_agency_discussion'
+  | 'strategy_safeguarding_discussion'
 
 export type OrbDictateStartMode =
   | 'record_note'
@@ -76,6 +84,16 @@ export type OrbDictateGenerateResult = {
   }>
   speaker_summary?: { known_speakers: number; unknown_speakers: number; needs_review: boolean }
   speaker_boundary_notice?: string
+  structured_actions?: OrbDictateActionPoint[]
+  speakers?: Array<{
+    speaker_id: string
+    display_label: string
+    confirmed_name?: string
+    confirmed_role?: string
+    confidence?: number
+    source: string
+    is_confirmed: boolean
+  }>
 }
 
 export type OrbDictateTemplate = {
@@ -103,7 +121,14 @@ export const ORB_DICTATE_NOTE_TYPE_LABELS: Record<OrbDictateNoteType, string> = 
   ofsted_evidence_summary: 'Ofsted evidence summary',
   team_meeting: 'Team meeting',
   investigation_meeting: 'Investigation meeting',
-  strategy_multi_agency_prep: 'Strategy / multi-agency prep'
+  strategy_multi_agency_prep: 'Strategy / multi-agency prep',
+  meeting_notes: 'Meeting notes',
+  professional_consultation: 'Professional consultation',
+  home_visit_note: 'Home visit note',
+  assessment_notes: 'Assessment notes',
+  supervision_discussion: 'Supervision discussion',
+  multi_agency_discussion: 'Multi-agency discussion',
+  strategy_safeguarding_discussion: 'Strategy / safeguarding discussion'
 }
 
 export const REFLECTIVE_DEBRIEF_QUESTIONS = [
@@ -137,6 +162,6 @@ export const ORB_DICTATE_GOVERNANCE_COPY = {
   noLiveRecords: 'ORB does not access live care records in standalone mode.',
   retention: 'Transcripts are kept only when you choose to save. You can delete drafts at any time.',
   speaker:
-    'ORB can label speakers from introductions and corrections. It does not verify identity by voice.',
+    'ORB can separate speakers where possible. Confirm names or roles before using them in a record. ORB does not verify identity by voice.',
   saveWording: 'Save to ORB · Copy for your records · Export · Send to chat — draft for review.'
 } as const

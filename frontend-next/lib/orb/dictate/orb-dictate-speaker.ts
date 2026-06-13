@@ -59,7 +59,7 @@ export const MODE_REQUIRES_CONSENT: OrbDictateMode[] = [
 ]
 
 export const SPEAKER_BOUNDARY_COPY =
-  'Speaker labels are based on introductions and your corrections. ORB Dictate does not verify identity by voice.'
+  'ORB can separate speakers where possible. Confirm names or roles before using them in a record. ORB does not verify identity by voice.'
 
 export const SPEAKER_INTRO_PROMPT =
   "Before you start, you can introduce who is present. For example: 'Tom Kelly, Registered Manager, speaking.' ORB will use this to label the transcript."

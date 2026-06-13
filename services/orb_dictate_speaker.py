@@ -8,13 +8,14 @@ from uuid import uuid4
 
 from schemas.orb_dictate import (
     OrbDictateParticipant,
+    OrbDictateSpeaker,
     OrbDictateSpeakerSummary,
     OrbDictateTranscriptSegment,
 )
 
 SPEAKER_BOUNDARY_COPY = (
-    "Speaker labels are based on introductions and your corrections. "
-    "ORB Dictate does not verify identity by voice."
+    "ORB can separate speakers where possible. Confirm names or roles before using them in a record. "
+    "ORB does not verify identity by voice."
 )
 
 INTRO_PATTERNS: list[tuple[re.Pattern[str], str]] = [
@@ -213,6 +214,72 @@ def anonymise_note_text(
             replacement = p.role or "Staff member"
             result = re.sub(re.escape(p.name), replacement, result, flags=re.I)
     return result
+
+
+_GENERIC_SPEAKER_RE = re.compile(r"^Speaker (\d+)$", re.I)
+
+
+def _is_generic_speaker_label(label: str) -> bool:
+    return bool(_GENERIC_SPEAKER_RE.match((label or "").strip()))
+
+
+def _infer_speaker_source(participant: OrbDictateParticipant | None, label: str) -> str:
+    if participant and participant.introduced_by == "self":
+        return "transcript_named"
+    if participant and participant.introduced_by == "manual":
+        return "manual"
+    if participant and participant.introduced_by == "import":
+        return "transcript_named"
+    if not _is_generic_speaker_label(label) and label.strip():
+        return "transcript_named"
+    return "unknown"
+
+
+def _is_speaker_confirmed(participant: OrbDictateParticipant | None, label: str) -> bool:
+    if participant and participant.introduced_by in {"manual", "self"}:
+        return True
+    if participant and participant.name.strip() and not _is_generic_speaker_label(participant.name):
+        return True
+    if not _is_generic_speaker_label(label) and participant and (participant.role or "").strip():
+        return True
+    return False
+
+
+def build_speakers_from_segments(
+    segments: list[OrbDictateTranscriptSegment],
+    participants: list[OrbDictateParticipant] | None = None,
+) -> list[OrbDictateSpeaker]:
+    """Build converged speaker list — never guesses real identities from voice."""
+    participants = participants or []
+    by_participant_id = {p.id: p for p in participants}
+    speakers: list[OrbDictateSpeaker] = []
+    seen: set[str] = set()
+
+    for seg in segments:
+        key = seg.speaker_id or (seg.speaker_label or "").lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        participant = by_participant_id.get(seg.speaker_id) if seg.speaker_id else None
+        display_label = seg.speaker_label or "Speaker 1"
+        source: str = "unknown"
+        if _is_generic_speaker_label(display_label):
+            source = "diarised" if seg.source == "upload" else "unknown"
+        else:
+            source = _infer_speaker_source(participant, display_label)
+
+        speakers.append(
+            OrbDictateSpeaker(
+                speaker_id=seg.speaker_id or _new_id("spk"),
+                display_label=display_label,
+                confirmed_name=participant.name if participant else None,
+                confirmed_role=participant.role if participant else None,
+                confidence=seg.confidence,
+                source=source,  # type: ignore[arg-type]
+                is_confirmed=_is_speaker_confirmed(participant, display_label),
+            )
+        )
+    return speakers
 
 
 def participants_block_for_prompt(

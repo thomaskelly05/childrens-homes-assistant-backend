@@ -43,7 +43,10 @@ describe('ORB Residential full-product convergence', () => {
     assert.match(dictateTypes, /orbResidentialStation\('orb_dictate'\)/)
     assert.match(tools, /ORB_RESIDENTIAL_STATION_DEFINITIONS/)
     assert.equal(ORB_RESIDENTIAL_STATION_DEFINITIONS.orb_voice.tagline, 'Talk it through.')
-    assert.equal(ORB_RESIDENTIAL_STATION_DEFINITIONS.orb_dictate.tagline, 'Capture rough notes.')
+    assert.equal(
+      ORB_RESIDENTIAL_STATION_DEFINITIONS.orb_dictate.tagline,
+      'Record, upload or paste conversations and turn them into safer notes.'
+    )
     assert.equal(ORB_RESIDENTIAL_STATION_DEFINITIONS.orb_write.tagline, 'Review and finalise.')
   })
 

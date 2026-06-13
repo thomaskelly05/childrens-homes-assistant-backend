@@ -1974,6 +1974,672 @@
       "safety_disclaimer": "Draft only — formal plans require authorised sign-off.",
       "dictate_note_type": "action_plan",
       "studio_template_id": "action_plan"
+    },
+    {
+      "id": "meeting_notes",
+      "label": "Meeting Notes",
+      "category": "meeting",
+      "description": "Structured notes from team meetings, shift discussions and internal practice meetings.",
+      "purpose": "Capture meeting discussion with child-centred professional structure.",
+      "when_to_use": "After team meetings, shift discussions, practice meetings or internal planning conversations.",
+      "when_not_to_use": "For formal supervision records — use supervision discussion template after the session.",
+      "required_sections": [
+        "Purpose of discussion",
+        "People present",
+        "Child's voice / wishes / presentation",
+        "Key information shared",
+        "Adult/professional views",
+        "Decisions or agreed actions"
+      ],
+      "optional_sections": [
+        "Risks / safeguarding considerations",
+        "Management oversight",
+        "Follow-up required",
+        "Missing information / not clear"
+      ],
+      "missing_evidence_checks": [
+        "Purpose clear",
+        "People present listed",
+        "Child voice where relevant",
+        "Decisions or actions stated"
+      ],
+      "safeguarding_checks": [
+        "Safeguarding themes flagged where discussed",
+        "Management oversight noted if required"
+      ],
+      "child_voice_checks": [
+        "Child's voice, wishes or presentation included where discussed"
+      ],
+      "manager_oversight_checks": [
+        "Management oversight and follow-up identified"
+      ],
+      "professional_language_guidance": "Use child-centred, factual language. Attribute views to speakers where known. Do not invent names, decisions or actions.",
+      "regulatory_evidence_points": [
+        "Multi-agency working",
+        "Child-centred recording",
+        "Professional accountability"
+      ],
+      "related_quality_standards": [
+        "recording_quality",
+        "child_voice",
+        "safeguarding",
+        "manager_oversight"
+      ],
+      "suggested_outputs": [
+        "meeting_notes",
+        "team_meeting",
+        "action_plan",
+        "handover"
+      ],
+      "final_document_headings": [
+        "Purpose of discussion",
+        "People present",
+        "Child's voice / wishes / presentation",
+        "Key information shared",
+        "Adult/professional views",
+        "Decisions or agreed actions",
+        "Risks / safeguarding considerations",
+        "Management oversight",
+        "Follow-up required",
+        "Missing information / not clear"
+      ],
+      "pdf_heading_order": [
+        "Purpose of discussion",
+        "People present",
+        "Child's voice / wishes / presentation",
+        "Key information shared",
+        "Adult/professional views",
+        "Decisions or agreed actions",
+        "Risks / safeguarding considerations",
+        "Management oversight",
+        "Follow-up required",
+        "Missing information / not clear"
+      ],
+      "related_templates": [
+        "meeting_notes"
+      ],
+      "related_document_lenses": [
+        "extract_actions",
+        "explain"
+      ],
+      "suggested_follow_up_actions": [
+        "Review draft",
+        "Confirm speaker labels",
+        "Finalise in ORB Write"
+      ],
+      "safety_disclaimer": "Draft only — adult review required. ORB supports recording and reflection; it does not replace professional judgement or safeguarding procedures.",
+      "dictate_note_type": "meeting_notes",
+      "studio_template_id": "meeting_notes"
+    },
+    {
+      "id": "professional_consultation",
+      "label": "Professional Consultation",
+      "category": "meeting",
+      "description": "Notes from professional consultations with clinicians, education or external specialists.",
+      "purpose": "Document consultation content with clear child-centred focus.",
+      "when_to_use": "After clinical, educational, therapeutic or specialist professional consultations.",
+      "when_not_to_use": "For informal chats without professional purpose — use general dictation.",
+      "required_sections": [
+        "Purpose of discussion",
+        "People present",
+        "Child's voice / wishes / presentation",
+        "Key information shared",
+        "Adult/professional views",
+        "Decisions or agreed actions"
+      ],
+      "optional_sections": [
+        "Risks / safeguarding considerations",
+        "Management oversight",
+        "Follow-up required",
+        "Missing information / not clear"
+      ],
+      "missing_evidence_checks": [
+        "Purpose clear",
+        "People present listed",
+        "Child voice where relevant",
+        "Decisions or actions stated"
+      ],
+      "safeguarding_checks": [
+        "Safeguarding themes flagged where discussed",
+        "Management oversight noted if required"
+      ],
+      "child_voice_checks": [
+        "Child's voice, wishes or presentation included where discussed"
+      ],
+      "manager_oversight_checks": [
+        "Management oversight and follow-up identified"
+      ],
+      "professional_language_guidance": "Use child-centred, factual language. Attribute views to speakers where known. Do not invent names, decisions or actions.",
+      "regulatory_evidence_points": [
+        "Multi-agency working",
+        "Child-centred recording",
+        "Professional accountability"
+      ],
+      "related_quality_standards": [
+        "recording_quality",
+        "child_voice",
+        "safeguarding",
+        "manager_oversight"
+      ],
+      "suggested_outputs": [
+        "professional_consultation",
+        "keywork_summary",
+        "care_plan_update"
+      ],
+      "final_document_headings": [
+        "Purpose of discussion",
+        "People present",
+        "Child's voice / wishes / presentation",
+        "Key information shared",
+        "Adult/professional views",
+        "Decisions or agreed actions",
+        "Risks / safeguarding considerations",
+        "Management oversight",
+        "Follow-up required",
+        "Missing information / not clear"
+      ],
+      "pdf_heading_order": [
+        "Purpose of discussion",
+        "People present",
+        "Child's voice / wishes / presentation",
+        "Key information shared",
+        "Adult/professional views",
+        "Decisions or agreed actions",
+        "Risks / safeguarding considerations",
+        "Management oversight",
+        "Follow-up required",
+        "Missing information / not clear"
+      ],
+      "related_templates": [
+        "professional_consultation"
+      ],
+      "related_document_lenses": [
+        "extract_actions",
+        "explain"
+      ],
+      "suggested_follow_up_actions": [
+        "Review draft",
+        "Confirm speaker labels",
+        "Finalise in ORB Write"
+      ],
+      "safety_disclaimer": "Draft only — adult review required. ORB supports recording and reflection; it does not replace professional judgement or safeguarding procedures.",
+      "dictate_note_type": "professional_consultation",
+      "studio_template_id": "professional_consultation"
+    },
+    {
+      "id": "home_visit_note",
+      "label": "Home Visit Note",
+      "category": "meeting",
+      "description": "Notes from home visits, family contact sessions or visits in the community.",
+      "purpose": "Record home visit or family contact discussions with child voice and safeguarding focus.",
+      "when_to_use": "After home visits, family contact sessions, community visits or placement visits.",
+      "when_not_to_use": "For routine in-home daily events — use daily record.",
+      "required_sections": [
+        "Purpose of discussion",
+        "People present",
+        "Child's voice / wishes / presentation",
+        "Key information shared",
+        "Adult/professional views",
+        "Decisions or agreed actions"
+      ],
+      "optional_sections": [
+        "Risks / safeguarding considerations",
+        "Management oversight",
+        "Follow-up required",
+        "Missing information / not clear"
+      ],
+      "missing_evidence_checks": [
+        "Purpose clear",
+        "People present listed",
+        "Child voice where relevant",
+        "Decisions or actions stated"
+      ],
+      "safeguarding_checks": [
+        "Safeguarding themes flagged where discussed",
+        "Management oversight noted if required"
+      ],
+      "child_voice_checks": [
+        "Child's voice, wishes or presentation included where discussed"
+      ],
+      "manager_oversight_checks": [
+        "Management oversight and follow-up identified"
+      ],
+      "professional_language_guidance": "Use child-centred, factual language. Attribute views to speakers where known. Do not invent names, decisions or actions.",
+      "regulatory_evidence_points": [
+        "Multi-agency working",
+        "Child-centred recording",
+        "Professional accountability"
+      ],
+      "related_quality_standards": [
+        "recording_quality",
+        "child_voice",
+        "safeguarding",
+        "manager_oversight"
+      ],
+      "suggested_outputs": [
+        "home_visit_note",
+        "family_contact_record",
+        "chronology_entry"
+      ],
+      "final_document_headings": [
+        "Purpose of discussion",
+        "People present",
+        "Child's voice / wishes / presentation",
+        "Key information shared",
+        "Adult/professional views",
+        "Decisions or agreed actions",
+        "Risks / safeguarding considerations",
+        "Management oversight",
+        "Follow-up required",
+        "Missing information / not clear"
+      ],
+      "pdf_heading_order": [
+        "Purpose of discussion",
+        "People present",
+        "Child's voice / wishes / presentation",
+        "Key information shared",
+        "Adult/professional views",
+        "Decisions or agreed actions",
+        "Risks / safeguarding considerations",
+        "Management oversight",
+        "Follow-up required",
+        "Missing information / not clear"
+      ],
+      "related_templates": [
+        "home_visit_note"
+      ],
+      "related_document_lenses": [
+        "extract_actions",
+        "explain"
+      ],
+      "suggested_follow_up_actions": [
+        "Review draft",
+        "Confirm speaker labels",
+        "Finalise in ORB Write"
+      ],
+      "safety_disclaimer": "Draft only — adult review required. ORB supports recording and reflection; it does not replace professional judgement or safeguarding procedures.",
+      "dictate_note_type": "home_visit_note",
+      "studio_template_id": "home_visit_note"
+    },
+    {
+      "id": "assessment_notes",
+      "label": "Assessment Notes",
+      "category": "meeting",
+      "description": "Notes from assessments, reviews or structured professional discussions about a child.",
+      "purpose": "Structure assessment discussions with evidence-led, child-centred headings.",
+      "when_to_use": "After assessment meetings, review discussions or structured professional assessments.",
+      "when_not_to_use": "For final signed assessments — this is a draft capture aid only.",
+      "required_sections": [
+        "Purpose of discussion",
+        "People present",
+        "Child's voice / wishes / presentation",
+        "Key information shared",
+        "Adult/professional views",
+        "Decisions or agreed actions"
+      ],
+      "optional_sections": [
+        "Risks / safeguarding considerations",
+        "Management oversight",
+        "Follow-up required",
+        "Missing information / not clear"
+      ],
+      "missing_evidence_checks": [
+        "Purpose clear",
+        "People present listed",
+        "Child voice where relevant",
+        "Decisions or actions stated"
+      ],
+      "safeguarding_checks": [
+        "Safeguarding themes flagged where discussed",
+        "Management oversight noted if required"
+      ],
+      "child_voice_checks": [
+        "Child's voice, wishes or presentation included where discussed"
+      ],
+      "manager_oversight_checks": [
+        "Management oversight and follow-up identified"
+      ],
+      "professional_language_guidance": "Use child-centred, factual language. Attribute views to speakers where known. Do not invent names, decisions or actions.",
+      "regulatory_evidence_points": [
+        "Multi-agency working",
+        "Child-centred recording",
+        "Professional accountability"
+      ],
+      "related_quality_standards": [
+        "recording_quality",
+        "child_voice",
+        "safeguarding",
+        "manager_oversight"
+      ],
+      "suggested_outputs": [
+        "assessment_notes",
+        "care_plan_update",
+        "risk_assessment_update"
+      ],
+      "final_document_headings": [
+        "Purpose of discussion",
+        "People present",
+        "Child's voice / wishes / presentation",
+        "Key information shared",
+        "Adult/professional views",
+        "Decisions or agreed actions",
+        "Risks / safeguarding considerations",
+        "Management oversight",
+        "Follow-up required",
+        "Missing information / not clear"
+      ],
+      "pdf_heading_order": [
+        "Purpose of discussion",
+        "People present",
+        "Child's voice / wishes / presentation",
+        "Key information shared",
+        "Adult/professional views",
+        "Decisions or agreed actions",
+        "Risks / safeguarding considerations",
+        "Management oversight",
+        "Follow-up required",
+        "Missing information / not clear"
+      ],
+      "related_templates": [
+        "assessment_notes"
+      ],
+      "related_document_lenses": [
+        "extract_actions",
+        "explain"
+      ],
+      "suggested_follow_up_actions": [
+        "Review draft",
+        "Confirm speaker labels",
+        "Finalise in ORB Write"
+      ],
+      "safety_disclaimer": "Draft only — adult review required. ORB supports recording and reflection; it does not replace professional judgement or safeguarding procedures.",
+      "dictate_note_type": "assessment_notes",
+      "studio_template_id": "assessment_notes"
+    },
+    {
+      "id": "supervision_discussion",
+      "label": "Supervision Discussion",
+      "category": "meeting",
+      "description": "Record of reflective supervision or practice supervision discussions.",
+      "purpose": "Capture supervision discussion with practice reflection and child-centred focus.",
+      "when_to_use": "After supervision sessions, practice discussions or reflective supervision meetings.",
+      "when_not_to_use": "For pre-supervision preparation only — use supervision preparation template.",
+      "required_sections": [
+        "Purpose of discussion",
+        "People present",
+        "Child's voice / wishes / presentation",
+        "Key information shared",
+        "Adult/professional views",
+        "Decisions or agreed actions"
+      ],
+      "optional_sections": [
+        "Risks / safeguarding considerations",
+        "Management oversight",
+        "Follow-up required",
+        "Missing information / not clear"
+      ],
+      "missing_evidence_checks": [
+        "Purpose clear",
+        "People present listed",
+        "Child voice where relevant",
+        "Decisions or actions stated"
+      ],
+      "safeguarding_checks": [
+        "Safeguarding themes flagged where discussed",
+        "Management oversight noted if required"
+      ],
+      "child_voice_checks": [
+        "Child's voice, wishes or presentation included where discussed"
+      ],
+      "manager_oversight_checks": [
+        "Management oversight and follow-up identified"
+      ],
+      "professional_language_guidance": "Use child-centred, factual language. Attribute views to speakers where known. Do not invent names, decisions or actions.",
+      "regulatory_evidence_points": [
+        "Multi-agency working",
+        "Child-centred recording",
+        "Professional accountability"
+      ],
+      "related_quality_standards": [
+        "recording_quality",
+        "child_voice",
+        "safeguarding",
+        "manager_oversight"
+      ],
+      "suggested_outputs": [
+        "supervision_discussion",
+        "supervision_reflection",
+        "action_plan"
+      ],
+      "final_document_headings": [
+        "Purpose of discussion",
+        "People present",
+        "Child's voice / wishes / presentation",
+        "Key information shared",
+        "Adult/professional views",
+        "Decisions or agreed actions",
+        "Risks / safeguarding considerations",
+        "Management oversight",
+        "Follow-up required",
+        "Missing information / not clear"
+      ],
+      "pdf_heading_order": [
+        "Purpose of discussion",
+        "People present",
+        "Child's voice / wishes / presentation",
+        "Key information shared",
+        "Adult/professional views",
+        "Decisions or agreed actions",
+        "Risks / safeguarding considerations",
+        "Management oversight",
+        "Follow-up required",
+        "Missing information / not clear"
+      ],
+      "related_templates": [
+        "supervision_discussion"
+      ],
+      "related_document_lenses": [
+        "extract_actions",
+        "explain"
+      ],
+      "suggested_follow_up_actions": [
+        "Review draft",
+        "Confirm speaker labels",
+        "Finalise in ORB Write"
+      ],
+      "safety_disclaimer": "Draft only — adult review required. ORB supports recording and reflection; it does not replace professional judgement or safeguarding procedures.",
+      "dictate_note_type": "supervision_discussion",
+      "studio_template_id": "supervision_discussion"
+    },
+    {
+      "id": "multi_agency_discussion",
+      "label": "Multi-agency Discussion",
+      "category": "multi_agency",
+      "description": "Notes from multi-agency meetings, LAC reviews and partner discussions.",
+      "purpose": "Document multi-agency discussion with child voice and agreed actions.",
+      "when_to_use": "After LAC reviews, multi-agency meetings, partner strategy discussions or network meetings.",
+      "when_not_to_use": "For pre-meeting preparation — use strategy / multi-agency prep.",
+      "required_sections": [
+        "Purpose of discussion",
+        "People present",
+        "Child's voice / wishes / presentation",
+        "Key information shared",
+        "Adult/professional views",
+        "Decisions or agreed actions"
+      ],
+      "optional_sections": [
+        "Risks / safeguarding considerations",
+        "Management oversight",
+        "Follow-up required",
+        "Missing information / not clear"
+      ],
+      "missing_evidence_checks": [
+        "Purpose clear",
+        "People present listed",
+        "Child voice where relevant",
+        "Decisions or actions stated"
+      ],
+      "safeguarding_checks": [
+        "Safeguarding themes flagged where discussed",
+        "Management oversight noted if required"
+      ],
+      "child_voice_checks": [
+        "Child's voice, wishes or presentation included where discussed"
+      ],
+      "manager_oversight_checks": [
+        "Management oversight and follow-up identified"
+      ],
+      "professional_language_guidance": "Use child-centred, factual language. Attribute views to speakers where known. Do not invent names, decisions or actions.",
+      "regulatory_evidence_points": [
+        "Multi-agency working",
+        "Child-centred recording",
+        "Professional accountability"
+      ],
+      "related_quality_standards": [
+        "recording_quality",
+        "child_voice",
+        "safeguarding",
+        "manager_oversight"
+      ],
+      "suggested_outputs": [
+        "multi_agency_discussion",
+        "strategy_multi_agency_prep",
+        "social_worker_update"
+      ],
+      "final_document_headings": [
+        "Purpose of discussion",
+        "People present",
+        "Child's voice / wishes / presentation",
+        "Key information shared",
+        "Adult/professional views",
+        "Decisions or agreed actions",
+        "Risks / safeguarding considerations",
+        "Management oversight",
+        "Follow-up required",
+        "Missing information / not clear"
+      ],
+      "pdf_heading_order": [
+        "Purpose of discussion",
+        "People present",
+        "Child's voice / wishes / presentation",
+        "Key information shared",
+        "Adult/professional views",
+        "Decisions or agreed actions",
+        "Risks / safeguarding considerations",
+        "Management oversight",
+        "Follow-up required",
+        "Missing information / not clear"
+      ],
+      "related_templates": [
+        "multi_agency_discussion"
+      ],
+      "related_document_lenses": [
+        "extract_actions",
+        "explain"
+      ],
+      "suggested_follow_up_actions": [
+        "Review draft",
+        "Confirm speaker labels",
+        "Finalise in ORB Write"
+      ],
+      "safety_disclaimer": "Draft only — adult review required. ORB supports recording and reflection; it does not replace professional judgement or safeguarding procedures.",
+      "dictate_note_type": "multi_agency_discussion",
+      "studio_template_id": "multi_agency_discussion"
+    },
+    {
+      "id": "strategy_safeguarding_discussion",
+      "label": "Strategy / Safeguarding Discussion",
+      "category": "safeguarding",
+      "description": "Notes from strategy discussions or safeguarding meetings where carefully governed recording is required.",
+      "purpose": "Capture strategy or safeguarding discussion themes with clear boundaries — draft for adult review.",
+      "when_to_use": "After strategy discussions, safeguarding meetings or high-level risk planning conversations you are authorised to record.",
+      "when_not_to_use": "For active child protection investigations — follow local authority guidance; do not use ORB to make findings.",
+      "required_sections": [
+        "Purpose of discussion",
+        "People present",
+        "Child's voice / wishes / presentation",
+        "Key information shared",
+        "Adult/professional views",
+        "Decisions or agreed actions"
+      ],
+      "optional_sections": [
+        "Risks / safeguarding considerations",
+        "Management oversight",
+        "Follow-up required",
+        "Missing information / not clear"
+      ],
+      "missing_evidence_checks": [
+        "Purpose clear",
+        "People present listed",
+        "Child voice where relevant",
+        "Decisions or actions stated"
+      ],
+      "safeguarding_checks": [
+        "Safeguarding themes flagged where discussed",
+        "Management oversight noted if required"
+      ],
+      "child_voice_checks": [
+        "Child's voice, wishes or presentation included where discussed"
+      ],
+      "manager_oversight_checks": [
+        "Management oversight and follow-up identified"
+      ],
+      "professional_language_guidance": "Use child-centred, factual language. Attribute views to speakers where known. Do not invent names, decisions or actions.",
+      "regulatory_evidence_points": [
+        "Multi-agency working",
+        "Child-centred recording",
+        "Professional accountability"
+      ],
+      "related_quality_standards": [
+        "recording_quality",
+        "child_voice",
+        "safeguarding",
+        "manager_oversight"
+      ],
+      "suggested_outputs": [
+        "strategy_safeguarding_discussion",
+        "safeguarding_concern_record",
+        "manager_summary"
+      ],
+      "final_document_headings": [
+        "Purpose of discussion",
+        "People present",
+        "Child's voice / wishes / presentation",
+        "Key information shared",
+        "Adult/professional views",
+        "Decisions or agreed actions",
+        "Risks / safeguarding considerations",
+        "Management oversight",
+        "Follow-up required",
+        "Missing information / not clear"
+      ],
+      "pdf_heading_order": [
+        "Purpose of discussion",
+        "People present",
+        "Child's voice / wishes / presentation",
+        "Key information shared",
+        "Adult/professional views",
+        "Decisions or agreed actions",
+        "Risks / safeguarding considerations",
+        "Management oversight",
+        "Follow-up required",
+        "Missing information / not clear"
+      ],
+      "related_templates": [
+        "strategy_safeguarding_discussion"
+      ],
+      "related_document_lenses": [
+        "extract_actions",
+        "explain"
+      ],
+      "suggested_follow_up_actions": [
+        "Review draft",
+        "Confirm speaker labels",
+        "Finalise in ORB Write"
+      ],
+      "safety_disclaimer": "Draft only — adult review required. ORB supports recording and reflection; it does not replace professional judgement or safeguarding procedures.",
+      "dictate_note_type": "strategy_safeguarding_discussion",
+      "studio_template_id": "strategy_safeguarding_discussion"
     }
   ]
 }
