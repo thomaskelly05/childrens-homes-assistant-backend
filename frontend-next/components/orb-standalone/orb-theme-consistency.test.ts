@@ -82,7 +82,7 @@ describe('ORB theme consistency across station panels', () => {
     const sidebar = read('components/orb-residential/orb-residential-sidebar.tsx')
     assert.match(sidebar, /ORB Write/)
     assert.match(sidebar, /Documents & Guidance/)
-    assert.match(sidebar, /Rough notes to records/)
+    assert.match(sidebar, /Turn rough speech into records/)
     assert.match(sidebar, /Policies, guidance and document analyser/)
   })
 

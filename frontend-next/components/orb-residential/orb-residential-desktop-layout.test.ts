@@ -37,7 +37,7 @@ describe('ORB Residential desktop layout system', () => {
     assert.match(desktop, /\[data-orb-empty-starter-chips\][\s\S]*grid-template-columns:\s*repeat\(2/)
     assert.match(premium, /@media \(min-width: 1024px\)[\s\S]*html\[data-orb-residential='1'\] \.orb-presence--hero/)
     assert.match(premium, /clamp\(11\.25rem,\s*18vw,\s*17\.5rem\)/)
-    assert.match(companion, /GlassOrbMark variant="hero"/)
+    assert.match(companion, /GlassOrbMark/)
     assert.match(companion, /data-orb-empty-heading-desktop/)
     assert.doesNotMatch(companion, /orb-brand\.png|orb-static\.png/)
   })

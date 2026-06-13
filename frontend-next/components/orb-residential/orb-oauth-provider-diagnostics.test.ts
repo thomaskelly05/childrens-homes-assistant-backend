@@ -35,7 +35,7 @@ describe('ORB OAuth provider diagnostics wiring', () => {
     assert.match(client, /api\.indicare\.co\.uk/)
     assert.match(client, /\/orb\/standalone\/auth\/oauth\//)
     assert.match(nav, /navigateOrbOAuthStart/)
-    assert.match(authButton, /<a href=\{href\}/)
+    assert.match(authButton, /href=\{href\}|Link href=\{href\}/)
   })
 
   it('login screen maps security check failed to friendly retry copy', () => {

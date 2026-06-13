@@ -24,7 +24,8 @@ describe('ORB Residential orb presence layout', () => {
 
   it('home empty state renders OrbPresence hero variant in document order before copy', () => {
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
-    assert.match(companion, /GlassOrbMark variant="hero"/)
+    assert.match(companion, /GlassOrbMark/)
+    assert.match(companion, /variant=\{isMobileViewport \? 'compact' : 'hero'\}/)
     assert.match(companion, /data-orb-presence-slot="hero"/)
     assert.match(companion, /ORB_RESIDENTIAL_BRAND_EMOTIONAL_LINE/)
     assert.match(companion, /data-orb-empty-heading/)

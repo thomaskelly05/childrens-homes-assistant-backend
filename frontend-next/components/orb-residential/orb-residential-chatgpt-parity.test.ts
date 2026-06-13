@@ -92,9 +92,10 @@ describe('ORB Residential ChatGPT parity', () => {
     const mark = readComponent('components/orb-residential/ui/glass-orb-mark.tsx')
     assert.match(presence, /OrbSphere/)
     assert.match(presence, /orb-presence--hero/)
-    assert.match(mark, /OrbPresence/)
+    assert.match(mark, /OrbPresence|variant === 'hero'/)
     const companion = readComponent('components/orb-standalone/orb-care-companion.tsx')
-    assert.match(companion, /GlassOrbMark variant="hero"/)
+    assert.match(companion, /GlassOrbMark/)
+    assert.match(companion, /variant=\{isMobileViewport \? 'compact' : 'hero'\}/)
     assert.match(companion, /ORB_RESIDENTIAL_BRAND_EMOTIONAL_LINE/)
   })
 

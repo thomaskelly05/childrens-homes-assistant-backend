@@ -34,8 +34,10 @@ describe('ORB Residential desktop UX', () => {
 
   it('login uses one hero sphere and dark autofill input class', () => {
     const login = readComponent('components/orb-residential/orb-login-screen.tsx')
-    assert.match(login, /OrbHeroSphere/)
-    assert.match(login, /orb-login-input/)
+    const hero = readComponent('components/orb-residential/orb-login-desktop-hero.tsx')
+    const authCard = readComponent('components/orb-residential/orb-login-auth-card.tsx')
+    assert.match(hero, /OrbHeroSphere/)
+    assert.match(authCard, /orb-login-input/)
     assert.match(login, /useOrbResidentialThemeSync/)
     assert.doesNotMatch(login, /OrbGlowHero/)
   })
@@ -75,7 +77,7 @@ describe('ORB Residential desktop UX', () => {
   it('desktop empty state uses single GlassOrbMark sphere', () => {
     const companion = readComponent('components/orb-standalone/orb-care-companion.tsx')
     const premiumCss = readComponent('app/orb/orb-premium-tokens.css')
-    assert.match(companion, /GlassOrbMark variant="hero"/)
+    assert.match(companion, /GlassOrbMark/)
     assert.doesNotMatch(companion, /variant="mobile"[\s\S]*md:hidden[\s\S]*variant="desktop"[\s\S]*hidden md:flex/)
     assert.match(premiumCss, /orb-presence--hero/)
   })

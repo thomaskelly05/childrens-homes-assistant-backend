@@ -10,7 +10,8 @@ import {
 import { OrbPrivacyInputWarning } from '@/components/orb/privacy/orb-privacy-input-warning'
 import { OrbPrivacyNotice } from '@/components/orb/privacy/orb-privacy-notice'
 import {
-  OrbResidentialPrivacyGuidanceSheet
+  OrbResidentialPrivacyGuidanceSheet,
+  OrbResidentialPrivacyGuidanceIcon
 } from '@/components/orb-residential/orb-privacy-guidance-sheet'
 import { OrbResidentialComposerToolsSheet } from '@/components/orb-residential/orb-residential-composer-tools-sheet'
 import { OrbComposerCopyright } from '@/components/orb-standalone/orb-composer-copyright'
@@ -435,6 +436,9 @@ export function OrbStandaloneComposer({
                 )}
                 {!mobileViewport && onAttachDocumentClick ? <button type="button" onClick={onAttachDocumentClick} className="inline-flex h-9 min-w-9 shrink-0 items-center justify-center rounded-full text-[var(--orb-muted)] transition hover:bg-[var(--orb-surface-hover)]" aria-label="Attach document" data-orb-composer-document><FileText className="h-4 w-4" aria-hidden /></button> : null}
                 {!mobileViewport && onToolsClick ? <button type="button" onClick={onToolsClick} className="inline-flex h-9 min-w-9 shrink-0 items-center justify-center rounded-full text-[var(--orb-muted)] transition hover:bg-[var(--orb-surface-hover)]" aria-label="Tools" data-orb-composer-tools><Wrench className="h-4 w-4" aria-hidden /></button> : null}
+                {mobileViewport ? (
+                  <OrbResidentialPrivacyGuidanceIcon onOpen={() => setPrivacyGuidanceOpen(true)} />
+                ) : null}
               </div>
             ) : null}
 

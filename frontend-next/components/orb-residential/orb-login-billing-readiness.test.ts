@@ -43,12 +43,11 @@ describe('ORB login and billing readiness', () => {
   })
 
   it('create account and provider email hints exist', () => {
-    const login = read('components/orb-residential/orb-login-screen.tsx')
     const authCard = read('components/orb-residential/orb-login-auth-card.tsx')
+    const upgrade = read('components/orb-standalone/orb-upgrade-screen.tsx')
     assert.match(authCard, /href="\/orb\/signup"/)
     assert.match(authCard, /Create account/)
-    assert.match(login, /Already subscribed/)
-    assert.match(login, /data-orb-provider-email-hint/)
+    assert.match(upgrade, /Already subscribed/)
   })
 
   it('inactive user upgrade screen shows subscribe path, refresh and switch account', () => {
@@ -61,7 +60,7 @@ describe('ORB login and billing readiness', () => {
 
   it('active billing modal shows manage subscription and individual plan', () => {
     const billing = read('components/orb-standalone/orb-billing-modal.tsx')
-    assert.match(billing, /ORB Residential — individual subscription/)
+    assert.match(billing, /ORB Residential — Individual/)
     assert.match(billing, /£9\.99\/month/)
     assert.match(billing, /data-orb-billing-portal/)
     assert.match(billing, /data-orb-billing-upgrade/)

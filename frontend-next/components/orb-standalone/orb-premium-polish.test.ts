@@ -106,7 +106,7 @@ describe('ORB personalised welcome', () => {
       name: 'Tom Kelly',
       role: 'registered_manager',
       roleLabel: 'Registered Manager'
-    })
+    }, { hour: 9 })
     assert.match(welcome.heading, /Ready when you are|Good morning, Tom/)
     assert.match(welcome.subline, /inspection readiness|safeguarding|recording/i)
   })
