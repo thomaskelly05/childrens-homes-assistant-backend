@@ -33,16 +33,21 @@ describe('ORB mobile convergence sprint', () => {
     assert.match(composer, /Ask ORB anything/)
   })
 
-  it('dictate mobile prioritises start recording in compact capture panel', () => {
+  it('dictate mobile prioritises start recording in premium capture panel with ORB visual', () => {
     const dictate = read('components/orb-standalone/orb-dictate-mobile-experience.tsx')
     const mobileCss = read('app/orb/orb-mobile.css')
     const statusIdx = dictate.indexOf('data-orb-dictate-status-line')
     const actionIdx = dictate.indexOf('data-orb-dictate-primary-action')
     const panelIdx = dictate.indexOf('data-orb-dictate-capture-panel')
+    const orbIdx = dictate.indexOf('data-orb-dictate-capture-orb')
+    const recordTypeIdx = dictate.indexOf('data-orb-dictate-mobile-record-type')
     assert.ok(statusIdx > -1 && actionIdx > statusIdx && panelIdx > -1)
+    assert.ok(orbIdx > -1 && recordTypeIdx > orbIdx && statusIdx > recordTypeIdx)
     assert.match(dictate, /data-orb-dictate-idle-shell/)
-    assert.doesNotMatch(dictate, /orb-dictate-mobile-orb/)
+    assert.match(dictate, /GlassOrbMark/)
+    assert.match(dictate, /variant="dictate"/)
     assert.match(mobileCss, /\[data-orb-dictate-capture-panel='true'\]/)
+    assert.match(mobileCss, /orb-dictate-mobile-orb-wrap/)
   })
 
   it('orb write uses mobile bottom sheet toolbar under 768px', () => {

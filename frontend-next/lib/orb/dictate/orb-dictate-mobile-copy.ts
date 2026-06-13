@@ -68,7 +68,7 @@ export function dictateMobileStatusLine(input: {
   if (input.dictateState === 'generating') return 'Generating…'
   if (input.hasTranscript && input.dictateState === 'transcript_ready') return 'Transcript captured'
   if (input.userStatus && !isTechnicalDictateStatus(input.userStatus)) return input.userStatus
-  return 'Ready to record'
+  return 'Ready to capture'
 }
 
 export function isTechnicalDictateStatus(message: string): boolean {

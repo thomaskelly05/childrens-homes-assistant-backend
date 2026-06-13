@@ -1,10 +1,11 @@
 'use client'
 
 import { useRef } from 'react'
-import { Upload } from 'lucide-react'
+import { Mic, Upload } from 'lucide-react'
 
 import { OrbDictateBoundaryCopy } from '@/components/orb-standalone/orb-dictate-boundary-copy'
 import { OrbDictateTemplateSelector } from '@/components/orb/dictate/OrbDictateTemplateSelector'
+import { GlassOrbMark } from '@/components/orb-residential/ui/glass-orb-mark'
 import { OrbDictateOutputTypeSelector } from '@/components/orb-standalone/orb-dictate-output-type-selector'
 import {
   OrbDictateModeSelect,
@@ -146,6 +147,10 @@ export function OrbDictateMobileExperience({
 }) {
   const voiceDebug = isOrbVoiceDebugMode()
   const uploadInputRef = useRef<HTMLInputElement>(null)
+  const orbListening = recordingActive || captureStarting || dictateState === 'listening'
+  const orbReadyIdle = !showCapturedCard && !orbListening
+  const showStartMicIcon =
+    mobilePrimaryLabel === 'Start recording' || mobilePrimaryLabel === 'Record more'
 
   return (
     <div
@@ -167,21 +172,44 @@ export function OrbDictateMobileExperience({
       >
       <section
         className={`flex shrink-0 flex-col items-center text-center ${
-          showCapturedCard ? 'px-0 pt-2' : 'mx-auto w-full max-w-xs rounded-2xl border border-[var(--orb-line)]/35 bg-[var(--orb-surface-elevated)]/55 px-3 py-3'
+          showCapturedCard
+            ? 'px-0 pt-2'
+            : 'orb-dictate-mobile-capture-panel mx-auto w-full max-w-xs rounded-2xl border border-[var(--orb-primary)]/12 bg-[var(--orb-surface-elevated)]/72 px-3.5 py-3.5 shadow-[0_10px_32px_color-mix(in_srgb,var(--orb-primary)_8%,transparent)] backdrop-blur-md'
         }`}
         data-orb-dictate-mobile-capture
         data-orb-dictate-capture-panel={showCapturedCard ? undefined : 'true'}
       >
         {!showCapturedCard ? (
-          <div className="mb-2 w-full max-w-xs" data-orb-dictate-mobile-record-type>
-            <OrbDictateTemplateSelector
-              selectedTemplateId={selectedTemplateId}
-              onTemplateChange={onTemplateChange}
-              variant="compact"
-            />
-          </div>
+          <>
+            <div
+              className="orb-dictate-mobile-orb-wrap mb-2 flex shrink-0 items-center justify-center"
+              data-orb-dictate-capture-orb
+              data-orb-dictate-capture-orb-state={orbListening ? 'listening' : orbReadyIdle ? 'ready' : 'idle'}
+              aria-hidden
+            >
+              <GlassOrbMark
+                variant="dictate"
+                className="orb-dictate-mobile-orb"
+                state={orbListening ? 'listening' : 'idle'}
+                pulse={orbListening || orbReadyIdle}
+              />
+            </div>
+            <div className="mb-2 w-full" data-orb-dictate-mobile-record-type>
+              <OrbDictateTemplateSelector
+                selectedTemplateId={selectedTemplateId}
+                onTemplateChange={onTemplateChange}
+                variant="compact"
+                appearance="capture"
+              />
+            </div>
+          </>
         ) : null}
-        <p className="text-sm font-semibold text-[var(--orb-text,var(--orb-foreground))]" data-orb-dictate-status-line>
+        <p
+          className={`font-semibold text-[var(--orb-text,var(--orb-foreground))] ${
+            showCapturedCard ? 'text-sm' : 'text-xs tracking-wide text-[var(--orb-muted)]'
+          }`}
+          data-orb-dictate-status-line
+        >
           {mobileStatusLine}
         </p>
         {recordingActive || captureStarting ? (
@@ -199,20 +227,21 @@ export function OrbDictateMobileExperience({
           data-orb-dictate-speech-start={
             mobilePrimaryLabel === 'Start recording' || mobilePrimaryLabel === 'Record more' ? 'true' : undefined
           }
-          className="mt-3 inline-flex min-h-[2.75rem] w-full max-w-xs items-center justify-center rounded-full bg-gradient-to-r from-[var(--orb-primary-blue,#168bff)] to-[var(--orb-primary-blue-2,#0d5fcc)] px-8 text-sm font-semibold text-white shadow-lg shadow-sky-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+          className="mt-2.5 inline-flex min-h-[2.75rem] w-full max-w-xs items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[var(--orb-primary-blue,#168bff)] to-[var(--orb-primary-blue-2,#0d5fcc)] px-8 text-sm font-semibold text-white shadow-lg shadow-sky-500/25 ring-1 ring-white/10 disabled:cursor-not-allowed disabled:opacity-50"
           disabled={uploadingAudio || (needsConsent && !consentConfirmed && mobilePrimaryLabel === 'Start recording')}
           onClick={onPrimaryAction}
         >
-          {captureStarting ? 'Starting…' : mobilePrimaryLabel}
+          {showStartMicIcon ? <Mic className="h-4 w-4 shrink-0" aria-hidden /> : null}
+          <span>{captureStarting ? 'Starting…' : mobilePrimaryLabel}</span>
         </button>
 
-        <div className="mt-3 flex flex-wrap justify-center gap-2" data-orb-dictate-mobile-secondary>
+        <div className="mt-2.5 flex flex-wrap justify-center gap-1.5" data-orb-dictate-mobile-secondary>
           {!showCapturedCard ? (
             <>
               <button
                 type="button"
                 data-orb-dictate-paste-secondary
-                className="rounded-full border border-[var(--orb-mobile-line,var(--orb-line))]/60 bg-[var(--orb-mobile-card,#fff)] px-3 py-1.5 text-xs text-[var(--orb-text,var(--orb-foreground))] shadow-sm"
+                className="inline-flex min-h-[2.75rem] items-center rounded-full border border-[var(--orb-mobile-line,var(--orb-line))]/50 bg-[var(--orb-mobile-card,#fff)]/80 px-3.5 py-1.5 text-xs font-medium text-[var(--orb-text,var(--orb-foreground))] shadow-sm backdrop-blur-sm"
                 onClick={onPasteTranscript}
               >
                 Paste transcript
@@ -220,7 +249,7 @@ export function OrbDictateMobileExperience({
               <button
                 type="button"
                 data-orb-dictate-upload-secondary
-                className="inline-flex items-center gap-1 rounded-full border border-[var(--orb-mobile-line,var(--orb-line))]/60 bg-[var(--orb-mobile-card,#fff)] px-3 py-1.5 text-xs text-[var(--orb-text,var(--orb-foreground))] shadow-sm"
+                className="inline-flex min-h-[2.75rem] items-center gap-1 rounded-full border border-[var(--orb-mobile-line,var(--orb-line))]/50 bg-[var(--orb-mobile-card,#fff)]/80 px-3.5 py-1.5 text-xs font-medium text-[var(--orb-text,var(--orb-foreground))] shadow-sm backdrop-blur-sm"
                 disabled={uploadingAudio}
                 onClick={() => uploadInputRef.current?.click()}
               >
