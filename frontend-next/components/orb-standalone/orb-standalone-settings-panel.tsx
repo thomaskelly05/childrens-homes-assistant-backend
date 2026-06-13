@@ -270,8 +270,11 @@ export function OrbStandaloneSettingsPanel({
         </nav>
 
         <div
-          className={`flex-1 overflow-y-auto overflow-x-hidden p-4 pb-[max(1rem,env(safe-area-inset-bottom))] ${showMobileList ? 'hidden' : ''}`}
+          className={`overflow-x-hidden pb-[max(1rem,env(safe-area-inset-bottom))] ${
+            showMobileDetail ? 'flex-none p-3' : 'flex-1 overflow-y-auto p-4'
+          } ${showMobileList ? 'hidden' : ''}`}
           data-orb-settings-scroll
+          data-orb-settings-mobile-detail={showMobileDetail ? 'true' : undefined}
         >
           {showMobileDetail ? (
             <button
@@ -665,7 +668,7 @@ function SettingsBlock({
           <p className="mt-0.5 text-xs text-[var(--orb-muted)]">{description}</p>
         </>
       ) : null}
-      <div className={`space-y-3 ${suppressHeader ? '' : 'mt-3'}`}>{children}</div>
+      <div className={`space-y-3 ${suppressHeader ? 'space-y-2.5' : 'mt-3'}`}>{children}</div>
     </section>
   )
 }

@@ -18,6 +18,7 @@ import {
 import { OrbSavedOutputDetailActions } from '@/components/orb-standalone/orb-saved-output-detail-actions'
 import { orbStationShellProps } from '@/components/orb-standalone/orb-app-modal'
 import { OrbStandalonePanelShell } from '@/components/orb-standalone/orb-standalone-panel-shell'
+import { useOrbResponsiveMode } from '@/components/orb-standalone/use-orb-responsive-mode'
 import {
   isOrbStationAuthError,
   OrbStationAuthError,
@@ -100,6 +101,7 @@ export function OrbSavedOutputsPanel({
   residentialSurface?: boolean
   sessionReady?: boolean
 }) {
+  const { isMobile } = useOrbResponsiveMode()
   const [loading, setLoading] = useState(false)
   const [items, setItems] = useState<OrbSavedOutputSummary[]>([])
   const [search, setSearch] = useState('')
@@ -108,6 +110,7 @@ export function OrbSavedOutputsPanel({
   const [projectFilter, setProjectFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
   const [includeArchived, setIncludeArchived] = useState(false)
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [detail, setDetail] = useState<OrbSavedOutputRecord | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
@@ -182,6 +185,9 @@ export function OrbSavedOutputsPanel({
     [detail]
   )
 
+  const activeFilterCount =
+    (chipFilter !== 'all' ? 1 : 0) + (projectFilter ? 1 : 0) + (includeArchived ? 1 : 0) + (statusFilter ? 1 : 0)
+
   async function handleArchive(id: string) {
     await archiveOrbSavedOutput(id)
     setNotice('Output archived.')
@@ -223,11 +229,11 @@ export function OrbSavedOutputsPanel({
     <OrbStandalonePanelShell
       open={open}
       title="Saved Outputs"
-      subtitle="Reuse, export and improve your ORB work"
+      subtitle={isMobile ? 'Saved ORB work for reuse, export and review.' : 'Reuse, export and improve your ORB work'}
       onClose={onClose}
       panelId="saved_outputs"
       ariaLabel="ORB saved outputs"
-      footer="Saved outputs are standalone ORB artefacts."
+      footer={isMobile ? undefined : 'Saved outputs are standalone ORB artefacts.'}
       {...orbStationShellProps(residentialSurface, 'wide')}
     >
       <div
@@ -238,8 +244,12 @@ export function OrbSavedOutputsPanel({
       >
         <div className="flex w-full shrink-0 flex-col border-b border-[var(--orb-mobile-ws-card-border,var(--orb-line))] lg:w-[var(--orb-desktop-saved-list-width,27.5rem)] lg:max-w-[var(--orb-desktop-saved-list-width,27.5rem)] lg:border-b-0 lg:border-r">
           <OrbStudioHeader
-            title="Document archive"
-            subtitle="Saved ORB work — not templates or the recording library"
+            title={isMobile ? 'Saved outputs' : 'Document archive'}
+            subtitle={
+              isMobile
+                ? 'Saved ORB work for reuse, export and review.'
+                : 'Saved ORB work — not templates or the recording library'
+            }
             className="px-2 pb-2 lg:px-3"
           />
           {reconnectSuggested && items.length ? (
@@ -258,52 +268,121 @@ export function OrbSavedOutputsPanel({
               searchInputProps={{ 'data-orb-saved-outputs-search': '' } as React.InputHTMLAttributes<HTMLInputElement>}
               filtersDataAttr="data-orb-saved-outputs-filters"
               filters={
-                <>
-                  {FILTER_CHIPS.map((chip) => (
-                    <OrbPremiumPill
-                      key={chip.id}
-                      active={chipFilter === chip.id}
-                      onClick={() => {
-                        setChipFilter(chip.id)
-                        setTypeFilter(chip.type)
-                      }}
-                      className="text-[10px]"
+                isMobile ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setMobileFiltersOpen((open) => !open)}
+                      className="inline-flex min-h-[2.75rem] items-center rounded-full border border-[var(--orb-line)] px-3 py-1 text-xs font-semibold text-[var(--orb-foreground)]"
+                      data-orb-saved-outputs-filter-toggle
+                      aria-expanded={mobileFiltersOpen}
                     >
-                      {chip.label}
-                    </OrbPremiumPill>
-                  ))}
-                </>
+                      Filter{activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}
+                    </button>
+                    {mobileFiltersOpen ? (
+                      <div
+                        className="w-full space-y-2 rounded-xl border border-[var(--orb-line)]/60 bg-[var(--orb-surface)] p-2.5"
+                        data-orb-saved-outputs-mobile-filters
+                      >
+                        <div className="flex flex-wrap gap-1.5">
+                          {FILTER_CHIPS.map((chip) => (
+                            <OrbPremiumPill
+                              key={chip.id}
+                              active={chipFilter === chip.id}
+                              onClick={() => {
+                                setChipFilter(chip.id)
+                                setTypeFilter(chip.type)
+                              }}
+                              className="text-[10px]"
+                            >
+                              {chip.label}
+                            </OrbPremiumPill>
+                          ))}
+                        </div>
+                        <select
+                          value={projectFilter}
+                          onChange={(e) => setProjectFilter(e.target.value)}
+                          className="w-full rounded-lg border border-[var(--orb-mobile-ws-card-border,var(--orb-line))] bg-[var(--orb-mobile-ws-input,var(--orb-surface))] px-2 py-1.5 text-xs text-[var(--orb-mobile-ws-text,var(--orb-foreground))]"
+                        >
+                          <option value="">All projects</option>
+                          {workspace.projects.map((p: StandaloneProject) => (
+                            <option key={p.id} value={p.id}>
+                              {p.name}
+                            </option>
+                          ))}
+                        </select>
+                        <div className="flex flex-wrap items-center gap-2 text-xs">
+                          <label className="flex min-h-[2.75rem] items-center gap-1 text-[var(--orb-mobile-ws-muted,var(--orb-muted))]">
+                            <input
+                              type="checkbox"
+                              checked={includeArchived}
+                              onChange={(e) => setIncludeArchived(e.target.checked)}
+                            />
+                            Archived
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => void refresh()}
+                            className="ml-auto min-h-[2.75rem] rounded-lg border border-[var(--orb-mobile-ws-card-border,var(--orb-line))] px-2 py-1 text-[var(--orb-mobile-ws-text,var(--orb-foreground))]"
+                          >
+                            Refresh
+                          </button>
+                        </div>
+                      </div>
+                    ) : null}
+                  </>
+                ) : (
+                  <>
+                    {FILTER_CHIPS.map((chip) => (
+                      <OrbPremiumPill
+                        key={chip.id}
+                        active={chipFilter === chip.id}
+                        onClick={() => {
+                          setChipFilter(chip.id)
+                          setTypeFilter(chip.type)
+                        }}
+                        className="text-[10px]"
+                      >
+                        {chip.label}
+                      </OrbPremiumPill>
+                    ))}
+                  </>
+                )
               }
             />
-            <select
-              value={projectFilter}
-              onChange={(e) => setProjectFilter(e.target.value)}
-              className="w-full rounded-lg border border-[var(--orb-mobile-ws-card-border,var(--orb-line))] bg-[var(--orb-mobile-ws-input,var(--orb-surface))] px-2 py-1.5 text-xs text-[var(--orb-mobile-ws-text,var(--orb-foreground))]"
-            >
-              <option value="">All projects</option>
-              {workspace.projects.map((p: StandaloneProject) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
-            <div className="flex flex-wrap items-center gap-2 text-xs">
-              <label className="flex items-center gap-1 text-[var(--orb-mobile-ws-muted,var(--orb-muted))]">
-                <input
-                  type="checkbox"
-                  checked={includeArchived}
-                  onChange={(e) => setIncludeArchived(e.target.checked)}
-                />
-                Archived
-              </label>
-              <button
-                type="button"
-                onClick={() => void refresh()}
-                className="ml-auto rounded-lg border border-[var(--orb-mobile-ws-card-border,var(--orb-line))] px-2 py-1 text-[var(--orb-mobile-ws-text,var(--orb-foreground))]"
-              >
-                Refresh
-              </button>
-            </div>
+            {!isMobile ? (
+              <>
+                <select
+                  value={projectFilter}
+                  onChange={(e) => setProjectFilter(e.target.value)}
+                  className="w-full rounded-lg border border-[var(--orb-mobile-ws-card-border,var(--orb-line))] bg-[var(--orb-mobile-ws-input,var(--orb-surface))] px-2 py-1.5 text-xs text-[var(--orb-mobile-ws-text,var(--orb-foreground))]"
+                >
+                  <option value="">All projects</option>
+                  {workspace.projects.map((p: StandaloneProject) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
+                </select>
+                <div className="flex flex-wrap items-center gap-2 text-xs">
+                  <label className="flex items-center gap-1 text-[var(--orb-mobile-ws-muted,var(--orb-muted))]">
+                    <input
+                      type="checkbox"
+                      checked={includeArchived}
+                      onChange={(e) => setIncludeArchived(e.target.checked)}
+                    />
+                    Archived
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => void refresh()}
+                    className="ml-auto rounded-lg border border-[var(--orb-mobile-ws-card-border,var(--orb-line))] px-2 py-1 text-[var(--orb-mobile-ws-text,var(--orb-foreground))]"
+                  >
+                    Refresh
+                  </button>
+                </div>
+              </>
+            ) : null}
           </div>
 
           <div className="max-h-[min(36vh,18rem)] flex-1 overflow-y-auto p-2 lg:max-h-none" data-orb-saved-outputs-list>
@@ -327,12 +406,13 @@ export function OrbSavedOutputsPanel({
             ) : items.length === 0 ? (
               <OrbStudioEmptyState
                 title="Nothing saved yet."
-                description="Save reviews, action plans and documents here."
+                description={isMobile ? undefined : 'Save reviews, action plans and documents here.'}
+                className={isMobile ? '!px-4 !py-6' : undefined}
                 actions={
                   <>
                     {onStartInOrbWrite ? (
                       <OrbPremiumButton variant="primary" onClick={onStartInOrbWrite} data-orb-saved-start-write>
-                        Create document
+                        {isMobile ? 'Create in ORB Write' : 'Create document'}
                       </OrbPremiumButton>
                     ) : null}
                     {onStartInDictate ? (
@@ -454,11 +534,13 @@ export function OrbSavedOutputsPanel({
               {items.length === 0 ? (
                 <div className="space-y-3" data-orb-saved-output-empty-state>
                   <p className="font-medium text-[var(--orb-foreground)]">Nothing saved yet.</p>
-                  <p className="text-xs">Save reviews, action plans and documents here.</p>
+                  {!isMobile ? (
+                    <p className="text-xs">Save reviews, action plans and documents here.</p>
+                  ) : null}
                   <div className="flex flex-wrap justify-center gap-2">
                     {onStartInOrbWrite ? (
                       <OrbPremiumButton variant="primary" onClick={onStartInOrbWrite} data-orb-saved-start-write>
-                        Create document
+                        {isMobile ? 'Create in ORB Write' : 'Create document'}
                       </OrbPremiumButton>
                     ) : null}
                     {onStartInDictate ? (

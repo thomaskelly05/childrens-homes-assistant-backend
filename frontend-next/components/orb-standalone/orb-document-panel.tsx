@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Copy, FileText, Link2, Loader2, MessageSquare, Sparkles, Upload } from 'lucide-react'
+import { Copy, ChevronRight, FileText, Link2, Loader2, MessageSquare, Sparkles, Upload } from 'lucide-react'
 
 import {
   OrbPremiumButton,
@@ -38,6 +38,7 @@ import {
 } from '@/lib/orb/recording/orb-recording-framework'
 import type { OrbRecordingRecordType, OrbRecordingRecordTypeId } from '@/lib/orb/recording/orb-recording-types'
 import { OrbDocumentComparisonSection } from '@/components/orb-standalone/orb-document-comparison-section'
+import { useOrbResponsiveMode } from '@/components/orb-standalone/use-orb-responsive-mode'
 import {
   runOrbDocumentIntelligence,
   uploadOrbStandaloneDocument
@@ -45,6 +46,14 @@ import {
 
 type InputTab = 'paste' | 'upload'
 type KnowledgeLibraryTab = 'official' | 'home' | 'uploaded' | 'analyse' | 'compare'
+
+const MOBILE_DOCUMENT_ACTIONS: Array<{ id: KnowledgeLibraryTab; label: string; ready?: boolean }> = [
+  { id: 'official', label: 'Official guidance' },
+  { id: 'home', label: 'Home documents' },
+  { id: 'uploaded', label: 'Uploaded documents' },
+  { id: 'analyse', label: 'Analyse a document' },
+  { id: 'compare', label: 'Compare documents' }
+]
 
 export function OrbDocumentPanel({
   open,
@@ -92,6 +101,7 @@ export function OrbDocumentPanel({
   initialLens?: OrbDocumentLens
   initialRecordTypeId?: OrbRecordingRecordTypeId | string
 }) {
+  const { isMobile } = useOrbResponsiveMode()
   const [title, setTitle] = useState('Uploaded document')
   const [sourceType, setSourceType] = useState('user_uploaded')
   const [text, setText] = useState(initialText || '')
@@ -243,11 +253,19 @@ export function OrbDocumentPanel({
     <OrbStandalonePanelShell
       open={open}
       title="Documents & Guidance"
-      subtitle="Official guidance, useful links and home documents that support ORB Residential."
+      subtitle={
+        isMobile
+          ? 'Use policies, guidance or uploads to support your thinking.'
+          : 'Official guidance, useful links and home documents that support ORB Residential.'
+      }
       onClose={onClose}
       panelId="documents"
       ariaLabel="ORB Knowledge Library and documents"
-      footer="ORB Residential — Powered by IndiCare Intelligence. Documents use only what you upload or paste."
+      footer={
+        isMobile
+          ? undefined
+          : 'ORB Residential — Powered by IndiCare Intelligence. Documents use only what you upload or paste.'
+      }
       {...orbStationShellProps(residentialSurface, 'wide')}
       {...(residentialSurface ? { compactChrome: true } : {})}
     >
@@ -262,19 +280,54 @@ export function OrbDocumentPanel({
               onSearchChange={setLibrarySearch}
               searchPlaceholder="Search guidance, home documents and uploads…"
             />
-            <OrbPremiumTabs
-              ariaLabel="Knowledge Library sections"
-              activeId={libraryTab}
-              onChange={setLibraryTab}
-              tabs={[
-                { id: 'official', label: 'Official Guidance' },
-                { id: 'home', label: 'My Home Documents' },
-                { id: 'uploaded', label: 'Uploaded Documents' },
-                { id: 'analyse', label: 'Analyse a Document' },
-                { id: 'compare', label: 'Compare Documents' }
-              ]}
-              data-orb-knowledge-library-tabs
-            />
+            {isMobile ? (
+              <div className="space-y-1" data-orb-documents-mobile-actions>
+                {MOBILE_DOCUMENT_ACTIONS.map((action) => (
+                  <button
+                    key={action.id}
+                    type="button"
+                    onClick={() => setLibraryTab(action.id)}
+                    className={`flex min-h-[2.75rem] w-full items-center justify-between rounded-xl border px-3 py-2.5 text-left text-sm font-medium transition ${
+                      libraryTab === action.id
+                        ? 'border-[var(--orb-primary,#168bff)]/35 bg-[var(--orb-primary-soft,rgba(22,139,255,0.12))] text-[var(--orb-foreground)]'
+                        : 'border-[var(--orb-line)] text-[var(--orb-foreground)] hover:bg-[var(--orb-surface-hover)]'
+                    } ${action.ready === false ? 'opacity-60' : ''}`}
+                    data-orb-documents-mobile-action={action.id}
+                    aria-current={libraryTab === action.id ? 'page' : undefined}
+                  >
+                    <span>{action.label}</span>
+                    <ChevronRight className="h-4 w-4 shrink-0 text-[var(--orb-muted)]" aria-hidden />
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => setLibraryTab('analyse')}
+                  className={`flex min-h-[2.75rem] w-full items-center justify-between rounded-xl border px-3 py-2.5 text-left text-sm font-medium transition ${
+                    libraryTab === 'analyse'
+                      ? 'border-[var(--orb-primary,#168bff)]/35 bg-[var(--orb-primary-soft,rgba(22,139,255,0.12))] text-[var(--orb-foreground)]'
+                      : 'border-[var(--orb-line)] text-[var(--orb-foreground)] hover:bg-[var(--orb-surface-hover)]'
+                  }`}
+                  data-orb-documents-mobile-action="record_type"
+                >
+                  <span>Review against record type</span>
+                  <ChevronRight className="h-4 w-4 shrink-0 text-[var(--orb-muted)]" aria-hidden />
+                </button>
+              </div>
+            ) : (
+              <OrbPremiumTabs
+                ariaLabel="Knowledge Library sections"
+                activeId={libraryTab}
+                onChange={setLibraryTab}
+                tabs={[
+                  { id: 'official', label: 'Official Guidance' },
+                  { id: 'home', label: 'My Home Documents' },
+                  { id: 'uploaded', label: 'Uploaded Documents' },
+                  { id: 'analyse', label: 'Analyse a Document' },
+                  { id: 'compare', label: 'Compare Documents' }
+                ]}
+                data-orb-knowledge-library-tabs
+              />
+            )}
           </div>
         }
       >

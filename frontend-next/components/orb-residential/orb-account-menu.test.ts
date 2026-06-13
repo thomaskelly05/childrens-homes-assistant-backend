@@ -27,6 +27,8 @@ describe('ORB ChatGPT-style account menu', () => {
     assert.match(menu, /onOpenSettings\('voice'\)/)
     assert.match(menu, /role="menu"/)
     assert.match(menu, /Escape/)
+    assert.match(menu, /min\(15rem/)
+    assert.match(menu, /overscroll-contain/)
   })
 
   it('care companion wires account menu from header and sidebar', () => {

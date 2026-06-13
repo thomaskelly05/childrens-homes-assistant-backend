@@ -1835,6 +1835,130 @@
   [data-orb-templates-mobile-template] {
     min-height: 2.75rem !important;
   }
+
+  /* Template picker — mobile bottom sheet with sticky footer above Safari controls */
+  [data-orb-write-template-picker-mobile='true'] {
+    overscroll-behavior: none;
+  }
+
+  [data-orb-write-template-picker-sheet] {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  [data-orb-write-template-picker-mobile='true'] [data-orb-write-template-picker-body] {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    flex: 1 1 auto;
+    overflow: hidden;
+  }
+
+  [data-orb-write-template-picker-mobile='true'] [data-orb-write-template-list] {
+    flex: 1 1 auto;
+    min-height: 0;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+
+  [data-orb-write-template-picker-mobile='true'] [data-orb-write-template-detail] {
+    flex: 0 1 auto;
+    min-height: 0;
+    max-height: 38%;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+
+  [data-orb-write-template-picker-footer] {
+    position: sticky;
+    bottom: 0;
+    z-index: 12;
+    flex-shrink: 0;
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 0px)) !important;
+    background: color-mix(in srgb, var(--orb-surface) 96%, transparent);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+
+  [data-orb-write-template-picker-footer] button {
+    min-height: 2.75rem !important;
+  }
+
+  [data-orb-write-template-groups] {
+    scrollbar-width: none;
+  }
+
+  [data-orb-write-template-groups]::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Dictate — breathing room between title and capture panel */
+  [data-orb-dictate-mobile][data-orb-dictate-capture-idle='true'] [data-orb-dictate-title-spacing] {
+    margin-bottom: 0.5rem;
+    padding-bottom: 0.15rem;
+  }
+
+  [data-orb-dictate-idle-shell] {
+    padding-top: 0.5rem !important;
+  }
+
+  [data-orb-dictate-capture-panel='true'] .orb-dictate-mobile-orb-wrap {
+    margin-top: 0.15rem !important;
+    margin-bottom: 0.5rem !important;
+  }
+
+  /* Settings — compact mobile detail without dead lower half */
+  [data-orb-settings-mobile-detail='true'] {
+    flex: 0 1 auto !important;
+    align-content: start;
+  }
+
+  [data-orb-settings-panel][data-orb-settings-mobile-layout='stack'] [data-orb-settings-scroll][data-orb-settings-mobile-detail='true'] {
+    min-height: 0 !important;
+    max-height: none !important;
+  }
+
+  [data-orb-settings-panel][data-orb-settings-mobile-layout='stack'] [data-orb-settings-mobile-detail='true'] .orb-settings-row {
+    padding-block: 0.45rem !important;
+  }
+
+  /* Saved outputs — collapsed mobile filters and compact empty state */
+  [data-orb-saved-outputs-filter-toggle] {
+    min-height: 2.75rem !important;
+  }
+
+  [data-orb-saved-outputs-mobile-filters] {
+    width: 100%;
+  }
+
+  [data-orb-saved-outputs-panel] [data-orb-studio-empty-state] {
+    padding-block: 1.25rem !important;
+  }
+
+  [data-orb-saved-outputs-panel][data-orb-saved-outputs-empty='true'] [data-orb-saved-output-detail] {
+    min-height: 0 !important;
+  }
+
+  /* Documents & guidance — compact mobile action rows */
+  [data-orb-documents-mobile-actions] button {
+    min-height: 2.75rem !important;
+  }
+
+  [data-orb-documents-mobile-actions] {
+    padding-bottom: 0.25rem;
+  }
+
+  /* Account menu — compact popover */
+  .orb-account-menu {
+    max-height: min(21rem, calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 2rem)) !important;
+    width: min(15rem, calc(100vw - 1.5rem)) !important;
+    overscroll-behavior: contain;
+  }
+
+  [data-orb-account-menu-items] [role='menuitem'] {
+    min-height: 2.75rem !important;
+  }
 }
 
 /* Short mobile height — compact home hero so composer stays in view */

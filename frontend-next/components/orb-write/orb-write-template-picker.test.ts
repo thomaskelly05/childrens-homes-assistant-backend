@@ -33,6 +33,14 @@ describe('ORB Write template picker', () => {
     assert.match(picker, /data-orb-write-template-confirm-merge/)
   })
 
+  it('mobile template picker footer is sticky with safe-area padding', () => {
+    const picker = read('components/orb-write/orb-write-template-picker.tsx')
+    const mobileCss = read('app/orb/orb-mobile.css')
+    assert.match(picker, /data-orb-write-template-picker-footer/)
+    assert.match(picker, /data-orb-write-template-picker-mobile/)
+    assert.match(mobileCss, /\[data-orb-write-template-picker-footer\]/)
+  })
+
   it('standalone panel updates record type on template apply', () => {
     const panel = read('components/orb-write/orb-write-standalone-panel.tsx')
     assert.match(panel, /setRecordTypeId/)

@@ -62,7 +62,7 @@ function MenuItem({
       type="button"
       role="menuitem"
       onClick={onClick}
-      className={`flex w-full min-h-[2.75rem] items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm transition ${
+      className={`flex w-full min-h-[2.75rem] items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-sm transition ${
         tone === 'danger'
           ? 'text-red-400 hover:bg-red-500/10 hover:text-red-300'
           : 'text-[var(--orb-foreground)] hover:bg-[var(--orb-surface-hover)]'
@@ -147,11 +147,11 @@ export function OrbAccountMenu({
 
   const anchor = anchorRef.current
   const rect = anchor?.getBoundingClientRect()
-  const menuWidth = Math.min(288, typeof window !== 'undefined' ? window.innerWidth - 24 : 288)
+  const menuWidth = Math.min(272, typeof window !== 'undefined' ? window.innerWidth - 24 : 272)
   const left = rect
     ? Math.min(Math.max(12, rect.right - menuWidth), typeof window !== 'undefined' ? window.innerWidth - menuWidth - 12 : 12)
     : 12
-  const estimatedHeight = 420
+  const estimatedHeight = 360
   const openAbove =
     preferAbove ||
     Boolean(rect && rect.bottom > (typeof window !== 'undefined' ? window.innerHeight : 800) * 0.55)
@@ -166,12 +166,12 @@ export function OrbAccountMenu({
       ref={menuRef}
       role="menu"
       aria-label="Account menu"
-      className="orb-account-menu fixed z-[80] w-[min(16rem,calc(100vw-1.5rem))] max-h-[min(24rem,calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-1.5rem))] overflow-y-auto rounded-xl border border-[var(--orb-line)]/45 bg-[var(--orb-surface-elevated)] p-1 shadow-lg shadow-black/10"
+      className="orb-account-menu fixed z-[80] w-[min(15rem,calc(100vw-1.5rem))] max-h-[min(21rem,calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-1.5rem))] overflow-y-auto overscroll-contain rounded-xl border border-[var(--orb-line)]/45 bg-[var(--orb-surface-elevated)] p-1 shadow-lg shadow-black/10"
       style={{ top, left }}
       data-orb-account-menu
       data-orb-account-menu-open="true"
     >
-      <div className="rounded-lg border border-[var(--orb-line)]/25 bg-[var(--orb-surface)]/80 px-2 py-2" data-orb-account-menu-header>
+      <div className="rounded-lg border border-[var(--orb-line)]/25 bg-[var(--orb-surface)]/80 px-2 py-1.5" data-orb-account-menu-header>
         <div className="flex items-start gap-2.5">
           <OrbUserAvatar name={displayName} avatarUrl={avatarUrl} size="sm" />
           <div className="min-w-0 flex-1">
@@ -212,7 +212,7 @@ export function OrbAccountMenu({
         </div>
       </div>
 
-      <div className="mt-1 flex flex-col gap-0.5 py-1" data-orb-account-menu-items>
+      <div className="mt-0.5 flex flex-col gap-0 py-0.5" data-orb-account-menu-items>
         <MenuItem
           icon={<User className="h-4 w-4" />}
           label="Profile"
