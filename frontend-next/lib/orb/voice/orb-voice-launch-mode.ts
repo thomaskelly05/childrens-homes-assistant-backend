@@ -24,6 +24,7 @@ export type OrbRealtimeVoiceStatusLite = {
 export const ORB_VOICE_PANEL_TITLE = 'Voice'
 export const ORB_VOICE_PANEL_SUBTITLE =
   'Live conversation and reflection — talk hands-free with ORB'
+export const ORB_VOICE_PANEL_MOBILE_SUBTITLE = 'Talk hands-free with ORB'
 
 export const ORB_VOICE_BOUNDARY_COPY = [
   'Voice is for live support and reflection. Dictate is for turning speech into a structured record.',
