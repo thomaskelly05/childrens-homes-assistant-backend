@@ -35,4 +35,40 @@ test.describe('ORB home composer reach', () => {
     expect(audit.composerBottom).toBeLessThanOrEqual(audit.vh + 4)
     expect(audit.sendBottom).toBeLessThanOrEqual(audit.vh + 4)
   })
+
+  test('focused composer keeps send reachable with long input and no page scroll', async ({ page }) => {
+    await setupOrbE2eMocks(page)
+    await page.goto('/orb')
+    await page.locator('[data-orb-shell="true"]').waitFor({ state: 'visible', timeout: 20_000 })
+
+    const input = page.locator('[data-orb-composer-input], .orb-composer-glass textarea').first()
+    await input.click()
+    await input.fill(`${'Long reflective note line.\n'.repeat(24)}`.trim())
+
+    const audit = await page.evaluate(() => {
+      const vh = window.innerHeight
+      const composer = document.querySelector('[data-orb-composer="main"]')
+      const composerRect = composer?.getBoundingClientRect()
+      const send = document.querySelector('[data-orb-composer-send], .orb-composer-send')
+      const sendRect = send?.getBoundingClientRect()
+      const textarea = document.querySelector(
+        '[data-orb-composer-input], .orb-composer-glass textarea'
+      ) as HTMLTextAreaElement | null
+      const textareaStyle = textarea ? window.getComputedStyle(textarea) : null
+      const textareaScrollable =
+        textarea != null && textarea.scrollHeight > textarea.clientHeight + 2
+      return {
+        vh,
+        pageScroll: document.documentElement.scrollHeight > vh + 4,
+        composerBottom: composerRect?.bottom ?? 0,
+        sendBottom: sendRect?.bottom ?? 0,
+        textareaMaxHeight: textareaStyle?.maxHeight ?? null,
+        textareaScrollable
+      }
+    })
+
+    expect(audit.pageScroll, JSON.stringify(audit)).toBe(false)
+    expect(audit.sendBottom).toBeLessThanOrEqual(audit.vh + 4)
+    expect(audit.textareaScrollable, JSON.stringify(audit)).toBe(true)
+  })
 })
