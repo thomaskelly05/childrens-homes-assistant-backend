@@ -19,10 +19,12 @@ describe('ORB Dictate mobile capture polish', () => {
     assert.match(dictate, /GlassOrbMark/)
     assert.match(dictate, /variant="dictate"/)
     assert.match(dictate, /data-orb-dictate-capture-orb/)
+    assert.match(dictate, /data-orb-dictate-title-spacing/)
     assert.match(dictate, /orb-dictate-mobile-orb/)
     assert.match(dictate, /data-orb-dictate-capture-panel=\{showCapturedCard \? undefined : 'true'\}/)
     assert.match(mobileCss, /orb-dictate-mobile-orb-wrap/)
     assert.match(mobileCss, /\[data-orb-dictate-capture-panel='true'\]/)
+    assert.match(mobileCss, /\[data-orb-dictate-title-spacing\]/)
     assert.match(mobileCss, /prefers-reduced-motion: reduce/)
   })
 

@@ -64,7 +64,9 @@ describe('ORB Residential mobile simplification pass', () => {
   it('dictate mobile uses collapsible privacy, compact capture orb, and no idle generate panel', () => {
     const dictate = read('components/orb-standalone/orb-dictate-mobile-experience.tsx')
     const boundary = read('components/orb-standalone/orb-dictate-boundary-copy.tsx')
+    const mobileCss = read('app/orb/orb-mobile.css')
     assert.match(dictate, /data-orb-dictate-capture-idle/)
+    assert.match(dictate, /data-orb-dictate-title-spacing/)
     assert.match(dictate, /collapsible/)
     assert.match(dictate, /data-orb-dictate-options-chip/)
     assert.match(dictate, /data-orb-dictate-capture-orb/)
@@ -72,6 +74,7 @@ describe('ORB Residential mobile simplification pass', () => {
     assert.doesNotMatch(dictate, /data-orb-dictate-recording-options-toggle/)
     assert.doesNotMatch(dictate, /data-orb-dictate-generate-idle/)
     assert.match(boundary, /data-orb-dictate-boundary-disclosure/)
+    assert.match(mobileCss, /\[data-orb-dictate-title-spacing\]/)
   })
 
   it('voice mobile uses compact safety disclosure', () => {
