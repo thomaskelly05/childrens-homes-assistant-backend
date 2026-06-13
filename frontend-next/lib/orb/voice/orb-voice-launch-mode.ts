@@ -128,13 +128,13 @@ export function orbVoiceLaunchHeadline(
     case 'starting':
       return 'Starting voice…'
     case 'listening':
-      return "I'm listening"
+      return 'Listening…'
     case 'transcribing':
       return 'Transcribing…'
     case 'thinking':
-      return 'ORB is thinking…'
+      return 'ORB is responding…'
     case 'speaking':
-      return 'ORB is speaking'
+      return 'ORB is responding…'
     case 'unavailable':
       return 'Voice is not available in this browser'
     case 'error':

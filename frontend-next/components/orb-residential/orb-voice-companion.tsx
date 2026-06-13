@@ -35,10 +35,10 @@ export const ORB_VOICE_COMPANION_HEADLINES: Record<
   import('@/components/orb-residential/orb-voice-head').OrbVoiceCompanionState,
   string
 > = {
-  idle: "I'm ORB. I'm listening.",
-  listening: "I'm listening.",
-  thinking: 'Let me think…',
-  speaking: 'ORB is speaking.',
+  idle: "I'm ORB. I'm listening when you're ready.",
+  listening: 'Listening…',
+  thinking: 'ORB is responding…',
+  speaking: 'ORB is responding…',
   paused: "I'm here when you're ready.",
   error: 'Voice is unavailable right now.'
 }
@@ -46,10 +46,11 @@ export const ORB_VOICE_COMPANION_HEADLINES: Record<
 export const ORB_VOICE_COMPANION_SUBLINES: Partial<
   Record<import('@/components/orb-residential/orb-voice-head').OrbVoiceCompanionState, string>
 > = {
-  idle:
-    'Talk through a situation, rough note or concern. ORB will help you reflect, structure your thinking and decide what may need recording.',
-  listening:
-    'Talk through a situation, rough note or concern. ORB will help you reflect, structure your thinking and decide what may need recording.'
+  idle: 'Talk through a situation, rough note or concern.',
+  listening: 'Speak naturally — ORB is with you.',
+  thinking: 'ORB is preparing a response…',
+  speaking: 'ORB is speaking…',
+  paused: 'Review your conversation or start again when ready.'
 }
 
 export function mapOrbVoiceUiToCompanionState(

@@ -60,6 +60,23 @@ html[data-orb-residential='1'] [data-orb-workspace-panel='voice'] [data-orb-voic
   overflow-y: auto;
 }
 
+.orb-voice-station-content__split {
+  max-width: 56rem;
+}
+
+.orb-voice-station-content__side {
+  overflow-y: auto;
+  max-height: min(72dvh, 36rem);
+}
+
+[data-orb-voice-desktop-side-panel] {
+  border-radius: 1rem;
+  border: 1px solid color-mix(in srgb, var(--orb-line) 40%, transparent);
+  background: color-mix(in srgb, var(--orb-surface-elevated) 72%, transparent);
+  padding: 1rem;
+  backdrop-filter: blur(10px);
+}
+
 [data-orb-voice-station][data-orb-voice-capture-active='true'] .orb-voice-station-content__hero {
   flex: 0 0 auto;
 }

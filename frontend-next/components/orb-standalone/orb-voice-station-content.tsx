@@ -17,6 +17,8 @@ export function OrbVoiceStationContent({
   children,
   controls,
   secondaryControls,
+  sidePanel,
+  workspaceMode = 'idle',
   className = ''
 }: {
   companionState: OrbVoiceCompanionState
@@ -24,33 +26,56 @@ export function OrbVoiceStationContent({
   detailLine: string | null
   children?: ReactNode
   /** Primary CTA — rendered in the hero stack below the waveform. */
-  controls: ReactNode
+  controls: ReactNode | null
   /** Optional secondary actions below the hero (transcript tools, etc.). */
   secondaryControls?: ReactNode
+  /** Desktop transcript / summary column when live or after call. */
+  sidePanel?: ReactNode
+  workspaceMode?: 'idle' | 'live' | 'after_call'
   className?: string
 }) {
   const isMobileViewport = useOrbMobileViewport()
+  const showDesktopSplit = !isMobileViewport && Boolean(sidePanel) && workspaceMode !== 'idle'
 
   return (
     <div
       className={`orb-voice-station-content flex min-h-0 flex-1 flex-col overflow-hidden ${className}`.trim()}
       data-orb-voice-station-content
-      data-orb-voice-mobile
+      data-orb-voice-mobile={isMobileViewport ? true : undefined}
+      data-orb-voice-workspace-mode={workspaceMode}
     >
-      <div className="orb-voice-station-content__scroll min-h-0 flex-1 overscroll-contain px-4 py-1 md:px-6 md:py-2">
-        <div className="orb-voice-station-content__hero mx-auto flex w-full max-w-lg flex-col items-center">
-          <OrbVoiceHeroStage
-            companionState={companionState}
-            statusLine={statusLine}
-            detailLine={detailLine}
-            cta={isMobileViewport ? undefined : controls}
-            heroStageId={isMobileViewport ? 'mobile' : 'desktop'}
-          />
-          {children}
+      <div
+        className={`orb-voice-station-content__scroll min-h-0 flex-1 overscroll-contain px-4 py-1 md:px-6 md:py-2 ${
+          showDesktopSplit ? 'orb-voice-station-content__scroll--split' : ''
+        }`}
+      >
+        <div
+          className={`mx-auto flex w-full max-w-lg flex-col items-center ${
+            showDesktopSplit ? 'orb-voice-station-content__split md:max-w-none md:flex-row md:items-start md:gap-6' : ''
+          }`}
+        >
+          <div className={`orb-voice-station-content__hero flex w-full flex-col items-center ${showDesktopSplit ? 'md:max-w-sm md:flex-1' : ''}`}>
+            <OrbVoiceHeroStage
+              companionState={companionState}
+              statusLine={statusLine}
+              detailLine={detailLine}
+              cta={isMobileViewport && workspaceMode === 'idle' ? undefined : controls}
+              heroStageId={isMobileViewport ? 'mobile' : 'desktop'}
+            />
+            {isMobileViewport || workspaceMode === 'idle' ? children : null}
+          </div>
+          {showDesktopSplit ? (
+            <aside
+              className="orb-voice-station-content__side min-h-0 w-full min-w-0 md:max-w-md md:flex-1"
+              data-orb-voice-desktop-side-panel
+            >
+              {sidePanel}
+            </aside>
+          ) : null}
         </div>
       </div>
 
-      {isMobileViewport && controls ? (
+      {isMobileViewport && controls && workspaceMode !== 'after_call' ? (
         <div
           className="orb-voice-station-content__mobile-dock shrink-0 border-t border-[var(--orb-line)]/30 px-4 py-2.5 pb-[max(0.75rem,env(safe-area-inset-bottom))]"
           data-orb-voice-mobile-action-dock

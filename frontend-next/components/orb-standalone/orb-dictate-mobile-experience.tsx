@@ -176,34 +176,35 @@ export function OrbDictateMobileExperience({
       >
       <section
         className={`flex shrink-0 flex-col items-center text-center ${
-          showCapturedCard
-            ? 'px-0 pt-2'
-            : 'orb-dictate-mobile-capture-panel mx-auto w-full max-w-xs rounded-2xl border border-[var(--orb-primary)]/12 bg-[var(--orb-surface-elevated)]/72 px-3.5 py-3.5 shadow-[0_10px_32px_color-mix(in_srgb,var(--orb-primary)_8%,transparent)] backdrop-blur-md'
+          showCapturedCard ? 'px-0 pt-2' : 'orb-dictate-mobile-capture-stage mx-auto w-full max-w-sm px-1 py-2'
         }`}
         data-orb-dictate-mobile-capture
         data-orb-dictate-capture-panel={showCapturedCard ? undefined : 'true'}
+        data-orb-dictate-capture-stage={showCapturedCard ? undefined : 'true'}
       >
         {!showCapturedCard ? (
           <>
             <div
-              className="orb-dictate-mobile-orb-wrap mb-2 flex shrink-0 items-center justify-center"
+              className="orb-dictate-mobile-orb-wrap mb-3 flex shrink-0 items-center justify-center"
               data-orb-dictate-capture-orb
-              data-orb-dictate-capture-orb-state={orbListening ? 'listening' : orbReadyIdle ? 'ready' : 'idle'}
+              data-orb-dictate-capture-orb-state={
+                orbListening
+                  ? 'listening'
+                  : generating || recordingUiState === 'processing'
+                    ? 'processing'
+                    : output
+                      ? 'review_ready'
+                      : orbReadyIdle
+                        ? 'ready'
+                        : 'idle'
+              }
               aria-hidden
             >
               <GlassOrbMark
                 variant="dictate"
                 className="orb-dictate-mobile-orb"
-                state={orbListening ? 'listening' : 'idle'}
-                pulse={orbListening || orbReadyIdle}
-              />
-            </div>
-            <div className="mb-2 w-full" data-orb-dictate-mobile-record-type>
-              <OrbDictateTemplateSelector
-                selectedTemplateId={selectedTemplateId}
-                onTemplateChange={onTemplateChange}
-                variant="compact"
-                appearance="capture"
+                state={orbListening ? 'listening' : generating ? 'thinking' : 'idle'}
+                pulse={orbListening || orbReadyIdle || generating}
               />
             </div>
           </>
@@ -231,13 +232,24 @@ export function OrbDictateMobileExperience({
           data-orb-dictate-speech-start={
             mobilePrimaryLabel === 'Start recording' || mobilePrimaryLabel === 'Record more' ? 'true' : undefined
           }
-          className="mt-2.5 inline-flex min-h-[2.75rem] w-full max-w-xs items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[var(--orb-primary-blue,#168bff)] to-[var(--orb-primary-blue-2,#0d5fcc)] px-8 text-sm font-semibold text-white shadow-lg shadow-sky-500/25 ring-1 ring-white/10 disabled:cursor-not-allowed disabled:opacity-50"
+          className="mt-3 inline-flex min-h-[2.75rem] w-full max-w-xs items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[var(--orb-primary-blue,#168bff)] to-[var(--orb-primary-blue-2,#0d5fcc)] px-8 text-sm font-semibold text-white shadow-lg shadow-sky-500/25 ring-1 ring-white/10 disabled:cursor-not-allowed disabled:opacity-50"
           disabled={uploadingAudio || (needsConsent && !consentConfirmed && mobilePrimaryLabel === 'Start recording')}
           onClick={onPrimaryAction}
         >
           {showStartMicIcon ? <Mic className="h-4 w-4 shrink-0" aria-hidden /> : null}
           <span>{captureStarting ? 'Starting…' : mobilePrimaryLabel}</span>
         </button>
+
+        {!showCapturedCard ? (
+          <div className="mt-2.5 w-full max-w-xs" data-orb-dictate-mobile-record-type>
+            <OrbDictateTemplateSelector
+              selectedTemplateId={selectedTemplateId}
+              onTemplateChange={onTemplateChange}
+              variant="compact"
+              appearance="capture"
+            />
+          </div>
+        ) : null}
 
         <div className="mt-2.5 flex flex-wrap justify-center gap-1.5" data-orb-dictate-mobile-secondary>
           {!showCapturedCard ? (

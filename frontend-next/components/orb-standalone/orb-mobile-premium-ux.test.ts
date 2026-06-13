@@ -211,7 +211,7 @@ describe('ORB mobile premium Voice copy', () => {
     const actions = readComponent('components/orb-standalone/orb-voice-actions.tsx')
     assert.match(voice, /OrbVoiceActions/)
     assert.match(actions, /data-orb-voice-use-dictate/)
-    assert.match(voice, /data-orb-voice-type-instead/)
+    assert.match(actions, /data-orb-voice-type-instead/)
     assert.doesNotMatch(voice, /data-orb-voice-open-dictate/)
     assert.equal(
       voiceMobileStatusLine({ uiState: 'provider_unavailable', blockedReason: null }),
@@ -251,14 +251,14 @@ describe('ORB mobile premium Voice copy', () => {
     assert.match(readComponent('components/orb-standalone/orb-voice-station.tsx'), /onPrimary=\{handleEnd\}/)
   })
 
-  it('post-session shows Dictate copy and new conversation without duplicate fallbacks', () => {
+  it('post-session shows after-call panel and record handoff without duplicate fallbacks', () => {
     const voice = readComponent('components/orb-standalone/orb-voice-station.tsx')
-    const actions = readComponent('components/orb-standalone/orb-voice-transcript-actions.tsx')
-    assert.match(voice, /data-orb-voice-post-session/)
-    assert.match(voice, /OrbVoiceTranscriptActions/)
-    assert.match(actions, /data-orb-voice-to-dictate/)
-    assert.match(actions, /Copy full conversation/)
-    assert.match(voice, /Start new voice conversation|New conversation/)
+    const after = readComponent('components/orb-standalone/orb-voice-after-call-panel.tsx')
+    assert.match(voice, /OrbVoiceAfterCallPanel/)
+    assert.match(after, /data-orb-voice-after-call/)
+    assert.match(after, /data-orb-voice-create-draft-record/)
+    assert.match(after, /Copy transcript/)
+    assert.match(after, /New voice session/)
     assert.doesNotMatch(voice, /Open Dictate instead/)
     assert.doesNotMatch(voice, /Open Dictate again/)
   })
