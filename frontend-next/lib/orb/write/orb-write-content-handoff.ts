@@ -9,6 +9,7 @@ const CONTENT_HANDOFF_KEY = 'orb-write-content-handoff-v1'
 
 export type OrbWriteContentHandoffSource =
   | 'chat'
+  | 'voice'
   | 'dictate'
   | 'template'
   | 'document'

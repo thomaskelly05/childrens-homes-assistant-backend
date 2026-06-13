@@ -4,18 +4,16 @@ import { FormEvent, useCallback, useMemo, useState } from 'react'
 
 import { OrbHeroSphere } from '@/components/orb-residential/ui/orb-hero-sphere'
 import { useOrbAppearance } from '@/components/orb-standalone/use-orb-appearance'
+import {
+  ORB_SAFETY_ACCEPTANCE_INTRO,
+  ORB_SAFETY_ACCEPTANCE_STATEMENTS
+} from '@/lib/orb/orb-residential-safety-copy'
 import { ORB_SAFETY_VERSION, acceptOrbSafety } from '@/lib/orb/orb-billing-client'
 import { getOrbThemeCssVariables } from '@/lib/orb/orb-theme'
 
-export const ORB_SAFETY_INTRO =
-  'ORB supports residential childcare professionals, but it does not replace professional judgement, safeguarding procedures, managers, emergency services or legal advice.'
+export const ORB_SAFETY_INTRO = ORB_SAFETY_ACCEPTANCE_INTRO
 
-export const ORB_SAFETY_STATEMENTS = [
-  'I understand ORB is guidance and recording support, not a replacement for professional judgement.',
-  'I understand urgent safeguarding concerns must follow my home’s safeguarding policy and local safeguarding procedures.',
-  'I understand I must review, edit and approve ORB outputs before using them in professional records.',
-  'I understand ORB Residential does not access live IndiCare OS care records.'
-] as const
+export const ORB_SAFETY_STATEMENTS = ORB_SAFETY_ACCEPTANCE_STATEMENTS
 
 type StatementKey = (typeof ORB_SAFETY_STATEMENTS)[number]
 

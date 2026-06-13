@@ -27,6 +27,7 @@ import { GlassOrbMark } from '@/components/orb-residential/ui/glass-orb-mark'
 import { OrbUserAvatar } from '@/components/orb-residential/orb-user-avatar'
 import { OrbProjectMemoryModal } from '@/components/orb-residential/orb-project-memory-modal'
 import { ORB_RESIDENTIAL_TAGLINE } from '@/lib/orb/orb-residential-copy'
+import { ORB_RESIDENTIAL_STATION_DEFINITIONS } from '@/lib/orb/orb-residential-stations'
 import type { StandaloneOrbMode } from '@/lib/orb/standalone-client'
 import {
   ORB_SIDEBAR_PROJECTS_COLLAPSED_KEY,
@@ -73,10 +74,31 @@ const DESKTOP_MAIN_NAV: Array<{
   icon: (typeof NAV_ITEMS)[number]['icon']
   magicNotes?: boolean
 }> = [
-  { id: 'chat', label: 'Chat', helper: 'Ask, reflect and plan', icon: MessageSquare },
-  { id: 'orb_dictate', label: 'Dictate', helper: 'Turn rough speech into records', icon: PenLine, magicNotes: true },
-  { id: 'orb_voice', label: 'Voice', helper: 'Talk hands-free with ORB', icon: Mic },
-  { id: 'orb_write', label: 'ORB Write', helper: 'Create and finalise documents', icon: FileEdit }
+  {
+    id: 'chat',
+    label: ORB_RESIDENTIAL_STATION_DEFINITIONS.chat.label,
+    helper: ORB_RESIDENTIAL_STATION_DEFINITIONS.chat.helper,
+    icon: MessageSquare
+  },
+  {
+    id: 'orb_dictate',
+    label: ORB_RESIDENTIAL_STATION_DEFINITIONS.orb_dictate.label,
+    helper: ORB_RESIDENTIAL_STATION_DEFINITIONS.orb_dictate.helper,
+    icon: PenLine,
+    magicNotes: true
+  },
+  {
+    id: 'orb_voice',
+    label: ORB_RESIDENTIAL_STATION_DEFINITIONS.orb_voice.label,
+    helper: ORB_RESIDENTIAL_STATION_DEFINITIONS.orb_voice.helper,
+    icon: Mic
+  },
+  {
+    id: 'orb_write',
+    label: ORB_RESIDENTIAL_STATION_DEFINITIONS.orb_write.label,
+    helper: ORB_RESIDENTIAL_STATION_DEFINITIONS.orb_write.helper,
+    icon: FileEdit
+  }
 ]
 
 const DESKTOP_LIBRARY_NAV: Array<{
@@ -122,10 +144,30 @@ const MOBILE_DRAWER_QUICK_NAV: Array<{
   helper?: string
   icon: (typeof NAV_ITEMS)[number]['icon']
 }> = [
-  { id: 'chat', label: 'Chat', helper: 'Ask, reflect and plan', icon: MessageSquare },
-  { id: 'orb_dictate', label: 'Dictate', helper: 'Turn rough speech into records', icon: PenLine },
-  { id: 'orb_voice', label: 'Voice', helper: 'Talk hands-free with ORB', icon: Mic },
-  { id: 'orb_write', label: 'ORB Write', helper: 'Create and finalise documents', icon: FileEdit },
+  {
+    id: 'chat',
+    label: ORB_RESIDENTIAL_STATION_DEFINITIONS.chat.label,
+    helper: ORB_RESIDENTIAL_STATION_DEFINITIONS.chat.helper,
+    icon: MessageSquare
+  },
+  {
+    id: 'orb_dictate',
+    label: ORB_RESIDENTIAL_STATION_DEFINITIONS.orb_dictate.label,
+    helper: ORB_RESIDENTIAL_STATION_DEFINITIONS.orb_dictate.helper,
+    icon: PenLine
+  },
+  {
+    id: 'orb_voice',
+    label: ORB_RESIDENTIAL_STATION_DEFINITIONS.orb_voice.label,
+    helper: ORB_RESIDENTIAL_STATION_DEFINITIONS.orb_voice.helper,
+    icon: Mic
+  },
+  {
+    id: 'orb_write',
+    label: ORB_RESIDENTIAL_STATION_DEFINITIONS.orb_write.label,
+    helper: ORB_RESIDENTIAL_STATION_DEFINITIONS.orb_write.helper,
+    icon: FileEdit
+  },
   { id: 'templates', label: 'Templates', helper: 'Recording library', icon: FileText },
   { id: 'documents', label: 'Documents & Guidance', icon: FolderOpen },
   { id: 'saved', label: 'Saved Outputs', helper: 'Your records and drafts', icon: Save },

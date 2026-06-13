@@ -158,7 +158,7 @@ describe('ORB Dictate', () => {
     const station = readComponent('components/orb-standalone/orb-dictate-station.tsx')
     const selector = readComponent('components/orb/dictate/OrbDictateTemplateSelector.tsx')
     const types = readFileSync(join(root, 'lib/orb/dictate/orb-dictate-types.ts'), 'utf8')
-    assert.match(types, /ORB_DICTATE_PRODUCT_TITLE = 'Dictate'/)
+    assert.match(types, /orbResidentialStation\('orb_dictate'\)/)
     assert.match(station, /ORB_DICTATE_PRODUCT_SUBTITLE/)
     assert.match(selector, /data-orb-dictate-template-selector/)
   })

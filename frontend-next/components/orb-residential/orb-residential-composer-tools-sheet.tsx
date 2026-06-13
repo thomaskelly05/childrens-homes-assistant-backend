@@ -5,6 +5,8 @@ import { AudioLines, Camera, FileText, ImagePlus, Mic, PenLine, Shield, Upload, 
 
 import type { OrbComposerPlusAction } from '@/components/orb-standalone/orb-composer-plus-menu'
 
+import { ORB_RESIDENTIAL_STATION_DEFINITIONS } from '@/lib/orb/orb-residential-stations'
+
 const MOBILE_TOOL_ITEMS: Array<{
   id: OrbComposerPlusAction
   label: string
@@ -31,20 +33,20 @@ const MOBILE_TOOL_ITEMS: Array<{
   },
   {
     id: 'orb_dictate',
-    label: 'Dictate',
-    description: 'Turn speech into a record',
+    label: ORB_RESIDENTIAL_STATION_DEFINITIONS.orb_dictate.label,
+    description: ORB_RESIDENTIAL_STATION_DEFINITIONS.orb_dictate.tagline,
     icon: Mic
   },
   {
     id: 'orb_voice',
-    label: 'Voice',
-    description: 'Talk hands-free',
+    label: ORB_RESIDENTIAL_STATION_DEFINITIONS.orb_voice.label,
+    description: ORB_RESIDENTIAL_STATION_DEFINITIONS.orb_voice.tagline,
     icon: AudioLines
   },
   {
     id: 'orb_write',
-    label: 'ORB Write',
-    description: 'Create or finalise a document',
+    label: ORB_RESIDENTIAL_STATION_DEFINITIONS.orb_write.label,
+    description: ORB_RESIDENTIAL_STATION_DEFINITIONS.orb_write.tagline,
     icon: PenLine
   },
   {

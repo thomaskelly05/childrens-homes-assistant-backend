@@ -1,5 +1,22 @@
 import { convergedChatStarters } from '@/lib/orb/orb-converged-actions'
+import {
+  ORB_RESIDENTIAL_DICTATE_RESPONSIBILITY_STRIP,
+  ORB_RESIDENTIAL_PRIVACY_GUIDANCE_ITEMS,
+  ORB_RESIDENTIAL_PRIVACY_STRIP,
+  ORB_RESIDENTIAL_SAFETY_STRIP,
+  ORB_RESIDENTIAL_VOICE_PRIVACY_STRIP,
+  ORB_RESIDENTIAL_VOICE_SAFETY_STRIP
+} from '@/lib/orb/orb-residential-safety-copy'
 import type { StandaloneOrbMode } from '@/lib/orb/standalone-client'
+
+export {
+  ORB_RESIDENTIAL_DICTATE_RESPONSIBILITY_STRIP,
+  ORB_RESIDENTIAL_PRIVACY_GUIDANCE_ITEMS,
+  ORB_RESIDENTIAL_PRIVACY_STRIP,
+  ORB_RESIDENTIAL_SAFETY_STRIP,
+  ORB_RESIDENTIAL_VOICE_PRIVACY_STRIP,
+  ORB_RESIDENTIAL_VOICE_SAFETY_STRIP
+}
 
 const ORB_CONVERGED_CHAT_STARTERS = convergedChatStarters()
 
@@ -196,14 +213,6 @@ export const ORB_RESIDENTIAL_MOBILE_PRIMARY_STARTERS: ResidentialStarter[] = ORB
   ORB_RESIDENTIAL_MOBILE_PRIMARY_STARTER_COUNT
 )
 
-/** Compact privacy guidance shown on mobile home — full detail in bottom sheet. */
-export const ORB_RESIDENTIAL_PRIVACY_GUIDANCE_ITEMS = [
-  'Use anonymised or minimal details where possible.',
-  `Follow your organisation${APOS}s safeguarding procedures.`,
-  'Do not use ORB for emergencies.',
-  'Adult remains responsible.'
-] as const
-
 /** Short billing value bullets for mobile default view. */
 export const ORB_RESIDENTIAL_BILLING_VALUE_SUMMARY = [
   'Chat, Dictate and Voice support',
@@ -252,22 +261,6 @@ export const ORB_RESIDENTIAL_EMPTY_SUBLINE =
 export const ORB_RESIDENTIAL_MOBILE_EMPTY_STARTERS = ORB_RESIDENTIAL_MOBILE_PRIMARY_STARTERS
 
 export const ORB_RESIDENTIAL_EMPTY_STARTERS = ORB_RESIDENTIAL_PRIMARY_STARTERS
-
-/** Calm adult-responsibility strip used across ORB Residential surfaces. */
-export const ORB_RESIDENTIAL_SAFETY_STRIP =
-  'ORB can help you reflect and improve wording. You remain responsible for accuracy, escalation and final approval.'
-
-export const ORB_RESIDENTIAL_PRIVACY_STRIP =
-  `Use anonymised or minimal identifiable information where possible. Follow your organisation${APOS}s policy and local safeguarding procedures.`
-
-export const ORB_RESIDENTIAL_VOICE_PRIVACY_STRIP =
-  'Voice sessions may create transcripts for drafting and support purposes. Do not use ORB for emergencies — follow local safeguarding and emergency procedures.'
-
-export const ORB_RESIDENTIAL_VOICE_SAFETY_STRIP =
-  'ORB can support your thinking, but it does not replace safeguarding procedures, management oversight or professional judgement. Do not use ORB for emergencies — follow local safeguarding and emergency procedures.'
-
-export const ORB_RESIDENTIAL_DICTATE_RESPONSIBILITY_STRIP =
-  'ORB can help structure and improve wording. You remain responsible for accuracy, escalation and final approval.'
 
 export const ORB_RESIDENTIAL_BILLING_VALUE_ITEMS = [
   'Chat with ORB',

@@ -36,7 +36,7 @@ describe('ORB Dictate hero polish', () => {
     const topBar = readComponent('components/orb/dictate/OrbDictateTopBar.tsx')
     const workspace = readComponent('components/orb/dictate/OrbDictateStudioWorkspace.tsx')
     const types = readComponent('lib/orb/dictate/orb-dictate-types.ts')
-    assert.match(types, /ORB_DICTATE_PRODUCT_TITLE = 'Dictate'/)
+    assert.match(types, /orbResidentialStation\('orb_dictate'\)/)
     assert.match(types, /ORB_DICTATE_PRODUCT_SUBTITLE/)
     assert.match(topBar, /data-orb-dictate-title/)
     assert.match(station, /data-orb-dictate-subtitle/)
@@ -65,7 +65,8 @@ describe('ORB Dictate hero polish', () => {
 
   it('sidebar nav uses Dictate label with helper text', () => {
     const sidebar = readComponent('components/orb-residential/orb-residential-sidebar.tsx')
-    assert.match(sidebar, /label: 'Dictate', helper: 'Turn rough speech into records'/)
+    assert.match(sidebar, /ORB_RESIDENTIAL_STATION_DEFINITIONS/)
+    assert.match(sidebar, /orb_dictate/)
     assert.doesNotMatch(sidebar, /label: 'Magic Notes'/)
   })
 })

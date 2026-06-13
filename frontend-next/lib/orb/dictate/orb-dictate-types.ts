@@ -118,8 +118,12 @@ export const REFLECTIVE_DEBRIEF_QUESTIONS = [
   'What needs manager oversight?'
 ] as const
 
-export const ORB_DICTATE_PRODUCT_TITLE = 'Dictate'
-export const ORB_DICTATE_PRODUCT_SUBTITLE = 'Turn rough notes into a safer record.'
+import { orbResidentialStation } from '../orb-residential-stations.ts'
+
+const dictateStation = orbResidentialStation('orb_dictate')
+
+export const ORB_DICTATE_PRODUCT_TITLE = dictateStation.label
+export const ORB_DICTATE_PRODUCT_SUBTITLE = dictateStation.tagline
 
 export const ORB_DICTATE_GOVERNANCE_COPY = {
   draft:

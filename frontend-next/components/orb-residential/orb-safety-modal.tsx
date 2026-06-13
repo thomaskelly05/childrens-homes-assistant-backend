@@ -3,14 +3,8 @@
 import { useState } from 'react'
 
 import { OrbButton } from '@/components/orb-residential/ui/orb-button'
+import { ORB_SAFETY_MODAL_POINTS } from '@/lib/orb/orb-residential-safety-copy'
 import { ORB_SAFETY_VERSION, acceptOrbSafety } from '@/lib/orb/orb-billing-client'
-
-const SAFETY_POINTS = [
-  'ORB supports professional judgement.',
-  'ORB does not replace safeguarding procedures, managers, emergency services, local protocols or legal or medical advice.',
-  'If there is immediate risk of harm, follow your organisation\'s procedures and contact emergency services where required.',
-  'An adult must review ORB outputs before use in practice.'
-] as const
 
 export function OrbSafetyModal({ onAccepted }: { onAccepted: () => void }) {
   const [submitting, setSubmitting] = useState(false)
@@ -51,7 +45,7 @@ export function OrbSafetyModal({ onAccepted }: { onAccepted: () => void }) {
           payment problem.
         </p>
         <ul className="mt-4 space-y-2 text-base leading-relaxed text-slate-300" data-orb-safety-copy>
-          {SAFETY_POINTS.map((point) => (
+          {ORB_SAFETY_MODAL_POINTS.map((point) => (
             <li key={point} className="flex gap-2">
               <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-sky-400" aria-hidden />
               <span>{point}</span>
