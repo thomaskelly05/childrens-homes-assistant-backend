@@ -3,7 +3,6 @@
 import { useRef } from 'react'
 import { Upload } from 'lucide-react'
 
-import { GlassOrbMark } from '@/components/orb-residential/ui/glass-orb-mark'
 import { OrbDictateBoundaryCopy } from '@/components/orb-standalone/orb-dictate-boundary-copy'
 import { OrbDictateOutputTypeSelector } from '@/components/orb-standalone/orb-dictate-output-type-selector'
 import {
@@ -230,15 +229,6 @@ export function OrbDictateMobileExperience({
             </button>
           )}
         </div>
-        {!showCapturedCard ? (
-          <div className="mt-2 w-full max-w-xs" data-orb-dictate-orb-accent>
-            <GlassOrbMark
-              variant="dictate"
-              pulse={recordingActive}
-              className={`orb-dictate-mobile-orb orb-dictate-mobile-orb--compact mx-auto shrink-0 ${orbClass}`}
-            />
-          </div>
-        ) : null}
         <div className="mt-2 w-full max-w-xs text-left">
           <OrbDictateBoundaryCopy compact collapsible />
         </div>

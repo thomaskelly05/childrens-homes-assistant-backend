@@ -62,7 +62,7 @@ function MenuItem({
       type="button"
       role="menuitem"
       onClick={onClick}
-      className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm transition ${
+      className={`flex w-full min-h-[2.75rem] items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm transition ${
         tone === 'danger'
           ? 'text-red-400 hover:bg-red-500/10 hover:text-red-300'
           : 'text-[var(--orb-foreground)] hover:bg-[var(--orb-surface-hover)]'
@@ -166,12 +166,12 @@ export function OrbAccountMenu({
       ref={menuRef}
       role="menu"
       aria-label="Account menu"
-      className="orb-account-menu fixed z-[80] w-[min(17rem,calc(100vw-1.5rem))] max-h-[min(26rem,calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-1.5rem))] overflow-y-auto rounded-xl border border-[var(--orb-line)]/45 bg-[var(--orb-surface-elevated)]/96 p-1.5 shadow-lg shadow-black/20 backdrop-blur-md"
+      className="orb-account-menu fixed z-[80] w-[min(16rem,calc(100vw-1.5rem))] max-h-[min(24rem,calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-1.5rem))] overflow-y-auto rounded-xl border border-[var(--orb-line)]/45 bg-[var(--orb-surface-elevated)] p-1 shadow-lg shadow-black/10"
       style={{ top, left }}
       data-orb-account-menu
       data-orb-account-menu-open="true"
     >
-      <div className="rounded-lg border border-[var(--orb-line)]/30 bg-[var(--orb-surface)]/70 px-2.5 py-2.5" data-orb-account-menu-header>
+      <div className="rounded-lg border border-[var(--orb-line)]/25 bg-[var(--orb-surface)]/80 px-2 py-2" data-orb-account-menu-header>
         <div className="flex items-start gap-2.5">
           <OrbUserAvatar name={displayName} avatarUrl={avatarUrl} size="sm" />
           <div className="min-w-0 flex-1">

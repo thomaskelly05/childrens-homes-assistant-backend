@@ -16,18 +16,18 @@ describe('ORB Residential mobile simplification pass', () => {
     const composer = read('components/orb-standalone/orb-standalone-composer.tsx')
     const privacy = read('components/orb-residential/orb-privacy-guidance-sheet.tsx')
     const mobileCss = read('app/orb/orb-mobile.css')
-    assert.equal(copy.match(/ORB_RESIDENTIAL_MOBILE_PRIMARY_STARTER_COUNT = 3/)?.[0], 'ORB_RESIDENTIAL_MOBILE_PRIMARY_STARTER_COUNT = 3')
+    assert.equal(copy.match(/ORB_RESIDENTIAL_MOBILE_PRIMARY_STARTER_COUNT = 2/)?.[0], 'ORB_RESIDENTIAL_MOBILE_PRIMARY_STARTER_COUNT = 2')
     assert.match(composer, /mobileViewport/)
     assert.match(composer, /chatHasMessages/)
-    assert.match(composer, /OrbResidentialPrivacyGuidanceIcon/)
-    assert.match(privacy, /data-orb-privacy-guidance-trigger/)
+    assert.match(composer, /OrbResidentialComposerToolsSheet/)
     assert.match(privacy, /data-orb-privacy-guidance-sheet/)
     assert.match(mobileCss, /\[data-orb-composer-privacy-zone\] \[data-orb-privacy-guidance-link\]/)
   })
 
-  it('mobile home uses horizontal starter row with More chip', () => {
+  it('mobile home uses horizontal suggestion cards with More card', () => {
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
     assert.match(companion, /data-orb-starter-pills-scroll/)
+    assert.match(companion, /data-orb-starter-suggestion-card/)
     assert.match(companion, /data-orb-more-examples/)
     assert.match(companion, /data-orb-more-examples-sheet/)
     assert.match(companion, /ORB_RESIDENTIAL_STARTER_GROUPS\.map/)
@@ -58,15 +58,14 @@ describe('ORB Residential mobile simplification pass', () => {
     assert.match(settings, /isMobile\s*\?\s*undefined/)
   })
 
-  it('dictate mobile uses collapsible privacy, compact orb, and no idle generate panel', () => {
+  it('dictate mobile uses collapsible privacy, no idle orb, and no idle generate panel', () => {
     const dictate = read('components/orb-standalone/orb-dictate-mobile-experience.tsx')
     const boundary = read('components/orb-standalone/orb-dictate-boundary-copy.tsx')
-    const mobileCss = read('app/orb/orb-mobile.css')
     assert.match(dictate, /data-orb-dictate-capture-idle/)
     assert.match(dictate, /collapsible/)
     assert.doesNotMatch(dictate, /data-orb-dictate-generate-idle/)
+    assert.doesNotMatch(dictate, /orb-dictate-mobile-orb/)
     assert.match(boundary, /data-orb-dictate-boundary-disclosure/)
-    assert.match(mobileCss, /orb-dictate-mobile-orb--compact/)
   })
 
   it('voice mobile uses compact safety disclosure', () => {

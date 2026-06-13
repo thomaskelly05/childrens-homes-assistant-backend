@@ -205,22 +205,24 @@
   [data-orb-empty-sphere] {
     width: auto !important;
     height: auto !important;
-    max-width: min(9.75rem, 42vw) !important;
-    max-height: min(9.75rem, 42vw) !important;
+    max-width: min(5.5rem, 22vw) !important;
+    max-height: min(5.5rem, 22vw) !important;
     margin-bottom: 0 !important;
   }
 
-  [data-orb-empty-sphere] .orb-presence--hero {
-    max-width: min(9.75rem, 42vw);
-    max-height: min(9.75rem, 42vw);
+  [data-orb-empty-sphere] .orb-presence--hero,
+  [data-orb-empty-sphere] .orb-presence--compact {
+    --orb-presence-size: clamp(4rem, 18vw, 5.5rem) !important;
+    max-width: clamp(4rem, 18vw, 5.5rem);
+    max-height: clamp(4rem, 18vw, 5.5rem);
   }
 
   [data-orb-empty-sphere] .premium-mobile-orb,
   [data-premium-mobile-orb] {
     width: auto !important;
     height: auto !important;
-    max-width: min(9.75rem, 42vw) !important;
-    max-height: min(9.75rem, 42vw) !important;
+    max-width: min(5.5rem, 22vw) !important;
+    max-height: min(5.5rem, 22vw) !important;
   }
 
   [data-orb-empty-sphere] .orb-standalone-halo,
@@ -1452,15 +1454,17 @@
   }
 
   [data-orb-empty-sphere] {
-    max-width: min(7.5rem, 36vw) !important;
-    max-height: min(7.5rem, 36vw) !important;
+    max-width: min(5.5rem, 22vw) !important;
+    max-height: min(5.5rem, 22vw) !important;
   }
 
   [data-orb-empty-sphere] .orb-presence--hero,
+  [data-orb-empty-sphere] .orb-presence--compact,
   [data-orb-empty-sphere] .premium-mobile-orb,
   [data-premium-mobile-orb] {
-    max-width: min(7.5rem, 36vw) !important;
-    max-height: min(7.5rem, 36vw) !important;
+    --orb-presence-size: clamp(4rem, 18vw, 5.5rem) !important;
+    max-width: clamp(4rem, 18vw, 5.5rem) !important;
+    max-height: clamp(4rem, 18vw, 5.5rem) !important;
   }
 
   [data-orb-empty-heading-mobile] {
@@ -1468,9 +1472,48 @@
     font-size: clamp(1.125rem, 5vw, 1.375rem) !important;
   }
 
+  [data-orb-starter-pills-scroll] [data-orb-starter-suggestion-card] {
+    min-width: min(9.5rem, 42vw) !important;
+    max-width: min(11.5rem, 48vw) !important;
+    min-height: 2.5rem !important;
+    padding: 0.55rem 0.75rem !important;
+    font-size: 0.8125rem !important;
+    border-radius: 0.875rem !important;
+    border: 1px solid color-mix(in srgb, var(--orb-line) 55%, transparent) !important;
+    background: color-mix(in srgb, var(--orb-surface-elevated) 72%, transparent) !important;
+    box-shadow: none !important;
+    font-weight: 500 !important;
+  }
+
+  [data-orb-starter-pills-scroll] [data-orb-more-examples] {
+    min-width: 4.5rem !important;
+    max-width: 5.5rem !important;
+    text-align: center !important;
+    justify-content: center !important;
+  }
+
+  [data-orb-composer-tools-trigger] {
+    color: var(--orb-muted) !important;
+  }
+
+  [data-orb-composer-action-rail] [data-orb-composer-mic],
+  [data-orb-composer-action-rail] [data-orb-composer-voice],
+  [data-orb-composer-action-rail] [data-orb-privacy-guidance-trigger] {
+    display: none !important;
+  }
+
   [data-orb-starter-pills-scroll] {
     flex-wrap: nowrap !important;
     -webkit-overflow-scrolling: touch;
+  }
+
+  [data-orb-empty-subline-mobile] {
+    display: block !important;
+    max-width: 16rem !important;
+    margin-inline: auto !important;
+    text-align: center !important;
+    color: var(--orb-muted) !important;
+    opacity: 0.92 !important;
   }
 
   [data-orb-composer-privacy-zone] [data-orb-privacy-guidance-link] {
@@ -1509,10 +1552,29 @@
     display: none !important;
   }
 
+  [data-orb-voice-mobile] [data-orb-voice-mobile-hero-stage],
   [data-orb-voice-mobile] [data-orb-voice-hero-stage],
   [data-orb-voice-mobile] .orb-voice-hero-stage {
-    min-height: min(34dvh, 15rem) !important;
-    max-height: 38dvh !important;
+    min-height: min(28dvh, 12rem) !important;
+    max-height: 32dvh !important;
+    padding-top: 0.25rem !important;
+    padding-bottom: 0.25rem !important;
+  }
+
+  [data-orb-voice-mobile-hero-stage] [data-orb-voice-companion-size='mobile-preview'],
+  [data-orb-voice-mobile-hero-stage] .orb-voice-companion--mobile-preview {
+    --orb-voice-head-width: clamp(6rem, 28vw, 8.75rem) !important;
+    --orb-voice-head-height: clamp(6rem, 28vw, 8.75rem) !important;
+  }
+
+  [data-orb-templates-panel] [data-orb-recording-library-filters-mobile] .orb-premium-pill {
+    min-height: 2rem !important;
+    padding-inline: 0.65rem !important;
+    font-size: 0.6875rem !important;
+  }
+
+  [data-orb-composer-tools-sheet] [data-orb-composer-tools-item] {
+    min-height: 2.75rem;
   }
 
   .orb-account-menu {
@@ -1576,7 +1638,8 @@
   }
 
   [data-orb-residential-empty] [data-orb-empty-sphere] {
-    display: none !important;
+    display: flex !important;
+    opacity: 0.92;
   }
 
   [data-orb-residential-empty] [data-orb-empty-heading-mobile] {

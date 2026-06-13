@@ -10,9 +10,9 @@ import {
 import { OrbPrivacyInputWarning } from '@/components/orb/privacy/orb-privacy-input-warning'
 import { OrbPrivacyNotice } from '@/components/orb/privacy/orb-privacy-notice'
 import {
-  OrbResidentialPrivacyGuidanceIcon,
   OrbResidentialPrivacyGuidanceSheet
 } from '@/components/orb-residential/orb-privacy-guidance-sheet'
+import { OrbResidentialComposerToolsSheet } from '@/components/orb-residential/orb-residential-composer-tools-sheet'
 import { OrbComposerCopyright } from '@/components/orb-standalone/orb-composer-copyright'
 import { OrbFooter } from '@/components/orb-standalone/orb-footer'
 import { logTapTarget } from '@/lib/interaction/mobile-tap-debug'
@@ -206,9 +206,17 @@ export function OrbStandaloneComposer({
   }, [value, residentialSurface])
 
   const compactResidential = residentialSurface
-  const showMobilePrivacyIcon = compactResidential && mobileViewport && !chatHasMessages
+  const [toolsSheetOpen, setToolsSheetOpen] = useState(false)
   const [privacyGuidanceOpen, setPrivacyGuidanceOpen] = useState(false)
   const showComposerQuickActions = compactResidential && !mobileViewport
+
+  function handleComposerToolSelect(action: OrbComposerPlusAction) {
+    if (action === 'privacy_guidance') {
+      setPrivacyGuidanceOpen(true)
+      return
+    }
+    onPlusMenuAction?.(action)
+  }
 
   return (
     <div
@@ -392,44 +400,25 @@ export function OrbStandaloneComposer({
             <div className={compactResidential ? 'flex items-end gap-1.5' : ''}>
             {compactResidential ? (
               <div className="orb-composer-action-rail flex shrink-0 items-center gap-0.5 pb-1">
-                {mobileViewport ? (
-                  <>
-                    {showMobilePrivacyIcon ? (
-                      <OrbResidentialPrivacyGuidanceIcon onOpen={() => setPrivacyGuidanceOpen(true)} />
-                    ) : null}
+                {onPlusMenuAction ? (
+                  mobileViewport ? (
                     <button
                       type="button"
-                      onClick={onMicClick}
-                      disabled={micDisabled}
-                      aria-label={micLabel}
-                      title={micHint}
-                      className={`inline-flex h-9 min-w-9 shrink-0 items-center justify-center rounded-full transition disabled:cursor-not-allowed disabled:opacity-40 ${voiceListening ? 'bg-[var(--orb-primary-soft)] text-[var(--orb-primary)]' : 'text-[var(--orb-muted)] hover:bg-[var(--orb-surface-hover)] hover:text-[var(--orb-foreground)]'}`}
-                      data-orb-composer-quick-dictate
-                      data-orb-composer-mic
-                      data-orb-composer-mic-route={composerMicRoute}
+                      onClick={() => setToolsSheetOpen(true)}
+                      className="inline-flex h-9 min-w-9 shrink-0 items-center justify-center rounded-full text-[var(--orb-muted)] transition hover:bg-[var(--orb-surface-hover)] hover:text-[var(--orb-foreground)]"
+                      aria-label="Tools"
+                      aria-haspopup="dialog"
+                      data-orb-composer-plus-trigger
+                      data-orb-composer-tools-trigger
                     >
-                      <Mic className="h-4 w-4" aria-hidden />
+                      <Plus className="h-4 w-4" aria-hidden />
                     </button>
-                    {onVoiceClick ? (
-                      <button
-                        type="button"
-                        onClick={onVoiceClick}
-                        aria-label={voicePanelUnavailable ? 'Open ORB Voice (unavailable)' : 'Open ORB Voice'}
-                        className={`inline-flex h-9 min-w-9 shrink-0 items-center justify-center rounded-full transition ${voicePanelUnavailable ? 'text-[var(--orb-muted)] opacity-60' : 'text-[var(--orb-muted)] hover:bg-[var(--orb-surface-hover)] hover:text-[var(--orb-foreground)]'}`}
-                        data-orb-composer-quick-voice
-                        data-orb-composer-voice
-                        data-orb-composer-voice-unavailable={voicePanelUnavailable ? 'true' : 'false'}
-                      >
-                        <AudioLines className="h-4 w-4" aria-hidden />
-                      </button>
-                    ) : null}
-                  </>
-                ) : null}
-                {onPlusMenuAction ? (
-                  <OrbComposerPlusMenu
-                    onSelect={onPlusMenuAction}
-                    onAttachFiles={() => fileInputRef.current?.click()}
-                  />
+                  ) : (
+                    <OrbComposerPlusMenu
+                      onSelect={onPlusMenuAction}
+                      onAttachFiles={() => fileInputRef.current?.click()}
+                    />
+                  )
                 ) : (
                   <button type="button" onClick={() => fileInputRef.current?.click()} className="inline-flex h-9 min-w-9 shrink-0 items-center justify-center rounded-full text-[var(--orb-muted)] transition hover:bg-[var(--orb-surface-hover)] hover:text-[var(--orb-foreground)]" aria-label="Attach" data-orb-composer-attach>
                     <Plus className="h-4 w-4" aria-hidden />
@@ -586,7 +575,14 @@ export function OrbStandaloneComposer({
           <OrbComposerCopyright className="mt-2 px-2 pb-1" />
         ) : null}
       </div>
-      {showMobilePrivacyIcon ? (
+      {mobileViewport && onPlusMenuAction ? (
+        <OrbResidentialComposerToolsSheet
+          open={toolsSheetOpen}
+          onClose={() => setToolsSheetOpen(false)}
+          onSelect={handleComposerToolSelect}
+        />
+      ) : null}
+      {privacyGuidanceOpen ? (
         <OrbResidentialPrivacyGuidanceSheet
           open={privacyGuidanceOpen}
           onClose={() => setPrivacyGuidanceOpen(false)}

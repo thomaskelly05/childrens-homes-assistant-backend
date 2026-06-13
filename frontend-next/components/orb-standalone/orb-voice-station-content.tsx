@@ -3,6 +3,7 @@
 import type { ReactNode } from 'react'
 
 import { OrbVoiceHeroStage } from '@/components/orb-standalone/orb-voice-hero-stage'
+import { useOrbMobileViewport } from '@/components/orb-standalone/use-orb-mobile-viewport'
 import type { OrbVoiceCompanionState } from '@/components/orb-residential/orb-voice-companion'
 
 /**
@@ -28,6 +29,8 @@ export function OrbVoiceStationContent({
   secondaryControls?: ReactNode
   className?: string
 }) {
+  const isMobileViewport = useOrbMobileViewport()
+
   return (
     <div
       className={`orb-voice-station-content flex min-h-0 flex-1 flex-col overflow-hidden ${className}`.trim()}
@@ -41,7 +44,7 @@ export function OrbVoiceStationContent({
             statusLine={statusLine}
             detailLine={detailLine}
             cta={controls}
-            heroStageId="desktop"
+            heroStageId={isMobileViewport ? 'mobile' : 'desktop'}
           />
           {children}
         </div>

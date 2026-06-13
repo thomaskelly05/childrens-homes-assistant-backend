@@ -146,7 +146,7 @@ describe('ORB mobile premium Dictate copy', () => {
     const mobile = readComponent('components/orb-standalone/orb-dictate-mobile-experience.tsx')
     assert.match(mobile, /data-orb-dictate-captured-card/)
     assert.match(mobile, /data-orb-dictate-generate-sticky/)
-    assert.match(mobile, /data-orb-dictate-generate-idle/)
+    assert.doesNotMatch(mobile, /data-orb-dictate-generate-idle/)
     assert.match(mobile, /disabled=\{generating \|\| !effectiveInputText\.trim\(\)\}/)
   })
 

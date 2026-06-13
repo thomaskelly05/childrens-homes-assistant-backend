@@ -54,7 +54,7 @@ describe('ORB Residential mobile UX', () => {
     const companion = readComponent('components/orb-standalone/orb-care-companion.tsx')
     const mark = readComponent('components/orb-residential/ui/glass-orb-mark.tsx')
     const premiumCss = readComponent('app/orb/orb-premium-tokens.css')
-    assert.match(companion, /GlassOrbMark variant="hero"/)
+    assert.match(companion, /variant=\{isMobileViewport \? 'compact' : 'hero'\}/)
     assert.match(companion, /data-orb-residential-empty/)
     assert.match(mark, /OrbPresence/)
     assert.match(premiumCss, /orb-presence--hero/)
@@ -120,7 +120,7 @@ describe('ORB Residential mobile UX', () => {
     assert.match(companion, /mobileHeader=/)
     assert.match(copy, /ORB_RESIDENTIAL_MOBILE_EMPTY_HEADING/)
     assert.match(copy, /What do you need help with\?/)
-    assert.match(copy, /ORB_RESIDENTIAL_MOBILE_PRIMARY_STARTER_COUNT = 3/)
+    assert.match(copy, /ORB_RESIDENTIAL_MOBILE_PRIMARY_STARTER_COUNT = 2/)
     for (const starter of [
       'Daily record',
       'Incident reflection',

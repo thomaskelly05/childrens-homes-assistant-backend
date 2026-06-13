@@ -204,7 +204,7 @@ export function OrbBillingModal({
         </div>
 
         <section className={sectionClassName()} data-orb-billing-plan-card>
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+          <div className="hidden flex-col gap-3 sm:flex lg:flex-row lg:items-start lg:justify-between">
             <div className="flex min-w-0 items-start gap-2.5" data-orb-billing-account>
               <OrbUserAvatar name={displayName} avatarUrl={avatarUrl} size="sm" />
               <div className="min-w-0 flex-1">
