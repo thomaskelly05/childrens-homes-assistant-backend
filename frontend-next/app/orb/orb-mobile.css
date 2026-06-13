@@ -1192,10 +1192,65 @@
 
   .orb-dictate-mobile .orb-dictate-mobile-orb,
   .orb-dictate-mobile .orb-presence--dictate {
-    --orb-presence-size: clamp(8.5rem, 34vw, 10.5rem) !important;
+    --orb-presence-size: clamp(3.5rem, 14vw, 4.5rem) !important;
     width: var(--orb-presence-size) !important;
     height: var(--orb-presence-size) !important;
-    opacity: 0.92;
+    opacity: 0.94;
+  }
+
+  .orb-dictate-mobile-orb-wrap {
+    position: relative;
+    width: clamp(3.5rem, 14vw, 4.5rem);
+    height: clamp(3.5rem, 14vw, 4.5rem);
+  }
+
+  .orb-dictate-mobile-orb-wrap::before {
+    content: '';
+    position: absolute;
+    inset: -18%;
+    border-radius: 9999px;
+    background: radial-gradient(
+      circle,
+      color-mix(in srgb, var(--orb-primary-blue, #168bff) 28%, transparent) 0%,
+      color-mix(in srgb, var(--orb-primary-blue-2, #0d5fcc) 12%, transparent) 42%,
+      transparent 72%
+    );
+    opacity: 0.72;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  [data-orb-dictate-capture-orb-state='listening'] .orb-dictate-mobile-orb-wrap::before {
+    opacity: 0.95;
+    animation: orb-dictate-capture-glow 2.4s ease-in-out infinite;
+  }
+
+  [data-orb-dictate-capture-orb-state='ready'] .orb-dictate-mobile-orb-wrap::before {
+    animation: orb-dictate-capture-glow 3.6s ease-in-out infinite;
+  }
+
+  @keyframes orb-dictate-capture-glow {
+    0%,
+    100% {
+      transform: scale(0.96);
+      opacity: 0.62;
+    }
+    50% {
+      transform: scale(1.04);
+      opacity: 0.92;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    [data-orb-dictate-capture-orb-state] .orb-dictate-mobile-orb-wrap::before {
+      animation: none !important;
+    }
+  }
+
+  .orb-dictate-mobile-orb-wrap .orb-dictate-mobile-orb,
+  .orb-dictate-mobile-orb-wrap .orb-presence {
+    position: relative;
+    z-index: 1;
   }
 
   [data-orb-write-mobile='true'] [data-orb-write-toolbar] {
@@ -1423,7 +1478,13 @@
 
   [data-orb-dictate-capture-panel='true'] {
     gap: 0.35rem !important;
-    box-shadow: 0 8px 24px color-mix(in srgb, var(--orb-line) 18%, transparent) !important;
+    border-color: color-mix(in srgb, var(--orb-primary-blue, #168bff) 14%, var(--orb-line)) !important;
+    background: color-mix(in srgb, var(--orb-surface-elevated) 78%, var(--orb-primary-soft) 22%) !important;
+    box-shadow:
+      0 10px 32px color-mix(in srgb, var(--orb-primary-blue, #168bff) 10%, transparent),
+      0 1px 0 color-mix(in srgb, #fff 8%, transparent) inset !important;
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
   }
 
   [data-orb-dictate-capture-panel='true'] [data-orb-dictate-primary-action] {
@@ -1441,16 +1502,20 @@
     gap: 0.35rem !important;
   }
 
+  [data-orb-dictate-capture-panel='true'] [data-orb-dictate-template-selector-appearance='capture'] [data-orb-dictate-template-dropdown] {
+    min-height: 2.75rem !important;
+  }
+
   [data-orb-dictate-mobile][data-orb-dictate-capture-idle='true'] {
     overflow: hidden !important;
   }
 
   .orb-dictate-mobile-orb--compact,
   .orb-dictate-mobile .orb-dictate-mobile-orb {
-    --orb-presence-size: clamp(4.5rem, 18vw, 5.5rem) !important;
+    --orb-presence-size: clamp(3.5rem, 14vw, 4.5rem) !important;
     width: var(--orb-presence-size) !important;
     height: var(--orb-presence-size) !important;
-    opacity: 0.85;
+    opacity: 0.94;
   }
 
   [data-orb-dictate-boundary-disclosure] summary {
@@ -1827,6 +1892,40 @@
 
   [data-orb-residential-empty] [data-orb-empty-heading-mobile] {
     margin-top: 0.25rem !important;
+  }
+
+  [data-orb-dictate-idle-shell] {
+    min-height: min(48dvh, 22rem) !important;
+    padding-block: 0.35rem !important;
+  }
+
+  .orb-dictate-mobile .orb-dictate-mobile-orb,
+  .orb-dictate-mobile .orb-presence--dictate,
+  .orb-dictate-mobile-orb-wrap {
+    --orb-presence-size: clamp(2.75rem, 12vw, 3.5rem) !important;
+    width: var(--orb-presence-size) !important;
+    height: var(--orb-presence-size) !important;
+  }
+
+  [data-orb-dictate-capture-panel='true'] {
+    padding-block: 0.65rem !important;
+    gap: 0.25rem !important;
+  }
+
+  [data-orb-dictate-capture-panel='true'] .orb-dictate-mobile-orb-wrap {
+    margin-bottom: 0.35rem !important;
+  }
+
+  [data-orb-dictate-capture-panel='true'] [data-orb-dictate-mobile-record-type] {
+    margin-bottom: 0.35rem !important;
+  }
+
+  [data-orb-dictate-capture-panel='true'] [data-orb-dictate-primary-action] {
+    margin-top: 0.35rem !important;
+  }
+
+  [data-orb-dictate-capture-panel='true'] [data-orb-dictate-mobile-secondary] {
+    margin-top: 0.35rem !important;
   }
 }
 

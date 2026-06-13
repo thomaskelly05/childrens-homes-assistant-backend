@@ -96,7 +96,7 @@ describe('ORB mobile premium Dictate copy', () => {
         userStatus: null,
         listening: false
       }),
-      /Ready to record/
+      /Ready to capture/
     )
   })
 

@@ -14,11 +14,14 @@ import { resolveOrbRecordingRecordType } from '@/lib/orb/recording/orb-recording
 export function OrbDictateTemplateSelector({
   selectedTemplateId,
   onTemplateChange,
-  variant = 'compact'
+  variant = 'compact',
+  appearance = 'default'
 }: {
   selectedTemplateId: string
   onTemplateChange: (template: OrbDictateStudioTemplate) => void
   variant?: 'compact' | 'chips'
+  /** `capture` — centred pill styling for mobile Dictate capture panel */
+  appearance?: 'default' | 'capture'
 }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const [detailsOpen, setDetailsOpen] = useState(false)
@@ -66,37 +69,54 @@ export function OrbDictateTemplateSelector({
     )
   }
 
+  const capturePill = appearance === 'capture'
+
   return (
     <div
       ref={rootRef}
-      className="orb-dictate-template-selector relative min-w-0"
+      className={`orb-dictate-template-selector relative min-w-0 ${capturePill ? 'flex flex-col items-center' : ''}`}
       data-orb-dictate-template-selector
       data-orb-dictate-template-selector-variant="compact"
+      data-orb-dictate-template-selector-appearance={capturePill ? 'capture' : undefined}
     >
-      <div className="flex min-w-0 items-center gap-1">
+      <div className={`flex min-w-0 items-center gap-1 ${capturePill ? 'w-full max-w-[17rem] justify-center' : ''}`}>
         <button
           type="button"
           data-orb-dictate-template-dropdown
           aria-expanded={menuOpen}
           aria-haspopup="listbox"
-          className="inline-flex min-w-0 max-w-[min(100%,14rem)] items-center gap-1 rounded-lg border border-[var(--orb-primary)]/35 bg-[var(--orb-primary-soft)]/50 px-2 py-1 text-left text-[11px] font-semibold text-[var(--orb-foreground)] transition hover:bg-[var(--orb-primary-soft)] sm:max-w-[16rem]"
+          aria-label={`Record type: ${selected?.label ?? recordType.label}`}
+          className={
+            capturePill
+              ? 'inline-flex min-h-[2.75rem] min-w-0 flex-1 items-center justify-center gap-1.5 rounded-full border border-[var(--orb-primary)]/25 bg-[var(--orb-primary-soft)]/35 px-3.5 py-1.5 text-[11px] font-semibold text-[var(--orb-foreground)] shadow-sm transition hover:border-[var(--orb-primary)]/40 hover:bg-[var(--orb-primary-soft)]/55'
+              : 'inline-flex min-w-0 max-w-[min(100%,14rem)] items-center gap-1 rounded-lg border border-[var(--orb-primary)]/35 bg-[var(--orb-primary-soft)]/50 px-2 py-1 text-left text-[11px] font-semibold text-[var(--orb-foreground)] transition hover:bg-[var(--orb-primary-soft)] sm:max-w-[16rem]'
+          }
           onClick={() => {
             setMenuOpen((v) => !v)
             setDetailsOpen(false)
           }}
         >
-          <span className="shrink-0 text-[10px] font-medium text-[var(--orb-muted)]">Record type:</span>
+          {!capturePill ? (
+            <span className="shrink-0 text-[10px] font-medium text-[var(--orb-muted)]">Record type:</span>
+          ) : null}
           <span className="truncate" data-orb-dictate-selected-template>
-            {selected?.label ?? recordType.label}
+            {capturePill ? (
+              <>
+                <span className="font-medium text-[var(--orb-muted)]">Record type: </span>
+                {selected?.label ?? recordType.label}
+              </>
+            ) : (
+              (selected?.label ?? recordType.label)
+            )}
           </span>
-          <ChevronDown className={`h-3.5 w-3.5 shrink-0 transition ${menuOpen ? 'rotate-180' : ''}`} aria-hidden />
+          <ChevronDown className={`h-3.5 w-3.5 shrink-0 text-[var(--orb-muted)] transition ${menuOpen ? 'rotate-180' : ''}`} aria-hidden />
         </button>
         <button
           type="button"
           data-orb-dictate-template-details-trigger
           aria-expanded={detailsOpen}
           title="Template details — what ORB checks"
-          className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-[var(--orb-line)]/45 text-[var(--orb-muted)] hover:bg-[var(--orb-surface-hover)] hover:text-[var(--orb-foreground)]"
+          className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-[var(--orb-line)]/40 text-[var(--orb-muted)] hover:bg-[var(--orb-surface-hover)] hover:text-[var(--orb-foreground)]"
           onClick={() => {
             setDetailsOpen((v) => !v)
             setMenuOpen(false)
@@ -106,7 +126,9 @@ export function OrbDictateTemplateSelector({
         </button>
       </div>
       <p
-        className="mt-0.5 line-clamp-1 text-[10px] leading-snug text-[var(--orb-muted)]"
+        className={`line-clamp-2 text-[10px] leading-snug text-[var(--orb-muted)] ${
+          capturePill ? 'mt-1 max-w-[16rem] text-center' : 'mt-0.5 line-clamp-1'
+        }`}
         data-orb-dictate-template-purpose
       >
         {recordType.when_to_use}

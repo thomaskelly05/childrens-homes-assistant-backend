@@ -44,14 +44,16 @@ describe('ORB Residential mobile hierarchy reset', () => {
     assert.match(mobileCss, /\[data-orb-composer-tools-trigger\]/)
   })
 
-  it('dictate mobile idle removes decorative orb clutter', () => {
+  it('dictate mobile idle uses premium capture panel with compact ORB visual', () => {
     const dictate = read('components/orb-standalone/orb-dictate-mobile-experience.tsx')
     const mobileCss = read('app/orb/orb-mobile.css')
     assert.match(dictate, /data-orb-dictate-capture-idle/)
     assert.match(dictate, /data-orb-dictate-capture-panel/)
     assert.match(dictate, /data-orb-dictate-idle-shell/)
-    assert.doesNotMatch(dictate, /orb-dictate-mobile-orb/)
+    assert.match(dictate, /data-orb-dictate-capture-orb/)
+    assert.match(dictate, /GlassOrbMark/)
     assert.match(mobileCss, /\[data-orb-dictate-capture-panel='true'\]/)
+    assert.match(mobileCss, /orb-dictate-mobile-orb-wrap/)
   })
 
   it('voice mobile uses smaller hero stage sizing', () => {

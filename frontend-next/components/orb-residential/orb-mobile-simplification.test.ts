@@ -61,15 +61,16 @@ describe('ORB Residential mobile simplification pass', () => {
     assert.match(settings, /isMobile\s*\?\s*undefined/)
   })
 
-  it('dictate mobile uses collapsible privacy, no idle orb, and no idle generate panel', () => {
+  it('dictate mobile uses collapsible privacy, compact capture orb, and no idle generate panel', () => {
     const dictate = read('components/orb-standalone/orb-dictate-mobile-experience.tsx')
     const boundary = read('components/orb-standalone/orb-dictate-boundary-copy.tsx')
     assert.match(dictate, /data-orb-dictate-capture-idle/)
     assert.match(dictate, /collapsible/)
     assert.match(dictate, /data-orb-dictate-options-chip/)
+    assert.match(dictate, /data-orb-dictate-capture-orb/)
+    assert.match(dictate, /GlassOrbMark/)
     assert.doesNotMatch(dictate, /data-orb-dictate-recording-options-toggle/)
     assert.doesNotMatch(dictate, /data-orb-dictate-generate-idle/)
-    assert.doesNotMatch(dictate, /orb-dictate-mobile-orb/)
     assert.match(boundary, /data-orb-dictate-boundary-disclosure/)
   })
 
