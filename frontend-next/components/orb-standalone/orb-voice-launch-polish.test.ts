@@ -6,6 +6,7 @@ import { describe, it } from 'node:test'
 
 import {
   ORB_VOICE_BOUNDARY_COPY,
+  ORB_VOICE_PANEL_MOBILE_SUBTITLE,
   ORB_VOICE_PANEL_SUBTITLE,
   ORB_VOICE_PANEL_TITLE,
   orbVoiceLaunchStatusLabel,
@@ -24,9 +25,11 @@ describe('ORB Voice launch polish', () => {
   it('panel title and subtitle', () => {
     assert.equal(ORB_VOICE_PANEL_TITLE, 'Voice')
     assert.equal(ORB_VOICE_PANEL_SUBTITLE, 'Live conversation and reflection — talk hands-free with ORB')
+    assert.equal(ORB_VOICE_PANEL_MOBILE_SUBTITLE, 'Talk hands-free with ORB')
     const station = readComponent('components/orb-standalone/orb-voice-station.tsx')
     assert.match(station, /ORB_VOICE_PANEL_TITLE/)
     assert.match(station, /ORB_VOICE_PANEL_SUBTITLE/)
+    assert.match(station, /ORB_VOICE_PANEL_MOBILE_SUBTITLE/)
   })
 
   it('launch state labels render', () => {

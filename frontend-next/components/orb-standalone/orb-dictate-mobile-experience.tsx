@@ -155,9 +155,16 @@ export function OrbDictateMobileExperience({
           {ORB_DICTATE_PRODUCT_SUBTITLE}
         </p>
       </header>
+      <div
+        className={`flex min-h-0 flex-1 flex-col px-2 ${showCapturedCard ? 'shrink-0' : 'justify-center'}`}
+        data-orb-dictate-idle-shell={showCapturedCard ? undefined : 'true'}
+      >
       <section
-        className="flex shrink-0 flex-col items-center px-2 pt-2 text-center"
+        className={`flex shrink-0 flex-col items-center text-center ${
+          showCapturedCard ? 'px-0 pt-2' : 'mx-auto w-full max-w-xs rounded-2xl border border-[var(--orb-line)]/35 bg-[var(--orb-surface-elevated)]/55 px-3 py-3'
+        }`}
         data-orb-dictate-mobile-capture
+        data-orb-dictate-capture-panel={showCapturedCard ? undefined : 'true'}
       >
         <p className="text-sm font-semibold text-[var(--orb-text,var(--orb-foreground))]" data-orb-dictate-status-line>
           {mobileStatusLine}
@@ -303,6 +310,7 @@ export function OrbDictateMobileExperience({
           ) : null}
         </div>
       </section>
+      </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-2 pb-28">
         {recordingActive ? (

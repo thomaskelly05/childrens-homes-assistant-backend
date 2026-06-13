@@ -3849,10 +3849,10 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
                           <button
                             type="button"
                             onClick={() => setPromptDrawerOpen(true)}
-                            className="orb-starter-card mt-2 w-full border-dashed px-3 py-1.5 text-center text-xs font-medium text-[var(--orb-muted)]"
+                            className="mx-auto mt-1 inline-flex min-h-0 items-center justify-center rounded-full border border-[var(--orb-line)]/35 bg-transparent px-2.5 py-0.5 text-[11px] font-medium text-[var(--orb-muted)]"
                             data-orb-more-examples
                           >
-                            More examples
+                            More
                           </button>
                         </div>
                       ) : (

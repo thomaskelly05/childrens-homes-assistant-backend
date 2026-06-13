@@ -47,6 +47,8 @@ export function OrbWriteEditor({
   onSaveDraft,
   onApprove,
   onAskOrb,
+  onOpenSource,
+  onOpenGuidance,
   lastEdited
 }: {
   document: OrbWriteDocument
@@ -58,6 +60,8 @@ export function OrbWriteEditor({
   onSaveDraft?: () => void
   onApprove?: () => void
   onAskOrb?: () => void
+  onOpenSource?: () => void
+  onOpenGuidance?: () => void
   lastEdited?: string
 }) {
   const { isMobile } = useOrbResponsiveMode()
@@ -141,7 +145,7 @@ export function OrbWriteEditor({
       data-orb-write-body
       className={
         isMobile
-          ? 'min-h-[12rem] flex-1 text-[0.9375rem] leading-relaxed text-[var(--orb-foreground)] focus:outline-none [&_.orb-write-section-hint]:pointer-events-none [&_.orb-write-section-hint]:text-[var(--orb-muted)] [&_.orb-write-section-hint]:italic [&_h1]:mb-2 [&_h1]:mt-3 [&_h1]:text-lg [&_h1]:font-semibold [&_h2]:mb-1 [&_h2]:mt-4 [&_h2]:text-base [&_h2]:font-semibold [&_h2]:tracking-tight [&_li]:ml-4 [&_ol]:list-decimal [&_table]:my-2 [&_table]:w-full [&_table]:border-collapse [&_td]:border [&_td]:border-[var(--orb-line)]/40 [&_td]:p-2 [&_ul]:list-disc'
+          ? 'min-h-[12rem] flex-1 text-[0.875rem] leading-[1.55] text-[var(--orb-foreground)] focus:outline-none [&_.orb-write-section-hint]:pointer-events-none [&_.orb-write-section-hint]:text-[var(--orb-muted)] [&_.orb-write-section-hint]:italic [&_h1]:mb-1.5 [&_h1]:mt-2 [&_h1]:text-base [&_h1]:font-semibold [&_h2]:mb-1 [&_h2]:mt-2.5 [&_h2]:text-sm [&_h2]:font-semibold [&_h2]:tracking-tight [&_li]:ml-4 [&_ol]:list-decimal [&_table]:my-1.5 [&_table]:w-full [&_table]:border-collapse [&_td]:border [&_td]:border-[var(--orb-line)]/40 [&_td]:p-1.5 [&_ul]:list-disc'
           : 'min-h-[180mm] text-sm leading-relaxed text-slate-800 focus:outline-none [&_h1]:mb-2 [&_h1]:text-lg [&_h1]:font-semibold [&_h2]:mb-2 [&_h2]:text-base [&_h2]:font-semibold [&_li]:ml-4 [&_ol]:list-decimal [&_table]:my-2 [&_table]:w-full [&_table]:border-collapse [&_td]:border [&_td]:border-slate-200 [&_td]:p-2 [&_ul]:list-disc'
       }
       onInput={syncContent}
@@ -172,7 +176,7 @@ export function OrbWriteEditor({
       {isMobile ? (
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden" data-orb-write-notepad-surface>
           <div
-            className="flex shrink-0 flex-wrap items-center gap-2 border-b border-[var(--orb-line)]/40 px-3 py-2 text-[10px] text-[var(--orb-muted)]"
+            className="flex shrink-0 flex-wrap items-center gap-1.5 border-b border-[var(--orb-line)]/40 px-3 py-1.5 text-[10px] text-[var(--orb-muted)]"
             data-orb-write-notepad-meta
           >
             <span
@@ -201,7 +205,7 @@ export function OrbWriteEditor({
             </span>
           </div>
           <div
-            className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-3 py-3 pb-[max(0.5rem,env(safe-area-inset-bottom))]"
+            className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-3 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]"
             data-orb-write-notepad-body
           >
             {editorBody}
@@ -286,6 +290,8 @@ export function OrbWriteEditor({
           onSaveDraft={onSaveDraft}
           onApprove={onApprove}
           onAskOrb={onAskOrb}
+          onOpenSource={onOpenSource}
+          onOpenGuidance={onOpenGuidance}
         />
       ) : null}
     </div>

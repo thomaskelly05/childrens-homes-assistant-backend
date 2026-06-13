@@ -533,6 +533,8 @@ export function OrbWriteStandalonePanel({
                   onSaveDraft={() => void handleSaveDraft()}
                   onApprove={handleApprove}
                   onAskOrb={() => void runAnalysis()}
+                  onOpenSource={() => setSourcePanelOpen(true)}
+                  onOpenGuidance={() => setGuidancePanelOpen(true)}
                 />
               </div>
               {guidancePanelOpen ? (

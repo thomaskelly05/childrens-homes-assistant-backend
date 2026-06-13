@@ -9,6 +9,7 @@ import { OrbVoiceActions } from '@/components/orb-standalone/orb-voice-actions'
 import { OrbVoiceLaunchControls } from '@/components/orb-standalone/orb-voice-launch-controls'
 import { OrbVoiceTranscriptActions } from '@/components/orb-standalone/orb-voice-transcript-actions'
 import { OrbVoiceStationContent } from '@/components/orb-standalone/orb-voice-station-content'
+import { useOrbMobileViewport } from '@/components/orb-standalone/use-orb-mobile-viewport'
 import {
   mapOrbVoiceUiToCompanionState
 } from '@/components/orb-residential/orb-voice-companion'
@@ -85,6 +86,7 @@ import {
 } from '@/components/orb-standalone/use-standalone-orb-voice'
 import {
   ORB_VOICE_BOUNDARY_COPY,
+  ORB_VOICE_PANEL_MOBILE_SUBTITLE,
   ORB_VOICE_PANEL_SUBTITLE,
   ORB_VOICE_PANEL_TITLE,
   orbVoiceLaunchHeadline,
@@ -204,6 +206,7 @@ export function OrbVoiceStation({
   const [voiceStartError, setVoiceStartError] = useState<string | null>(null)
   const [browserStartStage, setBrowserStartStage] = useState<BrowserStartStage>('idle')
   const statusFetchedRef = useRef(false)
+  const isMobileViewport = useOrbMobileViewport()
 
   const browserSpeechSupported =
     voice.recognitionAvailable || detectSpeechRecognitionSupported()
@@ -936,7 +939,7 @@ export function OrbVoiceStation({
     <OrbAppModal
       open={open}
       title={ORB_VOICE_PANEL_TITLE}
-      subtitle={ORB_VOICE_PANEL_SUBTITLE}
+      subtitle={isMobileViewport ? ORB_VOICE_PANEL_MOBILE_SUBTITLE : ORB_VOICE_PANEL_SUBTITLE}
       onClose={() => {
         resetSession()
         onClose()

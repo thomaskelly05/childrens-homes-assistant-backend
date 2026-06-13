@@ -38,7 +38,9 @@ export function OrbWriteMobileToolbar({
   onExportPdf,
   onSaveDraft,
   onApprove,
-  onAskOrb
+  onAskOrb,
+  onOpenSource,
+  onOpenGuidance
 }: {
   onCommand: (command: string, value?: string) => void
   canUndo: boolean
@@ -49,6 +51,8 @@ export function OrbWriteMobileToolbar({
   onSaveDraft?: () => void
   onApprove?: () => void
   onAskOrb?: () => void
+  onOpenSource?: () => void
+  onOpenGuidance?: () => void
 }) {
   const [sheet, setSheet] = useState<MobileSheet>(null)
 
@@ -166,6 +170,32 @@ export function OrbWriteMobileToolbar({
             ) : null}
             {sheet === 'more' ? (
               <>
+                {onOpenSource ? (
+                  <button
+                    type="button"
+                    className={btn}
+                    onClick={() => {
+                      onOpenSource()
+                      closeSheet()
+                    }}
+                    data-orb-write-mobile-source-entry
+                  >
+                    Source
+                  </button>
+                ) : null}
+                {onOpenGuidance ? (
+                  <button
+                    type="button"
+                    className={btn}
+                    onClick={() => {
+                      onOpenGuidance()
+                      closeSheet()
+                    }}
+                    data-orb-write-mobile-guidance-entry
+                  >
+                    Guidance
+                  </button>
+                ) : null}
                 <button type="button" className={btn} onClick={() => setSheet('format')} data-orb-write-mobile-format-entry>
                   Format
                 </button>

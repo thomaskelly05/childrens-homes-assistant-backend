@@ -46,18 +46,25 @@ describe('ORB Residential mobile hierarchy reset', () => {
 
   it('dictate mobile idle removes decorative orb clutter', () => {
     const dictate = read('components/orb-standalone/orb-dictate-mobile-experience.tsx')
+    const mobileCss = read('app/orb/orb-mobile.css')
     assert.match(dictate, /data-orb-dictate-capture-idle/)
+    assert.match(dictate, /data-orb-dictate-capture-panel/)
+    assert.match(dictate, /data-orb-dictate-idle-shell/)
     assert.doesNotMatch(dictate, /orb-dictate-mobile-orb/)
+    assert.match(mobileCss, /\[data-orb-dictate-capture-panel='true'\]/)
   })
 
   it('voice mobile uses smaller hero stage sizing', () => {
     const voiceContent = read('components/orb-standalone/orb-voice-station-content.tsx')
     const voiceHero = read('components/orb-standalone/orb-voice-hero-stage.tsx')
+    const voiceStation = read('components/orb-standalone/orb-voice-station.tsx')
     const mobileCss = read('app/orb/orb-mobile.css')
     assert.match(voiceContent, /heroStageId=\{isMobileViewport \? 'mobile' : 'desktop'\}/)
     assert.match(voiceContent, /data-orb-voice-mobile-action-dock/)
     assert.match(voiceHero, /mobile-preview/)
+    assert.match(voiceStation, /ORB_VOICE_PANEL_MOBILE_SUBTITLE/)
     assert.match(mobileCss, /\[data-orb-voice-mobile-hero-stage\]/)
+    assert.match(mobileCss, /\[data-orb-workspace-panel='voice'\]/)
   })
 
   it('templates mobile hides duplicate hero and recording library header', () => {
