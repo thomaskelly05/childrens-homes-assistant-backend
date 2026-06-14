@@ -586,7 +586,20 @@
   }
 
   .orb-composer-action-rail {
+    position: relative !important;
+    z-index: 63 !important;
     border-radius: 9999px !important;
+  }
+
+  [data-orb-composer-plus-button],
+  [data-orb-composer-tools-trigger] {
+    position: relative !important;
+    z-index: 64 !important;
+    touch-action: manipulation;
+  }
+
+  [data-orb-composer-attachment-menu] {
+    z-index: 68 !important;
   }
 
   .orb-composer-action-rail button:not([data-orb-composer-attach]):not([data-orb-composer-tools]):not([data-orb-composer-tools-trigger]):not([data-orb-privacy-guidance-trigger]) {

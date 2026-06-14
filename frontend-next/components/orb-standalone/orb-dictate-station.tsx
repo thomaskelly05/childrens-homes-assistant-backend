@@ -115,6 +115,7 @@ import {
 import { buildSavedOutputCreateBody } from '@/lib/orb/orb-saved-output-adapters'
 import { createOrbSavedOutput } from '@/lib/orb/standalone-client'
 import { isOrbDeveloperMode } from '@/lib/orb/orb-developer-mode'
+import { markOrbInteractionLatency } from '@/lib/orb/voice/latency'
 import {
   dictateMobilePrimaryButton,
   dictateMobileShowsCapturedCard,
@@ -214,6 +215,7 @@ export function OrbDictateStation({
   const [reflectiveAnswers, setReflectiveAnswers] = useState<string[]>([])
   const [reflectiveDraft, setReflectiveDraft] = useState('')
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const dictateStartInFlightRef = useRef(false)
   const recorderModeRef = useRef<'speech' | 'media' | null>(null)
   const [recorderMode, setRecorderMode] = useState<'speech' | 'media' | 'none'>('none')
   const transcriptBufferRef = useRef<string[]>([])
@@ -375,12 +377,12 @@ export function OrbDictateStation({
   }, [open, initialTranscript, initialStudio, initialStudioTemplateId, initialNoteType, resetRecording])
 
   useEffect(() => {
-    if (!recordingActive || recordingPaused) return
+    if ((!recordingActive && !captureStarting) || recordingPaused) return
     timerRef.current = setInterval(() => setTimerSec((s) => s + 1), 1000)
     return () => {
       if (timerRef.current) clearInterval(timerRef.current)
     }
-  }, [recordingActive, recordingPaused])
+  }, [recordingActive, captureStarting, recordingPaused])
 
   useEffect(() => {
     if (!recordingActive || recordingPaused) return
@@ -448,6 +450,7 @@ export function OrbDictateStation({
     const ok = await voice.beginDictateSpeechCapture()
     if (ok) {
       setRecordingUiState('recording')
+      markOrbInteractionLatency('dictate_stream_ready')
       setStatusMessage(DICTATE_LISTENING_MESSAGE)
       orbMicDevLog('speech capture started')
       emitOrbClientDebug({ area: 'dictate', event: 'dictate_speech_started', detail: {} })
@@ -466,15 +469,26 @@ export function OrbDictateStation({
 
   async function handleStartSpeechTranscript(mode?: OrbDictateStartMode) {
     const effectiveStartMode = mode ?? startMode
+    if (dictateStartInFlightRef.current || recordingUiState === 'starting' || recordingUiState === 'recording') {
+      return
+    }
+    dictateStartInFlightRef.current = true
+    markOrbInteractionLatency('dictate_tap')
     orbMicDevLog('dictate speech start clicked', effectiveStartMode ?? 'unknown')
     emitOrbClientDebug({ area: 'dictate', event: 'dictate_speech_start_clicked', detail: { mode: effectiveStartMode } })
-    if (consentBlocksStart(mode)) return
+    if (consentBlocksStart(mode)) {
+      dictateStartInFlightRef.current = false
+      return
+    }
+    try {
     if (mode) setStartMode(mode)
     setStartSource('user_click')
     setSpeechError(null)
     transcriptBufferRef.current = transcript.trim() ? [transcript.trim()] : []
     lastDictateTranscriptRef.current = ''
     setRecordingUiState('starting')
+    setTimerSec(0)
+    markOrbInteractionLatency('dictate_permission_requested')
     setRecordingPaused(false)
     setRecordedAudioLabel(null)
     setLastCaptureSource('none')
@@ -508,6 +522,7 @@ export function OrbDictateStation({
       })
       if (ok) {
         setRecordingUiState('recording')
+        markOrbInteractionLatency('dictate_stream_ready')
         setStatusMessage(DICTATE_REALTIME_LISTENING_MESSAGE)
         emitOrbClientDebug({ area: 'dictate', event: 'record_started', detail: { mode: 'realtime_transcription' } })
         return
@@ -542,6 +557,9 @@ export function OrbDictateStation({
     }
 
     await startBrowserSpeechTranscript(mode)
+    } finally {
+      dictateStartInFlightRef.current = false
+    }
   }
 
   async function handleBrowserSpeechFallbackClick() {
@@ -1202,7 +1220,7 @@ export function OrbDictateStation({
     statusMessage && !isTechnicalDictateStatus(statusMessage) ? statusMessage : null
 
   const micStatus = captureStarting
-    ? 'Starting…'
+    ? 'Preparing microphone…'
     : uploadingAudio
       ? 'Processing audio…'
       : recordingActive
@@ -1230,7 +1248,8 @@ export function OrbDictateStation({
     hasGeneratedOutput: Boolean(output),
     speechError,
     userStatus: userFacingStatus,
-    listening: recordingActive && !recordingPaused
+    listening: recordingActive && !recordingPaused,
+    permissionPending: captureStarting
   })
 
   const showMobileCapturedCard = dictateMobileShowsCapturedCard({

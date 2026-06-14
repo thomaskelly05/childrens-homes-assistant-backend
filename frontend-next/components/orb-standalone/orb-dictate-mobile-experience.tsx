@@ -240,11 +240,15 @@ export function OrbDictateMobileExperience({
             mobilePrimaryLabel === 'Start recording' || mobilePrimaryLabel === 'Record more' ? 'true' : undefined
           }
           className="mt-3 inline-flex min-h-[2.75rem] w-full max-w-xs items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[var(--orb-primary-blue,#168bff)] to-[var(--orb-primary-blue-2,#0d5fcc)] px-8 text-sm font-semibold text-white shadow-lg shadow-sky-500/25 ring-1 ring-white/10 disabled:cursor-not-allowed disabled:opacity-50"
-          disabled={uploadingAudio || (needsConsent && !consentConfirmed && mobilePrimaryLabel === 'Start recording')}
+          disabled={
+            uploadingAudio ||
+            captureStarting ||
+            (needsConsent && !consentConfirmed && mobilePrimaryLabel === 'Start recording')
+          }
           onClick={onPrimaryAction}
         >
           {showStartMicIcon ? <Mic className="h-4 w-4 shrink-0" aria-hidden /> : null}
-          <span>{captureStarting ? 'Starting…' : mobilePrimaryLabel}</span>
+          <span>{mobilePrimaryLabel}</span>
         </button>
 
         {!showCapturedCard ? (

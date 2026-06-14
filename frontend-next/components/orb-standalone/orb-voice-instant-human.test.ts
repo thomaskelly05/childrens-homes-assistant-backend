@@ -46,7 +46,7 @@ const baseInput = {
 describe('ORB Voice instant-human refinement', () => {
   it('idle → preparing → listening state copy', () => {
     assert.equal(orbVoiceUiStatusLine('ready'), "I'm ready when you are.")
-    assert.equal(orbVoiceUiStatusLine('preparing'), 'Preparing voice…')
+    assert.equal(orbVoiceUiStatusLine('preparing'), 'Opening microphone…')
     assert.equal(orbVoiceUiStatusLine('listening'), "I'm listening.")
     assert.equal(resolveOrbVoiceUiState({ ...baseInput, startStage: 'starting' }), 'preparing')
     assert.equal(
@@ -116,7 +116,7 @@ describe('ORB Voice instant-human refinement', () => {
     assert.match(live, /Take your time/)
     assert.match(live, /orbVoiceLivePanelStatusLabel/)
     assert.match(live, /I'm listening\./)
-    assert.match(live, /Preparing voice/)
+    assert.match(live, /Opening microphone/)
   })
 
   it('after-call actions and safeguarding prompts', () => {
@@ -150,7 +150,7 @@ describe('ORB Voice instant-human refinement', () => {
     assert.match(station, /start_in_flight/)
     assert.match(station, /setBrowserStartStage\('starting'\)/)
     assert.match(station, /setVoiceStartStage\('starting'\)/)
-    assert.match(station, /Preparing voice…/)
+    assert.match(station, /Opening microphone…/)
   })
 
   it('mobile safe-area dock and no duplicate voice shell', () => {

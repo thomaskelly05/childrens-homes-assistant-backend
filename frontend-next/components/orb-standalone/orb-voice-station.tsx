@@ -63,6 +63,8 @@ import type { OrbRealtimeVoiceState } from '@/lib/orb/voice/orb-realtime-voice-c
 import {
   orbVoiceUiDetailLine,
   orbVoiceUiStatusLine,
+  orbVoiceStartProgressLine,
+  resolveOrbVoiceStartProgressStage,
   resolveOrbVoiceUiState,
   type OrbVoiceAuthStatus,
   type OrbVoiceUiState
@@ -107,6 +109,7 @@ import {
 } from '@/lib/orb/voice/orb-voice-conversation-engine'
 import {
   logOrbVoiceLatencyIfEnabled,
+  markOrbInteractionLatency,
   markOrbVoiceLatency,
   resetOrbVoiceLatencyMarks,
   setOrbVoiceLatencyLogging
@@ -401,11 +404,27 @@ export function OrbVoiceStation({
 
   const turnsForSave = useCallback((): VoiceTurn[] => conversationTurns, [conversationTurns])
 
+  const voiceStartProgressStage = resolveOrbVoiceStartProgressStage({
+    voiceCaptureState: voice.voiceCaptureState,
+    startStage: voiceStartStage,
+    transportLive: voiceTransportLive,
+    browserLaunch: useBrowserLaunch,
+    listening: voice.listening
+  })
+
   const browserStatusOverride =
     voiceStartError ||
     voice.error ||
-    (voice.voiceCaptureState === 'requesting_permission' ? 'Preparing voice…' : null) ||
-    (voice.voiceCaptureState === 'starting' || browserStartStage === 'starting' ? 'Preparing voice…' : null)
+    (voiceStartProgressStage
+      ? orbVoiceStartProgressLine(voiceStartProgressStage)
+      : voice.voiceCaptureState === 'requesting_permission'
+        ? 'Opening microphone…'
+        : null) ||
+    (voice.voiceCaptureState === 'starting' || browserStartStage === 'starting'
+      ? useBrowserLaunch
+        ? 'Hold or tap to speak.'
+        : 'Connecting ORB voice…'
+      : null)
 
   const statusLine =
     browserStatusOverride ||
@@ -414,7 +433,9 @@ export function OrbVoiceStation({
           pushToTalk: voice.settings.pushToTalk,
           realtimeConfigured: false
         })
-      : orbVoiceUiStatusLine(uiState))
+      : uiState === 'preparing' && voiceStartProgressStage
+        ? orbVoiceStartProgressLine(voiceStartProgressStage)
+        : orbVoiceUiStatusLine(uiState))
   const detailLine =
     startBlockedMessage ||
     (audioPlaybackBlocked ? 'Tap to hear ORB' : null) ||
@@ -774,6 +795,7 @@ export function OrbVoiceStation({
     emitOrbClientDebug({ area: 'voice', event: 'voice_start_realtime_attempt', detail: {} })
     setVoiceStartStage('starting')
     markOrbVoiceLatency('preparing')
+    markOrbInteractionLatency('voice_mic_permission_requested')
     setSessionStartedAt(new Date().toISOString())
     voice.resumeVoiceSession()
     const result = await beginOrbRealtimeVoiceConversation({
@@ -847,6 +869,8 @@ export function OrbVoiceStation({
     setVoiceStartStage('active')
     setRealtimeState('listening')
     markOrbVoiceLatency('listening')
+    markOrbInteractionLatency('voice_stream_ready')
+    markOrbInteractionLatency('voice_backend_connected')
     emitOrbClientDebug({
       area: 'voice',
       event: 'voice_session_started',
@@ -876,6 +900,7 @@ export function OrbVoiceStation({
     voice.clearTranscript()
     setVoiceStartError(null)
     setBrowserStartStage('starting')
+    markOrbInteractionLatency('voice_mic_permission_requested')
     setSessionStartedAt(new Date().toISOString())
     emitOrbClientDebug({
       area: 'voice',
@@ -887,6 +912,7 @@ export function OrbVoiceStation({
     })
     if (started) {
       setBrowserStartStage('active')
+      markOrbInteractionLatency('voice_stream_ready')
       emitOrbClientDebug({ area: 'voice', event: 'voice_start_browser_fallback_success', detail: {} })
       return
     }
