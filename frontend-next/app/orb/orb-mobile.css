@@ -1783,6 +1783,40 @@
     font-size: 0.6875rem !important;
   }
 
+  [data-orb-composer-attach-anchor='true'] {
+    position: relative !important;
+    z-index: 2;
+  }
+
+  [data-orb-composer-attach-backdrop] {
+    touch-action: none;
+  }
+
+  [data-orb-composer-attach-sheet='true'] {
+    max-height: min(22rem, 52dvh) !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    box-shadow:
+      0 -4px 24px color-mix(in srgb, var(--orb-line) 28%, transparent),
+      0 8px 32px color-mix(in srgb, #000 22%, transparent) !important;
+  }
+
+  [data-orb-composer-upload-actions] {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 0.5rem !important;
+  }
+
+  [data-orb-composer-upload-action] {
+    min-height: 4.25rem !important;
+    touch-action: manipulation;
+  }
+
+  [data-orb-composer-orb-tools-list] [data-orb-composer-tools-item] {
+    min-height: 2.75rem;
+  }
+
   [data-orb-composer-tools-sheet] [data-orb-composer-tools-item] {
     min-height: 2.75rem;
   }
@@ -2016,13 +2050,23 @@
 
   [data-orb-composer-attachments] {
     margin-top: 0.25rem;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  [data-orb-composer-attachments]::-webkit-scrollbar {
+    display: none;
   }
 
   [data-orb-composer-attachment] {
     max-width: min(100%, 16rem);
+    flex-shrink: 0;
   }
 
-  [data-orb-composer-tools-sheet] {
+  [data-orb-composer-tools-sheet],
+  [data-orb-composer-attach-sheet='true'] {
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }
 

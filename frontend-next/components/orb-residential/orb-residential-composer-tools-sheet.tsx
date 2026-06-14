@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect } from 'react'
 import {
   AudioLines,
   Camera,
@@ -10,90 +10,42 @@ import {
   Mic,
   PenLine,
   Shield,
-  Upload,
-  X
+  Upload
 } from 'lucide-react'
 
 import type { OrbComposerPlusAction } from '@/components/orb-standalone/orb-composer-plus-menu'
 import { ORB_COMPOSER_UPLOAD_BOUNDARY_LINES } from '@/lib/orb/orb-composer-attachments'
 import { ORB_RESIDENTIAL_STATION_DEFINITIONS } from '@/lib/orb/orb-residential-stations'
 
-const MOBILE_TOOL_SECTIONS: Array<{
-  title: string
-  items: Array<{
-    id: OrbComposerPlusAction
-    label: string
-    description: string
-    icon: typeof Mic
-  }>
+const UPLOAD_ACTIONS: Array<{
+  id: OrbComposerPlusAction
+  label: string
+  icon: typeof ImagePlus
 }> = [
-  {
-    title: 'Upload',
-    items: [
-      {
-        id: 'photo_library',
-        label: 'Photo Library',
-        description: 'Choose from your photo library',
-        icon: ImagePlus
-      },
-      {
-        id: 'take_photo',
-        label: 'Take Photo',
-        description: 'Use your camera',
-        icon: Camera
-      },
-      {
-        id: 'choose_files',
-        label: 'Choose Files',
-        description: 'Images, PDF, DOC or TXT',
-        icon: FolderOpen
-      }
-    ]
-  },
-  {
-    title: 'ORB',
-    items: [
-      {
-        id: 'upload_document',
-        label: 'Upload document',
-        description: 'Analyse with Documents & Guidance',
-        icon: Upload
-      },
-      {
-        id: 'orb_dictate',
-        label: ORB_RESIDENTIAL_STATION_DEFINITIONS.orb_dictate.label,
-        description: ORB_RESIDENTIAL_STATION_DEFINITIONS.orb_dictate.tagline,
-        icon: Mic
-      },
-      {
-        id: 'orb_voice',
-        label: ORB_RESIDENTIAL_STATION_DEFINITIONS.orb_voice.label,
-        description: ORB_RESIDENTIAL_STATION_DEFINITIONS.orb_voice.tagline,
-        icon: AudioLines
-      },
-      {
-        id: 'orb_write',
-        label: ORB_RESIDENTIAL_STATION_DEFINITIONS.orb_write.label,
-        description: ORB_RESIDENTIAL_STATION_DEFINITIONS.orb_write.tagline,
-        icon: PenLine
-      },
-      {
-        id: 'use_template',
-        label: 'Record type',
-        description: 'Choose a recording template',
-        icon: FileText
-      },
-      {
-        id: 'privacy_guidance',
-        label: 'Privacy & responsibility',
-        description: 'Safety and data boundaries',
-        icon: Shield
-      }
-    ]
-  }
+  { id: 'photo_library', label: 'Photo Library', icon: ImagePlus },
+  { id: 'take_photo', label: 'Take Photo', icon: Camera },
+  { id: 'choose_files', label: 'Choose Files', icon: FolderOpen }
 ]
 
-/** ChatGPT-style composer tools sheet — mobile ORB Residential home only. */
+const ORB_TOOL_ACTIONS: Array<{
+  id: OrbComposerPlusAction
+  label: string
+  icon: typeof Mic
+}> = [
+  { id: 'orb_dictate', label: ORB_RESIDENTIAL_STATION_DEFINITIONS.orb_dictate.label, icon: Mic },
+  { id: 'orb_voice', label: ORB_RESIDENTIAL_STATION_DEFINITIONS.orb_voice.label, icon: AudioLines },
+  { id: 'orb_write', label: ORB_RESIDENTIAL_STATION_DEFINITIONS.orb_write.label, icon: PenLine },
+  { id: 'use_template', label: 'Record type', icon: FileText },
+  { id: 'upload_document', label: 'Upload document', icon: Upload },
+  { id: 'privacy_guidance', label: 'Privacy & responsibility', icon: Shield }
+]
+
+function selectAction(onClose: () => void, onSelect: (action: OrbComposerPlusAction) => void, action: OrbComposerPlusAction) {
+  onClose()
+  onSelect(action)
+}
+
+/** ChatGPT-style composer attachment sheet — compact popover above mobile composer. */
 export function OrbResidentialComposerToolsSheet({
   open,
   onClose,
@@ -103,11 +55,8 @@ export function OrbResidentialComposerToolsSheet({
   onClose: () => void
   onSelect: (action: OrbComposerPlusAction) => void
 }) {
-  const closeRef = useRef<HTMLButtonElement>(null)
-
   useEffect(() => {
     if (!open) return
-    closeRef.current?.focus()
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === 'Escape') onClose()
     }
@@ -118,69 +67,84 @@ export function OrbResidentialComposerToolsSheet({
   if (!open) return null
 
   return (
-    <div
-      className="fixed inset-0 z-[68] flex items-end justify-center bg-black/50 p-0 sm:items-center sm:p-4"
-      role="dialog"
-      aria-label="Composer tools"
-      aria-modal="true"
-      data-orb-composer-tools-sheet
-      onClick={(event) => {
-        if (event.target === event.currentTarget) onClose()
-      }}
-    >
-      <div className="max-h-[min(78dvh,32rem)] w-full max-w-lg overflow-y-auto rounded-t-2xl border border-[var(--orb-line)] bg-[var(--orb-surface-elevated)] p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-2xl sm:rounded-2xl">
-        <div className="mb-2 flex items-center justify-between gap-2">
-          <h2 className="text-sm font-semibold text-[var(--orb-foreground)]">Add to chat</h2>
-          <button
-            ref={closeRef}
-            type="button"
-            onClick={onClose}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-full text-[var(--orb-muted)] transition hover:bg-[var(--orb-surface-hover)]"
-            aria-label="Close"
+    <>
+      <div
+        className="orb-composer-attach-backdrop fixed inset-0 z-[67] bg-black/20"
+        aria-hidden="true"
+        data-orb-composer-attach-backdrop
+        onClick={onClose}
+      />
+      <div
+        className="orb-composer-attach-sheet absolute bottom-full left-0 right-0 z-[68] mb-2 overflow-hidden rounded-2xl border border-[var(--orb-line)]/70 bg-[var(--orb-surface-elevated)] shadow-2xl"
+        role="dialog"
+        aria-label="Add to message"
+        aria-modal="true"
+        data-orb-composer-tools-sheet
+        data-orb-composer-attach-sheet="true"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="px-3 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] pt-3">
+          <p
+            className="mb-2.5 px-0.5 text-xs font-semibold text-[var(--orb-foreground)]"
+            data-orb-composer-attach-heading
           >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-        <p className="mb-2 px-0.5 text-[10px] leading-snug text-[var(--orb-muted)]" data-orb-composer-tools-privacy-hint>
-          {ORB_COMPOSER_UPLOAD_BOUNDARY_LINES[0]} {ORB_COMPOSER_UPLOAD_BOUNDARY_LINES[1]}
-        </p>
-        <div className="space-y-3" data-orb-composer-tools-list>
-          {MOBILE_TOOL_SECTIONS.map((section) => (
-            <section key={section.title}>
-              <p className="mb-1 px-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--orb-muted)]">
-                {section.title}
-              </p>
-              <ul className="space-y-1">
-                {section.items.map((item) => {
-                  const Icon = item.icon
-                  return (
-                    <li key={item.id}>
-                      <button
-                        type="button"
-                        role="menuitem"
-                        className="flex w-full min-h-[2.75rem] items-center gap-3 rounded-xl px-2.5 py-2.5 text-left transition hover:bg-[var(--orb-surface-hover)]"
-                        data-orb-composer-tools-item={item.id}
-                        onClick={() => {
-                          onClose()
-                          onSelect(item.id)
-                        }}
-                      >
-                        <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--orb-primary-soft)] text-[var(--orb-primary)]">
-                          <Icon className="h-4 w-4" aria-hidden />
-                        </span>
-                        <span className="min-w-0 flex-1">
-                          <span className="block text-sm font-medium text-[var(--orb-foreground)]">{item.label}</span>
-                          <span className="block text-xs text-[var(--orb-muted)]">{item.description}</span>
-                        </span>
-                      </button>
-                    </li>
-                  )
-                })}
-              </ul>
-            </section>
-          ))}
+            Add to message
+          </p>
+
+          <div className="grid grid-cols-3 gap-2" data-orb-composer-upload-actions>
+            {UPLOAD_ACTIONS.map((item) => {
+              const Icon = item.icon
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  className="flex min-h-[4.25rem] flex-col items-center justify-center gap-1.5 rounded-xl border border-[var(--orb-line)]/55 bg-[var(--orb-surface-hover)]/40 px-1.5 py-2.5 text-center transition active:scale-[0.98] hover:bg-[var(--orb-surface-hover)]"
+                  data-orb-composer-upload-action={item.id}
+                  data-orb-composer-tools-item={item.id}
+                  onClick={() => selectAction(onClose, onSelect, item.id)}
+                >
+                  <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[var(--orb-primary-soft)] text-[var(--orb-primary)]">
+                    <Icon className="h-4 w-4" aria-hidden />
+                  </span>
+                  <span className="text-[11px] font-medium leading-tight text-[var(--orb-foreground)]">{item.label}</span>
+                </button>
+              )
+            })}
+          </div>
+
+          <div className="mt-3 border-t border-[var(--orb-line)]/45 pt-2.5" data-orb-composer-orb-tools-section>
+            <p className="mb-1 px-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--orb-muted)]">
+              ORB tools
+            </p>
+            <ul className="space-y-0.5" data-orb-composer-orb-tools-list>
+              {ORB_TOOL_ACTIONS.map((item) => {
+                const Icon = item.icon
+                return (
+                  <li key={item.id}>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      className="flex w-full min-h-[2.75rem] items-center gap-2.5 rounded-lg px-2 py-2 text-left transition hover:bg-[var(--orb-surface-hover)]"
+                      data-orb-composer-tools-item={item.id}
+                      onClick={() => selectAction(onClose, onSelect, item.id)}
+                    >
+                      <Icon className="h-4 w-4 shrink-0 text-[var(--orb-muted)]" aria-hidden />
+                      <span className="text-sm text-[var(--orb-foreground)]">{item.label}</span>
+                    </button>
+                  </li>
+                )
+              })}
+            </ul>
+          </div>
+
+          <p
+            className="mt-2 px-0.5 text-[10px] leading-snug text-[var(--orb-muted)]"
+            data-orb-composer-tools-privacy-hint
+          >
+            {ORB_COMPOSER_UPLOAD_BOUNDARY_LINES[0]} {ORB_COMPOSER_UPLOAD_BOUNDARY_LINES[1]}
+          </p>
         </div>
       </div>
-    </div>
+    </>
   )
 }

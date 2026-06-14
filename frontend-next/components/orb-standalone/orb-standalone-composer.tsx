@@ -223,6 +223,7 @@ export function OrbStandaloneComposer({
   const showComposerQuickActions = compactResidential && !mobileViewport
 
   function handleComposerToolSelect(action: OrbComposerPlusAction) {
+    setToolsSheetOpen(false)
     if (action === 'privacy_guidance') {
       setPrivacyGuidanceOpen(true)
       return
@@ -349,6 +350,17 @@ export function OrbStandaloneComposer({
           ) : null}
 
           <div
+            className={`relative ${compactResidential && mobileViewport ? 'orb-composer-attach-anchor' : ''}`}
+            data-orb-composer-attach-anchor={compactResidential && mobileViewport ? 'true' : undefined}
+          >
+            {mobileViewport && onPlusMenuAction ? (
+              <OrbResidentialComposerToolsSheet
+                open={toolsSheetOpen}
+                onClose={() => setToolsSheetOpen(false)}
+                onSelect={handleComposerToolSelect}
+              />
+            ) : null}
+          <div
             className={`orb-composer-glass ${compactResidential ? 'orb-composer-glass--compact p-2 sm:p-2.5' : 'p-2.5 sm:p-3'} ${answering ? 'orb-composer-answering orb-answering-pulse' : ''}`}
             onClick={focusComposerInput}
             onTouchEnd={focusComposerInput}
@@ -390,7 +402,10 @@ export function OrbStandaloneComposer({
             ) : null}
 
             {attachments.length > 0 ? (
-              <div className="mt-2 flex flex-wrap gap-2 px-1" data-orb-composer-attachments>
+              <div
+                className={`mt-2 flex gap-2 px-1 ${compactResidential && mobileViewport ? 'flex-nowrap overflow-x-auto [-webkit-overflow-scrolling:touch]' : 'flex-wrap'}`}
+                data-orb-composer-attachments
+              >
                 {attachments.map((file) => (
                   <div
                     key={file.id}
@@ -527,8 +542,9 @@ export function OrbStandaloneComposer({
                       type="button"
                       onClick={() => setToolsSheetOpen(true)}
                       className="inline-flex h-9 min-w-9 shrink-0 items-center justify-center rounded-full border border-[var(--orb-line)]/55 bg-[var(--orb-surface-elevated)] text-[var(--orb-foreground)] shadow-sm transition hover:bg-[var(--orb-surface-hover)]"
-                      aria-label="Tools"
+                      aria-label="Add to message"
                       aria-haspopup="dialog"
+                      aria-expanded={toolsSheetOpen}
                       data-orb-composer-attach
                       data-orb-composer-plus-trigger
                       data-orb-composer-tools-trigger
@@ -656,6 +672,7 @@ export function OrbStandaloneComposer({
             </div>
             ) : null}
           </div>
+          </div>
 
           <div className={`orb-voice-status-slot mt-2 flex min-h-[1.25rem] flex-wrap items-center justify-between gap-2 px-2 ${compactResidential ? 'hidden' : ''}`}>
             {voiceStatusText ? (
@@ -700,13 +717,6 @@ export function OrbStandaloneComposer({
           <OrbComposerCopyright className="mt-2 px-2 pb-1" />
         ) : null}
       </div>
-      {mobileViewport && onPlusMenuAction ? (
-        <OrbResidentialComposerToolsSheet
-          open={toolsSheetOpen}
-          onClose={() => setToolsSheetOpen(false)}
-          onSelect={handleComposerToolSelect}
-        />
-      ) : null}
       {privacyGuidanceOpen ? (
         <OrbResidentialPrivacyGuidanceSheet
           open={privacyGuidanceOpen}

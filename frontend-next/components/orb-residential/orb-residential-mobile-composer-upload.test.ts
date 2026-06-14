@@ -11,13 +11,32 @@ function read(relativePath: string) {
 }
 
 describe('ORB Residential mobile continuity and composer upload pass', () => {
-  it('plus button opens mobile composer tools sheet', () => {
+  it('plus button opens mobile composer attachment sheet', () => {
     const composer = read('components/orb-standalone/orb-standalone-composer.tsx')
     const tools = read('components/orb-residential/orb-residential-composer-tools-sheet.tsx')
     assert.match(composer, /data-orb-composer-tools-trigger/)
     assert.match(composer, /setToolsSheetOpen\(true\)/)
     assert.match(composer, /OrbResidentialComposerToolsSheet/)
+    assert.match(composer, /data-orb-composer-attach-anchor/)
+    assert.match(composer, /aria-label="Add to message"/)
     assert.match(tools, /data-orb-composer-tools-sheet/)
+    assert.match(tools, /data-orb-composer-attach-sheet="true"/)
+    assert.match(tools, /data-orb-composer-attach-heading/)
+    assert.match(tools, /Add to message/)
+  })
+
+  it('upload actions are visible first as direct tiles before ORB tools', () => {
+    const tools = read('components/orb-residential/orb-residential-composer-tools-sheet.tsx')
+    const uploadIndex = tools.indexOf('data-orb-composer-upload-actions')
+    const orbIndex = tools.indexOf('data-orb-composer-orb-tools-section')
+    assert.ok(uploadIndex >= 0 && orbIndex > uploadIndex)
+    assert.match(tools, /data-orb-composer-upload-action=\{item\.id\}/)
+    assert.match(tools, /Photo Library/)
+    assert.match(tools, /Take Photo/)
+    assert.match(tools, /Choose Files/)
+    assert.match(tools, /ORB tools/)
+    assert.doesNotMatch(tools, /title: 'Upload'/)
+    assert.doesNotMatch(tools, /items-end justify-center bg-black\/50/)
   })
 
   it('tools sheet exposes Photo Library, Take Photo and Choose Files wired to inputs', () => {
@@ -38,6 +57,32 @@ describe('ORB Residential mobile continuity and composer upload pass', () => {
     assert.match(composer, /data-orb-composer-file-input="choose_files"/)
   })
 
+  it('sheet closes before upload action triggers file input', () => {
+    const tools = read('components/orb-residential/orb-residential-composer-tools-sheet.tsx')
+    const composer = read('components/orb-standalone/orb-standalone-composer.tsx')
+    assert.match(tools, /onClose\(\)\s*\n\s*onSelect/)
+    assert.match(composer, /setToolsSheetOpen\(false\)/)
+    assert.match(composer, /photoLibraryInputRef\.current\?\.click\(\)/)
+    assert.match(composer, /cameraInputRef\.current\?\.click\(\)/)
+    assert.match(composer, /documentFileInputRef\.current\?\.click\(\)/)
+  })
+
+  it('ORB tools remain available below upload section', () => {
+    const tools = read('components/orb-residential/orb-residential-composer-tools-sheet.tsx')
+    assert.match(tools, /orb_dictate/)
+    assert.match(tools, /orb_voice/)
+    assert.match(tools, /orb_write/)
+    assert.match(tools, /use_template/)
+    assert.match(tools, /upload_document/)
+    assert.match(tools, /privacy_guidance/)
+    assert.match(tools, /Dictate/)
+    assert.match(tools, /Voice/)
+    assert.match(tools, /ORB Write/)
+    assert.match(tools, /Record type/)
+    assert.match(tools, /Upload document/)
+    assert.match(tools, /Privacy & responsibility/)
+  })
+
   it('unsupported file shows calm error via shared attachment helper', () => {
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
     const composer = read('components/orb-standalone/orb-standalone-composer.tsx')
@@ -47,12 +92,15 @@ describe('ORB Residential mobile continuity and composer upload pass', () => {
     assert.match(composer, /onUnsupportedFile/)
   })
 
-  it('selected files appear as composer attachment chips and can be removed', () => {
+  it('selected files appear as composer attachment chips with horizontal scroll on mobile', () => {
     const composer = read('components/orb-standalone/orb-standalone-composer.tsx')
+    const mobileCss = read('app/orb/orb-mobile.css')
     assert.match(composer, /data-orb-composer-attachments/)
     assert.match(composer, /data-orb-composer-attachment/)
     assert.match(composer, /data-orb-composer-attachment-remove/)
     assert.match(composer, /onRemoveAttachment/)
+    assert.match(composer, /flex-nowrap overflow-x-auto/)
+    assert.match(mobileCss, /\[data-orb-composer-attachments\][\s\S]*overflow-x: auto/)
   })
 
   it('attachment send routes documents through uploadOrbComposerDocument', () => {
@@ -102,11 +150,15 @@ describe('ORB Residential mobile continuity and composer upload pass', () => {
     assert.match(write, /data-orb-write-notepad/)
   })
 
-  it('mobile safe-area respected for lists and composer sheet', () => {
+  it('mobile safe-area respected for composer attachment sheet', () => {
     const mobileCss = read('app/orb/orb-mobile.css')
+    const tools = read('components/orb-residential/orb-residential-composer-tools-sheet.tsx')
     assert.match(mobileCss, /safe-area-inset-bottom/)
-    assert.match(mobileCss, /\[data-orb-composer-tools-sheet\]/)
-    assert.match(mobileCss, /\[data-orb-templates-mobile-record-list\]/)
+    assert.match(mobileCss, /\[data-orb-composer-attach-sheet='true'\]/)
+    assert.match(mobileCss, /\[data-orb-composer-attach-anchor='true'\]/)
+    assert.match(tools, /safe-area-inset-bottom/)
+    assert.match(tools, /data-orb-composer-attach-backdrop/)
+    assert.doesNotMatch(tools, /max-h-\[min\(78dvh/)
   })
 
   it('desktop saved outputs detail empty state preserved', () => {
