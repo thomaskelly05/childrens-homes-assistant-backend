@@ -75,12 +75,12 @@ describe('ORB Residential mobile continuity and composer upload pass', () => {
     assert.match(tools, /use_template/)
     assert.match(tools, /upload_document/)
     assert.match(tools, /privacy_guidance/)
-    assert.match(tools, /Dictate/)
-    assert.match(tools, /Voice/)
-    assert.match(tools, /ORB Write/)
-    assert.match(tools, /Record type/)
-    assert.match(tools, /Upload document/)
-    assert.match(tools, /Privacy & responsibility/)
+    assert.match(tools, /ORB_RESIDENTIAL_STATION_DEFINITIONS\.orb_dictate\.label/)
+    assert.match(tools, /ORB_RESIDENTIAL_STATION_DEFINITIONS\.orb_voice\.label/)
+    assert.match(tools, /ORB_RESIDENTIAL_STATION_DEFINITIONS\.orb_write\.label/)
+    assert.match(tools, /label: 'Record type'/)
+    assert.match(tools, /label: 'Upload document'/)
+    assert.match(tools, /label: 'Privacy & responsibility'/)
   })
 
   it('unsupported file shows calm error via shared attachment helper', () => {
