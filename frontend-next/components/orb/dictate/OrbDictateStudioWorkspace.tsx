@@ -13,7 +13,7 @@ import {
 import { OrbTranscriptPanel } from '@/components/orb/dictate/OrbTranscriptPanel'
 import { OrbStudioShell } from '@/components/orb/premium'
 import { OrbWorkflowStrip, resolveDictateWorkflowStep } from '@/components/orb/premium/orb-workflow-strip'
-import { ORB_RESIDENTIAL_DICTATE_RESPONSIBILITY_STRIP } from '@/lib/orb/orb-residential-copy'
+import { ORB_RESIDENTIAL_DICTATE_MAGIC_NOTES_COPY } from '@/lib/orb/orb-residential-copy'
 import { OrbResizableWorkspace } from '@/components/orb/resizable-panels/orb-resizable-workspace'
 import {
   OrbDictateAudioUpload,
@@ -262,6 +262,7 @@ export function OrbDictateStudioWorkspace(props: OrbDictateStudioWorkspaceProps)
       studioId="dictate"
       className="orb-dictate-studio-workspace flex min-h-0 flex-1 flex-col gap-1 overflow-hidden px-1 sm:px-2"
       data-orb-dictate-studio-workspace
+      data-orb-dictate-magic-notes
       data-orb-dictate-focus-mode={focusMode ? 'true' : 'false'}
       data-orb-dictate-empty={!hasTranscript ? 'true' : undefined}
       style={{ minHeight: 'min(100dvh - 4.5rem, calc(100svh - 4.5rem))' }}
@@ -271,10 +272,16 @@ export function OrbDictateStudioWorkspace(props: OrbDictateStudioWorkspaceProps)
           activeStep={resolveDictateWorkflowStep({ hasTranscript, hasAnalysis, hasDraft })}
         />
         <p
-          className="mt-1.5 text-[10px] leading-relaxed text-[var(--orb-muted)]"
+          className="mt-1 text-xs leading-relaxed text-[var(--orb-muted)]"
+          data-orb-dictate-magic-notes-subtitle
+        >
+          {ORB_RESIDENTIAL_DICTATE_MAGIC_NOTES_COPY.subtitle}
+        </p>
+        <p
+          className="mt-1 text-[10px] leading-relaxed text-[var(--orb-muted)]"
           data-orb-dictate-responsibility-strip
         >
-          {ORB_RESIDENTIAL_DICTATE_RESPONSIBILITY_STRIP}
+          {ORB_RESIDENTIAL_DICTATE_MAGIC_NOTES_COPY.responsibility}
         </p>
       </div>
 

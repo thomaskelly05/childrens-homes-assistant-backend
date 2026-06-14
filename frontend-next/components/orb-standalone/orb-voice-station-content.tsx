@@ -42,10 +42,11 @@ export function OrbVoiceStationContent({
       className={`orb-voice-station-content flex min-h-0 flex-1 flex-col overflow-hidden ${className}`.trim()}
       data-orb-voice-station-content
       data-orb-voice-mobile={isMobileViewport ? true : undefined}
+      data-orb-voice-desktop-spacious={!isMobileViewport ? true : undefined}
       data-orb-voice-workspace-mode={workspaceMode}
     >
       <div
-        className={`orb-voice-station-content__scroll min-h-0 flex-1 overscroll-contain px-4 py-1 md:px-6 md:py-2 ${
+        className={`orb-voice-station-content__scroll min-h-0 flex-1 overscroll-contain px-4 py-2 md:px-6 md:py-6 ${
           showDesktopSplit ? 'orb-voice-station-content__scroll--split' : ''
         }`}
       >

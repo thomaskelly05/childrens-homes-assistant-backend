@@ -4163,31 +4163,57 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
                         </div>
                       ) : (
                         <div
-                          className="mt-5 w-full max-w-[var(--orb-composer-max,46rem)] space-y-4 text-left"
-                          data-orb-starter-groups
+                          className="mt-4 w-full max-w-[var(--orb-composer-max,46rem)]"
                           data-orb-empty-starter-chips
+                          data-orb-starter-primary-chips
+                          data-orb-starter-count={emptyStarters.length}
                         >
-                          {ORB_RESIDENTIAL_STARTER_GROUPS.map((group) => (
-                            <section key={group.id} className="orb-liquid-card" data-orb-starter-group={group.id}>
-                              <h3 className="mb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--orb-muted)]">
-                                {group.label}
-                              </h3>
-                              <div className="flex flex-wrap gap-1.5" data-orb-starter-pills>
-                                {group.starters.map((starter) => (
-                                  <button
-                                    key={starter.text}
-                                    type="button"
-                                    onClick={() => applyPrompt(starter)}
-                                    className="orb-starter-pill orb-starter-card rounded-full border border-[var(--orb-line)]/35 bg-[var(--orb-surface)]/40 px-3.5 py-1.5 text-left text-[13px] leading-snug text-[var(--orb-foreground)] transition hover:border-[var(--orb-primary)]/30 hover:bg-[var(--orb-surface-elevated)]/80"
-                                    data-orb-starter-card
-                                    data-orb-starter-pill="true"
-                                  >
-                                    {starter.text}
-                                  </button>
-                                ))}
-                              </div>
-                            </section>
-                          ))}
+                          <div
+                            className="flex flex-wrap justify-center gap-2"
+                            data-orb-starter-pills
+                          >
+                            {emptyStarters.map((starter) => (
+                              <button
+                                key={starter.text}
+                                type="button"
+                                onClick={() => applyPrompt(starter)}
+                                className="orb-starter-pill orb-starter-card rounded-full border border-[var(--orb-line)]/30 bg-transparent px-3.5 py-1.5 text-[13px] leading-snug text-[var(--orb-foreground)] transition hover:border-[var(--orb-primary)]/28 hover:bg-[var(--orb-surface)]/50"
+                                data-orb-starter-card
+                                data-orb-starter-pill="true"
+                              >
+                                {starter.text}
+                              </button>
+                            ))}
+                          </div>
+                          {moreExamplesExpanded ? (
+                            <div
+                              className="mt-4 space-y-3 text-left"
+                              data-orb-starter-groups
+                              data-orb-starter-expanded-groups
+                            >
+                              {ORB_RESIDENTIAL_STARTER_GROUPS.map((group) => (
+                                <section key={group.id} data-orb-starter-group={group.id}>
+                                  <h3 className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--orb-muted)]">
+                                    {group.label}
+                                  </h3>
+                                  <div className="flex flex-wrap gap-1.5" data-orb-starter-pills>
+                                    {group.starters.map((starter) => (
+                                      <button
+                                        key={starter.text}
+                                        type="button"
+                                        onClick={() => applyPrompt(starter)}
+                                        className="orb-starter-pill orb-starter-card rounded-full border border-[var(--orb-line)]/28 bg-transparent px-3 py-1 text-left text-[12px] leading-snug text-[var(--orb-foreground)] transition hover:border-[var(--orb-primary)]/24 hover:bg-[var(--orb-surface)]/45"
+                                        data-orb-starter-card
+                                        data-orb-starter-pill="true"
+                                      >
+                                        {starter.text}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </section>
+                              ))}
+                            </div>
+                          ) : null}
                         </div>
                       )
                     ) : (
@@ -4211,15 +4237,25 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
                         ))}
                       </div>
                     )}
-                    {!residentialSurface || !isMobileViewport ? (
-                    <button
-                      type="button"
-                      onClick={() => setPromptDrawerOpen(true)}
-                      className="mt-3 text-xs font-medium text-[var(--orb-muted)] underline-offset-4 transition hover:text-[var(--orb-foreground)] hover:underline"
-                      data-orb-more-examples
-                    >
-                      More examples
-                    </button>
+                    {residentialSurface && !isMobileViewport ? (
+                      <button
+                        type="button"
+                        onClick={() => setMoreExamplesExpanded((open) => !open)}
+                        className="mt-3 text-xs font-medium text-[var(--orb-muted)] underline-offset-4 transition hover:text-[var(--orb-foreground)] hover:underline"
+                        data-orb-more-examples
+                        aria-expanded={moreExamplesExpanded}
+                      >
+                        {moreExamplesExpanded ? 'Fewer examples' : 'More examples'}
+                      </button>
+                    ) : !residentialSurface ? (
+                      <button
+                        type="button"
+                        onClick={() => setPromptDrawerOpen(true)}
+                        className="mt-3 text-xs font-medium text-[var(--orb-muted)] underline-offset-4 transition hover:text-[var(--orb-foreground)] hover:underline"
+                        data-orb-more-examples
+                      >
+                        More examples
+                      </button>
                     ) : null}
                   </div>
                 ) : (

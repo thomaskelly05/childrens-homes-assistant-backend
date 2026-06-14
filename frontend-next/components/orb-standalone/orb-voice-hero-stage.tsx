@@ -92,10 +92,10 @@ export function OrbVoiceHeroStage({
           </details>
         ) : (
           <>
-            <p className="text-[11px] leading-4 text-[var(--orb-muted)]" data-orb-voice-privacy-note>
+            <p className="text-[10px] leading-4 text-[var(--orb-muted)] opacity-80" data-orb-voice-privacy-note>
               {getOrbDataClassificationNotice('voice')}
             </p>
-            <OrbPrivacyNotice surface="voice" className="text-left" />
+            <OrbPrivacyNotice surface="voice" className="text-left text-[10px] opacity-90" />
           </>
         )}
       </div>

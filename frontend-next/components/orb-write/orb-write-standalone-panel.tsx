@@ -13,6 +13,7 @@ import {
   type OrbWriteSelectedGuidance
 } from '@/components/orb-write/orb-write-guidance-panel'
 import { OrbStudioShell } from '@/components/orb/premium'
+import { OrbWriteRecordTypeSelector } from '@/components/orb-write/orb-write-record-type-selector'
 import { OrbWriteEditor } from '@/components/orb-write/orb-write-editor'
 import { OrbWriteSourcePanel } from '@/components/orb-write/orb-write-source-panel'
 import {
@@ -461,8 +462,15 @@ export function OrbWriteStandalonePanel({
               className="flex shrink-0 flex-wrap items-center gap-2 border-b border-[var(--orb-line)]/40 pb-2"
               data-orb-write-studio-header
             >
-              <div className="flex min-w-0 flex-1 items-center gap-2">
+              <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
                 <FileEdit className="h-4 w-4 shrink-0 text-[var(--orb-primary)]" aria-hidden />
+                <OrbWriteRecordTypeSelector
+                  recordTypeId={recordTypeId}
+                  variant="compact"
+                  selectorLabel="Template"
+                  onSelect={(nextRecordType) => requestRecordTypeChange(nextRecordType.id)}
+                  onOpenFullPicker={() => setTemplatePickerOpen(true)}
+                />
                 <input
                   data-orb-write-title-input
                   value={doc.title}

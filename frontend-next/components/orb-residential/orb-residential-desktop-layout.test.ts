@@ -34,7 +34,8 @@ describe('ORB Residential desktop layout system', () => {
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
 
     assert.match(desktop, /\[data-orb-residential-empty\][\s\S]*\[data-orb-empty-heading-desktop\]/)
-    assert.match(desktop, /\[data-orb-empty-starter-chips\][\s\S]*grid-template-columns:\s*repeat\(2/)
+    assert.match(desktop, /\[data-orb-starter-primary-chips\]/)
+    assert.match(desktop, /\[data-orb-empty-starter-chips\][\s\S]*max-width:\s*var\(--orb-desktop-hero-starter-max\)/)
     assert.match(premium, /@media \(min-width: 1024px\)[\s\S]*html\[data-orb-residential='1'\] \.orb-presence--hero/)
     assert.match(premium, /clamp\(11\.25rem,\s*18vw,\s*17\.5rem\)/)
     assert.match(companion, /GlassOrbMark/)

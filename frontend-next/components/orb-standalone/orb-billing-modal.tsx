@@ -385,59 +385,82 @@ export function OrbBillingModal({
           ) : null}
         </section>
 
-        <section className={sectionClassName(true)} data-orb-billing-status>
-          <details className="group" data-orb-billing-collapsible="subscription">
-            <summary className="cursor-pointer list-none text-xs font-semibold uppercase tracking-wide text-[var(--orb-muted)] [&::-webkit-details-marker]:hidden">
-              Subscription details
-            </summary>
-            <dl className="mt-2 grid gap-2 text-xs sm:grid-cols-2">
+        <div
+          className="space-y-2 sm:grid sm:grid-cols-2 sm:items-start sm:gap-3 sm:space-y-0"
+          data-orb-billing-desktop-grid
+        >
+          <section
+            className={`${sectionClassName(true)} sm:col-start-1 sm:row-start-1 hidden sm:block`}
+            data-orb-billing-usage
+          >
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--orb-muted)]">Usage</h3>
+            <dl className="mt-2 grid gap-2 text-xs">
               <div>
-                <dt className="text-[var(--orb-muted)]">Plan</dt>
-                <dd className="mt-0.5 font-medium">{planName}</dd>
+                <dt className="text-[var(--orb-muted)]">Usage this period</dt>
+                <dd className="mt-0.5 font-medium">{usageRequests} requests</dd>
               </div>
-              <div>
-                <dt className="text-[var(--orb-muted)]">Status</dt>
-                <dd className="mt-0.5 font-medium capitalize" data-orb-billing-subscription-status>
-                  {display.subscriptionLabel}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-[var(--orb-muted)]">Billing</dt>
-                <dd className="mt-0.5 font-medium">{priceLabel}</dd>
-              </div>
-              <div>
-                <dt className="text-[var(--orb-muted)]">Managed by</dt>
-                <dd className="mt-0.5 font-medium">Stripe</dd>
-              </div>
-              {access?.subscription?.current_period_end ? (
-                <div className="sm:col-span-2">
-                  <dt className="text-[var(--orb-muted)]">Current period ends</dt>
-                  <dd className="mt-0.5 font-medium">
-                    {String(access.subscription.current_period_end).slice(0, 10)}
-                  </dd>
+              {meter?.soft_limit_warning ? (
+                <div>
+                  <dt className="text-[var(--orb-muted)]">Usage note</dt>
+                  <dd className="mt-0.5 font-medium text-amber-700">{String(meter.soft_limit_warning)}</dd>
                 </div>
               ) : null}
             </dl>
-          </details>
-        </section>
+          </section>
 
-        <section className={`${sectionClassName(true)} hidden sm:block`} data-orb-billing-usage>
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--orb-muted)]">Usage</h3>
-          <dl className="mt-2 grid gap-2 text-xs sm:grid-cols-2">
-            <div>
-              <dt className="text-[var(--orb-muted)]">Usage this period</dt>
-              <dd className="mt-0.5 font-medium">{usageRequests} requests</dd>
-            </div>
-            {meter?.soft_limit_warning ? (
-              <div>
-                <dt className="text-[var(--orb-muted)]">Usage note</dt>
-                <dd className="mt-0.5 font-medium text-amber-700">{String(meter.soft_limit_warning)}</dd>
-              </div>
-            ) : null}
-          </dl>
-        </section>
+          <section
+            className={`${sectionClassName()} sm:col-start-2 sm:row-start-1`}
+            data-orb-billing-value
+            data-orb-billing-column-right
+          >
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--orb-muted)]">
+              What&apos;s included
+            </h3>
+            <ul
+              className="mt-2 space-y-1.5 text-xs leading-5 text-[var(--orb-foreground)] sm:hidden"
+              data-orb-billing-included-summary
+            >
+              {ORB_RESIDENTIAL_BILLING_VALUE_SUMMARY.map((item) => (
+                <li key={item} className="flex gap-2">
+                  <span className="text-[var(--orb-primary)]" aria-hidden>
+                    ✓
+                  </span>
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
+            <details className="group mt-2 sm:mt-2" data-orb-billing-collapsible="included">
+              <summary className="cursor-pointer list-none text-xs font-medium text-[var(--orb-muted)] sm:hidden [&::-webkit-details-marker]:hidden">
+                Full included list
+              </summary>
+              <ul className="mt-2 space-y-1.5 text-xs leading-5 text-[var(--orb-foreground)] sm:mt-2">
+                {ORB_RESIDENTIAL_BILLING_VALUE_ITEMS.map((item) => (
+                  <li key={item} className="flex gap-2">
+                    <span className="text-[var(--orb-primary)]" aria-hidden>
+                      ✓
+                    </span>
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </details>
+            <ul className="mt-2 hidden space-y-1.5 text-xs leading-5 text-[var(--orb-foreground)] sm:block" data-orb-billing-plan-features>
+              {INDIVIDUAL_PLAN_FEATURES.map((item) => (
+                <li key={item} className="flex gap-2">
+                  <span className="text-[var(--orb-primary)]" aria-hidden>
+                    ✓
+                  </span>
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
 
-        <section className={sectionClassName(true)} data-orb-billing-spending-cap>
+          <section
+            className={`${sectionClassName(true)} sm:col-start-1 sm:row-start-2`}
+            data-orb-billing-spending-cap
+            data-orb-billing-column-left
+          >
           <details className="group sm:open" data-orb-billing-collapsible="spending-cap">
             <summary className="cursor-pointer list-none text-xs font-semibold uppercase tracking-wide text-[var(--orb-muted)] sm:cursor-default sm:[&::-webkit-details-marker]:hidden [&::-webkit-details-marker]:hidden">
               Spending cap
@@ -498,7 +521,10 @@ export function OrbBillingModal({
           </details>
         </section>
 
-        <section className={sectionClassName(true)} data-orb-billing-buy-more>
+        <section
+          className={`${sectionClassName(true)} sm:col-start-1 sm:row-start-3`}
+          data-orb-billing-buy-more
+        >
           <details className="group sm:open" data-orb-billing-collapsible="buy-more">
             <summary className="cursor-pointer list-none text-xs font-semibold uppercase tracking-wide text-[var(--orb-muted)] sm:cursor-default sm:[&::-webkit-details-marker]:hidden [&::-webkit-details-marker]:hidden">
               Buy more
@@ -527,51 +553,50 @@ export function OrbBillingModal({
           </details>
         </section>
 
-        <section className={sectionClassName()} data-orb-billing-value>
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--orb-muted)]">
-            What&apos;s included
-          </h3>
-          <ul
-            className="mt-2 space-y-1.5 text-xs leading-5 text-[var(--orb-foreground)] sm:hidden"
-            data-orb-billing-included-summary
-          >
-            {ORB_RESIDENTIAL_BILLING_VALUE_SUMMARY.map((item) => (
-              <li key={item} className="flex gap-2">
-                <span className="text-[var(--orb-primary)]" aria-hidden>
-                  ✓
-                </span>
-                <span>{item}</span>
-              </li>
-            ))}
-          </ul>
-          <details className="group mt-2 sm:mt-2" data-orb-billing-collapsible="included">
-            <summary className="cursor-pointer list-none text-xs font-medium text-[var(--orb-muted)] sm:hidden [&::-webkit-details-marker]:hidden">
-              Full included list
+        <section
+          className={`${sectionClassName(true)} sm:col-start-2 sm:row-start-2`}
+          data-orb-billing-status
+          data-orb-billing-column-right
+        >
+          <details className="group sm:open" data-orb-billing-collapsible="subscription">
+            <summary className="cursor-pointer list-none text-xs font-semibold uppercase tracking-wide text-[var(--orb-muted)] sm:cursor-default sm:[&::-webkit-details-marker]:hidden [&::-webkit-details-marker]:hidden">
+              Subscription details
             </summary>
-            <ul className="mt-2 space-y-1.5 text-xs leading-5 text-[var(--orb-foreground)] sm:mt-2">
-              {ORB_RESIDENTIAL_BILLING_VALUE_ITEMS.map((item) => (
-                <li key={item} className="flex gap-2">
-                  <span className="text-[var(--orb-primary)]" aria-hidden>
-                    ✓
-                  </span>
-                  <span>{item}</span>
-                </li>
-              ))}
-            </ul>
+            <dl className="mt-2 grid gap-2 text-xs sm:grid-cols-1">
+              <div>
+                <dt className="text-[var(--orb-muted)]">Plan</dt>
+                <dd className="mt-0.5 font-medium">{planName}</dd>
+              </div>
+              <div>
+                <dt className="text-[var(--orb-muted)]">Status</dt>
+                <dd className="mt-0.5 font-medium capitalize" data-orb-billing-subscription-status>
+                  {display.subscriptionLabel}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-[var(--orb-muted)]">Billing</dt>
+                <dd className="mt-0.5 font-medium">{priceLabel}</dd>
+              </div>
+              <div>
+                <dt className="text-[var(--orb-muted)]">Managed by</dt>
+                <dd className="mt-0.5 font-medium">Stripe</dd>
+              </div>
+              {access?.subscription?.current_period_end ? (
+                <div>
+                  <dt className="text-[var(--orb-muted)]">Current period ends</dt>
+                  <dd className="mt-0.5 font-medium">
+                    {String(access.subscription.current_period_end).slice(0, 10)}
+                  </dd>
+                </div>
+              ) : null}
+            </dl>
           </details>
-          <ul className="mt-2 hidden space-y-1.5 text-xs leading-5 text-[var(--orb-foreground)] sm:block" data-orb-billing-plan-features>
-            {INDIVIDUAL_PLAN_FEATURES.map((item) => (
-              <li key={item} className="flex gap-2">
-                <span className="text-[var(--orb-primary)]" aria-hidden>
-                  ✓
-                </span>
-                <span>{item}</span>
-              </li>
-            ))}
-          </ul>
         </section>
 
-        <section className={sectionClassName(true)} data-orb-billing-trust>
+        <section
+          className={`${sectionClassName(true)} sm:col-start-2 sm:row-start-3`}
+          data-orb-billing-trust
+        >
           <details className="group" data-orb-billing-collapsible="trust">
             <summary className="cursor-pointer list-none text-xs font-semibold uppercase tracking-wide text-[var(--orb-muted)] [&::-webkit-details-marker]:hidden">
               Trust &amp; data
@@ -586,7 +611,10 @@ export function OrbBillingModal({
           </details>
         </section>
 
-        <section className={`${sectionClassName(true)} sm:block`} data-orb-billing-provider-team>
+        <section
+          className={`${sectionClassName(true)} sm:col-start-2 sm:row-start-4`}
+          data-orb-billing-provider-team
+        >
           <details className="group sm:hidden" data-orb-billing-collapsible="provider">
             <summary className="cursor-pointer list-none text-xs font-semibold uppercase tracking-wide text-[var(--orb-muted)] [&::-webkit-details-marker]:hidden">
               Provider team plans
@@ -624,6 +652,7 @@ export function OrbBillingModal({
             </a>
           </div>
         </section>
+        </div>
 
         {notice ? (
           <p className="text-xs text-[var(--orb-res-info-text,#1e3a8a)]" data-orb-billing-notice>

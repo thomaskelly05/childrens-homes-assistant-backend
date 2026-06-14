@@ -14,12 +14,14 @@ export function OrbWriteRecordTypeSelector({
   recordTypeId,
   onSelect,
   onOpenFullPicker,
-  variant = 'compact'
+  variant = 'compact',
+  selectorLabel = 'Record type'
 }: {
   recordTypeId: string
   onSelect?: (recordType: OrbRecordingRecordType) => void
   onOpenFullPicker?: () => void
   variant?: 'compact' | 'badge'
+  selectorLabel?: string
 }) {
   const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
@@ -47,11 +49,12 @@ export function OrbWriteRecordTypeSelector({
         type="button"
         className="inline-flex items-center gap-1 rounded-full border border-[var(--orb-line)]/50 px-2 py-0.5 font-medium text-[var(--orb-foreground)]"
         data-orb-write-record-type-selector
+        data-orb-write-template-selector
         data-orb-write-record-type-badge
         onClick={() => (onOpenFullPicker ? onOpenFullPicker() : setOpen((v) => !v))}
         aria-expanded={open}
       >
-        <span className="text-[10px] text-[var(--orb-muted)]">Record type:</span>
+        <span className="text-[10px] text-[var(--orb-muted)]">{selectorLabel}:</span>
         <span className="truncate">{current.label}</span>
         <ChevronDown className="h-3 w-3 shrink-0 opacity-70" aria-hidden />
       </button>
@@ -59,7 +62,7 @@ export function OrbWriteRecordTypeSelector({
   }
 
   return (
-    <div ref={rootRef} className="relative min-w-0" data-orb-write-record-type-selector>
+    <div ref={rootRef} className="relative min-w-0" data-orb-write-record-type-selector data-orb-write-template-selector>
       <button
         type="button"
         className="inline-flex min-w-0 max-w-full items-center gap-1 rounded-lg border border-[var(--orb-primary)]/35 bg-[var(--orb-primary-soft)]/50 px-2 py-1 text-left text-[11px] font-semibold text-[var(--orb-foreground)]"
@@ -68,7 +71,7 @@ export function OrbWriteRecordTypeSelector({
         aria-haspopup="listbox"
         onClick={() => (onOpenFullPicker ? onOpenFullPicker() : setOpen((v) => !v))}
       >
-        <span className="text-[10px] font-medium text-[var(--orb-muted)]">Record type:</span>
+        <span className="text-[10px] font-medium text-[var(--orb-muted)]">{selectorLabel}:</span>
         <span className="truncate" data-orb-write-record-type-label>
           {current.label}
         </span>
