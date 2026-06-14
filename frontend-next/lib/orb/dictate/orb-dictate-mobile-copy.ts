@@ -59,12 +59,18 @@ export function dictateMobileStatusLine(input: {
   speechError: string | null
   userStatus: string | null
   listening: boolean
+  permissionPending?: boolean
 }): string {
   if (input.speechError) return input.speechError
   if (input.dictateState === 'error' || input.recordingUiState === 'error') {
     return input.userStatus?.trim() || 'Recording could not start. Try again or paste a transcript.'
   }
-  if (input.listening || input.dictateState === 'listening') return 'Listening…'
+  if (input.permissionPending || input.dictateState === 'requesting_permission') {
+    return input.userStatus?.toLowerCase().includes('microphone access')
+      ? 'Allow microphone access…'
+      : 'Preparing microphone…'
+  }
+  if (input.listening || input.dictateState === 'listening') return 'Recording…'
   if (
     input.dictateState === 'stopping' ||
     input.recordingUiState === 'stopping' ||

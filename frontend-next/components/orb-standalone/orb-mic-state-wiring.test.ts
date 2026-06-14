@@ -147,7 +147,8 @@ describe('ORB mic state wiring', () => {
     const mobile = readComponent('components/orb-standalone/orb-dictate-mobile-experience.tsx')
     assert.match(dictate, /recordingActive \|\| captureStarting/)
     assert.match(dictate, /handleStopRecording/)
-    assert.match(mobile, /captureStarting \? 'Starting…' : mobilePrimaryLabel/)
+    assert.match(mobile, /mobilePrimaryLabel/)
+    assert.doesNotMatch(mobile, /captureStarting \? 'Starting…'/)
   })
 
   it('Voice tracks voiceStartStage through handleStart', () => {

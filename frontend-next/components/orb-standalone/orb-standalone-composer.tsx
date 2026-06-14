@@ -17,6 +17,7 @@ import { OrbResidentialComposerToolsSheet } from '@/components/orb-residential/o
 import { OrbComposerCopyright } from '@/components/orb-standalone/orb-composer-copyright'
 import { OrbFooter } from '@/components/orb-standalone/orb-footer'
 import { logTapTarget } from '@/lib/interaction/mobile-tap-debug'
+import { markOrbInteractionLatency } from '@/lib/orb/voice/latency'
 import {
   ORB_COMPOSER_DOCUMENT_ACCEPT,
   ORB_COMPOSER_FILE_ACCEPT,
@@ -201,8 +202,30 @@ export function OrbStandaloneComposer({
 
   function focusComposerInput(event: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>) {
     const target = event.target as HTMLElement | null
-    if (target?.closest('button,input,textarea,a,[role="button"]')) return
+    if (
+      target?.closest(
+        'button,input,textarea,a,[role="button"],[data-orb-composer-plus-button],[data-orb-composer-attachment-menu],[data-orb-composer-attach-backdrop]'
+      )
+    ) {
+      return
+    }
     focusInput()
+  }
+
+  function handlePlusPointerDown(event: React.PointerEvent<HTMLButtonElement> | React.TouchEvent<HTMLButtonElement>) {
+    event.preventDefault()
+    event.stopPropagation()
+  }
+
+  function toggleAttachmentMenu(event: React.MouseEvent<HTMLButtonElement>) {
+    event.preventDefault()
+    event.stopPropagation()
+    markOrbInteractionLatency('plus_tap')
+    setToolsSheetOpen((open) => {
+      const next = !open
+      if (next) markOrbInteractionLatency('plus_menu_open')
+      return next
+    })
   }
 
   function syncComposerHeight() {
@@ -221,6 +244,27 @@ export function OrbStandaloneComposer({
   const [toolsSheetOpen, setToolsSheetOpen] = useState(false)
   const [privacyGuidanceOpen, setPrivacyGuidanceOpen] = useState(false)
   const showComposerQuickActions = compactResidential && !mobileViewport
+
+  useEffect(() => {
+    if (!toolsSheetOpen) return
+    function onOutsidePointer(event: Event) {
+      const target = event.target as Node | null
+      if (!target) return
+      if ((target as HTMLElement).closest?.('[data-orb-composer-plus-button]')) return
+      if ((target as HTMLElement).closest?.('[data-orb-composer-attachment-menu]')) return
+      setToolsSheetOpen(false)
+    }
+    document.addEventListener('mousedown', onOutsidePointer)
+    document.addEventListener('touchstart', onOutsidePointer, { passive: true })
+    return () => {
+      document.removeEventListener('mousedown', onOutsidePointer)
+      document.removeEventListener('touchstart', onOutsidePointer)
+    }
+  }, [toolsSheetOpen])
+
+  useEffect(() => {
+    setToolsSheetOpen(false)
+  }, [mode])
 
   function handleComposerToolSelect(action: OrbComposerPlusAction) {
     setToolsSheetOpen(false)
@@ -363,7 +407,6 @@ export function OrbStandaloneComposer({
           <div
             className={`orb-composer-glass ${compactResidential ? 'orb-composer-glass--compact p-2 sm:p-2.5' : 'p-2.5 sm:p-3'} ${answering ? 'orb-composer-answering orb-answering-pulse' : ''}`}
             onClick={focusComposerInput}
-            onTouchEnd={focusComposerInput}
             data-orb-composer-answering={answering ? 'true' : 'false'}
             data-orb-composer-card
             data-orb-composer-compact={compactResidential ? 'true' : undefined}
@@ -535,17 +578,24 @@ export function OrbStandaloneComposer({
 
             <div className={compactResidential ? 'flex items-end gap-1.5' : ''}>
             {compactResidential ? (
-              <div className="orb-composer-action-rail flex shrink-0 items-center gap-0.5 pb-1">
+              <div className="orb-composer-action-rail flex shrink-0 items-center gap-0.5 pb-1" data-orb-composer-action-rail>
                 {onPlusMenuAction ? (
                   mobileViewport ? (
                     <button
                       type="button"
-                      onClick={() => setToolsSheetOpen(true)}
-                      className="inline-flex h-9 min-w-9 shrink-0 items-center justify-center rounded-full border border-[var(--orb-line)]/55 bg-[var(--orb-surface-elevated)] text-[var(--orb-foreground)] shadow-sm transition hover:bg-[var(--orb-surface-hover)]"
-                      aria-label="Add to message"
-                      aria-haspopup="dialog"
+                      onPointerDown={handlePlusPointerDown}
+                      onTouchStart={handlePlusPointerDown}
+                      onClick={toggleAttachmentMenu}
+                      className={`inline-flex h-9 min-w-9 shrink-0 items-center justify-center rounded-full border shadow-sm transition hover:bg-[var(--orb-surface-hover)] ${
+                        toolsSheetOpen
+                          ? 'border-[var(--orb-primary)]/45 bg-[var(--orb-primary-soft)] text-[var(--orb-primary)]'
+                          : 'border-[var(--orb-line)]/55 bg-[var(--orb-surface-elevated)] text-[var(--orb-foreground)]'
+                      }`}
+                      aria-label="Add attachment"
+                      aria-haspopup="menu"
                       aria-expanded={toolsSheetOpen}
                       data-orb-composer-attach
+                      data-orb-composer-plus-button
                       data-orb-composer-plus-trigger
                       data-orb-composer-tools-trigger
                     >

@@ -127,7 +127,7 @@ export function orbVoiceLaunchHeadline(
       if (options?.realtimeConfigured) return "I'm ready when you are."
       return options?.pushToTalk !== false ? 'Hold or tap to speak' : "I'm ready when you are."
     case 'starting':
-      return 'Preparing voice…'
+      return 'Opening microphone…'
     case 'listening':
       return "I'm listening."
     case 'transcribing':

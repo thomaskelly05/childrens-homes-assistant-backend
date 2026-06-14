@@ -13,12 +13,16 @@ export type OrbVoiceLivePanelState =
   | 'connecting'
   | 'paused'
 
-export function orbVoiceLivePanelStatusLabel(state: OrbVoiceLivePanelState): string {
+export function orbVoiceLivePanelStatusLabel(
+  state: OrbVoiceLivePanelState,
+  progressStage?: 'opening_mic' | 'listening_local' | 'connecting_orb' | null
+): string {
+  if (state === 'preparing' && progressStage === 'connecting_orb') return 'Connecting ORB voice…'
+  if (state === 'preparing' && progressStage === 'opening_mic') return 'Opening microphone…'
+  if (state === 'connecting') return 'Connecting ORB voice…'
   switch (state) {
     case 'preparing':
-      return 'Preparing voice…'
-    case 'connecting':
-      return 'Reconnecting…'
+      return 'Opening microphone…'
     case 'user_speaking':
       return 'I heard that.'
     case 'thinking':

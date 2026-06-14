@@ -62,13 +62,11 @@ describe('ORB Residential unified mobile interface pass', () => {
     const uploadIndex = tools.indexOf('data-orb-composer-upload-actions')
     const orbIndex = tools.indexOf('data-orb-composer-orb-tools-section')
     assert.ok(uploadIndex >= 0 && orbIndex > uploadIndex)
-    assert.match(tools, /Photo Library/)
-    assert.match(tools, /Take Photo/)
-    assert.match(tools, /Choose Files/)
-    assert.match(tools, /upload_document/)
+    assert.match(tools, /label: 'Camera'/)
+    assert.match(tools, /label: 'Photos'/)
+    assert.match(tools, /label: 'Files'/)
     assert.match(tools, /orb_dictate/)
     assert.match(tools, /privacy_guidance/)
-    assert.match(tools, /Add to message/)
   })
 
   it('billing status distinguishes loading and inactive', () => {

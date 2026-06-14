@@ -106,6 +106,43 @@ export function normaliseOrbVoiceUiState(state: OrbVoiceUiState): OrbVoiceUiStat
   }
 }
 
+export type OrbVoiceStartProgressStage = 'opening_mic' | 'listening_local' | 'connecting_orb' | 'ready'
+
+export function resolveOrbVoiceStartProgressStage(input: {
+  voiceCaptureState: string
+  startStage: 'idle' | 'starting' | 'active' | 'failed'
+  transportLive: boolean
+  browserLaunch: boolean
+  listening: boolean
+}): OrbVoiceStartProgressStage | null {
+  if (input.voiceCaptureState === 'requesting_permission') return 'opening_mic'
+  if (
+    input.browserLaunch &&
+    (input.listening || input.voiceCaptureState === 'listening' || input.voiceCaptureState === 'recording')
+  ) {
+    return 'listening_local'
+  }
+  if (input.startStage === 'starting' && !input.transportLive) return 'connecting_orb'
+  if (input.startStage === 'active' && input.transportLive) return 'ready'
+  if (input.voiceCaptureState === 'starting') return 'opening_mic'
+  return null
+}
+
+export function orbVoiceStartProgressLine(stage: OrbVoiceStartProgressStage): string {
+  switch (stage) {
+    case 'opening_mic':
+      return 'Opening microphone…'
+    case 'listening_local':
+      return 'Listening…'
+    case 'connecting_orb':
+      return 'Connecting ORB voice…'
+    case 'ready':
+      return 'Ready'
+    default:
+      return 'Opening microphone…'
+  }
+}
+
 export function orbVoiceUiStatusLine(state: OrbVoiceUiState): string {
   switch (normaliseOrbVoiceUiState(state)) {
     case 'unauthenticated':
@@ -115,7 +152,7 @@ export function orbVoiceUiStatusLine(state: OrbVoiceUiState): string {
     case 'ready':
       return "I'm ready when you are."
     case 'preparing':
-      return 'Preparing voice…'
+      return 'Opening microphone…'
     case 'listening':
       return "I'm listening."
     case 'user_speaking':
@@ -147,7 +184,7 @@ export function orbVoiceUiDetailLine(state: OrbVoiceUiState, dictateReady?: bool
     case 'ready':
       return 'Talk through a situation, rough note or concern. ORB will help you reflect and decide what may need recording.'
     case 'preparing':
-      return 'Setting up your microphone and voice connection…'
+      return 'Getting voice ready…'
     case 'listening':
       return 'Speak naturally. You can pause.'
     case 'user_speaking':
