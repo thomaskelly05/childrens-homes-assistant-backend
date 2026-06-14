@@ -44,8 +44,11 @@ export type OrbFrontDoorVerdictResponse = {
   data: OrbFrontDoorVerdictPayload
 }
 
+const VERDICT_CACHE_MS = 20_000
+
 let verdictInFlight: Promise<OrbFrontDoorVerdictPayload> | null = null
 let lastVerdict: OrbFrontDoorVerdictPayload | null = null
+let lastVerdictFetchedAt = 0
 
 export function getCachedOrbFrontDoorVerdict(): OrbFrontDoorVerdictPayload | null {
   return lastVerdict
@@ -54,6 +57,14 @@ export function getCachedOrbFrontDoorVerdict(): OrbFrontDoorVerdictPayload | nul
 export function resetOrbFrontDoorVerdictCache(): void {
   verdictInFlight = null
   lastVerdict = null
+  lastVerdictFetchedAt = 0
+}
+
+function verdictCacheFresh(payload: OrbFrontDoorVerdictPayload): boolean {
+  if (!lastVerdictFetchedAt) return false
+  if (Date.now() - lastVerdictFetchedAt > VERDICT_CACHE_MS) return false
+  // Brief cache only for verified positive session state — do not extend failed/inactive verdicts.
+  return payload.verdict === 'ready' && payload.frontend_should_mount_product
 }
 
 function parseVerdictPayload(
@@ -83,7 +94,7 @@ function recordVerdict401Recovery(verdictStatus: number): void {
 export async function fetchOrbFrontDoorVerdict(options?: {
   force?: boolean
 }): Promise<OrbFrontDoorVerdictPayload> {
-  if (!options?.force && lastVerdict) {
+  if (!options?.force && lastVerdict && verdictCacheFresh(lastVerdict)) {
     return lastVerdict
   }
   if (!options?.force && verdictInFlight) {
@@ -104,6 +115,7 @@ export async function fetchOrbFrontDoorVerdict(options?: {
       const data = parseVerdictPayload(payload)
       recordVerdict401Recovery(401)
       lastVerdict = data
+      lastVerdictFetchedAt = Date.now()
       return data
     }
 
@@ -133,6 +145,7 @@ export async function fetchOrbFrontDoorVerdict(options?: {
       recordVerdict401Recovery(200)
     }
     lastVerdict = data
+    lastVerdictFetchedAt = Date.now()
     return data
   }
 

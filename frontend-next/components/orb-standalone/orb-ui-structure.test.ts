@@ -239,9 +239,9 @@ describe('ORB ChatGPT UI structure', () => {
     assert.match(companion, /standaloneGreetingLocalAnswer\(trimmed\)/)
     assert.match(companion, /local_greeting_response/)
     const greetingIdx = companion.indexOf('standaloneGreetingLocalAnswer(trimmed)')
-    const setPendingIdx = companion.indexOf('setPending(true)')
-    assert.ok(greetingIdx >= 0 && setPendingIdx >= 0)
-    assert.ok(greetingIdx < setPendingIdx, 'greeting must be resolved before pending/backend send')
+    const backendIdx = companion.indexOf('askOrbBrain({')
+    assert.ok(greetingIdx >= 0 && backendIdx >= 0)
+    assert.ok(greetingIdx < backendIdx, 'greeting must be resolved before backend send')
   })
 
   it('clears in-flight streaming placeholders on send failure', () => {

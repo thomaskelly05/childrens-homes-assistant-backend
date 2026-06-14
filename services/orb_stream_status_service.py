@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 # User-facing status copy only — no backend architecture labels.
@@ -10,6 +11,12 @@ USER_STATUS_PREPARING_GUIDANCE = "Preparing guidance…"
 USER_STATUS_SAFEST_STEPS = "Checking the safest next steps…"
 USER_STATUS_RECORDING_POINTS = "Preparing recording points…"
 USER_STATUS_BUILDING_ANSWER = "Building the answer…"
+USER_STATUS_STRUCTURING = "Structuring this safely…"
+
+_STRUCTURED_PLAN_RE = re.compile(
+    r"\b(action plan|improvement plan|reg\s*44|reg44|evidence summary|handover plan)\b",
+    re.I,
+)
 
 
 def stream_status_payload(
@@ -27,14 +34,28 @@ def stream_status_payload(
     return payload
 
 
-def stream_status_sequence(expert_depth: str) -> list[dict[str, Any]]:
+def stream_status_sequence(expert_depth: str, *, message: str | None = None) -> list[dict[str, Any]]:
     """Ordered status events after `received` for residential/deep paths."""
     depth = (expert_depth or "general_light").strip().lower()
     if depth == "general_light":
         return []
 
+    structured_plan = bool(message and _STRUCTURED_PLAN_RE.search(message))
+    structuring = (
+        [
+            stream_status_payload(
+                "structuring",
+                message=USER_STATUS_STRUCTURING,
+                expert_depth=depth,
+            )
+        ]
+        if structured_plan
+        else []
+    )
+
     if depth == "safeguarding_critical":
         return [
+            *structuring,
             stream_status_payload(
                 "safety_check",
                 message=USER_STATUS_SAFEST_STEPS,
@@ -49,6 +70,7 @@ def stream_status_sequence(expert_depth: str) -> list[dict[str, Any]]:
 
     if depth == "residential_deep":
         return [
+            *structuring,
             stream_status_payload(
                 "safety_check",
                 message=USER_STATUS_SAFEST_STEPS,
@@ -63,6 +85,7 @@ def stream_status_sequence(expert_depth: str) -> list[dict[str, Any]]:
 
     if depth == "residential_standard":
         return [
+            *structuring,
             stream_status_payload(
                 "preparing_guidance",
                 message=USER_STATUS_PREPARING_GUIDANCE,
@@ -77,6 +100,7 @@ def stream_status_sequence(expert_depth: str) -> list[dict[str, Any]]:
 
     # residential_light and other residential-ish depths
     return [
+        *structuring,
         stream_status_payload(
             "preparing_guidance",
             message=USER_STATUS_PREPARING_GUIDANCE,

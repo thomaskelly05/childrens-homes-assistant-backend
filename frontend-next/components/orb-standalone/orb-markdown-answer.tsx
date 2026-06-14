@@ -81,8 +81,16 @@ function buildMarkdownComponents(sources?: StandaloneOrbSource[]): Components {
     ),
     hr: () => <hr className="my-4 border-[var(--orb-line)]" />,
     table: ({ children }) => (
-      <div className="orb-md-table-wrap mb-3 overflow-x-auto last:mb-0">
-        <table className="orb-md-table w-full min-w-[16rem] border-collapse text-left text-[14px]">{children}</table>
+      <div
+        className="orb-md-table-wrap mb-3 last:mb-0"
+        data-orb-table-scroll
+        role="region"
+        aria-label="Table — scroll horizontally to view all columns"
+      >
+        <p className="orb-md-table-scroll-hint" aria-hidden="true">
+          Scroll to view full table
+        </p>
+        <table className="orb-md-table border-collapse text-left text-[14px]">{children}</table>
       </div>
     ),
     thead: ({ children }) => <thead className="orb-md-thead bg-[var(--orb-surface-hover,#F1F5F9)]">{children}</thead>,

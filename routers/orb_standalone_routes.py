@@ -1405,7 +1405,7 @@ async def standalone_orb_conversation_stream(
             mode=mode,
             profile_context=profile_context,
         )
-        for status_event in stream_status_sequence(quick_depth):
+        for status_event in stream_status_sequence(quick_depth, message=user_message):
             yield _sse_event("status", status_event)
 
         fast_opening = fast_opening_for_message(
