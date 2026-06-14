@@ -15,6 +15,9 @@ import {
 
 export type OrbComposerPlusAction =
   | 'upload_document'
+  | 'photo_library'
+  | 'take_photo'
+  | 'choose_files'
   | 'attach_image'
   | 'attach_photo'
   | 'review_text'

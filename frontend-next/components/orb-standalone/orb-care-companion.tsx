@@ -43,8 +43,7 @@ import {
   writeOrbSidebarCollapsed
 } from '@/lib/orb/orb-sidebar-preference'
 import {
-  OrbStandaloneComposer,
-  type PendingImageAttachment
+  OrbStandaloneComposer
 } from '@/components/orb-standalone/orb-standalone-composer'
 import {
   OrbAskAboutThisChips,
@@ -261,10 +260,21 @@ import {
   runStandaloneOrbAction,
   STANDALONE_ORB_EMPTY_ANSWER_MESSAGE,
   STANDALONE_ORB_MODES,
+  uploadOrbStandaloneDocument,
   type StandaloneOrbAgentSuggestion,
   type StandaloneOrbConversationResponse,
   type StandaloneOrbMode
 } from '@/lib/orb/standalone-client'
+import {
+  ORB_COMPOSER_MAX_ATTACHMENTS,
+  ORB_COMPOSER_MAX_DOCUMENT_ATTACHMENTS,
+  ORB_COMPOSER_UNSUPPORTED_FILE_MESSAGE,
+  composerAttachmentFromFile,
+  readComposerFileAsBase64,
+  readComposerFileAsDataUrl,
+  revokeComposerAttachmentPreview,
+  type OrbComposerAttachment
+} from '@/lib/orb/orb-composer-attachments'
 import {
   BACKEND_ORB_STANDALONE_ACTION_IDS,
   backendOrbActionIdForFollowUp,
@@ -298,7 +308,7 @@ const MODE_SAFETY: Partial<Record<StandaloneOrbMode, string>> = {
 }
 
 const MAX_HISTORY_TURNS = 20
-const MAX_IMAGE_ATTACHMENTS = 4
+const MAX_IMAGE_ATTACHMENTS = ORB_COMPOSER_MAX_ATTACHMENTS
 const SUBMIT_GUARD_MS = 1500
 const ORB_THINKING_LABEL = 'ORB is thinking…'
 
@@ -539,15 +549,6 @@ async function copyToClipboard(text: string) {
   await copyTextToClipboard(text)
 }
 
-async function readFileAsDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => resolve(String(reader.result || ''))
-    reader.onerror = () => reject(reader.error)
-    reader.readAsDataURL(file)
-  })
-}
-
 function patchActiveChat(workspace: StandaloneWorkspace, chatId: string, patch: Partial<StandaloneChat>): StandaloneWorkspace {
   return {
     ...workspace,
@@ -623,7 +624,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
   const [retryPayload, setRetryPayload] = useState<{ text: string; chatId: string } | null>(null)
   const [imageUnderstandingNote, setImageUnderstandingNote] = useState<string | null>(null)
   const [imageNoteForMessageId, setImageNoteForMessageId] = useState<string | null>(null)
-  const [attachments, setAttachments] = useState<PendingImageAttachment[]>([])
+  const [attachments, setAttachments] = useState<OrbComposerAttachment[]>([])
   const [micNotice, setMicNotice] = useState<string | null>(null)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
@@ -1150,8 +1151,9 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
   const sendMessage = useCallback(
     async (text: string, options?: SendMessageOptions) => {
       const trimmed = text.trim()
-      const hasImages = attachments.length > 0
-      if ((!trimmed && !hasImages) || pending || sendInFlightRef.current) {
+      const hasImages = attachments.some((item) => item.kind === 'image')
+      const hasDocuments = attachments.some((item) => item.kind === 'document')
+      if ((!trimmed && !hasImages && !hasDocuments) || pending || sendInFlightRef.current) {
         traceOrbSend('submit_blocked', { reason: 'empty_or_in_flight', pending, inFlight: sendInFlightRef.current })
         return
       }
@@ -1188,7 +1190,51 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
       }
       if (voice.speaking) voice.cancelSpeaking()
 
-      const imagePayload = attachments.map((a) => ({ data_url: a.dataUrl, name: a.name }))
+      const imagePayload = await Promise.all(
+        attachments
+          .filter((item) => item.kind === 'image')
+          .map(async (item) => ({
+            data_url: await readComposerFileAsDataUrl(item.file),
+            name: item.name
+          }))
+      )
+      let composerDocumentSourceId: string | undefined
+      let composerDocumentTitle: string | undefined
+      const documentAttachment = attachments.find((item) => item.kind === 'document')
+      if (documentAttachment) {
+        setAttachments((current) =>
+          current.map((item) =>
+            item.id === documentAttachment.id ? { ...item, status: 'uploading', error: undefined } : item
+          )
+        )
+        try {
+          const content_base64 = await readComposerFileAsBase64(documentAttachment.file)
+          const uploaded = await uploadOrbStandaloneDocument({
+            title: documentAttachment.name.replace(/\.[^.]+$/, '') || documentAttachment.name,
+            content_base64,
+            file_name: documentAttachment.name,
+            content_type: documentAttachment.mimeType || undefined,
+            source_type: 'user_uploaded'
+          })
+          composerDocumentSourceId = uploaded.source_id
+          composerDocumentTitle = uploaded.title
+          setAttachments((current) =>
+            current.map((item) =>
+              item.id === documentAttachment.id ? { ...item, status: 'ready' } : item
+            )
+          )
+        } catch (err) {
+          const message = err instanceof Error ? err.message : 'Upload failed'
+          setAttachments((current) =>
+            current.map((item) =>
+              item.id === documentAttachment.id ? { ...item, status: 'error', error: message } : item
+            )
+          )
+          setDraftNotice(`Could not upload ${documentAttachment.name}. ${message}`)
+          sendInFlightRef.current = false
+          return
+        }
+      }
       lastSendHadImagesRef.current = imagePayload.length > 0
       let targetChatId = options?.chatId || workspace.activeChatId
       let targetChat = targetChatId ? workspace.chats.find((c) => c.id === targetChatId) ?? null : null
@@ -1199,7 +1245,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
       const messageBody = [
         adultBlock,
         profileBlock,
-        trimmed || (hasImages ? 'Please look at the image(s) I shared and help me with this.' : '')
+        trimmed || (hasImages ? 'Please look at the image(s) I shared and help me with this.' : hasDocuments ? 'Please review the document I shared and help me with this.' : '')
       ]
         .filter(Boolean)
         .join('\n\n')
@@ -1292,7 +1338,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
       }
 
       setMessage('')
-      setAttachments([])
+      clearComposerAttachments()
       setAnsweringStreamStatus(null)
       setAnsweringDepthHint(estimateTranscriptExpertDepth(trimmed || messageBody))
       composerUserEditedRef.current = false
@@ -1424,8 +1470,8 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
         detail: voiceSettings.answerStyle,
         images: imagePayload.length ? imagePayload : undefined,
         document_text: pendingDocument?.text,
-        document_source_id: pendingDocument?.sourceId || undefined,
-        document_title: pendingDocument?.title,
+        document_source_id: composerDocumentSourceId || pendingDocument?.sourceId || undefined,
+        document_title: composerDocumentTitle || pendingDocument?.title,
         ...(projectMemory ? { project_memory: projectMemory } : {})
       }
 
@@ -2180,6 +2226,9 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
         break
       case 'attach_image':
       case 'attach_photo':
+      case 'photo_library':
+      case 'take_photo':
+      case 'choose_files':
         break
       case 'review_text':
         setMessage(
@@ -2274,7 +2323,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
       chats: [chat, ...current.chats]
     }))
     setMessage('')
-    setAttachments([])
+    clearComposerAttachments()
     setError(null)
     setSidebarOpen(false)
   }
@@ -2293,7 +2342,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
       chats: [chat, ...current.chats]
     }))
     setMessage('')
-    setAttachments([])
+    clearComposerAttachments()
     composerUserEditedRef.current = false
     voiceMayFillComposerRef.current = false
     setError(null)
@@ -2314,7 +2363,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
       activeProjectId: chat.projectId
     }))
     setMessage('')
-    setAttachments([])
+    clearComposerAttachments()
     composerUserEditedRef.current = false
     voiceMayFillComposerRef.current = false
     setError(null)
@@ -2732,23 +2781,58 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
     }
   }
 
-  async function addImageFiles(files: FileList | File[]) {
-    const list = Array.from(files).filter((f) => f.type.startsWith('image/'))
-    if (!list.length) return
-    const remaining = MAX_IMAGE_ATTACHMENTS - attachments.length
-    const slice = list.slice(0, remaining)
-    const next: PendingImageAttachment[] = []
-    for (const file of slice) {
-      const dataUrl = await readFileAsDataUrl(file)
-      next.push({
-        id: `img-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-        dataUrl,
-        name: file.name,
-        previewUrl: dataUrl
-      })
+  function addComposerFiles(files: FileList | File[]) {
+    const list = Array.from(files)
+    const next: OrbComposerAttachment[] = []
+    let imageCount = attachments.filter((item) => item.kind === 'image').length
+    let documentCount = attachments.filter((item) => item.kind === 'document').length
+    for (const file of list) {
+      const attachment = composerAttachmentFromFile(file)
+      if (!attachment) {
+        setDraftNotice(ORB_COMPOSER_UNSUPPORTED_FILE_MESSAGE)
+        continue
+      }
+      if (attachment.kind === 'image') {
+        if (imageCount >= MAX_IMAGE_ATTACHMENTS) continue
+        imageCount += 1
+      }
+      if (attachment.kind === 'document') {
+        if (documentCount >= ORB_COMPOSER_MAX_DOCUMENT_ATTACHMENTS) {
+          setDraftNotice('One document at a time in chat. Remove the current file to add another.')
+          revokeComposerAttachmentPreview(attachment)
+          continue
+        }
+        documentCount += 1
+      }
+      next.push(attachment)
     }
-    setAttachments((current) => [...current, ...next].slice(0, MAX_IMAGE_ATTACHMENTS))
+    if (!next.length) return
+    setAttachments((current) => [...current, ...next].slice(0, MAX_IMAGE_ATTACHMENTS + ORB_COMPOSER_MAX_DOCUMENT_ATTACHMENTS))
   }
+
+  function clearComposerAttachments() {
+    setAttachments((current) => {
+      current.forEach((item) => revokeComposerAttachmentPreview(item))
+      return []
+    })
+  }
+
+  function removeComposerAttachment(id: string) {
+    setAttachments((current) => {
+      const target = current.find((item) => item.id === id)
+      if (target) revokeComposerAttachmentPreview(target)
+      return current.filter((item) => item.id !== id)
+    })
+  }
+
+  const attachmentsRef = useRef(attachments)
+  attachmentsRef.current = attachments
+
+  useEffect(() => {
+    return () => {
+      attachmentsRef.current.forEach((item) => revokeComposerAttachmentPreview(item))
+    }
+  }, [])
 
   function handlePaste(event: React.ClipboardEvent) {
     const items = event.clipboardData?.items
@@ -2763,13 +2847,13 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
     }
     if (imageFiles.length) {
       event.preventDefault()
-      void addImageFiles(imageFiles)
+      void addComposerFiles(imageFiles)
     }
   }
 
   function handleDrop(event: DragEvent) {
     event.preventDefault()
-    if (event.dataTransfer.files?.length) void addImageFiles(event.dataTransfer.files)
+    if (event.dataTransfer.files?.length) void addComposerFiles(event.dataTransfer.files)
   }
 
   function toggleProfileOnChat(profileId: string) {
@@ -2871,8 +2955,9 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
         voice.clearTranscript()
         if (STANDALONE_ORB_VOICE_CAPTURE_ENABLED) voice.startListening()
       }}
-      onAddFiles={(files) => void addImageFiles(files)}
-      onRemoveAttachment={(id) => setAttachments((current) => current.filter((a) => a.id !== id))}
+      onAddFiles={addComposerFiles}
+      onRemoveAttachment={removeComposerAttachment}
+      onUnsupportedFile={() => setDraftNotice(ORB_COMPOSER_UNSUPPORTED_FILE_MESSAGE)}
       onPaste={handlePaste}
       onDrop={handleDrop}
       inputRef={inputRef}
