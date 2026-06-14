@@ -11,6 +11,12 @@ services:
     healthCheckPath: /
     autoDeploy: true
     envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: NODE_OPTIONS
+        value: --max-old-space-size=4096
+      - key: NEXT_TELEMETRY_DISABLED
+        value: "1"
       - key: NODE_ENV
         value: production
       - key: NEXT_PUBLIC_ORB_UI_BUILD

@@ -1247,27 +1247,7 @@ export type OrbDocumentUnderstanding = {
   care_record_access?: boolean
 }
 
-export async function uploadOrbStandaloneDocument(body: {
-  title: string
-  text?: string
-  content_base64?: string
-  file_name?: string
-  content_type?: string
-  source_type?: string
-}) {
-  const payload = await authFetch('/orb/standalone/documents/upload', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
-  })
-  return unwrapKnowledgeData<{
-    source_id: string
-    title: string
-    chunk_count: number
-    source_type?: string
-    status: string
-  }>(payload)
-}
+export { uploadOrbComposerDocument as uploadOrbStandaloneDocument } from './orb-composer-upload-client'
 
 export async function analyseOrbStandaloneDocument(body: {
   mode: OrbDocumentAnalysisMode

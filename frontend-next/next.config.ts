@@ -11,6 +11,10 @@ const backendOrigin = (
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  experimental: {
+    // Reduce peak webpack memory on constrained hosts (e.g. Render starter builds).
+    memoryBasedWorkersCount: true
+  },
   env: {
     NEXT_PUBLIC_ORB_BUILD_TIMESTAMP:
       process.env.NEXT_PUBLIC_ORB_BUILD_TIMESTAMP || new Date().toISOString(),
