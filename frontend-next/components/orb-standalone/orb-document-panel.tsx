@@ -278,7 +278,7 @@ export function OrbDocumentPanel({
             <OrbPremiumToolbar
               searchValue={librarySearch}
               onSearchChange={setLibrarySearch}
-              searchPlaceholder="Search guidance, home documents and uploads…"
+              searchSurfaceId="documents_guidance"
             />
             {isMobile ? (
               <div className="space-y-1" data-orb-documents-mobile-actions>

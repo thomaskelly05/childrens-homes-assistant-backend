@@ -266,7 +266,7 @@ export function OrbSavedOutputsPanel({
             <OrbPremiumToolbar
               searchValue={search}
               onSearchChange={setSearch}
-              searchPlaceholder="Search saved outputs"
+              searchSurfaceId="saved_outputs"
               searchInputProps={{ 'data-orb-saved-outputs-search': '' } as React.InputHTMLAttributes<HTMLInputElement>}
               filtersDataAttr="data-orb-saved-outputs-filters"
               filters={
@@ -437,7 +437,7 @@ export function OrbSavedOutputsPanel({
                         <button
                           type="button"
                           onClick={() => setSelectedId(item.id)}
-                          className={`orb-panel-card w-full rounded-xl border px-3 py-2 text-left transition ${
+                          className={`orb-panel-card orb-liquid-card w-full rounded-xl border px-3 py-2 text-left transition ${
                             selectedId === item.id
                               ? 'border-[var(--orb-primary,#168bff)]/40 bg-[var(--orb-primary-soft,rgba(22,139,255,0.16))]'
                               : 'border-[var(--orb-mobile-ws-card-border,var(--orb-line))] hover:bg-[var(--orb-surface-hover)]'

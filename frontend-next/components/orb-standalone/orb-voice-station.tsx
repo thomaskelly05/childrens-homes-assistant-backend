@@ -1321,11 +1321,11 @@ export function OrbVoiceStation({
 
           {(browserDisplayTranscript || voice.interimTranscript) && useBrowserLaunch ? (
             <div
-              className="orb-voice-transcript mt-6 w-full rounded-2xl border border-[var(--orb-line)]/40 bg-[var(--orb-surface-elevated)]/60 p-4 text-left backdrop-blur-md"
+              className="orb-voice-transcript orb-liquid-card mt-6 w-full p-4 text-left"
               data-orb-voice-transcript
               data-orb-voice-you-said
             >
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-[#5ec8ff]/90">You said</p>
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--orb-primary)]/90">You said</p>
               <p className="mt-2 text-xs leading-5 text-[var(--orb-foreground)]">
                 {browserDisplayTranscript || voice.interimTranscript}
               </p>
@@ -1339,13 +1339,13 @@ export function OrbVoiceStation({
 
           {displayedOrbReply ? (
             <div
-              className="orb-voice-reply mt-4 max-h-[min(36vh,18rem)] w-full overflow-y-auto rounded-2xl border border-[var(--orb-line)]/40 bg-[var(--orb-surface-elevated)]/60 p-4 text-left backdrop-blur-md"
+              className="orb-voice-reply orb-liquid-card mt-4 max-h-[min(36vh,18rem)] w-full overflow-y-auto p-4 text-left"
               data-orb-voice-reply
               data-orb-voice-orb-replied
               data-orb-voice-reply-key={assistantReplyKey ?? undefined}
             >
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-[#5ec8ff]/90">ORB replied</p>
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--orb-primary)]/90">ORB replied</p>
                 <span
                   className="text-[10px] text-[var(--orb-muted)]"
                   data-orb-voice-speech-status={

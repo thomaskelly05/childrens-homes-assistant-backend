@@ -253,7 +253,7 @@ export function OrbTemplatesPanel({
           <OrbPremiumToolbar
             searchValue={search}
             onSearchChange={setSearch}
-            searchPlaceholder={isMobileViewport ? 'Search record types…' : 'Search templates and record types…'}
+            searchSurfaceId="record_types"
             onSearchSubmit={() => void load()}
             filters={
               !isMobileViewport ? (

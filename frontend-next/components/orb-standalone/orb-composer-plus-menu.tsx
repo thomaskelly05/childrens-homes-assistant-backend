@@ -13,6 +13,7 @@ import {
   Shield,
   Upload
 } from 'lucide-react'
+import { ORB_COMPOSER_UPLOAD_BOUNDARY_LINES } from '@/lib/orb/orb-composer-attachments'
 import { ORB_COMPOSER_UPLOAD_PLUS_ACTIONS } from '@/lib/orb/orb-foundation-capabilities'
 import { ORB_RESIDENTIAL_STATION_DEFINITIONS } from '@/lib/orb/orb-residential-stations'
 
@@ -142,7 +143,7 @@ export function OrbComposerPlusMenu({
       </button>
       {open ? (
         <div
-          className="orb-composer-plus-dropdown absolute bottom-full left-0 z-50 mb-2 min-w-[13.5rem] rounded-xl border border-[var(--orb-line)]/60 bg-[rgba(12,16,28,0.98)] py-1 shadow-xl backdrop-blur-xl"
+          className="orb-composer-plus-dropdown orb-liquid-panel absolute bottom-full left-0 z-50 mb-2 min-w-[13.5rem] overflow-hidden rounded-xl py-1"
           role="menu"
           data-orb-composer-plus-dropdown
           data-orb-composer-attachment-menu
@@ -171,7 +172,7 @@ export function OrbComposerPlusMenu({
                         }
                         onClick={() => handleSelect(item)}
                       >
-                        <Icon className="h-4 w-4 shrink-0 text-[#5ec8ff]" aria-hidden />
+                        <Icon className="h-4 w-4 shrink-0 text-[var(--orb-primary)]" aria-hidden />
                         <span>{item.label}</span>
                       </button>
                     </li>
@@ -180,6 +181,12 @@ export function OrbComposerPlusMenu({
               </ul>
             </div>
           ))}
+          <p
+            className="mt-1 border-t border-[var(--orb-line)]/45 px-3 py-2 text-[10px] leading-snug text-[var(--orb-muted)]"
+            data-orb-composer-tools-privacy-hint
+          >
+            {ORB_COMPOSER_UPLOAD_BOUNDARY_LINES[0]} {ORB_COMPOSER_UPLOAD_BOUNDARY_LINES[1]}
+          </p>
         </div>
       ) : null}
     </div>
