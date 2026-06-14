@@ -224,6 +224,7 @@ function OrbAuthGateInner({
   const [verdictLoading, setVerdictLoading] = useState(true)
   const [verdict, setVerdict] = useState<OrbFrontDoorVerdictPayload | null>(null)
   const [verdictError, setVerdictError] = useState<string | null>(null)
+  const [verdictServiceUnavailable, setVerdictServiceUnavailable] = useState(false)
   const [backendBuild, setBackendBuild] = useState<string | null>(null)
 
   const returnUrl = useMemo(() => {
@@ -238,6 +239,7 @@ function OrbAuthGateInner({
       markOrbFrontDoorVerdictProbeStarted()
       setVerdictLoading(true)
       setVerdictError(null)
+      setVerdictServiceUnavailable(false)
       try {
         const payload = await fetchOrbFrontDoorVerdict({ force: options?.force })
         resolveStaleVerdictSession(payload)
@@ -267,6 +269,7 @@ function OrbAuthGateInner({
           resetOrbFrontDoorVerdictCache()
           setVerdict(null)
           setVerdictError(null)
+          setVerdictServiceUnavailable(false)
           markOrbFrontDoorVerdictResolved(false)
           setOrbGateState('unauthenticated', false)
           if (auth.status === 'authenticated') {
@@ -274,9 +277,18 @@ function OrbAuthGateInner({
           }
           return
         }
+        if (error instanceof AuthApiError && error.status === 503) {
+          setVerdictError(error.message || ACCESS_UNAVAILABLE_MESSAGE)
+          setVerdictServiceUnavailable(true)
+          setVerdict(null)
+          markOrbFrontDoorVerdictResolved(false)
+          setOrbGateState('access_retry', false)
+          return
+        }
         const message =
           error instanceof Error ? error.message : 'ORB front-door verdict could not be loaded'
         setVerdictError(message)
+        setVerdictServiceUnavailable(false)
         setVerdict(null)
         markOrbFrontDoorVerdictResolved(false)
         setOrbGateState('access_retry', false)
@@ -440,11 +452,19 @@ function OrbAuthGateInner({
       return (
         <>
           <OrbAccessRetryScreen
-            message={verdictError ?? ACCESS_FALLBACK_MESSAGE}
-            detail={ACCESS_UNAVAILABLE_MESSAGE}
+            message={
+              verdictServiceUnavailable
+                ? ACCESS_UNAVAILABLE_MESSAGE
+                : verdictError ?? ACCESS_FALLBACK_MESSAGE
+            }
+            detail={
+              verdictServiceUnavailable
+                ? 'We are reconnecting to ORB. Your session is still signed in.'
+                : ACCESS_UNAVAILABLE_MESSAGE
+            }
             onRetry={handleVerdictRetry}
             onBackToSignIn={handleBackToSignIn}
-            showManageBilling
+            showManageBilling={!verdictServiceUnavailable}
             onManageBilling={handleManageBilling}
           />
           {debugPanel}

@@ -107,6 +107,23 @@ export async function fetchOrbFrontDoorVerdict(options?: {
       return data
     }
 
+    if (response.status === 503) {
+      const body = (payload ?? {}) as Record<string, unknown>
+      const message =
+        typeof body.message === 'string'
+          ? body.message
+          : 'ORB is temporarily unavailable. Please try again shortly.'
+      throw new AuthApiError(503, {
+        code:
+          typeof body.reason === 'string'
+            ? body.reason
+            : 'database_unavailable',
+        message,
+        retry_after_seconds:
+          typeof body.retry_after_seconds === 'number' ? body.retry_after_seconds : 10
+      })
+    }
+
     if (!response.ok) {
       throw new AuthApiError(response.status, 'ORB front-door verdict could not be loaded')
     }

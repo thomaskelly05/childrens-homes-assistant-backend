@@ -9,6 +9,8 @@ from services import audit_event_service
 def test_audit_skips_immediately_when_pool_busy():
     with (
         patch.object(audit_event_service, "is_pool_under_pressure", return_value=True),
+        patch.object(audit_event_service, "is_db_available", return_value=True),
+        patch.object(audit_event_service, "is_pool_init_in_cooldown", return_value=False),
         patch.object(audit_event_service, "get_db_connection") as get_conn,
         patch.object(audit_event_service, "ensure_audit_table") as ensure_table,
     ):
