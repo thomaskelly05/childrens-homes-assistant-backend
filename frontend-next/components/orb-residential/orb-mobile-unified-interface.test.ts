@@ -57,10 +57,10 @@ describe('ORB Residential unified mobile interface pass', () => {
     assert.match(billing, /data-orb-billing-refresh/)
   })
 
-  it('plus sheet exposes upload-first actions', () => {
+  it('plus sheet exposes upload-first actions as compact attachment tiles', () => {
     const tools = read('components/orb-residential/orb-residential-composer-tools-sheet.tsx')
-    const uploadIndex = tools.indexOf("title: 'Upload'")
-    const orbIndex = tools.indexOf("title: 'ORB'")
+    const uploadIndex = tools.indexOf('data-orb-composer-upload-actions')
+    const orbIndex = tools.indexOf('data-orb-composer-orb-tools-section')
     assert.ok(uploadIndex >= 0 && orbIndex > uploadIndex)
     assert.match(tools, /Photo Library/)
     assert.match(tools, /Take Photo/)
@@ -68,6 +68,7 @@ describe('ORB Residential unified mobile interface pass', () => {
     assert.match(tools, /upload_document/)
     assert.match(tools, /orb_dictate/)
     assert.match(tools, /privacy_guidance/)
+    assert.match(tools, /Add to message/)
   })
 
   it('billing status distinguishes loading and inactive', () => {
