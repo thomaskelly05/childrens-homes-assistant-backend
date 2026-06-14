@@ -19,17 +19,24 @@ import {
 import type { OrbComposerPlusAction } from '@/components/orb-standalone/orb-composer-plus-menu'
 import { traceOrbComposerInteraction } from '@/lib/orb/orb-composer-interaction-trace'
 import { ORB_COMPOSER_UPLOAD_BOUNDARY_LINES } from '@/lib/orb/orb-composer-attachments'
+import { ORB_COMPOSER_UPLOAD_PLUS_ACTIONS } from '@/lib/orb/orb-foundation-capabilities'
 import { ORB_RESIDENTIAL_STATION_DEFINITIONS } from '@/lib/orb/orb-residential-stations'
+
+const UPLOAD_ICON_BY_ACTION = {
+  take_photo: Camera,
+  photo_library: ImagePlus,
+  choose_files: FolderOpen
+} as const
 
 const UPLOAD_ACTIONS: Array<{
   id: OrbComposerPlusAction
   label: string
   icon: typeof Camera
-}> = [
-  { id: 'take_photo', label: 'Camera', icon: Camera },
-  { id: 'photo_library', label: 'Photos', icon: ImagePlus },
-  { id: 'choose_files', label: 'Files', icon: FolderOpen }
-]
+}> = ORB_COMPOSER_UPLOAD_PLUS_ACTIONS.map((action) => ({
+  id: action.id,
+  label: action.label,
+  icon: UPLOAD_ICON_BY_ACTION[action.id]
+}))
 
 const ORB_TOOL_ACTIONS: Array<{
   id: OrbComposerPlusAction
