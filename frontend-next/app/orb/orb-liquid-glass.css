@@ -163,9 +163,23 @@ html[data-orb-residential='1'] [data-orb-settings-panel].orb-liquid-panel {
 }
 
 html[data-orb-residential='1'] [data-orb-composer-attachment-menu].orb-liquid-panel,
-html[data-orb-residential='1'] [data-orb-composer-tools-sheet].orb-liquid-panel {
+html[data-orb-residential='1'] [data-orb-composer-tools-sheet].orb-liquid-panel,
+html[data-orb-residential='1'] .orb-composer-plus-dropdown.orb-liquid-panel {
   background: var(--orb-glass-bg-strong);
   border-color: var(--orb-glass-border);
+}
+
+html[data-orb-residential='1'] .orb-sidebar-search {
+  border-color: var(--orb-glass-border);
+  background: var(--orb-glass-bg);
+  -webkit-backdrop-filter: blur(var(--orb-glass-blur)) saturate(150%);
+  backdrop-filter: blur(var(--orb-glass-blur)) saturate(150%);
+}
+
+html[data-orb-residential='1'] .orb-liquid-toolbar .orb-premium-input {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
 }
 
 html[data-orb-residential='1'] [data-orb-privacy-detail-sheet] .orb-liquid-panel {

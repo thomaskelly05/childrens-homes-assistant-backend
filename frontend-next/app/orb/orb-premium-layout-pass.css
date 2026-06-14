@@ -33,9 +33,11 @@ html[data-orb-residential='1'] [data-orb-workspace-panel] .orb-workspace-body > 
   flex-direction: column;
 }
 
-html[data-orb-residential='1'] [data-orb-workspace-panel='settings'] .orb-workspace-body,
-html[data-orb-residential='1'] [data-orb-workspace-panel='help'] .orb-workspace-body {
-  overflow-y: auto;
+@media (max-width: 1023px) {
+  html[data-orb-residential='1'] [data-orb-workspace-panel='settings'] .orb-workspace-body,
+  html[data-orb-residential='1'] [data-orb-workspace-panel='help'] .orb-workspace-body {
+    overflow-y: auto;
+  }
 }
 
 /* ── Chat home — prompt pills + centred composer focal point ────────────── */
@@ -329,8 +331,10 @@ html[data-orb-residential='1'] [data-orb-residential-empty] [data-orb-empty-sphe
   opacity: 0.92;
 }
 
-html[data-orb-residential='1'] .orb-presence--hero {
-  --orb-presence-size: clamp(8.5rem, 14vw, 13.5rem);
+@media (max-width: 1023px) {
+  html[data-orb-residential='1'] .orb-presence--hero {
+    --orb-presence-size: clamp(8.5rem, 14vw, 13.5rem);
+  }
 }
 
 html[data-orb-residential='1'] .orb-composer-zone {

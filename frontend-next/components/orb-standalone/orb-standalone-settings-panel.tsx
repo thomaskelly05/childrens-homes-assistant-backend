@@ -694,7 +694,7 @@ function ShortcutRow({ keys, action }: { keys: string; action: string }) {
   return (
     <div className="flex items-center justify-between rounded-xl border border-[var(--orb-line)] px-4 py-2.5 text-xs">
       <span className="text-[var(--orb-foreground)]">{action}</span>
-      <kbd className="rounded-md border border-[#CBD5E1] bg-[#F1F5F9] px-2 py-0.5 font-mono text-[10px] text-[#0F172A]">{keys}</kbd>
+      <kbd className="rounded-md border border-[var(--orb-line)] bg-[var(--orb-surface-hover)] px-2 py-0.5 font-mono text-[10px] text-[var(--orb-foreground)]">{keys}</kbd>
     </div>
   )
 }

@@ -39,7 +39,7 @@ export const ORB_SEARCH_SURFACES: OrbSearchSurface[] = [
   {
     id: 'record_types',
     label: 'Record types',
-    placeholder: 'Search record types…',
+    placeholder: 'Search templates and record types…',
     source: 'server',
     supportsGlobalSearch: false,
     privacySensitivity: 'medium',

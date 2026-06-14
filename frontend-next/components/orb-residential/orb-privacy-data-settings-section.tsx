@@ -60,7 +60,7 @@ function PrivacyGroup({ title, children }: { title: string; children: ReactNode 
   return (
     <section className="space-y-1" data-orb-privacy-data-group>
       <h4 className="px-1 text-[11px] font-semibold uppercase tracking-wide text-[var(--orb-muted)]">{title}</h4>
-      <div className="overflow-hidden rounded-xl border border-[var(--orb-line)]/60 bg-[var(--orb-surface)]">
+      <div className="orb-liquid-card overflow-hidden rounded-xl">
         {children}
       </div>
     </section>

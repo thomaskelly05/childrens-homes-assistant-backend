@@ -1185,6 +1185,7 @@ html[data-orb-residential='1'] .orb-chat-layout {
     display: flex;
     justify-content: center;
     padding-bottom: 0;
+    overflow: hidden;
   }
 
   [data-orb-settings-panel] {

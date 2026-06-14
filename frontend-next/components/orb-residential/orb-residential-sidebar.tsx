@@ -27,6 +27,7 @@ import { GlassOrbMark } from '@/components/orb-residential/ui/glass-orb-mark'
 import { OrbUserAvatar } from '@/components/orb-residential/orb-user-avatar'
 import { OrbProjectMemoryModal } from '@/components/orb-residential/orb-project-memory-modal'
 import { ORB_RESIDENTIAL_TAGLINE } from '@/lib/orb/orb-residential-copy'
+import { getOrbSearchSurface } from '@/lib/orb/orb-search-registry'
 import { ORB_RESIDENTIAL_STATION_DEFINITIONS } from '@/lib/orb/orb-residential-stations'
 import type { StandaloneOrbMode } from '@/lib/orb/standalone-client'
 import {
@@ -695,8 +696,8 @@ export function OrbResidentialSidebar({
             type="search"
             value={chatSearch}
             onChange={(e) => onChatSearchChange(e.target.value)}
-            placeholder="Search chats"
-            aria-label="Search chats"
+            placeholder={getOrbSearchSurface('chats')?.placeholder ?? 'Search chats…'}
+            aria-label={getOrbSearchSurface('chats')?.placeholder ?? 'Search chats'}
             className="w-full bg-transparent text-sm text-[var(--orb-foreground)] outline-none placeholder:text-[var(--orb-muted)]"
             data-orb-sidebar-search
           />
