@@ -79,7 +79,7 @@ describe('ORB mobile convergence sprint', () => {
       'Appearance',
       'Recording Preferences',
       'Writing Preferences',
-      'Safety & Privacy',
+      'Privacy & data',
       'Account & Billing',
       'About ORB'
     ]) {
