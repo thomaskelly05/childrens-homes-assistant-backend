@@ -55,9 +55,9 @@ describe('ORB Residential mobile continuity and composer upload pass', () => {
     assert.match(composer, /onRemoveAttachment/)
   })
 
-  it('attachment send routes documents through uploadOrbStandaloneDocument', () => {
+  it('attachment send routes documents through uploadOrbComposerDocument', () => {
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
-    assert.match(companion, /uploadOrbStandaloneDocument/)
+    assert.match(companion, /uploadOrbComposerDocument/)
     assert.match(companion, /document_source_id: composerDocumentSourceId/)
     assert.match(companion, /readComposerFileAsBase64/)
     assert.match(companion, /images: imagePayload/)

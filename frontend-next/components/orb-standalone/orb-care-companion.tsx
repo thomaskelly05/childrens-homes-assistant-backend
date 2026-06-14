@@ -260,11 +260,11 @@ import {
   runStandaloneOrbAction,
   STANDALONE_ORB_EMPTY_ANSWER_MESSAGE,
   STANDALONE_ORB_MODES,
-  uploadOrbStandaloneDocument,
   type StandaloneOrbAgentSuggestion,
   type StandaloneOrbConversationResponse,
   type StandaloneOrbMode
 } from '@/lib/orb/standalone-client'
+import { uploadOrbComposerDocument } from '@/lib/orb/orb-composer-upload-client'
 import {
   ORB_COMPOSER_MAX_ATTACHMENTS,
   ORB_COMPOSER_MAX_DOCUMENT_ATTACHMENTS,
@@ -1209,7 +1209,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
         )
         try {
           const content_base64 = await readComposerFileAsBase64(documentAttachment.file)
-          const uploaded = await uploadOrbStandaloneDocument({
+          const uploaded = await uploadOrbComposerDocument({
             title: documentAttachment.name.replace(/\.[^.]+$/, '') || documentAttachment.name,
             content_base64,
             file_name: documentAttachment.name,
