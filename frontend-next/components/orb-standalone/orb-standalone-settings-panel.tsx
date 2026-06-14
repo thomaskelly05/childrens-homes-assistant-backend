@@ -41,6 +41,7 @@ import {
   saveOrbStandaloneChatSettings,
   type OrbStandaloneChatSettings
 } from '@/lib/orb/orb-standalone-settings'
+import { traceOrbComposerInteraction } from '@/lib/orb/orb-composer-interaction-trace'
 import {
   defaultOrbStandalonePersonalisation,
   loadOrbStandalonePersonalisation,
@@ -197,6 +198,7 @@ export function OrbStandaloneSettingsPanel({
   function updateChat(patch: Partial<OrbStandaloneChatSettings>) {
     setChatSettings((current) => {
       const next = { ...current, ...patch }
+      traceOrbComposerInteraction('settings_save_clicked', { section: 'chat' })
       saveOrbStandaloneChatSettings(next)
       return next
     })
@@ -205,6 +207,7 @@ export function OrbStandaloneSettingsPanel({
   function updatePersonalisation(patch: Partial<OrbStandalonePersonalisation>) {
     setPersonalisation((current) => {
       const next = { ...current, ...patch }
+      traceOrbComposerInteraction('settings_save_clicked', { section: 'personalisation' })
       saveOrbStandalonePersonalisation(next)
       return next
     })

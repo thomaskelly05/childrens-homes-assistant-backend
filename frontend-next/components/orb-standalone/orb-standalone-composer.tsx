@@ -17,7 +17,12 @@ import { OrbResidentialComposerToolsSheet } from '@/components/orb-residential/o
 import { OrbComposerCopyright } from '@/components/orb-standalone/orb-composer-copyright'
 import { OrbFooter } from '@/components/orb-standalone/orb-footer'
 import { logTapTarget } from '@/lib/interaction/mobile-tap-debug'
+import { traceOrbComposerInteraction } from '@/lib/orb/orb-composer-interaction-trace'
 import { shouldIgnoreComposerFocusTarget } from '@/lib/orb/orb-composer-focus-guard'
+import {
+  deferComposerOutsidePointerArm,
+  shouldDismissComposerAttachmentMenu
+} from '@/lib/orb/orb-composer-outside-click'
 import {
   composerPrimaryActionAriaLabel,
   resolveComposerPrimaryAction
@@ -164,6 +169,8 @@ export function OrbStandaloneComposer({
   const documentFileInputRef = useRef<HTMLInputElement | null>(null)
   const fallbackInputRef = useRef<HTMLTextAreaElement | null>(null)
   const attachAnchorRef = useRef<HTMLDivElement | null>(null)
+  const plusActivateGuardRef = useRef(0)
+  const menuOutsideArmRef = useRef(deferComposerOutsidePointerArm())
   const trimmedMessage = value.trim()
   const stateLength = composerStateLength ?? trimmedMessage.length
   const canSend = trimmedMessage.length > 0 || attachments.length > 0
@@ -218,31 +225,51 @@ export function OrbStandaloneComposer({
     }
   }
 
-  function focusComposerInput(event: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>) {
+  function focusComposerInput(event: React.MouseEvent<HTMLTextAreaElement>) {
+    if (event.target !== event.currentTarget) return
     if (shouldIgnoreComposerFocusTarget(event.target)) return
+    traceOrbComposerInteraction('composer_focus_handler_fired')
     focusInput()
   }
 
   function handlePlusTouchStart(event: React.TouchEvent<HTMLButtonElement>) {
     event.stopPropagation()
+    traceOrbComposerInteraction('plus_touchstart')
   }
 
   function handlePlusPointerDown(event: React.PointerEvent<HTMLButtonElement>) {
     event.stopPropagation()
+    traceOrbComposerInteraction('plus_pointerdown')
     if (event.pointerType === 'mouse') {
       event.preventDefault()
     }
   }
 
-  function toggleAttachmentMenu(event: React.MouseEvent<HTMLButtonElement>) {
-    event.preventDefault()
-    event.stopPropagation()
+  function setAttachmentMenuOpen(next: boolean) {
+    setToolsSheetOpen(next)
+    traceOrbComposerInteraction('menu_open_state_changed', { open: next })
+    if (next) markOrbInteractionLatency('plus_menu_open')
+  }
+
+  function toggleAttachmentMenuFromPlus() {
     markOrbInteractionLatency('plus_tap')
     setToolsSheetOpen((open) => {
       const next = !open
+      traceOrbComposerInteraction('menu_open_state_changed', { open: next })
       if (next) markOrbInteractionLatency('plus_menu_open')
       return next
     })
+  }
+
+  function handlePlusActivate(event: React.PointerEvent<HTMLButtonElement> | React.MouseEvent<HTMLButtonElement>) {
+    event.preventDefault()
+    event.stopPropagation()
+    const stamp = Date.now()
+    if (stamp - plusActivateGuardRef.current < 320) return
+    plusActivateGuardRef.current = stamp
+    if (event.type === 'click') traceOrbComposerInteraction('plus_click')
+    else traceOrbComposerInteraction('plus_pointerup')
+    toggleAttachmentMenuFromPlus()
   }
 
   function syncComposerHeight() {
@@ -262,18 +289,22 @@ export function OrbStandaloneComposer({
   const showComposerQuickActions = compactResidential && !mobileViewport
 
   useEffect(() => {
-    if (!toolsSheetOpen) return
-    function onOutsidePointer(event: Event) {
-      const target = event.target as Node | null
-      if (!target) return
-      if (shouldIgnoreComposerFocusTarget(target)) return
-      setToolsSheetOpen(false)
+    if (!toolsSheetOpen) {
+      menuOutsideArmRef.current.disarm()
+      return
     }
-    document.addEventListener('mousedown', onOutsidePointer)
-    document.addEventListener('touchstart', onOutsidePointer, { passive: true })
+    traceOrbComposerInteraction('menu_mounted')
+    const arm = menuOutsideArmRef.current
+    arm.arm()
+    function onOutsidePointer(event: Event) {
+      if (!shouldDismissComposerAttachmentMenu(event, { armed: arm.isArmed() })) return
+      traceOrbComposerInteraction('menu_outside_click')
+      setAttachmentMenuOpen(false)
+    }
+    document.addEventListener('pointerdown', onOutsidePointer, true)
     return () => {
-      document.removeEventListener('mousedown', onOutsidePointer)
-      document.removeEventListener('touchstart', onOutsidePointer)
+      arm.disarm()
+      document.removeEventListener('pointerdown', onOutsidePointer, true)
     }
   }, [toolsSheetOpen])
 
@@ -282,20 +313,23 @@ export function OrbStandaloneComposer({
   }, [mode])
 
   function handleComposerToolSelect(action: OrbComposerPlusAction) {
-    setToolsSheetOpen(false)
+    setAttachmentMenuOpen(false)
     if (action === 'privacy_guidance') {
       setPrivacyGuidanceOpen(true)
       return
     }
     if (action === 'photo_library' || action === 'attach_image') {
+      traceOrbComposerInteraction('file_input_clicked', { kind: 'photo_library' })
       photoLibraryInputRef.current?.click()
       return
     }
     if (action === 'take_photo' || action === 'attach_photo') {
+      traceOrbComposerInteraction('file_input_clicked', { kind: 'take_photo' })
       cameraInputRef.current?.click()
       return
     }
     if (action === 'choose_files') {
+      traceOrbComposerInteraction('file_input_clicked', { kind: 'choose_files' })
       documentFileInputRef.current?.click()
       return
     }
@@ -416,7 +450,7 @@ export function OrbStandaloneComposer({
             {mobileViewport && onPlusMenuAction ? (
               <OrbResidentialComposerToolsSheet
                 open={toolsSheetOpen}
-                onClose={() => setToolsSheetOpen(false)}
+                onClose={() => setAttachmentMenuOpen(false)}
                 onSelect={handleComposerToolSelect}
                 anchorRef={attachAnchorRef}
               />
@@ -607,7 +641,8 @@ export function OrbStandaloneComposer({
                       type="button"
                       onPointerDown={handlePlusPointerDown}
                       onTouchStart={handlePlusTouchStart}
-                      onClick={toggleAttachmentMenu}
+                      onPointerUp={handlePlusActivate}
+                      onClick={handlePlusActivate}
                       className={`inline-flex h-9 min-w-9 shrink-0 items-center justify-center rounded-full border shadow-sm transition hover:bg-[var(--orb-surface-hover)] ${
                         toolsSheetOpen
                           ? 'border-[var(--orb-primary)]/45 bg-[var(--orb-primary-soft)] text-[var(--orb-primary)]'
@@ -645,14 +680,17 @@ export function OrbStandaloneComposer({
             <div
               className={compactResidential ? 'orb-composer-input-column min-w-0 flex-1' : 'w-full'}
               data-orb-composer-input-column={compactResidential ? 'true' : undefined}
-              onClick={compactResidential ? focusComposerInput : undefined}
             >
             <textarea
               ref={setInputNode}
               id="orb-standalone-input"
               name="message"
               value={value}
-              onFocus={() => document.body.setAttribute('data-orb-composer-focused', 'true')}
+              onClick={compactResidential ? focusComposerInput : undefined}
+              onFocus={() => {
+                traceOrbComposerInteraction('textarea_focus')
+                document.body.setAttribute('data-orb-composer-focused', 'true')
+              }}
               onBlur={() => document.body.removeAttribute('data-orb-composer-focused')}
               onChange={(event) => {
                 syncMessage(event.currentTarget.value)
@@ -719,7 +757,12 @@ export function OrbStandaloneComposer({
                   ) : (
                     <button
                       type="button"
-                      onClick={primaryAction === 'stop' ? onCancelListening : onComposerPrimaryAction}
+                      onClick={(event) => {
+                        traceOrbComposerInteraction('voice_button_clicked', { action: primaryAction })
+                        if (primaryAction === 'stop') onCancelListening()
+                        else onComposerPrimaryAction?.()
+                        event.stopPropagation()
+                      }}
                       disabled={primaryAction === 'voice' && micDisabled}
                       aria-label={primaryActionLabel}
                       className={`inline-flex h-11 min-w-11 items-center justify-center rounded-full transition disabled:cursor-not-allowed disabled:opacity-45 ${

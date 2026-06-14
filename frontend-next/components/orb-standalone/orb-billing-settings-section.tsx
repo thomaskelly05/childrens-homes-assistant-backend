@@ -5,6 +5,7 @@ import { CreditCard, Settings } from 'lucide-react'
 
 import { OrbUserAvatar } from '@/components/orb-residential/orb-user-avatar'
 import { formatOrbPlanLabel, getOrbBillingDisplayStatus } from '@/lib/orb/orb-billing-display'
+import { traceOrbComposerInteraction } from '@/lib/orb/orb-composer-interaction-trace'
 import {
   fetchOrbAccess,
   fetchOrbBillingMeter,
@@ -103,6 +104,7 @@ export function OrbBillingSettingsSection({
   }
 
   async function handleRefreshStatus() {
+    traceOrbComposerInteraction('billing_refresh_clicked')
     setLoading(true)
     setError(null)
     try {
