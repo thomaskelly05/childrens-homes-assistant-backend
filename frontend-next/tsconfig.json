@@ -28,7 +28,12 @@
     "node_modules",
     "**/*.test.ts",
     "**/*.test.tsx",
+    "**/*.spec.ts",
+    "**/*.spec.tsx",
     "e2e/**",
+    "playwright/**",
+    "test-results/**",
+    "coverage/**",
     "lib/orb/evals/**",
     "scripts/**"
   ]

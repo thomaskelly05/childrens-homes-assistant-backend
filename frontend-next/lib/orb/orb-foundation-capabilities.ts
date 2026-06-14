@@ -7,6 +7,8 @@ import { ORB_NATURAL_LANGUAGE_DOCUMENT_EDITING_COPY } from './orb-document-intel
 import { ORB_APP_PERMISSIONS } from './orb-app-permissions.ts'
 import { ORB_SEARCH_SURFACES } from './orb-search-registry.ts'
 
+export { ORB_COMPOSER_UPLOAD_PLUS_ACTIONS } from './orb-composer-upload-actions.ts'
+
 export type OrbFoundationSurface =
   | 'mobile'
   | 'desktop'
@@ -457,12 +459,6 @@ export function orbFoundationCapabilitiesForSurface(surface: OrbFoundationSurfac
 }
 
 /** Shared composer plus upload actions — mobile sheet and desktop menu converge here. */
-export const ORB_COMPOSER_UPLOAD_PLUS_ACTIONS = [
-  { id: 'take_photo' as const, label: 'Camera', capabilityId: 'camera_capture' as const },
-  { id: 'photo_library' as const, label: 'Photos', capabilityId: 'photo_upload' as const },
-  { id: 'choose_files' as const, label: 'Files', capabilityId: 'file_upload' as const }
-]
-
 export function orbFoundationCapabilityHasSurface(capability: OrbFoundationCapability): boolean {
   return capability.surfaces.length > 0 || capability.currentLimitations.length > 0
 }

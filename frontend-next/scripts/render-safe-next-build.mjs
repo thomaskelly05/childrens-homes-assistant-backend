@@ -4,14 +4,15 @@
  *
  * Render dashboard services may ignore render.yaml env vars (e.g. NODE_OPTIONS).
  * This script enforces heap headroom inside npm run build so constrained hosts
- * do not OOM around the default ~2 GB Node limit.
+ * do not OOM around the default ~2 GB Node limit, and logs memory at key steps.
  */
 import { spawn } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-const DEFAULT_HEAP_MB = 4096
+/** Stay below Render starter RAM; heap + webpack overhead must fit ~8 GB total. */
+export const DEFAULT_HEAP_MB = 4096
 const MAX_OLD_SPACE_SIZE_PATTERN = /--max-old-space-size(?:=\d+)?(?:\s|$)/
 
 /**
@@ -25,6 +26,29 @@ export function ensureMaxOldSpaceSize(nodeOptions = '', sizeMb = DEFAULT_HEAP_MB
   }
   const flag = `--max-old-space-size=${sizeMb}`
   return trimmed ? `${trimmed} ${flag}` : flag
+}
+
+/**
+ * Production build env applied before spawning `next build`.
+ * Exported for unit tests — does not mutate process.env.
+ */
+export function resolveRenderBuildEnv(env = process.env, sizeMb = DEFAULT_HEAP_MB) {
+  const next = { ...env }
+  next.NODE_OPTIONS = ensureMaxOldSpaceSize(next.NODE_OPTIONS, sizeMb)
+  if (!next.NEXT_TELEMETRY_DISABLED) {
+    next.NEXT_TELEMETRY_DISABLED = '1'
+  }
+  if (!next.NODE_ENV) {
+    next.NODE_ENV = 'production'
+  }
+  return next
+}
+
+/** RSS snapshot for build diagnostics (Render OOM forensics). */
+export function formatBuildMemorySnapshot(label = 'memory') {
+  const { rss, heapUsed, heapTotal, external } = process.memoryUsage()
+  const mb = (bytes) => `${Math.round(bytes / 1024 / 1024)}MB`
+  return `[render-safe-next-build] ${label}: rss=${mb(rss)} heap=${mb(heapUsed)}/${mb(heapTotal)} external=${mb(external)}`
 }
 
 function resolveNextBinary(projectRoot) {
@@ -43,10 +67,13 @@ function resolveNextBinary(projectRoot) {
 
 function runNextBuild() {
   const projectRoot = join(dirname(fileURLToPath(import.meta.url)), '..')
-  process.env.NODE_OPTIONS = ensureMaxOldSpaceSize(process.env.NODE_OPTIONS)
-  if (!process.env.NEXT_TELEMETRY_DISABLED) {
-    process.env.NEXT_TELEMETRY_DISABLED = '1'
-  }
+  const buildEnv = resolveRenderBuildEnv(process.env)
+  Object.assign(process.env, buildEnv)
+
+  console.log(formatBuildMemorySnapshot('before next build'))
+  console.log(
+    `[render-safe-next-build] NODE_ENV=${process.env.NODE_ENV} NODE_OPTIONS=${process.env.NODE_OPTIONS}`
+  )
 
   const { command, useShell } = resolveNextBinary(projectRoot)
   const child = spawn(command, ['build'], {
@@ -62,6 +89,7 @@ function runNextBuild() {
   })
 
   child.on('close', (code, signal) => {
+    console.log(formatBuildMemorySnapshot('after next build'))
     if (signal) {
       process.kill(process.pid, signal)
       return
