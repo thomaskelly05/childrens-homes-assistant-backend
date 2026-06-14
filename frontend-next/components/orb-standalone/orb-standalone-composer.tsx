@@ -17,6 +17,11 @@ import { OrbResidentialComposerToolsSheet } from '@/components/orb-residential/o
 import { OrbComposerCopyright } from '@/components/orb-standalone/orb-composer-copyright'
 import { OrbFooter } from '@/components/orb-standalone/orb-footer'
 import { logTapTarget } from '@/lib/interaction/mobile-tap-debug'
+import { shouldIgnoreComposerFocusTarget } from '@/lib/orb/orb-composer-focus-guard'
+import {
+  composerPrimaryActionAriaLabel,
+  resolveComposerPrimaryAction
+} from '@/lib/orb/orb-composer-primary-action'
 import { markOrbInteractionLatency } from '@/lib/orb/voice/latency'
 import {
   ORB_COMPOSER_DOCUMENT_ACCEPT,
@@ -65,6 +70,8 @@ export function OrbStandaloneComposer({
   onSubmit,
   composerStateLength,
   onMicClick,
+  onComposerPrimaryAction,
+  composerInlineVoiceEnabled = false,
   onVoiceClick,
   voicePanelUnavailable = false,
   onCancelListening,
@@ -118,6 +125,8 @@ export function OrbStandaloneComposer({
   onSubmit: (event?: FormEvent<HTMLFormElement>) => void | Promise<void>
   composerStateLength?: number
   onMicClick: () => void
+  onComposerPrimaryAction?: () => void
+  composerInlineVoiceEnabled?: boolean
   onVoiceClick?: () => void
   /** When true, ORB Voice panel opens but browser speech is unavailable. */
   voicePanelUnavailable?: boolean
@@ -154,12 +163,21 @@ export function OrbStandaloneComposer({
   const cameraInputRef = useRef<HTMLInputElement | null>(null)
   const documentFileInputRef = useRef<HTMLInputElement | null>(null)
   const fallbackInputRef = useRef<HTMLTextAreaElement | null>(null)
+  const attachAnchorRef = useRef<HTMLDivElement | null>(null)
   const trimmedMessage = value.trim()
   const stateLength = composerStateLength ?? trimmedMessage.length
   const canSend = trimmedMessage.length > 0 || attachments.length > 0
   const sendDisabled = pending || !canSend
   const disabledReason = sendDisabledReason(pending, canSend)
+  const compactResidential = residentialSurface
   const micDisabled = !composerMicEnabled || !voiceCaptureEnabled
+  const mobileInlineVoice = compactResidential && mobileViewport && composerInlineVoiceEnabled
+  const primaryAction = resolveComposerPrimaryAction({
+    voiceListening,
+    canSend,
+    pending
+  })
+  const primaryActionLabel = composerPrimaryActionAriaLabel(primaryAction)
   const micLabel =
     composerMicAriaLabel ??
     (voiceListening ? 'Stop voice input' : 'Open voice or dictate')
@@ -201,20 +219,19 @@ export function OrbStandaloneComposer({
   }
 
   function focusComposerInput(event: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>) {
-    const target = event.target as HTMLElement | null
-    if (
-      target?.closest(
-        'button,input,textarea,a,[role="button"],[data-orb-composer-plus-button],[data-orb-composer-attachment-menu],[data-orb-composer-attach-backdrop]'
-      )
-    ) {
-      return
-    }
+    if (shouldIgnoreComposerFocusTarget(event.target)) return
     focusInput()
   }
 
-  function handlePlusPointerDown(event: React.PointerEvent<HTMLButtonElement> | React.TouchEvent<HTMLButtonElement>) {
-    event.preventDefault()
+  function handlePlusTouchStart(event: React.TouchEvent<HTMLButtonElement>) {
     event.stopPropagation()
+  }
+
+  function handlePlusPointerDown(event: React.PointerEvent<HTMLButtonElement>) {
+    event.stopPropagation()
+    if (event.pointerType === 'mouse') {
+      event.preventDefault()
+    }
   }
 
   function toggleAttachmentMenu(event: React.MouseEvent<HTMLButtonElement>) {
@@ -240,7 +257,6 @@ export function OrbStandaloneComposer({
     syncComposerHeight()
   }, [value, residentialSurface])
 
-  const compactResidential = residentialSurface
   const [toolsSheetOpen, setToolsSheetOpen] = useState(false)
   const [privacyGuidanceOpen, setPrivacyGuidanceOpen] = useState(false)
   const showComposerQuickActions = compactResidential && !mobileViewport
@@ -250,8 +266,7 @@ export function OrbStandaloneComposer({
     function onOutsidePointer(event: Event) {
       const target = event.target as Node | null
       if (!target) return
-      if ((target as HTMLElement).closest?.('[data-orb-composer-plus-button]')) return
-      if ((target as HTMLElement).closest?.('[data-orb-composer-attachment-menu]')) return
+      if (shouldIgnoreComposerFocusTarget(target)) return
       setToolsSheetOpen(false)
     }
     document.addEventListener('mousedown', onOutsidePointer)
@@ -394,6 +409,7 @@ export function OrbStandaloneComposer({
           ) : null}
 
           <div
+            ref={attachAnchorRef}
             className={`relative ${compactResidential && mobileViewport ? 'orb-composer-attach-anchor' : ''}`}
             data-orb-composer-attach-anchor={compactResidential && mobileViewport ? 'true' : undefined}
           >
@@ -402,11 +418,11 @@ export function OrbStandaloneComposer({
                 open={toolsSheetOpen}
                 onClose={() => setToolsSheetOpen(false)}
                 onSelect={handleComposerToolSelect}
+                anchorRef={attachAnchorRef}
               />
             ) : null}
           <div
             className={`orb-composer-glass ${compactResidential ? 'orb-composer-glass--compact p-2 sm:p-2.5' : 'p-2.5 sm:p-3'} ${answering ? 'orb-composer-answering orb-answering-pulse' : ''}`}
-            onClick={focusComposerInput}
             data-orb-composer-answering={answering ? 'true' : 'false'}
             data-orb-composer-card
             data-orb-composer-compact={compactResidential ? 'true' : undefined}
@@ -576,15 +592,21 @@ export function OrbStandaloneComposer({
               tabIndex={-1}
             />
 
-            <div className={compactResidential ? 'flex items-end gap-1.5' : ''}>
+            <div
+              className={compactResidential ? 'orb-composer-row flex items-end gap-1.5' : ''}
+              data-orb-composer-row={compactResidential ? 'true' : undefined}
+            >
             {compactResidential ? (
-              <div className="orb-composer-action-rail flex shrink-0 items-center gap-0.5 pb-1" data-orb-composer-action-rail>
+              <div
+                className="orb-composer-action-rail pointer-events-auto relative z-[64] flex shrink-0 items-center gap-0.5 pb-1"
+                data-orb-composer-action-rail
+              >
                 {onPlusMenuAction ? (
                   mobileViewport ? (
                     <button
                       type="button"
                       onPointerDown={handlePlusPointerDown}
-                      onTouchStart={handlePlusPointerDown}
+                      onTouchStart={handlePlusTouchStart}
                       onClick={toggleAttachmentMenu}
                       className={`inline-flex h-9 min-w-9 shrink-0 items-center justify-center rounded-full border shadow-sm transition hover:bg-[var(--orb-surface-hover)] ${
                         toolsSheetOpen
@@ -620,6 +642,11 @@ export function OrbStandaloneComposer({
               </div>
             ) : null}
 
+            <div
+              className={compactResidential ? 'orb-composer-input-column min-w-0 flex-1' : 'w-full'}
+              data-orb-composer-input-column={compactResidential ? 'true' : undefined}
+              onClick={compactResidential ? focusComposerInput : undefined}
+            >
             <textarea
               ref={setInputNode}
               id="orb-standalone-input"
@@ -649,7 +676,7 @@ export function OrbStandaloneComposer({
               rows={1}
               className={
                 compactResidential
-                  ? 'min-h-[2.5rem] max-h-[8.75rem] min-w-0 flex-1 resize-none overflow-y-auto bg-transparent px-1 py-2.5 text-[0.9375rem] leading-6 text-[var(--orb-foreground)] outline-none placeholder:text-[var(--orb-muted)] md:max-h-[13.75rem]'
+                  ? 'min-h-[2.5rem] max-h-[8.75rem] w-full min-w-0 resize-none overflow-y-auto bg-transparent px-1 py-2.5 text-[0.9375rem] leading-6 text-[var(--orb-foreground)] outline-none placeholder:text-[var(--orb-muted)] md:max-h-[13.75rem]'
                   : 'mt-1.5 max-h-40 min-h-[3.25rem] w-full resize-none bg-transparent px-0.5 py-2 text-[0.9375rem] leading-6 text-[var(--orb-foreground)] outline-none focus:outline-none focus-visible:outline-none placeholder:text-slate-500'
               }
               placeholder={compactResidential ? 'Ask ORB anything...' : 'Ask anything'}
@@ -665,17 +692,57 @@ export function OrbStandaloneComposer({
               data-testid="orb-standalone-message-input"
               data-input-source="controlled"
             />
+            </div>
 
             {compactResidential ? (
-              <div className="flex shrink-0 items-center gap-1.5 pb-1">
+              <div
+                className="orb-composer-send-rail pointer-events-auto relative z-[64] flex shrink-0 items-center gap-1.5 pb-1"
+                data-orb-composer-send-rail
+              >
                 {answering && onStopGenerating ? (
                   <button type="button" onClick={onStopGenerating} className="inline-flex h-11 min-w-11 items-center justify-center rounded-full border border-rose-400/30 text-rose-300" aria-label="Stop generating" data-orb-composer-stop-generating>
                     <Square className="h-4 w-4 fill-current" aria-hidden />
                   </button>
                 ) : null}
-                <button type="submit" disabled={sendDisabled || (answering && Boolean(onStopGenerating))} aria-label="Send message" className="orb-composer-send inline-flex h-11 min-w-11 items-center justify-center rounded-full text-white transition disabled:opacity-35" data-orb-composer-send data-testid="orb-standalone-send-clickable">
-                  <Send className="h-4 w-4" />
-                </button>
+                {mobileInlineVoice && onComposerPrimaryAction ? (
+                  primaryAction === 'send' ? (
+                    <button
+                      type="submit"
+                      disabled={sendDisabled || (answering && Boolean(onStopGenerating))}
+                      aria-label={primaryActionLabel}
+                      className="orb-composer-send inline-flex h-11 min-w-11 items-center justify-center rounded-full text-white transition disabled:opacity-35"
+                      data-orb-composer-send
+                      data-testid="orb-standalone-send-clickable"
+                    >
+                      <Send className="h-4 w-4" />
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={primaryAction === 'stop' ? onCancelListening : onComposerPrimaryAction}
+                      disabled={primaryAction === 'voice' && micDisabled}
+                      aria-label={primaryActionLabel}
+                      className={`inline-flex h-11 min-w-11 items-center justify-center rounded-full transition disabled:cursor-not-allowed disabled:opacity-45 ${
+                        primaryAction === 'stop'
+                          ? 'border border-sky-400/35 bg-sky-500/15 text-sky-200'
+                          : 'border border-[var(--orb-line)]/55 bg-[var(--orb-surface-elevated)] text-[var(--orb-foreground)]'
+                      }`}
+                      data-orb-composer-voice-send
+                      data-orb-composer-voice
+                      data-orb-composer-voice-route="inline"
+                    >
+                      {primaryAction === 'stop' ? (
+                        <Square className="h-4 w-4 fill-current" aria-hidden />
+                      ) : (
+                        <AudioLines className="h-4 w-4" aria-hidden />
+                      )}
+                    </button>
+                  )
+                ) : (
+                  <button type="submit" disabled={sendDisabled || (answering && Boolean(onStopGenerating))} aria-label="Send message" className="orb-composer-send inline-flex h-11 min-w-11 items-center justify-center rounded-full text-white transition disabled:opacity-35" data-orb-composer-send data-testid="orb-standalone-send-clickable">
+                    <Send className="h-4 w-4" />
+                  </button>
+                )}
               </div>
             ) : null}
             </div>
@@ -724,9 +791,9 @@ export function OrbStandaloneComposer({
           </div>
           </div>
 
-          <div className={`orb-voice-status-slot mt-2 flex min-h-[1.25rem] flex-wrap items-center justify-between gap-2 px-2 ${compactResidential ? 'hidden' : ''}`}>
+          <div className={`orb-voice-status-slot mt-2 flex min-h-[1.25rem] flex-wrap items-center justify-between gap-2 px-2 ${compactResidential && !mobileInlineVoice ? 'hidden' : ''}`}>
             {voiceStatusText ? (
-              <p id="orb-standalone-status" className="text-[11px] leading-5 text-slate-500" role="status" data-orb-voice-status>{voiceStatusText}</p>
+              <p id="orb-standalone-status" className="text-[11px] leading-5 text-slate-500" role="status" data-orb-voice-status data-orb-composer-inline-voice-status={mobileInlineVoice ? 'true' : undefined}>{voiceStatusText}</p>
             ) : (
               <span id="orb-standalone-status" className="sr-only" data-orb-voice-status>Ready to type</span>
             )}

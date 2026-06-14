@@ -275,6 +275,8 @@ import {
   revokeComposerAttachmentPreview,
   type OrbComposerAttachment
 } from '@/lib/orb/orb-composer-attachments'
+import { orbComposerInlineVoiceStatusLine } from '@/lib/orb/orb-composer-inline-voice-status'
+import { ORB_DRAFT_NOTICE_CLASS } from '@/lib/orb/orb-draft-notice'
 import {
   BACKEND_ORB_STANDALONE_ACTION_IDS,
   backendOrbActionIdForFollowUp,
@@ -527,8 +529,20 @@ function voiceStatusLine(options: {
   pending: boolean
   micNotice: string | null
   voiceCaptureEnabled: boolean
+  mobileInlineVoice?: boolean
 }): string {
-  const { voice, pending, micNotice, voiceCaptureEnabled } = options
+  const { voice, pending, micNotice, voiceCaptureEnabled, mobileInlineVoice } = options
+  if (mobileInlineVoice) {
+    return orbComposerInlineVoiceStatusLine({
+      listening: voice.listening,
+      speaking: voice.speaking,
+      pending,
+      phase: voice.phase,
+      voiceCaptureState: voice.voiceCaptureState,
+      micNotice,
+      voiceCaptureEnabled
+    })
+  }
   if (micNotice) return micNotice
   if (!voiceCaptureEnabled) return ''
   if (voice.listening || voice.phase === 'continuous_listening' || voice.phase === 'wake_listening') {
@@ -2012,6 +2026,11 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
       return
     }
 
+    if (residentialSurface && isMobileViewport) {
+      void handleComposerInlineVoice()
+      return
+    }
+
     const openVoice = composerMicRoute === 'voice' && voiceGenuinelyAvailable
 
     if (openVoice) {
@@ -2025,6 +2044,44 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
     openOrbDictatePanel()
     setMicNotice('Dictate is open — tap Start recording when you are ready.')
     window.setTimeout(() => setMicNotice(null), 8000)
+  }
+
+  async function handleComposerInlineVoice() {
+    if (!STANDALONE_ORB_VOICE_CAPTURE_ENABLED || !canUseComposerMic()) {
+      setMicNotice(VOICE_MODE_COMING_SOON)
+      window.setTimeout(() => setMicNotice(null), 5000)
+      return
+    }
+    if (voice.speaking) {
+      voice.interruptForListen()
+      return
+    }
+    if (voice.listening) {
+      voice.stopListening()
+      return
+    }
+
+    voiceMayFillComposerRef.current = true
+    composerUserEditedRef.current = false
+    setMicNotice(null)
+    emitOrbClientDebug({ area: 'composer', event: 'composer_inline_voice_start' })
+
+    const started = await voice.beginUserVoiceCapture({ mode: 'active' })
+    if (!started) {
+      const fallback =
+        voice.error?.trim() ||
+        'Voice could not start — try Dictate or type your message instead.'
+      setMicNotice(fallback)
+      window.setTimeout(() => setMicNotice(null), 8000)
+    }
+  }
+
+  function handleComposerPrimaryAction() {
+    if (voice.listening) {
+      voice.stopListening()
+      return
+    }
+    void handleComposerInlineVoice()
   }
 
   const SLASH_MODE_COMMANDS: Record<string, StandaloneOrbMode> = {
@@ -2929,7 +2986,8 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
         voice,
         pending,
         micNotice,
-        voiceCaptureEnabled: STANDALONE_ORB_VOICE_CAPTURE_ENABLED
+        voiceCaptureEnabled: STANDALONE_ORB_VOICE_CAPTURE_ENABLED,
+        mobileInlineVoice: residentialSurface && isMobileViewport
       })}
       transcriptReady={STANDALONE_ORB_VOICE_CAPTURE_ENABLED && voice.phase === 'transcript_ready'}
       displayTranscript={voice.displayTranscript}
@@ -2952,6 +3010,8 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
           : 'Open ORB Dictate and start recording'
       }
       onMicClick={handleMicClick}
+      onComposerPrimaryAction={residentialSurface && isMobileViewport ? handleComposerPrimaryAction : undefined}
+      composerInlineVoiceEnabled={residentialSurface && isMobileViewport}
       onVoiceClick={residentialSurface ? openOrbVoicePanel : undefined}
       voicePanelUnavailable={residentialSurface ? voicePanelUnavailable : false}
       onCancelListening={voice.cancelListening}
@@ -3795,7 +3855,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
           ) : null}
 
           {draftNotice ? (
-            <p className="mx-3 mt-3 rounded-2xl border border-amber-300/30 bg-amber-300/10 px-4 py-2 text-sm text-amber-50 md:mx-5" role="status">
+            <p className={ORB_DRAFT_NOTICE_CLASS} role="status" data-orb-draft-notice="true">
               {draftNotice}
             </p>
           ) : null}
