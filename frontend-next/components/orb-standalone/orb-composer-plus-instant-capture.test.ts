@@ -9,6 +9,9 @@ import {
   dictateMobileStatusLine
 } from '../../lib/orb/dictate/orb-dictate-mobile-copy.ts'
 import { mapRecordingUiToDictateState } from '../../lib/orb/dictate/orb-dictate-state.ts'
+import { orbComposerInlineVoiceStatusLine } from '../../lib/orb/orb-composer-inline-voice-status.ts'
+import { resolveComposerPrimaryAction } from '../../lib/orb/orb-composer-primary-action.ts'
+import { orbDraftNoticeHasReadableContrast, ORB_DRAFT_NOTICE_CLASS } from '../../lib/orb/orb-draft-notice.ts'
 import {
   orbVoiceStartProgressLine,
   orbVoiceUiStatusLine,
@@ -32,14 +35,78 @@ describe('ORB composer plus menu and instant capture pass', () => {
     assert.match(composer, /toggleAttachmentMenu/)
   })
 
-  it('tapping plus opens data-orb-composer-attachment-menu without focusing composer via touchEnd', () => {
+  it('plus button sits outside input focus wrapper with explicit composer columns', () => {
     const composer = read('components/orb-standalone/orb-standalone-composer.tsx')
+    const focusGuard = read('lib/orb/orb-composer-focus-guard.ts')
+    assert.match(composer, /data-orb-composer-row/)
+    assert.match(composer, /data-orb-composer-input-column/)
+    assert.match(composer, /data-orb-composer-action-rail/)
+    assert.match(composer, /data-orb-composer-send-rail/)
+    assert.match(composer, /shouldIgnoreComposerFocusTarget/)
+    assert.doesNotMatch(composer, /onClick=\{focusComposerInput\}[\s\S]*data-orb-composer-card/)
+    assert.match(focusGuard, /data-orb-composer-action-rail/)
+    assert.match(focusGuard, /data-orb-composer-send-rail/)
+  })
+
+  it('attachment menu is portaled with fixed positioning above composer', () => {
     const tools = read('components/orb-residential/orb-residential-composer-tools-sheet.tsx')
-    assert.match(composer, /data-orb-composer-attachment-menu/)
+    assert.match(tools, /createPortal/)
     assert.match(tools, /data-orb-composer-attachment-menu/)
-    assert.match(composer, /setToolsSheetOpen/)
-    assert.doesNotMatch(composer, /onTouchEnd=\{focusComposerInput\}/)
-    assert.match(composer, /\[data-orb-composer-plus-button\]/)
+    assert.match(tools, /fixed z-\[68\]/)
+    assert.match(tools, /anchorRef/)
+  })
+
+  it('draft notice uses readable contrast tokens', () => {
+    const companion = read('components/orb-standalone/orb-care-companion.tsx')
+    const notice = read('lib/orb/orb-draft-notice.ts')
+    const mobileCss = read('app/orb/orb-mobile.css')
+    assert.match(companion, /ORB_DRAFT_NOTICE_CLASS/)
+    assert.match(companion, /data-orb-draft-notice/)
+    assert.doesNotMatch(companion, /text-amber-50.*draftNotice|draftNotice[\s\S]*text-amber-50/)
+    assert.equal(orbDraftNoticeHasReadableContrast(ORB_DRAFT_NOTICE_CLASS), true)
+    assert.match(mobileCss, /\[data-orb-draft-notice\]/)
+  })
+
+  it('mobile composer voice-send toggles between voice, stop, and send', () => {
+    const composer = read('components/orb-standalone/orb-standalone-composer.tsx')
+    const companion = read('components/orb-standalone/orb-care-companion.tsx')
+    assert.match(composer, /resolveComposerPrimaryAction/)
+    assert.match(composer, /data-orb-composer-voice-send/)
+    assert.match(composer, /composerInlineVoiceEnabled/)
+    assert.match(composer, /onComposerPrimaryAction/)
+    assert.match(companion, /handleComposerInlineVoice/)
+    assert.match(companion, /beginUserVoiceCapture/)
+    assert.match(companion, /openOrbVoicePanel/)
+    assert.equal(resolveComposerPrimaryAction({ voiceListening: false, canSend: false }), 'voice')
+    assert.equal(resolveComposerPrimaryAction({ voiceListening: false, canSend: true }), 'send')
+    assert.equal(resolveComposerPrimaryAction({ voiceListening: true, canSend: false }), 'stop')
+  })
+
+  it('inline composer voice status covers listening and permission states', () => {
+    assert.equal(
+      orbComposerInlineVoiceStatusLine({
+        listening: false,
+        speaking: false,
+        pending: false,
+        phase: 'idle',
+        voiceCaptureState: 'requesting_permission',
+        micNotice: null,
+        voiceCaptureEnabled: true
+      }),
+      'Allow microphone access…'
+    )
+    assert.equal(
+      orbComposerInlineVoiceStatusLine({
+        listening: true,
+        speaking: false,
+        pending: false,
+        phase: 'listening',
+        voiceCaptureState: 'ready',
+        micNotice: null,
+        voiceCaptureEnabled: true
+      }),
+      'Listening…'
+    )
   })
 
   it('menu contains Camera, Photos, Files before ORB tools', () => {
@@ -69,8 +136,8 @@ describe('ORB composer plus menu and instant capture pass', () => {
     const composer = read('components/orb-standalone/orb-standalone-composer.tsx')
     assert.match(tools, /onClose\(\)\s*\n\s*onSelect/)
     assert.match(composer, /setToolsSheetOpen\(false\)/)
-    assert.match(composer, /data-orb-composer-attach-backdrop/)
-    assert.match(composer, /setToolsSheetOpen\(false\)/)
+    assert.match(tools, /data-orb-composer-attach-backdrop/)
+    assert.match(composer, /shouldIgnoreComposerFocusTarget/)
   })
 
   it('desktop plus menu remains OrbComposerPlusMenu', () => {

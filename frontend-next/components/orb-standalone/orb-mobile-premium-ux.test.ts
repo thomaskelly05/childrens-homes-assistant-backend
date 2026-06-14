@@ -276,9 +276,10 @@ describe('ORB mobile shell and composer', () => {
   it('no duplicate conflicting mic buttons in mobile composer rail', () => {
     const composer = readComponent('components/orb-standalone/orb-standalone-composer.tsx')
     const mobileCss = readComponent('app/orb/orb-mobile.css')
-    const micButtons = (composer.match(/<button[^>]*data-orb-composer-mic/g) || []).length
+    const micButtons = (composer.match(/data-orb-composer-mic(?!-)/g) || []).length
     assert.ok(micButtons >= 1 && micButtons <= 2, 'compact and desktop layouts each expose one mic control')
-    assert.match(mobileCss, /data-orb-composer-mic/)
+    assert.match(mobileCss, /data-orb-composer-mic|data-orb-composer-voice-send/)
+    assert.match(composer, /data-orb-composer-voice-send/)
   })
 
   it('mobile product tokens are defined', () => {

@@ -572,6 +572,7 @@
     display: block !important;
     min-width: 0 !important;
     width: 100% !important;
+    max-width: 100% !important;
     min-height: 2.35rem !important;
     max-height: 8.75rem !important;
     padding-top: 0.5rem !important;
@@ -585,21 +586,48 @@
     cursor: text !important;
   }
 
-  .orb-composer-action-rail {
+  .orb-composer-row {
     position: relative !important;
-    z-index: 63 !important;
+    align-items: flex-end !important;
+    gap: 0.35rem !important;
+  }
+
+  .orb-composer-input-column {
+    position: relative !important;
+    z-index: 62 !important;
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    max-width: calc(100% - 5.75rem) !important;
+  }
+
+  .orb-composer-action-rail,
+  .orb-composer-send-rail {
+    position: relative !important;
+    z-index: 64 !important;
+    flex: 0 0 auto !important;
+    pointer-events: auto !important;
+    isolation: isolate !important;
+  }
+
+  .orb-composer-action-rail {
     border-radius: 9999px !important;
   }
 
   [data-orb-composer-plus-button],
   [data-orb-composer-tools-trigger] {
     position: relative !important;
-    z-index: 64 !important;
+    z-index: 65 !important;
+    pointer-events: auto !important;
     touch-action: manipulation;
   }
 
   [data-orb-composer-attachment-menu] {
     z-index: 68 !important;
+    pointer-events: auto !important;
+  }
+
+  [data-orb-composer-voice-send] {
+    touch-action: manipulation;
   }
 
   .orb-composer-action-rail button:not([data-orb-composer-attach]):not([data-orb-composer-tools]):not([data-orb-composer-tools-trigger]):not([data-orb-privacy-guidance-trigger]) {
@@ -1799,6 +1827,19 @@
   [data-orb-composer-attach-anchor='true'] {
     position: relative !important;
     z-index: 2;
+    overflow: visible !important;
+  }
+
+  [data-orb-draft-notice] {
+    color: #451a03 !important;
+    background: #fffbeb !important;
+    border-color: rgba(217, 119, 6, 0.35) !important;
+  }
+
+  html[data-orb-residential='1'] .orb-chat-layout--residential.orb-theme-dark [data-orb-draft-notice] {
+    color: #fef3c7 !important;
+    background: rgba(120, 53, 15, 0.42) !important;
+    border-color: rgba(251, 191, 36, 0.28) !important;
   }
 
   [data-orb-composer-attach-backdrop] {

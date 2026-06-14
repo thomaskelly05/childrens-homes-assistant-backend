@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect } from 'react'
+import { createPortal } from 'react-dom'
+import { useEffect, useLayoutEffect, useState, type RefObject } from 'react'
 import {
   AudioLines,
   Camera,
@@ -54,16 +55,55 @@ function selectAction(onClose: () => void, onSelect: (action: OrbComposerPlusAct
   onSelect(action)
 }
 
-/** ChatGPT-style compact attachment menu — floats above mobile composer. */
+type MenuPosition = {
+  bottom: number
+  left: number
+  width: number
+}
+
+/** ChatGPT-style compact attachment menu — portaled above mobile composer. */
 export function OrbResidentialComposerToolsSheet({
   open,
   onClose,
-  onSelect
+  onSelect,
+  anchorRef
 }: {
   open: boolean
   onClose: () => void
   onSelect: (action: OrbComposerPlusAction) => void
+  anchorRef?: RefObject<HTMLElement | null>
 }) {
+  const [mounted, setMounted] = useState(false)
+  const [menuPosition, setMenuPosition] = useState<MenuPosition | null>(null)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  useLayoutEffect(() => {
+    if (!open) {
+      setMenuPosition(null)
+      return
+    }
+    function syncPosition() {
+      const anchor = anchorRef?.current
+      if (!anchor) return
+      const rect = anchor.getBoundingClientRect()
+      setMenuPosition({
+        bottom: Math.max(8, window.innerHeight - rect.top + 8),
+        left: Math.max(8, rect.left),
+        width: Math.min(rect.width, window.innerWidth - 16)
+      })
+    }
+    syncPosition()
+    window.addEventListener('resize', syncPosition)
+    window.addEventListener('scroll', syncPosition, true)
+    return () => {
+      window.removeEventListener('resize', syncPosition)
+      window.removeEventListener('scroll', syncPosition, true)
+    }
+  }, [anchorRef, open])
+
   useEffect(() => {
     if (!open) return
     function onKeyDown(event: KeyboardEvent) {
@@ -73,9 +113,9 @@ export function OrbResidentialComposerToolsSheet({
     return () => document.removeEventListener('keydown', onKeyDown)
   }, [onClose, open])
 
-  if (!open) return null
+  if (!open || !mounted) return null
 
-  return (
+  const sheet = (
     <>
       <div
         className="orb-composer-attach-backdrop fixed inset-0 z-[67] bg-black/20"
@@ -84,12 +124,22 @@ export function OrbResidentialComposerToolsSheet({
         onClick={onClose}
       />
       <div
-        className="orb-composer-attach-sheet absolute bottom-full left-0 right-0 z-[68] mb-2 overflow-hidden rounded-2xl border border-[var(--orb-line)]/60 bg-[color-mix(in_srgb,var(--orb-surface-elevated)_92%,transparent)] shadow-2xl backdrop-blur-xl"
+        className="orb-composer-attach-sheet fixed z-[68] overflow-hidden rounded-2xl border border-[var(--orb-line)]/60 bg-[color-mix(in_srgb,var(--orb-surface-elevated)_92%,transparent)] shadow-2xl backdrop-blur-xl"
         role="menu"
         aria-label="Add attachment"
         data-orb-composer-tools-sheet
         data-orb-composer-attach-sheet="true"
         data-orb-composer-attachment-menu
+        style={
+          menuPosition
+            ? {
+                bottom: menuPosition.bottom,
+                left: menuPosition.left,
+                width: menuPosition.width,
+                maxWidth: 'calc(100vw - 1rem)'
+              }
+            : { visibility: 'hidden' }
+        }
         onClick={(event) => event.stopPropagation()}
       >
         <div className="px-2 pb-[max(0.5rem,env(safe-area-inset-bottom,0px))] pt-2">
@@ -175,4 +225,6 @@ export function OrbResidentialComposerToolsSheet({
       </div>
     </>
   )
+
+  return createPortal(sheet, document.body)
 }
