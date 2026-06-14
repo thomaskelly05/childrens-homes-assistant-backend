@@ -46,12 +46,12 @@ describe('ORB Residential unified mobile interface pass', () => {
 
   it('station controls remain visible on mobile', () => {
     const dictate = read('components/orb-standalone/orb-dictate-mobile-experience.tsx')
-    const voice = read('components/orb-standalone/orb-voice-hero-stage.tsx')
+    const voiceContent = read('components/orb-standalone/orb-voice-station-content.tsx')
     const write = read('components/orb-write/orb-write-mobile-toolbar.tsx')
     const settings = read('components/orb-standalone/orb-standalone-settings-panel.tsx')
     const billing = read('components/orb-standalone/orb-billing-modal.tsx')
     assert.match(dictate, /data-orb-dictate-primary-action/)
-    assert.match(voice, /data-orb-voice-safety-disclosure/)
+    assert.match(voiceContent, /OrbVoiceResponsibilityStrip/)
     assert.match(write, /data-orb-write-approve/)
     assert.match(settings, /reduce-motion/)
     assert.match(billing, /data-orb-billing-refresh/)

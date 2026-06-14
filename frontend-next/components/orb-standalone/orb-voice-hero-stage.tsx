@@ -9,9 +9,6 @@ import {
   type OrbVoiceCompanionState
 } from '@/components/orb-residential/orb-voice-companion'
 import { useOrbResponsiveMode } from '@/components/orb-standalone/use-orb-responsive-mode'
-import { OrbPrivacyNotice } from '@/components/orb/privacy/orb-privacy-notice'
-import { getOrbDataClassificationNotice } from '@/lib/orb/privacy/orb-data-classification'
-import { ORB_RESIDENTIAL_VOICE_SAFETY_STRIP } from '@/lib/orb/orb-residential-copy'
 import { OrbVoiceStudioWaveform } from '@/components/orb-standalone/orb-voice-studio-layout'
 
 /** Shared hero column — living head, headline, waveform, CTA, and status for Voice stations. */
@@ -44,10 +41,11 @@ export function OrbVoiceHeroStage({
 
   return (
     <div
-      className={`orb-voice-hero-stage flex shrink-0 flex-col items-center text-center ${className}`.trim()}
+      className={`orb-voice-hero-stage relative flex shrink-0 flex-col items-center text-center ${className}`.trim()}
       {...stageAttr}
     >
-      <OrbVoiceCompanion state={companionState} size="hero" className="shrink-0" />
+      <div className="orb-voice-hero-aura pointer-events-none absolute inset-x-0 top-0 -z-10 h-[min(28rem,70%)]" aria-hidden />
+      <OrbVoiceCompanion state={companionState} size="hero" className="orb-voice-hero-stage__orb shrink-0" />
 
       <p
         className="orb-voice-hero-stage__headline text-center text-sm font-medium text-[var(--orb-text,var(--orb-foreground))]"
@@ -76,29 +74,6 @@ export function OrbVoiceHeroStage({
           {cta}
         </div>
       ) : null}
-
-      <div
-        className="orb-voice-station__privacy orb-voice-hero-stage__privacy w-full max-w-sm space-y-2"
-        data-orb-voice-privacy
-      >
-        {isMobile ? (
-          <details className="text-left" data-orb-voice-safety-disclosure>
-            <summary className="cursor-pointer text-[11px] leading-4 text-[var(--orb-muted)]">
-              Not for emergencies. Follow local safeguarding procedures.
-            </summary>
-            <p className="mt-2 text-[11px] leading-4 text-[var(--orb-muted)]" data-orb-voice-privacy-note>
-              {ORB_RESIDENTIAL_VOICE_SAFETY_STRIP}
-            </p>
-          </details>
-        ) : (
-          <>
-            <p className="text-[10px] leading-4 text-[var(--orb-muted)] opacity-80" data-orb-voice-privacy-note>
-              {getOrbDataClassificationNotice('voice')}
-            </p>
-            <OrbPrivacyNotice surface="voice" className="text-left text-[10px] opacity-90" />
-          </>
-        )}
-      </div>
     </div>
   )
 }

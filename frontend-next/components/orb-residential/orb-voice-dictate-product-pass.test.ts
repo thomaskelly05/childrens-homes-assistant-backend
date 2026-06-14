@@ -87,12 +87,15 @@ describe('ORB Voice + Dictate product pass', () => {
     const actions = read('components/orb-standalone/orb-voice-actions.tsx')
     const companion = read('components/orb-residential/orb-voice-companion.tsx')
     const hero = read('components/orb-standalone/orb-voice-hero-stage.tsx')
+    const content = read('components/orb-standalone/orb-voice-station-content.tsx')
     assert.match(companion, /I'm ready when you are\./)
     assert.match(actions, /Start voice/)
     assert.match(actions, /Type instead/)
     assert.match(actions, /Turn speech into a record/)
     assert.match(hero, /OrbVoiceCompanion/)
-    assert.match(hero, /data-orb-voice-safety-disclosure/)
+    assert.match(content, /OrbVoiceResponsibilityStrip/)
+    assert.match(content, /data-orb-voice-responsibility-strip/)
+    assert.match(content, /data-orb-voice-privacy-strip/)
   })
 
   it('Voice live and after-call panels exist with controls and shared record type framework', () => {

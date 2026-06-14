@@ -79,10 +79,12 @@ describe('ORB Residential mobile simplification pass', () => {
     assert.match(mobileCss, /\[data-orb-dictate-title-spacing\]/)
   })
 
-  it('voice mobile uses compact safety disclosure', () => {
-    const voice = read('components/orb-standalone/orb-voice-hero-stage.tsx')
-    assert.match(voice, /data-orb-voice-safety-disclosure/)
-    assert.match(voice, /Not for emergencies/)
+  it('voice mobile uses full-width responsibility strip', () => {
+    const content = read('components/orb-standalone/orb-voice-station-content.tsx')
+    const strip = read('components/orb-standalone/orb-voice-responsibility-strip.tsx')
+    assert.match(content, /OrbVoiceResponsibilityStrip/)
+    assert.match(strip, /data-orb-voice-responsibility-strip/)
+    assert.match(strip, /ORB_RESIDENTIAL_VOICE_PRIVACY_STRIP/)
   })
 
   it('write mobile uses notepad surface and Review Approve More toolbar', () => {

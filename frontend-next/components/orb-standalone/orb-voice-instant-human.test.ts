@@ -47,7 +47,7 @@ describe('ORB Voice instant-human refinement', () => {
   it('idle → preparing → listening state copy', () => {
     assert.equal(orbVoiceUiStatusLine('ready'), "I'm ready when you are.")
     assert.equal(orbVoiceUiStatusLine('preparing'), 'Opening microphone…')
-    assert.equal(orbVoiceUiStatusLine('listening'), "I'm listening.")
+    assert.equal(orbVoiceUiStatusLine('listening'), 'Listening…')
     assert.equal(resolveOrbVoiceUiState({ ...baseInput, startStage: 'starting' }), 'preparing')
     assert.equal(
       resolveOrbVoiceUiState({
@@ -68,7 +68,7 @@ describe('ORB Voice instant-human refinement', () => {
       'user_speaking'
     )
     assert.equal(orbVoiceUiStatusLine('user_speaking'), 'I heard that.')
-    assert.equal(orbVoiceUiStatusLine('thinking'), 'Give me a moment.')
+    assert.equal(orbVoiceUiStatusLine('thinking'), 'Thinking with you…')
     assert.equal(orbVoiceUiStatusLine('speaking'), 'ORB is responding.')
   })
 
@@ -115,7 +115,7 @@ describe('ORB Voice instant-human refinement', () => {
     assert.match(live, /data-orb-voice-pause-hint/)
     assert.match(live, /Take your time/)
     assert.match(live, /orbVoiceLivePanelStatusLabel/)
-    assert.match(live, /I'm listening\./)
+    assert.match(live, /Listening…/)
     assert.match(live, /Opening microphone/)
   })
 

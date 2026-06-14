@@ -3,6 +3,7 @@
 import type { ReactNode } from 'react'
 
 import { OrbVoiceHeroStage } from '@/components/orb-standalone/orb-voice-hero-stage'
+import { OrbVoiceResponsibilityStrip } from '@/components/orb-standalone/orb-voice-responsibility-strip'
 import { useOrbMobileViewport } from '@/components/orb-standalone/use-orb-mobile-viewport'
 import type { OrbVoiceCompanionState } from '@/components/orb-residential/orb-voice-companion'
 
@@ -93,6 +94,8 @@ export function OrbVoiceStationContent({
           <div className="mx-auto w-full max-w-lg">{secondaryControls}</div>
         </div>
       ) : null}
+
+      <OrbVoiceResponsibilityStrip className="pb-[max(0.5rem,env(safe-area-inset-bottom))]" />
     </div>
   )
 }

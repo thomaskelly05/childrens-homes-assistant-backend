@@ -36,8 +36,8 @@ export const ORB_VOICE_COMPANION_HEADLINES: Record<
   string
 > = {
   idle: "I'm ready when you are.",
-  listening: "I'm listening.",
-  thinking: 'Give me a moment.',
+  listening: 'Listening…',
+  thinking: 'Thinking with you…',
   speaking: 'ORB is responding.',
   paused: 'Voice session captured',
   error: 'Voice is unavailable right now.'
@@ -46,7 +46,7 @@ export const ORB_VOICE_COMPANION_HEADLINES: Record<
 export const ORB_VOICE_COMPANION_SUBLINES: Partial<
   Record<import('@/components/orb-residential/orb-voice-head').OrbVoiceCompanionState, string>
 > = {
-  idle: 'Talk through a situation, rough note or concern. ORB will help you reflect and decide what may need recording.',
+  idle: 'Talk it through with ORB. Share a situation, rough note or concern — ORB will help you reflect and decide what may need recording.',
   listening: 'Speak naturally. You can pause.',
   thinking: "I'm structuring what you shared.",
   speaking: 'You can continue when I finish.',

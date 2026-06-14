@@ -154,11 +154,11 @@ export function orbVoiceUiStatusLine(state: OrbVoiceUiState): string {
     case 'preparing':
       return 'Opening microphone…'
     case 'listening':
-      return "I'm listening."
+      return 'Listening…'
     case 'user_speaking':
       return 'I heard that.'
     case 'thinking':
-      return 'Give me a moment.'
+      return 'Thinking with you…'
     case 'speaking':
       return 'ORB is responding.'
     case 'reconnecting':
@@ -182,7 +182,7 @@ export function orbVoiceUiDetailLine(state: OrbVoiceUiState, dictateReady?: bool
     case 'unauthenticated':
       return 'Sign in to start a live conversation with ORB.'
     case 'ready':
-      return 'Talk through a situation, rough note or concern. ORB will help you reflect and decide what may need recording.'
+      return 'Talk it through with ORB.'
     case 'preparing':
       return 'Getting voice ready…'
     case 'listening':

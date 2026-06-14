@@ -72,6 +72,31 @@ export const ORB_RECORD_TYPE_QUALITY_EXPECTATIONS: Record<
     qualityThemes: ['oversight', 'professional curiosity'],
     unsafePhrases: ['compliant', 'ofsted ready']
   },
+  meeting_notes: {
+    requiredSectionThemes: ['purpose', 'voice', 'decisions', 'follow-up'],
+    qualityThemes: ['child', 'factual', 'adult response'],
+    unsafePhrases: ['manipulative', 'bad behaviour']
+  },
+  home_visit_note: {
+    requiredSectionThemes: ['purpose', 'voice', 'safeguarding', 'follow-up'],
+    qualityThemes: ['child', 'observation', 'adult response'],
+    unsafePhrases: ['manipulative', 'non-compliant']
+  },
+  multi_agency_discussion: {
+    requiredSectionThemes: ['purpose', 'voice', 'decisions', 'safeguarding'],
+    qualityThemes: ['factual', 'child', 'follow-up'],
+    unsafePhrases: ['blame', 'manipulative']
+  },
+  strategy_safeguarding_discussion: {
+    requiredSectionThemes: ['safety', 'known', 'informed', 'escalation'],
+    qualityThemes: ['factual', 'management', 'child'],
+    unsafePhrases: ['minimis', 'keep secret']
+  },
+  supervision_discussion: {
+    requiredSectionThemes: ['practice', 'child', 'actions', 'support'],
+    qualityThemes: ['reflection', 'child voice', 'follow-up'],
+    unsafePhrases: ['failed', 'non-compliant']
+  },
   reg_44_evidence_summary: {
     requiredSectionThemes: ['evidence', 'experience', 'strengths', 'gaps', 'actions'],
     qualityThemes: ['balanced', 'child experience'],
@@ -123,23 +148,32 @@ export const ORB_PRIMARY_RECORD_TYPE_IDS = [
 
 export const ORB_RECORDING_SECTION_PROMPTS: Record<string, OrbRecordingSectionPrompt[]> = {
   general_dictation: [
-    { title: 'Summary', prompt: 'Briefly summarise the note, keeping the child central.' },
+    {
+      title: 'Summary',
+      prompt: "Briefly summarise what happened and why this record matters for the child's care."
+    },
     {
       title: 'What was observed or shared',
-      prompt: 'Describe what was seen, heard or shared. Separate facts from interpretation.'
+      prompt: 'Describe what was seen, heard or shared. Separate observation from interpretation.'
     },
     {
       title: "Child's voice and presentation",
-      prompt: 'Include what the child said, showed, communicated or may have been expressing through behaviour.'
+      prompt:
+        'Record what the child said, showed, communicated or may have been expressing through behaviour. Avoid assumptions and separate observation from interpretation.'
     },
     {
       title: 'Adult response',
-      prompt: 'Describe how adults responded, supported, reassured, de-escalated or followed the plan.'
+      prompt:
+        'Describe how adults responded, supported, reassured, de-escalated, offered choice or followed the plan.'
     },
-    { title: 'Outcome', prompt: 'Record what changed by the end and how the child appeared afterwards.' },
+    {
+      title: 'Outcome',
+      prompt: 'Record what changed by the end, how the child appeared afterwards and what helped.'
+    },
     {
       title: 'Follow-up / management oversight',
-      prompt: 'Record actions, notifications, escalation, review or further support needed.'
+      prompt:
+        'Record actions, notifications, escalation, review, management oversight or further support needed.'
     }
   ],
   daily_record: [
@@ -171,7 +205,7 @@ export const ORB_RECORDING_SECTION_PROMPTS: Record<string, OrbRecordingSectionPr
     { title: 'Follow-up for next shift', prompt: 'What should the next team know, monitor or continue?' }
   ],
   incident_report: [
-    { title: 'Brief summary', prompt: 'A short factual overview — child-centred, without conclusions.' },
+    { title: 'Brief summary', prompt: "Briefly summarise what happened and why this record matters for the child's care." },
     {
       title: 'What happened before the incident',
       prompt: 'Describe context, triggers or events leading up. Separate facts from interpretation.'
@@ -179,16 +213,19 @@ export const ORB_RECORDING_SECTION_PROMPTS: Record<string, OrbRecordingSectionPr
     { title: 'What was observed', prompt: 'Record observable behaviour and events in clear, non-judgemental language.' },
     {
       title: "Child's presentation and possible communication",
-      prompt: 'What might this behaviour have been communicating? Include the child’s words if known.'
+      prompt:
+        'Record what the child said, showed, communicated or may have been expressing through behaviour. Avoid assumptions.'
     },
     {
       title: 'Adult response and de-escalation',
-      prompt: 'Describe adult actions, de-escalation, support offered and what helped or did not.'
+      prompt:
+        'Describe how adults responded, supported, reassured, de-escalated, offered choice or followed the plan.'
     },
     { title: 'Harm, injury or damage', prompt: 'State injuries, harm or damage factually, or record that none were observed.' },
     {
       title: 'Notifications and safeguarding actions',
-      prompt: 'Who was informed and what safeguarding steps were taken in line with policy?'
+      prompt:
+        'Record the concern clearly, who was informed, what immediate action was taken and what policy or pathway was followed.'
     },
     {
       title: 'Repair, reflection and follow-up',
@@ -197,7 +234,7 @@ export const ORB_RECORDING_SECTION_PROMPTS: Record<string, OrbRecordingSectionPr
     { title: 'Management oversight', prompt: 'Manager review, escalation or further oversight required.' }
   ],
   handover: [
-    { title: 'Key update', prompt: 'The most important information for the incoming team, child-centred.' },
+    { title: 'Key update', prompt: 'Record what the next adult needs to know to support continuity, safety and emotional consistency.' },
     { title: "Child's current presentation", prompt: 'How is the child now — mood, needs, regulation, location?' },
     {
       title: 'Risks or vulnerabilities for next shift',
@@ -257,15 +294,19 @@ export const ORB_RECORDING_SECTION_PROMPTS: Record<string, OrbRecordingSectionPr
     }
   ],
   behaviour_reflection: [
-    { title: 'Behaviour observed', prompt: 'Describe observable behaviour factually — avoid labels or blame.' },
+    {
+      title: 'Behaviour observed',
+      prompt:
+        'Describe the behaviour as communication, including observable facts. Avoid labels, blame or diagnostic language.'
+    },
     { title: 'Context before the behaviour', prompt: 'What was happening before? Triggers, transitions or unmet needs?' },
     {
       title: 'Possible communication or unmet need',
       prompt: 'What might this behaviour be communicating? Stay curious, not diagnostic.'
     },
-    { title: 'Adult response', prompt: 'How did adults respond, co-regulate or follow the plan?' },
-    { title: 'What helped or escalated', prompt: 'What de-escalated or escalated the situation?' },
-    { title: 'Outcome', prompt: 'How did things end for the child? Presentation afterwards.' },
+    { title: 'Adult response', prompt: 'Describe how adults responded, co-regulated, offered choice or followed the plan.' },
+    { title: 'What helped or escalated', prompt: 'What helped the child regulate or what escalated the situation?' },
+    { title: 'Outcome', prompt: 'Record what changed by the end, how the child appeared afterwards and what helped.' },
     { title: 'Learning for future support', prompt: 'What might help next time — for the child and the team.' }
   ],
   supervision_preparation: [
@@ -319,6 +360,128 @@ export const ORB_RECORDING_SECTION_PROMPTS: Record<string, OrbRecordingSectionPr
     { title: 'Timescale', prompt: 'When should each action be completed?' },
     { title: 'Evidence of completion', prompt: 'How will completion be evidenced or reviewed?' },
     { title: 'Review date', prompt: 'When will progress be reviewed with the child where appropriate?' }
+  ],
+  meeting_notes: [
+    { title: 'Purpose of discussion', prompt: 'Why did this meeting take place and what does it mean for the child’s care?' },
+    { title: 'People present', prompt: 'Who attended? Use roles or initials where full names are not appropriate.' },
+    {
+      title: "Child's voice / wishes / presentation",
+      prompt:
+        'Record what the child said, showed, communicated or may have been expressing. Include their words where known.'
+    },
+    { title: 'Key information shared', prompt: 'Summarise the main factual information discussed — separate facts from opinion.' },
+    {
+      title: 'Adult/professional views',
+      prompt: 'Record professional views shared, attributed to speakers where known. Avoid presenting opinion as fact.'
+    },
+    {
+      title: 'Decisions or agreed actions',
+      prompt: 'Record decisions, agreements and actions with owners and timescales where known.'
+    },
+    {
+      title: 'Risks / safeguarding considerations',
+      prompt: 'Record safeguarding themes discussed, immediate actions and who was informed.'
+    },
+    { title: 'Management oversight', prompt: 'Record management oversight, escalation or review required.' },
+    { title: 'Follow-up required', prompt: 'What follow-up is needed for the child or the team?' },
+    { title: 'Missing information / not clear', prompt: 'Note gaps that need further exploration — do not invent details.' }
+  ],
+  home_visit_note: [
+    { title: 'Purpose of discussion', prompt: 'Why did this visit take place and what does it mean for the child’s care?' },
+    { title: 'People present', prompt: 'Who was present during the visit? Use roles where appropriate.' },
+    {
+      title: "Child's voice / wishes / presentation",
+      prompt: 'Record how the child presented and what they communicated during the visit.'
+    },
+    { title: 'Key information shared', prompt: 'Summarise factual information from the visit — observation before interpretation.' },
+    {
+      title: 'Adult/professional views',
+      prompt: 'Record professional views shared during the visit, attributed where known.'
+    },
+    {
+      title: 'Decisions or agreed actions',
+      prompt: 'Record agreements, plans or actions arising from the visit.'
+    },
+    {
+      title: 'Risks / safeguarding considerations',
+      prompt: 'Record any safeguarding concerns, immediate actions and notifications.'
+    },
+    { title: 'Management oversight', prompt: 'Record management oversight or escalation required after the visit.' },
+    { title: 'Follow-up required', prompt: 'What follow-up does the child need after this visit?' },
+    { title: 'Missing information / not clear', prompt: 'Note information gaps — do not invent details.' }
+  ],
+  multi_agency_discussion: [
+    { title: 'Purpose of discussion', prompt: 'Why did this multi-agency discussion take place and what does it mean for the child?' },
+    { title: 'People present', prompt: 'Which agencies and professionals were represented?' },
+    {
+      title: "Child's voice / wishes / presentation",
+      prompt: 'Record the child’s voice, wishes or presentation as discussed — their words where possible.'
+    },
+    { title: 'Key information shared', prompt: 'Summarise factual information shared across agencies.' },
+    {
+      title: 'Adult/professional views',
+      prompt: 'Record professional views by agency or role — attribute views, do not merge opinion into fact.'
+    },
+    {
+      title: 'Decisions or agreed actions',
+      prompt: 'Record joint decisions, agreed actions, owners and timescales.'
+    },
+    {
+      title: 'Risks / safeguarding considerations',
+      prompt: 'Record safeguarding themes, immediate actions and pathway followed.'
+    },
+    { title: 'Management oversight', prompt: 'Record management oversight, escalation or review required.' },
+    { title: 'Follow-up required', prompt: 'What follow-up is needed across agencies for the child?' },
+    { title: 'Missing information / not clear', prompt: 'Note gaps requiring further multi-agency exploration.' }
+  ],
+  strategy_safeguarding_discussion: [
+    {
+      title: 'Purpose of discussion',
+      prompt: 'Why did this strategy or safeguarding discussion take place? Record only what you are authorised to document.'
+    },
+    { title: 'People present', prompt: 'Who was present? Record roles and agencies where appropriate.' },
+    {
+      title: "Child's voice / wishes / presentation",
+      prompt: 'Record the child’s voice or presentation as discussed — factual, child-centred wording.'
+    },
+    { title: 'Key information shared', prompt: 'Summarise factual information shared — separate known facts from uncertainty.' },
+    {
+      title: 'Adult/professional views',
+      prompt: 'Record professional views attributed to speakers. ORB supports reflection; adults remain responsible for decisions.'
+    },
+    {
+      title: 'Decisions or agreed actions',
+      prompt: 'Record decisions and actions agreed, with owners and timescales where known.'
+    },
+    {
+      title: 'Risks / safeguarding considerations',
+      prompt:
+        'Record the concern clearly, who was informed, what immediate action was taken and what policy or pathway was followed.'
+    },
+    { title: 'Management oversight', prompt: 'Record management oversight, escalation or further review required.' },
+    { title: 'Follow-up required', prompt: 'What follow-up, review or support does the child need?' },
+    { title: 'Missing information / not clear', prompt: 'Note gaps — do not present uncertainty as established fact.' }
+  ],
+  supervision_discussion: [
+    { title: 'Purpose of discussion', prompt: 'What was the focus of this supervision session?' },
+    { title: 'People present', prompt: 'Who attended the supervision discussion?' },
+    {
+      title: "Child's voice / wishes / presentation",
+      prompt: 'How was the child’s experience, voice or presentation discussed in supervision?'
+    },
+    { title: 'Key information shared', prompt: 'Summarise practice issues, cases or situations discussed.' },
+    {
+      title: 'Adult/professional views',
+      prompt: 'Record reflective discussion, including what went well and what was difficult.'
+    },
+    {
+      title: 'Decisions or agreed actions',
+      prompt: 'Record learning, actions or support agreed in supervision.'
+    },
+    { title: 'Risks / safeguarding considerations', prompt: 'Record safeguarding themes discussed and any actions agreed.' },
+    { title: 'Management oversight', prompt: 'Record oversight, direction or review agreed with the supervisor.' },
+    { title: 'Follow-up required', prompt: 'What follow-up practice or recording is needed?' },
+    { title: 'Missing information / not clear', prompt: 'Note recording gaps or questions to return to.' }
   ]
 }
 

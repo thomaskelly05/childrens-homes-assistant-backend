@@ -1762,31 +1762,82 @@ html[data-orb-residential='1'] .orb-chat-layout {
   }
 
   html[data-orb-residential='1'] [data-orb-voice-station-content] {
-    background: radial-gradient(
-      ellipse 80% 55% at 50% 18%,
-      color-mix(in srgb, var(--orb-royal-blue, #168bff) 10%, transparent),
-      transparent 68%
-    );
+    position: relative;
+    background:
+      radial-gradient(
+        ellipse 90% 60% at 50% 12%,
+        color-mix(in srgb, var(--orb-royal-blue, #168bff) 14%, transparent),
+        transparent 62%
+      ),
+      radial-gradient(
+        ellipse 70% 45% at 30% 20%,
+        color-mix(in srgb, #8b5cf6 8%, transparent),
+        transparent 55%
+      ),
+      radial-gradient(
+        ellipse 60% 40% at 72% 18%,
+        color-mix(in srgb, #ec4899 6%, transparent),
+        transparent 50%
+      ),
+      radial-gradient(
+        ellipse 50% 35% at 50% 28%,
+        color-mix(in srgb, #f59e0b 5%, transparent),
+        transparent 48%
+      );
   }
 
-  html[data-orb-residential='1'] [data-orb-voice-hero-stage] .orb-voice-companion {
-    --orb-voice-head-width: clamp(11.5rem, 18vw, 16rem);
-    --orb-voice-head-height: clamp(11.5rem, 18vw, 16rem);
+  html[data-orb-residential='1'] .orb-voice-hero-aura {
+    background:
+      radial-gradient(
+        ellipse 75% 55% at 50% 42%,
+        color-mix(in srgb, var(--orb-royal-blue, #168bff) 18%, transparent),
+        transparent 68%
+      ),
+      radial-gradient(
+        ellipse 55% 40% at 35% 50%,
+        color-mix(in srgb, #22d3ee 10%, transparent),
+        transparent 60%
+      ),
+      radial-gradient(
+        ellipse 50% 38% at 68% 48%,
+        color-mix(in srgb, #a78bfa 9%, transparent),
+        transparent 58%
+      );
+    filter: blur(28px);
+    opacity: 0.92;
+  }
+
+  html[data-orb-residential='1'] [data-orb-voice-hero-stage] .orb-voice-companion,
+  html[data-orb-residential='1'] [data-orb-voice-hero-stage] .orb-voice-hero-stage__orb {
+    --orb-voice-head-width: clamp(12.5rem, 20vw, 17.5rem);
+    --orb-voice-head-height: clamp(12.5rem, 20vw, 17.5rem);
     margin-bottom: 0.75rem;
+    filter: drop-shadow(0 0 48px color-mix(in srgb, var(--orb-royal-blue, #168bff) 28%, transparent))
+      drop-shadow(0 0 72px color-mix(in srgb, #8b5cf6 12%, transparent));
   }
 
   html[data-orb-residential='1'] [data-orb-voice-hero-stage] .orb-voice-hero-stage__headline {
     margin-top: 0.75rem;
-    font-size: 0.9375rem;
+    font-size: 1rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
   }
 
   html[data-orb-residential='1'] [data-orb-voice-hero-stage] .orb-voice-hero-stage__cta {
     margin-top: 1.25rem;
   }
 
-  html[data-orb-residential='1'] [data-orb-voice-hero-stage] .orb-voice-hero-stage__privacy {
-    margin-top: 1.5rem;
-    opacity: 0.88;
+  html[data-orb-residential='1'] [data-orb-voice-responsibility-strip] {
+    width: 100%;
+    border-top-color: color-mix(in srgb, var(--orb-line) 28%, transparent);
+    background: var(--orb-glass-bg, color-mix(in srgb, var(--orb-surface) 72%, transparent));
+    -webkit-backdrop-filter: blur(14px) saturate(150%);
+    backdrop-filter: blur(14px) saturate(150%);
+    box-shadow: inset 0 1px 0 color-mix(in srgb, #fff 4%, transparent);
+  }
+
+  html[data-orb-residential='1'] [data-orb-voice-responsibility-strip] [data-orb-voice-privacy-note] {
+    max-width: none;
   }
 
   html[data-orb-residential='1'] [data-orb-voice-status-subline],
@@ -1811,6 +1862,19 @@ html[data-orb-residential='1'] .orb-chat-layout {
     background: color-mix(in srgb, var(--orb-glass-bg-strong) 90%, transparent);
     -webkit-backdrop-filter: blur(12px) saturate(150%);
     backdrop-filter: blur(12px) saturate(150%);
+    transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  }
+
+  html[data-orb-residential='1'] [data-orb-voice-station] .orb-voice-actions button[data-orb-voice-primary-action='start'],
+  html[data-orb-residential='1'] [data-orb-voice-hero-cta] button[data-orb-voice-primary-action='start'] {
+    box-shadow:
+      0 4px 20px color-mix(in srgb, var(--orb-royal-blue, #168bff) 35%, transparent),
+      0 0 0 1px color-mix(in srgb, #fff 8%, transparent) inset;
+  }
+
+  html[data-orb-residential='1'] [data-orb-voice-station] .orb-voice-actions button:hover:not(:disabled),
+  html[data-orb-residential='1'] [data-orb-voice-hero-cta] button:hover:not(:disabled) {
+    transform: translateY(-1px);
   }
 
   html[data-orb-residential='1'] [data-orb-voice-boundary-copy] .orb-privacy-notice,
@@ -1874,6 +1938,26 @@ html[data-orb-residential='1'] .orb-chat-layout {
     box-shadow:
       0 2px 8px rgba(15, 23, 42, 0.06),
       0 16px 48px rgba(0, 0, 0, 0.12);
+  }
+
+  html[data-orb-residential='1'] [data-orb-write-body] .orb-write-section-hint {
+    color: var(--orb-muted);
+    font-style: italic;
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    margin-block: 0.25rem 0.5rem;
+    padding-inline-start: 0.125rem;
+    border-inline-start: 2px solid color-mix(in srgb, var(--orb-primary) 25%, transparent);
+    padding-left: 0.625rem;
+  }
+
+  html[data-orb-residential='1'] [data-orb-write-body] h2 {
+    color: var(--orb-foreground);
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    margin-top: 1.25rem;
+    padding-bottom: 0.25rem;
+    border-bottom: 1px solid color-mix(in srgb, var(--orb-line) 22%, transparent);
   }
 
   html[data-orb-residential='1'] [data-orb-write-source-panel],
