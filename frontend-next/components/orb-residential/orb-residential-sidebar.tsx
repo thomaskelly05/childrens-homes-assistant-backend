@@ -688,7 +688,7 @@ export function OrbResidentialSidebar({
           <span>New chat</span>
         </button>
         <label
-          className="orb-sidebar-search mt-2 flex items-center gap-2 rounded-xl border border-[var(--orb-line)]/60 bg-[var(--orb-surface-elevated)] px-3 py-2"
+          className="orb-sidebar-search orb-liquid-glass mt-2 flex items-center gap-2 rounded-xl border border-[var(--orb-line)]/60 bg-[var(--orb-surface-elevated)] px-3 py-2"
           data-orb-sidebar-search-wrap
         >
           <Search className="h-4 w-4 shrink-0 text-[var(--orb-muted)]" aria-hidden />
@@ -1045,7 +1045,7 @@ export function OrbResidentialSidebar({
           </SidebarCollapsibleSection>
         ) : (
           <nav
-            className="space-y-0.5 rounded-xl p-1"
+            className="orb-liquid-card space-y-0.5 rounded-xl p-1"
             aria-label="Account and settings"
             data-orb-sidebar-bottom
             data-orb-sidebar-account-card

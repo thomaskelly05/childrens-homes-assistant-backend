@@ -57,7 +57,7 @@ describe('ORB Residential desktop final UX regressions', () => {
     const desktop = read('app/orb/orb-desktop.css')
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
 
-    assert.match(desktop, /\[data-orb-residential-empty\][\s\S]*--orb-presence-size:\s*clamp\(7\.5rem/)
+    assert.match(desktop, /\[data-orb-residential-empty\][\s\S]*--orb-presence-size:\s*clamp\(9\.5rem/)
     assert.match(companion, /data-orb-empty-heading-desktop/)
     assert.match(companion, /GlassOrbMark/)
     assert.doesNotMatch(companion, /orb-brand\.png/)

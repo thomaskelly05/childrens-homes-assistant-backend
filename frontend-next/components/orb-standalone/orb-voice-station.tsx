@@ -1144,7 +1144,7 @@ export function OrbVoiceStation({
           <button
             type="button"
             onClick={onOpenVoiceSettings}
-            className="rounded-full border border-[var(--orb-line)]/50 px-3 py-1.5 text-xs font-medium text-[var(--orb-foreground)]"
+            className="orb-liquid-button rounded-full border border-[var(--orb-line)]/50 px-3 py-1.5 text-xs font-medium text-[var(--orb-foreground)]"
             data-orb-voice-settings-chip
           >
             Voice settings
