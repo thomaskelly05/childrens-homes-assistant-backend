@@ -2057,13 +2057,16 @@
 
   /* Settings — compact mobile detail without dead lower half */
   [data-orb-settings-mobile-detail='true'] {
-    flex: 0 1 auto !important;
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
     align-content: start;
   }
 
   [data-orb-settings-panel][data-orb-settings-mobile-layout='stack'] [data-orb-settings-scroll][data-orb-settings-mobile-detail='true'] {
     min-height: 0 !important;
     max-height: none !important;
+    flex: 1 1 auto !important;
+    overflow-y: auto !important;
   }
 
   [data-orb-settings-panel][data-orb-settings-mobile-layout='stack'] [data-orb-settings-mobile-detail='true'] .orb-settings-row {

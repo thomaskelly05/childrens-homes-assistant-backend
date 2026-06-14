@@ -3,15 +3,13 @@
 import { FormEvent, useEffect, useRef, useState, type DragEvent } from 'react'
 import { AudioLines, Camera, ChevronDown, FileText, Mic, MicOff, Plus, Send, Square, Wrench, X } from 'lucide-react'
 
-import {
-  OrbComposerPlusMenu,
+import { OrbComposerPlusMenu,
   type OrbComposerPlusAction
 } from '@/components/orb-standalone/orb-composer-plus-menu'
 import { OrbPrivacyInputWarning } from '@/components/orb/privacy/orb-privacy-input-warning'
 import { OrbPrivacyNotice } from '@/components/orb/privacy/orb-privacy-notice'
 import {
-  OrbResidentialPrivacyGuidanceSheet,
-  OrbResidentialPrivacyGuidanceIcon
+  OrbResidentialPrivacyGuidanceSheet
 } from '@/components/orb-residential/orb-privacy-guidance-sheet'
 import { OrbResidentialComposerToolsSheet } from '@/components/orb-residential/orb-residential-composer-tools-sheet'
 import { OrbComposerCopyright } from '@/components/orb-standalone/orb-composer-copyright'
@@ -105,7 +103,9 @@ export function OrbStandaloneComposer({
   residentialSurface = false,
   mobileViewport = false,
   chatHasMessages = false,
-  onPlusMenuAction
+  onPlusMenuAction,
+  onOpenDictateFallback,
+  inlineVoiceShowDictateFallback = false
 }: {
   value: string
   pending: boolean
@@ -162,6 +162,8 @@ export function OrbStandaloneComposer({
   mobileViewport?: boolean
   chatHasMessages?: boolean
   onPlusMenuAction?: (action: OrbComposerPlusAction) => void
+  onOpenDictateFallback?: () => void
+  inlineVoiceShowDictateFallback?: boolean
 }) {
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const photoLibraryInputRef = useRef<HTMLInputElement | null>(null)
@@ -170,6 +172,7 @@ export function OrbStandaloneComposer({
   const fallbackInputRef = useRef<HTMLTextAreaElement | null>(null)
   const attachAnchorRef = useRef<HTMLDivElement | null>(null)
   const plusActivateGuardRef = useRef(0)
+  const voiceActivateGuardRef = useRef(0)
   const menuOutsideArmRef = useRef(deferComposerOutsidePointerArm())
   const trimmedMessage = value.trim()
   const stateLength = composerStateLength ?? trimmedMessage.length
@@ -261,6 +264,29 @@ export function OrbStandaloneComposer({
     })
   }
 
+  function handleVoicePointerDown(event: React.PointerEvent<HTMLButtonElement>) {
+    event.stopPropagation()
+    traceOrbComposerInteraction('voice_pointerdown')
+    if (event.pointerType === 'mouse') {
+      event.preventDefault()
+    }
+  }
+
+  function handleVoiceActivate(event: React.PointerEvent<HTMLButtonElement> | React.MouseEvent<HTMLButtonElement>) {
+    event.preventDefault()
+    event.stopPropagation()
+    const stamp = Date.now()
+    if (stamp - voiceActivateGuardRef.current < 320) return
+    voiceActivateGuardRef.current = stamp
+    markOrbInteractionLatency('voice_tap')
+    traceOrbComposerInteraction('voice_button_clicked', { action: primaryAction, source: event.type })
+    if (primaryAction === 'stop') {
+      onCancelListening()
+      return
+    }
+    onComposerPrimaryAction?.()
+  }
+
   function handlePlusActivate(event: React.PointerEvent<HTMLButtonElement> | React.MouseEvent<HTMLButtonElement>) {
     event.preventDefault()
     event.stopPropagation()
@@ -286,7 +312,7 @@ export function OrbStandaloneComposer({
 
   const [toolsSheetOpen, setToolsSheetOpen] = useState(false)
   const [privacyGuidanceOpen, setPrivacyGuidanceOpen] = useState(false)
-  const [privacyReturnOrigin, setPrivacyReturnOrigin] = useState<'composer' | 'tools_menu'>('composer')
+  const [privacyReturnOrigin, setPrivacyReturnOrigin] = useState<'tools_menu'>('tools_menu')
   const showComposerQuickActions = compactResidential && !mobileViewport
 
   useEffect(() => {
@@ -458,7 +484,7 @@ export function OrbStandaloneComposer({
               />
             ) : null}
           <div
-            className={`orb-composer-glass ${compactResidential ? 'orb-composer-glass--compact p-2 sm:p-2.5' : 'p-2.5 sm:p-3'} ${answering ? 'orb-composer-answering orb-answering-pulse' : ''}`}
+            className={`orb-composer-glass orb-liquid-composer ${compactResidential ? 'orb-composer-glass--compact p-2 sm:p-2.5' : 'p-2.5 sm:p-3'} ${answering ? 'orb-composer-answering orb-answering-pulse' : ''}`}
             data-orb-composer-answering={answering ? 'true' : 'false'}
             data-orb-composer-card
             data-orb-composer-compact={compactResidential ? 'true' : undefined}
@@ -673,14 +699,6 @@ export function OrbStandaloneComposer({
                 )}
                 {!mobileViewport && onAttachDocumentClick ? <button type="button" onClick={onAttachDocumentClick} className="inline-flex h-9 min-w-9 shrink-0 items-center justify-center rounded-full text-[var(--orb-muted)] transition hover:bg-[var(--orb-surface-hover)]" aria-label="Attach document" data-orb-composer-document><FileText className="h-4 w-4" aria-hidden /></button> : null}
                 {!mobileViewport && onToolsClick ? <button type="button" onClick={onToolsClick} className="inline-flex h-9 min-w-9 shrink-0 items-center justify-center rounded-full text-[var(--orb-muted)] transition hover:bg-[var(--orb-surface-hover)]" aria-label="Tools" data-orb-composer-tools><Wrench className="h-4 w-4" aria-hidden /></button> : null}
-                {mobileViewport ? (
-                  <OrbResidentialPrivacyGuidanceIcon
-                    onOpen={() => {
-                      setPrivacyReturnOrigin('composer')
-                      setPrivacyGuidanceOpen(true)
-                    }}
-                  />
-                ) : null}
               </div>
             ) : null}
 
@@ -764,22 +782,22 @@ export function OrbStandaloneComposer({
                   ) : (
                     <button
                       type="button"
-                      onClick={(event) => {
-                        traceOrbComposerInteraction('voice_button_clicked', { action: primaryAction })
-                        if (primaryAction === 'stop') onCancelListening()
-                        else onComposerPrimaryAction?.()
-                        event.stopPropagation()
-                      }}
-                      disabled={primaryAction === 'voice' && micDisabled}
+                      onPointerDown={handleVoicePointerDown}
+                      onPointerUp={handleVoiceActivate}
+                      onClick={handleVoiceActivate}
+                      disabled={primaryAction === 'stop' ? pending : false}
                       aria-label={primaryActionLabel}
-                      className={`inline-flex h-11 min-w-11 items-center justify-center rounded-full transition disabled:cursor-not-allowed disabled:opacity-45 ${
+                      className={`orb-liquid-button inline-flex h-11 min-w-11 items-center justify-center rounded-full transition disabled:cursor-not-allowed disabled:opacity-45 ${
                         primaryAction === 'stop'
                           ? 'border border-sky-400/35 bg-sky-500/15 text-sky-200'
-                          : 'border border-[var(--orb-line)]/55 bg-[var(--orb-surface-elevated)] text-[var(--orb-foreground)]'
+                          : voiceListening
+                            ? 'border border-sky-400/35 bg-sky-500/15 text-sky-200'
+                            : 'border border-[var(--orb-line)]/55 bg-[var(--orb-surface-elevated)] text-[var(--orb-foreground)]'
                       }`}
                       data-orb-composer-voice-send
                       data-orb-composer-voice
                       data-orb-composer-voice-route="inline"
+                      data-orb-composer-inline-voice-active={voiceListening ? 'true' : undefined}
                     >
                       {primaryAction === 'stop' ? (
                         <Square className="h-4 w-4 fill-current" aria-hidden />
@@ -847,6 +865,16 @@ export function OrbStandaloneComposer({
             ) : (
               <span id="orb-standalone-status" className="sr-only" data-orb-voice-status>Ready to type</span>
             )}
+            {mobileInlineVoice && inlineVoiceShowDictateFallback && onOpenDictateFallback ? (
+              <button
+                type="button"
+                onClick={onOpenDictateFallback}
+                className="orb-liquid-button shrink-0 rounded-full px-3 py-1 text-[11px] font-semibold text-[var(--orb-primary)]"
+                data-orb-composer-open-dictate-fallback
+              >
+                Open Dictate
+              </button>
+            ) : null}
             {!compactResidential ? (
               <span className="hidden text-[10px] text-slate-400 md:inline" data-orb-composer-mode-label>
                 Mode: {mode}

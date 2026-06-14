@@ -1177,7 +1177,7 @@ html[data-orb-residential='1'] .orb-chat-layout {
     padding-bottom: 0;
   }
 
-  html[data-orb-residential='1'] [data-orb-settings-panel] {
+  [data-orb-settings-panel] {
     max-width: var(--orb-desktop-settings-max);
     width: 100%;
     min-height: min(100%, 100%);
@@ -1187,6 +1187,17 @@ html[data-orb-residential='1'] .orb-chat-layout {
     background: var(--orb-mobile-ws-card, var(--orb-surface));
     box-shadow: 0 12px 32px rgba(15, 23, 42, 0.06);
     overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  html[data-orb-residential='1'] [data-orb-workspace-panel='settings'] [data-orb-settings-scroll] {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
   }
 
   html[data-orb-residential='1'] .orb-chat-layout--residential.orb-theme-dark [data-orb-settings-panel] {

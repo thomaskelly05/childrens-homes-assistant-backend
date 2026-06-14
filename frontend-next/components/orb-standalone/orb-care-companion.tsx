@@ -276,6 +276,10 @@ import {
   type OrbComposerAttachment
 } from '@/lib/orb/orb-composer-attachments'
 import { orbComposerInlineVoiceStatusLine } from '@/lib/orb/orb-composer-inline-voice-status'
+import {
+  ORB_COMPOSER_SPEECH_UNAVAILABLE_MESSAGE,
+  orbComposerSpeechFallbackMessage
+} from '@/lib/orb/orb-composer-inline-voice-fallback'
 import { ORB_DRAFT_NOTICE_CLASS } from '@/lib/orb/orb-draft-notice'
 import {
   BACKEND_ORB_STANDALONE_ACTION_IDS,
@@ -2063,17 +2067,21 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
 
     voiceMayFillComposerRef.current = true
     composerUserEditedRef.current = false
-    setMicNotice(null)
     emitOrbClientDebug({ area: 'composer', event: 'composer_inline_voice_start' })
+
+    if (!voice.recognitionAvailable) {
+      setMicNotice(ORB_COMPOSER_SPEECH_UNAVAILABLE_MESSAGE)
+      return
+    }
+
+    setMicNotice('Opening microphone…')
 
     const started = await voice.beginUserVoiceCapture({ mode: 'active' })
     if (!started) {
-      const fallback =
-        voice.error?.trim() ||
-        'Voice could not start — try Dictate or type your message instead.'
-      setMicNotice(fallback)
-      window.setTimeout(() => setMicNotice(null), 8000)
+      setMicNotice(orbComposerSpeechFallbackMessage(voice.error))
+      return
     }
+    setMicNotice(null)
   }
 
   function handleComposerPrimaryAction() {
@@ -3044,6 +3052,15 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
       mobileViewport={isMobileViewport}
       chatHasMessages={visibleMessages.length > 0}
       onPlusMenuAction={residentialSurface ? handleComposerPlusAction : undefined}
+      onOpenDictateFallback={
+        residentialSurface && isMobileViewport
+          ? () => {
+              setMicNotice(null)
+              openOrbDictatePanel()
+            }
+          : undefined
+      }
+      inlineVoiceShowDictateFallback={Boolean(residentialSurface && isMobileViewport && micNotice)}
     />
     </div>
   )

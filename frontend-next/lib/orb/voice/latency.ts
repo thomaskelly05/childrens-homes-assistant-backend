@@ -13,7 +13,7 @@ export type OrbVoiceLatencyMark =
   | 'first_response'
   | 'after_call_ready'
 
-export type OrbComposerLatencyMark = 'plus_tap' | 'plus_menu_open'
+export type OrbComposerLatencyMark = 'plus_tap' | 'plus_menu_open' | 'voice_tap'
 
 export type OrbDictateLatencyMark =
   | 'dictate_tap'

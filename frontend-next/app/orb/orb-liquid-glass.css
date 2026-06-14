@@ -1,0 +1,179 @@
+/**
+ * ORB Residential Liquid Glass — shared translucent surfaces.
+ * Converges premium glass tokens across composer, panels, menus, and ORB chrome.
+ */
+
+:root,
+html[data-orb-residential='1'] {
+  --orb-glass-bg: color-mix(in srgb, var(--orb-surface-elevated, rgba(255, 255, 255, 0.06)) 72%, transparent);
+  --orb-glass-bg-strong: color-mix(in srgb, var(--orb-surface-elevated, rgba(255, 255, 255, 0.09)) 88%, transparent);
+  --orb-glass-border: color-mix(in srgb, var(--orb-line, rgba(255, 255, 255, 0.12)) 78%, transparent);
+  --orb-glass-shadow: 0 12px 40px rgba(5, 10, 22, 0.28), 0 0 32px rgba(22, 139, 255, 0.05);
+  --orb-glass-blur: 18px;
+  --orb-liquid-highlight: linear-gradient(
+    145deg,
+    color-mix(in srgb, #ffffff 42%, transparent) 0%,
+    color-mix(in srgb, #ffffff 8%, transparent) 38%,
+    transparent 62%
+  );
+  --orb-liquid-orb-glow: radial-gradient(
+    circle at 50% 42%,
+    color-mix(in srgb, var(--orb-liquid-blue, #168bff) 28%, transparent) 0%,
+    transparent 68%
+  );
+  --orb-liquid-blue: var(--orb-royal-blue, #168bff);
+  --orb-liquid-violet: #7c5cff;
+  --orb-liquid-gold: #e8c27a;
+  --orb-surface-soft: color-mix(in srgb, var(--orb-page-bg, #05070d) 92%, #ffffff 8%);
+  --orb-text-primary: var(--orb-foreground, #f7faff);
+  --orb-text-secondary: var(--orb-muted, #a7aebd);
+}
+
+html[data-orb-theme='light'],
+html[data-orb-residential='1'] .orb-theme-light {
+  --orb-glass-bg: color-mix(in srgb, #ffffff 86%, transparent);
+  --orb-glass-bg-strong: color-mix(in srgb, #ffffff 94%, transparent);
+  --orb-glass-border: color-mix(in srgb, rgba(37, 99, 235, 0.16) 90%, transparent);
+  --orb-glass-shadow: 0 10px 36px rgba(15, 23, 42, 0.08), 0 0 24px rgba(22, 139, 255, 0.06);
+  --orb-surface-soft: color-mix(in srgb, var(--orb-page-bg, #f7fbff) 96%, #ffffff);
+}
+
+.orb-liquid-glass,
+.orb-liquid-glass-strong,
+.orb-liquid-card,
+.orb-liquid-panel,
+.orb-liquid-toolbar,
+.orb-liquid-composer {
+  position: relative;
+  border: 1px solid var(--orb-glass-border);
+  background: var(--orb-glass-bg);
+  box-shadow: var(--orb-glass-shadow);
+  -webkit-backdrop-filter: blur(var(--orb-glass-blur)) saturate(150%);
+  backdrop-filter: blur(var(--orb-glass-blur)) saturate(150%);
+}
+
+.orb-liquid-glass-strong,
+.orb-liquid-panel {
+  background: var(--orb-glass-bg-strong);
+}
+
+.orb-liquid-glass::before,
+.orb-liquid-glass-strong::before,
+.orb-liquid-card::before,
+.orb-liquid-panel::before,
+.orb-liquid-composer::before {
+  content: '';
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--orb-liquid-highlight);
+  opacity: 0.55;
+}
+
+.orb-liquid-card {
+  border-radius: 1rem;
+}
+
+.orb-liquid-panel {
+  border-radius: 1.25rem;
+}
+
+.orb-liquid-toolbar {
+  border-radius: 9999px;
+}
+
+.orb-liquid-composer {
+  border-radius: 1.35rem;
+}
+
+.orb-liquid-button {
+  border: 1px solid var(--orb-glass-border);
+  background: color-mix(in srgb, var(--orb-glass-bg-strong) 88%, transparent);
+  color: var(--orb-text-primary);
+  transition: background 120ms ease, border-color 120ms ease, transform 80ms ease;
+  touch-action: manipulation;
+}
+
+.orb-liquid-button:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.orb-liquid-list-row {
+  border: 1px solid color-mix(in srgb, var(--orb-glass-border) 85%, transparent);
+  background: color-mix(in srgb, var(--orb-glass-bg) 92%, transparent);
+  touch-action: manipulation;
+}
+
+.orb-liquid-orb {
+  position: relative;
+  border-radius: 9999px;
+  background: transparent;
+  box-shadow: none;
+}
+
+.orb-liquid-orb::before {
+  content: '';
+  pointer-events: none;
+  position: absolute;
+  inset: -12%;
+  border-radius: inherit;
+  background: var(--orb-liquid-orb-glow);
+  z-index: 0;
+}
+
+html[data-orb-residential='1'] .orb-composer-glass.orb-liquid-composer {
+  background: var(--orb-glass-bg-strong);
+  border-color: var(--orb-glass-border);
+  box-shadow: var(--orb-glass-shadow);
+}
+
+html[data-orb-residential='1'] [data-orb-settings-panel].orb-liquid-panel {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+
+html[data-orb-residential='1'] [data-orb-composer-attachment-menu].orb-liquid-panel,
+html[data-orb-residential='1'] [data-orb-composer-tools-sheet].orb-liquid-panel {
+  background: var(--orb-glass-bg-strong);
+  border-color: var(--orb-glass-border);
+}
+
+html[data-orb-residential='1'] [data-orb-privacy-detail-sheet] .orb-liquid-panel {
+  background: var(--orb-glass-bg-strong);
+}
+
+html[data-orb-residential='1'] .orb-appearance-segmented button,
+html[data-orb-residential='1'] .orb-settings-row,
+html[data-orb-residential='1'] [data-orb-appearance-option] {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html[data-orb-residential='1'] .orb-appearance-segmented button:active,
+html[data-orb-residential='1'] .orb-settings-row:active {
+  transform: scale(0.99);
+}
+
+html[data-orb-residential='1'] [data-orb-settings-scroll] {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .orb-liquid-button:active:not(:disabled),
+  html[data-orb-residential='1'] .orb-appearance-segmented button:active,
+  html[data-orb-residential='1'] .orb-settings-row:active {
+    transform: none;
+  }
+}
+
+@media (max-width: 1023px) {
+  html[data-orb-residential='1'] .orb-liquid-glass,
+  html[data-orb-residential='1'] .orb-liquid-glass-strong,
+  html[data-orb-residential='1'] .orb-liquid-panel,
+  html[data-orb-residential='1'] .orb-liquid-composer {
+    --orb-glass-blur: 14px;
+  }
+}

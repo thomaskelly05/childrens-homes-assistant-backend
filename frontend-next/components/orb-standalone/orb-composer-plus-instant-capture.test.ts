@@ -215,6 +215,7 @@ describe('ORB composer plus menu and instant capture pass', () => {
     const latency = read('lib/orb/voice/latency.ts')
     assert.match(latency, /plus_tap/)
     assert.match(latency, /plus_menu_open/)
+    assert.match(latency, /voice_tap/)
     assert.match(latency, /dictate_tap/)
     assert.match(latency, /dictate_stream_ready/)
     assert.match(latency, /voice_backend_connected/)
