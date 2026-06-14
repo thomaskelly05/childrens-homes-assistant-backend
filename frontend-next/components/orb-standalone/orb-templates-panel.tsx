@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { useOrbMobileViewport } from '@/components/orb-standalone/use-orb-mobile-viewport'
-import { FileText, Loader2 } from 'lucide-react'
+import { FileText, Loader2, ChevronRight } from 'lucide-react'
 
 import {
   OrbPremiumButton,
@@ -328,12 +328,12 @@ export function OrbTemplatesPanel({
             </div>
           )}
           {isMobileViewport ? (
-            <ul className="space-y-1" data-orb-templates-mobile-record-list>
+            <ul className="divide-y divide-[var(--orb-line)]/35" data-orb-templates-mobile-record-list>
               {mobileRecordTypes.map((recordType) => (
                 <li key={recordType.id}>
                   <button
                     type="button"
-                    className="flex w-full items-center justify-between gap-2 rounded-xl border border-[var(--orb-line)]/45 bg-[var(--orb-surface-elevated)] px-3 py-2.5 text-left transition active:bg-[var(--orb-surface-hover)]"
+                    className="flex w-full items-center justify-between gap-2 px-1 py-3 text-left transition active:bg-[var(--orb-surface-hover)]"
                     data-orb-templates-mobile-record={recordType.id}
                     onClick={() => onRecordingAction?.('write', recordType)}
                   >
@@ -341,9 +341,7 @@ export function OrbTemplatesPanel({
                       <span className="block text-sm font-medium text-[var(--orb-foreground)]">{recordType.label}</span>
                       <span className="block truncate text-xs text-[var(--orb-muted)]">{recordType.purpose}</span>
                     </span>
-                    <span className="shrink-0 text-[10px] font-medium uppercase tracking-wide text-[var(--orb-muted)]">
-                      Open
-                    </span>
+                    <ChevronRight className="h-4 w-4 shrink-0 text-[var(--orb-muted)]" aria-hidden />
                   </button>
                 </li>
               ))}

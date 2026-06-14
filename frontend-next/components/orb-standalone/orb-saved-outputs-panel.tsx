@@ -237,12 +237,13 @@ export function OrbSavedOutputsPanel({
       {...orbStationShellProps(residentialSurface, 'wide')}
     >
       <div
-        className="orb-studio-shell flex min-h-0 flex-col gap-3 p-3 sm:p-4 lg:flex-row"
+        className="orb-studio-shell flex min-h-0 flex-col gap-2 p-2 sm:gap-3 sm:p-4 lg:flex-row"
         data-orb-saved-outputs-panel
         data-orb-studio-shell="saved_outputs"
         {...(items.length === 0 && !loading ? { 'data-orb-saved-outputs-empty': true } : {})}
       >
-        <div className="flex w-full shrink-0 flex-col border-b border-[var(--orb-mobile-ws-card-border,var(--orb-line))] lg:w-[var(--orb-desktop-saved-list-width,27.5rem)] lg:max-w-[var(--orb-desktop-saved-list-width,27.5rem)] lg:border-b-0 lg:border-r">
+        <div className="flex w-full shrink-0 flex-col lg:w-[var(--orb-desktop-saved-list-width,27.5rem)] lg:max-w-[var(--orb-desktop-saved-list-width,27.5rem)] lg:border-b-0 lg:border-r lg:border-[var(--orb-mobile-ws-card-border,var(--orb-line))]">
+          {!isMobile ? (
           <OrbStudioHeader
             title={isMobile ? 'Saved outputs' : 'Document archive'}
             subtitle={
@@ -252,6 +253,7 @@ export function OrbSavedOutputsPanel({
             }
             className="px-2 pb-2 lg:px-3"
           />
+          ) : null}
           {reconnectSuggested && items.length ? (
             <div className="p-3 pb-0">
               <OrbStationReconnectBanner onRefresh={() => void refresh()} />
@@ -466,7 +468,7 @@ export function OrbSavedOutputsPanel({
         </div>
 
         <div
-          className="flex min-h-[10rem] min-w-0 flex-1 flex-col lg:min-h-[12rem] lg:border-l lg:border-[var(--orb-mobile-ws-card-border,var(--orb-line))]"
+          className={`flex min-h-[10rem] min-w-0 flex-1 flex-col lg:min-h-[12rem] lg:border-l lg:border-[var(--orb-mobile-ws-card-border,var(--orb-line))] ${isMobile && items.length === 0 ? 'hidden' : ''}`}
           data-orb-saved-output-detail
         >
           {detail ? (
@@ -531,16 +533,14 @@ export function OrbSavedOutputsPanel({
               className="flex flex-1 items-center justify-center p-6 text-center text-sm text-[var(--orb-mobile-ws-muted,var(--orb-muted))]"
               data-orb-saved-output-detail-empty
             >
-              {items.length === 0 ? (
+              {items.length === 0 && !isMobile ? (
                 <div className="space-y-3" data-orb-saved-output-empty-state>
                   <p className="font-medium text-[var(--orb-foreground)]">Nothing saved yet.</p>
-                  {!isMobile ? (
-                    <p className="text-xs">Save reviews, action plans and documents here.</p>
-                  ) : null}
+                  <p className="text-xs">Save reviews, action plans and documents here.</p>
                   <div className="flex flex-wrap justify-center gap-2">
                     {onStartInOrbWrite ? (
                       <OrbPremiumButton variant="primary" onClick={onStartInOrbWrite} data-orb-saved-start-write>
-                        {isMobile ? 'Create in ORB Write' : 'Create document'}
+                        Create document
                       </OrbPremiumButton>
                     ) : null}
                     {onStartInDictate ? (

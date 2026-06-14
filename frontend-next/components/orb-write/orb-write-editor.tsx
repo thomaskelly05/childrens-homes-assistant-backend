@@ -160,7 +160,7 @@ export function OrbWriteEditor({
   )
 
   return (
-    <div className="orb-write-studio-editor relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-[var(--orb-line)]/50 bg-[var(--orb-surface-elevated)]" data-orb-write-editor data-orb-write-mobile={isMobile ? 'true' : 'false'} data-orb-write-notepad={isMobile ? 'true' : 'false'}>
+    <div className={`orb-write-studio-editor relative flex min-h-0 flex-1 flex-col overflow-hidden ${isMobile ? '' : 'rounded-xl border border-[var(--orb-line)]/50 bg-[var(--orb-surface-elevated)]'}`} data-orb-write-editor data-orb-write-mobile={isMobile ? 'true' : 'false'} data-orb-write-notepad={isMobile ? 'true' : 'false'}>
       <div className="hidden md:block">
         <OrbWriteToolbar
           onCommand={runCommand}

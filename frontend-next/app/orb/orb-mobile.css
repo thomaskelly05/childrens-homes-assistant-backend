@@ -1989,7 +1989,60 @@
   }
 
   [data-orb-saved-outputs-panel][data-orb-saved-outputs-empty='true'] [data-orb-saved-output-detail] {
+    display: none !important;
     min-height: 0 !important;
+  }
+
+  [data-orb-saved-outputs-panel][data-orb-saved-outputs-empty='true'] .orb-studio-shell {
+    gap: 0.5rem !important;
+    padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px)) !important;
+  }
+
+  [data-orb-saved-outputs-panel] [data-orb-saved-outputs-list] {
+    max-height: none !important;
+    padding-bottom: calc(0.5rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  [data-orb-templates-panel] [data-orb-recording-library-section] {
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    padding-inline: 0 !important;
+  }
+
+  [data-orb-templates-mobile-record-list] {
+    padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  [data-orb-composer-attachments] {
+    margin-top: 0.25rem;
+  }
+
+  [data-orb-composer-attachment] {
+    max-width: min(100%, 16rem);
+  }
+
+  [data-orb-composer-tools-sheet] {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  [data-orb-write-notepad='true'] .orb-write-studio-editor {
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+
+  [data-orb-dictate-mobile][data-orb-dictate-capture-idle='true'] [data-orb-dictate-idle-shell] {
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+
+  [data-orb-dictate-capture-panel='true'] {
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
   }
 
   /* Documents & guidance — compact mobile action rows */

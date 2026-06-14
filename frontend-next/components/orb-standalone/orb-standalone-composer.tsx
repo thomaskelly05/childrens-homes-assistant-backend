@@ -17,8 +17,15 @@ import { OrbResidentialComposerToolsSheet } from '@/components/orb-residential/o
 import { OrbComposerCopyright } from '@/components/orb-standalone/orb-composer-copyright'
 import { OrbFooter } from '@/components/orb-standalone/orb-footer'
 import { logTapTarget } from '@/lib/interaction/mobile-tap-debug'
+import {
+  ORB_COMPOSER_DOCUMENT_ACCEPT,
+  ORB_COMPOSER_FILE_ACCEPT,
+  ORB_COMPOSER_IMAGE_ACCEPT,
+  type OrbComposerAttachment
+} from '@/lib/orb/orb-composer-attachments'
 import type { StandaloneOrbMode } from '@/lib/orb/standalone-client'
 
+/** @deprecated Use OrbComposerAttachment from lib/orb/orb-composer-attachments */
 export type PendingImageAttachment = {
   id: string
   dataUrl: string
@@ -65,6 +72,7 @@ export function OrbStandaloneComposer({
   onRetryTranscript,
   onAddFiles,
   onRemoveAttachment,
+  onUnsupportedFile,
   onPaste,
   onDrop,
   inputRef,
@@ -90,7 +98,7 @@ export function OrbStandaloneComposer({
   pending: boolean
   lastSendStatus?: OrbComposerLastSendStatus
   mode: StandaloneOrbMode
-  attachments: PendingImageAttachment[]
+  attachments: OrbComposerAttachment[]
   voiceListening: boolean
   voiceSpeaking: boolean
   voiceRecognitionAvailable: boolean
@@ -118,6 +126,7 @@ export function OrbStandaloneComposer({
   onRetryTranscript: () => void
   onAddFiles: (files: FileList | File[]) => void
   onRemoveAttachment: (id: string) => void
+  onUnsupportedFile?: (fileName: string) => void
   onPaste: (event: React.ClipboardEvent) => void
   onDrop: (event: DragEvent) => void
   inputRef?: React.RefObject<HTMLTextAreaElement | null>
@@ -140,7 +149,9 @@ export function OrbStandaloneComposer({
   onPlusMenuAction?: (action: OrbComposerPlusAction) => void
 }) {
   const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const photoLibraryInputRef = useRef<HTMLInputElement | null>(null)
   const cameraInputRef = useRef<HTMLInputElement | null>(null)
+  const documentFileInputRef = useRef<HTMLInputElement | null>(null)
   const fallbackInputRef = useRef<HTMLTextAreaElement | null>(null)
   const trimmedMessage = value.trim()
   const stateLength = composerStateLength ?? trimmedMessage.length
@@ -216,15 +227,30 @@ export function OrbStandaloneComposer({
       setPrivacyGuidanceOpen(true)
       return
     }
-    if (action === 'attach_image') {
-      fileInputRef.current?.click()
+    if (action === 'photo_library' || action === 'attach_image') {
+      photoLibraryInputRef.current?.click()
       return
     }
-    if (action === 'attach_photo') {
+    if (action === 'take_photo' || action === 'attach_photo') {
       cameraInputRef.current?.click()
       return
     }
+    if (action === 'choose_files') {
+      documentFileInputRef.current?.click()
+      return
+    }
     onPlusMenuAction?.(action)
+  }
+
+  function handleSelectedFiles(files: FileList | File[] | null | undefined) {
+    if (!files?.length) return
+    const list = Array.from(files)
+    const supported = list.filter((file) => file.type.startsWith('image/') || file.name.match(/\.(txt|md|pdf|docx?)$/i))
+    const unsupported = list.filter((file) => !supported.includes(file))
+    if (supported.length) onAddFiles(supported)
+    if (unsupported.length) {
+      onUnsupportedFile?.(unsupported[0]?.name || 'file')
+    }
   }
 
   return (
@@ -364,13 +390,45 @@ export function OrbStandaloneComposer({
             ) : null}
 
             {attachments.length > 0 ? (
-              <div className="mt-3 flex flex-wrap gap-2 px-1">
+              <div className="mt-2 flex flex-wrap gap-2 px-1" data-orb-composer-attachments>
                 {attachments.map((file) => (
-                  <div key={file.id} className="relative">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={file.previewUrl} alt={file.name} className="h-16 w-16 rounded-2xl border border-white/80 object-cover shadow-sm" />
-                    <button type="button" onClick={() => onRemoveAttachment(file.id)} className="absolute -right-1 -top-1 rounded-full border border-white bg-slate-950 p-0.5 text-white shadow-sm" aria-label={`Remove ${file.name}`}>
-                      <X className="h-3 w-3" />
+                  <div
+                    key={file.id}
+                    className={`relative flex max-w-full items-center gap-2 rounded-2xl border px-2 py-1.5 ${
+                      file.status === 'error'
+                        ? 'border-rose-400/40 bg-rose-500/10'
+                        : 'border-[var(--orb-line)]/50 bg-[var(--orb-surface-elevated)]'
+                    }`}
+                    data-orb-composer-attachment
+                    data-orb-composer-attachment-kind={file.kind}
+                    data-orb-composer-attachment-status={file.status}
+                  >
+                    {file.kind === 'image' && file.previewUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={file.previewUrl} alt="" className="h-10 w-10 shrink-0 rounded-xl object-cover" />
+                    ) : (
+                      <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--orb-primary-soft)] text-[var(--orb-primary)]">
+                        <FileText className="h-4 w-4" aria-hidden />
+                      </span>
+                    )}
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-xs font-medium text-[var(--orb-foreground)]">{file.name}</span>
+                      {file.status === 'uploading' ? (
+                        <span className="text-[10px] text-[var(--orb-muted)]">Uploading…</span>
+                      ) : file.error ? (
+                        <span className="text-[10px] text-rose-400">{file.error}</span>
+                      ) : (
+                        <span className="text-[10px] capitalize text-[var(--orb-muted)]">{file.kind}</span>
+                      )}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => onRemoveAttachment(file.id)}
+                      className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[var(--orb-muted)] transition hover:bg-[var(--orb-surface-hover)]"
+                      aria-label={`Remove ${file.name}`}
+                      data-orb-composer-attachment-remove
+                    >
+                      <X className="h-3.5 w-3.5" />
                     </button>
                   </div>
                 ))}
@@ -403,8 +461,62 @@ export function OrbStandaloneComposer({
               </div>
             ) : null}
 
-            <input ref={fileInputRef} type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/*" multiple className="hidden" onChange={(event) => { if (event.target.files?.length) onAddFiles(event.target.files); event.target.value = '' }} />
-            <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(event) => { if (event.target.files?.length) onAddFiles(event.target.files); event.target.value = '' }} />
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept={ORB_COMPOSER_IMAGE_ACCEPT}
+              multiple
+              className="hidden"
+              data-orb-composer-file-input="legacy"
+              onChange={(event) => {
+                handleSelectedFiles(event.target.files)
+                event.target.value = ''
+              }}
+            />
+            <input
+              ref={photoLibraryInputRef}
+              type="file"
+              accept={ORB_COMPOSER_IMAGE_ACCEPT}
+              multiple
+              className="hidden"
+              data-orb-composer-file-input="photo_library"
+              onChange={(event) => {
+                handleSelectedFiles(event.target.files)
+                event.target.value = ''
+              }}
+            />
+            <input
+              ref={cameraInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              className="hidden"
+              data-orb-composer-file-input="take_photo"
+              onChange={(event) => {
+                handleSelectedFiles(event.target.files)
+                event.target.value = ''
+              }}
+            />
+            <input
+              ref={documentFileInputRef}
+              type="file"
+              accept={ORB_COMPOSER_FILE_ACCEPT}
+              multiple
+              className="hidden"
+              data-orb-composer-file-input="choose_files"
+              onChange={(event) => {
+                handleSelectedFiles(event.target.files)
+                event.target.value = ''
+              }}
+            />
+            <input
+              type="file"
+              accept={ORB_COMPOSER_DOCUMENT_ACCEPT}
+              className="hidden"
+              data-orb-composer-file-input="document_only"
+              aria-hidden
+              tabIndex={-1}
+            />
 
             <div className={compactResidential ? 'flex items-end gap-1.5' : ''}>
             {compactResidential ? (

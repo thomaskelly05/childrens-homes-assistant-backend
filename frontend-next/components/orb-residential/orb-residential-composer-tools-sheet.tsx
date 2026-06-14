@@ -1,65 +1,95 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
-import { AudioLines, Camera, FileText, ImagePlus, Mic, PenLine, Shield, Upload, X } from 'lucide-react'
+import {
+  AudioLines,
+  Camera,
+  FileText,
+  FolderOpen,
+  ImagePlus,
+  Mic,
+  PenLine,
+  Shield,
+  Upload,
+  X
+} from 'lucide-react'
 
 import type { OrbComposerPlusAction } from '@/components/orb-standalone/orb-composer-plus-menu'
-
+import { ORB_COMPOSER_UPLOAD_BOUNDARY_LINES } from '@/lib/orb/orb-composer-attachments'
 import { ORB_RESIDENTIAL_STATION_DEFINITIONS } from '@/lib/orb/orb-residential-stations'
 
-const MOBILE_TOOL_ITEMS: Array<{
-  id: OrbComposerPlusAction
-  label: string
-  description: string
-  icon: typeof Mic
+const MOBILE_TOOL_SECTIONS: Array<{
+  title: string
+  items: Array<{
+    id: OrbComposerPlusAction
+    label: string
+    description: string
+    icon: typeof Mic
+  }>
 }> = [
   {
-    id: 'attach_photo',
-    label: 'Add photo',
-    description: 'Take or choose a photo for this chat',
-    icon: Camera
+    title: 'Upload',
+    items: [
+      {
+        id: 'photo_library',
+        label: 'Photo Library',
+        description: 'Choose from your photo library',
+        icon: ImagePlus
+      },
+      {
+        id: 'take_photo',
+        label: 'Take Photo',
+        description: 'Use your camera',
+        icon: Camera
+      },
+      {
+        id: 'choose_files',
+        label: 'Choose Files',
+        description: 'Images, PDF, DOC or TXT',
+        icon: FolderOpen
+      }
+    ]
   },
   {
-    id: 'upload_document',
-    label: 'Upload document',
-    description: 'Analyse a document with ORB',
-    icon: Upload
-  },
-  {
-    id: 'attach_image',
-    label: 'Add file',
-    description: 'Attach an image or screenshot',
-    icon: ImagePlus
-  },
-  {
-    id: 'orb_dictate',
-    label: ORB_RESIDENTIAL_STATION_DEFINITIONS.orb_dictate.label,
-    description: ORB_RESIDENTIAL_STATION_DEFINITIONS.orb_dictate.tagline,
-    icon: Mic
-  },
-  {
-    id: 'orb_voice',
-    label: ORB_RESIDENTIAL_STATION_DEFINITIONS.orb_voice.label,
-    description: ORB_RESIDENTIAL_STATION_DEFINITIONS.orb_voice.tagline,
-    icon: AudioLines
-  },
-  {
-    id: 'orb_write',
-    label: ORB_RESIDENTIAL_STATION_DEFINITIONS.orb_write.label,
-    description: ORB_RESIDENTIAL_STATION_DEFINITIONS.orb_write.tagline,
-    icon: PenLine
-  },
-  {
-    id: 'use_template',
-    label: 'Record type',
-    description: 'Choose a recording template',
-    icon: FileText
-  },
-  {
-    id: 'privacy_guidance',
-    label: 'Privacy guidance',
-    description: 'Safety and data boundaries',
-    icon: Shield
+    title: 'ORB',
+    items: [
+      {
+        id: 'upload_document',
+        label: 'Upload document',
+        description: 'Analyse with Documents & Guidance',
+        icon: Upload
+      },
+      {
+        id: 'orb_dictate',
+        label: ORB_RESIDENTIAL_STATION_DEFINITIONS.orb_dictate.label,
+        description: ORB_RESIDENTIAL_STATION_DEFINITIONS.orb_dictate.tagline,
+        icon: Mic
+      },
+      {
+        id: 'orb_voice',
+        label: ORB_RESIDENTIAL_STATION_DEFINITIONS.orb_voice.label,
+        description: ORB_RESIDENTIAL_STATION_DEFINITIONS.orb_voice.tagline,
+        icon: AudioLines
+      },
+      {
+        id: 'orb_write',
+        label: ORB_RESIDENTIAL_STATION_DEFINITIONS.orb_write.label,
+        description: ORB_RESIDENTIAL_STATION_DEFINITIONS.orb_write.tagline,
+        icon: PenLine
+      },
+      {
+        id: 'use_template',
+        label: 'Record type',
+        description: 'Choose a recording template',
+        icon: FileText
+      },
+      {
+        id: 'privacy_guidance',
+        label: 'Privacy & responsibility',
+        description: 'Safety and data boundaries',
+        icon: Shield
+      }
+    ]
   }
 ]
 
@@ -98,9 +128,9 @@ export function OrbResidentialComposerToolsSheet({
         if (event.target === event.currentTarget) onClose()
       }}
     >
-      <div className="max-h-[min(70dvh,28rem)] w-full max-w-lg overflow-y-auto rounded-t-2xl border border-[var(--orb-line)] bg-[var(--orb-surface-elevated)] p-3 shadow-2xl sm:rounded-2xl">
+      <div className="max-h-[min(78dvh,32rem)] w-full max-w-lg overflow-y-auto rounded-t-2xl border border-[var(--orb-line)] bg-[var(--orb-surface-elevated)] p-3 shadow-2xl sm:rounded-2xl">
         <div className="mb-2 flex items-center justify-between gap-2">
-          <h2 className="text-sm font-semibold text-[var(--orb-foreground)]">Tools</h2>
+          <h2 className="text-sm font-semibold text-[var(--orb-foreground)]">Add to chat</h2>
           <button
             ref={closeRef}
             type="button"
@@ -112,35 +142,44 @@ export function OrbResidentialComposerToolsSheet({
           </button>
         </div>
         <p className="mb-2 px-0.5 text-[10px] leading-snug text-[var(--orb-muted)]" data-orb-composer-tools-privacy-hint>
-          Use anonymised or minimal details where possible.
+          {ORB_COMPOSER_UPLOAD_BOUNDARY_LINES[0]} {ORB_COMPOSER_UPLOAD_BOUNDARY_LINES[1]}
         </p>
-        <ul className="space-y-1" data-orb-composer-tools-list>
-          {MOBILE_TOOL_ITEMS.map((item, index) => {
-            const Icon = item.icon
-            return (
-              <li key={`${item.id}-${index}`}>
-                <button
-                  type="button"
-                  role="menuitem"
-                  className="flex w-full min-h-[2.75rem] items-center gap-3 rounded-xl px-2.5 py-2.5 text-left transition hover:bg-[var(--orb-surface-hover)]"
-                  data-orb-composer-tools-item={item.id}
-                  onClick={() => {
-                    onClose()
-                    onSelect(item.id)
-                  }}
-                >
-                  <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--orb-primary-soft)] text-[var(--orb-primary)]">
-                    <Icon className="h-4 w-4" aria-hidden />
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-sm font-medium text-[var(--orb-foreground)]">{item.label}</span>
-                    <span className="block text-xs text-[var(--orb-muted)]">{item.description}</span>
-                  </span>
-                </button>
-              </li>
-            )
-          })}
-        </ul>
+        <div className="space-y-3" data-orb-composer-tools-list>
+          {MOBILE_TOOL_SECTIONS.map((section) => (
+            <section key={section.title}>
+              <p className="mb-1 px-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--orb-muted)]">
+                {section.title}
+              </p>
+              <ul className="space-y-1">
+                {section.items.map((item) => {
+                  const Icon = item.icon
+                  return (
+                    <li key={item.id}>
+                      <button
+                        type="button"
+                        role="menuitem"
+                        className="flex w-full min-h-[2.75rem] items-center gap-3 rounded-xl px-2.5 py-2.5 text-left transition hover:bg-[var(--orb-surface-hover)]"
+                        data-orb-composer-tools-item={item.id}
+                        onClick={() => {
+                          onClose()
+                          onSelect(item.id)
+                        }}
+                      >
+                        <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--orb-primary-soft)] text-[var(--orb-primary)]">
+                          <Icon className="h-4 w-4" aria-hidden />
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-sm font-medium text-[var(--orb-foreground)]">{item.label}</span>
+                          <span className="block text-xs text-[var(--orb-muted)]">{item.description}</span>
+                        </span>
+                      </button>
+                    </li>
+                  )
+                })}
+              </ul>
+            </section>
+          ))}
+        </div>
       </div>
     </div>
   )
