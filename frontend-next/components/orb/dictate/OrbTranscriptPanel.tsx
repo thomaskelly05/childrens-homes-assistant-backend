@@ -49,9 +49,9 @@ export function OrbTranscriptPanel({
     <div className="flex min-h-0 flex-1 flex-col" data-orb-transcript-panel data-orb-dictate-transcript-panel>
       <header className="flex shrink-0 items-center justify-between gap-3 border-b border-[var(--orb-line)]/40 px-4 py-3">
         <div>
-          <h3 className="text-sm font-semibold text-[var(--orb-foreground)]">Live Transcript</h3>
+          <h3 className="text-sm font-semibold text-[var(--orb-foreground)]">Capture rough notes</h3>
           <p className="mt-0.5 text-[11px] text-[var(--orb-muted)]">
-            Record, paste or edit rough notes before review.
+            Capture rough notes here. You can edit before review.
           </p>
           <p className="text-[10px] text-[var(--orb-muted)]/80" data-orb-dictate-recording-status>
             {recordingActive ? (recordingPaused ? 'Paused' : 'Recording') : 'Ready to capture'}
@@ -80,8 +80,8 @@ export function OrbTranscriptPanel({
             <p className="text-sm font-medium text-[var(--orb-foreground)]" data-orb-dictate-capture-prompt>
               {ORB_RESIDENTIAL_DICTATE_MAGIC_NOTES_COPY.capturePrompt}
             </p>
-            <p className="mt-1.5 max-w-sm text-xs leading-relaxed text-[var(--orb-muted)]">
-              Press Start recording above, paste rough notes, or upload audio in advanced options.
+            <p className="mt-1.5 max-w-sm text-xs leading-relaxed text-[var(--orb-muted)]" data-orb-dictate-capture-guidance>
+              {ORB_RESIDENTIAL_DICTATE_MAGIC_NOTES_COPY.captureGuidance}
             </p>
           </div>
         ) : null}

@@ -44,11 +44,15 @@ describe('ORB Residential desktop premium simplification pass', () => {
   it('voice station keeps spacious desktop layout and actionable controls', () => {
     const voiceContent = read('components/orb-standalone/orb-voice-station-content.tsx')
     const voiceHero = read('components/orb-standalone/orb-voice-hero-stage.tsx')
+    const voiceStrip = read('components/orb-standalone/orb-voice-responsibility-strip.tsx')
     const desktop = read('app/orb/orb-desktop.css')
 
     assert.match(voiceContent, /data-orb-voice-desktop-spacious/)
-    assert.match(voiceHero, /data-orb-voice-privacy-note/)
+    assert.match(voiceContent, /OrbVoiceResponsibilityStrip/)
+    assert.match(voiceHero, /orb-voice-hero-aura/)
+    assert.match(voiceStrip, /data-orb-voice-privacy-note/)
     assert.match(desktop, /\[data-orb-voice-desktop-spacious='true'\]/)
+    assert.match(desktop, /\[data-orb-voice-responsibility-strip\]/)
     assert.match(read('components/orb-standalone/orb-voice-actions.tsx'), /Start voice|Type instead|Turn speech/)
   })
 
@@ -75,7 +79,7 @@ describe('ORB Residential desktop premium simplification pass', () => {
     const picker = read('components/orb-write/orb-write-template-picker.tsx')
 
     assert.match(writePanel, /OrbWriteRecordTypeSelector/)
-    assert.match(writePanel, /selectorLabel="Template"/)
+    assert.match(writePanel, /selectorLabel="Record type"/)
     assert.match(writePanel, /requestRecordTypeChange/)
     assert.match(selector, /ORB_PRIMARY_RECORD_TYPE_IDS/)
     assert.match(selector, /data-orb-write-template-selector/)

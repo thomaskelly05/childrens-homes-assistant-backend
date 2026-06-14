@@ -96,12 +96,20 @@ export function OrbDictateTopBar({
           >
             {ORB_RESIDENTIAL_DICTATE_MAGIC_NOTES_COPY.title}
           </h2>
-          <p
-            className="hidden max-w-xs text-[11px] leading-snug text-[var(--orb-muted)] lg:block"
-            data-orb-dictate-magic-notes-subtitle
-          >
-            {ORB_RESIDENTIAL_DICTATE_MAGIC_NOTES_COPY.subtitle}
-          </p>
+          <div className="hidden min-w-0 flex-col lg:flex">
+            <p
+              className="max-w-xs text-[11px] leading-snug text-[var(--orb-muted)]"
+              data-orb-dictate-magic-notes-subtitle
+            >
+              {ORB_RESIDENTIAL_DICTATE_MAGIC_NOTES_COPY.subtitle}
+            </p>
+            <p
+              className="text-[10px] leading-snug text-[var(--orb-muted)]/75"
+              data-orb-dictate-magic-notes-powered-by
+            >
+              {ORB_RESIDENTIAL_DICTATE_MAGIC_NOTES_COPY.poweredBy}
+            </p>
+          </div>
           <OrbDictateTemplateSelector
             selectedTemplateId={selectedTemplateId}
             onTemplateChange={onTemplateChange}

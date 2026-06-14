@@ -278,6 +278,12 @@ export function OrbDictateStudioWorkspace(props: OrbDictateStudioWorkspaceProps)
           {ORB_RESIDENTIAL_DICTATE_MAGIC_NOTES_COPY.subtitle}
         </p>
         <p
+          className="mt-0.5 text-[10px] leading-relaxed text-[var(--orb-muted)]/80"
+          data-orb-dictate-magic-notes-powered-by
+        >
+          {ORB_RESIDENTIAL_DICTATE_MAGIC_NOTES_COPY.poweredBy}
+        </p>
+        <p
           className="mt-1 text-[10px] leading-relaxed text-[var(--orb-muted)]"
           data-orb-dictate-responsibility-strip
         >

@@ -62,6 +62,7 @@ import {
   saveOrbWriteLocalDraft
 } from '@/lib/orb/write/orb-write-standalone'
 import type { OrbWriteDocument } from '@/lib/orb/write/orb-write-types'
+import { ORB_RESIDENTIAL_STATION_PRODUCT_COPY } from '@/lib/orb/orb-residential-copy'
 import { ORB_WRITE_SAFETY_COPY } from '@/lib/orb/write/orb-write-types'
 
 export function OrbWriteStandalonePanel({
@@ -447,7 +448,7 @@ export function OrbWriteStandalonePanel({
     <OrbAppModal
       open={open}
       title="ORB Write"
-      subtitle="Document studio"
+      subtitle={ORB_RESIDENTIAL_STATION_PRODUCT_COPY.write}
       onClose={onClose}
       panelId="orb-write"
       size="xlarge"
@@ -459,18 +460,29 @@ export function OrbWriteStandalonePanel({
         {doc ? (
           <div className="flex min-h-0 flex-1 flex-col gap-3" data-orb-write-studio-editor>
             <header
-              className="flex shrink-0 flex-wrap items-center gap-2 border-b border-[var(--orb-line)]/40 pb-2"
+              className="flex shrink-0 flex-col gap-2 border-b border-[var(--orb-line)]/40 pb-2"
               data-orb-write-studio-header
             >
+              <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                <h2 className="text-sm font-semibold text-[var(--orb-foreground)]" data-orb-write-studio-title>
+                  Write with ORB
+                </h2>
+                <p className="text-[11px] text-[var(--orb-muted)]" data-orb-write-studio-subtitle>
+                  Review, structure and finalise safer recording.
+                </p>
+              </div>
               <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
                 <FileEdit className="h-4 w-4 shrink-0 text-[var(--orb-primary)]" aria-hidden />
                 <OrbWriteRecordTypeSelector
                   recordTypeId={recordTypeId}
                   variant="compact"
-                  selectorLabel="Template"
+                  selectorLabel="Record type"
                   onSelect={(nextRecordType) => requestRecordTypeChange(nextRecordType.id)}
                   onOpenFullPicker={() => setTemplatePickerOpen(true)}
                 />
+                <p className="hidden text-[10px] text-[var(--orb-muted)] lg:block" data-orb-write-template-hint>
+                  Choose the structure ORB should help you write.
+                </p>
                 <input
                   data-orb-write-title-input
                   value={doc.title}

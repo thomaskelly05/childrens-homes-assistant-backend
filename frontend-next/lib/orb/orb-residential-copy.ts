@@ -206,11 +206,23 @@ export const ORB_RESIDENTIAL_PRIMARY_STARTERS: ResidentialStarter[] = [
 
 /** Desktop Dictate “Magic Notes” copy — visual and UX tone without renaming the product globally. */
 export const ORB_RESIDENTIAL_DICTATE_MAGIC_NOTES_COPY = {
-  title: 'ORB Dictate',
+  title: 'ORB Magic Notes',
   subtitle: 'Turn rough speech, meetings and observations into safer notes.',
+  poweredBy: 'Powered by ORB Dictate',
   capturePrompt: 'Start with speech, paste notes or upload audio',
-  reviewHint: 'ORB will help check what may be missing.',
+  captureGuidance:
+    'ORB will help structure what was shared, what was observed and what may need follow-up.',
+  reviewHint: 'ORB will help check what may be missing before you write the final record.',
   responsibility: 'Adult review required before use.'
+} as const
+
+/** Calm IndiCare Intelligence product language — one line per station, not over-branded. */
+export const ORB_RESIDENTIAL_STATION_PRODUCT_COPY = {
+  voice: 'Talk it through with ORB.',
+  magicNotes: 'Turn rough notes into safer recording.',
+  write: 'Structure, review and finalise with adult approval.',
+  documents: 'Use authorised documents as sources. ORB shows what it used.',
+  templates: 'Choose a structure that keeps the child central.'
 } as const
 
 /** Mobile first-view starters — three most useful actions on phone. */

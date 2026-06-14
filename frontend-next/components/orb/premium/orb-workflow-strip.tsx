@@ -6,6 +6,14 @@ export const ORB_RECORDING_WORKFLOW_STEPS = ['Capture', 'Review', 'Draft', 'Fina
 
 export type OrbRecordingWorkflowStep = (typeof ORB_RECORDING_WORKFLOW_STEPS)[number]
 
+/** Therapeutic workflow labels shown in Dictate and ORB Write strips. */
+export const ORB_RECORDING_WORKFLOW_STEP_LABELS: Record<OrbRecordingWorkflowStep, string> = {
+  Capture: 'Capture rough notes',
+  Review: 'Review with ORB',
+  Draft: 'Create safer draft',
+  Finalise: 'Finalise with adult approval'
+}
+
 function stepIndex(step: OrbRecordingWorkflowStep): number {
   return ORB_RECORDING_WORKFLOW_STEPS.indexOf(step)
 }
@@ -56,10 +64,11 @@ export function OrbWorkflowStrip({
                     : 'text-[var(--orb-muted)]/70'
               )}
               data-orb-workflow-step={step.toLowerCase()}
+              data-orb-workflow-step-label={ORB_RECORDING_WORKFLOW_STEP_LABELS[step]}
               data-orb-workflow-step-active={isActive ? 'true' : undefined}
               data-orb-workflow-step-complete={isComplete ? 'true' : undefined}
             >
-              {step}
+              {ORB_RECORDING_WORKFLOW_STEP_LABELS[step]}
             </span>
           </div>
         )

@@ -20,14 +20,17 @@ import {
   type OrbWriteZoomMode
 } from '@/lib/orb/write/orb-write-zoom'
 
-function orbWriteBodyForEditor(body: string, mobile: boolean): string {
+function orbWriteBodyForEditor(body: string): string {
   if (!body.trim()) return ''
   if (body.includes('<')) return body
-  if (mobile && orbWriteBodyLooksLikeMarkdownTemplate(body)) {
+  if (orbWriteBodyLooksLikeMarkdownTemplate(body)) {
     return orbWriteBodyToMobileNotepadHtml(body)
   }
   return body.replace(/\n/g, '<br/>')
 }
+
+const ORB_WRITE_MARKDOWN_EDITOR_CLASSES =
+  '[&_.orb-write-section-hint]:pointer-events-none [&_.orb-write-section-hint]:text-[var(--orb-muted)] [&_.orb-write-section-hint]:italic [&_h1]:mb-1.5 [&_h1]:mt-2 [&_h1]:text-base [&_h1]:font-semibold [&_h2]:mb-1 [&_h2]:mt-2.5 [&_h2]:text-sm [&_h2]:font-semibold [&_h2]:tracking-tight [&_h3]:mb-1 [&_h3]:mt-2 [&_h3]:text-sm [&_h3]:font-semibold [&_li]:ml-4 [&_ol]:list-decimal [&_table]:my-1.5 [&_table]:w-full [&_table]:border-collapse [&_td]:border [&_td]:border-[var(--orb-line)]/40 [&_td]:p-1.5 [&_ul]:list-disc'
 
 const PDF_FOOTER = 'Generated with ORB Residential, powered by IndiCare Intelligence'
 
@@ -86,11 +89,11 @@ export function OrbWriteEditor({
 
   useEffect(() => {
     if (!editorRef.current) return
-    const nextHtml = orbWriteBodyForEditor(doc.body, isMobile)
+    const nextHtml = orbWriteBodyForEditor(doc.body)
     if (editorRef.current.innerHTML !== nextHtml && !editorRef.current.matches(':focus')) {
       editorRef.current.innerHTML = nextHtml
     }
-  }, [doc.body, isMobile])
+  }, [doc.body])
 
   const syncContent = useCallback(() => {
     if (!editorRef.current) return
@@ -150,8 +153,8 @@ export function OrbWriteEditor({
       data-orb-write-body
       className={
         isMobile
-          ? 'min-h-[12rem] flex-1 text-[0.875rem] leading-[1.55] text-[var(--orb-foreground)] focus:outline-none [&_.orb-write-section-hint]:pointer-events-none [&_.orb-write-section-hint]:text-[var(--orb-muted)] [&_.orb-write-section-hint]:italic [&_h1]:mb-1.5 [&_h1]:mt-2 [&_h1]:text-base [&_h1]:font-semibold [&_h2]:mb-1 [&_h2]:mt-2.5 [&_h2]:text-sm [&_h2]:font-semibold [&_h2]:tracking-tight [&_li]:ml-4 [&_ol]:list-decimal [&_table]:my-1.5 [&_table]:w-full [&_table]:border-collapse [&_td]:border [&_td]:border-[var(--orb-line)]/40 [&_td]:p-1.5 [&_ul]:list-disc'
-          : 'min-h-[180mm] text-sm leading-relaxed text-slate-800 focus:outline-none [&_h1]:mb-2 [&_h1]:text-lg [&_h1]:font-semibold [&_h2]:mb-2 [&_h2]:text-base [&_h2]:font-semibold [&_li]:ml-4 [&_ol]:list-decimal [&_table]:my-2 [&_table]:w-full [&_table]:border-collapse [&_td]:border [&_td]:border-slate-200 [&_td]:p-2 [&_ul]:list-disc'
+          ? `min-h-[12rem] flex-1 text-[0.875rem] leading-[1.55] text-[var(--orb-foreground)] focus:outline-none ${ORB_WRITE_MARKDOWN_EDITOR_CLASSES}`
+          : `min-h-[180mm] text-sm leading-relaxed text-[var(--orb-foreground)] focus:outline-none ${ORB_WRITE_MARKDOWN_EDITOR_CLASSES}`
       }
       onInput={syncContent}
       onBlur={syncContent}

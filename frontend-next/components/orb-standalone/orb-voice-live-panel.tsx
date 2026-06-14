@@ -26,13 +26,13 @@ export function orbVoiceLivePanelStatusLabel(
     case 'user_speaking':
       return 'I heard that.'
     case 'thinking':
-      return 'Give me a moment.'
+      return 'Thinking with you…'
     case 'speaking':
       return 'ORB is responding.'
     case 'paused':
       return 'Paused'
     default:
-      return "I'm listening."
+      return 'Listening…'
   }
 }
 
