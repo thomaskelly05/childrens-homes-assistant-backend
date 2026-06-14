@@ -78,6 +78,16 @@ export const ORB_ENTERPRISE_CAPABILITY_EVIDENCE: EnterpriseCapabilityEvidence[] 
     notes: ['Do not claim government-grade encryption at rest']
   },
   {
+    id: 'end_to_end_encryption',
+    label: 'End-to-end encryption',
+    status: 'missing',
+    safeToClaimPublicly: false,
+    evidence: [],
+    implementationFiles: [],
+    limitations: ['Not implemented — no per-user keys or zero-knowledge storage'],
+    notes: ['Do not claim E2EE publicly; use "protected in transit" only']
+  },
+  {
     id: 'audit_logs',
     label: 'Audit logging',
     status: 'implemented',
@@ -232,7 +242,7 @@ export function getEnterpriseEvidence(id: string): EnterpriseCapabilityEvidence 
 
 export function validateEnterpriseEvidenceTruthfulness(): string[] {
   const violations: string[] = []
-  const neverPublic = ['hipaa', 'iso_soc2', 'region_storage', 'penetration_testing']
+  const neverPublic = ['hipaa', 'iso_soc2', 'region_storage', 'penetration_testing', 'end_to_end_encryption']
 
   for (const item of ORB_ENTERPRISE_CAPABILITY_EVIDENCE) {
     if (item.status === 'missing' && item.safeToClaimPublicly) {

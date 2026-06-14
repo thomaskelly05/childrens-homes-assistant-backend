@@ -62,9 +62,9 @@ describe('ORB data safety copy', () => {
   })
 
   it('settings privacy includes data safety section', () => {
-    const settings = readComponent('components/orb-standalone/orb-standalone-settings-panel.tsx')
+    const settings = readComponent('components/orb-residential/orb-privacy-data-settings-section.tsx')
     assert.match(settings, /data-orb-settings-data-safety/)
-    assert.match(settings, /How ORB protects your data/)
+    assert.match(settings, /does not access IndiCare OS/)
     assert.doesNotMatch(settings, /100% safe/i)
   })
 })

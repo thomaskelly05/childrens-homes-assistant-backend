@@ -83,6 +83,9 @@ test.describe('ORB home composer reach', () => {
     await page.locator('[data-orb-privacy-guidance-trigger]').click()
     await expect(page.locator('[data-orb-privacy-guidance-sheet]')).toBeVisible()
     await expect(page.locator('[data-orb-privacy-guidance-list] li')).toHaveCount(4)
+    await page.locator('[data-orb-privacy-guidance-done]').click()
+    await expect(page.locator('[data-orb-privacy-guidance-sheet]')).toHaveCount(0)
+    await expect(page.locator('[data-orb-composer-tools-trigger], [data-orb-composer-attach]')).toBeVisible()
   })
 
   test('more examples opens grouped starter bottom sheet', async ({ page }) => {

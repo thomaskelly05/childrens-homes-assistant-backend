@@ -5,18 +5,13 @@ import {
   Accessibility,
   Bell,
   ChevronLeft,
-  Database,
-  Fingerprint,
   HelpCircle,
   Keyboard,
   Lock,
-  Map,
   Mic,
   Moon,
   Settings,
-  Shield,
   Sun,
-  Trash2,
   Type,
   User
 } from 'lucide-react'
@@ -24,6 +19,7 @@ import {
 import { useOrbResponsiveMode } from '@/components/orb-standalone/use-orb-responsive-mode'
 import { OrbAppearanceControl } from '@/components/orb-standalone/orb-appearance-control'
 import { OrbBillingSettingsSection } from '@/components/orb-standalone/orb-billing-settings-section'
+import { OrbPrivacyDataSettingsSection } from '@/components/orb-residential/orb-privacy-data-settings-section'
 import { orbOverlayDrawerShellProps } from '@/components/orb-standalone/orb-app-modal'
 import { OrbStandalonePanelShell } from '@/components/orb-standalone/orb-standalone-panel-shell'
 import type { OrbAppearanceMode } from '@/lib/orb/orb-appearance'
@@ -66,7 +62,7 @@ const SECTION_META: Array<{ id: SettingsSectionId; label: string }> = [
   { id: 'voice', label: 'Voice' },
   { id: 'recording', label: 'Recording Preferences' },
   { id: 'writing', label: 'Writing Preferences' },
-  { id: 'safety_privacy', label: 'Safety & Privacy' },
+  { id: 'safety_privacy', label: 'Privacy & data' },
   { id: 'account_billing', label: 'Account & Billing' },
   { id: 'about', label: 'About ORB' }
 ]
@@ -485,113 +481,27 @@ export function OrbStandaloneSettingsPanel({
 
           {activeSection === 'safety_privacy' ? (
             <SettingsBlock
-              title="Safety & Privacy"
-              description="Understand what ORB can and cannot process, and how to use anonymised or minimal information safely."
+              title="Privacy & data"
+              description="App permissions, personal context, security and your responsibilities."
               suppressHeader={showMobileDetail}
             >
-              <div className="rounded-xl border border-[var(--orb-line)] bg-[var(--orb-surface)] px-4 py-3">
-                <p className="flex items-center gap-2 text-sm font-semibold text-[var(--orb-foreground)]">
-                  <Fingerprint className="h-4 w-4 text-[#0284C7]" aria-hidden />
-                  Face ID / Touch ID
-                </p>
-                <p className="mt-1 text-xs leading-5 text-[var(--orb-muted)]">
-                  Add a passkey so this device can sign in to ORB more quickly. Your biometric stays on your device;
-                  ORB stores the passkey credential needed to recognise you securely.
-                </p>
-                <button
-                  type="button"
-                  onClick={handleAddPasskey}
-                  disabled={!passkeysSupported || passkeyBusy}
-                  className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-[#0284C7] px-4 py-3 text-sm font-bold text-white transition hover:bg-[#0369A1] disabled:cursor-not-allowed disabled:opacity-50"
-                  data-orb-passkey-register
-                >
-                  <Fingerprint className="h-4 w-4" aria-hidden />
-                  {passkeyBusy ? 'Working…' : passkeysSupported ? 'Add Face ID / Touch ID' : 'Passkeys unavailable'}
-                </button>
-                {passkeyStatus ? (
-                  <p className="mt-2 text-xs leading-5 text-[var(--orb-muted)]" data-orb-passkey-status>
-                    {passkeyStatus}
-                  </p>
-                ) : null}
-              </div>
-
-              <div className="space-y-2" data-orb-passkey-list>
-                <p className="text-xs font-semibold text-[var(--orb-foreground)]">Saved passkeys</p>
-                {passkeys.length ? (
-                  passkeys.map((item) => (
-                    <div
-                      key={item.id}
-                      className="flex items-center justify-between gap-3 rounded-xl border border-[var(--orb-line)] px-4 py-3"
-                    >
-                      <span className="min-w-0">
-                        <span className="block truncate text-sm font-medium text-[var(--orb-foreground)]">
-                          {item.nickname || 'ORB passkey'}
-                        </span>
-                        <span className="block text-xs text-[var(--orb-muted)]">
-                          {item.last_used_at ? `Last used ${new Date(item.last_used_at).toLocaleDateString()}` : 'Not used yet'}
-                        </span>
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => handleDeletePasskey(item.id)}
-                        disabled={passkeyBusy}
-                        className="rounded-full border border-[var(--orb-line)] p-2 text-[var(--orb-muted)] transition hover:bg-red-50 hover:text-red-700 disabled:opacity-50"
-                        aria-label="Remove passkey"
-                      >
-                        <Trash2 className="h-4 w-4" aria-hidden />
-                      </button>
-                    </div>
-                  ))
-                ) : (
-                  <p className="rounded-xl border border-dashed border-[var(--orb-line)] px-4 py-3 text-xs text-[var(--orb-muted)]">
-                    No passkeys saved yet.
-                  </p>
-                )}
-              </div>
-              <RowButton
-                icon={<Database className="h-4 w-4" />}
-                label="Export workspace JSON"
-                hint="Download chats, projects and profiles"
-                onClick={onExportWorkspace}
+              <OrbPrivacyDataSettingsSection
+                passkeysSupported={passkeysSupported}
+                passkeyCount={passkeys.length}
+                passkeys={passkeys}
+                onAddPasskey={handleAddPasskey}
+                onDeletePasskey={handleDeletePasskey}
+                passkeyBusy={passkeyBusy}
+                onExportWorkspace={onExportWorkspace}
+                onClearMemory={onClearMemory}
+                onClearProfiles={onClearProfiles}
+                onClearProjects={onClearProjects}
               />
-              <RowButton
-                icon={<Settings className="h-4 w-4" />}
-                label="Clear local ORB memory"
-                hint="All chats on this device"
-                onClick={onClearMemory}
-              />
-              <RowButton icon={<User className="h-4 w-4" />} label="Clear profiles" hint="Workspace context profiles" onClick={onClearProfiles} />
-              <RowButton
-                icon={<Map className="h-4 w-4" />}
-                label="Clear custom projects"
-                hint="Chats move to General"
-                onClick={onClearProjects}
-              />
-              <div className="rounded-xl border border-[var(--orb-line)] bg-[var(--orb-surface)] px-3 py-2.5" data-orb-settings-privacy-link>
-                <a
-                  href="/orb/privacy"
-                  className="text-xs font-semibold text-[var(--orb-primary,#1677ff)] hover:underline"
-                  data-orb-settings-privacy-page-link
-                >
-                  ORB Privacy &amp; Data Handling
-                </a>
-                <p className="mt-1 text-[11px] leading-5 text-[var(--orb-muted)]">
-                  Green / Amber / Red guidance, retention status and privacy requests.
+              {passkeyStatus ? (
+                <p className="text-xs leading-5 text-[var(--orb-muted)]" data-orb-passkey-status>
+                  {passkeyStatus}
                 </p>
-              </div>
-              <div className="rounded-xl border border-[var(--orb-line)] bg-[var(--orb-surface)] px-3 py-2.5" data-orb-settings-privacy>
-                <p className="flex items-center gap-2 text-[11px] font-medium text-[var(--orb-foreground)]">
-                  <Shield className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                  How ORB protects your data
-                </p>
-                <p className="mt-1 text-[11px] leading-5 text-[var(--orb-muted)]" data-orb-settings-data-safety>
-                  ORB Residential does not access IndiCare OS records. It uses your profile, conversation, uploaded documents and IndiCare residential intelligence. ORB
-                  only uses what you type, upload, save or submit as feedback here. Temporary chat skips saved profile
-                  context for that chat. AI providers process the text you send — not live OS records. Use initials
-                  where you can. Feedback improves ORB through human review; it does not make automatic care
-                  decisions. For permissioned OS context, use IndiCare OS ORB at /assistant/orb.
-                </p>
-              </div>
+              ) : null}
             </SettingsBlock>
           ) : null}
 

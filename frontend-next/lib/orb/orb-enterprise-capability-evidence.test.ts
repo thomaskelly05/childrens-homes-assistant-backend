@@ -33,6 +33,13 @@ describe('ORB enterprise capability evidence', () => {
     assert.equal(oauth!.status, 'implemented')
   })
 
+  it('E2EE is never publicly claimable', () => {
+    const e2ee = ORB_ENTERPRISE_CAPABILITY_EVIDENCE.find((e) => e.id === 'end_to_end_encryption')
+    assert.ok(e2ee)
+    assert.equal(e2ee!.safeToClaimPublicly, false)
+    assert.equal(e2ee!.status, 'missing')
+  })
+
   it('UK storage guarantee is not claimed', () => {
     const region = ORB_ENTERPRISE_CAPABILITY_EVIDENCE.find((e) => e.id === 'region_storage')
     assert.ok(region)

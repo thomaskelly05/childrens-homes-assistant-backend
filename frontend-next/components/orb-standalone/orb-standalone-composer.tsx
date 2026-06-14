@@ -286,6 +286,7 @@ export function OrbStandaloneComposer({
 
   const [toolsSheetOpen, setToolsSheetOpen] = useState(false)
   const [privacyGuidanceOpen, setPrivacyGuidanceOpen] = useState(false)
+  const [privacyReturnOrigin, setPrivacyReturnOrigin] = useState<'composer' | 'tools_menu'>('composer')
   const showComposerQuickActions = compactResidential && !mobileViewport
 
   useEffect(() => {
@@ -315,6 +316,7 @@ export function OrbStandaloneComposer({
   function handleComposerToolSelect(action: OrbComposerPlusAction) {
     setAttachmentMenuOpen(false)
     if (action === 'privacy_guidance') {
+      setPrivacyReturnOrigin('tools_menu')
       setPrivacyGuidanceOpen(true)
       return
     }
@@ -672,7 +674,12 @@ export function OrbStandaloneComposer({
                 {!mobileViewport && onAttachDocumentClick ? <button type="button" onClick={onAttachDocumentClick} className="inline-flex h-9 min-w-9 shrink-0 items-center justify-center rounded-full text-[var(--orb-muted)] transition hover:bg-[var(--orb-surface-hover)]" aria-label="Attach document" data-orb-composer-document><FileText className="h-4 w-4" aria-hidden /></button> : null}
                 {!mobileViewport && onToolsClick ? <button type="button" onClick={onToolsClick} className="inline-flex h-9 min-w-9 shrink-0 items-center justify-center rounded-full text-[var(--orb-muted)] transition hover:bg-[var(--orb-surface-hover)]" aria-label="Tools" data-orb-composer-tools><Wrench className="h-4 w-4" aria-hidden /></button> : null}
                 {mobileViewport ? (
-                  <OrbResidentialPrivacyGuidanceIcon onOpen={() => setPrivacyGuidanceOpen(true)} />
+                  <OrbResidentialPrivacyGuidanceIcon
+                    onOpen={() => {
+                      setPrivacyReturnOrigin('composer')
+                      setPrivacyGuidanceOpen(true)
+                    }}
+                  />
                 ) : null}
               </div>
             ) : null}
@@ -881,6 +888,7 @@ export function OrbStandaloneComposer({
         <OrbResidentialPrivacyGuidanceSheet
           open={privacyGuidanceOpen}
           onClose={() => setPrivacyGuidanceOpen(false)}
+          returnOrigin={privacyReturnOrigin}
         />
       ) : null}
     </div>
