@@ -320,15 +320,17 @@ html[data-orb-residential='1'] [data-orb-document-panel] [data-orb-knowledge-lib
   }
 }
 
-/* Chat home — composer focal, softer hero atmosphere */
-html[data-orb-residential='1'] [data-orb-residential-empty] .orb-v2-atmosphere {
-  opacity: 0.42;
-  transform: scale(0.92);
-}
+/* Chat home — composer focal, softer hero atmosphere (mobile only; desktop uses orb-desktop.css) */
+@media (max-width: 1023px) {
+  html[data-orb-residential='1'] [data-orb-residential-empty] .orb-v2-atmosphere {
+    opacity: 0.42;
+    transform: scale(0.92);
+  }
 
-html[data-orb-residential='1'] [data-orb-residential-empty] [data-orb-empty-sphere] {
-  transform: scale(0.88);
-  opacity: 0.92;
+  html[data-orb-residential='1'] [data-orb-residential-empty] [data-orb-empty-sphere] {
+    transform: scale(0.88);
+    opacity: 0.92;
+  }
 }
 
 @media (max-width: 1023px) {

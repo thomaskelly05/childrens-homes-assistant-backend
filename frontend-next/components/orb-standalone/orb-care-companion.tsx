@@ -4168,7 +4168,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
                           data-orb-empty-starter-chips
                         >
                           {ORB_RESIDENTIAL_STARTER_GROUPS.map((group) => (
-                            <section key={group.id} data-orb-starter-group={group.id}>
+                            <section key={group.id} className="orb-liquid-card" data-orb-starter-group={group.id}>
                               <h3 className="mb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--orb-muted)]">
                                 {group.label}
                               </h3>

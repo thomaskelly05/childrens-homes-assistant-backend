@@ -61,9 +61,42 @@ describe('ORB Residential desktop convergence sprint', () => {
   it('desktop ORB presence uses shared liquid orb treatment', () => {
     const presence = read('components/orb-residential/ui/orb-presence.tsx')
     const desktop = read('app/orb/orb-desktop.css')
+    const companion = read('components/orb-standalone/orb-care-companion.tsx')
 
     assert.match(presence, /orb-liquid-orb/)
-    assert.match(desktop, /\[data-orb-residential-empty\][\s\S]*--orb-presence-size:\s*clamp\(7\.5rem/)
+    assert.match(desktop, /\[data-orb-residential-empty\][\s\S]*--orb-presence-size:\s*clamp\(9\.5rem/)
+    assert.match(desktop, /desktop premium convergence pass/)
+    assert.match(companion, /orb-liquid-card/)
+    assert.match(companion, /data-orb-starter-groups/)
+    assert.doesNotMatch(companion, /orb-presence--hero[\s\S]*mobile-only/)
+  })
+
+  it('desktop home uses liquid glass starter groups and composer without shield', () => {
+    const companion = read('components/orb-standalone/orb-care-companion.tsx')
+    const composer = read('components/orb-standalone/orb-standalone-composer.tsx')
+    const desktop = read('app/orb/orb-desktop.css')
+
+    assert.match(companion, /data-orb-residential-empty/)
+    assert.match(companion, /data-orb-empty-heading-desktop/)
+    assert.match(companion, /ORB_RESIDENTIAL_BRAND_EMOTIONAL_LINE/)
+    assert.match(desktop, /\[data-orb-starter-groups\]/)
+    assert.match(composer, /orb-liquid-composer/)
+    assert.doesNotMatch(composer, /data-orb-privacy-guidance-trigger/)
+    assert.match(composer, /data-testid="orb-standalone-composer"/)
+  })
+
+  it('desktop sidebar nav, search and liquid glass account card remain wired', () => {
+    const sidebar = read('components/orb-residential/orb-residential-sidebar.tsx')
+    const desktop = read('app/orb/orb-desktop.css')
+
+    assert.match(sidebar, /data-orb-sidebar-search/)
+    assert.match(sidebar, /data-orb-sidebar-new-chat/)
+    assert.match(sidebar, /data-orb-sidebar-station/)
+    assert.match(sidebar, /orb-sidebar-nav-item--active/)
+    assert.match(sidebar, /orb-liquid-glass/)
+    assert.match(sidebar, /data-orb-sidebar-account-card/)
+    assert.match(sidebar, /data-orb-sidebar-billing/)
+    assert.match(desktop, /\[data-orb-sidebar-account-card\]/)
   })
 
   it('settings scroll uses single owner on desktop and privacy rows open detail sheets', () => {
@@ -107,20 +140,83 @@ describe('ORB Residential desktop convergence sprint', () => {
 
   it('voice, dictate and write desktop surfaces keep actionable fallback and adult review copy', () => {
     const voice = read('components/orb-standalone/orb-voice-station.tsx')
+    const voiceContent = read('components/orb-standalone/orb-voice-station-content.tsx')
     const dictate = read('components/orb-standalone/orb-dictate-station.tsx')
+    const dictateTop = read('components/orb/dictate/OrbDictateTopBar.tsx')
     const write = read('components/orb-write/orb-write-station.tsx')
+    const writePanel = read('components/orb-write/orb-write-standalone-panel.tsx')
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
+    const desktop = read('app/orb/orb-desktop.css')
 
     assert.match(voice, /orb-liquid-card/)
+    assert.match(voice, /orb-liquid-button/)
     assert.match(voice, /data-orb-voice-dictate-bridge/)
+    assert.match(voiceContent, /data-orb-voice-station-content/)
+    assert.match(desktop, /\[data-orb-voice-station-content\]/)
     assert.match(dictate, /desktop-runtime/)
     assert.match(dictate, /OrbDictateStudioWorkspace/)
+    assert.match(dictateTop, /orb-liquid-toolbar/)
+    assert.match(dictateTop, /data-orb-dictate-top-bar/)
     assert.match(write, /ORB_WRITE_SAFETY_COPY/)
+    assert.match(writePanel, /Create draft record/)
+    assert.match(read('components/orb-write/orb-write-toolbar.tsx'), /data-orb-write-approve/)
     assert.match(companion, /onOpenDictateFallback/)
     assert.equal(
       orbComposerSpeechFallbackMessage(null),
       ORB_COMPOSER_SPEECH_UNAVAILABLE_MESSAGE
     )
+  })
+
+  it('settings and billing desktop surfaces use scroll containers and truthful billing CTAs', () => {
+    const settings = read('components/orb-standalone/orb-standalone-settings-panel.tsx')
+    const billing = read('components/orb-standalone/orb-billing-modal.tsx')
+    const appearance = read('components/orb-standalone/orb-appearance-control.tsx')
+    const privacy = read('components/orb-residential/orb-privacy-data-settings-section.tsx')
+    const desktop = read('app/orb/orb-desktop.css')
+
+    assert.match(settings, /data-orb-settings-scroll/)
+    assert.match(appearance, /data-orb-appearance-option/)
+    assert.match(privacy, /data-orb-privacy-data-row/)
+    assert.match(billing, /data-orb-billing-status/)
+    assert.match(billing, /data-orb-billing-refresh/)
+    assert.match(billing, /data-orb-billing-portal|data-orb-billing-upgrade|data-orb-billing-trial/)
+    assert.match(billing, /data-orb-billing-desktop-layout="sheet"/)
+    assert.match(billing, /orb-liquid-card/)
+    const billingCtaMatches = billing.match(/data-orb-billing-(trial|upgrade|portal)/g) ?? []
+    assert.ok(billingCtaMatches.length >= 1)
+    assert.match(billing, /data-orb-billing-sticky-footer/)
+    assert.match(billing, /sm:hidden[\s\S]*data-orb-billing-sticky-footer|data-orb-billing-sticky-footer[\s\S]*sm:hidden/)
+    assert.match(billing, /data-orb-billing-cta-bar/)
+    assert.match(desktop, /\[data-orb-settings-nav\]/)
+    assert.match(desktop, /\[data-orb-billing-modal\]/)
+  })
+
+  it('documents and templates desktop surfaces keep search and library actions', () => {
+    const documents = read('components/orb-standalone/orb-document-panel.tsx')
+    const templates = read('components/orb-standalone/orb-templates-panel.tsx')
+    const desktop = read('app/orb/orb-desktop.css')
+
+    assert.match(documents, /searchSurfaceId="documents_guidance"/)
+    assert.match(documents, /data-orb-document-dropzone/)
+    assert.match(documents, /data-orb-document-lens/)
+    assert.match(documents, /Analyse a Document/)
+    assert.match(templates, /data-orb-recording-library-section/)
+    assert.match(templates, /OrbRecordingLibraryCards|data-orb-recording-card/)
+    assert.match(read('components/orb/recording/OrbRecordingLibraryCards.tsx'), /Start in Dictate/)
+    assert.match(desktop, /\[data-orb-document-dropzone\]/)
+    assert.match(desktop, /\[data-orb-template-card\]/)
+  })
+
+  it('build memory protections remain in place', () => {
+    const companion = read('components/orb-standalone/orb-care-companion.tsx')
+    const buildExcludes = read('lib/orb/orb-build-excludes.test.ts')
+    const renderSafe = read('scripts/render-safe-next-build.test.ts')
+
+    assert.match(companion, /dynamic\(/)
+    assert.match(companion, /import\('@\/components\/orb-standalone\/orb-dictate-station'\)/)
+    assert.match(buildExcludes, /production build excludes/)
+    assert.match(buildExcludes, /\*\*\/\*\.test\.ts/)
+    assert.match(renderSafe, /render-safe-next-build/)
   })
 
   it('mobile regression: plus sheet, no shield, speech fallback and settings scroll intact', () => {

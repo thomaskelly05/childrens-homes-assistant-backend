@@ -48,9 +48,9 @@ const TOP_UP_OPTIONS = [
 
 function sectionClassName(compact = false) {
   if (compact) {
-    return 'orb-billing-card orb-billing-card--flat rounded-lg border-0 border-b border-[var(--orb-line)]/25 bg-transparent p-0 pb-2.5 sm:rounded-xl sm:border sm:border-[var(--orb-mobile-ws-card-border,var(--orb-line))]/30 sm:bg-[var(--orb-mobile-ws-card,var(--orb-surface-elevated))]/60 sm:p-3.5'
+    return 'orb-billing-card orb-billing-card--flat orb-liquid-card rounded-lg border-0 border-b border-[var(--orb-line)]/25 bg-transparent p-0 pb-2.5 sm:rounded-xl sm:border sm:border-[var(--orb-mobile-ws-card-border,var(--orb-line))]/30 sm:bg-[var(--orb-mobile-ws-card,var(--orb-surface-elevated))]/60 sm:p-3.5'
   }
-  return 'orb-billing-card orb-mobile-workspace-card rounded-lg border border-[var(--orb-mobile-ws-card-border,var(--orb-line))]/30 bg-[var(--orb-mobile-ws-card,var(--orb-surface-elevated))]/60 p-2.5 sm:rounded-xl sm:p-3.5'
+  return 'orb-billing-card orb-mobile-workspace-card orb-liquid-card rounded-lg border border-[var(--orb-mobile-ws-card-border,var(--orb-line))]/30 bg-[var(--orb-mobile-ws-card,var(--orb-surface-elevated))]/60 p-2.5 sm:rounded-xl sm:p-3.5'
 }
 
 export function OrbBillingModal({
@@ -259,6 +259,7 @@ export function OrbBillingModal({
         className="space-y-2 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:space-y-3 sm:p-4"
         data-orb-billing-modal
         data-orb-billing-mobile-layout="compact"
+        data-orb-billing-desktop-layout="sheet"
       >
         {loading && !access ? (
           <p className="text-sm text-[var(--orb-muted)]" data-orb-billing-loading>

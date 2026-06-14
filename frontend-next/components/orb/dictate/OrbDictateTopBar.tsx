@@ -83,7 +83,7 @@ export function OrbDictateTopBar({
 
   return (
     <header
-      className="orb-dictate-top-bar orb-dictate-recorder-bar sticky top-0 z-10 shrink-0 border-b border-[var(--orb-line)]/40 bg-[var(--orb-surface-elevated)]/95 py-1.5 backdrop-blur-sm"
+      className="orb-dictate-top-bar orb-dictate-recorder-bar orb-liquid-toolbar sticky top-0 z-10 shrink-0 border-b border-[var(--orb-line)]/40 bg-[var(--orb-surface-elevated)]/95 py-1.5 backdrop-blur-sm"
       data-orb-dictate-top-bar
       data-orb-dictate-recorder-bar
     >
