@@ -1,5 +1,6 @@
 'use client'
 
+import dynamic from 'next/dynamic'
 import {
   useCallback,
   useEffect,
@@ -62,12 +63,7 @@ import { OrbMessageFeedback } from '@/components/orb-standalone/orb-message-feed
 import { OrbScrollToBottomFab } from '@/components/orb-standalone/orb-scroll-to-bottom-fab'
 import { OrbAgentPanel } from '@/components/orb-standalone/orb-agent-panel'
 import { OrbResidentialAgentsPanel } from '@/components/orb-standalone/orb-residential-agents-panel'
-import { OrbDocumentPanel } from '@/components/orb-standalone/orb-document-panel'
-import { OrbShiftBuilderPanel } from '@/components/orb-standalone/shift-builder/orb-shift-builder-panel'
 import { OrbDocumentContextPanel } from '@/components/orb-standalone/orb-document-context-panel'
-import { OrbSavedOutputsPanel } from '@/components/orb-standalone/orb-saved-outputs-panel'
-import { OrbKnowledgeLibraryPanel } from '@/components/orb-standalone/orb-knowledge-library'
-import { OrbTemplatesPanel } from '@/components/orb-standalone/orb-templates-panel'
 import type { OrbRecordingLibraryAction } from '@/components/orb/recording/OrbRecordingLibraryCards'
 import {
   convergedHandoffToOrbWrite,
@@ -99,19 +95,13 @@ import { OrbToolsPanel } from '@/components/orb-standalone/orb-tools-panel'
 import { OrbReviewPanel } from '@/components/orb-standalone/orb-review-panel'
 import { OrbSkillsPanel } from '@/components/orb-standalone/orb-skills-panel'
 import type { OrbSkillDefinition } from '@/lib/orb/orb-skills-catalog'
-import { OrbDictateStation } from '@/components/orb-standalone/orb-dictate-station'
-import { OrbWriteStandalonePanel } from '@/components/orb-write/orb-write-standalone-panel'
 import {
   OrbWriteTemplatePicker,
   type OrbWriteTemplateApplyMode
 } from '@/components/orb-write/orb-write-template-picker'
-import { OrbVoiceStation } from '@/components/orb-standalone/orb-voice-station'
 import type { OrbDictateNoteType } from '@/lib/orb/dictate/orb-dictate-types'
 import type { OrbComposerPlusAction } from '@/components/orb-standalone/orb-composer-plus-menu'
-import {
-  OrbStandaloneSettingsPanel,
-  type OrbSettingsSectionId
-} from '@/components/orb-standalone/orb-standalone-settings-panel'
+import type { OrbSettingsSectionId } from '@/components/orb-standalone/orb-standalone-settings-panel'
 import {
   ORB_TOOL_TO_PANEL,
   type OrbStandalonePanel
@@ -123,7 +113,6 @@ import { OrbAccountMenu, type OrbAccountMenuSettingsSection } from '@/components
 import { ORB_MOBILE_SHELL_CLASS } from '@/components/orb-residential/orb-mobile-shell'
 import { OrbAccountModal } from '@/components/orb-standalone/orb-account-modal'
 import { OrbAdultProfileDrawer } from '@/components/orb-standalone/orb-adult-profile-drawer'
-import { OrbBillingModal } from '@/components/orb-standalone/orb-billing-modal'
 import { OrbLayout, OrbMobileChatHeader } from '@/components/orb/orb-layout'
 import { GlassOrbMark } from '@/components/orb-residential/ui/glass-orb-mark'
 import { OrbStandaloneSidebar } from '@/components/orb-standalone/orb-standalone-sidebar'
@@ -305,6 +294,67 @@ import {
   type OrbDocumentIntelligenceResult,
   type OrbDocumentLens
 } from '@/lib/orb/document-intelligence'
+
+const OrbKnowledgeLibraryPanel = dynamic(
+  () =>
+    import('@/components/orb-standalone/orb-knowledge-library').then(
+      (mod) => mod.OrbKnowledgeLibraryPanel
+    ),
+  { loading: () => null, ssr: false }
+)
+const OrbTemplatesPanel = dynamic(
+  () =>
+    import('@/components/orb-standalone/orb-templates-panel').then((mod) => mod.OrbTemplatesPanel),
+  { loading: () => null, ssr: false }
+)
+const OrbSavedOutputsPanel = dynamic(
+  () =>
+    import('@/components/orb-standalone/orb-saved-outputs-panel').then(
+      (mod) => mod.OrbSavedOutputsPanel
+    ),
+  { loading: () => null, ssr: false }
+)
+const OrbDocumentPanel = dynamic(
+  () =>
+    import('@/components/orb-standalone/orb-document-panel').then((mod) => mod.OrbDocumentPanel),
+  { loading: () => null, ssr: false }
+)
+const OrbShiftBuilderPanel = dynamic(
+  () =>
+    import('@/components/orb-standalone/shift-builder/orb-shift-builder-panel').then(
+      (mod) => mod.OrbShiftBuilderPanel
+    ),
+  { loading: () => null, ssr: false }
+)
+const OrbVoiceStation = dynamic(
+  () =>
+    import('@/components/orb-standalone/orb-voice-station').then((mod) => mod.OrbVoiceStation),
+  { loading: () => null, ssr: false }
+)
+const OrbDictateStation = dynamic(
+  () =>
+    import('@/components/orb-standalone/orb-dictate-station').then((mod) => mod.OrbDictateStation),
+  { loading: () => null, ssr: false }
+)
+const OrbWriteStandalonePanel = dynamic(
+  () =>
+    import('@/components/orb-write/orb-write-standalone-panel').then(
+      (mod) => mod.OrbWriteStandalonePanel
+    ),
+  { loading: () => null, ssr: false }
+)
+const OrbBillingModal = dynamic(
+  () =>
+    import('@/components/orb-standalone/orb-billing-modal').then((mod) => mod.OrbBillingModal),
+  { loading: () => null, ssr: false }
+)
+const OrbStandaloneSettingsPanel = dynamic(
+  () =>
+    import('@/components/orb-standalone/orb-standalone-settings-panel').then(
+      (mod) => mod.OrbStandaloneSettingsPanel
+    ),
+  { loading: () => null, ssr: false }
+)
 
 /** Push-to-talk voice with reflective pacing — no passive listening. */
 const STANDALONE_ORB_VOICE_CAPTURE_ENABLED = true

@@ -14,7 +14,7 @@ import {
   Upload
 } from 'lucide-react'
 import { ORB_COMPOSER_UPLOAD_BOUNDARY_LINES } from '@/lib/orb/orb-composer-attachments'
-import { ORB_COMPOSER_UPLOAD_PLUS_ACTIONS } from '@/lib/orb/orb-foundation-capabilities'
+import { ORB_COMPOSER_UPLOAD_PLUS_ACTIONS } from '@/lib/orb/orb-composer-upload-actions'
 import { ORB_RESIDENTIAL_STATION_DEFINITIONS } from '@/lib/orb/orb-residential-stations'
 
 export type OrbComposerPlusAction =

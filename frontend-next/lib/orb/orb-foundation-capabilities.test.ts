@@ -136,7 +136,7 @@ describe('orb foundation build guard', () => {
   it('desktop plus menu exposes upload and ORB tool actions', () => {
     const menu = readFileSync(join(root, 'components/orb-standalone/orb-composer-plus-menu.tsx'), 'utf8')
     const composer = readFileSync(join(root, 'components/orb-standalone/orb-standalone-composer.tsx'), 'utf8')
-    assert.match(menu, /ORB_COMPOSER_UPLOAD_PLUS_ACTIONS/)
+    assert.match(menu, /orb-composer-upload-actions/)
     assert.match(menu, /take_photo/)
     assert.match(menu, /photo_library/)
     assert.match(menu, /choose_files/)
@@ -144,5 +144,12 @@ describe('orb foundation build guard', () => {
     assert.match(menu, /orb_write/)
     assert.match(composer, /handleComposerToolSelect/)
     assert.match(composer, /OrbComposerPlusMenu/)
+  })
+
+  it('lightweight upload actions module exists separately from foundation registry', () => {
+    assert.ok(existsSync(join(root, 'lib/orb/orb-composer-upload-actions.ts')))
+    const uploadActions = readFileSync(join(root, 'lib/orb/orb-composer-upload-actions.ts'), 'utf8')
+    assert.doesNotMatch(uploadActions, /ORB_FOUNDATION_CAPABILITIES/)
+    assert.doesNotMatch(uploadActions, /orb-privacy-capability-evidence/)
   })
 })

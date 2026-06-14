@@ -19,7 +19,7 @@ import {
 import type { OrbComposerPlusAction } from '@/components/orb-standalone/orb-composer-plus-menu'
 import { traceOrbComposerInteraction } from '@/lib/orb/orb-composer-interaction-trace'
 import { ORB_COMPOSER_UPLOAD_BOUNDARY_LINES } from '@/lib/orb/orb-composer-attachments'
-import { ORB_COMPOSER_UPLOAD_PLUS_ACTIONS } from '@/lib/orb/orb-foundation-capabilities'
+import { ORB_COMPOSER_UPLOAD_PLUS_ACTIONS } from '@/lib/orb/orb-composer-upload-actions'
 import { ORB_RESIDENTIAL_STATION_DEFINITIONS } from '@/lib/orb/orb-residential-stations'
 
 const UPLOAD_ICON_BY_ACTION = {

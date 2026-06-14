@@ -13,7 +13,14 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   experimental: {
     // Reduce peak webpack memory on constrained hosts (e.g. Render starter builds).
-    memoryBasedWorkersCount: true
+    memoryBasedWorkersCount: true,
+    webpackMemoryOptimizations: true
+  },
+  modularizeImports: {
+    'lucide-react': {
+      transform: 'lucide-react/dist/esm/icons/{{kebabCase member}}',
+      skipDefaultConversion: true
+    }
   },
   env: {
     NEXT_PUBLIC_ORB_BUILD_TIMESTAMP:
