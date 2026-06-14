@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react'
 
-const MOBILE_MAX_WIDTH_PX = 768
+/** Aligns with `orb-mobile.css` (`max-width: 1023px`) and Tailwind `lg` (1024px). */
+export const MOBILE_MAX_WIDTH_PX = 1024
 const TABLET_MAX_WIDTH_PX = 1024
 
 function readViewportWidth(): number {
@@ -21,7 +22,7 @@ export type OrbResponsiveSnapshot = {
 
 function snapshotFromWidth(width: number): OrbResponsiveSnapshot {
   const isMobile = width < MOBILE_MAX_WIDTH_PX
-  const isTablet = width >= MOBILE_MAX_WIDTH_PX && width < TABLET_MAX_WIDTH_PX
+  const isTablet = isMobile
   const isDesktop = width >= TABLET_MAX_WIDTH_PX
   return {
     isMobile,

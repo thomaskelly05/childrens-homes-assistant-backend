@@ -4,6 +4,7 @@ import { describe, it } from 'node:test'
 import {
   ORB_APPEARANCE_MIGRATION_KEY,
   ORB_APPEARANCE_STORAGE_KEY,
+  ORB_RESIDENTIAL_APPEARANCE_MIGRATION_KEY,
   ORB_SYSTEM_DARK_START_HOUR,
   ORB_SYSTEM_LIGHT_START_HOUR,
   ORB_APPEARANCE_BOOTSTRAP_SCRIPT,
@@ -63,6 +64,20 @@ describe('orb appearance', () => {
       assert.equal(readOrbAppearanceMode(), 'dark')
       writeOrbAppearanceMode('light')
       assert.equal(bag[ORB_APPEARANCE_STORAGE_KEY], 'light')
+    } finally {
+      Reflect.deleteProperty(globalThis, 'localStorage')
+      Reflect.deleteProperty(globalThis, 'window')
+    }
+  })
+
+  it('persists residential appearance after reload', () => {
+    const bag = mockBrowserStorage()
+    try {
+      bag[ORB_RESIDENTIAL_APPEARANCE_MIGRATION_KEY] = 'done'
+      writeOrbAppearanceMode('dark')
+      assert.equal(readOrbAppearanceMode({ residential: true }), 'dark')
+      writeOrbAppearanceMode('system')
+      assert.equal(readOrbAppearanceMode({ residential: true }), 'system')
     } finally {
       Reflect.deleteProperty(globalThis, 'localStorage')
       Reflect.deleteProperty(globalThis, 'window')

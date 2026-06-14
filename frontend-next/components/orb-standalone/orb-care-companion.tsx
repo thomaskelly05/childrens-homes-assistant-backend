@@ -599,10 +599,14 @@ function orbErrorCallToAction(message: string, className = 'mt-3') {
 export function OrbCareCompanion({ residentialSurface = false }: { residentialSurface?: boolean } = {}) {
   const { status, csrfReady, refreshSession, logout } = useAuth()
   const account = useOrbAccountState()
-  const subscriptionStatusLabel = useMemo(
-    () => (account.isSignedIn ? getOrbBillingDisplayStatus(account.access).headline : null),
-    [account.access, account.isSignedIn]
-  )
+  const subscriptionStatusLabel = useMemo(() => {
+    if (!account.isSignedIn) return null
+    return getOrbBillingDisplayStatus(account.access, {
+      isLoading: account.accessStatus === 'loading' || (account.isLoading && !account.access),
+      hasError: account.accessStatus === 'error',
+      isSignedIn: true
+    }).headline
+  }, [account.access, account.accessStatus, account.isLoading, account.isSignedIn])
   const sessionGate = useOrbSessionGate()
   const orbSessionReady = account.isSignedIn && csrfReady && !account.isLoading
   const mounted = useMounted()
@@ -654,7 +658,9 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
   const [speakingMessageId, setSpeakingMessageId] = useState<string | null>(null)
   const [profilePickerOpen, setProfilePickerOpen] = useState(false)
   const [savedOutputsCount, setSavedOutputsCount] = useState(0)
-  const [a11yPrefs, setA11yPrefs] = useState<StandaloneOrbAccessibilityPreferences>(defaultStandaloneOrbAccessibility)
+  const [a11yPrefs, setA11yPrefs] = useState<StandaloneOrbAccessibilityPreferences>(() =>
+    loadStandaloneOrbAccessibility()
+  )
   const [fallbackConversationId] = useState('standalone-session')
   const [agentPanelPrompt, setAgentPanelPrompt] = useState('')
   const [agentPanelType, setAgentPanelType] = useState<string | undefined>()
@@ -3357,6 +3363,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
       data-orb-appearance-mode={appearanceMode}
       data-orb-system-theme={effectiveTheme}
       data-orb-mobile-shell={isMobileViewport ? 'true' : undefined}
+      data-orb-mobile-surface={isMobileViewport && residentialSurface ? 'true' : undefined}
       data-orb-chat-layout={isMobileViewport ? 'mobile' : 'desktop'}
       data-orb-active-panel={activePanel || 'none'}
       data-orb-close-all-panels
@@ -3639,7 +3646,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
           )
         }
         mobileHeader={
-          residentialSurface ? (
+          residentialSurface && !activeWorkspacePanel ? (
             <OrbMobileChatHeader
               onOpenMenu={() => setSidebarOpen(true)}
               onOpenAccount={(anchor) => {
@@ -4451,6 +4458,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
           planLabel={account.planName}
           subscriptionActive={account.hasConfirmedAccess}
           access={account.access}
+          accessStatus={account.accessStatus}
           savedOutputsCount={savedOutputsCount}
           role={account.role}
           passkeyEnabled={account.hasPasskeys}

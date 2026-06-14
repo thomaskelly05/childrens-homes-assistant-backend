@@ -23,6 +23,12 @@ export function formatOrbPlanLabel(planIdOrName: string | null | undefined): str
   return raw
 }
 
+export type OrbBillingStatusContext = {
+  isLoading?: boolean
+  hasError?: boolean
+  isSignedIn?: boolean
+}
+
 export type OrbBillingDisplayStatus = {
   headline: string
   subscriptionLabel: string
@@ -32,45 +38,106 @@ export type OrbBillingDisplayStatus = {
   showManageBilling: boolean
   showTrialCta: boolean
   isPaidActive: boolean
+  statusKind: OrbBillingStatusKind
 }
+
+export type OrbBillingStatusKind =
+  | 'loading'
+  | 'unavailable'
+  | 'unable_to_verify'
+  | 'active'
+  | 'trial_active'
+  | 'past_due'
+  | 'cancelled'
+  | 'incomplete'
+  | 'trial_ended'
+  | 'inactive'
+
+const PAID_SUBSCRIPTION_STATUSES = new Set(['active', 'trialing'])
 
 export function isPaidSubscriptionActive(access: OrbAccessPayload | null): boolean {
   if (!access) return false
-  const status = (access.subscription?.status || '').toLowerCase()
-  if (access.subscription?.active && status === 'active') return true
-  return access.access_state === 'subscription_active' && Boolean(access.subscription?.active)
-}
-
-export function formatOrbBillingHeadline(access: OrbAccessPayload | null): string {
-  if (!access) return 'Loading…'
-  if (isPaidSubscriptionActive(access)) return 'Active'
-  if (access.trial?.active) {
-    const days =
-      access.trial.days_left != null ? ` · ${access.trial.days_left} days left` : ''
-    return `Trial active${days}`
-  }
   const state = access.access_state
-  if (state === 'subscription_past_due' || access.subscription?.status === 'past_due') {
-    return 'Past due'
+  if (state === 'admin_bypass' || state === 'founding_plan_bypass') return true
+  const status = (access.subscription?.status || '').toLowerCase()
+  if (access.subscription?.active) {
+    if (!status || PAID_SUBSCRIPTION_STATUSES.has(status)) return true
   }
-  if (state === 'subscription_cancelled') return 'Cancelled'
-  if (state === 'subscription_incomplete') return 'Incomplete'
-  if (access.trial?.available === false && !access.can_use_orb) return 'Trial ended'
-  return 'Inactive'
+  if (state === 'subscription_active') {
+    return Boolean(access.subscription?.active ?? true)
+  }
+  return false
 }
 
-export function formatOrbSubscriptionLabel(access: OrbAccessPayload | null): string {
-  if (!access) return '—'
-  if (isPaidSubscriptionActive(access)) return 'Active'
-  if (access.trial?.active) {
+function resolveBillingStatusKind(
+  access: OrbAccessPayload | null,
+  context?: OrbBillingStatusContext
+): OrbBillingStatusKind {
+  if (context?.isLoading) return 'loading'
+  if (context?.hasError) return 'unavailable'
+  if (!access) return context?.isSignedIn === false ? 'inactive' : 'unable_to_verify'
+  if (isPaidSubscriptionActive(access)) return 'active'
+  if (access.trial?.active) return 'trial_active'
+  const state = access.access_state
+  if (state === 'subscription_past_due' || access.subscription?.status === 'past_due') return 'past_due'
+  if (state === 'subscription_cancelled') return 'cancelled'
+  if (state === 'subscription_incomplete') return 'incomplete'
+  if (state === 'access_check_unavailable') return 'unavailable'
+  if (access.trial?.available === false && !access.can_use_orb) return 'trial_ended'
+  return 'inactive'
+}
+
+export function formatOrbBillingHeadline(
+  access: OrbAccessPayload | null,
+  context?: OrbBillingStatusContext
+): string {
+  const kind = resolveBillingStatusKind(access, context)
+  switch (kind) {
+    case 'loading':
+      return 'Syncing…'
+    case 'unavailable':
+      return 'Status unavailable'
+    case 'unable_to_verify':
+      return 'Unable to verify'
+    case 'active':
+      return 'Active'
+    case 'trial_active': {
+      const days =
+        access?.trial?.days_left != null ? ` · ${access.trial.days_left} days left` : ''
+      return `Trial active${days}`
+    }
+    case 'past_due':
+      return 'Past due'
+    case 'cancelled':
+      return 'Cancelled'
+    case 'incomplete':
+      return 'Incomplete'
+    case 'trial_ended':
+      return 'Trial ended'
+    case 'inactive':
+      return 'Inactive'
+    default:
+      return 'Unable to verify'
+  }
+}
+
+export function formatOrbSubscriptionLabel(
+  access: OrbAccessPayload | null,
+  context?: OrbBillingStatusContext
+): string {
+  const kind = resolveBillingStatusKind(access, context)
+  if (kind === 'loading') return 'Syncing…'
+  if (kind === 'unavailable') return 'Status unavailable'
+  if (kind === 'unable_to_verify') return 'Unable to verify'
+  if (kind === 'active') return 'Active'
+  if (kind === 'trial_active') {
     const days =
-      access.trial.days_left != null ? ` · ${access.trial.days_left} days left` : ''
+      access?.trial?.days_left != null ? ` · ${access.trial.days_left} days left` : ''
     return `Trial active${days}`
   }
-  if (access.trial?.available === false && !access.subscription?.active) return 'Trial ended'
-  const raw = access.subscription?.status
-  if (raw) return raw.replace(/_/g, ' ')
-  return formatOrbBillingHeadline(access)
+  if (kind === 'trial_ended') return 'Trial ended'
+  if (access?.subscription?.status) return access.subscription.status.replace(/_/g, ' ')
+  return formatOrbBillingHeadline(access, context)
 }
 
 export function shouldShowTrialChip(access: OrbAccessPayload | null): boolean {
@@ -78,16 +145,23 @@ export function shouldShowTrialChip(access: OrbAccessPayload | null): boolean {
   return !isPaidSubscriptionActive(access)
 }
 
-export function getOrbBillingDisplayStatus(access: OrbAccessPayload | null): OrbBillingDisplayStatus {
+export function getOrbBillingDisplayStatus(
+  access: OrbAccessPayload | null,
+  context?: OrbBillingStatusContext
+): OrbBillingDisplayStatus {
+  const statusKind = resolveBillingStatusKind(access, context)
   const paidActive = isPaidSubscriptionActive(access)
   const trialActive = Boolean(access?.trial?.active) && !paidActive
-  const showUpgrade = Boolean(access) && !paidActive && !trialActive
-  const showManageBilling = Boolean(access) && (paidActive || trialActive)
-  const showTrialCta = Boolean(access?.trial?.available && !access?.can_use_orb && !paidActive)
+  const confirmedPayload = Boolean(access) && statusKind !== 'loading' && statusKind !== 'unavailable' && statusKind !== 'unable_to_verify'
+  const showUpgrade = confirmedPayload && !paidActive && !trialActive
+  const showManageBilling = confirmedPayload && (paidActive || trialActive)
+  const showTrialCta = Boolean(
+    access?.trial?.available && !access?.can_use_orb && !paidActive && confirmedPayload
+  )
 
   return {
-    headline: formatOrbBillingHeadline(access),
-    subscriptionLabel: formatOrbSubscriptionLabel(access),
+    headline: formatOrbBillingHeadline(access, context),
+    subscriptionLabel: formatOrbSubscriptionLabel(access, context),
     showTrialChip: shouldShowTrialChip(access),
     trialChipLabel: trialActive
       ? `Trial active${
@@ -97,6 +171,7 @@ export function getOrbBillingDisplayStatus(access: OrbAccessPayload | null): Orb
     showUpgrade,
     showManageBilling: paidActive || showManageBilling,
     showTrialCta,
-    isPaidActive: paidActive
+    isPaidActive: paidActive,
+    statusKind
   }
 }

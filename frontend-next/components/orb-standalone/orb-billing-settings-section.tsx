@@ -29,19 +29,33 @@ export function OrbBillingSettingsSection({
   const [access, setAccess] = useState<OrbAccessPayload | null>(null)
   const [meter, setMeter] = useState<Record<string, unknown> | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [loadFailed, setLoadFailed] = useState(false)
 
   useEffect(() => {
     Promise.all([fetchOrbAccess(), fetchOrbBillingMeter().catch(() => null)])
       .then(([accessPayload, meterPayload]) => {
         setAccess(accessPayload)
         setMeter(meterPayload)
+        setLoadFailed(false)
       })
-      .catch(() => setError('Billing information could not be loaded.'))
+      .catch(() => {
+        setLoadFailed(true)
+        setError('Billing information could not be loaded.')
+      })
+      .finally(() => setLoading(false))
   }, [])
 
   const stripeReady = Boolean(access?.billing?.stripe_configured)
-  const display = useMemo(() => getOrbBillingDisplayStatus(access), [access])
+  const display = useMemo(
+    () =>
+      getOrbBillingDisplayStatus(access, {
+        isLoading: loading && !access,
+        hasError: loadFailed || Boolean(error),
+        isSignedIn: true
+      }),
+    [access, error, loadFailed, loading]
+  )
   const usageRequests = meter?.total_requests != null ? String(meter.total_requests) : '0'
   const displayName = userName?.trim() || userEmail?.trim() || 'Your account'
   const email = userEmail?.trim() || null
