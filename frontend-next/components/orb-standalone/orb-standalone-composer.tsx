@@ -209,7 +209,7 @@ export function OrbStandaloneComposer({
     const input = inputRef?.current ?? fallbackInputRef.current
     if (!input || !residentialSurface) return
     input.style.height = 'auto'
-    const maxHeight = typeof window !== 'undefined' && window.innerWidth < 768 ? 140 : 220
+    const maxHeight = typeof window !== 'undefined' && window.innerWidth < 1024 ? 140 : 220
     input.style.height = `${Math.min(input.scrollHeight, maxHeight)}px`
   }
 

@@ -30,6 +30,7 @@ export type OrbAccountMenuProps = {
   planLabel?: string | null
   subscriptionActive?: boolean
   access?: import('@/lib/orb/orb-billing-client').OrbAccessPayload | null
+  accessStatus?: 'idle' | 'loading' | 'ready' | 'error'
   savedOutputsCount?: number
   role?: string | null
   passkeyEnabled?: boolean
@@ -97,6 +98,7 @@ export function OrbAccountMenu({
   planLabel,
   subscriptionActive = false,
   access = null,
+  accessStatus = 'idle',
   savedOutputsCount = 0,
   role = null,
   onOpenProfile,
@@ -110,7 +112,11 @@ export function OrbAccountMenu({
 
   const displayName = userName?.trim() || profile?.name?.trim() || 'Your account'
   const email = userEmail?.trim() || null
-  const billingDisplay = getOrbBillingDisplayStatus(access)
+  const billingDisplay = getOrbBillingDisplayStatus(access, {
+    isLoading: accessStatus === 'loading' || (accessStatus === 'idle' && !access),
+    hasError: accessStatus === 'error',
+    isSignedIn: true
+  })
   const subscriptionStatus = billingDisplay.headline
   const roleLabel = formatRoleLabel(profile, role)
   const planDisplay = formatOrbPlanLabel(planLabel?.trim() || access?.subscription?.plan_name)

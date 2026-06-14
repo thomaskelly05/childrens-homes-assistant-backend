@@ -128,7 +128,7 @@ export function OrbResidentialComposerToolsSheet({
         if (event.target === event.currentTarget) onClose()
       }}
     >
-      <div className="max-h-[min(78dvh,32rem)] w-full max-w-lg overflow-y-auto rounded-t-2xl border border-[var(--orb-line)] bg-[var(--orb-surface-elevated)] p-3 shadow-2xl sm:rounded-2xl">
+      <div className="max-h-[min(78dvh,32rem)] w-full max-w-lg overflow-y-auto rounded-t-2xl border border-[var(--orb-line)] bg-[var(--orb-surface-elevated)] p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-2xl sm:rounded-2xl">
         <div className="mb-2 flex items-center justify-between gap-2">
           <h2 className="text-sm font-semibold text-[var(--orb-foreground)]">Add to chat</h2>
           <button

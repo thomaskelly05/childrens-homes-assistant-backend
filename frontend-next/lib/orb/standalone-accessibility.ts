@@ -25,7 +25,8 @@ export function loadStandaloneOrbAccessibility(): StandaloneOrbAccessibilityPref
   try {
     const raw = window.localStorage.getItem(STANDALONE_ORB_A11Y_STORAGE_KEY)
     if (!raw) return defaultStandaloneOrbAccessibility
-    return { ...defaultStandaloneOrbAccessibility, ...JSON.parse(raw) }
+    const parsed = JSON.parse(raw) as Partial<StandaloneOrbAccessibilityPreferences>
+    return { ...defaultStandaloneOrbAccessibility, ...parsed }
   } catch {
     return defaultStandaloneOrbAccessibility
   }
@@ -33,7 +34,11 @@ export function loadStandaloneOrbAccessibility(): StandaloneOrbAccessibilityPref
 
 export function saveStandaloneOrbAccessibility(prefs: StandaloneOrbAccessibilityPreferences) {
   if (typeof window === 'undefined') return
-  window.localStorage.setItem(STANDALONE_ORB_A11Y_STORAGE_KEY, JSON.stringify(prefs))
+  try {
+    window.localStorage.setItem(STANDALONE_ORB_A11Y_STORAGE_KEY, JSON.stringify(prefs))
+  } catch {
+    /* localStorage unavailable — preferences stay in memory for this session */
+  }
 }
 
 export function standaloneOrbAccessibilityClassNames(

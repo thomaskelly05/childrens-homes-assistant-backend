@@ -162,7 +162,7 @@ describe('ORB mobile premium Dictate copy', () => {
     const station = readComponent('components/orb-standalone/orb-dictate-station.tsx')
     const mobile = readComponent('components/orb-standalone/orb-dictate-mobile-experience.tsx')
 
-    assert.match(hook, /MOBILE_MAX_WIDTH_PX = 768/)
+    assert.match(hook, /MOBILE_MAX_WIDTH_PX = 1024/)
     assert.match(hook, /width < MOBILE_MAX_WIDTH_PX/)
     assert.match(hook, /orientationchange/)
     assert.match(station, /data-orb-dictate-layout=\{/)

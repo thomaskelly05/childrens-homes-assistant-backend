@@ -2156,6 +2156,66 @@
   [data-orb-dictate-capture-panel='true'] [data-orb-dictate-mobile-secondary] {
     margin-top: 0.35rem !important;
   }
+
+  /* ORB Residential unified mobile surface — one continuous app screen */
+  .orb-chat-layout[data-orb-mobile-surface='true'] .orb-chat-main {
+    background: var(--orb-page-bg, #f7fbff) !important;
+  }
+
+  .orb-chat-layout[data-orb-mobile-surface='true'].orb-theme-dark .orb-chat-main,
+  html[data-orb-theme='dark'] .orb-chat-layout[data-orb-mobile-surface='true'] .orb-chat-main {
+    background: var(--orb-page-bg, #05070d) !important;
+  }
+
+  .orb-chat-layout[data-orb-mobile-surface='true'] .orb-main-workspace {
+    border-radius: 0 !important;
+    box-shadow: none !important;
+  }
+
+  .orb-chat-layout[data-orb-mobile-surface='true'] .orb-main-workspace .orb-mobile-workspace-card,
+  .orb-chat-layout[data-orb-mobile-surface='true'] .orb-main-workspace .orb-doc-glass-card,
+  .orb-chat-layout[data-orb-mobile-surface='true'] .orb-main-workspace .orb-premium-settings-card,
+  .orb-chat-layout[data-orb-mobile-surface='true'] [data-orb-billing-modal] .orb-billing-card {
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    background: transparent !important;
+  }
+
+  .orb-chat-layout[data-orb-mobile-surface='true'] [data-orb-billing-modal] .orb-billing-card--flat {
+    border-bottom: 1px solid var(--orb-mobile-ws-card-border, var(--orb-line)) !important;
+    padding-bottom: 0.75rem !important;
+  }
+
+  .orb-chat-layout[data-orb-mobile-surface='true'] [data-orb-billing-modal][data-orb-billing-mobile-layout='compact'] {
+    padding-bottom: 0 !important;
+  }
+
+  .orb-chat-layout[data-orb-mobile-surface='true'] [data-orb-billing-sticky-footer] {
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
+  }
+
+  .orb-chat-layout[data-orb-mobile-surface='true'] .orb-sidebar-drawer,
+  .orb-chat-layout[data-orb-mobile-surface='true'] .orb-residential-sidebar {
+    background: var(--orb-mobile-ws-panel, var(--orb-page-bg)) !important;
+    border-right-color: var(--orb-mobile-ws-card-border, var(--orb-line)) !important;
+  }
+
+  .orb-chat-layout[data-orb-mobile-surface='true'] .orb-account-menu {
+    border-color: var(--orb-mobile-ws-card-border, var(--orb-line)) !important;
+    background: var(--orb-mobile-ws-card, var(--orb-surface-elevated)) !important;
+    box-shadow: var(--orb-res-shadow, 0 12px 32px rgba(15, 23, 42, 0.12)) !important;
+  }
+
+  [data-orb-billing-status-pill][data-orb-billing-status-kind='loading'],
+  [data-orb-billing-status-pill][data-orb-billing-status-kind='unavailable'],
+  [data-orb-billing-status-pill][data-orb-billing-status-kind='unable_to_verify'] {
+    border-color: var(--orb-line) !important;
+    background: var(--orb-surface-elevated) !important;
+    color: var(--orb-muted) !important;
+  }
 }
 
 @media (max-width: 640px) {

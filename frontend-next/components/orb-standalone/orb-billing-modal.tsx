@@ -74,6 +74,7 @@ export function OrbBillingModal({
   const [loading, setLoading] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
   const [checkoutOpening, setCheckoutOpening] = useState(false)
+  const [loadFailed, setLoadFailed] = useState(false)
   const [monthlyCapPounds, setMonthlyCapPounds] = useState('')
   const [warningPercent, setWarningPercent] = useState('80')
   const [allowOverage, setAllowOverage] = useState(false)
@@ -100,9 +101,11 @@ export function OrbBillingModal({
     if (!open) return
     setError(null)
     setNotice(null)
+    setLoadFailed(false)
     setLoading(true)
     void loadBilling()
       .catch(() => {
+        setLoadFailed(true)
         setError(
           'Checkout is not available right now. Please try again shortly or contact support.'
         )
@@ -111,7 +114,15 @@ export function OrbBillingModal({
   }, [open])
 
   const stripeReady = Boolean(access?.billing?.stripe_configured)
-  const display = useMemo(() => getOrbBillingDisplayStatus(access), [access])
+  const display = useMemo(
+    () =>
+      getOrbBillingDisplayStatus(access, {
+        isLoading: loading && !access,
+        hasError: loadFailed || Boolean(error),
+        isSignedIn: true
+      }),
+    [access, error, loadFailed, loading]
+  )
   const planName = formatOrbPlanLabel(access?.subscription?.plan_name)
   const displayName = userName?.trim() || userEmail?.trim() || 'Your account'
   const email = userEmail?.trim() || null
@@ -231,7 +242,8 @@ export function OrbBillingModal({
   const actionBusy = loading || refreshing || checkoutOpening
   const usageRequests = meter?.total_requests != null ? String(meter.total_requests) : '0'
   const showMobileStickyActions =
-    display.showTrialCta || display.showUpgrade || display.showManageBilling
+    !loadFailed &&
+    (display.showTrialCta || display.showUpgrade || display.showManageBilling)
 
   return (
     <OrbAppModal
@@ -267,6 +279,7 @@ export function OrbBillingModal({
                   : 'border-amber-300/40 bg-amber-500/12 text-amber-800'
             }`}
             data-orb-billing-status-pill
+            data-orb-billing-status-kind={display.statusKind}
           >
             {display.headline}
           </span>
