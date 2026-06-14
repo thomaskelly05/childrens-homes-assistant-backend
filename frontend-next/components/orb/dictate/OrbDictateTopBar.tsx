@@ -5,6 +5,7 @@ import { Maximize2, Mic, Minimize2, Pause, PenLine, Play, Sparkles, Square } fro
 import { OrbDictatePanelLayoutControl } from '@/components/orb/dictate/OrbDictatePanelLayoutControl'
 import { OrbDictateTemplateSelector } from '@/components/orb/dictate/OrbDictateTemplateSelector'
 import type { OrbDictatePanelLayout } from '@/lib/orb/dictate/orb-dictate-panel-layout'
+import { ORB_RESIDENTIAL_DICTATE_MAGIC_NOTES_COPY } from '@/lib/orb/orb-residential-copy'
 import type { OrbDictateStudioTemplate } from '@/lib/orb/dictate/orb-dictate-studio-templates'
 
 export type OrbDictatePrimaryAction = 'analyse' | 'generate' | 'disabled'
@@ -93,8 +94,14 @@ export function OrbDictateTopBar({
             className="hidden shrink-0 pt-1 text-sm font-semibold tracking-tight text-[var(--orb-foreground)] sm:block"
             data-orb-dictate-title
           >
-            ORB Dictate
+            {ORB_RESIDENTIAL_DICTATE_MAGIC_NOTES_COPY.title}
           </h2>
+          <p
+            className="hidden max-w-xs text-[11px] leading-snug text-[var(--orb-muted)] lg:block"
+            data-orb-dictate-magic-notes-subtitle
+          >
+            {ORB_RESIDENTIAL_DICTATE_MAGIC_NOTES_COPY.subtitle}
+          </p>
           <OrbDictateTemplateSelector
             selectedTemplateId={selectedTemplateId}
             onTemplateChange={onTemplateChange}
@@ -132,7 +139,7 @@ export function OrbDictateTopBar({
               onClick={onStartRecording}
             >
               <Mic className="h-4 w-4" aria-hidden />
-              Record
+              Start recording
             </button>
           ) : captureStarting ? (
             <div

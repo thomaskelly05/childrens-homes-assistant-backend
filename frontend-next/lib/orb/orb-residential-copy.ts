@@ -185,9 +185,8 @@ export const ORB_RESIDENTIAL_PRIMARY_STARTERS: ResidentialStarter[] = [
       'Help me reflect on an incident and prepare safer wording. I will describe what happened — support me with sequence, de-escalation, harm, notifications and follow-up.'
   },
   {
-    text: 'Safeguarding reflection',
-    mode: 'Safeguarding Thinking',
-    prompt: `Help me think through a safeguarding concern step by step — facts, risks, child${APOS}s voice, adult response and escalation.`
+    text: 'Key-work summary',
+    prompt: `Help me summarise key-work with the child${APOS}s voice, what was explored, agreements and next steps for adults.`
   },
   {
     text: 'Handover note',
@@ -195,17 +194,24 @@ export const ORB_RESIDENTIAL_PRIMARY_STARTERS: ResidentialStarter[] = [
       'Help me prepare a handover note for the next shift — key risks, presentation, health or medication, practical tasks and anything management should know.'
   },
   {
-    text: 'Prepare for inspection',
-    mode: 'Ofsted Lens',
-    prompt:
-      'Help me prepare inspection-ready evidence thinking — what happened, impact on the child, adult actions and follow-up.'
+    text: 'Safeguarding reflection',
+    mode: 'Safeguarding Thinking',
+    prompt: `Help me think through a safeguarding concern step by step — facts, risks, child${APOS}s voice, adult response and escalation.`
   },
   {
-    text: 'Review written practice',
-    prompt:
-      'Help me review written practice — clarity, child-centred wording, safeguarding boundaries and what could be stronger before I finalise.'
+    text: 'Prepare for supervision',
+    prompt: `Help me prepare for supervision — key cases, recording gaps, risks, child${APOS}s voice and what I need from my manager.`
   }
 ]
+
+/** Desktop Dictate “Magic Notes” copy — visual and UX tone without renaming the product globally. */
+export const ORB_RESIDENTIAL_DICTATE_MAGIC_NOTES_COPY = {
+  title: 'ORB Dictate',
+  subtitle: 'Turn rough speech, meetings and observations into safer notes.',
+  capturePrompt: 'Start with speech, paste notes or upload audio',
+  reviewHint: 'ORB will help check what may be missing.',
+  responsibility: 'Adult review required before use.'
+} as const
 
 /** Mobile first-view starters — three most useful actions on phone. */
 export const ORB_RESIDENTIAL_MOBILE_PRIMARY_STARTERS: ResidentialStarter[] = ORB_RESIDENTIAL_PRIMARY_STARTERS.slice(

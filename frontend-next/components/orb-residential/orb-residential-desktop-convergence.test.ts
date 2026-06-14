@@ -66,12 +66,12 @@ describe('ORB Residential desktop convergence sprint', () => {
     assert.match(presence, /orb-liquid-orb/)
     assert.match(desktop, /\[data-orb-residential-empty\][\s\S]*--orb-presence-size:\s*clamp\(9\.5rem/)
     assert.match(desktop, /desktop premium convergence pass/)
-    assert.match(companion, /orb-liquid-card/)
-    assert.match(companion, /data-orb-starter-groups/)
+    assert.match(companion, /data-orb-starter-primary-chips/)
+    assert.match(companion, /data-orb-starter-expanded-groups/)
     assert.doesNotMatch(companion, /orb-presence--hero[\s\S]*mobile-only/)
   })
 
-  it('desktop home uses liquid glass starter groups and composer without shield', () => {
+  it('desktop home uses calm starter chips and composer without shield', () => {
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
     const composer = read('components/orb-standalone/orb-standalone-composer.tsx')
     const desktop = read('app/orb/orb-desktop.css')
@@ -79,7 +79,7 @@ describe('ORB Residential desktop convergence sprint', () => {
     assert.match(companion, /data-orb-residential-empty/)
     assert.match(companion, /data-orb-empty-heading-desktop/)
     assert.match(companion, /ORB_RESIDENTIAL_BRAND_EMOTIONAL_LINE/)
-    assert.match(desktop, /\[data-orb-starter-groups\]/)
+    assert.match(desktop, /\[data-orb-starter-primary-chips\]/)
     assert.match(composer, /orb-liquid-composer/)
     assert.doesNotMatch(composer, /data-orb-privacy-guidance-trigger/)
     assert.match(composer, /data-testid="orb-standalone-composer"/)

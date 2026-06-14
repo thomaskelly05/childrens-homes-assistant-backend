@@ -5,6 +5,7 @@ import { Mic, Trash2 } from 'lucide-react'
 
 import { OrbDictateTranscriptSegmentsEditor } from '@/components/orb-standalone/orb-dictate-station-extras'
 import { OrbDictateSpeakerLabelling } from '@/components/orb/dictate/OrbDictateSpeakerLabelling'
+import { ORB_RESIDENTIAL_DICTATE_MAGIC_NOTES_COPY } from '@/lib/orb/orb-residential-copy'
 import type { OrbDictateParticipant, OrbDictateTranscriptSegment } from '@/lib/orb/dictate/orb-dictate-speaker'
 import { SPEAKER_BOUNDARY_COPY } from '@/lib/orb/dictate/orb-dictate-speaker-model'
 
@@ -76,9 +77,11 @@ export function OrbTranscriptPanel({
             data-orb-dictate-transcript-empty
           >
             <Mic className="mb-2 h-7 w-7 text-[var(--orb-primary)]/70" aria-hidden />
-            <p className="text-sm font-medium text-[var(--orb-foreground)]">Start with speech or paste notes</p>
+            <p className="text-sm font-medium text-[var(--orb-foreground)]" data-orb-dictate-capture-prompt>
+              {ORB_RESIDENTIAL_DICTATE_MAGIC_NOTES_COPY.capturePrompt}
+            </p>
             <p className="mt-1.5 max-w-sm text-xs leading-relaxed text-[var(--orb-muted)]">
-              Press Record above, or paste rough notes into the editor.
+              Press Start recording above, paste rough notes, or upload audio in advanced options.
             </p>
           </div>
         ) : null}

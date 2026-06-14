@@ -1172,7 +1172,27 @@ html[data-orb-residential='1'] .orb-chat-layout {
   html[data-orb-residential='1'] [data-orb-empty-starter-chips] {
     max-width: var(--orb-desktop-hero-starter-max) !important;
     width: 100%;
-    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  html[data-orb-residential='1'] [data-orb-starter-primary-chips] [data-orb-starter-pills] {
+    gap: 0.5rem;
+  }
+
+  html[data-orb-residential='1'] [data-orb-starter-primary-chips] .orb-starter-pill,
+  html[data-orb-residential='1'] [data-orb-starter-primary-chips] [data-orb-starter-pill='true'] {
+    border-width: 1px;
+    box-shadow: none !important;
+    background: transparent !important;
+    font-weight: 500;
+  }
+
+  html[data-orb-residential='1'] [data-orb-starter-expanded-groups] [data-orb-starter-group] {
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+    padding: 0;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
   }
 
   html[data-orb-residential='1'] [data-orb-more-examples] {
@@ -1551,13 +1571,13 @@ html[data-orb-residential='1'] .orb-chat-layout {
   }
 
   html[data-orb-residential='1'] [data-orb-starter-groups] [data-orb-starter-group] {
-    border-radius: 1.125rem;
-    border: 1px solid var(--orb-glass-border, var(--orb-premium-border));
-    background: var(--orb-glass-bg, var(--orb-premium-glass));
-    padding: 1rem 1.125rem;
-    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.12);
-    -webkit-backdrop-filter: blur(var(--orb-glass-blur, 18px)) saturate(150%);
-    backdrop-filter: blur(var(--orb-glass-blur, 18px)) saturate(150%);
+    border-radius: 0;
+    border: 0;
+    background: transparent;
+    padding: 0;
+    box-shadow: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
   }
 
   html[data-orb-residential='1'] [data-orb-starter-groups] [data-orb-starter-pill] {
@@ -1732,6 +1752,15 @@ html[data-orb-residential='1'] .orb-chat-layout {
   }
 
   /* Voice — immersive ORB atmosphere, calmer copy hierarchy */
+  html[data-orb-residential='1'] [data-orb-voice-station-content][data-orb-voice-desktop-spacious='true'] {
+    min-height: min(100%, calc(100dvh - 7rem));
+  }
+
+  html[data-orb-residential='1'] [data-orb-voice-station-content][data-orb-voice-desktop-spacious='true'] .orb-voice-station-content__scroll {
+    padding-top: clamp(1.5rem, 5vh, 3rem);
+    padding-bottom: clamp(1.25rem, 4vh, 2.5rem);
+  }
+
   html[data-orb-residential='1'] [data-orb-voice-station-content] {
     background: radial-gradient(
       ellipse 80% 55% at 50% 18%,
@@ -1741,8 +1770,23 @@ html[data-orb-residential='1'] .orb-chat-layout {
   }
 
   html[data-orb-residential='1'] [data-orb-voice-hero-stage] .orb-voice-companion {
-    --orb-voice-head-width: clamp(10.5rem, 16vw, 14.5rem);
-    --orb-voice-head-height: clamp(10.5rem, 16vw, 14.5rem);
+    --orb-voice-head-width: clamp(11.5rem, 18vw, 16rem);
+    --orb-voice-head-height: clamp(11.5rem, 18vw, 16rem);
+    margin-bottom: 0.75rem;
+  }
+
+  html[data-orb-residential='1'] [data-orb-voice-hero-stage] .orb-voice-hero-stage__headline {
+    margin-top: 0.75rem;
+    font-size: 0.9375rem;
+  }
+
+  html[data-orb-residential='1'] [data-orb-voice-hero-stage] .orb-voice-hero-stage__cta {
+    margin-top: 1.25rem;
+  }
+
+  html[data-orb-residential='1'] [data-orb-voice-hero-stage] .orb-voice-hero-stage__privacy {
+    margin-top: 1.5rem;
+    opacity: 0.88;
   }
 
   html[data-orb-residential='1'] [data-orb-voice-status-subline],
@@ -1776,6 +1820,14 @@ html[data-orb-residential='1'] .orb-chat-layout {
     padding: 0;
     font-size: 0.6875rem;
     opacity: 0.85;
+  }
+
+  /* Dictate — Magic Notes capture tone on desktop */
+  html[data-orb-residential='1'] [data-orb-dictate-magic-notes] [data-orb-dictate-transcript-empty] {
+    border-style: dashed;
+    border-color: color-mix(in srgb, var(--orb-royal-blue, #168bff) 22%, transparent);
+    background: color-mix(in srgb, var(--orb-surface) 55%, transparent);
+    padding: 2rem 1.5rem;
   }
 
   /* Dictate — premium capture bar, calm transcript/review panels */
@@ -1852,6 +1904,14 @@ html[data-orb-residential='1'] .orb-chat-layout {
     box-shadow: none;
   }
 
+  html[data-orb-residential='1'] [data-orb-settings-scroll] {
+    padding: 1.25rem 1.5rem;
+  }
+
+  html[data-orb-residential='1'] [data-orb-settings-panel] [data-orb-settings-section] {
+    max-width: 36rem;
+  }
+
   html[data-orb-residential='1'] .orb-appearance-segmented {
     margin-inline: auto;
   }
@@ -1863,9 +1923,17 @@ html[data-orb-residential='1'] .orb-chat-layout {
   }
 
   html[data-orb-residential='1'] [data-orb-billing-modal][data-orb-billing-desktop-layout='sheet'] {
-    display: grid;
+    display: block;
     gap: 0.875rem;
     padding: 1.25rem 1.5rem 1rem;
+  }
+
+  html[data-orb-residential='1'] [data-orb-billing-desktop-grid] {
+    width: 100%;
+  }
+
+  html[data-orb-residential='1'] [data-orb-billing-plan-card] {
+    width: 100%;
   }
 
   html[data-orb-residential='1'] [data-orb-billing-modal] .orb-billing-card {

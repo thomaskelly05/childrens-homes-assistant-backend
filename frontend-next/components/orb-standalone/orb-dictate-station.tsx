@@ -1338,6 +1338,7 @@ export function OrbDictateStation({
       <div
         className="orb-dictate pointer-events-auto flex min-h-0 flex-1 flex-col"
         data-orb-dictate-station
+        data-orb-dictate-magic-notes
         data-orb-dictate-title={ORB_DICTATE_PRODUCT_TITLE}
         data-orb-dictate-subtitle={ORB_DICTATE_PRODUCT_SUBTITLE}
         data-orb-dictate-layout={
