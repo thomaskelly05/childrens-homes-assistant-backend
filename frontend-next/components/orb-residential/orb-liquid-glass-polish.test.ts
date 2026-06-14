@@ -34,9 +34,10 @@ describe('ORB Residential Liquid Glass final polish pass', () => {
     assert.match(composer, /handlePlusActivate/)
     assert.match(tools, /data-orb-composer-attachment-menu/)
     assert.match(tools, /orb-liquid-panel/)
-    assert.match(tools, /label: 'Camera'/)
-    assert.match(tools, /label: 'Photos'/)
-    assert.match(tools, /label: 'Files'/)
+    assert.match(tools, /ORB_COMPOSER_UPLOAD_PLUS_ACTIONS/)
+    assert.match(tools, /take_photo/)
+    assert.match(tools, /photo_library/)
+    assert.match(tools, /choose_files/)
   })
 
   it('speech button wires inline voice or dictate fallback', () => {

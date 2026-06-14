@@ -688,8 +688,8 @@ export function OrbStandaloneComposer({
                     </button>
                   ) : (
                     <OrbComposerPlusMenu
-                      onSelect={onPlusMenuAction}
-                      onAttachFiles={() => fileInputRef.current?.click()}
+                      onSelect={handleComposerToolSelect}
+                      onAttachFiles={() => documentFileInputRef.current?.click()}
                     />
                   )
                 ) : (
