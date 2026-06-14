@@ -31,8 +31,9 @@ describe('ORB composer plus menu and instant capture pass', () => {
     assert.match(composer, /data-orb-composer-plus-button/)
     assert.match(composer, /aria-label="Add attachment"/)
     assert.match(composer, /onPointerDown=\{handlePlusPointerDown\}/)
+    assert.match(composer, /onPointerUp=\{handlePlusActivate\}/)
     assert.match(composer, /event\.stopPropagation\(\)/)
-    assert.match(composer, /toggleAttachmentMenu/)
+    assert.match(composer, /handlePlusActivate/)
   })
 
   it('plus button sits outside input focus wrapper with explicit composer columns', () => {
@@ -135,9 +136,9 @@ describe('ORB composer plus menu and instant capture pass', () => {
     const tools = read('components/orb-residential/orb-residential-composer-tools-sheet.tsx')
     const composer = read('components/orb-standalone/orb-standalone-composer.tsx')
     assert.match(tools, /onClose\(\)\s*\n\s*onSelect/)
-    assert.match(composer, /setToolsSheetOpen\(false\)/)
+    assert.match(composer, /setAttachmentMenuOpen\(false\)/)
     assert.match(tools, /data-orb-composer-attach-backdrop/)
-    assert.match(composer, /shouldIgnoreComposerFocusTarget/)
+    assert.match(composer, /shouldDismissComposerAttachmentMenu/)
   })
 
   it('desktop plus menu remains OrbComposerPlusMenu', () => {

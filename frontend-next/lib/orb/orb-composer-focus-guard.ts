@@ -6,10 +6,14 @@ export const ORB_COMPOSER_FOCUS_IGNORE_SELECTOR = [
   'a',
   '[role="button"]',
   '[data-orb-composer-plus-button]',
+  '[data-orb-composer-plus-trigger]',
+  '[data-orb-composer-tools-trigger]',
   '[data-orb-composer-action-rail]',
   '[data-orb-composer-send-rail]',
   '[data-orb-composer-attachment-menu]',
   '[data-orb-composer-attach-backdrop]',
+  '[data-orb-composer-attach-sheet]',
+  '[data-orb-composer-tools-sheet]',
   '[data-orb-privacy-guidance-trigger]'
 ].join(',')
 

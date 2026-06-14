@@ -17,6 +17,7 @@ import {
 } from 'lucide-react'
 
 import type { OrbComposerPlusAction } from '@/components/orb-standalone/orb-composer-plus-menu'
+import { traceOrbComposerInteraction } from '@/lib/orb/orb-composer-interaction-trace'
 import { ORB_COMPOSER_UPLOAD_BOUNDARY_LINES } from '@/lib/orb/orb-composer-attachments'
 import { ORB_RESIDENTIAL_STATION_DEFINITIONS } from '@/lib/orb/orb-residential-stations'
 
@@ -85,6 +86,7 @@ export function OrbResidentialComposerToolsSheet({
       setMenuPosition(null)
       return
     }
+    traceOrbComposerInteraction('menu_mounted', { portaled: true })
     function syncPosition() {
       const anchor = anchorRef?.current
       if (!anchor) return

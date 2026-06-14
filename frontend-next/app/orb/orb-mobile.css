@@ -568,11 +568,12 @@
   .orb-composer-glass textarea,
   .orb-composer-glass [data-orb-composer-input] {
     position: relative !important;
-    z-index: 62 !important;
+    z-index: 1 !important;
     display: block !important;
     min-width: 0 !important;
     width: 100% !important;
     max-width: 100% !important;
+    box-sizing: border-box !important;
     min-height: 2.35rem !important;
     max-height: 8.75rem !important;
     padding-top: 0.5rem !important;
@@ -597,7 +598,13 @@
     z-index: 62 !important;
     flex: 1 1 auto !important;
     min-width: 0 !important;
-    max-width: calc(100% - 5.75rem) !important;
+    max-width: calc(100% - 8.5rem) !important;
+    pointer-events: none !important;
+  }
+
+  .orb-composer-input-column [data-orb-composer-input],
+  .orb-composer-input-column textarea {
+    pointer-events: auto !important;
   }
 
   .orb-composer-action-rail,
