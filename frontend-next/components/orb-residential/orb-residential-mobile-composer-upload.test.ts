@@ -111,12 +111,12 @@ describe('ORB Residential mobile continuity and composer upload pass', () => {
     assert.match(companion, /images: imagePayload/)
   })
 
-  it('privacy guidance remains accessible from composer', () => {
+  it('privacy guidance remains accessible from plus tools not composer shield', () => {
     const composer = read('components/orb-standalone/orb-standalone-composer.tsx')
     const tools = read('components/orb-residential/orb-residential-composer-tools-sheet.tsx')
     assert.match(tools, /privacy_guidance/)
     assert.match(tools, /Privacy & responsibility/)
-    assert.match(composer, /OrbResidentialPrivacyGuidanceIcon/)
+    assert.doesNotMatch(composer, /OrbResidentialPrivacyGuidanceIcon/)
     assert.match(composer, /OrbResidentialPrivacyGuidanceSheet/)
   })
 

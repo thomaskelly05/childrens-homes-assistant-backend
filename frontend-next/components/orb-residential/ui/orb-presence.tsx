@@ -123,7 +123,7 @@ export function OrbPresence({
 
   return (
     <span
-      className={`orb-presence ${VARIANT_CLASS[resolvedVariant]} ${pulse && !reducedMotion ? 'orb-presence--pulse' : ''} ${className}`.trim()}
+      className={`orb-presence orb-liquid-orb ${VARIANT_CLASS[resolvedVariant]} ${pulse && !reducedMotion ? 'orb-presence--pulse' : ''} ${className}`.trim()}
       data-orb-presence
       data-orb-presence-variant={resolvedVariant}
       data-orb-presence-state={state}

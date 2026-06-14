@@ -24,7 +24,7 @@ export function OrbAppearanceControl({
         System changes automatically based on time of day.
       </p>
       <div
-        className="orb-appearance-segmented flex rounded-xl border border-[var(--orb-line)] bg-[var(--orb-surface)] p-0.5"
+        className="orb-appearance-segmented orb-liquid-toolbar flex rounded-xl border border-[var(--orb-line)] bg-[var(--orb-surface)] p-0.5"
         role="radiogroup"
         aria-label="Appearance"
       >
@@ -35,7 +35,7 @@ export function OrbAppearanceControl({
             role="radio"
             aria-checked={value === option.id}
             onClick={() => onChange(option.id)}
-            className={`min-h-[2.25rem] flex-1 rounded-lg px-2 py-1.5 text-xs font-semibold transition ${
+            className={`orb-liquid-button min-h-[2.75rem] flex-1 rounded-lg px-2 py-1.5 text-xs font-semibold transition ${
               value === option.id
                 ? 'bg-gradient-to-r from-[var(--orb-res-primary,var(--orb-royal-blue,#168bff))] to-[var(--orb-res-primary-strong,var(--orb-deep-blue,#0d5fcc))] text-white shadow-sm'
                 : 'text-[var(--orb-muted)] hover:text-[var(--orb-foreground)]'

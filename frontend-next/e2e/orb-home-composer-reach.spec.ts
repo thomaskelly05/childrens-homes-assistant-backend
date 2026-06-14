@@ -72,15 +72,17 @@ test.describe('ORB home composer reach', () => {
     expect(audit.textareaScrollable, JSON.stringify(audit)).toBe(true)
   })
 
-  test('home privacy guidance opens from composer shield icon not visible link', async ({ page }) => {
+  test('privacy guidance is available from settings not composer shield', async ({ page }) => {
     await setupOrbE2eMocks(page)
     await page.goto('/orb')
     await page.locator('[data-orb-shell="true"]').waitFor({ state: 'visible', timeout: 20_000 })
 
     await expect(page.locator('[data-orb-privacy-guidance-link]')).toHaveCount(0)
     await expect(page.locator('[data-orb-privacy-notice="chat"]')).toHaveCount(0)
+    await expect(page.locator('[data-orb-privacy-guidance-trigger]')).toHaveCount(0)
 
-    await page.locator('[data-orb-privacy-guidance-trigger]').click()
+    await page.locator('[data-orb-composer-tools-trigger], [data-orb-composer-attach]').click()
+    await page.locator('[data-orb-composer-tools-item="privacy_guidance"]').click()
     await expect(page.locator('[data-orb-privacy-guidance-sheet]')).toBeVisible()
     await expect(page.locator('[data-orb-privacy-guidance-list] li')).toHaveCount(4)
     await page.locator('[data-orb-privacy-guidance-done]').click()

@@ -11,7 +11,7 @@ function read(relativePath: string) {
 }
 
 describe('ORB Residential mobile simplification pass', () => {
-  it('mobile home hides visible privacy link and uses composer shield trigger', () => {
+  it('mobile home hides visible privacy link; privacy lives in settings and plus tools', () => {
     const copy = read('lib/orb/orb-residential-copy.ts')
     const composer = read('components/orb-standalone/orb-standalone-composer.tsx')
     const privacy = read('components/orb-residential/orb-privacy-guidance-sheet.tsx')
@@ -22,6 +22,8 @@ describe('ORB Residential mobile simplification pass', () => {
     assert.match(composer, /OrbResidentialComposerToolsSheet/)
     assert.match(composer, /data-orb-composer-tools-trigger/)
     assert.match(composer, /data-orb-composer-attach/)
+    assert.doesNotMatch(composer, /OrbResidentialPrivacyGuidanceIcon/)
+    assert.doesNotMatch(composer, /data-orb-privacy-guidance-trigger/)
     assert.match(privacy, /data-orb-privacy-guidance-sheet/)
     assert.match(mobileCss, /\[data-orb-composer-privacy-zone\] \[data-orb-privacy-guidance-link\]/)
   })

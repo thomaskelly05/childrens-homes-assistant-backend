@@ -33,7 +33,7 @@ describe('ORB Residential mobile hierarchy reset', () => {
     assert.match(composer, /OrbResidentialComposerToolsSheet/)
     assert.match(composer, /data-orb-composer-tools-trigger/)
     assert.match(composer, /data-orb-composer-attach/)
-    assert.match(composer, /OrbResidentialPrivacyGuidanceIcon/)
+    assert.doesNotMatch(composer, /OrbResidentialPrivacyGuidanceIcon/)
     assert.match(tools, /data-orb-composer-tools-sheet/)
     assert.match(tools, /orb_dictate/)
     assert.match(tools, /orb_voice/)

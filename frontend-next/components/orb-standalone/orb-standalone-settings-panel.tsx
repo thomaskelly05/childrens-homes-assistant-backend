@@ -233,7 +233,7 @@ export function OrbStandaloneSettingsPanel({
         : { layout: 'center' as const, wide: true, mobileMode: 'full' as const })}
     >
       <div
-        className="orb-studio-shell flex min-h-0 flex-1 flex-col overflow-hidden md:flex-row"
+        className="orb-studio-shell orb-liquid-panel flex min-h-0 flex-1 flex-col overflow-hidden md:flex-row"
         data-orb-settings-panel
         data-orb-settings-drawer
         data-orb-settings-layout="premium-cards"
@@ -269,9 +269,9 @@ export function OrbStandaloneSettingsPanel({
         </nav>
 
         <div
-          className={`overflow-x-hidden pb-[max(1rem,env(safe-area-inset-bottom))] ${
-            showMobileDetail ? 'flex-none p-3' : 'flex-1 overflow-y-auto p-4'
-          } ${showMobileList ? 'hidden' : ''}`}
+          className={`orb-settings-scroll min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain pb-[max(1rem,env(safe-area-inset-bottom))] ${
+            showMobileList ? 'hidden' : 'p-4'
+          } ${showMobileDetail ? 'pt-3' : ''}`}
           data-orb-settings-scroll
           data-orb-settings-mobile-detail={showMobileDetail ? 'true' : undefined}
         >
@@ -593,7 +593,7 @@ function TogglePill({ active, label, onClick }: { active: boolean; label: string
       role="radio"
       aria-checked={active}
       onClick={onClick}
-      className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${
+      className={`orb-liquid-button min-h-[2.75rem] rounded-full border px-3 py-1.5 text-xs font-medium transition ${
         active
           ? 'border-[var(--orb-primary-cyan)] bg-[#00B8FF]/10 text-[var(--orb-foreground)]'
           : 'border-[var(--orb-line)] text-[var(--orb-muted)] hover:bg-[var(--orb-surface-hover)]'
@@ -621,7 +621,7 @@ function ToggleRow({
 }) {
   return (
     <label
-      className={`orb-settings-row flex items-center justify-between gap-3 rounded-xl border border-[var(--orb-line)]/60 px-3.5 py-2.5 ${disabled ? 'opacity-60' : ''}`}
+      className={`orb-liquid-list-row orb-settings-row flex items-center justify-between gap-3 rounded-xl border border-[var(--orb-line)]/60 px-3.5 py-2.5 ${disabled ? 'opacity-60' : ''}`}
       data-orb-settings-toggle={dataAttr}
     >
       <span className="min-w-0">
@@ -659,7 +659,7 @@ function RowButton({
       type="button"
       onClick={onClick}
       disabled={disabled || !onClick}
-      className="orb-panel-row orb-settings-row flex w-full items-center gap-3 rounded-xl border border-[var(--orb-line)]/60 px-3.5 py-2.5 text-left disabled:opacity-60"
+      className="orb-liquid-list-row orb-panel-row orb-settings-row flex w-full items-center gap-3 rounded-xl border border-[var(--orb-line)]/60 px-3.5 py-2.5 text-left disabled:opacity-60"
     >
       <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--orb-surface-hover)] text-[#0369A1]">
         {icon}

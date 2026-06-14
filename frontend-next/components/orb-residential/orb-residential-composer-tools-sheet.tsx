@@ -126,7 +126,7 @@ export function OrbResidentialComposerToolsSheet({
         onClick={onClose}
       />
       <div
-        className="orb-composer-attach-sheet fixed z-[68] overflow-hidden rounded-2xl border border-[var(--orb-line)]/60 bg-[color-mix(in_srgb,var(--orb-surface-elevated)_92%,transparent)] shadow-2xl backdrop-blur-xl"
+        className="orb-composer-attach-sheet orb-liquid-panel fixed z-[68] overflow-hidden rounded-2xl border border-[var(--orb-line)]/60 bg-[color-mix(in_srgb,var(--orb-surface-elevated)_92%,transparent)] shadow-2xl backdrop-blur-xl"
         role="menu"
         aria-label="Add attachment"
         data-orb-composer-tools-sheet

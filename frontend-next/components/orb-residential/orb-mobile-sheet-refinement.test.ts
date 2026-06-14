@@ -35,13 +35,17 @@ describe('ORB mobile sheet refinement pass', () => {
     assert.match(mobileCss, /\[data-orb-dictate-capture-panel='true'\] \.orb-dictate-mobile-orb-wrap/)
   })
 
-  it('settings appearance mobile detail is compact without dead space stretch', () => {
+  it('settings appearance mobile detail scrolls without dead space stretch', () => {
     const settings = read('components/orb-standalone/orb-standalone-settings-panel.tsx')
     const mobileCss = read('app/orb/orb-mobile.css')
     assert.match(settings, /data-orb-settings-mobile-detail/)
-    assert.match(settings, /flex-none p-3/)
+    assert.match(settings, /orb-settings-scroll/)
+    assert.match(settings, /min-h-0/)
+    assert.match(settings, /flex-1/)
+    assert.match(settings, /overflow-y-auto/)
     assert.match(settings, /footer=\{\s*isMobile\s*\? undefined/)
     assert.match(mobileCss, /\[data-orb-settings-mobile-detail='true'\]/)
+    assert.match(mobileCss, /flex: 1 1 auto/)
   })
 
   it('account menu is compact with 44px touch targets', () => {
