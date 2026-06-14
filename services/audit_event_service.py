@@ -8,7 +8,14 @@ from typing import Any
 
 from fastapi import Request
 
-from db.connection import DatabaseUnavailableError, get_db_connection, is_pool_under_pressure, release_db_connection
+from db.connection import (
+    DatabaseUnavailableError,
+    get_db_connection,
+    is_db_available,
+    is_pool_init_in_cooldown,
+    is_pool_under_pressure,
+    release_db_connection,
+)
 
 logger = logging.getLogger("indicare.audit")
 
@@ -148,20 +155,34 @@ def _should_write_audit(event_type: str, action: str, outcome: str, metadata: di
     return True
 
 
-def _log_audit_failure(event_type: str, action: str, *, busy: bool = False) -> None:
+def _log_audit_failure(
+    event_type: str,
+    action: str,
+    *,
+    busy: bool = False,
+    request: Request | None = None,
+) -> None:
     global _LAST_AUDIT_FAILURE_LOG_AT
     now = time.time()
     if now - _LAST_AUDIT_FAILURE_LOG_AT < _AUDIT_FAILURE_LOG_THROTTLE_SECONDS:
         return
     _LAST_AUDIT_FAILURE_LOG_AT = now
+    request_id = getattr(request.state, "request_id", None) if request else None
     if busy:
         logger.warning(
-            "Skipped audit event while database pool is busy type=%s action=%s",
+            "Skipped audit event while database pool is busy type=%s action=%s request_id=%s",
             event_type,
             action,
+            request_id,
         )
         return
-    logger.warning("Failed to record audit event type=%s action=%s", event_type, action, exc_info=True)
+    logger.warning(
+        "Failed to record audit event type=%s action=%s request_id=%s",
+        event_type,
+        action,
+        request_id,
+        exc_info=True,
+    )
 
 
 def record_audit_event(
@@ -184,15 +205,19 @@ def record_audit_event(
     if not _should_write_audit(event_type, action, outcome, metadata):
         return True
 
+    if not is_db_available() or is_pool_init_in_cooldown():
+        _log_audit_failure(event_type, action, busy=True, request=request)
+        return False
+
     if is_pool_under_pressure():
-        _log_audit_failure(event_type, action, busy=True)
+        _log_audit_failure(event_type, action, busy=True, request=request)
         return False
 
     actor = actor or {}
     conn = None
     try:
         if not ensure_audit_table():
-            _log_audit_failure(event_type, action, busy=True)
+            _log_audit_failure(event_type, action, busy=True, request=request)
             return False
         conn = get_db_connection()
         with conn.cursor() as cur:
@@ -230,20 +255,20 @@ def record_audit_event(
         conn.commit()
         return True
     except DatabaseUnavailableError as exc:
-        _log_audit_failure(event_type, action, busy=_is_db_busy_error(exc))
+        _log_audit_failure(event_type, action, busy=_is_db_busy_error(exc), request=request)
         return False
     except RuntimeError as exc:
         if _is_db_busy_error(exc):
-            _log_audit_failure(event_type, action, busy=True)
+            _log_audit_failure(event_type, action, busy=True, request=request)
             return False
         if conn and not conn.closed:
             conn.rollback()
-        _log_audit_failure(event_type, action)
+        _log_audit_failure(event_type, action, request=request)
         return False
     except Exception:
         if conn and not conn.closed:
             conn.rollback()
-        _log_audit_failure(event_type, action)
+        _log_audit_failure(event_type, action, request=request)
         return False
     finally:
         if conn is not None:

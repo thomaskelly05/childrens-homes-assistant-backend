@@ -20,10 +20,9 @@ Base = declarative_base()
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 
-# Increased defaults because IndiCare now loads live operational cognition,
-# chronology, governance and workforce state concurrently.
-DB_POOL_MIN = int(os.getenv("DB_POOL_MIN", "5"))
-DB_POOL_MAX = int(os.getenv("DB_POOL_MAX", "25"))
+# Conservative defaults for small Render/Postgres plans; override via env for larger hosts.
+DB_POOL_MIN = int(os.getenv("DB_POOL_MIN", "1"))
+DB_POOL_MAX = int(os.getenv("DB_POOL_MAX", "10"))
 if DB_POOL_MAX < DB_POOL_MIN:
     logger.warning("DB_POOL_MAX=%s is lower than DB_POOL_MIN=%s; raising max to min", DB_POOL_MAX, DB_POOL_MIN)
     DB_POOL_MAX = DB_POOL_MIN
@@ -49,8 +48,17 @@ DB_CONNECT_TIMEOUT_SECONDS = int(
         os.getenv("DB_CONNECT_TIMEOUT", "5"),
     )
 )
-DB_INIT_RETRIES = int(os.getenv("DB_INIT_RETRIES", "3"))
+DB_POOL_INIT_RETRIES = int(
+    os.getenv(
+        "DB_POOL_INIT_RETRIES",
+        os.getenv("DB_INIT_RETRIES", "3"),
+    )
+)
+DB_INIT_RETRIES = DB_POOL_INIT_RETRIES
 DB_INIT_RETRY_DELAY_SECONDS = float(os.getenv("DB_INIT_RETRY_DELAY_SECONDS", "2"))
+DB_POOL_INIT_FAILURE_COOLDOWN_SECONDS = float(
+    os.getenv("DB_POOL_INIT_FAILURE_COOLDOWN_SECONDS", "10")
+)
 
 
 def _env_bool(name: str, default: bool = False) -> bool:
@@ -71,6 +79,8 @@ _pool_init_lock = threading.Lock()
 db_pool: ThreadedConnectionPool | None = None
 _last_db_error: str | None = None
 _last_checked_at: str | None = None
+_last_pool_init_failure_at: float | None = None
+_last_pool_init_failure_category: str | None = None
 
 
 class DatabaseUnavailableError(Exception):
@@ -90,7 +100,84 @@ def _safe_db_error_message(exc: Exception) -> str:
         message = message.replace(dsn, "<redacted>")
     message = re.sub(r"postgresql://\S+", "<redacted-dsn>", message, flags=re.IGNORECASE)
     message = re.sub(r"password=\S+", "password=<redacted>", message, flags=re.IGNORECASE)
+    message = re.sub(
+        r'connection to server at "\S+"',
+        'connection to server at "<redacted>"',
+        message,
+        flags=re.IGNORECASE,
+    )
+    message = re.sub(
+        r"host=\S+",
+        "host=<redacted>",
+        message,
+        flags=re.IGNORECASE,
+    )
     return message[:500]
+
+
+def classify_db_init_error(exc: Exception) -> str:
+    message = _safe_db_error_message(exc).lower()
+    if "timeout" in message or "timed out" in message:
+        return "timeout"
+    if "password" in message or "authentication" in message or "role" in message:
+        return "auth_config"
+    if "does not exist" in message or "database_url" in message or "not set" in message:
+        return "config"
+    if "busy" in message:
+        return "pool_busy"
+    return "unavailable"
+
+
+def is_pool_init_in_cooldown() -> bool:
+    if _last_pool_init_failure_at is None:
+        return False
+    elapsed = time.monotonic() - _last_pool_init_failure_at
+    return elapsed < DB_POOL_INIT_FAILURE_COOLDOWN_SECONDS
+
+
+def pool_init_cooldown_remaining_seconds() -> float:
+    if _last_pool_init_failure_at is None:
+        return 0.0
+    remaining = DB_POOL_INIT_FAILURE_COOLDOWN_SECONDS - (time.monotonic() - _last_pool_init_failure_at)
+    return max(0.0, remaining)
+
+
+def database_unavailable_payload(*, retry_after_seconds: int | None = None) -> dict[str, object]:
+    retry_after = retry_after_seconds
+    if retry_after is None:
+        retry_after = max(1, int(pool_init_cooldown_remaining_seconds() or DB_POOL_INIT_FAILURE_COOLDOWN_SECONDS))
+    return {
+        "ok": False,
+        "status": "service_unavailable",
+        "reason": "database_unavailable",
+        "message": (
+            "ORB is temporarily unavailable while we connect to the service. "
+            "Please try again shortly."
+        ),
+        "retry_after_seconds": retry_after,
+    }
+
+
+def _init_retry_delay_seconds(attempt: int) -> float:
+    """Exponential backoff for pool init: 0.5s, 1s, 2s (capped), env override as base."""
+    base = max(0.1, DB_INIT_RETRY_DELAY_SECONDS)
+    if base != 2.0:
+        return base
+    return min(2.0, 0.5 * (2 ** (attempt - 1)))
+
+
+def _mark_pool_init_failure(exc: Exception) -> None:
+    global _last_pool_init_failure_at, _last_pool_init_failure_category
+
+    _last_pool_init_failure_at = time.monotonic()
+    _last_pool_init_failure_category = classify_db_init_error(exc)
+
+
+def _clear_pool_init_failure() -> None:
+    global _last_pool_init_failure_at, _last_pool_init_failure_category
+
+    _last_pool_init_failure_at = None
+    _last_pool_init_failure_category = None
 
 
 def _touch_db_status(*, error: Exception | None = None) -> None:
@@ -126,6 +213,17 @@ def get_db_status() -> dict[str, str | bool | int | float | None]:
         "last_checked_at": _last_checked_at,
         "pool": pool,
         "pool_pressure": bool(pool.get("used", 0) >= pool.get("max", 0) and pool.get("max", 0) > 0),
+        "pool_init_in_cooldown": is_pool_init_in_cooldown(),
+        "pool_init_cooldown_remaining_seconds": pool_init_cooldown_remaining_seconds(),
+        "pool_init_failure_category": _last_pool_init_failure_category,
+        "pool_settings": {
+            "min": DB_POOL_MIN,
+            "max": DB_POOL_MAX,
+            "connect_timeout_seconds": DB_CONNECT_TIMEOUT_SECONDS,
+            "wait_timeout_seconds": DB_POOL_WAIT_TIMEOUT_SECONDS,
+            "init_retries": DB_POOL_INIT_RETRIES,
+            "init_failure_cooldown_seconds": DB_POOL_INIT_FAILURE_COOLDOWN_SECONDS,
+        },
     }
 
 
@@ -267,28 +365,38 @@ def init_db_pool(*, max_retries: int | None = None) -> ThreadedConnectionPool | 
 
     Returns the pool on success, None when init fails and DB_REQUIRED_ON_STARTUP is false.
     Raises the underlying error when DB_REQUIRED_ON_STARTUP is true.
+
+    After a failed init, subsequent calls fail fast until the cooldown expires so
+    concurrent requests do not stampede the database.
     """
     global db_pool
 
     if db_pool is not None:
         return db_pool
 
-    retries = DB_INIT_RETRIES if max_retries is None else max(1, max_retries)
+    if is_pool_init_in_cooldown():
+        return None
+
+    retries = DB_POOL_INIT_RETRIES if max_retries is None else max(1, max_retries)
     last_error: Exception | None = None
 
     with _pool_init_lock:
         if db_pool is not None:
             return db_pool
+        if is_pool_init_in_cooldown():
+            return None
 
         for attempt in range(1, retries + 1):
             try:
                 db_pool = _create_db_pool()
                 _touch_db_status(error=None)
+                _clear_pool_init_failure()
                 _log_pool_state(
                     logging.INFO,
                     "Database pool initialised "
                     f"(DB_POOL_MIN={DB_POOL_MIN} DB_POOL_MAX={DB_POOL_MAX} "
-                    f"wait_timeout_seconds={DB_POOL_WAIT_TIMEOUT_SECONDS})",
+                    f"wait_timeout_seconds={DB_POOL_WAIT_TIMEOUT_SECONDS} "
+                    f"init_retries={DB_POOL_INIT_RETRIES})",
                 )
                 return db_pool
             except Exception as exc:
@@ -296,19 +404,25 @@ def init_db_pool(*, max_retries: int | None = None) -> ThreadedConnectionPool | 
                 db_pool = None
                 _touch_db_status(error=exc)
                 if attempt < retries:
+                    delay = _init_retry_delay_seconds(attempt)
                     logger.warning(
-                        "Database pool init failed (attempt %s/%s): %s; retrying in %ss",
+                        "Database pool init failed (attempt %s/%s, category=%s): %s; retrying in %ss",
                         attempt,
                         retries,
+                        classify_db_init_error(exc),
                         _safe_db_error_message(exc),
-                        DB_INIT_RETRY_DELAY_SECONDS,
+                        delay,
                     )
-                    time.sleep(DB_INIT_RETRY_DELAY_SECONDS)
+                    time.sleep(delay)
                 else:
+                    _mark_pool_init_failure(exc)
                     logger.error(
-                        "Database pool init failed after %s attempt(s): %s",
+                        "Database pool init failed after %s attempt(s) (category=%s): %s; "
+                        "cooldown %ss before retry",
                         retries,
+                        classify_db_init_error(exc),
                         _safe_db_error_message(exc),
+                        DB_POOL_INIT_FAILURE_COOLDOWN_SECONDS,
                     )
 
         if last_error is not None and DB_REQUIRED_ON_STARTUP:
@@ -349,6 +463,8 @@ def _discard_connection(conn) -> None:
 def _ensure_db_pool(*, lazy: bool = False) -> None:
     if db_pool is not None:
         return
+    if is_pool_init_in_cooldown():
+        raise DatabaseUnavailableError("Database temporarily unavailable")
     init_db_pool(max_retries=1 if lazy else None)
     if db_pool is None:
         raise DatabaseUnavailableError("Database temporarily unavailable")

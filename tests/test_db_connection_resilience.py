@@ -16,6 +16,8 @@ def reset_db_connection_state(monkeypatch):
     connection.db_pool = None
     connection._last_db_error = None
     connection._last_checked_at = None
+    connection._last_pool_init_failure_at = None
+    connection._last_pool_init_failure_category = None
     connection.DB_REQUIRED_ON_STARTUP = False
     yield
     connection.close_db_pool()
@@ -117,3 +119,63 @@ def test_db_connection_context_manager_releases_connection(monkeypatch):
         assert conn is mock_conn
 
     release.assert_called_once_with(mock_conn)
+
+
+def test_pool_defaults_are_low_pressure():
+    assert connection.DB_POOL_MIN == 1
+    assert connection.DB_POOL_MAX == 10
+    assert connection.DB_CONNECT_TIMEOUT_SECONDS == 5
+    assert connection.DB_POOL_WAIT_TIMEOUT_SECONDS == 2.0
+    assert connection.DB_POOL_INIT_RETRIES == 3
+
+
+def test_init_db_pool_retries_with_backoff(monkeypatch):
+    monkeypatch.setattr(connection, "DB_POOL_INIT_RETRIES", 3)
+    sleeps: list[float] = []
+    monkeypatch.setattr(connection.time, "sleep", lambda seconds: sleeps.append(seconds))
+    side_effect = connection.OperationalError("timeout expired")
+
+    with patch.object(connection, "ThreadedConnectionPool", side_effect=side_effect):
+        result = connection.init_db_pool()
+
+    assert result is None
+    assert len(sleeps) == 2
+    assert sleeps[0] == 0.5
+    assert sleeps[1] == 1.0
+    assert connection.is_pool_init_in_cooldown() is True
+
+
+def test_init_db_pool_skips_during_cooldown(monkeypatch):
+    connection._last_pool_init_failure_at = connection.time.monotonic()
+    create = MagicMock()
+    monkeypatch.setattr(connection, "_create_db_pool", create)
+
+    result = connection.init_db_pool()
+
+    assert result is None
+    create.assert_not_called()
+
+
+def test_ensure_db_pool_fails_fast_during_cooldown():
+    connection._last_pool_init_failure_at = connection.time.monotonic()
+    with pytest.raises(connection.DatabaseUnavailableError):
+        connection.get_db_connection()
+
+
+def test_safe_db_error_message_redacts_host():
+    message = connection._safe_db_error_message(
+        connection.OperationalError(
+            'connection to server at "dpg-d6dfp4lm5p6s73fbj7lg-a.frankfurt-postgres.render.com" port 5432 failed: timeout expired'
+        )
+    )
+    assert "frankfurt-postgres" not in message
+    assert "dpg-" not in message
+    assert "timeout" in message
+
+
+def test_get_db_status_exposes_pool_settings():
+    status = connection.get_db_status()
+    settings = status["pool_settings"]
+    assert settings["min"] == connection.DB_POOL_MIN
+    assert settings["max"] == connection.DB_POOL_MAX
+    assert settings["init_retries"] == connection.DB_POOL_INIT_RETRIES

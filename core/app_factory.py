@@ -10,7 +10,12 @@ from core.frontend_routes import register_frontend_routes
 from core.lifespan import lifespan
 from core.middleware import add_middlewares
 from core.router_loader import include_routers
-from db.connection import DatabaseUnavailableError, get_db_status
+from db.connection import (
+    DatabaseUnavailableError,
+    database_unavailable_payload,
+    get_db_status,
+    pool_init_cooldown_remaining_seconds,
+)
 from routers.ai_governance_routes import router as ai_governance_router
 
 logging.basicConfig(level=logging.INFO)
@@ -48,11 +53,29 @@ def create_app() -> FastAPI:
     mount_core_static_assets(app)
 
     @app.exception_handler(DatabaseUnavailableError)
-    async def database_unavailable_handler(_request, _exc: DatabaseUnavailableError):
+    async def database_unavailable_handler(request, _exc: DatabaseUnavailableError):
+        retry_after = max(1, int(pool_init_cooldown_remaining_seconds() or 10))
+        headers = {"Retry-After": str(retry_after)}
+        if request.url.path == "/orb/front-door/verdict":
+            return JSONResponse(
+                status_code=503,
+                content=database_unavailable_payload(retry_after_seconds=retry_after),
+                headers=headers,
+            )
         return JSONResponse(
             status_code=503,
             content={"detail": "Database busy; please retry shortly."},
+            headers=headers,
         )
+
+    def liveness_payload(check: str = "health") -> dict:
+        return {
+            "ok": True,
+            "status": "ok",
+            "service": "indicare-os",
+            "check": check,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        }
 
     def health_payload(check: str = "health") -> dict:
         database = get_db_status()
@@ -78,6 +101,10 @@ def create_app() -> FastAPI:
                     "wait_timeout_seconds": pool.get("wait_timeout_seconds"),
                 },
                 "pool_pressure": pool_pressure,
+                "pool_init_in_cooldown": bool(database.get("pool_init_in_cooldown")),
+                "pool_init_cooldown_remaining_seconds": database.get("pool_init_cooldown_remaining_seconds"),
+                "pool_init_failure_category": database.get("pool_init_failure_category"),
+                "pool_settings": database.get("pool_settings"),
                 "last_error": database.get("last_error"),
             },
             "routes": {
@@ -92,9 +119,41 @@ def create_app() -> FastAPI:
     def health():
         return health_payload()
 
+    @app.get("/health/ready")
+    def health_ready():
+        database = get_db_status()
+        pool = database.get("pool") or {}
+        ready = bool(database.get("available")) and not bool(database.get("pool_init_in_cooldown"))
+        payload = {
+            "ok": ready,
+            "status": "ready" if ready else "degraded",
+            "service": "indicare-os",
+            "check": "ready",
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "database": {
+                "available": bool(database.get("available")),
+                "pool_initialised": bool(database.get("pool_initialised")),
+                "pool_pressure": bool(database.get("pool_pressure")),
+                "pool_init_in_cooldown": bool(database.get("pool_init_in_cooldown")),
+                "pool_init_cooldown_remaining_seconds": database.get("pool_init_cooldown_remaining_seconds"),
+                "pool_init_failure_category": database.get("pool_init_failure_category"),
+                "pool_settings": database.get("pool_settings"),
+                "pool": {
+                    "min": pool.get("min"),
+                    "max": pool.get("max"),
+                    "used": pool.get("used"),
+                    "available": pool.get("available"),
+                },
+                "last_error": database.get("last_error"),
+            },
+        }
+        if not ready:
+            return JSONResponse(status_code=503, content=payload)
+        return payload
+
     @app.get("/")
     def root_health():
-        return JSONResponse(health_payload("root"))
+        return JSONResponse(liveness_payload("root"))
 
     @app.head("/")
     def root_head():

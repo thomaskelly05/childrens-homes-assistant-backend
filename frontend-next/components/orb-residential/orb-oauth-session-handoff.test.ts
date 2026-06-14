@@ -39,4 +39,13 @@ describe('ORB OAuth session handoff', () => {
     const verdictClient = read('lib/orb/orb-front-door-verdict-client.ts')
     assert.match(verdictClient, /case 'inactive'/)
   })
+
+  it('front-door verdict 503 shows retry without billing inactive screen', () => {
+    const gate = read('components/orb-residential/orb-auth-gate.tsx')
+    const verdictClient = read('lib/orb/orb-front-door-verdict-client.ts')
+    assert.match(verdictClient, /response\.status === 503/)
+    assert.match(gate, /verdictServiceUnavailable/)
+    assert.match(gate, /showManageBilling=\{!verdictServiceUnavailable\}/)
+    assert.match(gate, /ACCESS_UNAVAILABLE_MESSAGE/)
+  })
 })

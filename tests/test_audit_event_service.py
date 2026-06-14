@@ -10,6 +10,8 @@ from services import audit_event_service as audit
 
 def test_record_audit_event_returns_false_when_database_busy(monkeypatch):
     monkeypatch.setattr(audit, "_TABLE_READY", True)
+    monkeypatch.setattr(audit, "is_db_available", lambda: True)
+    monkeypatch.setattr(audit, "is_pool_init_in_cooldown", lambda: False)
     monkeypatch.setattr(
         audit,
         "get_db_connection",
@@ -30,6 +32,8 @@ def test_record_audit_event_returns_false_when_database_busy(monkeypatch):
 
 def test_record_audit_event_returns_true_on_success(monkeypatch):
     monkeypatch.setattr(audit, "_TABLE_READY", True)
+    monkeypatch.setattr(audit, "is_db_available", lambda: True)
+    monkeypatch.setattr(audit, "is_pool_init_in_cooldown", lambda: False)
     conn = MagicMock()
     conn.closed = False
     cursor = MagicMock()
