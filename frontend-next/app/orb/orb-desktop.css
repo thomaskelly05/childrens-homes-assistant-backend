@@ -351,6 +351,16 @@ html[data-orb-theme='dark'] .orb-composer-glass button:not(.orb-composer-send) {
   color: #e4e4e7;
 }
 
+html[data-orb-residential='1'] [data-orb-composer-action-rail] [data-orb-privacy-guidance-trigger],
+html[data-orb-residential='1'] [data-orb-composer-send-rail] [data-orb-privacy-guidance-trigger],
+html[data-orb-residential='1'] [data-orb-composer-row] [data-orb-privacy-guidance-trigger] {
+  display: none !important;
+}
+
+html[data-orb-residential='1'] [data-orb-composer-privacy-zone] [data-orb-privacy-notice='chat'] {
+  display: none;
+}
+
 .orb-composer-send {
   background: linear-gradient(135deg, var(--orb-brand-blue), var(--orb-brand-blue-deep));
   color: white;

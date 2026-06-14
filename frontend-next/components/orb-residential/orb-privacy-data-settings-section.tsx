@@ -32,6 +32,7 @@ import {
   ORB_PERSONAL_CONTEXT_SUMMARY,
   getPersonalContextRule
 } from '@/lib/orb/orb-personal-context'
+import { safePublicCopy } from '@/lib/orb/orb-private-compute-framework'
 
 const PERMISSION_ICONS: Record<string, typeof Mic> = {
   microphone: Mic,
@@ -243,7 +244,7 @@ export function OrbPrivacyDataSettingsSection({
   return (
     <div className="space-y-4" data-orb-privacy-data-section>
       <p className="text-xs leading-5 text-[var(--orb-muted)]" data-orb-privacy-data-intro data-orb-settings-data-safety>
-        {ORB_PERSONAL_CONTEXT_SUMMARY} ORB Residential does not access IndiCare OS records.
+        {safePublicCopy} {ORB_PERSONAL_CONTEXT_SUMMARY} ORB Residential does not access IndiCare OS records.
       </p>
 
       <PrivacyGroup title="App permissions">

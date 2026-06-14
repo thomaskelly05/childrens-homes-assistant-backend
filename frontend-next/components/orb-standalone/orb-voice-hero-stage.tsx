@@ -56,7 +56,15 @@ export function OrbVoiceHeroStage({
         {headline}
       </p>
       {showSubline ? (
-        <p className="orb-voice-hero-stage__subline text-center text-xs text-[var(--orb-muted)]" data-orb-voice-status-subline>
+        <p
+          className={`orb-voice-hero-stage__subline text-center text-xs ${
+            subline === detailLine && subline?.includes('Browser speech recognition is optional')
+              ? 'text-[var(--orb-muted)] opacity-90'
+              : 'text-[var(--orb-muted)]'
+          }`}
+          data-orb-voice-status-subline
+          data-orb-voice-speech-notice={subline?.includes('Browser speech recognition is optional') ? 'true' : undefined}
+        >
           {subline}
         </p>
       ) : null}
