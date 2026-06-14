@@ -71,9 +71,10 @@ import {
 } from '@/lib/orb/voice/orb-voice-ui-state'
 import type { OrbVoiceLivePanelState } from '@/components/orb-standalone/orb-voice-live-panel'
 import {
-  ORB_VOICE_WEBRTC_FAILED_HEADLINE,
-  sanitizeOrbVoiceUserMessage
-} from '@/lib/orb/voice/orb-voice-user-messages'
+  isOrbSpeechRecognitionErrorMessage,
+  orbVoiceCalmSpeechNotice
+} from '@/lib/orb/voice/orb-voice-speech-notice'
+import { sanitizeOrbVoiceUserMessage } from '@/lib/orb/voice/orb-voice-user-messages'
 import { isOrbDictateRealtimeAvailable } from '@/lib/orb/dictate/orb-dictate-realtime'
 import { templateById } from '@/lib/orb/dictate/orb-dictate-studio-templates'
 import {
@@ -414,7 +415,7 @@ export function OrbVoiceStation({
 
   const browserStatusOverride =
     voiceStartError ||
-    voice.error ||
+    (voice.error && !isOrbSpeechRecognitionErrorMessage(voice.error) ? voice.error : null) ||
     (voiceStartProgressStage
       ? orbVoiceStartProgressLine(voiceStartProgressStage)
       : voice.voiceCaptureState === 'requesting_permission'
@@ -425,6 +426,8 @@ export function OrbVoiceStation({
         ? 'Hold or tap to speak.'
         : 'Connecting ORB voice…'
       : null)
+
+  const speechRecognitionNotice = orbVoiceCalmSpeechNotice(voice.error || voiceStartError)
 
   const statusLine =
     browserStatusOverride ||
@@ -437,6 +440,7 @@ export function OrbVoiceStation({
         ? orbVoiceStartProgressLine(voiceStartProgressStage)
         : orbVoiceUiStatusLine(uiState))
   const detailLine =
+    speechRecognitionNotice ||
     startBlockedMessage ||
     (audioPlaybackBlocked ? 'Tap to hear ORB' : null) ||
     orbVoiceUiDetailLine(uiState, dictateRealtimeReady) ||

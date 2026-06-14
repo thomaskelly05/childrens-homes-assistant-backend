@@ -277,8 +277,13 @@ import {
 } from '@/lib/orb/orb-composer-attachments'
 import { orbComposerInlineVoiceStatusLine } from '@/lib/orb/orb-composer-inline-voice-status'
 import {
+  ORB_COMPOSER_SPEECH_LISTENING_COPY,
+  ORB_COMPOSER_SPEECH_OPENING_MIC_COPY,
+  ORB_COMPOSER_SPEECH_START_TIMEOUT_MS,
   ORB_COMPOSER_SPEECH_UNAVAILABLE_MESSAGE,
-  orbComposerSpeechFallbackMessage
+  composerSpeechImmediateStatus,
+  orbComposerSpeechFallbackMessage,
+  shouldComposerPreferDictateFallback
 } from '@/lib/orb/orb-composer-inline-voice-fallback'
 import { ORB_DRAFT_NOTICE_CLASS } from '@/lib/orb/orb-draft-notice'
 import {
@@ -710,6 +715,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
   const isNearBottomRef = useRef(true)
   const lastSendHadImagesRef = useRef(false)
   const autoSendTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const composerSpeechTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const hydratedRef = useRef(false)
   const sendInFlightRef = useRef(false)
   const submitGuardRef = useRef(false)
@@ -1927,6 +1933,19 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
     voice.clearTranscript
   ])
 
+  useEffect(() => {
+    if (voice.listening || voice.phase === 'transcript_ready') {
+      clearComposerSpeechTimeout()
+      if (voice.listening) {
+        setMicNotice((current) =>
+          current && current !== ORB_COMPOSER_SPEECH_UNAVAILABLE_MESSAGE
+            ? ORB_COMPOSER_SPEECH_LISTENING_COPY
+            : current
+        )
+      }
+    }
+  }, [voice.listening, voice.phase])
+
   const handleComposerSubmit = useCallback(
     async (event?: FormEvent<HTMLFormElement>) => {
       event?.preventDefault()
@@ -2050,6 +2069,21 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
     window.setTimeout(() => setMicNotice(null), 8000)
   }
 
+  function clearComposerSpeechTimeout() {
+    if (composerSpeechTimeoutRef.current) {
+      clearTimeout(composerSpeechTimeoutRef.current)
+      composerSpeechTimeoutRef.current = null
+    }
+  }
+
+  function armComposerSpeechTimeout() {
+    clearComposerSpeechTimeout()
+    composerSpeechTimeoutRef.current = setTimeout(() => {
+      if (voice.listening || voice.phase === 'transcript_ready') return
+      setMicNotice(ORB_COMPOSER_SPEECH_UNAVAILABLE_MESSAGE)
+    }, ORB_COMPOSER_SPEECH_START_TIMEOUT_MS)
+  }
+
   async function handleComposerInlineVoice() {
     if (!STANDALONE_ORB_VOICE_CAPTURE_ENABLED || !canUseComposerMic()) {
       setMicNotice(VOICE_MODE_COMING_SOON)
@@ -2062,6 +2096,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
     }
     if (voice.listening) {
       voice.stopListening()
+      clearComposerSpeechTimeout()
       return
     }
 
@@ -2069,26 +2104,41 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
     composerUserEditedRef.current = false
     emitOrbClientDebug({ area: 'composer', event: 'composer_inline_voice_start' })
 
+    const preferDictate = shouldComposerPreferDictateFallback({
+      safari: isSafariBrowser(),
+      recognitionAvailable: voice.recognitionAvailable
+    })
+
     if (!voice.recognitionAvailable) {
       setMicNotice(ORB_COMPOSER_SPEECH_UNAVAILABLE_MESSAGE)
       return
     }
 
-    setMicNotice('Opening microphone…')
+    setMicNotice(
+      composerSpeechImmediateStatus({
+        recognitionAvailable: voice.recognitionAvailable,
+        preferDictate
+      })
+    )
+    armComposerSpeechTimeout()
 
     const started = await voice.beginUserVoiceCapture({ mode: 'active' })
     if (!started) {
+      clearComposerSpeechTimeout()
       setMicNotice(orbComposerSpeechFallbackMessage(voice.error))
       return
     }
-    setMicNotice(null)
+    clearComposerSpeechTimeout()
+    setMicNotice(voice.listening ? ORB_COMPOSER_SPEECH_LISTENING_COPY : null)
   }
 
   function handleComposerPrimaryAction() {
     if (voice.listening) {
       voice.stopListening()
+      clearComposerSpeechTimeout()
       return
     }
+    setMicNotice(ORB_COMPOSER_SPEECH_OPENING_MIC_COPY)
     void handleComposerInlineVoice()
   }
 

@@ -264,6 +264,11 @@ export function OrbStandaloneComposer({
     })
   }
 
+  function handleVoiceTouchStart(event: React.TouchEvent<HTMLButtonElement>) {
+    event.stopPropagation()
+    traceOrbComposerInteraction('voice_touchstart')
+  }
+
   function handleVoicePointerDown(event: React.PointerEvent<HTMLButtonElement>) {
     event.stopPropagation()
     traceOrbComposerInteraction('voice_pointerdown')
@@ -783,6 +788,7 @@ export function OrbStandaloneComposer({
                     <button
                       type="button"
                       onPointerDown={handleVoicePointerDown}
+                      onTouchStart={handleVoiceTouchStart}
                       onPointerUp={handleVoiceActivate}
                       onClick={handleVoiceActivate}
                       disabled={primaryAction === 'stop' ? pending : false}
@@ -866,14 +872,21 @@ export function OrbStandaloneComposer({
               <span id="orb-standalone-status" className="sr-only" data-orb-voice-status>Ready to type</span>
             )}
             {mobileInlineVoice && inlineVoiceShowDictateFallback && onOpenDictateFallback ? (
-              <button
-                type="button"
-                onClick={onOpenDictateFallback}
-                className="orb-liquid-button shrink-0 rounded-full px-3 py-1 text-[11px] font-semibold text-[var(--orb-primary)]"
-                data-orb-composer-open-dictate-fallback
-              >
-                Open Dictate
-              </button>
+              <div className="flex min-w-0 flex-1 flex-col items-end gap-1.5 sm:flex-row sm:items-center sm:justify-end">
+                {voiceStatusText && voiceStatusText.includes('Speech input is not available') ? (
+                  <p className="text-[10px] leading-4 text-[var(--orb-muted)]" data-orb-composer-speech-fallback-copy>
+                    Speech input is not available here. Open Dictate instead.
+                  </p>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={onOpenDictateFallback}
+                  className="orb-liquid-button shrink-0 rounded-full px-3 py-1 text-[11px] font-semibold text-[var(--orb-primary)]"
+                  data-orb-composer-open-dictate-fallback
+                >
+                  Open Dictate
+                </button>
+              </div>
             ) : null}
             {!compactResidential ? (
               <span className="hidden text-[10px] text-slate-400 md:inline" data-orb-composer-mode-label>

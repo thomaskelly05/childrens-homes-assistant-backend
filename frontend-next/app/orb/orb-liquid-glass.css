@@ -18,8 +18,16 @@ html[data-orb-residential='1'] {
   );
   --orb-liquid-orb-glow: radial-gradient(
     circle at 50% 42%,
-    color-mix(in srgb, var(--orb-liquid-blue, #168bff) 28%, transparent) 0%,
-    transparent 68%
+    color-mix(in srgb, var(--orb-liquid-blue, #168bff) 34%, transparent) 0%,
+    color-mix(in srgb, var(--orb-liquid-violet, #7c5cff) 18%, transparent) 38%,
+    color-mix(in srgb, var(--orb-liquid-magenta, #ec4899) 12%, transparent) 58%,
+    transparent 72%
+  );
+  --orb-liquid-orb-aura: radial-gradient(
+    ellipse 120% 90% at 50% 58%,
+    color-mix(in srgb, var(--orb-liquid-blue, #168bff) 22%, transparent) 0%,
+    color-mix(in srgb, var(--orb-liquid-violet, #7c5cff) 10%, transparent) 42%,
+    transparent 70%
   );
   --orb-liquid-blue: var(--orb-royal-blue, #168bff);
   --orb-liquid-violet: #7c5cff;
@@ -110,16 +118,36 @@ html[data-orb-residential='1'] .orb-theme-light {
   border-radius: 9999px;
   background: transparent;
   box-shadow: none;
+  isolation: isolate;
 }
 
 .orb-liquid-orb::before {
   content: '';
   pointer-events: none;
   position: absolute;
-  inset: -12%;
+  inset: -18%;
+  border-radius: inherit;
+  background: var(--orb-liquid-orb-aura, var(--orb-liquid-orb-glow));
+  z-index: 0;
+  filter: blur(10px);
+  opacity: 0.92;
+}
+
+.orb-liquid-orb::after {
+  content: '';
+  pointer-events: none;
+  position: absolute;
+  inset: -8%;
   border-radius: inherit;
   background: var(--orb-liquid-orb-glow);
   z-index: 0;
+  mix-blend-mode: screen;
+  opacity: 0.85;
+}
+
+.orb-liquid-orb .orb-sphere-wrap {
+  position: relative;
+  z-index: 1;
 }
 
 html[data-orb-residential='1'] .orb-composer-glass.orb-liquid-composer {

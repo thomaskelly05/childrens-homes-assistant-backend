@@ -43,8 +43,9 @@ describe('ORB Residential Liquid Glass final polish pass', () => {
   it('speech button wires inline voice or dictate fallback', () => {
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
     const composer = read('components/orb-standalone/orb-standalone-composer.tsx')
-    assert.match(companion, /handleComposerInlineVoice/)
-    assert.match(companion, /beginUserVoiceCapture/)
+    assert.match(companion, /handleComposerPrimaryAction/)
+    assert.match(companion, /armComposerSpeechTimeout/)
+    assert.match(companion, /ORB_COMPOSER_SPEECH_OPENING_MIC_COPY/)
     assert.match(companion, /ORB_COMPOSER_SPEECH_UNAVAILABLE_MESSAGE/)
     assert.match(companion, /onOpenDictateFallback/)
     assert.match(companion, /inlineVoiceShowDictateFallback/)

@@ -13,7 +13,7 @@ describe('orb-composer-inline-voice-fallback', () => {
   it('exports required fallback copy', () => {
     assert.equal(
       ORB_COMPOSER_INLINE_VOICE_FALLBACK_COPY,
-      'Speech input is not available in this browser. You can use Dictate or type instead.'
+      'Speech input is not available here. Open Dictate instead.'
     )
     assert.equal(ORB_COMPOSER_SPEECH_UNAVAILABLE_MESSAGE, ORB_COMPOSER_INLINE_VOICE_FALLBACK_COPY)
     assert.equal(getComposerSpeechFallbackCopy(), ORB_COMPOSER_INLINE_VOICE_FALLBACK_COPY)

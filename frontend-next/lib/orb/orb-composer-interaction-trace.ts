@@ -19,6 +19,7 @@ export type OrbComposerInteractionTraceEvent =
   | 'file_input_clicked'
   | 'voice_button_clicked'
   | 'voice_pointerdown'
+  | 'voice_touchstart'
   | 'dictate_start_clicked'
   | 'billing_refresh_clicked'
   | 'settings_save_clicked'
