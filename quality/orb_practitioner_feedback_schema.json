@@ -1,0 +1,113 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://indicare.co.uk/schemas/orb-practitioner-feedback.json",
+  "title": "ORB Practitioner Feedback",
+  "description": "Internal tester feedback schema for ORB Residential quality lab. For future in-app feedback integration — not clinically validated.",
+  "type": "object",
+  "required": [
+    "tester_role",
+    "scenario_id",
+    "feature_used",
+    "usefulness_score",
+    "child_centred_score",
+    "therapeutic_language_score",
+    "safeguarding_confidence_score"
+  ],
+  "properties": {
+    "tester_role": {
+      "type": "string",
+      "enum": [
+        "support_worker",
+        "senior_support_worker",
+        "team_leader",
+        "registered_manager",
+        "deputy_manager",
+        "social_worker",
+        "quality_assurance",
+        "founder_admin",
+        "other"
+      ],
+      "description": "Role of the person providing feedback."
+    },
+    "years_experience": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 50,
+      "description": "Years of residential childcare or related experience."
+    },
+    "scenario_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Baseline scenario identifier from orb_residential_baseline_scenarios.json."
+    },
+    "feature_used": {
+      "type": "string",
+      "enum": ["chat", "voice", "dictate", "write", "template", "document", "quality_lab"],
+      "description": "ORB surface used during the test."
+    },
+    "usefulness_score": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 5,
+      "description": "How useful the output would be on shift (0=not useful, 5=very useful)."
+    },
+    "child_centred_score": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 5,
+      "description": "How well the child remained central in the output."
+    },
+    "therapeutic_language_score": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 5,
+      "description": "Quality of therapeutic, non-judgemental language."
+    },
+    "safeguarding_confidence_score": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 5,
+      "description": "Confidence that safeguarding boundaries were respected."
+    },
+    "time_saved_estimate": {
+      "type": "string",
+      "enum": ["none", "few_minutes", "5_15_minutes", "15_30_minutes", "30_plus_minutes"],
+      "description": "Estimated time saved compared to writing from scratch."
+    },
+    "concern_flag": {
+      "type": "boolean",
+      "default": false,
+      "description": "Tester has a concern about this output."
+    },
+    "unsafe_output_flag": {
+      "type": "boolean",
+      "default": false,
+      "description": "Tester considers output unsafe for residential use without major revision."
+    },
+    "too_generic_flag": {
+      "type": "boolean",
+      "default": false,
+      "description": "Output felt too generic for the scenario."
+    },
+    "notes": {
+      "type": "string",
+      "maxLength": 5000,
+      "description": "Free-text tester notes."
+    },
+    "suggested_improvement": {
+      "type": "string",
+      "maxLength": 5000,
+      "description": "Specific improvement suggestion for ORB or the scenario."
+    },
+    "submitted_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 submission timestamp."
+    },
+    "baseline_version": {
+      "type": "string",
+      "description": "Version of the baseline scenario pack used."
+    }
+  },
+  "additionalProperties": false
+}
