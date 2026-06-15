@@ -5,7 +5,7 @@ Rough notes converted to professional wording. Times approximate per input.
 Young person returned around 3pm (approximate). Upset after school; lessons described as difficult.
 
 ## Child's voice and presentation
-Upset presentation on return. Direct quotes beyond "school hard": Not stated.
+Young person communicated that lessons were difficult (paraphrased from rough notes). Upset presentation on return. Direct quotes beyond "school hard": Not stated.
 
 ## Adult response
 Staff sat with young person in quiet room.

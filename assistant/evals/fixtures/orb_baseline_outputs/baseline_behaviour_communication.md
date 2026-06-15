@@ -1,14 +1,14 @@
 ## Trigger
 Transition from gaming to tea time.
 
-## Presentation
-Raised voice; left room.
+## Child voice and presentation
+Raised voice; left room at transition. What would help next time: brief check-in agreed — further words: Not stated.
 
 ## Communication / unmet need
 Possible unmet need around predictable transition — interpretation to be checked with young person.
 
 ## Adult response
-Low-arousal approach; snack offered later.
+Low-arousal approach; snack offered later. Staff offered choice about when to return to tea area.
 
 ## Outcome
 Returned after approximately 15 minutes; ate later.

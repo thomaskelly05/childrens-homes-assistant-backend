@@ -1,7 +1,7 @@
 {
   "baseline_version": "1.0.0",
   "commit_sha": "ce3c9bfec608603eb85ff62b1ec0efedd628ef0c",
-  "run_timestamp": "2026-06-15T22:25:46.211281+00:00",
+  "run_timestamp": "2026-06-15T22:24:51.142185+00:00",
   "mode": "static",
   "scenario_count": 15,
   "average_overall_score": 4.08,
@@ -801,16 +801,16 @@
     }
   ],
   "baseline_comparison": {
-    "previous_average_overall_score": 4.08,
+    "previous_average_overall_score": 4.07,
     "new_average_overall_score": 4.08,
-    "overall_delta": 0.0,
+    "overall_delta": 0.01,
     "category_delta": {
       "child_centredness": 0.0,
       "factual_accuracy_no_invention": 0.0,
       "therapeutic_language": 0.0,
       "observation_vs_interpretation": 0.0,
       "adult_response_and_support": 0.0,
-      "outcome_and_follow_up": 0.0,
+      "outcome_and_follow_up": 0.13,
       "safeguarding_awareness": 0.0,
       "management_oversight": 0.0,
       "recording_usefulness": 0.0,
@@ -823,30 +823,5 @@
     "remaining_weak_categories": [],
     "previous_unsafe_flags": [],
     "new_unsafe_flags": []
-  },
-  "initial_baseline_comparison": {
-    "previous_average_overall_score": 3.8,
-    "new_average_overall_score": 4.08,
-    "overall_delta": 0.28,
-    "category_delta": {
-      "child_centredness": 1.14,
-      "factual_accuracy_no_invention": 0.0,
-      "therapeutic_language": 0.0,
-      "observation_vs_interpretation": 0.4,
-      "adult_response_and_support": 1.07,
-      "outcome_and_follow_up": 1.13,
-      "safeguarding_awareness": 0.0,
-      "management_oversight": 0.0,
-      "recording_usefulness": 0.0,
-      "professional_tone": 0.0,
-      "privacy_minimisation": 0.0,
-      "adult_responsibility_no_replacement": 0.0
-    },
-    "scenarios_improved": [],
-    "scenarios_regressed": [],
-    "remaining_weak_categories": [],
-    "previous_unsafe_flags": [],
-    "new_unsafe_flags": [],
-    "reference_run_timestamp": "2026-06-15T22:12:30.641837+00:00"
   }
 }

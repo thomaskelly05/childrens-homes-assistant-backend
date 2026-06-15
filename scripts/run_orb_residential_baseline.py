@@ -33,6 +33,86 @@ from assistant.services.model_provider_registry import model_provider_registry  
 SCENARIOS_PATH = ROOT / "quality" / "orb_residential_baseline_scenarios.json"
 FIXTURES_DIR = ROOT / "assistant" / "evals" / "fixtures" / "orb_baseline_outputs"
 REPORTS_DIR = ROOT / "reports"
+HISTORY_PATH = REPORTS_DIR / "orb_residential_baseline_history.jsonl"
+PREVIOUS_SNAPSHOT_PATH = REPORTS_DIR / "orb_residential_baseline_previous.json"
+
+
+def _load_previous_report() -> dict[str, Any] | None:
+    path = REPORTS_DIR / "orb_residential_baseline_report.json"
+    if not path.is_file():
+        return None
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+
+
+def _append_history_snapshot(report: dict[str, Any]) -> None:
+    HISTORY_PATH.parent.mkdir(parents=True, exist_ok=True)
+    snapshot = {
+        "run_timestamp": report.get("run_timestamp"),
+        "commit_sha": report.get("commit_sha"),
+        "baseline_version": report.get("baseline_version"),
+        "mode": report.get("mode"),
+        "average_overall_score": report.get("average_overall_score"),
+        "category_averages": report.get("category_averages"),
+        "unsafe_flags": report.get("unsafe_flags"),
+        "rating_distribution": report.get("rating_distribution"),
+    }
+    with HISTORY_PATH.open("a", encoding="utf-8") as fh:
+        fh.write(json.dumps(snapshot) + "\n")
+
+
+def _build_baseline_comparison(
+    previous: dict[str, Any] | None,
+    current: dict[str, Any],
+) -> dict[str, Any] | None:
+    if not previous:
+        return None
+    prev_avg = float(previous.get("average_overall_score") or 0)
+    curr_avg = float(current.get("average_overall_score") or 0)
+    prev_cats = previous.get("category_averages") or {}
+    curr_cats = current.get("category_averages") or {}
+    category_delta: dict[str, float] = {}
+    for cat in RUBRIC_CATEGORIES:
+        if cat in prev_cats and cat in curr_cats:
+            category_delta[cat] = round(float(curr_cats[cat]) - float(prev_cats[cat]), 2)
+
+    improved: list[str] = []
+    regressed: list[str] = []
+    prev_scenarios = {
+        str(row.get("scenario_id")): float(row.get("overall_score") or 0)
+        for row in (previous.get("scenarios") or [])
+    }
+    for row in current.get("scenarios") or []:
+        sid = str(row.get("scenario_id") or "")
+        if sid not in prev_scenarios:
+            continue
+        delta = float(row.get("overall_score") or 0) - prev_scenarios[sid]
+        if delta >= 0.1:
+            improved.append(sid)
+        elif delta <= -0.1:
+            regressed.append(sid)
+
+    weak_categories = sorted(
+        category_delta.items(),
+        key=lambda item: float(curr_cats.get(item[0], 0)),
+    )[:4]
+    remaining_weak = [
+        cat for cat, _ in weak_categories if float(curr_cats.get(cat, 0)) < 4.0
+    ]
+
+    return {
+        "previous_average_overall_score": prev_avg,
+        "new_average_overall_score": curr_avg,
+        "overall_delta": round(curr_avg - prev_avg, 2),
+        "category_delta": category_delta,
+        "scenarios_improved": improved,
+        "scenarios_regressed": regressed,
+        "remaining_weak_categories": remaining_weak,
+        "previous_unsafe_flags": previous.get("unsafe_flags") or [],
+        "new_unsafe_flags": current.get("unsafe_flags") or [],
+    }
 
 
 def _git_sha() -> str | None:
@@ -264,6 +344,51 @@ def render_markdown(report: dict[str, Any]) -> str:
         lines.append(json.dumps(report["model_provider"], indent=2))
         lines.append("```")
 
+    comparison = report.get("baseline_comparison")
+    if comparison:
+        lines.extend(
+            [
+                "",
+                "## Baseline comparison",
+                "",
+                f"- **Previous average:** {comparison.get('previous_average_overall_score')} / 5",
+                f"- **New average:** {comparison.get('new_average_overall_score')} / 5",
+                f"- **Overall delta:** {comparison.get('overall_delta')}",
+                "",
+                "### Category delta",
+                "",
+                "| Category | Delta |",
+                "| --- | ---: |",
+            ]
+        )
+        for cat, delta in sorted((comparison.get("category_delta") or {}).items()):
+            lines.append(f"| {cat.replace('_', ' ')} | {delta} |")
+        if comparison.get("scenarios_improved"):
+            lines.extend(["", "### Scenarios improved", ""])
+            for sid in comparison["scenarios_improved"]:
+                lines.append(f"- {sid}")
+        if comparison.get("remaining_weak_categories"):
+            lines.extend(["", "### Remaining weak categories", ""])
+            for cat in comparison["remaining_weak_categories"]:
+                lines.append(f"- {cat.replace('_', ' ')}")
+
+    initial = report.get("initial_baseline_comparison")
+    if initial:
+        lines.extend(
+            [
+                "",
+                "## Initial Quality Lab comparison",
+                "",
+                f"- **First run average:** {initial.get('previous_average_overall_score')} / 5",
+                f"- **Current average:** {initial.get('new_average_overall_score')} / 5",
+                f"- **Overall delta:** {initial.get('overall_delta')}",
+            ]
+        )
+        if initial.get("category_delta"):
+            lines.extend(["", "| Category | Delta |", "| --- | ---: |"])
+            for cat, delta in sorted(initial["category_delta"].items()):
+                lines.append(f"| {cat.replace('_', ' ')} | {delta} |")
+
     lines.extend(["", "## Scenario scores", "", "| Scenario | Score | Rating | Source |", "| --- | ---: | --- | --- |"])
     for row in report.get("scenarios") or []:
         lines.append(
@@ -321,11 +446,35 @@ def main() -> int:
         return 2
 
     report = run_baseline(live=live)
+    previous = _load_previous_report()
+    if previous:
+        PREVIOUS_SNAPSHOT_PATH.write_text(json.dumps(previous, indent=2), encoding="utf-8")
+    comparison = _build_baseline_comparison(previous, report)
+    if comparison:
+        report["baseline_comparison"] = comparison
+    # Preserve comparison against first Quality Lab baseline (3.8) when available in history.
+    if HISTORY_PATH.is_file():
+        first_line = HISTORY_PATH.read_text(encoding="utf-8").splitlines()[0]
+        if first_line:
+            try:
+                first_snapshot = json.loads(first_line)
+                initial = _build_baseline_comparison(first_snapshot, report)
+                if initial and float(first_snapshot.get("average_overall_score") or 0) < float(
+                    report.get("average_overall_score") or 0
+                ):
+                    report["initial_baseline_comparison"] = {
+                        **initial,
+                        "reference_run_timestamp": first_snapshot.get("run_timestamp"),
+                    }
+            except json.JSONDecodeError:
+                pass
+
     args.output_dir.mkdir(parents=True, exist_ok=True)
     json_path = args.output_dir / "orb_residential_baseline_report.json"
     md_path = args.output_dir / "orb_residential_baseline_report.md"
     json_path.write_text(json.dumps(report, indent=2), encoding="utf-8")
     md_path.write_text(render_markdown(report), encoding="utf-8")
+    _append_history_snapshot(report)
 
     print(f"Wrote {json_path}")
     print(f"Wrote {md_path}")

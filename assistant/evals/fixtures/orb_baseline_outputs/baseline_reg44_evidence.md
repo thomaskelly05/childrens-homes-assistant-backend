@@ -10,14 +10,17 @@ Attendance variable. Exclusions: Not stated in input.
 ## Incidents
 Two incidents this month; de-escalation only per input.
 
+## Practice observed / adult response
+Staff de-escalation in two incidents; supervision and keywork active per input.
+
 ## Safeguarding
 Chronology updated per input. Detail: Not stated.
 
-## Staffing
-Supervision current per input.
-
 ## Child voice
-Feedback collected via keywork per input.
+Feedback collected via keywork per input. Young person communicated placement feels more stable recently — exact words: Not stated.
+
+## Outcome and follow-up
+Evidence pack preparation in progress; placement stability improved per input. Next step: dated chronology extracts and manager sign-off before visit.
 
 ## Gaps
 Dates, chronology extracts and signed management reviews: Not stated.

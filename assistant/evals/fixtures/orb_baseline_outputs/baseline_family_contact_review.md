@@ -8,10 +8,13 @@ Last three contacts reviewed from input.
 | Third (phone) | Young person chose shorter call |
 
 ## Child voice
-Young person said visits feel rushed.
+Young person said visits feel rushed. Presentation after contacts: tired; tearful when second visit ended early.
 
-## Other observations
-Guardian requested longer weekend contact. Staff observed fatigue after visits.
+## Adult response
+Staff observed fatigue after visits and supported rest time. No pressure to continue contact when tearful.
+
+## Outcome
+Pattern of shorter or early-ended contacts noted. Young person appeared tired after visits; settled with rest time offered.
 
 ## Follow-up
 Contact plan review with responsible adults. Dates of contacts: Not stated.

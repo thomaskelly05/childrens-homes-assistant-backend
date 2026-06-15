@@ -1,14 +1,22 @@
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { describe, it } from 'node:test'
 
 import {
+  assertBaselineFixtureQuality,
   assertChildCentredOutput,
   assertMeetingIntelligence,
   assertOrbWriteReadiness,
   assertRecordingQuality,
   assertSafeguardingBoundaries,
-  assertTherapeuticLanguage
+  assertTherapeuticLanguage,
+  GOLDEN_FIXTURE_ASSERTIONS
 } from './orb-residential-quality-assertions.ts'
+
+const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '../../..')
+const fixturesDir = join(repoRoot, '../assistant/evals/fixtures/orb_baseline_outputs')
 
 describe('ORB residential quality assertions', () => {
   const goodOutput = `## What happened
@@ -69,5 +77,13 @@ Adult review required before saving or exporting.`
   it('ORB Write readiness fails without review statement', () => {
     const result = assertOrbWriteReadiness('Plain text without structure.')
     assert.equal(result.passed, false)
+  })
+
+  it('golden baseline fixtures include child voice, adult response and follow-up', () => {
+    for (const fixture of GOLDEN_FIXTURE_ASSERTIONS) {
+      const output = readFileSync(join(fixturesDir, `${fixture.scenarioId}.md`), 'utf8')
+      const result = assertBaselineFixtureQuality(fixture, output)
+      assert.equal(result.passed, true, `${fixture.scenarioId}: ${result.failures.join('; ')}`)
+    }
   })
 })

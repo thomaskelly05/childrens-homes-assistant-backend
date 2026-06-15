@@ -1,5 +1,23 @@
 {
-  "version": "1.1.0",
+  "version": "1.2.0",
+  "residential_recording_structure": {
+    "principle": "Use flexibly — not as a forced heading list every time.",
+    "steps": [
+      "What happened?",
+      "What did the child say, show or communicate?",
+      "What did adults observe?",
+      "What did adults do to support?",
+      "What changed by the end?",
+      "What follow-up, oversight or escalation is needed?"
+    ],
+    "wording_discipline": [
+      "Record behaviour as communication where appropriate.",
+      "Name adult actions specifically, not just 'staff supported'.",
+      "Include outcome and next steps where known.",
+      "State when information is unknown rather than inventing it.",
+      "Keep records factual, warm and child-centred."
+    ]
+  },
   "record_types": [
     {
       "id": "general_dictation",
@@ -33,7 +51,7 @@
       "manager_oversight_checks": [
         "Whether manager notification is needed"
       ],
-      "professional_language_guidance": "Use observable facts, avoid judgement, name adults and times where known.",
+      "professional_language_guidance": "Use observable facts, avoid judgement, name adults and times where known. Include child voice/presentation, specific adult actions, outcome and follow-up where relevant.",
       "regulatory_evidence_points": [
         "Factual clarity",
         "Professional tone"
@@ -212,7 +230,7 @@
         "Manager informed",
         "Review required"
       ],
-      "professional_language_guidance": "Chronological facts, no blame language, clear adult actions.",
+      "professional_language_guidance": "Chronological facts, no blame language. Include child voice/presentation, specific adult de-escalation actions, outcome, repair and follow-up.",
       "regulatory_evidence_points": [
         "Safeguarding response",
         "De-escalation",
@@ -405,7 +423,7 @@
         "Manager and DSL informed",
         "Review date"
       ],
-      "professional_language_guidance": "Facts led, no speculation, clear decision rationale.",
+      "professional_language_guidance": "Facts led, no speculation. Record child words, adult response, escalation pathway, outcome and follow-up. Adults decide — ORB does not make safeguarding decisions.",
       "regulatory_evidence_points": [
         "Child voice",
         "Immediate safety",
@@ -592,7 +610,7 @@
       "manager_oversight_checks": [
         "Significant disclosures escalated"
       ],
-      "professional_language_guidance": "Strengths-based, child-led language, link to care plan goals.",
+      "professional_language_guidance": "Strengths-based, child-led language. Include child voice, emotional support offered, specific adult actions, outcome and contact plan follow-up.",
       "regulatory_evidence_points": [
         "Child participation",
         "Plan impact"
@@ -672,7 +690,7 @@
       "manager_oversight_checks": [
         "Clear actions and review date"
       ],
-      "professional_language_guidance": "Fact-led curiosity, clear accountability, child impact focus.",
+      "professional_language_guidance": "Fact-led oversight with child impact, staff actions observed, outcomes and follow-up actions with owners. No inspection grade predictions.",
       "regulatory_evidence_points": [
         "Leadership oversight",
         "Actions tracked"
@@ -832,7 +850,7 @@
       "manager_oversight_checks": [
         "Outstanding manager actions flagged"
       ],
-      "professional_language_guidance": "Concise, risk-focused, actionable for incoming staff.",
+      "professional_language_guidance": "Concise handover: child presentation and voice, what adults did that helped, end-of-shift outcome, risks and clear follow-up actions for incoming staff.",
       "regulatory_evidence_points": [
         "Continuity of care",
         "Risk communication"
@@ -1069,7 +1087,7 @@
       "manager_oversight_checks": [
         "Concerns escalated to manager / SW"
       ],
-      "professional_language_guidance": "Balanced, child-centred, contact plan referenced.",
+      "professional_language_guidance": "Balanced, child-centred. Include child voice, how adults supported, outcome after contact and follow-up for contact plan review.",
       "regulatory_evidence_points": [
         "Contact quality",
         "Child impact"
@@ -1616,7 +1634,7 @@
       "manager_oversight_checks": [
         "Manager response to findings"
       ],
-      "professional_language_guidance": "Inspection-ready, impact-focused, evidence-linked.",
+      "professional_language_guidance": "Evidence-linked summary of child experience, practice observed, adult actions, outcomes and follow-up. Balanced — no compliance guarantees.",
       "regulatory_evidence_points": [
         "Reg 44 requirements",
         "Child experience"
@@ -1774,7 +1792,7 @@
       "manager_oversight_checks": [
         "Manager review if pattern or risk increases"
       ],
-      "professional_language_guidance": "Non-blaming, trauma-informed, behaviour as communication.",
+      "professional_language_guidance": "Non-blaming, trauma-informed, behaviour as communication. Include child voice/presentation, specific adult response, outcome and learning follow-up.",
       "regulatory_evidence_points": [
         "Child-centred reflection",
         "Learning from practice"
@@ -2192,7 +2210,8 @@
         "Purpose clear",
         "People present listed",
         "Child voice where relevant",
-        "Decisions or actions stated"
+        "Adult response during visit",
+        "Outcome and follow-up"
       ],
       "safeguarding_checks": [
         "Safeguarding themes flagged where discussed",
@@ -2204,7 +2223,7 @@
       "manager_oversight_checks": [
         "Management oversight and follow-up identified"
       ],
-      "professional_language_guidance": "Use child-centred, factual language. Attribute views to speakers where known. Do not invent names, decisions or actions.",
+      "professional_language_guidance": "Factual visit record with child voice, how adults supported during the visit, observable presentation, outcome and follow-up. Observation before interpretation.",
       "regulatory_evidence_points": [
         "Multi-agency working",
         "Child-centred recording",
@@ -2382,7 +2401,7 @@
         "Purpose clear",
         "People present listed",
         "Child voice where relevant",
-        "Decisions or actions stated"
+        "Practice outcomes and follow-up actions"
       ],
       "safeguarding_checks": [
         "Safeguarding themes flagged where discussed",
@@ -2394,7 +2413,7 @@
       "manager_oversight_checks": [
         "Management oversight and follow-up identified"
       ],
-      "professional_language_guidance": "Use child-centred, factual language. Attribute views to speakers where known. Do not invent names, decisions or actions.",
+      "professional_language_guidance": "Reflective, supportive supervision record. Include child-centred practice discussed, adult responses reviewed, outcomes agreed and follow-up actions.",
       "regulatory_evidence_points": [
         "Multi-agency working",
         "Child-centred recording",
@@ -2477,7 +2496,8 @@
         "Purpose clear",
         "People present listed",
         "Child voice where relevant",
-        "Decisions or actions stated"
+        "Adult response from home team",
+        "Outcome and follow-up actions"
       ],
       "safeguarding_checks": [
         "Safeguarding themes flagged where discussed",
@@ -2489,7 +2509,7 @@
       "manager_oversight_checks": [
         "Management oversight and follow-up identified"
       ],
-      "professional_language_guidance": "Use child-centred, factual language. Attribute views to speakers where known. Do not invent names, decisions or actions.",
+      "professional_language_guidance": "Child-centred, factual multi-agency summary. Include child voice, home team adult response, impact on the child, agreed outcomes and follow-up. Attribute views to agencies.",
       "regulatory_evidence_points": [
         "Multi-agency working",
         "Child-centred recording",
@@ -2571,8 +2591,9 @@
       "missing_evidence_checks": [
         "Purpose clear",
         "People present listed",
+        "Factual observations separated from decisions",
         "Child voice where relevant",
-        "Decisions or actions stated"
+        "Escalation pathway and follow-up"
       ],
       "safeguarding_checks": [
         "Safeguarding themes flagged where discussed",
@@ -2584,7 +2605,7 @@
       "manager_oversight_checks": [
         "Management oversight and follow-up identified"
       ],
-      "professional_language_guidance": "Use child-centred, factual language. Attribute views to speakers where known. Do not invent names, decisions or actions.",
+      "professional_language_guidance": "Factual safeguarding strategy record. Include child welfare, adult support offered, escalation pathway, human decisions and time-bound follow-up. ORB does not make safeguarding decisions.",
       "regulatory_evidence_points": [
         "Multi-agency working",
         "Child-centred recording",
