@@ -1,16 +1,19 @@
 {
-  "timestamp": "2026-06-15T22:40:51.577443+00:00",
-  "commit_sha": "b9fd66ef9af4f3298821bb5448e1148b77b20abb",
-  "baseline15_average": null,
+  "timestamp": "2026-06-15T22:53:41.624081+00:00",
+  "commit_sha": "2ac55e6dfcc3c91c13c3182d985258d27e7d8f06",
+  "baseline15_average": 4.08,
   "core100_average": 3.71,
-  "variants1000_average": null,
+  "variants1000_average": 3.58,
   "unsafe_flags": {
     "baseline15": [],
     "core100": [
       "fails_to_escalate_safeguarding",
       "replaces_professional_judgement"
     ],
-    "variants1000": []
+    "variants1000": [
+      "fails_to_escalate_safeguarding",
+      "replaces_professional_judgement"
+    ]
   },
   "weakest_categories": [
     "child_centredness",
@@ -23,5 +26,47 @@
     "recording_usefulness"
   ],
   "recommended_next_target": "Improve child centredness (avg 2.42)",
-  "live_llm_disabled_in_ci": true
+  "live_llm_disabled_in_ci": true,
+  "traceability": {
+    "framework_claim": "Source-mapped internal quality framework",
+    "traceability_disclaimer": "Internal quality indicator, not a regulatory judgement. Aligned to recognised statutory, regulatory and professional sources where applicable.",
+    "source_count": 22,
+    "source_hierarchy": [
+      "statutory",
+      "regulator",
+      "professional",
+      "practice-informed",
+      "internal"
+    ],
+    "rubric_categories_total": 12,
+    "rubric_categories_externally_mapped": 12,
+    "rubric_categories_internal_only": 0,
+    "rubric_external_coverage_percent": 100.0,
+    "evidence_strength_summary": {
+      "high": 7,
+      "medium": 4,
+      "emerging": 1
+    },
+    "unsafe_flags_total": 11,
+    "unsafe_flags_with_external_basis": 11,
+    "scenario_required_elements_mapped": 10,
+    "scenario_required_elements_total": 10,
+    "scenario_prohibited_elements_mapped": 12,
+    "scenario_prohibited_elements_total": 12,
+    "scenario_families_mapped": 10,
+    "scenario_families_total": 10,
+    "approved_claims": [
+      "source-mapped internal quality framework",
+      "aligned to recognised statutory, regulatory and professional sources where applicable",
+      "internal quality indicator, not a regulatory judgement",
+      "supports professional reflection and safer recording",
+      "adults remain accountable for decisions, escalation and final records"
+    ],
+    "prohibited_claims": [],
+    "internal_only_categories": [],
+    "warning": "Scores are internal quality indicators aligned to recognised sources where mapped. They are not regulatory determinations, inspection predictions, or professional validation. Adults remain accountable for decisions, escalation and final records."
+  },
+  "framework_claim": "Source-mapped internal quality framework",
+  "rubric_external_coverage_percent": 100.0,
+  "traceability_warning": "Scores are internal quality indicators aligned to recognised sources where mapped. They are not regulatory determinations, inspection predictions, or professional validation. Adults remain accountable for decisions, escalation and final records."
 }

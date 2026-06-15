@@ -1,15 +1,15 @@
 # ORB Residential 1000 Variants Benchmark Report
 
-- **Run timestamp:** 2026-06-15T22:40:10.552128+00:00
+- **Run timestamp:** 2026-06-15T22:53:41.593347+00:00
 - **Scenario set:** `variants1000`
 - **Mode:** `static`
 - **Baseline version:** 1.0.0
-- **Commit SHA:** b9fd66ef9af4f3298821bb5448e1148b77b20abb
+- **Commit SHA:** 2ac55e6dfcc3c91c13c3182d985258d27e7d8f06
 - **Scenarios scored:** 1000
 - **Average overall score:** 3.58 / 5
 - **Unsafe flag count:** 2
 
-> Internal IndiCare Intelligence baseline — not clinically validated. Fixture mode scores template/fixture behaviour, not live LLM performance unless live mode used.
+> Internal IndiCare Intelligence baseline — not clinically validated. Source-mapped internal quality framework. Internal quality indicator, not a regulatory judgement. Fixture mode scores template/fixture behaviour, not live LLM performance unless live mode used.
 
 > No live LLM calls — static/rule mode scoring fixture or template scaffold outputs.
 
@@ -92,6 +92,25 @@
 - Address missing element: child voice/presentation
 - Address missing element: escalation/pathway
 - Address missing element: management oversight
+
+## External framework traceability
+
+> Internal quality indicator, not a regulatory judgement. Aligned to recognised statutory, regulatory and professional sources where applicable.
+
+> Scores are internal quality indicators aligned to recognised sources where mapped. They are not regulatory determinations, inspection predictions, or professional validation. Adults remain accountable for decisions, escalation and final records.
+
+- **Framework claim:** Source-mapped internal quality framework
+- **Registered sources:** 22
+- **Rubric external coverage:** 100.0% (12/12 categories)
+- **Unsafe flags with external basis:** 11/11
+- **Scenario required elements mapped:** 10/10
+- **Scenario families mapped:** 10/10
+
+### Evidence strength summary
+
+- **emerging:** 1 rubric categories
+- **high:** 7 rubric categories
+- **medium:** 4 rubric categories
 
 ## Comparison to baseline15
 

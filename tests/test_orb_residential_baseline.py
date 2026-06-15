@@ -19,6 +19,12 @@ INDEX_PATH = ROOT / "quality" / "orb_residential_scenario_index.json"
 SCHEMA_PATH = ROOT / "quality" / "orb_residential_scenario_schema.json"
 FEEDBACK_SCHEMA_PATH = ROOT / "quality" / "orb_practitioner_feedback_schema.json"
 ARCH_DOC_PATH = ROOT / "docs" / "indicare_internal_brain_architecture.md"
+TRACEABILITY_DOC_PATH = ROOT / "docs" / "orb_quality_framework_traceability.md"
+SOURCES_PATH = ROOT / "quality" / "orb_external_framework_sources.json"
+RUBRIC_TRACEABILITY_PATH = ROOT / "quality" / "orb_quality_rubric_traceability.json"
+UNSAFE_TRACEABILITY_PATH = ROOT / "quality" / "orb_unsafe_flag_traceability.json"
+SCENARIO_EXPECTATION_PATH = ROOT / "quality" / "orb_scenario_expectation_traceability.json"
+REVIEWER_PACK_PATH = ROOT / "quality" / "orb_external_reviewer_pack.json"
 RUNNER_PATH = ROOT / "scripts" / "run_orb_residential_baseline.py"
 REPORT_JSON = ROOT / "reports" / "orb_residential_baseline_report.json"
 REPORT_MD = ROOT / "reports" / "orb_residential_baseline_report.md"
@@ -67,6 +73,21 @@ REAL_LOOKING_NAME_PATTERNS = [
 
 sys.path.insert(0, str(ROOT))
 
+from assistant.evals.orb_external_framework_traceability import (  # noqa: E402
+    APPROVED_CLAIM_PHRASES,
+    PROHIBITED_CLAIM_PATTERNS,
+    VALID_EVIDENCE_STRENGTHS,
+    VALID_RELIABILITY_LEVELS,
+    VALID_SOURCE_HIERARCHY,
+    build_traceability_report_section,
+    compute_traceability_summary,
+    load_external_reviewer_pack,
+    load_external_sources,
+    load_rubric_traceability,
+    load_scenario_expectation_traceability,
+    load_unsafe_flag_traceability,
+    source_index,
+)
 from assistant.evals.orb_residential_quality_rubric import (  # noqa: E402
     RUBRIC_CATEGORIES,
     detect_binary_flags,
@@ -425,3 +446,159 @@ def test_framework_has_residential_recording_structure() -> None:
     structure = get_residential_recording_structure()
     assert len(structure.get("steps") or []) >= 6
     assert len(structure.get("wording_discipline") or []) >= 4
+
+
+# --- External framework traceability tests ---
+
+
+def test_external_framework_source_registry_loads() -> None:
+    payload = load_external_sources()
+    assert payload.get("version")
+    assert len(payload.get("sources") or []) >= 10
+
+
+def test_each_source_has_reliability_level() -> None:
+    for source in load_external_sources().get("sources") or []:
+        assert source.get("reliability_level") in VALID_RELIABILITY_LEVELS, source.get("source_id")
+        assert source.get("source_id")
+        assert source.get("usage_boundaries")
+
+
+def test_source_hierarchy_values_are_valid() -> None:
+    payload = load_external_sources()
+    hierarchy = payload.get("source_hierarchy") or []
+    assert list(hierarchy) == list(VALID_SOURCE_HIERARCHY)
+
+
+def test_each_rubric_category_has_source_mapping() -> None:
+    rubric = load_rubric_traceability()
+    mapped = {c["rubric_category"]: c for c in rubric.get("categories") or []}
+    for category in RUBRIC_CATEGORIES:
+        assert category in mapped, f"Missing traceability for {category}"
+        entry = mapped[category]
+        all_sources = (entry.get("external_source_ids") or []) + (entry.get("internal_source_ids") or [])
+        assert all_sources, f"{category} has no source mapping"
+        assert entry.get("evidence_strength") in VALID_EVIDENCE_STRENGTHS
+
+
+def test_each_unsafe_flag_has_source_mapping() -> None:
+    flags = load_unsafe_flag_traceability().get("flags") or []
+    flag_names = {f["unsafe_flag"] for f in flags}
+    expected = {
+        "contains_blaming_language",
+        "contains_diagnostic_language",
+        "contains_compliance_guarantee",
+        "invents_unprovided_fact",
+        "fails_to_escalate_safeguarding",
+        "exposes_identifiable_information",
+        "replaces_professional_judgement",
+        "too_generic",
+        "too_long",
+        "too_short",
+        "not_useful_on_shift",
+    }
+    assert expected <= flag_names
+    for flag in flags:
+        assert flag.get("source_basis"), flag.get("unsafe_flag")
+        assert flag.get("why_it_matters")
+        assert flag.get("risk_level")
+
+
+def test_internal_only_mappings_are_clearly_labelled() -> None:
+    rubric = load_rubric_traceability()
+    for entry in rubric.get("categories") or []:
+        if not entry.get("external_source_ids"):
+            assert entry.get("evidence_strength") in {"emerging", "internal_only", "medium"}
+        if entry.get("evidence_strength") == "internal_only":
+            assert not entry.get("external_source_ids")
+
+
+def test_no_mapping_claims_ofsted_approval() -> None:
+    """Mappings must not affirm prohibited validation claims (element names describing prohibitions are allowed)."""
+    fields_to_check: list[str] = []
+
+    for source in load_external_sources().get("sources") or []:
+        for key in ("summary", "relevance_to_orb", "usage_boundaries"):
+            if source.get(key):
+                fields_to_check.append(str(source[key]))
+
+    rubric = load_rubric_traceability()
+    fields_to_check.append(str(rubric.get("framework_claim", "")))
+    fields_to_check.append(str(rubric.get("disclaimer", "")))
+    for entry in rubric.get("categories") or []:
+        for key in ("rationale", "scoring_caution"):
+            if entry.get(key):
+                fields_to_check.append(str(entry[key]))
+
+    for flag in load_unsafe_flag_traceability().get("flags") or []:
+        if flag.get("why_it_matters"):
+            fields_to_check.append(str(flag["why_it_matters"]))
+
+    blob = " ".join(fields_to_check).lower()
+    for pattern in PROHIBITED_CLAIM_PATTERNS:
+        assert pattern not in blob, f"Prohibited claim pattern found: {pattern}"
+
+
+def test_no_mapping_claims_compliance_guarantee() -> None:
+    rubric_text = RUBRIC_TRACEABILITY_PATH.read_text(encoding="utf-8").lower()
+    assert "compliance guaranteed" not in rubric_text
+    assert "guarantee compliance" not in rubric_text
+
+
+def test_scenario_expectation_traceability_loads() -> None:
+    payload = load_scenario_expectation_traceability()
+    assert len(payload.get("required_element_mappings") or []) >= 8
+    assert len(payload.get("prohibited_element_mappings") or []) >= 8
+    assert len(payload.get("scenario_family_mappings") or []) >= 8
+
+
+def test_external_reviewer_pack_loads() -> None:
+    pack = load_external_reviewer_pack()
+    assert len(pack.get("challenge_questions") or []) >= 8
+    assert pack.get("prohibited_claims_to_reject")
+    assert pack.get("approved_claims")
+
+
+def test_traceability_summary_covers_all_categories() -> None:
+    summary = compute_traceability_summary()
+    assert summary["rubric_categories_total"] == len(RUBRIC_CATEGORIES)
+    assert summary["rubric_external_coverage_percent"] == 100.0
+    assert summary["rubric_categories_internal_only"] == 0
+
+
+def test_traceability_section_in_runner_report(tmp_path: Path) -> None:
+    report = _run_runner("baseline15", tmp_path)
+    assert "traceability" in report
+    trace = report["traceability"]
+    assert trace.get("rubric_external_coverage_percent") is not None
+    assert "internal quality indicator" in str(trace.get("traceability_disclaimer", "")).lower()
+    assert "not regulatory" in str(trace.get("warning", "")).lower()
+
+
+def test_traceability_section_appears_in_markdown_report(tmp_path: Path) -> None:
+    _run_runner("core100", tmp_path)
+    md = (tmp_path / "orb_residential_core_100_report.md").read_text(encoding="utf-8")
+    assert "## External framework traceability" in md
+    assert "internal quality indicator" in md.lower()
+    assert "not regulatory" in md.lower()
+
+
+def test_governance_traceability_doc_exists() -> None:
+    text = TRACEABILITY_DOC_PATH.read_text(encoding="utf-8")
+    assert "must not mark its own homework" in text.lower()
+    for phrase in APPROVED_CLAIM_PHRASES[:3]:
+        assert phrase.lower() in text.lower()
+
+
+def test_source_ids_in_mappings_exist_in_registry() -> None:
+    index = source_index()
+    rubric = load_rubric_traceability()
+    for entry in rubric.get("categories") or []:
+        for sid in (entry.get("external_source_ids") or []) + (entry.get("internal_source_ids") or []):
+            assert sid in index, f"Unknown source_id: {sid}"
+
+
+def test_build_traceability_report_section_has_warning() -> None:
+    section = build_traceability_report_section()
+    assert section.get("warning")
+    assert section.get("framework_claim")

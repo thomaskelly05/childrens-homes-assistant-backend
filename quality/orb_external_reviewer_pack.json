@@ -1,0 +1,135 @@
+{
+  "version": "1.0.0",
+  "description": "External reviewer and audit board challenge pack for ORB Residential quality framework.",
+  "last_reviewed_date": "2026-06-15",
+  "purpose": "Items an independent residential childcare professional, safeguarding lead or audit board should challenge before treating ORB quality scores as credible.",
+  "reviewer_profile": [
+    "Registered manager or deputy with children's homes experience",
+    "Designated safeguarding lead or safeguarding advisor",
+    "Independent visitor or Reg 44 perspective (optional)",
+    "Social work or multi-agency safeguarding representative (optional)",
+    "Data protection or governance advisor (optional)"
+  ],
+  "challenge_questions": [
+    {
+      "id": "rubric_reflects_practice",
+      "question": "Does the rubric reflect residential childcare recording practice as you would expect on shift?",
+      "focus_areas": ["RUBRIC_CATEGORIES", "category weights", "marker keywords"],
+      "evidence_to_review": [
+        "quality/orb_quality_rubric_traceability.json",
+        "assistant/evals/orb_residential_quality_rubric.py"
+      ]
+    },
+    {
+      "id": "source_mappings_appropriate",
+      "question": "Are source mappings appropriate — neither overclaiming nor missing key statutory guidance?",
+      "focus_areas": ["source hierarchy", "paragraph-level gaps", "internal-only categories"],
+      "evidence_to_review": [
+        "quality/orb_external_framework_sources.json",
+        "quality/orb_quality_rubric_traceability.json"
+      ]
+    },
+    {
+      "id": "unsafe_flags_sufficient",
+      "question": "Are unsafe flags sufficient for high-risk residential scenarios?",
+      "focus_areas": [
+        "fails_to_escalate_safeguarding",
+        "replaces_professional_judgement",
+        "invents_unprovided_fact",
+        "contains_compliance_guarantee"
+      ],
+      "evidence_to_review": [
+        "quality/orb_unsafe_flag_traceability.json",
+        "quality/orb_residential_baseline_scenarios.json"
+      ]
+    },
+    {
+      "id": "scenario_families_realistic",
+      "question": "Are scenario families realistic for children's homes practice?",
+      "focus_areas": ["scenario_family coverage", "record_type diversity", "difficulty levels"],
+      "evidence_to_review": [
+        "quality/orb_residential_core_100_scenarios.json",
+        "quality/orb_scenario_expectation_traceability.json"
+      ]
+    },
+    {
+      "id": "high_risk_handled_safely",
+      "question": "Are high-risk safeguarding scenarios handled safely in prompts, fixtures and scoring?",
+      "focus_areas": ["partial disclosure", "escalation_required", "no investigation by staff"],
+      "evidence_to_review": [
+        "assistant/prompts.py",
+        "assistant/evals/fixtures/orb_baseline_outputs/baseline_safeguarding_disclosure.md"
+      ]
+    },
+    {
+      "id": "scoring_overconfident",
+      "question": "Is any scoring category overconfident relative to the evidence available?",
+      "focus_areas": ["evidence_strength: emerging", "evidence_strength: internal_only", "heuristic limits"],
+      "evidence_to_review": [
+        "quality/orb_quality_rubric_traceability.json",
+        "reports/orb_residential_core_100_report.md"
+      ]
+    },
+    {
+      "id": "missing_sources",
+      "question": "Are there missing sources that should be mapped (e.g. restraint guidance, missing-from-care protocols, medication recording)?",
+      "focus_areas": ["source_text_status: pending", "regulatory_context gaps"],
+      "evidence_to_review": [
+        "quality/orb_external_framework_sources.json",
+        "quality/orb_residential_scenario_schema.json"
+      ]
+    },
+    {
+      "id": "contradictions_with_practice",
+      "question": "Are there contradictions with real residential practice or local safeguarding procedures?",
+      "focus_areas": ["escalation timing", "investigation boundaries", "manager notification"],
+      "evidence_to_review": [
+        "assistant/knowledge/orb_recording_framework.json",
+        "services/orb_residential_quality_service.py"
+      ]
+    },
+    {
+      "id": "child_central",
+      "question": "Does the system keep the child central in scoring and scenario expectations?",
+      "focus_areas": ["child_centredness", "child voice/presentation", "record dignity"],
+      "evidence_to_review": [
+        "quality/orb_quality_rubric_traceability.json",
+        "assistant/knowledge/therapeutic_language.py"
+      ]
+    },
+    {
+      "id": "adult_judgement_preserved",
+      "question": "Does the framework preserve adult judgement and avoid replacing safeguarding decisions?",
+      "focus_areas": [
+        "adult_responsibility_no_replacement",
+        "replaces_professional_judgement flag",
+        "draft-only caveats"
+      ],
+      "evidence_to_review": [
+        "docs/orb_quality_framework_traceability.md",
+        "assistant/prompts.py"
+      ]
+    }
+  ],
+  "prohibited_claims_to_reject": [
+    "Ofsted approved",
+    "Compliance guaranteed",
+    "Regulator validated",
+    "Professionally validated",
+    "Safeguarding decision made by ORB"
+  ],
+  "approved_claims": [
+    "Source-mapped internal quality framework",
+    "Aligned to recognised statutory, regulatory and professional sources where applicable",
+    "Internal quality indicator, not a regulatory judgement",
+    "Supports professional reflection and safer recording",
+    "Adults remain accountable for decisions, escalation and final records"
+  ],
+  "recommended_review_outputs": [
+    "Written challenge notes per question",
+    "Source mapping corrections with citations",
+    "Scenario additions for uncovered record types",
+    "Unsafe flag gap analysis",
+    "Evidence strength reclassification where warranted"
+  ]
+}

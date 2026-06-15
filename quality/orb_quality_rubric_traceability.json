@@ -1,0 +1,209 @@
+{
+  "version": "1.0.0",
+  "description": "Rubric category to external/internal source traceability map for ORB Residential Quality Lab.",
+  "last_reviewed_date": "2026-06-15",
+  "framework_claim": "Source-mapped internal quality framework",
+  "disclaimer": "Internal quality indicator, not a regulatory judgement. Aligned to recognised statutory, regulatory and professional sources where applicable.",
+  "categories": [
+    {
+      "rubric_category": "child_centredness",
+      "what_orb_scores": "Whether output foregrounds child voice, presentation, communication and welfare-focused subject language.",
+      "external_source_ids": [
+        "guide_ch_reg_quality_standards",
+        "children_act_1989",
+        "nice_looked_after_children",
+        "ofsted_sccif_ch"
+      ],
+      "internal_source_ids": [
+        "indicare_record_dignity",
+        "indicare_therapeutic_recording"
+      ],
+      "evidence_strength": "high",
+      "rationale": "Children's homes quality standards and NICE looked-after children guidance emphasise wishes, feelings and child-centred practice. IndiCare principles operationalise this in recording markers.",
+      "scoring_caution": "Marker-based detection may miss nuanced child voice; high scores do not prove child participation in real practice.",
+      "reviewer_notes_required": true
+    },
+    {
+      "rubric_category": "factual_accuracy_no_invention",
+      "what_orb_scores": "Whether output avoids inventing facts not in input and marks unknown information appropriately.",
+      "external_source_ids": [
+        "guide_ch_reg_quality_standards",
+        "ofsted_ch_inspection_guidance",
+        "swe_professional_standards"
+      ],
+      "internal_source_ids": [
+        "indicare_therapeutic_recording",
+        "orb_adult_responsibility_boundary"
+      ],
+      "evidence_strength": "high",
+      "rationale": "Accurate, defensible records are expected in inspection and professional standards. ORB enforces no-invention via pattern checks and missing-information markers.",
+      "scoring_caution": "Cannot detect subtle invention or omission; fixture mode may not reflect live LLM behaviour.",
+      "reviewer_notes_required": true
+    },
+    {
+      "rubric_category": "therapeutic_language",
+      "what_orb_scores": "Whether wording avoids blaming, punitive or diagnostic language and uses respectful residential phrasing.",
+      "external_source_ids": [
+        "nice_looked_after_children",
+        "pace_principles",
+        "trauma_informed_principles",
+        "nspcc_safeguarding_guidance"
+      ],
+      "internal_source_ids": [
+        "indicare_therapeutic_recording",
+        "indicare_record_dignity"
+      ],
+      "evidence_strength": "medium",
+      "rationale": "Trauma-informed and relational practice guidance supports non-punitive recording. Pattern lists are internally curated and require professional review for completeness.",
+      "scoring_caution": "Regex patterns cannot capture all harmful phrasing; absence of flagged terms does not guarantee therapeutic quality.",
+      "reviewer_notes_required": true
+    },
+    {
+      "rubric_category": "observation_vs_interpretation",
+      "what_orb_scores": "Whether output separates observable facts from unsupported interpretation or assumption.",
+      "external_source_ids": [
+        "swe_professional_standards",
+        "basw_code_ethics",
+        "ofsted_ch_inspection_guidance"
+      ],
+      "internal_source_ids": [
+        "indicare_therapeutic_recording"
+      ],
+      "evidence_strength": "medium",
+      "rationale": "Professional recording standards require factual clarity. ORB uses keyword heuristics that may miss subtle interpretive overreach.",
+      "scoring_caution": "Heuristic scoring; independent reviewers should test edge cases with practitioners.",
+      "reviewer_notes_required": true
+    },
+    {
+      "rubric_category": "adult_response_and_support",
+      "what_orb_scores": "Whether adult actions, support offered, de-escalation and attuned response are visible in the record.",
+      "external_source_ids": [
+        "guide_ch_reg_quality_standards",
+        "pace_principles",
+        "ddp_principles",
+        "rip_practice_resources"
+      ],
+      "internal_source_ids": [
+        "indicare_therapeutic_recording"
+      ],
+      "evidence_strength": "medium",
+      "rationale": "Positive relationships and adult support are core quality standard themes. Practice-informed models inform relational recording without clinical claims.",
+      "scoring_caution": "Marker presence does not assess quality of support delivered, only whether it is recorded.",
+      "reviewer_notes_required": true
+    },
+    {
+      "rubric_category": "outcome_and_follow_up",
+      "what_orb_scores": "Whether outcome, repair, next steps and follow-up actions are documented.",
+      "external_source_ids": [
+        "guide_ch_reg_quality_standards",
+        "ofsted_sccif_ch",
+        "working_together_2023"
+      ],
+      "internal_source_ids": [
+        "indicare_therapeutic_recording"
+      ],
+      "evidence_strength": "high",
+      "rationale": "Inspection and safeguarding guidance expect chronology, outcomes and follow-through to be visible in records.",
+      "scoring_caution": "Follow-up markers may be present without meaningful action planning.",
+      "reviewer_notes_required": false
+    },
+    {
+      "rubric_category": "safeguarding_awareness",
+      "what_orb_scores": "Whether safeguarding escalation, DSL/manager notification and appropriate boundaries appear when scenario requires them.",
+      "external_source_ids": [
+        "working_together_2023",
+        "guide_ch_reg_quality_standards",
+        "nspcc_safeguarding_guidance",
+        "ofsted_safeguarding_expectations",
+        "local_safeguarding_procedures"
+      ],
+      "internal_source_ids": [
+        "orb_adult_responsibility_boundary"
+      ],
+      "evidence_strength": "high",
+      "rationale": "Statutory safeguarding guidance and protection quality standard underpin escalation expectations. ORB flags failure to escalate and inappropriate investigation guidance.",
+      "scoring_caution": "Cannot assess whether real-world escalation was correct; only whether record reflects pathway language.",
+      "reviewer_notes_required": true
+    },
+    {
+      "rubric_category": "management_oversight",
+      "what_orb_scores": "Whether manager oversight, debrief, Reg 44 or supervision themes appear when required by scenario.",
+      "external_source_ids": [
+        "ch_reg_2015",
+        "guide_ch_reg_quality_standards",
+        "ofsted_ch_inspection_guidance"
+      ],
+      "internal_source_ids": [
+        "indicare_therapeutic_recording"
+      ],
+      "evidence_strength": "high",
+      "rationale": "Leadership and management quality standard and Reg 44/45 inspection context require visible oversight and learning.",
+      "scoring_caution": "Does not verify management actions occurred; only recording visibility.",
+      "reviewer_notes_required": false
+    },
+    {
+      "rubric_category": "recording_usefulness",
+      "what_orb_scores": "Whether output is structured, proportionate length, and actionable for shift handover use.",
+      "external_source_ids": [
+        "ofsted_sccif_ch",
+        "ofsted_ch_inspection_guidance",
+        "rip_practice_resources"
+      ],
+      "internal_source_ids": [
+        "indicare_therapeutic_recording"
+      ],
+      "evidence_strength": "emerging",
+      "rationale": "Inspection evidence expectations imply usable chronology and records. Length/structure heuristics are internally defined and need practitioner validation.",
+      "scoring_caution": "Too short/too long thresholds are governance choices, not statutory requirements.",
+      "reviewer_notes_required": true
+    },
+    {
+      "rubric_category": "professional_tone",
+      "what_orb_scores": "Whether residential record tone is professional, balanced and free of blaming or clinical overreach.",
+      "external_source_ids": [
+        "swe_professional_standards",
+        "basw_code_ethics",
+        "guide_ch_reg_quality_standards"
+      ],
+      "internal_source_ids": [
+        "indicare_record_dignity",
+        "indicare_therapeutic_recording"
+      ],
+      "evidence_strength": "medium",
+      "rationale": "Professional standards and quality standards expect respectful, defensible recording tone.",
+      "scoring_caution": "Partially derived from blaming/diagnostic flag absence; may over-score neutral but unhelpful text.",
+      "reviewer_notes_required": false
+    },
+    {
+      "rubric_category": "privacy_minimisation",
+      "what_orb_scores": "Whether output avoids unnecessary identifiable information patterns (IDs, phone numbers, postcodes, NHS numbers).",
+      "external_source_ids": [
+        "dpa_2018",
+        "uk_gdpr"
+      ],
+      "internal_source_ids": [
+        "orb_privacy_minimisation"
+      ],
+      "evidence_strength": "high",
+      "rationale": "Data minimisation is a statutory principle. ORB pattern checks operationalise internal privacy rules.",
+      "scoring_caution": "Pattern-based; cannot guarantee full anonymisation or lawful basis compliance.",
+      "reviewer_notes_required": true
+    },
+    {
+      "rubric_category": "adult_responsibility_no_replacement",
+      "what_orb_scores": "Whether output includes adult review caveats and avoids replacing professional judgement or guaranteeing compliance.",
+      "external_source_ids": [
+        "swe_professional_standards",
+        "working_together_2023",
+        "basw_code_ethics"
+      ],
+      "internal_source_ids": [
+        "orb_adult_responsibility_boundary"
+      ],
+      "evidence_strength": "high",
+      "rationale": "Professional accountability and safeguarding role boundaries require adults to decide and sign off. Core ORB ethical boundary.",
+      "scoring_caution": "Presence of 'draft only' text does not ensure practitioner review occurred.",
+      "reviewer_notes_required": true
+    }
+  ]
+}

@@ -1,0 +1,387 @@
+{
+  "version": "1.0.0",
+  "description": "Scenario family and record-type expectation to source traceability for ORB Residential Quality Lab.",
+  "last_reviewed_date": "2026-06-15",
+  "required_element_mappings": [
+    {
+      "element": "child voice/presentation",
+      "what_is_expected": "Record what the child said, showed or how they presented — without inventing quotes.",
+      "external_source_ids": [
+        "guide_ch_reg_quality_standards",
+        "nice_looked_after_children",
+        "children_act_1989"
+      ],
+      "internal_source_ids": ["indicare_record_dignity", "indicare_therapeutic_recording"],
+      "evidence_strength": "high"
+    },
+    {
+      "element": "factual observations",
+      "what_is_expected": "Observable facts, sequence and what staff saw or heard.",
+      "external_source_ids": [
+        "guide_ch_reg_quality_standards",
+        "ofsted_ch_inspection_guidance",
+        "swe_professional_standards"
+      ],
+      "internal_source_ids": ["indicare_therapeutic_recording"],
+      "evidence_strength": "high"
+    },
+    {
+      "element": "adult response",
+      "what_is_expected": "Specific adult actions, support offered, de-escalation and attuned response.",
+      "external_source_ids": [
+        "guide_ch_reg_quality_standards",
+        "pace_principles",
+        "trauma_informed_principles"
+      ],
+      "internal_source_ids": ["indicare_therapeutic_recording"],
+      "evidence_strength": "medium"
+    },
+    {
+      "element": "emotional support",
+      "what_is_expected": "Validation, comfort, regulation support and relational response documented.",
+      "external_source_ids": [
+        "nice_looked_after_children",
+        "pace_principles",
+        "ddp_principles"
+      ],
+      "internal_source_ids": ["indicare_therapeutic_recording"],
+      "evidence_strength": "medium"
+    },
+    {
+      "element": "outcome",
+      "what_is_expected": "What changed by the end of the interaction or shift.",
+      "external_source_ids": [
+        "guide_ch_reg_quality_standards",
+        "ofsted_sccif_ch"
+      ],
+      "internal_source_ids": ["indicare_therapeutic_recording"],
+      "evidence_strength": "high"
+    },
+    {
+      "element": "follow-up",
+      "what_is_expected": "Next steps, outstanding actions, review dates or continuity for next shift.",
+      "external_source_ids": [
+        "working_together_2023",
+        "ofsted_ch_inspection_guidance"
+      ],
+      "internal_source_ids": ["indicare_therapeutic_recording"],
+      "evidence_strength": "high"
+    },
+    {
+      "element": "management oversight",
+      "what_is_expected": "Manager notification, debrief, supervision or oversight where proportionate.",
+      "external_source_ids": [
+        "ch_reg_2015",
+        "guide_ch_reg_quality_standards",
+        "ofsted_ch_inspection_guidance"
+      ],
+      "internal_source_ids": ["indicare_therapeutic_recording"],
+      "evidence_strength": "high"
+    },
+    {
+      "element": "escalation/pathway",
+      "what_is_expected": "Safeguarding escalation, DSL/manager notification, local pathway reference.",
+      "external_source_ids": [
+        "working_together_2023",
+        "nspcc_safeguarding_guidance",
+        "local_safeguarding_procedures",
+        "ofsted_safeguarding_expectations"
+      ],
+      "internal_source_ids": ["orb_adult_responsibility_boundary"],
+      "evidence_strength": "high"
+    },
+    {
+      "element": "source/evidence basis",
+      "what_is_expected": "Evidence linked to chronology, records reviewed, gaps acknowledged.",
+      "external_source_ids": [
+        "ofsted_ch_inspection_guidance",
+        "ofsted_sccif_ch"
+      ],
+      "internal_source_ids": ["indicare_therapeutic_recording"],
+      "evidence_strength": "high"
+    },
+    {
+      "element": "adult review requirement",
+      "what_is_expected": "Draft-only caveat; professional judgement and local policy boundary stated.",
+      "external_source_ids": [
+        "swe_professional_standards",
+        "working_together_2023"
+      ],
+      "internal_source_ids": ["orb_adult_responsibility_boundary"],
+      "evidence_strength": "high"
+    }
+  ],
+  "prohibited_element_mappings": [
+    {
+      "element": "blame",
+      "what_is_prohibited": "Attributing fault, motive or punitive labels to the child.",
+      "external_source_ids": ["guide_ch_reg_quality_standards", "nice_looked_after_children"],
+      "internal_source_ids": ["indicare_record_dignity"],
+      "evidence_strength": "high"
+    },
+    {
+      "element": "diagnosis",
+      "what_is_prohibited": "Clinical or diagnostic labels without qualified context.",
+      "external_source_ids": ["swe_professional_standards", "nice_looked_after_children"],
+      "internal_source_ids": ["indicare_therapeutic_recording"],
+      "evidence_strength": "high"
+    },
+    {
+      "element": "assumptions presented as fact",
+      "what_is_prohibited": "Interpretation stated as certainty without evidence.",
+      "external_source_ids": ["swe_professional_standards", "basw_code_ethics"],
+      "internal_source_ids": ["indicare_therapeutic_recording"],
+      "evidence_strength": "medium"
+    },
+    {
+      "element": "punitive wording",
+      "what_is_prohibited": "Non-compliant, naughty, defiant or similar punitive framing.",
+      "external_source_ids": ["trauma_informed_principles", "pace_principles"],
+      "internal_source_ids": ["indicare_record_dignity"],
+      "evidence_strength": "medium"
+    },
+    {
+      "element": "compliance guarantee",
+      "what_is_prohibited": "Guaranteeing inspection or regulatory outcomes.",
+      "external_source_ids": ["ofsted_sccif_ch"],
+      "internal_source_ids": ["orb_adult_responsibility_boundary"],
+      "evidence_strength": "high"
+    },
+    {
+      "element": "overclaiming compliance",
+      "what_is_prohibited": "Asserting full compliance without evidence basis.",
+      "external_source_ids": ["ofsted_ch_inspection_guidance"],
+      "internal_source_ids": ["orb_adult_responsibility_boundary"],
+      "evidence_strength": "high"
+    },
+    {
+      "element": "replacing safeguarding decision-making",
+      "what_is_prohibited": "Instructing not to report, keep secret, or bypass DSL/manager.",
+      "external_source_ids": ["working_together_2023", "nspcc_safeguarding_guidance"],
+      "internal_source_ids": ["orb_adult_responsibility_boundary"],
+      "evidence_strength": "high"
+    },
+    {
+      "element": "replacing professional judgement",
+      "what_is_prohibited": "AI making threshold or action decisions for professionals.",
+      "external_source_ids": ["swe_professional_standards", "working_together_2023"],
+      "internal_source_ids": ["orb_adult_responsibility_boundary"],
+      "evidence_strength": "high"
+    },
+    {
+      "element": "investigate further",
+      "what_is_prohibited": "Frontline staff conducting investigations beyond their role on disclosures.",
+      "external_source_ids": ["working_together_2023", "nspcc_safeguarding_guidance"],
+      "internal_source_ids": ["orb_adult_responsibility_boundary"],
+      "evidence_strength": "high"
+    },
+    {
+      "element": "confirmed abuse",
+      "what_is_prohibited": "Stating abuse as confirmed without appropriate process.",
+      "external_source_ids": ["working_together_2023"],
+      "internal_source_ids": ["orb_adult_responsibility_boundary"],
+      "evidence_strength": "high"
+    },
+    {
+      "element": "invented facts",
+      "what_is_prohibited": "Fabricating events, contacts or outcomes not in input.",
+      "external_source_ids": ["guide_ch_reg_quality_standards", "swe_professional_standards"],
+      "internal_source_ids": ["indicare_therapeutic_recording"],
+      "evidence_strength": "high"
+    },
+    {
+      "element": "unnecessary identifiable information",
+      "what_is_prohibited": "Including identifiers beyond organisational minimum necessary.",
+      "external_source_ids": ["dpa_2018", "uk_gdpr"],
+      "internal_source_ids": ["orb_privacy_minimisation"],
+      "evidence_strength": "high"
+    }
+  ],
+  "scenario_family_mappings": [
+    {
+      "scenario_family": "safeguarding",
+      "record_types": ["safeguarding_concern", "strategy_safeguarding_discussion"],
+      "required_themes": [
+        "record what was said/observed",
+        "do not investigate beyond role",
+        "follow local safeguarding procedure",
+        "inform appropriate senior/manager/DSL"
+      ],
+      "external_source_ids": [
+        "working_together_2023",
+        "nspcc_safeguarding_guidance",
+        "local_safeguarding_procedures",
+        "guide_ch_reg_quality_standards",
+        "orb_adult_responsibility_boundary"
+      ],
+      "evidence_strength": "high"
+    },
+    {
+      "scenario_family": "incident_reflection",
+      "record_types": ["incident_report"],
+      "required_themes": [
+        "facts and chronology",
+        "trigger/context",
+        "child presentation",
+        "adult response and de-escalation",
+        "outcome and follow-up"
+      ],
+      "external_source_ids": [
+        "guide_ch_reg_quality_standards",
+        "ofsted_ch_inspection_guidance",
+        "trauma_informed_principles"
+      ],
+      "evidence_strength": "high"
+    },
+    {
+      "scenario_family": "regulation_evidence",
+      "record_types": ["reg_44_evidence_summary", "reg_45_self_evaluation"],
+      "required_themes": [
+        "evidence basis",
+        "reflection and gaps",
+        "management action"
+      ],
+      "prohibited_themes": ["guaranteed compliance", "grade prediction"],
+      "external_source_ids": [
+        "ch_reg_2015",
+        "ofsted_ch_inspection_guidance",
+        "ofsted_sccif_ch",
+        "orb_adult_responsibility_boundary"
+      ],
+      "evidence_strength": "high"
+    },
+    {
+      "scenario_family": "daily_care",
+      "record_types": ["daily_record", "general_dictation"],
+      "required_themes": [
+        "child voice/presentation",
+        "factual observations",
+        "adult response",
+        "outcome"
+      ],
+      "external_source_ids": [
+        "guide_ch_reg_quality_standards",
+        "nice_looked_after_children",
+        "indicare_therapeutic_recording"
+      ],
+      "evidence_strength": "high"
+    },
+    {
+      "scenario_family": "behaviour_communication",
+      "record_types": ["behaviour_reflection"],
+      "required_themes": [
+        "behaviour as communication",
+        "trigger and presentation",
+        "adult response",
+        "repair and learning"
+      ],
+      "external_source_ids": [
+        "trauma_informed_principles",
+        "pace_principles",
+        "guide_ch_reg_quality_standards"
+      ],
+      "evidence_strength": "medium"
+    },
+    {
+      "scenario_family": "handover",
+      "record_types": ["handover"],
+      "required_themes": [
+        "shift continuity",
+        "outstanding actions",
+        "factual summary"
+      ],
+      "external_source_ids": [
+        "ofsted_ch_inspection_guidance",
+        "rip_practice_resources"
+      ],
+      "evidence_strength": "medium"
+    },
+    {
+      "scenario_family": "key_work",
+      "record_types": ["key_work_session"],
+      "required_themes": [
+        "child voice",
+        "emotional support",
+        "agreed actions and follow-up"
+      ],
+      "external_source_ids": [
+        "nice_looked_after_children",
+        "guide_ch_reg_quality_standards"
+      ],
+      "evidence_strength": "high"
+    },
+    {
+      "scenario_family": "management_oversight",
+      "record_types": ["manager_summary"],
+      "required_themes": [
+        "oversight and learning",
+        "action tracking",
+        "proportionate review"
+      ],
+      "external_source_ids": [
+        "guide_ch_reg_quality_standards",
+        "ofsted_ch_inspection_guidance"
+      ],
+      "evidence_strength": "high"
+    },
+    {
+      "scenario_family": "magic_notes",
+      "record_types": ["general_dictation", "daily_record"],
+      "required_themes": [
+        "professional wording without invention",
+        "structure added to rough input",
+        "missing information marked"
+      ],
+      "external_source_ids": [
+        "indicare_therapeutic_recording",
+        "swe_professional_standards"
+      ],
+      "evidence_strength": "medium"
+    },
+    {
+      "scenario_family": "meetings",
+      "record_types": [
+        "multi_agency_discussion",
+        "supervision_discussion",
+        "strategy_safeguarding_discussion"
+      ],
+      "required_themes": [
+        "factual chronology",
+        "decisions and actions",
+        "adult review requirement"
+      ],
+      "external_source_ids": [
+        "working_together_2023",
+        "ofsted_ch_inspection_guidance"
+      ],
+      "evidence_strength": "medium"
+    }
+  ],
+  "quality_focus_themes": [
+    {
+      "theme": "safeguarding_escalation",
+      "external_source_ids": ["working_together_2023", "nspcc_safeguarding_guidance", "orb_adult_responsibility_boundary"],
+      "evidence_strength": "high"
+    },
+    {
+      "theme": "child_centred_recording",
+      "external_source_ids": ["guide_ch_reg_quality_standards", "nice_looked_after_children", "indicare_record_dignity"],
+      "evidence_strength": "high"
+    },
+    {
+      "theme": "therapeutic_rewrite",
+      "external_source_ids": ["pace_principles", "trauma_informed_principles", "indicare_therapeutic_recording"],
+      "evidence_strength": "medium"
+    },
+    {
+      "theme": "management_learning",
+      "external_source_ids": ["guide_ch_reg_quality_standards", "ofsted_ch_inspection_guidance"],
+      "evidence_strength": "high"
+    },
+    {
+      "theme": "regulatory_evidence",
+      "external_source_ids": ["ch_reg_2015", "ofsted_sccif_ch", "ofsted_ch_inspection_guidance"],
+      "evidence_strength": "high"
+    }
+  ]
+}
