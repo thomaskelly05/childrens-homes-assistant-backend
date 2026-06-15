@@ -9,6 +9,7 @@ import {
   buildSectionPromptBody,
   ORB_PRIMARY_RECORD_TYPE_IDS,
   ORB_REFLECTIVE_CAPTURE_PROMPTS,
+  ORB_RESIDENTIAL_RECORDING_STRUCTURE,
   ORB_STRUCTURED_FORMAT_RULES,
   ORB_THERAPEUTIC_RECORDING_PRINCIPLES,
   sectionPromptsForRecordType
@@ -46,7 +47,7 @@ export const ORB_RECORDING_RECORD_TYPES: readonly OrbRecordingRecordType[] = mer
 
 import { ORB_RECOMMENDED_RECORD_TYPE_IDS } from '@/lib/orb/orb-navigation-convergence'
 
-export { ORB_RECOMMENDED_RECORD_TYPE_IDS, ORB_PRIMARY_RECORD_TYPE_IDS, ORB_THERAPEUTIC_RECORDING_PRINCIPLES, ORB_REFLECTIVE_CAPTURE_PROMPTS, ORB_STRUCTURED_FORMAT_RULES }
+export { ORB_RECOMMENDED_RECORD_TYPE_IDS, ORB_PRIMARY_RECORD_TYPE_IDS, ORB_THERAPEUTIC_RECORDING_PRINCIPLES, ORB_RESIDENTIAL_RECORDING_STRUCTURE, ORB_REFLECTIVE_CAPTURE_PROMPTS, ORB_STRUCTURED_FORMAT_RULES }
 
 export function isRecommendedRecordingType(id: string): boolean {
   return (ORB_RECOMMENDED_RECORD_TYPE_IDS as readonly string[]).includes(id)
@@ -180,6 +181,9 @@ export function buildOrbRecordingBrainPromptBlock(recordType: OrbRecordingRecord
   const formatHint = structuredFormatHintForRecordType(recordType.id)
   const lines = [
     `Record type: ${context.record_type_label} (${context.record_type_id})`,
+    '',
+    'Residential recording structure (use flexibly):',
+    ...ORB_RESIDENTIAL_RECORDING_STRUCTURE.map((step) => `• ${step}`),
     '',
     'Residential recording principles:',
     ...ORB_THERAPEUTIC_RECORDING_PRINCIPLES.map((principle) => `• ${principle}`),

@@ -122,10 +122,22 @@ export const ORB_THERAPEUTIC_RECORDING_PRINCIPLES: readonly string[] = [
   'Avoid blaming or shaming language',
   'Avoid diagnosis unless recorded from an appropriate professional source',
   "Include the child's voice where known",
-  'Include adult response, not just child behaviour',
+  'Name adult actions specifically — not just “staff supported”',
+  'Include outcome and follow-up where known',
   'Include context, triggers, de-escalation and repair where relevant',
+  'State when information is unknown rather than inventing it',
   'Include follow-up, review and management oversight',
   'Adult remains responsible for final wording'
+]
+
+/** Flexible residential structure — not a forced heading list every time. */
+export const ORB_RESIDENTIAL_RECORDING_STRUCTURE: readonly string[] = [
+  'What happened?',
+  'What did the child say, show or communicate?',
+  'What did adults observe?',
+  'What did adults do to support?',
+  'What changed by the end?',
+  'What follow-up, oversight or escalation is needed?'
 ]
 
 export type OrbRecordingSectionPrompt = { title: string; prompt: string }

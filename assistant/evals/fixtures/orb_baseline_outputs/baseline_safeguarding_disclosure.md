@@ -10,8 +10,14 @@ Staff listened and did not press for further detail. No investigation by staff.
 ## Escalation
 Escalated to manager/DSL same shift per local safeguarding protocol.
 
+## Outcome
+Young person left session safely. Further questions deferred per local protocol; views to be sought when ready.
+
+## Follow-up
+Chronology update; review at next keywork. MASH referral decision: for responsible adult per local pathway.
+
 ## Management oversight
-DSL/manager notification documented. MASH referral decision: for responsible adult per local pathway.
+DSL/manager notification documented.
 
 ---
 Draft only — adult review required. Safeguarding decisions remain with the designated safeguarding lead and manager.

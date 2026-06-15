@@ -359,3 +359,54 @@ export function allAssertionsPassed(results: QualityAssertionResult[]): boolean 
 export function flattenAssertionFailures(results: QualityAssertionResult[]): string[] {
   return results.flatMap((r) => r.failures.map((f) => `[${r.category}] ${f}`))
 }
+
+/** Golden baseline fixture assertions — child voice, adult response, outcome/follow-up. */
+export type FixtureQualityAssertion = {
+  scenarioId: string
+  recordType: string
+  requiresChildVoice: boolean
+  requiresAdultResponse: boolean
+  requiresOutcomeFollowUp: boolean
+  requiresEscalation: boolean
+}
+
+export const GOLDEN_FIXTURE_ASSERTIONS: FixtureQualityAssertion[] = [
+  { scenarioId: 'baseline_daily_record', recordType: 'daily_record', requiresChildVoice: true, requiresAdultResponse: true, requiresOutcomeFollowUp: true, requiresEscalation: false },
+  { scenarioId: 'baseline_incident_reflection', recordType: 'incident_report', requiresChildVoice: true, requiresAdultResponse: true, requiresOutcomeFollowUp: true, requiresEscalation: false },
+  { scenarioId: 'baseline_safeguarding_disclosure', recordType: 'safeguarding_concern', requiresChildVoice: true, requiresAdultResponse: true, requiresOutcomeFollowUp: true, requiresEscalation: true },
+  { scenarioId: 'baseline_handover_note', recordType: 'handover', requiresChildVoice: true, requiresAdultResponse: true, requiresOutcomeFollowUp: true, requiresEscalation: false },
+  { scenarioId: 'baseline_behaviour_communication', recordType: 'behaviour_reflection', requiresChildVoice: true, requiresAdultResponse: true, requiresOutcomeFollowUp: true, requiresEscalation: false },
+  { scenarioId: 'baseline_strategy_safeguarding', recordType: 'strategy_safeguarding_discussion', requiresChildVoice: true, requiresAdultResponse: true, requiresOutcomeFollowUp: true, requiresEscalation: true }
+]
+
+const _CHILD_VOICE_MARKERS = ['child voice', 'young person said', 'communicated', 'presentation', 'mood', 'tearful', 'they said']
+const _ADULT_RESPONSE_MARKERS = ['adult response', 'staff ', 'offered', 'supported', 'listened', 'validated', 'de-escalat', 'calm voice', 'sat with']
+const _OUTCOME_MARKERS = ['outcome', 'follow-up', 'follow up', 'settled', 'improved', 'repair', 'action', 'next step']
+const _SAFEGUARDING_MARKERS = ['escalat', 'dsl', 'safeguard', 'mash', 'manager informed', 'local pathway', 'local protocol']
+
+function _hasAnyMarker(text: string, markers: string[]): boolean {
+  const lower = text.toLowerCase()
+  return markers.some((marker) => lower.includes(marker))
+}
+
+export function assertBaselineFixtureQuality(
+  assertion: FixtureQualityAssertion,
+  output: string
+): QualityAssertionResult {
+  const failures: string[] = []
+  if (assertion.requiresChildVoice && !_hasAnyMarker(output, _CHILD_VOICE_MARKERS)) {
+    failures.push('missing child voice/presentation language')
+  }
+  if (assertion.requiresAdultResponse && !_hasAnyMarker(output, _ADULT_RESPONSE_MARKERS)) {
+    failures.push('missing adult response language')
+  }
+  if (assertion.requiresOutcomeFollowUp && !_hasAnyMarker(output, _OUTCOME_MARKERS)) {
+    failures.push('missing outcome/follow-up language')
+  }
+  if (assertion.requiresEscalation && !_hasAnyMarker(output, _SAFEGUARDING_MARKERS)) {
+    failures.push('missing escalation/safeguarding pathway language')
+  }
+  failures.push(...assertTherapeuticLanguage(output).failures)
+  failures.push(...assertOrbWriteReadiness(output).failures)
+  return { passed: failures.length === 0, category: 'baseline_fixture', failures }
+}

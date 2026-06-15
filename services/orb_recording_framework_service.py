@@ -42,6 +42,12 @@ def get_framework_version() -> str:
     return str(_load_framework_raw().get("version", "1.0.0"))
 
 
+def get_residential_recording_structure() -> dict[str, Any]:
+    """Shared residential recording structure principle — model-independent."""
+    raw = _load_framework_raw()
+    return dict(raw.get("residential_recording_structure") or {})
+
+
 def list_record_types() -> list[dict[str, Any]]:
     return list(_load_framework_raw().get("record_types", []))
 
@@ -280,6 +286,7 @@ def match_record_types_for_document(text: str, *, limit: int = 6) -> list[dict[s
 def get_framework_payload() -> dict[str, Any]:
     return {
         "version": get_framework_version(),
+        "residential_recording_structure": get_residential_recording_structure(),
         "record_types": list_record_types(),
     }
 

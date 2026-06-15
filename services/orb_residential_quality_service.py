@@ -28,6 +28,7 @@ SHARED_CAPTURE_PROMPTS: tuple[str, ...] = (
     "What did the child say or communicate?",
     "How did adults respond?",
     "What action was taken?",
+    "What changed by the end?",
     "Was anyone informed?",
     "Is follow-up or management oversight needed?",
     "Were there safeguarding concerns?",

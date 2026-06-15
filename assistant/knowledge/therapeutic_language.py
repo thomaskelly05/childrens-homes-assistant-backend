@@ -1,4 +1,24 @@
 THERAPEUTIC_LANGUAGE_MODULE = {
+    "residential_recording_discipline": {
+        "description": "Shared wording discipline for residential records — child voice, adult action, outcome and follow-up.",
+        "principles": [
+            "Record behaviour as communication where appropriate.",
+            "Name adult actions specifically, not just 'staff supported'.",
+            "Include outcome and next steps where known.",
+            "State when information is unknown rather than inventing it.",
+            "Keep records factual, warm and child-centred.",
+            "Separate observation from interpretation.",
+            "Adults remain responsible for professional judgement and safeguarding decisions.",
+        ],
+        "structure_steps": [
+            "What happened?",
+            "What did the child say, show or communicate?",
+            "What did adults observe?",
+            "What did adults do to support?",
+            "What changed by the end?",
+            "What follow-up, oversight or escalation is needed?",
+        ],
+    },
     "principles": {
         "description": "Therapeutic language in residential care is a way of speaking that supports emotional safety, attunement, and predictability without becoming therapy.",
         "elements": [

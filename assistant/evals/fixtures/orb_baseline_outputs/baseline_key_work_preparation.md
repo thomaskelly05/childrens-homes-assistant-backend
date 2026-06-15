@@ -8,9 +8,12 @@ Young person talked about worrying before family contact. Asked for predictable 
 Anticipatory anxiety before contact; need for predictability.
 
 ## Adult response
-Staff validated feelings.
+Staff validated feelings and offered emotional support through listening.
 
-## Agreed actions
+## Outcome
+Young person felt heard; agreed to discuss contact routine with manager.
+
+## Agreed actions / follow-up
 Discuss with manager about contact plan. Who will update plan: Not stated.
 
 ---

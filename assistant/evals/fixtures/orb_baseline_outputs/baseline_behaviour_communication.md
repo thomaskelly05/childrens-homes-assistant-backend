@@ -1,8 +1,8 @@
 ## Trigger
 Transition from gaming to tea time.
 
-## Presentation
-Raised voice; left room.
+## Child voice and presentation
+Raised voice; left room at transition. What would help next time: brief check-in agreed — further words: Not stated.
 
 ## Communication / unmet need
 Possible unmet need around predictable transition — interpretation to be checked with young person.

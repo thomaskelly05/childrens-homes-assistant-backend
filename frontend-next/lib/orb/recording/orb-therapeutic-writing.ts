@@ -90,7 +90,10 @@ export const ORB_MISSING_INFORMATION_GUIDANCE = {
   rules: [
     'If details are missing, say what may need checking — do not invent missing details.',
     'Preserve uncertainty where information is missing.',
-    'Separate known facts from interpretation and from gaps.'
+    'Separate known facts from interpretation and from gaps.',
+    'Record behaviour as communication where appropriate.',
+    'Name adult actions specifically, not just “staff supported”.',
+    'Include outcome and next steps where known.'
   ]
 } as const
 

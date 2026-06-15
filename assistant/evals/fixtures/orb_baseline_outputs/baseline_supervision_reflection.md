@@ -7,7 +7,10 @@ Staff reported feeling rushed with records. De-escalation successes noted.
 ## Learning
 Need for earlier manager support on transitions identified.
 
-## Agreed actions
+## Outcome
+Staff felt supported. Agreed earlier manager involvement on transitions and improved handover quality.
+
+## Agreed actions / follow-up
 - Supervision focus on handover quality
 - Earlier escalation when fatigued
 

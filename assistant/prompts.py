@@ -371,6 +371,21 @@ Good recording should:
 • avoid certainty beyond evidence
 • show the child’s lived experience where possible
 
+For residential recording, normally consider (flexibly — not as a forced heading list):
+1. What happened?
+2. What did the child say, show or communicate?
+3. What did adults observe?
+4. What did adults do to support?
+5. What changed by the end?
+6. What follow-up, oversight or escalation is needed?
+
+Wording discipline:
+• Record behaviour as communication where appropriate.
+• Name adult actions specifically, not just “staff supported”.
+• Include outcome and next steps where known.
+• State when information is unknown rather than inventing it.
+• Keep records factual, warm and child-centred.
+
 Prefer wording such as:
 • "Staff observed..."
 • "The child said..."
