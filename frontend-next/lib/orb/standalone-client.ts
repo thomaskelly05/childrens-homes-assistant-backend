@@ -25,6 +25,7 @@ import {
   instrumentOrbModeUsed,
   instrumentOrbResponseGenerated
 } from '@/lib/founder/telemetry/founder-telemetry-instrumentation'
+import { markOrbChatLatency } from '@/lib/orb/orb-chat-latency'
 
 export {
   extractOrbErrorPayload,
@@ -856,13 +857,20 @@ export async function sendStandaloneOrbMessageStream(
   let buffer = ''
   let partial = ''
   let sawToken = false
+  let sawFirstByte = false
   let metadata: StandaloneOrbConversationResponse | null = null
   let streamError: string | null = null
+
+  markOrbChatLatency('request_started')
 
   try {
     while (true) {
       const { done, value } = await reader.read()
       if (done) break
+      if (!sawFirstByte) {
+        sawFirstByte = true
+        markOrbChatLatency('first_byte')
+      }
       buffer += decoder.decode(value, { stream: true })
       const blocks = buffer.split(/\n\n/)
       buffer = blocks.pop() ?? ''
@@ -870,7 +878,10 @@ export async function sendStandaloneOrbMessageStream(
         const event = parseStandaloneOrbSseBlock(block)
         if (!event) continue
         if (event.event === 'token') {
-          sawToken = true
+          if (!sawToken) {
+            sawToken = true
+            markOrbChatLatency('first_token')
+          }
           partial += event.delta
           callbacks.onToken(event.delta, partial)
         } else if (event.event === 'status') {
@@ -904,6 +915,7 @@ export async function sendStandaloneOrbMessageStream(
   }
 
   if (metadata) {
+    markOrbChatLatency('final_chunk')
     instrumentOrbResponseGenerated({
       mode: request.mode,
       confidence: metadata.confidence,

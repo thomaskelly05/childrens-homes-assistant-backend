@@ -444,6 +444,52 @@ html[data-orb-theme='dark'] .orb-starter-card {
   overflow-wrap: anywhere;
 }
 
+/* Tables must not inherit aggressive wrapping — prevents one-letter column collapse on mobile. */
+.orb-markdown-answer .orb-md-table-wrap,
+.orb-markdown-answer .orb-md-table,
+.orb-markdown-answer .orb-md-table th,
+.orb-markdown-answer .orb-md-table td {
+  overflow-wrap: normal;
+  word-break: normal;
+  hyphens: manual;
+}
+
+.orb-markdown-answer [data-orb-table-scroll] {
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+}
+
+.orb-markdown-answer [data-orb-table-scroll] .orb-md-table {
+  width: auto;
+  min-width: max-content;
+}
+
+.orb-markdown-answer [data-orb-table-scroll] .orb-md-th,
+.orb-markdown-answer [data-orb-table-scroll] .orb-md-td {
+  min-width: 5.5rem;
+  white-space: normal;
+}
+
+.orb-markdown-answer .orb-md-table-scroll-hint {
+  margin: 0 0 0.35rem;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  color: var(--orb-muted, #64748b);
+  opacity: 0.85;
+}
+
+html[data-orb-theme='dark'] .orb-markdown-answer [data-orb-table-scroll] .orb-md-thead {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+html[data-orb-theme='dark'] .orb-markdown-answer [data-orb-table-scroll] .orb-md-th,
+html[data-orb-theme='dark'] .orb-markdown-answer [data-orb-table-scroll] .orb-md-td {
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
 .orb-scroll-to-bottom-fab {
   position: fixed;
   z-index: 70;
@@ -621,8 +667,8 @@ html[data-orb-theme='dark'] .orb-action-chip:hover {
 
 .orb-markdown-answer .orb-md-table {
   border-collapse: collapse;
-  width: 100%;
-  min-width: 16rem;
+  width: auto;
+  min-width: max-content;
   font-size: 0.875rem;
 }
 

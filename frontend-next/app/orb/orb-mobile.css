@@ -411,6 +411,35 @@
     font-size: 1.0625rem !important;
   }
 
+  /* Chat markdown tables — horizontal scroll on narrow screens (Reg 44 action plans, etc.) */
+  .orb-markdown-answer [data-orb-table-scroll] {
+    max-width: 100% !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+    touch-action: pan-x pan-y;
+  }
+
+  .orb-markdown-answer [data-orb-table-scroll] .orb-md-table {
+    width: auto !important;
+    min-width: max-content !important;
+  }
+
+  .orb-markdown-answer [data-orb-table-scroll] .orb-md-th,
+  .orb-markdown-answer [data-orb-table-scroll] .orb-md-td {
+    min-width: 5.5rem !important;
+    white-space: normal !important;
+    word-break: normal !important;
+    overflow-wrap: normal !important;
+  }
+
+  .orb-markdown-answer .orb-md-table-scroll-hint {
+    display: block !important;
+    font-size: 0.6875rem !important;
+    margin-bottom: 0.35rem !important;
+    color: var(--orb-muted, #94a3b8) !important;
+  }
+
   .orb-message-user .orb-message-content,
   [data-orb-user-message-bubble] {
     font-size: 0.9375rem !important;

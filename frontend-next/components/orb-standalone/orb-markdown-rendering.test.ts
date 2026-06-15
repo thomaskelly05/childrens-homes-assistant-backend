@@ -36,6 +36,7 @@ describe('ORB markdown and cognition rendering', () => {
     assert.match(markdown, /list-disc/)
     assert.match(markdown, /list-decimal/)
     assert.match(markdown, /leading-\[1\.7\]/)
+    assert.match(markdown, /data-orb-table-scroll/)
   })
 
   it('route CSS ships orb-markdown-answer typography rules', () => {

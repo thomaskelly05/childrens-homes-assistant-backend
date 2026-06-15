@@ -9,6 +9,13 @@ from typing import Pattern
 _SCENARIO_OPENINGS: list[tuple[Pattern[str], str]] = [
     (
         re.compile(
+            r"\b(action plan|improvement plan|reg\s*44|reg44)\b",
+            re.I,
+        ),
+        "I'll structure this into a child-centred action plan with clear ownership, review points, and source basis.",
+    ),
+    (
+        re.compile(
             r"(help me (to )?write|draft|write).*(incident report|incident record)",
             re.I,
         ),

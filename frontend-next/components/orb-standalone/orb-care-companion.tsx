@@ -282,6 +282,11 @@ import {
 } from '@/lib/orb/orb-response-actions'
 import { askOrbBrain, buildOrbBrainConversationRequest } from '@/lib/orb/orb-brain-router'
 import {
+  logOrbChatLatencySnapshot,
+  markOrbChatLatency,
+  startOrbChatLatencyTrace
+} from '@/lib/orb/orb-chat-latency'
+import {
   isOrbFastOpeningOnlyCompletion,
   resolveOrbStreamedAnswer
 } from '@/lib/orb/orb-fast-opening'
@@ -1270,73 +1275,20 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
       }
       if (voice.speaking) voice.cancelSpeaking()
 
-      const imagePayload = await Promise.all(
-        attachments
-          .filter((item) => item.kind === 'image')
-          .map(async (item) => ({
-            data_url: await readComposerFileAsDataUrl(item.file),
-            name: item.name
-          }))
-      )
-      let composerDocumentSourceId: string | undefined
-      let composerDocumentTitle: string | undefined
-      const documentAttachment = attachments.find((item) => item.kind === 'document')
-      if (documentAttachment) {
-        setAttachments((current) =>
-          current.map((item) =>
-            item.id === documentAttachment.id ? { ...item, status: 'uploading', error: undefined } : item
-          )
-        )
-        try {
-          const content_base64 = await readComposerFileAsBase64(documentAttachment.file)
-          const uploaded = await uploadOrbComposerDocument({
-            title: documentAttachment.name.replace(/\.[^.]+$/, '') || documentAttachment.name,
-            content_base64,
-            file_name: documentAttachment.name,
-            content_type: documentAttachment.mimeType || undefined,
-            source_type: 'user_uploaded'
-          })
-          composerDocumentSourceId = uploaded.source_id
-          composerDocumentTitle = uploaded.title
-          setAttachments((current) =>
-            current.map((item) =>
-              item.id === documentAttachment.id ? { ...item, status: 'ready' } : item
-            )
-          )
-        } catch (err) {
-          const message = err instanceof Error ? err.message : 'Upload failed'
-          setAttachments((current) =>
-            current.map((item) =>
-              item.id === documentAttachment.id ? { ...item, status: 'error', error: message } : item
-            )
-          )
-          setDraftNotice(`Could not upload ${documentAttachment.name}. ${message}`)
-          sendInFlightRef.current = false
-          return
-        }
-      }
-      lastSendHadImagesRef.current = imagePayload.length > 0
+      startOrbChatLatencyTrace(`send-${sendGeneration}-${now}`)
+      markOrbChatLatency('send_clicked')
+
       let targetChatId = options?.chatId || workspace.activeChatId
       let targetChat = targetChatId ? workspace.chats.find((c) => c.id === targetChatId) ?? null : null
-      const skipPersonalisation = Boolean(targetChat?.temporary)
-      const profileBlock = skipPersonalisation ? '' : buildProfileContextBlock(attachedProfiles)
-      const adultBlock =
-        skipPersonalisation || !adultProfile ? '' : buildAdultProfilePromptBlock(adultProfile)
-      const messageBody = [
-        adultBlock,
-        profileBlock,
-        trimmed || (hasImages ? 'Please look at the image(s) I shared and help me with this.' : hasDocuments ? 'Please review the document I shared and help me with this.' : '')
-      ]
-        .filter(Boolean)
-        .join('\n\n')
-
       const userMessageId = `u-${now}`
       const thinkingMessageId = `a-thinking-${now}`
+      const optimisticUserContent =
+        trimmed ||
+        (hasImages ? '[Image attachment]' : hasDocuments ? '[Document attachment]' : '')
       const userMessage: StandaloneChatMessage = {
         id: userMessageId,
         role: 'user',
-        content: trimmed || '[Image attachment]',
-        imageDataUrls: imagePayload.map((i) => i.data_url),
+        content: optimisticUserContent,
         status: 'sent',
         createdAt: now
       }
@@ -1356,7 +1308,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
           priorMessages = [...existingMessages, userMessage, thinkingMessage]
         }
       } else if (options?.retry) {
-        priorMessages = stripTrailingTurnPlaceholders(existingMessages)
+        priorMessages = [...stripTrailingTurnPlaceholders(existingMessages), thinkingMessage]
       } else {
         const lastMessage = existingMessages[existingMessages.length - 1]
         const isRapidDuplicate =
@@ -1418,8 +1370,85 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
       }
 
       setMessage('')
-      clearComposerAttachments()
+      setPending(true)
+      setLastSendStatus('sending')
+      setError(null)
+      setRetryPayload(null)
       setAnsweringStreamStatus(null)
+      markOrbChatLatency('thinking_visible')
+      traceOrbSend('pending_state', { sendGeneration, pending: true, early: true })
+
+      const imagePayload = await Promise.all(
+        attachments
+          .filter((item) => item.kind === 'image')
+          .map(async (item) => ({
+            data_url: await readComposerFileAsDataUrl(item.file),
+            name: item.name
+          }))
+      )
+      if (imagePayload.length > 0) {
+        priorMessages = replaceMessageById(priorMessages, userMessageId, {
+          ...userMessage,
+          content: trimmed || '[Image attachment]',
+          imageDataUrls: imagePayload.map((i) => i.data_url)
+        })
+        commitMessages(priorMessages)
+      }
+
+      let composerDocumentSourceId: string | undefined
+      let composerDocumentTitle: string | undefined
+      const documentAttachment = attachments.find((item) => item.kind === 'document')
+      if (documentAttachment) {
+        setAttachments((current) =>
+          current.map((item) =>
+            item.id === documentAttachment.id ? { ...item, status: 'uploading', error: undefined } : item
+          )
+        )
+        try {
+          const content_base64 = await readComposerFileAsBase64(documentAttachment.file)
+          const uploaded = await uploadOrbComposerDocument({
+            title: documentAttachment.name.replace(/\.[^.]+$/, '') || documentAttachment.name,
+            content_base64,
+            file_name: documentAttachment.name,
+            content_type: documentAttachment.mimeType || undefined,
+            source_type: 'user_uploaded'
+          })
+          composerDocumentSourceId = uploaded.source_id
+          composerDocumentTitle = uploaded.title
+          setAttachments((current) =>
+            current.map((item) =>
+              item.id === documentAttachment.id ? { ...item, status: 'ready' } : item
+            )
+          )
+        } catch (err) {
+          const message = err instanceof Error ? err.message : 'Upload failed'
+          setAttachments((current) =>
+            current.map((item) =>
+              item.id === documentAttachment.id ? { ...item, status: 'error', error: message } : item
+            )
+          )
+          setDraftNotice(`Could not upload ${documentAttachment.name}. ${message}`)
+          const withoutThinking = stripInFlightAssistantPlaceholders(priorMessages)
+          commitMessages(withoutThinking)
+          setPending(false)
+          sendInFlightRef.current = false
+          return
+        }
+      }
+      lastSendHadImagesRef.current = imagePayload.length > 0
+      clearComposerAttachments()
+      const skipPersonalisation = Boolean(targetChat?.temporary)
+      const profileBlock = skipPersonalisation ? '' : buildProfileContextBlock(attachedProfiles)
+      const adultBlock =
+        skipPersonalisation || !adultProfile ? '' : buildAdultProfilePromptBlock(adultProfile)
+      const messageBody = [
+        adultBlock,
+        profileBlock,
+        trimmed || (hasImages ? 'Please look at the image(s) I shared and help me with this.' : hasDocuments ? 'Please review the document I shared and help me with this.' : '')
+      ]
+        .filter(Boolean)
+        .join('\n\n')
+
       setAnsweringDepthHint(estimateTranscriptExpertDepth(trimmed || messageBody))
       composerUserEditedRef.current = false
       voiceMayFillComposerRef.current = false
@@ -1445,6 +1474,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
         setLastSendStatus('success')
         setError(null)
         setRetryPayload(null)
+        setPending(false)
         requestAbortRef.current?.abort()
         requestAbortRef.current = null
         streamAbortRef.current?.abort()
@@ -1458,13 +1488,8 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
         return
       }
 
-      setPending(true)
-      setLastSendStatus('sending')
-      setError(null)
-      setRetryPayload(null)
       setImageUnderstandingNote(null)
       setImageNoteForMessageId(null)
-      traceOrbSend('pending_state', { sendGeneration, pending: true })
 
       const osBoundary = standaloneOsBoundaryReply(trimmed || messageBody)
       if (osBoundary && !options?.retry) {
@@ -1756,7 +1781,9 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
             },
             signal: streamSignal,
             stream: {
-              onToken: (_delta, partial) => applyStreamingPartial(partial),
+              onToken: (_delta, partial) => {
+                applyStreamingPartial(partial)
+              },
               onStatus: (status) => {
                 if (status.expert_depth) {
                   setAnsweringDepthHint(status.expert_depth)
@@ -1841,6 +1868,8 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
 
         traceOrbSend('request_end', { sendGeneration, hasAnswer: Boolean(response.answer) })
         const frontendRequestCompletedAt = Date.now()
+        markOrbChatLatency('render_complete')
+        logOrbChatLatencySnapshot()
         logOrbTiming('request_end', {
           sendGeneration,
           frontend_request_started_at: frontendRequestStartedAt,
