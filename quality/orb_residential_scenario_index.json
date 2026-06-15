@@ -1,0 +1,2500 @@
+{
+  "version": "1.0.0",
+  "generated_at": "2026-06-15T22:40:09.519632+00:00",
+  "total_entries": 200,
+  "core100_count": 100,
+  "baseline15_count": 15,
+  "expert_gold_count": 100,
+  "entries": [
+    {
+      "canonical_id": "core_001",
+      "title": "Daily record after difficult school day",
+      "scenario_family": "daily_care",
+      "record_type": "daily_record",
+      "feature_target": "ORB Write",
+      "source": "core100_generator",
+      "original_sources": [
+        {
+          "source_file": "quality/orb_residential_baseline_scenarios.json",
+          "original_id": "baseline_daily_record",
+          "relationship": "baseline_converged"
+        }
+      ]
+    },
+    {
+      "canonical_id": "core_002",
+      "title": "Positive progress daily record",
+      "scenario_family": "daily_care",
+      "record_type": "daily_record",
+      "feature_target": "ORB Write",
+      "source": "core100_generator",
+      "original_sources": []
+    },
+    {
+      "canonical_id": "core_003",
+      "title": "Mealtime refusal",
+      "scenario_family": "daily_care",
+      "record_type": "daily_record",
+      "feature_target": "ORB Write",
+      "source": "core100_generator",
+      "original_sources": []
+    },
+    {
+      "canonical_id": "core_004",
+      "title": "Sleep routine difficulty",
+      "scenario_family": "daily_care",
+      "record_type": "daily_record",
+      "feature_target": "ORB Write",
+      "source": "core100_generator",
+      "original_sources": []
+    },
+    {
+      "canonical_id": "core_005",
+      "title": "Hygiene support",
+      "scenario_family": "daily_care",
+      "record_type": "daily_record",
+      "feature_target": "ORB Write",
+      "source": "core100_generator",
+      "original_sources": []
+    },
+    {
+      "canonical_id": "core_006",
+      "title": "Peer relationship concern",
+      "scenario_family": "daily_care",
+      "record_type": "daily_record",
+      "feature_target": "ORB Write",
+      "source": "core100_generator",
+      "original_sources": []
+    },
+    {
+      "canonical_id": "core_007",
+      "title": "Child requests private conversation",
+      "scenario_family": "daily_care",
+      "record_type": "daily_record",
+      "feature_target": "Chat",
+      "source": "core100_generator",
+      "original_sources": []
+    },
+    {
+      "canonical_id": "core_008",
+      "title": "Child refuses activity",
+      "scenario_family": "daily_care",
+      "record_type": "daily_record",
+      "feature_target": "ORB Write",
+      "source": "core100_generator",
+      "original_sources": []
+    },
+    {
+      "canonical_id": "core_009",
+      "title": "Child returns home unsettled",
+      "scenario_family": "daily_care",
+      "record_type": "daily_record",
+      "feature_target": "ORB Write",
+      "source": "core100_generator",
+      "original_sources": []
+    },
+    {
+      "canonical_id": "core_010",
+      "title": "Child has positive family contact",
+      "scenario_family": "daily_care",
+      "record_type": "family_contact_record",
+      "feature_target": "ORB Write",
+      "source": "core100_generator",
+      "original_sources": []
+    },
+    {
+      "canonical_id": "core_011",
+      "title": "Property damage",
+      "scenario_family": "incident_reflection",
+      "record_type": "incident_report",
+      "feature_target": "ORB Write",
+      "source": "core100_generator",
+      "original_sources": [
+        {
+          "source_file": "quality/orb_residential_baseline_scenarios.json",
+          "original_id": "baseline_incident_reflection",
+          "relationship": "baseline_converged"
+        }
+      ]
+    },
+    {
+      "canonical_id": "core_012",
+      "title": "Verbal aggression",
+      "scenario_family": "incident_reflection",
+      "record_type": "incident_report",
+      "feature_target": "ORB Write",
+      "source": "core100_generator",
+      "original_sources": []
+    },
+    {
+      "canonical_id": "core_013",
+      "title": "Door slamming / emotional distress",
+      "scenario_family": "incident_reflection",
+      "record_type": "incident_report",
+      "feature_target": "ORB Write",
+      "source": "core100_generator",
+      "original_sources": []
+    },
+    {
+      "canonical_id": "core_014",
+      "title": "Physical aggression without injury",
+      "scenario_family": "incident_reflection",
+      "record_type": "incident_report",
+      "feature_target": "ORB Write",
+      "source": "core100_generator",
+      "original_sources": []
+    },
+    {
+      "canonical_id": "core_015",
+      "title": "Bullying concern",
+      "scenario_family": "incident_reflection",
+      "record_type": "incident_report",
+      "feature_target": "ORB Write",
+      "source": "core100_generator",
+      "original_sources": []
+    },
+    {
+      "canonical_id": "core_016",
+      "title": "Threats to abscond",
+      "scenario_family": "incident_reflection",
+      "record_type": "incident_report",
+      "feature_target": "ORB Write",
+      "source": "core100_generator",
+      "original_sources": []
+    },
+    {
+      "canonical_id": "core_017",
+      "title": "Self-isolation after trigger",
+      "scenario_family": "incident_reflection",
+      "record_type": "behaviour_reflection",
+      "feature_target": "ORB Write",
+      "source": "core100_generator",
+      "original_sources": []
+    },
+    {
+      "canonical_id": "core_018",
+      "title": "Conflict between young people",
+      "scenario_family": "incident_reflection",
+      "record_type": "incident_report",
+      "feature_target": "ORB Write",
+      "source": "core100_generator",
+      "original_sources": []
+    },
+    {
+      "canonical_id": "core_019",
+      "title": "Online conflict",
+      "scenario_family": "incident_reflection",
+      "record_type": "incident_report",
+      "feature_target": "ORB Write",
+      "source": "core100_generator",
+      "original_sources": []
+    },
+    {
+      "canonical_id": "core_020",
+      "title": "Staff debrief after incident",
+      "scenario_family": "incident_reflection",
+      "record_type": "supervision_discussion",
+      "feature_target": "Management oversight",
+      "source": "core100_generator",
+      "original_sources": []
+    },
+    {
+      "canonical_id": "core_021",
+      "title": "Disclosure of feeling unsafe",
+      "scenario_family": "safeguarding",
+      "record_type": "safeguarding_concern",
+      "feature_target": "ORB Write",
+      "source": "core100_generator",
+      "original_sources": [
+        {
+          "source_file": "quality/orb_residential_baseline_scenarios.json",
+          "original_id": "baseline_safeguarding_disclosure",
+          "relationship": "baseline_converged"
+        }
+      ]
+    },
+    {
+      "canonical_id": "core_022",
+      "title": "Historic harm comment",
+      "scenario_family": "safeguarding",
+      "record_type": "safeguarding_concern",
+      "feature_target": "ORB Write",
+      "source": "core100_generator",
+      "original_sources": []
+    },
+    {
+      "canonical_id": "core_023",
+      "title": "Concern about family contact",
+      "scenario_family": "safeguarding",
+      "record_type": "safeguarding_concern",
+      "feature_target": "ORB Write",
+      "source": "core100_generator",
+      "original_sources": []
+    },
+    {
+      "canonical_id": "core_024",
+      "title": "Online exploitation concern",
+      "scenario_family": "safeguarding",
+      "record_type": "safeguarding_concern",
+      "feature_target": "ORB Write",
+      "source": "core100_generator",
+      "original_sources": []
+    },
+    {
+      "canonical_id": "core_025",
+      "title": "Missing from care concern",
+      "scenario_family": "safeguarding",
+      "record_type": "safeguarding_concern",
+      "feature_target": "ORB Write",
+      "source": "core100_generator",
+      "original_sources": []
+    },
+    {
+      "canonical_id": "core_026",
+      "title": "Substance concern",
+      "scenario_family": "safeguarding",
+      "record_type": "safeguarding_concern",
+      "feature_target": "ORB Write",
+      "source": "core100_generator",
+      "original_sources": []
+    },
+    {
+      "canonical_id": "core_027",
+      "title": "Allegation against adult",
+      "scenario_family": "safeguarding",
+      "record_type": "safeguarding_concern",
+      "feature_target": "ORB Write",
+      "source": "core100_generator",
+      "original_sources": []
+    },
+    {
+      "canonical_id": "core_028",
+      "title": "Peer-on-peer concern",
+      "scenario_family": "safeguarding",
+      "record_type": "safeguarding_concern",
+      "feature_target": "ORB Write",
+      "source": "core100_generator",
+      "original_sources": []
+    },
+    {
+      "canonical_id": "core_029",
+      "title": "Child returns with unexplained item",
+      "scenario_family": "safeguarding",
+      "record_type": "safeguarding_concern",
+      "feature_target": "ORB Write",
+      "source": "core100_generator",
+      "original_sources": []
+    },
+    {
+      "canonical_id": "core_030",
+      "title": "Sexualised language / boundary concern",
+      "scenario_family": "safeguarding",
+      "record_type": "safeguarding_concern",
+      "feature_target": "ORB Write",
+      "source": "core100_generator",
+      "original_sources": []
+    },
+    {
+      "canonical_id": "core_031",
+      "title": "Distress after contact",
+      "scenario_family": "behaviour_communication",
+      "record_type": "behaviour_reflection",
+      "feature_target": "ORB Write",
+      "source": "core100_generator",
+      "original_sources": [
+        {
+          "source_file": "quality/orb_residential_baseline_scenarios.json",
+          "original_id": "baseline_behaviour_communication",
+          "relationship": "baseline_converged"
+        }
+      ]
+    },
+    {
+      "canonical_id": "core_032",
+      "title": "School refusal",
+      "scenario_family": "behaviour_communication",
+      "record_type": "behaviour_reflection",
+      "feature_target": "ORB Write",
+      "source": "core100_generator",
+      "original_sources": []
+    },
+    {
+      "canonical_id": "core_033",
+      "title": "Sudden withdrawal",
+      "scenario_family": "behaviour_communication",
+      "record_type": "behaviour_reflection",
+      "feature_target": "ORB Write",
+      "source": "core100_generator",
+      "original_sources": []
+    },
+    {
+      "canonical_id": "core_034",
+      "title": "Anger after disappointment",
+      "scenario_family": "behaviour_communication",
+      "record_type": "behaviour_reflection",
+      "feature_target": "ORB Write",
+      "source": "core100_generator",
+      "original_sources": []
+    },
+    {
+      "canonical_id": "core_035",
+      "title": "Repeated bedtime dysregulation",
+      "scenario_family": "behaviour_communication",
+      "record_type": "behaviour_reflection",
+      "feature_target": "ORB Write",
+      "source": "core100_generator",
+      "original_sources": []
+    },
+    {
+      "canonical_id": "core_036",
+      "title": "Food-related anxiety",
+      "scenario_family": "behaviour_communication",
+      "record_type": "behaviour_reflection",
+      "feature_target": "ORB Write",
+      "source": "core100_generator",
+      "original_sources": []
+    },
+    {
+      "canonical_id": "core_037",
+      "title": "Refusal to attend appointment",
+      "scenario_family": "behaviour_communication",
+      "record_type": "behaviour_reflection",
+      "feature_target": "ORB Write",
+      "source": "core100_generator",
+      "original_sources": []
+    },
+    {
+      "canonical_id": "core_038",
+      "title": "Avoiding key-work",
+      "scenario_family": "behaviour_communication",
+      "record_type": "behaviour_reflection",
+      "feature_target": "ORB Write",
+      "source": "core100_generator",
+      "original_sources": []
+    },
+    {
+      "canonical_id": "core_039",
+      "title": "Damaging bedroom item",
+      "scenario_family": "behaviour_communication",
+      "record_type": "behaviour_reflection",
+      "feature_target": "ORB Write",
+      "source": "core100_generator",
+      "original_sources": []
+    },
+    {
+      "canonical_id": "core_040",
+      "title": "Repair after conflict",
+      "scenario_family": "behaviour_communication",
+      "record_type": "behaviour_reflection",
+      "feature_target": "ORB Write",
+      "source": "core100_generator",
+      "original_sources": []
+    },
+    {
+      "canonical_id": "core_041",
+      "title": "Rough daily note conversion",
+      "scenario_family": "magic_notes",
+      "record_type": "general_dictation",
+      "feature_target": "Magic Notes",
+      "source": "core100_generator",
+      "original_sources": [
+        {
+          "source_file": "quality/orb_residential_baseline_scenarios.json",
+          "original_id": "baseline_magic_notes_conversion",
+          "relationship": "baseline_converged"
+        }
+      ]
+    },
+    {
+      "canonical_id": "core_042",
+      "title": "Rough incident note conversion",
+      "scenario_family": "magic_notes",
+      "record_type": "general_dictation",
+      "feature_target": "Magic Notes",
+      "source": "core100_generator",
+      "original_sources": []
+    },
+    {
+      "canonical_id": "core_043",
+      "title": "Poor wording rewrite",
+      "scenario_family": "magic_notes",
+      "record_type": "daily_record",
+      "feature_target": "Magic Notes",
+      "source": "core100_generator",
+      "original_sources": [
+        {
+          "source_file": "quality/orb_residential_baseline_scenarios.json",
+          "original_id": "baseline_poor_wording_rewrite",
+          "relationship": "baseline_converged"
+        }
+      ]
+    },
+    {
+      "canonical_id": "core_044",
+      "title": "Judgemental language rewrite",
+      "scenario_family": "magic_notes",
+      "record_type": "daily_record",
+      "feature_target": "Magic Notes",
+      "source": "core100_generator",
+      "original_sources": []
+    },
+    {
+      "canonical_id": "core_045",
+      "title": "Incomplete safeguarding note",
+      "scenario_family": "magic_notes",
+      "record_type": "safeguarding_concern",
+      "feature_target": "Magic Notes",
+      "source": "core100_generator",
+      "original_sources": []
+    },
+    {
+      "canonical_id": "core_046",
+      "title": "Incomplete handover",
+      "scenario_family": "magic_notes",
+      "record_type": "handover",
+      "feature_target": "Magic Notes",
+      "source": "core100_generator",
+      "original_sources": []
+    },
+    {
+      "canonical_id": "core_047",
+      "title": "Voice-to-record correction",
+      "scenario_family": "magic_notes",
+      "record_type": "general_dictation",
+      "feature_target": "Voice",
+      "source": "core100_generator",
+      "original_sources": []
+    },
+    {
+      "canonical_id": "core_048",
+      "title": "Meeting note clean-up",
+      "scenario_family": "magic_notes",
+      "record_type": "multi_agency_discussion",
+      "feature_target": "Magic Notes",
+      "source": "core100_generator",
+      "original_sources": []
+    },
+    {
+      "canonical_id": "core_049",
+      "title": "Manager oversight rough notes",
+      "scenario_family": "magic_notes",
+      "record_type": "manager_summary",
+      "feature_target": "Management oversight",
+      "source": "core100_generator",
+      "original_sources": []
+    },
+    {
+      "canonical_id": "core_050",
+      "title": "Reg 44 evidence notes",
+      "scenario_family": "magic_notes",
+      "record_type": "reg_44_evidence_summary",
+      "feature_target": "Regulation evidence",
+      "source": "core100_generator",
+      "original_sources": [
+        {
+          "source_file": "quality/orb_residential_baseline_scenarios.json",
+          "original_id": "baseline_reg44_evidence",
+          "relationship": "baseline_converged"
+        }
+      ]
+    },
+    {
+      "canonical_id": "core_051",
+      "title": "Emotional check-in required",
+      "scenario_family": "handover",
+      "record_type": "handover",
+      "feature_target": "ORB Write",
+      "source": "core100_generator",
+      "original_sources": []
+    },
+    {
+      "canonical_id": "core_052",
+      "title": "Medication reminder",
+      "scenario_family": "handover",
+      "record_type": "handover",
+      "feature_target": "ORB Write",
+      "source": "core100_generator",
+      "original_sources": []
+    },
+    {
+      "canonical_id": "core_053",
+      "title": "Family phone call follow-up",
+      "scenario_family": "handover",
+      "record_type": "handover",
+      "feature_target": "ORB Write",
+      "source": "core100_generator",
+      "original_sources": []
+    },
+    {
+      "canonical_id": "core_054",
+      "title": "School issue follow-up",
+      "scenario_family": "handover",
+      "record_type": "handover",
+      "feature_target": "ORB Write",
+      "source": "core100_generator",
+      "original_sources": []
+    },
+    {
+      "canonical_id": "core_055",
+      "title": "Contact arrangements",
+      "scenario_family": "handover",
+      "record_type": "handover",
+      "feature_target": "ORB Write",
+      "source": "core100_generator",
+      "original_sources": []
+    },
+    {
+      "canonical_id": "core_056",
+      "title": "Risk change update",
+      "scenario_family": "handover",
+      "record_type": "handover",
+      "feature_target": "ORB Write",
+      "source": "core100_generator",
+      "original_sources": []
+    },
+    {
+      "canonical_id": "core_057",
+      "title": "Positive progress handover",
+      "scenario_family": "handover",
+      "record_type": "handover",
+      "feature_target": "ORB Write",
+      "source": "core100_generator",
+      "original_sources": []
+    },
+    {
+      "canonical_id": "core_058",
+      "title": "Health appointment handover",
+      "scenario_family": "handover",
+      "record_type": "handover",
+      "feature_target": "ORB Write",
+      "source": "core100_generator",
+      "original_sources": []
+    },
+    {
+      "canonical_id": "core_059",
+      "title": "Sleep concern handover",
+      "scenario_family": "handover",
+      "record_type": "handover",
+      "feature_target": "ORB Write",
+      "source": "core100_generator",
+      "original_sources": []
+    },
+    {
+      "canonical_id": "core_060",
+      "title": "Peer dynamics handover",
+      "scenario_family": "handover",
+      "record_type": "handover",
+      "feature_target": "ORB Write",
+      "source": "core100_generator",
+      "original_sources": [
+        {
+          "source_file": "quality/orb_residential_baseline_scenarios.json",
+          "original_id": "baseline_handover_note",
+          "relationship": "baseline_converged"
+        }
+      ]
+    },
+    {
+      "canonical_id": "core_061",
+      "title": "School motivation",
+      "scenario_family": "key_work",
+      "record_type": "key_work_session",
+      "feature_target": "ORB Write",
+      "source": "core100_generator",
+      "original_sources": [
+        {
+          "source_file": "quality/orb_residential_baseline_scenarios.json",
+          "original_id": "baseline_key_work_preparation",
+          "relationship": "baseline_converged"
+        }
+      ]
+    },
+    {
+      "canonical_id": "core_062",
+      "title": "Family relationships",
+      "scenario_family": "key_work",
+      "record_type": "key_work_session",
+      "feature_target": "ORB Write",
+      "source": "core100_generator",
+      "original_sources": []
+    },
+    {
+      "canonical_id": "core_063",
+      "title": "Identity and belonging",
+      "scenario_family": "key_work",
+      "record_type": "key_work_session",
+      "feature_target": "ORB Write",
+      "source": "core100_generator",
+      "original_sources": []
+    },
+    {
+      "canonical_id": "core_064",
+      "title": "Emotional regulation",
+      "scenario_family": "key_work",
+      "record_type": "key_work_session",
+      "feature_target": "ORB Write",
+      "source": "core100_generator",
+      "original_sources": []
+    },
+    {
+      "canonical_id": "core_065",
+      "title": "Online safety",
+      "scenario_family": "key_work",
+      "record_type": "key_work_session",
+      "feature_target": "ORB Write",
+      "source": "core100_generator",
+      "original_sources": []
+    },
+    {
+      "canonical_id": "core_066",
+      "title": "Healthy relationships",
+      "scenario_family": "key_work",
+      "record_type": "key_work_session",
+      "feature_target": "ORB Write",
+      "source": "core100_generator",
+      "original_sources": []
+    },
+    {
+      "canonical_id": "core_067",
+      "title": "Preparing for review meeting",
+      "scenario_family": "key_work",
+      "record_type": "key_work_session",
+      "feature_target": "ORB Write",
+      "source": "core100_generator",
+      "original_sources": []
+    },
+    {
+      "canonical_id": "core_068",
+      "title": "Child unhappy with plan",
+      "scenario_family": "key_work",
+      "record_type": "key_work_session",
+      "feature_target": "ORB Write",
+      "source": "core100_generator",
+      "original_sources": []
+    },
+    {
+      "canonical_id": "core_069",
+      "title": "Restorative conversation",
+      "scenario_family": "key_work",
+      "record_type": "key_work_session",
+      "feature_target": "ORB Write",
+      "source": "core100_generator",
+      "original_sources": []
+    },
+    {
+      "canonical_id": "core_070",
+      "title": "Building trust",
+      "scenario_family": "key_work",
+      "record_type": "key_work_session",
+      "feature_target": "ORB Write",
+      "source": "core100_generator",
+      "original_sources": []
+    },
+    {
+      "canonical_id": "core_071",
+      "title": "Incident pattern review",
+      "scenario_family": "management_oversight",
+      "record_type": "manager_summary",
+      "feature_target": "Management oversight",
+      "source": "core100_generator",
+      "original_sources": [
+        {
+          "source_file": "quality/orb_residential_baseline_scenarios.json",
+          "original_id": "baseline_management_oversight",
+          "relationship": "baseline_converged"
+        }
+      ]
+    },
+    {
+      "canonical_id": "core_072",
+      "title": "Family contact pattern",
+      "scenario_family": "management_oversight",
+      "record_type": "manager_summary",
+      "feature_target": "Management oversight",
+      "source": "core100_generator",
+      "original_sources": [
+        {
+          "source_file": "quality/orb_residential_baseline_scenarios.json",
+          "original_id": "baseline_family_contact_review",
+          "relationship": "baseline_converged"
+        }
+      ]
+    },
+    {
+      "canonical_id": "core_073",
+      "title": "Missing episode oversight",
+      "scenario_family": "management_oversight",
+      "record_type": "manager_summary",
+      "feature_target": "Management oversight",
+      "source": "core100_generator",
+      "original_sources": []
+    },
+    {
+      "canonical_id": "core_074",
+      "title": "Safeguarding management note",
+      "scenario_family": "management_oversight",
+      "record_type": "manager_summary",
+      "feature_target": "Management oversight",
+      "source": "core100_generator",
+      "original_sources": []
+    },
+    {
+      "canonical_id": "core_075",
+      "title": "Staff practice reflection",
+      "scenario_family": "management_oversight",
+      "record_type": "manager_summary",
+      "feature_target": "Management oversight",
+      "source": "core100_generator",
+      "original_sources": []
+    },
+    {
+      "canonical_id": "core_076",
+      "title": "Placement plan review",
+      "scenario_family": "management_oversight",
+      "record_type": "placement_plan_review",
+      "feature_target": "Management oversight",
+      "source": "core100_generator",
+      "original_sources": []
+    },
+    {
+      "canonical_id": "core_077",
+      "title": "Risk assessment update",
+      "scenario_family": "management_oversight",
+      "record_type": "risk_assessment_note",
+      "feature_target": "Management oversight",
+      "source": "core100_generator",
+      "original_sources": []
+    },
+    {
+      "canonical_id": "core_078",
+      "title": "Complaints oversight",
+      "scenario_family": "management_oversight",
+      "record_type": "complaint_record",
+      "feature_target": "Management oversight",
+      "source": "core100_generator",
+      "original_sources": []
+    },
+    {
+      "canonical_id": "core_079",
+      "title": "Positive progress oversight",
+      "scenario_family": "management_oversight",
+      "record_type": "manager_summary",
+      "feature_target": "Management oversight",
+      "source": "core100_generator",
+      "original_sources": []
+    },
+    {
+      "canonical_id": "core_080",
+      "title": "Reg 45 improvement note",
+      "scenario_family": "management_oversight",
+      "record_type": "reg_45_self_evaluation",
+      "feature_target": "Regulation evidence",
+      "source": "core100_generator",
+      "original_sources": []
+    },
+    {
+      "canonical_id": "core_081",
+      "title": "Care team meeting",
+      "scenario_family": "meetings",
+      "record_type": "multi_agency_discussion",
+      "feature_target": "ORB Write",
+      "source": "core100_generator",
+      "original_sources": []
+    },
+    {
+      "canonical_id": "core_082",
+      "title": "Strategy discussion note",
+      "scenario_family": "meetings",
+      "record_type": "strategy_safeguarding_discussion",
+      "feature_target": "ORB Write",
+      "source": "core100_generator",
+      "original_sources": [
+        {
+          "source_file": "quality/orb_residential_baseline_scenarios.json",
+          "original_id": "baseline_strategy_safeguarding",
+          "relationship": "baseline_converged"
+        }
+      ]
+    },
+    {
+      "canonical_id": "core_083",
+      "title": "Professionals meeting",
+      "scenario_family": "meetings",
+      "record_type": "multi_agency_discussion",
+      "feature_target": "ORB Write",
+      "source": "core100_generator",
+      "original_sources": [
+        {
+          "source_file": "quality/orb_residential_baseline_scenarios.json",
+          "original_id": "baseline_multi_agency_meeting",
+          "relationship": "baseline_converged"
+        }
+      ]
+    },
+    {
+      "canonical_id": "core_084",
+      "title": "School meeting",
+      "scenario_family": "meetings",
+      "record_type": "multi_agency_discussion",
+      "feature_target": "ORB Write",
+      "source": "core100_generator",
+      "original_sources": []
+    },
+    {
+      "canonical_id": "core_085",
+      "title": "LAC/review preparation",
+      "scenario_family": "meetings",
+      "record_type": "multi_agency_discussion",
+      "feature_target": "Documents & Guidance",
+      "source": "core100_generator",
+      "original_sources": []
+    },
+    {
+      "canonical_id": "core_086",
+      "title": "Therapy feedback note",
+      "scenario_family": "meetings",
+      "record_type": "professional_contact_note",
+      "feature_target": "ORB Write",
+      "source": "core100_generator",
+      "original_sources": []
+    },
+    {
+      "canonical_id": "core_087",
+      "title": "Social worker update",
+      "scenario_family": "meetings",
+      "record_type": "professional_contact_note",
+      "feature_target": "ORB Write",
+      "source": "core100_generator",
+      "original_sources": []
+    },
+    {
+      "canonical_id": "core_088",
+      "title": "Family contact review",
+      "scenario_family": "meetings",
+      "record_type": "family_contact_record",
+      "feature_target": "ORB Write",
+      "source": "core100_generator",
+      "original_sources": []
+    },
+    {
+      "canonical_id": "core_089",
+      "title": "Health appointment summary",
+      "scenario_family": "meetings",
+      "record_type": "professional_contact_note",
+      "feature_target": "ORB Write",
+      "source": "core100_generator",
+      "original_sources": []
+    },
+    {
+      "canonical_id": "core_090",
+      "title": "Police/professional contact note",
+      "scenario_family": "meetings",
+      "record_type": "professional_contact_note",
+      "feature_target": "ORB Write",
+      "source": "core100_generator",
+      "original_sources": [
+        {
+          "source_file": "quality/orb_residential_baseline_scenarios.json",
+          "original_id": "baseline_home_visit_note",
+          "relationship": "baseline_converged"
+        }
+      ]
+    },
+    {
+      "canonical_id": "core_091",
+      "title": "Reg 44 evidence pack",
+      "scenario_family": "regulation_evidence",
+      "record_type": "reg_44_evidence_summary",
+      "feature_target": "Regulation evidence",
+      "source": "core100_generator",
+      "original_sources": []
+    },
+    {
+      "canonical_id": "core_092",
+      "title": "Reg 45 self-evaluation",
+      "scenario_family": "regulation_evidence",
+      "record_type": "reg_45_self_evaluation",
+      "feature_target": "Regulation evidence",
+      "source": "core100_generator",
+      "original_sources": []
+    },
+    {
+      "canonical_id": "core_093",
+      "title": "Safer recruitment evidence reflection",
+      "scenario_family": "regulation_evidence",
+      "record_type": "manager_summary",
+      "feature_target": "Regulation evidence",
+      "source": "core100_generator",
+      "original_sources": []
+    },
+    {
+      "canonical_id": "core_094",
+      "title": "Staff supervision reflection",
+      "scenario_family": "regulation_evidence",
+      "record_type": "supervision_discussion",
+      "feature_target": "Management oversight",
+      "source": "core100_generator",
+      "original_sources": [
+        {
+          "source_file": "quality/orb_residential_baseline_scenarios.json",
+          "original_id": "baseline_supervision_reflection",
+          "relationship": "baseline_converged"
+        }
+      ]
+    },
+    {
+      "canonical_id": "core_095",
+      "title": "Training impact note",
+      "scenario_family": "regulation_evidence",
+      "record_type": "manager_summary",
+      "feature_target": "Management oversight",
+      "source": "core100_generator",
+      "original_sources": []
+    },
+    {
+      "canonical_id": "core_096",
+      "title": "Quality of care review",
+      "scenario_family": "regulation_evidence",
+      "record_type": "manager_summary",
+      "feature_target": "Management oversight",
+      "source": "core100_generator",
+      "original_sources": []
+    },
+    {
+      "canonical_id": "core_097",
+      "title": "Leadership oversight summary",
+      "scenario_family": "regulation_evidence",
+      "record_type": "manager_summary",
+      "feature_target": "Management oversight",
+      "source": "core100_generator",
+      "original_sources": []
+    },
+    {
+      "canonical_id": "core_098",
+      "title": "Children's voice evidence",
+      "scenario_family": "regulation_evidence",
+      "record_type": "manager_summary",
+      "feature_target": "Regulation evidence",
+      "source": "core100_generator",
+      "original_sources": []
+    },
+    {
+      "canonical_id": "core_099",
+      "title": "Learning from incident review",
+      "scenario_family": "regulation_evidence",
+      "record_type": "manager_summary",
+      "feature_target": "Management oversight",
+      "source": "core100_generator",
+      "original_sources": []
+    },
+    {
+      "canonical_id": "core_100",
+      "title": "Monthly manager summary",
+      "scenario_family": "regulation_evidence",
+      "record_type": "manager_summary",
+      "feature_target": "Management oversight",
+      "source": "core100_generator",
+      "original_sources": []
+    },
+    {
+      "canonical_id": "GOLD-001-unknown-vehicle-missing",
+      "title": "Missing from care \u2014 unknown adult and car at door",
+      "scenario_family": "unknown_adult_vehicle",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-001-unknown-vehicle-missing",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-002-repeated-missing",
+      "title": "Repeated missing from care \u2014 third episode this week",
+      "scenario_family": "repeated_missing",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-002-repeated-missing",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-003-return-intoxicated",
+      "title": "Missing return \u2014 intoxication",
+      "scenario_family": "late_return",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-003-return-intoxicated",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-004-return-injury",
+      "title": "Missing return \u2014 unexplained injury",
+      "scenario_family": "missing_from_care",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-004-return-injury",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-005-refuses-return-conversation",
+      "title": "Child refuses return conversation",
+      "scenario_family": "missing_from_care",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-005-refuses-return-conversation",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-006-cse-after-missing",
+      "title": "CSE indicators after missing episode",
+      "scenario_family": "cse_concern",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-006-cse-after-missing",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-007-county-lines",
+      "title": "CCE / county lines indicators",
+      "scenario_family": "cce_county_lines",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-007-county-lines",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-008-online-grooming",
+      "title": "Online grooming concern",
+      "scenario_family": "online_grooming",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-008-online-grooming",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-009-disclosure-abuse",
+      "title": "Disclosure of abuse",
+      "scenario_family": "disclosure_abuse",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-009-disclosure-abuse",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-010-historic-abuse",
+      "title": "Historic abuse disclosure",
+      "scenario_family": "historic_abuse_disclosure",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-010-historic-abuse",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-011-allegation-staff",
+      "title": "Allegation against staff",
+      "scenario_family": "allegation_staff",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-011-allegation-staff",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-012-allegation-peer",
+      "title": "Allegation against peer",
+      "scenario_family": "allegation_peer",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-012-allegation-peer",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-013-peer-harm",
+      "title": "Peer-on-peer harm",
+      "scenario_family": "peer_on_peer_harm",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-013-peer-harm",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-014-sexual-harm",
+      "title": "Sexual harm concern",
+      "scenario_family": "peer_on_peer_harm",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-014-sexual-harm",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-015-self-harm-disclosure",
+      "title": "Self-harm disclosure",
+      "scenario_family": "self_harm_disclosure",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-015-self-harm-disclosure",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-016-ligature",
+      "title": "Ligature concern",
+      "scenario_family": "ligature_concern",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-016-ligature",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-017-weapon",
+      "title": "Weapon concern",
+      "scenario_family": "weapon_disclosure",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-017-weapon",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-018-restraint-injury-complaint",
+      "title": "Restraint with injury complaint",
+      "scenario_family": "restraint_injury_complaint",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-018-restraint-injury-complaint",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-019-repeated-restraint",
+      "title": "Repeated restraint trend",
+      "scenario_family": "repeated_restraint_trend",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-019-repeated-restraint",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-020-weak-restraint-record",
+      "title": "Weak restraint record",
+      "scenario_family": "physical_intervention",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-020-weak-restraint-record",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-021-no-debrief",
+      "title": "Physical intervention not debriefed",
+      "scenario_family": "physical_intervention",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-021-no-debrief",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-022-medication-refusal",
+      "title": "Medication refusal",
+      "scenario_family": "medication_refusal",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-022-medication-refusal",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-023-medication-error",
+      "title": "Medication error",
+      "scenario_family": "medication_error",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-023-medication-error",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-024-controlled-drug",
+      "title": "Controlled drug discrepancy",
+      "scenario_family": "controlled_drug_discrepancy",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-024-controlled-drug",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-025-contact-distressed",
+      "title": "Child distressed after contact",
+      "scenario_family": "family_contact_distress",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-025-contact-distressed",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-026-family-phone-trigger",
+      "title": "Difficult family phone call",
+      "scenario_family": "family_contact_distress",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-026-family-phone-trigger",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-027-contact-cancelled",
+      "title": "Contact cancellation dysregulation",
+      "scenario_family": "family_contact_distress",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-027-contact-cancelled",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-028-not-feeling-safe",
+      "title": "Child does not feel safe",
+      "scenario_family": "child_not_feeling_safe",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-028-not-feeling-safe",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-029-parent-restraint-complaint",
+      "title": "Parent complaint about restraint",
+      "scenario_family": "parent_complaint_restraint",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-029-parent-restraint-complaint",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-030-sw-records-complaint",
+      "title": "Social worker complaint about records",
+      "scenario_family": "social_worker_complaint_records",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-030-sw-records-complaint",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-031-poor-daily-log",
+      "title": "Poor daily log",
+      "scenario_family": "poor_daily_log",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-031-poor-daily-log",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-032-opinion-record",
+      "title": "Opinion-based incident record",
+      "scenario_family": "opinion_based_record",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-032-opinion-record",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-033-missing-child-voice",
+      "title": "Missing child voice",
+      "scenario_family": "missing_child_voice",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-033-missing-child-voice",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-034-weak-manager-oversight",
+      "title": "Weak manager oversight",
+      "scenario_family": "weak_manager_oversight",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-034-weak-manager-oversight",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-035-no-chronology",
+      "title": "No chronology entry",
+      "scenario_family": "no_chronology_entry",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-035-no-chronology",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-036-no-further-issues",
+      "title": "Record says no further issues despite concerns",
+      "scenario_family": "record_no_further_issues",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-036-no-further-issues",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-037-punitive-language",
+      "title": "Staff punitive language",
+      "scenario_family": "opinion_based_record",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-037-punitive-language",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-038-autism-comm",
+      "title": "Autism-aware communication missed",
+      "scenario_family": "autism_communication_missed",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-038-autism-comm",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-039-gdd-comm",
+      "title": "GDD / adaptive communication missed",
+      "scenario_family": "gdd_communication_missed",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-039-gdd-comm",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-040-school-refusal",
+      "title": "School refusal",
+      "scenario_family": "school_refusal",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-040-school-refusal",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-041-exclusion",
+      "title": "Exclusion / suspension",
+      "scenario_family": "school_refusal",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-041-exclusion",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-042-online-images",
+      "title": "Online image sharing",
+      "scenario_family": "online_grooming",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-042-online-images",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-043-room-search",
+      "title": "Room search concern",
+      "scenario_family": "room_search_confiscation",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-043-room-search",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-044-phone-confiscation",
+      "title": "Phone confiscation concern",
+      "scenario_family": "room_search_confiscation",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-044-phone-confiscation",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-045-door-blocking",
+      "title": "Door blocking / movement restriction",
+      "scenario_family": "room_search_confiscation",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-045-door-blocking",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-046-placement-breakdown",
+      "title": "Placement breakdown worry",
+      "scenario_family": "family_contact_distress",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-046-placement-breakdown",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-047-new-admission",
+      "title": "New admission unsettled",
+      "scenario_family": "family_contact_distress",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-047-new-admission",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-048-camhs-refusal",
+      "title": "CAMHS appointment refusal",
+      "scenario_family": "medication_refusal",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-048-camhs-refusal",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-049-hospital-escalation",
+      "title": "Hospital / 111 escalation",
+      "scenario_family": "medication_error",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-049-hospital-escalation",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-050-sleep-mental-health",
+      "title": "Sleep disruption and mental health",
+      "scenario_family": "self_harm_disclosure",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-050-sleep-mental-health",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-051-school-bullying",
+      "title": "Bullying at school",
+      "scenario_family": "school_refusal",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-051-school-bullying",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-052-intimidation",
+      "title": "Child-on-child intimidation",
+      "scenario_family": "peer_on_peer_harm",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-052-intimidation",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-053-staff-conduct",
+      "title": "Staff conduct concern",
+      "scenario_family": "allegation_staff",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-053-staff-conduct",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-054-whistleblowing",
+      "title": "Whistleblowing concern",
+      "scenario_family": "whistleblowing",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-054-whistleblowing",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-055-weak-supervision",
+      "title": "Staff supervision weak",
+      "scenario_family": "weak_manager_oversight",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-055-weak-supervision",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-056-training-gap",
+      "title": "Training gap after incident",
+      "scenario_family": "weak_manager_oversight",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-056-training-gap",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-057-agency-handover",
+      "title": "Agency staff poor handover",
+      "scenario_family": "agency_handover",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-057-agency-handover",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-058-night-shift",
+      "title": "Night shift poor response",
+      "scenario_family": "night_shift_response",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-058-night-shift",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-059-reg44-open-action",
+      "title": "Reg 44 repeated action not closed",
+      "scenario_family": "reg44_action_not_closed",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-059-reg44-open-action",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-060-reg44-child-voice",
+      "title": "Reg 44 report weak child voice",
+      "scenario_family": "reg44_action_not_closed",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-060-reg44-child-voice",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-061-reg45-impact",
+      "title": "Reg 45 review lacks impact",
+      "scenario_family": "reg45_weak_impact",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-061-reg45-impact",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-062-ri-drift",
+      "title": "RI governance drift",
+      "scenario_family": "ri_governance_drift",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-062-ri-drift",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-063-provider-theme",
+      "title": "Provider risk theme across homes",
+      "scenario_family": "ri_governance_drift",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-063-provider-theme",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-064-ofsted-notify",
+      "title": "Ofsted notification uncertainty",
+      "scenario_family": "ofsted_notification_uncertainty",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-064-ofsted-notify",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-065-serious-incident",
+      "title": "Serious incident notification uncertainty",
+      "scenario_family": "ofsted_notification_uncertainty",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-065-serious-incident",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-066-complaint-not-followed",
+      "title": "Child complaint not followed up",
+      "scenario_family": "advocacy_complaint",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-066-complaint-not-followed",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-067-advocacy",
+      "title": "Advocacy request",
+      "scenario_family": "advocacy_complaint",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-067-advocacy",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-068-social-media-risky-adult",
+      "title": "Social media contact with risky adult",
+      "scenario_family": "online_grooming",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-068-social-media-risky-adult",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-069-unknown-gifts",
+      "title": "Unknown money / gifts",
+      "scenario_family": "cse_concern",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-069-unknown-gifts",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-070-new-phone",
+      "title": "Unexplained new phone",
+      "scenario_family": "cse_concern",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-070-new-phone",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-071-substance",
+      "title": "Substance use concern",
+      "scenario_family": "medication_refusal",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-071-substance",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-072-pregnancy",
+      "title": "Pregnancy / sexual health concern",
+      "scenario_family": "peer_on_peer_harm",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-072-pregnancy",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-073-uasc-missing",
+      "title": "UASC missing concern",
+      "scenario_family": "uasc_missing",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-073-uasc-missing",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-074-cultural-need",
+      "title": "Cultural / religious need missed",
+      "scenario_family": "cultural_religious_need",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-074-cultural-need",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-075-lgbtq",
+      "title": "LGBTQ+ identity / support concern",
+      "scenario_family": "lgbtq_support",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-075-lgbtq",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-076-restraint-med-refusal",
+      "title": "Restraint during medication refusal",
+      "scenario_family": "medication_refusal",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-076-restraint-med-refusal",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-077-missing-after-contact",
+      "title": "Missing episode after family contact",
+      "scenario_family": "missing_from_care",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-077-missing-after-contact",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-078-restraint-after-missing",
+      "title": "Restraint after missing return",
+      "scenario_family": "physical_intervention",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-078-restraint-after-missing",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-079-body-map",
+      "title": "Body map not completed",
+      "scenario_family": "body_map_not_completed",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-079-body-map",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-080-conflicting-accounts",
+      "title": "Conflicting staff accounts",
+      "scenario_family": "conflicting_staff_accounts",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-080-conflicting-accounts",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-081-police-unclear",
+      "title": "Police update unclear",
+      "scenario_family": "missing_from_care",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-081-police-unclear",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-082-risk-assessment-outdated",
+      "title": "Risk assessment outdated",
+      "scenario_family": "outdated_risk_plans",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-082-risk-assessment-outdated",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-083-bsp-outdated",
+      "title": "Behaviour support plan outdated",
+      "scenario_family": "outdated_risk_plans",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-083-bsp-outdated",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-084-missing-plan-outdated",
+      "title": "Missing plan outdated",
+      "scenario_family": "outdated_risk_plans",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-084-missing-plan-outdated",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-085-manipulative-label",
+      "title": "Staff write 'manipulative'",
+      "scenario_family": "opinion_based_record",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-085-manipulative-label",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-086-attention-seeking",
+      "title": "Staff write 'attention seeking'",
+      "scenario_family": "opinion_based_record",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-086-attention-seeking",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-087-choosing-kick-off",
+      "title": "Staff write 'choosing to kick off'",
+      "scenario_family": "opinion_based_record",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-087-choosing-kick-off",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-088-refuses-speak",
+      "title": "Child refuses to speak after incident",
+      "scenario_family": "missing_child_voice",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-088-refuses-speak",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-089-partial-disclosure",
+      "title": "Partial disclosure then withdrawal",
+      "scenario_family": "disclosure_abuse",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-089-partial-disclosure",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-090-parent-threatens",
+      "title": "Parent threatens staff",
+      "scenario_family": "family_contact_distress",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-090-parent-threatens",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-091-community-complaint",
+      "title": "Community complaint",
+      "scenario_family": "community_complaint",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-091-community-complaint",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-092-property-damage",
+      "title": "Child damages property",
+      "scenario_family": "property_damage",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-092-property-damage",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-093-assault-staff",
+      "title": "Assault on staff",
+      "scenario_family": "assault_staff",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-093-assault-staff",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-094-assault-peer",
+      "title": "Assault on peer",
+      "scenario_family": "peer_on_peer_harm",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-094-assault-peer",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-095-reg44-triangulation",
+      "title": "Reg 44 visitor triangulation",
+      "scenario_family": "reg44_triangulation",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-095-reg44-triangulation",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-096-rm-action-owner",
+      "title": "RM asks for action owner / timescale",
+      "scenario_family": "rm_action_owner",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-096-rm-action-owner",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-097-ri-assurance",
+      "title": "RI asks for governance assurance",
+      "scenario_family": "ri_governance_drift",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-097-ri-assurance",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-098-nvq-restraint-reflective",
+      "title": "NVQ learner reflective account from restraint",
+      "scenario_family": "nvq_reflective_restraint",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-098-nvq-restraint-reflective",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-099-nvq-assessor-missing",
+      "title": "NVQ assessor professional discussion \u2014 missing",
+      "scenario_family": "nvq_assessor_missing",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-099-nvq-assessor-missing",
+          "relationship": "expert_gold"
+        }
+      ]
+    },
+    {
+      "canonical_id": "GOLD-100-level5-governance",
+      "title": "Level 5 manager evidence from governance drift",
+      "scenario_family": "level5_governance_evidence",
+      "record_type": "advisor_prompt",
+      "feature_target": "Chat",
+      "source": "assistant/knowledge/orb_expert_scenarios.py",
+      "original_sources": [
+        {
+          "source_file": "assistant/knowledge/orb_expert_scenarios.py",
+          "original_id": "GOLD-100-level5-governance",
+          "relationship": "expert_gold"
+        }
+      ]
+    }
+  ]
+}

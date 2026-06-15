@@ -1,4 +1,4 @@
-"""Tests for ORB Residential baseline quality lab foundation."""
+"""Tests for ORB Residential baseline quality lab foundation and benchmark expansion."""
 
 from __future__ import annotations
 
@@ -13,11 +13,18 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 SCENARIOS_PATH = ROOT / "quality" / "orb_residential_baseline_scenarios.json"
+CORE100_PATH = ROOT / "quality" / "orb_residential_core_100_scenarios.json"
+VARIANTS_PATH = ROOT / "quality" / "orb_residential_1000_scenario_variants.jsonl"
+INDEX_PATH = ROOT / "quality" / "orb_residential_scenario_index.json"
+SCHEMA_PATH = ROOT / "quality" / "orb_residential_scenario_schema.json"
 FEEDBACK_SCHEMA_PATH = ROOT / "quality" / "orb_practitioner_feedback_schema.json"
 ARCH_DOC_PATH = ROOT / "docs" / "indicare_internal_brain_architecture.md"
 RUNNER_PATH = ROOT / "scripts" / "run_orb_residential_baseline.py"
 REPORT_JSON = ROOT / "reports" / "orb_residential_baseline_report.json"
 REPORT_MD = ROOT / "reports" / "orb_residential_baseline_report.md"
+CORE100_REPORT_JSON = ROOT / "reports" / "orb_residential_core_100_report.json"
+VARIANTS_REPORT_JSON = ROOT / "reports" / "orb_residential_variants_1000_report.json"
+QUALITY_LAB_SUMMARY = ROOT / "reports" / "orb_quality_lab_summary.json"
 
 REQUIRED_SCENARIO_FIELDS = {
     "id",
@@ -29,6 +36,27 @@ REQUIRED_SCENARIO_FIELDS = {
     "required_elements",
     "prohibited_elements",
     "ideal_output_traits",
+}
+
+REQUIRED_CANONICAL_FIELDS = {
+    "scenario_id",
+    "title",
+    "version",
+    "source",
+    "scenario_family",
+    "record_type",
+    "feature_target",
+    "difficulty",
+    "regulatory_context",
+    "input",
+    "expected_strengths",
+    "required_elements",
+    "prohibited_elements",
+    "safeguarding_flags",
+    "quality_focus",
+    "ideal_output_traits",
+    "scoring_notes",
+    "synthetic_data_confirmation",
 }
 
 REAL_LOOKING_NAME_PATTERNS = [
@@ -45,12 +73,27 @@ from assistant.evals.orb_residential_quality_rubric import (  # noqa: E402
     evaluate_output,
     overall_rating,
 )
+from assistant.evals.orb_residential_scenario_safety import (  # noqa: E402
+    validate_scenario_safety,
+    validate_scenarios_batch,
+)
+from assistant.evals.orb_residential_scenario_schema import (  # noqa: E402
+    FEATURE_TARGETS,
+    RECORD_TYPES,
+    validate_scenario_fields,
+)
 from assistant.services.model_provider_registry import model_provider_registry  # noqa: E402
 
 
 @pytest.fixture
 def scenarios() -> list[dict]:
     payload = json.loads(SCENARIOS_PATH.read_text(encoding="utf-8"))
+    return list(payload["scenarios"])
+
+
+@pytest.fixture
+def core100_scenarios() -> list[dict]:
+    payload = json.loads(CORE100_PATH.read_text(encoding="utf-8"))
     return list(payload["scenarios"])
 
 
@@ -70,6 +113,80 @@ def test_no_real_looking_names_in_scenarios(scenarios: list[dict]) -> None:
         blob = json.dumps(scenario)
         for pattern in REAL_LOOKING_NAME_PATTERNS:
             assert not pattern.search(blob), f"{scenario['id']} may contain real-looking identifiers"
+
+
+def test_scenario_index_loads() -> None:
+    assert INDEX_PATH.is_file()
+    index = json.loads(INDEX_PATH.read_text(encoding="utf-8"))
+    assert index.get("total_entries", 0) >= 115
+    assert index.get("core100_count") == 100
+
+
+def test_no_duplicate_canonical_ids_in_index() -> None:
+    index = json.loads(INDEX_PATH.read_text(encoding="utf-8"))
+    ids = [e["canonical_id"] for e in index.get("entries") or []]
+    assert len(ids) == len(set(ids)), "Duplicate canonical IDs in index"
+
+
+def test_core100_has_exactly_100_scenarios(core100_scenarios: list[dict]) -> None:
+    assert len(core100_scenarios) == 100
+
+
+def test_core100_schema_required_fields_present(core100_scenarios: list[dict]) -> None:
+    for scenario in core100_scenarios:
+        missing = REQUIRED_CANONICAL_FIELDS - set(scenario.keys())
+        assert not missing, f"{scenario.get('scenario_id')}: missing {missing}"
+        assert not validate_scenario_fields(scenario), scenario.get("scenario_id")
+
+
+def test_every_core_scenario_confirms_synthetic_data(core100_scenarios: list[dict]) -> None:
+    for scenario in core100_scenarios:
+        assert scenario.get("synthetic_data_confirmation") is True
+
+
+def test_all_record_types_have_coverage(core100_scenarios: list[dict]) -> None:
+    covered = {s["record_type"] for s in core100_scenarios}
+    # Core100 should cover a substantial subset of record types
+    assert len(covered) >= 10
+    for rt in covered:
+        assert rt in RECORD_TYPES
+
+
+def test_all_feature_targets_have_coverage(core100_scenarios: list[dict]) -> None:
+    covered = {s["feature_target"] for s in core100_scenarios}
+    assert len(covered) >= 5
+    for ft in covered:
+        assert ft in FEATURE_TARGETS
+
+
+def test_safety_validation_catches_real_looking_identifiers() -> None:
+    bad = {
+        "scenario_id": "test_bad",
+        "title": "Test",
+        "input": "Child Jay Smith lives at 10 High Street SW1A 1AA. DOB: 01/01/2010. NHS number: 943 476 5919.",
+        "synthetic_data_confirmation": False,
+    }
+    violations = validate_scenario_safety(bad)
+    assert violations
+    assert any("synthetic_data_confirmation" in v for v in violations)
+
+
+def test_safety_validation_passes_synthetic_scenarios(core100_scenarios: list[dict]) -> None:
+    violations = validate_scenarios_batch(core100_scenarios)
+    assert not violations, violations[:5]
+
+
+def test_scenario_schema_json_exists() -> None:
+    assert SCHEMA_PATH.is_file()
+    schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
+    assert "required_fields" in schema
+    assert "feature_targets" in schema
+
+
+def test_variants1000_file_exists() -> None:
+    assert VARIANTS_PATH.is_file()
+    count = sum(1 for line in VARIANTS_PATH.read_text(encoding="utf-8").splitlines() if line.strip())
+    assert count == 1000
 
 
 def test_rubric_scores_valid_range() -> None:
@@ -118,26 +235,69 @@ def test_diagnostic_language_detection() -> None:
     assert flags["contains_diagnostic_language"] is True
 
 
-def test_baseline_runner_writes_report_in_static_mode(tmp_path: Path) -> None:
+def _run_runner(scenario_set: str, tmp_path: Path) -> dict:
     env = {**os.environ, "ORB_BASELINE_LIVE": "0"}
     result = subprocess.run(
-        [sys.executable, str(RUNNER_PATH), "--output-dir", str(tmp_path)],
+        [
+            sys.executable,
+            str(RUNNER_PATH),
+            "--scenario-set",
+            scenario_set,
+            "--output-dir",
+            str(tmp_path),
+            "--update-quality-lab-summary",
+        ],
         cwd=ROOT,
         env=env,
         capture_output=True,
         text=True,
         check=False,
-        timeout=120,
+        timeout=180,
     )
     assert result.returncode == 0, result.stderr
-    json_path = tmp_path / "orb_residential_baseline_report.json"
-    md_path = tmp_path / "orb_residential_baseline_report.md"
-    assert json_path.is_file()
-    assert md_path.is_file()
-    report = json.loads(json_path.read_text(encoding="utf-8"))
+    return json.loads((tmp_path / {
+        "baseline15": "orb_residential_baseline_report.json",
+        "core100": "orb_residential_core_100_report.json",
+        "variants1000": "orb_residential_variants_1000_report.json",
+    }[scenario_set]).read_text(encoding="utf-8"))
+
+
+def test_baseline_runner_writes_report_in_static_mode(tmp_path: Path) -> None:
+    report = _run_runner("baseline15", tmp_path)
     assert report["mode"] == "static"
     assert report["scenario_count"] >= 15
+    assert report["scenario_set"] == "baseline15"
     assert "category_averages" in report
+    assert (tmp_path / "orb_residential_baseline_report.md").is_file()
+
+
+def test_core100_runner_writes_report(tmp_path: Path) -> None:
+    report = _run_runner("core100", tmp_path)
+    assert report["scenario_set"] == "core100"
+    assert report["scenario_count"] == 100
+    assert "top_10_weakest_scenarios" in report
+    assert "unsafe_flag_count" in report
+    assert (tmp_path / "orb_residential_core_100_report.md").is_file()
+
+
+def test_variants1000_runner_writes_report(tmp_path: Path) -> None:
+    report = _run_runner("variants1000", tmp_path)
+    assert report["scenario_set"] == "variants1000"
+    assert report["scenario_count"] == 1000
+    assert (tmp_path / "orb_residential_variants_1000_report.md").is_file()
+
+
+def test_scoring_categories_remain_0_to_5(tmp_path: Path) -> None:
+    report = _run_runner("core100", tmp_path)
+    for row in report.get("scenarios") or []:
+        for cat, score in (row.get("category_scores") or {}).items():
+            assert 0 <= score <= 5, f"{cat}={score}"
+
+
+def test_unsafe_flags_count_is_reported(tmp_path: Path) -> None:
+    report = _run_runner("core100", tmp_path)
+    assert "unsafe_flag_count" in report
+    assert isinstance(report["unsafe_flag_count"], int)
 
 
 def test_live_mode_disabled_by_default() -> None:
@@ -151,6 +311,12 @@ def test_provider_registry_does_not_require_one_hardcoded_provider() -> None:
     assert "openai" in provider_ids
     assert "mock" in provider_ids
     assert len(provider_ids) >= 2
+
+
+def test_no_provider_lock_in_added() -> None:
+    text = RUNNER_PATH.read_text(encoding="utf-8")
+    assert "openai_only" not in text.lower()
+    assert "requires_single_provider" not in text
 
 
 def test_internal_brain_architecture_doc_exists() -> None:
@@ -237,11 +403,25 @@ def test_baseline_report_meets_quality_targets() -> None:
     assert float(cats.get("outcome_and_follow_up") or 0) >= 4.0
 
 
+def test_quality_lab_summary_exists() -> None:
+    if not QUALITY_LAB_SUMMARY.is_file():
+        pytest.skip("quality lab summary not generated yet")
+    summary = json.loads(QUALITY_LAB_SUMMARY.read_text(encoding="utf-8"))
+    assert "baseline15_average" in summary
+    assert "core100_average" in summary
+    assert summary.get("live_llm_disabled_in_ci") is True
+
+
+def test_convergence_report_exists() -> None:
+    path = ROOT / "reports" / "orb_residential_scenario_convergence_report.md"
+    assert path.is_file()
+    text = path.read_text(encoding="utf-8")
+    assert "Core 100" in text or "core100" in text.lower()
+
+
 def test_framework_has_residential_recording_structure() -> None:
     from services.orb_recording_framework_service import get_residential_recording_structure
 
     structure = get_residential_recording_structure()
     assert len(structure.get("steps") or []) >= 6
     assert len(structure.get("wording_discipline") or []) >= 4
-
-

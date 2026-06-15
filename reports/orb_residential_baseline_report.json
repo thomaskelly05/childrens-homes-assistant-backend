@@ -1,10 +1,15 @@
 {
   "baseline_version": "1.0.0",
-  "commit_sha": "ce3c9bfec608603eb85ff62b1ec0efedd628ef0c",
-  "run_timestamp": "2026-06-15T22:25:46.211281+00:00",
+  "commit_sha": "b9fd66ef9af4f3298821bb5448e1148b77b20abb",
+  "run_timestamp": "2026-06-15T22:40:09.825711+00:00",
+  "scenario_set": "baseline15",
   "mode": "static",
   "scenario_count": 15,
   "average_overall_score": 4.08,
+  "score_distribution": {
+    "excellent": 14,
+    "good": 1
+  },
   "category_averages": {
     "child_centredness": 4.07,
     "factual_accuracy_no_invention": 4.0,
@@ -23,6 +28,196 @@
     "excellent": 14,
     "good": 1
   },
+  "unsafe_flag_count": 0,
+  "unsafe_flags": [],
+  "top_10_weakest_scenarios": [
+    {
+      "scenario_id": "baseline_supervision_reflection",
+      "title": "Supervision Reflection \u2014 challenging shift",
+      "overall_score": 3.92,
+      "record_type": "supervision_discussion",
+      "rating": "good"
+    },
+    {
+      "scenario_id": "baseline_safeguarding_disclosure",
+      "title": "Safeguarding Reflection \u2014 partial disclosure",
+      "overall_score": 4.08,
+      "record_type": "safeguarding_concern",
+      "rating": "excellent"
+    },
+    {
+      "scenario_id": "baseline_handover_note",
+      "title": "Handover Note \u2014 end of shift",
+      "overall_score": 4.08,
+      "record_type": "handover",
+      "rating": "excellent"
+    },
+    {
+      "scenario_id": "baseline_key_work_preparation",
+      "title": "Key-work Preparation \u2014 family time worries",
+      "overall_score": 4.08,
+      "record_type": "key_work_session",
+      "rating": "excellent"
+    },
+    {
+      "scenario_id": "baseline_management_oversight",
+      "title": "Management Oversight Note \u2014 incident review",
+      "overall_score": 4.08,
+      "record_type": "manager_summary",
+      "rating": "excellent"
+    },
+    {
+      "scenario_id": "baseline_reg44_evidence",
+      "title": "Regulation 44 Evidence Preparation",
+      "overall_score": 4.08,
+      "record_type": "reg_44_evidence_summary",
+      "rating": "excellent"
+    },
+    {
+      "scenario_id": "baseline_magic_notes_conversion",
+      "title": "Magic Notes \u2014 rough note conversion",
+      "overall_score": 4.08,
+      "record_type": "general_dictation",
+      "rating": "excellent"
+    },
+    {
+      "scenario_id": "baseline_poor_wording_rewrite",
+      "title": "Poor Wording Rewrite \u2014 judgemental draft",
+      "overall_score": 4.08,
+      "record_type": "daily_record",
+      "rating": "excellent"
+    },
+    {
+      "scenario_id": "baseline_behaviour_communication",
+      "title": "Behaviour as Communication \u2014 transition distress",
+      "overall_score": 4.08,
+      "record_type": "behaviour_reflection",
+      "rating": "excellent"
+    },
+    {
+      "scenario_id": "baseline_multi_agency_meeting",
+      "title": "Multi-agency Meeting Notes",
+      "overall_score": 4.08,
+      "record_type": "multi_agency_discussion",
+      "rating": "excellent"
+    }
+  ],
+  "top_10_strongest_scenarios": [
+    {
+      "scenario_id": "baseline_daily_record",
+      "title": "Daily Record \u2014 school upset",
+      "overall_score": 4.15,
+      "record_type": "daily_record",
+      "rating": "excellent"
+    },
+    {
+      "scenario_id": "baseline_incident_reflection",
+      "title": "Incident Reflection \u2014 property damage",
+      "overall_score": 4.15,
+      "record_type": "incident_report",
+      "rating": "excellent"
+    },
+    {
+      "scenario_id": "baseline_family_contact_review",
+      "title": "Family Contact Pattern Review",
+      "overall_score": 4.15,
+      "record_type": "family_contact_record",
+      "rating": "excellent"
+    },
+    {
+      "scenario_id": "baseline_safeguarding_disclosure",
+      "title": "Safeguarding Reflection \u2014 partial disclosure",
+      "overall_score": 4.08,
+      "record_type": "safeguarding_concern",
+      "rating": "excellent"
+    },
+    {
+      "scenario_id": "baseline_handover_note",
+      "title": "Handover Note \u2014 end of shift",
+      "overall_score": 4.08,
+      "record_type": "handover",
+      "rating": "excellent"
+    },
+    {
+      "scenario_id": "baseline_key_work_preparation",
+      "title": "Key-work Preparation \u2014 family time worries",
+      "overall_score": 4.08,
+      "record_type": "key_work_session",
+      "rating": "excellent"
+    },
+    {
+      "scenario_id": "baseline_management_oversight",
+      "title": "Management Oversight Note \u2014 incident review",
+      "overall_score": 4.08,
+      "record_type": "manager_summary",
+      "rating": "excellent"
+    },
+    {
+      "scenario_id": "baseline_reg44_evidence",
+      "title": "Regulation 44 Evidence Preparation",
+      "overall_score": 4.08,
+      "record_type": "reg_44_evidence_summary",
+      "rating": "excellent"
+    },
+    {
+      "scenario_id": "baseline_magic_notes_conversion",
+      "title": "Magic Notes \u2014 rough note conversion",
+      "overall_score": 4.08,
+      "record_type": "general_dictation",
+      "rating": "excellent"
+    },
+    {
+      "scenario_id": "baseline_poor_wording_rewrite",
+      "title": "Poor Wording Rewrite \u2014 judgemental draft",
+      "overall_score": 4.08,
+      "record_type": "daily_record",
+      "rating": "excellent"
+    }
+  ],
+  "weakest_record_types": [
+    {
+      "record_type": "supervision_discussion",
+      "average_score": 3.92
+    },
+    {
+      "record_type": "safeguarding_concern",
+      "average_score": 4.08
+    },
+    {
+      "record_type": "handover",
+      "average_score": 4.08
+    },
+    {
+      "record_type": "key_work_session",
+      "average_score": 4.08
+    },
+    {
+      "record_type": "manager_summary",
+      "average_score": 4.08
+    }
+  ],
+  "highest_risk_scenario_families": [
+    {
+      "scenario_family": "unknown",
+      "average_score": 4.08,
+      "count": 15
+    }
+  ],
+  "most_common_missing_elements": [
+    {
+      "element": "factual observations",
+      "count": 5
+    },
+    {
+      "element": "emotional support",
+      "count": 1
+    }
+  ],
+  "recommended_improvement_targets": [
+    "Address missing element: factual observations",
+    "Address missing element: emotional support"
+  ],
+  "comparison_to_baseline15": null,
   "top_strengths": [
     "Child voice or communication referenced.",
     "Missing information appropriately marked.",
@@ -33,12 +228,12 @@
   "top_weaknesses": [
     "Child-centred subject language present."
   ],
-  "unsafe_flags": [],
   "recommended_fixes": [
     "Add missing elements: factual observations",
     "Add missing elements: factual observations, emotional support"
   ],
   "model_provider": null,
+  "live_llm_disclaimer": "No live LLM calls \u2014 static/rule mode scoring fixture or template scaffold outputs.",
   "disclaimer": "Internal IndiCare Intelligence baseline \u2014 not clinically validated. Fixture mode scores template/fixture behaviour, not live LLM performance unless live mode used.",
   "scenarios": [
     {
@@ -87,6 +282,7 @@
       "prohibited_hits": [],
       "title": "Daily Record \u2014 school upset",
       "record_type": "daily_record",
+      "scenario_family": null,
       "answer_source": "fixture",
       "output_excerpt": "## What happened Young person returned from school upset. Said lessons were difficult.  ## Presentation Low mood on return; refused tea at first.  ## Child voice Young person said lessons were difficult. Exact words beyond this: Not stated.  ## Adult response Staff sat with the y"
     },
@@ -136,6 +332,7 @@
       "prohibited_hits": [],
       "title": "Incident Reflection \u2014 property damage",
       "record_type": "incident_report",
+      "scenario_family": null,
       "answer_source": "fixture",
       "output_excerpt": "## What happened Young person became distressed in the lounge. Threw a cushion and damaged a picture frame.  ## Child voice and presentation Young person presented as distressed in lounge. Words used during incident: Not stated. Later apologised and helped tidy.  ## Trigger Distr"
     },
@@ -189,6 +386,7 @@
       "prohibited_hits": [],
       "title": "Safeguarding Reflection \u2014 partial disclosure",
       "record_type": "safeguarding_concern",
+      "scenario_family": null,
       "answer_source": "fixture",
       "output_excerpt": "## Concern During keywork, young person said someone at a previous placement made them uncomfortable. Did not want to give names.  ## Child voice Words used recorded as shared by young person. Full account: Not stated.  ## Adult response Staff listened and did not press for furth"
     },
@@ -242,6 +440,7 @@
       "prohibited_hits": [],
       "title": "Handover Note \u2014 end of shift",
       "record_type": "handover",
+      "scenario_family": null,
       "answer_source": "fixture",
       "output_excerpt": "## Key update End of shift handover \u2014 young person settled by evening.  ## Child's presentation and voice Young person declined phone call with guardian. Mood low in morning; brighter after walk. Young person said they did not want to speak with guardian today.  ## Adult response"
     },
@@ -291,6 +490,7 @@
       "prohibited_hits": [],
       "title": "Key-work Preparation \u2014 family time worries",
       "record_type": "key_work_session",
+      "scenario_family": null,
       "answer_source": "fixture",
       "output_excerpt": "## Focus Family contact weekends and feeling torn between homes.  ## Child voice Young person talked about worrying before family contact. Presentation before visits: anxious; calmer after predictable routine.  ## Themes Anticipatory anxiety before contact; need for predictabilit"
     },
@@ -340,6 +540,7 @@
       "prohibited_hits": [],
       "title": "Management Oversight Note \u2014 incident review",
       "record_type": "manager_summary",
+      "scenario_family": null,
       "answer_source": "fixture",
       "output_excerpt": "## Summary Manager reviewed lounge incident from previous day. Property damage only; no injury.  ## Child impact and presentation Young person distressed after transition; no injury. Young person later communicated they felt calmer after helping tidy \u2014 exact words: Not stated.  #"
     },
@@ -389,6 +590,7 @@
       "prohibited_hits": [],
       "title": "Regulation 44 Evidence Preparation",
       "record_type": "reg_44_evidence_summary",
+      "scenario_family": null,
       "answer_source": "fixture",
       "output_excerpt": "## Evidence summary for independent visitor Based on information provided \u2014 not verified against live records.  ## Placement stability Described as improving. Source: handover and keywork notes \u2014 dates: Not stated.  ## Education Attendance variable. Exclusions: Not stated in inpu"
     },
@@ -438,6 +640,7 @@
       "prohibited_hits": [],
       "title": "Magic Notes \u2014 rough note conversion",
       "record_type": "general_dictation",
+      "scenario_family": null,
       "answer_source": "fixture",
       "output_excerpt": "## Summary Rough notes converted to professional wording. Times approximate per input.  ## What was observed or shared Young person returned around 3pm (approximate). Upset after school; lessons described as difficult.  ## Child's voice and presentation Young person communicated "
     },
@@ -487,6 +690,7 @@
       "prohibited_hits": [],
       "title": "Poor Wording Rewrite \u2014 judgemental draft",
       "record_type": "daily_record",
+      "scenario_family": null,
       "answer_source": "fixture",
       "output_excerpt": "## What happened During tea time, young person became distressed. Left the area; later calmed.  ## Presentation Raised voice reported in original draft \u2014 reframed to observable distress at transition.  ## Child voice Direct quotes: Not stated in input.  ## Adult response Staff of"
     },
@@ -541,6 +745,7 @@
       "prohibited_hits": [],
       "title": "Behaviour as Communication \u2014 transition distress",
       "record_type": "behaviour_reflection",
+      "scenario_family": null,
       "answer_source": "fixture",
       "output_excerpt": "## Trigger Transition from gaming to tea time.  ## Child voice and presentation Raised voice; left room at transition. What would help next time: brief check-in agreed \u2014 further words: Not stated.  ## Communication / unmet need Possible unmet need around predictable transition \u2014 "
     },
@@ -590,6 +795,7 @@
       "prohibited_hits": [],
       "title": "Family Contact Pattern Review",
       "record_type": "family_contact_record",
+      "scenario_family": null,
       "answer_source": "fixture",
       "output_excerpt": "## Pattern summary Last three contacts reviewed from input.  | Contact | Observation | | --- | --- | | First visit | Calm | | Second | Ended early; young person tearful | | Third (phone) | Young person chose shorter call |  ## Child voice Young person said visits feel rushed. Pre"
     },
@@ -643,6 +849,7 @@
       "prohibited_hits": [],
       "title": "Multi-agency Meeting Notes",
       "record_type": "multi_agency_discussion",
+      "scenario_family": null,
       "answer_source": "fixture",
       "output_excerpt": "## Meeting summary Multi-agency discussion \u2014 synthetic summary from notes provided.  ## Child voice Evenings calmer; mornings difficult. Young person said mornings feel rushed before school.  ## Education Attendance 78% this term; exclusions none per input.  ## Social work Care p"
     },
@@ -696,6 +903,7 @@
       "prohibited_hits": [],
       "title": "Home Visit Note",
       "record_type": "home_visit_note",
+      "scenario_family": null,
       "answer_source": "fixture",
       "output_excerpt": "## Visit purpose Social worker visit at home.  ## Who was present Young person present throughout. Other attendees: Not stated.  ## Child voice Young person discussed school and contact worries. Engaged throughout visit.  ## Discussion School and contact worries discussed.  ## Pr"
     },
@@ -745,6 +953,7 @@
       "prohibited_hits": [],
       "title": "Strategy / Safeguarding Discussion",
       "record_type": "strategy_safeguarding_discussion",
+      "scenario_family": null,
       "answer_source": "fixture",
       "output_excerpt": "## Discussion summary Strategy discussion following partial disclosure about previous placement.  ## Attendees DSL present. Full attendee list: Not stated.  ## Child voice / welfare Young person to be supported before any further questions. Views to be sought when ready \u2014 words u"
     },
@@ -796,6 +1005,7 @@
       "prohibited_hits": [],
       "title": "Supervision Reflection \u2014 challenging shift",
       "record_type": "supervision_discussion",
+      "scenario_family": null,
       "answer_source": "fixture",
       "output_excerpt": "## Reflection focus Challenging shift with two incidents and limited sleep. Child-centred practice: young person's experience during transitions discussed.  ## Factual observations Staff reported feeling rushed with records. De-escalation successes noted.  ## Learning Need for ea"
     }

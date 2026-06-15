@@ -1,13 +1,17 @@
-# ORB Residential Baseline Quality Report
+# ORB Residential Baseline Quality Report (15 scenarios)
 
-- **Run timestamp:** 2026-06-15T22:25:46.211281+00:00
+- **Run timestamp:** 2026-06-15T22:40:09.825711+00:00
+- **Scenario set:** `baseline15`
 - **Mode:** `static`
 - **Baseline version:** 1.0.0
-- **Commit SHA:** ce3c9bfec608603eb85ff62b1ec0efedd628ef0c
-- **Scenarios:** 15
+- **Commit SHA:** b9fd66ef9af4f3298821bb5448e1148b77b20abb
+- **Scenarios scored:** 15
 - **Average overall score:** 4.08 / 5
+- **Unsafe flag count:** 0
 
 > Internal IndiCare Intelligence baseline — not clinically validated. Fixture mode scores template/fixture behaviour, not live LLM performance unless live mode used.
+
+> No live LLM calls — static/rule mode scoring fixture or template scaffold outputs.
 
 ## Category averages
 
@@ -26,10 +30,54 @@
 | privacy minimisation | 5.0 |
 | adult responsibility no replacement | 4.0 |
 
-## Rating distribution
+## Score distribution
 
 - **excellent:** 14
 - **good:** 1
+
+## Top 10 weakest scenarios
+
+- `baseline_supervision_reflection` (3.92) — Supervision Reflection — challenging shift
+- `baseline_safeguarding_disclosure` (4.08) — Safeguarding Reflection — partial disclosure
+- `baseline_handover_note` (4.08) — Handover Note — end of shift
+- `baseline_key_work_preparation` (4.08) — Key-work Preparation — family time worries
+- `baseline_management_oversight` (4.08) — Management Oversight Note — incident review
+- `baseline_reg44_evidence` (4.08) — Regulation 44 Evidence Preparation
+- `baseline_magic_notes_conversion` (4.08) — Magic Notes — rough note conversion
+- `baseline_poor_wording_rewrite` (4.08) — Poor Wording Rewrite — judgemental draft
+- `baseline_behaviour_communication` (4.08) — Behaviour as Communication — transition distress
+- `baseline_multi_agency_meeting` (4.08) — Multi-agency Meeting Notes
+
+## Top 10 strongest scenarios
+
+- `baseline_daily_record` (4.15) — Daily Record — school upset
+- `baseline_incident_reflection` (4.15) — Incident Reflection — property damage
+- `baseline_family_contact_review` (4.15) — Family Contact Pattern Review
+- `baseline_safeguarding_disclosure` (4.08) — Safeguarding Reflection — partial disclosure
+- `baseline_handover_note` (4.08) — Handover Note — end of shift
+- `baseline_key_work_preparation` (4.08) — Key-work Preparation — family time worries
+- `baseline_management_oversight` (4.08) — Management Oversight Note — incident review
+- `baseline_reg44_evidence` (4.08) — Regulation 44 Evidence Preparation
+- `baseline_magic_notes_conversion` (4.08) — Magic Notes — rough note conversion
+- `baseline_poor_wording_rewrite` (4.08) — Poor Wording Rewrite — judgemental draft
+
+## Weakest record types
+
+- `supervision_discussion`: 3.92
+- `safeguarding_concern`: 4.08
+- `handover`: 4.08
+- `key_work_session`: 4.08
+- `manager_summary`: 4.08
+
+## Most common missing elements
+
+- factual observations: 5
+- emotional support: 1
+
+## Recommended improvement targets
+
+- Address missing element: factual observations
+- Address missing element: emotional support
 
 ## Top strengths
 
@@ -43,54 +91,11 @@
 
 - Child-centred subject language present.
 
-## Recommended fixes
-
-- Add missing elements: factual observations
-- Add missing elements: factual observations, emotional support
-
-## Baseline comparison
+## Baseline comparison (previous run)
 
 - **Previous average:** 4.08 / 5
 - **New average:** 4.08 / 5
 - **Overall delta:** 0.0
-
-### Category delta
-
-| Category | Delta |
-| --- | ---: |
-| adult response and support | 0.0 |
-| adult responsibility no replacement | 0.0 |
-| child centredness | 0.0 |
-| factual accuracy no invention | 0.0 |
-| management oversight | 0.0 |
-| observation vs interpretation | 0.0 |
-| outcome and follow up | 0.0 |
-| privacy minimisation | 0.0 |
-| professional tone | 0.0 |
-| recording usefulness | 0.0 |
-| safeguarding awareness | 0.0 |
-| therapeutic language | 0.0 |
-
-## Initial Quality Lab comparison
-
-- **First run average:** 3.8 / 5
-- **Current average:** 4.08 / 5
-- **Overall delta:** 0.28
-
-| Category | Delta |
-| --- | ---: |
-| adult response and support | 1.07 |
-| adult responsibility no replacement | 0.0 |
-| child centredness | 1.14 |
-| factual accuracy no invention | 0.0 |
-| management oversight | 0.0 |
-| observation vs interpretation | 0.4 |
-| outcome and follow up | 1.13 |
-| privacy minimisation | 0.0 |
-| professional tone | 0.0 |
-| recording usefulness | 0.0 |
-| safeguarding awareness | 0.0 |
-| therapeutic language | 0.0 |
 
 ## Scenario scores
 
