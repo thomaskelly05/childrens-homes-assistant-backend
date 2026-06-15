@@ -1,8 +1,8 @@
 ## Summary
 Manager reviewed lounge incident from previous day. Property damage only; no injury.
 
-## Child impact
-Young person distressed after transition; no injury. Experience of de-escalation and repair to be checked with young person.
+## Child impact and presentation
+Young person distressed after transition; no injury. Young person later communicated they felt calmer after helping tidy — exact words: Not stated.
 
 ## Factual observations
 Young person distressed after transition. Staff de-escalation described as appropriate.

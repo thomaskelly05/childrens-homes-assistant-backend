@@ -2,7 +2,7 @@
 End of shift handover — young person settled by evening.
 
 ## Child's presentation and voice
-Young person declined phone call with guardian. Mood low in morning; brighter after walk. Expressed preference not to speak with guardian today.
+Young person declined phone call with guardian. Mood low in morning; brighter after walk. Young person said they did not want to speak with guardian today.
 
 ## Adult response today
 Staff offered a walk when mood was low — young person accepted. Guardian call offered respectfully; choice declined without pressure.

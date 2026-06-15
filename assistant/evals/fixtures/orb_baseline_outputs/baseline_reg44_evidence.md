@@ -17,10 +17,10 @@ Staff de-escalation in two incidents; supervision and keywork active per input.
 Chronology updated per input. Detail: Not stated.
 
 ## Child voice
-Feedback collected via keywork per input.
+Feedback collected via keywork per input. Young person communicated placement feels more stable recently — exact words: Not stated.
 
 ## Outcome and follow-up
-Evidence pack preparation in progress. Outstanding: dated chronology extracts; manager sign-off before visit.
+Evidence pack preparation in progress; placement stability improved per input. Next step: dated chronology extracts and manager sign-off before visit.
 
 ## Gaps
 Dates, chronology extracts and signed management reviews: Not stated.

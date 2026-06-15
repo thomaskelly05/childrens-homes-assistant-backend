@@ -2,7 +2,7 @@
 Family contact weekends and feeling torn between homes.
 
 ## Child voice
-Young person talked about worrying before family contact. Asked for predictable routine before visits.
+Young person talked about worrying before family contact. Presentation before visits: anxious; calmer after predictable routine.
 
 ## Themes
 Anticipatory anxiety before contact; need for predictability.

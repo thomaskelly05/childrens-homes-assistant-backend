@@ -372,6 +372,23 @@ def render_markdown(report: dict[str, Any]) -> str:
             for cat in comparison["remaining_weak_categories"]:
                 lines.append(f"- {cat.replace('_', ' ')}")
 
+    initial = report.get("initial_baseline_comparison")
+    if initial:
+        lines.extend(
+            [
+                "",
+                "## Initial Quality Lab comparison",
+                "",
+                f"- **First run average:** {initial.get('previous_average_overall_score')} / 5",
+                f"- **Current average:** {initial.get('new_average_overall_score')} / 5",
+                f"- **Overall delta:** {initial.get('overall_delta')}",
+            ]
+        )
+        if initial.get("category_delta"):
+            lines.extend(["", "| Category | Delta |", "| --- | ---: |"])
+            for cat, delta in sorted(initial["category_delta"].items()):
+                lines.append(f"| {cat.replace('_', ' ')} | {delta} |")
+
     lines.extend(["", "## Scenario scores", "", "| Scenario | Score | Rating | Source |", "| --- | ---: | --- | --- |"])
     for row in report.get("scenarios") or []:
         lines.append(
@@ -435,6 +452,22 @@ def main() -> int:
     comparison = _build_baseline_comparison(previous, report)
     if comparison:
         report["baseline_comparison"] = comparison
+    # Preserve comparison against first Quality Lab baseline (3.8) when available in history.
+    if HISTORY_PATH.is_file():
+        first_line = HISTORY_PATH.read_text(encoding="utf-8").splitlines()[0]
+        if first_line:
+            try:
+                first_snapshot = json.loads(first_line)
+                initial = _build_baseline_comparison(first_snapshot, report)
+                if initial and float(first_snapshot.get("average_overall_score") or 0) < float(
+                    report.get("average_overall_score") or 0
+                ):
+                    report["initial_baseline_comparison"] = {
+                        **initial,
+                        "reference_run_timestamp": first_snapshot.get("run_timestamp"),
+                    }
+            except json.JSONDecodeError:
+                pass
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
     json_path = args.output_dir / "orb_residential_baseline_report.json"

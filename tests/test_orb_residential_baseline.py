@@ -232,9 +232,9 @@ def test_baseline_report_meets_quality_targets() -> None:
     cats = report.get("category_averages") or {}
     assert report.get("unsafe_flags") == []
     assert float(report.get("average_overall_score") or 0) >= 4.0
-    assert float(cats.get("child_centredness") or 0) >= 3.8
-    assert float(cats.get("adult_response_and_support") or 0) >= 3.8
-    assert float(cats.get("outcome_and_follow_up") or 0) >= 3.8
+    assert float(cats.get("child_centredness") or 0) >= 4.0
+    assert float(cats.get("adult_response_and_support") or 0) >= 4.0
+    assert float(cats.get("outcome_and_follow_up") or 0) >= 4.0
 
 
 def test_framework_has_residential_recording_structure() -> None:

@@ -11,7 +11,7 @@ Staff listened and did not press for further detail. No investigation by staff.
 Escalated to manager/DSL same shift per local safeguarding protocol.
 
 ## Outcome
-Young person left session safely. Further questions deferred per local protocol; views to be sought when ready.
+Young person left session safely and appeared settled before leaving keywork. Further questions deferred per local protocol; views to be sought when ready.
 
 ## Follow-up
 Chronology update; review at next keywork. MASH referral decision: for responsible adult per local pathway.

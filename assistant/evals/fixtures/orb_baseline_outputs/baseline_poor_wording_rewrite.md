@@ -8,7 +8,7 @@ Raised voice reported in original draft — reframed to observable distress at t
 Direct quotes: Not stated in input.
 
 ## Adult response
-Staff responded with low-arousal approach. Original wording "told them to stop being dramatic" is not used; support and boundaries to be confirmed by adult on shift.
+Staff offered low-arousal support and boundaries. Original wording "told them to stop being dramatic" is not used; support to be confirmed by adult on shift.
 
 ## Outcome
 Young person calmed later.

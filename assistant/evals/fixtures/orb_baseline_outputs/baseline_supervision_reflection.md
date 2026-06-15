@@ -1,5 +1,5 @@
 ## Reflection focus
-Challenging shift with two incidents and limited sleep.
+Challenging shift with two incidents and limited sleep. Child-centred practice: young person's experience during transitions discussed.
 
 ## Factual observations
 Staff reported feeling rushed with records. De-escalation successes noted.
@@ -8,7 +8,7 @@ Staff reported feeling rushed with records. De-escalation successes noted.
 Need for earlier manager support on transitions identified.
 
 ## Outcome
-Staff felt supported. Agreed earlier manager involvement on transitions and improved handover quality.
+Staff felt supported and clearer on next steps. Agreed earlier manager involvement on transitions; handover quality to improve.
 
 ## Agreed actions / follow-up
 - Supervision focus on handover quality

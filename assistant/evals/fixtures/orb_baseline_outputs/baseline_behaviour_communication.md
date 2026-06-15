@@ -8,7 +8,7 @@ Raised voice; left room at transition. What would help next time: brief check-in
 Possible unmet need around predictable transition — interpretation to be checked with young person.
 
 ## Adult response
-Low-arousal approach; snack offered later.
+Low-arousal approach; snack offered later. Staff offered choice about when to return to tea area.
 
 ## Outcome
 Returned after approximately 15 minutes; ate later.
