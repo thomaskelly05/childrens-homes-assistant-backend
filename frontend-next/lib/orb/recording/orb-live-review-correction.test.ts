@@ -21,14 +21,18 @@ import {
   sanitizeLiveRecordOutput,
   sanitizeObservationInterpretationLanguage,
   stripChildQuoteInterpretation,
+  stripEndOfRecordArtefacts,
   stripInterpretiveFeelingsPhrases,
   stripInventedEmotionalImpact,
   stripOutcomeInterpretation,
+  stripRedundantNextStepsInDailyRecord,
+  stripRepeatedObservedOutcome,
   stripTrailingMarkdownArtefacts,
   stripTrailingSelfCommentary,
   stripUnnecessaryFollowUpSection,
   stripUnsupportedTimelineExpansion,
-  userProvidedDslTerm
+  userProvidedDslTerm,
+  userRequestedEndMarker
 } from './orb-adult-identity-language.ts'
 import { buildSectionPromptBody } from './orb-recording-section-prompts.ts'
 import { buildTherapeuticWritingPromptBlock } from './orb-therapeutic-writing.ts'
@@ -303,6 +307,7 @@ describe('ORB live review correction pass', () => {
       readFileSync(join(workspaceRoot, 'assistant/knowledge/orb_recording_framework.json'), 'utf8')
     )
     assert.equal(frontend.version, backend.version)
+    assert.equal(frontend.version, '1.2.6')
     const daily = frontend.record_types.find((row: { id: string }) => row.id === 'daily_record')
     assert.ok(daily.final_document_headings.includes('Daily Record'))
     assert.ok(!daily.final_document_headings.join(' ').match(/Incident Summary/i))
@@ -356,5 +361,105 @@ describe('ORB live review correction pass', () => {
     assert.doesNotMatch(cleaned.toLowerCase(), /seemed more settled/)
     assert.match(cleaned.toLowerCase(), /appeared calmer/)
     assert.doesNotMatch(cleaned, /—\s*$/)
+  })
+
+  it('repairs watched television Child A sentence boundary', () => {
+    const source = ORB_MANUAL_REGRESSION_DAILY_RECORD_PROMPT
+    const cleaned = sanitizeLiveRecordOutput(
+      'Adult JS sat nearby while Child A watched television Child A accepted the toast.',
+      source
+    )
+    assert.match(cleaned, /watched television\. Child A/)
+  })
+
+  it('repairs accepted the toast Before bedtime sentence boundary', () => {
+    const source = ORB_MANUAL_REGRESSION_DAILY_RECORD_PROMPT
+    const cleaned = sanitizeLiveRecordOutput(
+      'Child A accepted the toast Before bedtime, Child A appeared calmer.',
+      source
+    )
+    assert.match(cleaned, /accepted the toast\. Before bedtime/)
+  })
+
+  it('repairs appeared calmer Adult TK sentence boundary', () => {
+    const source = ORB_MANUAL_REGRESSION_DAILY_RECORD_PROMPT
+    const cleaned = sanitizeLiveRecordOutput('Child A appeared calmer Adult TK handed over.', source)
+    assert.match(cleaned, /appeared calmer\. Adult TK/)
+  })
+
+  it('removes duplicate appeared calmer from Adult Response when Outcome has timed version', () => {
+    const source = ORB_MANUAL_REGRESSION_DAILY_RECORD_PROMPT
+    const cleaned = stripRepeatedObservedOutcome(
+      '## Adult Response\n\nAdult JS offered toast. Child A accepted the toast and appeared calmer.\n\n## Outcome / Handover\n\nBefore bedtime, Child A appeared calmer. Adult TK handed over.',
+      source
+    )
+    assert.doesNotMatch(cleaned.toLowerCase(), /accepted the toast and appeared calmer/)
+    assert.match(cleaned.toLowerCase(), /before bedtime, child a appeared calmer/)
+  })
+
+  it('preserves appeared calmer when it appears only once', () => {
+    const source = ORB_MANUAL_REGRESSION_DAILY_RECORD_PROMPT
+    const cleaned = stripRepeatedObservedOutcome(
+      '## Adult Response\n\nChild A accepted the toast and appeared calmer.',
+      source
+    )
+    assert.match(cleaned.toLowerCase(), /appeared calmer/)
+  })
+
+  it('strips inline Next Steps heading and same-line bullets', () => {
+    const source = ORB_MANUAL_REGRESSION_DAILY_RECORD_PROMPT
+    const cleaned = stripRedundantNextStepsInDailyRecord(
+      "## Outcome / Handover\n\nAdult TK handed over to check in tomorrow.\n\nNext Steps: - Monitor Child A's mood - Check in about school",
+      source
+    )
+    assert.doesNotMatch(cleaned.toLowerCase(), /next steps/)
+    assert.match(cleaned.toLowerCase(), /handed over/)
+  })
+
+  it('strips multiline Next Steps section from simple daily record', () => {
+    const source = ORB_MANUAL_REGRESSION_DAILY_RECORD_PROMPT
+    const cleaned = sanitizeLiveRecordOutput(
+      "## Outcome / Handover\n\nAdult TK handed over.\n\n## Next Steps\n\n- Monitor mood\n- Check in tomorrow",
+      source
+    )
+    assert.doesNotMatch(cleaned.toLowerCase(), /next steps/)
+    assert.match(cleaned.toLowerCase(), /outcome \/ handover/)
+  })
+
+  it('removes [End of record] artefact', () => {
+    const source = ORB_MANUAL_REGRESSION_DAILY_RECORD_PROMPT
+    const cleaned = stripEndOfRecordArtefacts('Child A appeared calmer.\n\n[End of record]', source)
+    assert.doesNotMatch(cleaned, /\[End of record\]/i)
+  })
+
+  it('preserves user-requested end marker', () => {
+    const source = 'Create a daily record with an end marker. Child A quieter.\n\n[End of record]'
+    const cleaned = stripEndOfRecordArtefacts('Child A quieter.\n\n[End of record]', source)
+    assert.match(cleaned, /\[End of record\]/)
+    assert.equal(userRequestedEndMarker(source), true)
+  })
+
+  it('sanitizes full manual regression failure output', () => {
+    const source = ORB_MANUAL_REGRESSION_DAILY_RECORD_PROMPT
+    const cleaned = sanitizeLiveRecordOutput(
+      [
+        '## Adult Response',
+        '',
+        'Adult JS offered toast and sat nearby while Child A watched television Child A accepted the toast and appeared calmer.',
+        '',
+        '## Outcome / Handover',
+        '',
+        'Before bedtime, Child A appeared calmer. Adult TK handed over to check in tomorrow.',
+        '',
+        'Next Steps: - Monitor mood - Check in about school',
+        '',
+        '[End of record]'
+      ].join('\n'),
+      source
+    )
+    assert.match(cleaned, /watched television\. Child A/)
+    assert.doesNotMatch(cleaned.toLowerCase(), /accepted the toast and appeared calmer/)
+    assert.doesNotMatch(cleaned.toLowerCase(), /next steps/)
+    assert.doesNotMatch(cleaned, /\[End of record\]/i)
   })
 })

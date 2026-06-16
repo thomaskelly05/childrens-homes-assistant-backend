@@ -2669,7 +2669,7 @@
     },
     {
       "file": "frontend-next/lib/orb/recording/orb-therapeutic-writing.ts",
-      "line": 295,
+      "line": 298,
       "context": "writing_style_ids: ['manager_summary', 'professional', 'inspection_ready']",
       "occurrence": "inspection ready",
       "classification": "user_facing_copy_risky",
@@ -2677,7 +2677,7 @@
     },
     {
       "file": "frontend-next/lib/orb/recording/orb-therapeutic-writing.ts",
-      "line": 353,
+      "line": 356,
       "context": "writing_style_ids: ['inspection_ready', 'child_centred', 'professional']",
       "occurrence": "inspection ready",
       "classification": "user_facing_copy_risky",
@@ -2685,7 +2685,7 @@
     },
     {
       "file": "frontend-next/lib/orb/recording/orb-therapeutic-writing.ts",
-      "line": 358,
+      "line": 361,
       "context": "writing_style_ids: ['therapeutic', 'inspection_ready', 'manager_summary']",
       "occurrence": "inspection ready",
       "classification": "user_facing_copy_risky",
@@ -2693,7 +2693,7 @@
     },
     {
       "file": "frontend-next/lib/orb/recording/orb-therapeutic-writing.ts",
-      "line": 363,
+      "line": 366,
       "context": "writing_style_ids: ['inspection_ready', 'professional', 'factual']",
       "occurrence": "inspection ready",
       "classification": "factual_source_reference",
@@ -3061,7 +3061,7 @@
     },
     {
       "file": "assistant/knowledge/orb_residential_principles.py",
-      "line": 104,
+      "line": 106,
       "context": "\"It does not determine inspection outcomes, guarantee compliance or represent regulator endorsement.\"",
       "occurrence": "guarantees compliance",
       "classification": "factual_source_reference",
