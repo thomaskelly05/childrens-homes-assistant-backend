@@ -37,7 +37,10 @@ SHARED_CAPTURE_PROMPTS: tuple[str, ...] = (
 )
 
 _QUALITY_FIELD_PROMPTS: dict[str, str] = {
-    "child_voice": "What did the child say, show or communicate? Include direct quotes where possible.",
+    "child_voice": (
+        "What did the child say, show or communicate? Include direct quotes where provided. "
+        "Record presentation and wishes/feelings where known — use 'not yet known' rather than inventing."
+    ),
     "safeguarding": "Were there safeguarding concerns? What was seen, disclosed or suspected?",
     "manager_oversight": "Was a manager informed? Is manager review or sign-off needed?",
     "staff_response": "What was the adult response and support offered?",

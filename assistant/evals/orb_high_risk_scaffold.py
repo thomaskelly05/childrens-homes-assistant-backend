@@ -1,6 +1,6 @@
-"""High-risk scenario scaffold generation for ORB Residential Quality Lab.
+"""High-risk and child-centred scenario scaffold generation for ORB Residential Quality Lab.
 
-Deterministic static outputs for safeguarding and escalation scenarios.
+Deterministic static outputs for safeguarding, escalation and general recording scenarios.
 Supports benchmark evaluation — not live LLM generation.
 """
 
@@ -20,6 +20,35 @@ _HIGH_RISK_RECORD_TYPES = frozenset(
         "missing_episode_note",
         "multi_agency_discussion",
     }
+)
+
+_MAGIC_NOTES_VARIANTS = frozenset({"rough_note", "voice_dictate_transcript", "poor_wording_correction"})
+
+_SPEECH_CUE_PATTERN = re.compile(
+    r"\b(?:said|shared|disclosed|communicated|told\s+staff|asked|declined|refused|explained|mentioned)\b",
+    re.I,
+)
+
+_PRESENTATION_CUE_WORDS = (
+    "upset",
+    "tearful",
+    "quiet",
+    "quieter",
+    "calm",
+    "withdrawn",
+    "settled",
+    "angry",
+    "worried",
+    "tired",
+    "anxious",
+    "distressed",
+    "smiled",
+    "engaged",
+    "refused",
+    "declined",
+    "happy",
+    "low",
+    "flat",
 )
 
 _PROFESSIONAL_JUDGEMENT_REPLACEMENTS: tuple[tuple[re.Pattern[str], str], ...] = (
@@ -75,6 +104,12 @@ _FAMILY_ESCALATION_GUIDANCE: dict[str, str] = {
     ),
 }
 
+_CHILD_CENTRED_PRINCIPLE = (
+    "For residential records, keep the child visible: what they said or showed, their presentation, "
+    "and their experience before, during and after adult support. "
+    "Separate observation from interpretation. Do not invent feelings."
+)
+
 _DEFAULT_ESCALATION_GUIDANCE = (
     "Follow the home's safeguarding procedure and inform the appropriate senior/manager without delay. "
     "Record what was said or observed, who was informed and what action was taken. "
@@ -85,6 +120,12 @@ _ADULT_BOUNDARY_FOOTER = (
     "---\n"
     "Draft only — adult review required. "
     "This supports reflection and recording; it is not a safeguarding decision. "
+    "Professional judgement and local policy apply."
+)
+
+_STANDARD_BOUNDARY_FOOTER = (
+    "---\n"
+    "Template scaffold only — adult review required. Not live ORB output. "
     "Professional judgement and local policy apply."
 )
 
@@ -140,11 +181,239 @@ def _resolve_escalation_guidance(scenario: dict[str, Any]) -> str:
     return _DEFAULT_ESCALATION_GUIDANCE
 
 
-def _extract_child_voice_hint(input_text: str) -> str:
+def _clean_input_prefix(text: str) -> str:
+    """Strip rough-note / dictate prefixes while keeping factual content."""
+    cleaned = str(text or "").strip()
+    for prefix in (
+        r"^rough:\s*",
+        r"^um\s+",
+        r"^rewrite child-centred:\s*",
+        r"^manager review of:\s*[^.]+\.\s*facts from shift:\s*",
+        r"^handover summary —[^:]+:\s*",
+        r"^supervision reflection on[^:]+:\s*",
+        r"^reg 44 evidence note for:\s*[^.]+\.\s*",
+    ):
+        cleaned = re.sub(prefix, "", cleaned, flags=re.I)
+    cleaned = re.sub(r"\s*yp kicked off again\.\s*staff firm\.\s*", " ", cleaned, flags=re.I)
+    cleaned = re.sub(r"\s*uh staff um helped um\s*$", "", cleaned, flags=re.I)
+    cleaned = re.sub(r"\s*\[recorded on mobile, brief\]\s*$", "", cleaned, flags=re.I)
+    cleaned = re.sub(r"\s*check if safeguarding escalation needed — not stated\.?\s*$", "", cleaned, flags=re.I)
+    return cleaned.strip()
+
+
+def _input_has_speech_cues(text: str) -> bool:
+    return bool(_SPEECH_CUE_PATTERN.search(text))
+
+
+def _extract_speech_from_input(text: str) -> str:
+    """Extract child speech cues from input without inventing content."""
+    lower = text.lower()
+    if re.search(r"\b(?:young person|yp|child)\s+said\b", lower):
+        match = re.search(
+            r"((?:young person|yp|child)\s+said[^.]*(?:\.[^.]*)?)",
+            text,
+            re.I,
+        )
+        if match:
+            return match.group(1).strip().rstrip(".")
+    sentences = re.split(r"(?<=[.!?])\s+", text)
+    speech_parts: list[str] = []
+    for sentence in sentences:
+        if _SPEECH_CUE_PATTERN.search(sentence):
+            speech_parts.append(sentence.strip())
+    if speech_parts:
+        joined = " ".join(speech_parts[:2])
+        if not re.search(r"\b(?:young person|child|yp)\b", joined, re.I):
+            return f"Young person said: {joined}"
+        return joined
+    return ""
+
+
+def _extract_presentation_from_input(text: str) -> str:
+    """Describe observable presentation from input cues — no invented feelings."""
+    lower = text.lower()
+    cues: list[str] = []
+    for word in _PRESENTATION_CUE_WORDS:
+        if re.search(rf"\b{re.escape(word)}\b", lower):
+            cues.append(word)
+    if "mood improved" in lower or "mood" in lower:
+        cues.append("mood shift noted")
+    if "settled" in lower and "settled" not in cues:
+        cues.append("settled")
+    if cues:
+        unique = list(dict.fromkeys(cues))
+        return f"Staff observed presentation: appeared {', '.join(unique[:4])}."
+    if re.search(r"\b(?:young person|child|yp)\b", lower):
+        return "Presentation: as described in factual account — further detail not yet recorded."
+    return "Presentation: not yet known — to be completed from shift observation."
+
+
+def _extract_wishes_feelings(text: str) -> str:
+    lower = text.lower()
+    if any(w in lower for w in ("wishes", "feelings", "views", "wanted", "did not want", "needed quiet")):
+        if "did not want" in lower:
+            return "Wishes, feelings and views: young person did not want something recorded or shared as described in input."
+        if "needed quiet" in lower or "quiet time" in lower:
+            return "Wishes, feelings and views: young person communicated need for quiet time."
+        return "Wishes, feelings and views: as communicated in input — see child voice above."
+    return "Wishes, feelings and views: not yet known — to be sought where appropriate."
+
+
+def build_child_voice_section(input_text: str, scenario: dict[str, Any] | None = None) -> str:
+    """Build child voice / presentation section with rubric-aligned markers."""
+    cleaned = _clean_input_prefix(sanitize_professional_judgement_phrases(input_text))
+    lines: list[str] = []
+
+    speech = _extract_speech_from_input(cleaned)
+    if speech:
+        if not speech.lower().startswith(("young person", "child", "yp")):
+            lines.append(f"Young person said: {speech}")
+        else:
+            lines.append(speech)
+    elif _input_has_speech_cues(cleaned):
+        lines.append("Young person communicated as described in the factual account below.")
+    else:
+        lines.append("Young person said: not yet known — record the child's words where provided.")
+
+    lines.append(_extract_presentation_from_input(cleaned))
+
+    scenario = scenario or {}
+    family = str(scenario.get("scenario_family") or "")
+    variant = str(scenario.get("variant_type") or "")
+    feature = str(scenario.get("feature_target") or "")
+    required = list(scenario.get("required_elements") or [])
+
+    if (
+        family in {"meetings", "key_work", "handover", "management_oversight", "regulation_evidence"}
+        or "child voice/presentation" in required
+        or variant in _MAGIC_NOTES_VARIANTS
+        or feature == "Magic Notes"
+    ):
+        lines.append(_extract_wishes_feelings(cleaned))
+
+    return "\n".join(lines)
+
+
+def _magic_notes_missing_prompt(scenario: dict[str, Any], *, safeguarding: bool = False) -> str:
+    parts = ["**Missing detail to complete:**"]
+    input_text = str(scenario.get("input") or "")
+    if not _input_has_speech_cues(_clean_input_prefix(input_text)):
+        parts.append("What did the young person say or show? Record child voice where known.")
+    parts.append("What was the child's presentation before, during and after adult support?")
+    if safeguarding:
+        parts.extend(
+            [
+                "Who was informed?",
+                "What safeguarding action was taken?",
+                "What remains unclear and requires management review?",
+            ]
+        )
+    else:
+        parts.append("What outcome and follow-up should the next adult know about the child's experience?")
+    return "\n".join(parts)
+
+
+def _is_magic_notes_variant(scenario: dict[str, Any]) -> bool:
+    variant = str(scenario.get("variant_type") or "")
+    feature = str(scenario.get("feature_target") or "")
+    family = str(scenario.get("scenario_family") or "")
+    return variant in _MAGIC_NOTES_VARIANTS or feature == "Magic Notes" or family == "magic_notes"
+
+
+def _build_adult_response_line(scenario: dict[str, Any], input_text: str) -> str:
     lower = input_text.lower()
-    if any(m in lower for m in ("young person said", "child said", "yp said", "they said", "disclosed", "shared")):
-        return "Young person communicated as described above. Words used recorded where provided."
-    return "Young person presentation: Not stated unless provided in input."
+    if any(w in lower for w in ("staff offered", "staff listened", "staff sat", "staff respected", "de-escalat")):
+        return (
+            "Staff listened and responded within role as described in input. "
+            "Specific adult actions to be confirmed by practitioner where incomplete."
+        )
+    return (
+        "Staff responded supportively within role. "
+        "Specific actions: not stated unless provided — to be completed by practitioner."
+    )
+
+
+def _build_outcome_line(input_text: str) -> str:
+    lower = input_text.lower()
+    if any(w in lower for w in ("settled", "improved", "repair", "later", "eventually", "completed", "agreed")):
+        return "Outcome: as described in input — young person presentation by end of shift to be confirmed."
+    return "Outcome: not stated — to be completed by practitioner."
+
+
+def _family_specific_sections(scenario: dict[str, Any], input_text: str) -> list[str]:
+    family = str(scenario.get("scenario_family") or "")
+    variant = str(scenario.get("variant_type") or "")
+    sections: list[str] = []
+
+    if family == "behaviour_communication":
+        sections.extend(
+            [
+                "## Behaviour as possible communication (reflection, not fact)",
+                "Staff observed behaviour as described below. "
+                "What the young person may have been communicating remains a professional reflection — "
+                "not stated as fact unless the child shared this.",
+            ]
+        )
+    elif family == "incident_reflection":
+        sections.extend(
+            [
+                "## Presentation before / during / after",
+                "Before: as described in factual account. During: staff observed events as recorded. "
+                "After: current presentation — to be completed by practitioner.",
+            ]
+        )
+    elif family == "handover":
+        sections.extend(
+            [
+                "## Emotional continuity for next adult",
+                "What the next adult needs to know about the young person's experience, presentation and any ongoing needs.",
+            ]
+        )
+    elif family == "key_work":
+        sections.extend(
+            [
+                "## Child's views, pace and choice",
+                "Record the young person's views and pace as shared. Avoid lecturing tone — keep their voice visible.",
+            ]
+        )
+    elif family == "management_oversight":
+        sections.extend(
+            [
+                "## Impact on the child",
+                "How patterns or events described affect the young person's experience, safety and relationships — "
+                "not only staff or process actions.",
+            ]
+        )
+    elif family == "meetings":
+        sections.extend(
+            [
+                "## Child's voice in this discussion",
+                "Record whether the young person's voice, wishes, feelings or views were shared, "
+                "represented or still need to be sought.",
+            ]
+        )
+    elif family == "regulation_evidence":
+        sections.extend(
+            [
+                "## Children's experience and evidence",
+                "Include evidence of children's experience, wishes and feelings — not only compliance activity. "
+                "Regulatory wording supports evidence; it is not a judgement.",
+            ]
+        )
+    elif family == "magic_notes" or _is_magic_notes_variant(scenario):
+        sections.append(_magic_notes_missing_prompt(scenario))
+
+    if variant in {"manager_oversight", "reflective_supervision"} or str(
+        scenario.get("feature_target") or ""
+    ) == "Management oversight":
+        sections.extend(
+            [
+                "## Impact on the child",
+                "Management review should make the young person visible — impact on their experience, not only process.",
+            ]
+        )
+
+    return sections
 
 
 def build_high_risk_safeguarding_scaffold(scenario: dict[str, Any]) -> str:
@@ -152,32 +421,26 @@ def build_high_risk_safeguarding_scaffold(scenario: dict[str, Any]) -> str:
     title = scenario.get("title") or scenario.get("id") or "Record"
     raw_input = str(scenario.get("input") or "").strip()
     input_text = sanitize_professional_judgement_phrases(raw_input)
+    factual = _clean_input_prefix(input_text)
     escalation = _resolve_escalation_guidance(scenario)
-    child_voice = _extract_child_voice_hint(input_text)
-    variant_type = str(scenario.get("variant_type") or "")
+    child_voice = build_child_voice_section(input_text, scenario)
 
     magic_notes_prompt = ""
-    if variant_type in {"rough_note", "voice_dictate_transcript", "poor_wording_correction"} or str(
-        scenario.get("feature_target") or ""
-    ) == "Magic Notes":
-        magic_notes_prompt = (
-            "\n\n**Missing detail to complete:** Who was informed? What safeguarding action was taken? "
-            "What remains unclear and requires management review?"
-        )
+    if _is_magic_notes_variant(scenario):
+        magic_notes_prompt = "\n\n" + _magic_notes_missing_prompt(scenario, safeguarding=True)
 
     return "\n".join(
         [
             f"## {title}",
             "",
             "## What was said / observed",
-            input_text or "Not stated.",
+            factual or "Not stated.",
             "",
             "## Child voice / presentation",
             child_voice,
             "",
             "## Immediate adult response",
-            "Staff listened, recorded what was said or observed, and responded supportively within role. "
-            "Specific actions: Not stated unless provided — to be completed by practitioner.",
+            _build_adult_response_line(scenario, factual),
             "",
             "## Safeguarding action / who was informed",
             escalation,
@@ -186,7 +449,7 @@ def build_high_risk_safeguarding_scaffold(scenario: dict[str, Any]) -> str:
             "Seek management oversight and ensure any required notifications or referrals are considered by the responsible adults.",
             "",
             "## Outcome / current presentation",
-            "Not stated — to be completed by practitioner.",
+            _build_outcome_line(factual),
             "",
             "## Follow-up / review required",
             "Follow-up and review required by responsible adult. "
@@ -198,32 +461,56 @@ def build_high_risk_safeguarding_scaffold(scenario: dict[str, Any]) -> str:
     ).strip()
 
 
-def build_standard_scaffold(scenario: dict[str, Any]) -> str:
-    """Generic scaffold for lower-risk scenarios — with professional judgement boundary."""
-    title = scenario.get("title") or scenario.get("id")
-    input_text = sanitize_professional_judgement_phrases(str(scenario.get("input") or "").strip())
-    return "\n".join(
+def build_child_centred_scaffold(scenario: dict[str, Any]) -> str:
+    """Family-aware child-centred scaffold for ordinary recording scenarios."""
+    title = scenario.get("title") or scenario.get("id") or "Record"
+    raw_input = str(scenario.get("input") or "").strip()
+    input_text = sanitize_professional_judgement_phrases(raw_input)
+    factual = _clean_input_prefix(input_text)
+    child_voice = build_child_voice_section(input_text, scenario)
+    extra_sections = _family_specific_sections(scenario, factual)
+
+    blocks: list[str] = [
+        f"## {title}",
+        "",
+        "## What happened",
+        factual or "Not stated.",
+        "",
+        "## Child voice / presentation",
+        child_voice,
+    ]
+    blocks.extend(extra_sections)
+    blocks.extend(
         [
-            f"## {title}",
-            "",
-            "## What happened",
-            input_text,
             "",
             "## Adult response",
-            "Not stated in output — to be completed by practitioner.",
+            _build_adult_response_line(scenario, factual),
             "",
-            "## Outcome",
-            "Not stated.",
+            "## The child's experience",
+            "What changed for the young person before, during and after adult support — "
+            "as observed, not assumed.",
             "",
-            "---",
-            "Template scaffold only — adult review required. Not live ORB output. "
-            "Professional judgement and local policy apply.",
+            "## Outcome / follow-up",
+            _build_outcome_line(factual),
+            "",
+            _STANDARD_BOUNDARY_FOOTER,
         ]
     )
+    return "\n".join(blocks).strip()
+
+
+def build_standard_scaffold(scenario: dict[str, Any]) -> str:
+    """Child-centred scaffold for lower-risk scenarios — with professional judgement boundary."""
+    return build_child_centred_scaffold(scenario)
 
 
 def build_quality_lab_scaffold(scenario: dict[str, Any]) -> str:
     """Select appropriate scaffold for a quality lab scenario."""
     if needs_safeguarding_escalation(scenario):
         return build_high_risk_safeguarding_scaffold(scenario)
-    return build_standard_scaffold(scenario)
+    return build_child_centred_scaffold(scenario)
+
+
+def child_centred_recording_principle() -> str:
+    """Reusable child-centred recording principle for brain/framework sources."""
+    return _CHILD_CENTRED_PRINCIPLE

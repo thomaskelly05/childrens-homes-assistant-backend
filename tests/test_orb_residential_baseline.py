@@ -727,6 +727,100 @@ def test_no_output_claims_compliance_guaranteed() -> None:
     assert "ready for inspection" not in lower
 
 
+# --- Child-centredness scaffold tests ---
+
+
+def test_child_centred_scaffold_includes_voice_and_presentation() -> None:
+    scenario = _core_scenario("core_001")
+    output = build_quality_lab_scaffold(scenario)
+    lower = output.lower()
+    assert "child voice" in lower
+    assert "presentation" in lower
+    assert any(m in lower for m in ("young person said", "communicated", "said"))
+    assert "not yet known" in lower or "staff observed" in lower
+
+
+def test_management_oversight_scaffold_includes_child_impact() -> None:
+    payload = json.loads(VARIANTS_PATH.read_text(encoding="utf-8").splitlines()[1])
+    payload = scenario_to_baseline_format(payload)
+    output = build_quality_lab_scaffold(payload)
+    lower = output.lower()
+    assert "impact on the child" in lower or "young person's experience" in lower
+
+
+def test_meeting_scaffold_includes_wishes_or_not_yet_known() -> None:
+    for raw in json.loads(CORE100_PATH.read_text(encoding="utf-8"))["scenarios"]:
+        if raw.get("scenario_family") != "meetings":
+            continue
+        scenario = scenario_to_baseline_format(raw)
+        output = build_quality_lab_scaffold(scenario)
+        lower = output.lower()
+        assert "child voice" in lower or "wishes" in lower
+        assert "not yet known" in lower or "young person" in lower
+        break
+    else:
+        pytest.fail("No meetings family scenario found")
+
+
+def test_magic_notes_prompts_for_missing_child_voice() -> None:
+    scenario = {
+        "id": "test_magic_daily",
+        "title": "Rough daily note",
+        "input": "rough: staff helped with tea and bedtime routine",
+        "safeguarding_flags": [],
+        "scenario_family": "daily_care",
+        "record_type": "daily_record",
+        "feature_target": "Magic Notes",
+        "variant_type": "rough_note",
+        "required_elements": [],
+        "prohibited_elements": [],
+    }
+    output = build_quality_lab_scaffold(scenario)
+    lower = output.lower()
+    assert "what did the young person say" in lower or "child voice" in lower
+    assert "not yet known" in lower
+
+
+def test_safeguarding_scaffold_preserves_observation_not_invented_feelings() -> None:
+    scenario = _core_scenario("core_021")
+    output = build_quality_lab_scaffold(scenario)
+    lower = output.lower()
+    assert "felt sad" not in lower
+    assert "feels worried" not in lower
+    assert "feels angry" not in lower
+    assert any(m in lower for m in ("said", "observed", "presentation", "communicated"))
+
+
+def test_behaviour_scaffold_distinguishes_reflection_from_fact() -> None:
+    for raw in json.loads(CORE100_PATH.read_text(encoding="utf-8"))["scenarios"]:
+        if raw.get("scenario_family") != "behaviour_communication":
+            continue
+        scenario = scenario_to_baseline_format(raw)
+        output = build_quality_lab_scaffold(scenario)
+        lower = output.lower()
+        assert "reflection" in lower or "not stated as fact" in lower
+        break
+    else:
+        pytest.fail("No behaviour_communication scenario found")
+
+
+def test_variants1000_child_centredness_improves() -> None:
+    if not VARIANTS_REPORT_JSON.is_file():
+        pytest.skip("variants1000 report not generated yet")
+    report = json.loads(VARIANTS_REPORT_JSON.read_text(encoding="utf-8"))
+    cc = float((report.get("category_averages") or {}).get("child_centredness") or 0)
+    assert cc >= 3.25, f"child_centredness {cc} below target 3.25"
+    assert report.get("unsafe_flag_count", 0) == 0
+
+
+def test_child_centred_scaffold_no_diagnostic_language() -> None:
+    scenario = _core_scenario("core_001")
+    output = build_quality_lab_scaffold(scenario)
+    flags = detect_binary_flags(output, scenario=scenario, input_text=scenario["input"])
+    assert flags["contains_diagnostic_language"] is False
+    assert flags["contains_blaming_language"] is False
+
+
 def test_live_llm_mode_disabled_by_default() -> None:
     from scripts.run_orb_residential_baseline import is_live_mode_requested
 

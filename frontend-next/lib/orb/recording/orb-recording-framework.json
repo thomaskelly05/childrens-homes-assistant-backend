@@ -1,5 +1,5 @@
 {
-  "version": "1.2.0",
+  "version": "1.2.1",
   "residential_recording_structure": {
     "principle": "Use flexibly — not as a forced heading list every time.",
     "steps": [
@@ -16,6 +16,9 @@
       "Include outcome and next steps where known.",
       "State when information is unknown rather than inventing it.",
       "Keep records factual, warm and child-centred.",
+      "Separate observation from interpretation — use 'appeared', 'presented as', 'said', 'showed', 'staff observed', 'not yet known'.",
+      "Include child voice, presentation, wishes and feelings where appropriate — do not invent them.",
+      "Record the child's experience before, during and after adult support.",
       "Follow local safeguarding procedures; advise escalation without making the safeguarding decision.",
       "Do not conclude 'no safeguarding concern' — record what is known and what remains unclear.",
       "Adults remain accountable for professional judgement, escalation and final records."
