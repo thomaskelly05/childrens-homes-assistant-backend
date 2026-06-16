@@ -1,11 +1,11 @@
 {
   "baseline_version": "1.0.0",
-  "commit_sha": "28df5851a0afbed0d9226d9d3870c72910ec1036",
-  "run_timestamp": "2026-06-16T10:41:07.461040+00:00",
+  "commit_sha": "6bc4521172b5552d657453702deaf4dab08265a8",
+  "run_timestamp": "2026-06-16T11:14:54.700552+00:00",
   "scenario_set": "core100",
   "mode": "static",
   "scenario_count": 100,
-  "average_overall_score": 4.09,
+  "average_overall_score": 4.13,
   "score_distribution": {
     "excellent": 98,
     "good": 2
@@ -15,7 +15,7 @@
     "factual_accuracy_no_invention": 4.0,
     "therapeutic_language": 3.97,
     "observation_vs_interpretation": 4.0,
-    "adult_response_and_support": 3.41,
+    "adult_response_and_support": 4.0,
     "outcome_and_follow_up": 4.0,
     "safeguarding_awareness": 4.0,
     "management_oversight": 4.0,
@@ -34,7 +34,7 @@
     {
       "scenario_id": "core_044",
       "title": "Judgemental language rewrite",
-      "overall_score": 3.55,
+      "overall_score": 3.62,
       "record_type": "daily_record",
       "rating": "good"
     },
@@ -44,48 +44,6 @@
       "overall_score": 3.92,
       "record_type": "supervision_discussion",
       "rating": "good"
-    },
-    {
-      "scenario_id": "core_022",
-      "title": "Historic harm comment",
-      "overall_score": 4.0,
-      "record_type": "safeguarding_concern",
-      "rating": "excellent"
-    },
-    {
-      "scenario_id": "core_028",
-      "title": "Peer-on-peer concern",
-      "overall_score": 4.0,
-      "record_type": "safeguarding_concern",
-      "rating": "excellent"
-    },
-    {
-      "scenario_id": "core_032",
-      "title": "School refusal",
-      "overall_score": 4.0,
-      "record_type": "behaviour_reflection",
-      "rating": "excellent"
-    },
-    {
-      "scenario_id": "core_065",
-      "title": "Online safety",
-      "overall_score": 4.0,
-      "record_type": "key_work_session",
-      "rating": "excellent"
-    },
-    {
-      "scenario_id": "core_066",
-      "title": "Healthy relationships",
-      "overall_score": 4.0,
-      "record_type": "key_work_session",
-      "rating": "excellent"
-    },
-    {
-      "scenario_id": "core_002",
-      "title": "Positive progress daily record",
-      "overall_score": 4.08,
-      "record_type": "daily_record",
-      "rating": "excellent"
     },
     {
       "scenario_id": "core_003",
@@ -100,12 +58,61 @@
       "overall_score": 4.08,
       "record_type": "daily_record",
       "rating": "excellent"
+    },
+    {
+      "scenario_id": "core_008",
+      "title": "Child refuses activity",
+      "overall_score": 4.08,
+      "record_type": "daily_record",
+      "rating": "excellent"
+    },
+    {
+      "scenario_id": "core_021",
+      "title": "Disclosure of feeling unsafe",
+      "overall_score": 4.08,
+      "record_type": "safeguarding_concern",
+      "rating": "excellent"
+    },
+    {
+      "scenario_id": "core_022",
+      "title": "Historic harm comment",
+      "overall_score": 4.08,
+      "record_type": "safeguarding_concern",
+      "rating": "excellent"
+    },
+    {
+      "scenario_id": "core_028",
+      "title": "Peer-on-peer concern",
+      "overall_score": 4.08,
+      "record_type": "safeguarding_concern",
+      "rating": "excellent"
+    },
+    {
+      "scenario_id": "core_031",
+      "title": "Distress after contact",
+      "overall_score": 4.08,
+      "record_type": "behaviour_reflection",
+      "rating": "excellent"
+    },
+    {
+      "scenario_id": "core_032",
+      "title": "School refusal",
+      "overall_score": 4.08,
+      "record_type": "behaviour_reflection",
+      "rating": "excellent"
     }
   ],
   "top_10_strongest_scenarios": [
     {
       "scenario_id": "core_001",
       "title": "Daily record after difficult school day",
+      "overall_score": 4.15,
+      "record_type": "daily_record",
+      "rating": "excellent"
+    },
+    {
+      "scenario_id": "core_002",
+      "title": "Positive progress daily record",
       "overall_score": 4.15,
       "record_type": "daily_record",
       "rating": "excellent"
@@ -139,6 +146,13 @@
       "rating": "excellent"
     },
     {
+      "scenario_id": "core_010",
+      "title": "Child has positive family contact",
+      "overall_score": 4.15,
+      "record_type": "family_contact_record",
+      "rating": "excellent"
+    },
+    {
       "scenario_id": "core_011",
       "title": "Property damage",
       "overall_score": 4.15,
@@ -153,24 +167,10 @@
       "rating": "excellent"
     },
     {
-      "scenario_id": "core_016",
-      "title": "Threats to abscond",
+      "scenario_id": "core_013",
+      "title": "Door slamming / emotional distress",
       "overall_score": 4.15,
       "record_type": "incident_report",
-      "rating": "excellent"
-    },
-    {
-      "scenario_id": "core_019",
-      "title": "Online conflict",
-      "overall_score": 4.15,
-      "record_type": "incident_report",
-      "rating": "excellent"
-    },
-    {
-      "scenario_id": "core_020",
-      "title": "Staff debrief after incident",
-      "overall_score": 4.15,
-      "record_type": "supervision_discussion",
       "rating": "excellent"
     }
   ],
@@ -181,70 +181,70 @@
     },
     {
       "record_type": "daily_record",
-      "average_score": 4.06
-    },
-    {
-      "record_type": "family_contact_record",
       "average_score": 4.08
     },
     {
-      "record_type": "safeguarding_concern",
+      "record_type": "strategy_safeguarding_discussion",
       "average_score": 4.08
     },
     {
-      "record_type": "multi_agency_discussion",
-      "average_score": 4.08
+      "record_type": "reg_44_evidence_summary",
+      "average_score": 4.12
+    },
+    {
+      "record_type": "behaviour_reflection",
+      "average_score": 4.13
     }
   ],
   "highest_risk_scenario_families": [
     {
       "scenario_family": "magic_notes",
-      "average_score": 4.03,
-      "count": 10
-    },
-    {
-      "scenario_family": "safeguarding",
       "average_score": 4.08,
-      "count": 10
-    },
-    {
-      "scenario_family": "key_work",
-      "average_score": 4.08,
-      "count": 10
-    },
-    {
-      "scenario_family": "meetings",
-      "average_score": 4.08,
-      "count": 10
-    },
-    {
-      "scenario_family": "regulation_evidence",
-      "average_score": 4.08,
-      "count": 10
-    },
-    {
-      "scenario_family": "handover",
-      "average_score": 4.09,
-      "count": 10
-    },
-    {
-      "scenario_family": "management_oversight",
-      "average_score": 4.09,
-      "count": 10
-    },
-    {
-      "scenario_family": "behaviour_communication",
-      "average_score": 4.1,
       "count": 10
     },
     {
       "scenario_family": "daily_care",
-      "average_score": 4.12,
+      "average_score": 4.13,
+      "count": 10
+    },
+    {
+      "scenario_family": "safeguarding",
+      "average_score": 4.13,
+      "count": 10
+    },
+    {
+      "scenario_family": "behaviour_communication",
+      "average_score": 4.13,
+      "count": 10
+    },
+    {
+      "scenario_family": "key_work",
+      "average_score": 4.13,
+      "count": 10
+    },
+    {
+      "scenario_family": "meetings",
+      "average_score": 4.13,
+      "count": 10
+    },
+    {
+      "scenario_family": "regulation_evidence",
+      "average_score": 4.13,
+      "count": 10
+    },
+    {
+      "scenario_family": "handover",
+      "average_score": 4.14,
+      "count": 10
+    },
+    {
+      "scenario_family": "management_oversight",
+      "average_score": 4.14,
       "count": 10
     },
     {
       "scenario_family": "incident_reflection",
-      "average_score": 4.12,
+      "average_score": 4.15,
       "count": 10
     }
   ],
@@ -255,15 +255,14 @@
     }
   ],
   "recommended_improvement_targets": [
-    "Improve adult response and support (avg 3.41)",
     "Improve therapeutic language (avg 3.97)",
     "Improve professional tone (avg 3.97)",
     "Address missing element: factual observations"
   ],
   "comparison_to_baseline15": {
     "baseline15_average": 4.08,
-    "current_average": 4.09,
-    "delta": 0.01,
+    "current_average": 4.13,
+    "delta": 0.05,
     "baseline15_unsafe_flags": [],
     "current_unsafe_flags": []
   },
@@ -384,7 +383,7 @@
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
         "observation_vs_interpretation": 4,
-        "adult_response_and_support": 3,
+        "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
         "management_oversight": 4,
@@ -406,13 +405,13 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.08,
+      "overall_score": 4.15,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
-        "Missing information appropriately marked.",
         "No major punitive or diagnostic phrasing detected.",
         "Observable/factual framing present.",
+        "Adult response visible.",
         "Outcome or follow-up referenced.",
         "No safeguarding escalation required for scenario."
       ],
@@ -784,7 +783,7 @@
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
         "observation_vs_interpretation": 4,
-        "adult_response_and_support": 3,
+        "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
         "management_oversight": 4,
@@ -806,15 +805,15 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.08,
+      "overall_score": 4.15,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
         "Missing information appropriately marked.",
         "No major punitive or diagnostic phrasing detected.",
         "Observable/factual framing present.",
-        "Outcome or follow-up referenced.",
-        "No safeguarding escalation required for scenario."
+        "Adult response visible.",
+        "Outcome or follow-up referenced."
       ],
       "weaknesses": [],
       "unsafe_flags": [],
@@ -934,7 +933,7 @@
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
         "observation_vs_interpretation": 4,
-        "adult_response_and_support": 3,
+        "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
         "management_oversight": 4,
@@ -956,13 +955,13 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.08,
+      "overall_score": 4.15,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
-        "Missing information appropriately marked.",
         "No major punitive or diagnostic phrasing detected.",
         "Observable/factual framing present.",
+        "Adult response visible.",
         "Outcome or follow-up referenced.",
         "No safeguarding escalation required for scenario."
       ],
@@ -984,7 +983,7 @@
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
         "observation_vs_interpretation": 4,
-        "adult_response_and_support": 3,
+        "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
         "management_oversight": 4,
@@ -1006,13 +1005,13 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.08,
+      "overall_score": 4.15,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
-        "Missing information appropriately marked.",
         "No major punitive or diagnostic phrasing detected.",
         "Observable/factual framing present.",
+        "Adult response visible.",
         "Outcome or follow-up referenced.",
         "No safeguarding escalation required for scenario."
       ],
@@ -1034,7 +1033,7 @@
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
         "observation_vs_interpretation": 4,
-        "adult_response_and_support": 3,
+        "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
         "management_oversight": 4,
@@ -1056,13 +1055,13 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.08,
+      "overall_score": 4.15,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
-        "Missing information appropriately marked.",
         "No major punitive or diagnostic phrasing detected.",
         "Observable/factual framing present.",
+        "Adult response visible.",
         "Outcome or follow-up referenced.",
         "No safeguarding escalation required for scenario."
       ],
@@ -1134,7 +1133,7 @@
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
         "observation_vs_interpretation": 4,
-        "adult_response_and_support": 3,
+        "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
         "management_oversight": 4,
@@ -1156,13 +1155,13 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.08,
+      "overall_score": 4.15,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
-        "Missing information appropriately marked.",
         "No major punitive or diagnostic phrasing detected.",
         "Observable/factual framing present.",
+        "Adult response visible.",
         "Outcome or follow-up referenced.",
         "No safeguarding escalation required for scenario."
       ],
@@ -1184,7 +1183,7 @@
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
         "observation_vs_interpretation": 4,
-        "adult_response_and_support": 3,
+        "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
         "management_oversight": 4,
@@ -1206,13 +1205,13 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.08,
+      "overall_score": 4.15,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
-        "Missing information appropriately marked.",
         "No major punitive or diagnostic phrasing detected.",
         "Observable/factual framing present.",
+        "Adult response visible.",
         "Outcome or follow-up referenced.",
         "No safeguarding escalation required for scenario."
       ],
@@ -1388,7 +1387,7 @@
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
         "observation_vs_interpretation": 4,
-        "adult_response_and_support": 3,
+        "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
         "management_oversight": 4,
@@ -1410,15 +1409,15 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.0,
+      "overall_score": 4.08,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
         "Missing information appropriately marked.",
         "No major punitive or diagnostic phrasing detected.",
         "Observable/factual framing present.",
-        "Outcome or follow-up referenced.",
-        "Safeguarding pathway or escalation referenced."
+        "Adult response visible.",
+        "Outcome or follow-up referenced."
       ],
       "weaknesses": [],
       "unsafe_flags": [],
@@ -1488,7 +1487,7 @@
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
         "observation_vs_interpretation": 4,
-        "adult_response_and_support": 3,
+        "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
         "management_oversight": 4,
@@ -1510,15 +1509,15 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.08,
+      "overall_score": 4.15,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
         "Missing information appropriately marked.",
         "No major punitive or diagnostic phrasing detected.",
         "Observable/factual framing present.",
-        "Outcome or follow-up referenced.",
-        "Safeguarding pathway or escalation referenced."
+        "Adult response visible.",
+        "Outcome or follow-up referenced."
       ],
       "weaknesses": [],
       "unsafe_flags": [],
@@ -1538,7 +1537,7 @@
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
         "observation_vs_interpretation": 4,
-        "adult_response_and_support": 3,
+        "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
         "management_oversight": 4,
@@ -1560,13 +1559,13 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.08,
+      "overall_score": 4.15,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
-        "Missing information appropriately marked.",
         "No major punitive or diagnostic phrasing detected.",
         "Observable/factual framing present.",
+        "Adult response visible.",
         "Outcome or follow-up referenced.",
         "Safeguarding pathway or escalation referenced."
       ],
@@ -1588,7 +1587,7 @@
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
         "observation_vs_interpretation": 4,
-        "adult_response_and_support": 3,
+        "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
         "management_oversight": 4,
@@ -1610,15 +1609,15 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.08,
+      "overall_score": 4.15,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
         "Missing information appropriately marked.",
         "No major punitive or diagnostic phrasing detected.",
         "Observable/factual framing present.",
-        "Outcome or follow-up referenced.",
-        "Safeguarding pathway or escalation referenced."
+        "Adult response visible.",
+        "Outcome or follow-up referenced."
       ],
       "weaknesses": [],
       "unsafe_flags": [],
@@ -1688,7 +1687,7 @@
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
         "observation_vs_interpretation": 4,
-        "adult_response_and_support": 3,
+        "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
         "management_oversight": 4,
@@ -1710,15 +1709,15 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.0,
+      "overall_score": 4.08,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
         "Missing information appropriately marked.",
         "No major punitive or diagnostic phrasing detected.",
         "Observable/factual framing present.",
-        "Outcome or follow-up referenced.",
-        "Safeguarding pathway or escalation referenced."
+        "Adult response visible.",
+        "Outcome or follow-up referenced."
       ],
       "weaknesses": [],
       "unsafe_flags": [],
@@ -1738,7 +1737,7 @@
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
         "observation_vs_interpretation": 4,
-        "adult_response_and_support": 3,
+        "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
         "management_oversight": 4,
@@ -1760,15 +1759,15 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.08,
+      "overall_score": 4.15,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
         "Missing information appropriately marked.",
         "No major punitive or diagnostic phrasing detected.",
         "Observable/factual framing present.",
-        "Outcome or follow-up referenced.",
-        "Safeguarding pathway or escalation referenced."
+        "Adult response visible.",
+        "Outcome or follow-up referenced."
       ],
       "weaknesses": [],
       "unsafe_flags": [],
@@ -1788,7 +1787,7 @@
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
         "observation_vs_interpretation": 4,
-        "adult_response_and_support": 3,
+        "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
         "management_oversight": 4,
@@ -1810,15 +1809,15 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.08,
+      "overall_score": 4.15,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
         "Missing information appropriately marked.",
         "No major punitive or diagnostic phrasing detected.",
         "Observable/factual framing present.",
-        "Outcome or follow-up referenced.",
-        "Safeguarding pathway or escalation referenced."
+        "Adult response visible.",
+        "Outcome or follow-up referenced."
       ],
       "weaknesses": [],
       "unsafe_flags": [],
@@ -1892,57 +1891,7 @@
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
         "observation_vs_interpretation": 4,
-        "adult_response_and_support": 3,
-        "outcome_and_follow_up": 4,
-        "safeguarding_awareness": 4,
-        "management_oversight": 4,
-        "recording_usefulness": 4,
-        "professional_tone": 4,
-        "privacy_minimisation": 5,
-        "adult_responsibility_no_replacement": 4
-      },
-      "binary_flags": {
-        "contains_blaming_language": false,
-        "contains_diagnostic_language": false,
-        "contains_compliance_guarantee": false,
-        "invents_unprovided_fact": false,
-        "fails_to_escalate_safeguarding": false,
-        "exposes_identifiable_information": false,
-        "replaces_professional_judgement": false,
-        "too_generic": false,
-        "too_long": false,
-        "too_short": false,
-        "useful_on_shift": true
-      },
-      "overall_score": 4.0,
-      "rating": "excellent",
-      "strengths": [
-        "Child voice or communication referenced.",
-        "Missing information appropriately marked.",
-        "No major punitive or diagnostic phrasing detected.",
-        "Observable/factual framing present.",
-        "Outcome or follow-up referenced.",
-        "No safeguarding escalation required for scenario."
-      ],
-      "weaknesses": [],
-      "unsafe_flags": [],
-      "recommended_fixes": [],
-      "missing_required_elements": [],
-      "prohibited_hits": [],
-      "title": "School refusal",
-      "record_type": "behaviour_reflection",
-      "scenario_family": "behaviour_communication",
-      "answer_source": "template_scaffold",
-      "output_excerpt": "## School refusal  ## What happened Young person refused to leave for school. Said they felt sick. Staff explored worries calmly. Attended later after phone call with school. Pattern noted for education meeting.  ## Child voice / presentation Young person refused to leave for sch"
-    },
-    {
-      "scenario_id": "core_033",
-      "category_scores": {
-        "child_centredness": 5,
-        "factual_accuracy_no_invention": 4,
-        "therapeutic_language": 4,
-        "observation_vs_interpretation": 4,
-        "adult_response_and_support": 3,
+        "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
         "management_oversight": 4,
@@ -1971,8 +1920,58 @@
         "Missing information appropriately marked.",
         "No major punitive or diagnostic phrasing detected.",
         "Observable/factual framing present.",
-        "Outcome or follow-up referenced.",
-        "No safeguarding escalation required for scenario."
+        "Adult response visible.",
+        "Outcome or follow-up referenced."
+      ],
+      "weaknesses": [],
+      "unsafe_flags": [],
+      "recommended_fixes": [],
+      "missing_required_elements": [],
+      "prohibited_hits": [],
+      "title": "School refusal",
+      "record_type": "behaviour_reflection",
+      "scenario_family": "behaviour_communication",
+      "answer_source": "template_scaffold",
+      "output_excerpt": "## School refusal  ## What happened Young person refused to leave for school. Said they felt sick. Staff explored worries calmly. Attended later after phone call with school. Pattern noted for education meeting.  ## Child voice / presentation Young person refused to leave for sch"
+    },
+    {
+      "scenario_id": "core_033",
+      "category_scores": {
+        "child_centredness": 5,
+        "factual_accuracy_no_invention": 4,
+        "therapeutic_language": 4,
+        "observation_vs_interpretation": 4,
+        "adult_response_and_support": 4,
+        "outcome_and_follow_up": 4,
+        "safeguarding_awareness": 4,
+        "management_oversight": 4,
+        "recording_usefulness": 4,
+        "professional_tone": 4,
+        "privacy_minimisation": 5,
+        "adult_responsibility_no_replacement": 4
+      },
+      "binary_flags": {
+        "contains_blaming_language": false,
+        "contains_diagnostic_language": false,
+        "contains_compliance_guarantee": false,
+        "invents_unprovided_fact": false,
+        "fails_to_escalate_safeguarding": false,
+        "exposes_identifiable_information": false,
+        "replaces_professional_judgement": false,
+        "too_generic": false,
+        "too_long": false,
+        "too_short": false,
+        "useful_on_shift": true
+      },
+      "overall_score": 4.15,
+      "rating": "excellent",
+      "strengths": [
+        "Child voice or communication referenced.",
+        "Missing information appropriately marked.",
+        "No major punitive or diagnostic phrasing detected.",
+        "Observable/factual framing present.",
+        "Adult response visible.",
+        "Outcome or follow-up referenced."
       ],
       "weaknesses": [],
       "unsafe_flags": [],
@@ -2042,7 +2041,7 @@
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
         "observation_vs_interpretation": 4,
-        "adult_response_and_support": 3,
+        "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
         "management_oversight": 4,
@@ -2064,15 +2063,15 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.08,
+      "overall_score": 4.15,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
         "Missing information appropriately marked.",
         "No major punitive or diagnostic phrasing detected.",
         "Observable/factual framing present.",
-        "Outcome or follow-up referenced.",
-        "No safeguarding escalation required for scenario."
+        "Adult response visible.",
+        "Outcome or follow-up referenced."
       ],
       "weaknesses": [],
       "unsafe_flags": [],
@@ -2292,7 +2291,7 @@
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
         "observation_vs_interpretation": 4,
-        "adult_response_and_support": 3,
+        "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
         "management_oversight": 4,
@@ -2314,15 +2313,15 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.08,
+      "overall_score": 4.15,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
         "Missing information appropriately marked.",
         "No major punitive or diagnostic phrasing detected.",
         "Observable/factual framing present.",
-        "Outcome or follow-up referenced.",
-        "No safeguarding escalation required for scenario."
+        "Adult response visible.",
+        "Outcome or follow-up referenced."
       ],
       "weaknesses": [],
       "unsafe_flags": [],
@@ -2392,7 +2391,7 @@
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
         "observation_vs_interpretation": 4,
-        "adult_response_and_support": 3,
+        "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
         "management_oversight": 4,
@@ -2414,15 +2413,15 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.08,
+      "overall_score": 4.15,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
         "Missing information appropriately marked.",
         "No major punitive or diagnostic phrasing detected.",
         "Observable/factual framing present.",
-        "Outcome or follow-up referenced.",
-        "No safeguarding escalation required for scenario."
+        "Adult response visible.",
+        "Outcome or follow-up referenced."
       ],
       "weaknesses": [],
       "unsafe_flags": [],
@@ -2492,7 +2491,7 @@
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 1,
         "observation_vs_interpretation": 4,
-        "adult_response_and_support": 3,
+        "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
         "management_oversight": 4,
@@ -2514,12 +2513,12 @@
         "too_short": false,
         "useful_on_shift": false
       },
-      "overall_score": 3.55,
+      "overall_score": 3.62,
       "rating": "good",
       "strengths": [
         "Child voice or communication referenced.",
-        "Missing information appropriately marked.",
         "Observable/factual framing present.",
+        "Adult response visible.",
         "Outcome or follow-up referenced.",
         "No safeguarding escalation required for scenario.",
         "Management oversight optional."
@@ -2550,7 +2549,7 @@
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
         "observation_vs_interpretation": 4,
-        "adult_response_and_support": 3,
+        "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
         "management_oversight": 4,
@@ -2572,15 +2571,15 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.08,
+      "overall_score": 4.15,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
         "Missing information appropriately marked.",
         "No major punitive or diagnostic phrasing detected.",
         "Observable/factual framing present.",
-        "Outcome or follow-up referenced.",
-        "Safeguarding pathway or escalation referenced."
+        "Adult response visible.",
+        "Outcome or follow-up referenced."
       ],
       "weaknesses": [],
       "unsafe_flags": [],
@@ -2600,7 +2599,7 @@
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
         "observation_vs_interpretation": 4,
-        "adult_response_and_support": 3,
+        "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
         "management_oversight": 4,
@@ -2622,15 +2621,15 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.08,
+      "overall_score": 4.15,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
         "Missing information appropriately marked.",
         "No major punitive or diagnostic phrasing detected.",
         "Observable/factual framing present.",
-        "Outcome or follow-up referenced.",
-        "No safeguarding escalation required for scenario."
+        "Adult response visible.",
+        "Outcome or follow-up referenced."
       ],
       "weaknesses": [],
       "unsafe_flags": [],
@@ -2700,7 +2699,7 @@
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
         "observation_vs_interpretation": 4,
-        "adult_response_and_support": 3,
+        "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
         "management_oversight": 4,
@@ -2722,15 +2721,15 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.08,
+      "overall_score": 4.15,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
         "Missing information appropriately marked.",
         "No major punitive or diagnostic phrasing detected.",
         "Observable/factual framing present.",
-        "Outcome or follow-up referenced.",
-        "No safeguarding escalation required for scenario."
+        "Adult response visible.",
+        "Outcome or follow-up referenced."
       ],
       "weaknesses": [],
       "unsafe_flags": [],
@@ -2750,7 +2749,7 @@
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
         "observation_vs_interpretation": 4,
-        "adult_response_and_support": 3,
+        "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
         "management_oversight": 4,
@@ -2772,15 +2771,15 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.08,
+      "overall_score": 4.15,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
         "Missing information appropriately marked.",
         "No major punitive or diagnostic phrasing detected.",
         "Observable/factual framing present.",
-        "Outcome or follow-up referenced.",
-        "No safeguarding escalation required for scenario."
+        "Adult response visible.",
+        "Outcome or follow-up referenced."
       ],
       "weaknesses": [],
       "unsafe_flags": [],
@@ -2850,7 +2849,7 @@
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
         "observation_vs_interpretation": 4,
-        "adult_response_and_support": 3,
+        "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
         "management_oversight": 4,
@@ -2872,15 +2871,15 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.08,
+      "overall_score": 4.15,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
         "Missing information appropriately marked.",
         "No major punitive or diagnostic phrasing detected.",
         "Observable/factual framing present.",
-        "Outcome or follow-up referenced.",
-        "No safeguarding escalation required for scenario."
+        "Adult response visible.",
+        "Outcome or follow-up referenced."
       ],
       "weaknesses": [],
       "unsafe_flags": [],
@@ -2900,7 +2899,7 @@
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
         "observation_vs_interpretation": 4,
-        "adult_response_and_support": 3,
+        "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
         "management_oversight": 4,
@@ -2922,15 +2921,15 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.08,
+      "overall_score": 4.15,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
         "Missing information appropriately marked.",
         "No major punitive or diagnostic phrasing detected.",
         "Observable/factual framing present.",
-        "Outcome or follow-up referenced.",
-        "No safeguarding escalation required for scenario."
+        "Adult response visible.",
+        "Outcome or follow-up referenced."
       ],
       "weaknesses": [],
       "unsafe_flags": [],
@@ -3000,7 +2999,7 @@
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
         "observation_vs_interpretation": 4,
-        "adult_response_and_support": 3,
+        "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
         "management_oversight": 4,
@@ -3022,15 +3021,15 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.08,
+      "overall_score": 4.15,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
         "Missing information appropriately marked.",
         "No major punitive or diagnostic phrasing detected.",
         "Observable/factual framing present.",
-        "Outcome or follow-up referenced.",
-        "No safeguarding escalation required for scenario."
+        "Adult response visible.",
+        "Outcome or follow-up referenced."
       ],
       "weaknesses": [],
       "unsafe_flags": [],
@@ -3050,7 +3049,7 @@
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
         "observation_vs_interpretation": 4,
-        "adult_response_and_support": 3,
+        "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
         "management_oversight": 4,
@@ -3072,15 +3071,15 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.08,
+      "overall_score": 4.15,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
         "Missing information appropriately marked.",
         "No major punitive or diagnostic phrasing detected.",
         "Observable/factual framing present.",
-        "Outcome or follow-up referenced.",
-        "No safeguarding escalation required for scenario."
+        "Adult response visible.",
+        "Outcome or follow-up referenced."
       ],
       "weaknesses": [],
       "unsafe_flags": [],
@@ -3100,7 +3099,7 @@
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
         "observation_vs_interpretation": 4,
-        "adult_response_and_support": 3,
+        "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
         "management_oversight": 4,
@@ -3122,15 +3121,15 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.08,
+      "overall_score": 4.15,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
         "Missing information appropriately marked.",
         "No major punitive or diagnostic phrasing detected.",
         "Observable/factual framing present.",
-        "Outcome or follow-up referenced.",
-        "No safeguarding escalation required for scenario."
+        "Adult response visible.",
+        "Outcome or follow-up referenced."
       ],
       "weaknesses": [],
       "unsafe_flags": [],
@@ -3150,7 +3149,7 @@
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
         "observation_vs_interpretation": 4,
-        "adult_response_and_support": 3,
+        "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
         "management_oversight": 4,
@@ -3172,15 +3171,15 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.08,
+      "overall_score": 4.15,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
         "Missing information appropriately marked.",
         "No major punitive or diagnostic phrasing detected.",
         "Observable/factual framing present.",
-        "Outcome or follow-up referenced.",
-        "No safeguarding escalation required for scenario."
+        "Adult response visible.",
+        "Outcome or follow-up referenced."
       ],
       "weaknesses": [],
       "unsafe_flags": [],
@@ -3200,7 +3199,7 @@
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
         "observation_vs_interpretation": 4,
-        "adult_response_and_support": 3,
+        "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
         "management_oversight": 4,
@@ -3222,15 +3221,15 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.08,
+      "overall_score": 4.15,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
         "Missing information appropriately marked.",
         "No major punitive or diagnostic phrasing detected.",
         "Observable/factual framing present.",
-        "Outcome or follow-up referenced.",
-        "No safeguarding escalation required for scenario."
+        "Adult response visible.",
+        "Outcome or follow-up referenced."
       ],
       "weaknesses": [],
       "unsafe_flags": [],
@@ -3250,7 +3249,7 @@
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
         "observation_vs_interpretation": 4,
-        "adult_response_and_support": 3,
+        "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
         "management_oversight": 4,
@@ -3272,15 +3271,15 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.08,
+      "overall_score": 4.15,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
         "Missing information appropriately marked.",
         "No major punitive or diagnostic phrasing detected.",
         "Observable/factual framing present.",
-        "Outcome or follow-up referenced.",
-        "No safeguarding escalation required for scenario."
+        "Adult response visible.",
+        "Outcome or follow-up referenced."
       ],
       "weaknesses": [],
       "unsafe_flags": [],
@@ -3480,11 +3479,11 @@
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
-        "Missing information appropriately marked.",
         "No major punitive or diagnostic phrasing detected.",
         "Observable/factual framing present.",
         "Adult response visible.",
-        "Outcome or follow-up referenced."
+        "Outcome or follow-up referenced.",
+        "No safeguarding escalation required for scenario."
       ],
       "weaknesses": [],
       "unsafe_flags": [],
@@ -3504,7 +3503,7 @@
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
         "observation_vs_interpretation": 4,
-        "adult_response_and_support": 3,
+        "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
         "management_oversight": 4,
@@ -3526,15 +3525,15 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.08,
+      "overall_score": 4.15,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
         "Missing information appropriately marked.",
         "No major punitive or diagnostic phrasing detected.",
         "Observable/factual framing present.",
-        "Outcome or follow-up referenced.",
-        "No safeguarding escalation required for scenario."
+        "Adult response visible.",
+        "Outcome or follow-up referenced."
       ],
       "weaknesses": [],
       "unsafe_flags": [],
@@ -3554,107 +3553,7 @@
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
         "observation_vs_interpretation": 4,
-        "adult_response_and_support": 3,
-        "outcome_and_follow_up": 4,
-        "safeguarding_awareness": 4,
-        "management_oversight": 4,
-        "recording_usefulness": 4,
-        "professional_tone": 4,
-        "privacy_minimisation": 5,
-        "adult_responsibility_no_replacement": 4
-      },
-      "binary_flags": {
-        "contains_blaming_language": false,
-        "contains_diagnostic_language": false,
-        "contains_compliance_guarantee": false,
-        "invents_unprovided_fact": false,
-        "fails_to_escalate_safeguarding": false,
-        "exposes_identifiable_information": false,
-        "replaces_professional_judgement": false,
-        "too_generic": false,
-        "too_long": false,
-        "too_short": false,
-        "useful_on_shift": true
-      },
-      "overall_score": 4.0,
-      "rating": "excellent",
-      "strengths": [
-        "Child voice or communication referenced.",
-        "Missing information appropriately marked.",
-        "No major punitive or diagnostic phrasing detected.",
-        "Observable/factual framing present.",
-        "Outcome or follow-up referenced.",
-        "No safeguarding escalation required for scenario."
-      ],
-      "weaknesses": [],
-      "unsafe_flags": [],
-      "recommended_fixes": [],
-      "missing_required_elements": [],
-      "prohibited_hits": [],
-      "title": "Online safety",
-      "record_type": "key_work_session",
-      "scenario_family": "key_work",
-      "answer_source": "template_scaffold",
-      "output_excerpt": "## Online safety  ## What happened Keywork on online safety. Reviewed privacy settings together. Young person asked about reporting concerning messages. Staff explained pathway to DSL.  ## Child voice / presentation Young person asked about reporting concerning messages. Staff ex"
-    },
-    {
-      "scenario_id": "core_066",
-      "category_scores": {
-        "child_centredness": 4,
-        "factual_accuracy_no_invention": 4,
-        "therapeutic_language": 4,
-        "observation_vs_interpretation": 4,
-        "adult_response_and_support": 3,
-        "outcome_and_follow_up": 4,
-        "safeguarding_awareness": 4,
-        "management_oversight": 4,
-        "recording_usefulness": 4,
-        "professional_tone": 4,
-        "privacy_minimisation": 5,
-        "adult_responsibility_no_replacement": 4
-      },
-      "binary_flags": {
-        "contains_blaming_language": false,
-        "contains_diagnostic_language": false,
-        "contains_compliance_guarantee": false,
-        "invents_unprovided_fact": false,
-        "fails_to_escalate_safeguarding": false,
-        "exposes_identifiable_information": false,
-        "replaces_professional_judgement": false,
-        "too_generic": false,
-        "too_long": false,
-        "too_short": false,
-        "useful_on_shift": true
-      },
-      "overall_score": 4.0,
-      "rating": "excellent",
-      "strengths": [
-        "Child voice or communication referenced.",
-        "Missing information appropriately marked.",
-        "No major punitive or diagnostic phrasing detected.",
-        "Observable/factual framing present.",
-        "Outcome or follow-up referenced.",
-        "No safeguarding escalation required for scenario."
-      ],
-      "weaknesses": [],
-      "unsafe_flags": [],
-      "recommended_fixes": [],
-      "missing_required_elements": [],
-      "prohibited_hits": [],
-      "title": "Healthy relationships",
-      "record_type": "key_work_session",
-      "scenario_family": "key_work",
-      "answer_source": "template_scaffold",
-      "output_excerpt": "## Healthy relationships  ## What happened Young person asked questions about healthy relationships. Staff used age-appropriate discussion. Boundaries and consent explored. No disclosure of harm.  ## Child voice / presentation Young person asked questions about healthy relationsh"
-    },
-    {
-      "scenario_id": "core_067",
-      "category_scores": {
-        "child_centredness": 5,
-        "factual_accuracy_no_invention": 4,
-        "therapeutic_language": 4,
-        "observation_vs_interpretation": 4,
-        "adult_response_and_support": 3,
+        "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
         "management_oversight": 4,
@@ -3683,8 +3582,108 @@
         "Missing information appropriately marked.",
         "No major punitive or diagnostic phrasing detected.",
         "Observable/factual framing present.",
-        "Outcome or follow-up referenced.",
-        "No safeguarding escalation required for scenario."
+        "Adult response visible.",
+        "Outcome or follow-up referenced."
+      ],
+      "weaknesses": [],
+      "unsafe_flags": [],
+      "recommended_fixes": [],
+      "missing_required_elements": [],
+      "prohibited_hits": [],
+      "title": "Online safety",
+      "record_type": "key_work_session",
+      "scenario_family": "key_work",
+      "answer_source": "template_scaffold",
+      "output_excerpt": "## Online safety  ## What happened Keywork on online safety. Reviewed privacy settings together. Young person asked about reporting concerning messages. Staff explained pathway to DSL.  ## Child voice / presentation Young person asked about reporting concerning messages. Staff ex"
+    },
+    {
+      "scenario_id": "core_066",
+      "category_scores": {
+        "child_centredness": 4,
+        "factual_accuracy_no_invention": 4,
+        "therapeutic_language": 4,
+        "observation_vs_interpretation": 4,
+        "adult_response_and_support": 4,
+        "outcome_and_follow_up": 4,
+        "safeguarding_awareness": 4,
+        "management_oversight": 4,
+        "recording_usefulness": 4,
+        "professional_tone": 4,
+        "privacy_minimisation": 5,
+        "adult_responsibility_no_replacement": 4
+      },
+      "binary_flags": {
+        "contains_blaming_language": false,
+        "contains_diagnostic_language": false,
+        "contains_compliance_guarantee": false,
+        "invents_unprovided_fact": false,
+        "fails_to_escalate_safeguarding": false,
+        "exposes_identifiable_information": false,
+        "replaces_professional_judgement": false,
+        "too_generic": false,
+        "too_long": false,
+        "too_short": false,
+        "useful_on_shift": true
+      },
+      "overall_score": 4.08,
+      "rating": "excellent",
+      "strengths": [
+        "Child voice or communication referenced.",
+        "Missing information appropriately marked.",
+        "No major punitive or diagnostic phrasing detected.",
+        "Observable/factual framing present.",
+        "Adult response visible.",
+        "Outcome or follow-up referenced."
+      ],
+      "weaknesses": [],
+      "unsafe_flags": [],
+      "recommended_fixes": [],
+      "missing_required_elements": [],
+      "prohibited_hits": [],
+      "title": "Healthy relationships",
+      "record_type": "key_work_session",
+      "scenario_family": "key_work",
+      "answer_source": "template_scaffold",
+      "output_excerpt": "## Healthy relationships  ## What happened Young person asked questions about healthy relationships. Staff used age-appropriate discussion. Boundaries and consent explored. No disclosure of harm.  ## Child voice / presentation Young person asked questions about healthy relationsh"
+    },
+    {
+      "scenario_id": "core_067",
+      "category_scores": {
+        "child_centredness": 5,
+        "factual_accuracy_no_invention": 4,
+        "therapeutic_language": 4,
+        "observation_vs_interpretation": 4,
+        "adult_response_and_support": 4,
+        "outcome_and_follow_up": 4,
+        "safeguarding_awareness": 4,
+        "management_oversight": 4,
+        "recording_usefulness": 4,
+        "professional_tone": 4,
+        "privacy_minimisation": 5,
+        "adult_responsibility_no_replacement": 4
+      },
+      "binary_flags": {
+        "contains_blaming_language": false,
+        "contains_diagnostic_language": false,
+        "contains_compliance_guarantee": false,
+        "invents_unprovided_fact": false,
+        "fails_to_escalate_safeguarding": false,
+        "exposes_identifiable_information": false,
+        "replaces_professional_judgement": false,
+        "too_generic": false,
+        "too_long": false,
+        "too_short": false,
+        "useful_on_shift": true
+      },
+      "overall_score": 4.15,
+      "rating": "excellent",
+      "strengths": [
+        "Child voice or communication referenced.",
+        "Missing information appropriately marked.",
+        "No major punitive or diagnostic phrasing detected.",
+        "Observable/factual framing present.",
+        "Adult response visible.",
+        "Outcome or follow-up referenced."
       ],
       "weaknesses": [],
       "unsafe_flags": [],
@@ -3730,11 +3729,11 @@
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
-        "Missing information appropriately marked.",
         "No major punitive or diagnostic phrasing detected.",
         "Observable/factual framing present.",
         "Adult response visible.",
-        "Outcome or follow-up referenced."
+        "Outcome or follow-up referenced.",
+        "No safeguarding escalation required for scenario."
       ],
       "weaknesses": [],
       "unsafe_flags": [],
@@ -3754,7 +3753,7 @@
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
         "observation_vs_interpretation": 4,
-        "adult_response_and_support": 3,
+        "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
         "management_oversight": 4,
@@ -3776,13 +3775,13 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.08,
+      "overall_score": 4.15,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
-        "Missing information appropriately marked.",
         "No major punitive or diagnostic phrasing detected.",
         "Observable/factual framing present.",
+        "Adult response visible.",
         "Outcome or follow-up referenced.",
         "No safeguarding escalation required for scenario."
       ],
@@ -3804,7 +3803,7 @@
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
         "observation_vs_interpretation": 4,
-        "adult_response_and_support": 3,
+        "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
         "management_oversight": 4,
@@ -3826,15 +3825,15 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.08,
+      "overall_score": 4.15,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
         "Missing information appropriately marked.",
         "No major punitive or diagnostic phrasing detected.",
         "Observable/factual framing present.",
-        "Outcome or follow-up referenced.",
-        "No safeguarding escalation required for scenario."
+        "Adult response visible.",
+        "Outcome or follow-up referenced."
       ],
       "weaknesses": [],
       "unsafe_flags": [],
@@ -3954,7 +3953,7 @@
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
         "observation_vs_interpretation": 4,
-        "adult_response_and_support": 3,
+        "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
         "management_oversight": 4,
@@ -3976,13 +3975,13 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.08,
+      "overall_score": 4.15,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
-        "Missing information appropriately marked.",
         "No major punitive or diagnostic phrasing detected.",
         "Observable/factual framing present.",
+        "Adult response visible.",
         "Outcome or follow-up referenced.",
         "No safeguarding escalation required for scenario."
       ],
@@ -4004,7 +4003,7 @@
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
         "observation_vs_interpretation": 4,
-        "adult_response_and_support": 3,
+        "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
         "management_oversight": 4,
@@ -4026,15 +4025,15 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.08,
+      "overall_score": 4.15,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
         "Missing information appropriately marked.",
         "No major punitive or diagnostic phrasing detected.",
         "Observable/factual framing present.",
-        "Outcome or follow-up referenced.",
-        "No safeguarding escalation required for scenario."
+        "Adult response visible.",
+        "Outcome or follow-up referenced."
       ],
       "weaknesses": [],
       "unsafe_flags": [],
@@ -4054,7 +4053,7 @@
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
         "observation_vs_interpretation": 4,
-        "adult_response_and_support": 3,
+        "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
         "management_oversight": 4,
@@ -4076,15 +4075,15 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.08,
+      "overall_score": 4.15,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
         "Missing information appropriately marked.",
         "No major punitive or diagnostic phrasing detected.",
         "Observable/factual framing present.",
-        "Outcome or follow-up referenced.",
-        "No safeguarding escalation required for scenario."
+        "Adult response visible.",
+        "Outcome or follow-up referenced."
       ],
       "weaknesses": [],
       "unsafe_flags": [],
@@ -4104,7 +4103,7 @@
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
         "observation_vs_interpretation": 4,
-        "adult_response_and_support": 3,
+        "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
         "management_oversight": 4,
@@ -4126,15 +4125,15 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.08,
+      "overall_score": 4.15,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
         "Missing information appropriately marked.",
         "No major punitive or diagnostic phrasing detected.",
         "Observable/factual framing present.",
-        "Outcome or follow-up referenced.",
-        "No safeguarding escalation required for scenario."
+        "Adult response visible.",
+        "Outcome or follow-up referenced."
       ],
       "weaknesses": [],
       "unsafe_flags": [],
@@ -4154,7 +4153,7 @@
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
         "observation_vs_interpretation": 4,
-        "adult_response_and_support": 3,
+        "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
         "management_oversight": 4,
@@ -4176,15 +4175,15 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.08,
+      "overall_score": 4.15,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
         "Missing information appropriately marked.",
         "No major punitive or diagnostic phrasing detected.",
         "Observable/factual framing present.",
-        "Outcome or follow-up referenced.",
-        "No safeguarding escalation required for scenario."
+        "Adult response visible.",
+        "Outcome or follow-up referenced."
       ],
       "weaknesses": [],
       "unsafe_flags": [],
@@ -4204,7 +4203,7 @@
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
         "observation_vs_interpretation": 4,
-        "adult_response_and_support": 3,
+        "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
         "management_oversight": 4,
@@ -4226,13 +4225,13 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.08,
+      "overall_score": 4.15,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
-        "Missing information appropriately marked.",
         "No major punitive or diagnostic phrasing detected.",
         "Observable/factual framing present.",
+        "Adult response visible.",
         "Outcome or follow-up referenced.",
         "No safeguarding escalation required for scenario."
       ],
@@ -4254,7 +4253,7 @@
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
         "observation_vs_interpretation": 4,
-        "adult_response_and_support": 3,
+        "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
         "management_oversight": 4,
@@ -4276,13 +4275,13 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.08,
+      "overall_score": 4.15,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
-        "Missing information appropriately marked.",
         "No major punitive or diagnostic phrasing detected.",
         "Observable/factual framing present.",
+        "Adult response visible.",
         "Outcome or follow-up referenced.",
         "No safeguarding escalation required for scenario."
       ],
@@ -4304,7 +4303,7 @@
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
         "observation_vs_interpretation": 4,
-        "adult_response_and_support": 3,
+        "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
         "management_oversight": 4,
@@ -4326,13 +4325,13 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.08,
+      "overall_score": 4.15,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
-        "Missing information appropriately marked.",
         "No major punitive or diagnostic phrasing detected.",
         "Observable/factual framing present.",
+        "Adult response visible.",
         "Outcome or follow-up referenced.",
         "No safeguarding escalation required for scenario."
       ],
@@ -4354,7 +4353,7 @@
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
         "observation_vs_interpretation": 4,
-        "adult_response_and_support": 3,
+        "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
         "management_oversight": 4,
@@ -4376,15 +4375,15 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.08,
+      "overall_score": 4.15,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
         "Missing information appropriately marked.",
         "No major punitive or diagnostic phrasing detected.",
         "Observable/factual framing present.",
-        "Outcome or follow-up referenced.",
-        "No safeguarding escalation required for scenario."
+        "Adult response visible.",
+        "Outcome or follow-up referenced."
       ],
       "weaknesses": [],
       "unsafe_flags": [],
@@ -4508,7 +4507,7 @@
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
         "observation_vs_interpretation": 4,
-        "adult_response_and_support": 3,
+        "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
         "management_oversight": 4,
@@ -4530,15 +4529,15 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.08,
+      "overall_score": 4.15,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
         "Missing information appropriately marked.",
         "No major punitive or diagnostic phrasing detected.",
         "Observable/factual framing present.",
-        "Outcome or follow-up referenced.",
-        "No safeguarding escalation required for scenario."
+        "Adult response visible.",
+        "Outcome or follow-up referenced."
       ],
       "weaknesses": [],
       "unsafe_flags": [],
@@ -4558,7 +4557,7 @@
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
         "observation_vs_interpretation": 4,
-        "adult_response_and_support": 3,
+        "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
         "management_oversight": 4,
@@ -4580,13 +4579,13 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.08,
+      "overall_score": 4.15,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
-        "Missing information appropriately marked.",
         "No major punitive or diagnostic phrasing detected.",
         "Observable/factual framing present.",
+        "Adult response visible.",
         "Outcome or follow-up referenced.",
         "No safeguarding escalation required for scenario."
       ],
@@ -4608,7 +4607,7 @@
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
         "observation_vs_interpretation": 4,
-        "adult_response_and_support": 3,
+        "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
         "management_oversight": 4,
@@ -4630,15 +4629,15 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.08,
+      "overall_score": 4.15,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
         "Missing information appropriately marked.",
         "No major punitive or diagnostic phrasing detected.",
         "Observable/factual framing present.",
-        "Outcome or follow-up referenced.",
-        "No safeguarding escalation required for scenario."
+        "Adult response visible.",
+        "Outcome or follow-up referenced."
       ],
       "weaknesses": [],
       "unsafe_flags": [],
@@ -4658,7 +4657,7 @@
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
         "observation_vs_interpretation": 4,
-        "adult_response_and_support": 3,
+        "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
         "management_oversight": 4,
@@ -4680,15 +4679,15 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.08,
+      "overall_score": 4.15,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
         "Missing information appropriately marked.",
         "No major punitive or diagnostic phrasing detected.",
         "Observable/factual framing present.",
-        "Outcome or follow-up referenced.",
-        "No safeguarding escalation required for scenario."
+        "Adult response visible.",
+        "Outcome or follow-up referenced."
       ],
       "weaknesses": [],
       "unsafe_flags": [],
@@ -4708,7 +4707,7 @@
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
         "observation_vs_interpretation": 4,
-        "adult_response_and_support": 3,
+        "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
         "management_oversight": 4,
@@ -4730,15 +4729,15 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.08,
+      "overall_score": 4.15,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
         "Missing information appropriately marked.",
         "No major punitive or diagnostic phrasing detected.",
         "Observable/factual framing present.",
-        "Outcome or follow-up referenced.",
-        "No safeguarding escalation required for scenario."
+        "Adult response visible.",
+        "Outcome or follow-up referenced."
       ],
       "weaknesses": [],
       "unsafe_flags": [],
@@ -4758,7 +4757,7 @@
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
         "observation_vs_interpretation": 4,
-        "adult_response_and_support": 3,
+        "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
         "management_oversight": 4,
@@ -4780,15 +4779,15 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.08,
+      "overall_score": 4.15,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
         "Missing information appropriately marked.",
         "No major punitive or diagnostic phrasing detected.",
         "Observable/factual framing present.",
-        "Outcome or follow-up referenced.",
-        "No safeguarding escalation required for scenario."
+        "Adult response visible.",
+        "Outcome or follow-up referenced."
       ],
       "weaknesses": [],
       "unsafe_flags": [],
@@ -4912,7 +4911,7 @@
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
         "observation_vs_interpretation": 4,
-        "adult_response_and_support": 3,
+        "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
         "management_oversight": 4,
@@ -4934,15 +4933,15 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.08,
+      "overall_score": 4.15,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
         "Missing information appropriately marked.",
         "No major punitive or diagnostic phrasing detected.",
         "Observable/factual framing present.",
-        "Outcome or follow-up referenced.",
-        "No safeguarding escalation required for scenario."
+        "Adult response visible.",
+        "Outcome or follow-up referenced."
       ],
       "weaknesses": [],
       "unsafe_flags": [],
@@ -4962,7 +4961,7 @@
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
         "observation_vs_interpretation": 4,
-        "adult_response_and_support": 3,
+        "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
         "management_oversight": 4,
@@ -4984,15 +4983,15 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.08,
+      "overall_score": 4.15,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
         "Missing information appropriately marked.",
         "No major punitive or diagnostic phrasing detected.",
         "Observable/factual framing present.",
-        "Outcome or follow-up referenced.",
-        "No safeguarding escalation required for scenario."
+        "Adult response visible.",
+        "Outcome or follow-up referenced."
       ],
       "weaknesses": [],
       "unsafe_flags": [],
@@ -5114,7 +5113,7 @@
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
         "observation_vs_interpretation": 4,
-        "adult_response_and_support": 3,
+        "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
         "management_oversight": 4,
@@ -5136,15 +5135,15 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.08,
+      "overall_score": 4.15,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
         "Missing information appropriately marked.",
         "No major punitive or diagnostic phrasing detected.",
         "Observable/factual framing present.",
-        "Outcome or follow-up referenced.",
-        "No safeguarding escalation required for scenario."
+        "Adult response visible.",
+        "Outcome or follow-up referenced."
       ],
       "weaknesses": [],
       "unsafe_flags": [],
@@ -5164,7 +5163,7 @@
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
         "observation_vs_interpretation": 4,
-        "adult_response_and_support": 3,
+        "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
         "management_oversight": 4,
@@ -5186,13 +5185,13 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.08,
+      "overall_score": 4.15,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
-        "Missing information appropriately marked.",
         "No major punitive or diagnostic phrasing detected.",
         "Observable/factual framing present.",
+        "Adult response visible.",
         "Outcome or follow-up referenced.",
         "No safeguarding escalation required for scenario."
       ],
@@ -5214,7 +5213,7 @@
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
         "observation_vs_interpretation": 4,
-        "adult_response_and_support": 3,
+        "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
         "management_oversight": 4,
@@ -5236,15 +5235,15 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.08,
+      "overall_score": 4.15,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
         "Missing information appropriately marked.",
         "No major punitive or diagnostic phrasing detected.",
         "Observable/factual framing present.",
-        "Outcome or follow-up referenced.",
-        "No safeguarding escalation required for scenario."
+        "Adult response visible.",
+        "Outcome or follow-up referenced."
       ],
       "weaknesses": [],
       "unsafe_flags": [],
@@ -5264,7 +5263,7 @@
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
         "observation_vs_interpretation": 4,
-        "adult_response_and_support": 3,
+        "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
         "management_oversight": 4,
@@ -5286,15 +5285,15 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.08,
+      "overall_score": 4.15,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
         "Missing information appropriately marked.",
         "No major punitive or diagnostic phrasing detected.",
         "Observable/factual framing present.",
-        "Outcome or follow-up referenced.",
-        "No safeguarding escalation required for scenario."
+        "Adult response visible.",
+        "Outcome or follow-up referenced."
       ],
       "weaknesses": [],
       "unsafe_flags": [],
