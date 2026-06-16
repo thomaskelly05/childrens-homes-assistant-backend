@@ -37,7 +37,7 @@ export const ORB_RESIDENTIAL_SKILLS: OrbSkillDefinition[] = [
     mode: 'Safeguarding Thinking'
   },
   {
-    id: 'inspection evidence preparation',
+    id: 'inspection-readiness',
     title: 'Inspection evidence preparation',
     description: 'Inspection themes, evidence and manager narrative.',
     category: 'inspection',

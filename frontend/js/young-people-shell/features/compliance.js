@@ -1480,7 +1480,7 @@ async function fetchComplianceDataset(homeId) {
     safeGet(`/homes/${homeId}/inductions`),
     safeGet(`/homes/${homeId}/child-compliance`),
     safeGet(`/homes/${homeId}/documents`),
-    safeGet(`/homes/${homeId}/inspection evidence preparation`),
+    safeGet(`/homes/${homeId}/inspection-readiness`),
   ];
 
   const [

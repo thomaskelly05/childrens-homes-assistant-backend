@@ -1151,7 +1151,7 @@ def home_safeguarding(home_id: int, request: Request):
     )
 
 
-@router.get("/homes/{home_id}/inspection evidence preparation")
+@router.get("/homes/{home_id}/inspection-readiness")
 def home_inspection_readiness(home_id: int, request: Request):
     return _inspection_improvement_actions_payload(home_id, request)
 

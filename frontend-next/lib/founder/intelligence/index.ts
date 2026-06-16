@@ -22,5 +22,5 @@ export {
   type OfstedReadinessResult,
   type ReadinessGap,
   type ReadinessStatus
-} from './inspection evidence preparation-engine'
+} from './inspection-readiness-engine'
 export { calculateOrbIntelligence, generateOrbIntelligence, type OrbCategoryIntelligence, type OrbIntelligence } from './orb-intelligence-engine'

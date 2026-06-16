@@ -155,4 +155,4 @@ export function scopeNavigationFor(scopeType: OsScopeType, ids: { homeId?: strin
   return noScopeNavigation()
 }
 
-export const SCOPE_HEAVY_ROUTE_HINTS = ['/command-centre', '/governance', '/staff', '/intelligence', '/reports', '/actions', '/chronology', '/handover', '/record/alerts', '/intelligence/inspection evidence preparation'] as const
+export const SCOPE_HEAVY_ROUTE_HINTS = ['/command-centre', '/governance', '/staff', '/intelligence', '/reports', '/actions', '/chronology', '/handover', '/record/alerts', '/intelligence/inspection-readiness'] as const

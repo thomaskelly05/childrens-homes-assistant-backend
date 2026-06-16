@@ -463,7 +463,7 @@ MODULE_KEYWORDS = {
     "inspection_readiness": [
         "ofsted",
         "inspection",
-        "inspection evidence preparation",
+        "inspection-readiness",
         "Inspection evidence preparation",
         "what would ofsted say",
         "what would an inspector notice",
@@ -528,7 +528,7 @@ INSPECTION_TRIGGER_WORDS = {
     "inspection",
     "inspector",
     "sccif",
-    "inspection evidence preparation",
+    "inspection-readiness",
     "Inspection evidence preparation",
     "evidence pack",
     "audit trail",

@@ -25,7 +25,7 @@ def test_inspection_readiness_page_exists():
     page = FRONTEND / "app" / "intelligence" / "inspection-readiness" / "page.tsx"
     assert page.is_file()
     text = _read(page)
-    assert "Inspection readiness" in text
+    assert "Inspection evidence preparation" in text
     assert "does not predict inspection outcomes" in text
 
 

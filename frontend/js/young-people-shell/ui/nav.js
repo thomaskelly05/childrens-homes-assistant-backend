@@ -132,7 +132,7 @@ const MOBILE_BOTTOM_BY_SCOPE = {
     "ofsted-dashboard",
     "sccif-evidence",
     "judgement-builder",
-    "inspection evidence preparation",
+    "inspection-readiness",
     "actions",
   ],
 };
@@ -188,8 +188,8 @@ const SECTION_SCOPE_MAP = {
   reg45: "quality",
 
   "ofsted-dashboard": "ofsted",
-  "inspection evidence preparation": "ofsted",
-  "inspection evidence preparation": "ofsted",
+  "inspection-readiness": "ofsted",
+  "inspection-readiness": "ofsted",
   "sccif-evidence": "ofsted",
   "judgement-builder": "ofsted",
 };
@@ -336,7 +336,7 @@ function shouldShowDesktopSidebar() {
 }
 
 function isReadinessSection(sectionId) {
-  return ["readiness", "inspection evidence preparation", "inspection evidence preparation"].includes(
+  return ["readiness", "inspection-readiness", "inspection-readiness"].includes(
     String(sectionId || "")
   );
 }
@@ -418,7 +418,7 @@ const QUALITY_SECTION_LOADERS = Object.freeze({
   compliance: loadCompliance,
   reg44: loadReg44,
   reg45: loadReg45,
-  "inspection evidence preparation": loadReadiness,
+  "inspection-readiness": loadReadiness,
   reports: loadReports,
   actions: loadActions,
 });
@@ -427,7 +427,7 @@ const OFSTED_SECTION_LOADERS = Object.freeze({
   "ofsted-dashboard": loadOfstedDashboard,
   "sccif-evidence": loadSccifEvidence,
   "judgement-builder": loadJudgementBuilder,
-  "inspection evidence preparation": loadReadiness,
+  "inspection-readiness": loadReadiness,
   compliance: loadCompliance,
   actions: loadActions,
 });

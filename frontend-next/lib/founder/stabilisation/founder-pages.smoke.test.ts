@@ -88,7 +88,7 @@ const BLOCKED_BROWSER_PATTERNS = [
   /authFetchResponse\([^)]*['"]\/orb\/admin\//,
   /fetch\([^)]*['"]\/api\/providers/,
   /fetch\([^)]*['"]\/api\/homes/,
-  /fetch\([^)]*['"]\/api\/inspection evidence preparation/
+  /fetch\([^)]*['"]\/api\/inspection-readiness/
 ]
 
 describe('Founder OS page smoke suite', () => {

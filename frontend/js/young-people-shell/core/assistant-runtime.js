@@ -237,7 +237,7 @@ function sectionGuidance(section, scope) {
       "Support with supervision oversight, workforce development, training and practice accountability.",
     quality:
       "Support with audit summaries, RI themes, monthly patterns, triangulation, quality assurance and Inspection evidence preparation.",
-    "inspection evidence preparation":
+    "inspection-readiness":
       "Support with inspection scorecards, lines of enquiry, action recovery, evidence quality and Ofsted preparation.",
     reg44:
       "Support with Reg 44 findings, recommendations, provider challenge and evidence of follow-through.",
@@ -579,19 +579,19 @@ function filterEvidenceBySection(evidence = [], section = "workspace") {
       "team",
       "supervision",
       "documents",
-      "inspection evidence preparation",
+      "inspection-readiness",
       "reg44",
       "reg45",
     ],
-    "inspection evidence preparation": [
-      "inspection evidence preparation",
+    "inspection-readiness": [
+      "inspection-readiness",
       "quality",
       "compliance",
       "manager",
       "reports",
     ],
-    reg44: ["reg44", "quality", "inspection evidence preparation", "manager"],
-    reg45: ["reg45", "quality", "reports", "inspection evidence preparation"],
+    reg44: ["reg44", "quality", "inspection-readiness", "manager"],
+    reg45: ["reg45", "quality", "reports", "inspection-readiness"],
   };
 
   const allowed = new Set(sectionGroups[section] || [section]);

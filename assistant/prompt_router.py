@@ -297,7 +297,7 @@ OFSTED_TERMS = {
     "inspection",
     "inspector",
     "sccif",
-    "inspection evidence preparation",
+    "inspection-readiness",
     "Inspection evidence preparation",
     "what would ofsted",
     "what would an inspector",

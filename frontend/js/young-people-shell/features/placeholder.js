@@ -469,7 +469,7 @@ const SECTION_CONTENT = {
     ],
   },
 
-  "inspection evidence preparation": {
+  "inspection-readiness": {
     eyebrow: "Quality and compliance",
     intro:
       "An Inspection evidence preparation area pulling together evidence, actions, leadership oversight, key records and inspection-day confidence.",
@@ -673,7 +673,7 @@ const SECTION_CONTENT = {
     ],
   },
 
-  "inspection evidence preparation": {
+  "inspection-readiness": {
     eyebrow: "Quality",
     intro:
       "A strategic inspection evidence preparation area for provider and home leaders preparing evidence, speaking points, risk analysis and quality narrative.",

@@ -93,7 +93,7 @@ export function OrbInspectionReadinessPanel({
           </OrbStudioSidebarPanel>
         }
       >
-        <div data-orb-inspection evidence preparation-panel data-orb-premium-page="inspection_readiness">
+        <div data-orb-inspection-readiness-panel data-orb-premium-page="inspection_readiness">
           <OrbStudioComposerCard label="Paste evidence / notes">
             <OrbPremiumTextarea
               value={evidence}

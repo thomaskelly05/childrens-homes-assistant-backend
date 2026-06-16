@@ -1,4 +1,4 @@
-import type { InspectionReadinessDashboard } from '@/lib/os-api/inspection evidence preparation'
+import type { InspectionReadinessDashboard } from '@/lib/os-api/inspection-readiness'
 import { isFounderMockFallbackAllowed } from '@/lib/founder/data/founder-data-mode'
 import { mockReadinessMetrics } from '@/lib/founder/intelligence/mock-inputs'
 import type { ReadinessMetrics } from '@/lib/founder/contracts/readiness-metrics'

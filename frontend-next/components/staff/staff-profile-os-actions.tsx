@@ -59,8 +59,8 @@ export function StaffProfileOsSccifLink({ staffId }: { staffId: string }) {
         Leadership / workforce evidence (SCCIF)
       </Link>
       <Link
-        href={`/intelligence/inspection evidence preparation?staff_id=${encodeURIComponent(staffId)}`}
-        data-testid="staff-profile-inspection evidence preparation-link"
+        href={`/intelligence/inspection-readiness?staff_id=${encodeURIComponent(staffId)}`}
+        data-testid="staff-profile-inspection-readiness-link"
         className="inline-flex rounded-full border border-indigo-200 bg-indigo-50 px-4 py-2 text-xs font-black text-indigo-900"
       >
         Inspection evidence preparation (workforce evidence)

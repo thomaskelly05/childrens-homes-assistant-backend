@@ -75,7 +75,7 @@ export function isShellOrbRailRoute(pathname: string): boolean {
   if (pathname === '/chronology' || pathname.startsWith('/chronology/')) return false
   if (/\/young-people\/[^/]+\/chronology/.test(pathname)) return false
   if (pathname === '/handover' || pathname.startsWith('/handover/')) return false
-  if (pathname === '/intelligence/inspection evidence preparation' || pathname.startsWith('/intelligence/inspection evidence preparation/')) return true
+  if (pathname === '/intelligence/inspection-readiness' || pathname.startsWith('/intelligence/inspection-readiness/')) return true
   if (pathname === '/intelligence/reg45' || pathname.startsWith('/intelligence/reg45/')) return true
   if (pathname === '/intelligence/sccif' || pathname.startsWith('/intelligence/sccif/')) return true
   if (pathname === '/record/reviews' || pathname.startsWith('/record/reviews/')) return true
@@ -91,7 +91,7 @@ export function resolveOperationalOrbScopeType(pathname: string): OperationalOrb
   if (/\/young-people\/[^/]+\/lifeecho\/?$/.test(pathname) || pathname.startsWith('/life_echo')) return 'lifeecho'
   if (pathname.startsWith('/chronology') || /\/chronology/.test(pathname)) return 'chronology'
   if (pathname.startsWith('/handover')) return 'handover'
-  if (pathname.startsWith('/intelligence/inspection evidence preparation')) return 'inspection'
+  if (pathname.startsWith('/intelligence/inspection-readiness')) return 'inspection'
   if (pathname.startsWith('/intelligence/reg45')) return 'reg45'
   if (pathname.startsWith('/intelligence/sccif')) return 'sccif'
   if (pathname.startsWith('/record/reviews')) return 'review'

@@ -93,6 +93,6 @@ export const OS_HOME_SUPPORT_LINKS = [
   { label: 'Notifications', href: '/notifications', testId: 'os-home-notifications' },
   { label: 'Connect', href: '/connect', testId: 'os-home-connect' },
   { label: 'Manager brief', href: '/command-centre/briefing', testId: 'os-home-manager-brief' },
-  { label: 'Inspection evidence preparation', href: '/intelligence/inspection evidence preparation', testId: 'os-home-inspection' },
+  { label: 'Inspection evidence preparation', href: '/intelligence/inspection-readiness', testId: 'os-home-inspection' },
   { label: 'Schema status', href: '/schema-live', testId: 'os-home-schema' }
 ] as const

@@ -1,8 +1,8 @@
 'use client'
 
-import { InspectionEvidenceCard } from '@/components/inspection evidence preparation/inspection-evidence-card'
-import { InspectionGapCard } from '@/components/inspection evidence preparation/inspection-gap-card'
-import type { InspectionPackSection } from '@/lib/os-api/inspection evidence preparation'
+import { InspectionEvidenceCard } from '@/components/inspection-readiness/inspection-evidence-card'
+import { InspectionGapCard } from '@/components/inspection-readiness/inspection-gap-card'
+import type { InspectionPackSection } from '@/lib/os-api/inspection-readiness'
 
 type Props = { section: InspectionPackSection }
 

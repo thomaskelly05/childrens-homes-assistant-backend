@@ -14,7 +14,7 @@ const BLOCKED_BROWSER_PATH_PREFIXES = [
   '/orb/admin/',
   '/api/providers',
   '/api/homes',
-  '/api/inspection evidence preparation/'
+  '/api/inspection-readiness/'
 ] as const
 
 const GET_CACHE_TTL_MS = 10_000

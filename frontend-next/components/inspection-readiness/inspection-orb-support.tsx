@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
 import { shouldShowInlineOrbCard } from '@/lib/orb/orb-presence-rules'
-import { inspectionReadinessOrbHref, type InspectionEvidencePack } from '@/lib/os-api/inspection evidence preparation'
+import { inspectionReadinessOrbHref, type InspectionEvidencePack } from '@/lib/os-api/inspection-readiness'
 
 type Props = { pack?: InspectionEvidencePack | null }
 

@@ -132,7 +132,7 @@ INTERNAL_IDENTIFIER_ALLOWLIST = frozenset(
         "sccif_ofsted_readiness_intelligence",
         "ofsted_readiness_summary",
         "ofsted-ready",
-        "inspection evidence preparation",
+        "inspection-readiness",
     }
 )
 
@@ -351,7 +351,7 @@ def scan_product_strings() -> list[WordingOccurrence]:
                     continue
                 if re.search(r"\bdoes not provide an ofsted grade\b", literal, re.I):
                     continue
-                if "/inspection evidence preparation" in literal or "inspection_readiness_" in literal:
+                if "/inspection-readiness" in literal or "inspection_readiness_" in literal:
                     continue
                 if re.search(
                     r"\b(does not|do not|must not|cannot|can't|will not|won't)\s+[\w\s]{0,30}"

@@ -840,7 +840,7 @@ PRACTICE_CATEGORY_FALLBACKS: dict[str, CategoryFallbackContent] = {
             "Quality Standards and SCCIF apply — verify locally.",
         ],
     ),
-    "inspection evidence preparation": CategoryFallbackContent(
+    "inspection-readiness": CategoryFallbackContent(
         safety_position=(
             "This is a management oversight scenario — "
             "Inspection evidence preparation requires honest safeguarding and recording evidence."

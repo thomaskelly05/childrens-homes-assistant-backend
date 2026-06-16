@@ -60,7 +60,7 @@ SURFACES: tuple[EvidenceSurface, ...] = (
     EvidenceSurface("ai_generated_reports", "Generated reports", "report", ("title", "report_type"), ("summary", "report_text", "findings"), ("review_month", "created_at", "updated_at"), "/young-people/{young_person_id}/reports"),
     EvidenceSurface("governance_reg44_visits", "Reg 44 visits", "governance", ("title", "visit_type", "visitor_name"), ("summary", "findings", "actions", "manager_response"), ("visit_date", "created_at", "updated_at"), "/governance/reg44", home_provider=True),
     EvidenceSurface("governance_reg45_reviews", "Reg 45 reviews", "governance", ("title", "review_period"), ("summary", "findings", "improvement_actions"), ("review_date", "created_at", "updated_at"), "/governance/reg45", home_provider=True),
-    EvidenceSurface("inspection_evidence_facts", "Inspection evidence", "inspection", ("title", "standard", "area"), ("summary", "evidence", "rationale"), ("created_at", "updated_at"), "/inspection evidence preparation", home_provider=True),
+    EvidenceSurface("inspection_evidence_facts", "Inspection evidence", "inspection", ("title", "standard", "area"), ("summary", "evidence", "rationale"), ("created_at", "updated_at"), "/inspection-readiness", home_provider=True),
 )
 
 LIVE_JOURNEY_TYPES = {

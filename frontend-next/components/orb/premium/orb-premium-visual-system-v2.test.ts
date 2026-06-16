@@ -86,7 +86,7 @@ describe('ORB Premium Visual System v2', () => {
     const practice = read('components/orb-standalone/orb-practice-panels.tsx')
     const shift = read('components/orb-standalone/shift-builder/orb-shift-builder-panel.tsx')
     assert.match(saved, /data-orb-saved-outputs-panel/)
-    assert.match(practice, /data-orb-inspection evidence preparation-panel/)
+    assert.match(practice, /data-orb-inspection-readiness-panel/)
     assert.match(practice, /data-orb-safeguarding-thinking-panel/)
     assert.match(practice, /data-orb-record-properly-panel/)
     assert.match(shift, /panelId="shift_builder"/)
