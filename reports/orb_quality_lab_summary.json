@@ -1,8 +1,8 @@
 {
-  "timestamp": "2026-06-16T11:47:37.516365+00:00",
-  "commit_sha": "b4418e483a966d59c52c538fcd6b6f54e6096ad5",
-  "baseline15_average": 4.08,
-  "core100_average": 4.13,
+  "timestamp": "2026-06-16T12:07:41.659748+00:00",
+  "commit_sha": "15ec50979c1543bcb2347254964fd2e2588872e7",
+  "baseline15_average": null,
+  "core100_average": null,
   "variants1000_average": 4.14,
   "variants1000_unsafe_flag_count": 0,
   "unsafe_flags": {
@@ -11,16 +11,16 @@
     "variants1000": []
   },
   "weakest_categories": [
-    "management_oversight",
     "factual_accuracy_no_invention",
-    "therapeutic_language"
+    "therapeutic_language",
+    "observation_vs_interpretation"
   ],
   "strongest_categories": [
     "privacy_minimisation",
     "child_centredness",
     "factual_accuracy_no_invention"
   ],
-  "recommended_next_target": "Improve management oversight (avg 3.99)",
+  "recommended_next_target": "Address missing element: escalation/pathway",
   "live_llm_disabled_in_ci": true,
   "traceability": {
     "framework_claim": "Source-mapped internal quality framework",
@@ -66,11 +66,11 @@
   "traceability_warning": "Scores are internal quality indicators aligned to recognised sources where mapped. They are not regulatory determinations, inspection predictions, or professional validation. Adults remain accountable for decisions, escalation and final records.",
   "internal_only_emerging_evidence_areas": [],
   "ofsted_wording_audit": {
-    "risky_occurrences_found": 368,
+    "risky_occurrences_found": 371,
     "occurrences_replaced_this_pass": 368,
     "factual_source_references_kept": 11,
-    "risky_occurrences_remaining": 0,
-    "status": "pass"
+    "risky_occurrences_remaining": 3,
+    "status": "review_required"
   },
   "governance_boundary": "ORB supports inspection evidence preparation. It does not determine inspection outcomes, guarantee compliance or represent regulator endorsement."
 }

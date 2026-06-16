@@ -213,6 +213,15 @@ _ADULT_RESPONSE_PRINCIPLE = (
     "Do not invent actions not in the input — prompt for missing detail instead."
 )
 
+_MANAGEMENT_OVERSIGHT_PRINCIPLE = (
+    "For residential childcare records, help adults consider management oversight — not replace it. "
+    "Prompt whether this is an isolated event or part of a pattern; whether plans or risk assessments need review; "
+    "whether the adult response was consistent with the agreed approach; whether a manager/senior should review; "
+    "whether supervision, debrief or practice learning is needed; and what follow-up remains. "
+    "Use 'manager/senior should consider reviewing…' not 'manager must conclude…'. "
+    "ORB supports oversight; it does not complete management oversight."
+)
+
 _ADULT_ACTION_CUE_PATTERN = re.compile(
     r"\b(?:staff|key\s*worker|shift\s*lead|manager|adult)\s+"
     r"(?:offered|listened|sat|used|gave|followed|informed|checked|respected|helped|supported|"
@@ -466,7 +475,158 @@ def _magic_notes_missing_prompt(scenario: dict[str, Any], *, safeguarding: bool 
         )
     else:
         parts.append("What outcome and follow-up should the next adult know about the child's experience?")
+    if not _input_has_management_cues(cleaned):
+        parts.append(
+            "Does this require senior/manager review, handover or plan update? "
+            "Record what remains to be reviewed by a responsible adult."
+        )
     return "\n".join(parts)
+
+
+def _input_has_management_cues(text: str) -> bool:
+    """Whether input already mentions manager, oversight or review actions."""
+    lower = str(text or "").lower()
+    return any(
+        cue in lower
+        for cue in (
+            "manager",
+            "senior",
+            "oversight",
+            "supervision",
+            "debrief",
+            "reg 44",
+            "regulation 44",
+            "informed by phone",
+            "on-call",
+            "dsl",
+        )
+    )
+
+
+def _needs_management_oversight_section(scenario: dict[str, Any]) -> bool:
+    """Whether scaffold should include a management oversight / review section."""
+    required = list(scenario.get("required_elements") or [])
+    if "management oversight" in required:
+        return True
+    family = str(scenario.get("scenario_family") or "")
+    if family in {
+        "incident_reflection",
+        "safeguarding",
+        "handover",
+        "meetings",
+        "management_oversight",
+        "regulation_evidence",
+        "behaviour_communication",
+        "key_work",
+    }:
+        return True
+    variant = str(scenario.get("variant_type") or "")
+    feature = str(scenario.get("feature_target") or "")
+    if variant in {"manager_oversight", "reflective_supervision"} or feature == "Management oversight":
+        return True
+    return False
+
+
+def _build_management_oversight_section(scenario: dict[str, Any], input_text: str) -> str:
+    """Build proportionate management oversight prompts — supports review, does not decide."""
+    family = str(scenario.get("scenario_family") or "")
+    cleaned = _clean_input_prefix(input_text)
+    lines: list[str] = []
+
+    if _input_has_management_cues(cleaned):
+        lines.append(
+            "Management action noted in input — manager/senior should consider reviewing "
+            "whether follow-up, debrief or plan review is complete."
+        )
+    else:
+        lines.append(
+            "Manager/senior should consider reviewing this record — "
+            "what remains to be reviewed by a responsible adult."
+        )
+
+    if family == "daily_care":
+        lines.extend(
+            [
+                "Pattern or repeat theme: is this isolated or part of an emerging pattern?",
+                "Handover or follow-up: does the next adult need to continue anything?",
+                "Plan review: if repeated, should the child's plan or support strategy be updated?",
+            ]
+        )
+    elif family == "incident_reflection":
+        lines.extend(
+            [
+                "Manager/senior review: should this incident be reviewed for learning and consistency?",
+                "Debrief / supervision / learning: is a staff debrief or practice reflection needed?",
+                "Plan or risk assessment review: does this inform the child's plan or risk assessment?",
+                "Adult response consistency: was the response aligned with the agreed approach?",
+            ]
+        )
+    elif family == "safeguarding":
+        lines.extend(
+            [
+                "Management oversight: who was informed and what follow-up review is needed?",
+                "Local safeguarding pathway followed — do not investigate beyond role.",
+                "Responsible adult to confirm notifications and review outstanding actions.",
+            ]
+        )
+    elif family == "behaviour_communication":
+        lines.extend(
+            [
+                "Pattern or repeat theme: are triggers or themes recurring?",
+                "Plan review: should the behaviour support plan be reviewed?",
+                "Supervision / reflection: what should adults try consistently?",
+            ]
+        )
+    elif family == "handover":
+        lines.extend(
+            [
+                "What the next shift should continue and what senior/manager should review.",
+                "Unresolved follow-up: record outstanding actions and review owner.",
+            ]
+        )
+    elif family == "key_work":
+        lines.extend(
+            [
+                "Should themes from this session inform placement or care planning?",
+                "Child's views: to be fed into planning/review where appropriate.",
+            ]
+        )
+    elif family == "meetings":
+        lines.extend(
+            [
+                "Agreed actions and responsible adults — record review points.",
+                "Child's views: still to be sought or represented where appropriate.",
+                "ORB supports meeting reflection; adults remain responsible for decisions.",
+            ]
+        )
+    elif family == "regulation_evidence":
+        lines.extend(
+            [
+                "Evidence and gaps: what evidence exists and what is missing?",
+                "Learning / action plan: what improvement actions are suggested?",
+                "Manager review: internal quality indicator — not regulatory judgement.",
+            ]
+        )
+    elif family == "management_oversight":
+        lines.extend(
+            [
+                "Pattern: is there drift, inconsistency or repeat concern?",
+                "Child impact: how does this affect the young person's experience?",
+                "Adult response consistency and action/follow-up with review owner.",
+                "Supervision / practice learning where relevant.",
+            ]
+        )
+    elif family == "magic_notes" or _is_magic_notes_variant(scenario):
+        lines.append(
+            "Does this require senior/manager review, handover or plan update?"
+        )
+    else:
+        lines.append(
+            "Follow-up and review points for responsible adult — "
+            "evidence for quality assurance, not compliance judgement."
+        )
+
+    return "\n".join(lines)
 
 
 def _is_magic_notes_variant(scenario: dict[str, Any]) -> bool:
@@ -761,6 +921,14 @@ def build_child_centred_scaffold(scenario: dict[str, Any]) -> str:
         child_voice,
     ]
     blocks.extend(extra_sections)
+    if _needs_management_oversight_section(scenario):
+        blocks.extend(
+            [
+                "",
+                "## Management oversight / review",
+                _build_management_oversight_section(scenario, factual),
+            ]
+        )
     blocks.extend(
         [
             "",
@@ -809,3 +977,8 @@ def adult_response_recording_principle() -> str:
 def therapeutic_language_recording_principle() -> str:
     """Reusable therapeutic language principle for brain/framework sources."""
     return _THERAPEUTIC_LANGUAGE_PRINCIPLE
+
+
+def management_oversight_recording_principle() -> str:
+    """Reusable management oversight principle for brain/framework sources."""
+    return _MANAGEMENT_OVERSIGHT_PRINCIPLE

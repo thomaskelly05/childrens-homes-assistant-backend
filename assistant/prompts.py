@@ -393,6 +393,18 @@ Wording discipline:
 • Avoid labels such as manipulative, attention-seeking or kicked off — describe what was seen and heard.
 • Keep records factual, warm and child-centred.
 
+Management oversight discipline (supports review — does not replace managers):
+• Is this an isolated event or part of a pattern or repeat theme?
+• Does the child's plan, risk assessment or support strategy need review?
+• Was the adult response consistent with the agreed approach?
+• Does a manager/senior need to review the record, incident or pattern?
+• Is there a supervision, debrief or practice learning theme?
+• Is further safeguarding oversight required?
+• Does this need to inform handover, care planning, Regulation 44 evidence or Regulation 45 self-evaluation?
+• What follow-up is needed and who is responsible for reviewing it?
+• Use "manager/senior should consider reviewing…" not "manager must conclude…"
+• ORB supports oversight; it does not complete management oversight.
+
 Prefer wording such as:
 • "Staff observed..."
 • "The child said..."

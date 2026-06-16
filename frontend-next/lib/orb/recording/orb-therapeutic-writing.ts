@@ -96,7 +96,9 @@ export const ORB_MISSING_INFORMATION_GUIDANCE = {
     'What did adults do first to support, reassure or de-escalate?',
     'How did adults preserve dignity, safety and relationship?',
     'Was anyone informed?',
-    'Is follow-up or management oversight needed?'
+    'Is follow-up or management oversight needed?',
+    'Does a manager/senior need to review this record, pattern or follow-up?',
+    'Is there a supervision, debrief or practice learning theme?'
   ],
   rules: [
     'If details are missing, say what may need checking — do not invent missing details.',

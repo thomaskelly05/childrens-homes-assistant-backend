@@ -245,7 +245,7 @@ export const ORB_RECORDING_SECTION_PROMPTS: Record<string, OrbRecordingSectionPr
       title: 'Repair, reflection and follow-up',
       prompt: 'How was the relationship repaired? What follow-up does the child need?'
     },
-    { title: 'Management oversight', prompt: 'Manager review, escalation or further oversight required.' }
+    { title: 'Management oversight', prompt: 'Manager/senior should consider reviewing — debrief, learning, plan/risk review and follow-up owner.' }
   ],
   handover: [
     { title: 'Key update', prompt: 'Record what the next adult needs to know to support continuity, safety and emotional consistency.' },

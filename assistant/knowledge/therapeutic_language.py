@@ -29,6 +29,9 @@ THERAPEUTIC_LANGUAGE_MODULE = {
             "Adults remain responsible for professional judgement and safeguarding decisions.",
             "Follow local safeguarding procedures; advise escalation without making the safeguarding decision.",
             "Do not conclude 'no safeguarding concern' — record what is known and what remains unclear.",
+            "Help adults consider management oversight — pattern, plan review, manager/senior review, supervision/debrief/learning, and follow-up.",
+            "Use 'manager/senior should consider reviewing…' not 'manager must conclude…'. ORB supports oversight; it does not complete management oversight.",
+            "Avoid compliance guarantees, claims of regulatory preparedness, or 'no further action' without responsible adult review.",
         ],
         "structure_steps": [
             "What happened?",

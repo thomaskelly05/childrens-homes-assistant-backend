@@ -42,7 +42,11 @@ _QUALITY_FIELD_PROMPTS: dict[str, str] = {
         "Record presentation and wishes/feelings where known — use 'not yet known' rather than inventing."
     ),
     "safeguarding": "Were there safeguarding concerns? What was seen, disclosed or suspected?",
-    "manager_oversight": "Was a manager informed? Is manager review or sign-off needed?",
+    "manager_oversight": (
+        "Was a manager informed? Should a manager/senior consider reviewing this record? "
+        "Is there a pattern, plan review need, debrief/learning theme, or unresolved follow-up? "
+        "Record what remains to be reviewed — ORB supports oversight; it does not complete management oversight."
+    ),
     "staff_response": (
         "What was the adult response and support offered? Name specific actions — "
         "how staff listened, what was offered, de-escalation, repair or plan follow-through. "
