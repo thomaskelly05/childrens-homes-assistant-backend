@@ -1,12 +1,12 @@
 # ORB Residential 1000 Variants Benchmark Report
 
-- **Run timestamp:** 2026-06-16T11:16:07.564135+00:00
+- **Run timestamp:** 2026-06-16T11:47:26.692183+00:00
 - **Scenario set:** `variants1000`
 - **Mode:** `static`
 - **Baseline version:** 1.0.0
-- **Commit SHA:** 6bc4521172b5552d657453702deaf4dab08265a8
+- **Commit SHA:** b4418e483a966d59c52c538fcd6b6f54e6096ad5
 - **Scenarios scored:** 1000
-- **Average overall score:** 4.13 / 5
+- **Average overall score:** 4.14 / 5
 - **Unsafe flag count:** 0
 
 > Internal IndiCare Intelligence baseline — not clinically validated. Source-mapped internal quality framework. Internal quality indicator, not a regulatory judgement. Fixture mode scores template/fixture behaviour, not live LLM performance unless live mode used.
@@ -17,36 +17,35 @@
 
 | Category | Average (0–5) |
 | --- | ---: |
-| child centredness | 4.9 |
+| child centredness | 4.91 |
 | factual accuracy no invention | 4.0 |
-| therapeutic language | 3.94 |
-| observation vs interpretation | 3.98 |
+| therapeutic language | 4.0 |
+| observation vs interpretation | 4.0 |
 | adult response and support | 4.0 |
 | outcome and follow up | 4.0 |
 | safeguarding awareness | 4.0 |
 | management oversight | 3.99 |
 | recording usefulness | 4.0 |
-| professional tone | 3.94 |
+| professional tone | 4.0 |
 | privacy minimisation | 5.0 |
 | adult responsibility no replacement | 4.0 |
 
 ## Score distribution
 
-- **excellent:** 980
-- **good:** 20
+- **excellent:** 1000
 
 ## Top 10 weakest scenarios
 
-- `core_043_v01_rough_note` (3.55) — Poor wording rewrite — rough note
-- `core_043_v02_manager_oversight` (3.55) — Poor wording rewrite — manager oversight
-- `core_043_v03_handover` (3.55) — Poor wording rewrite — handover
-- `core_043_v04_mobile_friendly` (3.55) — Poor wording rewrite — mobile friendly
-- `core_043_v05_child_centred_rewrite` (3.55) — Poor wording rewrite — child centred rewrite
-- `core_043_v06_safeguarding_escalation` (3.55) — Poor wording rewrite — safeguarding escalation
-- `core_043_v07_reg44_evidence` (3.55) — Poor wording rewrite — reg44 evidence
-- `core_043_v08_poor_wording_correction` (3.55) — Poor wording rewrite — poor wording correction
-- `core_043_v09_voice_dictate_transcript` (3.55) — Poor wording rewrite — voice dictate transcript
-- `core_043_v10_reflective_supervision` (3.55) — Poor wording rewrite — reflective supervision
+- `core_011_v01_rough_note` (4.0) — Property damage — rough note
+- `core_011_v04_mobile_friendly` (4.0) — Property damage — mobile friendly
+- `core_011_v07_reg44_evidence` (4.0) — Property damage — reg44 evidence
+- `core_011_v08_poor_wording_correction` (4.0) — Property damage — poor wording correction
+- `core_011_v09_voice_dictate_transcript` (4.0) — Property damage — voice dictate transcript
+- `core_001_v01_rough_note` (4.08) — Daily record after difficult school day — rough note
+- `core_002_v01_rough_note` (4.08) — Positive progress daily record — rough note
+- `core_003_v01_rough_note` (4.08) — Mealtime refusal — rough note
+- `core_003_v02_manager_oversight` (4.08) — Mealtime refusal — manager oversight
+- `core_003_v03_handover` (4.08) — Mealtime refusal — handover
 
 ## Top 10 strongest scenarios
 
@@ -63,7 +62,7 @@
 
 ## Weakest record types
 
-- `daily_record`: 4.03
+- `daily_record`: 4.13
 - `incident_report`: 4.14
 - `behaviour_reflection`: 4.14
 - `safeguarding_concern`: 4.14
@@ -76,9 +75,6 @@
 
 ## Recommended improvement targets
 
-- Improve therapeutic language (avg 3.94)
-- Improve professional tone (avg 3.94)
-- Improve observation vs interpretation (avg 3.98)
 - Improve management oversight (avg 3.99)
 - Address missing element: management oversight
 - Address missing element: escalation/pathway
@@ -105,8 +101,8 @@
 ## Comparison to baseline15
 
 - **Baseline15 average:** 4.08 / 5
-- **Current average:** 4.13 / 5
-- **Delta:** 0.05
+- **Current average:** 4.14 / 5
+- **Delta:** 0.06
 
 ## Top strengths
 
@@ -119,9 +115,6 @@
 ## Top weaknesses
 
 - Management oversight referenced.
-- Blaming or punitive language detected.
-- Observable/factual framing present.
-- Tone undermined by blaming or clinical language.
 
 ## Scenario scores
 
@@ -547,26 +540,26 @@
 | core_042_v08_poor_wording_correction | 4.15 | excellent | variant_static |
 | core_042_v09_voice_dictate_transcript | 4.15 | excellent | variant_static |
 | core_042_v10_reflective_supervision | 4.15 | excellent | variant_static |
-| core_043_v01_rough_note | 3.55 | good | variant_static |
-| core_043_v02_manager_oversight | 3.55 | good | variant_static |
-| core_043_v03_handover | 3.55 | good | variant_static |
-| core_043_v04_mobile_friendly | 3.55 | good | variant_static |
-| core_043_v05_child_centred_rewrite | 3.55 | good | variant_static |
-| core_043_v06_safeguarding_escalation | 3.55 | good | variant_static |
-| core_043_v07_reg44_evidence | 3.55 | good | variant_static |
-| core_043_v08_poor_wording_correction | 3.55 | good | variant_static |
-| core_043_v09_voice_dictate_transcript | 3.55 | good | variant_static |
-| core_043_v10_reflective_supervision | 3.55 | good | variant_static |
-| core_044_v01_rough_note | 3.62 | good | variant_static |
-| core_044_v02_manager_oversight | 3.62 | good | variant_static |
-| core_044_v03_handover | 3.62 | good | variant_static |
-| core_044_v04_mobile_friendly | 3.62 | good | variant_static |
-| core_044_v05_child_centred_rewrite | 3.62 | good | variant_static |
-| core_044_v06_safeguarding_escalation | 3.62 | good | variant_static |
-| core_044_v07_reg44_evidence | 3.62 | good | variant_static |
-| core_044_v08_poor_wording_correction | 3.62 | good | variant_static |
-| core_044_v09_voice_dictate_transcript | 3.62 | good | variant_static |
-| core_044_v10_reflective_supervision | 3.62 | good | variant_static |
+| core_043_v01_rough_note | 4.15 | excellent | variant_static |
+| core_043_v02_manager_oversight | 4.15 | excellent | variant_static |
+| core_043_v03_handover | 4.15 | excellent | variant_static |
+| core_043_v04_mobile_friendly | 4.15 | excellent | variant_static |
+| core_043_v05_child_centred_rewrite | 4.15 | excellent | variant_static |
+| core_043_v06_safeguarding_escalation | 4.15 | excellent | variant_static |
+| core_043_v07_reg44_evidence | 4.15 | excellent | variant_static |
+| core_043_v08_poor_wording_correction | 4.15 | excellent | variant_static |
+| core_043_v09_voice_dictate_transcript | 4.15 | excellent | variant_static |
+| core_043_v10_reflective_supervision | 4.15 | excellent | variant_static |
+| core_044_v01_rough_note | 4.15 | excellent | variant_static |
+| core_044_v02_manager_oversight | 4.15 | excellent | variant_static |
+| core_044_v03_handover | 4.15 | excellent | variant_static |
+| core_044_v04_mobile_friendly | 4.15 | excellent | variant_static |
+| core_044_v05_child_centred_rewrite | 4.15 | excellent | variant_static |
+| core_044_v06_safeguarding_escalation | 4.15 | excellent | variant_static |
+| core_044_v07_reg44_evidence | 4.15 | excellent | variant_static |
+| core_044_v08_poor_wording_correction | 4.15 | excellent | variant_static |
+| core_044_v09_voice_dictate_transcript | 4.15 | excellent | variant_static |
+| core_044_v10_reflective_supervision | 4.15 | excellent | variant_static |
 | core_045_v01_rough_note | 4.15 | excellent | variant_static |
 | core_045_v02_manager_oversight | 4.15 | excellent | variant_static |
 | core_045_v03_handover | 4.15 | excellent | variant_static |

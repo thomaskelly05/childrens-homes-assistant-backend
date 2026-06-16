@@ -158,11 +158,6 @@
   ],
   "highest_risk_weak_scenario_families": [
     {
-      "scenario_family": "magic_notes",
-      "average_score": 4.04,
-      "count": 100
-    },
-    {
       "scenario_family": "daily_care",
       "average_score": 4.13,
       "count": 100
@@ -188,6 +183,11 @@
       "count": 100
     },
     {
+      "scenario_family": "magic_notes",
+      "average_score": 4.15,
+      "count": 100
+    },
+    {
       "scenario_family": "handover",
       "average_score": 4.15,
       "count": 100
@@ -210,20 +210,20 @@
   ],
   "weakest_scoring_categories_variants1000": [
     {
-      "category": "therapeutic_language",
-      "average_score": 3.94
+      "category": "management_oversight",
+      "average_score": 3.99
     },
     {
-      "category": "professional_tone",
-      "average_score": 3.94
+      "category": "factual_accuracy_no_invention",
+      "average_score": 4.0
+    },
+    {
+      "category": "therapeutic_language",
+      "average_score": 4.0
     },
     {
       "category": "observation_vs_interpretation",
-      "average_score": 3.98
-    },
-    {
-      "category": "management_oversight",
-      "average_score": 3.99
+      "average_score": 4.0
     }
   ],
   "internal_only_emerging_evidence_areas": [],

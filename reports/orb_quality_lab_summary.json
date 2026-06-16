@@ -1,9 +1,9 @@
 {
-  "timestamp": "2026-06-16T11:27:19.482208+00:00",
-  "commit_sha": "6bc4521172b5552d657453702deaf4dab08265a8",
-  "baseline15_average": null,
-  "core100_average": null,
-  "variants1000_average": 4.13,
+  "timestamp": "2026-06-16T11:47:37.516365+00:00",
+  "commit_sha": "b4418e483a966d59c52c538fcd6b6f54e6096ad5",
+  "baseline15_average": 4.08,
+  "core100_average": 4.13,
+  "variants1000_average": 4.14,
   "variants1000_unsafe_flag_count": 0,
   "unsafe_flags": {
     "baseline15": [],
@@ -11,16 +11,16 @@
     "variants1000": []
   },
   "weakest_categories": [
-    "therapeutic_language",
-    "professional_tone",
-    "observation_vs_interpretation"
+    "management_oversight",
+    "factual_accuracy_no_invention",
+    "therapeutic_language"
   ],
   "strongest_categories": [
     "privacy_minimisation",
     "child_centredness",
     "factual_accuracy_no_invention"
   ],
-  "recommended_next_target": "Improve therapeutic language (avg 3.94)",
+  "recommended_next_target": "Improve management oversight (avg 3.99)",
   "live_llm_disabled_in_ci": true,
   "traceability": {
     "framework_claim": "Source-mapped internal quality framework",
@@ -66,11 +66,11 @@
   "traceability_warning": "Scores are internal quality indicators aligned to recognised sources where mapped. They are not regulatory determinations, inspection predictions, or professional validation. Adults remain accountable for decisions, escalation and final records.",
   "internal_only_emerging_evidence_areas": [],
   "ofsted_wording_audit": {
-    "risky_occurrences_found": 413,
-    "occurrences_replaced_this_pass": 412,
+    "risky_occurrences_found": 368,
+    "occurrences_replaced_this_pass": 368,
     "factual_source_references_kept": 11,
-    "risky_occurrences_remaining": 1,
-    "status": "review_required"
+    "risky_occurrences_remaining": 0,
+    "status": "pass"
   },
   "governance_boundary": "ORB supports inspection evidence preparation. It does not determine inspection outcomes, guarantee compliance or represent regulator endorsement."
 }
