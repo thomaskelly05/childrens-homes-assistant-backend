@@ -1,7 +1,7 @@
 {
   "baseline_version": "1.0.0",
-  "commit_sha": "de5318ca93d20082923061244b946edbec5b05cd",
-  "run_timestamp": "2026-06-16T17:13:35.419938+00:00",
+  "commit_sha": "b29f08eae41516d56e3033e668ffc013b64d96b7",
+  "run_timestamp": "2026-06-16T17:55:31.448324+00:00",
   "scenario_set": "variants1000",
   "mode": "static",
   "scenario_count": 1000,
@@ -313,7 +313,7 @@
     "internal_only_categories": [],
     "warning": "Scores are internal quality indicators aligned to recognised sources where mapped. They are not regulatory determinations, inspection predictions, or professional validation. Adults remain accountable for decisions, escalation and final records."
   },
-  "run_duration_seconds": 3.57,
+  "run_duration_seconds": 3.82,
   "run_scope": {
     "limit": null,
     "sample": null,
@@ -371,7 +371,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily record after difficult school day \u2014 rough note  ## Presentation and Support young person returned from school upset said lessons were difficult refused tea at first later settled after The adult sa  ## Child's Voice / Presentation young person returned from school upset "
+      "output_excerpt": "## Daily Record  ## Presentation and Support young person returned from school upset said lessons were difficult refused tea at first later settled after The adult sa  young person returned from school upset said lessons were difficult refused tea at first later settled after The"
     },
     {
       "scenario_id": "core_001_v02_manager_oversight",
@@ -421,7 +421,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily record after difficult school day \u2014 manager oversight  ## Presentation and Support Young person returned from school upset. Said lessons were difficult. Refused tea at first. Later settled after The adult sat with them and offered a quiet space. appeared calmer by evenin"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person returned from school upset. Said lessons were difficult. Refused tea at first. Later settled after The adult sat with them and offered a quiet space. appeared calmer by evening.  Young person said: Said lessons were diffic"
     },
     {
       "scenario_id": "core_001_v03_handover",
@@ -471,7 +471,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily record after difficult school day \u2014 handover  ## Presentation and Support Young person returned from school upset. Said lessons were difficult. Refused tea at first. Later settled after The adult sat with them and offered a quiet space. appeared calmer by even  ## Child'"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person returned from school upset. Said lessons were difficult. Refused tea at first. Later settled after The adult sat with them and offered a quiet space. appeared calmer by even  Young person said: Said lessons were difficult."
     },
     {
       "scenario_id": "core_001_v04_mobile_friendly",
@@ -521,7 +521,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily record after difficult school day \u2014 mobile friendly  ## Presentation and Support Young person returned from school upset. Said lessons were difficult. Refused tea at first. Later settled after The adult sat with them and offered a quie  ## Child's Voice / Presentation Yo"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person returned from school upset. Said lessons were difficult. Refused tea at first. Later settled after The adult sat with them and offered a quie  Young person said: Said lessons were difficult. Refused tea at first. The adult"
     },
     {
       "scenario_id": "core_001_v05_child_centred_rewrite",
@@ -571,7 +571,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily record after difficult school day \u2014 child centred rewrite  ## Presentation and Support Young person returned from school upset. Said lessons were difficult. Refused tea at first. Later settled after The adult sat with them and offered a quiet space. appeared calmer by ev"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person returned from school upset. Said lessons were difficult. Refused tea at first. Later settled after The adult sat with them and offered a quiet space. appeared calmer by evening.  Young person said: Said lessons were diffic"
     },
     {
       "scenario_id": "core_001_v06_safeguarding_escalation",
@@ -621,7 +621,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily record after difficult school day \u2014 safeguarding escalation  ## Presentation and Support Young person returned from school upset. Said lessons were difficult. Refused tea at first. Later settled after The adult sat with them and offered a quiet space. appeared calmer by "
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person returned from school upset. Said lessons were difficult. Refused tea at first. Later settled after The adult sat with them and offered a quiet space. appeared calmer by evening.  Young person said: Said lessons were diffic"
     },
     {
       "scenario_id": "core_001_v07_reg44_evidence",
@@ -671,7 +671,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily record after difficult school day \u2014 reg44 evidence  ## Presentation and Support Young person returned from school upset. Said lessons were difficult. Refused tea at first. Later settled after The adult sat with them and offered a quiet space. M  ## Child's Voice / Presen"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person returned from school upset. Said lessons were difficult. Refused tea at first. Later settled after The adult sat with them and offered a quiet space. M  Young person said: Said lessons were difficult. Refused tea at first."
     },
     {
       "scenario_id": "core_001_v08_poor_wording_correction",
@@ -721,7 +721,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily record after difficult school day \u2014 poor wording correction  ## Presentation and Support Young person returned from school upset. Said lessons were difficult. Refused te  ## Child's Voice / Presentation Young person said: Said lessons were difficult. Refused te The adult"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person returned from school upset. Said lessons were difficult. Refused te  Young person said: Said lessons were difficult. Refused te The adult observed presentation: upset, refused. Wishes, feelings and views: not yet known \u2014 t"
     },
     {
       "scenario_id": "core_001_v09_voice_dictate_transcript",
@@ -771,7 +771,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily record after difficult school day \u2014 voice dictate transcript  ## Presentation and Support Young person returned from school upset. Said lessons were difficult. Refused tea at first. Later se  ## Child's Voice / Presentation Young person said: Said lessons were difficult."
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person returned from school upset. Said lessons were difficult. Refused tea at first. Later se  Young person said: Said lessons were difficult. Refused tea at first. The adult observed presentation: upset, refused. Wishes, feelin"
     },
     {
       "scenario_id": "core_001_v10_reflective_supervision",
@@ -821,7 +821,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily record after difficult school day \u2014 reflective supervision  ## Presentation and Support Young person returned from school upset. Said lessons were difficult. Refused tea at first. Later settled after The adult sat with them and offered a quiet space. M  ## Child's Voice "
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person returned from school upset. Said lessons were difficult. Refused tea at first. Later settled after The adult sat with them and offered a quiet space. M  Young person said: Said lessons were difficult. Refused tea at first."
     },
     {
       "scenario_id": "core_002_v01_rough_note",
@@ -871,7 +871,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Positive progress daily record \u2014 rough note  ## Presentation and Support young person had a calm day attended school on time joined group activity in the evening and shared positive news abou  ## Child's Voice / Presentation young person had a calm day attended school on time "
+      "output_excerpt": "## Daily Record  ## Presentation and Support young person had a calm day attended school on time joined group activity in the evening and shared positive news abou  young person had a calm day attended school on time joined group activity in the evening and shared positive news a"
     },
     {
       "scenario_id": "core_002_v02_manager_oversight",
@@ -921,7 +921,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Positive progress daily record \u2014 manager oversight  ## Presentation and Support Young person had a calm day. Attended school on time. Joined group activity in the evening and shared positive news about a school project. Ate all meals. Bedtime routine completed without difficul"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person had a calm day. Attended school on time. Joined group activity in the evening and shared positive news about a school project. Ate all meals. Bedtime routine completed without difficulty.  Young person said: Joined group a"
     },
     {
       "scenario_id": "core_002_v03_handover",
@@ -971,7 +971,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Positive progress daily record \u2014 handover  ## Presentation and Support Young person had a calm day. Attended school on time. Joined group activity in the evening and shared positive news about a school project. Ate all meals. Bedtime routine completed  ## Child's Voice / Prese"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person had a calm day. Attended school on time. Joined group activity in the evening and shared positive news about a school project. Ate all meals. Bedtime routine completed  Young person said: Joined group activity in the eveni"
     },
     {
       "scenario_id": "core_002_v04_mobile_friendly",
@@ -1021,7 +1021,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Positive progress daily record \u2014 mobile friendly  ## Presentation and Support Young person had a calm day. Attended school on time. Joined group activity in the evening and shared positive news about a school project. Ate all me  ## Child's Voice / Presentation Young person sa"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person had a calm day. Attended school on time. Joined group activity in the evening and shared positive news about a school project. Ate all me  Young person said: Joined group activity in the evening and shared positive news ab"
     },
     {
       "scenario_id": "core_002_v05_child_centred_rewrite",
@@ -1071,7 +1071,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Positive progress daily record \u2014 child centred rewrite  ## Presentation and Support Young person had a calm day. Attended school on time. Joined group activity in the evening and shared positive news about a school project. Ate all meals. Bedtime routine completed without diff"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person had a calm day. Attended school on time. Joined group activity in the evening and shared positive news about a school project. Ate all meals. Bedtime routine completed without difficulty.  Young person said: Joined group a"
     },
     {
       "scenario_id": "core_002_v06_safeguarding_escalation",
@@ -1121,7 +1121,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Positive progress daily record \u2014 safeguarding escalation  ## Presentation and Support Young person had a calm day. Attended school on time. Joined group activity in the evening and shared positive news about a school project. Ate all meals. Bedtime routine completed without di"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person had a calm day. Attended school on time. Joined group activity in the evening and shared positive news about a school project. Ate all meals. Bedtime routine completed without difficulty.  Young person said: Joined group a"
     },
     {
       "scenario_id": "core_002_v07_reg44_evidence",
@@ -1171,7 +1171,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Positive progress daily record \u2014 reg44 evidence  ## Presentation and Support Young person had a calm day. Attended school on time. Joined group activity in the evening and shared positive news about a school project. Ate all meals. Bedti  ## Child's Voice / Presentation Young "
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person had a calm day. Attended school on time. Joined group activity in the evening and shared positive news about a school project. Ate all meals. Bedti  Young person said: Joined group activity in the evening and shared positi"
     },
     {
       "scenario_id": "core_002_v08_poor_wording_correction",
@@ -1221,7 +1221,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Positive progress daily record \u2014 poor wording correction  ## Presentation and Support Young person had a calm day. Attended school on time. Joined group activity in t  ## Child's Voice / Presentation Young person said: not yet known \u2014 record the child's words where provided. T"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person had a calm day. Attended school on time. Joined group activity in t  Young person said: not yet known \u2014 record the child's words where provided. The adult observed presentation: calm.  ## Adult Response Adult response deta"
     },
     {
       "scenario_id": "core_002_v09_voice_dictate_transcript",
@@ -1271,7 +1271,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Positive progress daily record \u2014 voice dictate transcript  ## Presentation and Support Young person had a calm day. Attended school on time. Joined group activity in the evening and share  ## Child's Voice / Presentation Young person said: not yet known \u2014 record the child's wo"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person had a calm day. Attended school on time. Joined group activity in the evening and share  Young person said: not yet known \u2014 record the child's words where provided. The adult observed presentation: calm.  ## Adult Response"
     },
     {
       "scenario_id": "core_002_v10_reflective_supervision",
@@ -1321,7 +1321,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Positive progress daily record \u2014 reflective supervision  ## Presentation and Support Young person had a calm day. Attended school on time. Joined group activity in the evening and shared positive news about a school project. Ate all meals. Bedti  ## Child's Voice / Presentatio"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person had a calm day. Attended school on time. Joined group activity in the evening and shared positive news about a school project. Ate all meals. Bedti  Young person said: Joined group activity in the evening and shared positi"
     },
     {
       "scenario_id": "core_003_v01_rough_note",
@@ -1371,7 +1371,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support young person refused lunch saying they were not hungry The adult offered alternative snack later young person ate a small  ## Child's Voice / Presentation young person refused lunch saying they were not hungry The adult offered alterna"
+      "output_excerpt": "## Daily Record  ## Presentation and Support young person refused lunch saying they were not hungry The adult offered alternative snack later young person ate a small  young person refused lunch saying they were not hungry The adult offered alternative snack later young person at"
     },
     {
       "scenario_id": "core_003_v02_manager_oversight",
@@ -1421,7 +1421,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person refused lunch saying they were not hungry. The adult offered alternative snack later. Young person ate a small portion at tea after calm conversation about food choices. No weight concern rai  ## Child's Voice / Presentati"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person refused lunch saying they were not hungry. The adult offered alternative snack later. Young person ate a small portion at tea after calm conversation about food choices. No weight concern rai  Young person refused lunch sa"
     },
     {
       "scenario_id": "core_003_v03_handover",
@@ -1471,7 +1471,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person refused lunch saying they were not hungry. The adult offered alternative snack later. Young person ate a small portion at tea after calm conversation about food choices. N  ## Child's Voice / Presentation Young person refu"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person refused lunch saying they were not hungry. The adult offered alternative snack later. Young person ate a small portion at tea after calm conversation about food choices. N  Young person refused lunch saying they were not h"
     },
     {
       "scenario_id": "core_003_v04_mobile_friendly",
@@ -1521,7 +1521,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person refused lunch saying they were not hungry. The adult offered alternative snack later. Young person ate a small portion at tea after calm conv  ## Child's Voice / Presentation Young person refused lunch saying they were not"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person refused lunch saying they were not hungry. The adult offered alternative snack later. Young person ate a small portion at tea after calm conv  Young person refused lunch saying they were not hungry. The adult observed pres"
     },
     {
       "scenario_id": "core_003_v05_child_centred_rewrite",
@@ -1571,7 +1571,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person refused lunch saying they were not hungry. The adult offered alternative snack later. Young person ate a small portion at tea after calm conversation about food choices. No weight concern raised today.  ## Child's Voice / "
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person refused lunch saying they were not hungry. The adult offered alternative snack later. Young person ate a small portion at tea after calm conversation about food choices. No weight concern raised today.  Young person refuse"
     },
     {
       "scenario_id": "core_003_v06_safeguarding_escalation",
@@ -1621,7 +1621,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person refused lunch saying they were not hungry. The adult offered alternative snack later. Young person ate a small portion at tea after calm conversation about food choices. No weight concern raised today.  ## Child's Voice / "
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person refused lunch saying they were not hungry. The adult offered alternative snack later. Young person ate a small portion at tea after calm conversation about food choices. No weight concern raised today.  Young person refuse"
     },
     {
       "scenario_id": "core_003_v07_reg44_evidence",
@@ -1671,7 +1671,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person refused lunch saying they were not hungry. The adult offered alternative snack later. Young person ate a small portion at tea after calm conversation a  ## Child's Voice / Presentation Young person refused lunch saying the"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person refused lunch saying they were not hungry. The adult offered alternative snack later. Young person ate a small portion at tea after calm conversation a  Young person refused lunch saying they were not hungry. The adult obs"
     },
     {
       "scenario_id": "core_003_v08_poor_wording_correction",
@@ -1723,7 +1723,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person refused lunch saying they were not hungry. The adult offered alternativ  ## Child's Voice / Presentation Young person refused lunch saying they were not hungry. The adult observed presentation: refused.  ## Adult Response "
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person refused lunch saying they were not hungry. The adult offered alternativ  Young person refused lunch saying they were not hungry. The adult observed presentation: refused.  ## Adult Response Immediate adult response as desc"
     },
     {
       "scenario_id": "core_003_v09_voice_dictate_transcript",
@@ -1773,7 +1773,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person refused lunch saying they were not hungry. The adult offered alternative snack later. Young  ## Child's Voice / Presentation Young person refused lunch saying they were not hungry. The adult observed presentation: refused."
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person refused lunch saying they were not hungry. The adult offered alternative snack later. Young  Young person refused lunch saying they were not hungry. The adult observed presentation: refused.  ## Adult Response Immediate ad"
     },
     {
       "scenario_id": "core_003_v10_reflective_supervision",
@@ -1823,7 +1823,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person refused lunch saying they were not hungry. The adult offered alternative snack later. Young person ate a small portion at tea after calm conversation a  ## Child's Voice / Presentation Young person refused lunch saying the"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person refused lunch saying they were not hungry. The adult offered alternative snack later. Young person ate a small portion at tea after calm conversation a  Young person refused lunch saying they were not hungry. The adult obs"
     },
     {
       "scenario_id": "core_004_v01_rough_note",
@@ -1873,7 +1873,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support young person struggled to settle at bedtime was awake until late The adult offered quiet activity and reassurance eventua  ## Child's Voice / Presentation Young person said: not yet known \u2014 record the child's words where provided. The "
+      "output_excerpt": "## Daily Record  ## Presentation and Support young person struggled to settle at bedtime was awake until late The adult offered quiet activity and reassurance eventua  Young person said: not yet known \u2014 record the child's words where provided. The adult observed presentation: qui"
     },
     {
       "scenario_id": "core_004_v02_manager_oversight",
@@ -1925,7 +1925,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person struggled to settle at bedtime. Was awake until late. The adult offered quiet activity and reassurance. Eventually slept. Woke tired this morning. Sleep pattern to be monitored.  ## Child's Voice / Presentation Young perso"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person struggled to settle at bedtime. Was awake until late. The adult offered quiet activity and reassurance. Eventually slept. Woke tired this morning. Sleep pattern to be monitored.  Young person said: not yet known \u2014 record t"
     },
     {
       "scenario_id": "core_004_v03_handover",
@@ -1977,7 +1977,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person struggled to settle at bedtime. Was awake until late. The adult offered quiet activity and reassurance. Eventually slept. Woke tired this morning. Sleep pattern to be moni  ## Child's Voice / Presentation Young person said"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person struggled to settle at bedtime. Was awake until late. The adult offered quiet activity and reassurance. Eventually slept. Woke tired this morning. Sleep pattern to be moni  Young person said: not yet known \u2014 record the chi"
     },
     {
       "scenario_id": "core_004_v04_mobile_friendly",
@@ -2029,7 +2029,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person struggled to settle at bedtime. Was awake until late. The adult offered quiet activity and reassurance. Eventually slept. Woke tired this mor  ## Child's Voice / Presentation Young person said: not yet known \u2014 record the c"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person struggled to settle at bedtime. Was awake until late. The adult offered quiet activity and reassurance. Eventually slept. Woke tired this mor  Young person said: not yet known \u2014 record the child's words where provided. The"
     },
     {
       "scenario_id": "core_004_v05_child_centred_rewrite",
@@ -2081,7 +2081,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person struggled to settle at bedtime. Was awake until late. The adult offered quiet activity and reassurance. Eventually slept. Woke tired this morning. Sleep pattern to be monitored.  ## Child's Voice / Presentation Young perso"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person struggled to settle at bedtime. Was awake until late. The adult offered quiet activity and reassurance. Eventually slept. Woke tired this morning. Sleep pattern to be monitored.  Young person said: not yet known \u2014 record t"
     },
     {
       "scenario_id": "core_004_v06_safeguarding_escalation",
@@ -2133,7 +2133,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person struggled to settle at bedtime. Was awake until late. The adult offered quiet activity and reassurance. Eventually slept. Woke tired this morning. Sleep pattern to be monitored.  ## Child's Voice / Presentation Young perso"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person struggled to settle at bedtime. Was awake until late. The adult offered quiet activity and reassurance. Eventually slept. Woke tired this morning. Sleep pattern to be monitored.  Young person said: not yet known \u2014 record t"
     },
     {
       "scenario_id": "core_004_v07_reg44_evidence",
@@ -2185,7 +2185,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person struggled to settle at bedtime. Was awake until late. The adult offered quiet activity and reassurance. Eventually slept. Woke tired this morning. Slee  ## Child's Voice / Presentation Young person said: not yet known \u2014 re"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person struggled to settle at bedtime. Was awake until late. The adult offered quiet activity and reassurance. Eventually slept. Woke tired this morning. Slee  Young person said: not yet known \u2014 record the child's words where pro"
     },
     {
       "scenario_id": "core_004_v08_poor_wording_correction",
@@ -2237,7 +2237,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person struggled to settle at bedtime. Was awake until late. The adult offered  ## Child's Voice / Presentation Young person said: not yet known \u2014 record the child's words where provided. Presentation: as described in factual acc"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person struggled to settle at bedtime. Was awake until late. The adult offered  Young person said: not yet known \u2014 record the child's words where provided. Presentation: as described in factual account \u2014 further detail not yet re"
     },
     {
       "scenario_id": "core_004_v09_voice_dictate_transcript",
@@ -2289,7 +2289,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person struggled to settle at bedtime. Was awake until late. The adult offered quiet activity and  ## Child's Voice / Presentation Young person said: not yet known \u2014 record the child's words where provided. The adult observed pre"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person struggled to settle at bedtime. Was awake until late. The adult offered quiet activity and  Young person said: not yet known \u2014 record the child's words where provided. The adult observed presentation: quiet.  ## Adult Resp"
     },
     {
       "scenario_id": "core_004_v10_reflective_supervision",
@@ -2341,7 +2341,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person struggled to settle at bedtime. Was awake until late. The adult offered quiet activity and reassurance. Eventually slept. Woke tired this morning. Slee  ## Child's Voice / Presentation Young person said: not yet known \u2014 re"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person struggled to settle at bedtime. Was awake until late. The adult offered quiet activity and reassurance. Eventually slept. Woke tired this morning. Slee  Young person said: not yet known \u2014 record the child's words where pro"
     },
     {
       "scenario_id": "core_005_v01_rough_note",
@@ -2391,7 +2391,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support young person needed encouragement with personal care this morning The adult offered sensitive support and choices young pe  ## Child's Voice / Presentation Young person said: not yet known \u2014 record the child's words where provided. Pre"
+      "output_excerpt": "## Daily Record  ## Presentation and Support young person needed encouragement with personal care this morning The adult offered sensitive support and choices young pe  Young person said: not yet known \u2014 record the child's words where provided. Presentation: as described in factu"
     },
     {
       "scenario_id": "core_005_v02_manager_oversight",
@@ -2443,7 +2443,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person needed encouragement with personal care this morning. The adult offered sensitive support and choices. Young person completed hygiene routine with minimal prompting. Dressed appropriately for  ## Child's Voice / Presentati"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person needed encouragement with personal care this morning. The adult offered sensitive support and choices. Young person completed hygiene routine with minimal prompting. Dressed appropriately for  Young person said: not yet kn"
     },
     {
       "scenario_id": "core_005_v03_handover",
@@ -2495,7 +2495,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person needed encouragement with personal care this morning. The adult offered sensitive support and choices. Young person completed hygiene routine with minimal prompting. Dress  ## Child's Voice / Presentation Young person said"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person needed encouragement with personal care this morning. The adult offered sensitive support and choices. Young person completed hygiene routine with minimal prompting. Dress  Young person said: not yet known \u2014 record the chi"
     },
     {
       "scenario_id": "core_005_v04_mobile_friendly",
@@ -2547,7 +2547,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person needed encouragement with personal care this morning. The adult offered sensitive support and choices. Young person completed hygiene routine  ## Child's Voice / Presentation Young person said: not yet known \u2014 record the c"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person needed encouragement with personal care this morning. The adult offered sensitive support and choices. Young person completed hygiene routine  Young person said: not yet known \u2014 record the child's words where provided. Pre"
     },
     {
       "scenario_id": "core_005_v05_child_centred_rewrite",
@@ -2599,7 +2599,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person needed encouragement with personal care this morning. The adult offered sensitive support and choices. Young person completed hygiene routine with minimal prompting. Dressed appropriately for school.  ## Child's Voice / Pr"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person needed encouragement with personal care this morning. The adult offered sensitive support and choices. Young person completed hygiene routine with minimal prompting. Dressed appropriately for school.  Young person said: no"
     },
     {
       "scenario_id": "core_005_v06_safeguarding_escalation",
@@ -2651,7 +2651,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person needed encouragement with personal care this morning. The adult offered sensitive support and choices. Young person completed hygiene routine with minimal prompting. Dressed appropriately for school.  ## Child's Voice / Pr"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person needed encouragement with personal care this morning. The adult offered sensitive support and choices. Young person completed hygiene routine with minimal prompting. Dressed appropriately for school.  Young person said: no"
     },
     {
       "scenario_id": "core_005_v07_reg44_evidence",
@@ -2703,7 +2703,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person needed encouragement with personal care this morning. The adult offered sensitive support and choices. Young person completed hygiene routine with mini  ## Child's Voice / Presentation Young person said: not yet known \u2014 re"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person needed encouragement with personal care this morning. The adult offered sensitive support and choices. Young person completed hygiene routine with mini  Young person said: not yet known \u2014 record the child's words where pro"
     },
     {
       "scenario_id": "core_005_v08_poor_wording_correction",
@@ -2755,7 +2755,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person needed encouragement with personal care this morning. The adult offered  ## Child's Voice / Presentation Young person said: not yet known \u2014 record the child's words where provided. Presentation: as described in factual acc"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person needed encouragement with personal care this morning. The adult offered  Young person said: not yet known \u2014 record the child's words where provided. Presentation: as described in factual account \u2014 further detail not yet re"
     },
     {
       "scenario_id": "core_005_v09_voice_dictate_transcript",
@@ -2807,7 +2807,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person needed encouragement with personal care this morning. The adult offered sensitive support a  ## Child's Voice / Presentation Young person said: not yet known \u2014 record the child's words where provided. Presentation: as desc"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person needed encouragement with personal care this morning. The adult offered sensitive support a  Young person said: not yet known \u2014 record the child's words where provided. Presentation: as described in factual account \u2014 furth"
     },
     {
       "scenario_id": "core_005_v10_reflective_supervision",
@@ -2859,7 +2859,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person needed encouragement with personal care this morning. The adult offered sensitive support and choices. Young person completed hygiene routine with mini  ## Child's Voice / Presentation Young person said: not yet known \u2014 re"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person needed encouragement with personal care this morning. The adult offered sensitive support and choices. Young person completed hygiene routine with mini  Young person said: not yet known \u2014 record the child's words where pro"
     },
     {
       "scenario_id": "core_006_v01_rough_note",
@@ -2909,7 +2909,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support young person said another young person in the home had been unkind during a game The adult listened and facilitated a brief  ## Child's Voice / Presentation young person said another young person in the home had been unkind during a ga"
+      "output_excerpt": "## Daily Record  ## Presentation and Support young person said another young person in the home had been unkind during a game The adult listened and facilitated a brief  young person said another young person in the home had been unkind during a game The adult listened and facili"
     },
     {
       "scenario_id": "core_006_v02_manager_oversight",
@@ -2961,7 +2961,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person said another young person in the home had been unkind during a game. The adult listened and facilitated a brief restorative conversation. Both young people agreed to try again tomorrow. No ph  ## Child's Voice / Presentati"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person said another young person in the home had been unkind during a game. The adult listened and facilitated a brief restorative conversation. Both young people agreed to try again tomorrow. No ph  Young person said another you"
     },
     {
       "scenario_id": "core_006_v03_handover",
@@ -3013,7 +3013,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person said another young person in the home had been unkind during a game. The adult listened and facilitated a brief restorative conversation. Both young people agreed to try a  ## Child's Voice / Presentation Young person said"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person said another young person in the home had been unkind during a game. The adult listened and facilitated a brief restorative conversation. Both young people agreed to try a  Young person said another young person in the hom"
     },
     {
       "scenario_id": "core_006_v04_mobile_friendly",
@@ -3065,7 +3065,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person said another young person in the home had been unkind during a game. The adult listened and facilitated a brief restorative conversation. Bot  ## Child's Voice / Presentation Young person said another young person in the h"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person said another young person in the home had been unkind during a game. The adult listened and facilitated a brief restorative conversation. Bot  Young person said another young person in the home had been unkind during a gam"
     },
     {
       "scenario_id": "core_006_v05_child_centred_rewrite",
@@ -3117,7 +3117,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person said another young person in the home had been unkind during a game. The adult listened and facilitated a brief restorative conversation. Both young people agreed to try again tomorrow. No physical contact.  ## Child's Voi"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person said another young person in the home had been unkind during a game. The adult listened and facilitated a brief restorative conversation. Both young people agreed to try again tomorrow. No physical contact.  Young person s"
     },
     {
       "scenario_id": "core_006_v06_safeguarding_escalation",
@@ -3169,7 +3169,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person said another young person in the home had been unkind during a game. The adult listened and facilitated a brief restorative conversation. Both young people agreed to try again tomorrow. No physical contact.  ## Child's Voi"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person said another young person in the home had been unkind during a game. The adult listened and facilitated a brief restorative conversation. Both young people agreed to try again tomorrow. No physical contact.  Young person s"
     },
     {
       "scenario_id": "core_006_v07_reg44_evidence",
@@ -3221,7 +3221,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person said another young person in the home had been unkind during a game. The adult listened and facilitated a brief restorative conversation. Both young pe  ## Child's Voice / Presentation Young person said another young perso"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person said another young person in the home had been unkind during a game. The adult listened and facilitated a brief restorative conversation. Both young pe  Young person said another young person in the home had been unkind du"
     },
     {
       "scenario_id": "core_006_v08_poor_wording_correction",
@@ -3271,7 +3271,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person said another young person in the home had been unkind during a game  ## Child's Voice / Presentation Young person said another young person in the home had been unkind during a game Presentation: as described in factual ac"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person said another young person in the home had been unkind during a game  Young person said another young person in the home had been unkind during a game Presentation: as described in factual account \u2014 further detail not yet r"
     },
     {
       "scenario_id": "core_006_v09_voice_dictate_transcript",
@@ -3323,7 +3323,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person said another young person in the home had been unkind during a game. The adult listened and  ## Child's Voice / Presentation Young person said another young person in the home had been unkind during a game. The adult liste"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person said another young person in the home had been unkind during a game. The adult listened and  Young person said another young person in the home had been unkind during a game. The adult listened and Presentation: as describ"
     },
     {
       "scenario_id": "core_006_v10_reflective_supervision",
@@ -3375,7 +3375,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person said another young person in the home had been unkind during a game. The adult listened and facilitated a brief restorative conversation. Both young pe  ## Child's Voice / Presentation Young person said another young perso"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person said another young person in the home had been unkind during a game. The adult listened and facilitated a brief restorative conversation. Both young pe  Young person said another young person in the home had been unkind du"
     },
     {
       "scenario_id": "core_007_v01_rough_note",
@@ -3425,7 +3425,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support young person asked to speak privately before bedtime shared worries about school but did not want details recorded in f  ## Child's Voice / Presentation young person asked to speak privately before bedtime shared worries about school b"
+      "output_excerpt": "## Daily Record  ## Presentation and Support young person asked to speak privately before bedtime shared worries about school but did not want details recorded in f  young person asked to speak privately before bedtime shared worries about school but did not want details recorded"
     },
     {
       "scenario_id": "core_007_v02_manager_oversight",
@@ -3477,7 +3477,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person asked to speak privately before bedtime. Shared worries about school but did not want details recorded in front of others. The adult listened in private space and agreed to record proportiona  ## Child's Voice / Presentati"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person asked to speak privately before bedtime. Shared worries about school but did not want details recorded in front of others. The adult listened in private space and agreed to record proportiona  Young person asked to speak p"
     },
     {
       "scenario_id": "core_007_v03_handover",
@@ -3529,7 +3529,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person asked to speak privately before bedtime. Shared worries about school but did not want details recorded in front of others. The adult listened in private space and agreed t  ## Child's Voice / Presentation Young person aske"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person asked to speak privately before bedtime. Shared worries about school but did not want details recorded in front of others. The adult listened in private space and agreed t  Young person asked to speak privately before bedt"
     },
     {
       "scenario_id": "core_007_v04_mobile_friendly",
@@ -3581,7 +3581,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person asked to speak privately before bedtime. Shared worries about school but did not want details recorded in front of others. The adult listened  ## Child's Voice / Presentation Young person asked to speak privately before be"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person asked to speak privately before bedtime. Shared worries about school but did not want details recorded in front of others. The adult listened  Young person asked to speak privately before bedtime. Shared worries about scho"
     },
     {
       "scenario_id": "core_007_v05_child_centred_rewrite",
@@ -3733,7 +3733,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person asked to speak privately before bedtime. Shared worries about school but did not want details recorded in front of others. The adult listened in privat  ## Child's Voice / Presentation Young person asked to speak privately"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person asked to speak privately before bedtime. Shared worries about school but did not want details recorded in front of others. The adult listened in privat  Young person asked to speak privately before bedtime. Shared worries "
     },
     {
       "scenario_id": "core_007_v08_poor_wording_correction",
@@ -3783,7 +3783,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person asked to speak privately before bedtime. Shared worries about schoo  ## Child's Voice / Presentation Young person asked to speak privately before bedtime. Shared worries about schoo Presentation: as described in factual ac"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person asked to speak privately before bedtime. Shared worries about schoo  Young person asked to speak privately before bedtime. Shared worries about schoo Presentation: as described in factual account \u2014 further detail not yet r"
     },
     {
       "scenario_id": "core_007_v09_voice_dictate_transcript",
@@ -3833,7 +3833,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person asked to speak privately before bedtime. Shared worries about school but did not want d  ## Child's Voice / Presentation Young person asked to speak privately before bedtime. Shared worries about school but did not want d "
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person asked to speak privately before bedtime. Shared worries about school but did not want d  Young person asked to speak privately before bedtime. Shared worries about school but did not want d Presentation: as described in fa"
     },
     {
       "scenario_id": "core_007_v10_reflective_supervision",
@@ -3885,7 +3885,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person asked to speak privately before bedtime. Shared worries about school but did not want details recorded in front of others. The adult listened in privat  ## Child's Voice / Presentation Young person asked to speak privately"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person asked to speak privately before bedtime. Shared worries about school but did not want details recorded in front of others. The adult listened in privat  Young person asked to speak privately before bedtime. Shared worries "
     },
     {
       "scenario_id": "core_008_v01_rough_note",
@@ -3935,7 +3935,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support young person declined planned group outing said they needed quiet time The adult respected choice and offered alternative  ## Child's Voice / Presentation young person declined planned group outing said they needed quiet time The adult"
+      "output_excerpt": "## Daily Record  ## Presentation and Support young person declined planned group outing said they needed quiet time The adult respected choice and offered alternative  young person declined planned group outing said they needed quiet time The adult respected choice and offered al"
     },
     {
       "scenario_id": "core_008_v02_manager_oversight",
@@ -3987,7 +3987,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person declined planned group outing. Said they needed quiet time. The adult respected choice and offered alternative activity at home. Young person engaged with one-to-one support instead.  ## Child's Voice / Presentation Young "
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person declined planned group outing. Said they needed quiet time. The adult respected choice and offered alternative activity at home. Young person engaged with one-to-one support instead.  Young person declined planned group ou"
     },
     {
       "scenario_id": "core_008_v03_handover",
@@ -4039,7 +4039,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person declined planned group outing. Said they needed quiet time. The adult respected choice and offered alternative activity at home. Young person engaged with one-to-one suppo  ## Child's Voice / Presentation Young person decl"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person declined planned group outing. Said they needed quiet time. The adult respected choice and offered alternative activity at home. Young person engaged with one-to-one suppo  Young person declined planned group outing. Said "
     },
     {
       "scenario_id": "core_008_v04_mobile_friendly",
@@ -4091,7 +4091,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person declined planned group outing. Said they needed quiet time. The adult respected choice and offered alternative activity at home. Young person  ## Child's Voice / Presentation Young person declined planned group outing. Sai"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person declined planned group outing. Said they needed quiet time. The adult respected choice and offered alternative activity at home. Young person  Young person declined planned group outing. Said they needed quiet time. The ad"
     },
     {
       "scenario_id": "core_008_v05_child_centred_rewrite",
@@ -4143,7 +4143,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person declined planned group outing. Said they needed quiet time. The adult respected choice and offered alternative activity at home. Young person engaged with one-to-one support instead.  ## Child's Voice / Presentation Young "
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person declined planned group outing. Said they needed quiet time. The adult respected choice and offered alternative activity at home. Young person engaged with one-to-one support instead.  Young person declined planned group ou"
     },
     {
       "scenario_id": "core_008_v06_safeguarding_escalation",
@@ -4195,7 +4195,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person declined planned group outing. Said they needed quiet time. The adult respected choice and offered alternative activity at home. Young person engaged with one-to-one support instead.  ## Child's Voice / Presentation Young "
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person declined planned group outing. Said they needed quiet time. The adult respected choice and offered alternative activity at home. Young person engaged with one-to-one support instead.  Young person declined planned group ou"
     },
     {
       "scenario_id": "core_008_v07_reg44_evidence",
@@ -4247,7 +4247,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person declined planned group outing. Said they needed quiet time. The adult respected choice and offered alternative activity at home. Young person engaged w  ## Child's Voice / Presentation Young person declined planned group o"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person declined planned group outing. Said they needed quiet time. The adult respected choice and offered alternative activity at home. Young person engaged w  Young person declined planned group outing. Said they needed quiet ti"
     },
     {
       "scenario_id": "core_008_v08_poor_wording_correction",
@@ -4297,7 +4297,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person declined planned group outing. Said they needed quiet time. The adult r  ## Child's Voice / Presentation Young person declined planned group outing. Said they needed quiet time. The adult observed presentation: quiet, decl"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person declined planned group outing. Said they needed quiet time. The adult r  Young person declined planned group outing. Said they needed quiet time. The adult observed presentation: quiet, declined.  ## Adult Response Adult r"
     },
     {
       "scenario_id": "core_008_v09_voice_dictate_transcript",
@@ -4349,7 +4349,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person declined planned group outing. Said they needed quiet time. The adult respected choice and  ## Child's Voice / Presentation Young person declined planned group outing. Said they needed quiet time. The adult observed presen"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person declined planned group outing. Said they needed quiet time. The adult respected choice and  Young person declined planned group outing. Said they needed quiet time. The adult observed presentation: quiet, declined.  ## Adu"
     },
     {
       "scenario_id": "core_008_v10_reflective_supervision",
@@ -4401,7 +4401,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person declined planned group outing. Said they needed quiet time. The adult respected choice and offered alternative activity at home. Young person engaged w  ## Child's Voice / Presentation Young person declined planned group o"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person declined planned group outing. Said they needed quiet time. The adult respected choice and offered alternative activity at home. Young person engaged w  Young person declined planned group outing. Said they needed quiet ti"
     },
     {
       "scenario_id": "core_009_v01_rough_note",
@@ -4451,7 +4451,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support young person returned to the home after off-site appointment appearing unsettled would not say why immediately The adult o  ## Child's Voice / Presentation Young person said: not yet known \u2014 record the child's words where provided. The"
+      "output_excerpt": "## Daily Record  ## Presentation and Support young person returned to the home after off-site appointment appearing unsettled would not say why immediately The adult o  Young person said: not yet known \u2014 record the child's words where provided. The adult observed presentation: ap"
     },
     {
       "scenario_id": "core_009_v02_manager_oversight",
@@ -4501,7 +4501,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person returned to the home after off-site appointment appearing unsettled. Would not say why immediately. The adult offered drink and quiet space. Presentation improved after 30 minutes. Follow-up  ## Child's Voice / Presentatio"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person returned to the home after off-site appointment appearing unsettled. Would not say why immediately. The adult offered drink and quiet space. Presentation improved after 30 minutes. Follow-up  Young person said: not yet kno"
     },
     {
       "scenario_id": "core_009_v03_handover",
@@ -4551,7 +4551,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person returned to the home after off-site appointment appearing unsettled. Would not say why immediately. The adult offered drink and quiet space. Presentation improved after 30  ## Child's Voice / Presentation Young person said"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person returned to the home after off-site appointment appearing unsettled. Would not say why immediately. The adult offered drink and quiet space. Presentation improved after 30  Young person said: not yet known \u2014 record the chi"
     },
     {
       "scenario_id": "core_009_v04_mobile_friendly",
@@ -4601,7 +4601,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person returned to the home after off-site appointment appearing unsettled. Would not say why immediately. The adult offered drink and quiet space.  ## Child's Voice / Presentation Young person said: not yet known \u2014 record the ch"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person returned to the home after off-site appointment appearing unsettled. Would not say why immediately. The adult offered drink and quiet space.  Young person said: not yet known \u2014 record the child's words where provided. The "
     },
     {
       "scenario_id": "core_009_v05_child_centred_rewrite",
@@ -4651,7 +4651,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person returned to the home after off-site appointment appearing unsettled. Would not say why immediately. The adult offered drink and quiet space. Presentation improved after 30 minutes. Follow-up keywork offered.  ## Child's Vo"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person returned to the home after off-site appointment appearing unsettled. Would not say why immediately. The adult offered drink and quiet space. Presentation improved after 30 minutes. Follow-up keywork offered.  Young person "
     },
     {
       "scenario_id": "core_009_v06_safeguarding_escalation",
@@ -4701,7 +4701,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person returned to the home after off-site appointment appearing unsettled. Would not say why immediately. The adult offered drink and quiet space. Presentation improved after 30 minutes. Follow-up keywork offered.  ## Child's Vo"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person returned to the home after off-site appointment appearing unsettled. Would not say why immediately. The adult offered drink and quiet space. Presentation improved after 30 minutes. Follow-up keywork offered.  Young person "
     },
     {
       "scenario_id": "core_009_v07_reg44_evidence",
@@ -4751,7 +4751,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person returned to the home after off-site appointment appearing unsettled. Would not say why immediately. The adult offered drink and quiet space. Presentati  ## Child's Voice / Presentation Young person said: not yet known \u2014 re"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person returned to the home after off-site appointment appearing unsettled. Would not say why immediately. The adult offered drink and quiet space. Presentati  Young person said: not yet known \u2014 record the child's words where pro"
     },
     {
       "scenario_id": "core_009_v08_poor_wording_correction",
@@ -4801,7 +4801,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person returned to the home after off-site appointment appearing unsettled  ## Child's Voice / Presentation Young person said: not yet known \u2014 record the child's words where provided. The adult observed presentation: appeared mor"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person returned to the home after off-site appointment appearing unsettled  Young person said: not yet known \u2014 record the child's words where provided. The adult observed presentation: appeared more settled.  ## Adult Response Ad"
     },
     {
       "scenario_id": "core_009_v09_voice_dictate_transcript",
@@ -4851,7 +4851,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person returned to the home after off-site appointment appearing unsettled. Would not say why  ## Child's Voice / Presentation Young person said: not yet known \u2014 record the child's words where provided. The adult observed present"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person returned to the home after off-site appointment appearing unsettled. Would not say why  Young person said: not yet known \u2014 record the child's words where provided. The adult observed presentation: appeared more settled.  #"
     },
     {
       "scenario_id": "core_009_v10_reflective_supervision",
@@ -4901,7 +4901,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person returned to the home after off-site appointment appearing unsettled. Would not say why immediately. The adult offered drink and quiet space. Presentati  ## Child's Voice / Presentation Young person said: not yet known \u2014 re"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person returned to the home after off-site appointment appearing unsettled. Would not say why immediately. The adult offered drink and quiet space. Presentati  Young person said: not yet known \u2014 record the child's words where pro"
     },
     {
       "scenario_id": "core_010_v01_rough_note",
@@ -4951,7 +4951,7 @@
       "record_type": "family_contact_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support family contact visit at the home young person engaged well with family member shared news about school visit ended ca  ## Child's Voice / Presentation Young person said: family contact visit at the home young person engaged well with f"
+      "output_excerpt": "## Daily Record  ## Presentation and Support family contact visit at the home young person engaged well with family member shared news about school visit ended ca  Young person said: family contact visit at the home young person engaged well with family member shared news about s"
     },
     {
       "scenario_id": "core_010_v02_manager_oversight",
@@ -5101,7 +5101,7 @@
       "record_type": "family_contact_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Family contact visit at the home. Young person engaged well with family member. Shared news about school. Visit ended calmly. Young person said they e  ## Child's Voice / Presentation Young person said they e The adult observed present"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Family contact visit at the home. Young person engaged well with family member. Shared news about school. Visit ended calmly. Young person said they e  Young person said they e The adult observed presentation: engaged.  ## Adult Respon"
     },
     {
       "scenario_id": "core_010_v05_child_centred_rewrite",
@@ -5251,7 +5251,7 @@
       "record_type": "family_contact_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Family contact visit at the home. Young person engaged well with family member. Shared news about school. Visit ended calmly. Young person said they enjoyed the  ## Child's Voice / Presentation Young person said they enjoyed the The ad"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Family contact visit at the home. Young person engaged well with family member. Shared news about school. Visit ended calmly. Young person said they enjoyed the  Young person said they enjoyed the The adult observed presentation: engag"
     },
     {
       "scenario_id": "core_010_v08_poor_wording_correction",
@@ -5301,7 +5301,7 @@
       "record_type": "family_contact_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Family contact visit at the home. Young person engaged well with family member.  ## Child's Voice / Presentation Young person said: not yet known \u2014 record the child's words where provided. The adult observed presentation: engaged.  ## "
+      "output_excerpt": "## Daily Record  ## Presentation and Support Family contact visit at the home. Young person engaged well with family member.  Young person said: not yet known \u2014 record the child's words where provided. The adult observed presentation: engaged.  ## Adult Response Adult response de"
     },
     {
       "scenario_id": "core_010_v09_voice_dictate_transcript",
@@ -5351,7 +5351,7 @@
       "record_type": "family_contact_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Family contact visit at the home. Young person engaged well with family member. Shared news about sc  ## Child's Voice / Presentation Young person said: Shared news about sc The adult observed presentation: engaged.  ## Adult Response "
+      "output_excerpt": "## Daily Record  ## Presentation and Support Family contact visit at the home. Young person engaged well with family member. Shared news about sc  Young person said: Shared news about sc The adult observed presentation: engaged.  ## Adult Response Adult response detail not yet re"
     },
     {
       "scenario_id": "core_010_v10_reflective_supervision",
@@ -5401,7 +5401,7 @@
       "record_type": "family_contact_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Family contact visit at the home. Young person engaged well with family member. Shared news about school. Visit ended calmly. Young person said they enjoyed the  ## Child's Voice / Presentation Young person said they enjoyed the The ad"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Family contact visit at the home. Young person engaged well with family member. Shared news about school. Visit ended calmly. Young person said they enjoyed the  Young person said they enjoyed the The adult observed presentation: engag"
     },
     {
       "scenario_id": "core_011_v01_rough_note",
@@ -21451,7 +21451,7 @@
       "record_type": "daily_record",
       "scenario_family": "magic_notes",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support young person became distressed at tea \u2014 further review is needed to understand what they may have been communicating The adult used wording that should be reframed more respectfully later appeared calmer  ## Child's Voice / Presentatio"
+      "output_excerpt": "## Daily Record  ## Presentation and Support young person became distressed at tea \u2014 further review is needed to understand what they may have been communicating The adult used wording that should be reframed more respectfully later appeared calmer  Young person said: not yet kno"
     },
     {
       "scenario_id": "core_043_v02_manager_oversight",
@@ -21501,7 +21501,7 @@
       "record_type": "daily_record",
       "scenario_family": "magic_notes",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person became distressed at tea \u2014 further review is needed to understand what they may have been communicating. The adult used wording that should be reframed more respectfully. Later appeared calmer.  ## Child's Voice / Presenta"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person became distressed at tea \u2014 further review is needed to understand what they may have been communicating. The adult used wording that should be reframed more respectfully. Later appeared calmer.  Young person said: not yet "
     },
     {
       "scenario_id": "core_043_v03_handover",
@@ -21551,7 +21551,7 @@
       "record_type": "daily_record",
       "scenario_family": "magic_notes",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person became distressed at tea \u2014 further review is needed to understand what they may have been communicating. The adult used wording that should be reframed more respectfully. Later appeared calmer.  ## Child's Voice / Presenta"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person became distressed at tea \u2014 further review is needed to understand what they may have been communicating. The adult used wording that should be reframed more respectfully. Later appeared calmer.  Young person said: not yet "
     },
     {
       "scenario_id": "core_043_v04_mobile_friendly",
@@ -21601,7 +21601,7 @@
       "record_type": "daily_record",
       "scenario_family": "magic_notes",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person became distressed at tea \u2014 further review is needed to understand what they may have been communicating. The adult used wording that should be reframed more respectfully. Later appeared calmer.  ## Child's Voice / Presenta"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person became distressed at tea \u2014 further review is needed to understand what they may have been communicating. The adult used wording that should be reframed more respectfully. Later appeared calmer.  Young person said: not yet "
     },
     {
       "scenario_id": "core_043_v05_child_centred_rewrite",
@@ -21651,7 +21651,7 @@
       "record_type": "daily_record",
       "scenario_family": "magic_notes",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person became distressed at tea \u2014 further review is needed to understand what they may have been communicating. The adult used wording that should be reframed more respectfully. Later appeared calmer.  ## Child's Voice / Presenta"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person became distressed at tea \u2014 further review is needed to understand what they may have been communicating. The adult used wording that should be reframed more respectfully. Later appeared calmer.  Young person said: not yet "
     },
     {
       "scenario_id": "core_043_v06_safeguarding_escalation",
@@ -21701,7 +21701,7 @@
       "record_type": "daily_record",
       "scenario_family": "magic_notes",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person became distressed at tea \u2014 further review is needed to understand what they may have been communicating. The adult used wording that should be reframed more respectfully. Later appeared calmer.  ## Child's Voice / Presenta"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person became distressed at tea \u2014 further review is needed to understand what they may have been communicating. The adult used wording that should be reframed more respectfully. Later appeared calmer.  Young person said: not yet "
     },
     {
       "scenario_id": "core_043_v07_reg44_evidence",
@@ -21751,7 +21751,7 @@
       "record_type": "daily_record",
       "scenario_family": "magic_notes",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person became distressed at tea \u2014 further review is needed to understand what they may have been communicating. The adult used wording that should be reframed more respectfully. Later appeared calmer.  ## Child's Voice / Presenta"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person became distressed at tea \u2014 further review is needed to understand what they may have been communicating. The adult used wording that should be reframed more respectfully. Later appeared calmer.  Young person said: not yet "
     },
     {
       "scenario_id": "core_043_v08_poor_wording_correction",
@@ -21801,7 +21801,7 @@
       "record_type": "daily_record",
       "scenario_family": "magic_notes",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person became distressed at tea \u2014 further review is needed to understand what they may have been communicating. The adult told them to  ## Child's Voice / Presentation Young person said: not yet known \u2014 record the child's words w"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person became distressed at tea \u2014 further review is needed to understand what they may have been communicating. The adult told them to  Young person said: not yet known \u2014 record the child's words where provided. The adult observe"
     },
     {
       "scenario_id": "core_043_v09_voice_dictate_transcript",
@@ -21851,7 +21851,7 @@
       "record_type": "daily_record",
       "scenario_family": "magic_notes",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person became distressed at tea \u2014 further review is needed to understand what they may have been communicating. The adult used wording that should be reframed more respectfully  ## Child's Voice / Presentation Young person said: "
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person became distressed at tea \u2014 further review is needed to understand what they may have been communicating. The adult used wording that should be reframed more respectfully  Young person said: not yet known \u2014 record the child"
     },
     {
       "scenario_id": "core_043_v10_reflective_supervision",
@@ -21901,7 +21901,7 @@
       "record_type": "daily_record",
       "scenario_family": "magic_notes",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person became distressed at tea \u2014 further review is needed to understand what they may have been communicating. The adult used wording that should be reframed more respectfully. Later appeared calmer.  ## Child's Voice / Presenta"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person became distressed at tea \u2014 further review is needed to understand what they may have been communicating. The adult used wording that should be reframed more respectfully. Later appeared calmer.  Young person said: not yet "
     },
     {
       "scenario_id": "core_044_v01_rough_note",
@@ -21951,7 +21951,7 @@
       "record_type": "daily_record",
       "scenario_family": "magic_notes",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support young person was behaviour that may have communicated an unmet need and found it difficult to follow the request at that time The adult used a firm approach \u2014 wording may need review later followed the request when ready  ## Child's Vo"
+      "output_excerpt": "## Daily Record  ## Presentation and Support young person was behaviour that may have communicated an unmet need and found it difficult to follow the request at that time The adult used a firm approach \u2014 wording may need review later followed the request when ready  young person "
     },
     {
       "scenario_id": "core_044_v02_manager_oversight",
@@ -22001,7 +22001,7 @@
       "record_type": "daily_record",
       "scenario_family": "magic_notes",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person was behaviour that may have communicated an unmet need and found it difficult to follow the request at that time. The adult used a firm approach \u2014 wording may need review. later followed the request when ready.  ## Child's"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person was behaviour that may have communicated an unmet need and found it difficult to follow the request at that time. The adult used a firm approach \u2014 wording may need review. later followed the request when ready.  Young pers"
     },
     {
       "scenario_id": "core_044_v03_handover",
@@ -22051,7 +22051,7 @@
       "record_type": "daily_record",
       "scenario_family": "magic_notes",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person was behaviour that may have communicated an unmet need and found it difficult to follow the request at that time. The adult used a firm approach \u2014 wording may need review. later followed the request when ready.  ## Child's"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person was behaviour that may have communicated an unmet need and found it difficult to follow the request at that time. The adult used a firm approach \u2014 wording may need review. later followed the request when ready.  Young pers"
     },
     {
       "scenario_id": "core_044_v04_mobile_friendly",
@@ -22101,7 +22101,7 @@
       "record_type": "daily_record",
       "scenario_family": "magic_notes",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person was behaviour that may have communicated an unmet need and found it difficult to follow the request at that time. The adult used a firm approach \u2014 wording may need review. later followed the request when ready.  ## Child's"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person was behaviour that may have communicated an unmet need and found it difficult to follow the request at that time. The adult used a firm approach \u2014 wording may need review. later followed the request when ready.  Young pers"
     },
     {
       "scenario_id": "core_044_v05_child_centred_rewrite",
@@ -22151,7 +22151,7 @@
       "record_type": "daily_record",
       "scenario_family": "magic_notes",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person was behaviour that may have communicated an unmet need and found it difficult to follow the request at that time. The adult used a firm approach \u2014 wording may need review. later followed the request when ready.  ## Child's"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person was behaviour that may have communicated an unmet need and found it difficult to follow the request at that time. The adult used a firm approach \u2014 wording may need review. later followed the request when ready.  Young pers"
     },
     {
       "scenario_id": "core_044_v06_safeguarding_escalation",
@@ -22201,7 +22201,7 @@
       "record_type": "daily_record",
       "scenario_family": "magic_notes",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person was behaviour that may have communicated an unmet need and found it difficult to follow the request at that time. The adult used a firm approach \u2014 wording may need review. later followed the request when ready.  ## Child's"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person was behaviour that may have communicated an unmet need and found it difficult to follow the request at that time. The adult used a firm approach \u2014 wording may need review. later followed the request when ready.  Young pers"
     },
     {
       "scenario_id": "core_044_v07_reg44_evidence",
@@ -22251,7 +22251,7 @@
       "record_type": "daily_record",
       "scenario_family": "magic_notes",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person was behaviour that may have communicated an unmet need and found it difficult to follow the request at that time. The adult used a firm approach \u2014 wording may need review. later followed the request when ready.  ## Child's"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person was behaviour that may have communicated an unmet need and found it difficult to follow the request at that time. The adult used a firm approach \u2014 wording may need review. later followed the request when ready.  Young pers"
     },
     {
       "scenario_id": "core_044_v08_poor_wording_correction",
@@ -22301,7 +22301,7 @@
       "record_type": "daily_record",
       "scenario_family": "magic_notes",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person was behaviour that may have communicated an unmet need and found it difficult to follow the request at that time. The adult used a firm approach \u2014 wording may need review. Event  ## Child's Voice / Presentation Young perso"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person was behaviour that may have communicated an unmet need and found it difficult to follow the request at that time. The adult used a firm approach \u2014 wording may need review. Event  Young person was behaviour that may have co"
     },
     {
       "scenario_id": "core_044_v09_voice_dictate_transcript",
@@ -22351,7 +22351,7 @@
       "record_type": "daily_record",
       "scenario_family": "magic_notes",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person was behaviour that may have communicated an unmet need and found it difficult to follow the request at that time. The adult used a firm approach \u2014 wording may need review. later followed the request when ready.  ## Child's"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person was behaviour that may have communicated an unmet need and found it difficult to follow the request at that time. The adult used a firm approach \u2014 wording may need review. later followed the request when ready.  Young pers"
     },
     {
       "scenario_id": "core_044_v10_reflective_supervision",
@@ -22401,7 +22401,7 @@
       "record_type": "daily_record",
       "scenario_family": "magic_notes",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person was behaviour that may have communicated an unmet need and found it difficult to follow the request at that time. The adult used a firm approach \u2014 wording may need review. later followed the request when ready.  ## Child's"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person was behaviour that may have communicated an unmet need and found it difficult to follow the request at that time. The adult used a firm approach \u2014 wording may need review. later followed the request when ready.  Young pers"
     },
     {
       "scenario_id": "core_045_v01_rough_note",

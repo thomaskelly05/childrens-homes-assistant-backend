@@ -1214,17 +1214,17 @@ def build_child_centred_scaffold(scenario: dict[str, Any]) -> str:
     is_daily = record_type == "daily_record" or family == "daily_care"
 
     blocks: list[str] = [
-        f"## {title}",
+        f"## {'Daily Record' if is_daily else title}",
         "",
     ]
     if is_daily:
+        presentation = factual or "Not stated."
+        if child_voice and child_voice.strip().lower() not in {"not yet known.", "not stated."}:
+            presentation = f"{presentation}\n\n{child_voice}".strip()
         blocks.extend(
             [
                 "## Presentation and Support",
-                factual or "Not stated.",
-                "",
-                "## Child's Voice / Presentation",
-                child_voice,
+                presentation,
             ]
         )
     else:
