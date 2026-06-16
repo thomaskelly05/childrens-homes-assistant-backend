@@ -124,7 +124,7 @@ export function generateCompanyBoardReport(
     ),
     section(
       'Quality and Inspection evidence preparation',
-      [kpiLine(kpiMap['quality-lab-pass-rate']), kpiLine(kpiMap['inspection evidence preparation-status'])].join('\n'),
+      [kpiLine(kpiMap['quality-lab-pass-rate']), kpiLine(kpiMap['inspection-readiness-status'])].join('\n'),
       kpiMap['quality-lab-pass-rate']?.sourceStatus === 'live' ? 'live' : 'unavailable'
     ),
     section(

@@ -26,7 +26,7 @@ SKIP_PARTS = (
     "/reports/",
     "test_inspection_readiness_technical_paths_guard.py",
     "restore_inspection_readiness_technical_paths.py",
-    "apply_orb_ofsted_wording_safety.py",
+    "test_orb_ofsted_wording_script_safety.py",
 )
 
 EXTENSIONS = {".py", ".tsx", ".ts", ".js", ".html"}

@@ -147,7 +147,7 @@ async function fetchLiveTarget(
     })
 
     if (!upstream.ok) {
-      if (targetKey === 'inspection evidence preparation') {
+      if (targetKey === 'inspection-readiness') {
         return {
           key: targetKey,
           data: INSPECTION_READINESS_UNAVAILABLE,
@@ -170,7 +170,7 @@ async function fetchLiveTarget(
     cacheSet(liveDataCache, cacheKey, data, ttl)
     return { key: targetKey, data }
   } catch {
-    if (targetKey === 'inspection evidence preparation') {
+    if (targetKey === 'inspection-readiness') {
       return {
         key: targetKey,
         data: INSPECTION_READINESS_UNAVAILABLE,
@@ -225,7 +225,7 @@ export async function proxyFounderLiveData(
 
   const result = await fetchLiveTarget(request, cookieHeader, targetKey, query)
   const data =
-    targetKey === 'inspection evidence preparation' && result.error === 'unavailable'
+    targetKey === 'inspection-readiness' && result.error === 'unavailable'
       ? INSPECTION_READINESS_UNAVAILABLE
       : result.data
   return NextResponse.json(sanitiseFounderPayload({ success: true, data }), { status: 200 })
@@ -281,7 +281,7 @@ export async function buildFounderBootstrapResponse(request: Request): Promise<N
   const liveJobs: Array<{ key: keyof typeof LIVE_PROXY_TARGETS; query?: Record<string, string> }> = [
     { key: 'providers' },
     { key: 'homes' },
-    { key: 'inspection evidence preparation' },
+    { key: 'inspection-readiness' },
     { key: 'orb-billing-usage', query: { days: '30' } },
     { key: 'orb-feedback-summary', query: { days: '30' } }
   ]
@@ -302,7 +302,7 @@ export async function buildFounderBootstrapResponse(request: Request): Promise<N
   }
 
   for (const result of liveResults) {
-    if (result.key === 'inspection evidence preparation') {
+    if (result.key === 'inspection-readiness') {
       if (result.error === 'unavailable') {
         liveSummary.inspectionReadiness = INSPECTION_READINESS_UNAVAILABLE
         limitations.push(INSPECTION_READINESS_LIMITATION)

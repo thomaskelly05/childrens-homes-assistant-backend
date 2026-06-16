@@ -351,7 +351,11 @@ def scan_product_strings() -> list[WordingOccurrence]:
                     continue
                 if re.search(r"\bdoes not provide an ofsted grade\b", literal, re.I):
                     continue
-                if "/inspection-readiness" in literal or "inspection_readiness_" in literal:
+                if "/inspection-readiness" in literal or "inspection_readiness" in literal:
+                    continue
+                if re.search(r"inspection-readiness", literal):
+                    continue
+                if re.search(r"ofsted-readiness", literal):
                     continue
                 if re.search(
                     r"\b(does not|do not|must not|cannot|can't|will not|won't)\s+[\w\s]{0,30}"

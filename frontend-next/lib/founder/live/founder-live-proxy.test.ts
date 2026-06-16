@@ -14,7 +14,7 @@ describe('founder live proxy Inspection evidence preparation isolation', () => {
   it('treats Inspection evidence preparation as an optional live section', () => {
     const proxy = read('lib/founder/live/founder-live-proxy.ts')
     assert.match(proxy, /FOUNDER_OPTIONAL_LIVE_SECTIONS/)
-    assert.match(proxy, /'inspection evidence preparation'/)
+    assert.match(proxy, /'inspection-readiness'/)
   })
 
   it('returns unavailable Inspection evidence preparation payload instead of propagating 500', () => {
@@ -32,7 +32,7 @@ describe('founder live proxy Inspection evidence preparation isolation', () => {
     assert.match(bootstrapClient, /FOUNDER_CRITICAL_SECTIONS/)
     assert.match(bootstrapClient, /hasFounderCriticalSectionError/)
     assert.match(bootstrapClient, /'persistence'/)
-    assert.doesNotMatch(bootstrapClient, /'inspection evidence preparation'/)
+    assert.doesNotMatch(bootstrapClient, /'inspection-readiness'/)
   })
 
   it('shows degraded banner only for critical persistence failures', () => {

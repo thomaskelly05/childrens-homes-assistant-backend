@@ -26,7 +26,7 @@ def test_inspection_readiness_page_exists():
     assert page.is_file()
     text = _read(page)
     assert "Inspection evidence preparation" in text
-    assert "does not predict inspection outcomes" in text
+    assert "We do not predict Ofsted grades" in text or "We do not claim Ofsted grades" in text
 
 
 def test_inspection_ui_markers():
@@ -34,7 +34,7 @@ def test_inspection_ui_markers():
     for phrase in (
         "Reg 44",
         "Reg 45",
-        "Evidence gaps",
+        "Gaps to review",
         "Draft-only",
         "Ask OS ORB",
         "Save pack",

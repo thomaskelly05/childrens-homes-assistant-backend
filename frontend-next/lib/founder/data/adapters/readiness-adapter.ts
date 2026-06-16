@@ -7,7 +7,7 @@ import { getReadinessAdapterUnavailable } from './adapter-unavailable'
 import { anonymiseHomeLabel, currentPeriodBounds, fetchFounderLiveJson } from './adapter-utils'
 
 export async function fetchReadinessAdapter(): Promise<FounderAdapterResult<ReadinessMetrics>> {
-  const dashboard = await fetchFounderLiveJson<InspectionReadinessDashboard>('inspection evidence preparation')
+  const dashboard = await fetchFounderLiveJson<InspectionReadinessDashboard>('inspection-readiness')
 
   if (!dashboard) {
     return isFounderMockFallbackAllowed() ? getReadinessAdapterFallback() : getReadinessAdapterUnavailable()

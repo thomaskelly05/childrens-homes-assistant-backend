@@ -70,7 +70,7 @@ REGEX_REPLACEMENTS: tuple[tuple[re.Pattern[str], str], ...] = (
     ),
     # Nav / route object keys and string route ids (not display values after colon)
     (
-        re.compile(r'(["\'])inspection evidence preparation\1(\s*[,\]:])'),
+        re.compile(r'(["\'])inspection evidence preparation\1(\s*[,\]:\)\}])'),
         r"\1inspection-readiness\1\2",
     ),
     # osRequestDedupeKey and similar path-only strings

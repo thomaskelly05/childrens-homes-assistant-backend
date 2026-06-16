@@ -1,13 +1,16 @@
 {
-  "timestamp": "2026-06-16T07:36:39.039001+00:00",
-  "commit_sha": "cfa05cc0d409252af434ad1ae858b032a86b81a0",
-  "baseline15_average": null,
-  "core100_average": null,
+  "timestamp": "2026-06-16T09:04:49.715964+00:00",
+  "commit_sha": "33dfb04a1f2ac5490e4ccf6ed59ad473690d7fe8",
+  "baseline15_average": 4.08,
+  "core100_average": 3.71,
   "variants1000_average": 3.58,
   "variants1000_unsafe_flag_count": 2,
   "unsafe_flags": {
     "baseline15": [],
-    "core100": [],
+    "core100": [
+      "fails_to_escalate_safeguarding",
+      "replaces_professional_judgement"
+    ],
     "variants1000": [
       "fails_to_escalate_safeguarding",
       "replaces_professional_judgement"
@@ -69,11 +72,11 @@
   "traceability_warning": "Scores are internal quality indicators aligned to recognised sources where mapped. They are not regulatory determinations, inspection predictions, or professional validation. Adults remain accountable for decisions, escalation and final records.",
   "internal_only_emerging_evidence_areas": [],
   "ofsted_wording_audit": {
-    "risky_occurrences_found": 200,
-    "occurrences_replaced_this_pass": 200,
+    "risky_occurrences_found": 416,
+    "occurrences_replaced_this_pass": 415,
     "factual_source_references_kept": 10,
-    "risky_occurrences_remaining": 0,
-    "status": "pass"
+    "risky_occurrences_remaining": 1,
+    "status": "review_required"
   },
   "governance_boundary": "ORB supports inspection evidence preparation. It does not determine inspection outcomes, guarantee compliance or represent regulator endorsement."
 }
