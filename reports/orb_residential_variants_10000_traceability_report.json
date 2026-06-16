@@ -1,0 +1,143 @@
+{
+  "run_timestamp": "2026-06-16T14:32:30.748334+00:00",
+  "commit_sha": "1588b34968622f15c8e5c22cc7fe2f34440e7684",
+  "scenario_set": "variants10000",
+  "scenario_count": 10000,
+  "average_overall_score": 4.23,
+  "unsafe_flags": [],
+  "unsafe_flag_count": 0,
+  "category_averages": {
+    "child_centredness": 5.0,
+    "factual_accuracy_no_invention": 4.0,
+    "therapeutic_language": 4.0,
+    "observation_vs_interpretation": 5.0,
+    "adult_response_and_support": 4.0,
+    "outcome_and_follow_up": 4.0,
+    "safeguarding_awareness": 4.0,
+    "management_oversight": 4.0,
+    "recording_usefulness": 4.0,
+    "professional_tone": 4.0,
+    "privacy_minimisation": 5.0,
+    "adult_responsibility_no_replacement": 4.0
+  },
+  "weakest_record_types": [
+    {
+      "record_type": "daily_record",
+      "average_score": 4.23
+    },
+    {
+      "record_type": "family_contact_record",
+      "average_score": 4.23
+    },
+    {
+      "record_type": "incident_report",
+      "average_score": 4.23
+    },
+    {
+      "record_type": "behaviour_reflection",
+      "average_score": 4.23
+    },
+    {
+      "record_type": "supervision_discussion",
+      "average_score": 4.23
+    }
+  ],
+  "highest_risk_scenario_families": [
+    {
+      "scenario_family": "daily_care",
+      "average_score": 4.23,
+      "count": 1000
+    },
+    {
+      "scenario_family": "incident_reflection",
+      "average_score": 4.23,
+      "count": 1000
+    },
+    {
+      "scenario_family": "safeguarding",
+      "average_score": 4.23,
+      "count": 1000
+    },
+    {
+      "scenario_family": "behaviour_communication",
+      "average_score": 4.23,
+      "count": 1000
+    },
+    {
+      "scenario_family": "magic_notes",
+      "average_score": 4.23,
+      "count": 1000
+    },
+    {
+      "scenario_family": "handover",
+      "average_score": 4.23,
+      "count": 1000
+    },
+    {
+      "scenario_family": "key_work",
+      "average_score": 4.23,
+      "count": 1000
+    },
+    {
+      "scenario_family": "management_oversight",
+      "average_score": 4.23,
+      "count": 1000
+    },
+    {
+      "scenario_family": "meetings",
+      "average_score": 4.23,
+      "count": 1000
+    },
+    {
+      "scenario_family": "regulation_evidence",
+      "average_score": 4.23,
+      "count": 1000
+    }
+  ],
+  "most_common_missing_elements": [],
+  "recommended_improvement_targets": [
+    "Continue monitoring baseline categories"
+  ],
+  "traceability": {
+    "framework_claim": "Source-mapped internal quality framework",
+    "traceability_disclaimer": "Internal quality indicator, not a regulatory judgement. Aligned to recognised statutory, regulatory and professional sources where applicable.",
+    "source_count": 22,
+    "source_hierarchy": [
+      "statutory",
+      "regulator",
+      "professional",
+      "practice-informed",
+      "internal"
+    ],
+    "rubric_categories_total": 12,
+    "rubric_categories_externally_mapped": 12,
+    "rubric_categories_internal_only": 0,
+    "rubric_external_coverage_percent": 100.0,
+    "evidence_strength_summary": {
+      "high": 7,
+      "medium": 4,
+      "emerging": 1
+    },
+    "unsafe_flags_total": 11,
+    "unsafe_flags_with_external_basis": 11,
+    "scenario_required_elements_mapped": 10,
+    "scenario_required_elements_total": 10,
+    "scenario_prohibited_elements_mapped": 12,
+    "scenario_prohibited_elements_total": 12,
+    "scenario_families_mapped": 10,
+    "scenario_families_total": 10,
+    "approved_claims": [
+      "source-mapped internal quality framework",
+      "aligned to recognised statutory, regulatory and professional sources where applicable",
+      "internal quality indicator, not a regulatory judgement",
+      "supports professional reflection and safer recording",
+      "adults remain accountable for decisions, escalation and final records"
+    ],
+    "prohibited_claims": [],
+    "internal_only_categories": [],
+    "warning": "Scores are internal quality indicators aligned to recognised sources where mapped. They are not regulatory determinations, inspection predictions, or professional validation. Adults remain accountable for decisions, escalation and final records."
+  },
+  "disclaimer": "Internal IndiCare Intelligence baseline \u2014 not clinically validated. Source-mapped internal quality framework. Internal quality indicator, not a regulatory judgement. Fixture mode scores template/fixture behaviour, not live LLM performance unless live mode used.",
+  "warning": "Scores are internal quality indicators aligned to recognised sources where mapped. They are not regulatory determinations, inspection predictions, or professional validation. Adults remain accountable for decisions, escalation and final records.",
+  "linked_full_report": "orb_residential_variants_10000_report.json"
+}

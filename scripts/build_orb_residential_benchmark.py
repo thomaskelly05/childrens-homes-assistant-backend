@@ -271,14 +271,21 @@ def build_index(core: list[dict[str, Any]], baseline: list[dict[str, Any]]) -> d
 def _variant_input(core: dict[str, Any], variant_type: str, variant_num: int) -> str:
     base = str(core.get("input") or "")
     title = core.get("title") or ""
+
+    def _tw(t: str, n: int) -> str:
+        t = str(t or "").strip()
+        if len(t) <= n:
+            return t
+        return t[:n].rsplit(" ", 1)[0].rstrip(".,;:")
+
     if variant_type == "rough_note":
-        return f"rough: {base[:120].lower().replace('.', '')}"
+        return f"rough: {_tw(base, 120).lower().replace('.', '')}"
     if variant_type == "manager_oversight":
-        return f"Manager review of: {title}. Facts from shift: {base[:200]}"
+        return f"Manager review of: {title}. Facts from shift: {_tw(base, 200)}"
     if variant_type == "handover":
-        return f"Handover summary — {title}: {base[:180]}"
+        return f"Handover summary — {title}: {_tw(base, 180)}"
     if variant_type == "mobile_friendly":
-        return f"{base[:150]} [recorded on mobile, brief]"
+        return f"{_tw(base, 150)} [recorded on mobile, brief]"
     if variant_type == "child_centred_rewrite":
         return f"Rewrite child-centred: {base}"
     if variant_type == "safeguarding_escalation":
@@ -287,13 +294,13 @@ def _variant_input(core: dict[str, Any], variant_type: str, variant_num: int) ->
             return f"{base} DSL pathway required."
         return f"{base} Check if safeguarding escalation needed — not stated."
     if variant_type == "reg44_evidence":
-        return f"Reg 44 evidence note for: {title}. {base[:160]}"
+        return f"Reg 44 evidence note for: {title}. {_tw(base, 160)}"
     if variant_type == "poor_wording_correction":
-        return f"yp kicked off again. staff firm. {base[:80]}"
+        return f"yp kicked off again. staff firm. {_tw(base, 80)}"
     if variant_type == "voice_dictate_transcript":
-        return f"um {base[:100]} uh staff um helped um"
+        return f"um {_tw(base, 100)} uh staff um helped um"
     if variant_type == "reflective_supervision":
-        return f"Supervision reflection on {title}: {base[:160]}"
+        return f"Supervision reflection on {title}: {_tw(base, 160)}"
     return base
 
 

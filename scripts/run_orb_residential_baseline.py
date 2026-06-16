@@ -52,6 +52,7 @@ from assistant.services.model_provider_registry import model_provider_registry  
 SCENARIOS_PATH = ROOT / "quality" / "orb_residential_baseline_scenarios.json"
 CORE100_PATH = ROOT / "quality" / "orb_residential_core_100_scenarios.json"
 VARIANTS1000_PATH = ROOT / "quality" / "orb_residential_1000_scenario_variants.jsonl"
+VARIANTS10000_PATH = ROOT / "quality" / "orb_residential_10000_scenario_variants.jsonl"
 FIXTURES_DIR = ROOT / "assistant" / "evals" / "fixtures" / "orb_baseline_outputs"
 REPORTS_DIR = ROOT / "reports"
 HISTORY_PATH = REPORTS_DIR / "orb_residential_baseline_history.jsonl"
@@ -59,6 +60,8 @@ PREVIOUS_SNAPSHOT_PATH = REPORTS_DIR / "orb_residential_baseline_previous.json"
 QUALITY_LAB_SUMMARY_PATH = REPORTS_DIR / "orb_quality_lab_summary.json"
 TRACEABILITY_REPORT_JSON = REPORTS_DIR / "orb_residential_variants_1000_traceability_report.json"
 TRACEABILITY_REPORT_MD = REPORTS_DIR / "orb_residential_variants_1000_traceability_report.md"
+TRACEABILITY_10000_JSON = REPORTS_DIR / "orb_residential_variants_10000_traceability_report.json"
+TRACEABILITY_10000_MD = REPORTS_DIR / "orb_residential_variants_10000_traceability_report.md"
 RISK_MAP_JSON = REPORTS_DIR / "orb_quality_lab_source_coverage_risk_map.json"
 RISK_MAP_MD = REPORTS_DIR / "orb_quality_lab_source_coverage_risk_map.md"
 WORDING_AUDIT_JSON = REPORTS_DIR / "orb_ofsted_wording_audit.json"
@@ -84,6 +87,15 @@ SCENARIO_SET_CONFIG: dict[str, dict[str, Any]] = {
         "report_json": "orb_residential_variants_1000_report.json",
         "report_md": "orb_residential_variants_1000_report.md",
         "history": False,
+    },
+    "variants10000": {
+        "path": VARIANTS10000_PATH,
+        "format": "jsonl",
+        "report_json": "orb_residential_variants_10000_report.json",
+        "report_md": "orb_residential_variants_10000_report.md",
+        "history": False,
+        "summary_only_default": True,
+        "progress_interval": 500,
     },
 }
 
@@ -183,21 +195,41 @@ def _git_sha() -> str | None:
         return None
 
 
-def load_scenarios_for_set(scenario_set: str) -> list[dict[str, Any]]:
+def load_scenarios_for_set(
+    scenario_set: str,
+    *,
+    limit: int | None = None,
+    sample: int | None = None,
+    families: list[str] | None = None,
+) -> list[dict[str, Any]]:
     config = SCENARIO_SET_CONFIG[scenario_set]
     path: Path = config["path"]
     if not path.is_file():
         raise FileNotFoundError(f"Scenario set file missing: {path}")
 
+    scenarios: list[dict[str, Any]] = []
     if config["format"] == "jsonl":
-        scenarios: list[dict[str, Any]] = []
-        for line in path.read_text(encoding="utf-8").splitlines():
-            line = line.strip()
-            if line:
-                scenarios.append(json.loads(line))
+        with path.open(encoding="utf-8") as fh:
+            for line in fh:
+                line = line.strip()
+                if line:
+                    scenarios.append(json.loads(line))
     else:
         payload = json.loads(path.read_text(encoding="utf-8"))
         scenarios = list(payload.get("scenarios") or [])
+
+    if families:
+        allowed = {f.lower() for f in families}
+        scenarios = [
+            s for s in scenarios if str(s.get("scenario_family") or "").lower() in allowed
+        ]
+
+    if sample is not None and sample > 0 and len(scenarios) > sample:
+        step = max(1, len(scenarios) // sample)
+        scenarios = scenarios[::step][:sample]
+
+    if limit is not None and limit > 0:
+        scenarios = scenarios[:limit]
 
     normalised: list[dict[str, Any]] = []
     for raw in scenarios:
@@ -243,6 +275,9 @@ def generate_static_output(scenario: dict[str, Any], *, scenario_set: str = "bas
     fixture_id = str(scenario.get("source_baseline_id") or scenario_id)
 
     if scenario_set == "variants1000":
+        return _build_variant_static_output(scenario), "variant_static"
+
+    if scenario_set == "variants10000":
         return _build_variant_static_output(scenario), "variant_static"
 
     try:
@@ -367,6 +402,9 @@ def build_report(
     scenarios: list[dict[str, Any]],
     model_meta: dict[str, Any] | None = None,
     baseline15_report: dict[str, Any] | None = None,
+    summary_only: bool = False,
+    run_duration_seconds: float | None = None,
+    run_scope: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     category_averages = aggregate_category_averages(results)
     overall_scores = [float(r.get("overall_score", 0)) for r in results]
@@ -430,7 +468,7 @@ def build_report(
 
     traceability = build_traceability_report_section()
 
-    return {
+    report: dict[str, Any] = {
         "baseline_version": BASELINE_VERSION,
         "commit_sha": _git_sha(),
         "run_timestamp": datetime.now(timezone.utc).isoformat(),
@@ -461,8 +499,17 @@ def build_report(
             "Fixture mode scores template/fixture behaviour, not live LLM performance unless live mode used."
         ),
         "traceability": traceability,
-        "scenarios": results,
     }
+    if run_duration_seconds is not None:
+        report["run_duration_seconds"] = round(run_duration_seconds, 2)
+    if run_scope:
+        report["run_scope"] = run_scope
+    if summary_only:
+        report["scenarios_included"] = "summary_only"
+        report["scenarios"] = results[:0]
+    else:
+        report["scenarios"] = results
+    return report
 
 
 def render_markdown(report: dict[str, Any]) -> str:
@@ -470,6 +517,7 @@ def render_markdown(report: dict[str, Any]) -> str:
         "baseline15": "ORB Residential Baseline Quality Report (15 scenarios)",
         "core100": "ORB Residential Core 100 Benchmark Report",
         "variants1000": "ORB Residential 1000 Variants Benchmark Report",
+        "variants10000": "ORB Residential 10000 Variants Benchmark Report",
     }
     lines = [
         f"# {title_map.get(report.get('scenario_set', ''), 'ORB Residential Quality Report')}",
@@ -610,13 +658,29 @@ def run_baseline(
     *,
     live: bool = False,
     scenario_set: str = "baseline15",
+    limit: int | None = None,
+    sample: int | None = None,
+    families: list[str] | None = None,
+    summary_only: bool | None = None,
 ) -> dict[str, Any]:
+    import time
+
+    started = time.monotonic()
     mode = "live" if live else "static"
     model_meta: dict[str, Any] | None = None
     if live:
         model_meta = model_provider_registry.health_payload()
 
-    scenarios = load_scenarios_for_set(scenario_set)
+    config = SCENARIO_SET_CONFIG[scenario_set]
+    if summary_only is None:
+        summary_only = bool(config.get("summary_only_default")) and not limit and not sample
+
+    scenarios = load_scenarios_for_set(
+        scenario_set,
+        limit=limit,
+        sample=sample,
+        families=families,
+    )
     baseline15_report: dict[str, Any] | None = None
     if scenario_set != "baseline15":
         baseline15_path = REPORTS_DIR / "orb_residential_baseline_report.json"
@@ -627,7 +691,9 @@ def run_baseline(
                 baseline15_report = None
 
     results: list[dict[str, Any]] = []
-    for scenario in scenarios:
+    progress_interval = int(config.get("progress_interval") or 0)
+    total = len(scenarios)
+    for idx, scenario in enumerate(scenarios, start=1):
         input_text = str(scenario.get("input") or "")
         if live:
             output, source, extra = generate_live_output(scenario)
@@ -645,6 +711,17 @@ def run_baseline(
         row["output_excerpt"] = output[:280].replace("\n", " ")
         results.append(row)
 
+        if progress_interval and idx % progress_interval == 0:
+            print(f"Progress: {idx}/{total} scenarios scored ({scenario_set})", file=sys.stderr)
+
+    duration = time.monotonic() - started
+    run_scope = {
+        "limit": limit,
+        "sample": sample,
+        "families": families,
+        "requested_total": total,
+    }
+
     return build_report(
         mode=mode,
         scenario_set=scenario_set,
@@ -652,6 +729,9 @@ def run_baseline(
         scenarios=scenarios,
         model_meta=model_meta,
         baseline15_report=baseline15_report,
+        summary_only=summary_only,
+        run_duration_seconds=duration,
+        run_scope=run_scope,
     )
 
 
@@ -659,10 +739,28 @@ def _write_traceability_artifacts(
     report: dict[str, Any],
     *,
     output_dir: Path,
+    scenario_set: str = "variants1000",
 ) -> None:
-    """Write variants1000 traceability report and source coverage risk map."""
-    if report.get("scenario_set") != "variants1000":
+    """Write variants traceability report and source coverage risk map."""
+    if scenario_set not in {"variants1000", "variants10000"}:
         return
+
+    linked = {
+        "variants1000": "orb_residential_variants_1000_report.json",
+        "variants10000": "orb_residential_variants_10000_report.json",
+    }[scenario_set]
+    title = {
+        "variants1000": "ORB Residential 1000 Variants Traceability Report",
+        "variants10000": "ORB Residential 10000 Variants Traceability Report",
+    }[scenario_set]
+    trace_json_name = {
+        "variants1000": TRACEABILITY_REPORT_JSON.name,
+        "variants10000": TRACEABILITY_10000_JSON.name,
+    }[scenario_set]
+    trace_md_name = {
+        "variants1000": TRACEABILITY_REPORT_MD.name,
+        "variants10000": TRACEABILITY_10000_MD.name,
+    }[scenario_set]
 
     traceability_payload = {
         "run_timestamp": report.get("run_timestamp"),
@@ -680,15 +778,15 @@ def _write_traceability_artifacts(
         "traceability": report.get("traceability"),
         "disclaimer": report.get("disclaimer"),
         "warning": (report.get("traceability") or {}).get("warning"),
-        "linked_full_report": "orb_residential_variants_1000_report.json",
+        "linked_full_report": linked,
     }
-    trace_json = output_dir / TRACEABILITY_REPORT_JSON.name
-    trace_md = output_dir / TRACEABILITY_REPORT_MD.name
+    trace_json = output_dir / trace_json_name
+    trace_md = output_dir / trace_md_name
     trace_json.write_text(json.dumps(traceability_payload, indent=2), encoding="utf-8")
 
     trace = report.get("traceability") or {}
     md_lines = [
-        "# ORB Residential 1000 Variants Traceability Report",
+        f"# {title}",
         "",
         f"- **Run timestamp:** {report.get('run_timestamp')}",
         f"- **Average overall score:** {report.get('average_overall_score')} / 5",
@@ -730,14 +828,15 @@ def _write_traceability_artifacts(
     md_lines.append("")
     trace_md.write_text("\n".join(md_lines), encoding="utf-8")
 
-    risk_map = build_source_coverage_risk_map(
-        scenario_count=int(report.get("scenario_count") or 1000),
-        variants_report=report,
-    )
-    risk_json = output_dir / RISK_MAP_JSON.name
-    risk_md = output_dir / RISK_MAP_MD.name
-    risk_json.write_text(json.dumps(risk_map, indent=2), encoding="utf-8")
-    risk_md.write_text(render_risk_map_markdown(risk_map), encoding="utf-8")
+    if scenario_set == "variants1000":
+        risk_map = build_source_coverage_risk_map(
+            scenario_count=int(report.get("scenario_count") or 1000),
+            variants_report=report,
+        )
+        risk_json = output_dir / RISK_MAP_JSON.name
+        risk_md = output_dir / RISK_MAP_MD.name
+        risk_json.write_text(json.dumps(risk_map, indent=2), encoding="utf-8")
+        risk_md.write_text(render_risk_map_markdown(risk_map), encoding="utf-8")
 
 
 def update_quality_lab_summary(reports: dict[str, dict[str, Any]]) -> None:
@@ -748,7 +847,16 @@ def update_quality_lab_summary(reports: dict[str, dict[str, Any]]) -> None:
 
     core = reports.get("core100")
     variants = reports.get("variants1000")
-    if variants:
+    variants10k = reports.get("variants10000")
+    if variants10k:
+        cats = variants10k.get("category_averages") or {}
+        sorted_cats = sorted(cats.items(), key=lambda x: x[1])
+        weakest = [c[0] for c in sorted_cats[:3]]
+        strongest = [c[0] for c in sorted(cats.items(), key=lambda x: x[1], reverse=True)[:3]]
+        targets = variants10k.get("recommended_improvement_targets") or []
+        if targets:
+            next_target = targets[0]
+    elif variants:
         cats = variants.get("category_averages") or {}
         sorted_cats = sorted(cats.items(), key=lambda x: x[1])
         weakest = [c[0] for c in sorted_cats[:3]]
@@ -778,11 +886,24 @@ def update_quality_lab_summary(reports: dict[str, dict[str, Any]]) -> None:
         "baseline15_average": (reports.get("baseline15") or {}).get("average_overall_score"),
         "core100_average": (reports.get("core100") or {}).get("average_overall_score"),
         "variants1000_average": (reports.get("variants1000") or {}).get("average_overall_score"),
+        "variants10000_average": (reports.get("variants10000") or {}).get("average_overall_score"),
         "variants1000_unsafe_flag_count": (reports.get("variants1000") or {}).get("unsafe_flag_count"),
+        "variants10000_unsafe_flag_count": (reports.get("variants10000") or {}).get("unsafe_flag_count"),
+        "variants10000_run_duration_seconds": (reports.get("variants10000") or {}).get("run_duration_seconds"),
+        "variants10000_run_scope": (reports.get("variants10000") or {}).get("run_scope"),
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "static_mode_disclaimer": (
+            "No live LLM calls — static/rule mode scoring fixture or template scaffold outputs."
+        ),
+        "internal_quality_indicator_disclaimer": (
+            "Internal quality indicator, not a regulatory judgement. "
+            "Scores are not inspection predictions or compliance determinations."
+        ),
         "unsafe_flags": {
             "baseline15": (reports.get("baseline15") or {}).get("unsafe_flags") or [],
             "core100": (reports.get("core100") or {}).get("unsafe_flags") or [],
             "variants1000": (reports.get("variants1000") or {}).get("unsafe_flags") or [],
+            "variants10000": (reports.get("variants10000") or {}).get("unsafe_flags") or [],
         },
         "weakest_categories": weakest,
         "strongest_categories": strongest,
@@ -835,6 +956,21 @@ def main() -> int:
         action="store_true",
         help="Refresh orb_quality_lab_summary.json after run",
     )
+    parser.add_argument("--limit", type=int, default=None, help="Score only first N scenarios")
+    parser.add_argument("--sample", type=int, default=None, help="Deterministic sample of N scenarios")
+    parser.add_argument(
+        "--families",
+        nargs="*",
+        default=None,
+        help="Filter to scenario families (space-separated)",
+    )
+    parser.add_argument("--skip-md", action="store_true", help="Skip Markdown report output")
+    parser.add_argument("--json-only", action="store_true", help="Alias for --skip-md")
+    parser.add_argument(
+        "--full-scenarios",
+        action="store_true",
+        help="Include all scenario rows in JSON report (default summary-only for variants10000)",
+    )
     args = parser.parse_args()
 
     live = args.live or is_live_mode_requested()
@@ -843,7 +979,14 @@ def main() -> int:
         return 2
 
     config = SCENARIO_SET_CONFIG[args.scenario_set]
-    report = run_baseline(live=live, scenario_set=args.scenario_set)
+    report = run_baseline(
+        live=live,
+        scenario_set=args.scenario_set,
+        limit=args.limit,
+        sample=args.sample,
+        families=args.families,
+        summary_only=False if args.full_scenarios else None,
+    )
 
     if args.scenario_set == "baseline15" and config.get("history"):
         previous = _load_previous_report(config["report_json"])
@@ -870,17 +1013,24 @@ def main() -> int:
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
     json_path = args.output_dir / config["report_json"]
-    md_path = args.output_dir / config["report_md"]
     json_path.write_text(json.dumps(report, indent=2), encoding="utf-8")
-    md_path.write_text(render_markdown(report), encoding="utf-8")
+
+    skip_md = args.skip_md or args.json_only
+    md_path = args.output_dir / config["report_md"]
+    if not skip_md:
+        md_path.write_text(render_markdown(report), encoding="utf-8")
 
     if config.get("history"):
         _append_history_snapshot(report)
 
-    if args.scenario_set == "variants1000":
-        _write_traceability_artifacts(report, output_dir=args.output_dir)
+    if args.scenario_set in {"variants1000", "variants10000"}:
+        _write_traceability_artifacts(
+            report,
+            output_dir=args.output_dir,
+            scenario_set=args.scenario_set,
+        )
 
-    if args.update_quality_lab_summary or args.scenario_set in {"core100", "variants1000"}:
+    if args.update_quality_lab_summary or args.scenario_set in {"core100", "variants1000", "variants10000"}:
         all_reports: dict[str, dict[str, Any]] = {args.scenario_set: report}
         for set_name, set_config in SCENARIO_SET_CONFIG.items():
             if set_name == args.scenario_set:
@@ -894,7 +1044,10 @@ def main() -> int:
         update_quality_lab_summary(all_reports)
 
     print(f"Wrote {json_path}")
-    print(f"Wrote {md_path}")
+    if not skip_md:
+        print(f"Wrote {md_path}")
+    if report.get("run_duration_seconds") is not None:
+        print(f"Duration: {report['run_duration_seconds']}s")
     print(
         f"Set: {args.scenario_set} | Mode: {report.get('mode')} | "
         f"Average: {report.get('average_overall_score')} | Unsafe: {report.get('unsafe_flags')}"

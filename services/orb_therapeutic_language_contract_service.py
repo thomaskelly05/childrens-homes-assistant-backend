@@ -84,7 +84,7 @@ THERAPEUTIC_PHRASE_REPLACEMENTS: tuple[tuple[re.Pattern[str], str], ...] = (
     (re.compile(r"\bseek(?:ing)?\s+attention\b", re.I), "communicating distress"),
     (re.compile(r"\boverreacted\b", re.I), "appeared distressed"),
     (re.compile(r"\babsconded\b", re.I), "went missing"),
-    (re.compile(r"\bcalmed down\b", re.I), "settled with staff support"),
+    (re.compile(r"\bcalmed down\b", re.I), "appeared calmer"),
 )
 
 # Safeguarding terms that must not be softened by therapeutic repair.

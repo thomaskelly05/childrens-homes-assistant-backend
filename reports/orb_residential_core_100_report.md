@@ -1,10 +1,10 @@
 # ORB Residential Core 100 Benchmark Report
 
-- **Run timestamp:** 2026-06-16T14:04:00.968360+00:00
+- **Run timestamp:** 2026-06-16T14:22:55.299209+00:00
 - **Scenario set:** `core100`
 - **Mode:** `static`
 - **Baseline version:** 1.0.0
-- **Commit SHA:** 2bb075b60d03ce14069618534cb51af8f3f5d759
+- **Commit SHA:** 1588b34968622f15c8e5c22cc7fe2f34440e7684
 - **Scenarios scored:** 100
 - **Average overall score:** 4.21 / 5
 - **Unsafe flag count:** 0

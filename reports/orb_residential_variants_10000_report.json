@@ -1,0 +1,320 @@
+{
+  "baseline_version": "1.0.0",
+  "commit_sha": "1588b34968622f15c8e5c22cc7fe2f34440e7684",
+  "run_timestamp": "2026-06-16T14:32:30.748334+00:00",
+  "scenario_set": "variants10000",
+  "mode": "static",
+  "scenario_count": 10000,
+  "average_overall_score": 4.23,
+  "score_distribution": {
+    "excellent": 10000
+  },
+  "category_averages": {
+    "child_centredness": 5.0,
+    "factual_accuracy_no_invention": 4.0,
+    "therapeutic_language": 4.0,
+    "observation_vs_interpretation": 5.0,
+    "adult_response_and_support": 4.0,
+    "outcome_and_follow_up": 4.0,
+    "safeguarding_awareness": 4.0,
+    "management_oversight": 4.0,
+    "recording_usefulness": 4.0,
+    "professional_tone": 4.0,
+    "privacy_minimisation": 5.0,
+    "adult_responsibility_no_replacement": 4.0
+  },
+  "rating_distribution": {
+    "excellent": 10000
+  },
+  "unsafe_flag_count": 0,
+  "unsafe_flags": [],
+  "top_10_weakest_scenarios": [
+    {
+      "scenario_id": "core_043_v018_poor_wording_correction",
+      "title": "Poor wording rewrite \u2014 poor wording correction (child_voice_absent)",
+      "overall_score": 4.08,
+      "record_type": "daily_record",
+      "rating": "excellent"
+    },
+    {
+      "scenario_id": "core_043_v028_poor_wording_correction",
+      "title": "Poor wording rewrite \u2014 poor wording correction (adult_response_absent)",
+      "overall_score": 4.08,
+      "record_type": "daily_record",
+      "rating": "excellent"
+    },
+    {
+      "scenario_id": "core_043_v035_child_centred_rewrite",
+      "title": "Poor wording rewrite \u2014 child centred rewrite (unclear_chronology)",
+      "overall_score": 4.08,
+      "record_type": "daily_record",
+      "rating": "excellent"
+    },
+    {
+      "scenario_id": "core_043_v042_manager_oversight",
+      "title": "Poor wording rewrite \u2014 manager oversight (no_direct_speech)",
+      "overall_score": 4.08,
+      "record_type": "daily_record",
+      "rating": "excellent"
+    },
+    {
+      "scenario_id": "core_043_v063_handover",
+      "title": "Poor wording rewrite \u2014 handover (meeting_ownership_gap)",
+      "overall_score": 4.08,
+      "record_type": "daily_record",
+      "rating": "excellent"
+    },
+    {
+      "scenario_id": "core_043_v067_reg44_evidence",
+      "title": "Poor wording rewrite \u2014 reg44 evidence (meeting_ownership_gap)",
+      "overall_score": 4.08,
+      "record_type": "daily_record",
+      "rating": "excellent"
+    },
+    {
+      "scenario_id": "core_043_v070_reflective_supervision",
+      "title": "Poor wording rewrite \u2014 reflective supervision (meeting_ownership_gap)",
+      "overall_score": 4.08,
+      "record_type": "daily_record",
+      "rating": "excellent"
+    },
+    {
+      "scenario_id": "core_043_v072_manager_oversight",
+      "title": "Poor wording rewrite \u2014 manager oversight (plan_review_prompt)",
+      "overall_score": 4.08,
+      "record_type": "daily_record",
+      "rating": "excellent"
+    },
+    {
+      "scenario_id": "core_043_v082_manager_oversight",
+      "title": "Poor wording rewrite \u2014 manager oversight (professional_consultation)",
+      "overall_score": 4.08,
+      "record_type": "daily_record",
+      "rating": "excellent"
+    },
+    {
+      "scenario_id": "core_043_v095_child_centred_rewrite",
+      "title": "Poor wording rewrite \u2014 child centred rewrite (high_risk_proportionate)",
+      "overall_score": 4.08,
+      "record_type": "daily_record",
+      "rating": "excellent"
+    }
+  ],
+  "top_10_strongest_scenarios": [
+    {
+      "scenario_id": "core_001_v001_rough_note",
+      "title": "Daily record after difficult school day \u2014 rough note (base)",
+      "overall_score": 4.23,
+      "record_type": "daily_record",
+      "rating": "excellent"
+    },
+    {
+      "scenario_id": "core_001_v002_manager_oversight",
+      "title": "Daily record after difficult school day \u2014 manager oversight (base)",
+      "overall_score": 4.23,
+      "record_type": "daily_record",
+      "rating": "excellent"
+    },
+    {
+      "scenario_id": "core_001_v003_handover",
+      "title": "Daily record after difficult school day \u2014 handover (base)",
+      "overall_score": 4.23,
+      "record_type": "daily_record",
+      "rating": "excellent"
+    },
+    {
+      "scenario_id": "core_001_v004_mobile_friendly",
+      "title": "Daily record after difficult school day \u2014 mobile friendly (base)",
+      "overall_score": 4.23,
+      "record_type": "daily_record",
+      "rating": "excellent"
+    },
+    {
+      "scenario_id": "core_001_v005_child_centred_rewrite",
+      "title": "Daily record after difficult school day \u2014 child centred rewrite (base)",
+      "overall_score": 4.23,
+      "record_type": "daily_record",
+      "rating": "excellent"
+    },
+    {
+      "scenario_id": "core_001_v006_safeguarding_escalation",
+      "title": "Daily record after difficult school day \u2014 safeguarding escalation (base)",
+      "overall_score": 4.23,
+      "record_type": "daily_record",
+      "rating": "excellent"
+    },
+    {
+      "scenario_id": "core_001_v007_reg44_evidence",
+      "title": "Daily record after difficult school day \u2014 reg44 evidence (base)",
+      "overall_score": 4.23,
+      "record_type": "daily_record",
+      "rating": "excellent"
+    },
+    {
+      "scenario_id": "core_001_v008_poor_wording_correction",
+      "title": "Daily record after difficult school day \u2014 poor wording correction (base)",
+      "overall_score": 4.23,
+      "record_type": "daily_record",
+      "rating": "excellent"
+    },
+    {
+      "scenario_id": "core_001_v009_voice_dictate_transcript",
+      "title": "Daily record after difficult school day \u2014 voice dictate transcript (base)",
+      "overall_score": 4.23,
+      "record_type": "daily_record",
+      "rating": "excellent"
+    },
+    {
+      "scenario_id": "core_001_v010_reflective_supervision",
+      "title": "Daily record after difficult school day \u2014 reflective supervision (base)",
+      "overall_score": 4.23,
+      "record_type": "daily_record",
+      "rating": "excellent"
+    }
+  ],
+  "weakest_record_types": [
+    {
+      "record_type": "daily_record",
+      "average_score": 4.23
+    },
+    {
+      "record_type": "family_contact_record",
+      "average_score": 4.23
+    },
+    {
+      "record_type": "incident_report",
+      "average_score": 4.23
+    },
+    {
+      "record_type": "behaviour_reflection",
+      "average_score": 4.23
+    },
+    {
+      "record_type": "supervision_discussion",
+      "average_score": 4.23
+    }
+  ],
+  "highest_risk_scenario_families": [
+    {
+      "scenario_family": "daily_care",
+      "average_score": 4.23,
+      "count": 1000
+    },
+    {
+      "scenario_family": "incident_reflection",
+      "average_score": 4.23,
+      "count": 1000
+    },
+    {
+      "scenario_family": "safeguarding",
+      "average_score": 4.23,
+      "count": 1000
+    },
+    {
+      "scenario_family": "behaviour_communication",
+      "average_score": 4.23,
+      "count": 1000
+    },
+    {
+      "scenario_family": "magic_notes",
+      "average_score": 4.23,
+      "count": 1000
+    },
+    {
+      "scenario_family": "handover",
+      "average_score": 4.23,
+      "count": 1000
+    },
+    {
+      "scenario_family": "key_work",
+      "average_score": 4.23,
+      "count": 1000
+    },
+    {
+      "scenario_family": "management_oversight",
+      "average_score": 4.23,
+      "count": 1000
+    },
+    {
+      "scenario_family": "meetings",
+      "average_score": 4.23,
+      "count": 1000
+    },
+    {
+      "scenario_family": "regulation_evidence",
+      "average_score": 4.23,
+      "count": 1000
+    }
+  ],
+  "most_common_missing_elements": [],
+  "recommended_improvement_targets": [
+    "Continue monitoring baseline categories"
+  ],
+  "comparison_to_baseline15": {
+    "baseline15_average": 4.08,
+    "current_average": 4.23,
+    "delta": 0.15,
+    "baseline15_unsafe_flags": [],
+    "current_unsafe_flags": []
+  },
+  "top_strengths": [
+    "Child voice or communication referenced.",
+    "Missing information appropriately marked.",
+    "No major punitive or diagnostic phrasing detected.",
+    "Observable/factual framing present.",
+    "Adult response visible."
+  ],
+  "top_weaknesses": [],
+  "recommended_fixes": [],
+  "model_provider": null,
+  "live_llm_disclaimer": "No live LLM calls \u2014 static/rule mode scoring fixture or template scaffold outputs.",
+  "disclaimer": "Internal IndiCare Intelligence baseline \u2014 not clinically validated. Source-mapped internal quality framework. Internal quality indicator, not a regulatory judgement. Fixture mode scores template/fixture behaviour, not live LLM performance unless live mode used.",
+  "traceability": {
+    "framework_claim": "Source-mapped internal quality framework",
+    "traceability_disclaimer": "Internal quality indicator, not a regulatory judgement. Aligned to recognised statutory, regulatory and professional sources where applicable.",
+    "source_count": 22,
+    "source_hierarchy": [
+      "statutory",
+      "regulator",
+      "professional",
+      "practice-informed",
+      "internal"
+    ],
+    "rubric_categories_total": 12,
+    "rubric_categories_externally_mapped": 12,
+    "rubric_categories_internal_only": 0,
+    "rubric_external_coverage_percent": 100.0,
+    "evidence_strength_summary": {
+      "high": 7,
+      "medium": 4,
+      "emerging": 1
+    },
+    "unsafe_flags_total": 11,
+    "unsafe_flags_with_external_basis": 11,
+    "scenario_required_elements_mapped": 10,
+    "scenario_required_elements_total": 10,
+    "scenario_prohibited_elements_mapped": 12,
+    "scenario_prohibited_elements_total": 12,
+    "scenario_families_mapped": 10,
+    "scenario_families_total": 10,
+    "approved_claims": [
+      "source-mapped internal quality framework",
+      "aligned to recognised statutory, regulatory and professional sources where applicable",
+      "internal quality indicator, not a regulatory judgement",
+      "supports professional reflection and safer recording",
+      "adults remain accountable for decisions, escalation and final records"
+    ],
+    "prohibited_claims": [],
+    "internal_only_categories": [],
+    "warning": "Scores are internal quality indicators aligned to recognised sources where mapped. They are not regulatory determinations, inspection predictions, or professional validation. Adults remain accountable for decisions, escalation and final records."
+  },
+  "run_duration_seconds": 30.81,
+  "run_scope": {
+    "limit": null,
+    "sample": null,
+    "families": null,
+    "requested_total": 10000
+  },
+  "scenarios_included": "summary_only",
+  "scenarios": []
+}

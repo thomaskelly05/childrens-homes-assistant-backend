@@ -15,6 +15,7 @@ ROOT = Path(__file__).resolve().parents[1]
 SCENARIOS_PATH = ROOT / "quality" / "orb_residential_baseline_scenarios.json"
 CORE100_PATH = ROOT / "quality" / "orb_residential_core_100_scenarios.json"
 VARIANTS_PATH = ROOT / "quality" / "orb_residential_1000_scenario_variants.jsonl"
+VARIANTS10000_PATH = ROOT / "quality" / "orb_residential_10000_scenario_variants.jsonl"
 INDEX_PATH = ROOT / "quality" / "orb_residential_scenario_index.json"
 SCHEMA_PATH = ROOT / "quality" / "orb_residential_scenario_schema.json"
 FEEDBACK_SCHEMA_PATH = ROOT / "quality" / "orb_practitioner_feedback_schema.json"
@@ -1662,3 +1663,163 @@ def test_regulation_evidence_pathway_no_regulatory_judgement() -> None:
         break
     else:
         pytest.fail("No regulation_evidence scenario found")
+
+
+# --- Quality Lab consolidation / 10,000 scale readiness ---
+
+
+def test_internal_brain_principles_not_conflicting() -> None:
+    from assistant.knowledge.orb_residential_principles import (
+        CANONICAL_PRINCIPLES,
+        validate_principle_alignment,
+    )
+
+    assert len(CANONICAL_PRINCIPLES) >= 8
+    issues = validate_principle_alignment()
+    assert not issues, issues
+    texts = list(CANONICAL_PRINCIPLES.values())
+    assert not any("threshold met" in t and "must not" not in t for t in texts)
+    assert all("regulatory judgement" not in t.lower() or "not" in t.lower() for t in texts[-2:])
+
+
+def test_variants10000_file_exists_after_build() -> None:
+    if not VARIANTS10000_PATH.is_file():
+        pytest.skip("variants10000 bank not generated in this environment")
+    lines = [ln for ln in VARIANTS10000_PATH.read_text(encoding="utf-8").splitlines() if ln.strip()]
+    assert len(lines) == 10000
+
+
+def test_variants10000_unique_ids_and_parent_linkage() -> None:
+    if not VARIANTS10000_PATH.is_file():
+        pytest.skip("variants10000 bank not generated")
+    variants = [json.loads(ln) for ln in VARIANTS10000_PATH.read_text(encoding="utf-8").splitlines() if ln.strip()]
+    ids = {v["scenario_id"] for v in variants}
+    assert len(ids) == 10000
+    core_ids = {s["scenario_id"] for s in json.loads(CORE100_PATH.read_text(encoding="utf-8"))["scenarios"]}
+    parents = {v["parent_scenario_id"] for v in variants}
+    assert parents == core_ids
+
+
+def test_variants10000_safety_validation() -> None:
+    if not VARIANTS10000_PATH.is_file():
+        pytest.skip("variants10000 bank not generated")
+    from assistant.evals.orb_residential_scenario_safety import validate_variant_bank_integrity
+
+    variants = [json.loads(ln) for ln in VARIANTS10000_PATH.read_text(encoding="utf-8").splitlines() if ln.strip()]
+    core_ids = {s["scenario_id"] for s in json.loads(CORE100_PATH.read_text(encoding="utf-8"))["scenarios"]}
+    issues = validate_variant_bank_integrity(variants, expected_count=10000, core_ids=core_ids)
+    assert not issues, issues[:10]
+
+
+def test_variants10000_runner_supports_limit(tmp_path: Path) -> None:
+    if not VARIANTS10000_PATH.is_file():
+        pytest.skip("variants10000 bank not generated")
+    env = {**os.environ, "ORB_BASELINE_LIVE": "0"}
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(RUNNER_PATH),
+            "--scenario-set",
+            "variants10000",
+            "--limit",
+            "25",
+            "--output-dir",
+            str(tmp_path),
+            "--json-only",
+        ],
+        cwd=ROOT,
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=120,
+    )
+    assert result.returncode == 0, result.stderr
+    report = json.loads((tmp_path / "orb_residential_variants_10000_report.json").read_text(encoding="utf-8"))
+    assert report["scenario_count"] == 25
+    assert report["mode"] == "static"
+    assert "internal quality indicator" in report["disclaimer"].lower()
+
+
+def test_variants10000_reports_include_traceability(tmp_path: Path) -> None:
+    if not VARIANTS10000_PATH.is_file():
+        pytest.skip("variants10000 bank not generated")
+    env = {**os.environ, "ORB_BASELINE_LIVE": "0"}
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(RUNNER_PATH),
+            "--scenario-set",
+            "variants10000",
+            "--limit",
+            "10",
+            "--output-dir",
+            str(tmp_path),
+        ],
+        cwd=ROOT,
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=120,
+    )
+    assert result.returncode == 0, result.stderr
+    trace = json.loads(
+        (tmp_path / "orb_residential_variants_10000_traceability_report.json").read_text(encoding="utf-8")
+    )
+    assert trace.get("traceability")
+    assert "not a regulatory" in trace["disclaimer"].lower() or "not regulatory" in trace["disclaimer"].lower()
+
+
+def test_no_live_llm_in_baseline_runner() -> None:
+    assert os.getenv("ORB_BASELINE_LIVE", "") not in {"1", "true", "yes", "on"}
+    from scripts.run_orb_residential_baseline import is_live_mode_requested
+
+    assert not is_live_mode_requested()
+
+
+def test_output_naturalness_audit_generated() -> None:
+    path = ROOT / "reports" / "orb_quality_lab_output_naturalness_audit.md"
+    if not path.is_file():
+        pytest.skip("audit report not generated yet")
+    text = path.read_text(encoding="utf-8")
+    assert "Naturalness Audit" in text
+    assert "regulatory judgement" in text.lower()
+
+
+def test_scaffold_length_profile_generated() -> None:
+    json_path = ROOT / "reports" / "orb_quality_lab_scaffold_length_profile.json"
+    md_path = ROOT / "reports" / "orb_quality_lab_scaffold_length_profile.md"
+    if not json_path.is_file():
+        pytest.skip("scaffold profile not generated yet")
+    profile = json.loads(json_path.read_text(encoding="utf-8"))
+    assert profile.get("average_output_length", 0) > 0
+    assert md_path.is_file()
+
+
+def test_variants10000_dry_run_no_unsafe_flags(tmp_path: Path) -> None:
+    if not VARIANTS10000_PATH.is_file():
+        pytest.skip("variants10000 bank not generated")
+    env = {**os.environ, "ORB_BASELINE_LIVE": "0"}
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(RUNNER_PATH),
+            "--scenario-set",
+            "variants10000",
+            "--limit",
+            "250",
+            "--output-dir",
+            str(tmp_path),
+            "--json-only",
+        ],
+        cwd=ROOT,
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=180,
+    )
+    assert result.returncode == 0, result.stderr
+    report = json.loads((tmp_path / "orb_residential_variants_10000_report.json").read_text(encoding="utf-8"))
+    assert report.get("unsafe_flag_count", 0) == 0
