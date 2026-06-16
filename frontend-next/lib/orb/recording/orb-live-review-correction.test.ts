@@ -16,14 +16,18 @@ import {
   isSelfCommentaryParagraph,
   normalizeDuplicateDailyRecordHeadings,
   ORB_MANUAL_REGRESSION_DAILY_RECORD_PROMPT,
+  repairRecordSentenceBoundaries,
   sanitizeChildrensHomeTerminology,
   sanitizeLiveRecordOutput,
   sanitizeObservationInterpretationLanguage,
   stripChildQuoteInterpretation,
+  stripInterpretiveFeelingsPhrases,
   stripInventedEmotionalImpact,
   stripOutcomeInterpretation,
+  stripTrailingMarkdownArtefacts,
   stripTrailingSelfCommentary,
   stripUnnecessaryFollowUpSection,
+  stripUnsupportedTimelineExpansion,
   userProvidedDslTerm
 } from './orb-adult-identity-language.ts'
 import { buildSectionPromptBody } from './orb-recording-section-prompts.ts'
@@ -309,5 +313,48 @@ describe('ORB live review correction pass', () => {
     assert.match(block, /Adult TK gave Child A space/)
     assert.match(block, /Incident Summary/)
     assert.match(block, /Outcome \/ Handover/)
+    assert.match(block, /complete sentences/i)
+  })
+
+  it('repairs sentence boundaries for broken live output', () => {
+    const source = ORB_MANUAL_REGRESSION_DAILY_RECORD_PROMPT
+    assert.match(
+      sanitizeLiveRecordOutput('appearing quieter than usual Adult TK noticed this', source),
+      /quieter than usual\. Adult TK/
+    )
+    assert.match(
+      sanitizeLiveRecordOutput('space to settle Later, Adult JS checked in', source),
+      /settle\. Later,/
+    )
+    assert.match(
+      sanitizeLiveRecordOutput('watched TV During this time, Child A ate toast', source),
+      /watched television\. During this time,/
+    )
+    assert.match(
+      sanitizeLiveRecordOutput('before bedtime Adult TK handed over', source),
+      /before bedtime\. Adult TK/
+    )
+  })
+
+  it('strips interpretive Child A feelings phrasing unless supported', () => {
+    const source = ORB_MANUAL_REGRESSION_DAILY_RECORD_PROMPT
+    const cleaned = stripInterpretiveFeelingsPhrases(
+      "In response to Child A's feelings, Adult JS offered toast.",
+      source
+    )
+    assert.match(cleaned, /^In response/)
+    assert.doesNotMatch(cleaned, /Child A's feelings/)
+  })
+
+  it('removes unsupported timeline expansion and strengthens observation wording', () => {
+    const source = ORB_MANUAL_REGRESSION_DAILY_RECORD_PROMPT
+    const cleaned = sanitizeLiveRecordOutput(
+      "Child A seemed more settled as the evening progressed.\n\n—",
+      source
+    )
+    assert.doesNotMatch(cleaned.toLowerCase(), /as the evening progressed/)
+    assert.doesNotMatch(cleaned.toLowerCase(), /seemed more settled/)
+    assert.match(cleaned.toLowerCase(), /appeared calmer/)
+    assert.doesNotMatch(cleaned, /—\s*$/)
   })
 })

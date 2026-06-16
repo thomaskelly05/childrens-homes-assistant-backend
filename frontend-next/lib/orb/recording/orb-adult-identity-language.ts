@@ -30,6 +30,18 @@ export const ORB_EMOTIONAL_IMPACT_DISCIPLINE =
 export const ORB_OUTCOME_INTERPRETATION_DISCIPLINE =
   "Keep observed outcomes observed. Do not add 'indicating a positive shift in mood' or 'showing emotional regulation' — use observed presentation such as 'appeared calmer'."
 
+export const ORB_SENTENCE_PUNCTUATION_DISCIPLINE =
+  'Use complete sentences in records. Do not join separate record sentences together without punctuation.'
+
+export const ORB_INTERPRETIVE_FEELINGS_DISCIPLINE =
+  "Do not use 'In response to Child A's feelings' unless the child directly stated a feeling. Prefer 'In response,' followed by the adult action."
+
+export const ORB_TIMELINE_DISCIPLINE =
+  "Do not add 'as the evening progressed' or similar timeline wording unless the user provided that chronology. Prefer timing from input such as 'before bedtime'."
+
+export const ORB_TRAILING_MARKDOWN_DISCIPLINE =
+  'Do not end record outputs with markdown separator lines such as em dashes (—), underscores (___) or asterisks (***) unless requested.'
+
 export const ORB_DUPLICATE_HEADING_DISCIPLINE =
   'Do not duplicate Outcome and Outcome / Handover headings in simple daily records. Do not add separate Follow-up or Next Steps when handover already states the next action.'
 
@@ -69,12 +81,13 @@ export const ORB_THERAPEUTIC_RELATIONAL_PHRASES = [
 
 export const ORB_OBSERVATION_INTERPRETATION_RULES = [
   "Use 'appeared calmer' rather than 'mood improved' unless the input states mood improved.",
-  "Use 'appeared calmer' rather than 'seemed more relaxed'.",
-  "Use 'appeared more settled' rather than 'was relaxed' or 'seemed relaxed'.",
+  "Use 'appeared calmer' rather than 'seemed more relaxed', 'seemed relaxed' or 'seemed more settled'.",
+  "Prefer 'appeared calmer before bedtime' where the input states this timing.",
   "Do not add 'indicating a positive shift in mood' or 'showing emotional regulation' after observed presentation.",
   'Do not state internal emotion as fact unless the child said it.',
   "Preserve direct quotes with 'said'.",
-  "Use 'appeared', 'was observed', 'not yet known' for presentation."
+  "Use 'appeared', 'was observed', 'not yet known' for presentation.",
+  'Use complete sentences — do not join record sentences without punctuation.'
 ] as const
 
 const ADULT_INITIALS_RE = /\bAdult\s+([A-Z]{1,3})\b/g
@@ -135,8 +148,7 @@ const OUTCOME_INTERPRETATION_CLAUSE_RES = [
   /,?\s*(?:showing|demonstrating|indicating)\s+emotional\s+regulation\b[^.!?]*/gi,
   /,?\s*(?:indicating|suggesting)\s+(?:they\s+)?felt\s+better\b[^.!?]*/gi,
   /,?\s*(?:showing|indicating)\s+(?:they\s+)?(?:were|felt)\s+(?:more\s+)?comfortable\b[^.!?]*/gi,
-  /\bthis\s+(?:showed|demonstrated|indicated)\s+emotional\s+regulation\b[^.!?]*[.!?]/gi,
-  /\bas\s+the\s+evening\s+progressed\b[^.!?]*[.!?]/gi
+  /\bthis\s+(?:showed|demonstrated|indicated)\s+emotional\s+regulation\b[^.!?]*[.!?]/gi
 ]
 
 const OUTCOME_INTERPRETATION_SENTENCE_RES = [
@@ -169,6 +181,45 @@ const OUTCOME_INTERPRETATION_LABELS = ['positive shift in mood', 'emotional regu
 
 const FOLLOW_UP_HEADING_RE = /^#+\s*(?:Follow-up(?:\s+for\s+next\s+shift)?|Next\s+Steps)\s*$/gim
 const HANDOVER_PRESENT_RE = /\b(?:hand(?:ed|over)|outcome\s*\/\s*handover|next\s+(?:shift|adults?|team))\b/i
+
+const UNSUPPORTED_TIMELINE_PHRASES = [
+  'as the evening progressed',
+  'over the evening',
+  'throughout the evening',
+  'later in the evening'
+] as const
+
+const INTERPRETIVE_FEELINGS_RES: Array<{ label: string; pattern: RegExp }> = [
+  {
+    label: "in response to child a's feelings",
+    pattern: /\bIn response to (?:Child|Young person|The child)\s+[A-Z]'s feelings,?\s*/gi
+  },
+  {
+    label: "in response to child a's emotions",
+    pattern: /\bIn response to (?:Child|Young person|The child)\s+[A-Z]'s emotions,?\s*/gi
+  },
+  {
+    label: "in response to child a's emotional state",
+    pattern: /\bIn response to (?:Child|Young person|The child)\s+[A-Z]'s emotional state,?\s*/gi
+  },
+  {
+    label: "responding to child a's frustration",
+    pattern: /\b[Rr]esponding to (?:Child|Young person|The child)\s+[A-Z]'s frustration,?\s*/g
+  },
+  {
+    label: "responding to child a's dissatisfaction",
+    pattern: /\b[Rr]esponding to (?:Child|Young person|The child)\s+[A-Z]'s dissatisfaction,?\s*/gi
+  }
+]
+
+const ADULT_LABEL_BOUNDARY_RE = /(?<=[a-z\d"\)])(?<![A-Z])\s+(Adult\s+[A-Z]{1,3})\b/g
+const QUOTE_ADULT_BOUNDARY_RE =
+  /((?:said|shared|stated|communicated),?\s*["'][^"']*["'])\s+(Adult\s+[A-Z]{1,3}\b)/gi
+const TRANSITION_BOUNDARY_RES = [
+  /(?<=[a-z])\s+(Later,)\s*/g,
+  /(?<=[a-z])\s+(During this time,)\s*/gi
+]
+const TRAILING_MD_ARTIFACTS_RE = /(?:[\n\r\s]*(?:—|___|\*\*\*)\s*)+$/
 
 const EXPLANATION_REQUEST_RE =
   /\b(?:why\s+is\s+this\b.+?\bwording\s+better|why\s+is\s+this\s+better|explain\s+(?:the\s+)?(?:wording|record)|why\s+did\s+you\s+(?:write|choose))\b/i
@@ -229,12 +280,83 @@ export function applyAdultIdentityLanguage(text: string, suppliedInitials?: stri
   return value.replace(/\b[Ss]taff\b/g, 'The adult')
 }
 
-export function sanitizeObservationInterpretationLanguage(text: string): string {
+export function sanitizeObservationInterpretationLanguage(text: string, sourceText = ''): string {
+  const bedtimeTiming = String(sourceText || '').toLowerCase().includes('before bedtime')
   return String(text || '')
-    .replace(/\bmood improved\b/gi, 'appeared calmer')
-    .replace(/\bseemed more relaxed\b/gi, 'appeared calmer')
-    .replace(/\bseemed relaxed\b/gi, 'appeared more settled')
-    .replace(/\bwas relaxed\b/gi, 'appeared more settled')
+    .replace(/\bmood improved\b/gi, bedtimeTiming ? 'appeared calmer before bedtime' : 'appeared calmer')
+    .replace(/\bmood seemed better\b/gi, bedtimeTiming ? 'appeared calmer before bedtime' : 'appeared calmer')
+    .replace(/\bseemed more relaxed\b/gi, bedtimeTiming ? 'appeared calmer before bedtime' : 'appeared calmer')
+    .replace(/\bseemed relaxed\b/gi, bedtimeTiming ? 'appeared calmer before bedtime' : 'appeared calmer')
+    .replace(/\bwas relaxed\b/gi, bedtimeTiming ? 'appeared calmer before bedtime' : 'appeared calmer')
+    .replace(/\bseemed calmer\b/gi, bedtimeTiming ? 'appeared calmer before bedtime' : 'appeared calmer')
+    .replace(/\bseemed more settled\b/gi, bedtimeTiming ? 'appeared calmer before bedtime' : 'appeared calmer')
+    .replace(/\bappeared more relaxed\b/gi, bedtimeTiming ? 'appeared calmer before bedtime' : 'appeared calmer')
+    .replace(/\bappeared settled emotionally\b/gi, bedtimeTiming ? 'appeared calmer before bedtime' : 'appeared calmer')
+}
+
+function sourceSupportsInterpretiveFeeling(sourceText: string, label: string): boolean {
+  return String(sourceText || '').toLowerCase().includes(label.toLowerCase())
+}
+
+export function stripInterpretiveFeelingsPhrases(text: string, sourceText = ''): string {
+  let result = String(text || '')
+  for (const { label, pattern } of INTERPRETIVE_FEELINGS_RES) {
+    if (sourceSupportsInterpretiveFeeling(sourceText, label)) continue
+    result = result.replace(pattern, 'In response, ')
+  }
+  return result.replace(/\bIn response,\s*,/gi, 'In response,').replace(/\bIn response,\s*$/i, 'In response')
+}
+
+export function stripUnsupportedTimelineExpansion(text: string, sourceText = ''): string {
+  let result = String(text || '')
+  const sourceLower = String(sourceText || '').toLowerCase()
+  for (const phrase of UNSUPPORTED_TIMELINE_PHRASES) {
+    if (sourceLower.includes(phrase)) continue
+    result = result.replace(new RegExp(`,?\\s*${phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'gi'), '')
+  }
+  return result
+    .split('\n')
+    .map((line) => line.replace(/  +/g, ' ').trim())
+    .join('\n')
+    .trim()
+}
+
+function repairSentenceBoundariesInLine(line: string): string {
+  let result = String(line || '')
+  result = result.replace(QUOTE_ADULT_BOUNDARY_RE, '$1. $2')
+  result = result.replace(ADULT_LABEL_BOUNDARY_RE, '. $1')
+  for (const pattern of TRANSITION_BOUNDARY_RES) {
+    result = result.replace(pattern, '. $1 ')
+  }
+  result = result.replace(/\bwatched TV\b/gi, 'watched television')
+  result = result.replace(/\.{2,}/g, '.')
+  return result.trim()
+}
+
+export function repairRecordSentenceBoundaries(text: string): string {
+  if (!String(text || '').trim()) return String(text || '')
+  return String(text)
+    .split('\n')
+    .map((line) => {
+      const stripped = line.trim()
+      if (!stripped || stripped.startsWith('#') || /^[A-Za-z][^:]{0,40}:\s*$/.test(stripped)) return line
+      return repairSentenceBoundariesInLine(stripped)
+    })
+    .join('\n')
+    .trim()
+}
+
+export function stripTrailingMarkdownArtefacts(text: string, sourceText = ''): string {
+  let result = String(text || '').replace(/\s+$/, '')
+  const source = String(sourceText || '').replace(/\s+$/, '')
+  const userProvidedTrailingRule = ['—', '___', '***'].some((artifact) => source.endsWith(artifact))
+  if (userProvidedTrailingRule) return result
+  for (const artifact of ['—', '___', '***']) {
+    if (result.endsWith(artifact)) {
+      result = result.replace(new RegExp(`[\\n\\r\\s]*${artifact.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*$`), '')
+    }
+  }
+  return result.replace(TRAILING_MD_ARTIFACTS_RE, '').replace(/\s+$/, '')
 }
 
 function splitParagraphs(text: string): string[] {
@@ -474,12 +596,16 @@ export function countContentSections(text: string): number {
 
 export function sanitizeLiveRecordOutput(text: string, sourceText = ''): string {
   const initials = extractSuppliedAdultInitials(sourceText)
-  let cleaned = sanitizeObservationInterpretationLanguage(text)
+  let cleaned = stripInterpretiveFeelingsPhrases(text, sourceText)
   cleaned = stripChildQuoteInterpretation(cleaned, sourceText)
   cleaned = stripInventedEmotionalImpact(cleaned, sourceText)
   cleaned = stripOutcomeInterpretation(cleaned, sourceText)
-  cleaned = normalizeDuplicateDailyRecordHeadings(cleaned, sourceText)
+  cleaned = stripUnsupportedTimelineExpansion(cleaned, sourceText)
+  cleaned = sanitizeObservationInterpretationLanguage(cleaned, sourceText)
   cleaned = sanitizeChildrensHomeTerminology(cleaned, sourceText)
+  if (initials.length || /\b[Ss]taff\b/.test(cleaned)) {
+    cleaned = applyAdultIdentityLanguage(cleaned, initials)
+  }
   if (isDailyRecordRequest(sourceText) && !hasSafeguardingCue(sourceText)) {
     cleaned = cleaned
       .replace(/^#+\s*Safeguarding\s+Note\s*$/gim, '')
@@ -490,11 +616,11 @@ export function sanitizeLiveRecordOutput(text: string, sourceText = ''): string 
       .trim()
     cleaned = stripUnnecessaryFollowUpSection(cleaned, sourceText)
   }
-  if (initials.length || /\b[Ss]taff\b/.test(cleaned)) {
-    cleaned = applyAdultIdentityLanguage(cleaned, initials)
-  }
+  cleaned = normalizeDuplicateDailyRecordHeadings(cleaned, sourceText)
   if (isRecordGenerationRequest(sourceText) && !userExplicitlyRequestsExplanation(sourceText)) {
     cleaned = stripTrailingSelfCommentary(cleaned, sourceText)
+    cleaned = stripTrailingMarkdownArtefacts(cleaned, sourceText)
+    cleaned = repairRecordSentenceBoundaries(cleaned)
   }
   return cleaned
 }
@@ -568,6 +694,18 @@ export function buildAdultIdentityPromptBlock(): string {
     '',
     'Outcome interpretation discipline:',
     `• ${ORB_OUTCOME_INTERPRETATION_DISCIPLINE}`,
+    '',
+    'Sentence punctuation discipline:',
+    `• ${ORB_SENTENCE_PUNCTUATION_DISCIPLINE}`,
+    '',
+    'Interpretive feelings discipline:',
+    `• ${ORB_INTERPRETIVE_FEELINGS_DISCIPLINE}`,
+    '',
+    'Timeline discipline:',
+    `• ${ORB_TIMELINE_DISCIPLINE}`,
+    '',
+    'Trailing markdown discipline:',
+    `• ${ORB_TRAILING_MARKDOWN_DISCIPLINE}`,
     '',
     'Duplicate heading discipline:',
     `• ${ORB_DUPLICATE_HEADING_DISCIPLINE}`,

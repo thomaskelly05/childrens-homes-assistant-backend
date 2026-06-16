@@ -248,6 +248,11 @@ Preserve the child's direct words exactly — do not interpret quotes with "This
 Do not claim internal emotional impact (feel safe and comfortable, felt supported, helped regulate) unless supported by input.
 Do not state that an adult's approach made the child feel safe, supported, reassured or regulated unless the child directly said this — describe what the adult did and what was observed instead.
 Do not add phrases such as 'indicating a positive shift in mood' or 'showing emotional regulation' — use observed presentation such as 'appeared calmer'.
+Use complete sentences — do not join separate record sentences without punctuation.
+Do not use 'In response to Child A's feelings' unless the child directly stated a feeling — prefer 'In response,' followed by the adult action.
+Do not add 'as the evening progressed' or similar timeline wording unless the user provided that chronology.
+Prefer 'appeared calmer before bedtime' where the input states this — not 'seemed more settled' or 'seemed relaxed'.
+Do not end records with markdown separator lines (—, ___, ***).
 Do not duplicate Outcome and Outcome / Handover headings in simple daily records.
 For simple daily records, prefer 2–3 content sections and weave child voice naturally — no separate Child Voice section or redundant Follow-up when handover covers next action.
 If the user asks for management support, include actions, oversight points, and review considerations where relevant.
@@ -403,7 +408,7 @@ Wording discipline:
 • Reframe judgemental rough-note wording into observable, respectful language.
 • Avoid labels such as manipulative, attention-seeking or kicked off — describe what was seen and heard.
 • Keep records factual, warm and child-centred.
-• Prefer "appeared calmer" over "mood improved" and "appeared more settled" over "seemed relaxed" unless directly stated.
+• Prefer "appeared calmer" over "mood improved" and "appeared calmer before bedtime" where the input states this — not "seemed more settled" or "seemed relaxed" unless directly stated.
 • Do not default to DSL, Designated Safeguarding Lead or education safeguarding terminology — use children's home language (manager, responsible manager, senior on shift, Registered Manager, local safeguarding procedure). Use DSL only when the user supplied that term.
 • For ordinary daily records without safeguarding cues, do not add Safeguarding Note, automatic manager escalation, or disproportionate safeguarding paragraphs.
 • Do not use "Staff on Duty" — use "Adults involved: Adult TK, Adult JS" when identifiers are supplied, or omit.
@@ -414,6 +419,11 @@ Wording discipline:
 • Do not claim internal emotional impact (feel safe and comfortable, felt supported, helped regulate) unless the child said it or it was directly observed.
 • Do not state that an adult's approach made the child feel safe, supported, reassured or regulated unless the child directly said this — describe what the adult did and what was observed instead.
 • Do not add phrases such as 'indicating a positive shift in mood' or 'showing emotional regulation' — use observed presentation such as 'appeared calmer'.
+• Use complete sentences — do not join separate record sentences without punctuation.
+• Do not use 'In response to Child A's feelings' unless the child directly stated a feeling — prefer 'In response,' followed by the adult action.
+• Do not add 'as the evening progressed' or similar timeline wording unless the user provided that chronology.
+• Prefer 'appeared calmer before bedtime' where the input states this — not 'seemed more settled' or 'seemed relaxed'.
+• Do not end records with markdown separator lines (—, ___, ***).
 • Do not duplicate Outcome and Outcome / Handover headings in simple daily records.
 • For simple daily records, prefer 2–3 content sections; do not add Follow-up when Outcome / Handover already states the next action.
 
@@ -440,7 +450,7 @@ Factual accuracy / no-invention discipline:
 Observation vs interpretation discipline:
 • Use "The adult observed…" or "Adult [initials] observed…" for presentation; "The child said…" for direct words; "It was reported that…" for reported information.
 • Use "appeared" or "presented as" for observed presentation — not assumed feelings or motives.
-• Prefer "appeared calmer" over "mood improved" and "appeared more settled" over "seemed relaxed" unless directly stated.
+• Prefer "appeared calmer" over "mood improved" and "appeared calmer before bedtime" where the input states this — not "seemed more settled" or "seemed relaxed" unless directly stated.
 • Use "may indicate", "could suggest" or "may have communicated" only as reflection, not fact.
 • Do not state triggers, motives, feelings or risk levels as facts unless the child or responsible adult provided them.
 • Mark what remains unknown; separate record wording from reflective analysis.
