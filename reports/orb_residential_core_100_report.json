@@ -1,7 +1,7 @@
 {
   "baseline_version": "1.0.0",
-  "commit_sha": "15ec50979c1543bcb2347254964fd2e2588872e7",
-  "run_timestamp": "2026-06-16T12:05:21.695277+00:00",
+  "commit_sha": "004b8588d57da6e1d494c07d91d4e45e3175eaf9",
+  "run_timestamp": "2026-06-16T12:48:48.805195+00:00",
   "scenario_set": "core100",
   "mode": "static",
   "scenario_count": 100,
@@ -403,11 +403,11 @@
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
+        "Missing information appropriately marked.",
         "No major punitive or diagnostic phrasing detected.",
         "Observable/factual framing present.",
         "Adult response visible.",
-        "Outcome or follow-up referenced.",
-        "No safeguarding escalation required for scenario."
+        "Outcome or follow-up referenced."
       ],
       "weaknesses": [],
       "unsafe_flags": [],
@@ -418,7 +418,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "template_scaffold",
-      "output_excerpt": "## Positive progress daily record  ## What happened Young person had a calm day. Attended school on time. Joined group activity in the evening and shared positive news about a school project. Ate all meals. Bedtime routine completed without difficulty.  ## Child voice / presentat"
+      "output_excerpt": "## Positive progress daily record  ## What happened Young person had a calm day. Attended school on time. Joined group activity in the evening and shared positive news about a school project. Ate all meals. Bedtime routine completed without difficulty.  ## Known / gaps Based on t"
     },
     {
       "scenario_id": "core_003",
@@ -453,11 +453,11 @@
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
+        "Missing information appropriately marked.",
         "No major punitive or diagnostic phrasing detected.",
         "Observable/factual framing present.",
         "Adult response visible.",
-        "Outcome or follow-up referenced.",
-        "No safeguarding escalation required for scenario."
+        "Outcome or follow-up referenced."
       ],
       "weaknesses": [],
       "unsafe_flags": [],
@@ -468,7 +468,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "template_scaffold",
-      "output_excerpt": "## Mealtime refusal  ## What happened Young person refused lunch saying they were not hungry. Staff offered alternative snack later. Young person ate a small portion at tea after calm conversation about food choices. No weight concern raised today.  ## Child voice / presentation "
+      "output_excerpt": "## Mealtime refusal  ## What happened Young person refused lunch saying they were not hungry. Staff offered alternative snack later. Young person ate a small portion at tea after calm conversation about food choices. No weight concern raised today.  ## Known / gaps Based on the i"
     },
     {
       "scenario_id": "core_004",
@@ -503,11 +503,11 @@
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
+        "Missing information appropriately marked.",
         "No major punitive or diagnostic phrasing detected.",
         "Observable/factual framing present.",
         "Adult response visible.",
-        "Outcome or follow-up referenced.",
-        "No safeguarding escalation required for scenario."
+        "Outcome or follow-up referenced."
       ],
       "weaknesses": [],
       "unsafe_flags": [],
@@ -518,7 +518,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "template_scaffold",
-      "output_excerpt": "## Sleep routine difficulty  ## What happened Young person struggled to settle at bedtime. Was awake until late. Staff offered quiet activity and reassurance. Eventually slept. Woke tired this morning. Sleep pattern to be monitored.  ## Child voice / presentation Young person sai"
+      "output_excerpt": "## Sleep routine difficulty  ## What happened Young person struggled to settle at bedtime. Was awake until late. Staff offered quiet activity and reassurance. Eventually slept. Woke tired this morning. Sleep pattern to be monitored.  ## Known / gaps Based on the information provi"
     },
     {
       "scenario_id": "core_005",
@@ -553,11 +553,11 @@
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
+        "Missing information appropriately marked.",
         "No major punitive or diagnostic phrasing detected.",
         "Observable/factual framing present.",
         "Adult response visible.",
-        "Outcome or follow-up referenced.",
-        "No safeguarding escalation required for scenario."
+        "Outcome or follow-up referenced."
       ],
       "weaknesses": [],
       "unsafe_flags": [],
@@ -568,7 +568,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "template_scaffold",
-      "output_excerpt": "## Hygiene support  ## What happened Young person needed encouragement with personal care this morning. Staff offered sensitive support and choices. Young person completed hygiene routine with minimal prompting. Dressed appropriately for school.  ## Child voice / presentation You"
+      "output_excerpt": "## Hygiene support  ## What happened Young person needed encouragement with personal care this morning. Staff offered sensitive support and choices. Young person completed hygiene routine with minimal prompting. Dressed appropriately for school.  ## Known / gaps Based on the info"
     },
     {
       "scenario_id": "core_006",
@@ -603,11 +603,11 @@
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
+        "Missing information appropriately marked.",
         "No major punitive or diagnostic phrasing detected.",
         "Observable/factual framing present.",
         "Adult response visible.",
-        "Outcome or follow-up referenced.",
-        "No safeguarding escalation required for scenario."
+        "Outcome or follow-up referenced."
       ],
       "weaknesses": [],
       "unsafe_flags": [],
@@ -618,7 +618,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "template_scaffold",
-      "output_excerpt": "## Peer relationship concern  ## What happened Young person said another young person in the home had been unkind during a game. Staff listened and facilitated a brief restorative conversation. Both young people agreed to try again tomorrow. No physical contact.  ## Child voice /"
+      "output_excerpt": "## Peer relationship concern  ## What happened Young person said another young person in the home had been unkind during a game. Staff listened and facilitated a brief restorative conversation. Both young people agreed to try again tomorrow. No physical contact.  ## Known / gaps "
     },
     {
       "scenario_id": "core_007",
@@ -653,11 +653,11 @@
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
+        "Missing information appropriately marked.",
         "No major punitive or diagnostic phrasing detected.",
         "Observable/factual framing present.",
         "Adult response visible.",
-        "Outcome or follow-up referenced.",
-        "No safeguarding escalation required for scenario."
+        "Outcome or follow-up referenced."
       ],
       "weaknesses": [],
       "unsafe_flags": [],
@@ -718,7 +718,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "template_scaffold",
-      "output_excerpt": "## Child refuses activity  ## What happened Young person declined planned group outing. Said they needed quiet time. Staff respected choice and offered alternative activity at home. Young person engaged with one-to-one support instead.  ## Child voice / presentation Young person "
+      "output_excerpt": "## Child refuses activity  ## What happened Young person declined planned group outing. Said they needed quiet time. Staff respected choice and offered alternative activity at home. Young person engaged with one-to-one support instead.  ## Known / gaps Based on the information pr"
     },
     {
       "scenario_id": "core_009",
@@ -753,11 +753,11 @@
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
+        "Missing information appropriately marked.",
         "No major punitive or diagnostic phrasing detected.",
         "Observable/factual framing present.",
         "Adult response visible.",
-        "Outcome or follow-up referenced.",
-        "No safeguarding escalation required for scenario."
+        "Outcome or follow-up referenced."
       ],
       "weaknesses": [],
       "unsafe_flags": [],
@@ -768,7 +768,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "template_scaffold",
-      "output_excerpt": "## Child returns home unsettled  ## What happened Young person returned to the home after off-site appointment appearing unsettled. Would not say why immediately. Staff offered drink and quiet space. Presentation improved after 30 minutes. Follow-up keywork offered.  ## Child voi"
+      "output_excerpt": "## Child returns home unsettled  ## What happened Young person returned to the home after off-site appointment appearing unsettled. Would not say why immediately. Staff offered drink and quiet space. Presentation improved after 30 minutes. Follow-up keywork offered.  ## Known / g"
     },
     {
       "scenario_id": "core_010",
@@ -918,7 +918,7 @@
       "record_type": "incident_report",
       "scenario_family": "incident_reflection",
       "answer_source": "template_scaffold",
-      "output_excerpt": "## Verbal aggression  ## What happened Young person shouted at staff during transition. Used raised voice but no threats of violence. Staff maintained low arousal and gave space. Young person calmed within ten minutes. No injury. Debrief offered.  ## Child voice / presentation Yo"
+      "output_excerpt": "## Verbal aggression  ## What happened Young person shouted at staff during transition. Used raised voice but no threats of violence. Staff maintained low arousal and gave space. Young person calmed within ten minutes. No injury. Debrief offered.  ## Known / gaps Based on the inf"
     },
     {
       "scenario_id": "core_013",
@@ -953,11 +953,11 @@
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
+        "Missing information appropriately marked.",
         "No major punitive or diagnostic phrasing detected.",
         "Observable/factual framing present.",
         "Adult response visible.",
-        "Outcome or follow-up referenced.",
-        "No safeguarding escalation required for scenario."
+        "Outcome or follow-up referenced."
       ],
       "weaknesses": [],
       "unsafe_flags": [],
@@ -968,7 +968,7 @@
       "record_type": "incident_report",
       "scenario_family": "incident_reflection",
       "answer_source": "template_scaffold",
-      "output_excerpt": "## Door slamming / emotional distress  ## What happened Young person slammed bedroom door after disappointing phone call. Staff checked welfare through door. Young person said they needed space. Door opened later; young person accepted drink. No damage observed.  ## Child voice /"
+      "output_excerpt": "## Door slamming / emotional distress  ## What happened Young person slammed bedroom door after disappointing phone call. Staff checked welfare through door. Young person said they needed space. Door opened later; young person accepted drink. No damage observed.  ## Known / gaps "
     },
     {
       "scenario_id": "core_014",
@@ -1003,11 +1003,11 @@
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
+        "Missing information appropriately marked.",
         "No major punitive or diagnostic phrasing detected.",
         "Observable/factual framing present.",
         "Adult response visible.",
-        "Outcome or follow-up referenced.",
-        "No safeguarding escalation required for scenario."
+        "Outcome or follow-up referenced."
       ],
       "weaknesses": [],
       "unsafe_flags": [],
@@ -1018,7 +1018,7 @@
       "record_type": "incident_report",
       "scenario_family": "incident_reflection",
       "answer_source": "template_scaffold",
-      "output_excerpt": "## Physical aggression without injury  ## What happened Young person pushed past staff during argument about screen time. No injury to staff or young person. Staff did not restrain. Manager notified. Young person later expressed regret. Risk review to be considered.  ## Child voi"
+      "output_excerpt": "## Physical aggression without injury  ## What happened Young person pushed past staff during argument about screen time. No injury to staff or young person. Staff did not restrain. Manager notified. Young person later expressed regret. Risk review to be considered.  ## Known / g"
     },
     {
       "scenario_id": "core_015",
@@ -1053,11 +1053,11 @@
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
+        "Missing information appropriately marked.",
         "No major punitive or diagnostic phrasing detected.",
         "Observable/factual framing present.",
         "Adult response visible.",
-        "Outcome or follow-up referenced.",
-        "No safeguarding escalation required for scenario."
+        "Outcome or follow-up referenced."
       ],
       "weaknesses": [],
       "unsafe_flags": [],
@@ -1068,7 +1068,7 @@
       "record_type": "incident_report",
       "scenario_family": "incident_reflection",
       "answer_source": "template_scaffold",
-      "output_excerpt": "## Bullying concern  ## What happened Young person reported name-calling by a peer at school. Staff recorded words used. School to be informed. Young person did not want staff to call school today. Agreed to discuss with keyworker tomorrow.  ## Child voice / presentation Young pe"
+      "output_excerpt": "## Bullying concern  ## What happened Young person reported name-calling by a peer at school. Staff recorded words used. School to be informed. Young person did not want staff to call school today. Agreed to discuss with keyworker tomorrow.  ## Known / gaps Based on the informati"
     },
     {
       "scenario_id": "core_016",
@@ -1118,7 +1118,7 @@
       "record_type": "incident_report",
       "scenario_family": "incident_reflection",
       "answer_source": "template_scaffold",
-      "output_excerpt": "## Threats to abscond  ## What was said / observed Young person said they were going to leave the home and not return. Staff listened and maintained calm presence. Young person remained on site. Manager informed. Missing from care protocol discussed. No abscond occurred.  ## Chil"
+      "output_excerpt": "## Threats to abscond  ## What was said / observed Young person said they were going to leave the home and not return. Staff listened and maintained calm presence. Young person remained on site. Manager informed. Missing from care protocol discussed. No abscond occurred.  Child's"
     },
     {
       "scenario_id": "core_017",
@@ -1153,11 +1153,11 @@
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
+        "Missing information appropriately marked.",
         "No major punitive or diagnostic phrasing detected.",
         "Observable/factual framing present.",
         "Adult response visible.",
-        "Outcome or follow-up referenced.",
-        "No safeguarding escalation required for scenario."
+        "Outcome or follow-up referenced."
       ],
       "weaknesses": [],
       "unsafe_flags": [],
@@ -1168,7 +1168,7 @@
       "record_type": "behaviour_reflection",
       "scenario_family": "incident_reflection",
       "answer_source": "template_scaffold",
-      "output_excerpt": "## Self-isolation after trigger  ## What happened After family phone call ended early, young person withdrew to bedroom. Declined dinner initially. Staff checked welfare hourly. Young person accepted snack later. Expressed feeling overwhelmed. Repair conversation planned.  ## Chi"
+      "output_excerpt": "## Self-isolation after trigger  ## What happened After family phone call ended early, young person withdrew to bedroom. Declined dinner initially. Staff checked welfare hourly. Young person accepted snack later. Expressed feeling overwhelmed. Repair conversation planned.  ## Kno"
     },
     {
       "scenario_id": "core_018",
@@ -1203,11 +1203,11 @@
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
+        "Missing information appropriately marked.",
         "No major punitive or diagnostic phrasing detected.",
         "Observable/factual framing present.",
         "Adult response visible.",
-        "Outcome or follow-up referenced.",
-        "No safeguarding escalation required for scenario."
+        "Outcome or follow-up referenced."
       ],
       "weaknesses": [],
       "unsafe_flags": [],
@@ -1218,7 +1218,7 @@
       "record_type": "incident_report",
       "scenario_family": "incident_reflection",
       "answer_source": "template_scaffold",
-      "output_excerpt": "## Conflict between young people  ## What happened Two young people argued over shared space. Raised voices but no physical contact. Staff separated and spoke with each individually. Both calmed. Agreed ground rules restated. Manager informed.  ## Child voice / presentation Young"
+      "output_excerpt": "## Conflict between young people  ## What happened Two young people argued over shared space. Raised voices but no physical contact. Staff separated and spoke with each individually. Both calmed. Agreed ground rules restated. Manager informed.  ## Known / gaps Based on the inform"
     },
     {
       "scenario_id": "core_019",
@@ -1268,7 +1268,7 @@
       "record_type": "incident_report",
       "scenario_family": "incident_reflection",
       "answer_source": "template_scaffold",
-      "output_excerpt": "## Online conflict  ## What happened Young person upset after online messages from a peer. Showed staff the messages. No threats of violence. Staff supported young person to block contact and documented concerns. Online safety plan to be reviewed.  ## Child voice / presentation Y"
+      "output_excerpt": "## Online conflict  ## What happened Young person upset after online messages from a peer. Showed staff the messages. No threats of violence. Staff supported young person to block contact and documented concerns. Online safety plan to be reviewed.  ## Known / gaps Based on the in"
     },
     {
       "scenario_id": "core_020",
@@ -1303,11 +1303,11 @@
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
+        "Missing information appropriately marked.",
         "No major punitive or diagnostic phrasing detected.",
         "Observable/factual framing present.",
         "Adult response visible.",
-        "Outcome or follow-up referenced.",
-        "No safeguarding escalation required for scenario."
+        "Outcome or follow-up referenced."
       ],
       "weaknesses": [],
       "unsafe_flags": [],
@@ -1318,7 +1318,7 @@
       "record_type": "supervision_discussion",
       "scenario_family": "incident_reflection",
       "answer_source": "template_scaffold",
-      "output_excerpt": "## Staff debrief after incident  ## What happened Team debrief after lounge incident. Staff reflected on de-escalation approach. Discussed what helped and what to do earlier next time. Agreed to update handover template. No disciplinary issues raised.  ## Child voice / presentati"
+      "output_excerpt": "## Staff debrief after incident  ## What happened Team debrief after lounge incident. Staff reflected on de-escalation approach. Discussed what helped and what to do earlier next time. Agreed to update handover template. No disciplinary issues raised.  ## Known / gaps Based on th"
     },
     {
       "scenario_id": "core_021",
@@ -1422,7 +1422,7 @@
       "record_type": "safeguarding_concern",
       "scenario_family": "safeguarding",
       "answer_source": "template_scaffold",
-      "output_excerpt": "## Historic harm comment  ## What was said / observed Young person mentioned historic harm in passing during daily routine. Did not want to elaborate. Staff recorded comment verbatim. Manager/DSL informed. No questioning beyond supportive listening.  ## Child voice / presentation"
+      "output_excerpt": "## Historic harm comment  ## What was said / observed Young person mentioned historic harm in passing during daily routine. Did not want to elaborate. Staff recorded comment verbatim. Manager/DSL informed. No questioning beyond supportive listening.  Child's exact words preserved"
     },
     {
       "scenario_id": "core_023",
@@ -1472,7 +1472,7 @@
       "record_type": "safeguarding_concern",
       "scenario_family": "safeguarding",
       "answer_source": "template_scaffold",
-      "output_excerpt": "## Concern about family contact  ## What was said / observed Young person said they feel anxious before family contact but would not say why. Staff validated feelings. DSL informed. Contact plan to be reviewed at next professionals meeting. No allegation made.  ## Child voice / p"
+      "output_excerpt": "## Concern about family contact  ## What was said / observed Young person said they feel anxious before family contact but would not say why. Staff validated feelings. DSL informed. Contact plan to be reviewed at next professionals meeting. No allegation made.  Child's exact word"
     },
     {
       "scenario_id": "core_024",
@@ -1522,7 +1522,7 @@
       "record_type": "safeguarding_concern",
       "scenario_family": "safeguarding",
       "answer_source": "template_scaffold",
-      "output_excerpt": "## Online exploitation concern  ## What was said / observed Young person received messages from unknown adult online offering gifts. Staff saw message content with young person's consent. DSL informed immediately. Device secured per policy. Chronology updated.  ## Child voice / p"
+      "output_excerpt": "## Online exploitation concern  ## What was said / observed Young person received messages from unknown adult online offering gifts. Staff saw message content with young person's consent. DSL informed immediately. Device secured per policy. Chronology updated.  The child's exact "
     },
     {
       "scenario_id": "core_025",
@@ -1557,11 +1557,11 @@
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
+        "Missing information appropriately marked.",
         "No major punitive or diagnostic phrasing detected.",
         "Observable/factual framing present.",
         "Adult response visible.",
-        "Outcome or follow-up referenced.",
-        "Safeguarding pathway or escalation referenced."
+        "Outcome or follow-up referenced."
       ],
       "weaknesses": [],
       "unsafe_flags": [],
@@ -1572,7 +1572,7 @@
       "record_type": "safeguarding_concern",
       "scenario_family": "safeguarding",
       "answer_source": "template_scaffold",
-      "output_excerpt": "## Missing from care concern  ## What was said / observed Young person left the home without permission. Returned two hours later. Appeared unsettled. Staff completed welfare check. Manager and social worker notified. Return home interview to be arranged.  ## Child voice / presen"
+      "output_excerpt": "## Missing from care concern  ## What was said / observed Young person left the home without permission. Returned two hours later. Appeared unsettled. Staff completed welfare check. Manager and social worker notified. Return home interview to be arranged.  The child's exact words"
     },
     {
       "scenario_id": "core_026",
@@ -1622,7 +1622,7 @@
       "record_type": "safeguarding_concern",
       "scenario_family": "safeguarding",
       "answer_source": "template_scaffold",
-      "output_excerpt": "## Substance concern  ## What was said / observed Staff noticed unusual smell on young person's clothing. Young person denied substance use. Staff recorded observations without accusation. Manager informed. Health and safeguarding pathway to be followed per local policy.  ## Chil"
+      "output_excerpt": "## Substance concern  ## What was said / observed Staff noticed unusual smell on young person's clothing. Young person denied substance use. Staff recorded observations without accusation. Manager informed. Health and safeguarding pathway to be followed per local policy.  The chi"
     },
     {
       "scenario_id": "core_027",
@@ -1722,7 +1722,7 @@
       "record_type": "safeguarding_concern",
       "scenario_family": "safeguarding",
       "answer_source": "template_scaffold",
-      "output_excerpt": "## Peer-on-peer concern  ## What was said / observed Young person disclosed uncomfortable physical contact by another young person last week. Staff responded supportively. DSL informed. Separate supervision arranged. No questioning beyond supportive listening.  ## Child voice / p"
+      "output_excerpt": "## Peer-on-peer concern  ## What was said / observed Young person disclosed uncomfortable physical contact by another young person last week. Staff responded supportively. DSL informed. Separate supervision arranged. No questioning beyond supportive listening.  Child's exact word"
     },
     {
       "scenario_id": "core_029",
@@ -1772,7 +1772,7 @@
       "record_type": "safeguarding_concern",
       "scenario_family": "safeguarding",
       "answer_source": "template_scaffold",
-      "output_excerpt": "## Child returns with unexplained item  ## What was said / observed Young person returned from off-site activity with expensive item they could not explain. Staff stored item securely. Recorded young person's account without pressure. Manager and social worker informed.  ## Child"
+      "output_excerpt": "## Child returns with unexplained item  ## What was said / observed Young person returned from off-site activity with expensive item they could not explain. Staff stored item securely. Recorded young person's account without pressure. Manager and social worker informed.  The chil"
     },
     {
       "scenario_id": "core_030",
@@ -1822,7 +1822,7 @@
       "record_type": "safeguarding_concern",
       "scenario_family": "safeguarding",
       "answer_source": "template_scaffold",
-      "output_excerpt": "## Sexualised language / boundary concern  ## What was said / observed Young person used sexualised language toward staff. Staff set boundary calmly and recorded incident. DSL informed. No punitive response. Context and pattern to be reviewed by manager.  ## Child voice / present"
+      "output_excerpt": "## Sexualised language / boundary concern  ## What was said / observed Young person used sexualised language toward staff. Staff set boundary calmly and recorded incident. DSL informed. No punitive response. Context and pattern to be reviewed by manager.  The child's exact words "
     },
     {
       "scenario_id": "core_031",
@@ -1926,7 +1926,7 @@
       "record_type": "behaviour_reflection",
       "scenario_family": "behaviour_communication",
       "answer_source": "template_scaffold",
-      "output_excerpt": "## School refusal  ## What happened Young person refused to leave for school. Said they felt sick. Staff explored worries calmly. Attended later after phone call with school. Pattern noted for education meeting.  ## Child voice / presentation Young person refused to leave for sch"
+      "output_excerpt": "## School refusal  ## What happened Young person refused to leave for school. Said they felt sick. Staff explored worries calmly. Attended later after phone call with school. Pattern noted for education meeting.  ## Known / gaps Based on the information provided: Known / observed"
     },
     {
       "scenario_id": "core_033",
@@ -1976,7 +1976,7 @@
       "record_type": "behaviour_reflection",
       "scenario_family": "behaviour_communication",
       "answer_source": "template_scaffold",
-      "output_excerpt": "## Sudden withdrawal  ## What happened Usually sociable young person withdrew to room all day. Minimal interaction. Staff checked in regularly. Young person said they needed space. No safeguarding disclosure. Monitor tomorrow.  ## Child voice / presentation Young person said they"
+      "output_excerpt": "## Sudden withdrawal  ## What happened Usually sociable young person withdrew to room all day. Minimal interaction. Staff checked in regularly. Young person said they needed space. No safeguarding disclosure. Monitor tomorrow.  ## Known / gaps Based on the information provided: K"
     },
     {
       "scenario_id": "core_034",
@@ -2026,7 +2026,7 @@
       "record_type": "behaviour_reflection",
       "scenario_family": "behaviour_communication",
       "answer_source": "template_scaffold",
-      "output_excerpt": "## Anger after disappointment  ## What happened Young person angry when outing was cancelled due to weather. Raised voice and threw soft item. Staff validated disappointment. Young person regulated with support. Repair conversation completed.  ## Child voice / presentation Young "
+      "output_excerpt": "## Anger after disappointment  ## What happened Young person angry when outing was cancelled due to weather. Raised voice and threw soft item. Staff validated disappointment. Young person regulated with support. Repair conversation completed.  ## Known / gaps Based on the informa"
     },
     {
       "scenario_id": "core_035",
@@ -2076,7 +2076,7 @@
       "record_type": "behaviour_reflection",
       "scenario_family": "behaviour_communication",
       "answer_source": "template_scaffold",
-      "output_excerpt": "## Repeated bedtime dysregulation  ## What happened Third night this week of bedtime dysregulation. Young person anxious about next day. Staff used consistent routine. Settled after extended reassurance. Pattern to be discussed in supervision.  ## Child voice / presentation Young"
+      "output_excerpt": "## Repeated bedtime dysregulation  ## What happened Third night this week of bedtime dysregulation. Young person anxious about next day. Staff used consistent routine. Settled after extended reassurance. Pattern to be discussed in supervision.  ## Known / gaps Based on the inform"
     },
     {
       "scenario_id": "core_036",
@@ -2126,7 +2126,7 @@
       "record_type": "behaviour_reflection",
       "scenario_family": "behaviour_communication",
       "answer_source": "template_scaffold",
-      "output_excerpt": "## Food-related anxiety  ## What happened Young person anxious about group meal. Ate separately with staff support. Expressed worry about being judged. Staff validated and recorded. Dietician referral already in place.  ## Child voice / presentation Young person said: not yet kno"
+      "output_excerpt": "## Food-related anxiety  ## What happened Young person anxious about group meal. Ate separately with staff support. Expressed worry about being judged. Staff validated and recorded. Dietician referral already in place.  ## Known / gaps Based on the information provided: Known / o"
     },
     {
       "scenario_id": "core_037",
@@ -2176,7 +2176,7 @@
       "record_type": "behaviour_reflection",
       "scenario_family": "behaviour_communication",
       "answer_source": "template_scaffold",
-      "output_excerpt": "## Refusal to attend appointment  ## What happened Young person refused CAMHS appointment. Said they were not ready. Staff respected choice and informed manager. Social worker to be updated. Alternative date to be offered.  ## Child voice / presentation Young person refused CAMHS"
+      "output_excerpt": "## Refusal to attend appointment  ## What happened Young person refused CAMHS appointment. Said they were not ready. Staff respected choice and informed manager. Social worker to be updated. Alternative date to be offered.  ## Known / gaps Based on the information provided: Known"
     },
     {
       "scenario_id": "core_038",
@@ -2226,7 +2226,7 @@
       "record_type": "behaviour_reflection",
       "scenario_family": "behaviour_communication",
       "answer_source": "template_scaffold",
-      "output_excerpt": "## Avoiding key-work  ## What happened Young person cancelled keywork twice this week. Said sessions feel too formal. Staff offered informal check-in instead. Relationship repair planned with keyworker.  ## Child voice / presentation Young person said: Said sessions feel too form"
+      "output_excerpt": "## Avoiding key-work  ## What happened Young person cancelled keywork twice this week. Said sessions feel too formal. Staff offered informal check-in instead. Relationship repair planned with keyworker.  ## Known / gaps Based on the information provided: Known / observed / report"
     },
     {
       "scenario_id": "core_039",
@@ -2276,7 +2276,7 @@
       "record_type": "behaviour_reflection",
       "scenario_family": "behaviour_communication",
       "answer_source": "template_scaffold",
-      "output_excerpt": "## Damaging bedroom item  ## What happened Young person damaged own bedroom item when upset. No injury. Staff supported regulation. Young person helped with tidy-up. Repair and replacement discussed calmly.  ## Child voice / presentation Young person said: not yet known \u2014 record "
+      "output_excerpt": "## Damaging bedroom item  ## What happened Young person damaged own bedroom item when upset. No injury. Staff supported regulation. Young person helped with tidy-up. Repair and replacement discussed calmly.  ## Known / gaps Based on the information provided: Known / observed / re"
     },
     {
       "scenario_id": "core_040",
@@ -2326,7 +2326,7 @@
       "record_type": "behaviour_reflection",
       "scenario_family": "behaviour_communication",
       "answer_source": "template_scaffold",
-      "output_excerpt": "## Repair after conflict  ## What happened After earlier argument with staff, young person returned to apologise. Staff accepted repair. Brief conversation about triggers. Relationship restored. Positive end to shift.  ## Child voice / presentation Young person said: not yet know"
+      "output_excerpt": "## Repair after conflict  ## What happened After earlier argument with staff, young person returned to apologise. Staff accepted repair. Brief conversation about triggers. Relationship restored. Positive end to shift.  ## Known / gaps Based on the information provided: Known / ob"
     },
     {
       "scenario_id": "core_041",
@@ -2426,7 +2426,7 @@
       "record_type": "general_dictation",
       "scenario_family": "magic_notes",
       "answer_source": "template_scaffold",
-      "output_excerpt": "## Rough incident note conversion  ## What happened yp threw cushion frame broke no pi mgr phoned ok after  ## Child voice / presentation Young person said: not yet known \u2014 record the child's words where provided. Presentation: as described in factual account \u2014 further detail not"
+      "output_excerpt": "## Rough incident note conversion  ## What happened yp threw cushion frame broke no pi mgr phoned ok after  ## Known / gaps Based on the information provided: Known / observed / reported: see factual account above. What is not yet stated: - Direct words if known \u2014 the child's wor"
     },
     {
       "scenario_id": "core_043",
@@ -2511,11 +2511,11 @@
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
+        "Missing information appropriately marked.",
         "No major punitive or diagnostic phrasing detected.",
         "Observable/factual framing present.",
         "Adult response visible.",
-        "Outcome or follow-up referenced.",
-        "No safeguarding escalation required for scenario."
+        "Outcome or follow-up referenced."
       ],
       "weaknesses": [],
       "unsafe_flags": [],
@@ -2526,7 +2526,7 @@
       "record_type": "daily_record",
       "scenario_family": "magic_notes",
       "answer_source": "template_scaffold",
-      "output_excerpt": "## Judgemental language rewrite  ## What happened Young person was behaviour that may have communicated an unmet need and found it difficult to follow the request at that time. staff offered calm boundaries within role. eventually settled and engaged when ready.  ## Child voice /"
+      "output_excerpt": "## Judgemental language rewrite  ## What happened Young person was behaviour that may have communicated an unmet need and found it difficult to follow the request at that time. staff used a firm approach \u2014 wording may need review. later followed the request when ready.  ## Known "
     },
     {
       "scenario_id": "core_045",
@@ -2576,7 +2576,7 @@
       "record_type": "safeguarding_concern",
       "scenario_family": "magic_notes",
       "answer_source": "template_scaffold",
-      "output_excerpt": "## Incomplete safeguarding note  ## What was said / observed yp said something about old placement. told mgr.  ## Child voice / presentation yp said something about old placement. told mgr Presentation: as described in factual account \u2014 further detail not yet recorded. Wishes, fe"
+      "output_excerpt": "## Incomplete safeguarding note  ## What was said / observed yp said something about old placement. told mgr.  Child's exact words preserved above.  ## Child voice / presentation yp said something about old placement. told mgr Presentation: as described in factual account \u2014 furth"
     },
     {
       "scenario_id": "core_046",
@@ -2626,7 +2626,7 @@
       "record_type": "handover",
       "scenario_family": "magic_notes",
       "answer_source": "template_scaffold",
-      "output_excerpt": "## Incomplete handover  ## What happened school ok. mood low. meds? ask next shift.  ## Child voice / presentation Young person said: not yet known \u2014 record the child's words where provided. Staff observed presentation: appeared low, mood shift noted. Wishes, feelings and views: "
+      "output_excerpt": "## Incomplete handover  ## What happened school ok. mood low. meds? ask next shift.  ## Known / gaps Based on the information provided: Known / observed / reported: see factual account above. What is not yet stated: - Direct words if known \u2014 the child's words were not recorded; a"
     },
     {
       "scenario_id": "core_047",
@@ -2661,11 +2661,11 @@
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
+        "Missing information appropriately marked.",
         "No major punitive or diagnostic phrasing detected.",
         "Observable/factual framing present.",
         "Adult response visible.",
-        "Outcome or follow-up referenced.",
-        "No safeguarding escalation required for scenario."
+        "Outcome or follow-up referenced."
       ],
       "weaknesses": [],
       "unsafe_flags": [],
@@ -2676,7 +2676,7 @@
       "record_type": "general_dictation",
       "scenario_family": "magic_notes",
       "answer_source": "template_scaffold",
-      "output_excerpt": "## Voice-to-record correction  ## What happened voice transcript: um young person came back uh from school bit upset said lessons were hard um staff sat with them quiet room um better later  ## Child voice / presentation Young person said: voice transcript: um young person came b"
+      "output_excerpt": "## Voice-to-record correction  ## What happened voice transcript: um young person came back uh from school bit upset said lessons were hard um staff sat with them quiet room um better later  ## Known / gaps Based on the information provided: Known / observed / reported: see factu"
     },
     {
       "scenario_id": "core_048",
@@ -2726,7 +2726,7 @@
       "record_type": "multi_agency_discussion",
       "scenario_family": "magic_notes",
       "answer_source": "template_scaffold",
-      "output_excerpt": "## Meeting note clean-up  ## What was said / observed mtg: sw pep school home. att 78%. camhs wait. act: school mtg.  ## Child voice / presentation Young person said: not yet known \u2014 record the child's words where provided. Presentation: not yet known \u2014 to be completed from shift"
+      "output_excerpt": "## Meeting note clean-up  ## What was said / observed mtg: sw pep school home. att 78%. camhs wait. act: school mtg.  The child's exact words were not recorded \u2014 add direct words if known.  ## Child voice / presentation Young person said: not yet known \u2014 record the child's words "
     },
     {
       "scenario_id": "core_049",
@@ -2776,7 +2776,7 @@
       "record_type": "manager_summary",
       "scenario_family": "magic_notes",
       "answer_source": "template_scaffold",
-      "output_excerpt": "## Manager oversight rough notes  ## What happened reviewed incident. staff ok. debrief done. check transitions.  ## Child voice / presentation Young person said: not yet known \u2014 record the child's words where provided. Presentation: not yet known \u2014 to be completed from shift obs"
+      "output_excerpt": "## Manager oversight rough notes  ## What happened reviewed incident. staff ok. debrief done. check transitions.  ## Known / gaps Based on the information provided: Known / observed / reported: see factual account above. What is not yet stated: - Direct words if known \u2014 the child"
     },
     {
       "scenario_id": "core_050",
@@ -2876,7 +2876,7 @@
       "record_type": "handover",
       "scenario_family": "handover",
       "answer_source": "template_scaffold",
-      "output_excerpt": "## Emotional check-in required  ## What happened Young person low mood after difficult phone call. Needs emotional check-in from next shift. Declined group activity. Accepted one-to-one support.  ## Child voice / presentation Young person said: Declined group activity. Staff obse"
+      "output_excerpt": "## Emotional check-in required  ## What happened Young person low mood after difficult phone call. Needs emotional check-in from next shift. Declined group activity. Accepted one-to-one support.  ## Known / gaps Based on the information provided: Known / observed / reported: see "
     },
     {
       "scenario_id": "core_052",
@@ -2926,7 +2926,7 @@
       "record_type": "handover",
       "scenario_family": "handover",
       "answer_source": "template_scaffold",
-      "output_excerpt": "## Medication reminder  ## What happened Evening medication given at usual time. Morning dose due 08:00. Stock check needed \u2014 one week remaining. Young person compliant with medication.  ## Child voice / presentation Young person said: not yet known \u2014 record the child's words whe"
+      "output_excerpt": "## Medication reminder  ## What happened Evening medication given at usual time. Morning dose due 08:00. Stock check needed \u2014 one week remaining. Young person compliant with medication.  ## Known / gaps Based on the information provided: Known / observed / reported: see factual a"
     },
     {
       "scenario_id": "core_053",
@@ -3026,7 +3026,7 @@
       "record_type": "handover",
       "scenario_family": "handover",
       "answer_source": "template_scaffold",
-      "output_excerpt": "## School issue follow-up  ## What happened School reported concern about attendance pattern. Email received. Manager to call school tomorrow. Young person aware and anxious about call.  ## Child voice / presentation Young person said: not yet known \u2014 record the child's words whe"
+      "output_excerpt": "## School issue follow-up  ## What happened School reported concern about attendance pattern. Email received. Manager to call school tomorrow. Young person aware and anxious about call.  ## Known / gaps Based on the information provided: Known / observed / reported: see factual a"
     },
     {
       "scenario_id": "core_055",
@@ -3076,7 +3076,7 @@
       "record_type": "handover",
       "scenario_family": "handover",
       "answer_source": "template_scaffold",
-      "output_excerpt": "## Contact arrangements  ## What happened Family contact scheduled Saturday 14:00. Transport confirmed. Young person mixed feelings \u2014 excited and worried. Preparation time blocked in diary.  ## Child voice / presentation Young person said: not yet known \u2014 record the child's words"
+      "output_excerpt": "## Contact arrangements  ## What happened Family contact scheduled Saturday 14:00. Transport confirmed. Young person mixed feelings \u2014 excited and worried. Preparation time blocked in diary.  ## Known / gaps Based on the information provided: Known / observed / reported: see factu"
     },
     {
       "scenario_id": "core_056",
@@ -3126,7 +3126,7 @@
       "record_type": "handover",
       "scenario_family": "handover",
       "answer_source": "template_scaffold",
-      "output_excerpt": "## Risk change update  ## What happened Risk assessment updated after incident. Missing from care risk increased to amber. Night checks increased. Manager briefed oncoming shift.  ## Child voice / presentation Young person said: not yet known \u2014 record the child's words where prov"
+      "output_excerpt": "## Risk change update  ## What happened Risk assessment updated after incident. Missing from care risk increased to amber. Night checks increased. Manager briefed oncoming shift.  ## Known / gaps Based on the information provided: Known / observed / reported: see factual account "
     },
     {
       "scenario_id": "core_057",
@@ -3176,7 +3176,7 @@
       "record_type": "handover",
       "scenario_family": "handover",
       "answer_source": "template_scaffold",
-      "output_excerpt": "## Positive progress handover  ## What happened Calm shift. Young person engaged well with education and hobbies. Ate all meals. Positive phone call with social worker. Continue encouragement next shift.  ## Child voice / presentation Young person said: not yet known \u2014 record the"
+      "output_excerpt": "## Positive progress handover  ## What happened Calm shift. Young person engaged well with education and hobbies. Ate all meals. Positive phone call with social worker. Continue encouragement next shift.  ## Known / gaps Based on the information provided: Known / observed / repor"
     },
     {
       "scenario_id": "core_058",
@@ -3226,7 +3226,7 @@
       "record_type": "handover",
       "scenario_family": "handover",
       "answer_source": "template_scaffold",
-      "output_excerpt": "## Health appointment handover  ## What happened GP appointment tomorrow 10:30. Young person nervous. Staff to accompany. Fasting not required. Bring red book equivalent care records.  ## Child voice / presentation Young person said: not yet known \u2014 record the child's words where"
+      "output_excerpt": "## Health appointment handover  ## What happened GP appointment tomorrow 10:30. Young person nervous. Staff to accompany. Fasting not required. Bring red book equivalent care records.  ## Known / gaps Based on the information provided: Known / observed / reported: see factual acc"
     },
     {
       "scenario_id": "core_059",
@@ -3276,7 +3276,7 @@
       "record_type": "handover",
       "scenario_family": "handover",
       "answer_source": "template_scaffold",
-      "output_excerpt": "## Sleep concern handover  ## What happened Young person slept only four hours. Tired and irritable this morning. May need flexible school start. Monitor presentation overnight.  ## Child voice / presentation Young person said: not yet known \u2014 record the child's words where provi"
+      "output_excerpt": "## Sleep concern handover  ## What happened Young person slept only four hours. Tired and irritable this morning. May need flexible school start. Monitor presentation overnight.  ## Known / gaps Based on the information provided: Known / observed / reported: see factual account a"
     },
     {
       "scenario_id": "core_060",
@@ -3430,7 +3430,7 @@
       "record_type": "key_work_session",
       "scenario_family": "key_work",
       "answer_source": "template_scaffold",
-      "output_excerpt": "## Family relationships  ## What happened Young person talked about complicated feelings toward family member. Staff listened without taking sides. Young person identified what helps before contact. No safeguarding disclosure.  ## Child voice / presentation Young person said: not"
+      "output_excerpt": "## Family relationships  ## What happened Young person talked about complicated feelings toward family member. Staff listened without taking sides. Young person identified what helps before contact. No safeguarding disclosure.  ## Known / gaps Based on the information provided: K"
     },
     {
       "scenario_id": "core_063",
@@ -3465,11 +3465,11 @@
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
+        "Missing information appropriately marked.",
         "No major punitive or diagnostic phrasing detected.",
         "Observable/factual framing present.",
         "Adult response visible.",
-        "Outcome or follow-up referenced.",
-        "No safeguarding escalation required for scenario."
+        "Outcome or follow-up referenced."
       ],
       "weaknesses": [],
       "unsafe_flags": [],
@@ -3480,7 +3480,7 @@
       "record_type": "key_work_session",
       "scenario_family": "key_work",
       "answer_source": "template_scaffold",
-      "output_excerpt": "## Identity and belonging  ## What happened Young person explored identity and belonging in keywork. Shared pride in cultural background. Staff validated experiences. Agreed to find resources for next session.  ## Child voice / presentation Young person said: Shared pride in cult"
+      "output_excerpt": "## Identity and belonging  ## What happened Young person explored identity and belonging in keywork. Shared pride in cultural background. Staff validated experiences. Agreed to find resources for next session.  ## Known / gaps Based on the information provided: Known / observed /"
     },
     {
       "scenario_id": "core_064",
@@ -3530,7 +3530,7 @@
       "record_type": "key_work_session",
       "scenario_family": "key_work",
       "answer_source": "template_scaffold",
-      "output_excerpt": "## Emotional regulation  ## What happened Keywork on emotional regulation strategies. Young person practised breathing exercise. Identified early warning signs. Staff reinforced strengths.  ## Child voice / presentation Young person said: not yet known \u2014 record the child's words "
+      "output_excerpt": "## Emotional regulation  ## What happened Keywork on emotional regulation strategies. Young person practised breathing exercise. Identified early warning signs. Staff reinforced strengths.  ## Known / gaps Based on the information provided: Known / observed / reported: see factua"
     },
     {
       "scenario_id": "core_065",
@@ -3580,7 +3580,7 @@
       "record_type": "key_work_session",
       "scenario_family": "key_work",
       "answer_source": "template_scaffold",
-      "output_excerpt": "## Online safety  ## What happened Keywork on online safety. Reviewed privacy settings together. Young person asked about reporting concerning messages. Staff explained pathway to DSL.  ## Child voice / presentation Young person asked about reporting concerning messages. Staff ex"
+      "output_excerpt": "## Online safety  ## What happened Keywork on online safety. Reviewed privacy settings together. Young person asked about reporting concerning messages. Staff explained pathway to DSL.  ## Known / gaps Based on the information provided: Known / observed / reported: see factual ac"
     },
     {
       "scenario_id": "core_066",
@@ -3630,7 +3630,7 @@
       "record_type": "key_work_session",
       "scenario_family": "key_work",
       "answer_source": "template_scaffold",
-      "output_excerpt": "## Healthy relationships  ## What happened Young person asked questions about healthy relationships. Staff used age-appropriate discussion. Boundaries and consent explored. No disclosure of harm.  ## Child voice / presentation Young person asked questions about healthy relationsh"
+      "output_excerpt": "## Healthy relationships  ## What happened Young person asked questions about healthy relationships. Staff used age-appropriate discussion. Boundaries and consent explored. No disclosure of harm.  ## Known / gaps Based on the information provided: Known / observed / reported: see"
     },
     {
       "scenario_id": "core_067",
@@ -3680,7 +3680,7 @@
       "record_type": "key_work_session",
       "scenario_family": "key_work",
       "answer_source": "template_scaffold",
-      "output_excerpt": "## Preparing for review meeting  ## What happened Young person preparing for LAC review. Identified three wishes for meeting. Staff helped write notes. Young person nervous but willing to attend.  ## Child voice / presentation Young person said: not yet known \u2014 record the child's"
+      "output_excerpt": "## Preparing for review meeting  ## What happened Young person preparing for LAC review. Identified three wishes for meeting. Staff helped write notes. Young person nervous but willing to attend.  ## Known / gaps Based on the information provided: Known / observed / reported: see"
     },
     {
       "scenario_id": "core_068",
@@ -3715,11 +3715,11 @@
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
+        "Missing information appropriately marked.",
         "No major punitive or diagnostic phrasing detected.",
         "Observable/factual framing present.",
         "Adult response visible.",
-        "Outcome or follow-up referenced.",
-        "No safeguarding escalation required for scenario."
+        "Outcome or follow-up referenced."
       ],
       "weaknesses": [],
       "unsafe_flags": [],
@@ -3730,7 +3730,7 @@
       "record_type": "key_work_session",
       "scenario_family": "key_work",
       "answer_source": "template_scaffold",
-      "output_excerpt": "## Child unhappy with plan  ## What happened Young person said they disagree with contact plan. Staff recorded views accurately. Agreed to raise at review. Validated right to be heard.  ## Child voice / presentation Young person said they disagree with contact plan. Staff recorde"
+      "output_excerpt": "## Child unhappy with plan  ## What happened Young person said they disagree with contact plan. Staff recorded views accurately. Agreed to raise at review. Validated right to be heard.  ## Known / gaps Based on the information provided: Known / observed / reported: see factual ac"
     },
     {
       "scenario_id": "core_069",
@@ -3765,11 +3765,11 @@
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
+        "Missing information appropriately marked.",
         "No major punitive or diagnostic phrasing detected.",
         "Observable/factual framing present.",
         "Adult response visible.",
-        "Outcome or follow-up referenced.",
-        "No safeguarding escalation required for scenario."
+        "Outcome or follow-up referenced."
       ],
       "weaknesses": [],
       "unsafe_flags": [],
@@ -3780,7 +3780,7 @@
       "record_type": "key_work_session",
       "scenario_family": "key_work",
       "answer_source": "template_scaffold",
-      "output_excerpt": "## Restorative conversation  ## What happened Restorative conversation after peer conflict. Both young people heard each other's perspective with staff support. Agreed ground rules. Relationship improving.  ## Child voice / presentation Young person said: not yet known \u2014 record t"
+      "output_excerpt": "## Restorative conversation  ## What happened Restorative conversation after peer conflict. Both young people heard each other's perspective with staff support. Agreed ground rules. Relationship improving.  ## Known / gaps Based on the information provided: Known / observed / rep"
     },
     {
       "scenario_id": "core_070",
@@ -3830,7 +3830,7 @@
       "record_type": "key_work_session",
       "scenario_family": "key_work",
       "answer_source": "template_scaffold",
-      "output_excerpt": "## Building trust  ## What happened Young person new to home. Keywork focused on building trust. Explored likes and worries. Young person said staff feel approachable. Small goal set for week.  ## Child voice / presentation Young person said staff feel approachable. Small goal se"
+      "output_excerpt": "## Building trust  ## What happened Young person new to home. Keywork focused on building trust. Explored likes and worries. Young person said staff feel approachable. Small goal set for week.  ## Known / gaps Based on the information provided: Known / observed / reported: see fa"
     },
     {
       "scenario_id": "core_071",
@@ -3965,11 +3965,11 @@
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
+        "Missing information appropriately marked.",
         "No major punitive or diagnostic phrasing detected.",
         "Observable/factual framing present.",
         "Adult response visible.",
-        "Outcome or follow-up referenced.",
-        "No safeguarding escalation required for scenario."
+        "Outcome or follow-up referenced."
       ],
       "weaknesses": [],
       "unsafe_flags": [],
@@ -3980,7 +3980,7 @@
       "record_type": "manager_summary",
       "scenario_family": "management_oversight",
       "answer_source": "template_scaffold",
-      "output_excerpt": "## Missing episode oversight  ## What was said / observed Manager oversight of missing episode. Return home interview completed. Chronology updated. Multi-agency notification confirmed. Missing plan to be revised.  ## Child voice / presentation Young person said: not yet known \u2014 "
+      "output_excerpt": "## Missing episode oversight  ## What was said / observed Manager oversight of missing episode. Return home interview completed. Chronology updated. Multi-agency notification confirmed. Missing plan to be revised.  The child's exact words were not recorded \u2014 add direct words if k"
     },
     {
       "scenario_id": "core_074",
@@ -4030,7 +4030,7 @@
       "record_type": "manager_summary",
       "scenario_family": "management_oversight",
       "answer_source": "template_scaffold",
-      "output_excerpt": "## Safeguarding management note  ## What was said / observed DSL oversight of partial disclosure case. Decision: chronology update and multi-agency discussion. No MASH on current information. Review in 48 hours.  ## Child voice / presentation Young person said: not yet known \u2014 re"
+      "output_excerpt": "## Safeguarding management note  ## What was said / observed DSL oversight of partial disclosure case. Decision: chronology update and multi-agency discussion. No MASH on current information. Review in 48 hours.  The child's exact words were not recorded \u2014 add direct words if kno"
     },
     {
       "scenario_id": "core_075",
@@ -4080,7 +4080,7 @@
       "record_type": "manager_summary",
       "scenario_family": "management_oversight",
       "answer_source": "template_scaffold",
-      "output_excerpt": "## Staff practice reflection  ## What happened Manager reflected on staff recording quality after audit sample. Strengths in child voice. Development need: follow-up actions. Supervision plan updated.  ## Child voice / presentation Young person said: not yet known \u2014 record the ch"
+      "output_excerpt": "## Staff practice reflection  ## What happened Manager reflected on staff recording quality after audit sample. Strengths in child voice. Development need: follow-up actions. Supervision plan updated.  ## Known / gaps Based on the information provided: Known / observed / reported"
     },
     {
       "scenario_id": "core_076",
@@ -4130,7 +4130,7 @@
       "record_type": "placement_plan_review",
       "scenario_family": "management_oversight",
       "answer_source": "template_scaffold",
-      "output_excerpt": "## Placement plan review  ## What happened Placement plan review due. Education goals on track. Contact plan needs update. Health actions outstanding. Manager to chair internal review before statutory meeting.  ## Child voice / presentation Young person said: not yet known \u2014 reco"
+      "output_excerpt": "## Placement plan review  ## What happened Placement plan review due. Education goals on track. Contact plan needs update. Health actions outstanding. Manager to chair internal review before statutory meeting.  ## Known / gaps Based on the information provided: Known / observed /"
     },
     {
       "scenario_id": "core_077",
@@ -4180,7 +4180,7 @@
       "record_type": "risk_assessment_note",
       "scenario_family": "management_oversight",
       "answer_source": "template_scaffold",
-      "output_excerpt": "## Risk assessment update  ## What happened Risk assessment updated after self-harm concern. Night checks increased. Sharp items stored securely. CAMHS contacted. Young person aware of safety plan.  ## Child voice / presentation Young person said: not yet known \u2014 record the child"
+      "output_excerpt": "## Risk assessment update  ## What happened Risk assessment updated after self-harm concern. Night checks increased. Sharp items stored securely. CAMHS contacted. Young person aware of safety plan.  ## Known / gaps Based on the information provided: Known / observed / reported: s"
     },
     {
       "scenario_id": "core_078",
@@ -4215,11 +4215,11 @@
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
+        "Missing information appropriately marked.",
         "No major punitive or diagnostic phrasing detected.",
         "Observable/factual framing present.",
         "Adult response visible.",
-        "Outcome or follow-up referenced.",
-        "No safeguarding escalation required for scenario."
+        "Outcome or follow-up referenced."
       ],
       "weaknesses": [],
       "unsafe_flags": [],
@@ -4230,7 +4230,7 @@
       "record_type": "complaint_record",
       "scenario_family": "management_oversight",
       "answer_source": "template_scaffold",
-      "output_excerpt": "## Complaints oversight  ## What happened Manager oversight of complaint about meal variety. Young person heard. Action plan agreed. Menu review with young people scheduled. Response within timescale.  ## Child voice / presentation Young person said: not yet known \u2014 record the ch"
+      "output_excerpt": "## Complaints oversight  ## What happened Manager oversight of complaint about meal variety. Young person heard. Action plan agreed. Menu review with young people scheduled. Response within timescale.  ## Known / gaps Based on the information provided: Known / observed / reported"
     },
     {
       "scenario_id": "core_079",
@@ -4265,11 +4265,11 @@
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
+        "Missing information appropriately marked.",
         "No major punitive or diagnostic phrasing detected.",
         "Observable/factual framing present.",
         "Adult response visible.",
-        "Outcome or follow-up referenced.",
-        "No safeguarding escalation required for scenario."
+        "Outcome or follow-up referenced."
       ],
       "weaknesses": [],
       "unsafe_flags": [],
@@ -4280,7 +4280,7 @@
       "record_type": "manager_summary",
       "scenario_family": "management_oversight",
       "answer_source": "template_scaffold",
-      "output_excerpt": "## Positive progress oversight  ## What happened Manager noted sustained positive progress over six weeks. Improved school attendance. Reduced incidents. Commendation for staff team. Share at supervision.  ## Child voice / presentation Young person said: not yet known \u2014 record th"
+      "output_excerpt": "## Positive progress oversight  ## What happened Manager noted sustained positive progress over six weeks. Improved school attendance. Reduced incidents. Commendation for staff team. Share at supervision.  ## Known / gaps Based on the information provided: Known / observed / repo"
     },
     {
       "scenario_id": "core_080",
@@ -4315,11 +4315,11 @@
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
+        "Missing information appropriately marked.",
         "No major punitive or diagnostic phrasing detected.",
         "Observable/factual framing present.",
         "Adult response visible.",
-        "Outcome or follow-up referenced.",
-        "No safeguarding escalation required for scenario."
+        "Outcome or follow-up referenced."
       ],
       "weaknesses": [],
       "unsafe_flags": [],
@@ -4330,7 +4330,7 @@
       "record_type": "reg_45_self_evaluation",
       "scenario_family": "management_oversight",
       "answer_source": "template_scaffold",
-      "output_excerpt": "## Reg 45 improvement note  ## What happened Reg 45 improvement action: handover quality. Progress: new template trialled. Evidence: audit sample improved. Next: train all shifts on template use.  ## Child voice / presentation Young person said: not yet known \u2014 record the child's"
+      "output_excerpt": "## Reg 45 improvement note  ## What happened Reg 45 improvement action: handover quality. Progress: new template trialled. Evidence: audit sample improved. Next: train all shifts on template use.  ## Known / gaps Based on the information provided: Known / observed / reported: see"
     },
     {
       "scenario_id": "core_081",
@@ -4380,7 +4380,7 @@
       "record_type": "multi_agency_discussion",
       "scenario_family": "meetings",
       "answer_source": "template_scaffold",
-      "output_excerpt": "## Care team meeting  ## What was said / observed Internal care team meeting. Reviewed week events. Education, health, contact updates discussed. Actions assigned. Young person's views represented from keywork.  ## Child voice / presentation Young person said: not yet known \u2014 rec"
+      "output_excerpt": "## Care team meeting  ## What was said / observed Internal care team meeting. Reviewed week events. Education, health, contact updates discussed. Actions assigned. Young person's views represented from keywork.  The child's exact words were not recorded \u2014 add direct words if know"
     },
     {
       "scenario_id": "core_082",
@@ -4534,7 +4534,7 @@
       "record_type": "multi_agency_discussion",
       "scenario_family": "meetings",
       "answer_source": "template_scaffold",
-      "output_excerpt": "## School meeting  ## What was said / observed School meeting attended by home staff. Discussed attendance and behaviour support plan. School willing to provide mentor. Young person views shared with consent.  ## Child voice / presentation Young person views shared with consent. "
+      "output_excerpt": "## School meeting  ## What was said / observed School meeting attended by home staff. Discussed attendance and behaviour support plan. School willing to provide mentor. Young person views shared with consent.  Child's exact words preserved above.  ## Child voice / presentation Yo"
     },
     {
       "scenario_id": "core_085",
@@ -4569,11 +4569,11 @@
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
+        "Missing information appropriately marked.",
         "No major punitive or diagnostic phrasing detected.",
         "Observable/factual framing present.",
         "Adult response visible.",
-        "Outcome or follow-up referenced.",
-        "No safeguarding escalation required for scenario."
+        "Outcome or follow-up referenced."
       ],
       "weaknesses": [],
       "unsafe_flags": [],
@@ -4584,7 +4584,7 @@
       "record_type": "multi_agency_discussion",
       "scenario_family": "meetings",
       "answer_source": "template_scaffold",
-      "output_excerpt": "## LAC/review preparation  ## What was said / observed Preparing for LAC review. Chronology extract prepared. Young person's wishes document completed. Health and education reports requested. Review date confirmed.  ## Child voice / presentation Young person said: not yet known \u2014"
+      "output_excerpt": "## LAC/review preparation  ## What was said / observed Preparing for LAC review. Chronology extract prepared. Young person's wishes document completed. Health and education reports requested. Review date confirmed.  The child's exact words were not recorded \u2014 add direct words if "
     },
     {
       "scenario_id": "core_086",
@@ -4634,7 +4634,7 @@
       "record_type": "professional_contact_note",
       "scenario_family": "meetings",
       "answer_source": "template_scaffold",
-      "output_excerpt": "## Therapy feedback note  ## What happened Therapist feedback via phone. Young person engaged well in session. Homework strategies shared. Staff to reinforce coping skills daily. Next session in two weeks.  ## Child voice / presentation Young person said: Homework strategies shar"
+      "output_excerpt": "## Therapy feedback note  ## What happened Therapist feedback via phone. Young person engaged well in session. Homework strategies shared. Staff to reinforce coping skills daily. Next session in two weeks.  ## Known / gaps Based on the information provided: Known / observed / rep"
     },
     {
       "scenario_id": "core_087",
@@ -4684,7 +4684,7 @@
       "record_type": "professional_contact_note",
       "scenario_family": "meetings",
       "answer_source": "template_scaffold",
-      "output_excerpt": "## Social worker update  ## What happened Phone update with social worker. Shared chronology summary. No new safeguarding concerns. Care plan review date confirmed. Social worker thanked team.  ## Child voice / presentation Young person said: Shared chronology summary. Presentati"
+      "output_excerpt": "## Social worker update  ## What happened Phone update with social worker. Shared chronology summary. No new safeguarding concerns. Care plan review date confirmed. Social worker thanked team.  ## Known / gaps Based on the information provided: Known / observed / reported: see fa"
     },
     {
       "scenario_id": "core_088",
@@ -4784,7 +4784,7 @@
       "record_type": "professional_contact_note",
       "scenario_family": "meetings",
       "answer_source": "template_scaffold",
-      "output_excerpt": "## Health appointment summary  ## What happened GP appointment attended. Young person healthy. Sleep concerns discussed. Advice given on routine. Follow-up in three months unless concerns sooner.  ## Child voice / presentation Young person said: not yet known \u2014 record the child's"
+      "output_excerpt": "## Health appointment summary  ## What happened GP appointment attended. Young person healthy. Sleep concerns discussed. Advice given on routine. Follow-up in three months unless concerns sooner.  ## Known / gaps Based on the information provided: Known / observed / reported: see"
     },
     {
       "scenario_id": "core_090",
@@ -4938,7 +4938,7 @@
       "record_type": "reg_45_self_evaluation",
       "scenario_family": "regulation_evidence",
       "answer_source": "template_scaffold",
-      "output_excerpt": "## Reg 45 self-evaluation  ## What happened Reg 45 self-evaluation quarter. Strength: child voice in records. Development: handover consistency. Evidence samples attached. Action plan for next quarter drafted.  ## Child voice / presentation Young person said: not yet known \u2014 reco"
+      "output_excerpt": "## Reg 45 self-evaluation  ## What happened Reg 45 self-evaluation quarter. Strength: child voice in records. Development: handover consistency. Evidence samples attached. Action plan for next quarter drafted.  ## Known / gaps Based on the information provided: Known / observed /"
     },
     {
       "scenario_id": "core_093",
@@ -4988,7 +4988,7 @@
       "record_type": "manager_summary",
       "scenario_family": "regulation_evidence",
       "answer_source": "template_scaffold",
-      "output_excerpt": "## Safer recruitment evidence reflection  ## What happened Manager reflected on safer recruitment file sample. All checks complete for recent hire. Induction documented. Supervision scheduled. Evidence ready for inspection.  ## Child voice / presentation Young person said: not ye"
+      "output_excerpt": "## Safer recruitment evidence reflection  ## What happened Manager reflected on safer recruitment file sample. All checks complete for recent hire. Induction documented. Supervision scheduled. Evidence ready for inspection.  ## Known / gaps Based on the information provided: Know"
     },
     {
       "scenario_id": "core_094",
@@ -5075,11 +5075,11 @@
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
+        "Missing information appropriately marked.",
         "No major punitive or diagnostic phrasing detected.",
         "Observable/factual framing present.",
         "Adult response visible.",
-        "Outcome or follow-up referenced.",
-        "No safeguarding escalation required for scenario."
+        "Outcome or follow-up referenced."
       ],
       "weaknesses": [],
       "unsafe_flags": [],
@@ -5090,7 +5090,7 @@
       "record_type": "manager_summary",
       "scenario_family": "regulation_evidence",
       "answer_source": "template_scaffold",
-      "output_excerpt": "## Training impact note  ## What happened Team completed trauma-informed practice training. Staff reported increased confidence in de-escalation. Manager to observe practice and collect feedback next month.  ## Child voice / presentation Young person said: not yet known \u2014 record "
+      "output_excerpt": "## Training impact note  ## What happened Team completed trauma-informed practice training. Staff reported increased confidence in de-escalation. Manager to observe practice and collect feedback next month.  ## Known / gaps Based on the information provided: Known / observed / re"
     },
     {
       "scenario_id": "core_096",
@@ -5140,7 +5140,7 @@
       "record_type": "manager_summary",
       "scenario_family": "regulation_evidence",
       "answer_source": "template_scaffold",
-      "output_excerpt": "## Quality of care review  ## What happened Monthly quality of care review. Sampled ten records. Strengths: safeguarding escalation timely. Development: outcome sections sometimes thin. Action: refresher on recording standards.  ## Child voice / presentation Young person said: no"
+      "output_excerpt": "## Quality of care review  ## What happened Monthly quality of care review. Sampled ten records. Strengths: safeguarding escalation timely. Development: outcome sections sometimes thin. Action: refresher on recording standards.  ## Known / gaps Based on the information provided: "
     },
     {
       "scenario_id": "core_097",
@@ -5175,11 +5175,11 @@
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
+        "Missing information appropriately marked.",
         "No major punitive or diagnostic phrasing detected.",
         "Observable/factual framing present.",
         "Adult response visible.",
-        "Outcome or follow-up referenced.",
-        "No safeguarding escalation required for scenario."
+        "Outcome or follow-up referenced."
       ],
       "weaknesses": [],
       "unsafe_flags": [],
@@ -5190,7 +5190,7 @@
       "record_type": "manager_summary",
       "scenario_family": "regulation_evidence",
       "answer_source": "template_scaffold",
-      "output_excerpt": "## Leadership oversight summary  ## What happened Registered Manager monthly oversight. Staffing stable. Two vacancies in recruitment. Incidents trending down. Reg 44 visit preparation on track. Children's views summary completed.  ## Child voice / presentation Young person said:"
+      "output_excerpt": "## Leadership oversight summary  ## What happened Registered Manager monthly oversight. Staffing stable. Two vacancies in recruitment. Incidents trending down. Reg 44 visit preparation on track. Children's views summary completed.  ## Known / gaps Based on the information provide"
     },
     {
       "scenario_id": "core_098",
@@ -5240,7 +5240,7 @@
       "record_type": "manager_summary",
       "scenario_family": "regulation_evidence",
       "answer_source": "template_scaffold",
-      "output_excerpt": "## Children's voice evidence  ## What happened Compiled children's voice evidence for review. Young person wishes: more say in activities, shorter contact when tired. Feedback collected via keywork and house meeting.  ## Child voice / presentation Young person said: not yet known"
+      "output_excerpt": "## Children's voice evidence  ## What happened Compiled children's voice evidence for review. Young person wishes: more say in activities, shorter contact when tired. Feedback collected via keywork and house meeting.  ## Known / gaps Based on the information provided: Known / obs"
     },
     {
       "scenario_id": "core_099",
@@ -5290,7 +5290,7 @@
       "record_type": "manager_summary",
       "scenario_family": "regulation_evidence",
       "answer_source": "template_scaffold",
-      "output_excerpt": "## Learning from incident review  ## What happened Learning review after property damage incident. Trigger: transition. Learning: earlier offer of quiet space. Action: update transition visual schedule. Shared in team meeting.  ## Child voice / presentation Young person said: Sha"
+      "output_excerpt": "## Learning from incident review  ## What happened Learning review after property damage incident. Trigger: transition. Learning: earlier offer of quiet space. Action: update transition visual schedule. Shared in team meeting.  ## Known / gaps Based on the information provided: K"
     },
     {
       "scenario_id": "core_100",
@@ -5340,7 +5340,7 @@
       "record_type": "manager_summary",
       "scenario_family": "regulation_evidence",
       "answer_source": "template_scaffold",
-      "output_excerpt": "## Monthly manager summary  ## What happened Monthly manager summary: occupancy stable; education variable; safeguarding chronology current; supervision compliance 100%; two incidents with good de-escalation; contact plan review pending; Reg 44 visit next month.  ## Child voice /"
+      "output_excerpt": "## Monthly manager summary  ## What happened Monthly manager summary: occupancy stable; education variable; safeguarding chronology current; supervision compliance 100%; two incidents with good de-escalation; contact plan review pending; Reg 44 visit next month.  ## Known / gaps "
     }
   ]
 }

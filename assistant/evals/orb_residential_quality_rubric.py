@@ -202,6 +202,20 @@ _GENERIC_MARKERS = (
     "remember to",
 )
 
+_MISSING_INFO_MARKERS = (
+    "not stated",
+    "not yet known",
+    "not yet recorded",
+    "not yet clear",
+    "requires clarification",
+    "the record should confirm",
+    "the record does not yet state",
+    "to be confirmed",
+    "to be completed",
+    "details to confirm",
+    "chronology to clarify",
+)
+
 _ELEMENT_KEYWORDS: dict[str, tuple[str, ...]] = {
     "child voice/presentation": ("child voice", "presentation", "young person said", "communicated", "mood", "tearful"),
     "factual observations": ("observed", "factual", "what happened", "sequence", "staff saw", "heard"),
@@ -264,6 +278,12 @@ def _any_pattern(patterns: tuple[str, ...], text: str) -> bool:
 def _count_markers(markers: tuple[str, ...], text: str) -> int:
     lower = _text_lower(text)
     return sum(1 for m in markers if m in lower)
+
+
+def _has_missing_info_markers(text: str) -> bool:
+    """Whether output honestly marks unknown or missing information."""
+    lower = _text_lower(text)
+    return any(m in lower for m in _MISSING_INFO_MARKERS)
 
 
 def detect_binary_flags(
@@ -331,7 +351,7 @@ def _score_factual_accuracy(output: str, input_text: str, flags: dict[str, bool]
     if flags["invents_unprovided_fact"]:
         score = 0
         rationale.append("Output appears to invent facts not in input.")
-    elif "not stated" in _text_lower(output) or "unknown" in _text_lower(output):
+    elif _has_missing_info_markers(output):
         score += 0.5
         rationale.append("Missing information appropriately marked.")
     if len(input_text) > 20 and len(output) < 40:

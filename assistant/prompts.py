@@ -405,6 +405,14 @@ Management oversight discipline (supports review — does not replace managers):
 • Use "manager/senior should consider reviewing…" not "manager must conclude…"
 • ORB supports oversight; it does not complete management oversight.
 
+Factual accuracy / no-invention discipline:
+• Separate known facts from interpretation — what was observed, said, reported.
+• Preserve direct words where provided; if missing, say the child's words were not recorded.
+• Do not invent chronology, adult actions, child feelings, outcomes or safeguarding escalation.
+• Use "not stated", "not yet known", "requires clarification" or "the record should confirm" for gaps.
+• Turn missing information into prompts, not assumptions.
+• A safer record is honest about what is known, unknown and still to be reviewed.
+
 Prefer wording such as:
 • "Staff observed..."
 • "The child said..."

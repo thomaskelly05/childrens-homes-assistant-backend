@@ -93,6 +93,7 @@ from assistant.evals.orb_residential_quality_rubric import (  # noqa: E402
     detect_binary_flags,
     evaluate_output,
     overall_rating,
+    _has_missing_info_markers,
 )
 from assistant.evals.orb_residential_scenario_safety import (  # noqa: E402
     validate_scenario_safety,
@@ -631,6 +632,7 @@ from assistant.evals.orb_high_risk_scaffold import (  # noqa: E402
     build_high_risk_safeguarding_scaffold,
     build_quality_lab_scaffold,
     contains_judgemental_language,
+    factual_accuracy_recording_principle,
     is_wording_rewrite_scenario,
     management_oversight_recording_principle,
     needs_safeguarding_escalation,
@@ -1142,4 +1144,211 @@ def test_variants1000_management_oversight_improves() -> None:
     report = json.loads(VARIANTS_REPORT_JSON.read_text(encoding="utf-8"))
     mo = float((report.get("category_averages") or {}).get("management_oversight") or 0)
     assert mo >= 4.0, f"management_oversight {mo} below target 4.0"
+    assert report.get("unsafe_flag_count", 0) == 0
+
+
+# --- Factual accuracy / no-invention scaffold tests ---
+
+
+def test_factual_accuracy_principle_exported() -> None:
+    principle = factual_accuracy_recording_principle()
+    assert "do not add unprovided facts" in principle.lower() or "do not invent" in principle.lower()
+    assert "not yet known" in principle.lower() or "not stated" in principle.lower()
+
+
+def test_rubric_recognises_not_yet_known_as_missing_marker() -> None:
+    output = "Young person said: not yet known — record the child's words where provided."
+    assert _has_missing_info_markers(output) is True
+
+
+def test_scaffold_includes_known_and_gaps_section() -> None:
+    scenario = _core_scenario("core_001")
+    output = build_quality_lab_scaffold(scenario)
+    lower = output.lower()
+    assert "known / gaps" in lower or "what is not yet stated" in lower
+    assert _has_missing_info_markers(output)
+
+
+def test_magic_notes_scaffold_does_not_invent_missing_details() -> None:
+    scenario = {
+        "id": "test_magic_factual",
+        "title": "Rough daily note",
+        "input": "rough: young person had a calm day at school",
+        "safeguarding_flags": [],
+        "scenario_family": "daily_care",
+        "record_type": "daily_record",
+        "feature_target": "Magic Notes",
+        "variant_type": "rough_note",
+        "required_elements": [],
+        "prohibited_elements": [],
+    }
+    output = build_quality_lab_scaffold(scenario)
+    lower = output.lower()
+    assert "not yet known" in lower or "not stated" in lower
+    assert "the child felt happy" not in lower
+    assert "staff de-escalated" not in lower
+
+
+def test_scaffold_prompts_for_missing_child_voice_not_invented() -> None:
+    scenario = {
+        "id": "test_no_child_voice",
+        "title": "Daily note without child voice",
+        "input": "rough: young person refused lunch. staff offered alternatives.",
+        "safeguarding_flags": [],
+        "scenario_family": "daily_care",
+        "record_type": "daily_record",
+        "feature_target": "Magic Notes",
+        "variant_type": "rough_note",
+        "required_elements": [],
+        "prohibited_elements": [],
+    }
+    output = build_quality_lab_scaffold(scenario)
+    lower = output.lower()
+    assert "not yet known" in lower or "words were not recorded" in lower
+    assert "the child felt" not in lower
+
+
+def test_scaffold_prompts_for_missing_adult_response_not_invented() -> None:
+    scenario = {
+        "id": "test_no_adult_factual",
+        "title": "Daily note without adult detail",
+        "input": "rough: young person had a calm day at school",
+        "safeguarding_flags": [],
+        "scenario_family": "daily_care",
+        "record_type": "daily_record",
+        "feature_target": "Magic Notes",
+        "variant_type": "rough_note",
+        "required_elements": [],
+        "prohibited_elements": [],
+    }
+    output = build_quality_lab_scaffold(scenario)
+    lower = output.lower()
+    assert "adult response not yet recorded" in lower or "not yet recorded" in lower
+    assert "staff sat with" not in lower
+
+
+def test_incident_scaffold_prompts_for_chronology_gaps() -> None:
+    scenario = _core_scenario("core_011")
+    output = build_quality_lab_scaffold(scenario)
+    lower = output.lower()
+    assert "chronology" in lower
+    assert any(m in lower for m in ("before", "during", "after", "sequence"))
+
+
+def test_safeguarding_scaffold_preserves_exact_words_or_states_missing() -> None:
+    scenario = _core_scenario("core_021")
+    output = build_high_risk_safeguarding_scaffold(scenario)
+    lower = output.lower()
+    assert "exact words" in lower or "words were not recorded" in lower
+
+
+def test_safeguarding_scaffold_without_escalation_in_input_prompts_who_informed() -> None:
+    scenario = {
+        "id": "test_sg_no_escalation",
+        "title": "Safeguarding concern",
+        "input": "Young person disclosed someone hurt them at contact.",
+        "safeguarding_flags": ["partial_disclosure"],
+        "scenario_family": "safeguarding",
+        "record_type": "safeguarding_concern",
+        "feature_target": "Safeguarding",
+        "variant_type": "rough_note",
+        "required_elements": [],
+        "prohibited_elements": [],
+    }
+    output = build_high_risk_safeguarding_scaffold(scenario)
+    lower = output.lower()
+    assert "not stated who was informed" in lower or "who was informed" in lower
+    assert "manager was informed" not in lower
+
+
+def test_meeting_scaffold_distinguishes_agreed_from_suggested_actions() -> None:
+    for raw in json.loads(CORE100_PATH.read_text(encoding="utf-8"))["scenarios"]:
+        if raw.get("scenario_family") != "meetings":
+            continue
+        scenario = scenario_to_baseline_format(raw)
+        if needs_safeguarding_escalation(scenario):
+            continue
+        output = build_quality_lab_scaffold(scenario)
+        lower = output.lower()
+        assert "agreed actions" in lower
+        assert "suggested" in lower
+        break
+    else:
+        pytest.fail("No non-escalation meetings family scenario found")
+
+
+def test_sanitize_therapeutic_language_preserves_material_facts() -> None:
+    raw = "Young person kicked off at tea. Staff told them to stop being dramatic. Later calmed down."
+    sanitized = sanitize_therapeutic_language(raw)
+    lower = sanitized.lower()
+    assert "kicked off" not in lower
+    assert "stop being dramatic" not in lower
+    assert "offered calm boundaries" not in lower
+    assert "offered calm reassurance" not in lower
+    assert "became distressed" in lower or "appeared distressed" in lower or "distressed" in lower
+    assert "appeared calmer" in lower or "calmer" in lower
+
+
+def test_sanitize_therapeutic_language_does_not_invent_staff_actions() -> None:
+    sanitized = sanitize_therapeutic_language("staff told them to stop being dramatic")
+    lower = sanitized.lower()
+    assert "offered calm" not in lower
+    assert "reassurance" not in lower
+    assert "reframed more respectfully" in lower
+
+
+def test_poor_wording_scaffold_preserves_events_not_invents_actions() -> None:
+    scenario = _core_scenario("core_043")
+    output = build_quality_lab_scaffold(scenario)
+    lower = output.lower()
+    assert "offered calm boundaries" not in lower
+    assert "settled with staff support" not in lower
+    flags = detect_binary_flags(output, scenario=scenario, input_text=scenario["input"])
+    assert flags["contains_blaming_language"] is False
+
+
+def test_no_output_claims_child_settled_without_input() -> None:
+    scenario = {
+        "id": "test_no_settled",
+        "title": "Daily note",
+        "input": "rough: young person refused breakfast",
+        "safeguarding_flags": [],
+        "scenario_family": "daily_care",
+        "record_type": "daily_record",
+        "feature_target": "Magic Notes",
+        "variant_type": "rough_note",
+        "required_elements": [],
+        "prohibited_elements": [],
+    }
+    output = build_quality_lab_scaffold(scenario)
+    lower = output.lower()
+    assert "young person settled" not in lower
+    assert "child settled" not in lower
+
+
+def test_no_output_claims_manager_informed_without_input() -> None:
+    for raw in json.loads(CORE100_PATH.read_text(encoding="utf-8"))["scenarios"][:30]:
+        scenario = scenario_to_baseline_format(raw)
+        input_lower = str(scenario.get("input") or "").lower()
+        if "manager" in input_lower and "informed" in input_lower:
+            continue
+        output = build_quality_lab_scaffold(scenario)
+        lower = output.lower()
+        assert "manager was informed" not in lower
+
+
+def test_variants1000_factual_accuracy_remains_strong() -> None:
+    if not VARIANTS_REPORT_JSON.is_file():
+        pytest.skip("variants1000 report not generated yet")
+    report = json.loads(VARIANTS_REPORT_JSON.read_text(encoding="utf-8"))
+    fa = float((report.get("category_averages") or {}).get("factual_accuracy_no_invention") or 0)
+    cc = float((report.get("category_averages") or {}).get("child_centredness") or 0)
+    ar = float((report.get("category_averages") or {}).get("adult_response_and_support") or 0)
+    tl = float((report.get("category_averages") or {}).get("therapeutic_language") or 0)
+    mo = float((report.get("category_averages") or {}).get("management_oversight") or 0)
+    assert fa >= 4.0, f"factual_accuracy_no_invention {fa} below target 4.0"
+    assert cc >= 4.9, f"child_centredness regressed to {cc}"
+    assert ar >= 4.0, f"adult_response regressed to {ar}"
+    assert tl >= 4.0, f"therapeutic_language regressed to {tl}"
+    assert mo >= 4.0, f"management_oversight regressed to {mo}"
     assert report.get("unsafe_flag_count", 0) == 0
