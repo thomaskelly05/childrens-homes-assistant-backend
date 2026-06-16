@@ -249,6 +249,24 @@ Brain/framework sources implementing this principle:
 
 ORB never turns interpretation into fact. Behaviour-as-communication remains reflective, not diagnostic.
 
+## Escalation / pathway discipline (June 2026)
+
+ORB helps adults consider proportionate pathways without replacing professional judgement:
+
+- Routine follow-up, handover, senior/manager review, plan/risk review, supervision/debrief
+- Local safeguarding procedure, professional consultation where policy-led, urgent action if immediate risk
+- "Pathway to consider" and "responsible adult to decide" — not "threshold met", "referral required" or "no concern" as ORB decisions
+- Record who was informed and what remains unresolved; prompt for missing pathway details rather than inventing them
+
+**Boundary:** Pathways are for professional consideration. Local policy remains authoritative. Internal quality indicator, not regulatory judgement.
+
+Brain/framework sources:
+
+- `assistant/evals/orb_high_risk_scaffold.py` — `_build_pathway_section()` and family-specific pathway guidance
+- `assistant/knowledge/orb_recording_framework.json` — residential recording structure
+- `assistant/prompts.py` — escalation/pathway discipline block
+- `services/orb_residential_quality_service.py` — pathway capture prompts
+
 ## Related documentation
 
 - `docs/indicare_internal_brain_architecture.md` — brain layers and design principles

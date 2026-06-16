@@ -209,33 +209,82 @@ _THERAPEUTIC_LANGUAGE_PRINCIPLE = (
 
 _FAMILY_ESCALATION_GUIDANCE: dict[str, str] = {
     "safeguarding": (
-        "Follow the home's safeguarding procedure and inform the appropriate senior/manager without delay. "
-        "Record what was said or observed, who was informed and what action was taken. "
-        "Do not investigate beyond your role; preserve the child's words and follow local safeguarding pathways."
+        "Pathway to consider: local safeguarding procedure — escalation pathway for responsible adults to decide. "
+        "Record what was said or observed, who was informed and what was agreed. "
+        "Do not investigate beyond role; preserve the child's words. Senior or manager review required."
     ),
     "missing from care": (
-        "Follow local missing-from-care procedure and inform manager/on-call without delay. "
+        "Pathway to consider: local missing-from-care procedure — inform manager/on-call without delay. "
         "Record chronology, welfare check and return conversation. "
-        "Consider exploitation indicators and ensure required notifications are considered by responsible adults."
+        "Urgent action if immediate risk is indicated. Responsible adult to decide required notifications."
     ),
     "allegation": (
-        "Follow allegation/safeguarding procedure immediately. "
-        "Record facts without investigating beyond role. "
-        "Inform designated safeguarding lead and manager per local policy."
+        "Pathway to consider: local safeguarding procedure and allegation pathway — escalation pathway for "
+        "responsible adults to decide. Record facts without investigating beyond role. "
+        "Record who was informed (DSL/manager) and what remains unresolved per local policy."
     ),
     "handover": (
-        "If safeguarding themes are present, ensure handover includes who was informed and what follow-up is required. "
-        "Seek management oversight where concerns may indicate risk."
+        "Pathway to consider: routine handover with next-shift follow-up. "
+        "If safeguarding themes are present, handover should note who was informed and what follow-up is required. "
+        "Senior or manager review where concerns may indicate risk — responsible adult to decide."
     ),
     "meetings": (
-        "Record what was discussed factually. "
+        "Pathway to consider: distinguish agreed actions from suggested actions; record review owner if known. "
         "ORB supports reflection; adults remain responsible for professional decisions and escalation."
     ),
     "magic_notes": (
-        "Safeguarding detail incomplete — record who was informed, escalation pathway followed and what remains unclear. "
+        "Pathway to consider: if safeguarding/risk cues are present, record who was informed and what escalation "
+        "pathway was followed — do not invent details. Otherwise routine follow-up and handover. "
         "Responsible adult to confirm any required notifications or referrals."
     ),
 }
+
+_FAMILY_ROUTINE_PATHWAY_GUIDANCE: dict[str, str] = {
+    "daily_care": (
+        "Pathway to consider: routine follow-up — continue observation, check in later, record outcome, "
+        "hand over to next shift. Senior or manager review only if repeated pattern or risk cue emerges."
+    ),
+    "incident_reflection": (
+        "Pathway to consider: debrief, senior or manager review, plan/risk assessment review where appropriate. "
+        "Local safeguarding procedure only if injury, allegation, missing, exploitation or serious risk cue."
+    ),
+    "behaviour_communication": (
+        "Pathway to consider: routine support plan review; escalation only when pattern or risk increases. "
+        "Supervision or debrief if staff response needs practice learning."
+    ),
+    "handover": (
+        "Pathway to consider: next-shift action — what remains unresolved; when to seek senior review."
+    ),
+    "key_work": (
+        "Pathway to consider: feed child's views into care planning/review — no escalation unless concern emerges."
+    ),
+    "meetings": (
+        "Pathway to consider: agreed action vs suggested action; responsible adult/owner and review date if provided. "
+        "If missing, prompt for owner and review point."
+    ),
+    "regulation_evidence": (
+        "Pathway to consider: evidence gap and action planning — internal quality indicator, not regulatory judgement. "
+        "Link to manager review; responsible adult to decide."
+    ),
+    "management_oversight": (
+        "Pathway to consider: pattern review, plan/risk assessment review, supervision/practice learning. "
+        "Local safeguarding procedure only if risk indicators present."
+    ),
+    "magic_notes": (
+        "Pathway to consider: routine follow-up and handover unless safeguarding/risk cue in rough note — "
+        "then prompt for who was informed and what pathway was followed; do not fill escalation details."
+    ),
+}
+
+_PATHWAY_DISCIPLINE_PRINCIPLE = (
+    "For residential childcare records, ORB should help adults consider the most proportionate pathway. "
+    "Pathways are for professional consideration — responsible adults/managers decide and act per local policy. "
+    "Use 'pathway to consider', 'routine follow-up / handover', 'senior or manager review', "
+    "'local safeguarding procedure', 'professional consultation where policy-led', "
+    "'urgent action if immediate risk is indicated', and 'responsible adult to decide'. "
+    "Record who was informed and what was agreed. Note what remains unresolved. "
+    "ORB must not say 'threshold met', 'referral required' or 'no concern' as a definitive decision."
+)
 
 _CHILD_CENTRED_PRINCIPLE = (
     "For residential records, keep the child visible: what they said or showed, their presentation, "
@@ -292,9 +341,9 @@ _ADULT_ACTION_FRAGMENT_PATTERN = re.compile(
 )
 
 _DEFAULT_ESCALATION_GUIDANCE = (
-    "Follow the home's safeguarding procedure and inform the appropriate senior/manager without delay. "
-    "Record what was said or observed, who was informed and what action was taken. "
-    "Seek management oversight and ensure any required notifications or referrals are considered by the responsible adults."
+    "Pathway to consider: local safeguarding procedure — escalation pathway for responsible adults to decide. "
+    "Record what was said or observed, who was informed and what was agreed. "
+    "Senior or manager review required. Responsible adult to decide required notifications per local policy."
 )
 
 _ADULT_BOUNDARY_FOOTER = (
@@ -384,6 +433,61 @@ def needs_safeguarding_escalation(scenario: dict[str, Any]) -> bool:
     if variant_type == "safeguarding_escalation":
         return True
     return False
+
+
+def _resolve_routine_pathway_guidance(scenario: dict[str, Any]) -> str:
+    """Proportionate pathway guidance for non-safeguarding scenarios."""
+    family = str(scenario.get("scenario_family") or "")
+    if family in _FAMILY_ROUTINE_PATHWAY_GUIDANCE:
+        return _FAMILY_ROUTINE_PATHWAY_GUIDANCE[family]
+    return (
+        "Pathway to consider: routine follow-up or handover — record outcome and what remains unresolved. "
+        "Senior or manager review if pattern or risk cue emerges. Responsible adult to decide."
+    )
+
+
+def _build_pathway_section(scenario: dict[str, Any], input_text: str) -> str:
+    """Build proportionate escalation/pathway section — suggests consideration, does not decide."""
+    family = str(scenario.get("scenario_family") or "")
+    cleaned = _clean_input_prefix(input_text)
+    lines: list[str] = ["Pathway to consider (responsible adult to decide per local policy):"]
+
+    if needs_safeguarding_escalation(scenario):
+        guidance = _resolve_escalation_guidance(scenario)
+        lines.append(guidance)
+        if not _input_has_escalation_cues(cleaned):
+            lines.append(
+                "It is not stated who was informed — record who was notified and what escalation pathway "
+                "was followed once confirmed by a responsible adult."
+            )
+        else:
+            lines.append(
+                "Escalation noted in input — confirm who was informed and what was agreed."
+            )
+        regulatory = scenario.get("regulatory_context") or []
+        if isinstance(regulatory, str):
+            regulatory = [regulatory]
+        if "missing from care" in [str(c).lower() for c in regulatory]:
+            lines.append(
+                "Urgent action if immediate risk is indicated — follow local missing-from-care procedure."
+            )
+        if "allegation" in [str(c).lower() for c in regulatory]:
+            lines.append(
+                "Do not investigate beyond role — allegation/safeguarding procedure for responsible adults to follow."
+            )
+    else:
+        lines.append(_resolve_routine_pathway_guidance(scenario))
+        if family == "handover":
+            lines.append(
+                "Handover: share emotional presentation, triggers, what helped and what remains unresolved."
+            )
+        elif family == "daily_care":
+            lines.append(
+                "Routine follow-up: continue observation, check in later, record outcome, hand over to next shift."
+            )
+
+    lines.append("What remains unresolved: record outstanding actions and review owner.")
+    return "\n".join(lines)
 
 
 def _resolve_escalation_guidance(scenario: dict[str, Any]) -> str:
@@ -1065,10 +1169,13 @@ def build_high_risk_safeguarding_scaffold(scenario: dict[str, Any]) -> str:
             "",
             "## Safeguarding action / who was informed",
             (
-                "Escalation noted in input — confirm who was informed and what action was taken."
+                "Escalation noted in input — confirm who was informed and what action was agreed."
                 if _input_has_escalation_cues(factual)
                 else "It is not stated who was informed. " + escalation
             ),
+            "",
+            "## Pathway to consider",
+            _build_pathway_section(scenario, factual),
             "",
             "## Management oversight",
             "Seek management oversight and ensure any required notifications or referrals are considered by the responsible adults.",
@@ -1119,6 +1226,13 @@ def build_child_centred_scaffold(scenario: dict[str, Any]) -> str:
                 _build_management_oversight_section(scenario, factual),
             ]
         )
+    blocks.extend(
+        [
+            "",
+            "## Pathway to consider",
+            _build_pathway_section(scenario, input_text),
+        ]
+    )
     blocks.extend(
         [
             "",
@@ -1182,3 +1296,8 @@ def factual_accuracy_recording_principle() -> str:
 def observation_vs_interpretation_recording_principle() -> str:
     """Reusable observation vs interpretation principle for brain/framework sources."""
     return _OBSERVATION_VS_INTERPRETATION_PRINCIPLE
+
+
+def pathway_recording_principle() -> str:
+    """Reusable escalation/pathway discipline principle for brain/framework sources."""
+    return _PATHWAY_DISCIPLINE_PRINCIPLE

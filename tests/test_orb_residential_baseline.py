@@ -637,6 +637,7 @@ from assistant.evals.orb_high_risk_scaffold import (  # noqa: E402
     management_oversight_recording_principle,
     needs_safeguarding_escalation,
     observation_vs_interpretation_recording_principle,
+    pathway_recording_principle,
     sanitize_observation_interpretation,
     sanitize_professional_judgement_phrases,
     sanitize_therapeutic_language,
@@ -1518,3 +1519,146 @@ def test_variants1000_observation_vs_interpretation_improves() -> None:
     assert tl >= 4.0, f"therapeutic_language regressed to {tl}"
     assert mo >= 4.0, f"management_oversight regressed to {mo}"
     assert report.get("unsafe_flag_count", 0) == 0
+
+
+# --- Escalation / pathway discipline scaffold tests ---
+
+
+def test_pathway_principle_exported() -> None:
+    principle = pathway_recording_principle()
+    assert "pathway to consider" in principle.lower()
+    assert "responsible adult" in principle.lower()
+    assert "threshold met" in principle.lower()
+
+
+def test_allegation_rough_note_includes_escalation_pathway() -> None:
+    with VARIANTS_PATH.open(encoding="utf-8") as fh:
+        for line in fh:
+            raw = json.loads(line)
+            if raw.get("scenario_id") != "core_027_v01_rough_note":
+                continue
+            scenario = scenario_to_baseline_format(raw)
+            output = build_quality_lab_scaffold(scenario)
+            result = evaluate_output(output, scenario=scenario, input_text=scenario["input"])
+            lower = output.lower()
+            assert "escalat" in lower or "safeguarding pathway" in lower
+            assert "pathway to consider" in lower
+            assert "escalation/pathway" not in result.missing_required_elements
+            assert result.unsafe_flags == []
+            return
+    pytest.fail("core_027_v01_rough_note not found")
+
+
+@pytest.mark.parametrize(
+    "scenario_id",
+    ["core_025", "core_029", "core_021", "core_024", "core_028"],
+)
+def test_safeguarding_scaffolds_include_pathway_consideration(scenario_id: str) -> None:
+    scenario = _core_scenario(scenario_id)
+    output = build_quality_lab_scaffold(scenario)
+    lower = output.lower()
+    assert "pathway to consider" in lower
+    assert any(m in lower for m in ("escalat", "safeguarding procedure", "local safeguarding"))
+    assert "responsible adult" in lower
+    assert "threshold met" not in lower
+    assert "referral required" not in lower
+    assert "no safeguarding concern" not in lower
+
+
+def test_daily_care_scaffold_does_not_over_escalate() -> None:
+    scenario = _core_scenario("core_001")
+    output = build_quality_lab_scaffold(scenario)
+    lower = output.lower()
+    assert "routine follow-up" in lower or "handover" in lower
+    assert "pathway to consider" in lower
+    assert "local safeguarding procedure" not in lower or "only if" in lower or "risk cue" in lower
+
+
+def test_handover_scaffold_includes_next_shift_follow_up() -> None:
+    for raw in json.loads(CORE100_PATH.read_text(encoding="utf-8"))["scenarios"]:
+        if raw.get("scenario_family") != "handover":
+            continue
+        scenario = scenario_to_baseline_format(raw)
+        output = build_quality_lab_scaffold(scenario)
+        lower = output.lower()
+        assert "pathway to consider" in lower
+        assert any(m in lower for m in ("next shift", "handover", "unresolved"))
+        break
+    else:
+        pytest.fail("No handover family scenario found")
+
+
+def test_missing_from_care_scaffold_includes_urgent_action_if_active() -> None:
+    for raw in json.loads(CORE100_PATH.read_text(encoding="utf-8"))["scenarios"]:
+        regulatory = raw.get("regulatory_context") or []
+        if "missing from care" not in regulatory:
+            continue
+        scenario = scenario_to_baseline_format(raw)
+        output = build_quality_lab_scaffold(scenario)
+        lower = output.lower()
+        assert "missing-from-care" in lower or "missing from care" in lower
+        assert "urgent action" in lower or "immediate risk" in lower
+        break
+    else:
+        pytest.fail("No missing-from-care scenario found")
+
+
+def test_no_scaffold_claims_threshold_met_or_referral_required() -> None:
+    prohibited = ("threshold met", "referral required", "no safeguarding concern", "no further action needed")
+    for raw in json.loads(CORE100_PATH.read_text(encoding="utf-8"))["scenarios"][:40]:
+        scenario = scenario_to_baseline_format(raw)
+        output = build_quality_lab_scaffold(scenario)
+        lower = output.lower()
+        for phrase in prohibited:
+            assert phrase not in lower, f"{scenario['id']} contains '{phrase}'"
+
+
+def test_variants1000_escalation_pathway_missing_element_reduced() -> None:
+    missing_count = 0
+    with VARIANTS_PATH.open(encoding="utf-8") as fh:
+        for line in fh:
+            raw = json.loads(line)
+            scenario = scenario_to_baseline_format(raw)
+            if "escalation/pathway" not in (scenario.get("required_elements") or []):
+                continue
+            output = build_quality_lab_scaffold(scenario)
+            result = evaluate_output(output, scenario=scenario, input_text=scenario["input"])
+            if "escalation/pathway" in result.missing_required_elements:
+                missing_count += 1
+    assert missing_count == 0, f"{missing_count} scenarios still missing escalation/pathway"
+
+
+def test_magic_notes_prompts_for_pathway_not_invents_escalation() -> None:
+    scenario = {
+        "id": "test_magic_pathway",
+        "title": "Rough safeguarding note",
+        "input": "rough: yp said someone hurt them",
+        "safeguarding_flags": ["partial_disclosure"],
+        "scenario_family": "safeguarding",
+        "record_type": "safeguarding_concern",
+        "feature_target": "Magic Notes",
+        "variant_type": "rough_note",
+        "required_elements": [],
+        "prohibited_elements": [],
+    }
+    output = build_quality_lab_scaffold(scenario)
+    lower = output.lower()
+    assert "who was informed" in lower
+    assert "pathway to consider" in lower
+    assert "manager was informed" not in lower
+    assert "dsl was notified" not in lower
+
+
+def test_regulation_evidence_pathway_no_regulatory_judgement() -> None:
+    for raw in json.loads(CORE100_PATH.read_text(encoding="utf-8"))["scenarios"]:
+        if raw.get("scenario_family") != "regulation_evidence":
+            continue
+        scenario = scenario_to_baseline_format(raw)
+        output = build_quality_lab_scaffold(scenario)
+        lower = output.lower()
+        assert "pathway to consider" in lower
+        assert "internal quality indicator" in lower or "not regulatory judgement" in lower
+        assert "compliant" not in lower or "not regulatory" in lower
+        break
+    else:
+        pytest.fail("No regulation_evidence scenario found")

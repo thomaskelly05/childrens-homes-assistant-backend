@@ -1,7 +1,7 @@
 {
   "baseline_version": "1.0.0",
-  "commit_sha": "cdc26a873cf09cdb4f1580ce9356e89bac0c6260",
-  "run_timestamp": "2026-06-16T13:51:25.313427+00:00",
+  "commit_sha": "2bb075b60d03ce14069618534cb51af8f3f5d759",
+  "run_timestamp": "2026-06-16T14:04:00.496979+00:00",
   "scenario_set": "baseline15",
   "mode": "static",
   "scenario_count": 15,

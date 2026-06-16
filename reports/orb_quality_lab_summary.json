@@ -1,6 +1,6 @@
 {
-  "timestamp": "2026-06-16T13:53:33.831536+00:00",
-  "commit_sha": "cdc26a873cf09cdb4f1580ce9356e89bac0c6260",
+  "timestamp": "2026-06-16T14:06:12.722870+00:00",
+  "commit_sha": "2bb075b60d03ce14069618534cb51af8f3f5d759",
   "baseline15_average": null,
   "core100_average": null,
   "variants1000_average": 4.23,
@@ -20,7 +20,7 @@
     "observation_vs_interpretation",
     "privacy_minimisation"
   ],
-  "recommended_next_target": "Address missing element: escalation/pathway",
+  "recommended_next_target": "Continue monitoring baseline categories",
   "live_llm_disabled_in_ci": true,
   "traceability": {
     "framework_claim": "Source-mapped internal quality framework",

@@ -581,7 +581,7 @@
     },
     {
       "file": "services/orb_residential_quality_service.py",
-      "line": 152,
+      "line": 158,
       "context": "\"ofsted_ready\": len(gaps) == 0 and quality.recording_quality == \"good\",",
       "occurrence": "ofsted-ready",
       "classification": "product_label_risky",
@@ -589,7 +589,7 @@
     },
     {
       "file": "services/orb_residential_quality_service.py",
-      "line": 232,
+      "line": 238,
       "context": "\"ofsted_readiness\": inspection,",
       "occurrence": "ofsted readiness",
       "classification": "product_label_risky",
@@ -2669,7 +2669,7 @@
     },
     {
       "file": "frontend-next/lib/orb/recording/orb-therapeutic-writing.ts",
-      "line": 285,
+      "line": 287,
       "context": "writing_style_ids: ['manager_summary', 'professional', 'inspection_ready']",
       "occurrence": "inspection ready",
       "classification": "user_facing_copy_risky",
@@ -2677,7 +2677,7 @@
     },
     {
       "file": "frontend-next/lib/orb/recording/orb-therapeutic-writing.ts",
-      "line": 343,
+      "line": 345,
       "context": "writing_style_ids: ['inspection_ready', 'child_centred', 'professional']",
       "occurrence": "inspection ready",
       "classification": "user_facing_copy_risky",
@@ -2685,7 +2685,7 @@
     },
     {
       "file": "frontend-next/lib/orb/recording/orb-therapeutic-writing.ts",
-      "line": 348,
+      "line": 350,
       "context": "writing_style_ids: ['therapeutic', 'inspection_ready', 'manager_summary']",
       "occurrence": "inspection ready",
       "classification": "user_facing_copy_risky",
@@ -2693,7 +2693,7 @@
     },
     {
       "file": "frontend-next/lib/orb/recording/orb-therapeutic-writing.ts",
-      "line": 353,
+      "line": 355,
       "context": "writing_style_ids: ['inspection_ready', 'professional', 'factual']",
       "occurrence": "inspection ready",
       "classification": "factual_source_reference",
