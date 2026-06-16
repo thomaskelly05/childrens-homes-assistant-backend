@@ -954,3 +954,58 @@ def test_manual_regression_live_output_with_all_failures():
     assert "[end of record]" not in cleaned.lower()
     assert "Adult TK" in cleaned
     assert "Adult JS" in cleaned
+
+
+DAMAGED_LIVE_DAILY_RECORD_OUTPUT = """Daily Record
+
+Presentation and Support
+Child A returned from school appearing quieter than usual. Adult TK observed this and gave. Child A space to settle. Later, Adult JS checked in with. Child A to see how they were feeling
+
+Child Voice
+During the check-in, Child A expressed, "I'm just annoyed about school." This statement indicated that. Child A was processing some feelings related to their school experience
+
+Adult Response
+In response, Adult JS offered. Child A some toast and sat nearby while. Child A watched television This provided a calm and supportive environment. Child A accepted the toast and appeared calmer
+
+Outcome / Handover
+Before bedtime, Child A appeared more settled. Adult TK handed over to the next shift that tomorrow's adults should check in gently with. Child A about school if they wish to talk This approach aims to support. Child A's emotional needs and encourage open communication"""
+
+
+def test_protected_child_object_phrases_not_broken_by_sentence_repair():
+    """gave Child A / offered Child A / checked in with Child A must never become gave. Child A."""
+    protected = [
+        "gave Child A space",
+        "checked in with Child A",
+        "offered Child A toast",
+        "sat nearby while Child A watched television",
+        "check in gently with Child A",
+    ]
+    for phrase in protected:
+        repaired = repair_record_sentence_boundaries(phrase)
+        assert ". Child A" not in repaired, f"broken repair for: {phrase!r} -> {repaired!r}"
+        assert phrase.lower() in repaired.lower()
+
+
+def test_damaged_live_daily_record_output_full_regression():
+    """Exact regression for live sanitizer damage after PR #1705 route fix."""
+    source = MANUAL_REGRESSION_DAILY_RECORD_PROMPT
+    cleaned = sanitize_live_record_output(DAMAGED_LIVE_DAILY_RECORD_OUTPUT, source_text=source)
+    lowered = cleaned.lower()
+    assert "gave. child a" not in lowered
+    assert "with. child a" not in lowered
+    assert "offered. child a" not in lowered
+    assert "gave child a" in lowered
+    assert "offered child a" in lowered
+    assert "checked in with child a" in lowered
+    assert "watched television" in lowered
+    assert "i'm just annoyed about school." in lowered
+    assert "child voice" not in lowered
+    assert "statement indicated" not in lowered
+    assert "processing some feelings" not in lowered
+    assert "calm and supportive environment" not in lowered
+    assert "approach aims" not in lowered
+    assert "emotional needs" not in lowered
+    assert "appeared more settled" not in lowered
+    assert "appeared calmer before bedtime" in lowered
+    assert "child a was" not in lowered
+    assert "with child a about school" in lowered
