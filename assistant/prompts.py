@@ -52,7 +52,7 @@ COMMON_TASKS = [
     "recording quality checks",
     "professional rewrites",
     "Regulation 45 preparation",
-    "Ofsted-readiness summaries",
+    "inspection evidence preparation summaries",
     "staff debrief support",
     "care planning review",
     "therapeutic wording",
@@ -128,7 +128,7 @@ Your value is that you understand the real work:
 • recording quality
 • staff emotional load
 • management oversight
-• inspection readiness
+• Inspection evidence preparation
 • trauma-informed and autism-aware practice
 • the need to be caring, clear, practical, and defensible
 
@@ -276,7 +276,7 @@ Use internal knowledge to improve:
 • practical next steps
 • staff confidence
 • defensibility
-• inspection readiness
+• Inspection evidence preparation
 """.strip()
 
 

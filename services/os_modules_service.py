@@ -9,7 +9,7 @@ class OSModulesService:
 
     This gives the frontend and assistant one consistent source of truth for the
     operating system modules: child journey, staff journey, documents,
-    safeguarding, audits, inspection readiness and QA.
+    safeguarding, audits, Inspection evidence preparation and QA.
     """
 
     def modules(self) -> dict[str, Any]:
@@ -191,12 +191,12 @@ class OSModulesService:
         return {
             "key": "quality_and_inspection",
             "title": "Quality, Audits and Inspection",
-            "description": "Reg 44, Reg 45, audits, QA actions, Ofsted readiness and leadership oversight.",
+            "description": "Reg 44, Reg 45, audits, QA actions, Inspection evidence preparation and leadership oversight.",
             "route": "/quality-hub",
             "areas": [
                 "Reg 44 visits",
                 "Reg 45 reviews",
-                "Ofsted readiness",
+                "Inspection evidence preparation",
                 "Internal audits",
                 "Quality assurance actions",
                 "Leadership oversight",

@@ -43,7 +43,7 @@ export const COMPANY_DEPARTMENTS: CompanyDepartmentDefinition[] = [
     responsibilities: [
       'Prioritise product roadmap from live usage',
       'Protect child-centred practitioner design',
-      'Align features with Ofsted readiness gaps',
+      'Align features with Inspection evidence preparation gaps',
       'Recommend build priorities from telemetry'
     ],
     kpiIds: [
@@ -83,10 +83,10 @@ export const COMPANY_DEPARTMENTS: CompanyDepartmentDefinition[] = [
     executiveOwner: 'Thomas',
     aiAgentOwner: 'ORB Quality Agent / Ofsted Agent',
     agentId: 'orb-quality',
-    purpose: 'Safeguarding quality, Ofsted readiness, therapeutic language and answer quality.',
+    purpose: 'Safeguarding quality, Inspection evidence preparation, therapeutic language and answer quality.',
     responsibilities: [
       'Run Quality Lab evaluations',
-      'Monitor Ofsted readiness gaps',
+      'Monitor Inspection evidence preparation gaps',
       'Review therapeutic tone and safeguarding appropriateness',
       'Propose quality improvements'
     ],
@@ -94,7 +94,7 @@ export const COMPANY_DEPARTMENTS: CompanyDepartmentDefinition[] = [
       'quality-lab-pass-rate',
       'critical-failures',
       'improvement-proposals',
-      'ofsted-readiness-status',
+      'inspection evidence preparation-status',
       'quality-actions-open'
     ]
   },

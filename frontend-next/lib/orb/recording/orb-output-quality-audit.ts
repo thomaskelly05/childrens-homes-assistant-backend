@@ -163,7 +163,7 @@ export const ORB_OUTPUT_QUALITY_FIXTURES: OrbOutputQualityFixture[] = [
     expectedSectionThemes: ['evidence', 'child impact', 'gaps', 'decision', 'actions'],
     expectedQualityThemes: ['oversight', 'professional curiosity'],
     expectedSafetyPrompts: ['management', 'actions'],
-    unsafePhrases: ['compliant', 'ofsted ready'],
+    unsafePhrases: ['compliant', 'Inspection evidence support'],
     structuredFormat: 'mixed'
   },
   {

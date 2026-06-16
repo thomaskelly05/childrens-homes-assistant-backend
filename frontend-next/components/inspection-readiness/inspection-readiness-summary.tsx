@@ -1,13 +1,13 @@
 'use client'
 
-import type { InspectionReadinessDashboard } from '@/lib/os-api/inspection-readiness'
+import type { InspectionReadinessDashboard } from '@/lib/os-api/inspection evidence preparation'
 
 type Props = { dashboard: InspectionReadinessDashboard | null }
 
 export function InspectionReadinessSummary({ dashboard }: Props) {
   if (!dashboard) return null
   return (
-    <section data-testid="inspection-readiness-summary" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+    <section data-testid="inspection evidence preparation-summary" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
       <div className="rounded-2xl border border-blue-100 bg-blue-50/50 p-4">
         <p className="text-[10px] font-black uppercase text-blue-700">Reg 44</p>
         <p className="mt-2 text-xs leading-6 text-blue-950">{dashboard.reg44_summary}</p>

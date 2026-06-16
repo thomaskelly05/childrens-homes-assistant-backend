@@ -41,7 +41,7 @@ class DocumentExportService:
             "<!doctype html><html><head><meta charset='utf-8'><title>"
             + html.escape(str(document.get("title") or template_title))
             + "</title><style>body{font-family:Inter,Arial,sans-serif;max-width:860px;margin:40px auto;line-height:1.65;color:#0f172a}section{break-inside:avoid;margin:24px 0}.label{font-size:12px;text-transform:uppercase;letter-spacing:.16em;color:#64748b}</style></head><body>"
-            + "<p class='label'>Confidential care record - inspection ready print view</p>"
+            + "<p class='label'>Confidential care record - inspection evidence print view</p>"
             + f"<h1>{html.escape(str(document.get('title') or template_title))}</h1>"
             + body
             + "<h2>Chronology, evidence and actions appendix</h2><ul>"

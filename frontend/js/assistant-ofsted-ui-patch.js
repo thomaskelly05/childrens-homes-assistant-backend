@@ -490,7 +490,7 @@
           handover: "Rewrite the supplied information into a concise handover summary with key risks, actions completed and outstanding actions. Keep it operational.",
           chronology: "Rewrite the supplied information as a concise, factual chronology entry. Include date/time only if supplied. Do not add unnecessary template sections.",
           keywork: "Improve the supplied keywork information with discussion, young person's views, support offered and next steps where known. Do not invent the child's voice.",
-          review: "Review the supplied information through an Ofsted-ready lens: impact, evidence, oversight, actions and follow-through.",
+          review: "Review the supplied information through an Inspection evidence support lens: impact, evidence, oversight, actions and follow-through.",
           safeguarding: "Give safeguarding-aware guidance prioritising immediate safety, risk, protection, who may need informing, and recording expectations. Avoid legal certainty where thresholds require professional judgement.",
           daily_note: "Improve and rewrite the supplied daily note. Keep it factual, child-centred, neutral and suitable for care records. Do not create a full template unless asked.",
           report: "Improve the supplied information into a clear report-style summary, keeping facts separate from interpretation and highlighting evidence or missing details.",

@@ -187,7 +187,7 @@ const ASSISTANT_SECTION_HEADINGS = new Set([
   "key oversight points",
   "management actions",
   "escalation and scrutiny",
-  "quality and inspection-readiness brief",
+  "quality and inspection evidence preparation brief",
   "inspection and scrutiny themes",
   "evidence gaps",
   "reg 45 review support",
@@ -584,9 +584,9 @@ function actionToPrompt(action = "") {
     "Review safeguarding records":
       "Review safeguarding records and tell me what needs action.",
     "Draft handover": "Draft a residential handover for the next shift.",
-    "Build quality brief": "Build a quality and inspection-readiness brief.",
-    "Check inspection readiness":
-      "Check inspection readiness and highlight evidence gaps.",
+    "Build quality brief": "Build a quality and inspection evidence preparation brief.",
+    "Check Inspection evidence preparation":
+      "Check Inspection evidence preparation and highlight evidence gaps.",
     "Review overdue items":
       "Review overdue items and list what needs owner, action and timescale.",
     "Check management actions":

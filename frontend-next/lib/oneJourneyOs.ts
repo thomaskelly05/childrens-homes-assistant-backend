@@ -72,7 +72,7 @@ export const CHILD_JOURNEY_GROUPS: ChildJourneyGroup[] = [
   {
     id: 'standards-inspection',
     label: 'Standards & Inspection',
-    description: 'Quality Standards evidence and inspection readiness.',
+    description: 'Quality Standards evidence and Inspection evidence preparation.',
     dataKeys: ['standards', 'reports']
   },
   {
@@ -93,6 +93,6 @@ export const OS_HOME_SUPPORT_LINKS = [
   { label: 'Notifications', href: '/notifications', testId: 'os-home-notifications' },
   { label: 'Connect', href: '/connect', testId: 'os-home-connect' },
   { label: 'Manager brief', href: '/command-centre/briefing', testId: 'os-home-manager-brief' },
-  { label: 'Inspection readiness', href: '/intelligence/inspection-readiness', testId: 'os-home-inspection' },
+  { label: 'Inspection evidence preparation', href: '/intelligence/inspection evidence preparation', testId: 'os-home-inspection' },
   { label: 'Schema status', href: '/schema-live', testId: 'os-home-schema' }
 ] as const

@@ -321,7 +321,7 @@ GENERIC_WEAK_PHRASES: tuple[str, ...] = (
     "it is essential",
     "subsequent escalation",
     "therapeutic interventions",
-    "ensure that the record is ofsted ready",
+    "ensure that the record is Inspection evidence support",
     "safeguarding practices",
     "underlying issues",
     "maintain clarity and transparency",

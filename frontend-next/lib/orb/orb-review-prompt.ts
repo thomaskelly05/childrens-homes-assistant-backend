@@ -29,7 +29,7 @@ export function buildOrbReviewPrompt(input: {
     input.professionalTone === 'therapeutic'
       ? 'Prioritise therapeutic, trauma-informed and child-centred interpretation.'
       : input.professionalTone === 'compliance'
-        ? 'Prioritise regulatory compliance, recording standards and inspection readiness.'
+        ? 'Prioritise regulatory compliance, recording standards and Inspection evidence preparation.'
         : 'Balance therapeutic insight with safeguarding and regulatory clarity.'
 
   const sections = [

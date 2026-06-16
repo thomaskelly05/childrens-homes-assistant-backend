@@ -30,7 +30,7 @@ window.loadStandardsOfstedReadiness = loadStandardsOfstedReadiness;
 
 async function loadStandardsOfstedReadiness() {
   const ctx = context();
-  if (standardsTitle) standardsTitle.textContent = 'Standards and Ofsted readiness';
+  if (standardsTitle) standardsTitle.textContent = 'Standards and Inspection evidence preparation';
   if (standardsSubtitle) standardsSubtitle.textContent = 'Regulations, inspection evidence, documents and readiness should emerge from the child, adult and home journeys.';
   if (!standardsMain) return;
 
@@ -40,7 +40,7 @@ async function loadStandardsOfstedReadiness() {
   standardsMain.innerHTML = `
     <section class="hero-card child-first-hero">
       <div>
-        <p class="eyebrow">Inspection-ready by design</p>
+        <p class="eyebrow">inspection evidence preparation by design</p>
         <h3>Children’s standards, Ofsted, Reg 44/45 and documents</h3>
         <p>The OS should not bolt compliance on afterwards. Evidence should naturally flow from journeys, documents, manager sign-off, child voice and home learning.</p>
       </div>
@@ -98,7 +98,7 @@ function bindStandardsActions() {
   });
   standardsMain.querySelector('[data-standards-action="assistant"]')?.addEventListener('click', () => {
     const input = document.getElementById('assistant-input') || document.getElementById('os-copilot-input');
-    if (input) input.value = 'Review this home against children’s homes quality standards, SCCIF/Ofsted readiness, Reg 44/45 learning, child voice, safeguarding, leadership and evidence gaps.';
+    if (input) input.value = 'Review this home against children’s homes quality standards, SCCIF/Inspection evidence preparation, Reg 44/45 learning, child voice, safeguarding, leadership and evidence gaps.';
     document.getElementById('assistant-run')?.click();
     document.getElementById('os-copilot-launcher')?.click();
   });

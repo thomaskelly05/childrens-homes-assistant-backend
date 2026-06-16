@@ -40,7 +40,7 @@ const HOME_SECTIONS: Array<{
   {
     testId: 'home-workspace-section-inspection',
     title: 'Regulation and quality',
-    description: 'Inspection readiness, Quality Standards alignment, Reg 44 and Reg 45 — evidence snapshots, not grade claims.',
+    description: 'Inspection evidence preparation, Quality Standards alignment, Reg 44 and Reg 45 — evidence snapshots, not grade claims.',
     keys: ['sccif', 'inspectionReadiness', 'reg44', 'reg45']
   },
   {
@@ -86,7 +86,7 @@ const LINK_LABELS: Record<string, string> = {
   workforce: 'Workforce',
   staffProfiles: 'Staff profiles',
   actions: 'Manager actions',
-  inspectionReadiness: 'Inspection readiness',
+  inspectionReadiness: 'Inspection evidence preparation',
   sccif: 'SCCIF alignment',
   reg44: 'Reg 44',
   reg45: 'Reg 45',
@@ -115,7 +115,7 @@ export default async function HomeWorkspacePage({ params }: { params: Promise<{ 
         <p className="text-[11px] font-black uppercase tracking-[0.22em] text-blue-700">Home workspace</p>
         <h1 className="mt-2 text-2xl font-black tracking-[-0.05em] text-slate-950 md:mt-3 md:text-4xl">{homeName}</h1>
         <p className="mt-3 hidden max-w-2xl text-sm leading-7 text-slate-600 md:block">
-          Calm home view — today&apos;s priorities, safeguarding, staff and inspection readiness without loading every module at once.
+          Calm home view — today&apos;s priorities, safeguarding, staff and Inspection evidence preparation without loading every module at once.
         </p>
         <div className="mt-4 flex flex-wrap gap-2 md:mt-6" data-testid="home-workspace-hero-badges">
           <StatusBadge value={`${bundle.operational_pressure?.children_count || 0} children`} />

@@ -85,7 +85,7 @@ describe('ORB Residential desktop layout system', () => {
     assert.match(core, /inspection_readiness/)
     assert.match(core, /safeguarding_thinking/)
     assert.match(core, /record_properly/)
-    assert.match(practice, /data-orb-inspection-readiness-panel/)
+    assert.match(practice, /data-orb-inspection evidence preparation-panel/)
     assert.match(practice, /data-orb-safeguarding-thinking-panel/)
     assert.match(practice, /data-orb-record-properly-panel/)
   })

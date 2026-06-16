@@ -9,7 +9,7 @@ from services.risk_intelligence_language import SAFE_DECISION_SUPPORT_NOTICE, ev
 
 
 class OfstedDocumentReadinessService:
-    """Inspection readiness intelligence for required home, child and staff documents."""
+    """Inspection evidence preparation intelligence for required home, child and staff documents."""
 
     def readiness(
         self,

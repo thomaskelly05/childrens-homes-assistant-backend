@@ -26,7 +26,7 @@ OFFICIAL_CHILDRENS_HOME_SOURCES: list[dict[str, str]] = [
         "source_type": "inspection_guidance",
         "url": "https://www.gov.uk/government/collections/ofsted-inspections-of-childrens-homes",
         "summary": "Ofsted guidance explaining how children’s homes are inspected under the SCCIF.",
-        "keywords": "ofsted sccif inspection inspector judgement experiences progress helped protected leaders managers evidence inspection ready",
+        "keywords": "ofsted sccif inspection inspector judgement experiences progress helped protected leaders managers evidence inspection evidence preparation",
     },
     {
         "id": "care_standards_act_2000",

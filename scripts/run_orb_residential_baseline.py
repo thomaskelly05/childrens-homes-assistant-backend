@@ -31,6 +31,11 @@ if str(ROOT) not in sys.path:
 from assistant.evals.orb_external_framework_traceability import (  # noqa: E402
     build_traceability_report_section,
 )
+from assistant.evals.orb_ofsted_wording_audit import scan_repo  # noqa: E402
+from assistant.evals.orb_source_coverage_risk_map import (  # noqa: E402
+    build_source_coverage_risk_map,
+    render_risk_map_markdown,
+)
 from assistant.evals.orb_residential_quality_rubric import (  # noqa: E402
     BASELINE_VERSION,
     RUBRIC_CATEGORIES,
@@ -48,6 +53,11 @@ REPORTS_DIR = ROOT / "reports"
 HISTORY_PATH = REPORTS_DIR / "orb_residential_baseline_history.jsonl"
 PREVIOUS_SNAPSHOT_PATH = REPORTS_DIR / "orb_residential_baseline_previous.json"
 QUALITY_LAB_SUMMARY_PATH = REPORTS_DIR / "orb_quality_lab_summary.json"
+TRACEABILITY_REPORT_JSON = REPORTS_DIR / "orb_residential_variants_1000_traceability_report.json"
+TRACEABILITY_REPORT_MD = REPORTS_DIR / "orb_residential_variants_1000_traceability_report.md"
+RISK_MAP_JSON = REPORTS_DIR / "orb_quality_lab_source_coverage_risk_map.json"
+RISK_MAP_MD = REPORTS_DIR / "orb_quality_lab_source_coverage_risk_map.md"
+WORDING_AUDIT_JSON = REPORTS_DIR / "orb_ofsted_wording_audit.json"
 
 SCENARIO_SET_CONFIG: dict[str, dict[str, Any]] = {
     "baseline15": {
@@ -669,6 +679,91 @@ def run_baseline(
     )
 
 
+def _write_traceability_artifacts(
+    report: dict[str, Any],
+    *,
+    output_dir: Path,
+) -> None:
+    """Write variants1000 traceability report and source coverage risk map."""
+    if report.get("scenario_set") != "variants1000":
+        return
+
+    traceability_payload = {
+        "run_timestamp": report.get("run_timestamp"),
+        "commit_sha": report.get("commit_sha"),
+        "scenario_set": report.get("scenario_set"),
+        "scenario_count": report.get("scenario_count"),
+        "average_overall_score": report.get("average_overall_score"),
+        "unsafe_flags": report.get("unsafe_flags"),
+        "unsafe_flag_count": report.get("unsafe_flag_count"),
+        "category_averages": report.get("category_averages"),
+        "weakest_record_types": report.get("weakest_record_types"),
+        "highest_risk_scenario_families": report.get("highest_risk_scenario_families"),
+        "most_common_missing_elements": report.get("most_common_missing_elements"),
+        "recommended_improvement_targets": report.get("recommended_improvement_targets"),
+        "traceability": report.get("traceability"),
+        "disclaimer": report.get("disclaimer"),
+        "warning": (report.get("traceability") or {}).get("warning"),
+        "linked_full_report": "orb_residential_variants_1000_report.json",
+    }
+    trace_json = output_dir / TRACEABILITY_REPORT_JSON.name
+    trace_md = output_dir / TRACEABILITY_REPORT_MD.name
+    trace_json.write_text(json.dumps(traceability_payload, indent=2), encoding="utf-8")
+
+    trace = report.get("traceability") or {}
+    md_lines = [
+        "# ORB Residential 1000 Variants Traceability Report",
+        "",
+        f"- **Run timestamp:** {report.get('run_timestamp')}",
+        f"- **Average overall score:** {report.get('average_overall_score')} / 5",
+        f"- **Unsafe flag count:** {report.get('unsafe_flag_count', 0)}",
+        f"- **Scenarios scored:** {report.get('scenario_count')}",
+        "",
+        f"> {report.get('disclaimer')}",
+        "",
+        f"> {trace.get('warning', '')}",
+        "",
+        "## Traceability coverage",
+        "",
+        f"- **Framework claim:** {trace.get('framework_claim')}",
+        f"- **Registered sources:** {trace.get('source_count')}",
+        f"- **Rubric external coverage:** {trace.get('rubric_external_coverage_percent')}%",
+        f"- **Unsafe flags with external basis:** "
+        f"{trace.get('unsafe_flags_with_external_basis')}/{trace.get('unsafe_flags_total')}",
+        f"- **Scenario required elements mapped:** "
+        f"{trace.get('scenario_required_elements_mapped')}/{trace.get('scenario_required_elements_total')}",
+        f"- **Scenario prohibited elements mapped:** "
+        f"{trace.get('scenario_prohibited_elements_mapped')}/{trace.get('scenario_prohibited_elements_total')}",
+        f"- **Scenario families mapped:** "
+        f"{trace.get('scenario_families_mapped')}/{trace.get('scenario_families_total')}",
+        "",
+        "## Weakest categories",
+        "",
+    ]
+    for cat, avg in sorted((report.get("category_averages") or {}).items(), key=lambda x: float(x[1]))[:4]:
+        md_lines.append(f"- `{cat}` — {avg}")
+    md_lines.extend(["", "## Highest-risk scenario families", ""])
+    for row in report.get("highest_risk_scenario_families") or []:
+        md_lines.append(
+            f"- `{row.get('scenario_family')}` — avg {row.get('average_score')} ({row.get('count')} variants)"
+        )
+    if trace.get("internal_only_categories"):
+        md_lines.extend(["", "## Internal-only / emerging evidence areas", ""])
+        for cat in trace["internal_only_categories"]:
+            md_lines.append(f"- `{cat}`")
+    md_lines.append("")
+    trace_md.write_text("\n".join(md_lines), encoding="utf-8")
+
+    risk_map = build_source_coverage_risk_map(
+        scenario_count=int(report.get("scenario_count") or 1000),
+        variants_report=report,
+    )
+    risk_json = output_dir / RISK_MAP_JSON.name
+    risk_md = output_dir / RISK_MAP_MD.name
+    risk_json.write_text(json.dumps(risk_map, indent=2), encoding="utf-8")
+    risk_md.write_text(render_risk_map_markdown(risk_map), encoding="utf-8")
+
+
 def update_quality_lab_summary(reports: dict[str, dict[str, Any]]) -> None:
     """Write compact machine-readable Quality Lab dashboard summary."""
     weakest: list[str] = []
@@ -676,7 +771,16 @@ def update_quality_lab_summary(reports: dict[str, dict[str, Any]]) -> None:
     next_target = "Continue baseline15 monitoring"
 
     core = reports.get("core100")
-    if core:
+    variants = reports.get("variants1000")
+    if variants:
+        cats = variants.get("category_averages") or {}
+        sorted_cats = sorted(cats.items(), key=lambda x: x[1])
+        weakest = [c[0] for c in sorted_cats[:3]]
+        strongest = [c[0] for c in sorted(cats.items(), key=lambda x: x[1], reverse=True)[:3]]
+        targets = variants.get("recommended_improvement_targets") or []
+        if targets:
+            next_target = targets[0]
+    elif core:
         cats = core.get("category_averages") or {}
         sorted_cats = sorted(cats.items(), key=lambda x: x[1])
         weakest = [c[0] for c in sorted_cats[:3]]
@@ -686,6 +790,11 @@ def update_quality_lab_summary(reports: dict[str, dict[str, Any]]) -> None:
             next_target = targets[0]
 
     traceability_summary = build_traceability_report_section()
+    from assistant.evals.orb_ofsted_wording_audit import find_risky_product_occurrences, scan_repo
+
+    wording_audit = scan_repo(product_only=True)
+    risky_remaining = find_risky_product_occurrences()
+    replaced_estimate = max(0, wording_audit.risky_count - len(risky_remaining))
 
     summary = {
         "timestamp": datetime.now(timezone.utc).isoformat(),
@@ -693,6 +802,7 @@ def update_quality_lab_summary(reports: dict[str, dict[str, Any]]) -> None:
         "baseline15_average": (reports.get("baseline15") or {}).get("average_overall_score"),
         "core100_average": (reports.get("core100") or {}).get("average_overall_score"),
         "variants1000_average": (reports.get("variants1000") or {}).get("average_overall_score"),
+        "variants1000_unsafe_flag_count": (reports.get("variants1000") or {}).get("unsafe_flag_count"),
         "unsafe_flags": {
             "baseline15": (reports.get("baseline15") or {}).get("unsafe_flags") or [],
             "core100": (reports.get("core100") or {}).get("unsafe_flags") or [],
@@ -707,9 +817,22 @@ def update_quality_lab_summary(reports: dict[str, dict[str, Any]]) -> None:
         "framework_claim": traceability_summary.get("framework_claim"),
         "rubric_external_coverage_percent": traceability_summary.get("rubric_external_coverage_percent"),
         "traceability_warning": traceability_summary.get("warning"),
+        "internal_only_emerging_evidence_areas": traceability_summary.get("internal_only_categories") or [],
+        "ofsted_wording_audit": {
+            "risky_occurrences_found": wording_audit.risky_count,
+            "occurrences_replaced_this_pass": replaced_estimate,
+            "factual_source_references_kept": wording_audit.factual_kept_count,
+            "risky_occurrences_remaining": len(risky_remaining),
+            "status": "pass" if not risky_remaining else "review_required",
+        },
+        "governance_boundary": (
+            "ORB supports inspection evidence preparation. It does not determine inspection outcomes, "
+            "guarantee compliance or represent regulator endorsement."
+        ),
     }
     QUALITY_LAB_SUMMARY_PATH.parent.mkdir(parents=True, exist_ok=True)
     QUALITY_LAB_SUMMARY_PATH.write_text(json.dumps(summary, indent=2), encoding="utf-8")
+    WORDING_AUDIT_JSON.write_text(json.dumps(wording_audit.to_dict(), indent=2), encoding="utf-8")
 
 
 def main() -> int:
@@ -777,6 +900,9 @@ def main() -> int:
 
     if config.get("history"):
         _append_history_snapshot(report)
+
+    if args.scenario_set == "variants1000":
+        _write_traceability_artifacts(report, output_dir=args.output_dir)
 
     if args.update_quality_lab_summary or args.scenario_set in {"core100", "variants1000"}:
         all_reports: dict[str, dict[str, Any]] = {args.scenario_set: report}

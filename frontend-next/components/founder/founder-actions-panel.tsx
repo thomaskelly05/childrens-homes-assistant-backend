@@ -19,7 +19,7 @@ export function FounderActionsPanel() {
     return (
       <div className="space-y-5">
         <p className="text-sm leading-7 text-slate-400">
-          No live founder actions yet. Actions will appear once live usage, Ofsted readiness, billing or ORB analytics data is connected.
+          No live founder actions yet. Actions will appear once live usage, Inspection evidence preparation, billing or ORB analytics data is connected.
         </p>
         <Link
           href="/founder/actions"

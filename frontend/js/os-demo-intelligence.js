@@ -46,7 +46,7 @@
       const data = await getJson("/os-modules/intelligence/home/" + encodeURIComponent(homeId()));
       const summary = data.summary || {};
       const box = byId("demoReadinessSummary");
-      if (box) box.innerHTML = `<p><strong>Average inspection readiness:</strong> ${summary.average_inspection_readiness || 0}%</p><p><strong>Children needing review:</strong> ${summary.children_needing_review || 0}</p><p>This view is powered by daily life diaries, incidents, risk assessments and care plans.</p>`;
+      if (box) box.innerHTML = `<p><strong>Average Inspection evidence preparation:</strong> ${summary.average_inspection_readiness || 0}%</p><p><strong>Children needing review:</strong> ${summary.children_needing_review || 0}</p><p>This view is powered by daily life diaries, incidents, risk assessments and care plans.</p>`;
       const children = byId("demoPriorityChildren");
       if (children) {
         children.innerHTML = "";

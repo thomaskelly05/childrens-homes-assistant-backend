@@ -90,7 +90,7 @@ def _mode_route(mode: str, request: Any) -> str:
     if mode == "safeguarding_themes":
         return _home_query_route(request, "/safeguarding")
     if mode == "ofsted_evidence_review":
-        return _home_query_route(request, "/intelligence/inspection-readiness")
+        return _home_query_route(request, "/intelligence/inspection evidence preparation")
     if mode == "governance_briefing":
         return _home_query_route(request, "/intelligence/reg45")
     if mode == "manager_daily_brief":
@@ -234,8 +234,8 @@ class OrbOperationalActionBuilderService:
         if mode in {"governance_briefing", "ofsted_evidence_review"}:
             follow_ups.append(
                 OrbOperationalFollowUpAction(
-                    label="Open inspection readiness",
-                    route=_home_query_route(request, "/intelligence/inspection-readiness"),
+                    label="Open Inspection evidence preparation",
+                    route=_home_query_route(request, "/intelligence/inspection evidence preparation"),
                     action_type="review",
                 ).model_dump()
             )
@@ -249,7 +249,7 @@ class OrbOperationalActionBuilderService:
             follow_ups.append(
                 OrbOperationalFollowUpAction(
                     label="Open Reg 44 evidence pack",
-                    route=_home_query_route(request, "/intelligence/inspection-readiness?pack=reg44"),
+                    route=_home_query_route(request, "/intelligence/inspection evidence preparation?pack=reg44"),
                     action_type="review",
                 ).model_dump()
             )

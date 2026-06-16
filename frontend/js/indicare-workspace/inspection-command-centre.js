@@ -104,7 +104,7 @@ async function loadInspectionCommandCentre() {
 
   main.querySelector("[data-inspection-action='summary']")?.addEventListener("click", () => {
     const input = document.getElementById("assistant-input");
-    if (input) input.value = "Create an inspection-ready summary of child voice, safeguarding, outcomes, leadership oversight, recording quality and evidence gaps for this home.";
+    if (input) input.value = "Create an inspection evidence preparation summary of child voice, safeguarding, outcomes, leadership oversight, recording quality and evidence gaps for this home.";
     document.getElementById("assistant-run")?.click();
   });
 

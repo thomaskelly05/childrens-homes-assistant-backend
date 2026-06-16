@@ -11,7 +11,7 @@
     { label: 'Open Today', hint: 'Live shift chronology', action: () => clickNav('[data-view="today-child"]') },
     { label: 'Open Timeline', hint: 'Full chronology stream', action: () => clickNav('[data-view="child-timeline"]') },
     { label: 'Open Documents', hint: 'Plans, evidence and review dates', action: () => clickNav('[data-shell="documents"]') },
-    { label: 'Open Standards & Ofsted', hint: 'Inspection readiness and evidence', action: () => clickNav('[data-view="standards-ofsted"]') },
+    { label: 'Open Standards & Ofsted', hint: 'Inspection evidence preparation and evidence', action: () => clickNav('[data-view="standards-ofsted"]') },
     { label: 'Open Oversight', hint: 'Manager review and sign-off', action: () => clickNav('[data-view="review"]') }
   ];
 

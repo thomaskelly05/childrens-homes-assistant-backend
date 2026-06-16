@@ -873,9 +873,9 @@ SAFEGUARD_PHRASE_MAP: dict[str, list[str]] = {
         "record gaps honestly",
         "do not invent",
     ],
-    "inspection readiness": [
-        "inspection readiness",
-        "ofsted readiness",
+    "Inspection evidence preparation": [
+        "Inspection evidence preparation",
+        "Inspection evidence preparation",
         "evidence quality",
         "staff knowledge",
         "safeguarding evidence",

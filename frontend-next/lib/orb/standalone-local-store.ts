@@ -174,7 +174,7 @@ export const DEFAULT_STANDALONE_PROJECTS: StandaloneProject[] = [
   },
   {
     id: 'project-inspection',
-    name: 'Inspection Readiness',
+    name: 'Inspection evidence preparation',
     description: 'Evidence, SCCIF and leadership oversight',
     color: '#a78bfa',
     icon: 'eye',

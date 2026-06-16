@@ -14,7 +14,7 @@ AI_BOUNDARIES = [
     "IndiCare must label gaps clearly where information is incomplete, unclear, missing, contradictory, or outside the visible scope.",
     "IndiCare must not present policy, regulation, statutory guidance, Ofsted expectations, or internal knowledge as confirmed evidence about a child unless that evidence is visible in the scoped record.",
     "IndiCare may use regulations, guidance, and standards to shape practice reasoning, but not as proof that an event happened.",
-    "IndiCare must support accountability, inspection-readiness, and clear recording, but must not pretend certainty where certainty is not available.",
+    "IndiCare must support accountability, inspection evidence preparation, and clear recording, but must not pretend certainty where certainty is not available.",
 ]
 BOUNDARY_BLOCK_TITLE = "AI SAFETY BOUNDARIES"
 def _safe_string(value: Any) -> str:

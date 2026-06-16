@@ -229,7 +229,7 @@ _TEMPLATE_SPECS: list[tuple[str, str, str, list[str]]] = [
         "Child voice", "Review",
     ]),
     # Ofsted / SCCIF Templates
-    ("ofsted_readiness_review", "Ofsted readiness review", "ofsted_sccif", "Prepare inspection readiness thinking.", [
+    ("ofsted_readiness_review", "Inspection evidence preparation review", "ofsted_sccif", "Prepare Inspection evidence preparation thinking.", [
         "Home profile", "Strengths", "Gaps and risks", "Child experience evidence",
         "Safeguarding evidence", "Workforce evidence", "Leadership evidence", "Actions",
     ]),

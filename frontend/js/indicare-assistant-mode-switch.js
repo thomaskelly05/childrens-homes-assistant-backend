@@ -1,7 +1,7 @@
 /* IndiCare AI Assistant Mode Switch
    Adds a clear user-facing switch between:
    - General use: broad everyday assistant, no specialist orchestrator by default
-   - Children's Home Specialist: Ofsted-grade advanced practitioner with IndiCare brain/orchestrator
+   - Children's Home Specialist: quality evidence advanced practitioner with IndiCare brain/orchestrator
 */
 (function () {
   const MODE_KEY = "indicare_ai_assistant_mode";
@@ -73,7 +73,7 @@
     if (helper) {
       helper.textContent = mode === GENERAL
         ? "General use: everyday questions, writing, ideas and web answers."
-        : "Specialist: Ofsted-grade residential childcare practice intelligence.";
+        : "Specialist: quality evidence residential childcare practice intelligence.";
     }
   }
 

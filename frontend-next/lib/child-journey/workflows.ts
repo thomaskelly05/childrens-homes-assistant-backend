@@ -829,7 +829,7 @@ export const recordingWorkflows: Record<RecordingWorkflowId, RecordingWorkflow> 
     quickActionLabel: 'Document / evidence',
     tone: 'Evidence-linked and report-ready.',
     primaryField: 'document_summary',
-    regulatoryBadges: ['Evidence trail', 'Audit', 'Inspection readiness'],
+    regulatoryBadges: ['Evidence trail', 'Audit', 'Inspection evidence preparation'],
     lifecycle: ['Draft', 'Submitted', 'Reviewed', 'Signed off', 'Review due', 'Archived'],
     scope: ['child', 'home', 'staff'],
     sourceRecordType: 'document',

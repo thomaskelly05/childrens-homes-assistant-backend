@@ -920,7 +920,7 @@ function renderHomeDashboardHtml({
         <div>
           <div class="eyebrow">Home dashboard</div>
           <h2>${safeText(homeName)}</h2>
-          <p>A live home-wide management view across children, staffing, documents, inspection readiness and oversight.</p>
+          <p>A live home-wide management view across children, staffing, documents, Inspection evidence preparation and oversight.</p>
         </div>
       </div>
 
@@ -976,7 +976,7 @@ function renderHomeDashboardHtml({
               <article class="record-row">
                 <div class="record-row-main">
                   <div class="record-row-title">Urgent inspection actions</div>
-                  <div class="record-row-summary">Inspection readiness actions needing urgent focus.</div>
+                  <div class="record-row-summary">Inspection evidence preparation actions needing urgent focus.</div>
                 </div>
                 <div class="record-row-side">
                   <span class="row-pill ${operationalCounts.urgentInspection > 0 ? "danger" : "muted"}">${safeText(operationalCounts.urgentInspection)}</span>
@@ -1057,7 +1057,7 @@ function renderHomeDashboardHtml({
 
           <div class="overview-section-card">
             <div class="overview-section-head">
-              <h3>Inspection readiness</h3>
+              <h3>Inspection evidence preparation</h3>
               <p>Current inspection scorecards and readiness position.</p>
             </div>
             ${renderRows(inspectionCards, {

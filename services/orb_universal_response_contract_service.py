@@ -124,8 +124,8 @@ PUBLIC_CONSIDERATION_MAP: dict[str, str] = {
     "recording": "Child-centred recording",
     "incident": "Child-centred recording",
     "manager_review": "Leadership and oversight",
-    "ofsted_view": "Inspection readiness",
-    "reg45": "Inspection readiness",
+    "ofsted_view": "Inspection evidence preparation",
+    "reg45": "Inspection evidence preparation",
     "guidance": "Residential childcare practice",
     "knowledge": "Residential childcare practice",
     "rewrite": "Recording quality",
@@ -285,7 +285,7 @@ class OrbUniversalResponseContractService:
         if "manager" in brains_text or "leadership" in brains_text or "governance" in brains_text:
             considerations.append("Leadership and oversight")
         if "ofsted" in brains_text or "inspection" in brains_text or "regulatory" in brains_text:
-            considerations.append("Inspection readiness")
+            considerations.append("Inspection evidence preparation")
         for item in DEFAULT_PUBLIC:
             considerations.append(item)
         return _dedupe(considerations)[:8]

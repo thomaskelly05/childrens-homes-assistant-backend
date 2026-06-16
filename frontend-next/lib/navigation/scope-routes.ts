@@ -94,9 +94,9 @@ export function homeStaffOnShiftHref(homeId: string | number) { return `/shifts/
 export function homeWorkforceHref(homeId: string | number) { return `/staff?home_id=${enc(homeId)}` }
 export function homeStaffProfilesHref(homeId: string | number) { return `/staff?home_id=${enc(homeId)}#profiles` }
 export function homeActionsHref(homeId: string | number) { return `/actions?home_id=${enc(homeId)}` }
-export function homeInspectionReadinessHref(homeId: string | number) { return `/intelligence/inspection-readiness?home_id=${enc(homeId)}` }
+export function homeInspectionReadinessHref(homeId: string | number) { return `/intelligence/inspection evidence preparation?home_id=${enc(homeId)}` }
 export function homeSccifHref(homeId: string | number) { return `/intelligence/sccif?home_id=${enc(homeId)}` }
-export function homeReg44Href(homeId: string | number) { return `/intelligence/inspection-readiness?home_id=${enc(homeId)}&pack=reg44` }
+export function homeReg44Href(homeId: string | number) { return `/intelligence/inspection evidence preparation?home_id=${enc(homeId)}&pack=reg44` }
 export function homeReg45Href(homeId: string | number) { return `/intelligence/reg45?home_id=${enc(homeId)}` }
 export function homeReportsHref(homeId: string | number) { return `/reports?home_id=${enc(homeId)}` }
 export function homeOrbHref(homeId: string | number, mode: ScopeOrbMode = 'manager_daily_brief') { return assistantOrbHref({ scope: 'home', homeId, mode }) }

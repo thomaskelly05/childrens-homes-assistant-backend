@@ -840,16 +840,16 @@ PRACTICE_CATEGORY_FALLBACKS: dict[str, CategoryFallbackContent] = {
             "Quality Standards and SCCIF apply — verify locally.",
         ],
     ),
-    "ofsted-readiness": CategoryFallbackContent(
+    "inspection evidence preparation": CategoryFallbackContent(
         safety_position=(
             "This is a management oversight scenario — "
-            "inspection readiness requires honest safeguarding and recording evidence."
+            "Inspection evidence preparation requires honest safeguarding and recording evidence."
         ),
         cannot_do=[
             "ORB cannot guarantee inspection grades or outcomes.",
         ],
         what_to_do=[
-            "Inspection readiness: safeguarding evidence, recording quality, manager oversight.",
+            "Inspection evidence preparation: safeguarding evidence, recording quality, manager oversight.",
             "Child voice, staff knowledge, incidents and learning visible.",
             "Policies/local procedures accessible — no overclaiming or invented evidence.",
         ],

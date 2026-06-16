@@ -202,7 +202,7 @@ def _score_inspection(readiness: dict[str, Any]) -> QualityDomainScore:
     score = int(readiness.get("overall_score") or 0)
     if not score:
         score = 40
-    rationale = [f"Inspection readiness level is {readiness.get('overall_level', 'unknown')} ({score}/100)."]
+    rationale = [f"Inspection evidence preparation level is {readiness.get('overall_level', 'unknown')} ({score}/100)."]
     actions = readiness.get("immediate_actions") if isinstance(readiness.get("immediate_actions"), list) else []
 
     return QualityDomainScore(

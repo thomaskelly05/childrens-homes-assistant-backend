@@ -88,7 +88,7 @@ export function FounderDashboardPage() {
       <div className="mx-auto max-w-[1600px] space-y-8 px-4 py-8 pb-16 md:px-8">
         <FounderNavHeader
           title="IndiCare Intelligence Command Centre"
-          subtitle="Private live overview of business performance, ORB usage, risk, revenue, Ofsted readiness, and what to build next."
+          subtitle="Private live overview of business performance, ORB usage, risk, revenue, Inspection evidence preparation, and what to build next."
         />
 
         <FounderSectionCard
@@ -304,7 +304,7 @@ export function FounderDashboardPage() {
           </FounderSectionCard>
         </div>
 
-        <FounderSectionCard eyebrow="Ofsted Intelligence" title="Inspection readiness across homes" description="Readiness scores calculated by the Ofsted Readiness Engine with recurring evidence gaps.">
+        <FounderSectionCard eyebrow="Ofsted Intelligence" title="Inspection evidence preparation across homes" description="Readiness scores calculated by the Inspection evidence preparation Engine with recurring evidence gaps.">
           <FounderReadinessPanel homes={data.ofstedIntelligence.homes} commonGaps={data.ofstedIntelligence.commonGaps} />
         </FounderSectionCard>
 

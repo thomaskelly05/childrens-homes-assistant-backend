@@ -322,7 +322,7 @@ export function buildChildJourneyEvidenceCards(childId: string, data: ChildJourn
       status: actionsCount ? 'Open' : 'Clear',
       statusTone: cardStatusTone(actionsCount),
       count: actionsCount,
-      orbHint: operationalOrbHint(childId, 'ORB can prioritise', 'Which actions matter most for inspection readiness?')
+      orbHint: operationalOrbHint(childId, 'ORB can prioritise', 'Which actions matter most for Inspection evidence preparation?')
     },
     {
       key: 'record-hub',

@@ -44,7 +44,7 @@ export const DEFAULT_PRICING_MODELS: PricingModel[] = [
     name: 'Enterprise / Provider Bundle',
     pricePerUser: 6.99,
     pricePerProvider: 499,
-    includedUsage: 'Multi-home provider; priority support; inspection readiness pack',
+    includedUsage: 'Multi-home provider; priority support; Inspection evidence preparation pack',
     overageModel: 'Annual contract with usage review',
     targetCustomer: 'Multi-site providers and strategic partners',
     marginNotes: 'Enterprise discount justified by volume and lower support ratio',

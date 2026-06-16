@@ -113,7 +113,7 @@ REGULATION_LIBRARY: dict[str, RegulationReference] = {
         key="sccif",
         label="Ofsted SCCIF for children’s homes",
         source_type="inspection_framework",
-        rationale="Relevant where inspection-readiness, evidence quality, lived experience, leadership, safeguarding, and impact of care are considered.",
+        rationale="Relevant where inspection evidence preparation, evidence quality, lived experience, leadership, safeguarding, and impact of care are considered.",
     ),
     "guide": RegulationReference(
         key="guide",
@@ -170,7 +170,7 @@ def map_regulation_references(
     )
     inspection_context = _contains_any(
         text,
-        {"ofsted", "inspection", "inspect", "sccif", "inspection ready", "defensible", "audit trail", "evidence pack"},
+        {"ofsted", "inspection", "inspect", "sccif", "inspection evidence preparation", "defensible", "audit trail", "evidence pack"},
     )
     views_context = _contains_any(
         text,

@@ -240,7 +240,7 @@ export const RECORD_HUB_CARDS: RecordCardDefinition[] = [
     section: 'progress-evidence',
     title: 'Reg 44 evidence',
     description: 'Independent visitor findings, provider response and impact for children.',
-    whenToUse: 'After Reg 44 visits or when logging oversight evidence for inspection readiness.',
+    whenToUse: 'After Reg 44 visits or when logging oversight evidence for Inspection evidence preparation.',
     buttonText: 'Add Reg 44 evidence',
     icon: FileText,
     workflowSegment: 'reg44-action',

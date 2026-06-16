@@ -71,7 +71,7 @@ export default function SetupPage() {
               <Link href="/settings" className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-700">Settings</Link>
               <Link href="/staff" className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-700">Staff roles</Link>
               <Link href="/documents/regulatory" className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-700">Regulatory documents</Link>
-              <Link href="/ofsted-readiness" className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-700">Ofsted readiness</Link>
+              <Link href="/inspection evidence preparation" className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-700">Inspection evidence preparation</Link>
               <Link href="/settings/orb" className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-700">Orb privacy</Link>
             </div>
           </Card>

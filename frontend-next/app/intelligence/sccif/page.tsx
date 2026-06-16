@@ -20,10 +20,10 @@ export default function SccifAlignmentPage() {
   if (staffId) filters.staff_id = staffId
   const inspectionHref = homeId
     ? homeInspectionReadinessHref(homeId)
-    : '/intelligence/inspection-readiness'
+    : '/intelligence/inspection evidence preparation'
   const reg44Href = homeId
     ? `${homeInspectionReadinessHref(homeId)}&pack=reg44`
-    : '/intelligence/inspection-readiness?pack=reg44'
+    : '/intelligence/inspection evidence preparation?pack=reg44'
   const reg45Href = homeId ? homeReg45Href(homeId) : '/intelligence/reg45'
 
   return (
@@ -31,7 +31,7 @@ export default function SccifAlignmentPage() {
       <PageHeader
         eyebrow="Inspection evidence support"
         title="SCCIF and Quality Standards alignment"
-        description="Quality Standards alignment and SCCIF evidence snapshot — gaps to review for managers. Supports inspection readiness; does not guarantee compliance or predict grades."
+        description="Quality Standards alignment and SCCIF evidence snapshot — gaps to review for managers. Supports Inspection evidence preparation; does not guarantee compliance or predict grades."
         action={
           <div className="flex flex-wrap gap-2">
             <Link
@@ -51,10 +51,10 @@ export default function SccifAlignmentPage() {
             <Link
               prefetch={false}
               href={inspectionHref}
-              data-testid="sccif-open-inspection-readiness"
+              data-testid="sccif-open-inspection evidence preparation"
               className="inline-flex min-h-10 items-center rounded-2xl border border-blue-200 bg-blue-50 px-4 py-2.5 text-xs font-black text-blue-950"
             >
-              Inspection readiness
+              Inspection evidence preparation
             </Link>
             <Link
               prefetch={false}
@@ -80,7 +80,7 @@ export default function SccifAlignmentPage() {
         data-testid="sccif-evidence-pack-note"
         className="rounded-2xl border border-blue-100 bg-blue-50/50 px-4 py-3 text-xs font-semibold text-blue-950"
       >
-        Evidence pack support: use inspection readiness to prepare Reg 44 and Reg 45 review packs from safe
+        Evidence pack support: use Inspection evidence preparation to prepare Reg 44 and Reg 45 review packs from safe
         metadata. Not a compliance decision.
       </p>
 

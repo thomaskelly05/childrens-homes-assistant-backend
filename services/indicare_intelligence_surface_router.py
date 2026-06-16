@@ -144,7 +144,7 @@ def _manager_operational_route(lower: str) -> str:
         return "/care-hub"
     if any(t in lower for t in ("record quality", "recording quality", "weak record")):
         return "/assistant/orb?mode=record_quality_review"
-    if "ofsted" in lower or "inspection readiness" in lower or "inspection evidence" in lower:
+    if "ofsted" in lower or "Inspection evidence preparation" in lower or "inspection evidence" in lower:
         return "/assistant/orb?mode=ofsted_evidence_review"
     if any(t in lower for t in ("prioritise", "prioritize", "action board", "what actions")):
         return "/assistant/orb?mode=action_priority"
@@ -183,7 +183,7 @@ def route_intelligence_surface(
     if "live evidence" in lower and any(term in lower for term in ("ofsted", "inspection", "sccif")):
         return SurfaceRoutingDecision(
             recommended_surface="operational_orb",
-            reason="Ofsted questions about your home's live evidence need OS inspection readiness.",
+            reason="Ofsted questions about your home's live evidence need OS Inspection evidence preparation.",
             allowed_in_standalone=False,
             requires_os_context=True,
             suggested_route="/assistant/orb?mode=ofsted_evidence_review",
@@ -258,7 +258,7 @@ def route_intelligence_surface(
         if live_evidence:
             return SurfaceRoutingDecision(
                 recommended_surface="operational_orb",
-                reason="Ofsted questions about your home's live evidence need OS inspection readiness.",
+                reason="Ofsted questions about your home's live evidence need OS Inspection evidence preparation.",
                 allowed_in_standalone=False,
                 requires_os_context=True,
                 suggested_route="/assistant/orb?mode=ofsted_evidence_review",

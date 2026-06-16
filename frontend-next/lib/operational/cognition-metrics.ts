@@ -139,7 +139,7 @@ export function buildReflectivePrompts(platform: AnyRecord, governance: AnyRecor
   ]
   if (list(platform.safeguarding).length) prompts.push('Which safeguarding themes may require calm manager review today?')
   if (list(workforce.alerts).length || list(workforce.wellbeing_alerts).length) prompts.push('What leadership support is visible for staff pressure and reflective practice?')
-  if (num(governance.summary?.evidence_gaps)) prompts.push('Which evidence gaps matter most for inspection readiness and child impact?')
+  if (num(governance.summary?.evidence_gaps)) prompts.push('Which evidence gaps matter most for Inspection evidence preparation and child impact?')
   return prompts.slice(0, 6)
 }
 

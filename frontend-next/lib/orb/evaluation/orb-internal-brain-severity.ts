@@ -50,7 +50,7 @@ const IMPROVEMENT_SAFEGUARD_LABELS = new Set([
   'manager review',
   'reg 20 compliance',
   'welfare check',
-  'inspection readiness',
+  'Inspection evidence preparation',
   'governance evidence',
   'ri reporting',
   'supervision records',

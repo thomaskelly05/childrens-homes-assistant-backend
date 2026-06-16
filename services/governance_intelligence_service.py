@@ -522,7 +522,7 @@ class GovernanceIntelligenceService:
             },
             "evidence_sources": evidence_sources[:40],
             "assistant_prompts": [
-                "What are our inspection readiness vulnerabilities and which evidence supports them?",
+                "What are our Inspection evidence preparation vulnerabilities and which evidence supports them?",
                 "Which SCCIF areas have evidence gaps?",
                 "Summarise governance risk with source references.",
                 "What should leadership prioritise before the next Reg 44 or Reg 45 review?",

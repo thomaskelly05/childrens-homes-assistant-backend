@@ -848,7 +848,7 @@ export function runOrbDesktopLayoutAudit(): OrbDesktopLayoutAuditResult {
     '[data-orb-templates-panel]',
     '[data-orb-knowledge-library]',
     '[data-orb-residential-empty]',
-    '[data-orb-inspection-readiness-panel]',
+    '[data-orb-inspection evidence preparation-panel]',
     '[data-orb-safeguarding-thinking-panel]',
     '[data-orb-record-properly-panel]',
     '[data-orb-review-panel]'

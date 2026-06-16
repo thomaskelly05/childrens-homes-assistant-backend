@@ -34,7 +34,7 @@ const state = {
   level: 0,
   mode: 'Ask ORB',
   status: 'Tap ORB to begin',
-  detail: 'Voice-first guidance for residential care practice. ORB supports reflection, safeguarding thinking and Ofsted-ready practice.',
+  detail: 'Voice-first guidance for residential care practice. ORB supports reflection, safeguarding thinking and Inspection evidence support practice.',
   error: '',
   response: '',
   runtime: null,
@@ -113,7 +113,7 @@ function modeDetail(mode) {
   if (mode === 'Ofsted Lens') return 'Think through evidence, impact, leadership oversight and children’s experiences.'
   if (mode === 'Behaviour Support') return 'Consider what the behaviour may communicate and what support should follow.'
   if (mode === 'Record This Properly') return 'Shape the event into clear, factual, child-centred recording prompts.'
-  return 'Voice-first guidance for residential care practice. ORB supports reflection, safeguarding thinking and Ofsted-ready practice.'
+  return 'Voice-first guidance for residential care practice. ORB supports reflection, safeguarding thinking and Inspection evidence support practice.'
 }
 
 async function handleTypedMessage(event) {

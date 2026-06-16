@@ -69,7 +69,7 @@ export const SCOPE_SECTIONS = Object.freeze({
     "manager",
     "quality",
     "reports",
-    "ofsted-readiness",
+    "inspection evidence preparation",
     "policies",
     "documents",
     "communication",
@@ -82,7 +82,7 @@ export const SCOPE_SECTIONS = Object.freeze({
     "compliance",
     "reg44",
     "reg45",
-    "inspection-readiness",
+    "inspection evidence preparation",
     "staff-profile",
     "onboarding",
     "supervision",
@@ -100,7 +100,7 @@ export const SCOPE_SECTIONS = Object.freeze({
     "ofsted-dashboard",
     "sccif-evidence",
     "judgement-builder",
-    "inspection-readiness",
+    "inspection evidence preparation",
     "quality-audits",
     "reg44",
     "reg45",
@@ -162,14 +162,14 @@ export const SECTION_TITLES = Object.freeze({
   maintenance: "Maintenance and environment",
   notifications: "Alerts and notifications",
   quality: "Quality dashboard",
-  "ofsted-readiness": "Ofsted readiness",
+  "inspection evidence preparation": "Inspection evidence preparation",
   policies: "Policies and guidance",
 
   "provider-overview": "Provider overview",
   "quality-audits": "Quality audits",
   reg44: "Regulation 44",
   reg45: "Regulation 45",
-  "inspection-readiness": "Inspection readiness",
+  "inspection evidence preparation": "Inspection evidence preparation",
 
   "ofsted-dashboard": "Ofsted dashboard",
   "sccif-evidence": "SCCIF evidence",
@@ -247,7 +247,7 @@ export const SECTION_SUBTITLES = Object.freeze({
   "training-centre":
     "Mandatory training, role development, compliance and workforce learning needs.",
   compliance:
-    "A live compliance view across workforce, children’s files, statutory paperwork and inspection readiness.",
+    "A live compliance view across workforce, children’s files, statutory paperwork and Inspection evidence preparation.",
   "health-safety":
     "Fire, premises, risk controls, safety checks and environmental readiness.",
   maintenance:
@@ -256,8 +256,8 @@ export const SECTION_SUBTITLES = Object.freeze({
     "A live action layer for reminders, escalations, acknowledgements and workforce follow-up.",
   quality:
     "Quality assurance, audits, trends, RI oversight and service performance.",
-  "ofsted-readiness":
-    "Live mock Ofsted dashboard, evidence gaps, action tracking and inspection readiness across the home.",
+  "inspection evidence preparation":
+    "Live mock Ofsted dashboard, evidence gaps, action tracking and Inspection evidence preparation across the home.",
   policies:
     "Policy library, review dates, guidance and practice standards across the service.",
 
@@ -269,7 +269,7 @@ export const SECTION_SUBTITLES = Object.freeze({
     "Independent visit preparation, evidence collation, themes and resulting actions.",
   reg45:
     "Quality of care review planning, evidence, analysis and improvement actions.",
-  "inspection-readiness":
+  "inspection evidence preparation":
     "Portfolio-level inspection evidence, gaps, readiness tracking and regulator-facing preparation.",
 
   "ofsted-dashboard":
@@ -277,7 +277,7 @@ export const SECTION_SUBTITLES = Object.freeze({
   "sccif-evidence":
     "Evidence mapped against SCCIF themes, lines of enquiry and likely inspection focus areas.",
   "judgement-builder":
-    "Build inspection-ready strengths, gaps, impact statements and draft judgement language from the underlying evidence.",
+    "Build inspection evidence preparation strengths, gaps, impact statements and draft judgement language from the underlying evidence.",
 });
 
 /*
@@ -489,7 +489,7 @@ export const QUICK_ACTIONS = Object.freeze([
     record_type: "task",
     section_hint: "ofsted-dashboard",
     description:
-      "Create an inspection-readiness or evidence-gap action linked to SCCIF and Ofsted preparation.",
+      "Create an inspection evidence preparation or evidence-gap action linked to SCCIF and Ofsted preparation.",
   },
 ]);
 
@@ -538,14 +538,14 @@ export const SECTION_DEFAULT_ACTION = Object.freeze({
   maintenance: "task",
   notifications: "staff_task",
   quality: "task",
-  "ofsted-readiness": "task",
+  "inspection evidence preparation": "task",
   policies: "policy_review",
 
   "provider-overview": "task",
   "quality-audits": "task",
   reg44: "task",
   reg45: "task",
-  "inspection-readiness": "task",
+  "inspection evidence preparation": "task",
 
   "ofsted-dashboard": "ofsted_action",
   "sccif-evidence": "ofsted_action",

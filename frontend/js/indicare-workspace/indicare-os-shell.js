@@ -7,7 +7,7 @@ const statusStrip = document.getElementById("status-strip");
 const SYSTEM_LAYERS = [
   { key: "young-person", title: "Young person", text: "Live child workspace, Narrative OS, memory stream, safeguarding, direct work and documents." },
   { key: "home", title: "Home", text: "Home-wide operational picture: emotional climate, safeguarding pressure, review backlog and daily work." },
-  { key: "provider", title: "Provider", text: "Provider-level evidence, quality assurance, inspection readiness, governance and learning." },
+  { key: "provider", title: "Provider", text: "Provider-level evidence, quality assurance, Inspection evidence preparation, governance and learning." },
 ];
 
 const FEATURE_REGISTRY = [
@@ -19,7 +19,7 @@ const FEATURE_REGISTRY = [
   { key: "voice", layer: "Young person", title: "Child voice", action: "voice", text: "Capture wishes, feelings, communication, refusal, choice and what changed afterwards." },
   { key: "documents", layer: "Young person", title: "Documents", view: "child-file", text: "Placement plans, care plans, risk assessments, BSPs, health, education and identity documents." },
   { key: "timeline", layer: "Young person", title: "Memory stream", view: "child-timeline", text: "Chronology, records, document changes, approvals, comments and operational memory." },
-  { key: "home-overview", layer: "Home", title: "Home operating picture", view: "home-overview", text: "Children, records, safeguarding, governance, documents and inspection readiness in the home." },
+  { key: "home-overview", layer: "Home", title: "Home operating picture", view: "home-overview", text: "Children, records, safeguarding, governance, documents and Inspection evidence preparation in the home." },
   { key: "provider-overview", layer: "Provider", title: "Provider oversight", view: "provider-overview", text: "Reg 44/45, SCCIF, safeguarding themes, QA, leadership and learning across homes." },
   { key: "inspection", layer: "Provider", title: "Inspection evidence", view: "provider-overview", text: "SCCIF, Ofsted and Children’s Homes Regulations evidence generated from normal operational work." },
   { key: "system-map", layer: "System", title: "IndiCare system map", view: "system-map", text: "See how young person, home and provider workflows operate as one system." },
@@ -142,7 +142,7 @@ async function openHomeOverview() {
   const visibleChildren = (children?.young_people || children?.items || []).filter((child) => !ctx.homeId || !child.home_id || String(child.home_id) === String(ctx.homeId));
   shellMain.innerHTML = `
     <section class="hero-card">
-      <div><p class="eyebrow">Home layer</p><h3>${escapeHtml(ctx.homeName || "Selected home")}</h3><p>One home operating layer for young people, records, safety, documents, quality assurance and inspection readiness.</p></div>
+      <div><p class="eyebrow">Home layer</p><h3>${escapeHtml(ctx.homeName || "Selected home")}</h3><p>One home operating layer for young people, records, safety, documents, quality assurance and Inspection evidence preparation.</p></div>
       <button class="primary-action" onclick="window.renderWorkspaceGate?.()">Change home / child</button>
     </section>
     <section class="card-grid">${renderHomeMetric("Homes", (homes?.homes || homes?.items || []).length, "Available through live homes endpoint")}${renderHomeMetric("Young people", visibleChildren.length, "Visible in current home context")}${renderHomeMetric("Narrative OS", "Live", "Universal document and record processor")}${renderHomeMetric("Memory", "Live", "Operational memory powers child workspace")}</section>

@@ -148,7 +148,7 @@ export function OrbSetup({ compact = false }: { compact?: boolean }) {
             >
               <option value="standard">Calm operational support</option>
               <option value="concise">Concise</option>
-              <option value="inspection">Inspection-ready</option>
+              <option value="inspection">inspection evidence preparation</option>
               <option value="quiet">Quiet mode</option>
             </select>
           </label>

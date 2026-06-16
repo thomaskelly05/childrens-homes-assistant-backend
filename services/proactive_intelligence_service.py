@@ -90,7 +90,7 @@ class ProactiveIntelligenceService:
                 category="evidence_gap",
                 title=f"Evidence gap: {gap.get('area') or 'Unknown area'}",
                 message=gap.get("gap") or "Evidence gap identified.",
-                why="Evidence gaps may weaken Ofsted readiness and reduce management oversight visibility.",
+                why="Evidence gaps may weaken Inspection evidence preparation and reduce management oversight visibility.",
                 action="Assign an owner to close this gap and record evidence of completion.",
             ))
         return alerts

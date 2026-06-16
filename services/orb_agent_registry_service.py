@@ -270,7 +270,7 @@ class OrbAgentRegistryService:
         if any(phrase in lower for phrase in ("manager briefing", "create a briefing", "briefing for manager", "executive summary")):
             return "manager_briefing", "Manager briefing requested"
 
-        if any(phrase in lower for phrase in ("evidence map", "ofsted-ready", "ofsted ready", "inspection evidence")):
+        if any(phrase in lower for phrase in ("evidence map", "Inspection evidence support", "Inspection evidence support", "inspection evidence")):
             return "ofsted_research", "Ofsted evidence mapping requested"
 
         if mode_name in {"ofsted lens", "ofsted"} or any(

@@ -19,7 +19,7 @@ export const ORB_CARE_COMPANION_CONFIG = {
     health: '/orb/standalone/health'
   },
   modeDetails: {
-    'Ask ORB': 'Standalone voice-first guidance for residential care practice. ORB supports reflection, safeguarding thinking and Ofsted-ready practice without accessing OS records.',
+    'Ask ORB': 'Standalone voice-first guidance for residential care practice. ORB supports reflection, safeguarding thinking and Inspection evidence support practice without accessing OS records.',
     Safeguarding: 'Start with immediate safety, escalation, professional curiosity and clear recording. ORB gives guidance only and does not replace safeguarding procedures.',
     Reflect: 'Slow the situation down and turn practice moments into learning without pulling from operational records.',
     'Ofsted Lens': 'Think through evidence, impact, leadership oversight and care quality from a standalone guidance perspective.',

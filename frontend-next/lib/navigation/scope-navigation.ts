@@ -85,7 +85,7 @@ export function homeScopePrimaryNavigation(homeId: string | number): ScopeNavIte
     { label: 'Evidence checks', href: homeRecordingAlertsHref(hid), icon: ClipboardList, prefetch: false, testId: 'scope-nav-home-alerts' },
     { label: 'Safeguarding', href: homeSafeguardingHref(hid), icon: ShieldCheck, prefetch: false, testId: 'scope-nav-home-safeguarding-primary' },
     { label: 'Staff today', href: homeStaffOnShiftHref(hid), icon: UserRound, prefetch: false, testId: 'scope-nav-home-staff-primary' },
-    { label: 'Inspection readiness', href: homeInspectionReadinessHref(hid), icon: ShieldCheck, prefetch: false, testId: 'scope-nav-home-inspection-primary' }
+    { label: 'Inspection evidence preparation', href: homeInspectionReadinessHref(hid), icon: ShieldCheck, prefetch: false, testId: 'scope-nav-home-inspection-primary' }
   ]
 }
 
@@ -155,4 +155,4 @@ export function scopeNavigationFor(scopeType: OsScopeType, ids: { homeId?: strin
   return noScopeNavigation()
 }
 
-export const SCOPE_HEAVY_ROUTE_HINTS = ['/command-centre', '/governance', '/staff', '/intelligence', '/reports', '/actions', '/chronology', '/handover', '/record/alerts', '/intelligence/inspection-readiness'] as const
+export const SCOPE_HEAVY_ROUTE_HINTS = ['/command-centre', '/governance', '/staff', '/intelligence', '/reports', '/actions', '/chronology', '/handover', '/record/alerts', '/intelligence/inspection evidence preparation'] as const

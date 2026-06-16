@@ -70,7 +70,7 @@ class SharedInstitutionalCognitionService:
                     "provider cognition",
                     "continuous operational state",
                     "governance oversight",
-                    "inspection readiness",
+                    "Inspection evidence preparation",
                     "event-driven cognition",
                 ],
                 "identity": "Operational institutional cognition infrastructure.",

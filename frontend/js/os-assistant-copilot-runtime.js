@@ -14,7 +14,7 @@
     'Summarise what matters for handover.',
     'What needs manager review?',
     'What safeguarding patterns are emerging?',
-    'Prepare an Ofsted-ready summary.',
+    'Prepare an Inspection evidence support summary.',
     'What should I record next?',
     'Summarise this young person for LAC review.',
   ];
@@ -56,7 +56,7 @@
         <div class="ic365-assistant-starters">${starterPrompts.map((prompt) => `<button type="button" data-os-assistant-prompt="${esc(prompt)}">${esc(prompt)}</button>`).join('')}</div>
         <main id="ic365-assistant-messages" class="ic365-assistant-messages"></main>
         <footer class="ic365-assistant-composer">
-          <textarea id="ic365-assistant-input" placeholder="Ask about chronology, safeguarding, review, documents, handover or inspection readiness..."></textarea>
+          <textarea id="ic365-assistant-input" placeholder="Ask about chronology, safeguarding, review, documents, handover or Inspection evidence preparation..."></textarea>
           <button type="button" class="ic365-button primary" data-send-os-assistant>Ask</button>
         </footer>
       </aside>`;
@@ -81,11 +81,11 @@
       card.className = 'ic365-side-card';
       card.innerHTML = `
         <h2>Assistant</h2>
-        <p>Ask about the current young person, records, safeguarding, evidence, handover or inspection readiness.</p>
+        <p>Ask about the current young person, records, safeguarding, evidence, handover or Inspection evidence preparation.</p>
         <div class="ic365-action-list">
           <button type="button" data-open-os-assistant><strong>Open assistant</strong><span>Context-aware operational support</span></button>
           <button type="button" data-os-assistant-prompt="What needs manager review?"><strong>Manager review</strong><span>Find records needing oversight</span></button>
-          <button type="button" data-os-assistant-prompt="Prepare an Ofsted-ready summary."><strong>Inspection summary</strong><span>Structure evidence and risks</span></button>
+          <button type="button" data-os-assistant-prompt="Prepare an Inspection evidence support summary."><strong>Inspection summary</strong><span>Structure evidence and risks</span></button>
         </div>`;
       rail.prepend(card);
     }

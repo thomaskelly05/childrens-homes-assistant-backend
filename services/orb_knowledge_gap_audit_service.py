@@ -826,7 +826,7 @@ class OrbKnowledgeGapAuditService:
             "internal_knowledge_passed": internal_passed,
             "missing_internal_markers": missing_internal,
             "missing_answer_markers": missing_answer,
-            "ofsted_readiness_score": (ofsted_score or {}).get("Ofsted-readiness"),
+            "inspection_evidence_score": (ofsted_score or {}).get("inspection-evidence-support"),
             "ofsted_ready": (ofsted_score or {}).get("ofsted_ready"),
             "pilot_ready": internal_passed and (ofsted_score is None or ofsted_score.get("ofsted_ready", True)),
             "therapeutic_scoring": therapeutic_scoring,

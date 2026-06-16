@@ -101,7 +101,7 @@ export function CareHubIntelligenceWidgets({
       tone: 'purple'
     },
     {
-      label: 'Inspection readiness',
+      label: 'Inspection evidence preparation',
       value: live.inspection_readiness_pct != null ? `${live.inspection_readiness_pct}%` : '—',
       detail: payload.orb_reasoning?.inspection_summary,
       tone: 'slate'

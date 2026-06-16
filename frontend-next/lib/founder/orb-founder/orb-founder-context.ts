@@ -83,7 +83,7 @@ function buildCurrentRisks(
 
   if (ofstedReadiness.score < 80) {
     risks.push(
-      `Ofsted readiness at ${ofstedReadiness.score}% — gaps in ${ofstedReadiness.commonGaps.slice(0, 2).join(', ')}`
+      `Inspection evidence preparation at ${ofstedReadiness.score}% — gaps in ${ofstedReadiness.commonGaps.slice(0, 2).join(', ')}`
     )
   }
 

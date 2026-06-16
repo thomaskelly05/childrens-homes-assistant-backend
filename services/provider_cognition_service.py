@@ -8,7 +8,7 @@ class ProviderCognitionService:
     """Provider-wide institutional cognition foundations.
 
     Supports provider-level reflection across homes, safeguarding themes,
-    workforce strain, evidence drift and inspection readiness.
+    workforce strain, evidence drift and Inspection evidence preparation.
     """
 
     HIGH_PRESSURE_TERMS = {

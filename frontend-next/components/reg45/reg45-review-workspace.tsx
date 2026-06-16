@@ -79,11 +79,11 @@ export function Reg45ReviewWorkspace() {
 
       <div className="flex flex-wrap gap-2">
         <Link
-          href={`/intelligence/inspection-readiness?pack=reg45${homeQuery}`}
-          data-testid="reg45-link-inspection-readiness"
+          href={`/intelligence/inspection evidence preparation?pack=reg45${homeQuery}`}
+          data-testid="reg45-link-inspection evidence preparation"
           className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1.5 text-[10px] font-black uppercase text-blue-800"
         >
-          Open inspection readiness
+          Open Inspection evidence preparation
         </Link>
         <Link
           href={homeId ? `/intelligence/sccif?home_id=${encodeURIComponent(homeId)}` : '/intelligence/sccif'}

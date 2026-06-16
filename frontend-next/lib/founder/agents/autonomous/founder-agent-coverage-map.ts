@@ -62,7 +62,7 @@ export const COVERAGE_AREA_DEFINITIONS: CoverageAreaDefinition[] = [
   { id: 'complaints', label: 'Complaints', keywords: ['complaint'] },
   { id: 'professional_meetings', label: 'Professional meetings', keywords: ['lac review', 'pep meeting', 'professional meeting'] },
   { id: 'data_protection', label: 'Data protection', keywords: ['data protection', 'gdpr', 'privacy'] },
-  { id: 'ofsted_readiness', label: 'Ofsted readiness', keywords: ['ofsted', 'sccif', 'inspection'] }
+  { id: 'ofsted_readiness', label: 'Inspection evidence preparation', keywords: ['ofsted', 'sccif', 'inspection'] }
 ]
 
 function matchesArea(text: string, area: CoverageAreaDefinition): boolean {

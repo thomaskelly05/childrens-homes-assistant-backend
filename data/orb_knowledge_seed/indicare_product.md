@@ -6,4 +6,4 @@ ORB Care Companion is the standalone assistant layer at /orb — a ChatGPT-style
 
 IndiCare OS ORB at /assistant/orb is the operational, permissioned assistant that may use OS and Care Hub context where your role allows.
 
-Platform areas include Care Hub (command centre), Record, Young People, Chronology, Documents, Actions, Intelligence Spine, Ofsted readiness, workforce support, governance, Reports and ORB.
+Platform areas include Care Hub (command centre), Record, Young People, Chronology, Documents, Actions, Intelligence Spine, Inspection evidence preparation, workforce support, governance, Reports and ORB.

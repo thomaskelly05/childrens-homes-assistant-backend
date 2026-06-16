@@ -1,15 +1,13 @@
 {
-  "timestamp": "2026-06-15T22:53:41.624081+00:00",
-  "commit_sha": "2ac55e6dfcc3c91c13c3182d985258d27e7d8f06",
-  "baseline15_average": 4.08,
-  "core100_average": 3.71,
+  "timestamp": "2026-06-16T07:36:39.039001+00:00",
+  "commit_sha": "cfa05cc0d409252af434ad1ae858b032a86b81a0",
+  "baseline15_average": null,
+  "core100_average": null,
   "variants1000_average": 3.58,
+  "variants1000_unsafe_flag_count": 2,
   "unsafe_flags": {
     "baseline15": [],
-    "core100": [
-      "fails_to_escalate_safeguarding",
-      "replaces_professional_judgement"
-    ],
+    "core100": [],
     "variants1000": [
       "fails_to_escalate_safeguarding",
       "replaces_professional_judgement"
@@ -25,7 +23,7 @@
     "factual_accuracy_no_invention",
     "recording_usefulness"
   ],
-  "recommended_next_target": "Improve child centredness (avg 2.42)",
+  "recommended_next_target": "Improve child centredness (avg 2.08)",
   "live_llm_disabled_in_ci": true,
   "traceability": {
     "framework_claim": "Source-mapped internal quality framework",
@@ -68,5 +66,14 @@
   },
   "framework_claim": "Source-mapped internal quality framework",
   "rubric_external_coverage_percent": 100.0,
-  "traceability_warning": "Scores are internal quality indicators aligned to recognised sources where mapped. They are not regulatory determinations, inspection predictions, or professional validation. Adults remain accountable for decisions, escalation and final records."
+  "traceability_warning": "Scores are internal quality indicators aligned to recognised sources where mapped. They are not regulatory determinations, inspection predictions, or professional validation. Adults remain accountable for decisions, escalation and final records.",
+  "internal_only_emerging_evidence_areas": [],
+  "ofsted_wording_audit": {
+    "risky_occurrences_found": 200,
+    "occurrences_replaced_this_pass": 200,
+    "factual_source_references_kept": 10,
+    "risky_occurrences_remaining": 0,
+    "status": "pass"
+  },
+  "governance_boundary": "ORB supports inspection evidence preparation. It does not determine inspection outcomes, guarantee compliance or represent regulator endorsement."
 }

@@ -30,7 +30,7 @@ export function FounderOrbChat({ messages, input, onInputChange, onSend, pending
             <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-cyan-300">ORB Founder</p>
             <h2 className="mt-3 text-2xl font-black tracking-[-0.04em] text-white">Your private CEO copilot</h2>
             <p className="mt-3 max-w-md text-sm leading-7 text-slate-400">
-              Ask strategic questions about product, risk, Ofsted readiness, ORB usage, investor narratives, and what to
+              Ask strategic questions about product, risk, Inspection evidence preparation, ORB usage, investor narratives, and what to
               focus on next. Hybrid intelligence uses the Founder Intelligence Layer with AI — falling back to
               rule-based responses if AI is unavailable.
             </p>

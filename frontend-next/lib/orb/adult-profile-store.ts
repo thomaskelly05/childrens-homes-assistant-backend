@@ -251,7 +251,7 @@ export function writeAdultProfile(profile: AdultProfile): void {
 export function roleResponseGuidance(profile: AdultProfile): string | null {
   const role = normalizeAdultProfileRole(profile.role)
   if (role === 'registered_manager' || role === 'responsible_individual' || role === 'provider_director') {
-    return 'Lean toward oversight, evidence, actions, staff learning, Ofsted readiness, manager grip, and decision rationale.'
+    return 'Lean toward oversight, evidence, actions, staff learning, Inspection evidence preparation, manager grip, and decision rationale.'
   }
   if (role === 'deputy_manager') {
     return 'Lean toward RM cover, oversight, risk, staff learning, and recording standards.'

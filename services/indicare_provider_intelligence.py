@@ -118,7 +118,7 @@ def recommended_actions(homes: list[ProviderHomeSignal]) -> list[dict[str, Any]]
         if home.readiness < 75:
             actions.append({
                 "label": f"Create readiness plan for {home.name}",
-                "prompt": f"Create an inspection readiness improvement plan for {home.name}, focusing on {', '.join(home.inspection_focus)}.",
+                "prompt": f"Create an Inspection evidence preparation improvement plan for {home.name}, focusing on {', '.join(home.inspection_focus)}.",
                 "feature": "inspection_readiness",
                 "home_id": home.id,
             })
@@ -133,7 +133,7 @@ def recommended_actions(homes: list[ProviderHomeSignal]) -> list[dict[str, Any]]
 
     actions.append({
         "label": "Generate executive briefing",
-        "prompt": "Create an executive provider briefing covering safeguarding, chronology quality, inspection readiness and unresolved actions.",
+        "prompt": "Create an executive provider briefing covering safeguarding, chronology quality, Inspection evidence preparation and unresolved actions.",
         "feature": "executive_briefing",
         "home_id": None,
     })

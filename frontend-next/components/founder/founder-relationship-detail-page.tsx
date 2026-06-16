@@ -103,7 +103,7 @@ export function FounderRelationshipDetailPage({ relationshipId }: FounderRelatio
       opportunityType: 'pilot',
       status: 'open',
       confidence: 'medium',
-      evidenceNeeded: ['Pilot proposal', 'Ofsted readiness summary'],
+      evidenceNeeded: ['Pilot proposal', 'Inspection evidence preparation summary'],
       nextStep: 'Prepare evidence pack and follow-up draft'
     })
     if (!result.ok) {

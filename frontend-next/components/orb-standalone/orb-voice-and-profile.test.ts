@@ -65,7 +65,7 @@ describe('adult profile personalisation', () => {
       { hour: 10 }
     )
     assert.match(welcome.heading, /Good morning, Tom/i)
-    assert.match(welcome.subline, /inspection readiness|safeguarding|recording/i)
+    assert.match(welcome.subline, /Inspection evidence preparation|safeguarding|recording/i)
   })
 
   it('welcome message stays calm for NVQ assessor role', () => {
@@ -78,7 +78,7 @@ describe('adult profile personalisation', () => {
       { hour: 20 }
     )
     assert.match(welcome.heading, /Good evening/i)
-    assert.match(welcome.subline, /inspection readiness|safeguarding|recording/i)
+    assert.match(welcome.subline, /Inspection evidence preparation|safeguarding|recording/i)
   })
 
   it('welcome message stays calm for support worker role', () => {
@@ -90,7 +90,7 @@ describe('adult profile personalisation', () => {
       { hour: 3 }
     )
     assert.match(welcome.heading, /Ready when you are/i)
-    assert.match(welcome.subline, /inspection readiness|safeguarding|recording/i)
+    assert.match(welcome.subline, /Inspection evidence preparation|safeguarding|recording/i)
   })
 
   it('initials from Tom Kelly are TK', () => {

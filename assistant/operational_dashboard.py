@@ -174,7 +174,7 @@ def build_operational_dashboard(
         ),
         _card(
             "inspection_readiness",
-            "Inspection readiness",
+            "Inspection evidence preparation",
             readiness.get("overall_level", "unknown"),
             f"Readiness: {readiness.get('overall_level', 'unknown')} ({readiness.get('overall_score', 0)}/100).",
             readiness,

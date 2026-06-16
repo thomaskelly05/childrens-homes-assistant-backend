@@ -86,7 +86,7 @@
           <p>Ask about risk, chronology, leadership decisions, staff communication, Ofsted evidence or reflective supervision.</p>
           <div class="ic-starter-grid">
             <button data-intel-starter="Analyse the key safeguarding risks in this situation: ">Analyse risk</button>
-            <button data-intel-starter="Help me prepare an Ofsted-ready evidence summary about: ">Ofsted evidence</button>
+            <button data-intel-starter="Help me prepare an Inspection evidence support evidence summary about: ">Ofsted evidence</button>
             <button data-intel-starter="Think through the leadership decision here: ">Leadership decision</button>
             <button data-intel-starter="Turn this into calm reflective supervision prompts: ">Reflective supervision</button>
           </div>

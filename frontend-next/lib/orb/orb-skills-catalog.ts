@@ -37,12 +37,12 @@ export const ORB_RESIDENTIAL_SKILLS: OrbSkillDefinition[] = [
     mode: 'Safeguarding Thinking'
   },
   {
-    id: 'ofsted-readiness',
-    title: 'Ofsted readiness',
+    id: 'inspection evidence preparation',
+    title: 'Inspection evidence preparation',
     description: 'Inspection themes, evidence and manager narrative.',
     category: 'inspection',
     categoryLabel: ORB_SKILL_CATEGORY_LABELS.inspection,
-    starterPrompt: 'Help me prepare for inspection readiness. I will share context about practice and records.\n\n',
+    starterPrompt: 'Help me prepare for Inspection evidence preparation. I will share context about practice and records.\n\n',
     mode: 'Ofsted Lens'
   },
   {

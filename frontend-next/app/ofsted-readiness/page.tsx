@@ -26,7 +26,7 @@ export default async function OfstedReadinessPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="Inspection readiness"
+        eyebrow="Inspection evidence preparation"
         title="SCCIF and regulatory evidence readiness"
         description="Fast live readiness view for SCCIF, Quality Standards, Children’s Homes Regulations, Reg 44, Reg 45, Reg 40 and Annex A. Full inspection pack generation is reserved for explicit manager review."
         action={<Link prefetch={false} href="/regulatory" className="rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-500/30">Open framework</Link>}

@@ -30,7 +30,7 @@ const workflows = {
   ],
   reg45: [
     ['Gather annual evidence', '/evidence', 'current'],
-    ['Identify gaps', '/ofsted-readiness', 'review'],
+    ['Identify gaps', '/inspection evidence preparation', 'review'],
     ['Generate draft with citations', '/reports', 'pending'],
     ['Manager review required', '/actions', 'pending']
   ],
@@ -44,7 +44,7 @@ const workflows = {
     ['Review overdue items', '/actions', 'current'],
     ['Check incidents and safeguarding', '/incidents', 'review'],
     ['Review Reg 44 actions', '/documents/regulatory', 'review'],
-    ['Open sign-off readiness', '/ofsted-readiness', 'pending']
+    ['Open sign-off readiness', '/inspection evidence preparation', 'pending']
   ]
 } as const
 

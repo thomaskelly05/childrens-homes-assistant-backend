@@ -513,7 +513,7 @@ function buildHomeModel(data = {}) {
   return {
     title: getScopeTitle(),
     subtitle:
-      "Home-level reporting view across operational outputs, quality summaries and inspection readiness.",
+      "Home-level reporting view across operational outputs, quality summaries and Inspection evidence preparation.",
     stats: [
       { label: "Home reports", value: reports.length, note: "Home-level outputs" },
       { label: "Quality outputs", value: quality.length, note: "Audit and QA records" },
@@ -533,7 +533,7 @@ function buildHomeModel(data = {}) {
       },
       {
         title: "Quality and inspection reports",
-        subtitle: "Quality and inspection-readiness outputs for this home.",
+        subtitle: "Quality and inspection evidence preparation outputs for this home.",
         body: renderReportRows([...quality, ...inspection], "No quality or inspection reports found.", 10),
       },
     ],
@@ -834,7 +834,7 @@ function getFallbackPayload(scope) {
           type: "report",
           record_type: "report",
           title: "Inspection preparation report",
-          summary: "Preview Ofsted readiness report showing evidence gaps and preparation actions.",
+          summary: "Preview Inspection evidence preparation report showing evidence gaps and preparation actions.",
           status: "completed",
           date: "2026-04-15T10:00:00Z",
         },

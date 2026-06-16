@@ -155,9 +155,9 @@ export function buildEvidenceSources(): EvidenceSourceBundle {
     if (ofsted.score > 0) {
       productEvidence.push(
         point(
-          'Ofsted readiness signals are connected.',
+          'Inspection evidence preparation signals are connected.',
           `Overall readiness score ${ofsted.score}%; ${ofsted.gaps.length} gaps identified.`,
-          'Ofsted Readiness Engine',
+          'Inspection evidence preparation Engine',
           'live-telemetry',
           'medium'
         )

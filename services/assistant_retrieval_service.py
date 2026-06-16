@@ -233,7 +233,7 @@ class AssistantRetrievalService:
 
         governance_terms = {
             "governance",
-            "inspection readiness",
+            "Inspection evidence preparation",
             "inspection",
             "sccif",
             "reg 44",

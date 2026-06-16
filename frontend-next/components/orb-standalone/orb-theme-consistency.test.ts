@@ -65,7 +65,7 @@ describe('ORB theme consistency across station panels', () => {
     const practice = read('components/orb-standalone/orb-practice-panels.tsx')
     assert.match(practice, /OrbStudioPage/)
     assert.match(practice, /OrbStudioSidebarPanel/)
-    assert.match(practice, /data-orb-inspection-readiness-panel/)
+    assert.match(practice, /data-orb-inspection evidence preparation-panel/)
     assert.match(practice, /data-orb-safeguarding-thinking-panel/)
     assert.match(practice, /data-orb-record-properly-panel/)
   })

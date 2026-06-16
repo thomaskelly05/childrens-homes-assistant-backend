@@ -331,7 +331,7 @@ def build_rows(cur) -> dict[str, list[dict[str, Any]]]:
             "id": 9702,
             "title": "Evidence check before inspection discussion",
             "task": "Review daily note, incident and safeguarding evidence links for Oak House.",
-            "description": "Inspection readiness action for the provider demo.",
+            "description": "Inspection evidence preparation action for the provider demo.",
             "status": "open",
             "priority": "medium",
             "home_id": DEMO_HOME_ID,
@@ -367,7 +367,7 @@ def build_rows(cur) -> dict[str, list[dict[str, Any]]]:
         {
             "id": evidence_id,
             "title": "Daily note shows child voice and manager follow-up",
-            "description": "Synthetic evidence item linking daily recording, safeguarding oversight and inspection readiness.",
+            "description": "Synthetic evidence item linking daily recording, safeguarding oversight and inspection evidence preparation.",
             "quality": "review_required",
             "evidence_type": "daily_record",
             "source_table": "daily_notes",

@@ -32,7 +32,7 @@ export const ORB_RESIDENTIAL_DEFAULT_PROJECTS: Array<{
   {
     id: 'project-inspection-prep',
     name: 'Inspection preparation',
-    description: 'Ofsted readiness, SCCIF and evidence'
+    description: 'Inspection evidence preparation, SCCIF and evidence'
   },
   {
     id: 'project-safeguarding',

@@ -790,7 +790,7 @@ function buildHeroNarrative({
     return "The quality view is showing live operational pressure. Focus should be on overdue compliance, open actions, manager review items and evidence that proves follow-through.";
   }
 
-  return "Quality oversight is not currently surfacing urgent pressure. Continue monitoring compliance, audit actions, Reg 44, Reg 45 and inspection readiness.";
+  return "Quality oversight is not currently surfacing urgent pressure. Continue monitoring compliance, audit actions, Reg 44, Reg 45 and Inspection evidence preparation.";
 }
 
 function renderWorkspace(payload) {
@@ -844,7 +844,7 @@ function renderWorkspace(payload) {
       <section class="quality-hero-card">
         <div class="quality-hero-main">
           <div class="eyebrow">Quality operating picture</div>
-          <h2>Audit, compliance, Reg 44, Reg 45 and inspection readiness</h2>
+          <h2>Audit, compliance, Reg 44, Reg 45 and Inspection evidence preparation</h2>
           <p>${safeText(heroNarrative)}</p>
         </div>
 
@@ -1078,8 +1078,8 @@ function renderWorkspace(payload) {
           ${
             latestInspection.length
               ? renderPanelSection(
-                  "Latest inspection readiness",
-                  "Most recent inspection-readiness score and narrative.",
+                  "Latest Inspection evidence preparation",
+                  "Most recent inspection evidence preparation score and narrative.",
                   renderCardList(latestInspection, "", "")
                 )
               : ""

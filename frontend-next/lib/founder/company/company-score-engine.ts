@@ -138,7 +138,7 @@ export function calculateDepartmentScores(kpiMap: CompanyKpiMap): DepartmentScor
             base,
             passRate !== null ? `Quality Lab pass rate ${passRate}%` : 'No Quality Lab run — score limited.',
             passRate === null ? ['No Quality Lab run recorded'] : critical > 0 ? [`${critical} critical proposals`] : [],
-            ['Run Quality Lab evaluation', 'Address Ofsted readiness gaps']
+            ['Run Quality Lab evaluation', 'Address Inspection evidence preparation gaps']
           )
         )
         break

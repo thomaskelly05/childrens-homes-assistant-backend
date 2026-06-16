@@ -1,4 +1,4 @@
-"""Shared ORB Residential quality layer — child-centred, therapeutic, Ofsted-ready.
+"""Shared ORB Residential quality layer — child-centred, therapeutic, Inspection evidence support.
 
 Reusable by Voice, Dictate, Chat, Write, Templates and Outputs.
 Wraps existing heuristic checks; does not replace professional judgement.
@@ -91,8 +91,8 @@ def build_missing_capture_prompts(
     return prompts[:12]
 
 
-def ofsted_readiness_summary(quality: OrbDictateQualityChecks, note_type: str) -> dict[str, Any]:
-    """Quiet Ofsted-readiness indicators — not a grade prediction."""
+def inspection_evidence_summary(quality: OrbDictateQualityChecks, note_type: str) -> dict[str, Any]:
+    """Quiet inspection evidence support indicators — not a grade prediction."""
     checks = quality.model_dump()
     strengths: list[str] = []
     gaps: list[str] = []
@@ -128,12 +128,18 @@ def ofsted_readiness_summary(quality: OrbDictateQualityChecks, note_type: str) -
     }
 
     return {
-        "ofsted_ready": len(gaps) == 0 and quality.recording_quality == "good",
+        "inspection_evidence_support": len(gaps) == 0 and quality.recording_quality == "good",
         "reg44_reg45_useful": reg_useful,
         "strengths": strengths,
         "gaps": gaps,
         "recording_quality": quality.recording_quality,
+        # Deprecated alias
+        "ofsted_ready": len(gaps) == 0 and quality.recording_quality == "good",
     }
+
+
+# Backward-compatible alias
+ofsted_readiness_summary = inspection_evidence_summary
 
 
 def run_residential_quality_check(
@@ -148,7 +154,7 @@ def run_residential_quality_check(
     body = (text or "").strip()
     quality = compute_quality_checks(body, note_type)
     missing_prompts = build_missing_capture_prompts(quality, note_type=note_type)
-    ofsted = ofsted_readiness_summary(quality, note_type)
+    inspection = inspection_evidence_summary(quality, note_type)
 
     record_type = resolve_record_type(
         record_type_id=record_type_id,
@@ -177,7 +183,10 @@ def run_residential_quality_check(
         "missing_prompts": missing_prompts,
         "incident_missing_checklist": incident_contract_prompts,
         "framework_gaps": framework_gaps,
-        "ofsted_readiness": ofsted,
+        "inspection_evidence": inspection,
+        "inspection_evidence_summary": inspection,
+        # Deprecated alias
+        "ofsted_readiness": inspection,
         "manager_oversight_prompt": manager_prompt,
         "shared_capture_prompts": list(SHARED_CAPTURE_PROMPTS),
         "child_centred": quality.child_voice in {"present", "good"},
@@ -192,7 +201,8 @@ orb_residential_quality_service = type(
     {
         "SHARED_CAPTURE_PROMPTS": SHARED_CAPTURE_PROMPTS,
         "build_missing_capture_prompts": staticmethod(build_missing_capture_prompts),
-        "ofsted_readiness_summary": staticmethod(ofsted_readiness_summary),
+        "inspection_evidence_summary": staticmethod(inspection_evidence_summary),
+        "ofsted_readiness_summary": staticmethod(inspection_evidence_summary),
         "run_residential_quality_check": staticmethod(run_residential_quality_check),
         "compute_quality_checks": staticmethod(compute_quality_checks),
     },

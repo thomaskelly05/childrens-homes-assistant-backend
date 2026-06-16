@@ -170,7 +170,7 @@ QUALITY_CHECK_KEYWORDS = {
     "improve this",
     "does this make sense",
     "is this defensible",
-    "inspection ready",
+    "inspection evidence preparation",
 }
 
 URGENT_KEYWORDS = {
@@ -1563,7 +1563,7 @@ def _build_practice_quality_context(
         checks.extend(
             [
                 "Identify missing evidence, missing actions, or weak wording clearly.",
-                "Strengthen defensibility and inspection-readiness where relevant.",
+                "Strengthen defensibility and inspection evidence preparation where relevant.",
             ]
         )
 

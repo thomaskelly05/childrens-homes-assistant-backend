@@ -86,7 +86,7 @@ export default async function StaffDetailPage({ params }: { params: Promise<{ id
           ) : <EmptyState title="No supervision returned" description="Create a draft supervision or submit staff journal evidence." />}
         </Card>
         <Card>
-          <SectionHeader eyebrow="Inspection readiness" title="Evidence, tasks and quality signals" />
+          <SectionHeader eyebrow="Inspection evidence preparation" title="Evidence, tasks and quality signals" />
           <div className="grid gap-3">
             {[
               ['Tasks', profile.tasks.length],

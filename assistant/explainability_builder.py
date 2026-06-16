@@ -322,7 +322,7 @@ def _derive_what_was_used(
     response_plan = runtime.get("response_plan")
     if isinstance(response_plan, dict):
         if _safe_bool(response_plan.get("use_inspection_lens")):
-            used.append("Inspection readiness lens")
+            used.append("Inspection evidence preparation lens")
         if _safe_bool(response_plan.get("use_leadership_lens")):
             used.append("Leadership lens")
         if _safe_bool(response_plan.get("use_therapeutic_lens")):
@@ -378,7 +378,7 @@ def _derive_lenses_used(
         lenses.append("Registered Manager")
 
     if mode in {"ofsted_view", "reg45"} or response_mode in {"ofsted_view", "reg45"}:
-        lenses.append("Ofsted / inspection readiness")
+        lenses.append("Ofsted / Inspection evidence preparation")
 
     if mode in {"reflection", "mentor", "supervision"} or response_mode == "reflection":
         lenses.append("Reflective practice")
@@ -392,7 +392,7 @@ def _derive_lenses_used(
     response_plan = runtime.get("response_plan")
     if isinstance(response_plan, dict):
         if _safe_bool(response_plan.get("use_ofsted_lens")) or _safe_bool(response_plan.get("use_inspection_lens")):
-            lenses.append("Ofsted / inspection readiness")
+            lenses.append("Ofsted / Inspection evidence preparation")
         if _safe_bool(response_plan.get("use_manager_lens")) or _safe_bool(response_plan.get("use_leadership_lens")):
             lenses.append("Management oversight")
         if _safe_bool(response_plan.get("use_ri_lens")):
@@ -403,7 +403,7 @@ def _derive_lenses_used(
             lenses.append("Therapeutic / relational practice")
 
     if _safe_bool(route.get("should_use_ofsted_lens")):
-        lenses.append("Ofsted / inspection readiness")
+        lenses.append("Ofsted / Inspection evidence preparation")
     if _safe_bool(route.get("should_use_manager_lens")):
         lenses.append("Management oversight")
     if _safe_bool(route.get("should_use_ri_lens")):

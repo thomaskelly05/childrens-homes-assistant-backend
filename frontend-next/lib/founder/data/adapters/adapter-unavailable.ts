@@ -87,6 +87,6 @@ export function getReadinessAdapterUnavailable(): FounderAdapterResult<Readiness
   return {
     data: emptyReadinessMetrics(),
     source: 'unavailable',
-    limitations: ['Live Ofsted readiness source not connected.']
+    limitations: ['Live Inspection evidence preparation source not connected.']
   }
 }

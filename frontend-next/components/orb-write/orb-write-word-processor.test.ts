@@ -65,7 +65,7 @@ describe('ORB Write word processor', () => {
     assert.match(ai, /ORB guidance/)
     assert.doesNotMatch(ai, /IndiCare Brain/)
     assert.match(actions, /Check safeguarding gaps/)
-    assert.match(actions, /Check Ofsted readiness/)
+    assert.match(actions, /Check Inspection evidence preparation/)
     assert.match(actions, /What am I missing/)
     assert.match(ai, /data-orb-write-ai-apply/)
   })

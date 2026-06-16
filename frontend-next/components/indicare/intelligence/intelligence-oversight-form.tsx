@@ -10,7 +10,7 @@ const REVIEW_TYPES = [
   { value: 'daily_brief_review', label: 'Daily brief review' },
   { value: 'safeguarding_review', label: 'Safeguarding review' },
   { value: 'evidence_gap_review', label: 'Evidence gap review' },
-  { value: 'ofsted_readiness_review', label: 'Ofsted readiness review' },
+  { value: 'ofsted_readiness_review', label: 'Inspection evidence preparation review' },
   { value: 'record_quality_review', label: 'Record quality review' },
   { value: 'staff_support_review', label: 'Staff support review' }
 ]

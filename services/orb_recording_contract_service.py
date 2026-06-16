@@ -181,7 +181,7 @@ def build_no_invented_facts_contract_block(*, record_kind: str = "general") -> s
       "NO INVENTED FACTS RECORDING CONTRACT",
       "",
       "For records, incident reports, safeguarding notes, daily logs, manager oversight notes, "
-      "chronologies and Ofsted-ready outputs:",
+      "chronologies and Inspection evidence support outputs:",
       "",
       "Distinguish clearly:",
       "• known facts — only what the adult provided",

@@ -1,5 +1,5 @@
 /**
- * Ofsted Readiness Engine — calculates inspection readiness scores and gaps.
+ * Inspection evidence preparation Engine — calculates Inspection evidence preparation scores and gaps.
  * Designed to become the platform-wide readiness model for IndiCare.
  */
 

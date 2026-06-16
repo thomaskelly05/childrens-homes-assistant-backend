@@ -19,7 +19,7 @@
   root.innerHTML=`
     <div class="ic-page-head">
       <div>
-        <h1>Inspection Readiness</h1>
+        <h1>Inspection evidence preparation</h1>
         <p>Live SCCIF evidence and judgement support</p>
       </div>
       <div class="ofsted-score">

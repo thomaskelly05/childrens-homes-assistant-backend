@@ -44,8 +44,8 @@ export function OrbInspectionReadinessPanel({
   return (
     <OrbStandalonePanelShell
       open={open}
-      title="Inspection Readiness"
-      subtitle="Explore evidence, gaps and inspection readiness without making regulatory judgements."
+      title="Inspection evidence preparation"
+      subtitle="Explore evidence, gaps and Inspection evidence preparation without making regulatory judgements."
       panelId="inspection_readiness"
       {...orbStationShellProps(residentialSurface, 'wide')}
       onClose={onClose}
@@ -54,7 +54,7 @@ export function OrbInspectionReadinessPanel({
         studioId="inspection_readiness"
         trustStrip={
           <span data-orb-inspection-disclaimer>
-            ORB supports inspection readiness. It does not make regulatory judgements.
+            ORB supports Inspection evidence preparation. It does not make regulatory judgements.
           </span>
         }
         trustTone="safety"
@@ -93,7 +93,7 @@ export function OrbInspectionReadinessPanel({
           </OrbStudioSidebarPanel>
         }
       >
-        <div data-orb-inspection-readiness-panel data-orb-premium-page="inspection_readiness">
+        <div data-orb-inspection evidence preparation-panel data-orb-premium-page="inspection_readiness">
           <OrbStudioComposerCard label="Paste evidence / notes">
             <OrbPremiumTextarea
               value={evidence}

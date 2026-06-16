@@ -399,7 +399,7 @@ function normaliseInspectionReadinessItems(data = {}) {
   return toArray(data.items, [data.inspection, data.readiness, data.records]).map((item) => ({
     ...item,
     id: item.id ?? item.record_id ?? item.source_id ?? null,
-    title: item.title || item.requirement || "Inspection readiness item",
+    title: item.title || item.requirement || "Inspection evidence preparation item",
     category: item.category || item.area || "",
     review_date: item.review_date || item.due_date || null,
     due_date: item.due_date || item.review_date || null,
@@ -408,7 +408,7 @@ function normaliseInspectionReadinessItems(data = {}) {
       item.summary ||
       item.notes ||
       item.requirement ||
-      "Inspection readiness item.",
+      "Inspection evidence preparation item.",
     record_type: item.record_type || "inspection_readiness",
     updated_at: item.updated_at || item.created_at || null,
     created_at: item.created_at || null,
@@ -899,7 +899,7 @@ function renderComplianceDashboardHtml({
           <p>
             ${safeText(
               inspectionHeader?.top_concerns ||
-                "A live compliance view across workforce, children’s files, statutory paperwork and inspection readiness."
+                "A live compliance view across workforce, children’s files, statutory paperwork and Inspection evidence preparation."
             )}
           </p>
           ${
@@ -1112,12 +1112,12 @@ function renderComplianceDashboardHtml({
 
           <section class="overview-side-card">
             <div class="overview-section-head">
-              <h3>Inspection readiness</h3>
+              <h3>Inspection evidence preparation</h3>
               <p>What an inspector or RI would likely want to see next.</p>
             </div>
 
             ${renderRows(inspectionReadiness, {
-              emptyMessage: "No inspection readiness issues are currently flagged.",
+              emptyMessage: "No Inspection evidence preparation issues are currently flagged.",
               titleKey: "title",
               summaryKey: "summary",
               recordType: "inspection_readiness",
@@ -1198,7 +1198,7 @@ function renderLoadingState() {
 
   updateWorkspaceSummaryStrip({
     today: "Loading compliance view",
-    nextEvent: "Checking inspection readiness",
+    nextEvent: "Checking Inspection evidence preparation",
     lastRecord: "Loading latest compliance record",
     openActions: "Loading actions",
   });
@@ -1480,7 +1480,7 @@ async function fetchComplianceDataset(homeId) {
     safeGet(`/homes/${homeId}/inductions`),
     safeGet(`/homes/${homeId}/child-compliance`),
     safeGet(`/homes/${homeId}/documents`),
-    safeGet(`/homes/${homeId}/inspection-readiness`),
+    safeGet(`/homes/${homeId}/inspection evidence preparation`),
   ];
 
   const [

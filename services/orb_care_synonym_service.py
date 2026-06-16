@@ -82,14 +82,14 @@ CARE_CONCEPTS: dict[str, dict[str, Any]] = {
         ],
     },
     "ofsted_readiness": {
-        "canonical": "Ofsted readiness",
+        "canonical": "Inspection evidence preparation",
         "terms": [
             "inspection evidence",
             "sccif",
             "quality standards",
             "impact",
             "progress from starting points",
-            "ofsted readiness",
+            "Inspection evidence preparation",
             "inspection prep",
             "ofsted",
         ],

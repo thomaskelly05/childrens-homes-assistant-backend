@@ -94,7 +94,7 @@ export function buildCompanyCadences(kpiMap: CompanyKpiMap): CompanyOperatingCad
         'Product progress and usage',
         'Relationship pipeline',
         'Evidence readiness',
-        'Quality and Ofsted readiness',
+        'Quality and Inspection evidence preparation',
         'Key risks and runway/forecast (labelled assumptions)',
         'Decisions required from Thomas'
       ],

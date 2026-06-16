@@ -105,7 +105,7 @@ function renderReports() {
       ${table(["Report", "Scope", "Status", "Updated", "Action"], moduleRows.reports)}
     </section>
     <section class="sp-two-col">
-      <section class="sp-card"><h2>Inspection readiness</h2>${mini([["Chronology", "Current and linked to records", "Ready"], ["Safeguarding", "One open concern requires review", "Action"], ["Documents", "Four records awaiting review", "Action"]])}</section>
+      <section class="sp-card"><h2>Inspection evidence preparation</h2>${mini([["Chronology", "Current and linked to records", "Ready"], ["Safeguarding", "One open concern requires review", "Action"], ["Documents", "Four records awaiting review", "Action"]])}</section>
       <section class="sp-card"><h2>Monthly summary</h2><p>Reports will later pull from live backend data. For now this gives managers a clear operating destination inside the shell.</p></section>
     </section>`;
 }

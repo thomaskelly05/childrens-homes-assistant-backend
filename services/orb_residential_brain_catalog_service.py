@@ -156,7 +156,7 @@ class OrbResidentialBrainCatalogService:
                     "A good record shows what happened, what adults did, what the child communicated and what changed afterwards.",
                     "Avoid judgemental labels such as attention seeking, manipulative, naughty or non-compliant.",
                     "Child voice can be words, choices, presentation, behaviour, wishes, feelings or observed communication.",
-                    "Inspection-ready evidence shows impact, follow-up and manager oversight where needed.",
+                    "Inspection evidence support shows impact, follow-up and manager oversight where needed.",
                 ),
                 answer_lens=("Rewrite with factual sequence.", "Add child voice and adult response.", "Add outcome and next steps."),
                 evidence_questions=("What did the child say or show?", "What did staff do?", "What changed?", "What follow-up is needed?"),
@@ -178,7 +178,7 @@ class OrbResidentialBrainCatalogService:
             ResidentialBrainDomain(
                 id="ofsted_sccif_evidence",
                 title="Ofsted, SCCIF and evidence thinking",
-                purpose="Help adults think about evidence, lived experience, leadership impact and inspection readiness.",
+                purpose="Help adults think about evidence, lived experience, leadership impact and Inspection evidence preparation.",
                 triggers=("ofsted", "sccif", "inspection", "reg 44", "reg 45", "quality standard", "evidence", "inspector"),
                 adult_needs_to_know=(
                     "Inspectors look for the lived experience and progress of children, help and protection, and leadership impact.",

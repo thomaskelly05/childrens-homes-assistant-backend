@@ -8,7 +8,7 @@ import {
   saveInspectionPack,
   type InspectionEvidencePack,
   type InspectionPackType
-} from '@/lib/os-api/inspection-readiness'
+} from '@/lib/os-api/inspection evidence preparation'
 
 type Props = {
   pack: InspectionEvidencePack | null

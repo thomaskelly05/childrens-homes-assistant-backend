@@ -41,7 +41,7 @@ OVERDUE_REVIEW_DAYS = 5
 LIMITATIONS = [
     "Dashboard counts use draft metadata and review events — not formal chronology records.",
     "Formal record submission may still be draft-workspace only for some form types.",
-    "This is decision-support for managers; it does not grade inspection readiness or legal completeness.",
+    "This is decision-support for managers; it does not grade Inspection evidence preparation or legal completeness.",
     "High-risk structured field values are not shown in summary cards.",
 ]
 

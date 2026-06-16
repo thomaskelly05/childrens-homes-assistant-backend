@@ -55,7 +55,7 @@ export function OrbFrontDoor() {
               <br />
               Review practice.
               <br />
-              Stay inspection ready.
+              support inspection evidence preparation.
             </p>
 
             <div className="mt-7 flex flex-col gap-3 sm:flex-row">

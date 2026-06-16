@@ -18,7 +18,7 @@ describe('ORB Documents converged lenses', () => {
     assert.match(registry, /RESIDENTIAL_FIRST_CLASS_LENSES/)
     assert.match(lenses, /Analyse Reg 44 report/)
     assert.match(lenses, /Create easy-read summary/)
-    assert.match(lenses, /Inspection readiness/)
+    assert.match(lenses, /Inspection evidence preparation/)
   })
 
   it('documents panel renders lenses and cross-room actions', () => {

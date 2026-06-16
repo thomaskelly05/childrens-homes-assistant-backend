@@ -148,7 +148,7 @@ def care_hub_provider(
         return provider_command_centre_service.build(conn, current_user=user, limit=limit)
 
 
-@router.get("/inspection-readiness")
+@router.get("/inspection evidence preparation")
 def care_hub_inspection_readiness(
     params: dict[str, Any] = Depends(_scope_params),
     _current_user=Depends(get_current_user),

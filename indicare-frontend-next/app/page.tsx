@@ -34,7 +34,7 @@ export default function HomePage() {
               The first place adults go when they need help thinking, writing or preparing.
             </h1>
             <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-600">
-              ORB Residential helps adults write better records, strengthen safeguarding, create templates, review incidents and stay inspection ready — without becoming another care management system.
+              ORB Residential helps adults write better records, strengthen safeguarding, create templates, review incidents and support inspection evidence preparation — without becoming another care management system.
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:max-w-md">
               <Link href="/orb/setup" className="rounded-2xl bg-slate-950 px-5 py-4 text-center text-sm font-black text-white shadow-2xl shadow-slate-300 transition hover:-translate-y-0.5 hover:bg-slate-800">

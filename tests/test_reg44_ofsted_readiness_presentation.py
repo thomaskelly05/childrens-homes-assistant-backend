@@ -15,7 +15,7 @@ SCCIF = Path(__file__).resolve().parents[1] / "frontend-next" / "app" / "intelli
 
 def test_inspection_readiness_safe_copy():
     text = INSPECTION.read_text(encoding="utf-8")
-    assert "Inspection readiness" in text
+    assert "Inspection evidence preparation" in text
     assert "Gaps to review" in text
     assert "guaranteed compliance" in text.lower() or "do not claim" in text.lower()
 

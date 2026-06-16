@@ -10,7 +10,7 @@ class ProviderWideCognitionService:
     - cross-home drift
     - repeated safeguarding themes
     - workforce fragility
-    - inspection readiness
+    - Inspection evidence preparation
     - provider learning
     """
 

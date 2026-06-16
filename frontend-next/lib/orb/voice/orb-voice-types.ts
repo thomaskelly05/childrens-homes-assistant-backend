@@ -74,7 +74,7 @@ export const ORB_VOICE_MODES: Array<{ id: OrbVoiceModeId; label: string; hint: s
   },
   {
     id: 'inspection_readiness',
-    label: 'Inspection readiness',
+    label: 'Inspection evidence preparation',
     hint: 'Ofsted, SCCIF, and quality standards preparation.'
   },
   {

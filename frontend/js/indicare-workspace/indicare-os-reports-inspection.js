@@ -196,7 +196,7 @@ function handleReportsClicks(event) {
   }
   if (event.target.closest?.("[data-open-ai-management-report]")) {
     event.preventDefault();
-    openAssistantWithPrompt("Draft a management report pack from the current Reports page. Include safeguarding, chronology, workforce, overdue records, actions and inspection readiness.");
+    openAssistantWithPrompt("Draft a management report pack from the current Reports page. Include safeguarding, chronology, workforce, overdue records, actions and Inspection evidence preparation.");
     return;
   }
   const typed = event.target.closest?.("[data-open-ai-report-type]");

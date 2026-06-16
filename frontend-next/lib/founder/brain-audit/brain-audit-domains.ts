@@ -84,7 +84,7 @@ export const BRAIN_AUDIT_DOMAIN_DEFINITIONS: BrainAuditAreaDefinition[] = [
   area('training_needs', 'Training needs', 'management_oversight', ['training needs', 'cpd']),
   area('patterns_trends', 'Patterns and trends', 'management_oversight', ['pattern', 'trend analysis']),
   area('audit_evidence', 'Audit evidence', 'management_oversight', ['audit evidence', 'audit trail']),
-  area('ofsted_readiness', 'Ofsted readiness', 'management_oversight', ['ofsted', 'sccif', 'inspection']),
+  area('ofsted_readiness', 'Inspection evidence preparation', 'management_oversight', ['ofsted', 'sccif', 'inspection']),
   area('sccif_evidence', 'SCCIF evidence', 'management_oversight', ['sccif', 'social care common inspection']),
   area('safer_recruitment', 'Safer recruitment awareness', 'management_oversight', ['safer recruitment', 'dbs']),
   area('medication_governance', 'Medication governance', 'management_oversight', ['medication governance', 'controlled drug']),

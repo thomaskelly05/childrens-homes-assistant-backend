@@ -602,3 +602,22 @@ def test_build_traceability_report_section_has_warning() -> None:
     section = build_traceability_report_section()
     assert section.get("warning")
     assert section.get("framework_claim")
+
+
+def test_variants1000_report_includes_traceability_section(tmp_path: Path) -> None:
+    report = _run_runner("variants1000", tmp_path)
+    assert "traceability" in report
+    trace = report["traceability"]
+    assert trace.get("rubric_external_coverage_percent") is not None
+    assert trace.get("scenario_families_mapped") is not None
+    assert "internal quality indicator" in str(report.get("disclaimer", "")).lower()
+
+
+def test_quality_lab_summary_includes_traceability_fields() -> None:
+    path = ROOT / "reports" / "orb_quality_lab_summary.json"
+    if not path.is_file():
+        pytest.skip("quality lab summary not generated yet")
+    summary = json.loads(path.read_text(encoding="utf-8"))
+    assert "traceability" in summary
+    assert summary.get("rubric_external_coverage_percent") is not None
+    assert "ofsted_wording_audit" in summary or "traceability_warning" in summary

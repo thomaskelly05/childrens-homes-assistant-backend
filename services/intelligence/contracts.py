@@ -157,7 +157,7 @@ OPERATIONAL_DOMAIN_CONTRACTS: tuple[OperationalDomainContract, ...] = (
     OperationalDomainContract(
         domain="inspection",
         operating_system="Governance & Inspection OS",
-        primary_shell="Next.js /ofsted-readiness",
+        primary_shell="Next.js /inspection evidence preparation",
         strategic_status="primary",
         workflow="partial",
         chronology="partial",

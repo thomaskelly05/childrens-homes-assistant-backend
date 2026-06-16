@@ -505,11 +505,11 @@ class OrbStandaloneBrainService:
         if "allegation" in text or "lado" in text:
             return "Allegation or staff-conduct safeguarding reflection in a children's home context."
         if is_residential_incident_scenario(text):
-            return "Residential behaviour/recording scenario — therapeutic, person-centred, Ofsted-ready support."
+            return "Residential behaviour/recording scenario — therapeutic, person-centred, Inspection evidence support support."
         if "recording_quality_brain" in brains:
             return "Recording quality and professional wording support."
         if "ofsted_brain" in brains:
-            return "Ofsted/SCCIF evidence and inspection-readiness reflection."
+            return "Ofsted/SCCIF evidence and inspection evidence preparation reflection."
         if "therapeutic_brain" in brains:
             return "Therapeutic practice and behaviour-as-communication reflection."
         if "safeguarding_brain" in brains:

@@ -78,11 +78,11 @@ export const ORB_TEMPLATE_WRITING_STYLE_CHIPS: OrbTemplateWritingStyle[] = [
   },
   {
     id: 'ofsted_ready',
-    label: 'Ofsted-ready',
-    chipLabel: 'Ofsted-ready',
-    description: 'Inspection-ready without regulatory judgements',
+    label: 'Inspection evidence support',
+    chipLabel: 'Inspection evidence support',
+    description: 'inspection evidence preparation without regulatory judgements',
     editMode: 'ofsted_ready',
-    instruction: 'Review for inspection readiness without making regulatory judgements',
+    instruction: 'Review for Inspection evidence preparation without making regulatory judgements',
     surfaces: ['templates', 'orb_write']
   },
   {
@@ -108,8 +108,8 @@ export const ORB_WRITE_WRITING_STYLE_OPTIONS: OrbTemplateWritingStyle[] = [
   ...ORB_TEMPLATE_WRITING_STYLE_CHIPS.filter((s) => s.id !== 'concise'),
   {
     id: 'inspection_ready',
-    label: 'Inspection-ready',
-    chipLabel: 'Inspection-ready',
+    label: 'inspection evidence preparation',
+    chipLabel: 'inspection evidence preparation',
     description: 'Evidence-focused, impact clear, audit-ready structure',
     editMode: 'ofsted_ready',
     instruction: 'Polish for inspection evidence — impact on child clear, structure audit-ready',

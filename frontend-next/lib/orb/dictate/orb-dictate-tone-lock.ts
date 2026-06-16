@@ -18,7 +18,7 @@ export const ORB_DICTATE_TONE_LABELS: Record<OrbDictateToneLock, string> = {
   reflective: 'Reflective',
   professional: 'Professional',
   concise: 'Concise',
-  ofsted_ready: 'Ofsted-ready',
+  ofsted_ready: 'Inspection evidence support',
   safeguarding_aware: 'Safeguarding-aware',
   parent_friendly: 'Parent-friendly',
   ri_summary: 'RI summary'

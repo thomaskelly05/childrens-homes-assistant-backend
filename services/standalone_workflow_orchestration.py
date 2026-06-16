@@ -62,7 +62,7 @@ WORKFLOWS: dict[str, WorkflowDefinition] = {
         title="Generate inspection summary",
         source="workspace",
         target="inspection",
-        prompt="Create an inspection-ready evidence summary from the current workspace context, chronology, safeguarding themes and documents.",
+        prompt="Create an inspection evidence preparation summary from the current workspace context, chronology, safeguarding themes and documents.",
         required_feature="inspection_summaries",
     ),
 }

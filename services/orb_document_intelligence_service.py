@@ -101,7 +101,7 @@ LENS_REGISTRY: dict[str, dict[str, Any]] = {
         "id": "ofsted",
         "label": "Ofsted lens",
         "description": "Child experience, evidence, leadership — no grade prediction.",
-        "residential_purpose": "Inspection-ready evidence thinking.",
+        "residential_purpose": "Inspection evidence support thinking.",
         "output_structure": "SCCIF-aligned sections",
         "safety_level": "medium",
         "recommended_vaults": ("Ofsted/SCCIF Vault",),

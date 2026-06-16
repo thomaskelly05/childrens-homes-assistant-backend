@@ -93,7 +93,7 @@ export function FounderActionsPage() {
           <FounderSectionCard
             eyebrow="Actions"
             title="No live founder actions yet"
-            description="Actions will appear once live usage, Ofsted readiness, billing or ORB analytics data is connected."
+            description="Actions will appear once live usage, Inspection evidence preparation, billing or ORB analytics data is connected."
           >
             <p className="text-sm leading-7 text-slate-400">
               Connect live data sources on the founder dashboard. Founder actions are generated only from connected live intelligence — never from mock or estimated figures.

@@ -315,7 +315,7 @@
     panel.className = "ic-card ic-product-upgrade-card";
     panel.innerHTML = `
       <h2>Document intelligence</h2>
-      <p>Live professional review for child-centred, factual and inspection-ready documents.</p>
+      <p>Live professional review for child-centred, factual and inspection evidence preparation documents.</p>
       <div id="docsQualityScore" class="ic-doc-score"><strong>0%</strong><span>Start writing to review this document.</span></div>
       <div id="docsQualityChecks" class="ic-doc-checks"></div>
       <div class="ic-product-actions">

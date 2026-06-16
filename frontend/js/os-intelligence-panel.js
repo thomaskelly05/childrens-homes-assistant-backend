@@ -69,7 +69,7 @@
     const scoreNode = byId("ypOSIntelScore");
     if (scoreNode) scoreNode.textContent = score ? `${score}%` : "--";
     const status = byId("ypOSIntelStatus");
-    if (status) status.textContent = score ? `Inspection readiness: ${score}% - ${text(readiness.status, "review needed")}` : "Inspection readiness needs review.";
+    if (status) status.textContent = score ? `Inspection evidence preparation: ${score}% - ${text(readiness.status, "review needed")}` : "Inspection evidence preparation needs review.";
 
     const voice = data.child_voice || {};
     const safeguarding = data.safeguarding || {};

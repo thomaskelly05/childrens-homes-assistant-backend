@@ -62,7 +62,7 @@ const CONVERGENCE_ROUTES: Record<OrbDeprecatedPrimaryNavPanelId, OrbConvergenceR
   inspection_readiness: {
     destination: { kind: 'station', station: 'documents' },
     message:
-      'Inspection Readiness has moved into Documents & Guidance and Chat. Use the Ofsted lens or ask ORB in Chat.',
+      'Inspection evidence preparation has moved into Documents & Guidance and Chat. Use the Ofsted lens or ask ORB in Chat.',
     documentLens: 'ofsted'
   },
   safeguarding_thinking: {

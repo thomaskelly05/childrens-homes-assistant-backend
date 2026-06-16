@@ -242,9 +242,9 @@
         <div class="ic-provider-hero">
           <span class="ic-surface-pill">Enterprise intelligence</span>
           <h2>Provider overview</h2>
-          <p>Provider-wide safeguarding, inspection readiness, chronology quality and operational follow-through in one calm AI command centre.</p>
+          <p>Provider-wide safeguarding, Inspection evidence preparation, chronology quality and operational follow-through in one calm AI command centre.</p>
           <div class="ic-provider-actions">
-            <button type="button" data-provider-prompt="Create an executive briefing for provider leadership covering safeguarding, chronology quality, inspection readiness and unresolved actions.">Generate executive briefing</button>
+            <button type="button" data-provider-prompt="Create an executive briefing for provider leadership covering safeguarding, chronology quality, Inspection evidence preparation and unresolved actions.">Generate executive briefing</button>
             <button type="button" data-provider-prompt="Identify the highest priority operational risks across homes and recommend next actions.">Prioritise risks</button>
             <button type="button" data-workflow-run="workspace_to_inspection_summary">Inspection summary</button>
           </div>
@@ -278,7 +278,7 @@
             <div class="ic-provider-stream">
               <div class="ic-insight-item"><strong>Chronology gap detected</strong><p>Home B has weaker chronology completeness and should be reviewed before inspection preparation.</p></div>
               <div class="ic-insight-item"><strong>Safeguarding oversight</strong><p>Leadership should check whether all open safeguarding actions have management oversight recorded.</p></div>
-              <div class="ic-insight-item"><strong>Inspection readiness</strong><p>Provider average is stable, but one home is below the preferred confidence threshold.</p></div>
+              <div class="ic-insight-item"><strong>Inspection evidence preparation</strong><p>Provider average is stable, but one home is below the preferred confidence threshold.</p></div>
             </div>
           </aside>
         </section>

@@ -24,7 +24,7 @@ class InspectionOSService:
     """SCCIF/Quality Standards operating layer.
 
     This is intentionally additive and tolerant of incomplete schemas. It turns
-    existing records into inspection-ready views: responsibility, shift safety,
+    existing records into inspection evidence preparation views: responsibility, shift safety,
     leadership oversight, child voice, consistency, competency, safeguarding
     narrative and enforcement gates.
     """

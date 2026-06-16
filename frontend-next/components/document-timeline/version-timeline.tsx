@@ -6,7 +6,7 @@ export function DocumentVersionTimeline() {
       <ul className="mt-4 space-y-3 text-sm text-slate-600">
         <li>Versions are created before meaningful saves.</li>
         <li>Autosaves are recoverable drafts, not hidden final records.</li>
-        <li>Review and sign-off events remain visible for inspection readiness.</li>
+        <li>Review and sign-off events remain visible for Inspection evidence preparation.</li>
       </ul>
     </aside>
   )

@@ -44,7 +44,7 @@ const FOUNDER_LIVE_TARGETS: Record<FounderDataSourceKey, string | null> = {
   featureEvents: null,
   billing: 'orb-billing-usage',
   aiUsage: 'orb-billing-usage',
-  readiness: 'inspection-readiness'
+  readiness: 'inspection evidence preparation'
 }
 
 const AVAILABILITY_FIELDS: Record<FounderDataSourceKey, keyof Omit<FounderDataSourceAvailability, 'sourceMode'>> = {

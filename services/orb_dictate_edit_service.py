@@ -32,7 +32,8 @@ logger = logging.getLogger("indicare.orb_dictate_edit")
 EDIT_MODE_LABELS: dict[str, str] = {
     "spelling_grammar": "Spelling & grammar",
     "therapeutic_rewrite": "Therapeutic rewrite",
-    "ofsted_ready": "Ofsted-ready",
+    "ofsted_ready": "Inspection evidence support",
+    "inspection_evidence_support": "Inspection evidence support",
     "factual_tone": "Factual tone",
     "professional_language": "Professional language",
     "child_voice": "Child voice",
@@ -66,7 +67,11 @@ MODE_INSTRUCTIONS: dict[str, str] = {
         "Add prompts for child voice where missing — use placeholders, not invented quotes."
     ),
     "ofsted_ready": (
-        "Improve evidence structure for inspection preparation. Add prompts for impact, oversight and child voice. "
+        "Improve evidence structure for inspection evidence preparation. Add prompts for impact, oversight and child voice. "
+        "Do not claim evidence exists if not in the original. Use [evidence needed] placeholders."
+    ),
+    "inspection_evidence_support": (
+        "Improve evidence structure for inspection evidence preparation. Add prompts for impact, oversight and child voice. "
         "Do not claim evidence exists if not in the original. Use [evidence needed] placeholders."
     ),
     "factual_tone": (
@@ -149,7 +154,8 @@ def _resolve_mode(request: OrbDictateEditRequest) -> str:
         ("spelling", "spelling_grammar"),
         ("grammar", "spelling_grammar"),
         ("therapeutic", "therapeutic_rewrite"),
-        ("ofsted", "ofsted_ready"),
+        ("ofsted", "inspection_evidence_support"),
+        ("inspection evidence", "inspection_evidence_support"),
         ("sccif", "sccif_lens"),
         ("factual", "factual_tone"),
         ("child voice", "child_voice"),
@@ -191,7 +197,7 @@ def _fallback_edit(request: OrbDictateEditRequest, mode: str) -> OrbDictateEditR
             )
         revised = f"{text}\n\n## Follow-up questions for staff\n\n{follow_up}\n"
         change_summary.append("Added follow-up questions section.")
-    elif mode in {"ofsted_ready", "sccif_lens"}:
+    elif mode in {"ofsted_ready", "inspection_evidence_support", "sccif_lens"}:
         revised = (
             f"{text}\n\n## Inspection evidence prompts\n\n"
             "- [Child impact — describe observable impact on the child]\n"

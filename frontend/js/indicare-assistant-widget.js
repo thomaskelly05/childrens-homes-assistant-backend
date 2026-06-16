@@ -67,7 +67,7 @@
       recordType: safe.recordType || null,
       position: safe.position || "bottom-right",
       title: safe.title || "IndiCare Assistant",
-      subtitle: safe.subtitle || "Ofsted-ready residential care support",
+      subtitle: safe.subtitle || "Inspection evidence support residential care support",
       buttonLabel: safe.buttonLabel || "Ask IndiCare",
       theme: safe.theme || "light",
       defaultMode: safe.defaultMode || "guidance",

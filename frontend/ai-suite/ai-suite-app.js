@@ -32,7 +32,7 @@
       placeholder: 'Ask Docs to draft, rewrite or quality-check',
       starterTitle: 'What document are we working on?',
       starterSubtitle: 'Draft, rewrite, structure and quality-check residential children\'s home documents with AI support.',
-      instruction: 'You are IndiCare Docs, an AI-native word processor for residential children\'s homes. Help draft, rewrite, improve, structure and quality-check professional documents. Keep records factual, child-centred, non-judgemental and inspection-ready.'
+      instruction: 'You are IndiCare Docs, an AI-native word processor for residential children\'s homes. Help draft, rewrite, improve, structure and quality-check professional documents. Keep records factual, child-centred, non-judgemental and inspection evidence preparation.'
     },
     notes: {
       title: 'I-Notes',

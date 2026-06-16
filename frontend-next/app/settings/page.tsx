@@ -26,7 +26,7 @@ export default async function SettingsPage() {
     ['External AI processing', governance.external_ai_enabled ?? governance.externalAIEnabled],
     ['Redaction mode', governance.redaction_mode ?? governance.redactionMode],
     ['Metadata extraction', governance.metadata_extraction_enabled ?? governance.metadataExtractionEnabled],
-    ['Inspection readiness', governance.inspection_readiness_enabled ?? governance.inspectionReadinessEnabled],
+    ['Inspection evidence preparation', governance.inspection_readiness_enabled ?? governance.inspectionReadinessEnabled],
     ['Allowed assistant features', governance.allowed_ai_features ?? governance.allowedAIFeatures],
     ['Restricted features', governance.restricted_feature_prefixes ?? governance.restrictedFeaturePrefixes],
     ['Streaming', governance.streaming_enabled ?? governance.streamingEnabled],

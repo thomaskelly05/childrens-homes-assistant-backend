@@ -69,7 +69,7 @@ export default function OSCommandPage() {
           <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">IndiCare OS</p>
           <h1 className="text-3xl font-bold">OS Command</h1>
           <p className="mt-1 max-w-3xl text-sm text-slate-600">
-            One command centre for safeguarding, risk, compliance, manager review and Ofsted readiness.
+            One command centre for safeguarding, risk, compliance, manager review and Inspection evidence preparation.
           </p>
         </div>
 

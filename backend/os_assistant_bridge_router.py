@@ -303,7 +303,7 @@ def make_answer(payload: OSAssistantAskRequest, context: dict[str, Any]) -> tupl
     suggested = [
         'What should be carried into handover?',
         'Which records need manager review?',
-        'Prepare an Ofsted-ready evidence summary.',
+        'Prepare an inspection evidence support summary.',
         'What safeguarding patterns are emerging?',
         'What follow-up should be recorded next?',
     ]

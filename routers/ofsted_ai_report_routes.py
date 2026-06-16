@@ -354,7 +354,7 @@ def generate_ofsted_ai_report(
 
         report = {
             "generated_at": datetime.utcnow().isoformat(),
-            "report_type": "OFSTED Inspection Ready Young Person Report",
+            "report_type": "OFSTED inspection evidence preparation Young Person Report",
             "young_person_id": young_person_id,
             "overview": overview_section,
             "monthly_review": monthly_review_section,
