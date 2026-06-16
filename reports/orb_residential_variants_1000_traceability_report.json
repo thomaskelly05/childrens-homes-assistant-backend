@@ -1,6 +1,6 @@
 {
-  "run_timestamp": "2026-06-16T11:47:26.692183+00:00",
-  "commit_sha": "b4418e483a966d59c52c538fcd6b6f54e6096ad5",
+  "run_timestamp": "2026-06-16T12:05:34.613366+00:00",
+  "commit_sha": "15ec50979c1543bcb2347254964fd2e2588872e7",
   "scenario_set": "variants1000",
   "scenario_count": 1000,
   "average_overall_score": 4.14,
@@ -14,7 +14,7 @@
     "adult_response_and_support": 4.0,
     "outcome_and_follow_up": 4.0,
     "safeguarding_awareness": 4.0,
-    "management_oversight": 3.99,
+    "management_oversight": 4.0,
     "recording_usefulness": 4.0,
     "professional_tone": 4.0,
     "privacy_minimisation": 5.0,
@@ -24,10 +24,6 @@
     {
       "record_type": "daily_record",
       "average_score": 4.13
-    },
-    {
-      "record_type": "incident_report",
-      "average_score": 4.14
     },
     {
       "record_type": "behaviour_reflection",
@@ -40,6 +36,10 @@
     {
       "record_type": "key_work_session",
       "average_score": 4.14
+    },
+    {
+      "record_type": "family_contact_record",
+      "average_score": 4.15
     }
   ],
   "highest_risk_scenario_families": [
@@ -54,11 +54,6 @@
       "count": 100
     },
     {
-      "scenario_family": "incident_reflection",
-      "average_score": 4.14,
-      "count": 100
-    },
-    {
       "scenario_family": "safeguarding",
       "average_score": 4.14,
       "count": 100
@@ -66,6 +61,11 @@
     {
       "scenario_family": "key_work",
       "average_score": 4.14,
+      "count": 100
+    },
+    {
+      "scenario_family": "incident_reflection",
+      "average_score": 4.15,
       "count": 100
     },
     {
@@ -96,17 +96,11 @@
   ],
   "most_common_missing_elements": [
     {
-      "element": "management oversight",
-      "count": 5
-    },
-    {
       "element": "escalation/pathway",
       "count": 1
     }
   ],
   "recommended_improvement_targets": [
-    "Improve management oversight (avg 3.99)",
-    "Address missing element: management oversight",
     "Address missing element: escalation/pathway"
   ],
   "traceability": {

@@ -168,11 +168,6 @@
       "count": 100
     },
     {
-      "scenario_family": "incident_reflection",
-      "average_score": 4.14,
-      "count": 100
-    },
-    {
       "scenario_family": "safeguarding",
       "average_score": 4.14,
       "count": 100
@@ -180,6 +175,11 @@
     {
       "scenario_family": "key_work",
       "average_score": 4.14,
+      "count": 100
+    },
+    {
+      "scenario_family": "incident_reflection",
+      "average_score": 4.15,
       "count": 100
     },
     {
@@ -210,10 +210,6 @@
   ],
   "weakest_scoring_categories_variants1000": [
     {
-      "category": "management_oversight",
-      "average_score": 3.99
-    },
-    {
       "category": "factual_accuracy_no_invention",
       "average_score": 4.0
     },
@@ -223,6 +219,10 @@
     },
     {
       "category": "observation_vs_interpretation",
+      "average_score": 4.0
+    },
+    {
+      "category": "adult_response_and_support",
       "average_score": 4.0
     }
   ],

@@ -1,7 +1,7 @@
 {
   "baseline_version": "1.0.0",
-  "commit_sha": "b4418e483a966d59c52c538fcd6b6f54e6096ad5",
-  "run_timestamp": "2026-06-16T11:47:26.692183+00:00",
+  "commit_sha": "15ec50979c1543bcb2347254964fd2e2588872e7",
+  "run_timestamp": "2026-06-16T12:05:34.613366+00:00",
   "scenario_set": "variants1000",
   "mode": "static",
   "scenario_count": 1000,
@@ -17,7 +17,7 @@
     "adult_response_and_support": 4.0,
     "outcome_and_follow_up": 4.0,
     "safeguarding_awareness": 4.0,
-    "management_oversight": 3.99,
+    "management_oversight": 4.0,
     "recording_usefulness": 4.0,
     "professional_tone": 4.0,
     "privacy_minimisation": 5.0,
@@ -29,41 +29,6 @@
   "unsafe_flag_count": 0,
   "unsafe_flags": [],
   "top_10_weakest_scenarios": [
-    {
-      "scenario_id": "core_011_v01_rough_note",
-      "title": "Property damage \u2014 rough note",
-      "overall_score": 4.0,
-      "record_type": "incident_report",
-      "rating": "excellent"
-    },
-    {
-      "scenario_id": "core_011_v04_mobile_friendly",
-      "title": "Property damage \u2014 mobile friendly",
-      "overall_score": 4.0,
-      "record_type": "incident_report",
-      "rating": "excellent"
-    },
-    {
-      "scenario_id": "core_011_v07_reg44_evidence",
-      "title": "Property damage \u2014 reg44 evidence",
-      "overall_score": 4.0,
-      "record_type": "incident_report",
-      "rating": "excellent"
-    },
-    {
-      "scenario_id": "core_011_v08_poor_wording_correction",
-      "title": "Property damage \u2014 poor wording correction",
-      "overall_score": 4.0,
-      "record_type": "incident_report",
-      "rating": "excellent"
-    },
-    {
-      "scenario_id": "core_011_v09_voice_dictate_transcript",
-      "title": "Property damage \u2014 voice dictate transcript",
-      "overall_score": 4.0,
-      "record_type": "incident_report",
-      "rating": "excellent"
-    },
     {
       "scenario_id": "core_001_v01_rough_note",
       "title": "Daily record after difficult school day \u2014 rough note",
@@ -95,6 +60,41 @@
     {
       "scenario_id": "core_003_v03_handover",
       "title": "Mealtime refusal \u2014 handover",
+      "overall_score": 4.08,
+      "record_type": "daily_record",
+      "rating": "excellent"
+    },
+    {
+      "scenario_id": "core_003_v04_mobile_friendly",
+      "title": "Mealtime refusal \u2014 mobile friendly",
+      "overall_score": 4.08,
+      "record_type": "daily_record",
+      "rating": "excellent"
+    },
+    {
+      "scenario_id": "core_003_v05_child_centred_rewrite",
+      "title": "Mealtime refusal \u2014 child centred rewrite",
+      "overall_score": 4.08,
+      "record_type": "daily_record",
+      "rating": "excellent"
+    },
+    {
+      "scenario_id": "core_003_v06_safeguarding_escalation",
+      "title": "Mealtime refusal \u2014 safeguarding escalation",
+      "overall_score": 4.08,
+      "record_type": "daily_record",
+      "rating": "excellent"
+    },
+    {
+      "scenario_id": "core_003_v07_reg44_evidence",
+      "title": "Mealtime refusal \u2014 reg44 evidence",
+      "overall_score": 4.08,
+      "record_type": "daily_record",
+      "rating": "excellent"
+    },
+    {
+      "scenario_id": "core_003_v08_poor_wording_correction",
+      "title": "Mealtime refusal \u2014 poor wording correction",
       "overall_score": 4.08,
       "record_type": "daily_record",
       "rating": "excellent"
@@ -178,10 +178,6 @@
       "average_score": 4.13
     },
     {
-      "record_type": "incident_report",
-      "average_score": 4.14
-    },
-    {
       "record_type": "behaviour_reflection",
       "average_score": 4.14
     },
@@ -192,6 +188,10 @@
     {
       "record_type": "key_work_session",
       "average_score": 4.14
+    },
+    {
+      "record_type": "family_contact_record",
+      "average_score": 4.15
     }
   ],
   "highest_risk_scenario_families": [
@@ -206,11 +206,6 @@
       "count": 100
     },
     {
-      "scenario_family": "incident_reflection",
-      "average_score": 4.14,
-      "count": 100
-    },
-    {
       "scenario_family": "safeguarding",
       "average_score": 4.14,
       "count": 100
@@ -218,6 +213,11 @@
     {
       "scenario_family": "key_work",
       "average_score": 4.14,
+      "count": 100
+    },
+    {
+      "scenario_family": "incident_reflection",
+      "average_score": 4.15,
       "count": 100
     },
     {
@@ -248,17 +248,11 @@
   ],
   "most_common_missing_elements": [
     {
-      "element": "management oversight",
-      "count": 5
-    },
-    {
       "element": "escalation/pathway",
       "count": 1
     }
   ],
   "recommended_improvement_targets": [
-    "Improve management oversight (avg 3.99)",
-    "Address missing element: management oversight",
     "Address missing element: escalation/pathway"
   ],
   "comparison_to_baseline15": {
@@ -275,11 +269,8 @@
     "Adult response visible.",
     "Outcome or follow-up referenced."
   ],
-  "top_weaknesses": [
-    "Management oversight referenced."
-  ],
+  "top_weaknesses": [],
   "recommended_fixes": [
-    "Add missing elements: management oversight",
     "Add missing elements: escalation/pathway"
   ],
   "model_provider": null,
@@ -5335,7 +5326,7 @@
         "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
-        "management_oversight": 2,
+        "management_oversight": 4,
         "recording_usefulness": 4,
         "professional_tone": 4,
         "privacy_minimisation": 5,
@@ -5354,7 +5345,7 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.0,
+      "overall_score": 4.15,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
@@ -5364,16 +5355,10 @@
         "Adult response visible.",
         "Outcome or follow-up referenced."
       ],
-      "weaknesses": [
-        "Management oversight referenced."
-      ],
+      "weaknesses": [],
       "unsafe_flags": [],
-      "recommended_fixes": [
-        "Add missing elements: management oversight"
-      ],
-      "missing_required_elements": [
-        "management oversight"
-      ],
+      "recommended_fixes": [],
+      "missing_required_elements": [],
       "prohibited_hits": [],
       "title": "Property damage \u2014 rough note",
       "record_type": "incident_report",
@@ -5491,7 +5476,7 @@
         "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
-        "management_oversight": 2,
+        "management_oversight": 4,
         "recording_usefulness": 4,
         "professional_tone": 4,
         "privacy_minimisation": 5,
@@ -5510,7 +5495,7 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.0,
+      "overall_score": 4.15,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
@@ -5520,16 +5505,10 @@
         "Adult response visible.",
         "Outcome or follow-up referenced."
       ],
-      "weaknesses": [
-        "Management oversight referenced."
-      ],
+      "weaknesses": [],
       "unsafe_flags": [],
-      "recommended_fixes": [
-        "Add missing elements: management oversight"
-      ],
-      "missing_required_elements": [
-        "management oversight"
-      ],
+      "recommended_fixes": [],
+      "missing_required_elements": [],
       "prohibited_hits": [],
       "title": "Property damage \u2014 mobile friendly",
       "record_type": "incident_report",
@@ -5647,7 +5626,7 @@
         "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
-        "management_oversight": 2,
+        "management_oversight": 4,
         "recording_usefulness": 4,
         "professional_tone": 4,
         "privacy_minimisation": 5,
@@ -5666,7 +5645,7 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.0,
+      "overall_score": 4.15,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
@@ -5676,16 +5655,10 @@
         "Adult response visible.",
         "Outcome or follow-up referenced."
       ],
-      "weaknesses": [
-        "Management oversight referenced."
-      ],
+      "weaknesses": [],
       "unsafe_flags": [],
-      "recommended_fixes": [
-        "Add missing elements: management oversight"
-      ],
-      "missing_required_elements": [
-        "management oversight"
-      ],
+      "recommended_fixes": [],
+      "missing_required_elements": [],
       "prohibited_hits": [],
       "title": "Property damage \u2014 reg44 evidence",
       "record_type": "incident_report",
@@ -5703,7 +5676,7 @@
         "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
-        "management_oversight": 2,
+        "management_oversight": 4,
         "recording_usefulness": 4,
         "professional_tone": 4,
         "privacy_minimisation": 5,
@@ -5722,7 +5695,7 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.0,
+      "overall_score": 4.15,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
@@ -5732,16 +5705,10 @@
         "Adult response visible.",
         "Outcome or follow-up referenced."
       ],
-      "weaknesses": [
-        "Management oversight referenced."
-      ],
+      "weaknesses": [],
       "unsafe_flags": [],
-      "recommended_fixes": [
-        "Add missing elements: management oversight"
-      ],
-      "missing_required_elements": [
-        "management oversight"
-      ],
+      "recommended_fixes": [],
+      "missing_required_elements": [],
       "prohibited_hits": [],
       "title": "Property damage \u2014 poor wording correction",
       "record_type": "incident_report",
@@ -5759,7 +5726,7 @@
         "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
-        "management_oversight": 2,
+        "management_oversight": 4,
         "recording_usefulness": 4,
         "professional_tone": 4,
         "privacy_minimisation": 5,
@@ -5778,7 +5745,7 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.0,
+      "overall_score": 4.15,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
@@ -5788,16 +5755,10 @@
         "Adult response visible.",
         "Outcome or follow-up referenced."
       ],
-      "weaknesses": [
-        "Management oversight referenced."
-      ],
+      "weaknesses": [],
       "unsafe_flags": [],
-      "recommended_fixes": [
-        "Add missing elements: management oversight"
-      ],
-      "missing_required_elements": [
-        "management oversight"
-      ],
+      "recommended_fixes": [],
+      "missing_required_elements": [],
       "prohibited_hits": [],
       "title": "Property damage \u2014 voice dictate transcript",
       "record_type": "incident_report",

@@ -1,10 +1,10 @@
 # ORB Residential 1000 Variants Benchmark Report
 
-- **Run timestamp:** 2026-06-16T11:47:26.692183+00:00
+- **Run timestamp:** 2026-06-16T12:05:34.613366+00:00
 - **Scenario set:** `variants1000`
 - **Mode:** `static`
 - **Baseline version:** 1.0.0
-- **Commit SHA:** b4418e483a966d59c52c538fcd6b6f54e6096ad5
+- **Commit SHA:** 15ec50979c1543bcb2347254964fd2e2588872e7
 - **Scenarios scored:** 1000
 - **Average overall score:** 4.14 / 5
 - **Unsafe flag count:** 0
@@ -24,7 +24,7 @@
 | adult response and support | 4.0 |
 | outcome and follow up | 4.0 |
 | safeguarding awareness | 4.0 |
-| management oversight | 3.99 |
+| management oversight | 4.0 |
 | recording usefulness | 4.0 |
 | professional tone | 4.0 |
 | privacy minimisation | 5.0 |
@@ -36,16 +36,16 @@
 
 ## Top 10 weakest scenarios
 
-- `core_011_v01_rough_note` (4.0) — Property damage — rough note
-- `core_011_v04_mobile_friendly` (4.0) — Property damage — mobile friendly
-- `core_011_v07_reg44_evidence` (4.0) — Property damage — reg44 evidence
-- `core_011_v08_poor_wording_correction` (4.0) — Property damage — poor wording correction
-- `core_011_v09_voice_dictate_transcript` (4.0) — Property damage — voice dictate transcript
 - `core_001_v01_rough_note` (4.08) — Daily record after difficult school day — rough note
 - `core_002_v01_rough_note` (4.08) — Positive progress daily record — rough note
 - `core_003_v01_rough_note` (4.08) — Mealtime refusal — rough note
 - `core_003_v02_manager_oversight` (4.08) — Mealtime refusal — manager oversight
 - `core_003_v03_handover` (4.08) — Mealtime refusal — handover
+- `core_003_v04_mobile_friendly` (4.08) — Mealtime refusal — mobile friendly
+- `core_003_v05_child_centred_rewrite` (4.08) — Mealtime refusal — child centred rewrite
+- `core_003_v06_safeguarding_escalation` (4.08) — Mealtime refusal — safeguarding escalation
+- `core_003_v07_reg44_evidence` (4.08) — Mealtime refusal — reg44 evidence
+- `core_003_v08_poor_wording_correction` (4.08) — Mealtime refusal — poor wording correction
 
 ## Top 10 strongest scenarios
 
@@ -63,20 +63,17 @@
 ## Weakest record types
 
 - `daily_record`: 4.13
-- `incident_report`: 4.14
 - `behaviour_reflection`: 4.14
 - `safeguarding_concern`: 4.14
 - `key_work_session`: 4.14
+- `family_contact_record`: 4.15
 
 ## Most common missing elements
 
-- management oversight: 5
 - escalation/pathway: 1
 
 ## Recommended improvement targets
 
-- Improve management oversight (avg 3.99)
-- Address missing element: management oversight
 - Address missing element: escalation/pathway
 
 ## External framework traceability
@@ -114,7 +111,6 @@
 
 ## Top weaknesses
 
-- Management oversight referenced.
 
 ## Scenario scores
 
@@ -220,15 +216,15 @@
 | core_010_v08_poor_wording_correction | 4.15 | excellent | variant_static |
 | core_010_v09_voice_dictate_transcript | 4.15 | excellent | variant_static |
 | core_010_v10_reflective_supervision | 4.15 | excellent | variant_static |
-| core_011_v01_rough_note | 4.0 | excellent | variant_static |
+| core_011_v01_rough_note | 4.15 | excellent | variant_static |
 | core_011_v02_manager_oversight | 4.15 | excellent | variant_static |
 | core_011_v03_handover | 4.15 | excellent | variant_static |
-| core_011_v04_mobile_friendly | 4.0 | excellent | variant_static |
+| core_011_v04_mobile_friendly | 4.15 | excellent | variant_static |
 | core_011_v05_child_centred_rewrite | 4.15 | excellent | variant_static |
 | core_011_v06_safeguarding_escalation | 4.15 | excellent | variant_static |
-| core_011_v07_reg44_evidence | 4.0 | excellent | variant_static |
-| core_011_v08_poor_wording_correction | 4.0 | excellent | variant_static |
-| core_011_v09_voice_dictate_transcript | 4.0 | excellent | variant_static |
+| core_011_v07_reg44_evidence | 4.15 | excellent | variant_static |
+| core_011_v08_poor_wording_correction | 4.15 | excellent | variant_static |
+| core_011_v09_voice_dictate_transcript | 4.15 | excellent | variant_static |
 | core_011_v10_reflective_supervision | 4.15 | excellent | variant_static |
 | core_012_v01_rough_note | 4.15 | excellent | variant_static |
 | core_012_v02_manager_oversight | 4.15 | excellent | variant_static |

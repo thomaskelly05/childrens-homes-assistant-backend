@@ -177,6 +177,29 @@ Brain/framework sources implementing this principle:
 
 ORB reframes poor input wording in rewrite scenarios; it does not silently preserve blaming language in outputs.
 
+## Management oversight quality indicator
+
+ORB's `management_oversight` rubric category scores whether outputs help adults consider leadership review without replacing managers:
+
+- Pattern or repeat theme — isolated event vs emerging concern
+- Plan or risk assessment review needs
+- Manager/senior review prompts — not management decisions by ORB
+- Supervision, debrief or practice learning themes
+- Handover, follow-up and review owner
+- Regulation 44 / Regulation 45 evidence opportunities (internal quality indicator, not regulatory judgement)
+
+This is a **source-mapped internal quality framework** indicator aligned to leadership, quality assurance, review, learning, safer recording and child-centred evidence. It is **not a regulatory judgement**.
+
+Brain/framework sources implementing this principle:
+
+- `assistant/evals/orb_high_risk_scaffold.py` — family-aware management oversight sections and prompts
+- `assistant/knowledge/orb_recording_framework.json` — residential recording structure
+- `assistant/knowledge/therapeutic_language.py` — oversight wording discipline
+- `services/orb_residential_quality_service.py` — manager oversight capture prompts
+- `frontend-next/lib/orb/recording/orb-recording-section-prompts.ts` — section scaffolds
+
+ORB supports management thinking; it does not complete management oversight or conclude that no further action is needed.
+
 ## Related documentation
 
 - `docs/indicare_internal_brain_architecture.md` — brain layers and design principles
