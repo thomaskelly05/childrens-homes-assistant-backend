@@ -367,7 +367,7 @@ const MANAGEMENT_TEMPLATES: ScenarioTemplate[] = [
   },
   {
     domain: 'management',
-    category: 'inspection evidence preparation',
+    category: 'inspection-readiness',
     riskLevel: 'high',
     rolePerspectives: ['registered-manager', 'ofsted-inspector'],
     questionTemplate:

@@ -170,7 +170,7 @@ QUALITY_CHECK_KEYWORDS = {
     "improve this",
     "does this make sense",
     "is this defensible",
-    "inspection evidence preparation",
+    "inspection-readiness",
 }
 
 URGENT_KEYWORDS = {

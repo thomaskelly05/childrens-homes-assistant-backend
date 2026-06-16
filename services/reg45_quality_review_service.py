@@ -48,8 +48,8 @@ LIMITATIONS = [
 
 ROUTES = {
     "workspace": "/intelligence/reg45",
-    "inspection_readiness": "/intelligence/inspection evidence preparation",
-    "inspection_reg45_pack": "/intelligence/inspection evidence preparation?pack=reg45",
+    "inspection_readiness": "/intelligence/inspection-readiness",
+    "inspection_reg45_pack": "/intelligence/inspection-readiness?pack=reg45",
     "sccif": "/intelligence/sccif",
     "governance": "/record/governance",
     "handover": "/handover",

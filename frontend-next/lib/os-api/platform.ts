@@ -236,7 +236,7 @@ function buildAttentionCards(data: Omit<CommandCentreData, 'attention'>): Attent
       theme: 'compliance',
       title: 'Inspection evidence gaps',
       body: evidenceGaps.length ? 'Evidence items need review before they are relied on for Inspection evidence preparation.' : 'No review-required evidence items were returned.',
-      href: '/inspection evidence preparation',
+      href: '/inspection-readiness',
       count: evidenceGaps.length,
       status: evidenceGaps.length ? 'possible gap' : 'not calculated'
     },

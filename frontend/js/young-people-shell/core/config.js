@@ -69,7 +69,7 @@ export const SCOPE_SECTIONS = Object.freeze({
     "manager",
     "quality",
     "reports",
-    "inspection evidence preparation",
+    "inspection-readiness",
     "policies",
     "documents",
     "communication",
@@ -82,7 +82,7 @@ export const SCOPE_SECTIONS = Object.freeze({
     "compliance",
     "reg44",
     "reg45",
-    "inspection evidence preparation",
+    "inspection-readiness",
     "staff-profile",
     "onboarding",
     "supervision",
@@ -100,7 +100,7 @@ export const SCOPE_SECTIONS = Object.freeze({
     "ofsted-dashboard",
     "sccif-evidence",
     "judgement-builder",
-    "inspection evidence preparation",
+    "inspection-readiness",
     "quality-audits",
     "reg44",
     "reg45",
@@ -162,14 +162,14 @@ export const SECTION_TITLES = Object.freeze({
   maintenance: "Maintenance and environment",
   notifications: "Alerts and notifications",
   quality: "Quality dashboard",
-  "inspection evidence preparation": "Inspection evidence preparation",
+  "inspection-readiness": "Inspection evidence preparation",
   policies: "Policies and guidance",
 
   "provider-overview": "Provider overview",
   "quality-audits": "Quality audits",
   reg44: "Regulation 44",
   reg45: "Regulation 45",
-  "inspection evidence preparation": "Inspection evidence preparation",
+  "inspection-readiness": "Inspection evidence preparation",
 
   "ofsted-dashboard": "Ofsted dashboard",
   "sccif-evidence": "SCCIF evidence",
@@ -256,7 +256,7 @@ export const SECTION_SUBTITLES = Object.freeze({
     "A live action layer for reminders, escalations, acknowledgements and workforce follow-up.",
   quality:
     "Quality assurance, audits, trends, RI oversight and service performance.",
-  "inspection evidence preparation":
+  "inspection-readiness":
     "Live mock Ofsted dashboard, evidence gaps, action tracking and Inspection evidence preparation across the home.",
   policies:
     "Policy library, review dates, guidance and practice standards across the service.",
@@ -269,7 +269,7 @@ export const SECTION_SUBTITLES = Object.freeze({
     "Independent visit preparation, evidence collation, themes and resulting actions.",
   reg45:
     "Quality of care review planning, evidence, analysis and improvement actions.",
-  "inspection evidence preparation":
+  "inspection-readiness":
     "Portfolio-level inspection evidence, gaps, readiness tracking and regulator-facing preparation.",
 
   "ofsted-dashboard":
@@ -538,14 +538,14 @@ export const SECTION_DEFAULT_ACTION = Object.freeze({
   maintenance: "task",
   notifications: "staff_task",
   quality: "task",
-  "inspection evidence preparation": "task",
+  "inspection-readiness": "task",
   policies: "policy_review",
 
   "provider-overview": "task",
   "quality-audits": "task",
   reg44: "task",
   reg45: "task",
-  "inspection evidence preparation": "task",
+  "inspection-readiness": "task",
 
   "ofsted-dashboard": "ofsted_action",
   "sccif-evidence": "ofsted_action",

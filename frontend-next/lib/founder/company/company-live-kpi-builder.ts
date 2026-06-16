@@ -355,8 +355,8 @@ export function buildCompanyLiveKpis(): { kpis: CompanyKpiMap; limitations: stri
     'open'
   )
 
-  kpis['inspection evidence preparation-status'] = kpi(
-    'inspection evidence preparation-status',
+  kpis['inspection-readiness-status'] = kpi(
+    'inspection-readiness-status',
     'Inspection evidence preparation source status',
     isLiveSourceConnected('readiness', connections)
       ? assertLiveMetric({

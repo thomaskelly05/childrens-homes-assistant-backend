@@ -825,7 +825,7 @@ class ManagerDailyBriefService:
                     title="Reg 44 evidence support",
                     safe_summary="Generate monthly visit evidence support pack — manager review needed.",
                     priority="medium",
-                    route="/intelligence/inspection evidence preparation?pack=reg44",
+                    route="/intelligence/inspection-readiness?pack=reg44",
                     action_label="Generate Reg 44 pack",
                     source="inspection_readiness",
                 )
@@ -836,7 +836,7 @@ class ManagerDailyBriefService:
                     title="Reg 45 evidence support",
                     safe_summary="Generate quality of care review evidence support — not a final judgement.",
                     priority="medium",
-                    route="/intelligence/inspection evidence preparation?pack=reg45",
+                    route="/intelligence/inspection-readiness?pack=reg45",
                     action_label="Generate Reg 45 pack",
                     source="inspection_readiness",
                 )
@@ -850,7 +850,7 @@ class ManagerDailyBriefService:
             title="Inspection evidence preparation",
             summary=summary,
             items=items,
-            route="/intelligence/inspection evidence preparation",
+            route="/intelligence/inspection-readiness",
             action_label="Open Inspection evidence preparation",
             tone=tone,
             metadata={

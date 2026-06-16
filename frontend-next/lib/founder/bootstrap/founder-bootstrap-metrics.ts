@@ -3,7 +3,7 @@
  */
 
 import type { OrbAdminFeedbackSummary, OrbAdminUsageSummary } from '@/lib/orb/admin-quality-client'
-import type { InspectionReadinessDashboard } from '@/lib/os-api/inspection evidence preparation'
+import type { InspectionReadinessDashboard } from '@/lib/os-api/inspection-readiness'
 import type { FounderBootstrapLiveSummary, FounderBootstrapPayload } from './founder-bootstrap-client'
 import {
   buildLiveMetricsFromAdapters,
@@ -66,7 +66,7 @@ function deriveAvailability(
     billingAvailable: billingOk,
     aiUsageAvailable: billingOk,
     readinessAvailable:
-      !isBusy('inspection evidence preparation', sectionErrors) &&
+      !isBusy('inspection-readiness', sectionErrors) &&
       dataSourceStatus.readiness !== 'unavailable' &&
       dataSourceStatus.readiness !== 'busy'
   }

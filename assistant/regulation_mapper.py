@@ -170,7 +170,7 @@ def map_regulation_references(
     )
     inspection_context = _contains_any(
         text,
-        {"ofsted", "inspection", "inspect", "sccif", "inspection evidence preparation", "defensible", "audit trail", "evidence pack"},
+        {"ofsted", "inspection", "inspect", "sccif", "inspection-readiness", "defensible", "audit trail", "evidence pack"},
     )
     views_context = _contains_any(
         text,

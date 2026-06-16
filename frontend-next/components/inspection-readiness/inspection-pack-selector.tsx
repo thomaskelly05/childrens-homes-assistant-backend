@@ -1,6 +1,6 @@
 'use client'
 
-import type { InspectionPackType } from '@/lib/os-api/inspection evidence preparation'
+import type { InspectionPackType } from '@/lib/os-api/inspection-readiness'
 
 const PACK_OPTIONS: { id: InspectionPackType; label: string; hint: string }[] = [
   { id: 'reg44', label: 'Reg 44', hint: 'Monthly visit evidence support' },

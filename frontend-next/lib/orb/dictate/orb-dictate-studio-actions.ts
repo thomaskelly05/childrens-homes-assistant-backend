@@ -3,6 +3,7 @@ export type OrbDictateEditMode =
   | 'spelling_grammar'
   | 'therapeutic_rewrite'
   | 'ofsted_ready'
+  | 'inspection_evidence_support'
   | 'factual_tone'
   | 'professional_language'
   | 'child_voice'
@@ -30,6 +31,23 @@ export type OrbDictateQuickAction = {
   mode: OrbDictateEditMode
   instruction: string
   group: 'wording' | 'practice' | 'inspection' | 'convert'
+}
+
+/** User-facing labels for dictate edit modes (canonical + deprecated aliases). */
+export const ORB_DICTATE_EDIT_MODE_LABELS: Record<
+  'inspection_evidence_support' | 'ofsted_ready',
+  string
+> = {
+  inspection_evidence_support: 'Inspection evidence support',
+  ofsted_ready: 'Inspection evidence support'
+}
+
+export function orbDictateEditModeLabel(mode: OrbDictateEditMode): string {
+  if (mode === 'inspection_evidence_support' || mode === 'ofsted_ready') {
+    return ORB_DICTATE_EDIT_MODE_LABELS[mode]
+  }
+  const action = ORB_DICTATE_QUICK_ACTIONS.find((item) => item.mode === mode)
+  return action?.label ?? mode.replace(/_/g, ' ')
 }
 
 export const ORB_DICTATE_QUICK_ACTIONS: OrbDictateQuickAction[] = [

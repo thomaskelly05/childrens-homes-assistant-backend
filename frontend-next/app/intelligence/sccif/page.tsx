@@ -20,10 +20,10 @@ export default function SccifAlignmentPage() {
   if (staffId) filters.staff_id = staffId
   const inspectionHref = homeId
     ? homeInspectionReadinessHref(homeId)
-    : '/intelligence/inspection evidence preparation'
+    : '/intelligence/inspection-readiness'
   const reg44Href = homeId
     ? `${homeInspectionReadinessHref(homeId)}&pack=reg44`
-    : '/intelligence/inspection evidence preparation?pack=reg44'
+    : '/intelligence/inspection-readiness?pack=reg44'
   const reg45Href = homeId ? homeReg45Href(homeId) : '/intelligence/reg45'
 
   return (
@@ -51,7 +51,7 @@ export default function SccifAlignmentPage() {
             <Link
               prefetch={false}
               href={inspectionHref}
-              data-testid="sccif-open-inspection evidence preparation"
+              data-testid="sccif-open-inspection-readiness"
               className="inline-flex min-h-10 items-center rounded-2xl border border-blue-200 bg-blue-50 px-4 py-2.5 text-xs font-black text-blue-950"
             >
               Inspection evidence preparation

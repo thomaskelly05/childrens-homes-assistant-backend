@@ -94,7 +94,7 @@ export const COMPANY_DEPARTMENTS: CompanyDepartmentDefinition[] = [
       'quality-lab-pass-rate',
       'critical-failures',
       'improvement-proposals',
-      'inspection evidence preparation-status',
+      'inspection-readiness-status',
       'quality-actions-open'
     ]
   },

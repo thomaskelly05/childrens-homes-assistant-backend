@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic'
 const TARGETS = new Set([
   'providers',
   'homes',
-  'inspection evidence preparation',
+  'inspection-readiness',
   'orb-feedback-summary',
   'orb-billing-usage'
 ])
@@ -24,7 +24,7 @@ export async function GET(request: Request, context: RouteContext) {
     target as
       | 'providers'
       | 'homes'
-      | 'inspection evidence preparation'
+      | 'inspection-readiness'
       | 'orb-feedback-summary'
       | 'orb-billing-usage'
   )

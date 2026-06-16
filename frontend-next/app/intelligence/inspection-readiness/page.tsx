@@ -1,6 +1,6 @@
 import Link from 'next/link'
 
-import { InspectionReadinessWorkspace } from '@/components/inspection evidence preparation/inspection evidence preparation-workspace'
+import { InspectionReadinessWorkspace } from '@/components/inspection-readiness/inspection-readiness-workspace'
 import { homeOrbHref, homeWorkspaceHref } from '@/lib/navigation/scope-routes'
 
 export default async function InspectionReadinessPage({
@@ -12,7 +12,7 @@ export default async function InspectionReadinessPage({
 
   return (
     <main
-      data-testid="inspection evidence preparation-page"
+      data-testid="inspection-readiness-page"
       className="mx-auto max-w-5xl space-y-8 px-4 py-10 sm:px-6"
     >
       <header className="space-y-2">

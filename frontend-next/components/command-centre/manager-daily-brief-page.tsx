@@ -108,7 +108,7 @@ export function ManagerDailyBriefPage() {
         </article>
         <article
           className="rounded-2xl border border-indigo-100 bg-indigo-50/50 p-4 md:col-span-2"
-          data-testid="manager-daily-brief-inspection evidence preparation"
+          data-testid="manager-daily-brief-inspection-readiness"
         >
           <p className="text-[10px] font-black uppercase tracking-[0.16em] text-indigo-700">
             Inspection evidence preparation
@@ -118,8 +118,8 @@ export function ManagerDailyBriefPage() {
               'Reg 44 / Reg 45 evidence support packs — not a grade prediction.'}
           </p>
           <Link
-            href="/intelligence/inspection evidence preparation"
-            data-testid="manager-daily-brief-inspection evidence preparation-link"
+            href="/intelligence/inspection-readiness"
+            data-testid="manager-daily-brief-inspection-readiness-link"
             className="mt-3 inline-flex text-[10px] font-black uppercase tracking-[0.12em] text-indigo-800 underline"
           >
             Open Inspection evidence preparation

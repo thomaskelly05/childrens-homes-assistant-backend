@@ -154,7 +154,7 @@ export default async function IntelligenceSpinePage({ searchParams }: PageProps)
         action={
           <Link
             prefetch={false}
-            href="/inspection evidence preparation"
+            href="/inspection-readiness"
             className="rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-500/30"
           >
             Inspection evidence preparation
@@ -452,7 +452,7 @@ export default async function IntelligenceSpinePage({ searchParams }: PageProps)
             ['/intelligence-actions', 'Action Board'],
             ['/intelligence-oversight', 'Oversight review'],
             ['/command-centre', 'Command centre'],
-            ['/inspection evidence preparation', 'Inspection evidence preparation'],
+            ['/inspection-readiness', 'Inspection evidence preparation'],
             ['/regulatory', 'Regulatory framework'],
             ['/safeguarding', 'Safeguarding'],
             ['/chronology', 'Chronology'],

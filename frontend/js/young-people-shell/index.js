@@ -330,8 +330,8 @@ function getRequiredScopeForSection(section = "") {
   const ofstedSections = new Set([
     "ofsted",
     "ofsted-dashboard",
-    "inspection evidence preparation",
-    "inspection evidence preparation",
+    "inspection-readiness",
+    "inspection-readiness",
     "sccif-evidence",
     "judgement-builder",
     "evidence",

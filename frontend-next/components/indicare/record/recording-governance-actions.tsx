@@ -78,8 +78,8 @@ export function RecordingGovernanceActions({
           Open manager daily brief
         </Link>
         <Link
-          href="/intelligence/inspection evidence preparation"
-          data-testid="recording-governance-inspection evidence preparation"
+          href="/intelligence/inspection-readiness"
+          data-testid="recording-governance-inspection-readiness"
           className="inline-flex min-h-10 items-center rounded-2xl border border-blue-200 bg-blue-600 px-4 py-2 text-xs font-black text-white"
         >
           Inspection evidence preparation

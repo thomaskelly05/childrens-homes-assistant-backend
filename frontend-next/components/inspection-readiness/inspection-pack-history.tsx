@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 
-import { getInspectionPack, listInspectionPacks, type InspectionEvidencePack } from '@/lib/os-api/inspection evidence preparation'
+import { getInspectionPack, listInspectionPacks, type InspectionEvidencePack } from '@/lib/os-api/inspection-readiness'
 
 type Props = {
   onOpenPack?: (pack: InspectionEvidencePack) => void
