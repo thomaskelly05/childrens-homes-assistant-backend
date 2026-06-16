@@ -154,6 +154,10 @@ const SHARED_PROMPTS = {
     'Vague staff supported / staff managed / staff dealt with it without specific adult actions',
     'Claiming an adult approach made the child feel safe, supported, reassured or regulated unless the child said this',
     'Indicating a positive shift in mood or showing emotional regulation after observed presentation',
+    "In response to Child A's feelings unless the child directly stated a feeling",
+    "Unsupported timeline wording such as as the evening progressed unless provided in input",
+    'Joined record sentences without punctuation',
+    'Trailing markdown separator lines at the end of records (—, ___, ***)',
     'Duplicate Outcome and Outcome / Handover headings in simple daily records',
     'No safeguarding concern / no further action needed without responsible adult review',
     'ORB making safeguarding or compliance decisions',
@@ -202,7 +206,7 @@ export const ORB_THERAPEUTIC_WRITING_BY_RECORD_TYPE: Partial<
   }),
   daily_record: framework({
     writing_guidance:
-      'Child-centred shift record — presentation, voice, specific adult actions and outcome with observable facts. Use Adult [initials] when supplied; otherwise the adult/adults. Describe what adults did and what was observed — do not claim invented emotional impact or outcome interpretation.',
+      'Child-centred shift record — presentation, voice, specific adult actions and outcome with observable facts. Use Adult [initials] when supplied; otherwise the adult/adults. Use complete sentences — do not join record sentences. Prefer appeared calmer before bedtime where the input states this. Use In response, not In response to Child A\'s feelings unless the child stated a feeling. Do not end with markdown separators.',
     person_centred_prompts: [
       'How was the child feeling and presenting?',
       'What went well for the child today?'

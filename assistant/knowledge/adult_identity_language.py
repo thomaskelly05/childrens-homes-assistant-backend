@@ -72,6 +72,28 @@ OUTCOME_INTERPRETATION_DISCIPLINE_PRINCIPLE = (
     "'appeared calmer' unless the input states mood improved. Do not convert presentation into internal mood state."
 )
 
+SENTENCE_PUNCTUATION_DISCIPLINE_PRINCIPLE = (
+    "Use complete sentences in records. Do not join separate record sentences together without punctuation. "
+    "End each factual sentence with a full stop before the next adult action, transition or child quote."
+)
+
+INTERPRETIVE_FEELINGS_DISCIPLINE_PRINCIPLE = (
+    "Do not use 'In response to Child A's feelings' or similar interpretive phrasing unless the child directly "
+    "stated a feeling. Prefer 'In response,' followed by the adult action. Do not invent frustration, "
+    "dissatisfaction or emotional state labels unless supported by the child's words or user input."
+)
+
+TIMELINE_DISCIPLINE_PRINCIPLE = (
+    "Do not add unsupported timeline wording such as 'as the evening progressed', 'over the evening' or "
+    "'throughout the evening' unless the user provided that chronology. Prefer timing from input "
+    "(for example 'before bedtime') rather than expanding the timeline."
+)
+
+TRAILING_MARKDOWN_DISCIPLINE_PRINCIPLE = (
+    "Do not end record outputs with markdown separator lines such as em dashes (—), underscores (___) or "
+    "asterisks (***) unless the user requested formatted document separators."
+)
+
 DUPLICATE_HEADING_DISCIPLINE_PRINCIPLE = (
     "Do not duplicate Outcome and Outcome / Handover headings in simple daily records. Use one Outcome / Handover "
     "section. Do not add separate Follow-up or Next Steps when handover already states the next action."
@@ -129,12 +151,13 @@ THERAPEUTIC_RECORDING_PHRASES: tuple[str, ...] = (
 
 OBSERVATION_VS_INTERPRETATION_GUIDANCE: tuple[str, ...] = (
     "Use 'appeared calmer' rather than 'mood improved' unless the input states mood improved.",
-    "Use 'appeared calmer' rather than 'seemed more relaxed'.",
-    "Use 'appeared more settled' rather than 'was relaxed' or 'seemed relaxed'.",
+    "Use 'appeared calmer' rather than 'seemed more relaxed', 'seemed relaxed' or 'seemed more settled'.",
+    "Prefer 'appeared calmer before bedtime' where the input states this timing.",
     "Do not add 'indicating a positive shift in mood' or 'showing emotional regulation' after observed presentation.",
     "Do not state internal emotion as fact unless the child said it.",
     "Preserve direct quotes with 'said'.",
     "Use 'appeared', 'was observed', 'not yet known' for presentation.",
+    "Use complete sentences — do not join record sentences without punctuation.",
 )
 
 _ADULT_INITIALS_PATTERN = re.compile(r"\bAdult\s+([A-Z]{1,3})\b")
@@ -270,7 +293,6 @@ _OUTCOME_INTERPRETATION_CLAUSE_RES: tuple[re.Pattern[str], ...] = (
         re.I,
     ),
     re.compile(r"\bthis\s+(?:showed|demonstrated|indicated)\s+emotional\s+regulation\b[^.!?]*[.!?]", re.I),
-    re.compile(r"\bas\s+the\s+evening\s+progressed\b[^.!?]*[.!?]", re.I),
 )
 
 _OUTCOME_INTERPRETATION_SENTENCE_RES: tuple[re.Pattern[str], ...] = (
@@ -319,11 +341,81 @@ _HANDOVER_PRESENT_RE = re.compile(
 
 _OBSERVATION_INTERPRETATION_REPLACEMENTS: tuple[tuple[re.Pattern[str], str], ...] = (
     (re.compile(r"\bmood\s+improved\b", re.I), "appeared calmer"),
+    (re.compile(r"\bmood\s+seemed\s+better\b", re.I), "appeared calmer"),
     (re.compile(r"\bseemed\s+more\s+relaxed\b", re.I), "appeared calmer"),
-    (re.compile(r"\bseemed\s+relaxed\b", re.I), "appeared more settled"),
-    (re.compile(r"\bwas\s+relaxed\b", re.I), "appeared more settled"),
+    (re.compile(r"\bseemed\s+relaxed\b", re.I), "appeared calmer"),
+    (re.compile(r"\bwas\s+relaxed\b", re.I), "appeared calmer"),
     (re.compile(r"\bseemed\s+calmer\b", re.I), "appeared calmer"),
+    (re.compile(r"\bseemed\s+more\s+settled\b", re.I), "appeared calmer"),
+    (re.compile(r"\bappeared\s+more\s+relaxed\b", re.I), "appeared calmer"),
+    (re.compile(r"\bappeared\s+settled\s+emotionally\b", re.I), "appeared calmer"),
 )
+
+_UNSUPPORTED_TIMELINE_PHRASES: tuple[str, ...] = (
+    "as the evening progressed",
+    "over the evening",
+    "throughout the evening",
+    "later in the evening",
+)
+
+_INTERPRETIVE_FEELINGS_SOURCE_LABELS: tuple[str, ...] = (
+    "in response to child a's feelings",
+    "in response to child a's emotions",
+    "in response to child a's emotional state",
+    "responding to child a's frustration",
+    "responding to child a's dissatisfaction",
+)
+
+_INTERPRETIVE_FEELINGS_RES: tuple[tuple[str, re.Pattern[str]], ...] = (
+    (
+        "in response to child a's feelings",
+        re.compile(
+            r"\bIn response to (?:Child|Young person|The child)\s+[A-Z]'s feelings,?\s*",
+            re.I,
+        ),
+    ),
+    (
+        "in response to child a's emotions",
+        re.compile(
+            r"\bIn response to (?:Child|Young person|The child)\s+[A-Z]'s emotions,?\s*",
+            re.I,
+        ),
+    ),
+    (
+        "in response to child a's emotional state",
+        re.compile(
+            r"\bIn response to (?:Child|Young person|The child)\s+[A-Z]'s emotional state,?\s*",
+            re.I,
+        ),
+    ),
+    (
+        "responding to child a's frustration",
+        re.compile(
+            r"\b[Rr]esponding to (?:Child|Young person|The child)\s+[A-Z]'s frustration,?\s*",
+            re.I,
+        ),
+    ),
+    (
+        "responding to child a's dissatisfaction",
+        re.compile(
+            r"\b[Rr]esponding to (?:Child|Young person|The child)\s+[A-Z]'s dissatisfaction,?\s*",
+            re.I,
+        ),
+    ),
+)
+
+_ADULT_LABEL_BOUNDARY_RE = re.compile(
+    r'(?<=[a-z\d"\)])(?<![A-Z])\s+(Adult\s+[A-Z]{1,3})\b'
+)
+_QUOTE_ADULT_BOUNDARY_RE = re.compile(
+    r'((?:said|shared|stated|communicated),?\s*["\'][^"\']*["\'])\s+(Adult\s+[A-Z]{1,3}\b)',
+    re.I,
+)
+_TRANSITION_BOUNDARY_RES: tuple[re.Pattern[str], ...] = (
+    re.compile(r"(?<=[a-z])\s+(Later,)\s*"),
+    re.compile(r"(?<=[a-z])\s+(During this time,)\s*", re.I),
+)
+_TRAILING_MD_ARTIFACTS_RE = re.compile(r"(?:[\n\r\s]*(?:—|___|\*\*\*)\s*)+$")
 
 _STAFF_TO_ADULT_RE = re.compile(r"\b[Ss]taff\b")
 _STAFF_ON_DUTY_RE = re.compile(r"\bStaff\s+on\s+Duty\b", re.I)
@@ -721,30 +813,105 @@ def apply_adult_identity_language(text: str, *, supplied_initials: list[str] | N
     return _STAFF_TO_ADULT_RE.sub("The adult", value)
 
 
-def sanitize_observation_interpretation_language(text: str) -> str:
+def sanitize_observation_interpretation_language(text: str, *, source_text: str = "") -> str:
     """Reframe over-interpretive presentation wording into factual observation language."""
     result = str(text or "")
+    source_lower = str(source_text or "").lower()
+    bedtime_timing = "before bedtime" in source_lower
     for pattern, replacement in _OBSERVATION_INTERPRETATION_REPLACEMENTS:
-        result = pattern.sub(replacement, result)
+        resolved = "appeared calmer before bedtime" if bedtime_timing and replacement == "appeared calmer" else replacement
+        result = pattern.sub(resolved, result)
     return result
+
+
+def _source_supports_interpretive_feeling(source_text: str, label: str) -> bool:
+    return label.lower() in str(source_text or "").lower()
+
+
+def strip_interpretive_feelings_phrases(text: str, *, source_text: str = "") -> str:
+    """Remove interpretive 'Child A's feelings' phrasing unless supported by user input."""
+    result = str(text or "")
+    for label, pattern in _INTERPRETIVE_FEELINGS_RES:
+        if _source_supports_interpretive_feeling(source_text, label):
+            continue
+        result = pattern.sub("In response, ", result)
+    result = re.sub(r"\bIn response,\s*,", "In response,", result, flags=re.I)
+    result = re.sub(r"\bIn response,\s*$", "In response", result, flags=re.I)
+    return result
+
+
+def strip_unsupported_timeline_expansion(text: str, *, source_text: str = "") -> str:
+    """Remove invented evening timeline wording unless the user provided that chronology."""
+    result = str(text or "")
+    source_lower = str(source_text or "").lower()
+    for phrase in _UNSUPPORTED_TIMELINE_PHRASES:
+        if phrase in source_lower:
+            continue
+        result = re.sub(rf",?\s*{re.escape(phrase)}", "", result, flags=re.I)
+    lines = [re.sub(r"  +", " ", line).strip() for line in result.splitlines()]
+    return "\n".join(lines).strip()
+
+
+def _repair_sentence_boundaries_in_line(line: str) -> str:
+    """Insert conservative full stops where record sentences were joined."""
+    result = str(line or "")
+    result = _QUOTE_ADULT_BOUNDARY_RE.sub(r"\1. \2", result)
+    result = _ADULT_LABEL_BOUNDARY_RE.sub(r". \1", result)
+    for pattern in _TRANSITION_BOUNDARY_RES:
+        result = pattern.sub(r". \1 ", result)
+    result = re.sub(r"\bwatched TV\b", "watched television", result, flags=re.I)
+    result = re.sub(r"\.{2,}", ".", result)
+    return result.strip()
+
+
+def repair_record_sentence_boundaries(text: str) -> str:
+    """Conservative sentence-boundary repair for record-generation outputs."""
+    if not str(text or "").strip():
+        return str(text or "")
+    lines = str(text).splitlines()
+    repaired: list[str] = []
+    for line in lines:
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#") or re.match(r"^[A-Za-z][^:]{0,40}:\s*$", stripped):
+            repaired.append(line)
+            continue
+        repaired.append(_repair_sentence_boundaries_in_line(stripped))
+    return "\n".join(repaired).strip()
+
+
+def strip_trailing_markdown_artefacts(text: str, *, source_text: str = "") -> str:
+    """Remove trailing markdown separator lines from record outputs when not user-provided."""
+    result = str(text or "").rstrip()
+    source = str(source_text or "").rstrip()
+    user_provided_trailing_rule = any(source.endswith(artifact) for artifact in ("—", "___", "***"))
+    if user_provided_trailing_rule:
+        return result
+    for artifact in ("—", "___", "***"):
+        if result.endswith(artifact):
+            result = re.sub(rf"[\n\r\s]*{re.escape(artifact)}\s*$", "", result)
+    return _TRAILING_MD_ARTIFACTS_RE.sub("", result).rstrip()
 
 
 def sanitize_live_record_output(text: str, *, source_text: str = "") -> str:
     """Apply adult identity, terminology, proportionality and observation discipline to record output."""
     initials = extract_supplied_adult_initials(source_text)
-    cleaned = sanitize_observation_interpretation_language(text)
+    cleaned = strip_interpretive_feelings_phrases(text, source_text=source_text)
     cleaned = strip_child_quote_interpretation(cleaned, source_text=source_text)
     cleaned = strip_invented_emotional_impact(cleaned, source_text=source_text)
     cleaned = strip_outcome_interpretation(cleaned, source_text=source_text)
-    cleaned = normalize_duplicate_daily_record_headings(cleaned, source_text=source_text)
+    cleaned = strip_unsupported_timeline_expansion(cleaned, source_text=source_text)
+    cleaned = sanitize_observation_interpretation_language(cleaned, source_text=source_text)
     cleaned = sanitize_childrens_home_terminology(cleaned, source_text=source_text)
+    if initials or _STAFF_TO_ADULT_RE.search(cleaned):
+        cleaned = apply_adult_identity_language(cleaned, supplied_initials=initials)
     if is_daily_record_request(source_text) and not has_safeguarding_cue(source_text):
         cleaned = strip_unnecessary_daily_record_sections(cleaned, source_text=source_text)
         cleaned = strip_unnecessary_follow_up_section(cleaned, source_text=source_text)
-    if initials or _STAFF_TO_ADULT_RE.search(cleaned):
-        cleaned = apply_adult_identity_language(cleaned, supplied_initials=initials)
+    cleaned = normalize_duplicate_daily_record_headings(cleaned, source_text=source_text)
     if is_record_generation_request(source_text) and not user_explicitly_requests_explanation(source_text):
         cleaned = strip_trailing_self_commentary(cleaned, source_text=source_text)
+        cleaned = strip_trailing_markdown_artefacts(cleaned, source_text=source_text)
+        cleaned = repair_record_sentence_boundaries(cleaned)
     return cleaned
 
 
@@ -827,6 +994,14 @@ def build_adult_identity_prompt_block() -> str:
         EMOTIONAL_IMPACT_DISCIPLINE_PRINCIPLE,
         "",
         OUTCOME_INTERPRETATION_DISCIPLINE_PRINCIPLE,
+        "",
+        SENTENCE_PUNCTUATION_DISCIPLINE_PRINCIPLE,
+        "",
+        INTERPRETIVE_FEELINGS_DISCIPLINE_PRINCIPLE,
+        "",
+        TIMELINE_DISCIPLINE_PRINCIPLE,
+        "",
+        TRAILING_MARKDOWN_DISCIPLINE_PRINCIPLE,
         "",
         DUPLICATE_HEADING_DISCIPLINE_PRINCIPLE,
         "",

@@ -22,14 +22,18 @@ from assistant.knowledge.adult_identity_language import (
     is_record_generation_request,
     is_self_commentary_paragraph,
     normalize_duplicate_daily_record_headings,
+    repair_record_sentence_boundaries,
     sanitize_childrens_home_terminology,
     sanitize_live_record_output,
     sanitize_observation_interpretation_language,
     strip_child_quote_interpretation,
+    strip_interpretive_feelings_phrases,
     strip_invented_emotional_impact,
     strip_outcome_interpretation,
+    strip_trailing_markdown_artefacts,
     strip_trailing_self_commentary,
     strip_unnecessary_follow_up_section,
+    strip_unsupported_timeline_expansion,
     user_explicitly_requests_explanation,
     user_provided_dsl_term,
 )
@@ -229,7 +233,7 @@ def test_observation_interpretation_sanitization():
     assert "mood improved" not in cleaned.lower()
     assert "seemed relaxed" not in cleaned.lower()
     assert "appeared calmer" in cleaned.lower()
-    assert "appeared more settled" in cleaned.lower()
+    assert "appeared more settled" not in cleaned.lower()
 
 
 def test_child_quote_preserved_in_sanitized_output():
@@ -611,3 +615,151 @@ def test_manual_regression_live_output_sanitized():
     assert "appeared calmer" in cleaned.lower()
     assert not re.search(r"^##\s+Outcome\s*$", cleaned, re.M | re.I)
     assert "outcome / handover" in cleaned.lower()
+
+
+def test_sentence_boundary_repair_quieter_than_usual_adult_tk():
+    source = MANUAL_REGRESSION_DAILY_RECORD_PROMPT
+    rough = "Child A returned from school appearing quieter than usual Adult TK noticed this and gave Child A space."
+    cleaned = sanitize_live_record_output(rough, source_text=source)
+    assert "quieter than usual. Adult TK" in cleaned
+
+
+def test_sentence_boundary_repair_settle_later():
+    source = MANUAL_REGRESSION_DAILY_RECORD_PROMPT
+    rough = "Adult TK gave Child A space to settle Later, Adult JS checked in with Child A."
+    cleaned = sanitize_live_record_output(rough, source_text=source)
+    assert "settle. Later," in cleaned
+
+
+def test_sentence_boundary_repair_watched_tv_during_this_time():
+    source = MANUAL_REGRESSION_DAILY_RECORD_PROMPT
+    rough = "Adult JS sat nearby while Child A watched TV During this time, Child A ate toast."
+    cleaned = sanitize_live_record_output(rough, source_text=source)
+    assert "watched television. During this time," in cleaned
+
+
+def test_sentence_boundary_repair_before_bedtime_adult_tk():
+    source = MANUAL_REGRESSION_DAILY_RECORD_PROMPT
+    rough = "Child A appeared calmer before bedtime Adult TK handed over to the next shift."
+    cleaned = sanitize_live_record_output(rough, source_text=source)
+    assert "before bedtime. Adult TK" in cleaned
+
+
+def test_repair_record_sentence_boundaries_direct():
+    assert "usual. Adult TK" in repair_record_sentence_boundaries(
+        "appearing quieter than usual Adult TK noticed this"
+    )
+
+
+def test_strip_interpretive_child_a_feelings_phrase():
+    source = MANUAL_REGRESSION_DAILY_RECORD_PROMPT
+    rough = "In response to Child A's feelings, Adult JS offered Child A toast."
+    cleaned = strip_interpretive_feelings_phrases(rough, source_text=source)
+    assert cleaned.startswith("In response")
+    assert "Child A's feelings" not in cleaned
+
+
+def test_child_quote_feeling_preserved():
+    source = f'{MANUAL_REGRESSION_DAILY_RECORD_PROMPT} Child A said, "I feel sad."'
+    rough = 'Child A said, "I feel sad."'
+    cleaned = sanitize_live_record_output(rough, source_text=source)
+    assert "I feel sad." in cleaned
+
+
+def test_user_provided_felt_sad_preserved():
+    source = "Create a daily record. Child A said they felt sad after school."
+    rough = "Child A said they felt sad after school."
+    cleaned = sanitize_live_record_output(rough, source_text=source)
+    assert "felt sad" in cleaned.lower()
+
+
+def test_invented_frustration_not_generated():
+    source = MANUAL_REGRESSION_DAILY_RECORD_PROMPT
+    rough = "Responding to Child A's frustration, Adult JS offered toast."
+    cleaned = sanitize_live_record_output(rough, source_text=source)
+    assert "frustration" not in cleaned.lower()
+
+
+def test_manual_regression_preserves_before_bedtime():
+    source = MANUAL_REGRESSION_DAILY_RECORD_PROMPT
+    rough = "Child A ate the toast and appeared calmer before bedtime."
+    cleaned = sanitize_live_record_output(rough, source_text=source)
+    assert "appeared calmer before bedtime" in cleaned.lower()
+
+
+def test_unsupported_evening_progressed_removed():
+    source = MANUAL_REGRESSION_DAILY_RECORD_PROMPT
+    rough = "Child A appeared calmer as the evening progressed."
+    cleaned = strip_unsupported_timeline_expansion(rough, source_text=source)
+    assert "as the evening progressed" not in cleaned.lower()
+    assert "appeared calmer" in cleaned.lower()
+
+
+def test_user_provided_evening_progressed_preserved():
+    source = (
+        "Create a daily record. Child A appeared calmer as the evening progressed "
+        "and was ready for bed."
+    )
+    rough = "Child A appeared calmer as the evening progressed and was ready for bed."
+    cleaned = strip_unsupported_timeline_expansion(rough, source_text=source)
+    assert "as the evening progressed" in cleaned.lower()
+
+
+def test_seemed_more_settled_becomes_appeared_calmer():
+    source = MANUAL_REGRESSION_DAILY_RECORD_PROMPT
+    rough = "Child A seemed more settled."
+    cleaned = sanitize_observation_interpretation_language(rough, source_text=source)
+    assert "seemed more settled" not in cleaned.lower()
+    assert "appeared calmer before bedtime" in cleaned.lower()
+
+
+def test_mood_improved_does_not_appear():
+    source = MANUAL_REGRESSION_DAILY_RECORD_PROMPT
+    rough = "By evening mood improved."
+    cleaned = sanitize_observation_interpretation_language(rough, source_text=source)
+    assert "mood improved" not in cleaned.lower()
+
+
+def test_seemed_relaxed_does_not_appear():
+    source = MANUAL_REGRESSION_DAILY_RECORD_PROMPT
+    rough = "Child A seemed relaxed by bedtime."
+    cleaned = sanitize_observation_interpretation_language(rough, source_text=source)
+    assert "seemed relaxed" not in cleaned.lower()
+
+
+def test_trailing_markdown_rule_removed_from_record_output():
+    source = MANUAL_REGRESSION_DAILY_RECORD_PROMPT
+    rough = "Daily Record\n\nChild A appeared calmer before bedtime.\n\n—"
+    cleaned = sanitize_live_record_output(rough, source_text=source)
+    assert not cleaned.rstrip().endswith("—")
+
+
+def test_trailing_markdown_preserved_when_user_provided():
+    source = "Create a daily record with section separators.\n\nChild A quieter after school.\n\n—"
+    rough = "Child A quieter after school.\n\n—"
+    cleaned = strip_trailing_markdown_artefacts(rough, source_text=source)
+    assert cleaned.rstrip().endswith("—")
+
+
+def test_live_broken_output_full_sanitize_pass():
+    source = MANUAL_REGRESSION_DAILY_RECORD_PROMPT
+    rough = (
+        "Child A returned from school appearing quieter than usual Adult TK noticed this and gave Child A space to settle "
+        "Later, Adult JS checked in with Child A.\n\n"
+        'Child A said, "I\'m just annoyed about school."\n\n'
+        "In response to Child A's feelings, Adult JS offered Child A toast and sat nearby while Child A watched TV "
+        "During this time, Child A ate the toast.\n\n"
+        "Child A seemed more settled as the evening progressed.\n\n"
+        "Adult TK handed over that tomorrow's adults should check in gently about school if Child A wishes to talk.\n\n"
+        "—"
+    )
+    cleaned = sanitize_live_record_output(rough, source_text=source)
+    assert "quieter than usual. Adult TK" in cleaned
+    assert "settle. Later," in cleaned
+    assert "watched television. During this time," in cleaned
+    assert "Child A's feelings" not in cleaned
+    assert "as the evening progressed" not in cleaned.lower()
+    assert "seemed more settled" not in cleaned.lower()
+    assert "appeared calmer before bedtime" in cleaned.lower() or "appeared calmer" in cleaned.lower()
+    assert not cleaned.rstrip().endswith("—")
+    assert "I'm just annoyed about school." in cleaned

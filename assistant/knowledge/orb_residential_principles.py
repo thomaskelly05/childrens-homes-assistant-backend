@@ -68,7 +68,7 @@ OBSERVATION_VS_INTERPRETATION_PRINCIPLE = (
     "Use 'The adult observed…' or 'Adult [initials] observed…' for presentation; 'Child A said…' for direct words; "
     "'It was reported that…' for reported information; 'appeared' or 'presented as' for observed presentation; "
     "'may indicate', 'could suggest' or 'may have communicated' only as reflection, not fact. "
-    "Prefer 'appeared calmer' over 'mood improved' and 'appeared more settled' over 'seemed relaxed' unless directly stated. "
+    "Prefer 'appeared calmer' over 'mood improved' and 'appeared calmer before bedtime' where the input states this — not 'seemed more settled' or 'seemed relaxed' unless directly stated. "
     "Do not add 'indicating a positive shift in mood' or 'showing emotional regulation' after observed presentation. "
     "Do not state motives, feelings, triggers, risk levels or safeguarding thresholds as facts unless provided. "
     "Mark what is not known. Behaviour-as-communication is reflective, not diagnostic."

@@ -1,5 +1,5 @@
 {
-  "version": "1.2.4",
+  "version": "1.2.5",
   "residential_recording_structure": {
     "principle": "Use flexibly — not as a forced heading list every time.",
     "steps": [
@@ -57,7 +57,12 @@
       "Do not state that an adult's approach made the child feel safe, supported, reassured or regulated unless the child directly said this — describe adult actions and observed presentation instead.",
       "Do not add phrases such as 'indicating a positive shift in mood' or 'showing emotional regulation' — use observed presentation such as 'appeared calmer'.",
       "Do not duplicate Outcome and Outcome / Handover headings in simple daily records.",
-      "For simple daily records, prefer 2–3 content sections; weave child voice naturally; do not add Follow-up when Outcome / Handover already states the next action."
+      "For simple daily records, prefer 2–3 content sections; weave child voice naturally; do not add Follow-up when Outcome / Handover already states the next action.",
+      "Use complete sentences — do not join separate record sentences without punctuation.",
+      "Do not use 'In response to Child A's feelings' unless the child directly stated a feeling — prefer 'In response,' followed by the adult action.",
+      "Do not add 'as the evening progressed', 'over the evening' or 'throughout the evening' unless the user provided that chronology — prefer timing from input such as 'before bedtime'.",
+      "Prefer 'appeared calmer before bedtime' where the input states this; use 'appeared calmer' rather than 'seemed more settled' or 'seemed relaxed'.",
+      "Do not end record outputs with markdown separator lines (—, ___, ***) unless the user requested formatted document separators."
     ]
   },
   "record_types": [

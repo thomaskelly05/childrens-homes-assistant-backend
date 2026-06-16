@@ -1,7 +1,7 @@
 {
   "baseline_version": "1.0.0",
-  "commit_sha": "e2e21fac3d1cea9dc599f98e629c0425be7f2b4a",
-  "run_timestamp": "2026-06-16T19:00:40.264522+00:00",
+  "commit_sha": "ffcd2fbff25674aa20591903ec210ecf1dd62462",
+  "run_timestamp": "2026-06-16T20:12:26.350236+00:00",
   "scenario_set": "variants1000",
   "mode": "static",
   "scenario_count": 1000,
@@ -313,7 +313,7 @@
     "internal_only_categories": [],
     "warning": "Scores are internal quality indicators aligned to recognised sources where mapped. They are not regulatory determinations, inspection predictions, or professional validation. Adults remain accountable for decisions, escalation and final records."
   },
-  "run_duration_seconds": 4.47,
+  "run_duration_seconds": 5.37,
   "run_scope": {
     "limit": null,
     "sample": null,
@@ -19451,7 +19451,7 @@
       "record_type": "behaviour_reflection",
       "scenario_family": "behaviour_communication",
       "answer_source": "variant_static",
-      "output_excerpt": "## Damaging bedroom item \u2014 rough note  ## What happened young person damaged own bedroom item when upset no injury The adult  What is not yet stated: - Direct words if known \u2014 the child's words were not recorded; add if known. - Outcome not yet recorded \u2014 follow-up still to be co"
+      "output_excerpt": "## Damaging bedroom item \u2014 rough note  ## What happened young person damaged own bedroom item when upset no injury The adult What is not yet stated: - Direct words if known \u2014 the child's words were not recorded; add if known. - Outcome not yet recorded \u2014 follow-up still to be con"
     },
     {
       "scenario_id": "core_039_v02_manager_oversight",
@@ -19501,7 +19501,7 @@
       "record_type": "behaviour_reflection",
       "scenario_family": "behaviour_communication",
       "answer_source": "variant_static",
-      "output_excerpt": "## Damaging bedroom item \u2014 manager oversight  ## What happened Young person damaged own bedroom item when upset. No injury. The adult  Young person helped with tidy-up. Repair and replacement discussed calmly.  ## Known / gaps Based on the information provided: Known / observed /"
+      "output_excerpt": "## Damaging bedroom item \u2014 manager oversight  ## What happened Young person damaged own bedroom item when upset. No injury. The adult Young person helped with tidy-up. Repair and replacement discussed calmly.  ## Known / gaps Based on the information provided: Known / observed / "
     },
     {
       "scenario_id": "core_039_v03_handover",
@@ -19551,7 +19551,7 @@
       "record_type": "behaviour_reflection",
       "scenario_family": "behaviour_communication",
       "answer_source": "variant_static",
-      "output_excerpt": "## Damaging bedroom item \u2014 handover  ## What happened Young person damaged own bedroom item when upset. No injury. The adult  Young person helped with tidy-up. Repair and replacement discussed calmly.  ## Known / gaps Based on the information provided: Known / observed / reported"
+      "output_excerpt": "## Damaging bedroom item \u2014 handover  ## What happened Young person damaged own bedroom item when upset. No injury. The adult Young person helped with tidy-up. Repair and replacement discussed calmly.  ## Known / gaps Based on the information provided: Known / observed / reported:"
     },
     {
       "scenario_id": "core_039_v04_mobile_friendly",
@@ -19601,7 +19601,7 @@
       "record_type": "behaviour_reflection",
       "scenario_family": "behaviour_communication",
       "answer_source": "variant_static",
-      "output_excerpt": "## Damaging bedroom item \u2014 mobile friendly  ## What happened Young person damaged own bedroom item when upset. No injury. The adult  Young person helped with tidy-up. Repair and replacement disc  ## Known / gaps Based on the information provided: Known / observed / reported: see "
+      "output_excerpt": "## Damaging bedroom item \u2014 mobile friendly  ## What happened Young person damaged own bedroom item when upset. No injury. The adult Young person helped with tidy-up. Repair and replacement disc  ## Known / gaps Based on the information provided: Known / observed / reported: see f"
     },
     {
       "scenario_id": "core_039_v05_child_centred_rewrite",
@@ -19651,7 +19651,7 @@
       "record_type": "behaviour_reflection",
       "scenario_family": "behaviour_communication",
       "answer_source": "variant_static",
-      "output_excerpt": "## Damaging bedroom item \u2014 child centred rewrite  ## What happened Young person damaged own bedroom item when upset. No injury. The adult  Young person helped with tidy-up. Repair and replacement discussed calmly.  ## Known / gaps Based on the information provided: Known / observ"
+      "output_excerpt": "## Damaging bedroom item \u2014 child centred rewrite  ## What happened Young person damaged own bedroom item when upset. No injury. The adult Young person helped with tidy-up. Repair and replacement discussed calmly.  ## Known / gaps Based on the information provided: Known / observe"
     },
     {
       "scenario_id": "core_039_v06_safeguarding_escalation",
@@ -19701,7 +19701,7 @@
       "record_type": "behaviour_reflection",
       "scenario_family": "behaviour_communication",
       "answer_source": "variant_static",
-      "output_excerpt": "## Damaging bedroom item \u2014 safeguarding escalation  ## What happened Young person damaged own bedroom item when upset. No injury. The adult  Young person helped with tidy-up. Repair and replacement discussed calmly.  ## Known / gaps Based on the information provided: Known / obse"
+      "output_excerpt": "## Damaging bedroom item \u2014 safeguarding escalation  ## What happened Young person damaged own bedroom item when upset. No injury. The adult Young person helped with tidy-up. Repair and replacement discussed calmly.  ## Known / gaps Based on the information provided: Known / obser"
     },
     {
       "scenario_id": "core_039_v07_reg44_evidence",
@@ -19751,7 +19751,7 @@
       "record_type": "behaviour_reflection",
       "scenario_family": "behaviour_communication",
       "answer_source": "variant_static",
-      "output_excerpt": "## Damaging bedroom item \u2014 reg44 evidence  ## What happened Young person damaged own bedroom item when upset. No injury. The adult  Young person helped with tidy-up. Repair and replacement discussed calm  ## Known / gaps Based on the information provided: Known / observed / repor"
+      "output_excerpt": "## Damaging bedroom item \u2014 reg44 evidence  ## What happened Young person damaged own bedroom item when upset. No injury. The adult Young person helped with tidy-up. Repair and replacement discussed calm  ## Known / gaps Based on the information provided: Known / observed / report"
     },
     {
       "scenario_id": "core_039_v08_poor_wording_correction",
@@ -19851,7 +19851,7 @@
       "record_type": "behaviour_reflection",
       "scenario_family": "behaviour_communication",
       "answer_source": "variant_static",
-      "output_excerpt": "## Damaging bedroom item \u2014 voice dictate transcript  ## What happened Young person damaged own bedroom item when upset. No injury. The adult  Young perso  ## Known / gaps Based on the information provided: Known / observed / reported: see factual account above. What is not yet st"
+      "output_excerpt": "## Damaging bedroom item \u2014 voice dictate transcript  ## What happened Young person damaged own bedroom item when upset. No injury. The adult Young perso  ## Known / gaps Based on the information provided: Known / observed / reported: see factual account above. What is not yet sta"
     },
     {
       "scenario_id": "core_039_v10_reflective_supervision",
@@ -19901,7 +19901,7 @@
       "record_type": "behaviour_reflection",
       "scenario_family": "behaviour_communication",
       "answer_source": "variant_static",
-      "output_excerpt": "## Damaging bedroom item \u2014 reflective supervision  ## What happened Young person damaged own bedroom item when upset. No injury. The adult  Young person helped with tidy-up. Repair and replacement discussed calm  ## Known / gaps Based on the information provided: Known / observed"
+      "output_excerpt": "## Damaging bedroom item \u2014 reflective supervision  ## What happened Young person damaged own bedroom item when upset. No injury. The adult Young person helped with tidy-up. Repair and replacement discussed calm  ## Known / gaps Based on the information provided: Known / observed "
     },
     {
       "scenario_id": "core_040_v01_rough_note",
