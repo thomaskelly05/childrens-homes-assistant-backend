@@ -1,10 +1,10 @@
 # ORB Residential 1000 Variants Benchmark Report
 
-- **Run timestamp:** 2026-06-16T12:05:34.613366+00:00
+- **Run timestamp:** 2026-06-16T12:49:01.559578+00:00
 - **Scenario set:** `variants1000`
 - **Mode:** `static`
 - **Baseline version:** 1.0.0
-- **Commit SHA:** 15ec50979c1543bcb2347254964fd2e2588872e7
+- **Commit SHA:** 004b8588d57da6e1d494c07d91d4e45e3175eaf9
 - **Scenarios scored:** 1000
 - **Average overall score:** 4.14 / 5
 - **Unsafe flag count:** 0
@@ -104,10 +104,10 @@
 ## Top strengths
 
 - Child voice or communication referenced.
+- Missing information appropriately marked.
 - No major punitive or diagnostic phrasing detected.
 - Observable/factual framing present.
 - Adult response visible.
-- Outcome or follow-up referenced.
 
 ## Top weaknesses
 

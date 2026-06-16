@@ -1190,7 +1190,18 @@ def test_magic_notes_scaffold_does_not_invent_missing_details() -> None:
 
 
 def test_scaffold_prompts_for_missing_child_voice_not_invented() -> None:
-    scenario = _core_scenario("core_003")
+    scenario = {
+        "id": "test_no_child_voice",
+        "title": "Daily note without child voice",
+        "input": "rough: young person refused lunch. staff offered alternatives.",
+        "safeguarding_flags": [],
+        "scenario_family": "daily_care",
+        "record_type": "daily_record",
+        "feature_target": "Magic Notes",
+        "variant_type": "rough_note",
+        "required_elements": [],
+        "prohibited_elements": [],
+    }
     output = build_quality_lab_scaffold(scenario)
     lower = output.lower()
     assert "not yet known" in lower or "words were not recorded" in lower
