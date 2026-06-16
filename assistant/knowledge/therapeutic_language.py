@@ -40,6 +40,9 @@ THERAPEUTIC_LANGUAGE_MODULE = {
             "Use 'may indicate', 'could suggest' or 'may have communicated' only as reflection — not as fact.",
             "Do not state motives, feelings, triggers or risk levels as facts unless the child or responsible adult provided them.",
             "Mark what remains unknown; separate record wording from reflective analysis.",
+            "Help adults consider proportionate pathways — routine follow-up, handover, senior/manager review, local safeguarding procedure, professional consultation, urgent action if immediate risk.",
+            "Use 'pathway to consider' and 'responsible adult to decide'; record who was informed and what remains unresolved.",
+            "Do not say 'threshold met', 'referral required' or 'no concern' as ORB's decision; do not invent escalation details.",
         ],
         "structure_steps": [
             "What happened?",

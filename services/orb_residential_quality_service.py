@@ -30,7 +30,8 @@ SHARED_CAPTURE_PROMPTS: tuple[str, ...] = (
     "What action was taken?",
     "What changed by the end?",
     "Was anyone informed?",
-    "Is follow-up or management oversight needed?",
+    "What pathway or escalation should a responsible adult consider?",
+    "Is follow-up, handover or management oversight needed?",
     "Were there safeguarding concerns?",
     "Is the record factual and balanced?",
     "Is the language respectful and child-centred?",
@@ -60,7 +61,12 @@ _QUALITY_FIELD_PROMPTS: dict[str, str] = {
     "non_judgemental_language": "Is the wording factual and respectful, without judgemental labels?",
     "chronology_relevance": "What was the sequence of events? Include approximate times.",
     "evidence_of_action": "What actions were taken and who was informed?",
-    "follow_up_review_date": "Are follow-up actions or review dates needed?",
+    "follow_up_review_date": "Are follow-up actions, handover points or review dates needed?",
+    "pathway_escalation": (
+        "What pathway should a responsible adult consider — routine follow-up, handover, senior/manager review, "
+        "local safeguarding procedure, professional consultation or urgent action if immediate risk? "
+        "Record who was informed and what remains unresolved. ORB suggests consideration; adults decide per local policy."
+    ),
     "impact": "What was the outcome or impact at the time?",
     "professional_curiosity": "What questions remain? What might need further exploration?",
     "plan_risk_review": "Does this affect the care plan, placement plan or risk assessment?",

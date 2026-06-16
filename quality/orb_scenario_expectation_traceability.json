@@ -80,7 +80,7 @@
     },
     {
       "element": "escalation/pathway",
-      "what_is_expected": "Safeguarding escalation, DSL/manager notification, local pathway reference.",
+      "what_is_expected": "Proportionate pathway language — routine follow-up, handover, senior/manager review, local safeguarding procedure, professional consultation or urgent action where indicated. Record who was informed and what remains unresolved. ORB suggests consideration; responsible adults decide per local policy.",
       "external_source_ids": [
         "working_together_2023",
         "nspcc_safeguarding_guidance",
@@ -88,7 +88,8 @@
         "ofsted_safeguarding_expectations"
       ],
       "internal_source_ids": ["orb_adult_responsibility_boundary"],
-      "evidence_strength": "high"
+      "evidence_strength": "high",
+      "boundary_note": "Pathways are for professional consideration, not ORB decision-making. Local policy remains authoritative. Internal quality indicator, not regulatory judgement."
     },
     {
       "element": "source/evidence basis",

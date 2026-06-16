@@ -96,7 +96,9 @@ export const ORB_MISSING_INFORMATION_GUIDANCE = {
     'What did adults do first to support, reassure or de-escalate?',
     'How did adults preserve dignity, safety and relationship?',
     'Was anyone informed?',
-    'Is follow-up or management oversight needed?',
+    'Is follow-up, handover or management oversight needed?',
+    'What pathway should a responsible adult consider — routine follow-up, handover, senior/manager review, local safeguarding procedure, professional consultation or urgent action if immediate risk?',
+    'Record who was informed and what remains unresolved — ORB suggests consideration; adults decide per local policy.',
     'Does a manager/senior need to review this record, pattern or follow-up?',
     'Is there a supervision, debrief or practice learning theme?'
   ],
