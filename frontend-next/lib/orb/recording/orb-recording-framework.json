@@ -1,5 +1,5 @@
 {
-  "version": "1.2.2",
+  "version": "1.2.3",
   "residential_recording_structure": {
     "principle": "Use flexibly — not as a forced heading list every time.",
     "steps": [
@@ -44,7 +44,13 @@
       "Match record headings to the type requested — daily records use Daily Record / Presentation and Support / Child's Voice / Adult Response / Outcome / Handover; not Incident Summary unless an incident record was requested.",
       "When creating a record, provide the record itself — do not add self-assessment or explanation after the record unless the user asks.",
       "Use relational therapeutic wording with specific adult actions — gave space, checked in gently, remained nearby, acknowledged what the child shared — without inventing feelings or actions.",
-      "Prefer 'appeared calmer' over 'mood improved' and 'appeared more settled' over 'seemed relaxed' unless directly stated; preserve the child's direct words."
+      "Prefer 'appeared calmer' over 'mood improved' and 'appeared more settled' over 'seemed relaxed' unless directly stated; preserve the child's direct words.",
+      "Do not default to DSL, Designated Safeguarding Lead or education safeguarding terminology — use children's home language: manager, responsible manager, senior on shift, Registered Manager, local safeguarding procedure.",
+      "Use DSL only when the user explicitly included DSL in their input and ORB is referring back to that term.",
+      "For ordinary daily records without safeguarding cues, do not add Safeguarding Note, automatic manager escalation, or disproportionate safeguarding paragraphs.",
+      "Do not use 'Staff on Duty' — use 'Adults involved: Adult TK, Adult JS' when adult identifiers are supplied, or omit.",
+      "When Adult [initials] are supplied, use them consistently throughout — do not revert to generic 'staff' later in the record.",
+      "Daily records should be clean and record-like — avoid unnecessary Child Voice, Next Steps, Professional Reflection or self-commentary sections unless asked."
     ]
   },
   "record_types": [
@@ -445,7 +451,7 @@
         "Child words in quote marks where possible"
       ],
       "manager_oversight_checks": [
-        "Manager and DSL informed",
+        "Manager informed",
         "Review date"
       ],
       "professional_language_guidance": "Facts led, no speculation. Record child words, adult response, escalation pathway, outcome and follow-up. Adults decide — ORB does not make safeguarding decisions.",
@@ -493,7 +499,7 @@
         "policy_compare"
       ],
       "suggested_follow_up_actions": [
-        "DSL notification",
+        "Manager notification",
         "Chronology entry",
         "Agency referral if required"
       ],
@@ -1181,7 +1187,7 @@
       ],
       "missing_evidence_checks": [
         "Immediate child safety",
-        "DSL / LADO pathway",
+        "Local safeguarding / LADO pathway",
         "Evidence preservation"
       ],
       "safeguarding_checks": [
@@ -1192,7 +1198,7 @@
         "Child words recorded factually"
       ],
       "manager_oversight_checks": [
-        "Senior manager and DSL informed immediately"
+        "Senior manager informed immediately"
       ],
       "professional_language_guidance": "Neutral, factual, no conclusions, preserve evidence.",
       "regulatory_evidence_points": [
@@ -1233,7 +1239,7 @@
         "extract_actions"
       ],
       "suggested_follow_up_actions": [
-        "DSL notification",
+        "Manager notification",
         "LADO referral assessment"
       ],
       "safety_disclaimer": "Draft only — follow allegations policy immediately; do not investigate informally.",

@@ -8,10 +8,14 @@ import {
   applyAdultIdentityLanguage,
   buildAdultIdentityPromptBlock,
   extractSuppliedAdultInitials,
+  hasSafeguardingCue,
   isDailyRecordRequest,
   isIncidentRecordRequest,
   isSelfCommentaryParagraph,
-  sanitizeObservationInterpretationLanguage
+  sanitizeChildrensHomeTerminology,
+  sanitizeLiveRecordOutput,
+  sanitizeObservationInterpretationLanguage,
+  userProvidedDslTerm
 } from './orb-adult-identity-language.ts'
 import { buildSectionPromptBody } from './orb-recording-section-prompts.ts'
 import { buildTherapeuticWritingPromptBlock } from './orb-therapeutic-writing.ts'
@@ -48,14 +52,38 @@ describe('ORB live review correction pass', () => {
     assert.doesNotMatch(cleaned, /\bStaff\b/)
   })
 
-  it('sanitizes mood improved and seemed relaxed wording', () => {
+  it('sanitizes mood improved, seemed more relaxed and seemed relaxed wording', () => {
     const cleaned = sanitizeObservationInterpretationLanguage(
-      'By evening mood improved and Child A seemed relaxed.'
+      'By evening mood improved and Child A seemed more relaxed.'
     )
     assert.doesNotMatch(cleaned.toLowerCase(), /mood improved/)
-    assert.doesNotMatch(cleaned.toLowerCase(), /seemed relaxed/)
+    assert.doesNotMatch(cleaned.toLowerCase(), /seemed more relaxed/)
     assert.match(cleaned.toLowerCase(), /appeared calmer/)
-    assert.match(cleaned.toLowerCase(), /appeared more settled/)
+  })
+
+  it('does not default to DSL in residential output when not in input', () => {
+    const source = 'Child A quieter after school. Manager informed.'
+    const cleaned = sanitizeChildrensHomeTerminology('DSL informed and pathway to DSL followed.', source)
+    assert.doesNotMatch(cleaned, /\bDSL\b/)
+    assert.match(cleaned.toLowerCase(), /manager/)
+    assert.equal(userProvidedDslTerm(source), false)
+  })
+
+  it('replaces Staff on Duty and staff consistently when initials supplied', () => {
+    const source = 'Create a daily record. Adult TK and Adult JS on shift.'
+    const cleaned = sanitizeLiveRecordOutput(
+      '## Safeguarding Note\nStaff on Duty. Staff checked in. Child seemed more relaxed. DSL informed.',
+      source
+    )
+    assert.doesNotMatch(cleaned, /Staff on Duty/)
+    assert.doesNotMatch(cleaned, /\bStaff\b/)
+    assert.doesNotMatch(cleaned, /\bDSL\b/)
+    assert.doesNotMatch(cleaned, /Safeguarding Note/)
+    assert.doesNotMatch(cleaned.toLowerCase(), /seemed more relaxed/)
+  })
+
+  it('ordinary daily input has no safeguarding cue by default', () => {
+    assert.equal(hasSafeguardingCue(DAILY_RECORD_PROMPT), false)
   })
 
   it('flags self-commentary after records', () => {
@@ -77,11 +105,12 @@ describe('ORB live review correction pass', () => {
     assert.doesNotMatch(body, /^## Incident\b/mi)
   })
 
-  it('therapeutic writing prompt block includes adult identity discipline', () => {
+  it('therapeutic writing prompt block includes adult identity and DSL discipline', () => {
     const block = buildTherapeuticWritingPromptBlock('daily_record').toLowerCase()
     assert.match(block, /do not default to 'staff'/)
-    assert.match(block, /do not add a self-assessment|no self-commentary/)
+    assert.match(block, /do not add a self-assessment|no self-commentary|self-commentary/)
     assert.match(block, /appeared calmer/)
+    assert.match(block, /dsl/)
   })
 
   it('frontend and backend framework versions remain aligned', () => {

@@ -12,14 +12,18 @@ from assistant.evals.orb_high_risk_scaffold import build_child_centred_scaffold,
 from assistant.knowledge.adult_identity_language import (
     apply_adult_identity_language,
     build_adult_identity_prompt_block,
+    contains_generic_staff_with_initials,
     extract_supplied_adult_initials,
+    has_safeguarding_cue,
     headings_for_record_context,
     is_daily_record_request,
     is_incident_record_request,
     is_self_commentary_paragraph,
+    sanitize_childrens_home_terminology,
     sanitize_live_record_output,
     sanitize_observation_interpretation_language,
     user_explicitly_requests_explanation,
+    user_provided_dsl_term,
 )
 from assistant.knowledge.orb_residential_principles import CANONICAL_PRINCIPLES, validate_principle_alignment
 from assistant.prompts import _build_output_discipline_block, _build_recording_excellence_block
@@ -77,14 +81,21 @@ def daily_scenario() -> dict:
 
 def test_canonical_principles_include_live_review_discipline():
     assert "adult_identity" in CANONICAL_PRINCIPLES
+    assert "childrens_home_safeguarding_terminology" in CANONICAL_PRINCIPLES
+    assert "daily_record_proportionality" in CANONICAL_PRINCIPLES
+    assert "daily_record_output_discipline" in CANONICAL_PRINCIPLES
     assert "record_heading_discipline" in CANONICAL_PRINCIPLES
     assert "self_commentary" in CANONICAL_PRINCIPLES
     assert "do not default to 'staff'" in CANONICAL_PRINCIPLES["adult_identity"].lower()
+    assert "dsl" in CANONICAL_PRINCIPLES["childrens_home_safeguarding_terminology"].lower()
 
 
 def test_framework_wording_discipline_includes_adult_identity_and_headings(framework: dict):
     bullets = " ".join(framework["residential_recording_structure"]["wording_discipline"]).lower()
     assert "do not default to 'staff'" in bullets
+    assert "do not default to dsl" in bullets
+    assert "staff on duty" in bullets
+    assert "safeguarding note" in bullets
     assert "incident summary" in bullets
     assert "self-assessment" in bullets or "self-commentary" in bullets.replace(" ", "-")
     assert "appeared calmer" in bullets
@@ -103,9 +114,12 @@ def test_prompt_blocks_include_adult_identity_and_no_self_commentary():
     output = _build_output_discipline_block().lower()
     adult_block = build_adult_identity_prompt_block().lower()
     assert "do not default to" in recording and "staff" in recording
+    assert "do not default to dsl" in recording
+    assert "staff on duty" in recording
     assert "self-assessment" in output or "self-commentary" in output.replace(" ", "-")
     assert "adult tk" in adult_block
     assert "incident summary" in adult_block
+    assert "children's home safeguarding" in adult_block or "childrens home safeguarding" in adult_block.replace("'", "")
 
 
 def test_therapeutic_contract_daily_headings_use_daily_record_discipline():
@@ -137,10 +151,54 @@ def test_adult_identity_retains_supplied_initials():
     rough = "Adult TK gave Child A space. Adult JS checked in later."
     initials = extract_supplied_adult_initials(rough)
     assert initials == ["TK", "JS"]
-    mixed = "Staff offered toast after Adult TK gave space."
+    mixed = "Staff offered toast after Adult TK gave space. Staff checked in later."
     cleaned = apply_adult_identity_language(mixed, supplied_initials=initials)
     assert "Adult TK" in cleaned
+    assert "Adult JS" in cleaned
     assert "Staff" not in cleaned
+    assert not contains_generic_staff_with_initials(cleaned, supplied_initials=initials)
+
+
+def test_staff_on_duty_is_not_generated():
+    rough = "Staff on Duty: Adult TK, Adult JS"
+    cleaned = apply_adult_identity_language(rough, supplied_initials=["TK", "JS"])
+    assert "Staff on Duty" not in cleaned
+    assert "Adults involved" in cleaned
+
+
+def test_dsl_not_used_by_default_in_residential_output():
+    source = "Child A came back quieter after school. Manager informed."
+    output = sanitize_childrens_home_terminology("DSL informed and pathway to DSL followed.", source_text=source)
+    assert "DSL" not in output
+    assert "manager" in output.lower()
+
+
+def test_dsl_preserved_when_user_provided_term():
+    source = "Young person disclosed concern. DSL informed per local policy."
+    output = sanitize_childrens_home_terminology("DSL informed and recorded.", source_text=source)
+    assert "DSL" in output
+    assert user_provided_dsl_term(source)
+
+
+def test_daily_record_scaffold_without_dsl_when_not_in_input(daily_scenario: dict):
+    output = build_child_centred_scaffold(daily_scenario)
+    assert "DSL" not in output
+    assert "Safeguarding Note" not in output
+    assert "Staff on Duty" not in output
+    assert "Next Steps" not in output
+
+
+def test_daily_record_scaffold_no_safeguarding_note_without_cue(daily_scenario: dict):
+    assert not has_safeguarding_cue(daily_scenario["input"])
+    output = build_child_centred_scaffold(daily_scenario)
+    assert "safeguarding note" not in output.lower()
+
+
+def test_observation_sanitization_seemed_more_relaxed():
+    text = "Child A seemed more relaxed by evening."
+    cleaned = sanitize_observation_interpretation_language(text)
+    assert "seemed more relaxed" not in cleaned.lower()
+    assert "appeared calmer" in cleaned.lower()
 
 
 def test_observation_interpretation_sanitization():
@@ -184,18 +242,59 @@ def test_daily_scaffold_prefers_the_adult_over_staff_default(daily_scenario: dic
     assert re.search(r"\bthe adult\b", output, re.I)
 
 
-def test_daily_scaffold_with_initials_uses_adult_labels():
+def test_daily_scaffold_with_initials_uses_adult_labels_consistently():
     scenario = {
         "scenario_id": "live_review_daily_initials",
         "title": "Daily record with adult initials",
         "record_type": "daily_record",
         "scenario_family": "daily_care",
-        "input": DAILY_RECORD_WITH_INITIALS,
+        "input": DAILY_RECORD_WITH_INITIALS + " Staff handed over to next shift.",
     }
     output = build_child_centred_scaffold(scenario)
     assert "Adult TK" in output
     assert "Adult JS" in output
     assert "Staff" not in output
+    assert "Staff on Duty" not in output
+
+
+def test_safeguarding_scaffold_still_has_pathway_language():
+    scenario = {
+        "scenario_id": "live_review_safeguarding",
+        "title": "Online exploitation concern",
+        "record_type": "safeguarding_concern",
+        "scenario_family": "safeguarding",
+        "input": (
+            "Young person received messages from unknown adult online. "
+            "Manager informed immediately. Device secured per policy."
+        ),
+        "safeguarding_flags": ["escalation_required"],
+        "regulatory_context": ["safeguarding"],
+    }
+    output = build_quality_lab_scaffold(scenario).lower()
+    assert "pathway" in output
+    assert "manager" in output
+    assert "local safeguarding" in output or "safeguarding procedure" in output
+
+
+def test_daily_scaffold_routine_not_over_escalated(daily_scenario: dict):
+    output = build_child_centred_scaffold(daily_scenario).lower()
+    assert "must escalate" not in output
+    assert "dsl pathway required" not in output
+    assert "## pathway to consider" not in output
+
+
+def test_sanitize_live_output_applies_full_discipline():
+    source = DAILY_RECORD_WITH_INITIALS
+    rough = (
+        "## Safeguarding Note\n\nStaff on Duty. Child A seemed more relaxed. "
+        "DSL informed. Staff handed over."
+    )
+    cleaned = sanitize_live_record_output(rough, source_text=source)
+    assert "Safeguarding Note" not in cleaned
+    assert "Staff on Duty" not in cleaned
+    assert "seemed more relaxed" not in cleaned.lower()
+    assert "DSL" not in cleaned
+    assert "Staff" not in cleaned
 
 
 def test_daily_scaffold_avoids_mood_improved_when_input_says_appeared_calmer(daily_scenario: dict):

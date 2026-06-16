@@ -12,6 +12,9 @@ from typing import Any
 from assistant.knowledge.adult_identity_language import (
     apply_adult_identity_language,
     extract_supplied_adult_initials,
+    has_safeguarding_cue,
+    sanitize_childrens_home_terminology,
+    sanitize_live_record_output,
     sanitize_observation_interpretation_language,
     scaffold_heading_for_scenario,
 )
@@ -231,7 +234,7 @@ _FAMILY_ESCALATION_GUIDANCE: dict[str, str] = {
     "allegation": (
         "Pathway to consider: local safeguarding procedure and allegation pathway — escalation pathway for "
         "responsible adults to decide. Record facts without investigating beyond role. "
-        "Record who was informed (DSL/manager) and what remains unresolved per local policy."
+        "Record who was informed (manager/responsible manager) and what remains unresolved per local policy."
     ),
     "handover": (
         "Pathway to consider: routine handover with next-shift follow-up. "
@@ -396,6 +399,28 @@ def needs_safeguarding_escalation(scenario: dict[str, Any]) -> bool:
     if variant_type == "safeguarding_escalation":
         return True
     return False
+
+
+def _finalize_scaffold_output(text: str, scenario: dict[str, Any], input_text: str) -> str:
+    """Apply live-output discipline to deterministic scaffold text."""
+    raw_input = str(scenario.get("input") or input_text or "")
+    return sanitize_live_record_output(text, source_text=raw_input)
+
+
+def _should_include_pathway_section(scenario: dict[str, Any], input_text: str) -> bool:
+    family = str(scenario.get("scenario_family") or "")
+    if family == "daily_care" and not needs_safeguarding_escalation(scenario):
+        return has_safeguarding_cue(input_text)
+    if needs_safeguarding_escalation(scenario):
+        return True
+    if has_safeguarding_cue(input_text):
+        return True
+    return family not in {"daily_care", "key_work"}
+
+
+def _normalize_escalation_wording(text: str, *, source_text: str) -> str:
+    """Echo user-provided DSL when present; otherwise use children's home terminology."""
+    return sanitize_childrens_home_terminology(text, source_text=source_text)
 
 
 def _resolve_routine_pathway_guidance(scenario: dict[str, Any]) -> str:
@@ -728,6 +753,9 @@ def _input_has_management_cues(text: str) -> bool:
 
 def _needs_management_oversight_section(scenario: dict[str, Any]) -> bool:
     """Whether scaffold should include a management oversight / review section."""
+    family = str(scenario.get("scenario_family") or "")
+    if family == "daily_care":
+        return False
     required = list(scenario.get("required_elements") or [])
     if "management oversight" in required:
         return True
@@ -883,9 +911,9 @@ def _format_extracted_adult_actions(actions: list[str], *, source_text: str = ""
         normalised = action.strip()
         if re.search(r"\bstaff\b", normalised, re.I) and initials:
             adult_label = f"Adult {initials[index % len(initials)]}"
-            normalised = re.sub(r"\b[Ss]taff\b", adult_label, normalised, count=1)
+            normalised = re.sub(r"\b[Ss]taff\b", adult_label, normalised)
         elif re.search(r"\bstaff\b", normalised, re.I):
-            normalised = re.sub(r"\b[Ss]taff\b", "The adult", normalised, count=1)
+            normalised = re.sub(r"\b[Ss]taff\b", "The adult", normalised)
         if not normalised.endswith("."):
             normalised += "."
         lines.append(normalised)
@@ -1115,12 +1143,12 @@ def build_high_risk_safeguarding_scaffold(scenario: dict[str, Any]) -> str:
             "Suggested actions or ideas remain prompts — do not state them as decisions unless confirmed.",
         ]
 
-    return "\n".join(
+    output = "\n".join(
         [
             f"## {title}",
             "",
             "## What was said / observed",
-            factual or "Not stated.",
+            _normalize_escalation_wording(factual or "Not stated.", source_text=raw_input),
             "",
             exact_words_line,
             "",
@@ -1139,10 +1167,13 @@ def build_high_risk_safeguarding_scaffold(scenario: dict[str, Any]) -> str:
             "and maintained relationship — only as actually provided.",
             "",
             "## Safeguarding action / who was informed",
-            (
-                "Escalation noted in input — confirm who was informed and what action was agreed."
-                if _input_has_escalation_cues(factual)
-                else "It is not stated who was informed. " + escalation
+            _normalize_escalation_wording(
+                (
+                    "Escalation noted in input — confirm who was informed and what action was agreed."
+                    if _input_has_escalation_cues(factual)
+                    else "It is not stated who was informed. " + escalation
+                ),
+                source_text=raw_input,
             ),
             "",
             "## Pathway to consider",
@@ -1162,6 +1193,7 @@ def build_high_risk_safeguarding_scaffold(scenario: dict[str, Any]) -> str:
             _ADULT_BOUNDARY_FOOTER,
         ]
     ).strip()
+    return _finalize_scaffold_output(output, scenario, raw_input)
 
 
 def build_child_centred_scaffold(scenario: dict[str, Any]) -> str:
@@ -1190,12 +1222,6 @@ def build_child_centred_scaffold(scenario: dict[str, Any]) -> str:
             [
                 "## Presentation and Support",
                 factual or "Not stated.",
-                "",
-                "## Known / gaps",
-                _build_factual_gaps_section(scenario, input_text),
-                "",
-                "## Observed / said / reported vs reflection",
-                _build_observation_reflection_section(scenario, input_text),
                 "",
                 "## Child's Voice / Presentation",
                 child_voice,
@@ -1226,23 +1252,33 @@ def build_child_centred_scaffold(scenario: dict[str, Any]) -> str:
                 _build_management_oversight_section(scenario, factual),
             ]
         )
-    blocks.extend(
-        [
-            "",
-            "## Pathway to consider",
-            _build_pathway_section(scenario, input_text),
-        ]
-    )
+    if _should_include_pathway_section(scenario, input_text):
+        blocks.extend(
+            [
+                "",
+                "## Pathway to consider",
+                _build_pathway_section(scenario, input_text),
+            ]
+        )
     blocks.extend(
         [
             "",
             "## Adult Response" if is_daily else "## What adults did to support",
             _build_adult_response_section(scenario, factual),
-            "",
-            "## Dignity, relationship and child's experience",
-            "Record whether adults offered space, choice, reassurance or repair, and how dignity "
-            "and relationship were preserved — only as actually provided. "
-            "What changed for the young person before, during and after adult support — as observed, not assumed.",
+        ]
+    )
+    if not is_daily:
+        blocks.extend(
+            [
+                "",
+                "## Dignity, relationship and child's experience",
+                "Record whether adults offered space, choice, reassurance or repair, and how dignity "
+                "and relationship were preserved — only as actually provided. "
+                "What changed for the young person before, during and after adult support — as observed, not assumed.",
+            ]
+        )
+    blocks.extend(
+        [
             "",
             "## Outcome / Handover" if is_daily else "## Outcome / follow-up",
             _build_outcome_line(factual),
@@ -1250,7 +1286,8 @@ def build_child_centred_scaffold(scenario: dict[str, Any]) -> str:
             _BOUNDARY_FOOTER,
         ]
     )
-    return "\n".join(blocks).strip()
+    output = "\n".join(blocks).strip()
+    return _finalize_scaffold_output(output, scenario, raw_input)
 
 
 def build_standard_scaffold(scenario: dict[str, Any]) -> str:

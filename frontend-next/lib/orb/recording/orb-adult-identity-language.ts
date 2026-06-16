@@ -4,7 +4,16 @@
  */
 
 export const ORB_ADULT_IDENTITY_PRINCIPLE =
-  "Do not default to 'staff' in child records. Where adult initials are supplied, use Adult [initials]. Where initials are not supplied, use 'the adult' or 'adults'. Do not invent initials."
+  "Do not default to 'staff' in child records. Where adult initials are supplied, use Adult [initials] consistently throughout — do not revert to 'staff' later. Where initials are not supplied, use 'the adult' or 'adults'. Do not invent initials. Do not use 'Staff on Duty' — use 'Adults involved' when needed."
+
+export const ORB_CHILDRENS_HOME_SAFEGUARDING_TERMINOLOGY =
+  "Use children's home safeguarding language, not education-sector DSL defaults. Prefer manager, responsible manager, senior on shift, Registered Manager, local safeguarding procedure. Use DSL only when the user explicitly included DSL in their input."
+
+export const ORB_DAILY_RECORD_PROPORTIONALITY =
+  "For ordinary daily records without safeguarding cues, do not add Safeguarding Note, automatic manager escalation, or disproportionate safeguarding paragraphs."
+
+export const ORB_DAILY_RECORD_OUTPUT_DISCIPLINE =
+  "Daily records should be clean and record-like — avoid unnecessary Safeguarding Note, Child Voice, Next Steps or self-commentary unless asked."
 
 export const ORB_SELF_COMMENTARY_PRINCIPLE =
   'When creating a record, provide the record itself. Do not add a self-assessment or explanation after the record unless the user explicitly asks.'
@@ -43,6 +52,7 @@ export const ORB_THERAPEUTIC_RELATIONAL_PHRASES = [
 
 export const ORB_OBSERVATION_INTERPRETATION_RULES = [
   "Use 'appeared calmer' rather than 'mood improved' unless the input states mood improved.",
+  "Use 'appeared calmer' rather than 'seemed more relaxed'.",
   "Use 'appeared more settled' rather than 'was relaxed' or 'seemed relaxed'.",
   'Do not state internal emotion as fact unless the child said it.',
   "Preserve direct quotes with 'said'.",
@@ -50,6 +60,11 @@ export const ORB_OBSERVATION_INTERPRETATION_RULES = [
 ] as const
 
 const ADULT_INITIALS_RE = /\bAdult\s+([A-Z]{1,3})\b/g
+const STAFF_ON_DUTY_RE = /\bStaff\s+on\s+Duty\b/gi
+const DSL_USER_PROVIDED_RE = /\b(?:DSL|Designated\s+Safeguarding\s+Lead)\b/i
+
+const SAFEGUARDING_CUE_RE =
+  /\b(?:disclos\w*|allegat\w*|missing\s+from\s+care|went\s+missing|exploit\w*|self[\s-]?harm|suicid\w*|unexplained\s+injur\w*|bruise|abuse|unsafe|inappropriat\w*|sexualis\w*|weapon|peer[\s-]?on[\s-]?peer|substance|immediate\s+risk|historic\s+harm|safeguarding\s+concern|lado|mash|police\s+called|999)\b/i
 
 export function extractSuppliedAdultInitials(text: string): string[] {
   const seen = new Set<string>()
@@ -64,21 +79,69 @@ export function extractSuppliedAdultInitials(text: string): string[] {
   return initials
 }
 
+export function userProvidedDslTerm(text: string): boolean {
+  return DSL_USER_PROVIDED_RE.test(String(text || ''))
+}
+
+export function hasSafeguardingCue(text: string): boolean {
+  return SAFEGUARDING_CUE_RE.test(String(text || ''))
+}
+
+export function sanitizeChildrensHomeTerminology(text: string, sourceText = ''): string {
+  if (userProvidedDslTerm(sourceText)) return String(text || '')
+  return String(text || '')
+    .replace(/\bManager\s*\/\s*DSL\b/gi, 'manager')
+    .replace(/\bDSL\s*\/\s*manager\b/gi, 'manager')
+    .replace(/\bDSL\s+and\s+manager\b/gi, 'manager')
+    .replace(/\bmanager\s+and\s+DSL\b/gi, 'manager')
+    .replace(/\bDSL\s+pathway\b/gi, 'local safeguarding procedure')
+    .replace(/\bpathway\s+to\s+DSL\b/gi, 'local safeguarding procedure')
+    .replace(/\bDesignated\s+Safeguarding\s+Lead\b/gi, 'responsible manager')
+    .replace(/\bDSL\b/g, 'manager')
+}
+
 export function applyAdultIdentityLanguage(text: string, suppliedInitials?: string[]): string {
-  const value = String(text || '')
+  let value = String(text || '')
   if (!value.trim()) return value
   const initials = suppliedInitials ?? extractSuppliedAdultInitials(value)
+  value = value.replace(STAFF_ON_DUTY_RE, () =>
+    initials.length ? `Adults involved: ${initials.map((i) => `Adult ${i}`).join(', ')}` : 'Adults involved'
+  )
   if (initials.length) {
-    return value.replace(/\bStaff\b/g, `Adult ${initials[0]}`)
+    let staffIndex = 0
+    return value.replace(/\b[Ss]taff\b/g, () => {
+      const label = `Adult ${initials[staffIndex % initials.length]}`
+      staffIndex += 1
+      return label
+    })
   }
-  return value.replace(/\bStaff\b/g, 'The adult')
+  return value.replace(/\b[Ss]taff\b/g, 'The adult')
 }
 
 export function sanitizeObservationInterpretationLanguage(text: string): string {
   return String(text || '')
     .replace(/\bmood improved\b/gi, 'appeared calmer')
+    .replace(/\bseemed more relaxed\b/gi, 'appeared calmer')
     .replace(/\bseemed relaxed\b/gi, 'appeared more settled')
     .replace(/\bwas relaxed\b/gi, 'appeared more settled')
+}
+
+export function sanitizeLiveRecordOutput(text: string, sourceText = ''): string {
+  const initials = extractSuppliedAdultInitials(sourceText)
+  let cleaned = sanitizeObservationInterpretationLanguage(text)
+  cleaned = sanitizeChildrensHomeTerminology(cleaned, sourceText)
+  if (isDailyRecordRequest(sourceText) && !hasSafeguardingCue(sourceText)) {
+    cleaned = cleaned
+      .replace(/^#+\s*Safeguarding\s+Note\s*$/gim, '')
+      .replace(/^#+\s*Child\s+Voice\s*$/gim, '')
+      .replace(/^#+\s*Next\s+Steps\s*$/gim, '')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim()
+  }
+  if (initials.length || /\b[Ss]taff\b/.test(cleaned)) {
+    cleaned = applyAdultIdentityLanguage(cleaned, initials)
+  }
+  return cleaned
 }
 
 export function isDailyRecordRequest(text: string): boolean {
@@ -117,6 +180,15 @@ export function buildAdultIdentityPromptBlock(): string {
     '• Adult JS checked in later in a calm and gentle way.',
     '• Adults continued to offer reassurance.',
     '• The adult handed over to the next shift.',
+    '',
+    "Children's home safeguarding terminology:",
+    `• ${ORB_CHILDRENS_HOME_SAFEGUARDING_TERMINOLOGY}`,
+    '',
+    'Daily record proportionality:',
+    `• ${ORB_DAILY_RECORD_PROPORTIONALITY}`,
+    '',
+    'Daily record output discipline:',
+    `• ${ORB_DAILY_RECORD_OUTPUT_DISCIPLINE}`,
     '',
     'Record heading discipline:',
     `• ${ORB_RECORD_HEADING_DISCIPLINE}`,

@@ -14,6 +14,9 @@ from typing import Any
 
 from assistant.knowledge.adult_identity_language import (
     ADULT_IDENTITY_PRINCIPLE,
+    CHILDRENS_HOME_SAFEGUARDING_TERMINOLOGY_PRINCIPLE,
+    DAILY_RECORD_OUTPUT_DISCIPLINE_PRINCIPLE,
+    DAILY_RECORD_PROPORTIONALITY_PRINCIPLE,
     RECORD_HEADING_DISCIPLINE_PRINCIPLE,
     SELF_COMMENTARY_PRINCIPLE,
 )
@@ -80,7 +83,8 @@ PATHWAY_DISCIPLINE_PRINCIPLE = (
     "'local safeguarding procedure', 'professional consultation where policy-led', "
     "'urgent action if immediate risk is indicated', and 'responsible adult to decide'. "
     "Record who was informed and what was agreed. Note what remains unresolved. "
-    "ORB must not say 'threshold met', 'referral required' or 'no concern' as a definitive decision."
+    "Do not say 'threshold met', 'referral required' or 'no concern' as a definitive decision. "
+    "ORB must not default to DSL or education safeguarding terminology — use children's home language unless the user supplied DSL."
 )
 
 PROFESSIONAL_JUDGEMENT_BOUNDARY = (
@@ -98,6 +102,9 @@ CANONICAL_PRINCIPLES: dict[str, str] = {
     "child_centredness": CHILD_CENTRED_PRINCIPLE,
     "adult_response": ADULT_RESPONSE_PRINCIPLE,
     "adult_identity": ADULT_IDENTITY_PRINCIPLE,
+    "childrens_home_safeguarding_terminology": CHILDRENS_HOME_SAFEGUARDING_TERMINOLOGY_PRINCIPLE,
+    "daily_record_proportionality": DAILY_RECORD_PROPORTIONALITY_PRINCIPLE,
+    "daily_record_output_discipline": DAILY_RECORD_OUTPUT_DISCIPLINE_PRINCIPLE,
     "therapeutic_language": THERAPEUTIC_LANGUAGE_PRINCIPLE,
     "factual_accuracy": FACTUAL_ACCURACY_PRINCIPLE,
     "observation_vs_interpretation": OBSERVATION_VS_INTERPRETATION_PRINCIPLE,
@@ -146,6 +153,8 @@ def validate_principle_alignment() -> list[str]:
         ("child voice", "child_centredness"),
         ("staff supported", "adult_response"),
         ("do not default to 'staff'", "adult_identity"),
+        ("do not default to dsl", "childrens_home_safeguarding_terminology"),
+        ("safeguarding note", "daily_record_proportionality"),
         ("not yet known", "factual_accuracy"),
         ("pathway to consider", "pathway_discipline"),
         ("manager/senior should consider", "management_oversight"),
