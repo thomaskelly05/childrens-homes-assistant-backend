@@ -417,6 +417,8 @@ export type StandaloneOrbConversationResponse = {
   guardrails?: string[]
   image_understanding_available?: boolean
   error_detail?: string
+  answer_repaired?: boolean
+  final_answer_repair_applied?: boolean
 }
 
 export type StandaloneOrbActionRunRequest = {
@@ -921,14 +923,6 @@ export async function sendStandaloneOrbMessageStream(
       confidence: metadata.confidence,
       conversationId: metadata.conversation_id
     })
-    const partialTrimmed = partial.trim()
-    const metadataAnswer = (metadata.answer || '').trim()
-    if (partialTrimmed && metadataAnswer && partialTrimmed.length > metadataAnswer.length) {
-      return {
-        ...metadata,
-        answer: partialTrimmed.startsWith(metadataAnswer) ? partialTrimmed : metadata.answer
-      }
-    }
     return metadata
   }
   if (streamError) {

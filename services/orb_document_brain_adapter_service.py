@@ -14,10 +14,8 @@ from __future__ import annotations
 from typing import Any, Literal
 
 from services.indicare_intelligence_core_service import indicare_intelligence_core_service
-from services.indicare_intelligence_route_finalize_service import (
-    finalize_standalone_intelligence,
-    intelligence_context_summary,
-)
+from services.indicare_intelligence_route_finalize_service import intelligence_context_summary
+from services.orb_residential_finalization_service import finalize_orb_residential_answer
 from services.orb_brain_convergence_orchestrator_service import orb_brain_convergence_orchestrator_service
 from services.orb_brain_metadata_service import build_brain_metadata
 from services.orb_brain_visibility_service import build_public_explainability
@@ -95,6 +93,7 @@ def finalize_document_intelligence(
     *,
     indicare_intelligence: dict[str, Any] | None,
     document_text: str,
+    source_text: str | None = None,
     mode: str | None = None,
     note_type: str | None = None,
     record_learning: bool = False,
@@ -103,16 +102,18 @@ def finalize_document_intelligence(
     packet = dict(indicare_intelligence or {})
     if not packet:
         return document_text, {}
-    answer, meta = finalize_standalone_intelligence(
-        indicare_intelligence=packet,
-        answer=document_text,
-        prompt_text=document_text,
-        message=document_text,
+    user_input = (source_text or document_text).strip()
+    return finalize_orb_residential_answer(
+        document_text,
+        user_input=user_input,
+        record_type=note_type,
+        surface="orb_residential",
+        streaming=False,
         mode=mode or note_type or "Ask ORB",
+        indicare_intelligence=packet,
         record_learning=record_learning,
         apply_gate_fixes=True,
     )
-    return answer, meta
 
 
 def attach_document_brain_metadata(

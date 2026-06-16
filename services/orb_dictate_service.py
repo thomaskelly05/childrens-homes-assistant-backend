@@ -133,14 +133,17 @@ def _finalize_dictate_text(
     note_type: str,
     mode: str | None = None,
     intel_packet: dict[str, Any] | None = None,
+    source_text: str | None = None,
 ) -> tuple[str, dict[str, Any]]:
+    user_input = (source_text or text).strip()
     packet = intel_packet or indicare_intelligence_core_service.build_intelligence_packet(
-        text,
+        user_input,
         mode=mode or note_type,
     )
     return orb_document_brain_adapter_service.finalize_document_intelligence(
         indicare_intelligence=packet,
         document_text=text,
+        source_text=user_input,
         mode=mode or note_type,
         note_type=note_type,
         record_learning=False,
@@ -415,6 +418,7 @@ def generate_dictate_note(
         note_type=note_type,
         mode=request.mode,
         intel_packet=intel_packet,
+        source_text=transcript_text or request.input_text,
     )
     quality = compute_quality_checks(professional, note_type)
     return _enrich_meeting_metadata(
@@ -750,6 +754,7 @@ def analyze_dictate_session(request: OrbDictateAnalyzeRequest) -> OrbDictateAnal
         note_type=note_type,
         mode=request.mode,
         intel_packet=intel_packet,
+        source_text=transcript,
     )
 
     return OrbDictateAnalyzeResponse(
@@ -819,6 +824,7 @@ def prepare_write_document(request: OrbDictatePrepareWriteRequest) -> OrbDictate
         text=structured,
         note_type=note_type,
         intel_packet=intel_packet,
+        source_text=source_text or transcript,
     )
     template = get_dictate_template(note_type)  # type: ignore[arg-type]
     section_prompts = [

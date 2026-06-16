@@ -1765,7 +1765,7 @@
     },
     {
       "file": "frontend-next/components/orb-standalone/orb-care-companion.tsx",
-      "line": 2403,
+      "line": 2425,
       "context": "(station === 'inspection_readiness' ||",
       "occurrence": "inspection readiness",
       "classification": "user_facing_copy_risky",
@@ -1773,7 +1773,7 @@
     },
     {
       "file": "frontend-next/components/orb-standalone/orb-care-companion.tsx",
-      "line": 3364,
+      "line": 3386,
       "context": "open={activePanel === 'inspection_readiness'}",
       "occurrence": "inspection readiness",
       "classification": "user_facing_copy_risky",

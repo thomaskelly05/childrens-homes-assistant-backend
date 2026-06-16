@@ -20,10 +20,8 @@ from services.ai_provider_registry import ai_provider_registry
 from services.orb_converged_general_assistant_service import orb_converged_general_assistant_service
 from services.orb_general_assistant_service import orb_general_assistant_service
 from services.orb_knowledge_retrieval_service import orb_knowledge_retrieval_service
-from services.indicare_intelligence_route_finalize_service import (
-    finalize_standalone_intelligence,
-    merge_intelligence_into_context,
-)
+from services.indicare_intelligence_route_finalize_service import merge_intelligence_into_context
+from services.orb_residential_finalization_service import finalize_orb_residential_answer
 from services.indicare_intelligence_core_service import indicare_intelligence_core_service
 from services.orb_chat_timing_service import (
     OrbChatTimingTracker,
@@ -1218,12 +1216,13 @@ async def standalone_orb_conversation(
             or ""
         )
         if indicare_intelligence:
-            answer, intel_meta = finalize_standalone_intelligence(
-                indicare_intelligence=indicare_intelligence,
-                answer=answer,
-                prompt_text=payload.message,
-                message=payload.message,
+            answer, intel_meta = finalize_orb_residential_answer(
+                answer,
+                user_input=payload.message,
+                surface="orb_standalone",
+                streaming=False,
                 mode=mode,
+                indicare_intelligence=indicare_intelligence,
                 sanitize_closer=orb_grounded_answer_style_service.sanitize_high_attention_closer,
                 timing=timing,
             )
@@ -1638,12 +1637,13 @@ async def standalone_orb_conversation_stream(
                 int((time.perf_counter() - provider_started) * 1000) if provider_started else None
             )
             if indicare_intelligence:
-                answer, intel_meta = finalize_standalone_intelligence(
-                    indicare_intelligence=indicare_intelligence,
-                    answer=answer,
-                    prompt_text=payload.message,
-                    message=payload.message,
+                answer, intel_meta = finalize_orb_residential_answer(
+                    answer,
+                    user_input=payload.message,
+                    surface="orb_standalone",
+                    streaming=True,
                     mode=mode,
+                    indicare_intelligence=indicare_intelligence,
                     sanitize_closer=orb_grounded_answer_style_service.sanitize_high_attention_closer,
                     timing=timing,
                 )
@@ -1681,6 +1681,9 @@ async def standalone_orb_conversation_stream(
                 mode=mode,
             )
             sanitized_context = sanitize_orb_brain_metadata_for_user(context_used, current_user)
+            answer_repaired = bool(
+                intel_meta.get("answer_repaired") or intel_meta.get("final_answer_repair_applied")
+            ) if indicare_intelligence else False
             metadata_payload = {
                 "ok": True,
                 "standalone": True,
@@ -1697,6 +1700,8 @@ async def standalone_orb_conversation_stream(
                 ),
                 "image_understanding_available": assistant_data.get("image_understanding_available"),
                 "error_detail": assistant_data.get("error_detail"),
+                "answer_repaired": answer_repaired,
+                "final_answer_repair_applied": answer_repaired,
             }
             yield _sse_event("metadata", metadata_payload)
             yield _sse_event("done", {"ok": True})
