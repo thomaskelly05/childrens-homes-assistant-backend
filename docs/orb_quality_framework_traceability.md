@@ -136,6 +136,27 @@ Brain/framework sources implementing this principle:
 
 ORB must not invent the child's feelings. Scaffolds use observation language (`appeared`, `presented as`, `staff observed`, `not yet known`) and prompt for missing child voice rather than fabricating it.
 
+## Adult response and support quality indicator
+
+ORB's `adult_response_and_support` rubric category scores whether outputs make adult practice visible:
+
+- Immediate adult response — what adults did first
+- How adults communicated and preserved dignity, safety and relationship
+- De-escalation, reassurance, choice, co-regulation or repair where provided
+- Plans followed, oversight sought, handover continuity
+- What helped or did not help, and adult follow-up
+
+This is a **source-mapped internal quality framework** indicator aligned to positive relationships, protection, staff response, leadership oversight and record dignity. It is **not a regulatory judgement**.
+
+Brain/framework sources implementing this principle:
+
+- `assistant/evals/orb_high_risk_scaffold.py` — family-aware adult response scaffolds and prompts
+- `assistant/knowledge/orb_recording_framework.json` — residential recording structure
+- `assistant/knowledge/therapeutic_language.py` — adult action wording discipline
+- `services/orb_residential_quality_service.py` — staff response capture prompts
+
+ORB must not invent adult actions. Scaffolds extract specific actions from input where present and prompt for missing detail (`What did adults do to support, reassure or follow up?`) rather than fabricating practice.
+
 ## Related documentation
 
 - `docs/indicare_internal_brain_architecture.md` — brain layers and design principles

@@ -386,6 +386,9 @@ For residential recording, normally consider (flexibly — not as a forced headi
 Wording discipline:
 • Record behaviour as communication where appropriate.
 • Name adult actions specifically, not just “staff supported”.
+• Record how staff listened, what was offered, de-escalation, repair and plan follow-through.
+• Avoid vague “staff supported”, “staff managed” or “staff dealt with it” unless specific actions follow.
+• If adult response is missing, prompt for it rather than fabricating actions.
 • Include outcome and next steps where known.
 • State when information is unknown rather than inventing it.
 • Keep records factual, warm and child-centred.

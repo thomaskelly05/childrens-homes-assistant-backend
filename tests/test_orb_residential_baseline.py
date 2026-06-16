@@ -627,6 +627,7 @@ def test_quality_lab_summary_includes_traceability_fields() -> None:
 
 
 from assistant.evals.orb_high_risk_scaffold import (  # noqa: E402
+    adult_response_recording_principle,
     build_high_risk_safeguarding_scaffold,
     build_quality_lab_scaffold,
     needs_safeguarding_escalation,
@@ -830,3 +831,127 @@ def test_live_llm_mode_disabled_by_default() -> None:
     finally:
         if old is not None:
             os.environ["ORB_BASELINE_LIVE"] = old
+
+
+# --- Adult response and support scaffold tests ---
+
+
+def test_adult_response_principle_exported() -> None:
+    principle = adult_response_recording_principle()
+    assert "adult practice visible" in principle.lower() or "name what adults did" in principle.lower()
+    assert "do not invent" in principle.lower()
+
+
+def test_high_risk_scaffold_includes_specific_adult_response() -> None:
+    scenario = _core_scenario("core_025")
+    output = build_high_risk_safeguarding_scaffold(scenario)
+    lower = output.lower()
+    assert "immediate adult response" in lower
+    assert any(m in lower for m in ("listened", "offered", "de-escalat", "prompt if missing", "as described"))
+    assert "adult review" in lower
+
+
+@pytest.mark.parametrize(
+    "family",
+    ["daily_care", "incident_reflection", "handover", "meetings", "management_oversight"],
+)
+def test_family_scaffolds_include_adult_response_section(family: str) -> None:
+    for raw in json.loads(CORE100_PATH.read_text(encoding="utf-8"))["scenarios"]:
+        if raw.get("scenario_family") != family:
+            continue
+        scenario = scenario_to_baseline_format(raw)
+        output = build_quality_lab_scaffold(scenario)
+        lower = output.lower()
+        assert any(
+            m in lower
+            for m in (
+                "what adults did to support",
+                "immediate adult response",
+                "adult response",
+            )
+        ), f"Missing adult response section for {family}"
+        break
+    else:
+        pytest.fail(f"No {family} scenario found")
+
+
+def test_scaffold_prompts_for_missing_adult_action_instead_of_inventing() -> None:
+    scenario = {
+        "id": "test_no_adult",
+        "title": "Daily note without adult detail",
+        "input": "rough: young person had a calm day at school",
+        "safeguarding_flags": [],
+        "scenario_family": "daily_care",
+        "record_type": "daily_record",
+        "feature_target": "Magic Notes",
+        "variant_type": "rough_note",
+        "required_elements": [],
+        "prohibited_elements": [],
+    }
+    output = build_quality_lab_scaffold(scenario)
+    lower = output.lower()
+    assert "not yet recorded" in lower or "prompt if missing" in lower or "complete with" in lower
+    assert "staff sat with" not in lower
+    assert "staff offered tea" not in lower
+
+
+def test_scaffold_extracts_adult_actions_from_input_when_present() -> None:
+    scenario = _core_scenario("core_001")
+    output = build_quality_lab_scaffold(scenario)
+    lower = output.lower()
+    assert "sat with" in lower or "offered" in lower or "quiet space" in lower
+
+
+def test_scaffold_avoids_vague_staff_supported_without_detail() -> None:
+    payload = json.loads(VARIANTS_PATH.read_text(encoding="utf-8").splitlines()[0])
+    scenario = scenario_to_baseline_format(payload)
+    output = build_quality_lab_scaffold(scenario)
+    lower = output.lower()
+    for phrase in ("staff managed the situation", "staff dealt with it", "staff intervened"):
+        assert phrase not in lower
+    if "staff supported" in lower:
+        assert "avoid vague" in lower or "unless" in lower
+
+
+def test_handover_scaffold_includes_shift_continuity() -> None:
+    for raw in json.loads(CORE100_PATH.read_text(encoding="utf-8"))["scenarios"]:
+        if raw.get("scenario_family") != "handover":
+            continue
+        scenario = scenario_to_baseline_format(raw)
+        output = build_quality_lab_scaffold(scenario)
+        lower = output.lower()
+        assert any(
+            m in lower
+            for m in ("handover", "incoming adult", "next adult", "already did", "continue")
+        )
+        break
+    else:
+        pytest.fail("No handover scenario found")
+
+
+def test_safeguarding_scaffold_includes_listening_and_recording_guidance() -> None:
+    scenario = _core_scenario("core_021")
+    output = build_quality_lab_scaffold(scenario)
+    lower = output.lower()
+    assert any(m in lower for m in ("listening", "listened", "reassurance", "recorded", "informed"))
+    assert "do not investigate beyond role" in lower
+
+
+def test_variants1000_adult_response_improves() -> None:
+    if not VARIANTS_REPORT_JSON.is_file():
+        pytest.skip("variants1000 report not generated yet")
+    report = json.loads(VARIANTS_REPORT_JSON.read_text(encoding="utf-8"))
+    ar = float((report.get("category_averages") or {}).get("adult_response_and_support") or 0)
+    assert ar >= 3.8, f"adult_response_and_support {ar} below target 3.8"
+    assert report.get("unsafe_flag_count", 0) == 0
+
+
+def test_adult_response_scaffold_no_diagnostic_or_compliance_language() -> None:
+    scenario = _core_scenario("core_001")
+    output = build_quality_lab_scaffold(scenario)
+    flags = detect_binary_flags(output, scenario=scenario, input_text=scenario["input"])
+    lower = output.lower()
+    assert flags["contains_diagnostic_language"] is False
+    assert flags["contains_compliance_guarantee"] is False
+    assert "ready for inspection" not in lower
+    assert "ofsted will" not in lower
