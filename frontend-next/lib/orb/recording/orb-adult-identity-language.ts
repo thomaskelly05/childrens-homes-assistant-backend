@@ -25,7 +25,13 @@ export const ORB_CHILD_VOICE_DISCIPLINE =
   "Preserve the child's direct words exactly — do not paraphrase or interpret them as fact. Avoid 'This indicates…' after direct quotes in simple daily records."
 
 export const ORB_EMOTIONAL_IMPACT_DISCIPLINE =
-  "Describe adult actions without claiming internal emotional impact unless the child said it or it was directly observed. Do not write 'feel safe and comfortable' or 'felt supported' unless supported by input."
+  "Describe adult actions without claiming internal emotional impact unless the child said it or it was directly observed. Do not write that an adult's approach made the child feel safe, supported, reassured or regulated unless the child directly said this. Do not write 'feel safe and comfortable' or 'felt supported' unless supported by input — describe what the adult did and what was observed instead."
+
+export const ORB_OUTCOME_INTERPRETATION_DISCIPLINE =
+  "Keep observed outcomes observed. Do not add 'indicating a positive shift in mood' or 'showing emotional regulation' — use observed presentation such as 'appeared calmer'."
+
+export const ORB_DUPLICATE_HEADING_DISCIPLINE =
+  'Do not duplicate Outcome and Outcome / Handover headings in simple daily records. Do not add separate Follow-up or Next Steps when handover already states the next action.'
 
 export const ORB_DAILY_RECORD_SIMPLIFICATION =
   'For simple daily records, prefer a short narrative with no more than 2–3 content sections. Do not add Follow-up when Outcome / Handover already states the next action.'
@@ -65,6 +71,7 @@ export const ORB_OBSERVATION_INTERPRETATION_RULES = [
   "Use 'appeared calmer' rather than 'mood improved' unless the input states mood improved.",
   "Use 'appeared calmer' rather than 'seemed more relaxed'.",
   "Use 'appeared more settled' rather than 'was relaxed' or 'seemed relaxed'.",
+  "Do not add 'indicating a positive shift in mood' or 'showing emotional regulation' after observed presentation.",
   'Do not state internal emotion as fact unless the child said it.',
   "Preserve direct quotes with 'said'.",
   "Use 'appeared', 'was observed', 'not yet known' for presentation."
@@ -103,11 +110,42 @@ const CHILD_QUOTE_INTERPRETATION_RE =
   /(["'][\s\S]*?["'])\.?\s+(?:This|That)\s+(?:indicates?|suggests?|shows?|demonstrates?|may indicate|could suggest|reflects?|reveals?)\s+[^.!?]*[.!?]/gi
 
 const INVENTED_EMOTIONAL_IMPACT_RES = [
+  /\b(?:this approach|the approach) allowed\b[^.!?]*\b(?:feel|felt)\s+(?:safe|comfortable|supported|reassured|calm|secure)\b[^.!?]*[.!?]/gi,
   /\b(?:allowing|enabled|helped|this (?:allowed|helped|enabled))\s+[^.!?]*\b(?:feel|felt)\s+(?:safe|comfortable|supported|reassured|calm|secure)\b[^.!?]*[.!?]/gi,
+  /\b(?:helping|allowing|enabling)\s+[^.!?]*\b(?:feel|felt)\s+(?:safe|comfortable|supported|reassured|calm|secure)\b[^.!?]*[.!?]/gi,
+  /\b(?:made|making)\s+[^.!?]*\b(?:feel|felt)\s+(?:safe|comfortable|supported|reassured|calm|secure)\b[^.!?]*[.!?]/gi,
   /\b(?:Child|Young person|The child)\s+[A-Z]?\s*(?:felt|feel)\s+(?:safe|comfortable|supported|reassured|calm|secure|better)\b[^.!?]*[.!?]/gi,
-  /\b(?:helped|supporting)\s+[^.!?]*\b(?:regulate|regulation)\b[^.!?]*[.!?]/gi,
+  /\b(?:helped|supporting|supported)\s+[^.!?]*\b(?:regulate|regulation)\b[^.!?]*[.!?]/gi,
+  /\b(?:allowed|enabling)\s+[^.!?]*\bto\s+regulate\b[^.!?]*[.!?]/gi,
+  /\bhelped them regulate emotionally\b[^.!?]*[.!?]/gi,
+  /\b(?:was|were)\s+emotionally\s+settled\b[^.!?]*[.!?]/gi,
   /\bfeel safe and comfortable\b/gi
 ]
+
+const EMOTIONAL_IMPACT_CLAUSE_RE =
+  /,?\s*(?:(?:this|the)\s+approach\s+)?(?:allowing|helping|enabling|which\s+(?:helped|allowed))\s+[^.!?]*\b(?:to\s+)?(?:feel|felt)\s+(?:safe|comfortable|supported|reassured|calm|secure)\b[^.!?]*/gi
+
+const CHILD_STATED_FEELING_RE =
+  /\b(?:said|shared|told|communicated|explained|mentioned)\b[^.!?]*(?:["'][^"']*(?:feel|felt)\s+(?:safe|comfortable|supported|reassured|calm|secure|better)[^"']*["']|(?:they|he|she)\s+(?:feel|felt)\s+(?:safe|comfortable|supported|reassured|calm|secure|better))/i
+
+const OUTCOME_INTERPRETATION_CLAUSE_RES = [
+  /,?\s*(?:indicating|suggesting|showing|demonstrating)\s+(?:a\s+)?(?:positive\s+)?shift\s+in\s+mood\b[^.!?]*/gi,
+  /,?\s*(?:indicating|suggesting)\s+(?:their\s+)?mood\s+(?:had\s+)?improved\b[^.!?]*/gi,
+  /,?\s*(?:suggesting|indicating)\s+(?:they\s+)?(?:were\s+)?(?:more\s+)?settled\s+emotionally\b[^.!?]*/gi,
+  /,?\s*(?:showing|demonstrating|indicating)\s+emotional\s+regulation\b[^.!?]*/gi,
+  /,?\s*(?:indicating|suggesting)\s+(?:they\s+)?felt\s+better\b[^.!?]*/gi,
+  /,?\s*(?:showing|indicating)\s+(?:they\s+)?(?:were|felt)\s+(?:more\s+)?comfortable\b[^.!?]*/gi,
+  /\bthis\s+(?:showed|demonstrated|indicated)\s+emotional\s+regulation\b[^.!?]*[.!?]/gi,
+  /\bas\s+the\s+evening\s+progressed\b[^.!?]*[.!?]/gi
+]
+
+const OUTCOME_INTERPRETATION_SENTENCE_RES = [
+  /^[^.!?]*\b(?:indicating|suggesting|showing|demonstrating)\s+emotional\s+regulation\b[^.!?]*[.!?]$/i
+]
+
+const OUTCOME_ONLY_HEADING_RE = /^(?:#+\s+)?Outcome\s*:?\s*$/i
+const OUTCOME_HANDOVER_HEADING_RE = /^(?:#+\s+)?Outcome\s*\/\s*Handover\s*:?\s*$/i
+const REDUNDANT_FOLLOW_UP_HEADING_RE = /^(?:#+\s+)?(?:Follow-up(?:\s+for\s+next\s+shift)?|Next\s+Steps)\s*:?\s*$/i
 
 const EMOTION_LABELS_REQUIRING_SOURCE = [
   'frustration',
@@ -115,10 +153,19 @@ const EMOTION_LABELS_REQUIRING_SOURCE = [
   'dissatisfaction',
   'dissatisfied',
   'feel safe and comfortable',
+  'feel supported',
   'felt supported',
   'felt reassured',
-  'helped regulate'
+  'felt safe',
+  'felt comfortable',
+  'helped regulate',
+  'helped child regulate',
+  'allowed to feel',
+  'made feel',
+  'emotionally settled'
 ]
+
+const OUTCOME_INTERPRETATION_LABELS = ['positive shift in mood', 'emotional regulation']
 
 const FOLLOW_UP_HEADING_RE = /^#+\s*(?:Follow-up(?:\s+for\s+next\s+shift)?|Next\s+Steps)\s*$/gim
 const HANDOVER_PRESENT_RE = /\b(?:hand(?:ed|over)|outcome\s*\/\s*handover|next\s+(?:shift|adults?|team))\b/i
@@ -201,6 +248,34 @@ function sourceSupportsEmotionLabel(sourceText: string, label: string): boolean 
   return String(sourceText || '').toLowerCase().includes(label.toLowerCase())
 }
 
+function sentenceContainsChildStatedFeeling(sentence: string): boolean {
+  return CHILD_STATED_FEELING_RE.test(String(sentence || ''))
+}
+
+function trimEmotionalImpactClauses(sentence: string): string {
+  return String(sentence || '')
+    .replace(EMOTIONAL_IMPACT_CLAUSE_RE, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim()
+    .replace(/[ ,;.]+$/, '')
+}
+
+function contentSimilarity(a: string, b: string): boolean {
+  const normA = String(a || '')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim()
+  const normB = String(b || '')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim()
+  if (!normA || !normB) return false
+  if (normA === normB) return true
+  const shorter = normA.length <= normB.length ? normA : normB
+  const longer = normA.length <= normB.length ? normB : normA
+  return shorter.length >= 24 && longer.includes(shorter)
+}
+
 export function stripTrailingSelfCommentary(text: string, sourceText = ''): string {
   if (userExplicitlyRequestsExplanation(sourceText)) return String(text || '')
   const paragraphs = splitParagraphs(text)
@@ -241,16 +316,132 @@ export function stripInventedEmotionalImpact(text: string, sourceText = ''): str
     }
     const kept = stripped
       .split(/(?<=[.!?])\s+/)
-      .filter((sentence) =>
-        EMOTION_LABELS_REQUIRING_SOURCE.every(
+      .flatMap((sentence) => {
+        if (sentenceContainsChildStatedFeeling(sentence)) return [sentence]
+        const unsupportedEmotion = EMOTION_LABELS_REQUIRING_SOURCE.some(
           (label) =>
-            !sentence.toLowerCase().includes(label.toLowerCase()) ||
-            sourceSupportsEmotionLabel(sourceText, label)
+            sentence.toLowerCase().includes(label.toLowerCase()) &&
+            !sourceSupportsEmotionLabel(sourceText, label)
         )
-      )
+        const trimmed = trimEmotionalImpactClauses(sentence)
+        if (unsupportedEmotion) {
+          if (
+            trimmed &&
+            !EMOTION_LABELS_REQUIRING_SOURCE.some(
+              (label) =>
+                trimmed.toLowerCase().includes(label.toLowerCase()) &&
+                !sourceSupportsEmotionLabel(sourceText, label)
+            )
+          ) {
+            return [trimmed]
+          }
+          if (
+            trimmed &&
+            OUTCOME_INTERPRETATION_LABELS.some((label) => trimmed.toLowerCase().includes(label))
+          ) {
+            return [trimmed]
+          }
+          return []
+        }
+        return trimmed ? [trimmed] : []
+      })
     if (kept.length) cleaned.push(kept.join(' '))
   }
   return cleaned.join('\n\n').replace(/\n{3,}/g, '\n\n').trim()
+}
+
+export function stripOutcomeInterpretation(text: string, sourceText = ''): string {
+  if (hasSafeguardingCue(sourceText) && !isDailyRecordRequest(sourceText)) return String(text || '')
+  let result = String(text || '')
+  for (const pattern of OUTCOME_INTERPRETATION_SENTENCE_RES) {
+    result = result.replace(pattern, '')
+  }
+  const paragraphs = result.split(/\n\s*\n/)
+  const cleaned: string[] = []
+  for (const paragraph of paragraphs) {
+    const stripped = paragraph.trim()
+    if (!stripped) continue
+    if (stripped.startsWith('#')) {
+      cleaned.push(stripped)
+      continue
+    }
+    const kept = stripped
+      .split(/(?<=[.!?])\s+/)
+      .map((sentence) => {
+        let cleanedSentence = sentence
+        for (const pattern of OUTCOME_INTERPRETATION_CLAUSE_RES) {
+          cleanedSentence = cleanedSentence.replace(pattern, '')
+        }
+        return cleanedSentence.replace(/\s{2,}/g, ' ').trim().replace(/[ ,;.]+$/, '')
+      })
+      .filter(Boolean)
+    if (kept.length) cleaned.push(kept.join(' '))
+  }
+  return cleaned.join('\n\n').replace(/\n{3,}/g, '\n\n').trim()
+}
+
+export function normalizeDuplicateDailyRecordHeadings(text: string, sourceText = ''): string {
+  if (hasSafeguardingCue(sourceText) || !isDailyRecordRequest(sourceText)) return String(text || '')
+  const lines = String(text || '').split('\n')
+  const sections: Array<{ heading: string; body: string[] }> = []
+  let currentHeading = ''
+  let currentBody: string[] = []
+  for (const line of lines) {
+    const stripped = line.trim()
+    const isHeading =
+      /^#+\s+\S/.test(stripped) ||
+      (!!stripped &&
+        !stripped.startsWith('-') &&
+        /^(?:Outcome|Follow-up|Next Steps)(?:\s*\/\s*Handover)?\s*:?\s*$/i.test(stripped))
+    if (isHeading) {
+      if (currentHeading || currentBody.length) sections.push({ heading: currentHeading, body: currentBody })
+      currentHeading = stripped
+      currentBody = []
+      continue
+    }
+    currentBody.push(line)
+  }
+  if (currentHeading || currentBody.length) sections.push({ heading: currentHeading, body: currentBody })
+
+  let outcomeIdx: number | null = null
+  let handoverIdx: number | null = null
+  sections.forEach((section, idx) => {
+    if (OUTCOME_ONLY_HEADING_RE.test(section.heading)) outcomeIdx = idx
+    if (OUTCOME_HANDOVER_HEADING_RE.test(section.heading)) handoverIdx = idx
+  })
+
+  if (outcomeIdx !== null && handoverIdx !== null && outcomeIdx !== handoverIdx) {
+    const outcomeBody = sections[outcomeIdx].body.join('\n').trim()
+    const handoverBody = sections[handoverIdx].body.join('\n').trim()
+    let mergedBody = outcomeBody
+    if (handoverBody && !contentSimilarity(outcomeBody, handoverBody)) {
+      mergedBody = outcomeBody ? `${outcomeBody}\n\n${handoverBody}` : handoverBody
+    } else if (handoverBody) {
+      mergedBody = handoverBody || outcomeBody
+    }
+    let handoverHeading = sections[handoverIdx].heading
+    if (!/^#+\s+/.test(handoverHeading.trim())) handoverHeading = '## Outcome / Handover'
+    sections[handoverIdx] = { heading: handoverHeading, body: mergedBody.split('\n') }
+    sections.splice(outcomeIdx, 1)
+  }
+
+  const resolvedHandoverIdx = sections.findIndex((section) => OUTCOME_HANDOVER_HEADING_RE.test(section.heading))
+  if (resolvedHandoverIdx >= 0) {
+    const handoverBody = sections[resolvedHandoverIdx].body.join('\n').trim()
+    const filtered = sections.filter((section) => {
+      if (!REDUNDANT_FOLLOW_UP_HEADING_RE.test(section.heading)) return true
+      return !contentSimilarity(section.body.join('\n').trim(), handoverBody)
+    })
+    sections.splice(0, sections.length, ...filtered)
+  }
+
+  const outputLines: string[] = []
+  for (const section of sections) {
+    if (section.heading) outputLines.push(section.heading)
+    outputLines.push(...section.body)
+    if (section.body.length && section.body[section.body.length - 1]?.trim()) outputLines.push('')
+  }
+  return outputLines.join('\n').replace(/\n{3,}/g, '\n\n').trim()
 }
 
 export function stripUnnecessaryFollowUpSection(text: string, sourceText = ''): string {
@@ -286,6 +477,8 @@ export function sanitizeLiveRecordOutput(text: string, sourceText = ''): string 
   let cleaned = sanitizeObservationInterpretationLanguage(text)
   cleaned = stripChildQuoteInterpretation(cleaned, sourceText)
   cleaned = stripInventedEmotionalImpact(cleaned, sourceText)
+  cleaned = stripOutcomeInterpretation(cleaned, sourceText)
+  cleaned = normalizeDuplicateDailyRecordHeadings(cleaned, sourceText)
   cleaned = sanitizeChildrensHomeTerminology(cleaned, sourceText)
   if (isDailyRecordRequest(sourceText) && !hasSafeguardingCue(sourceText)) {
     cleaned = cleaned
@@ -372,6 +565,12 @@ export function buildAdultIdentityPromptBlock(): string {
     '',
     'Emotional impact discipline:',
     `• ${ORB_EMOTIONAL_IMPACT_DISCIPLINE}`,
+    '',
+    'Outcome interpretation discipline:',
+    `• ${ORB_OUTCOME_INTERPRETATION_DISCIPLINE}`,
+    '',
+    'Duplicate heading discipline:',
+    `• ${ORB_DUPLICATE_HEADING_DISCIPLINE}`,
     '',
     'Daily record simplification:',
     `• ${ORB_DAILY_RECORD_SIMPLIFICATION}`,

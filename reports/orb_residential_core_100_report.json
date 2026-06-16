@@ -1,7 +1,7 @@
 {
   "baseline_version": "1.0.0",
-  "commit_sha": "b29f08eae41516d56e3033e668ffc013b64d96b7",
-  "run_timestamp": "2026-06-16T17:55:16.168165+00:00",
+  "commit_sha": "e2e21fac3d1cea9dc599f98e629c0425be7f2b4a",
+  "run_timestamp": "2026-06-16T19:00:24.125705+00:00",
   "scenario_set": "core100",
   "mode": "static",
   "scenario_count": 100,
@@ -321,7 +321,7 @@
     "internal_only_categories": [],
     "warning": "Scores are internal quality indicators aligned to recognised sources where mapped. They are not regulatory determinations, inspection predictions, or professional validation. Adults remain accountable for decisions, escalation and final records."
   },
-  "run_duration_seconds": 0.41,
+  "run_duration_seconds": 0.39,
   "run_scope": {
     "limit": null,
     "sample": null,
@@ -2293,7 +2293,7 @@
       "record_type": "behaviour_reflection",
       "scenario_family": "behaviour_communication",
       "answer_source": "template_scaffold",
-      "output_excerpt": "## Damaging bedroom item  ## What happened Young person damaged own bedroom item when upset. No injury. The adult supported regulation. Young person helped with tidy-up. Repair and replacement discussed calmly.  ## Known / gaps Based on the information provided: Known / observed "
+      "output_excerpt": "## Damaging bedroom item  ## What happened Young person damaged own bedroom item when upset. No injury. The adult  Young person helped with tidy-up. Repair and replacement discussed calmly.  ## Known / gaps Based on the information provided: Known / observed / reported: see factu"
     },
     {
       "scenario_id": "core_040",
@@ -2593,7 +2593,7 @@
       "record_type": "safeguarding_concern",
       "scenario_family": "magic_notes",
       "answer_source": "template_scaffold",
-      "output_excerpt": "## Incomplete safeguarding note  ## What was said / observed yp said something about old placement. told mgr.  Child's exact words preserved above.  ## Child voice / presentation yp said something about old placement. told mgr Presentation: as described in factual account \u2014 furth"
+      "output_excerpt": "## Incomplete safeguarding note  ## What was said / observed yp said something about old placement. told mgr.  Child's exact words preserved above  ## Child voice / presentation yp said something about old placement. told mgr Presentation: as described in factual account \u2014 furthe"
     },
     {
       "scenario_id": "core_046",
@@ -2743,7 +2743,7 @@
       "record_type": "multi_agency_discussion",
       "scenario_family": "magic_notes",
       "answer_source": "template_scaffold",
-      "output_excerpt": "## Meeting note clean-up  ## What was said / observed mtg: sw pep school home. att 78%. camhs wait. act: school mtg.  The child's exact words were not recorded \u2014 add direct words if known.  ## Child voice / presentation Young person said: not yet known \u2014 record the child's words "
+      "output_excerpt": "## Meeting note clean-up  ## What was said / observed mtg: sw pep school home. att 78%. camhs wait. act: school mtg.  The child's exact words were not recorded \u2014 add direct words if known  ## Child voice / presentation Young person said: not yet known \u2014 record the child's words w"
     },
     {
       "scenario_id": "core_049",
@@ -4551,7 +4551,7 @@
       "record_type": "multi_agency_discussion",
       "scenario_family": "meetings",
       "answer_source": "template_scaffold",
-      "output_excerpt": "## School meeting  ## What was said / observed School meeting attended by home The adult. Discussed attendance and behaviour support plan. School willing to provide mentor. Young person views shared with consent.  Child's exact words preserved above.  ## Child voice / presentatio"
+      "output_excerpt": "## School meeting  ## What was said / observed School meeting attended by home The adult. Discussed attendance and behaviour support plan. School willing to provide mentor. Young person views shared with consent.  Child's exact words preserved above  ## Child voice / presentation"
     },
     {
       "scenario_id": "core_085",

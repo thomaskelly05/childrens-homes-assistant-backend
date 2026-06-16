@@ -152,6 +152,9 @@ const SHARED_PROMPTS = {
     'Changing direct quotes without adult approval',
     'Manipulative, attention-seeking, kicked off, non-compliant, bad behaviour',
     'Vague staff supported / staff managed / staff dealt with it without specific adult actions',
+    'Claiming an adult approach made the child feel safe, supported, reassured or regulated unless the child said this',
+    'Indicating a positive shift in mood or showing emotional regulation after observed presentation',
+    'Duplicate Outcome and Outcome / Handover headings in simple daily records',
     'No safeguarding concern / no further action needed without responsible adult review',
     'ORB making safeguarding or compliance decisions',
     'Diagnosis unless from an appropriate professional source',
@@ -199,7 +202,7 @@ export const ORB_THERAPEUTIC_WRITING_BY_RECORD_TYPE: Partial<
   }),
   daily_record: framework({
     writing_guidance:
-      'Child-centred shift record — presentation, voice, specific adult actions and outcome with observable facts. Use Adult [initials] when supplied; otherwise the adult/adults.',
+      'Child-centred shift record — presentation, voice, specific adult actions and outcome with observable facts. Use Adult [initials] when supplied; otherwise the adult/adults. Describe what adults did and what was observed — do not claim invented emotional impact or outcome interpretation.',
     person_centred_prompts: [
       'How was the child feeling and presenting?',
       'What went well for the child today?'

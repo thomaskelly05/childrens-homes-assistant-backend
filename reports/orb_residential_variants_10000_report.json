@@ -1,7 +1,7 @@
 {
   "baseline_version": "1.0.0",
-  "commit_sha": "b29f08eae41516d56e3033e668ffc013b64d96b7",
-  "run_timestamp": "2026-06-16T17:55:42.765238+00:00",
+  "commit_sha": "e2e21fac3d1cea9dc599f98e629c0425be7f2b4a",
+  "run_timestamp": "2026-06-16T19:00:52.610752+00:00",
   "scenario_set": "variants10000",
   "mode": "static",
   "scenario_count": 250,
@@ -261,7 +261,7 @@
     "internal_only_categories": [],
     "warning": "Scores are internal quality indicators aligned to recognised sources where mapped. They are not regulatory determinations, inspection predictions, or professional validation. Adults remain accountable for decisions, escalation and final records."
   },
-  "run_duration_seconds": 0.65,
+  "run_duration_seconds": 0.81,
   "run_scope": {
     "limit": 250,
     "sample": null,
@@ -419,7 +419,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person returned from school upset. Said lessons were difficult. Refused tea at first. Later settled after The adult sat with them and offered a quiet space. appeared calmer by  Young person said: Said lessons were difficult. Refu"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person returned from school upset. Said lessons were difficult. Refused tea at first. Later settled after The adult sat with them and offered a quiet space. appeared calmer by  Young person said: Said lessons were difficult Refus"
     },
     {
       "scenario_id": "core_001_v004_mobile_friendly",
@@ -469,7 +469,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person returned from school upset. Said lessons were difficult. Refused tea at first. Later settled after The adult sat with them and offered a  Young person said: Said lessons were difficult. Refused tea at first. The adult obse"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person returned from school upset. Said lessons were difficult. Refused tea at first. Later settled after The adult sat with them and offered a  Young person said: Said lessons were difficult Refused tea at first The adult observ"
     },
     {
       "scenario_id": "core_001_v005_child_centred_rewrite",
@@ -619,7 +619,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person returned from school upset. Said lessons were difficult. Refused tea at first. Later settled after The adult sat with them and offered a quiet space  Young person said: Said lessons were difficult. Refused tea at first. Th"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person returned from school upset. Said lessons were difficult. Refused tea at first. Later settled after The adult sat with them and offered a quiet space  Young person said: Said lessons were difficult Refused tea at first The "
     },
     {
       "scenario_id": "core_001_v008_poor_wording_correction",
@@ -669,7 +669,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person returned from school upset. Said lessons were difficult. Refused  Young person said: Said lessons were difficult. Refused The adult observed presentation: upset, refused. Wishes, feelings and views: not yet known \u2014 to be s"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person returned from school upset. Said lessons were difficult. Refused  Young person said: Said lessons were difficult Refused The adult observed presentation: upset, refused Wishes, feelings and views: not yet known \u2014 to be sou"
     },
     {
       "scenario_id": "core_001_v009_voice_dictate_transcript",
@@ -719,7 +719,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person returned from school upset. Said lessons were difficult. Refused tea at first. Later  Young person said: Said lessons were difficult. Refused tea at first. The adult observed presentation: upset, refused. Wishes, feelings "
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person returned from school upset. Said lessons were difficult. Refused tea at first. Later  Young person said: Said lessons were difficult Refused tea at first The adult observed presentation: upset, refused Wishes, feelings and"
     },
     {
       "scenario_id": "core_001_v010_reflective_supervision",
@@ -769,7 +769,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person returned from school upset. Said lessons were difficult. Refused tea at first. Later settled after The adult sat with them and offered a quiet space  Young person said: Said lessons were difficult. Refused tea at first. Th"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person returned from school upset. Said lessons were difficult. Refused tea at first. Later settled after The adult sat with them and offered a quiet space  Young person said: Said lessons were difficult Refused tea at first The "
     },
     {
       "scenario_id": "core_001_v011_rough_note",
@@ -871,7 +871,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young [brief note \u2014 detail missing] [child words not recorded]  Young person said: not yet known \u2014 record the child's words where provided. Presentation: as described in factual account \u2014 further detail not yet recorded. Wishes, feelin"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young [brief note \u2014 detail missing] [child words not recorded]  Young person said: not yet known \u2014 record the child's words where provided Presentation: as described in factual account \u2014 further detail not yet recorded Wishes, feelings"
     },
     {
       "scenario_id": "core_001_v013_handover",
@@ -921,7 +921,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person returned from [brief note \u2014 detail missing] [child words not recorded]  Young person said: not yet known \u2014 record the child's words where provided. Presentation: as described in factual account \u2014 further detail not yet rec"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person returned from [brief note \u2014 detail missing] [child words not recorded]  Young person said: not yet known \u2014 record the child's words where provided Presentation: as described in factual account \u2014 further detail not yet reco"
     },
     {
       "scenario_id": "core_001_v014_mobile_friendly",
@@ -971,7 +971,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person returned from school upset. Said lessons were difficult. Refused tea at [brief note \u2014 detail missing] [child words not recorded]  Young person said: Said lessons were difficult. Refused tea at [brief note \u2014 detail missing]"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person returned from school upset. Said lessons were difficult. Refused tea at [brief note \u2014 detail missing] [child words not recorded]  Young person said: Said lessons were difficult Refused tea at [brief note \u2014 detail missing] "
     },
     {
       "scenario_id": "core_001_v015_child_centred_rewrite",
@@ -1071,7 +1071,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person returned from school upset. Said lessons were difficult. Refused tea at [brief note \u2014 detail missing] [child words not recorded]  Young person said: Said lessons were difficult. Refused tea at [brief note \u2014 detail missing]"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person returned from school upset. Said lessons were difficult. Refused tea at [brief note \u2014 detail missing] [child words not recorded]  Young person said: Said lessons were difficult Refused tea at [brief note \u2014 detail missing] "
     },
     {
       "scenario_id": "core_001_v017_reg44_evidence",
@@ -1121,7 +1121,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person returned [brief note \u2014 detail missing] [child words not recorded]  Young person said: not yet known \u2014 record the child's words where provided. Presentation: as described in factual account \u2014 further detail not yet recorded"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person returned [brief note \u2014 detail missing] [child words not recorded]  Young person said: not yet known \u2014 record the child's words where provided Presentation: as described in factual account \u2014 further detail not yet recorded "
     },
     {
       "scenario_id": "core_001_v018_poor_wording_correction",
@@ -1221,7 +1221,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person returned from school upset. Said lessons were difficult. Refused tea at [brief note \u2014 detail missing] [child words not recorded]  Young person said: Said lessons were difficult. Refused tea at [brief note \u2014 detail missing]"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person returned from school upset. Said lessons were difficult. Refused tea at [brief note \u2014 detail missing] [child words not recorded]  Young person said: Said lessons were difficult Refused tea at [brief note \u2014 detail missing] "
     },
     {
       "scenario_id": "core_001_v020_reflective_supervision",
@@ -1271,7 +1271,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person returned [brief note \u2014 detail missing] [child words not recorded]  Young person said: not yet known \u2014 record the child's words where provided. Presentation: as described in factual account \u2014 further detail not yet recorded"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person returned [brief note \u2014 detail missing] [child words not recorded]  Young person said: not yet known \u2014 record the child's words where provided Presentation: as described in factual account \u2014 further detail not yet recorded "
     },
     {
       "scenario_id": "core_001_v021_rough_note",
@@ -1377,7 +1377,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young [brief note \u2014 detail missing] [adult response not yet recorded] [outcome not yet known] [action owner not stated]  Young person said: not yet known \u2014 record the child's words where provided. Presentation: not yet known \u2014 to be co"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young [brief note \u2014 detail missing] [adult response not yet recorded] [outcome not yet known] [action owner not stated]  Young person said: not yet known \u2014 record the child's words where provided Presentation: not yet known \u2014 to be com"
     },
     {
       "scenario_id": "core_001_v023_handover",
@@ -1427,7 +1427,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person returned from [brief note \u2014 detail missing] [adult response not yet recorded] [outcome not yet known] [action owner not stated]  Young person said: not yet known \u2014 record the child's words where provided. Presentation: as "
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person returned from [brief note \u2014 detail missing] [adult response not yet recorded] [outcome not yet known] [action owner not stated]  Young person said: not yet known \u2014 record the child's words where provided Presentation: as d"
     },
     {
       "scenario_id": "core_001_v024_mobile_friendly",
@@ -1627,7 +1627,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person returned [brief note \u2014 detail missing] [adult response not yet recorded] [outcome not yet known] [action owner not stated]  Young person said: not yet known \u2014 record the child's words where provided. Presentation: as descr"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person returned [brief note \u2014 detail missing] [adult response not yet recorded] [outcome not yet known] [action owner not stated]  Young person said: not yet known \u2014 record the child's words where provided Presentation: as descri"
     },
     {
       "scenario_id": "core_001_v028_poor_wording_correction",
@@ -1777,7 +1777,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person returned [brief note \u2014 detail missing] [adult response not yet recorded] [outcome not yet known] [action owner not stated]  Young person said: not yet known \u2014 record the child's words where provided. Presentation: as descr"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person returned [brief note \u2014 detail missing] [adult response not yet recorded] [outcome not yet known] [action owner not stated]  Young person said: not yet known \u2014 record the child's words where provided Presentation: as descri"
     },
     {
       "scenario_id": "core_001_v031_rough_note",
@@ -1881,7 +1881,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Timeline unclear \u2014 Earlier\u2026 then later\u2026 Manager review of: Daily record after difficult school day. Facts from shift  Young person said: not yet known \u2014 record the child's words where provided. Presentation: not yet known \u2014 to be compl"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Timeline unclear \u2014 Earlier\u2026 then later\u2026 Manager review of: Daily record after difficult school day. Facts from shift  Young person said: not yet known \u2014 record the child's words where provided Presentation: not yet known \u2014 to be comple"
     },
     {
       "scenario_id": "core_001_v033_handover",
@@ -1931,7 +1931,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Timeline unclear \u2014 Earlier\u2026 then later\u2026 Handover summary \u2014 Daily record after difficult school day: Young person  Young person said: not yet known \u2014 record the child's words where provided. Presentation: as described in factual account"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Timeline unclear \u2014 Earlier\u2026 then later\u2026 Handover summary \u2014 Daily record after difficult school day: Young person  Young person said: not yet known \u2014 record the child's words where provided Presentation: as described in factual account "
     },
     {
       "scenario_id": "core_001_v034_mobile_friendly",
@@ -1981,7 +1981,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Timeline unclear \u2014 Earlier\u2026 then later\u2026 Young person returned from school upset. Said lessons were difficult. Refused  Young person said: Said lessons were difficult. Refused The adult observed presentation: upset, refused. Wishes, fee"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Timeline unclear \u2014 Earlier\u2026 then later\u2026 Young person returned from school upset. Said lessons were difficult. Refused  Young person said: Said lessons were difficult Refused The adult observed presentation: upset, refused Wishes, feeli"
     },
     {
       "scenario_id": "core_001_v035_child_centred_rewrite",
@@ -2031,7 +2031,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Timeline unclear \u2014 Earlier\u2026 then later\u2026 Rewrite child-centred: Young person returned from school upset. Said lessons  Young person said: Said lessons The adult observed presentation: upset. Wishes, feelings and views: not yet known \u2014 t"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Timeline unclear \u2014 Earlier\u2026 then later\u2026 Rewrite child-centred: Young person returned from school upset. Said lessons  Young person said: Said lessons The adult observed presentation: upset Wishes, feelings and views: not yet known \u2014 to"
     },
     {
       "scenario_id": "core_001_v036_safeguarding_escalation",
@@ -2081,7 +2081,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Timeline unclear \u2014 Earlier\u2026 then later\u2026 Young person returned from school upset. Said lessons were difficult. Refused  Young person said: Said lessons were difficult. Refused The adult observed presentation: upset, refused. Wishes, fee"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Timeline unclear \u2014 Earlier\u2026 then later\u2026 Young person returned from school upset. Said lessons were difficult. Refused  Young person said: Said lessons were difficult Refused The adult observed presentation: upset, refused Wishes, feeli"
     },
     {
       "scenario_id": "core_001_v037_reg44_evidence",
@@ -2135,7 +2135,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Timeline unclear \u2014 Earlier\u2026 then later\u2026 Reg 44 evidence note for: Daily record after difficult school day. Young  Young person said: not yet known \u2014 record the child's words where provided. Presentation: not yet known \u2014 to be completed"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Timeline unclear \u2014 Earlier\u2026 then later\u2026 Reg 44 evidence note for: Daily record after difficult school day. Young  Young person said: not yet known \u2014 record the child's words where provided Presentation: not yet known \u2014 to be completed "
     },
     {
       "scenario_id": "core_001_v038_poor_wording_correction",
@@ -2185,7 +2185,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Timeline unclear \u2014 Earlier\u2026 then later\u2026 Young person returned from school upset. Said  Young person said: Said The adult observed presentation: upset. Wishes, feelings and views: not yet known \u2014 to be sought where appropriate.  ## Adul"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Timeline unclear \u2014 Earlier\u2026 then later\u2026 Young person returned from school upset. Said  Young person said: Said The adult observed presentation: upset Wishes, feelings and views: not yet known \u2014 to be sought where appropriate  ## Adult "
     },
     {
       "scenario_id": "core_001_v039_voice_dictate_transcript",
@@ -2235,7 +2235,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Timeline unclear \u2014 Earlier\u2026 then later\u2026 um Young person returned from school upset. Said lessons were difficult  Young person said: Said lessons were difficult The adult observed presentation: upset. Wishes, feelings and views: not yet"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Timeline unclear \u2014 Earlier\u2026 then later\u2026 um Young person returned from school upset. Said lessons were difficult  Young person said: Said lessons were difficult The adult observed presentation: upset Wishes, feelings and views: not yet "
     },
     {
       "scenario_id": "core_001_v040_reflective_supervision",
@@ -2289,7 +2289,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Timeline unclear \u2014 Earlier\u2026 then later\u2026 Supervision reflection on Daily record after difficult school day: Young  Young person said: not yet known \u2014 record the child's words where provided. Presentation: not yet known \u2014 to be completed"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Timeline unclear \u2014 Earlier\u2026 then later\u2026 Supervision reflection on Daily record after difficult school day: Young  Young person said: not yet known \u2014 record the child's words where provided Presentation: not yet known \u2014 to be completed "
     },
     {
       "scenario_id": "core_001_v041_rough_note",
@@ -2389,7 +2389,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Observed: Manager review of: Daily record after difficult school day. Facts from shift: Young person returned from school upset [child words not recorded]  Young person said: not yet known \u2014 record the child's words where provided. The"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Observed: Manager review of: Daily record after difficult school day. Facts from shift: Young person returned from school upset [child words not recorded]  Young person said: not yet known \u2014 record the child's words where provided The "
     },
     {
       "scenario_id": "core_001_v043_handover",
@@ -2489,7 +2489,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Observed: Young person returned from school upset. Said lessons were difficult. Refused tea at first. Later settled after The adult [child words not recorded]  Young person said: Said lessons were difficult. Refused tea at first. The a"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Observed: Young person returned from school upset. Said lessons were difficult. Refused tea at first. Later settled after The adult [child words not recorded]  Young person said: Said lessons were difficult Refused tea at first The adu"
     },
     {
       "scenario_id": "core_001_v045_child_centred_rewrite",
@@ -2539,7 +2539,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Observed: Rewrite child-centred: Young person returned from school upset. Said lessons were difficult. Refused tea at first [child words not recorded]  Young person said: Said lessons were difficult. Refused tea at first [child words n"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Observed: Rewrite child-centred: Young person returned from school upset. Said lessons were difficult. Refused tea at first [child words not recorded]  Young person said: Said lessons were difficult Refused tea at first [child words no"
     },
     {
       "scenario_id": "core_001_v046_safeguarding_escalation",
@@ -2589,7 +2589,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Observed: Young person returned from school upset. Said lessons were difficult. Refused tea at first. Later settled after The adult [child words not recorded]  Young person said: Said lessons were difficult. Refused tea at first. The a"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Observed: Young person returned from school upset. Said lessons were difficult. Refused tea at first. Later settled after The adult [child words not recorded]  Young person said: Said lessons were difficult Refused tea at first The adu"
     },
     {
       "scenario_id": "core_001_v047_reg44_evidence",
@@ -2689,7 +2689,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Observed: Young person returned from school upset. Said lessons were difficult. Refused [child words not recorded]  Young person said: Said lessons were difficult. Refused [child words not recorded] The adult observed presentation: ups"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Observed: Young person returned from school upset. Said lessons were difficult. Refused [child words not recorded]  Young person said: Said lessons were difficult Refused [child words not recorded] The adult observed presentation: upse"
     },
     {
       "scenario_id": "core_001_v049_voice_dictate_transcript",
@@ -2739,7 +2739,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Observed: um Young person returned from school upset. Said lessons were difficult. Refused tea at first. Later uh The adult um helped [child words not recorded]  Young person said: Said lessons were difficult. Refused tea at first. The"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Observed: um Young person returned from school upset. Said lessons were difficult. Refused tea at first. Later uh The adult um helped [child words not recorded]  Young person said: Said lessons were difficult Refused tea at first The a"
     },
     {
       "scenario_id": "core_001_v050_reflective_supervision",
@@ -3191,7 +3191,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person returned from school upset. Said lessons were difficult. Refused [outcome not yet known] possible safeguarding cue \u2014 responsible adult to review. [action owner not stated]  Young person said: Said lessons were difficult. R"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person returned from school upset. Said lessons were difficult. Refused [outcome not yet known] possible safeguarding cue \u2014 responsible adult to review. [action owner not stated]  Young person said: Said lessons were difficult Re"
     },
     {
       "scenario_id": "core_001_v059_voice_dictate_transcript",
@@ -3391,7 +3391,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Meeting chair note: Meeting note \u2014 agreed actions unclear: Manager review of: Daily record after difficult school day. Facts from shift: Young person returned  Young person said: not yet known \u2014 record the child's words where provided."
+      "output_excerpt": "## Daily Record  ## Presentation and Support Meeting chair note: Meeting note \u2014 agreed actions unclear: Manager review of: Daily record after difficult school day. Facts from shift: Young person returned  Young person said: not yet known \u2014 record the child's words where provided "
     },
     {
       "scenario_id": "core_001_v063_handover",
@@ -3441,7 +3441,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Meeting chair note: Meeting note \u2014 agreed actions unclear: Handover summary \u2014 Daily record after difficult school day: Young person returned from school upset  Young person said: not yet known \u2014 record the child's words where provided."
+      "output_excerpt": "## Daily Record  ## Presentation and Support Meeting chair note: Meeting note \u2014 agreed actions unclear: Handover summary \u2014 Daily record after difficult school day: Young person returned from school upset  Young person said: not yet known \u2014 record the child's words where provided "
     },
     {
       "scenario_id": "core_001_v064_mobile_friendly",
@@ -3491,7 +3491,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Meeting chair note: Meeting note \u2014 agreed actions unclear: Young person returned from school upset. Said lessons were difficult. Refused tea at first. Later  Young person said: Said lessons were difficult. Refused tea at first. The adu"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Meeting chair note: Meeting note \u2014 agreed actions unclear: Young person returned from school upset. Said lessons were difficult. Refused tea at first. Later  Young person said: Said lessons were difficult Refused tea at first The adult"
     },
     {
       "scenario_id": "core_001_v065_child_centred_rewrite",
@@ -3541,7 +3541,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Meeting chair note: Meeting note \u2014 agreed actions unclear: Rewrite child-centred: Young person returned from school upset. Said lessons were difficult. Refused  Young person said: Said lessons were difficult. Refused The adult observed"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Meeting chair note: Meeting note \u2014 agreed actions unclear: Rewrite child-centred: Young person returned from school upset. Said lessons were difficult. Refused  Young person said: Said lessons were difficult Refused The adult observed "
     },
     {
       "scenario_id": "core_001_v066_safeguarding_escalation",
@@ -3591,7 +3591,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Meeting chair note: Meeting note \u2014 agreed actions unclear: Young person returned from school upset. Said lessons were difficult. Refused tea at first. Later  Young person said: Said lessons were difficult. Refused tea at first. The adu"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Meeting chair note: Meeting note \u2014 agreed actions unclear: Young person returned from school upset. Said lessons were difficult. Refused tea at first. Later  Young person said: Said lessons were difficult Refused tea at first The adult"
     },
     {
       "scenario_id": "core_001_v067_reg44_evidence",
@@ -3691,7 +3691,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Meeting chair note: Meeting note \u2014 agreed actions unclear: Young person returned from school upset. Said lessons were  Young person said: Said lessons were The adult observed presentation: upset. Wishes, feelings and views: not yet kno"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Meeting chair note: Meeting note \u2014 agreed actions unclear: Young person returned from school upset. Said lessons were  Young person said: Said lessons were The adult observed presentation: upset Wishes, feelings and views: not yet know"
     },
     {
       "scenario_id": "core_001_v069_voice_dictate_transcript",
@@ -3741,7 +3741,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Meeting chair note: Meeting note \u2014 agreed actions unclear: um Young person returned from school upset. Said lessons were difficult. Refused tea at first. Later  Young person said: Said lessons were difficult. Refused tea at first. The "
+      "output_excerpt": "## Daily Record  ## Presentation and Support Meeting chair note: Meeting note \u2014 agreed actions unclear: um Young person returned from school upset. Said lessons were difficult. Refused tea at first. Later  Young person said: Said lessons were difficult Refused tea at first The ad"
     },
     {
       "scenario_id": "core_001_v070_reflective_supervision",
@@ -3891,7 +3891,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Key-work note: Plan review prompt: Manager review of: Daily record after difficult school day. Facts from shift: Young person returned from school upset  Young person said: not yet known \u2014 record the child's words where provided. The a"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Key-work note: Plan review prompt: Manager review of: Daily record after difficult school day. Facts from shift: Young person returned from school upset  Young person said: not yet known \u2014 record the child's words where provided The ad"
     },
     {
       "scenario_id": "core_001_v073_handover",
@@ -3941,7 +3941,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Key-work note: Plan review prompt: Handover summary \u2014 Daily record after difficult school day: Young person returned from school upset. Said lessons were  Young person said: Said lessons were The adult observed presentation: upset. Wis"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Key-work note: Plan review prompt: Handover summary \u2014 Daily record after difficult school day: Young person returned from school upset. Said lessons were  Young person said: Said lessons were The adult observed presentation: upset Wish"
     },
     {
       "scenario_id": "core_001_v074_mobile_friendly",
@@ -3991,7 +3991,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Key-work note: Plan review prompt: Young person returned from school upset. Said lessons were difficult. Refused tea at first. Later settled after The adult  Young person said: Said lessons were difficult. Refused tea at first. The adu"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Key-work note: Plan review prompt: Young person returned from school upset. Said lessons were difficult. Refused tea at first. Later settled after The adult  Young person said: Said lessons were difficult Refused tea at first The adult"
     },
     {
       "scenario_id": "core_001_v075_child_centred_rewrite",
@@ -4041,7 +4041,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Key-work note: Plan review prompt: Rewrite child-centred: Young person returned from school upset. Said lessons were difficult. Refused tea at first  Young person said: Said lessons were difficult. Refused tea at first The adult observ"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Key-work note: Plan review prompt: Rewrite child-centred: Young person returned from school upset. Said lessons were difficult. Refused tea at first  Young person said: Said lessons were difficult Refused tea at first The adult observe"
     },
     {
       "scenario_id": "core_001_v076_safeguarding_escalation",
@@ -4091,7 +4091,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Key-work note: Plan review prompt: Young person returned from school upset. Said lessons were difficult. Refused tea at first. Later settled after The adult  Young person said: Said lessons were difficult. Refused tea at first. The adu"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Key-work note: Plan review prompt: Young person returned from school upset. Said lessons were difficult. Refused tea at first. Later settled after The adult  Young person said: Said lessons were difficult Refused tea at first The adult"
     },
     {
       "scenario_id": "core_001_v077_reg44_evidence",
@@ -4141,7 +4141,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Key-work note: Plan review prompt: Reg 44 evidence note for: Daily record after difficult school day. Young person returned from school upset. Said  Young person said: Said The adult observed presentation: upset. Wishes, feelings and v"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Key-work note: Plan review prompt: Reg 44 evidence note for: Daily record after difficult school day. Young person returned from school upset. Said  Young person said: Said The adult observed presentation: upset Wishes, feelings and vi"
     },
     {
       "scenario_id": "core_001_v078_poor_wording_correction",
@@ -4191,7 +4191,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Key-work note: Plan review prompt: Young person returned from school upset. Said lessons were difficult. Refused  Young person said: Said lessons were difficult. Refused The adult observed presentation: upset, refused. Wishes, feelings"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Key-work note: Plan review prompt: Young person returned from school upset. Said lessons were difficult. Refused  Young person said: Said lessons were difficult Refused The adult observed presentation: upset, refused Wishes, feelings a"
     },
     {
       "scenario_id": "core_001_v079_voice_dictate_transcript",
@@ -4241,7 +4241,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Key-work note: Plan review prompt: um Young person returned from school upset. Said lessons were difficult. Refused tea at first. Later uh The adult um helped  Young person said: Said lessons were difficult. Refused tea at first. The a"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Key-work note: Plan review prompt: um Young person returned from school upset. Said lessons were difficult. Refused tea at first. Later uh The adult um helped  Young person said: Said lessons were difficult Refused tea at first The adu"
     },
     {
       "scenario_id": "core_001_v080_reflective_supervision",
@@ -4291,7 +4291,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Key-work note: Plan review prompt: Supervision reflection on Daily record after difficult school day: Young person returned from school upset. Said  Young person said: Said The adult observed presentation: upset. Wishes, feelings and v"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Key-work note: Plan review prompt: Supervision reflection on Daily record after difficult school day: Young person returned from school upset. Said  Young person said: Said The adult observed presentation: upset Wishes, feelings and vi"
     },
     {
       "scenario_id": "core_001_v081_rough_note",
@@ -4441,7 +4441,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Manager perspective: Professional consultation to consider: Handover summary \u2014 Daily record after difficult school day: Young person returned from school upset. Said  Young person said: Said The adult observed presentation: upset. Wish"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Manager perspective: Professional consultation to consider: Handover summary \u2014 Daily record after difficult school day: Young person returned from school upset. Said  Young person said: Said The adult observed presentation: upset Wishe"
     },
     {
       "scenario_id": "core_001_v084_mobile_friendly",
@@ -4491,7 +4491,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Manager perspective: Professional consultation to consider: Young person returned from school upset. Said lessons were difficult. Refused tea at first. Later settled  Young person said: Said lessons were difficult. Refused tea at first"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Manager perspective: Professional consultation to consider: Young person returned from school upset. Said lessons were difficult. Refused tea at first. Later settled  Young person said: Said lessons were difficult Refused tea at first "
     },
     {
       "scenario_id": "core_001_v085_child_centred_rewrite",
@@ -4541,7 +4541,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Manager perspective: Professional consultation to consider: Rewrite child-centred: Young person returned from school upset. Said lessons were difficult. Refused tea at  Young person said: Said lessons were difficult. Refused tea at The"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Manager perspective: Professional consultation to consider: Rewrite child-centred: Young person returned from school upset. Said lessons were difficult. Refused tea at  Young person said: Said lessons were difficult Refused tea at The "
     },
     {
       "scenario_id": "core_001_v086_safeguarding_escalation",
@@ -4591,7 +4591,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Manager perspective: Professional consultation to consider: Young person returned from school upset. Said lessons were difficult. Refused tea at first. Later settled  Young person said: Said lessons were difficult. Refused tea at first"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Manager perspective: Professional consultation to consider: Young person returned from school upset. Said lessons were difficult. Refused tea at first. Later settled  Young person said: Said lessons were difficult Refused tea at first "
     },
     {
       "scenario_id": "core_001_v087_reg44_evidence",
@@ -4691,7 +4691,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Manager perspective: Professional consultation to consider: Young person returned from school upset. Said lessons were difficult. Refused  Young person said: Said lessons were difficult. Refused The adult observed presentation: upset, "
+      "output_excerpt": "## Daily Record  ## Presentation and Support Manager perspective: Professional consultation to consider: Young person returned from school upset. Said lessons were difficult. Refused  Young person said: Said lessons were difficult Refused The adult observed presentation: upset, r"
     },
     {
       "scenario_id": "core_001_v089_voice_dictate_transcript",
@@ -4741,7 +4741,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Manager perspective: Professional consultation to consider: um Young person returned from school upset. Said lessons were difficult. Refused tea at first. Later uh The adult  Young person said: Said lessons were difficult. Refused tea "
+      "output_excerpt": "## Daily Record  ## Presentation and Support Manager perspective: Professional consultation to consider: um Young person returned from school upset. Said lessons were difficult. Refused tea at first. Later uh The adult  Young person said: Said lessons were difficult Refused tea a"
     },
     {
       "scenario_id": "core_001_v090_reflective_supervision",
@@ -4895,7 +4895,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support On-call manager brief: Timeline unclear \u2014 Urgent brief: Manager review of: Daily record after difficult school day. Facts from shift [outcome High-risk  Young person said: not yet known \u2014 record the child's words where provided. Presen"
+      "output_excerpt": "## Daily Record  ## Presentation and Support On-call manager brief: Timeline unclear \u2014 Urgent brief: Manager review of: Daily record after difficult school day. Facts from shift [outcome High-risk  Young person said: not yet known \u2014 record the child's words where provided Present"
     },
     {
       "scenario_id": "core_001_v093_handover",
@@ -4945,7 +4945,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support On-call manager brief: Timeline unclear \u2014 Urgent brief: Handover summary \u2014 Daily record after difficult school day: Young person [outcome not High-risk  Young person said: not yet known \u2014 record the child's words where provided. Presen"
+      "output_excerpt": "## Daily Record  ## Presentation and Support On-call manager brief: Timeline unclear \u2014 Urgent brief: Handover summary \u2014 Daily record after difficult school day: Young person [outcome not High-risk  Young person said: not yet known \u2014 record the child's words where provided Present"
     },
     {
       "scenario_id": "core_001_v094_mobile_friendly",
@@ -4995,7 +4995,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support On-call manager brief: Timeline unclear \u2014 Urgent brief: Young person returned from school upset. Said lessons were difficult. Refused possible High-risk  Young person said: Said lessons were difficult. Refused possible High-risk The ad"
+      "output_excerpt": "## Daily Record  ## Presentation and Support On-call manager brief: Timeline unclear \u2014 Urgent brief: Young person returned from school upset. Said lessons were difficult. Refused possible High-risk  Young person said: Said lessons were difficult Refused possible High-risk The adu"
     },
     {
       "scenario_id": "core_001_v095_child_centred_rewrite",
@@ -5095,7 +5095,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support On-call manager brief: Timeline unclear \u2014 Urgent brief: Young person returned from school upset. Said lessons were difficult. Refused possible High-risk  Young person said: Said lessons were difficult. Refused possible High-risk The ad"
+      "output_excerpt": "## Daily Record  ## Presentation and Support On-call manager brief: Timeline unclear \u2014 Urgent brief: Young person returned from school upset. Said lessons were difficult. Refused possible High-risk  Young person said: Said lessons were difficult Refused possible High-risk The adu"
     },
     {
       "scenario_id": "core_001_v097_reg44_evidence",
@@ -5145,7 +5145,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support On-call manager brief: Timeline unclear \u2014 Urgent brief: Reg 44 evidence note for: Daily record after difficult school day. Young person High-risk  Young person said: not yet known \u2014 record the child's words where provided. Presentation"
+      "output_excerpt": "## Daily Record  ## Presentation and Support On-call manager brief: Timeline unclear \u2014 Urgent brief: Reg 44 evidence note for: Daily record after difficult school day. Young person High-risk  Young person said: not yet known \u2014 record the child's words where provided Presentation:"
     },
     {
       "scenario_id": "core_001_v098_poor_wording_correction",
@@ -5195,7 +5195,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support On-call manager brief: Timeline unclear \u2014 Urgent brief: Young person returned from school upset. Said High-risk context  Young person said: Said High-risk context The adult observed presentation: upset. Wishes, feelings and views: not "
+      "output_excerpt": "## Daily Record  ## Presentation and Support On-call manager brief: Timeline unclear \u2014 Urgent brief: Young person returned from school upset. Said High-risk context  Young person said: Said High-risk context The adult observed presentation: upset Wishes, feelings and views: not y"
     },
     {
       "scenario_id": "core_001_v099_voice_dictate_transcript",
@@ -5295,7 +5295,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support On-call manager brief: Timeline unclear \u2014 Urgent brief: Supervision reflection on Daily record after difficult school day: Young person High-risk  Young person said: not yet known \u2014 record the child's words where provided. Presentation"
+      "output_excerpt": "## Daily Record  ## Presentation and Support On-call manager brief: Timeline unclear \u2014 Urgent brief: Supervision reflection on Daily record after difficult school day: Young person High-risk  Young person said: not yet known \u2014 record the child's words where provided Presentation:"
     },
     {
       "scenario_id": "core_002_v001_rough_note",
@@ -5695,7 +5695,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person had a calm day. Attended school on time. Joined group activity in  Young person said: not yet known \u2014 record the child's words where provided. The adult observed presentation: calm.  ## Adult Response Adult response detail"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person had a calm day. Attended school on time. Joined group activity in  Young person said: not yet known \u2014 record the child's words where provided The adult observed presentation: calm  ## Adult Response Adult response detail n"
     },
     {
       "scenario_id": "core_002_v009_voice_dictate_transcript",
@@ -5745,7 +5745,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person had a calm day. Attended school on time. Joined group activity in the evening and  Young person said: not yet known \u2014 record the child's words where provided. The adult observed presentation: calm.  ## Adult Response Adult"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person had a calm day. Attended school on time. Joined group activity in the evening and  Young person said: not yet known \u2014 record the child's words where provided The adult observed presentation: calm  ## Adult Response Adult r"
     },
     {
       "scenario_id": "core_002_v010_reflective_supervision",
@@ -5845,7 +5845,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support young person had a calm day attended school on time joined group activity in the [brief note \u2014 detail missing] [child words not recorded]  Young person said: not yet known \u2014 record the child's words where provided. The adult observed p"
+      "output_excerpt": "## Daily Record  ## Presentation and Support young person had a calm day attended school on time joined group activity in the [brief note \u2014 detail missing] [child words not recorded]  Young person said: not yet known \u2014 record the child's words where provided The adult observed pr"
     },
     {
       "scenario_id": "core_002_v012_manager_oversight",
@@ -5895,7 +5895,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person had a [brief note \u2014 detail missing] [child words not recorded]  Young person said: not yet known \u2014 record the child's words where provided. Presentation: as described in factual account \u2014 further detail not yet recorded. #"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person had a [brief note \u2014 detail missing] [child words not recorded]  Young person said: not yet known \u2014 record the child's words where provided Presentation: as described in factual account \u2014 further detail not yet recorded ## "
     },
     {
       "scenario_id": "core_002_v013_handover",
@@ -5945,7 +5945,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person had a calm day. Attended [brief note \u2014 detail missing] [child words not recorded]  Young person said: not yet known \u2014 record the child's words where provided. The adult observed presentation: calm.  ## Adult Response Adult"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person had a calm day. Attended [brief note \u2014 detail missing] [child words not recorded]  Young person said: not yet known \u2014 record the child's words where provided The adult observed presentation: calm  ## Adult Response Adult r"
     },
     {
       "scenario_id": "core_002_v014_mobile_friendly",
@@ -5995,7 +5995,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person had a calm day. Attended school on time. Joined group activity in the [brief note \u2014 detail missing] [child words not recorded]  Young person said: not yet known \u2014 record the child's words where provided. The adult observed"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person had a calm day. Attended school on time. Joined group activity in the [brief note \u2014 detail missing] [child words not recorded]  Young person said: not yet known \u2014 record the child's words where provided The adult observed "
     },
     {
       "scenario_id": "core_002_v015_child_centred_rewrite",
@@ -6045,7 +6045,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person had a calm day. Attended school on time. Joined group [brief note \u2014 detail missing] [child words not recorded]  Young person said: not yet known \u2014 record the child's words where provided. The adult observed presentation: c"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person had a calm day. Attended school on time. Joined group [brief note \u2014 detail missing] [child words not recorded]  Young person said: not yet known \u2014 record the child's words where provided The adult observed presentation: ca"
     },
     {
       "scenario_id": "core_002_v016_safeguarding_escalation",
@@ -6095,7 +6095,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person had a calm day. Attended school on time. Joined group activity in the [brief note \u2014 detail missing] [child words not recorded]  Young person said: not yet known \u2014 record the child's words where provided. The adult observed"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person had a calm day. Attended school on time. Joined group activity in the [brief note \u2014 detail missing] [child words not recorded]  Young person said: not yet known \u2014 record the child's words where provided The adult observed "
     },
     {
       "scenario_id": "core_002_v017_reg44_evidence",
@@ -6145,7 +6145,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person had a calm day [brief note \u2014 detail missing] [child words not recorded]  Young person said: not yet known \u2014 record the child's words where provided. The adult observed presentation: calm.  ## Adult Response Adult response "
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person had a calm day [brief note \u2014 detail missing] [child words not recorded]  Young person said: not yet known \u2014 record the child's words where provided The adult observed presentation: calm  ## Adult Response Adult response de"
     },
     {
       "scenario_id": "core_002_v018_poor_wording_correction",
@@ -6195,7 +6195,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person had a calm day. Attended school on time [brief note \u2014 detail missing] [child words not recorded]  Young person said: not yet known \u2014 record the child's words where provided. The adult observed presentation: calm.  ## Adult"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person had a calm day. Attended school on time [brief note \u2014 detail missing] [child words not recorded]  Young person said: not yet known \u2014 record the child's words where provided The adult observed presentation: calm  ## Adult R"
     },
     {
       "scenario_id": "core_002_v019_voice_dictate_transcript",
@@ -6245,7 +6245,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person had a calm day. Attended school on time. Joined group activity in the [brief note \u2014 detail missing] [child words not recorded]  Young person said: not yet known \u2014 record the child's words where provided. The adult observed"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person had a calm day. Attended school on time. Joined group activity in the [brief note \u2014 detail missing] [child words not recorded]  Young person said: not yet known \u2014 record the child's words where provided The adult observed "
     },
     {
       "scenario_id": "core_002_v020_reflective_supervision",
@@ -6295,7 +6295,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person had a calm day [brief note \u2014 detail missing] [child words not recorded]  Young person said: not yet known \u2014 record the child's words where provided. The adult observed presentation: calm. ## Impact on the child Management "
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person had a calm day [brief note \u2014 detail missing] [child words not recorded]  Young person said: not yet known \u2014 record the child's words where provided The adult observed presentation: calm ## Impact on the child Management re"
     },
     {
       "scenario_id": "core_002_v021_rough_note",
@@ -6395,7 +6395,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person had a [brief note \u2014 detail missing] [adult response not yet recorded] [outcome not yet known] [action owner not stated]  Young person said: not yet known \u2014 record the child's words where provided. Presentation: as describe"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person had a [brief note \u2014 detail missing] [adult response not yet recorded] [outcome not yet known] [action owner not stated]  Young person said: not yet known \u2014 record the child's words where provided Presentation: as described"
     },
     {
       "scenario_id": "core_002_v023_handover",
@@ -6445,7 +6445,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person had a calm day. Attended [brief note \u2014 detail missing] [adult response not yet recorded] [outcome not yet known] [action owner not stated]  Young person said: not yet known \u2014 record the child's words where provided. The ad"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person had a calm day. Attended [brief note \u2014 detail missing] [adult response not yet recorded] [outcome not yet known] [action owner not stated]  Young person said: not yet known \u2014 record the child's words where provided The adu"
     },
     {
       "scenario_id": "core_002_v024_mobile_friendly",
@@ -6645,7 +6645,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person had a calm day [brief note \u2014 detail missing] [adult response not yet recorded] [outcome not yet known] [action owner not stated]  Young person said: not yet known \u2014 record the child's words where provided. The adult observ"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person had a calm day [brief note \u2014 detail missing] [adult response not yet recorded] [outcome not yet known] [action owner not stated]  Young person said: not yet known \u2014 record the child's words where provided The adult observe"
     },
     {
       "scenario_id": "core_002_v028_poor_wording_correction",
@@ -6795,7 +6795,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person had a calm day [brief note \u2014 detail missing] [adult response not yet recorded] [outcome not yet known] [action owner not stated]  Young person said: not yet known \u2014 record the child's words where provided. The adult observ"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person had a calm day [brief note \u2014 detail missing] [adult response not yet recorded] [outcome not yet known] [action owner not stated]  Young person said: not yet known \u2014 record the child's words where provided The adult observe"
     },
     {
       "scenario_id": "core_002_v031_rough_note",
@@ -6845,7 +6845,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Timeline unclear \u2014 Earlier\u2026 then later\u2026 rough: young person had a calm day attended school on time joined group  Young person said: not yet known \u2014 record the child's words where provided. The adult observed presentation: calm. Wishes,"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Timeline unclear \u2014 Earlier\u2026 then later\u2026 rough: young person had a calm day attended school on time joined group  Young person said: not yet known \u2014 record the child's words where provided The adult observed presentation: calm Wishes, f"
     },
     {
       "scenario_id": "core_002_v032_manager_oversight",
@@ -6899,7 +6899,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Timeline unclear \u2014 Earlier\u2026 then later\u2026 Manager review of: Positive progress daily record. Facts from shift: Young  Young person said: not yet known \u2014 record the child's words where provided. Presentation: not yet known \u2014 to be complet"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Timeline unclear \u2014 Earlier\u2026 then later\u2026 Manager review of: Positive progress daily record. Facts from shift: Young  Young person said: not yet known \u2014 record the child's words where provided Presentation: not yet known \u2014 to be complete"
     },
     {
       "scenario_id": "core_002_v033_handover",
@@ -6949,7 +6949,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Timeline unclear \u2014 Earlier\u2026 then later\u2026 Handover summary \u2014 Positive progress daily record: Young person had a calm  Young person said: not yet known \u2014 record the child's words where provided. The adult observed presentation: calm.  ## "
+      "output_excerpt": "## Daily Record  ## Presentation and Support Timeline unclear \u2014 Earlier\u2026 then later\u2026 Handover summary \u2014 Positive progress daily record: Young person had a calm  Young person said: not yet known \u2014 record the child's words where provided The adult observed presentation: calm  ## Ad"
     },
     {
       "scenario_id": "core_002_v034_mobile_friendly",
@@ -6999,7 +6999,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Timeline unclear \u2014 Earlier\u2026 then later\u2026 Young person had a calm day. Attended school on time. Joined group activity in  Young person said: not yet known \u2014 record the child's words where provided. The adult observed presentation: calm. "
+      "output_excerpt": "## Daily Record  ## Presentation and Support Timeline unclear \u2014 Earlier\u2026 then later\u2026 Young person had a calm day. Attended school on time. Joined group activity in  Young person said: not yet known \u2014 record the child's words where provided The adult observed presentation: calm  #"
     },
     {
       "scenario_id": "core_002_v035_child_centred_rewrite",
@@ -7049,7 +7049,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Timeline unclear \u2014 Earlier\u2026 then later\u2026 Rewrite child-centred: Young person had a calm day. Attended school on time  Young person said: not yet known \u2014 record the child's words where provided. The adult observed presentation: calm.  ##"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Timeline unclear \u2014 Earlier\u2026 then later\u2026 Rewrite child-centred: Young person had a calm day. Attended school on time  Young person said: not yet known \u2014 record the child's words where provided The adult observed presentation: calm  ## A"
     },
     {
       "scenario_id": "core_002_v036_safeguarding_escalation",
@@ -7099,7 +7099,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Timeline unclear \u2014 Earlier\u2026 then later\u2026 Young person had a calm day. Attended school on time. Joined group activity in  Young person said: not yet known \u2014 record the child's words where provided. The adult observed presentation: calm. "
+      "output_excerpt": "## Daily Record  ## Presentation and Support Timeline unclear \u2014 Earlier\u2026 then later\u2026 Young person had a calm day. Attended school on time. Joined group activity in  Young person said: not yet known \u2014 record the child's words where provided The adult observed presentation: calm  #"
     },
     {
       "scenario_id": "core_002_v037_reg44_evidence",
@@ -7149,7 +7149,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Timeline unclear \u2014 Earlier\u2026 then later\u2026 Reg 44 evidence note for: Positive progress daily record. Young person had a  Young person said: not yet known \u2014 record the child's words where provided. Presentation: as described in factual acc"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Timeline unclear \u2014 Earlier\u2026 then later\u2026 Reg 44 evidence note for: Positive progress daily record. Young person had a  Young person said: not yet known \u2014 record the child's words where provided Presentation: as described in factual acco"
     },
     {
       "scenario_id": "core_002_v038_poor_wording_correction",
@@ -7199,7 +7199,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Timeline unclear \u2014 Earlier\u2026 then later\u2026 Young person had a calm day. Attended school  Young person said: not yet known \u2014 record the child's words where provided. The adult observed presentation: calm.  ## Adult Response Adult response "
+      "output_excerpt": "## Daily Record  ## Presentation and Support Timeline unclear \u2014 Earlier\u2026 then later\u2026 Young person had a calm day. Attended school  Young person said: not yet known \u2014 record the child's words where provided The adult observed presentation: calm  ## Adult Response Adult response de"
     },
     {
       "scenario_id": "core_002_v039_voice_dictate_transcript",
@@ -7249,7 +7249,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Timeline unclear \u2014 Earlier\u2026 then later\u2026 um Young person had a calm day. Attended school on time. Joined group activity  Young person said: not yet known \u2014 record the child's words where provided. The adult observed presentation: calm. "
+      "output_excerpt": "## Daily Record  ## Presentation and Support Timeline unclear \u2014 Earlier\u2026 then later\u2026 um Young person had a calm day. Attended school on time. Joined group activity  Young person said: not yet known \u2014 record the child's words where provided The adult observed presentation: calm  #"
     },
     {
       "scenario_id": "core_002_v040_reflective_supervision",
@@ -7299,7 +7299,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Timeline unclear \u2014 Earlier\u2026 then later\u2026 Supervision reflection on Positive progress daily record: Young person had a  Young person said: not yet known \u2014 record the child's words where provided. Presentation: as described in factual acc"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Timeline unclear \u2014 Earlier\u2026 then later\u2026 Supervision reflection on Positive progress daily record: Young person had a  Young person said: not yet known \u2014 record the child's words where provided Presentation: as described in factual acco"
     },
     {
       "scenario_id": "core_002_v041_rough_note",
@@ -7399,7 +7399,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Observed: Manager review of: Positive progress daily record. Facts from shift: Young person had a calm day. Attended school on [child words not recorded]  Young person said: not yet known \u2014 record the child's words where provided. The "
+      "output_excerpt": "## Daily Record  ## Presentation and Support Observed: Manager review of: Positive progress daily record. Facts from shift: Young person had a calm day. Attended school on [child words not recorded]  Young person said: not yet known \u2014 record the child's words where provided The a"
     },
     {
       "scenario_id": "core_002_v043_handover",
@@ -7449,7 +7449,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Observed: Handover summary \u2014 Positive progress daily record: Young person had a calm day. Attended school on time. Joined group [child words not recorded]  Young person said: not yet known \u2014 record the child's words where provided. The"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Observed: Handover summary \u2014 Positive progress daily record: Young person had a calm day. Attended school on time. Joined group [child words not recorded]  Young person said: not yet known \u2014 record the child's words where provided The "
     },
     {
       "scenario_id": "core_002_v044_mobile_friendly",
@@ -7549,7 +7549,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Observed: Rewrite child-centred: Young person had a calm day. Attended school on time. Joined group activity in the evening and [child words not recorded]  Young person said: not yet known \u2014 record the child's words where provided. The"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Observed: Rewrite child-centred: Young person had a calm day. Attended school on time. Joined group activity in the evening and [child words not recorded]  Young person said: not yet known \u2014 record the child's words where provided The "
     },
     {
       "scenario_id": "core_002_v046_safeguarding_escalation",
@@ -7649,7 +7649,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Observed: Reg 44 evidence note for: Positive progress daily record. Young person had a calm day. Attended school on time. Joined [child words not recorded]  Young person said: not yet known \u2014 record the child's words where provided. Th"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Observed: Reg 44 evidence note for: Positive progress daily record. Young person had a calm day. Attended school on time. Joined [child words not recorded]  Young person said: not yet known \u2014 record the child's words where provided The"
     },
     {
       "scenario_id": "core_002_v048_poor_wording_correction",
@@ -7699,7 +7699,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Observed: Young person had a calm day. Attended school on time. Joined group activity in [child words not recorded]  Young person said: not yet known \u2014 record the child's words where provided. The adult observed presentation: calm.  ##"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Observed: Young person had a calm day. Attended school on time. Joined group activity in [child words not recorded]  Young person said: not yet known \u2014 record the child's words where provided The adult observed presentation: calm  ## A"
     },
     {
       "scenario_id": "core_002_v049_voice_dictate_transcript",
@@ -7801,7 +7801,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Observed: Supervision reflection on Positive progress daily record: Young person had a calm day. Attended school on time. Joined [child words not recorded]  Young person said: not yet known \u2014 record the child's words where provided. Th"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Observed: Supervision reflection on Positive progress daily record: Young person had a calm day. Attended school on time. Joined [child words not recorded]  Young person said: not yet known \u2014 record the child's words where provided The"
     },
     {
       "scenario_id": "core_002_v051_rough_note",
@@ -8351,7 +8351,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Meeting chair note: Meeting note \u2014 agreed actions unclear: rough: young person had a calm day attended school on time joined group activity in the evening and  Young person said: not yet known \u2014 record the child's words where provided."
+      "output_excerpt": "## Daily Record  ## Presentation and Support Meeting chair note: Meeting note \u2014 agreed actions unclear: rough: young person had a calm day attended school on time joined group activity in the evening and  Young person said: not yet known \u2014 record the child's words where provided "
     },
     {
       "scenario_id": "core_002_v062_manager_oversight",
@@ -8401,7 +8401,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Meeting chair note: Meeting note \u2014 agreed actions unclear: Manager review of: Positive progress daily record. Facts from shift: Young person had a calm day  Young person said: not yet known \u2014 record the child's words where provided. Th"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Meeting chair note: Meeting note \u2014 agreed actions unclear: Manager review of: Positive progress daily record. Facts from shift: Young person had a calm day  Young person said: not yet known \u2014 record the child's words where provided The"
     },
     {
       "scenario_id": "core_002_v063_handover",
@@ -8451,7 +8451,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Meeting chair note: Meeting note \u2014 agreed actions unclear: Handover summary \u2014 Positive progress daily record: Young person had a calm day. Attended school on  Young person said: not yet known \u2014 record the child's words where provided. "
+      "output_excerpt": "## Daily Record  ## Presentation and Support Meeting chair note: Meeting note \u2014 agreed actions unclear: Handover summary \u2014 Positive progress daily record: Young person had a calm day. Attended school on  Young person said: not yet known \u2014 record the child's words where provided T"
     },
     {
       "scenario_id": "core_002_v064_mobile_friendly",
@@ -8501,7 +8501,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Meeting chair note: Meeting note \u2014 agreed actions unclear: Young person had a calm day. Attended school on time. Joined group activity in the evening and  Young person said: not yet known \u2014 record the child's words where provided. The "
+      "output_excerpt": "## Daily Record  ## Presentation and Support Meeting chair note: Meeting note \u2014 agreed actions unclear: Young person had a calm day. Attended school on time. Joined group activity in the evening and  Young person said: not yet known \u2014 record the child's words where provided The a"
     },
     {
       "scenario_id": "core_002_v065_child_centred_rewrite",
@@ -8551,7 +8551,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Meeting chair note: Meeting note \u2014 agreed actions unclear: Rewrite child-centred: Young person had a calm day. Attended school on time. Joined group activity  Young person said: not yet known \u2014 record the child's words where provided. "
+      "output_excerpt": "## Daily Record  ## Presentation and Support Meeting chair note: Meeting note \u2014 agreed actions unclear: Rewrite child-centred: Young person had a calm day. Attended school on time. Joined group activity  Young person said: not yet known \u2014 record the child's words where provided T"
     },
     {
       "scenario_id": "core_002_v066_safeguarding_escalation",
@@ -8601,7 +8601,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Meeting chair note: Meeting note \u2014 agreed actions unclear: Young person had a calm day. Attended school on time. Joined group activity in the evening and  Young person said: not yet known \u2014 record the child's words where provided. The "
+      "output_excerpt": "## Daily Record  ## Presentation and Support Meeting chair note: Meeting note \u2014 agreed actions unclear: Young person had a calm day. Attended school on time. Joined group activity in the evening and  Young person said: not yet known \u2014 record the child's words where provided The a"
     },
     {
       "scenario_id": "core_002_v067_reg44_evidence",
@@ -8651,7 +8651,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Meeting chair note: Meeting note \u2014 agreed actions unclear: Reg 44 evidence note for: Positive progress daily record. Young person had a calm day. Attended  Young person said: not yet known \u2014 record the child's words where provided. The"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Meeting chair note: Meeting note \u2014 agreed actions unclear: Reg 44 evidence note for: Positive progress daily record. Young person had a calm day. Attended  Young person said: not yet known \u2014 record the child's words where provided The "
     },
     {
       "scenario_id": "core_002_v068_poor_wording_correction",
@@ -8701,7 +8701,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Meeting chair note: Meeting note \u2014 agreed actions unclear: Young person had a calm day. Attended school on time. Joined group  Young person said: not yet known \u2014 record the child's words where provided. The adult observed presentation:"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Meeting chair note: Meeting note \u2014 agreed actions unclear: Young person had a calm day. Attended school on time. Joined group  Young person said: not yet known \u2014 record the child's words where provided The adult observed presentation: "
     },
     {
       "scenario_id": "core_002_v069_voice_dictate_transcript",
@@ -8801,7 +8801,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Meeting chair note: Meeting note \u2014 agreed actions unclear: Supervision reflection on Positive progress daily record: Young person had a calm day. Attended  Young person said: not yet known \u2014 record the child's words where provided. The"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Meeting chair note: Meeting note \u2014 agreed actions unclear: Supervision reflection on Positive progress daily record: Young person had a calm day. Attended  Young person said: not yet known \u2014 record the child's words where provided The "
     },
     {
       "scenario_id": "core_002_v071_rough_note",
@@ -8901,7 +8901,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Key-work note: Plan review prompt: Manager review of: Positive progress daily record. Facts from shift: Young person had a calm day. Attended school on  Young person said: not yet known \u2014 record the child's words where provided. The ad"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Key-work note: Plan review prompt: Manager review of: Positive progress daily record. Facts from shift: Young person had a calm day. Attended school on  Young person said: not yet known \u2014 record the child's words where provided The adu"
     },
     {
       "scenario_id": "core_002_v073_handover",
@@ -8951,7 +8951,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Key-work note: Plan review prompt: Handover summary \u2014 Positive progress daily record: Young person had a calm day. Attended school on time. Joined group  Young person said: not yet known \u2014 record the child's words where provided. The a"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Key-work note: Plan review prompt: Handover summary \u2014 Positive progress daily record: Young person had a calm day. Attended school on time. Joined group  Young person said: not yet known \u2014 record the child's words where provided The ad"
     },
     {
       "scenario_id": "core_002_v074_mobile_friendly",
@@ -9051,7 +9051,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Key-work note: Plan review prompt: Rewrite child-centred: Young person had a calm day. Attended school on time. Joined group activity in the evening and  Young person said: not yet known \u2014 record the child's words where provided. The a"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Key-work note: Plan review prompt: Rewrite child-centred: Young person had a calm day. Attended school on time. Joined group activity in the evening and  Young person said: not yet known \u2014 record the child's words where provided The ad"
     },
     {
       "scenario_id": "core_002_v076_safeguarding_escalation",
@@ -9151,7 +9151,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Key-work note: Plan review prompt: Reg 44 evidence note for: Positive progress daily record. Young person had a calm day. Attended school on time. Joined  Young person said: not yet known \u2014 record the child's words where provided. The "
+      "output_excerpt": "## Daily Record  ## Presentation and Support Key-work note: Plan review prompt: Reg 44 evidence note for: Positive progress daily record. Young person had a calm day. Attended school on time. Joined  Young person said: not yet known \u2014 record the child's words where provided The a"
     },
     {
       "scenario_id": "core_002_v078_poor_wording_correction",
@@ -9201,7 +9201,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Key-work note: Plan review prompt: Young person had a calm day. Attended school on time. Joined group activity in  Young person said: not yet known \u2014 record the child's words where provided. The adult observed presentation: calm.  ## A"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Key-work note: Plan review prompt: Young person had a calm day. Attended school on time. Joined group activity in  Young person said: not yet known \u2014 record the child's words where provided The adult observed presentation: calm  ## Adu"
     },
     {
       "scenario_id": "core_002_v079_voice_dictate_transcript",
@@ -9251,7 +9251,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Key-work note: Plan review prompt: um Young person had a calm day. Attended school on time. Joined group activity in the evening and  Young person said: not yet known \u2014 record the child's words where provided. The adult observed presen"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Key-work note: Plan review prompt: um Young person had a calm day. Attended school on time. Joined group activity in the evening and  Young person said: not yet known \u2014 record the child's words where provided The adult observed present"
     },
     {
       "scenario_id": "core_002_v080_reflective_supervision",
@@ -9301,7 +9301,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Key-work note: Plan review prompt: Supervision reflection on Positive progress daily record: Young person had a calm day. Attended school on time. Joined  Young person said: not yet known \u2014 record the child's words where provided. The "
+      "output_excerpt": "## Daily Record  ## Presentation and Support Key-work note: Plan review prompt: Supervision reflection on Positive progress daily record: Young person had a calm day. Attended school on time. Joined  Young person said: not yet known \u2014 record the child's words where provided The a"
     },
     {
       "scenario_id": "core_002_v081_rough_note",
@@ -9701,7 +9701,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Manager perspective: Professional consultation to consider: Young person had a calm day. Attended school on time. Joined group activity  Young person said: not yet known \u2014 record the child's words where provided. The adult observed pre"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Manager perspective: Professional consultation to consider: Young person had a calm day. Attended school on time. Joined group activity  Young person said: not yet known \u2014 record the child's words where provided The adult observed pres"
     },
     {
       "scenario_id": "core_002_v089_voice_dictate_transcript",
@@ -9851,7 +9851,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support On-call manager brief: Timeline unclear \u2014 Urgent brief: rough: young person had a calm day attended school on time joined group [outcome not High-risk  Young person said: not yet known \u2014 record the child's words where provided. The adu"
+      "output_excerpt": "## Daily Record  ## Presentation and Support On-call manager brief: Timeline unclear \u2014 Urgent brief: rough: young person had a calm day attended school on time joined group [outcome not High-risk  Young person said: not yet known \u2014 record the child's words where provided The adul"
     },
     {
       "scenario_id": "core_002_v092_manager_oversight",
@@ -9905,7 +9905,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support On-call manager brief: Timeline unclear \u2014 Urgent brief: Manager review of: Positive progress daily record. Facts from shift: Young [outcome High-risk  Young person said: not yet known \u2014 record the child's words where provided. Presenta"
+      "output_excerpt": "## Daily Record  ## Presentation and Support On-call manager brief: Timeline unclear \u2014 Urgent brief: Manager review of: Positive progress daily record. Facts from shift: Young [outcome High-risk  Young person said: not yet known \u2014 record the child's words where provided Presentat"
     },
     {
       "scenario_id": "core_002_v093_handover",
@@ -9955,7 +9955,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support On-call manager brief: Timeline unclear \u2014 Urgent brief: Handover summary \u2014 Positive progress daily record: Young person had a calm day High-risk context  Young person said: not yet known \u2014 record the child's words where provided. The a"
+      "output_excerpt": "## Daily Record  ## Presentation and Support On-call manager brief: Timeline unclear \u2014 Urgent brief: Handover summary \u2014 Positive progress daily record: Young person had a calm day High-risk context  Young person said: not yet known \u2014 record the child's words where provided The ad"
     },
     {
       "scenario_id": "core_002_v094_mobile_friendly",
@@ -10005,7 +10005,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support On-call manager brief: Timeline unclear \u2014 Urgent brief: Young person had a calm day. Attended school on time. Joined group activity in High-risk context  Young person said: not yet known \u2014 record the child's words where provided. The a"
+      "output_excerpt": "## Daily Record  ## Presentation and Support On-call manager brief: Timeline unclear \u2014 Urgent brief: Young person had a calm day. Attended school on time. Joined group activity in High-risk context  Young person said: not yet known \u2014 record the child's words where provided The ad"
     },
     {
       "scenario_id": "core_002_v095_child_centred_rewrite",
@@ -10055,7 +10055,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support On-call manager brief: Timeline unclear \u2014 Urgent brief: Rewrite child-centred: Young person had a calm day. Attended school on time [outcome High-risk  Young person said: not yet known \u2014 record the child's words where provided. The adu"
+      "output_excerpt": "## Daily Record  ## Presentation and Support On-call manager brief: Timeline unclear \u2014 Urgent brief: Rewrite child-centred: Young person had a calm day. Attended school on time [outcome High-risk  Young person said: not yet known \u2014 record the child's words where provided The adul"
     },
     {
       "scenario_id": "core_002_v096_safeguarding_escalation",
@@ -10105,7 +10105,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support On-call manager brief: Timeline unclear \u2014 Urgent brief: Young person had a calm day. Attended school on time. Joined group activity in High-risk context  Young person said: not yet known \u2014 record the child's words where provided. The a"
+      "output_excerpt": "## Daily Record  ## Presentation and Support On-call manager brief: Timeline unclear \u2014 Urgent brief: Young person had a calm day. Attended school on time. Joined group activity in High-risk context  Young person said: not yet known \u2014 record the child's words where provided The ad"
     },
     {
       "scenario_id": "core_002_v097_reg44_evidence",
@@ -10155,7 +10155,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support On-call manager brief: Timeline unclear \u2014 Urgent brief: Reg 44 evidence note for: Positive progress daily record. Young person had a [outcome High-risk  Young person said: not yet known \u2014 record the child's words where provided. Presen"
+      "output_excerpt": "## Daily Record  ## Presentation and Support On-call manager brief: Timeline unclear \u2014 Urgent brief: Reg 44 evidence note for: Positive progress daily record. Young person had a [outcome High-risk  Young person said: not yet known \u2014 record the child's words where provided Present"
     },
     {
       "scenario_id": "core_002_v098_poor_wording_correction",
@@ -10205,7 +10205,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support On-call manager brief: Timeline unclear \u2014 Urgent brief: Young person had a calm day. Attended school possible High-risk  Young person said: not yet known \u2014 record the child's words where provided. The adult observed presentation: calm."
+      "output_excerpt": "## Daily Record  ## Presentation and Support On-call manager brief: Timeline unclear \u2014 Urgent brief: Young person had a calm day. Attended school possible High-risk  Young person said: not yet known \u2014 record the child's words where provided The adult observed presentation: calm  "
     },
     {
       "scenario_id": "core_002_v099_voice_dictate_transcript",
@@ -10255,7 +10255,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support On-call manager brief: Timeline unclear \u2014 Urgent brief: um Young person had a calm day. Attended school on time. Joined group activity High-risk context  Young person said: not yet known \u2014 record the child's words where provided. The a"
+      "output_excerpt": "## Daily Record  ## Presentation and Support On-call manager brief: Timeline unclear \u2014 Urgent brief: um Young person had a calm day. Attended school on time. Joined group activity High-risk context  Young person said: not yet known \u2014 record the child's words where provided The ad"
     },
     {
       "scenario_id": "core_002_v100_reflective_supervision",
@@ -10305,7 +10305,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support On-call manager brief: Timeline unclear \u2014 Urgent brief: Supervision reflection on Positive progress daily record: Young person had a [outcome High-risk  Young person said: not yet known \u2014 record the child's words where provided. Presen"
+      "output_excerpt": "## Daily Record  ## Presentation and Support On-call manager brief: Timeline unclear \u2014 Urgent brief: Supervision reflection on Positive progress daily record: Young person had a [outcome High-risk  Young person said: not yet known \u2014 record the child's words where provided Present"
     },
     {
       "scenario_id": "core_003_v001_rough_note",
@@ -10505,7 +10505,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person refused lunch saying they were not hungry. The adult offered alternative snack later. Young person ate a small portion at tea after calm  Young person refused lunch saying they were not hungry. The adult observed presentat"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person refused lunch saying they were not hungry. The adult offered alternative snack later. Young person ate a small portion at tea after calm  Young person refused lunch saying they were not hungry The adult observed presentati"
     },
     {
       "scenario_id": "core_003_v005_child_centred_rewrite",
@@ -10655,7 +10655,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person refused lunch saying they were not hungry. The adult offered alternative snack later. Young person ate a small portion at tea after calm conversation  Young person refused lunch saying they were not hungry. The adult obser"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person refused lunch saying they were not hungry. The adult offered alternative snack later. Young person ate a small portion at tea after calm conversation  Young person refused lunch saying they were not hungry The adult observ"
     },
     {
       "scenario_id": "core_003_v008_poor_wording_correction",
@@ -10707,7 +10707,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person refused lunch saying they were not hungry. The adult offered  Young person refused lunch saying they were not hungry. The adult observed presentation: refused.  ## Adult Response Immediate adult response as described in th"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person refused lunch saying they were not hungry. The adult offered  Young person refused lunch saying they were not hungry The adult observed presentation: refused  ## Adult Response Immediate adult response as described in the "
     },
     {
       "scenario_id": "core_003_v009_voice_dictate_transcript",
@@ -10757,7 +10757,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person refused lunch saying they were not hungry. The adult offered alternative snack later  Young person refused lunch saying they were not hungry. The adult observed presentation: refused.  ## Adult Response Immediate adult res"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person refused lunch saying they were not hungry. The adult offered alternative snack later  Young person refused lunch saying they were not hungry The adult observed presentation: refused  ## Adult Response Immediate adult respo"
     },
     {
       "scenario_id": "core_003_v010_reflective_supervision",
@@ -10807,7 +10807,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person refused lunch saying they were not hungry. The adult offered alternative snack later. Young person ate a small portion at tea after calm conversation  Young person refused lunch saying they were not hungry. The adult obser"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person refused lunch saying they were not hungry. The adult offered alternative snack later. Young person ate a small portion at tea after calm conversation  Young person refused lunch saying they were not hungry The adult observ"
     },
     {
       "scenario_id": "core_003_v011_rough_note",
@@ -10907,7 +10907,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person refused lunch saying [brief note \u2014 detail missing] [child words not recorded]  Young person refused lunch saying [brief note \u2014 detail missing] [child words not recorded] The adult observed presentation: refused. ## Impact "
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person refused lunch saying [brief note \u2014 detail missing] [child words not recorded]  Young person refused lunch saying [brief note \u2014 detail missing] [child words not recorded] The adult observed presentation: refused ## Impact o"
     },
     {
       "scenario_id": "core_003_v013_handover",
@@ -11009,7 +11009,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person refused lunch saying they were not hungry. The adult offered alternative snack [brief note \u2014 detail missing] [child words not recorded]  Young person refused lunch saying they were not hungry. The adult observed presentati"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person refused lunch saying they were not hungry. The adult offered alternative snack [brief note \u2014 detail missing] [child words not recorded]  Young person refused lunch saying they were not hungry The adult observed presentatio"
     },
     {
       "scenario_id": "core_003_v015_child_centred_rewrite",
@@ -11059,7 +11059,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person refused lunch saying they were not hungry. The adult [brief note \u2014 detail missing] [child words not recorded]  Young person refused lunch saying they were not hungry. The adult observed presentation: refused.  ## Adult Res"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person refused lunch saying they were not hungry. The adult [brief note \u2014 detail missing] [child words not recorded]  Young person refused lunch saying they were not hungry The adult observed presentation: refused  ## Adult Respo"
     },
     {
       "scenario_id": "core_003_v016_safeguarding_escalation",
@@ -11111,7 +11111,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person refused lunch saying they were not hungry. The adult offered alternative snack [brief note \u2014 detail missing] [child words not recorded]  Young person refused lunch saying they were not hungry. The adult observed presentati"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person refused lunch saying they were not hungry. The adult offered alternative snack [brief note \u2014 detail missing] [child words not recorded]  Young person refused lunch saying they were not hungry The adult observed presentatio"
     },
     {
       "scenario_id": "core_003_v017_reg44_evidence",
@@ -11263,7 +11263,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person refused lunch saying they were not hungry. The adult offered alternative [brief note \u2014 detail missing] [child words not recorded]  Young person refused lunch saying they were not hungry. The adult observed presentation: re"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person refused lunch saying they were not hungry. The adult offered alternative [brief note \u2014 detail missing] [child words not recorded]  Young person refused lunch saying they were not hungry The adult observed presentation: ref"
     },
     {
       "scenario_id": "core_003_v020_reflective_supervision",
@@ -11913,7 +11913,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Timeline unclear \u2014 Earlier\u2026 then later\u2026 Manager review of: Mealtime refusal. Facts from shift: Young person refused  Young person said: Facts from shift: Young person refused The adult observed presentation: refused. ## Impact on the c"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Timeline unclear \u2014 Earlier\u2026 then later\u2026 Manager review of: Mealtime refusal. Facts from shift: Young person refused  Young person said: Facts from shift: Young person refused The adult observed presentation: refused ## Impact on the ch"
     },
     {
       "scenario_id": "core_003_v033_handover",
@@ -12013,7 +12013,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Timeline unclear \u2014 Earlier\u2026 then later\u2026 Young person refused lunch saying they were not hungry. The adult offered  Young person said: Timeline unclear \u2014 Earlier\u2026 then later\u2026 Young person refused lunch saying they were not hungry. The a"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Timeline unclear \u2014 Earlier\u2026 then later\u2026 Young person refused lunch saying they were not hungry. The adult offered  Young person said: Timeline unclear \u2014 Earlier\u2026 then later\u2026 Young person refused lunch saying they were not hungry The ad"
     },
     {
       "scenario_id": "core_003_v035_child_centred_rewrite",
@@ -12113,7 +12113,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Timeline unclear \u2014 Earlier\u2026 then later\u2026 Young person refused lunch saying they were not hungry. The adult offered  Young person said: Timeline unclear \u2014 Earlier\u2026 then later\u2026 Young person refused lunch saying they were not hungry. The a"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Timeline unclear \u2014 Earlier\u2026 then later\u2026 Young person refused lunch saying they were not hungry. The adult offered  Young person said: Timeline unclear \u2014 Earlier\u2026 then later\u2026 Young person refused lunch saying they were not hungry The ad"
     },
     {
       "scenario_id": "core_003_v037_reg44_evidence",
@@ -12163,7 +12163,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Timeline unclear \u2014 Earlier\u2026 then later\u2026 Reg 44 evidence note for: Mealtime refusal. Young person refused lunch saying  Young person refused lunch saying The adult observed presentation: refused.  ## Adult Response Adult response detail"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Timeline unclear \u2014 Earlier\u2026 then later\u2026 Reg 44 evidence note for: Mealtime refusal. Young person refused lunch saying  Young person refused lunch saying The adult observed presentation: refused  ## Adult Response Adult response detail "
     },
     {
       "scenario_id": "core_003_v038_poor_wording_correction",
@@ -12213,7 +12213,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Timeline unclear \u2014 Earlier\u2026 then later\u2026 Young person refused lunch saying they were  Young person said: Timeline unclear \u2014 Earlier\u2026 then later\u2026 Young person refused lunch saying they were The adult observed presentation: refused.  ## A"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Timeline unclear \u2014 Earlier\u2026 then later\u2026 Young person refused lunch saying they were  Young person said: Timeline unclear \u2014 Earlier\u2026 then later\u2026 Young person refused lunch saying they were The adult observed presentation: refused  ## Ad"
     },
     {
       "scenario_id": "core_003_v039_voice_dictate_transcript",
@@ -12263,7 +12263,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Timeline unclear \u2014 Earlier\u2026 then later\u2026 um Young person refused lunch saying they were not hungry. The adult offered  Young person said: Timeline unclear \u2014 Earlier\u2026 then later\u2026 um Young person refused lunch saying they were not hungry."
+      "output_excerpt": "## Daily Record  ## Presentation and Support Timeline unclear \u2014 Earlier\u2026 then later\u2026 um Young person refused lunch saying they were not hungry. The adult offered  Young person said: Timeline unclear \u2014 Earlier\u2026 then later\u2026 um Young person refused lunch saying they were not hungry "
     },
     {
       "scenario_id": "core_003_v040_reflective_supervision",
@@ -12667,7 +12667,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Observed: Reg 44 evidence note for: Mealtime refusal. Young person refused lunch saying they were not hungry. The adult offered [child words not recorded]  Young person refused lunch saying they were not hungry. The adult observed pres"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Observed: Reg 44 evidence note for: Mealtime refusal. Young person refused lunch saying they were not hungry. The adult offered [child words not recorded]  Young person refused lunch saying they were not hungry The adult observed prese"
     },
     {
       "scenario_id": "core_003_v048_poor_wording_correction",
@@ -12719,7 +12719,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Observed: Young person refused lunch saying they were not hungry. The adult offered [child words not recorded]  Young person said: Observed: Young person refused lunch saying they were not hungry. The adult observed presentation: refus"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Observed: Young person refused lunch saying they were not hungry. The adult offered [child words not recorded]  Young person said: Observed: Young person refused lunch saying they were not hungry The adult observed presentation: refuse"
     },
     {
       "scenario_id": "core_003_v049_voice_dictate_transcript",

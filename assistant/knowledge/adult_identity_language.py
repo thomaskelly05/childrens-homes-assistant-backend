@@ -59,9 +59,22 @@ CHILD_VOICE_DISCIPLINE_PRINCIPLE = (
 
 EMOTIONAL_IMPACT_DISCIPLINE_PRINCIPLE = (
     "Describe adult actions without claiming internal emotional impact unless the child said it or it was directly "
-    "observed. Do not write that an action 'allowed the child to feel safe and comfortable', 'made the child feel "
-    "reassured', 'helped the child regulate' or 'the child felt supported' unless supported by input. "
+    "observed. Do not write that an adult's approach made the child feel safe, supported, reassured or regulated "
+    "unless the child directly said this. Do not write 'allowed the child to feel safe and comfortable', "
+    "'made the child feel reassured', 'helped the child regulate' or 'the child felt supported' unless supported "
+    "by input. Describe what the adult did and what was observed instead. "
     "Prefer observable wording such as 'remained nearby', 'offered a calm adult presence', 'appeared calmer'."
+)
+
+OUTCOME_INTERPRETATION_DISCIPLINE_PRINCIPLE = (
+    "Keep observed outcomes observed. Do not add phrases such as 'indicating a positive shift in mood', "
+    "'showing emotional regulation' or 'suggesting they felt better'. Use observed presentation such as "
+    "'appeared calmer' unless the input states mood improved. Do not convert presentation into internal mood state."
+)
+
+DUPLICATE_HEADING_DISCIPLINE_PRINCIPLE = (
+    "Do not duplicate Outcome and Outcome / Handover headings in simple daily records. Use one Outcome / Handover "
+    "section. Do not add separate Follow-up or Next Steps when handover already states the next action."
 )
 
 DAILY_RECORD_SIMPLIFICATION_PRINCIPLE = (
@@ -118,6 +131,7 @@ OBSERVATION_VS_INTERPRETATION_GUIDANCE: tuple[str, ...] = (
     "Use 'appeared calmer' rather than 'mood improved' unless the input states mood improved.",
     "Use 'appeared calmer' rather than 'seemed more relaxed'.",
     "Use 'appeared more settled' rather than 'was relaxed' or 'seemed relaxed'.",
+    "Do not add 'indicating a positive shift in mood' or 'showing emotional regulation' after observed presentation.",
     "Do not state internal emotion as fact unless the child said it.",
     "Preserve direct quotes with 'said'.",
     "Use 'appeared', 'was observed', 'not yet known' for presentation.",
@@ -186,7 +200,22 @@ _CHILD_QUOTE_INTERPRETATION_RE = re.compile(
 
 _INVENTED_EMOTIONAL_IMPACT_PATTERNS: tuple[re.Pattern[str], ...] = (
     re.compile(
+        r"\b(?:this\s+approach|the\s+approach)\s+allowed\b[^.!?]*\b(?:feel|felt)\s+"
+        r"(?:safe|comfortable|supported|reassured|calm|secure)\b[^.!?]*[.!?]",
+        re.I,
+    ),
+    re.compile(
         r"\b(?:allowing|enabled|helped|this\s+(?:allowed|helped|enabled))\s+[^.!?]*\b(?:feel|felt)\s+"
+        r"(?:safe|comfortable|supported|reassured|calm|secure)\b[^.!?]*[.!?]",
+        re.I,
+    ),
+    re.compile(
+        r"\b(?:helping|allowing|enabling)\s+[^.!?]*\b(?:feel|felt)\s+"
+        r"(?:safe|comfortable|supported|reassured|calm|secure)\b[^.!?]*[.!?]",
+        re.I,
+    ),
+    re.compile(
+        r"\b(?:made|making)\s+[^.!?]*\b(?:feel|felt)\s+"
         r"(?:safe|comfortable|supported|reassured|calm|secure)\b[^.!?]*[.!?]",
         re.I,
     ),
@@ -195,9 +224,65 @@ _INVENTED_EMOTIONAL_IMPACT_PATTERNS: tuple[re.Pattern[str], ...] = (
         r"(?:safe|comfortable|supported|reassured|calm|secure|better)\b[^.!?]*[.!?]",
         re.I,
     ),
-    re.compile(r"\b(?:helped|supporting)\s+[^.!?]*\b(?:regulate|regulation)\b[^.!?]*[.!?]", re.I),
+    re.compile(r"\b(?:helped|supporting|supported)\s+[^.!?]*\b(?:regulate|regulation)\b[^.!?]*[.!?]", re.I),
+    re.compile(r"\b(?:allowed|enabling)\s+[^.!?]*\bto\s+regulate\b[^.!?]*[.!?]", re.I),
+    re.compile(r"\bhelped\s+them\s+regulate\s+emotionally\b[^.!?]*[.!?]", re.I),
     re.compile(r"\b(?:was|were)\s+emotionally\s+settled\b[^.!?]*[.!?]", re.I),
     re.compile(r"\bfeel\s+safe\s+and\s+comfortable\b", re.I),
+)
+
+_EMOTIONAL_IMPACT_CLAUSE_RE = re.compile(
+    r",?\s*(?:(?:this|the)\s+approach\s+)?(?:allowing|helping|enabling|which\s+(?:helped|allowed))\s+"
+    r"[^.!?]*\b(?:to\s+)?(?:feel|felt)\s+(?:safe|comfortable|supported|reassured|calm|secure)\b[^.!?]*",
+    re.I,
+)
+
+_CHILD_STATED_FEELING_RE = re.compile(
+    r"\b(?:said|shared|told|communicated|explained|mentioned)\b[^.!?]*"
+    r'(?:["\'][^"\']*(?:feel|felt)\s+(?:safe|comfortable|supported|reassured|calm|secure|better)[^"\']*["\']'
+    r"|(?:they|he|she)\s+(?:feel|felt)\s+(?:safe|comfortable|supported|reassured|calm|secure|better))",
+    re.I,
+)
+
+_OUTCOME_INTERPRETATION_CLAUSE_RES: tuple[re.Pattern[str], ...] = (
+    re.compile(
+        r",?\s*(?:indicating|suggesting|showing|demonstrating)\s+(?:a\s+)?(?:positive\s+)?shift\s+in\s+mood\b[^.!?]*",
+        re.I,
+    ),
+    re.compile(
+        r",?\s*(?:indicating|suggesting)\s+(?:their\s+)?mood\s+(?:had\s+)?improved\b[^.!?]*",
+        re.I,
+    ),
+    re.compile(
+        r",?\s*(?:suggesting|indicating)\s+(?:they\s+)?(?:were\s+)?(?:more\s+)?settled\s+emotionally\b[^.!?]*",
+        re.I,
+    ),
+    re.compile(
+        r",?\s*(?:showing|demonstrating|indicating)\s+emotional\s+regulation\b[^.!?]*",
+        re.I,
+    ),
+    re.compile(
+        r",?\s*(?:indicating|suggesting)\s+(?:they\s+)?felt\s+better\b[^.!?]*",
+        re.I,
+    ),
+    re.compile(
+        r",?\s*(?:showing|indicating)\s+(?:they\s+)?(?:were|felt)\s+(?:more\s+)?comfortable\b[^.!?]*",
+        re.I,
+    ),
+    re.compile(r"\bthis\s+(?:showed|demonstrated|indicated)\s+emotional\s+regulation\b[^.!?]*[.!?]", re.I),
+    re.compile(r"\bas\s+the\s+evening\s+progressed\b[^.!?]*[.!?]", re.I),
+)
+
+_OUTCOME_INTERPRETATION_SENTENCE_RES: tuple[re.Pattern[str], ...] = (
+    re.compile(r"^[^.!?]*\b(?:indicating|suggesting|showing|demonstrating)\s+emotional\s+regulation\b[^.!?]*[.!?]$", re.I),
+)
+
+
+_OUTCOME_ONLY_HEADING_RE = re.compile(r"^(?:#+\s+)?Outcome\s*:?\s*$", re.I)
+_OUTCOME_HANDOVER_HEADING_RE = re.compile(r"^(?:#+\s+)?Outcome\s*/\s*Handover\s*:?\s*$", re.I)
+_REDUNDANT_FOLLOW_UP_HEADING_RE = re.compile(
+    r"^(?:#+\s+)?(?:Follow-up(?:\s+for\s+next\s+shift)?|Next\s+Steps)\s*:?\s*$",
+    re.I,
 )
 
 _EMOTION_LABELS_REQUIRING_SOURCE: tuple[str, ...] = (
@@ -206,10 +291,21 @@ _EMOTION_LABELS_REQUIRING_SOURCE: tuple[str, ...] = (
     "dissatisfaction",
     "dissatisfied",
     "feel safe and comfortable",
+    "feel supported",
     "felt supported",
     "felt reassured",
+    "felt safe",
+    "felt comfortable",
     "helped regulate",
     "helped child regulate",
+    "allowed to feel",
+    "made feel",
+    "emotionally settled",
+)
+
+_OUTCOME_INTERPRETATION_LABELS: tuple[str, ...] = (
+    "positive shift in mood",
+    "emotional regulation",
 )
 
 _FOLLOW_UP_HEADING_RE = re.compile(
@@ -359,6 +455,17 @@ def _source_supports_emotion_label(source_text: str, label: str) -> bool:
     return label.lower() in str(source_text or "").lower()
 
 
+def _sentence_contains_child_stated_feeling(sentence: str) -> bool:
+    """True when the sentence preserves a child-stated feeling in direct speech or reported speech."""
+    return bool(_CHILD_STATED_FEELING_RE.search(str(sentence or "")))
+
+
+def _trim_emotional_impact_clauses(sentence: str) -> str:
+    """Strip trailing invented emotional-impact clauses while preserving adult-action lead-in."""
+    trimmed = _EMOTIONAL_IMPACT_CLAUSE_RE.sub("", str(sentence or ""))
+    return re.sub(r"\s{2,}", " ", trimmed).strip(" ,;.")
+
+
 def strip_invented_emotional_impact(text: str, *, source_text: str = "") -> str:
     """Remove or trim invented internal emotional impact unless supported by input."""
     result = str(text or "")
@@ -376,16 +483,161 @@ def strip_invented_emotional_impact(text: str, *, source_text: str = "") -> str:
         sentences = re.split(r"(?<=[.!?])\s+", stripped)
         kept: list[str] = []
         for sentence in sentences:
-            unsupported = False
+            if _sentence_contains_child_stated_feeling(sentence):
+                kept.append(sentence)
+                continue
+            unsupported_emotion = False
             for label in _EMOTION_LABELS_REQUIRING_SOURCE:
                 if label.lower() in sentence.lower() and not _source_supports_emotion_label(source_text, label):
-                    unsupported = True
+                    unsupported_emotion = True
                     break
-            if not unsupported:
-                kept.append(sentence)
+            trimmed = _trim_emotional_impact_clauses(sentence)
+            if unsupported_emotion:
+                if trimmed and not any(
+                    label.lower() in trimmed.lower()
+                    for label in _EMOTION_LABELS_REQUIRING_SOURCE
+                    if not _source_supports_emotion_label(source_text, label)
+                ):
+                    kept.append(trimmed)
+                elif trimmed and any(
+                    label.lower() in trimmed.lower() for label in _OUTCOME_INTERPRETATION_LABELS
+                ):
+                    kept.append(trimmed)
+                continue
+            if trimmed:
+                kept.append(trimmed)
         if kept:
             cleaned_paragraphs.append(" ".join(kept))
     return re.sub(r"\n{3,}", "\n\n", "\n\n".join(cleaned_paragraphs)).strip()
+
+
+def strip_outcome_interpretation(text: str, *, source_text: str = "") -> str:
+    """Remove outcome interpretation clauses while preserving observed presentation."""
+    if has_safeguarding_cue(source_text) and not is_daily_record_request(source_text):
+        return str(text or "")
+    result = str(text or "")
+    for pattern in _OUTCOME_INTERPRETATION_SENTENCE_RES:
+        result = pattern.sub("", result)
+    paragraphs = re.split(r"\n\s*\n", result)
+    cleaned_paragraphs: list[str] = []
+    for paragraph in paragraphs:
+        stripped = paragraph.strip()
+        if not stripped:
+            continue
+        if stripped.startswith("#"):
+            cleaned_paragraphs.append(stripped)
+            continue
+        sentences = re.split(r"(?<=[.!?])\s+", stripped)
+        kept: list[str] = []
+        for sentence in sentences:
+            cleaned = sentence
+            for pattern in _OUTCOME_INTERPRETATION_CLAUSE_RES:
+                cleaned = pattern.sub("", cleaned)
+            cleaned = re.sub(r"\s{2,}", " ", cleaned).strip(" ,;.")
+            if cleaned:
+                kept.append(cleaned)
+        if kept:
+            cleaned_paragraphs.append(" ".join(kept))
+    return re.sub(r"\n{3,}", "\n\n", "\n\n".join(cleaned_paragraphs)).strip()
+
+
+
+def _is_outcome_only_heading(line: str) -> bool:
+    return bool(_OUTCOME_ONLY_HEADING_RE.match(line.strip()))
+
+
+def _is_outcome_handover_heading(line: str) -> bool:
+    return bool(_OUTCOME_HANDOVER_HEADING_RE.match(line.strip()))
+
+
+def _is_redundant_follow_up_heading(line: str) -> bool:
+    return bool(_REDUNDANT_FOLLOW_UP_HEADING_RE.match(line.strip()))
+
+
+def _content_similarity(a: str, b: str) -> bool:
+    """Rough check whether two section bodies repeat the same handover content."""
+    norm_a = re.sub(r"\s+", " ", (a or "").lower().strip())
+    norm_b = re.sub(r"\s+", " ", (b or "").lower().strip())
+    if not norm_a or not norm_b:
+        return False
+    if norm_a == norm_b:
+        return True
+    shorter, longer = (norm_a, norm_b) if len(norm_a) <= len(norm_b) else (norm_b, norm_a)
+    return shorter in longer and len(shorter) >= 24
+
+
+def normalize_duplicate_daily_record_headings(text: str, *, source_text: str = "") -> str:
+    """Merge duplicate Outcome / Outcome / Handover headings in simple daily records."""
+    if has_safeguarding_cue(source_text) or not is_daily_record_request(source_text):
+        return str(text or "")
+    lines = str(text or "").splitlines()
+    sections: list[tuple[str, list[str]]] = []
+    current_heading = ""
+    current_body: list[str] = []
+    for line in lines:
+        stripped = line.strip()
+        is_heading = bool(re.match(r"^#+\s+\S", stripped)) or (
+            stripped
+            and not stripped.startswith("-")
+            and re.match(r"^(?:Outcome|Follow-up|Next Steps)(?:\s*/\s*Handover)?\s*:?\s*$", stripped, re.I)
+        )
+        if is_heading:
+            if current_heading or current_body:
+                sections.append((current_heading, current_body))
+            current_heading = stripped
+            current_body = []
+            continue
+        current_body.append(line)
+    if current_heading or current_body:
+        sections.append((current_heading, current_body))
+
+    outcome_idx: int | None = None
+    handover_idx: int | None = None
+    for idx, (heading, _body) in enumerate(sections):
+        if _is_outcome_only_heading(heading):
+            outcome_idx = idx
+        if _is_outcome_handover_heading(heading):
+            handover_idx = idx
+
+    if outcome_idx is not None and handover_idx is not None and outcome_idx != handover_idx:
+        outcome_body = "\n".join(sections[outcome_idx][1]).strip()
+        handover_body = "\n".join(sections[handover_idx][1]).strip()
+        merged_body = outcome_body
+        if handover_body and not _content_similarity(outcome_body, handover_body):
+            merged_body = f"{outcome_body}\n\n{handover_body}".strip() if outcome_body else handover_body
+        elif handover_body:
+            merged_body = handover_body or outcome_body
+        handover_heading = sections[handover_idx][0]
+        if not re.match(r"^#+\s+", handover_heading.strip()):
+            handover_heading = "## Outcome / Handover"
+        sections[handover_idx] = (handover_heading, merged_body.splitlines())
+        del sections[outcome_idx]
+        if outcome_idx < handover_idx:
+            handover_idx -= 1
+
+    resolved_handover_idx = next(
+        (idx for idx, (heading, _body) in enumerate(sections) if _is_outcome_handover_heading(heading)),
+        None,
+    )
+    if resolved_handover_idx is not None:
+        handover_body = "\n".join(sections[resolved_handover_idx][1]).strip()
+        filtered: list[tuple[str, list[str]]] = []
+        for heading, body in sections:
+            if _is_redundant_follow_up_heading(heading) and _content_similarity(
+                "\n".join(body).strip(), handover_body
+            ):
+                continue
+            filtered.append((heading, body))
+        sections = filtered
+
+    output_lines: list[str] = []
+    for heading, body in sections:
+        if heading:
+            output_lines.append(heading)
+        output_lines.extend(body)
+        if body and body[-1].strip():
+            output_lines.append("")
+    return re.sub(r"\n{3,}", "\n\n", "\n".join(output_lines)).strip()
 
 
 def strip_unnecessary_follow_up_section(text: str, *, source_text: str = "") -> str:
@@ -483,6 +735,8 @@ def sanitize_live_record_output(text: str, *, source_text: str = "") -> str:
     cleaned = sanitize_observation_interpretation_language(text)
     cleaned = strip_child_quote_interpretation(cleaned, source_text=source_text)
     cleaned = strip_invented_emotional_impact(cleaned, source_text=source_text)
+    cleaned = strip_outcome_interpretation(cleaned, source_text=source_text)
+    cleaned = normalize_duplicate_daily_record_headings(cleaned, source_text=source_text)
     cleaned = sanitize_childrens_home_terminology(cleaned, source_text=source_text)
     if is_daily_record_request(source_text) and not has_safeguarding_cue(source_text):
         cleaned = strip_unnecessary_daily_record_sections(cleaned, source_text=source_text)
@@ -571,6 +825,10 @@ def build_adult_identity_prompt_block() -> str:
         CHILD_VOICE_DISCIPLINE_PRINCIPLE,
         "",
         EMOTIONAL_IMPACT_DISCIPLINE_PRINCIPLE,
+        "",
+        OUTCOME_INTERPRETATION_DISCIPLINE_PRINCIPLE,
+        "",
+        DUPLICATE_HEADING_DISCIPLINE_PRINCIPLE,
         "",
         DAILY_RECORD_SIMPLIFICATION_PRINCIPLE,
         "",

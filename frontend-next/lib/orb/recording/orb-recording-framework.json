@@ -54,6 +54,9 @@
       "When creating a record, return the record only — no trailing self-commentary such as 'This record captures…' unless the user asks why the wording is better.",
       "Preserve direct child quotes exactly — do not add 'This indicates…' interpretation after quotes in simple daily records.",
       "Do not claim internal emotional impact (feel safe and comfortable, felt supported, helped regulate) unless supported by input.",
+      "Do not state that an adult's approach made the child feel safe, supported, reassured or regulated unless the child directly said this — describe adult actions and observed presentation instead.",
+      "Do not add phrases such as 'indicating a positive shift in mood' or 'showing emotional regulation' — use observed presentation such as 'appeared calmer'.",
+      "Do not duplicate Outcome and Outcome / Handover headings in simple daily records.",
       "For simple daily records, prefer 2–3 content sections; weave child voice naturally; do not add Follow-up when Outcome / Handover already states the next action."
     ]
   },
