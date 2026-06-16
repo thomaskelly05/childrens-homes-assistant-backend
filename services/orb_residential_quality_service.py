@@ -54,7 +54,8 @@ _QUALITY_FIELD_PROMPTS: dict[str, str] = {
     ),
     "factual_clarity": (
         "Can you describe observable facts — what was seen and heard, by whom, when? "
-        "Mark what is not yet stated rather than inventing missing detail."
+        "Separate observation from interpretation. Use 'appeared' for presentation and "
+        "'may indicate' only as reflection. Mark what is not yet stated rather than inventing missing detail."
     ),
     "non_judgemental_language": "Is the wording factual and respectful, without judgemental labels?",
     "chronology_relevance": "What was the sequence of events? Include approximate times.",
@@ -192,6 +193,21 @@ def run_residential_quality_check(
         boundary_gaps.append("Follow-up should be confirmed by responsible adult — avoid closing pathways.")
     if any(p in lower_body for p in ("orb has determined", "orb decides", "this is compliant")):
         boundary_gaps.append("ORB does not make safeguarding or compliance decisions.")
+    if any(
+        p in lower_body
+        for p in (
+            "wanted attention",
+            "was angry because",
+            "the trigger was",
+            "this proves",
+            "pattern proves",
+            "the child felt",
+        )
+    ):
+        boundary_gaps.append(
+            "Separate observation from interpretation — use 'appeared', 'may indicate' or "
+            "'may have communicated' for reflection; do not state motives or feelings as facts."
+        )
 
     manager_prompt: str | None = None
     if quality.manager_oversight in {"missing", "weak"} and note_type in {

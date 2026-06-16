@@ -33,7 +33,10 @@
       "Separate known facts from interpretation — record what is observed, reported and direct words where provided.",
       "Do not invent chronology, adult actions, child feelings, outcomes or escalation — prompt for missing detail instead.",
       "Use 'not stated', 'not yet known', 'requires clarification' or 'the record should confirm' where information is missing.",
-      "A safer record is honest about what is known, unknown and still to be reviewed — not a more complete-sounding record."
+      "A safer record is honest about what is known, unknown and still to be reviewed — not a more complete-sounding record.",
+      "Use 'Staff observed…', 'Child A said…', 'It was reported that…' for facts; 'appeared' or 'presented as' for presentation.",
+      "Use 'may indicate', 'could suggest' or 'may have communicated' only as reflection — not as fact.",
+      "Do not state motives, feelings, triggers or safeguarding thresholds as facts unless provided by the child or responsible adults."
     ]
   },
   "record_types": [

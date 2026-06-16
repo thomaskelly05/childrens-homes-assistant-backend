@@ -216,6 +216,46 @@ _MISSING_INFO_MARKERS = (
     "chronology to clarify",
 )
 
+_OBSERVATION_MARKERS = (
+    "observed",
+    "presentation",
+    "said",
+    "staff saw",
+    "staff observed",
+    "factual",
+    "appeared",
+    "presented as",
+    "was reported",
+    "it was reported",
+)
+
+_REFLECTION_MARKERS = (
+    "may indicate",
+    "could suggest",
+    "may have communicated",
+    "reflection, not fact",
+    "not stated as fact",
+    "further review",
+    "based on the information",
+    "what remains unknown",
+    "do not state motives",
+)
+
+_INTERPRETATION_AS_FACT_PATTERNS = (
+    r"\bbecause they wanted\b",
+    r"\bwanted attention\b",
+    r"\bwas angry because\b",
+    r"\bthe trigger was\b",
+    r"\bthis proves\b",
+    r"\bthis means\b",
+    r"\bobviously manipulative\b",
+    r"\bclearly wanted\b",
+    r"\brisk is (?:low|high)\b",
+    r"\bno safeguarding concern\b",
+    r"\bthe child felt\b",
+    r"\bpattern proves\b",
+)
+
 _ELEMENT_KEYWORDS: dict[str, tuple[str, ...]] = {
     "child voice/presentation": ("child voice", "presentation", "young person said", "communicated", "mood", "tearful"),
     "factual observations": ("observed", "factual", "what happened", "sequence", "staff saw", "heard"),
@@ -302,7 +342,7 @@ def detect_binary_flags(
 
     flags = {
         "contains_blaming_language": _any_pattern(_BLAMING_PATTERNS, lower),
-        "contains_diagnostic_language": _any_pattern(_DIAGNOSIS_PATTERNS, lower),
+        "contains_diagnostic_language": _contains_diagnostic_language(lower),
         "contains_compliance_guarantee": _any_pattern(_COMPLIANCE_GUARANTEE_PATTERNS, lower),
         "invents_unprovided_fact": _any_pattern(_INVENTED_FACT_PATTERNS, lower)
         and not _any_pattern(_INVENTED_FACT_PATTERNS, input_lower),
@@ -360,6 +400,18 @@ def _score_factual_accuracy(output: str, input_text: str, flags: dict[str, bool]
     return RubricCategoryScore("factual_accuracy_no_invention", _clamp_score(score), rationale)
 
 
+def _contains_diagnostic_language(text: str) -> bool:
+    """Whether text contains diagnostic language — excludes negated safety disclaimers."""
+    lower = _text_lower(text)
+    if re.search(r"\bnot a diagnos", lower):
+        return False
+    if re.search(r"\bnot diagnostic\b", lower):
+        return False
+    if re.search(r"\bcannot diagnos", lower):
+        return False
+    return _any_pattern(_DIAGNOSIS_PATTERNS, lower)
+
+
 def _score_therapeutic_language(output: str, flags: dict[str, bool]) -> RubricCategoryScore:
     score = 4.0 if not flags["contains_blaming_language"] else 1.0
     rationale: list[str] = []
@@ -377,10 +429,18 @@ def _score_observation_vs_interpretation(output: str) -> RubricCategoryScore:
     lower = _text_lower(output)
     score = 3.0
     rationale: list[str] = []
-    if any(w in lower for w in ("observed", "presentation", "said", "staff saw", "factual")):
+    obs_hits = _count_markers(_OBSERVATION_MARKERS, lower)
+    refl_hits = _count_markers(_REFLECTION_MARKERS, lower)
+    if obs_hits >= 1:
         score += 1.0
         rationale.append("Observable/factual framing present.")
-    if any(w in lower for w in ("because they wanted", "clearly", "obviously manipulative")):
+    if refl_hits >= 2:
+        score += 1.0
+        rationale.append("Explicit reflection/unknown separation present.")
+    elif refl_hits >= 1:
+        score += 0.5
+        rationale.append("Reflection or unknown markers separate interpretation from fact.")
+    if _any_pattern(_INTERPRETATION_AS_FACT_PATTERNS, lower):
         score -= 2.0
         rationale.append("Interpretation presented without evidence.")
     return RubricCategoryScore("observation_vs_interpretation", _clamp_score(score), rationale)

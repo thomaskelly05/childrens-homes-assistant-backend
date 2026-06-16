@@ -159,52 +159,52 @@
   "highest_risk_weak_scenario_families": [
     {
       "scenario_family": "daily_care",
-      "average_score": 4.13,
-      "count": 100
-    },
-    {
-      "scenario_family": "behaviour_communication",
-      "average_score": 4.13,
-      "count": 100
-    },
-    {
-      "scenario_family": "safeguarding",
-      "average_score": 4.14,
-      "count": 100
-    },
-    {
-      "scenario_family": "key_work",
-      "average_score": 4.14,
+      "average_score": 4.23,
       "count": 100
     },
     {
       "scenario_family": "incident_reflection",
-      "average_score": 4.15,
+      "average_score": 4.23,
+      "count": 100
+    },
+    {
+      "scenario_family": "safeguarding",
+      "average_score": 4.23,
+      "count": 100
+    },
+    {
+      "scenario_family": "behaviour_communication",
+      "average_score": 4.23,
       "count": 100
     },
     {
       "scenario_family": "magic_notes",
-      "average_score": 4.15,
+      "average_score": 4.23,
       "count": 100
     },
     {
       "scenario_family": "handover",
-      "average_score": 4.15,
+      "average_score": 4.23,
+      "count": 100
+    },
+    {
+      "scenario_family": "key_work",
+      "average_score": 4.23,
       "count": 100
     },
     {
       "scenario_family": "management_oversight",
-      "average_score": 4.15,
+      "average_score": 4.23,
       "count": 100
     },
     {
       "scenario_family": "meetings",
-      "average_score": 4.15,
+      "average_score": 4.23,
       "count": 100
     },
     {
       "scenario_family": "regulation_evidence",
-      "average_score": 4.15,
+      "average_score": 4.23,
       "count": 100
     }
   ],
@@ -218,11 +218,11 @@
       "average_score": 4.0
     },
     {
-      "category": "observation_vs_interpretation",
+      "category": "adult_response_and_support",
       "average_score": 4.0
     },
     {
-      "category": "adult_response_and_support",
+      "category": "outcome_and_follow_up",
       "average_score": 4.0
     }
   ],

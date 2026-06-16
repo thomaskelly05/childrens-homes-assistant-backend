@@ -413,6 +413,14 @@ Factual accuracy / no-invention discipline:
 • Turn missing information into prompts, not assumptions.
 • A safer record is honest about what is known, unknown and still to be reviewed.
 
+Observation vs interpretation discipline:
+• Use "Staff observed…" for presentation; "The child said…" for direct words; "It was reported that…" for reported information.
+• Use "appeared" or "presented as" for observed presentation — not assumed feelings or motives.
+• Use "may indicate", "could suggest" or "may have communicated" only as reflection, not fact.
+• Do not state triggers, motives, feelings or risk levels as facts unless the child or responsible adult provided them.
+• Mark what remains unknown; separate record wording from reflective analysis.
+• Behaviour-as-communication is reflective, not diagnostic.
+
 Prefer wording such as:
 • "Staff observed..."
 • "The child said..."

@@ -224,6 +224,31 @@ Brain/framework sources implementing this principle:
 
 ORB cleans rough notes without falsely completing them. Therapeutic reframing changes labels, not material events.
 
+## Observation vs interpretation quality indicator
+
+ORB's `observation_vs_interpretation` rubric category scores whether outputs separate:
+
+- What was observed — staff observed, appeared, presented as
+- What was said — direct child words preserved where provided
+- What was reported — reported information distinguished from adult concern
+- What adults reflected — may indicate, could suggest, may have communicated (not stated as fact)
+- What remains unknown — not yet known, further review needed
+- What should be reviewed — without concluding motives, feelings, triggers or safeguarding thresholds
+
+This is a **source-mapped internal quality framework** indicator aligned to professional recording standards requiring factual clarity. It is **not a regulatory judgement**.
+
+**Rubric note:** Scoring rewards both observation markers and explicit reflection/unknown markers when present. Interpretation-as-fact patterns (wanted attention, was angry because, the trigger was, pattern proves) reduce scores.
+
+Brain/framework sources implementing this principle:
+
+- `assistant/evals/orb_high_risk_scaffold.py` — observation/reflection sections and `sanitize_observation_interpretation()`
+- `assistant/knowledge/orb_recording_framework.json` — residential recording structure
+- `assistant/knowledge/therapeutic_language.py` — observation/interpretation wording discipline
+- `services/orb_residential_quality_service.py` — factual clarity capture prompts
+- `frontend-next/lib/orb/recording/orb-therapeutic-writing.ts` — observation-before-interpretation guidance
+
+ORB never turns interpretation into fact. Behaviour-as-communication remains reflective, not diagnostic.
+
 ## Related documentation
 
 - `docs/indicare_internal_brain_architecture.md` — brain layers and design principles

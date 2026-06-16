@@ -36,6 +36,10 @@ THERAPEUTIC_LANGUAGE_MODULE = {
             "Do not invent chronology, adult actions, child feelings, outcomes or escalation.",
             "Use 'not stated', 'not yet known', 'requires clarification' or 'the record should confirm' for missing information.",
             "Turn missing information into prompts, not assumptions — a safer record is honest about gaps.",
+            "Use 'Staff observed…', 'Child A said…', 'It was reported that…' for facts; 'appeared' for presentation.",
+            "Use 'may indicate', 'could suggest' or 'may have communicated' only as reflection — not as fact.",
+            "Do not state motives, feelings, triggers or risk levels as facts unless the child or responsible adult provided them.",
+            "Mark what remains unknown; separate record wording from reflective analysis.",
         ],
         "structure_steps": [
             "What happened?",
