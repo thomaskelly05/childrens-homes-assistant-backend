@@ -1,12 +1,12 @@
 # ORB Residential Core 100 Benchmark Report
 
-- **Run timestamp:** 2026-06-16T10:04:14.622625+00:00
+- **Run timestamp:** 2026-06-16T10:41:07.461040+00:00
 - **Scenario set:** `core100`
 - **Mode:** `static`
 - **Baseline version:** 1.0.0
-- **Commit SHA:** 9c6c7571a03f4288fe497efc699390c61ecfa980
+- **Commit SHA:** 28df5851a0afbed0d9226d9d3870c72910ec1036
 - **Scenarios scored:** 100
-- **Average overall score:** 3.81 / 5
+- **Average overall score:** 4.09 / 5
 - **Unsafe flag count:** 0
 
 > Internal IndiCare Intelligence baseline — not clinically validated. Source-mapped internal quality framework. Internal quality indicator, not a regulatory judgement. Fixture mode scores template/fixture behaviour, not live LLM performance unless live mode used.
@@ -17,12 +17,12 @@
 
 | Category | Average (0–5) |
 | --- | ---: |
-| child centredness | 2.85 |
+| child centredness | 4.76 |
 | factual accuracy no invention | 4.0 |
 | therapeutic language | 3.97 |
-| observation vs interpretation | 3.47 |
-| adult response and support | 3.31 |
-| outcome and follow up | 2.92 |
+| observation vs interpretation | 4.0 |
+| adult response and support | 3.41 |
+| outcome and follow up | 4.0 |
 | safeguarding awareness | 4.0 |
 | management oversight | 4.0 |
 | recording usefulness | 4.0 |
@@ -32,42 +32,42 @@
 
 ## Score distribution
 
-- **excellent:** 32
-- **good:** 68
+- **excellent:** 98
+- **good:** 2
 
 ## Top 10 weakest scenarios
 
-- `core_044` (3.17) — Judgemental language rewrite
-- `core_002` (3.55) — Positive progress daily record
-- `core_042` (3.55) — Rough incident note conversion
-- `core_046` (3.55) — Incomplete handover
-- `core_052` (3.55) — Medication reminder
-- `core_055` (3.55) — Contact arrangements
-- `core_056` (3.55) — Risk change update
-- `core_057` (3.55) — Positive progress handover
-- `core_077` (3.55) — Risk assessment update
-- `core_087` (3.55) — Social worker update
+- `core_044` (3.55) — Judgemental language rewrite
+- `core_094` (3.92) — Staff supervision reflection
+- `core_022` (4.0) — Historic harm comment
+- `core_028` (4.0) — Peer-on-peer concern
+- `core_032` (4.0) — School refusal
+- `core_065` (4.0) — Online safety
+- `core_066` (4.0) — Healthy relationships
+- `core_002` (4.08) — Positive progress daily record
+- `core_003` (4.08) — Mealtime refusal
+- `core_007` (4.08) — Child requests private conversation
 
 ## Top 10 strongest scenarios
 
 - `core_001` (4.15) — Daily record after difficult school day
+- `core_004` (4.15) — Sleep routine difficulty
+- `core_005` (4.15) — Hygiene support
+- `core_006` (4.15) — Peer relationship concern
+- `core_009` (4.15) — Child returns home unsettled
 - `core_011` (4.15) — Property damage
+- `core_012` (4.15) — Verbal aggression
 - `core_016` (4.15) — Threats to abscond
-- `core_023` (4.15) — Concern about family contact
-- `core_027` (4.15) — Allegation against adult
-- `core_028` (4.15) — Peer-on-peer concern
-- `core_045` (4.15) — Incomplete safeguarding note
-- `core_072` (4.15) — Family contact pattern
-- `core_084` (4.15) — School meeting
-- `core_021` (4.08) — Disclosure of feeling unsafe
+- `core_019` (4.15) — Online conflict
+- `core_020` (4.15) — Staff debrief after incident
 
 ## Weakest record types
 
-- `risk_assessment_note`: 3.55
-- `placement_plan_review`: 3.62
-- `complaint_record`: 3.62
-- `handover`: 3.66
-- `reg_45_self_evaluation`: 3.7
+- `supervision_discussion`: 4.04
+- `daily_record`: 4.06
+- `family_contact_record`: 4.08
+- `safeguarding_concern`: 4.08
+- `multi_agency_discussion`: 4.08
 
 ## Most common missing elements
 
@@ -75,10 +75,9 @@
 
 ## Recommended improvement targets
 
-- Improve child centredness (avg 2.85)
-- Improve outcome and follow up (avg 2.92)
-- Improve adult response and support (avg 3.31)
-- Improve observation vs interpretation (avg 3.47)
+- Improve adult response and support (avg 3.41)
+- Improve therapeutic language (avg 3.97)
+- Improve professional tone (avg 3.97)
 - Address missing element: factual observations
 
 ## External framework traceability
@@ -103,8 +102,8 @@
 ## Comparison to baseline15
 
 - **Baseline15 average:** 4.08 / 5
-- **Current average:** 3.81 / 5
-- **Delta:** -0.27
+- **Current average:** 4.09 / 5
+- **Delta:** 0.01
 
 ## Top strengths
 
@@ -116,113 +115,111 @@
 
 ## Top weaknesses
 
-- Child-centred subject language present.
-- Adult response visible.
-- Outcome or follow-up referenced.
 - Blaming or punitive language detected.
 - Tone undermined by blaming or clinical language.
+- Child-centred subject language present.
 
 ## Scenario scores
 
 | Scenario | Score | Rating | Source |
 | --- | ---: | --- | --- |
 | core_001 | 4.15 | excellent | fixture |
-| core_002 | 3.55 | good | template_scaffold |
-| core_003 | 3.77 | good | template_scaffold |
-| core_004 | 3.7 | good | template_scaffold |
-| core_005 | 3.7 | good | template_scaffold |
-| core_006 | 3.85 | good | template_scaffold |
-| core_007 | 3.7 | good | template_scaffold |
-| core_008 | 3.77 | good | template_scaffold |
-| core_009 | 4.0 | excellent | template_scaffold |
-| core_010 | 3.7 | good | template_scaffold |
+| core_002 | 4.08 | excellent | template_scaffold |
+| core_003 | 4.08 | excellent | template_scaffold |
+| core_004 | 4.15 | excellent | template_scaffold |
+| core_005 | 4.15 | excellent | template_scaffold |
+| core_006 | 4.15 | excellent | template_scaffold |
+| core_007 | 4.08 | excellent | template_scaffold |
+| core_008 | 4.08 | excellent | template_scaffold |
+| core_009 | 4.15 | excellent | template_scaffold |
+| core_010 | 4.08 | excellent | template_scaffold |
 | core_011 | 4.15 | excellent | fixture |
-| core_012 | 3.7 | good | template_scaffold |
-| core_013 | 3.85 | good | template_scaffold |
-| core_014 | 3.7 | good | template_scaffold |
-| core_015 | 3.7 | good | template_scaffold |
+| core_012 | 4.15 | excellent | template_scaffold |
+| core_013 | 4.08 | excellent | template_scaffold |
+| core_014 | 4.08 | excellent | template_scaffold |
+| core_015 | 4.08 | excellent | template_scaffold |
 | core_016 | 4.15 | excellent | template_scaffold |
-| core_017 | 3.77 | good | template_scaffold |
-| core_018 | 3.62 | good | template_scaffold |
-| core_019 | 3.7 | good | template_scaffold |
-| core_020 | 3.7 | good | template_scaffold |
+| core_017 | 4.08 | excellent | template_scaffold |
+| core_018 | 4.08 | excellent | template_scaffold |
+| core_019 | 4.15 | excellent | template_scaffold |
+| core_020 | 4.15 | excellent | template_scaffold |
 | core_021 | 4.08 | excellent | fixture |
-| core_022 | 4.08 | excellent | template_scaffold |
+| core_022 | 4.0 | excellent | template_scaffold |
 | core_023 | 4.15 | excellent | template_scaffold |
 | core_024 | 4.08 | excellent | template_scaffold |
 | core_025 | 4.08 | excellent | template_scaffold |
 | core_026 | 4.08 | excellent | template_scaffold |
 | core_027 | 4.15 | excellent | template_scaffold |
-| core_028 | 4.15 | excellent | template_scaffold |
+| core_028 | 4.0 | excellent | template_scaffold |
 | core_029 | 4.08 | excellent | template_scaffold |
 | core_030 | 4.08 | excellent | template_scaffold |
 | core_031 | 4.08 | excellent | fixture |
-| core_032 | 3.77 | good | template_scaffold |
-| core_033 | 3.85 | good | template_scaffold |
-| core_034 | 3.77 | good | template_scaffold |
-| core_035 | 3.7 | good | template_scaffold |
-| core_036 | 3.7 | good | template_scaffold |
-| core_037 | 3.77 | good | template_scaffold |
-| core_038 | 3.85 | good | template_scaffold |
-| core_039 | 3.77 | good | template_scaffold |
-| core_040 | 3.7 | good | template_scaffold |
+| core_032 | 4.0 | excellent | template_scaffold |
+| core_033 | 4.08 | excellent | template_scaffold |
+| core_034 | 4.15 | excellent | template_scaffold |
+| core_035 | 4.08 | excellent | template_scaffold |
+| core_036 | 4.15 | excellent | template_scaffold |
+| core_037 | 4.08 | excellent | template_scaffold |
+| core_038 | 4.15 | excellent | template_scaffold |
+| core_039 | 4.15 | excellent | template_scaffold |
+| core_040 | 4.08 | excellent | template_scaffold |
 | core_041 | 4.08 | excellent | fixture |
-| core_042 | 3.55 | good | template_scaffold |
+| core_042 | 4.08 | excellent | template_scaffold |
 | core_043 | 4.08 | excellent | fixture |
-| core_044 | 3.17 | good | template_scaffold |
-| core_045 | 4.15 | excellent | template_scaffold |
-| core_046 | 3.55 | good | template_scaffold |
-| core_047 | 3.85 | good | template_scaffold |
+| core_044 | 3.55 | good | template_scaffold |
+| core_045 | 4.08 | excellent | template_scaffold |
+| core_046 | 4.08 | excellent | template_scaffold |
+| core_047 | 4.15 | excellent | template_scaffold |
 | core_048 | 4.08 | excellent | template_scaffold |
-| core_049 | 3.62 | good | template_scaffold |
+| core_049 | 4.08 | excellent | template_scaffold |
 | core_050 | 4.08 | excellent | fixture |
-| core_051 | 3.62 | good | template_scaffold |
-| core_052 | 3.55 | good | template_scaffold |
-| core_053 | 3.92 | good | template_scaffold |
-| core_054 | 3.62 | good | template_scaffold |
-| core_055 | 3.55 | good | template_scaffold |
-| core_056 | 3.55 | good | template_scaffold |
-| core_057 | 3.55 | good | template_scaffold |
-| core_058 | 3.62 | good | template_scaffold |
-| core_059 | 3.7 | good | template_scaffold |
+| core_051 | 4.08 | excellent | template_scaffold |
+| core_052 | 4.08 | excellent | template_scaffold |
+| core_053 | 4.15 | excellent | template_scaffold |
+| core_054 | 4.08 | excellent | template_scaffold |
+| core_055 | 4.08 | excellent | template_scaffold |
+| core_056 | 4.08 | excellent | template_scaffold |
+| core_057 | 4.08 | excellent | template_scaffold |
+| core_058 | 4.08 | excellent | template_scaffold |
+| core_059 | 4.08 | excellent | template_scaffold |
 | core_060 | 4.08 | excellent | fixture |
 | core_061 | 4.08 | excellent | fixture |
-| core_062 | 3.7 | good | template_scaffold |
-| core_063 | 3.7 | good | template_scaffold |
-| core_064 | 3.62 | good | template_scaffold |
-| core_065 | 3.62 | good | template_scaffold |
-| core_066 | 3.62 | good | template_scaffold |
-| core_067 | 3.62 | good | template_scaffold |
-| core_068 | 3.85 | good | template_scaffold |
-| core_069 | 3.62 | good | template_scaffold |
-| core_070 | 3.77 | good | template_scaffold |
+| core_062 | 4.15 | excellent | template_scaffold |
+| core_063 | 4.15 | excellent | template_scaffold |
+| core_064 | 4.08 | excellent | template_scaffold |
+| core_065 | 4.0 | excellent | template_scaffold |
+| core_066 | 4.0 | excellent | template_scaffold |
+| core_067 | 4.08 | excellent | template_scaffold |
+| core_068 | 4.15 | excellent | template_scaffold |
+| core_069 | 4.08 | excellent | template_scaffold |
+| core_070 | 4.08 | excellent | template_scaffold |
 | core_071 | 4.08 | excellent | fixture |
 | core_072 | 4.15 | excellent | fixture |
 | core_073 | 4.08 | excellent | template_scaffold |
 | core_074 | 4.08 | excellent | template_scaffold |
-| core_075 | 3.85 | good | template_scaffold |
-| core_076 | 3.62 | good | template_scaffold |
-| core_077 | 3.55 | good | template_scaffold |
-| core_078 | 3.62 | good | template_scaffold |
-| core_079 | 3.7 | good | template_scaffold |
-| core_080 | 3.7 | good | template_scaffold |
+| core_075 | 4.08 | excellent | template_scaffold |
+| core_076 | 4.08 | excellent | template_scaffold |
+| core_077 | 4.08 | excellent | template_scaffold |
+| core_078 | 4.08 | excellent | template_scaffold |
+| core_079 | 4.08 | excellent | template_scaffold |
+| core_080 | 4.08 | excellent | template_scaffold |
 | core_081 | 4.08 | excellent | template_scaffold |
 | core_082 | 4.08 | excellent | fixture |
 | core_083 | 4.08 | excellent | fixture |
-| core_084 | 4.15 | excellent | template_scaffold |
+| core_084 | 4.08 | excellent | template_scaffold |
 | core_085 | 4.08 | excellent | template_scaffold |
-| core_086 | 3.62 | good | template_scaffold |
-| core_087 | 3.55 | good | template_scaffold |
-| core_088 | 3.77 | good | template_scaffold |
-| core_089 | 3.62 | good | template_scaffold |
+| core_086 | 4.08 | excellent | template_scaffold |
+| core_087 | 4.08 | excellent | template_scaffold |
+| core_088 | 4.08 | excellent | template_scaffold |
+| core_089 | 4.08 | excellent | template_scaffold |
 | core_090 | 4.08 | excellent | fixture |
-| core_091 | 3.7 | good | template_scaffold |
-| core_092 | 3.7 | good | template_scaffold |
-| core_093 | 3.55 | good | template_scaffold |
+| core_091 | 4.15 | excellent | template_scaffold |
+| core_092 | 4.08 | excellent | template_scaffold |
+| core_093 | 4.08 | excellent | template_scaffold |
 | core_094 | 3.92 | good | fixture |
-| core_095 | 3.7 | good | template_scaffold |
-| core_096 | 3.62 | good | template_scaffold |
-| core_097 | 3.55 | good | template_scaffold |
-| core_098 | 3.55 | good | template_scaffold |
-| core_099 | 3.62 | good | template_scaffold |
-| core_100 | 3.62 | good | template_scaffold |
+| core_095 | 4.15 | excellent | template_scaffold |
+| core_096 | 4.08 | excellent | template_scaffold |
+| core_097 | 4.08 | excellent | template_scaffold |
+| core_098 | 4.08 | excellent | template_scaffold |
+| core_099 | 4.08 | excellent | template_scaffold |
+| core_100 | 4.15 | excellent | template_scaffold |

@@ -158,72 +158,72 @@
   ],
   "highest_risk_weak_scenario_families": [
     {
-      "scenario_family": "handover",
-      "average_score": 3.58,
-      "count": 100
-    },
-    {
-      "scenario_family": "regulation_evidence",
-      "average_score": 3.58,
-      "count": 100
-    },
-    {
       "scenario_family": "magic_notes",
-      "average_score": 3.59,
-      "count": 100
-    },
-    {
-      "scenario_family": "key_work",
-      "average_score": 3.63,
-      "count": 100
-    },
-    {
-      "scenario_family": "incident_reflection",
-      "average_score": 3.68,
-      "count": 100
-    },
-    {
-      "scenario_family": "daily_care",
-      "average_score": 3.69,
-      "count": 100
-    },
-    {
-      "scenario_family": "behaviour_communication",
-      "average_score": 3.69,
-      "count": 100
-    },
-    {
-      "scenario_family": "management_oversight",
-      "average_score": 3.7,
-      "count": 100
-    },
-    {
-      "scenario_family": "meetings",
-      "average_score": 3.86,
+      "average_score": 3.98,
       "count": 100
     },
     {
       "scenario_family": "safeguarding",
-      "average_score": 4.06,
+      "average_score": 4.08,
+      "count": 100
+    },
+    {
+      "scenario_family": "key_work",
+      "average_score": 4.08,
+      "count": 100
+    },
+    {
+      "scenario_family": "meetings",
+      "average_score": 4.08,
+      "count": 100
+    },
+    {
+      "scenario_family": "handover",
+      "average_score": 4.09,
+      "count": 100
+    },
+    {
+      "scenario_family": "management_oversight",
+      "average_score": 4.09,
+      "count": 100
+    },
+    {
+      "scenario_family": "incident_reflection",
+      "average_score": 4.1,
+      "count": 100
+    },
+    {
+      "scenario_family": "behaviour_communication",
+      "average_score": 4.1,
+      "count": 100
+    },
+    {
+      "scenario_family": "regulation_evidence",
+      "average_score": 4.1,
+      "count": 100
+    },
+    {
+      "scenario_family": "daily_care",
+      "average_score": 4.11,
       "count": 100
     }
   ],
   "weakest_scoring_categories_variants1000": [
     {
-      "category": "child_centredness",
-      "average_score": 2.61
-    },
-    {
-      "category": "outcome_and_follow_up",
-      "average_score": 2.68
-    },
-    {
       "category": "adult_response_and_support",
-      "average_score": 3.2
+      "average_score": 3.28
+    },
+    {
+      "category": "therapeutic_language",
+      "average_score": 3.94
+    },
+    {
+      "category": "professional_tone",
+      "average_score": 3.94
     },
     {
       "category": "observation_vs_interpretation",
-      "average_score": 3.35
+      "average_score": 3.98
     }
   ],
   "internal_only_emerging_evidence_areas": [],
