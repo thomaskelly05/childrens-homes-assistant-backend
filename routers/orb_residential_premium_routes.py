@@ -39,6 +39,11 @@ from schemas.orb_residential_premium import (
 from schemas.orb_shift_builder import OrbShiftBuilderGenerateRequest, OrbShiftBuilderRequest
 from services.orb_access_service import orb_access_service
 from services.orb_converged_general_assistant_service import orb_converged_general_assistant_service
+from services.orb_knowledge_retrieval_service import orb_knowledge_retrieval_service
+from services.orb_residential_finalization_service import (
+    finalize_orb_residential_answer,
+    merge_residential_finalization_into_context,
+)
 from services.orb_shift_builder_service import orb_shift_builder_service
 
 router = APIRouter(prefix="/orb/residential", tags=["ORB Residential"])
@@ -225,6 +230,25 @@ async def orb_residential_conversation(
         document_title=payload.document_title,
         raw_user_message=payload.message,
     )
+    retrieval_bundle = orb_knowledge_retrieval_service.prepare_request_bundle(
+        payload.message,
+        mode=payload.mode,
+    )
+    indicare_intelligence = retrieval_bundle.get("indicare_intelligence") or {}
+    raw_answer = str(result.get("answer") or "")
+    if indicare_intelligence and raw_answer:
+        finalized_answer, final_meta = finalize_orb_residential_answer(
+            raw_answer,
+            user_input=payload.message,
+            surface="orb_residential",
+            streaming=False,
+            mode=payload.mode,
+            indicare_intelligence=indicare_intelligence,
+            record_learning=True,
+        )
+        result["answer"] = finalized_answer
+        context_used = dict(result.get("context_used") or {})
+        result["context_used"] = merge_residential_finalization_into_context(context_used, final_meta)
     context_used = dict(result.get("context_used") or {})
     live_prompt_tier = context_used.get("prompt_tier")
     live_expert_depth = (

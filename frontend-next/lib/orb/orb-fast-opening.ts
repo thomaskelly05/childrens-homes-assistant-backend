@@ -54,10 +54,19 @@ export function isOrbFastOpeningPlaceholder(text: string): boolean {
 export function resolveOrbStreamedAnswer(
   responseAnswer: string | undefined,
   streamedPartial: string,
-  options?: { errorDetail?: string | null; fastOpening?: string | null }
+  options?: {
+    errorDetail?: string | null
+    fastOpening?: string | null
+    answerRepaired?: boolean | null
+  }
 ): string {
   const partial = ensureFastOpeningSpacing(streamedPartial || '', options?.fastOpening)
   const metadataAnswer = ensureFastOpeningSpacing(responseAnswer || '', options?.fastOpening)
+
+  // Post-stream server finalisation (repair + record discipline) always wins when present.
+  if (metadataAnswer && (options?.answerRepaired || !options?.errorDetail)) {
+    return metadataAnswer
+  }
 
   if (metadataAnswer && partial) {
     if (partial.length > metadataAnswer.length && partial.startsWith(metadataAnswer)) {

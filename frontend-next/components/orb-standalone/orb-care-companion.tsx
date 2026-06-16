@@ -1646,7 +1646,17 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
         const resolvedAnswer = resolveOrbStreamedAnswer(
           response.answer,
           streamPartialRef.current,
-          { errorDetail: response.error_detail }
+          {
+            errorDetail: response.error_detail,
+            answerRepaired:
+              response.answer_repaired ??
+              response.final_answer_repair_applied ??
+              Boolean(
+                (response.context_used as Record<string, unknown> | undefined)?.answer_repaired ??
+                  (response.context_used as Record<string, unknown> | undefined)
+                    ?.final_answer_repair_applied
+              )
+          }
         )
         const answer =
           resolvedAnswer.trim() ||
@@ -1798,7 +1808,19 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
                 const responseSources = (
                   (meta.citations?.length ? meta.citations : meta.sources) ?? []
                 ) as StandaloneOrbSource[]
-                applyStreamingPartial(streamPartialRef.current, {
+                const repairedAnswer = (meta.answer || '').trim()
+                const answerRepaired =
+                  meta.answer_repaired ??
+                  meta.final_answer_repair_applied ??
+                  Boolean(
+                    (meta.context_used as Record<string, unknown> | undefined)?.answer_repaired
+                  )
+                if (repairedAnswer && answerRepaired) {
+                  streamPartialRef.current = repairedAnswer
+                }
+                applyStreamingPartial(
+                  answerRepaired && repairedAnswer ? repairedAnswer : streamPartialRef.current,
+                  {
                   sources: responseSources.length ? responseSources : undefined,
                   modelRouting: meta.context_used?.model_routing,
                   explainability: buildExplainabilityFromResponse(meta, trimmed || messageBody),

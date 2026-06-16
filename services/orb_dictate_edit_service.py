@@ -234,6 +234,7 @@ def _fallback_edit(request: OrbDictateEditRequest, mode: str) -> OrbDictateEditR
         text=revised,
         note_type=request.note_type,
         intel_packet=intel_packet,
+        source_text=request.document_text,
     )
     quality = compute_quality_checks(revised, request.note_type)
     return OrbDictateEditResponse(
@@ -372,6 +373,7 @@ def edit_dictate_document(
         text=revised,
         note_type=request.note_type,
         intel_packet=intel_packet,
+        source_text=request.document_text,
     )
     quality: OrbDictateQualityChecks = compute_quality_checks(revised, request.note_type)
 
