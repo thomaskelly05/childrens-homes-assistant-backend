@@ -1,10 +1,10 @@
 # ORB Residential 10000 Variants Benchmark Report
 
-- **Run timestamp:** 2026-06-16T20:12:38.983403+00:00
+- **Run timestamp:** 2026-06-16T21:10:11.572896+00:00
 - **Scenario set:** `variants10000`
 - **Mode:** `static`
 - **Baseline version:** 1.0.0
-- **Commit SHA:** ffcd2fbff25674aa20591903ec210ecf1dd62462
+- **Commit SHA:** c14a6d79d63e5c81374470c0e8d493b5c9399d24
 - **Scenarios scored:** 250
 - **Average overall score:** 4.06 / 5
 - **Unsafe flag count:** 0

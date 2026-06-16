@@ -136,6 +136,9 @@ export const ORB_THERAPEUTIC_RECORDING_PRINCIPLES: readonly string[] = [
   "Do not use In response to Child A's feelings unless the child directly stated a feeling",
   "Do not add as the evening progressed unless the user provided that chronology",
   'Do not end records with markdown separator lines (—, ___, ***)',
+  'Do not include Next Steps or Follow-up in simple daily records when Outcome / Handover already states the handover',
+  'Do not repeat the same observed outcome in multiple sections',
+  "Do not include '[End of record]' or any end marker in record outputs",
   'Do not default to DSL or Designated Safeguarding Lead — use children\'s home language unless the user supplied DSL',
   'For ordinary daily records without safeguarding cues, do not add Safeguarding Note or disproportionate escalation',
   'Do not use Staff on Duty — use Adults involved with Adult [initials] when supplied',
@@ -222,7 +225,7 @@ export const ORB_RECORDING_SECTION_PROMPTS: Record<string, OrbRecordingSectionPr
     {
       title: 'Outcome / Handover',
       prompt:
-        'Record what changed by the end, how the child appeared afterwards, and what the next adults should continue or check in about. Use observed presentation such as "appeared calmer" — do not add "indicating a positive shift in mood" or "showing emotional regulation". Include handover here — do not add a separate Outcome or Follow-up section unless safeguarding cues require it.'
+        'Record what changed by the end, how the child appeared afterwards, and what the next adults should continue or check in about. Use observed presentation such as "appeared calmer" — do not add "indicating a positive shift in mood" or "showing emotional regulation". Include handover here — do not add a separate Outcome, Follow-up or Next Steps section. Do not repeat the same observed outcome in Adult Response. Do not end with an end marker.'
     }
   ],
   incident_report: [

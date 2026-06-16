@@ -99,6 +99,16 @@ DUPLICATE_HEADING_DISCIPLINE_PRINCIPLE = (
     "section. Do not add separate Follow-up or Next Steps when handover already states the next action."
 )
 
+REPEATED_OUTCOME_DISCIPLINE_PRINCIPLE = (
+    "Do not repeat the same observed outcome in multiple sections. If Outcome / Handover already records a timed "
+    "observation such as 'appeared calmer before bedtime', do not repeat it in Adult Response."
+)
+
+END_OF_RECORD_DISCIPLINE_PRINCIPLE = (
+    "Do not include '[End of record]', 'END OF RECORD', '<end>' or any end marker in record outputs unless the "
+    "user explicitly asked to include one."
+)
+
 DAILY_RECORD_SIMPLIFICATION_PRINCIPLE = (
     "For simple, low-risk daily records, prefer a short narrative record with no more than 2–3 content sections. "
     "Weave child voice naturally into the narrative — do not add a separate Child Voice section unless useful. "
@@ -415,7 +425,55 @@ _TRANSITION_BOUNDARY_RES: tuple[re.Pattern[str], ...] = (
     re.compile(r"(?<=[a-z])\s+(Later,)\s*"),
     re.compile(r"(?<=[a-z])\s+(During this time,)\s*", re.I),
 )
+_CHILD_SUBJECT_BOUNDARY_RE = re.compile(
+    r'(?<=[a-z"\)])(?<![A-Z])\s+(Child\s+[A-Z])\b'
+)
+_WATCHED_TV_CHILD_BOUNDARY_RE = re.compile(
+    r"(watched television)\s+(Child\s+[A-Z])\b", re.I
+)
+_WATCHED_TV_SHORT_CHILD_BOUNDARY_RE = re.compile(
+    r"(watched TV)\s+(Child\s+[A-Z])\b", re.I
+)
+_ACCEPTED_TOAST_BEFORE_BEDTIME_RE = re.compile(
+    r"(accepted the toast)\s+(Before\s+bedtime)\b", re.I
+)
+_SECTION_HEADING_INLINE_BOUNDARY_RES: tuple[re.Pattern[str], ...] = (
+    re.compile(r"(?<=[a-z])\s+(Next\s+Steps)\s*:", re.I),
+    re.compile(r"(?<=[a-z])\s+(Follow-up)\s*:", re.I),
+    re.compile(r"(?<=[a-z])\s+(Recommendations)\s*:", re.I),
+    re.compile(r"(?<=[a-z])\s+(Outcome\s*/\s*Handover)\s*:", re.I),
+)
 _TRAILING_MD_ARTIFACTS_RE = re.compile(r"(?:[\n\r\s]*(?:—|___|\*\*\*)\s*)+$")
+_TRAILING_HR_ARTIFACTS_RE = re.compile(r"(?:[\n\r\s]*^---+\s*)+$", re.M)
+_END_OF_RECORD_ARTEFACT_RES: tuple[re.Pattern[str], ...] = (
+    re.compile(r"\[End of record\]", re.I),
+    re.compile(r"\[End record\]", re.I),
+    re.compile(r"\bEnd of record\.?\s*$", re.I | re.M),
+    re.compile(r"\bEND OF RECORD\b"),
+    re.compile(r"[–-]\s*end\s*[–-]", re.I),
+    re.compile(r"<end>", re.I),
+)
+_REDUNDANT_NEXT_STEPS_HEADING_RE = re.compile(
+    r"^(?:#+\s+)?(?:Next\s+Steps|Follow-up(?:\s+for\s+next\s+shift)?|Recommendations)\s*:?\s*$",
+    re.I,
+)
+_INLINE_REDUNDANT_NEXT_STEPS_RE = re.compile(
+    r"^(?:#+\s+)?(?:Next\s+Steps|Follow-up|Recommendations)\s*:\s*(?:-\s*.+)+$",
+    re.I | re.M,
+)
+_APPEARED_CALMER_RE = re.compile(r"\bappeared\s+calmer(?:\s+before\s+bedtime)?\b", re.I)
+_ADULT_RESPONSE_HEADING_RE = re.compile(
+    r"^(?:#+\s+)?Adult\s+Response\s*:?\s*$", re.I
+)
+_ACTION_PLAN_REQUEST_RE = re.compile(
+    r"\b(?:action\s+plan|follow-up\s+action|recommendations?\s+section|"
+    r"include\s+(?:next\s+steps|follow-up|action\s+plan)|end\s+of\s+record|end\s+marker|<end>)\b",
+    re.I,
+)
+_HANDOVER_ACTION_RE = re.compile(
+    r"\b(?:hand(?:ed|over)|check\s+in|monitor|tomorrow(?:'s)?\s+adults?|next\s+(?:shift|adults?))\b",
+    re.I,
+)
 
 _STAFF_TO_ADULT_RE = re.compile(r"\b[Ss]taff\b")
 _STAFF_ON_DUTY_RE = re.compile(r"\bStaff\s+on\s+Duty\b", re.I)
@@ -499,8 +557,15 @@ def strip_unnecessary_daily_record_sections(text: str, *, source_text: str = "")
     """Remove disproportionate daily-record section headings unless safeguarding cues are present."""
     if has_safeguarding_cue(source_text):
         return str(text or "")
+    patterns = _UNNECESSARY_DAILY_SECTION_HEADINGS
+    if user_requested_action_plan_or_end_marker(source_text):
+        patterns = tuple(
+            pattern
+            for pattern in _UNNECESSARY_DAILY_SECTION_HEADINGS
+            if "Next" not in pattern.pattern and "Follow-up" not in pattern.pattern
+        )
     result = str(text or "")
-    for pattern in _UNNECESSARY_DAILY_SECTION_HEADINGS:
+    for pattern in patterns:
         result = pattern.sub("", result)
     return re.sub(r"\n{3,}", "\n\n", result).strip()
 
@@ -662,6 +727,7 @@ def normalize_duplicate_daily_record_headings(text: str, *, source_text: str = "
     """Merge duplicate Outcome / Outcome / Handover headings in simple daily records."""
     if has_safeguarding_cue(source_text) or not is_daily_record_request(source_text):
         return str(text or "")
+    preserve_follow_up = user_requested_action_plan_or_end_marker(source_text)
     lines = str(text or "").splitlines()
     sections: list[tuple[str, list[str]]] = []
     current_heading = ""
@@ -715,8 +781,10 @@ def normalize_duplicate_daily_record_headings(text: str, *, source_text: str = "
         handover_body = "\n".join(sections[resolved_handover_idx][1]).strip()
         filtered: list[tuple[str, list[str]]] = []
         for heading, body in sections:
-            if _is_redundant_follow_up_heading(heading) and _content_similarity(
-                "\n".join(body).strip(), handover_body
+            if (
+                not preserve_follow_up
+                and _is_redundant_follow_up_heading(heading)
+                and _content_similarity("\n".join(body).strip(), handover_body)
             ):
                 continue
             filtered.append((heading, body))
@@ -734,7 +802,7 @@ def normalize_duplicate_daily_record_headings(text: str, *, source_text: str = "
 
 def strip_unnecessary_follow_up_section(text: str, *, source_text: str = "") -> str:
     """Remove redundant Follow-up sections when handover already covers next action."""
-    if has_safeguarding_cue(source_text):
+    if has_safeguarding_cue(source_text) or user_requested_action_plan_or_end_marker(source_text):
         return str(text or "")
     if not _HANDOVER_PRESENT_RE.search(str(text or "")):
         return str(text or "")
@@ -852,14 +920,154 @@ def strip_unsupported_timeline_expansion(text: str, *, source_text: str = "") ->
     return "\n".join(lines).strip()
 
 
+def user_requested_action_plan_or_end_marker(text: str) -> bool:
+    """True when the user explicitly asked for action-plan or end-marker sections."""
+    return bool(_ACTION_PLAN_REQUEST_RE.search(str(text or "")))
+
+
+def user_requested_end_marker(text: str) -> bool:
+    """True when the user explicitly asked to include an end-of-record marker."""
+    lower = str(text or "").lower()
+    return any(
+        marker in lower
+        for marker in ("end of record", "[end of record]", "end marker", "<end>", "end record")
+    )
+
+
+def _parse_record_sections(text: str) -> list[tuple[str, list[str]]]:
+    lines = str(text or "").splitlines()
+    sections: list[tuple[str, list[str]]] = []
+    current_heading = ""
+    current_body: list[str] = []
+    for line in lines:
+        stripped = line.strip()
+        is_heading = bool(re.match(r"^#+\s+\S", stripped)) or (
+            stripped
+            and not stripped.startswith("-")
+            and re.match(
+                r"^(?:Presentation and Support|Adult Response|Outcome|Follow-up|Next Steps|Recommendations)"
+                r"(?:\s*/\s*Handover)?\s*:?\s*$",
+                stripped,
+                re.I,
+            )
+        )
+        if is_heading:
+            if current_heading or current_body:
+                sections.append((current_heading, current_body))
+            current_heading = stripped
+            current_body = []
+            continue
+        current_body.append(line)
+    if current_heading or current_body:
+        sections.append((current_heading, current_body))
+    return sections
+
+
+def _sections_to_text(sections: list[tuple[str, list[str]]]) -> str:
+    output_lines: list[str] = []
+    for heading, body in sections:
+        if heading:
+            output_lines.append(heading)
+        output_lines.extend(body)
+        if body and body[-1].strip():
+            output_lines.append("")
+    return re.sub(r"\n{3,}", "\n\n", "\n".join(output_lines)).strip()
+
+
+def strip_repeated_observed_outcome(text: str, *, source_text: str = "") -> str:
+    """Remove duplicate observed outcomes from Adult Response when Outcome / Handover already records them."""
+    if has_safeguarding_cue(source_text) or not is_daily_record_request(source_text):
+        return str(text or "")
+    sections = _parse_record_sections(text)
+    adult_idx: int | None = None
+    outcome_idx: int | None = None
+    for idx, (heading, _body) in enumerate(sections):
+        if _ADULT_RESPONSE_HEADING_RE.match(heading.strip()):
+            adult_idx = idx
+        if _is_outcome_handover_heading(heading) or _is_outcome_only_heading(heading):
+            outcome_idx = idx
+    if adult_idx is None or outcome_idx is None:
+        return str(text or "")
+    outcome_body = "\n".join(sections[outcome_idx][1]).strip()
+    adult_body = "\n".join(sections[adult_idx][1]).strip()
+    if not _APPEARED_CALMER_RE.search(outcome_body) or not _APPEARED_CALMER_RE.search(adult_body):
+        return str(text or "")
+    cleaned_adult = re.sub(
+        r",?\s+and\s+appeared\s+calmer(?:\s+before\s+bedtime)?",
+        "",
+        adult_body,
+        flags=re.I,
+    )
+    cleaned_adult = re.sub(
+        r",?\s+appeared\s+calmer(?:\s+before\s+bedtime)?",
+        "",
+        cleaned_adult,
+        flags=re.I,
+    )
+    cleaned_adult = re.sub(r"\s{2,}", " ", cleaned_adult).strip(" ,;.")
+    if not cleaned_adult:
+        return str(text or "")
+    sections[adult_idx] = (sections[adult_idx][0], cleaned_adult.splitlines())
+    return _sections_to_text(sections)
+
+
+def strip_redundant_next_steps_in_daily_record(text: str, *, source_text: str = "") -> str:
+    """Remove redundant Next Steps / Follow-up / Recommendations when handover already covers next action."""
+    if has_safeguarding_cue(source_text) or not is_daily_record_request(source_text):
+        return str(text or "")
+    if user_requested_action_plan_or_end_marker(source_text):
+        return str(text or "")
+    value = str(text or "")
+    if not _HANDOVER_PRESENT_RE.search(value) or not _HANDOVER_ACTION_RE.search(value):
+        return value
+    result = _INLINE_REDUNDANT_NEXT_STEPS_RE.sub("", value)
+    lines = result.splitlines()
+    output: list[str] = []
+    skip_until_heading = False
+    for line in lines:
+        stripped = line.strip()
+        if _REDUNDANT_NEXT_STEPS_HEADING_RE.match(stripped):
+            skip_until_heading = True
+            continue
+        if skip_until_heading:
+            if re.match(r"^#+\s+\S", stripped) or re.match(
+                r"^(?:Presentation and Support|Adult Response|Outcome|Daily Record)\b", stripped, re.I
+            ):
+                skip_until_heading = False
+            elif stripped.startswith("-") or stripped.startswith("•") or not stripped:
+                continue
+            else:
+                skip_until_heading = False
+        if not skip_until_heading:
+            output.append(line)
+    return re.sub(r"\n{3,}", "\n\n", "\n".join(output)).strip()
+
+
+def strip_end_of_record_artefacts(text: str, *, source_text: str = "") -> str:
+    """Remove trailing end-of-record markers from record-generation outputs."""
+    if user_requested_end_marker(source_text):
+        return str(text or "")
+    result = str(text or "").rstrip()
+    for pattern in _END_OF_RECORD_ARTEFACT_RES:
+        result = pattern.sub("", result)
+    result = _TRAILING_HR_ARTIFACTS_RE.sub("", result.rstrip())
+    return result.rstrip()
+
+
 def _repair_sentence_boundaries_in_line(line: str) -> str:
     """Insert conservative full stops where record sentences were joined."""
     result = str(line or "")
     result = _QUOTE_ADULT_BOUNDARY_RE.sub(r"\1. \2", result)
+    result = re.sub(r"\bwatched TV\b", "watched television", result, flags=re.I)
+    result = _WATCHED_TV_SHORT_CHILD_BOUNDARY_RE.sub(r"\1. \2", result)
+    result = _WATCHED_TV_CHILD_BOUNDARY_RE.sub(r"\1. \2", result)
+    result = _ACCEPTED_TOAST_BEFORE_BEDTIME_RE.sub(r"\1. \2", result)
+    result = _CHILD_SUBJECT_BOUNDARY_RE.sub(r". \1", result)
     result = _ADULT_LABEL_BOUNDARY_RE.sub(r". \1", result)
     for pattern in _TRANSITION_BOUNDARY_RES:
         result = pattern.sub(r". \1 ", result)
-    result = re.sub(r"\bwatched TV\b", "watched television", result, flags=re.I)
+    for pattern in _SECTION_HEADING_INLINE_BOUNDARY_RES:
+        result = pattern.sub(r". \1:", result)
     result = re.sub(r"\.{2,}", ".", result)
     return result.strip()
 
@@ -894,24 +1102,58 @@ def strip_trailing_markdown_artefacts(text: str, *, source_text: str = "") -> st
 
 def sanitize_live_record_output(text: str, *, source_text: str = "") -> str:
     """Apply adult identity, terminology, proportionality and observation discipline to record output."""
+    cleaned = str(text or "")
     initials = extract_supplied_adult_initials(source_text)
-    cleaned = strip_interpretive_feelings_phrases(text, source_text=source_text)
-    cleaned = strip_child_quote_interpretation(cleaned, source_text=source_text)
-    cleaned = strip_invented_emotional_impact(cleaned, source_text=source_text)
-    cleaned = strip_outcome_interpretation(cleaned, source_text=source_text)
-    cleaned = strip_unsupported_timeline_expansion(cleaned, source_text=source_text)
-    cleaned = sanitize_observation_interpretation_language(cleaned, source_text=source_text)
-    cleaned = sanitize_childrens_home_terminology(cleaned, source_text=source_text)
-    if initials or _STAFF_TO_ADULT_RE.search(cleaned):
-        cleaned = apply_adult_identity_language(cleaned, supplied_initials=initials)
-    if is_daily_record_request(source_text) and not has_safeguarding_cue(source_text):
-        cleaned = strip_unnecessary_daily_record_sections(cleaned, source_text=source_text)
-        cleaned = strip_unnecessary_follow_up_section(cleaned, source_text=source_text)
-    cleaned = normalize_duplicate_daily_record_headings(cleaned, source_text=source_text)
+
+    # 1. record-only stripping
     if is_record_generation_request(source_text) and not user_explicitly_requests_explanation(source_text):
         cleaned = strip_trailing_self_commentary(cleaned, source_text=source_text)
-        cleaned = strip_trailing_markdown_artefacts(cleaned, source_text=source_text)
+
+    # Supporting pre-steps before content repairs
+    cleaned = strip_interpretive_feelings_phrases(cleaned, source_text=source_text)
+    cleaned = strip_unsupported_timeline_expansion(cleaned, source_text=source_text)
+
+    # 2. safeguarding/proportionality stripping
+    cleaned = sanitize_childrens_home_terminology(cleaned, source_text=source_text)
+    if is_daily_record_request(source_text) and not has_safeguarding_cue(source_text):
+        cleaned = strip_unnecessary_daily_record_sections(cleaned, source_text=source_text)
+
+    # 3. child quote interpretation stripping
+    cleaned = strip_child_quote_interpretation(cleaned, source_text=source_text)
+
+    # 4. invented emotional impact stripping
+    cleaned = strip_invented_emotional_impact(cleaned, source_text=source_text)
+
+    # 5. outcome interpretation stripping
+    cleaned = strip_outcome_interpretation(cleaned, source_text=source_text)
+    cleaned = sanitize_observation_interpretation_language(cleaned, source_text=source_text)
+
+    # 6. adult identity sanitisation
+    if initials or _STAFF_TO_ADULT_RE.search(cleaned):
+        cleaned = apply_adult_identity_language(cleaned, supplied_initials=initials)
+
+    # 7. daily section simplification
+    if is_daily_record_request(source_text) and not has_safeguarding_cue(source_text):
+        cleaned = strip_redundant_next_steps_in_daily_record(cleaned, source_text=source_text)
+        cleaned = strip_unnecessary_follow_up_section(cleaned, source_text=source_text)
+
+    # 8. duplicate heading normalisation
+    cleaned = normalize_duplicate_daily_record_headings(cleaned, source_text=source_text)
+
+    # 9. repeated observed-outcome clean-up
+    if is_daily_record_request(source_text) and not has_safeguarding_cue(source_text):
+        cleaned = strip_repeated_observed_outcome(cleaned, source_text=source_text)
+
+    # 10. sentence-boundary repair
+    if is_record_generation_request(source_text):
         cleaned = repair_record_sentence_boundaries(cleaned)
+
+    # 11. trailing artefact removal including [End of record]
+    if is_record_generation_request(source_text) and not user_explicitly_requests_explanation(source_text):
+        cleaned = strip_trailing_self_commentary(cleaned, source_text=source_text)
+        cleaned = strip_end_of_record_artefacts(cleaned, source_text=source_text)
+        cleaned = strip_trailing_markdown_artefacts(cleaned, source_text=source_text)
+
     return cleaned
 
 
@@ -1004,6 +1246,10 @@ def build_adult_identity_prompt_block() -> str:
         TRAILING_MARKDOWN_DISCIPLINE_PRINCIPLE,
         "",
         DUPLICATE_HEADING_DISCIPLINE_PRINCIPLE,
+        "",
+        REPEATED_OUTCOME_DISCIPLINE_PRINCIPLE,
+        "",
+        END_OF_RECORD_DISCIPLINE_PRINCIPLE,
         "",
         DAILY_RECORD_SIMPLIFICATION_PRINCIPLE,
         "",

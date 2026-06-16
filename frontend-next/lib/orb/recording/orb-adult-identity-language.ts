@@ -45,6 +45,12 @@ export const ORB_TRAILING_MARKDOWN_DISCIPLINE =
 export const ORB_DUPLICATE_HEADING_DISCIPLINE =
   'Do not duplicate Outcome and Outcome / Handover headings in simple daily records. Do not add separate Follow-up or Next Steps when handover already states the next action.'
 
+export const ORB_REPEATED_OUTCOME_DISCIPLINE =
+  "Do not repeat the same observed outcome in multiple sections. If Outcome / Handover already records a timed observation such as 'appeared calmer before bedtime', do not repeat it in Adult Response."
+
+export const ORB_END_OF_RECORD_DISCIPLINE =
+  "Do not include '[End of record]', 'END OF RECORD', '<end>' or any end marker in record outputs unless the user explicitly asked to include one."
+
 export const ORB_DAILY_RECORD_SIMPLIFICATION =
   'For simple daily records, prefer a short narrative with no more than 2–3 content sections. Do not add Follow-up when Outcome / Handover already states the next action.'
 
@@ -219,7 +225,36 @@ const TRANSITION_BOUNDARY_RES = [
   /(?<=[a-z])\s+(Later,)\s*/g,
   /(?<=[a-z])\s+(During this time,)\s*/gi
 ]
+const CHILD_SUBJECT_BOUNDARY_RE = /(?<=[a-z"\)])(?<![A-Z])\s+(Child\s+[A-Z])\b/g
+const WATCHED_TV_CHILD_BOUNDARY_RE = /(watched television)\s+(Child\s+[A-Z])\b/gi
+const WATCHED_TV_SHORT_CHILD_BOUNDARY_RE = /(watched TV)\s+(Child\s+[A-Z])\b/gi
+const ACCEPTED_TOAST_BEFORE_BEDTIME_RE = /(accepted the toast)\s+(Before\s+bedtime)\b/gi
+const SECTION_HEADING_INLINE_BOUNDARY_RES = [
+  /(?<=[a-z])\s+(Next\s+Steps)\s*:/gi,
+  /(?<=[a-z])\s+(Follow-up)\s*:/gi,
+  /(?<=[a-z])\s+(Recommendations)\s*:/gi,
+  /(?<=[a-z])\s+(Outcome\s*\/\s*Handover)\s*:/gi
+]
 const TRAILING_MD_ARTIFACTS_RE = /(?:[\n\r\s]*(?:—|___|\*\*\*)\s*)+$/
+const TRAILING_HR_ARTIFACTS_RE = /(?:[\n\r\s]*^---+\s*)+$/m
+const END_OF_RECORD_ARTEFACT_RES = [
+  /\[End of record\]/gi,
+  /\[End record\]/gi,
+  /\bEnd of record\.?\s*$/gim,
+  /\bEND OF RECORD\b/g,
+  /[–-]\s*end\s*[–-]/gi,
+  /<end>/gi
+]
+const REDUNDANT_NEXT_STEPS_HEADING_RE =
+  /^(?:#+\s+)?(?:Next\s+Steps|Follow-up(?:\s+for\s+next\s+shift)?|Recommendations)\s*:?\s*$/i
+const INLINE_REDUNDANT_NEXT_STEPS_RE =
+  /^(?:#+\s+)?(?:Next\s+Steps|Follow-up|Recommendations)\s*:\s*(?:-\s*.+)+$/gim
+const APPEARED_CALMER_RE = /\bappeared\s+calmer(?:\s+before\s+bedtime)?\b/i
+const ADULT_RESPONSE_HEADING_RE = /^(?:#+\s+)?Adult\s+Response\s*:?\s*$/i
+const ACTION_PLAN_REQUEST_RE =
+  /\b(?:action\s+plan|follow-up\s+action|recommendations?\s+section|include\s+(?:next\s+steps|follow-up|action\s+plan)|end\s+of\s+record|end\s+marker|<end>)\b/i
+const HANDOVER_ACTION_RE =
+  /\b(?:hand(?:ed|over)|check\s+in|monitor|tomorrow(?:'s)?\s+adults?|next\s+(?:shift|adults?))\b/i
 
 const EXPLANATION_REQUEST_RE =
   /\b(?:why\s+is\s+this\b.+?\bwording\s+better|why\s+is\s+this\s+better|explain\s+(?:the\s+)?(?:wording|record)|why\s+did\s+you\s+(?:write|choose))\b/i
@@ -324,11 +359,18 @@ export function stripUnsupportedTimelineExpansion(text: string, sourceText = '')
 function repairSentenceBoundariesInLine(line: string): string {
   let result = String(line || '')
   result = result.replace(QUOTE_ADULT_BOUNDARY_RE, '$1. $2')
+  result = result.replace(/\bwatched TV\b/gi, 'watched television')
+  result = result.replace(WATCHED_TV_SHORT_CHILD_BOUNDARY_RE, '$1. $2')
+  result = result.replace(WATCHED_TV_CHILD_BOUNDARY_RE, '$1. $2')
+  result = result.replace(ACCEPTED_TOAST_BEFORE_BEDTIME_RE, '$1. $2')
+  result = result.replace(CHILD_SUBJECT_BOUNDARY_RE, '. $1')
   result = result.replace(ADULT_LABEL_BOUNDARY_RE, '. $1')
   for (const pattern of TRANSITION_BOUNDARY_RES) {
     result = result.replace(pattern, '. $1 ')
   }
-  result = result.replace(/\bwatched TV\b/gi, 'watched television')
+  for (const pattern of SECTION_HEADING_INLINE_BOUNDARY_RES) {
+    result = result.replace(pattern, '. $1:')
+  }
   result = result.replace(/\.{2,}/g, '.')
   return result.trim()
 }
@@ -504,6 +546,7 @@ export function stripOutcomeInterpretation(text: string, sourceText = ''): strin
 
 export function normalizeDuplicateDailyRecordHeadings(text: string, sourceText = ''): string {
   if (hasSafeguardingCue(sourceText) || !isDailyRecordRequest(sourceText)) return String(text || '')
+  const preserveFollowUp = userRequestedActionPlanOrEndMarker(sourceText)
   const lines = String(text || '').split('\n')
   const sections: Array<{ heading: string; body: string[] }> = []
   let currentHeading = ''
@@ -552,6 +595,7 @@ export function normalizeDuplicateDailyRecordHeadings(text: string, sourceText =
     const handoverBody = sections[resolvedHandoverIdx].body.join('\n').trim()
     const filtered = sections.filter((section) => {
       if (!REDUNDANT_FOLLOW_UP_HEADING_RE.test(section.heading)) return true
+      if (preserveFollowUp) return true
       return !contentSimilarity(section.body.join('\n').trim(), handoverBody)
     })
     sections.splice(0, sections.length, ...filtered)
@@ -567,7 +611,7 @@ export function normalizeDuplicateDailyRecordHeadings(text: string, sourceText =
 }
 
 export function stripUnnecessaryFollowUpSection(text: string, sourceText = ''): string {
-  if (hasSafeguardingCue(sourceText)) return String(text || '')
+  if (hasSafeguardingCue(sourceText) || userRequestedActionPlanOrEndMarker(sourceText)) return String(text || '')
   if (!HANDOVER_PRESENT_RE.test(String(text || ''))) return String(text || '')
   const lines = String(text || '').split('\n')
   const output: string[] = []
@@ -594,34 +638,176 @@ export function countContentSections(text: string): number {
   ).length
 }
 
+export function userRequestedActionPlanOrEndMarker(text: string): boolean {
+  return ACTION_PLAN_REQUEST_RE.test(String(text || ''))
+}
+
+export function userRequestedEndMarker(text: string): boolean {
+  const lower = String(text || '').toLowerCase()
+  return ['end of record', '[end of record]', 'end marker', '<end>', 'end record'].some((marker) =>
+    lower.includes(marker)
+  )
+}
+
+function parseRecordSections(text: string): Array<{ heading: string; body: string[] }> {
+  const lines = String(text || '').split('\n')
+  const sections: Array<{ heading: string; body: string[] }> = []
+  let currentHeading = ''
+  let currentBody: string[] = []
+  for (const line of lines) {
+    const stripped = line.trim()
+    const isHeading =
+      /^#+\s+\S/.test(stripped) ||
+      (!!stripped &&
+        !stripped.startsWith('-') &&
+        /^(?:Presentation and Support|Adult Response|Outcome|Follow-up|Next Steps|Recommendations)(?:\s*\/\s*Handover)?\s*:?\s*$/i.test(
+          stripped
+        ))
+    if (isHeading) {
+      if (currentHeading || currentBody.length) sections.push({ heading: currentHeading, body: currentBody })
+      currentHeading = stripped
+      currentBody = []
+      continue
+    }
+    currentBody.push(line)
+  }
+  if (currentHeading || currentBody.length) sections.push({ heading: currentHeading, body: currentBody })
+  return sections
+}
+
+function sectionsToText(sections: Array<{ heading: string; body: string[] }>): string {
+  const outputLines: string[] = []
+  for (const section of sections) {
+    if (section.heading) outputLines.push(section.heading)
+    outputLines.push(...section.body)
+    if (section.body.length && section.body[section.body.length - 1]?.trim()) outputLines.push('')
+  }
+  return outputLines.join('\n').replace(/\n{3,}/g, '\n\n').trim()
+}
+
+export function stripRepeatedObservedOutcome(text: string, sourceText = ''): string {
+  if (hasSafeguardingCue(sourceText) || !isDailyRecordRequest(sourceText)) return String(text || '')
+  const sections = parseRecordSections(text)
+  let adultIdx: number | null = null
+  let outcomeIdx: number | null = null
+  sections.forEach((section, idx) => {
+    if (ADULT_RESPONSE_HEADING_RE.test(section.heading.trim())) adultIdx = idx
+    if (OUTCOME_HANDOVER_HEADING_RE.test(section.heading) || OUTCOME_ONLY_HEADING_RE.test(section.heading)) {
+      outcomeIdx = idx
+    }
+  })
+  if (adultIdx === null || outcomeIdx === null) return String(text || '')
+  const outcomeBody = sections[outcomeIdx].body.join('\n').trim()
+  const adultBody = sections[adultIdx].body.join('\n').trim()
+  if (!APPEARED_CALMER_RE.test(outcomeBody) || !APPEARED_CALMER_RE.test(adultBody)) return String(text || '')
+  let cleanedAdult = adultBody
+    .replace(/,?\s+and\s+appeared\s+calmer(?:\s+before\s+bedtime)?/gi, '')
+    .replace(/,?\s+appeared\s+calmer(?:\s+before\s+bedtime)?/gi, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim()
+    .replace(/[ ,;.]+$/, '')
+  if (!cleanedAdult) return String(text || '')
+  sections[adultIdx] = { heading: sections[adultIdx].heading, body: cleanedAdult.split('\n') }
+  return sectionsToText(sections)
+}
+
+export function stripRedundantNextStepsInDailyRecord(text: string, sourceText = ''): string {
+  if (hasSafeguardingCue(sourceText) || !isDailyRecordRequest(sourceText)) return String(text || '')
+  if (userRequestedActionPlanOrEndMarker(sourceText)) return String(text || '')
+  const value = String(text || '')
+  if (!HANDOVER_PRESENT_RE.test(value) || !HANDOVER_ACTION_RE.test(value)) return value
+  let result = value.replace(INLINE_REDUNDANT_NEXT_STEPS_RE, '')
+  const lines = result.split('\n')
+  const output: string[] = []
+  let skipUntilHeading = false
+  for (const line of lines) {
+    const stripped = line.trim()
+    if (REDUNDANT_NEXT_STEPS_HEADING_RE.test(stripped)) {
+      skipUntilHeading = true
+      continue
+    }
+    if (skipUntilHeading) {
+      if (
+        /^#+\s+\S/.test(stripped) ||
+        /^(?:Presentation and Support|Adult Response|Outcome|Daily Record)\b/i.test(stripped)
+      ) {
+        skipUntilHeading = false
+      } else if (stripped.startsWith('-') || stripped.startsWith('•') || !stripped) {
+        continue
+      } else {
+        skipUntilHeading = false
+      }
+    }
+    if (!skipUntilHeading) output.push(line)
+  }
+  return output.join('\n').replace(/\n{3,}/g, '\n\n').trim()
+}
+
+export function stripEndOfRecordArtefacts(text: string, sourceText = ''): string {
+  if (userRequestedEndMarker(sourceText)) return String(text || '')
+  let result = String(text || '').replace(/\s+$/, '')
+  for (const pattern of END_OF_RECORD_ARTEFACT_RES) {
+    result = result.replace(pattern, '')
+  }
+  result = result.replace(TRAILING_HR_ARTIFACTS_RE, '').replace(/\s+$/, '')
+  return result.replace(/\s+$/, '')
+}
+
 export function sanitizeLiveRecordOutput(text: string, sourceText = ''): string {
   const initials = extractSuppliedAdultInitials(sourceText)
-  let cleaned = stripInterpretiveFeelingsPhrases(text, sourceText)
-  cleaned = stripChildQuoteInterpretation(cleaned, sourceText)
-  cleaned = stripInventedEmotionalImpact(cleaned, sourceText)
-  cleaned = stripOutcomeInterpretation(cleaned, sourceText)
-  cleaned = stripUnsupportedTimelineExpansion(cleaned, sourceText)
-  cleaned = sanitizeObservationInterpretationLanguage(cleaned, sourceText)
-  cleaned = sanitizeChildrensHomeTerminology(cleaned, sourceText)
-  if (initials.length || /\b[Ss]taff\b/.test(cleaned)) {
-    cleaned = applyAdultIdentityLanguage(cleaned, initials)
+  let cleaned = String(text || '')
+
+  if (isRecordGenerationRequest(sourceText) && !userExplicitlyRequestsExplanation(sourceText)) {
+    cleaned = stripTrailingSelfCommentary(cleaned, sourceText)
   }
+
+  cleaned = stripInterpretiveFeelingsPhrases(cleaned, sourceText)
+  cleaned = stripUnsupportedTimelineExpansion(cleaned, sourceText)
+  cleaned = sanitizeChildrensHomeTerminology(cleaned, sourceText)
+
   if (isDailyRecordRequest(sourceText) && !hasSafeguardingCue(sourceText)) {
+    const preserveActionPlan = userRequestedActionPlanOrEndMarker(sourceText)
     cleaned = cleaned
       .replace(/^#+\s*Safeguarding\s+Note\s*$/gim, '')
       .replace(/^#+\s*Child(?:'s|\s)Voice(?:\s*\/\s*Presentation)?\s*$/gim, '')
-      .replace(/^#+\s*Next\s+Steps\s*$/gim, '')
-      .replace(/^#+\s*Follow-up(?:\s+for\s+next\s+shift)?\s*$/gim, '')
-      .replace(/\n{3,}/g, '\n\n')
-      .trim()
+    if (!preserveActionPlan) {
+      cleaned = cleaned
+        .replace(/^#+\s*Next\s+Steps\s*$/gim, '')
+        .replace(/^#+\s*Follow-up(?:\s+for\s+next\s+shift)?\s*$/gim, '')
+    }
+    cleaned = cleaned.replace(/\n{3,}/g, '\n\n').trim()
+  }
+
+  cleaned = stripChildQuoteInterpretation(cleaned, sourceText)
+  cleaned = stripInventedEmotionalImpact(cleaned, sourceText)
+  cleaned = stripOutcomeInterpretation(cleaned, sourceText)
+  cleaned = sanitizeObservationInterpretationLanguage(cleaned, sourceText)
+
+  if (initials.length || /\b[Ss]taff\b/.test(cleaned)) {
+    cleaned = applyAdultIdentityLanguage(cleaned, initials)
+  }
+
+  if (isDailyRecordRequest(sourceText) && !hasSafeguardingCue(sourceText)) {
+    cleaned = stripRedundantNextStepsInDailyRecord(cleaned, sourceText)
     cleaned = stripUnnecessaryFollowUpSection(cleaned, sourceText)
   }
+
   cleaned = normalizeDuplicateDailyRecordHeadings(cleaned, sourceText)
-  if (isRecordGenerationRequest(sourceText) && !userExplicitlyRequestsExplanation(sourceText)) {
-    cleaned = stripTrailingSelfCommentary(cleaned, sourceText)
-    cleaned = stripTrailingMarkdownArtefacts(cleaned, sourceText)
+
+  if (isDailyRecordRequest(sourceText) && !hasSafeguardingCue(sourceText)) {
+    cleaned = stripRepeatedObservedOutcome(cleaned, sourceText)
+  }
+
+  if (isRecordGenerationRequest(sourceText)) {
     cleaned = repairRecordSentenceBoundaries(cleaned)
   }
+
+  if (isRecordGenerationRequest(sourceText) && !userExplicitlyRequestsExplanation(sourceText)) {
+    cleaned = stripTrailingSelfCommentary(cleaned, sourceText)
+    cleaned = stripEndOfRecordArtefacts(cleaned, sourceText)
+    cleaned = stripTrailingMarkdownArtefacts(cleaned, sourceText)
+  }
+
   return cleaned
 }
 
@@ -709,6 +895,12 @@ export function buildAdultIdentityPromptBlock(): string {
     '',
     'Duplicate heading discipline:',
     `• ${ORB_DUPLICATE_HEADING_DISCIPLINE}`,
+    '',
+    'Repeated outcome discipline:',
+    `• ${ORB_REPEATED_OUTCOME_DISCIPLINE}`,
+    '',
+    'End-of-record discipline:',
+    `• ${ORB_END_OF_RECORD_DISCIPLINE}`,
     '',
     'Daily record simplification:',
     `• ${ORB_DAILY_RECORD_SIMPLIFICATION}`,

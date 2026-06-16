@@ -1,5 +1,5 @@
 {
-  "version": "1.2.5",
+  "version": "1.2.6",
   "residential_recording_structure": {
     "principle": "Use flexibly — not as a forced heading list every time.",
     "steps": [
@@ -62,7 +62,11 @@
       "Do not use 'In response to Child A's feelings' unless the child directly stated a feeling — prefer 'In response,' followed by the adult action.",
       "Do not add 'as the evening progressed', 'over the evening' or 'throughout the evening' unless the user provided that chronology — prefer timing from input such as 'before bedtime'.",
       "Prefer 'appeared calmer before bedtime' where the input states this; use 'appeared calmer' rather than 'seemed more settled' or 'seemed relaxed'.",
-      "Do not end record outputs with markdown separator lines (—, ___, ***) unless the user requested formatted document separators."
+      "Do not end record outputs with markdown separator lines (—, ___, ***) unless the user requested formatted document separators.",
+      "Do not include Next Steps, Follow-up or Recommendations in a simple daily record when Outcome / Handover already states the handover or next action.",
+      "Do not repeat the same observed outcome in multiple sections — keep timed observations such as 'appeared calmer before bedtime' in Outcome / Handover only.",
+      "Do not include '[End of record]', 'END OF RECORD', '<end>' or any end marker in record outputs.",
+      "Use Outcome / Handover once in simple daily records — not separate Outcome and Follow-up sections."
     ]
   },
   "record_types": [
