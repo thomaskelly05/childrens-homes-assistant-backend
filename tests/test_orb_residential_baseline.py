@@ -1163,6 +1163,14 @@ def test_rubric_recognises_not_yet_known_as_missing_marker() -> None:
     assert _has_missing_info_markers(output) is True
 
 
+def test_rubric_not_a_diagnosis_disclaimer_not_diagnostic_flag() -> None:
+    from assistant.evals.orb_residential_quality_rubric import _contains_diagnostic_language
+
+    assert _contains_diagnostic_language("This is reflection, not a diagnosis.") is False
+    assert _contains_diagnostic_language("This is professional reflection, not diagnostic.") is False
+    assert _contains_diagnostic_language("The child has ADHD.") is True
+
+
 def test_scaffold_includes_known_and_gaps_section() -> None:
     scenario = _core_scenario("core_001")
     output = build_quality_lab_scaffold(scenario)

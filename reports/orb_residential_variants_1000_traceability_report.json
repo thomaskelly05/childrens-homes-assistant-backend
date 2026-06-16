@@ -1,16 +1,16 @@
 {
-  "run_timestamp": "2026-06-16T12:49:01.559578+00:00",
-  "commit_sha": "004b8588d57da6e1d494c07d91d4e45e3175eaf9",
+  "run_timestamp": "2026-06-16T13:51:39.163594+00:00",
+  "commit_sha": "cdc26a873cf09cdb4f1580ce9356e89bac0c6260",
   "scenario_set": "variants1000",
   "scenario_count": 1000,
-  "average_overall_score": 4.14,
+  "average_overall_score": 4.23,
   "unsafe_flags": [],
   "unsafe_flag_count": 0,
   "category_averages": {
-    "child_centredness": 4.91,
+    "child_centredness": 5.0,
     "factual_accuracy_no_invention": 4.0,
     "therapeutic_language": 4.0,
-    "observation_vs_interpretation": 4.0,
+    "observation_vs_interpretation": 5.0,
     "adult_response_and_support": 4.0,
     "outcome_and_follow_up": 4.0,
     "safeguarding_awareness": 4.0,
@@ -23,74 +23,74 @@
   "weakest_record_types": [
     {
       "record_type": "daily_record",
-      "average_score": 4.13
-    },
-    {
-      "record_type": "behaviour_reflection",
-      "average_score": 4.14
-    },
-    {
-      "record_type": "safeguarding_concern",
-      "average_score": 4.14
-    },
-    {
-      "record_type": "key_work_session",
-      "average_score": 4.14
+      "average_score": 4.23
     },
     {
       "record_type": "family_contact_record",
-      "average_score": 4.15
+      "average_score": 4.23
+    },
+    {
+      "record_type": "incident_report",
+      "average_score": 4.23
+    },
+    {
+      "record_type": "behaviour_reflection",
+      "average_score": 4.23
+    },
+    {
+      "record_type": "supervision_discussion",
+      "average_score": 4.23
     }
   ],
   "highest_risk_scenario_families": [
     {
       "scenario_family": "daily_care",
-      "average_score": 4.13,
-      "count": 100
-    },
-    {
-      "scenario_family": "behaviour_communication",
-      "average_score": 4.13,
-      "count": 100
-    },
-    {
-      "scenario_family": "safeguarding",
-      "average_score": 4.14,
-      "count": 100
-    },
-    {
-      "scenario_family": "key_work",
-      "average_score": 4.14,
+      "average_score": 4.23,
       "count": 100
     },
     {
       "scenario_family": "incident_reflection",
-      "average_score": 4.15,
+      "average_score": 4.23,
+      "count": 100
+    },
+    {
+      "scenario_family": "safeguarding",
+      "average_score": 4.23,
+      "count": 100
+    },
+    {
+      "scenario_family": "behaviour_communication",
+      "average_score": 4.23,
       "count": 100
     },
     {
       "scenario_family": "magic_notes",
-      "average_score": 4.15,
+      "average_score": 4.23,
       "count": 100
     },
     {
       "scenario_family": "handover",
-      "average_score": 4.15,
+      "average_score": 4.23,
+      "count": 100
+    },
+    {
+      "scenario_family": "key_work",
+      "average_score": 4.23,
       "count": 100
     },
     {
       "scenario_family": "management_oversight",
-      "average_score": 4.15,
+      "average_score": 4.23,
       "count": 100
     },
     {
       "scenario_family": "meetings",
-      "average_score": 4.15,
+      "average_score": 4.23,
       "count": 100
     },
     {
       "scenario_family": "regulation_evidence",
-      "average_score": 4.15,
+      "average_score": 4.23,
       "count": 100
     }
   ],

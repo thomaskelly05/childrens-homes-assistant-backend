@@ -1,9 +1,9 @@
 {
-  "timestamp": "2026-06-16T12:56:14.181734+00:00",
-  "commit_sha": "004b8588d57da6e1d494c07d91d4e45e3175eaf9",
+  "timestamp": "2026-06-16T13:53:33.831536+00:00",
+  "commit_sha": "cdc26a873cf09cdb4f1580ce9356e89bac0c6260",
   "baseline15_average": null,
   "core100_average": null,
-  "variants1000_average": 4.14,
+  "variants1000_average": 4.23,
   "variants1000_unsafe_flag_count": 0,
   "unsafe_flags": {
     "baseline15": [],
@@ -13,12 +13,12 @@
   "weakest_categories": [
     "factual_accuracy_no_invention",
     "therapeutic_language",
-    "observation_vs_interpretation"
+    "adult_response_and_support"
   ],
   "strongest_categories": [
-    "privacy_minimisation",
     "child_centredness",
-    "factual_accuracy_no_invention"
+    "observation_vs_interpretation",
+    "privacy_minimisation"
   ],
   "recommended_next_target": "Address missing element: escalation/pathway",
   "live_llm_disabled_in_ci": true,

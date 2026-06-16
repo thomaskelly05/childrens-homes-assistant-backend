@@ -55,7 +55,7 @@
       ],
       "evidence_strength": "medium",
       "rationale": "Trauma-informed and relational practice guidance supports non-punitive recording. Pattern lists are internally curated and require professional review for completeness.",
-      "scoring_caution": "Regex patterns cannot capture all harmful phrasing. Wording rewrite scenarios must reframe poor input rather than pass blaming language through to outputs.",
+      "scoring_caution": "Regex patterns cannot capture all harmful phrasing. Wording rewrite scenarios must reframe poor input rather than pass blaming language through to outputs. Negated disclaimers ('not a diagnosis', 'not diagnostic', 'cannot diagnose') are not scored as diagnostic language.",
       "reviewer_notes_required": true
     },
     {

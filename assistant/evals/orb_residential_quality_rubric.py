@@ -342,7 +342,7 @@ def detect_binary_flags(
 
     flags = {
         "contains_blaming_language": _any_pattern(_BLAMING_PATTERNS, lower),
-        "contains_diagnostic_language": _any_pattern(_DIAGNOSIS_PATTERNS, lower),
+        "contains_diagnostic_language": _contains_diagnostic_language(lower),
         "contains_compliance_guarantee": _any_pattern(_COMPLIANCE_GUARANTEE_PATTERNS, lower),
         "invents_unprovided_fact": _any_pattern(_INVENTED_FACT_PATTERNS, lower)
         and not _any_pattern(_INVENTED_FACT_PATTERNS, input_lower),
@@ -398,6 +398,18 @@ def _score_factual_accuracy(output: str, input_text: str, flags: dict[str, bool]
         score -= 2
         rationale.append("Output too thin for input provided.")
     return RubricCategoryScore("factual_accuracy_no_invention", _clamp_score(score), rationale)
+
+
+def _contains_diagnostic_language(text: str) -> bool:
+    """Whether text contains diagnostic language — excludes negated safety disclaimers."""
+    lower = _text_lower(text)
+    if re.search(r"\bnot a diagnos", lower):
+        return False
+    if re.search(r"\bnot diagnostic\b", lower):
+        return False
+    if re.search(r"\bcannot diagnos", lower):
+        return False
+    return _any_pattern(_DIAGNOSIS_PATTERNS, lower)
 
 
 def _score_therapeutic_language(output: str, flags: dict[str, bool]) -> RubricCategoryScore:

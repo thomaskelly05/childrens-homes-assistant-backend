@@ -596,7 +596,7 @@ def _build_observation_reflection_section(scenario: dict[str, Any], input_text: 
         )
     elif family == "behaviour_communication":
         lines.append(
-            "Behaviour may have communicated an unmet need — this is professional reflection, not a diagnosis."
+            "Behaviour may have communicated an unmet need — this is professional reflection, not diagnostic."
         )
     elif family == "management_oversight":
         lines.append(

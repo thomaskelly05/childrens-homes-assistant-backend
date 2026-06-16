@@ -1,20 +1,20 @@
 {
   "baseline_version": "1.0.0",
-  "commit_sha": "004b8588d57da6e1d494c07d91d4e45e3175eaf9",
-  "run_timestamp": "2026-06-16T12:48:48.805195+00:00",
+  "commit_sha": "cdc26a873cf09cdb4f1580ce9356e89bac0c6260",
+  "run_timestamp": "2026-06-16T13:51:25.714248+00:00",
   "scenario_set": "core100",
   "mode": "static",
   "scenario_count": 100,
-  "average_overall_score": 4.13,
+  "average_overall_score": 4.21,
   "score_distribution": {
     "excellent": 99,
     "good": 1
   },
   "category_averages": {
-    "child_centredness": 4.77,
+    "child_centredness": 4.86,
     "factual_accuracy_no_invention": 4.0,
     "therapeutic_language": 4.0,
-    "observation_vs_interpretation": 4.0,
+    "observation_vs_interpretation": 4.85,
     "adult_response_and_support": 4.0,
     "outcome_and_follow_up": 4.0,
     "safeguarding_awareness": 4.0,
@@ -39,43 +39,8 @@
       "rating": "good"
     },
     {
-      "scenario_id": "core_003",
-      "title": "Mealtime refusal",
-      "overall_score": 4.08,
-      "record_type": "daily_record",
-      "rating": "excellent"
-    },
-    {
-      "scenario_id": "core_007",
-      "title": "Child requests private conversation",
-      "overall_score": 4.08,
-      "record_type": "daily_record",
-      "rating": "excellent"
-    },
-    {
-      "scenario_id": "core_008",
-      "title": "Child refuses activity",
-      "overall_score": 4.08,
-      "record_type": "daily_record",
-      "rating": "excellent"
-    },
-    {
       "scenario_id": "core_021",
       "title": "Disclosure of feeling unsafe",
-      "overall_score": 4.08,
-      "record_type": "safeguarding_concern",
-      "rating": "excellent"
-    },
-    {
-      "scenario_id": "core_022",
-      "title": "Historic harm comment",
-      "overall_score": 4.08,
-      "record_type": "safeguarding_concern",
-      "rating": "excellent"
-    },
-    {
-      "scenario_id": "core_028",
-      "title": "Peer-on-peer concern",
       "overall_score": 4.08,
       "record_type": "safeguarding_concern",
       "rating": "excellent"
@@ -88,88 +53,123 @@
       "rating": "excellent"
     },
     {
-      "scenario_id": "core_032",
-      "title": "School refusal",
+      "scenario_id": "core_041",
+      "title": "Rough daily note conversion",
       "overall_score": 4.08,
-      "record_type": "behaviour_reflection",
+      "record_type": "general_dictation",
       "rating": "excellent"
     },
     {
-      "scenario_id": "core_037",
-      "title": "Refusal to attend appointment",
+      "scenario_id": "core_043",
+      "title": "Poor wording rewrite",
       "overall_score": 4.08,
-      "record_type": "behaviour_reflection",
+      "record_type": "daily_record",
+      "rating": "excellent"
+    },
+    {
+      "scenario_id": "core_050",
+      "title": "Reg 44 evidence notes",
+      "overall_score": 4.08,
+      "record_type": "reg_44_evidence_summary",
+      "rating": "excellent"
+    },
+    {
+      "scenario_id": "core_060",
+      "title": "Peer dynamics handover",
+      "overall_score": 4.08,
+      "record_type": "handover",
+      "rating": "excellent"
+    },
+    {
+      "scenario_id": "core_061",
+      "title": "School motivation",
+      "overall_score": 4.08,
+      "record_type": "key_work_session",
+      "rating": "excellent"
+    },
+    {
+      "scenario_id": "core_071",
+      "title": "Incident pattern review",
+      "overall_score": 4.08,
+      "record_type": "manager_summary",
+      "rating": "excellent"
+    },
+    {
+      "scenario_id": "core_082",
+      "title": "Strategy discussion note",
+      "overall_score": 4.08,
+      "record_type": "strategy_safeguarding_discussion",
       "rating": "excellent"
     }
   ],
   "top_10_strongest_scenarios": [
     {
-      "scenario_id": "core_001",
-      "title": "Daily record after difficult school day",
-      "overall_score": 4.15,
+      "scenario_id": "core_002",
+      "title": "Positive progress daily record",
+      "overall_score": 4.23,
       "record_type": "daily_record",
       "rating": "excellent"
     },
     {
-      "scenario_id": "core_002",
-      "title": "Positive progress daily record",
-      "overall_score": 4.15,
+      "scenario_id": "core_003",
+      "title": "Mealtime refusal",
+      "overall_score": 4.23,
       "record_type": "daily_record",
       "rating": "excellent"
     },
     {
       "scenario_id": "core_004",
       "title": "Sleep routine difficulty",
-      "overall_score": 4.15,
+      "overall_score": 4.23,
       "record_type": "daily_record",
       "rating": "excellent"
     },
     {
       "scenario_id": "core_005",
       "title": "Hygiene support",
-      "overall_score": 4.15,
+      "overall_score": 4.23,
       "record_type": "daily_record",
       "rating": "excellent"
     },
     {
       "scenario_id": "core_006",
       "title": "Peer relationship concern",
-      "overall_score": 4.15,
+      "overall_score": 4.23,
+      "record_type": "daily_record",
+      "rating": "excellent"
+    },
+    {
+      "scenario_id": "core_007",
+      "title": "Child requests private conversation",
+      "overall_score": 4.23,
+      "record_type": "daily_record",
+      "rating": "excellent"
+    },
+    {
+      "scenario_id": "core_008",
+      "title": "Child refuses activity",
+      "overall_score": 4.23,
       "record_type": "daily_record",
       "rating": "excellent"
     },
     {
       "scenario_id": "core_009",
       "title": "Child returns home unsettled",
-      "overall_score": 4.15,
+      "overall_score": 4.23,
       "record_type": "daily_record",
       "rating": "excellent"
     },
     {
       "scenario_id": "core_010",
       "title": "Child has positive family contact",
-      "overall_score": 4.15,
+      "overall_score": 4.23,
       "record_type": "family_contact_record",
-      "rating": "excellent"
-    },
-    {
-      "scenario_id": "core_011",
-      "title": "Property damage",
-      "overall_score": 4.15,
-      "record_type": "incident_report",
       "rating": "excellent"
     },
     {
       "scenario_id": "core_012",
       "title": "Verbal aggression",
-      "overall_score": 4.15,
-      "record_type": "incident_report",
-      "rating": "excellent"
-    },
-    {
-      "scenario_id": "core_013",
-      "title": "Door slamming / emotional distress",
-      "overall_score": 4.15,
+      "overall_score": 4.23,
       "record_type": "incident_report",
       "rating": "excellent"
     }
@@ -177,74 +177,74 @@
   "weakest_record_types": [
     {
       "record_type": "supervision_discussion",
-      "average_score": 4.04
+      "average_score": 4.08
     },
     {
       "record_type": "strategy_safeguarding_discussion",
       "average_score": 4.08
     },
     {
-      "record_type": "daily_record",
-      "average_score": 4.12
-    },
-    {
       "record_type": "reg_44_evidence_summary",
-      "average_score": 4.12
+      "average_score": 4.16
     },
     {
-      "record_type": "behaviour_reflection",
-      "average_score": 4.13
+      "record_type": "general_dictation",
+      "average_score": 4.18
+    },
+    {
+      "record_type": "professional_contact_note",
+      "average_score": 4.19
     }
   ],
   "highest_risk_scenario_families": [
     {
-      "scenario_family": "daily_care",
-      "average_score": 4.13,
-      "count": 10
-    },
-    {
-      "scenario_family": "safeguarding",
-      "average_score": 4.13,
-      "count": 10
-    },
-    {
-      "scenario_family": "behaviour_communication",
-      "average_score": 4.13,
-      "count": 10
-    },
-    {
       "scenario_family": "magic_notes",
-      "average_score": 4.13,
-      "count": 10
-    },
-    {
-      "scenario_family": "key_work",
-      "average_score": 4.13,
+      "average_score": 4.19,
       "count": 10
     },
     {
       "scenario_family": "meetings",
-      "average_score": 4.13,
+      "average_score": 4.19,
       "count": 10
     },
     {
       "scenario_family": "regulation_evidence",
-      "average_score": 4.13,
-      "count": 10
-    },
-    {
-      "scenario_family": "handover",
-      "average_score": 4.14,
+      "average_score": 4.2,
       "count": 10
     },
     {
       "scenario_family": "management_oversight",
-      "average_score": 4.14,
+      "average_score": 4.21,
+      "count": 10
+    },
+    {
+      "scenario_family": "daily_care",
+      "average_score": 4.22,
       "count": 10
     },
     {
       "scenario_family": "incident_reflection",
-      "average_score": 4.15,
+      "average_score": 4.22,
+      "count": 10
+    },
+    {
+      "scenario_family": "safeguarding",
+      "average_score": 4.22,
+      "count": 10
+    },
+    {
+      "scenario_family": "behaviour_communication",
+      "average_score": 4.22,
+      "count": 10
+    },
+    {
+      "scenario_family": "handover",
+      "average_score": 4.22,
+      "count": 10
+    },
+    {
+      "scenario_family": "key_work",
+      "average_score": 4.22,
       "count": 10
     }
   ],
@@ -259,8 +259,8 @@
   ],
   "comparison_to_baseline15": {
     "baseline15_average": 4.08,
-    "current_average": 4.13,
-    "delta": 0.05,
+    "current_average": 4.21,
+    "delta": 0.13,
     "baseline15_unsafe_flags": [],
     "current_unsafe_flags": []
   },
@@ -376,7 +376,7 @@
         "child_centredness": 5,
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
-        "observation_vs_interpretation": 4,
+        "observation_vs_interpretation": 5,
         "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
@@ -399,7 +399,7 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.15,
+      "overall_score": 4.23,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
@@ -423,10 +423,10 @@
     {
       "scenario_id": "core_003",
       "category_scores": {
-        "child_centredness": 4,
+        "child_centredness": 5,
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
-        "observation_vs_interpretation": 4,
+        "observation_vs_interpretation": 5,
         "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
@@ -449,7 +449,7 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.08,
+      "overall_score": 4.23,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
@@ -476,7 +476,7 @@
         "child_centredness": 5,
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
-        "observation_vs_interpretation": 4,
+        "observation_vs_interpretation": 5,
         "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
@@ -499,7 +499,7 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.15,
+      "overall_score": 4.23,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
@@ -526,7 +526,7 @@
         "child_centredness": 5,
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
-        "observation_vs_interpretation": 4,
+        "observation_vs_interpretation": 5,
         "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
@@ -549,7 +549,7 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.15,
+      "overall_score": 4.23,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
@@ -576,7 +576,7 @@
         "child_centredness": 5,
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
-        "observation_vs_interpretation": 4,
+        "observation_vs_interpretation": 5,
         "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
@@ -599,7 +599,7 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.15,
+      "overall_score": 4.23,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
@@ -623,10 +623,10 @@
     {
       "scenario_id": "core_007",
       "category_scores": {
-        "child_centredness": 4,
+        "child_centredness": 5,
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
-        "observation_vs_interpretation": 4,
+        "observation_vs_interpretation": 5,
         "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
@@ -649,7 +649,7 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.08,
+      "overall_score": 4.23,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
@@ -673,10 +673,10 @@
     {
       "scenario_id": "core_008",
       "category_scores": {
-        "child_centredness": 4,
+        "child_centredness": 5,
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
-        "observation_vs_interpretation": 4,
+        "observation_vs_interpretation": 5,
         "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
@@ -699,7 +699,7 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.08,
+      "overall_score": 4.23,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
@@ -726,7 +726,7 @@
         "child_centredness": 5,
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
-        "observation_vs_interpretation": 4,
+        "observation_vs_interpretation": 5,
         "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
@@ -749,7 +749,7 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.15,
+      "overall_score": 4.23,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
@@ -776,7 +776,7 @@
         "child_centredness": 5,
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
-        "observation_vs_interpretation": 4,
+        "observation_vs_interpretation": 5,
         "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
@@ -799,7 +799,7 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.15,
+      "overall_score": 4.23,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
@@ -876,7 +876,7 @@
         "child_centredness": 5,
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
-        "observation_vs_interpretation": 4,
+        "observation_vs_interpretation": 5,
         "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
@@ -899,7 +899,7 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.15,
+      "overall_score": 4.23,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
@@ -926,7 +926,7 @@
         "child_centredness": 5,
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
-        "observation_vs_interpretation": 4,
+        "observation_vs_interpretation": 5,
         "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
@@ -949,7 +949,7 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.15,
+      "overall_score": 4.23,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
@@ -976,7 +976,7 @@
         "child_centredness": 5,
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
-        "observation_vs_interpretation": 4,
+        "observation_vs_interpretation": 5,
         "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
@@ -999,7 +999,7 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.15,
+      "overall_score": 4.23,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
@@ -1026,7 +1026,7 @@
         "child_centredness": 5,
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
-        "observation_vs_interpretation": 4,
+        "observation_vs_interpretation": 5,
         "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
@@ -1049,7 +1049,7 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.15,
+      "overall_score": 4.23,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
@@ -1076,7 +1076,7 @@
         "child_centredness": 5,
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
-        "observation_vs_interpretation": 4,
+        "observation_vs_interpretation": 5,
         "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
@@ -1099,7 +1099,7 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.15,
+      "overall_score": 4.23,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
@@ -1126,7 +1126,7 @@
         "child_centredness": 5,
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
-        "observation_vs_interpretation": 4,
+        "observation_vs_interpretation": 5,
         "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
@@ -1149,7 +1149,7 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.15,
+      "overall_score": 4.23,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
@@ -1176,7 +1176,7 @@
         "child_centredness": 5,
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
-        "observation_vs_interpretation": 4,
+        "observation_vs_interpretation": 5,
         "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
@@ -1199,7 +1199,7 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.15,
+      "overall_score": 4.23,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
@@ -1226,7 +1226,7 @@
         "child_centredness": 5,
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
-        "observation_vs_interpretation": 4,
+        "observation_vs_interpretation": 5,
         "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
@@ -1249,7 +1249,7 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.15,
+      "overall_score": 4.23,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
@@ -1276,7 +1276,7 @@
         "child_centredness": 5,
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
-        "observation_vs_interpretation": 4,
+        "observation_vs_interpretation": 5,
         "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
@@ -1299,7 +1299,7 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.15,
+      "overall_score": 4.23,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
@@ -1377,10 +1377,10 @@
     {
       "scenario_id": "core_022",
       "category_scores": {
-        "child_centredness": 4,
+        "child_centredness": 5,
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
-        "observation_vs_interpretation": 4,
+        "observation_vs_interpretation": 5,
         "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
@@ -1403,7 +1403,7 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.08,
+      "overall_score": 4.23,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
@@ -1430,7 +1430,7 @@
         "child_centredness": 5,
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
-        "observation_vs_interpretation": 4,
+        "observation_vs_interpretation": 5,
         "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
@@ -1453,7 +1453,7 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.15,
+      "overall_score": 4.23,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
@@ -1480,7 +1480,7 @@
         "child_centredness": 5,
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
-        "observation_vs_interpretation": 4,
+        "observation_vs_interpretation": 5,
         "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
@@ -1503,7 +1503,7 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.15,
+      "overall_score": 4.23,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
@@ -1530,7 +1530,7 @@
         "child_centredness": 5,
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
-        "observation_vs_interpretation": 4,
+        "observation_vs_interpretation": 5,
         "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
@@ -1553,7 +1553,7 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.15,
+      "overall_score": 4.23,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
@@ -1580,7 +1580,7 @@
         "child_centredness": 5,
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
-        "observation_vs_interpretation": 4,
+        "observation_vs_interpretation": 5,
         "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
@@ -1603,7 +1603,7 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.15,
+      "overall_score": 4.23,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
@@ -1630,7 +1630,7 @@
         "child_centredness": 5,
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
-        "observation_vs_interpretation": 4,
+        "observation_vs_interpretation": 5,
         "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
@@ -1653,7 +1653,7 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.15,
+      "overall_score": 4.23,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
@@ -1677,10 +1677,10 @@
     {
       "scenario_id": "core_028",
       "category_scores": {
-        "child_centredness": 4,
+        "child_centredness": 5,
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
-        "observation_vs_interpretation": 4,
+        "observation_vs_interpretation": 5,
         "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
@@ -1703,7 +1703,7 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.08,
+      "overall_score": 4.23,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
@@ -1730,7 +1730,7 @@
         "child_centredness": 5,
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
-        "observation_vs_interpretation": 4,
+        "observation_vs_interpretation": 5,
         "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
@@ -1753,7 +1753,7 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.15,
+      "overall_score": 4.23,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
@@ -1780,7 +1780,7 @@
         "child_centredness": 5,
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
-        "observation_vs_interpretation": 4,
+        "observation_vs_interpretation": 5,
         "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
@@ -1803,7 +1803,7 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.15,
+      "overall_score": 4.23,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
@@ -1881,10 +1881,10 @@
     {
       "scenario_id": "core_032",
       "category_scores": {
-        "child_centredness": 4,
+        "child_centredness": 5,
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
-        "observation_vs_interpretation": 4,
+        "observation_vs_interpretation": 5,
         "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
@@ -1907,7 +1907,7 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.08,
+      "overall_score": 4.23,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
@@ -1934,7 +1934,7 @@
         "child_centredness": 5,
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
-        "observation_vs_interpretation": 4,
+        "observation_vs_interpretation": 5,
         "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
@@ -1957,7 +1957,7 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.15,
+      "overall_score": 4.23,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
@@ -1984,7 +1984,7 @@
         "child_centredness": 5,
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
-        "observation_vs_interpretation": 4,
+        "observation_vs_interpretation": 5,
         "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
@@ -2007,7 +2007,7 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.15,
+      "overall_score": 4.23,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
@@ -2034,7 +2034,7 @@
         "child_centredness": 5,
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
-        "observation_vs_interpretation": 4,
+        "observation_vs_interpretation": 5,
         "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
@@ -2057,7 +2057,7 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.15,
+      "overall_score": 4.23,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
@@ -2084,7 +2084,7 @@
         "child_centredness": 5,
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
-        "observation_vs_interpretation": 4,
+        "observation_vs_interpretation": 5,
         "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
@@ -2107,7 +2107,7 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.15,
+      "overall_score": 4.23,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
@@ -2131,10 +2131,10 @@
     {
       "scenario_id": "core_037",
       "category_scores": {
-        "child_centredness": 4,
+        "child_centredness": 5,
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
-        "observation_vs_interpretation": 4,
+        "observation_vs_interpretation": 5,
         "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
@@ -2157,7 +2157,7 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.08,
+      "overall_score": 4.23,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
@@ -2184,7 +2184,7 @@
         "child_centredness": 5,
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
-        "observation_vs_interpretation": 4,
+        "observation_vs_interpretation": 5,
         "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
@@ -2207,7 +2207,7 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.15,
+      "overall_score": 4.23,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
@@ -2234,7 +2234,7 @@
         "child_centredness": 5,
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
-        "observation_vs_interpretation": 4,
+        "observation_vs_interpretation": 5,
         "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
@@ -2257,7 +2257,7 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.15,
+      "overall_score": 4.23,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
@@ -2284,7 +2284,7 @@
         "child_centredness": 5,
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
-        "observation_vs_interpretation": 4,
+        "observation_vs_interpretation": 5,
         "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
@@ -2307,7 +2307,7 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.15,
+      "overall_score": 4.23,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
@@ -2384,7 +2384,7 @@
         "child_centredness": 5,
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
-        "observation_vs_interpretation": 4,
+        "observation_vs_interpretation": 5,
         "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
@@ -2407,7 +2407,7 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.15,
+      "overall_score": 4.23,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
@@ -2484,7 +2484,7 @@
         "child_centredness": 5,
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
-        "observation_vs_interpretation": 4,
+        "observation_vs_interpretation": 5,
         "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
@@ -2507,7 +2507,7 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.15,
+      "overall_score": 4.23,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
@@ -2534,7 +2534,7 @@
         "child_centredness": 5,
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
-        "observation_vs_interpretation": 4,
+        "observation_vs_interpretation": 5,
         "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
@@ -2557,7 +2557,7 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.15,
+      "overall_score": 4.23,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
@@ -2584,7 +2584,7 @@
         "child_centredness": 5,
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
-        "observation_vs_interpretation": 4,
+        "observation_vs_interpretation": 5,
         "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
@@ -2607,7 +2607,7 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.15,
+      "overall_score": 4.23,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
@@ -2634,7 +2634,7 @@
         "child_centredness": 5,
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
-        "observation_vs_interpretation": 4,
+        "observation_vs_interpretation": 5,
         "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
@@ -2657,7 +2657,7 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.15,
+      "overall_score": 4.23,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
@@ -2684,7 +2684,7 @@
         "child_centredness": 5,
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
-        "observation_vs_interpretation": 4,
+        "observation_vs_interpretation": 5,
         "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
@@ -2707,7 +2707,7 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.15,
+      "overall_score": 4.23,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
@@ -2734,7 +2734,7 @@
         "child_centredness": 5,
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
-        "observation_vs_interpretation": 4,
+        "observation_vs_interpretation": 5,
         "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
@@ -2757,7 +2757,7 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.15,
+      "overall_score": 4.23,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
@@ -2834,7 +2834,7 @@
         "child_centredness": 5,
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
-        "observation_vs_interpretation": 4,
+        "observation_vs_interpretation": 5,
         "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
@@ -2857,7 +2857,7 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.15,
+      "overall_score": 4.23,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
@@ -2884,7 +2884,7 @@
         "child_centredness": 5,
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
-        "observation_vs_interpretation": 4,
+        "observation_vs_interpretation": 5,
         "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
@@ -2907,7 +2907,7 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.15,
+      "overall_score": 4.23,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
@@ -2934,7 +2934,7 @@
         "child_centredness": 5,
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
-        "observation_vs_interpretation": 4,
+        "observation_vs_interpretation": 5,
         "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
@@ -2957,7 +2957,7 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.15,
+      "overall_score": 4.23,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
@@ -2984,7 +2984,7 @@
         "child_centredness": 5,
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
-        "observation_vs_interpretation": 4,
+        "observation_vs_interpretation": 5,
         "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
@@ -3007,7 +3007,7 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.15,
+      "overall_score": 4.23,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
@@ -3034,7 +3034,7 @@
         "child_centredness": 5,
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
-        "observation_vs_interpretation": 4,
+        "observation_vs_interpretation": 5,
         "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
@@ -3057,7 +3057,7 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.15,
+      "overall_score": 4.23,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
@@ -3084,7 +3084,7 @@
         "child_centredness": 5,
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
-        "observation_vs_interpretation": 4,
+        "observation_vs_interpretation": 5,
         "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
@@ -3107,7 +3107,7 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.15,
+      "overall_score": 4.23,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
@@ -3134,7 +3134,7 @@
         "child_centredness": 5,
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
-        "observation_vs_interpretation": 4,
+        "observation_vs_interpretation": 5,
         "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
@@ -3157,7 +3157,7 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.15,
+      "overall_score": 4.23,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
@@ -3184,7 +3184,7 @@
         "child_centredness": 5,
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
-        "observation_vs_interpretation": 4,
+        "observation_vs_interpretation": 5,
         "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
@@ -3207,7 +3207,7 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.15,
+      "overall_score": 4.23,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
@@ -3234,7 +3234,7 @@
         "child_centredness": 5,
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
-        "observation_vs_interpretation": 4,
+        "observation_vs_interpretation": 5,
         "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
@@ -3257,7 +3257,7 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.15,
+      "overall_score": 4.23,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
@@ -3388,7 +3388,7 @@
         "child_centredness": 5,
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
-        "observation_vs_interpretation": 4,
+        "observation_vs_interpretation": 5,
         "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
@@ -3411,7 +3411,7 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.15,
+      "overall_score": 4.23,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
@@ -3438,7 +3438,7 @@
         "child_centredness": 5,
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
-        "observation_vs_interpretation": 4,
+        "observation_vs_interpretation": 5,
         "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
@@ -3461,7 +3461,7 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.15,
+      "overall_score": 4.23,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
@@ -3488,7 +3488,7 @@
         "child_centredness": 5,
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
-        "observation_vs_interpretation": 4,
+        "observation_vs_interpretation": 5,
         "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
@@ -3511,7 +3511,7 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.15,
+      "overall_score": 4.23,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
@@ -3535,10 +3535,10 @@
     {
       "scenario_id": "core_065",
       "category_scores": {
-        "child_centredness": 4,
+        "child_centredness": 5,
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
-        "observation_vs_interpretation": 4,
+        "observation_vs_interpretation": 5,
         "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
@@ -3561,7 +3561,7 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.08,
+      "overall_score": 4.23,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
@@ -3585,10 +3585,10 @@
     {
       "scenario_id": "core_066",
       "category_scores": {
-        "child_centredness": 4,
+        "child_centredness": 5,
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
-        "observation_vs_interpretation": 4,
+        "observation_vs_interpretation": 5,
         "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
@@ -3611,7 +3611,7 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.08,
+      "overall_score": 4.23,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
@@ -3638,7 +3638,7 @@
         "child_centredness": 5,
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
-        "observation_vs_interpretation": 4,
+        "observation_vs_interpretation": 5,
         "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
@@ -3661,7 +3661,7 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.15,
+      "overall_score": 4.23,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
@@ -3688,7 +3688,7 @@
         "child_centredness": 5,
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
-        "observation_vs_interpretation": 4,
+        "observation_vs_interpretation": 5,
         "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
@@ -3711,7 +3711,7 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.15,
+      "overall_score": 4.23,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
@@ -3738,7 +3738,7 @@
         "child_centredness": 5,
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
-        "observation_vs_interpretation": 4,
+        "observation_vs_interpretation": 5,
         "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
@@ -3761,7 +3761,7 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.15,
+      "overall_score": 4.23,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
@@ -3788,7 +3788,7 @@
         "child_centredness": 5,
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
-        "observation_vs_interpretation": 4,
+        "observation_vs_interpretation": 5,
         "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
@@ -3811,7 +3811,7 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.15,
+      "overall_score": 4.23,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
@@ -3938,7 +3938,7 @@
         "child_centredness": 5,
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
-        "observation_vs_interpretation": 4,
+        "observation_vs_interpretation": 5,
         "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
@@ -3961,7 +3961,7 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.15,
+      "overall_score": 4.23,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
@@ -3988,7 +3988,7 @@
         "child_centredness": 5,
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
-        "observation_vs_interpretation": 4,
+        "observation_vs_interpretation": 5,
         "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
@@ -4011,7 +4011,7 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.15,
+      "overall_score": 4.23,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
@@ -4038,7 +4038,7 @@
         "child_centredness": 5,
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
-        "observation_vs_interpretation": 4,
+        "observation_vs_interpretation": 5,
         "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
@@ -4061,7 +4061,7 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.15,
+      "overall_score": 4.23,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
@@ -4088,7 +4088,7 @@
         "child_centredness": 5,
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
-        "observation_vs_interpretation": 4,
+        "observation_vs_interpretation": 5,
         "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
@@ -4111,7 +4111,7 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.15,
+      "overall_score": 4.23,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
@@ -4138,7 +4138,7 @@
         "child_centredness": 5,
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
-        "observation_vs_interpretation": 4,
+        "observation_vs_interpretation": 5,
         "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
@@ -4161,7 +4161,7 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.15,
+      "overall_score": 4.23,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
@@ -4188,7 +4188,7 @@
         "child_centredness": 5,
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
-        "observation_vs_interpretation": 4,
+        "observation_vs_interpretation": 5,
         "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
@@ -4211,7 +4211,7 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.15,
+      "overall_score": 4.23,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
@@ -4238,7 +4238,7 @@
         "child_centredness": 5,
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
-        "observation_vs_interpretation": 4,
+        "observation_vs_interpretation": 5,
         "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
@@ -4261,7 +4261,7 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.15,
+      "overall_score": 4.23,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
@@ -4288,7 +4288,7 @@
         "child_centredness": 5,
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
-        "observation_vs_interpretation": 4,
+        "observation_vs_interpretation": 5,
         "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
@@ -4311,7 +4311,7 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.15,
+      "overall_score": 4.23,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
@@ -4338,7 +4338,7 @@
         "child_centredness": 5,
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
-        "observation_vs_interpretation": 4,
+        "observation_vs_interpretation": 5,
         "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
@@ -4361,7 +4361,7 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.15,
+      "overall_score": 4.23,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
@@ -4492,7 +4492,7 @@
         "child_centredness": 5,
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
-        "observation_vs_interpretation": 4,
+        "observation_vs_interpretation": 5,
         "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
@@ -4515,7 +4515,7 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.15,
+      "overall_score": 4.23,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
@@ -4542,7 +4542,7 @@
         "child_centredness": 5,
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
-        "observation_vs_interpretation": 4,
+        "observation_vs_interpretation": 5,
         "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
@@ -4565,7 +4565,7 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.15,
+      "overall_score": 4.23,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
@@ -4592,7 +4592,7 @@
         "child_centredness": 5,
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
-        "observation_vs_interpretation": 4,
+        "observation_vs_interpretation": 5,
         "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
@@ -4615,7 +4615,7 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.15,
+      "overall_score": 4.23,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
@@ -4642,7 +4642,7 @@
         "child_centredness": 5,
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
-        "observation_vs_interpretation": 4,
+        "observation_vs_interpretation": 5,
         "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
@@ -4665,7 +4665,7 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.15,
+      "overall_score": 4.23,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
@@ -4692,7 +4692,7 @@
         "child_centredness": 5,
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
-        "observation_vs_interpretation": 4,
+        "observation_vs_interpretation": 5,
         "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
@@ -4715,7 +4715,7 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.15,
+      "overall_score": 4.23,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
@@ -4742,7 +4742,7 @@
         "child_centredness": 5,
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
-        "observation_vs_interpretation": 4,
+        "observation_vs_interpretation": 5,
         "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
@@ -4765,7 +4765,7 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.15,
+      "overall_score": 4.23,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
@@ -4846,7 +4846,7 @@
         "child_centredness": 5,
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
-        "observation_vs_interpretation": 4,
+        "observation_vs_interpretation": 5,
         "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
@@ -4869,7 +4869,7 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.15,
+      "overall_score": 4.23,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
@@ -4896,7 +4896,7 @@
         "child_centredness": 5,
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
-        "observation_vs_interpretation": 4,
+        "observation_vs_interpretation": 5,
         "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
@@ -4919,7 +4919,7 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.15,
+      "overall_score": 4.23,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
@@ -4946,7 +4946,7 @@
         "child_centredness": 5,
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
-        "observation_vs_interpretation": 4,
+        "observation_vs_interpretation": 5,
         "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
@@ -4969,7 +4969,7 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.15,
+      "overall_score": 4.23,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
@@ -5048,7 +5048,7 @@
         "child_centredness": 5,
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
-        "observation_vs_interpretation": 4,
+        "observation_vs_interpretation": 5,
         "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
@@ -5071,7 +5071,7 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.15,
+      "overall_score": 4.23,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
@@ -5098,7 +5098,7 @@
         "child_centredness": 5,
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
-        "observation_vs_interpretation": 4,
+        "observation_vs_interpretation": 5,
         "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
@@ -5121,7 +5121,7 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.15,
+      "overall_score": 4.23,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
@@ -5148,7 +5148,7 @@
         "child_centredness": 5,
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
-        "observation_vs_interpretation": 4,
+        "observation_vs_interpretation": 5,
         "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
@@ -5171,7 +5171,7 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.15,
+      "overall_score": 4.23,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
@@ -5198,7 +5198,7 @@
         "child_centredness": 5,
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
-        "observation_vs_interpretation": 4,
+        "observation_vs_interpretation": 5,
         "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
@@ -5221,7 +5221,7 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.15,
+      "overall_score": 4.23,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
@@ -5248,7 +5248,7 @@
         "child_centredness": 5,
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
-        "observation_vs_interpretation": 4,
+        "observation_vs_interpretation": 5,
         "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
@@ -5271,7 +5271,7 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.15,
+      "overall_score": 4.23,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
@@ -5298,7 +5298,7 @@
         "child_centredness": 5,
         "factual_accuracy_no_invention": 4,
         "therapeutic_language": 4,
-        "observation_vs_interpretation": 4,
+        "observation_vs_interpretation": 5,
         "adult_response_and_support": 4,
         "outcome_and_follow_up": 4,
         "safeguarding_awareness": 4,
@@ -5321,7 +5321,7 @@
         "too_short": false,
         "useful_on_shift": true
       },
-      "overall_score": 4.15,
+      "overall_score": 4.23,
       "rating": "excellent",
       "strengths": [
         "Child voice or communication referenced.",
