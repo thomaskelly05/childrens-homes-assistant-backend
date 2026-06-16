@@ -1093,7 +1093,7 @@ function renderOfstedDashboardHtml({
       <section class="ofsted-section-card ofsted-section-card--snapshot">
         ${renderSectionHeader(
           "Snapshot",
-          "Inspection readiness picture",
+          "Inspection evidence preparation picture",
           "A quick visual read across evidence confidence, gap closure, action completion and judgement strength."
         )}
         ${renderProgressCards(progressCards)}
@@ -1217,7 +1217,7 @@ function renderOfstedDashboardHtml({
             ${renderSectionHeader(
               "Movement",
               "What is changing",
-              "Direction of key inspection readiness indicators."
+              "Direction of key Inspection evidence preparation indicators."
             )}
             ${renderTrendRows(changing)}
           </section>

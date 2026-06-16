@@ -19,7 +19,7 @@ class OrbEvidenceReasoningService:
         "Coach the adult toward safer, calmer, more child-centred practice.",
         "Identify actions, follow-up and who needs oversight.",
         "Evidence the management, safeguarding and review trail.",
-        "Prepare for scrutiny, learning and inspection readiness.",
+        "Prepare for scrutiny, learning and Inspection evidence preparation.",
     ]
 
     EVIDENCE_NETWORK = {

@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-"""Inspection readiness scoring for IndiCare OS assistant.
+"""Inspection evidence preparation scoring for IndiCare OS assistant.
 
-This module converts visible OS evidence into a conservative inspection-readiness
+This module converts visible OS evidence into a conservative inspection evidence preparation
 view. It does not predict Ofsted grades. It highlights evidence strength,
 visible gaps and immediate management actions for professional review.
 """
@@ -319,7 +319,7 @@ def serialise_inspection_readiness(result: InspectionReadinessResult) -> dict[st
 
 def build_inspection_readiness_prompt_block(result: InspectionReadinessResult) -> str:
     lines = [
-        "INSPECTION READINESS CONTEXT",
+        "Inspection evidence preparation CONTEXT",
         "Do not predict or imply an Ofsted grade. Use this as evidence-readiness support only.",
         f"Overall readiness: {result.overall_level} ({result.overall_score}/100)",
         "",

@@ -844,7 +844,7 @@ def _inspection_scores_payload(home_id: int, request: Request) -> dict[str, Any]
         "id": f"{home_id}-inspection-score",
         "home_id": home_id,
         "record_type": "inspection_score",
-        "title": "Inspection readiness",
+        "title": "Inspection evidence preparation",
         "period_start": None,
         "period_end": item.get("scored_at"),
         "overall_band": item.get("overall_band"),
@@ -950,7 +950,7 @@ def _inspection_lines_payload(home_id: int, request: Request) -> dict[str, Any]:
                 "record_type": "inspection_line_of_enquiry",
                 "priority": "medium",
                 "line_of_enquiry": "How consistently are actions tracked to closure?",
-                "rationale": "This remains a common pressure point in inspection readiness.",
+                "rationale": "This remains a common pressure point in Inspection evidence preparation.",
                 "status": "open",
                 "due_date": None,
                 "section_code": "leadership",
@@ -1151,7 +1151,7 @@ def home_safeguarding(home_id: int, request: Request):
     )
 
 
-@router.get("/homes/{home_id}/inspection-readiness")
+@router.get("/homes/{home_id}/inspection evidence preparation")
 def home_inspection_readiness(home_id: int, request: Request):
     return _inspection_improvement_actions_payload(home_id, request)
 

@@ -1275,7 +1275,7 @@ class OrbOperationalContextBridge:
                     source_labels=["Record quality intelligence"],
                     suggested_action="Review recording with the author or manager.",
                     review_required=True,
-                    manager_review_reason="Recording quality supports inspection readiness.",
+                    manager_review_reason="Recording quality supports Inspection evidence preparation.",
                     route_hint="/intelligence-spine",
                 ).model_dump()
             )

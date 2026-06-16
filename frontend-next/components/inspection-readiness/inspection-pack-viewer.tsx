@@ -1,7 +1,7 @@
 'use client'
 
-import { InspectionPackSectionView } from '@/components/inspection-readiness/inspection-pack-section'
-import type { InspectionEvidencePack } from '@/lib/os-api/inspection-readiness'
+import { InspectionPackSectionView } from '@/components/inspection evidence preparation/inspection-pack-section'
+import type { InspectionEvidencePack } from '@/lib/os-api/inspection evidence preparation'
 
 type Props = { pack: InspectionEvidencePack | null; loading?: boolean }
 

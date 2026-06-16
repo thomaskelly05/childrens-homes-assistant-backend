@@ -110,7 +110,7 @@ export default function OSProviderOversightDashboard() {
           <div className="space-y-6">
             <section className="rounded-2xl border bg-white p-5 shadow-sm">
               <div className="mb-4">
-                <h2 className="text-xl font-semibold">Inspection Readiness</h2>
+                <h2 className="text-xl font-semibold">Inspection evidence preparation</h2>
                 <p className="text-sm text-slate-500">
                   SCCIF and operational readiness indicators.
                 </p>

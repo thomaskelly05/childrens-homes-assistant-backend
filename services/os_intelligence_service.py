@@ -12,7 +12,7 @@ class OSIntelligenceService:
     Uses existing records only. It does not require new schema and is tolerant of
     missing tables/columns by falling back safely. The aim is to turn records into
     actionable insight: risk, safeguarding, care plan review, child voice,
-    therapeutic practice and inspection readiness.
+    therapeutic practice and Inspection evidence preparation.
     """
 
     def child_intelligence(self, *, young_person_id: int) -> dict[str, Any]:
@@ -61,7 +61,7 @@ class OSIntelligenceService:
                 "Summarise this child's lived experience and progress.",
                 "What risks or safeguarding patterns need manager review?",
                 "Which care plan or risk assessment needs updating?",
-                "Prepare an Ofsted-ready child summary with evidence.",
+                "Prepare an Inspection evidence support child summary with evidence.",
             ],
         }
 

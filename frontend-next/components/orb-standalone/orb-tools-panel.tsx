@@ -109,7 +109,7 @@ export function OrbToolsPanel({
         icon: <ClipboardList className="h-4 w-4" aria-hidden />,
         onClick: () =>
           onComposerPrefill?.(
-            'Review this written practice for safeguarding, child voice, recording quality, chronology gaps and inspection readiness. I will paste the text below:\n\n'
+            'Review this written practice for safeguarding, child voice, recording quality, chronology gaps and Inspection evidence preparation. I will paste the text below:\n\n'
           )
       },
       {

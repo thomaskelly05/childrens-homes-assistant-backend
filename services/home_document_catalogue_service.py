@@ -112,7 +112,7 @@ class HomeDocumentCatalogueService:
         return safe_payload(
             {
                 "home_id": home_id,
-                "summary": "records indicate the complete home document catalogue is available for inspection readiness review.",
+                "summary": "records indicate the complete home document catalogue is available for Inspection evidence preparation review.",
                 "items": [item.model_dump() for item in items],
                 "counts": {
                     "child_documents": len(CHILD_DOCUMENTS) * max(1, len(child_ids or [])),

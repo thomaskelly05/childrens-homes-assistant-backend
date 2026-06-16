@@ -358,7 +358,7 @@ class OrbInstitutionalDepthFrameService:
     def _missing_frame(self) -> dict[str, Any]:
         return {
             "topic": "missing from home / away from placement",
-            "purpose": "Contextual safeguarding and Ofsted-ready cognition — understand why children go missing, not only whether forms are completed.",
+            "purpose": "Contextual safeguarding and Inspection evidence support cognition — understand why children go missing, not only whether forms are completed.",
             "opening_anchor": (
                 "Open with: 'The key is to understand both the immediate safety picture and why the young person went missing.'"
             ),
@@ -570,7 +570,7 @@ class OrbInstitutionalDepthFrameService:
                 "RI lens: is the home safe; is the manager supported; are children progressing; is leadership effective; staff supervised and stable; Reg 44 findings repeated; Reg 45 evaluative not descriptive; governance triangulated; patterns acted on; drift; are children safer because of provider action; what evidence proves impact.",
                 "Leadership visibility and management rationale [Reg 13].",
                 "Patterns, drift, repeated themes and learning.",
-                "Inspection readiness and provider learning [SCCIF].",
+                "Inspection evidence preparation and provider learning [SCCIF].",
             ],
             "evidence_expectations": [
                 "What leaders knew, when they knew it and what they did.",

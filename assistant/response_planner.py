@@ -57,7 +57,7 @@ INSPECTION_TRIGGER_KEYWORDS = {
     "what would an inspector notice",
     "what would ofsted notice",
     "evidence pack",
-    "inspection readiness",
+    "Inspection evidence preparation",
     "audit trail",
     "triangulation",
     "what are we missing",

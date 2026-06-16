@@ -1,9 +1,9 @@
 """
-Inspection Readiness Knowledge Module
+Inspection evidence preparation Knowledge Module
 IndiCare AI
 
 Purpose:
-Provide Ofsted-grade inspection thinking for UK residential children’s homes.
+Provide quality evidence inspection thinking for UK residential children’s homes.
 
 This module helps IndiCare:
 - Think like an Ofsted inspector
@@ -381,7 +381,7 @@ INSPECTION_REVIEW_STRUCTURE = [
     "What evidence is missing",
     "What this may mean for children’s lived experience",
     "What managers should review",
-    "What actions may strengthen inspection readiness",
+    "What actions may strengthen Inspection evidence preparation",
 ]
 
 
@@ -461,7 +461,7 @@ DOWNGRADE_RISK_LOGIC = [
 # =====================================================
 
 PRACTICE_GUIDANCE = """
-INSPECTION READINESS MODEL
+Inspection evidence preparation MODEL
 
 When reviewing any record, incident, plan, chronology, Reg 45 material, or management summary, think in this order:
 
@@ -510,7 +510,7 @@ Use language such as:
 - “An inspector may notice...”
 - “This could raise a question about...”
 - “The evidence is currently limited because...”
-- “This may strengthen inspection readiness by...”
+- “This may strengthen Inspection evidence preparation by...”
 
 Never invent evidence.
 Never invent citations.

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 """Inspection evidence pack builder for IndiCare OS assistant.
 
-This module organises visible OS evidence into inspection-ready themes. It does
+This module organises visible OS evidence into inspection evidence preparation themes. It does
 not predict Ofsted grades or make final compliance judgements. It prepares a
 structured evidence bundle that managers, RIs and providers can review.
 """

@@ -32,7 +32,7 @@ DOCUMENT_PLAN_MAP: dict[str, list[tuple[str, str]]] = {
         ("other", "Review Reg 44 improvement actions and leadership oversight"),
     ],
     "reg44-report": [
-        ("other", "Review Reg 44 improvement actions and inspection readiness"),
+        ("other", "Review Reg 44 improvement actions and inspection evidence preparation"),
     ],
     "reg45": [
         ("other", "Review Reg 45 quality of care improvement plan actions"),

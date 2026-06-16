@@ -17,7 +17,7 @@ SOURCE_DOCUMENTS = [
         "id": "sccif_childrens_homes",
         "title": "Social care common inspection framework: children's homes",
         "source": "Ofsted/GOV.UK",
-        "ingestion": "Direct fetch returned 403; SCCIF judgement areas mapped from public framework wording and existing inspection-readiness services.",
+        "ingestion": "Direct fetch returned 403; SCCIF judgement areas mapped from public framework wording and existing inspection evidence preparation services.",
     },
 ]
 
@@ -69,7 +69,7 @@ SCCIF_AREAS: list[tuple[str, str, str]] = [
 
 
 class RegulatoryOntologyService:
-    """Static regulatory graph used by metadata, Orb and inspection readiness."""
+    """Static regulatory graph used by metadata, Orb and Inspection evidence preparation."""
 
     @lru_cache(maxsize=1)
     def nodes(self) -> list[RegulatoryOntologyNode]:
@@ -203,7 +203,7 @@ class RegulatoryOntologyService:
         if any(term in node_id for term in ("leadership", "management", "reg_44", "reg_45")):
             base.extend(["QA sampling", "action tracker", "RM/RI review evidence"])
         if node_type == "sccif_area":
-            base.append("inspection-ready source links")
+            base.append("inspection evidence preparation source links")
         return base
 
     def _record_types(self, node_id: str) -> list[str]:

@@ -71,7 +71,7 @@ export const STANDALONE_OS_BOUNDARY_MESSAGE =
 
 const MANAGER_ROUTE_HINTS: Array<{ pattern: RegExp; route: string }> = [
   { pattern: /\bour\b.+\b(record quality|recording quality|weak record)\b/i, route: '/assistant/orb?mode=record_quality_review' },
-  { pattern: /\b(ofsted|inspection readiness|inspection evidence)\b/i, route: '/assistant/orb?mode=ofsted_evidence_review' },
+  { pattern: /\b(ofsted|Inspection evidence preparation|inspection evidence)\b/i, route: '/assistant/orb?mode=ofsted_evidence_review' },
   { pattern: /\b(prioritise|prioritize|action board|what actions)\b/i, route: '/assistant/orb?mode=action_priority' },
   { pattern: /\bsafeguarding\b/i, route: '/assistant/orb?mode=safeguarding_themes' },
   { pattern: /\b(staff support|supervision|workforce)\b/i, route: '/assistant/orb?mode=staff_support' },

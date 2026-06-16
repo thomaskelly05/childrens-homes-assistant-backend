@@ -16,7 +16,7 @@ STANDARD_AREAS = {
 
 
 def build_inspection_readiness(project_id: str, local_memory: dict[str, Any] | None = None) -> dict[str, Any]:
-    """Build a standalone inspection-readiness view.
+    """Build a standalone inspection evidence preparation view.
 
     This intentionally wraps the standalone timeline intelligence and mirrors the
     existing Ofsted evidence engine's evidence-led approach: do not invent facts;
@@ -123,11 +123,11 @@ def _suggested_actions(gaps: list[dict[str, str]], scores: dict[str, int]) -> li
 def _summary(scores: dict[str, int], gaps: list[dict[str, str]], strengths: list[dict[str, str]], timeline: dict[str, Any]) -> str:
     average = round(sum(scores.values()) / max(len(scores), 1))
     if average >= 75:
-        opening = "Inspection readiness evidence is developing strongly."
+        opening = "Inspection evidence preparation evidence is developing strongly."
     elif average >= 55:
-        opening = "Inspection readiness evidence is developing, with some areas needing review."
+        opening = "Inspection evidence preparation evidence is developing, with some areas needing review."
     else:
-        opening = "Inspection readiness evidence needs strengthening."
+        opening = "Inspection evidence preparation evidence needs strengthening."
     return f"{opening} {len(strengths)} strength area(s), {len(gaps)} evidence gap(s), and {timeline.get('eventCount', 0)} chronology event(s) are currently visible."
 
 

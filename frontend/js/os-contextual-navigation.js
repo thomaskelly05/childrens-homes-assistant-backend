@@ -63,7 +63,7 @@
     inspection: {
       title: 'Ofsted / inspection',
       items: [
-        ['readiness', 'Ofsted Readiness', 'Inspection workspace', 'view:inspection'],
+        ['readiness', 'Inspection evidence preparation', 'Inspection workspace', 'view:inspection'],
         ['evidence', 'Evidence Packs', 'SCCIF evidence', 'focus:inspection-board'],
         ['reg44', 'Reg 44', 'Open Reg 44 reader', 'hash:#reg44'],
         ['reg45', 'Reg 45', 'Generate learning themes', 'assistant:Reg 45 learning themes'],

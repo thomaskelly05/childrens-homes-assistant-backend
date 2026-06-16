@@ -191,11 +191,11 @@ def build_smart_recommendations(
     if readiness.overall_level in {"weak", "limited"}:
         recommendations.append(
             SmartRecommendation(
-                title="Improve inspection-readiness evidence",
+                title="Improve inspection evidence preparation evidence",
                 recommendation="Address visible evidence gaps across safeguarding, leadership, workforce, care planning and quality assurance before relying on the review output.",
                 priority="high",
                 audience="provider" if role_group == "provider" else "manager",
-                reason=f"Inspection readiness appears {readiness.overall_level}.",
+                reason=f"Inspection evidence preparation appears {readiness.overall_level}.",
                 evidence_refs=[],
             )
         )

@@ -84,7 +84,7 @@ class OrbConversationalStateEngine:
             "therapeutic_reflection": "co-regulation and repair",
             "oversight": "manager review and action ownership",
             "staff_wellbeing": "debrief and emotionally safe practice",
-            "ofsted_evidence": "inspection-ready evidence and impact",
+            "ofsted_evidence": "inspection evidence preparation and impact",
         }
         return tuple(mapping[theme] for theme in themes if theme in mapping)
 

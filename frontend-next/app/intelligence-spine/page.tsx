@@ -150,14 +150,14 @@ export default async function IntelligenceSpinePage({ searchParams }: PageProps)
       <PageHeader
         eyebrow="IndiCare Super Intelligence"
         title="Intelligence Spine"
-        description="A calm decision-support layer connecting child journey, safeguarding, chronology, Reg 44/45, workforce and Ofsted readiness evidence. Records indicate themes for review — not final judgements."
+        description="A calm decision-support layer connecting child journey, safeguarding, chronology, Reg 44/45, workforce and Inspection evidence preparation evidence. Records indicate themes for review — not final judgements."
         action={
           <Link
             prefetch={false}
-            href="/ofsted-readiness"
+            href="/inspection evidence preparation"
             className="rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-500/30"
           >
-            Ofsted readiness
+            Inspection evidence preparation
           </Link>
         }
       />
@@ -452,7 +452,7 @@ export default async function IntelligenceSpinePage({ searchParams }: PageProps)
             ['/intelligence-actions', 'Action Board'],
             ['/intelligence-oversight', 'Oversight review'],
             ['/command-centre', 'Command centre'],
-            ['/ofsted-readiness', 'Ofsted readiness'],
+            ['/inspection evidence preparation', 'Inspection evidence preparation'],
             ['/regulatory', 'Regulatory framework'],
             ['/safeguarding', 'Safeguarding'],
             ['/chronology', 'Chronology'],

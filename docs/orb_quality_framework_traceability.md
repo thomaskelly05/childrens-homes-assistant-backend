@@ -51,6 +51,12 @@ Traceability artefacts:
 - `quality/orb_scenario_expectation_traceability.json` — scenario expectation mappings
 - `quality/orb_external_reviewer_pack.json` — audit board challenge questions
 
+## Regulatory boundary
+
+ORB supports inspection evidence preparation. It does not determine inspection outcomes, guarantee compliance or represent regulator endorsement.
+
+Scores and traceability mappings are internal quality indicators aligned to recognised sources where mapped. They are not regulatory determinations, inspection predictions, or professional endorsements.
+
 ## What it cannot claim
 
 Prohibited wording:

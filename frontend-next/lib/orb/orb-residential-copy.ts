@@ -151,7 +151,7 @@ export const ORB_RESIDENTIAL_STARTER_GROUPS: OrbResidentialStarterGroup[] = [
         text: 'Prepare for inspection',
         mode: 'Ofsted Lens',
         prompt:
-          'Help me prepare inspection-ready evidence thinking — what happened, impact on the child, adult actions and follow-up.'
+          'Help me prepare inspection evidence preparation evidence thinking — what happened, impact on the child, adult actions and follow-up.'
       },
       {
         text: 'Regulation 44 support',
@@ -295,7 +295,7 @@ export const ORB_RESIDENTIAL_BILLING_TRUST_COPY =
 
 /** Visible mode labels — internal mode ids may still use legacy names for API compatibility. */
 export const ORB_RESIDENTIAL_MODE_DISPLAY: Partial<Record<StandaloneOrbMode, string>> = {
-  'Ofsted Lens': 'Inspection Readiness',
+  'Ofsted Lens': 'Inspection evidence preparation',
   'Reg 44 / Reg 45 Prep': 'Regulation 44 preparation'
 }
 

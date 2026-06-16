@@ -1044,7 +1044,7 @@ async def assistant_scope_bundle_get(
         "suggested_actions": [
             "Draft summary",
             "Review overdue items",
-            "Check inspection readiness",
+            "Check Inspection evidence preparation",
             "Review safeguarding records",
         ],
         "runtime": {
@@ -1089,7 +1089,7 @@ async def assistant_scope_bundle_post(request: Request):
         "suggested_actions": [
             "Draft summary",
             "Review overdue items",
-            "Check inspection readiness",
+            "Check Inspection evidence preparation",
             "Review safeguarding records",
         ],
         "runtime": {
@@ -1136,7 +1136,7 @@ async def assistant_message(request: Request):
         "suggested_actions": [
             "Draft summary",
             "Review overdue items",
-            "Check inspection readiness",
+            "Check Inspection evidence preparation",
         ],
         "runtime": {
             "source": "frontend_compat_message",

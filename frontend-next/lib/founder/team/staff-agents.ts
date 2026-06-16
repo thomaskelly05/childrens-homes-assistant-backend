@@ -264,7 +264,7 @@ export const productDirectorAgent = buildStaffAgent({
         [
           alignRecommendationToProductFocus('Prioritise ORB Residential features with direct care impact', productFocus),
           'Review abandonment risk on least-used workflows',
-          'Align roadmap with Ofsted readiness gaps'
+          'Align roadmap with Inspection evidence preparation gaps'
         ],
         memory.deferredObjectives
       ),
@@ -282,9 +282,9 @@ export const ofstedRegulationAgent = buildStaffAgent({
   roleTitle: 'Ofsted and Regulation Lead',
   department: 'Regulation',
   status: 'monitoring',
-  purpose: 'Keeps ORB and IndiCare aligned with Ofsted readiness, SCCIF themes and children\'s homes expectations.',
+  purpose: 'Keeps ORB and IndiCare aligned with Inspection evidence preparation, SCCIF themes and children\'s homes expectations.',
   responsibilities: [
-    'Identify Ofsted-readiness gaps',
+    'Identify inspection evidence preparation gaps',
     'Suggest prompt and template improvements',
     'Flag weak child voice and management oversight'
   ],

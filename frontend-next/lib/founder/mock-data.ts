@@ -147,7 +147,7 @@ const _legacyFounderMockData: FounderDashboardData = {
     { id: 'ai-cost', label: 'Current AI Cost', value: '£184', change: '+22%', changeDirection: 'up', hint: 'this month' }
   ],
   activityFeed: [
-    { id: '1', time: '2 min ago', role: 'Registered Manager', region: 'South East · Residential', action: 'Opened Ofsted Readiness Review', category: 'Inspection' },
+    { id: '1', time: '2 min ago', role: 'Registered Manager', region: 'South East · Residential', action: 'Opened Inspection evidence preparation Review', category: 'Inspection' },
     { id: '2', time: '6 min ago', role: 'Manager', region: 'Midlands · Residential', action: 'Generated Missing From Home Report', category: 'Reporting' },
     { id: '3', time: '11 min ago', role: 'Senior Staff', region: 'North West · Residential', action: 'Used Dictate for 14 minutes', category: 'Dictate' },
     { id: '4', time: '18 min ago', role: 'Deputy Manager', region: 'London · Supported Living', action: 'Reviewed risk assessment', category: 'Risk' },
@@ -183,7 +183,7 @@ const _legacyFounderMockData: FounderDashboardData = {
       { name: 'ORB Chat', usage: 88, trend: 18, abandonmentRisk: 'low', demand: 'rising' },
       { name: 'Report Builder', usage: 72, trend: 11, abandonmentRisk: 'medium', demand: 'stable' },
       { name: 'Risk Assessment Review', usage: 61, trend: 7, abandonmentRisk: 'medium', demand: 'stable' },
-      { name: 'Ofsted Readiness', usage: 58, trend: 14, abandonmentRisk: 'low', demand: 'rising' },
+      { name: 'Inspection evidence preparation', usage: 58, trend: 14, abandonmentRisk: 'low', demand: 'rising' },
       { name: 'Export to PDF', usage: 54, trend: 5, abandonmentRisk: 'low', demand: 'stable' },
       { name: 'Chronology Builder', usage: 41, trend: 19, abandonmentRisk: 'high', demand: 'rising' },
       { name: 'Supervision Builder', usage: 33, trend: 3, abandonmentRisk: 'high', demand: 'falling' }
@@ -239,7 +239,7 @@ const _legacyFounderMockData: FounderDashboardData = {
     {
       id: 'r4',
       priority: 4,
-      title: 'Ofsted readiness gaps show weak child voice. Add child voice prompts across templates.',
+      title: 'Inspection evidence preparation gaps show weak child voice. Add child voice prompts across templates.',
       detail: 'Child voice remains the most common inspection gap across lower-scoring homes. Embed prompts in reports, key work, and daily logs.'
     },
     {

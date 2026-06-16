@@ -65,7 +65,7 @@ CARE_RECORD_TERMS = {
     "summarize shift",
     "shift summary",
     "actions outstanding",
-    "inspection readiness",
+    "Inspection evidence preparation",
     "workforce",
     "governance",
 }

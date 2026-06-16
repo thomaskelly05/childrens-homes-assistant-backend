@@ -711,7 +711,7 @@ class InspectionReadinessService:
             matches = matching_records(records, (area,))
             packs[area.replace(" ", "_")] = {
                 "summary": f"{len(matches)} evidence item(s) found." if matches else NO_EVIDENCE_FOUND,
-                "evidence_links": [evidence_ref(record, reason=f"inspection readiness: {area}") for record in matches[:10]],
+                "evidence_links": [evidence_ref(record, reason=f"Inspection evidence preparation: {area}") for record in matches[:10]],
             }
         return {"status": "draft", "editable": True, "packs": packs, "known_weaknesses": packs["evidence_gap"], "human_review_required": True}
 

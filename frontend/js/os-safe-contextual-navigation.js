@@ -92,7 +92,7 @@
       ['Team Culture', 'Relational practice climate', 'ask:team culture'],
     ],
     ofsted: [
-      ['Overview', 'Inspection readiness', 'intel:inspection'],
+      ['Overview', 'Inspection evidence preparation', 'intel:inspection'],
       ['SCCIF', 'Inspection framework evidence', 'ask:SCCIF evidence summary'],
       ['Quality Standards', 'Children’s Homes quality standards', 'ask:quality standards evidence'],
       ['Reg 44', 'Independent visitor evidence', 'ask:Reg 44 evidence'],
@@ -108,7 +108,7 @@
       ['Leadership', 'Leadership and management judgement', 'ask:leadership and management evidence'],
       ['Workforce', 'Staffing, training and supervision', 'ask:workforce evidence'],
       ['Evidence Builder', 'Build inspection evidence', 'intel:inspection'],
-      ['Inspection Readiness', 'What would Ofsted see today?', 'ask:inspection readiness'],
+      ['Inspection evidence preparation', 'What would Ofsted see today?', 'ask:Inspection evidence preparation'],
       ['Actions', 'Inspection actions and owners', 'intel:continuity'],
     ],
     provider: [

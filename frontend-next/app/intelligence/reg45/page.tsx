@@ -31,10 +31,10 @@ export default async function Reg45QualityReviewPage({
             {homeId ? 'Home workspace' : 'Choose home'}
           </Link>
           <Link
-            href={homeId ? homeInspectionReadinessHref(homeId) : '/intelligence/inspection-readiness'}
+            href={homeId ? homeInspectionReadinessHref(homeId) : '/intelligence/inspection evidence preparation'}
             className="inline-flex min-h-10 items-center rounded-2xl border border-blue-200 bg-blue-50 px-4 py-2.5 text-xs font-black text-blue-950"
           >
-            Inspection readiness
+            Inspection evidence preparation
           </Link>
           <Link
             href={homeId ? homeOrbHref(homeId, 'ofsted_evidence_review') : '/assistant/orb?mode=ofsted_evidence_review'}

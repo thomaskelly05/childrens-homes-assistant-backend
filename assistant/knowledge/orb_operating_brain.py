@@ -50,7 +50,7 @@ KNOWLEDGE = {
             "support reflection",
             "identify possible patterns",
             "prepare report sections",
-            "help with Ofsted readiness",
+            "help with Inspection evidence preparation",
             "suggest document updates",
             "coach staff",
         ],
@@ -134,7 +134,7 @@ KNOWLEDGE = {
             "patterns",
             "plan updates",
             "sign-off",
-            "Ofsted readiness",
+            "Inspection evidence preparation",
             "staff learning",
         ],
         "responsible_individual": [

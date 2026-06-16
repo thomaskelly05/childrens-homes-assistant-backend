@@ -310,7 +310,7 @@ function buildFallbackData(homeIds = []) {
         id: "pr-2",
         home_id: ids[1] || ids[0],
         home_name: `Home ${ids[1] || ids[0]}`,
-        title: "Inspection readiness pack",
+        title: "Inspection evidence preparation pack",
         status: "draft",
         review_month: minusDays(8),
         summary: "Inspection pack draft awaiting final review.",

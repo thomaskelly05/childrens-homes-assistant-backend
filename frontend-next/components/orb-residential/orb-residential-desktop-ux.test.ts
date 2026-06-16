@@ -94,6 +94,6 @@ describe('ORB Residential desktop UX', () => {
   it('Ofsted answer sanitizer uses inspection closer not threshold', () => {
     const py = readFileSync(join(root, '../tests/test_orb_professional_curiosity_depth.py'), 'utf8')
     assert.match(py, /test_general_ofsted_sanitize_strips_threshold_closer/)
-    assert.match(py, /inspection readiness checklist|evidence review/)
+    assert.match(py, /Inspection evidence preparation checklist|evidence review/)
   })
 })

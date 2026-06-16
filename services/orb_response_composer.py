@@ -96,7 +96,7 @@ class OrbResponseComposer:
     def _intro_for_intent(self, *, intent: str, scope: str, child_name: str, care_journey: dict[str, Any]) -> str:
         progress = _text(care_journey.get("progress"), "The visible records need reviewing alongside staff knowledge and the full chronology.")
         if intent == "inspection_sccif" or scope in {"inspection", "governance", "provider"}:
-            return "Inspection readiness should be treated as evidence-led preparation, not a predicted outcome. The key question is whether records show what happened, what adults did, what changed for children, and how managers followed this up."
+            return "Inspection evidence preparation should be treated as evidence-led preparation, not a predicted outcome. The key question is whether records show what happened, what adults did, what changed for children, and how managers followed this up."
         if intent == "safeguarding_risk":
             return "Risk information should be reviewed calmly, with facts separated from interpretation and source records checked before action."
         if intent == "child_chronology" or scope == "child":

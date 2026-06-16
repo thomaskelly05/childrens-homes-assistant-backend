@@ -586,7 +586,7 @@ TEMPLATE_SPECS: list[dict[str, Any]] = [
             ("Safeguarding and notifications", "Summarise open safeguarding, Reg 40, missing, restraint and complaints evidence.", ["What notifications or concerns are open?", "What evidence supports oversight?"]),
             ("Outcomes and progress", "Summarise education, health, relationships, enjoyment and achievement evidence.", ["What progress is visible?", "Where is there no evidence found?"]),
             ("Workforce and leadership", "Summarise staffing, supervision, training, recruitment checks and management monitoring.", ["What workforce evidence is ready?", "What needs follow-up?"]),
-            ("Documents and evidence gaps", "List missing evidence, document review gaps and actions for inspection readiness.", ["What evidence gap remains?", "Who owns the action?"]),
+            ("Documents and evidence gaps", "List missing evidence, document review gaps and actions for Inspection evidence preparation.", ["What evidence gap remains?", "Who owns the action?"]),
         ],
         regulations=["13", "44", "45"],
         quality=["purpose", "protection", "leadership", "planning"],
@@ -749,7 +749,7 @@ def _make_template(spec: dict[str, Any]) -> DocumentTemplate:
         orb_prompt_pack=["strengthen child voice", "check therapeutic language", "identify missing evidence", "prepare manager review", "summarise actions without adding unsupported facts"],
         child_voice_prompts=CHILD_VOICE_PROMPTS if spec["child_voice"] else [],
         therapeutic_guidance=THERAPEUTIC_GUIDANCE,
-        inspection_relevance="Operational evidence mapping only: this supports inspection readiness, but is not legal advice.",
+        inspection_relevance="Operational evidence mapping only: this supports Inspection evidence preparation, but is not legal advice.",
         workflow={
             "browse": True,
             "create_document": True,

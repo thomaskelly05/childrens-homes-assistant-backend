@@ -85,7 +85,7 @@ function scenarioRisks(scenario: ForecastScenario): string[] {
   const common = [
     REVENUE_FORECAST_DISCLAIMER,
     'Children\'s homes procurement cycles may delay provider licence uptake.',
-    'Ofsted readiness value must not be overstated without live traction evidence.'
+    'Inspection evidence preparation value must not be overstated without live traction evidence.'
   ]
   if (scenario === 'aggressive') {
     return [

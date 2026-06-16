@@ -1,4 +1,4 @@
-import type { InspectionReadinessDashboard } from '@/lib/os-api/inspection-readiness'
+import type { InspectionReadinessDashboard } from '@/lib/os-api/inspection evidence preparation'
 import { isFounderMockFallbackAllowed } from '@/lib/founder/data/founder-data-mode'
 import { mockReadinessMetrics } from '@/lib/founder/intelligence/mock-inputs'
 import type { ReadinessMetrics } from '@/lib/founder/contracts/readiness-metrics'
@@ -7,7 +7,7 @@ import { getReadinessAdapterUnavailable } from './adapter-unavailable'
 import { anonymiseHomeLabel, currentPeriodBounds, fetchFounderLiveJson } from './adapter-utils'
 
 export async function fetchReadinessAdapter(): Promise<FounderAdapterResult<ReadinessMetrics>> {
-  const dashboard = await fetchFounderLiveJson<InspectionReadinessDashboard>('inspection-readiness')
+  const dashboard = await fetchFounderLiveJson<InspectionReadinessDashboard>('inspection evidence preparation')
 
   if (!dashboard) {
     return isFounderMockFallbackAllowed() ? getReadinessAdapterFallback() : getReadinessAdapterUnavailable()
@@ -51,6 +51,6 @@ export function getReadinessAdapterFallback(): FounderAdapterResult<ReadinessMet
       homes
     },
     source: 'mock',
-    limitations: ['Inspection readiness feed unavailable — using mock readiness metrics.']
+    limitations: ['Inspection evidence preparation feed unavailable — using mock readiness metrics.']
   }
 }

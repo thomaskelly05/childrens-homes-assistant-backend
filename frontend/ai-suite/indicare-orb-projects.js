@@ -6,7 +6,7 @@
   const state = {
     mode: localStorage.getItem('ic_orb_mode') || 'everyday',
     project: localStorage.getItem('ic_active_project') || 'general',
-    projects: JSON.parse(localStorage.getItem('ic_projects') || '[{"id":"general","name":"General"},{"id":"ofsted","name":"OFSTED readiness"},{"id":"safeguarding","name":"Safeguarding"}]')
+    projects: JSON.parse(localStorage.getItem('ic_projects') || '[{"id":"general","name":"General"},{"id":"ofsted","name":"Inspection evidence preparation"},{"id":"safeguarding","name":"Safeguarding"}]')
   };
 
   function createAssetResolver() {

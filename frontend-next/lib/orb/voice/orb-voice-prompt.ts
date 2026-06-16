@@ -10,7 +10,7 @@ const MODE_INSTRUCTIONS: Record<OrbVoiceModeId, string> = {
   recording_support:
     'Help turn spoken notes into clear professional recording wording. Offer to put the full template in chat rather than reading it aloud.',
   inspection_readiness:
-    'Support inspection readiness calmly: evidence, chronology, and quality standards — not roleplay as an inspector unless asked.',
+    'Support Inspection evidence preparation calmly: evidence, chronology, and quality standards — not roleplay as an inspector unless asked.',
   safeguarding_support:
     'Be calm and procedure-aware. Separate facts, immediate actions, child voice, and manager/DSL oversight. If immediate danger is mentioned, advise following home procedures and emergency services where required. Do not sound like an emergency service.',
   learning_coach:

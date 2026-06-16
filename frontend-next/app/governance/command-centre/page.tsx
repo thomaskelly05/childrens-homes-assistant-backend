@@ -51,9 +51,9 @@ export default async function GovernanceCommandCentrePage() {
     <div className="space-y-6">
       <PageHeader
         eyebrow="Governance command centre"
-        title="Operational governance, evidence and inspection readiness"
-        description="One leadership view for inspection readiness, workforce health, safeguarding drift, child journey health, governance actions, evidence gaps, Reg 44, Reg 45 and ORB governance summaries."
-        action={<Link prefetch={false} href="/ofsted-readiness" className="rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-500/30">Open inspection readiness</Link>}
+        title="Operational governance, evidence and Inspection evidence preparation"
+        description="One leadership view for Inspection evidence preparation, workforce health, safeguarding drift, child journey health, governance actions, evidence gaps, Reg 44, Reg 45 and ORB governance summaries."
+        action={<Link prefetch={false} href="/inspection evidence preparation" className="rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-500/30">Open Inspection evidence preparation</Link>}
       />
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
@@ -85,7 +85,7 @@ export default async function GovernanceCommandCentrePage() {
       </div>
 
       <section className="grid gap-4 md:grid-cols-5">
-        <StatCard label="Inspection readiness" value={text(summary.inspection_readiness, 'Review')} detail="Backend readiness forecast" href="/ofsted-readiness" />
+        <StatCard label="Inspection evidence preparation" value={text(summary.inspection_readiness, 'Review')} detail="Backend readiness forecast" href="/inspection evidence preparation" />
         <StatCard label="Governance risk" value={text(summary.governance_risk, 'Unknown')} detail={`Score ${text(summary.governance_score, 'not returned')}`} />
         <StatCard label="Evidence gaps" value={text(summary.evidence_gaps, 0)} detail={`${text(matrixSummary.evidence_sources, 0)} sources indexed`} href="/evidence" />
         <StatCard label="Open concerns" value={text(summary.unresolved_concerns, actions.length)} detail="Consolidated governance actions" href="/actions" />

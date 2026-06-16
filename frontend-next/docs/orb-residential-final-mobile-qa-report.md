@@ -29,12 +29,12 @@ ORB Residential mobile now enforces a locked dark premium shell, restores a sing
 
 ## 4. Ofsted response improved
 
-- `orb_grounded_answer_style_service` inspection depth block now structures answers for **children's homes** (RM, RI, SCCIF, Quality Standards, child voice, inspection readiness).
+- `orb_grounded_answer_style_service` inspection depth block now structures answers for **children's homes** (RM, RI, SCCIF, Quality Standards, child voice, Inspection evidence preparation).
 - General “Tell me about Ofsted” no longer steered toward generic schools/regulator copy in prompt depth.
 
 ## 5. Generic closer logic fixed
 
-- Inspection topic closer: *“ORB can help you turn this into an inspection readiness checklist, Reg 44/45 preparation note, or evidence review.”*
+- Inspection topic closer: *“ORB can help you turn this into an Inspection evidence preparation checklist, Reg 44/45 preparation note, or evidence review.”*
 - Threshold/safeguarding closers stripped for general Ofsted and inspection topics unless safeguarding risk terms are present.
 - Templates and learning topics get dedicated closers.
 - Python test: `test_general_ofsted_sanitize_strips_threshold_closer_and_adds_inspection_closer`.

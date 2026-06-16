@@ -48,8 +48,8 @@ LIMITATIONS = [
 
 ROUTES = {
     "workspace": "/intelligence/reg45",
-    "inspection_readiness": "/intelligence/inspection-readiness",
-    "inspection_reg45_pack": "/intelligence/inspection-readiness?pack=reg45",
+    "inspection_readiness": "/intelligence/inspection evidence preparation",
+    "inspection_reg45_pack": "/intelligence/inspection evidence preparation?pack=reg45",
     "sccif": "/intelligence/sccif",
     "governance": "/record/governance",
     "handover": "/handover",
@@ -403,7 +403,7 @@ class Reg45QualityReviewService:
             period_end=(request.period_end if request else None) or pack.period_end,
             home_id=current_user.get("home_id"),
             summary=(
-                "Draft Reg 45 quality of care review assembled from inspection readiness evidence support. "
+                "Draft Reg 45 quality of care review assembled from Inspection evidence preparation evidence support. "
                 "Evidence reviewed may support professional judgement — does not determine compliance."
             ),
             sections=sections,
@@ -460,7 +460,7 @@ class Reg45QualityReviewService:
             period_end=req.period_end,
             home_id=req.home_id or current_user.get("home_id"),
             summary=(
-                "Draft Reg 45 quality of care review — evidence reviewed from inspection readiness, "
+                "Draft Reg 45 quality of care review — evidence reviewed from Inspection evidence preparation, "
                 "SCCIF alignment and operational metadata. Manager review needed."
             ),
             sections=sections,
@@ -517,7 +517,7 @@ class Reg45QualityReviewService:
             recent_reviews=recent,
             key_gaps=key_gaps,
             recommendations=[
-                "Generate a draft review from inspection readiness Reg 45 pack evidence.",
+                "Generate a draft review from Inspection evidence preparation Reg 45 pack evidence.",
                 "Mark ready for manager review when evidence themes are complete.",
                 "Request RI review where provider oversight is needed — not a statutory conclusion.",
             ],

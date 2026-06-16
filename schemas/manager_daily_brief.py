@@ -65,7 +65,7 @@ class ManagerDailyBriefRoutes(BaseModel):
     isn: str = "/safeguarding"
     isn_orb: str = "/assistant/orb?mode=safeguarding_themes"
     sccif_alignment: str = "/intelligence/sccif"
-    inspection_readiness: str = "/intelligence/inspection-readiness"
+    inspection_readiness: str = "/intelligence/inspection evidence preparation"
     reg45_quality_review: str = "/intelligence/reg45"
 
 

@@ -47,7 +47,7 @@ export function answerProviderEvidence(): FounderOrbAnswer {
 
   return {
     answer: `Provider evidence available: ${summary} Limitations: ${sources.limitations.slice(0, 3).join(' ')}`,
-    usedSources: ['Founder Evidence Engine', 'Ofsted Readiness', 'Hours Returned Engine'],
+    usedSources: ['Founder Evidence Engine', 'Inspection evidence preparation', 'Hours Returned Engine'],
     suggestedFollowUps: ['Build a pilot partner pack.', 'What claims are unsafe to make?'],
     confidence: points.length > 0 ? 'medium' : 'low'
   }

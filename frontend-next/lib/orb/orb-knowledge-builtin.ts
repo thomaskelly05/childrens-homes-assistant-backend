@@ -59,7 +59,7 @@ export const ORB_KNOWLEDGE_BUILTIN_RESOURCES: OrbKnowledgeBuiltinResource[] = [
   res('insp-ch', "Ofsted children's homes inspection framework", 'Inspection framework', 'inspection', 'official'),
   res('insp-sccif', 'Ofsted social care common inspection framework', 'Inspection framework', 'inspection', 'official'),
   res('insp-r44', 'Reg 44 / Reg 45 evidence support', 'Regulatory', 'inspection', 'built-in'),
-  res('insp-checklist', 'Inspection readiness checklist', 'Practice tool', 'inspection', 'built-in'),
+  res('insp-checklist', 'Inspection evidence preparation checklist', 'Practice tool', 'inspection', 'built-in'),
   res('sg-mfc', 'Missing from care', 'Safeguarding guidance', 'safeguarding', 'built-in'),
   res('sg-return-home', 'Return home interviews', 'Safeguarding guidance', 'safeguarding', 'built-in'),
   res('sg-exploit', 'Child exploitation', 'Safeguarding guidance', 'safeguarding', 'built-in'),

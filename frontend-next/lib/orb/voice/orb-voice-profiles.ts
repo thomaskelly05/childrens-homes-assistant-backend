@@ -101,7 +101,7 @@ const CURATED_PROFILES: OrbVoiceProfile[] = [
   {
     id: 'neutral_professional',
     label: 'Neutral Professional',
-    description: 'Clear and balanced for policies, recording and inspection readiness.',
+    description: 'Clear and balanced for policies, recording and Inspection evidence preparation.',
     provider: 'browser',
     locale: 'en-GB',
     openaiVoice: 'cedar',
@@ -114,7 +114,7 @@ const CURATED_PROFILES: OrbVoiceProfile[] = [
     recommendedFor: ['Recording support', 'Policies', 'Structured updates'],
     spokenStyleGuidance: 'Structured but conversational. Practical steps without waffle.',
     instructions: 'Speak crisply and clearly in British English. Give practical steps.',
-    bestFor: ['Inspection readiness', 'Policies', 'Procedures'],
+    bestFor: ['Inspection evidence preparation', 'Policies', 'Procedures'],
     curated: true
   },
   {
@@ -230,10 +230,10 @@ const LEGACY_ORB_PROFILES: OrbVoiceProfile[] = [
     defaultPitch: 1,
     defaultVolume: 1,
     suitableModes: ['inspection_readiness'],
-    recommendedFor: ['Inspection readiness'],
+    recommendedFor: ['Inspection evidence preparation'],
     spokenStyleGuidance: 'Crisp practical steps.',
     instructions: 'Speak crisply and clearly in British English.',
-    bestFor: ['Inspection readiness', 'Policies']
+    bestFor: ['Inspection evidence preparation', 'Policies']
   },
   {
     id: 'orb_friendly_coach',

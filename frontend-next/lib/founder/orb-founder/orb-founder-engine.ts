@@ -136,7 +136,7 @@ function answerBuildNext(ctx: ReturnType<typeof buildIntelligenceContext>): Foun
   if (!live.hasFeatureEvents) return orbFounderNoLiveDataAnswer(['Product Intelligence'])
 
   const chronologyNote = ctx.chronology
-    ? ` The second priority is Chronology Builder because chronology-related demand is increasing (+${ctx.chronology.trendPercent}%) and Ofsted readiness gaps show chronology weaknesses.`
+    ? ` The second priority is Chronology Builder because chronology-related demand is increasing (+${ctx.chronology.trendPercent}%) and Inspection evidence preparation gaps show chronology weaknesses.`
     : ''
 
   return {
@@ -222,7 +222,7 @@ function answerInvestorQuestions(ctx: ReturnType<typeof buildIntelligenceContext
 
   return {
     answer: `An investor would likely ask: What is the retention rate? What is the gross margin after AI costs (currently ${ctx.aiCost.grossMargin})? How many active users return weekly (${ctx.activeUsers} active, +${ctx.activeUsersTrendPercent}%)? How defensible is the Ofsted intelligence model? What evidence proves time is being returned to direct care (${ctx.hoursReturned.totalHoursFormatted} hours this month)?`,
-    usedSources: ['AI Cost Engine', 'Hours Returned Engine', 'Provider Analytics', 'Ofsted Readiness Engine'],
+    usedSources: ['AI Cost Engine', 'Hours Returned Engine', 'Provider Analytics', 'Inspection evidence preparation Engine'],
     suggestedFollowUps: [
       'How many hours have we returned to direct care?',
       'Where is AI cost becoming a risk?',
@@ -233,13 +233,13 @@ function answerInvestorQuestions(ctx: ReturnType<typeof buildIntelligenceContext
 }
 
 function answerOfstedConcerns(ctx: ReturnType<typeof buildIntelligenceContext>): FounderOrbAnswer {
-  if (!orbFounderLiveInputs().hasReadiness) return orbFounderNoLiveDataAnswer(['Ofsted Readiness Engine'])
+  if (!orbFounderLiveInputs().hasReadiness) return orbFounderNoLiveDataAnswer(['Inspection evidence preparation Engine'])
 
   const gaps = ctx.ofstedReadiness.commonGaps.slice(0, 4).join(', ')
 
   return {
     answer: `Ofsted would be concerned about: ${gaps}. Platform readiness is at ${ctx.ofstedReadiness.score}% (${ctx.ofstedReadiness.status}). Child voice and evaluation quality remain recurring gaps. With safeguarding query volume rising, inspectors would expect stronger chronology linkage and management oversight evidence across children's homes.`,
-    usedSources: ['Ofsted Readiness Engine', 'Ofsted Agent', 'ORB Intelligence Engine'],
+    usedSources: ['Inspection evidence preparation Engine', 'Ofsted Agent', 'ORB Intelligence Engine'],
     suggestedFollowUps: [
       'What is the biggest risk this month?',
       'What should IndiCare build next?',
@@ -432,7 +432,7 @@ function answerOfstedActions(): FounderOrbAnswer {
     answer: actions.length > 0
       ? `Ofsted-linked actions: ${formatActionList(actions)}`
       : 'No open Ofsted actions right now. Review readiness gaps on the founder dashboard.',
-    usedSources: ['Founder Action Layer', 'Ofsted Readiness Engine', 'Ofsted Agent'],
+    usedSources: ['Founder Action Layer', 'Inspection evidence preparation Engine', 'Ofsted Agent'],
     suggestedFollowUps: [
       'What would Ofsted be concerned about?',
       'What should I do today?',
@@ -607,7 +607,7 @@ function answerFallback(ctx: ReturnType<typeof buildIntelligenceContext>): Found
   return {
     answer: top
       ? `Based on current intelligence: ${top.title} ${top.detail}`
-      : `I can help with strategic questions about IndiCare Intelligence — product priorities, risks, Ofsted readiness, ORB usage, investor narratives, and daily focus. Try asking about what to build next, the biggest risk, or hours returned to direct care.`,
+      : `I can help with strategic questions about IndiCare Intelligence — product priorities, risks, Inspection evidence preparation, ORB usage, investor narratives, and daily focus. Try asking about what to build next, the biggest risk, or hours returned to direct care.`,
     usedSources: ['Founder Insight Engine', 'Founder Dashboard'],
     suggestedFollowUps: [
       'What should IndiCare build next?',

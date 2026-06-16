@@ -57,6 +57,7 @@ OrbDictateEditMode = Literal[
     "spelling_grammar",
     "therapeutic_rewrite",
     "ofsted_ready",
+    "inspection_evidence_support",
     "factual_tone",
     "professional_language",
     "child_voice",

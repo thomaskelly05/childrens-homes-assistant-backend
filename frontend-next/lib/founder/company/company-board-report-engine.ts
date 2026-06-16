@@ -123,8 +123,8 @@ export function generateCompanyBoardReport(
       'live'
     ),
     section(
-      'Quality and Ofsted readiness',
-      [kpiLine(kpiMap['quality-lab-pass-rate']), kpiLine(kpiMap['ofsted-readiness-status'])].join('\n'),
+      'Quality and Inspection evidence preparation',
+      [kpiLine(kpiMap['quality-lab-pass-rate']), kpiLine(kpiMap['inspection evidence preparation-status'])].join('\n'),
       kpiMap['quality-lab-pass-rate']?.sourceStatus === 'live' ? 'live' : 'unavailable'
     ),
     section(

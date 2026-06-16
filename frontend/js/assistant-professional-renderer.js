@@ -17,7 +17,7 @@
 
   const FOLLOW_UP_PROMPTS = {
     regenerate: "Regenerate your previous response with clearer structure, stronger evidence separation and professional children's residential care language.",
-    ofsted: "Convert your previous response into an Ofsted-ready evidence summary. Include evidence, impact, gaps, leadership oversight and likely inspector questions.",
+    ofsted: "Convert your previous response into an Inspection evidence support evidence summary. Include evidence, impact, gaps, leadership oversight and likely inspector questions.",
     chronology: "Convert your previous response into a factual chronology. Include times/dates where known, events, actions taken, risk points and missing information.",
     handover: "Convert your previous response into a concise shift handover with current risks, support offered, follow-up tasks and management awareness.",
     qa: "Review your previous response for recording quality. Improve factuality, child-centred language, chronology, missing evidence and management oversight.",
@@ -99,7 +99,7 @@
       if (actions.dataset.enhanced === "true") return;
       actions.insertAdjacentHTML("beforeend", `
         <button type="button" data-pro-followup="regenerate">Regenerate</button>
-        <button type="button" data-pro-followup="ofsted">Ofsted-ready</button>
+        <button type="button" data-pro-followup="ofsted">Inspection evidence support</button>
         <button type="button" data-pro-followup="chronology">Chronology</button>
         <button type="button" data-pro-followup="handover">Handover</button>
         <button type="button" data-pro-followup="qa">QA review</button>

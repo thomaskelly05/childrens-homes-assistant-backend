@@ -78,7 +78,7 @@ ORB Founder explicitly blocks post/send/publish/deploy requests.
 | Telemetry summary | Bootstrap | Empty summary; honest zeros |
 | Providers | Bootstrap liveSummary | "No records" — no fake counts |
 | Homes | Bootstrap liveSummary | "No records" |
-| Inspection readiness | Bootstrap liveSummary | Unavailable section; no crash |
+| Inspection evidence preparation | Bootstrap liveSummary | Unavailable section; no crash |
 | ORB billing usage | Bootstrap liveSummary | MRR unavailable; AI cost if present |
 | ORB feedback summary | Bootstrap liveSummary | ORB analytics empty |
 | Quality Lab overview | `/api/founder/quality-lab/overview` | Empty state on page |
@@ -86,7 +86,7 @@ ORB Founder explicitly blocks post/send/publish/deploy requests.
 | Intelligence snapshot | `/api/founder/intelligence/snapshot` | Empty state card |
 | Audit log tail | `/api/founder/persistence/audit-log` | "No audit events recorded yet" |
 
-Bootstrap does **not** fail fully when inspection readiness, billing or feedback is unavailable — `sectionErrors` + `FounderDegradedBanner`.
+Bootstrap does **not** fail fully when Inspection evidence preparation, billing or feedback is unavailable — `sectionErrors` + `FounderDegradedBanner`.
 
 ---
 
@@ -186,7 +186,7 @@ Audit events written for create/update/archive/approve/reject.
 3. Connect live billing rollup for honest MRR on revenue dashboard.
 4. Feature events telemetry for product intelligence depth.
 5. LinkedIn OAuth post flow (still approval-gated).
-6. Inspection readiness per-home anonymised scores when API matures.
+6. Inspection evidence preparation per-home anonymised scores when API matures.
 
 ---
 

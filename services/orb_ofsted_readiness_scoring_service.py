@@ -1,4 +1,4 @@
-"""Local Ofsted-readiness scoring for ORB knowledge gap audit and QA."""
+"""Local inspection evidence support scoring for ORB knowledge gap audit and QA."""
 
 from __future__ import annotations
 
@@ -70,7 +70,7 @@ def score_answer(
     deterministic_available: bool = False,
     high_risk: bool = False,
 ) -> dict[str, Any]:
-    """Score an ORB answer across Ofsted-readiness dimensions."""
+    """Score an ORB answer across inspection evidence support dimensions."""
     text = str(answer or "")
     lowered = text.lower()
     family = get_contract_family(contract_family) or {}
@@ -99,7 +99,7 @@ def score_answer(
         }
     )
 
-    ofsted_readiness = _composite_ofsted_score(
+    inspection_evidence_score = _composite_inspection_evidence_score(
         child_centred=child_centred,
         residential_specific=residential_specific,
         safeguarding_aware=safeguarding_aware,
@@ -110,11 +110,11 @@ def score_answer(
     )
 
     high_risk_failure = high_risk and safeguarding_aware < 3
-    ofsted_ready = (
+    inspection_evidence_support = (
         not high_risk_failure
         and no_invented_facts
         and (bool(contract_family) if contract_family else True)
-        and ofsted_readiness >= 3
+        and inspection_evidence_score >= 3
         and not forbidden
         and internal_first
         and cost_control
@@ -123,9 +123,9 @@ def score_answer(
     # Child voice / recording quality gate for template answers
     if contract_family in {"daily_record", "keywork_session", "incident_record"}:
         if child_voice < 2 and "structure" not in lowered and "paste" not in lowered:
-            ofsted_ready = False
+            inspection_evidence_support = False
         if recording_quality < 2 and "structure" not in lowered:
-            ofsted_ready = False
+            inspection_evidence_support = False
 
     return {
         "child-centred": child_centred,
@@ -136,11 +136,13 @@ def score_answer(
         "child-voice": child_voice,
         "evidence-based": evidence_based,
         "professional-boundary": professional_boundary,
-        "Ofsted-readiness": ofsted_readiness,
+        "inspection-evidence-support": inspection_evidence_score,
         "no-invented-facts": "pass" if no_invented_facts else "fail",
         "internal-first": "pass" if internal_first else "fail",
         "cost-control": "pass" if cost_control else "fail",
-        "ofsted_ready": ofsted_ready,
+        "inspection_evidence_support": inspection_evidence_support,
+        # Deprecated alias — snake_case only for API migration
+        "ofsted_ready": inspection_evidence_support,
         "forbidden_patterns": forbidden,
         "missing_markers": missing_markers,
     }
@@ -217,7 +219,7 @@ def _score_professional_boundary(lowered: str, *, high_risk: bool) -> int:
     return min(5, score)
 
 
-def _composite_ofsted_score(**scores: int) -> int:
+def _composite_inspection_evidence_score(**scores: int) -> int:
     relevant = [
         scores.get("child_centred", 0),
         scores.get("residential_specific", 0),
@@ -252,8 +254,11 @@ def _has_invented_facts(answer: str, prompt: str) -> bool:
     return any(p in answer_lower and p not in prompt_lower for p in invented_phrases)
 
 
-class OrbOfstedReadinessScoringService:
+class OrbInspectionEvidenceScoringService:
     score_answer = staticmethod(score_answer)
 
 
-orb_ofsted_readiness_scoring_service = OrbOfstedReadinessScoringService()
+# Backward-compatible aliases
+OrbOfstedReadinessScoringService = OrbInspectionEvidenceScoringService
+orb_inspection_evidence_scoring_service = OrbInspectionEvidenceScoringService()
+orb_ofsted_readiness_scoring_service = orb_inspection_evidence_scoring_service

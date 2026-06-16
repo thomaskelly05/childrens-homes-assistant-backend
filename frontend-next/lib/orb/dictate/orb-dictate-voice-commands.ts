@@ -38,7 +38,7 @@ const RULES: Array<{ pattern: RegExp; action: OrbDictateVoiceCommandAction; labe
   { pattern: /^copy this|copy this$/i, action: 'copy', label: 'Copy' },
   { pattern: /send (this )?to chat/i, action: 'send_chat', label: 'Send to chat' },
   { pattern: /what is missing|what's missing/i, action: 'what_missing', label: 'What is missing?' },
-  { pattern: /ofsted ready|make it ofsted/i, action: 'ofsted_ready', label: 'Ofsted ready' },
+  { pattern: /Inspection evidence support|make it ofsted/i, action: 'ofsted_ready', label: 'Inspection evidence support' },
   {
     pattern: /reflective supervision|supervision note from this/i,
     action: 'make_professional',

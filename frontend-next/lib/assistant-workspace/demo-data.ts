@@ -82,7 +82,7 @@ export const assistantWorkspaceDemoData: AssistantWorkspaceData = {
     },
     {
       id: 'project-reporting',
-      name: 'Inspection-ready reporting',
+      name: 'inspection evidence preparation reporting',
       description: 'Evidence collection, report drafting and missing-section checks.',
       linkedYoungPersonIds: ['yp-1', 'yp-3'],
       linkedAdultProfileIds: ['adult-michael'],

@@ -108,21 +108,21 @@ export function ManagerDailyBriefPage() {
         </article>
         <article
           className="rounded-2xl border border-indigo-100 bg-indigo-50/50 p-4 md:col-span-2"
-          data-testid="manager-daily-brief-inspection-readiness"
+          data-testid="manager-daily-brief-inspection evidence preparation"
         >
           <p className="text-[10px] font-black uppercase tracking-[0.16em] text-indigo-700">
-            Inspection readiness
+            Inspection evidence preparation
           </p>
           <p className="mt-2 text-sm font-semibold text-slate-700">
             {(brief as { inspection_readiness_summary?: string }).inspection_readiness_summary ||
               'Reg 44 / Reg 45 evidence support packs — not a grade prediction.'}
           </p>
           <Link
-            href="/intelligence/inspection-readiness"
-            data-testid="manager-daily-brief-inspection-readiness-link"
+            href="/intelligence/inspection evidence preparation"
+            data-testid="manager-daily-brief-inspection evidence preparation-link"
             className="mt-3 inline-flex text-[10px] font-black uppercase tracking-[0.12em] text-indigo-800 underline"
           >
-            Open inspection readiness
+            Open Inspection evidence preparation
           </Link>
         </article>
         <article

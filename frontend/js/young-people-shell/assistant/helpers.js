@@ -717,7 +717,7 @@ export function detectOutputMode(
   }
 
   if (
-    /quality brief|quality summary|inspection readiness|ri summary|scrutiny/.test(
+    /quality brief|quality summary|Inspection evidence preparation|ri summary|scrutiny/.test(
       value
     )
   ) {
@@ -940,14 +940,14 @@ export function buildRoleAwareGreeting() {
   }
 
   if (scope === "home") {
-    return `Hello. What would you like to know about ${getHomeName()}? I can help with a full home summary, chronology, staffing, compliance, inspection readiness, management oversight, or next actions.`;
+    return `Hello. What would you like to know about ${getHomeName()}? I can help with a full home summary, chronology, staffing, compliance, Inspection evidence preparation, management oversight, or next actions.`;
   }
 
   return `Hello. What would you like to know about ${
     accessLevel === "provider"
       ? "your homes and provider oversight"
       : `${getHomeName()} quality and oversight`
-  }? I can help with compliance themes, chronology, inspection readiness, RI summaries, governance patterns and cross-home comparisons where allowed.`;
+  }? I can help with compliance themes, chronology, Inspection evidence preparation, RI summaries, governance patterns and cross-home comparisons where allowed.`;
 }
 
 export function buildUnknownIntentPrompt() {
@@ -1117,7 +1117,7 @@ export function assistantPromptsForView(view, scope = getCurrentScope()) {
     ],
     quality: [
       "Summarise the current quality picture for the home.",
-      "What are the biggest inspection readiness risks?",
+      "What are the biggest Inspection evidence preparation risks?",
       "What actions should be prioritised before scrutiny?",
     ],
   };

@@ -92,7 +92,7 @@ const AUDIENCE_CONFIGS: Record<EvidenceAudience, AudienceConfig> = {
       },
       {
         title: 'Product',
-        summary: "IndiCare Intelligence delivers ORB, recording and Ofsted readiness tools for children's homes.",
+        summary: "IndiCare Intelligence delivers ORB, recording and Inspection evidence preparation tools for children's homes.",
         pick: (s) => s.productEvidence.slice(0, 3),
         dataSource: 'live-telemetry'
       },
@@ -156,7 +156,7 @@ const AUDIENCE_CONFIGS: Record<EvidenceAudience, AudienceConfig> = {
         dataSource: 'live-telemetry'
       },
       {
-        title: 'Ofsted Readiness',
+        title: 'Inspection evidence preparation',
         summary: 'Recording quality and inspection preparation.',
         pick: (s) => s.productEvidence.filter((p) => /ofsted|readiness|recording/i.test(p.claim + p.support)),
         dataSource: 'quality-lab'

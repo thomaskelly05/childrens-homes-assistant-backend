@@ -7,7 +7,7 @@ SAFE_AUTOMATIONS = [
     "Annex A draft population",
     "Reg 45 evidence pack",
     "Reg 44 action tracker",
-    "Ofsted readiness pack",
+    "Ofsted evidence pack",
     "missing document tracker",
     "review due reminders",
     "policy review schedule",

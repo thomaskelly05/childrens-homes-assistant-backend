@@ -47,7 +47,7 @@ class WorkspaceOrchestratorService:
 
     This service does not create a second system. It composes existing records,
     documents, actions, inspection OS and operational intelligence into one
-    practical workspace for children, staff, managers and Ofsted readiness.
+    practical workspace for children, staff, managers and Inspection evidence preparation.
     """
 
     def child_workspace(self, *, young_person_id: int, current_user: dict[str, Any], days: int = 30) -> dict[str, Any]:
@@ -94,7 +94,7 @@ class WorkspaceOrchestratorService:
                 "suggested_prompts": [
                     "Summarise this child's journey over the last 30 days.",
                     "What should staff know for handover?",
-                    "What evidence supports Ofsted readiness for this child?",
+                    "What evidence supports Inspection evidence preparation for this child?",
                     "What manager oversight is missing?",
                 ]
             },

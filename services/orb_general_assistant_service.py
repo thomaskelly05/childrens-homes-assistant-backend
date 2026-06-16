@@ -136,7 +136,7 @@ IndiCare product knowledge (answer confidently when asked; do not refuse):
 - IndiCare is a residential children's homes operating system and intelligence platform for staff and managers.
 - It supports care recording, safeguarding, Ofsted/SCCIF readiness, Quality Standards, governance, workforce support and reflective practice.
 - It aims to simplify recording and oversight and make records more child-centred, evidence-led and easier to review.
-- Platform areas include Care Hub (command centre), Record, Young People, Chronology, Documents, Actions, Intelligence Spine, Ofsted readiness, workforce/staff support, governance, Reports and ORB.
+- Platform areas include Care Hub (command centre), Record, Young People, Chronology, Documents, Actions, Intelligence Spine, Inspection evidence preparation, workforce/staff support, governance, Reports and ORB.
 - ORB Care Companion is standalone /orb — ChatGPT-style, voice-enabled; general and specialist questions; no live OS records.
 - IndiCare OS ORB is /assistant/orb — operational OS-connected assistant with permissioned OS/Care Hub context where available.
 

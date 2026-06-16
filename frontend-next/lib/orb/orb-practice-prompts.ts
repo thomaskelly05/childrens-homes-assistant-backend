@@ -12,7 +12,7 @@ export function buildOrbInspectionReadinessPrompt(input: {
         : 'Include readiness questions staff and managers can use to prepare.'
 
   return [
-    'You are supporting inspection readiness for a children\'s home. ORB does not make regulatory judgements.',
+    'You are supporting Inspection evidence preparation for a children\'s home. ORB does not make regulatory judgements.',
     focusLine,
     'Structure your response with:',
     '1. Evidence themes noticed',

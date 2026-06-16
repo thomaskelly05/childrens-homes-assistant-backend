@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 
-import type { InspectionEvidenceItem } from '@/lib/os-api/inspection-readiness'
+import type { InspectionEvidenceItem } from '@/lib/os-api/inspection evidence preparation'
 
 type Props = { item: InspectionEvidenceItem }
 

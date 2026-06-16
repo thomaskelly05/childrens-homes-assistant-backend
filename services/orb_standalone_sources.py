@@ -190,7 +190,7 @@ INDICARE_PRODUCT_FALLBACK = """IndiCare is a residential children's homes operat
 
 It is designed around care recording, safeguarding, Ofsted and SCCIF readiness, Quality Standards, governance, workforce support and reflective practice. The aim is to simplify recording and oversight while making records more child-centred, evidence-led and easier to review.
 
-Key areas include Care Hub (command centre), Record, Young People, Chronology, Documents, Actions, the Intelligence Spine, Ofsted readiness, workforce support, governance, reports and ORB.
+Key areas include Care Hub (command centre), Record, Young People, Chronology, Documents, Actions, the Intelligence Spine, Inspection evidence preparation, workforce support, governance, reports and ORB.
 
 ORB Care Companion is this standalone experience at /orb — a ChatGPT-style, voice-enabled companion for general questions, recording quality, Ofsted/SCCIF reflection, safeguarding thinking and therapeutic practice. It does not access live OS records.
 

@@ -115,7 +115,7 @@ class OrbKnowledgeVaultService:
                     "Repeated concerns should increase visibility.",
                     "Improvement should be measurable.",
                 ),
-                examples=("Reg 44 themes", "audit learning", "repeated incidents", "inspection readiness"),
+                examples=("Reg 44 themes", "audit learning", "repeated incidents", "Inspection evidence preparation"),
             ),
             self._vault(
                 id="child_narrative_vault",

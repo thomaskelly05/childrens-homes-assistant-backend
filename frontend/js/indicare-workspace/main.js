@@ -12,7 +12,7 @@ function renderOfsted() {
       els.main.innerHTML = `
         <section class="hero-card">
           <div>
-            <p class="eyebrow">Inspection ready</p>
+            <p class="eyebrow">inspection evidence preparation</p>
             <h3>Ofsted evidence overview</h3>
             <p>Live evidence mapped to inspection judgement areas.</p>
           </div>

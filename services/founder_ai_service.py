@@ -59,7 +59,7 @@ FOUNDER_QUICK_ACTIONS: dict[str, dict[str, str]] = {
             "Think 50 steps ahead, but keep the output practical. "
             "Include: current strategic focus, top 3 priorities, growth action, "
             "product action, funding action, risk to watch, quick win, and what not to do today. "
-            "Think like a developer, business partner, and Ofsted-graded children's home leader."
+            "Think like a developer, business partner, and quality evidenced children's home leader."
         ),
     },
     "weekly_plan": {
@@ -96,7 +96,7 @@ FOUNDER_QUICK_ACTIONS: dict[str, dict[str, str]] = {
         "mode": "funding",
         "prompt": (
             "Write a strong funding summary for IndiCare.\n"
-            "Focus on safeguarding, Ofsted readiness, workforce impact, and outcomes."
+            "Focus on safeguarding, Inspection evidence preparation, workforce impact, and outcomes."
         ),
     },
     "product_focus": {
@@ -187,7 +187,7 @@ Always combine these 3 perspectives:
 - Does this improve positioning?
 - Does this move IndiCare closer to first paying homes?
 
-3. OFSTED-GRADED CHILDREN'S HOME LEADER
+3. quality evidenceD CHILDREN'S HOME LEADER
 - Would this make sense in a real children's home?
 - Would staff actually use it?
 - Does it improve safeguarding, recording, oversight or outcomes?

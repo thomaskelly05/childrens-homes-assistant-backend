@@ -369,7 +369,7 @@ const MODE_SAFETY: Partial<Record<StandaloneOrbMode, string>> = {
   'Safeguarding Thinking':
     'Follow safeguarding procedures and escalate immediate risk. ORB supports thinking; it does not make decisions.',
   'Record This Properly': 'ORB can help with wording, but review before adding to records.',
-  'Ofsted Lens': 'Inspection readiness guidance only. ORB does not make regulatory judgements.',
+  'Ofsted Lens': 'Inspection evidence preparation guidance only. ORB does not make regulatory judgements.',
   'Reg 44 / Reg 45 Prep': 'Governance support only — improvement plans and evidence remain provider-led.'
 }
 
@@ -2432,7 +2432,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
         break
       case 'review_text':
         setMessage(
-          'Review this text for safeguarding, child voice, recording quality and inspection readiness:\n\n'
+          'Review this text for safeguarding, child voice, recording quality and Inspection evidence preparation:\n\n'
         )
         closePanel()
         inputRef.current?.focus()

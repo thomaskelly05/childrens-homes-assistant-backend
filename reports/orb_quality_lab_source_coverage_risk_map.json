@@ -1,0 +1,256 @@
+{
+  "generated_for": "orb_quality_lab_governance",
+  "scenario_variants_scored": 1000,
+  "traceability_summary": {
+    "rubric_external_coverage_percent": 100.0,
+    "unsafe_flags_with_external_basis": 11,
+    "unsafe_flags_total": 11,
+    "scenario_required_elements_mapped": 10,
+    "scenario_required_elements_total": 10,
+    "scenario_prohibited_elements_mapped": 12,
+    "scenario_prohibited_elements_total": 12,
+    "scenario_families_mapped": 10,
+    "scenario_families_total": 10,
+    "registered_sources": 22
+  },
+  "rubric_categories_covered_by_external_sources": 12,
+  "rubric_categories_total": 12,
+  "unsafe_flags_covered_by_external_sources": 11,
+  "scenario_required_elements_covered": 10,
+  "scenario_prohibited_elements_covered": 12,
+  "scenario_families_strongest_mapping": [
+    {
+      "scenario_family": "regulation_evidence",
+      "evidence_strength": "high",
+      "external_source_count": 4,
+      "mapping_score": 3.6
+    },
+    {
+      "scenario_family": "safeguarding",
+      "evidence_strength": "high",
+      "external_source_count": 5,
+      "mapping_score": 3.6
+    },
+    {
+      "scenario_family": "daily_care",
+      "evidence_strength": "high",
+      "external_source_count": 3,
+      "mapping_score": 3.45
+    },
+    {
+      "scenario_family": "incident_reflection",
+      "evidence_strength": "high",
+      "external_source_count": 3,
+      "mapping_score": 3.45
+    }
+  ],
+  "scenario_families_weakest_mapping": [
+    {
+      "scenario_family": "handover",
+      "evidence_strength": "medium",
+      "external_source_count": 2,
+      "mapping_score": 2.3
+    },
+    {
+      "scenario_family": "magic_notes",
+      "evidence_strength": "medium",
+      "external_source_count": 2,
+      "mapping_score": 2.3
+    },
+    {
+      "scenario_family": "meetings",
+      "evidence_strength": "medium",
+      "external_source_count": 2,
+      "mapping_score": 2.3
+    },
+    {
+      "scenario_family": "behaviour_communication",
+      "evidence_strength": "medium",
+      "external_source_count": 3,
+      "mapping_score": 2.45
+    }
+  ],
+  "categories_relying_on_internal_or_emerging_evidence": [
+    {
+      "rubric_category": "recording_usefulness",
+      "evidence_strength": "emerging",
+      "external_source_count": 3
+    }
+  ],
+  "high_risk_domains_needing_source_deepening": [
+    {
+      "domain": "restraint_physical_intervention",
+      "label": "Restraint / physical intervention guidance",
+      "risk_level": "high",
+      "status": "partial_or_internal",
+      "notes": "Scenario variants exist; dedicated statutory/professional source paragraphs not yet mapped."
+    },
+    {
+      "domain": "missing_from_care",
+      "label": "Missing-from-care protocols",
+      "risk_level": "high",
+      "status": "partial",
+      "notes": "Reg 40 / missing episodes referenced; paragraph-level traceability needs deepening."
+    },
+    {
+      "domain": "medication_recording",
+      "label": "Medication recording standards",
+      "risk_level": "high",
+      "status": "emerging",
+      "notes": "Health recording scenarios rely partly on practice-informed internal evidence."
+    },
+    {
+      "domain": "allegations_against_adults",
+      "label": "Allegations against adults",
+      "risk_level": "high",
+      "status": "partial",
+      "notes": "Safeguarding family mapped; allegations-specific source depth limited."
+    },
+    {
+      "domain": "peer_on_peer_harm",
+      "label": "Peer-on-peer harmful behaviour",
+      "risk_level": "high",
+      "status": "emerging",
+      "notes": "Behaviour/safeguarding overlap; dedicated peer-abuse source mapping thin."
+    },
+    {
+      "domain": "online_exploitation",
+      "label": "Online exploitation concerns",
+      "risk_level": "high",
+      "status": "emerging",
+      "notes": "CEOP/online safety sources not yet paragraph-mapped in traceability registry."
+    },
+    {
+      "domain": "complaints",
+      "label": "Complaints",
+      "risk_level": "medium",
+      "status": "partial",
+      "notes": "Reg 44/45 evidence themes cover oversight; complaints-specific mapping limited."
+    },
+    {
+      "domain": "deprivation_liberty_restriction",
+      "label": "Deprivation / liberty / restriction language",
+      "risk_level": "high",
+      "status": "emerging",
+      "notes": "DoLS/restriction recording boundaries need explicit external source paragraphs."
+    },
+    {
+      "domain": "equality_identity_recording",
+      "label": "Equality / identity recording",
+      "risk_level": "medium",
+      "status": "emerging",
+      "notes": "Equality Act / identity-affirming recording relies on emerging internal mapping."
+    },
+    {
+      "domain": "health_mental_health_boundaries",
+      "label": "Health / mental health boundaries",
+      "risk_level": "high",
+      "status": "partial",
+      "notes": "NICE referenced; clinical/diagnostic boundary language needs continued governance."
+    },
+    {
+      "domain": "family_contact_risk",
+      "label": "Family contact risk patterns",
+      "risk_level": "medium",
+      "status": "partial",
+      "notes": "Contact risk scenarios mapped at family level; contact-specific sources thin."
+    }
+  ],
+  "highest_risk_weak_scenario_families": [
+    {
+      "scenario_family": "safeguarding",
+      "average_score": 3.34,
+      "count": 100
+    },
+    {
+      "scenario_family": "magic_notes",
+      "average_score": 3.49,
+      "count": 100
+    },
+    {
+      "scenario_family": "meetings",
+      "average_score": 3.53,
+      "count": 100
+    },
+    {
+      "scenario_family": "handover",
+      "average_score": 3.56,
+      "count": 100
+    },
+    {
+      "scenario_family": "regulation_evidence",
+      "average_score": 3.58,
+      "count": 100
+    },
+    {
+      "scenario_family": "management_oversight",
+      "average_score": 3.6,
+      "count": 100
+    },
+    {
+      "scenario_family": "key_work",
+      "average_score": 3.63,
+      "count": 100
+    },
+    {
+      "scenario_family": "incident_reflection",
+      "average_score": 3.65,
+      "count": 100
+    },
+    {
+      "scenario_family": "daily_care",
+      "average_score": 3.69,
+      "count": 100
+    },
+    {
+      "scenario_family": "behaviour_communication",
+      "average_score": 3.69,
+      "count": 100
+    }
+  ],
+  "weakest_scoring_categories_variants1000": [
+    {
+      "category": "child_centredness",
+      "average_score": 2.08
+    },
+    {
+      "category": "outcome_and_follow_up",
+      "average_score": 2.29
+    },
+    {
+      "category": "adult_response_and_support",
+      "average_score": 2.95
+    },
+    {
+      "category": "observation_vs_interpretation",
+      "average_score": 3.19
+    }
+  ],
+  "internal_only_emerging_evidence_areas": [],
+  "source_registry_ids": [
+    "basw_code_ethics",
+    "ch_reg_2015",
+    "children_act_1989",
+    "ddp_principles",
+    "dpa_2018",
+    "guide_ch_reg_quality_standards",
+    "indicare_record_dignity",
+    "indicare_therapeutic_recording",
+    "local_safeguarding_procedures",
+    "nice_looked_after_children",
+    "nspcc_safeguarding_guidance",
+    "ofsted_ch_inspection_guidance",
+    "ofsted_safeguarding_expectations",
+    "ofsted_sccif_ch",
+    "orb_adult_responsibility_boundary",
+    "orb_privacy_minimisation",
+    "pace_principles",
+    "rip_practice_resources",
+    "swe_professional_standards",
+    "trauma_informed_principles",
+    "uk_gdpr",
+    "working_together_2023"
+  ],
+  "warning": "Scores are internal quality indicators aligned to recognised sources where mapped. They are not regulatory determinations, inspection predictions, or professional validation. Adults remain accountable for decisions, escalation and final records.",
+  "disclaimer": "Source coverage percentages reflect mapped registry entries, not paragraph-level citation completeness. Scores are internal quality indicators, not regulatory judgements."
+}

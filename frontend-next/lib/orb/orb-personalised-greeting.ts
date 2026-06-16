@@ -17,7 +17,7 @@ export function orbTimeOfDayFromHour(hour: number): OrbTimeOfDay {
 }
 
 export const ORB_CONTEXTUAL_GREETING_LINE =
-  'Ask about recording, safeguarding, reflection or inspection readiness.'
+  'Ask about recording, safeguarding, reflection or Inspection evidence preparation.'
 
 function greetingSubline(style: OrbGreetingStyle | undefined, includeContextLine: boolean): string {
   if (!includeContextLine) return ''

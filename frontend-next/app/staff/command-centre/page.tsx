@@ -36,7 +36,7 @@ export default async function WorkforceCommandCentrePage() {
       <PageHeader
         eyebrow="Workforce Intelligence"
         title="Workforce command centre"
-        description="Role-aware manager view of workforce alerts, practice concerns, wellbeing, staffing instability, recognition and inspection readiness."
+        description="Role-aware manager view of workforce alerts, practice concerns, wellbeing, staffing instability, recognition and Inspection evidence preparation."
         action={<Link href="/staff" className="rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-500/30">Staff dashboard</Link>}
       />
       <LiveDataStatus result={result} />
@@ -96,7 +96,7 @@ export default async function WorkforceCommandCentrePage() {
         </Card>
         <Card>
           <SectionHeader eyebrow="Inspection" title="Workforce evidence readiness" />
-          <p className="text-sm leading-7 text-slate-600">{String(centre.inspection_readiness?.summary || 'No inspection readiness summary returned.')}</p>
+          <p className="text-sm leading-7 text-slate-600">{String(centre.inspection_readiness?.summary || 'No Inspection evidence preparation summary returned.')}</p>
         </Card>
       </section>
     </div>

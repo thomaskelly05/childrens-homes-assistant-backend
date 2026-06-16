@@ -1390,7 +1390,7 @@ def _build_home_snapshot(home_ctx: dict[str, Any], quality_ctx: dict[str, Any]) 
             code="home_inspection_question",
             question="What is likely to matter in inspection?",
             evidence=f"{len(open_inspection_risks)} high-risk inspection actions, {len(overdue_compliance)} overdue compliance items, {len(quality_theme_risks)} priority quality themes.",
-            interpretation="Inspection confidence may weaken if prep actions and compliance drift stay unresolved." if (open_inspection_risks or overdue_compliance or quality_theme_risks) else "No immediate inspection-readiness pressure is indicated.",
+            interpretation="Inspection confidence may weaken if prep actions and compliance drift stay unresolved." if (open_inspection_risks or overdue_compliance or quality_theme_risks) else "No immediate inspection evidence preparation pressure is indicated.",
             suggested_action="Prioritise closure evidence for overdue prep and compliance items before next quality review." if (open_inspection_risks or overdue_compliance or quality_theme_risks) else "Continue planned readiness checks.",
             severity="high" if (open_inspection_risks or overdue_compliance) else "medium",
         ),
@@ -1661,7 +1661,7 @@ def _build_ofsted_snapshot(quality_ctx: dict[str, Any]) -> dict[str, Any]:
     return {
         **base,
         "scope": "ofsted",
-        "insight_story": base.get("insight_story") or "Ofsted readiness: no major trend shifts were detected in this snapshot.",
+        "insight_story": base.get("insight_story") or "Inspection evidence preparation: no major trend shifts were detected in this snapshot.",
     }
 
 

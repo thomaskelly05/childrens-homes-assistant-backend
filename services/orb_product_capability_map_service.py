@@ -120,7 +120,7 @@ class OrbProductCapabilityMapService:
                 id="real_time_assistance",
                 title="Real-Time Assistance",
                 purpose="Typing help, wording support, safeguarding prompts and missing-information warnings.",
-                capabilities=("live typing assistance", "grammar improvement", "therapeutic wording", "risk language detection", "missing information warnings", "inspection readiness prompts"),
+                capabilities=("live typing assistance", "grammar improvement", "therapeutic wording", "risk language detection", "missing information warnings", "Inspection evidence preparation prompts"),
                 orb_advantage=("trauma-informed language", "Regulation-aware wording", "safe escalation nudges"),
             ),
             OrbCapabilityGroup(
@@ -128,7 +128,7 @@ class OrbProductCapabilityMapService:
                 title="Search & Knowledge Systems",
                 purpose="Universal search and semantic retrieval across conversations, knowledge and future records.",
                 capabilities=("universal search", "conversation search", "semantic search", "saved searches", "linked knowledge graph", "AI answers from evidence"),
-                orb_advantage=("evidence lineage", "child journey meaning", "Ofsted readiness"),
+                orb_advantage=("evidence lineage", "child journey meaning", "Inspection evidence preparation"),
             ),
             OrbCapabilityGroup(
                 id="multi_modal",

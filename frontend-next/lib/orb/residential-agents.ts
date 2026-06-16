@@ -142,7 +142,7 @@ export const RESIDENTIAL_AGENTS: ResidentialAgentDefinition[] = [
 ]
 
 export const DEFAULT_PROJECT_TEMPLATES = [
-  { name: 'Inspection Readiness', icon: '◎', color: '#a78bfa', description: 'Evidence, SCCIF and leadership oversight' },
+  { name: 'Inspection evidence preparation', icon: '◎', color: '#a78bfa', description: 'Evidence, SCCIF and leadership oversight' },
   { name: 'Reflective Supervision', icon: '◈', color: '#fbbf24', description: 'Staff reflection and supervision prep' },
   { name: 'Placement Stability', icon: '◇', color: '#34d399', description: 'Transitions, relationships and plans' },
   { name: 'Team Development', icon: '▣', color: '#22d3ee', description: 'Workforce practice and culture' },

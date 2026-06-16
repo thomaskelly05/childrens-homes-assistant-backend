@@ -41,7 +41,7 @@ export function OrbProjectMemoryModal({
           value={memory}
           onChange={(e) => setMemory(e.target.value)}
           rows={5}
-          placeholder="e.g. My Home supports children aged 12–17. Current focus: recording quality, safeguarding oversight and inspection readiness."
+          placeholder="e.g. My Home supports children aged 12–17. Current focus: recording quality, safeguarding oversight and Inspection evidence preparation."
           className="w-full resize-y rounded-xl border border-[var(--orb-line)] bg-[var(--orb-surface-elevated)] px-3 py-2.5 text-sm text-[var(--orb-foreground)] outline-none placeholder:text-[var(--orb-muted)]"
           data-orb-project-memory-input
         />

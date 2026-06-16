@@ -87,7 +87,7 @@ const API_ROUTE_ALIASES = [
   // Homes - older quality/ofsted/readiness URLs mapped to newer families
   [/\/homes\/(\d+)\/quality-dashboard$/, "/homes/$1/inspection-scores"],
   [/\/homes\/(\d+)\/compliance-dashboard$/, "/homes/$1/compliance-items"],
-  [/\/homes\/(\d+)\/inspection-readiness$/, "/homes/$1/inspection-improvement-actions"],
+  [/\/homes\/(\d+)\/inspection evidence preparation$/, "/homes/$1/inspection-improvement-actions"],
   [/\/homes\/(\d+)\/quality$/, "/homes/$1/inspection-scores"],
   [/\/homes\/(\d+)\/compliance$/, "/homes/$1/compliance-items"],
   [/\/homes\/(\d+)\/dashboard$/, "/homes/$1/inspection-scores"],

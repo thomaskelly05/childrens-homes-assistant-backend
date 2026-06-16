@@ -33,7 +33,7 @@ def test_ofsted_score_fails_without_child_voice_for_full_answer():
         openai_called=True,
     )
     assert score["child-voice"] < 3
-    assert score["ofsted_ready"] is False
+    assert score["inspection_evidence_support"] is False
 
 
 def test_ofsted_score_fails_without_recording_quality():
@@ -56,7 +56,7 @@ def test_ofsted_ready_requires_no_invented_facts():
         openai_called=True,
     )
     assert score["no-invented-facts"] == "fail"
-    assert score["ofsted_ready"] is False
+    assert score["inspection_evidence_support"] is False
 
 
 def test_reg44_template_scores_ofsted_ready():
@@ -71,7 +71,7 @@ def test_reg44_template_scores_ofsted_ready():
         deterministic_available=True,
     )
     assert score["evidence-based"] >= 3
-    assert score["ofsted_ready"] is True
+    assert score["inspection_evidence_support"] is True
 
 
 def test_mandatory_safeguarding_high_risk_scoring():

@@ -8,7 +8,7 @@
   const roleMeta = {
     staff: ['Staff daily view', 'What needs attention today, why it matters, and what to do next.'],
     manager: ['Manager home view', 'Home-level risk, recording quality, safeguarding and leadership actions.'],
-    ri: ['Responsible Individual view', 'Multi-home assurance, inspection readiness and safeguarding oversight.'],
+    ri: ['Responsible Individual view', 'Multi-home assurance, Inspection evidence preparation and safeguarding oversight.'],
     provider: ['Provider view', 'Organisation-wide risk, trends and leadership focus.'],
   };
 

@@ -10,7 +10,7 @@
 `/api/founder/bootstrap` (server, 20s cache):
 
 1. `GET /founder-os/bootstrap?days=30` — persistence + telemetry + operating-loop runs
-2. Five live upstream fetches (concurrency 3): providers, homes, inspection-readiness, orb-billing-usage, orb-feedback-summary
+2. Five live upstream fetches (concurrency 3): providers, homes, inspection evidence preparation, orb-billing-usage, orb-feedback-summary
 3. Merges into `persistence`, `telemetrySummary`, `liveSummary`, `dataSourceStatus`, `sectionErrors`
 
 Client (`loadFounderBootstrap`): 20s session cache + in-flight dedup.

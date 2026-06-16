@@ -36,7 +36,7 @@ function buildPostBody(template: LinkedInPostTemplate): string {
 
   return `${intro}
 
-IndiCare Intelligence exists to return time to direct care in children's homes — through ORB, Ofsted readiness support, and ethical intelligence that never replaces professional judgement.
+IndiCare Intelligence exists to return time to direct care in children's homes — through ORB, Inspection evidence preparation support, and ethical intelligence that never replaces professional judgement.
 
 ${dataBasis}${metricsBlock}
 
@@ -125,7 +125,7 @@ We are building ethical intelligence for children's homes practitioners. All fig
 export function generateProviderMessageDraft(): ContentDraft {
   const body = `Provider partnership message — DRAFT
 
-IndiCare Intelligence supports children's homes practitioners with ORB, Ofsted readiness, and ethical intelligence designed to return time to direct care.
+IndiCare Intelligence supports children's homes practitioners with ORB, Inspection evidence preparation, and ethical intelligence designed to return time to direct care.
 
 We would welcome a conversation about pilot participation. No identifiable operational data is shared in this outreach.
 

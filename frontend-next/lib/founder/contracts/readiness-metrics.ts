@@ -1,5 +1,5 @@
 /**
- * Future live integration contract for Ofsted readiness metrics.
+ * Future live integration contract for Inspection evidence preparation metrics.
  * No API implementation yet — defines the shape for backend projections.
  */
 

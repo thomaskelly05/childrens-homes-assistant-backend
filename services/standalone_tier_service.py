@@ -98,7 +98,7 @@ FEATURE_LABELS: dict[str, str] = {
     "relationship_awareness": "Relationship-aware operational memory",
     "inspection_summaries": "Inspection summaries",
     "inspection_workspace": "Inspection workspace",
-    "readiness_scoring": "Inspection readiness scoring",
+    "readiness_scoring": "Inspection evidence preparation scoring",
     "evidence_gap_analysis": "Evidence gap analysis",
     "leadership_intelligence": "Leadership intelligence",
     "operational_copilots": "Specialist operational copilots",

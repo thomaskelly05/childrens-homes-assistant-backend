@@ -9,7 +9,7 @@ ORB Voice exposes **human-friendly voice profiles** (not raw OpenAI voice IDs) f
 | `orb_british_female` | ORB British Female | `coral` | Conversational, general guidance |
 | `orb_calm_professional` | ORB Calm Professional | `marin` | Recording support, structured updates |
 | `orb_reflective` | ORB Reflective | `sage` | Supervision, reflective practice |
-| `orb_clear_guidance` | ORB Clear Guidance | `cedar` | Inspection readiness, policies |
+| `orb_clear_guidance` | ORB Clear Guidance | `cedar` | Inspection evidence preparation, policies |
 | `orb_friendly_coach` | ORB Friendly Coach | `nova` | Learning coach, staff training |
 | `orb_serious_safeguarding` | ORB Serious Safeguarding | `onyx` | Safeguarding, risk discussions |
 | `system_fallback` | System fallback | (browser) | Device voice when realtime unavailable |
@@ -59,7 +59,7 @@ When the user has **not** explicitly chosen a voice, changing mode updates the p
 | Conversational | `orb_british_female` |
 | Reflective practice | `orb_reflective` |
 | Recording support | `orb_calm_professional` |
-| Inspection readiness | `orb_clear_guidance` |
+| Inspection evidence preparation | `orb_clear_guidance` |
 | Safeguarding support | `orb_serious_safeguarding` |
 | Learning coach | `orb_friendly_coach` |
 

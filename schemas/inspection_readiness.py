@@ -1,4 +1,4 @@
-"""Inspection readiness schemas — Reg 44 / Reg 45 evidence support packs, metadata only."""
+"""Inspection evidence preparation schemas — Reg 44 / Reg 45 evidence support packs, metadata only."""
 
 from __future__ import annotations
 

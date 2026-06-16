@@ -41,7 +41,7 @@ const REQUIRED_GET_ROUTES = [
   '/api/founder/operating-loop/runs',
   '/api/founder/live/providers',
   '/api/founder/live/homes',
-  '/api/founder/live/inspection-readiness',
+  '/api/founder/live/inspection evidence preparation',
   '/api/founder/live/orb-feedback-summary?days=30',
   '/api/founder/live/orb-billing-usage?days=30',
   '/api/founder/session'

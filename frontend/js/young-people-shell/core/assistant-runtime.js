@@ -230,14 +230,14 @@ function sectionGuidance(section, scope) {
     "home-dashboard":
       "Support with whole-home operational oversight, quality of care, staffing, incidents, compliance and management actions.",
     compliance:
-      "Support with Ofsted readiness, statutory compliance, supervision, training, audits, quality standards and evidence of good practice.",
+      "Support with Inspection evidence preparation, statutory compliance, supervision, training, audits, quality standards and evidence of good practice.",
     team:
       "Support with staffing pressures, absence impact, rota themes and workforce consistency.",
     supervision:
       "Support with supervision oversight, workforce development, training and practice accountability.",
     quality:
-      "Support with audit summaries, RI themes, monthly patterns, triangulation, quality assurance and inspection readiness.",
-    "inspection-readiness":
+      "Support with audit summaries, RI themes, monthly patterns, triangulation, quality assurance and Inspection evidence preparation.",
+    "inspection evidence preparation":
       "Support with inspection scorecards, lines of enquiry, action recovery, evidence quality and Ofsted preparation.",
     reg44:
       "Support with Reg 44 findings, recommendations, provider challenge and evidence of follow-through.",
@@ -259,7 +259,7 @@ function roleGuidance(role = "") {
   }
 
   if (["manager", "registered_manager", "deputy_manager"].includes(value)) {
-    return "Prioritise safeguarding oversight, consistency of care, management grip, standards, action completion and inspection readiness.";
+    return "Prioritise safeguarding oversight, consistency of care, management grip, standards, action completion and Inspection evidence preparation.";
   }
 
   if (value === "ri") {
@@ -286,7 +286,7 @@ function lensGuidance(lens = "general") {
     inspection:
       "Weight whether the evidence stands up to inspection scrutiny, the quality of analysis, follow-through, compliance and service leadership.",
     quality:
-      "Weight governance, cross-record triangulation, recurring shortfalls, provider oversight, audit concerns and inspection readiness.",
+      "Weight governance, cross-record triangulation, recurring shortfalls, provider oversight, audit concerns and Inspection evidence preparation.",
     operational:
       "Weight home functioning, routines, staffing, compliance, incidents, communication and practical service actions.",
     general:
@@ -311,7 +311,7 @@ function outputModeGuidance(outputMode = OUTPUT_MODE.answer) {
     [OUTPUT_MODE.handover]:
       "Write like a residential care handover: practical, shift-ready, concise and action-focused.",
     [OUTPUT_MODE.compliance_brief]:
-      "Write like a compliance and inspection-readiness brief for a children’s home.",
+      "Write like a compliance and inspection evidence preparation brief for a children’s home.",
     [OUTPUT_MODE.management_brief]:
       "Write like a manager oversight brief focusing on risk, actions, performance and service pressures.",
     [OUTPUT_MODE.quality_brief]:
@@ -329,7 +329,7 @@ function outputModeGuidance(outputMode = OUTPUT_MODE.answer) {
     [OUTPUT_MODE.children_home_manager_brief_template]:
       "Use a children’s home manager brief template. Focus on oversight, safeguarding, quality, compliance, workforce and actions.",
     [OUTPUT_MODE.children_home_quality_brief_template]:
-      "Use a children’s home quality and scrutiny template. Focus on triangulation, patterns, quality assurance, Ofsted readiness and governance.",
+      "Use a children’s home quality and scrutiny template. Focus on triangulation, patterns, quality assurance, Inspection evidence preparation and governance.",
     [OUTPUT_MODE.children_home_reg45_template]:
       "Use a Reg 45 support template suitable for children’s home review work. Focus on lived experience, progress, care impact, patterns, shortfalls and actions.",
   };
@@ -345,7 +345,7 @@ function buildSystemPrompt(context, options = {}) {
   return [
     "You are IndiCare OS, a children’s residential home operating system assistant.",
     "You are not a generic chatbot. You are an evidence-led operational intelligence assistant for children’s homes.",
-    "You support child-level practice, home-level oversight, provider quality assurance, and inspection readiness.",
+    "You support child-level practice, home-level oversight, provider quality assurance, and Inspection evidence preparation.",
     "You should reason from the records as a children’s home practitioner and oversight professional, then produce one clear answer suited to the user’s role, scope and need.",
     `Current scope: ${context.scope}.`,
     `Current section: ${context.section}.`,
@@ -579,19 +579,19 @@ function filterEvidenceBySection(evidence = [], section = "workspace") {
       "team",
       "supervision",
       "documents",
-      "inspection-readiness",
+      "inspection evidence preparation",
       "reg44",
       "reg45",
     ],
-    "inspection-readiness": [
-      "inspection-readiness",
+    "inspection evidence preparation": [
+      "inspection evidence preparation",
       "quality",
       "compliance",
       "manager",
       "reports",
     ],
-    reg44: ["reg44", "quality", "inspection-readiness", "manager"],
-    reg45: ["reg45", "quality", "reports", "inspection-readiness"],
+    reg44: ["reg44", "quality", "inspection evidence preparation", "manager"],
+    reg45: ["reg45", "quality", "reports", "inspection evidence preparation"],
   };
 
   const allowed = new Set(sectionGroups[section] || [section]);
@@ -1618,7 +1618,7 @@ function buildFallbackReply(message, context, runtime = {}) {
   if (/compliance|ofsted|audit|inspection|reg 44|reg44|reg 45|reg45/.test(text)) {
     return {
       answer: [
-        "Compliance and inspection-readiness view:",
+        "Compliance and inspection evidence preparation view:",
         "",
         "1. Workforce compliance",
         "2. Child or service file compliance",
@@ -1670,7 +1670,7 @@ function buildFallbackReply(message, context, runtime = {}) {
 
   return {
     answer: [
-      "I can help across the full children’s residential home record set for this scope, including incidents, daily records, care planning, risk, health, education, family contact, compliance, uploaded documents, quality, inspection readiness and oversight.",
+      "I can help across the full children’s residential home record set for this scope, including incidents, daily records, care planning, risk, health, education, family contact, compliance, uploaded documents, quality, Inspection evidence preparation and oversight.",
       "",
       "Try asking me to:",
       "• give a full summary",

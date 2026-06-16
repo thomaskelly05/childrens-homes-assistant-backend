@@ -43,7 +43,7 @@ export const ORB_DICTATE_QUICK_ACTIONS: OrbDictateQuickAction[] = [
   { id: 'manager', label: 'Add manager oversight', mode: 'manager_oversight', instruction: 'Add manager oversight', group: 'practice' },
   { id: 'curiosity', label: 'Add professional curiosity', mode: 'professional_curiosity', instruction: 'Add professional curiosity', group: 'practice' },
   { id: 'impact', label: 'Add evidence of impact', mode: 'evidence_of_impact', instruction: 'Add evidence of impact', group: 'practice' },
-  { id: 'ofsted', label: 'Make Ofsted-ready', mode: 'ofsted_ready', instruction: 'Make this more Ofsted-ready', group: 'inspection' },
+  { id: 'ofsted', label: 'Make Inspection evidence support', mode: 'ofsted_ready', instruction: 'Make this more Inspection evidence support', group: 'inspection' },
   { id: 'sccif', label: 'Add SCCIF lens', mode: 'sccif_lens', instruction: 'Add SCCIF lens', group: 'inspection' },
   { id: 'ri', label: 'Create RI summary', mode: 'ri_summary', instruction: 'Create summary for RI', group: 'inspection' },
   { id: 'action_plan', label: 'Create action plan', mode: 'action_plan', instruction: 'Create action plan from this', group: 'inspection' },

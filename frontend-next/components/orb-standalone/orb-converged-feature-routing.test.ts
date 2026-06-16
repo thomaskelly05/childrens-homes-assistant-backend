@@ -49,7 +49,7 @@ describe('ORB converged feature routing', () => {
   it('documents panel exposes converged lenses and cross-room actions', () => {
     const lenses = readComponent('lib/orb/document-intelligence.ts')
     const panel = readComponent('components/orb-standalone/orb-document-panel.tsx')
-    assert.match(lenses, /Inspection readiness/)
+    assert.match(lenses, /Inspection evidence preparation/)
     assert.match(lenses, /Recording requirements/)
     assert.match(lenses, /RESIDENTIAL_DOCUMENT_CROSS_ACTIONS/)
     assert.match(panel, /data-orb-document-cross-actions/)

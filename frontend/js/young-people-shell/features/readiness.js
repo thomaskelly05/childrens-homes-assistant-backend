@@ -921,7 +921,7 @@ function renderLegacyReadinessHtml({
           <section class="overview-side-card">
             <div class="overview-section-head">
               <h3>Statutory and linked documents</h3>
-              <p>Documents that may affect review, expiry or inspection readiness.</p>
+              <p>Documents that may affect review, expiry or Inspection evidence preparation.</p>
             </div>
 
             ${renderRecordRows(buildDocumentRows(documents), "No documents found.")}
@@ -983,7 +983,7 @@ function renderBandChip(label, band, score) {
 
 function renderHomeCards(cards = [], selectedHomeId = null) {
   if (!cards.length) {
-    return renderEmptyState("No inspection readiness cards are available.");
+    return renderEmptyState("No Inspection evidence preparation cards are available.");
   }
 
   return `
@@ -1338,13 +1338,13 @@ function renderInspectionDetail({
     <section class="overview-panel">
       <div class="overview-panel-head">
         <div>
-          <div class="eyebrow">Inspection readiness</div>
+          <div class="eyebrow">Inspection evidence preparation</div>
           <h2>${toText(detail.home_name || getScopeTitle())}</h2>
           <p>
             ${toText(
               detail.top_concerns ||
                 detail.narrative_summary ||
-                "Live inspection readiness, actions, and likely areas of inspector focus."
+                "Live Inspection evidence preparation, actions, and likely areas of inspector focus."
             )}
           </p>
         </div>
@@ -1435,7 +1435,7 @@ function renderInspectionWorkspace({
         <section class="overview-section-card">
           <div class="overview-section-head">
             <h3>Homes</h3>
-            <p>Live inspection readiness across available homes.</p>
+            <p>Live Inspection evidence preparation across available homes.</p>
           </div>
           ${renderHomeCards(cards, selectedCard?.home_id || state.readinessSelectedHomeId)}
         </section>

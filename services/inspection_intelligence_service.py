@@ -7,7 +7,7 @@ from services.evidence_quality_service import evidence_quality_service
 
 
 class InspectionIntelligenceService:
-    """Predictive inspection readiness support with cautious, explainable outputs."""
+    """Predictive Inspection evidence preparation support with cautious, explainable outputs."""
 
     def readiness(self, *, evidence: dict[str, Any], workspace: dict[str, Any] | None = None) -> dict[str, Any]:
         quality = evidence_quality_service.analyse(evidence=evidence, workspace=workspace or {})
@@ -168,7 +168,7 @@ class InspectionIntelligenceService:
     def _summary(self, readiness: str, concerns: list[str]) -> str:
         if not concerns:
             return "Inspection intelligence found no immediate operational concerns from the supplied evidence."
-        return f"Inspection readiness is currently '{readiness}' with {len(concerns)} identified operational concern(s)."
+        return f"Inspection evidence preparation is currently '{readiness}' with {len(concerns)} identified operational concern(s)."
 
 
 inspection_intelligence_service = InspectionIntelligenceService()

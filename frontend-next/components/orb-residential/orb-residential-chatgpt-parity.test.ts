@@ -66,7 +66,7 @@ describe('ORB Residential ChatGPT parity', () => {
   it('Ofsted answer uses residential-specific structure in backend sanitizer', () => {
     const py = readFileSync(join(root, '../tests/test_orb_professional_curiosity_depth.py'), 'utf8')
     assert.match(py, /test_general_ofsted_sanitize_strips_threshold_closer/)
-    assert.match(py, /SCCIF|inspection readiness|evidence review/i)
+    assert.match(py, /SCCIF|Inspection evidence preparation|evidence review/i)
   })
 
   it('raw p.map error is not user-facing in error boundary', () => {

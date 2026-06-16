@@ -73,7 +73,7 @@ function generateRuleBasedInsights(input: FounderInsightInput): FounderInsight[]
   if (topGap && topGap.frequency >= 10) {
     insights.push({
       priority: 'medium',
-      title: `Ofsted readiness gaps show ${topGap.gap.toLowerCase()}. Add prompts across templates.`,
+      title: `Inspection evidence preparation gaps show ${topGap.gap.toLowerCase()}. Add prompts across templates.`,
       explanation: `${topGap.gap} appears in ${topGap.frequency} homes. Platform average readiness is ${readinessMetrics.platformAverageScore}%.`,
       action: 'Embed child voice prompts in reports, key work sessions, and daily logs.'
     })

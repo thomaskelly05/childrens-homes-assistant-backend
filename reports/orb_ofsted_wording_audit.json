@@ -1,0 +1,1703 @@
+{
+  "risky_occurrences_found": 200,
+  "occurrences_replaced": 0,
+  "factual_source_references_kept": 10,
+  "occurrences": [
+    {
+      "file": "services/assistant_intelligence_service.py",
+      "line": 46,
+      "context": "\"inspection_readiness\": brief.get(\"inspection_readiness\"),",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "services/assistant_intelligence_service.py",
+      "line": 69,
+      "context": "\"inspection_readiness\": readiness,",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "services/assistant_orchestrator.py",
+      "line": 551,
+      "context": "\"response_stance\": \"inspection_ready\",",
+      "occurrence": "inspection ready",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "services/continuous_intelligence_state_service.py",
+      "line": 226,
+      "context": "\"inspection_readiness\": \"review\" if findings.get(\"inspection_risks\") or findings.get(\"ofsted\") else \"not_flagged\",",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "services/document_template_service.py",
+      "line": 541,
+      "context": "\"inspection_readiness\",",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "services/document_template_service.py",
+      "line": 562,
+      "context": "\"inspection_readiness\",",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "services/document_template_service.py",
+      "line": 582,
+      "context": "\"inspection_readiness\",",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "services/governance_intelligence_service.py",
+      "line": 9,
+      "context": "from assistant.inspection_readiness import build_inspection_readiness, serialise_inspection_readiness",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "services/governance_intelligence_service.py",
+      "line": 115,
+      "context": "\"assistant.inspection_readiness and assistant.reg45_builder for inspection and Reg 45 context.\",",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "services/governance_intelligence_service.py",
+      "line": 136,
+      "context": "\"Predictive readiness is a conservative risk forecast, not an Ofsted grade prediction.\",",
+      "occurrence": "ofsted-grade",
+      "classification": "product_label_risky",
+      "action": "replace"
+    },
+    {
+      "file": "services/governance_intelligence_service.py",
+      "line": 166,
+      "context": "\"inspection_readiness\": \"degraded\",",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "services/governance_intelligence_service.py",
+      "line": 174,
+      "context": "\"inspection_readiness\": {\"readiness_level\": \"degraded\", \"summary\": reason[:120]},",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "services/governance_intelligence_service.py",
+      "line": 323,
+      "context": "\"inspection_readiness\": forecast[\"readiness_level\"],",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "services/governance_intelligence_service.py",
+      "line": 331,
+      "context": "\"inspection_readiness\": forecast,",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "services/governance_intelligence_service.py",
+      "line": 462,
+      "context": "payload[\"inspection_readiness\"] = serialise_inspection_readiness(readiness)",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "services/governance_intelligence_service.py",
+      "line": 463,
+      "context": "payload[\"strengths\"] = payload[\"inspection_readiness\"].get(\"strengths\", [])",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "services/governance_intelligence_service.py",
+      "line": 464,
+      "context": "payload[\"weaknesses\"] = payload[\"inspection_readiness\"].get(\"vulnerabilities\", [])",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "services/governance_intelligence_service.py",
+      "line": 491,
+      "context": "\"guardrail\": \"This is a readiness forecast for leadership review, not an Ofsted grade prediction.\",",
+      "occurrence": "ofsted-grade",
+      "classification": "product_label_risky",
+      "action": "replace"
+    },
+    {
+      "file": "services/governance_intelligence_service.py",
+      "line": 533,
+      "context": "\"Do not predict an Ofsted grade or make safeguarding decisions.\",",
+      "occurrence": "ofsted-grade",
+      "classification": "product_label_risky",
+      "action": "replace"
+    },
+    {
+      "file": "services/governance_trust_framework_service.py",
+      "line": 70,
+      "context": "f\"- Ofsted grade prediction blocked: {snapshot['ofsted_grade_prediction_blocked']}\",",
+      "occurrence": "ofsted-grade",
+      "classification": "product_label_risky",
+      "action": "replace"
+    },
+    {
+      "file": "services/group_quality_service.py",
+      "line": 33,
+      "context": "{\"home_id\": home[\"home_id\"], \"status\": home[\"inspection_readiness\"]}",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "services/indicare_intelligence_spine_service.py",
+      "line": 333,
+      "context": "ofsted_readiness=readiness,",
+      "occurrence": "ofsted readiness",
+      "classification": "product_label_risky",
+      "action": "replace"
+    },
+    {
+      "file": "services/indicare_provider_intelligence.py",
+      "line": 122,
+      "context": "\"feature\": \"inspection_readiness\",",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "services/inspection_evidence_pack_service.py",
+      "line": 44,
+      "context": "\"inspection_readiness\": inspection.get(\"overall_readiness\"),",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "services/inspection_pack_registry_service.py",
+      "line": 7,
+      "context": "from schemas.inspection_readiness import (",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "services/inspection_pack_service.py",
+      "line": 46,
+      "context": "\"inspection_readiness\": readiness,",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "services/inspection_readiness_service.py",
+      "line": 15,
+      "context": "from schemas.inspection_readiness import (",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "services/inspection_readiness_service.py",
+      "line": 33,
+      "context": "logger = logging.getLogger(\"indicare.inspection_readiness\")",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "services/inspection_readiness_service.py",
+      "line": 208,
+      "context": "# Exclude collect_daily_brief_evidence \u2014 would recurse via manager_daily_brief \u2192 inspection_readiness.",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "services/inspection_readiness_service.py",
+      "line": 804,
+      "context": "tags=[\"inspection_readiness\", pack.pack_type],",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "services/inspection_readiness_service.py",
+      "line": 858,
+      "context": "source_service=\"inspection_readiness\",",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "services/live_home_status_service.py",
+      "line": 36,
+      "context": "\"inspection_readiness_pct\": dimensions.get(\"inspection_readiness\"),",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "services/manager_daily_brief_service.py",
+      "line": 818,
+      "context": "source=\"inspection_readiness\",",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "services/manager_daily_brief_service.py",
+      "line": 830,
+      "context": "source=\"inspection_readiness\",",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "services/manager_daily_brief_service.py",
+      "line": 841,
+      "context": "source=\"inspection_readiness\",",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "services/manager_daily_brief_service.py",
+      "line": 849,
+      "context": "id=\"inspection_readiness\",",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "services/ofsted_judgement_simulation_service.py",
+      "line": 9,
+      "context": "\"Simulation of evidence strength only. This does not provide an Ofsted grade, \"",
+      "occurrence": "ofsted-grade",
+      "classification": "product_label_risky",
+      "action": "replace"
+    },
+    {
+      "file": "services/operational_action_engine.py",
+      "line": 559,
+      "context": "tags=[\"compliance\", \"inspection_readiness\"],",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "services/operational_consciousness_event_engine.py",
+      "line": 106,
+      "context": "updates.extend([\"governance_drift\", \"provider_learning\", \"inspection_readiness\"])",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "services/operational_risk_matrix_service.py",
+      "line": 34,
+      "context": "\"inspection_readiness\": self._score_inspection(inspection),",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "services/operational_state_engine.py",
+      "line": 201,
+      "context": "\"required_records\": [\"inspection_readiness\", \"document_readiness\", \"annex_a_readiness\"],",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "services/orb_action_engine_service.py",
+      "line": 268,
+      "context": "knowledge_modules=(\"inspection_readiness\", \"ofsted_sccif\", \"quality_standards\"),",
+      "occurrence": "inspection readiness",
+      "classification": "factual_source_reference",
+      "action": "keep"
+    },
+    {
+      "file": "services/orb_care_synonym_service.py",
+      "line": 84,
+      "context": "\"ofsted_readiness\": {",
+      "occurrence": "ofsted readiness",
+      "classification": "product_label_risky",
+      "action": "replace"
+    },
+    {
+      "file": "services/orb_cost_optimised_retrieval.py",
+      "line": 38,
+      "context": "return {\"intent\": \"regulatory\", \"feature\": \"ofsted_challenge\", \"report_type\": \"inspection_readiness\"}",
+      "occurrence": "inspection readiness",
+      "classification": "factual_source_reference",
+      "action": "keep"
+    },
+    {
+      "file": "services/orb_cost_optimised_retrieval.py",
+      "line": 43,
+      "context": "return {\"intent\": \"metadata\", \"feature\": \"metadata\", \"report_type\": \"inspection_readiness\"}",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "services/orb_cost_optimised_retrieval.py",
+      "line": 73,
+      "context": "report_type = decision.get(\"report_type\", \"inspection_readiness\")",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "services/orb_data_vault_registry_service.py",
+      "line": 65,
+      "context": "typical_modules=(\"inspection_readiness\", \"ofsted_sccif\", \"quality_standards\", \"leadership_management\"),",
+      "occurrence": "inspection readiness",
+      "classification": "factual_source_reference",
+      "action": "keep"
+    },
+    {
+      "file": "services/orb_data_vault_registry_service.py",
+      "line": 72,
+      "context": "typical_modules=(\"leadership_management\", \"team_learning_loop\", \"inspection_readiness\"),",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "services/orb_dictate_edit_service.py",
+      "line": 35,
+      "context": "\"ofsted_ready\": \"Inspection evidence support\",",
+      "occurrence": "ofsted-ready",
+      "classification": "product_label_risky",
+      "action": "replace"
+    },
+    {
+      "file": "services/orb_dictate_edit_service.py",
+      "line": 69,
+      "context": "\"ofsted_ready\": (",
+      "occurrence": "ofsted-ready",
+      "classification": "product_label_risky",
+      "action": "replace"
+    },
+    {
+      "file": "services/orb_dictate_edit_service.py",
+      "line": 200,
+      "context": "elif mode in {\"ofsted_ready\", \"inspection_evidence_support\", \"sccif_lens\"}:",
+      "occurrence": "ofsted-ready",
+      "classification": "factual_source_reference",
+      "action": "keep"
+    },
+    {
+      "file": "services/orb_evaluation_suite_service.py",
+      "line": 56,
+      "context": "\"inspection_readiness\": {",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "services/orb_evaluation_suite_service.py",
+      "line": 73,
+      "context": "\"No Ofsted grade prediction.\",",
+      "occurrence": "ofsted-grade",
+      "classification": "product_label_risky",
+      "action": "replace"
+    },
+    {
+      "file": "services/orb_expert_brain_orchestrator_service.py",
+      "line": 121,
+      "context": "\"- ORB does not make safeguarding thresholds, diagnoses, or Ofsted grade predictions.\",",
+      "occurrence": "ofsted-grade",
+      "classification": "product_label_risky",
+      "action": "replace"
+    },
+    {
+      "file": "services/orb_inspector_evidence_score_service.py",
+      "line": 22,
+      "context": "This is not an Ofsted grade predictor. It helps ORB talk about evidence quality:",
+      "occurrence": "ofsted-grade",
+      "classification": "product_label_risky",
+      "action": "replace"
+    },
+    {
+      "file": "services/orb_inspector_evidence_score_service.py",
+      "line": 60,
+      "context": "\"- Do not predict an Ofsted grade. Score evidence quality only: strong, emerging, weak, missing or contradictory.\",",
+      "occurrence": "ofsted-grade",
+      "classification": "product_label_risky",
+      "action": "replace"
+    },
+    {
+      "file": "services/orb_knowledge_gap_audit_service.py",
+      "line": 830,
+      "context": "\"ofsted_ready\": (ofsted_score or {}).get(\"ofsted_ready\"),",
+      "occurrence": "ofsted-ready",
+      "classification": "product_label_risky",
+      "action": "replace"
+    },
+    {
+      "file": "services/orb_knowledge_gap_audit_service.py",
+      "line": 831,
+      "context": "\"pilot_ready\": internal_passed and (ofsted_score is None or ofsted_score.get(\"ofsted_ready\", True)),",
+      "occurrence": "ofsted-ready",
+      "classification": "product_label_risky",
+      "action": "replace"
+    },
+    {
+      "file": "services/orb_missingness_graph_service.py",
+      "line": 68,
+      "context": "return sequences.get(\"ofsted_readiness\")",
+      "occurrence": "ofsted readiness",
+      "classification": "product_label_risky",
+      "action": "replace"
+    },
+    {
+      "file": "services/orb_multi_agent_reasoning_service.py",
+      "line": 38,
+      "context": "cautions=(\"Do not predict an Ofsted grade.\", \"Do not overstate evidence that is not visible.\"),",
+      "occurrence": "ofsted-grade",
+      "classification": "product_label_risky",
+      "action": "replace"
+    },
+    {
+      "file": "services/orb_ofsted_readiness_scoring_service.py",
+      "line": 145,
+      "context": "\"ofsted_ready\": inspection_evidence_support,",
+      "occurrence": "ofsted-ready",
+      "classification": "product_label_risky",
+      "action": "replace"
+    },
+    {
+      "file": "services/orb_residential_quality_service.py",
+      "line": 137,
+      "context": "\"ofsted_ready\": len(gaps) == 0 and quality.recording_quality == \"good\",",
+      "occurrence": "ofsted-ready",
+      "classification": "product_label_risky",
+      "action": "replace"
+    },
+    {
+      "file": "services/orb_residential_quality_service.py",
+      "line": 189,
+      "context": "\"ofsted_readiness\": inspection,",
+      "occurrence": "ofsted readiness",
+      "classification": "product_label_risky",
+      "action": "replace"
+    },
+    {
+      "file": "services/orb_voice_profiles.py",
+      "line": 33,
+      "context": "\"inspection_readiness\": \"orb_clear_guidance\",",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "services/orb_voice_profiles.py",
+      "line": 177,
+      "context": "\"inspection_readiness\": (",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "services/os_intelligence_service.py",
+      "line": 59,
+      "context": "\"inspection_readiness\": readiness,",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "services/os_intelligence_service.py",
+      "line": 84,
+      "context": "score = int((item.get(\"inspection_readiness\") or {}).get(\"score\") or 0)",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "services/os_intelligence_service.py",
+      "line": 85,
+      "context": "actions = (item.get(\"inspection_readiness\") or {}).get(\"actions\") or []",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "services/os_intelligence_service.py",
+      "line": 95,
+      "context": "scores = [int((item.get(\"inspection_readiness\") or {}).get(\"score\") or 0) for item in child_outputs]",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "services/provider_command_centre_service.py",
+      "line": 43,
+      "context": "\"inspection_readiness\": home.get(\"inspection_readiness\"),",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "services/provider_command_centre_service.py",
+      "line": 59,
+      "context": "inspection_penalty = 15 if home.get(\"inspection_readiness\") == \"requires_immediate_attention\" else 0",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "services/provider_command_centre_service.py",
+      "line": 74,
+      "context": "\"inspection\": home.get(\"inspection_readiness\"),",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "services/provider_intelligence_service.py",
+      "line": 80,
+      "context": "\"inspection_readiness\": inspection.get(\"overall_readiness\"),",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "services/provider_intelligence_service.py",
+      "line": 130,
+      "context": "1 for snap in home_snapshots if snap.get(\"inspection_readiness\") == \"requires_immediate_attention\"",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "services/provider_intelligence_service.py",
+      "line": 162,
+      "context": "\"readiness_breakdown\": [snap.get(\"inspection_readiness\") for snap in home_snapshots],",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "services/provider_intelligence_service.py",
+      "line": 181,
+      "context": "\"inspection_readiness\": (\"ofsted\", \"inspection\", \"reg 44\", \"reg 45\"),",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "services/provider_oversight_service.py",
+      "line": 115,
+      "context": "\"inspection_readiness\": home.get(\"inspection_readiness\") or \"not_sampled\",",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "services/reg44_intelligence_service.py",
+      "line": 25,
+      "context": "\"inspection_readiness\": inspection.get(\"overall_readiness\"),",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "services/reg45_generation_service.py",
+      "line": 45,
+      "context": "\"inspection_readiness\": intelligence.get(\"inspection_readiness\"),",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "services/reg45_quality_review_service.py",
+      "line": 14,
+      "context": "from schemas.inspection_readiness import InspectionEvidenceGap, InspectionEvidenceItem, InspectionReadinessFilters",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "services/reg45_quality_review_service.py",
+      "line": 51,
+      "context": "\"inspection_readiness\": \"/intelligence/inspection evidence preparation\",",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "services/regulatory_cognition_service.py",
+      "line": 86,
+      "context": "if home.get(\"inspection_readiness\") == \"review\":",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "services/regulatory_graph_service.py",
+      "line": 212,
+      "context": "return self.get_report_evidence_pack(records, report_type=\"inspection_readiness\", scope=scope)",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "services/regulatory_graph_service.py",
+      "line": 248,
+      "context": "if report_type == \"inspection_readiness\":",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "services/regulatory_metadata_service.py",
+      "line": 57,
+      "context": "\"education\": [\"lac_review\", \"reg45\", \"inspection_readiness\"],",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "services/regulatory_metadata_service.py",
+      "line": 58,
+      "context": "\"health_and_wellbeing\": [\"lac_review\", \"reg45\", \"inspection_readiness\"],",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "services/regulatory_metadata_service.py",
+      "line": 59,
+      "context": "\"positive_relationships\": [\"lac_review\", \"reg45\", \"inspection_readiness\"],",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "services/regulatory_metadata_service.py",
+      "line": 62,
+      "context": "\"care_planning\": [\"lac_review\", \"reg45\", \"inspection_readiness\"],",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "services/regulatory_metadata_service.py",
+      "line": 101,
+      "context": "report_relevance.append(\"inspection_readiness\")",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "services/risk_locality_connection_service.py",
+      "line": 63,
+      "context": "\"inspection_readiness\": {",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "services/workforce_intelligence_service.py",
+      "line": 385,
+      "context": "\"inspection_readiness\": {",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "services/workforce_journey_service.py",
+      "line": 280,
+      "context": "\"inspection_readiness\": self._inspection_links(rows[\"evidence\"]),",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "services/workspace_orchestrator_service.py",
+      "line": 91,
+      "context": "\"ofsted_readiness\": inspection,",
+      "occurrence": "ofsted readiness",
+      "classification": "product_label_risky",
+      "action": "replace"
+    },
+    {
+      "file": "routers/account_routes.py",
+      "line": 435,
+      "context": "if assistant_tone not in {\"professional\", \"warm\", \"concise\", \"reflective\", \"inspection_ready\"}:",
+      "occurrence": "inspection ready",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "routers/governance_intelligence_routes.py",
+      "line": 354,
+      "context": "return {\"ok\": True, \"data\": centre.get(\"inspection_readiness\", {})}",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "routers/inspection_readiness_routes.py",
+      "line": 15,
+      "context": "from schemas.inspection_readiness import (",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "schemas/indicare_intelligence.py",
+      "line": 132,
+      "context": "\"Simulation of evidence strength only. This does not provide an Ofsted grade or inspection outcome.\"",
+      "occurrence": "ofsted-grade",
+      "classification": "product_label_risky",
+      "action": "replace"
+    },
+    {
+      "file": "schemas/indicare_intelligence.py",
+      "line": 194,
+      "context": "ofsted_readiness: dict[str, Any] = Field(default_factory=dict)",
+      "occurrence": "ofsted readiness",
+      "classification": "product_label_risky",
+      "action": "replace"
+    },
+    {
+      "file": "schemas/manager_daily_brief.py",
+      "line": 68,
+      "context": "inspection_readiness: str = \"/intelligence/inspection evidence preparation\"",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "schemas/orb_dictate.py",
+      "line": 59,
+      "context": "\"ofsted_ready\",",
+      "occurrence": "ofsted-ready",
+      "classification": "product_label_risky",
+      "action": "replace"
+    },
+    {
+      "file": "frontend/osOversightTypes.ts",
+      "line": 1,
+      "context": "export type InspectionReadinessState = 'inspection_ready' | 'monitor' | 'requires_attention' | 'urgent';",
+      "occurrence": "inspection ready",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "frontend/staff-profile.html",
+      "line": 107,
+      "context": "<div class=\"field\"><label for=\"assistantTone\">Assistant tone</label><select id=\"assistantTone\"><option value=\"professional\">Professional</option><option value=\"warm\">Warm</option><option value=\"concis",
+      "occurrence": "inspection ready",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "frontend/js/os-demo-intelligence.js",
+      "line": 83,
+      "context": "const readiness = data.inspection_readiness || {};",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "frontend/js/os-intelligence-panel.js",
+      "line": 67,
+      "context": "const readiness = data.inspection_readiness || {};",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "frontend/js/indicare-workspace/indicare-os-data-adapter-safe.js",
+      "line": 14,
+      "context": "reports: [\"reports\", \"inspection\", \"inspection_readiness\"],",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "frontend/js/young-people-shell/features/compliance.js",
+      "line": 412,
+      "context": "record_type: item.record_type || \"inspection_readiness\",",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "frontend/js/young-people-shell/features/compliance.js",
+      "line": 1123,
+      "context": "recordType: \"inspection_readiness\",",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "frontend-next/docs/orb-dictate-studio-report.md",
+      "line": 48,
+      "context": "Modes include: `spelling_grammar`, `therapeutic_rewrite`, `ofsted_ready`, `child_voice`, `safeguarding_lens`, `manager_oversight`, `chronology_conversion`, `handover_conversion`, `missing_information`",
+      "occurrence": "ofsted-ready",
+      "classification": "product_label_risky",
+      "action": "replace"
+    },
+    {
+      "file": "frontend-next/app/wellbeing/page.tsx",
+      "line": 18,
+      "context": "inspection_readiness: {},",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "frontend-next/app/governance/command-centre/page.tsx",
+      "line": 30,
+      "context": "{ label: 'SCCIF visibility', value: text(summary.inspection_readiness, valueFromRecord(data.inspection_readiness || {}, ['status'], 'Review')), detail: `${matrixEntries.length} evidence matrix entr${m",
+      "occurrence": "inspection readiness",
+      "classification": "factual_source_reference",
+      "action": "keep"
+    },
+    {
+      "file": "frontend-next/app/governance/command-centre/page.tsx",
+      "line": 44,
+      "context": "['Where is oversight strongest?', matrixEntries.length ? `${matrixEntries.length} SCCIF evidence entries visible` : label(summary.inspection_readiness, 'Evidence matrix not returned')],",
+      "occurrence": "inspection readiness",
+      "classification": "factual_source_reference",
+      "action": "keep"
+    },
+    {
+      "file": "frontend-next/app/governance/command-centre/page.tsx",
+      "line": 88,
+      "context": "<StatCard label=\"Inspection evidence preparation\" value={text(summary.inspection_readiness, 'Review')} detail=\"Backend readiness forecast\" href=\"/inspection evidence preparation\" />",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "frontend-next/app/intelligence/sccif/page.tsx",
+      "line": 34,
+      "context": "description=\"Quality Standards alignment and SCCIF evidence snapshot \u2014 gaps to review for managers. Supports Inspection evidence preparation; does not guarantee compliance or predict grades.\"",
+      "occurrence": "guarantees compliance",
+      "classification": "factual_source_reference",
+      "action": "keep"
+    },
+    {
+      "file": "frontend-next/app/staff/command-centre/page.tsx",
+      "line": 27,
+      "context": "['Safeguarding confidence', String(centre.inspection_readiness?.summary || centre.role_scope || 'Review supervision, recording quality and safeguarding evidence')],",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "frontend-next/app/staff/command-centre/page.tsx",
+      "line": 99,
+      "context": "<p className=\"text-sm leading-7 text-slate-600\">{String(centre.inspection_readiness?.summary || 'No Inspection evidence preparation summary returned.')}</p>",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "frontend-next/components/inspection-readiness/inspection-readiness-workspace.tsx",
+      "line": 64,
+      "context": "Manager judgement required \u2014 summaries support preparation; they do not guarantee compliance or predict grades.",
+      "occurrence": "guarantees compliance",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "frontend-next/components/orb-residential/orb-navigation-convergence.test.ts",
+      "line": 68,
+      "context": "assert.equal(resolveConvergedNavigation('inspection_readiness').destination.station, 'documents')",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "frontend-next/components/orb-residential/orb-navigation-convergence.test.ts",
+      "line": 78,
+      "context": "'inspection_readiness',",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "frontend-next/components/orb-residential/orb-residential-desktop-layout.test.ts",
+      "line": 85,
+      "context": "assert.match(core, /inspection_readiness/)",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "frontend-next/components/orb-standalone/orb-care-companion.tsx",
+      "line": 2403,
+      "context": "(station === 'inspection_readiness' ||",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "frontend-next/components/orb-standalone/orb-care-companion.tsx",
+      "line": 3364,
+      "context": "open={activePanel === 'inspection_readiness'}",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "frontend-next/components/orb-standalone/orb-converged-panel-redirect.tsx",
+      "line": 12,
+      "context": "inspection_readiness: 'Inspection evidence preparation',",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "frontend-next/components/orb-standalone/orb-core-workspace-panels.ts",
+      "line": 12,
+      "context": "'inspection_readiness',",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "frontend-next/components/orb-standalone/orb-dictate-station.tsx",
+      "line": 422,
+      "context": "await runGenerate({ ...flags, include_ofsted_lens: flags.include_ofsted_lens ?? action === 'ofsted_ready' })",
+      "occurrence": "ofsted-ready",
+      "classification": "product_label_risky",
+      "action": "replace"
+    },
+    {
+      "file": "frontend-next/components/orb-standalone/orb-practice-panels.tsx",
+      "line": 49,
+      "context": "panelId=\"inspection_readiness\"",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "frontend-next/components/orb-standalone/orb-practice-panels.tsx",
+      "line": 54,
+      "context": "studioId=\"inspection_readiness\"",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "frontend-next/components/orb-standalone/orb-practice-panels.tsx",
+      "line": 96,
+      "context": "<div data-orb-inspection evidence preparation-panel data-orb-premium-page=\"inspection_readiness\">",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "frontend-next/components/orb-standalone/orb-standalone-panel-types.ts",
+      "line": 5,
+      "context": "| 'inspection_readiness'",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "frontend-next/components/orb-standalone/orb-standalone-panel-types.ts",
+      "line": 32,
+      "context": "'inspection_readiness',",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "frontend-next/components/orb-standalone/orb-studio-surface-contract.test.ts",
+      "line": 25,
+      "context": "'inspection_readiness',",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "frontend-next/components/orb-standalone/orb-workspace-shell.test.ts",
+      "line": 22,
+      "context": "'inspection_readiness',",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "frontend-next/lib/document-system/templates.ts",
+      "line": 65,
+      "context": "template('reg_44_evidence_note', 'Reg 44 Evidence Note', 'home', 'inspection_readiness', ['Visit evidence sampled', \"Children's views\", 'Staff views and practice', 'Safeguarding and environment', 'Lea",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "frontend-next/lib/document-system/templates.ts",
+      "line": 66,
+      "context": "template('reg_45_review_evidence_note', 'Reg 45 Review Evidence Note', 'home', 'inspection_readiness', ['Quality of care evidence', 'Patterns and trends', 'Children and family feedback', 'Workforce an",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "frontend-next/lib/document-system/templates.ts",
+      "line": 67,
+      "context": "template('annex_a_evidence_summary', 'Annex A Evidence Summary', 'home', 'inspection_readiness', ['Children living at the home', 'Safeguarding and notifications', 'Outcomes and progress', 'Workforce a",
+      "occurrence": "inspection readiness",
+      "classification": "factual_source_reference",
+      "action": "keep"
+    },
+    {
+      "file": "frontend-next/lib/orb/document-comparison.ts",
+      "line": 15,
+      "context": "| 'inspection_readiness'",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "frontend-next/lib/orb/document-comparison.ts",
+      "line": 58,
+      "context": "id: 'inspection_readiness',",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "frontend-next/lib/orb/document-comparison.ts",
+      "line": 94,
+      "context": "inspection_readiness:",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "frontend-next/lib/orb/orb-converged-actions.ts",
+      "line": 271,
+      "context": "id: 'ofsted_ready',",
+      "occurrence": "ofsted-ready",
+      "classification": "product_label_risky",
+      "action": "replace"
+    },
+    {
+      "file": "frontend-next/lib/orb/orb-converged-actions.ts",
+      "line": 816,
+      "context": "'ofsted_ready',",
+      "occurrence": "ofsted-ready",
+      "classification": "product_label_risky",
+      "action": "replace"
+    },
+    {
+      "file": "frontend-next/lib/orb/orb-navigation-convergence.ts",
+      "line": 5,
+      "context": "| 'inspection_readiness'",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "frontend-next/lib/orb/orb-navigation-convergence.ts",
+      "line": 13,
+      "context": "| 'inspection_readiness'",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "frontend-next/lib/orb/orb-navigation-convergence.ts",
+      "line": 21,
+      "context": "'inspection_readiness',",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "frontend-next/lib/orb/orb-navigation-convergence.ts",
+      "line": 62,
+      "context": "inspection_readiness: {",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "frontend-next/lib/os-api/care-hub.ts",
+      "line": 249,
+      "context": "summary?: { evidence_gaps?: number; inspection_readiness?: string }",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "frontend-next/lib/os-api/care-hub.ts",
+      "line": 261,
+      "context": "inspection_readiness: String(inspection.overall_readiness || payload?.live_status?.inspection_readiness_pct || '')",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "frontend-next/lib/os-api/governance.ts",
+      "line": 19,
+      "context": "inspection_readiness: UnknownRecord",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "frontend-next/lib/os-api/governance.ts",
+      "line": 47,
+      "context": "inspection_readiness: {},",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "frontend-next/lib/os-api/governance.ts",
+      "line": 72,
+      "context": "inspection_readiness: object(data.inspection_readiness),",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "frontend-next/lib/os-api/workforce.ts",
+      "line": 70,
+      "context": "inspection_readiness: UnknownRecord",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "frontend-next/lib/os-api/workforce.ts",
+      "line": 108,
+      "context": "inspection_readiness: UnknownRecord",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "frontend-next/lib/os-api/workforce.ts",
+      "line": 251,
+      "context": "return { ...result, data: envelopeData(result.data, { role_scope: 'self', alerts: [], practice_concerns: [], wellbeing_alerts: [], staffing_instability: {}, recognition: [], inspection_readiness: {} }",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "frontend-next/lib/os-api/workforce.ts",
+      "line": 265,
+      "context": "command_centre: { role_scope: 'self', alerts: [], practice_concerns: [], wellbeing_alerts: [], staffing_instability: {}, recognition: [], inspection_readiness: {} },",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "frontend-next/lib/founder/brain-audit/brain-audit-domains.ts",
+      "line": 87,
+      "context": "area('ofsted_readiness', 'Inspection evidence preparation', 'management_oversight', ['ofsted', 'sccif', 'inspection']),",
+      "occurrence": "ofsted readiness",
+      "classification": "factual_source_reference",
+      "action": "keep"
+    },
+    {
+      "file": "frontend-next/lib/founder/learning-loop/learning-loop-scenario-generator.ts",
+      "line": 299,
+      "context": "ofsted_readiness: {",
+      "occurrence": "ofsted readiness",
+      "classification": "product_label_risky",
+      "action": "replace"
+    },
+    {
+      "file": "frontend-next/lib/founder/agents/autonomous/founder-agent-coverage-map.ts",
+      "line": 65,
+      "context": "{ id: 'ofsted_readiness', label: 'Inspection evidence preparation', keywords: ['ofsted', 'sccif', 'inspection'] }",
+      "occurrence": "ofsted readiness",
+      "classification": "factual_source_reference",
+      "action": "keep"
+    },
+    {
+      "file": "frontend-next/lib/founder/agents/autonomous/founder-agent-types.ts",
+      "line": 201,
+      "context": "| 'ofsted_readiness'",
+      "occurrence": "ofsted readiness",
+      "classification": "product_label_risky",
+      "action": "replace"
+    },
+    {
+      "file": "frontend-next/lib/orb/dictate/orb-dictate-studio-actions.ts",
+      "line": 5,
+      "context": "| 'ofsted_ready'",
+      "occurrence": "ofsted-ready",
+      "classification": "product_label_risky",
+      "action": "replace"
+    },
+    {
+      "file": "frontend-next/lib/orb/dictate/orb-dictate-studio-actions.ts",
+      "line": 46,
+      "context": "{ id: 'ofsted', label: 'Make Inspection evidence support', mode: 'ofsted_ready', instruction: 'Make this more Inspection evidence support', group: 'inspection' },",
+      "occurrence": "ofsted-ready",
+      "classification": "product_label_risky",
+      "action": "replace"
+    },
+    {
+      "file": "frontend-next/lib/orb/dictate/orb-dictate-tone-lock.ts",
+      "line": 7,
+      "context": "'ofsted_ready',",
+      "occurrence": "ofsted-ready",
+      "classification": "product_label_risky",
+      "action": "replace"
+    },
+    {
+      "file": "frontend-next/lib/orb/dictate/orb-dictate-tone-lock.ts",
+      "line": 21,
+      "context": "ofsted_ready: 'Inspection evidence support',",
+      "occurrence": "ofsted-ready",
+      "classification": "product_label_risky",
+      "action": "replace"
+    },
+    {
+      "file": "frontend-next/lib/orb/dictate/orb-dictate-voice-commands.ts",
+      "line": 18,
+      "context": "| 'ofsted_ready'",
+      "occurrence": "ofsted-ready",
+      "classification": "product_label_risky",
+      "action": "replace"
+    },
+    {
+      "file": "frontend-next/lib/orb/dictate/orb-dictate-voice-commands.ts",
+      "line": 41,
+      "context": "{ pattern: /Inspection evidence support|make it ofsted/i, action: 'ofsted_ready', label: 'Inspection evidence support' },",
+      "occurrence": "ofsted-ready",
+      "classification": "product_label_risky",
+      "action": "replace"
+    },
+    {
+      "file": "frontend-next/lib/orb/dictate/orb-dictate-voice-commands.ts",
+      "line": 98,
+      "context": "case 'ofsted_ready':",
+      "occurrence": "ofsted-ready",
+      "classification": "product_label_risky",
+      "action": "replace"
+    },
+    {
+      "file": "frontend-next/lib/orb/recording/orb-template-writing-styles.ts",
+      "line": 12,
+      "context": "| 'inspection_ready'",
+      "occurrence": "inspection ready",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "frontend-next/lib/orb/recording/orb-template-writing-styles.ts",
+      "line": 19,
+      "context": "| 'ofsted_ready'",
+      "occurrence": "ofsted-ready",
+      "classification": "product_label_risky",
+      "action": "replace"
+    },
+    {
+      "file": "frontend-next/lib/orb/recording/orb-template-writing-styles.ts",
+      "line": 80,
+      "context": "id: 'ofsted_ready',",
+      "occurrence": "ofsted-ready",
+      "classification": "product_label_risky",
+      "action": "replace"
+    },
+    {
+      "file": "frontend-next/lib/orb/recording/orb-template-writing-styles.ts",
+      "line": 84,
+      "context": "editMode: 'ofsted_ready',",
+      "occurrence": "ofsted-ready",
+      "classification": "product_label_risky",
+      "action": "replace"
+    },
+    {
+      "file": "frontend-next/lib/orb/recording/orb-template-writing-styles.ts",
+      "line": 110,
+      "context": "id: 'inspection_ready',",
+      "occurrence": "inspection ready",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "frontend-next/lib/orb/recording/orb-template-writing-styles.ts",
+      "line": 114,
+      "context": "editMode: 'ofsted_ready',",
+      "occurrence": "ofsted-ready",
+      "classification": "product_label_risky",
+      "action": "replace"
+    },
+    {
+      "file": "frontend-next/lib/orb/recording/orb-therapeutic-writing.ts",
+      "line": 256,
+      "context": "writing_style_ids: ['manager_summary', 'professional', 'inspection_ready']",
+      "occurrence": "inspection ready",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "frontend-next/lib/orb/recording/orb-therapeutic-writing.ts",
+      "line": 314,
+      "context": "writing_style_ids: ['inspection_ready', 'child_centred', 'professional']",
+      "occurrence": "inspection ready",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "frontend-next/lib/orb/recording/orb-therapeutic-writing.ts",
+      "line": 319,
+      "context": "writing_style_ids: ['therapeutic', 'inspection_ready', 'manager_summary']",
+      "occurrence": "inspection ready",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "frontend-next/lib/orb/recording/orb-therapeutic-writing.ts",
+      "line": 324,
+      "context": "writing_style_ids: ['inspection_ready', 'professional', 'factual']",
+      "occurrence": "inspection ready",
+      "classification": "factual_source_reference",
+      "action": "keep"
+    },
+    {
+      "file": "frontend-next/lib/orb/residential/orb-residential-quality.ts",
+      "line": 37,
+      "context": "ofsted_readiness: {",
+      "occurrence": "ofsted readiness",
+      "classification": "product_label_risky",
+      "action": "replace"
+    },
+    {
+      "file": "frontend-next/lib/orb/residential/orb-residential-quality.ts",
+      "line": 38,
+      "context": "ofsted_ready: boolean",
+      "occurrence": "ofsted-ready",
+      "classification": "product_label_risky",
+      "action": "replace"
+    },
+    {
+      "file": "frontend-next/lib/orb/voice/orb-voice-profiles.ts",
+      "line": 56,
+      "context": "inspection_readiness: 'neutral_professional',",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "frontend-next/lib/orb/voice/orb-voice-profiles.ts",
+      "line": 94,
+      "context": "suitableModes: ['safeguarding_support', 'inspection_readiness'],",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "frontend-next/lib/orb/voice/orb-voice-profiles.ts",
+      "line": 113,
+      "context": "suitableModes: ['recording_support', 'inspection_readiness', 'conversational'],",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "frontend-next/lib/orb/voice/orb-voice-profiles.ts",
+      "line": 232,
+      "context": "suitableModes: ['inspection_readiness'],",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "frontend-next/lib/orb/voice/orb-voice-prompt.ts",
+      "line": 12,
+      "context": "inspection_readiness:",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "frontend-next/lib/orb/voice/orb-voice-types.ts",
+      "line": 27,
+      "context": "| 'inspection_readiness'",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "frontend-next/lib/orb/voice/orb-voice-types.ts",
+      "line": 76,
+      "context": "id: 'inspection_readiness',",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "assistant/home_quality_trends.py",
+      "line": 15,
+      "context": "from assistant.inspection_readiness import build_inspection_readiness, serialise_inspection_readiness",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "assistant/home_quality_trends.py",
+      "line": 33,
+      "context": "inspection_readiness: dict[str, Any] = field(default_factory=dict)",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "assistant/home_quality_trends.py",
+      "line": 193,
+      "context": "inspection_readiness=readiness_payload,",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "assistant/home_quality_trends.py",
+      "line": 212,
+      "context": "\"inspection_readiness\": result.inspection_readiness,",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "assistant/inspection_evidence_pack.py",
+      "line": 15,
+      "context": "from assistant.inspection_readiness import build_inspection_readiness, serialise_inspection_readiness",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "assistant/inspection_readiness.py",
+      "line": 323,
+      "context": "\"Do not predict or imply an Ofsted grade. Use this as evidence-readiness support only.\",",
+      "occurrence": "ofsted-grade",
+      "classification": "product_label_risky",
+      "action": "replace"
+    },
+    {
+      "file": "assistant/knowledge_loader.py",
+      "line": 168,
+      "context": "\"inspection_readiness\": \"assistant.knowledge.inspection_readiness\",",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "assistant/knowledge_loader.py",
+      "line": 181,
+      "context": "\"inspection_readiness\",",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "assistant/knowledge_loader.py",
+      "line": 463,
+      "context": "\"inspection_readiness\": [",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "assistant/knowledge_loader.py",
+      "line": 641,
+      "context": "\"inspection_readiness\",",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "assistant/knowledge_loader.py",
+      "line": 673,
+      "context": "\"inspection_readiness\",",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "assistant/knowledge_loader.py",
+      "line": 744,
+      "context": "if name in {\"inspection_readiness\", \"ofsted_sccif\"}:",
+      "occurrence": "inspection readiness",
+      "classification": "factual_source_reference",
+      "action": "keep"
+    },
+    {
+      "file": "assistant/management_summary_builder.py",
+      "line": 156,
+      "context": "\"inspection_readiness\",",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "assistant/operational_dashboard.py",
+      "line": 7,
+      "context": "no Ofsted grade predictions, no final safeguarding threshold decisions, and no",
+      "occurrence": "ofsted-grade",
+      "classification": "product_label_risky",
+      "action": "replace"
+    },
+    {
+      "file": "assistant/operational_dashboard.py",
+      "line": 17,
+      "context": "from assistant.inspection_readiness import build_inspection_readiness, serialise_inspection_readiness",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "assistant/operational_dashboard.py",
+      "line": 133,
+      "context": "\"inspection_readiness\": readiness,",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "assistant/operational_dashboard.py",
+      "line": 176,
+      "context": "\"inspection_readiness\",",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "assistant/operational_runtime.py",
+      "line": 109,
+      "context": "response_style = \"inspection_readiness\"",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "assistant/orchestrator.py",
+      "line": 411,
+      "context": "\"response_stance\": \"inspection_ready\",",
+      "occurrence": "inspection ready",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "assistant/provider_benchmarking.py",
+      "line": 15,
+      "context": "from assistant.inspection_readiness import build_inspection_readiness, serialise_inspection_readiness",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "assistant/provider_benchmarking.py",
+      "line": 120,
+      "context": "\"inspection_readiness\": readiness,",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "assistant/quality_scoring.py",
+      "line": 15,
+      "context": "from assistant.inspection_readiness import build_inspection_readiness, serialise_inspection_readiness",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "assistant/quality_scoring.py",
+      "line": 285,
+      "context": "\"inspection_readiness\": readiness,",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "assistant/quality_scoring.py",
+      "line": 318,
+      "context": "\"Use this as internal quality intelligence only. Do not present it as an Ofsted grade or final compliance judgement.\",",
+      "occurrence": "ofsted-grade",
+      "classification": "product_label_risky",
+      "action": "replace"
+    },
+    {
+      "file": "assistant/response_contracts.py",
+      "line": 42,
+      "context": "\"Unverified Ofsted grade predictions\",",
+      "occurrence": "ofsted-grade",
+      "classification": "product_label_risky",
+      "action": "replace"
+    },
+    {
+      "file": "assistant/smart_recommendations.py",
+      "line": 15,
+      "context": "from assistant.inspection_readiness import build_inspection_readiness, serialise_inspection_readiness",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "assistant/smart_recommendations.py",
+      "line": 254,
+      "context": "\"inspection_readiness\": readiness_payload,",
+      "occurrence": "inspection readiness",
+      "classification": "user_facing_copy_risky",
+      "action": "replace"
+    },
+    {
+      "file": "assistant/knowledge/inspection_readiness.py",
+      "line": 527,
+      "context": "\"Do not make definitive Ofsted grade predictions from limited evidence.\",",
+      "occurrence": "ofsted-grade",
+      "classification": "product_label_risky",
+      "action": "replace"
+    },
+    {
+      "file": "assistant/knowledge/orb_regression_test_bank.py",
+      "line": 77,
+      "context": "\"sequence_id\": \"ofsted_readiness\",",
+      "occurrence": "ofsted readiness",
+      "classification": "product_label_risky",
+      "action": "replace"
+    },
+    {
+      "file": "assistant/knowledge/orb_scenario_sequences.json",
+      "line": 54,
+      "context": "\"ofsted_readiness\": {",
+      "occurrence": "ofsted readiness",
+      "classification": "product_label_risky",
+      "action": "replace"
+    }
+  ]
+}

@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 
-import type { InspectionEvidenceGap } from '@/lib/os-api/inspection-readiness'
+import type { InspectionEvidenceGap } from '@/lib/os-api/inspection evidence preparation'
 
 type Props = { gap: InspectionEvidenceGap }
 

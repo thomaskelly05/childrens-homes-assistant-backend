@@ -355,16 +355,16 @@ export function buildCompanyLiveKpis(): { kpis: CompanyKpiMap; limitations: stri
     'open'
   )
 
-  kpis['ofsted-readiness-status'] = kpi(
-    'ofsted-readiness-status',
-    'Ofsted readiness source status',
+  kpis['inspection evidence preparation-status'] = kpi(
+    'inspection evidence preparation-status',
+    'Inspection evidence preparation source status',
     isLiveSourceConnected('readiness', connections)
       ? assertLiveMetric({
           value: 'Connected',
-          source: 'Inspection Readiness',
+          source: 'Inspection evidence preparation',
           sourceStatus: 'live'
         })
-      : formatUnavailableMetric('Inspection Readiness')
+      : formatUnavailableMetric('Inspection evidence preparation')
   )
 
   kpis['quality-actions-open'] = kpi(

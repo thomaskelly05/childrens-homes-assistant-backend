@@ -21,7 +21,7 @@
       id: 'ofsted-evidence',
       category: 'Ofsted',
       title: 'Ofsted Evidence Builder',
-      description: 'Create inspection-ready evidence summaries and identify gaps.',
+      description: 'Create inspection evidence preparation evidence summaries and identify gaps.',
       prompt: `Please review this information through an Ofsted inspection lens.\n\nPlease identify:\n- evidence seen\n- impact for children\n- safeguarding culture\n- leadership oversight\n- evidence gaps\n- recommended actions\n- potential inspector questions.`
     },
     {

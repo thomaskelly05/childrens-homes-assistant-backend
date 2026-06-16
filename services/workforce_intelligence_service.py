@@ -416,7 +416,7 @@ class WorkforceIntelligenceService:
                 "Summarise workforce chronology and linked evidence.",
                 "Explain workforce operational risks and management oversight.",
                 "Review supervision culture, competence and recording quality.",
-                "Prepare inspection-ready workforce evidence for Reg 13 and SCCIF.",
+                "Prepare inspection evidence support for workforce evidence for Reg 13 and SCCIF.",
             ],
         }
 

@@ -57,7 +57,7 @@ describe('ORB navigation convergence', () => {
       assert.doesNotMatch(block, /label: 'Knowledge Library'/)
       assert.doesNotMatch(block, /Safeguarding Thinking/)
       assert.doesNotMatch(block, /Record This Properly/)
-      assert.doesNotMatch(block, /Inspection Readiness/)
+      assert.doesNotMatch(block, /Inspection evidence preparation/)
     }
   })
 

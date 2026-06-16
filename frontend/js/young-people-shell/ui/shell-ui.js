@@ -148,7 +148,7 @@ function getScopeIdentity() {
 
   if (scope === "ofsted") {
     return {
-      title: "Ofsted readiness",
+      title: "Inspection evidence preparation",
       meta: "Inspection preparation, evidence testing and regulator-facing assurance.",
       seed: { first_name: "O", last_name: "" },
     };
@@ -175,7 +175,7 @@ function getScopeTitle() {
 
   if (scope === "home") return "Home Rhythm";
   if (scope === "quality") return "Quality Picture";
-  if (scope === "ofsted") return "Evidence and Inspection Readiness";
+  if (scope === "ofsted") return "Evidence and Inspection evidence preparation";
 
   return "My Day";
 }

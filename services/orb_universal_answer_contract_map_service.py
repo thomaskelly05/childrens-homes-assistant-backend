@@ -390,7 +390,7 @@ ORB_ANSWER_CONTRACT_FAMILIES: dict[str, dict[str, Any]] = {
         ],
         "forbidden_patterns": list(UNIVERSAL_FORBIDDEN_PATTERNS[:4]) + ["outstanding grade", "inadequate grade"],
         "public_considerations": [
-            "Inspection readiness",
+            "Inspection evidence preparation",
             "Leadership and oversight",
             "Therapeutic language",
             "Relational support",
@@ -424,7 +424,7 @@ ORB_ANSWER_CONTRACT_FAMILIES: dict[str, dict[str, Any]] = {
             "good grade",
             "requires improvement grade",
         ],
-        "public_considerations": ["Inspection readiness"],
+        "public_considerations": ["Inspection evidence preparation"],
     },
     "policy_practice_question": {
         "label": "Policy / general practice question",

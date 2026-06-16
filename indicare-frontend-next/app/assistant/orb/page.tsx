@@ -62,7 +62,7 @@ export default function OrbPage({ searchParams }: { searchParams?: { scope?: 'ch
             <div className="ic-soft-list">
               <SoftRow label="Child" value="Story, daily records, chronology, plans, risks, voice, documents and appointments." />
               <SoftRow label="Home" value="Risks, alerts, staff, handover, safeguarding, reviews, Reg 44 and daily climate." />
-              <SoftRow label="Provider" value="Themes, inspection readiness, trends, leadership oversight and quality evidence." />
+              <SoftRow label="Provider" value="Themes, Inspection evidence preparation, trends, leadership oversight and quality evidence." />
             </div>
           </StoryCard>
           <StoryCard eyebrow="Inspector thinking" title="What ORB should help adults ask">

@@ -3,11 +3,11 @@ Quality Standards Intelligence Module
 IndiCare AI
 
 Purpose:
-Provide deep, Ofsted-grade reasoning aligned to the
+Provide deep, quality evidence reasoning aligned to the
 Children’s Homes (England) Regulations 2015.
 
 This module enables:
-- Inspection-ready analysis
+- inspection evidence preparation analysis
 - Regulation 45 evaluation
 - Manager oversight thinking
 - Staff recording improvement

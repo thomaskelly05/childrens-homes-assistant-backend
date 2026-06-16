@@ -52,7 +52,7 @@ export const assistantNavItems: AssistantNavItem[] = [
 export const assistantApps: AssistantApp[] = [
   { slug: 'connect', name: 'IndiCare Connect', description: 'Teams-style spaces, channels, DMs, meetings and announcement rooms for standalone collaboration.', route: '/assistant/apps/connect', status: 'foundation' },
   { slug: 'magic-notes', name: 'Magic Notes by IndiCare', description: 'Record, dictate, transcribe, summarise, extract actions and create professional notes.', route: '/assistant/apps/magic-notes', status: 'foundation' },
-  { slug: 'docs', name: 'IndiCare Docs', description: 'Care-native word processor for Ofsted-ready documents, templates, drafting and exports.', route: '/assistant/apps/docs', status: 'foundation' },
+  { slug: 'docs', name: 'IndiCare Docs', description: 'Care-native word processor for Inspection evidence support documents, templates, drafting and exports.', route: '/assistant/apps/docs', status: 'foundation' },
   { slug: 'reports', name: 'Report Generator', description: 'Generate report drafts from uploaded or pasted source material with evidence gaps and action plans.', route: '/assistant/apps/reports', status: 'foundation' },
   { slug: 'templates', name: 'Templates', description: 'Reusable care-sector templates for notes, reports, policies, letters and plans.', route: '/assistant/apps/templates', status: 'foundation' },
   { slug: 'policies', name: 'Policy Writer', description: 'Policy and procedure drafting workspace with references and review controls.', route: '/assistant/apps/policies', status: 'foundation' },

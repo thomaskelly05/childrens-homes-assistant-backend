@@ -103,7 +103,7 @@ ROLE_PROFILES: dict[str, RolePracticeProfile] = {
     "registered_manager": RolePracticeProfile(
         role_key="registered_manager",
         label="Registered manager",
-        needs_from_orb="Oversight, evidence, staff learning, plan/risk review, Ofsted readiness, manager grip.",
+        needs_from_orb="Oversight, evidence, staff learning, plan/risk review, Inspection evidence preparation, manager grip.",
         priorities="Actions with owners, safeguarding oversight, evidence sufficiency, staff learning.",
         avoid="Frontline-only micro-detail unless asked; invented notifications.",
         typical_questions=(
@@ -251,7 +251,7 @@ ROLE_PROFILES: dict[str, RolePracticeProfile] = {
         typical_questions=("Turn this into a staff briefing", "What learning questions fit this policy?"),
         safeguarding_angle="Training must not dilute safeguarding responsibility.",
         recording_angle="Recording standards in training scenarios.",
-        ofsted_evidence_angle="Inspection-ready workforce development themes.",
+        ofsted_evidence_angle="Inspection evidence support for workforce development themes.",
         supervision_learning_angle="Facilitation and supervision training design.",
         academy_nvq_angle="Policy-to-learning questions; workbook themes — generic only.",
         suggested_follow_ups=("policy_to_learning_questions", "create_professional_discussion_prompts"),

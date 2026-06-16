@@ -87,7 +87,7 @@ ORB_VOICE_PROFILES: list[dict[str, Any]] = [
             "Speak crisply and clearly in British English. Give practical steps. Avoid waffle. "
             "Use short sections where helpful."
         ),
-        "best_for": ["Inspection readiness", "Policies", "Procedures"],
+        "best_for": ["Inspection evidence preparation", "Policies", "Procedures"],
     },
     {
         "id": "orb_friendly_coach",
@@ -175,7 +175,7 @@ def build_residential_voice_instructions(
             "oversight. Offer to generate the full written record in chat."
         ),
         "inspection_readiness": (
-            "In Inspection Readiness mode, focus on evidence, chronology and quality standards calmly."
+            "In Inspection evidence preparation mode, focus on evidence, chronology and quality standards calmly."
         ),
         "safeguarding_support": (
             "In Safeguarding Support mode, be procedure-aware. If immediate danger is mentioned, advise following "

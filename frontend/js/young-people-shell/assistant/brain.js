@@ -452,7 +452,7 @@ function buildImmediateActions(evidence = [], lens = "general") {
   }
 
   if (lens === "quality" || lens === "inspection") {
-    actions.push("Check whether the visible evidence is inspection-ready, complete and triangulated across records.");
+    actions.push("Check whether the visible evidence is inspection evidence preparation, complete and triangulated across records.");
   }
 
   actions.push("Read the latest records before key interactions so support is consistent, calm and informed.");
@@ -759,7 +759,7 @@ function buildQualityAnswer(context = {}, evidence = [], lens = "quality") {
   const gaps = buildGaps(evidence);
 
   return [
-    "Quality and inspection-readiness brief",
+    "Quality and inspection evidence preparation brief",
     context.scope === "child"
       ? `This quality brief is scoped to ${context.person?.name || context.young_person_name || "the young person"}.`
       : `This quality brief is scoped to ${context.home?.home_name || context.home_name || "the home"}.`,
@@ -838,7 +838,7 @@ function inferSuggestedActions(intent = INTENT.unknown, evidence = [], lens = "g
   }
 
   if (lens === "manager") actions.push("Check management actions");
-  if (lens === "quality" || lens === "inspection") actions.push("Check inspection readiness");
+  if (lens === "quality" || lens === "inspection") actions.push("Check Inspection evidence preparation");
 
   return unique(actions).slice(0, 6);
 }

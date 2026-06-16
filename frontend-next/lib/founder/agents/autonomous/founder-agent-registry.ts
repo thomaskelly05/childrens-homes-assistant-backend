@@ -66,7 +66,7 @@ export const FOUNDER_AGENT_DEFINITIONS: FounderAgentDefinition[] = [
     scope: ['SCCIF alignment', 'Reg 44/45', 'management oversight', 'regulatory caution'],
     permissions: 'prepare_only',
     forbiddenActions: [...BASE_FORBIDDEN],
-    approvalRequirements: ['regulatory claims', 'Ofsted readiness statements'],
+    approvalRequirements: ['regulatory claims', 'Inspection evidence preparation statements'],
     connectedSignals: ['quality lab', 'evaluation runs', 'evidence packs'],
     availablePreparedActions: ['analyse_latest_run', 'prepare_launch_gate_evidence', 'create_audit_note'],
     requiresFounderApproval: true

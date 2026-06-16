@@ -9,7 +9,7 @@ from services.regulatory_ontology_service import regulatory_ontology_service
 
 
 class InspectionPackService:
-    """Composes manager-reviewed inspection readiness packs."""
+    """Composes manager-reviewed Inspection evidence preparation packs."""
 
     def build_pack(
         self,

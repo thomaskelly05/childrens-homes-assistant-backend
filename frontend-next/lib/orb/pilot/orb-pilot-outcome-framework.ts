@@ -165,7 +165,7 @@ export const ORB_PILOT_OUTCOMES: OrbPilotOutcome[] = [
   },
   {
     id: 'safeguarding-ofsted',
-    title: 'Safeguarding and Ofsted readiness',
+    title: 'Safeguarding and Inspection evidence preparation',
     summary: 'Whether ORB reminded staff about safeguarding escalation and local policy.',
     questions: [
       {
@@ -183,12 +183,12 @@ export const ORB_PILOT_OUTCOMES: OrbPilotOutcome[] = [
         limitations: 'Staff must follow organisational safeguarding procedures regardless of ORB prompts.'
       },
       {
-        id: 'ofsted-ready',
-        text: 'Did it feel Ofsted-ready?',
+        id: 'Inspection evidence support',
+        text: 'Did it feel Inspection evidence support?',
         dataSource: 'feedback',
         suitableForExternalEvidence: false,
         limitations:
-          'Subjective readiness feeling. Ofsted inspection readiness requires manager oversight and real record review.'
+          'Subjective readiness feeling. Ofsted Inspection evidence preparation requires manager oversight and real record review.'
       }
     ]
   }

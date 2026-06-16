@@ -367,13 +367,13 @@ const MANAGEMENT_TEMPLATES: ScenarioTemplate[] = [
   },
   {
     domain: 'management',
-    category: 'ofsted-readiness',
+    category: 'inspection evidence preparation',
     riskLevel: 'high',
     rolePerspectives: ['registered-manager', 'ofsted-inspector'],
     questionTemplate:
       'Ofsted may arrive unannounced. What should on-call staff and the registered manager be able to demonstrate about safeguarding and recording?',
     expectedResponseFocus: ['immediate access', 'safeguarding culture', 'recording quality'],
-    requiredSafeguards: ['inspection readiness'],
+    requiredSafeguards: ['Inspection evidence preparation'],
     requiredRegulatoryAnchors: ['SCCIF', "Children's Homes Regulations"],
     requiredTone: ['practical', 'confident but honest']
   }

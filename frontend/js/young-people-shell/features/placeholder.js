@@ -469,10 +469,10 @@ const SECTION_CONTENT = {
     ],
   },
 
-  "ofsted-readiness": {
+  "inspection evidence preparation": {
     eyebrow: "Quality and compliance",
     intro:
-      "An Ofsted readiness area pulling together evidence, actions, leadership oversight, key records and inspection-day confidence.",
+      "An Inspection evidence preparation area pulling together evidence, actions, leadership oversight, key records and inspection-day confidence.",
     stats: [
       ["Readiness", "Live", "Current inspection position"],
       ["Evidence", "Collected", "Key sources available"],
@@ -531,7 +531,7 @@ const SECTION_CONTENT = {
           "Version history and change log",
           "Staff reading confirmation",
           "Linked training and competency",
-          "Inspection-ready evidence of implementation",
+          "inspection evidence preparation evidence of implementation",
         ],
       },
     ],
@@ -666,17 +666,17 @@ const SECTION_CONTENT = {
           "Six-month review report",
           "Improvement priorities and timescales",
           "Responsible leads and governance oversight",
-          "Links to audit and Ofsted readiness",
+          "Links to audit and Inspection evidence preparation",
           "Review history and trend comparison",
         ],
       },
     ],
   },
 
-  "inspection-readiness": {
+  "inspection evidence preparation": {
     eyebrow: "Quality",
     intro:
-      "A strategic inspection-readiness area for provider and home leaders preparing evidence, speaking points, risk analysis and quality narrative.",
+      "A strategic inspection evidence preparation area for provider and home leaders preparing evidence, speaking points, risk analysis and quality narrative.",
     stats: [
       ["Narrative", "Prepared", "Service quality story"],
       ["Evidence", "Mapped", "Inspection supporting material"],
@@ -728,7 +728,7 @@ function getSectionContent(sectionId = "") {
             "Linked actions and evidence capture",
             "Manager and quality visibility",
             "Clear role-based navigation",
-            "Inspection-ready documentation support",
+            "inspection evidence preparation documentation support",
           ],
         },
       ],

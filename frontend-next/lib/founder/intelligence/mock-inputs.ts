@@ -28,7 +28,7 @@ export const mockUsageMetrics: UsageMetrics = {
     { featureId: 'orb-chat', featureName: 'ORB Chat', activeUsers: 160, sessions: 1847, adoptionRate: 88, trendPercent: 18, abandonmentRate: 8, periodStart: PERIOD_START, periodEnd: PERIOD_END },
     { featureId: 'report-builder', featureName: 'Report Builder', activeUsers: 131, sessions: 734, adoptionRate: 72, trendPercent: 11, abandonmentRate: 22, periodStart: PERIOD_START, periodEnd: PERIOD_END },
     { featureId: 'risk-assessment', featureName: 'Risk Assessment Review', activeUsers: 111, sessions: 276, adoptionRate: 61, trendPercent: 7, abandonmentRate: 18, periodStart: PERIOD_START, periodEnd: PERIOD_END },
-    { featureId: 'ofsted-readiness', featureName: 'Ofsted Readiness', activeUsers: 106, sessions: 198, adoptionRate: 58, trendPercent: 14, abandonmentRate: 10, periodStart: PERIOD_START, periodEnd: PERIOD_END },
+    { featureId: 'inspection evidence preparation', featureName: 'Inspection evidence preparation', activeUsers: 106, sessions: 198, adoptionRate: 58, trendPercent: 14, abandonmentRate: 10, periodStart: PERIOD_START, periodEnd: PERIOD_END },
     { featureId: 'export-pdf', featureName: 'Export to PDF', activeUsers: 98, sessions: 412, adoptionRate: 54, trendPercent: 5, abandonmentRate: 12, periodStart: PERIOD_START, periodEnd: PERIOD_END },
     { featureId: 'chronology', featureName: 'Chronology Builder', activeUsers: 75, sessions: 412, adoptionRate: 41, trendPercent: 19, abandonmentRate: 34, periodStart: PERIOD_START, periodEnd: PERIOD_END },
     { featureId: 'supervision', featureName: 'Supervision Builder', activeUsers: 60, sessions: 143, adoptionRate: 33, trendPercent: 3, abandonmentRate: 41, periodStart: PERIOD_START, periodEnd: PERIOD_END }
@@ -57,7 +57,7 @@ export const mockOrbAnalytics: OrbConversationAnalytics = {
   emergingThemes: [
     { theme: 'County lines exploitation queries rising across adolescent homes', confidence: 0.87, relatedCategories: ['child-exploitation', 'safeguarding'], firstDetected: '2026-05-28' },
     { theme: 'Managers requesting stronger chronology linkage in safeguarding outputs', confidence: 0.82, relatedCategories: ['safeguarding', 'chronology'], firstDetected: '2026-05-30' },
-    { theme: 'Increased demand for Reg 44-aligned evaluation language', confidence: 0.79, relatedCategories: ['ofsted-readiness'], firstDetected: '2026-06-02' },
+    { theme: 'Increased demand for Reg 44-aligned evaluation language', confidence: 0.79, relatedCategories: ['inspection evidence preparation'], firstDetected: '2026-06-02' },
     { theme: 'Dictate-led incident narratives reducing late record completion', confidence: 0.76, relatedCategories: ['dictate', 'reporting'], firstDetected: '2026-06-04' }
   ]
 }

@@ -26,7 +26,7 @@ export const RESIDENTIAL_FIRST_CLASS_LENSES: Array<{
   },
   { lens: 'explain', label: 'Create easy-read summary', description: 'Plain-English meaning', hero: true, converged: true },
   { lens: 'ofsted', label: 'Check against Quality Standards', description: 'Evidence and experience thinking', converged: true },
-  { lens: 'ofsted', label: 'Inspection readiness', description: 'Prepare inspection evidence thinking', hero: true, converged: true },
+  { lens: 'ofsted', label: 'Inspection evidence preparation', description: 'Prepare inspection evidence thinking', hero: true, converged: true },
   { lens: 'safeguarding', label: 'Safeguarding lens', description: 'Structured safeguarding reflection', converged: true },
   {
     lens: 'recording_quality',

@@ -25,7 +25,7 @@ const WORKSPACE_LABELS: Record<OperationalOrbScopeType, string> = {
   lifeecho: 'LifeEcho',
   plan_impacts: 'Plan impacts',
   handover: 'Handover',
-  inspection: 'Inspection readiness',
+  inspection: 'Inspection evidence preparation',
   reg45: 'Reg 45',
   sccif: 'SCCIF',
   generic: 'Operational workspace'

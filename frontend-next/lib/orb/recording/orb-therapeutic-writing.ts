@@ -123,7 +123,7 @@ const SHARED_PROMPTS = {
     'Changing direct quotes without adult approval',
     'Manipulative, attention-seeking, kicked off, non-compliant, bad behaviour',
     'Diagnosis unless from an appropriate professional source',
-    'Claims of compliance or inspection readiness'
+    'Claims of compliance or Inspection evidence preparation'
   ],
   spelling: 'Before finalising, ORB will help check spelling, grammar, names, times and dates.'
 }

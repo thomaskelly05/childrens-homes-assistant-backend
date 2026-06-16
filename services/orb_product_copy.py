@@ -14,7 +14,7 @@ ORB_DATA_BOUNDARY_SHORT = "ORB Residential does not access IndiCare OS records."
 ORB_POSITIONING = {
     "headline": "ORB Residential",
     "tagline": "The AI Assistant for Children's Homes",
-    "subheading": "Write better records, create care plans, review incidents and stay inspection ready.",
+    "subheading": "Write better records, create care plans, review incidents and support inspection evidence preparation.",
     "cta": "Start Free Trial",
     "price_label": "£9.99/month",
     "trial_label": "7-day free trial",
@@ -27,7 +27,7 @@ ORB_CORE_FEATURES = [
     "Risk Assessments",
     "Incident Reviews",
     "Regulation Guidance",
-    "Ofsted Readiness",
+    "Inspection evidence support",
 ]
 
 ORB_AI_DISCLAIMER = (
@@ -70,6 +70,6 @@ ORB_TWO_MINUTE_PITCH = (
     "I grew up in care and now manage a children's home. Throughout my career I saw staff spending hours writing reports, "
     "preparing for inspections and searching through fragmented systems. So I built ORB Residential. ORB is an AI assistant "
     "built specifically for children's homes. It helps professionals write records, create care plans, review incidents, "
-    "understand regulations and stay inspection ready. Instead of generic AI, ORB is powered by IndiCare Intelligence, designed "
+    "understand regulations and support inspection evidence preparation. Instead of generic AI, ORB is powered by IndiCare Intelligence, designed "
     "around residential childcare practice. The goal is simple: less paperwork, better decisions and more time for children."
 )

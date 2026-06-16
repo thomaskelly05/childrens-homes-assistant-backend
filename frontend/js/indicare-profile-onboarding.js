@@ -295,7 +295,7 @@
                 ${option('professional', current.tone, 'Professional')}
                 ${option('supportive', current.tone, 'Supportive')}
                 ${option('concise', current.tone, 'Concise')}
-                ${option('inspection-ready', current.tone, 'Inspection-ready')}
+                ${option('inspection evidence preparation', current.tone, 'inspection evidence preparation')}
               </select>
             </label>
 
@@ -436,7 +436,7 @@
           <option value="professional">Professional</option>
           <option value="supportive">Supportive</option>
           <option value="concise">Concise</option>
-          <option value="inspection-ready">Inspection-ready</option>
+          <option value="inspection evidence preparation">inspection evidence preparation</option>
         </select>
       </label>
       <label><span>Experience level</span>

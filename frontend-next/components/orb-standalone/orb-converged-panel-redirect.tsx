@@ -9,7 +9,7 @@ import { resolveConvergedNavigation } from '@/lib/orb/orb-navigation-convergence
 const DEPRECATED_PANEL_LABELS: Record<OrbDeprecatedPrimaryNavPanelId, string> = {
   shift_builder: 'Shift Builder',
   review: 'Review',
-  inspection_readiness: 'Inspection Readiness',
+  inspection_readiness: 'Inspection evidence preparation',
   safeguarding_thinking: 'Safeguarding Thinking',
   record_properly: 'Record This Properly',
   knowledge: 'Knowledge Library'

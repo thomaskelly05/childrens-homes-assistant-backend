@@ -13,7 +13,7 @@ export default async function StaffEvidencePage() {
       <PageHeader
         eyebrow="Adults / Staff"
         title="Staff evidence"
-        description="Inspection-ready workforce evidence linking staff records to Reg 13 and SCCIF leadership and management."
+        description="inspection evidence preparation workforce evidence linking staff records to Reg 13 and SCCIF leadership and management."
         action={<Link href="/staff/evidence/new" className="rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-500/30">Create evidence</Link>}
       />
       <LiveDataStatus result={result} />
@@ -23,7 +23,7 @@ export default async function StaffEvidencePage() {
         <StatCard label="Inspection area" value="Leadership" detail="SCCIF leadership and management" />
       </section>
       <Card>
-        <SectionHeader eyebrow="Evidence engine" title="Inspection readiness links" description="Staff evidence is linked through the same OS evidence/audit path used by existing documents, tasks and workflow review where the tables are present." />
+        <SectionHeader eyebrow="Evidence engine" title="Inspection evidence preparation links" description="Staff evidence is linked through the same OS evidence/audit path used by existing documents, tasks and workflow review where the tables are present." />
         <DataTable
           headers={['Title', 'Type', 'Staff', 'Summary']}
           rows={evidence.items.map((item: any) => [
@@ -32,7 +32,7 @@ export default async function StaffEvidencePage() {
             item.staff_id || 'Not returned',
             item.summary || 'No summary returned'
           ])}
-          empty={<EmptyState title="No workforce evidence returned" description="Create staff evidence or complete supervision/training/probation workflows to populate inspection readiness." />}
+          empty={<EmptyState title="No workforce evidence returned" description="Create staff evidence or complete supervision/training/probation workflows to populate Inspection evidence preparation." />}
         />
       </Card>
     </div>

@@ -70,7 +70,7 @@ export const ORB_RECORD_TYPE_QUALITY_EXPECTATIONS: Record<
   manager_summary: {
     requiredSectionThemes: ['evidence', 'child impact', 'gaps', 'decision', 'actions'],
     qualityThemes: ['oversight', 'professional curiosity'],
-    unsafePhrases: ['compliant', 'ofsted ready']
+    unsafePhrases: ['compliant', 'Inspection evidence support']
   },
   meeting_notes: {
     requiredSectionThemes: ['purpose', 'voice', 'decisions', 'follow-up'],

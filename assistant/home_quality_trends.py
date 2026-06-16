@@ -80,10 +80,10 @@ def _derive_trend(
 
     if inspection_level in {"weak", "limited"}:
         risk_points += 2
-        reasons.append("inspection readiness appears limited or weak")
+        reasons.append("Inspection evidence preparation appears limited or weak")
     elif inspection_level == "strong":
         risk_points -= 2
-        reasons.append("inspection readiness appears strong")
+        reasons.append("Inspection evidence preparation appears strong")
 
     if oversight_level in {"weak_or_unclear", "limited_visible_oversight"}:
         risk_points += 2

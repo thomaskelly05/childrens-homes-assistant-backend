@@ -135,12 +135,12 @@ export function inspectionReadinessOrbHref(mode: string, query: string): string 
 }
 
 export async function getInspectionReadinessHealth() {
-  const response = await fetch('/api/inspection-readiness/health', { credentials: 'include', cache: 'no-store' })
+  const response = await fetch('/api/inspection evidence preparation/health', { credentials: 'include', cache: 'no-store' })
   return parseEnvelope(response, { status: 'unavailable' })
 }
 
 export async function getInspectionReadinessDashboard(filters?: InspectionReadinessFilters) {
-  const response = await fetch(`/api/inspection-readiness/dashboard${queryString(filters)}`, {
+  const response = await fetch(`/api/inspection evidence preparation/dashboard${queryString(filters)}`, {
     credentials: 'include',
     cache: 'no-store'
   })
@@ -165,7 +165,7 @@ export async function generateInspectionPack(
   packType: InspectionPackType,
   options?: { period_start?: string; period_end?: string }
 ) {
-  const response = await fetch('/api/inspection-readiness/packs/generate', {
+  const response = await fetch('/api/inspection evidence preparation/packs/generate', {
     method: 'POST',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
@@ -194,7 +194,7 @@ export async function generateInspectionPack(
 }
 
 export async function getReg44Pack(filters?: InspectionReadinessFilters) {
-  const response = await fetch(`/api/inspection-readiness/packs/reg44${queryString(filters)}`, {
+  const response = await fetch(`/api/inspection evidence preparation/packs/reg44${queryString(filters)}`, {
     credentials: 'include',
     cache: 'no-store'
   })
@@ -202,7 +202,7 @@ export async function getReg44Pack(filters?: InspectionReadinessFilters) {
 }
 
 export async function getReg45Pack(filters?: InspectionReadinessFilters) {
-  const response = await fetch(`/api/inspection-readiness/packs/reg45${queryString(filters)}`, {
+  const response = await fetch(`/api/inspection evidence preparation/packs/reg45${queryString(filters)}`, {
     credentials: 'include',
     cache: 'no-store'
   })
@@ -210,12 +210,12 @@ export async function getReg45Pack(filters?: InspectionReadinessFilters) {
 }
 
 export async function getSccifPack() {
-  const response = await fetch('/api/inspection-readiness/packs/sccif', { credentials: 'include', cache: 'no-store' })
+  const response = await fetch('/api/inspection evidence preparation/packs/sccif', { credentials: 'include', cache: 'no-store' })
   return parseEnvelope(response, {} as InspectionEvidencePack)
 }
 
 export async function getQualityStandardsPack() {
-  const response = await fetch('/api/inspection-readiness/packs/quality-standards', {
+  const response = await fetch('/api/inspection evidence preparation/packs/quality-standards', {
     credentials: 'include',
     cache: 'no-store'
   })
@@ -229,7 +229,7 @@ export async function saveInspectionPack(body: {
   create_actions_from_gaps?: boolean
   title?: string
 }) {
-  const response = await fetch('/api/inspection-readiness/packs/save', {
+  const response = await fetch('/api/inspection evidence preparation/packs/save', {
     method: 'POST',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
@@ -239,7 +239,7 @@ export async function saveInspectionPack(body: {
 }
 
 export async function listInspectionPacks(limit = 20) {
-  const response = await fetch(`/api/inspection-readiness/packs/history?limit=${limit}`, {
+  const response = await fetch(`/api/inspection evidence preparation/packs/history?limit=${limit}`, {
     credentials: 'include',
     cache: 'no-store'
   })
@@ -247,7 +247,7 @@ export async function listInspectionPacks(limit = 20) {
 }
 
 export async function getInspectionPack(packId: string) {
-  const response = await fetch(`/api/inspection-readiness/packs/${encodeURIComponent(packId)}`, {
+  const response = await fetch(`/api/inspection evidence preparation/packs/${encodeURIComponent(packId)}`, {
     credentials: 'include',
     cache: 'no-store'
   })

@@ -23,7 +23,7 @@ INTELLIGENCE_LAYERS: dict[str, str] = {
     "relationship_intelligence": "Relationship Intelligence",
     "leadership_rm_intelligence": "Leadership / RM Intelligence",
     "ri_governance_intelligence": "RI Governance Intelligence",
-    "inspection_readiness_intelligence": "Inspection Readiness Intelligence",
+    "inspection_readiness_intelligence": "Inspection evidence preparation Intelligence",
     "sccif_intelligence": "SCCIF Intelligence",
     "quality_standards_intelligence": "Quality Standards Intelligence",
     "outstanding_practice_intelligence": "Outstanding Practice Intelligence",

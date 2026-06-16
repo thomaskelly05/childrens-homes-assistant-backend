@@ -164,7 +164,7 @@ PYTHON_KNOWLEDGE_MODULES = {
     "trauma_informed": "assistant.knowledge.trauma_informed",
     "values_engine": "assistant.knowledge.values_engine",
 
-    # Elite / optional Ofsted-grade modules
+    # Elite / optional quality evidence modules
     "inspection_readiness": "assistant.knowledge.inspection_readiness",
     "quality_standards": "assistant.knowledge.quality_standards",
     "regulation_citations": "assistant.knowledge.regulation_citations",
@@ -463,8 +463,8 @@ MODULE_KEYWORDS = {
     "inspection_readiness": [
         "ofsted",
         "inspection",
-        "inspection ready",
-        "inspection readiness",
+        "inspection evidence preparation",
+        "Inspection evidence preparation",
         "what would ofsted say",
         "what would an inspector notice",
         "sccif",
@@ -528,8 +528,8 @@ INSPECTION_TRIGGER_WORDS = {
     "inspection",
     "inspector",
     "sccif",
-    "inspection ready",
-    "inspection readiness",
+    "inspection evidence preparation",
+    "Inspection evidence preparation",
     "evidence pack",
     "audit trail",
     "triangulation",

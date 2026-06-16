@@ -40,7 +40,7 @@ class OrbOutstandingPracticeLensService:
         "residential_support_worker": "For an RSW, translate outstanding practice into simple actions: safety, relationship, recording, asking for support and passing concerns to seniors/managers.",
         "senior": "For a senior, include coaching, record review, immediate oversight and what should be checked before sign-off.",
         "deputy_manager": "For a deputy manager, include quality assurance, drift, pattern spotting and supervision/debrief needs.",
-        "registered_manager": "For an RM, include evidence of impact, leadership oversight, regulatory alignment and inspection readiness.",
+        "registered_manager": "For an RM, include evidence of impact, leadership oversight, regulatory alignment and Inspection evidence preparation.",
         "responsible_individual": "For an RI, include governance challenge, triangulation, repeated themes, evidence of impact and provider learning.",
     }
 

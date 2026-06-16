@@ -95,7 +95,7 @@ export function generateOrbChatTitle(message: string, context?: OrbChatTitleCont
   }
 
   if (mode.includes('ofsted') || mode.includes('reg 44')) {
-    return capTitle(text || 'Inspection readiness', 48)
+    return capTitle(text || 'Inspection evidence preparation', 48)
   }
 
   if (mode.includes('staff coach') || mode.includes('therapeutic')) {

@@ -56,7 +56,7 @@ Citations such as `[incident:123]` must be clickable and open the relevant sourc
 
 ### AI Audit Log
 
-Inspection-ready review of AI interactions.
+inspection evidence preparation review of AI interactions.
 
 API:
 - `GET /api/ai-audit`

@@ -589,7 +589,7 @@
 
   function followUp(type) {
     const prompts = {
-      professional: "Rewrite the previous response in a more professional, child-centred and inspection-ready style.",
+      professional: "Rewrite the previous response in a more professional, child-centred and inspection evidence preparation style.",
       shorter: "Shorten the previous response while keeping the key safeguarding, evidence and action points.",
       manager: "Turn the previous response into a concise manager summary with oversight actions and evidence gaps.",
     };

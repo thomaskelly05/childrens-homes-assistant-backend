@@ -1083,7 +1083,7 @@ async function fetchOfstedLensData(homeId) {
       briefingRes,
       prepRes,
     ],
-    "Ofsted readiness records"
+    "Inspection evidence preparation records"
   );
 
   const headerRows = toArray(headerRes.items, [headerRes.inspection_headers]).map(

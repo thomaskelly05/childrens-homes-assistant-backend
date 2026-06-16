@@ -164,7 +164,7 @@
         <aside class="ic-intelligence-rail">
           <div class="ic-ai-mark">IC</div>
           <h2>Intelligence AI</h2>
-          <p class="ic-rail-copy">An immersive reasoning partner for care, risk, leadership, inspection readiness and reflective decision-making.</p>
+          <p class="ic-rail-copy">An immersive reasoning partner for care, risk, leadership, Inspection evidence preparation and reflective decision-making.</p>
           <div class="ic-rail-actions">
             <button type="button" class="ic-primary-action" id="icNewIntelligence">New intelligence thread</button>
             <button type="button" class="ic-secondary-action" id="icSummariseIntelligence">Summarise thinking</button>

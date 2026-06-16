@@ -782,7 +782,7 @@ class ManagerDailyBriefService:
         self, current_user: dict[str, Any], conn: Any | None = None
     ) -> ManagerDailyBriefSection:
         items: list[ManagerDailyBriefItem] = []
-        summary = "Inspection readiness workspace unavailable in current scope."
+        summary = "Inspection evidence preparation workspace unavailable in current scope."
         tone = "neutral"
         gap_count = 0
         draft_only = 0
@@ -800,7 +800,7 @@ class ManagerDailyBriefService:
                 f"Reg 44: {reg44_pack.evidence_count} evidence, {reg44_pack.gap_count} gaps, "
                 f"{reg44_pack.draft_only_count} draft-only. "
                 f"Reg 45: {reg45_pack.evidence_count} evidence, {reg45_pack.gap_count} gaps. "
-                "Open inspection readiness — not a grade prediction."
+                "Open Inspection evidence preparation — not a grade prediction."
             )
             tone = "urgent" if urgent > 0 else ("attention" if gap_count else "neutral")
             key_gaps: list = []
@@ -825,7 +825,7 @@ class ManagerDailyBriefService:
                     title="Reg 44 evidence support",
                     safe_summary="Generate monthly visit evidence support pack — manager review needed.",
                     priority="medium",
-                    route="/intelligence/inspection-readiness?pack=reg44",
+                    route="/intelligence/inspection evidence preparation?pack=reg44",
                     action_label="Generate Reg 44 pack",
                     source="inspection_readiness",
                 )
@@ -836,22 +836,22 @@ class ManagerDailyBriefService:
                     title="Reg 45 evidence support",
                     safe_summary="Generate quality of care review evidence support — not a final judgement.",
                     priority="medium",
-                    route="/intelligence/inspection-readiness?pack=reg45",
+                    route="/intelligence/inspection evidence preparation?pack=reg45",
                     action_label="Generate Reg 45 pack",
                     source="inspection_readiness",
                 )
             )
         except Exception as exc:
             logger.debug("brief_inspection_readiness_skipped: %s", exc)
-            summary = "Inspection readiness section could not load — open workspace manually."
+            summary = "Inspection evidence preparation section could not load — open workspace manually."
 
         return ManagerDailyBriefSection(
             id="inspection_readiness",
-            title="Inspection readiness",
+            title="Inspection evidence preparation",
             summary=summary,
             items=items,
-            route="/intelligence/inspection-readiness",
-            action_label="Open inspection readiness",
+            route="/intelligence/inspection evidence preparation",
+            action_label="Open Inspection evidence preparation",
             tone=tone,
             metadata={
                 "gap_count": gap_count,
@@ -919,7 +919,7 @@ class ManagerDailyBriefService:
                 ManagerDailyBriefItem(
                     id="reg45:draft-review",
                     title="Draft Reg 45 quality of care review",
-                    safe_summary="Generate structured draft review from inspection readiness evidence — manager review needed.",
+                    safe_summary="Generate structured draft review from Inspection evidence preparation evidence — manager review needed.",
                     priority="medium",
                     route="/intelligence/reg45",
                     action_label="Draft Reg 45 review",
@@ -1050,7 +1050,7 @@ class ManagerDailyBriefService:
             recs.append("Review SCCIF alignment gaps before inspection preparation — not a grade prediction.")
         if brief.inspection_readiness_summary and "unavailable" not in brief.inspection_readiness_summary.lower():
             recs.append(
-                "Review Reg 44 / Reg 45 evidence support packs in inspection readiness — not a compliance decision."
+                "Review Reg 44 / Reg 45 evidence support packs in Inspection evidence preparation — not a compliance decision."
             )
         for section in brief.sections:
             if section.id == "notification_oversight" and section.tone in ("urgent", "attention"):

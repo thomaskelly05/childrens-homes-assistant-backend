@@ -184,9 +184,9 @@ export const SAFEGUARD_PHRASE_MAP: Record<string, string[]> = {
     'record gaps honestly',
     'do not invent'
   ],
-  'inspection readiness': [
-    'inspection readiness',
-    'ofsted readiness',
+  'Inspection evidence preparation': [
+    'Inspection evidence preparation',
+    'Inspection evidence preparation',
     'evidence quality',
     'staff knowledge',
     'safeguarding evidence'
@@ -202,7 +202,7 @@ export const SAFEGUARD_PHRASE_MAP: Record<string, string[]> = {
 
 const WHY_IT_MATTERS: Record<string, string> = {
   'anti-stigmatising language':
-    'Children’s home records must avoid blame and stigma so practice stays therapeutic and inspection-ready.',
+    'Children’s home records must avoid blame and stigma so practice stays therapeutic and inspection evidence preparation.',
   'accurate legal framing':
     'Invented or misquoted law creates unsafe practice and regulatory risk in children’s homes.',
   'emergency proportionality':

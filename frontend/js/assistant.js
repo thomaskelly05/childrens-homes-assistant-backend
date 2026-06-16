@@ -683,7 +683,7 @@ function copilotPrompt() {
     return "You are IndiCare Manager Copilot. Focus on oversight, accountability, actions, and compliance.";
   }
   if (mode === "ofsted") {
-    return "You are IndiCare Compliance Copilot. Write in a way that is defensible, inspection-ready, and aligned to standards.";
+    return "You are IndiCare Compliance Copilot. Write in a way that is defensible, inspection evidence preparation, and aligned to standards.";
   }
   if (mode === "documentation") {
     return "You are IndiCare Documentation Copilot. Produce clear, factual, well-structured records ready to paste.";

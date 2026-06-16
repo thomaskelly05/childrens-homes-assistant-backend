@@ -1,4 +1,4 @@
-"""Inspection readiness service — Reg 44 / Reg 45 evidence support packs from safe metadata."""
+"""Inspection evidence preparation service — Reg 44 / Reg 45 evidence support packs from safe metadata."""
 
 from __future__ import annotations
 
@@ -33,7 +33,7 @@ from services.inspection_pack_registry_service import (
 logger = logging.getLogger("indicare.inspection_readiness")
 
 PRIVACY_NOTICE = (
-    "Inspection readiness uses metadata and safe summaries only — not full record bodies. "
+    "Inspection evidence preparation uses metadata and safe summaries only — not full record bodies. "
     "Not a compliance decision. Professional judgement remains required."
 )
 
@@ -46,12 +46,12 @@ LIMITATIONS = [
 ]
 
 ROUTES = {
-    "workspace": "/intelligence/inspection-readiness",
-    "reg44_pack": "/intelligence/inspection-readiness?pack=reg44",
-    "reg45_pack": "/intelligence/inspection-readiness?pack=reg45",
+    "workspace": "/intelligence/inspection evidence preparation",
+    "reg44_pack": "/intelligence/inspection evidence preparation?pack=reg44",
+    "reg45_pack": "/intelligence/inspection evidence preparation?pack=reg45",
     "reg45_review": "/intelligence/reg45",
     "sccif": "/intelligence/sccif",
-    "pack_history": "/intelligence/inspection-readiness#history",
+    "pack_history": "/intelligence/inspection evidence preparation#history",
     "governance": "/record/governance",
     "handover": "/handover",
     "briefing": "/command-centre/briefing",
@@ -552,7 +552,7 @@ class InspectionReadinessService:
     def build_degraded_dashboard(
         self,
         *,
-        reason: str = "Inspection readiness temporarily unavailable",
+        reason: str = "Inspection evidence preparation temporarily unavailable",
     ) -> InspectionReadinessDashboard:
         return InspectionReadinessDashboard(
             generated_at=_now_iso(),
@@ -563,7 +563,7 @@ class InspectionReadinessService:
             quality_standards_summary="Quality Standards alignment temporarily unavailable.",
             recent_packs=[],
             key_gaps=[],
-            recommendations=["Retry shortly or open the inspection readiness workspace directly."],
+            recommendations=["Retry shortly or open the Inspection evidence preparation workspace directly."],
             limitations=LIMITATIONS + [reason],
             privacy_notice=PRIVACY_NOTICE,
             routes=ROUTES,
@@ -582,7 +582,7 @@ class InspectionReadinessService:
         except Exception as exc:
             _handle_db_failure(conn, exc)
             logger.warning("inspection_readiness_dashboard_pack_build_failed: %s", exc)
-            return self.build_degraded_dashboard(reason="Inspection readiness pack build temporarily unavailable")
+            return self.build_degraded_dashboard(reason="Inspection evidence preparation pack build temporarily unavailable")
 
         all_gaps = reg44.sections[0].gaps if reg44.sections else []
         for section in reg44.sections + reg45.sections:
@@ -595,7 +595,7 @@ class InspectionReadinessService:
         return InspectionReadinessDashboard(
             generated_at=_now_iso(),
             summary=(
-                "Inspection readiness workspace — evidence support for Reg 44, Reg 45, SCCIF and Quality Standards. "
+                "Inspection evidence preparation workspace — evidence support for Reg 44, Reg 45, SCCIF and Quality Standards. "
                 "Does not predict inspection outcomes."
             ),
             reg44_summary=(

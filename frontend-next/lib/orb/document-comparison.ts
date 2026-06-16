@@ -56,7 +56,7 @@ export const ORB_DOCUMENT_COMPARISON_LENSES: OrbDocumentComparisonLensMeta[] = [
   },
   {
     id: 'inspection_readiness',
-    label: 'Inspection readiness',
+    label: 'Inspection evidence preparation',
     description: 'Evidence and practice implications for inspection',
     outputType: 'comparison_summary'
   },
@@ -92,7 +92,7 @@ const LENS_INSTRUCTIONS: Record<OrbDocumentComparisonLens, string> = {
   safeguarding_implications:
     'Compare the two documents with a safeguarding lens. Note safeguarding implications, escalation prompts, and gaps — adult review required before acting.',
   inspection_readiness:
-    'Compare the two documents for inspection readiness. Note evidence implications, practice changes, and areas to prepare — without predicting grades.',
+    'Compare the two documents for Inspection evidence preparation. Note evidence implications, practice changes, and areas to prepare — without predicting grades.',
   recording_requirements:
     'Compare the two documents for recording requirements. What must staff record differently? Child-centred recording implications only.',
   quality_standards_check:

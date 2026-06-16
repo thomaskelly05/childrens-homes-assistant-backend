@@ -32,7 +32,7 @@ class LiveAlertsService:
                 "level": "high" if child.get("score", 100) < 70 else "medium",
                 "type": "child_review",
                 "title": f"{child.get('name')} requires review",
-                "message": f"Inspection readiness {child.get('score')}% with actions required.",
+                "message": f"Inspection evidence preparation {child.get('score')}% with actions required.",
                 "href": child.get("href"),
             })
 

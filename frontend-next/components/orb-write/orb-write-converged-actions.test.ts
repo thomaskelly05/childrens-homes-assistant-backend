@@ -40,7 +40,7 @@ describe('ORB Write converged actions', () => {
       'Make child-centred',
       'Improve grammar',
       'Check safeguarding gaps',
-      'Check Ofsted readiness',
+      'Check Inspection evidence preparation',
       'Check recording quality',
       'Check child voice',
       'Check manager oversight',

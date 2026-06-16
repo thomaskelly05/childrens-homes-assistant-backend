@@ -83,7 +83,7 @@ const FEATURED_TEMPLATE_TITLES = [
   'Handover',
   'Shift plan',
   'Safeguarding concern',
-  'Inspection readiness',
+  'Inspection evidence preparation',
   'Reg 44',
   'Reg 45',
   'Record this properly',
@@ -499,7 +499,7 @@ export function OrbTemplatesPanel({
           <div className="orb-doc-glass-card rounded-xl border border-[var(--orb-line)] p-4">
             <p className="text-sm font-semibold text-[var(--orb-foreground)]">{selected.title}</p>
             <p className="mt-1 text-xs text-[var(--orb-muted)]">
-              ORB will help you complete this template in chat with child-centred, inspection-ready wording.
+              ORB will help you complete this template in chat with child-centred, inspection evidence preparation wording.
             </p>
             <OrbPremiumButton
               disabled={generating}

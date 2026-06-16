@@ -1,4 +1,4 @@
-"""Inspection readiness routes — Reg 44 / Reg 45 evidence support packs."""
+"""Inspection evidence preparation routes — Reg 44 / Reg 45 evidence support packs."""
 
 from __future__ import annotations
 
@@ -25,11 +25,11 @@ from services.inspection_readiness_service import inspection_readiness_service
 logger = logging.getLogger(__name__)
 
 # Legacy document OS / inspection prefix
-legacy_router = APIRouter(prefix="/inspection", tags=["Inspection readiness (legacy)"])
+legacy_router = APIRouter(prefix="/inspection", tags=["Inspection evidence preparation (legacy)"])
 
-# Canonical inspection readiness workspace
-router = APIRouter(prefix="/inspection-readiness", tags=["Inspection readiness"])
-compat_router = APIRouter(prefix="/api", tags=["Inspection readiness API"])
+# Canonical Inspection evidence preparation workspace
+router = APIRouter(prefix="/inspection evidence preparation", tags=["Inspection evidence preparation"])
+compat_router = APIRouter(prefix="/api", tags=["Inspection evidence preparation API"])
 
 MANAGER_ROLES = {
     "admin",
@@ -101,14 +101,14 @@ def _light_readiness_pack(home_id: Any, current_user: dict[str, Any]) -> dict[st
     return {
         "ok": True,
         "home_id": home_id,
-        "summary": "Inspection readiness workspace available at /intelligence/inspection-readiness.",
+        "summary": "Inspection evidence preparation workspace available at /intelligence/inspection evidence preparation.",
         "sections": [
             {"id": "reg44", "title": "Regulation 44", "status": "available"},
             {"id": "reg45", "title": "Regulation 45", "status": "available"},
             {"id": "sccif", "title": "SCCIF evidence", "status": "available"},
             {"id": "quality_standards", "title": "Quality Standards", "status": "available"},
         ],
-        "routes": {"workspace": "/intelligence/inspection-readiness"},
+        "routes": {"workspace": "/intelligence/inspection evidence preparation"},
         "manager_only": True,
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "guardrails": [
@@ -156,7 +156,7 @@ def inspection_readiness_snapshot(
     }
 
 
-# --- Canonical inspection readiness routes ---
+# --- Canonical Inspection evidence preparation routes ---
 
 
 @router.get("/health")

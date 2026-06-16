@@ -164,9 +164,9 @@ export const operationalNavigation: OperationalNavItem[] = [
   },
   {
     domain: 'regulation',
-    href: '/intelligence/inspection-readiness',
+    href: '/intelligence/inspection evidence preparation',
     label: 'Regulation',
-    description: 'Inspection readiness, Quality Standards alignment, Reg 44 and Reg 45.',
+    description: 'Inspection evidence preparation, Quality Standards alignment, Reg 44 and Reg 45.',
     icon: ShieldCheck,
     permissions: ['reports:read'],
     roleScopes: ['rm', 'ri', 'provider', 'admin'],

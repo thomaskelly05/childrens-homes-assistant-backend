@@ -90,7 +90,7 @@ class OrbGroundedAnswerStyleService:
             "\n\nKeep advocacy, plan review and child progress visible — not only appointments or process lists."
         ),
         "inspection": (
-            "\n\nORB can help you turn this into an inspection readiness checklist, Reg 44/45 preparation note, "
+            "\n\nORB can help you turn this into an Inspection evidence preparation checklist, Reg 44/45 preparation note, "
             "or evidence review."
         ),
         "templates": (
@@ -236,10 +236,10 @@ class OrbGroundedAnswerStyleService:
                 "- Structure: ## What Ofsted means for children's homes, ## What inspectors look at, "
                 "## What a Registered Manager should evidence, ## What an RI should challenge, ## What ORB can help with.",
                 "- Anchor to children's homes, residential childcare, Registered Managers, Responsible Individuals, "
-                "SCCIF, Quality Standards, safeguarding, leadership and management, child voice, evidence of impact, inspection readiness.",
+                "SCCIF, Quality Standards, safeguarding, leadership and management, child voice, evidence of impact, Inspection evidence preparation.",
                 "- Do not simply explain what Ofsted is as a general regulator; focus on residential care practice and evidence.",
                 "- Evaluative not descriptive Reg 45; Reg 44 repetition; triangulation; child experience and impact evidence [SCCIF] [Reg 13].",
-                "- End with inspection-readiness support (checklist, Reg 44/45 note, evidence review) — not generic safeguarding threshold language unless risk is asked.",
+                "- End with inspection evidence preparation support (checklist, Reg 44/45 note, evidence review) — not generic safeguarding threshold language unless risk is asked.",
             ],
             "placement_planning": [
                 "Care/placement/risk planning depth:",
@@ -390,7 +390,7 @@ class OrbGroundedAnswerStyleService:
         "cumulative_concern": ("registered manager and", "ri oversight are visible"),
         "leadership": ("children were safer", "understood the pattern"),
         "inspection": (
-            "inspection readiness checklist",
+            "Inspection evidence preparation checklist",
             "reg 44/45 preparation",
             "evidence review",
             "ri challenge questions",

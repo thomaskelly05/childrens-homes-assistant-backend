@@ -55,7 +55,7 @@ IMPROVEMENT_SAFEGUARD_LABELS = frozenset(
         "manager review",
         "reg 20 compliance",
         "welfare check",
-        "inspection readiness",
+        "Inspection evidence preparation",
         "governance evidence",
         "ri reporting",
         "supervision records",

@@ -6,7 +6,7 @@ from typing import Any
 STANDARD_RESPONSE_CONTRACT = """
 DEFENSIBLE AI RESPONSE CONTRACT
 
-You are supporting staff in a children's home. Your answer must be safe, evidence-led, and inspection-ready.
+You are supporting staff in a children's home. Your answer must be safe, evidence-led, and support inspection evidence preparation.
 
 Default structure, unless the user explicitly asks for another format:
 

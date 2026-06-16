@@ -310,7 +310,7 @@ def build_young_person_assistant_context(
             "items": sources,
             "source_count": len(sources),
             "assistant_context": {
-                "summary": "Young person OS context built across core care records for inspection-ready review.",
+                "summary": "Young person OS context built across core care records for inspection evidence preparation review.",
                 "timeline_count": len(timeline),
                 "risk_signal_count": len(risk_signals),
                 "alert_count": len(alerts),

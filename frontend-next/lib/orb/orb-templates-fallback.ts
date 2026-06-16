@@ -51,7 +51,7 @@ export const ORB_RESIDENTIAL_TEMPLATE_FALLBACK: OrbTemplateFallbackEntry[] = [
   tpl('cp-mfc-plan', 'Missing from care plan', 'Missing from care prevention and response plan.', 'Care Planning'),
   tpl('cp-wellbeing', 'Emotional wellbeing plan', 'Emotional wellbeing and therapeutic support plan.', 'Care Planning'),
   tpl('insp-sccif', 'SCCIF evidence tracker', 'Track evidence against SCCIF evaluation criteria.', 'Ofsted / SCCIF'),
-  tpl('insp-ready', 'Ofsted readiness review', 'Pre-inspection readiness review for children\'s homes.', 'Ofsted / SCCIF'),
+  tpl('insp-ready', 'Inspection evidence preparation review', 'Pre-Inspection evidence preparation review for children\'s homes.', 'Ofsted / SCCIF'),
   tpl('insp-r44', 'Reg 44 action tracker', 'Regulation 44 visit actions and evidence.', 'Ofsted / SCCIF'),
   tpl('insp-r45', 'Reg 45 quality of care review', 'Regulation 45 independent review structure.', 'Ofsted / SCCIF'),
   tpl('insp-qs', 'Quality Standards audit', 'Children\'s homes Quality Standards self-audit.', 'Ofsted / SCCIF'),
