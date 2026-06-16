@@ -3060,20 +3060,20 @@
       "action": "replace"
     },
     {
+      "file": "assistant/knowledge/orb_residential_principles.py",
+      "line": 97,
+      "context": "\"It does not determine inspection outcomes, guarantee compliance or represent regulator endorsement.\"",
+      "occurrence": "guarantees compliance",
+      "classification": "factual_source_reference",
+      "action": "keep"
+    },
+    {
       "file": "assistant/knowledge/orb_scenario_sequences.json",
       "line": 54,
       "context": "\"ofsted_readiness\": {",
       "occurrence": "ofsted readiness",
       "classification": "product_label_risky",
       "action": "replace"
-    },
-    {
-      "file": "assistant/knowledge/orb_residential_principles.py",
-      "line": 93,
-      "context": "\"It does not determine inspection outcomes, guarantee compliance or represent regulator endorsement.\"",
-      "occurrence": "guarantees compliance",
-      "classification": "factual_source_reference",
-      "action": "keep"
     }
   ]
 }

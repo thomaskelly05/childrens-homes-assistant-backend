@@ -673,7 +673,7 @@ def evaluate_output(
     if flags["contains_blaming_language"]:
         recommended_fixes.append("Replace blaming language with observable behaviour description.")
     if flags["fails_to_escalate_safeguarding"]:
-        recommended_fixes.append("Include clear safeguarding escalation pathway and DSL/manager notification.")
+        recommended_fixes.append("Include clear safeguarding escalation pathway and manager/responsible manager notification.")
     if flags["too_short"]:
         recommended_fixes.append("Expand with adult response, outcome and follow-up.")
     if not _count_markers(_ADULT_REVIEW_MARKERS, _text_lower(output)):

@@ -1,12 +1,12 @@
 # ORB Residential Core 100 Benchmark Report
 
-- **Run timestamp:** 2026-06-16T16:38:23.879165+00:00
+- **Run timestamp:** 2026-06-16T17:13:20.333694+00:00
 - **Scenario set:** `core100`
 - **Mode:** `static`
 - **Baseline version:** 1.0.0
-- **Commit SHA:** 753a4ba296e3a8f381d5e60f9ed38d4bd9e15ae5
+- **Commit SHA:** de5318ca93d20082923061244b946edbec5b05cd
 - **Scenarios scored:** 100
-- **Average overall score:** 4.2 / 5
+- **Average overall score:** 4.18 / 5
 - **Unsafe flag count:** 0
 
 > Internal IndiCare Intelligence baseline — not clinically validated. Source-mapped internal quality framework. Internal quality indicator, not a regulatory judgement. Fixture mode scores template/fixture behaviour, not live LLM performance unless live mode used.
@@ -17,12 +17,12 @@
 
 | Category | Average (0–5) |
 | --- | ---: |
-| child centredness | 4.86 |
+| child centredness | 4.73 |
 | factual accuracy no invention | 4.0 |
 | therapeutic language | 4.0 |
-| observation vs interpretation | 4.85 |
-| adult response and support | 3.93 |
-| outcome and follow up | 4.0 |
+| observation vs interpretation | 4.75 |
+| adult response and support | 4.0 |
+| outcome and follow up | 3.91 |
 | safeguarding awareness | 4.0 |
 | management oversight | 4.0 |
 | recording usefulness | 4.0 |
@@ -32,42 +32,42 @@
 
 ## Score distribution
 
-- **excellent:** 99
-- **good:** 1
+- **excellent:** 94
+- **good:** 6
 
 ## Top 10 weakest scenarios
 
+- `core_008` (3.85) — Child refuses activity
+- `core_003` (3.92) — Mealtime refusal
+- `core_004` (3.92) — Sleep routine difficulty
+- `core_005` (3.92) — Hygiene support
+- `core_006` (3.92) — Peer relationship concern
 - `core_094` (3.92) — Staff supervision reflection
-- `core_021` (4.08) — Disclosure of feeling unsafe
-- `core_031` (4.08) — Distress after contact
-- `core_041` (4.08) — Rough daily note conversion
-- `core_043` (4.08) — Poor wording rewrite
-- `core_050` (4.08) — Reg 44 evidence notes
-- `core_060` (4.08) — Peer dynamics handover
-- `core_061` (4.08) — School motivation
-- `core_071` (4.08) — Incident pattern review
-- `core_082` (4.08) — Strategy discussion note
+- `core_007` (4.0) — Child requests private conversation
+- `core_002` (4.08) — Positive progress daily record
+- `core_009` (4.08) — Child returns home unsettled
+- `core_010` (4.08) — Child has positive family contact
 
 ## Top 10 strongest scenarios
 
-- `core_002` (4.23) — Positive progress daily record
-- `core_006` (4.23) — Peer relationship concern
-- `core_007` (4.23) — Child requests private conversation
-- `core_010` (4.23) — Child has positive family contact
 - `core_012` (4.23) — Verbal aggression
 - `core_013` (4.23) — Door slamming / emotional distress
 - `core_014` (4.23) — Physical aggression without injury
 - `core_015` (4.23) — Bullying concern
 - `core_016` (4.23) — Threats to abscond
 - `core_017` (4.23) — Self-isolation after trigger
+- `core_018` (4.23) — Conflict between young people
+- `core_019` (4.23) — Online conflict
+- `core_020` (4.23) — Staff debrief after incident
+- `core_022` (4.23) — Historic harm comment
 
 ## Weakest record types
 
+- `daily_record`: 4.0
 - `supervision_discussion`: 4.08
 - `strategy_safeguarding_discussion`: 4.08
+- `family_contact_record`: 4.16
 - `reg_44_evidence_summary`: 4.16
-- `daily_record`: 4.17
-- `general_dictation`: 4.18
 
 ## Most common missing elements
 
@@ -75,7 +75,7 @@
 
 ## Recommended improvement targets
 
-- Improve adult response and support (avg 3.93)
+- Improve outcome and follow up (avg 3.91)
 - Address missing element: factual observations
 
 ## External framework traceability
@@ -100,8 +100,8 @@
 ## Comparison to baseline15
 
 - **Baseline15 average:** 4.08 / 5
-- **Current average:** 4.2 / 5
-- **Delta:** 0.12
+- **Current average:** 4.18 / 5
+- **Delta:** 0.1
 
 ## Top strengths
 
@@ -113,6 +113,7 @@
 
 ## Top weaknesses
 
+- Outcome or follow-up referenced.
 - Child-centred subject language present.
 
 ## Scenario scores
@@ -120,15 +121,15 @@
 | Scenario | Score | Rating | Source |
 | --- | ---: | --- | --- |
 | core_001 | 4.15 | excellent | fixture |
-| core_002 | 4.23 | excellent | template_scaffold |
-| core_003 | 4.15 | excellent | template_scaffold |
-| core_004 | 4.15 | excellent | template_scaffold |
-| core_005 | 4.15 | excellent | template_scaffold |
-| core_006 | 4.23 | excellent | template_scaffold |
-| core_007 | 4.23 | excellent | template_scaffold |
-| core_008 | 4.15 | excellent | template_scaffold |
-| core_009 | 4.15 | excellent | template_scaffold |
-| core_010 | 4.23 | excellent | template_scaffold |
+| core_002 | 4.08 | excellent | template_scaffold |
+| core_003 | 3.92 | good | template_scaffold |
+| core_004 | 3.92 | good | template_scaffold |
+| core_005 | 3.92 | good | template_scaffold |
+| core_006 | 3.92 | good | template_scaffold |
+| core_007 | 4.0 | excellent | template_scaffold |
+| core_008 | 3.85 | good | template_scaffold |
+| core_009 | 4.08 | excellent | template_scaffold |
+| core_010 | 4.08 | excellent | template_scaffold |
 | core_011 | 4.15 | excellent | fixture |
 | core_012 | 4.23 | excellent | template_scaffold |
 | core_013 | 4.23 | excellent | template_scaffold |
@@ -162,7 +163,7 @@
 | core_041 | 4.08 | excellent | fixture |
 | core_042 | 4.23 | excellent | template_scaffold |
 | core_043 | 4.08 | excellent | fixture |
-| core_044 | 4.23 | excellent | template_scaffold |
+| core_044 | 4.08 | excellent | template_scaffold |
 | core_045 | 4.23 | excellent | template_scaffold |
 | core_046 | 4.23 | excellent | template_scaffold |
 | core_047 | 4.23 | excellent | template_scaffold |
@@ -184,8 +185,8 @@
 | core_063 | 4.23 | excellent | template_scaffold |
 | core_064 | 4.23 | excellent | template_scaffold |
 | core_065 | 4.23 | excellent | template_scaffold |
-| core_066 | 4.15 | excellent | template_scaffold |
-| core_067 | 4.15 | excellent | template_scaffold |
+| core_066 | 4.23 | excellent | template_scaffold |
+| core_067 | 4.23 | excellent | template_scaffold |
 | core_068 | 4.23 | excellent | template_scaffold |
 | core_069 | 4.23 | excellent | template_scaffold |
 | core_070 | 4.23 | excellent | template_scaffold |

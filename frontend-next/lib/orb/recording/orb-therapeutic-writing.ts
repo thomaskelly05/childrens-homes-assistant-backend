@@ -254,7 +254,7 @@ export const ORB_THERAPEUTIC_WRITING_BY_RECORD_TYPE: Partial<
     ],
     safeguarding_checks: [
       'Immediate safety actions documented?',
-      'DSL / manager informed?',
+      'Manager / responsible manager informed?',
       'Decision rationale clear?'
     ],
     what_to_avoid: [...SHARED_PROMPTS.avoid, 'Leading questions or conclusions before investigation', 'Minimising or downplaying concern'],

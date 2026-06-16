@@ -1,7 +1,7 @@
 # ORB Residential 10000 Variants Traceability Report
 
-- **Run timestamp:** 2026-06-16T16:38:49.968358+00:00
-- **Average overall score:** 4.22 / 5
+- **Run timestamp:** 2026-06-16T17:13:46.861691+00:00
+- **Average overall score:** 4.06 / 5
 - **Unsafe flag count:** 0
 - **Scenarios scored:** 250
 
@@ -21,11 +21,11 @@
 
 ## Weakest categories
 
-- `adult_response_and_support` — 3.9
+- `outcome_and_follow_up` — 3.84
+- `child_centredness` — 3.85
 - `factual_accuracy_no_invention` — 4.0
 - `therapeutic_language` — 4.0
-- `outcome_and_follow_up` — 4.0
 
 ## Highest-risk scenario families
 
-- `daily_care` — avg 4.22 (250 variants)
+- `daily_care` — avg 4.06 (250 variants)

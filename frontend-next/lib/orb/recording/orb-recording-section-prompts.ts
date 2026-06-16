@@ -132,6 +132,10 @@ export const ORB_THERAPEUTIC_RECORDING_PRINCIPLES: readonly string[] = [
   'Separate known / observed / reported from what is not yet stated',
   'Use may indicate / could suggest / may have communicated only as reflection, not fact',
   'Prefer appeared calmer over mood improved and appeared more settled over seemed relaxed unless directly stated',
+  'Do not default to DSL or Designated Safeguarding Lead — use children\'s home language unless the user supplied DSL',
+  'For ordinary daily records without safeguarding cues, do not add Safeguarding Note or disproportionate escalation',
+  'Do not use Staff on Duty — use Adults involved with Adult [initials] when supplied',
+  'When Adult [initials] are supplied, use them consistently — do not revert to staff later in the record',
   'Do not state motives, feelings or triggers as facts unless the child said them',
   'Do not invent chronology, adult actions, child feelings, outcomes or escalation',
   'Provide the record only — no self-commentary after the record unless asked',
@@ -303,7 +307,7 @@ export const ORB_RECORDING_SECTION_PROMPTS: Record<string, OrbRecordingSectionPr
       title: 'Action taken in line with policy',
       prompt: 'Steps taken following safeguarding policy — adult decisions, not ORB conclusions.'
     },
-    { title: 'Who was informed', prompt: 'DSL, manager, social worker or other agencies informed.' },
+    { title: 'Who was informed', prompt: 'Manager, responsible manager, social worker or other agencies informed per local policy.' },
     {
       title: 'Further escalation or management oversight needed',
       prompt: 'What further escalation, review or management oversight is needed?'
