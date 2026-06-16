@@ -46,7 +46,17 @@ export const ORB_THERAPEUTIC_LANGUAGE_MAP: ReadonlyArray<{
   { avoid: 'deliberately caused', prefer: 'it is not clear from the information provided' },
   { avoid: 'bad behaviour', prefer: 'behaviour that staff supported / observed behaviour' },
   { avoid: 'lying', prefer: "the child's account differed from… / it is not clear from the information provided", note: 'Unless directly quoting with context' },
-  { avoid: 'making allegations', prefer: 'shared concerns / disclosed', note: 'Unless contextually appropriate for safeguarding records' }
+  { avoid: 'making allegations', prefer: 'shared concerns / disclosed', note: 'Unless contextually appropriate for safeguarding records' },
+  {
+    avoid: 'no safeguarding concern',
+    prefer: 'no immediate safeguarding indicators reported — responsible adult to review',
+    note: 'ORB does not determine safeguarding thresholds'
+  },
+  {
+    avoid: 'no further action needed',
+    prefer: 'follow-up to be confirmed by responsible adult',
+    note: 'Do not close safeguarding pathways without management review'
+  }
 ]
 
 export const ORB_STRUCTURED_OUTPUT_GUIDANCE = {
@@ -122,6 +132,8 @@ const SHARED_PROMPTS = {
     'Speculation presented as fact',
     'Changing direct quotes without adult approval',
     'Manipulative, attention-seeking, kicked off, non-compliant, bad behaviour',
+    'No safeguarding concern / no further action needed without responsible adult review',
+    'ORB making safeguarding or compliance decisions',
     'Diagnosis unless from an appropriate professional source',
     'Claims of compliance or Inspection evidence preparation'
   ],

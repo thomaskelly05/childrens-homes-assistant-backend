@@ -167,6 +167,18 @@ def run_residential_quality_check(
     if note_type == "incident_record" or is_incident_report_draft_request(body):
         incident_contract_prompts = incident_missing_checklist()
 
+    boundary_gaps: list[str] = []
+    lower_body = body.lower()
+    if "no safeguarding concern" in lower_body:
+        boundary_gaps.append(
+            "Reframe safeguarding conclusion — record what is known and what remains unclear; "
+            "responsible adult to review."
+        )
+    if "no further action needed" in lower_body or "no further action is needed" in lower_body:
+        boundary_gaps.append("Follow-up should be confirmed by responsible adult — avoid closing pathways.")
+    if any(p in lower_body for p in ("orb has determined", "orb decides", "this is compliant")):
+        boundary_gaps.append("ORB does not make safeguarding or compliance decisions.")
+
     manager_prompt: str | None = None
     if quality.manager_oversight in {"missing", "weak"} and note_type in {
         "incident_record",
@@ -183,6 +195,7 @@ def run_residential_quality_check(
         "missing_prompts": missing_prompts,
         "incident_missing_checklist": incident_contract_prompts,
         "framework_gaps": framework_gaps,
+        "boundary_gaps": boundary_gaps,
         "inspection_evidence": inspection,
         "inspection_evidence_summary": inspection,
         # Deprecated alias
