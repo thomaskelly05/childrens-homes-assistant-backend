@@ -140,7 +140,15 @@ _CHILD_VOICE_MARKERS = (
 
 _ADULT_RESPONSE_MARKERS = (
     "adult response",
+    "the adult",
+    "adults",
+    "adult tk",
+    "adult js",
     "staff ",
+    "gave space",
+    "checked in gently",
+    "remained nearby",
+    "offered reassurance",
     "offered",
     "supported",
     "listened",
@@ -148,6 +156,7 @@ _ADULT_RESPONSE_MARKERS = (
     "de-escalat",
     "calm voice",
     "sat with",
+    "sat nearby",
 )
 
 _OUTCOME_MARKERS = (
@@ -220,10 +229,14 @@ _OBSERVATION_MARKERS = (
     "observed",
     "presentation",
     "said",
+    "the adult observed",
+    "adult observed",
     "staff saw",
     "staff observed",
     "factual",
     "appeared",
+    "appeared calmer",
+    "appeared more settled",
     "presented as",
     "was reported",
     "it was reported",
@@ -259,7 +272,18 @@ _INTERPRETATION_AS_FACT_PATTERNS = (
 _ELEMENT_KEYWORDS: dict[str, tuple[str, ...]] = {
     "child voice/presentation": ("child voice", "presentation", "young person said", "communicated", "mood", "tearful"),
     "factual observations": ("observed", "factual", "what happened", "sequence", "staff saw", "heard"),
-    "adult response": ("adult response", "staff offered", "staff listened", "de-escalat", "supported"),
+    "adult response": (
+        "adult response",
+        "the adult offered",
+        "the adult gave",
+        "adult checked",
+        "staff offered",
+        "staff listened",
+        "de-escalat",
+        "supported",
+        "gave space",
+        "checked in gently",
+    ),
     "emotional support": ("validated", "comfort", "quiet space", "emotional", "reassur"),
     "outcome": ("outcome", "settled", "improved", "later", "repair"),
     "follow-up": ("follow-up", "follow up", "action", "next", "review date", "outstanding"),

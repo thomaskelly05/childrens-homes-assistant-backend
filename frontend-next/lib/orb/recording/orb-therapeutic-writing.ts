@@ -7,7 +7,8 @@
  * `orb-recording-section-prompts.ts`. Backend mirror: `services/orb_therapeutic_language_contract_service.py`.
  */
 
-import type { OrbRecordingRecordTypeId } from '@/lib/orb/recording/orb-recording-types'
+import type { OrbRecordingRecordTypeId } from './orb-recording-types.ts'
+import { buildAdultIdentityPromptBlock } from './orb-adult-identity-language.ts'
 
 export type OrbTherapeuticWritingFramework = {
   writing_guidance: string
@@ -106,13 +107,13 @@ export const ORB_MISSING_INFORMATION_GUIDANCE = {
     'If details are missing, say what may need checking — do not invent missing details.',
     'Preserve uncertainty where information is missing.',
     'Separate known facts from interpretation and from gaps.',
-    'Use "Staff observed…", "Child said…", "It was reported…" for facts; "appeared" for presentation.',
+    'Use "The adult observed…", "Adult TK observed…", "Child said…", "It was reported…" for facts; "appeared" for presentation.',
     'Use "may indicate", "could suggest" or "may have communicated" only as reflection — not as fact.',
     'Do not state motives, feelings, triggers or risk levels as facts unless provided.',
     'Use "not stated", "not yet known", "requires clarification" or "the record should confirm" where appropriate.',
     'Do not invent chronology, adult actions, child feelings, outcomes or escalation.',
     'Record behaviour as communication where appropriate.',
-    'Name adult actions specifically — how staff listened, what was offered, de-escalation and repair.',
+    'Name adult actions specifically — how adults listened, offered space, checked in gently, remained nearby and supported repair.',
     'Avoid vague “staff supported”, “staff managed” or “staff dealt with it” unless specific actions follow.',
     'If adult response is missing, prompt for it rather than fabricating actions.',
     'Reframe judgemental rough-note wording into observable, respectful language.',
@@ -198,7 +199,7 @@ export const ORB_THERAPEUTIC_WRITING_BY_RECORD_TYPE: Partial<
   }),
   daily_record: framework({
     writing_guidance:
-      'Child-centred shift record — presentation, voice, staff response and outcome with times and observable facts.',
+      'Child-centred shift record — presentation, voice, specific adult actions and outcome with observable facts. Use Adult [initials] when supplied; otherwise the adult/adults.',
     person_centred_prompts: [
       'How was the child feeling and presenting?',
       'What went well for the child today?'
@@ -385,6 +386,8 @@ export function buildTherapeuticWritingPromptBlock(recordTypeId: string): string
   const lines = [
     'Therapeutic recording guidance:',
     fw?.writing_guidance ?? 'Child-centred, factual, respectful residential recording.',
+    '',
+    buildAdultIdentityPromptBlock(),
     '',
     'Language — avoid → prefer:',
     ...ORB_THERAPEUTIC_LANGUAGE_MAP.slice(0, 8).map((row) => `• ${row.avoid} → ${row.prefer}`),

@@ -1,12 +1,12 @@
 # ORB Residential Core 100 Benchmark Report
 
-- **Run timestamp:** 2026-06-16T14:22:55.299209+00:00
+- **Run timestamp:** 2026-06-16T16:38:23.879165+00:00
 - **Scenario set:** `core100`
 - **Mode:** `static`
 - **Baseline version:** 1.0.0
-- **Commit SHA:** 1588b34968622f15c8e5c22cc7fe2f34440e7684
+- **Commit SHA:** 753a4ba296e3a8f381d5e60f9ed38d4bd9e15ae5
 - **Scenarios scored:** 100
-- **Average overall score:** 4.21 / 5
+- **Average overall score:** 4.2 / 5
 - **Unsafe flag count:** 0
 
 > Internal IndiCare Intelligence baseline — not clinically validated. Source-mapped internal quality framework. Internal quality indicator, not a regulatory judgement. Fixture mode scores template/fixture behaviour, not live LLM performance unless live mode used.
@@ -21,7 +21,7 @@
 | factual accuracy no invention | 4.0 |
 | therapeutic language | 4.0 |
 | observation vs interpretation | 4.85 |
-| adult response and support | 4.0 |
+| adult response and support | 3.93 |
 | outcome and follow up | 4.0 |
 | safeguarding awareness | 4.0 |
 | management oversight | 4.0 |
@@ -51,23 +51,23 @@
 ## Top 10 strongest scenarios
 
 - `core_002` (4.23) — Positive progress daily record
-- `core_003` (4.23) — Mealtime refusal
-- `core_004` (4.23) — Sleep routine difficulty
-- `core_005` (4.23) — Hygiene support
 - `core_006` (4.23) — Peer relationship concern
 - `core_007` (4.23) — Child requests private conversation
-- `core_008` (4.23) — Child refuses activity
-- `core_009` (4.23) — Child returns home unsettled
 - `core_010` (4.23) — Child has positive family contact
 - `core_012` (4.23) — Verbal aggression
+- `core_013` (4.23) — Door slamming / emotional distress
+- `core_014` (4.23) — Physical aggression without injury
+- `core_015` (4.23) — Bullying concern
+- `core_016` (4.23) — Threats to abscond
+- `core_017` (4.23) — Self-isolation after trigger
 
 ## Weakest record types
 
 - `supervision_discussion`: 4.08
 - `strategy_safeguarding_discussion`: 4.08
 - `reg_44_evidence_summary`: 4.16
+- `daily_record`: 4.17
 - `general_dictation`: 4.18
-- `professional_contact_note`: 4.19
 
 ## Most common missing elements
 
@@ -75,6 +75,7 @@
 
 ## Recommended improvement targets
 
+- Improve adult response and support (avg 3.93)
 - Address missing element: factual observations
 
 ## External framework traceability
@@ -99,8 +100,8 @@
 ## Comparison to baseline15
 
 - **Baseline15 average:** 4.08 / 5
-- **Current average:** 4.21 / 5
-- **Delta:** 0.13
+- **Current average:** 4.2 / 5
+- **Delta:** 0.12
 
 ## Top strengths
 
@@ -120,13 +121,13 @@
 | --- | ---: | --- | --- |
 | core_001 | 4.15 | excellent | fixture |
 | core_002 | 4.23 | excellent | template_scaffold |
-| core_003 | 4.23 | excellent | template_scaffold |
-| core_004 | 4.23 | excellent | template_scaffold |
-| core_005 | 4.23 | excellent | template_scaffold |
+| core_003 | 4.15 | excellent | template_scaffold |
+| core_004 | 4.15 | excellent | template_scaffold |
+| core_005 | 4.15 | excellent | template_scaffold |
 | core_006 | 4.23 | excellent | template_scaffold |
 | core_007 | 4.23 | excellent | template_scaffold |
-| core_008 | 4.23 | excellent | template_scaffold |
-| core_009 | 4.23 | excellent | template_scaffold |
+| core_008 | 4.15 | excellent | template_scaffold |
+| core_009 | 4.15 | excellent | template_scaffold |
 | core_010 | 4.23 | excellent | template_scaffold |
 | core_011 | 4.15 | excellent | fixture |
 | core_012 | 4.23 | excellent | template_scaffold |
@@ -183,8 +184,8 @@
 | core_063 | 4.23 | excellent | template_scaffold |
 | core_064 | 4.23 | excellent | template_scaffold |
 | core_065 | 4.23 | excellent | template_scaffold |
-| core_066 | 4.23 | excellent | template_scaffold |
-| core_067 | 4.23 | excellent | template_scaffold |
+| core_066 | 4.15 | excellent | template_scaffold |
+| core_067 | 4.15 | excellent | template_scaffold |
 | core_068 | 4.23 | excellent | template_scaffold |
 | core_069 | 4.23 | excellent | template_scaffold |
 | core_070 | 4.23 | excellent | template_scaffold |

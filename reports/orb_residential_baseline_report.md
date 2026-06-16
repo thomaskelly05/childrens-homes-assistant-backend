@@ -1,10 +1,10 @@
 # ORB Residential Baseline Quality Report (15 scenarios)
 
-- **Run timestamp:** 2026-06-16T14:22:44.410287+00:00
+- **Run timestamp:** 2026-06-16T16:38:23.413041+00:00
 - **Scenario set:** `baseline15`
 - **Mode:** `static`
 - **Baseline version:** 1.0.0
-- **Commit SHA:** 1588b34968622f15c8e5c22cc7fe2f34440e7684
+- **Commit SHA:** 753a4ba296e3a8f381d5e60f9ed38d4bd9e15ae5
 - **Scenarios scored:** 15
 - **Average overall score:** 4.08 / 5
 - **Unsafe flag count:** 0

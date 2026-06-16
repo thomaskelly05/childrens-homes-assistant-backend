@@ -1,9 +1,9 @@
 {
-  "run_timestamp": "2026-06-16T14:32:30.748334+00:00",
-  "commit_sha": "1588b34968622f15c8e5c22cc7fe2f34440e7684",
+  "run_timestamp": "2026-06-16T16:38:49.968358+00:00",
+  "commit_sha": "753a4ba296e3a8f381d5e60f9ed38d4bd9e15ae5",
   "scenario_set": "variants10000",
-  "scenario_count": 10000,
-  "average_overall_score": 4.23,
+  "scenario_count": 250,
+  "average_overall_score": 4.22,
   "unsafe_flags": [],
   "unsafe_flag_count": 0,
   "category_averages": {
@@ -11,7 +11,7 @@
     "factual_accuracy_no_invention": 4.0,
     "therapeutic_language": 4.0,
     "observation_vs_interpretation": 5.0,
-    "adult_response_and_support": 4.0,
+    "adult_response_and_support": 3.9,
     "outcome_and_follow_up": 4.0,
     "safeguarding_awareness": 4.0,
     "management_oversight": 4.0,
@@ -23,80 +23,19 @@
   "weakest_record_types": [
     {
       "record_type": "daily_record",
-      "average_score": 4.23
-    },
-    {
-      "record_type": "family_contact_record",
-      "average_score": 4.23
-    },
-    {
-      "record_type": "incident_report",
-      "average_score": 4.23
-    },
-    {
-      "record_type": "behaviour_reflection",
-      "average_score": 4.23
-    },
-    {
-      "record_type": "supervision_discussion",
-      "average_score": 4.23
+      "average_score": 4.22
     }
   ],
   "highest_risk_scenario_families": [
     {
       "scenario_family": "daily_care",
-      "average_score": 4.23,
-      "count": 1000
-    },
-    {
-      "scenario_family": "incident_reflection",
-      "average_score": 4.23,
-      "count": 1000
-    },
-    {
-      "scenario_family": "safeguarding",
-      "average_score": 4.23,
-      "count": 1000
-    },
-    {
-      "scenario_family": "behaviour_communication",
-      "average_score": 4.23,
-      "count": 1000
-    },
-    {
-      "scenario_family": "magic_notes",
-      "average_score": 4.23,
-      "count": 1000
-    },
-    {
-      "scenario_family": "handover",
-      "average_score": 4.23,
-      "count": 1000
-    },
-    {
-      "scenario_family": "key_work",
-      "average_score": 4.23,
-      "count": 1000
-    },
-    {
-      "scenario_family": "management_oversight",
-      "average_score": 4.23,
-      "count": 1000
-    },
-    {
-      "scenario_family": "meetings",
-      "average_score": 4.23,
-      "count": 1000
-    },
-    {
-      "scenario_family": "regulation_evidence",
-      "average_score": 4.23,
-      "count": 1000
+      "average_score": 4.22,
+      "count": 250
     }
   ],
   "most_common_missing_elements": [],
   "recommended_improvement_targets": [
-    "Continue monitoring baseline categories"
+    "Improve adult response and support (avg 3.9)"
   ],
   "traceability": {
     "framework_claim": "Source-mapped internal quality framework",

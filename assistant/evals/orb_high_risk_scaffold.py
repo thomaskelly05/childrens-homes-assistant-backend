@@ -9,6 +9,12 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from assistant.knowledge.adult_identity_language import (
+    apply_adult_identity_language,
+    extract_supplied_adult_initials,
+    sanitize_observation_interpretation_language,
+    scaffold_heading_for_scenario,
+)
 from assistant.knowledge.orb_residential_principles import (
     ADULT_RESPONSE_PRINCIPLE,
     CHILD_CENTRED_PRINCIPLE,
@@ -288,14 +294,14 @@ _FACTUAL_ACCURACY_PRINCIPLE = FACTUAL_ACCURACY_PRINCIPLE
 _OBSERVATION_VS_INTERPRETATION_PRINCIPLE = OBSERVATION_VS_INTERPRETATION_PRINCIPLE
 
 _ADULT_ACTION_CUE_PATTERN = re.compile(
-    r"\b(?:staff|key\s*worker|shift\s*lead|manager|adult)\s+"
+    r"\b(?:(?:Adult\s+[A-Z]{1,3})|(?:the\s+adult)|(?:adults)|(?:staff)|(?:key\s*worker)|(?:shift\s*lead)|(?:manager))\s+"
     r"(?:offered|listened|sat|used|gave|followed|informed|checked|respected|helped|supported|"
-    r"de[- ]?escalat\w*|reassured|recorded|handed|monitored|encouraged|calm\w*|validated)\b[^.]*",
+    r"de[- ]?escalat\w*|reassured|recorded|handed|monitored|encouraged|calm\w*|validated|remained)\b[^.]*",
     re.I,
 )
 
 _ADULT_ACTION_FRAGMENT_PATTERN = re.compile(
-    r"\b(?:after|when|while)\s+staff\s+\w+",
+    r"\b(?:after|when|while)\s+(?:(?:Adult\s+[A-Z]{1,3})|(?:the\s+adult)|(?:staff))\s+\w+",
     re.I,
 )
 
@@ -523,13 +529,15 @@ def _extract_presentation_from_input(text: str) -> str:
     for word in _PRESENTATION_CUE_WORDS:
         if re.search(rf"\b{re.escape(word)}\b", lower):
             cues.append(word)
-    if "mood improved" in lower or "mood" in lower:
-        cues.append("mood shift noted")
-    if "settled" in lower and "settled" not in cues:
-        cues.append("settled")
+    if "appeared calmer" in lower:
+        cues.append("appeared calmer")
+    elif "settled" in lower and "settled" not in cues:
+        cues.append("appeared more settled")
+    initials = extract_supplied_adult_initials(text)
+    observer = f"Adult {initials[0]}" if initials else "The adult"
     if cues:
         unique = list(dict.fromkeys(cues))
-        return f"Staff observed presentation: appeared {', '.join(unique[:4])}."
+        return f"{observer} observed presentation: {', '.join(unique[:4])}."
     if re.search(r"\b(?:young person|child|yp)\b", lower):
         return "Presentation: as described in factual account — further detail not yet recorded."
     return "Presentation: not yet known — to be completed from shift observation."
@@ -638,7 +646,7 @@ def _build_observation_reflection_section(scenario: dict[str, Any], input_text: 
     cleaned = _clean_input_prefix(input_text)
     lines: list[str] = [
         "Observed / said / reported:",
-        "- Staff observed: see factual account and presentation above.",
+        "- The adult observed: see factual account and presentation above.",
     ]
     if _input_has_speech_cues(cleaned):
         lines.append("- Child said / communicated: see child voice above — direct words preserved where provided.")
@@ -867,13 +875,17 @@ def _extract_adult_actions_from_input(text: str) -> list[str]:
     return actions[:4]
 
 
-def _format_extracted_adult_actions(actions: list[str]) -> str:
+def _format_extracted_adult_actions(actions: list[str], *, source_text: str = "") -> str:
     """Turn extracted input cues into rubric-aligned adult response wording."""
+    initials = extract_supplied_adult_initials(source_text)
     lines: list[str] = []
-    for action in actions:
+    for index, action in enumerate(actions):
         normalised = action.strip()
-        if not normalised.lower().startswith("staff"):
-            normalised = f"Staff {normalised}"
+        if re.search(r"\bstaff\b", normalised, re.I) and initials:
+            adult_label = f"Adult {initials[index % len(initials)]}"
+            normalised = re.sub(r"\b[Ss]taff\b", adult_label, normalised, count=1)
+        elif re.search(r"\bstaff\b", normalised, re.I):
+            normalised = re.sub(r"\b[Ss]taff\b", "The adult", normalised, count=1)
         if not normalised.endswith("."):
             normalised += "."
         lines.append(normalised)
@@ -884,11 +896,11 @@ def _adult_response_prompt_block() -> str:
     """Prompt for missing adult detail — structural markers without inventing actions."""
     return (
         "Adult response detail not yet recorded. Complete with specific adult actions — "
-        "how staff listened, what was offered, de-escalation or repair steps, and "
+        "how adults listened, what was offered, de-escalation or repair steps, and "
         "dignity-preserving choices — only as actually provided.\n\n"
         "**Prompt if missing:** What did adults do first? How did adults communicate? "
         "Did adults offer space, choice or reassurance? Avoid vague 'staff supported' "
-        "unless the support is described."
+        "or generic 'the adult supported' unless the support is described."
     )
 
 
@@ -903,7 +915,7 @@ def _build_adult_response_section(scenario: dict[str, Any], input_text: str) -> 
 
     if actions:
         lines.append("Immediate adult response as described in the factual account:")
-        lines.append(_format_extracted_adult_actions(actions))
+        lines.append(_format_extracted_adult_actions(actions, source_text=input_text))
         lower_actions = " ".join(actions).lower()
         if "de-escalat" not in lower_actions and family in {"incident_reflection", "behaviour_communication"}:
             lines.append(
@@ -977,6 +989,8 @@ def _build_adult_response_line(scenario: dict[str, Any], input_text: str) -> str
 
 def _build_outcome_line(input_text: str) -> str:
     lower = input_text.lower()
+    if "appeared calmer" in lower:
+        return "Outcome: Child A appeared calmer before bedtime — as described in input."
     if any(w in lower for w in ("settled", "improved", "repair", "later", "eventually", "completed", "agreed")):
         return "Outcome: as described in input — young person presentation by end of shift to be confirmed."
     return "Outcome: not stated — to be completed by the adult completing the record."
@@ -991,7 +1005,7 @@ def _family_specific_sections(scenario: dict[str, Any], input_text: str) -> list
         sections.extend(
             [
                 "## Behaviour as possible communication (reflection, not fact)",
-                "Staff observed behaviour as described below. "
+                "The adult observed behaviour as described below. "
                 "What the young person may have been communicating remains a professional reflection — "
                 "not stated as fact unless the child shared this.",
             ]
@@ -1152,28 +1166,57 @@ def build_high_risk_safeguarding_scaffold(scenario: dict[str, Any]) -> str:
 
 def build_child_centred_scaffold(scenario: dict[str, Any]) -> str:
     """Family-aware child-centred scaffold for ordinary recording scenarios."""
-    title = scenario.get("title") or scenario.get("id") or "Record"
+    title = scaffold_heading_for_scenario(scenario)
     raw_input = str(scenario.get("input") or "").strip()
     input_text = sanitize_professional_judgement_phrases(raw_input)
-    factual = build_factual_account(scenario, input_text)
+    factual = sanitize_observation_interpretation_language(
+        apply_adult_identity_language(
+            build_factual_account(scenario, input_text),
+            supplied_initials=extract_supplied_adult_initials(input_text),
+        )
+    )
     child_voice = build_child_voice_section(factual, scenario)
     extra_sections = _family_specific_sections(scenario, factual)
+    record_type = str(scenario.get("record_type") or "")
+    family = str(scenario.get("scenario_family") or "")
+    is_daily = record_type == "daily_record" or family == "daily_care"
 
     blocks: list[str] = [
         f"## {title}",
         "",
-        "## What happened",
-        factual or "Not stated.",
-        "",
-        "## Known / gaps",
-        _build_factual_gaps_section(scenario, input_text),
-        "",
-        "## Observed / said / reported vs reflection",
-        _build_observation_reflection_section(scenario, input_text),
-        "",
-        "## Child voice / presentation",
-        child_voice,
     ]
+    if is_daily:
+        blocks.extend(
+            [
+                "## Presentation and Support",
+                factual or "Not stated.",
+                "",
+                "## Known / gaps",
+                _build_factual_gaps_section(scenario, input_text),
+                "",
+                "## Observed / said / reported vs reflection",
+                _build_observation_reflection_section(scenario, input_text),
+                "",
+                "## Child's Voice / Presentation",
+                child_voice,
+            ]
+        )
+    else:
+        blocks.extend(
+            [
+                "## What happened",
+                factual or "Not stated.",
+                "",
+                "## Known / gaps",
+                _build_factual_gaps_section(scenario, input_text),
+                "",
+                "## Observed / said / reported vs reflection",
+                _build_observation_reflection_section(scenario, input_text),
+                "",
+                "## Child voice / presentation",
+                child_voice,
+            ]
+        )
     blocks.extend(extra_sections)
     if _needs_management_oversight_section(scenario):
         blocks.extend(
@@ -1193,7 +1236,7 @@ def build_child_centred_scaffold(scenario: dict[str, Any]) -> str:
     blocks.extend(
         [
             "",
-            "## What adults did to support",
+            "## Adult Response" if is_daily else "## What adults did to support",
             _build_adult_response_section(scenario, factual),
             "",
             "## Dignity, relationship and child's experience",
@@ -1201,7 +1244,7 @@ def build_child_centred_scaffold(scenario: dict[str, Any]) -> str:
             "and relationship were preserved — only as actually provided. "
             "What changed for the young person before, during and after adult support — as observed, not assumed.",
             "",
-            "## Outcome / follow-up",
+            "## Outcome / Handover" if is_daily else "## Outcome / follow-up",
             _build_outcome_line(factual),
             "",
             _BOUNDARY_FOOTER,

@@ -9,6 +9,18 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from assistant.knowledge.adult_identity_language import (
+    ADULT_IDENTITY_PRINCIPLE,
+    DAILY_RECORD_HEADINGS,
+    OBSERVATION_VS_INTERPRETATION_GUIDANCE,
+    RECORD_HEADING_DISCIPLINE_PRINCIPLE,
+    SELF_COMMENTARY_PRINCIPLE,
+    THERAPEUTIC_RECORDING_PHRASES,
+    build_adult_identity_prompt_block,
+    is_daily_record_request,
+    is_self_commentary_paragraph,
+    sanitize_live_record_output,
+)
 from services.orb_recording_contract_service import (
     build_no_invented_facts_contract_block,
     extract_known_incident_facts,
@@ -361,15 +373,22 @@ RESIDENTIAL_INCIDENT_HEADINGS: tuple[str, ...] = (
     "Follow-up",
 )
 
+DAILY_RECORD_PREFERRED_HEADINGS: tuple[str, ...] = DAILY_RECORD_HEADINGS
+
 CONCISE_RESIDENTIAL_HEADINGS: tuple[str, ...] = RESIDENTIAL_INCIDENT_HEADINGS
 
 PREFERRED_THERAPEUTIC_CONCEPTS: tuple[str, ...] = (
-    "became emotionally dysregulated",
     "appeared unsettled",
     "appeared distressed",
+    "appeared calmer",
+    "appeared more settled",
+    "gave space and did not place pressure to speak",
+    "checked in gently",
+    "remained nearby",
+    "offered reassurance",
+    "acknowledged what the child shared",
     "needed support to regulate",
     "behaviour may have communicated distress or unmet need",
-    "family time may have been emotionally significant",
     "remain curious about the meaning behind the behaviour",
     "record what was seen, heard and done",
     "avoid assumptions about motivation",
@@ -420,7 +439,9 @@ def is_short_residential_scenario(text: str) -> bool:
     return word_count <= SHORT_RESIDENTIAL_MAX_WORDS or len(value) <= SHORT_RESIDENTIAL_MAX_CHARS
 
 
-def build_therapeutic_language_contract_block(*, include_headings: bool = True) -> str:
+def build_therapeutic_language_contract_block(
+    *, include_headings: bool = True, prompt_text: str = ""
+) -> str:
     lines = [
         "============================================================",
         "THERAPEUTIC LANGUAGE CONTRACT (ORB Residential)",
@@ -444,11 +465,25 @@ def build_therapeutic_language_contract_block(*, include_headings: bool = True) 
         "5. Keep the child central — prompt for presentation, words/views, emotional meaning, needs,",
         "   and how adults responded therapeutically.",
         "",
-        "6. Keep the adult accountable — staff response, de-escalation, risk reduction,",
+        "6. Keep the adult accountable — name specific adult actions, de-escalation, risk reduction,",
         "   manager notification where relevant, follow-up/restorative work.",
         "",
-        "7. Keep wording factual, respectful and recording-ready — child voice, staff response,",
+        "7. Keep wording factual, respectful and recording-ready — child voice, adult response,",
         "   risk/harm/damage, outcome, manager oversight when relevant.",
+        "",
+        "8. When creating a record, provide the record itself — no self-commentary after the record unless asked.",
+        "",
+        ADULT_IDENTITY_PRINCIPLE,
+        "",
+        RECORD_HEADING_DISCIPLINE_PRINCIPLE,
+        "",
+        SELF_COMMENTARY_PRINCIPLE,
+        "",
+        "Therapeutic relational wording examples:",
+        *[f"   • {phrase}" for phrase in THERAPEUTIC_RECORDING_PHRASES[:6]],
+        "",
+        "Observation vs interpretation:",
+        *[f"   • {rule}" for rule in OBSERVATION_VS_INTERPRETATION_GUIDANCE[:4]],
         "",
         "Preferred natural residential wording:",
         "   • First, check everyone is safe.",
@@ -464,11 +499,16 @@ def build_therapeutic_language_contract_block(*, include_headings: bool = True) 
         "   • Stating 'became emotionally dysregulated' as fact without observable support",
     ]
     if include_headings:
+        heading_source = (
+            DAILY_RECORD_PREFERRED_HEADINGS
+            if is_daily_record_request(prompt_text)
+            else RESIDENTIAL_INCIDENT_HEADINGS
+        )
         lines.extend(
             [
                 "",
-                "Preferred residential incident response headings (not generic advice headings):",
-                *[f"   • {heading}" for heading in RESIDENTIAL_INCIDENT_HEADINGS],
+                "Preferred residential recording headings (match record type — not generic advice headings):",
+                *[f"   • {heading}" for heading in heading_source],
             ]
         )
     return "\n".join(lines)
@@ -481,7 +521,7 @@ def build_residential_scenario_prompt_block(source_text: str) -> str:
         if not facts.get("shorthand_behaviour"):
             facts = {**facts, "shorthand_behaviour": shorthand}
     name = facts.get("young_person") or "the young person"
-    therapeutic = build_therapeutic_language_contract_block()
+    therapeutic = build_therapeutic_language_contract_block(prompt_text=source_text)
     no_invent = build_no_invented_facts_contract_block(record_kind="incident_report")
     concise = is_short_residential_scenario(source_text)
 
