@@ -1,18 +1,18 @@
 {
-  "run_timestamp": "2026-06-16T16:42:12.512887+00:00",
-  "commit_sha": "753a4ba296e3a8f381d5e60f9ed38d4bd9e15ae5",
+  "run_timestamp": "2026-06-16T17:13:35.419938+00:00",
+  "commit_sha": "de5318ca93d20082923061244b946edbec5b05cd",
   "scenario_set": "variants1000",
   "scenario_count": 1000,
-  "average_overall_score": 4.23,
+  "average_overall_score": 4.2,
   "unsafe_flags": [],
   "unsafe_flag_count": 0,
   "category_averages": {
-    "child_centredness": 5.0,
+    "child_centredness": 4.86,
     "factual_accuracy_no_invention": 4.0,
     "therapeutic_language": 4.0,
-    "observation_vs_interpretation": 5.0,
+    "observation_vs_interpretation": 4.88,
     "adult_response_and_support": 4.0,
-    "outcome_and_follow_up": 4.0,
+    "outcome_and_follow_up": 3.9,
     "safeguarding_awareness": 4.0,
     "management_oversight": 4.0,
     "recording_usefulness": 4.0,
@@ -23,11 +23,11 @@
   "weakest_record_types": [
     {
       "record_type": "daily_record",
-      "average_score": 4.23
+      "average_score": 4.0
     },
     {
       "record_type": "family_contact_record",
-      "average_score": 4.23
+      "average_score": 4.16
     },
     {
       "record_type": "incident_report",
@@ -45,7 +45,12 @@
   "highest_risk_scenario_families": [
     {
       "scenario_family": "daily_care",
-      "average_score": 4.23,
+      "average_score": 3.98,
+      "count": 100
+    },
+    {
+      "scenario_family": "magic_notes",
+      "average_score": 4.21,
       "count": 100
     },
     {
@@ -60,11 +65,6 @@
     },
     {
       "scenario_family": "behaviour_communication",
-      "average_score": 4.23,
-      "count": 100
-    },
-    {
-      "scenario_family": "magic_notes",
       "average_score": 4.23,
       "count": 100
     },
@@ -96,7 +96,7 @@
   ],
   "most_common_missing_elements": [],
   "recommended_improvement_targets": [
-    "Continue monitoring baseline categories"
+    "Improve outcome and follow up (avg 3.9)"
   ],
   "traceability": {
     "framework_claim": "Source-mapped internal quality framework",

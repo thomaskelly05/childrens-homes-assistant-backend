@@ -46,11 +46,11 @@
 
 ## Highest-risk weak scenario families (variants1000 scores)
 
-- `daily_care` — avg 4.23
+- `daily_care` — avg 3.98
+- `magic_notes` — avg 4.21
 - `incident_reflection` — avg 4.23
 - `safeguarding` — avg 4.23
 - `behaviour_communication` — avg 4.23
-- `magic_notes` — avg 4.23
 - `handover` — avg 4.23
 - `key_work` — avg 4.23
 - `management_oversight` — avg 4.23

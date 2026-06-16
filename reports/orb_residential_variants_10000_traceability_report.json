@@ -1,18 +1,18 @@
 {
-  "run_timestamp": "2026-06-16T16:38:49.968358+00:00",
-  "commit_sha": "753a4ba296e3a8f381d5e60f9ed38d4bd9e15ae5",
+  "run_timestamp": "2026-06-16T17:13:46.861691+00:00",
+  "commit_sha": "de5318ca93d20082923061244b946edbec5b05cd",
   "scenario_set": "variants10000",
   "scenario_count": 250,
-  "average_overall_score": 4.22,
+  "average_overall_score": 4.06,
   "unsafe_flags": [],
   "unsafe_flag_count": 0,
   "category_averages": {
-    "child_centredness": 5.0,
+    "child_centredness": 3.85,
     "factual_accuracy_no_invention": 4.0,
     "therapeutic_language": 4.0,
-    "observation_vs_interpretation": 5.0,
-    "adult_response_and_support": 3.9,
-    "outcome_and_follow_up": 4.0,
+    "observation_vs_interpretation": 4.0,
+    "adult_response_and_support": 4.0,
+    "outcome_and_follow_up": 3.84,
     "safeguarding_awareness": 4.0,
     "management_oversight": 4.0,
     "recording_usefulness": 4.0,
@@ -23,19 +23,26 @@
   "weakest_record_types": [
     {
       "record_type": "daily_record",
-      "average_score": 4.22
+      "average_score": 4.06
     }
   ],
   "highest_risk_scenario_families": [
     {
       "scenario_family": "daily_care",
-      "average_score": 4.22,
+      "average_score": 4.06,
       "count": 250
     }
   ],
-  "most_common_missing_elements": [],
+  "most_common_missing_elements": [
+    {
+      "element": "factual observations",
+      "count": 7
+    }
+  ],
   "recommended_improvement_targets": [
-    "Improve adult response and support (avg 3.9)"
+    "Improve outcome and follow up (avg 3.84)",
+    "Improve child centredness (avg 3.85)",
+    "Address missing element: factual observations"
   ],
   "traceability": {
     "framework_claim": "Source-mapped internal quality framework",

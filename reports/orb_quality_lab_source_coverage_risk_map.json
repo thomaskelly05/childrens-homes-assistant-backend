@@ -159,7 +159,12 @@
   "highest_risk_weak_scenario_families": [
     {
       "scenario_family": "daily_care",
-      "average_score": 4.23,
+      "average_score": 3.98,
+      "count": 100
+    },
+    {
+      "scenario_family": "magic_notes",
+      "average_score": 4.21,
       "count": 100
     },
     {
@@ -174,11 +179,6 @@
     },
     {
       "scenario_family": "behaviour_communication",
-      "average_score": 4.23,
-      "count": 100
-    },
-    {
-      "scenario_family": "magic_notes",
       "average_score": 4.23,
       "count": 100
     },
@@ -210,6 +210,10 @@
   ],
   "weakest_scoring_categories_variants1000": [
     {
+      "category": "outcome_and_follow_up",
+      "average_score": 3.9
+    },
+    {
       "category": "factual_accuracy_no_invention",
       "average_score": 4.0
     },
@@ -219,10 +223,6 @@
     },
     {
       "category": "adult_response_and_support",
-      "average_score": 4.0
-    },
-    {
-      "category": "outcome_and_follow_up",
       "average_score": 4.0
     }
   ],
