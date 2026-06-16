@@ -1,7 +1,7 @@
 {
   "baseline_version": "1.0.0",
-  "commit_sha": "0e133c5218a64b5d6abebf9070d2c9b2ba6ea007",
-  "run_timestamp": "2026-06-16T21:38:53.019120+00:00",
+  "commit_sha": "9c378c725736af8cfd8344b3652a795a0c23152e",
+  "run_timestamp": "2026-06-16T22:01:26.476804+00:00",
   "scenario_set": "variants1000",
   "mode": "static",
   "scenario_count": 1000,
@@ -313,7 +313,7 @@
     "internal_only_categories": [],
     "warning": "Scores are internal quality indicators aligned to recognised sources where mapped. They are not regulatory determinations, inspection predictions, or professional validation. Adults remain accountable for decisions, escalation and final records."
   },
-  "run_duration_seconds": 5.5,
+  "run_duration_seconds": 5.39,
   "run_scope": {
     "limit": null,
     "sample": null,
@@ -4801,7 +4801,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person returned to the home after off-site appointment appearing unsettled  Young person said: not yet known \u2014 record the child's words where provided The adult observed presentation: appeared more settled  ## Adult Response Adul"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person returned to the home after off-site appointment appearing unsettled  Young person said: not yet known \u2014 record the child's words where provided The adult observed presentation: appeared calmer  ## Adult Response Adult resp"
     },
     {
       "scenario_id": "core_009_v09_voice_dictate_transcript",
@@ -4851,7 +4851,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person returned to the home after off-site appointment appearing unsettled. Would not say why  Young person said: not yet known \u2014 record the child's words where provided The adult observed presentation: appeared more settled  ## "
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person returned to the home after off-site appointment appearing unsettled. Would not say why  Young person said: not yet known \u2014 record the child's words where provided The adult observed presentation: appeared calmer  ## Adult "
     },
     {
       "scenario_id": "core_009_v10_reflective_supervision",

@@ -1,6 +1,6 @@
 {
-  "run_timestamp": "2026-06-16T21:39:06.753396+00:00",
-  "commit_sha": "0e133c5218a64b5d6abebf9070d2c9b2ba6ea007",
+  "run_timestamp": "2026-06-16T22:01:38.278720+00:00",
+  "commit_sha": "9c378c725736af8cfd8344b3652a795a0c23152e",
   "scenario_set": "variants10000",
   "scenario_count": 250,
   "average_overall_score": 4.06,
