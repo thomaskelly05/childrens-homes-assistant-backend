@@ -74,15 +74,54 @@ _PROFESSIONAL_JUDGEMENT_REPLACEMENTS: tuple[tuple[re.Pattern[str], str], ...] = 
     ),
 )
 
-_THERAPEUTIC_LANGUAGE_REPLACEMENTS: tuple[tuple[re.Pattern[str], str], ...] = (
+_INTERPRETATION_AS_FACT_REPLACEMENTS: tuple[tuple[re.Pattern[str], str], ...] = (
+    (
+        re.compile(r"\bwas angry because contact\b", re.I),
+        "became upset after contact",
+    ),
+    (
+        re.compile(r"\bwas angry because\b", re.I),
+        "became upset after",
+    ),
+    (
+        re.compile(r"\bthe trigger was\b", re.I),
+        "events before this included",
+    ),
+    (
+        re.compile(r"\bthis proves\b", re.I),
+        "this could suggest",
+    ),
+    (
+        re.compile(r"\bthis means\b", re.I),
+        "this may indicate",
+    ),
     (
         re.compile(r"\bbecause they wanted attention\b", re.I),
-        "during tea time",
+        "— further review is needed to understand what they may have been communicating",
     ),
     (
         re.compile(r"\bwanted attention\b", re.I),
         "may have been communicating distress",
     ),
+    (
+        re.compile(r"\b(?:child|young person) was angry\b", re.I),
+        "young person appeared angry",
+    ),
+    (
+        re.compile(r"\b(?:child|young person) was frustrated\b", re.I),
+        "young person appeared frustrated",
+    ),
+    (
+        re.compile(r"\bthe child felt\b", re.I),
+        "the child appeared",
+    ),
+    (
+        re.compile(r"\bpattern proves\b", re.I),
+        "pattern appears to be emerging",
+    ),
+)
+
+_THERAPEUTIC_LANGUAGE_REPLACEMENTS: tuple[tuple[re.Pattern[str], str], ...] = (
     (
         re.compile(r"\bstaff told them to stop being dramatic\b", re.I),
         "staff used wording that should be reframed more respectfully",
@@ -231,6 +270,15 @@ _FACTUAL_ACCURACY_PRINCIPLE = (
     "A safer record is honest about what is known, unknown and still to be reviewed."
 )
 
+_OBSERVATION_VS_INTERPRETATION_PRINCIPLE = (
+    "For residential childcare records, separate what was observed, said, reported and reflected. "
+    "Use 'Staff observed…' for presentation; 'Child A said…' for direct words; "
+    "'It was reported that…' for reported information; 'appeared' or 'presented as' for observed presentation; "
+    "'may indicate', 'could suggest' or 'may have communicated' only as reflection, not fact. "
+    "Do not state motives, feelings, triggers, risk levels or safeguarding thresholds as facts unless provided. "
+    "Mark what is not known. Behaviour-as-communication is reflective, not diagnostic."
+)
+
 _ADULT_ACTION_CUE_PATTERN = re.compile(
     r"\b(?:staff|key\s*worker|shift\s*lead|manager|adult)\s+"
     r"(?:offered|listened|sat|used|gave|followed|informed|checked|respected|helped|supported|"
@@ -271,9 +319,18 @@ def sanitize_professional_judgement_phrases(text: str) -> str:
     return result
 
 
+def sanitize_observation_interpretation(text: str) -> str:
+    """Reframe interpretation presented as fact into observation or reflective wording."""
+    result = str(text or "")
+    for pattern, replacement in _INTERPRETATION_AS_FACT_REPLACEMENTS:
+        result = pattern.sub(replacement, result)
+    return result
+
+
 def sanitize_therapeutic_language(text: str) -> str:
     """Reframe judgemental or blaming phrasing into respectful therapeutic wording."""
     result = sanitize_professional_judgement_phrases(str(text or ""))
+    result = sanitize_observation_interpretation(result)
     for pattern, replacement in _THERAPEUTIC_LANGUAGE_REPLACEMENTS:
         result = pattern.sub(replacement, result)
     result = re.sub(r"\s{2,}", " ", result)
@@ -514,6 +571,41 @@ def _input_has_escalation_cues(text: str) -> bool:
     )
 
 
+def _build_observation_reflection_section(scenario: dict[str, Any], input_text: str) -> str:
+    """Concise observed / said / reported vs reflection framing for residential records."""
+    family = str(scenario.get("scenario_family") or "")
+    cleaned = _clean_input_prefix(input_text)
+    lines: list[str] = [
+        "Observed / said / reported:",
+        "- Staff observed: see factual account and presentation above.",
+    ]
+    if _input_has_speech_cues(cleaned):
+        lines.append("- Child said / communicated: see child voice above — direct words preserved where provided.")
+    else:
+        lines.append("- Child said: not yet recorded — add direct words if known.")
+    if "reported" in cleaned.lower() or "it was reported" in cleaned.lower():
+        lines.append("- Reported information: as described in the factual account.")
+    lines.append(
+        "Possible meaning (reflection, not fact): further review may be needed to understand "
+        "what the young person may have been communicating — do not state motives or feelings as facts."
+    )
+    if family == "safeguarding":
+        lines.append(
+            "Safeguarding: record disclosure/comment separately from adult concern — "
+            "ORB does not conclude threshold or risk level."
+        )
+    elif family == "behaviour_communication":
+        lines.append(
+            "Behaviour may have communicated an unmet need — this is professional reflection, not a diagnosis."
+        )
+    elif family == "management_oversight":
+        lines.append(
+            "Pattern appears to be emerging where repeat themes are noted — not a concluded management finding."
+        )
+    lines.append("What remains unknown: see Known / gaps above.")
+    return "\n".join(lines)
+
+
 def _build_factual_gaps_section(scenario: dict[str, Any], input_text: str) -> str:
     """Concise known/gaps framing — prompts for missing detail without inventing content."""
     cleaned = _clean_input_prefix(input_text)
@@ -609,7 +701,7 @@ def _build_management_oversight_section(scenario: dict[str, Any], input_text: st
     if family == "daily_care":
         lines.extend(
             [
-                "Pattern or repeat theme: is this isolated or part of an emerging pattern?",
+                "Pattern or repeat theme: a pattern appears to be emerging — is this isolated or recurring?",
                 "Handover or follow-up: does the next adult need to continue anything?",
                 "Plan review: if repeated, should the child's plan or support strategy be updated?",
             ]
@@ -634,7 +726,7 @@ def _build_management_oversight_section(scenario: dict[str, Any], input_text: st
     elif family == "behaviour_communication":
         lines.extend(
             [
-                "Pattern or repeat theme: are triggers or themes recurring?",
+                "Pattern or repeat theme: triggers or themes may be recurring — appears to be emerging, not concluded.",
                 "Plan review: should the behaviour support plan be reviewed?",
                 "Supervision / reflection: what should adults try consistently?",
             ]
@@ -672,7 +764,7 @@ def _build_management_oversight_section(scenario: dict[str, Any], input_text: st
     elif family == "management_oversight":
         lines.extend(
             [
-                "Pattern: is there drift, inconsistency or repeat concern?",
+                "Pattern: drift, inconsistency or repeat concern may appear to be emerging — not a concluded finding.",
                 "Child impact: how does this affect the young person's experience?",
                 "Adult response consistency and action/follow-up with review owner.",
                 "Supervision / practice learning where relevant.",
@@ -959,6 +1051,9 @@ def build_high_risk_safeguarding_scaffold(scenario: dict[str, Any]) -> str:
             "",
             "## Child voice / presentation",
             child_voice,
+            "",
+            "## Observed / said / reported vs reflection",
+            _build_observation_reflection_section(scenario, factual),
             *family_sections,
             "",
             "## Immediate adult response",
@@ -1008,6 +1103,9 @@ def build_child_centred_scaffold(scenario: dict[str, Any]) -> str:
         "",
         "## Known / gaps",
         _build_factual_gaps_section(scenario, input_text),
+        "",
+        "## Observed / said / reported vs reflection",
+        _build_observation_reflection_section(scenario, input_text),
         "",
         "## Child voice / presentation",
         child_voice,
@@ -1079,3 +1177,8 @@ def management_oversight_recording_principle() -> str:
 def factual_accuracy_recording_principle() -> str:
     """Reusable factual accuracy / no-invention principle for brain/framework sources."""
     return _FACTUAL_ACCURACY_PRINCIPLE
+
+
+def observation_vs_interpretation_recording_principle() -> str:
+    """Reusable observation vs interpretation principle for brain/framework sources."""
+    return _OBSERVATION_VS_INTERPRETATION_PRINCIPLE

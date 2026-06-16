@@ -129,6 +129,8 @@ export const ORB_THERAPEUTIC_RECORDING_PRINCIPLES: readonly string[] = [
   'Include context, triggers, de-escalation and repair where relevant',
   'State when information is unknown rather than inventing it',
   'Separate known / observed / reported from what is not yet stated',
+  'Use may indicate / could suggest / may have communicated only as reflection, not fact',
+  'Do not state motives, feelings or triggers as facts unless the child said them',
   'Do not invent chronology, adult actions, child feelings, outcomes or escalation',
   'Include follow-up, review and management oversight',
   'Adult remains responsible for final wording'

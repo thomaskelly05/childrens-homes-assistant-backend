@@ -71,7 +71,7 @@
       ],
       "evidence_strength": "medium",
       "rationale": "Professional recording standards require factual clarity. ORB uses keyword heuristics that may miss subtle interpretive overreach.",
-      "scoring_caution": "Heuristic scoring; independent reviewers should test edge cases with practitioners.",
+      "scoring_caution": "Heuristic scoring; independent reviewers should test edge cases with practitioners. Rewards reflection markers (may indicate, may have communicated) and observation separation when genuinely present — not rubric inflation.",
       "reviewer_notes_required": true
     },
     {

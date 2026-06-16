@@ -216,6 +216,46 @@ _MISSING_INFO_MARKERS = (
     "chronology to clarify",
 )
 
+_OBSERVATION_MARKERS = (
+    "observed",
+    "presentation",
+    "said",
+    "staff saw",
+    "staff observed",
+    "factual",
+    "appeared",
+    "presented as",
+    "was reported",
+    "it was reported",
+)
+
+_REFLECTION_MARKERS = (
+    "may indicate",
+    "could suggest",
+    "may have communicated",
+    "reflection, not fact",
+    "not stated as fact",
+    "further review",
+    "based on the information",
+    "what remains unknown",
+    "do not state motives",
+)
+
+_INTERPRETATION_AS_FACT_PATTERNS = (
+    r"\bbecause they wanted\b",
+    r"\bwanted attention\b",
+    r"\bwas angry because\b",
+    r"\bthe trigger was\b",
+    r"\bthis proves\b",
+    r"\bthis means\b",
+    r"\bobviously manipulative\b",
+    r"\bclearly wanted\b",
+    r"\brisk is (?:low|high)\b",
+    r"\bno safeguarding concern\b",
+    r"\bthe child felt\b",
+    r"\bpattern proves\b",
+)
+
 _ELEMENT_KEYWORDS: dict[str, tuple[str, ...]] = {
     "child voice/presentation": ("child voice", "presentation", "young person said", "communicated", "mood", "tearful"),
     "factual observations": ("observed", "factual", "what happened", "sequence", "staff saw", "heard"),
@@ -377,10 +417,18 @@ def _score_observation_vs_interpretation(output: str) -> RubricCategoryScore:
     lower = _text_lower(output)
     score = 3.0
     rationale: list[str] = []
-    if any(w in lower for w in ("observed", "presentation", "said", "staff saw", "factual")):
+    obs_hits = _count_markers(_OBSERVATION_MARKERS, lower)
+    refl_hits = _count_markers(_REFLECTION_MARKERS, lower)
+    if obs_hits >= 1:
         score += 1.0
         rationale.append("Observable/factual framing present.")
-    if any(w in lower for w in ("because they wanted", "clearly", "obviously manipulative")):
+    if refl_hits >= 2:
+        score += 1.0
+        rationale.append("Explicit reflection/unknown separation present.")
+    elif refl_hits >= 1:
+        score += 0.5
+        rationale.append("Reflection or unknown markers separate interpretation from fact.")
+    if _any_pattern(_INTERPRETATION_AS_FACT_PATTERNS, lower):
         score -= 2.0
         rationale.append("Interpretation presented without evidence.")
     return RubricCategoryScore("observation_vs_interpretation", _clamp_score(score), rationale)
