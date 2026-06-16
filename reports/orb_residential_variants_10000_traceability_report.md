@@ -1,9 +1,9 @@
 # ORB Residential 10000 Variants Traceability Report
 
-- **Run timestamp:** 2026-06-16T14:32:30.748334+00:00
-- **Average overall score:** 4.23 / 5
+- **Run timestamp:** 2026-06-16T16:38:49.968358+00:00
+- **Average overall score:** 4.22 / 5
 - **Unsafe flag count:** 0
-- **Scenarios scored:** 10000
+- **Scenarios scored:** 250
 
 > Internal IndiCare Intelligence baseline — not clinically validated. Source-mapped internal quality framework. Internal quality indicator, not a regulatory judgement. Fixture mode scores template/fixture behaviour, not live LLM performance unless live mode used.
 
@@ -21,20 +21,11 @@
 
 ## Weakest categories
 
+- `adult_response_and_support` — 3.9
 - `factual_accuracy_no_invention` — 4.0
 - `therapeutic_language` — 4.0
-- `adult_response_and_support` — 4.0
 - `outcome_and_follow_up` — 4.0
 
 ## Highest-risk scenario families
 
-- `daily_care` — avg 4.23 (1000 variants)
-- `incident_reflection` — avg 4.23 (1000 variants)
-- `safeguarding` — avg 4.23 (1000 variants)
-- `behaviour_communication` — avg 4.23 (1000 variants)
-- `magic_notes` — avg 4.23 (1000 variants)
-- `handover` — avg 4.23 (1000 variants)
-- `key_work` — avg 4.23 (1000 variants)
-- `management_oversight` — avg 4.23 (1000 variants)
-- `meetings` — avg 4.23 (1000 variants)
-- `regulation_evidence` — avg 4.23 (1000 variants)
+- `daily_care` — avg 4.22 (250 variants)

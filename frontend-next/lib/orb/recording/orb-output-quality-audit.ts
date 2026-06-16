@@ -55,7 +55,7 @@ export const ORB_OUTPUT_QUALITY_FIXTURES: OrbOutputQualityFixture[] = [
     label: 'Daily Record',
     roughInput:
       'quiet morning. didnt want breakfast. said school is rubbish. played fifa later seemed ok. meds given. no contact today',
-    expectedSectionThemes: ['presentation', 'interaction', 'voice', 'follow-up'],
+    expectedSectionThemes: ['presentation', 'voice', 'adult response', 'follow-up'],
     expectedQualityThemes: ['child', 'routine', 'positive'],
     expectedSafetyPrompts: ['not clear', 'not provided', 'follow-up'],
     unsafePhrases: ['manipulative', 'attention-seeking', 'kicked off'],

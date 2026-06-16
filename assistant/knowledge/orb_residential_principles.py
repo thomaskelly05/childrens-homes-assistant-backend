@@ -12,6 +12,12 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
+from assistant.knowledge.adult_identity_language import (
+    ADULT_IDENTITY_PRINCIPLE,
+    RECORD_HEADING_DISCIPLINE_PRINCIPLE,
+    SELF_COMMENTARY_PRINCIPLE,
+)
+
 _FRAMEWORK_PATH = Path(__file__).resolve().parent / "orb_recording_framework.json"
 
 # Core principle statements — referenced by scaffold, rubric traceability and tests.
@@ -26,8 +32,9 @@ ADULT_RESPONSE_PRINCIPLE = (
     "Name what adults did first, how they communicated, and how they preserved dignity, safety and relationship. "
     "Record space, choice, reassurance, co-regulation or repair where provided. "
     "Note plans followed, oversight sought, and what appeared to help or not help. "
+    "Do not default to generic 'staff' — use Adult [initials] when supplied, otherwise 'the adult' or 'adults'. "
     "Avoid vague 'staff supported' unless the support is described. "
-    "Do not invent actions not in the input — prompt for missing detail instead."
+    "Do not invent actions or initials not in the input — prompt for missing detail instead."
 )
 
 THERAPEUTIC_LANGUAGE_PRINCIPLE = (
@@ -49,9 +56,10 @@ FACTUAL_ACCURACY_PRINCIPLE = (
 
 OBSERVATION_VS_INTERPRETATION_PRINCIPLE = (
     "For residential childcare records, separate what was observed, said, reported and reflected. "
-    "Use 'Staff observed…' for presentation; 'Child A said…' for direct words; "
+    "Use 'The adult observed…' or 'Adult [initials] observed…' for presentation; 'Child A said…' for direct words; "
     "'It was reported that…' for reported information; 'appeared' or 'presented as' for observed presentation; "
     "'may indicate', 'could suggest' or 'may have communicated' only as reflection, not fact. "
+    "Prefer 'appeared calmer' over 'mood improved' and 'appeared more settled' over 'seemed relaxed' unless directly stated. "
     "Do not state motives, feelings, triggers, risk levels or safeguarding thresholds as facts unless provided. "
     "Mark what is not known. Behaviour-as-communication is reflective, not diagnostic."
 )
@@ -89,9 +97,12 @@ INSPECTION_EVIDENCE_SUPPORT = (
 CANONICAL_PRINCIPLES: dict[str, str] = {
     "child_centredness": CHILD_CENTRED_PRINCIPLE,
     "adult_response": ADULT_RESPONSE_PRINCIPLE,
+    "adult_identity": ADULT_IDENTITY_PRINCIPLE,
     "therapeutic_language": THERAPEUTIC_LANGUAGE_PRINCIPLE,
     "factual_accuracy": FACTUAL_ACCURACY_PRINCIPLE,
     "observation_vs_interpretation": OBSERVATION_VS_INTERPRETATION_PRINCIPLE,
+    "record_heading_discipline": RECORD_HEADING_DISCIPLINE_PRINCIPLE,
+    "self_commentary": SELF_COMMENTARY_PRINCIPLE,
     "management_oversight": MANAGEMENT_OVERSIGHT_PRINCIPLE,
     "pathway_discipline": PATHWAY_DISCIPLINE_PRINCIPLE,
     "professional_judgement": PROFESSIONAL_JUDGEMENT_BOUNDARY,
@@ -134,10 +145,12 @@ def validate_principle_alignment() -> list[str]:
     checks = [
         ("child voice", "child_centredness"),
         ("staff supported", "adult_response"),
+        ("do not default to 'staff'", "adult_identity"),
         ("not yet known", "factual_accuracy"),
         ("pathway to consider", "pathway_discipline"),
         ("manager/senior should consider", "management_oversight"),
         ("may indicate", "observation_vs_interpretation"),
+        ("self-assessment", "self_commentary"),
     ]
     for needle, key in checks:
         if needle not in bullets:

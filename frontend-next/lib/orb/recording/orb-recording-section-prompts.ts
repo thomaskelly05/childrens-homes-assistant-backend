@@ -30,7 +30,7 @@ export const ORB_RECORD_TYPE_QUALITY_EXPECTATIONS: Record<
   { requiredSectionThemes: string[]; qualityThemes: string[]; unsafePhrases: string[] }
 > = {
   daily_record: {
-    requiredSectionThemes: ['presentation', 'interaction', 'voice', 'follow-up'],
+    requiredSectionThemes: ['presentation', 'voice', 'adult response', 'follow-up'],
     qualityThemes: ['child', 'routine', 'positive', 'concern'],
     unsafePhrases: ['manipulative', 'attention-seeking', 'kicked off']
   },
@@ -124,17 +124,20 @@ export const ORB_THERAPEUTIC_RECORDING_PRINCIPLES: readonly string[] = [
   'Avoid blaming or shaming language',
   'Avoid diagnosis unless recorded from an appropriate professional source',
   "Include the child's voice where known",
-  'Name adult actions specifically — not just “staff supported”',
+  'Name adult actions specifically — use Adult [initials] when supplied; otherwise the adult or adults',
+  'Do not default to generic staff wording in child records',
   'Include outcome and follow-up where known',
   'Include context, triggers, de-escalation and repair where relevant',
   'State when information is unknown rather than inventing it',
   'Separate known / observed / reported from what is not yet stated',
   'Use may indicate / could suggest / may have communicated only as reflection, not fact',
+  'Prefer appeared calmer over mood improved and appeared more settled over seemed relaxed unless directly stated',
   'Do not state motives, feelings or triggers as facts unless the child said them',
-    'Do not invent chronology, adult actions, child feelings, outcomes or escalation',
-    'Help adults consider proportionate pathways without deciding thresholds — use "pathway to consider" and "responsible adult to decide"',
-    'Do not say "threshold met", "referral required" or "no concern" as ORB\'s decision',
-    'Include follow-up, review and management oversight',
+  'Do not invent chronology, adult actions, child feelings, outcomes or escalation',
+  'Provide the record only — no self-commentary after the record unless asked',
+  'Help adults consider proportionate pathways without deciding thresholds — use "pathway to consider" and "responsible adult to decide"',
+  'Do not say "threshold met", "referral required" or "no concern" as ORB\'s decision',
+  'Include follow-up, review and management oversight',
   'Adult remains responsible for final wording'
 ]
 
@@ -197,32 +200,25 @@ export const ORB_RECORDING_SECTION_PROMPTS: Record<string, OrbRecordingSectionPr
     }
   ],
   daily_record: [
-    { title: 'Overview of the day', prompt: 'Summarise the shift with the child at the centre — not a list of tasks.' },
+    { title: 'Daily Record', prompt: 'Brief child-centred overview of the shift — not an incident summary.' },
     {
-      title: "Child's presentation",
-      prompt: 'Describe how the child appeared, felt or presented through the day. Use observable language.'
+      title: 'Presentation and Support',
+      prompt: 'Describe how the child appeared and what support was offered. Use observable language and relational adult detail.'
     },
     {
-      title: 'Meaningful interactions',
-      prompt: 'Record significant conversations, play, repair or connection — what mattered to the child.'
+      title: "Child's Voice / Presentation",
+      prompt: 'Include what the child said, wished for or communicated. Preserve direct quotes where provided.'
     },
     {
-      title: 'Routines, education, health and appointments',
-      prompt: 'Note routines, school, health or appointments and how the child experienced them.'
+      title: 'Adult Response',
+      prompt:
+        'Describe how adults responded with specific relational actions — space, gentle check-in, reassurance, remaining nearby, choice and repair. Use Adult [initials] when supplied.'
     },
     {
-      title: "Child's voice, wishes or feelings",
-      prompt: 'Include what the child said, wished for or communicated about their day.'
+      title: 'Outcome / Handover',
+      prompt: 'Record what changed by the end, how the child appeared afterwards, and what the next adults should continue or check in about.'
     },
-    {
-      title: 'Progress, strengths and positives',
-      prompt: 'Record strengths, progress or moments that went well — balance is important.'
-    },
-    {
-      title: 'Concerns, changes or triggers',
-      prompt: 'Note any concerns, changes in presentation or possible triggers without blame.'
-    },
-    { title: 'Follow-up for next shift', prompt: 'What should the next team know, monitor or continue?' }
+    { title: 'Follow-up for next shift', prompt: 'What should the next team know, monitor or continue if the child wishes to talk?' }
   ],
   incident_report: [
     { title: 'Brief summary', prompt: "Briefly summarise what happened and why this record matters for the child's care." },
@@ -522,7 +518,7 @@ export function buildSectionPromptBody(recordTypeId: string): string | undefined
   const footer = [
     '## Recording guidance',
     '',
-    '*Use British English. Separate observation from interpretation. Do not invent facts or diagnose. Adult remains responsible for final wording.*',
+    '*Use British English. Separate observation from interpretation. Do not invent facts, initials or feelings. Provide the record only — no self-commentary unless asked. Adult remains responsible for final wording.*',
     '',
     '**If information is missing:** use "not provided" or "not clear from the information given" — do not invent details.',
     '',

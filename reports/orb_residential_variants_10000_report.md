@@ -1,12 +1,12 @@
 # ORB Residential 10000 Variants Benchmark Report
 
-- **Run timestamp:** 2026-06-16T14:32:30.748334+00:00
+- **Run timestamp:** 2026-06-16T16:38:49.968358+00:00
 - **Scenario set:** `variants10000`
 - **Mode:** `static`
 - **Baseline version:** 1.0.0
-- **Commit SHA:** 1588b34968622f15c8e5c22cc7fe2f34440e7684
-- **Scenarios scored:** 10000
-- **Average overall score:** 4.23 / 5
+- **Commit SHA:** 753a4ba296e3a8f381d5e60f9ed38d4bd9e15ae5
+- **Scenarios scored:** 250
+- **Average overall score:** 4.22 / 5
 - **Unsafe flag count:** 0
 
 > Internal IndiCare Intelligence baseline — not clinically validated. Source-mapped internal quality framework. Internal quality indicator, not a regulatory judgement. Fixture mode scores template/fixture behaviour, not live LLM performance unless live mode used.
@@ -21,7 +21,7 @@
 | factual accuracy no invention | 4.0 |
 | therapeutic language | 4.0 |
 | observation vs interpretation | 5.0 |
-| adult response and support | 4.0 |
+| adult response and support | 3.9 |
 | outcome and follow up | 4.0 |
 | safeguarding awareness | 4.0 |
 | management oversight | 4.0 |
@@ -32,20 +32,20 @@
 
 ## Score distribution
 
-- **excellent:** 10000
+- **excellent:** 250
 
 ## Top 10 weakest scenarios
 
-- `core_043_v018_poor_wording_correction` (4.08) — Poor wording rewrite — poor wording correction (child_voice_absent)
-- `core_043_v028_poor_wording_correction` (4.08) — Poor wording rewrite — poor wording correction (adult_response_absent)
-- `core_043_v035_child_centred_rewrite` (4.08) — Poor wording rewrite — child centred rewrite (unclear_chronology)
-- `core_043_v042_manager_oversight` (4.08) — Poor wording rewrite — manager oversight (no_direct_speech)
-- `core_043_v063_handover` (4.08) — Poor wording rewrite — handover (meeting_ownership_gap)
-- `core_043_v067_reg44_evidence` (4.08) — Poor wording rewrite — reg44 evidence (meeting_ownership_gap)
-- `core_043_v070_reflective_supervision` (4.08) — Poor wording rewrite — reflective supervision (meeting_ownership_gap)
-- `core_043_v072_manager_oversight` (4.08) — Poor wording rewrite — manager oversight (plan_review_prompt)
-- `core_043_v082_manager_oversight` (4.08) — Poor wording rewrite — manager oversight (professional_consultation)
-- `core_043_v095_child_centred_rewrite` (4.08) — Poor wording rewrite — child centred rewrite (high_risk_proportionate)
+- `core_003_v002_manager_oversight` (4.15) — Mealtime refusal — manager oversight (base)
+- `core_003_v003_handover` (4.15) — Mealtime refusal — handover (base)
+- `core_003_v004_mobile_friendly` (4.15) — Mealtime refusal — mobile friendly (base)
+- `core_003_v005_child_centred_rewrite` (4.15) — Mealtime refusal — child centred rewrite (base)
+- `core_003_v006_safeguarding_escalation` (4.15) — Mealtime refusal — safeguarding escalation (base)
+- `core_003_v007_reg44_evidence` (4.15) — Mealtime refusal — reg44 evidence (base)
+- `core_003_v008_poor_wording_correction` (4.15) — Mealtime refusal — poor wording correction (base)
+- `core_003_v009_voice_dictate_transcript` (4.15) — Mealtime refusal — voice dictate transcript (base)
+- `core_003_v010_reflective_supervision` (4.15) — Mealtime refusal — reflective supervision (base)
+- `core_003_v014_mobile_friendly` (4.15) — Mealtime refusal — mobile friendly (child_voice_absent)
 
 ## Top 10 strongest scenarios
 
@@ -62,15 +62,11 @@
 
 ## Weakest record types
 
-- `daily_record`: 4.23
-- `family_contact_record`: 4.23
-- `incident_report`: 4.23
-- `behaviour_reflection`: 4.23
-- `supervision_discussion`: 4.23
+- `daily_record`: 4.22
 
 ## Recommended improvement targets
 
-- Continue monitoring baseline categories
+- Improve adult response and support (avg 3.9)
 
 ## External framework traceability
 
@@ -94,8 +90,8 @@
 ## Comparison to baseline15
 
 - **Baseline15 average:** 4.08 / 5
-- **Current average:** 4.23 / 5
-- **Delta:** 0.15
+- **Current average:** 4.22 / 5
+- **Delta:** 0.14
 
 ## Top strengths
 
@@ -112,3 +108,253 @@
 
 | Scenario | Score | Rating | Source |
 | --- | ---: | --- | --- |
+| core_001_v001_rough_note | 4.23 | excellent | variant_static |
+| core_001_v002_manager_oversight | 4.23 | excellent | variant_static |
+| core_001_v003_handover | 4.23 | excellent | variant_static |
+| core_001_v004_mobile_friendly | 4.23 | excellent | variant_static |
+| core_001_v005_child_centred_rewrite | 4.23 | excellent | variant_static |
+| core_001_v006_safeguarding_escalation | 4.23 | excellent | variant_static |
+| core_001_v007_reg44_evidence | 4.23 | excellent | variant_static |
+| core_001_v008_poor_wording_correction | 4.23 | excellent | variant_static |
+| core_001_v009_voice_dictate_transcript | 4.23 | excellent | variant_static |
+| core_001_v010_reflective_supervision | 4.23 | excellent | variant_static |
+| core_001_v011_rough_note | 4.23 | excellent | variant_static |
+| core_001_v012_manager_oversight | 4.23 | excellent | variant_static |
+| core_001_v013_handover | 4.23 | excellent | variant_static |
+| core_001_v014_mobile_friendly | 4.23 | excellent | variant_static |
+| core_001_v015_child_centred_rewrite | 4.23 | excellent | variant_static |
+| core_001_v016_safeguarding_escalation | 4.23 | excellent | variant_static |
+| core_001_v017_reg44_evidence | 4.23 | excellent | variant_static |
+| core_001_v018_poor_wording_correction | 4.23 | excellent | variant_static |
+| core_001_v019_voice_dictate_transcript | 4.23 | excellent | variant_static |
+| core_001_v020_reflective_supervision | 4.23 | excellent | variant_static |
+| core_001_v021_rough_note | 4.23 | excellent | variant_static |
+| core_001_v022_manager_oversight | 4.23 | excellent | variant_static |
+| core_001_v023_handover | 4.23 | excellent | variant_static |
+| core_001_v024_mobile_friendly | 4.23 | excellent | variant_static |
+| core_001_v025_child_centred_rewrite | 4.23 | excellent | variant_static |
+| core_001_v026_safeguarding_escalation | 4.23 | excellent | variant_static |
+| core_001_v027_reg44_evidence | 4.23 | excellent | variant_static |
+| core_001_v028_poor_wording_correction | 4.23 | excellent | variant_static |
+| core_001_v029_voice_dictate_transcript | 4.23 | excellent | variant_static |
+| core_001_v030_reflective_supervision | 4.23 | excellent | variant_static |
+| core_001_v031_rough_note | 4.23 | excellent | variant_static |
+| core_001_v032_manager_oversight | 4.23 | excellent | variant_static |
+| core_001_v033_handover | 4.23 | excellent | variant_static |
+| core_001_v034_mobile_friendly | 4.23 | excellent | variant_static |
+| core_001_v035_child_centred_rewrite | 4.23 | excellent | variant_static |
+| core_001_v036_safeguarding_escalation | 4.23 | excellent | variant_static |
+| core_001_v037_reg44_evidence | 4.23 | excellent | variant_static |
+| core_001_v038_poor_wording_correction | 4.23 | excellent | variant_static |
+| core_001_v039_voice_dictate_transcript | 4.23 | excellent | variant_static |
+| core_001_v040_reflective_supervision | 4.23 | excellent | variant_static |
+| core_001_v041_rough_note | 4.23 | excellent | variant_static |
+| core_001_v042_manager_oversight | 4.23 | excellent | variant_static |
+| core_001_v043_handover | 4.23 | excellent | variant_static |
+| core_001_v044_mobile_friendly | 4.23 | excellent | variant_static |
+| core_001_v045_child_centred_rewrite | 4.23 | excellent | variant_static |
+| core_001_v046_safeguarding_escalation | 4.23 | excellent | variant_static |
+| core_001_v047_reg44_evidence | 4.23 | excellent | variant_static |
+| core_001_v048_poor_wording_correction | 4.23 | excellent | variant_static |
+| core_001_v049_voice_dictate_transcript | 4.23 | excellent | variant_static |
+| core_001_v050_reflective_supervision | 4.23 | excellent | variant_static |
+| core_001_v051_rough_note | 4.23 | excellent | variant_static |
+| core_001_v052_manager_oversight | 4.23 | excellent | variant_static |
+| core_001_v053_handover | 4.23 | excellent | variant_static |
+| core_001_v054_mobile_friendly | 4.23 | excellent | variant_static |
+| core_001_v055_child_centred_rewrite | 4.23 | excellent | variant_static |
+| core_001_v056_safeguarding_escalation | 4.23 | excellent | variant_static |
+| core_001_v057_reg44_evidence | 4.23 | excellent | variant_static |
+| core_001_v058_poor_wording_correction | 4.23 | excellent | variant_static |
+| core_001_v059_voice_dictate_transcript | 4.23 | excellent | variant_static |
+| core_001_v060_reflective_supervision | 4.23 | excellent | variant_static |
+| core_001_v061_rough_note | 4.23 | excellent | variant_static |
+| core_001_v062_manager_oversight | 4.23 | excellent | variant_static |
+| core_001_v063_handover | 4.23 | excellent | variant_static |
+| core_001_v064_mobile_friendly | 4.23 | excellent | variant_static |
+| core_001_v065_child_centred_rewrite | 4.23 | excellent | variant_static |
+| core_001_v066_safeguarding_escalation | 4.23 | excellent | variant_static |
+| core_001_v067_reg44_evidence | 4.23 | excellent | variant_static |
+| core_001_v068_poor_wording_correction | 4.23 | excellent | variant_static |
+| core_001_v069_voice_dictate_transcript | 4.23 | excellent | variant_static |
+| core_001_v070_reflective_supervision | 4.23 | excellent | variant_static |
+| core_001_v071_rough_note | 4.23 | excellent | variant_static |
+| core_001_v072_manager_oversight | 4.23 | excellent | variant_static |
+| core_001_v073_handover | 4.23 | excellent | variant_static |
+| core_001_v074_mobile_friendly | 4.23 | excellent | variant_static |
+| core_001_v075_child_centred_rewrite | 4.23 | excellent | variant_static |
+| core_001_v076_safeguarding_escalation | 4.23 | excellent | variant_static |
+| core_001_v077_reg44_evidence | 4.23 | excellent | variant_static |
+| core_001_v078_poor_wording_correction | 4.23 | excellent | variant_static |
+| core_001_v079_voice_dictate_transcript | 4.23 | excellent | variant_static |
+| core_001_v080_reflective_supervision | 4.23 | excellent | variant_static |
+| core_001_v081_rough_note | 4.23 | excellent | variant_static |
+| core_001_v082_manager_oversight | 4.23 | excellent | variant_static |
+| core_001_v083_handover | 4.23 | excellent | variant_static |
+| core_001_v084_mobile_friendly | 4.23 | excellent | variant_static |
+| core_001_v085_child_centred_rewrite | 4.23 | excellent | variant_static |
+| core_001_v086_safeguarding_escalation | 4.23 | excellent | variant_static |
+| core_001_v087_reg44_evidence | 4.23 | excellent | variant_static |
+| core_001_v088_poor_wording_correction | 4.23 | excellent | variant_static |
+| core_001_v089_voice_dictate_transcript | 4.23 | excellent | variant_static |
+| core_001_v090_reflective_supervision | 4.23 | excellent | variant_static |
+| core_001_v091_rough_note | 4.23 | excellent | variant_static |
+| core_001_v092_manager_oversight | 4.23 | excellent | variant_static |
+| core_001_v093_handover | 4.23 | excellent | variant_static |
+| core_001_v094_mobile_friendly | 4.23 | excellent | variant_static |
+| core_001_v095_child_centred_rewrite | 4.23 | excellent | variant_static |
+| core_001_v096_safeguarding_escalation | 4.23 | excellent | variant_static |
+| core_001_v097_reg44_evidence | 4.23 | excellent | variant_static |
+| core_001_v098_poor_wording_correction | 4.23 | excellent | variant_static |
+| core_001_v099_voice_dictate_transcript | 4.23 | excellent | variant_static |
+| core_001_v100_reflective_supervision | 4.23 | excellent | variant_static |
+| core_002_v001_rough_note | 4.23 | excellent | variant_static |
+| core_002_v002_manager_oversight | 4.23 | excellent | variant_static |
+| core_002_v003_handover | 4.23 | excellent | variant_static |
+| core_002_v004_mobile_friendly | 4.23 | excellent | variant_static |
+| core_002_v005_child_centred_rewrite | 4.23 | excellent | variant_static |
+| core_002_v006_safeguarding_escalation | 4.23 | excellent | variant_static |
+| core_002_v007_reg44_evidence | 4.23 | excellent | variant_static |
+| core_002_v008_poor_wording_correction | 4.23 | excellent | variant_static |
+| core_002_v009_voice_dictate_transcript | 4.23 | excellent | variant_static |
+| core_002_v010_reflective_supervision | 4.23 | excellent | variant_static |
+| core_002_v011_rough_note | 4.23 | excellent | variant_static |
+| core_002_v012_manager_oversight | 4.23 | excellent | variant_static |
+| core_002_v013_handover | 4.23 | excellent | variant_static |
+| core_002_v014_mobile_friendly | 4.23 | excellent | variant_static |
+| core_002_v015_child_centred_rewrite | 4.23 | excellent | variant_static |
+| core_002_v016_safeguarding_escalation | 4.23 | excellent | variant_static |
+| core_002_v017_reg44_evidence | 4.23 | excellent | variant_static |
+| core_002_v018_poor_wording_correction | 4.23 | excellent | variant_static |
+| core_002_v019_voice_dictate_transcript | 4.23 | excellent | variant_static |
+| core_002_v020_reflective_supervision | 4.23 | excellent | variant_static |
+| core_002_v021_rough_note | 4.23 | excellent | variant_static |
+| core_002_v022_manager_oversight | 4.23 | excellent | variant_static |
+| core_002_v023_handover | 4.23 | excellent | variant_static |
+| core_002_v024_mobile_friendly | 4.23 | excellent | variant_static |
+| core_002_v025_child_centred_rewrite | 4.23 | excellent | variant_static |
+| core_002_v026_safeguarding_escalation | 4.23 | excellent | variant_static |
+| core_002_v027_reg44_evidence | 4.23 | excellent | variant_static |
+| core_002_v028_poor_wording_correction | 4.23 | excellent | variant_static |
+| core_002_v029_voice_dictate_transcript | 4.23 | excellent | variant_static |
+| core_002_v030_reflective_supervision | 4.23 | excellent | variant_static |
+| core_002_v031_rough_note | 4.23 | excellent | variant_static |
+| core_002_v032_manager_oversight | 4.23 | excellent | variant_static |
+| core_002_v033_handover | 4.23 | excellent | variant_static |
+| core_002_v034_mobile_friendly | 4.23 | excellent | variant_static |
+| core_002_v035_child_centred_rewrite | 4.23 | excellent | variant_static |
+| core_002_v036_safeguarding_escalation | 4.23 | excellent | variant_static |
+| core_002_v037_reg44_evidence | 4.23 | excellent | variant_static |
+| core_002_v038_poor_wording_correction | 4.23 | excellent | variant_static |
+| core_002_v039_voice_dictate_transcript | 4.23 | excellent | variant_static |
+| core_002_v040_reflective_supervision | 4.23 | excellent | variant_static |
+| core_002_v041_rough_note | 4.23 | excellent | variant_static |
+| core_002_v042_manager_oversight | 4.23 | excellent | variant_static |
+| core_002_v043_handover | 4.23 | excellent | variant_static |
+| core_002_v044_mobile_friendly | 4.23 | excellent | variant_static |
+| core_002_v045_child_centred_rewrite | 4.23 | excellent | variant_static |
+| core_002_v046_safeguarding_escalation | 4.23 | excellent | variant_static |
+| core_002_v047_reg44_evidence | 4.23 | excellent | variant_static |
+| core_002_v048_poor_wording_correction | 4.23 | excellent | variant_static |
+| core_002_v049_voice_dictate_transcript | 4.23 | excellent | variant_static |
+| core_002_v050_reflective_supervision | 4.23 | excellent | variant_static |
+| core_002_v051_rough_note | 4.23 | excellent | variant_static |
+| core_002_v052_manager_oversight | 4.23 | excellent | variant_static |
+| core_002_v053_handover | 4.23 | excellent | variant_static |
+| core_002_v054_mobile_friendly | 4.23 | excellent | variant_static |
+| core_002_v055_child_centred_rewrite | 4.23 | excellent | variant_static |
+| core_002_v056_safeguarding_escalation | 4.23 | excellent | variant_static |
+| core_002_v057_reg44_evidence | 4.23 | excellent | variant_static |
+| core_002_v058_poor_wording_correction | 4.23 | excellent | variant_static |
+| core_002_v059_voice_dictate_transcript | 4.23 | excellent | variant_static |
+| core_002_v060_reflective_supervision | 4.23 | excellent | variant_static |
+| core_002_v061_rough_note | 4.23 | excellent | variant_static |
+| core_002_v062_manager_oversight | 4.23 | excellent | variant_static |
+| core_002_v063_handover | 4.23 | excellent | variant_static |
+| core_002_v064_mobile_friendly | 4.23 | excellent | variant_static |
+| core_002_v065_child_centred_rewrite | 4.23 | excellent | variant_static |
+| core_002_v066_safeguarding_escalation | 4.23 | excellent | variant_static |
+| core_002_v067_reg44_evidence | 4.23 | excellent | variant_static |
+| core_002_v068_poor_wording_correction | 4.23 | excellent | variant_static |
+| core_002_v069_voice_dictate_transcript | 4.23 | excellent | variant_static |
+| core_002_v070_reflective_supervision | 4.23 | excellent | variant_static |
+| core_002_v071_rough_note | 4.23 | excellent | variant_static |
+| core_002_v072_manager_oversight | 4.23 | excellent | variant_static |
+| core_002_v073_handover | 4.23 | excellent | variant_static |
+| core_002_v074_mobile_friendly | 4.23 | excellent | variant_static |
+| core_002_v075_child_centred_rewrite | 4.23 | excellent | variant_static |
+| core_002_v076_safeguarding_escalation | 4.23 | excellent | variant_static |
+| core_002_v077_reg44_evidence | 4.23 | excellent | variant_static |
+| core_002_v078_poor_wording_correction | 4.23 | excellent | variant_static |
+| core_002_v079_voice_dictate_transcript | 4.23 | excellent | variant_static |
+| core_002_v080_reflective_supervision | 4.23 | excellent | variant_static |
+| core_002_v081_rough_note | 4.23 | excellent | variant_static |
+| core_002_v082_manager_oversight | 4.23 | excellent | variant_static |
+| core_002_v083_handover | 4.23 | excellent | variant_static |
+| core_002_v084_mobile_friendly | 4.23 | excellent | variant_static |
+| core_002_v085_child_centred_rewrite | 4.23 | excellent | variant_static |
+| core_002_v086_safeguarding_escalation | 4.23 | excellent | variant_static |
+| core_002_v087_reg44_evidence | 4.23 | excellent | variant_static |
+| core_002_v088_poor_wording_correction | 4.23 | excellent | variant_static |
+| core_002_v089_voice_dictate_transcript | 4.23 | excellent | variant_static |
+| core_002_v090_reflective_supervision | 4.23 | excellent | variant_static |
+| core_002_v091_rough_note | 4.23 | excellent | variant_static |
+| core_002_v092_manager_oversight | 4.23 | excellent | variant_static |
+| core_002_v093_handover | 4.23 | excellent | variant_static |
+| core_002_v094_mobile_friendly | 4.23 | excellent | variant_static |
+| core_002_v095_child_centred_rewrite | 4.23 | excellent | variant_static |
+| core_002_v096_safeguarding_escalation | 4.23 | excellent | variant_static |
+| core_002_v097_reg44_evidence | 4.23 | excellent | variant_static |
+| core_002_v098_poor_wording_correction | 4.23 | excellent | variant_static |
+| core_002_v099_voice_dictate_transcript | 4.23 | excellent | variant_static |
+| core_002_v100_reflective_supervision | 4.23 | excellent | variant_static |
+| core_003_v001_rough_note | 4.23 | excellent | variant_static |
+| core_003_v002_manager_oversight | 4.15 | excellent | variant_static |
+| core_003_v003_handover | 4.15 | excellent | variant_static |
+| core_003_v004_mobile_friendly | 4.15 | excellent | variant_static |
+| core_003_v005_child_centred_rewrite | 4.15 | excellent | variant_static |
+| core_003_v006_safeguarding_escalation | 4.15 | excellent | variant_static |
+| core_003_v007_reg44_evidence | 4.15 | excellent | variant_static |
+| core_003_v008_poor_wording_correction | 4.15 | excellent | variant_static |
+| core_003_v009_voice_dictate_transcript | 4.15 | excellent | variant_static |
+| core_003_v010_reflective_supervision | 4.15 | excellent | variant_static |
+| core_003_v011_rough_note | 4.23 | excellent | variant_static |
+| core_003_v012_manager_oversight | 4.23 | excellent | variant_static |
+| core_003_v013_handover | 4.23 | excellent | variant_static |
+| core_003_v014_mobile_friendly | 4.15 | excellent | variant_static |
+| core_003_v015_child_centred_rewrite | 4.23 | excellent | variant_static |
+| core_003_v016_safeguarding_escalation | 4.15 | excellent | variant_static |
+| core_003_v017_reg44_evidence | 4.23 | excellent | variant_static |
+| core_003_v018_poor_wording_correction | 4.23 | excellent | variant_static |
+| core_003_v019_voice_dictate_transcript | 4.15 | excellent | variant_static |
+| core_003_v020_reflective_supervision | 4.23 | excellent | variant_static |
+| core_003_v021_rough_note | 4.23 | excellent | variant_static |
+| core_003_v022_manager_oversight | 4.23 | excellent | variant_static |
+| core_003_v023_handover | 4.23 | excellent | variant_static |
+| core_003_v024_mobile_friendly | 4.15 | excellent | variant_static |
+| core_003_v025_child_centred_rewrite | 4.23 | excellent | variant_static |
+| core_003_v026_safeguarding_escalation | 4.15 | excellent | variant_static |
+| core_003_v027_reg44_evidence | 4.23 | excellent | variant_static |
+| core_003_v028_poor_wording_correction | 4.23 | excellent | variant_static |
+| core_003_v029_voice_dictate_transcript | 4.15 | excellent | variant_static |
+| core_003_v030_reflective_supervision | 4.23 | excellent | variant_static |
+| core_003_v031_rough_note | 4.23 | excellent | variant_static |
+| core_003_v032_manager_oversight | 4.23 | excellent | variant_static |
+| core_003_v033_handover | 4.23 | excellent | variant_static |
+| core_003_v034_mobile_friendly | 4.15 | excellent | variant_static |
+| core_003_v035_child_centred_rewrite | 4.23 | excellent | variant_static |
+| core_003_v036_safeguarding_escalation | 4.15 | excellent | variant_static |
+| core_003_v037_reg44_evidence | 4.23 | excellent | variant_static |
+| core_003_v038_poor_wording_correction | 4.23 | excellent | variant_static |
+| core_003_v039_voice_dictate_transcript | 4.15 | excellent | variant_static |
+| core_003_v040_reflective_supervision | 4.23 | excellent | variant_static |
+| core_003_v041_rough_note | 4.23 | excellent | variant_static |
+| core_003_v042_manager_oversight | 4.23 | excellent | variant_static |
+| core_003_v043_handover | 4.15 | excellent | variant_static |
+| core_003_v044_mobile_friendly | 4.15 | excellent | variant_static |
+| core_003_v045_child_centred_rewrite | 4.15 | excellent | variant_static |
+| core_003_v046_safeguarding_escalation | 4.15 | excellent | variant_static |
+| core_003_v047_reg44_evidence | 4.15 | excellent | variant_static |
+| core_003_v048_poor_wording_correction | 4.15 | excellent | variant_static |
+| core_003_v049_voice_dictate_transcript | 4.23 | excellent | variant_static |
+| core_003_v050_reflective_supervision | 4.15 | excellent | variant_static |

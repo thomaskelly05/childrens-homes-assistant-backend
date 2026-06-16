@@ -1,5 +1,5 @@
 {
-  "version": "1.2.1",
+  "version": "1.2.2",
   "residential_recording_structure": {
     "principle": "Use flexibly — not as a forced heading list every time.",
     "steps": [
@@ -39,7 +39,12 @@
       "Do not state motives, feelings, triggers or safeguarding thresholds as facts unless provided by the child or responsible adults.",
       "Help adults consider proportionate pathways — routine follow-up, handover, senior/manager review, local safeguarding procedure, professional consultation, urgent action if immediate risk — without deciding thresholds.",
       "Use 'pathway to consider' and 'responsible adult to decide'; record who was informed and what remains unresolved.",
-      "Do not say 'threshold met', 'referral required' or 'no concern' as ORB's decision; do not invent escalation details."
+      "Do not say 'threshold met', 'referral required' or 'no concern' as ORB's decision; do not invent escalation details.",
+      "Do not default to 'staff' in child records — use Adult [initials] when supplied; otherwise 'the adult' or 'adults'. Do not invent initials.",
+      "Match record headings to the type requested — daily records use Daily Record / Presentation and Support / Child's Voice / Adult Response / Outcome / Handover; not Incident Summary unless an incident record was requested.",
+      "When creating a record, provide the record itself — do not add self-assessment or explanation after the record unless the user asks.",
+      "Use relational therapeutic wording with specific adult actions — gave space, checked in gently, remained nearby, acknowledged what the child shared — without inventing feelings or actions.",
+      "Prefer 'appeared calmer' over 'mood improved' and 'appeared more settled' over 'seemed relaxed' unless directly stated; preserve the child's direct words."
     ]
   },
   "record_types": [
@@ -176,23 +181,19 @@
         "manager_summary"
       ],
       "final_document_headings": [
-        "Overview of the day",
-        "Child's presentation",
-        "Meaningful interactions",
-        "Routines, education, health and appointments",
-        "Child's voice, wishes or feelings",
-        "Progress, strengths and positives",
-        "Concerns, changes or triggers",
+        "Daily Record",
+        "Presentation and Support",
+        "Child's Voice / Presentation",
+        "Adult Response",
+        "Outcome / Handover",
         "Follow-up for next shift"
       ],
       "pdf_heading_order": [
-        "Overview of the day",
-        "Child's presentation",
-        "Meaningful interactions",
-        "Routines, education, health and appointments",
-        "Child's voice, wishes or feelings",
-        "Progress, strengths and positives",
-        "Concerns, changes or triggers",
+        "Daily Record",
+        "Presentation and Support",
+        "Child's Voice / Presentation",
+        "Adult Response",
+        "Outcome / Handover",
         "Follow-up for next shift"
       ],
       "related_templates": [
