@@ -85,7 +85,7 @@ _THERAPEUTIC_LANGUAGE_REPLACEMENTS: tuple[tuple[re.Pattern[str], str], ...] = (
     ),
     (
         re.compile(r"\bstaff told them to stop being dramatic\b", re.I),
-        "staff offered calm boundaries and reassurance",
+        "staff used wording that should be reframed more respectfully",
     ),
     (
         re.compile(r"\bstop being dramatic\b", re.I),
@@ -97,7 +97,7 @@ _THERAPEUTIC_LANGUAGE_REPLACEMENTS: tuple[tuple[re.Pattern[str], str], ...] = (
     ),
     (
         re.compile(r"\bstaff had to be firm\b", re.I),
-        "staff offered calm boundaries within role",
+        "staff used a firm approach — wording may need review",
     ),
     (
         re.compile(r"\brefused to comply\b", re.I),
@@ -105,11 +105,11 @@ _THERAPEUTIC_LANGUAGE_REPLACEMENTS: tuple[tuple[re.Pattern[str], str], ...] = (
     ),
     (
         re.compile(r"\beventually did as told\b", re.I),
-        "eventually settled and engaged when ready",
+        "later followed the request when ready",
     ),
     (
         re.compile(r"\bdid as told\b", re.I),
-        "engaged when ready",
+        "followed the request when ready",
     ),
     (
         re.compile(r"\battention[\s-]?seeking\b", re.I),
@@ -149,7 +149,7 @@ _THERAPEUTIC_LANGUAGE_REPLACEMENTS: tuple[tuple[re.Pattern[str], str], ...] = (
     ),
     (
         re.compile(r"\bcalmed down\b", re.I),
-        "settled with staff support",
+        "appeared calmer",
     ),
 )
 
@@ -220,6 +220,15 @@ _MANAGEMENT_OVERSIGHT_PRINCIPLE = (
     "whether supervision, debrief or practice learning is needed; and what follow-up remains. "
     "Use 'manager/senior should consider reviewing…' not 'manager must conclude…'. "
     "ORB supports oversight; it does not complete management oversight."
+)
+
+_FACTUAL_ACCURACY_PRINCIPLE = (
+    "For residential childcare records, separate known facts from interpretation. "
+    "Preserve direct words where provided. Do not add unprovided facts, chronology, adult actions, "
+    "child feelings, outcomes or safeguarding escalation. "
+    "Use 'not stated', 'not yet known', 'requires clarification' or 'the record should confirm' "
+    "where information is missing. Turn missing information into prompts, not assumptions. "
+    "A safer record is honest about what is known, unknown and still to be reviewed."
 )
 
 _ADULT_ACTION_CUE_PATTERN = re.compile(
@@ -481,6 +490,59 @@ def _magic_notes_missing_prompt(scenario: dict[str, Any], *, safeguarding: bool 
             "Record what remains to be reviewed by a responsible adult."
         )
     return "\n".join(parts)
+
+
+def _input_has_escalation_cues(text: str) -> bool:
+    """Whether input states who was informed or escalation actions taken."""
+    lower = str(text or "").lower()
+    return any(
+        cue in lower
+        for cue in (
+            "manager informed",
+            "manager was informed",
+            "dsl informed",
+            "dsl notified",
+            "informed manager",
+            "informed the manager",
+            "informed dsl",
+            "called police",
+            "police called",
+            "ambulance called",
+            "mash notified",
+            "on-call informed",
+        )
+    )
+
+
+def _build_factual_gaps_section(scenario: dict[str, Any], input_text: str) -> str:
+    """Concise known/gaps framing — prompts for missing detail without inventing content."""
+    cleaned = _clean_input_prefix(input_text)
+    lines: list[str] = [
+        "Based on the information provided:",
+        "Known / observed / reported: see factual account above.",
+    ]
+    gaps: list[str] = []
+    if not _input_has_speech_cues(cleaned):
+        gaps.append("Direct words if known — the child's words were not recorded; add if known.")
+    if not _extract_adult_actions_from_input(cleaned):
+        gaps.append("Adult response not yet recorded — complete with specific actions only as provided.")
+    if not any(w in cleaned.lower() for w in ("settled", "improved", "repair", "later", "eventually", "completed", "agreed", "outcome")):
+        gaps.append("Outcome not yet recorded — follow-up still to be confirmed.")
+    if needs_safeguarding_escalation(scenario) and not _input_has_escalation_cues(cleaned):
+        gaps.append("It is not stated who was informed — escalation/pathway to be confirmed.")
+    family = str(scenario.get("scenario_family") or "")
+    if family in {"incident_reflection", "safeguarding"}:
+        gaps.append("Chronology to clarify — sequence before / during / after should be confirmed.")
+    if family == "meetings":
+        gaps.append("Distinguish agreed actions from suggested actions — do not invent attendee decisions.")
+    if family == "key_work":
+        gaps.append("Child views: record if known; seek if not yet stated.")
+    if gaps:
+        lines.append("What is not yet stated:")
+        lines.extend(f"- {gap}" for gap in gaps[:5])
+    else:
+        lines.append("Details to confirm: review whether any gaps remain before finalising.")
+    return "\n".join(lines)
 
 
 def _input_has_management_cues(text: str) -> bool:
@@ -764,7 +826,7 @@ def _build_outcome_line(input_text: str) -> str:
     lower = input_text.lower()
     if any(w in lower for w in ("settled", "improved", "repair", "later", "eventually", "completed", "agreed")):
         return "Outcome: as described in input — young person presentation by end of shift to be confirmed."
-    return "Outcome: not stated — to be completed by practitioner."
+    return "Outcome: not stated — to be completed by the adult completing the record."
 
 
 def _family_specific_sections(scenario: dict[str, Any], input_text: str) -> list[str]:
@@ -784,6 +846,9 @@ def _family_specific_sections(scenario: dict[str, Any], input_text: str) -> list
     elif family == "incident_reflection":
         sections.extend(
             [
+                "## Chronology to clarify",
+                "Before / during / after: separate sequence from interpretation. "
+                "The sequence of events should be clarified where not stated.",
                 "## Presentation before / during / after",
                 "Before: as described in factual account. During: staff observed events as recorded. "
                 "After: current presentation — to be completed by practitioner.",
@@ -814,6 +879,9 @@ def _family_specific_sections(scenario: dict[str, Any], input_text: str) -> list
     elif family == "meetings":
         sections.extend(
             [
+                "## Agreed actions vs suggested actions",
+                "Record agreed actions, responsible adults and review points. "
+                "Suggested actions or ideas remain prompts — do not state them as decisions unless confirmed.",
                 "## Child's voice in this discussion",
                 "Record whether the young person's voice, wishes, feelings or views were shared, "
                 "represented or still need to be sought.",
@@ -824,7 +892,7 @@ def _family_specific_sections(scenario: dict[str, Any], input_text: str) -> list
             [
                 "## Children's experience and evidence",
                 "Include evidence of children's experience, wishes and feelings — not only compliance activity. "
-                "Regulatory wording supports evidence; it is not a judgement.",
+                "Identify evidence gaps without regulatory judgement — internal quality indicator only.",
             ]
         )
     elif family == "magic_notes" or _is_magic_notes_variant(scenario):
@@ -861,10 +929,24 @@ def build_high_risk_safeguarding_scaffold(scenario: dict[str, Any]) -> str:
     factual = build_factual_account(scenario, input_text)
     escalation = _resolve_escalation_guidance(scenario)
     child_voice = build_child_voice_section(factual, scenario)
+    exact_words_line = (
+        "Child's exact words preserved above."
+        if _input_has_speech_cues(factual)
+        else "The child's exact words were not recorded — add direct words if known."
+    )
 
     magic_notes_prompt = ""
     if _is_magic_notes_variant(scenario):
         magic_notes_prompt = "\n\n" + _magic_notes_missing_prompt(scenario, safeguarding=True)
+
+    family_sections: list[str] = []
+    if str(scenario.get("scenario_family") or "") == "meetings":
+        family_sections = [
+            "",
+            "## Agreed actions vs suggested actions",
+            "Record agreed actions, responsible adults and review points. "
+            "Suggested actions or ideas remain prompts — do not state them as decisions unless confirmed.",
+        ]
 
     return "\n".join(
         [
@@ -873,8 +955,11 @@ def build_high_risk_safeguarding_scaffold(scenario: dict[str, Any]) -> str:
             "## What was said / observed",
             factual or "Not stated.",
             "",
+            exact_words_line,
+            "",
             "## Child voice / presentation",
             child_voice,
+            *family_sections,
             "",
             "## Immediate adult response",
             _build_adult_response_section(scenario, factual),
@@ -884,7 +969,11 @@ def build_high_risk_safeguarding_scaffold(scenario: dict[str, Any]) -> str:
             "and maintained relationship — only as actually provided.",
             "",
             "## Safeguarding action / who was informed",
-            escalation,
+            (
+                "Escalation noted in input — confirm who was informed and what action was taken."
+                if _input_has_escalation_cues(factual)
+                else "It is not stated who was informed. " + escalation
+            ),
             "",
             "## Management oversight",
             "Seek management oversight and ensure any required notifications or referrals are considered by the responsible adults.",
@@ -916,6 +1005,9 @@ def build_child_centred_scaffold(scenario: dict[str, Any]) -> str:
         "",
         "## What happened",
         factual or "Not stated.",
+        "",
+        "## Known / gaps",
+        _build_factual_gaps_section(scenario, input_text),
         "",
         "## Child voice / presentation",
         child_voice,
@@ -982,3 +1074,8 @@ def therapeutic_language_recording_principle() -> str:
 def management_oversight_recording_principle() -> str:
     """Reusable management oversight principle for brain/framework sources."""
     return _MANAGEMENT_OVERSIGHT_PRINCIPLE
+
+
+def factual_accuracy_recording_principle() -> str:
+    """Reusable factual accuracy / no-invention principle for brain/framework sources."""
+    return _FACTUAL_ACCURACY_PRINCIPLE

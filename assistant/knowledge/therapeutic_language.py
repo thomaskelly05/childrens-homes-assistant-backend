@@ -32,6 +32,10 @@ THERAPEUTIC_LANGUAGE_MODULE = {
             "Help adults consider management oversight — pattern, plan review, manager/senior review, supervision/debrief/learning, and follow-up.",
             "Use 'manager/senior should consider reviewing…' not 'manager must conclude…'. ORB supports oversight; it does not complete management oversight.",
             "Avoid compliance guarantees, claims of regulatory preparedness, or 'no further action' without responsible adult review.",
+            "Separate known facts from interpretation; preserve direct words where provided.",
+            "Do not invent chronology, adult actions, child feelings, outcomes or escalation.",
+            "Use 'not stated', 'not yet known', 'requires clarification' or 'the record should confirm' for missing information.",
+            "Turn missing information into prompts, not assumptions — a safer record is honest about gaps.",
         ],
         "structure_steps": [
             "What happened?",

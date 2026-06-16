@@ -128,6 +128,8 @@ export const ORB_THERAPEUTIC_RECORDING_PRINCIPLES: readonly string[] = [
   'Include outcome and follow-up where known',
   'Include context, triggers, de-escalation and repair where relevant',
   'State when information is unknown rather than inventing it',
+  'Separate known / observed / reported from what is not yet stated',
+  'Do not invent chronology, adult actions, child feelings, outcomes or escalation',
   'Include follow-up, review and management oversight',
   'Adult remains responsible for final wording'
 ]

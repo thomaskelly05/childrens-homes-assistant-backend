@@ -52,7 +52,10 @@ _QUALITY_FIELD_PROMPTS: dict[str, str] = {
         "how staff listened, what was offered, de-escalation, repair or plan follow-through. "
         "Avoid vague 'staff supported' unless support is described."
     ),
-    "factual_clarity": "Can you describe observable facts — what was seen and heard, by whom, when?",
+    "factual_clarity": (
+        "Can you describe observable facts — what was seen and heard, by whom, when? "
+        "Mark what is not yet stated rather than inventing missing detail."
+    ),
     "non_judgemental_language": "Is the wording factual and respectful, without judgemental labels?",
     "chronology_relevance": "What was the sequence of events? Include approximate times.",
     "evidence_of_action": "What actions were taken and who was informed?",

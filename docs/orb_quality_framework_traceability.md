@@ -200,6 +200,30 @@ Brain/framework sources implementing this principle:
 
 ORB supports management thinking; it does not complete management oversight or conclude that no further action is needed.
 
+## Factual accuracy / no-invention quality indicator
+
+ORB's `factual_accuracy_no_invention` rubric category scores whether outputs distinguish known facts from gaps:
+
+- Known / observed / reported vs interpretation
+- Direct words preserved where provided; honest prompts where missing
+- No invented chronology, adult actions, child feelings, outcomes or escalation
+- Missing information marked with approved wording (`not stated`, `not yet known`, `requires clarification`)
+- Gaps become prompts, not assumptions
+
+This is a **source-mapped internal quality framework** indicator aligned to accurate, defensible recording practice. It is **not a regulatory judgement**.
+
+**Rubric note:** Approved gap markers include `not yet known` and `not yet recorded` — not only `not stated` / `unknown`. Earlier versions under-recognised scaffold wording (false positive).
+
+Brain/framework sources implementing this principle:
+
+- `assistant/evals/orb_high_risk_scaffold.py` — factual gaps sections, sanitisation that preserves material facts
+- `assistant/knowledge/orb_recording_framework.json` — residential recording structure
+- `assistant/knowledge/therapeutic_language.py` — no-invention wording discipline
+- `services/orb_residential_quality_service.py` — factual clarity capture prompts
+- `frontend-next/lib/orb/recording/orb-therapeutic-writing.ts` — missing-information guidance
+
+ORB cleans rough notes without falsely completing them. Therapeutic reframing changes labels, not material events.
+
 ## Related documentation
 
 - `docs/indicare_internal_brain_architecture.md` — brain layers and design principles

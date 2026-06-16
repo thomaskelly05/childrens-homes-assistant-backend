@@ -104,6 +104,8 @@ export const ORB_MISSING_INFORMATION_GUIDANCE = {
     'If details are missing, say what may need checking — do not invent missing details.',
     'Preserve uncertainty where information is missing.',
     'Separate known facts from interpretation and from gaps.',
+    'Use "not stated", "not yet known", "requires clarification" or "the record should confirm" where appropriate.',
+    'Do not invent chronology, adult actions, child feelings, outcomes or escalation.',
     'Record behaviour as communication where appropriate.',
     'Name adult actions specifically — how staff listened, what was offered, de-escalation and repair.',
     'Avoid vague “staff supported”, “staff managed” or “staff dealt with it” unless specific actions follow.',
@@ -130,7 +132,8 @@ const SHARED_PROMPTS = {
   ],
   factual: [
     'Have we recorded observable facts before interpretation?',
-    'Are times, dates and adults named where known?'
+    'Are times, dates and adults named where known?',
+    'Have we marked what is not yet stated rather than filling gaps?'
   ],
   follow_up: ['What follow-up is needed?'],
   quality: [
