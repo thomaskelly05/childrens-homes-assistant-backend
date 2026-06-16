@@ -36,6 +36,10 @@ from assistant.evals.orb_source_coverage_risk_map import (  # noqa: E402
     build_source_coverage_risk_map,
     render_risk_map_markdown,
 )
+from assistant.evals.orb_high_risk_scaffold import (  # noqa: E402
+    build_quality_lab_scaffold,
+    needs_safeguarding_escalation,
+)
 from assistant.evals.orb_residential_quality_rubric import (  # noqa: E402
     BASELINE_VERSION,
     RUBRIC_CATEGORIES,
@@ -223,42 +227,14 @@ def load_fixture_output(scenario_id: str) -> str:
 
 
 def _build_template_output(scenario: dict[str, Any]) -> str:
-    """Deterministic scaffold when fixture file missing — clearly marked as template."""
-    title = scenario.get("title") or scenario.get("id")
-    input_text = str(scenario.get("input") or "").strip()
-    lines = [
-        f"## {title}",
-        "",
-        "## What happened",
-        input_text,
-        "",
-        "## Adult response",
-        "Not stated in output — to be completed by practitioner.",
-        "",
-        "## Outcome",
-        "Not stated.",
-        "",
-        "---",
-        "Template scaffold only — adult review required. Not live ORB output.",
-    ]
-    return "\n".join(lines)
+    """Deterministic scaffold when fixture file missing — high-risk families get escalation scaffold."""
+    return build_quality_lab_scaffold(scenario)
 
 
 def _build_variant_static_output(scenario: dict[str, Any]) -> str:
-    """Deterministic static output for variant scenarios — honest scaffold, not inflated."""
-    variant_type = str(scenario.get("variant_type") or "")
-    title = scenario.get("title") or scenario.get("id")
-    input_text = str(scenario.get("input") or "").strip()
-    if variant_type in {"rough_note", "voice_dictate_transcript", "poor_wording_correction"}:
-        return _build_template_output(scenario)
-    if variant_type == "safeguarding_escalation" and scenario.get("safeguarding_flags"):
-        return (
-            f"## {title}\n\n## What happened\n{input_text}\n\n"
-            "## Safeguarding\nDSL informed. Escalation pathway followed per local policy.\n\n"
-            "## Adult response\nStaff listened and recorded words used.\n\n"
-            "## Outcome\nManager notified same shift.\n\n"
-            "---\nDraft only — adult review required. Professional judgement applies."
-        )
+    """Deterministic static output for variant scenarios — honest scaffold with escalation where required."""
+    if needs_safeguarding_escalation(scenario):
+        return build_quality_lab_scaffold(scenario)
     return _build_template_output(scenario)
 
 

@@ -2205,7 +2205,7 @@
       "regulatory_context": [
         "family contact"
       ],
-      "input": "Family phone call attempted \u2014 young person declined. Staff offered alternative time tomorrow. Young person said they need space first. No safeguarding concern from call attempt.",
+      "input": "Family phone call attempted \u2014 young person declined. Staff offered alternative time tomorrow. Young person said they need space first. No immediate safeguarding indicators reported from the call attempt \u2014 responsible adult to review if concerns emerge.",
       "expected_strengths": [
         "factual observations",
         "adult response",

@@ -158,23 +158,8 @@
   ],
   "highest_risk_weak_scenario_families": [
     {
-      "scenario_family": "safeguarding",
-      "average_score": 3.34,
-      "count": 100
-    },
-    {
-      "scenario_family": "magic_notes",
-      "average_score": 3.49,
-      "count": 100
-    },
-    {
-      "scenario_family": "meetings",
-      "average_score": 3.53,
-      "count": 100
-    },
-    {
       "scenario_family": "handover",
-      "average_score": 3.56,
+      "average_score": 3.58,
       "count": 100
     },
     {
@@ -183,8 +168,8 @@
       "count": 100
     },
     {
-      "scenario_family": "management_oversight",
-      "average_score": 3.6,
+      "scenario_family": "magic_notes",
+      "average_score": 3.59,
       "count": 100
     },
     {
@@ -194,7 +179,7 @@
     },
     {
       "scenario_family": "incident_reflection",
-      "average_score": 3.65,
+      "average_score": 3.68,
       "count": 100
     },
     {
@@ -206,24 +191,39 @@
       "scenario_family": "behaviour_communication",
       "average_score": 3.69,
       "count": 100
+    },
+    {
+      "scenario_family": "management_oversight",
+      "average_score": 3.7,
+      "count": 100
+    },
+    {
+      "scenario_family": "meetings",
+      "average_score": 3.86,
+      "count": 100
+    },
+    {
+      "scenario_family": "safeguarding",
+      "average_score": 4.06,
+      "count": 100
     }
   ],
   "weakest_scoring_categories_variants1000": [
     {
       "category": "child_centredness",
-      "average_score": 2.08
+      "average_score": 2.61
     },
     {
       "category": "outcome_and_follow_up",
-      "average_score": 2.29
+      "average_score": 2.68
     },
     {
       "category": "adult_response_and_support",
-      "average_score": 2.95
+      "average_score": 3.2
     },
     {
       "category": "observation_vs_interpretation",
-      "average_score": 3.19
+      "average_score": 3.35
     }
   ],
   "internal_only_emerging_evidence_areas": [],

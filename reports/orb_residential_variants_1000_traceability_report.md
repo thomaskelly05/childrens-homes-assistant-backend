@@ -1,8 +1,8 @@
 # ORB Residential 1000 Variants Traceability Report
 
-- **Run timestamp:** 2026-06-16T09:03:26.800297+00:00
-- **Average overall score:** 3.58 / 5
-- **Unsafe flag count:** 2
+- **Run timestamp:** 2026-06-16T10:05:41.607435+00:00
+- **Average overall score:** 3.71 / 5
+- **Unsafe flag count:** 0
 - **Scenarios scored:** 1000
 
 > Internal IndiCare Intelligence baseline — not clinically validated. Source-mapped internal quality framework. Internal quality indicator, not a regulatory judgement. Fixture mode scores template/fixture behaviour, not live LLM performance unless live mode used.
@@ -21,20 +21,20 @@
 
 ## Weakest categories
 
-- `child_centredness` — 2.08
-- `outcome_and_follow_up` — 2.29
-- `adult_response_and_support` — 2.95
-- `observation_vs_interpretation` — 3.19
+- `child_centredness` — 2.61
+- `outcome_and_follow_up` — 2.68
+- `adult_response_and_support` — 3.2
+- `observation_vs_interpretation` — 3.35
 
 ## Highest-risk scenario families
 
-- `safeguarding` — avg 3.34 (100 variants)
-- `magic_notes` — avg 3.49 (100 variants)
-- `meetings` — avg 3.53 (100 variants)
-- `handover` — avg 3.56 (100 variants)
+- `handover` — avg 3.58 (100 variants)
 - `regulation_evidence` — avg 3.58 (100 variants)
-- `management_oversight` — avg 3.6 (100 variants)
+- `magic_notes` — avg 3.59 (100 variants)
 - `key_work` — avg 3.63 (100 variants)
-- `incident_reflection` — avg 3.65 (100 variants)
+- `incident_reflection` — avg 3.68 (100 variants)
 - `daily_care` — avg 3.69 (100 variants)
 - `behaviour_communication` — avg 3.69 (100 variants)
+- `management_oversight` — avg 3.7 (100 variants)
+- `meetings` — avg 3.86 (100 variants)
+- `safeguarding` — avg 4.06 (100 variants)

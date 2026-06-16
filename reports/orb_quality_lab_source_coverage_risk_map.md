@@ -46,13 +46,13 @@
 
 ## Highest-risk weak scenario families (variants1000 scores)
 
-- `safeguarding` — avg 3.34
-- `magic_notes` — avg 3.49
-- `meetings` — avg 3.53
-- `handover` — avg 3.56
+- `handover` — avg 3.58
 - `regulation_evidence` — avg 3.58
-- `management_oversight` — avg 3.6
+- `magic_notes` — avg 3.59
 - `key_work` — avg 3.63
-- `incident_reflection` — avg 3.65
+- `incident_reflection` — avg 3.68
 - `daily_care` — avg 3.69
 - `behaviour_communication` — avg 3.69
+- `management_oversight` — avg 3.7
+- `meetings` — avg 3.86
+- `safeguarding` — avg 4.06

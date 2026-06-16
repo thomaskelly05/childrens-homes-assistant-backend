@@ -1,5 +1,5 @@
 {
-  "risky_occurrences_found": 416,
+  "risky_occurrences_found": 413,
   "occurrences_replaced": 0,
   "factual_source_references_kept": 10,
   "occurrences": [
@@ -589,7 +589,7 @@
     },
     {
       "file": "services/orb_residential_quality_service.py",
-      "line": 189,
+      "line": 202,
       "context": "\"ofsted_readiness\": inspection,",
       "occurrence": "ofsted readiness",
       "classification": "product_label_risky",
@@ -1309,7 +1309,7 @@
     },
     {
       "file": "frontend-next/.next/app-path-routes-manifest.json",
-      "line": 148,
+      "line": 150,
       "context": "\"/intelligence/inspection-readiness/page\": \"/intelligence/inspection-readiness\",",
       "occurrence": "inspection readiness",
       "classification": "user_facing_copy_risky",
@@ -1317,7 +1317,7 @@
     },
     {
       "file": "frontend-next/.next/app-path-routes-manifest.json",
-      "line": 161,
+      "line": 162,
       "context": "\"/ofsted-readiness/page\": \"/ofsted-readiness\",",
       "occurrence": "ofsted readiness",
       "classification": "product_label_risky",
@@ -1325,7 +1325,7 @@
     },
     {
       "file": "frontend-next/.next/app-build-manifest.json",
-      "line": 1149,
+      "line": 1164,
       "context": "\"/intelligence/inspection-readiness/page\": [",
       "occurrence": "inspection readiness",
       "classification": "user_facing_copy_risky",
@@ -1333,7 +1333,7 @@
     },
     {
       "file": "frontend-next/.next/app-build-manifest.json",
-      "line": 1155,
+      "line": 1170,
       "context": "\"static/chunks/app/intelligence/inspection-readiness/page-d1cc58f81363d243.js\"",
       "occurrence": "inspection readiness",
       "classification": "user_facing_copy_risky",
@@ -1341,7 +1341,7 @@
     },
     {
       "file": "frontend-next/.next/app-build-manifest.json",
-      "line": 1254,
+      "line": 1261,
       "context": "\"/ofsted-readiness/page\": [",
       "occurrence": "ofsted readiness",
       "classification": "product_label_risky",
@@ -1349,7 +1349,7 @@
     },
     {
       "file": "frontend-next/.next/app-build-manifest.json",
-      "line": 1260,
+      "line": 1267,
       "context": "\"static/chunks/app/ofsted-readiness/page-878e9e823f2e0227.js\"",
       "occurrence": "ofsted readiness",
       "classification": "product_label_risky",
@@ -2660,30 +2660,6 @@
       "action": "replace"
     },
     {
-      "file": "frontend-next/lib/orb/dictate/orb-dictate-studio-actions.test.ts",
-      "line": 17,
-      "context": "assert.match(actions, /'ofsted_ready'/)",
-      "occurrence": "ofsted-ready",
-      "classification": "product_label_risky",
-      "action": "replace"
-    },
-    {
-      "file": "frontend-next/lib/orb/dictate/orb-dictate-studio-actions.test.ts",
-      "line": 23,
-      "context": "assert.match(actions, /ofsted_ready:\\s*'Inspection evidence support'/)",
-      "occurrence": "ofsted-ready",
-      "classification": "product_label_risky",
-      "action": "replace"
-    },
-    {
-      "file": "frontend-next/lib/orb/dictate/orb-dictate-studio-actions.test.ts",
-      "line": 24,
-      "context": "assert.doesNotMatch(actions, /Ofsted-ready/i)",
-      "occurrence": "ofsted-ready",
-      "classification": "product_label_risky",
-      "action": "replace"
-    },
-    {
       "file": "frontend-next/lib/orb/evaluation/orb-scenario-generator.ts",
       "line": 370,
       "context": "category: 'inspection-readiness',",
@@ -2757,7 +2733,7 @@
     },
     {
       "file": "frontend-next/lib/orb/recording/orb-therapeutic-writing.ts",
-      "line": 256,
+      "line": 268,
       "context": "writing_style_ids: ['manager_summary', 'professional', 'inspection_ready']",
       "occurrence": "inspection ready",
       "classification": "user_facing_copy_risky",
@@ -2765,7 +2741,7 @@
     },
     {
       "file": "frontend-next/lib/orb/recording/orb-therapeutic-writing.ts",
-      "line": 314,
+      "line": 326,
       "context": "writing_style_ids: ['inspection_ready', 'child_centred', 'professional']",
       "occurrence": "inspection ready",
       "classification": "user_facing_copy_risky",
@@ -2773,7 +2749,7 @@
     },
     {
       "file": "frontend-next/lib/orb/recording/orb-therapeutic-writing.ts",
-      "line": 319,
+      "line": 331,
       "context": "writing_style_ids: ['therapeutic', 'inspection_ready', 'manager_summary']",
       "occurrence": "inspection ready",
       "classification": "user_facing_copy_risky",
@@ -2781,7 +2757,7 @@
     },
     {
       "file": "frontend-next/lib/orb/recording/orb-therapeutic-writing.ts",
-      "line": 324,
+      "line": 336,
       "context": "writing_style_ids: ['inspection_ready', 'professional', 'factual']",
       "occurrence": "inspection ready",
       "classification": "factual_source_reference",
@@ -2861,7 +2837,7 @@
     },
     {
       "file": "frontend-next/.next/server/app-paths-manifest.json",
-      "line": 148,
+      "line": 150,
       "context": "\"/intelligence/inspection-readiness/page\": \"app/intelligence/inspection-readiness/page.js\",",
       "occurrence": "inspection readiness",
       "classification": "user_facing_copy_risky",
@@ -2869,7 +2845,7 @@
     },
     {
       "file": "frontend-next/.next/server/app-paths-manifest.json",
-      "line": 161,
+      "line": 162,
       "context": "\"/ofsted-readiness/page\": \"app/ofsted-readiness/page.js\",",
       "occurrence": "ofsted readiness",
       "classification": "product_label_risky",
@@ -3126,7 +3102,7 @@
     {
       "file": "frontend-next/.next/server/app/setup.html",
       "line": 1,
-      "context": "<!DOCTYPE html><!--cd_xPP4Zwzphy28Z5cMcR--><html lang=\"en-GB\"><head><meta charSet=\"utf-8\"/><meta name=\"viewport\" content=\"width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover\"/><li",
+      "context": "<!DOCTYPE html><!--W7AmpsnblHn_C2Dx5X14K--><html lang=\"en-GB\"><head><meta charSet=\"utf-8\"/><meta name=\"viewport\" content=\"width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover\"/><li",
       "occurrence": "inspection readiness",
       "classification": "factual_source_reference",
       "action": "keep"
@@ -3230,7 +3206,7 @@
     {
       "file": "frontend-next/.next/server/app/documents/home.html",
       "line": 1,
-      "context": "<!DOCTYPE html><!--cd_xPP4Zwzphy28Z5cMcR--><html lang=\"en-GB\"><head><meta charSet=\"utf-8\"/><meta name=\"viewport\" content=\"width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover\"/><li",
+      "context": "<!DOCTYPE html><!--W7AmpsnblHn_C2Dx5X14K--><html lang=\"en-GB\"><head><meta charSet=\"utf-8\"/><meta name=\"viewport\" content=\"width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover\"/><li",
       "occurrence": "inspection readiness",
       "classification": "factual_source_reference",
       "action": "keep"
@@ -3246,7 +3222,7 @@
     {
       "file": "frontend-next/.next/server/app/documents/templates.html",
       "line": 1,
-      "context": "<!DOCTYPE html><!--cd_xPP4Zwzphy28Z5cMcR--><html lang=\"en-GB\"><head><meta charSet=\"utf-8\"/><meta name=\"viewport\" content=\"width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover\"/><li",
+      "context": "<!DOCTYPE html><!--W7AmpsnblHn_C2Dx5X14K--><html lang=\"en-GB\"><head><meta charSet=\"utf-8\"/><meta name=\"viewport\" content=\"width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover\"/><li",
       "occurrence": "inspection readiness",
       "classification": "factual_source_reference",
       "action": "keep"
@@ -6156,7 +6132,7 @@
       "action": "keep"
     },
     {
-      "file": "frontend-next/.next/static/chunks/app/orb/page-ec79569d8c744ade.js",
+      "file": "frontend-next/.next/static/chunks/app/orb/page-cb665d68c8b34797.js",
       "line": 1,
       "context": "(self.webpackChunk_N_E=self.webpackChunk_N_E||[]).push([[2141,5184],{1299:(e,t,r)=>{\"use strict\";r.d(t,{l7:()=>n,ue:()=>i});let a=\"orb-sidebar-collapsed\";function n(){try{return\"true\"===window.localSt",
       "occurrence": "ofsted-ready",
@@ -6164,7 +6140,7 @@
       "action": "keep"
     },
     {
-      "file": "frontend-next/.next/static/chunks/app/orb/page-ec79569d8c744ade.js",
+      "file": "frontend-next/.next/static/chunks/app/orb/page-cb665d68c8b34797.js",
       "line": 1,
       "context": "(self.webpackChunk_N_E=self.webpackChunk_N_E||[]).push([[2141,5184],{1299:(e,t,r)=>{\"use strict\";r.d(t,{l7:()=>n,ue:()=>i});let a=\"orb-sidebar-collapsed\";function n(){try{return\"true\"===window.localSt",
       "occurrence": "inspection ready",
@@ -6172,7 +6148,7 @@
       "action": "keep"
     },
     {
-      "file": "frontend-next/.next/static/chunks/app/orb/page-ec79569d8c744ade.js",
+      "file": "frontend-next/.next/static/chunks/app/orb/page-cb665d68c8b34797.js",
       "line": 1,
       "context": "(self.webpackChunk_N_E=self.webpackChunk_N_E||[]).push([[2141,5184],{1299:(e,t,r)=>{\"use strict\";r.d(t,{l7:()=>n,ue:()=>i});let a=\"orb-sidebar-collapsed\";function n(){try{return\"true\"===window.localSt",
       "occurrence": "inspection readiness",

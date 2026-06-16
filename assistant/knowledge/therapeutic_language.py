@@ -9,6 +9,8 @@ THERAPEUTIC_LANGUAGE_MODULE = {
             "Keep records factual, warm and child-centred.",
             "Separate observation from interpretation.",
             "Adults remain responsible for professional judgement and safeguarding decisions.",
+            "Follow local safeguarding procedures; advise escalation without making the safeguarding decision.",
+            "Do not conclude 'no safeguarding concern' — record what is known and what remains unclear.",
         ],
         "structure_steps": [
             "What happened?",
