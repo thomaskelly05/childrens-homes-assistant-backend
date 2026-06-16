@@ -1,111 +1,103 @@
 {
-  "run_timestamp": "2026-06-16T10:05:41.607435+00:00",
-  "commit_sha": "9c6c7571a03f4288fe497efc699390c61ecfa980",
+  "run_timestamp": "2026-06-16T10:42:14.605122+00:00",
+  "commit_sha": "28df5851a0afbed0d9226d9d3870c72910ec1036",
   "scenario_set": "variants1000",
   "scenario_count": 1000,
-  "average_overall_score": 3.71,
+  "average_overall_score": 4.08,
   "unsafe_flags": [],
   "unsafe_flag_count": 0,
   "category_averages": {
-    "child_centredness": 2.61,
+    "child_centredness": 4.9,
     "factual_accuracy_no_invention": 4.0,
-    "therapeutic_language": 3.65,
-    "observation_vs_interpretation": 3.35,
-    "adult_response_and_support": 3.2,
-    "outcome_and_follow_up": 2.68,
+    "therapeutic_language": 3.94,
+    "observation_vs_interpretation": 3.98,
+    "adult_response_and_support": 3.28,
+    "outcome_and_follow_up": 4.0,
     "safeguarding_awareness": 4.0,
     "management_oversight": 3.99,
     "recording_usefulness": 4.0,
-    "professional_tone": 3.65,
+    "professional_tone": 3.94,
     "privacy_minimisation": 5.0,
     "adult_responsibility_no_replacement": 4.0
   },
   "weakest_record_types": [
     {
-      "record_type": "risk_assessment_note",
-      "average_score": 3.52
-    },
-    {
-      "record_type": "reg_44_evidence_summary",
-      "average_score": 3.56
-    },
-    {
-      "record_type": "handover",
-      "average_score": 3.58
-    },
-    {
-      "record_type": "placement_plan_review",
-      "average_score": 3.58
-    },
-    {
       "record_type": "daily_record",
-      "average_score": 3.59
+      "average_score": 4.0
+    },
+    {
+      "record_type": "family_contact_record",
+      "average_score": 4.08
+    },
+    {
+      "record_type": "safeguarding_concern",
+      "average_score": 4.08
+    },
+    {
+      "record_type": "multi_agency_discussion",
+      "average_score": 4.08
+    },
+    {
+      "record_type": "key_work_session",
+      "average_score": 4.08
     }
   ],
   "highest_risk_scenario_families": [
     {
-      "scenario_family": "handover",
-      "average_score": 3.58,
-      "count": 100
-    },
-    {
-      "scenario_family": "regulation_evidence",
-      "average_score": 3.58,
-      "count": 100
-    },
-    {
       "scenario_family": "magic_notes",
-      "average_score": 3.59,
-      "count": 100
-    },
-    {
-      "scenario_family": "key_work",
-      "average_score": 3.63,
-      "count": 100
-    },
-    {
-      "scenario_family": "incident_reflection",
-      "average_score": 3.68,
-      "count": 100
-    },
-    {
-      "scenario_family": "daily_care",
-      "average_score": 3.69,
-      "count": 100
-    },
-    {
-      "scenario_family": "behaviour_communication",
-      "average_score": 3.69,
-      "count": 100
-    },
-    {
-      "scenario_family": "management_oversight",
-      "average_score": 3.7,
-      "count": 100
-    },
-    {
-      "scenario_family": "meetings",
-      "average_score": 3.86,
+      "average_score": 3.98,
       "count": 100
     },
     {
       "scenario_family": "safeguarding",
-      "average_score": 4.06,
+      "average_score": 4.08,
+      "count": 100
+    },
+    {
+      "scenario_family": "key_work",
+      "average_score": 4.08,
+      "count": 100
+    },
+    {
+      "scenario_family": "meetings",
+      "average_score": 4.08,
+      "count": 100
+    },
+    {
+      "scenario_family": "handover",
+      "average_score": 4.09,
+      "count": 100
+    },
+    {
+      "scenario_family": "management_oversight",
+      "average_score": 4.09,
+      "count": 100
+    },
+    {
+      "scenario_family": "incident_reflection",
+      "average_score": 4.1,
+      "count": 100
+    },
+    {
+      "scenario_family": "behaviour_communication",
+      "average_score": 4.1,
+      "count": 100
+    },
+    {
+      "scenario_family": "regulation_evidence",
+      "average_score": 4.1,
+      "count": 100
+    },
+    {
+      "scenario_family": "daily_care",
+      "average_score": 4.11,
       "count": 100
     }
   ],
   "most_common_missing_elements": [
     {
-      "element": "follow-up",
-      "count": 10
-    },
-    {
       "element": "escalation/pathway",
       "count": 7
-    },
-    {
-      "element": "child voice/presentation",
-      "count": 6
     },
     {
       "element": "management oversight",
@@ -113,13 +105,12 @@
     }
   ],
   "recommended_improvement_targets": [
-    "Improve child centredness (avg 2.61)",
-    "Improve outcome and follow up (avg 2.68)",
-    "Improve adult response and support (avg 3.2)",
-    "Improve observation vs interpretation (avg 3.35)",
-    "Address missing element: follow-up",
+    "Improve adult response and support (avg 3.28)",
+    "Improve therapeutic language (avg 3.94)",
+    "Improve professional tone (avg 3.94)",
+    "Improve observation vs interpretation (avg 3.98)",
     "Address missing element: escalation/pathway",
-    "Address missing element: child voice/presentation"
+    "Address missing element: management oversight"
   ],
   "traceability": {
     "framework_claim": "Source-mapped internal quality framework",

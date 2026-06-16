@@ -109,8 +109,10 @@ export const ORB_MISSING_INFORMATION_GUIDANCE = {
 
 const SHARED_PROMPTS = {
   child_voice: [
-    'What did the child say, do or show?',
-    "Is the child's voice present?",
+    'What did the child say, show or communicate?',
+    "Is the child's voice and presentation visible?",
+    'What was the child\'s experience before, during and after adult support?',
+    'Were wishes, feelings or views known, unknown or still to be sought?',
     'What was the impact for the child?'
   ],
   therapeutic: [

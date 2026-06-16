@@ -1,9 +1,9 @@
 {
-  "timestamp": "2026-06-16T10:18:07.192268+00:00",
-  "commit_sha": "9c6c7571a03f4288fe497efc699390c61ecfa980",
+  "timestamp": "2026-06-16T10:52:08.820673+00:00",
+  "commit_sha": "28df5851a0afbed0d9226d9d3870c72910ec1036",
   "baseline15_average": null,
   "core100_average": null,
-  "variants1000_average": 3.71,
+  "variants1000_average": 4.08,
   "variants1000_unsafe_flag_count": 0,
   "unsafe_flags": {
     "baseline15": [],
@@ -11,16 +11,16 @@
     "variants1000": []
   },
   "weakest_categories": [
-    "child_centredness",
-    "outcome_and_follow_up",
-    "adult_response_and_support"
+    "adult_response_and_support",
+    "therapeutic_language",
+    "professional_tone"
   ],
   "strongest_categories": [
     "privacy_minimisation",
-    "factual_accuracy_no_invention",
-    "safeguarding_awareness"
+    "child_centredness",
+    "factual_accuracy_no_invention"
   ],
-  "recommended_next_target": "Improve child centredness (avg 2.61)",
+  "recommended_next_target": "Improve adult response and support (avg 3.28)",
   "live_llm_disabled_in_ci": true,
   "traceability": {
     "framework_claim": "Source-mapped internal quality framework",
@@ -66,11 +66,11 @@
   "traceability_warning": "Scores are internal quality indicators aligned to recognised sources where mapped. They are not regulatory determinations, inspection predictions, or professional validation. Adults remain accountable for decisions, escalation and final records.",
   "internal_only_emerging_evidence_areas": [],
   "ofsted_wording_audit": {
-    "risky_occurrences_found": 413,
-    "occurrences_replaced_this_pass": 412,
+    "risky_occurrences_found": 368,
+    "occurrences_replaced_this_pass": 368,
     "factual_source_references_kept": 10,
-    "risky_occurrences_remaining": 1,
-    "status": "review_required"
+    "risky_occurrences_remaining": 0,
+    "status": "pass"
   },
   "governance_boundary": "ORB supports inspection evidence preparation. It does not determine inspection outcomes, guarantee compliance or represent regulator endorsement."
 }

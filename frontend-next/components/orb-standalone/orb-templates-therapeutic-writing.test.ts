@@ -64,7 +64,7 @@ describe('ORB therapeutic template writing', () => {
 
   it('therapeutic prompts include person-centred questions', () => {
     const tw = read('lib/orb/recording/orb-therapeutic-writing.ts')
-    assert.match(tw, /What did the child say, do or show/)
+    assert.match(tw, /What did the child say, show or communicate/)
     assert.match(tw, /trauma_informed/)
     assert.match(tw, /what_to_avoid/)
   })

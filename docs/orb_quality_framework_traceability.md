@@ -116,6 +116,26 @@ Recommended next steps for independent review:
 4. **Practitioner feedback loop** — connect `quality/orb_practitioner_feedback_schema.json` to traceability updates.
 5. **Audit board attestation** — signed record of review scope, limitations, and approved claims.
 
+## Child-centredness quality indicator
+
+ORB's `child_centredness` rubric category scores whether outputs foreground:
+
+- Child voice — what the young person said or communicated
+- Presentation — mood, behaviour, silence, withdrawal, engagement or refusal as observed
+- Wishes, feelings and views — known, unknown or still to be sought
+- The child's experience before, during and after adult support
+
+This is a **source-mapped internal quality framework** indicator aligned to child voice, wishes and feelings, relationship-based care and record dignity. It is **not a regulatory judgement**.
+
+Brain/framework sources implementing this principle:
+
+- `assistant/evals/orb_high_risk_scaffold.py` — deterministic Quality Lab scaffolds
+- `assistant/knowledge/orb_recording_framework.json` — residential recording structure
+- `assistant/knowledge/therapeutic_language.py` — wording discipline
+- `services/orb_residential_quality_service.py` — live quality capture prompts
+
+ORB must not invent the child's feelings. Scaffolds use observation language (`appeared`, `presented as`, `staff observed`, `not yet known`) and prompt for missing child voice rather than fabricating it.
+
 ## Related documentation
 
 - `docs/indicare_internal_brain_architecture.md` — brain layers and design principles

@@ -19,8 +19,8 @@
         "indicare_therapeutic_recording"
       ],
       "evidence_strength": "high",
-      "rationale": "Children's homes quality standards and NICE looked-after children guidance emphasise wishes, feelings and child-centred practice. IndiCare principles operationalise this in recording markers.",
-      "scoring_caution": "Marker-based detection may miss nuanced child voice; high scores do not prove child participation in real practice.",
+      "rationale": "Children's homes quality standards and NICE looked-after children guidance emphasise wishes, feelings and child-centred practice. IndiCare principles operationalise this in recording markers — child voice, presentation, wishes/feelings and the child's experience before, during and after adult support.",
+      "scoring_caution": "Marker-based detection may miss nuanced child voice; high scores do not prove child participation in real practice. ORB must not invent feelings — scaffolds prompt for missing voice rather than fabricating it.",
       "reviewer_notes_required": true
     },
     {
