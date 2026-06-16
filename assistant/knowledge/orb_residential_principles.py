@@ -19,7 +19,9 @@ from assistant.knowledge.adult_identity_language import (
     DAILY_RECORD_OUTPUT_DISCIPLINE_PRINCIPLE,
     DAILY_RECORD_PROPORTIONALITY_PRINCIPLE,
     DAILY_RECORD_SIMPLIFICATION_PRINCIPLE,
+    DUPLICATE_HEADING_DISCIPLINE_PRINCIPLE,
     EMOTIONAL_IMPACT_DISCIPLINE_PRINCIPLE,
+    OUTCOME_INTERPRETATION_DISCIPLINE_PRINCIPLE,
     RECORD_HEADING_DISCIPLINE_PRINCIPLE,
     RECORD_ONLY_OUTPUT_PRINCIPLE,
     SELF_COMMENTARY_PRINCIPLE,
@@ -67,6 +69,7 @@ OBSERVATION_VS_INTERPRETATION_PRINCIPLE = (
     "'It was reported that…' for reported information; 'appeared' or 'presented as' for observed presentation; "
     "'may indicate', 'could suggest' or 'may have communicated' only as reflection, not fact. "
     "Prefer 'appeared calmer' over 'mood improved' and 'appeared more settled' over 'seemed relaxed' unless directly stated. "
+    "Do not add 'indicating a positive shift in mood' or 'showing emotional regulation' after observed presentation. "
     "Do not state motives, feelings, triggers, risk levels or safeguarding thresholds as facts unless provided. "
     "Mark what is not known. Behaviour-as-communication is reflective, not diagnostic."
 )
@@ -112,6 +115,8 @@ CANONICAL_PRINCIPLES: dict[str, str] = {
     "record_only_output": RECORD_ONLY_OUTPUT_PRINCIPLE,
     "child_voice_discipline": CHILD_VOICE_DISCIPLINE_PRINCIPLE,
     "emotional_impact_discipline": EMOTIONAL_IMPACT_DISCIPLINE_PRINCIPLE,
+    "outcome_interpretation_discipline": OUTCOME_INTERPRETATION_DISCIPLINE_PRINCIPLE,
+    "duplicate_heading_discipline": DUPLICATE_HEADING_DISCIPLINE_PRINCIPLE,
     "daily_record_simplification": DAILY_RECORD_SIMPLIFICATION_PRINCIPLE,
     "therapeutic_language": THERAPEUTIC_LANGUAGE_PRINCIPLE,
     "factual_accuracy": FACTUAL_ACCURACY_PRINCIPLE,

@@ -14,12 +14,14 @@ import {
   isIncidentRecordRequest,
   isRecordGenerationRequest,
   isSelfCommentaryParagraph,
+  normalizeDuplicateDailyRecordHeadings,
   ORB_MANUAL_REGRESSION_DAILY_RECORD_PROMPT,
   sanitizeChildrensHomeTerminology,
   sanitizeLiveRecordOutput,
   sanitizeObservationInterpretationLanguage,
   stripChildQuoteInterpretation,
   stripInventedEmotionalImpact,
+  stripOutcomeInterpretation,
   stripTrailingSelfCommentary,
   stripUnnecessaryFollowUpSection,
   userProvidedDslTerm
@@ -177,6 +179,99 @@ describe('ORB live review correction pass', () => {
     assert.match(ORB_MANUAL_REGRESSION_DAILY_RECORD_PROMPT, /Adult JS/)
     assert.match(ORB_MANUAL_REGRESSION_DAILY_RECORD_PROMPT, /appeared calmer/)
     assert.match(ORB_MANUAL_REGRESSION_DAILY_RECORD_PROMPT, /I'm just annoyed about school\./)
+  })
+
+  it('strips approach allowed feel supported wording', () => {
+    const source = ORB_MANUAL_REGRESSION_DAILY_RECORD_PROMPT
+    const cleaned = stripInventedEmotionalImpact(
+      'This approach allowed Child A to feel supported without pressure to engage further.',
+      source
+    )
+    assert.doesNotMatch(cleaned.toLowerCase(), /feel supported/)
+  })
+
+  it('preserves adult action when stripping helping feel safe and comfortable', () => {
+    const source = ORB_MANUAL_REGRESSION_DAILY_RECORD_PROMPT
+    const cleaned = stripInventedEmotionalImpact(
+      'Adult JS sat nearby, helping Child A feel safe and comfortable.',
+      source
+    )
+    assert.match(cleaned, /Adult JS sat nearby/)
+    assert.doesNotMatch(cleaned.toLowerCase(), /feel safe/)
+    assert.doesNotMatch(cleaned.toLowerCase(), /comfortable/)
+  })
+
+  it('preserves child-stated feeling when supported by input', () => {
+    const source = `${ORB_MANUAL_REGRESSION_DAILY_RECORD_PROMPT} Child A said, "I felt supported when Adult JS sat nearby."`
+    const cleaned = stripInventedEmotionalImpact(
+      'Child A said, "I felt supported when Adult JS sat nearby."',
+      source
+    )
+    assert.match(cleaned.toLowerCase(), /felt supported/)
+  })
+
+  it('strips positive shift in mood while preserving appeared calmer', () => {
+    const source = ORB_MANUAL_REGRESSION_DAILY_RECORD_PROMPT
+    const cleaned = stripOutcomeInterpretation(
+      'Child A ate the toast and appeared calmer before bedtime, indicating a positive shift in mood.',
+      source
+    )
+    assert.match(cleaned.toLowerCase(), /appeared calmer/)
+    assert.doesNotMatch(cleaned.toLowerCase(), /positive shift in mood/)
+  })
+
+  it('strips showed emotional regulation wording', () => {
+    const source = ORB_MANUAL_REGRESSION_DAILY_RECORD_PROMPT
+    const cleaned = stripOutcomeInterpretation('Child A ate toast. This showed emotional regulation.', source)
+    assert.doesNotMatch(cleaned.toLowerCase(), /emotional regulation/)
+    assert.match(cleaned.toLowerCase(), /ate toast/)
+  })
+
+  it('merges duplicate Outcome and Outcome / Handover headings', () => {
+    const source = ORB_MANUAL_REGRESSION_DAILY_RECORD_PROMPT
+    const cleaned = normalizeDuplicateDailyRecordHeadings(
+      '## Outcome\n\nChild A appeared calmer before bedtime.\n\n## Outcome / Handover\n\nAdult TK handed over to next shift.',
+      source
+    )
+    assert.doesNotMatch(cleaned, /^##\s+Outcome\s*$/m)
+    assert.match(cleaned.toLowerCase(), /appeared calmer/)
+    assert.match(cleaned.toLowerCase(), /handed over/)
+  })
+
+  it('sanitizes manual regression live output shape', () => {
+    const source = ORB_MANUAL_REGRESSION_DAILY_RECORD_PROMPT
+    const cleaned = sanitizeLiveRecordOutput(
+      [
+        '## Daily Record',
+        '',
+        '## Presentation and Support',
+        '',
+        'Child A returned quieter after school. Adult TK gave Child A space. Adult JS checked in later.',
+        '',
+        'Child A said, "I\'m just annoyed about school."',
+        '',
+        '## Adult Response',
+        '',
+        'Adult JS offered toast and sat nearby, helping Child A feel safe and comfortable.',
+        '',
+        '## Outcome',
+        '',
+        'Child A accepted and ate the toast.',
+        '',
+        '## Outcome / Handover',
+        '',
+        'Child A appeared calmer before bedtime, indicating a positive shift in mood. This approach allowed Child A to feel supported without pressure. Adult TK handed over to next shift.'
+      ].join('\n'),
+      source
+    )
+    assert.doesNotMatch(cleaned.toLowerCase(), /feel supported/)
+    assert.doesNotMatch(cleaned.toLowerCase(), /feel safe/)
+    assert.doesNotMatch(cleaned.toLowerCase(), /positive shift in mood/)
+    assert.match(cleaned, /Adult TK/)
+    assert.match(cleaned, /Adult JS/)
+    assert.match(cleaned, /I'm just annoyed about school\./)
+    assert.match(cleaned.toLowerCase(), /appeared calmer/)
+    assert.doesNotMatch(cleaned, /^##\s+Outcome\s*$/m)
   })
 
   it('daily record section prompts avoid Incident Summary headings', () => {

@@ -1,7 +1,7 @@
 {
   "baseline_version": "1.0.0",
-  "commit_sha": "b29f08eae41516d56e3033e668ffc013b64d96b7",
-  "run_timestamp": "2026-06-16T17:55:31.448324+00:00",
+  "commit_sha": "e2e21fac3d1cea9dc599f98e629c0425be7f2b4a",
+  "run_timestamp": "2026-06-16T19:00:40.264522+00:00",
   "scenario_set": "variants1000",
   "mode": "static",
   "scenario_count": 1000,
@@ -313,7 +313,7 @@
     "internal_only_categories": [],
     "warning": "Scores are internal quality indicators aligned to recognised sources where mapped. They are not regulatory determinations, inspection predictions, or professional validation. Adults remain accountable for decisions, escalation and final records."
   },
-  "run_duration_seconds": 3.82,
+  "run_duration_seconds": 4.47,
   "run_scope": {
     "limit": null,
     "sample": null,
@@ -471,7 +471,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person returned from school upset. Said lessons were difficult. Refused tea at first. Later settled after The adult sat with them and offered a quiet space. appeared calmer by even  Young person said: Said lessons were difficult."
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person returned from school upset. Said lessons were difficult. Refused tea at first. Later settled after The adult sat with them and offered a quiet space. appeared calmer by even  Young person said: Said lessons were difficult "
     },
     {
       "scenario_id": "core_001_v04_mobile_friendly",
@@ -521,7 +521,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person returned from school upset. Said lessons were difficult. Refused tea at first. Later settled after The adult sat with them and offered a quie  Young person said: Said lessons were difficult. Refused tea at first. The adult"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person returned from school upset. Said lessons were difficult. Refused tea at first. Later settled after The adult sat with them and offered a quie  Young person said: Said lessons were difficult Refused tea at first The adult o"
     },
     {
       "scenario_id": "core_001_v05_child_centred_rewrite",
@@ -671,7 +671,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person returned from school upset. Said lessons were difficult. Refused tea at first. Later settled after The adult sat with them and offered a quiet space. M  Young person said: Said lessons were difficult. Refused tea at first."
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person returned from school upset. Said lessons were difficult. Refused tea at first. Later settled after The adult sat with them and offered a quiet space. M  Young person said: Said lessons were difficult Refused tea at first T"
     },
     {
       "scenario_id": "core_001_v08_poor_wording_correction",
@@ -721,7 +721,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person returned from school upset. Said lessons were difficult. Refused te  Young person said: Said lessons were difficult. Refused te The adult observed presentation: upset, refused. Wishes, feelings and views: not yet known \u2014 t"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person returned from school upset. Said lessons were difficult. Refused te  Young person said: Said lessons were difficult Refused te The adult observed presentation: upset, refused Wishes, feelings and views: not yet known \u2014 to "
     },
     {
       "scenario_id": "core_001_v09_voice_dictate_transcript",
@@ -771,7 +771,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person returned from school upset. Said lessons were difficult. Refused tea at first. Later se  Young person said: Said lessons were difficult. Refused tea at first. The adult observed presentation: upset, refused. Wishes, feelin"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person returned from school upset. Said lessons were difficult. Refused tea at first. Later se  Young person said: Said lessons were difficult Refused tea at first The adult observed presentation: upset, refused Wishes, feelings "
     },
     {
       "scenario_id": "core_001_v10_reflective_supervision",
@@ -821,7 +821,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person returned from school upset. Said lessons were difficult. Refused tea at first. Later settled after The adult sat with them and offered a quiet space. M  Young person said: Said lessons were difficult. Refused tea at first."
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person returned from school upset. Said lessons were difficult. Refused tea at first. Later settled after The adult sat with them and offered a quiet space. M  Young person said: Said lessons were difficult Refused tea at first T"
     },
     {
       "scenario_id": "core_002_v01_rough_note",
@@ -1221,7 +1221,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person had a calm day. Attended school on time. Joined group activity in t  Young person said: not yet known \u2014 record the child's words where provided. The adult observed presentation: calm.  ## Adult Response Adult response deta"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person had a calm day. Attended school on time. Joined group activity in t  Young person said: not yet known \u2014 record the child's words where provided The adult observed presentation: calm  ## Adult Response Adult response detail"
     },
     {
       "scenario_id": "core_002_v09_voice_dictate_transcript",
@@ -1271,7 +1271,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person had a calm day. Attended school on time. Joined group activity in the evening and share  Young person said: not yet known \u2014 record the child's words where provided. The adult observed presentation: calm.  ## Adult Response"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person had a calm day. Attended school on time. Joined group activity in the evening and share  Young person said: not yet known \u2014 record the child's words where provided The adult observed presentation: calm  ## Adult Response A"
     },
     {
       "scenario_id": "core_002_v10_reflective_supervision",
@@ -1521,7 +1521,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person refused lunch saying they were not hungry. The adult offered alternative snack later. Young person ate a small portion at tea after calm conv  Young person refused lunch saying they were not hungry. The adult observed pres"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person refused lunch saying they were not hungry. The adult offered alternative snack later. Young person ate a small portion at tea after calm conv  Young person refused lunch saying they were not hungry The adult observed prese"
     },
     {
       "scenario_id": "core_003_v05_child_centred_rewrite",
@@ -1671,7 +1671,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person refused lunch saying they were not hungry. The adult offered alternative snack later. Young person ate a small portion at tea after calm conversation a  Young person refused lunch saying they were not hungry. The adult obs"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person refused lunch saying they were not hungry. The adult offered alternative snack later. Young person ate a small portion at tea after calm conversation a  Young person refused lunch saying they were not hungry The adult obse"
     },
     {
       "scenario_id": "core_003_v08_poor_wording_correction",
@@ -1723,7 +1723,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person refused lunch saying they were not hungry. The adult offered alternativ  Young person refused lunch saying they were not hungry. The adult observed presentation: refused.  ## Adult Response Immediate adult response as desc"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person refused lunch saying they were not hungry. The adult offered alternativ  Young person refused lunch saying they were not hungry The adult observed presentation: refused  ## Adult Response Immediate adult response as descri"
     },
     {
       "scenario_id": "core_003_v09_voice_dictate_transcript",
@@ -1773,7 +1773,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person refused lunch saying they were not hungry. The adult offered alternative snack later. Young  Young person refused lunch saying they were not hungry. The adult observed presentation: refused.  ## Adult Response Immediate ad"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person refused lunch saying they were not hungry. The adult offered alternative snack later. Young  Young person refused lunch saying they were not hungry The adult observed presentation: refused  ## Adult Response Immediate adul"
     },
     {
       "scenario_id": "core_003_v10_reflective_supervision",
@@ -1823,7 +1823,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person refused lunch saying they were not hungry. The adult offered alternative snack later. Young person ate a small portion at tea after calm conversation a  Young person refused lunch saying they were not hungry. The adult obs"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person refused lunch saying they were not hungry. The adult offered alternative snack later. Young person ate a small portion at tea after calm conversation a  Young person refused lunch saying they were not hungry The adult obse"
     },
     {
       "scenario_id": "core_004_v01_rough_note",
@@ -1873,7 +1873,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support young person struggled to settle at bedtime was awake until late The adult offered quiet activity and reassurance eventua  Young person said: not yet known \u2014 record the child's words where provided. The adult observed presentation: qui"
+      "output_excerpt": "## Daily Record  ## Presentation and Support young person struggled to settle at bedtime was awake until late The adult offered quiet activity and reassurance eventua  Young person said: not yet known \u2014 record the child's words where provided The adult observed presentation: quie"
     },
     {
       "scenario_id": "core_004_v02_manager_oversight",
@@ -2029,7 +2029,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person struggled to settle at bedtime. Was awake until late. The adult offered quiet activity and reassurance. Eventually slept. Woke tired this mor  Young person said: not yet known \u2014 record the child's words where provided. The"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person struggled to settle at bedtime. Was awake until late. The adult offered quiet activity and reassurance. Eventually slept. Woke tired this mor  Young person said: not yet known \u2014 record the child's words where provided The "
     },
     {
       "scenario_id": "core_004_v05_child_centred_rewrite",
@@ -2237,7 +2237,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person struggled to settle at bedtime. Was awake until late. The adult offered  Young person said: not yet known \u2014 record the child's words where provided. Presentation: as described in factual account \u2014 further detail not yet re"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person struggled to settle at bedtime. Was awake until late. The adult offered  Young person said: not yet known \u2014 record the child's words where provided Presentation: as described in factual account \u2014 further detail not yet rec"
     },
     {
       "scenario_id": "core_004_v09_voice_dictate_transcript",
@@ -2289,7 +2289,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person struggled to settle at bedtime. Was awake until late. The adult offered quiet activity and  Young person said: not yet known \u2014 record the child's words where provided. The adult observed presentation: quiet.  ## Adult Resp"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person struggled to settle at bedtime. Was awake until late. The adult offered quiet activity and  Young person said: not yet known \u2014 record the child's words where provided The adult observed presentation: quiet  ## Adult Respon"
     },
     {
       "scenario_id": "core_004_v10_reflective_supervision",
@@ -2391,7 +2391,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support young person needed encouragement with personal care this morning The adult offered sensitive support and choices young pe  Young person said: not yet known \u2014 record the child's words where provided. Presentation: as described in factu"
+      "output_excerpt": "## Daily Record  ## Presentation and Support young person needed encouragement with personal care this morning The adult offered sensitive support and choices young pe  Young person said: not yet known \u2014 record the child's words where provided Presentation: as described in factua"
     },
     {
       "scenario_id": "core_005_v02_manager_oversight",
@@ -2547,7 +2547,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person needed encouragement with personal care this morning. The adult offered sensitive support and choices. Young person completed hygiene routine  Young person said: not yet known \u2014 record the child's words where provided. Pre"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person needed encouragement with personal care this morning. The adult offered sensitive support and choices. Young person completed hygiene routine  Young person said: not yet known \u2014 record the child's words where provided Pres"
     },
     {
       "scenario_id": "core_005_v05_child_centred_rewrite",
@@ -2755,7 +2755,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person needed encouragement with personal care this morning. The adult offered  Young person said: not yet known \u2014 record the child's words where provided. Presentation: as described in factual account \u2014 further detail not yet re"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person needed encouragement with personal care this morning. The adult offered  Young person said: not yet known \u2014 record the child's words where provided Presentation: as described in factual account \u2014 further detail not yet rec"
     },
     {
       "scenario_id": "core_005_v09_voice_dictate_transcript",
@@ -2807,7 +2807,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person needed encouragement with personal care this morning. The adult offered sensitive support a  Young person said: not yet known \u2014 record the child's words where provided. Presentation: as described in factual account \u2014 furth"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person needed encouragement with personal care this morning. The adult offered sensitive support a  Young person said: not yet known \u2014 record the child's words where provided Presentation: as described in factual account \u2014 furthe"
     },
     {
       "scenario_id": "core_005_v10_reflective_supervision",
@@ -3323,7 +3323,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person said another young person in the home had been unkind during a game. The adult listened and  Young person said another young person in the home had been unkind during a game. The adult listened and Presentation: as describ"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person said another young person in the home had been unkind during a game. The adult listened and  Young person said another young person in the home had been unkind during a game The adult listened and Presentation: as describe"
     },
     {
       "scenario_id": "core_006_v10_reflective_supervision",
@@ -3581,7 +3581,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person asked to speak privately before bedtime. Shared worries about school but did not want details recorded in front of others. The adult listened  Young person asked to speak privately before bedtime. Shared worries about scho"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person asked to speak privately before bedtime. Shared worries about school but did not want details recorded in front of others. The adult listened  Young person asked to speak privately before bedtime Shared worries about schoo"
     },
     {
       "scenario_id": "core_007_v05_child_centred_rewrite",
@@ -3733,7 +3733,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person asked to speak privately before bedtime. Shared worries about school but did not want details recorded in front of others. The adult listened in privat  Young person asked to speak privately before bedtime. Shared worries "
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person asked to speak privately before bedtime. Shared worries about school but did not want details recorded in front of others. The adult listened in privat  Young person asked to speak privately before bedtime Shared worries a"
     },
     {
       "scenario_id": "core_007_v08_poor_wording_correction",
@@ -3783,7 +3783,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person asked to speak privately before bedtime. Shared worries about schoo  Young person asked to speak privately before bedtime. Shared worries about schoo Presentation: as described in factual account \u2014 further detail not yet r"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person asked to speak privately before bedtime. Shared worries about schoo  Young person asked to speak privately before bedtime Shared worries about schoo Presentation: as described in factual account \u2014 further detail not yet re"
     },
     {
       "scenario_id": "core_007_v09_voice_dictate_transcript",
@@ -3833,7 +3833,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person asked to speak privately before bedtime. Shared worries about school but did not want d  Young person asked to speak privately before bedtime. Shared worries about school but did not want d Presentation: as described in fa"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person asked to speak privately before bedtime. Shared worries about school but did not want d  Young person asked to speak privately before bedtime Shared worries about school but did not want d Presentation: as described in fac"
     },
     {
       "scenario_id": "core_007_v10_reflective_supervision",
@@ -3885,7 +3885,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person asked to speak privately before bedtime. Shared worries about school but did not want details recorded in front of others. The adult listened in privat  Young person asked to speak privately before bedtime. Shared worries "
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person asked to speak privately before bedtime. Shared worries about school but did not want details recorded in front of others. The adult listened in privat  Young person asked to speak privately before bedtime Shared worries a"
     },
     {
       "scenario_id": "core_008_v01_rough_note",
@@ -4039,7 +4039,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person declined planned group outing. Said they needed quiet time. The adult respected choice and offered alternative activity at home. Young person engaged with one-to-one suppo  Young person declined planned group outing. Said "
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person declined planned group outing. Said they needed quiet time. The adult respected choice and offered alternative activity at home. Young person engaged with one-to-one suppo  Young person declined planned group outing Said t"
     },
     {
       "scenario_id": "core_008_v04_mobile_friendly",
@@ -4091,7 +4091,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person declined planned group outing. Said they needed quiet time. The adult respected choice and offered alternative activity at home. Young person  Young person declined planned group outing. Said they needed quiet time. The ad"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person declined planned group outing. Said they needed quiet time. The adult respected choice and offered alternative activity at home. Young person  Young person declined planned group outing Said they needed quiet time The adul"
     },
     {
       "scenario_id": "core_008_v05_child_centred_rewrite",
@@ -4247,7 +4247,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person declined planned group outing. Said they needed quiet time. The adult respected choice and offered alternative activity at home. Young person engaged w  Young person declined planned group outing. Said they needed quiet ti"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person declined planned group outing. Said they needed quiet time. The adult respected choice and offered alternative activity at home. Young person engaged w  Young person declined planned group outing Said they needed quiet tim"
     },
     {
       "scenario_id": "core_008_v08_poor_wording_correction",
@@ -4297,7 +4297,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person declined planned group outing. Said they needed quiet time. The adult r  Young person declined planned group outing. Said they needed quiet time. The adult observed presentation: quiet, declined.  ## Adult Response Adult r"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person declined planned group outing. Said they needed quiet time. The adult r  Young person declined planned group outing Said they needed quiet time The adult observed presentation: quiet, declined  ## Adult Response Adult resp"
     },
     {
       "scenario_id": "core_008_v09_voice_dictate_transcript",
@@ -4349,7 +4349,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person declined planned group outing. Said they needed quiet time. The adult respected choice and  Young person declined planned group outing. Said they needed quiet time. The adult observed presentation: quiet, declined.  ## Adu"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person declined planned group outing. Said they needed quiet time. The adult respected choice and  Young person declined planned group outing Said they needed quiet time The adult observed presentation: quiet, declined  ## Adult "
     },
     {
       "scenario_id": "core_008_v10_reflective_supervision",
@@ -4401,7 +4401,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person declined planned group outing. Said they needed quiet time. The adult respected choice and offered alternative activity at home. Young person engaged w  Young person declined planned group outing. Said they needed quiet ti"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person declined planned group outing. Said they needed quiet time. The adult respected choice and offered alternative activity at home. Young person engaged w  Young person declined planned group outing Said they needed quiet tim"
     },
     {
       "scenario_id": "core_009_v01_rough_note",
@@ -4451,7 +4451,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support young person returned to the home after off-site appointment appearing unsettled would not say why immediately The adult o  Young person said: not yet known \u2014 record the child's words where provided. The adult observed presentation: ap"
+      "output_excerpt": "## Daily Record  ## Presentation and Support young person returned to the home after off-site appointment appearing unsettled would not say why immediately The adult o  Young person said: not yet known \u2014 record the child's words where provided The adult observed presentation: app"
     },
     {
       "scenario_id": "core_009_v02_manager_oversight",
@@ -4601,7 +4601,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person returned to the home after off-site appointment appearing unsettled. Would not say why immediately. The adult offered drink and quiet space.  Young person said: not yet known \u2014 record the child's words where provided. The "
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person returned to the home after off-site appointment appearing unsettled. Would not say why immediately. The adult offered drink and quiet space.  Young person said: not yet known \u2014 record the child's words where provided The a"
     },
     {
       "scenario_id": "core_009_v05_child_centred_rewrite",
@@ -4801,7 +4801,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person returned to the home after off-site appointment appearing unsettled  Young person said: not yet known \u2014 record the child's words where provided. The adult observed presentation: appeared more settled.  ## Adult Response Ad"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person returned to the home after off-site appointment appearing unsettled  Young person said: not yet known \u2014 record the child's words where provided The adult observed presentation: appeared more settled  ## Adult Response Adul"
     },
     {
       "scenario_id": "core_009_v09_voice_dictate_transcript",
@@ -4851,7 +4851,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person returned to the home after off-site appointment appearing unsettled. Would not say why  Young person said: not yet known \u2014 record the child's words where provided. The adult observed presentation: appeared more settled.  #"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person returned to the home after off-site appointment appearing unsettled. Would not say why  Young person said: not yet known \u2014 record the child's words where provided The adult observed presentation: appeared more settled  ## "
     },
     {
       "scenario_id": "core_009_v10_reflective_supervision",
@@ -5101,7 +5101,7 @@
       "record_type": "family_contact_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Family contact visit at the home. Young person engaged well with family member. Shared news about school. Visit ended calmly. Young person said they e  Young person said they e The adult observed presentation: engaged.  ## Adult Respon"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Family contact visit at the home. Young person engaged well with family member. Shared news about school. Visit ended calmly. Young person said they e  Young person said they e The adult observed presentation: engaged  ## Adult Respons"
     },
     {
       "scenario_id": "core_010_v05_child_centred_rewrite",
@@ -5301,7 +5301,7 @@
       "record_type": "family_contact_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Family contact visit at the home. Young person engaged well with family member.  Young person said: not yet known \u2014 record the child's words where provided. The adult observed presentation: engaged.  ## Adult Response Adult response de"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Family contact visit at the home. Young person engaged well with family member.  Young person said: not yet known \u2014 record the child's words where provided The adult observed presentation: engaged  ## Adult Response Adult response deta"
     },
     {
       "scenario_id": "core_010_v09_voice_dictate_transcript",
@@ -5351,7 +5351,7 @@
       "record_type": "family_contact_record",
       "scenario_family": "daily_care",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Family contact visit at the home. Young person engaged well with family member. Shared news about sc  Young person said: Shared news about sc The adult observed presentation: engaged.  ## Adult Response Adult response detail not yet re"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Family contact visit at the home. Young person engaged well with family member. Shared news about sc  Young person said: Shared news about sc The adult observed presentation: engaged  ## Adult Response Adult response detail not yet rec"
     },
     {
       "scenario_id": "core_010_v10_reflective_supervision",
@@ -7951,7 +7951,7 @@
       "record_type": "incident_report",
       "scenario_family": "incident_reflection",
       "answer_source": "variant_static",
-      "output_excerpt": "## Threats to abscond \u2014 rough note  ## What was said / observed young person said they were going to leave the home and not return The adult listened and maintained calm presence young p  Child's exact words preserved above.  ## Child voice / presentation young person said they w"
+      "output_excerpt": "## Threats to abscond \u2014 rough note  ## What was said / observed young person said they were going to leave the home and not return The adult listened and maintained calm presence young p  Child's exact words preserved above  ## Child voice / presentation young person said they we"
     },
     {
       "scenario_id": "core_016_v02_manager_oversight",
@@ -8101,7 +8101,7 @@
       "record_type": "incident_report",
       "scenario_family": "incident_reflection",
       "answer_source": "variant_static",
-      "output_excerpt": "## Threats to abscond \u2014 mobile friendly  ## What was said / observed Young person said they were going to leave the home and not return. The adult listened and maintained calm presence. Young person remained on site. Manage  Child's exact words preserved above.  ## Child voice / "
+      "output_excerpt": "## Threats to abscond \u2014 mobile friendly  ## What was said / observed Young person said they were going to leave the home and not return. The adult listened and maintained calm presence. Young person remained on site. Manage  Child's exact words preserved above  ## Child voice / p"
     },
     {
       "scenario_id": "core_016_v05_child_centred_rewrite",
@@ -8251,7 +8251,7 @@
       "record_type": "incident_report",
       "scenario_family": "incident_reflection",
       "answer_source": "variant_static",
-      "output_excerpt": "## Threats to abscond \u2014 reg44 evidence  ## What was said / observed Young person said they were going to leave the home and not return. The adult listened and maintained calm presence. Young person remained on site. Manager informed  Child's exact words preserved above.  ## Child"
+      "output_excerpt": "## Threats to abscond \u2014 reg44 evidence  ## What was said / observed Young person said they were going to leave the home and not return. The adult listened and maintained calm presence. Young person remained on site. Manager informed  Child's exact words preserved above  ## Child "
     },
     {
       "scenario_id": "core_016_v08_poor_wording_correction",
@@ -8301,7 +8301,7 @@
       "record_type": "incident_report",
       "scenario_family": "incident_reflection",
       "answer_source": "variant_static",
-      "output_excerpt": "## Threats to abscond \u2014 poor wording correction  ## What was said / observed Young person said they were going to leave the home and not return. The adult listen  Child's exact words preserved above.  ## Child voice / presentation Young person said they were going to leave the ho"
+      "output_excerpt": "## Threats to abscond \u2014 poor wording correction  ## What was said / observed Young person said they were going to leave the home and not return. The adult listen  Child's exact words preserved above  ## Child voice / presentation Young person said they were going to leave the hom"
     },
     {
       "scenario_id": "core_016_v09_voice_dictate_transcript",
@@ -8351,7 +8351,7 @@
       "record_type": "incident_report",
       "scenario_family": "incident_reflection",
       "answer_source": "variant_static",
-      "output_excerpt": "## Threats to abscond \u2014 voice dictate transcript  ## What was said / observed Young person said they were going to leave the home and not return. The adult listened and maintained ca  Child's exact words preserved above.  ## Child voice / presentation Young person said they were "
+      "output_excerpt": "## Threats to abscond \u2014 voice dictate transcript  ## What was said / observed Young person said they were going to leave the home and not return. The adult listened and maintained ca  Child's exact words preserved above  ## Child voice / presentation Young person said they were g"
     },
     {
       "scenario_id": "core_016_v10_reflective_supervision",
@@ -8401,7 +8401,7 @@
       "record_type": "incident_report",
       "scenario_family": "incident_reflection",
       "answer_source": "variant_static",
-      "output_excerpt": "## Threats to abscond \u2014 reflective supervision  ## What was said / observed Young person said they were going to leave the home and not return. The adult listened and maintained calm presence. Young person remained on site. Manager informed  Child's exact words preserved above.  "
+      "output_excerpt": "## Threats to abscond \u2014 reflective supervision  ## What was said / observed Young person said they were going to leave the home and not return. The adult listened and maintained calm presence. Young person remained on site. Manager informed  Child's exact words preserved above  #"
     },
     {
       "scenario_id": "core_017_v01_rough_note",
@@ -10451,7 +10451,7 @@
       "record_type": "safeguarding_concern",
       "scenario_family": "safeguarding",
       "answer_source": "variant_static",
-      "output_excerpt": "## Disclosure of feeling unsafe \u2014 rough note  ## What was said / observed during keywork, young person said someone at a previous placement made them uncomfortable did not want to give names s  Child's exact words preserved above.  ## Child voice / presentation young person said "
+      "output_excerpt": "## Disclosure of feeling unsafe \u2014 rough note  ## What was said / observed during keywork, young person said someone at a previous placement made them uncomfortable did not want to give names s  Child's exact words preserved above  ## Child voice / presentation young person said s"
     },
     {
       "scenario_id": "core_021_v02_manager_oversight",
@@ -10601,7 +10601,7 @@
       "record_type": "safeguarding_concern",
       "scenario_family": "safeguarding",
       "answer_source": "variant_static",
-      "output_excerpt": "## Disclosure of feeling unsafe \u2014 mobile friendly  ## What was said / observed During keywork, young person said someone at a previous placement made them uncomfortable. Did not want to give names. The adult listened, did not press f  Child's exact words preserved above.  ## Chil"
+      "output_excerpt": "## Disclosure of feeling unsafe \u2014 mobile friendly  ## What was said / observed During keywork, young person said someone at a previous placement made them uncomfortable. Did not want to give names. The adult listened, did not press f  Child's exact words preserved above  ## Child"
     },
     {
       "scenario_id": "core_021_v05_child_centred_rewrite",
@@ -10751,7 +10751,7 @@
       "record_type": "safeguarding_concern",
       "scenario_family": "safeguarding",
       "answer_source": "variant_static",
-      "output_excerpt": "## Disclosure of feeling unsafe \u2014 reg44 evidence  ## What was said / observed During keywork, young person said someone at a previous placement made them uncomfortable. Did not want to give names. The adult listened, did not press for detail,  Child's exact words preserved above."
+      "output_excerpt": "## Disclosure of feeling unsafe \u2014 reg44 evidence  ## What was said / observed During keywork, young person said someone at a previous placement made them uncomfortable. Did not want to give names. The adult listened, did not press for detail,  Child's exact words preserved above "
     },
     {
       "scenario_id": "core_021_v08_poor_wording_correction",
@@ -10801,7 +10801,7 @@
       "record_type": "safeguarding_concern",
       "scenario_family": "safeguarding",
       "answer_source": "variant_static",
-      "output_excerpt": "## Disclosure of feeling unsafe \u2014 poor wording correction  ## What was said / observed During keywork, young person said someone at a previous placement made them unco  Child's exact words preserved above.  ## Child voice / presentation young person said someone at a previous pla"
+      "output_excerpt": "## Disclosure of feeling unsafe \u2014 poor wording correction  ## What was said / observed During keywork, young person said someone at a previous placement made them unco  Child's exact words preserved above  ## Child voice / presentation young person said someone at a previous plac"
     },
     {
       "scenario_id": "core_021_v09_voice_dictate_transcript",
@@ -10851,7 +10851,7 @@
       "record_type": "safeguarding_concern",
       "scenario_family": "safeguarding",
       "answer_source": "variant_static",
-      "output_excerpt": "## Disclosure of feeling unsafe \u2014 voice dictate transcript  ## What was said / observed During keywork, young person said someone at a previous placement made them uncomfortable. Did not w  Child's exact words preserved above.  ## Child voice / presentation young person said some"
+      "output_excerpt": "## Disclosure of feeling unsafe \u2014 voice dictate transcript  ## What was said / observed During keywork, young person said someone at a previous placement made them uncomfortable. Did not w  Child's exact words preserved above  ## Child voice / presentation young person said someo"
     },
     {
       "scenario_id": "core_021_v10_reflective_supervision",
@@ -10951,7 +10951,7 @@
       "record_type": "safeguarding_concern",
       "scenario_family": "safeguarding",
       "answer_source": "variant_static",
-      "output_excerpt": "## Historic harm comment \u2014 rough note  ## What was said / observed young person mentioned historic harm in passing during daily routine did not want to elaborate The adult recorded comment  Child's exact words preserved above.  ## Child voice / presentation young person mentioned"
+      "output_excerpt": "## Historic harm comment \u2014 rough note  ## What was said / observed young person mentioned historic harm in passing during daily routine did not want to elaborate The adult recorded comment  Child's exact words preserved above  ## Child voice / presentation young person mentioned "
     },
     {
       "scenario_id": "core_022_v02_manager_oversight",
@@ -11101,7 +11101,7 @@
       "record_type": "safeguarding_concern",
       "scenario_family": "safeguarding",
       "answer_source": "variant_static",
-      "output_excerpt": "## Historic harm comment \u2014 mobile friendly  ## What was said / observed Young person mentioned historic harm in passing during daily routine. Did not want to elaborate. The adult recorded comment verbatim. Manager/DSL informed  Child's exact words preserved above.  ## Child voice"
+      "output_excerpt": "## Historic harm comment \u2014 mobile friendly  ## What was said / observed Young person mentioned historic harm in passing during daily routine. Did not want to elaborate. The adult recorded comment verbatim. Manager/DSL informed  Child's exact words preserved above  ## Child voice "
     },
     {
       "scenario_id": "core_022_v05_child_centred_rewrite",
@@ -11251,7 +11251,7 @@
       "record_type": "safeguarding_concern",
       "scenario_family": "safeguarding",
       "answer_source": "variant_static",
-      "output_excerpt": "## Historic harm comment \u2014 reg44 evidence  ## What was said / observed Young person mentioned historic harm in passing during daily routine. Did not want to elaborate. The adult recorded comment verbatim. Manager/DSL informed. No quest  Child's exact words preserved above.  ## Ch"
+      "output_excerpt": "## Historic harm comment \u2014 reg44 evidence  ## What was said / observed Young person mentioned historic harm in passing during daily routine. Did not want to elaborate. The adult recorded comment verbatim. Manager/DSL informed. No quest  Child's exact words preserved above  ## Chi"
     },
     {
       "scenario_id": "core_022_v08_poor_wording_correction",
@@ -11301,7 +11301,7 @@
       "record_type": "safeguarding_concern",
       "scenario_family": "safeguarding",
       "answer_source": "variant_static",
-      "output_excerpt": "## Historic harm comment \u2014 poor wording correction  ## What was said / observed Young person mentioned historic harm in passing during daily routine. Did not wa  Child's exact words preserved above.  ## Child voice / presentation Young person mentioned historic harm in passing du"
+      "output_excerpt": "## Historic harm comment \u2014 poor wording correction  ## What was said / observed Young person mentioned historic harm in passing during daily routine. Did not wa  Child's exact words preserved above  ## Child voice / presentation Young person mentioned historic harm in passing dur"
     },
     {
       "scenario_id": "core_022_v09_voice_dictate_transcript",
@@ -11351,7 +11351,7 @@
       "record_type": "safeguarding_concern",
       "scenario_family": "safeguarding",
       "answer_source": "variant_static",
-      "output_excerpt": "## Historic harm comment \u2014 voice dictate transcript  ## What was said / observed Young person mentioned historic harm in passing during daily routine. Did not want to elaborate. Sta  Child's exact words preserved above.  ## Child voice / presentation Young person mentioned histor"
+      "output_excerpt": "## Historic harm comment \u2014 voice dictate transcript  ## What was said / observed Young person mentioned historic harm in passing during daily routine. Did not want to elaborate. Sta  Child's exact words preserved above  ## Child voice / presentation Young person mentioned histori"
     },
     {
       "scenario_id": "core_022_v10_reflective_supervision",
@@ -11451,7 +11451,7 @@
       "record_type": "safeguarding_concern",
       "scenario_family": "safeguarding",
       "answer_source": "variant_static",
-      "output_excerpt": "## Concern about family contact \u2014 rough note  ## What was said / observed young person said they feel anxious before family contact but would not say why The adult validated feelings dsl informed  Child's exact words preserved above.  ## Child voice / presentation young person sa"
+      "output_excerpt": "## Concern about family contact \u2014 rough note  ## What was said / observed young person said they feel anxious before family contact but would not say why The adult validated feelings dsl informed  Child's exact words preserved above  ## Child voice / presentation young person sai"
     },
     {
       "scenario_id": "core_023_v02_manager_oversight",
@@ -11601,7 +11601,7 @@
       "record_type": "safeguarding_concern",
       "scenario_family": "safeguarding",
       "answer_source": "variant_static",
-      "output_excerpt": "## Concern about family contact \u2014 mobile friendly  ## What was said / observed Young person said they feel anxious before family contact but would not say why. The adult validated feelings. DSL informed. Contact plan to be reviewed a  Child's exact words preserved above.  ## Chil"
+      "output_excerpt": "## Concern about family contact \u2014 mobile friendly  ## What was said / observed Young person said they feel anxious before family contact but would not say why. The adult validated feelings. DSL informed. Contact plan to be reviewed a  Child's exact words preserved above  ## Child"
     },
     {
       "scenario_id": "core_023_v05_child_centred_rewrite",
@@ -11751,7 +11751,7 @@
       "record_type": "safeguarding_concern",
       "scenario_family": "safeguarding",
       "answer_source": "variant_static",
-      "output_excerpt": "## Concern about family contact \u2014 reg44 evidence  ## What was said / observed Young person said they feel anxious before family contact but would not say why. The adult validated feelings. DSL informed. Contact plan to be reviewed at next pro  Child's exact words preserved above."
+      "output_excerpt": "## Concern about family contact \u2014 reg44 evidence  ## What was said / observed Young person said they feel anxious before family contact but would not say why. The adult validated feelings. DSL informed. Contact plan to be reviewed at next pro  Child's exact words preserved above "
     },
     {
       "scenario_id": "core_023_v08_poor_wording_correction",
@@ -11801,7 +11801,7 @@
       "record_type": "safeguarding_concern",
       "scenario_family": "safeguarding",
       "answer_source": "variant_static",
-      "output_excerpt": "## Concern about family contact \u2014 poor wording correction  ## What was said / observed Young person said they feel anxious before family contact but would not say why.  Child's exact words preserved above.  ## Child voice / presentation Young person said they feel anxious before "
+      "output_excerpt": "## Concern about family contact \u2014 poor wording correction  ## What was said / observed Young person said they feel anxious before family contact but would not say why.  Child's exact words preserved above  ## Child voice / presentation Young person said they feel anxious before f"
     },
     {
       "scenario_id": "core_023_v09_voice_dictate_transcript",
@@ -11851,7 +11851,7 @@
       "record_type": "safeguarding_concern",
       "scenario_family": "safeguarding",
       "answer_source": "variant_static",
-      "output_excerpt": "## Concern about family contact \u2014 voice dictate transcript  ## What was said / observed Young person said they feel anxious before family contact but would not say why. The adult validated fee  Child's exact words preserved above.  ## Child voice / presentation Young person said "
+      "output_excerpt": "## Concern about family contact \u2014 voice dictate transcript  ## What was said / observed Young person said they feel anxious before family contact but would not say why. The adult validated fee  Child's exact words preserved above  ## Child voice / presentation Young person said t"
     },
     {
       "scenario_id": "core_023_v10_reflective_supervision",
@@ -11951,7 +11951,7 @@
       "record_type": "safeguarding_concern",
       "scenario_family": "safeguarding",
       "answer_source": "variant_static",
-      "output_excerpt": "## Online exploitation concern \u2014 rough note  ## What was said / observed young person received messages from unknown adult online offering gifts The adult saw message content with young person's c  The child's exact words were not recorded \u2014 add direct words if known.  ## Child v"
+      "output_excerpt": "## Online exploitation concern \u2014 rough note  ## What was said / observed young person received messages from unknown adult online offering gifts The adult saw message content with young person's c  The child's exact words were not recorded \u2014 add direct words if known  ## Child vo"
     },
     {
       "scenario_id": "core_024_v02_manager_oversight",
@@ -12301,7 +12301,7 @@
       "record_type": "safeguarding_concern",
       "scenario_family": "safeguarding",
       "answer_source": "variant_static",
-      "output_excerpt": "## Online exploitation concern \u2014 poor wording correction  ## What was said / observed Young person received messages from unknown adult online offering gifts. The adult s  The child's exact words were not recorded \u2014 add direct words if known.  ## Child voice / presentation Young "
+      "output_excerpt": "## Online exploitation concern \u2014 poor wording correction  ## What was said / observed Young person received messages from unknown adult online offering gifts. The adult s  The child's exact words were not recorded \u2014 add direct words if known  ## Child voice / presentation Young p"
     },
     {
       "scenario_id": "core_024_v09_voice_dictate_transcript",
@@ -12351,7 +12351,7 @@
       "record_type": "safeguarding_concern",
       "scenario_family": "safeguarding",
       "answer_source": "variant_static",
-      "output_excerpt": "## Online exploitation concern \u2014 voice dictate transcript  ## What was said / observed Young person received messages from unknown adult online offering gifts. The adult saw message content w  The child's exact words were not recorded \u2014 add direct words if known.  ## Child voice "
+      "output_excerpt": "## Online exploitation concern \u2014 voice dictate transcript  ## What was said / observed Young person received messages from unknown adult online offering gifts. The adult saw message content w  The child's exact words were not recorded \u2014 add direct words if known  ## Child voice /"
     },
     {
       "scenario_id": "core_024_v10_reflective_supervision",
@@ -12451,7 +12451,7 @@
       "record_type": "safeguarding_concern",
       "scenario_family": "safeguarding",
       "answer_source": "variant_static",
-      "output_excerpt": "## Missing from care concern \u2014 rough note  ## What was said / observed young person left the home without permission returned two hours later appeared unsettled The adult completed welfare che  The child's exact words were not recorded \u2014 add direct words if known.  ## Child voice"
+      "output_excerpt": "## Missing from care concern \u2014 rough note  ## What was said / observed young person left the home without permission returned two hours later appeared unsettled The adult completed welfare che  The child's exact words were not recorded \u2014 add direct words if known  ## Child voice "
     },
     {
       "scenario_id": "core_025_v02_manager_oversight",
@@ -12801,7 +12801,7 @@
       "record_type": "safeguarding_concern",
       "scenario_family": "safeguarding",
       "answer_source": "variant_static",
-      "output_excerpt": "## Missing from care concern \u2014 poor wording correction  ## What was said / observed Young person left the home without permission. Returned two hours later. Appeare  The child's exact words were not recorded \u2014 add direct words if known.  ## Child voice / presentation Young person"
+      "output_excerpt": "## Missing from care concern \u2014 poor wording correction  ## What was said / observed Young person left the home without permission. Returned two hours later. Appeare  The child's exact words were not recorded \u2014 add direct words if known  ## Child voice / presentation Young person "
     },
     {
       "scenario_id": "core_025_v09_voice_dictate_transcript",
@@ -12851,7 +12851,7 @@
       "record_type": "safeguarding_concern",
       "scenario_family": "safeguarding",
       "answer_source": "variant_static",
-      "output_excerpt": "## Missing from care concern \u2014 voice dictate transcript  ## What was said / observed Young person left the home without permission. Returned two hours later. Appeared unsettled. The adult c  The child's exact words were not recorded \u2014 add direct words if known.  ## Child voice / "
+      "output_excerpt": "## Missing from care concern \u2014 voice dictate transcript  ## What was said / observed Young person left the home without permission. Returned two hours later. Appeared unsettled. The adult c  The child's exact words were not recorded \u2014 add direct words if known  ## Child voice / p"
     },
     {
       "scenario_id": "core_025_v10_reflective_supervision",
@@ -12951,7 +12951,7 @@
       "record_type": "safeguarding_concern",
       "scenario_family": "safeguarding",
       "answer_source": "variant_static",
-      "output_excerpt": "## Substance concern \u2014 rough note  ## What was said / observed The adult noticed unusual smell on young person's clothing young person denied substance use The adult recorded observations w  The child's exact words were not recorded \u2014 add direct words if known.  ## Child voice / "
+      "output_excerpt": "## Substance concern \u2014 rough note  ## What was said / observed The adult noticed unusual smell on young person's clothing young person denied substance use The adult recorded observations w  The child's exact words were not recorded \u2014 add direct words if known  ## Child voice / p"
     },
     {
       "scenario_id": "core_026_v02_manager_oversight",
@@ -13301,7 +13301,7 @@
       "record_type": "safeguarding_concern",
       "scenario_family": "safeguarding",
       "answer_source": "variant_static",
-      "output_excerpt": "## Substance concern \u2014 poor wording correction  ## What was said / observed The adult noticed unusual smell on young person's clothing. Young person denied subs  The child's exact words were not recorded \u2014 add direct words if known.  ## Child voice / presentation Young person sai"
+      "output_excerpt": "## Substance concern \u2014 poor wording correction  ## What was said / observed The adult noticed unusual smell on young person's clothing. Young person denied subs  The child's exact words were not recorded \u2014 add direct words if known  ## Child voice / presentation Young person said"
     },
     {
       "scenario_id": "core_026_v09_voice_dictate_transcript",
@@ -13351,7 +13351,7 @@
       "record_type": "safeguarding_concern",
       "scenario_family": "safeguarding",
       "answer_source": "variant_static",
-      "output_excerpt": "## Substance concern \u2014 voice dictate transcript  ## What was said / observed The adult noticed unusual smell on young person's clothing. Young person denied substance use. The adult rec  The child's exact words were not recorded \u2014 add direct words if known.  ## Child voice / pres"
+      "output_excerpt": "## Substance concern \u2014 voice dictate transcript  ## What was said / observed The adult noticed unusual smell on young person's clothing. Young person denied substance use. The adult rec  The child's exact words were not recorded \u2014 add direct words if known  ## Child voice / prese"
     },
     {
       "scenario_id": "core_026_v10_reflective_supervision",
@@ -13451,7 +13451,7 @@
       "record_type": "safeguarding_concern",
       "scenario_family": "safeguarding",
       "answer_source": "variant_static",
-      "output_excerpt": "## Allegation against adult \u2014 rough note  ## What was said / observed young person said an adult outside the home behaved inappropriately on a recent outing The adult listened, recorded exact w  Child's exact words preserved above.  ## Child voice / presentation young person said"
+      "output_excerpt": "## Allegation against adult \u2014 rough note  ## What was said / observed young person said an adult outside the home behaved inappropriately on a recent outing The adult listened, recorded exact w  Child's exact words preserved above  ## Child voice / presentation young person said "
     },
     {
       "scenario_id": "core_027_v02_manager_oversight",
@@ -13601,7 +13601,7 @@
       "record_type": "safeguarding_concern",
       "scenario_family": "safeguarding",
       "answer_source": "variant_static",
-      "output_excerpt": "## Allegation against adult \u2014 mobile friendly  ## What was said / observed Young person said an adult outside the home behaved inappropriately on a recent outing. The adult listened, recorded exact words, did not investigate. DSL  Child's exact words preserved above.  ## Child vo"
+      "output_excerpt": "## Allegation against adult \u2014 mobile friendly  ## What was said / observed Young person said an adult outside the home behaved inappropriately on a recent outing. The adult listened, recorded exact words, did not investigate. DSL  Child's exact words preserved above  ## Child voi"
     },
     {
       "scenario_id": "core_027_v05_child_centred_rewrite",
@@ -13751,7 +13751,7 @@
       "record_type": "safeguarding_concern",
       "scenario_family": "safeguarding",
       "answer_source": "variant_static",
-      "output_excerpt": "## Allegation against adult \u2014 reg44 evidence  ## What was said / observed Young person said an adult outside the home behaved inappropriately on a recent outing. The adult listened, recorded exact words, did not investigate. DSL and manag  Child's exact words preserved above.  ##"
+      "output_excerpt": "## Allegation against adult \u2014 reg44 evidence  ## What was said / observed Young person said an adult outside the home behaved inappropriately on a recent outing. The adult listened, recorded exact words, did not investigate. DSL and manag  Child's exact words preserved above  ## "
     },
     {
       "scenario_id": "core_027_v08_poor_wording_correction",
@@ -13801,7 +13801,7 @@
       "record_type": "safeguarding_concern",
       "scenario_family": "safeguarding",
       "answer_source": "variant_static",
-      "output_excerpt": "## Allegation against adult \u2014 poor wording correction  ## What was said / observed Young person said an adult outside the home behaved inappropriately on a recent  Child's exact words preserved above.  ## Child voice / presentation Young person said an adult outside the home beha"
+      "output_excerpt": "## Allegation against adult \u2014 poor wording correction  ## What was said / observed Young person said an adult outside the home behaved inappropriately on a recent  Child's exact words preserved above  ## Child voice / presentation Young person said an adult outside the home behav"
     },
     {
       "scenario_id": "core_027_v09_voice_dictate_transcript",
@@ -13851,7 +13851,7 @@
       "record_type": "safeguarding_concern",
       "scenario_family": "safeguarding",
       "answer_source": "variant_static",
-      "output_excerpt": "## Allegation against adult \u2014 voice dictate transcript  ## What was said / observed Young person said an adult outside the home behaved inappropriately on a recent outing. The adult listen  Child's exact words preserved above.  ## Child voice / presentation Young person said an a"
+      "output_excerpt": "## Allegation against adult \u2014 voice dictate transcript  ## What was said / observed Young person said an adult outside the home behaved inappropriately on a recent outing. The adult listen  Child's exact words preserved above  ## Child voice / presentation Young person said an ad"
     },
     {
       "scenario_id": "core_027_v10_reflective_supervision",
@@ -13951,7 +13951,7 @@
       "record_type": "safeguarding_concern",
       "scenario_family": "safeguarding",
       "answer_source": "variant_static",
-      "output_excerpt": "## Peer-on-peer concern \u2014 rough note  ## What was said / observed young person disclosed uncomfortable physical contact by another young person last week The adult responded supportively d  Child's exact words preserved above.  ## Child voice / presentation young person disclosed"
+      "output_excerpt": "## Peer-on-peer concern \u2014 rough note  ## What was said / observed young person disclosed uncomfortable physical contact by another young person last week The adult responded supportively d  Child's exact words preserved above  ## Child voice / presentation young person disclosed "
     },
     {
       "scenario_id": "core_028_v02_manager_oversight",
@@ -14101,7 +14101,7 @@
       "record_type": "safeguarding_concern",
       "scenario_family": "safeguarding",
       "answer_source": "variant_static",
-      "output_excerpt": "## Peer-on-peer concern \u2014 mobile friendly  ## What was said / observed Young person disclosed uncomfortable physical contact by another young person last week. The adult responded supportively. DSL informed. Separate supervis  Child's exact words preserved above.  ## Child voice "
+      "output_excerpt": "## Peer-on-peer concern \u2014 mobile friendly  ## What was said / observed Young person disclosed uncomfortable physical contact by another young person last week. The adult responded supportively. DSL informed. Separate supervis  Child's exact words preserved above  ## Child voice /"
     },
     {
       "scenario_id": "core_028_v05_child_centred_rewrite",
@@ -14251,7 +14251,7 @@
       "record_type": "safeguarding_concern",
       "scenario_family": "safeguarding",
       "answer_source": "variant_static",
-      "output_excerpt": "## Peer-on-peer concern \u2014 reg44 evidence  ## What was said / observed Young person disclosed uncomfortable physical contact by another young person last week. The adult responded supportively. DSL informed. Separate supervision arrang  Child's exact words preserved above.  ## Chi"
+      "output_excerpt": "## Peer-on-peer concern \u2014 reg44 evidence  ## What was said / observed Young person disclosed uncomfortable physical contact by another young person last week. The adult responded supportively. DSL informed. Separate supervision arrang  Child's exact words preserved above  ## Chil"
     },
     {
       "scenario_id": "core_028_v08_poor_wording_correction",
@@ -14301,7 +14301,7 @@
       "record_type": "safeguarding_concern",
       "scenario_family": "safeguarding",
       "answer_source": "variant_static",
-      "output_excerpt": "## Peer-on-peer concern \u2014 poor wording correction  ## What was said / observed Young person disclosed uncomfortable physical contact by another young person la  Child's exact words preserved above.  ## Child voice / presentation Young person disclosed uncomfortable physical conta"
+      "output_excerpt": "## Peer-on-peer concern \u2014 poor wording correction  ## What was said / observed Young person disclosed uncomfortable physical contact by another young person la  Child's exact words preserved above  ## Child voice / presentation Young person disclosed uncomfortable physical contac"
     },
     {
       "scenario_id": "core_028_v09_voice_dictate_transcript",
@@ -14351,7 +14351,7 @@
       "record_type": "safeguarding_concern",
       "scenario_family": "safeguarding",
       "answer_source": "variant_static",
-      "output_excerpt": "## Peer-on-peer concern \u2014 voice dictate transcript  ## What was said / observed Young person disclosed uncomfortable physical contact by another young person last week. The adult respo  Child's exact words preserved above.  ## Child voice / presentation Young person disclosed unc"
+      "output_excerpt": "## Peer-on-peer concern \u2014 voice dictate transcript  ## What was said / observed Young person disclosed uncomfortable physical contact by another young person last week. The adult respo  Child's exact words preserved above  ## Child voice / presentation Young person disclosed unco"
     },
     {
       "scenario_id": "core_028_v10_reflective_supervision",
@@ -14401,7 +14401,7 @@
       "record_type": "safeguarding_concern",
       "scenario_family": "safeguarding",
       "answer_source": "variant_static",
-      "output_excerpt": "## Peer-on-peer concern \u2014 reflective supervision  ## What was said / observed Young person disclosed uncomfortable physical contact by another young person last week. The adult responded supportively. DSL informed. Separate supervision arrang  Child's exact words preserved above."
+      "output_excerpt": "## Peer-on-peer concern \u2014 reflective supervision  ## What was said / observed Young person disclosed uncomfortable physical contact by another young person last week. The adult responded supportively. DSL informed. Separate supervision arrang  Child's exact words preserved above "
     },
     {
       "scenario_id": "core_029_v01_rough_note",
@@ -14451,7 +14451,7 @@
       "record_type": "safeguarding_concern",
       "scenario_family": "safeguarding",
       "answer_source": "variant_static",
-      "output_excerpt": "## Child returns with unexplained item \u2014 rough note  ## What was said / observed young person returned from off-site activity with expensive item they could not explain The adult stored item securely rec  The child's exact words were not recorded \u2014 add direct words if known.  ## "
+      "output_excerpt": "## Child returns with unexplained item \u2014 rough note  ## What was said / observed young person returned from off-site activity with expensive item they could not explain The adult stored item securely rec  The child's exact words were not recorded \u2014 add direct words if known  ## C"
     },
     {
       "scenario_id": "core_029_v02_manager_oversight",
@@ -14801,7 +14801,7 @@
       "record_type": "safeguarding_concern",
       "scenario_family": "safeguarding",
       "answer_source": "variant_static",
-      "output_excerpt": "## Child returns with unexplained item \u2014 poor wording correction  ## What was said / observed Young person returned from off-site activity with expensive item they could not  The child's exact words were not recorded \u2014 add direct words if known.  ## Child voice / presentation You"
+      "output_excerpt": "## Child returns with unexplained item \u2014 poor wording correction  ## What was said / observed Young person returned from off-site activity with expensive item they could not  The child's exact words were not recorded \u2014 add direct words if known  ## Child voice / presentation Youn"
     },
     {
       "scenario_id": "core_029_v09_voice_dictate_transcript",
@@ -14851,7 +14851,7 @@
       "record_type": "safeguarding_concern",
       "scenario_family": "safeguarding",
       "answer_source": "variant_static",
-      "output_excerpt": "## Child returns with unexplained item \u2014 voice dictate transcript  ## What was said / observed Young person returned from off-site activity with expensive item they could not explain. The adult store  The child's exact words were not recorded \u2014 add direct words if known.  ## Chil"
+      "output_excerpt": "## Child returns with unexplained item \u2014 voice dictate transcript  ## What was said / observed Young person returned from off-site activity with expensive item they could not explain. The adult store  The child's exact words were not recorded \u2014 add direct words if known  ## Child"
     },
     {
       "scenario_id": "core_029_v10_reflective_supervision",
@@ -15301,7 +15301,7 @@
       "record_type": "safeguarding_concern",
       "scenario_family": "safeguarding",
       "answer_source": "variant_static",
-      "output_excerpt": "## Sexualised language / boundary concern \u2014 poor wording correction  ## What was said / observed Young person used sexualised language toward The adult. The adult set boundary calmly an  The child's exact words were not recorded \u2014 add direct words if known.  ## Child voice / pres"
+      "output_excerpt": "## Sexualised language / boundary concern \u2014 poor wording correction  ## What was said / observed Young person used sexualised language toward The adult. The adult set boundary calmly an  The child's exact words were not recorded \u2014 add direct words if known  ## Child voice / prese"
     },
     {
       "scenario_id": "core_030_v09_voice_dictate_transcript",
@@ -15351,7 +15351,7 @@
       "record_type": "safeguarding_concern",
       "scenario_family": "safeguarding",
       "answer_source": "variant_static",
-      "output_excerpt": "## Sexualised language / boundary concern \u2014 voice dictate transcript  ## What was said / observed Young person used sexualised language toward The adult. The adult set boundary calmly and recorded incident.  The child's exact words were not recorded \u2014 add direct words if known.  "
+      "output_excerpt": "## Sexualised language / boundary concern \u2014 voice dictate transcript  ## What was said / observed Young person used sexualised language toward The adult. The adult set boundary calmly and recorded incident.  The child's exact words were not recorded \u2014 add direct words if known  #"
     },
     {
       "scenario_id": "core_030_v10_reflective_supervision",
@@ -19451,7 +19451,7 @@
       "record_type": "behaviour_reflection",
       "scenario_family": "behaviour_communication",
       "answer_source": "variant_static",
-      "output_excerpt": "## Damaging bedroom item \u2014 rough note  ## What happened young person damaged own bedroom item when upset no injury The adult supported regulation young person helped with tidy-u  ## Known / gaps Based on the information provided: Known / observed / reported: see factual account a"
+      "output_excerpt": "## Damaging bedroom item \u2014 rough note  ## What happened young person damaged own bedroom item when upset no injury The adult  What is not yet stated: - Direct words if known \u2014 the child's words were not recorded; add if known. - Outcome not yet recorded \u2014 follow-up still to be co"
     },
     {
       "scenario_id": "core_039_v02_manager_oversight",
@@ -19501,7 +19501,7 @@
       "record_type": "behaviour_reflection",
       "scenario_family": "behaviour_communication",
       "answer_source": "variant_static",
-      "output_excerpt": "## Damaging bedroom item \u2014 manager oversight  ## What happened Young person damaged own bedroom item when upset. No injury. The adult supported regulation. Young person helped with tidy-up. Repair and replacement discussed calmly.  ## Known / gaps Based on the information provide"
+      "output_excerpt": "## Damaging bedroom item \u2014 manager oversight  ## What happened Young person damaged own bedroom item when upset. No injury. The adult  Young person helped with tidy-up. Repair and replacement discussed calmly.  ## Known / gaps Based on the information provided: Known / observed /"
     },
     {
       "scenario_id": "core_039_v03_handover",
@@ -19551,7 +19551,7 @@
       "record_type": "behaviour_reflection",
       "scenario_family": "behaviour_communication",
       "answer_source": "variant_static",
-      "output_excerpt": "## Damaging bedroom item \u2014 handover  ## What happened Young person damaged own bedroom item when upset. No injury. The adult supported regulation. Young person helped with tidy-up. Repair and replacement discussed calmly.  ## Known / gaps Based on the information provided: Known "
+      "output_excerpt": "## Damaging bedroom item \u2014 handover  ## What happened Young person damaged own bedroom item when upset. No injury. The adult  Young person helped with tidy-up. Repair and replacement discussed calmly.  ## Known / gaps Based on the information provided: Known / observed / reported"
     },
     {
       "scenario_id": "core_039_v04_mobile_friendly",
@@ -19601,7 +19601,7 @@
       "record_type": "behaviour_reflection",
       "scenario_family": "behaviour_communication",
       "answer_source": "variant_static",
-      "output_excerpt": "## Damaging bedroom item \u2014 mobile friendly  ## What happened Young person damaged own bedroom item when upset. No injury. The adult supported regulation. Young person helped with tidy-up. Repair and replacement disc  ## Known / gaps Based on the information provided: Known / obse"
+      "output_excerpt": "## Damaging bedroom item \u2014 mobile friendly  ## What happened Young person damaged own bedroom item when upset. No injury. The adult  Young person helped with tidy-up. Repair and replacement disc  ## Known / gaps Based on the information provided: Known / observed / reported: see "
     },
     {
       "scenario_id": "core_039_v05_child_centred_rewrite",
@@ -19651,7 +19651,7 @@
       "record_type": "behaviour_reflection",
       "scenario_family": "behaviour_communication",
       "answer_source": "variant_static",
-      "output_excerpt": "## Damaging bedroom item \u2014 child centred rewrite  ## What happened Young person damaged own bedroom item when upset. No injury. The adult supported regulation. Young person helped with tidy-up. Repair and replacement discussed calmly.  ## Known / gaps Based on the information pro"
+      "output_excerpt": "## Damaging bedroom item \u2014 child centred rewrite  ## What happened Young person damaged own bedroom item when upset. No injury. The adult  Young person helped with tidy-up. Repair and replacement discussed calmly.  ## Known / gaps Based on the information provided: Known / observ"
     },
     {
       "scenario_id": "core_039_v06_safeguarding_escalation",
@@ -19701,7 +19701,7 @@
       "record_type": "behaviour_reflection",
       "scenario_family": "behaviour_communication",
       "answer_source": "variant_static",
-      "output_excerpt": "## Damaging bedroom item \u2014 safeguarding escalation  ## What happened Young person damaged own bedroom item when upset. No injury. The adult supported regulation. Young person helped with tidy-up. Repair and replacement discussed calmly.  ## Known / gaps Based on the information p"
+      "output_excerpt": "## Damaging bedroom item \u2014 safeguarding escalation  ## What happened Young person damaged own bedroom item when upset. No injury. The adult  Young person helped with tidy-up. Repair and replacement discussed calmly.  ## Known / gaps Based on the information provided: Known / obse"
     },
     {
       "scenario_id": "core_039_v07_reg44_evidence",
@@ -19751,7 +19751,7 @@
       "record_type": "behaviour_reflection",
       "scenario_family": "behaviour_communication",
       "answer_source": "variant_static",
-      "output_excerpt": "## Damaging bedroom item \u2014 reg44 evidence  ## What happened Young person damaged own bedroom item when upset. No injury. The adult supported regulation. Young person helped with tidy-up. Repair and replacement discussed calm  ## Known / gaps Based on the information provided: Kno"
+      "output_excerpt": "## Damaging bedroom item \u2014 reg44 evidence  ## What happened Young person damaged own bedroom item when upset. No injury. The adult  Young person helped with tidy-up. Repair and replacement discussed calm  ## Known / gaps Based on the information provided: Known / observed / repor"
     },
     {
       "scenario_id": "core_039_v08_poor_wording_correction",
@@ -19851,7 +19851,7 @@
       "record_type": "behaviour_reflection",
       "scenario_family": "behaviour_communication",
       "answer_source": "variant_static",
-      "output_excerpt": "## Damaging bedroom item \u2014 voice dictate transcript  ## What happened Young person damaged own bedroom item when upset. No injury. The adult supported regulation. Young perso  ## Known / gaps Based on the information provided: Known / observed / reported: see factual account abov"
+      "output_excerpt": "## Damaging bedroom item \u2014 voice dictate transcript  ## What happened Young person damaged own bedroom item when upset. No injury. The adult  Young perso  ## Known / gaps Based on the information provided: Known / observed / reported: see factual account above. What is not yet st"
     },
     {
       "scenario_id": "core_039_v10_reflective_supervision",
@@ -19901,7 +19901,7 @@
       "record_type": "behaviour_reflection",
       "scenario_family": "behaviour_communication",
       "answer_source": "variant_static",
-      "output_excerpt": "## Damaging bedroom item \u2014 reflective supervision  ## What happened Young person damaged own bedroom item when upset. No injury. The adult supported regulation. Young person helped with tidy-up. Repair and replacement discussed calm  ## Known / gaps Based on the information provi"
+      "output_excerpt": "## Damaging bedroom item \u2014 reflective supervision  ## What happened Young person damaged own bedroom item when upset. No injury. The adult  Young person helped with tidy-up. Repair and replacement discussed calm  ## Known / gaps Based on the information provided: Known / observed"
     },
     {
       "scenario_id": "core_040_v01_rough_note",
@@ -21801,7 +21801,7 @@
       "record_type": "daily_record",
       "scenario_family": "magic_notes",
       "answer_source": "variant_static",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person became distressed at tea \u2014 further review is needed to understand what they may have been communicating. The adult told them to  Young person said: not yet known \u2014 record the child's words where provided. The adult observe"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person became distressed at tea \u2014 further review is needed to understand what they may have been communicating. The adult told them to  Young person said: not yet known \u2014 record the child's words where provided The adult observed"
     },
     {
       "scenario_id": "core_043_v09_voice_dictate_transcript",
@@ -22451,7 +22451,7 @@
       "record_type": "safeguarding_concern",
       "scenario_family": "magic_notes",
       "answer_source": "variant_static",
-      "output_excerpt": "## Incomplete safeguarding note \u2014 rough note  ## What was said / observed yp said something about old placement told mgr  Child's exact words preserved above.  ## Child voice / presentation yp said something about old placement told mgr Presentation: as described in factual accou"
+      "output_excerpt": "## Incomplete safeguarding note \u2014 rough note  ## What was said / observed yp said something about old placement told mgr  Child's exact words preserved above  ## Child voice / presentation yp said something about old placement told mgr Presentation: as described in factual accoun"
     },
     {
       "scenario_id": "core_045_v02_manager_oversight",
@@ -22501,7 +22501,7 @@
       "record_type": "safeguarding_concern",
       "scenario_family": "magic_notes",
       "answer_source": "variant_static",
-      "output_excerpt": "## Incomplete safeguarding note \u2014 manager oversight  ## What was said / observed yp said something about old placement. told mgr.  Child's exact words preserved above.  ## Child voice / presentation yp said something about old placement. told mgr Presentation: as described in fac"
+      "output_excerpt": "## Incomplete safeguarding note \u2014 manager oversight  ## What was said / observed yp said something about old placement. told mgr.  Child's exact words preserved above  ## Child voice / presentation yp said something about old placement. told mgr Presentation: as described in fact"
     },
     {
       "scenario_id": "core_045_v03_handover",
@@ -22551,7 +22551,7 @@
       "record_type": "safeguarding_concern",
       "scenario_family": "magic_notes",
       "answer_source": "variant_static",
-      "output_excerpt": "## Incomplete safeguarding note \u2014 handover  ## What was said / observed yp said something about old placement. told mgr.  Child's exact words preserved above.  ## Child voice / presentation yp said something about old placement. told mgr Presentation: as described in factual acco"
+      "output_excerpt": "## Incomplete safeguarding note \u2014 handover  ## What was said / observed yp said something about old placement. told mgr.  Child's exact words preserved above  ## Child voice / presentation yp said something about old placement. told mgr Presentation: as described in factual accou"
     },
     {
       "scenario_id": "core_045_v04_mobile_friendly",
@@ -22601,7 +22601,7 @@
       "record_type": "safeguarding_concern",
       "scenario_family": "magic_notes",
       "answer_source": "variant_static",
-      "output_excerpt": "## Incomplete safeguarding note \u2014 mobile friendly  ## What was said / observed yp said something about old placement. told mgr.  Child's exact words preserved above.  ## Child voice / presentation yp said something about old placement. told mgr Presentation: as described in factu"
+      "output_excerpt": "## Incomplete safeguarding note \u2014 mobile friendly  ## What was said / observed yp said something about old placement. told mgr.  Child's exact words preserved above  ## Child voice / presentation yp said something about old placement. told mgr Presentation: as described in factua"
     },
     {
       "scenario_id": "core_045_v05_child_centred_rewrite",
@@ -22651,7 +22651,7 @@
       "record_type": "safeguarding_concern",
       "scenario_family": "magic_notes",
       "answer_source": "variant_static",
-      "output_excerpt": "## Incomplete safeguarding note \u2014 child centred rewrite  ## What was said / observed yp said something about old placement. told mgr.  Child's exact words preserved above.  ## Child voice / presentation yp said something about old placement. told mgr Presentation: as described in"
+      "output_excerpt": "## Incomplete safeguarding note \u2014 child centred rewrite  ## What was said / observed yp said something about old placement. told mgr.  Child's exact words preserved above  ## Child voice / presentation yp said something about old placement. told mgr Presentation: as described in "
     },
     {
       "scenario_id": "core_045_v06_safeguarding_escalation",
@@ -22701,7 +22701,7 @@
       "record_type": "safeguarding_concern",
       "scenario_family": "magic_notes",
       "answer_source": "variant_static",
-      "output_excerpt": "## Incomplete safeguarding note \u2014 safeguarding escalation  ## What was said / observed yp said something about old placement. told mgr. DSL pathway required.  Child's exact words preserved above.  ## Child voice / presentation yp said something about old placement. told mgr Prese"
+      "output_excerpt": "## Incomplete safeguarding note \u2014 safeguarding escalation  ## What was said / observed yp said something about old placement. told mgr. DSL pathway required.  Child's exact words preserved above  ## Child voice / presentation yp said something about old placement. told mgr Presen"
     },
     {
       "scenario_id": "core_045_v07_reg44_evidence",
@@ -22751,7 +22751,7 @@
       "record_type": "safeguarding_concern",
       "scenario_family": "magic_notes",
       "answer_source": "variant_static",
-      "output_excerpt": "## Incomplete safeguarding note \u2014 reg44 evidence  ## What was said / observed yp said something about old placement. told mgr.  Child's exact words preserved above.  ## Child voice / presentation yp said something about old placement. told mgr Presentation: as described in factua"
+      "output_excerpt": "## Incomplete safeguarding note \u2014 reg44 evidence  ## What was said / observed yp said something about old placement. told mgr.  Child's exact words preserved above  ## Child voice / presentation yp said something about old placement. told mgr Presentation: as described in factual"
     },
     {
       "scenario_id": "core_045_v08_poor_wording_correction",
@@ -22801,7 +22801,7 @@
       "record_type": "safeguarding_concern",
       "scenario_family": "magic_notes",
       "answer_source": "variant_static",
-      "output_excerpt": "## Incomplete safeguarding note \u2014 poor wording correction  ## What was said / observed yp said something about old placement. told mgr.  Child's exact words preserved above.  ## Child voice / presentation yp said something about old placement. told mgr Presentation: as described "
+      "output_excerpt": "## Incomplete safeguarding note \u2014 poor wording correction  ## What was said / observed yp said something about old placement. told mgr.  Child's exact words preserved above  ## Child voice / presentation yp said something about old placement. told mgr Presentation: as described i"
     },
     {
       "scenario_id": "core_045_v09_voice_dictate_transcript",
@@ -22851,7 +22851,7 @@
       "record_type": "safeguarding_concern",
       "scenario_family": "magic_notes",
       "answer_source": "variant_static",
-      "output_excerpt": "## Incomplete safeguarding note \u2014 voice dictate transcript  ## What was said / observed yp said something about old placement. told mgr.  Child's exact words preserved above.  ## Child voice / presentation yp said something about old placement. told mgr Presentation: as described"
+      "output_excerpt": "## Incomplete safeguarding note \u2014 voice dictate transcript  ## What was said / observed yp said something about old placement. told mgr.  Child's exact words preserved above  ## Child voice / presentation yp said something about old placement. told mgr Presentation: as described "
     },
     {
       "scenario_id": "core_045_v10_reflective_supervision",
@@ -22901,7 +22901,7 @@
       "record_type": "safeguarding_concern",
       "scenario_family": "magic_notes",
       "answer_source": "variant_static",
-      "output_excerpt": "## Incomplete safeguarding note \u2014 reflective supervision  ## What was said / observed yp said something about old placement. told mgr.  Child's exact words preserved above.  ## Child voice / presentation yp said something about old placement. told mgr Presentation: as described i"
+      "output_excerpt": "## Incomplete safeguarding note \u2014 reflective supervision  ## What was said / observed yp said something about old placement. told mgr.  Child's exact words preserved above  ## Child voice / presentation yp said something about old placement. told mgr Presentation: as described in"
     },
     {
       "scenario_id": "core_046_v01_rough_note",
@@ -23951,7 +23951,7 @@
       "record_type": "multi_agency_discussion",
       "scenario_family": "magic_notes",
       "answer_source": "variant_static",
-      "output_excerpt": "## Meeting note clean-up \u2014 rough note  ## What was said / observed mtg: sw pep school home att 78% camhs wait act: school mtg  The child's exact words were not recorded \u2014 add direct words if known.  ## Child voice / presentation Young person said: not yet known \u2014 record the child"
+      "output_excerpt": "## Meeting note clean-up \u2014 rough note  ## What was said / observed mtg: sw pep school home att 78% camhs wait act: school mtg  The child's exact words were not recorded \u2014 add direct words if known  ## Child voice / presentation Young person said: not yet known \u2014 record the child'"
     },
     {
       "scenario_id": "core_048_v02_manager_oversight",
@@ -24001,7 +24001,7 @@
       "record_type": "multi_agency_discussion",
       "scenario_family": "magic_notes",
       "answer_source": "variant_static",
-      "output_excerpt": "## Meeting note clean-up \u2014 manager oversight  ## What was said / observed mtg: sw pep school home. att 78%. camhs wait. act: school mtg.  The child's exact words were not recorded \u2014 add direct words if known.  ## Child voice / presentation Young person said: not yet known \u2014 recor"
+      "output_excerpt": "## Meeting note clean-up \u2014 manager oversight  ## What was said / observed mtg: sw pep school home. att 78%. camhs wait. act: school mtg.  The child's exact words were not recorded \u2014 add direct words if known  ## Child voice / presentation Young person said: not yet known \u2014 record"
     },
     {
       "scenario_id": "core_048_v03_handover",
@@ -24051,7 +24051,7 @@
       "record_type": "multi_agency_discussion",
       "scenario_family": "magic_notes",
       "answer_source": "variant_static",
-      "output_excerpt": "## Meeting note clean-up \u2014 handover  ## What was said / observed mtg: sw pep school home. att 78%. camhs wait. act: school mtg.  The child's exact words were not recorded \u2014 add direct words if known.  ## Child voice / presentation Young person said: not yet known \u2014 record the chi"
+      "output_excerpt": "## Meeting note clean-up \u2014 handover  ## What was said / observed mtg: sw pep school home. att 78%. camhs wait. act: school mtg.  The child's exact words were not recorded \u2014 add direct words if known  ## Child voice / presentation Young person said: not yet known \u2014 record the chil"
     },
     {
       "scenario_id": "core_048_v04_mobile_friendly",
@@ -24101,7 +24101,7 @@
       "record_type": "multi_agency_discussion",
       "scenario_family": "magic_notes",
       "answer_source": "variant_static",
-      "output_excerpt": "## Meeting note clean-up \u2014 mobile friendly  ## What was said / observed mtg: sw pep school home. att 78%. camhs wait. act: school mtg.  The child's exact words were not recorded \u2014 add direct words if known.  ## Child voice / presentation Young person said: not yet known \u2014 record "
+      "output_excerpt": "## Meeting note clean-up \u2014 mobile friendly  ## What was said / observed mtg: sw pep school home. att 78%. camhs wait. act: school mtg.  The child's exact words were not recorded \u2014 add direct words if known  ## Child voice / presentation Young person said: not yet known \u2014 record t"
     },
     {
       "scenario_id": "core_048_v05_child_centred_rewrite",
@@ -24151,7 +24151,7 @@
       "record_type": "multi_agency_discussion",
       "scenario_family": "magic_notes",
       "answer_source": "variant_static",
-      "output_excerpt": "## Meeting note clean-up \u2014 child centred rewrite  ## What was said / observed mtg: sw pep school home. att 78%. camhs wait. act: school mtg.  The child's exact words were not recorded \u2014 add direct words if known.  ## Child voice / presentation Young person said: not yet known \u2014 r"
+      "output_excerpt": "## Meeting note clean-up \u2014 child centred rewrite  ## What was said / observed mtg: sw pep school home. att 78%. camhs wait. act: school mtg.  The child's exact words were not recorded \u2014 add direct words if known  ## Child voice / presentation Young person said: not yet known \u2014 re"
     },
     {
       "scenario_id": "core_048_v06_safeguarding_escalation",
@@ -24201,7 +24201,7 @@
       "record_type": "multi_agency_discussion",
       "scenario_family": "magic_notes",
       "answer_source": "variant_static",
-      "output_excerpt": "## Meeting note clean-up \u2014 safeguarding escalation  ## What was said / observed mtg: sw pep school home. att 78%. camhs wait. act: school mtg.  The child's exact words were not recorded \u2014 add direct words if known.  ## Child voice / presentation Young person said: not yet known \u2014"
+      "output_excerpt": "## Meeting note clean-up \u2014 safeguarding escalation  ## What was said / observed mtg: sw pep school home. att 78%. camhs wait. act: school mtg.  The child's exact words were not recorded \u2014 add direct words if known  ## Child voice / presentation Young person said: not yet known \u2014 "
     },
     {
       "scenario_id": "core_048_v07_reg44_evidence",
@@ -24251,7 +24251,7 @@
       "record_type": "multi_agency_discussion",
       "scenario_family": "magic_notes",
       "answer_source": "variant_static",
-      "output_excerpt": "## Meeting note clean-up \u2014 reg44 evidence  ## What was said / observed mtg: sw pep school home. att 78%. camhs wait. act: school mtg.  The child's exact words were not recorded \u2014 add direct words if known.  ## Child voice / presentation Young person said: not yet known \u2014 record t"
+      "output_excerpt": "## Meeting note clean-up \u2014 reg44 evidence  ## What was said / observed mtg: sw pep school home. att 78%. camhs wait. act: school mtg.  The child's exact words were not recorded \u2014 add direct words if known  ## Child voice / presentation Young person said: not yet known \u2014 record th"
     },
     {
       "scenario_id": "core_048_v08_poor_wording_correction",
@@ -24301,7 +24301,7 @@
       "record_type": "multi_agency_discussion",
       "scenario_family": "magic_notes",
       "answer_source": "variant_static",
-      "output_excerpt": "## Meeting note clean-up \u2014 poor wording correction  ## What was said / observed mtg: sw pep school home. att 78%. camhs wait. act: school mtg.  The child's exact words were not recorded \u2014 add direct words if known.  ## Child voice / presentation Young person said: not yet known \u2014"
+      "output_excerpt": "## Meeting note clean-up \u2014 poor wording correction  ## What was said / observed mtg: sw pep school home. att 78%. camhs wait. act: school mtg.  The child's exact words were not recorded \u2014 add direct words if known  ## Child voice / presentation Young person said: not yet known \u2014 "
     },
     {
       "scenario_id": "core_048_v09_voice_dictate_transcript",
@@ -24351,7 +24351,7 @@
       "record_type": "multi_agency_discussion",
       "scenario_family": "magic_notes",
       "answer_source": "variant_static",
-      "output_excerpt": "## Meeting note clean-up \u2014 voice dictate transcript  ## What was said / observed mtg: sw pep school home. att 78%. camhs wait. act: school mtg.  The child's exact words were not recorded \u2014 add direct words if known.  ## Child voice / presentation Young person said: not yet known "
+      "output_excerpt": "## Meeting note clean-up \u2014 voice dictate transcript  ## What was said / observed mtg: sw pep school home. att 78%. camhs wait. act: school mtg.  The child's exact words were not recorded \u2014 add direct words if known  ## Child voice / presentation Young person said: not yet known \u2014"
     },
     {
       "scenario_id": "core_048_v10_reflective_supervision",
@@ -24401,7 +24401,7 @@
       "record_type": "multi_agency_discussion",
       "scenario_family": "magic_notes",
       "answer_source": "variant_static",
-      "output_excerpt": "## Meeting note clean-up \u2014 reflective supervision  ## What was said / observed mtg: sw pep school home. att 78%. camhs wait. act: school mtg.  The child's exact words were not recorded \u2014 add direct words if known.  ## Child voice / presentation Young person said: not yet known \u2014 "
+      "output_excerpt": "## Meeting note clean-up \u2014 reflective supervision  ## What was said / observed mtg: sw pep school home. att 78%. camhs wait. act: school mtg.  The child's exact words were not recorded \u2014 add direct words if known  ## Child voice / presentation Young person said: not yet known \u2014 r"
     },
     {
       "scenario_id": "core_049_v01_rough_note",
@@ -36451,7 +36451,7 @@
       "record_type": "manager_summary",
       "scenario_family": "management_oversight",
       "answer_source": "variant_static",
-      "output_excerpt": "## Missing episode oversight \u2014 rough note  ## What was said / observed manager oversight of missing episode return home interview completed chronology updated multi-agency notification con  The child's exact words were not recorded \u2014 add direct words if known.  ## Child voice / p"
+      "output_excerpt": "## Missing episode oversight \u2014 rough note  ## What was said / observed manager oversight of missing episode return home interview completed chronology updated multi-agency notification con  The child's exact words were not recorded \u2014 add direct words if known  ## Child voice / pr"
     },
     {
       "scenario_id": "core_073_v02_manager_oversight",
@@ -36801,7 +36801,7 @@
       "record_type": "manager_summary",
       "scenario_family": "management_oversight",
       "answer_source": "variant_static",
-      "output_excerpt": "## Missing episode oversight \u2014 poor wording correction  ## What was said / observed Manager oversight of missing episode. Return home interview completed. Chronolog  The child's exact words were not recorded \u2014 add direct words if known.  ## Child voice / presentation Young person"
+      "output_excerpt": "## Missing episode oversight \u2014 poor wording correction  ## What was said / observed Manager oversight of missing episode. Return home interview completed. Chronolog  The child's exact words were not recorded \u2014 add direct words if known  ## Child voice / presentation Young person "
     },
     {
       "scenario_id": "core_073_v09_voice_dictate_transcript",
@@ -36851,7 +36851,7 @@
       "record_type": "manager_summary",
       "scenario_family": "management_oversight",
       "answer_source": "variant_static",
-      "output_excerpt": "## Missing episode oversight \u2014 voice dictate transcript  ## What was said / observed Manager oversight of missing episode. Return home interview completed. Chronology updated. Multi-age  The child's exact words were not recorded \u2014 add direct words if known.  ## Child voice / pres"
+      "output_excerpt": "## Missing episode oversight \u2014 voice dictate transcript  ## What was said / observed Manager oversight of missing episode. Return home interview completed. Chronology updated. Multi-age  The child's exact words were not recorded \u2014 add direct words if known  ## Child voice / prese"
     },
     {
       "scenario_id": "core_073_v10_reflective_supervision",
@@ -36951,7 +36951,7 @@
       "record_type": "manager_summary",
       "scenario_family": "management_oversight",
       "answer_source": "variant_static",
-      "output_excerpt": "## Safeguarding management note \u2014 rough note  ## What was said / observed dsl oversight of partial disclosure case decision: chronology update and multi-agency discussion no mash on current in  The child's exact words were not recorded \u2014 add direct words if known.  ## Child voice"
+      "output_excerpt": "## Safeguarding management note \u2014 rough note  ## What was said / observed dsl oversight of partial disclosure case decision: chronology update and multi-agency discussion no mash on current in  The child's exact words were not recorded \u2014 add direct words if known  ## Child voice "
     },
     {
       "scenario_id": "core_074_v02_manager_oversight",
@@ -37301,7 +37301,7 @@
       "record_type": "manager_summary",
       "scenario_family": "management_oversight",
       "answer_source": "variant_static",
-      "output_excerpt": "## Safeguarding management note \u2014 poor wording correction  ## What was said / observed DSL oversight of partial disclosure case. Decision: chronology update and multi-  The child's exact words were not recorded \u2014 add direct words if known.  ## Child voice / presentation Young per"
+      "output_excerpt": "## Safeguarding management note \u2014 poor wording correction  ## What was said / observed DSL oversight of partial disclosure case. Decision: chronology update and multi-  The child's exact words were not recorded \u2014 add direct words if known  ## Child voice / presentation Young pers"
     },
     {
       "scenario_id": "core_074_v09_voice_dictate_transcript",
@@ -37351,7 +37351,7 @@
       "record_type": "manager_summary",
       "scenario_family": "management_oversight",
       "answer_source": "variant_static",
-      "output_excerpt": "## Safeguarding management note \u2014 voice dictate transcript  ## What was said / observed DSL oversight of partial disclosure case. Decision: chronology update and multi-agency discussion. N  The child's exact words were not recorded \u2014 add direct words if known.  ## Child voice / p"
+      "output_excerpt": "## Safeguarding management note \u2014 voice dictate transcript  ## What was said / observed DSL oversight of partial disclosure case. Decision: chronology update and multi-agency discussion. N  The child's exact words were not recorded \u2014 add direct words if known  ## Child voice / pr"
     },
     {
       "scenario_id": "core_074_v10_reflective_supervision",
@@ -40451,7 +40451,7 @@
       "record_type": "multi_agency_discussion",
       "scenario_family": "meetings",
       "answer_source": "variant_static",
-      "output_excerpt": "## Care team meeting \u2014 rough note  ## What was said / observed internal care team meeting reviewed week events education, health, contact updates discussed actions assigned young  The child's exact words were not recorded \u2014 add direct words if known.  ## Child voice / presentatio"
+      "output_excerpt": "## Care team meeting \u2014 rough note  ## What was said / observed internal care team meeting reviewed week events education, health, contact updates discussed actions assigned young  The child's exact words were not recorded \u2014 add direct words if known  ## Child voice / presentation"
     },
     {
       "scenario_id": "core_081_v02_manager_oversight",
@@ -40801,7 +40801,7 @@
       "record_type": "multi_agency_discussion",
       "scenario_family": "meetings",
       "answer_source": "variant_static",
-      "output_excerpt": "## Care team meeting \u2014 poor wording correction  ## What was said / observed Internal care team meeting. Reviewed week events. Education, health, contact upd  The child's exact words were not recorded \u2014 add direct words if known.  ## Child voice / presentation Young person said: n"
+      "output_excerpt": "## Care team meeting \u2014 poor wording correction  ## What was said / observed Internal care team meeting. Reviewed week events. Education, health, contact upd  The child's exact words were not recorded \u2014 add direct words if known  ## Child voice / presentation Young person said: no"
     },
     {
       "scenario_id": "core_081_v09_voice_dictate_transcript",
@@ -40851,7 +40851,7 @@
       "record_type": "multi_agency_discussion",
       "scenario_family": "meetings",
       "answer_source": "variant_static",
-      "output_excerpt": "## Care team meeting \u2014 voice dictate transcript  ## What was said / observed Internal care team meeting. Reviewed week events. Education, health, contact updates discussed. Acti  The child's exact words were not recorded \u2014 add direct words if known.  ## Child voice / presentation"
+      "output_excerpt": "## Care team meeting \u2014 voice dictate transcript  ## What was said / observed Internal care team meeting. Reviewed week events. Education, health, contact updates discussed. Acti  The child's exact words were not recorded \u2014 add direct words if known  ## Child voice / presentation "
     },
     {
       "scenario_id": "core_081_v10_reflective_supervision",
@@ -40951,7 +40951,7 @@
       "record_type": "strategy_safeguarding_discussion",
       "scenario_family": "meetings",
       "answer_source": "variant_static",
-      "output_excerpt": "## Strategy discussion note \u2014 rough note  ## What was said / observed strategy discussion following partial disclosure about previous placement dsl present decision: mash referral not indi  The child's exact words were not recorded \u2014 add direct words if known.  ## Child voice / p"
+      "output_excerpt": "## Strategy discussion note \u2014 rough note  ## What was said / observed strategy discussion following partial disclosure about previous placement dsl present decision: mash referral not indi  The child's exact words were not recorded \u2014 add direct words if known  ## Child voice / pr"
     },
     {
       "scenario_id": "core_082_v02_manager_oversight",
@@ -41301,7 +41301,7 @@
       "record_type": "strategy_safeguarding_discussion",
       "scenario_family": "meetings",
       "answer_source": "variant_static",
-      "output_excerpt": "## Strategy discussion note \u2014 poor wording correction  ## What was said / observed Strategy discussion following partial disclosure about previous placement. DSL p  The child's exact words were not recorded \u2014 add direct words if known.  ## Child voice / presentation Young person "
+      "output_excerpt": "## Strategy discussion note \u2014 poor wording correction  ## What was said / observed Strategy discussion following partial disclosure about previous placement. DSL p  The child's exact words were not recorded \u2014 add direct words if known  ## Child voice / presentation Young person s"
     },
     {
       "scenario_id": "core_082_v09_voice_dictate_transcript",
@@ -41351,7 +41351,7 @@
       "record_type": "strategy_safeguarding_discussion",
       "scenario_family": "meetings",
       "answer_source": "variant_static",
-      "output_excerpt": "## Strategy discussion note \u2014 voice dictate transcript  ## What was said / observed Strategy discussion following partial disclosure about previous placement. DSL present. Decision: MA  The child's exact words were not recorded \u2014 add direct words if known.  ## Child voice / prese"
+      "output_excerpt": "## Strategy discussion note \u2014 voice dictate transcript  ## What was said / observed Strategy discussion following partial disclosure about previous placement. DSL present. Decision: MA  The child's exact words were not recorded \u2014 add direct words if known  ## Child voice / presen"
     },
     {
       "scenario_id": "core_082_v10_reflective_supervision",
@@ -41451,7 +41451,7 @@
       "record_type": "multi_agency_discussion",
       "scenario_family": "meetings",
       "answer_source": "variant_static",
-      "output_excerpt": "## Professionals meeting \u2014 rough note  ## What was said / observed education: attendance 78% this term; exclusions none social worker: care plan review due next month camhs: waiting lis  The child's exact words were not recorded \u2014 add direct words if known.  ## Child voice / pres"
+      "output_excerpt": "## Professionals meeting \u2014 rough note  ## What was said / observed education: attendance 78% this term; exclusions none social worker: care plan review due next month camhs: waiting lis  The child's exact words were not recorded \u2014 add direct words if known  ## Child voice / prese"
     },
     {
       "scenario_id": "core_083_v02_manager_oversight",
@@ -41801,7 +41801,7 @@
       "record_type": "multi_agency_discussion",
       "scenario_family": "meetings",
       "answer_source": "variant_static",
-      "output_excerpt": "## Professionals meeting \u2014 poor wording correction  ## What was said / observed Education: attendance 78% this term; exclusions none. Social worker: care plan r  The child's exact words were not recorded \u2014 add direct words if known.  ## Child voice / presentation Young person sai"
+      "output_excerpt": "## Professionals meeting \u2014 poor wording correction  ## What was said / observed Education: attendance 78% this term; exclusions none. Social worker: care plan r  The child's exact words were not recorded \u2014 add direct words if known  ## Child voice / presentation Young person said"
     },
     {
       "scenario_id": "core_083_v09_voice_dictate_transcript",
@@ -41851,7 +41851,7 @@
       "record_type": "multi_agency_discussion",
       "scenario_family": "meetings",
       "answer_source": "variant_static",
-      "output_excerpt": "## Professionals meeting \u2014 voice dictate transcript  ## What was said / observed Education: attendance 78% this term; exclusions none. Social worker: care plan review due next month  The child's exact words were not recorded \u2014 add direct words if known.  ## Child voice / presenta"
+      "output_excerpt": "## Professionals meeting \u2014 voice dictate transcript  ## What was said / observed Education: attendance 78% this term; exclusions none. Social worker: care plan review due next month  The child's exact words were not recorded \u2014 add direct words if known  ## Child voice / presentat"
     },
     {
       "scenario_id": "core_083_v10_reflective_supervision",
@@ -41951,7 +41951,7 @@
       "record_type": "multi_agency_discussion",
       "scenario_family": "meetings",
       "answer_source": "variant_static",
-      "output_excerpt": "## School meeting \u2014 rough note  ## What was said / observed school meeting attended by home The adult discussed attendance and behaviour support plan school willing to provide mentor  The child's exact words were not recorded \u2014 add direct words if known.  ## Child voice / present"
+      "output_excerpt": "## School meeting \u2014 rough note  ## What was said / observed school meeting attended by home The adult discussed attendance and behaviour support plan school willing to provide mentor  The child's exact words were not recorded \u2014 add direct words if known  ## Child voice / presenta"
     },
     {
       "scenario_id": "core_084_v02_manager_oversight",
@@ -42001,7 +42001,7 @@
       "record_type": "multi_agency_discussion",
       "scenario_family": "meetings",
       "answer_source": "variant_static",
-      "output_excerpt": "## School meeting \u2014 manager oversight  ## What was said / observed School meeting attended by home The adult. Discussed attendance and behaviour support plan. School willing to provide mentor. Young person views shared with consent.  Child's exact words preserved above.  ## Child"
+      "output_excerpt": "## School meeting \u2014 manager oversight  ## What was said / observed School meeting attended by home The adult. Discussed attendance and behaviour support plan. School willing to provide mentor. Young person views shared with consent.  Child's exact words preserved above  ## Child "
     },
     {
       "scenario_id": "core_084_v03_handover",
@@ -42051,7 +42051,7 @@
       "record_type": "multi_agency_discussion",
       "scenario_family": "meetings",
       "answer_source": "variant_static",
-      "output_excerpt": "## School meeting \u2014 handover  ## What was said / observed School meeting attended by home The adult. Discussed attendance and behaviour support plan. School willing to provide mentor. Young person views shared with consent.  Child's exact words preserved above.  ## Child voice / "
+      "output_excerpt": "## School meeting \u2014 handover  ## What was said / observed School meeting attended by home The adult. Discussed attendance and behaviour support plan. School willing to provide mentor. Young person views shared with consent.  Child's exact words preserved above  ## Child voice / p"
     },
     {
       "scenario_id": "core_084_v04_mobile_friendly",
@@ -42101,7 +42101,7 @@
       "record_type": "multi_agency_discussion",
       "scenario_family": "meetings",
       "answer_source": "variant_static",
-      "output_excerpt": "## School meeting \u2014 mobile friendly  ## What was said / observed School meeting attended by home The adult. Discussed attendance and behaviour support plan. School willing to provide mentor. Young person views shared wi  Child's exact words preserved above.  ## Child voice / pres"
+      "output_excerpt": "## School meeting \u2014 mobile friendly  ## What was said / observed School meeting attended by home The adult. Discussed attendance and behaviour support plan. School willing to provide mentor. Young person views shared wi  Child's exact words preserved above  ## Child voice / prese"
     },
     {
       "scenario_id": "core_084_v05_child_centred_rewrite",
@@ -42151,7 +42151,7 @@
       "record_type": "multi_agency_discussion",
       "scenario_family": "meetings",
       "answer_source": "variant_static",
-      "output_excerpt": "## School meeting \u2014 child centred rewrite  ## What was said / observed School meeting attended by home The adult. Discussed attendance and behaviour support plan. School willing to provide mentor. Young person views shared with consent.  Child's exact words preserved above.  ## C"
+      "output_excerpt": "## School meeting \u2014 child centred rewrite  ## What was said / observed School meeting attended by home The adult. Discussed attendance and behaviour support plan. School willing to provide mentor. Young person views shared with consent.  Child's exact words preserved above  ## Ch"
     },
     {
       "scenario_id": "core_084_v06_safeguarding_escalation",
@@ -42201,7 +42201,7 @@
       "record_type": "multi_agency_discussion",
       "scenario_family": "meetings",
       "answer_source": "variant_static",
-      "output_excerpt": "## School meeting \u2014 safeguarding escalation  ## What was said / observed School meeting attended by home The adult. Discussed attendance and behaviour support plan. School willing to provide mentor. Young person views shared with consent.  Child's exact words preserved above.  ##"
+      "output_excerpt": "## School meeting \u2014 safeguarding escalation  ## What was said / observed School meeting attended by home The adult. Discussed attendance and behaviour support plan. School willing to provide mentor. Young person views shared with consent.  Child's exact words preserved above  ## "
     },
     {
       "scenario_id": "core_084_v07_reg44_evidence",
@@ -42251,7 +42251,7 @@
       "record_type": "multi_agency_discussion",
       "scenario_family": "meetings",
       "answer_source": "variant_static",
-      "output_excerpt": "## School meeting \u2014 reg44 evidence  ## What was said / observed School meeting attended by home The adult. Discussed attendance and behaviour support plan. School willing to provide mentor. Young person views shared with consent  Child's exact words preserved above.  ## Child voi"
+      "output_excerpt": "## School meeting \u2014 reg44 evidence  ## What was said / observed School meeting attended by home The adult. Discussed attendance and behaviour support plan. School willing to provide mentor. Young person views shared with consent  Child's exact words preserved above  ## Child voic"
     },
     {
       "scenario_id": "core_084_v08_poor_wording_correction",
@@ -42301,7 +42301,7 @@
       "record_type": "multi_agency_discussion",
       "scenario_family": "meetings",
       "answer_source": "variant_static",
-      "output_excerpt": "## School meeting \u2014 poor wording correction  ## What was said / observed School meeting attended by home The adult. Discussed attendance and behaviour suppor  The child's exact words were not recorded \u2014 add direct words if known.  ## Child voice / presentation Young person said: "
+      "output_excerpt": "## School meeting \u2014 poor wording correction  ## What was said / observed School meeting attended by home The adult. Discussed attendance and behaviour suppor  The child's exact words were not recorded \u2014 add direct words if known  ## Child voice / presentation Young person said: n"
     },
     {
       "scenario_id": "core_084_v09_voice_dictate_transcript",
@@ -42351,7 +42351,7 @@
       "record_type": "multi_agency_discussion",
       "scenario_family": "meetings",
       "answer_source": "variant_static",
-      "output_excerpt": "## School meeting \u2014 voice dictate transcript  ## What was said / observed School meeting attended by home The adult. Discussed attendance and behaviour support plan. School willi  The child's exact words were not recorded \u2014 add direct words if known.  ## Child voice / presentatio"
+      "output_excerpt": "## School meeting \u2014 voice dictate transcript  ## What was said / observed School meeting attended by home The adult. Discussed attendance and behaviour support plan. School willi  The child's exact words were not recorded \u2014 add direct words if known  ## Child voice / presentation"
     },
     {
       "scenario_id": "core_084_v10_reflective_supervision",
@@ -42401,7 +42401,7 @@
       "record_type": "multi_agency_discussion",
       "scenario_family": "meetings",
       "answer_source": "variant_static",
-      "output_excerpt": "## School meeting \u2014 reflective supervision  ## What was said / observed School meeting attended by home The adult. Discussed attendance and behaviour support plan. School willing to provide mentor. Young person views shared with consent  Child's exact words preserved above.  ## C"
+      "output_excerpt": "## School meeting \u2014 reflective supervision  ## What was said / observed School meeting attended by home The adult. Discussed attendance and behaviour support plan. School willing to provide mentor. Young person views shared with consent  Child's exact words preserved above  ## Ch"
     },
     {
       "scenario_id": "core_085_v01_rough_note",
@@ -42451,7 +42451,7 @@
       "record_type": "multi_agency_discussion",
       "scenario_family": "meetings",
       "answer_source": "variant_static",
-      "output_excerpt": "## LAC/review preparation \u2014 rough note  ## What was said / observed preparing for lac review chronology extract prepared young person's wishes document completed health and education re  The child's exact words were not recorded \u2014 add direct words if known.  ## Child voice / pres"
+      "output_excerpt": "## LAC/review preparation \u2014 rough note  ## What was said / observed preparing for lac review chronology extract prepared young person's wishes document completed health and education re  The child's exact words were not recorded \u2014 add direct words if known  ## Child voice / prese"
     },
     {
       "scenario_id": "core_085_v02_manager_oversight",
@@ -42801,7 +42801,7 @@
       "record_type": "multi_agency_discussion",
       "scenario_family": "meetings",
       "answer_source": "variant_static",
-      "output_excerpt": "## LAC/review preparation \u2014 poor wording correction  ## What was said / observed Preparing for LAC review. Chronology extract prepared. Young person's wishes doc  The child's exact words were not recorded \u2014 add direct words if known.  ## Child voice / presentation Young person sa"
+      "output_excerpt": "## LAC/review preparation \u2014 poor wording correction  ## What was said / observed Preparing for LAC review. Chronology extract prepared. Young person's wishes doc  The child's exact words were not recorded \u2014 add direct words if known  ## Child voice / presentation Young person sai"
     },
     {
       "scenario_id": "core_085_v09_voice_dictate_transcript",
@@ -42851,7 +42851,7 @@
       "record_type": "multi_agency_discussion",
       "scenario_family": "meetings",
       "answer_source": "variant_static",
-      "output_excerpt": "## LAC/review preparation \u2014 voice dictate transcript  ## What was said / observed Preparing for LAC review. Chronology extract prepared. Young person's wishes document completed. Hea  The child's exact words were not recorded \u2014 add direct words if known.  ## Child voice / present"
+      "output_excerpt": "## LAC/review preparation \u2014 voice dictate transcript  ## What was said / observed Preparing for LAC review. Chronology extract prepared. Young person's wishes document completed. Hea  The child's exact words were not recorded \u2014 add direct words if known  ## Child voice / presenta"
     },
     {
       "scenario_id": "core_085_v10_reflective_supervision",
@@ -44951,7 +44951,7 @@
       "record_type": "professional_contact_note",
       "scenario_family": "meetings",
       "answer_source": "variant_static",
-      "output_excerpt": "## Police/professional contact note \u2014 rough note  ## What was said / observed police welfare check after missing episode young person safe officer spoke with manager no arrest advice on missing  The child's exact words were not recorded \u2014 add direct words if known.  ## Child voic"
+      "output_excerpt": "## Police/professional contact note \u2014 rough note  ## What was said / observed police welfare check after missing episode young person safe officer spoke with manager no arrest advice on missing  The child's exact words were not recorded \u2014 add direct words if known  ## Child voice"
     },
     {
       "scenario_id": "core_090_v02_manager_oversight",
@@ -45301,7 +45301,7 @@
       "record_type": "professional_contact_note",
       "scenario_family": "meetings",
       "answer_source": "variant_static",
-      "output_excerpt": "## Police/professional contact note \u2014 poor wording correction  ## What was said / observed Police welfare check after missing episode. Young person safe. Officer spoke wit  The child's exact words were not recorded \u2014 add direct words if known.  ## Child voice / presentation Young"
+      "output_excerpt": "## Police/professional contact note \u2014 poor wording correction  ## What was said / observed Police welfare check after missing episode. Young person safe. Officer spoke wit  The child's exact words were not recorded \u2014 add direct words if known  ## Child voice / presentation Young "
     },
     {
       "scenario_id": "core_090_v09_voice_dictate_transcript",
@@ -45351,7 +45351,7 @@
       "record_type": "professional_contact_note",
       "scenario_family": "meetings",
       "answer_source": "variant_static",
-      "output_excerpt": "## Police/professional contact note \u2014 voice dictate transcript  ## What was said / observed Police welfare check after missing episode. Young person safe. Officer spoke with manager. No arrest  The child's exact words were not recorded \u2014 add direct words if known.  ## Child voice"
+      "output_excerpt": "## Police/professional contact note \u2014 voice dictate transcript  ## What was said / observed Police welfare check after missing episode. Young person safe. Officer spoke with manager. No arrest  The child's exact words were not recorded \u2014 add direct words if known  ## Child voice "
     },
     {
       "scenario_id": "core_090_v10_reflective_supervision",

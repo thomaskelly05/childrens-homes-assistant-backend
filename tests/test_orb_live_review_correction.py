@@ -21,11 +21,13 @@ from assistant.knowledge.adult_identity_language import (
     is_incident_record_request,
     is_record_generation_request,
     is_self_commentary_paragraph,
+    normalize_duplicate_daily_record_headings,
     sanitize_childrens_home_terminology,
     sanitize_live_record_output,
     sanitize_observation_interpretation_language,
     strip_child_quote_interpretation,
     strip_invented_emotional_impact,
+    strip_outcome_interpretation,
     strip_trailing_self_commentary,
     strip_unnecessary_follow_up_section,
     user_explicitly_requests_explanation,
@@ -101,6 +103,8 @@ def test_canonical_principles_include_live_review_discipline():
     assert "record_only_output" in CANONICAL_PRINCIPLES
     assert "child_voice_discipline" in CANONICAL_PRINCIPLES
     assert "emotional_impact_discipline" in CANONICAL_PRINCIPLES
+    assert "outcome_interpretation_discipline" in CANONICAL_PRINCIPLES
+    assert "duplicate_heading_discipline" in CANONICAL_PRINCIPLES
     assert "daily_record_simplification" in CANONICAL_PRINCIPLES
     assert "record_heading_discipline" in CANONICAL_PRINCIPLES
     assert "self_commentary" in CANONICAL_PRINCIPLES
@@ -485,3 +489,125 @@ def test_manual_regression_prompt_constants_document_live_retest():
     assert "Adult JS" in MANUAL_REGRESSION_DAILY_RECORD_PROMPT
     assert "appeared calmer" in MANUAL_REGRESSION_DAILY_RECORD_PROMPT
     assert "I'm just annoyed about school." in MANUAL_REGRESSION_DAILY_RECORD_PROMPT
+
+
+def test_strip_approach_allowed_feel_supported():
+    source = MANUAL_REGRESSION_DAILY_RECORD_PROMPT
+    rough = (
+        "This approach allowed Child A to feel supported without pressure to engage further."
+    )
+    cleaned = strip_invented_emotional_impact(rough, source_text=source)
+    assert "feel supported" not in cleaned.lower()
+
+
+def test_strip_helping_feel_safe_preserves_adult_action():
+    source = MANUAL_REGRESSION_DAILY_RECORD_PROMPT
+    rough = "Adult JS sat nearby, helping Child A feel safe and comfortable."
+    cleaned = strip_invented_emotional_impact(rough, source_text=source)
+    assert "Adult JS sat nearby" in cleaned
+    assert "feel safe" not in cleaned.lower()
+    assert "comfortable" not in cleaned.lower()
+
+
+def test_child_stated_feeling_preserved_when_in_input():
+    source = (
+        f"{MANUAL_REGRESSION_DAILY_RECORD_PROMPT} "
+        'Child A said, "I felt supported when Adult JS sat nearby."'
+    )
+    rough = 'Child A said, "I felt supported when Adult JS sat nearby."'
+    cleaned = strip_invented_emotional_impact(rough, source_text=source)
+    assert "felt supported" in cleaned.lower()
+
+
+def test_strip_positive_shift_in_mood_preserves_appeared_calmer():
+    source = MANUAL_REGRESSION_DAILY_RECORD_PROMPT
+    rough = (
+        "Child A ate the toast and appeared calmer before bedtime, "
+        "indicating a positive shift in mood."
+    )
+    cleaned = strip_outcome_interpretation(rough, source_text=source)
+    assert "appeared calmer" in cleaned.lower()
+    assert "positive shift in mood" not in cleaned.lower()
+
+
+def test_strip_showed_emotional_regulation():
+    source = MANUAL_REGRESSION_DAILY_RECORD_PROMPT
+    rough = "Child A ate toast. This showed emotional regulation."
+    cleaned = strip_outcome_interpretation(rough, source_text=source)
+    assert "emotional regulation" not in cleaned.lower()
+    assert "ate toast" in cleaned.lower()
+
+
+def test_merge_duplicate_outcome_and_outcome_handover_headings():
+    source = MANUAL_REGRESSION_DAILY_RECORD_PROMPT
+    rough = (
+        "## Outcome\n\n"
+        "Child A appeared calmer before bedtime.\n\n"
+        "## Outcome / Handover\n\n"
+        "Adult TK handed over that tomorrow's adults should check in gently if Child A wishes to talk."
+    )
+    cleaned = normalize_duplicate_daily_record_headings(rough, source_text=source)
+    assert cleaned.lower().count("outcome") == 1 or "outcome / handover" in cleaned.lower()
+    assert "appeared calmer" in cleaned.lower()
+    assert "handed over" in cleaned.lower()
+    assert not re.search(r"^##\s+Outcome\s*$", cleaned, re.M | re.I)
+
+
+def test_simple_daily_record_no_separate_follow_up_when_handover_present():
+    source = MANUAL_REGRESSION_DAILY_RECORD_PROMPT
+    rough = (
+        "## Outcome / Handover\n\n"
+        "Adult TK handed over that tomorrow's adults should check in gently about school if Child A wishes to talk.\n\n"
+        "## Next Steps\n\n"
+        "Tomorrow's adults should check in gently about school if Child A wishes to talk."
+    )
+    cleaned = sanitize_live_record_output(rough, source_text=source)
+    assert "next steps" not in cleaned.lower()
+    assert "handed over" in cleaned.lower()
+
+
+def test_safeguarding_record_follow_up_not_wrongly_removed():
+    source = (
+        "Create a safeguarding concern record. Young person disclosed online exploitation concern. "
+        "Manager informed. Follow-up action plan required with social worker."
+    )
+    rough = (
+        "## Outcome / follow-up\n\n"
+        "Manager informed immediately.\n\n"
+        "## Follow-up action plan\n\n"
+        "Social worker to be contacted within 24 hours. Device review scheduled."
+    )
+    cleaned = sanitize_live_record_output(rough, source_text=source)
+    assert "follow-up action plan" in cleaned.lower()
+    assert "social worker" in cleaned.lower()
+
+
+def test_manual_regression_live_output_sanitized():
+    source = MANUAL_REGRESSION_DAILY_RECORD_PROMPT
+    rough = (
+        "## Daily Record\n\n"
+        "## Presentation and Support\n\n"
+        "Child A returned from school appearing quieter than usual. Adult TK gave Child A space. "
+        "Adult JS checked in later.\n\n"
+        'Child A said, "I\'m just annoyed about school."\n\n'
+        "## Adult Response\n\n"
+        "Adult JS offered Child A toast and sat nearby while Child A watched television, "
+        "helping Child A feel safe and comfortable.\n\n"
+        "## Outcome\n\n"
+        "Child A accepted and ate the toast.\n\n"
+        "## Outcome / Handover\n\n"
+        "Child A ate the toast and appeared calmer before bedtime, indicating a positive shift in mood. "
+        "This approach allowed Child A to feel supported without pressure to engage further. "
+        "Adult TK handed over that tomorrow's adults should check in gently about school if Child A wishes to talk."
+    )
+    cleaned = sanitize_live_record_output(rough, source_text=source)
+    assert "feel supported" not in cleaned.lower()
+    assert "feel safe" not in cleaned.lower()
+    assert "comfortable" not in cleaned.lower()
+    assert "positive shift in mood" not in cleaned.lower()
+    assert "Adult TK" in cleaned
+    assert "Adult JS" in cleaned
+    assert "I'm just annoyed about school." in cleaned
+    assert "appeared calmer" in cleaned.lower()
+    assert not re.search(r"^##\s+Outcome\s*$", cleaned, re.M | re.I)
+    assert "outcome / handover" in cleaned.lower()

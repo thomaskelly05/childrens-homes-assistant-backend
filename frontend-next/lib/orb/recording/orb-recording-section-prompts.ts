@@ -218,7 +218,7 @@ export const ORB_RECORDING_SECTION_PROMPTS: Record<string, OrbRecordingSectionPr
     {
       title: 'Outcome / Handover',
       prompt:
-        'Record what changed by the end, how the child appeared afterwards, and what the next adults should continue or check in about. Include handover here — do not add a separate Follow-up section unless safeguarding cues require it.'
+        'Record what changed by the end, how the child appeared afterwards, and what the next adults should continue or check in about. Use observed presentation such as "appeared calmer" — do not add "indicating a positive shift in mood" or "showing emotional regulation". Include handover here — do not add a separate Outcome or Follow-up section unless safeguarding cues require it.'
     }
   ],
   incident_report: [
