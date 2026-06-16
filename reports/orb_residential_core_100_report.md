@@ -1,10 +1,10 @@
 # ORB Residential Core 100 Benchmark Report
 
-- **Run timestamp:** 2026-06-16T11:14:54.700552+00:00
+- **Run timestamp:** 2026-06-16T11:47:14.642770+00:00
 - **Scenario set:** `core100`
 - **Mode:** `static`
 - **Baseline version:** 1.0.0
-- **Commit SHA:** 6bc4521172b5552d657453702deaf4dab08265a8
+- **Commit SHA:** b4418e483a966d59c52c538fcd6b6f54e6096ad5
 - **Scenarios scored:** 100
 - **Average overall score:** 4.13 / 5
 - **Unsafe flag count:** 0
@@ -17,27 +17,26 @@
 
 | Category | Average (0–5) |
 | --- | ---: |
-| child centredness | 4.76 |
+| child centredness | 4.77 |
 | factual accuracy no invention | 4.0 |
-| therapeutic language | 3.97 |
+| therapeutic language | 4.0 |
 | observation vs interpretation | 4.0 |
 | adult response and support | 4.0 |
 | outcome and follow up | 4.0 |
 | safeguarding awareness | 4.0 |
 | management oversight | 4.0 |
 | recording usefulness | 4.0 |
-| professional tone | 3.97 |
+| professional tone | 4.0 |
 | privacy minimisation | 5.0 |
 | adult responsibility no replacement | 4.0 |
 
 ## Score distribution
 
-- **excellent:** 98
-- **good:** 2
+- **excellent:** 99
+- **good:** 1
 
 ## Top 10 weakest scenarios
 
-- `core_044` (3.62) — Judgemental language rewrite
 - `core_094` (3.92) — Staff supervision reflection
 - `core_003` (4.08) — Mealtime refusal
 - `core_007` (4.08) — Child requests private conversation
@@ -47,6 +46,7 @@
 - `core_028` (4.08) — Peer-on-peer concern
 - `core_031` (4.08) — Distress after contact
 - `core_032` (4.08) — School refusal
+- `core_037` (4.08) — Refusal to attend appointment
 
 ## Top 10 strongest scenarios
 
@@ -64,8 +64,8 @@
 ## Weakest record types
 
 - `supervision_discussion`: 4.04
-- `daily_record`: 4.08
 - `strategy_safeguarding_discussion`: 4.08
+- `daily_record`: 4.12
 - `reg_44_evidence_summary`: 4.12
 - `behaviour_reflection`: 4.13
 
@@ -75,8 +75,6 @@
 
 ## Recommended improvement targets
 
-- Improve therapeutic language (avg 3.97)
-- Improve professional tone (avg 3.97)
 - Address missing element: factual observations
 
 ## External framework traceability
@@ -114,8 +112,6 @@
 
 ## Top weaknesses
 
-- Blaming or punitive language detected.
-- Tone undermined by blaming or clinical language.
 - Child-centred subject language present.
 
 ## Scenario scores
@@ -165,7 +161,7 @@
 | core_041 | 4.08 | excellent | fixture |
 | core_042 | 4.15 | excellent | template_scaffold |
 | core_043 | 4.08 | excellent | fixture |
-| core_044 | 3.62 | good | template_scaffold |
+| core_044 | 4.15 | excellent | template_scaffold |
 | core_045 | 4.15 | excellent | template_scaffold |
 | core_046 | 4.15 | excellent | template_scaffold |
 | core_047 | 4.15 | excellent | template_scaffold |

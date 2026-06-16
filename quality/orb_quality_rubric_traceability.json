@@ -55,7 +55,7 @@
       ],
       "evidence_strength": "medium",
       "rationale": "Trauma-informed and relational practice guidance supports non-punitive recording. Pattern lists are internally curated and require professional review for completeness.",
-      "scoring_caution": "Regex patterns cannot capture all harmful phrasing; absence of flagged terms does not guarantee therapeutic quality.",
+      "scoring_caution": "Regex patterns cannot capture all harmful phrasing. Wording rewrite scenarios must reframe poor input rather than pass blaming language through to outputs.",
       "reviewer_notes_required": true
     },
     {

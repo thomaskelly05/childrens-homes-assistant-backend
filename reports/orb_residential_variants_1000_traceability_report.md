@@ -1,7 +1,7 @@
 # ORB Residential 1000 Variants Traceability Report
 
-- **Run timestamp:** 2026-06-16T11:16:07.564135+00:00
-- **Average overall score:** 4.13 / 5
+- **Run timestamp:** 2026-06-16T11:47:26.692183+00:00
+- **Average overall score:** 4.14 / 5
 - **Unsafe flag count:** 0
 - **Scenarios scored:** 1000
 
@@ -21,19 +21,19 @@
 
 ## Weakest categories
 
-- `therapeutic_language` — 3.94
-- `professional_tone` — 3.94
-- `observation_vs_interpretation` — 3.98
 - `management_oversight` — 3.99
+- `factual_accuracy_no_invention` — 4.0
+- `therapeutic_language` — 4.0
+- `observation_vs_interpretation` — 4.0
 
 ## Highest-risk scenario families
 
-- `magic_notes` — avg 4.04 (100 variants)
 - `daily_care` — avg 4.13 (100 variants)
 - `behaviour_communication` — avg 4.13 (100 variants)
 - `incident_reflection` — avg 4.14 (100 variants)
 - `safeguarding` — avg 4.14 (100 variants)
 - `key_work` — avg 4.14 (100 variants)
+- `magic_notes` — avg 4.15 (100 variants)
 - `handover` — avg 4.15 (100 variants)
 - `management_oversight` — avg 4.15 (100 variants)
 - `meetings` — avg 4.15 (100 variants)

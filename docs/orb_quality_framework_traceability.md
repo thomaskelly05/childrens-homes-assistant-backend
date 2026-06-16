@@ -157,6 +157,26 @@ Brain/framework sources implementing this principle:
 
 ORB must not invent adult actions. Scaffolds extract specific actions from input where present and prompt for missing detail (`What did adults do to support, reassure or follow up?`) rather than fabricating practice.
 
+## Therapeutic language quality indicator
+
+ORB's `therapeutic_language` rubric category scores whether outputs use respectful, non-blaming residential wording:
+
+- Observable behaviour and presentation — not labels
+- Separation of observation from interpretation
+- Reframing of judgemental rough-note input (Magic Notes / poor wording scenarios)
+- No manipulative, attention-seeking, kicked off or punitive phrasing in final scaffold output
+
+This is a **source-mapped internal quality framework** indicator aligned to trauma-informed and relationship-based practice sources. It is **not a regulatory judgement** and does not claim clinical validation.
+
+Brain/framework sources implementing this principle:
+
+- `assistant/evals/orb_high_risk_scaffold.py` — `sanitize_therapeutic_language()` for wording rewrite scenarios
+- `assistant/knowledge/therapeutic_language.py` — wording discipline and avoid/prefer guidance
+- `services/orb_therapeutic_language_contract_service.py` — live therapeutic phrase replacements
+- `frontend-next/lib/orb/recording/orb-therapeutic-writing.ts` — therapeutic writing metadata
+
+ORB reframes poor input wording in rewrite scenarios; it does not silently preserve blaming language in outputs.
+
 ## Related documentation
 
 - `docs/indicare_internal_brain_architecture.md` — brain layers and design principles

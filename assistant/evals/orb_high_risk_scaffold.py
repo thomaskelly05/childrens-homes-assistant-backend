@@ -74,6 +74,100 @@ _PROFESSIONAL_JUDGEMENT_REPLACEMENTS: tuple[tuple[re.Pattern[str], str], ...] = 
     ),
 )
 
+_THERAPEUTIC_LANGUAGE_REPLACEMENTS: tuple[tuple[re.Pattern[str], str], ...] = (
+    (
+        re.compile(r"\bbecause they wanted attention\b", re.I),
+        "during tea time",
+    ),
+    (
+        re.compile(r"\bwanted attention\b", re.I),
+        "may have been communicating distress",
+    ),
+    (
+        re.compile(r"\bstaff told them to stop being dramatic\b", re.I),
+        "staff offered calm boundaries and reassurance",
+    ),
+    (
+        re.compile(r"\bstop being dramatic\b", re.I),
+        "appeared distressed",
+    ),
+    (
+        re.compile(r"\bbeing dramatic\b", re.I),
+        "appeared distressed",
+    ),
+    (
+        re.compile(r"\bstaff had to be firm\b", re.I),
+        "staff offered calm boundaries within role",
+    ),
+    (
+        re.compile(r"\brefused to comply\b", re.I),
+        "found it difficult to follow the request at that time",
+    ),
+    (
+        re.compile(r"\beventually did as told\b", re.I),
+        "eventually settled and engaged when ready",
+    ),
+    (
+        re.compile(r"\bdid as told\b", re.I),
+        "engaged when ready",
+    ),
+    (
+        re.compile(r"\battention[\s-]?seeking\b", re.I),
+        "communicating distress",
+    ),
+    (
+        re.compile(r"\bmanipulative\b", re.I),
+        "behaviour that may have communicated an unmet need",
+    ),
+    (
+        re.compile(r"\bnaughty\b", re.I),
+        "distressed",
+    ),
+    (
+        re.compile(r"\bbad behaviour\b", re.I),
+        "behaviour that staff observed and responded to",
+    ),
+    (
+        re.compile(r"\bkicked off\b", re.I),
+        "became distressed",
+    ),
+    (
+        re.compile(r"\brefused for no reason\b", re.I),
+        "was not ready to",
+    ),
+    (
+        re.compile(r"\bnon-?compliant\b", re.I),
+        "found it difficult to follow the request",
+    ),
+    (
+        re.compile(r"\bchose to behave\b", re.I),
+        "behaviour occurred / may have been communicating",
+    ),
+    (
+        re.compile(r"\bjust being dramatic\b", re.I),
+        "appeared distressed",
+    ),
+    (
+        re.compile(r"\bcalmed down\b", re.I),
+        "settled with staff support",
+    ),
+)
+
+_JUDGEMENTAL_INPUT_PATTERN = re.compile(
+    r"\b(?:manipulative|naughty|attention[\s-]?seeking|kicked off|bad behaviour|"
+    r"non[\s-]?compliant|chose to behave|wanted attention|being dramatic|stop being dramatic|"
+    r"refused to comply|staff had to be firm|did as told)\b",
+    re.I,
+)
+
+_THERAPEUTIC_LANGUAGE_PRINCIPLE = (
+    "For residential records, use respectful, non-blaming therapeutic language. "
+    "Describe observable behaviour and presentation — not labels. "
+    "Separate observation from interpretation. "
+    "When rough input contains judgemental wording, reframe to factual, warm language "
+    "without inventing events. Adults remain responsible for final wording."
+)
+
 _FAMILY_ESCALATION_GUIDANCE: dict[str, str] = {
     "safeguarding": (
         "Follow the home's safeguarding procedure and inform the appropriate senior/manager without delay. "
@@ -157,6 +251,42 @@ def sanitize_professional_judgement_phrases(text: str) -> str:
     for pattern, replacement in _PROFESSIONAL_JUDGEMENT_REPLACEMENTS:
         result = pattern.sub(replacement, result)
     return result
+
+
+def sanitize_therapeutic_language(text: str) -> str:
+    """Reframe judgemental or blaming phrasing into respectful therapeutic wording."""
+    result = sanitize_professional_judgement_phrases(str(text or ""))
+    for pattern, replacement in _THERAPEUTIC_LANGUAGE_REPLACEMENTS:
+        result = pattern.sub(replacement, result)
+    result = re.sub(r"\s{2,}", " ", result)
+    return result.strip()
+
+
+def contains_judgemental_language(text: str) -> bool:
+    """Whether text contains blaming or judgemental phrasing that should be reframed."""
+    return bool(_JUDGEMENTAL_INPUT_PATTERN.search(str(text or "")))
+
+
+def is_wording_rewrite_scenario(scenario: dict[str, Any]) -> bool:
+    """Whether scenario expects Magic Notes / therapeutic rewrite of poor wording."""
+    focus = str(scenario.get("quality_focus") or "").lower()
+    if "rewrite" in focus or "judgemental" in focus or "poor wording" in focus:
+        return True
+    sid = str(scenario.get("scenario_id") or scenario.get("id") or "")
+    parent = str(scenario.get("parent_scenario_id") or scenario.get("source_baseline_id") or "")
+    if sid.startswith(("core_043", "core_044")) or parent in {"core_043", "core_044"}:
+        return True
+    if sid == "baseline_poor_wording_rewrite":
+        return True
+    return False
+
+
+def build_factual_account(scenario: dict[str, Any], input_text: str) -> str:
+    """Build factual account from input — reframing judgemental rough wording when required."""
+    cleaned = _clean_input_prefix(sanitize_professional_judgement_phrases(input_text))
+    if is_wording_rewrite_scenario(scenario) or contains_judgemental_language(cleaned):
+        return sanitize_therapeutic_language(cleaned)
+    return cleaned
 
 
 def needs_safeguarding_escalation(scenario: dict[str, Any]) -> bool:
@@ -282,7 +412,10 @@ def _extract_wishes_feelings(text: str) -> str:
 
 def build_child_voice_section(input_text: str, scenario: dict[str, Any] | None = None) -> str:
     """Build child voice / presentation section with rubric-aligned markers."""
+    scenario = scenario or {}
     cleaned = _clean_input_prefix(sanitize_professional_judgement_phrases(input_text))
+    if is_wording_rewrite_scenario(scenario) or contains_judgemental_language(cleaned):
+        cleaned = sanitize_therapeutic_language(cleaned)
     lines: list[str] = []
 
     speech = _extract_speech_from_input(cleaned)
@@ -298,7 +431,6 @@ def build_child_voice_section(input_text: str, scenario: dict[str, Any] | None =
 
     lines.append(_extract_presentation_from_input(cleaned))
 
-    scenario = scenario or {}
     family = str(scenario.get("scenario_family") or "")
     variant = str(scenario.get("variant_type") or "")
     feature = str(scenario.get("feature_target") or "")
@@ -538,6 +670,16 @@ def _family_specific_sections(scenario: dict[str, Any], input_text: str) -> list
     elif family == "magic_notes" or _is_magic_notes_variant(scenario):
         sections.append(_magic_notes_missing_prompt(scenario))
 
+    if is_wording_rewrite_scenario(scenario):
+        sections.extend(
+            [
+                "## Wording reframed from rough input",
+                "Judgemental or blaming phrases from the rough note have been reframed into observable, "
+                "respectful language. Separate observation from interpretation. "
+                "Original wording must not be saved without adult review.",
+            ]
+        )
+
     if variant in {"manager_oversight", "reflective_supervision"} or str(
         scenario.get("feature_target") or ""
     ) == "Management oversight":
@@ -556,9 +698,9 @@ def build_high_risk_safeguarding_scaffold(scenario: dict[str, Any]) -> str:
     title = scenario.get("title") or scenario.get("id") or "Record"
     raw_input = str(scenario.get("input") or "").strip()
     input_text = sanitize_professional_judgement_phrases(raw_input)
-    factual = _clean_input_prefix(input_text)
+    factual = build_factual_account(scenario, input_text)
     escalation = _resolve_escalation_guidance(scenario)
-    child_voice = build_child_voice_section(input_text, scenario)
+    child_voice = build_child_voice_section(factual, scenario)
 
     magic_notes_prompt = ""
     if _is_magic_notes_variant(scenario):
@@ -605,8 +747,8 @@ def build_child_centred_scaffold(scenario: dict[str, Any]) -> str:
     title = scenario.get("title") or scenario.get("id") or "Record"
     raw_input = str(scenario.get("input") or "").strip()
     input_text = sanitize_professional_judgement_phrases(raw_input)
-    factual = _clean_input_prefix(input_text)
-    child_voice = build_child_voice_section(input_text, scenario)
+    factual = build_factual_account(scenario, input_text)
+    child_voice = build_child_voice_section(factual, scenario)
     extra_sections = _family_specific_sections(scenario, factual)
 
     blocks: list[str] = [
@@ -662,3 +804,8 @@ def child_centred_recording_principle() -> str:
 def adult_response_recording_principle() -> str:
     """Reusable adult response recording principle for brain/framework sources."""
     return _ADULT_RESPONSE_PRINCIPLE
+
+
+def therapeutic_language_recording_principle() -> str:
+    """Reusable therapeutic language principle for brain/framework sources."""
+    return _THERAPEUTIC_LANGUAGE_PRINCIPLE
