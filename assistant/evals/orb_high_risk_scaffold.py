@@ -9,6 +9,16 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from assistant.knowledge.orb_residential_principles import (
+    ADULT_RESPONSE_PRINCIPLE,
+    CHILD_CENTRED_PRINCIPLE,
+    FACTUAL_ACCURACY_PRINCIPLE,
+    MANAGEMENT_OVERSIGHT_PRINCIPLE,
+    OBSERVATION_VS_INTERPRETATION_PRINCIPLE,
+    PATHWAY_DISCIPLINE_PRINCIPLE,
+    THERAPEUTIC_LANGUAGE_PRINCIPLE,
+)
+
 _ESCALATION_SAFEGUARDING_FLAGS = frozenset(
     {"partial_disclosure", "escalation_required", "strategy_meeting", "escalation_pathway"}
 )
@@ -199,13 +209,7 @@ _JUDGEMENTAL_INPUT_PATTERN = re.compile(
     re.I,
 )
 
-_THERAPEUTIC_LANGUAGE_PRINCIPLE = (
-    "For residential records, use respectful, non-blaming therapeutic language. "
-    "Describe observable behaviour and presentation — not labels. "
-    "Separate observation from interpretation. "
-    "When rough input contains judgemental wording, reframe to factual, warm language "
-    "without inventing events. Adults remain responsible for final wording."
-)
+_THERAPEUTIC_LANGUAGE_PRINCIPLE = THERAPEUTIC_LANGUAGE_PRINCIPLE
 
 _FAMILY_ESCALATION_GUIDANCE: dict[str, str] = {
     "safeguarding": (
@@ -276,57 +280,12 @@ _FAMILY_ROUTINE_PATHWAY_GUIDANCE: dict[str, str] = {
     ),
 }
 
-_PATHWAY_DISCIPLINE_PRINCIPLE = (
-    "For residential childcare records, ORB should help adults consider the most proportionate pathway. "
-    "Pathways are for professional consideration — responsible adults/managers decide and act per local policy. "
-    "Use 'pathway to consider', 'routine follow-up / handover', 'senior or manager review', "
-    "'local safeguarding procedure', 'professional consultation where policy-led', "
-    "'urgent action if immediate risk is indicated', and 'responsible adult to decide'. "
-    "Record who was informed and what was agreed. Note what remains unresolved. "
-    "ORB must not say 'threshold met', 'referral required' or 'no concern' as a definitive decision."
-)
-
-_CHILD_CENTRED_PRINCIPLE = (
-    "For residential records, keep the child visible: what they said or showed, their presentation, "
-    "and their experience before, during and after adult support. "
-    "Separate observation from interpretation. Do not invent feelings."
-)
-
-_ADULT_RESPONSE_PRINCIPLE = (
-    "For residential childcare records, make adult practice visible and specific. "
-    "Name what adults did first, how they communicated, and how they preserved dignity, safety and relationship. "
-    "Record space, choice, reassurance, co-regulation or repair where provided. "
-    "Note plans followed, oversight sought, and what appeared to help or not help. "
-    "Avoid vague 'staff supported' unless the support is described. "
-    "Do not invent actions not in the input — prompt for missing detail instead."
-)
-
-_MANAGEMENT_OVERSIGHT_PRINCIPLE = (
-    "For residential childcare records, help adults consider management oversight — not replace it. "
-    "Prompt whether this is an isolated event or part of a pattern; whether plans or risk assessments need review; "
-    "whether the adult response was consistent with the agreed approach; whether a manager/senior should review; "
-    "whether supervision, debrief or practice learning is needed; and what follow-up remains. "
-    "Use 'manager/senior should consider reviewing…' not 'manager must conclude…'. "
-    "ORB supports oversight; it does not complete management oversight."
-)
-
-_FACTUAL_ACCURACY_PRINCIPLE = (
-    "For residential childcare records, separate known facts from interpretation. "
-    "Preserve direct words where provided. Do not add unprovided facts, chronology, adult actions, "
-    "child feelings, outcomes or safeguarding escalation. "
-    "Use 'not stated', 'not yet known', 'requires clarification' or 'the record should confirm' "
-    "where information is missing. Turn missing information into prompts, not assumptions. "
-    "A safer record is honest about what is known, unknown and still to be reviewed."
-)
-
-_OBSERVATION_VS_INTERPRETATION_PRINCIPLE = (
-    "For residential childcare records, separate what was observed, said, reported and reflected. "
-    "Use 'Staff observed…' for presentation; 'Child A said…' for direct words; "
-    "'It was reported that…' for reported information; 'appeared' or 'presented as' for observed presentation; "
-    "'may indicate', 'could suggest' or 'may have communicated' only as reflection, not fact. "
-    "Do not state motives, feelings, triggers, risk levels or safeguarding thresholds as facts unless provided. "
-    "Mark what is not known. Behaviour-as-communication is reflective, not diagnostic."
-)
+_PATHWAY_DISCIPLINE_PRINCIPLE = PATHWAY_DISCIPLINE_PRINCIPLE
+_CHILD_CENTRED_PRINCIPLE = CHILD_CENTRED_PRINCIPLE
+_ADULT_RESPONSE_PRINCIPLE = ADULT_RESPONSE_PRINCIPLE
+_MANAGEMENT_OVERSIGHT_PRINCIPLE = MANAGEMENT_OVERSIGHT_PRINCIPLE
+_FACTUAL_ACCURACY_PRINCIPLE = FACTUAL_ACCURACY_PRINCIPLE
+_OBSERVATION_VS_INTERPRETATION_PRINCIPLE = OBSERVATION_VS_INTERPRETATION_PRINCIPLE
 
 _ADULT_ACTION_CUE_PATTERN = re.compile(
     r"\b(?:staff|key\s*worker|shift\s*lead|manager|adult)\s+"
@@ -346,18 +305,16 @@ _DEFAULT_ESCALATION_GUIDANCE = (
     "Senior or manager review required. Responsible adult to decide required notifications per local policy."
 )
 
-_ADULT_BOUNDARY_FOOTER = (
+_BOUNDARY_FOOTER = (
     "---\n"
     "Draft only — adult review required. "
     "This supports reflection and recording; it is not a safeguarding decision. "
-    "Professional judgement and local policy apply."
+    "ORB does not complete management oversight. Professional judgement and local policy apply."
 )
 
-_STANDARD_BOUNDARY_FOOTER = (
-    "---\n"
-    "Template scaffold only — adult review required. Not live ORB output. "
-    "Professional judgement and local policy apply."
-)
+# Backward-compatible aliases
+_ADULT_BOUNDARY_FOOTER = _BOUNDARY_FOOTER
+_STANDARD_BOUNDARY_FOOTER = _BOUNDARY_FOOTER
 
 
 def sanitize_professional_judgement_phrases(text: str) -> str:
@@ -1239,18 +1196,15 @@ def build_child_centred_scaffold(scenario: dict[str, Any]) -> str:
             "## What adults did to support",
             _build_adult_response_section(scenario, factual),
             "",
-            "## How adults preserved dignity and relationship",
+            "## Dignity, relationship and child's experience",
             "Record whether adults offered space, choice, reassurance or repair, and how dignity "
-            "and relationship were preserved — only as actually provided.",
-            "",
-            "## The child's experience",
-            "What changed for the young person before, during and after adult support — "
-            "as observed, not assumed.",
+            "and relationship were preserved — only as actually provided. "
+            "What changed for the young person before, during and after adult support — as observed, not assumed.",
             "",
             "## Outcome / follow-up",
             _build_outcome_line(factual),
             "",
-            _STANDARD_BOUNDARY_FOOTER,
+            _BOUNDARY_FOOTER,
         ]
     )
     return "\n".join(blocks).strip()

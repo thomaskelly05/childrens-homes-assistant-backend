@@ -1,0 +1,21 @@
+{
+  "version": "1.0.0",
+  "generated_at": "2026-06-16T14:22:39.802618+00:00",
+  "core_scenarios": 100,
+  "variants_per_core": 100,
+  "total_variants": 10000,
+  "base_variant_types": [
+    "rough_note",
+    "manager_oversight",
+    "handover",
+    "mobile_friendly",
+    "child_centred_rewrite",
+    "safeguarding_escalation",
+    "reg44_evidence",
+    "poor_wording_correction",
+    "voice_dictate_transcript",
+    "reflective_supervision"
+  ],
+  "synthetic_only": true,
+  "llm_calls": false
+}

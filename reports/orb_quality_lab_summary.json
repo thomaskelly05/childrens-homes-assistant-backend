@@ -1,14 +1,27 @@
 {
-  "timestamp": "2026-06-16T14:06:12.722870+00:00",
-  "commit_sha": "2bb075b60d03ce14069618534cb51af8f3f5d759",
-  "baseline15_average": null,
-  "core100_average": null,
+  "timestamp": "2026-06-16T14:32:41.306434+00:00",
+  "commit_sha": "1588b34968622f15c8e5c22cc7fe2f34440e7684",
+  "baseline15_average": 4.08,
+  "core100_average": 4.21,
   "variants1000_average": 4.23,
+  "variants10000_average": 4.23,
   "variants1000_unsafe_flag_count": 0,
+  "variants10000_unsafe_flag_count": 0,
+  "variants10000_run_duration_seconds": 30.81,
+  "variants10000_run_scope": {
+    "limit": null,
+    "sample": null,
+    "families": null,
+    "requested_total": 10000
+  },
+  "generated_at": "2026-06-16T14:32:41.308177+00:00",
+  "static_mode_disclaimer": "No live LLM calls \u2014 static/rule mode scoring fixture or template scaffold outputs.",
+  "internal_quality_indicator_disclaimer": "Internal quality indicator, not a regulatory judgement. Scores are not inspection predictions or compliance determinations.",
   "unsafe_flags": {
     "baseline15": [],
     "core100": [],
-    "variants1000": []
+    "variants1000": [],
+    "variants10000": []
   },
   "weakest_categories": [
     "factual_accuracy_no_invention",

@@ -1,0 +1,145 @@
+"""Canonical ORB Residential recording principles — shared brain consolidation source.
+
+Runtime prompts and benchmark scaffolds should align to these principles.
+The JSON framework (`orb_recording_framework.json`) remains the structural SSOT for
+wording_discipline bullets and recording steps.
+"""
+
+from __future__ import annotations
+
+import json
+from functools import lru_cache
+from pathlib import Path
+from typing import Any
+
+_FRAMEWORK_PATH = Path(__file__).resolve().parent / "orb_recording_framework.json"
+
+# Core principle statements — referenced by scaffold, rubric traceability and tests.
+CHILD_CENTRED_PRINCIPLE = (
+    "For residential records, keep the child visible: what they said or showed, their presentation, "
+    "and their experience before, during and after adult support. "
+    "Separate observation from interpretation. Do not invent feelings."
+)
+
+ADULT_RESPONSE_PRINCIPLE = (
+    "For residential childcare records, make adult practice visible and specific. "
+    "Name what adults did first, how they communicated, and how they preserved dignity, safety and relationship. "
+    "Record space, choice, reassurance, co-regulation or repair where provided. "
+    "Note plans followed, oversight sought, and what appeared to help or not help. "
+    "Avoid vague 'staff supported' unless the support is described. "
+    "Do not invent actions not in the input — prompt for missing detail instead."
+)
+
+THERAPEUTIC_LANGUAGE_PRINCIPLE = (
+    "For residential records, use respectful, non-blaming therapeutic language. "
+    "Describe observable behaviour and presentation — not labels. "
+    "Separate observation from interpretation. "
+    "When rough input contains judgemental wording, reframe to factual, warm language "
+    "without inventing events. Adults remain responsible for final wording."
+)
+
+FACTUAL_ACCURACY_PRINCIPLE = (
+    "For residential childcare records, separate known facts from interpretation. "
+    "Preserve direct words where provided. Do not add unprovided facts, chronology, adult actions, "
+    "child feelings, outcomes or safeguarding escalation. "
+    "Use 'not stated', 'not yet known', 'requires clarification' or 'the record should confirm' "
+    "where information is missing. Turn missing information into prompts, not assumptions. "
+    "A safer record is honest about what is known, unknown and still to be reviewed."
+)
+
+OBSERVATION_VS_INTERPRETATION_PRINCIPLE = (
+    "For residential childcare records, separate what was observed, said, reported and reflected. "
+    "Use 'Staff observed…' for presentation; 'Child A said…' for direct words; "
+    "'It was reported that…' for reported information; 'appeared' or 'presented as' for observed presentation; "
+    "'may indicate', 'could suggest' or 'may have communicated' only as reflection, not fact. "
+    "Do not state motives, feelings, triggers, risk levels or safeguarding thresholds as facts unless provided. "
+    "Mark what is not known. Behaviour-as-communication is reflective, not diagnostic."
+)
+
+MANAGEMENT_OVERSIGHT_PRINCIPLE = (
+    "For residential childcare records, help adults consider management oversight — not replace it. "
+    "Prompt whether this is an isolated event or part of a pattern; whether plans or risk assessments need review; "
+    "whether the adult response was consistent with the agreed approach; whether a manager/senior should review; "
+    "whether supervision, debrief or practice learning is needed; and what follow-up remains. "
+    "Use 'manager/senior should consider reviewing…' not 'manager must conclude…'. "
+    "ORB supports oversight; it does not complete management oversight."
+)
+
+PATHWAY_DISCIPLINE_PRINCIPLE = (
+    "For residential childcare records, ORB should help adults consider the most proportionate pathway. "
+    "Pathways are for professional consideration — responsible adults/managers decide and act per local policy. "
+    "Use 'pathway to consider', 'routine follow-up / handover', 'senior or manager review', "
+    "'local safeguarding procedure', 'professional consultation where policy-led', "
+    "'urgent action if immediate risk is indicated', and 'responsible adult to decide'. "
+    "Record who was informed and what was agreed. Note what remains unresolved. "
+    "ORB must not say 'threshold met', 'referral required' or 'no concern' as a definitive decision."
+)
+
+PROFESSIONAL_JUDGEMENT_BOUNDARY = (
+    "Adults remain accountable for professional judgement, escalation and final records. "
+    "ORB supports reflection and recording; it is not a safeguarding or management decision."
+)
+
+INSPECTION_EVIDENCE_SUPPORT = (
+    "ORB may support inspection evidence preparation as an internal quality indicator. "
+    "It does not determine inspection outcomes, guarantee compliance or represent regulator endorsement."
+)
+
+# Named principle registry for consolidation tests and traceability.
+CANONICAL_PRINCIPLES: dict[str, str] = {
+    "child_centredness": CHILD_CENTRED_PRINCIPLE,
+    "adult_response": ADULT_RESPONSE_PRINCIPLE,
+    "therapeutic_language": THERAPEUTIC_LANGUAGE_PRINCIPLE,
+    "factual_accuracy": FACTUAL_ACCURACY_PRINCIPLE,
+    "observation_vs_interpretation": OBSERVATION_VS_INTERPRETATION_PRINCIPLE,
+    "management_oversight": MANAGEMENT_OVERSIGHT_PRINCIPLE,
+    "pathway_discipline": PATHWAY_DISCIPLINE_PRINCIPLE,
+    "professional_judgement": PROFESSIONAL_JUDGEMENT_BOUNDARY,
+    "inspection_evidence_support": INSPECTION_EVIDENCE_SUPPORT,
+}
+
+# Therapeutic phrase replacement — shared across scaffold and contract service.
+THERAPEUTIC_PHRASE_REPLACEMENTS: tuple[tuple[str, str], ...] = (
+    (r"\bcalmed down\b", "appeared calmer"),
+    (r"\battention[\s-]?seeking\b", "communicating distress"),
+    (r"\bmanipulative\b", "behaviour that may have communicated an unmet need"),
+    (r"\bkicked off\b", "became distressed"),
+    (r"\bnaughty\b", "distressed"),
+    (r"\bnon-?compliant\b", "found it difficult to follow the request"),
+)
+
+
+@lru_cache(maxsize=1)
+def load_framework() -> dict[str, Any]:
+    return json.loads(_FRAMEWORK_PATH.read_text(encoding="utf-8"))
+
+
+def structure_steps() -> list[str]:
+    return list(load_framework()["residential_recording_structure"]["steps"])
+
+
+def wording_discipline_bullets() -> list[str]:
+    return list(load_framework()["residential_recording_structure"]["wording_discipline"])
+
+
+def residential_recording_discipline_principles() -> list[str]:
+    """Condensed principles for therapeutic_language module — derived from framework SSOT."""
+    return wording_discipline_bullets()
+
+
+def validate_principle_alignment() -> list[str]:
+    """Return conflicts if canonical principles contradict framework bullets."""
+    issues: list[str] = []
+    bullets = " ".join(wording_discipline_bullets()).lower()
+    checks = [
+        ("child voice", "child_centredness"),
+        ("staff supported", "adult_response"),
+        ("not yet known", "factual_accuracy"),
+        ("pathway to consider", "pathway_discipline"),
+        ("manager/senior should consider", "management_oversight"),
+        ("may indicate", "observation_vs_interpretation"),
+    ]
+    for needle, key in checks:
+        if needle not in bullets:
+            issues.append(f"framework missing expected theme for {key}: {needle!r}")
+    return issues

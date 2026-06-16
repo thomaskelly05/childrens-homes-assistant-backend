@@ -1,0 +1,135 @@
+{
+  "generated_at": "2026-06-16T14:22:44.042451+00:00",
+  "scenario_count": 1000,
+  "average_output_length": 3206,
+  "shortest_output_length": 2277,
+  "longest_output_length": 3980,
+  "average_heading_count": 11.13,
+  "most_common_headings": [
+    {
+      "heading": "Observed / said / reported vs reflection",
+      "count": 1000
+    },
+    {
+      "heading": "Child voice / presentation",
+      "count": 1000
+    },
+    {
+      "heading": "Pathway to consider",
+      "count": 1000
+    },
+    {
+      "heading": "What happened",
+      "count": 711
+    },
+    {
+      "heading": "Known / gaps",
+      "count": 711
+    },
+    {
+      "heading": "What adults did to support",
+      "count": 711
+    },
+    {
+      "heading": "Dignity, relationship and child's experience",
+      "count": 711
+    },
+    {
+      "heading": "Outcome / follow-up",
+      "count": 711
+    },
+    {
+      "heading": "Management oversight / review",
+      "count": 589
+    },
+    {
+      "heading": "Impact on the child",
+      "count": 290
+    },
+    {
+      "heading": "What was said / observed",
+      "count": 289
+    },
+    {
+      "heading": "Immediate adult response",
+      "count": 289
+    }
+  ],
+  "phrase_frequency": {
+    "not yet known": 1534,
+    "responsible adult to decide": 1269,
+    "local safeguarding procedure": 477,
+    "management oversight": 1167,
+    "pathway to consider": 3233
+  },
+  "repeated_phrases": [
+    {
+      "phrase": "Observed / said / reported:",
+      "count": 1000
+    },
+    {
+      "phrase": "- Staff observed: see factual account and presentation above.",
+      "count": 1000
+    },
+    {
+      "phrase": "Possible meaning (reflection, not fact): further review may be needed to understand what the young person may have been communicating \u2014 do not state motives or feelings as facts.",
+      "count": 1000
+    },
+    {
+      "phrase": "What remains unknown: see Known / gaps above.",
+      "count": 1000
+    },
+    {
+      "phrase": "Pathway to consider (responsible adult to decide per local policy):",
+      "count": 1000
+    },
+    {
+      "phrase": "What remains unresolved: record outstanding actions and review owner.",
+      "count": 1000
+    },
+    {
+      "phrase": "Draft only \u2014 adult review required. This supports reflection and recording; it is not a safeguarding or management decision. Professional judgement and local policy apply.",
+      "count": 1000
+    },
+    {
+      "phrase": "Outcome: not stated \u2014 to be completed by the adult completing the record.",
+      "count": 736
+    },
+    {
+      "phrase": "Based on the information provided:",
+      "count": 711
+    },
+    {
+      "phrase": "Known / observed / reported: see factual account above.",
+      "count": 711
+    },
+    {
+      "phrase": "Record whether adults offered space, choice, reassurance or repair, and how dignity and relationship were preserved \u2014 only as actually provided. What changed for the young person before, during and after adult support \u2014 as observed, not assumed.",
+      "count": 711
+    },
+    {
+      "phrase": "What is not yet stated:",
+      "count": 665
+    },
+    {
+      "phrase": "Adult response detail not yet recorded. Complete with specific adult actions \u2014 how staff listened, what was offered, de-escalation or repair steps, and dignity-preserving choices \u2014 only as actually provided.",
+      "count": 661
+    },
+    {
+      "phrase": "**Prompt if missing:** What did adults do first? How did adults communicate? Did adults offer space, choice or reassurance? Avoid vague 'staff supported' unless the support is described.",
+      "count": 661
+    },
+    {
+      "phrase": "Wishes, feelings and views: not yet known \u2014 to be sought where appropriate.",
+      "count": 651
+    }
+  ],
+  "formulaic_marker_hits": {
+    "Draft only \u2014 adult review required": 1000,
+    "Professional judgement and local policy apply": 1000,
+    "as observed, not assumed": 711,
+    "only as actually provided": 1000,
+    "not yet known \u2014 to be completed": 251,
+    "Pathway to consider (responsible adult to decide": 1000
+  }
+}

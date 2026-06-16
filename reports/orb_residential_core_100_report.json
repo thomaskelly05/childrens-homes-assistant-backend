@@ -1,7 +1,7 @@
 {
   "baseline_version": "1.0.0",
-  "commit_sha": "2bb075b60d03ce14069618534cb51af8f3f5d759",
-  "run_timestamp": "2026-06-16T14:04:00.968360+00:00",
+  "commit_sha": "1588b34968622f15c8e5c22cc7fe2f34440e7684",
+  "run_timestamp": "2026-06-16T14:22:55.299209+00:00",
   "scenario_set": "core100",
   "mode": "static",
   "scenario_count": 100,
@@ -318,6 +318,13 @@
     "prohibited_claims": [],
     "internal_only_categories": [],
     "warning": "Scores are internal quality indicators aligned to recognised sources where mapped. They are not regulatory determinations, inspection predictions, or professional validation. Adults remain accountable for decisions, escalation and final records."
+  },
+  "run_duration_seconds": 0.26,
+  "run_scope": {
+    "limit": null,
+    "sample": null,
+    "families": null,
+    "requested_total": 100
   },
   "scenarios": [
     {
