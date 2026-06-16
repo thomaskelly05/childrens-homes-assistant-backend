@@ -1,7 +1,7 @@
 {
   "baseline_version": "1.0.0",
-  "commit_sha": "b9fd66ef9af4f3298821bb5448e1148b77b20abb",
-  "run_timestamp": "2026-06-15T22:40:09.825711+00:00",
+  "commit_sha": "2ac55e6dfcc3c91c13c3182d985258d27e7d8f06",
+  "run_timestamp": "2026-06-15T22:52:52.348966+00:00",
   "scenario_set": "baseline15",
   "mode": "static",
   "scenario_count": 15,
@@ -234,7 +234,46 @@
   ],
   "model_provider": null,
   "live_llm_disclaimer": "No live LLM calls \u2014 static/rule mode scoring fixture or template scaffold outputs.",
-  "disclaimer": "Internal IndiCare Intelligence baseline \u2014 not clinically validated. Fixture mode scores template/fixture behaviour, not live LLM performance unless live mode used.",
+  "disclaimer": "Internal IndiCare Intelligence baseline \u2014 not clinically validated. Source-mapped internal quality framework. Internal quality indicator, not a regulatory judgement. Fixture mode scores template/fixture behaviour, not live LLM performance unless live mode used.",
+  "traceability": {
+    "framework_claim": "Source-mapped internal quality framework",
+    "traceability_disclaimer": "Internal quality indicator, not a regulatory judgement. Aligned to recognised statutory, regulatory and professional sources where applicable.",
+    "source_count": 22,
+    "source_hierarchy": [
+      "statutory",
+      "regulator",
+      "professional",
+      "practice-informed",
+      "internal"
+    ],
+    "rubric_categories_total": 12,
+    "rubric_categories_externally_mapped": 12,
+    "rubric_categories_internal_only": 0,
+    "rubric_external_coverage_percent": 100.0,
+    "evidence_strength_summary": {
+      "high": 7,
+      "medium": 4,
+      "emerging": 1
+    },
+    "unsafe_flags_total": 11,
+    "unsafe_flags_with_external_basis": 11,
+    "scenario_required_elements_mapped": 10,
+    "scenario_required_elements_total": 10,
+    "scenario_prohibited_elements_mapped": 12,
+    "scenario_prohibited_elements_total": 12,
+    "scenario_families_mapped": 10,
+    "scenario_families_total": 10,
+    "approved_claims": [
+      "source-mapped internal quality framework",
+      "aligned to recognised statutory, regulatory and professional sources where applicable",
+      "internal quality indicator, not a regulatory judgement",
+      "supports professional reflection and safer recording",
+      "adults remain accountable for decisions, escalation and final records"
+    ],
+    "prohibited_claims": [],
+    "internal_only_categories": [],
+    "warning": "Scores are internal quality indicators aligned to recognised sources where mapped. They are not regulatory determinations, inspection predictions, or professional validation. Adults remain accountable for decisions, escalation and final records."
+  },
   "scenarios": [
     {
       "scenario_id": "baseline_daily_record",

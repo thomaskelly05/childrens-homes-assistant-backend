@@ -28,6 +28,9 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from assistant.evals.orb_external_framework_traceability import (  # noqa: E402
+    build_traceability_report_section,
+)
 from assistant.evals.orb_residential_quality_rubric import (  # noqa: E402
     BASELINE_VERSION,
     RUBRIC_CATEGORIES,
@@ -439,6 +442,8 @@ def build_report(
         else "Live mode used framework scaffold; not a full LLM generation pass."
     )
 
+    traceability = build_traceability_report_section()
+
     return {
         "baseline_version": BASELINE_VERSION,
         "commit_sha": _git_sha(),
@@ -466,8 +471,10 @@ def build_report(
         "live_llm_disclaimer": live_disclaimer,
         "disclaimer": (
             "Internal IndiCare Intelligence baseline — not clinically validated. "
+            "Source-mapped internal quality framework. Internal quality indicator, not a regulatory judgement. "
             "Fixture mode scores template/fixture behaviour, not live LLM performance unless live mode used."
         ),
+        "traceability": traceability,
         "scenarios": results,
     }
 
@@ -533,6 +540,42 @@ def render_markdown(report: dict[str, Any]) -> str:
         lines.extend(["", "## Recommended improvement targets", ""])
         for target in report["recommended_improvement_targets"]:
             lines.append(f"- {target}")
+
+    trace = report.get("traceability") or {}
+    if trace:
+        lines.extend(
+            [
+                "",
+                "## External framework traceability",
+                "",
+                f"> {trace.get('traceability_disclaimer', '')}",
+                "",
+                f"> {trace.get('warning', '')}",
+                "",
+                f"- **Framework claim:** {trace.get('framework_claim')}",
+                f"- **Registered sources:** {trace.get('source_count')}",
+                f"- **Rubric external coverage:** {trace.get('rubric_external_coverage_percent')}% "
+                f"({trace.get('rubric_categories_externally_mapped')}/{trace.get('rubric_categories_total')} categories)",
+                f"- **Unsafe flags with external basis:** "
+                f"{trace.get('unsafe_flags_with_external_basis')}/{trace.get('unsafe_flags_total')}",
+                f"- **Scenario required elements mapped:** "
+                f"{trace.get('scenario_required_elements_mapped')}/{trace.get('scenario_required_elements_total')}",
+                f"- **Scenario families mapped:** "
+                f"{trace.get('scenario_families_mapped')}/{trace.get('scenario_families_total')}",
+            ]
+        )
+        strength = trace.get("evidence_strength_summary") or {}
+        if strength:
+            lines.append("")
+            lines.append("### Evidence strength summary")
+            lines.append("")
+            for level, count in sorted(strength.items()):
+                lines.append(f"- **{level}:** {count} rubric categories")
+        internal_only = trace.get("internal_only_categories") or []
+        if internal_only:
+            lines.extend(["", "### Internal-only rubric categories", ""])
+            for cat in internal_only:
+                lines.append(f"- `{cat}`")
 
     comp = report.get("comparison_to_baseline15")
     if comp:
@@ -642,6 +685,8 @@ def update_quality_lab_summary(reports: dict[str, dict[str, Any]]) -> None:
         if targets:
             next_target = targets[0]
 
+    traceability_summary = build_traceability_report_section()
+
     summary = {
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "commit_sha": _git_sha(),
@@ -658,6 +703,10 @@ def update_quality_lab_summary(reports: dict[str, dict[str, Any]]) -> None:
         "recommended_next_target": next_target,
         "live_llm_disabled_in_ci": os.getenv("CI", "").strip().lower() in {"true", "1", "yes"}
         or not is_live_mode_requested(),
+        "traceability": traceability_summary,
+        "framework_claim": traceability_summary.get("framework_claim"),
+        "rubric_external_coverage_percent": traceability_summary.get("rubric_external_coverage_percent"),
+        "traceability_warning": traceability_summary.get("warning"),
     }
     QUALITY_LAB_SUMMARY_PATH.parent.mkdir(parents=True, exist_ok=True)
     QUALITY_LAB_SUMMARY_PATH.write_text(json.dumps(summary, indent=2), encoding="utf-8")
