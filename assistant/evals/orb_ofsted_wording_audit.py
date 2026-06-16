@@ -188,6 +188,27 @@ def is_allowlisted(path: Path) -> bool:
     return rel in ALLOWLIST_RELATIVE_PATHS
 
 
+PRODUCT_SCAN_SKIP_DIR_NAMES = frozenset(
+    {
+        ".next",
+        "node_modules",
+        ".turbo",
+        "dist",
+        "build",
+        ".cache",
+        "__pycache__",
+    }
+)
+
+
+def _should_skip_product_scan_path(path: Path) -> bool:
+    rel = _relative_path(path)
+    if "/fixtures/" in rel or rel.startswith("reports/"):
+        return True
+    parts = path.parts
+    return any(part in PRODUCT_SCAN_SKIP_DIR_NAMES for part in parts)
+
+
 def iter_product_scan_files() -> Iterable[Path]:
     for root_name in PRODUCT_SCAN_ROOTS:
         root = ROOT / root_name
@@ -200,9 +221,7 @@ def iter_product_scan_files() -> Iterable[Path]:
                 continue
             if is_allowlisted(path):
                 continue
-            # Skip eval fixtures and generated reports under assistant/
-            rel = _relative_path(path)
-            if "/fixtures/" in rel or rel.startswith("reports/"):
+            if _should_skip_product_scan_path(path):
                 continue
             yield path
 

@@ -93,7 +93,8 @@ export const ORB_MISSING_INFORMATION_GUIDANCE = {
   reflectivePrompts: [
     'What happened before?',
     'What did the child say or communicate?',
-    'How did adults respond?',
+    'What did adults do first to support, reassure or de-escalate?',
+    'How did adults preserve dignity, safety and relationship?',
     'Was anyone informed?',
     'Is follow-up or management oversight needed?'
   ],
@@ -102,7 +103,9 @@ export const ORB_MISSING_INFORMATION_GUIDANCE = {
     'Preserve uncertainty where information is missing.',
     'Separate known facts from interpretation and from gaps.',
     'Record behaviour as communication where appropriate.',
-    'Name adult actions specifically, not just “staff supported”.',
+    'Name adult actions specifically — how staff listened, what was offered, de-escalation and repair.',
+    'Avoid vague “staff supported”, “staff managed” or “staff dealt with it” unless specific actions follow.',
+    'If adult response is missing, prompt for it rather than fabricating actions.',
     'Include outcome and next steps where known.'
   ]
 } as const
@@ -118,6 +121,7 @@ const SHARED_PROMPTS = {
   therapeutic: [
     'What might this behaviour be communicating?',
     'What did adults do to help the child feel safe?',
+    'What did adults do first — listening, reassurance, space, choice or repair?',
     'Have we avoided blame, shame or judgemental wording?'
   ],
   factual: [
@@ -134,6 +138,7 @@ const SHARED_PROMPTS = {
     'Speculation presented as fact',
     'Changing direct quotes without adult approval',
     'Manipulative, attention-seeking, kicked off, non-compliant, bad behaviour',
+    'Vague staff supported / staff managed / staff dealt with it without specific adult actions',
     'No safeguarding concern / no further action needed without responsible adult review',
     'ORB making safeguarding or compliance decisions',
     'Diagnosis unless from an appropriate professional source',

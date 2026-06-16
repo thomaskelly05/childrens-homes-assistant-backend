@@ -10,7 +10,8 @@ export const ORB_REFLECTIVE_CAPTURE_PROMPTS: readonly string[] = [
   'What happened before?',
   'What did the child say, show or communicate?',
   'What was the child\'s presentation and mood?',
-  'How did adults respond in a way that preserved dignity, safety and relationship?',
+  'What did adults do first to support, reassure or de-escalate?',
+  'How did adults preserve dignity, safety and relationship?',
   'Was anyone informed?',
   'Is follow-up or management oversight needed?'
 ]

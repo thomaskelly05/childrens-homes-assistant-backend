@@ -43,7 +43,11 @@ _QUALITY_FIELD_PROMPTS: dict[str, str] = {
     ),
     "safeguarding": "Were there safeguarding concerns? What was seen, disclosed or suspected?",
     "manager_oversight": "Was a manager informed? Is manager review or sign-off needed?",
-    "staff_response": "What was the adult response and support offered?",
+    "staff_response": (
+        "What was the adult response and support offered? Name specific actions — "
+        "how staff listened, what was offered, de-escalation, repair or plan follow-through. "
+        "Avoid vague 'staff supported' unless support is described."
+    ),
     "factual_clarity": "Can you describe observable facts — what was seen and heard, by whom, when?",
     "non_judgemental_language": "Is the wording factual and respectful, without judgemental labels?",
     "chronology_relevance": "What was the sequence of events? Include approximate times.",

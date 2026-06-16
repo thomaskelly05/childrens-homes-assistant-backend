@@ -110,6 +110,27 @@ _CHILD_CENTRED_PRINCIPLE = (
     "Separate observation from interpretation. Do not invent feelings."
 )
 
+_ADULT_RESPONSE_PRINCIPLE = (
+    "For residential childcare records, make adult practice visible and specific. "
+    "Name what adults did first, how they communicated, and how they preserved dignity, safety and relationship. "
+    "Record space, choice, reassurance, co-regulation or repair where provided. "
+    "Note plans followed, oversight sought, and what appeared to help or not help. "
+    "Avoid vague 'staff supported' unless the support is described. "
+    "Do not invent actions not in the input — prompt for missing detail instead."
+)
+
+_ADULT_ACTION_CUE_PATTERN = re.compile(
+    r"\b(?:staff|key\s*worker|shift\s*lead|manager|adult)\s+"
+    r"(?:offered|listened|sat|used|gave|followed|informed|checked|respected|helped|supported|"
+    r"de[- ]?escalat\w*|reassured|recorded|handed|monitored|encouraged|calm\w*|validated)\b[^.]*",
+    re.I,
+)
+
+_ADULT_ACTION_FRAGMENT_PATTERN = re.compile(
+    r"\b(?:after|when|while)\s+staff\s+\w+",
+    re.I,
+)
+
 _DEFAULT_ESCALATION_GUIDANCE = (
     "Follow the home's safeguarding procedure and inform the appropriate senior/manager without delay. "
     "Record what was said or observed, who was informed and what action was taken. "
@@ -297,9 +318,12 @@ def build_child_voice_section(input_text: str, scenario: dict[str, Any] | None =
 def _magic_notes_missing_prompt(scenario: dict[str, Any], *, safeguarding: bool = False) -> str:
     parts = ["**Missing detail to complete:**"]
     input_text = str(scenario.get("input") or "")
-    if not _input_has_speech_cues(_clean_input_prefix(input_text)):
+    cleaned = _clean_input_prefix(input_text)
+    if not _input_has_speech_cues(cleaned):
         parts.append("What did the young person say or show? Record child voice where known.")
     parts.append("What was the child's presentation before, during and after adult support?")
+    if not _extract_adult_actions_from_input(cleaned):
+        parts.append("What did adults do to support, reassure or follow up? Name specific adult actions.")
     if safeguarding:
         parts.extend(
             [
@@ -320,17 +344,128 @@ def _is_magic_notes_variant(scenario: dict[str, Any]) -> bool:
     return variant in _MAGIC_NOTES_VARIANTS or feature == "Magic Notes" or family == "magic_notes"
 
 
-def _build_adult_response_line(scenario: dict[str, Any], input_text: str) -> str:
-    lower = input_text.lower()
-    if any(w in lower for w in ("staff offered", "staff listened", "staff sat", "staff respected", "de-escalat")):
-        return (
-            "Staff listened and responded within role as described in input. "
-            "Specific adult actions to be confirmed by practitioner where incomplete."
-        )
+def _extract_adult_actions_from_input(text: str) -> list[str]:
+    """Extract adult action sentences from input — no invention beyond what is stated."""
+    cleaned = _clean_input_prefix(sanitize_professional_judgement_phrases(text))
+    actions: list[str] = []
+    for match in _ADULT_ACTION_CUE_PATTERN.finditer(cleaned):
+        fragment = match.group(0).strip().rstrip(".,;")
+        if fragment and fragment not in actions:
+            actions.append(fragment)
+    if not actions:
+        for match in _ADULT_ACTION_FRAGMENT_PATTERN.finditer(cleaned):
+            fragment = match.group(0).strip().rstrip(".,;")
+            if fragment and fragment not in actions:
+                actions.append(fragment)
+    return actions[:4]
+
+
+def _format_extracted_adult_actions(actions: list[str]) -> str:
+    """Turn extracted input cues into rubric-aligned adult response wording."""
+    lines: list[str] = []
+    for action in actions:
+        normalised = action.strip()
+        if not normalised.lower().startswith("staff"):
+            normalised = f"Staff {normalised}"
+        if not normalised.endswith("."):
+            normalised += "."
+        lines.append(normalised)
+    return "\n".join(lines)
+
+
+def _adult_response_prompt_block() -> str:
+    """Prompt for missing adult detail — structural markers without inventing actions."""
     return (
-        "Staff responded supportively within role. "
-        "Specific actions: not stated unless provided — to be completed by practitioner."
+        "Adult response detail not yet recorded. Complete with specific adult actions — "
+        "how staff listened, what was offered, de-escalation or repair steps, and "
+        "dignity-preserving choices — only as actually provided.\n\n"
+        "**Prompt if missing:** What did adults do first? How did adults communicate? "
+        "Did adults offer space, choice or reassurance? Avoid vague 'staff supported' "
+        "unless the support is described."
     )
+
+
+def _build_adult_response_section(scenario: dict[str, Any], input_text: str) -> str:
+    """Build adult response section with specific actions from input or honest prompts."""
+    actions = _extract_adult_actions_from_input(input_text)
+    family = str(scenario.get("scenario_family") or "")
+    variant = str(scenario.get("variant_type") or "")
+    feature = str(scenario.get("feature_target") or "")
+
+    lines: list[str] = []
+
+    if actions:
+        lines.append("Immediate adult response as described in the factual account:")
+        lines.append(_format_extracted_adult_actions(actions))
+        lower_actions = " ".join(actions).lower()
+        if "de-escalat" not in lower_actions and family in {"incident_reflection", "behaviour_communication"}:
+            lines.append(
+                "De-escalation / reassurance / choice offered: complete from shift if applicable."
+            )
+        if family == "handover":
+            lines.append(
+                "Handover: record what staff already did and what the incoming adult should continue."
+            )
+    else:
+        lines.append(_adult_response_prompt_block())
+
+    if family == "safeguarding" or needs_safeguarding_escalation(scenario):
+        lines.append(
+            "Safeguarding adult response should include listening, reassurance, accurate recording, "
+            "who was informed and policy follow-through — only as actually provided. "
+            "Do not investigate beyond role."
+        )
+    elif family == "incident_reflection":
+        lines.append(
+            "Include calm response, space offered, de-escalation, repair and follow-up — "
+            "only as actually provided."
+        )
+    elif family == "behaviour_communication":
+        lines.append(
+            "Record co-regulation, curiosity, reduced demands, repair offered and whether "
+            "the support plan was followed — only as actually provided."
+        )
+    elif family == "handover":
+        lines.append(
+            "What staff already did to support, reassure or de-escalate, and what emotional "
+            "continuity the next adult should maintain."
+        )
+    elif family == "key_work":
+        lines.append(
+            "Record pace, choice, open questions and relationship-based support — "
+            "avoid pressure; only as actually provided."
+        )
+    elif family == "management_oversight":
+        lines.append(
+            "What adults did consistently, what leadership should review, and whether plans, "
+            "supervision or practice learning are needed."
+        )
+    elif family == "meetings":
+        lines.append(
+            "Home team adult response and agreed actions — not only process summary. "
+            "What did adults do to support the child?"
+        )
+    elif family == "regulation_evidence":
+        lines.append(
+            "Evidence of adult practice that improved safety, dignity, consistency or relationships — "
+            "not only events."
+        )
+    elif family == "daily_care":
+        lines.append(
+            "How adults noticed, checked in, and offered space, choice or routine support — "
+            "and what helped the young person settle or engage."
+        )
+
+    if variant in _MAGIC_NOTES_VARIANTS or feature == "Magic Notes" or family == "magic_notes":
+        if not actions:
+            lines.append("What did adults do to support, reassure or follow up?")
+
+    return "\n".join(lines)
+
+
+def _build_adult_response_line(scenario: dict[str, Any], input_text: str) -> str:
+    """Backward-compatible single-block adult response for tests referencing this helper."""
+    return _build_adult_response_section(scenario, input_text)
 
 
 def _build_outcome_line(input_text: str) -> str:
@@ -440,7 +575,11 @@ def build_high_risk_safeguarding_scaffold(scenario: dict[str, Any]) -> str:
             child_voice,
             "",
             "## Immediate adult response",
-            _build_adult_response_line(scenario, factual),
+            _build_adult_response_section(scenario, factual),
+            "",
+            "## How adults preserved dignity and relationship",
+            "Record whether adults avoided public discussion, offered private check-in, preserved choice "
+            "and maintained relationship — only as actually provided.",
             "",
             "## Safeguarding action / who was informed",
             escalation,
@@ -451,7 +590,7 @@ def build_high_risk_safeguarding_scaffold(scenario: dict[str, Any]) -> str:
             "## Outcome / current presentation",
             _build_outcome_line(factual),
             "",
-            "## Follow-up / review required",
+            "## Adult follow-up",
             "Follow-up and review required by responsible adult. "
             "If there is immediate risk, follow emergency safeguarding procedures.",
             magic_notes_prompt,
@@ -483,8 +622,12 @@ def build_child_centred_scaffold(scenario: dict[str, Any]) -> str:
     blocks.extend(
         [
             "",
-            "## Adult response",
-            _build_adult_response_line(scenario, factual),
+            "## What adults did to support",
+            _build_adult_response_section(scenario, factual),
+            "",
+            "## How adults preserved dignity and relationship",
+            "Record whether adults offered space, choice, reassurance or repair, and how dignity "
+            "and relationship were preserved — only as actually provided.",
             "",
             "## The child's experience",
             "What changed for the young person before, during and after adult support — "
@@ -514,3 +657,8 @@ def build_quality_lab_scaffold(scenario: dict[str, Any]) -> str:
 def child_centred_recording_principle() -> str:
     """Reusable child-centred recording principle for brain/framework sources."""
     return _CHILD_CENTRED_PRINCIPLE
+
+
+def adult_response_recording_principle() -> str:
+    """Reusable adult response recording principle for brain/framework sources."""
+    return _ADULT_RESPONSE_PRINCIPLE
