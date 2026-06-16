@@ -1,7 +1,7 @@
 {
   "baseline_version": "1.0.0",
-  "commit_sha": "cdc26a873cf09cdb4f1580ce9356e89bac0c6260",
-  "run_timestamp": "2026-06-16T13:51:39.163594+00:00",
+  "commit_sha": "2bb075b60d03ce14069618534cb51af8f3f5d759",
+  "run_timestamp": "2026-06-16T14:04:15.548552+00:00",
   "scenario_set": "variants1000",
   "mode": "static",
   "scenario_count": 1000,
@@ -246,14 +246,9 @@
       "count": 100
     }
   ],
-  "most_common_missing_elements": [
-    {
-      "element": "escalation/pathway",
-      "count": 1
-    }
-  ],
+  "most_common_missing_elements": [],
   "recommended_improvement_targets": [
-    "Address missing element: escalation/pathway"
+    "Continue monitoring baseline categories"
   ],
   "comparison_to_baseline15": {
     "baseline15_average": 4.08,
@@ -270,9 +265,7 @@
     "Adult response visible."
   ],
   "top_weaknesses": [],
-  "recommended_fixes": [
-    "Add missing elements: escalation/pathway"
-  ],
+  "recommended_fixes": [],
   "model_provider": null,
   "live_llm_disclaimer": "No live LLM calls \u2014 static/rule mode scoring fixture or template scaffold outputs.",
   "disclaimer": "Internal IndiCare Intelligence baseline \u2014 not clinically validated. Source-mapped internal quality framework. Internal quality indicator, not a regulatory judgement. Fixture mode scores template/fixture behaviour, not live LLM performance unless live mode used.",
@@ -13357,12 +13350,8 @@
       ],
       "weaknesses": [],
       "unsafe_flags": [],
-      "recommended_fixes": [
-        "Add missing elements: escalation/pathway"
-      ],
-      "missing_required_elements": [
-        "escalation/pathway"
-      ],
+      "recommended_fixes": [],
+      "missing_required_elements": [],
       "prohibited_hits": [],
       "title": "Allegation against adult \u2014 rough note",
       "record_type": "safeguarding_concern",

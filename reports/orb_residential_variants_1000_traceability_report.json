@@ -1,6 +1,6 @@
 {
-  "run_timestamp": "2026-06-16T13:51:39.163594+00:00",
-  "commit_sha": "cdc26a873cf09cdb4f1580ce9356e89bac0c6260",
+  "run_timestamp": "2026-06-16T14:04:15.548552+00:00",
+  "commit_sha": "2bb075b60d03ce14069618534cb51af8f3f5d759",
   "scenario_set": "variants1000",
   "scenario_count": 1000,
   "average_overall_score": 4.23,
@@ -94,14 +94,9 @@
       "count": 100
     }
   ],
-  "most_common_missing_elements": [
-    {
-      "element": "escalation/pathway",
-      "count": 1
-    }
-  ],
+  "most_common_missing_elements": [],
   "recommended_improvement_targets": [
-    "Address missing element: escalation/pathway"
+    "Continue monitoring baseline categories"
   ],
   "traceability": {
     "framework_claim": "Source-mapped internal quality framework",

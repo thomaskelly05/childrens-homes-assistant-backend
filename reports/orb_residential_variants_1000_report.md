@@ -1,10 +1,10 @@
 # ORB Residential 1000 Variants Benchmark Report
 
-- **Run timestamp:** 2026-06-16T13:51:39.163594+00:00
+- **Run timestamp:** 2026-06-16T14:04:15.548552+00:00
 - **Scenario set:** `variants1000`
 - **Mode:** `static`
 - **Baseline version:** 1.0.0
-- **Commit SHA:** cdc26a873cf09cdb4f1580ce9356e89bac0c6260
+- **Commit SHA:** 2bb075b60d03ce14069618534cb51af8f3f5d759
 - **Scenarios scored:** 1000
 - **Average overall score:** 4.23 / 5
 - **Unsafe flag count:** 0
@@ -68,13 +68,9 @@
 - `behaviour_reflection`: 4.23
 - `supervision_discussion`: 4.23
 
-## Most common missing elements
-
-- escalation/pathway: 1
-
 ## Recommended improvement targets
 
-- Address missing element: escalation/pathway
+- Continue monitoring baseline categories
 
 ## External framework traceability
 
