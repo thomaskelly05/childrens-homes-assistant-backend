@@ -22,7 +22,7 @@ export const ORB_RECORD_ONLY_OUTPUT_PRINCIPLE =
   'When the user asks ORB to create a record, return the record only. Do not add commentary before or after the record unless the user explicitly asks why the wording is better.'
 
 export const ORB_CHILD_VOICE_DISCIPLINE =
-  "Preserve the child's direct words exactly — do not paraphrase or interpret them as fact. Avoid 'This indicates…' after direct quotes in simple daily records."
+  "Preserve the child's direct words exactly — do not paraphrase or interpret them as fact. Avoid 'This indicates…' or 'This statement indicated…' after direct quotes in simple daily records. Do not create a separate Child Voice section in simple daily records."
 
 export const ORB_EMOTIONAL_IMPACT_DISCIPLINE =
   "Describe adult actions without claiming internal emotional impact unless the child said it or it was directly observed. Do not write that an adult's approach made the child feel safe, supported, reassured or regulated unless the child directly said this. Do not write 'feel safe and comfortable' or 'felt supported' unless supported by input — describe what the adult did and what was observed instead."
@@ -31,7 +31,7 @@ export const ORB_OUTCOME_INTERPRETATION_DISCIPLINE =
   "Keep observed outcomes observed. Do not add 'indicating a positive shift in mood' or 'showing emotional regulation' — use observed presentation such as 'appeared calmer'."
 
 export const ORB_SENTENCE_PUNCTUATION_DISCIPLINE =
-  'Use complete sentences in records. Do not join separate record sentences together without punctuation.'
+  'Use complete sentences in records. Do not join separate record sentences together without punctuation. Do not insert a full stop before Child A when Child A is the object of a verb or preposition (gave Child A, offered Child A, checked in with Child A).'
 
 export const ORB_INTERPRETIVE_FEELINGS_DISCIPLINE =
   "Do not use 'In response to Child A's feelings' unless the child directly stated a feeling. Prefer 'In response,' followed by the adult action."
@@ -126,7 +126,7 @@ const SELF_COMMENTARY_STARTERS = [
 ]
 
 const CHILD_QUOTE_INTERPRETATION_RE =
-  /(["'][\s\S]*?["'])\.?\s+(?:This|That)\s+(?:indicates?|suggests?|shows?|demonstrates?|may indicate|could suggest|reflects?|reveals?)\s+[^.!?]*[.!?]/gi
+  /(["'][\s\S]*?["'])\.?\s+(?:This|That)\s+(?:statement\s+)?(?:indicates?|indicated|suggests?|suggested|shows?|showed|demonstrates?|demonstrated|may indicate|could suggest|reflects?|reveals?)\s+[^.!?]*[.!?]/gi
 
 const INVENTED_EMOTIONAL_IMPACT_RES = [
   /\b(?:this approach|the approach) allowed\b[^.!?]*\b(?:feel|felt)\s+(?:safe|comfortable|supported|reassured|calm|secure)\b[^.!?]*[.!?]/gi,
@@ -218,6 +218,17 @@ const INTERPRETIVE_FEELINGS_RES: Array<{ label: string; pattern: RegExp }> = [
   }
 ]
 
+const BROKEN_CHILD_OBJECT_REPAIRS: Array<{ pattern: RegExp; replacement: string }> = [
+  { pattern: /\bgave\.\s+Child\s+([A-Z])\b/gi, replacement: 'gave Child $1' },
+  { pattern: /\boffered\.\s+Child\s+([A-Z])\b/gi, replacement: 'offered Child $1' },
+  { pattern: /\bwith\.\s+Child\s+([A-Z])\b/gi, replacement: 'with Child $1' },
+  { pattern: /\bwhile\.\s+Child\s+([A-Z])\b/gi, replacement: 'while Child $1' },
+  { pattern: /\bthat\.\s+Child\s+([A-Z])\b/gi, replacement: 'that Child $1' },
+  { pattern: /\band\.\s+Child\s+([A-Z])\b/gi, replacement: 'and Child $1' },
+  { pattern: /\bsupport\.\s+Child\s+([A-Z])\b/gi, replacement: 'support Child $1' },
+  { pattern: /\bto\.\s+Child\s+([A-Z])\b/gi, replacement: 'to Child $1' }
+]
+
 const ADULT_LABEL_BOUNDARY_RE = /(?<=[a-z\d"\)])(?<![A-Z])\s+(Adult\s+[A-Z]{1,3})\b/g
 const QUOTE_ADULT_BOUNDARY_RE =
   /((?:said|shared|stated|communicated),?\s*["'][^"']*["'])\s+(Adult\s+[A-Z]{1,3}\b)/gi
@@ -225,7 +236,29 @@ const TRANSITION_BOUNDARY_RES = [
   /(?<=[a-z])\s+(Later,)\s*/g,
   /(?<=[a-z])\s+(During this time,)\s*/gi
 ]
-const CHILD_SUBJECT_BOUNDARY_RE = /(?<=[a-z"\)])(?<![A-Z])\s+(Child\s+[A-Z])\b/g
+
+const ACCEPTED_TOAST_CHILD_BOUNDARY_RE = /(accepted the toast)\s+(Child\s+[A-Z])\b/gi
+
+const EXPLANATORY_DAILY_RECORD_CLAUSE_RES = [
+  /,?\s*(?:This|That)\s+statement\s+indicated\b[^.!?]*[.!?]?/gi,
+  /,?\s*(?:This|That)\s+(?:indicates?|indicated|suggests?|suggested)\b[^.!?]*[.!?]?/gi,
+  /,?\s*\bprocessing\s+some\s+feelings\b[^.!?]*[.!?]?/gi,
+  /,?\s*\bfeelings\s+related\s+to\b[^.!?]*[.!?]?/gi,
+  /,?\s*This\s+provided\s+a\s+calm\s+and\s+supportive\s+environment\b[.!?]?/gi,
+  /,?\s*This\s+approach\s+aims\b[^.!?]*[.!?]?/gi,
+  /,?\s*\bencourage\s+open\s+communication\b[^.!?]?/gi,
+  /,?\s*Child\s+[A-Z]'s\s+emotional\s+needs\b[^.!?]*[.!?]?/gi,
+  /,?\s*\bto\s+see\s+how\s+they\s+were\s+feeling\b[.!?]?/gi,
+  /,?\s*Child\s+[A-Z]\s+was\s*$/gi
+]
+
+const ORPHAN_FRAGMENT_CLEANUP_RES = [/\bChild\s+[A-Z]\s+was\s*\.?\s*$/gim, /\bthat\.\s*$/gim]
+
+const EXPLANATORY_INLINE_BOUNDARY_RES = [
+  /(watched television)\s+(This)\b/gi,
+  /(to talk)\s+(This)\b/gi,
+  /(environment)\s+(Child)\b/gi
+]
 const WATCHED_TV_CHILD_BOUNDARY_RE = /(watched television)\s+(Child\s+[A-Z])\b/gi
 const WATCHED_TV_SHORT_CHILD_BOUNDARY_RE = /(watched TV)\s+(Child\s+[A-Z])\b/gi
 const ACCEPTED_TOAST_BEFORE_BEDTIME_RE = /(accepted the toast)\s+(Before\s+bedtime)\b/gi
@@ -325,7 +358,9 @@ export function sanitizeObservationInterpretationLanguage(text: string, sourceTe
     .replace(/\bwas relaxed\b/gi, bedtimeTiming ? 'appeared calmer before bedtime' : 'appeared calmer')
     .replace(/\bseemed calmer\b/gi, bedtimeTiming ? 'appeared calmer before bedtime' : 'appeared calmer')
     .replace(/\bseemed more settled\b/gi, bedtimeTiming ? 'appeared calmer before bedtime' : 'appeared calmer')
+    .replace(/\bappeared more settled\b/gi, bedtimeTiming ? 'appeared calmer before bedtime' : 'appeared calmer')
     .replace(/\bappeared more relaxed\b/gi, bedtimeTiming ? 'appeared calmer before bedtime' : 'appeared calmer')
+    .replace(/\bappeared relaxed\b/gi, bedtimeTiming ? 'appeared calmer before bedtime' : 'appeared calmer')
     .replace(/\bappeared settled emotionally\b/gi, bedtimeTiming ? 'appeared calmer before bedtime' : 'appeared calmer')
 }
 
@@ -356,14 +391,25 @@ export function stripUnsupportedTimelineExpansion(text: string, sourceText = '')
     .trim()
 }
 
-function repairSentenceBoundariesInLine(line: string): string {
+function repairBrokenChildObjectPunctuation(line: string): string {
   let result = String(line || '')
+  for (const { pattern, replacement } of BROKEN_CHILD_OBJECT_REPAIRS) {
+    result = result.replace(pattern, replacement)
+  }
+  return result
+}
+
+function repairSentenceBoundariesInLine(line: string): string {
+  let result = repairBrokenChildObjectPunctuation(line)
   result = result.replace(QUOTE_ADULT_BOUNDARY_RE, '$1. $2')
   result = result.replace(/\bwatched TV\b/gi, 'watched television')
   result = result.replace(WATCHED_TV_SHORT_CHILD_BOUNDARY_RE, '$1. $2')
   result = result.replace(WATCHED_TV_CHILD_BOUNDARY_RE, '$1. $2')
   result = result.replace(ACCEPTED_TOAST_BEFORE_BEDTIME_RE, '$1. $2')
-  result = result.replace(CHILD_SUBJECT_BOUNDARY_RE, '. $1')
+  result = result.replace(ACCEPTED_TOAST_CHILD_BOUNDARY_RE, '$1. $2')
+  for (const pattern of EXPLANATORY_INLINE_BOUNDARY_RES) {
+    result = result.replace(pattern, '$1. $2')
+  }
   result = result.replace(ADULT_LABEL_BOUNDARY_RE, '. $1')
   for (const pattern of TRANSITION_BOUNDARY_RES) {
     result = result.replace(pattern, '. $1 ')
@@ -453,6 +499,53 @@ export function stripTrailingSelfCommentary(text: string, sourceText = ''): stri
     break
   }
   return paragraphs.join('\n\n').trim()
+}
+
+function trimExplanatoryClauses(sentence: string): string {
+  let result = String(sentence || '')
+  for (const pattern of EXPLANATORY_DAILY_RECORD_CLAUSE_RES) {
+    result = result.replace(pattern, '')
+  }
+  return result.replace(/\s{2,}/g, ' ').trim().replace(/[ ,;.]+$/, '')
+}
+
+export function stripExplanatoryDailyRecordPhrases(text: string, sourceText = ''): string {
+  if (hasSafeguardingCue(sourceText) || userExplicitlyRequestsExplanation(sourceText)) return String(text || '')
+  if (!isDailyRecordRequest(sourceText)) return String(text || '')
+  const paragraphs = String(text || '').split(/\n\s*\n/)
+  const cleaned: string[] = []
+  for (const paragraph of paragraphs) {
+    const stripped = paragraph.trim()
+    if (!stripped) continue
+    if (
+      stripped.startsWith('#') ||
+      /^(?:Presentation and Support|Adult Response|Outcome|Daily Record)(?:\s*\/\s*Handover)?\s*:?\s*$/i.test(
+        stripped
+      )
+    ) {
+      cleaned.push(stripped)
+      continue
+    }
+    const kept = stripped
+      .split(/(?<=[.!?])\s+/)
+      .map((sentence) => trimExplanatoryClauses(sentence))
+      .filter((sentence) => {
+        if (!sentence) return false
+        if (
+          /\bemotional\s+state\b/i.test(sentence) &&
+          !String(sourceText || '').toLowerCase().includes('emotional state')
+        ) {
+          return false
+        }
+        return true
+      })
+    if (kept.length) cleaned.push(kept.join(' '))
+  }
+  let result = cleaned.join('\n\n').replace(/\n{3,}/g, '\n\n').trim()
+  for (const pattern of ORPHAN_FRAGMENT_CLEANUP_RES) {
+    result = result.replace(pattern, '')
+  }
+  return result.replace(/\n{3,}/g, '\n\n').trim()
 }
 
 export function stripChildQuoteInterpretation(text: string, sourceText = ''): string {
@@ -768,17 +861,21 @@ export function sanitizeLiveRecordOutput(text: string, sourceText = ''): string 
   if (isDailyRecordRequest(sourceText) && !hasSafeguardingCue(sourceText)) {
     const preserveActionPlan = userRequestedActionPlanOrEndMarker(sourceText)
     cleaned = cleaned
-      .replace(/^#+\s*Safeguarding\s+Note\s*$/gim, '')
-      .replace(/^#+\s*Child(?:'s|\s)Voice(?:\s*\/\s*Presentation)?\s*$/gim, '')
+      .replace(/^(?:#+\s*)?Safeguarding\s+Note\s*:?\s*$/gim, '')
+      .replace(/^(?:#+\s*)?Child(?:'s|\s)Voice(?:\s*\/\s*Presentation)?\s*:?\s*$/gim, '')
+      .replace(/^(?:#+\s*)?Professional\s+Reflection\s*:?\s*$/gim, '')
+      .replace(/^(?:#+\s*)?Quality\s+Assurance\s+Note\s*:?\s*$/gim, '')
+      .replace(/^(?:#+\s*)?Compliance\s+Note\s*:?\s*$/gim, '')
     if (!preserveActionPlan) {
       cleaned = cleaned
-        .replace(/^#+\s*Next\s+Steps\s*$/gim, '')
-        .replace(/^#+\s*Follow-up(?:\s+for\s+next\s+shift)?\s*$/gim, '')
+        .replace(/^(?:#+\s*)?Next\s+Steps\s*:?\s*$/gim, '')
+        .replace(/^(?:#+\s*)?Follow-up(?:\s+for\s+next\s+shift)?\s*:?\s*$/gim, '')
     }
     cleaned = cleaned.replace(/\n{3,}/g, '\n\n').trim()
   }
 
   cleaned = stripChildQuoteInterpretation(cleaned, sourceText)
+  cleaned = stripExplanatoryDailyRecordPhrases(cleaned, sourceText)
   cleaned = stripInventedEmotionalImpact(cleaned, sourceText)
   cleaned = stripOutcomeInterpretation(cleaned, sourceText)
   cleaned = sanitizeObservationInterpretationLanguage(cleaned, sourceText)

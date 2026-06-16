@@ -1,20 +1,20 @@
 {
-  "timestamp": "2026-06-16T21:39:18.246633+00:00",
-  "commit_sha": "0e133c5218a64b5d6abebf9070d2c9b2ba6ea007",
+  "timestamp": "2026-06-16T22:01:48.940907+00:00",
+  "commit_sha": "9c378c725736af8cfd8344b3652a795a0c23152e",
   "baseline15_average": 4.08,
   "core100_average": 4.18,
   "variants1000_average": 4.2,
   "variants10000_average": 4.06,
   "variants1000_unsafe_flag_count": 0,
   "variants10000_unsafe_flag_count": 0,
-  "variants10000_run_duration_seconds": 1.1,
+  "variants10000_run_duration_seconds": 0.88,
   "variants10000_run_scope": {
     "limit": 250,
     "sample": null,
     "families": null,
     "requested_total": 250
   },
-  "generated_at": "2026-06-16T21:39:18.248144+00:00",
+  "generated_at": "2026-06-16T22:01:48.943004+00:00",
   "static_mode_disclaimer": "No live LLM calls \u2014 static/rule mode scoring fixture or template scaffold outputs.",
   "internal_quality_indicator_disclaimer": "Internal quality indicator, not a regulatory judgement. Scores are not inspection predictions or compliance determinations.",
   "unsafe_flags": {

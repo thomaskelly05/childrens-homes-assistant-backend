@@ -53,7 +53,8 @@ RECORD_ONLY_OUTPUT_PRINCIPLE = (
 CHILD_VOICE_DISCIPLINE_PRINCIPLE = (
     "Preserve the child's direct words exactly — do not paraphrase, expand or interpret them as fact. "
     "Do not add motive, diagnosis, emotional conclusion or professional judgement after a direct quote. "
-    "Avoid 'This indicates…' or similar after the child's words in simple daily records. "
+    "Avoid 'This indicates…', 'This statement indicated…' or similar after the child's words in simple daily records. "
+    "Do not create a separate Child Voice section in simple daily records — weave quotes naturally into the narrative. "
     "If reflection is needed, use cautious wording such as 'may suggest' and mark what is not confirmed."
 )
 
@@ -74,7 +75,9 @@ OUTCOME_INTERPRETATION_DISCIPLINE_PRINCIPLE = (
 
 SENTENCE_PUNCTUATION_DISCIPLINE_PRINCIPLE = (
     "Use complete sentences in records. Do not join separate record sentences together without punctuation. "
-    "End each factual sentence with a full stop before the next adult action, transition or child quote."
+    "End each factual sentence with a full stop before the next adult action, transition or child quote. "
+    "Do not insert a full stop before Child A when Child A is the object of a verb or preposition "
+    "(for example gave Child A space, offered Child A toast, checked in with Child A, sat nearby while Child A)."
 )
 
 INTERPRETIVE_FEELINGS_DISCIPLINE_PRINCIPLE = (
@@ -226,8 +229,8 @@ _SELF_COMMENTARY_STARTERS: tuple[str, ...] = (
 )
 
 _CHILD_QUOTE_INTERPRETATION_RE = re.compile(
-    r'(["\'][\s\S]*?["\'])\.?\s+(?:This|That)\s+(?:indicates?|suggests?|shows?|demonstrates?|may\s+indicate|'
-    r"could\s+suggest|reflects?|reveals?)\s+[^.!?]*[.!?]",
+    r'(["\'][\s\S]*?["\'])\.?\s+(?:This|That)\s+(?:statement\s+)?(?:indicates?|indicated|suggests?|suggested|'
+    r"shows?|showed|demonstrates?|demonstrated|may\s+indicate|could\s+suggest|reflects?|reveals?)\s+[^.!?]*[.!?]",
     re.I,
 )
 
@@ -354,9 +357,11 @@ _OBSERVATION_INTERPRETATION_REPLACEMENTS: tuple[tuple[re.Pattern[str], str], ...
     (re.compile(r"\bmood\s+seemed\s+better\b", re.I), "appeared calmer"),
     (re.compile(r"\bseemed\s+more\s+relaxed\b", re.I), "appeared calmer"),
     (re.compile(r"\bseemed\s+relaxed\b", re.I), "appeared calmer"),
+    (re.compile(r"\bappeared\s+relaxed\b", re.I), "appeared calmer"),
     (re.compile(r"\bwas\s+relaxed\b", re.I), "appeared calmer"),
     (re.compile(r"\bseemed\s+calmer\b", re.I), "appeared calmer"),
     (re.compile(r"\bseemed\s+more\s+settled\b", re.I), "appeared calmer"),
+    (re.compile(r"\bappeared\s+more\s+settled\b", re.I), "appeared calmer"),
     (re.compile(r"\bappeared\s+more\s+relaxed\b", re.I), "appeared calmer"),
     (re.compile(r"\bappeared\s+settled\s+emotionally\b", re.I), "appeared calmer"),
 )
@@ -425,8 +430,32 @@ _TRANSITION_BOUNDARY_RES: tuple[re.Pattern[str], ...] = (
     re.compile(r"(?<=[a-z])\s+(Later,)\s*"),
     re.compile(r"(?<=[a-z])\s+(During this time,)\s*", re.I),
 )
-_CHILD_SUBJECT_BOUNDARY_RE = re.compile(
-    r'(?<=[a-z"\)])(?<![A-Z])\s+(Child\s+[A-Z])\b'
+_CHILD_OBJECT_PROTECTED_PHRASE_RES: tuple[re.Pattern[str], ...] = (
+    re.compile(r"\bchecked\s+in\s+(?:gently\s+)?with\s+Child\s+[A-Z]\b", re.I),
+    re.compile(r"\bcheck\s+in\s+gently\s+with\s+Child\s+[A-Z]\b", re.I),
+    re.compile(r"\bsat\s+nearby\s+while\s+Child\s+[A-Z]\b", re.I),
+    re.compile(r"\bhanded\s+over\b[^.!?]*?\bwith\s+Child\s+[A-Z]\b", re.I),
+    re.compile(r"\blistened\s+to\s+Child\s+[A-Z]\b", re.I),
+    re.compile(r"\bgave\s+Child\s+[A-Z]\b", re.I),
+    re.compile(r"\boffered\s+Child\s+[A-Z]\b", re.I),
+    re.compile(r"\bsupport(?:ed)?\s+Child\s+[A-Z]\b", re.I),
+    re.compile(r"\breassured\s+Child\s+[A-Z]\b", re.I),
+    re.compile(r"\backnowledged\s+Child\s+[A-Z]\b", re.I),
+)
+
+_BROKEN_CHILD_OBJECT_REPAIRS: tuple[tuple[re.Pattern[str], str], ...] = (
+    (re.compile(r"\bgave\.\s+Child\s+([A-Z])\b", re.I), r"gave Child \1"),
+    (re.compile(r"\boffered\.\s+Child\s+([A-Z])\b", re.I), r"offered Child \1"),
+    (re.compile(r"\bwith\.\s+Child\s+([A-Z])\b", re.I), r"with Child \1"),
+    (re.compile(r"\bwhile\.\s+Child\s+([A-Z])\b", re.I), r"while Child \1"),
+    (re.compile(r"\bthat\.\s+Child\s+([A-Z])\b", re.I), r"that Child \1"),
+    (re.compile(r"\band\.\s+Child\s+([A-Z])\b", re.I), r"and Child \1"),
+    (re.compile(r"\bsupport\.\s+Child\s+([A-Z])\b", re.I), r"support Child \1"),
+    (re.compile(r"\bto\.\s+Child\s+([A-Z])\b", re.I), r"to Child \1"),
+)
+
+_ACCEPTED_TOAST_CHILD_BOUNDARY_RE = re.compile(
+    r"(accepted the toast)\s+(Child\s+[A-Z])\b", re.I
 )
 _WATCHED_TV_CHILD_BOUNDARY_RE = re.compile(
     r"(watched television)\s+(Child\s+[A-Z])\b", re.I
@@ -491,13 +520,37 @@ _DSL_DEFAULT_REPLACEMENTS: tuple[tuple[re.Pattern[str], str], ...] = (
 )
 
 _UNNECESSARY_DAILY_SECTION_HEADINGS: tuple[re.Pattern[str], ...] = (
-    re.compile(r"^#+\s*Safeguarding\s+Note\s*$", re.I | re.M),
-    re.compile(r"^#+\s*Child(?:'s|\s)Voice(?:\s*/\s*Presentation)?\s*$", re.I | re.M),
-    re.compile(r"^#+\s*Next\s+Steps\s*$", re.I | re.M),
-    re.compile(r"^#+\s*Professional\s+Reflection\s*$", re.I | re.M),
-    re.compile(r"^#+\s*Quality\s+Assurance\s+Note\s*$", re.I | re.M),
-    re.compile(r"^#+\s*Compliance\s+Note\s*$", re.I | re.M),
-    re.compile(r"^#+\s*Follow-up(?:\s+for\s+next\s+shift)?\s*$", re.I | re.M),
+    re.compile(r"^(?:#+\s*)?Safeguarding\s+Note\s*:?\s*$", re.I | re.M),
+    re.compile(r"^(?:#+\s*)?Child(?:'s|\s)Voice(?:\s*/\s*Presentation)?\s*:?\s*$", re.I | re.M),
+    re.compile(r"^(?:#+\s*)?Next\s+Steps\s*:?\s*$", re.I | re.M),
+    re.compile(r"^(?:#+\s*)?Professional\s+Reflection\s*:?\s*$", re.I | re.M),
+    re.compile(r"^(?:#+\s*)?Quality\s+Assurance\s+Note\s*:?\s*$", re.I | re.M),
+    re.compile(r"^(?:#+\s*)?Compliance\s+Note\s*:?\s*$", re.I | re.M),
+    re.compile(r"^(?:#+\s*)?Follow-up(?:\s+for\s+next\s+shift)?\s*:?\s*$", re.I | re.M),
+)
+
+_EXPLANATORY_DAILY_RECORD_CLAUSE_RES: tuple[re.Pattern[str], ...] = (
+    re.compile(r",?\s*(?:This|That)\s+statement\s+indicated\b[^.!?]*[.!?]?", re.I),
+    re.compile(r",?\s*(?:This|That)\s+(?:indicates?|indicated|suggests?|suggested)\b[^.!?]*[.!?]?", re.I),
+    re.compile(r",?\s*\bprocessing\s+some\s+feelings\b[^.!?]*[.!?]?", re.I),
+    re.compile(r",?\s*\bfeelings\s+related\s+to\b[^.!?]*[.!?]?", re.I),
+    re.compile(r",?\s*This\s+provided\s+a\s+calm\s+and\s+supportive\s+environment\b[.!?]?", re.I),
+    re.compile(r",?\s*This\s+approach\s+aims\b[^.!?]*[.!?]?", re.I),
+    re.compile(r",?\s*\bencourage\s+open\s+communication\b[^.!?]?", re.I),
+    re.compile(r",?\s*Child\s+[A-Z]'s\s+emotional\s+needs\b[^.!?]*[.!?]?", re.I),
+    re.compile(r",?\s*\bto\s+see\s+how\s+they\s+were\s+feeling\b[.!?]?", re.I),
+    re.compile(r",?\s*Child\s+[A-Z]\s+was\s*$", re.I),
+)
+
+_ORPHAN_FRAGMENT_CLEANUP_RES: tuple[re.Pattern[str], ...] = (
+    re.compile(r"\bChild\s+[A-Z]\s+was\s*\.?\s*$", re.I | re.M),
+    re.compile(r"\bthat\.\s*$", re.I | re.M),
+)
+
+_EXPLANATORY_INLINE_BOUNDARY_RES: tuple[re.Pattern[str], ...] = (
+    re.compile(r"(watched television)\s+(This)\b", re.I),
+    re.compile(r"(to talk)\s+(This)\b", re.I),
+    re.compile(r"(environment)\s+(Child)\b", re.I),
 )
 
 _SAFEGUARDING_CUE_PATTERN = re.compile(
@@ -1054,15 +1107,71 @@ def strip_end_of_record_artefacts(text: str, *, source_text: str = "") -> str:
     return result.rstrip()
 
 
+def _trim_explanatory_clauses(sentence: str) -> str:
+    """Remove explanatory AI clauses while preserving factual narrative lead-in."""
+    result = str(sentence or "")
+    for pattern in _EXPLANATORY_DAILY_RECORD_CLAUSE_RES:
+        result = pattern.sub("", result)
+    return re.sub(r"\s{2,}", " ", result).strip(" ,;.")
+
+
+def strip_explanatory_daily_record_phrases(text: str, *, source_text: str = "") -> str:
+    """Remove explanatory AI commentary from simple daily records unless safeguarding cues present."""
+    if has_safeguarding_cue(source_text) or user_explicitly_requests_explanation(source_text):
+        return str(text or "")
+    if not is_daily_record_request(source_text):
+        return str(text or "")
+    paragraphs = re.split(r"\n\s*\n", str(text or ""))
+    cleaned_paragraphs: list[str] = []
+    for paragraph in paragraphs:
+        stripped = paragraph.strip()
+        if not stripped:
+            continue
+        if stripped.startswith("#") or re.match(
+            r"^(?:Presentation and Support|Adult Response|Outcome|Daily Record)(?:\s*/\s*Handover)?\s*:?\s*$",
+            stripped,
+            re.I,
+        ):
+            cleaned_paragraphs.append(stripped)
+            continue
+        sentences = re.split(r"(?<=[.!?])\s+", stripped)
+        kept: list[str] = []
+        for sentence in sentences:
+            trimmed = _trim_explanatory_clauses(sentence)
+            if not trimmed:
+                continue
+            if re.search(r"\bemotional\s+state\b", trimmed, re.I) and not _source_supports_emotion_label(
+                source_text, "emotional state"
+            ):
+                continue
+            kept.append(trimmed)
+        if kept:
+            cleaned_paragraphs.append(" ".join(kept))
+    result = re.sub(r"\n{3,}", "\n\n", "\n\n".join(cleaned_paragraphs)).strip()
+    for pattern in _ORPHAN_FRAGMENT_CLEANUP_RES:
+        result = pattern.sub("", result)
+    return re.sub(r"\n{3,}", "\n\n", result).strip()
+
+
+def _repair_broken_child_object_punctuation(line: str) -> str:
+    """Repair sanitizer damage such as 'gave. Child A' back to 'gave Child A'."""
+    result = str(line or "")
+    for pattern, replacement in _BROKEN_CHILD_OBJECT_REPAIRS:
+        result = pattern.sub(replacement, result)
+    return result
+
+
 def _repair_sentence_boundaries_in_line(line: str) -> str:
     """Insert conservative full stops where record sentences were joined."""
-    result = str(line or "")
+    result = _repair_broken_child_object_punctuation(str(line or ""))
     result = _QUOTE_ADULT_BOUNDARY_RE.sub(r"\1. \2", result)
     result = re.sub(r"\bwatched TV\b", "watched television", result, flags=re.I)
     result = _WATCHED_TV_SHORT_CHILD_BOUNDARY_RE.sub(r"\1. \2", result)
     result = _WATCHED_TV_CHILD_BOUNDARY_RE.sub(r"\1. \2", result)
     result = _ACCEPTED_TOAST_BEFORE_BEDTIME_RE.sub(r"\1. \2", result)
-    result = _CHILD_SUBJECT_BOUNDARY_RE.sub(r". \1", result)
+    result = _ACCEPTED_TOAST_CHILD_BOUNDARY_RE.sub(r"\1. \2", result)
+    for pattern in _EXPLANATORY_INLINE_BOUNDARY_RES:
+        result = pattern.sub(r"\1. \2", result)
     result = _ADULT_LABEL_BOUNDARY_RE.sub(r". \1", result)
     for pattern in _TRANSITION_BOUNDARY_RES:
         result = pattern.sub(r". \1 ", result)
@@ -1120,6 +1229,7 @@ def sanitize_live_record_output(text: str, *, source_text: str = "") -> str:
 
     # 3. child quote interpretation stripping
     cleaned = strip_child_quote_interpretation(cleaned, source_text=source_text)
+    cleaned = strip_explanatory_daily_record_phrases(cleaned, source_text=source_text)
 
     # 4. invented emotional impact stripping
     cleaned = strip_invented_emotional_impact(cleaned, source_text=source_text)

@@ -462,4 +462,58 @@ describe('ORB live review correction pass', () => {
     assert.doesNotMatch(cleaned.toLowerCase(), /next steps/)
     assert.doesNotMatch(cleaned, /\[End of record\]/i)
   })
+
+  it('does not break protected child-object phrases during sentence repair', () => {
+    const protectedPhrases = [
+      'gave Child A space',
+      'checked in with Child A',
+      'offered Child A toast',
+      'sat nearby while Child A watched television',
+      'check in gently with Child A'
+    ]
+    for (const phrase of protectedPhrases) {
+      const repaired = repairRecordSentenceBoundaries(phrase)
+      assert.doesNotMatch(repaired, /\. Child A/)
+      assert.match(repaired.toLowerCase(), new RegExp(phrase.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))
+    }
+  })
+
+  it('repairs damaged live daily record output without sanitizer grammar damage', () => {
+    const source = ORB_MANUAL_REGRESSION_DAILY_RECORD_PROMPT
+    const damaged = [
+      'Daily Record',
+      '',
+      'Presentation and Support',
+      'Child A returned from school appearing quieter than usual. Adult TK observed this and gave. Child A space to settle. Later, Adult JS checked in with. Child A to see how they were feeling',
+      '',
+      'Child Voice',
+      'During the check-in, Child A expressed, "I\'m just annoyed about school." This statement indicated that. Child A was processing some feelings related to their school experience',
+      '',
+      'Adult Response',
+      'In response, Adult JS offered. Child A some toast and sat nearby while. Child A watched television This provided a calm and supportive environment. Child A accepted the toast and appeared calmer',
+      '',
+      'Outcome / Handover',
+      "Before bedtime, Child A appeared more settled. Adult TK handed over to the next shift that tomorrow's adults should check in gently with. Child A about school if they wish to talk This approach aims to support. Child A's emotional needs and encourage open communication"
+    ].join('\n')
+    const cleaned = sanitizeLiveRecordOutput(damaged, source)
+    const lowered = cleaned.toLowerCase()
+    assert.doesNotMatch(lowered, /gave\. child a/)
+    assert.doesNotMatch(lowered, /with\. child a/)
+    assert.doesNotMatch(lowered, /offered\. child a/)
+    assert.match(lowered, /gave child a/)
+    assert.match(lowered, /offered child a/)
+    assert.match(lowered, /checked in with child a/)
+    assert.match(lowered, /watched television/)
+    assert.match(cleaned, /I'm just annoyed about school\./)
+    assert.doesNotMatch(lowered, /child voice/)
+    assert.doesNotMatch(lowered, /statement indicated/)
+    assert.doesNotMatch(lowered, /processing some feelings/)
+    assert.doesNotMatch(lowered, /calm and supportive environment/)
+    assert.doesNotMatch(lowered, /approach aims/)
+    assert.doesNotMatch(lowered, /emotional needs/)
+    assert.doesNotMatch(lowered, /appeared more settled/)
+    assert.match(lowered, /appeared calmer before bedtime/)
+    assert.doesNotMatch(lowered, /child a was/)
+    assert.match(lowered, /with child a about school/)
+  })
 })
