@@ -630,8 +630,12 @@ from assistant.evals.orb_high_risk_scaffold import (  # noqa: E402
     adult_response_recording_principle,
     build_high_risk_safeguarding_scaffold,
     build_quality_lab_scaffold,
+    contains_judgemental_language,
+    is_wording_rewrite_scenario,
     needs_safeguarding_escalation,
     sanitize_professional_judgement_phrases,
+    sanitize_therapeutic_language,
+    therapeutic_language_recording_principle,
 )
 from assistant.evals.orb_residential_scenario_schema import scenario_to_baseline_format  # noqa: E402
 
@@ -955,3 +959,54 @@ def test_adult_response_scaffold_no_diagnostic_or_compliance_language() -> None:
     assert flags["contains_compliance_guarantee"] is False
     assert "ready for inspection" not in lower
     assert "ofsted will" not in lower
+
+
+# --- Therapeutic language scaffold tests ---
+
+
+def test_therapeutic_language_principle_exported() -> None:
+    principle = therapeutic_language_recording_principle()
+    assert "non-blaming" in principle.lower() or "respectful" in principle.lower()
+    assert "reframe" in principle.lower() or "judgemental" in principle.lower()
+
+
+def test_sanitize_therapeutic_language_reframes_blaming_phrases() -> None:
+    raw = "Young person kicked off because they wanted attention. Staff told them to stop being dramatic."
+    sanitized = sanitize_therapeutic_language(raw)
+    lower = sanitized.lower()
+    assert "kicked off" not in lower
+    assert "wanted attention" not in lower
+    assert "stop being dramatic" not in lower
+    assert not contains_judgemental_language(sanitized)
+
+
+def test_poor_wording_scaffold_reframes_blaming_language() -> None:
+    scenario = _core_scenario("core_043")
+    output = build_quality_lab_scaffold(scenario)
+    flags = detect_binary_flags(output, scenario=scenario, input_text=scenario["input"])
+    lower = output.lower()
+    assert flags["contains_blaming_language"] is False
+    assert "kicked off" not in lower
+    assert "wanted attention" not in lower
+    assert "wording reframed" in lower or "reframed" in lower
+
+
+def test_judgemental_language_scaffold_reframes_manipulative_wording() -> None:
+    scenario = _core_scenario("core_044")
+    output = build_quality_lab_scaffold(scenario)
+    flags = detect_binary_flags(output, scenario=scenario, input_text=scenario["input"])
+    lower = output.lower()
+    assert flags["contains_blaming_language"] is False
+    assert "manipulative" not in lower
+    assert is_wording_rewrite_scenario(scenario) is True
+
+
+def test_variants1000_therapeutic_language_improves() -> None:
+    if not VARIANTS_REPORT_JSON.is_file():
+        pytest.skip("variants1000 report not generated yet")
+    report = json.loads(VARIANTS_REPORT_JSON.read_text(encoding="utf-8"))
+    tl = float((report.get("category_averages") or {}).get("therapeutic_language") or 0)
+    pt = float((report.get("category_averages") or {}).get("professional_tone") or 0)
+    assert tl >= 3.98, f"therapeutic_language {tl} below target 3.98"
+    assert pt >= 3.98, f"professional_tone {pt} below target 3.98"
+    assert report.get("unsafe_flag_count", 0) == 0

@@ -106,6 +106,8 @@ export const ORB_MISSING_INFORMATION_GUIDANCE = {
     'Name adult actions specifically — how staff listened, what was offered, de-escalation and repair.',
     'Avoid vague “staff supported”, “staff managed” or “staff dealt with it” unless specific actions follow.',
     'If adult response is missing, prompt for it rather than fabricating actions.',
+    'Reframe judgemental rough-note wording into observable, respectful language.',
+    'Avoid labels such as manipulative, attention-seeking or kicked off.',
     'Include outcome and next steps where known.'
   ]
 } as const

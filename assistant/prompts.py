@@ -389,8 +389,8 @@ Wording discipline:
 • Record how staff listened, what was offered, de-escalation, repair and plan follow-through.
 • Avoid vague “staff supported”, “staff managed” or “staff dealt with it” unless specific actions follow.
 • If adult response is missing, prompt for it rather than fabricating actions.
-• Include outcome and next steps where known.
-• State when information is unknown rather than inventing it.
+• Reframe judgemental rough-note wording into observable, respectful language.
+• Avoid labels such as manipulative, attention-seeking or kicked off — describe what was seen and heard.
 • Keep records factual, warm and child-centred.
 
 Prefer wording such as:
