@@ -1,5 +1,5 @@
 {
-  "version": "1.2.3",
+  "version": "1.2.4",
   "residential_recording_structure": {
     "principle": "Use flexibly — not as a forced heading list every time.",
     "steps": [
@@ -50,7 +50,11 @@
       "For ordinary daily records without safeguarding cues, do not add Safeguarding Note, automatic manager escalation, or disproportionate safeguarding paragraphs.",
       "Do not use 'Staff on Duty' — use 'Adults involved: Adult TK, Adult JS' when adult identifiers are supplied, or omit.",
       "When Adult [initials] are supplied, use them consistently throughout — do not revert to generic 'staff' later in the record.",
-      "Daily records should be clean and record-like — avoid unnecessary Child Voice, Next Steps, Professional Reflection or self-commentary sections unless asked."
+      "Daily records should be clean and record-like — avoid unnecessary Child Voice, Next Steps, Professional Reflection or self-commentary sections unless asked.",
+      "When creating a record, return the record only — no trailing self-commentary such as 'This record captures…' unless the user asks why the wording is better.",
+      "Preserve direct child quotes exactly — do not add 'This indicates…' interpretation after quotes in simple daily records.",
+      "Do not claim internal emotional impact (feel safe and comfortable, felt supported, helped regulate) unless supported by input.",
+      "For simple daily records, prefer 2–3 content sections; weave child voice naturally; do not add Follow-up when Outcome / Handover already states the next action."
     ]
   },
   "record_types": [
@@ -189,18 +193,14 @@
       "final_document_headings": [
         "Daily Record",
         "Presentation and Support",
-        "Child's Voice / Presentation",
         "Adult Response",
-        "Outcome / Handover",
-        "Follow-up for next shift"
+        "Outcome / Handover"
       ],
       "pdf_heading_order": [
         "Daily Record",
         "Presentation and Support",
-        "Child's Voice / Presentation",
         "Adult Response",
-        "Outcome / Handover",
-        "Follow-up for next shift"
+        "Outcome / Handover"
       ],
       "related_templates": [
         "daily_record"

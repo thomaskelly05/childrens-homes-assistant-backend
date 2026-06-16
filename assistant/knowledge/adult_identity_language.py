@@ -45,9 +45,35 @@ SELF_COMMENTARY_PRINCIPLE = (
     "unless the user explicitly asks why the wording is better or requests commentary."
 )
 
+RECORD_ONLY_OUTPUT_PRINCIPLE = (
+    "When the user asks ORB to create a record, return the record only. Do not add commentary before or after the "
+    "record. Do not explain why the record is factual, therapeutic or child-centred unless the user explicitly asks."
+)
+
+CHILD_VOICE_DISCIPLINE_PRINCIPLE = (
+    "Preserve the child's direct words exactly — do not paraphrase, expand or interpret them as fact. "
+    "Do not add motive, diagnosis, emotional conclusion or professional judgement after a direct quote. "
+    "Avoid 'This indicates…' or similar after the child's words in simple daily records. "
+    "If reflection is needed, use cautious wording such as 'may suggest' and mark what is not confirmed."
+)
+
+EMOTIONAL_IMPACT_DISCIPLINE_PRINCIPLE = (
+    "Describe adult actions without claiming internal emotional impact unless the child said it or it was directly "
+    "observed. Do not write that an action 'allowed the child to feel safe and comfortable', 'made the child feel "
+    "reassured', 'helped the child regulate' or 'the child felt supported' unless supported by input. "
+    "Prefer observable wording such as 'remained nearby', 'offered a calm adult presence', 'appeared calmer'."
+)
+
+DAILY_RECORD_SIMPLIFICATION_PRINCIPLE = (
+    "For simple, low-risk daily records, prefer a short narrative record with no more than 2–3 content sections. "
+    "Weave child voice naturally into the narrative — do not add a separate Child Voice section unless useful. "
+    "Do not add a Follow-up section when Outcome / Handover already states the next action."
+)
+
 RECORD_HEADING_DISCIPLINE_PRINCIPLE = (
     "Match headings to the record type requested. Daily records use headings such as Daily Record, "
-    "Presentation and Support, Child's Voice / Presentation, Adult Response, and Outcome / Handover. "
+    "Presentation and Support, Adult Response, and Outcome / Handover. "
+    "Weave child voice naturally into the narrative — a separate Child Voice section is optional, not default. "
     "Do not use Incident Summary, Incident or Behaviour Incident for daily records unless the user asked "
     "for an incident record."
 )
@@ -55,7 +81,6 @@ RECORD_HEADING_DISCIPLINE_PRINCIPLE = (
 DAILY_RECORD_HEADINGS: tuple[str, ...] = (
     "Daily Record",
     "Presentation and Support",
-    "Child's Voice / Presentation",
     "Adult Response",
     "Outcome / Handover",
 )
@@ -107,6 +132,13 @@ _DAILY_RECORD_REQUEST = re.compile(
     r"\b(?:create|write|draft|turn|make)\b.{0,40}\b(?:a\s+)?daily\s+record\b",
     re.I,
 )
+_RECORD_GENERATION_REQUEST = re.compile(
+    r"\b(?:create|write|draft|turn|make|convert|generate|produce|help\s+me\s+(?:write|record|create))\b"
+    r".{0,80}\b(?:daily\s+record|incident\s+(?:record|report|reflection)|handover(?:\s+note)?|"
+    r"magic\s+notes?|behaviour\s+(?:record|reflection)|recording|(?:a\s+)?record)\b",
+    re.I,
+)
+_MAGIC_NOTES_REQUEST = re.compile(r"\bmagic\s+notes?\b", re.I)
 _INCIDENT_RECORD_REQUEST = re.compile(
     r"\b(?:incident\s+(?:record|report|reflection|summary)|behaviour\s+incident|record\s+an?\s+incident)\b",
     re.I,
@@ -119,12 +151,74 @@ _EXPLANATION_REQUEST = re.compile(
 
 _SELF_COMMENTARY_PATTERNS: tuple[re.Pattern[str], ...] = (
     re.compile(
-        r"\bthis\s+record\s+(?:maintains|uses|demonstrates|reflects)\s+(?:a\s+)?(?:factual|child-centred|therapeutic)",
+        r"\bthis\s+record\s+(?:maintains|uses|demonstrates|reflects|captures|ensures)\s+(?:a\s+)?(?:factual|child-centred|therapeutic|the\s+child)",
         re.I,
     ),
-    re.compile(r"\bthe\s+(?:above\s+)?record\s+is\s+(?:factual|child-centred|therapeutic|professional)\b", re.I),
-    re.compile(r"\bthis\s+(?:draft\s+)?(?:is|remains)\s+(?:factual|child-centred|therapeutic)\b", re.I),
+    re.compile(r"\bthe\s+(?:above\s+)?record\s+is\s+(?:factual|child-centred|therapeutic|professional|suitable)\b", re.I),
+    re.compile(r"\bthis\s+(?:draft\s+)?(?:is|remains)\s+(?:factual|child-centred|therapeutic|suitable)\b", re.I),
     re.compile(r"\bI\s+have\s+(?:written|created|maintained)\s+(?:a\s+)?(?:factual|child-centred)\b", re.I),
+    re.compile(r"\bthis\s+(?:approach|wording)\s+ensures\b", re.I),
+    re.compile(r"\bthis\s+(?:demonstrates|supports)\s+(?:a\s+)?(?:child-centred|therapeutic|factual)\b", re.I),
+    re.compile(r"\b(?:in\s+conclusion|overall),?\s+this\s+record\b", re.I),
+    re.compile(r"\bthe\s+record\s+is\s+child-centred\s+because\b", re.I),
+    re.compile(r"\bthis\s+is\s+suitable\s+because\b", re.I),
+)
+
+_SELF_COMMENTARY_STARTERS: tuple[str, ...] = (
+    "this record captures",
+    "this record maintains",
+    "this record ensures",
+    "this approach ensures",
+    "this demonstrates",
+    "this supports",
+    "in conclusion",
+    "overall,",
+    "this wording",
+    "this is suitable because",
+    "the record is child-centred because",
+)
+
+_CHILD_QUOTE_INTERPRETATION_RE = re.compile(
+    r'(["\'][\s\S]*?["\'])\.?\s+(?:This|That)\s+(?:indicates?|suggests?|shows?|demonstrates?|may\s+indicate|'
+    r"could\s+suggest|reflects?|reveals?)\s+[^.!?]*[.!?]",
+    re.I,
+)
+
+_INVENTED_EMOTIONAL_IMPACT_PATTERNS: tuple[re.Pattern[str], ...] = (
+    re.compile(
+        r"\b(?:allowing|enabled|helped|this\s+(?:allowed|helped|enabled))\s+[^.!?]*\b(?:feel|felt)\s+"
+        r"(?:safe|comfortable|supported|reassured|calm|secure)\b[^.!?]*[.!?]",
+        re.I,
+    ),
+    re.compile(
+        r"\b(?:Child|Young person|The child)\s+[A-Z]?\s*(?:felt|feel)\s+"
+        r"(?:safe|comfortable|supported|reassured|calm|secure|better)\b[^.!?]*[.!?]",
+        re.I,
+    ),
+    re.compile(r"\b(?:helped|supporting)\s+[^.!?]*\b(?:regulate|regulation)\b[^.!?]*[.!?]", re.I),
+    re.compile(r"\b(?:was|were)\s+emotionally\s+settled\b[^.!?]*[.!?]", re.I),
+    re.compile(r"\bfeel\s+safe\s+and\s+comfortable\b", re.I),
+)
+
+_EMOTION_LABELS_REQUIRING_SOURCE: tuple[str, ...] = (
+    "frustration",
+    "frustrated",
+    "dissatisfaction",
+    "dissatisfied",
+    "feel safe and comfortable",
+    "felt supported",
+    "felt reassured",
+    "helped regulate",
+    "helped child regulate",
+)
+
+_FOLLOW_UP_HEADING_RE = re.compile(
+    r"^#+\s*(?:Follow-up(?:\s+for\s+next\s+shift)?|Next\s+Steps)\s*$",
+    re.I | re.M,
+)
+_HANDOVER_PRESENT_RE = re.compile(
+    r"\b(?:hand(?:ed|over)|outcome\s*/\s*handover|next\s+(?:shift|adults?|team))\b",
+    re.I,
 )
 
 _OBSERVATION_INTERPRETATION_REPLACEMENTS: tuple[tuple[re.Pattern[str], str], ...] = (
@@ -152,11 +246,12 @@ _DSL_DEFAULT_REPLACEMENTS: tuple[tuple[re.Pattern[str], str], ...] = (
 
 _UNNECESSARY_DAILY_SECTION_HEADINGS: tuple[re.Pattern[str], ...] = (
     re.compile(r"^#+\s*Safeguarding\s+Note\s*$", re.I | re.M),
-    re.compile(r"^#+\s*Child\s+Voice\s*$", re.I | re.M),
+    re.compile(r"^#+\s*Child(?:'s|\s)Voice(?:\s*/\s*Presentation)?\s*$", re.I | re.M),
     re.compile(r"^#+\s*Next\s+Steps\s*$", re.I | re.M),
     re.compile(r"^#+\s*Professional\s+Reflection\s*$", re.I | re.M),
     re.compile(r"^#+\s*Quality\s+Assurance\s+Note\s*$", re.I | re.M),
     re.compile(r"^#+\s*Compliance\s+Note\s*$", re.I | re.M),
+    re.compile(r"^#+\s*Follow-up(?:\s+for\s+next\s+shift)?\s*$", re.I | re.M),
 )
 
 _SAFEGUARDING_CUE_PATTERN = re.compile(
@@ -222,6 +317,131 @@ def strip_unnecessary_daily_record_sections(text: str, *, source_text: str = "")
     return re.sub(r"\n{3,}", "\n\n", result).strip()
 
 
+def _split_paragraphs(text: str) -> list[str]:
+    return [part.strip() for part in re.split(r"\n\s*\n", str(text or "")) if part.strip()]
+
+
+def _join_paragraphs(paragraphs: list[str]) -> str:
+    return "\n\n".join(paragraphs).strip()
+
+
+def strip_trailing_self_commentary(text: str, *, source_text: str = "") -> str:
+    """Remove post-record self-assessment paragraphs unless the user asked for explanation."""
+    if user_explicitly_requests_explanation(source_text):
+        return str(text or "")
+    paragraphs = _split_paragraphs(text)
+    if not paragraphs:
+        return str(text or "")
+    while paragraphs:
+        tail = paragraphs[-1]
+        tail_lower = tail.lower().strip()
+        if is_self_commentary_paragraph(tail):
+            paragraphs.pop()
+            continue
+        if any(tail_lower.startswith(starter) for starter in _SELF_COMMENTARY_STARTERS):
+            paragraphs.pop()
+            continue
+        break
+    return _join_paragraphs(paragraphs)
+
+
+def strip_child_quote_interpretation(text: str, *, source_text: str = "") -> str:
+    """Remove interpretive sentences immediately after direct child quotes in simple daily records."""
+    if has_safeguarding_cue(source_text) or user_explicitly_requests_explanation(source_text):
+        return str(text or "")
+    if not is_daily_record_request(source_text):
+        return str(text or "")
+    result = _CHILD_QUOTE_INTERPRETATION_RE.sub(r"\1", str(text or ""))
+    return re.sub(r"\n{3,}", "\n\n", result).strip()
+
+
+def _source_supports_emotion_label(source_text: str, label: str) -> bool:
+    return label.lower() in str(source_text or "").lower()
+
+
+def strip_invented_emotional_impact(text: str, *, source_text: str = "") -> str:
+    """Remove or trim invented internal emotional impact unless supported by input."""
+    result = str(text or "")
+    for pattern in _INVENTED_EMOTIONAL_IMPACT_PATTERNS:
+        result = pattern.sub("", result)
+    paragraphs = re.split(r"\n\s*\n", result)
+    cleaned_paragraphs: list[str] = []
+    for paragraph in paragraphs:
+        stripped = paragraph.strip()
+        if not stripped:
+            continue
+        if stripped.startswith("#"):
+            cleaned_paragraphs.append(stripped)
+            continue
+        sentences = re.split(r"(?<=[.!?])\s+", stripped)
+        kept: list[str] = []
+        for sentence in sentences:
+            unsupported = False
+            for label in _EMOTION_LABELS_REQUIRING_SOURCE:
+                if label.lower() in sentence.lower() and not _source_supports_emotion_label(source_text, label):
+                    unsupported = True
+                    break
+            if not unsupported:
+                kept.append(sentence)
+        if kept:
+            cleaned_paragraphs.append(" ".join(kept))
+    return re.sub(r"\n{3,}", "\n\n", "\n\n".join(cleaned_paragraphs)).strip()
+
+
+def strip_unnecessary_follow_up_section(text: str, *, source_text: str = "") -> str:
+    """Remove redundant Follow-up sections when handover already covers next action."""
+    if has_safeguarding_cue(source_text):
+        return str(text or "")
+    if not _HANDOVER_PRESENT_RE.search(str(text or "")):
+        return str(text or "")
+    lines = str(text or "").splitlines()
+    output: list[str] = []
+    skip_until_heading = False
+    for line in lines:
+        if _FOLLOW_UP_HEADING_RE.match(line.strip()):
+            skip_until_heading = True
+            continue
+        if skip_until_heading and re.match(r"^#+\s+\S", line.strip()):
+            skip_until_heading = False
+        if not skip_until_heading:
+            output.append(line)
+    return re.sub(r"\n{3,}", "\n\n", "\n".join(output)).strip()
+
+
+def count_content_sections(text: str) -> int:
+    """Count markdown section headings excluding the main record title."""
+    headings = re.findall(r"^#+\s+(.+)$", str(text or ""), re.M)
+    if not headings:
+        return 0
+    main_titles = {"daily record", "incident reflection", "handover note", "magic notes"}
+    content = [
+        heading
+        for heading in headings
+        if heading.strip().lower() not in main_titles
+        and not heading.strip().lower().startswith("daily record")
+    ]
+    return len(content)
+
+
+def is_record_generation_request(text: str) -> bool:
+    """Whether the user asked ORB to create or draft a record."""
+    value = str(text or "")
+    if _RECORD_GENERATION_REQUEST.search(value):
+        return True
+    if _MAGIC_NOTES_REQUEST.search(value):
+        return True
+    if is_daily_record_request(value):
+        return True
+    if is_incident_record_request(value):
+        return True
+    lowered = value.lower()
+    if "rough notes" in lowered and any(
+        verb in lowered for verb in ("create", "write", "draft", "turn", "convert", "record")
+    ):
+        return True
+    return False
+
+
 def apply_adult_identity_language(text: str, *, supplied_initials: list[str] | None = None) -> str:
     """Replace generic Staff defaults with supplied Adult XX or the adult/adults."""
     value = str(text or "")
@@ -261,11 +481,16 @@ def sanitize_live_record_output(text: str, *, source_text: str = "") -> str:
     """Apply adult identity, terminology, proportionality and observation discipline to record output."""
     initials = extract_supplied_adult_initials(source_text)
     cleaned = sanitize_observation_interpretation_language(text)
+    cleaned = strip_child_quote_interpretation(cleaned, source_text=source_text)
+    cleaned = strip_invented_emotional_impact(cleaned, source_text=source_text)
     cleaned = sanitize_childrens_home_terminology(cleaned, source_text=source_text)
     if is_daily_record_request(source_text) and not has_safeguarding_cue(source_text):
         cleaned = strip_unnecessary_daily_record_sections(cleaned, source_text=source_text)
+        cleaned = strip_unnecessary_follow_up_section(cleaned, source_text=source_text)
     if initials or _STAFF_TO_ADULT_RE.search(cleaned):
         cleaned = apply_adult_identity_language(cleaned, supplied_initials=initials)
+    if is_record_generation_request(source_text) and not user_explicitly_requests_explanation(source_text):
+        cleaned = strip_trailing_self_commentary(cleaned, source_text=source_text)
     return cleaned
 
 
@@ -341,6 +566,14 @@ def build_adult_identity_prompt_block() -> str:
         "",
         SELF_COMMENTARY_PRINCIPLE,
         "",
+        RECORD_ONLY_OUTPUT_PRINCIPLE,
+        "",
+        CHILD_VOICE_DISCIPLINE_PRINCIPLE,
+        "",
+        EMOTIONAL_IMPACT_DISCIPLINE_PRINCIPLE,
+        "",
+        DAILY_RECORD_SIMPLIFICATION_PRINCIPLE,
+        "",
         "Therapeutic relational wording (use where supported by input — do not invent):",
         *[f"• {phrase}" for phrase in THERAPEUTIC_RECORDING_PHRASES],
         "",
@@ -374,7 +607,6 @@ def daily_scaffold_section_headings() -> list[tuple[str, str]]:
     """Section key to heading label for daily_care scaffold outputs."""
     return [
         ("presentation", "Presentation and Support"),
-        ("child_voice", "Child's Voice / Presentation"),
         ("adult_response", "Adult Response"),
         ("outcome", "Outcome / Handover"),
     ]

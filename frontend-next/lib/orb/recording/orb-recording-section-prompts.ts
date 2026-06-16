@@ -30,9 +30,9 @@ export const ORB_RECORD_TYPE_QUALITY_EXPECTATIONS: Record<
   { requiredSectionThemes: string[]; qualityThemes: string[]; unsafePhrases: string[] }
 > = {
   daily_record: {
-    requiredSectionThemes: ['presentation', 'voice', 'adult response', 'follow-up'],
+    requiredSectionThemes: ['presentation', 'adult response', 'handover'],
     qualityThemes: ['child', 'routine', 'positive', 'concern'],
-    unsafePhrases: ['manipulative', 'attention-seeking', 'kicked off']
+    unsafePhrases: ['manipulative', 'attention-seeking', 'kicked off', 'this indicates', 'this record captures']
   },
   incident_report: {
     requiredSectionThemes: ['before', 'observed', 'de-escalation', 'harm', 'notification', 'repair', 'management'],
@@ -207,11 +207,8 @@ export const ORB_RECORDING_SECTION_PROMPTS: Record<string, OrbRecordingSectionPr
     { title: 'Daily Record', prompt: 'Brief child-centred overview of the shift — not an incident summary.' },
     {
       title: 'Presentation and Support',
-      prompt: 'Describe how the child appeared and what support was offered. Use observable language and relational adult detail.'
-    },
-    {
-      title: "Child's Voice / Presentation",
-      prompt: 'Include what the child said, wished for or communicated. Preserve direct quotes where provided.'
+      prompt:
+        'Describe how the child appeared, what they said or communicated (preserve direct quotes), and what support was offered. Use observable language and relational adult detail.'
     },
     {
       title: 'Adult Response',
@@ -220,9 +217,9 @@ export const ORB_RECORDING_SECTION_PROMPTS: Record<string, OrbRecordingSectionPr
     },
     {
       title: 'Outcome / Handover',
-      prompt: 'Record what changed by the end, how the child appeared afterwards, and what the next adults should continue or check in about.'
-    },
-    { title: 'Follow-up for next shift', prompt: 'What should the next team know, monitor or continue if the child wishes to talk?' }
+      prompt:
+        'Record what changed by the end, how the child appeared afterwards, and what the next adults should continue or check in about. Include handover here — do not add a separate Follow-up section unless safeguarding cues require it.'
+    }
   ],
   incident_report: [
     { title: 'Brief summary', prompt: "Briefly summarise what happened and why this record matters for the child's care." },

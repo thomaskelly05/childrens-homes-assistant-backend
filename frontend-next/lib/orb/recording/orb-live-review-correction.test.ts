@@ -7,14 +7,21 @@ import { describe, it } from 'node:test'
 import {
   applyAdultIdentityLanguage,
   buildAdultIdentityPromptBlock,
+  countContentSections,
   extractSuppliedAdultInitials,
   hasSafeguardingCue,
   isDailyRecordRequest,
   isIncidentRecordRequest,
+  isRecordGenerationRequest,
   isSelfCommentaryParagraph,
+  ORB_MANUAL_REGRESSION_DAILY_RECORD_PROMPT,
   sanitizeChildrensHomeTerminology,
   sanitizeLiveRecordOutput,
   sanitizeObservationInterpretationLanguage,
+  stripChildQuoteInterpretation,
+  stripInventedEmotionalImpact,
+  stripTrailingSelfCommentary,
+  stripUnnecessaryFollowUpSection,
   userProvidedDslTerm
 } from './orb-adult-identity-language.ts'
 import { buildSectionPromptBody } from './orb-recording-section-prompts.ts'
@@ -86,14 +93,90 @@ describe('ORB live review correction pass', () => {
     assert.equal(hasSafeguardingCue(DAILY_RECORD_PROMPT), false)
   })
 
-  it('flags self-commentary after records', () => {
+  it('flags self-commentary after records including This record captures', () => {
     assert.equal(
       isSelfCommentaryParagraph(
         'This record maintains a factual, child-centred approach and uses therapeutic language throughout.'
       ),
       true
     )
+    assert.equal(
+      isSelfCommentaryParagraph(
+        "This record captures the child's experience in a factual, child-centred way."
+      ),
+      true
+    )
     assert.equal(isSelfCommentaryParagraph('Daily Record\n\nChild A appeared quieter after school.'), false)
+  })
+
+  it('strips trailing self-commentary from record output', () => {
+    const source = ORB_MANUAL_REGRESSION_DAILY_RECORD_PROMPT
+    const cleaned = stripTrailingSelfCommentary(
+      'Daily Record\n\nChild A appeared quieter.\n\nThis record captures the child\'s experience.',
+      source
+    )
+    assert.doesNotMatch(cleaned, /This record captures/)
+  })
+
+  it('preserves self-commentary when user asks why wording is better', () => {
+    const cleaned = stripTrailingSelfCommentary(
+      'Daily Record\n\nChild A appeared quieter.\n\nThis record maintains a factual approach.',
+      'Why is this daily record wording better than my rough notes?'
+    )
+    assert.match(cleaned, /This record maintains/)
+  })
+
+  it('strips this indicates after direct child quote in simple daily record', () => {
+    const source = ORB_MANUAL_REGRESSION_DAILY_RECORD_PROMPT
+    const cleaned = stripChildQuoteInterpretation(
+      'Child A said, "I\'m just annoyed about school." This indicates frustration or dissatisfaction regarding school.',
+      source
+    )
+    assert.match(cleaned, /I'm just annoyed about school\./)
+    assert.doesNotMatch(cleaned.toLowerCase(), /this indicates/)
+    assert.doesNotMatch(cleaned.toLowerCase(), /frustration/)
+    assert.doesNotMatch(cleaned.toLowerCase(), /dissatisfaction/)
+  })
+
+  it('removes invented emotional impact unless supported by input', () => {
+    const source = ORB_MANUAL_REGRESSION_DAILY_RECORD_PROMPT
+    const cleaned = stripInventedEmotionalImpact(
+      'Adult JS remained nearby, allowing Child A to feel safe and comfortable.',
+      source
+    )
+    assert.doesNotMatch(cleaned.toLowerCase(), /feel safe and comfortable/)
+  })
+
+  it('removes unnecessary Follow-up when handover already exists', () => {
+    const source = ORB_MANUAL_REGRESSION_DAILY_RECORD_PROMPT
+    const cleaned = stripUnnecessaryFollowUpSection(
+      '## Outcome / Handover\n\nAdult TK handed over to next shift.\n\n## Follow-up for next shift\n\nCheck in tomorrow.',
+      source
+    )
+    assert.doesNotMatch(cleaned.toLowerCase(), /follow-up/)
+    assert.match(cleaned.toLowerCase(), /handed over/)
+  })
+
+  it('detects record generation requests including magic notes', () => {
+    assert.equal(isRecordGenerationRequest(ORB_MANUAL_REGRESSION_DAILY_RECORD_PROMPT), true)
+    assert.equal(isRecordGenerationRequest('Create magic notes from these rough notes'), true)
+  })
+
+  it('simple sanitized daily record has no more than three content sections', () => {
+    const source = ORB_MANUAL_REGRESSION_DAILY_RECORD_PROMPT
+    const cleaned = sanitizeLiveRecordOutput(
+      '## Daily Record\n\nOverview.\n\n## Presentation and Support\n\nChild A quieter.\n\n## Safeguarding Note\n\nNone.\n\n## Follow-up\n\nTomorrow.\n\n## Outcome / Handover\n\nHanded over.',
+      source
+    )
+    assert.doesNotMatch(cleaned, /Safeguarding Note/)
+    assert.ok(countContentSections(cleaned) <= 3)
+  })
+
+  it('documents manual regression prompt for live retest', () => {
+    assert.match(ORB_MANUAL_REGRESSION_DAILY_RECORD_PROMPT, /Adult TK/)
+    assert.match(ORB_MANUAL_REGRESSION_DAILY_RECORD_PROMPT, /Adult JS/)
+    assert.match(ORB_MANUAL_REGRESSION_DAILY_RECORD_PROMPT, /appeared calmer/)
+    assert.match(ORB_MANUAL_REGRESSION_DAILY_RECORD_PROMPT, /I'm just annoyed about school\./)
   })
 
   it('daily record section prompts avoid Incident Summary headings', () => {
@@ -101,8 +184,10 @@ describe('ORB live review correction pass', () => {
     assert.match(body, /## Daily Record/)
     assert.match(body, /## Presentation and Support/)
     assert.match(body, /## Adult Response/)
+    assert.match(body, /## Outcome \/ Handover/)
     assert.doesNotMatch(body, /^## Incident Summary/mi)
-    assert.doesNotMatch(body, /^## Incident\b/mi)
+    assert.doesNotMatch(body, /^## Follow-up for next shift/mi)
+    assert.doesNotMatch(body, /^## Child's Voice/mi)
   })
 
   it('therapeutic writing prompt block includes adult identity and DSL discipline', () => {

@@ -13,15 +13,21 @@ from assistant.knowledge.adult_identity_language import (
     apply_adult_identity_language,
     build_adult_identity_prompt_block,
     contains_generic_staff_with_initials,
+    count_content_sections,
     extract_supplied_adult_initials,
     has_safeguarding_cue,
     headings_for_record_context,
     is_daily_record_request,
     is_incident_record_request,
+    is_record_generation_request,
     is_self_commentary_paragraph,
     sanitize_childrens_home_terminology,
     sanitize_live_record_output,
     sanitize_observation_interpretation_language,
+    strip_child_quote_interpretation,
+    strip_invented_emotional_impact,
+    strip_trailing_self_commentary,
+    strip_unnecessary_follow_up_section,
     user_explicitly_requests_explanation,
     user_provided_dsl_term,
 )
@@ -57,6 +63,14 @@ SELF_COMMENTARY_GOOD = "Daily Record\n\nChild A appeared quieter after school."
 
 EXPLANATION_REQUEST = "Why is this daily record wording better than my rough notes?"
 
+MANUAL_REGRESSION_DAILY_RECORD_PROMPT = (
+    "Create a daily record. Keep it factual, warm, therapeutic, child-centred and suitable for a children's home record.\n\n"
+    "Child A came back quieter after school. Adult TK gave Child A space. Adult JS checked in later. "
+    "Child A said, \"I'm just annoyed about school.\" Adult JS offered toast and sat nearby while Child A watched TV. "
+    "Child A ate the toast and appeared calmer before bedtime. Adult TK handed over that tomorrow's adults should "
+    "check in gently about school if Child A wishes to talk."
+)
+
 
 @pytest.fixture
 def framework() -> dict:
@@ -84,6 +98,10 @@ def test_canonical_principles_include_live_review_discipline():
     assert "childrens_home_safeguarding_terminology" in CANONICAL_PRINCIPLES
     assert "daily_record_proportionality" in CANONICAL_PRINCIPLES
     assert "daily_record_output_discipline" in CANONICAL_PRINCIPLES
+    assert "record_only_output" in CANONICAL_PRINCIPLES
+    assert "child_voice_discipline" in CANONICAL_PRINCIPLES
+    assert "emotional_impact_discipline" in CANONICAL_PRINCIPLES
+    assert "daily_record_simplification" in CANONICAL_PRINCIPLES
     assert "record_heading_discipline" in CANONICAL_PRINCIPLES
     assert "self_commentary" in CANONICAL_PRINCIPLES
     assert "do not default to 'staff'" in CANONICAL_PRINCIPLES["adult_identity"].lower()
@@ -231,9 +249,10 @@ def test_daily_scaffold_uses_daily_headings_not_incident_summary(daily_scenario:
     lowered = output.lower()
     assert "incident summary" not in lowered
     assert "presentation and support" in lowered
-    assert "child's voice / presentation" in lowered
     assert "adult response" in lowered
     assert "outcome / handover" in lowered
+    assert "i'm just annoyed about school." in lowered
+    assert count_content_sections(output) <= 3
 
 
 def test_daily_scaffold_prefers_the_adult_over_staff_default(daily_scenario: dict):
@@ -330,3 +349,139 @@ def test_handover_scenario_heading_remains_appropriate():
 
 def test_principle_alignment_still_valid():
     assert validate_principle_alignment() == []
+
+
+def test_record_generation_request_detection():
+    assert is_record_generation_request(DAILY_RECORD_PROMPT)
+    assert is_record_generation_request(INCIDENT_PROMPT)
+    assert is_record_generation_request(MANUAL_REGRESSION_DAILY_RECORD_PROMPT)
+    assert is_record_generation_request("Turn these rough notes into a daily record")
+
+
+def test_strip_trailing_self_commentary_from_daily_record():
+    source = DAILY_RECORD_WITH_INITIALS
+    rough = (
+        "Daily Record\n\nChild A appeared quieter after school.\n\n"
+        "This record captures the child's experience in a factual, child-centred way."
+    )
+    cleaned = strip_trailing_self_commentary(rough, source_text=source)
+    assert "This record captures" not in cleaned
+    assert "Child A appeared quieter" in cleaned
+
+
+def test_self_commentary_preserved_when_user_asks_why():
+    rough = SELF_COMMENTARY_BAD
+    cleaned = strip_trailing_self_commentary(rough, source_text=EXPLANATION_REQUEST)
+    assert "This record maintains" in cleaned
+
+
+def test_sanitize_live_output_strips_self_commentary_after_record():
+    source = MANUAL_REGRESSION_DAILY_RECORD_PROMPT
+    rough = (
+        "Daily Record\n\nChild A said, \"I'm just annoyed about school.\" Adult JS remained nearby.\n\n"
+        "This record captures the child's experience and maintains therapeutic wording."
+    )
+    cleaned = sanitize_live_record_output(rough, source_text=source)
+    assert "This record captures" not in cleaned
+    assert "I'm just annoyed about school." in cleaned
+
+
+def test_strip_child_quote_interpretation_in_simple_daily_record():
+    source = MANUAL_REGRESSION_DAILY_RECORD_PROMPT
+    rough = (
+        'Child A said, "I\'m just annoyed about school." '
+        "This indicates some frustration or dissatisfaction regarding their school experience."
+    )
+    cleaned = strip_child_quote_interpretation(rough, source_text=source)
+    assert "I'm just annoyed about school." in cleaned
+    assert "this indicates" not in cleaned.lower()
+    assert "dissatisfaction" not in cleaned.lower()
+    assert "frustration" not in cleaned.lower()
+
+
+def test_direct_child_quote_preserved_exactly():
+    source = MANUAL_REGRESSION_DAILY_RECORD_PROMPT
+    quote = 'Child A said, "I\'m just annoyed about school."'
+    cleaned = sanitize_live_record_output(quote, source_text=source)
+    assert cleaned == quote
+
+
+def test_strip_invented_emotional_impact_without_source_support():
+    source = MANUAL_REGRESSION_DAILY_RECORD_PROMPT
+    rough = (
+        "Adult JS remained nearby without placing pressure on Child A to speak, "
+        "allowing Child A to feel safe and comfortable."
+    )
+    cleaned = strip_invented_emotional_impact(rough, source_text=source)
+    assert "feel safe and comfortable" not in cleaned.lower()
+    assert "Adult JS remained nearby" in cleaned
+
+
+def test_invented_felt_supported_removed_unless_in_input():
+    source = DAILY_RECORD_WITH_INITIALS
+    rough = "Adult JS offered toast. Child A felt supported and reassured."
+    cleaned = strip_invented_emotional_impact(rough, source_text=source)
+    assert "felt supported" not in cleaned.lower()
+    assert "felt reassured" not in cleaned.lower()
+
+
+def test_appeared_calmer_preserved_in_sanitized_output():
+    source = MANUAL_REGRESSION_DAILY_RECORD_PROMPT
+    rough = "Child A ate toast and appeared calmer before bedtime."
+    cleaned = sanitize_live_record_output(rough, source_text=source)
+    assert "appeared calmer" in cleaned.lower()
+
+
+def test_strip_unnecessary_follow_up_when_handover_present():
+    source = MANUAL_REGRESSION_DAILY_RECORD_PROMPT
+    rough = (
+        "## Outcome / Handover\n\n"
+        "Adult TK handed over that tomorrow's adults should check in gently if Child A wishes to talk.\n\n"
+        "## Follow-up for next shift\n\n"
+        "Next adults should check in gently about school if Child A wishes to talk."
+    )
+    cleaned = strip_unnecessary_follow_up_section(rough, source_text=source)
+    assert "follow-up" not in cleaned.lower()
+    assert "handed over" in cleaned.lower()
+
+
+def test_simple_daily_record_section_count_after_sanitize():
+    source = MANUAL_REGRESSION_DAILY_RECORD_PROMPT
+    rough = (
+        "## Daily Record\n\nOverview.\n\n"
+        "## Presentation and Support\n\nChild A quieter after school.\n\n"
+        "## Safeguarding Note\n\nNone.\n\n"
+        "## Follow-up for next shift\n\nCheck in tomorrow.\n\n"
+        "## Outcome / Handover\n\nAdult TK handed over to next shift."
+    )
+    cleaned = sanitize_live_record_output(rough, source_text=source)
+    assert "Safeguarding Note" not in cleaned
+    assert count_content_sections(cleaned) <= 3
+
+
+def test_incident_record_self_commentary_stripped():
+    source = INCIDENT_PROMPT
+    rough = (
+        "Incident Reflection\n\nChild A became distressed after contact.\n\n"
+        "This record maintains a factual, child-centred approach."
+    )
+    cleaned = sanitize_live_record_output(rough, source_text=source)
+    assert "This record maintains" not in cleaned
+
+
+def test_magic_notes_request_is_record_generation():
+    assert is_record_generation_request("Create magic notes from these rough notes about Child A")
+
+
+def test_daily_headings_for_context_exclude_follow_up_by_default():
+    headings = headings_for_record_context(prompt_text=DAILY_RECORD_PROMPT)
+    assert headings[0] == "Daily Record"
+    assert "Follow-up" not in " ".join(headings)
+    assert "Child's Voice" not in " ".join(headings)
+
+
+def test_manual_regression_prompt_constants_document_live_retest():
+    assert "Adult TK" in MANUAL_REGRESSION_DAILY_RECORD_PROMPT
+    assert "Adult JS" in MANUAL_REGRESSION_DAILY_RECORD_PROMPT
+    assert "appeared calmer" in MANUAL_REGRESSION_DAILY_RECORD_PROMPT
+    assert "I'm just annoyed about school." in MANUAL_REGRESSION_DAILY_RECORD_PROMPT

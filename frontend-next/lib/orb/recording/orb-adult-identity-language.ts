@@ -18,13 +18,24 @@ export const ORB_DAILY_RECORD_OUTPUT_DISCIPLINE =
 export const ORB_SELF_COMMENTARY_PRINCIPLE =
   'When creating a record, provide the record itself. Do not add a self-assessment or explanation after the record unless the user explicitly asks.'
 
+export const ORB_RECORD_ONLY_OUTPUT_PRINCIPLE =
+  'When the user asks ORB to create a record, return the record only. Do not add commentary before or after the record unless the user explicitly asks why the wording is better.'
+
+export const ORB_CHILD_VOICE_DISCIPLINE =
+  "Preserve the child's direct words exactly — do not paraphrase or interpret them as fact. Avoid 'This indicates…' after direct quotes in simple daily records."
+
+export const ORB_EMOTIONAL_IMPACT_DISCIPLINE =
+  "Describe adult actions without claiming internal emotional impact unless the child said it or it was directly observed. Do not write 'feel safe and comfortable' or 'felt supported' unless supported by input."
+
+export const ORB_DAILY_RECORD_SIMPLIFICATION =
+  'For simple daily records, prefer a short narrative with no more than 2–3 content sections. Do not add Follow-up when Outcome / Handover already states the next action.'
+
 export const ORB_RECORD_HEADING_DISCIPLINE =
-  "Match headings to the record type requested. Daily records use Daily Record, Presentation and Support, Child's Voice / Presentation, Adult Response, and Outcome / Handover — not Incident Summary unless an incident record was requested."
+  "Match headings to the record type requested. Daily records use Daily Record, Presentation and Support, Adult Response, Outcome / Handover — not Incident Summary unless an incident record was requested."
 
 export const ORB_DAILY_RECORD_HEADINGS = [
   'Daily Record',
   'Presentation and Support',
-  "Child's Voice / Presentation",
   'Adult Response',
   'Outcome / Handover'
 ] as const
@@ -66,6 +77,55 @@ const DSL_USER_PROVIDED_RE = /\b(?:DSL|Designated\s+Safeguarding\s+Lead)\b/i
 const SAFEGUARDING_CUE_RE =
   /\b(?:disclos\w*|allegat\w*|missing\s+from\s+care|went\s+missing|exploit\w*|self[\s-]?harm|suicid\w*|unexplained\s+injur\w*|bruise|abuse|unsafe|inappropriat\w*|sexualis\w*|weapon|peer[\s-]?on[\s-]?peer|substance|immediate\s+risk|historic\s+harm|safeguarding\s+concern|lado|mash|police\s+called|999)\b/i
 
+const SELF_COMMENTARY_PATTERNS = [
+  /\bthis record (?:maintains|uses|demonstrates|reflects|captures|ensures) (?:a )?(?:factual|child-centred|therapeutic|the child)/i,
+  /\bthe (?:above )?record is (?:factual|child-centred|therapeutic|professional|suitable)\b/i,
+  /\bthis (?:draft )?(?:is|remains) (?:factual|child-centred|therapeutic|suitable)\b/i,
+  /\bthis (?:approach|wording) ensures\b/i,
+  /\b(?:in conclusion|overall),?\s+this record\b/i
+]
+
+const SELF_COMMENTARY_STARTERS = [
+  'this record captures',
+  'this record maintains',
+  'this record ensures',
+  'this approach ensures',
+  'this demonstrates',
+  'this supports',
+  'in conclusion',
+  'overall,',
+  'this wording',
+  'this is suitable because',
+  'the record is child-centred because'
+]
+
+const CHILD_QUOTE_INTERPRETATION_RE =
+  /(["'][\s\S]*?["'])\.?\s+(?:This|That)\s+(?:indicates?|suggests?|shows?|demonstrates?|may indicate|could suggest|reflects?|reveals?)\s+[^.!?]*[.!?]/gi
+
+const INVENTED_EMOTIONAL_IMPACT_RES = [
+  /\b(?:allowing|enabled|helped|this (?:allowed|helped|enabled))\s+[^.!?]*\b(?:feel|felt)\s+(?:safe|comfortable|supported|reassured|calm|secure)\b[^.!?]*[.!?]/gi,
+  /\b(?:Child|Young person|The child)\s+[A-Z]?\s*(?:felt|feel)\s+(?:safe|comfortable|supported|reassured|calm|secure|better)\b[^.!?]*[.!?]/gi,
+  /\b(?:helped|supporting)\s+[^.!?]*\b(?:regulate|regulation)\b[^.!?]*[.!?]/gi,
+  /\bfeel safe and comfortable\b/gi
+]
+
+const EMOTION_LABELS_REQUIRING_SOURCE = [
+  'frustration',
+  'frustrated',
+  'dissatisfaction',
+  'dissatisfied',
+  'feel safe and comfortable',
+  'felt supported',
+  'felt reassured',
+  'helped regulate'
+]
+
+const FOLLOW_UP_HEADING_RE = /^#+\s*(?:Follow-up(?:\s+for\s+next\s+shift)?|Next\s+Steps)\s*$/gim
+const HANDOVER_PRESENT_RE = /\b(?:hand(?:ed|over)|outcome\s*\/\s*handover|next\s+(?:shift|adults?|team))\b/i
+
+const EXPLANATION_REQUEST_RE =
+  /\b(?:why\s+is\s+this\b.+?\bwording\s+better|why\s+is\s+this\s+better|explain\s+(?:the\s+)?(?:wording|record)|why\s+did\s+you\s+(?:write|choose))\b/i
+
 export function extractSuppliedAdultInitials(text: string): string[] {
   const seen = new Set<string>()
   const initials: string[] = []
@@ -85,6 +145,10 @@ export function userProvidedDslTerm(text: string): boolean {
 
 export function hasSafeguardingCue(text: string): boolean {
   return SAFEGUARDING_CUE_RE.test(String(text || ''))
+}
+
+export function userExplicitlyRequestsExplanation(text: string): boolean {
+  return EXPLANATION_REQUEST_RE.test(String(text || ''))
 }
 
 export function sanitizeChildrensHomeTerminology(text: string, sourceText = ''): string {
@@ -126,20 +190,118 @@ export function sanitizeObservationInterpretationLanguage(text: string): string 
     .replace(/\bwas relaxed\b/gi, 'appeared more settled')
 }
 
+function splitParagraphs(text: string): string[] {
+  return String(text || '')
+    .split(/\n\s*\n/)
+    .map((part) => part.trim())
+    .filter(Boolean)
+}
+
+function sourceSupportsEmotionLabel(sourceText: string, label: string): boolean {
+  return String(sourceText || '').toLowerCase().includes(label.toLowerCase())
+}
+
+export function stripTrailingSelfCommentary(text: string, sourceText = ''): string {
+  if (userExplicitlyRequestsExplanation(sourceText)) return String(text || '')
+  const paragraphs = splitParagraphs(text)
+  while (paragraphs.length) {
+    const tail = paragraphs[paragraphs.length - 1]
+    const tailLower = tail.toLowerCase().trim()
+    if (isSelfCommentaryParagraph(tail) || SELF_COMMENTARY_STARTERS.some((starter) => tailLower.startsWith(starter))) {
+      paragraphs.pop()
+      continue
+    }
+    break
+  }
+  return paragraphs.join('\n\n').trim()
+}
+
+export function stripChildQuoteInterpretation(text: string, sourceText = ''): string {
+  if (hasSafeguardingCue(sourceText) || userExplicitlyRequestsExplanation(sourceText)) return String(text || '')
+  if (!isDailyRecordRequest(sourceText)) return String(text || '')
+  return String(text || '')
+    .replace(CHILD_QUOTE_INTERPRETATION_RE, '$1')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+}
+
+export function stripInventedEmotionalImpact(text: string, sourceText = ''): string {
+  let result = String(text || '')
+  for (const pattern of INVENTED_EMOTIONAL_IMPACT_RES) {
+    result = result.replace(pattern, '')
+  }
+  const paragraphs = result.split(/\n\s*\n/)
+  const cleaned: string[] = []
+  for (const paragraph of paragraphs) {
+    const stripped = paragraph.trim()
+    if (!stripped) continue
+    if (stripped.startsWith('#')) {
+      cleaned.push(stripped)
+      continue
+    }
+    const kept = stripped
+      .split(/(?<=[.!?])\s+/)
+      .filter((sentence) =>
+        EMOTION_LABELS_REQUIRING_SOURCE.every(
+          (label) =>
+            !sentence.toLowerCase().includes(label.toLowerCase()) ||
+            sourceSupportsEmotionLabel(sourceText, label)
+        )
+      )
+    if (kept.length) cleaned.push(kept.join(' '))
+  }
+  return cleaned.join('\n\n').replace(/\n{3,}/g, '\n\n').trim()
+}
+
+export function stripUnnecessaryFollowUpSection(text: string, sourceText = ''): string {
+  if (hasSafeguardingCue(sourceText)) return String(text || '')
+  if (!HANDOVER_PRESENT_RE.test(String(text || ''))) return String(text || '')
+  const lines = String(text || '').split('\n')
+  const output: string[] = []
+  let skipUntilHeading = false
+  for (const line of lines) {
+    if (/^#+\s*(?:Follow-up(?:\s+for\s+next\s+shift)?|Next\s+Steps)\s*$/i.test(line.trim())) {
+      skipUntilHeading = true
+      continue
+    }
+    if (skipUntilHeading && /^#+\s+\S/.test(line.trim())) {
+      skipUntilHeading = false
+    }
+    if (!skipUntilHeading) output.push(line)
+  }
+  return output.join('\n').replace(/\n{3,}/g, '\n\n').trim()
+}
+
+export function countContentSections(text: string): number {
+  const headings = [...String(text || '').matchAll(/^#+\s+(.+)$/gm)].map((match) => match[1]?.trim() ?? '')
+  const mainTitles = new Set(['daily record', 'incident reflection', 'handover note', 'magic notes'])
+  return headings.filter(
+    (heading) =>
+      !mainTitles.has(heading.toLowerCase()) && !heading.toLowerCase().startsWith('daily record')
+  ).length
+}
+
 export function sanitizeLiveRecordOutput(text: string, sourceText = ''): string {
   const initials = extractSuppliedAdultInitials(sourceText)
   let cleaned = sanitizeObservationInterpretationLanguage(text)
+  cleaned = stripChildQuoteInterpretation(cleaned, sourceText)
+  cleaned = stripInventedEmotionalImpact(cleaned, sourceText)
   cleaned = sanitizeChildrensHomeTerminology(cleaned, sourceText)
   if (isDailyRecordRequest(sourceText) && !hasSafeguardingCue(sourceText)) {
     cleaned = cleaned
       .replace(/^#+\s*Safeguarding\s+Note\s*$/gim, '')
-      .replace(/^#+\s*Child\s+Voice\s*$/gim, '')
+      .replace(/^#+\s*Child(?:'s|\s)Voice(?:\s*\/\s*Presentation)?\s*$/gim, '')
       .replace(/^#+\s*Next\s+Steps\s*$/gim, '')
+      .replace(/^#+\s*Follow-up(?:\s+for\s+next\s+shift)?\s*$/gim, '')
       .replace(/\n{3,}/g, '\n\n')
       .trim()
+    cleaned = stripUnnecessaryFollowUpSection(cleaned, sourceText)
   }
   if (initials.length || /\b[Ss]taff\b/.test(cleaned)) {
     cleaned = applyAdultIdentityLanguage(cleaned, initials)
+  }
+  if (isRecordGenerationRequest(sourceText) && !userExplicitlyRequestsExplanation(sourceText)) {
+    cleaned = stripTrailingSelfCommentary(cleaned, sourceText)
   }
   return cleaned
 }
@@ -160,11 +322,23 @@ export function isIncidentRecordRequest(text: string): boolean {
   )
 }
 
-const SELF_COMMENTARY_PATTERNS = [
-  /\bthis record (?:maintains|uses|demonstrates|reflects) (?:a )?(?:factual|child-centred|therapeutic)/i,
-  /\bthe (?:above )?record is (?:factual|child-centred|therapeutic|professional)\b/i,
-  /\bthis (?:draft )?(?:is|remains) (?:factual|child-centred|therapeutic)\b/i
-]
+export function isRecordGenerationRequest(text: string): boolean {
+  const value = String(text || '')
+  if (
+    /\b(?:create|write|draft|turn|make|convert|generate|produce|help\s+me\s+(?:write|record|create))\b.{0,80}\b(?:daily\s+record|incident\s+(?:record|report|reflection)|handover(?:\s+note)?|magic\s+notes?|behaviour\s+(?:record|reflection)|recording|(?:a\s+)?record)\b/i.test(
+      value
+    )
+  ) {
+    return true
+  }
+  if (/\bmagic\s+notes?\b/i.test(value)) return true
+  if (isDailyRecordRequest(value) || isIncidentRecordRequest(value)) return true
+  const lowered = value.toLowerCase()
+  return (
+    lowered.includes('rough notes') &&
+    ['create', 'write', 'draft', 'turn', 'convert', 'record'].some((needle) => lowered.includes(needle))
+  )
+}
 
 export function isSelfCommentaryParagraph(text: string): boolean {
   const value = String(text || '').trim()
@@ -190,6 +364,18 @@ export function buildAdultIdentityPromptBlock(): string {
     'Daily record output discipline:',
     `• ${ORB_DAILY_RECORD_OUTPUT_DISCIPLINE}`,
     '',
+    'Record-only output:',
+    `• ${ORB_RECORD_ONLY_OUTPUT_PRINCIPLE}`,
+    '',
+    'Child voice discipline:',
+    `• ${ORB_CHILD_VOICE_DISCIPLINE}`,
+    '',
+    'Emotional impact discipline:',
+    `• ${ORB_EMOTIONAL_IMPACT_DISCIPLINE}`,
+    '',
+    'Daily record simplification:',
+    `• ${ORB_DAILY_RECORD_SIMPLIFICATION}`,
+    '',
     'Record heading discipline:',
     `• ${ORB_RECORD_HEADING_DISCIPLINE}`,
     '',
@@ -200,3 +386,10 @@ export function buildAdultIdentityPromptBlock(): string {
     ...ORB_OBSERVATION_INTERPRETATION_RULES.map((rule) => `• ${rule}`)
   ].join('\n')
 }
+
+/** Manual regression prompt for live ORB daily-record retest after discipline passes. */
+export const ORB_MANUAL_REGRESSION_DAILY_RECORD_PROMPT =
+  'Create a daily record. Keep it factual, warm, therapeutic, child-centred and suitable for a children\'s home record.\n\n' +
+  'Child A came back quieter after school. Adult TK gave Child A space. Adult JS checked in later. Child A said, "I\'m just annoyed about school." ' +
+  'Adult JS offered toast and sat nearby while Child A watched TV. Child A ate the toast and appeared calmer before bedtime. ' +
+  'Adult TK handed over that tomorrow\'s adults should check in gently about school if Child A wishes to talk.'

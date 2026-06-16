@@ -1,7 +1,7 @@
 {
   "baseline_version": "1.0.0",
-  "commit_sha": "de5318ca93d20082923061244b946edbec5b05cd",
-  "run_timestamp": "2026-06-16T17:13:20.333694+00:00",
+  "commit_sha": "b29f08eae41516d56e3033e668ffc013b64d96b7",
+  "run_timestamp": "2026-06-16T17:55:16.168165+00:00",
   "scenario_set": "core100",
   "mode": "static",
   "scenario_count": 100,
@@ -321,7 +321,7 @@
     "internal_only_categories": [],
     "warning": "Scores are internal quality indicators aligned to recognised sources where mapped. They are not regulatory determinations, inspection predictions, or professional validation. Adults remain accountable for decisions, escalation and final records."
   },
-  "run_duration_seconds": 0.35,
+  "run_duration_seconds": 0.41,
   "run_scope": {
     "limit": null,
     "sample": null,
@@ -427,7 +427,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "template_scaffold",
-      "output_excerpt": "## Positive progress daily record  ## Presentation and Support Young person had a calm day. Attended school on time. Joined group activity in the evening and shared positive news about a school project. Ate all meals. Bedtime routine completed without difficulty.  ## Child's Voic"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person had a calm day. Attended school on time. Joined group activity in the evening and shared positive news about a school project. Ate all meals. Bedtime routine completed without difficulty.  Young person said: Joined group a"
     },
     {
       "scenario_id": "core_003",
@@ -477,7 +477,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "template_scaffold",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person refused lunch saying they were not hungry. The adult offered alternative snack later. Young person ate a small portion at tea after calm conversation about food choices. No weight concern raised today.  ## Child's Voice / "
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person refused lunch saying they were not hungry. The adult offered alternative snack later. Young person ate a small portion at tea after calm conversation about food choices. No weight concern raised today.  Young person refuse"
     },
     {
       "scenario_id": "core_004",
@@ -529,7 +529,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "template_scaffold",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person struggled to settle at bedtime. Was awake until late. The adult offered quiet activity and reassurance. Eventually slept. Woke tired this morning. Sleep pattern to be monitored.  ## Child's Voice / Presentation Young perso"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person struggled to settle at bedtime. Was awake until late. The adult offered quiet activity and reassurance. Eventually slept. Woke tired this morning. Sleep pattern to be monitored.  Young person said: not yet known \u2014 record t"
     },
     {
       "scenario_id": "core_005",
@@ -581,7 +581,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "template_scaffold",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person needed encouragement with personal care this morning. The adult offered sensitive support and choices. Young person completed hygiene routine with minimal prompting. Dressed appropriately for school.  ## Child's Voice / Pr"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person needed encouragement with personal care this morning. The adult offered sensitive support and choices. Young person completed hygiene routine with minimal prompting. Dressed appropriately for school.  Young person said: no"
     },
     {
       "scenario_id": "core_006",
@@ -633,7 +633,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "template_scaffold",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person said another young person in the home had been unkind during a game. The adult listened and facilitated a brief restorative conversation. Both young people agreed to try again tomorrow. No physical contact.  ## Child's Voi"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person said another young person in the home had been unkind during a game. The adult listened and facilitated a brief restorative conversation. Both young people agreed to try again tomorrow. No physical contact.  Young person s"
     },
     {
       "scenario_id": "core_007",
@@ -735,7 +735,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "template_scaffold",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person declined planned group outing. Said they needed quiet time. The adult respected choice and offered alternative activity at home. Young person engaged with one-to-one support instead.  ## Child's Voice / Presentation Young "
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person declined planned group outing. Said they needed quiet time. The adult respected choice and offered alternative activity at home. Young person engaged with one-to-one support instead.  Young person declined planned group ou"
     },
     {
       "scenario_id": "core_009",
@@ -785,7 +785,7 @@
       "record_type": "daily_record",
       "scenario_family": "daily_care",
       "answer_source": "template_scaffold",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person returned to the home after off-site appointment appearing unsettled. Would not say why immediately. The adult offered drink and quiet space. Presentation improved after 30 minutes. Follow-up keywork offered.  ## Child's Vo"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person returned to the home after off-site appointment appearing unsettled. Would not say why immediately. The adult offered drink and quiet space. Presentation improved after 30 minutes. Follow-up keywork offered.  Young person "
     },
     {
       "scenario_id": "core_010",
@@ -2543,7 +2543,7 @@
       "record_type": "daily_record",
       "scenario_family": "magic_notes",
       "answer_source": "template_scaffold",
-      "output_excerpt": "## Daily Record  ## Presentation and Support Young person was behaviour that may have communicated an unmet need and found it difficult to follow the request at that time. The adult used a firm approach \u2014 wording may need review. later followed the request when ready.  ## Child's"
+      "output_excerpt": "## Daily Record  ## Presentation and Support Young person was behaviour that may have communicated an unmet need and found it difficult to follow the request at that time. The adult used a firm approach \u2014 wording may need review. later followed the request when ready.  Young pers"
     },
     {
       "scenario_id": "core_045",

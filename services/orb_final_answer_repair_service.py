@@ -10,6 +10,10 @@ from services.orb_final_answer_contract_validator_service import validate_final_
 from services.orb_placeholder_quality_guard_service import sanitize_placeholders_in_answer
 from services.orb_execution_policy_service import MISSING_RETURN_SUBSTANCE_DETERMINISTIC_ANSWER
 from services.orb_mandatory_response_contract_service import find_inappropriate_lado_reference
+from assistant.knowledge.adult_identity_language import (
+    is_record_generation_request,
+    sanitize_live_record_output,
+)
 from services.orb_recording_contract_service import extract_known_incident_facts
 from services.orb_therapeutic_language_contract_service import (
     apply_deterministic_therapeutic_repairs,
@@ -194,6 +198,12 @@ def apply_deterministic_repairs(
     return cleaned, repair_meta
 
 
+def _apply_record_output_discipline(answer: str, *, message: str) -> str:
+    if not is_record_generation_request(message):
+        return answer
+    return sanitize_live_record_output(answer, source_text=message)
+
+
 def repair_and_validate_final_answer(
     answer: str,
     *,
@@ -216,11 +226,14 @@ def repair_and_validate_final_answer(
         (validation.get("therapeutic_validation") or {}).get("judgemental_phrases")
     )
     if validation["passed"]:
-        return validation["sanitized_answer"], {
+        sanitized = _apply_record_output_discipline(validation["sanitized_answer"], message=message)
+        return sanitized, {
             "final_answer_validation_passed": True,
-            "repair_applied": original_had_judgemental,
-            "answer_repaired": original_had_judgemental,
-            "repair_reason": "therapeutic_language" if original_had_judgemental else None,
+            "repair_applied": original_had_judgemental or sanitized != validation["sanitized_answer"],
+            "answer_repaired": original_had_judgemental or sanitized != validation["sanitized_answer"],
+            "repair_reason": "therapeutic_language" if original_had_judgemental else (
+                "live_record_discipline" if sanitized != validation["sanitized_answer"] else None
+            ),
             "validation": validation,
         }
 
@@ -260,7 +273,11 @@ def repair_and_validate_final_answer(
         or original_had_judgemental
         or repair_reason == "therapeutic_language"
     )
-    return validation["sanitized_answer"], {
+    final_answer = _apply_record_output_discipline(validation["sanitized_answer"], message=message)
+    if final_answer != validation["sanitized_answer"]:
+        answer_repaired = True
+        repair_reason = repair_reason or "live_record_discipline"
+    return final_answer, {
         "final_answer_validation_passed": validation["passed"],
         "repair_applied": answer_repaired or not validation["passed"],
         "answer_repaired": answer_repaired,
