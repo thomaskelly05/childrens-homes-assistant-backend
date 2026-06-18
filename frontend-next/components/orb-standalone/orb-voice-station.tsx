@@ -88,14 +88,20 @@ import {
 } from '@/lib/orb/voice/orb-voice-readiness'
 import {
   ORB_VOICE_MIC_BLOCKED_MESSAGE,
-  ORB_VOICE_NO_HEAR_MESSAGE,
-  ORB_VOICE_UNSUPPORTED_MESSAGE
+  ORB_VOICE_NO_HEAR_MESSAGE
 } from '@/components/orb-standalone/use-standalone-orb-voice'
 import {
   getOrbVoiceBrowserDiagnostics,
   ORB_VOICE_WEB_BOUNDARY_COPY,
-  ORB_VOICE_WEB_START_ERROR
+  ORB_VOICE_WEB_START_ERROR,
+  ORB_VOICE_WEB_UNSUPPORTED_ERROR,
+  patchOrbVoiceBrowserDiagnostics
 } from '@/lib/orb/voice/orb-voice-browser-diagnostics'
+import {
+  isOrbWebRealtimeVoiceEnabled,
+  ORB_WEB_REALTIME_DISABLED_REASON,
+  ORB_WEB_VOICE_CAPTURE_MODE
+} from '@/lib/orb/voice/orb-web-voice-config'
 import {
   ORB_VOICE_PANEL_MOBILE_SUBTITLE,
   ORB_VOICE_PANEL_SUBTITLE,
@@ -669,6 +675,15 @@ export function OrbVoiceStation({
       if (cancelled) return
       statusFetchedRef.current = true
       setRealtimeStatus(status)
+      patchOrbVoiceBrowserDiagnostics({
+        dictateCaptureAvailable:
+          detectSpeechRecognitionSupported() || Boolean(status?.realtime_enabled),
+        voiceCaptureMode: ORB_WEB_VOICE_CAPTURE_MODE,
+        realtimeAttempted: false,
+        realtimeDisabledReason: isOrbWebRealtimeVoiceEnabled()
+          ? null
+          : ORB_WEB_REALTIME_DISABLED_REASON
+      })
       setStatusProbe('done')
       emitOrbClientDebug({
         area: 'voice',
@@ -766,6 +781,22 @@ export function OrbVoiceStation({
       return
     }
 
+    if (!isOrbWebRealtimeVoiceEnabled()) {
+      patchOrbVoiceBrowserDiagnostics({
+        voiceCaptureMode: ORB_WEB_VOICE_CAPTURE_MODE,
+        realtimeAttempted: false,
+        realtimeDisabledReason: ORB_WEB_REALTIME_DISABLED_REASON
+      })
+      emitOrbClientDebug({
+        area: 'voice',
+        event: 'voice_start_branch_selected',
+        detail: { branch: 'browser_speech_recognition', realtimeDisabled: true }
+      })
+      setBrowserStartStage('starting')
+      await handleBrowserVoicePrimary()
+      return
+    }
+
     if (useBrowserLaunch) {
       emitOrbClientDebug({
         area: 'voice',
@@ -789,8 +820,8 @@ export function OrbVoiceStation({
         return
       }
       setVoiceStartStage('failed')
-      setVoiceStartError(ORB_VOICE_UNSUPPORTED_MESSAGE)
-      setStartBlockedMessage(ORB_VOICE_UNSUPPORTED_MESSAGE)
+      setVoiceStartError(ORB_VOICE_WEB_UNSUPPORTED_ERROR)
+      setStartBlockedMessage(ORB_VOICE_WEB_UNSUPPORTED_ERROR)
       emitOrbClientDebug({ area: 'voice', event: 'voice_start_unsupported_visible', detail: {} })
       return
     }
@@ -901,7 +932,7 @@ export function OrbVoiceStation({
       return
     }
     if (!browserSpeechSupported) {
-      setVoiceStartError(ORB_VOICE_UNSUPPORTED_MESSAGE)
+      setVoiceStartError(ORB_VOICE_WEB_UNSUPPORTED_ERROR)
       emitOrbClientDebug({ area: 'voice', event: 'voice_start_unsupported_visible', detail: {} })
       return
     }

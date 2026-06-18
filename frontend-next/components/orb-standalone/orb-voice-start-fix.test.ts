@@ -130,7 +130,7 @@ describe('ORB Voice start fix — start click path', () => {
 
   it('empty recognition shows visible no-hear message', () => {
     assert.match(hook(), /ORB_VOICE_NO_HEAR_MESSAGE/)
-    assert.match(hook(), /I didn't catch that\. Try again or use Chat\./)
+    assert.match(hook(), /I didn't catch that\. Try again, use Dictate, or use Chat\./)
   })
 
   it('voice station exposes launch and error data markers', () => {

@@ -12,6 +12,11 @@ import { OPENAI_REALTIME_SDP_URL } from '@/lib/orb/network'
 
 import type { OrbRealtimeVoiceStatus } from './orb-realtime-availability'
 import { getOrbVoiceBrowserDiagnostics } from './orb-voice-browser-diagnostics'
+import {
+  isOrbWebRealtimeVoiceEnabled,
+  ORB_WEB_REALTIME_DISABLED_REASON,
+  ORB_WEB_VOICE_CAPTURE_MODE
+} from './orb-web-voice-config'
 import { getActiveOrbRealtimeVoiceClient, getActiveOrbRealtimeVoiceSession } from './orb-voice-session-registry'
 import type { OrbVoiceAuthStatus } from './orb-voice-ui-state'
 
@@ -165,11 +170,26 @@ function sessionHasClientSecret(session: ReturnType<typeof getActiveOrbRealtimeV
 export function buildOrbVoiceDiagSnapshot() {
   const session = getActiveOrbRealtimeVoiceSession()
   const client = getActiveOrbRealtimeVoiceClient()
+  const browserDiagnostics = getOrbVoiceBrowserDiagnostics()
+  const webRealtimeEnabled = isOrbWebRealtimeVoiceEnabled()
   return {
     authStatus,
     statusHttpStatus,
     realtimeEnabled: lastStatus?.realtime_enabled ?? null,
     provider: session?.provider ?? lastStatus?.provider ?? null,
+    realtimeAttempted: browserDiagnostics.realtimeAttempted,
+    realtimeDisabledReason: webRealtimeEnabled ? null : ORB_WEB_REALTIME_DISABLED_REASON,
+    voiceCaptureMode: ORB_WEB_VOICE_CAPTURE_MODE,
+    dictateCaptureAvailable: browserDiagnostics.dictateCaptureAvailable,
+    micPermission: browserDiagnostics.microphonePermission,
+    recognitionStartCount: browserDiagnostics.recognitionStartCount,
+    recognitionEndCount: browserDiagnostics.recognitionEndCount,
+    lastStopReason: browserDiagnostics.lastStopReason ?? browserDiagnostics.stopReason,
+    orbBrainAttempted: browserDiagnostics.orbBrainAttempted,
+    orbBrainStatus: browserDiagnostics.orbBrainStatus,
+    ttsAttempted: browserDiagnostics.ttsAttempted,
+    ttsStatus: browserDiagnostics.ttsStatus,
+    ttsProvider: browserDiagnostics.ttsProvider,
     sessionHttpStatus,
     hasClientSecret: sessionHasClientSecret(session),
     model: session?.openai_session?.model ?? lastStatus?.model ?? null,
@@ -200,7 +220,8 @@ export function buildOrbVoiceDiagSnapshot() {
     sessionResponseShape: lastSessionResponseShape,
     sessionId: session?.session_id ?? null,
     clientUsesWebRTC: client?.usesOpenAIWebRTC ?? false,
-    browserDiagnostics: getOrbVoiceBrowserDiagnostics()
+    browserDiagnostics,
+    activeTransport: webRealtimeEnabled && transportState.transportLive ? 'openai_realtime' : ORB_WEB_VOICE_CAPTURE_MODE
   }
 }
 

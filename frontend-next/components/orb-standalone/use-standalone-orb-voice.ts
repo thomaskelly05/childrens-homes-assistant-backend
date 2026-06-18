@@ -23,6 +23,7 @@ import { detectMediaRecorderSupported } from '@/lib/orb/voice/orb-voice-readines
 import {
   detectMediaRecorderInWindow,
   detectSpeechRecognitionInWindow,
+  getOrbVoiceBrowserDiagnostics,
   patchOrbVoiceBrowserDiagnostics,
   resetOrbVoiceBrowserDiagnostics
 } from '@/lib/orb/voice/orb-voice-browser-diagnostics'
@@ -157,11 +158,11 @@ const SPEECH_TEST_PHRASE = ORB_VOICE_PREVIEW_PHRASE
 const SAFARI_KEEPALIVE_MS = 140
 export const RECOGNITION_START_TIMEOUT_MS = 2500
 export const ORB_VOICE_NO_HEAR_MESSAGE =
-  "I didn't catch that. Try again or use Chat."
+  "I didn't catch that. Try again, use Dictate, or use Chat."
 export const ORB_VOICE_MIC_BLOCKED_MESSAGE =
-  'Voice could not start. Check microphone permission or use Chat instead.'
+  'Voice could not start. Dictate is available, or you can use Chat instead.'
 export const ORB_VOICE_UNSUPPORTED_MESSAGE =
-  'Voice may not be supported in this browser. Try typing, Dictate, or another browser.'
+  'Voice is not supported in this browser. Use Dictate or Chat instead.'
 
 function readStoredSettings(): StandaloneOrbVoiceSettings {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS
@@ -441,6 +442,7 @@ export function useStandaloneOrbVoice() {
       }
 
       if (typeof window === 'undefined' || !window.speechSynthesis) {
+        patchOrbVoiceBrowserDiagnostics({ ttsStatus: 'skipped_no_synthesis', ttsProvider: null })
         setSpeaking(false)
         setVoiceCaptureState('idle')
         setPhase('idle')
@@ -470,6 +472,11 @@ export function useStandaloneOrbVoice() {
         setPhase('idle')
       }
       window.speechSynthesis.speak(utterance)
+      patchOrbVoiceBrowserDiagnostics({
+        ttsAttempted: true,
+        ttsStatus: 'browser_fallback',
+        ttsProvider: 'browser_speech_synthesis'
+      })
     },
     [startSafariKeepAlive, stopSafariKeepAlive]
   )
@@ -570,7 +577,12 @@ export function useStandaloneOrbVoice() {
       recognitionModeRef.current = mode
 
       recognition.onstart = () => {
-        patchOrbVoiceBrowserDiagnostics({ recognitionStartEvent: true, recognitionErrorEvent: false })
+        const diag = getOrbVoiceBrowserDiagnostics()
+        patchOrbVoiceBrowserDiagnostics({
+          recognitionStartEvent: true,
+          recognitionErrorEvent: false,
+          recognitionStartCount: diag.recognitionStartCount + 1
+        })
         setListening(true)
         setVoiceCaptureState('listening')
         setPhase(mode === 'continuous' ? 'continuous_listening' : 'listening')
@@ -623,7 +635,11 @@ export function useStandaloneOrbVoice() {
         stopMediaStream()
       }
       recognition.onend = () => {
-        patchOrbVoiceBrowserDiagnostics({ recognitionEndEvent: true })
+        const diag = getOrbVoiceBrowserDiagnostics()
+        patchOrbVoiceBrowserDiagnostics({
+          recognitionEndEvent: true,
+          recognitionEndCount: diag.recognitionEndCount + 1
+        })
         const continuous = recognitionModeRef.current === 'continuous'
         const willRestart =
           continuous && userInitiatedVoiceRef.current && !voiceSessionPausedRef.current
@@ -905,7 +921,11 @@ export function useStandaloneOrbVoice() {
     resetOrbVoiceBrowserDiagnostics()
     patchOrbVoiceBrowserDiagnostics({
       speechRecognitionSupported: detectSpeechRecognitionInWindow(),
-      mediaRecorderSupported: detectMediaRecorderInWindow()
+      mediaRecorderSupported: detectMediaRecorderInWindow(),
+      dictateCaptureAvailable:
+        detectSpeechRecognitionInWindow() || detectMediaRecorderInWindow(),
+      voiceCaptureMode: 'browser_speech_recognition',
+      realtimeAttempted: false
     })
     const Recognition = getSpeechRecognitionCtor()
     if (!Recognition) {

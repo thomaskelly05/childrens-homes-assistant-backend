@@ -186,10 +186,13 @@ export async function requestOrbPremiumTts(options: {
 }): Promise<{ ok: true; blob: Blob } | { ok: false; status: number }> {
   const { authFetchResponse } = await import('@/lib/auth/api')
   const { patchOrbVoiceBrowserDiagnostics } = await import('@/lib/orb/voice/orb-voice-browser-diagnostics')
-  patchOrbVoiceBrowserDiagnostics({ ttsRequestAttempted: true })
+  patchOrbVoiceBrowserDiagnostics({ ttsRequestAttempted: true, ttsAttempted: true })
   try {
     const trimmed = options.text.trim().slice(0, 500)
-    if (!trimmed) return { ok: false, status: 400 }
+    if (!trimmed) {
+      patchOrbVoiceBrowserDiagnostics({ ttsStatus: 'skipped_empty', ttsProvider: null })
+      return { ok: false, status: 400 }
+    }
     const response = await authFetchResponse('/orb/voice/tts', {
       method: 'POST',
       headers: {
@@ -204,11 +207,22 @@ export async function requestOrbPremiumTts(options: {
         context: 'orb_residential_web_voice_reply'
       })
     })
-    if (!response.ok) return { ok: false, status: response.status }
+    if (!response.ok) {
+      patchOrbVoiceBrowserDiagnostics({
+        ttsStatus: `failed_${response.status}`,
+        ttsProvider: null
+      })
+      return { ok: false, status: response.status }
+    }
     const blob = await response.blob()
-    if (!blob.size) return { ok: false, status: 502 }
+    if (!blob.size) {
+      patchOrbVoiceBrowserDiagnostics({ ttsStatus: 'failed_empty', ttsProvider: null })
+      return { ok: false, status: 502 }
+    }
+    patchOrbVoiceBrowserDiagnostics({ ttsStatus: 'success', ttsProvider: 'premium_tts' })
     return { ok: true, blob }
   } catch {
+    patchOrbVoiceBrowserDiagnostics({ ttsStatus: 'failed_network', ttsProvider: null })
     return { ok: false, status: 0 }
   }
 }

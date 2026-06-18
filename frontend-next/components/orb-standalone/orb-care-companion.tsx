@@ -1583,7 +1583,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
       const runConversationRequest = async () => {
         if (voiceOriginatedSend) {
           const { patchOrbVoiceBrowserDiagnostics } = await import('@/lib/orb/voice/orb-voice-browser-diagnostics')
-          patchOrbVoiceBrowserDiagnostics({ brainRequestAttempted: true })
+          patchOrbVoiceBrowserDiagnostics({ brainRequestAttempted: true, orbBrainAttempted: true })
         }
         const brainRoutedRequest = buildOrbBrainConversationRequest(conversationRequest, {
           source: voiceOriginatedSend ? 'voice' : 'chat',
@@ -1786,6 +1786,11 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
         let response: StandaloneOrbConversationResponse | null = null
         let streamFailedBeforeToken = false
 
+        if (voiceOriginatedSend) {
+          const { patchOrbVoiceBrowserDiagnostics } = await import('@/lib/orb/voice/orb-voice-browser-diagnostics')
+          patchOrbVoiceBrowserDiagnostics({ brainRequestAttempted: true, orbBrainAttempted: true })
+        }
+
         try {
           response = await askOrbBrain({
             request: conversationRequest,
@@ -1893,6 +1898,13 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
         }
 
         traceOrbSend('request_end', { sendGeneration, hasAnswer: Boolean(response.answer) })
+        if (voiceOriginatedSend) {
+          const { patchOrbVoiceBrowserDiagnostics } = await import('@/lib/orb/voice/orb-voice-browser-diagnostics')
+          patchOrbVoiceBrowserDiagnostics({
+            orbBrainAttempted: true,
+            orbBrainStatus: response.ok === false ? 'failed' : 'success'
+          })
+        }
         const frontendRequestCompletedAt = Date.now()
         markOrbChatLatency('render_complete')
         logOrbChatLatencySnapshot()
@@ -1957,6 +1969,13 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
           detail: parsed.detail,
           csrfFailed: parsed.csrfFailed
         })
+        if (voiceOriginatedSend) {
+          const { patchOrbVoiceBrowserDiagnostics } = await import('@/lib/orb/voice/orb-voice-browser-diagnostics')
+          patchOrbVoiceBrowserDiagnostics({
+            orbBrainAttempted: true,
+            orbBrainStatus: `failed_${parsed.status ?? 'error'}`
+          })
+        }
         if (!isCurrentSend()) return
         if (parsed.csrfFailed) {
           void refreshSession()

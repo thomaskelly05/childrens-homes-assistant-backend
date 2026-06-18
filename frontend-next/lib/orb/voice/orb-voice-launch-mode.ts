@@ -8,6 +8,7 @@ import {
   ORB_RESIDENTIAL_VOICE_SAFETY_STRIP
 } from '../orb-residential-safety-copy.ts'
 import { orbResidentialStation } from '../orb-residential-stations.ts'
+import { isOrbWebRealtimeVoiceEnabled } from './orb-web-voice-config.ts'
 
 const ORB_REALTIME_CONFIGURED_PROVIDERS = ['openai', 'openai_realtime'] as const
 
@@ -60,6 +61,7 @@ export function resolveOrbVoiceLaunchMode(input: ResolveOrbVoiceLaunchModeInput)
   if (!secure) return 'unavailable'
   if (
     input.liveVoiceAllowed &&
+    isOrbWebRealtimeVoiceEnabled() &&
     isOrbRealtimeStatusConfigured(input.realtimeStatus)
   ) {
     return 'openai_realtime'
