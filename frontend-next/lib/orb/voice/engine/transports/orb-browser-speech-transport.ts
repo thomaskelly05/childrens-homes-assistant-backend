@@ -9,26 +9,24 @@ import {
   recognitionErrorUserMessage,
   resolveBrowserSpeechCaptureText
 } from '@/lib/orb/voice/orb-browser-speech-capture'
-import { confirmSpeechRecognitionStart } from '@/lib/orb/voice/orb-speech-recognition-start'
+import {
+  confirmSpeechRecognitionStart,
+  type OrbSpeechRecognitionLike
+} from '@/lib/orb/voice/orb-speech-recognition-start'
 import { patchOrbVoiceBrowserDiagnostics, getOrbVoiceBrowserDiagnostics } from '@/lib/orb/voice/orb-voice-browser-diagnostics'
 
-type BrowserSpeechRecognition = {
+type BrowserSpeechRecognition = OrbSpeechRecognitionLike & {
   lang: string
   interimResults: boolean
   continuous: boolean
   maxAlternatives: number
-  onstart: (() => void) | null
-  onresult:
-    | ((event: {
-        resultIndex: number
-        results: { length: number; [index: number]: { isFinal: boolean; [index: number]: { transcript: string } } }
-      }) => void)
-    | null
-  onerror: ((event: Event) => void) | null
-  onend: (() => void) | null
-  start: () => void
   stop: () => void
   abort: () => void
+}
+
+type SpeechRecognitionResultEvent = {
+  resultIndex: number
+  results: ArrayLike<{ isFinal: boolean; 0?: { transcript?: string } }>
 }
 
 export type OrbBrowserSpeechTransportCallbacks = {
@@ -66,27 +64,28 @@ export class OrbBrowserSpeechTransport {
       return false
     }
 
-    this.recognition = new Recognition()
-    this.recognition.lang = ORB_BROWSER_SPEECH_LANG
-    this.recognition.interimResults = true
-    this.recognition.continuous = true
-    this.recognition.maxAlternatives = 1
+    const recognition = new Recognition()
+    recognition.lang = ORB_BROWSER_SPEECH_LANG
+    recognition.interimResults = true
+    recognition.continuous = true
+    recognition.maxAlternatives = 1
 
-    this.recognition.onstart = () => {
+    recognition.onstart = () => {
       patchOrbVoiceBrowserDiagnostics({ recognitionStartEvent: true })
       callbacks.onListeningChange(true)
     }
 
-    this.recognition.onresult = (event) => {
+    recognition.onresult = (event) => {
+      const speechEvent = event as SpeechRecognitionResultEvent
       const diag = getOrbVoiceBrowserDiagnostics()
       patchOrbVoiceBrowserDiagnostics({
         recognitionResultEventCount: diag.recognitionResultEventCount + 1
       })
       let interim = ''
       let finalText = ''
-      for (let i = event.resultIndex; i < event.results.length; i += 1) {
-        const piece = event.results[i]?.[0]?.transcript ?? ''
-        if (event.results[i]?.isFinal) finalText += piece
+      for (let i = speechEvent.resultIndex; i < speechEvent.results.length; i += 1) {
+        const piece = speechEvent.results[i]?.[0]?.transcript ?? ''
+        if (speechEvent.results[i]?.isFinal) finalText += piece
         else interim += piece
       }
       if (interim.trim()) {
@@ -108,7 +107,7 @@ export class OrbBrowserSpeechTransport {
       }
     }
 
-    this.recognition.onerror = (event) => {
+    recognition.onerror = (event) => {
       const speechEvent = event as Event & { error?: string; message?: string }
       const code = speechEvent.error ?? 'unknown'
       this.userInitiated = false
@@ -122,7 +121,7 @@ export class OrbBrowserSpeechTransport {
       callbacks.onListeningChange(false)
     }
 
-    this.recognition.onend = () => {
+    recognition.onend = () => {
       patchOrbVoiceBrowserDiagnostics({ recognitionEndEvent: true })
       const merged = promoteInterimTranscriptCommitted(this.transcript, this.interim)
       if (merged && merged !== this.transcript) {
@@ -134,10 +133,10 @@ export class OrbBrowserSpeechTransport {
       this.recognition = null
     }
 
-    const confirmed = await confirmSpeechRecognitionStart(() => {
-      this.recognition?.start()
-    })
+    this.recognition = recognition
+    const confirmed = await confirmSpeechRecognitionStart(recognition)
     if (!confirmed.ok) {
+      this.recognition = null
       callbacks.onError('Speech recognition could not start.')
       return false
     }

@@ -31,7 +31,7 @@ import {
   syncBrowserSpeechTranscriptDiagnostics,
   type OrbBrowserSpeechCapturePurpose
 } from '@/lib/orb/voice/orb-browser-speech-capture'
-import { confirmSpeechRecognitionStart } from '@/lib/orb/voice/orb-speech-recognition-start'
+import { confirmSpeechRecognitionStart, type OrbSpeechRecognitionLike } from '@/lib/orb/voice/orb-speech-recognition-start'
 import { detectMediaRecorderSupported } from '@/lib/orb/voice/orb-voice-readiness'
 import {
   detectMediaRecorderInWindow,
@@ -69,21 +69,11 @@ export {
 }
 export type { OrbVoiceCaptureState }
 
-type BrowserSpeechRecognition = {
+type BrowserSpeechRecognition = OrbSpeechRecognitionLike & {
   lang: string
   interimResults: boolean
   continuous: boolean
   maxAlternatives: number
-  onstart: (() => void) | null
-  onresult:
-    | ((event: {
-        resultIndex: number
-        results: ArrayLike<{ isFinal: boolean; 0?: { transcript?: string } }>
-      }) => void)
-    | null
-  onerror: ((event: Event) => void) | null
-  onend: (() => void) | null
-  start: () => void
   stop: () => void
   abort: () => void
 }
@@ -661,15 +651,19 @@ export function useStandaloneOrbVoice() {
         }
       }
       recognition.onresult = (event) => {
+        const speechEvent = event as {
+          resultIndex: number
+          results: ArrayLike<{ isFinal: boolean; 0?: { transcript?: string } }>
+        }
         const diag = getOrbVoiceBrowserDiagnostics()
         patchOrbVoiceBrowserDiagnostics({
           recognitionResultEventCount: diag.recognitionResultEventCount + 1
         })
         let interim = ''
         let finalText = ''
-        for (let i = event.resultIndex; i < event.results.length; i += 1) {
-          const piece = event.results[i]?.[0]?.transcript ?? ''
-          if (event.results[i]?.isFinal) finalText += piece
+        for (let i = speechEvent.resultIndex; i < speechEvent.results.length; i += 1) {
+          const piece = speechEvent.results[i]?.[0]?.transcript ?? ''
+          if (speechEvent.results[i]?.isFinal) finalText += piece
           else interim += piece
         }
         const interimTrimmed = stripWakePhraseFromTranscript(interim.trim())

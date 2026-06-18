@@ -26,10 +26,10 @@ export type OrbSpeechRecognitionStartResult = {
 }
 
 export type OrbSpeechRecognitionLike = {
-  onstart: (() => void) | null
-  onerror: (() => void) | null
-  onend: (() => void) | null
-  onresult?: ((...args: never[]) => void) | null
+  onstart: ((event?: unknown) => void) | null
+  onerror: ((event?: unknown) => void) | null
+  onend: ((event?: unknown) => void) | null
+  onresult?: ((event: unknown) => void) | null
   start: () => void
 }
 
@@ -83,10 +83,10 @@ export function confirmSpeechRecognitionStart(
       if (started) confirmSuccess()
     }
 
-    recognition.onstart = () => {
+    recognition.onstart = (event) => {
       started = true
       try {
-        priorOnstart?.()
+        priorOnstart?.(event)
       } catch {
         /* ignore handler errors */
       }
@@ -101,9 +101,9 @@ export function confirmSpeechRecognitionStart(
       }, minimumHoldMs)
     }
 
-    recognition.onerror = () => {
+    recognition.onerror = (event) => {
       try {
-        priorOnerror?.()
+        priorOnerror?.(event)
       } catch {
         /* ignore */
       }
@@ -113,9 +113,9 @@ export function confirmSpeechRecognitionStart(
       })
     }
 
-    recognition.onend = () => {
+    recognition.onend = (event) => {
       try {
-        priorOnend?.()
+        priorOnend?.(event)
       } catch {
         /* ignore */
       }

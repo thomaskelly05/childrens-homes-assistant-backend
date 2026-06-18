@@ -257,8 +257,7 @@ export function buildOrbVoiceDiagSnapshot() {
     sessionResponseShape: lastSessionResponseShape,
     sessionId: session?.session_id ?? null,
     clientUsesWebRTC: client?.usesOpenAIWebRTC ?? false,
-    browserDiagnostics,
-    activeTransport: webRealtimeEnabled && transportState.transportLive ? 'openai_realtime' : ORB_WEB_VOICE_CAPTURE_MODE
+    browserDiagnostics
   }
 }
 
