@@ -8,7 +8,7 @@ import {
   ORB_BRAIN_POWERED_BY,
   ORB_BRAIN_PRODUCT
 } from '@/lib/orb/orb-brain-metadata'
-import type { OrbSavedOutputRecord, OrbSavedOutputType } from '@/lib/orb/standalone-client'
+import type { OrbSavedOutputRecord, OrbSavedOutputSummary, OrbSavedOutputType } from '@/lib/orb/standalone-client'
 import type { OrbDocumentLens } from '@/lib/orb/document-intelligence'
 import type { OrbShiftBuilderFocus } from '@/lib/orb/shift-builder'
 
@@ -109,7 +109,7 @@ export function savedOutputSourceLabel(record: OrbSavedOutputRecord): string {
 export function savedOutputPlatformLabel(
   record: OrbSavedOutputRecord | OrbSavedOutputSummary
 ): string | null {
-  const meta = (record as OrbSavedOutputRecord).metadata
+  const meta = 'metadata' in record ? record.metadata : undefined
   if (!meta || typeof meta !== 'object' || !('source_platform' in meta)) return null
   const platform = String(meta.source_platform || '')
   if (!platform) return null
