@@ -83,6 +83,11 @@ export function isSafariBrowser(): boolean {
   return ua.includes('safari') && !ua.includes('chrome') && !ua.includes('chromium')
 }
 
+export function isFirefoxBrowser(): boolean {
+  if (typeof navigator === 'undefined') return false
+  return /firefox/i.test(navigator.userAgent)
+}
+
 export function detectSpeechRecognitionSupported(): boolean {
   if (typeof window === 'undefined') return false
   const w = window as Window & {

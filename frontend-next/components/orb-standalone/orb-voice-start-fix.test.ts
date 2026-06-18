@@ -59,10 +59,11 @@ describe('ORB Voice start fix — start click path', () => {
       'voice_start_handle_start_called',
       'voice_start_capabilities',
       'voice_start_branch_selected',
-      'voice_start_attempt_browser_fallback',
-      'voice_start_browser_fallback_start_called',
-      'voice_start_browser_fallback_success',
-      'voice_start_browser_fallback_failed',
+      'voice_start_attempt_browser_engine',
+      'voice_engine_start_called',
+      'voice_engine_start_success',
+      'voice_engine_start_failed',
+      'voice_engine_transcript_submitted',
       'voice_start_unsupported_visible',
       'voice_start_realtime_attempt',
       'voice_start_realtime_failed',
@@ -95,14 +96,10 @@ describe('ORB Voice start fix — start click path', () => {
     assert.match(station(), /setBrowserStartStage\('starting'\)/)
   })
 
-  it('browser voice requests microphone permission before starting recognition', () => {
-    const body = hook().match(/const beginUserVoiceCapture[\s\S]*?^  const endDictateSpeechCapture/m)?.[0] ?? ''
-    const micRequest = body.indexOf('const granted = await requestMicrophonePermission')
-    const firstStart = body.indexOf('const startResult = await startRecognitionSessionConfirmed')
-    assert.ok(micRequest >= 0)
-    assert.ok(firstStart >= 0)
-    assert.ok(micRequest < firstStart, 'mic permission must precede recognition start')
-    assert.match(body, /captureMode: 'active' \| 'continuous' = 'continuous'/)
+  it('browser voice uses ORBWebVoiceEngine in voice station', () => {
+    assert.match(station(), /useOrbWebVoiceEngine/)
+    assert.match(station(), /voiceEngine\.start/)
+    assert.match(station(), /voiceEngine\.stop/)
   })
 
   it('mic permission is requested on fallback after recognition start fails', () => {

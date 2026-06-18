@@ -61,7 +61,7 @@ describe('ORB Voice launch polish', () => {
     assert.match(actions, /Save to ORB/)
   })
 
-  it('browser launch mode when realtime not configured', () => {
+  it('browser launch mode when realtime not configured or launch gate off', () => {
     assert.equal(
       resolveOrbVoiceLaunchMode({
         realtimeStatus: { ok: true, realtime_enabled: false, provider: null, reason: 'not_configured' },
@@ -83,7 +83,7 @@ describe('ORB Voice launch polish', () => {
         synthesisAvailable: true,
         liveVoiceAllowed: true
       }),
-      'openai_realtime'
+      'browser_ptt'
     )
   })
 

@@ -6,15 +6,18 @@ import {
   ORB_WEB_REALTIME_DISABLED_REASON,
   ORB_WEB_VOICE_CAPTURE_MODE
 } from './orb-web-voice-config'
+import type { OrbVoiceRejectedTransport } from './engine/orb-web-voice-engine-types'
+import type { OrbVoiceTransportId } from './engine/orb-web-voice-engine-types'
 
 export type OrbVoiceBrowserDiagnostics = {
   microphonePermission: string
   speechRecognitionSupported: boolean
   mediaRecorderSupported: boolean
   dictateCaptureAvailable: boolean
-  voiceCaptureMode: typeof ORB_WEB_VOICE_CAPTURE_MODE | 'unknown'
+  voiceCaptureMode: typeof ORB_WEB_VOICE_CAPTURE_MODE | 'server_transcription' | 'unknown'
   getUserMediaAttempted: boolean
   getUserMediaSuccess: boolean
+  getUserMediaSupported: boolean
   recognitionStartEvent: boolean
   recognitionEndEvent: boolean
   recognitionErrorEvent: boolean
@@ -32,22 +35,42 @@ export type OrbVoiceBrowserDiagnostics = {
   ttsAttempted: boolean
   ttsStatus: string | null
   ttsProvider: string | null
+  ttsConfigured: boolean | null
   recognitionResultEventCount: number
   interimTranscriptLength: number
   finalTranscriptLength: number
+  resolvedTranscriptLength: number
   lastTranscriptLength: number
   lastTranscriptPreview: string
   noTranscriptReason: string | null
   voiceSubmitAttempted: boolean
   voiceSubmitBlockedReason: string | null
   browserName: string
+  browserFamily: string
   safariDetected: boolean
+  firefoxDetected: boolean
+  chromeDetected: boolean
+  secureContext: boolean
   lastRecognitionError: string | null
   lastRecognitionErrorMessage: string | null
   serverActionUsedForVoice: boolean
   clientFetchUsedForVoice: boolean
   staleServerActionErrorDetected: boolean
   recommendedFallback: 'dictate' | 'chat' | null
+  selectedTransport: OrbVoiceTransportId | null
+  activeTransport: OrbVoiceTransportId | null
+  supportedTransports: OrbVoiceTransportId[]
+  rejectedTransports: OrbVoiceRejectedTransport[]
+  lastStartAttemptAt: string | null
+  serverTranscriptionAttempted: boolean
+  serverTranscriptionStatus: string | null
+  appleOrBrowserFallbackUsed: boolean
+  bargeInEnabled: boolean
+  bargeInTriggered: boolean
+  interruptReason: string | null
+  speechCancelledBeforeListen: boolean
+  staleSpeakingStateDetected: boolean
+  userFacingMessage: string | null
 }
 
 const empty: OrbVoiceBrowserDiagnostics = {
@@ -58,6 +81,7 @@ const empty: OrbVoiceBrowserDiagnostics = {
   voiceCaptureMode: ORB_WEB_VOICE_CAPTURE_MODE,
   getUserMediaAttempted: false,
   getUserMediaSuccess: false,
+  getUserMediaSupported: false,
   recognitionStartEvent: false,
   recognitionEndEvent: false,
   recognitionErrorEvent: false,
@@ -75,22 +99,42 @@ const empty: OrbVoiceBrowserDiagnostics = {
   ttsAttempted: false,
   ttsStatus: null,
   ttsProvider: null,
+  ttsConfigured: null,
   recognitionResultEventCount: 0,
   interimTranscriptLength: 0,
   finalTranscriptLength: 0,
+  resolvedTranscriptLength: 0,
   lastTranscriptLength: 0,
   lastTranscriptPreview: '',
   noTranscriptReason: null,
   voiceSubmitAttempted: false,
   voiceSubmitBlockedReason: null,
   browserName: 'unknown',
+  browserFamily: 'unknown',
   safariDetected: false,
+  firefoxDetected: false,
+  chromeDetected: false,
+  secureContext: false,
   lastRecognitionError: null,
   lastRecognitionErrorMessage: null,
   serverActionUsedForVoice: false,
   clientFetchUsedForVoice: false,
   staleServerActionErrorDetected: false,
-  recommendedFallback: null
+  recommendedFallback: null,
+  selectedTransport: null,
+  activeTransport: null,
+  supportedTransports: [],
+  rejectedTransports: [],
+  lastStartAttemptAt: null,
+  serverTranscriptionAttempted: false,
+  serverTranscriptionStatus: null,
+  appleOrBrowserFallbackUsed: false,
+  bargeInEnabled: true,
+  bargeInTriggered: false,
+  interruptReason: null,
+  speechCancelledBeforeListen: false,
+  staleSpeakingStateDetected: false,
+  userFacingMessage: null
 }
 
 let state: OrbVoiceBrowserDiagnostics = { ...empty }

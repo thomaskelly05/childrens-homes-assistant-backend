@@ -57,9 +57,9 @@ describe('orb-browser-speech-capture', () => {
     assert.match(hook, /finalizeBrowserSpeechCapture/)
     assert.match(hook, /promoteInterimTranscriptCommitted/)
     assert.match(hook, /stopListeningAndFinalize/)
-    assert.match(station, /stopListeningAndFinalize/)
+    assert.match(station, /voiceEngine\.stop/)
     assert.match(station, /appendUserTurn\(text\)/)
-    assert.match(station, /voice\.displayTranscript \|\| voice\.transcript/)
+    assert.match(station, /voiceEngine\.displayTranscript/)
   })
 
   it('voice only reports no-catch when capture purpose is voice', () => {

@@ -30,22 +30,22 @@ describe('orb-voice-transcript', () => {
     assert.notEqual(display, 'live interim')
   })
 
-  it('voice hook uses chunk append helper and does not promote interim to transcript', () => {
+  it('voice hook promotes interim transcript on finalize', () => {
     const hook = readFileSync(
       join(root, 'components/orb-standalone/use-standalone-orb-voice.ts'),
       'utf8'
     )
-    assert.match(hook, /appendOrbVoiceFinalTranscriptChunk/)
-    assert.match(hook, /buildOrbVoiceDisplayTranscript/)
-    assert.doesNotMatch(hook, /setTranscript\(stripWakePhraseFromTranscript\(interimTrimmed\)\)/)
+    assert.match(hook, /promoteInterimTranscriptCommitted/)
+    assert.match(hook, /finalizeBrowserSpeechCapture/)
+    assert.match(hook, /resolveBrowserSpeechCaptureText/)
   })
 
-  it('send actions use committed transcript not interim-only display', () => {
+  it('send actions use display transcript including interim', () => {
     const station = readFileSync(
       join(root, 'components/orb-standalone/orb-voice-station.tsx'),
       'utf8'
     )
-    assert.match(station, /const browserTranscriptText = voice\.transcript\.trim\(\)/)
+    assert.match(station, /voice\.displayTranscript \|\| voice\.transcript/)
     assert.match(station, /onSendToOrb\(voiceTranscriptText/)
   })
 })
