@@ -3,8 +3,10 @@ from __future__ import annotations
 """ORB Residential voice API — browser STT/TTS primary; honest OpenAI Realtime / WebSocket hooks."""
 
 import os
+import shutil
+import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, WebSocket, status
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from pydantic import BaseModel, ConfigDict, Field
 
 from auth.orb_product_bootstrap_dependency import require_orb_product_bootstrap_access
@@ -28,6 +30,7 @@ from services.orb_voice_profiles import (
     resolve_openai_voice,
     resolve_voice_profile_for_session,
 )
+from services.orb_dictate_service import transcribe_dictate_audio
 from services.orb_voice_realtime_config import (
     _openai_realtime_configured,
     _provider_has_stt_credentials,
@@ -42,6 +45,23 @@ from services.orb_voice_realtime_ws_handler import orb_voice_realtime_ws_handler
 from services.orb_brain_metadata_service import attach_to_payload, build_brain_metadata
 
 router = APIRouter(prefix="/orb/voice", tags=["ORB Residential Voice"])
+
+VOICE_UPLOAD_DIR = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "_tmp_voice_uploads"
+)
+os.makedirs(VOICE_UPLOAD_DIR, exist_ok=True)
+VOICE_MAX_AUDIO_BYTES = 25 * 1024 * 1024
+VOICE_ALLOWED_AUDIO_SUFFIXES = frozenset(
+    {".webm", ".wav", ".mp3", ".m4a", ".ogg", ".mp4", ".mpeg", ".flac", ".aac", ".opus"}
+)
+VOICE_BLOCKED_UPLOAD_SUFFIXES = frozenset(
+    {".exe", ".bat", ".cmd", ".com", ".msi", ".scr", ".sh", ".bash", ".php", ".html", ".htm", ".js", ".jar"}
+)
+
+VOICE_REALTIME_TRANSCRIPTION_INSTRUCTIONS = (
+    "You are a silent transcription assistant for ORB Voice in residential childcare. "
+    "Transcribe the user's speech accurately. Do not speak or generate responses."
+)
 
 
 def _voice_brain_metadata() -> dict:
@@ -375,6 +395,83 @@ async def orb_voice_webrtc_ice(
             "session_id": session_id,
         },
     )
+
+
+@router.post("/transcribe/realtime/session")
+async def orb_voice_transcribe_realtime_session(
+    _current_user=Depends(require_orb_voice_premium),
+):
+    """Ephemeral OpenAI Realtime session for Voice transcription only (no assistant audio)."""
+    if not _openai_realtime_configured():
+        return {
+            "ok": True,
+            "configured": False,
+            "provider": None,
+            "reason": "not_configured",
+            "message": "Server transcription is not configured. Use Dictate or Chat instead.",
+        }
+
+    session_id = f"voice_tx_{uuid.uuid4().hex[:16]}"
+    provider_result = await orb_realtime_provider_service.create_dictate_transcription_session(
+        instructions=VOICE_REALTIME_TRANSCRIPTION_INSTRUCTIONS,
+        current_user=_current_user,
+        orb_session_id=session_id,
+    )
+    if not provider_result.get("configured") or provider_result.get("fallback_text_mode"):
+        return {
+            "ok": True,
+            "configured": False,
+            "provider": None,
+            "reason": "not_configured",
+            "message": provider_result.get("unavailable_reason")
+            or "Server transcription is not configured. Use Dictate or Chat instead.",
+        }
+
+    session_payload = provider_result.get("session") or {}
+    return {
+        "ok": True,
+        "configured": True,
+        "session_id": session_id,
+        "provider": "openai",
+        "model": provider_result.get("model"),
+        "openai_session": session_payload,
+        "reason": "configured",
+    }
+
+
+@router.post("/transcribe/audio")
+async def orb_voice_transcribe_audio(
+    file: UploadFile = File(...),
+    _current_user=Depends(require_orb_voice_premium),
+):
+    """Transient audio transcription for ORB Voice — audio is not stored after processing."""
+    suffix = (os.path.splitext(file.filename or "audio.webm")[1] or ".webm").lower()
+    if suffix in VOICE_BLOCKED_UPLOAD_SUFFIXES or suffix not in VOICE_ALLOWED_AUDIO_SUFFIXES:
+        raise HTTPException(status_code=400, detail="Unsupported audio file type.")
+    path = os.path.join(VOICE_UPLOAD_DIR, f"{uuid.uuid4().hex}{suffix}")
+    try:
+        with open(path, "wb") as handle:
+            shutil.copyfileobj(file.file, handle)
+        if os.path.getsize(path) > VOICE_MAX_AUDIO_BYTES:
+            raise HTTPException(status_code=400, detail="Audio file is too large.")
+        result = await transcribe_dictate_audio(path)
+        transcript = str(result.get("transcript") or "").strip()
+        return {
+            "success": True,
+            "data": {"transcript": transcript},
+            "provider": "server",
+            "audio_stored": False,
+        }
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(status_code=503, detail="Voice transcription is temporarily unavailable.")
+    finally:
+        if os.path.exists(path):
+            try:
+                os.remove(path)
+            except OSError:
+                pass
 
 
 @router.post("/transcribe")

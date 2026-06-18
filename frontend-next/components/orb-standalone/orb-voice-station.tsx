@@ -11,6 +11,7 @@ import { OrbVoiceLaunchControls } from '@/components/orb-standalone/orb-voice-la
 import { OrbVoiceLivePanel } from '@/components/orb-standalone/orb-voice-live-panel'
 import { OrbVoiceTranscriptActions } from '@/components/orb-standalone/orb-voice-transcript-actions'
 import { OrbVoiceStationContent } from '@/components/orb-standalone/orb-voice-station-content'
+import { useOrbWebVoiceEngine } from '@/components/orb-standalone/use-orb-web-voice-engine'
 import { useOrbMobileViewport } from '@/components/orb-standalone/use-orb-mobile-viewport'
 import {
   mapOrbVoiceUiToCompanionState
@@ -93,6 +94,8 @@ import {
   ORB_VOICE_SAFARI_NO_SPEECH_MESSAGE
 } from '@/components/orb-standalone/use-standalone-orb-voice'
 import { markOrbVoiceClientBrainFetch } from '@/lib/orb/voice/orb-voice-submit-client'
+import {
+  getOrbVoiceBrowserDiagnostics,
   ORB_VOICE_WEB_BOUNDARY_COPY,
   ORB_VOICE_WEB_START_ERROR,
   ORB_VOICE_WEB_UNSUPPORTED_ERROR,
@@ -272,6 +275,23 @@ export function OrbVoiceStation({
   const permissionDenied =
     micPermission === 'denied' || Boolean(voice.error?.toLowerCase().includes('microphone'))
 
+  const appendUserTurnRef = useRef<(text: string) => void>(() => {})
+
+  const voiceEngine = useOrbWebVoiceEngine({
+    onSubmitTranscript: (text) => appendUserTurnRef.current(text),
+    speakFallback: (text, onEnd) => voice.speak(text, onEnd),
+    onUserMessage: (message) => setVoiceStartError(message),
+    onStateChange: (engineState) => {
+      if (engineState === 'listening' || engineState === 'capturing') {
+        setBrowserStartStage('active')
+      } else if (engineState === 'failed' || engineState === 'unsupported') {
+        setBrowserStartStage('failed')
+      } else if (engineState === 'idle') {
+        setBrowserStartStage((current) => (current === 'stopping' ? 'active' : current))
+      }
+    }
+  })
+
   const voiceSessionLive =
     realtimeVoiceReady &&
     realtimeSessionConnected &&
@@ -305,8 +325,14 @@ export function OrbVoiceStation({
     secureContext: typeof window === 'undefined' ? true : window.isSecureContext
   })
 
-  const browserTranscriptText = (voice.displayTranscript || voice.transcript).trim()
-  const browserDisplayTranscript = (voice.displayTranscript || browserTranscriptText).trim()
+  const browserTranscriptText = (
+    voiceEngine.displayTranscript ||
+    voice.displayTranscript ||
+    voice.transcript
+  ).trim()
+  const browserDisplayTranscript = (
+    voiceEngine.displayTranscript || voice.displayTranscript || browserTranscriptText
+  ).trim()
 
   const orbTextReply = (assistantReply || '').trim()
   const orbReplyFromTurns = turns
@@ -351,7 +377,7 @@ export function OrbVoiceStation({
     launchMode,
     captureState: voice.voiceCaptureState,
     phase: voice.phase,
-    listening: voice.listening,
+        listening: voiceEngine.isListening || voice.listening,
     speaking: voice.speaking,
     pending,
     error: voice.error,
@@ -441,10 +467,12 @@ export function OrbVoiceStation({
   const speechRecognitionNotice = orbVoiceCalmSpeechNotice(voice.error || voiceStartError)
   const voiceDiagnostics = getOrbVoiceBrowserDiagnostics()
   const safariVoiceFallbackVisible =
-    isSafariBrowser() &&
-    (voice.error === ORB_VOICE_SAFARI_NO_SPEECH_MESSAGE ||
-      voiceStartError === ORB_VOICE_SAFARI_NO_SPEECH_MESSAGE ||
-      voiceDiagnostics.recommendedFallback === 'dictate')
+    voiceEngine.state === 'failed' ||
+    voiceEngine.state === 'unsupported' ||
+    (isSafariBrowser() &&
+      (voice.error === ORB_VOICE_SAFARI_NO_SPEECH_MESSAGE ||
+        voiceStartError === ORB_VOICE_SAFARI_NO_SPEECH_MESSAGE ||
+        voiceDiagnostics.recommendedFallback === 'dictate'))
 
   const statusLine =
     browserStatusOverride ||
@@ -595,6 +623,10 @@ export function OrbVoiceStation({
       const trimmed = text.trim()
       if (!trimmed) return
       markOrbVoiceLatency('first_transcript')
+      const provider =
+        getOrbVoiceBrowserDiagnostics().activeTransport === 'server_transcription'
+          ? 'server_transcription'
+          : 'browser'
       setTurns((prev) => [
         ...prev,
         {
@@ -603,13 +635,15 @@ export function OrbVoiceStation({
           text: trimmed,
           startedAt: new Date().toISOString(),
           mode: voice.settings.voiceMode,
-          provider: 'openai_realtime'
+          provider
         }
       ])
       void onSendToOrb(trimmed)
     },
     [onSendToOrb, voice.settings.voiceMode]
   )
+
+  appendUserTurnRef.current = appendUserTurn
 
   /** Sync ORB brain replies into the two-sided voice transcript (adult + ORB turns). */
   useEffect(() => {
@@ -927,12 +961,12 @@ export function OrbVoiceStation({
   async function handleBrowserVoicePrimary() {
     emitOrbClientDebug({
       area: 'voice',
-      event: 'voice_start_attempt_browser_fallback',
-      detail: { listening: voice.listening, phase: voice.phase }
+      event: 'voice_start_attempt_browser_engine',
+      detail: { listening: voiceEngine.isListening, engineState: voiceEngine.state }
     })
-    if (voice.listening) {
+    if (voiceEngine.isListening) {
       setBrowserStartStage('stopping')
-      const text = await voice.stopListeningAndFinalize()
+      const text = await voiceEngine.stop()
       if (text) {
         patchOrbVoiceBrowserDiagnostics({
           voiceSubmitAttempted: true,
@@ -945,8 +979,8 @@ export function OrbVoiceStation({
         setVoiceStartError(null)
         emitOrbClientDebug({
           area: 'voice',
-          event: 'voice_browser_transcript_submitted',
-          detail: { length: text.length }
+          event: 'voice_engine_transcript_submitted',
+          detail: { length: text.length, transport: voiceEngine.transport }
         })
       } else {
         patchOrbVoiceBrowserDiagnostics({
@@ -954,7 +988,7 @@ export function OrbVoiceStation({
           noTranscriptReason: 'user_stop_empty'
         })
         setBrowserStartStage('failed')
-        setVoiceStartError(voice.error || ORB_VOICE_NO_HEAR_MESSAGE)
+        setVoiceStartError(voiceEngine.userMessage || voice.error || ORB_VOICE_NO_HEAR_MESSAGE)
       }
       return
     }
@@ -962,42 +996,38 @@ export function OrbVoiceStation({
       emitOrbClientDebug({ area: 'voice', event: 'voice_start_noop_prevented', detail: { reason: 'transcript_ready' } })
       return
     }
-    if (!browserSpeechSupported) {
-      setVoiceStartError(ORB_VOICE_WEB_UNSUPPORTED_ERROR)
-      emitOrbClientDebug({ area: 'voice', event: 'voice_start_unsupported_visible', detail: {} })
-      return
-    }
     voice.clearTranscript()
+    void voiceEngine.reset()
     setVoiceStartError(null)
     setBrowserStartStage('starting')
     markOrbInteractionLatency('voice_mic_permission_requested')
     setSessionStartedAt(new Date().toISOString())
     emitOrbClientDebug({
       area: 'voice',
-      event: 'voice_start_browser_fallback_start_called',
+      event: 'voice_engine_start_called',
       detail: { pushToTalk: voice.settings.pushToTalk }
     })
-    const started = await voice.beginUserVoiceCapture({ mode: 'continuous' })
+    const started = await voiceEngine.start()
     if (started) {
       setBrowserStartStage('active')
       markOrbInteractionLatency('voice_stream_ready')
-      emitOrbClientDebug({ area: 'voice', event: 'voice_start_browser_fallback_success', detail: {} })
+      emitOrbClientDebug({
+        area: 'voice',
+        event: 'voice_engine_start_success',
+        detail: { transport: voiceEngine.transport }
+      })
       return
     }
     setBrowserStartStage('failed')
     const message =
+      voiceEngine.userMessage ||
       voice.error ||
       (micPermission === 'denied' ? ORB_VOICE_MIC_BLOCKED_MESSAGE : ORB_VOICE_WEB_START_ERROR)
     setVoiceStartError(message)
     emitOrbClientDebug({
       area: 'voice',
-      event: 'voice_start_browser_fallback_failed',
-      detail: { error: voice.error, micPermission }
-    })
-    emitOrbClientDebug({
-      area: 'voice',
-      event: 'voice_browser_capture_failed',
-      detail: { error: voice.error }
+      event: 'voice_engine_start_failed',
+      detail: { error: message, transport: voiceEngine.transport }
     })
   }
 
