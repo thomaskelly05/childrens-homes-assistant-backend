@@ -1581,6 +1581,10 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
       }
 
       const runConversationRequest = async () => {
+        if (voiceOriginatedSend) {
+          const { patchOrbVoiceBrowserDiagnostics } = await import('@/lib/orb/voice/orb-voice-browser-diagnostics')
+          patchOrbVoiceBrowserDiagnostics({ brainRequestAttempted: true })
+        }
         const brainRoutedRequest = buildOrbBrainConversationRequest(conversationRequest, {
           source: voiceOriginatedSend ? 'voice' : 'chat',
           mode
@@ -2223,7 +2227,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
     )
     armComposerSpeechTimeout()
 
-    const started = await voice.beginUserVoiceCapture({ mode: 'active' })
+    const started = await voice.beginUserVoiceCapture({ mode: 'continuous' })
     if (!started) {
       clearComposerSpeechTimeout()
       setMicNotice(orbComposerSpeechFallbackMessage(voice.error))

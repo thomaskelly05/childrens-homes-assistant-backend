@@ -11,6 +11,7 @@ import {
 import { OPENAI_REALTIME_SDP_URL } from '@/lib/orb/network'
 
 import type { OrbRealtimeVoiceStatus } from './orb-realtime-availability'
+import { getOrbVoiceBrowserDiagnostics } from './orb-voice-browser-diagnostics'
 import { getActiveOrbRealtimeVoiceClient, getActiveOrbRealtimeVoiceSession } from './orb-voice-session-registry'
 import type { OrbVoiceAuthStatus } from './orb-voice-ui-state'
 
@@ -198,7 +199,8 @@ export function buildOrbVoiceDiagSnapshot() {
     status: lastStatus,
     sessionResponseShape: lastSessionResponseShape,
     sessionId: session?.session_id ?? null,
-    clientUsesWebRTC: client?.usesOpenAIWebRTC ?? false
+    clientUsesWebRTC: client?.usesOpenAIWebRTC ?? false,
+    browserDiagnostics: getOrbVoiceBrowserDiagnostics()
   }
 }
 

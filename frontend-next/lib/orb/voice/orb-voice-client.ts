@@ -177,3 +177,38 @@ export async function requestOrbVoiceTranscribe(options: {
     }
   }
 }
+
+/** Premium ORB Voice TTS — short spoken reply text only; no microphone audio. */
+export async function requestOrbPremiumTts(options: {
+  text: string
+  voice_id?: string
+  voice_style?: string
+}): Promise<{ ok: true; blob: Blob } | { ok: false; status: number }> {
+  const { authFetchResponse } = await import('@/lib/auth/api')
+  const { patchOrbVoiceBrowserDiagnostics } = await import('@/lib/orb/voice/orb-voice-browser-diagnostics')
+  patchOrbVoiceBrowserDiagnostics({ ttsRequestAttempted: true })
+  try {
+    const trimmed = options.text.trim().slice(0, 500)
+    if (!trimmed) return { ok: false, status: 400 }
+    const response = await authFetchResponse('/orb/voice/tts', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'audio/mpeg, audio/mp4, application/json'
+      },
+      body: JSON.stringify({
+        text: trimmed,
+        voice_id: options.voice_id ?? 'orb_british_female',
+        voice_style: options.voice_style ?? 'calm_therapeutic',
+        format: 'mp3',
+        context: 'orb_residential_web_voice_reply'
+      })
+    })
+    if (!response.ok) return { ok: false, status: response.status }
+    const blob = await response.blob()
+    if (!blob.size) return { ok: false, status: 502 }
+    return { ok: true, blob }
+  } catch {
+    return { ok: false, status: 0 }
+  }
+}

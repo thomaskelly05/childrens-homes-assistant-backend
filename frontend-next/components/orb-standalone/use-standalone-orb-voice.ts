@@ -20,6 +20,12 @@ import {
 } from '@/lib/orb/voice/orb-voice-capture'
 import { confirmSpeechRecognitionStart } from '@/lib/orb/voice/orb-speech-recognition-start'
 import { detectMediaRecorderSupported } from '@/lib/orb/voice/orb-voice-readiness'
+import {
+  detectMediaRecorderInWindow,
+  detectSpeechRecognitionInWindow,
+  patchOrbVoiceBrowserDiagnostics,
+  resetOrbVoiceBrowserDiagnostics
+} from '@/lib/orb/voice/orb-voice-browser-diagnostics'
 import type { OrbSpeechRecognitionStartFailureReason } from '@/lib/orb/voice/orb-speech-recognition-start'
 import {
   DEFAULT_ORB_VOICE_PROFILE_ID,
@@ -29,7 +35,7 @@ import {
   normaliseOrbVoiceProfileId,
   resolveBrowserVoice
 } from '@/lib/orb/voice/orb-voice-profiles'
-import { requestOrbVoiceSpeak } from '@/lib/orb/voice/orb-voice-client'
+import { requestOrbPremiumTts, requestOrbVoiceSpeak } from '@/lib/orb/voice/orb-voice-client'
 import { requestOrbVoiceProviderSpeak } from '@/lib/orb/voice/orb-voice-provider'
 import {
   appendOrbVoiceFinalTranscriptChunk,
@@ -151,9 +157,9 @@ const SPEECH_TEST_PHRASE = ORB_VOICE_PREVIEW_PHRASE
 const SAFARI_KEEPALIVE_MS = 140
 export const RECOGNITION_START_TIMEOUT_MS = 2500
 export const ORB_VOICE_NO_HEAR_MESSAGE =
-  "I didn't hear anything — try again or use Dictate."
+  "I didn't catch that. Try again or use Chat."
 export const ORB_VOICE_MIC_BLOCKED_MESSAGE =
-  'Microphone access is needed to use Voice. You can still type or use Dictate.'
+  'Voice could not start. Check microphone permission or use Chat instead.'
 export const ORB_VOICE_UNSUPPORTED_MESSAGE =
   'Voice may not be supported in this browser. Try typing, Dictate, or another browser.'
 
@@ -336,6 +342,10 @@ export function useStandaloneOrbVoice() {
     setRecognitionAvailable(Boolean(Recognition))
     setContinuousRecognitionSupported(Boolean(Recognition))
     setSynthesisAvailable(typeof window !== 'undefined' && Boolean(window.speechSynthesis))
+    patchOrbVoiceBrowserDiagnostics({
+      speechRecognitionSupported: detectSpeechRecognitionInWindow(),
+      mediaRecorderSupported: detectMediaRecorderInWindow()
+    })
     refreshVoices()
     if (typeof window !== 'undefined' && window.speechSynthesis) {
       window.speechSynthesis.onvoiceschanged = refreshVoices
@@ -389,17 +399,57 @@ export function useStandaloneOrbVoice() {
   }, [])
 
   const runSpeech = useCallback(
-    (text: string, onEnd?: () => void) => {
-      if (typeof window === 'undefined' || !window.speechSynthesis || !text.trim()) return
+    async (text: string, onEnd?: () => void) => {
+      if (typeof window === 'undefined' || !text.trim()) return
       startSafariKeepAlive()
       setSpeechPlaybackError(null)
       setSpeaking(true)
       setVoiceCaptureState('speaking')
       setPhase('speaking')
+
+      const profileId = activeSpeakProfileId(settingsRef.current)
+      const premium = await requestOrbPremiumTts({
+        text,
+        voice_id: profileId,
+        voice_style: 'calm_therapeutic'
+      })
+      if (premium.ok) {
+        try {
+          const url = URL.createObjectURL(premium.blob)
+          const audio = new Audio(url)
+          audio.onended = () => {
+            URL.revokeObjectURL(url)
+            stopSafariKeepAlive()
+            setSpeaking(false)
+            setVoiceCaptureState('idle')
+            setPhase('idle')
+            onEnd?.()
+          }
+          audio.onerror = () => {
+            URL.revokeObjectURL(url)
+            stopSafariKeepAlive()
+            setSpeaking(false)
+            setSpeechPlaybackError('Speech playback is unavailable in this browser.')
+            setVoiceCaptureState('idle')
+            setPhase('idle')
+          }
+          await audio.play()
+          return
+        } catch {
+          /* fall through to browser synthesis */
+        }
+      }
+
+      if (typeof window === 'undefined' || !window.speechSynthesis) {
+        setSpeaking(false)
+        setVoiceCaptureState('idle')
+        setPhase('idle')
+        return
+      }
+
       const utterance = new SpeechSynthesisUtterance(text)
       utterance.rate = settingsRef.current.speechRate
       utterance.pitch = settingsRef.current.speechPitch
-      const profileId = activeSpeakProfileId(settingsRef.current)
       utterance.voice = resolveBrowserVoice(
         profileId,
         window.speechSynthesis.getVoices(),
@@ -425,11 +475,11 @@ export function useStandaloneOrbVoice() {
   )
 
   const speak = useCallback((text: string, onEnd?: () => void) => {
-    runSpeech(text, onEnd)
+    void runSpeech(text, onEnd)
   }, [runSpeech])
 
   const speakAloud = useCallback((text: string, onEnd?: () => void) => {
-    runSpeech(text, onEnd)
+    void runSpeech(text, onEnd)
   }, [runSpeech])
 
   const previewVoiceProfile = useCallback(async (profileId?: OrbVoicePresetId) => {
@@ -520,6 +570,7 @@ export function useStandaloneOrbVoice() {
       recognitionModeRef.current = mode
 
       recognition.onstart = () => {
+        patchOrbVoiceBrowserDiagnostics({ recognitionStartEvent: true, recognitionErrorEvent: false })
         setListening(true)
         setVoiceCaptureState('listening')
         setPhase(mode === 'continuous' ? 'continuous_listening' : 'listening')
@@ -559,18 +610,28 @@ export function useStandaloneOrbVoice() {
         }
       }
       recognition.onerror = () => {
+        patchOrbVoiceBrowserDiagnostics({
+          recognitionErrorEvent: true,
+          stopReason: 'recognition_error',
+          lastError: 'recognition_error'
+        })
         setListening(false)
         recognitionRef.current = null
         setVoiceCaptureState('error')
-        setError('Voice is unavailable in this browser. You can still type.')
+        setError(ORB_VOICE_MIC_BLOCKED_MESSAGE)
         setPhase('error')
         stopMediaStream()
       }
       recognition.onend = () => {
-        setListening(false)
+        patchOrbVoiceBrowserDiagnostics({ recognitionEndEvent: true })
+        const continuous = recognitionModeRef.current === 'continuous'
+        const willRestart =
+          continuous && userInitiatedVoiceRef.current && !voiceSessionPausedRef.current
+        if (!willRestart) {
+          setListening(false)
+        }
         recognitionRef.current = null
         setInterimTranscript('')
-        const continuous = recognitionModeRef.current === 'continuous'
         const hasTranscript = Boolean(transcriptRef.current.trim())
         if (
           !continuous &&
@@ -578,10 +639,14 @@ export function useStandaloneOrbVoice() {
           userInitiatedVoiceRef.current &&
           !dictateSpeechCaptureRef.current
         ) {
+          patchOrbVoiceBrowserDiagnostics({
+            stopReason: 'ended_without_transcript',
+            lastError: ORB_VOICE_NO_HEAR_MESSAGE
+          })
           setError(ORB_VOICE_NO_HEAR_MESSAGE)
           setVoiceCaptureState('error')
           setPhase('error')
-        } else {
+        } else if (!willRestart) {
           setVoiceCaptureState(continuous ? 'ready' : hasTranscript ? 'ready' : 'idle')
           setPhase((current) => {
             if (continuous) {
@@ -593,10 +658,11 @@ export function useStandaloneOrbVoice() {
             return hasTranscript ? 'transcript_ready' : current
           })
         }
-        if (!continuous) stopMediaStream()
-        if (continuous && userInitiatedVoiceRef.current && !voiceSessionPausedRef.current) {
+        if (!continuous && !willRestart) stopMediaStream()
+        if (willRestart) {
+          patchOrbVoiceBrowserDiagnostics({ stopReason: 'recognition_recycling' })
           window.setTimeout(() => {
-            if (userInitiatedVoiceRef.current && !recognitionRef.current && mediaStreamRef.current) {
+            if (userInitiatedVoiceRef.current && !recognitionRef.current && !voiceSessionPausedRef.current) {
               void startRecognitionSessionConfirmed('continuous')
             }
           }, 300)
@@ -644,12 +710,15 @@ export function useStandaloneOrbVoice() {
   }, [abortRecognition, clearTimers, speaking, transcript])
 
   const stopListening = useCallback(() => {
+    patchOrbVoiceBrowserDiagnostics({ stopReason: 'user_stop' })
+    userInitiatedVoiceRef.current = false
     recognitionRef.current?.stop()
     setListening(false)
     setInterimTranscript('')
     if (transcriptRef.current.trim()) setPhase('transcript_ready')
     else if (phase === 'listening' || phase === 'continuous_listening') setPhase('idle')
-  }, [phase])
+    stopMediaStream()
+  }, [phase, stopMediaStream])
 
   const interruptForListen = useCallback(() => {
     if (!settingsRef.current.allowInterruption && speaking) return
@@ -689,18 +758,34 @@ export function useStandaloneOrbVoice() {
   const requestMicrophonePermission = useCallback(async (options?: { probeOnly?: boolean }): Promise<boolean> => {
     if (!userInitiatedVoiceRef.current && !options?.probeOnly) return false
     setVoiceCaptureState('requesting_permission')
+    patchOrbVoiceBrowserDiagnostics({ getUserMediaAttempted: true })
     if (options?.probeOnly) {
       const access = await probeMicrophoneAccess()
+      patchOrbVoiceBrowserDiagnostics({
+        getUserMediaSuccess: access.ok,
+        microphonePermission: access.ok ? 'granted' : 'denied',
+        lastError: access.ok ? null : 'microphone_probe_failed'
+      })
       setVoiceCaptureState(access.ok ? 'ready' : 'error')
       return access.ok
     }
     stopMediaStream()
     const access = await acquireMicrophoneStream()
     if (!access.ok || !access.stream) {
+      patchOrbVoiceBrowserDiagnostics({
+        getUserMediaSuccess: false,
+        microphonePermission: 'denied',
+        stopReason: 'microphone_denied',
+        lastError: 'microphone_denied'
+      })
       setVoiceCaptureState('error')
       return false
     }
     mediaStreamRef.current = access.stream
+    patchOrbVoiceBrowserDiagnostics({
+      getUserMediaSuccess: true,
+      microphonePermission: 'granted'
+    })
     setVoiceCaptureState('ready')
     return true
   }, [stopMediaStream])
@@ -817,38 +902,48 @@ export function useStandaloneOrbVoice() {
     setWakeStatus('off')
     setError(null)
     setVoiceCaptureState('starting')
+    resetOrbVoiceBrowserDiagnostics()
+    patchOrbVoiceBrowserDiagnostics({
+      speechRecognitionSupported: detectSpeechRecognitionInWindow(),
+      mediaRecorderSupported: detectMediaRecorderInWindow()
+    })
     const Recognition = getSpeechRecognitionCtor()
     if (!Recognition) {
       dictateSpeechCaptureRef.current = false
       userInitiatedVoiceRef.current = false
       setError(ORB_VOICE_UNSUPPORTED_MESSAGE)
       setVoiceCaptureState('error')
+      patchOrbVoiceBrowserDiagnostics({
+        stopReason: 'unsupported',
+        lastError: ORB_VOICE_UNSUPPORTED_MESSAGE
+      })
       return false
     }
-    // SpeechRecognition.start() must run in the user-gesture stack — do not await getUserMedia first.
-    const startResult = await startRecognitionSessionConfirmed(options?.mode ?? 'active')
-    if (!startResult.ok) {
-      setVoiceCaptureState('requesting_permission')
-      const granted = await requestMicrophonePermission()
-      if (granted) {
-        const retry = await startRecognitionSessionConfirmed(options?.mode ?? 'active')
-        if (retry.ok) {
-          void requestMicrophonePermission()
-          return true
-        }
-        dictateSpeechCaptureRef.current = false
-        userInitiatedVoiceRef.current = false
-        setError(speechRecognitionFailureMessage(retry.reason))
-        setVoiceCaptureState('error')
-        return false
-      }
+
+    // Browser SpeechRecognition stays stable in continuous mode until the user stops.
+    const captureMode: 'active' | 'continuous' = 'continuous'
+
+    const granted = await requestMicrophonePermission()
+    if (!granted) {
       dictateSpeechCaptureRef.current = false
       userInitiatedVoiceRef.current = false
       setError(ORB_VOICE_MIC_BLOCKED_MESSAGE)
       setVoiceCaptureState('error')
       return false
     }
-    void requestMicrophonePermission()
+
+    const startResult = await startRecognitionSessionConfirmed(captureMode)
+    if (!startResult.ok) {
+      dictateSpeechCaptureRef.current = false
+      userInitiatedVoiceRef.current = false
+      setError(speechRecognitionFailureMessage(startResult.reason))
+      setVoiceCaptureState('error')
+      patchOrbVoiceBrowserDiagnostics({
+        stopReason: startResult.reason ?? 'recognition_start_failed',
+        lastError: speechRecognitionFailureMessage(startResult.reason)
+      })
+      return false
+    }
     return true
   }, [requestMicrophonePermission, speechRecognitionFailureMessage, startRecognitionSessionConfirmed])
 

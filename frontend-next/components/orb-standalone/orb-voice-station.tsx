@@ -92,7 +92,11 @@ import {
   ORB_VOICE_UNSUPPORTED_MESSAGE
 } from '@/components/orb-standalone/use-standalone-orb-voice'
 import {
-  ORB_VOICE_BOUNDARY_COPY,
+  getOrbVoiceBrowserDiagnostics,
+  ORB_VOICE_WEB_BOUNDARY_COPY,
+  ORB_VOICE_WEB_START_ERROR
+} from '@/lib/orb/voice/orb-voice-browser-diagnostics'
+import {
   ORB_VOICE_PANEL_MOBILE_SUBTITLE,
   ORB_VOICE_PANEL_SUBTITLE,
   ORB_VOICE_PANEL_TITLE,
@@ -911,9 +915,7 @@ export function OrbVoiceStation({
       event: 'voice_start_browser_fallback_start_called',
       detail: { pushToTalk: voice.settings.pushToTalk }
     })
-    const started = await voice.beginUserVoiceCapture({
-      mode: voice.settings.pushToTalk ? 'active' : 'continuous'
-    })
+    const started = await voice.beginUserVoiceCapture({ mode: 'continuous' })
     if (started) {
       setBrowserStartStage('active')
       markOrbInteractionLatency('voice_stream_ready')
@@ -923,7 +925,7 @@ export function OrbVoiceStation({
     setBrowserStartStage('failed')
     const message =
       voice.error ||
-      (micPermission === 'denied' ? ORB_VOICE_MIC_BLOCKED_MESSAGE : 'Voice could not connect.')
+      (micPermission === 'denied' ? ORB_VOICE_MIC_BLOCKED_MESSAGE : ORB_VOICE_WEB_START_ERROR)
     setVoiceStartError(message)
     emitOrbClientDebug({
       area: 'voice',
@@ -1558,12 +1560,20 @@ export function OrbVoiceStation({
           ) : null}
 
           <div className="mx-auto mt-6 hidden max-w-md space-y-1 text-center md:block" data-orb-voice-boundary-copy>
-            {ORB_VOICE_BOUNDARY_COPY.slice(0, 2).map((line) => (
+            {ORB_VOICE_WEB_BOUNDARY_COPY.map((line) => (
               <p key={line} className="text-[10px] leading-4 text-[var(--orb-muted)]">
                 {line}
               </p>
             ))}
           </div>
+          {voiceDebug ? (
+            <pre
+              className="mx-auto mt-3 max-w-md overflow-x-auto rounded-lg bg-black/20 p-3 text-left text-[10px] text-[var(--orb-muted)]"
+              data-orb-voice-browser-diagnostics
+            >
+              {JSON.stringify(getOrbVoiceBrowserDiagnostics(), null, 2)}
+            </pre>
+          ) : null}
           </div>
           ) : null}
         </OrbVoiceStationContent>

@@ -95,13 +95,14 @@ describe('ORB Voice start fix — start click path', () => {
     assert.match(station(), /setBrowserStartStage\('starting'\)/)
   })
 
-  it('browser fallback does not await getUserMedia before SpeechRecognition.start', () => {
+  it('browser voice requests microphone permission before starting recognition', () => {
     const body = hook().match(/const beginUserVoiceCapture[\s\S]*?^  const endDictateSpeechCapture/m)?.[0] ?? ''
-    assert.match(body, /SpeechRecognition\.start\(\) must run in the user-gesture stack/)
+    const micRequest = body.indexOf('const granted = await requestMicrophonePermission')
     const firstStart = body.indexOf('const startResult = await startRecognitionSessionConfirmed')
-    const micRetry = body.indexOf('const granted = await requestMicrophonePermission')
+    assert.ok(micRequest >= 0)
     assert.ok(firstStart >= 0)
-    assert.ok(micRetry < 0 || firstStart < micRetry, 'first recognition start must precede mic permission retry')
+    assert.ok(micRequest < firstStart, 'mic permission must precede recognition start')
+    assert.match(body, /captureMode: 'active' \| 'continuous' = 'continuous'/)
   })
 
   it('mic permission is requested on fallback after recognition start fails', () => {
@@ -129,7 +130,7 @@ describe('ORB Voice start fix — start click path', () => {
 
   it('empty recognition shows visible no-hear message', () => {
     assert.match(hook(), /ORB_VOICE_NO_HEAR_MESSAGE/)
-    assert.match(hook(), /I didn't hear anything/)
+    assert.match(hook(), /I didn't catch that\. Try again or use Chat\./)
   })
 
   it('voice station exposes launch and error data markers', () => {

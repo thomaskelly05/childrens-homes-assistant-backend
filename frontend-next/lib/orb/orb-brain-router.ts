@@ -45,6 +45,15 @@ export function buildOrbBrainConversationRequest(
 ): StandaloneOrbConversationRequest {
   const route = routeOrbBrainIntent(request.message, request.mode, context)
   const source = context?.source ?? 'chat'
+  if (source === 'voice') {
+    return {
+      ...request,
+      source_surface: 'voice',
+      requested_action: 'voice_conversation',
+      client_route_hint: route.route,
+      location_hint: context?.locationHint?.trim() || undefined
+    }
+  }
   return {
     ...request,
     source_surface: source,

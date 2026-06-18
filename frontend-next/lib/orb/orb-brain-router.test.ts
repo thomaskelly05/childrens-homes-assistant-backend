@@ -44,6 +44,7 @@ describe('ORB brain router convergence', () => {
     assert.match(router, /client_route_hint/)
     assert.match(router, /routeOrbBrainIntent/)
     assert.match(router, /buildOrbBrainConversationRequest/)
+    assert.match(router, /requested_action: 'voice_conversation'/)
     assert.doesNotMatch(router, /\[ORB brain routing\]/)
   })
 
