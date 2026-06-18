@@ -286,8 +286,6 @@ export function OrbVoiceStation({
         setBrowserStartStage('active')
       } else if (engineState === 'failed' || engineState === 'unsupported') {
         setBrowserStartStage('failed')
-      } else if (engineState === 'idle') {
-        setBrowserStartStage((current) => (current === 'stopping' ? 'active' : current))
       }
     }
   })
@@ -965,7 +963,6 @@ export function OrbVoiceStation({
       detail: { listening: voiceEngine.isListening, engineState: voiceEngine.state }
     })
     if (voiceEngine.isListening) {
-      setBrowserStartStage('stopping')
       const text = await voiceEngine.stop()
       if (text) {
         patchOrbVoiceBrowserDiagnostics({
