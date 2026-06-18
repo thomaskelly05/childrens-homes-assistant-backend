@@ -19,6 +19,7 @@ CONVERGED_GOVERNED_PATHS = {
     "services/document_ai_review_service.py",
     "services/orb_dictate_service.py",
     "services/orb_dictate_edit_service.py",
+    "services/orb_unified_brain_gateway.py",
     "services/title_service.py",
     "services/ai_reasoning_service.py",
     "assistant/retrieval.py",
@@ -66,7 +67,7 @@ def test_converged_documents_route_has_no_module_openai_client():
 def test_converged_dictate_has_no_module_openai_client():
     text = Path("services/orb_dictate_service.py").read_text(encoding="utf-8")
     assert "from openai" not in text
-    assert "try_governed_draft_text" in text
+    assert "orb_unified_brain_gateway" in text
 
 
 def test_openai_import_inventory_still_valid():

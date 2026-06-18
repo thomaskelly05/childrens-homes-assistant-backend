@@ -4,17 +4,10 @@ from __future__ import annotations
 
 import json
 import logging
-import os
 from typing import Any
 from uuid import uuid4
 
 from core.policy_engine import policy_engine
-from schemas.data_protection import DataClassification
-from services.ai_external_call_governance import (
-    FEATURE_DICTATE,
-    redact_plain_text,
-    try_governed_draft_text,
-)
 from db.ai_note_versions_db import ensure_ai_note_versions_table, insert_ai_note_version
 from db.ai_notes_db import ensure_ai_meetings_table, insert_ai_meeting_note, update_ai_meeting_note
 from db.connection import get_db_connection, release_db_connection
@@ -39,7 +32,6 @@ from services.orb_dictate_speaker import (
     SPEAKER_BOUNDARY_COPY,
     build_speaker_summary,
     build_speakers_from_segments,
-    participants_block_for_prompt,
     segments_to_plain_text,
     suggest_participants_from_text,
     text_to_segments,
@@ -64,11 +56,9 @@ from services.orb_document_brain_adapter_service import orb_document_brain_adapt
 from services.indicare_intelligence_core_service import indicare_intelligence_core_service
 from services.indicare_intelligence_route_finalize_service import intelligence_context_summary
 from services.orb_residential_quality_service import orb_residential_quality_service
-from services.orb_recording_contract_service import (
-    build_recording_contract_prompt_block,
-    build_safe_incident_report_scaffold,
-)
-from services.recording_intelligence_service import recording_intelligence_service
+from services.orb_recording_contract_service import build_safe_incident_report_scaffold
+from services.orb_prompt_registry import orb_prompt_registry
+from services.orb_unified_brain_gateway import orb_unified_brain_gateway
 
 logger = logging.getLogger("indicare.orb_dictate")
 
@@ -247,89 +237,8 @@ def _fallback_generate(request: OrbDictateGenerateRequest) -> OrbDictateGenerate
 
 
 def _build_generate_prompt(request: OrbDictateGenerateRequest, note_type: str) -> tuple[str, str]:
-    template = get_dictate_template(note_type)  # type: ignore[arg-type]
-    transcript_body = (
-        segments_to_plain_text(request.segments)
-        if request.segments
-        else request.input_text
-    )
-    intel_packet = indicare_intelligence_core_service.build_intelligence_packet(
-        transcript_body,
-        mode=request.mode or note_type,
-    )
-    recording_contract_block = build_recording_contract_prompt_block(
-        transcript_body,
-        note_type=note_type,
-    )
-    intelligence_block = "\n\n".join(
-        part
-        for part in (
-            intel_packet.get("prompt_block"),
-            recording_contract_block,
-            recording_intelligence_service.build_prompt_block(transcript_body),
-        )
-        if part
-    )
-    speaker_block = participants_block_for_prompt(request.participants, request.segments)
-    section_spec = "\n".join(
-        f"- {s.title}: " + "; ".join(s.prompts)
-        for s in template.sections
-    )
-    flags = []
-    if request.include_child_voice:
-        flags.append("Include child voice with direct quotes where known.")
-    if request.include_safeguarding:
-        flags.append("Include safeguarding considerations where relevant.")
-    if request.include_manager_oversight:
-        flags.append("Include manager oversight and notifications where relevant.")
-    if request.include_ofsted_lens:
-        flags.append("Add a short Ofsted/SCCIF evidence lens paragraph.")
-
-    quality_guidance = (
-        "Recording quality priorities: factual, observable wording; child-centred language; "
-        "child voice with direct quotes where stated; staff response and support; clear outcome; "
-        "follow-up actions; safeguarding considerations; manager oversight prompts where relevant; "
-        "Ofsted/evidence relevance only when requested — never invent facts or evidence."
-    )
-
-    investigation_rules = ""
-    if note_type == "investigation_meeting":
-        investigation_rules = (
-            "\nInvestigation meeting rules: use neutral language; do not state allegations as fact; "
-            "do not make findings or conclusions unless explicitly provided in the input; "
-            "attribute statements (e.g. 'X stated that…'); flag points requiring clarification."
-        )
-
-    system = (
-        "You are ORB Dictate for ORB Residential — Powered by IndiCare Intelligence. "
-        "Turn rough spoken notes into professional, factual recording wording. "
-        "Return JSON only with keys: title, professional_note, summary, actions (array of strings), "
-        "structured_actions (optional array of {action, owner, deadline, management_oversight}), "
-        "ofsted_lens (string or null). "
-        "For structured_actions: use owner/deadline only when explicitly stated in the transcript; "
-        "otherwise omit or use 'Not stated'. Do not invent owners or deadlines. "
-        "Never invent facts. Use [not stated] or section placeholders where detail is missing. "
-        "Do not fabricate quotes, actions, outcomes, emotional states or follow-up plans. "
-        "Use non-judgemental, child-centred language. "
-        "Do not claim submission to any care system. "
-        "When speakers are identified, attribute key points by name/role where useful — do not over-attribute."
-        f"{investigation_rules}"
-    )
-    user = (
-        f"Note type: {template.title}\n"
-        f"Purpose: {template.purpose}\n"
-        f"Audience: {request.audience}\n"
-        f"Tone: {request.tone}\n"
-        f"Source: {request.source}\n"
-        f"Mode: {request.mode or note_type}\n\n"
-        f"Required sections:\n{section_spec}\n\n"
-        f"Instructions:\n" + "\n".join(f"- {f}" for f in flags) + "\n\n"
-        f"{quality_guidance}\n\n"
-        f"{speaker_block}\n\n"
-        f"{intelligence_block}\n\n"
-        f"Rough input / transcript:\n{transcript_body}"
-    )
-    return system, user
+    bundle = orb_prompt_registry.build_dictate_generate_prompt(request, note_type)
+    return bundle.system, bundle.user
 
 
 def generate_dictate_note(
@@ -363,26 +272,26 @@ def generate_dictate_note(
     if not participants:
         participants = suggest_participants_from_text(request.input_text)
 
-    system, user = _build_generate_prompt(request, note_type)
-    redacted_user, _ = redact_plain_text(user, mode="strict")
-
-    gateway_response = try_governed_draft_text(
-        feature=FEATURE_DICTATE,
-        system_prompt=system,
-        prompt=redacted_user,
-        model=os.environ.get("ORB_DICTATE_MODEL", "gpt-4.1-mini"),
+    transcript_text = segments_to_plain_text(segments) if segments else _truncate(request.input_text)
+    unified = orb_unified_brain_gateway.generate_dictate_draft(
+        request,
+        note_type=note_type,
+        transcript_text=transcript_text,
         provider_id=provider_id,
         home_id=home_id,
         user_id=user_id,
-        data_classification=DataClassification.CONFIDENTIAL_CHILD,
-        metadata={"route": "orb_dictate_service.generate_dictate_note", "note_type": note_type},
     )
-    if gateway_response is None:
+    if unified.blocked or not unified.text:
         req = request.model_copy(update={"participants": participants, "segments": segments})
-        return _fallback_generate(req)
+        fallback = _fallback_generate(req)
+        if unified.blocked and unified.brain_metadata:
+            merged_meta = dict(unified.brain_metadata)
+            merged_meta.update(fallback.brain_metadata or {})
+            return fallback.model_copy(update={"brain_metadata": merged_meta})
+        return fallback
 
     try:
-        raw = gateway_response.text or "{}"
+        raw = unified.text or "{}"
         parsed = json.loads(raw)
     except Exception:
         logger.exception("ORB Dictate generation failed — using structured fallback")
@@ -408,7 +317,6 @@ def generate_dictate_note(
             "Review against your home's Quality Standards mapping."
         )
 
-    transcript_text = segments_to_plain_text(segments) if segments else _truncate(request.input_text)
     intel_packet = indicare_intelligence_core_service.build_intelligence_packet(
         transcript_text or professional,
         mode=request.mode or note_type,
@@ -420,6 +328,9 @@ def generate_dictate_note(
         intel_packet=intel_packet,
         source_text=transcript_text or request.input_text,
     )
+    brain_metadata = dict(unified.brain_metadata or {})
+    if intel_meta:
+        brain_metadata.update({k: v for k, v in intel_meta.items() if k not in brain_metadata})
     quality = compute_quality_checks(professional, note_type)
     return _enrich_meeting_metadata(
         OrbDictateGenerateResponse(
@@ -437,12 +348,7 @@ def generate_dictate_note(
         segments=segments,
         speaker_summary=build_speaker_summary(participants, segments),
         speaker_boundary_notice=SPEAKER_BOUNDARY_COPY,
-        brain_metadata=_dictate_brain_metadata(
-            note_type=note_type,
-            mode=request.mode,
-            transcript_text=transcript_text,
-            intelligence_meta=intel_meta,
-        ),
+        brain_metadata=brain_metadata,
     ),
         parsed_actions=parsed_structured,
     )
