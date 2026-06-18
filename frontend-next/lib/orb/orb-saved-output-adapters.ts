@@ -106,6 +106,18 @@ export function savedOutputSourceLabel(record: OrbSavedOutputRecord): string {
   return SOURCE_FEATURE_LABELS[feature] || feature.replace(/_/g, ' ')
 }
 
+export function savedOutputPlatformLabel(
+  record: OrbSavedOutputRecord | OrbSavedOutputSummary
+): string | null {
+  const meta = (record as OrbSavedOutputRecord).metadata
+  if (!meta || typeof meta !== 'object' || !('source_platform' in meta)) return null
+  const platform = String(meta.source_platform || '')
+  if (!platform) return null
+  if (platform === 'ios') return 'iPhone app'
+  if (platform === 'web') return 'Web'
+  return platform.replace(/_/g, ' ')
+}
+
 export function savedOutputTypeLabel(type: string): string {
   return TYPE_LABELS[type] || type.replace(/_/g, ' ')
 }
@@ -146,6 +158,7 @@ export function buildSavedOutputMetadata(
       : null
   const metadata: Record<string, unknown> = {
     source_feature: extras.source_feature,
+    source_platform: 'web',
     standalone: true,
     os_records_accessed: false,
     live_record_access: false

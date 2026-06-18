@@ -29,6 +29,7 @@ import {
 import {
   extractSavedOutputBrainMetadata,
   savedOutputSourceLabel,
+  savedOutputPlatformLabel,
   savedOutputTypeLabel,
   type OrbSavedOutputRerunState
 } from '@/lib/orb/orb-saved-output-adapters'
@@ -454,7 +455,9 @@ export function OrbSavedOutputsPanel({
                             <p className="mt-1 line-clamp-2 text-xs text-[var(--orb-mobile-ws-muted,var(--orb-muted))]">{item.summary}</p>
                           ) : null}
                           <p className="mt-1 text-[10px] text-[var(--orb-mobile-ws-muted,var(--orb-muted))] opacity-80">
-                            {item.source_count ? `${item.source_count} sources · ` : ''}
+                            {savedOutputPlatformLabel(item) ? `${savedOutputPlatformLabel(item)} · ` : ''}
+                            {savedOutputTypeLabel(item.type)}
+                            {item.source_count ? ` · ${item.source_count} sources` : ''} ·{' '}
                             {new Date(item.created_at).toLocaleDateString()}
                           </p>
                         </button>
@@ -476,7 +479,8 @@ export function OrbSavedOutputsPanel({
               <div className="border-b border-[var(--orb-mobile-ws-card-border,var(--orb-line))] px-4 py-3">
                 <h3 className="text-base font-semibold text-[var(--orb-mobile-ws-text,var(--orb-foreground))]">{detail.title}</h3>
                 <p className="mt-1 text-xs text-[var(--orb-mobile-ws-muted,var(--orb-muted))]">
-                  {savedOutputTypeLabel(detail.type)} · {savedOutputSourceLabel(detail)} ·{' '}
+                  {savedOutputTypeLabel(detail.type)} · {savedOutputSourceLabel(detail)}
+                  {savedOutputPlatformLabel(detail) ? ` · ${savedOutputPlatformLabel(detail)}` : ''} ·{' '}
                   {new Date(detail.created_at).toLocaleString()}
                 </p>
                 {shouldShowOrbBrainIndicator(detailBrain) && detailBrain ? (
