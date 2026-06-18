@@ -11,6 +11,8 @@ export const ORB_VOICE_SPEECH_NOTICE_DICTATE =
 export function isOrbSpeechRecognitionErrorMessage(message: string | null | undefined): boolean {
   if (!message?.trim()) return false
   const lower = message.trim().toLowerCase()
+  if (lower.includes('safari did not capture speech')) return false
+  if (lower.includes('dictate is available')) return false
   return (
     lower.includes('speech recognition') ||
     lower.includes('browser speech') ||

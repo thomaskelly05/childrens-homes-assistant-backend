@@ -40,6 +40,14 @@ export type OrbVoiceBrowserDiagnostics = {
   noTranscriptReason: string | null
   voiceSubmitAttempted: boolean
   voiceSubmitBlockedReason: string | null
+  browserName: string
+  safariDetected: boolean
+  lastRecognitionError: string | null
+  lastRecognitionErrorMessage: string | null
+  serverActionUsedForVoice: boolean
+  clientFetchUsedForVoice: boolean
+  staleServerActionErrorDetected: boolean
+  recommendedFallback: 'dictate' | 'chat' | null
 }
 
 const empty: OrbVoiceBrowserDiagnostics = {
@@ -74,7 +82,15 @@ const empty: OrbVoiceBrowserDiagnostics = {
   lastTranscriptPreview: '',
   noTranscriptReason: null,
   voiceSubmitAttempted: false,
-  voiceSubmitBlockedReason: null
+  voiceSubmitBlockedReason: null,
+  browserName: 'unknown',
+  safariDetected: false,
+  lastRecognitionError: null,
+  lastRecognitionErrorMessage: null,
+  serverActionUsedForVoice: false,
+  clientFetchUsedForVoice: false,
+  staleServerActionErrorDetected: false,
+  recommendedFallback: null
 }
 
 let state: OrbVoiceBrowserDiagnostics = { ...empty }

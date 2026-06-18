@@ -5,7 +5,9 @@ import { fileURLToPath } from 'node:url'
 import { describe, it } from 'node:test'
 
 import {
+  isSafariRecognitionNoSpeechError,
   promoteInterimTranscriptCommitted,
+  recognitionErrorUserMessage,
   resolveBrowserSpeechCaptureText
 } from './orb-browser-speech-capture.ts'
 
@@ -69,5 +71,37 @@ describe('orb-browser-speech-capture', () => {
   it('realtime remains disabled for residential web voice', () => {
     const config = readSource('lib/orb/voice/orb-web-voice-config.ts')
     assert.match(config, /ORB_WEB_REALTIME_VOICE_ENABLED = false/)
+  })
+
+  it('maps Safari no-speech and aborted errors to explicit fallback copy', () => {
+    assert.equal(isSafariRecognitionNoSpeechError('no-speech'), true)
+    assert.equal(isSafariRecognitionNoSpeechError('aborted', 'No speech detected'), true)
+    assert.equal(
+      recognitionErrorUserMessage('aborted', 'No speech detected', 'voice'),
+      'Safari did not capture speech. Dictate is available, or you can use Chat instead.'
+    )
+    assert.match(recognitionErrorUserMessage('network', 'offline', 'voice'), /didn't catch that/i)
+  })
+
+  it('Safari Voice blocks browser SpeechRecognition and recommends Dictate', () => {
+    const capture = readSource('lib/orb/voice/orb-browser-speech-capture.ts')
+    const hook = readSource('components/orb-standalone/use-standalone-orb-voice.ts')
+    const station = readSource('components/orb-standalone/orb-voice-station.tsx')
+    assert.match(capture, /shouldBlockSafariBrowserVoice/)
+    assert.match(capture, /ORB_VOICE_SAFARI_NO_SPEECH_MESSAGE/)
+    assert.match(hook, /shouldBlockSafariBrowserVoice/)
+    assert.match(station, /data-orb-voice-safari-fallback/)
+    assert.match(station, /Open Dictate/)
+    assert.match(station, /Use Chat/)
+  })
+
+  it('voice brain submit uses client fetch not server actions', () => {
+    const submit = readSource('lib/orb/voice/orb-voice-submit-client.ts')
+    const companion = readSource('components/orb-standalone/orb-care-companion.tsx')
+    assert.match(submit, /clientFetchUsedForVoice/)
+    assert.match(submit, /serverActionUsedForVoice: false/)
+    assert.match(submit, /isStaleServerActionError/)
+    assert.match(companion, /markOrbVoiceClientBrainFetch/)
+    assert.doesNotMatch(companion, /'use server'/)
   })
 })

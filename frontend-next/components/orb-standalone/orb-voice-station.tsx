@@ -80,6 +80,7 @@ import { templateById } from '@/lib/orb/dictate/orb-dictate-studio-templates'
 import {
   assessOrbVoiceReadiness,
   detectSpeechRecognitionSupported,
+  isSafariBrowser,
   orbVoiceReadinessPresentation,
   probeMicrophonePermission,
   requestMicrophoneAccess,
@@ -88,10 +89,10 @@ import {
 } from '@/lib/orb/voice/orb-voice-readiness'
 import {
   ORB_VOICE_MIC_BLOCKED_MESSAGE,
-  ORB_VOICE_NO_HEAR_MESSAGE
+  ORB_VOICE_NO_HEAR_MESSAGE,
+  ORB_VOICE_SAFARI_NO_SPEECH_MESSAGE
 } from '@/components/orb-standalone/use-standalone-orb-voice'
-import {
-  getOrbVoiceBrowserDiagnostics,
+import { markOrbVoiceClientBrainFetch } from '@/lib/orb/voice/orb-voice-submit-client'
   ORB_VOICE_WEB_BOUNDARY_COPY,
   ORB_VOICE_WEB_START_ERROR,
   ORB_VOICE_WEB_UNSUPPORTED_ERROR,
@@ -304,7 +305,7 @@ export function OrbVoiceStation({
     secureContext: typeof window === 'undefined' ? true : window.isSecureContext
   })
 
-  const browserTranscriptText = voice.transcript.trim()
+  const browserTranscriptText = (voice.displayTranscript || voice.transcript).trim()
   const browserDisplayTranscript = (voice.displayTranscript || browserTranscriptText).trim()
 
   const orbTextReply = (assistantReply || '').trim()
@@ -438,6 +439,12 @@ export function OrbVoiceStation({
       : null)
 
   const speechRecognitionNotice = orbVoiceCalmSpeechNotice(voice.error || voiceStartError)
+  const voiceDiagnostics = getOrbVoiceBrowserDiagnostics()
+  const safariVoiceFallbackVisible =
+    isSafariBrowser() &&
+    (voice.error === ORB_VOICE_SAFARI_NO_SPEECH_MESSAGE ||
+      voiceStartError === ORB_VOICE_SAFARI_NO_SPEECH_MESSAGE ||
+      voiceDiagnostics.recommendedFallback === 'dictate')
 
   const statusLine =
     browserStatusOverride ||
@@ -924,7 +931,31 @@ export function OrbVoiceStation({
       detail: { listening: voice.listening, phase: voice.phase }
     })
     if (voice.listening) {
-      voice.stopListening()
+      setBrowserStartStage('stopping')
+      const text = await voice.stopListeningAndFinalize()
+      if (text) {
+        patchOrbVoiceBrowserDiagnostics({
+          voiceSubmitAttempted: true,
+          voiceSubmitBlockedReason: null,
+          noTranscriptReason: null
+        })
+        markOrbVoiceClientBrainFetch()
+        appendUserTurn(text)
+        setBrowserStartStage('active')
+        setVoiceStartError(null)
+        emitOrbClientDebug({
+          area: 'voice',
+          event: 'voice_browser_transcript_submitted',
+          detail: { length: text.length }
+        })
+      } else {
+        patchOrbVoiceBrowserDiagnostics({
+          voiceSubmitBlockedReason: 'no_transcript',
+          noTranscriptReason: 'user_stop_empty'
+        })
+        setBrowserStartStage('failed')
+        setVoiceStartError(voice.error || ORB_VOICE_NO_HEAR_MESSAGE)
+      }
       return
     }
     if (voice.phase === 'transcript_ready' && browserTranscriptText) {
@@ -972,9 +1003,12 @@ export function OrbVoiceStation({
 
   function handleBrowserVoiceCancel() {
     setBrowserStartStage('idle')
-    voice.cancelListening()
-    voice.clearTranscript()
-    voice.markIdle()
+    void voice.stopListeningAndFinalize().then((text) => {
+      if (!text) {
+        voice.clearTranscript()
+      }
+      voice.markIdle()
+    })
   }
 
   function handleCancelStart() {
@@ -1333,6 +1367,41 @@ export function OrbVoiceStation({
             <p className="mt-2 text-center text-xs text-sky-700 dark:text-sky-200/90" role="status">
               {micTestMessage}
             </p>
+          ) : null}
+
+          {safariVoiceFallbackVisible ? (
+            <div
+              className="mt-4 flex w-full max-w-sm flex-col items-stretch gap-2 rounded-2xl border border-[var(--orb-line)]/60 bg-[var(--orb-surface-elevated)]/70 p-4 text-center"
+              data-orb-voice-safari-fallback
+              role="status"
+            >
+              <p className="text-sm text-[var(--orb-foreground)]">
+                {voice.error || voiceStartError || ORB_VOICE_SAFARI_NO_SPEECH_MESSAGE}
+              </p>
+              <p className="text-xs text-[var(--orb-muted)]">
+                Dictate uses server transcription in Safari. Voice conversation stays in Chat.
+              </p>
+              <div className="flex flex-col gap-2 sm:flex-row sm:justify-center">
+                {onOpenDictate ? (
+                  <button
+                    type="button"
+                    onClick={handleUseDictate}
+                    className="rounded-full bg-gradient-to-r from-[var(--orb-primary-blue,#168bff)] to-[var(--orb-primary-blue-2,#0d5fcc)] px-4 py-2.5 text-sm font-semibold text-white"
+                    data-orb-voice-open-dictate
+                  >
+                    Open Dictate
+                  </button>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={handleTypeInstead}
+                  className="rounded-full border border-[var(--orb-line)] px-4 py-2.5 text-sm font-medium text-[var(--orb-foreground)]"
+                  data-orb-voice-use-chat
+                >
+                  Use Chat
+                </button>
+              </div>
+            </div>
           ) : null}
 
           {developerMode ? (

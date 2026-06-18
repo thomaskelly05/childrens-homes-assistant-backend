@@ -282,6 +282,10 @@ import {
 } from '@/lib/orb/orb-response-actions'
 import { askOrbBrain, buildOrbBrainConversationRequest } from '@/lib/orb/orb-brain-router'
 import {
+  markOrbVoiceBrainFetchFailure,
+  markOrbVoiceClientBrainFetch
+} from '@/lib/orb/voice/orb-voice-submit-client'
+import {
   logOrbChatLatencySnapshot,
   markOrbChatLatency,
   startOrbChatLatencyTrace
@@ -1583,6 +1587,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
       const runConversationRequest = async () => {
         if (voiceOriginatedSend) {
           const { patchOrbVoiceBrowserDiagnostics } = await import('@/lib/orb/voice/orb-voice-browser-diagnostics')
+          markOrbVoiceClientBrainFetch()
           patchOrbVoiceBrowserDiagnostics({ brainRequestAttempted: true, orbBrainAttempted: true })
         }
         const brainRoutedRequest = buildOrbBrainConversationRequest(conversationRequest, {
@@ -1788,6 +1793,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
 
         if (voiceOriginatedSend) {
           const { patchOrbVoiceBrowserDiagnostics } = await import('@/lib/orb/voice/orb-voice-browser-diagnostics')
+          markOrbVoiceClientBrainFetch()
           patchOrbVoiceBrowserDiagnostics({ brainRequestAttempted: true, orbBrainAttempted: true })
         }
 
@@ -1971,6 +1977,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
         })
         if (voiceOriginatedSend) {
           const { patchOrbVoiceBrowserDiagnostics } = await import('@/lib/orb/voice/orb-voice-browser-diagnostics')
+          markOrbVoiceBrainFetchFailure(displayMessage)
           patchOrbVoiceBrowserDiagnostics({
             orbBrainAttempted: true,
             orbBrainStatus: `failed_${parsed.status ?? 'error'}`
