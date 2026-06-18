@@ -688,10 +688,7 @@ export function useStandaloneOrbVoice() {
                   : finalTrimmed
                 : appendOrbVoiceFinalTranscriptChunk(prev, finalTrimmed)
             transcriptRef.current = next
-            patchOrbVoiceBrowserDiagnostics({
-              finalTranscriptLength: next.length,
-              ...syncBrowserSpeechTranscriptDiagnostics(next)
-            })
+            patchOrbVoiceBrowserDiagnostics(syncBrowserSpeechTranscriptDiagnostics(next))
             return next
           })
           setInterimTranscript('')
@@ -747,10 +744,7 @@ export function useStandaloneOrbVoice() {
           if (merged && merged !== transcriptRef.current.trim()) {
             transcriptRef.current = merged
             setTranscript(merged)
-            patchOrbVoiceBrowserDiagnostics({
-              ...syncBrowserSpeechTranscriptDiagnostics(merged),
-              finalTranscriptLength: merged.length
-            })
+            patchOrbVoiceBrowserDiagnostics(syncBrowserSpeechTranscriptDiagnostics(merged))
           }
           setInterimTranscript('')
           interimTranscriptRef.current = ''
