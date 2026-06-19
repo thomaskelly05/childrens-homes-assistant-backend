@@ -132,6 +132,11 @@ import {
   orbVoiceServerTranscriptionHeadline
 } from '@/lib/orb/voice/orb-voice-server-transcription-ui'
 import {
+  canShowServerTranscriptionNoSpeechPanel,
+  isServerTranscriptionFinalizeInProgress,
+  ORB_VOICE_TRANSCRIPTION_FAILED_MESSAGE
+} from '@/lib/orb/voice/orb-voice-server-transcription-state'
+import {
   logOrbVoiceLatencyIfEnabled,
   markOrbInteractionLatency,
   markOrbVoiceLatency,
@@ -248,6 +253,7 @@ export function OrbVoiceStation({
   const [voiceRecordTemplateId, setVoiceRecordTemplateId] = useState('general')
   const [silenceDurationMs, setSilenceDurationMs] = useState(0)
   const [noTranscriptFallback, setNoTranscriptFallback] = useState(false)
+  const [isFinalizingRecording, setIsFinalizingRecording] = useState(false)
   const silenceStartedAtRef = useRef<number | null>(null)
   const statusFetchedRef = useRef(false)
   const isMobileViewport = useOrbMobileViewport()
@@ -393,10 +399,10 @@ export function OrbVoiceStation({
   }, [displayedOrbReply, speechDecision, voice])
 
   const engineCaptureState =
-    voiceEngine.state === 'capturing' || voiceEngine.state === 'listening'
-      ? 'recording'
-      : voiceEngine.state === 'transcribing'
-        ? 'transcribing'
+    isFinalizingRecording || voiceEngine.state === 'transcribing'
+      ? 'transcribing'
+      : voiceEngine.state === 'capturing' || voiceEngine.state === 'listening'
+        ? 'recording'
         : voiceEngine.state === 'thinking'
           ? 'thinking'
           : voice.voiceCaptureState
@@ -494,12 +500,28 @@ export function OrbVoiceStation({
         : 'Connecting ORB voice…'
       : null)
 
+  const serverFinalizeActive = isServerTranscriptionFinalizeInProgress(
+    voiceDiagnostics,
+    voiceEngine.state,
+    isFinalizingRecording
+  )
+  const showNoTranscriptPanel = canShowServerTranscriptionNoSpeechPanel(
+    noTranscriptFallback,
+    voiceDiagnostics,
+    voiceEngine.state,
+    isFinalizingRecording
+  )
+  const transcriptionFailed =
+    usesServerTranscription &&
+    voiceDiagnostics.serverTranscriptionStatus === 'failed' &&
+    !serverFinalizeActive
+
   const speechRecognitionNotice =
-    usesServerTranscription || noTranscriptFallback
+    usesServerTranscription || showNoTranscriptPanel
       ? null
       : orbVoiceCalmSpeechNotice(voice.error || voiceStartError)
   const safariVoiceFallbackVisible =
-    !noTranscriptFallback &&
+    !showNoTranscriptPanel &&
     !usesServerTranscription &&
     (voiceEngine.state === 'failed' ||
       voiceEngine.state === 'unsupported' ||
@@ -509,12 +531,16 @@ export function OrbVoiceStation({
           voiceDiagnostics.recommendedFallback === 'dictate')))
 
   const serverTranscriptionStatusLine =
-    usesServerTranscription && !noTranscriptFallback
-      ? orbVoiceServerTranscriptionHeadline(launchUiState, voiceEngine.state)
+    usesServerTranscription && !showNoTranscriptPanel
+      ? orbVoiceServerTranscriptionHeadline(
+          launchUiState,
+          isFinalizingRecording || serverFinalizeActive ? 'transcribing' : voiceEngine.state
+        )
       : null
 
   const statusLine =
-    (noTranscriptFallback ? ORB_VOICE_SERVER_NO_TRANSCRIPT_HEADLINE : null) ||
+    (showNoTranscriptPanel ? ORB_VOICE_SERVER_NO_TRANSCRIPT_HEADLINE : null) ||
+    (transcriptionFailed ? ORB_VOICE_TRANSCRIPTION_FAILED_MESSAGE : null) ||
     serverTranscriptionStatusLine ||
     browserStatusOverride ||
     (useBrowserLaunch
@@ -526,10 +552,12 @@ export function OrbVoiceStation({
         ? orbVoiceStartProgressLine(voiceStartProgressStage)
         : orbVoiceUiStatusLine(uiState))
   const detailLine =
-    noTranscriptFallback
+    showNoTranscriptPanel
       ? isSafariBrowser()
         ? ORB_VOICE_SERVER_NO_TRANSCRIPT_SAFARI
         : ORB_VOICE_SERVER_NO_TRANSCRIPT_DETAIL
+      : transcriptionFailed
+        ? ORB_VOICE_TRANSCRIPTION_FAILED_MESSAGE
       : speechRecognitionNotice ||
         (usesServerTranscription ? orbVoiceServerTranscriptionDetailLine(voiceEngine.state) : null) ||
         startBlockedMessage ||
@@ -553,11 +581,12 @@ export function OrbVoiceStation({
     (voiceDiagnostics.resolvedTranscriptLength ?? 0) > 0
 
   const voiceWorkspaceMode: OrbVoiceWorkspaceMode =
-    noTranscriptFallback
+    showNoTranscriptPanel
       ? 'no_transcript'
       : uiState === 'ended' || (sessionEnded && !voiceSessionLive && hasMeaningfulTranscript)
         ? 'after_call'
         : voiceSessionLive ||
+            serverFinalizeActive ||
             (useBrowserLaunch &&
               (launchUiState === 'listening' ||
                 launchUiState === 'transcribing' ||
@@ -677,6 +706,7 @@ export function OrbVoiceStation({
     setVoiceStartError(null)
     setBrowserStartStage('idle')
     setNoTranscriptFallback(false)
+    setIsFinalizingRecording(false)
     voice.cancelListening()
     voice.cancelSpeaking()
     voice.clearTranscript()
@@ -1029,8 +1059,12 @@ export function OrbVoiceStation({
       event: 'voice_start_attempt_browser_engine',
       detail: { listening: voiceEngine.isListening, engineState: voiceEngine.state }
     })
-    if (voiceEngine.isListening) {
+    if (voiceEngine.isListening || (usesServerTranscription && voiceEngine.state === 'capturing')) {
+      setNoTranscriptFallback(false)
+      setIsFinalizingRecording(true)
       const text = await voiceEngine.stop()
+      setIsFinalizingRecording(false)
+      const postStopDiagnostics = getOrbVoiceBrowserDiagnostics()
       if (text) {
         patchOrbVoiceBrowserDiagnostics({
           voiceSubmitAttempted: true,
@@ -1046,16 +1080,26 @@ export function OrbVoiceStation({
           event: 'voice_engine_transcript_submitted',
           detail: { length: text.length, transport: voiceEngine.transport }
         })
-      } else {
-        const emptyMessage = isSafariBrowser()
-          ? ORB_VOICE_SERVER_NO_TRANSCRIPT_SAFARI
-          : ORB_VOICE_WEB_NO_TRANSCRIPT
+      } else if (postStopDiagnostics.serverTranscriptionStatus === 'failed') {
+        setBrowserStartStage('idle')
+        setVoiceStartError(
+          postStopDiagnostics.userFacingMessage || ORB_VOICE_TRANSCRIPTION_FAILED_MESSAGE
+        )
+        void voiceEngine.reset()
+      } else if (
+        !isServerTranscriptionFinalizeInProgress(
+          postStopDiagnostics,
+          voiceEngine.state,
+          false
+        )
+      ) {
         patchOrbVoiceBrowserDiagnostics({
           voiceSubmitBlockedReason: 'no_transcript',
-          noTranscriptReason: 'user_stop_empty',
           recommendedFallback: 'dictate',
           resolvedTranscriptLength: 0,
-          userFacingMessage: emptyMessage
+          userFacingMessage:
+            postStopDiagnostics.userFacingMessage ||
+            (isSafariBrowser() ? ORB_VOICE_SERVER_NO_TRANSCRIPT_SAFARI : ORB_VOICE_WEB_NO_TRANSCRIPT)
         })
         setNoTranscriptFallback(true)
         setBrowserStartStage('idle')
@@ -1106,11 +1150,24 @@ export function OrbVoiceStation({
   function handleBrowserVoiceCancel() {
     setBrowserStartStage('idle')
     if (usesServerTranscription || voiceEngine.isListening) {
+      setIsFinalizingRecording(true)
       void voiceEngine.stop().then((text) => {
-        if (!text?.trim()) {
+        setIsFinalizingRecording(false)
+        const postStopDiagnostics = getOrbVoiceBrowserDiagnostics()
+        if (text?.trim()) {
+          appendUserTurn(text)
+          return
+        }
+        if (postStopDiagnostics.serverTranscriptionStatus === 'failed') {
+          setVoiceStartError(
+            postStopDiagnostics.userFacingMessage || ORB_VOICE_TRANSCRIPTION_FAILED_MESSAGE
+          )
+        } else if (
+          !isServerTranscriptionFinalizeInProgress(postStopDiagnostics, voiceEngine.state, false)
+        ) {
           setNoTranscriptFallback(true)
           patchOrbVoiceBrowserDiagnostics({
-            noTranscriptReason: 'cancel_empty',
+            noTranscriptReason: postStopDiagnostics.noTranscriptReason || 'cancel_empty',
             resolvedTranscriptLength: 0
           })
         }
@@ -1132,19 +1189,43 @@ export function OrbVoiceStation({
     setRealtimeState('idle')
   }
 
-  function handleEnd() {
+  async function handleEnd() {
     const transcriptForSuggestion = fullConversationText || voiceTranscriptText || browserTranscriptText
     const hasTranscript =
       Boolean(transcriptForSuggestion.trim()) || hasUserFacingTranscript(turns)
 
     if (usesServerTranscription && !hasTranscript) {
+      if (voiceEngine.isListening || voiceEngine.state === 'capturing') {
+        setIsFinalizingRecording(true)
+        const text = await voiceEngine.stop()
+        setIsFinalizingRecording(false)
+        if (text?.trim()) {
+          appendUserTurn(text)
+          setBrowserStartStage('active')
+          return
+        }
+      }
+      const postStopDiagnostics = getOrbVoiceBrowserDiagnostics()
+      if (
+        isServerTranscriptionFinalizeInProgress(postStopDiagnostics, voiceEngine.state, isFinalizingRecording)
+      ) {
+        return
+      }
+      if (postStopDiagnostics.serverTranscriptionStatus === 'failed') {
+        setVoiceStartError(
+          postStopDiagnostics.userFacingMessage || ORB_VOICE_TRANSCRIPTION_FAILED_MESSAGE
+        )
+        setBrowserStartStage('idle')
+        void voiceEngine.reset()
+        return
+      }
       const emptyMessage = isSafariBrowser()
         ? ORB_VOICE_SERVER_NO_TRANSCRIPT_SAFARI
         : ORB_VOICE_WEB_NO_TRANSCRIPT
       patchOrbVoiceBrowserDiagnostics({
-        noTranscriptReason: 'end_without_transcript',
+        noTranscriptReason: postStopDiagnostics.noTranscriptReason || 'end_without_transcript',
         resolvedTranscriptLength: 0,
-        userFacingMessage: emptyMessage
+        userFacingMessage: postStopDiagnostics.userFacingMessage || emptyMessage
       })
       emitOrbClientDebug({ area: 'voice', event: 'voice_no_transcript_end', detail: {} })
       setNoTranscriptFallback(true)
@@ -1341,7 +1422,7 @@ export function OrbVoiceStation({
         Boolean(onOpenDictate) &&
         (conversationEngine.suggestRecordCreation || orbVoiceConversationHasEnoughTranscript(conversationTurns))
       }
-      onEnd={handleEnd}
+      onEnd={() => void handleEnd()}
       onTurnIntoRecord={onOpenDictate ? () => handleCreateDraftFromVoice(voiceRecordTemplateId) : undefined}
     />
   )

@@ -250,45 +250,53 @@ function buildMediaRecorderCapture(recorder: MediaRecorder, chunks: Blob[], pcmC
       new Promise((resolve) => {
         let settled = false
 
-        const finish = () => {
+        const finish = async () => {
           if (settled) return
           settled = true
-          const flushDelayMs = isSafariLike() ? 900 : 200
-          window.setTimeout(async () => {
+          recorder.removeEventListener('dataavailable', handleData)
+
+          const maxWaitMs = isSafariLike() ? 2500 : 800
+          const pollMs = 50
+          const deadline = Date.now() + maxWaitMs
+          while (Date.now() < deadline) {
             const mediaBlob = buildAudioBlob(chunks, recorderMimeType)
-            const chunkCount = chunks.filter((chunk) => chunk.size > 0).length
-            const sampleCount = pcmCapture?.sampleCount() ?? 0
+            if (mediaBlob?.size) break
+            await new Promise((resolve) => window.setTimeout(resolve, pollMs))
+          }
 
-            if (mediaBlob?.size) {
-              pcmCapture?.cancel()
-              resolve({
-                blob: mediaBlob,
-                mimeType: mediaBlob.type || recorderMimeType,
-                source: 'media_recorder',
-                size: mediaBlob.size,
-                chunkCount,
-                sampleCount,
-                recorderMimeType
-              })
-              return
-            }
+          const mediaBlob = buildAudioBlob(chunks, recorderMimeType)
+          const chunkCount = chunks.filter((chunk) => chunk.size > 0).length
+          const sampleCount = pcmCapture?.sampleCount() ?? 0
 
-            const wav = await pcmCapture?.stop()
-            if (wav?.size) {
-              resolve({
-                blob: wav,
-                mimeType: 'audio/wav',
-                source: 'web_audio_wav',
-                size: wav.size,
-                chunkCount,
-                sampleCount,
-                recorderMimeType
-              })
-              return
-            }
+          if (mediaBlob?.size) {
+            pcmCapture?.cancel()
+            resolve({
+              blob: mediaBlob,
+              mimeType: mediaBlob.type || recorderMimeType,
+              source: 'media_recorder',
+              size: mediaBlob.size,
+              chunkCount,
+              sampleCount,
+              recorderMimeType
+            })
+            return
+          }
 
-            resolve(emptyStopResult(recorderMimeType, chunkCount, sampleCount))
-          }, flushDelayMs)
+          const wav = await pcmCapture?.stop()
+          if (wav?.size) {
+            resolve({
+              blob: wav,
+              mimeType: 'audio/wav',
+              source: 'web_audio_wav',
+              size: wav.size,
+              chunkCount,
+              sampleCount,
+              recorderMimeType
+            })
+            return
+          }
+
+          resolve(emptyStopResult(recorderMimeType, chunkCount, sampleCount))
         }
 
         const handleData = (event: BlobEvent) => {
@@ -298,16 +306,14 @@ function buildMediaRecorderCapture(recorder: MediaRecorder, chunks: Blob[], pcmC
         recorder.addEventListener('dataavailable', handleData)
 
         if (recorder.state === 'inactive') {
-          recorder.removeEventListener('dataavailable', handleData)
-          finish()
+          void finish()
           return
         }
 
         recorder.addEventListener(
           'stop',
           () => {
-            recorder.removeEventListener('dataavailable', handleData)
-            finish()
+            void finish()
           },
           { once: true }
         )

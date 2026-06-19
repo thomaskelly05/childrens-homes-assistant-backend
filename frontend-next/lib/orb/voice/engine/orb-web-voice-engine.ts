@@ -7,9 +7,11 @@ import { markOrbVoiceClientBrainFetch } from '@/lib/orb/voice/orb-voice-submit-c
 import { requestOrbPremiumTts } from '@/lib/orb/voice/orb-voice-client'
 import {
   patchOrbVoiceBrowserDiagnostics,
-  resetOrbVoiceBrowserDiagnostics
+  resetOrbVoiceBrowserDiagnostics,
+  getOrbVoiceBrowserDiagnostics
 } from '@/lib/orb/voice/orb-voice-browser-diagnostics'
 import { isOrbVoiceServerTranscriptionRealtimeAvailable } from '@/lib/orb/voice/orb-voice-server-transcription'
+import { ORB_VOICE_TRANSCRIPTION_FAILED_MESSAGE } from '@/lib/orb/voice/orb-voice-server-transcription-state'
 import { ORB_WEB_REALTIME_DISABLED_REASON } from '@/lib/orb/voice/orb-web-voice-config'
 
 import {
@@ -256,9 +258,11 @@ export class ORBWebVoiceEngine {
       })
       if (!started) {
         this.setState('failed')
+        this.activeTransport = null
         this.deps.callbacks?.onUserMessage?.(ORB_VOICE_ENGINE_COPY.limitedBrowser)
         return false
       }
+      this.listening = true
       this.setState('capturing')
       return true
     }
@@ -270,15 +274,30 @@ export class ORBWebVoiceEngine {
   async stop(): Promise<string> {
     patchOrbVoiceBrowserDiagnostics({ stopReason: 'user_stop' })
     let text = ''
+    const serverActive =
+      this.activeTransport === this.serverTransport ||
+      this.serverTransport.isRecording() ||
+      (this.selection?.selectedTransport === 'server_transcription' &&
+        (this.state === 'capturing' || this.state === 'listening'))
+
     if (this.activeTransport === this.browserTransport) {
       this.setState('transcribing')
       text = await this.browserTransport.stop()
-    } else if (this.activeTransport === this.serverTransport) {
+    } else if (serverActive) {
+      this.activeTransport = this.serverTransport
       this.setState('transcribing')
+      patchOrbVoiceBrowserDiagnostics({
+        serverTranscriptionStatus: 'processing',
+        userFacingMessage: 'Processing your voice…'
+      })
       try {
         text = await this.serverTransport.stop()
       } catch (error) {
-        const message = error instanceof Error ? error.message : ORB_VOICE_ENGINE_COPY.noCapture
+        const message =
+          getOrbVoiceBrowserDiagnostics().userFacingMessage ||
+          (error instanceof Error ? error.message : ORB_VOICE_TRANSCRIPTION_FAILED_MESSAGE)
+        this.listening = false
+        this.activeTransport = null
         this.setState('failed')
         this.deps.callbacks?.onUserMessage?.(message)
         return ''
@@ -288,24 +307,34 @@ export class ORBWebVoiceEngine {
     this.listening = false
     this.transcript = text
     this.partial = ''
-    patchOrbVoiceBrowserDiagnostics({
-      resolvedTranscriptLength: text.length,
-      lastTranscriptPreview: text.slice(0, 80),
-      finalTranscriptLength: text.length
-    })
-    if (!text.trim()) {
-      this.captureFailures += 1
+    if (text.trim()) {
+      patchOrbVoiceBrowserDiagnostics({
+        resolvedTranscriptLength: text.length,
+        lastTranscriptPreview: text.slice(0, 80),
+        finalTranscriptLength: text.length
+      })
+      this.setState('idle')
+      return text.trim()
+    }
+
+    const diagnostics = getOrbVoiceBrowserDiagnostics()
+    if (!diagnostics.noTranscriptReason) {
       patchOrbVoiceBrowserDiagnostics({
         voiceSubmitBlockedReason: 'no_transcript',
         noTranscriptReason: 'engine_stop_empty',
-        recommendedFallback: 'dictate'
+        recommendedFallback: 'dictate',
+        resolvedTranscriptLength: 0
       })
-      this.setState('failed')
-      this.deps.callbacks?.onUserMessage?.(ORB_VOICE_ENGINE_COPY.noCapture)
-      return ''
     }
-    this.setState('idle')
-    return text.trim()
+    this.captureFailures += 1
+    const message =
+      diagnostics.userFacingMessage ||
+      (diagnostics.serverTranscriptionStatus === 'failed'
+        ? ORB_VOICE_TRANSCRIPTION_FAILED_MESSAGE
+        : ORB_VOICE_ENGINE_COPY.noCapture)
+    this.setState('failed')
+    this.deps.callbacks?.onUserMessage?.(message)
+    return ''
   }
 
   async submitTranscript(text?: string): Promise<void> {
