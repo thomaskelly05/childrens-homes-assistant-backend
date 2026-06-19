@@ -63,6 +63,7 @@ import {
 } from '@/lib/orb/write/orb-write-standalone'
 import type { OrbWriteDocument } from '@/lib/orb/write/orb-write-types'
 import { ORB_RESIDENTIAL_STATION_PRODUCT_COPY } from '@/lib/orb/orb-residential-copy'
+import { orbGuidedDemoSaveStatusMessage, resolveOrbGuidedDemoSaveTitle } from '@/lib/orb/orb-guided-demo'
 import { ORB_WRITE_SAFETY_COPY } from '@/lib/orb/write/orb-write-types'
 
 export function OrbWriteStandalonePanel({
@@ -338,20 +339,21 @@ export function OrbWriteStandalonePanel({
 
   async function handleSaveDraft() {
     if (!doc) return
-    saveOrbWriteLocalDraft(doc)
+    const title = resolveOrbGuidedDemoSaveTitle(doc.title)
+    saveOrbWriteLocalDraft({ ...doc, title })
     setHasLocalDraft(true)
     const plain = doc.body.replace(/<[^>]+>/g, '\n')
     try {
       await saveOrbDictateNote({
-        title: doc.title,
+        title,
         note_type: doc.record_type,
         professional_note: plain,
         summary: doc.summary,
         transcript: doc.transcript
       })
-      setStatusMessage('Draft saved to ORB Saved Outputs.')
+      setStatusMessage(orbGuidedDemoSaveStatusMessage('Draft saved to Records & Drafts.'))
     } catch {
-      setStatusMessage('Saved locally — backend save unavailable.')
+      setStatusMessage(orbGuidedDemoSaveStatusMessage('Saved locally — backend save unavailable.'))
     }
   }
 

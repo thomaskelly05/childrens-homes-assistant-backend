@@ -4,6 +4,7 @@ import {
   type OrbWriteDocument,
   type OrbWriteDocumentVersion
 } from '@/lib/orb/write/orb-write-types'
+import { resolveOrbGuidedDemoSaveTitle } from '@/lib/orb/orb-guided-demo'
 
 const CONTENT_HANDOFF_KEY = 'orb-write-content-handoff-v1'
 
@@ -72,7 +73,7 @@ export function contentHandoffToOrbWriteDocument(
   }
   return {
     id: `write_${Date.now()}`,
-    title: payload.title?.trim() || recordType.label,
+    title: resolveOrbGuidedDemoSaveTitle(payload.title?.trim() || recordType.label),
     record_type: recordType.dictate_note_type,
     record_type_id: recordType.id,
     record_type_label: recordType.label,

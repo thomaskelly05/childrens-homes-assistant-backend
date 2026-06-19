@@ -113,6 +113,7 @@ import {
   type OrbDictateStartMode
 } from '@/lib/orb/dictate/orb-dictate-types'
 import { buildSavedOutputCreateBody } from '@/lib/orb/orb-saved-output-adapters'
+import { orbGuidedDemoSaveStatusMessage, resolveOrbGuidedDemoSaveTitle } from '@/lib/orb/orb-guided-demo'
 import { createOrbSavedOutput } from '@/lib/orb/standalone-client'
 import { isOrbDeveloperMode } from '@/lib/orb/orb-developer-mode'
 import { markOrbInteractionLatency } from '@/lib/orb/voice/latency'
@@ -1107,21 +1108,22 @@ export function OrbDictateStation({
   async function handleSave() {
     const text = editedNote || output?.professional_note
     if (!text || !output) return
+    const title = resolveOrbGuidedDemoSaveTitle(output.title)
     try {
       const saved = await saveOrbDictateNote({
-        title: output.title,
+        title,
         note_type: output.note_type,
         professional_note: text,
         summary: output.summary,
         transcript: output.transcript,
         actions: output.actions
       })
-      setStatusMessage(saved.message || 'Saved to Saved Outputs.')
+      setStatusMessage(orbGuidedDemoSaveStatusMessage(saved.message || 'Saved to Records & Drafts.'))
     } catch {
       try {
         await createOrbSavedOutput(
           buildSavedOutputCreateBody({
-            title: output.title,
+            title,
             type: 'recording_rewrite',
             summary: output.summary,
             content_markdown: text,
@@ -1134,7 +1136,7 @@ export function OrbDictateStation({
             }
           })
         )
-        setStatusMessage('Saved to Saved Outputs.')
+        setStatusMessage(orbGuidedDemoSaveStatusMessage('Saved to Records & Drafts.'))
       } catch {
         setStatusMessage('Save unavailable — use copy to keep your wording.')
       }

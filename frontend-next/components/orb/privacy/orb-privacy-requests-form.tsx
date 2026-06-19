@@ -119,7 +119,7 @@ export function OrbPrivacyRequestsForm({ authenticated }: { authenticated: boole
           onChange={(event) => setSummary(event.target.value)}
           rows={4}
           maxLength={800}
-          placeholder="Describe the type of request — e.g. delete saved outputs and account metadata. Do not paste record content."
+          placeholder="Describe the type of request — e.g. delete records and drafts and account metadata. Do not paste record content."
           className="mt-1 w-full rounded-xl border border-[var(--orb-line)] bg-[var(--orb-surface-elevated)] px-3 py-2 text-sm"
           data-orb-privacy-request-summary
         />

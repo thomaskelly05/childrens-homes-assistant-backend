@@ -6,19 +6,12 @@ import { Loader2, Search, Trash2 } from 'lucide-react'
 
 import { OrbGlassCard } from '@/components/orb-residential/ui/orb-glass-card'
 import { OrbShell } from '@/components/orb-residential/ui/orb-shell'
+import { ORB_NAV_RECORDS, ORB_RECORDS_EMPTY_TITLE, ORB_RECORDS_FILTER_CHIPS } from '@/lib/orb/orb-user-facing-names'
 import {
   deleteOrbSavedOutput,
   listOrbSavedOutputs,
   type OrbSavedOutputSummary
 } from '@/lib/orb/standalone-client'
-
-const TYPE_FILTERS = [
-  { id: '', label: 'All' },
-  { id: 'document_review', label: 'Reviews' },
-  { id: 'deep_research', label: 'Research' },
-  { id: 'manager_briefing', label: 'Briefings' },
-  { id: 'safeguarding_reflection', label: 'Safeguarding' }
-]
 
 export function OrbSavedScreen() {
   const [items, setItems] = useState<OrbSavedOutputSummary[]>([])
@@ -37,7 +30,7 @@ export function OrbSavedScreen() {
       })
       setItems(result.items ?? [])
     } catch {
-      setError('Could not load saved outputs. Sign in to ORB.')
+      setError('Could not load records and drafts. Sign in to ORB.')
       setItems([])
     } finally {
       setLoading(false)
@@ -63,8 +56,10 @@ export function OrbSavedScreen() {
         <Link href="/orb" className="text-xs text-slate-500 hover:text-sky-300">
           ← ORB home
         </Link>
-        <h1 className="mt-4 text-3xl font-semibold text-white">Saved Outputs</h1>
-        <p className="mt-2 text-sm text-slate-400">Your recent ORB work — reviews, templates and learning.</p>
+        <h1 className="mt-4 text-3xl font-semibold text-white">{ORB_NAV_RECORDS}</h1>
+        <p className="mt-2 text-sm text-slate-400">
+          Records and drafts saved from Chat, Dictate and Voice — for adult review before use.
+        </p>
 
         <div className="mt-6 flex gap-2">
           <div className="relative flex-1">
@@ -81,13 +76,13 @@ export function OrbSavedScreen() {
         </div>
 
         <div className="mt-4 flex flex-wrap gap-2" data-orb-saved-outputs-filters>
-          {TYPE_FILTERS.map((chip) => (
+          {ORB_RECORDS_FILTER_CHIPS.map((chip) => (
             <button
               key={chip.id}
               type="button"
-              onClick={() => setTypeFilter(chip.id)}
+              onClick={() => setTypeFilter(chip.type)}
               className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                typeFilter === chip.id ? 'bg-sky-500/30 text-white' : 'bg-white/[0.06] text-slate-400'
+                typeFilter === chip.type ? 'bg-sky-500/30 text-white' : 'bg-white/[0.06] text-slate-400'
               }`}
             >
               {chip.label}
@@ -128,7 +123,7 @@ export function OrbSavedScreen() {
             ))}
             {!items.length ? (
               <p className="text-sm text-slate-500" data-orb-saved-outputs-empty>
-                No saved outputs yet.
+                {ORB_RECORDS_EMPTY_TITLE}
               </p>
             ) : null}
           </div>

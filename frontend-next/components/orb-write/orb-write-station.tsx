@@ -11,6 +11,7 @@ import { saveOrbDictateNote } from '@/lib/orb/dictate/orb-dictate-client'
 import { copyOrbWriteText, exportOrbWritePdf, printOrbWriteDocument } from '@/lib/orb/write/orb-write-export'
 import { saveOrbWriteLocalDraft } from '@/lib/orb/write/orb-write-standalone'
 import { resolveOrbRecordingRecordType } from '@/lib/orb/recording/orb-recording-framework'
+import { orbGuidedDemoSaveStatusMessage, resolveOrbGuidedDemoSaveTitle } from '@/lib/orb/orb-guided-demo'
 import type { OrbWriteDocument } from '@/lib/orb/write/orb-write-types'
 import { ORB_WRITE_SAFETY_COPY } from '@/lib/orb/write/orb-write-types'
 
@@ -70,20 +71,21 @@ export function OrbWriteStation({
 
   async function handleSaveDraft() {
     if (!doc) return
+    const title = resolveOrbGuidedDemoSaveTitle(doc.title)
     const plain = doc.body.replace(/<[^>]+>/g, '\n')
-    saveOrbWriteLocalDraft(doc)
+    saveOrbWriteLocalDraft({ ...doc, title })
     try {
       await saveOrbDictateNote({
-        title: doc.title,
+        title,
         note_type: doc.record_type,
         professional_note: plain,
         summary: doc.summary,
         transcript: doc.transcript
       })
-      setStatusMessage('Draft saved to ORB Saved Outputs.')
-      setDoc((prev) => (prev ? { ...prev, is_draft: true } : prev))
+      setStatusMessage(orbGuidedDemoSaveStatusMessage('Draft saved to Records & Drafts.'))
+      setDoc((prev) => (prev ? { ...prev, is_draft: true, title } : prev))
     } catch {
-      setStatusMessage('Saved locally — backend save unavailable.')
+      setStatusMessage(orbGuidedDemoSaveStatusMessage('Saved locally — backend save unavailable.'))
     }
   }
 

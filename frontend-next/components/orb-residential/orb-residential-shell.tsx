@@ -4,12 +4,13 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import type { ReactNode } from 'react'
 
+import { ORB_NAV_CHAT, ORB_NAV_HOME, ORB_NAV_RECORDS } from '@/lib/orb/orb-user-facing-names'
+
 const NAV = [
-  { href: '/orb', label: 'Chat' },
-  { href: '/orb?station=shift_builder', label: 'Shift Builder' },
-  { href: '/orb/outputs', label: 'Saved' },
-  { href: '/orb/projects', label: 'Projects' },
-]
+  { href: '/orb', label: ORB_NAV_HOME },
+  { href: '/orb', label: ORB_NAV_CHAT },
+  { href: '/orb/outputs', label: ORB_NAV_RECORDS }
+] as const
 
 export function OrbResidentialShell({ children }: { children: ReactNode }) {
   const pathname = usePathname()
@@ -33,7 +34,7 @@ export function OrbResidentialShell({ children }: { children: ReactNode }) {
               const active = pathname === item.href || (item.href !== '/orb' && pathname.startsWith(item.href))
               return (
                 <Link
-                  key={item.href}
+                  key={`${item.href}-${item.label}`}
                   href={item.href}
                   className={`whitespace-nowrap rounded-full px-3 py-1.5 text-sm transition ${
                     active ? 'bg-[#111827] text-white shadow-sm' : 'text-[#4B5563] hover:bg-[#F3F4F6]'
@@ -66,7 +67,7 @@ export function OrbResidentialShell({ children }: { children: ReactNode }) {
             const active = pathname === item.href || (item.href !== '/orb' && pathname.startsWith(item.href))
             return (
               <Link
-                key={item.href}
+                key={`${item.href}-${item.label}-mobile`}
                 href={item.href}
                 className={`whitespace-nowrap rounded-full px-3 py-1.5 text-sm ${
                   active ? 'bg-[#111827] text-white' : 'bg-white/70 text-[#4B5563]'

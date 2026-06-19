@@ -10,18 +10,18 @@ const PRIMARY_WORKFLOWS = [
     accent: 'from-sky-50 to-white',
   },
   {
-    title: 'Shift Builder',
-    desc: 'Turn rough shift notes into structured, child-centred outputs.',
-    href: '/orb?station=shift_builder',
+    title: 'Dictate',
+    desc: 'Speak or paste rough notes and shape a clearer draft for adult review.',
+    href: '/orb?station=orb_dictate',
     accent: 'from-violet-50 to-white',
   },
   {
-    title: 'Record This Properly',
+    title: 'Help me record this properly',
     desc: 'Shape factual, professional and non-punitive recording.',
     href: '/orb/ask?mode=recording',
     accent: 'from-emerald-50 to-white',
   },
-]
+] as const
 
 const SUPPORT_WORKFLOWS = [
   'Safeguarding Thinking',
@@ -56,10 +56,10 @@ export function OrbResidentialHome() {
               Ask ORB
             </Link>
             <Link
-              href="/orb/shift-builder"
+              href="/orb?guided_demo=1"
               className="rounded-full border border-white/20 bg-white/10 px-5 py-3 text-center text-sm font-semibold text-white backdrop-blur transition hover:bg-white/15"
             >
-              Build a shift pack
+              Guided Demo
             </Link>
           </div>
         </div>

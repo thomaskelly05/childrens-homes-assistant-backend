@@ -92,7 +92,7 @@ export function OrbSavedOutputDetailActions({
   function handleShiftBuilder() {
     const notes = String(record.metadata?.source_text || markdown).trim()
     if (!notes) {
-      onNotice?.('No notes available for Shift Builder.')
+      onNotice?.('No notes available for handover planning.')
       return
     }
     const focus = String(record.metadata?.focus || '')
@@ -174,7 +174,7 @@ export function OrbSavedOutputDetailActions({
             data-orb-saved-output-shift-builder
           >
             <ClipboardList className="h-3.5 w-3.5" aria-hidden />
-            Use in Shift Builder
+            Create handover plan
           </button>
         ) : null}
         {onReuseInChat ? (

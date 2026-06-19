@@ -144,7 +144,7 @@ export function OrbAccountModal({
               className="mt-2 rounded-lg border border-[var(--orb-res-info-border,#bfdbfe)] bg-[var(--orb-res-info-bg,#eff6ff)] px-3 py-2 text-xs leading-5 text-[var(--orb-res-info-text,#1e3a8a)]"
               data-orb-account-local-mode
             >
-              Using local ORB content until your session reconnects. Projects, drafts and saved outputs on this device
+              Using local ORB content until your session reconnects. Projects, drafts and records on this device
               remain available.
             </p>
           ) : null}
@@ -200,7 +200,7 @@ export function OrbAccountModal({
         <div className="rounded-2xl border border-[var(--orb-line)]/50 bg-[var(--orb-surface-elevated)] px-3 py-3 text-xs leading-5 text-[var(--orb-muted)]" data-orb-account-privacy-summary>
           <p className="font-semibold text-[var(--orb-foreground)]">Data &amp; privacy</p>
           <p className="mt-1">
-            ORB Residential keeps conversations, uploads and saved outputs within your account boundary. Provider AI trust
+            ORB Residential keeps conversations, uploads and records and drafts within your account boundary. Provider AI trust
             settings apply where your organisation enables them.
           </p>
         </div>

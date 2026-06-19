@@ -2,6 +2,12 @@
  * ORB search surface registry — consistent placeholders, empty states and privacy boundaries.
  */
 
+import {
+  ORB_RECORDS_SEARCH_EMPTY,
+  ORB_RECORDS_SEARCH_LABEL,
+  ORB_RECORDS_SEARCH_PLACEHOLDER
+} from './orb-user-facing-names.ts'
+
 export type OrbSearchPrivacySensitivity = 'low' | 'medium' | 'high'
 
 export type OrbSearchSurface = {
@@ -28,12 +34,12 @@ export const ORB_SEARCH_SURFACES: OrbSearchSurface[] = [
   },
   {
     id: 'saved_outputs',
-    label: 'Saved outputs',
-    placeholder: 'Search saved outputs',
+    label: ORB_RECORDS_SEARCH_LABEL,
+    placeholder: ORB_RECORDS_SEARCH_PLACEHOLDER,
     source: 'server',
     supportsGlobalSearch: false,
     privacySensitivity: 'high',
-    emptyState: 'No saved outputs match your search.',
+    emptyState: ORB_RECORDS_SEARCH_EMPTY,
     dataAttr: 'data-orb-premium-search'
   },
   {

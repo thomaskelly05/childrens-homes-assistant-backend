@@ -13,6 +13,7 @@ import {
 
 import { OrbUserAvatar } from '@/components/orb-residential/orb-user-avatar'
 import type { AdultProfile } from '@/lib/orb/adult-profile-store'
+import { ORB_NAV_RECORDS } from '@/lib/orb/orb-user-facing-names'
 import { formatOrbPlanLabel, getOrbBillingDisplayStatus } from '@/lib/orb/orb-billing-display'
 
 export type OrbAccountMenuSettingsSection = 'appearance' | 'voice' | 'safety_privacy'
@@ -231,7 +232,7 @@ export function OrbAccountMenu({
         {onOpenSavedOutputs ? (
           <MenuItem
             icon={<Save className="h-4 w-4" />}
-            label="Saved outputs"
+            label={ORB_NAV_RECORDS}
             testId="saved-outputs"
             onClick={() => {
               onClose()
@@ -294,7 +295,7 @@ export function OrbAccountMenu({
       </div>
       {savedOutputsCount > 0 ? (
         <p className="sr-only" data-orb-account-menu-saved-count>
-          {savedOutputsCount} saved outputs
+          {savedOutputsCount} records and drafts
         </p>
       ) : null}
     </div>
