@@ -5,11 +5,13 @@ import { Square } from 'lucide-react'
 import { OrbVoiceTranscriptActions } from '@/components/orb-standalone/orb-voice-transcript-actions'
 import type { OrbVoiceLaunchMode, OrbVoiceLaunchUiState } from '@/lib/orb/voice/orb-voice-launch-mode'
 import { orbVoiceLaunchPrimaryLabel } from '@/lib/orb/voice/orb-voice-launch-mode'
+import { orbVoiceServerTranscriptionPrimaryLabel } from '@/lib/orb/voice/orb-voice-server-transcription-ui'
 
 export function OrbVoiceLaunchControls({
   launchMode,
   launchUiState,
   pushToTalk = true,
+  serverTranscription = false,
   transcript = '',
   primaryDisabled = false,
   onPrimary,
@@ -24,6 +26,7 @@ export function OrbVoiceLaunchControls({
   launchMode: OrbVoiceLaunchMode
   launchUiState: OrbVoiceLaunchUiState
   pushToTalk?: boolean
+  serverTranscription?: boolean
   transcript?: string
   primaryDisabled?: boolean
   onPrimary: () => void
@@ -39,6 +42,14 @@ export function OrbVoiceLaunchControls({
 
   const trimmed = transcript.trim()
   const showSendActions = Boolean(trimmed) && launchUiState === 'ready'
+  const primaryLabel = serverTranscription
+    ? orbVoiceServerTranscriptionPrimaryLabel(launchUiState)
+    : orbVoiceLaunchPrimaryLabel(launchUiState, { pushToTalk, listening: launchUiState === 'listening' })
+  const primaryDisabledWithWait =
+    primaryDisabled && launchUiState === 'ready'
+      ? true
+      : serverTranscription &&
+          (launchUiState === 'transcribing' || launchUiState === 'thinking' || launchUiState === 'speaking')
 
   return (
     <div className="flex w-full max-w-sm flex-col gap-2" data-orb-voice-launch-controls data-orb-voice-launch-mode={launchMode}>
@@ -57,14 +68,14 @@ export function OrbVoiceLaunchControls({
         type="button"
         data-orb-voice-ptt-primary
         data-orb-voice-primary-action={launchUiState === 'ready' ? 'start' : undefined}
-        disabled={primaryDisabled && launchUiState === 'ready'}
+        disabled={primaryDisabledWithWait}
         onClick={onPrimary}
         className="w-full rounded-full bg-gradient-to-r from-[var(--orb-primary-blue,#168bff)] to-[var(--orb-primary-blue-2,#0d5fcc)] py-3 text-sm font-semibold text-white shadow-lg shadow-sky-500/20 disabled:cursor-not-allowed disabled:opacity-50"
       >
-        {orbVoiceLaunchPrimaryLabel(launchUiState, { pushToTalk, listening: launchUiState === 'listening' })}
+        {primaryLabel}
       </button>
 
-      {launchUiState === 'listening' || launchUiState === 'transcribing' ? (
+      {!serverTranscription && (launchUiState === 'listening' || launchUiState === 'transcribing') ? (
         <button
           type="button"
           data-orb-voice-cancel-capture

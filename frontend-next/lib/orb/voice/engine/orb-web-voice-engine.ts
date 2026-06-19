@@ -66,12 +66,13 @@ export class ORBWebVoiceEngine {
   }
 
   getUserFacingMessage(): string {
+    const serverMode = this.selection?.selectedTransport === 'server_transcription'
     switch (this.state) {
       case 'idle':
-        return ORB_VOICE_ENGINE_COPY.ready
+        return serverMode ? 'Ready to record' : ORB_VOICE_ENGINE_COPY.ready
       case 'listening':
       case 'capturing':
-        return ORB_VOICE_ENGINE_COPY.listening
+        return serverMode ? 'Recording…' : ORB_VOICE_ENGINE_COPY.listening
       case 'transcribing':
         return ORB_VOICE_ENGINE_COPY.transcribing
       case 'thinking':
@@ -81,11 +82,13 @@ export class ORBWebVoiceEngine {
       case 'failed':
         return this.selection?.selectedTransport === 'unsupported'
           ? ORB_VOICE_ENGINE_COPY.limitedBrowser
-          : ORB_VOICE_ENGINE_COPY.noCapture
+          : serverMode
+            ? 'No speech was captured. Try again, use Dictate, or use Chat.'
+            : ORB_VOICE_ENGINE_COPY.noCapture
       case 'unsupported':
         return ORB_VOICE_ENGINE_COPY.unsupported
       default:
-        return ORB_VOICE_ENGINE_COPY.ready
+        return serverMode ? 'Ready to record' : ORB_VOICE_ENGINE_COPY.ready
     }
   }
 
@@ -256,7 +259,7 @@ export class ORBWebVoiceEngine {
         this.deps.callbacks?.onUserMessage?.(ORB_VOICE_ENGINE_COPY.limitedBrowser)
         return false
       }
-      this.setState('listening')
+      this.setState('capturing')
       return true
     }
 

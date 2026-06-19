@@ -44,9 +44,14 @@ export function OrbVoiceAfterCallPanel({
   const [transcriptOpen, setTranscriptOpen] = useState(false)
   const [recordTypeOpen, setRecordTypeOpen] = useState(false)
   const content: OrbVoiceAfterCallContent = buildOrbVoiceAfterCallContent(turns, voiceSummary, { summaryPending })
+  const hasTranscript = content.hasTranscript || Boolean(transcriptText.trim())
   const needsEscalation = orbVoiceNeedsEscalationPrompt(transcriptText)
   const needsManagementOversight = orbVoiceNeedsManagementOversight(transcriptText)
   const oversightTopics = orbVoiceManagementOversightTopics(transcriptText)
+
+  if (!hasTranscript) {
+    return null
+  }
 
   return (
     <section

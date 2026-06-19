@@ -12,7 +12,7 @@ export const ORB_BROWSER_SPEECH_FINALIZE_MS = 400
 export const ORB_SAFARI_BROWSER_VOICE_DEV_OVERRIDE_KEY = 'indicare.orb.voice.safari.browser'
 
 export const ORB_VOICE_SAFARI_NO_SPEECH_MESSAGE =
-  'Safari did not capture speech. Dictate is available, or you can use Chat instead.'
+  'Safari could not capture speech in this session. You can try again, use Dictate, or type in Chat.'
 
 export type OrbBrowserSpeechCapturePurpose = 'voice' | 'dictate'
 

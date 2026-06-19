@@ -64,6 +64,10 @@ export type OrbVoiceBrowserDiagnostics = {
   lastStartAttemptAt: string | null
   serverTranscriptionAttempted: boolean
   serverTranscriptionStatus: string | null
+  serverTranscriptionError: string | null
+  mediaRecorderStarted: boolean
+  mediaRecorderStopped: boolean
+  recordedAudioSizeBytes: number
   appleOrBrowserFallbackUsed: boolean
   bargeInEnabled: boolean
   bargeInTriggered: boolean
@@ -128,6 +132,10 @@ const empty: OrbVoiceBrowserDiagnostics = {
   lastStartAttemptAt: null,
   serverTranscriptionAttempted: false,
   serverTranscriptionStatus: null,
+  serverTranscriptionError: null,
+  mediaRecorderStarted: false,
+  mediaRecorderStopped: false,
+  recordedAudioSizeBytes: 0,
   appleOrBrowserFallbackUsed: false,
   bargeInEnabled: true,
   bargeInTriggered: false,

@@ -51,6 +51,7 @@ export function OrbVoiceLivePanel({
   onToggleMute,
   onEnd,
   onTurnIntoRecord,
+  statusLabelOverride,
   className = ''
 }: {
   turns: VoiceTurn[]
@@ -69,10 +70,12 @@ export function OrbVoiceLivePanel({
   onToggleMute?: () => void
   onEnd: () => void
   onTurnIntoRecord?: () => void
+  statusLabelOverride?: string | null
   className?: string
 }) {
   const dialogue = turns.filter((t) => t.role === 'user' || t.role === 'assistant')
-  const stateLabel = acknowledgement?.trim() || orbVoiceLivePanelStatusLabel(liveState)
+  const stateLabel =
+    statusLabelOverride?.trim() || acknowledgement?.trim() || orbVoiceLivePanelStatusLabel(liveState)
   const promptLine =
     livePrompt?.trim() ||
     (pauseHint && liveState === 'listening'

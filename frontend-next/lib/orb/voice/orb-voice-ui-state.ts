@@ -49,6 +49,8 @@ export type ResolveOrbVoiceUiStateInput = {
   realtimeState: string
   webrtcFailed: boolean
   permissionDenied?: boolean
+  /** Browser voice engine active (PTT / server transcription) — not WebRTC reconnect. */
+  browserEngineActive?: boolean
 }
 
 export function resolveOrbVoiceUiState(input: ResolveOrbVoiceUiStateInput): OrbVoiceUiState {
@@ -71,6 +73,12 @@ export function resolveOrbVoiceUiState(input: ResolveOrbVoiceUiStateInput): OrbV
   }
 
   if (input.startStage === 'starting') return 'preparing'
+
+  if (input.browserEngineActive && input.startStage === 'active') {
+    if (input.realtimeState === 'speaking') return 'speaking'
+    if (input.realtimeState === 'thinking' || input.realtimeState === 'transcribing') return 'thinking'
+    return 'listening'
+  }
 
   if (input.startStage === 'active' && !input.transportLive) return 'reconnecting'
 

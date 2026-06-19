@@ -32,7 +32,7 @@ export function OrbVoiceStationContent({
   secondaryControls?: ReactNode
   /** Desktop transcript / summary column when live or after call. */
   sidePanel?: ReactNode
-  workspaceMode?: 'idle' | 'live' | 'after_call'
+  workspaceMode?: 'idle' | 'live' | 'after_call' | 'no_transcript'
   className?: string
 }) {
   const isMobileViewport = useOrbMobileViewport()
