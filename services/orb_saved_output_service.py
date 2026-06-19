@@ -39,6 +39,23 @@ logger = logging.getLogger("indicare.orb_saved_outputs")
 MIGRATION_207_PATH = "sql/207_orb_saved_outputs_canonical.sql"
 SCHEMA_DEGRADED_REASON = "saved_outputs_schema_migration_required"
 
+_JSON_ROW_FIELDS = frozenset(
+    {
+        "profile_ids",
+        "tags",
+        "content_json",
+        "intelligence_output",
+        "sources",
+        "citations",
+        "quality",
+        "model_routing",
+        "retrieval_context",
+        "metadata",
+    }
+)
+
+_TIMESTAMPTZ_ROW_FIELDS = frozenset({"created_at", "updated_at", "archived_at"})
+
 
 class SavedOutputSchemaMigrationRequired(Exception):
     """Raised when a write requires canonical orb_saved_outputs schema."""
@@ -189,6 +206,51 @@ class OrbSavedOutputService:
             raise SavedOutputSchemaMigrationRequired(
                 f"Apply {MIGRATION_207_PATH} before writing saved outputs to PostgreSQL"
             )
+
+    def schema_state_for_clients(self) -> dict[str, Any]:
+        """Public snapshot for API error payloads and health surfaces."""
+        return self._saved_outputs_schema_state()
+
+    def _available_db_columns(self) -> set[str]:
+        from services.orb_schema_verification import CANONICAL_SAVED_OUTPUT_COLUMNS
+
+        state = self._saved_outputs_schema_state()
+        if not state.get("exists"):
+            return set()
+        missing = set(state.get("missing_columns") or [])
+        return set(CANONICAL_SAVED_OUTPUT_COLUMNS) - missing
+
+    def _persist_created_row(self, user_id: int, row: dict[str, Any]) -> None:
+        uid = self._resolve_user_id(user_id)
+        mode = self._detect_storage_mode()
+        if mode != "postgresql":
+            self._user_memory(uid)[row["id"]] = row
+            return
+        if self._db_write_allowed():
+            self._insert_db(row)
+            return
+        if self._db_read_allowed():
+            try:
+                self._insert_db_adaptive(row)
+                state = self._saved_outputs_schema_state()
+                logger.warning(
+                    "Saved output persisted with adaptive schema for user %s "
+                    "(apply %s; missing columns: %s)",
+                    uid,
+                    MIGRATION_207_PATH,
+                    ", ".join(state.get("missing_columns") or []) or "unknown",
+                )
+                return
+            except SavedOutputSchemaMigrationRequired:
+                raise
+            except Exception as exc:
+                logger.exception("Adaptive saved output insert failed for user %s", uid)
+                raise SavedOutputSchemaMigrationRequired(
+                    f"Apply {MIGRATION_207_PATH} before writing saved outputs to PostgreSQL"
+                ) from exc
+        raise SavedOutputSchemaMigrationRequired(
+            f"Apply {MIGRATION_207_PATH} before writing saved outputs to PostgreSQL"
+        )
 
     def health(self) -> OrbSavedOutputHealth:
         mode = self._detect_storage_mode()
@@ -435,11 +497,7 @@ class OrbSavedOutputService:
             metadata=enriched_metadata,
         )
         row = self._record_to_row(record, user_id=uid)
-        if self._detect_storage_mode() == "postgresql":
-            self._require_canonical_for_write()
-            self._insert_db(row)
-        else:
-            self._user_memory(uid)[record.id] = row
+        self._persist_created_row(uid, row)
         try:
             from services.indicare_ai_governance_event_service import indicare_ai_governance_event_service
 
@@ -732,6 +790,9 @@ class OrbSavedOutputService:
             quality_score=float(score) if score is not None else None,
             created_at=str(row.get("created_at") or _now_iso()),
             updated_at=str(row.get("updated_at") or _now_iso()),
+            metadata=_parse_json(row.get("metadata"), {})
+            if self._table_has_column("metadata")
+            else {},
         )
 
     def _fetch_row(self, user_id: int, output_id: str) -> dict[str, Any] | None:
@@ -786,6 +847,57 @@ class OrbSavedOutputService:
             if needle not in hay:
                 return False
         return True
+
+    def _insert_db_adaptive(self, row: dict[str, Any]) -> None:
+        available = self._available_db_columns()
+        required = {"id", "user_id", "title", "type"}
+        if not required.issubset(available):
+            missing_req = sorted(required - available)
+            raise SavedOutputSchemaMigrationRequired(
+                "Saved outputs table missing required columns: "
+                + ", ".join(missing_req)
+            )
+
+        insert_cols: list[str] = []
+        insert_vals: list[str] = []
+        params: dict[str, Any] = {}
+        for col in sorted(available):
+            if col not in row and col not in required:
+                continue
+            val = row.get(col)
+            insert_cols.append(col)
+            if col in _JSON_ROW_FIELDS:
+                if val is None:
+                    val = (
+                        []
+                        if col in {"profile_ids", "tags", "sources", "citations"}
+                        else {}
+                    )
+                params[col] = Json(val)
+                insert_vals.append(f"%({col})s")
+            elif col in _TIMESTAMPTZ_ROW_FIELDS:
+                params[col] = val
+                insert_vals.append(f"%({col})s::timestamptz")
+            else:
+                params[col] = val
+                insert_vals.append(f"%({col})s")
+
+        if not insert_cols:
+            raise SavedOutputSchemaMigrationRequired(
+                "No writable columns available on orb_saved_outputs"
+            )
+
+        sql = (
+            f"INSERT INTO orb_saved_outputs ({', '.join(insert_cols)}) "
+            f"VALUES ({', '.join(insert_vals)})"
+        )
+        conn = get_db_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute(sql, params)
+            conn.commit()
+        finally:
+            release_db_connection(conn)
 
     def _insert_db(self, row: dict[str, Any]) -> None:
         conn = get_db_connection()

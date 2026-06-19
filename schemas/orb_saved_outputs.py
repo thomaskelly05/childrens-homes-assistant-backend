@@ -171,6 +171,7 @@ class OrbSavedOutputSummary(BaseModel):
     standalone_only: bool = True
     os_linked: bool = False
     care_record_access: bool = False
+    metadata: dict[str, Any] = Field(default_factory=dict)
 
 
 class OrbSavedOutputListResponse(BaseModel):

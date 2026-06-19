@@ -18,6 +18,7 @@ from schemas.orb_saved_outputs import (
     OrbSavedOutputUpdate,
 )
 from services.orb_saved_output_service import (
+    MIGRATION_207_PATH,
     SavedOutputSchemaMigrationRequired,
     orb_saved_output_service,
 )
@@ -102,7 +103,16 @@ async def create_output(
     try:
         output = orb_saved_output_service.create_output(_user_id(current_user), payload)
     except SavedOutputSchemaMigrationRequired as exc:
-        raise HTTPException(status_code=503, detail=exc.message) from exc
+        state = orb_saved_output_service.schema_state_for_clients()
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "error": "saved_outputs_schema_migration_required",
+                "message": exc.message,
+                "migration": MIGRATION_207_PATH,
+                "missing_columns": state.get("missing_columns") or [],
+            },
+        ) from exc
     return _success(output.model_dump())
 
 

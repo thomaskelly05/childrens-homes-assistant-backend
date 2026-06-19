@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -174,10 +175,51 @@ def test_unsafe_table_not_queried(monkeypatch):
     assert called["list_db"] is False
 
 
-def test_write_requires_canonical_schema(monkeypatch):
+def test_create_succeeds_with_adaptive_insert_when_status_missing(monkeypatch):
     svc = orb_saved_output_service
     monkeypatch.setattr(svc, "_detect_storage_mode", lambda: "postgresql")
     monkeypatch.setattr(svc, "_saved_outputs_schema_state", _legacy_missing_status_state)
+    captured: dict[str, Any] = {}
+
+    def _capture(row):
+        captured.update(row)
+
+    monkeypatch.setattr(svc, "_insert_db_adaptive", _capture)
+
+    record = svc.create_output(
+        42,
+        OrbSavedOutputCreate(
+            title="Adaptive save",
+            type="general_research",
+            metadata={"review_status": "needs_review"},
+        ),
+    )
+    assert record.title == "Adaptive save"
+    assert record.metadata.get("review_status") == "needs_review"
+    assert captured["title"] == "Adaptive save"
+    assert captured["user_id"] == 42
+
+
+def test_create_route_succeeds_when_adaptive_insert_available(monkeypatch):
+    svc = orb_saved_output_service
+    monkeypatch.setattr(svc, "_detect_storage_mode", lambda: "postgresql")
+    monkeypatch.setattr(svc, "_saved_outputs_schema_state", _legacy_missing_status_state)
+    monkeypatch.setattr(svc, "_insert_db_adaptive", lambda row: None)
+
+    resp = asyncio.run(
+        standalone_routes.create_output(
+            OrbSavedOutputCreate(title="Route save", type="general_research"),
+            current_user={"user_id": 7, "id": 7},
+        )
+    )
+    assert resp["success"] is True
+    assert resp["data"]["title"] == "Route save"
+
+
+def test_write_raises_when_required_columns_missing(monkeypatch):
+    svc = orb_saved_output_service
+    monkeypatch.setattr(svc, "_detect_storage_mode", lambda: "postgresql")
+    monkeypatch.setattr(svc, "_saved_outputs_schema_state", _unsafe_no_user_id_state)
 
     with pytest.raises(SavedOutputSchemaMigrationRequired):
         svc.create_output(1, OrbSavedOutputCreate(title="Blocked", type="general_research"))
