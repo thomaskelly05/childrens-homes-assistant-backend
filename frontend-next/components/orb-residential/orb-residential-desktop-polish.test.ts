@@ -11,7 +11,7 @@ function readComponent(relativePath: string) {
 }
 
 describe('ORB Residential desktop polish', () => {
-  it('desktop sidebar has brand, new chat, search, grouped sections, and pinned account footer', () => {
+  it('desktop sidebar has brand, new chat, search, simplified nav, and pinned account footer', () => {
     const sidebar = readComponent('components/orb-residential/orb-residential-sidebar.tsx')
     const layout = readComponent('components/orb/orb-layout.tsx')
 
@@ -19,27 +19,35 @@ describe('ORB Residential desktop polish', () => {
     assert.match(sidebar, /data-orb-sidebar-new-chat/)
     assert.match(sidebar, /data-orb-sidebar-search/)
     assert.match(sidebar, /data-orb-sidebar-desktop-nav/)
-    assert.match(sidebar, /data-orb-sidebar-section="main"/)
-    assert.match(sidebar, /data-orb-sidebar-section="library"/)
+    assert.match(sidebar, /ORB_VISIBLE_SIDEBAR_NAV/)
+    assert.match(sidebar, /RESIDENTIAL_VISIBLE_NAV/)
     assert.match(sidebar, /data-orb-sidebar-icon-rail/)
     assert.match(sidebar, /data-orb-sidebar-account-footer/)
+    assert.doesNotMatch(sidebar, /data-orb-sidebar-section="library"/)
     assert.doesNotMatch(sidebar, /data-orb-sidebar-section="profiles"/)
     assert.match(sidebar, /Recent chats/)
     assert.match(layout, /orb-chat-sidebar/)
     assert.match(layout, /lg:static/)
   })
 
-  it('desktop shortcuts cover Dictate, Voice, Documents, Saved Outputs, and intelligence modes', () => {
+  it('desktop shortcuts cover Phase 1A visible stations only', () => {
     const sidebar = readComponent('components/orb-residential/orb-residential-sidebar.tsx')
+    const names = readComponent('lib/orb/orb-user-facing-names.ts')
     const copy = readComponent('lib/orb/orb-residential-copy.ts')
 
-    for (const label of ['Dictate', 'Voice', 'ORB Write', 'Documents & Guidance', 'Saved Outputs', 'Templates']) {
+    for (const label of ['Home', 'Chat', 'Dictate', 'Voice', 'Settings']) {
       assert.match(sidebar, new RegExp(label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))
     }
-    assert.match(sidebar, /DESKTOP_MAIN_NAV/)
-    assert.match(sidebar, /DESKTOP_LIBRARY_NAV/)
+    assert.match(sidebar, /ORB_NAV_WRITE/)
+    assert.match(sidebar, /ORB_NAV_RECORDS/)
+    assert.match(names, /ORB_NAV_HELP/)
+    assert.match(sidebar, /case 'help':/)
+    assert.match(sidebar, /ORB_VISIBLE_SIDEBAR_NAV/)
     assert.match(sidebar, /data-orb-sidebar-chat/)
-    assert.match(copy, /ORB_RESIDENTIAL_EMPTY_HEADING_DESKTOP = 'What do you need help with\?'/)
+    assert.match(sidebar, /data-orb-sidebar-dictate/)
+    assert.doesNotMatch(sidebar, /DESKTOP_LIBRARY_NAV/)
+    assert.doesNotMatch(sidebar, /data-orb-sidebar-library/)
+    assert.match(copy, /ORB_RESIDENTIAL_EMPTY_HEADING_DESKTOP = ORB_CHAT_EMPTY_HEADING/)
     assert.match(copy, /ORB_RESIDENTIAL_EMPTY_SUBLINE/)
     assert.match(copy, /ORB_RESIDENTIAL_STARTER_GROUPS/)
   })
@@ -80,6 +88,6 @@ describe('ORB Residential desktop polish', () => {
     const sidebar = readComponent('components/orb-residential/orb-residential-sidebar.tsx')
     assert.match(sidebar, /useOrbMobileViewport/)
     assert.match(sidebar, /data-orb-sidebar-mobile-quick-nav/)
-    assert.match(sidebar, /data-orb-sidebar-magic-notes/)
+    assert.match(sidebar, /data-orb-sidebar-dictate/)
   })
 })

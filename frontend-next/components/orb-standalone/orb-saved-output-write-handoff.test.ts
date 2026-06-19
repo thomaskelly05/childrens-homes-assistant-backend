@@ -29,7 +29,7 @@ describe('ORB saved output write handoff', () => {
   it('empty state points to Create document and Start in Dictate', () => {
     const panel = read('components/orb-standalone/orb-saved-outputs-panel.tsx')
     assert.match(panel, /data-orb-saved-output-empty-state/)
-    assert.match(panel, /Nothing saved yet/)
+    assert.match(panel, /ORB_RECORDS_EMPTY_TITLE/)
     assert.match(panel, /data-orb-saved-start-dictate/)
     assert.match(panel, /data-orb-saved-start-write/)
     assert.match(panel, /Create document/)

@@ -48,9 +48,10 @@ describe('ORB brain router convergence', () => {
     assert.doesNotMatch(router, /\[ORB brain routing\]/)
   })
 
-  it('voice and chat share askOrbBrain in care companion', () => {
+  it('voice and chat share brain routing in care companion', () => {
     const companion = readSource('components/orb-standalone/orb-care-companion.tsx')
-    assert.match(companion, /askOrbBrain/)
+    assert.match(companion, /buildOrbBrainConversationRequest/)
+    assert.match(companion, /queryStandaloneOrbConversation/)
     assert.match(companion, /source: voiceOriginatedSend \? 'voice' : 'chat'/)
   })
 

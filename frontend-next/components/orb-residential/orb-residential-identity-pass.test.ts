@@ -87,22 +87,22 @@ describe('ORB Residential station identity pass', () => {
     assert.match(live, /Thinking with you…/)
   })
 
-  it('dictate presents Magic Notes product layer without breaking workflow', () => {
+  it('dictate presents Dictate product copy without breaking workflow', () => {
     const copy = read('lib/orb/orb-residential-copy.ts')
     const workspace = read('components/orb/dictate/OrbDictateStudioWorkspace.tsx')
     const topBar = read('components/orb/dictate/OrbDictateTopBar.tsx')
     const transcript = read('components/orb/dictate/OrbTranscriptPanel.tsx')
     const brain = read('components/orb/dictate/OrbDictateBrainPanel.tsx')
 
-    assert.match(copy, /title: 'ORB Magic Notes'/)
-    assert.match(copy, /Turn rough speech, meetings and observations into safer notes/)
-    assert.match(copy, /Powered by ORB Dictate/)
+    assert.match(copy, /ORB_RESIDENTIAL_DICTATE_COPY/)
+    assert.match(copy, /ORB_DICTATE_SUBTITLE/)
+    assert.doesNotMatch(copy, /ORB Magic Notes/)
     assert.match(workspace, /OrbWorkflowStrip/)
     assert.match(workspace, /OrbDictatePrivacyStrip/)
-    assert.match(workspace, /data-orb-dictate-magic-notes/)
+    assert.match(workspace, /data-orb-dictate-studio/)
     assert.match(topBar, /Review with ORB/)
     assert.match(topBar, /Open in ORB Write/)
-    assert.match(transcript, /Capture rough notes/)
+    assert.match(transcript, /ORB_RESIDENTIAL_DICTATE_COPY\.capturePrompt/)
     assert.match(transcript, /data-orb-dictate-capture-guidance/)
     assert.match(brain, /ORB Review/)
     assert.match(brain, /reviewHint/)

@@ -25,7 +25,7 @@ const REQUIRED_SMOKE_CHECKS = [
   'ORB Write',
   'Templates',
   'Documents',
-  'Saved Outputs',
+  'Records & Drafts',
   'Settings',
   'Sign out',
   'Browser back',

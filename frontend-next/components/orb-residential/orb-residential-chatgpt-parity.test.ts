@@ -142,6 +142,6 @@ describe('ORB Residential ChatGPT parity', () => {
 
   it('saved outputs modal has designed empty state', () => {
     const saved = readComponent('components/orb-standalone/orb-saved-outputs-panel.tsx')
-    assert.match(saved, /Nothing saved yet/)
+    assert.match(saved, /ORB_RECORDS_EMPTY_TITLE/)
   })
 })

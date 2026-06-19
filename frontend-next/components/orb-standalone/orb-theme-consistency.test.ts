@@ -46,10 +46,10 @@ describe('ORB theme consistency across station panels', () => {
     assert.match(tpl, /OrbPremiumEmptyState/)
   })
 
-  it('Saved Outputs uses studio empty state with studio CTAs', () => {
+  it('Records & Drafts uses studio empty state with studio CTAs', () => {
     const saved = read('components/orb-standalone/orb-saved-outputs-panel.tsx')
     assert.match(saved, /OrbStudioEmptyState/)
-    assert.match(saved, /Nothing saved yet/)
+    assert.match(saved, /ORB_RECORDS_EMPTY_TITLE/)
     assert.match(saved, /data-orb-saved-start-write/)
     assert.match(saved, /data-orb-saved-start-dictate/)
   })
@@ -78,12 +78,13 @@ describe('ORB theme consistency across station panels', () => {
     assert.match(review, /data-orb-review-run/)
   })
 
-  it('Residential sidebar keeps ORB Write and clarifies Documents', () => {
+  it('Residential sidebar keeps ORB Write and Phase 1A visible nav', () => {
     const sidebar = read('components/orb-residential/orb-residential-sidebar.tsx')
-    assert.match(sidebar, /ORB Write/)
-    assert.match(sidebar, /Documents & Guidance/)
-    assert.match(sidebar, /ORB_RESIDENTIAL_STATION_DEFINITIONS/)
-    assert.match(sidebar, /Policies, guidance and document analyser/)
+    assert.match(sidebar, /ORB_NAV_WRITE|ORB Write/)
+    assert.match(sidebar, /ORB_VISIBLE_SIDEBAR_NAV/)
+    assert.match(sidebar, /RESIDENTIAL_VISIBLE_NAV/)
+    assert.doesNotMatch(sidebar, /data-orb-sidebar-library/)
+    assert.doesNotMatch(sidebar, /Policies, guidance and document analyser/)
   })
 
   it('does not add child profile selector to station panels', () => {

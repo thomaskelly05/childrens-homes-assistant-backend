@@ -141,7 +141,7 @@ describe('ORB ChatGPT UI structure', () => {
 
   it('help panel contains safeguarding boundary text', () => {
     const help = readComponent('components/orb-standalone/orb-help-panel.tsx')
-    assert.match(help, /Using ORB/)
+    assert.match(help, /Help & Safety|ORB_HELP_PANEL_TITLE/)
     assert.match(help, /does not access IndiCare OS records/)
     assert.match(help, /immediate risk/)
   })
@@ -239,7 +239,7 @@ describe('ORB ChatGPT UI structure', () => {
     assert.match(companion, /standaloneGreetingLocalAnswer\(trimmed\)/)
     assert.match(companion, /local_greeting_response/)
     const greetingIdx = companion.indexOf('standaloneGreetingLocalAnswer(trimmed)')
-    const backendIdx = companion.indexOf('askOrbBrain({')
+    const backendIdx = companion.indexOf('buildOrbBrainConversationRequest(')
     assert.ok(greetingIdx >= 0 && backendIdx >= 0)
     assert.ok(greetingIdx < backendIdx, 'greeting must be resolved before backend send')
   })

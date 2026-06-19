@@ -52,7 +52,7 @@ describe('ORB Dictate clean rebuild', () => {
     const hook = readComponent('components/orb-standalone/use-standalone-orb-voice.ts')
     const dictateCapture = hook.match(/const beginDictateSpeechCapture[\s\S]*?}, \[/)?.[0] ?? ''
     assert.doesNotMatch(dictateCapture, /requestMicrophonePermission/)
-    assert.match(dictateCapture, /startRecognitionSessionConfirmed\('continuous'\)/)
+    assert.match(dictateCapture, /beginBrowserSpeechCapture\('dictate'\)/)
   })
 })
 

@@ -103,15 +103,15 @@ describe('ORB Residential routing', () => {
 
   it('capability routes deep-link into /orb stations', () => {
     assert.match(readApp('app/orb/ask/page.tsx'), /redirect\('\/orb'\)/)
-    assert.match(readApp('app/orb/review/page.tsx'), /redirect\('\/orb\?station=review'\)/)
-    assert.match(readApp('app/orb/templates/page.tsx'), /redirect\('\/orb\?station=templates'\)/)
-    assert.match(readApp('app/orb/learn/page.tsx'), /redirect\('\/orb\?station=knowledge'\)/)
+    assert.match(readApp('app/orb/review/page.tsx'), /redirect\('\/orb\?station=orb_write'\)/)
+    assert.match(readApp('app/orb/templates/page.tsx'), /redirect\('\/orb\?station=orb_dictate'\)/)
+    assert.match(readApp('app/orb/learn/page.tsx'), /redirect\('\/orb'\)/)
     assert.match(readApp('app/orb/saved/page.tsx'), /redirect\('\/orb\?station=saved'\)/)
     assert.match(readApp('app/orb/outputs/page.tsx'), /redirect\('\/orb\?station=saved'\)/)
     assert.match(readApp('app/orb/projects/page.tsx'), /redirect\('\/orb'\)/)
     assert.doesNotMatch(readApp('app/orb/outputs/page.tsx'), /redirect\('\/orb\/outputs'\)/)
     assert.doesNotMatch(readApp('app/orb/projects/page.tsx'), /redirect\('\/orb\/projects'\)/)
-    assert.match(readApp('app/orb-residential/shift-builder/page.tsx'), /redirect\('\/orb\?station=shift_builder'\)/)
+    assert.match(readApp('app/orb-residential/shift-builder/page.tsx'), /redirect\('\/orb'\)/)
   })
 
   it('sidebar converges Shift Builder into Templates and Chat', () => {

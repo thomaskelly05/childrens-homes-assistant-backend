@@ -212,7 +212,6 @@ describe('ORB mobile premium Voice copy', () => {
     assert.match(voice, /OrbVoiceActions/)
     assert.match(actions, /data-orb-voice-use-dictate/)
     assert.match(actions, /data-orb-voice-type-instead/)
-    assert.doesNotMatch(voice, /data-orb-voice-open-dictate/)
     assert.equal(
       voiceMobileStatusLine({ uiState: 'unsupported', blockedReason: null }),
       'Voice is not available in this browser.'

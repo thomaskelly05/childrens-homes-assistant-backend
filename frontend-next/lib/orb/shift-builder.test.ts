@@ -73,7 +73,7 @@ test('standalone client wires shift builder generate path', () => {
   assert.match(client, /runOrbShiftBuilder/)
 })
 
-test('shift builder route redirects to station', () => {
+test('shift builder route redirects to home', () => {
   const page = readFileSync(join(root, 'app/orb-residential/shift-builder/page.tsx'), 'utf8')
-  assert.match(page, /redirect\('\/orb\?station=shift_builder'\)/)
+  assert.match(page, /redirect\('\/orb'\)/)
 })

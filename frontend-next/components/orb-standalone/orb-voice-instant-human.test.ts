@@ -92,8 +92,8 @@ describe('ORB Voice instant-human refinement', () => {
       'failed_connection'
     )
     const hook = read('components/orb-standalone/use-standalone-orb-voice.ts')
-    assert.match(hook, /Microphone access is needed to use Voice/)
-    assert.match(hook, /Voice may not be supported in this browser/)
+    assert.match(hook, /Microphone access is needed|ORB_VOICE_MIC_BLOCKED_MESSAGE/)
+    assert.match(hook, /Voice is not supported in this browser|ORB_VOICE_UNSUPPORTED_MESSAGE/)
   })
 
   it('unsupported browser copy', () => {

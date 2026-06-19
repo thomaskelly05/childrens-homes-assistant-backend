@@ -47,7 +47,7 @@ describe('orb saved outputs panel UI', () => {
   it('panel renders list, detail, review status and empty state hooks', () => {
     const panel = readComponent('orb-saved-outputs-panel.tsx')
     const actions = readComponent('orb-saved-output-detail-actions.tsx')
-    assert.match(panel, /Saved Outputs/)
+    assert.match(panel, /Records & Drafts/)
     assert.match(panel, /Reuse, export and improve your ORB work/)
     assert.match(panel, /data-orb-saved-outputs-list/)
     assert.match(panel, /data-orb-saved-output-detail/)

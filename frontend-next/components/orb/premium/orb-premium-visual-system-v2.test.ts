@@ -30,11 +30,13 @@ describe('ORB Premium Visual System v2', () => {
 
   it('sidebar renders simplified residential nav items', () => {
     const sidebar = read('components/orb-residential/orb-residential-sidebar.tsx')
-    for (const id of ['orb_dictate', 'orb_write', 'orb_voice', 'documents', 'saved', 'templates']) {
+    for (const id of ['orb_dictate', 'orb_write', 'orb_voice', 'saved']) {
       assert.match(sidebar, new RegExp(`'${id}'`))
     }
+    assert.match(sidebar, /ORB_VISIBLE_SIDEBAR_NAV/)
     assert.match(sidebar, /data-orb-sidebar-account-card/)
     assert.doesNotMatch(sidebar, /DESKTOP_PRACTICE_NAV/)
+    assert.doesNotMatch(sidebar, /data-orb-sidebar-library/)
   })
 
   it('chat home renders premium suggestion cards and atmosphere', () => {
@@ -46,7 +48,7 @@ describe('ORB Premium Visual System v2', () => {
     assert.match(copy, /Create a handover \/ shift plan/)
     assert.match(copy, /Review written practice/)
     assert.match(copy, /Think through a safeguarding concern/)
-    assert.match(copy, /Record this properly/)
+    assert.match(copy, /Help me record this properly/)
   })
 
   it('composer still sends messages without exposing internal labels', () => {

@@ -5,11 +5,11 @@ import { fileURLToPath } from 'node:url'
 import { describe, it } from 'node:test'
 
 import {
-  ORB_VISIBLE_LIBRARY_NAV_IDS,
-  ORB_VISIBLE_MAIN_NAV_IDS,
+  ORB_VISIBLE_SIDEBAR_NAV_IDS,
   isDeprecatedPrimaryNavPanel,
   resolveConvergedNavigation
 } from '../../lib/orb/orb-navigation-convergence.ts'
+import { ORB_NAV_RECORDS, ORB_VISIBLE_SIDEBAR_NAV } from '../../lib/orb/orb-user-facing-names.ts'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '../..')
 
@@ -18,57 +18,41 @@ function readComponent(relativePath: string) {
 }
 
 describe('ORB navigation convergence', () => {
-  it('visible main nav includes Chat, Dictate, Voice and ORB Write', () => {
+  it('visible sidebar nav includes Home through Settings', () => {
     const sidebar = readComponent('components/orb-residential/orb-residential-sidebar.tsx')
-    for (const id of ORB_VISIBLE_MAIN_NAV_IDS) {
-      if (id === 'chat') {
-        assert.match(sidebar, /label: 'Chat'/)
-        continue
-      }
-      assert.match(sidebar, new RegExp(`id: '${id}'`))
+    const names = readComponent('lib/orb/orb-user-facing-names.ts')
+    assert.match(sidebar, /ORB_VISIBLE_SIDEBAR_NAV/)
+    assert.match(sidebar, /RESIDENTIAL_VISIBLE_NAV/)
+    for (const id of ORB_VISIBLE_SIDEBAR_NAV_IDS) {
+      assert.match(names, new RegExp(`id: '${id}'`))
     }
   })
 
-  it('visible library nav includes Templates, Documents and Saved Outputs', () => {
+  it('primary sidebar does not render Shift Builder, Review, Skills, Library or Magic Notes', () => {
     const sidebar = readComponent('components/orb-residential/orb-residential-sidebar.tsx')
-    for (const id of ORB_VISIBLE_LIBRARY_NAV_IDS) {
-      assert.match(sidebar, new RegExp(`id: '${id}'`))
-    }
-  })
-
-  it('primary sidebar does not render Shift Builder, Review, Practice or Knowledge Library', () => {
-    const sidebar = readComponent('components/orb-residential/orb-residential-sidebar.tsx')
-    const mainNav = sidebar.slice(
-      sidebar.indexOf('const DESKTOP_MAIN_NAV'),
-      sidebar.indexOf('const DESKTOP_LIBRARY_NAV')
-    )
-    const libraryNav = sidebar.slice(
-      sidebar.indexOf('const DESKTOP_LIBRARY_NAV'),
-      sidebar.indexOf('const COLLAPSED_RAIL_STATIONS')
-    )
-    const mobileNav = sidebar.slice(
-      sidebar.indexOf('const MOBILE_DRAWER_QUICK_NAV'),
+    const visibleNav = sidebar.slice(
+      sidebar.indexOf('const RESIDENTIAL_VISIBLE_NAV'),
       sidebar.indexOf('export type OrbResidentialStationId')
     )
-    assert.doesNotMatch(sidebar, /DESKTOP_PRACTICE_NAV/)
-    for (const block of [mainNav, libraryNav, mobileNav]) {
-      assert.doesNotMatch(block, /label: 'Shift Builder'/)
-      assert.doesNotMatch(block, /label: 'Review'/)
-      assert.doesNotMatch(block, /label: 'Knowledge Library'/)
-      assert.doesNotMatch(block, /Safeguarding Thinking/)
-      assert.doesNotMatch(block, /Record This Properly/)
-      assert.doesNotMatch(block, /Inspection evidence preparation/)
-    }
+    assert.doesNotMatch(sidebar, /DESKTOP_LIBRARY_NAV/)
+    assert.doesNotMatch(sidebar, /MOBILE_DRAWER_QUICK_NAV/)
+    assert.doesNotMatch(visibleNav, /label: 'Shift Builder'/)
+    assert.doesNotMatch(visibleNav, /label: 'Review'/)
+    assert.doesNotMatch(visibleNav, /label: 'Skills'/)
+    assert.doesNotMatch(visibleNav, /label: 'Templates'/)
+    assert.doesNotMatch(visibleNav, /label: 'Documents & Guidance'/)
+    assert.doesNotMatch(visibleNav, /Magic Notes/)
+    assert.doesNotMatch(visibleNav, /Saved Outputs/)
+    assert.match(sidebar, /ORB_NAV_RECORDS/)
   })
 
   it('deprecated panel ids resolve to converged destinations', () => {
-    assert.equal(resolveConvergedNavigation('shift_builder').destination.kind, 'station')
-    assert.equal(resolveConvergedNavigation('shift_builder').destination.station, 'templates')
+    assert.equal(resolveConvergedNavigation('shift_builder').destination.kind, 'chat')
     assert.equal(resolveConvergedNavigation('review').destination.station, 'orb_write')
-    assert.equal(resolveConvergedNavigation('inspection_readiness').destination.station, 'documents')
+    assert.equal(resolveConvergedNavigation('inspection_readiness').destination.kind, 'chat')
     assert.equal(resolveConvergedNavigation('safeguarding_thinking').destination.kind, 'chat')
-    assert.equal(resolveConvergedNavigation('record_properly').destination.station, 'orb_dictate')
-    assert.equal(resolveConvergedNavigation('knowledge').destination.station, 'documents')
+    assert.equal(resolveConvergedNavigation('record_properly').destination.kind, 'chat')
+    assert.equal(resolveConvergedNavigation('knowledge').destination.kind, 'chat')
   })
 
   it('marks deprecated primary nav panels', () => {
@@ -91,7 +75,7 @@ describe('ORB navigation convergence', () => {
     assert.match(registry, /Review written practice/)
     assert.match(registry, /Think through safeguarding concern/)
     assert.match(registry, /Prepare for inspection/)
-    assert.match(registry, /Record this properly/)
+    assert.match(registry, /Help me record this properly/)
     assert.match(registry, /Create manager summary/)
     assert.match(registry, /Build action plan from Reg 44/)
     assert.match(registry, /Summarise recent changes/)

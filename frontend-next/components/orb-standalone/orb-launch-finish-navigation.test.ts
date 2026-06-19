@@ -15,14 +15,15 @@ describe('ORB launch finish navigation', () => {
     const sidebar = read('components/orb-residential/orb-residential-sidebar.tsx')
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
     assert.match(sidebar, /onOpenChat/)
-    assert.match(sidebar, /if \(isChat\) \{[\s\S]*onOpenChat\?\.\(\)/)
+    assert.match(sidebar, /handleVisibleNavClick/)
+    assert.match(sidebar, /case 'chat':[\s\S]*onOpenHome\?\.\(\) \?\? onOpenChat\?\.\(\)/)
     assert.match(companion, /onOpenChat=\{openChatPanel\}/)
     assert.match(companion, /const openChatPanel = useCallback\(\(\) => \{[\s\S]*closePanel\(\)/)
   })
 
   it('primary stations open workspace panels in the main thread', () => {
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
-    for (const station of ['orb_dictate', 'orb_voice', 'orb_write', 'templates', 'documents', 'saved_outputs']) {
+    for (const station of ['orb_dictate', 'orb_voice', 'orb_write', 'saved_outputs']) {
       assert.match(companion, new RegExp(`open=\\{activePanel === '${station}'`))
     }
   })

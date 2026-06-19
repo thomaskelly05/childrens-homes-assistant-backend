@@ -116,7 +116,7 @@ describe('ORB Dictate meeting intelligence convergence', () => {
 
   it('governance copy uses British English product subtitle', () => {
     const stations = readFileSync(join(root, 'lib/orb/orb-residential-stations.ts'), 'utf8')
-    assert.match(stations, /Record, upload or paste conversations/)
+    assert.match(stations, /Speak or paste rough notes/)
     assert.match(SPEAKER_LABELLING_COPY, /confirm names or roles/i)
   })
 

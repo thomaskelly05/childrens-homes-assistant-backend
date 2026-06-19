@@ -13,16 +13,17 @@ function readComponent(relativePath: string) {
 describe('ORB Write standalone studio', () => {
   it('menu item renders in residential sidebar', () => {
     const sidebar = readComponent('components/orb-residential/orb-residential-sidebar.tsx')
+    const names = readComponent('lib/orb/orb-user-facing-names.ts')
     assert.match(sidebar, /orb_write/)
-    assert.match(sidebar, /ORB Write/)
-    assert.match(sidebar, /data-orb-sidebar-station/)
-    const mainNav = sidebar.slice(
-      sidebar.indexOf('const DESKTOP_MAIN_NAV'),
-      sidebar.indexOf('const DESKTOP_LIBRARY_NAV')
+    assert.match(sidebar, /ORB_NAV_WRITE/)
+    assert.match(sidebar, /ORB_VISIBLE_SIDEBAR_NAV/)
+    const navOrder = names.slice(
+      names.indexOf('export const ORB_VISIBLE_SIDEBAR_NAV'),
+      names.indexOf('] as const', names.indexOf('export const ORB_VISIBLE_SIDEBAR_NAV'))
     )
-    const dictateIdx = mainNav.indexOf("'orb_dictate'")
-    const voiceIdx = mainNav.indexOf("'orb_voice'")
-    const writeIdx = mainNav.indexOf("'orb_write'")
+    const dictateIdx = navOrder.indexOf("'orb_dictate'")
+    const voiceIdx = navOrder.indexOf("'orb_voice'")
+    const writeIdx = navOrder.indexOf("'orb_write'")
     assert.ok(dictateIdx > -1 && voiceIdx > dictateIdx && writeIdx > voiceIdx)
   })
 

@@ -12,6 +12,7 @@ import {
   ORB_VOICE_BOUNDARY_COPY
 } from '../../lib/orb/orb-residential-safety-copy.ts'
 import { ORB_PRIMARY_RECORD_TYPE_IDS } from '../../lib/orb/recording/orb-recording-section-prompts.ts'
+import { ORB_DICTATE_SUBTITLE } from '../../lib/orb/orb-user-facing-names.ts'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '../..')
 
@@ -38,15 +39,12 @@ describe('ORB Residential full-product convergence', () => {
     const voiceLaunch = read('lib/orb/voice/orb-voice-launch-mode.ts')
     const dictateTypes = read('lib/orb/dictate/orb-dictate-types.ts')
     const tools = read('components/orb-residential/orb-residential-composer-tools-sheet.tsx')
-    assert.match(sidebar, /ORB_RESIDENTIAL_STATION_DEFINITIONS/)
+    assert.match(sidebar, /ORB_VISIBLE_SIDEBAR_NAV/)
     assert.match(voiceLaunch, /orbResidentialStation\('orb_voice'\)/)
     assert.match(dictateTypes, /orbResidentialStation\('orb_dictate'\)/)
     assert.match(tools, /ORB_RESIDENTIAL_STATION_DEFINITIONS/)
     assert.equal(ORB_RESIDENTIAL_STATION_DEFINITIONS.orb_voice.tagline, 'Talk it through.')
-    assert.equal(
-      ORB_RESIDENTIAL_STATION_DEFINITIONS.orb_dictate.tagline,
-      'Record, upload or paste conversations and turn them into safer notes.'
-    )
+    assert.equal(ORB_RESIDENTIAL_STATION_DEFINITIONS.orb_dictate.tagline, ORB_DICTATE_SUBTITLE)
     assert.equal(ORB_RESIDENTIAL_STATION_DEFINITIONS.orb_write.tagline, 'Review and finalise.')
   })
 

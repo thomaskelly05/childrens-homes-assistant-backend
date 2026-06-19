@@ -56,21 +56,21 @@ describe('ORB Residential desktop premium simplification pass', () => {
     assert.match(read('components/orb-standalone/orb-voice-actions.tsx'), /Start voice|Type instead|Turn speech/)
   })
 
-  it('dictate exposes Magic Notes copy while preserving workflow', () => {
+  it('dictate exposes Dictate copy while preserving workflow', () => {
     const workspace = read('components/orb/dictate/OrbDictateStudioWorkspace.tsx')
     const transcript = read('components/orb/dictate/OrbTranscriptPanel.tsx')
     const station = read('components/orb-standalone/orb-dictate-station.tsx')
     const topBar = read('components/orb/dictate/OrbDictateTopBar.tsx')
     const brain = read('components/orb/dictate/OrbDictateBrainPanel.tsx')
 
-    assert.match(workspace, /ORB_RESIDENTIAL_DICTATE_MAGIC_NOTES_COPY/)
-    assert.match(workspace, /data-orb-dictate-magic-notes/)
+    assert.match(workspace, /ORB_RESIDENTIAL_DICTATE_COPY/)
+    assert.match(workspace, /data-orb-dictate-studio/)
     assert.match(transcript, /data-orb-dictate-capture-prompt/)
-    assert.match(station, /data-orb-dictate-magic-notes/)
+    assert.match(workspace, /data-orb-dictate-studio/)
     assert.match(topBar, /Start recording/)
     assert.match(brain, /ORB Review/)
-    assert.match(brain, /ORB_RESIDENTIAL_DICTATE_MAGIC_NOTES_COPY\.reviewHint/)
-    assert.match(read('lib/orb/orb-residential-copy.ts'), /Turn rough speech, meetings and observations into safer notes/)
+    assert.match(brain, /ORB_RESIDENTIAL_DICTATE_COPY\.reviewHint/)
+    assert.match(read('lib/orb/orb-residential-copy.ts'), /ORB_DICTATE_SUBTITLE/)
   })
 
   it('ORB Write exposes shared template selector without duplicating registry', () => {

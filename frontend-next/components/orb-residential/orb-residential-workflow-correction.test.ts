@@ -98,7 +98,7 @@ describe('ORB Residential workflow correction pass', () => {
 
   it('saved outputs clarifies archive is not templates', () => {
     const saved = readComponent('components/orb-standalone/orb-saved-outputs-panel.tsx')
-    assert.match(saved, /title="Saved Outputs"/)
+    assert.match(saved, /title="Records & Drafts"/)
     assert.match(saved, /Document archive/)
     assert.match(saved, /not templates or the recording library/)
   })

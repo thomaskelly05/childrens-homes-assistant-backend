@@ -45,7 +45,7 @@ describe('orb-voice-transcript', () => {
       join(root, 'components/orb-standalone/orb-voice-station.tsx'),
       'utf8'
     )
-    assert.match(station, /voice\.displayTranscript \|\| voice\.transcript/)
+    assert.match(station, /voiceEngine\.displayTranscript \|\| voice\.displayTranscript/)
     assert.match(station, /onSendToOrb\(voiceTranscriptText/)
   })
 })

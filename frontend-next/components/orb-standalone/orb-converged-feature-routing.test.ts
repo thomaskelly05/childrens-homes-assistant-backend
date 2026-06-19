@@ -28,7 +28,7 @@ describe('ORB converged feature routing', () => {
     assert.match(panel, /ORB_CONVERGED_WRITE_PANEL_GROUPS/)
     for (const label of [
       'Review this record',
-      'Record this properly',
+      'Help me record this properly',
       'Add safeguarding lens',
       'Add Ofsted/inspection lens',
       'Create handover',
@@ -78,9 +78,9 @@ describe('ORB converged feature routing', () => {
   })
 
   it('deep-link routes still exist', () => {
-    assert.match(readComponent('app/orb/review/page.tsx'), /station=review/)
-    assert.match(readComponent('app/orb/learn/page.tsx'), /station=knowledge/)
-    assert.match(readComponent('app/orb-residential/shift-builder/page.tsx'), /station=shift_builder/)
+    assert.match(readComponent('app/orb/review/page.tsx'), /station=orb_write/)
+    assert.match(readComponent('app/orb/learn/page.tsx'), /redirect\('\/orb'\)/)
+    assert.match(readComponent('app/orb-residential/shift-builder/page.tsx'), /redirect\('\/orb'\)/)
   })
 
   it('does not expose child profile selector or brain metadata in residential shell', () => {

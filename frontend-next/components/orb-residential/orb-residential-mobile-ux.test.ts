@@ -76,33 +76,33 @@ describe('ORB Residential mobile UX', () => {
     const knowledge = readComponent('components/orb-standalone/orb-knowledge-library.tsx')
     assert.match(states, /Reconnect to continue/)
     assert.match(states, /data-orb-station-sign-in-again/)
-    assert.match(saved, /Nothing saved yet/)
-    assert.match(saved, /Save reviews, action plans and documents here/)
+    assert.match(saved, /ORB_RECORDS_EMPTY_TITLE/)
+    assert.match(saved, /ORB_RECORDS_EMPTY_SUBTITLE/)
     assert.match(knowledge, /OrbKnowledgeBuiltinPanel/)
     assert.match(knowledge, /data-orb-knowledge-connected-empty/)
   })
 
-  it('sidebar station links remain on residential sidebar', () => {
+  it('sidebar uses Phase 1A visible nav only', () => {
     const sidebar = readComponent('components/orb-residential/orb-residential-sidebar.tsx')
-    for (const station of ['skills', 'review', 'templates', 'knowledge', 'documents', 'orb_voice', 'orb_dictate', 'saved']) {
-      assert.match(sidebar, new RegExp(`id: '${station}'`))
+    for (const station of ['orb_voice', 'orb_dictate', 'orb_write', 'saved']) {
+      assert.match(sidebar, new RegExp(`'${station}'`))
     }
-    assert.match(sidebar, /label: 'Library'/)
+    assert.match(sidebar, /RESIDENTIAL_VISIBLE_NAV/)
+    assert.match(sidebar, /ORB_VISIBLE_SIDEBAR_NAV/)
     assert.match(sidebar, /GlassOrbMark/)
-    assert.match(sidebar, /data-orb-sidebar-main/)
-    assert.match(sidebar, /data-orb-sidebar-library/)
+    assert.match(sidebar, /data-orb-sidebar-desktop-nav/)
     assert.match(sidebar, /ORB_RESIDENTIAL_TAGLINE/)
+    assert.doesNotMatch(sidebar, /data-orb-sidebar-library/)
   })
 
-  it('mobile sidebar quick nav lists Dictate Voice Documents Saved Outputs Projects Recent chats', () => {
+  it('mobile sidebar quick nav lists Home Chat Dictate Voice ORB Write Records Help Settings', () => {
     const sidebar = readComponent('components/orb-residential/orb-residential-sidebar.tsx')
     assert.match(sidebar, /useOrbMobileViewport/)
     assert.match(sidebar, /data-orb-sidebar-mobile-quick-nav/)
-    assert.match(sidebar, /data-orb-sidebar-magic-notes/)
+    assert.match(sidebar, /data-orb-sidebar-dictate/)
     assert.match(sidebar, /data-orb-sidebar-recent-chats-shortcut/)
-    for (const label of ['Dictate', 'Voice', 'Documents', 'Saved Outputs', 'Projects', 'Recent chats', 'Search']) {
-      assert.match(sidebar, new RegExp(label))
-    }
+    assert.match(sidebar, /ORB_VISIBLE_SIDEBAR_NAV/)
+    assert.match(sidebar, /data-orb-sidebar-settings/)
   })
 
   it('mobile ChatGPT shell header menu account empty starters and composer', () => {
@@ -119,7 +119,7 @@ describe('ORB Residential mobile UX', () => {
     assert.match(companion, /OrbMobileChatHeader/)
     assert.match(companion, /mobileHeader=/)
     assert.match(copy, /ORB_RESIDENTIAL_MOBILE_EMPTY_HEADING/)
-    assert.match(copy, /What do you need help with\?/)
+    assert.match(copy, /ORB_CHAT_EMPTY_HEADING/)
     assert.match(copy, /ORB_RESIDENTIAL_MOBILE_PRIMARY_STARTER_COUNT = 2/)
     for (const starter of [
       'Daily record',

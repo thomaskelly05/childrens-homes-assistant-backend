@@ -160,12 +160,12 @@ describe('ORB modals and account polish', () => {
 describe('ORB flight recorder debug polish', () => {
   it('only renders with debugVoice and has hide/collapse', () => {
     const recorder = readComponent('components/orb-standalone/orb-client-flight-recorder.tsx')
-    const page = readComponent('app/orb/page.tsx')
+    const mount = readComponent('components/orb-standalone/orb-dev-tools-mount.tsx')
     assert.match(recorder, /debugVoice/)
     assert.match(recorder, /data-orb-flight-recorder/)
     assert.match(recorder, /data-orb-flight-recorder-hide/)
     assert.match(recorder, /data-orb-flight-recorder-toggle/)
-    assert.match(page, /OrbClientFlightRecorder/)
+    assert.match(mount, /OrbClientFlightRecorder/)
   })
 
   it('positions recorder away from bottom CTAs on mobile', () => {
