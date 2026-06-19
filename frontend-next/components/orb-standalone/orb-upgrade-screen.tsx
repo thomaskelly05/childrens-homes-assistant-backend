@@ -18,6 +18,12 @@ import {
 import { orbSwitchAccountLoginUrl } from '@/lib/orb/orb-switch-account'
 import { buildOrbFrontDoorUrl } from '@/lib/orb/orb-front-door-routing'
 import { getOrbThemeCssVariables } from '@/lib/orb/orb-theme'
+import { OrbRequestDemoLink } from '@/components/orb-residential/orb-request-demo-link'
+import {
+  ORB_DEMO_BEFORE_TRIAL_COPY,
+  ORB_UPGRADE_DEFAULT_FEATURES,
+  ORB_UPGRADE_INCLUDES_COPY
+} from '@/lib/orb/orb-user-facing-names'
 import { useAuth } from '@/contexts/auth-context'
 
 function resolveAccessHeadline(
@@ -214,8 +220,7 @@ export function OrbUpgradeScreen({ initialAccess = null }: { initialAccess?: Orb
                 {access?.price_label ?? '£9.99/month'}
               </p>
               <p className="mt-2 text-sm leading-relaxed text-[var(--orb-muted)]" data-orb-upgrade-includes>
-                ORB Residential helps adults in and around children&apos;s homes record, reflect and respond with
-                safeguarding-aware AI support. Includes chat, dictate, voice, documents, templates and saved outputs.
+                {ORB_UPGRADE_INCLUDES_COPY}
               </p>
             </>
           ) : null}
@@ -236,17 +241,7 @@ export function OrbUpgradeScreen({ initialAccess = null }: { initialAccess?: Orb
 
           {!billingDisplay.isPaidActive ? (
             <ul className="mt-6 grid gap-2 text-sm text-[var(--orb-muted)] sm:grid-cols-2" data-orb-upgrade-features>
-              {(upgrade?.features ?? [
-                "Residential children's homes assistant",
-                'Safeguarding thinking',
-                'Recording support',
-                'Ofsted / Reg 44 lens',
-                'Shift Builder',
-                'Document intelligence',
-                'Academy / NVQ helper',
-                'Profile and voice',
-                'Feedback-driven improvement'
-              ]).map((feature) => (
+              {(upgrade?.features ?? [...ORB_UPGRADE_DEFAULT_FEATURES]).map((feature) => (
                 <li
                   key={feature}
                   className="flex items-start gap-2 rounded-xl border border-[var(--orb-line)]/20 bg-white/4 px-3 py-2"
@@ -358,6 +353,23 @@ export function OrbUpgradeScreen({ initialAccess = null }: { initialAccess?: Orb
             <p className="mt-4 text-xs text-[var(--orb-muted)]" data-orb-stripe-dev-note>
               Checkout is not available right now. Please try again shortly or contact support.
             </p>
+          ) : null}
+
+          {!billingDisplay.isPaidActive ? (
+            <>
+              <p
+                className="mt-4 text-center text-sm leading-relaxed text-[var(--orb-muted)]"
+                data-orb-upgrade-demo-path
+              >
+                {ORB_DEMO_BEFORE_TRIAL_COPY}
+              </p>
+              <p className="mt-2 text-center text-xs text-[var(--orb-muted)]" data-orb-upgrade-request-demo>
+                <OrbRequestDemoLink
+                  surface="upgrade"
+                  className="font-semibold text-[var(--orb-primary)] underline-offset-2 hover:underline"
+                />
+              </p>
+            </>
           ) : null}
 
           <p

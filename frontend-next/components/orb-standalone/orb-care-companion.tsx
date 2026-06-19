@@ -115,6 +115,22 @@ import { OrbAccountModal } from '@/components/orb-standalone/orb-account-modal'
 import { OrbAdultProfileDrawer } from '@/components/orb-standalone/orb-adult-profile-drawer'
 import { OrbLayout, OrbMobileChatHeader } from '@/components/orb/orb-layout'
 import { GlassOrbMark } from '@/components/orb-residential/ui/glass-orb-mark'
+import { OrbGuidedDemoEntry } from '@/components/orb-residential/orb-guided-demo-entry'
+import { OrbGuidedDemoPanel } from '@/components/orb-residential/orb-guided-demo-panel'
+import {
+  advanceOrbGuidedDemoStep,
+  clearOrbGuidedDemoState,
+  markOrbGuidedDemoSaveHint,
+  orbGuidedDemoChatPrompt,
+  orbGuidedDemoDictateNotes,
+  orbGuidedDemoSaveTitle,
+  orbGuidedDemoWriteSeed,
+  readOrbGuidedDemoState,
+  startOrbGuidedDemo,
+  type OrbGuidedDemoState,
+  type OrbGuidedDemoStep
+} from '@/lib/orb/orb-guided-demo'
+import { ORB_REQUEST_DEMO_URL } from '@/lib/orb/orb-user-facing-names'
 import { OrbStandaloneSidebar } from '@/components/orb-standalone/orb-standalone-sidebar'
 import {
   OrbResidentialSidebar,
@@ -734,6 +750,10 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
   const [agentsPanelOpen, setAgentsPanelOpen] = useState(false)
   const [promptDrawerOpen, setPromptDrawerOpen] = useState(false)
   const [moreExamplesExpanded, setMoreExamplesExpanded] = useState(false)
+  const [guidedDemoState, setGuidedDemoState] = useState<OrbGuidedDemoState>(() =>
+    typeof window === 'undefined' ? { active: false, stepIndex: 0, startedAt: 0 } : readOrbGuidedDemoState()
+  )
+  const [guidedDemoPanelOpen, setGuidedDemoPanelOpen] = useState(false)
   const [chatSearch, setChatSearch] = useState('')
   const [draftNotice, setDraftNotice] = useState<string | null>(null)
   const [speakingMessageId, setSpeakingMessageId] = useState<string | null>(null)
@@ -2512,6 +2532,20 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
 
   useEffect(() => {
     if (!residentialSurface || !mounted) return
+    if (searchParams.get('guided_demo') === '1') {
+      const started = startOrbGuidedDemo()
+      setGuidedDemoState(started)
+      setGuidedDemoPanelOpen(true)
+    }
+  }, [mounted, residentialSurface, searchParams.get('guided_demo')])
+
+  useEffect(() => {
+    if (!residentialSurface || !mounted) return
+    setGuidedDemoState(readOrbGuidedDemoState())
+  }, [mounted, residentialSurface])
+
+  useEffect(() => {
+    if (!residentialSurface || !mounted) return
     const mic = searchParams.get('mic')?.toLowerCase()
     if (mic === 'dictate') {
       openOrbDictatePanel()
@@ -2600,6 +2634,67 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
     inputRef.current?.focus()
     setSidebarOpen(false)
   }
+
+  const handleGuidedDemoStart = useCallback(() => {
+    const started = startOrbGuidedDemo()
+    setGuidedDemoState(started)
+    setGuidedDemoPanelOpen(true)
+  }, [])
+
+  const handleGuidedDemoAdvance = useCallback(() => {
+    setGuidedDemoState((current) => {
+      const next = advanceOrbGuidedDemoStep(current)
+      return next
+    })
+  }, [])
+
+  const handleGuidedDemoExit = useCallback(() => {
+    clearOrbGuidedDemoState()
+    setGuidedDemoState({ active: false, stepIndex: 0, startedAt: 0 })
+    setGuidedDemoPanelOpen(false)
+  }, [])
+
+  const handleGuidedDemoPrimaryAction = useCallback(
+    (step: OrbGuidedDemoStep) => {
+      switch (step.id) {
+        case 'chat':
+          openChatPanel()
+          setMessage(orbGuidedDemoChatPrompt())
+          inputRef.current?.focus()
+          break
+        case 'dictate':
+          openOrbDictatePanel({ transcript: orbGuidedDemoDictateNotes(), studio: true })
+          break
+        case 'write':
+          markOrbGuidedDemoSaveHint()
+          openOrbWriteWithContent({
+            content: orbGuidedDemoWriteSeed(),
+            source: 'unknown',
+            sourceLabel: 'Guided demo',
+            recordTypeId: 'daily_record',
+            title: orbGuidedDemoSaveTitle('Daily record draft')
+          })
+          break
+        case 'records':
+          markOrbGuidedDemoSaveHint()
+          openSavedOutputsPanel()
+          break
+        case 'request_demo':
+          window.open(ORB_REQUEST_DEMO_URL, '_blank', 'noopener,noreferrer')
+          handleGuidedDemoExit()
+          return
+      }
+      setGuidedDemoState((current) => advanceOrbGuidedDemoStep(current))
+      setGuidedDemoPanelOpen(false)
+    },
+    [
+      handleGuidedDemoExit,
+      openChatPanel,
+      openOrbDictatePanel,
+      openOrbWriteWithContent,
+      openSavedOutputsPanel
+    ]
+  )
 
   async function handleDraftWording(text: string) {
     await copyToClipboard(text)
@@ -3679,6 +3774,15 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
         avatarUrl={account.avatarUrl}
       />
       <OrbHelpPanel open={activePanel === 'help'} onClose={closePanel} />
+      {residentialSurface && guidedDemoPanelOpen && guidedDemoState.active ? (
+        <OrbGuidedDemoPanel
+          stepIndex={guidedDemoState.stepIndex}
+          onPrimaryAction={handleGuidedDemoPrimaryAction}
+          onAdvance={handleGuidedDemoAdvance}
+          onClose={() => setGuidedDemoPanelOpen(false)}
+          onExit={handleGuidedDemoExit}
+        />
+      ) : null}
       <OrbVoiceSettingsPanel
         open={activePanel === 'voice'}
         onClose={closePanel}
@@ -3775,6 +3879,11 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
               onWorkspaceChange={setWorkspace}
               onOpenStation={openResidentialStation}
               onOpenChat={openChatPanel}
+              onOpenHome={openChatPanel}
+              onOpenHelp={() => {
+                openHelpPanel()
+                setSidebarOpen(false)
+              }}
               onOpenSettings={() => {
                 openSettingsPanel()
                 setSidebarOpen(false)
@@ -4165,6 +4274,22 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
                       <p className="mt-3 hidden max-w-md text-xs leading-5 text-slate-500 md:block" data-orb-empty-hint>
                         Pick a starter, choose a mode, or type in the composer below.
                       </p>
+                    ) : null}
+                    {residentialSurface ? (
+                      guidedDemoState.active && !guidedDemoPanelOpen ? (
+                        <div className="mt-4 w-full max-w-[var(--orb-composer-max,46rem)]" data-orb-guided-demo-resume>
+                          <button
+                            type="button"
+                            onClick={() => setGuidedDemoPanelOpen(true)}
+                            className="w-full rounded-2xl border border-[var(--orb-primary)]/30 bg-[var(--orb-primary)]/8 px-4 py-3 text-left text-sm font-medium text-[var(--orb-foreground)]"
+                            data-orb-guided-demo-continue
+                          >
+                            Continue Guided Demo — step {guidedDemoState.stepIndex + 1} of 5
+                          </button>
+                        </div>
+                      ) : !guidedDemoState.active ? (
+                        <OrbGuidedDemoEntry onStart={handleGuidedDemoStart} />
+                      ) : null
                     ) : null}
                     {residentialSurface ? (
                       isMobileViewport ? (

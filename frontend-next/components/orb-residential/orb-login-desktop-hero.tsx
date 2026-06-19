@@ -1,6 +1,8 @@
 import Link from 'next/link'
 
 import { OrbHeroSphere } from '@/components/orb-residential/ui/orb-hero-sphere'
+import { OrbRequestDemoLink } from '@/components/orb-residential/orb-request-demo-link'
+import { ORB_DEMO_BEFORE_TRIAL_COPY } from '@/lib/orb/orb-user-facing-names'
 
 const VALUE_CHIPS = [
   'Safeguarding-aware support',
@@ -72,6 +74,14 @@ export function OrbLoginDesktopHero() {
 
         <p className="orb-login-muted mt-3 max-w-lg text-xs leading-relaxed">
           ORB Residential does not replace professional judgement, safeguarding procedures or legal advice.
+        </p>
+
+        <p className="orb-login-muted mt-4 max-w-lg text-xs leading-relaxed" data-orb-login-demo-path>
+          {ORB_DEMO_BEFORE_TRIAL_COPY}{' '}
+          <OrbRequestDemoLink
+            surface="login"
+            className="font-semibold text-[var(--orb-primary)] underline-offset-2 hover:underline"
+          />
         </p>
       </div>
     </div>
