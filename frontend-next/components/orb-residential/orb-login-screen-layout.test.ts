@@ -49,8 +49,10 @@ describe('ORB premium login screen layout', () => {
 
     assert.match(hero, /ORB Residential/)
     assert.match(hero, /Powered by IndiCare Intelligence/)
-    assert.match(hero, /AI support for residential children/)
-    assert.match(hero, /Record better\. Reflect faster\. Respond safer\./)
+    assert.match(hero, /ORB_LOGIN_HERO_HEADLINE/)
+    assert.match(hero, /ORB_LOGIN_HERO_SUPPORTING/)
+    assert.match(hero, /orb-login-headline--showstopper/)
+    assert.match(hero, /data-orb-login-supporting/)
     assert.match(hero, /data-orb-login-trust-points/)
     assert.match(hero, /orb-login-hero-visual/)
     assert.match(hero, /OrbHeroSphere/)

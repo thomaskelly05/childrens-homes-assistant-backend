@@ -130,6 +130,10 @@ import {
   type OrbGuidedDemoState,
   type OrbGuidedDemoStep
 } from '@/lib/orb/orb-guided-demo'
+import {
+  ORB_GUIDED_DEMO_ACTIVE_MARKER,
+  ORB_HOME_TRUST_STRIP
+} from '@/lib/orb/orb-showstopper-copy'
 import { ORB_REQUEST_DEMO_URL } from '@/lib/orb/orb-user-facing-names'
 import { OrbStandaloneSidebar } from '@/components/orb-standalone/orb-standalone-sidebar'
 import {
@@ -3863,6 +3867,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
         onCloseSidebarOverlay={() => setSidebarOpen(false)}
         onDragOver={(event) => event.preventDefault()}
         onDrop={handleDrop}
+        guidedDemoActive={residentialSurface && guidedDemoState.active}
         sidebar={
           residentialSurface ? (
             <OrbResidentialSidebar
@@ -4151,6 +4156,16 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
           {modeSafety ? (
             <p className="mx-3 mt-2 text-[11px] leading-5 text-slate-500 md:mx-5">{modeSafety}</p>
           ) : null}
+
+          {residentialSurface && guidedDemoState.active ? (
+            <p
+              className="orb-guided-demo-active-marker"
+              role="status"
+              data-orb-guided-demo-active-marker
+            >
+              {ORB_GUIDED_DEMO_ACTIVE_MARKER}
+            </p>
+          ) : null}
           </>
           )
         }
@@ -4276,110 +4291,130 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
                       </p>
                     ) : null}
                     {residentialSurface ? (
-                      guidedDemoState.active && !guidedDemoPanelOpen ? (
-                        <div className="mt-4 w-full max-w-[var(--orb-composer-max,46rem)]" data-orb-guided-demo-resume>
-                          <button
-                            type="button"
-                            onClick={() => setGuidedDemoPanelOpen(true)}
-                            className="w-full rounded-2xl border border-[var(--orb-primary)]/30 bg-[var(--orb-primary)]/8 px-4 py-3 text-left text-sm font-medium text-[var(--orb-foreground)]"
-                            data-orb-guided-demo-continue
-                          >
-                            Continue Guided Demo — step {guidedDemoState.stepIndex + 1} of 5
-                          </button>
-                        </div>
-                      ) : !guidedDemoState.active ? (
-                        <OrbGuidedDemoEntry onStart={handleGuidedDemoStart} />
-                      ) : null
+                      <p
+                        className="orb-home-trust-strip"
+                        role="status"
+                        data-orb-home-trust-strip
+                      >
+                        {ORB_HOME_TRUST_STRIP}
+                      </p>
                     ) : null}
                     {residentialSurface ? (
-                      isMobileViewport ? (
-                        <div
-                          className="mt-2.5 w-full max-w-[var(--orb-composer-max,46rem)]"
-                          data-orb-starter-cards
-                          data-orb-empty-starter-chips
-                          data-orb-starter-count={ORB_RESIDENTIAL_MOBILE_PRIMARY_STARTERS.length}
-                        >
-                          <div
-                            className="grid grid-cols-2 gap-2"
-                            data-orb-starter-pills-grid
-                          >
-                            {ORB_RESIDENTIAL_MOBILE_PRIMARY_STARTERS.map((starter) => (
-                              <button
-                                key={starter.text}
-                                type="button"
-                                onClick={() => applyPrompt(starter)}
-                                className="orb-starter-card px-3 py-2 text-left text-[13px] leading-snug"
-                                data-orb-starter-card
-                                data-orb-starter-suggestion-card="true"
-                              >
-                                {starter.text}
-                              </button>
-                            ))}
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => setPromptDrawerOpen(true)}
-                            className="mx-auto mt-1 inline-flex min-h-0 items-center justify-center rounded-full border border-[var(--orb-line)]/35 bg-transparent px-2.5 py-0.5 text-[11px] font-medium text-[var(--orb-muted)]"
-                            data-orb-more-examples
-                          >
-                            More
-                          </button>
-                        </div>
-                      ) : (
-                        <div
-                          className="mt-4 w-full max-w-[var(--orb-composer-max,46rem)]"
-                          data-orb-empty-starter-chips
-                          data-orb-starter-primary-chips
-                          data-orb-starter-count={emptyStarters.length}
-                        >
-                          <div
-                            className="flex flex-wrap justify-center gap-2"
-                            data-orb-starter-pills
-                          >
-                            {emptyStarters.map((starter) => (
-                              <button
-                                key={starter.text}
-                                type="button"
-                                onClick={() => applyPrompt(starter)}
-                                className="orb-starter-pill orb-starter-card rounded-full border border-[var(--orb-line)]/30 bg-transparent px-3.5 py-1.5 text-[13px] leading-snug text-[var(--orb-foreground)] transition hover:border-[var(--orb-primary)]/28 hover:bg-[var(--orb-surface)]/50"
-                                data-orb-starter-card
-                                data-orb-starter-pill="true"
-                              >
-                                {starter.text}
-                              </button>
-                            ))}
-                          </div>
-                          {moreExamplesExpanded ? (
-                            <div
-                              className="mt-4 space-y-3 text-left"
-                              data-orb-starter-groups
-                              data-orb-starter-expanded-groups
+                      <div className="orb-home-surface-card" data-orb-home-surface-card>
+                        {guidedDemoState.active && !guidedDemoPanelOpen ? (
+                          <div className="mt-4 w-full max-w-[var(--orb-composer-max,46rem)]" data-orb-guided-demo-resume>
+                            <button
+                              type="button"
+                              onClick={() => setGuidedDemoPanelOpen(true)}
+                              className="w-full rounded-2xl border border-[var(--orb-primary)]/30 bg-[var(--orb-primary)]/8 px-4 py-3 text-left text-sm font-medium text-[var(--orb-foreground)]"
+                              data-orb-guided-demo-continue
                             >
-                              {ORB_RESIDENTIAL_STARTER_GROUPS.map((group) => (
-                                <section key={group.id} data-orb-starter-group={group.id}>
-                                  <h3 className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--orb-muted)]">
-                                    {group.label}
-                                  </h3>
-                                  <div className="flex flex-wrap gap-1.5" data-orb-starter-pills>
-                                    {group.starters.map((starter) => (
-                                      <button
-                                        key={starter.text}
-                                        type="button"
-                                        onClick={() => applyPrompt(starter)}
-                                        className="orb-starter-pill orb-starter-card rounded-full border border-[var(--orb-line)]/28 bg-transparent px-3 py-1 text-left text-[12px] leading-snug text-[var(--orb-foreground)] transition hover:border-[var(--orb-primary)]/24 hover:bg-[var(--orb-surface)]/45"
-                                        data-orb-starter-card
-                                        data-orb-starter-pill="true"
-                                      >
-                                        {starter.text}
-                                      </button>
-                                    ))}
-                                  </div>
-                                </section>
+                              Continue Guided Demo — step {guidedDemoState.stepIndex + 1} of 5
+                            </button>
+                          </div>
+                        ) : !guidedDemoState.active ? (
+                          <OrbGuidedDemoEntry onStart={handleGuidedDemoStart} />
+                        ) : null}
+                        {isMobileViewport ? (
+                          <div
+                            className="mt-2.5 w-full max-w-[var(--orb-composer-max,46rem)]"
+                            data-orb-starter-cards
+                            data-orb-empty-starter-chips
+                            data-orb-starter-count={ORB_RESIDENTIAL_MOBILE_PRIMARY_STARTERS.length}
+                          >
+                            <div
+                              className="grid grid-cols-2 gap-2"
+                              data-orb-starter-pills-grid
+                            >
+                              {ORB_RESIDENTIAL_MOBILE_PRIMARY_STARTERS.map((starter) => (
+                                <button
+                                  key={starter.text}
+                                  type="button"
+                                  onClick={() => applyPrompt(starter)}
+                                  className="orb-starter-card px-3 py-2 text-left text-[13px] leading-snug"
+                                  data-orb-starter-card
+                                  data-orb-starter-suggestion-card="true"
+                                >
+                                  {starter.text}
+                                </button>
                               ))}
                             </div>
-                          ) : null}
-                        </div>
-                      )
+                            <button
+                              type="button"
+                              onClick={() => setPromptDrawerOpen(true)}
+                              className="mx-auto mt-1 inline-flex min-h-0 items-center justify-center rounded-full border border-[var(--orb-line)]/35 bg-transparent px-2.5 py-0.5 text-[11px] font-medium text-[var(--orb-muted)]"
+                              data-orb-more-examples
+                            >
+                              More
+                            </button>
+                          </div>
+                        ) : (
+                          <div
+                            className="mt-4 w-full max-w-[var(--orb-composer-max,46rem)]"
+                            data-orb-empty-starter-chips
+                            data-orb-starter-primary-chips
+                            data-orb-starter-count={emptyStarters.length}
+                          >
+                            <div
+                              className="flex flex-wrap justify-center gap-2"
+                              data-orb-starter-pills
+                            >
+                              {emptyStarters.map((starter) => (
+                                <button
+                                  key={starter.text}
+                                  type="button"
+                                  onClick={() => applyPrompt(starter)}
+                                  className="orb-starter-pill orb-starter-card rounded-full border border-[var(--orb-line)]/30 bg-transparent px-3.5 py-1.5 text-[13px] leading-snug text-[var(--orb-foreground)] transition hover:border-[var(--orb-primary)]/28 hover:bg-[var(--orb-surface)]/50"
+                                  data-orb-starter-card
+                                  data-orb-starter-pill="true"
+                                >
+                                  {starter.text}
+                                </button>
+                              ))}
+                            </div>
+                            {moreExamplesExpanded ? (
+                              <div
+                                className="mt-4 space-y-3 text-left"
+                                data-orb-starter-groups
+                                data-orb-starter-expanded-groups
+                              >
+                                {ORB_RESIDENTIAL_STARTER_GROUPS.map((group) => (
+                                  <section key={group.id} data-orb-starter-group={group.id}>
+                                    <h3 className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--orb-muted)]">
+                                      {group.label}
+                                    </h3>
+                                    <div className="flex flex-wrap gap-1.5" data-orb-starter-pills>
+                                      {group.starters.map((starter) => (
+                                        <button
+                                          key={starter.text}
+                                          type="button"
+                                          onClick={() => applyPrompt(starter)}
+                                          className="orb-starter-pill orb-starter-card rounded-full border border-[var(--orb-line)]/28 bg-transparent px-3 py-1 text-left text-[12px] leading-snug text-[var(--orb-foreground)] transition hover:border-[var(--orb-primary)]/24 hover:bg-[var(--orb-surface)]/45"
+                                          data-orb-starter-card
+                                          data-orb-starter-pill="true"
+                                        >
+                                          {starter.text}
+                                        </button>
+                                      ))}
+                                    </div>
+                                  </section>
+                                ))}
+                              </div>
+                            ) : null}
+                          </div>
+                        )}
+                        {!isMobileViewport ? (
+                          <button
+                            type="button"
+                            onClick={() => setMoreExamplesExpanded((open) => !open)}
+                            className="mt-3 text-xs font-medium text-[var(--orb-muted)] underline-offset-4 transition hover:text-[var(--orb-foreground)] hover:underline"
+                            data-orb-more-examples
+                            aria-expanded={moreExamplesExpanded}
+                          >
+                            {moreExamplesExpanded ? 'Fewer examples' : 'More examples'}
+                          </button>
+                        ) : null}
+                      </div>
                     ) : (
                       <div
                         className="mt-5 flex w-full max-w-2xl flex-wrap justify-center gap-2 lg:max-w-3xl"
@@ -4401,17 +4436,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
                         ))}
                       </div>
                     )}
-                    {residentialSurface && !isMobileViewport ? (
-                      <button
-                        type="button"
-                        onClick={() => setMoreExamplesExpanded((open) => !open)}
-                        className="mt-3 text-xs font-medium text-[var(--orb-muted)] underline-offset-4 transition hover:text-[var(--orb-foreground)] hover:underline"
-                        data-orb-more-examples
-                        aria-expanded={moreExamplesExpanded}
-                      >
-                        {moreExamplesExpanded ? 'Fewer examples' : 'More examples'}
-                      </button>
-                    ) : !residentialSurface ? (
+                    {!residentialSurface ? (
                       <button
                         type="button"
                         onClick={() => setPromptDrawerOpen(true)}
@@ -4580,6 +4605,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
                                   mode={mode}
                                   content={entry.content}
                                   minimal={minimalTurn}
+                                  residentialSurface={residentialSurface}
                                   isLatest={index === visibleMessages.length - 1}
                                   speaking={speakingMessageId === entry.id}
                                   synthesisAvailable={voice.synthesisAvailable}

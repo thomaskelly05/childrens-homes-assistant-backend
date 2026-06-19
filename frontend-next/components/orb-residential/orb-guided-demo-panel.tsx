@@ -30,7 +30,7 @@ export function OrbGuidedDemoPanel({
 
   return (
     <div
-      className="fixed inset-0 z-[75] flex items-end justify-center bg-black/55 p-3 backdrop-blur-sm sm:items-center sm:p-4"
+      className="fixed inset-0 z-[75] flex items-end justify-center bg-black/60 p-3 backdrop-blur-md sm:items-center sm:p-4"
       role="dialog"
       aria-labelledby="orb-guided-demo-title"
       data-orb-guided-demo-panel
@@ -38,20 +38,34 @@ export function OrbGuidedDemoPanel({
       data-orb-guided-demo-step-index={stepIndex}
     >
       <div
-        className="max-h-[min(92dvh,calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-1rem))] w-full max-w-lg overflow-y-auto rounded-3xl border border-[var(--orb-line)]/40 bg-[var(--orb-surface-elevated,#0a1228)] p-5 shadow-2xl sm:p-6"
+        className="orb-guided-demo-panel__sheet max-h-[min(92dvh,calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-1rem))] w-full max-w-lg overflow-y-auto rounded-3xl p-5 sm:p-6"
         style={{ marginBottom: 'env(safe-area-inset-bottom, 0px)' }}
       >
         <div className="flex items-start justify-between gap-3">
-          <div>
+          <div className="min-w-0 flex-1">
             <p
               className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--orb-muted)]"
               data-orb-guided-demo-progress
             >
               Step {step.order} of {ORB_GUIDED_DEMO_STEPS.length}
             </p>
+            <div className="orb-guided-demo-panel__progress-dots" aria-hidden>
+              {ORB_GUIDED_DEMO_STEPS.map((s, index) => (
+                <span
+                  key={s.id}
+                  className={`orb-guided-demo-panel__dot ${
+                    index < stepIndex
+                      ? 'orb-guided-demo-panel__dot--done'
+                      : index === stepIndex
+                        ? 'orb-guided-demo-panel__dot--active'
+                        : ''
+                  }`}
+                />
+              ))}
+            </div>
             <h2
               id="orb-guided-demo-title"
-              className="mt-1 text-lg font-semibold text-[var(--orb-foreground)]"
+              className="orb-guided-demo-panel__title text-[var(--orb-foreground)]"
               data-orb-guided-demo-step-title
             >
               {step.title}
@@ -68,10 +82,7 @@ export function OrbGuidedDemoPanel({
           </button>
         </div>
 
-        <p
-          className="mt-3 rounded-2xl border border-sky-400/20 bg-sky-500/10 px-3 py-2.5 text-xs leading-relaxed text-sky-100 md:text-sm"
-          data-orb-guided-demo-safety-note
-        >
+        <p className="orb-guided-demo-panel__safety" data-orb-guided-demo-safety-note>
           {ORB_GUIDED_DEMO_SAFETY_NOTE}
         </p>
 
@@ -79,31 +90,32 @@ export function OrbGuidedDemoPanel({
           {step.explanation}
         </p>
 
-        <div className="mt-3 space-y-2 text-xs leading-relaxed text-[var(--orb-muted)] md:text-sm">
-          <p data-orb-guided-demo-child-note>
-            <span className="font-medium text-[var(--orb-foreground)]">Child-centred: </span>
+        <div className="mt-3 space-y-2.5">
+          <p className="orb-guided-demo-panel__note-card text-xs leading-relaxed text-[var(--orb-muted)] md:text-sm" data-orb-guided-demo-child-note>
+            <span className="font-semibold text-[var(--orb-foreground)]">Child-centred: </span>
             {step.childCentredNote}
           </p>
-          <p data-orb-guided-demo-adult-review-note>
-            <span className="font-medium text-[var(--orb-foreground)]">Adult review: </span>
+          <p className="orb-guided-demo-panel__note-card text-xs leading-relaxed text-[var(--orb-muted)] md:text-sm" data-orb-guided-demo-adult-review-note>
+            <span className="font-semibold text-[var(--orb-foreground)]">Adult review: </span>
             {step.adultReviewNote}
           </p>
         </div>
 
-        <details className="mt-4 rounded-xl border border-[var(--orb-line)]/30 bg-[var(--orb-surface)]/30 px-3 py-2">
-          <summary className="cursor-pointer text-xs font-medium text-[var(--orb-muted)]">
-            Anonymised scenario: {ORB_GUIDED_DEMO_SCENARIO.title}
-          </summary>
+        <div className="orb-guided-demo-panel__scenario mt-4">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--orb-muted)]">
+            Anonymised scenario
+          </p>
+          <p className="mt-1 text-sm font-medium text-[var(--orb-foreground)]">{ORB_GUIDED_DEMO_SCENARIO.title}</p>
           <p className="mt-2 text-xs leading-relaxed text-[var(--orb-muted)]" data-orb-guided-demo-scenario-summary>
             {ORB_GUIDED_DEMO_SCENARIO.summary}
           </p>
-        </details>
+        </div>
 
-        <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+        <div className="mt-5 flex flex-col gap-2.5 sm:flex-row sm:flex-wrap">
           <button
             type="button"
             onClick={() => onPrimaryAction(step)}
-            className="inline-flex min-h-[2.75rem] flex-1 items-center justify-center rounded-full bg-[var(--orb-primary)] px-4 py-2.5 text-sm font-semibold text-white"
+            className="orb-guided-demo-panel__primary inline-flex min-h-[2.85rem] flex-1 items-center justify-center rounded-full bg-[var(--orb-primary)] px-4 py-2.5 text-sm font-semibold text-white"
             data-orb-guided-demo-primary-action
           >
             {step.primaryActionLabel}
@@ -112,7 +124,7 @@ export function OrbGuidedDemoPanel({
             <button
               type="button"
               onClick={onAdvance}
-              className="inline-flex min-h-[2.75rem] items-center justify-center rounded-full border border-[var(--orb-line)]/40 px-4 py-2.5 text-sm font-medium text-[var(--orb-foreground)]"
+              className="orb-guided-demo-panel__secondary inline-flex min-h-[2.85rem] items-center justify-center rounded-full border px-4 py-2.5 text-sm font-medium"
               data-orb-guided-demo-skip-step
             >
               Next step

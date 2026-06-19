@@ -30,16 +30,44 @@ function encodeInlineCitations(content: string): string {
   })
 }
 
-function buildMarkdownComponents(sources?: StandaloneOrbSource[]): Components {
+function residentialHeadingClass(text: unknown): string {
+  const value = String(text ?? '').toLowerCase()
+  if (/fact|observ/.test(value)) return 'orb-md-section--facts'
+  if (/child|voice|presentation/.test(value)) return 'orb-md-section--child'
+  if (/staff|response/.test(value)) return 'orb-md-section--staff'
+  if (/follow|oversight|manager/.test(value)) return 'orb-md-section--oversight'
+  if (/policy|local/.test(value)) return 'orb-md-section--policy'
+  return ''
+}
+
+function buildMarkdownComponents(
+  sources?: StandaloneOrbSource[],
+  residentialSurface = false
+): Components {
+  const sectionClass = (children: unknown) =>
+    residentialSurface ? residentialHeadingClass(children) : ''
+
   return {
     h1: ({ children }) => (
-      <h2 className="orb-md-h2 mb-2 mt-5 first:mt-0 text-[17px] font-bold leading-snug text-[var(--orb-foreground,#0F172A)]">{children}</h2>
+      <h2
+        className={`orb-md-h2 mb-2 mt-5 first:mt-0 text-[17px] font-bold leading-snug text-[var(--orb-foreground,#0F172A)] ${sectionClass(children)}`}
+      >
+        {children}
+      </h2>
     ),
     h2: ({ children }) => (
-      <h2 className="orb-md-h2 mb-2 mt-5 first:mt-0 text-base font-bold leading-snug text-[var(--orb-foreground,#0F172A)]">{children}</h2>
+      <h2
+        className={`orb-md-h2 mb-2 mt-5 first:mt-0 text-base font-bold leading-snug text-[var(--orb-foreground,#0F172A)] ${sectionClass(children)}`}
+      >
+        {children}
+      </h2>
     ),
     h3: ({ children }) => (
-      <h3 className="orb-md-h3 mb-2 mt-4 first:mt-0 text-[15px] font-bold leading-snug text-[var(--orb-foreground,#0F172A)]">{children}</h3>
+      <h3
+        className={`orb-md-h3 mb-2 mt-4 first:mt-0 text-[15px] font-bold leading-snug text-[var(--orb-foreground,#0F172A)] ${sectionClass(children)}`}
+      >
+        {children}
+      </h3>
     ),
     h4: ({ children }) => (
       <h4 className="orb-md-h4 mb-1.5 mt-3 text-[14px] font-bold leading-snug text-[var(--orb-foreground,#0F172A)]">{children}</h4>
@@ -141,14 +169,26 @@ function buildMarkdownComponents(sources?: StandaloneOrbSource[]): Components {
 }
 
 /** Render assistant answers as markdown with inline citation chips preserved. */
-export function OrbMarkdownAnswer({ content, sources }: { content: string; sources?: StandaloneOrbSource[] }) {
+export function OrbMarkdownAnswer({
+  content,
+  sources,
+  residentialSurface = false
+}: {
+  content: string
+  sources?: StandaloneOrbSource[]
+  residentialSurface?: boolean
+}) {
   if (!content.trim()) return null
 
   const prepared = encodeInlineCitations(normaliseOrbMarkdown(content))
 
   return (
-    <div className="orb-markdown-answer" data-orb-markdown-answer>
-      <ReactMarkdown remarkPlugins={[remarkGfm]} components={buildMarkdownComponents(sources)}>
+    <div
+      className={`orb-markdown-answer ${residentialSurface ? 'orb-markdown-answer--residential' : ''}`}
+      data-orb-markdown-answer
+      data-orb-markdown-answer-residential={residentialSurface ? 'true' : undefined}
+    >
+      <ReactMarkdown remarkPlugins={[remarkGfm]} components={buildMarkdownComponents(sources, residentialSurface)}>
         {prepared}
       </ReactMarkdown>
     </div>

@@ -1,0 +1,312 @@
+/**
+ * Phase 1D — ORB Residential showstopper UI polish.
+ * Premium calm identity: depth, glass, hierarchy — no new product areas.
+ */
+
+/* ── Login hero ─────────────────────────────────────────────────────────── */
+
+.orb-login-headline--showstopper {
+  max-width: 28rem;
+  font-size: clamp(1.85rem, 2.4vw, 2.5rem);
+  line-height: 1.15;
+  letter-spacing: -0.025em;
+  background: linear-gradient(135deg, var(--orb-text, #f8fafc) 0%, #c7d2fe 48%, #a5f3fc 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.orb-login-root--light .orb-login-headline--showstopper {
+  background: linear-gradient(135deg, #0f172a 0%, #3730a3 52%, #0369a1 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+.orb-login-lead--showstopper {
+  max-width: 26rem;
+  font-size: 1.05rem;
+  line-height: 1.55;
+  color: color-mix(in srgb, var(--orb-text, #f8fafc) 88%, var(--orb-muted, #94a3b8));
+}
+
+.orb-login-demo-card {
+  margin-top: 1.25rem;
+  max-width: 26rem;
+  padding: 0.9rem 1rem;
+  border-radius: 1rem;
+  border: 1px solid color-mix(in srgb, var(--orb-res-primary, #818cf8) 35%, transparent);
+  background: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--orb-res-primary, #818cf8) 14%, transparent),
+    color-mix(in srgb, var(--orb-surface-elevated, #111827) 72%, transparent)
+  );
+  box-shadow: 0 12px 40px rgba(15, 23, 42, 0.18);
+}
+
+.orb-login-root--light .orb-login-demo-card {
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.92), rgba(238, 242, 255, 0.88));
+  box-shadow: 0 10px 32px rgba(79, 70, 229, 0.1);
+}
+
+.orb-login-demo-card a {
+  font-weight: 600;
+}
+
+/* ── Home empty state ───────────────────────────────────────────────────── */
+
+.orb-chat-layout--residential [data-orb-residential-empty] {
+  position: relative;
+}
+
+.orb-home-trust-strip {
+  margin-top: 0.65rem;
+  max-width: 28rem;
+  padding: 0.45rem 0.85rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--orb-primary, #6366f1) 22%, transparent);
+  background: color-mix(in srgb, var(--orb-primary, #6366f1) 8%, transparent);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  color: var(--orb-muted);
+  text-align: center;
+}
+
+.orb-home-surface-card {
+  margin-top: 0.75rem;
+  width: 100%;
+  max-width: var(--orb-composer-max, 46rem);
+  padding: 1.25rem 1.1rem 1rem;
+  border-radius: 1.35rem;
+  border: 1px solid color-mix(in srgb, var(--orb-line, #e2e8f0) 45%, transparent);
+  background: linear-gradient(
+    165deg,
+    color-mix(in srgb, var(--orb-surface-elevated, #0a1228) 88%, transparent),
+    color-mix(in srgb, var(--orb-primary, #6366f1) 6%, transparent)
+  );
+  box-shadow: 0 18px 48px rgba(15, 23, 42, 0.14);
+}
+
+.orb-chat-layout--residential.orb-theme-light .orb-home-surface-card {
+  background: linear-gradient(165deg, rgba(255, 255, 255, 0.96), rgba(239, 246, 255, 0.92));
+  box-shadow: 0 14px 36px rgba(99, 102, 241, 0.08);
+}
+
+.orb-chat-layout--residential [data-orb-residential-empty] [data-orb-empty-sphere] {
+  filter: drop-shadow(0 12px 28px rgba(99, 102, 241, 0.22));
+}
+
+/* ── Guided Demo entry ──────────────────────────────────────────────────── */
+
+[data-orb-guided-demo-entry].orb-guided-demo-entry--premium {
+  border: 1px solid color-mix(in srgb, var(--orb-primary, #6366f1) 38%, transparent);
+  background: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--orb-primary, #6366f1) 16%, transparent),
+    color-mix(in srgb, var(--orb-surface, #0f172a) 90%, transparent)
+  );
+  box-shadow: 0 16px 40px rgba(79, 70, 229, 0.14);
+}
+
+.orb-chat-layout--residential.orb-theme-light [data-orb-guided-demo-entry].orb-guided-demo-entry--premium {
+  background: linear-gradient(145deg, rgba(238, 242, 255, 0.95), rgba(255, 255, 255, 0.98));
+}
+
+/* ── Guided Demo modal ──────────────────────────────────────────────────── */
+
+.orb-guided-demo-panel__sheet {
+  border: 1px solid color-mix(in srgb, var(--orb-primary, #6366f1) 28%, transparent);
+  background: linear-gradient(
+    168deg,
+    color-mix(in srgb, var(--orb-surface-elevated, #0a1228) 94%, transparent),
+    color-mix(in srgb, #312e81 12%, transparent)
+  );
+  box-shadow: 0 28px 80px rgba(15, 23, 42, 0.45);
+}
+
+.orb-guided-demo-panel__progress-dots {
+  display: flex;
+  gap: 0.35rem;
+  margin-top: 0.65rem;
+}
+
+.orb-guided-demo-panel__dot {
+  height: 0.35rem;
+  flex: 1;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--orb-muted, #94a3b8) 28%, transparent);
+}
+
+.orb-guided-demo-panel__dot--active {
+  background: linear-gradient(90deg, #6366f1, #38bdf8);
+}
+
+.orb-guided-demo-panel__dot--done {
+  background: color-mix(in srgb, var(--orb-primary, #6366f1) 55%, transparent);
+}
+
+.orb-guided-demo-panel__title {
+  margin-top: 0.35rem;
+  font-size: 1.35rem;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+}
+
+.orb-guided-demo-panel__safety {
+  margin-top: 1rem;
+  padding: 0.85rem 1rem;
+  border-radius: 1rem;
+  border: 1px solid color-mix(in srgb, #f59e0b 35%, transparent);
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.12), rgba(99, 102, 241, 0.08));
+  color: var(--orb-foreground);
+  font-size: 0.8125rem;
+  line-height: 1.55;
+}
+
+.orb-guided-demo-panel__note-card {
+  margin-top: 0.85rem;
+  padding: 0.75rem 0.9rem;
+  border-radius: 0.9rem;
+  border: 1px solid color-mix(in srgb, var(--orb-line, #e2e8f0) 35%, transparent);
+  background: color-mix(in srgb, var(--orb-surface, #0f172a) 55%, transparent);
+}
+
+.orb-guided-demo-panel__scenario {
+  margin-top: 1rem;
+  padding: 0.85rem 1rem;
+  border-radius: 1rem;
+  border: 1px solid color-mix(in srgb, #38bdf8 28%, transparent);
+  background: color-mix(in srgb, #0ea5e9 8%, transparent);
+}
+
+.orb-guided-demo-panel__primary {
+  box-shadow: 0 10px 28px rgba(99, 102, 241, 0.28);
+}
+
+.orb-guided-demo-panel__secondary {
+  border-color: color-mix(in srgb, var(--orb-line, #e2e8f0) 55%, transparent) !important;
+  color: var(--orb-muted) !important;
+}
+
+/* ── Guided Demo active marker ────────────────────────────────────────── */
+
+.orb-guided-demo-active-marker {
+  position: sticky;
+  top: 0;
+  z-index: 12;
+  margin: 0 auto 0.5rem;
+  width: fit-content;
+  max-width: calc(100% - 1.5rem);
+  padding: 0.35rem 0.85rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--orb-primary, #6366f1) 35%, transparent);
+  background: color-mix(in srgb, var(--orb-primary, #6366f1) 12%, var(--orb-surface-elevated, #0a1228));
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--orb-muted);
+  backdrop-filter: blur(10px);
+}
+
+/* ── Assistant answer card ──────────────────────────────────────────────── */
+
+.orb-chat-layout--residential .orb-assistant-answer-card {
+  margin-top: 0.15rem;
+  padding: 0.95rem 1rem 0.85rem;
+  border-radius: 1.1rem;
+  border: 1px solid color-mix(in srgb, var(--orb-line, #e2e8f0) 42%, transparent);
+  background: linear-gradient(
+    165deg,
+    color-mix(in srgb, var(--orb-surface-elevated, #0a1228) 92%, transparent),
+    color-mix(in srgb, var(--orb-primary, #6366f1) 5%, transparent)
+  );
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.08);
+  max-width: 42rem;
+}
+
+.orb-chat-layout--residential.orb-theme-light .orb-assistant-answer-card {
+  background: linear-gradient(165deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.96));
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
+}
+
+.orb-chat-layout--residential .orb-message-content {
+  max-width: 42rem;
+}
+
+.orb-markdown-answer--residential .orb-md-h2,
+.orb-markdown-answer--residential .orb-md-h3 {
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--orb-line, #e2e8f0) 35%, transparent);
+}
+
+.orb-markdown-answer--residential .orb-md-section--facts {
+  color: color-mix(in srgb, var(--orb-foreground) 92%, #38bdf8);
+}
+
+.orb-markdown-answer--residential .orb-md-section--child {
+  color: color-mix(in srgb, var(--orb-foreground) 92%, #a78bfa);
+}
+
+.orb-markdown-answer--residential .orb-md-section--staff {
+  color: color-mix(in srgb, var(--orb-foreground) 92%, #34d399);
+}
+
+.orb-markdown-answer--residential .orb-md-section--oversight {
+  color: color-mix(in srgb, var(--orb-foreground) 92%, #f59e0b);
+}
+
+.orb-markdown-answer--residential .orb-md-section--policy {
+  color: color-mix(in srgb, var(--orb-foreground) 92%, #64748b);
+}
+
+/* ── Response actions — residential simplified row ──────────────────────── */
+
+.orb-response-action-bar--residential {
+  margin-top: 0.65rem;
+  padding-top: 0.55rem;
+  border-top: 1px solid color-mix(in srgb, var(--orb-line, #e2e8f0) 35%, transparent);
+  gap: 0.35rem;
+}
+
+.orb-response-action-bar--residential .orb-action-chip {
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--orb-line, #e2e8f0) 45%, transparent);
+  background: color-mix(in srgb, var(--orb-surface, #0f172a) 40%, transparent);
+}
+
+/* ── Composer — residential glass depth ─────────────────────────────────── */
+
+.orb-chat-layout--residential .orb-composer-glass--showstopper {
+  box-shadow:
+    0 14px 40px rgba(15, 23, 42, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
+}
+
+.orb-chat-layout--residential.orb-theme-light .orb-composer-glass--showstopper {
+  box-shadow:
+    0 12px 32px rgba(99, 102, 241, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9) !important;
+}
+
+/* ── Sidebar — active state & demo focus ────────────────────────────────── */
+
+.orb-chat-layout--residential .orb-sidebar-nav-item--active {
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--orb-primary, #6366f1) 22%, transparent),
+    color-mix(in srgb, var(--orb-primary, #6366f1) 8%, transparent)
+  ) !important;
+  border-inline-start: 2px solid var(--orb-primary, #6366f1);
+  font-weight: 600;
+}
+
+.orb-chat-sidebar[data-orb-guided-demo-active='true'] [data-orb-sidebar-projects],
+.orb-chat-sidebar[data-orb-guided-demo-active='true'] [data-orb-sidebar-recents] {
+  opacity: 0.55;
+}
+
+.orb-chat-sidebar[data-orb-guided-demo-active='true'] [data-orb-sidebar-projects] summary,
+.orb-chat-sidebar[data-orb-guided-demo-active='true'] [data-orb-sidebar-recents] summary {
+  font-size: 0.6875rem;
+}

@@ -3,6 +3,10 @@ import Link from 'next/link'
 import { OrbHeroSphere } from '@/components/orb-residential/ui/orb-hero-sphere'
 import { OrbRequestDemoLink } from '@/components/orb-residential/orb-request-demo-link'
 import { ORB_DEMO_BEFORE_TRIAL_COPY } from '@/lib/orb/orb-user-facing-names'
+import {
+  ORB_LOGIN_HERO_HEADLINE,
+  ORB_LOGIN_HERO_SUPPORTING
+} from '@/lib/orb/orb-showstopper-copy'
 
 const VALUE_CHIPS = [
   'Safeguarding-aware support',
@@ -41,13 +45,13 @@ export function OrbLoginDesktopHero() {
         </div>
 
         <h1
-          className="orb-login-headline max-w-lg text-[2rem] font-semibold leading-tight tracking-tight xl:text-[2.25rem]"
+          className="orb-login-headline orb-login-headline--showstopper max-w-lg font-semibold leading-tight tracking-tight"
           data-orb-login-title
         >
-          AI support for residential children&apos;s homes
+          {ORB_LOGIN_HERO_HEADLINE}
         </h1>
-        <p className="orb-login-lead mt-3 max-w-lg text-base leading-relaxed">
-          Record better. Reflect faster. Respond safer.
+        <p className="orb-login-lead orb-login-lead--showstopper mt-3 max-w-lg leading-relaxed" data-orb-login-supporting>
+          {ORB_LOGIN_HERO_SUPPORTING}
         </p>
 
         <ul
@@ -76,13 +80,15 @@ export function OrbLoginDesktopHero() {
           ORB Residential does not replace professional judgement, safeguarding procedures or legal advice.
         </p>
 
-        <p className="orb-login-muted mt-4 max-w-lg text-xs leading-relaxed" data-orb-login-demo-path>
-          {ORB_DEMO_BEFORE_TRIAL_COPY}{' '}
-          <OrbRequestDemoLink
-            surface="login"
-            className="font-semibold text-[var(--orb-primary)] underline-offset-2 hover:underline"
-          />
-        </p>
+        <div className="orb-login-demo-card" data-orb-login-demo-path>
+          <p className="text-xs leading-relaxed text-[var(--orb-muted)]">{ORB_DEMO_BEFORE_TRIAL_COPY}</p>
+          <p className="mt-2">
+            <OrbRequestDemoLink
+              surface="login"
+              className="text-sm font-semibold text-[var(--orb-primary)] underline-offset-2 hover:underline"
+            />
+          </p>
+        </div>
       </div>
     </div>
   )

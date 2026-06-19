@@ -101,6 +101,7 @@ export type OrbLayoutProps = {
   rightPanel?: ReactNode
   onDragOver?: (event: DragEvent) => void
   onDrop?: (event: DragEvent) => void
+  guidedDemoActive?: boolean
 }
 
 /**
@@ -121,7 +122,8 @@ export function OrbLayout({
   composer,
   rightPanel,
   onDragOver,
-  onDrop
+  onDrop,
+  guidedDemoActive = false
 }: OrbLayoutProps) {
   return (
     <>
@@ -150,6 +152,7 @@ export function OrbLayout({
           data-orb-sidebar-scroll-container
           data-orb-sidebar-state={residentialSurface ? (sidebarCollapsed ? 'collapsed' : 'expanded') : undefined}
           data-orb-sidebar-collapsed={residentialSurface && sidebarCollapsed ? 'true' : undefined}
+          data-orb-guided-demo-active={guidedDemoActive ? 'true' : undefined}
         >
           {sidebar}
         </aside>

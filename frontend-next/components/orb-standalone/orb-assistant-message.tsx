@@ -44,6 +44,8 @@ import {
   buildIntelligenceContextActionChips
 } from '@/lib/orb/indicare-intelligence-core'
 import { userHasFounderAccess } from '@/lib/founder/access'
+import { isOrbDeveloperMode } from '@/lib/orb/orb-developer-mode'
+import { ORB_NAV_RECORDS } from '@/lib/orb/orb-user-facing-names'
 import { sanitiseOrbUserFacingStatus } from '@/lib/orb/orb-user-facing-copy'
 import { OrbIntelligenceActionCtas } from '@/components/orb-standalone/orb-intelligence-core-panel'
 
@@ -292,10 +294,10 @@ export function OrbAssistantMessageBody({
             {displayStreamStatus}
           </p>
         ) : null}
-        <div className="orb-message-content text-[15px] leading-relaxed text-[var(--orb-foreground)] md:leading-7">
+        <div className={`orb-message-content text-[15px] leading-relaxed text-[var(--orb-foreground)] md:leading-7 ${residentialSurface ? 'orb-assistant-answer-card' : ''}`} data-orb-assistant-answer-card={residentialSurface ? 'true' : undefined}>
           {showSkeleton && !displayContent.trim() ? <OrbStreamingSkeleton /> : null}
           {displayContent.trim() ? (
-            <OrbMarkdownAnswer content={displayContent} sources={sources} />
+            <OrbMarkdownAnswer content={displayContent} sources={sources} residentialSurface={residentialSurface} />
           ) : null}
         </div>
         {showExplainability && !streaming ? (
@@ -678,7 +680,8 @@ export function OrbResponseActionBar({
   onOrbFollowUp,
   isLatest = true,
   minimal = false,
-  iconOnly = true
+  iconOnly = true,
+  residentialSurface = false
 }: {
   mode: string
   content: string
@@ -709,6 +712,8 @@ export function OrbResponseActionBar({
   minimal?: boolean
   /** Icon-first action row with accessible labels. */
   iconOnly?: boolean
+  /** Residential web — simplified demo-friendly action row. */
+  residentialSurface?: boolean
 }) {
   const [moreOpen, setMoreOpen] = useState(false)
   const [copyFeedback, setCopyFeedback] = useState<'idle' | 'copied' | 'failed'>('idle')
@@ -755,7 +760,9 @@ export function OrbResponseActionBar({
         ? 'Already saved'
         : saveFeedback === 'failed'
           ? 'Save failed'
-          : 'Save'
+          : residentialSurface
+            ? `Save to ${ORB_NAV_RECORDS}`
+            : 'Save'
 
   const speakLabel = !synthesisAvailable
     ? 'Voice unavailable'
@@ -768,6 +775,7 @@ export function OrbResponseActionBar({
   const isStaffCoach = modeKey === 'staff coach'
   const isInspection =
     modeKey === 'ofsted lens' || modeKey === 'reg 44 / reg 45 prep' || modeKey.includes('reg 44')
+  const residentialDemoActions = residentialSurface && !isOrbDeveloperMode()
 
   const primaryActions: ReactNode[] = [
     <ActionChip
@@ -780,7 +788,7 @@ export function OrbResponseActionBar({
       iconOnly={iconOnly}
     />
   ]
-  if (onEdit) {
+  if (!residentialDemoActions && onEdit) {
     primaryActions.push(
       <ActionChip
         key="edit"
@@ -792,7 +800,7 @@ export function OrbResponseActionBar({
       />
     )
   }
-  if (onRegenerate && isLatest) {
+  if (!residentialDemoActions && onRegenerate && isLatest) {
     primaryActions.push(
       <ActionChip
         key="regen"
@@ -804,25 +812,27 @@ export function OrbResponseActionBar({
       />
     )
   }
-  primaryActions.push(
-    synthesisAvailable ? (
-      speaking ? (
-        <ActionChip key="stop" icon={<Square className="h-3.5 w-3.5" />} label="Stop" onClick={onStop} dataAttr="speak-stop" iconOnly={iconOnly} />
+  if (!residentialDemoActions) {
+    primaryActions.push(
+      synthesisAvailable ? (
+        speaking ? (
+          <ActionChip key="stop" icon={<Square className="h-3.5 w-3.5" />} label="Stop" onClick={onStop} dataAttr="speak-stop" iconOnly={iconOnly} />
+        ) : (
+          <ActionChip key="speak" icon={<Volume2 className="h-3.5 w-3.5" />} label="Speak" onClick={onSpeak} dataAttr="speak" iconOnly={iconOnly} />
+        )
       ) : (
-        <ActionChip key="speak" icon={<Volume2 className="h-3.5 w-3.5" />} label="Speak" onClick={onSpeak} dataAttr="speak" iconOnly={iconOnly} />
+        <ActionChip
+          key="speak-unavailable"
+          icon={<Volume2 className="h-3.5 w-3.5" />}
+          label={speakLabel}
+          onClick={() => {}}
+          disabled
+          dataAttr="speak-unavailable"
+          iconOnly={iconOnly}
+        />
       )
-    ) : (
-      <ActionChip
-        key="speak-unavailable"
-        icon={<Volume2 className="h-3.5 w-3.5" />}
-        label={speakLabel}
-        onClick={() => {}}
-        disabled
-        dataAttr="speak-unavailable"
-        iconOnly={iconOnly}
-      />
     )
-  )
+  }
   if (onSave) {
     primaryActions.push(
       <ActionChip
@@ -848,7 +858,7 @@ export function OrbResponseActionBar({
       />
     )
   }
-  if (onUseAsTemplate) {
+  if (!residentialDemoActions && onUseAsTemplate) {
     primaryActions.push(
       <ActionChip
         key="use-template"
@@ -860,7 +870,7 @@ export function OrbResponseActionBar({
       />
     )
   }
-  if (exportEnabled && onExport) {
+  if (!residentialDemoActions && exportEnabled && onExport) {
     primaryActions.push(
       <ActionChip
         key="export-primary"
@@ -872,15 +882,15 @@ export function OrbResponseActionBar({
       />
     )
   }
-  if (isRecording) {
+  if (!residentialDemoActions && isRecording) {
     primaryActions.push(
       <ActionChip key="draft" icon={<FileText className="h-3 w-3" />} label="Use as draft" onClick={onDraft} dataAttr="use-as-draft" />
     )
   }
-  if (isStaffCoach && onSupervision) {
+  if (!residentialDemoActions && isStaffCoach && onSupervision) {
     primaryActions.push(<ActionChip key="supervision" label="Supervision prompts" onClick={onSupervision} dataAttr="supervision-prompts" />)
   }
-  if (isInspection && onInspectionPrep) {
+  if (!residentialDemoActions && isInspection && onInspectionPrep) {
     primaryActions.push(<ActionChip key="inspection" label="Inspection prep" onClick={onInspectionPrep} dataAttr="inspection-prep" />)
   }
 
@@ -902,6 +912,29 @@ export function OrbResponseActionBar({
     : []
 
   const moreActions: ReactNode[] = []
+  if (residentialDemoActions) {
+    if (onEdit) {
+      moreActions.push(
+        <ActionChip key="edit" icon={<Pencil className="h-3.5 w-3.5" />} label="Edit" onClick={onEdit} dataAttr="edit" iconOnly={iconOnly} />
+      )
+    }
+    if (onRegenerate && isLatest) {
+      moreActions.push(
+        <ActionChip key="regen" icon={<RotateCcw className="h-3.5 w-3.5" />} label="Regenerate" onClick={onRegenerate} dataAttr="regenerate" iconOnly={iconOnly} />
+      )
+    }
+    moreActions.push(
+      synthesisAvailable ? (
+        speaking ? (
+          <ActionChip key="stop-more" icon={<Square className="h-3.5 w-3.5" />} label="Stop" onClick={onStop} dataAttr="speak-stop" iconOnly={iconOnly} />
+        ) : (
+          <ActionChip key="speak-more" icon={<Volume2 className="h-3.5 w-3.5" />} label="Speak" onClick={onSpeak} dataAttr="speak" iconOnly={iconOnly} />
+        )
+      ) : (
+        <ActionChip key="speak-unavailable-more" icon={<Volume2 className="h-3.5 w-3.5" />} label={speakLabel} onClick={() => {}} disabled dataAttr="speak-unavailable" iconOnly={iconOnly} />
+      )
+    )
+  }
   if (!isRecording) {
     moreActions.push(<ActionChip key="draft-more" icon={<FileText className="h-3 w-3" />} label="Use as draft" onClick={onDraft} />)
   }
@@ -931,11 +964,12 @@ export function OrbResponseActionBar({
 
   return (
     <div
-      className="orb-response-action-bar orb-response-action-bar--icons mt-3 flex flex-nowrap items-center gap-0.5 overflow-x-auto border-t border-[var(--orb-line)] pt-2 opacity-100 transition-opacity sm:gap-1 sm:pt-3"
+      className={`orb-response-action-bar orb-response-action-bar--icons mt-3 flex flex-nowrap items-center gap-0.5 overflow-x-auto border-t border-[var(--orb-line)] pt-2 opacity-100 transition-opacity sm:gap-1 sm:pt-3 ${residentialDemoActions ? 'orb-response-action-bar--residential' : ''}`}
       data-orb-response-actions
       data-orb-response-action-bar
       data-orb-response-action-bar-persistent
       data-orb-response-action-bar-icons={iconOnly ? 'true' : 'false'}
+      data-orb-response-action-bar-residential={residentialDemoActions ? 'true' : undefined}
     >
       {primaryActions}
       {moreActions.length ? (
