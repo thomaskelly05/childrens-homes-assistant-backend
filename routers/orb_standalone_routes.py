@@ -113,6 +113,35 @@ def _select_assistant_runtime():
     return orb_general_assistant_service
 
 
+def _requires_guarded_stream_delivery(
+    safety_scaffold: dict[str, Any] | None,
+    *,
+    mode: str,
+) -> bool:
+    """Buffer stream tokens until post-LLM guardrails when safeguarding-sensitive.
+
+    Phase 1: stream must not be weaker than POST for guardrail-active requests.
+    """
+    scaffold = safety_scaffold or {}
+    if scaffold.get("guardrail_active"):
+        return True
+    normalised = str(mode or "").strip().lower()
+    if "safeguarding" in normalised:
+        return True
+    try:
+        from services.orb_safety_scaffold_service import OrbSafetyScaffold, orb_safety_scaffold_service
+
+        fields = OrbSafetyScaffold.__dataclass_fields__
+        scaffold_obj = OrbSafetyScaffold(
+            **{k: v for k, v in scaffold.items() if k in fields}
+        )
+        if orb_safety_scaffold_service.requires_deep_routing(scaffold_obj):
+            return True
+    except Exception:
+        pass
+    return False
+
+
 def _build_standalone_request_context(
     payload: OrbStandaloneConversationRequest,
     *,
@@ -1414,13 +1443,6 @@ async def standalone_orb_conversation_stream(
         )
         fast_opening_emitted = False
         model_token_count = 0
-        if fast_opening:
-            fast_opening_emitted = True
-            answer_parts.append(f"{fast_opening}\n\n")
-            if first_token_ms is None:
-                first_token_ms = int((time.perf_counter() - request_started) * 1000)
-                timing.mark("first_token")
-            yield _sse_event("token", {"delta": f"{fast_opening}\n\n"})
 
         timing.mark("core_start")
         try:
@@ -1480,6 +1502,17 @@ async def standalone_orb_conversation_stream(
             or quick_depth
         )
 
+        safety_scaffold = ctx.get("safety_scaffold") or {}
+        guarded_stream_delivery = _requires_guarded_stream_delivery(safety_scaffold, mode=mode)
+
+        if fast_opening and not guarded_stream_delivery:
+            fast_opening_emitted = True
+            answer_parts.append(f"{fast_opening}\n\n")
+            if first_token_ms is None:
+                first_token_ms = int((time.perf_counter() - request_started) * 1000)
+                timing.mark("first_token")
+            yield _sse_event("token", {"delta": f"{fast_opening}\n\n"})
+
         limited = _enforce_plan_limits(
             current_user=current_user,
             message=payload.message,
@@ -1501,25 +1534,65 @@ async def standalone_orb_conversation_stream(
             assistant_runtime = _select_assistant_runtime()
             provider_started = time.perf_counter()
             timing.mark("model_start")
-            async for delta in assistant_runtime.stream_answer(
-                framed_message,
-                history=history,
-                detail=detail,
-                image_data_urls=image_urls[:4],
-                mode=mode,
-                profile_context=profile_context,
-                document_text=payload.document_text,
-                document_source_id=payload.document_source_id,
-                document_title=payload.document_title,
-                raw_user_message=user_message,
-                stream_meta=stream_meta,
-            ):
-                model_token_count += 1
-                if first_token_ms is None:
-                    first_token_ms = int((time.perf_counter() - request_started) * 1000)
-                    timing.mark("first_token")
-                answer_parts.append(delta)
-                yield _sse_event("token", {"delta": delta})
+
+            if guarded_stream_delivery:
+                # POST-equivalent path: apply firewall + live guardrails before any client tokens.
+                if fast_opening_emitted:
+                    answer_parts.clear()
+                    fast_opening_emitted = False
+                assistant_data = await assistant_runtime.answer(
+                    framed_message,
+                    history=history,
+                    detail=detail,
+                    image_data_urls=image_urls[:4],
+                    mode=mode,
+                    profile_context=profile_context,
+                    document_text=payload.document_text,
+                    document_source_id=payload.document_source_id,
+                    document_title=payload.document_title,
+                    raw_user_message=user_message,
+                    user=current_user,
+                    brain_convergence=ctx.get("brain_convergence"),
+                    execution_policy=ctx.get("execution_policy"),
+                    safety_scaffold=safety_scaffold,
+                )
+                stream_meta.update(assistant_data)
+                guarded_answer = str(assistant_data.get("answer") or "").strip()
+                if fast_opening and guarded_answer:
+                    guarded_answer = merge_stream_answer(
+                        fast_opening=fast_opening,
+                        model_answer=guarded_answer,
+                        streamed_text="",
+                    )
+                    assistant_data["answer"] = guarded_answer
+                async for delta in assistant_runtime.yield_answer_text_as_stream(guarded_answer):
+                    model_token_count += 1
+                    if first_token_ms is None:
+                        first_token_ms = int((time.perf_counter() - request_started) * 1000)
+                        timing.mark("first_token")
+                    answer_parts.append(delta)
+                    yield _sse_event("token", {"delta": delta})
+            else:
+                async for delta in assistant_runtime.stream_answer(
+                    framed_message,
+                    history=history,
+                    detail=detail,
+                    image_data_urls=image_urls[:4],
+                    mode=mode,
+                    profile_context=profile_context,
+                    document_text=payload.document_text,
+                    document_source_id=payload.document_source_id,
+                    document_title=payload.document_title,
+                    raw_user_message=user_message,
+                    stream_meta=stream_meta,
+                    safety_scaffold=safety_scaffold,
+                ):
+                    model_token_count += 1
+                    if first_token_ms is None:
+                        first_token_ms = int((time.perf_counter() - request_started) * 1000)
+                        timing.mark("first_token")
+                    answer_parts.append(delta)
+                    yield _sse_event("token", {"delta": delta})
 
             timing.mark("stream_complete")
             assistant_data = dict(stream_meta)

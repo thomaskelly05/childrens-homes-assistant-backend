@@ -92,7 +92,7 @@ export function OrbOutputSaveActions({
     try {
       const record = await createOrbSavedOutput(buildBody(resolvedType))
       onSaved?.(record.id)
-      onNotice?.('Saved to Saved Outputs.')
+      onNotice?.('Saved to Saved Outputs — needs adult review before sharing.')
       setSaveOpen(false)
     } catch {
       void navigator.clipboard.writeText(markdown)

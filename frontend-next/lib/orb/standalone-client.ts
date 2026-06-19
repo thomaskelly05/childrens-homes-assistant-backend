@@ -26,6 +26,12 @@ import {
   instrumentOrbResponseGenerated
 } from '@/lib/founder/telemetry/founder-telemetry-instrumentation'
 import { markOrbChatLatency } from '@/lib/orb/orb-chat-latency'
+import {
+  STANDALONE_ORB_MODES,
+  type StandaloneOrbMode
+} from '@/lib/orb/orb-mode-registry'
+
+export { STANDALONE_ORB_MODES, type StandaloneOrbMode } from '@/lib/orb/orb-mode-registry'
 
 export {
   extractOrbErrorPayload,
@@ -153,19 +159,6 @@ export async function submitStandaloneOrbFeedback(request: StandaloneOrbFeedback
   }
   return response.json() as Promise<{ success?: boolean; data?: { ok?: boolean; feedback_id?: number | string } }>
 }
-
-export const STANDALONE_ORB_MODES = [
-  'Ask ORB',
-  'Safeguarding Thinking',
-  'Ofsted Lens',
-  'Record This Properly',
-  'Therapeutic Reframe',
-  'Manager Copilot',
-  'Staff Coach',
-  'Reg 44 / Reg 45 Prep'
-] as const
-
-export type StandaloneOrbMode = (typeof STANDALONE_ORB_MODES)[number]
 
 export type StandaloneOrbConfig = {
   name: string
@@ -1545,6 +1538,8 @@ export type OrbSavedOutputSummary = {
   standalone_only?: boolean
   os_linked?: boolean
   care_record_access?: boolean
+  /** Present on list responses when backend includes review metadata. */
+  metadata?: Record<string, unknown>
 }
 
 export type OrbSavedOutputRecord = OrbSavedOutputSummary & {

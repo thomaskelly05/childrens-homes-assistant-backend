@@ -2,6 +2,11 @@
 
 import type { OrbBrainMetadata } from '@/lib/orb/orb-brain-metadata'
 import {
+  buildOutputReviewMetadata,
+  displayLabelForSavedOutput,
+  type OrbOutputReviewStatusLabel
+} from '@/lib/orb/orb-output-types'
+import {
   normalizeOrbBrainMetadata,
   orbBrainIndicatorLabel,
   ORB_BRAIN_ID,
@@ -148,6 +153,14 @@ export function buildVoiceSavedOutputBrainMetadata(): OrbBrainMetadata {
   }
 }
 
+/** User-facing review lifecycle label — canonical via orb-output-types. */
+export function savedOutputReviewStatusLabel(record: {
+  status?: string | null
+  metadata?: Record<string, unknown> | null
+}): OrbOutputReviewStatusLabel {
+  return displayLabelForSavedOutput(record.status, record.metadata)
+}
+
 export function buildSavedOutputMetadata(
   extras: OrbSavedOutputSaveExtras
 ): Record<string, unknown> {
@@ -161,7 +174,8 @@ export function buildSavedOutputMetadata(
     source_platform: 'web',
     standalone: true,
     os_records_accessed: false,
-    live_record_access: false
+    live_record_access: false,
+    ...buildOutputReviewMetadata('needs_review')
   }
   if (brain) metadata.brain_metadata = brain
   if (extras.sections?.length) metadata.sections = extras.sections
@@ -314,10 +328,12 @@ export function buildSavedOutputExportMarkdown(record: OrbSavedOutputRecord): st
   const sourceFeature = savedOutputSourceLabel(record)
   const brain = extractSavedOutputBrainMetadata(record)
   const brainLine = brain ? orbBrainIndicatorLabel(brain) : null
+  const reviewLabel = savedOutputReviewStatusLabel(record)
   const lines = [
     `# ${record.title}`,
     '',
     `**Type:** ${savedOutputTypeLabel(record.type)}`,
+    `**Review status:** ${reviewLabel}`,
     `**Source:** ${sourceFeature}`,
     ''
   ]

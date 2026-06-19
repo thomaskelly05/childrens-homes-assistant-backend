@@ -1,5 +1,9 @@
 'use client'
 
+/**
+ * Learn from answer — API fixed Phase 1. Not wired to flagship `/orb` nav until Phase 5.
+ * `/orb/learn` redirects to `?station=knowledge` (Library).
+ */
 import { useState } from 'react'
 import Link from 'next/link'
 
@@ -35,8 +39,8 @@ export function OrbLearnScreen() {
     setError(null)
     try {
       const result = await generateOrbLearningFromAnswer({
-        answer_text: text,
-        session_type: sessionType,
+        answer: text,
+        format: sessionType,
         topic: topic || undefined
       })
       const data = (result as { data?: Record<string, unknown> }).data ?? result

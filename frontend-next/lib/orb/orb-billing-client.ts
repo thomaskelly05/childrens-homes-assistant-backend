@@ -466,14 +466,33 @@ export async function exportOrbTemplate(format: 'pdf' | 'docx', body: Record<str
 }
 
 export async function generateOrbLearningFromAnswer(body: {
-  answer_text: string
+  /** @deprecated Use `answer` — kept for callers migrating to backend schema. */
+  answer_text?: string
+  answer?: string
+  /** @deprecated Use `format` — backend OrbLearnFromAnswerRequest field. */
   session_type?: string
+  format?: string
   topic?: string
 }) {
+  const LEARN_FORMAT_MAP: Record<string, string> = {
+    five_minute: 'micro-learning',
+    staff_briefing: 'staff_briefing',
+    knowledge_check: 'knowledge_check',
+    reflective_supervision: 'reflective_exercise',
+    cpd_note: 'cpd_note',
+    team_discussion: 'staff_briefing'
+  }
+  const answer = (body.answer ?? body.answer_text ?? '').trim()
+  const formatKey = (body.format ?? body.session_type ?? '').trim().toLowerCase()
+  const format = LEARN_FORMAT_MAP[formatKey] ?? (formatKey || undefined)
   return authFetch<{ success?: boolean; data?: Record<string, unknown> }>(ORB_BILLING_API.learnFromAnswer, {
     method: 'POST',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
+    body: JSON.stringify({
+      answer,
+      format,
+      topic: body.topic
+    })
   })
 }

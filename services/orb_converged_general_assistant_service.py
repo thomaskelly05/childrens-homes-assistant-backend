@@ -201,6 +201,7 @@ class OrbConvergedGeneralAssistantService:
         document_title: str | None = None,
         raw_user_message: str | None = None,
         stream_meta: dict[str, Any] | None = None,
+        safety_scaffold: dict[str, Any] | None = None,
     ) -> AsyncIterator[str]:
         user_message = _safe_text(raw_user_message) or _safe_text(message)
         supplied_context_types: list[str] = []
@@ -256,6 +257,7 @@ class OrbConvergedGeneralAssistantService:
             document_title=document_title,
             raw_user_message=user_message,
             stream_meta=inner_meta,
+            safety_scaffold=safety_scaffold,
         ):
             yield delta
 
@@ -309,6 +311,10 @@ class OrbConvergedGeneralAssistantService:
         inner_meta["safe_to_show"] = processed.get("safe_to_show")
         if stream_meta is not None:
             stream_meta.update(inner_meta)
+
+    async def yield_answer_text_as_stream(self, answer: str) -> AsyncIterator[str]:
+        async for delta in orb_general_assistant_service.yield_answer_text_as_stream(answer):
+            yield delta
 
     def build_shift_builder_draft(self, notes: str) -> dict[str, str]:
         """Expose the paid Shift Builder scaffold through the converged runtime."""

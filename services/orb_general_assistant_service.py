@@ -1145,6 +1145,11 @@ class OrbGeneralAssistantService:
             yield delta
             await asyncio.sleep(0)
 
+    async def yield_answer_text_as_stream(self, answer: str) -> AsyncIterator[str]:
+        """Emit a fully guardrail-checked answer as stream deltas (buffer-then-release)."""
+        async for delta in self._yield_answer_chunks(answer):
+            yield delta
+
     async def stream_answer(
         self,
         message: str,
@@ -1159,6 +1164,7 @@ class OrbGeneralAssistantService:
         document_title: str | None = None,
         raw_user_message: str | None = None,
         stream_meta: dict[str, Any] | None = None,
+        safety_scaffold: dict[str, Any] | None = None,
     ) -> AsyncIterator[str]:
         """Stream answer text deltas. Populates stream_meta with final assistant payload fields."""
         meta = stream_meta if stream_meta is not None else {}
@@ -1251,6 +1257,58 @@ class OrbGeneralAssistantService:
                     yield delta
                 return
 
+        buffer_tokens = bool(safety_scaffold and safety_scaffold.get("guardrail_active") and not images)
+
+        if safety_scaffold and safety_scaffold.get("guardrail_active") and not images:
+            from services.orb_adversarial_safety_firewall import (
+                firewall_decision_to_live_guardrail,
+                should_firewall_before_llm,
+            )
+            from services.orb_safety_scaffold_service import OrbSafetyScaffold
+
+            scaffold_obj = OrbSafetyScaffold(
+                **{
+                    k: v
+                    for k, v in safety_scaffold.items()
+                    if k in OrbSafetyScaffold.__dataclass_fields__
+                }
+            )
+            firewall = should_firewall_before_llm(
+                user_message,
+                scaffold_obj,
+                str(
+                    safety_scaffold.get("detected_category")
+                    or safety_scaffold.get("fallback_category")
+                    or ""
+                ),
+            )
+            if firewall.should_firewall:
+                guardrail_meta = firewall_decision_to_live_guardrail(firewall)
+                result = {
+                    "answer": firewall.final_answer,
+                    "sources": [],
+                    "citations": [],
+                    "context_used": {
+                        "surface": "standalone_orb",
+                        "live_guardrail_check": guardrail_meta,
+                        "safety_firewall_used": True,
+                        "openai_called": False,
+                        "stream_guarded_delivery": True,
+                        "model_routing": {
+                            "provider": "indicare-intelligence",
+                            "model": "adversarial-safety-firewall-v4",
+                            "task_type": "safety_firewall",
+                        },
+                    },
+                    "tools_used": ["orb_adversarial_safety_firewall"],
+                    "internal_data_access": False,
+                    "no_llm": True,
+                }
+                meta.update(result)
+                async for delta in self._yield_answer_chunks(str(result.get("answer") or "")):
+                    yield delta
+                return
+
         retrieval = self.prepare_retrieval(
             user_message,
             mode=mode,
@@ -1295,11 +1353,38 @@ class OrbGeneralAssistantService:
                 parts.append(delta)
                 decision = routed_decision
                 trace = routed_trace
-                yield delta
+                if not buffer_tokens:
+                    yield delta
         except Exception:
             logger.warning("standalone_orb_stream llm failed", exc_info=True)
 
         answer_text = _text("".join(parts))
+        if answer_text and buffer_tokens and safety_scaffold and safety_scaffold.get("guardrail_active"):
+            from services.orb_live_guardrail_service import enforce_live_guardrails_async
+            from services.orb_safety_scaffold_service import (
+                OrbSafetyScaffold,
+                build_scenario_dict_from_message,
+            )
+
+            scaffold_obj = OrbSafetyScaffold(
+                **{
+                    k: v
+                    for k, v in safety_scaffold.items()
+                    if k in OrbSafetyScaffold.__dataclass_fields__
+                }
+            )
+            scenario_ctx = build_scenario_dict_from_message(user_message or message, mode=mode)
+            guarded = await enforce_live_guardrails_async(
+                scenario_ctx,
+                answer_text,
+                scaffold_obj,
+                mode,
+                user_message=user_message or message,
+            )
+            answer_text = guarded.final_answer
+            parts = [answer_text]
+            async for delta in self._yield_answer_chunks(answer_text):
+                yield delta
         if answer_text:
             model_routing = ai_model_router_service.routing_metadata_for_context(
                 decision,

@@ -167,7 +167,6 @@ import {
   atmosphereClassForMode,
   type ResidentialAgentDefinition
 } from '@/lib/orb/residential-agents'
-import { streamTextIntoView } from '@/lib/orb/streaming-text'
 import {
   defaultStandaloneOrbAccessibility,
   loadStandaloneOrbAccessibility,
@@ -239,7 +238,6 @@ import type { OrbSavedOutputRerunState } from '@/lib/orb/orb-saved-output-adapte
 import {
   createOrbSavedOutput,
   fetchStandaloneOrbConfig,
-  isStandaloneOrbRetryableNetworkError,
   ORB_SAFETY_ONBOARDING_PATH,
   parseStandaloneOrbSendError,
   logOrbCognitionDebug,
@@ -280,7 +278,8 @@ import {
   backendOrbActionIdForFollowUp,
   isBackendSupportedOrbResponseAction
 } from '@/lib/orb/orb-response-actions'
-import { askOrbBrain, buildOrbBrainConversationRequest } from '@/lib/orb/orb-brain-router'
+import { buildOrbBrainConversationRequest } from '@/lib/orb/orb-brain-router'
+import { executeOrbConversationTransport } from '@/hooks/use-orb-conversation'
 import {
   markOrbVoiceBrainFetchFailure,
   markOrbVoiceClientBrainFetch
@@ -1789,7 +1788,6 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
         }
 
         let response: StandaloneOrbConversationResponse | null = null
-        let streamFailedBeforeToken = false
 
         if (voiceOriginatedSend) {
           const { patchOrbVoiceBrowserDiagnostics } = await import('@/lib/orb/voice/orb-voice-browser-diagnostics')
@@ -1797,101 +1795,61 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
           patchOrbVoiceBrowserDiagnostics({ brainRequestAttempted: true, orbBrainAttempted: true })
         }
 
-        try {
-          response = await askOrbBrain({
-            request: conversationRequest,
-            context: {
-              source: voiceOriginatedSend ? 'voice' : 'chat',
-              mode
+        const transportResult = await executeOrbConversationTransport({
+          request: conversationRequest,
+          context: {
+            source: voiceOriginatedSend ? 'voice' : 'chat',
+            mode
+          },
+          signal: streamSignal,
+          stream: {
+            onToken: (_delta, partial) => {
+              applyStreamingPartial(partial)
             },
-            signal: streamSignal,
-            stream: {
-              onToken: (_delta, partial) => {
-                applyStreamingPartial(partial)
-              },
-              onStatus: (status) => {
-                if (status.expert_depth) {
-                  setAnsweringDepthHint(status.expert_depth)
-                }
-                const statusLine = status.message?.trim()
-                if (statusLine) {
-                  setAnsweringStreamStatus(statusLine)
-                  applyStreamingPartial(streamPartialRef.current, { streamStatus: statusLine })
-                }
-              },
-              onMetadata: (meta) => {
-                const responseSources = (
-                  (meta.citations?.length ? meta.citations : meta.sources) ?? []
-                ) as StandaloneOrbSource[]
-                const repairedAnswer = (meta.answer || '').trim()
-                const answerRepaired =
-                  meta.answer_repaired ??
-                  meta.final_answer_repair_applied ??
-                  Boolean(
-                    (meta.context_used as Record<string, unknown> | undefined)?.answer_repaired
-                  )
-                if (repairedAnswer && answerRepaired) {
-                  streamPartialRef.current = repairedAnswer
-                }
-                applyStreamingPartial(
-                  answerRepaired && repairedAnswer ? repairedAnswer : streamPartialRef.current,
-                  {
+            onStatus: (status) => {
+              if (status.expert_depth) {
+                setAnsweringDepthHint(status.expert_depth)
+              }
+              const statusLine = status.message?.trim()
+              if (statusLine) {
+                setAnsweringStreamStatus(statusLine)
+                applyStreamingPartial(streamPartialRef.current, { streamStatus: statusLine })
+              }
+            },
+            onMetadata: (meta) => {
+              const responseSources = (
+                (meta.citations?.length ? meta.citations : meta.sources) ?? []
+              ) as StandaloneOrbSource[]
+              const repairedAnswer = (meta.answer || '').trim()
+              const answerRepaired =
+                meta.answer_repaired ??
+                meta.final_answer_repair_applied ??
+                Boolean(
+                  (meta.context_used as Record<string, unknown> | undefined)?.answer_repaired
+                )
+              if (repairedAnswer && answerRepaired) {
+                streamPartialRef.current = repairedAnswer
+              }
+              applyStreamingPartial(
+                answerRepaired && repairedAnswer ? repairedAnswer : streamPartialRef.current,
+                {
                   sources: responseSources.length ? responseSources : undefined,
                   modelRouting: meta.context_used?.model_routing,
                   explainability: buildExplainabilityFromResponse(meta, trimmed || messageBody),
                   contextUsed: meta.context_used
                     ? (meta.context_used as unknown as Record<string, unknown>)
                     : undefined
-                })
-              }
+                }
+              )
             }
-          })
-        } catch (streamTransportError) {
-          if (streamTransportError instanceof DOMException && streamTransportError.name === 'AbortError') {
-            throw streamTransportError
-          }
-          const hadPartial = Boolean(streamPartialRef.current.trim())
-          if (hadPartial) {
-            streamFailedBeforeToken = false
-            response = {
-              ok: true,
-              standalone: true,
-              os_records_accessed: false,
-              answer: streamPartialRef.current.trim(),
-              error_detail: 'stream_interrupted'
-            }
-          } else {
-            streamFailedBeforeToken = true
-            traceOrbSend('stream_fallback', { sendGeneration, reason: 'no_tokens' })
-            console.warn('[orb-send] streaming unavailable, falling back to POST', streamTransportError)
-          }
-        }
-
-        if (!response && streamFailedBeforeToken) {
-          try {
-            response = await runConversationRequest()
-          } catch (firstError) {
-            if (
-              !options?.internalRetry &&
-              isStandaloneOrbRetryableNetworkError(firstError)
-            ) {
-              traceOrbSend('request_retry', { sendGeneration, reason: 'retryable_network' })
-              await refreshSession()
-              response = await runConversationRequest()
-            } else {
-              throw firstError
-            }
-          }
-          const fallbackAnswer = (response.answer || '').trim() || STANDALONE_ORB_EMPTY_ANSWER_MESSAGE
-          await streamTextIntoView({
-            text: fallbackAnswer,
-            signal: streamSignal,
-            onChunk: (partial) => applyStreamingPartial(partial)
-          })
-        }
-
-        if (!response) {
-          throw new Error('ORB did not return a response.')
+          },
+          runPostFallback: runConversationRequest,
+          refreshSession,
+          internalRetry: options?.internalRetry
+        })
+        response = transportResult.response
+        if (transportResult.usedPostFallback) {
+          traceOrbSend('stream_fallback', { sendGeneration, reason: 'no_tokens' })
         }
 
         if (!isCurrentSend()) {

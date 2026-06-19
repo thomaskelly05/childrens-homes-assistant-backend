@@ -102,6 +102,7 @@ describe('ORB Residential routing', () => {
   })
 
   it('capability routes deep-link into /orb stations', () => {
+    assert.match(readApp('app/orb/ask/page.tsx'), /redirect\('\/orb'\)/)
     assert.match(readApp('app/orb/review/page.tsx'), /redirect\('\/orb\?station=review'\)/)
     assert.match(readApp('app/orb/templates/page.tsx'), /redirect\('\/orb\?station=templates'\)/)
     assert.match(readApp('app/orb/learn/page.tsx'), /redirect\('\/orb\?station=knowledge'\)/)

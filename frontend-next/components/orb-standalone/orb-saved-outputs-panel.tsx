@@ -28,6 +28,7 @@ import {
 } from '@/components/orb-standalone/orb-station-panel-states'
 import {
   extractSavedOutputBrainMetadata,
+  savedOutputReviewStatusLabel,
   savedOutputSourceLabel,
   savedOutputPlatformLabel,
   savedOutputTypeLabel,
@@ -447,9 +448,17 @@ export function OrbSavedOutputsPanel({
                         >
                           <div className="flex items-start justify-between gap-2">
                             <span className="text-sm font-medium text-[var(--orb-mobile-ws-text,var(--orb-foreground))] line-clamp-1">{item.title}</span>
-                            <span className="shrink-0 rounded bg-[var(--orb-mobile-ws-input,rgba(255,255,255,0.06))] px-1.5 py-0.5 text-[10px] text-[var(--orb-mobile-ws-muted,var(--orb-muted))]">
-                              {savedOutputTypeLabel(item.type)}
-                            </span>
+                            <div className="flex shrink-0 flex-col items-end gap-1">
+                              <span
+                                className="rounded bg-[var(--orb-mobile-ws-input,rgba(255,255,255,0.06))] px-1.5 py-0.5 text-[10px] text-[var(--orb-mobile-ws-muted,var(--orb-muted))]"
+                                data-orb-saved-output-review-status
+                              >
+                                {savedOutputReviewStatusLabel(item)}
+                              </span>
+                              <span className="rounded bg-[var(--orb-mobile-ws-input,rgba(255,255,255,0.06))] px-1.5 py-0.5 text-[10px] text-[var(--orb-mobile-ws-muted,var(--orb-muted))]">
+                                {savedOutputTypeLabel(item.type)}
+                              </span>
+                            </div>
                           </div>
                           {item.summary ? (
                             <p className="mt-1 line-clamp-2 text-xs text-[var(--orb-mobile-ws-muted,var(--orb-muted))]">{item.summary}</p>
@@ -479,6 +488,13 @@ export function OrbSavedOutputsPanel({
               <div className="border-b border-[var(--orb-mobile-ws-card-border,var(--orb-line))] px-4 py-3">
                 <h3 className="text-base font-semibold text-[var(--orb-mobile-ws-text,var(--orb-foreground))]">{detail.title}</h3>
                 <p className="mt-1 text-xs text-[var(--orb-mobile-ws-muted,var(--orb-muted))]">
+                  <span
+                    className="font-medium text-[var(--orb-mobile-ws-text,var(--orb-foreground))]"
+                    data-orb-saved-output-review-status
+                  >
+                    {savedOutputReviewStatusLabel(detail)}
+                  </span>
+                  {' · '}
                   {savedOutputTypeLabel(detail.type)} · {savedOutputSourceLabel(detail)}
                   {savedOutputPlatformLabel(detail) ? ` · ${savedOutputPlatformLabel(detail)}` : ''} ·{' '}
                   {new Date(detail.created_at).toLocaleString()}
