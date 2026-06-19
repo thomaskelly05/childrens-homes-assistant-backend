@@ -5,7 +5,7 @@ import { Mic, Trash2 } from 'lucide-react'
 
 import { OrbDictateTranscriptSegmentsEditor } from '@/components/orb-standalone/orb-dictate-station-extras'
 import { OrbDictateSpeakerLabelling } from '@/components/orb/dictate/OrbDictateSpeakerLabelling'
-import { ORB_RESIDENTIAL_DICTATE_MAGIC_NOTES_COPY } from '@/lib/orb/orb-residential-copy'
+import { ORB_RESIDENTIAL_DICTATE_COPY } from '@/lib/orb/orb-residential-copy'
 import type { OrbDictateParticipant, OrbDictateTranscriptSegment } from '@/lib/orb/dictate/orb-dictate-speaker'
 import { SPEAKER_BOUNDARY_COPY } from '@/lib/orb/dictate/orb-dictate-speaker-model'
 
@@ -78,10 +78,10 @@ export function OrbTranscriptPanel({
           >
             <Mic className="mb-2 h-7 w-7 text-[var(--orb-primary)]/70" aria-hidden />
             <p className="text-sm font-medium text-[var(--orb-foreground)]" data-orb-dictate-capture-prompt>
-              {ORB_RESIDENTIAL_DICTATE_MAGIC_NOTES_COPY.capturePrompt}
+              {ORB_RESIDENTIAL_DICTATE_COPY.capturePrompt}
             </p>
             <p className="mt-1.5 max-w-sm text-xs leading-relaxed text-[var(--orb-muted)]" data-orb-dictate-capture-guidance>
-              {ORB_RESIDENTIAL_DICTATE_MAGIC_NOTES_COPY.captureGuidance}
+              {ORB_RESIDENTIAL_DICTATE_COPY.captureGuidance}
             </p>
           </div>
         ) : null}

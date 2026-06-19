@@ -8,10 +8,9 @@ import {
   ChevronRight,
   CreditCard,
   FileEdit,
-  FileText,
   FolderKanban,
-  FolderOpen,
-  Library,
+  Home,
+  LifeBuoy,
   MessageSquare,
   MessageSquarePlus,
   Mic,
@@ -19,7 +18,6 @@ import {
   Save,
   Search,
   Settings,
-  Sparkles,
   X
 } from 'lucide-react'
 
@@ -27,8 +25,12 @@ import { GlassOrbMark } from '@/components/orb-residential/ui/glass-orb-mark'
 import { OrbUserAvatar } from '@/components/orb-residential/orb-user-avatar'
 import { OrbProjectMemoryModal } from '@/components/orb-residential/orb-project-memory-modal'
 import { ORB_RESIDENTIAL_TAGLINE } from '@/lib/orb/orb-residential-copy'
+import {
+  ORB_NAV_RECORDS,
+  ORB_NAV_WRITE,
+  ORB_VISIBLE_SIDEBAR_NAV
+} from '@/lib/orb/orb-user-facing-names'
 import { getOrbSearchSurface } from '@/lib/orb/orb-search-registry'
-import { ORB_RESIDENTIAL_STATION_DEFINITIONS } from '@/lib/orb/orb-residential-stations'
 import type { StandaloneOrbMode } from '@/lib/orb/standalone-client'
 import {
   ORB_SIDEBAR_PROJECTS_COLLAPSED_KEY,
@@ -50,130 +52,50 @@ import {
   type StandaloneWorkspace
 } from '@/lib/orb/standalone-local-store'
 
+/** Internal station ids — legacy panels hidden from primary nav but still routable. */
 const NAV_ITEMS = [
-  { id: 'skills', label: 'Skills', icon: Sparkles },
-  { id: 'knowledge', label: 'Library', icon: Library },
-  { id: 'templates', label: 'Templates', icon: FileText },
+  { id: 'skills', label: 'Skills', icon: Settings },
+  { id: 'knowledge', label: 'Library', icon: BookOpen },
+  { id: 'templates', label: 'Templates', icon: FileEdit },
   { id: 'orb_voice', label: 'Voice', icon: Mic },
   { id: 'orb_dictate', label: 'Dictate', icon: PenLine },
-  { id: 'orb_write', label: 'ORB Write', icon: FileEdit },
-  { id: 'shift_builder', label: 'Shift Builder', icon: FileText },
-  { id: 'review', label: 'Review', icon: FileText },
-  { id: 'documents', label: 'Documents & Guidance', icon: FolderOpen },
-  { id: 'saved', label: 'Saved outputs', icon: Save }
+  { id: 'orb_write', label: ORB_NAV_WRITE, icon: FileEdit },
+  { id: 'shift_builder', label: 'Shift Builder', icon: FileEdit },
+  { id: 'review', label: 'Review', icon: FileEdit },
+  { id: 'documents', label: 'Documents & Guidance', icon: BookOpen },
+  { id: 'saved', label: ORB_NAV_RECORDS, icon: Save }
 ] as const
 
 import type { OrbResidentialPracticePanelId } from '@/lib/orb/orb-navigation-convergence'
 
 export type { OrbResidentialPracticePanelId }
 
-/** Visible primary navigation — converged features live in Chat/Templates/ORB Write/Documents. */
-const DESKTOP_MAIN_NAV: Array<{
-  id: (typeof NAV_ITEMS)[number]['id'] | 'chat'
-  label: string
-  helper?: string
-  icon: (typeof NAV_ITEMS)[number]['icon']
-  magicNotes?: boolean
-}> = [
-  {
-    id: 'chat',
-    label: ORB_RESIDENTIAL_STATION_DEFINITIONS.chat.label,
-    helper: ORB_RESIDENTIAL_STATION_DEFINITIONS.chat.helper,
-    icon: MessageSquare
-  },
-  {
-    id: 'orb_dictate',
-    label: ORB_RESIDENTIAL_STATION_DEFINITIONS.orb_dictate.label,
-    helper: ORB_RESIDENTIAL_STATION_DEFINITIONS.orb_dictate.helper,
-    icon: PenLine,
-    magicNotes: true
-  },
-  {
-    id: 'orb_voice',
-    label: ORB_RESIDENTIAL_STATION_DEFINITIONS.orb_voice.label,
-    helper: ORB_RESIDENTIAL_STATION_DEFINITIONS.orb_voice.helper,
-    icon: Mic
-  },
-  {
-    id: 'orb_write',
-    label: ORB_RESIDENTIAL_STATION_DEFINITIONS.orb_write.label,
-    helper: ORB_RESIDENTIAL_STATION_DEFINITIONS.orb_write.helper,
-    icon: FileEdit
-  }
-]
+const NAV_ICON_BY_ID: Record<string, typeof Home> = {
+  home: Home,
+  chat: MessageSquare,
+  orb_dictate: PenLine,
+  orb_voice: Mic,
+  orb_write: FileEdit,
+  saved: Save,
+  help: LifeBuoy,
+  settings: Settings
+}
 
-const DESKTOP_LIBRARY_NAV: Array<{
-  id: (typeof NAV_ITEMS)[number]['id']
-  label: string
-  helper?: string
-  icon: (typeof NAV_ITEMS)[number]['icon']
-}> = [
-  { id: 'templates', label: 'Templates', helper: 'Recording library', icon: FileText },
-  {
-    id: 'documents',
-    label: 'Documents & Guidance',
-    helper: 'Policies, guidance and document analyser',
-    icon: FolderOpen
-  },
-  { id: 'saved', label: 'Saved Outputs', helper: 'Your records and drafts', icon: Save }
-]
-
-const COLLAPSED_RAIL_MAIN: Array<{
-  id: (typeof NAV_ITEMS)[number]['id'] | 'chat'
-  label: string
-  icon: (typeof NAV_ITEMS)[number]['icon']
-}> = [
-  { id: 'chat', label: 'Chat', icon: MessageSquare },
-  { id: 'orb_dictate', label: 'Dictate', icon: PenLine },
-  { id: 'orb_voice', label: 'Voice', icon: Mic },
-  { id: 'orb_write', label: 'ORB Write', icon: FileEdit }
-]
-
-const COLLAPSED_RAIL_LIBRARY: Array<{
-  id: (typeof NAV_ITEMS)[number]['id']
-  label: string
-  icon: (typeof NAV_ITEMS)[number]['icon']
-}> = [
-  { id: 'templates', label: 'Templates', icon: FileText },
-  { id: 'documents', label: 'Documents & Guidance', icon: FolderOpen },
-  { id: 'saved', label: 'Saved outputs', icon: Save }
-]
-
-const MOBILE_DRAWER_QUICK_NAV: Array<{
-  id: (typeof NAV_ITEMS)[number]['id'] | 'projects' | 'chat'
-  label: string
-  helper?: string
-  icon: (typeof NAV_ITEMS)[number]['icon']
-}> = [
-  {
-    id: 'chat',
-    label: ORB_RESIDENTIAL_STATION_DEFINITIONS.chat.label,
-    helper: ORB_RESIDENTIAL_STATION_DEFINITIONS.chat.helper,
-    icon: MessageSquare
-  },
-  {
-    id: 'orb_dictate',
-    label: ORB_RESIDENTIAL_STATION_DEFINITIONS.orb_dictate.label,
-    helper: ORB_RESIDENTIAL_STATION_DEFINITIONS.orb_dictate.helper,
-    icon: PenLine
-  },
-  {
-    id: 'orb_voice',
-    label: ORB_RESIDENTIAL_STATION_DEFINITIONS.orb_voice.label,
-    helper: ORB_RESIDENTIAL_STATION_DEFINITIONS.orb_voice.helper,
-    icon: Mic
-  },
-  {
-    id: 'orb_write',
-    label: ORB_RESIDENTIAL_STATION_DEFINITIONS.orb_write.label,
-    helper: ORB_RESIDENTIAL_STATION_DEFINITIONS.orb_write.helper,
-    icon: FileEdit
-  },
-  { id: 'templates', label: 'Templates', helper: 'Recording library', icon: FileText },
-  { id: 'documents', label: 'Documents & Guidance', icon: FolderOpen },
-  { id: 'saved', label: 'Saved Outputs', helper: 'Your records and drafts', icon: Save },
-  { id: 'projects', label: 'Projects', icon: FolderKanban }
-]
+/** Phase 1A — single visible sidebar list (no Library section). */
+const RESIDENTIAL_VISIBLE_NAV = ORB_VISIBLE_SIDEBAR_NAV.map((entry) => ({
+  ...entry,
+  icon: NAV_ICON_BY_ID[entry.id] ?? MessageSquare,
+  helper:
+    entry.id === 'orb_dictate'
+      ? 'Speak or paste rough notes for a clearer draft'
+      : entry.id === 'saved'
+        ? 'Your records and drafts for review'
+        : entry.id === 'help'
+          ? 'Safety boundaries and support'
+          : entry.id === 'home'
+            ? 'Chat home and starters'
+            : undefined
+}))
 
 export type OrbResidentialStationId = (typeof NAV_ITEMS)[number]['id']
 
@@ -379,6 +301,8 @@ export function OrbResidentialSidebar({
   onNewChat,
   onOpenChat,
   onOpenStation,
+  onOpenHome,
+  onOpenHelp,
   onOpenSettings,
   onOpenSavedOutputs,
   onOpenProfile,
@@ -406,6 +330,8 @@ export function OrbResidentialSidebar({
   /** Return to the active chat thread without starting a new chat. */
   onOpenChat?: () => void
   onOpenStation: (station: OrbResidentialStationId) => void
+  onOpenHome?: () => void
+  onOpenHelp?: () => void
   onOpenSettings?: () => void
   onOpenSavedOutputs?: () => void
   onOpenProfile?: (anchor?: HTMLElement | null) => void
@@ -559,6 +485,27 @@ export function OrbResidentialSidebar({
     })
   }
 
+  function handleVisibleNavClick(navId: string) {
+    switch (navId) {
+      case 'home':
+      case 'chat':
+        onOpenHome?.() ?? onOpenChat?.()
+        break
+      case 'saved':
+        onOpenSavedOutputs?.()
+        break
+      case 'help':
+        onOpenHelp?.()
+        break
+      case 'settings':
+        onOpenSettings?.()
+        break
+      default:
+        openStation(navId as OrbResidentialStationId)
+        break
+    }
+  }
+
   if (collapsed) {
     return (
       <div
@@ -588,24 +535,18 @@ export function OrbResidentialSidebar({
           <MessageSquarePlus className="h-4 w-4 shrink-0" />
         </SidebarIconButton>
         <nav className="flex w-full flex-col gap-0.5 px-1" aria-label="ORB navigation">
-          {[...COLLAPSED_RAIL_MAIN, ...COLLAPSED_RAIL_LIBRARY].map((entry) => {
+          {RESIDENTIAL_VISIBLE_NAV.map((entry) => {
             const Icon = entry.icon
             return (
               <SidebarIconButton
                 key={entry.id}
                 label={entry.label}
-                onClick={() => {
-                  if (entry.id === 'chat') {
-                    onOpenChat?.()
-                    return
-                  }
-                  if (entry.id === 'saved') {
-                    onOpenSavedOutputs?.()
-                    return
-                  }
-                  onOpenStation(entry.id)
-                }}
-                dataOrb={entry.id === 'chat' ? 'orb-sidebar-chat' : `orb-sidebar-station-${entry.id}`}
+                onClick={() => handleVisibleNavClick(entry.id)}
+                dataOrb={
+                  entry.id === 'chat' || entry.id === 'home'
+                    ? 'orb-sidebar-chat'
+                    : `orb-sidebar-station-${entry.id}`
+                }
               >
                 <Icon className="h-4 w-4 shrink-0" />
               </SidebarIconButton>
@@ -613,9 +554,6 @@ export function OrbResidentialSidebar({
           })}
         </nav>
         <div className="mt-auto flex w-full flex-col gap-0.5 px-1">
-          <SidebarIconButton label="Settings" onClick={() => onOpenSettings?.()} dataOrb="orb-sidebar-settings">
-            <Settings className="h-4 w-4 shrink-0" />
-          </SidebarIconButton>
           <SidebarIconButton
             label="Account"
             onClick={(e) => onOpenProfile?.(e.currentTarget)}
@@ -720,7 +658,7 @@ export function OrbResidentialSidebar({
               <Search className="h-4 w-4 shrink-0" />
               <span className="text-sm">Search</span>
             </button>
-            {MOBILE_DRAWER_QUICK_NAV.map((item) => {
+            {RESIDENTIAL_VISIBLE_NAV.map((item) => {
               const Icon = item.icon
               const badge =
                 item.id === 'saved' && savedOutputsCount ? String(savedOutputsCount) : undefined
@@ -730,24 +668,11 @@ export function OrbResidentialSidebar({
                   type="button"
                   onClick={() => {
                     onClose?.()
-                    if (item.id === 'chat') {
-                      onOpenChat?.()
-                      return
-                    }
-                    if (item.id === 'saved') {
-                      onOpenSavedOutputs?.()
-                      return
-                    }
-                    if (item.id === 'projects') {
-                      setProjectsCollapsed(false)
-                      writeOrbSidebarSectionCollapsed('projects', false)
-                      return
-                    }
-                    onOpenStation(item.id)
+                    handleVisibleNavClick(item.id)
                   }}
                   className="orb-sidebar-nav-item w-full"
                   data-orb-sidebar-station={item.id}
-                  {...(item.id === 'orb_dictate' ? { 'data-orb-sidebar-magic-notes': true } : {})}
+                  {...(item.id === 'orb_dictate' ? { 'data-orb-sidebar-dictate': true } : {})}
                 >
                   <Icon className="h-4 w-4 shrink-0" />
                   <span className="flex min-w-0 flex-1 flex-col text-left">
@@ -913,65 +838,38 @@ export function OrbResidentialSidebar({
         </SidebarCollapsibleSection>
 
         {!isMobile ? (
-          <nav className="mb-2 space-y-3" aria-label="ORB desktop navigation" data-orb-sidebar-desktop-nav>
-            <div data-orb-sidebar-section="main">
-              <p className="px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--orb-muted)]">
-                Main
-              </p>
-              <ul className="mt-1 space-y-0.5" data-orb-sidebar-main>
-                {DESKTOP_MAIN_NAV.map((entry) => {
-                  const Icon = entry.icon
-                  const isChat = entry.id === 'chat'
-                  return (
-                    <li key={entry.id}>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (isChat) {
-                            onOpenChat?.()
-                            return
-                          }
-                          openStation(entry.id as OrbResidentialStationId)
-                        }}
-                        className="orb-sidebar-nav-item w-full"
-                        {...(entry.id === 'orb_dictate' ? { 'data-orb-sidebar-magic-notes': true } : {})}
-                        {...(isChat ? { 'data-orb-sidebar-chat': true } : { 'data-orb-sidebar-station': entry.id })}
-                      >
-                        <Icon className="h-4 w-4 shrink-0" aria-hidden />
-                        <span className="flex min-w-0 flex-1 flex-col text-left">
-                          <span className="text-sm">{entry.label}</span>
-                          {entry.helper ? (
-                            <span className="text-[10px] leading-tight text-[var(--orb-muted)]">{entry.helper}</span>
-                          ) : null}
-                        </span>
-                        {entry.id === 'saved' && savedOutputsCount ? (
-                          <span className="rounded-full bg-[var(--orb-surface-hover)] px-2 py-0.5 text-[10px]">
-                            {savedOutputsCount}
-                          </span>
+          <nav className="mb-2 space-y-0.5" aria-label="ORB desktop navigation" data-orb-sidebar-desktop-nav>
+            <ul className="space-y-0.5" data-orb-sidebar-main>
+              {RESIDENTIAL_VISIBLE_NAV.map((entry) => {
+                const Icon = entry.icon
+                return (
+                  <li key={entry.id}>
+                    <button
+                      type="button"
+                      onClick={() => handleVisibleNavClick(entry.id)}
+                      className="orb-sidebar-nav-item w-full"
+                      {...(entry.id === 'orb_dictate' ? { 'data-orb-sidebar-dictate': true } : {})}
+                      {...(entry.id === 'chat' || entry.id === 'home'
+                        ? { 'data-orb-sidebar-chat': true }
+                        : { 'data-orb-sidebar-station': entry.id })}
+                    >
+                      <Icon className="h-4 w-4 shrink-0" aria-hidden />
+                      <span className="flex min-w-0 flex-1 flex-col text-left">
+                        <span className="text-sm">{entry.label}</span>
+                        {entry.helper ? (
+                          <span className="text-[10px] leading-tight text-[var(--orb-muted)]">{entry.helper}</span>
                         ) : null}
-                      </button>
-                    </li>
-                  )
-                })}
-              </ul>
-            </div>
-
-            <div data-orb-sidebar-section="library">
-              <p className="px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--orb-muted)]">
-                Library
-              </p>
-              <ul className="mt-1 space-y-0.5" data-orb-sidebar-library>
-                {DESKTOP_LIBRARY_NAV.map((station) => (
-                  <DesktopSidebarNavButton
-                    key={station.id}
-                    label={station.label}
-                    icon={station.icon}
-                    stationId={station.id}
-                    onClick={() => openStation(station.id)}
-                  />
-                ))}
-              </ul>
-            </div>
+                      </span>
+                      {entry.id === 'saved' && savedOutputsCount ? (
+                        <span className="rounded-full bg-[var(--orb-surface-hover)] px-2 py-0.5 text-[10px]">
+                          {savedOutputsCount}
+                        </span>
+                      ) : null}
+                    </button>
+                  </li>
+                )
+              })}
+            </ul>
           </nav>
         ) : null}
       </div>

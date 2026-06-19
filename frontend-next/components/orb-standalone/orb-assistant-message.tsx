@@ -923,10 +923,6 @@ export function OrbResponseActionBar({
   }
   if (exportEnabled && onExport) {
     moreActions.push(<ActionChip key="export" label="Export" onClick={onExport} dataAttr="export" />)
-  } else if (onExport === undefined) {
-    moreActions.push(
-      <ActionChip key="export-soon" label="Export coming soon" onClick={() => {}} disabled dataAttr="export-coming-soon" />
-    )
   }
   if (!isInspection && onInspectionPrep) {
     moreActions.push(<ActionChip key="inspection-more" label="Inspection prep" onClick={onInspectionPrep} />)

@@ -4,7 +4,7 @@ import { useState, type ReactNode } from 'react'
 import { Loader2, PanelRightClose, PanelRightOpen, Sparkles } from 'lucide-react'
 
 import type { OrbDictateBrainAnalysis, OrbDictateBrainSuggestion } from '@/lib/orb/dictate/orb-dictate-brain-analysis'
-import { ORB_RESIDENTIAL_DICTATE_MAGIC_NOTES_COPY, orbResidentialReviewChecks } from '@/lib/orb/orb-residential-copy'
+import { ORB_RESIDENTIAL_DICTATE_COPY, orbResidentialReviewChecks } from '@/lib/orb/orb-residential-copy'
 import {
   orbRecordingSuggestedOutputs,
   resolveOrbRecordingRecordType
@@ -189,7 +189,7 @@ export function OrbDictateBrainPanel({
           <h3 className="truncate text-sm font-semibold text-[var(--orb-foreground)]">ORB Review</h3>
           {!collapsed ? (
             <p className="truncate text-[10px] text-[var(--orb-muted)]">
-              {ORB_RESIDENTIAL_DICTATE_MAGIC_NOTES_COPY.reviewHint} You remain responsible for the final record.
+              {ORB_RESIDENTIAL_DICTATE_COPY.reviewHint} You remain responsible for the final record.
             </p>
           ) : null}
         </div>

@@ -473,8 +473,8 @@ export function OrbStandaloneSettingsPanel({
                 </div>
               ) : null}
               <p className="text-[11px] leading-5 text-[var(--orb-muted)]">
-                Use Dictate, Templates and Documents from the sidebar for structured recording, handovers and inspection
-                prep.
+                Use Chat, Dictate, Voice and ORB Write from the sidebar. Save finished wording to Records &amp; Drafts
+                for adult review.
               </p>
             </SettingsBlock>
           ) : null}

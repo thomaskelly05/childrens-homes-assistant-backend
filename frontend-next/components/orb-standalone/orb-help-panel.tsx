@@ -1,6 +1,11 @@
 'use client'
 
 import { OrbStandalonePanelShell } from '@/components/orb-standalone/orb-standalone-panel-shell'
+import {
+  ORB_HELP_PANEL_SUBTITLE,
+  ORB_HELP_PANEL_TITLE,
+  ORB_NAV_RECORDS
+} from '@/lib/orb/orb-user-facing-names'
 
 const SECTIONS = [
   {
@@ -24,8 +29,8 @@ const SECTIONS = [
     body: 'ORB supports thinking, recording quality and reflection. It does not replace safeguarding procedures, LADO, police, social worker, clinical or legal advice. If a child is at immediate risk, follow local safeguarding and emergency procedures.'
   },
   {
-    title: 'Residential agents',
-    body: 'Agents such as Safeguarding Thinking, Record This Properly, Ofsted Lens and Manager Copilot shape tone and depth. You can switch agents from the composer or sidebar.'
+    title: 'Chat starters',
+    body: 'Use starters such as Daily record, Safeguarding reflection, or Help me record this properly. These are actions in Chat — not separate product areas.'
   },
   {
     title: 'Learning / Academy / NVQ',
@@ -44,21 +49,21 @@ const SECTIONS = [
     body: 'Attach a document from Tools or the Documents panel, then use lenses such as Explain, Summarise, Action plan or Reg 44 review. ORB uses your upload — not live OS records.'
   },
   {
-    title: 'Shift Builder',
-    body: 'Paste shift notes to draft handover prompts, incident flags and manager review questions. Treat outputs as drafts for your professional judgement.'
+    title: 'Handover and shift notes',
+    body: 'Use Chat or Dictate for handover notes and shift reflection. Treat outputs as drafts for your professional judgement and manager oversight.'
   },
   {
     title: 'Voice and accessibility',
     body: 'Push-to-talk voice input is optional and only starts when you tap the microphone — ORB does not listen passively. Auto-speak reads completed answers using your chosen voice; it never requests microphone permission for speech output.'
   },
   {
-    title: 'Projects and saved outputs',
-    body: 'Organise chats in projects, save useful outputs from the Library, and reuse them in new conversations. Saved outputs live under Library and Tools.'
+    title: `Projects and ${ORB_NAV_RECORDS}`,
+    body: `Organise chats in projects and save useful records and drafts from Chat, Dictate or Voice. Open ${ORB_NAV_RECORDS} from the sidebar to review before use in practice.`
   },
   {
     title: 'ORB Residential data safety',
     body:
-      'ORB Residential does not access IndiCare OS records. It uses your profile, conversation, uploaded documents and IndiCare residential intelligence. Temporary chat skips your saved ORB profile context for that chat. ORB may use trusted AI providers to generate responses — they process the text you send, not IndiCare OS records. Avoid unnecessary personal details; use initials where you can. Saved outputs and feedback are stored so you can reuse them and so ORB can improve through human review — not automatic care decisions. IndiCare OS ORB (/assistant/orb) may use permissioned OS records only where explicitly available and allowed.'
+      'Avoid unnecessary personal details; use initials where you can. Records and drafts are stored for adult review and reuse — not automatic care decisions. IndiCare OS ORB (/assistant/orb) may use permissioned OS records only where explicitly available and allowed.'
   },
   {
     title: 'Privacy and data',
@@ -74,10 +79,10 @@ export function OrbHelpPanel({ open, onClose }: { open: boolean; onClose: () => 
   return (
     <OrbStandalonePanelShell
       open={open}
-      title="Using ORB"
-      subtitle="ORB Residential"
+      title={ORB_HELP_PANEL_TITLE}
+      subtitle={ORB_HELP_PANEL_SUBTITLE}
       onClose={onClose}
-      ariaLabel="ORB help"
+      ariaLabel="ORB help and safety"
       panelId="help"
       layout="center"
     >

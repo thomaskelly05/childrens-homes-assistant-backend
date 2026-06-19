@@ -5,7 +5,7 @@ import { Maximize2, Mic, Minimize2, Pause, PenLine, Play, Sparkles, Square } fro
 import { OrbDictatePanelLayoutControl } from '@/components/orb/dictate/OrbDictatePanelLayoutControl'
 import { OrbDictateTemplateSelector } from '@/components/orb/dictate/OrbDictateTemplateSelector'
 import type { OrbDictatePanelLayout } from '@/lib/orb/dictate/orb-dictate-panel-layout'
-import { ORB_RESIDENTIAL_DICTATE_MAGIC_NOTES_COPY } from '@/lib/orb/orb-residential-copy'
+import { ORB_RESIDENTIAL_DICTATE_COPY } from '@/lib/orb/orb-residential-copy'
 import type { OrbDictateStudioTemplate } from '@/lib/orb/dictate/orb-dictate-studio-templates'
 
 export type OrbDictatePrimaryAction = 'analyse' | 'generate' | 'disabled'
@@ -94,20 +94,14 @@ export function OrbDictateTopBar({
             className="hidden shrink-0 pt-1 text-sm font-semibold tracking-tight text-[var(--orb-foreground)] sm:block"
             data-orb-dictate-title
           >
-            {ORB_RESIDENTIAL_DICTATE_MAGIC_NOTES_COPY.title}
+            {ORB_RESIDENTIAL_DICTATE_COPY.title}
           </h2>
           <div className="hidden min-w-0 flex-col lg:flex">
             <p
               className="max-w-xs text-[11px] leading-snug text-[var(--orb-muted)]"
-              data-orb-dictate-magic-notes-subtitle
+              data-orb-dictate-subtitle
             >
-              {ORB_RESIDENTIAL_DICTATE_MAGIC_NOTES_COPY.subtitle}
-            </p>
-            <p
-              className="text-[10px] leading-snug text-[var(--orb-muted)]/75"
-              data-orb-dictate-magic-notes-powered-by
-            >
-              {ORB_RESIDENTIAL_DICTATE_MAGIC_NOTES_COPY.poweredBy}
+              {ORB_RESIDENTIAL_DICTATE_COPY.subtitle}
             </p>
           </div>
           <OrbDictateTemplateSelector

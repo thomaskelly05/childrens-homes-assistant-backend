@@ -24,6 +24,19 @@ export const ORB_DEPRECATED_PRIMARY_NAV_PANEL_IDS: readonly OrbDeprecatedPrimary
   'knowledge'
 ] as const
 
+/** Phase 1A visible sidebar — Home through Settings only. */
+export const ORB_VISIBLE_SIDEBAR_NAV_IDS = [
+  'home',
+  'chat',
+  'orb_dictate',
+  'orb_voice',
+  'orb_write',
+  'saved',
+  'help',
+  'settings'
+] as const
+
+/** @deprecated Use ORB_VISIBLE_SIDEBAR_NAV_IDS — kept for transitional imports. */
 export const ORB_VISIBLE_MAIN_NAV_IDS = [
   'chat',
   'orb_dictate',
@@ -31,7 +44,8 @@ export const ORB_VISIBLE_MAIN_NAV_IDS = [
   'orb_write'
 ] as const
 
-export const ORB_VISIBLE_LIBRARY_NAV_IDS = ['templates', 'documents', 'saved'] as const
+/** Hidden from primary nav — templates/documents remain internal workflow support. */
+export const ORB_VISIBLE_LIBRARY_NAV_IDS = [] as const
 
 export type OrbConvergenceDestination =
   | { kind: 'station'; station: 'templates' | 'orb_write' | 'documents' | 'orb_dictate' }
@@ -48,22 +62,27 @@ export type OrbConvergenceRoute = {
 
 const CONVERGENCE_ROUTES: Record<OrbDeprecatedPrimaryNavPanelId, OrbConvergenceRoute> = {
   shift_builder: {
-    destination: { kind: 'station', station: 'templates' },
+    destination: {
+      kind: 'chat',
+      prompt: 'Help me prepare a handover note for the next shift — key risks, presentation and practical tasks.',
+      mode: 'Record This Properly'
+    },
     message:
-      'Shift Builder has moved into Templates and ORB Write. Start from the Handover template or ask ORB in Chat.',
-    templatesRecordTypeId: 'handover',
-    templatesSearch: 'handover'
+      'Shift planning lives in Chat and Dictate now. Try a handover starter in Chat or capture notes in Dictate.'
   },
   review: {
     destination: { kind: 'station', station: 'orb_write' },
     message:
-      'Review has moved into ORB Write assistant actions and Chat. Use “Review this record” in ORB Write or ask ORB in Chat.'
+      'Review lives in ORB Write. Open a draft in Records & Drafts or use review actions in ORB Write.'
   },
   inspection_readiness: {
-    destination: { kind: 'station', station: 'documents' },
+    destination: {
+      kind: 'chat',
+      prompt: 'Help me prepare inspection evidence thinking — impact on the child, adult actions and follow-up.',
+      mode: 'Ofsted Lens'
+    },
     message:
-      'Inspection evidence preparation has moved into Documents & Guidance and Chat. Use the Ofsted lens or ask ORB in Chat.',
-    documentLens: 'ofsted'
+      'Inspection evidence preparation is a Chat starter now. Use Prepare for inspection or ask ORB in Chat.'
   },
   safeguarding_thinking: {
     destination: {
@@ -73,16 +92,21 @@ const CONVERGENCE_ROUTES: Record<OrbDeprecatedPrimaryNavPanelId, OrbConvergenceR
       mode: 'Safeguarding Thinking'
     },
     message:
-      'Safeguarding Thinking has moved into Chat starters and Templates. Start a safeguarding concern template or ask ORB in Chat.'
+      'Safeguarding reflection is a Chat starter. Use Safeguarding reflection or ask ORB in Chat — follow local procedures.'
   },
   record_properly: {
-    destination: { kind: 'station', station: 'orb_dictate' },
+    destination: {
+      kind: 'chat',
+      prompt:
+        'Help me record this properly. I will share rough notes — keep the child central and help me record observable facts clearly for adult review.',
+      mode: 'Record This Properly'
+    },
     message:
-      'Record This Properly has moved into Dictate, ORB Write and Templates. Capture rough notes in Dictate or polish in ORB Write.'
+      'Use Help me record this properly in Chat, or capture rough notes in Dictate, then review in ORB Write.'
   },
   knowledge: {
-    destination: { kind: 'station', station: 'documents' },
-    message: 'Knowledge Library has merged into Documents & Guidance — policies, guidance and document analyser.'
+    destination: { kind: 'chat', prompt: 'Help me understand a policy or guidance document I will describe.' },
+    message: 'Guidance questions belong in Chat. Attach a document from the composer if you have one.'
   }
 }
 
@@ -113,7 +137,7 @@ export const ORB_CONVERGED_CHAT_STARTERS: Array<{ text: string; mode?: Standalon
   { text: 'Review written practice' },
   { text: 'Think through a safeguarding concern', mode: 'Safeguarding Thinking' },
   { text: 'Prepare for inspection / Ofsted evidence', mode: 'Ofsted Lens' },
-  { text: 'Record this properly', mode: 'Record This Properly' },
+  { text: 'Help me record this properly', mode: 'Record This Properly' },
   { text: 'Create manager summary' },
   {
     text: 'Build action plan from Reg 44 / Statement of Purpose',

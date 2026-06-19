@@ -1,5 +1,7 @@
 'use client'
 
+import { ORB_NAV_RECORDS } from '@/lib/orb/orb-user-facing-names'
+
 import { useState } from 'react'
 import { Copy, Download, FolderPlus, MessageSquarePlus, Save } from 'lucide-react'
 
@@ -92,7 +94,7 @@ export function OrbOutputSaveActions({
     try {
       const record = await createOrbSavedOutput(buildBody(resolvedType))
       onSaved?.(record.id)
-      onNotice?.('Saved to Saved Outputs — needs adult review before sharing.')
+      onNotice?.(`Saved to ${ORB_NAV_RECORDS} — adult review required before sharing.`)
       setSaveOpen(false)
     } catch {
       void navigator.clipboard.writeText(markdown)
@@ -142,7 +144,7 @@ export function OrbOutputSaveActions({
           data-orb-save-output
         >
           <FolderPlus className="h-3.5 w-3.5" aria-hidden />
-          Save to Saved Outputs
+          Save to {ORB_NAV_RECORDS}
         </button>
         <button
           type="button"

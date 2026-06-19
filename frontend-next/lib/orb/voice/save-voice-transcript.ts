@@ -142,14 +142,14 @@ export async function saveVoiceTranscript(
       ok: true,
       savedRemote: true,
       outputId: record.id,
-      message: 'Saved to ORB Saved Outputs.'
+      message: 'Saved to Records & Drafts.'
     }
   } catch {
     saveLocalFallback(turns, payload.title, options)
     return {
       ok: true,
       savedRemote: false,
-      message: 'Saved locally. Reconnect to sync to Saved Outputs.'
+      message: 'Saved locally. Reconnect to sync to Records & Drafts.'
     }
   }
 }

@@ -419,7 +419,7 @@ export function OrbAgentPanel({
                   onClick={onOpenSavedOutputs}
                   className="rounded-lg border border-cyan-400/30 bg-cyan-500/10 px-3 py-1.5 text-xs text-cyan-100"
                 >
-                  Open Saved Outputs
+                  Open Records & Drafts
                 </button>
               ) : null}
             </div>

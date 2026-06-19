@@ -3,6 +3,8 @@
  * Surfaces import taglines/helpers from here; do not duplicate mode copy in sidebars or panels.
  */
 
+import { ORB_DICTATE_SUBTITLE } from './orb-user-facing-names.ts'
+
 export type OrbResidentialStationId = 'chat' | 'orb_voice' | 'orb_dictate' | 'orb_write'
 
 export type OrbResidentialStationDefinition = {
@@ -33,8 +35,8 @@ export const ORB_RESIDENTIAL_STATION_DEFINITIONS: Record<
   orb_dictate: {
     id: 'orb_dictate',
     label: 'Dictate',
-    tagline: 'Record, upload or paste conversations and turn them into safer notes.',
-    helper: 'Record meetings, visits and conversations for safer notes'
+    tagline: ORB_DICTATE_SUBTITLE,
+    helper: 'Speak or paste rough notes for a clearer draft'
   },
   orb_write: {
     id: 'orb_write',

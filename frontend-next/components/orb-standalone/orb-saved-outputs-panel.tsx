@@ -46,16 +46,15 @@ import {
 import { getOrbLocalSavedOutput, removeOrbLocalSavedOutput } from '@/lib/orb/orb-saved-outputs-local'
 import { listOrbSavedOutputsResilient, orbLocalSavedOutputAsRecord } from '@/lib/orb/orb-saved-outputs-resilience'
 import type { StandaloneProject, StandaloneWorkspace } from '@/lib/orb/standalone-local-store'
-
-const FILTER_CHIPS: Array<{ id: string; label: string; type: string }> = [
-  { id: 'all', label: 'All', type: '' },
-  { id: 'briefings', label: 'Briefings', type: 'manager_briefing' },
-  { id: 'action_plans', label: 'Action plans', type: 'action_plan' },
-  { id: 'document_reviews', label: 'Document reviews', type: 'document_review' },
-  { id: 'research', label: 'Research', type: 'deep_research' },
-  { id: 'safeguarding', label: 'Safeguarding', type: 'safeguarding_reflection' },
-  { id: 'ofsted', label: 'Ofsted', type: 'ofsted_evidence_map' }
-]
+import {
+  ORB_RECORDS_EMPTY_SUBTITLE,
+  ORB_RECORDS_EMPTY_TITLE,
+  ORB_RECORDS_FILTER_CHIPS,
+  ORB_RECORDS_FOOTER,
+  ORB_RECORDS_LOAD_ERROR,
+  ORB_RECORDS_PANEL_SUBTITLE,
+  ORB_RECORDS_PANEL_TITLE
+} from '@/lib/orb/orb-user-facing-names'
 
 function recordToView(record: OrbSavedOutputRecord): OrbIntelligenceOutputView {
   const intel = record.intelligence_output as OrbIntelligenceOutputView | undefined
@@ -141,7 +140,7 @@ export function OrbSavedOutputsPanel({
         setError(null)
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not load saved outputs')
+      setError(err instanceof Error ? err.message : ORB_RECORDS_LOAD_ERROR)
     } finally {
       setLoading(false)
       refreshGuardRef.current = false
@@ -198,7 +197,7 @@ export function OrbSavedOutputsPanel({
   }
 
   async function handleDelete(id: string) {
-    if (!window.confirm('Delete this saved output permanently?')) return
+    if (!window.confirm('Delete this record or draft permanently?')) return
     if (id.startsWith('local_')) {
       removeOrbLocalSavedOutput(id)
     } else {
@@ -230,12 +229,12 @@ export function OrbSavedOutputsPanel({
   return (
     <OrbStandalonePanelShell
       open={open}
-      title="Saved Outputs"
-      subtitle={isMobile ? 'Saved ORB work for reuse, export and review.' : 'Reuse, export and improve your ORB work'}
+      title={ORB_RECORDS_PANEL_TITLE}
+      subtitle={isMobile ? ORB_RECORDS_PANEL_SUBTITLE : ORB_RECORDS_PANEL_SUBTITLE}
       onClose={onClose}
       panelId="saved_outputs"
-      ariaLabel="ORB saved outputs"
-      footer={isMobile ? undefined : 'Saved outputs are standalone ORB artefacts.'}
+      ariaLabel="ORB records and drafts"
+      footer={isMobile ? undefined : ORB_RECORDS_FOOTER}
       {...orbStationShellProps(residentialSurface, 'wide')}
     >
       <div
@@ -247,12 +246,8 @@ export function OrbSavedOutputsPanel({
         <div className="flex w-full shrink-0 flex-col lg:w-[var(--orb-desktop-saved-list-width,27.5rem)] lg:max-w-[var(--orb-desktop-saved-list-width,27.5rem)] lg:border-b-0 lg:border-r lg:border-[var(--orb-mobile-ws-card-border,var(--orb-line))]">
           {!isMobile ? (
           <OrbStudioHeader
-            title={isMobile ? 'Saved outputs' : 'Document archive'}
-            subtitle={
-              isMobile
-                ? 'Saved ORB work for reuse, export and review.'
-                : 'Saved ORB work — not templates or the recording library'
-            }
+            title={ORB_RECORDS_PANEL_TITLE}
+            subtitle={ORB_RECORDS_PANEL_SUBTITLE}
             className="px-2 pb-2 lg:px-3"
           />
           ) : null}
@@ -260,7 +255,7 @@ export function OrbSavedOutputsPanel({
             <div className="p-3 pb-0">
               <OrbStationReconnectBanner onRefresh={() => void refresh()} />
               <p className="mt-1 text-[10px] text-[var(--orb-mobile-ws-muted,var(--orb-muted))]" data-orb-saved-outputs-local-hint>
-                Showing {storageMode === 'mixed' ? 'local and synced' : 'local'} saved outputs until ORB reconnects.
+                Showing {storageMode === 'mixed' ? 'local and synced' : 'local'} records and drafts until ORB reconnects.
               </p>
             </div>
           ) : null}
@@ -289,7 +284,7 @@ export function OrbSavedOutputsPanel({
                         data-orb-saved-outputs-mobile-filters
                       >
                         <div className="flex flex-wrap gap-1.5">
-                          {FILTER_CHIPS.map((chip) => (
+                          {ORB_RECORDS_FILTER_CHIPS.map((chip) => (
                             <OrbPremiumPill
                               key={chip.id}
                               active={chipFilter === chip.id}
@@ -337,7 +332,7 @@ export function OrbSavedOutputsPanel({
                   </>
                 ) : (
                   <>
-                    {FILTER_CHIPS.map((chip) => (
+                    {ORB_RECORDS_FILTER_CHIPS.map((chip) => (
                       <OrbPremiumPill
                         key={chip.id}
                         active={chipFilter === chip.id}
@@ -403,14 +398,14 @@ export function OrbSavedOutputsPanel({
               ) : (
                 <OrbStationEmptyState
                   dataAttr="saved_outputs_error"
-                  title="Could not load saved outputs"
-                  body="Try again in a moment. Use Details in account settings if this persists."
+                  title={ORB_RECORDS_LOAD_ERROR}
+                  body="Try again in a moment. Open Help & Safety or account settings if this persists."
                 />
               )
             ) : items.length === 0 ? (
               <OrbStudioEmptyState
-                title="Nothing saved yet."
-                description={isMobile ? undefined : 'Save reviews, action plans and documents here.'}
+                title={ORB_RECORDS_EMPTY_TITLE}
+                description={isMobile ? undefined : ORB_RECORDS_EMPTY_SUBTITLE}
                 className={isMobile ? '!px-4 !py-6' : undefined}
                 actions={
                   <>
@@ -555,7 +550,7 @@ export function OrbSavedOutputsPanel({
             >
               {items.length === 0 && !isMobile ? (
                 <div className="space-y-3" data-orb-saved-output-empty-state>
-                  <p className="font-medium text-[var(--orb-foreground)]">Nothing saved yet.</p>
+                  <p className="font-medium text-[var(--orb-foreground)]">{ORB_RECORDS_EMPTY_TITLE}</p>
                   <p className="text-xs">Save reviews, action plans and documents here.</p>
                   <div className="flex flex-wrap justify-center gap-2">
                     {onStartInOrbWrite ? (
@@ -571,7 +566,7 @@ export function OrbSavedOutputsPanel({
                   </div>
                 </div>
               ) : (
-                'Select a saved output to open, export, reopen in ORB Write, or reuse in chat.'
+                'Select a record or draft to open, review in ORB Write, or reuse in Chat.'
               )}
             </div>
           )}

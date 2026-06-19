@@ -1,5 +1,16 @@
 import { convergedChatStarters } from '@/lib/orb/orb-converged-actions'
 import {
+  ORB_CHAT_EMPTY_HEADING,
+  ORB_CHAT_EMPTY_SUBLINE,
+  ORB_DICTATE_CAPTURE_GUIDANCE,
+  ORB_DICTATE_CAPTURE_PROMPT,
+  ORB_DICTATE_RESPONSIBILITY,
+  ORB_DICTATE_REVIEW_HINT,
+  ORB_DICTATE_SUBTITLE,
+  ORB_DICTATE_TITLE,
+  ORB_STARTER_RECORD_PROPERLY_PROMPT
+} from '@/lib/orb/orb-user-facing-names'
+import {
   ORB_RESIDENTIAL_DICTATE_RESPONSIBILITY_STRIP,
   ORB_RESIDENTIAL_PRIVACY_GUIDANCE_ITEMS,
   ORB_RESIDENTIAL_PRIVACY_STRIP,
@@ -151,7 +162,7 @@ export const ORB_RESIDENTIAL_STARTER_GROUPS: OrbResidentialStarterGroup[] = [
         text: 'Prepare for inspection',
         mode: 'Ofsted Lens',
         prompt:
-          'Help me prepare inspection evidence preparation evidence thinking — what happened, impact on the child, adult actions and follow-up.'
+          'Help me prepare inspection evidence thinking — what happened, impact on the child, adult actions and follow-up.'
       },
       {
         text: 'Regulation 44 support',
@@ -204,22 +215,23 @@ export const ORB_RESIDENTIAL_PRIMARY_STARTERS: ResidentialStarter[] = [
   }
 ]
 
-/** Desktop Dictate “Magic Notes” copy — visual and UX tone without renaming the product globally. */
-export const ORB_RESIDENTIAL_DICTATE_MAGIC_NOTES_COPY = {
-  title: 'ORB Magic Notes',
-  subtitle: 'Turn rough speech, meetings and observations into safer notes.',
-  poweredBy: 'Powered by ORB Dictate',
-  capturePrompt: 'Start with speech, paste notes or upload audio',
-  captureGuidance:
-    'ORB will help structure what was shared, what was observed and what may need follow-up.',
-  reviewHint: 'ORB will help check what may be missing before you write the final record.',
-  responsibility: 'Adult review required before use.'
+/** Dictate station copy — single visible name (Dictate). */
+export const ORB_RESIDENTIAL_DICTATE_COPY = {
+  title: ORB_DICTATE_TITLE,
+  subtitle: ORB_DICTATE_SUBTITLE,
+  capturePrompt: ORB_DICTATE_CAPTURE_PROMPT,
+  captureGuidance: ORB_DICTATE_CAPTURE_GUIDANCE,
+  reviewHint: ORB_DICTATE_REVIEW_HINT,
+  responsibility: ORB_DICTATE_RESPONSIBILITY
 } as const
+
+/** @deprecated Use ORB_RESIDENTIAL_DICTATE_COPY */
+export const ORB_RESIDENTIAL_DICTATE_MAGIC_NOTES_COPY = ORB_RESIDENTIAL_DICTATE_COPY
 
 /** Calm IndiCare Intelligence product language — one line per station, not over-branded. */
 export const ORB_RESIDENTIAL_STATION_PRODUCT_COPY = {
   voice: 'Talk it through with ORB.',
-  magicNotes: 'Turn rough notes into safer recording.',
+  dictate: ORB_DICTATE_SUBTITLE,
   write: 'Structure, review and finalise with adult approval.',
   documents: 'Use authorised documents as sources. ORB shows what it used.',
   templates: 'Choose a structure that keeps the child central.'
@@ -259,21 +271,17 @@ export function residentialStarterPrompt(starter: ResidentialStarter): string {
 export const ORB_RESIDENTIAL_PRODUCT_NAME = 'ORB Residential'
 export const ORB_RESIDENTIAL_TAGLINE = 'Powered by IndiCare Intelligence'
 
-/** Action-led empty heading — desktop and mobile share the same clear prompt. */
-export const ORB_RESIDENTIAL_EMPTY_HEADING_DESKTOP = 'What do you need help with?'
+/** Action-led empty heading — child-centred, ORB-specific. */
+export const ORB_RESIDENTIAL_EMPTY_HEADING_DESKTOP = ORB_CHAT_EMPTY_HEADING
 
-/** Calm ChatGPT-style empty heading on phone (`/orb`). */
-export const ORB_RESIDENTIAL_MOBILE_EMPTY_HEADING = 'What do you need help with?'
+export const ORB_RESIDENTIAL_MOBILE_EMPTY_HEADING = ORB_CHAT_EMPTY_HEADING
 
-/** Optional compact subline on mobile home — kept short to avoid clutter. */
-export const ORB_RESIDENTIAL_MOBILE_EMPTY_SUBLINE = 'Record, reflect or prepare a safer note.'
+export const ORB_RESIDENTIAL_MOBILE_EMPTY_SUBLINE = ORB_CHAT_EMPTY_SUBLINE
+
+export const ORB_RESIDENTIAL_EMPTY_SUBLINE = ORB_CHAT_EMPTY_SUBLINE
 
 /** Functional product line — hero / first-run only, not global chrome. */
 export const ORB_RESIDENTIAL_BRAND_EMOTIONAL_LINE = 'IndiCare Intelligence'
-
-/** Specialist residential childcare positioning on the home screen. */
-export const ORB_RESIDENTIAL_EMPTY_SUBLINE =
-  'Built for safer recording, stronger reflection and clearer evidence.'
 
 /** Compact residential starters — primary pills on desktop / mobile subsets. */
 export const ORB_RESIDENTIAL_MOBILE_EMPTY_STARTERS = ORB_RESIDENTIAL_MOBILE_PRIMARY_STARTERS

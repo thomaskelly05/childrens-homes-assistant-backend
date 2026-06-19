@@ -207,7 +207,7 @@ export function buildOrbRetentionPolicySummary(): OrbRetentionPolicySummary {
       RETENTION_FINALISING,
       'ORB Residential does not access IndiCare OS care records unless you separately use operational ORB within IndiCare OS.',
       'Feedback submissions may store trimmed question/answer snapshots (up to ~6,000 characters) for quality review.',
-      'Deleting a Dictate note does not remove copies already saved to Saved Outputs.',
+      'Deleting a Dictate note does not remove copies already saved to Records & Drafts.',
       'No automated account erasure endpoint is available in this pilot build.'
     ]
   }
@@ -306,7 +306,7 @@ export function buildOrbPrivacyNotice(): OrbPrivacyNotice {
       section('audio-voice', 'Audio and voice handling', [
         retention.audioRetention,
         'Voice sessions may create transcripts for drafting and support. Do not use ORB for emergencies.',
-        'Transcripts can be saved to Saved Outputs if you choose.'
+        'Transcripts can be saved to Records & Drafts if you choose.'
       ]),
       section('dictate', 'Dictate transcript handling', [
         retention.transcriptRetention,

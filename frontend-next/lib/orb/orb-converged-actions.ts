@@ -12,6 +12,7 @@ import {
   type OrbDocumentLens
 } from '@/lib/orb/document-intelligence'
 import type { StandaloneOrbMode } from '@/lib/orb/standalone-client'
+import { ORB_STARTER_RECORD_PROPERLY_PROMPT } from '@/lib/orb/orb-user-facing-names'
 
 export type OrbConvergedSurface =
   | 'chat'
@@ -227,7 +228,7 @@ export const ORB_CONVERGED_WRITE_ACTIONS: OrbConvergedAction[] = [
   },
   {
     id: 'record_properly',
-    label: 'Record this properly',
+    label: 'Help me record this properly',
     description: 'Turn rough notes into a professional residential record',
     category: 'core',
     surfaces: ['orb_write', 'chat', 'dictate'],
@@ -498,7 +499,7 @@ export const ORB_CONVERGED_CHAT_STARTER_ACTIONS: OrbConvergedAction[] = [
   },
   {
     id: 'starter_record_properly',
-    label: 'Record this properly',
+    label: 'Help me record this properly',
     description: 'Professional recording support',
     category: 'chat_starter',
     surfaces: ['chat'],
@@ -506,7 +507,7 @@ export const ORB_CONVERGED_CHAT_STARTER_ACTIONS: OrbConvergedAction[] = [
     outputTarget: 'chat',
     requiresHumanReview: true,
     chatMode: 'Record This Properly',
-    chatPrompt: 'Record this properly'
+    chatPrompt: ORB_STARTER_RECORD_PROPERLY_PROMPT
   },
   {
     id: 'starter_manager_summary',

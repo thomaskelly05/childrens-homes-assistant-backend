@@ -8,6 +8,7 @@ import { OrbCapabilityCard } from '@/components/orb-residential/ui/orb-capabilit
 import { OrbGlowHero } from '@/components/orb-residential/ui/orb-glow-hero'
 import { OrbShell } from '@/components/orb-residential/ui/orb-shell'
 import { useOrbAccountState } from '@/contexts/orb-account-context'
+import { ORB_NAV_HELP, ORB_NAV_RECORDS, ORB_NAV_WRITE } from '@/lib/orb/orb-user-facing-names'
 import { personalisedEmptyHeading } from '@/lib/orb/orb-personalised-greeting'
 
 const SUGGESTED_PROMPTS = [
@@ -21,10 +22,10 @@ const SUGGESTED_PROMPTS = [
 ]
 
 const CAPABILITY_LINKS = [
-  { title: 'Review This', href: '/orb/review' },
-  { title: 'Templates', href: '/orb/templates' },
-  { title: 'Learn', href: '/orb/learn' },
-  { title: 'Saved Outputs', href: '/orb/saved' }
+  { title: ORB_NAV_WRITE, href: '/orb?station=orb_write' },
+  { title: 'Dictate', href: '/orb?station=orb_dictate' },
+  { title: ORB_NAV_HELP, href: '/orb' },
+  { title: ORB_NAV_RECORDS, href: '/orb/saved' }
 ]
 
 export function OrbResidentialChatHome() {

@@ -18,9 +18,9 @@ import type { OrbDocumentLens } from '@/lib/orb/document-intelligence'
 import type { OrbShiftBuilderFocus } from '@/lib/orb/shift-builder'
 
 export const ORB_SAVED_OUTPUT_BOUNDARY_LINES = [
-  'Saved outputs are standalone ORB artefacts.',
-  'Review before sharing or relying on them.',
-  'Standalone ORB does not access live care records.'
+  'Records and drafts are standalone ORB artefacts.',
+  'Adult review required before sharing or relying on them.',
+  'ORB Residential does not access live care records.'
 ] as const
 
 export type OrbSavedOutputSourceFeature =
@@ -306,7 +306,7 @@ export function resolveSavedOutputRerun(record: OrbSavedOutputRecord): OrbSavedO
       label: 'Re-run Voice',
       available: false,
       reason:
-        'Voice transcripts cannot be re-run from Saved Outputs. Start a new Voice session to speak again.',
+        'Voice transcripts cannot be re-run from Records & Drafts. Start a new Voice session to speak again.',
       sourceText: sourceText || undefined
     }
   }
