@@ -84,7 +84,7 @@ describe('ORB Residential canonical shell (Phase 1H copy retained)', () => {
     assert.match(login, /orb-login-shell__grid/)
     assert.match(login, /lg:grid-cols-\[58%_42%\]/)
     assert.match(hero, /orb-login-shell__brand/)
-    assert.match(hero, /ORB_LOGIN_ENTERPRISE_TRUST_PILLS/)
+    assert.match(hero, /ORB_LOGIN_ENTERPRISE_SUBHEADLINE/)
     assert.match(css, /orb-login-shell__brand/)
     assert.equal(ORB_LOGIN_ENTERPRISE_TITLE, 'ORB Residential')
   })

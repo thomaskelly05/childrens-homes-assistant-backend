@@ -63,11 +63,11 @@ describe('ORB Dictate hero polish', () => {
     assert.match(toolbar, /data-orb-write-save-draft|data-orb-write-export-pdf/)
   })
 
-  it('sidebar nav uses Dictate label with helper text', () => {
+  it('sidebar nav uses Dictate label without helper clutter', () => {
     const sidebar = readComponent('components/orb-residential/orb-residential-sidebar.tsx')
     assert.match(sidebar, /ORB_VISIBLE_SIDEBAR_NAV/)
     assert.match(sidebar, /orb_dictate/)
-    assert.match(sidebar, /Speak or paste rough notes/)
+    assert.match(sidebar, /Dictate/)
     assert.doesNotMatch(sidebar, /label: 'Magic Notes'/)
   })
 })

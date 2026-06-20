@@ -69,7 +69,8 @@ describe('ORB Residential desktop convergence sprint', () => {
     assert.match(desktop, /\[data-orb-residential-empty\][\s\S]*--orb-presence-size:\s*clamp\(9\.5rem/)
     assert.match(desktop, /desktop premium convergence pass/)
     assert.match(companion, /data-orb-workspace-starters/)
-    assert.match(companion, /data-orb-starter-expanded-groups/)
+    assert.match(companion, /data-orb-workspace-starters/)
+    assert.doesNotMatch(companion, /data-orb-starter-expanded-groups/)
     assert.doesNotMatch(companion, /orb-presence--hero[\s\S]*mobile-only/)
   })
 
@@ -80,7 +81,7 @@ describe('ORB Residential desktop convergence sprint', () => {
 
     assert.match(companion, /data-orb-residential-empty/)
     assert.match(companion, /data-orb-empty-heading-desktop/)
-    assert.match(companion, /ORB_RESIDENTIAL_BRAND_EMOTIONAL_LINE/)
+    assert.match(companion, /Powered by IndiCare Intelligence/)
     assert.match(companion, /data-orb-workspace-starters/)
     assert.match(composer, /orb-liquid-composer/)
     assert.doesNotMatch(composer, /data-orb-privacy-guidance-trigger/)
@@ -95,7 +96,7 @@ describe('ORB Residential desktop convergence sprint', () => {
     assert.match(sidebar, /data-orb-sidebar-new-chat/)
     assert.match(sidebar, /data-orb-sidebar-station/)
     assert.match(sidebar, /orb-sidebar-nav-item--active/)
-    assert.match(sidebar, /orb-liquid-glass/)
+    assert.doesNotMatch(sidebar, /orb-liquid-glass/)
     assert.match(sidebar, /data-orb-sidebar-account-card/)
     assert.match(sidebar, /data-orb-sidebar-billing/)
     assert.match(desktop, /\[data-orb-sidebar-account-card\]/)

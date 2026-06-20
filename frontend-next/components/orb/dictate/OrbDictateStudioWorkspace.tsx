@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { OrbDictateBrainPanel } from '@/components/orb/dictate/OrbDictateBrainPanel'
-import { OrbDictatePrivacyStrip } from '@/components/orb/dictate/OrbDictatePrivacyStrip'
 import { useOrbDictatePanelLayout } from '@/components/orb/dictate/OrbDictatePanelLayoutControl'
 import { OrbDictateSuggestedOutputs } from '@/components/orb/dictate/OrbDictateSuggestedOutputs'
 import {
@@ -12,7 +11,6 @@ import {
 } from '@/components/orb/dictate/OrbDictateTopBar'
 import { OrbTranscriptPanel } from '@/components/orb/dictate/OrbTranscriptPanel'
 import { OrbStudioShell } from '@/components/orb/premium'
-import { OrbWorkflowStrip, resolveDictateWorkflowStep } from '@/components/orb/premium/orb-workflow-strip'
 import { ORB_RESIDENTIAL_DICTATE_COPY } from '@/lib/orb/orb-residential-copy'
 import { ORB_DICTATE_SUBTITLE, ORB_DICTATE_TITLE } from '@/lib/orb/orb-user-facing-names'
 import { OrbResizableWorkspace } from '@/components/orb/resizable-panels/orb-resizable-workspace'
@@ -276,23 +274,6 @@ export function OrbDictateStudioWorkspace(props: OrbDictateStudioWorkspaceProps)
           {ORB_DICTATE_SUBTITLE}
         </p>
       </header>
-      <div className="shrink-0 px-1 sm:px-0">
-        <OrbWorkflowStrip
-          activeStep={resolveDictateWorkflowStep({ hasTranscript, hasAnalysis, hasDraft })}
-        />
-        <p
-          className="mt-1 text-xs leading-relaxed text-[var(--orb-muted)]"
-          data-orb-dictate-subtitle
-        >
-          {ORB_RESIDENTIAL_DICTATE_COPY.subtitle}
-        </p>
-        <p
-          className="mt-1 text-[10px] leading-relaxed text-[var(--orb-muted)]"
-          data-orb-dictate-responsibility-strip
-        >
-          {ORB_RESIDENTIAL_DICTATE_COPY.responsibility}
-        </p>
-      </div>
 
       <OrbDictateTopBar
         selectedTemplateId={props.selectedTemplateId}
@@ -319,8 +300,6 @@ export function OrbDictateStudioWorkspace(props: OrbDictateStudioWorkspaceProps)
         panelLayout={panelLayout}
         onPanelLayoutChange={updatePanelLayout}
       />
-
-      <OrbDictatePrivacyStrip />
 
       <OrbResizableWorkspace
         hidePresetToolbar
@@ -362,7 +341,7 @@ export function OrbDictateStudioWorkspace(props: OrbDictateStudioWorkspaceProps)
 
       {hasTranscript ? (
         <div
-          className="orb-studio-action-rail shrink-0 rounded-lg border border-[var(--orb-line)]/35 bg-[var(--orb-surface-elevated)]/60 px-2.5 py-1.5"
+          className="orb-studio-action-rail shrink-0 px-1 py-1"
           data-orb-dictate-action-rail
         >
           <OrbDictateSuggestedOutputs
@@ -375,6 +354,9 @@ export function OrbDictateStudioWorkspace(props: OrbDictateStudioWorkspaceProps)
           />
         </div>
       ) : null}
+      <p className="orb-workspace-station-safety shrink-0 px-2 pb-2 text-center text-xs text-[var(--orb-muted)]" data-orb-dictate-safety-footer>
+        {ORB_RESIDENTIAL_DICTATE_COPY.responsibility}
+      </p>
     </OrbStudioShell>
   )
 }

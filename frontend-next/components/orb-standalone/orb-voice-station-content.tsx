@@ -121,14 +121,16 @@ export function OrbVoiceStationContent({
 
       {secondaryControls ? (
         <div
-          className="orb-voice-station-content__controls shrink-0 space-y-2 border-t border-[var(--orb-line)]/30 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] md:px-6"
+          className="orb-voice-station-content__controls shrink-0 space-y-2 px-4 py-2 md:px-6"
           data-orb-voice-station-controls
         >
           <div className="mx-auto w-full max-w-lg">{secondaryControls}</div>
         </div>
       ) : null}
 
-      <OrbVoiceResponsibilityStrip className="pb-[max(0.5rem,env(safe-area-inset-bottom))]" />
+      {workspaceMode !== 'idle' ? (
+        <OrbVoiceResponsibilityStrip className="pb-[max(0.5rem,env(safe-area-inset-bottom))]" />
+      ) : null}
     </div>
   )
 }

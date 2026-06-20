@@ -54,24 +54,19 @@ function readComponent(relativePath: string) {
 describe('ORB mobile home shell', () => {
   it('mobile home greeting is visible and uses strong heading tokens', () => {
     const companion = readComponent('components/orb-standalone/orb-care-companion.tsx')
-    const mobileCss = readComponent('app/orb/_legacy-ui-archive/orb-mobile.css')
-    assert.match(companion, /data-orb-empty-heading-mobile/)
+    const shellCss = readComponent('app/orb/orb-residential-shell.css')
+    assert.match(companion, /data-orb-empty-heading/)
     assert.match(
       companion,
-      /ORB_RESIDENTIAL_MOBILE_EMPTY_HEADING|personalisedEmptyHeading|orbPersonalisedGreeting|personalisedWelcomeMessage/
+      /ORB_RESIDENTIAL_EMPTY_HEADING_DESKTOP|ORB_RESIDENTIAL_MOBILE_EMPTY_HEADING|personalisedEmptyHeading|orbPersonalisedGreeting|personalisedWelcomeMessage/
     )
-    assert.match(mobileCss, /data-orb-empty-heading-mobile/)
-    assert.match(mobileCss, /#0a1628|#f7faff/)
+    assert.match(shellCss, /orb-workspace-headline/)
   })
 
-  it('starter prompts render as premium cards not hidden on mobile', () => {
+  it('starter prompts render in composer dock on mobile', () => {
     const companion = readComponent('components/orb-standalone/orb-care-companion.tsx')
-    const mobileCss = readComponent('app/orb/_legacy-ui-archive/orb-mobile.css')
-    assert.match(companion, /data-orb-starter-cards/)
-    assert.match(companion, /data-orb-starter-card/)
-    assert.match(mobileCss, /\[data-orb-starter-cards\]/)
-    assert.match(mobileCss, /\[data-orb-starter-card\]/)
-    assert.doesNotMatch(mobileCss, /\[data-orb-starter-cards\]\s*\{[^}]*display:\s*none/)
+    assert.match(companion, /data-orb-workspace-starters/)
+    assert.match(companion, /data-orb-starter-suggestion-card/)
   })
 
   it('mobile layout avoids horizontal overflow on empty state', () => {

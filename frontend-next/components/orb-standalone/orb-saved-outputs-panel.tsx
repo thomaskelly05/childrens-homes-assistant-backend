@@ -193,6 +193,8 @@ export function OrbSavedOutputsPanel({
   const activeFilterCount =
     (chipFilter !== 'all' ? 1 : 0) + (projectFilter ? 1 : 0) + (includeArchived ? 1 : 0) + (statusFilter ? 1 : 0)
 
+  const showRecordsEmptyCanvas = residentialSurface && items.length === 0 && !loading && !error
+
   async function handleArchive(id: string) {
     await archiveOrbSavedOutput(id)
     setNotice('Output archived.')
@@ -242,12 +244,35 @@ export function OrbSavedOutputsPanel({
       {...orbStationShellProps(residentialSurface, 'wide')}
     >
       <div
-        className={`orb-studio-shell flex min-h-0 flex-col gap-2 p-2 sm:gap-3 sm:p-4 lg:flex-row ${residentialSurface ? 'orb-workspace orb-workspace--records' : ''}`}
+        className={`orb-studio-shell flex min-h-0 flex-col gap-2 p-2 sm:gap-3 sm:p-4 ${showRecordsEmptyCanvas ? 'items-center justify-center' : 'lg:flex-row'} ${residentialSurface ? 'orb-workspace orb-workspace--records' : ''}`}
         data-orb-saved-outputs-panel
         data-orb-studio-shell="saved_outputs"
         {...(residentialSurface ? { 'data-orb-workspace-records': true } : {})}
         {...(items.length === 0 && !loading ? { 'data-orb-saved-outputs-empty': true } : {})}
       >
+        {showRecordsEmptyCanvas ? (
+          <div className="flex w-full max-w-md flex-col items-center justify-center py-8" data-orb-records-empty>
+            <OrbStudioEmptyState
+              title={ORB_RECORDS_EMPTY_TITLE}
+              description={ORB_RECORDS_EMPTY_SUBTITLE}
+              actions={
+                <>
+                  {onStartInDictate ? (
+                    <OrbPremiumButton variant="secondary" onClick={onStartInDictate} data-orb-saved-start-dictate>
+                      Start in Dictate
+                    </OrbPremiumButton>
+                  ) : null}
+                  {onStartInOrbWrite ? (
+                    <OrbPremiumButton variant="primary" onClick={onStartInOrbWrite} data-orb-saved-start-write>
+                      Create in ORB Write
+                    </OrbPremiumButton>
+                  ) : null}
+                </>
+              }
+            />
+          </div>
+        ) : (
+        <>
         <div className="flex w-full shrink-0 flex-col lg:w-[var(--orb-desktop-saved-list-width,27.5rem)] lg:max-w-[var(--orb-desktop-saved-list-width,27.5rem)] lg:border-b-0 lg:border-r lg:border-[var(--orb-mobile-ws-card-border,var(--orb-line))]">
           {!isMobile ? (
           <OrbStudioHeader
@@ -586,6 +611,8 @@ export function OrbSavedOutputsPanel({
             <p className="shrink-0 border-t border-[var(--orb-mobile-ws-card-border,var(--orb-line))] px-4 py-2 text-xs text-emerald-300/90">{notice}</p>
           ) : null}
         </div>
+        </>
+        )}
       </div>
     </OrbStandalonePanelShell>
   )

@@ -8,7 +8,7 @@ import {
   ORB_GUIDED_DEMO_ACTIVE_MARKER
 } from '../../lib/orb/orb-showstopper-copy.ts'
 import {
-  ORB_HOME_RAIL_TRUST_ITEMS,
+  ORB_HOME_SAFETY_LINE,
   ORB_LOGIN_ENTERPRISE_TITLE
 } from '../../lib/orb/orb-convergence-phase-1h-copy.ts'
 import { ORB_NAV_RECORDS } from '../../lib/orb/orb-user-facing-names.ts'
@@ -62,9 +62,9 @@ describe('ORB Residential Phase 1D.1 contrast and readability', () => {
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
     assert.match(companion, /ORB_GUIDED_DEMO_ACTIVE_MARKER/)
     assert.match(companion, /data-orb-guided-demo-active-marker/)
-    assert.match(companion, /ORB_HOME_RAIL_TRUST_ITEMS/)
-    assert.match(companion, /data-orb-workspace-rail-trust/)
-    assert.match(ORB_HOME_RAIL_TRUST_ITEMS.join(' '), /Adult review required/)
+    assert.match(companion, /data-orb-home-safety-line/)
+    assert.match(companion, /ORB_HOME_SAFETY_LINE/)
+    assert.match(ORB_HOME_SAFETY_LINE, /professional judgement/)
     assert.equal(ORB_GUIDED_DEMO_ACTIVE_MARKER, 'Guided Demo \u00b7 anonymised scenario')
   })
 

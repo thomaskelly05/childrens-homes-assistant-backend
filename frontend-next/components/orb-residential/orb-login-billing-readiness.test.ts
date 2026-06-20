@@ -33,14 +33,12 @@ describe('ORB login and billing readiness', () => {
 
   it('login hero uses premium positioning copy', () => {
     const hero = read('components/orb-residential/orb-login-desktop-hero.tsx')
-    assert.match(hero, /ORB Residential/)
+    assert.match(hero, /ORB_LOGIN_ENTERPRISE_TITLE/)
     assert.match(hero, /Powered by IndiCare Intelligence/)
     assert.match(hero, /ORB_LOGIN_ENTERPRISE_TITLE/)
-    assert.match(hero, /ORB_LOGIN_ENTERPRISE_SUPPORTING/)
+    assert.match(hero, /ORB_LOGIN_ENTERPRISE_SUBHEADLINE/)
     assert.match(hero, /orb-login-headline--showstopper/)
     assert.match(hero, /professional judgement/)
-    assert.match(hero, /ORB_LOGIN_ENTERPRISE_FOUNDER_LINE/)
-    assert.match(hero, /ORB_LOGIN_ENTERPRISE_TRUST_PILLS/)
     assert.match(hero, /data-orb-login-demo-path/)
   })
 

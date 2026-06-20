@@ -11,19 +11,12 @@ function read(relativePath: string) {
 }
 
 describe('ORB Residential desktop premium simplification pass', () => {
-  it('desktop home uses lightweight primary chips with progressive disclosure', () => {
+  it('desktop home uses lightweight starter chips in composer dock', () => {
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
-    const desktop = read('app/orb/_legacy-ui-archive/orb-desktop.css')
 
     assert.match(companion, /data-orb-workspace-starters/)
-    assert.match(companion, /data-orb-starter-expanded-groups/)
-    assert.match(companion, /setMoreExamplesExpanded/)
-    assert.match(companion, /Fewer examples/)
-    assert.doesNotMatch(
-      companion,
-      /!isMobileViewport \? \([\s\S]*ORB_RESIDENTIAL_STARTER_GROUPS\.map\([\s\S]*orb-liquid-card/
-    )
-    assert.match(desktop, /\[data-orb-starter-expanded-groups\]/)
+    assert.match(companion, /ORB_RESIDENTIAL_EMPTY_STARTERS/)
+    assert.doesNotMatch(companion, /data-orb-starter-expanded-groups/)
   })
 
   it('primary starter chips match the residential quick-start set', () => {

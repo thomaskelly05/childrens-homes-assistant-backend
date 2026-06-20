@@ -32,7 +32,7 @@ describe('ORB Dictate studio premium polish', () => {
     assert.match(strip, /Session-only transcript/)
     assert.match(strip, /data-orb-dictate-privacy-detail/)
     assert.match(strip, /ORB_WRITE_PRIVACY_NOTICE/)
-    assert.match(workspace, /OrbDictatePrivacyStrip/)
+    assert.match(workspace, /data-orb-dictate-safety-footer/)
   })
 
   it('generate/analyse button is disabled without transcript', () => {
@@ -57,7 +57,7 @@ describe('ORB Dictate studio premium polish', () => {
 
   it('workflow strip shows capture to approve journey', () => {
     const workspace = readComponent('components/orb/dictate/OrbDictateStudioWorkspace.tsx')
-    assert.match(workspace, /OrbWorkflowStrip/)
+    assert.doesNotMatch(workspace, /OrbWorkflowStrip/)
     assert.match(workspace, /data-orb-dictate-responsibility-strip/)
   })
 

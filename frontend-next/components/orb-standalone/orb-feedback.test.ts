@@ -56,7 +56,7 @@ describe('ORB message feedback UI', () => {
 describe('ORB data safety copy', () => {
   it('help panel includes data safety section without overpromise', () => {
     const help = readComponent('components/orb-standalone/orb-help-panel.tsx')
-    assert.match(help, /ORB Residential data safety/)
+    assert.match(help, /Data and privacy/)
     assert.match(help, /does not access IndiCare OS/)
     assert.doesNotMatch(help, /100% safe/i)
   })

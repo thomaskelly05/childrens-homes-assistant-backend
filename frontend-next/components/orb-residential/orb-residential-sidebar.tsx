@@ -84,17 +84,7 @@ const NAV_ICON_BY_ID: Record<string, typeof Home> = {
 /** Phase 1A — single visible sidebar list (no Library section). */
 const RESIDENTIAL_VISIBLE_NAV = ORB_VISIBLE_SIDEBAR_NAV.map((entry) => ({
   ...entry,
-  icon: NAV_ICON_BY_ID[entry.id] ?? MessageSquare,
-  helper:
-    entry.id === 'orb_dictate'
-      ? 'Speak or paste rough notes for a clearer draft'
-      : entry.id === 'saved'
-        ? 'Your records and drafts for review'
-        : entry.id === 'help'
-          ? 'Safety boundaries and support'
-          : entry.id === 'home'
-            ? 'Chat home and starters'
-            : undefined
+  icon: NAV_ICON_BY_ID[entry.id] ?? MessageSquare
 }))
 
 export type OrbResidentialStationId = (typeof NAV_ITEMS)[number]['id']
@@ -626,7 +616,7 @@ export function OrbResidentialSidebar({
           <span>New chat</span>
         </button>
         <label
-          className="orb-sidebar-search orb-liquid-glass mt-2 flex items-center gap-2 rounded-xl border border-[var(--orb-line)]/60 bg-[var(--orb-surface-elevated)] px-3 py-2"
+          className="orb-sidebar-search mt-2 flex items-center gap-2 rounded-lg border border-[var(--orb-line)]/40 bg-white px-3 py-2"
           data-orb-sidebar-search-wrap
         >
           <Search className="h-4 w-4 shrink-0 text-[var(--orb-muted)]" aria-hidden />
@@ -675,12 +665,7 @@ export function OrbResidentialSidebar({
                   {...(item.id === 'orb_dictate' ? { 'data-orb-sidebar-dictate': true } : {})}
                 >
                   <Icon className="h-4 w-4 shrink-0" />
-                  <span className="flex min-w-0 flex-1 flex-col text-left">
-                    <span className="text-sm">{item.label}</span>
-                    {item.helper ? (
-                      <span className="text-[10px] leading-tight text-[var(--orb-muted)]">{item.helper}</span>
-                    ) : null}
-                  </span>
+                  <span className="text-sm">{item.label}</span>
                   {badge ? (
                     <span className="rounded-full bg-[var(--orb-surface-hover)] px-2 py-0.5 text-[10px]">
                       {badge}
@@ -854,12 +839,7 @@ export function OrbResidentialSidebar({
                         : { 'data-orb-sidebar-station': entry.id })}
                     >
                       <Icon className="h-4 w-4 shrink-0" aria-hidden />
-                      <span className="flex min-w-0 flex-1 flex-col text-left">
-                        <span className="text-sm">{entry.label}</span>
-                        {entry.helper ? (
-                          <span className="text-[10px] leading-tight text-[var(--orb-muted)]">{entry.helper}</span>
-                        ) : null}
-                      </span>
+                      <span className="min-w-0 flex-1 truncate text-left text-sm">{entry.label}</span>
                       {entry.id === 'saved' && savedOutputsCount ? (
                         <span className="rounded-full bg-[var(--orb-surface-hover)] px-2 py-0.5 text-[10px]">
                           {savedOutputsCount}
@@ -938,12 +918,11 @@ export function OrbResidentialSidebar({
                 <CreditCard className="h-4 w-4" aria-hidden />
                 <span>Billing</span>
               </button>
-              <IndiCareOsComingLaterButton />
             </div>
           </SidebarCollapsibleSection>
         ) : (
           <nav
-            className="orb-sidebar-account-row space-y-0.5 rounded-xl p-0"
+            className="orb-sidebar-account-row space-y-0.5 border-t border-[var(--orb-line)]/30 pt-2"
             aria-label="Account and settings"
             data-orb-sidebar-bottom
             data-orb-sidebar-account-card
@@ -1000,7 +979,6 @@ export function OrbResidentialSidebar({
               <CreditCard className="h-4 w-4" aria-hidden />
               <span>Billing</span>
             </button>
-            <IndiCareOsComingLaterButton />
           </nav>
         )}
       </div>

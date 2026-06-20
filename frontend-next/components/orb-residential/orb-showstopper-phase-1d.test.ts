@@ -9,8 +9,7 @@ import {
 } from '../../lib/orb/orb-showstopper-copy.ts'
 import {
   ORB_LOGIN_ENTERPRISE_TITLE,
-  ORB_LOGIN_ENTERPRISE_SUPPORTING,
-  ORB_HOME_RAIL_TRUST_ITEMS
+  ORB_HOME_SAFETY_LINE
 } from '../../lib/orb/orb-convergence-phase-1h-copy.ts'
 import {
   ORB_NAV_RECORDS,
@@ -24,24 +23,22 @@ function read(relativePath: string) {
 }
 
 describe('ORB Residential Phase 1D showstopper UI', () => {
-  it('login hero uses premium headline and supporting copy', () => {
+  it('login hero uses premium headline and request demo link', () => {
     const hero = read('components/orb-residential/orb-login-desktop-hero.tsx')
     assert.match(hero, /ORB_LOGIN_ENTERPRISE_TITLE/)
-    assert.match(hero, /ORB_LOGIN_ENTERPRISE_SUPPORTING/)
+    assert.match(hero, /ORB_LOGIN_ENTERPRISE_SUBHEADLINE/)
     assert.match(hero, /orb-login-headline--showstopper/)
-    assert.match(hero, /orb-login-demo-card/)
+    assert.match(hero, /data-orb-login-demo-path/)
     assert.equal(ORB_LOGIN_ENTERPRISE_TITLE, 'ORB Residential')
-    assert.match(ORB_LOGIN_ENTERPRISE_SUPPORTING, /Record safer/)
   })
 
-  it('home empty state exposes trust rail and workspace grid', () => {
+  it('home empty state is a single minimal canvas', () => {
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
-    assert.match(companion, /ORB_HOME_RAIL_TRUST_ITEMS/)
-    assert.match(companion, /data-orb-workspace-rail-trust/)
     assert.match(companion, /data-orb-workspace-home-grid/)
-    assert.match(companion, /data-orb-workspace-home-rail/)
-    assert.match(ORB_HOME_RAIL_TRUST_ITEMS.join(' '), /Adult review required/)
-    assert.match(ORB_HOME_RAIL_TRUST_ITEMS.join(' '), /Child-centred recording/)
+    assert.match(companion, /data-orb-home-safety-line/)
+    assert.match(companion, /ORB_HOME_SAFETY_LINE/)
+    assert.doesNotMatch(companion, /data-orb-workspace-home-rail/)
+    assert.match(ORB_HOME_SAFETY_LINE, /professional judgement/)
   })
 
   it('guided demo active marker appears when demo is active', () => {

@@ -9,8 +9,7 @@ import {
   ORB_VOICE_STATUS_CARD_COPY
 } from '../../lib/orb/orb-flagship-copy.ts'
 import {
-  ORB_LOGIN_ENTERPRISE_TITLE,
-  ORB_HOME_RAIL_TRUST_ITEMS
+  ORB_LOGIN_ENTERPRISE_TITLE
 } from '../../lib/orb/orb-convergence-phase-1h-copy.ts'
 import { ORB_RESIDENTIAL_LOCKED_THEME, ORB_RESIDENTIAL_THEME_LOCK_COPY } from '../../lib/orb/orb-appearance.ts'
 import {
@@ -46,15 +45,14 @@ describe('ORB Residential Phase 1F flagship UI', () => {
     assert.equal(ORB_LOGIN_ENTERPRISE_TITLE, 'ORB Residential')
   })
 
-  it('home has guided demo card and calm trust rail', () => {
+  it('home has guided demo link and calm safety copy', () => {
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
     const entry = read('components/orb-residential/orb-guided-demo-entry.tsx')
     assert.match(companion, /orb-workspace--home/)
-    assert.match(companion, /ORB_HOME_RAIL_TRUST_ITEMS/)
-    assert.match(companion, /data-orb-workspace-rail-trust/)
-    assert.match(companion, /orb-guided-demo-continue-card--flagship/)
-    assert.match(entry, /orb-guided-demo-entry--flagship/)
-    assert.match(ORB_HOME_RAIL_TRUST_ITEMS.join(' '), /Adult review required/)
+    assert.match(companion, /data-orb-home-safety-line/)
+    assert.match(companion, /ORB_HOME_SAFETY_LINE/)
+    assert.match(entry, /data-orb-guided-demo-entry/)
+    assert.match(entry, /data-orb-guided-demo-start/)
   })
 
   it('guided demo modal uses product modal two-column layout', () => {

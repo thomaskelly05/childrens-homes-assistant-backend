@@ -21,18 +21,16 @@ describe('ORB Dictate + Write convergence', () => {
     assert.match(topBar, /Review with ORB/)
     assert.match(topBar, /data-orb-dictate-finalise/)
     assert.match(topBar, /OrbDictateTemplateSelector/)
-    assert.match(workspace, /OrbDictatePrivacyStrip/)
+    assert.match(workspace, /data-orb-dictate-safety-footer/)
     assert.doesNotMatch(topBar, /OrbDictatePrivacyStrip/)
   })
 
-  it('privacy trust strip renders with expandable detail', () => {
+  it('privacy trust strip component remains available; workspace uses quiet footer', () => {
     const strip = readComponent('components/orb/dictate/OrbDictatePrivacyStrip.tsx')
     const workspace = readComponent('components/orb/dictate/OrbDictateStudioWorkspace.tsx')
     const types = readComponent('lib/orb/write/orb-write-types.ts')
     assert.match(strip, /data-orb-dictate-privacy-strip/)
-    assert.match(strip, /data-orb-dictate-privacy-detail/)
-    assert.match(strip, /Session-only transcript/)
-    assert.match(workspace, /OrbDictatePrivacyStrip/)
+    assert.match(workspace, /data-orb-dictate-safety-footer/)
     assert.match(types, /No child profile data is stored in ORB Dictate/)
   })
 

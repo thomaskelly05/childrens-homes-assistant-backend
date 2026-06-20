@@ -9,69 +9,24 @@ import {
 
 const SECTIONS = [
   {
-    title: 'What ORB is',
-    body: 'ORB is IndiCare\'s residential care companion — a premium AI workspace for thinking, recording quality, reflection and professional reasoning in children\'s homes.'
+    title: 'What ORB can help with',
+    body: 'Wording, reflection, safeguarding thinking, supervision prep, chronology reasoning, and clearer evidence — using what you type and upload. Chat, Dictate, Voice and ORB Write support adult-led recording and review.'
   },
   {
-    title: 'What ORB Residential can do',
-    body: 'Help with wording, safeguarding thinking, Ofsted/SCCIF reflection, therapeutic interpretation, supervision prep, chronology reasoning, pattern recognition and general questions — using your profile, conversation, uploads and IndiCare residential intelligence.'
+    title: 'What ORB cannot do',
+    body: 'ORB does not access IndiCare OS records, make safeguarding threshold decisions, replace LADO, police, social worker, clinical or legal advice, or predict Ofsted outcomes.'
   },
   {
-    title: 'What ORB Residential cannot do',
-    body: 'ORB Residential does not access IndiCare OS records. It does not make safeguarding threshold decisions, replace LADO, police, social worker, clinical or legal advice, or predict Ofsted outcomes.'
-  },
-  {
-    title: 'When to use OS ORB',
-    body: 'Use IndiCare OS ORB for permissioned operational context — live chronology, child context, tasks and evidence where your role allows.'
+    title: 'Safe use',
+    body: 'Use minimal or anonymised details where possible. Review every output before use. ORB supports professional judgement — it does not replace management oversight or local policy.'
   },
   {
     title: 'Safeguarding boundaries',
-    body: 'ORB supports thinking, recording quality and reflection. It does not replace safeguarding procedures, LADO, police, social worker, clinical or legal advice. If a child is at immediate risk, follow local safeguarding and emergency procedures.'
+    body: 'If a child is at immediate risk, follow local safeguarding and emergency procedures. ORB supports thinking and recording quality — not automated safeguarding decisions.'
   },
   {
-    title: 'Chat starters',
-    body: 'Use starters such as Daily record, Safeguarding reflection, or Help me record this properly. These are actions in Chat — not separate product areas.'
-  },
-  {
-    title: 'Learning / Academy / NVQ',
-    body: 'Tools and follow-up chips can help with diplomas, reflective accounts, evidence mapping and assessor support. ORB uses only what you type — it does not access live Academy learner records or invent workplace evidence.'
-  },
-  {
-    title: 'Profile roles',
-    body: 'Set your role in Profile (support worker, manager, Reg 44, NVQ assessor, NVQ learner, etc.) so ORB shapes answers and “What am I missing?” for your job — still without live OS records.'
-  },
-  {
-    title: 'Actions & follow-ups',
-    body: 'Under each answer, use Copy, Regenerate, Save, or suggested chips such as recording wording, safeguarding lens, or manager oversight — only when they fit your question.'
-  },
-  {
-    title: 'Document intelligence',
-    body: 'Attach a document from Tools or the Documents panel, then use lenses such as Explain, Summarise, Action plan or Reg 44 review. ORB uses your upload — not live OS records.'
-  },
-  {
-    title: 'Handover and shift notes',
-    body: 'Use Chat or Dictate for handover notes and shift reflection. Treat outputs as drafts for your professional judgement and manager oversight.'
-  },
-  {
-    title: 'Voice and accessibility',
-    body: 'Push-to-talk voice input is optional and only starts when you tap the microphone — ORB does not listen passively. Auto-speak reads completed answers using your chosen voice; it never requests microphone permission for speech output.'
-  },
-  {
-    title: `Projects and ${ORB_NAV_RECORDS}`,
-    body: `Organise chats in projects and save useful records and drafts from Chat, Dictate or Voice. Open ${ORB_NAV_RECORDS} from the sidebar to review before use in practice.`
-  },
-  {
-    title: 'ORB Residential data safety',
-    body:
-      'Avoid unnecessary personal details; use initials where you can. Records and drafts are stored for adult review and reuse — not automatic care decisions. IndiCare OS ORB (/assistant/orb) may use permissioned OS records only where explicitly available and allowed.'
-  },
-  {
-    title: 'Privacy and data',
-    body: 'Chats and profiles are stored on this device unless you export them. ORB Residential does not send child records to IndiCare OS without the operational assistant.'
-  },
-  {
-    title: 'Quick shortcuts',
-    body: 'New chat from the sidebar · Search chats · Settings for appearance, voice and personalisation · Profile for role-based suggestions · Edit a sent message from the message actions row.'
+    title: 'Data and privacy',
+    body: `Chats and ${ORB_NAV_RECORDS.toLowerCase()} are stored for adult review on this device unless you export them. ORB Residential does not send child records to IndiCare OS without the operational assistant.`
   }
 ] as const
 
@@ -86,16 +41,16 @@ export function OrbHelpPanel({ open, onClose }: { open: boolean; onClose: () => 
       panelId="help"
       layout="center"
     >
-      <div className="space-y-4 p-4 orb-modal" data-orb-help-panel data-orb-modal="product">
+      <div className="space-y-5 p-4 orb-modal orb-modal--plain" data-orb-help-panel data-orb-modal="product">
         {SECTIONS.map((section) => (
-          <section key={section.title} className="rounded-xl border border-[var(--orb-line)] bg-[var(--orb-surface)] px-4 py-3">
+          <section key={section.title} className="orb-modal-section">
             <h3 className="text-sm font-semibold text-[var(--orb-foreground)]">{section.title}</h3>
-            <p className="mt-1.5 text-xs leading-6 text-[var(--orb-muted)]">{section.body}</p>
+            <p className="mt-1.5 text-sm leading-6 text-[var(--orb-muted)]">{section.body}</p>
           </section>
         ))}
-        <p className="text-[11px] leading-5 text-[var(--orb-muted)]" data-orb-help-safeguarding-boundary>
-          ORB Residential does not access IndiCare OS records. Use OS ORB for permissioned operational
-          context. If a child is at immediate risk, follow local safeguarding and emergency procedures.
+        <p className="text-sm leading-6 text-[var(--orb-muted)]" data-orb-help-safeguarding-boundary>
+          If a child is at immediate risk, follow local safeguarding and emergency procedures. ORB supports
+          professional judgement — it does not replace safeguarding procedures or local policy.
         </p>
       </div>
     </OrbStandalonePanelShell>

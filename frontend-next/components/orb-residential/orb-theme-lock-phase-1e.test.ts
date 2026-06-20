@@ -86,8 +86,8 @@ describe('ORB Residential Phase 1E theme lock', () => {
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
     assert.match(hero, /ORB_LOGIN_ENTERPRISE_TITLE/)
     assert.equal(ORB_LOGIN_ENTERPRISE_TITLE, 'ORB Residential')
-    assert.match(companion, /ORB_HOME_RAIL_TRUST_ITEMS/)
-    assert.match(ORB_HOME_RAIL_TRUST_ITEMS.join(' '), /Adult review required/)
+    assert.match(companion, /data-orb-home-safety-line/)
+    assert.match(companion, /ORB_HOME_SAFETY_LINE/)
   })
 
   it('guided demo safety note and modal classes remain present', () => {

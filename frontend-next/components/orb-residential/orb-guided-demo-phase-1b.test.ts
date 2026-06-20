@@ -158,7 +158,7 @@ describe('ORB Residential Phase 1B.1 language alignment', () => {
     assert.match(upgrade, /ORB_UPGRADE_DEFAULT_FEATURES/)
     assert.doesNotMatch(upgrade, /saved outputs/)
     assert.doesNotMatch(upgrade, /Shift Builder/)
-    assert.match(login, /ORB_DEMO_BEFORE_TRIAL_COPY/)
+    assert.match(login, /OrbRequestDemoLink/)
     assert.match(login, /data-orb-login-demo-path/)
   })
 

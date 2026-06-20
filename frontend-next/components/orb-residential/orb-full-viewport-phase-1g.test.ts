@@ -51,7 +51,7 @@ describe('ORB Residential full viewport workspace (consolidated shell)', () => {
     assert.match(companion, /orb-workspace--home/)
     assert.match(companion, /data-orb-workspace-home-grid/)
     assert.match(companion, /data-orb-workspace-home-main/)
-    assert.match(companion, /data-orb-workspace-home-rail/)
+    assert.doesNotMatch(companion, /data-orb-workspace-home-rail/)
     assert.match(companion, /data-orb-workspace-starters/)
   })
 

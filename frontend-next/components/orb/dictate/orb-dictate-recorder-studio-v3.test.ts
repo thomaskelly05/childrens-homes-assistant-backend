@@ -35,7 +35,7 @@ describe('ORB Dictate recorder studio v3', () => {
     const privacy = read('components/orb/dictate/OrbDictatePrivacyStrip.tsx')
     assert.match(workspace, /data-orb-dictate-action-rail/)
     assert.match(workspace, /OrbDictateSuggestedOutputs/)
-    assert.match(workspace, /OrbDictatePrivacyStrip/)
+    assert.match(workspace, /data-orb-dictate-safety-footer/)
     assert.match(privacy, /data-orb-dictate-privacy-strip/)
   })
 

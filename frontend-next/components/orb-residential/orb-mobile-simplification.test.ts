@@ -28,15 +28,13 @@ describe('ORB Residential mobile simplification pass', () => {
     assert.match(mobileCss, /\[data-orb-composer-privacy-zone\] \[data-orb-privacy-guidance-link\]/)
   })
 
-  it('mobile home uses horizontal suggestion cards with More card', () => {
+  it('mobile home uses composer starters without thread clutter', () => {
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
-    assert.match(companion, /data-orb-starter-pills-grid/)
+    assert.match(companion, /data-orb-workspace-starters/)
     assert.match(companion, /data-orb-starter-suggestion-card/)
-    assert.match(companion, /data-orb-more-examples/)
-    assert.match(companion, /data-orb-more-examples-sheet/)
-    assert.match(companion, />\s*More\s*</)
-    assert.match(companion, /ORB_RESIDENTIAL_STARTER_GROUPS\.map/)
-    assert.match(companion, /data-orb-starter-group=/)
+    assert.match(companion, /ORB_RESIDENTIAL_MOBILE_PRIMARY_STARTERS/)
+    assert.doesNotMatch(companion, /data-orb-starter-pills-grid/)
+    assert.doesNotMatch(companion, /data-orb-starter-expanded-groups/)
   })
 
   it('mobile header hides tagline and brand clutter on phone home', () => {
@@ -44,8 +42,8 @@ describe('ORB Residential mobile simplification pass', () => {
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
     assert.match(layout, /showTagline/)
     assert.match(companion, /showTagline=\{false\}/)
-    assert.match(companion, /hidden text-\[11px\].*data-orb-empty-brand-line/s)
-    assert.match(companion, /hidden max-w-lg text-sm.*data-orb-empty-subline/s)
+    assert.doesNotMatch(companion, /data-orb-brand-emotional-line/)
+    assert.match(companion, /data-orb-empty-subline/)
   })
 
   it('billing uses collapsible sections and avoids duplicate mobile CTAs', () => {

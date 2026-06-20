@@ -39,7 +39,7 @@ describe('ORB Dictate top-weight reduction', () => {
   it('privacy strip remains visible with expandable detail', () => {
     const workspace = readComponent('components/orb/dictate/OrbDictateStudioWorkspace.tsx')
     const strip = readComponent('components/orb/dictate/OrbDictatePrivacyStrip.tsx')
-    assert.match(workspace, /OrbDictatePrivacyStrip/)
+    assert.match(workspace, /data-orb-dictate-safety-footer/)
     assert.match(strip, /Session-only transcript/)
     assert.match(strip, /data-orb-dictate-privacy-detail/)
   })
