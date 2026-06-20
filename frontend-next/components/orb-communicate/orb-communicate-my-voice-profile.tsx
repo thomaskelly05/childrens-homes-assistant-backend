@@ -76,9 +76,13 @@ export function OrbCommunicateMyVoiceProfileWorkflow({ onBack }: { onBack: () =>
   }
 
   async function handleSave() {
-    const saved = await saveMyVoiceProfile(profile)
+    const { profile: saved, savedLocally } = await saveMyVoiceProfile(profile)
     setProfile(saved)
-    setSavedMessage('Profile saved locally — ready for team review.')
+    setSavedMessage(
+      savedLocally
+        ? 'Profile saved on this device — ready for team review.'
+        : 'Profile kept for this session — storage is unavailable on this device.'
+    )
   }
 
   function formatPreview(): string {
