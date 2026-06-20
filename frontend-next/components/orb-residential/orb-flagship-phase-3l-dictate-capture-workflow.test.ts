@@ -31,8 +31,8 @@ function read(relativePath: string) {
 }
 
 describe('ORB Residential Phase 3L Dictate capture workflow', () => {
-  it('build version marker is phase-3m-dictate-staged-recording', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-3m-dictate-staged-recording')
+  it('build version marker is phase-3n-dictate-transcript-workspace', () => {
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-3n-dictate-transcript-workspace')
     const layout = read('app/orb/layout.tsx')
     assert.match(layout, /orb-residential-shell\.css/)
     assert.deepEqual(ORB_LAYOUT_CSS_FILES, ['app/orb/orb-residential-shell.css'])
@@ -92,11 +92,10 @@ describe('ORB Residential Phase 3L Dictate capture workflow', () => {
   })
 
   it('record type suggestion selector exists', () => {
-    const suggestion = read('components/orb/dictate/OrbDictateRecordTypeSuggestion.tsx')
-    assert.match(suggestion, /data-orb-dictate-record-type-suggestion/)
-    assert.match(suggestion, /data-orb-dictate-record-type-prompt/)
-    assert.match(suggestion, /ORB_DICTATE_RECORD_TYPE_PROMPT/)
-    assert.match(read('components/orb/dictate/OrbDictateStudioWorkspace.tsx'), /OrbDictateRecordTypeSuggestion/)
+    const selector = read('components/orb/dictate/OrbDictateWriteTemplateSelector.tsx')
+    assert.match(selector, /data-orb-dictate-write-template-section/)
+    assert.match(selector, /data-orb-dictate-write-template-option/)
+    assert.match(read('components/orb/dictate/OrbDictateTranscriptWorkspace.tsx'), /OrbDictateWriteTemplateSelector/)
   })
 
   it('does not claim compliance or finalisation', () => {
@@ -111,7 +110,7 @@ describe('ORB Residential Phase 3L Dictate capture workflow', () => {
   it('single shell and one CSS import remain true', () => {
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
     assert.match(companion, /orb-app-shell/)
-    assert.match(read('app/orb/orb-residential-shell.css'), /phase-3m-dictate-staged-recording/)
-    assert.match(read('app/orb/orb-residential-shell.css'), /Phase 3M/)
+    assert.match(read('app/orb/orb-residential-shell.css'), /phase-3n-dictate-transcript-workspace/)
+    assert.match(read('app/orb/orb-residential-shell.css'), /Phase 3N/)
   })
 })

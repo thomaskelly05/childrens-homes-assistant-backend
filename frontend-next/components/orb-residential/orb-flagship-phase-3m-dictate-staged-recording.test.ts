@@ -37,8 +37,8 @@ function read(relativePath: string) {
 }
 
 describe('ORB Residential Phase 3M Dictate staged recording', () => {
-  it('build version marker is phase-3m-dictate-staged-recording', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-3m-dictate-staged-recording')
+  it('build version marker is phase-3n-dictate-transcript-workspace', () => {
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-3n-dictate-transcript-workspace')
     const layout = read('app/orb/layout.tsx')
     assert.match(layout, /orb-residential-shell\.css/)
     assert.deepEqual(ORB_LAYOUT_CSS_FILES, ['app/orb/orb-residential-shell.css'])
@@ -88,13 +88,13 @@ describe('ORB Residential Phase 3M Dictate staged recording', () => {
 
   it('rough capture stage shows not-yet-record label and Review with ORB', () => {
     const workspace = read('components/orb/dictate/OrbDictateStudioWorkspace.tsx')
+    const panel = read('components/orb/dictate/OrbDictateTranscriptWorkspace.tsx')
     assert.equal(ORB_DICTATE_NOT_YET_RECORD, 'Not yet a record')
     assert.equal(ORB_DICTATE_REVIEW_WITH_ORB, 'Review with ORB')
     assert.equal(ORB_DICTATE_CAPTURE_AGAIN, 'Capture again')
-    assert.match(workspace, /data-orb-dictate-rough-capture-stage/)
-    assert.match(workspace, /data-orb-dictate-not-yet-record/)
-    assert.match(workspace, /data-orb-dictate-review-with-orb/)
-    assert.match(workspace, /stage === 'rough-capture'/)
+    assert.match(panel, /data-orb-dictate-rough-capture-stage/)
+    assert.match(panel, /data-orb-dictate-review-with-orb/)
+    assert.match(workspace, /stage === 'transcript-workspace'/)
   })
 
   it('ORB Review only appears after Review with ORB is requested', () => {
@@ -150,7 +150,7 @@ describe('ORB Residential Phase 3M Dictate staged recording', () => {
     const workspace = read('components/orb/dictate/OrbDictateStudioWorkspace.tsx')
     assert.match(workspace, /ORB_DICTATE_CAPTURE_JOURNEY/)
     assert.match(workspace, /data-orb-dictate-stage="capture-station"/)
-    assert.match(workspace, /data-orb-dictate-stage="rough-capture"/)
+    assert.match(workspace, /data-orb-dictate-stage="transcript-workspace"/)
     assert.match(workspace, /data-orb-dictate-stage="orb-review"/)
     assert.match(workspace, /data-orb-dictate-stage="safer-draft"/)
     assert.match(workspace, /ORB_DICTATE_CONSENT_REMINDER/)
@@ -160,7 +160,7 @@ describe('ORB Residential Phase 3M Dictate staged recording', () => {
   it('single shell and one CSS import remain true', () => {
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
     assert.match(companion, /orb-app-shell/)
-    assert.match(read('app/orb/orb-residential-shell.css'), /phase-3m-dictate-staged-recording/)
-    assert.match(read('app/orb/orb-residential-shell.css'), /Phase 3M/)
+    assert.match(read('app/orb/orb-residential-shell.css'), /phase-3n-dictate-transcript-workspace/)
+    assert.match(read('app/orb/orb-residential-shell.css'), /Phase 3N/)
   })
 })

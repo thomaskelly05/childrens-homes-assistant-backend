@@ -1,7 +1,7 @@
 /**
  * ORB Residential — single canonical UI design system (Phase 1K blank canvas, 1M personality).
  * One file for shell, workspace, composer, login, mobile, stations and modals.
- * Visual build marker: phase-3m-dictate-staged-recording.
+ * Visual build marker: phase-3n-dictate-transcript-workspace.
  */
 
 :root {
@@ -2910,4 +2910,39 @@ html[data-orb-residential='1'] [data-orb-dictate-rough-capture-stage] {
   border-color: rgba(99, 102, 241, 0.12);
 }
 
-/* phase-3m-dictate-staged-recording marker end */
+/* Phase 3N — Dictate transcript workspace (phase-3n-dictate-transcript-workspace) */
+html[data-orb-residential='1'] [data-orb-dictate-transcript-workflow] .orb-dictate-capture-column {
+  max-width: min(100%, 56rem);
+}
+
+html[data-orb-residential='1'] [data-orb-dictate-transcript-workspace] {
+  border-color: rgba(99, 102, 241, 0.14);
+}
+
+html[data-orb-residential='1'] .orb-dictate-transcript-workspace-grid {
+  align-items: start;
+}
+
+html[data-orb-residential='1'] .orb-dictate-original-transcript {
+  min-height: 14rem;
+  font-size: 0.9375rem;
+  line-height: 1.55;
+}
+
+html[data-orb-residential='1'] [data-orb-dictate-edit-assistant] {
+  border-color: rgba(99, 102, 241, 0.12);
+}
+
+html[data-orb-residential='1'] [data-orb-dictate-write-template-section] {
+  border-color: rgba(15, 23, 42, 0.08);
+}
+
+html[data-orb-residential='1'] [data-orb-dictate-transcript-workspace-actions] button[data-orb-dictate-review-with-orb]:not(:disabled) {
+  box-shadow: 0 4px 14px rgba(79, 70, 229, 0.22);
+}
+
+html[data-orb-residential='1'] .orb-dictate-stage-indicator {
+  letter-spacing: 0.02em;
+}
+
+/* phase-3n-dictate-transcript-workspace marker end */

@@ -1,0 +1,121 @@
+'use client'
+
+import { OrbDictateEditAssistant } from '@/components/orb/dictate/OrbDictateEditAssistant'
+import { OrbDictateWriteTemplateSelector } from '@/components/orb/dictate/OrbDictateWriteTemplateSelector'
+import {
+  ORB_DICTATE_ASK_ORB_IMPROVE,
+  ORB_DICTATE_CAPTURE_AGAIN,
+  ORB_DICTATE_ORIGINAL_NOTES_LABEL,
+  ORB_DICTATE_ORIGINAL_TRANSCRIPT_LABEL,
+  ORB_DICTATE_REVIEW_WITH_ORB,
+  ORB_DICTATE_TRANSCRIPT_WORKSPACE_SUPPORTING,
+  ORB_DICTATE_TRANSCRIPT_WORKSPACE_TITLE
+} from '@/lib/orb/dictate/orb-dictate-capture-copy'
+
+export type OrbDictateCaptureSource = 'speak' | 'paste' | 'upload'
+
+export type OrbDictateTranscriptWorkspaceProps = {
+  transcript: string
+  onTranscriptChange: (value: string) => void
+  captureSource: OrbDictateCaptureSource
+  selectedTemplateId: string
+  onSelectTemplate: (templateId: string) => void
+  orbInstruction: string
+  onOrbInstructionChange: (value: string) => void
+  onApplyOrbChange: () => void
+  onAskOrbImprove: () => void
+  onReviewWithOrb: () => void
+  onCaptureAgain: () => void
+  applyingEdit: boolean
+  editNote: string | null
+  interactive: boolean
+}
+
+export function OrbDictateTranscriptWorkspace(props: OrbDictateTranscriptWorkspaceProps) {
+  const hasText = props.transcript.trim().length > 0
+  const originalLabel =
+    props.captureSource === 'paste' ? ORB_DICTATE_ORIGINAL_NOTES_LABEL : ORB_DICTATE_ORIGINAL_TRANSCRIPT_LABEL
+
+  return (
+    <section
+      className="orb-dictate-transcript-workspace rounded-2xl border border-[var(--orb-line)]/15 bg-[var(--orb-surface)]/80 p-4 shadow-sm"
+      data-orb-dictate-transcript-workspace
+      data-orb-dictate-rough-capture-stage
+    >
+      <header>
+        <h3 className="text-sm font-semibold text-[var(--orb-foreground)]" data-orb-dictate-transcript-workspace-title>
+          {ORB_DICTATE_TRANSCRIPT_WORKSPACE_TITLE}
+        </h3>
+        <p className="mt-1 text-xs leading-relaxed text-[var(--orb-muted)]" data-orb-dictate-transcript-workspace-supporting>
+          {ORB_DICTATE_TRANSCRIPT_WORKSPACE_SUPPORTING}
+        </p>
+      </header>
+
+      <div className="orb-dictate-transcript-workspace-grid mt-4 grid gap-4 lg:grid-cols-2">
+        <div className="orb-dictate-original-transcript-panel min-w-0">
+          <p
+            className="text-[11px] font-medium text-[var(--orb-primary)]"
+            data-orb-dictate-original-label={props.captureSource === 'paste' ? 'notes' : 'transcript'}
+          >
+            {originalLabel}
+          </p>
+          <textarea
+            value={props.transcript}
+            onChange={(e) => props.onTranscriptChange(e.target.value)}
+            rows={12}
+            className="orb-dictate-original-transcript mt-2 w-full resize-y rounded-xl border border-[var(--orb-line)]/20 bg-white/95 px-3 py-3 text-sm leading-relaxed text-[var(--orb-foreground)] outline-none focus:border-[var(--orb-primary)]/35 focus:ring-2 focus:ring-[var(--orb-primary)]/10"
+            aria-label={originalLabel}
+            data-orb-dictate-original-transcript
+            data-orb-dictate-rough-capture-text
+          />
+        </div>
+
+        <div className="orb-dictate-transcript-workspace-side flex min-w-0 flex-col gap-3">
+          <OrbDictateEditAssistant
+            instruction={props.orbInstruction}
+            onInstructionChange={props.onOrbInstructionChange}
+            onApply={props.onApplyOrbChange}
+            applying={props.applyingEdit}
+            disabled={!hasText || !props.interactive}
+            editNote={props.editNote}
+          />
+          <OrbDictateWriteTemplateSelector
+            selectedTemplateId={props.selectedTemplateId}
+            onSelectTemplate={props.onSelectTemplate}
+          />
+        </div>
+      </div>
+
+      {props.interactive ? (
+        <div className="mt-4 flex flex-wrap gap-2" data-orb-dictate-transcript-workspace-actions>
+          <button
+            type="button"
+            data-orb-dictate-ask-orb-improve
+            disabled={!hasText || props.applyingEdit}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--orb-primary)]/35 bg-[var(--orb-primary-soft)] px-4 py-2 text-xs font-semibold text-[var(--orb-foreground)] disabled:opacity-45"
+            onClick={props.onAskOrbImprove}
+          >
+            {ORB_DICTATE_ASK_ORB_IMPROVE}
+          </button>
+          <button
+            type="button"
+            data-orb-dictate-review-with-orb
+            disabled={!hasText}
+            className="inline-flex items-center gap-1.5 rounded-xl bg-[var(--orb-primary)] px-4 py-2 text-xs font-semibold text-white disabled:opacity-45"
+            onClick={props.onReviewWithOrb}
+          >
+            {ORB_DICTATE_REVIEW_WITH_ORB}
+          </button>
+          <button
+            type="button"
+            data-orb-dictate-capture-again
+            className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--orb-line)]/30 bg-white/80 px-4 py-2 text-xs font-medium text-[var(--orb-muted)] hover:text-[var(--orb-foreground)]"
+            onClick={props.onCaptureAgain}
+          >
+            {ORB_DICTATE_CAPTURE_AGAIN}
+          </button>
+        </div>
+      ) : null}
+    </section>
+  )
+}

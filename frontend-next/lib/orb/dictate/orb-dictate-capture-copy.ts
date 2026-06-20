@@ -1,4 +1,4 @@
-/** Phase 3L/3M — ORB Dictate capture workflow copy. */
+/** Phase 3L–3N — ORB Dictate capture workflow copy. */
 
 export const ORB_DICTATE_CAPTURE_HEADLINE = 'Dictate' as const
 
@@ -12,7 +12,7 @@ export const ORB_DICTATE_CAPTURE_BOUNDARY =
   'Generated drafts must be reviewed by an adult before use. Follow your home\u2019s safeguarding and recording policy.' as const
 
 export const ORB_DICTATE_CAPTURE_JOURNEY =
-  'Capture Station \u2192 Recording \u2192 Rough Capture \u2192 ORB Review \u2192 Safer Draft' as const
+  'Capture Station \u2192 Recording \u2192 Transcript Workspace \u2192 ORB Review \u2192 Safer Draft' as const
 
 export const ORB_DICTATE_READY_TO_CAPTURE = 'Ready to capture' as const
 
@@ -24,6 +24,46 @@ export const ORB_DICTATE_RECORDING_NOT_RECORD =
   'This is not a record yet. ORB will help structure it after capture.' as const
 
 export const ORB_DICTATE_ROUGH_CAPTURE_TITLE = 'Rough capture' as const
+
+export const ORB_DICTATE_TRANSCRIPT_WORKSPACE_TITLE = 'Transcript workspace' as const
+
+export const ORB_DICTATE_TRANSCRIPT_WORKSPACE_SUPPORTING =
+  'This is the original rough capture. Edit it, then ask ORB to structure or improve it before creating a draft.' as const
+
+export const ORB_DICTATE_ORIGINAL_TRANSCRIPT_LABEL = 'Original transcript \u2014 not yet a record' as const
+
+export const ORB_DICTATE_ORIGINAL_NOTES_LABEL = 'Original notes \u2014 not yet a record' as const
+
+export const ORB_DICTATE_ASK_ORB_IMPROVE = 'Ask ORB to improve this' as const
+
+export const ORB_DICTATE_EDIT_ASSISTANT_TITLE = 'Ask ORB to help with this transcript' as const
+
+export const ORB_DICTATE_EDIT_ASSISTANT_SUPPORTING =
+  'Tell ORB what you want changed. ORB can structure, clarify or prepare the capture for an adult-reviewed record.' as const
+
+export const ORB_DICTATE_EDIT_INSTRUCTION_PLACEHOLDER =
+  'For example: Make this more child-centred, structure it as a daily record, or check what may be missing.' as const
+
+export const ORB_DICTATE_APPLY_ORB_CHANGE = 'Apply ORB change' as const
+
+export const ORB_DICTATE_WRITE_TEMPLATE_TITLE = 'Use an ORB Write template' as const
+
+export const ORB_DICTATE_WRITE_TEMPLATE_SUPPORTING =
+  'Choose the structure you want ORB to apply to the transcript.' as const
+
+export const ORB_DICTATE_EDIT_OFFLINE_NOTE =
+  'Full ORB transform may need a connection \u2014 a local preparation was applied. Review before continuing.' as const
+
+/** Quick ORB edit prompt chips — populate instruction input only; adult submits. */
+export const ORB_DICTATE_QUICK_EDIT_PROMPTS = [
+  { id: 'professional', label: 'Make it more professional', instruction: 'Make this more professional' },
+  { id: 'child_centred', label: 'Make it more child-centred', instruction: 'Make this more child-centred' },
+  { id: 'less_judgemental', label: 'Remove judgemental language', instruction: 'Remove judgemental language' },
+  { id: 'missing', label: 'What information is missing?', instruction: 'What information is missing?' },
+  { id: 'daily_record', label: 'Turn into daily record', instruction: 'Structure this as a daily record' },
+  { id: 'incident', label: 'Turn into incident reflection', instruction: 'Structure this as an incident reflection' },
+  { id: 'missing_home', label: 'Use missing from home template', instruction: 'Structure this using the missing from home template' }
+] as const
 
 export const ORB_DICTATE_NOT_YET_RECORD = 'Not yet a record' as const
 

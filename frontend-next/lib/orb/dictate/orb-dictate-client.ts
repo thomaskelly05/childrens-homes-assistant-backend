@@ -164,6 +164,7 @@ export async function analyzeOrbDictateSession(payload: {
   mode?: OrbDictateMode
   record_type_id?: string
   template_id?: string
+  adult_instruction?: string
 }): Promise<OrbDictateBrainAnalysis> {
   const json = await authFetch<unknown>(DICTATE_BASE + '/analyze', {
     method: 'POST',
