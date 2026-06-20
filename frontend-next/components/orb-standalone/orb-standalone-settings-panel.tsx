@@ -19,6 +19,7 @@ import {
 import { useOrbResponsiveMode } from '@/components/orb-standalone/use-orb-responsive-mode'
 import { OrbAppearanceControl } from '@/components/orb-standalone/orb-appearance-control'
 import { OrbBillingSettingsSection } from '@/components/orb-standalone/orb-billing-settings-section'
+import { OrbBrandMark } from '@/components/orb-residential/ui/orb-brand-mark'
 import { OrbResidentialProfileSettingsSection } from '@/components/orb-residential/orb-residential-profile-settings-section'
 import { OrbPrivacyDataSettingsSection } from '@/components/orb-residential/orb-privacy-data-settings-section'
 import { orbOverlayDrawerShellProps } from '@/components/orb-standalone/orb-app-modal'
@@ -251,6 +252,9 @@ export function OrbStandaloneSettingsPanel({
           data-orb-settings-nav
           data-orb-settings-nav-mobile={showMobileList ? 'true' : undefined}
         >
+          <div className="orb-settings-brand border-b border-[var(--orb-line)]/40 px-3 py-3" data-orb-settings-brand>
+            <OrbBrandMark size="sm" pulse />
+          </div>
           {SECTION_META.map((section) => (
             <button
               key={section.id}

@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, type ReactNode } from 'react'
 import {
-  CreditCard,
   Database,
   LogOut,
   Mic,
@@ -258,15 +257,6 @@ export function OrbAccountMenu({
           onClick={() => {
             onClose()
             onOpenSettings('safety_privacy')
-          }}
-        />
-        <MenuItem
-          icon={<CreditCard className="h-4 w-4" />}
-          label="Account & Billing"
-          testId="billing"
-          onClick={() => {
-            onClose()
-            onOpenSettings('account_billing')
           }}
         />
         <MenuItem

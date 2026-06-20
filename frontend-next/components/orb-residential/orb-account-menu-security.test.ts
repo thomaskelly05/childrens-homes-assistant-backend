@@ -25,10 +25,10 @@ describe('ORB account menu security', () => {
     assert.match(menu, /onSignOut/)
   })
 
-  it('billing entry routes to account and billing in settings', () => {
+  it('billing is not exposed as a standalone account quick action', () => {
     const menu = read('components/orb-residential/orb-account-menu.tsx')
-    assert.match(menu, /Account & Billing/)
-    assert.match(menu, /onOpenSettings\('account_billing'\)/)
+    assert.doesNotMatch(menu, /Account & Billing/)
+    assert.doesNotMatch(menu, /onOpenSettings\('account_billing'\)/)
   })
 
   it('companion wires sign out only when signed in', () => {

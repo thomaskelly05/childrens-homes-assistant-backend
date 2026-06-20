@@ -22,7 +22,7 @@ export function OrbLoginDesktopHero() {
       <div className="orb-login-hero-inner relative mx-auto flex w-full max-w-lg flex-col justify-center py-6 lg:max-h-[100dvh] lg:overflow-y-auto lg:overscroll-contain">
         <div className="flex flex-col items-start gap-3" data-orb-login-hero-visual>
           <div className="orb-login-hero-sphere-wrap shrink-0" data-orb-login-hero-sphere>
-            <GlassOrbMark size="md" pulse data-orb-login-brand-mark />
+            <GlassOrbMark variant="hero" pulse data-orb-login-brand-mark />
           </div>
           <div className="min-w-0" data-orb-login-hero-brand>
             <Link href="/orb" className="orb-login-brand-link text-sm font-semibold tracking-wide" data-orb-login-brand>

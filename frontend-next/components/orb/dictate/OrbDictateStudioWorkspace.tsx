@@ -267,7 +267,7 @@ export function OrbDictateStudioWorkspace(props: OrbDictateStudioWorkspaceProps)
       data-orb-dictate-empty={!hasTranscript ? 'true' : undefined}
       style={{ minHeight: 'min(100dvh - 4.5rem, calc(100svh - 4.5rem))' }}
     >
-      <header className="orb-dictate-hero-strip shrink-0 rounded-xl border border-[var(--orb-line)]/40 bg-[var(--orb-surface-elevated)]/80 px-3 py-3 sm:px-4" data-orb-dictate-hero-strip>
+      <header className="orb-dictate-hero-strip shrink-0 rounded-xl border border-[var(--orb-line)]/40 bg-[var(--orb-surface-elevated)]/80 px-3 py-3 sm:px-4" data-orb-dictate-hero-strip data-orb-dictate-studio-hero>
         <div className="flex min-w-0 items-start gap-3">
           <GlassOrbMark size="sm" pulse className="shrink-0" aria-hidden />
           <div className="min-w-0 flex-1">
@@ -314,7 +314,7 @@ export function OrbDictateStudioWorkspace(props: OrbDictateStudioWorkspaceProps)
         showPreview={false}
         minPanelHeight="min(74dvh, calc(100svh - 8.5rem))"
         left={
-          <div className="flex min-h-0 flex-col gap-2" data-orb-dictate-capture-panel>
+          <div className="orb-dictate-capture-canvas flex min-h-0 flex-col gap-2" data-orb-dictate-capture-panel data-orb-dictate-capture-canvas>
             <div className="flex items-center justify-between gap-2 px-1">
               <p className="text-xs font-semibold uppercase tracking-wide text-[var(--orb-muted)]" data-orb-dictate-capture-label>
                 Capture

@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 
+import { GlassOrbMark } from '@/components/orb-residential/ui/glass-orb-mark'
 import { profileInitialsFromName } from '@/lib/orb/orb-profile-initials'
 
 type OrbUserAvatarProps = {
@@ -33,7 +34,7 @@ export function OrbUserAvatar({
     <div
       className={`flex shrink-0 items-center justify-center overflow-hidden border border-[var(--orb-line)]/50 bg-[var(--orb-surface-elevated)] font-semibold text-[var(--orb-primary)] ${SIZE_CLASSES[size]} ${className}`}
       data-orb-user-avatar={testId}
-      data-orb-user-avatar-mode={showImage ? 'image' : 'initials'}
+      data-orb-user-avatar-mode={showImage ? 'image' : 'orb'}
       aria-hidden={!name}
     >
       {showImage ? (
@@ -46,7 +47,10 @@ export function OrbUserAvatar({
           onError={() => setImageFailed(true)}
         />
       ) : (
-        <span data-orb-user-avatar-initials>{initials}</span>
+        <>
+          <GlassOrbMark variant="avatar" aria-hidden />
+          <span className="sr-only" data-orb-user-avatar-initials>{initials}</span>
+        </>
       )}
     </div>
   )

@@ -47,7 +47,7 @@ export function OrbHelpPanel({ open, onClose }: { open: boolean; onClose: () => 
         data-orb-help-panel-scroll
       >
         <div className="orb-help-safety-panel space-y-3 p-4 orb-modal--plain orb-modal--scroll-safe orb-modal--no-clip" data-orb-help-panel data-orb-modal="product">
-          <header className="orb-help-safety-panel__header flex items-start gap-3 rounded-xl border border-indigo-100 bg-indigo-50/60 p-3">
+          <header className="orb-help-safety-panel__header flex items-start gap-3 rounded-xl border border-indigo-100 bg-indigo-50/60 p-3" data-orb-help-safety-header>
             <GlassOrbMark size="sm" aria-hidden />
             <div className="min-w-0">
               <p className="text-xs font-semibold uppercase tracking-wide text-[var(--orb-muted)]">ORB Residential</p>

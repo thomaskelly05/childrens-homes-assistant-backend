@@ -96,8 +96,8 @@ export function OrbCommunicateCreateFlow({
   }
 
   return (
-    <div className="orb-communicate-create orb-communicate-station space-y-5" data-orb-communicate-create-flow data-orb-communicate-station-layout>
-      <header className="orb-communicate-station__hero flex gap-4">
+    <div className="orb-communicate-create orb-communicate-station space-y-4" data-orb-communicate-create-flow data-orb-communicate-station-layout>
+      <header className="orb-communicate-station__hero flex gap-4" data-orb-communicate-station-hero>
         <div className="shrink-0 pt-1">
           <GlassOrbMark size="sm" pulse aria-hidden />
         </div>
@@ -135,13 +135,13 @@ export function OrbCommunicateCreateFlow({
         </p>
       </div>
 
-      <form className="orb-communicate-create__form space-y-4" onSubmit={handleCreate}>
+      <form className="orb-communicate-create__form space-y-3" onSubmit={handleCreate} data-orb-communicate-create-block>
         <label className="sr-only" htmlFor="orb-communicate-prompt">
           Describe what you need
         </label>
         <textarea
           id="orb-communicate-prompt"
-          className="orb-communicate-prompt min-h-[9.5rem] w-full resize-y text-base"
+          className="orb-communicate-prompt min-h-[7rem] w-full resize-y text-base"
           placeholder="Describe what you need to explain, support or create for adult review…"
           value={prompt}
           onChange={(event) => setPrompt(event.target.value)}

@@ -83,10 +83,11 @@ export function OrbVoiceStationContent({
               companionState={companionState}
               statusLine={statusLine}
               detailLine={detailLine}
+              middleSlot={workspaceMode === 'idle' ? children : undefined}
               cta={isMobileViewport && workspaceMode === 'idle' ? undefined : controls}
               heroStageId={isMobileViewport ? 'mobile' : 'desktop'}
             />
-            {isMobileViewport || workspaceMode === 'idle' ? children : null}
+            {isMobileViewport && workspaceMode !== 'idle' ? children : null}
             {workspaceMode === 'idle' ? (
               <p
                 className="orb-workspace-voice-status"

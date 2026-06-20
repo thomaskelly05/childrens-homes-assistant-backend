@@ -12,9 +12,9 @@ function read(relativePath: string) {
   return readFileSync(join(root, relativePath), 'utf8')
 }
 
-describe('ORB Residential Phase 2E live UI composition repair', () => {
-  it('build version marker is phase-2e on shell and visual build', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-2e')
+describe('ORB Residential Phase 2F visual system repair', () => {
+  it('build version marker is phase-2f on shell and visual build', () => {
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-2f')
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
     const layout = read('app/orb/layout.tsx')
     assert.match(companion, /data-orb-build-version=\{ORB_BUILD_VISUAL_VERSION\}/)
@@ -27,6 +27,16 @@ describe('ORB Residential Phase 2E live UI composition repair', () => {
     const cssImports = [...layout.matchAll(/import ['"]\.\/([^'"]+\.css)['"]/g)].map((match) => match[1])
     assert.deepEqual(cssImports, ['orb-residential-shell.css'])
     assert.deepEqual(ORB_LAYOUT_CSS_FILES, ['app/orb/orb-residential-shell.css'])
+  })
+
+  it('ORB identity has explicit square circular geometry and is reused across core surfaces', () => {
+    const css = read('app/orb/orb-residential-shell.css')
+    const presence = read('components/orb-residential/ui/orb-presence.tsx')
+    assert.match(presence, /data-orb-presence/)
+    assert.match(css, /\.orb-presence\s*\{[\s\S]*aspect-ratio:\s*1/)
+    assert.match(css, /\.orb-presence \.orb-living-sphere[\s\S]*border-radius:\s*50%/)
+    assert.match(read('components/orb-residential/orb-login-desktop-hero.tsx'), /variant="hero"/)
+    assert.match(read('components/orb-residential/orb-user-avatar.tsx'), /GlassOrbMark/)
   })
 
   it('sidebar identity, readable new chat action and billing placement remain correct', () => {
@@ -42,6 +52,7 @@ describe('ORB Residential Phase 2E live UI composition repair', () => {
     assert.match(sidebar, /OrbIcon name="new_chat"[^>]+text-white/)
     assert.doesNotMatch(sidebar, /data-orb-sidebar-billing/)
     assert.doesNotMatch(sidebar, /label:\s*['"]Billing['"]/)
+    assert.doesNotMatch(read('components/orb-residential/orb-account-menu.tsx'), /testId="billing"/)
     assert.match(settings, /id: 'account_billing', label: 'Account & Billing'/)
   })
 
@@ -110,6 +121,7 @@ describe('ORB Residential Phase 2E live UI composition repair', () => {
     const voice = read('components/orb-standalone/orb-voice-station.tsx')
     const selector = read('components/orb-residential/orb-voice-mode-selector.tsx')
     assert.match(voice, /OrbVoiceModeSelector/)
+    assert.match(read('components/orb-standalone/orb-voice-hero-stage.tsx'), /data-orb-voice-main-mode-controls/)
     assert.match(selector, /data-orb-voice-mode-central/)
     assert.match(selector, /data-orb-voice-mode-selection-label/)
     assert.match(selector, /aria-label="Previous voice style"/)
@@ -140,6 +152,7 @@ describe('ORB Residential Phase 2E live UI composition repair', () => {
     const billing = read('components/orb-standalone/orb-billing-settings-section.tsx')
     assert.match(settings, /className="orb-settings-layout/)
     assert.match(settings, /data-orb-settings-nav/)
+    assert.match(settings, /data-orb-settings-brand/)
     assert.match(settings, /data-orb-settings-scroll/)
     assert.doesNotMatch(settings, /orb-studio-shell[^\n]+orb-modal/)
     assert.match(profile, /data-orb-settings-profile-save/)

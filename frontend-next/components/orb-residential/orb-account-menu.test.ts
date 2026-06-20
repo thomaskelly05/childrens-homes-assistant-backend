@@ -16,8 +16,8 @@ describe('ORB ChatGPT-style account menu', () => {
     assert.match(menu, /data-orb-account-menu/)
     assert.match(menu, /testId="profile"/)
     assert.match(menu, /testId="settings"/)
-    assert.match(menu, /testId="billing"/)
-    assert.match(menu, /label="Account & Billing"/)
+    assert.doesNotMatch(menu, /testId="billing"/)
+    assert.doesNotMatch(menu, /label="Account & Billing"/)
     assert.match(menu, /testId="sign-out"/)
     assert.match(menu, /data-orb-account-menu-item=\{testId\}/)
     assert.match(menu, /label="Privacy & data"/)
@@ -48,11 +48,11 @@ describe('ORB ChatGPT-style account menu', () => {
     assert.match(account, /data-orb-account-modal/)
   })
 
-  it('settings and billing open from menu handlers', () => {
+  it('billing remains inside settings rather than a standalone quick action', () => {
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
     const menu = read('components/orb-residential/orb-account-menu.tsx')
     assert.match(companion, /openSettingsPanel\(section/)
-    assert.match(menu, /onOpenSettings\('account_billing'\)/)
+    assert.doesNotMatch(menu, /onOpenSettings\('account_billing'\)/)
     assert.match(companion, /openSettingsPanel\('account_billing'\)/)
     assert.match(companion, /initialSection=\{settingsInitialSection\}/)
   })

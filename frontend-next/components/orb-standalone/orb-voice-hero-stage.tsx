@@ -16,6 +16,7 @@ export function OrbVoiceHeroStage({
   companionState,
   statusLine,
   detailLine,
+  middleSlot,
   cta,
   className = '',
   heroStageId = 'desktop'
@@ -23,6 +24,8 @@ export function OrbVoiceHeroStage({
   companionState: OrbVoiceCompanionState
   statusLine?: string
   detailLine?: string | null
+  /** Idle-mode controls shown between the ORB waveform and primary action. */
+  middleSlot?: ReactNode
   /** Primary voice action — anchored directly below the waveform. */
   cta?: ReactNode
   className?: string
@@ -68,6 +71,12 @@ export function OrbVoiceHeroStage({
       ) : null}
 
       <OrbVoiceStudioWaveform state={companionState} className="orb-voice-hero-stage__waveform" />
+
+      {middleSlot ? (
+        <div className="orb-voice-hero-stage__modes w-full" data-orb-voice-main-mode-controls>
+          {middleSlot}
+        </div>
+      ) : null}
 
       {cta ? (
         <div className="orb-voice-hero-stage__cta w-full max-w-sm" data-orb-voice-hero-cta>
