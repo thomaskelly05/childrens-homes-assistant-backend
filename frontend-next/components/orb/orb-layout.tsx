@@ -137,7 +137,8 @@ export function OrbLayout({
       ) : null}
 
       <div
-        className={`relative flex min-h-0 flex-1 ${residentialSurface ? 'orb-chat-shell' : ''}`}
+        className={`relative flex min-h-0 flex-1 ${residentialSurface ? 'orb-chat-shell orb-full-viewport-workspace' : ''}`}
+        data-orb-full-viewport-workspace={residentialSurface ? 'true' : undefined}
         data-orb-sidebar-state={residentialSurface ? (sidebarCollapsed ? 'collapsed' : 'expanded') : undefined}
         data-orb-sidebar-collapsed={residentialSurface && sidebarCollapsed ? 'true' : undefined}
       >
@@ -146,7 +147,7 @@ export function OrbLayout({
             residentialSurface
               ? sidebarCollapsed
                 ? 'w-[var(--orb-sidebar-width-collapsed,4.25rem)] max-w-[var(--orb-sidebar-width-collapsed,4.25rem)] lg:w-[var(--orb-sidebar-width-collapsed,4.25rem)]'
-                : 'w-[min(100%,var(--orb-sidebar-width,18.125rem))] max-w-[var(--orb-sidebar-width,18.125rem)] lg:w-[var(--orb-sidebar-width,18.125rem)]'
+                : 'w-[min(100%,var(--orb-sidebar-width,17.5rem))] max-w-[var(--orb-sidebar-width,17.5rem)] lg:w-[var(--orb-sidebar-width,17.5rem)]'
               : 'w-[min(100%,18.75rem)] lg:w-[18.75rem]'
           } ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}
           data-orb-sidebar-scroll-container
@@ -154,11 +155,12 @@ export function OrbLayout({
           data-orb-sidebar-collapsed={residentialSurface && sidebarCollapsed ? 'true' : undefined}
           data-orb-guided-demo-active={guidedDemoActive ? 'true' : undefined}
           data-orb-flagship-sidebar={residentialSurface ? 'true' : undefined}
+          data-orb-full-viewport-sidebar={residentialSurface ? 'true' : undefined}
         >
           {sidebar}
         </aside>
 
-        <div className="orb-chat-main flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+        <div className="orb-chat-main orb-full-viewport-main flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
           {mobileHeader}
           <div className={mobileHeader ? 'hidden lg:contents' : 'contents'}>{header}</div>
           {preThread}

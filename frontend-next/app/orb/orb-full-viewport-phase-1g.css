@@ -1,0 +1,389 @@
+/**
+ * Phase 1G — Full viewport modern workspace for ORB Residential.
+ * Application-grade layout: sidebar + stretching main canvas, not centred forms.
+ */
+
+:root {
+  --orb-sidebar-width: 17.5rem; /* 280px */
+  --orb-sidebar-width-collapsed: 4.25rem;
+  --orb-workspace-canvas: #f8fafc;
+  --orb-workspace-surface: #ffffff;
+  --orb-workspace-text: #0f172a;
+  --orb-workspace-muted: #475569;
+  --orb-workspace-border: rgba(15, 23, 42, 0.08);
+  --orb-workspace-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+  --orb-chat-readable-max: 46rem;
+  --orb-home-main-min: 0;
+  --orb-home-rail-width: min(22rem, 32vw);
+  --orb-product-panel-max: 57.5rem; /* 920px */
+  --orb-product-panel-min: 47.5rem; /* 760px */
+  --orb-composer-dock-max: min(52rem, calc(100vw - var(--orb-sidebar-width) - 4rem));
+}
+
+/* ── Signed-in full-height shell ───────────────────────────────────────────── */
+
+[data-orb-residential='true'].orb-full-viewport-shell {
+  width: 100%;
+  height: 100dvh;
+  max-height: 100dvh;
+}
+
+[data-orb-residential='true'].orb-full-viewport-shell .orb-chat-shell,
+[data-orb-residential='true'].orb-full-viewport-shell .orb-full-viewport-workspace {
+  min-height: 0;
+  flex: 1;
+  width: 100%;
+}
+
+[data-orb-residential='true'].orb-full-viewport-shell .orb-chat-main,
+[data-orb-residential='true'].orb-full-viewport-shell .orb-full-viewport-main {
+  background: var(--orb-workspace-canvas);
+  min-width: 0;
+  flex: 1;
+}
+
+[data-orb-residential='true'] .orb-chat-sidebar[data-orb-full-viewport-sidebar='true'] {
+  width: var(--orb-sidebar-width) !important;
+  max-width: var(--orb-sidebar-width) !important;
+  flex-shrink: 0;
+}
+
+[data-orb-residential='true'].orb-full-viewport-shell .orb-chat-thread {
+  width: 100%;
+  padding-left: clamp(1rem, 2.5vw, 2rem);
+  padding-right: clamp(1rem, 2.5vw, 2rem);
+}
+
+[data-orb-residential='true'].orb-full-viewport-shell .orb-full-viewport-chat-column {
+  width: 100%;
+  max-width: none;
+  margin-inline: 0;
+}
+
+[data-orb-residential='true'].orb-full-viewport-shell .orb-full-viewport-chat-inner {
+  width: 100%;
+  max-width: min(var(--orb-chat-readable-max), 100%);
+  margin-inline: auto;
+}
+
+/* ── Composer dock — ChatGPT-style anchor ────────────────────────────────── */
+
+[data-orb-residential='true'] .orb-composer-dock.orb-full-viewport-composer-dock {
+  padding: 0.75rem clamp(1rem, 2.5vw, 2rem) max(0.75rem, env(safe-area-inset-bottom));
+  background: linear-gradient(180deg, transparent 0%, rgba(248, 250, 252, 0.92) 24%, #f8fafc 100%) !important;
+  border-top: 1px solid var(--orb-workspace-border) !important;
+}
+
+[data-orb-residential='true'] .orb-full-viewport-composer-dock .orb-composer-glass--showstopper {
+  max-width: var(--orb-composer-dock-max);
+  margin-inline: auto;
+  min-height: 3.35rem;
+  border-radius: 1.15rem !important;
+  box-shadow: var(--orb-workspace-shadow) !important;
+}
+
+/* ── Home — two-column AI workspace ──────────────────────────────────────── */
+
+.orb-full-viewport-home {
+  width: 100%;
+  min-height: min(72vh, calc(100dvh - 12rem));
+  padding: clamp(0.5rem, 2vw, 1.25rem) 0;
+}
+
+.orb-full-viewport-home-grid {
+  display: grid;
+  gap: clamp(1rem, 2.5vw, 1.75rem);
+  width: 100%;
+  align-items: start;
+}
+
+@media (min-width: 1024px) {
+  .orb-full-viewport-home-grid {
+    grid-template-columns: minmax(0, 1fr) var(--orb-home-rail-width);
+  }
+}
+
+.orb-full-viewport-home-main {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+  min-width: 0;
+}
+
+.orb-full-viewport-home-main .orb-flagship-home-hero {
+  align-items: flex-start;
+  text-align: left;
+  width: 100%;
+}
+
+.orb-full-viewport-home-main [data-orb-empty-heading],
+.orb-full-viewport-home-main [data-orb-empty-subline] {
+  color: var(--orb-workspace-text) !important;
+  max-width: 38rem;
+}
+
+.orb-full-viewport-home-rail {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  min-width: 0;
+}
+
+.orb-full-viewport-home-rail .orb-home-trust-strip,
+.orb-full-viewport-home-rail .orb-flagship-home-product-context {
+  margin-top: 0 !important;
+  text-align: left;
+}
+
+.orb-full-viewport-safety-panel {
+  border: 1px solid var(--orb-workspace-border);
+  background: var(--orb-workspace-surface);
+  border-radius: 1rem;
+  padding: 1rem 1.1rem;
+  box-shadow: var(--orb-workspace-shadow);
+  font-size: 0.8125rem;
+  line-height: 1.55;
+  color: var(--orb-workspace-muted);
+}
+
+.orb-full-viewport-home-rail .orb-guided-demo-entry--flagship,
+.orb-full-viewport-home-rail .orb-guided-demo-continue-card--flagship {
+  margin-top: 0 !important;
+  max-width: none !important;
+  width: 100%;
+}
+
+.orb-full-viewport-starter-grid {
+  display: grid;
+  gap: 0.65rem;
+  width: 100%;
+  margin-top: 1.25rem;
+}
+
+@media (min-width: 768px) {
+  .orb-full-viewport-starter-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.orb-full-viewport-starter-grid .orb-starter-card {
+  border: 1px solid var(--orb-workspace-border) !important;
+  background: var(--orb-workspace-surface) !important;
+  border-radius: 0.9rem !important;
+  padding: 0.85rem 1rem !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  text-align: left;
+}
+
+.orb-full-viewport-starter-grid .orb-starter-card:hover {
+  border-color: rgba(37, 99, 235, 0.28) !important;
+  box-shadow: var(--orb-workspace-shadow);
+}
+
+/* ── Chat answers — modern readable column ─────────────────────────────────── */
+
+[data-orb-residential='true'] .orb-full-viewport-shell .orb-assistant-answer-card {
+  border: 1px solid var(--orb-workspace-border) !important;
+  background: var(--orb-workspace-surface) !important;
+  border-radius: 1rem !important;
+  padding: 1.1rem 1.2rem !important;
+  box-shadow: var(--orb-workspace-shadow) !important;
+}
+
+[data-orb-residential='true'] .orb-full-viewport-shell [data-orb-response-action-bar-residential] {
+  gap: 0.5rem !important;
+  margin-top: 0.85rem !important;
+}
+
+[data-orb-residential='true'] .orb-full-viewport-shell [data-orb-response-action-bar-residential] button {
+  min-height: 2.5rem !important;
+  padding: 0.45rem 0.9rem !important;
+  font-size: 0.8125rem !important;
+  border-radius: 0.75rem !important;
+}
+
+/* ── Login — full viewport landing ─────────────────────────────────────────── */
+
+.orb-login-full-viewport {
+  min-height: 100dvh;
+  width: 100%;
+}
+
+.orb-login-full-viewport .orb-login-full-viewport-shell {
+  width: 100% !important;
+  max-width: none !important;
+  min-height: 100dvh;
+  margin: 0 !important;
+  padding: 0 !important;
+  display: grid;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 1024px) {
+  .orb-login-full-viewport .orb-login-full-viewport-shell {
+    grid-template-columns: 58% 42%;
+  }
+}
+
+.orb-login-full-viewport .orb-login-flagship-hero {
+  min-height: min(100dvh, 56rem);
+  padding: clamp(2rem, 5vw, 4rem) clamp(1.75rem, 4vw, 3.5rem) !important;
+  background: linear-gradient(135deg, #f8fafc 0%, #eef2ff 48%, #f8fafc 100%);
+  border-right: 1px solid var(--orb-workspace-border);
+}
+
+.orb-login-full-viewport .orb-login-panel {
+  min-height: min(100dvh, 56rem);
+  justify-content: center;
+  padding: clamp(1.5rem, 4vw, 3rem) clamp(1.25rem, 4vw, 3rem) !important;
+}
+
+.orb-login-full-viewport .orb-login-flagship-auth {
+  width: 100% !important;
+  max-width: 26rem !important;
+}
+
+@media (min-width: 1280px) {
+  .orb-login-full-viewport .orb-login-flagship-auth {
+    max-width: 30rem !important;
+  }
+}
+
+/* ── Dictate — full two-panel workspace ────────────────────────────────────── */
+
+.orb-full-viewport-dictate-workspace {
+  min-height: calc(100dvh - 5rem);
+  width: 100%;
+  padding: 0.5rem clamp(0.75rem, 2vw, 1.25rem) !important;
+}
+
+.orb-full-viewport-dictate-workspace .orb-resizable-workspace,
+.orb-full-viewport-dictate-workspace [data-orb-dictate-studio-workspace] {
+  min-height: calc(100dvh - 11rem);
+}
+
+.orb-full-viewport-dictate-workspace .orb-transcript-panel {
+  min-height: calc(100dvh - 14rem) !important;
+}
+
+.orb-full-viewport-dictate-workspace [data-orb-dictate-brain-panel] {
+  min-height: calc(100dvh - 14rem);
+}
+
+.orb-full-viewport-dictate-workspace .orb-workflow-strip {
+  padding: 0.5rem 0 0.75rem;
+}
+
+/* ── Voice — full-height voice room ────────────────────────────────────────── */
+
+.orb-full-viewport-voice-room {
+  min-height: calc(100dvh - 6rem);
+  width: 100%;
+}
+
+.orb-full-viewport-voice-room .orb-voice-station-content__scroll {
+  min-height: calc(100dvh - 10rem);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.orb-full-viewport-voice-room [data-orb-voice-hero-stage] {
+  transform: scale(1.12);
+}
+
+.orb-full-viewport-voice-room .orb-flagship-voice-status-card {
+  max-width: 32rem;
+}
+
+/* ── ORB Write — full editor shell ─────────────────────────────────────────── */
+
+.orb-full-viewport-write-workspace {
+  width: 100%;
+  min-height: calc(100dvh - 5rem);
+  padding: 0.5rem clamp(0.75rem, 2vw, 1.25rem);
+}
+
+.orb-full-viewport-write-workspace [data-orb-write-editor-canvas],
+.orb-full-viewport-write-workspace .orb-write-editor-surface {
+  min-height: calc(100dvh - 14rem) !important;
+  max-width: none !important;
+}
+
+.orb-full-viewport-write-workspace [data-orb-write-guidance-panel] {
+  position: sticky;
+  top: 0.75rem;
+  max-height: calc(100dvh - 8rem);
+  overflow-y: auto;
+}
+
+/* ── Records & Drafts — full workspace ─────────────────────────────────────── */
+
+.orb-full-viewport-records-workspace {
+  width: 100%;
+  min-height: calc(100dvh - 6rem);
+  padding: 0.5rem clamp(0.75rem, 2vw, 1.25rem) !important;
+}
+
+.orb-full-viewport-records-workspace .orb-studio-empty-state,
+.orb-full-viewport-records-workspace .orb-flagship-records-empty {
+  min-height: 16rem;
+  padding: 2.5rem 2rem !important;
+  border-style: solid !important;
+  border-color: var(--orb-workspace-border) !important;
+}
+
+.orb-full-viewport-records-workspace [data-orb-premium-page='saved_outputs'] {
+  width: 100%;
+}
+
+/* ── Product modals — 760–920px panels ─────────────────────────────────────── */
+
+[data-orb-residential='true'] [data-orb-panel-shell='help'].orb-panel-modal,
+[data-orb-residential='true'] [data-orb-panel-shell='settings'].orb-panel-modal,
+[data-orb-residential='true'] .orb-app-panel-root:has([data-orb-billing-modal][data-orb-product-panel-modal]) .orb-panel-modal {
+  width: min(calc(100vw - 1.5rem), var(--orb-product-panel-max)) !important;
+  max-width: min(calc(100vw - 1.5rem), var(--orb-product-panel-max)) !important;
+}
+
+[data-orb-residential='true'] [data-orb-panel-shell='help'].orb-panel-modal,
+[data-orb-residential='true'] [data-orb-panel-shell='settings'].orb-panel-modal {
+  min-width: min(100%, var(--orb-product-panel-min));
+}
+
+[data-orb-residential='true'] [data-orb-panel-shell='settings'].orb-panel-drawer,
+[data-orb-residential='true'] [data-orb-panel-shell='saved_outputs'].orb-panel-drawer {
+  max-width: min(calc(100vw - var(--orb-sidebar-width)), 56rem) !important;
+  width: min(calc(100vw - var(--orb-sidebar-width)), 56rem) !important;
+}
+
+/* ── Reduce Windows-98 / admin-panel feel ──────────────────────────────────── */
+
+[data-orb-residential='true'] .orb-full-viewport-shell .orb-studio-empty-state {
+  border-style: solid !important;
+  border-color: var(--orb-workspace-border) !important;
+}
+
+[data-orb-residential='true'] .orb-full-viewport-shell .orb-starter-pill {
+  border-radius: 0.75rem !important;
+}
+
+[data-orb-residential='true'] .orb-panel-card {
+  border-color: var(--orb-workspace-border) !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+[data-orb-residential='true'] .orb-full-viewport-page-header {
+  padding: 0.75rem clamp(0.75rem, 2vw, 1.25rem) 1rem;
+  border-bottom: 1px solid var(--orb-workspace-border);
+  background: var(--orb-workspace-surface);
+}
+
+[data-orb-residential='true'] .orb-full-viewport-page-header h1,
+[data-orb-residential='true'] .orb-full-viewport-page-header h2 {
+  font-size: 1.25rem;
+  font-weight: 650;
+  color: var(--orb-workspace-text);
+  letter-spacing: -0.02em;
+}

@@ -242,10 +242,10 @@ export function OrbSavedOutputsPanel({
       {...orbStationShellProps(residentialSurface, 'wide')}
     >
       <div
-        className={`orb-studio-shell flex min-h-0 flex-col gap-2 p-2 sm:gap-3 sm:p-4 lg:flex-row ${residentialSurface ? 'orb-flagship-records-workspace' : ''}`}
+        className={`orb-studio-shell flex min-h-0 flex-col gap-2 p-2 sm:gap-3 sm:p-4 lg:flex-row ${residentialSurface ? 'orb-flagship-records-workspace orb-full-viewport-records-workspace' : ''}`}
         data-orb-saved-outputs-panel
         data-orb-studio-shell="saved_outputs"
-        {...(residentialSurface ? { 'data-orb-flagship-records-workspace': true } : {})}
+        {...(residentialSurface ? { 'data-orb-flagship-records-workspace': true, 'data-orb-full-viewport-records-workspace': true } : {})}
         {...(items.length === 0 && !loading ? { 'data-orb-saved-outputs-empty': true } : {})}
       >
         <div className="flex w-full shrink-0 flex-col lg:w-[var(--orb-desktop-saved-list-width,27.5rem)] lg:max-w-[var(--orb-desktop-saved-list-width,27.5rem)] lg:border-b-0 lg:border-r lg:border-[var(--orb-mobile-ws-card-border,var(--orb-line))]">

@@ -41,9 +41,10 @@ export function OrbVoiceStationContent({
 
   return (
     <div
-      className={`orb-voice-station-content orb-flagship-voice-room flex min-h-0 flex-1 flex-col overflow-hidden ${className}`.trim()}
+      className={`orb-voice-station-content orb-flagship-voice-room orb-full-viewport-voice-room flex min-h-0 flex-1 flex-col overflow-hidden ${className}`.trim()}
       data-orb-voice-station-content
       data-orb-flagship-voice-room
+      data-orb-full-viewport-voice-room
       data-orb-voice-mobile={isMobileViewport ? true : undefined}
       data-orb-voice-desktop-spacious={!isMobileViewport ? true : undefined}
       data-orb-voice-workspace-mode={workspaceMode}

@@ -3201,7 +3201,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
         residentialSurface
           ? 'bg-gradient-to-t from-[var(--orb-page-bg,var(--orb-bg-deep,#05070d))] via-[color-mix(in_srgb,var(--orb-page-bg,var(--orb-bg-deep,#05070d))_95%,transparent)] to-transparent'
           : 'bg-gradient-to-t from-[#f4f6f9] via-[#f4f6f9] to-transparent'
-      } ${residentialSurface && showEmptyState ? 'orb-composer-dock--empty' : ''}`}
+      } ${residentialSurface && showEmptyState ? 'orb-composer-dock--empty' : ''} ${residentialSurface ? 'orb-full-viewport-composer-dock' : ''}`}
       data-orb-composer="main"
       data-orb-composer-mounted="true"
     >
@@ -3674,7 +3674,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
 
   return (
     <main
-      className={`orb-chat-layout relative flex h-[100dvh] max-h-[100dvh] flex-col overflow-hidden ${layoutA11yClass} ${atmosphereClass} ${themeClass} ${isAnswering ? 'orb-response-active' : ''} ${residentialSurface ? 'orb-chat-layout--residential orb-flagship-shell' : ''} ${isMobileViewport ? ORB_MOBILE_SHELL_CLASS : ''}`}
+      className={`orb-chat-layout relative flex h-[100dvh] max-h-[100dvh] flex-col overflow-hidden ${layoutA11yClass} ${atmosphereClass} ${themeClass} ${isAnswering ? 'orb-response-active' : ''} ${residentialSurface ? 'orb-chat-layout--residential orb-flagship-shell orb-full-viewport-shell' : ''} ${isMobileViewport ? ORB_MOBILE_SHELL_CLASS : ''}`}
       data-orb-companion-root="true"
       data-orb-theme={effectiveTheme}
       data-orb-appearance={appearanceMode}
@@ -4186,14 +4186,22 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
               aria-label="ORB conversation"
               data-orb-chat-scroll-container
             >
-              <div className={`mx-auto w-full ${residentialSurface ? 'max-w-[var(--orb-flagship-home-max,52rem)]' : 'max-w-[var(--orb-chat-column-max,50rem)]'}`}>
+              <div className={`mx-auto w-full ${residentialSurface ? 'orb-full-viewport-chat-column' : 'max-w-[var(--orb-chat-column-max,50rem)]'}`}>
                 {showEmptyState ? (
                   <div
-                    className={`flex min-h-0 flex-col items-center justify-start px-2 py-3 text-center md:min-h-[min(56vh,28rem)] md:justify-center md:py-10 ${residentialSurface ? 'orb-residential-empty orb-residential-empty--desktop orb-flagship-home' : ''}`}
+                    className={`flex min-h-0 flex-col items-center justify-start px-2 py-3 text-center md:min-h-[min(56vh,28rem)] md:justify-center md:py-10 ${residentialSurface ? 'orb-residential-empty orb-residential-empty--desktop orb-flagship-home orb-full-viewport-home' : ''}`}
                     data-orb-empty-state
-                    {...(residentialSurface ? { 'data-orb-residential-empty': true, 'data-orb-flagship-home': true } : {})}
+                    {...(residentialSurface ? { 'data-orb-residential-empty': true, 'data-orb-flagship-home': true, 'data-orb-full-viewport-home': true } : {})}
                   >
                     {residentialSurface ? <div className="orb-v2-atmosphere" aria-hidden /> : null}
+                    <div
+                      className={residentialSurface ? 'orb-full-viewport-home-grid w-full' : 'w-full'}
+                      {...(residentialSurface ? { 'data-orb-full-viewport-home-grid': true } : {})}
+                    >
+                      <div
+                        className={residentialSurface ? 'orb-full-viewport-home-main w-full' : 'w-full'}
+                        {...(residentialSurface ? { 'data-orb-full-viewport-home-main': true } : {})}
+                      >
                     <div className="orb-flagship-home-hero" data-orb-flagship-home-hero>
                     <div
                       className="relative flex shrink-0 justify-center"
@@ -4241,14 +4249,14 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
                     {residentialSurface ? (
                       <>
                         <h2
-                          className="mt-4 hidden text-xl font-semibold tracking-tight text-[var(--orb-premium-text,#f7faff)] md:mt-6 md:block md:text-[1.35rem]"
+                          className="mt-4 hidden text-xl font-semibold tracking-tight text-slate-900 md:mt-6 md:block md:text-[1.5rem]"
                           data-orb-empty-heading
                           data-orb-empty-heading-desktop
                         >
                           {ORB_RESIDENTIAL_EMPTY_HEADING_DESKTOP}
                         </h2>
                         <h2
-                          className="mt-2 text-xl font-semibold tracking-tight text-[var(--orb-premium-text,#f7faff)] md:hidden"
+                          className="mt-2 text-xl font-semibold tracking-tight text-slate-900 md:hidden"
                           data-orb-empty-heading
                           data-orb-empty-heading-mobile
                         >
@@ -4298,56 +4306,125 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
                       </p>
                     ) : null}
                     </div>
-                    {residentialSurface ? (
-                      <p
-                        className="orb-home-trust-strip"
-                        role="status"
-                        data-orb-home-trust-strip
+                    {residentialSurface && !isMobileViewport ? (
+                      <div
+                        className="orb-full-viewport-starter-grid w-full"
+                        data-orb-starter-cards
+                        data-orb-empty-starter-chips
+                        data-orb-starter-primary-chips
+                        data-orb-starter-count={emptyStarters.length}
                       >
-                        {ORB_HOME_TRUST_STRIP}
-                      </p>
-                    ) : null}
-                    {residentialSurface ? (
-                      <p
-                        className="orb-flagship-home-product-context"
-                        data-orb-home-product-context
-                      >
-                        {ORB_HOME_PRODUCT_CONTEXT_ROW}
-                      </p>
-                    ) : null}
-                    {residentialSurface ? (
-                      <div className="orb-home-surface-card" data-orb-home-surface-card>
-                        {guidedDemoState.active && !guidedDemoPanelOpen ? (
-                          <div className="mt-4 w-full max-w-[var(--orb-composer-max,46rem)]" data-orb-guided-demo-resume>
-                            <button
-                              type="button"
-                              onClick={() => setGuidedDemoPanelOpen(true)}
-                              className="orb-guided-demo-continue-card orb-guided-demo-continue-card--flagship w-full rounded-2xl border border-indigo-200 bg-indigo-50 px-4 py-3.5 text-left text-sm font-semibold text-slate-900 shadow-sm"
-                              data-orb-guided-demo-continue
-                            >
-                              Continue Guided Demo — step {guidedDemoState.stepIndex + 1} of 5
-                            </button>
-                          </div>
-                        ) : !guidedDemoState.active ? (
-                          <OrbGuidedDemoEntry onStart={handleGuidedDemoStart} />
-                        ) : null}
-                        {isMobileViewport ? (
-                          <div
-                            className="mt-2.5 w-full max-w-[var(--orb-composer-max,46rem)]"
-                            data-orb-starter-cards
-                            data-orb-empty-starter-chips
-                            data-orb-starter-count={ORB_RESIDENTIAL_MOBILE_PRIMARY_STARTERS.length}
+                        {emptyStarters.map((starter) => (
+                          <button
+                            key={starter.text}
+                            type="button"
+                            onClick={() => applyPrompt(starter)}
+                            className="orb-starter-card text-left text-[13px] leading-snug"
+                            data-orb-starter-card
+                            data-orb-starter-suggestion-card="true"
                           >
-                            <div
-                              className="grid grid-cols-2 gap-2"
-                              data-orb-starter-pills-grid
+                            {starter.text}
+                          </button>
+                        ))}
+                      </div>
+                    ) : null}
+                    </div>
+                    {residentialSurface ? (
+                      <aside className="orb-full-viewport-home-rail w-full" data-orb-full-viewport-home-rail>
+                          <p
+                            className="orb-home-trust-strip"
+                            role="status"
+                            data-orb-home-trust-strip
+                          >
+                            {ORB_HOME_TRUST_STRIP}
+                          </p>
+                          <p
+                            className="orb-flagship-home-product-context"
+                            data-orb-home-product-context
+                          >
+                            {ORB_HOME_PRODUCT_CONTEXT_ROW}
+                          </p>
+                          <div className="orb-full-viewport-safety-panel" data-orb-full-viewport-safety-panel>
+                            Adult review required before use. ORB supports professional judgement — it does not replace safeguarding procedures or local policy.
+                          </div>
+                          {guidedDemoState.active && !guidedDemoPanelOpen ? (
+                            <div className="w-full" data-orb-guided-demo-resume>
+                              <button
+                                type="button"
+                                onClick={() => setGuidedDemoPanelOpen(true)}
+                                className="orb-guided-demo-continue-card orb-guided-demo-continue-card--flagship w-full rounded-2xl border border-indigo-200 bg-indigo-50 px-4 py-3.5 text-left text-sm font-semibold text-slate-900 shadow-sm"
+                                data-orb-guided-demo-continue
+                              >
+                                Continue Guided Demo — step {guidedDemoState.stepIndex + 1} of 5
+                              </button>
+                            </div>
+                          ) : !guidedDemoState.active ? (
+                            <OrbGuidedDemoEntry onStart={handleGuidedDemoStart} />
+                          ) : null}
+                      </aside>
+                    ) : null}
+                    </div>
+                    {residentialSurface && isMobileViewport ? (
+                      <>
+                        <div
+                          className="orb-full-viewport-starter-grid mt-3 w-full"
+                          data-orb-starter-cards
+                          data-orb-empty-starter-chips
+                          data-orb-starter-pills-grid
+                          data-orb-starter-count={ORB_RESIDENTIAL_MOBILE_PRIMARY_STARTERS.length}
+                        >
+                          {ORB_RESIDENTIAL_MOBILE_PRIMARY_STARTERS.map((starter) => (
+                            <button
+                              key={starter.text}
+                              type="button"
+                              onClick={() => applyPrompt(starter)}
+                              className="orb-starter-card text-left text-[13px] leading-snug"
+                              data-orb-starter-card
+                              data-orb-starter-suggestion-card="true"
                             >
-                              {ORB_RESIDENTIAL_MOBILE_PRIMARY_STARTERS.map((starter) => (
+                              {starter.text}
+                            </button>
+                          ))}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setPromptDrawerOpen(true)}
+                          className="mt-2 inline-flex min-h-0 items-center justify-center rounded-full border border-[var(--orb-line)]/35 bg-transparent px-2.5 py-0.5 text-[11px] font-medium text-[var(--orb-muted)]"
+                          data-orb-more-examples
+                        >
+                          More
+                        </button>
+                      </>
+                    ) : null}
+                    {residentialSurface && !isMobileViewport ? (
+                        <button
+                          type="button"
+                          onClick={() => setMoreExamplesExpanded((open) => !open)}
+                          className="mt-3 text-xs font-medium text-[var(--orb-muted)] underline-offset-4 transition hover:text-[var(--orb-foreground)] hover:underline"
+                          data-orb-more-examples
+                          aria-expanded={moreExamplesExpanded}
+                        >
+                          {moreExamplesExpanded ? 'Fewer examples' : 'More examples'}
+                        </button>
+                    ) : null}
+                    {residentialSurface && !isMobileViewport && moreExamplesExpanded ? (
+                      <div
+                        className="mt-4 w-full space-y-3 text-left"
+                        data-orb-starter-groups
+                        data-orb-starter-expanded-groups
+                      >
+                        {ORB_RESIDENTIAL_STARTER_GROUPS.map((group) => (
+                          <section key={group.id} data-orb-starter-group={group.id}>
+                            <h3 className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--orb-muted)]">
+                              {group.label}
+                            </h3>
+                            <div className="orb-full-viewport-starter-grid" data-orb-starter-pills>
+                              {group.starters.map((starter) => (
                                 <button
                                   key={starter.text}
                                   type="button"
                                   onClick={() => applyPrompt(starter)}
-                                  className="orb-starter-card px-3 py-2 text-left text-[13px] leading-snug"
+                                  className="orb-starter-card text-left text-[12px] leading-snug"
                                   data-orb-starter-card
                                   data-orb-starter-suggestion-card="true"
                                 >
@@ -4355,83 +4432,11 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
                                 </button>
                               ))}
                             </div>
-                            <button
-                              type="button"
-                              onClick={() => setPromptDrawerOpen(true)}
-                              className="mx-auto mt-1 inline-flex min-h-0 items-center justify-center rounded-full border border-[var(--orb-line)]/35 bg-transparent px-2.5 py-0.5 text-[11px] font-medium text-[var(--orb-muted)]"
-                              data-orb-more-examples
-                            >
-                              More
-                            </button>
-                          </div>
-                        ) : (
-                          <div
-                            className="mt-4 w-full max-w-[var(--orb-composer-max,46rem)]"
-                            data-orb-empty-starter-chips
-                            data-orb-starter-primary-chips
-                            data-orb-starter-count={emptyStarters.length}
-                          >
-                            <div
-                              className="flex flex-wrap justify-center gap-2"
-                              data-orb-starter-pills
-                            >
-                              {emptyStarters.map((starter) => (
-                                <button
-                                  key={starter.text}
-                                  type="button"
-                                  onClick={() => applyPrompt(starter)}
-                                  className="orb-starter-pill orb-starter-card rounded-full border border-[var(--orb-line)]/30 bg-transparent px-3.5 py-1.5 text-[13px] leading-snug text-[var(--orb-foreground)] transition hover:border-[var(--orb-primary)]/28 hover:bg-[var(--orb-surface)]/50"
-                                  data-orb-starter-card
-                                  data-orb-starter-pill="true"
-                                >
-                                  {starter.text}
-                                </button>
-                              ))}
-                            </div>
-                            {moreExamplesExpanded ? (
-                              <div
-                                className="mt-4 space-y-3 text-left"
-                                data-orb-starter-groups
-                                data-orb-starter-expanded-groups
-                              >
-                                {ORB_RESIDENTIAL_STARTER_GROUPS.map((group) => (
-                                  <section key={group.id} data-orb-starter-group={group.id}>
-                                    <h3 className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--orb-muted)]">
-                                      {group.label}
-                                    </h3>
-                                    <div className="flex flex-wrap gap-1.5" data-orb-starter-pills>
-                                      {group.starters.map((starter) => (
-                                        <button
-                                          key={starter.text}
-                                          type="button"
-                                          onClick={() => applyPrompt(starter)}
-                                          className="orb-starter-pill orb-starter-card rounded-full border border-[var(--orb-line)]/28 bg-transparent px-3 py-1 text-left text-[12px] leading-snug text-[var(--orb-foreground)] transition hover:border-[var(--orb-primary)]/24 hover:bg-[var(--orb-surface)]/45"
-                                          data-orb-starter-card
-                                          data-orb-starter-pill="true"
-                                        >
-                                          {starter.text}
-                                        </button>
-                                      ))}
-                                    </div>
-                                  </section>
-                                ))}
-                              </div>
-                            ) : null}
-                          </div>
-                        )}
-                        {!isMobileViewport ? (
-                          <button
-                            type="button"
-                            onClick={() => setMoreExamplesExpanded((open) => !open)}
-                            className="mt-3 text-xs font-medium text-[var(--orb-muted)] underline-offset-4 transition hover:text-[var(--orb-foreground)] hover:underline"
-                            data-orb-more-examples
-                            aria-expanded={moreExamplesExpanded}
-                          >
-                            {moreExamplesExpanded ? 'Fewer examples' : 'More examples'}
-                          </button>
-                        ) : null}
+                          </section>
+                        ))}
                       </div>
-                    ) : (
+                    ) : null}
+                    {!residentialSurface ? (
                       <div
                         className="mt-5 flex w-full max-w-2xl flex-wrap justify-center gap-2 lg:max-w-3xl"
                         data-orb-starter-cards
@@ -4451,7 +4456,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
                           </button>
                         ))}
                       </div>
-                    )}
+                    ) : null}
                     {!residentialSurface ? (
                       <button
                         type="button"
@@ -4464,7 +4469,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
                     ) : null}
                   </div>
                 ) : (
-                  <div className="space-y-6 pb-6">
+                  <div className={`space-y-6 pb-6 ${residentialSurface ? 'orb-full-viewport-chat-inner' : ''}`} data-orb-full-viewport-chat-inner={residentialSurface ? true : undefined}>
                     {imageUnderstandingNote &&
                     imageNoteForMessageId &&
                     visibleMessages.some((m) => m.id === imageNoteForMessageId) ? (

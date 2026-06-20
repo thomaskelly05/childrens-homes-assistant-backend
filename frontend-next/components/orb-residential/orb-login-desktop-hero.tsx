@@ -21,10 +21,11 @@ const VALUE_CHIPS = [
 export function OrbLoginDesktopHero() {
   return (
     <div
-      className="orb-login-hero orb-login-flagship-hero relative hidden flex-col justify-center lg:flex lg:px-4 xl:px-8"
+      className="orb-login-hero orb-login-flagship-hero orb-login-full-viewport-hero relative hidden flex-col justify-center lg:flex lg:px-4 xl:px-8"
       data-orb-login-hero-top-aligned
       data-orb-login-desktop-hero
       data-orb-login-flagship-hero
+      data-orb-login-full-viewport-hero
     >
       <div className="orb-login-hero-glow pointer-events-none absolute inset-0" aria-hidden />
       <div className="orb-login-hero-inner relative flex flex-col justify-start">

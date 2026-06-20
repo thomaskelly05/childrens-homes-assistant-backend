@@ -260,8 +260,9 @@ function OrbLoginPanel({
 
   return (
     <div
-      className={`orb-residential-root orb-login-root ${ORB_MOBILE_VIEWPORT_CLASS} ${themeClass} min-h-[100dvh] min-h-[100svh]`}
+      className={`orb-residential-root orb-login-root orb-login-full-viewport ${ORB_MOBILE_VIEWPORT_CLASS} ${themeClass} min-h-[100dvh] min-h-[100svh]`}
       data-orb-login-page
+      data-orb-login-full-viewport
       data-orb-login-version={ORB_LOGIN_VERSION}
       data-orb-auth-build-variant={ORB_AUTH_BUILD_VARIANT}
       data-orb-login-mobile-single-column
@@ -278,7 +279,7 @@ function OrbLoginPanel({
       }}
     >
       <div
-        className="orb-login-shell orb-login-flagship-shell mx-auto grid min-h-0 w-full max-w-[88rem] grid-cols-1 px-5 py-4 sm:px-8 lg:grid-cols-[1.15fr_0.85fr] lg:gap-12 lg:px-12 lg:pb-5 lg:pt-0"
+        className="orb-login-shell orb-login-flagship-shell orb-login-full-viewport-shell grid min-h-0 w-full grid-cols-1 px-5 py-4 sm:px-8 lg:grid-cols-[58%_42%] lg:gap-0 lg:px-0 lg:pb-0 lg:pt-0"
         data-orb-login-two-column
         data-orb-login-scrollable
       >
