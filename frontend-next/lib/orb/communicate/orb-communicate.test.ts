@@ -133,4 +133,14 @@ describe('ORB Communicate', () => {
     assert.match(station, /ORB Communicate/)
     assert.match(station, /data-orb-communicate-safety-banner|OrbCommunicateSafetyBanner/)
   })
+
+  it('my voice profile localStorage load and save handle storage failures', () => {
+    const client = read('lib/orb/communicate/orb-communicate-client.ts')
+    const profileUi = read('components/orb-communicate/orb-communicate-my-voice-profile.tsx')
+    assert.match(client, /loadMyVoiceProfileLocal[\s\S]*?try[\s\S]*?localStorage\.getItem/)
+    assert.match(client, /saveMyVoiceProfileLocal[\s\S]*?try[\s\S]*?localStorage\.setItem/)
+    assert.match(client, /savedLocally: saveMyVoiceProfileLocal/)
+    assert.match(profileUi, /savedLocally/)
+    assert.match(profileUi, /storage is unavailable/)
+  })
 })

@@ -100,13 +100,18 @@ export function loadMyVoiceProfileLocal(): MyVoiceProfile | null {
   }
 }
 
-export function saveMyVoiceProfileLocal(profile: MyVoiceProfile): void {
-  if (typeof window === 'undefined') return
+export function saveMyVoiceProfileLocal(profile: MyVoiceProfile): boolean {
+  if (typeof window === 'undefined') return false
   const payload: MyVoiceProfile = {
     ...profile,
     updatedAt: new Date().toISOString()
   }
-  window.localStorage.setItem(MY_VOICE_PROFILE_STORAGE_KEY, JSON.stringify(payload))
+  try {
+    window.localStorage.setItem(MY_VOICE_PROFILE_STORAGE_KEY, JSON.stringify(payload))
+    return true
+  } catch {
+    return false
+  }
 }
 
 export async function fetchMyVoiceProfile(): Promise<MyVoiceProfile | null> {
@@ -115,7 +120,13 @@ export async function fetchMyVoiceProfile(): Promise<MyVoiceProfile | null> {
   return loadMyVoiceProfileLocal()
 }
 
-export async function saveMyVoiceProfile(profile: MyVoiceProfile): Promise<MyVoiceProfile> {
+export type MyVoiceProfileSaveResult = {
+  profile: MyVoiceProfile
+  /** True when persisted to this device; false when only held in session memory. */
+  savedLocally: boolean
+}
+
+export async function saveMyVoiceProfile(profile: MyVoiceProfile): Promise<MyVoiceProfileSaveResult> {
   const payload: MyVoiceProfile = {
     ...profile,
     updatedAt: new Date().toISOString()
@@ -127,10 +138,9 @@ export async function saveMyVoiceProfile(profile: MyVoiceProfile): Promise<MyVoi
       body: JSON.stringify(payload)
     })
     const saved = parseEnvelope<MyVoiceProfile>(json)
-    if (saved) return saved
+    if (saved) return { profile: saved, savedLocally: true }
   } catch {
     // fall through to local persistence
   }
-  saveMyVoiceProfileLocal(payload)
-  return payload
+  return { profile: payload, savedLocally: saveMyVoiceProfileLocal(payload) }
 }
