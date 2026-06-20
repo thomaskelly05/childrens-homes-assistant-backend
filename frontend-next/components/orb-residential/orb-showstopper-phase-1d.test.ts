@@ -39,7 +39,7 @@ describe('ORB Residential Phase 1D showstopper UI', () => {
     assert.match(companion, /data-orb-home-safety-line/)
     assert.match(companion, /ORB_HOME_SAFETY_LINE/)
     assert.doesNotMatch(companion, /data-orb-workspace-home-rail/)
-    assert.match(ORB_HOME_SAFETY_LINE, /local safeguarding procedures/)
+    assert.match(ORB_HOME_SAFETY_LINE, /professional judgement/)
   })
 
   it('guided demo active marker appears when demo is active', () => {

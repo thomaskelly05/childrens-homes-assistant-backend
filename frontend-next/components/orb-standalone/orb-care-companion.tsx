@@ -114,7 +114,6 @@ import { ORB_MOBILE_SHELL_CLASS } from '@/components/orb-residential/orb-mobile-
 import { OrbAccountModal } from '@/components/orb-standalone/orb-account-modal'
 import { OrbAdultProfileDrawer } from '@/components/orb-standalone/orb-adult-profile-drawer'
 import { OrbLayout, OrbMobileChatHeader } from '@/components/orb/orb-layout'
-import { OrbHomeStartRow } from '@/components/orb-residential/orb-home-start-row'
 import { GlassOrbMark } from '@/components/orb-residential/ui/glass-orb-mark'
 import { OrbGuidedDemoEntry } from '@/components/orb-residential/orb-guided-demo-entry'
 import { OrbGuidedDemoPanel } from '@/components/orb-residential/orb-guided-demo-panel'
@@ -135,7 +134,6 @@ import {
   ORB_GUIDED_DEMO_ACTIVE_MARKER
 } from '@/lib/orb/orb-guided-demo-copy'
 import {
-  ORB_COMPOSER_V2_PLACEHOLDER_CHAT,
   ORB_COMPOSER_V2_PLACEHOLDER_HOME,
   ORB_HOME_BRAND_TRUTH_LINE,
   ORB_HOME_SAFETY_LINE
@@ -3237,14 +3235,6 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
           />
         </div>
       ) : null}
-      {residentialSurface && showEmptyState ? (
-        <OrbHomeStartRow
-          onSelect={(prompt) => {
-            setMessage(prompt)
-            inputRef.current?.focus()
-          }}
-        />
-      ) : null}
       <OrbIntelligenceMicroStatus
         active={isAnswering}
         expertDepth={answeringExpertDepth}
@@ -3333,13 +3323,17 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
       }
       inlineVoiceShowDictateFallback={Boolean(residentialSurface && isMobileViewport && micNotice)}
       composerPlaceholder={
-        residentialSurface
-          ? showEmptyState
-            ? ORB_COMPOSER_V2_PLACEHOLDER_HOME
-            : ORB_COMPOSER_V2_PLACEHOLDER_CHAT
-          : undefined
+        residentialSurface ? ORB_COMPOSER_V2_PLACEHOLDER_HOME : undefined
       }
     />
+      {residentialSurface && showEmptyState ? (
+        <p
+          className="orb-composer-dock-safety mx-auto mt-2 max-w-[var(--orb-composer-dock-max,48rem)] px-2 text-center text-[11px] leading-relaxed text-[var(--orb-muted)]"
+          data-orb-home-safety-line
+        >
+          {ORB_HOME_SAFETY_LINE}
+        </p>
+      ) : null}
     </div>
   )
 
@@ -4240,7 +4234,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
               <div className={`mx-auto w-full ${residentialSurface ? 'orb-chat-column' : 'max-w-[var(--orb-chat-column-max,50rem)]'}`}>
                 {showEmptyState ? (
                   <div
-                    className={`flex min-h-0 flex-col items-center justify-start px-2 py-3 text-center md:min-h-[min(56vh,28rem)] md:justify-center md:py-10 ${residentialSurface ? 'orb-residential-empty orb-residential-empty--desktop orb-workspace--home' : ''}`}
+                    className={`flex min-h-0 flex-col items-center justify-start px-2 py-2 text-center md:min-h-[min(42vh,22rem)] md:justify-center md:py-6 ${residentialSurface ? 'orb-residential-empty orb-residential-empty--desktop orb-workspace--home orb-workspace--home-calm' : ''}`}
                     data-orb-empty-state
                     {...(residentialSurface ? { 'data-orb-residential-empty': true, 'data-orb-workspace-home': true } : {})}
                   >
@@ -4277,10 +4271,10 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
                     {residentialSurface ? (
                       <>
                         <p className="orb-brand-eyebrow" data-orb-brand-eyebrow>
-                          ORB Residential
+                          ORB RESIDENTIAL
                         </p>
                         <h2
-                          className="orb-workspace-headline mt-3 text-xl font-semibold tracking-tight text-slate-900 md:mt-4 md:text-[1.5rem]"
+                          className="orb-workspace-headline mt-2 text-xl font-semibold tracking-tight text-slate-900 md:mt-3 md:text-[1.45rem]"
                           data-orb-empty-heading
                           data-orb-empty-heading-desktop
                           data-orb-workspace-headline
@@ -4320,18 +4314,10 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
                     ) : null}
                     {residentialSurface ? (
                       <p
-                        className="orb-home-brand-truth mt-2 max-w-lg text-xs leading-relaxed text-[var(--orb-muted)]"
+                        className="orb-home-brand-truth mt-1.5 max-w-lg text-xs leading-relaxed text-[var(--orb-muted)]"
                         data-orb-home-brand-truth
                       >
                         {ORB_HOME_BRAND_TRUTH_LINE}
-                      </p>
-                    ) : null}
-                    {residentialSurface && showEmptyState ? (
-                      <p
-                        className="orb-workspace-home-safety mt-2.5 max-w-lg text-[11px] leading-relaxed text-[var(--orb-muted)]"
-                        data-orb-home-safety-line
-                      >
-                        {ORB_HOME_SAFETY_LINE}
                       </p>
                     ) : null}
                     {emptyWelcome.temporaryNote ? (

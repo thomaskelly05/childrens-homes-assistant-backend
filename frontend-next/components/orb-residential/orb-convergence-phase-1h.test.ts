@@ -70,11 +70,10 @@ describe('ORB Residential canonical shell (Phase 1H copy retained)', () => {
     const composer = read('components/orb-standalone/orb-standalone-composer.tsx')
     assert.match(companion, /orb-composer-dock/)
     assert.match(companion, /ORB_COMPOSER_V2_PLACEHOLDER_HOME/)
-    assert.match(companion, /ORB_COMPOSER_V2_PLACEHOLDER_CHAT/)
     assert.match(composer, /orb-composer/)
     assert.match(composer, /data-orb-composer/)
-    assert.match(ORB_COMPOSER_V2_PLACEHOLDER_HOME, /Describe what happened|reflect/)
-    assert.match(ORB_COMPOSER_V2_PLACEHOLDER_CHAT, /recording, reflection, evidence/)
+    assert.match(ORB_COMPOSER_V2_PLACEHOLDER_HOME, /Ask ORB what you need help thinking through/)
+    assert.match(ORB_COMPOSER_V2_PLACEHOLDER_CHAT, /Ask ORB what you need help thinking through/)
   })
 
   it('login uses enterprise split layout with dark brand panel', () => {

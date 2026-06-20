@@ -41,11 +41,10 @@ export const ORB_DICTATE_REVIEW_HINT =
 export const ORB_DICTATE_RESPONSIBILITY =
   'Confirm names, roles, sequence and accuracy before using any draft. ORB does not verify identity or replace adult review.'
 
-/** Chat home — child-centred empty state (Phase 1H). */
-export const ORB_CHAT_EMPTY_HEADING =
-  'What needs thinking through, recording or evidencing today?'
+/** Chat home — child-centred empty state (Phase 3H calm welcome). */
+export const ORB_CHAT_EMPTY_HEADING = 'What do you need help thinking through?'
 export const ORB_CHAT_EMPTY_SUBLINE =
-  'Start with what happened. ORB can help you think, structure and write with the child\u2019s experience central.'
+  'Start with what happened, what you are unsure about, or what needs recording. ORB can help you reflect, structure and write with the child\u2019s experience central.'
 export const ORB_HOME_VALUE_PROPOSITION = ORB_CHAT_EMPTY_SUBLINE
 
 /** Starter action — not a competing station name. */

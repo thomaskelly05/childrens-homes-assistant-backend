@@ -1,7 +1,7 @@
 /**
  * ORB Residential — single canonical UI design system (Phase 1K blank canvas, 1M personality).
  * One file for shell, workspace, composer, login, mobile, stations and modals.
- * Visual build marker: phase-3g-home-chat.
+ * Visual build marker: phase-3h-calm-home-chat.
  */
 
 :root {
@@ -326,50 +326,60 @@ html[data-orb-residential='1'] :focus-visible {
 
 .orb-workspace--home {
   width: 100%;
-  min-height: min(60vh, calc(100dvh - 12rem));
+  min-height: min(48vh, calc(100dvh - 14rem));
+}
+
+.orb-workspace--home-calm {
+  min-height: min(42vh, calc(100dvh - 16rem));
 }
 
 .orb-workspace-hero--premium {
   position: relative;
-  padding-top: 0.5rem;
+  padding-top: 0.25rem;
+  padding-bottom: 0.25rem;
 }
 
 .orb-home-orb-glow {
   position: absolute;
-  top: -1rem;
+  top: -0.5rem;
   left: 50%;
-  width: min(18rem, 70vw);
-  height: min(18rem, 70vw);
+  width: min(14rem, 55vw);
+  height: min(14rem, 55vw);
   transform: translateX(-50%);
   background: var(--orb-res-orb-glow);
   pointer-events: none;
   z-index: 0;
-  animation: orb-home-breathe 6s ease-in-out infinite;
+  animation: orb-home-breathe 7s ease-in-out infinite;
+  opacity: 0.65;
 }
 
 @keyframes orb-home-breathe {
   0%,
   100% {
-    opacity: 0.72;
+    opacity: 0.58;
     transform: translateX(-50%) scale(1);
   }
   50% {
-    opacity: 1;
-    transform: translateX(-50%) scale(1.06);
+    opacity: 0.78;
+    transform: translateX(-50%) scale(1.03);
   }
 }
 
 .orb-home-hero-presence .orb-presence--hero,
 .orb-home-hero-presence [data-glass-orb-mark] .orb-presence {
-  filter: drop-shadow(0 0 18px rgba(99, 102, 241, 0.38)) drop-shadow(0 0 36px rgba(34, 211, 238, 0.22));
+  filter: drop-shadow(0 0 14px rgba(99, 102, 241, 0.28)) drop-shadow(0 0 28px rgba(34, 211, 238, 0.16));
+}
+
+.orb-workspace--home-calm .orb-home-hero-presence .orb-presence--hero {
+  --orb-presence-size: clamp(3.5rem, 5.5vw, 4.75rem);
 }
 
 body[data-orb-composer-focused='true'] [data-orb-home-empty='true'] .orb-home-orb-glow {
-  opacity: 1;
+  opacity: 0.82;
   background: radial-gradient(
     circle at 50% 45%,
-    rgba(99, 102, 241, 0.32) 0%,
-    rgba(37, 99, 235, 0.14) 42%,
+    rgba(99, 102, 241, 0.24) 0%,
+    rgba(37, 99, 235, 0.1) 42%,
     transparent 72%
   );
 }
@@ -389,8 +399,9 @@ body[data-orb-composer-focused='true'] [data-orb-home-empty='true'] .orb-home-or
 .orb-home-brand-truth {
   position: relative;
   z-index: 1;
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
   letter-spacing: -0.01em;
+  opacity: 0.88;
 }
 
 .orb-workspace-home-safety {
@@ -532,6 +543,30 @@ body[data-orb-composer-focused='true'] [data-orb-home-empty='true'] .orb-home-or
 [data-orb-home-empty='true'] .orb-composer-dock {
   border-top: none !important;
   background: transparent !important;
+  padding-top: 0.35rem;
+}
+
+[data-orb-home-empty='true'] .orb-composer-dock .orb-composer,
+[data-orb-home-empty='true'] .orb-composer-dock .orb-composer--premium {
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 4px 24px rgba(15, 23, 42, 0.06), 0 1px 3px rgba(15, 23, 42, 0.04);
+  max-width: min(42rem, var(--orb-composer-dock-max, 48rem));
+}
+
+[data-orb-home-empty='true'] .orb-composer-dock .orb-composer--premium:focus-within {
+  border-color: rgba(99, 102, 241, 0.22);
+  box-shadow: 0 6px 28px rgba(15, 23, 42, 0.08), 0 0 0 2px rgba(99, 102, 241, 0.08);
+}
+
+.orb-composer-dock-safety {
+  border: none;
+  background: transparent;
+  box-shadow: none;
+}
+
+[data-orb-chat-active='true'] .orb-composer-dock-safety {
+  display: none;
 }
 
 .orb-workspace-home-grid {
@@ -557,32 +592,40 @@ body[data-orb-composer-focused='true'] [data-orb-home-empty='true'] .orb-home-or
 /* ── Composer ─────────────────────────────────────────────────────────────── */
 
 .orb-composer-dock {
-  padding: 0.75rem clamp(1rem, 2.5vw, 2rem) max(0.75rem, env(safe-area-inset-bottom));
+  padding: 0.5rem clamp(1rem, 2.5vw, 2rem) max(0.5rem, env(safe-area-inset-bottom));
   background: var(--orb-res-workspace-bg);
-  border-top: 1px solid var(--orb-res-workspace-border);
+  border-top: 1px solid transparent;
+}
+
+[data-orb-chat-active='true'] .orb-composer-dock {
+  border-top-color: transparent;
+  background: linear-gradient(180deg, transparent 0%, var(--orb-res-workspace-bg) 18%);
 }
 
 .orb-composer {
   min-height: var(--orb-res-composer-min-height);
-  border-radius: var(--orb-res-composer-radius);
-  border: 1px solid rgba(15, 23, 42, 0.1);
+  border-radius: 1.25rem;
+  border: 1px solid rgba(15, 23, 42, 0.07);
   background: var(--orb-res-workspace-surface);
-  box-shadow: var(--orb-res-composer-shadow);
-  max-width: var(--orb-composer-dock-max);
+  box-shadow: 0 4px 20px rgba(15, 23, 42, 0.06);
+  max-width: min(42rem, var(--orb-composer-dock-max, 48rem));
   margin-inline: auto;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 html[data-orb-residential='1'] .orb-composer--premium:focus-within,
 html[data-orb-residential='1'] .orb-composer.orb-composer--premium:focus-within {
-  border-color: rgba(99, 102, 241, 0.45);
-  box-shadow: 0 8px 36px rgba(15, 23, 42, 0.1), 0 0 0 3px rgba(99, 102, 241, 0.12);
+  border-color: rgba(99, 102, 241, 0.28);
+  box-shadow: 0 6px 28px rgba(15, 23, 42, 0.08), 0 0 0 2px rgba(99, 102, 241, 0.08);
 }
 
 html[data-orb-residential='1'] .orb-composer--premium .orb-composer-send,
 html[data-orb-residential='1'] .orb-composer.orb-composer--premium .orb-composer-send {
   background: linear-gradient(135deg, var(--orb-res-accent) 0%, var(--orb-res-accent-violet) 100%) !important;
-  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
+  box-shadow: 0 3px 12px rgba(37, 99, 235, 0.28);
+  width: 2.25rem;
+  height: 2.25rem;
+  min-width: 2.25rem;
 }
 
 html[data-orb-residential='1'] .orb-composer--premium textarea,

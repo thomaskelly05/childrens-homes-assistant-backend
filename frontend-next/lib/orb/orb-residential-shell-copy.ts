@@ -14,13 +14,11 @@ export const ORB_LOGIN_ENTERPRISE_TRUST_PILLS = [
 export const ORB_LOGIN_ENTERPRISE_FOUNDER_LINE =
   'Built for the adults who care, centred on the children who matter.'
 
-export const ORB_HOME_V2_HEADLINE =
-  'What needs thinking through, recording or evidencing today?'
+export const ORB_HOME_V2_HEADLINE = 'What do you need help thinking through?'
 export const ORB_HOME_V2_SUBLINE =
-  'Start with what happened. ORB can help you think, structure and write with the child\u2019s experience central.'
+  'Start with what happened, what you are unsure about, or what needs recording. ORB can help you reflect, structure and write with the child\u2019s experience central.'
 
-export const ORB_HOME_BRAND_TRUTH_LINE =
-  'Built to help adults think before they write \u2014 with the child\u2019s experience at the centre.'
+export const ORB_HOME_BRAND_TRUTH_LINE = 'Built to help adults think before they write.'
 
 export const ORB_HOME_START_WITH_LABEL = 'Start with'
 
@@ -59,14 +57,13 @@ export const ORB_HOME_RAIL_TRUST_ITEMS = [
 ] as const
 
 export const ORB_COMPOSER_V2_PLACEHOLDER_HOME =
-  'Describe what happened, paste rough notes, or ask ORB to help you reflect\u2026'
-export const ORB_COMPOSER_V2_PLACEHOLDER_CHAT =
-  'Ask ORB about recording, reflection, evidence or practice\u2026'
+  'Ask ORB what you need help thinking through\u2026'
+export const ORB_COMPOSER_V2_PLACEHOLDER_CHAT = ORB_COMPOSER_V2_PLACEHOLDER_HOME
 export const ORB_COMPOSER_V2_PLACEHOLDER_DICTATE = 'Paste rough notes or speak naturally\u2026'
 export const ORB_COMPOSER_V2_PLACEHOLDER_WRITE = 'Ask ORB to improve this draft\u2026'
 
 export const ORB_HOME_SAFETY_LINE =
-  'Do not include unnecessary identifiable information. Use anonymised or minimal details where possible. Follow your local safeguarding procedures.'
+  'ORB supports professional judgement. Review before use and follow local safeguarding procedures.'
 
 export const ORB_VOICE_V2_STATUS_COPY =
   'Talk it through. ORB can help you reflect before you write.'
