@@ -77,7 +77,7 @@ describe('ORB Residential desktop premium simplification pass', () => {
     assert.match(selector, /data-orb-write-template-selector/)
     assert.match(picker, /orbWriteTemplatePickerRecordTypes/)
     assert.match(writePanel, /ORB_WRITE_SAFETY_COPY/)
-    assert.match(writePanel, /Create final draft/)
+    assert.match(writePanel, /Create safer final draft|Create final draft/)
     assert.match(read('lib/orb/recording/orb-recording-section-prompts.ts'), /general_dictation/)
   })
 

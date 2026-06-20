@@ -162,7 +162,7 @@ describe('ORB Residential desktop convergence sprint', () => {
     assert.match(dictateTop, /orb-liquid-toolbar/)
     assert.match(dictateTop, /data-orb-dictate-top-bar/)
     assert.match(write, /ORB_WRITE_SAFETY_COPY/)
-    assert.match(writePanel, /Create final draft/)
+    assert.match(writePanel, /Create safer final draft|Create final draft/)
     assert.match(read('components/orb-write/orb-write-toolbar.tsx'), /data-orb-write-approve/)
     assert.match(companion, /onOpenDictateFallback/)
     assert.equal(

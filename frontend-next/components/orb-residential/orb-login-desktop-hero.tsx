@@ -25,7 +25,7 @@ export function OrbLoginDesktopHero() {
       data-orb-login-enterprise-copy={`${ORB_LOGIN_ENTERPRISE_SUBHEADLINE} ${ORB_LOGIN_ENTERPRISE_SUPPORTING}`}
     >
       <div className="orb-login-hero-glow pointer-events-none absolute inset-0" aria-hidden />
-      <div className="orb-login-hero-inner relative mx-auto flex w-full max-w-2xl flex-col justify-center py-6 lg:max-h-[100dvh] lg:overflow-y-auto lg:overscroll-contain">
+      <div className="orb-login-hero-inner relative mx-auto flex w-full max-w-2xl flex-col justify-center py-4 lg:max-h-[100dvh] lg:overflow-y-auto lg:overscroll-contain" data-orb-login-above-fold>
         <div className="orb-login-brand-orb-field flex flex-col items-start gap-3" data-orb-login-hero-visual data-orb-login-luminous-orb>
           <div className="orb-login-hero-sphere-wrap shrink-0" data-orb-login-hero-sphere>
             <GlassOrbMark variant="hero" pulse data-orb-login-brand-mark />
@@ -41,7 +41,7 @@ export function OrbLoginDesktopHero() {
         </div>
 
         <p
-          className="orb-login-headline--showstopper mt-5 text-3xl font-semibold leading-tight text-slate-100 xl:text-4xl"
+          className="orb-login-headline--showstopper mt-4 text-2xl font-semibold leading-tight text-slate-100 xl:text-3xl"
           data-orb-login-title
           data-orb-login-subheadline
         >
@@ -60,10 +60,10 @@ export function OrbLoginDesktopHero() {
           {ORB_LOGIN_PRODUCT_EXPLANATION}
         </p>
 
-        <div className="orb-login-stations orb-login-station-preview mt-6" data-orb-login-stations data-orb-login-station-preview>
+        <div className="orb-login-stations orb-login-station-preview mt-4" data-orb-login-stations data-orb-login-station-preview>
           <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Station preview</p>
           <div
-            className="orb-login-stations-scroll grid max-h-[min(12rem,28dvh)] gap-2 overflow-y-auto overscroll-contain sm:grid-cols-2"
+            className="orb-login-stations-scroll grid max-h-[min(10rem,24dvh)] gap-1.5 overflow-y-auto overscroll-contain sm:grid-cols-2"
             data-orb-login-stations-scroll
           >
             {ORB_LOGIN_STATION_DESCRIPTIONS.map((station) => (

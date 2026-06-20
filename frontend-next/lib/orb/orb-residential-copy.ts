@@ -269,7 +269,17 @@ export function residentialStarterPrompt(starter: ResidentialStarter): string {
 
 /** User-facing product copy for ORB Residential — safe, regulatory-aware language. */
 export const ORB_RESIDENTIAL_PRODUCT_NAME = 'ORB Residential'
-export const ORB_RESIDENTIAL_TAGLINE = 'Powered by IndiCare Intelligence'
+export const ORB_RESIDENTIAL_TAGLINE = 'Powered by IndiCare'
+
+/** Visible ORB Write studio review prompts — adult-led checks before finalising. */
+export const ORB_WRITE_STUDIO_REVIEW_CHECKS = [
+  'What am I missing?',
+  `Is the child${APOS}s voice visible?`,
+  'Have I separated observation from interpretation?',
+  'Is the adult response clear?',
+  'Is follow-up or management oversight needed?',
+  'Does this wording preserve dignity?'
+] as const
 
 /** Action-led empty heading — child-centred, ORB-specific. */
 export const ORB_RESIDENTIAL_EMPTY_HEADING_DESKTOP = ORB_CHAT_EMPTY_HEADING

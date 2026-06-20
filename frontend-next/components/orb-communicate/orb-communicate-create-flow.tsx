@@ -36,6 +36,12 @@ export const ORB_COMMUNICATE_OUTPUT_TYPES = [
   'Reflect-and-record starter'
 ] as const
 
+export const ORB_COMMUNICATE_CREATOR_HEADLINE =
+  'Describe what the person needs to understand, express or prepare for. ORB will create an adult-reviewed communication support pack.'
+
+export const ORB_COMMUNICATE_PROMPT_PLACEHOLDER =
+  'What do you need to explain, support or create?'
+
 export const ORB_COMMUNICATE_PACK_PREVIEW =
   'Describe the communication need. ORB creates an adult-reviewed support pack with consistent accessible visuals that can be personalised around the way each person communicates.'
 
@@ -148,40 +154,23 @@ export function OrbCommunicateCreateFlow({
             themselves and be heard before the record is written.
           </p>
           <p className="mt-2 text-xs leading-relaxed text-[var(--orb-res-workspace-muted)]" data-orb-communicate-supporting-line>
-            Describe the communication need. ORB creates an adult-reviewed support pack.
+            {ORB_COMMUNICATE_CREATOR_HEADLINE}
           </p>
         </div>
       </header>
 
-      <div className="orb-communicate-outputs space-y-2" data-orb-communicate-outputs>
-        <p className="text-xs font-semibold uppercase tracking-wide text-[var(--orb-res-workspace-muted)]">
-          What you can create
+      <div className="orb-communicate-creator-grid grid gap-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(18rem,0.75fr)]" data-orb-communicate-creator-grid>
+      <form className="orb-communicate-create__form orb-station-workspace space-y-3" onSubmit={handleCreate} data-orb-communicate-create-block>
+        <p className="text-sm font-medium text-[var(--orb-res-navy)]" data-orb-communicate-creator-prompt>
+          {ORB_COMMUNICATE_PROMPT_PLACEHOLDER}
         </p>
-        <ul className="flex flex-wrap gap-2">
-          {ORB_COMMUNICATE_OUTPUT_TYPES.map((item) => (
-            <li
-              key={item}
-              className="rounded-full border border-[var(--orb-line)]/60 bg-[var(--orb-surface-elevated)] px-2.5 py-1 text-[11px] text-[var(--orb-res-workspace-text)]"
-              data-orb-communicate-output-type={item}
-            >
-              {item}
-            </li>
-          ))}
-        </ul>
-        <p className="text-xs leading-relaxed text-[var(--orb-res-workspace-muted)]" data-orb-communicate-pack-preview>
-          {ORB_COMMUNICATE_PACK_PREVIEW}
-        </p>
-      </div>
-
-      <div className="orb-communicate-creator-grid grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,0.82fr)]" data-orb-communicate-creator-grid>
-      <form className="orb-communicate-create__form space-y-3" onSubmit={handleCreate} data-orb-communicate-create-block>
         <label className="sr-only" htmlFor="orb-communicate-prompt">
           Describe what you need
         </label>
         <textarea
           id="orb-communicate-prompt"
-          className="orb-communicate-prompt min-h-[7rem] w-full resize-y text-base"
-          placeholder="Describe what you need to explain, support or create for adult review…"
+          className="orb-communicate-prompt min-h-[9rem] w-full resize-y text-base"
+          placeholder={ORB_COMMUNICATE_PROMPT_PLACEHOLDER}
           value={prompt}
           onChange={(event) => setPrompt(event.target.value)}
           data-orb-communicate-prompt-input
@@ -254,6 +243,26 @@ export function OrbCommunicateCreateFlow({
           ))}
         </div>
       </aside>
+      </div>
+
+      <div className="orb-communicate-outputs space-y-2" data-orb-communicate-outputs>
+        <p className="text-xs font-semibold uppercase tracking-wide text-[var(--orb-res-workspace-muted)]">
+          What ORB can create
+        </p>
+        <ul className="flex flex-wrap gap-2">
+          {ORB_COMMUNICATE_OUTPUT_TYPES.map((item) => (
+            <li
+              key={item}
+              className="rounded-full border border-[var(--orb-line)]/60 bg-[var(--orb-surface-elevated)] px-2.5 py-1 text-[11px] text-[var(--orb-res-workspace-text)]"
+              data-orb-communicate-output-type={item}
+            >
+              {item}
+            </li>
+          ))}
+        </ul>
+        <p className="text-xs leading-relaxed text-[var(--orb-res-workspace-muted)]" data-orb-communicate-pack-preview>
+          {ORB_COMMUNICATE_PACK_PREVIEW}
+        </p>
       </div>
 
       <p

@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom'
 import { Archive, MoreHorizontal, Pin } from 'lucide-react'
 
 import type { StandaloneChat } from '@/lib/orb/standalone-local-store'
+import { formatOrbChatDisplayTitle } from '@/lib/orb/orb-chat-display-title'
 
 export function OrbSidebarChatList({
   chats,
@@ -40,7 +41,7 @@ export function OrbSidebarChatList({
             data-orb-sidebar-chat={chat.id}
           >
             {chat.pinned ? <Pin className="mr-1 inline h-3 w-3 text-amber-300/90" aria-hidden /> : null}
-            {chat.title}
+            {formatOrbChatDisplayTitle(chat.title)}
           </button>
           <OrbSidebarChatMenu
             chat={chat}
@@ -83,7 +84,7 @@ function OrbSidebarChatMenu({
         className="rounded-md p-1 text-slate-500 hover:bg-slate-100 hover:text-slate-700"
         aria-expanded={open}
         aria-haspopup="menu"
-        aria-label={`Chat actions for ${chat.title}`}
+        aria-label={`Chat actions for ${formatOrbChatDisplayTitle(chat.title)}`}
         data-orb-sidebar-chat-menu
       >
         <MoreHorizontal className="h-3.5 w-3.5" />

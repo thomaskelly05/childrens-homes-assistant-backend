@@ -64,9 +64,10 @@ import {
   saveOrbWriteLocalDraft
 } from '@/lib/orb/write/orb-write-standalone'
 import type { OrbWriteDocument } from '@/lib/orb/write/orb-write-types'
+import { ORB_WRITE_SAFETY_COPY } from '@/lib/orb/write/orb-write-types'
 import { ORB_RESIDENTIAL_STATION_PRODUCT_COPY } from '@/lib/orb/orb-residential-copy'
 import { orbGuidedDemoSaveStatusMessage, resolveOrbGuidedDemoSaveTitle } from '@/lib/orb/orb-guided-demo'
-import { ORB_WRITE_SAFETY_COPY } from '@/lib/orb/write/orb-write-types'
+import { OrbWriteStudioReviewChecklist } from '@/components/orb-write/orb-write-studio-review-checklist'
 
 export function OrbWriteStandalonePanel({
   open,
@@ -483,7 +484,7 @@ export function OrbWriteStandalonePanel({
                     ORB Write
                   </h2>
                   <p className="text-[11px] text-slate-600" data-orb-write-studio-subtitle data-orb-write-care-studio>
-                    Care documentation studio — draft, review and finalise adult-led records with ORB.
+                    Care documentation studio — draft, review and finalise adult-led records in one calm workspace.
                   </p>
                 </div>
               </div>
@@ -551,7 +552,7 @@ export function OrbWriteStandalonePanel({
                   className="hidden items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white disabled:bg-indigo-300 disabled:opacity-100 md:inline-flex"
                   data-orb-write-generate
                 >
-                  Create final draft
+                  Create safer final draft
                 </button>
               </div>
             </header>
@@ -602,6 +603,7 @@ export function OrbWriteStandalonePanel({
                   data-orb-write-guidance-panel-host
                   data-orb-write-review-panel
                 >
+                  <OrbWriteStudioReviewChecklist />
                   <div className="min-h-[200px] overflow-hidden rounded-xl border border-[var(--orb-line)]/50 bg-[var(--orb-surface-elevated)] lg:min-h-0">
                     <OrbDictateBrainPanel
                       analysis={brainAnalysis}

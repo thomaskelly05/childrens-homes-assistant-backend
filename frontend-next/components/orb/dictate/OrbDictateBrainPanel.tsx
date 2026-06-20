@@ -4,7 +4,7 @@ import { useState, type ReactNode } from 'react'
 import { Loader2, PanelRightClose, PanelRightOpen, Sparkles } from 'lucide-react'
 
 import type { OrbDictateBrainAnalysis, OrbDictateBrainSuggestion } from '@/lib/orb/dictate/orb-dictate-brain-analysis'
-import { ORB_RESIDENTIAL_DICTATE_COPY, orbResidentialReviewChecks } from '@/lib/orb/orb-residential-copy'
+import { ORB_RESIDENTIAL_DICTATE_COPY, orbResidentialReviewChecks, ORB_CORE_REVIEW_CHECKS } from '@/lib/orb/orb-residential-copy'
 import {
   orbRecordingSuggestedOutputs,
   resolveOrbRecordingRecordType
@@ -106,6 +106,19 @@ function BrainEmptyState({
         {recordType.label}
       </p>
       <p className="mt-1 text-xs leading-relaxed text-[var(--orb-muted)]">{recordType.when_to_use}</p>
+
+      <section className="mt-4" data-orb-dictate-review-sections data-orb-brain-review-sections>
+        <h4 className="text-[10px] font-semibold uppercase tracking-wider text-[var(--orb-muted)]">
+          What ORB helps you check
+        </h4>
+        <ul className="mt-1.5 space-y-1 text-xs text-[var(--orb-foreground)]">
+          {ORB_CORE_REVIEW_CHECKS.map((check) => (
+            <li key={check} data-orb-dictate-review-section={check}>
+              {check}
+            </li>
+          ))}
+        </ul>
+      </section>
 
       <section className="mt-4" data-orb-brain-empty-orb-checks>
         <h4 className="text-[10px] font-semibold uppercase tracking-wider text-[var(--orb-muted)]">

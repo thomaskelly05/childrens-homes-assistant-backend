@@ -1,7 +1,7 @@
 /**
  * ORB Residential — single canonical UI design system (Phase 1K blank canvas, 1M personality).
  * One file for shell, workspace, composer, login, mobile, stations and modals.
- * Visual build marker: phase-2h.
+ * Visual build marker: phase-3b.
  */
 
 :root {
@@ -2023,4 +2023,244 @@ html[data-orb-residential='1'] .orb-communicate-preview-section p {
   font-size: 0.75rem;
   line-height: 1.45;
   margin-top: 0.2rem;
+}
+
+/* ── Phase 3B unified station pattern ───────────────────────────────────── */
+
+[data-glass-orb-mark] {
+  display: inline-grid;
+  place-items: center;
+  border-radius: 50%;
+  overflow: visible;
+  background: transparent;
+  line-height: 0;
+}
+
+.orb-presence .orb-living-sphere {
+  box-shadow:
+    inset 0 0 34px rgba(255,255,255,.62),
+    inset -12px -16px 26px rgba(15,23,42,.22),
+    0 0 36px rgba(34,211,238,.62),
+    0 0 78px rgba(124,58,237,.42),
+    0 0 104px rgba(236,72,153,.2);
+}
+
+.orb-presence::after {
+  inset: -52%;
+  filter: blur(14px);
+}
+
+.orb-sidebar-powered-tagline {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.35;
+  max-width: 11rem;
+}
+
+.orb-station-journey span[data-orb-dictate-journey-step] {
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  background: rgba(255,255,255,.12);
+  color: #f8fafc;
+  font-weight: 600;
+}
+
+.orb-voice-mode-carousel {
+  scroll-padding-inline: 0.5rem;
+}
+
+.orb-voice-mode-carousel__chip {
+  scroll-snap-align: start;
+}
+
+.orb-app-shell .orb-chat-thread {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  padding-top: 1rem;
+}
+
+.orb-chat-column-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+[data-orb-residential='true'] [data-orb-message-role='user'] {
+  align-self: flex-end;
+  max-width: min(85%, 36rem);
+}
+
+[data-orb-residential='true'] [data-orb-message-role='assistant'] {
+  align-self: flex-start;
+  max-width: min(92%, var(--orb-res-chat-column-max));
+}
+
+.orb-workspace--write .orb-write-editor-canvas,
+[data-orb-write-editor] {
+  max-width: min(64rem, 100%);
+}
+
+.orb-write-integrated-studio [data-orb-write-document-canvas] article {
+  min-height: 72vh;
+}
+
+.orb-communicate-create__form .orb-communicate-prompt {
+  border-radius: 1rem;
+  border: 1px solid rgba(99,102,241,.16);
+  background: #fff;
+  box-shadow: 0 10px 28px rgba(15,23,42,.05);
+  padding: 1rem;
+}
+
+html[data-orb-residential='1'] .orb-login-hero-inner[data-orb-login-above-fold] {
+  padding-block: clamp(1rem, 2.5vh, 1.5rem);
+}
+
+html[data-orb-residential='1'] .orb-login-brand-orb-field .glass-orb-mark {
+  filter: drop-shadow(0 0 28px rgba(103,232,249,.45)) drop-shadow(0 0 52px rgba(139,92,246,.28));
+}
+
+html[data-orb-residential='1'] .orb-dictate-stage-map.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0,0,0,0);
+}
+
+html[data-orb-residential='1'] [data-orb-write-studio-review-checklist] {
+  border-color: rgba(99,102,241,.14);
+  background: linear-gradient(145deg, #fff, #f8faff);
+}
+
+html[data-orb-residential='1'] [data-orb-voice-style-carousel],
+html[data-orb-residential='1'] [data-orb-voice-reasoning-carousel] {
+  mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+}
+
+/* ── Phase 3B unified station pattern ───────────────────────────────────── */
+
+[data-glass-orb-mark] {
+  display: inline-grid;
+  place-items: center;
+  border-radius: 50%;
+  overflow: visible;
+  background: transparent;
+  line-height: 0;
+}
+
+.orb-presence .orb-living-sphere {
+  box-shadow:
+    inset 0 0 34px rgba(255,255,255,.62),
+    inset -12px -16px 26px rgba(15,23,42,.22),
+    0 0 36px rgba(34,211,238,.62),
+    0 0 78px rgba(124,58,237,.42),
+    0 0 104px rgba(236,72,153,.2);
+}
+
+.orb-presence::after {
+  inset: -52%;
+  filter: blur(14px);
+}
+
+.orb-sidebar-powered-tagline {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.35;
+  max-width: 11rem;
+}
+
+.orb-station-hero {
+  border-radius: 1.15rem;
+}
+
+.orb-station-journey span[data-orb-dictate-journey-step] {
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  background: rgba(255,255,255,.12);
+  color: #f8fafc;
+  font-weight: 600;
+}
+
+.orb-station-workspace {
+  min-width: 0;
+}
+
+.orb-voice-mode-carousel {
+  scroll-padding-inline: 0.5rem;
+}
+
+.orb-voice-mode-carousel__chip {
+  scroll-snap-align: start;
+}
+
+.orb-app-shell .orb-chat-thread {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  padding-top: 1rem;
+}
+
+.orb-chat-column-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+[data-orb-residential='true'] [data-orb-message-role='user'] {
+  align-self: flex-end;
+  max-width: min(85%, 36rem);
+}
+
+[data-orb-residential='true'] [data-orb-message-role='assistant'] {
+  align-self: flex-start;
+  max-width: min(92%, var(--orb-res-chat-column-max));
+}
+
+.orb-workspace--write .orb-write-editor-canvas,
+[data-orb-write-editor] {
+  max-width: min(64rem, 100%);
+}
+
+.orb-write-integrated-studio [data-orb-write-document-canvas] article {
+  min-height: 72vh;
+}
+
+.orb-communicate-create__form .orb-communicate-prompt {
+  border-radius: 1rem;
+  border: 1px solid rgba(99,102,241,.16);
+  background: #fff;
+  box-shadow: 0 10px 28px rgba(15,23,42,.05);
+  padding: 1rem;
+}
+
+html[data-orb-residential='1'] .orb-login-hero-inner[data-orb-login-above-fold] {
+  padding-block: clamp(1rem, 2.5vh, 1.5rem);
+}
+
+html[data-orb-residential='1'] .orb-login-brand-orb-field .glass-orb-mark {
+  filter: drop-shadow(0 0 28px rgba(103,232,249,.45)) drop-shadow(0 0 52px rgba(139,92,246,.28));
+}
+
+html[data-orb-residential='1'] .orb-dictate-stage-map.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0,0,0,0);
+}
+
+html[data-orb-residential='1'] [data-orb-write-studio-review-checklist] {
+  border-color: rgba(99,102,241,.14);
+  background: linear-gradient(145deg, #fff, #f8faff);
+}
+
+html[data-orb-residential='1'] [data-orb-communicate-creator-prompt] {
+  color: var(--orb-res-navy);
+}
+
+html[data-orb-residential='1'] [data-orb-voice-style-carousel],
+html[data-orb-residential='1'] [data-orb-voice-reasoning-carousel] {
+  mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
 }

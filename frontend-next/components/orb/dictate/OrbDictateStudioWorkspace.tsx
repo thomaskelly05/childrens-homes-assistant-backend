@@ -267,50 +267,44 @@ export function OrbDictateStudioWorkspace(props: OrbDictateStudioWorkspaceProps)
       data-orb-dictate-empty={!hasTranscript ? 'true' : undefined}
       style={{ minHeight: 'min(100dvh - 4.5rem, calc(100svh - 4.5rem))' }}
     >
-      <header className="orb-dictate-hero-strip shrink-0 rounded-xl border border-[var(--orb-line)]/40 bg-[var(--orb-surface-elevated)]/80 px-3 py-3 sm:px-4" data-orb-dictate-hero-strip data-orb-dictate-studio-hero>
+      <header className="orb-station-hero orb-dictate-hero-strip shrink-0 rounded-xl border border-[var(--orb-line)]/35 bg-gradient-to-br from-[var(--orb-res-navy)] to-[#1e293b] px-3 py-3 text-white sm:px-4" data-orb-dictate-hero-strip data-orb-dictate-studio-hero>
         <div className="flex min-w-0 items-start gap-3">
           <GlassOrbMark size="sm" pulse className="shrink-0" aria-hidden />
           <div className="min-w-0 flex-1">
-            <h2 className="text-sm font-semibold tracking-tight text-[var(--orb-foreground)]" data-orb-dictate-title>
+            <h2 className="text-sm font-semibold tracking-tight" data-orb-dictate-title>
               {ORB_DICTATE_TITLE === 'Dictate' ? 'ORB Dictate' : ORB_DICTATE_TITLE}
             </h2>
-            <p className="mt-0.5 text-xs leading-relaxed text-[var(--orb-muted)]" data-orb-dictate-subtitle-header>
+            <p className="mt-0.5 text-xs leading-relaxed text-slate-200/90" data-orb-dictate-subtitle-header>
               {ORB_DICTATE_SUBTITLE}
             </p>
-            <div className="orb-dictate-workflow mt-2 flex flex-wrap items-center gap-1.5 text-[10px]" data-orb-dictate-designed-workflow>
-              <span>Capture</span><span aria-hidden>→</span><span>Transcript</span><span aria-hidden>→</span><span>ORB Review</span><span aria-hidden>→</span><span>Safer draft</span>
-            </div>
+            <nav
+              className="orb-station-journey orb-dictate-workflow mt-2 flex flex-wrap items-center gap-1 text-[10px] font-medium"
+              aria-label="Dictate journey"
+              data-orb-dictate-designed-workflow
+              data-orb-dictate-journey="Capture → Transcript → ORB Review → Safer Draft → ORB Write"
+            >
+              <span data-orb-dictate-journey-step="capture">Capture</span>
+              <span aria-hidden className="opacity-60">→</span>
+              <span data-orb-dictate-journey-step="transcript">Transcript</span>
+              <span aria-hidden className="opacity-60">→</span>
+              <span data-orb-dictate-journey-step="orb-review">ORB Review</span>
+              <span aria-hidden className="opacity-60">→</span>
+              <span data-orb-dictate-journey-step="safer-draft">Safer Draft</span>
+            </nav>
           </div>
         </div>
       </header>
 
       <section
-        className="orb-dictate-stage-map grid shrink-0 gap-2 sm:grid-cols-2 xl:grid-cols-4"
-        aria-label="Dictate journey"
+        className="orb-dictate-stage-map sr-only"
+        aria-hidden
         data-orb-dictate-stage-interface
-        data-orb-dictate-progression
         data-orb-dictate-journey="Capture → Transcript → ORB Review → Safer Draft → ORB Write"
       >
-        <article className="orb-dictate-stage-card" data-orb-dictate-stage="capture">
-          <p className="orb-dictate-stage-card__label">Stage 1</p>
-          <h3>Capture</h3>
-          <p>Record, paste notes or upload audio. Choose the record type before ORB reviews.</p>
-        </article>
-        <article className="orb-dictate-stage-card" data-orb-dictate-stage="transcript">
-          <p className="orb-dictate-stage-card__label">Stage 2</p>
-          <h3>Transcript</h3>
-          <p>Keep speaker separation clear and review the transcript before it becomes a draft.</p>
-        </article>
-        <article className="orb-dictate-stage-card" data-orb-dictate-stage="orb-review">
-          <p className="orb-dictate-stage-card__label">Stage 3</p>
-          <h3>ORB Review</h3>
-          <p>Check child&apos;s voice, observation, adult response, follow-up and what may be missing.</p>
-        </article>
-        <article className="orb-dictate-stage-card" data-orb-dictate-stage="output">
-          <p className="orb-dictate-stage-card__label">Stage 4</p>
-          <h3>Output</h3>
-          <p>Create safer draft, then send to ORB Write for adult-led final review.</p>
-        </article>
+        <span data-orb-dictate-stage="capture">Capture</span>
+        <span data-orb-dictate-stage="transcript">Transcript</span>
+        <span data-orb-dictate-stage="orb-review">ORB Review</span>
+        <span data-orb-dictate-stage="output">Safer Draft</span>
       </section>
 
       <OrbDictateTopBar
@@ -346,19 +340,18 @@ export function OrbDictateStudioWorkspace(props: OrbDictateStudioWorkspaceProps)
         showPreview={false}
         minPanelHeight="min(74dvh, calc(100svh - 8.5rem))"
         left={
-          <div className="orb-dictate-capture-canvas flex min-h-0 flex-col gap-2" data-orb-dictate-capture-panel data-orb-dictate-capture-canvas data-orb-dictate-transcript-stage>
-            <div className="flex items-center justify-between gap-2 px-1">
-              <p className="text-xs font-semibold uppercase tracking-wide text-[var(--orb-muted)]" data-orb-dictate-capture-label>
-                Capture
+          <div className="orb-dictate-capture-canvas orb-station-workspace flex min-h-0 flex-1 flex-col gap-3" data-orb-dictate-capture-panel data-orb-dictate-capture-canvas data-orb-dictate-transcript-stage>
+            <div className="orb-dictate-capture-empty rounded-2xl border border-[var(--orb-line)]/25 bg-[var(--orb-surface)]/70 p-4">
+              <p className="text-sm font-semibold text-[var(--orb-foreground)]" data-orb-dictate-capture-prompt>
+                Capture rough information
               </p>
-              <p className="text-[10px] text-[var(--orb-muted)]" data-orb-dictate-adult-review-reminder>
-                {ORB_DICTATE_RESPONSIBILITY}
+              <p className="mt-1 text-xs leading-relaxed text-[var(--orb-muted)]">
+                Start recording, paste notes or upload audio. ORB will help turn this into a safer draft for adult review.
               </p>
-            </div>
-            <div
-              className="orb-dictate-capture-affordances flex flex-wrap items-center gap-2 rounded-lg border border-[var(--orb-line)]/35 bg-[var(--orb-surface)]/50 px-3 py-2"
-              data-orb-dictate-capture-affordances
-            >
+              <div
+                className="orb-dictate-capture-affordances mt-3 flex flex-wrap items-center gap-2"
+                data-orb-dictate-capture-affordances
+              >
               <OrbDictateAudioUpload
                 onFile={props.onAudioUpload}
                 uploading={props.uploadingAudio}
@@ -373,8 +366,12 @@ export function OrbDictateStudioWorkspace(props: OrbDictateStudioWorkspaceProps)
               >
                 Paste notes
               </button>
-              <p className="text-[10px] text-[var(--orb-muted)]">Speaker separation and adult review reminder stay with the transcript.</p>
+              </div>
             </div>
+            <p className="px-1 text-[10px] text-[var(--orb-muted)]" data-orb-dictate-adult-review-reminder>
+              {ORB_DICTATE_RESPONSIBILITY}
+            </p>
+            <div className="orb-dictate-transcript-area min-h-[12rem] flex-1 rounded-xl">
             <OrbTranscriptPanel
             liveTranscript={props.liveTranscript}
             transcript={props.transcript}
@@ -392,6 +389,7 @@ export function OrbDictateStudioWorkspace(props: OrbDictateStudioWorkspaceProps)
             interimText={props.interimText}
             footerSlot={advancedFooter}
             />
+            </div>
           </div>
         }
         right={

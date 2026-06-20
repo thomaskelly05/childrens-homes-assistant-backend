@@ -35,7 +35,7 @@ export function OrbBrandMark({
         </p>
         {showTagline ? (
           <p
-            className={`orb-sidebar-powered-tagline mt-0.5 truncate text-[10px] ${taglineClassName}`.trim()}
+            className={`orb-sidebar-powered-tagline mt-0.5 text-[10px] leading-snug ${taglineClassName}`.trim()}
             data-orb-sidebar-powered
           >
             {ORB_RESIDENTIAL_TAGLINE}
