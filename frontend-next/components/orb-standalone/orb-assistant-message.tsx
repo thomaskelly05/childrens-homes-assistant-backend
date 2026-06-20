@@ -743,9 +743,7 @@ export function OrbResponseActionBar({
   const copyLabel =
     copyFeedback === 'copied' ? 'Copied' : copyFeedback === 'failed' ? 'Copy failed' : 'Copy'
 
-  if (residentialSurface && !isOrbDeveloperMode()) {
-    return null
-  }
+  const residentialQuietMode = residentialSurface && !isOrbDeveloperMode()
 
   if (minimal) {
     return (
@@ -790,7 +788,7 @@ export function OrbResponseActionBar({
   const isStaffCoach = modeKey === 'staff coach'
   const isInspection =
     modeKey === 'ofsted lens' || modeKey === 'reg 44 / reg 45 prep' || modeKey.includes('reg 44')
-  const residentialDemoActions = residentialSurface && !isOrbDeveloperMode()
+  const residentialDemoActions = residentialQuietMode
 
   const primaryActions: ReactNode[] = [
     <ActionChip
@@ -803,31 +801,31 @@ export function OrbResponseActionBar({
       iconOnly={iconOnly}
     />
   ]
-  if (!residentialDemoActions && onEdit) {
+  if (onEdit) {
     primaryActions.push(
       <ActionChip
         key="edit"
         icon={<Pencil className="h-3.5 w-3.5" />}
-        label="Edit"
+        label={residentialQuietMode ? 'Edit or refine' : 'Edit'}
         onClick={onEdit}
         dataAttr="edit"
         iconOnly={iconOnly}
       />
     )
   }
-  if (!residentialDemoActions && onRegenerate && isLatest) {
+  if (onRegenerate && isLatest) {
     primaryActions.push(
       <ActionChip
         key="regen"
         icon={<RotateCcw className="h-3.5 w-3.5" />}
-        label="Regenerate"
+        label={residentialQuietMode ? 'Try again' : 'Regenerate'}
         onClick={onRegenerate}
         dataAttr="regenerate"
         iconOnly={iconOnly}
       />
     )
   }
-  if (!residentialDemoActions) {
+  if (!residentialQuietMode) {
     primaryActions.push(
       synthesisAvailable ? (
         speaking ? (
@@ -861,7 +859,7 @@ export function OrbResponseActionBar({
       />
     )
   }
-  if (onOpenInOrbWrite) {
+  if (!residentialQuietMode && onOpenInOrbWrite) {
     primaryActions.push(
       <ActionChip
         key="open-write"
@@ -927,7 +925,7 @@ export function OrbResponseActionBar({
     : []
 
   const moreActions: ReactNode[] = []
-  if (residentialDemoActions) {
+  if (!residentialQuietMode) {
     if (onEdit) {
       moreActions.push(
         <ActionChip key="edit" icon={<Pencil className="h-3.5 w-3.5" />} label="Edit" onClick={onEdit} dataAttr="edit" iconOnly={iconOnly} />
@@ -950,18 +948,20 @@ export function OrbResponseActionBar({
       )
     )
   }
-  if (!isRecording) {
+  if (!residentialQuietMode && !isRecording) {
     moreActions.push(<ActionChip key="draft-more" icon={<FileText className="h-3 w-3" />} label="Use as draft" onClick={onDraft} />)
   }
-  for (const item of orbFollowUps) {
-    moreActions.push(
-      <ActionChip
-        key={item.action}
-        label={item.label}
-        onClick={() => onOrbFollowUp?.(item.action, content)}
-        dataAttr={item.action}
-      />
-    )
+  if (!residentialQuietMode) {
+    for (const item of orbFollowUps) {
+      moreActions.push(
+        <ActionChip
+          key={item.action}
+          label={item.label}
+          onClick={() => onOrbFollowUp?.(item.action, content)}
+          dataAttr={item.action}
+        />
+      )
+    }
   }
   if (onSaveToProject) moreActions.push(<ActionChip key="project" label="Save to project" onClick={onSaveToProject} />)
   if (onActionPlan) moreActions.push(<ActionChip key="plan" label="Action plan" onClick={onActionPlan} />)
@@ -979,12 +979,17 @@ export function OrbResponseActionBar({
 
   return (
     <div
-      className={`orb-response-action-bar orb-response-action-bar--icons mt-3 flex flex-nowrap items-center gap-0.5 overflow-x-auto border-t border-[var(--orb-line)] pt-2 opacity-100 transition-opacity sm:gap-1 sm:pt-3 ${residentialDemoActions ? 'orb-response-action-bar--residential' : ''}`}
+      className={`orb-response-action-bar orb-response-action-bar--icons flex flex-nowrap items-center gap-0.5 overflow-x-auto opacity-100 transition-opacity sm:gap-1 ${
+        residentialQuietMode
+          ? 'orb-response-action-bar--quiet mt-2 border-0 pt-0'
+          : 'mt-3 border-t border-[var(--orb-line)] pt-2 sm:pt-3'
+      } ${residentialDemoActions ? 'orb-response-action-bar--residential' : ''}`}
       data-orb-response-actions
       data-orb-response-action-bar
       data-orb-response-action-bar-persistent
       data-orb-response-action-bar-icons={iconOnly ? 'true' : 'false'}
       data-orb-response-action-bar-residential={residentialDemoActions ? 'true' : undefined}
+      data-orb-response-action-bar-quiet={residentialQuietMode ? 'true' : undefined}
     >
       {primaryActions}
       {moreActions.length ? (

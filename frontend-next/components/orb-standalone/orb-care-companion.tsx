@@ -4253,8 +4253,9 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
               <div className={`mx-auto w-full ${residentialSurface ? 'orb-chat-column' : 'max-w-[var(--orb-chat-column-max,50rem)]'}`}>
                 {showEmptyState ? (
                   <div
-                    className={`flex min-h-0 flex-col items-center justify-start px-2 py-2 text-center md:min-h-[min(28vh,16rem)] md:justify-center md:py-4 ${residentialSurface ? 'orb-residential-empty orb-residential-empty--desktop orb-workspace--home orb-workspace--home-calm' : ''}`}
+                    className={`flex min-h-0 flex-col items-center justify-center px-2 py-2 text-center md:min-h-[min(28vh,16rem)] md:py-4 ${residentialSurface ? 'orb-residential-empty orb-residential-empty--desktop orb-workspace--home orb-workspace--home-calm' : ''}`}
                     data-orb-empty-state
+                    data-orb-home-centre-stack={residentialSurface ? 'true' : undefined}
                     {...(residentialSurface ? { 'data-orb-residential-empty': true, 'data-orb-workspace-home': true } : {})}
                   >
                     {residentialSurface ? <div className="orb-v2-atmosphere" aria-hidden /> : null}
@@ -4545,6 +4546,41 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
                             ) : null}
                             {(entry.status === 'complete' || entry.status === 'stopped') ? (
                               <>
+                                {!minimalTurn &&
+                                entry.status === 'complete' &&
+                                index === visibleMessages.length - 1 ? (
+                                  <OrbSuggestedReplyChips
+                                    maxVisible={
+                                      residentialSurface ? RESIDENTIAL_MAX_FOLLOW_UP_CHIPS : 6
+                                    }
+                                    suggestions={
+                                      residentialSurface
+                                        ? contextualResidentialCalmFollowUps({
+                                            mode,
+                                            messageHint,
+                                            content: entry.content
+                                          })
+                                        : entry.outputKind
+                                        ? contextualSuggestedRepliesForOutput({
+                                            outputKind: entry.outputKind,
+                                            content: entry.content,
+                                            mode,
+                                            messageHint
+                                          })
+                                        : contextualSuggestedReplies({
+                                            mode,
+                                            messageHint,
+                                            content: entry.content,
+                                            contextUsed: entry.contextUsed as Record<string, unknown> | undefined
+                                          })
+                                    }
+                                    onSelect={(item) =>
+                                      void handleOrbFollowUp(item.action, entry.content, index, {
+                                        prefill: item.prefill
+                                      })
+                                    }
+                                  />
+                                ) : null}
                                 <OrbResponseActionBar
                                   mode={mode}
                                   content={entry.content}
@@ -4674,41 +4710,6 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
                                       : undefined
                                   }
                                 />
-                                ) : null}
-                                {!minimalTurn &&
-                                entry.status === 'complete' &&
-                                index === visibleMessages.length - 1 ? (
-                                  <OrbSuggestedReplyChips
-                                    maxVisible={
-                                      residentialSurface ? RESIDENTIAL_MAX_FOLLOW_UP_CHIPS : 6
-                                    }
-                                    suggestions={
-                                      residentialSurface
-                                        ? contextualResidentialCalmFollowUps({
-                                            mode,
-                                            messageHint,
-                                            content: entry.content
-                                          })
-                                        : entry.outputKind
-                                        ? contextualSuggestedRepliesForOutput({
-                                            outputKind: entry.outputKind,
-                                            content: entry.content,
-                                            mode,
-                                            messageHint
-                                          })
-                                        : contextualSuggestedReplies({
-                                            mode,
-                                            messageHint,
-                                            content: entry.content,
-                                            contextUsed: entry.contextUsed as Record<string, unknown> | undefined
-                                          })
-                                    }
-                                    onSelect={(item) =>
-                                      void handleOrbFollowUp(item.action, entry.content, index, {
-                                        prefill: item.prefill
-                                      })
-                                    }
-                                  />
                                 ) : null}
                               </>
                             ) : null}
@@ -5149,7 +5150,7 @@ function OrbUserMessageBubble({
 
   return (
     <article className="orb-message-user group flex items-end justify-end gap-2.5" data-testid="orb-message-user">
-      <div className="orb-message-bubble min-w-0 max-w-[82%]" data-orb-user-message-bubble>
+      <div className="orb-message-bubble w-fit min-w-0 max-w-[76%]" data-orb-user-message-bubble>
         {entry.imageDataUrls?.length ? (
           <div className="mb-2 flex flex-wrap gap-2">
             {entry.imageDataUrls.map((url, index) => (
