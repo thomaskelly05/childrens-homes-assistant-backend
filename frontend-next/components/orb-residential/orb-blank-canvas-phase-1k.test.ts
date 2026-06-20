@@ -4,7 +4,7 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, it } from 'node:test'
 
-import { ORB_HOME_SAFETY_LINE } from '../../lib/orb/orb-convergence-phase-1h-copy.ts'
+import { ORB_HOME_SAFETY_LINE } from '../../lib/orb/orb-residential-shell-copy.ts'
 import {
   ORB_RESIDENTIAL_BILLING_HEADER,
   ORB_RESIDENTIAL_BILLING_INCLUDED_ITEMS,

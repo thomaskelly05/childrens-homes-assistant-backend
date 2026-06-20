@@ -10,7 +10,7 @@ import {
   ORB_HOME_V2_HEADLINE,
   ORB_LOGIN_ENTERPRISE_TITLE,
   ORB_RECORDS_V2_EMPTY_SUBTITLE,
-} from '../../lib/orb/orb-convergence-phase-1h-copy.ts'
+} from '../../lib/orb/orb-residential-shell-copy.ts'
 import { ORB_RESIDENTIAL_BILLING_INCLUDED_ITEMS, ORB_VOICE_STATUS_CARD_COPY } from '../../lib/orb/orb-flagship-copy.ts'
 import { ORB_RESIDENTIAL_LOCKED_THEME, ORB_RESIDENTIAL_THEME_LOCK_COPY } from '../../lib/orb/orb-appearance.ts'
 import {

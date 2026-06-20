@@ -2,7 +2,7 @@ import Link from 'next/link'
 
 import { GlassOrbMark } from '@/components/orb-residential/ui/glass-orb-mark'
 import { OrbRequestDemoLink } from '@/components/orb-residential/orb-request-demo-link'
-import { ORB_LOGIN_ENTERPRISE_TITLE, ORB_LOGIN_ENTERPRISE_SUBHEADLINE, ORB_LOGIN_ENTERPRISE_SUPPORTING } from '@/lib/orb/orb-convergence-phase-1h-copy'
+import { ORB_LOGIN_ENTERPRISE_TITLE, ORB_LOGIN_ENTERPRISE_SUBHEADLINE, ORB_LOGIN_ENTERPRISE_SUPPORTING } from '@/lib/orb/orb-residential-shell-copy'
 import {
   ORB_LOGIN_FOUNDER_LINE,
   ORB_LOGIN_PRODUCT_EXPLANATION,

@@ -33,6 +33,8 @@ export function OrbResidentialProfileSettingsSection({
   }, [authName, authAvatarUrl])
 
   function handleSave() {
+    // TODO: Sync these fields to the authenticated account profile when the backend profile endpoint is available.
+    // Keep the localStorage-backed profile as the non-breaking fallback until then.
     saveOrbResidentialUserProfile({
       displayName,
       role,

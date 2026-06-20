@@ -6,7 +6,7 @@ import { describe, it } from 'node:test'
 
 import {
   ORB_VOICE_V2_STATUS_COPY
-} from '../../lib/orb/orb-convergence-phase-1h-copy.ts'
+} from '../../lib/orb/orb-residential-shell-copy.ts'
 import { ORB_RESIDENTIAL_LOCKED_THEME, ORB_RESIDENTIAL_THEME_LOCK_COPY } from '../../lib/orb/orb-appearance.ts'
 import { ORB_NAV_RECORDS, ORB_RECORDS_PANEL_SUBTITLE } from '../../lib/orb/orb-user-facing-names.ts'
 

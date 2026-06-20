@@ -32,7 +32,7 @@ export const ORB_SAVED_RECORD_LABEL = 'saved record'
 /** Dictate — single visible product name (no Magic Notes). */
 export const ORB_DICTATE_TITLE = 'Dictate'
 export const ORB_DICTATE_SUBTITLE =
-  'Speak or paste rough notes, voice memos or observations. ORB helps structure what was shared, what was observed and what may need follow-up.'
+  'Speak, paste or upload rough notes. ORB helps structure them into safer drafts for adult review.'
 export const ORB_DICTATE_CAPTURE_PROMPT = 'Start with speech, paste notes or upload audio'
 export const ORB_DICTATE_CAPTURE_GUIDANCE =
   'Speak or paste what happened. ORB helps turn rough information into a safer draft for adult review.'

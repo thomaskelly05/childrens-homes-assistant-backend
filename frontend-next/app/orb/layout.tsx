@@ -52,6 +52,7 @@ export default function OrbLayout({ children }: { children: ReactNode }) {
       />
       <span
         className="hidden"
+        data-orb-build-version={ORB_BUILD_VISUAL_VERSION}
         data-orb-style-version={ORB_STYLE_VERSION}
         data-orb-build-visual-version={ORB_BUILD_VISUAL_VERSION}
         data-orb-css-contract={ORB_CSS_CONTRACT}

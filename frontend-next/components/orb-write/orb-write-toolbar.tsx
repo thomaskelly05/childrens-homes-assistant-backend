@@ -128,16 +128,31 @@ export function OrbWriteToolbar({
 
       <span className="mx-0.5 hidden h-5 w-px bg-[var(--orb-line)]/40 sm:block" aria-hidden />
 
-      {typeof wordCount === 'number' ? (
-        <span className="hidden px-1 text-[10px] text-[var(--orb-muted)] sm:inline" data-orb-write-word-count>
-          {wordCount} words
-        </span>
-      ) : null}
-      {lastEdited ? (
-        <span className="hidden px-1 text-[10px] text-[var(--orb-muted)] lg:inline" data-orb-write-last-edited>
-          {lastEdited}
-        </span>
-      ) : null}
+      <div className="flex flex-wrap items-center gap-1" data-orb-write-toolbar-group="review">
+        <span className="hidden px-1 text-[9px] font-semibold uppercase tracking-wide text-[var(--orb-muted)] sm:inline">Review</span>
+        {typeof wordCount === 'number' ? (
+          <span className="hidden px-1 text-[10px] text-[var(--orb-muted)] sm:inline" data-orb-write-word-count>
+            {wordCount} words
+          </span>
+        ) : null}
+        {lastEdited ? (
+          <span className="hidden px-1 text-[10px] text-[var(--orb-muted)] lg:inline" data-orb-write-last-edited>
+            {lastEdited}
+          </span>
+        ) : null}
+        {onApprove ? (
+          <button
+            type="button"
+            data-orb-write-approve
+            data-orb-write-finalise
+            className="inline-flex items-center gap-1 rounded-lg bg-[var(--orb-primary)] px-2.5 py-1.5 text-[10px] font-semibold text-white shadow-sm shadow-sky-500/15"
+            onClick={onApprove}
+          >
+            <OrbIcon name="check" size="sm" className="text-white" />
+            <span className="hidden sm:inline">Approve</span>
+          </button>
+        ) : null}
+      </div>
 
       <div className="ml-auto flex flex-wrap items-center gap-1" data-orb-write-toolbar-group="export">
       <span className="hidden px-1 text-[9px] font-semibold uppercase tracking-wide text-[var(--orb-muted)] sm:inline">Export</span>
@@ -167,18 +182,6 @@ export function OrbWriteToolbar({
         {onSaveDraft ? (
           <button type="button" data-orb-write-save-draft className={btn} onClick={onSaveDraft} aria-label="Save draft">
             <OrbIcon name="save" size="sm" />
-          </button>
-        ) : null}
-        {onApprove ? (
-          <button
-            type="button"
-            data-orb-write-approve
-            data-orb-write-finalise
-            className="inline-flex items-center gap-1 rounded-lg bg-[var(--orb-primary)] px-2.5 py-1.5 text-[10px] font-semibold text-white shadow-sm shadow-sky-500/15"
-            onClick={onApprove}
-          >
-            <OrbIcon name="check" size="sm" className="text-white" />
-            <span className="hidden sm:inline">Approve</span>
           </button>
         ) : null}
       </div>

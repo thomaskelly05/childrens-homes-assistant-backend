@@ -132,12 +132,12 @@ import {
 } from '@/lib/orb/orb-guided-demo'
 import {
   ORB_GUIDED_DEMO_ACTIVE_MARKER
-} from '@/lib/orb/orb-showstopper-copy'
+} from '@/lib/orb/orb-guided-demo-copy'
 import {
   ORB_COMPOSER_V2_PLACEHOLDER_CHAT,
   ORB_COMPOSER_V2_PLACEHOLDER_HOME,
   ORB_HOME_SAFETY_LINE
-} from '@/lib/orb/orb-convergence-phase-1h-copy'
+} from '@/lib/orb/orb-residential-shell-copy'
 import { ORB_REQUEST_DEMO_URL } from '@/lib/orb/orb-user-facing-names'
 import { OrbStandaloneSidebar } from '@/components/orb-standalone/orb-standalone-sidebar'
 import {

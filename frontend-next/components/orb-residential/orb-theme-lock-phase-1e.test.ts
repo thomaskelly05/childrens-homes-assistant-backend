@@ -6,11 +6,11 @@ import { describe, it } from 'node:test'
 
 import {
   ORB_GUIDED_DEMO_ACTIVE_MARKER
-} from '../../lib/orb/orb-showstopper-copy.ts'
+} from '../../lib/orb/orb-guided-demo-copy.ts'
 import {
   ORB_HOME_RAIL_TRUST_ITEMS,
   ORB_LOGIN_ENTERPRISE_TITLE
-} from '../../lib/orb/orb-convergence-phase-1h-copy.ts'
+} from '../../lib/orb/orb-residential-shell-copy.ts'
 import {
   ORB_NAV_RECORDS
 } from '../../lib/orb/orb-user-facing-names.ts'

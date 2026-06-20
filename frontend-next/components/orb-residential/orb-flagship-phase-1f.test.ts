@@ -10,7 +10,7 @@ import {
 } from '../../lib/orb/orb-flagship-copy.ts'
 import {
   ORB_LOGIN_ENTERPRISE_TITLE
-} from '../../lib/orb/orb-convergence-phase-1h-copy.ts'
+} from '../../lib/orb/orb-residential-shell-copy.ts'
 import { ORB_RESIDENTIAL_LOCKED_THEME, ORB_RESIDENTIAL_THEME_LOCK_COPY } from '../../lib/orb/orb-appearance.ts'
 import {
   ORB_DICTATE_SUBTITLE,
@@ -70,7 +70,7 @@ describe('ORB Residential Phase 1F flagship UI', () => {
     assert.match(workspace, /ORB_DICTATE_TITLE/)
     assert.match(workspace, /ORB_DICTATE_SUBTITLE/)
     assert.equal(ORB_DICTATE_TITLE, 'Dictate')
-    assert.match(ORB_DICTATE_SUBTITLE, /Speak or paste rough notes/)
+    assert.match(ORB_DICTATE_SUBTITLE, /Speak, paste or upload rough notes/)
   })
 
   it('voice has reflective support status card', () => {
