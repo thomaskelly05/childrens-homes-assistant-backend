@@ -36,10 +36,11 @@ describe('ORB Residential Phase 1D.1 contrast and readability', () => {
 
   it('login headline remains visible with navy copy tokens', () => {
     const hero = read('components/orb-residential/orb-login-desktop-hero.tsx')
+    const auth = read('components/orb-residential/orb-login-auth-card.tsx')
     const css = read('app/orb/orb-residential-shell.css')
     assert.match(hero, /ORB_LOGIN_ENTERPRISE_TITLE/)
     assert.match(hero, /data-orb-login-title/)
-    assert.match(hero, /data-orb-login-demo-path/)
+    assert.match(auth, /data-orb-login-demo-path/)
     assert.equal(ORB_LOGIN_ENTERPRISE_TITLE, 'ORB Residential')
     assert.doesNotMatch(css, /orb-login-headline--showstopper[\s\S]{0,200}color:\s*transparent\s*!important/)
   })
@@ -51,11 +52,11 @@ describe('ORB Residential Phase 1D.1 contrast and readability', () => {
     assert.match(css, /orb-login-auth-card--readable/)
   })
 
-  it('request demo remains visible on login hero', () => {
-    const hero = read('components/orb-residential/orb-login-desktop-hero.tsx')
-    assert.equal((hero.match(/<OrbRequestDemoLink/g) ?? []).length, 1)
-    assert.match(hero, /surface="login"/)
-    assert.match(hero, /data-orb-login-demo-path/)
+  it('request demo remains visible on login auth card', () => {
+    const auth = read('components/orb-residential/orb-login-auth-card.tsx')
+    assert.equal((auth.match(/<OrbRequestDemoLink/g) ?? []).length, 1)
+    assert.match(auth, /surface="login"/)
+    assert.match(auth, /data-orb-login-demo-path/)
   })
 
   it('guided demo marker and trust rail remain present', () => {

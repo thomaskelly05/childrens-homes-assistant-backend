@@ -94,11 +94,11 @@ describe('ORB Residential Phase 1I single shell consolidation', () => {
 
   it('guided demo and request a demo remain present', () => {
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
-    const hero = read('components/orb-residential/orb-login-desktop-hero.tsx')
+    const auth = read('components/orb-residential/orb-login-auth-card.tsx')
     assert.match(companion, /OrbGuidedDemoEntry/)
     assert.match(companion, /data-orb-guided-demo/)
-    assert.match(hero, /OrbRequestDemoLink/)
-    assert.match(hero, /data-orb-login-demo-path/)
+    assert.match(auth, /OrbRequestDemoLink/)
+    assert.match(auth, /data-orb-login-demo-path/)
   })
 
   it('no user-facing Magic Notes or Saved Outputs in residential components', () => {

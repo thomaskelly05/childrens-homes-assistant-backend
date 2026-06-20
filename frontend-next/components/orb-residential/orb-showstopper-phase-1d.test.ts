@@ -25,10 +25,11 @@ function read(relativePath: string) {
 describe('ORB Residential Phase 1D showstopper UI', () => {
   it('login hero uses premium headline and request demo link', () => {
     const hero = read('components/orb-residential/orb-login-desktop-hero.tsx')
+    const auth = read('components/orb-residential/orb-login-auth-card.tsx')
     assert.match(hero, /ORB_LOGIN_ENTERPRISE_TITLE/)
     assert.match(hero, /ORB_LOGIN_ENTERPRISE_SUBHEADLINE/)
     assert.match(hero, /orb-login-headline--showstopper/)
-    assert.match(hero, /data-orb-login-demo-path/)
+    assert.match(auth, /data-orb-login-demo-path/)
     assert.equal(ORB_LOGIN_ENTERPRISE_TITLE, 'ORB Residential')
   })
 
@@ -95,7 +96,7 @@ describe('ORB Residential Phase 1D showstopper UI', () => {
   })
 
   it('request demo remains a single CTA per intended surface', () => {
-    const login = read('components/orb-residential/orb-login-desktop-hero.tsx')
+    const login = read('components/orb-residential/orb-login-auth-card.tsx')
     const entry = read('components/orb-residential/orb-guided-demo-entry.tsx')
     const panel = read('components/orb-residential/orb-guided-demo-panel.tsx')
     const loginDemoCount = (login.match(/<OrbRequestDemoLink/g) ?? []).length

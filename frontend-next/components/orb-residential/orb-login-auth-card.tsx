@@ -4,10 +4,15 @@ import { FormEvent } from 'react'
 import Link from 'next/link'
 
 import { OrbAuthButton } from '@/components/orb-residential/ui/orb-auth-button'
+import { GlassOrbMark } from '@/components/orb-residential/ui/glass-orb-mark'
 import { OrbLoginLegalFooter } from '@/components/orb-residential/orb-login-legal-footer'
 import { OrbRequestDemoLink } from '@/components/orb-residential/orb-request-demo-link'
 import type { OrbLegalPaths } from '@/components/orb-residential/orb-legal-links'
-import { ORB_LOGIN_PROFESSIONAL_BOUNDARY } from '@/lib/orb/orb-login-stations-copy'
+import {
+  ORB_LOGIN_CREATE_ACCOUNT_LABEL,
+  ORB_LOGIN_DEMO_FOOTER_PREFIX,
+  ORB_LOGIN_PROFESSIONAL_BOUNDARY
+} from '@/lib/orb/orb-login-stations-copy'
 import { orbOAuthRedirectMessage } from '@/lib/orb/orb-oauth-redirect-state'
 
 const OAUTH_UNAVAILABLE_COPY: Record<'google' | 'microsoft', string> = {
@@ -77,19 +82,26 @@ export function OrbLoginAuthCard({
       data-orb-login-flagship-auth
       data-orb-login-auth-card
     >
-      <h2
-        className="orb-login-signin-title text-left text-[1.375rem] font-semibold leading-tight tracking-tight lg:mt-0 lg:text-[1.625rem]"
-        data-orb-login-signin-title
-        data-orb-login-signin-title-mobile
-      >
-        Welcome to ORB Residential
-      </h2>
-      <p
-        className="orb-login-lead mt-1.5 text-left text-sm leading-relaxed text-[var(--orb-muted)]"
-        data-orb-login-mobile-lead
-      >
-        Sign in to continue to the specialist intelligence workspace for children&apos;s homes.
-      </p>
+      <div className="orb-login-auth-header flex items-start gap-3" data-orb-login-auth-brand-hook>
+        <div className="orb-login-auth-mark shrink-0" aria-hidden data-orb-login-auth-mark>
+          <GlassOrbMark size="sm" pulse className="orb-login-auth-mark-orb" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <h2
+            className="orb-login-signin-title text-left text-[1.375rem] font-semibold leading-tight tracking-tight lg:mt-0 lg:text-[1.625rem]"
+            data-orb-login-signin-title
+            data-orb-login-signin-title-mobile
+          >
+            Welcome to ORB Residential
+          </h2>
+          <p
+            className="orb-login-lead mt-1.5 text-left text-sm leading-relaxed text-[var(--orb-muted)]"
+            data-orb-login-mobile-lead
+          >
+            Sign in to continue to the specialist intelligence workspace for children&apos;s homes.
+          </p>
+        </div>
+      </div>
 
       {error ? (
         <p className="orb-login-error mt-3 rounded-2xl px-4 py-2.5 text-sm" role="alert">
@@ -127,14 +139,14 @@ export function OrbLoginAuthCard({
 
       <section className="orb-login-auth-section" aria-labelledby="orb-login-create-account" data-orb-login-account-links>
         <h3 id="orb-login-create-account" className="sr-only">
-          Create account
+          {ORB_LOGIN_CREATE_ACCOUNT_LABEL}
         </h3>
         <Link
           href="/orb/signup"
           className="orb-login-create-account flex w-full items-center justify-center rounded-xl border border-[var(--orb-line)]/35 bg-transparent py-2.5 text-center text-sm font-semibold no-underline transition hover:border-[var(--orb-res-primary,#6366f1)]/30 hover:bg-[var(--orb-surface-elevated)]/30 lg:rounded-2xl lg:bg-[var(--orb-surface-elevated)]/50"
           data-orb-create-account
         >
-          Create account
+          {ORB_LOGIN_CREATE_ACCOUNT_LABEL}
         </Link>
       </section>
 
@@ -279,20 +291,17 @@ export function OrbLoginAuthCard({
       </p>
 
       <p
-        className="orb-login-boundary mt-3 hidden rounded-xl border border-[var(--orb-line)]/45 bg-[var(--orb-surface-elevated)]/50 px-3 py-2 text-xs leading-relaxed text-[var(--orb-muted)] lg:block"
+        className="orb-login-boundary mt-3 rounded-xl border border-[var(--orb-line)]/45 bg-[var(--orb-surface-elevated)]/50 px-3 py-2 text-xs leading-relaxed text-[var(--orb-muted)]"
         data-orb-login-auth-boundary
+        data-orb-login-professional-boundary
       >
         {ORB_LOGIN_PROFESSIONAL_BOUNDARY}
       </p>
 
       <OrbLoginLegalFooter legalPaths={legalPaths} />
 
-      <p className="orb-login-demo-route mt-4 text-center text-sm lg:hidden" data-orb-login-demo-path data-orb-login-demo-visible data-orb-login-demo-route>
-        Not using ORB yet?{' '}
-        <OrbRequestDemoLink surface="login" className="font-semibold text-[var(--orb-primary)] underline-offset-2 hover:underline" />
-      </p>
-      <p className="orb-login-demo-route mt-4 hidden text-center text-sm lg:block" data-orb-login-demo-path data-orb-login-demo-visible data-orb-login-demo-route>
-        Not using ORB yet?{' '}
+      <p className="orb-login-demo-route mt-4 text-center text-sm" data-orb-login-demo-path data-orb-login-demo-visible data-orb-login-demo-route>
+        {ORB_LOGIN_DEMO_FOOTER_PREFIX}{' '}
         <OrbRequestDemoLink surface="login" className="font-semibold text-[var(--orb-primary)] underline-offset-2 hover:underline" />
       </p>
     </div>

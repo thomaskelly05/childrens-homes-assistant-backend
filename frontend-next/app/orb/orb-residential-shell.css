@@ -1,7 +1,7 @@
 /**
  * ORB Residential — single canonical UI design system (Phase 1K blank canvas, 1M personality).
  * One file for shell, workspace, composer, login, mobile, stations and modals.
- * Visual build marker: phase-3e-login.
+ * Visual build marker: phase-3f-login-final.
  */
 
 :root {
@@ -554,7 +554,11 @@ html[data-orb-residential='1'] .orb-composer--premium textarea::placeholder {
 
 .orb-login-hero-sphere-wrap {
   width: auto;
-  min-height: 8rem;
+  min-height: auto;
+}
+
+.orb-login-brand-orb-field .orb-presence--hero {
+  --orb-presence-size: clamp(4.25rem, 6.5vw, 5.75rem);
 }
 
 .orb-login-shell__brand .orb-login-headline {
@@ -1383,17 +1387,50 @@ html[data-orb-residential='1'] [data-orb-billing-modal] {
 .orb-login-capability-grid {
   display: flex;
   flex-direction: column;
-  gap: 0.65rem;
+  gap: 0.35rem;
 }
 
 .orb-login-capability {
-  padding: 0.55rem 0.15rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  display: grid;
+  grid-template-columns: 5.25rem minmax(0, 1fr);
+  gap: 0.65rem;
+  align-items: baseline;
+  padding: 0.35rem 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  background: none;
+  border-radius: 0;
+  box-shadow: none;
 }
 
 .orb-login-capability:first-child {
   border-top: 0;
   padding-top: 0;
+}
+
+.orb-login-capability-label {
+  letter-spacing: 0.01em;
+}
+
+.orb-login-capability-promise {
+  margin-top: 0 !important;
+}
+
+.orb-login-auth-header {
+  align-items: flex-start;
+}
+
+.orb-login-auth-mark {
+  width: 2.35rem;
+  height: 2.35rem;
+  margin-top: 0.15rem;
+}
+
+.orb-login-auth-mark .orb-presence {
+  --orb-presence-size: 2.35rem;
+}
+
+.orb-login-auth-mark-orb {
+  filter: drop-shadow(0 0 14px rgba(103, 232, 249, 0.35)) drop-shadow(0 0 24px rgba(139, 92, 246, 0.22));
 }
 
 .orb-login-professional-boundary,
@@ -1880,6 +1917,11 @@ html[data-orb-residential='1'] [data-orb-write-document-canvas] article {
   .orb-login-capability-grid {
     gap: 0.45rem;
   }
+
+  .orb-login-capability {
+    grid-template-columns: 4.75rem minmax(0, 1fr);
+    gap: 0.5rem;
+  }
 }
 
 @media (max-width: 1023px) {
@@ -1896,6 +1938,7 @@ html[data-orb-residential='1'] .orb-login-shell {
   background:
     radial-gradient(circle at 24% 20%, rgba(125, 92, 255, 0.36), transparent 32rem),
     radial-gradient(circle at 56% 52%, rgba(29, 178, 255, 0.2), transparent 28rem),
+    radial-gradient(circle at 52% 48%, rgba(99, 102, 241, 0.14), transparent 24rem),
     linear-gradient(135deg, #07111f 0%, #0e1630 48%, #f7f9fc 48%, #ffffff 100%);
 }
 
@@ -1942,17 +1985,19 @@ html[data-orb-residential='1'] .orb-login-shell__auth {
 html[data-orb-residential='1'] .orb-login-shell__auth::before {
   content: '';
   position: absolute;
-  inset: 12% 8% 12% -18%;
+  inset: 10% 4% 10% -22%;
   border-radius: 999px;
-  background: radial-gradient(circle, rgba(99, 102, 241, 0.18), transparent 62%);
+  background:
+    radial-gradient(circle, rgba(99, 102, 241, 0.22), transparent 58%),
+    radial-gradient(circle at 30% 50%, rgba(34, 211, 238, 0.12), transparent 52%);
   pointer-events: none;
 }
 
 html[data-orb-residential='1'] .orb-login-flagship-auth {
   position: relative;
-  border-color: rgba(99, 102, 241, 0.18) !important;
-  background: rgba(255, 255, 255, 0.9);
-  box-shadow: 0 28px 90px rgba(15, 23, 42, 0.14), 0 0 70px rgba(99, 102, 241, 0.12);
+  border-color: rgba(99, 102, 241, 0.16) !important;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 28px 90px rgba(15, 23, 42, 0.12), 0 0 64px rgba(99, 102, 241, 0.14);
   backdrop-filter: blur(20px);
 }
 
@@ -2195,13 +2240,18 @@ html[data-orb-residential='1'] .orb-communicate-preview-section p {
 }
 
 html[data-orb-residential='1'] .orb-login-hero-inner[data-orb-login-above-fold] {
-  padding-block: clamp(0.65rem, 1.8vh, 1.25rem);
+  padding-block: clamp(0.45rem, 1.2vh, 0.95rem);
   overflow: visible;
   max-height: none;
 }
 
+html[data-orb-residential='1'] .orb-login-founder-line,
+html[data-orb-residential='1'] .orb-login-product-explainer {
+  line-height: 1.45;
+}
+
 html[data-orb-residential='1'] .orb-login-brand-orb-field .glass-orb-mark {
-  filter: drop-shadow(0 0 28px rgba(103,232,249,.45)) drop-shadow(0 0 52px rgba(139,92,246,.28));
+  filter: drop-shadow(0 0 22px rgba(103,232,249,.4)) drop-shadow(0 0 40px rgba(139,92,246,.24));
 }
 
 html[data-orb-residential='1'] .orb-dictate-stage-map.sr-only {
@@ -2319,13 +2369,18 @@ html[data-orb-residential='1'] [data-orb-voice-reasoning-carousel] {
 }
 
 html[data-orb-residential='1'] .orb-login-hero-inner[data-orb-login-above-fold] {
-  padding-block: clamp(0.65rem, 1.8vh, 1.25rem);
+  padding-block: clamp(0.45rem, 1.2vh, 0.95rem);
   overflow: visible;
   max-height: none;
 }
 
+html[data-orb-residential='1'] .orb-login-founder-line,
+html[data-orb-residential='1'] .orb-login-product-explainer {
+  line-height: 1.45;
+}
+
 html[data-orb-residential='1'] .orb-login-brand-orb-field .glass-orb-mark {
-  filter: drop-shadow(0 0 28px rgba(103,232,249,.45)) drop-shadow(0 0 52px rgba(139,92,246,.28));
+  filter: drop-shadow(0 0 22px rgba(103,232,249,.4)) drop-shadow(0 0 40px rgba(139,92,246,.24));
 }
 
 html[data-orb-residential='1'] .orb-dictate-stage-map.sr-only {

@@ -60,7 +60,7 @@ describe('ORB premium login screen layout', () => {
     assert.match(copy, /professional judgement/)
     assert.match(hero, /orb-login-hero-visual/)
     assert.match(hero, /GlassOrbMark/)
-    assert.match(hero, /data-orb-login-demo-path/)
+    assert.match(read('components/orb-residential/orb-login-auth-card.tsx'), /data-orb-login-demo-path/)
     assert.match(hero, /orb-login-hero-inner/)
     assert.match(hero, /data-orb-login-hero-visual/)
     assert.match(hero, /data-orb-login-capability-groups/)

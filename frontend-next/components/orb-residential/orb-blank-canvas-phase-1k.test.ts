@@ -217,7 +217,7 @@ describe('ORB Residential Phase 1K blank canvas reset', () => {
       'ORB supports professional judgement. Review before use. Follow local safeguarding procedures.'
     )
     assert.match(companion, /OrbGuidedDemo|guided-demo|data-orb-guided-demo/i)
-    assert.match(read('components/orb-residential/orb-login-desktop-hero.tsx'), /OrbRequestDemoLink/)
+    assert.match(read('components/orb-residential/orb-login-auth-card.tsx'), /OrbRequestDemoLink/)
   })
 
   it('residential components avoid banned user-facing product labels in rendered copy', () => {

@@ -33,7 +33,7 @@ describe('ORB auth product redesign', () => {
     const authCard = read('components/orb-residential/orb-login-auth-card.tsx')
     assert.match(authCard, /data-orb-create-account/)
     assert.match(authCard, /href="\/orb\/signup"/)
-    assert.match(authCard, /Create account/)
+    assert.match(authCard, /Create ORB account/)
   })
 
   it('Email sign-in still works', () => {

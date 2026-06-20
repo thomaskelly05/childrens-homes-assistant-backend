@@ -18,7 +18,7 @@ function read(relativePath: string) {
 
 describe('ORB Residential Phase 3B unified station experience', () => {
   it('build version marker is phase-3b', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-3e-login')
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-3f-login-final')
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
     const layout = read('app/orb/layout.tsx')
     assert.match(companion, /data-orb-build-version=\{ORB_BUILD_VISUAL_VERSION\}/)
@@ -124,9 +124,10 @@ describe('ORB Residential Phase 3B unified station experience', () => {
 
   it('login renders capability groups, request demo and above-fold layout hooks', () => {
     const hero = read('components/orb-residential/orb-login-desktop-hero.tsx')
+    const auth = read('components/orb-residential/orb-login-auth-card.tsx')
     assert.match(hero, /data-orb-login-capability-groups/)
     assert.match(hero, /data-orb-login-above-fold/)
-    assert.match(hero, /OrbRequestDemoLink|data-orb-login-demo-route/)
+    assert.match(auth, /OrbRequestDemoLink|data-orb-login-demo-route/)
     assert.ok(ORB_LOGIN_CAPABILITY_GROUPS.some((g) => g.id === 'think'))
     assert.ok(ORB_LOGIN_CAPABILITY_GROUPS.some((g) => g.id === 'evidence'))
   })

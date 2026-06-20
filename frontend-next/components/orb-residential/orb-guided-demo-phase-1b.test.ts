@@ -92,7 +92,7 @@ describe('ORB Residential Phase 1B guided demo', () => {
     const link = read('components/orb-residential/orb-request-demo-link.tsx')
     const entry = read('components/orb-residential/orb-guided-demo-entry.tsx')
     const panel = read('components/orb-residential/orb-guided-demo-panel.tsx')
-    const login = read('components/orb-residential/orb-login-desktop-hero.tsx')
+    const login = read('components/orb-residential/orb-login-auth-card.tsx')
     const upgrade = read('components/orb-standalone/orb-upgrade-screen.tsx')
 
     for (const source of [entry, panel, login, upgrade]) {
@@ -152,7 +152,7 @@ describe('ORB Residential Phase 1B guided demo', () => {
 describe('ORB Residential Phase 1B.1 language alignment', () => {
   it('upgrade and login surfaces use demo-before-trial copy with single CTA', () => {
     const upgrade = read('components/orb-standalone/orb-upgrade-screen.tsx')
-    const login = read('components/orb-residential/orb-login-desktop-hero.tsx')
+    const login = read('components/orb-residential/orb-login-auth-card.tsx')
     assert.match(upgrade, /ORB_DEMO_BEFORE_TRIAL_COPY/)
     assert.match(upgrade, /ORB_UPGRADE_INCLUDES_COPY/)
     assert.match(upgrade, /ORB_UPGRADE_DEFAULT_FEATURES/)

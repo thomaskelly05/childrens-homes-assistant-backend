@@ -1,32 +1,33 @@
-/** Phase 3E — login product entrance copy for ORB Residential. */
+/** Phase 3F — login product entrance copy for ORB Residential. */
 
 export const ORB_LOGIN_ETHICAL_INTELLIGENCE_LINE =
-  'Specialist ethical intelligence for children\u2019s homes.'
+  'Ethical intelligence for children\u2019s homes.'
 
 export const ORB_LOGIN_FOUNDER_LINE =
   'Built from lived experience and professional responsibility \u2014 for the adults who write the records children may one day read.'
 
 export const ORB_LOGIN_PRODUCT_EXPLANATION =
-  'ORB Residential helps adults in Ofsted-regulated children\u2019s homes think before they write, capture rough information, talk through situations, create accessible communication support and keep professional judgement at the centre of every output.'
+  'ORB helps adults think before they write, capture rough information, create accessible communication support and keep professional judgement at the centre of every output.'
+
+export const ORB_LOGIN_DEMO_FOOTER_PREFIX = 'Interested in ORB Residential?'
+
+export const ORB_LOGIN_CREATE_ACCOUNT_LABEL = 'Create ORB account'
 
 export const ORB_LOGIN_CAPABILITY_GROUPS = [
   {
     id: 'think',
     label: 'Think',
-    description:
-      'Chat and Voice help adults reflect, structure thinking and consider what may need recording before they write.'
+    description: 'Reflect before you write.'
   },
   {
     id: 'capture',
     label: 'Capture',
-    description:
-      'Dictate helps turn speech, rough notes and uploaded audio into clearer adult-reviewed drafts.'
+    description: 'Turn speech, notes and uploads into safer adult-reviewed drafts.'
   },
   {
     id: 'evidence',
     label: 'Evidence',
-    description:
-      'ORB Write, Communicate and Records help adults review wording, evidence the child\u2019s voice and keep outputs together.'
+    description: 'Keep the child\u2019s voice, experience and adult response clear.'
   }
 ] as const
 

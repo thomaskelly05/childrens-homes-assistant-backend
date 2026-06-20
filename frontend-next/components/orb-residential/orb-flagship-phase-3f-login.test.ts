@@ -6,6 +6,8 @@ import { describe, it } from 'node:test'
 
 import {
   ORB_LOGIN_CAPABILITY_GROUPS,
+  ORB_LOGIN_CREATE_ACCOUNT_LABEL,
+  ORB_LOGIN_DEMO_FOOTER_PREFIX,
   ORB_LOGIN_ETHICAL_INTELLIGENCE_LINE,
   ORB_LOGIN_FOUNDER_LINE,
   ORB_LOGIN_PROFESSIONAL_BOUNDARY
@@ -18,7 +20,7 @@ function read(relativePath: string) {
   return readFileSync(join(root, relativePath), 'utf8')
 }
 
-describe('ORB Residential Phase 3E premium login entrance', () => {
+describe('ORB Residential Phase 3F final login entrance', () => {
   it('build version marker is phase-3f-login-final', () => {
     assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-3f-login-final')
     const layout = read('app/orb/layout.tsx')
@@ -27,7 +29,7 @@ describe('ORB Residential Phase 3E premium login entrance', () => {
     assert.deepEqual(ORB_LAYOUT_CSS_FILES, ['app/orb/orb-residential-shell.css'])
   })
 
-  it('login renders premium entrance structure and test hooks', () => {
+  it('login uses single premium entrance copy and hooks', () => {
     const hero = read('components/orb-residential/orb-login-desktop-hero.tsx')
     const screen = read('components/orb-residential/orb-login-screen.tsx')
     assert.match(screen, /OrbLoginScreen/)
@@ -36,52 +38,73 @@ describe('ORB Residential Phase 3E premium login entrance', () => {
     assert.match(hero, /data-orb-login-brand-promise/)
     assert.match(hero, /data-orb-login-founder-line/)
     assert.match(hero, /data-orb-login-capability-groups/)
-    assert.doesNotMatch(hero, /data-orb-login-demo-route/)
+    assert.match(hero, /data-orb-login-above-fold/)
+    assert.match(ORB_LOGIN_ETHICAL_INTELLIGENCE_LINE, /Ethical intelligence for children/)
   })
 
-  it('login copy includes ethical intelligence, founder line and capability groups', () => {
-    assert.match(ORB_LOGIN_ETHICAL_INTELLIGENCE_LINE, /Ethical intelligence/)
+  it('founder line and capability promises are visible in copy', () => {
     assert.match(ORB_LOGIN_FOUNDER_LINE, /lived experience and professional responsibility/)
-    assert.match(ORB_LOGIN_PROFESSIONAL_BOUNDARY, /professional judgement/)
-    assert.match(ORB_LOGIN_PROFESSIONAL_BOUNDARY, /does not replace safeguarding procedures/)
     assert.equal(ORB_LOGIN_CAPABILITY_GROUPS.length, 3)
-    assert.deepEqual(
-      ORB_LOGIN_CAPABILITY_GROUPS.map((g) => g.label),
-      ['Think', 'Capture', 'Evidence']
-    )
+    assert.match(ORB_LOGIN_CAPABILITY_GROUPS[0].description, /Reflect before you write/)
+    assert.match(ORB_LOGIN_CAPABILITY_GROUPS[1].description, /safer adult-reviewed drafts/)
+    assert.match(ORB_LOGIN_CAPABILITY_GROUPS[2].description, /child\u2019s voice/)
     const hero = read('components/orb-residential/orb-login-desktop-hero.tsx')
     assert.doesNotMatch(hero, /ORB_LOGIN_STATION_DESCRIPTIONS/)
     assert.doesNotMatch(hero, /data-orb-login-stations-scroll/)
     assert.doesNotMatch(hero, /Station preview/)
   })
 
-  it('auth card keeps sign-in actions and adult-reviewed boundary', () => {
+  it('auth card contains small ORB brand hook and safe copy', () => {
     const auth = read('components/orb-residential/orb-login-auth-card.tsx')
+    assert.match(auth, /data-orb-login-auth-brand-hook/)
+    assert.match(auth, /data-orb-login-auth-mark/)
+    assert.match(auth, /GlassOrbMark/)
     assert.match(auth, /Welcome to ORB Residential/)
-    assert.match(auth, /specialist intelligence workspace/)
     assert.match(auth, /Every output remains adult-reviewed/)
     assert.match(auth, /Continue with Google/)
     assert.match(auth, /Continue with Microsoft/)
-    assert.match(auth, /Create ORB account|ORB_LOGIN_CREATE_ACCOUNT_LABEL/)
     assert.match(auth, /Sign in with email/)
-    assert.match(auth, /data-orb-login-passkey-section|Use passkey/)
-    assert.match(auth, /ORB_LOGIN_DEMO_FOOTER_PREFIX|Interested in ORB Residential/)
+    assert.match(auth, /Use passkey/)
+    assert.equal(ORB_LOGIN_CREATE_ACCOUNT_LABEL, 'Create ORB account')
+    assert.match(auth, /ORB_LOGIN_CREATE_ACCOUNT_LABEL/)
+    assert.equal(ORB_LOGIN_DEMO_FOOTER_PREFIX, 'Interested in ORB Residential?')
+    assert.match(auth, /ORB_LOGIN_DEMO_FOOTER_PREFIX/)
     assert.match(auth, /OrbRequestDemoLink|Request a demo/)
     assert.doesNotMatch(auth, /Ofsted approved|guarantees compliance|automates safeguarding|replaces managers/)
   })
 
-  it('login CSS uses capability grid without scrollable station preview', () => {
+  it('boundary text supports judgement without overclaiming', () => {
+    assert.match(ORB_LOGIN_PROFESSIONAL_BOUNDARY, /supports professional judgement/)
+    assert.match(ORB_LOGIN_PROFESSIONAL_BOUNDARY, /does not replace safeguarding procedures/)
+    assert.doesNotMatch(ORB_LOGIN_PROFESSIONAL_BOUNDARY, /guarantees|Ofsted approved|automates safeguarding/)
+  })
+
+  it('login CSS uses calm capability rows without station preview scroll', () => {
     const css = read('app/orb/orb-residential-shell.css')
     assert.match(css, /\.orb-login-capability-grid/)
-    assert.match(css, /\.orb-login-entrance|\.orb-login-brand-panel/)
+    assert.match(css, /\.orb-login-auth-mark/)
+    assert.match(css, /phase-3f-login-final/)
     assert.doesNotMatch(css, /data-orb-login-stations-scroll/)
     assert.doesNotMatch(css, /\.orb-login-station-preview/)
   })
 
-  it('mobile login entrance includes promise and capability groups', () => {
+  it('desktop hero avoids duplicate demo CTA at bottom', () => {
+    const hero = read('components/orb-residential/orb-login-desktop-hero.tsx')
+    assert.doesNotMatch(hero, /data-orb-login-demo-route/)
+    assert.doesNotMatch(hero, /Not using ORB yet/)
+  })
+
+  it('mobile login renders narrative order with founder line and capabilities', () => {
     const mobile = read('components/orb-residential/orb-login-mobile-header.tsx')
-    assert.match(mobile, /data-orb-login-capability-groups/)
-    assert.match(mobile, /data-orb-login-professional-boundary/)
-    assert.match(mobile, /Powered by IndiCare Intelligence/)
+    const brandIdx = mobile.indexOf('data-orb-login-brand')
+    const subIdx = mobile.indexOf('data-orb-login-subheadline')
+    const founderIdx = mobile.indexOf('data-orb-login-founder-line')
+    const capIdx = mobile.indexOf('data-orb-login-capability-groups')
+    const boundaryIdx = mobile.indexOf('data-orb-login-professional-boundary')
+    assert.ok(brandIdx < subIdx)
+    assert.ok(subIdx < founderIdx)
+    assert.ok(founderIdx < capIdx)
+    assert.ok(capIdx < boundaryIdx)
+    assert.doesNotMatch(mobile, /data-orb-login-demo-route/)
   })
 })

@@ -33,6 +33,7 @@ describe('ORB login and billing readiness', () => {
 
   it('login hero uses premium positioning copy', () => {
     const hero = read('components/orb-residential/orb-login-desktop-hero.tsx')
+    const auth = read('components/orb-residential/orb-login-auth-card.tsx')
     const copy = read('lib/orb/orb-login-stations-copy.ts')
     assert.match(hero, /ORB_LOGIN_ENTERPRISE_TITLE/)
     assert.match(hero, /Powered by IndiCare Intelligence/)
@@ -40,14 +41,14 @@ describe('ORB login and billing readiness', () => {
     assert.match(hero, /ORB_LOGIN_ETHICAL_INTELLIGENCE_LINE/)
     assert.match(hero, /orb-login-headline--showstopper/)
     assert.match(copy, /professional judgement/)
-    assert.match(hero, /data-orb-login-demo-path/)
+    assert.match(auth, /data-orb-login-demo-path/)
   })
 
   it('create account and provider email hints exist', () => {
     const authCard = read('components/orb-residential/orb-login-auth-card.tsx')
     const upgrade = read('components/orb-standalone/orb-upgrade-screen.tsx')
     assert.match(authCard, /href="\/orb\/signup"/)
-    assert.match(authCard, /Create account/)
+    assert.match(authCard, /ORB_LOGIN_CREATE_ACCOUNT_LABEL|Create ORB account/)
     assert.match(upgrade, /Already subscribed/)
   })
 
