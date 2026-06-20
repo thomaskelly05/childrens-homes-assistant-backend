@@ -20,8 +20,8 @@ export function OrbVoiceModeSelector({
   onReasoningModeChange: (mode: OrbVoiceReasoningModeId) => void
 }) {
   const selection = describeVoiceModeSelection(voiceStyle, reasoningMode)
-  const activeStyle = ORB_VOICE_STYLE_OPTIONS[styleIndex]
-  const activeReasoning = ORB_VOICE_REASONING_OPTIONS[reasoningIndex]
+  const activeStyle = ORB_VOICE_STYLE_OPTIONS.find((option) => option.id === voiceStyle)
+  const activeReasoning = ORB_VOICE_REASONING_OPTIONS.find((option) => option.id === reasoningMode)
 
   return (
     <div
