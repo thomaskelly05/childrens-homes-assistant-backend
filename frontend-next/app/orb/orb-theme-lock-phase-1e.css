@@ -1,0 +1,235 @@
+/**
+ * Phase 1E — ORB Residential theme lock and UI system stabilisation.
+ * Forces readable light tokens; shared modal/surface treatment.
+ */
+
+html[data-orb-residential='1'],
+html[data-orb-theme-locked='light'] {
+  color-scheme: light !important;
+
+  --orb-read-bg: #f7fbff;
+  --orb-read-surface: #ffffff;
+  --orb-read-surface-soft: #f8fafc;
+  --orb-read-surface-tint: #eef2ff;
+  --orb-read-text-primary: #0f172a;
+  --orb-read-text-secondary: #334155;
+  --orb-read-text-muted: #475569;
+  --orb-read-border: #dbeafe;
+  --orb-read-border-strong: #cbd5e1;
+  --orb-read-primary: #4f46e5;
+  --orb-read-primary-strong: #4338ca;
+  --orb-read-warning-bg: #fffbeb;
+  --orb-read-warning-text: #78350f;
+  --orb-read-success-bg: #ecfdf5;
+  --orb-read-success-text: #065f46;
+  --orb-read-disabled-text: #64748b;
+  --orb-read-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
+
+  --orb-foreground: var(--orb-read-text-primary);
+  --orb-muted: var(--orb-read-text-muted);
+  --orb-line: var(--orb-read-border);
+  --orb-surface: var(--orb-read-surface);
+  --orb-surface-elevated: var(--orb-read-surface);
+  --orb-surface-hover: var(--orb-read-surface-soft);
+  --orb-primary: var(--orb-read-primary);
+  --orb-bg-deep: var(--orb-read-bg);
+  --orb-page-bg: var(--orb-read-bg);
+  --orb-text-primary: var(--orb-read-text-primary);
+  --orb-text-secondary: var(--orb-read-text-secondary);
+  --orb-text-muted: var(--orb-read-text-muted);
+  --orb-res-bg: var(--orb-read-bg);
+  --orb-res-surface: var(--orb-read-surface);
+  --orb-res-card: var(--orb-read-surface);
+  --orb-res-text: var(--orb-read-text-primary);
+  --orb-res-text-soft: var(--orb-read-text-secondary);
+  --orb-res-border: var(--orb-read-border);
+  --orb-res-primary: var(--orb-read-primary);
+  --orb-res-input-bg: var(--orb-read-surface);
+}
+
+/* Neutralise accidental dark theme inheritance inside residential */
+html[data-orb-residential='1'] .orb-chat-layout--residential.orb-theme-dark,
+html[data-orb-residential='1'] .orb-chat-layout--residential,
+html[data-orb-residential='1'] .orb-chat-layout.orb-theme-dark {
+  background: var(--orb-read-bg) !important;
+  color: var(--orb-read-text-primary) !important;
+}
+
+html[data-orb-residential='1'] .orb-chat-sidebar,
+html[data-orb-residential='1'] .orb-chat-sidebar.orb-theme-dark {
+  background: var(--orb-read-surface) !important;
+  border-color: var(--orb-read-border) !important;
+  color: var(--orb-read-text-secondary) !important;
+}
+
+html[data-orb-residential='1'] .orb-sidebar-nav-item {
+  color: var(--orb-read-text-secondary) !important;
+}
+
+html[data-orb-residential='1'] .orb-sidebar-nav-item--active {
+  background: var(--orb-read-surface-tint) !important;
+  border-inline-start: 3px solid var(--orb-read-primary) !important;
+  color: var(--orb-read-text-primary) !important;
+}
+
+html[data-orb-residential='1'] [data-orb-sidebar-account],
+html[data-orb-residential='1'] [data-orb-account-menu-trigger] {
+  background: var(--orb-read-surface) !important;
+  border-color: var(--orb-read-border) !important;
+  color: var(--orb-read-text-secondary) !important;
+}
+
+/* ── Login composition ──────────────────────────────────────────────────── */
+
+@media (min-width: 1024px) {
+  .orb-login-shell {
+    max-width: 1180px;
+    margin-inline: auto;
+    gap: 2.5rem;
+  }
+
+  .orb-login-hero-inner {
+    max-width: 34rem;
+  }
+
+  .orb-login-panel {
+    flex: 0 1 28rem;
+    max-width: 28rem;
+  }
+}
+
+.orb-login-hero-inner {
+  padding: 1rem;
+  border-radius: 1.25rem;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(248, 250, 252, 0.45));
+  border: 1px solid var(--orb-read-border);
+}
+
+.orb-login-root--light .orb-login-hero-inner {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(241, 245, 249, 0.88));
+}
+
+/* ── Home stabilisation ───────────────────────────────────────────────────── */
+
+.orb-chat-layout--residential [data-orb-residential-empty] .mx-auto {
+  max-width: 52rem;
+}
+
+.orb-home-surface-card {
+  max-width: 50rem !important;
+}
+
+.orb-guided-demo-continue-card {
+  border: 1px solid #c7d2fe !important;
+  background: #eef2ff !important;
+  color: var(--orb-read-text-primary) !important;
+  box-shadow: var(--orb-read-shadow) !important;
+}
+
+/* ── Shared modal / panel system ─────────────────────────────────────────── */
+
+html[data-orb-residential='1'] [data-orb-app-panel],
+html[data-orb-residential='1'] [data-orb-app-modal],
+html[data-orb-residential='1'] [data-orb-settings-panel],
+html[data-orb-residential='1'] [data-orb-help-panel],
+html[data-orb-residential='1'] [data-orb-billing-modal],
+html[data-orb-residential='1'] [data-orb-account-modal],
+html[data-orb-residential='1'] .orb-app-panel-sheet,
+html[data-orb-residential='1'] .orb-app-panel-dialog {
+  background: var(--orb-read-surface) !important;
+  color: var(--orb-read-text-primary) !important;
+  border-color: var(--orb-read-border-strong) !important;
+}
+
+html[data-orb-residential='1'] [data-orb-app-panel] h2,
+html[data-orb-residential='1'] [data-orb-app-panel] h3,
+html[data-orb-residential='1'] [data-orb-settings-panel] h2,
+html[data-orb-residential='1'] [data-orb-settings-panel] h3,
+html[data-orb-residential='1'] [data-orb-help-panel] h2,
+html[data-orb-residential='1'] [data-orb-help-panel] h3,
+html[data-orb-residential='1'] [data-orb-billing-modal] h2,
+html[data-orb-residential='1'] [data-orb-billing-modal] h3 {
+  color: var(--orb-read-text-primary) !important;
+}
+
+html[data-orb-residential='1'] [data-orb-app-panel] p,
+html[data-orb-residential='1'] [data-orb-settings-panel] p,
+html[data-orb-residential='1'] [data-orb-help-panel] p,
+html[data-orb-residential='1'] [data-orb-billing-modal] p,
+html[data-orb-residential='1'] [data-orb-account-modal] p {
+  color: var(--orb-read-text-secondary);
+}
+
+html[data-orb-residential='1'] .orb-billing-card,
+html[data-orb-residential='1'] .orb-settings-block,
+html[data-orb-residential='1'] [data-orb-help-panel] section {
+  background: var(--orb-read-surface-soft) !important;
+  border: 1px solid var(--orb-read-border) !important;
+  color: var(--orb-read-text-secondary) !important;
+}
+
+html[data-orb-residential='1'] [data-orb-panel-close],
+html[data-orb-residential='1'] [data-orb-app-panel-close] {
+  color: var(--orb-read-text-muted) !important;
+}
+
+/* ── Dictate / Voice ──────────────────────────────────────────────────────── */
+
+html[data-orb-residential='1'] [data-orb-dictate-station] {
+  color: var(--orb-read-text-primary);
+}
+
+html[data-orb-residential='1'] [data-orb-dictate-top-bar],
+html[data-orb-residential='1'] [data-orb-dictate-workflow-bar] {
+  background: var(--orb-read-surface) !important;
+  border-bottom: 1px solid var(--orb-read-border) !important;
+  color: var(--orb-read-text-secondary) !important;
+}
+
+html[data-orb-residential='1'] [data-orb-dictate-transcript-panel] textarea,
+html[data-orb-residential='1'] [data-orb-dictate-rough-notes],
+html[data-orb-residential='1'] [data-orb-dictate-empty-state] {
+  background: var(--orb-read-surface) !important;
+  border: 1px solid var(--orb-read-border) !important;
+  color: var(--orb-read-text-primary) !important;
+  border-radius: 0.9rem;
+  box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+html[data-orb-residential='1'] [data-orb-voice-panel],
+html[data-orb-residential='1'] [data-orb-voice-live-panel],
+html[data-orb-residential='1'] [data-orb-voice-studio] {
+  background: var(--orb-read-bg) !important;
+  color: var(--orb-read-text-primary) !important;
+}
+
+html[data-orb-residential='1'] [data-orb-voice-hold-hint],
+html[data-orb-residential='1'] [data-orb-voice-safety-note],
+html[data-orb-residential='1'] [data-orb-voice-responsibility-strip] {
+  color: var(--orb-read-text-secondary) !important;
+}
+
+html[data-orb-residential='1'] [data-orb-voice-primary-action],
+html[data-orb-residential='1'] [data-orb-voice-launch-button] {
+  border: 1px solid var(--orb-read-border-strong) !important;
+  background: var(--orb-read-surface) !important;
+  color: var(--orb-read-text-primary) !important;
+  box-shadow: var(--orb-read-shadow);
+}
+
+/* ── ORB Write footer safety ─────────────────────────────────────────────── */
+
+html[data-orb-residential='1'] [data-orb-write-safety-copy],
+html[data-orb-residential='1'] [data-orb-write-studio-footer] {
+  color: var(--orb-read-text-muted) !important;
+}
+
+html[data-orb-residential='1'] [data-orb-write-title-input] {
+  color: var(--orb-read-text-primary) !important;
+}
+
+/* Focus ring */
+html[data-orb-residential='1'] :focus-visible {
+  outline: 2px solid #6366f1;
+  outline-offset: 2px;
+}

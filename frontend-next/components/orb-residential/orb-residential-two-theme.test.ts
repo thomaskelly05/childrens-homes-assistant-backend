@@ -28,12 +28,13 @@ describe('ORB Residential two-theme system', () => {
     assert.doesNotMatch(theme, /ORB_RESIDENTIAL_RESOLVED_THEME/)
   })
 
-  it('appearance defaults residential to light and bootstrap resolves theme', () => {
+  it('appearance defaults residential to light and bootstrap locks theme', () => {
     const appearance = readComponent('lib/orb/orb-appearance.ts')
     assert.match(appearance, /ORB_RESIDENTIAL_DEFAULT_APPEARANCE[\s\S]*'light'/)
+    assert.match(appearance, /ORB_RESIDENTIAL_LOCKED_THEME/)
+    assert.match(appearance, /resolveOrbResidentialTheme/)
+    assert.match(appearance, /data-orb-theme-locked/)
     assert.match(appearance, /readOrbAppearanceMode\(options\?: \{ residential\?: boolean \}\)/)
-    assert.match(appearance, /timeTheme\(\)/)
-    assert.match(appearance, /resolveOrbThemeFromTimeOfDay/)
     assert.doesNotMatch(appearance, /prefers-color-scheme/)
     assert.doesNotMatch(appearance, /var theme='dark'/)
   })
@@ -57,30 +58,28 @@ describe('ORB Residential two-theme system', () => {
     assert.doesNotMatch(sync, /ORB_RESIDENTIAL_RESOLVED_THEME/)
   })
 
-  it('care companion uses resolved theme for residential surface', () => {
+  it('care companion forces light theme for residential surface', () => {
     const companion = readComponent('components/orb-standalone/orb-care-companion.tsx')
-    assert.match(companion, /const effectiveTheme = resolvedTheme/)
+    assert.match(companion, /const effectiveTheme = residentialSurface \? 'light' : resolvedTheme/)
     assert.match(companion, /data-orb-theme=\{effectiveTheme\}/)
     assert.doesNotMatch(companion, /residentialSurface \? 'dark' : resolvedTheme/)
   })
 
-  it('settings and appearance control enable light dark system', () => {
+  it('settings locks appearance control on residential surface', () => {
     const settings = readComponent('components/orb-standalone/orb-standalone-settings-panel.tsx')
     const control = readComponent('components/orb-standalone/orb-appearance-control.tsx')
-    assert.match(settings, /effectiveAppearance = appearanceMode/)
-    assert.doesNotMatch(settings, /residentialLocked=\{residentialSurface\}/)
-    assert.doesNotMatch(control, /premium dark mode/)
-    assert.doesNotMatch(control, /disabled = residentialLocked/)
-    assert.match(control, /data-orb-appearance-option/)
-    assert.match(control, /time of day/i)
+    assert.match(settings, /residentialLocked=\{residentialSurface\}/)
+    assert.match(settings, /data-orb-settings-appearance-lock-note/)
+    assert.match(control, /data-orb-appearance-locked/)
+    assert.match(control, /disabled=\{residentialLocked/)
+    assert.match(control, /ORB_RESIDENTIAL_THEME_LOCK_COPY|lockCopy/)
   })
 
-  it('useOrbAppearance does not lock residential theme', () => {
+  it('useOrbAppearance exposes residential theme lock on /orb routes', () => {
     const hook = readComponent('components/orb-standalone/use-orb-appearance.ts')
     assert.match(hook, /readOrbAppearanceMode\(\{ residential/)
-    assert.match(hook, /resolvedTheme/)
-    assert.doesNotMatch(hook, /ORB_RESIDENTIAL_RESOLVED_THEME/)
-    assert.match(hook, /residentialThemeLocked: false/)
+    assert.match(hook, /resolveOrbResidentialTheme/)
+    assert.match(hook, /residentialThemeLocked/)
   })
 
   it('no duplicate theme lock hook file', () => {
@@ -145,11 +144,12 @@ describe('ORB Residential two-theme system', () => {
     assert.match(shift, /orbStationShellProps\(residentialSurface/)
   })
 
-  it('billing account and settings modals avoid hardcoded white cards', () => {
+  it('billing and account modals avoid hardcoded white cards; settings uses readable slate copy', () => {
     const settings = readComponent('components/orb-standalone/orb-standalone-settings-panel.tsx')
     const account = readComponent('components/orb-standalone/orb-account-modal.tsx')
     const billing = readComponent('components/orb-standalone/orb-billing-modal.tsx')
-    for (const src of [settings, account, billing]) {
+    assert.match(settings, /data-orb-settings-appearance-lock-note/)
+    for (const src of [account, billing]) {
       assert.doesNotMatch(src, /bg-white/)
       assert.doesNotMatch(src, /text-slate-/)
     }

@@ -5,6 +5,7 @@ import {
   ORB_APPEARANCE_MIGRATION_KEY,
   ORB_APPEARANCE_STORAGE_KEY,
   ORB_RESIDENTIAL_APPEARANCE_MIGRATION_KEY,
+  ORB_RESIDENTIAL_THEME_LOCK_MIGRATION_KEY,
   ORB_SYSTEM_DARK_START_HOUR,
   ORB_SYSTEM_LIGHT_START_HOUR,
   ORB_APPEARANCE_BOOTSTRAP_SCRIPT,
@@ -70,14 +71,15 @@ describe('orb appearance', () => {
     }
   })
 
-  it('persists residential appearance after reload', () => {
+  it('locks residential appearance to light regardless of stored preference', () => {
     const bag = mockBrowserStorage()
     try {
+      bag[ORB_RESIDENTIAL_THEME_LOCK_MIGRATION_KEY] = 'done'
       bag[ORB_RESIDENTIAL_APPEARANCE_MIGRATION_KEY] = 'done'
       writeOrbAppearanceMode('dark')
-      assert.equal(readOrbAppearanceMode({ residential: true }), 'dark')
+      assert.equal(readOrbAppearanceMode({ residential: true }), 'light')
       writeOrbAppearanceMode('system')
-      assert.equal(readOrbAppearanceMode({ residential: true }), 'system')
+      assert.equal(readOrbAppearanceMode({ residential: true }), 'light')
     } finally {
       Reflect.deleteProperty(globalThis, 'localStorage')
       Reflect.deleteProperty(globalThis, 'window')
@@ -126,8 +128,9 @@ describe('orb appearance', () => {
     }
   })
 
-  it('bootstrap script resolves system theme from local time not prefers-color-scheme', () => {
-    assert.match(ORB_APPEARANCE_BOOTSTRAP_SCRIPT, /function timeTheme\(\)/)
+  it('bootstrap script locks residential theme to light before hydration', () => {
+    assert.match(ORB_APPEARANCE_BOOTSTRAP_SCRIPT, /data-orb-theme-locked/)
+    assert.match(ORB_APPEARANCE_BOOTSTRAP_SCRIPT, /localStorage\.setItem\(K,LOCK\)/)
     assert.doesNotMatch(ORB_APPEARANCE_BOOTSTRAP_SCRIPT, /prefers-color-scheme/)
   })
 })

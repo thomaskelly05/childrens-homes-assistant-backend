@@ -1,4 +1,8 @@
 import type { OrbAppearanceMode } from '@/lib/orb/orb-appearance'
+import {
+  ORB_RESIDENTIAL_LOCKED_THEME,
+  resolveOrbResidentialTheme
+} from '@/lib/orb/orb-appearance'
 import { getOrbThemeCssVariables } from '@/lib/orb/orb-theme'
 import { ORB_BUILD_VISUAL_VERSION, ORB_CSS_CONTRACT, ORB_STYLE_VERSION } from '@/lib/orb/orb-visual-build'
 
@@ -35,18 +39,22 @@ function toggleThemeClasses(el: HTMLElement, resolvedTheme: 'light' | 'dark'): v
  */
 export function applyOrbResidentialTheme({
   selectedAppearance,
-  resolvedTheme
+  resolvedTheme: _resolvedTheme
 }: ApplyOrbResidentialThemeInput): void {
   if (typeof document === 'undefined') return
+
+  const resolvedTheme = resolveOrbResidentialTheme(selectedAppearance)
+  const selectedMode = ORB_RESIDENTIAL_LOCKED_THEME
 
   const html = document.documentElement
   const body = document.body
   const cssVars = getOrbThemeCssVariables(resolvedTheme)
 
+  html.dataset.orbThemeLocked = resolvedTheme
   html.dataset.orbResidential = '1'
   html.dataset.orbTheme = resolvedTheme
-  html.dataset.orbAppearance = selectedAppearance
-  html.dataset.orbAppearanceMode = selectedAppearance
+  html.dataset.orbAppearance = selectedMode
+  html.dataset.orbAppearanceMode = selectedMode
   html.dataset.orbSystemTheme = resolvedTheme
   html.dataset.orbStyleVersion = ORB_STYLE_VERSION
   html.dataset.orbBuildVisualVersion = ORB_BUILD_VISUAL_VERSION
@@ -55,8 +63,9 @@ export function applyOrbResidentialTheme({
 
   if (body) {
     body.dataset.orbTheme = resolvedTheme
-    body.dataset.orbAppearance = selectedAppearance
-    body.dataset.orbAppearanceMode = selectedAppearance
+    body.dataset.orbAppearance = selectedMode
+    body.dataset.orbAppearanceMode = selectedMode
+    body.dataset.orbThemeLocked = resolvedTheme
   }
 
   toggleThemeClasses(html, resolvedTheme)
@@ -66,9 +75,10 @@ export function applyOrbResidentialTheme({
   for (const selector of RESIDENTIAL_ROOT_SELECTORS) {
     document.querySelectorAll<HTMLElement>(selector).forEach((root) => {
       root.dataset.orbTheme = resolvedTheme
-      root.dataset.orbAppearance = selectedAppearance
-      root.dataset.orbAppearanceMode = selectedAppearance
+      root.dataset.orbAppearance = selectedMode
+      root.dataset.orbAppearanceMode = selectedMode
       root.dataset.orbSystemTheme = resolvedTheme
+      root.dataset.orbThemeLocked = resolvedTheme
       if (root.hasAttribute('data-orb-residential') || selector.includes('orb-residential')) {
         root.dataset.orbResidential = 'true'
       }

@@ -308,12 +308,17 @@ export function OrbStandaloneSettingsPanel({
               <OrbAppearanceControl
                 value={effectiveAppearance}
                 onChange={(mode) => onAppearanceChange?.(mode)}
+                residentialLocked={residentialSurface}
               />
-              {!residentialSurface ? (
-                <p className="text-[11px] leading-5 text-[var(--orb-muted)]">
+              {residentialSurface ? (
+                <p className="text-[11px] leading-5 text-slate-600" data-orb-settings-appearance-lock-note>
+                  Text size and motion settings still apply on this device.
+                </p>
+              ) : (
+                <p className="text-[11px] leading-5 text-slate-600">
                   System follows your device. You can override it here.
                 </p>
-              ) : null}
+              )}
               <fieldset>
                 <legend className="mb-2 flex items-center gap-2 text-xs font-medium text-[var(--orb-foreground)]">
                   <Type className="h-3.5 w-3.5" aria-hidden />

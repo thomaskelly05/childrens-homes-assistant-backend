@@ -12,8 +12,11 @@ import {
 
 import {
   ORB_APPEARANCE_STORAGE_KEY,
+  ORB_RESIDENTIAL_LOCKED_THEME,
+  ORB_RESIDENTIAL_THEME_LOCK_COPY,
   msUntilNextOrbSystemThemeBoundary,
   readOrbAppearanceMode,
+  resolveOrbResidentialTheme,
   resolveOrbTheme,
   writeOrbAppearanceMode,
   type OrbAppearanceMode
@@ -25,7 +28,8 @@ export type OrbAppearanceContextValue = {
   resolvedTheme: 'light' | 'dark'
   setAppearanceMode: (mode: OrbAppearanceMode) => void
   storageKey: string
-  residentialThemeLocked: false
+  residentialThemeLocked: boolean
+  residentialThemeLockCopy: string
 }
 
 const OrbAppearanceContext = createContext<OrbAppearanceContextValue | null>(null)
@@ -50,16 +54,22 @@ export function OrbAppearanceProvider({
     readOrbAppearanceMode({ residential })
   )
   const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>(() =>
-    resolveOrbTheme(readOrbAppearanceMode({ residential }))
+    residential ? resolveOrbResidentialTheme() : resolveOrbTheme(readOrbAppearanceMode({ residential: false }))
   )
 
   useEffect(() => {
-    const stored = readOrbAppearanceMode({ residential: isOrbResidentialRoute() })
+    const onResidential = isOrbResidentialRoute()
+    const stored = readOrbAppearanceMode({ residential: onResidential })
     setAppearanceModeState(stored)
-    setResolvedTheme(resolveOrbTheme(stored))
+    setResolvedTheme(onResidential ? resolveOrbResidentialTheme() : resolveOrbTheme(stored))
   }, [residential])
 
   useEffect(() => {
+    if (residential || isOrbResidentialRoute()) {
+      setResolvedTheme(resolveOrbResidentialTheme())
+      return
+    }
+
     if (appearanceMode !== 'system') {
       setResolvedTheme(resolveOrbTheme(appearanceMode))
       return
@@ -83,27 +93,39 @@ export function OrbAppearanceProvider({
       window.clearTimeout(timerId)
       window.clearInterval(minuteTick)
     }
-  }, [appearanceMode])
+  }, [appearanceMode, residential])
 
   useEffect(() => {
-    applyOrbResidentialTheme({ selectedAppearance: appearanceMode, resolvedTheme })
-  }, [appearanceMode, resolvedTheme])
+    const locked = residential || isOrbResidentialRoute()
+    applyOrbResidentialTheme({
+      selectedAppearance: locked ? ORB_RESIDENTIAL_LOCKED_THEME : appearanceMode,
+      resolvedTheme: locked ? ORB_RESIDENTIAL_LOCKED_THEME : resolvedTheme
+    })
+  }, [appearanceMode, resolvedTheme, residential])
 
-  const setAppearanceMode = useCallback((mode: OrbAppearanceMode) => {
-    writeOrbAppearanceMode(mode)
-    setAppearanceModeState(mode)
-    setResolvedTheme(resolveOrbTheme(mode))
-  }, [])
+  const setAppearanceMode = useCallback(
+    (mode: OrbAppearanceMode) => {
+      const onResidential = residential || isOrbResidentialRoute()
+      if (onResidential) return
+      writeOrbAppearanceMode(mode)
+      setAppearanceModeState(mode)
+      setResolvedTheme(resolveOrbTheme(mode))
+    },
+    [residential]
+  )
+
+  const themeLocked = residential || isOrbResidentialRoute()
 
   const value = useMemo<OrbAppearanceContextValue>(
     () => ({
-      appearanceMode,
-      resolvedTheme,
+      appearanceMode: themeLocked ? ORB_RESIDENTIAL_LOCKED_THEME : appearanceMode,
+      resolvedTheme: themeLocked ? ORB_RESIDENTIAL_LOCKED_THEME : resolvedTheme,
       setAppearanceMode,
       storageKey: ORB_APPEARANCE_STORAGE_KEY,
-      residentialThemeLocked: false
+      residentialThemeLocked: themeLocked,
+      residentialThemeLockCopy: ORB_RESIDENTIAL_THEME_LOCK_COPY
     }),
-    [appearanceMode, resolvedTheme, setAppearanceMode]
+    [appearanceMode, resolvedTheme, setAppearanceMode, themeLocked]
   )
 
   return <OrbAppearanceContext.Provider value={value}>{children}</OrbAppearanceContext.Provider>

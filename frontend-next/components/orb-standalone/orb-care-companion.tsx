@@ -3365,7 +3365,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
   const layoutA11yClass = standaloneOrbAccessibilityClassNames(a11yPrefs)
 
   const atmosphereClass = atmosphereClassForMode(mode)
-  const effectiveTheme = resolvedTheme
+  const effectiveTheme = residentialSurface ? 'light' : resolvedTheme
   const themeClass = effectiveTheme === 'light' ? 'orb-theme-light' : 'orb-theme-dark'
 
   const renderResidentialCorePanels = () => (
@@ -4306,7 +4306,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
                             <button
                               type="button"
                               onClick={() => setGuidedDemoPanelOpen(true)}
-                              className="w-full rounded-2xl border border-[var(--orb-primary)]/30 bg-[var(--orb-primary)]/8 px-4 py-3 text-left text-sm font-medium text-[var(--orb-foreground)]"
+                              className="orb-guided-demo-continue-card w-full rounded-2xl border border-indigo-200 bg-indigo-50 px-4 py-3.5 text-left text-sm font-semibold text-slate-900 shadow-sm"
                               data-orb-guided-demo-continue
                             >
                               Continue Guided Demo — step {guidedDemoState.stepIndex + 1} of 5

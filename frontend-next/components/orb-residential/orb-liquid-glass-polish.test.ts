@@ -71,15 +71,13 @@ describe('ORB Residential Liquid Glass final polish pass', () => {
     assert.match(desktop, /\[data-orb-settings-scroll\]/)
   })
 
-  it('appearance segmented control remains selectable with liquid toolbar', () => {
+  it('appearance segmented control remains selectable with readable toolbar', () => {
     const appearance = read('components/orb-standalone/orb-appearance-control.tsx')
-    const liquid = read('app/orb/orb-liquid-glass.css')
+    const themeLock = read('app/orb/orb-theme-lock-phase-1e.css')
     assert.match(appearance, /data-orb-appearance-option/)
-    assert.match(appearance, /orb-liquid-toolbar/)
+    assert.match(appearance, /data-orb-appearance-locked/)
     assert.match(appearance, /min-h-\[2\.75rem\]/)
-    assert.match(liquid, /--orb-glass-bg/)
-    assert.match(liquid, /\.orb-liquid-glass/)
-    assert.match(liquid, /\.orb-liquid-composer/)
+    assert.match(themeLock, /--orb-read-surface/)
   })
 
   it('privacy detail sheet scrolls independently with safe-area padding', () => {

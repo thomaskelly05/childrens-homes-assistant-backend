@@ -5,8 +5,10 @@ import { useCallback, useEffect, useState } from 'react'
 import { useOrbAppearanceContext } from '@/components/orb-standalone/orb-appearance-provider'
 import {
   ORB_APPEARANCE_STORAGE_KEY,
+  ORB_RESIDENTIAL_LOCKED_THEME,
   msUntilNextOrbSystemThemeBoundary,
   readOrbAppearanceMode,
+  resolveOrbResidentialTheme,
   resolveOrbTheme,
   writeOrbAppearanceMode,
   type OrbAppearanceMode
@@ -28,18 +30,24 @@ function useOrbAppearanceStandalone(skip: boolean) {
     readOrbAppearanceMode({ residential })
   )
   const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>(() =>
-    resolveOrbTheme(readOrbAppearanceMode({ residential }))
+    residential ? resolveOrbResidentialTheme() : resolveOrbTheme(readOrbAppearanceMode({ residential: false }))
   )
 
   useEffect(() => {
     if (skip) return
-    const stored = readOrbAppearanceMode({ residential: isOrbResidentialRoute() })
+    const onResidential = isOrbResidentialRoute()
+    const stored = readOrbAppearanceMode({ residential: onResidential })
     setAppearanceModeState(stored)
-    setResolvedTheme(resolveOrbTheme(stored))
+    setResolvedTheme(onResidential ? resolveOrbResidentialTheme() : resolveOrbTheme(stored))
   }, [skip])
 
   useEffect(() => {
     if (skip) return
+    if (isOrbResidentialRoute()) {
+      setResolvedTheme(resolveOrbResidentialTheme())
+      return
+    }
+
     if (appearanceMode !== 'system') {
       setResolvedTheme(resolveOrbTheme(appearanceMode))
       return
@@ -67,12 +75,16 @@ function useOrbAppearanceStandalone(skip: boolean) {
 
   useEffect(() => {
     if (skip) return
-    applyOrbResidentialTheme({ selectedAppearance: appearanceMode, resolvedTheme })
+    const onResidential = isOrbResidentialRoute()
+    applyOrbResidentialTheme({
+      selectedAppearance: onResidential ? ORB_RESIDENTIAL_LOCKED_THEME : appearanceMode,
+      resolvedTheme: onResidential ? ORB_RESIDENTIAL_LOCKED_THEME : resolvedTheme
+    })
   }, [skip, appearanceMode, resolvedTheme])
 
   const setAppearanceMode = useCallback(
     (mode: OrbAppearanceMode) => {
-      if (skip) return
+      if (skip || isOrbResidentialRoute()) return
       writeOrbAppearanceMode(mode)
       setAppearanceModeState(mode)
       setResolvedTheme(resolveOrbTheme(mode))
@@ -80,12 +92,14 @@ function useOrbAppearanceStandalone(skip: boolean) {
     [skip]
   )
 
+  const themeLocked = isOrbResidentialRoute()
+
   return {
-    appearanceMode,
-    resolvedTheme,
+    appearanceMode: themeLocked ? ORB_RESIDENTIAL_LOCKED_THEME : appearanceMode,
+    resolvedTheme: themeLocked ? ORB_RESIDENTIAL_LOCKED_THEME : resolvedTheme,
     setAppearanceMode,
     storageKey: ORB_APPEARANCE_STORAGE_KEY,
-    residentialThemeLocked: false as const
+    residentialThemeLocked: themeLocked
   }
 }
 
