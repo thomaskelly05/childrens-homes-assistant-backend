@@ -2,13 +2,100 @@
 
 export type CommunicateMode =
   | 'hub'
+  | 'support_pack'
   | 'easy_read'
   | 'visual_board'
   | 'social_story'
   | 'my_voice_profile'
   | 'reflect_record'
 
-export type CommunicateAgeGroup = 'child' | 'young_person' | 'adult'
+export type CommunicationAudience = 'child' | 'young_person' | 'adult'
+
+export type CommunicationSupportPackSensitivity =
+  | 'routine'
+  | 'emotional'
+  | 'health'
+  | 'safeguarding_sensitive'
+
+export type CommunicationOutputPreference =
+  | 'let_orb_choose'
+  | 'easy_read_only'
+  | 'visual_support'
+  | 'social_story'
+  | 'full_support_pack'
+
+export type CommunicateRequestIntent =
+  | 'contact_change'
+  | 'new_staff_member'
+  | 'hospital_appointment'
+  | 'bedtime_worries'
+  | 'feelings_expression'
+  | 'safeguarding_disclosure'
+  | 'visual_routine'
+  | 'general'
+
+export type CommunicationSupportPackSectionType =
+  | 'easy_read'
+  | 'visual_cards'
+  | 'social_story'
+  | 'staff_guidance'
+  | 'regulation_support'
+  | 'recording_prompts'
+  | 'reflection_draft'
+  | 'custom_note'
+
+export type CommunicationSupportPackAction =
+  | 'copy_section'
+  | 'edit_section'
+  | 'regenerate_section'
+  | 'create_image'
+  | 'replace_image'
+  | 'save_to_library'
+  | 'personalise_for_person'
+
+export type CommunicationSupportPackSection = {
+  id: string
+  type: CommunicationSupportPackSectionType
+  heading: string
+  description: string
+  content: string
+  visualCards?: VisualSymbol[]
+  actions: CommunicationSupportPackAction[]
+}
+
+export type CommunicationSupportPackRequest = {
+  prompt: string
+  useMyVoiceProfile?: boolean
+  myVoiceProfile?: MyVoiceProfile | null
+  audience?: CommunicationAudience
+  sensitivity?: CommunicationSupportPackSensitivity
+  outputPreference?: CommunicationOutputPreference
+  includeVisuals?: boolean
+  includeRecordingPrompts?: boolean
+}
+
+export type CommunicationPlan = {
+  intent: CommunicateRequestIntent
+  sensitivity: CommunicationSupportPackSensitivity
+  audience: CommunicationAudience
+  sectionTypes: CommunicationSupportPackSectionType[]
+  safeguardingMode: boolean
+}
+
+export type CommunicationSupportPackOutput = {
+  packTitle: string
+  intent: CommunicateRequestIntent
+  sensitivity: CommunicationSupportPackSensitivity
+  audience: CommunicationAudience
+  sections: CommunicationSupportPackSection[]
+  suggestedActions: string[]
+  safetyNotes: string[]
+  myVoiceProfileUsed: boolean
+  myVoiceProfileNotice?: string
+  createdAt: string
+}
+
+export type CommunicateAgeGroup = CommunicationAudience
 
 export type EasyReadContext =
   | 'contact'

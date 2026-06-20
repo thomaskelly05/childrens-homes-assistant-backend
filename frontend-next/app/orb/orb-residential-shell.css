@@ -538,10 +538,107 @@ html[data-orb-residential='1'] .orb-composer--premium textarea::placeholder {
 
 .orb-workspace--communicate {
   min-height: 0;
+  background: var(--orb-res-workspace-bg);
 }
 
 .orb-workspace--communicate [data-orb-communicate-hub] {
   width: 100%;
+}
+
+.orb-communicate-prompt {
+  border-radius: var(--orb-res-composer-radius);
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  background: var(--orb-res-workspace-surface);
+  box-shadow: var(--orb-res-composer-shadow);
+  padding: 1rem 1.125rem;
+  font-size: 1rem;
+  line-height: 1.55;
+  color: var(--orb-res-navy);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.orb-communicate-prompt:focus {
+  outline: none;
+  border-color: rgba(99, 102, 241, 0.45);
+  box-shadow: 0 8px 36px rgba(15, 23, 42, 0.08), 0 0 0 3px rgba(99, 102, 241, 0.12);
+}
+
+.orb-communicate-field {
+  border-radius: 0.625rem;
+  border: 1px solid var(--orb-res-workspace-border);
+  background: var(--orb-res-workspace-surface);
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  color: var(--orb-res-navy);
+}
+
+.orb-communicate-example-chip {
+  border: 1px solid var(--orb-res-workspace-border);
+  background: var(--orb-res-workspace-surface);
+  color: var(--orb-res-workspace-text);
+  border-radius: 999px;
+  padding: 0.4rem 0.85rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.orb-communicate-example-chip:hover {
+  border-color: rgba(37, 99, 235, 0.25);
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.08);
+}
+
+.orb-communicate-create-btn {
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--orb-res-accent) 0%, var(--orb-res-accent-violet) 100%);
+  color: #fff;
+  font-weight: 600;
+  padding: 0.75rem 1.25rem;
+  box-shadow: 0 6px 20px rgba(37, 99, 235, 0.28);
+  transition: opacity 0.15s ease;
+}
+
+.orb-communicate-create-btn:disabled {
+  opacity: 0.45;
+}
+
+.orb-communicate-advanced-card {
+  border: 1px solid var(--orb-res-workspace-border);
+  border-radius: 0.75rem;
+  background: var(--orb-res-workspace-surface);
+  padding: 0.75rem;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.orb-communicate-advanced-card:hover {
+  border-color: rgba(37, 99, 235, 0.2);
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.06);
+}
+
+.orb-communicate-pack-action {
+  border: 1px solid var(--orb-res-workspace-border);
+  border-radius: 999px;
+  background: var(--orb-res-workspace-surface);
+  padding: 0.35rem 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--orb-res-workspace-text);
+}
+
+.orb-communicate-pack-action--primary {
+  background: var(--orb-res-navy);
+  border-color: var(--orb-res-navy);
+  color: #fff;
+}
+
+html[data-orb-residential='1'] .orb-communicate-pack [data-orb-communicate-symbol] {
+  border-color: var(--orb-res-workspace-border);
+  background: linear-gradient(160deg, rgba(99, 102, 241, 0.08), rgba(37, 99, 235, 0.04));
+  color: var(--orb-res-navy);
+}
+
+html[data-orb-residential='1'] .orb-communicate-pack [data-orb-communicate-symbol] span {
+  color: var(--orb-res-workspace-text);
 }
 
 .orb-workspace--records [data-orb-records-empty] {

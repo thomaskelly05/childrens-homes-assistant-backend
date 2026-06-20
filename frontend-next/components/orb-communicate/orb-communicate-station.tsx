@@ -2,20 +2,19 @@
 
 import { useState } from 'react'
 
+import { OrbCommunicateCreateFlow } from '@/components/orb-communicate/orb-communicate-create-flow'
 import { OrbCommunicateEasyReadWorkflow } from '@/components/orb-communicate/orb-communicate-easy-read'
-import { OrbCommunicateHub } from '@/components/orb-communicate/orb-communicate-hub'
 import { OrbCommunicateMyVoiceProfileWorkflow } from '@/components/orb-communicate/orb-communicate-my-voice-profile'
 import { OrbCommunicateReflectRecordWorkflow } from '@/components/orb-communicate/orb-communicate-reflect-record'
-import {
-  OrbCommunicateSafetyBanner
-} from '@/components/orb-communicate/orb-communicate-shared'
 import { OrbCommunicateSocialStoryWorkflow } from '@/components/orb-communicate/orb-communicate-social-story'
 import { OrbCommunicateVisualBoardWorkflow } from '@/components/orb-communicate/orb-communicate-visual-board'
+import { OrbCommunicateSupportPackView } from '@/components/orb-communicate/orb-communicate-support-pack-view'
 import { OrbAppModal } from '@/components/orb-standalone/orb-app-modal'
-import { orbNavyGradient, orbNavyPage } from '@/components/orb-residential/ui/orb-theme'
-import { GlassOrbMark } from '@/components/orb-residential/ui/glass-orb-mark'
 import { orbResidentialStation } from '@/lib/orb/orb-residential-stations'
-import type { CommunicateMode } from '@/lib/orb/communicate/orb-communicate-types'
+import type {
+  CommunicateMode,
+  CommunicationSupportPackOutput
+} from '@/lib/orb/communicate/orb-communicate-types'
 
 const STATION = orbResidentialStation('orb_communicate')
 
@@ -27,15 +26,36 @@ export function OrbCommunicateStation({
   onClose: () => void
 }) {
   const [mode, setMode] = useState<CommunicateMode>('hub')
+  const [supportPack, setSupportPack] = useState<CommunicationSupportPackOutput | null>(null)
 
   function handleClose() {
     setMode('hub')
+    setSupportPack(null)
     onClose()
   }
 
   function renderWorkflow() {
-    const back = () => setMode('hub')
+    const back = () => {
+      setSupportPack(null)
+      setMode('hub')
+    }
     switch (mode) {
+      case 'support_pack':
+        return supportPack ? (
+          <OrbCommunicateSupportPackView
+            pack={supportPack}
+            onBack={back}
+            onStartReflect={() => setMode('reflect_record')}
+          />
+        ) : (
+          <OrbCommunicateCreateFlow
+            onPackCreated={(pack) => {
+              setSupportPack(pack)
+              setMode('support_pack')
+            }}
+            onSelectAdvanced={setMode}
+          />
+        )
       case 'easy_read':
         return <OrbCommunicateEasyReadWorkflow onBack={back} />
       case 'visual_board':
@@ -48,22 +68,13 @@ export function OrbCommunicateStation({
         return <OrbCommunicateReflectRecordWorkflow onBack={back} />
       default:
         return (
-          <div className="space-y-6">
-            <div className="flex items-start gap-4">
-              <GlassOrbMark className="h-12 w-12 shrink-0" />
-              <div>
-                <h2 className="text-xl font-semibold tracking-tight text-white sm:text-2xl">
-                  ORB Communicate
-                </h2>
-                <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-400 [text-wrap:pretty]">
-                  Create accessible explanations, visual supports and reflection prompts that help
-                  people understand, express themselves and be heard.
-                </p>
-              </div>
-            </div>
-            <OrbCommunicateHub onSelect={setMode} />
-            <OrbCommunicateSafetyBanner />
-          </div>
+          <OrbCommunicateCreateFlow
+            onPackCreated={(pack) => {
+              setSupportPack(pack)
+              setMode('support_pack')
+            }}
+            onSelectAdvanced={setMode}
+          />
         )
     }
   }
@@ -79,11 +90,11 @@ export function OrbCommunicateStation({
       size="wide"
     >
       <div
-        className={`orb-workspace--communicate min-h-0 flex-1 overflow-y-auto ${orbNavyPage} ${orbNavyGradient}`}
+        className="orb-workspace--communicate min-h-0 flex-1 overflow-y-auto bg-[var(--orb-res-workspace-bg)]"
         data-orb-workspace-communicate
         data-orb-communicate-mode={mode}
       >
-        <div className="mx-auto max-w-4xl px-4 py-6 sm:px-6 sm:py-8">{renderWorkflow()}</div>
+        <div className="mx-auto max-w-3xl px-4 py-6 sm:px-6 sm:py-8">{renderWorkflow()}</div>
       </div>
     </OrbAppModal>
   )

@@ -118,8 +118,9 @@ describe('ORB Communicate', () => {
     assert.match(client, /tryApiPost/)
   })
 
-  it('communicate hub exposes five workflow cards', () => {
+  it('communicate hub exposes five workflow cards under advanced tools', () => {
     const hub = read('components/orb-communicate/orb-communicate-hub.tsx')
+    const createFlow = read('components/orb-communicate/orb-communicate-create-flow.tsx')
     for (const card of [
       'easy_read',
       'visual_board',
@@ -129,9 +130,11 @@ describe('ORB Communicate', () => {
     ]) {
       assert.match(hub, new RegExp(card))
     }
+    assert.match(hub, /data-orb-communicate-advanced-tools/)
+    assert.match(createFlow, /data-orb-communicate-create-flow/)
     const station = read('components/orb-communicate/orb-communicate-station.tsx')
-    assert.match(station, /ORB Communicate/)
-    assert.match(station, /data-orb-communicate-safety-banner|OrbCommunicateSafetyBanner/)
+    assert.match(createFlow, /data-orb-communicate-create-flow/)
+    assert.match(createFlow, /ORB_COMMUNICATE_COMPACT_SAFETY|data-orb-communicate-compact-safety/)
   })
 
   it('my voice profile localStorage load and save handle storage failures', () => {
