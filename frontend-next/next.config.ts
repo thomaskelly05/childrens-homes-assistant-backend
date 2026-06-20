@@ -11,14 +11,25 @@ const backendOrigin = (
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  productionBrowserSourceMaps: false,
+  typescript: {
+    // Typecheck runs via `npm run typecheck` — skip duplicate full-project tsc during Render build.
+    ignoreBuildErrors: true
+  },
   experimental: {
     // Reduce peak webpack memory on constrained hosts (e.g. Render starter builds).
     memoryBasedWorkersCount: true,
-    webpackMemoryOptimizations: true
+    webpackMemoryOptimizations: true,
+    // Single build worker — avoids multi-process webpack spikes on 8 GB Render builders.
+    cpus: 1
   },
   modularizeImports: {
     'lucide-react': {
       transform: 'lucide-react/dist/esm/icons/{{kebabCase member}}',
+      skipDefaultConversion: true
+    },
+    recharts: {
+      transform: 'recharts/es6/{{member}}',
       skipDefaultConversion: true
     }
   },
@@ -40,6 +51,22 @@ const nextConfig: NextConfig = {
     // We still keep linting available locally/CI, but production builds should
     // not be blocked by historical unused-variable warnings while ORB is being rebuilt.
     ignoreDuringBuilds: true
+  },
+  webpack: (config, { dev, webpack }) => {
+    if (!dev) {
+      config.parallelism = 1
+      config.plugins.push(
+        new webpack.IgnorePlugin({
+          checkResource(resource: string) {
+            return (
+              /\.(test|spec)\.(tsx?|jsx?)$/.test(resource) ||
+              resource.includes('lib/orb/evals/')
+            )
+          }
+        })
+      )
+    }
+    return config
   },
   async rewrites() {
     return [

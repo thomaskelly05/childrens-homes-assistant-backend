@@ -6,7 +6,7 @@ services:
     region: frankfurt
     branch: main
     rootDir: frontend-next
-    buildCommand: npm install && npm run build
+    buildCommand: npm ci --omit=optional && npm run build:render
     startCommand: npm run start
     healthCheckPath: /
     autoDeploy: true
@@ -14,7 +14,7 @@ services:
       - key: NODE_VERSION
         value: "22"
       - key: NODE_OPTIONS
-        value: --max-old-space-size=4096
+        value: --max-old-space-size=3072
       - key: NEXT_TELEMETRY_DISABLED
         value: "1"
       - key: NODE_ENV

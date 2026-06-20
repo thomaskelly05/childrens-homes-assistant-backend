@@ -36,7 +36,7 @@ describe('render-safe-next-build', () => {
     const env = resolveRenderBuildEnv({})
     assert.equal(env.NODE_ENV, 'production')
     assert.equal(env.NEXT_TELEMETRY_DISABLED, '1')
-    assert.match(env.NODE_OPTIONS ?? '', /--max-old-space-size=4096/)
+    assert.match(env.NODE_OPTIONS ?? '', /--max-old-space-size=3072/)
   })
 
   it('resolveRenderBuildEnv preserves explicit NODE_ENV and NODE_OPTIONS', () => {

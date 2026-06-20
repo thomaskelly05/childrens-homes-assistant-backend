@@ -19,8 +19,8 @@ function read(relativePath: string) {
 }
 
 describe('ORB Residential Phase 3E premium login entrance', () => {
-  it('build version marker is phase-3i-calm-composer', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-3i-calm-composer')
+  it('build version marker is phase-3i1-deploy-rescue', () => {
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-3i1-deploy-rescue')
     const layout = read('app/orb/layout.tsx')
     assert.match(layout, /orb-residential-shell\.css/)
     assert.doesNotMatch(layout, /orb-flagship-phase|orb-login\.css/)

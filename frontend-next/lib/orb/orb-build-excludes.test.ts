@@ -36,10 +36,14 @@ describe('production build excludes', () => {
     assert.match(tailwind, /!\.\/e2e\/\*\*/)
   })
 
-  it('next config enables webpack memory optimisations', () => {
+  it('next config enables webpack memory optimisations and build-time guards', () => {
     const nextConfig = read('next.config.ts')
     assert.match(nextConfig, /webpackMemoryOptimizations:\s*true/)
     assert.match(nextConfig, /memoryBasedWorkersCount:\s*true/)
+    assert.match(nextConfig, /productionBrowserSourceMaps:\s*false/)
+    assert.match(nextConfig, /typescript:[\s\S]*ignoreBuildErrors:\s*true/)
+    assert.match(nextConfig, /cpus:\s*1/)
+    assert.match(nextConfig, /config\.parallelism\s*=\s*1/)
   })
 
   it('runtime ORB shell does not statically import heavy stations', () => {
