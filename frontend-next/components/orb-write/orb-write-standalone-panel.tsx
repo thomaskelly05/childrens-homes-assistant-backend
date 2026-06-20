@@ -467,12 +467,16 @@ export function OrbWriteStandalonePanel({
             >
               <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-0.5">
                 <h2 className="text-sm font-semibold text-slate-900" data-orb-write-studio-title>
-                  Write with ORB
+                  ORB Write
                 </h2>
                 <p className="text-[11px] text-slate-600" data-orb-write-studio-subtitle>
-                  Review, structure and finalise safer recording.
+                  A specialist care documentation studio — draft, review and finalise records with ORB.
                 </p>
               </div>
+              <p className="text-[11px] leading-relaxed text-slate-600" data-orb-write-studio-guidance>
+                ORB is helping you keep observation, interpretation, child&apos;s voice and adult response clearly
+                separated.
+              </p>
               <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
                 <FileEdit className="h-4 w-4 shrink-0 text-[var(--orb-primary)]" aria-hidden />
                 <OrbWriteRecordTypeSelector
@@ -534,7 +538,7 @@ export function OrbWriteStandalonePanel({
                   className="hidden items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white disabled:bg-indigo-300 disabled:opacity-100 md:inline-flex"
                   data-orb-write-generate
                 >
-                  Create draft record
+                  Create final draft
                 </button>
               </div>
             </header>

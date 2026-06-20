@@ -21,7 +21,7 @@ export const ORB_RECORDS_PANEL_SUBTITLE =
   'Saved records and drafts for adult review — part of a child\u2019s story, not admin clutter.'
 export const ORB_RECORDS_EMPTY_TITLE = 'No records or drafts yet.'
 export const ORB_RECORDS_EMPTY_SUBTITLE =
-  'Save from Chat, Dictate, Voice or ORB Write when wording is ready for adult review.'
+  'Save from Chat, Dictate, Voice, Communicate or ORB Write when wording is ready for adult review.'
 export const ORB_RECORDS_FOOTER =
   'Records and drafts are standalone ORB artefacts. Adult review required before use in practice.'
 export const ORB_RECORDS_LOAD_ERROR = 'Could not load records and drafts'

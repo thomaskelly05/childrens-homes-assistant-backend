@@ -21,7 +21,7 @@ describe('ORB Residential mobile hierarchy reset', () => {
     )
     assert.match(copy, /ORB_RESIDENTIAL_MOBILE_EMPTY_SUBLINE/)
     assert.match(companion, /variant=\{isMobileViewport \? 'compact' : 'hero'\}/)
-    assert.match(companion, /data-orb-starter-suggestion-card/)
+    assert.doesNotMatch(companion, /data-orb-starter-suggestion-card/)
     assert.match(companion, /ORB_RESIDENTIAL_MOBILE_EMPTY_SUBLINE/)
     assert.match(mobileCss, /\[data-orb-empty-subline-mobile\]/)
   })

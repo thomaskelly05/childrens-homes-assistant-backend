@@ -111,7 +111,7 @@ describe('ORB Voice + Dictate product pass', () => {
     assert.match(live, /data-orb-voice-live-transcript/)
     assert.match(live, /data-orb-voice-end/)
     assert.match(after, /data-orb-voice-after-call/)
-    assert.match(after, /Create draft record/)
+    assert.match(after, /Create final draft/)
     assert.match(after, /Send to ORB Write/)
     assert.match(after, /OrbDictateTemplateSelector/)
     assert.match(after, /Turn speech into a record/)

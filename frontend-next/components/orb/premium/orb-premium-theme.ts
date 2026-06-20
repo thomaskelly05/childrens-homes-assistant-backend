@@ -4,7 +4,7 @@ import { twMerge } from 'tailwind-merge'
 /** Canonical primary action labels across ORB Residential surfaces. */
 export const ORB_PREMIUM_ACTION_LABELS = {
   analyseWithOrb: 'Review with ORB',
-  generateDraft: 'Create draft record',
+  generateDraft: 'Create final draft',
   openInOrbWrite: 'Open in ORB Write',
   continueInChat: 'Continue in chat',
   exportPdf: 'Export PDF',

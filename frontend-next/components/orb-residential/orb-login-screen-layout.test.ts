@@ -57,7 +57,7 @@ describe('ORB premium login screen layout', () => {
     assert.match(hero, /data-orb-login-subheadline/)
     assert.match(hero, /professional judgement/)
     assert.match(hero, /orb-login-hero-visual/)
-    assert.match(hero, /OrbHeroSphere/)
+    assert.match(hero, /GlassOrbMark/)
     assert.match(hero, /ORB_LOGIN_ENTERPRISE_SUBHEADLINE/)
     assert.match(hero, /data-orb-login-demo-path/)
     assert.match(hero, /orb-login-hero-inner/)

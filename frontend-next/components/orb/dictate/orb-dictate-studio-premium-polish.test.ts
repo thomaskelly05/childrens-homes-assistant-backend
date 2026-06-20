@@ -46,7 +46,7 @@ describe('ORB Dictate studio premium polish', () => {
   it('analyse button appears when transcript exists', () => {
     const topBar = readComponent('components/orb/dictate/OrbDictateTopBar.tsx')
     assert.match(topBar, /Review with ORB/)
-    assert.match(topBar, /Create draft record/)
+    assert.match(topBar, /Create final draft/)
   })
 
   it('open in ORB Write is disabled until draft is available', () => {

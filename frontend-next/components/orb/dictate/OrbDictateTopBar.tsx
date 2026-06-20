@@ -13,7 +13,7 @@ export type OrbDictatePrimaryAction = 'analyse' | 'generate' | 'disabled'
 function primaryActionLabel(action: OrbDictatePrimaryAction, generating: boolean): string {
   if (generating) return 'Working…'
   if (action === 'analyse') return 'Review with ORB'
-  if (action === 'generate') return 'Create draft record'
+  if (action === 'generate') return 'Create final draft'
   return 'Review with ORB'
 }
 

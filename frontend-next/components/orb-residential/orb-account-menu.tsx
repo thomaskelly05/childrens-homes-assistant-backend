@@ -16,7 +16,7 @@ import type { AdultProfile } from '@/lib/orb/adult-profile-store'
 import { ORB_NAV_RECORDS } from '@/lib/orb/orb-user-facing-names'
 import { formatOrbPlanLabel, getOrbBillingDisplayStatus } from '@/lib/orb/orb-billing-display'
 
-export type OrbAccountMenuSettingsSection = 'appearance' | 'voice' | 'safety_privacy'
+export type OrbAccountMenuSettingsSection = 'appearance' | 'voice' | 'safety_privacy' | 'account_billing'
 
 export type OrbAccountMenuProps = {
   open: boolean
@@ -262,11 +262,11 @@ export function OrbAccountMenu({
         />
         <MenuItem
           icon={<CreditCard className="h-4 w-4" />}
-          label="Billing"
+          label="Account & Billing"
           testId="billing"
           onClick={() => {
             onClose()
-            onOpenBilling()
+            onOpenSettings('account_billing')
           }}
         />
         <MenuItem

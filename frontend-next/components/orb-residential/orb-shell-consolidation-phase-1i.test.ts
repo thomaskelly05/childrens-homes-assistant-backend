@@ -115,7 +115,7 @@ describe('ORB Residential Phase 1I single shell consolidation', () => {
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
     const composerMounts = (companion.match(/data-orb-composer-mounted="true"/g) ?? []).length
     assert.equal(composerMounts, 1)
-    assert.match(companion, /data-orb-workspace-starters/)
+    assert.doesNotMatch(companion, /data-orb-workspace-starters/)
     assert.match(companion, /orb-composer-dock/)
   })
 

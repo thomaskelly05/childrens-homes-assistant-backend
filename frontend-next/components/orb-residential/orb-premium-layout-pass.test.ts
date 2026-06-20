@@ -73,7 +73,7 @@ describe('ORB Residential premium layout pass', () => {
     assert.match(login, /data-orb-login-version=\{ORB_LOGIN_VERSION\}/)
     assert.match(login, /OrbLoginDesktopHero/)
     assert.match(desktopHero, /orb-login-hero-sphere-wrap/)
-    assert.match(desktopHero, /OrbHeroSphere/)
+    assert.match(desktopHero, /GlassOrbMark/)
     assert.match(css, /\.orb-login-hero-sphere-wrap[\s\S]*overflow:\s*visible/)
     assert.match(css, /--orb-presence-size:\s*clamp\(4\.75rem, 7\.5vw, 6rem\)/)
     assert.match(css, /max-height:\s*100dvh/)

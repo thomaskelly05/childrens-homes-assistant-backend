@@ -115,7 +115,7 @@ describe('ORB Residential personality pass (Phase 1M)', () => {
   it('login includes supporting copy and luminous brand mark', () => {
     const hero = read('components/orb-residential/orb-login-desktop-hero.tsx')
     const css = read('app/orb/orb-residential-shell.css')
-    assert.match(hero, /OrbHeroSphere/)
+    assert.match(hero, /GlassOrbMark/)
     assert.match(hero, /ORB_LOGIN_ENTERPRISE_SUPPORTING/)
     assert.match(css, /orb-login-hero-sphere-wrap/)
   })

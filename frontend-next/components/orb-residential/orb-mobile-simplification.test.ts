@@ -30,8 +30,8 @@ describe('ORB Residential mobile simplification pass', () => {
 
   it('mobile home uses composer starters without thread clutter', () => {
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
-    assert.match(companion, /data-orb-workspace-starters/)
-    assert.match(companion, /data-orb-starter-suggestion-card/)
+    assert.doesNotMatch(companion, /data-orb-workspace-starters/)
+    assert.doesNotMatch(companion, /data-orb-starter-suggestion-card/)
     assert.match(companion, /ORB_RESIDENTIAL_MOBILE_PRIMARY_STARTERS/)
     assert.doesNotMatch(companion, /data-orb-starter-pills-grid/)
     assert.doesNotMatch(companion, /data-orb-starter-expanded-groups/)

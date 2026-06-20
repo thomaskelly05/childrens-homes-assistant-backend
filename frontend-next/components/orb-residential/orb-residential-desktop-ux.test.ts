@@ -36,7 +36,7 @@ describe('ORB Residential desktop UX', () => {
     const login = readComponent('components/orb-residential/orb-login-screen.tsx')
     const hero = readComponent('components/orb-residential/orb-login-desktop-hero.tsx')
     const authCard = readComponent('components/orb-residential/orb-login-auth-card.tsx')
-    assert.match(hero, /OrbHeroSphere/)
+    assert.match(hero, /GlassOrbMark/)
     assert.match(authCard, /orb-login-input/)
     assert.match(login, /useOrbResidentialThemeSync/)
     assert.doesNotMatch(login, /OrbGlowHero/)

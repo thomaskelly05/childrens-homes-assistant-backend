@@ -25,10 +25,10 @@ describe('ORB account menu security', () => {
     assert.match(menu, /onSignOut/)
   })
 
-  it('billing entry stays in account menu for signed-in users', () => {
+  it('billing entry routes to account and billing in settings', () => {
     const menu = read('components/orb-residential/orb-account-menu.tsx')
-    assert.match(menu, /Billing/)
-    assert.match(menu, /onOpenBilling/)
+    assert.match(menu, /Account & Billing/)
+    assert.match(menu, /onOpenSettings\('account_billing'\)/)
   })
 
   it('companion wires sign out only when signed in', () => {

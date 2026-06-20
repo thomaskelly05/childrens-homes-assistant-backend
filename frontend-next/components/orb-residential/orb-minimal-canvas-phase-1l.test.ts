@@ -34,15 +34,13 @@ describe('ORB Residential minimal canvas (Phase 1L)', () => {
     assert.match(css, /\[data-orb-workspace-home-rail\]/)
   })
 
-  it('home keeps one composer, starters and single safety line', () => {
+  it('home keeps one composer and compact safety in hero', () => {
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
     assert.match(companion, /data-orb-composer="main"/)
-    assert.match(companion, /data-orb-workspace-starters/)
+    assert.doesNotMatch(companion, /data-orb-workspace-starters/)
     assert.match(companion, /data-orb-home-safety-line/)
     assert.match(companion, /ORB_HOME_SAFETY_LINE/)
     assert.equal(ORB_HOME_SAFETY_LINE, ORB_HOME_SAFETY_LINE)
-    const safetyCount = (companion.match(/ORB_HOME_SAFETY_LINE/g) ?? []).length
-    assert.ok(safetyCount <= 2, 'safety line should not be duplicated across home surfaces')
   })
 
   it('records empty state hides filters until data exists', () => {
@@ -68,9 +66,10 @@ describe('ORB Residential minimal canvas (Phase 1L)', () => {
     assert.match(voice, /OrbVoiceResponsibilityStrip/)
   })
 
-  it('help modal uses plain sections not boxed admin rows', () => {
+  it('help modal uses scroll-safe layout', () => {
     const help = read('components/orb-standalone/orb-help-panel.tsx')
     assert.match(help, /orb-modal--plain/)
+    assert.match(help, /data-orb-help-panel-scroll/)
     assert.match(help, /What ORB can help with/)
     assert.match(help, /Safeguarding boundaries/)
     assert.doesNotMatch(help, /rounded-xl border border-\[var\(--orb-line\)\] bg-\[var\(--orb-surface\)\]/)

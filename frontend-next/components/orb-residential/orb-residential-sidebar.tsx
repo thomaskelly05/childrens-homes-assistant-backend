@@ -6,7 +6,6 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
-  CreditCard,
   FileEdit,
   FolderKanban,
   Home,
@@ -573,12 +572,14 @@ export function OrbResidentialSidebar({
   return (
     <div className="flex h-full min-h-0 flex-col orb-sidebar" data-orb-sidebar-panel data-orb-sidebar-state="expanded">
       <div className="orb-sidebar-header shrink-0 px-3 py-3" data-orb-sidebar-header>
-        <div className="flex items-start gap-2.5">
-          <GlassOrbMark size="sm" className="mt-0.5" pulse />
+        <div className="flex items-center gap-2.5">
+          <GlassOrbMark size="sm" className="shrink-0" pulse data-orb-sidebar-brand-mark />
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold leading-tight text-[var(--orb-foreground)]" data-orb-sidebar-brand>
-              ORB Residential
-            </p>
+            <div className="flex min-w-0 items-center gap-2">
+              <p className="truncate text-sm font-semibold leading-tight text-[var(--orb-foreground)]" data-orb-sidebar-brand>
+                ORB Residential
+              </p>
+            </div>
             <p className="orb-sidebar-powered-tagline mt-0.5 text-[10px]" data-orb-sidebar-powered>
               {ORB_RESIDENTIAL_TAGLINE}
             </p>
@@ -911,16 +912,6 @@ export function OrbResidentialSidebar({
                 <Settings className="h-4 w-4" aria-hidden />
                 <span>Settings</span>
               </button>
-              <button
-                type="button"
-                onClick={() => onOpenBilling?.()}
-                className="orb-sidebar-nav-item w-full"
-                data-orb-sidebar-billing
-                aria-label="Open billing"
-              >
-                <CreditCard className="h-4 w-4" aria-hidden />
-                <span>Billing</span>
-              </button>
             </div>
           </SidebarCollapsibleSection>
         ) : (
@@ -971,16 +962,6 @@ export function OrbResidentialSidebar({
             >
               <Settings className="h-4 w-4" aria-hidden />
               <span>Settings</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => onOpenBilling?.()}
-              className="orb-sidebar-nav-item w-full"
-              data-orb-sidebar-billing
-              aria-label="Open billing"
-            >
-              <CreditCard className="h-4 w-4" aria-hidden />
-              <span>Billing</span>
             </button>
           </nav>
         )}

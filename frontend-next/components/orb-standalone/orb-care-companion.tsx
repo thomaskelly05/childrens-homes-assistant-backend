@@ -996,7 +996,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
   const openAccessibilityPanel = useCallback(() => openPanel('accessibility'), [openPanel])
   const openPermissionsPanel = useCallback(() => openPanel('permissions'), [openPanel])
   const openIntelligenceMap = useCallback(() => openPanel('intelligence_map'), [openPanel])
-  const openBillingPanel = useCallback(() => openPanel('billing'), [openPanel])
+  const openBillingPanel = useCallback(() => openSettingsPanel('account_billing'), [openSettingsPanel])
   const openOrbVoicePanel = useCallback(() => openPanel('orb_voice'), [openPanel])
   const openOrbDictatePanel = useCallback(
     (opts?: {
@@ -3322,44 +3322,6 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
           : undefined
       }
     />
-    {residentialSurface && showEmptyState ? (
-      <div className="orb-workspace-starters" data-orb-workspace-starters>
-        {(isMobileViewport ? ORB_RESIDENTIAL_MOBILE_PRIMARY_STARTERS : ORB_RESIDENTIAL_EMPTY_STARTERS).map(
-          (starter) => (
-          <button
-            key={starter.text}
-            type="button"
-            onClick={() => applyPrompt(starter)}
-            className="orb-workspace-starter"
-            data-orb-starter-card
-            data-orb-starter-suggestion-card="true"
-          >
-            {starter.text}
-          </button>
-        )
-        )}
-      </div>
-    ) : null}
-    {residentialSurface && showEmptyState ? (
-      <p className="orb-workspace-home-safety" data-orb-home-safety-line>
-        {ORB_HOME_SAFETY_LINE}
-      </p>
-    ) : null}
-    {residentialSurface && showEmptyState && !guidedDemoState.active ? (
-      <OrbGuidedDemoEntry onStart={handleGuidedDemoStart} />
-    ) : null}
-    {residentialSurface && showEmptyState && guidedDemoState.active && !guidedDemoPanelOpen ? (
-      <p className="mt-1 text-center text-xs" data-orb-guided-demo-resume>
-        <button
-          type="button"
-          onClick={() => setGuidedDemoPanelOpen(true)}
-          className="font-medium text-[var(--orb-primary)] underline-offset-2 hover:underline"
-          data-orb-guided-demo-continue
-        >
-          Continue Guided Demo — step {guidedDemoState.stepIndex + 1} of 5
-        </button>
-      </p>
-    ) : null}
     </div>
   )
 
@@ -3487,6 +3449,10 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
         onStartInDictate={() => {
           closePanel()
           openOrbDictatePanel()
+        }}
+        onStartInCommunicate={() => {
+          closePanel()
+          openOrbCommunicatePanel()
         }}
         onStartInChat={() => {
           closePanel()
@@ -4329,6 +4295,14 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
                     ) : (emptyWelcome.subline || ORB_RESIDENTIAL_EMPTY_SUBLINE) ? (
                       <p className="mt-2 max-w-lg text-sm leading-7 text-slate-600" data-orb-empty-subline>
                         {emptyWelcome.subline || ORB_RESIDENTIAL_EMPTY_SUBLINE}
+                      </p>
+                    ) : null}
+                    {residentialSurface && showEmptyState ? (
+                      <p
+                        className="orb-workspace-home-safety mt-3 max-w-lg text-xs leading-relaxed text-[var(--orb-muted)]"
+                        data-orb-home-safety-line
+                      >
+                        {ORB_HOME_SAFETY_LINE}
                       </p>
                     ) : null}
                     {emptyWelcome.temporaryNote ? (

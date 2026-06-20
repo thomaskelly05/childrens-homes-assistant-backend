@@ -14,7 +14,7 @@ describe('ORB Residential desktop premium simplification pass', () => {
   it('desktop home uses lightweight starter chips in composer dock', () => {
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
 
-    assert.match(companion, /data-orb-workspace-starters/)
+    assert.doesNotMatch(companion, /data-orb-workspace-starters/)
     assert.match(companion, /ORB_RESIDENTIAL_EMPTY_STARTERS/)
     assert.doesNotMatch(companion, /data-orb-starter-expanded-groups/)
   })
@@ -77,7 +77,7 @@ describe('ORB Residential desktop premium simplification pass', () => {
     assert.match(selector, /data-orb-write-template-selector/)
     assert.match(picker, /orbWriteTemplatePickerRecordTypes/)
     assert.match(writePanel, /ORB_WRITE_SAFETY_COPY/)
-    assert.match(writePanel, /Create draft record/)
+    assert.match(writePanel, /Create final draft/)
     assert.match(read('lib/orb/recording/orb-recording-section-prompts.ts'), /general_dictation/)
   })
 
@@ -116,7 +116,7 @@ describe('ORB Residential desktop premium simplification pass', () => {
     const buildExcludes = read('lib/orb/orb-build-excludes.test.ts')
 
     assert.match(companion, /dynamic\(/)
-    assert.match(companion, /data-orb-starter-suggestion-card/)
+    assert.doesNotMatch(companion, /data-orb-starter-suggestion-card/)
     assert.match(composer, /OrbResidentialComposerToolsSheet|OrbComposerPlusMenu/)
     assert.doesNotMatch(composer, /data-orb-privacy-guidance-trigger/)
     assert.match(tools, /take_photo/)

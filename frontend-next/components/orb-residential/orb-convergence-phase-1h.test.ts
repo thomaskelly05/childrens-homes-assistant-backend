@@ -95,7 +95,7 @@ describe('ORB Residential canonical shell (Phase 1H copy retained)', () => {
     assert.match(companion, /orb-workspace--home/)
     assert.match(companion, /data-orb-workspace-home/)
     assert.match(companion, /data-orb-home-empty/)
-    assert.match(companion, /data-orb-workspace-starters/)
+    assert.doesNotMatch(companion, /data-orb-workspace-starters/)
     assert.equal(ORB_CHAT_EMPTY_HEADING, ORB_HOME_V2_HEADLINE)
     assert.match(ORB_CHAT_EMPTY_SUBLINE, /child\u2019s experience central/)
   })
@@ -134,7 +134,7 @@ describe('ORB Residential canonical shell (Phase 1H copy retained)', () => {
     assert.match(panel, /data-orb-records-empty/)
     assert.match(panel, /ORB_RECORDS_EMPTY_SUBTITLE/)
     assert.equal(ORB_RECORDS_EMPTY_SUBTITLE, ORB_RECORDS_V2_EMPTY_SUBTITLE)
-    assert.match(ORB_RECORDS_EMPTY_SUBTITLE, /Save from Chat, Dictate, Voice or ORB Write/)
+    assert.match(ORB_RECORDS_EMPTY_SUBTITLE, /Save from Chat, Dictate, Voice, Communicate or ORB Write/)
   })
 
   it('modals use shared product modal class', () => {

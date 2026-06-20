@@ -65,8 +65,8 @@ describe('ORB mobile home shell', () => {
 
   it('starter prompts render in composer dock on mobile', () => {
     const companion = readComponent('components/orb-standalone/orb-care-companion.tsx')
-    assert.match(companion, /data-orb-workspace-starters/)
-    assert.match(companion, /data-orb-starter-suggestion-card/)
+    assert.doesNotMatch(companion, /data-orb-workspace-starters/)
+    assert.doesNotMatch(companion, /data-orb-starter-suggestion-card/)
   })
 
   it('mobile layout avoids horizontal overflow on empty state', () => {

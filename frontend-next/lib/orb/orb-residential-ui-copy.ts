@@ -20,6 +20,7 @@ export const ORB_RESIDENTIAL_BILLING_INCLUDED_ITEMS = [
   'Chat',
   'Dictate',
   'Voice',
+  'Communicate',
   'ORB Write',
   'Records & Drafts',
   'Guided Demo',
@@ -36,4 +37,4 @@ export const ORB_DICTATE_FLAGSHIP_WORKFLOW = [
 ] as const
 
 export const ORB_RECORDS_EMPTY_GUIDANCE =
-  'Save from Chat, Dictate, Voice or ORB Write when wording is ready for adult review.'
+  'Save from Chat, Dictate, Voice, Communicate or ORB Write when wording is ready for adult review.'

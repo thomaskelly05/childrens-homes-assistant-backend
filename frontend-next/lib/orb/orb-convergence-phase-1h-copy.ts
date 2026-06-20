@@ -39,4 +39,4 @@ export const ORB_VOICE_V2_STATUS_COPY =
   'Talk it through. ORB can help you reflect before you write.'
 
 export const ORB_RECORDS_V2_EMPTY_SUBTITLE =
-  'Save from Chat, Dictate, Voice or ORB Write when wording is ready for adult review.'
+  'Save from Chat, Dictate, Voice, Communicate or ORB Write when wording is ready for adult review.'

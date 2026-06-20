@@ -41,7 +41,11 @@ export function OrbHelpPanel({ open, onClose }: { open: boolean; onClose: () => 
       panelId="help"
       layout="center"
     >
-      <div className="space-y-5 p-4 orb-modal orb-modal--plain" data-orb-help-panel data-orb-modal="product">
+      <div
+        className="orb-help-panel-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain"
+        data-orb-help-panel-scroll
+      >
+        <div className="space-y-5 p-4 orb-modal orb-modal--plain orb-modal--scroll-safe" data-orb-help-panel data-orb-modal="product">
         {SECTIONS.map((section) => (
           <section key={section.title} className="orb-modal-section">
             <h3 className="text-sm font-semibold text-[var(--orb-foreground)]">{section.title}</h3>
@@ -52,6 +56,7 @@ export function OrbHelpPanel({ open, onClose }: { open: boolean; onClose: () => 
           If a child is at immediate risk, follow local safeguarding and emergency procedures. ORB supports
           professional judgement — it does not replace safeguarding procedures or local policy.
         </p>
+        </div>
       </div>
     </OrbStandalonePanelShell>
   )

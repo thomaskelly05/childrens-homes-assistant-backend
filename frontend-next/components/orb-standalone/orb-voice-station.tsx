@@ -32,6 +32,15 @@ import { stripMarkdownForSpeech } from '@/lib/orb/orb-speech-text'
 import { isOrbDeveloperMode } from '@/lib/orb/orb-developer-mode'
 import { isOrbVoiceDebugMode } from '@/lib/orb/orb-voice-debug'
 import { getOrbVoiceProfile, orbVoiceProfileLabel } from '@/lib/orb/voice/orb-voice-profiles'
+import { OrbVoiceModeSelector } from '@/components/orb-residential/orb-voice-mode-selector'
+import {
+  ORB_VOICE_REASONING_OPTIONS,
+  ORB_VOICE_STYLE_OPTIONS,
+  resolveVoiceReasoningModeId,
+  resolveVoiceStyleProfileId,
+  type OrbVoiceReasoningModeId,
+  type OrbVoiceStyleId
+} from '@/lib/orb/orb-voice-mode-carousel'
 import {
   ORB_VOICE_GREETING,
   ORB_VOICE_MODES,
@@ -257,6 +266,34 @@ export function OrbVoiceStation({
   const silenceStartedAtRef = useRef<number | null>(null)
   const statusFetchedRef = useRef(false)
   const isMobileViewport = useOrbMobileViewport()
+
+  const [voiceStyle, setVoiceStyle] = useState<OrbVoiceStyleId>(() => {
+    const preset = voice.settings.voicePresetId
+    const match = ORB_VOICE_STYLE_OPTIONS.find((option) => option.profileId === preset)
+    return match?.id ?? 'calm'
+  })
+  const [reasoningMode, setReasoningMode] = useState<OrbVoiceReasoningModeId>(() => {
+    const match = ORB_VOICE_REASONING_OPTIONS.find(
+      (option) => option.voiceModeId === voice.settings.voiceMode
+    )
+    return match?.id ?? 'talk_through'
+  })
+
+  const handleVoiceStyleChange = useCallback(
+    (styleId: OrbVoiceStyleId) => {
+      setVoiceStyle(styleId)
+      voice.setVoicePresetId(resolveVoiceStyleProfileId(styleId))
+    },
+    [voice]
+  )
+
+  const handleReasoningModeChange = useCallback(
+    (modeId: OrbVoiceReasoningModeId) => {
+      setReasoningMode(modeId)
+      voice.setVoiceMode(resolveVoiceReasoningModeId(modeId))
+    },
+    [voice]
+  )
 
   const browserSpeechSupported =
     voice.recognitionAvailable || detectSpeechRecognitionSupported()
@@ -1546,38 +1583,13 @@ export function OrbVoiceStation({
           {voiceWorkspaceMode === 'idle' ? (
           <div className="orb-voice-session-extras w-full" data-orb-voice-session-extras>
           {!isMobileViewport ? (
-          <div className="mt-4 flex w-full flex-wrap items-center justify-center gap-2">
-            <label className="sr-only" htmlFor="orb-voice-mode-select">
-              Voice mode
-            </label>
-            <select
-              id="orb-voice-mode-select"
-              value={voice.settings.voiceMode}
-              onChange={(e) => voice.setVoiceMode(e.target.value as OrbVoiceModeId)}
-              className="rounded-full border border-[var(--orb-line)]/60 bg-[var(--orb-surface-elevated)]/80 px-3 py-1.5 text-xs text-[var(--orb-foreground)]"
-            >
-              {ORB_VOICE_MODES.map((mode) => (
-                <option key={mode.id} value={mode.id}>
-                  {mode.label}
-                </option>
-              ))}
-            </select>
-            <label className="sr-only" htmlFor="orb-voice-preset-select">
-              Voice
-            </label>
-            <select
-              id="orb-voice-preset-select"
-              value={voice.settings.voicePresetId}
-              onChange={(e) => voice.setVoicePresetId(e.target.value as OrbVoicePresetId)}
-              className="rounded-full border border-[var(--orb-line)]/60 bg-[var(--orb-surface-elevated)]/80 px-3 py-1.5 text-xs text-[var(--orb-foreground)]"
-              aria-label="Voice profile"
-            >
-              {ORB_VOICE_PRESETS.map((preset) => (
-                <option key={preset.id} value={preset.id}>
-                  {preset.label}
-                </option>
-              ))}
-            </select>
+          <div className="mt-4 flex w-full justify-center px-2">
+            <OrbVoiceModeSelector
+              voiceStyle={voiceStyle}
+              reasoningMode={reasoningMode}
+              onVoiceStyleChange={handleVoiceStyleChange}
+              onReasoningModeChange={handleReasoningModeChange}
+            />
           </div>
           ) : null}
 

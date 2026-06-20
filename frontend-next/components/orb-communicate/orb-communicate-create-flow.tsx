@@ -18,12 +18,21 @@ import type {
 import { GlassOrbMark } from '@/components/orb-residential/ui/glass-orb-mark'
 
 export const ORB_COMMUNICATE_EXAMPLE_PROMPTS = [
-  'Contact has changed',
-  'New staff member',
-  'Hospital appointment',
-  'Bedtime worries',
-  'Help someone say how they feel',
-  'Create a visual routine'
+  'Explain that contact has changed',
+  'Create a visual routine for bedtime',
+  'Prepare for a hospital appointment',
+  'Support someone to say how they feel',
+  'Introduce a new staff member',
+  'Help explain a change of plan'
+] as const
+
+export const ORB_COMMUNICATE_OUTPUT_TYPES = [
+  'Easy-read wording',
+  'Visual support cards',
+  'Social story sections',
+  'Staff guidance',
+  'Recording prompts',
+  'Reflect-and-record starter'
 ] as const
 
 export function OrbCommunicateCreateFlow({
@@ -92,12 +101,31 @@ export function OrbCommunicateCreateFlow({
         <h2 className="text-xl font-semibold tracking-tight text-[var(--orb-res-navy)] sm:text-2xl">
           ORB Communicate
         </h2>
-        <p className="mt-2 text-base font-medium text-[var(--orb-res-workspace-text)]">
-          What do you want to do today?
+        <p className="mt-2 text-base font-medium text-[var(--orb-res-workspace-text)]" data-orb-communicate-subtitle>
+          Create accessible explanations, visual supports and social stories so people can understand, express
+          themselves and be heard before the record is written.
         </p>
-        <p className="mt-1 text-sm text-[var(--orb-res-workspace-muted)]">
-          Describe what you need to explain, support or create.
+        <p className="mt-2 text-sm text-[var(--orb-res-workspace-muted)]" data-orb-communicate-supporting-line>
+          Describe what you need to explain or support. ORB will help create the right communication support pack for
+          adult review.
         </p>
+      </div>
+
+      <div className="orb-communicate-outputs space-y-2" data-orb-communicate-outputs>
+        <p className="text-xs font-semibold uppercase tracking-wide text-[var(--orb-res-workspace-muted)]">
+          What ORB can create
+        </p>
+        <ul className="flex flex-wrap gap-2">
+          {ORB_COMMUNICATE_OUTPUT_TYPES.map((item) => (
+            <li
+              key={item}
+              className="rounded-full border border-[var(--orb-line)]/60 bg-[var(--orb-surface-elevated)] px-2.5 py-1 text-[11px] text-[var(--orb-res-workspace-text)]"
+              data-orb-communicate-output-type={item}
+            >
+              {item}
+            </li>
+          ))}
+        </ul>
       </div>
 
       <form className="space-y-4" onSubmit={handleCreate}>

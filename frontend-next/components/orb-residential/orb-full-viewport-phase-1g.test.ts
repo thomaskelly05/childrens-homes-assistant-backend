@@ -52,7 +52,7 @@ describe('ORB Residential full viewport workspace (consolidated shell)', () => {
     assert.match(companion, /data-orb-workspace-home-grid/)
     assert.match(companion, /data-orb-workspace-home-main/)
     assert.doesNotMatch(companion, /data-orb-workspace-home-rail/)
-    assert.match(companion, /data-orb-workspace-starters/)
+    assert.doesNotMatch(companion, /data-orb-workspace-starters/)
   })
 
   it('chat uses readable column inner width', () => {

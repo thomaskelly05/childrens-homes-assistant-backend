@@ -308,7 +308,11 @@ export function OrbDictateStudioWorkspace(props: OrbDictateStudioWorkspaceProps)
         showPreview={false}
         minPanelHeight="min(74dvh, calc(100svh - 8.5rem))"
         left={
-          <OrbTranscriptPanel
+          <div className="flex min-h-0 flex-col gap-2" data-orb-dictate-capture-panel>
+            <p className="px-1 text-xs font-semibold uppercase tracking-wide text-[var(--orb-muted)]" data-orb-dictate-capture-label>
+              Capture
+            </p>
+            <OrbTranscriptPanel
             liveTranscript={props.liveTranscript}
             transcript={props.transcript}
             onTranscriptChange={props.onTranscriptChange}
@@ -324,10 +328,15 @@ export function OrbDictateStudioWorkspace(props: OrbDictateStudioWorkspaceProps)
             onClearTranscript={props.onClearTranscript}
             interimText={props.interimText}
             footerSlot={advancedFooter}
-          />
+            />
+          </div>
         }
         right={
-          <OrbDictateBrainPanel
+          <div className="flex min-h-0 flex-col gap-2" data-orb-dictate-review-panel>
+            <p className="px-1 text-xs font-semibold uppercase tracking-wide text-[var(--orb-muted)]" data-orb-dictate-review-label>
+              ORB Review
+            </p>
+            <OrbDictateBrainPanel
             analysis={brainAnalysis}
             loading={brainLoading}
             onSuggestionUpdate={updateSuggestion}
@@ -336,6 +345,7 @@ export function OrbDictateStudioWorkspace(props: OrbDictateStudioWorkspaceProps)
             onAnalyse={handlePrimaryAction}
             hasTranscript={hasTranscript}
           />
+          </div>
         }
       />
 

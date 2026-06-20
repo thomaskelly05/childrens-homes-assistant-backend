@@ -72,12 +72,13 @@ export function OrbWriteToolbar({
 
   return (
     <div
-      className="flex flex-wrap items-center gap-1 border-b border-[var(--orb-line)]/40 px-2 py-1.5"
+      className="flex flex-wrap items-center gap-1 border-b border-[var(--orb-line)]/40 px-2 py-1.5 orb-write-toolbar"
       data-orb-write-toolbar
       role="toolbar"
       aria-label="Document formatting and actions"
     >
-      <div className="flex flex-wrap items-center gap-1" data-orb-write-toolbar-format>
+      <div className="flex flex-wrap items-center gap-1" data-orb-write-toolbar-group="format">
+      <span className="sr-only">Format</span>
       <button type="button" className={btn} disabled={!canUndo} data-orb-write-undo onClick={() => onCommand('undo')} aria-label="Undo">
         <Undo2 className="h-3.5 w-3.5" />
       </button>
@@ -155,7 +156,8 @@ export function OrbWriteToolbar({
         </span>
       ) : null}
 
-      <div className="ml-auto flex flex-wrap items-center gap-1" data-orb-write-toolbar-record>
+      <div className="ml-auto flex flex-wrap items-center gap-1" data-orb-write-toolbar-group="export">
+      <span className="sr-only">Export</span>
         <OrbWriteZoomControls
           zoomMode={zoomMode}
           zoomPercent={zoomPercent}

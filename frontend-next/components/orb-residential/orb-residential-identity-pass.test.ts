@@ -121,12 +121,12 @@ describe('ORB Residential station identity pass', () => {
 
     assert.match(copy, /Structure, review and finalise with adult approval/)
 
-    assert.match(panel, /Write with ORB/)
+    assert.match(panel, /ORB Write/)
     assert.match(panel, /data-orb-write-studio-subtitle/)
     assert.match(panel, /Choose the structure ORB should help you write/)
     assert.match(panel, /ORB_RESIDENTIAL_STATION_PRODUCT_COPY\.write/)
     assert.match(panel, /OrbWriteRecordTypeSelector/)
-    assert.match(panel, /Create draft record/)
+    assert.match(panel, /Create final draft/)
     assert.match(panel, /ORB_WRITE_SAFETY_COPY/)
     assert.match(editor, /onApprove/)
     assert.match(editor, /orbWriteBodyLooksLikeMarkdownTemplate/)

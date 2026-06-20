@@ -42,7 +42,7 @@ describe('ORB Communicate intelligent support pack (Phase 1N)', () => {
     const station = read('components/orb-communicate/orb-communicate-station.tsx')
     assert.match(createFlow, /data-orb-communicate-create-flow/)
     assert.match(createFlow, /data-orb-communicate-prompt-input/)
-    assert.match(createFlow, /What do you want to do today/)
+    assert.match(createFlow, /data-orb-communicate-subtitle/)
     assert.match(createFlow, /data-orb-communicate-example-chips/)
     assert.match(createFlow, /Create support/)
     assert.match(station, /OrbCommunicateCreateFlow/)

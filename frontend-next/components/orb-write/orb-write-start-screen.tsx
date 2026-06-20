@@ -189,7 +189,7 @@ export function OrbWriteStartScreen({
           working={generating}
           data-orb-write-generate
         >
-          {generating ? 'Creating…' : 'Create draft record'}
+          {generating ? 'Creating…' : 'Create final draft'}
         </OrbStudioPrimaryAction>
         {hasDraft && onOpenDocument ? (
           <button

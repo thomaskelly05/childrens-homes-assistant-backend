@@ -19,6 +19,7 @@ import {
 import { useOrbResponsiveMode } from '@/components/orb-standalone/use-orb-responsive-mode'
 import { OrbAppearanceControl } from '@/components/orb-standalone/orb-appearance-control'
 import { OrbBillingSettingsSection } from '@/components/orb-standalone/orb-billing-settings-section'
+import { OrbResidentialProfileSettingsSection } from '@/components/orb-residential/orb-residential-profile-settings-section'
 import { OrbPrivacyDataSettingsSection } from '@/components/orb-residential/orb-privacy-data-settings-section'
 import { orbOverlayDrawerShellProps } from '@/components/orb-standalone/orb-app-modal'
 import { OrbStandalonePanelShell } from '@/components/orb-standalone/orb-standalone-panel-shell'
@@ -47,6 +48,7 @@ import {
 import type { StandaloneOrbAccessibilityPreferences } from '@/lib/orb/standalone-accessibility'
 
 type SettingsSectionId =
+  | 'profile'
   | 'appearance'
   | 'voice'
   | 'recording'
@@ -58,6 +60,7 @@ type SettingsSectionId =
 export type OrbSettingsSectionId = SettingsSectionId
 
 const SECTION_META: Array<{ id: SettingsSectionId; label: string }> = [
+  { id: 'profile', label: 'Profile' },
   { id: 'appearance', label: 'Appearance' },
   { id: 'voice', label: 'Voice' },
   { id: 'recording', label: 'Recording Preferences' },
@@ -300,6 +303,16 @@ export function OrbStandaloneSettingsPanel({
               Theme, text size and motion
             </p>
           ) : null}
+          {activeSection === 'profile' ? (
+            <SettingsBlock
+              title="Profile"
+              description="How you appear in ORB Residential on this device."
+              suppressHeader={showMobileDetail}
+            >
+              <OrbResidentialProfileSettingsSection authName={userName} authAvatarUrl={avatarUrl} />
+            </SettingsBlock>
+          ) : null}
+
           {activeSection === 'appearance' ? (
             <SettingsBlock
               title="Appearance"

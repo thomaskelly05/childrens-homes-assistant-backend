@@ -56,7 +56,7 @@ describe('ORB Write standalone studio', () => {
     assert.match(start, /data-orb-write-analyse/)
     assert.match(start, /Review with ORB/)
     assert.match(start, /data-orb-write-generate/)
-    assert.match(start, /Create draft record/)
+    assert.match(start, /Create final draft/)
   })
 
   it('print-style document canvas renders', () => {

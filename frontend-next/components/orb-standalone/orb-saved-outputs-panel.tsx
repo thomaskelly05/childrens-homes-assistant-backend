@@ -82,6 +82,7 @@ export function OrbSavedOutputsPanel({
   onStartInOrbWrite,
   onOpenSavedOutputInOrbWrite,
   onStartInDictate,
+  onStartInCommunicate,
   onStartInChat,
   onStartInDocuments,
   onOpenGuidedDemo,
@@ -100,6 +101,7 @@ export function OrbSavedOutputsPanel({
   onStartInOrbWrite?: () => void
   onOpenSavedOutputInOrbWrite?: (record: OrbSavedOutputRecord) => void
   onStartInDictate?: () => void
+  onStartInCommunicate?: () => void
   onStartInChat?: () => void
   onStartInDocuments?: () => void
   onOpenGuidedDemo?: () => void
@@ -263,6 +265,11 @@ export function OrbSavedOutputsPanel({
                   {onStartInDictate ? (
                     <OrbPremiumButton variant="secondary" onClick={onStartInDictate} data-orb-saved-start-dictate>
                       Start in Dictate
+                    </OrbPremiumButton>
+                  ) : null}
+                  {onStartInCommunicate ? (
+                    <OrbPremiumButton variant="secondary" onClick={onStartInCommunicate} data-orb-saved-start-communicate>
+                      Start in Communicate
                     </OrbPremiumButton>
                   ) : null}
                   {onStartInOrbWrite ? (

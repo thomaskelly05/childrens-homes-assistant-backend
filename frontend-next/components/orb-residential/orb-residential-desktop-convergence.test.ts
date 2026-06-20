@@ -68,13 +68,13 @@ describe('ORB Residential desktop convergence sprint', () => {
     assert.match(presence, /orb-liquid-orb/)
     assert.match(desktop, /\[data-orb-residential-empty\][\s\S]*--orb-presence-size:\s*clamp\(9\.5rem/)
     assert.match(desktop, /desktop premium convergence pass/)
-    assert.match(companion, /data-orb-workspace-starters/)
-    assert.match(companion, /data-orb-workspace-starters/)
+    assert.doesNotMatch(companion, /data-orb-workspace-starters/)
+    assert.doesNotMatch(companion, /data-orb-workspace-starters/)
     assert.doesNotMatch(companion, /data-orb-starter-expanded-groups/)
     assert.doesNotMatch(companion, /orb-presence--hero[\s\S]*mobile-only/)
   })
 
-  it('desktop home uses calm starter chips and composer without shield', () => {
+  it('desktop home uses calm composer without starter chip row', () => {
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
     const composer = read('components/orb-standalone/orb-standalone-composer.tsx')
     const desktop = read('app/orb/_legacy-ui-archive/orb-desktop.css')
@@ -83,7 +83,7 @@ describe('ORB Residential desktop convergence sprint', () => {
     assert.match(companion, /data-orb-empty-heading-desktop/)
     assert.match(companion, /data-orb-brand-eyebrow/)
     assert.match(companion, /ORB Residential/)
-    assert.match(companion, /data-orb-workspace-starters/)
+    assert.doesNotMatch(companion, /data-orb-workspace-starters/)
     assert.match(composer, /orb-liquid-composer/)
     assert.doesNotMatch(composer, /data-orb-privacy-guidance-trigger/)
     assert.match(composer, /data-testid="orb-standalone-composer"/)
@@ -99,7 +99,7 @@ describe('ORB Residential desktop convergence sprint', () => {
     assert.match(sidebar, /orb-sidebar-nav-item--active/)
     assert.doesNotMatch(sidebar, /orb-liquid-glass/)
     assert.match(sidebar, /data-orb-sidebar-account-card/)
-    assert.match(sidebar, /data-orb-sidebar-billing/)
+    assert.doesNotMatch(sidebar, /data-orb-sidebar-billing/)
     assert.match(desktop, /\[data-orb-sidebar-account-card\]/)
   })
 
@@ -162,7 +162,7 @@ describe('ORB Residential desktop convergence sprint', () => {
     assert.match(dictateTop, /orb-liquid-toolbar/)
     assert.match(dictateTop, /data-orb-dictate-top-bar/)
     assert.match(write, /ORB_WRITE_SAFETY_COPY/)
-    assert.match(writePanel, /Create draft record/)
+    assert.match(writePanel, /Create final draft/)
     assert.match(read('components/orb-write/orb-write-toolbar.tsx'), /data-orb-write-approve/)
     assert.match(companion, /onOpenDictateFallback/)
     assert.equal(
