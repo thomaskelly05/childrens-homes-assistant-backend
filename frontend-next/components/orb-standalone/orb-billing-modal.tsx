@@ -7,6 +7,9 @@ import { OrbUserAvatar } from '@/components/orb-residential/orb-user-avatar'
 import { OrbLegalLinks } from '@/components/orb-residential/orb-legal-links'
 import { OrbAppModal } from '@/components/orb-standalone/orb-app-modal'
 import {
+  ORB_FLAGSHIP_BILLING_INCLUDED_ITEMS
+} from '@/lib/orb/orb-flagship-copy'
+import {
   ORB_RESIDENTIAL_BILLING_TRUST_COPY,
   ORB_RESIDENTIAL_BILLING_VALUE_ITEMS,
   ORB_RESIDENTIAL_BILLING_VALUE_SUMMARY
@@ -30,14 +33,7 @@ import {
   type OrbUsageSummary
 } from '@/lib/orb/orb-billing-client'
 
-const INDIVIDUAL_PLAN_FEATURES = [
-  'ORB chat',
-  'Dictate',
-  'Voice',
-  'Documents',
-  'Templates',
-  'Saved outputs'
-] as const
+const INDIVIDUAL_PLAN_FEATURES = ORB_FLAGSHIP_BILLING_INCLUDED_ITEMS
 
 const TOP_UP_OPTIONS = [
   { label: '£5', pence: 500 },
@@ -258,6 +254,7 @@ export function OrbBillingModal({
       <div
         className="space-y-2 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:space-y-3 sm:p-4"
         data-orb-billing-modal
+        data-orb-flagship-product-modal="true"
         data-orb-billing-mobile-layout="compact"
         data-orb-billing-desktop-layout="sheet"
       >

@@ -278,7 +278,7 @@ function OrbLoginPanel({
       }}
     >
       <div
-        className="orb-login-shell mx-auto grid min-h-0 w-full max-w-[76rem] grid-cols-1 px-5 py-4 sm:px-8 lg:grid-cols-[1.05fr_0.95fr] lg:gap-12 lg:px-12 lg:pb-5 lg:pt-0"
+        className="orb-login-shell orb-login-flagship-shell mx-auto grid min-h-0 w-full max-w-[88rem] grid-cols-1 px-5 py-4 sm:px-8 lg:grid-cols-[1.15fr_0.85fr] lg:gap-12 lg:px-12 lg:pb-5 lg:pt-0"
         data-orb-login-two-column
         data-orb-login-scrollable
       >

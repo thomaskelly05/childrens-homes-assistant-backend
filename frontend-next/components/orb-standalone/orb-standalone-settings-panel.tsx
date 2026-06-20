@@ -237,6 +237,7 @@ export function OrbStandaloneSettingsPanel({
         data-orb-settings-panel
         data-orb-settings-drawer
         data-orb-settings-layout="premium-cards"
+        data-orb-flagship-product-modal="true"
         data-orb-settings-mobile-layout={isMobile ? 'stack' : 'desktop'}
         data-orb-studio-shell="settings"
       >

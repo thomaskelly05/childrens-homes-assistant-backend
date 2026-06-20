@@ -14,6 +14,7 @@ import { OrbTranscriptPanel } from '@/components/orb/dictate/OrbTranscriptPanel'
 import { OrbStudioShell } from '@/components/orb/premium'
 import { OrbWorkflowStrip, resolveDictateWorkflowStep } from '@/components/orb/premium/orb-workflow-strip'
 import { ORB_RESIDENTIAL_DICTATE_COPY } from '@/lib/orb/orb-residential-copy'
+import { ORB_DICTATE_SUBTITLE, ORB_DICTATE_TITLE } from '@/lib/orb/orb-user-facing-names'
 import { OrbResizableWorkspace } from '@/components/orb/resizable-panels/orb-resizable-workspace'
 import {
   OrbDictateAudioUpload,
@@ -260,13 +261,22 @@ export function OrbDictateStudioWorkspace(props: OrbDictateStudioWorkspaceProps)
   return (
     <OrbStudioShell
       studioId="dictate"
-      className="orb-dictate-studio-workspace flex min-h-0 flex-1 flex-col gap-1 overflow-hidden px-1 sm:px-2"
+      className="orb-dictate-studio-workspace orb-flagship-dictate-workspace flex min-h-0 flex-1 flex-col gap-1 overflow-hidden px-1 sm:px-2"
       data-orb-dictate-studio-workspace
       data-orb-dictate-studio
+      data-orb-flagship-dictate-workspace
       data-orb-dictate-focus-mode={focusMode ? 'true' : 'false'}
       data-orb-dictate-empty={!hasTranscript ? 'true' : undefined}
       style={{ minHeight: 'min(100dvh - 4.5rem, calc(100svh - 4.5rem))' }}
     >
+      <header className="orb-flagship-page-header shrink-0 px-1 sm:px-0" data-orb-flagship-dictate-header>
+        <h2 className="orb-flagship-page-title" data-orb-dictate-flagship-title>
+          {ORB_DICTATE_TITLE}
+        </h2>
+        <p className="orb-flagship-page-lead" data-orb-dictate-flagship-subtitle>
+          {ORB_DICTATE_SUBTITLE}
+        </p>
+      </header>
       <div className="shrink-0 px-1 sm:px-0">
         <OrbWorkflowStrip
           activeStep={resolveDictateWorkflowStep({ hasTranscript, hasAnalysis, hasDraft })}

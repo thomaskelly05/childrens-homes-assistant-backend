@@ -16,7 +16,7 @@ type OrbGuidedDemoEntryProps = {
 export function OrbGuidedDemoEntry({ onStart }: OrbGuidedDemoEntryProps) {
   return (
     <div
-      className="orb-guided-demo-entry--premium mt-4 w-full max-w-[var(--orb-composer-max,46rem)] rounded-2xl border p-4 text-left shadow-sm backdrop-blur-sm md:p-5"
+      className="orb-guided-demo-entry--premium orb-guided-demo-entry--flagship mt-4 w-full max-w-[var(--orb-composer-max,46rem)] rounded-2xl border p-4 text-left shadow-sm backdrop-blur-sm md:p-5"
       data-orb-guided-demo-entry
     >
       <div className="flex items-start gap-3.5">

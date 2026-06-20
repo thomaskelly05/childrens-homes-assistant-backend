@@ -86,7 +86,7 @@ export function OrbHelpPanel({ open, onClose }: { open: boolean; onClose: () => 
       panelId="help"
       layout="center"
     >
-      <div className="space-y-4 p-4" data-orb-help-panel>
+      <div className="space-y-4 p-4" data-orb-help-panel data-orb-flagship-product-modal="true">
         {SECTIONS.map((section) => (
           <section key={section.title} className="rounded-xl border border-[var(--orb-line)] bg-[var(--orb-surface)] px-4 py-3">
             <h3 className="text-sm font-semibold text-[var(--orb-foreground)]">{section.title}</h3>

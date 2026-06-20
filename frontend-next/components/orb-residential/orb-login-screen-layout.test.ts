@@ -17,7 +17,8 @@ describe('ORB premium login screen layout', () => {
     const css = read('app/orb/orb-login.css')
 
     assert.match(login, /data-orb-login-two-column/)
-    assert.match(login, /lg:grid-cols-\[1\.05fr_0\.95fr\]/)
+    assert.match(login, /orb-login-flagship-shell/)
+    assert.match(login, /lg:grid-cols-\[1\.15fr_0\.85fr\]/)
     assert.match(login, /OrbLoginDesktopHero/)
     assert.match(hero, /data-orb-login-hero-top-aligned/)
     assert.match(hero, /data-orb-login-desktop-hero/)

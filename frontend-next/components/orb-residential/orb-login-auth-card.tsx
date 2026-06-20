@@ -71,7 +71,8 @@ export function OrbLoginAuthCard({
 
   return (
     <div
-      className="orb-login-card orb-login-panel-inner orb-login-auth-card--readable mx-auto w-full max-w-md p-0 lg:rounded-[1.75rem] lg:border lg:p-7 lg:shadow-xl"
+      className="orb-login-card orb-login-panel-inner orb-login-auth-card--readable orb-login-flagship-auth mx-auto w-full max-w-md p-0 lg:rounded-[1.75rem] lg:border lg:p-7 lg:shadow-xl"
+      data-orb-login-flagship-auth
       data-orb-login-auth-card
     >
       <h2

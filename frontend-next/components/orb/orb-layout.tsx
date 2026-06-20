@@ -153,6 +153,7 @@ export function OrbLayout({
           data-orb-sidebar-state={residentialSurface ? (sidebarCollapsed ? 'collapsed' : 'expanded') : undefined}
           data-orb-sidebar-collapsed={residentialSurface && sidebarCollapsed ? 'true' : undefined}
           data-orb-guided-demo-active={guidedDemoActive ? 'true' : undefined}
+          data-orb-flagship-sidebar={residentialSurface ? 'true' : undefined}
         >
           {sidebar}
         </aside>

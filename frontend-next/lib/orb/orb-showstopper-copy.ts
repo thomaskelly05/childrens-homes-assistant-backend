@@ -7,4 +7,7 @@ export const ORB_LOGIN_HERO_SUPPORTING =
 export const ORB_HOME_TRUST_STRIP =
   'Adult review required \u00b7 Local policy applies \u00b7 Child-centred recording'
 
+export const ORB_HOME_PRODUCT_CONTEXT_ROW =
+  'Chat \u00b7 Dictate \u00b7 Voice \u00b7 ORB Write \u00b7 Records & Drafts'
+
 export const ORB_GUIDED_DEMO_ACTIVE_MARKER = 'Guided Demo \u00b7 anonymised scenario'

@@ -36,9 +36,10 @@ export function OrbGuidedDemoPanel({
       data-orb-guided-demo-panel
       data-orb-guided-demo-step={step.id}
       data-orb-guided-demo-step-index={stepIndex}
+      data-orb-flagship-guided-demo
     >
       <div
-        className="orb-guided-demo-panel__sheet max-h-[min(92dvh,calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-1rem))] w-full max-w-lg overflow-y-auto rounded-3xl p-5 sm:p-6"
+        className="orb-guided-demo-panel__sheet orb-guided-demo-panel__sheet--flagship max-h-[min(92dvh,calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-1rem))] w-full max-w-4xl overflow-y-auto rounded-3xl p-5 sm:p-6"
         style={{ marginBottom: 'env(safe-area-inset-bottom, 0px)' }}
       >
         <div className="flex items-start justify-between gap-3">
@@ -82,73 +83,77 @@ export function OrbGuidedDemoPanel({
           </button>
         </div>
 
-        <p className="orb-guided-demo-panel__safety" data-orb-guided-demo-safety-note>
-          {ORB_GUIDED_DEMO_SAFETY_NOTE}
-        </p>
+        <div className="orb-flagship-guided-demo-grid" data-orb-flagship-guided-demo-grid>
+          <div className="orb-guided-demo-panel__main min-w-0" data-orb-guided-demo-main>
+            <p className="orb-guided-demo-panel__safety" data-orb-guided-demo-safety-note>
+              {ORB_GUIDED_DEMO_SAFETY_NOTE}
+            </p>
 
-        <p className="mt-4 text-sm leading-relaxed text-slate-700" data-orb-guided-demo-explanation>
-          {step.explanation}
-        </p>
+            <p className="mt-4 text-sm leading-relaxed text-slate-700" data-orb-guided-demo-explanation>
+              {step.explanation}
+            </p>
 
-        <div className="mt-3 space-y-2.5">
-          <p className="orb-guided-demo-panel__note-card text-xs leading-relaxed md:text-sm" data-orb-guided-demo-child-note>
-            <span className="font-semibold text-slate-900">Child-centred: </span>
-            {step.childCentredNote}
-          </p>
-          <p className="orb-guided-demo-panel__note-card text-xs leading-relaxed md:text-sm" data-orb-guided-demo-adult-review-note>
-            <span className="font-semibold text-slate-900">Adult review: </span>
-            {step.adultReviewNote}
-          </p>
-        </div>
+            <div className="mt-3 space-y-2.5">
+              <p className="orb-guided-demo-panel__note-card text-xs leading-relaxed md:text-sm" data-orb-guided-demo-child-note>
+                <span className="font-semibold text-slate-900">Child-centred: </span>
+                {step.childCentredNote}
+              </p>
+              <p className="orb-guided-demo-panel__note-card text-xs leading-relaxed md:text-sm" data-orb-guided-demo-adult-review-note>
+                <span className="font-semibold text-slate-900">Adult review: </span>
+                {step.adultReviewNote}
+              </p>
+            </div>
 
-        <div className="orb-guided-demo-panel__scenario mt-4">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">
-            Anonymised scenario
-          </p>
-          <p className="mt-1 text-sm font-medium text-slate-900">{ORB_GUIDED_DEMO_SCENARIO.title}</p>
-          <p className="mt-2 text-xs leading-relaxed text-slate-600" data-orb-guided-demo-scenario-summary>
-            {ORB_GUIDED_DEMO_SCENARIO.summary}
-          </p>
-        </div>
+            <div className="mt-5 flex flex-col gap-2.5 sm:flex-row sm:flex-wrap">
+              <button
+                type="button"
+                onClick={() => onPrimaryAction(step)}
+                className="orb-guided-demo-panel__primary inline-flex min-h-[2.85rem] flex-1 items-center justify-center rounded-full bg-[var(--orb-primary)] px-4 py-2.5 text-sm font-semibold text-white"
+                data-orb-guided-demo-primary-action
+              >
+                {step.primaryActionLabel}
+              </button>
+              {!isLast ? (
+                <button
+                  type="button"
+                  onClick={onAdvance}
+                  className="orb-guided-demo-panel__secondary inline-flex min-h-[2.85rem] items-center justify-center rounded-full border px-4 py-2.5 text-sm font-medium"
+                  data-orb-guided-demo-skip-step
+                >
+                  Next step
+                </button>
+              ) : null}
+            </div>
 
-        <div className="mt-5 flex flex-col gap-2.5 sm:flex-row sm:flex-wrap">
-          <button
-            type="button"
-            onClick={() => onPrimaryAction(step)}
-            className="orb-guided-demo-panel__primary inline-flex min-h-[2.85rem] flex-1 items-center justify-center rounded-full bg-[var(--orb-primary)] px-4 py-2.5 text-sm font-semibold text-white"
-            data-orb-guided-demo-primary-action
-          >
-            {step.primaryActionLabel}
-          </button>
-          {!isLast ? (
+            {isLast ? (
+              <p className="mt-3 text-center text-xs text-[var(--orb-muted)]">
+                <OrbRequestDemoLink
+                  surface="guided_demo"
+                  className="font-semibold text-[var(--orb-primary)] underline-offset-2 hover:underline"
+                />
+              </p>
+            ) : null}
+
             <button
               type="button"
-              onClick={onAdvance}
-              className="orb-guided-demo-panel__secondary inline-flex min-h-[2.85rem] items-center justify-center rounded-full border px-4 py-2.5 text-sm font-medium"
-              data-orb-guided-demo-skip-step
+              onClick={onExit}
+              className="mt-4 w-full text-center text-xs text-[var(--orb-muted)] underline-offset-2 hover:underline"
+              data-orb-guided-demo-exit
             >
-              Next step
+              Exit guided demo
             </button>
-          ) : null}
+          </div>
+
+          <div className="orb-guided-demo-panel__scenario orb-guided-demo-panel__preview orb-guided-demo-panel__preview--flagship" data-orb-guided-demo-preview>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+              Anonymised scenario
+            </p>
+            <p className="mt-1 text-sm font-medium text-slate-900">{ORB_GUIDED_DEMO_SCENARIO.title}</p>
+            <p className="mt-2 text-xs leading-relaxed text-slate-600" data-orb-guided-demo-scenario-summary>
+              {ORB_GUIDED_DEMO_SCENARIO.summary}
+            </p>
+          </div>
         </div>
-
-        {isLast ? (
-          <p className="mt-3 text-center text-xs text-[var(--orb-muted)]">
-            <OrbRequestDemoLink
-              surface="guided_demo"
-              className="font-semibold text-[var(--orb-primary)] underline-offset-2 hover:underline"
-            />
-          </p>
-        ) : null}
-
-        <button
-          type="button"
-          onClick={onExit}
-          className="mt-4 w-full text-center text-xs text-[var(--orb-muted)] underline-offset-2 hover:underline"
-          data-orb-guided-demo-exit
-        >
-          Exit guided demo
-        </button>
       </div>
     </div>
   )

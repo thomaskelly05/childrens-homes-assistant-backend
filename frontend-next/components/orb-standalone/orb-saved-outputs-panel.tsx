@@ -83,6 +83,8 @@ export function OrbSavedOutputsPanel({
   onStartInDictate,
   onStartInChat,
   onStartInDocuments,
+  onOpenGuidedDemo,
+  guidedDemoActive = false,
   residentialSurface = false,
   sessionReady = true
 }: {
@@ -99,6 +101,8 @@ export function OrbSavedOutputsPanel({
   onStartInDictate?: () => void
   onStartInChat?: () => void
   onStartInDocuments?: () => void
+  onOpenGuidedDemo?: () => void
+  guidedDemoActive?: boolean
   residentialSurface?: boolean
   sessionReady?: boolean
 }) {
@@ -238,9 +242,10 @@ export function OrbSavedOutputsPanel({
       {...orbStationShellProps(residentialSurface, 'wide')}
     >
       <div
-        className="orb-studio-shell flex min-h-0 flex-col gap-2 p-2 sm:gap-3 sm:p-4 lg:flex-row"
+        className={`orb-studio-shell flex min-h-0 flex-col gap-2 p-2 sm:gap-3 sm:p-4 lg:flex-row ${residentialSurface ? 'orb-flagship-records-workspace' : ''}`}
         data-orb-saved-outputs-panel
         data-orb-studio-shell="saved_outputs"
+        {...(residentialSurface ? { 'data-orb-flagship-records-workspace': true } : {})}
         {...(items.length === 0 && !loading ? { 'data-orb-saved-outputs-empty': true } : {})}
       >
         <div className="flex w-full shrink-0 flex-col lg:w-[var(--orb-desktop-saved-list-width,27.5rem)] lg:max-w-[var(--orb-desktop-saved-list-width,27.5rem)] lg:border-b-0 lg:border-r lg:border-[var(--orb-mobile-ws-card-border,var(--orb-line))]">
@@ -406,7 +411,7 @@ export function OrbSavedOutputsPanel({
               <OrbStudioEmptyState
                 title={ORB_RECORDS_EMPTY_TITLE}
                 description={isMobile ? undefined : ORB_RECORDS_EMPTY_SUBTITLE}
-                className={isMobile ? '!px-4 !py-6' : undefined}
+                className={`${isMobile ? '!px-4 !py-6' : ''} ${residentialSurface ? 'orb-flagship-records-empty' : ''}`.trim()}
                 actions={
                   <>
                     {onStartInOrbWrite ? (
@@ -417,6 +422,11 @@ export function OrbSavedOutputsPanel({
                     {onStartInDictate ? (
                       <OrbPremiumButton variant="secondary" onClick={onStartInDictate} data-orb-saved-start-dictate>
                         Start in Dictate
+                      </OrbPremiumButton>
+                    ) : null}
+                    {guidedDemoActive && onOpenGuidedDemo ? (
+                      <OrbPremiumButton variant="secondary" onClick={onOpenGuidedDemo} data-orb-saved-open-guided-demo>
+                        Open Guided Demo
                       </OrbPremiumButton>
                     ) : null}
                   </>

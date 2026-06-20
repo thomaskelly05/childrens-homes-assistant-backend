@@ -6,6 +6,7 @@ import { OrbVoiceHeroStage } from '@/components/orb-standalone/orb-voice-hero-st
 import { OrbVoiceResponsibilityStrip } from '@/components/orb-standalone/orb-voice-responsibility-strip'
 import { useOrbMobileViewport } from '@/components/orb-standalone/use-orb-mobile-viewport'
 import type { OrbVoiceCompanionState } from '@/components/orb-residential/orb-voice-companion'
+import { ORB_VOICE_STATUS_CARD_COPY } from '@/lib/orb/orb-flagship-copy'
 
 /**
  * Canonical Voice station body — shared hero column for desktop and mobile.
@@ -40,8 +41,9 @@ export function OrbVoiceStationContent({
 
   return (
     <div
-      className={`orb-voice-station-content flex min-h-0 flex-1 flex-col overflow-hidden ${className}`.trim()}
+      className={`orb-voice-station-content orb-flagship-voice-room flex min-h-0 flex-1 flex-col overflow-hidden ${className}`.trim()}
       data-orb-voice-station-content
+      data-orb-flagship-voice-room
       data-orb-voice-mobile={isMobileViewport ? true : undefined}
       data-orb-voice-desktop-spacious={!isMobileViewport ? true : undefined}
       data-orb-voice-workspace-mode={workspaceMode}
@@ -65,6 +67,16 @@ export function OrbVoiceStationContent({
               heroStageId={isMobileViewport ? 'mobile' : 'desktop'}
             />
             {isMobileViewport || workspaceMode === 'idle' ? children : null}
+            {workspaceMode === 'idle' ? (
+              <p
+                className="orb-flagship-voice-status-card"
+                role="status"
+                data-orb-voice-status-card
+                data-orb-voice-safety-note
+              >
+                {ORB_VOICE_STATUS_CARD_COPY}
+              </p>
+            ) : null}
           </div>
           {showDesktopSplit ? (
             <aside
