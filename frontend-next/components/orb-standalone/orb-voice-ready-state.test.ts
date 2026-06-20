@@ -50,10 +50,10 @@ const baseInput = {
 }
 
 describe('ORB Voice UI state — ready before session', () => {
-  it('authenticated + status configured + no session renders Start voice', () => {
+  it('authenticated + status configured + no session renders Push to talk', () => {
     assert.equal(resolveOrbVoiceUiState(baseInput), 'ready')
-    assert.equal(orbVoiceUiStatusLine('ready'), "I'm ready when you are.")
-    assert.equal(orbVoiceUiPrimaryLabel('ready'), 'Start voice')
+    assert.equal(orbVoiceUiStatusLine('ready'), "Ready to talk")
+    assert.equal(orbVoiceUiPrimaryLabel('ready'), 'Push to talk')
     const station = readComponent('components/orb-standalone/orb-voice-station.tsx')
     assert.match(station, /data-orb-voice-ui-state=\{uiState\}/)
     assert.match(readComponent('components/orb-standalone/orb-voice-actions.tsx'), /data-orb-voice-ui-state=\{uiState\}/)

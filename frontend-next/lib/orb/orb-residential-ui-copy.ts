@@ -12,8 +12,8 @@ export const ORB_RESIDENTIAL_BILLING_PROVIDER_COPY =
 export const ORB_VOICE_STATUS_CARD_COPY =
   'Voice is for reflective support. Audio is not stored. Review any transcript before use.'
 
-export const ORB_VOICE_V2_TITLE = 'Talk it through.'
-export const ORB_VOICE_V2_PROMPT = 'ORB can help you reflect before you write.'
+export const ORB_VOICE_V2_TITLE = 'Ready to talk'
+export const ORB_VOICE_V2_PROMPT = 'Talk it through with ORB before you write.'
 export const ORB_VOICE_V2_BUTTON = 'Push to talk'
 
 export const ORB_RESIDENTIAL_BILLING_INCLUDED_ITEMS = [

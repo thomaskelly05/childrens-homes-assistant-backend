@@ -22,7 +22,7 @@ describe('ORB Voice conversational sprint', () => {
     assert.match(station, /data-orb-voice-start-stage/)
     assert.match(station, /OrbVoiceActions/)
     assert.match(actions, /data-orb-voice-primary-action/)
-    assert.match(readLib('orb/voice/orb-voice-ui-state.ts'), /Start voice/)
+    assert.match(readLib('orb/voice/orb-voice-ui-state.ts'), /Push to talk/)
     assert.match(station, /ORB_VOICE_PANEL_SUBTITLE/)
   })
 

@@ -2,7 +2,11 @@ import Link from 'next/link'
 
 import { GlassOrbMark } from '@/components/orb-residential/ui/glass-orb-mark'
 import { OrbRequestDemoLink } from '@/components/orb-residential/orb-request-demo-link'
-import { ORB_LOGIN_ENTERPRISE_TITLE, ORB_LOGIN_ENTERPRISE_SUBHEADLINE, ORB_LOGIN_ENTERPRISE_SUPPORTING } from '@/lib/orb/orb-residential-shell-copy'
+import {
+  ORB_LOGIN_ENTERPRISE_TITLE,
+  ORB_LOGIN_ENTERPRISE_SUBHEADLINE,
+  ORB_LOGIN_ENTERPRISE_SUPPORTING
+} from '@/lib/orb/orb-residential-shell-copy'
 import {
   ORB_LOGIN_FOUNDER_LINE,
   ORB_LOGIN_PRODUCT_EXPLANATION,
@@ -13,14 +17,16 @@ import {
 export function OrbLoginDesktopHero() {
   return (
     <div
-      className="orb-login-hero orb-login-shell__brand relative hidden flex-col justify-center lg:flex lg:px-4 xl:px-8"
+      className="orb-login-hero orb-login-shell__brand orb-login-brand-panel relative hidden flex-col justify-center lg:flex lg:px-4 xl:px-8"
       data-orb-login-hero-top-aligned
       data-orb-login-desktop-hero
       data-orb-login-brand-panel
+      data-orb-login-premium-entrance
+      data-orb-login-enterprise-copy={`${ORB_LOGIN_ENTERPRISE_SUBHEADLINE} ${ORB_LOGIN_ENTERPRISE_SUPPORTING}`}
     >
       <div className="orb-login-hero-glow pointer-events-none absolute inset-0" aria-hidden />
-      <div className="orb-login-hero-inner relative mx-auto flex w-full max-w-lg flex-col justify-center py-6 lg:max-h-[100dvh] lg:overflow-y-auto lg:overscroll-contain">
-        <div className="flex flex-col items-start gap-3" data-orb-login-hero-visual>
+      <div className="orb-login-hero-inner relative mx-auto flex w-full max-w-2xl flex-col justify-center py-6 lg:max-h-[100dvh] lg:overflow-y-auto lg:overscroll-contain">
+        <div className="orb-login-brand-orb-field flex flex-col items-start gap-3" data-orb-login-hero-visual data-orb-login-luminous-orb>
           <div className="orb-login-hero-sphere-wrap shrink-0" data-orb-login-hero-sphere>
             <GlassOrbMark variant="hero" pulse data-orb-login-brand-mark />
           </div>
@@ -35,27 +41,27 @@ export function OrbLoginDesktopHero() {
         </div>
 
         <p
-          className="orb-login-headline--showstopper mt-4 text-base font-semibold leading-snug text-slate-100"
+          className="orb-login-headline--showstopper mt-5 text-3xl font-semibold leading-tight text-slate-100 xl:text-4xl"
           data-orb-login-title
           data-orb-login-subheadline
         >
-          {ORB_LOGIN_ENTERPRISE_SUBHEADLINE}
+          The specialist intelligence workspace for children&apos;s homes.
         </p>
 
-        <p className="orb-login-supporting mt-2 text-sm leading-relaxed text-slate-200" data-orb-login-supporting>
-          {ORB_LOGIN_ENTERPRISE_SUPPORTING}
+        <p className="orb-login-supporting mt-3 text-base leading-relaxed text-slate-200" data-orb-login-supporting>
+          Record safer. Reflect stronger. Evidence the child&apos;s experience more clearly.
         </p>
 
         <p className="orb-login-founder-line mt-4 text-sm font-medium leading-relaxed" data-orb-login-founder-line>
           {ORB_LOGIN_FOUNDER_LINE}
         </p>
 
-        <p className="orb-login-product-explainer mt-3 text-sm leading-relaxed text-slate-200" data-orb-login-product-explainer>
+        <p className="orb-login-product-explainer mt-3 max-w-xl text-sm leading-relaxed text-slate-200" data-orb-login-product-explainer>
           {ORB_LOGIN_PRODUCT_EXPLANATION}
         </p>
 
-        <div className="orb-login-stations mt-5" data-orb-login-stations>
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">ORB stations</p>
+        <div className="orb-login-stations orb-login-station-preview mt-6" data-orb-login-stations data-orb-login-station-preview>
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Station preview</p>
           <div
             className="orb-login-stations-scroll grid max-h-[min(12rem,28dvh)] gap-2 overflow-y-auto overscroll-contain sm:grid-cols-2"
             data-orb-login-stations-scroll

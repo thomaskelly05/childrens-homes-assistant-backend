@@ -158,7 +158,7 @@ export function orbVoiceUiStatusLine(state: OrbVoiceUiState): string {
     case 'checking':
       return 'Checking voice…'
     case 'ready':
-      return "I'm ready when you are."
+      return 'Ready to talk'
     case 'preparing':
       return 'Opening microphone…'
     case 'listening':
@@ -180,7 +180,7 @@ export function orbVoiceUiStatusLine(state: OrbVoiceUiState): string {
     case 'unsupported':
       return 'Voice is not available in this browser.'
     default:
-      return "I'm ready when you are."
+      return 'Ready to talk'
   }
 }
 
@@ -190,7 +190,7 @@ export function orbVoiceUiDetailLine(state: OrbVoiceUiState, dictateReady?: bool
     case 'unauthenticated':
       return 'Sign in to start a live conversation with ORB.'
     case 'ready':
-      return 'Talk it through with ORB.'
+      return 'Talk it through with ORB before you write.'
     case 'preparing':
       return 'Getting voice ready…'
     case 'listening':
@@ -221,7 +221,7 @@ export function orbVoiceUiPrimaryLabel(state: OrbVoiceUiState): string {
     case 'unauthenticated':
       return 'Sign in'
     case 'ready':
-      return 'Start voice'
+      return 'Push to talk'
     case 'preparing':
     case 'reconnecting':
       return 'Cancel'
@@ -237,7 +237,7 @@ export function orbVoiceUiPrimaryLabel(state: OrbVoiceUiState): string {
     case 'unsupported':
       return 'Try voice again'
     default:
-      return 'Start voice'
+      return 'Push to talk'
   }
 }
 

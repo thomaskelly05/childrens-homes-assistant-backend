@@ -57,13 +57,16 @@ export function OrbWriteAiPanel({
     <div
       className="flex min-h-0 flex-col overflow-hidden rounded-xl border border-[var(--orb-line)]/50 bg-[var(--orb-surface-elevated)]"
       data-orb-write-ai-panel
+      data-orb-write-review-structure-panel
     >
       <header className="flex shrink-0 items-center gap-2 border-b border-[var(--orb-line)]/40 px-3 py-2.5">
         <Sparkles className="h-4 w-4 text-[var(--orb-primary)]" aria-hidden />
         <div className="min-w-0 flex-1">
-          <h3 className="text-xs font-semibold text-[var(--orb-foreground)]">ORB guidance</h3>
+          <h3 className="text-xs font-semibold text-[var(--orb-foreground)]">
+            ORB Review / Structure <span className="sr-only">ORB guidance</span>
+          </h3>
           <p className="text-[10px] leading-snug text-[var(--orb-muted)]">
-            ORB suggests — you review and apply. Nothing is submitted automatically.
+            ORB suggests checks for observation, interpretation, child&apos;s voice, adult response, outcome, follow-up and oversight.
           </p>
         </div>
         {editing ? <Loader2 className="h-4 w-4 shrink-0 animate-spin text-[var(--orb-muted)]" aria-label="ORB is working" /> : null}

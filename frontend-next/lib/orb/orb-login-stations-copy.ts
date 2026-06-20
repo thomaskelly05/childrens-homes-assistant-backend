@@ -4,7 +4,7 @@ export const ORB_LOGIN_FOUNDER_LINE =
   'Built for the adults who care, centred on the children who matter.'
 
 export const ORB_LOGIN_PRODUCT_EXPLANATION =
-  'A specialist intelligence workspace for children\u2019s homes \u2014 helping adults record safer, reflect stronger, communicate clearly and evidence the child\u2019s experience more meaningfully.'
+  'ORB Residential helps adults in children\u2019s homes think through situations, prepare records, create accessible communication support and keep professional judgement at the centre of every output.'
 
 export const ORB_LOGIN_STATION_DESCRIPTIONS = [
   {

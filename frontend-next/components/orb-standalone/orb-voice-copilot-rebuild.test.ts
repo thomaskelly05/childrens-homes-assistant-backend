@@ -49,10 +49,10 @@ describe('ORB Voice copilot rebuild — auth', () => {
 })
 
 describe('ORB Voice copilot rebuild — ready', () => {
-  it('configured status renders Start voice', () => {
-    assert.equal(orbVoiceUiPrimaryLabel('ready'), 'Start voice')
+  it('configured status renders Push to talk', () => {
+    assert.equal(orbVoiceUiPrimaryLabel('ready'), 'Push to talk')
     const actions = readComponent('components/orb-standalone/orb-voice-actions.tsx')
-    assert.match(actions, /Start voice/)
+    assert.match(actions, /Push to talk/)
   })
 
   it('ready state does not render Open Dictate as primary', () => {

@@ -45,7 +45,7 @@ const baseInput = {
 
 describe('ORB Voice instant-human refinement', () => {
   it('idle → preparing → listening state copy', () => {
-    assert.equal(orbVoiceUiStatusLine('ready'), "I'm ready when you are.")
+    assert.equal(orbVoiceUiStatusLine('ready'), "Ready to talk")
     assert.equal(orbVoiceUiStatusLine('preparing'), 'Opening microphone…')
     assert.equal(orbVoiceUiStatusLine('listening'), 'Listening…')
     assert.equal(resolveOrbVoiceUiState({ ...baseInput, startStage: 'starting' }), 'preparing')
@@ -172,7 +172,7 @@ describe('ORB Voice instant-human refinement', () => {
   })
 
   it('primary labels remain human on failure and live session', () => {
-    assert.equal(orbVoiceUiPrimaryLabel('ready'), 'Start voice')
+    assert.equal(orbVoiceUiPrimaryLabel('ready'), 'Push to talk')
     assert.equal(orbVoiceUiPrimaryLabel('preparing'), 'Cancel')
     assert.equal(orbVoiceUiPrimaryLabel('listening'), 'End')
     assert.equal(orbVoiceUiPrimaryLabel('unsupported'), 'Try voice again')

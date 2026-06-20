@@ -36,7 +36,32 @@ export const ORB_COMMUNICATE_OUTPUT_TYPES = [
 ] as const
 
 export const ORB_COMMUNICATE_PACK_PREVIEW =
-  'ORB can create an adult-reviewed support pack with easy-read wording, visual cards, staff guidance and recording prompts.'
+  'Describe the communication need. ORB creates an adult-reviewed support pack with consistent accessible visuals that can be personalised around the way each person communicates.'
+
+const ORB_COMMUNICATE_PREVIEW_SECTIONS = [
+  {
+    title: 'Easy-read explanation preview',
+    body: 'Short sentences, clear sequence and a calm explanation of what is happening.'
+  },
+  {
+    title: 'Visual support cards preview',
+    body: 'Original generic cards for people, places, feelings and next steps.'
+  },
+  {
+    title: 'Social story preview',
+    body: 'Respectful first-person structure that can be personalised before sharing.'
+  },
+  {
+    title: 'Staff guidance preview',
+    body: 'How adults can introduce, check understanding and avoid assumptions.'
+  },
+  {
+    title: 'Recording prompts preview',
+    body: 'What the person expressed, what helped, adult response and follow-up.'
+  }
+] as const
+
+const ORB_COMMUNICATE_PLACEHOLDER_VISUALS = ['Now', 'Next', 'Choice', 'Feeling'] as const
 
 export function OrbCommunicateCreateFlow({
   onPackCreated,
@@ -106,11 +131,11 @@ export function OrbCommunicateCreateFlow({
             ORB Communicate
           </h2>
           <p className="mt-1.5 text-sm leading-relaxed text-[var(--orb-res-workspace-text)]" data-orb-communicate-subtitle>
-            ORB Communicate helps adults create accessible explanations, visual supports and social stories so people
-            can understand, express themselves and be heard before the record is written.
+            Create accessible explanations, visual supports and social stories so people can understand, express
+            themselves and be heard before the record is written.
           </p>
           <p className="mt-2 text-xs leading-relaxed text-[var(--orb-res-workspace-muted)]" data-orb-communicate-supporting-line>
-            Describe what you need to explain or support. ORB will shape an adult-reviewed communication support pack.
+            Describe the communication need. ORB creates an adult-reviewed support pack.
           </p>
         </div>
       </header>
@@ -135,6 +160,7 @@ export function OrbCommunicateCreateFlow({
         </p>
       </div>
 
+      <div className="orb-communicate-creator-grid grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,0.82fr)]" data-orb-communicate-creator-grid>
       <form className="orb-communicate-create__form space-y-3" onSubmit={handleCreate} data-orb-communicate-create-block>
         <label className="sr-only" htmlFor="orb-communicate-prompt">
           Describe what you need
@@ -146,6 +172,7 @@ export function OrbCommunicateCreateFlow({
           value={prompt}
           onChange={(event) => setPrompt(event.target.value)}
           data-orb-communicate-prompt-input
+          data-orb-communicate-natural-language-input
         />
 
         <div className="space-y-2">
@@ -167,7 +194,7 @@ export function OrbCommunicateCreateFlow({
           </div>
         </div>
 
-        <OrbCommunicateGuidePanel settings={guide} onChange={setGuide} />
+        <OrbCommunicateGuidePanel settings={guide} onChange={setGuide} className="orb-communicate-guide-secondary" />
 
         {profileNotice ? (
           <p className="text-sm text-[var(--orb-res-workspace-muted)]" data-orb-communicate-profile-notice>
@@ -184,6 +211,37 @@ export function OrbCommunicateCreateFlow({
           {creating ? 'Creating support…' : 'Create support pack'}
         </button>
       </form>
+
+      <aside className="orb-communicate-support-preview" data-orb-communicate-support-pack-preview data-orb-communicate-original-placeholder-visuals>
+        <header>
+          <p className="text-xs font-semibold uppercase tracking-wide text-[var(--orb-res-workspace-muted)]">
+            Support-pack preview
+          </p>
+          <h3 className="mt-1 text-lg font-semibold text-[var(--orb-res-navy)]">
+            Adult-reviewed pack structure
+          </h3>
+          <p className="mt-1 text-xs leading-relaxed text-[var(--orb-res-workspace-muted)]">
+            Uses original placeholder visual cards only. Visuals support communication and do not imply universal understanding.
+          </p>
+        </header>
+        <div className="mt-4 grid grid-cols-2 gap-2" data-orb-communicate-placeholder-visual-cards>
+          {ORB_COMMUNICATE_PLACEHOLDER_VISUALS.map((label) => (
+            <div key={label} className="orb-communicate-preview-symbol" data-orb-communicate-placeholder-card={label}>
+              <span aria-hidden />
+              <strong>{label}</strong>
+            </div>
+          ))}
+        </div>
+        <div className="mt-4 space-y-2" data-orb-communicate-preview-sections>
+          {ORB_COMMUNICATE_PREVIEW_SECTIONS.map((section) => (
+            <article key={section.title} className="orb-communicate-preview-section">
+              <h4>{section.title}</h4>
+              <p>{section.body}</p>
+            </article>
+          ))}
+        </div>
+      </aside>
+      </div>
 
       <p
         className="text-center text-xs leading-relaxed text-[var(--orb-res-workspace-muted)]"

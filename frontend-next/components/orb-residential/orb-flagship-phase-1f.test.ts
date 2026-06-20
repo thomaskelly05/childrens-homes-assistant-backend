@@ -70,7 +70,7 @@ describe('ORB Residential Phase 1F flagship UI', () => {
     assert.match(workspace, /ORB_DICTATE_TITLE/)
     assert.match(workspace, /ORB_DICTATE_SUBTITLE/)
     assert.equal(ORB_DICTATE_TITLE, 'Dictate')
-    assert.match(ORB_DICTATE_SUBTITLE, /Speak, paste or upload rough notes/)
+    assert.match(ORB_DICTATE_SUBTITLE, /Record, paste or upload what happened/)
   })
 
   it('voice has reflective support status card', () => {

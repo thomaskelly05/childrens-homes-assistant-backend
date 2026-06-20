@@ -59,6 +59,6 @@ test('voice station requires explicit start', () => {
   assert.match(voice, /OrbVoiceActions/)
   assert.match(voiceActions, /data-orb-voice-primary-action/)
   const uiState = readFileSync(new URL('../../lib/orb/voice/orb-voice-ui-state.ts', import.meta.url), 'utf8')
-  assert.match(uiState, /Start voice/)
+  assert.match(uiState, /Push to talk/)
   assert.match(voice, /onTestMicrophone|Diagnostics/)
 })

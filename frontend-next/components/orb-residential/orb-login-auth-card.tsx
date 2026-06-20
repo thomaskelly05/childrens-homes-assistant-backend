@@ -277,6 +277,12 @@ export function OrbLoginAuthCard({
       )}
 
       <OrbLoginLegalFooter legalPaths={legalPaths} />
+
+      <p className="orb-login-demo-link mt-4 text-center text-sm" data-orb-login-demo-path data-orb-login-demo-visible>
+        <Link href="/orb/signup" className="font-semibold text-[var(--orb-primary)] underline-offset-2 hover:underline">
+          Request demo
+        </Link>
+      </p>
     </div>
   )
 }

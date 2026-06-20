@@ -285,7 +285,7 @@ function OrbLoginPanel({
       >
         <OrbLoginDesktopHero />
 
-        <div className="orb-login-panel flex min-h-0 flex-col lg:px-2 xl:px-6" data-orb-login-panel-centered>
+        <div className="orb-login-panel orb-login-shell__auth flex min-h-0 flex-col lg:px-2 xl:px-6" data-orb-login-panel-centered data-orb-login-auth-connected>
           <OrbLoginMobileHeader />
           <OrbLoginAuthCard
             error={error}

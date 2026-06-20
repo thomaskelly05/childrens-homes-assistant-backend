@@ -1581,8 +1581,8 @@ export function OrbVoiceStation({
           {voiceWorkspaceMode === 'no_transcript' && isMobileViewport ? noTranscriptPanel : null}
           {voiceWorkspaceMode === 'live' && isMobileViewport ? livePanel : null}
           {voiceWorkspaceMode === 'idle' ? (
-          <div className="orb-voice-session-extras w-full" data-orb-voice-session-extras>
-          <div className="mt-4 flex w-full justify-center px-2">
+          <div className="orb-voice-session-extras w-full" data-orb-voice-session-extras data-orb-voice-controls-main-screen>
+          <div className="mt-4 flex w-full justify-center px-2" data-orb-voice-controls-not-settings>
             <OrbVoiceModeSelector
               voiceStyle={voiceStyle}
               reasoningMode={reasoningMode}
@@ -1592,10 +1592,14 @@ export function OrbVoiceStation({
           </div>
 
           {!voiceSessionLive ? (
-            <p className="mt-2 text-center text-[11px] text-[var(--orb-muted)]">
+            <p className="mt-2 text-center text-[11px] text-[var(--orb-muted)]" data-orb-voice-selected-style-note>
               Voice: {selectedProfileLabel} — {getOrbVoiceProfile(voice.settings.voicePresetId).description}
             </p>
           ) : null}
+
+          <p className="mt-2 text-center text-[11px] text-[var(--orb-muted)]" data-orb-voice-audio-storage-note>
+            Audio is not stored. Review any transcript before use.
+          </p>
 
           {audioPlaybackBlocked ? (
             <button

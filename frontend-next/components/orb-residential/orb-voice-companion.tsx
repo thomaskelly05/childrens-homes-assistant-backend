@@ -35,7 +35,7 @@ export const ORB_VOICE_COMPANION_HEADLINES: Record<
   import('@/components/orb-residential/orb-voice-head').OrbVoiceCompanionState,
   string
 > = {
-  idle: "I'm ready when you are.",
+  idle: 'Ready to talk',
   listening: 'Listening…',
   thinking: 'Thinking with you…',
   speaking: 'ORB is responding.',

@@ -12,9 +12,9 @@ function read(relativePath: string) {
   return readFileSync(join(root, relativePath), 'utf8')
 }
 
-describe('ORB Residential Phase 2G flagship UX convergence', () => {
-  it('build version marker is phase-2g on shell and visual build', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-2g')
+describe('ORB Residential Phase 2H flagship UX convergence', () => {
+  it('build version marker is phase-2h on shell and visual build', () => {
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-2h')
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
     const layout = read('app/orb/layout.tsx')
     assert.match(companion, /data-orb-build-version=\{ORB_BUILD_VISUAL_VERSION\}/)
@@ -27,6 +27,24 @@ describe('ORB Residential Phase 2G flagship UX convergence', () => {
     const cssImports = [...layout.matchAll(/import ['"]\.\/([^'"]+\.css)['"]/g)].map((match) => match[1])
     assert.deepEqual(cssImports, ['orb-residential-shell.css'])
     assert.deepEqual(ORB_LAYOUT_CSS_FILES, ['app/orb/orb-residential-shell.css'])
+  })
+
+  it('Login has premium product entrance structure', () => {
+    const hero = read('components/orb-residential/orb-login-desktop-hero.tsx')
+    const shell = read('components/orb-residential/orb-login-screen.tsx')
+    const auth = read('components/orb-residential/orb-login-auth-card.tsx')
+    const copy = read('lib/orb/orb-login-stations-copy.ts')
+    assert.match(hero, /data-orb-login-premium-entrance/)
+    assert.match(hero, /data-orb-login-luminous-orb/)
+    assert.match(hero, /The specialist intelligence workspace for children&apos;s homes\./)
+    assert.match(hero, /Record safer\. Reflect stronger\. Evidence the child&apos;s experience more clearly\./)
+    assert.match(copy, /Built for the adults who care, centred on the children who matter\./)
+    assert.match(hero, /data-orb-login-station-preview/)
+    for (const label of ['Chat', 'Dictate', 'Voice', 'Communicate', 'ORB Write', 'Records & Drafts']) {
+      assert.match(hero + copy, new RegExp(label))
+    }
+    assert.match(shell, /data-orb-login-auth-connected/)
+    assert.match(auth, /data-orb-login-demo-visible/)
   })
 
   it('ORB identity has explicit square circular geometry and is reused across core surfaces', () => {
@@ -90,26 +108,37 @@ describe('ORB Residential Phase 2G flagship UX convergence', () => {
     assert.match(workspace, /data-orb-dictate-capture-panel/)
     assert.match(workspace, /data-orb-dictate-review-panel/)
     assert.match(workspace, /data-orb-dictate-designed-workflow/)
+    for (const label of ['Capture', 'Transcript', 'ORB Review', 'Output']) {
+      assert.match(workspace, new RegExp(label))
+    }
+    assert.match(workspace, /data-orb-dictate-stage-interface/)
+    assert.match(workspace, /data-orb-dictate-paste-notes-control/)
+    assert.match(workspace, /data-orb-dictate-output-stage/)
     assert.match(workspace, /Create safer draft/)
     assert.match(topBar, /Create safer draft/)
     assert.match(topBar, /Open in ORB Write/)
     assert.match(transcript, /data-orb-dictate-capture-zone/)
     assert.match(topBar, /data-orb-dictate-capture-controls/)
     assert.match(topBar, /OrbIcon/)
-    assert.match(read('lib/orb/orb-user-facing-names.ts'), /Speak, paste or upload rough notes\. ORB helps structure them into safer drafts for adult review\./)
+    assert.match(read('lib/orb/orb-user-facing-names.ts'), /Record, paste or upload what happened\. ORB helps turn rough information into a safer draft for adult review\./)
     assert.match(read('components/orb/dictate/OrbDictateBrainPanel.tsx'), /What may be missing/)
   })
 
   it('ORB Write documentation studio structure with grouped OrbIcon toolbar', () => {
-    const panel = read('components/orb-write/orb-write-standalone-panel.tsx')
+    const panel = read('components/orb-write/orb-write-station.tsx')
     const toolbar = read('components/orb-write/orb-write-toolbar.tsx')
     assert.match(panel, /GlassOrbMark/)
-    assert.match(panel, /care documentation studio/)
+    assert.match(panel, /IndiCare Intelligence&apos;s care documentation studio/)
+    assert.match(panel, /Draft, review and finalise adult-led records in one calm workspace\./)
     assert.match(panel, /data-orb-write-integrated-studio-surface/)
+    assert.match(panel, /data-orb-write-full-width-studio/)
+    assert.match(panel, /data-orb-write-layout="studio-wide"/)
+    assert.match(panel, /data-orb-write-create-final-draft/)
+    assert.match(read('components/orb-write/orb-write-ai-panel.tsx'), /data-orb-write-review-structure-panel/)
     for (const group of ['structure', 'format', 'review', 'export']) {
       assert.match(toolbar, new RegExp(`data-orb-write-toolbar-group="${group}"`))
     }
-    assert.match(panel, /separate observation, interpretation, the child&apos;s voice, adult response and[\s\S]*follow-up/)
+    assert.match(read('components/orb-write/orb-write-ai-panel.tsx'), /observation, interpretation, child&apos;s voice, adult response, outcome, follow-up and oversight/)
     assert.match(read('components/orb-write/orb-write-editor.tsx'), /Review required/)
     assert.match(toolbar, /OrbIcon/)
   })
@@ -133,6 +162,11 @@ describe('ORB Residential Phase 2G flagship UX convergence', () => {
     assert.match(selector, /data-orb-voice-style-controls/)
     assert.match(selector, /data-orb-voice-reasoning-controls/)
     assert.match(selector, /data-orb-voice-mode-summary/)
+    assert.match(voice, /data-orb-voice-controls-main-screen/)
+    assert.match(voice, /data-orb-voice-controls-not-settings/)
+    assert.match(voice, /Audio is not stored\. Review any transcript before use\./)
+    assert.match(read('lib/orb/voice/orb-voice-ui-state.ts'), /return 'Push to talk'/)
+    assert.match(read('lib/orb/voice/orb-voice-ui-state.ts'), /return 'Ready to talk'/)
     const modes = read('lib/orb/orb-voice-mode-carousel.ts')
     for (const label of ['Calm', 'Warm', 'Direct', 'Reflective', 'Talk it through', 'Safeguarding thinking', 'Supervision prep', 'Clear summary']) {
       assert.match(modes, new RegExp(label))
@@ -142,11 +176,18 @@ describe('ORB Residential Phase 2G flagship UX convergence', () => {
   it('communicate explains its purpose and renders a premium support pack', () => {
     const create = read('components/orb-communicate/orb-communicate-create-flow.tsx')
     const pack = read('components/orb-communicate/orb-communicate-support-pack-view.tsx')
-    assert.match(create, /ORB Communicate helps adults create accessible explanations, visual supports and social stories so people[\s\S]*can understand, express themselves and be heard before the record is written\./)
+    assert.match(create, /Create accessible explanations, visual supports and social stories so people can understand, express[\s\S]*themselves and be heard before the record is written\./)
+    assert.match(create, /Describe the communication need\. ORB creates an adult-reviewed support pack\./)
     assert.match(create, /data-orb-communicate-output-type/)
     assert.match(create, /data-orb-communicate-prompt-input/)
+    assert.match(create, /data-orb-communicate-natural-language-input/)
+    assert.match(create, /data-orb-communicate-support-pack-preview/)
+    assert.match(create, /data-orb-communicate-placeholder-visual-cards/)
+    assert.match(create, /data-orb-communicate-original-placeholder-visuals/)
+    assert.match(create, /consistent accessible visuals that can be personalised around the way each person communicates/)
     assert.match(create, /OrbCommunicateGuidePanel/)
     assert.match(create, /OrbCommunicateAdvancedTools/)
+    assert.match(read('components/orb-communicate/orb-communicate-hub.tsx'), /data-orb-communicate-advanced-tools/)
     assert.match(pack, /data-orb-communicate-pack-sections/)
     assert.match(pack, /data-orb-communicate-pack-voice-profile/)
     assert.match(pack, /data-orb-communicate-action-placeholder/)

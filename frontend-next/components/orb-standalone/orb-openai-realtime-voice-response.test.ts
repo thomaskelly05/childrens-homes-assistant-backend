@@ -127,7 +127,7 @@ describe('ORB OpenAI realtime voice response flow', () => {
     assert.match(debug, /clearOrbVoiceDebugEvents/)
   })
 
-  it('voice station unlocks audio on Start voice and offers Tap to hear ORB', () => {
+  it('voice station unlocks audio on Push to talk and offers Tap to hear ORB', () => {
     const content = readFileSync(join(root, 'components/orb-standalone/orb-voice-station-content.tsx'), 'utf8')
     assert.match(station, /unlockAssistantAudio/)
     assert.match(station, /Tap to hear ORB/)

@@ -126,8 +126,8 @@ export function orbVoiceLaunchHeadline(
 ): string {
   switch (state) {
     case 'ready':
-      if (options?.realtimeConfigured) return "I'm ready when you are."
-      return options?.pushToTalk !== false ? 'Hold or tap to speak' : "I'm ready when you are."
+      if (options?.realtimeConfigured) return 'Ready to talk'
+      return options?.pushToTalk !== false ? 'Hold or tap to speak' : 'Ready to talk'
     case 'starting':
       return 'Opening microphone…'
     case 'listening':
@@ -143,7 +143,7 @@ export function orbVoiceLaunchHeadline(
     case 'error':
       return 'Voice could not connect.'
     default:
-      return "I'm ready when you are."
+      return 'Ready to talk'
   }
 }
 

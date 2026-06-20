@@ -39,7 +39,7 @@ export function OrbVoiceActions({
 
   const normalisedState = normaliseOrbVoiceUiState(uiState)
   const primaryLabel = orbVoiceUiPrimaryLabel(uiState)
-  const isStartVoice = primaryLabel === 'Start voice'
+  const isStartVoice = primaryLabel === 'Push to talk'
 
   const showTypeInstead =
     normalisedState === 'unauthenticated' ||
