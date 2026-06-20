@@ -1,18 +1,13 @@
 import type { Metadata } from 'next'
 import { ReactNode } from 'react'
 
-/* Canonical ORB design layers — single import hub (orb-style-v1). */
+/* Canonical ORB design layers — single residential shell (Phase 1I). */
 import './orb-theme.css'
 import './orb-components.css'
 import './orb-shell.css'
 import './orb-stations.css'
 import './orb-login.css'
-import './orb-showstopper-phase-1d.css'
-import './orb-showstopper-phase-1d1.css'
-import './orb-theme-lock-phase-1e.css'
-import './orb-flagship-phase-1f.css'
-import './orb-full-viewport-phase-1g.css'
-import './orb-convergence-phase-1h.css'
+import './orb-residential-shell.css'
 import { OrbResidentialThemeRoot } from '@/app/orb/orb-theme-root'
 import { ORB_APPEARANCE_BOOTSTRAP_SCRIPT } from '@/lib/orb/orb-appearance'
 import {

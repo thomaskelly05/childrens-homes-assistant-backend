@@ -491,10 +491,10 @@ export function OrbStandaloneComposer({
               />
             ) : null}
           <div
-            className={`orb-composer-glass orb-liquid-composer orb-composer-v2 ${compactResidential ? 'orb-composer-glass--compact orb-composer-glass--showstopper p-2 sm:p-2.5' : 'p-2.5 sm:p-3'} ${residentialSurface ? 'orb-composer-glass--showstopper' : ''} ${answering ? 'orb-composer-answering orb-answering-pulse' : ''}`}
+            className={`orb-composer-glass orb-liquid-composer orb-composer ${compactResidential ? 'orb-composer-glass--compact orb-composer-glass--showstopper p-2 sm:p-2.5' : 'p-2.5 sm:p-3'} ${residentialSurface ? 'orb-composer-glass--showstopper' : ''} ${answering ? 'orb-composer-answering orb-answering-pulse' : ''}`}
             data-orb-composer-answering={answering ? 'true' : 'false'}
             data-orb-composer-card
-            data-orb-composer-v2={residentialSurface ? 'true' : undefined}
+            data-orb-composer={residentialSurface ? 'true' : undefined}
             data-orb-composer-compact={compactResidential ? 'true' : undefined}
           >
             {!compactResidential ? (

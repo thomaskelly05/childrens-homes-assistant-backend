@@ -41,11 +41,9 @@ export function OrbVoiceStationContent({
 
   return (
     <div
-      className={`orb-voice-station-content orb-flagship-voice-room orb-full-viewport-voice-room orb-voice-v2-room flex min-h-0 flex-1 flex-col overflow-hidden ${className}`.trim()}
+      className={`orb-voice-station-content orb-workspace orb-workspace--voice flex min-h-0 flex-1 flex-col overflow-hidden ${className}`.trim()}
       data-orb-voice-station-content
-      data-orb-flagship-voice-room
-      data-orb-full-viewport-voice-room
-      data-orb-voice-v2-room
+      data-orb-workspace-voice
       data-orb-voice-mobile={isMobileViewport ? true : undefined}
       data-orb-voice-desktop-spacious={!isMobileViewport ? true : undefined}
       data-orb-voice-workspace-mode={workspaceMode}
@@ -71,10 +69,10 @@ export function OrbVoiceStationContent({
             {isMobileViewport || workspaceMode === 'idle' ? children : null}
             {workspaceMode === 'idle' ? (
               <p
-                className="orb-flagship-voice-status-card orb-voice-v2-status"
+                className="orb-workspace-voice-status"
                 role="status"
                 data-orb-voice-status-card
-                data-orb-voice-v2-status
+                data-orb-voice-status
                 data-orb-voice-safety-note
               >
                 {ORB_VOICE_V2_STATUS_COPY}

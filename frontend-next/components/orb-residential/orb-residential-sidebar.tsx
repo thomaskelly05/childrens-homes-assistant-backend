@@ -578,7 +578,7 @@ export function OrbResidentialSidebar({
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col orb-residential-sidebar-v2" data-orb-sidebar-panel data-orb-sidebar-state="expanded" data-orb-residential-sidebar-v2="true">
+    <div className="flex h-full min-h-0 flex-col orb-sidebar" data-orb-sidebar-panel data-orb-sidebar-state="expanded">
       <div className="orb-sidebar-header shrink-0 px-3 py-3" data-orb-sidebar-header>
         <div className="flex items-start gap-2.5">
           <GlassOrbMark size="sm" className="mt-0.5" pulse />
