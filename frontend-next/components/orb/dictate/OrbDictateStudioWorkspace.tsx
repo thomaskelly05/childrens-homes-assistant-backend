@@ -343,10 +343,10 @@ export function OrbDictateStudioWorkspace(props: OrbDictateStudioWorkspaceProps)
           <div className="orb-dictate-capture-canvas orb-station-workspace flex min-h-0 flex-1 flex-col gap-3" data-orb-dictate-capture-panel data-orb-dictate-capture-canvas data-orb-dictate-transcript-stage>
             <div className="orb-dictate-capture-empty rounded-2xl border border-[var(--orb-line)]/25 bg-[var(--orb-surface)]/70 p-4">
               <p className="text-sm font-semibold text-[var(--orb-foreground)]" data-orb-dictate-capture-prompt>
-                Capture rough information
+                {ORB_RESIDENTIAL_DICTATE_COPY.capturePrompt}
               </p>
-              <p className="mt-1 text-xs leading-relaxed text-[var(--orb-muted)]">
-                Start recording, paste notes or upload audio. ORB will help turn this into a safer draft for adult review.
+              <p className="mt-1 text-xs leading-relaxed text-[var(--orb-muted)]" data-orb-dictate-capture-guidance>
+                {ORB_RESIDENTIAL_DICTATE_COPY.captureGuidance}
               </p>
               <div
                 className="orb-dictate-capture-affordances mt-3 flex flex-wrap items-center gap-2"
@@ -405,8 +405,17 @@ export function OrbDictateStudioWorkspace(props: OrbDictateStudioWorkspaceProps)
             recordTypeId={recordTypeId}
             onAnalyse={handlePrimaryAction}
             hasTranscript={hasTranscript}
-          />
-          </div>
+            />
+            {!hasDraft && hasTranscript ? (
+              <div
+                className="mx-1 mt-2"
+                data-orb-dictate-safer-draft-placeholder
+                aria-live="polite"
+              >
+                Your safer draft will appear here after ORB Review.
+              </div>
+            ) : null}
+            </div>
         }
       />
 

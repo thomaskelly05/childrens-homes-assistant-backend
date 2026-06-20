@@ -58,6 +58,7 @@ export function buildOrbBrainConversationRequest(
     ...request,
     source_surface: source,
     client_route_hint: route.route,
+    requested_action: 'residential_guided_chat',
     location_hint: context?.locationHint?.trim() || undefined
   }
 }

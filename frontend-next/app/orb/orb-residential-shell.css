@@ -1,7 +1,7 @@
 /**
  * ORB Residential — single canonical UI design system (Phase 1K blank canvas, 1M personality).
  * One file for shell, workspace, composer, login, mobile, stations and modals.
- * Visual build marker: phase-3b.
+ * Visual build marker: phase-3c.
  */
 
 :root {
@@ -2263,4 +2263,78 @@ html[data-orb-residential='1'] [data-orb-communicate-creator-prompt] {
 html[data-orb-residential='1'] [data-orb-voice-style-carousel],
 html[data-orb-residential='1'] [data-orb-voice-reasoning-carousel] {
   mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+}
+
+/* Sidebar chat/project overflow menus — stacked portal menu (not inline actions). */
+.orb-sidebar-dropdown-menu {
+  display: flex;
+  flex-direction: column;
+  min-width: 9.5rem;
+  padding: 0.35rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.18);
+  backdrop-filter: blur(12px) saturate(140%);
+  -webkit-backdrop-filter: blur(12px) saturate(140%);
+}
+
+html[data-orb-theme='dark'] .orb-sidebar-dropdown-menu {
+  border-color: rgba(255, 255, 255, 0.14);
+  background: #202123;
+  color: #f4f4f5;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.48);
+}
+
+.orb-sidebar-dropdown-menu__item {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 0.35rem;
+  border: 0;
+  border-radius: 0.5rem;
+  background: transparent;
+  padding: 0.45rem 0.65rem;
+  text-align: left;
+  font-size: 0.8125rem;
+  line-height: 1.25;
+  color: inherit;
+  white-space: nowrap;
+}
+
+.orb-sidebar-dropdown-menu__item:hover,
+.orb-sidebar-dropdown-menu button:hover {
+  background: rgba(0, 184, 255, 0.08);
+}
+
+.orb-sidebar-dropdown-menu__danger {
+  color: #b91c1c;
+}
+
+html[data-orb-theme='dark'] .orb-sidebar-dropdown-menu__danger {
+  color: #fca5a5;
+}
+
+[data-orb-sidebar-chat-list] li > .shrink-0 {
+  flex-shrink: 0;
+}
+
+[data-orb-sidebar-chat-list] [data-orb-sidebar-chat-menu] {
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+[data-orb-sidebar-chat-list] li:hover [data-orb-sidebar-chat-menu],
+[data-orb-sidebar-chat-list] li:focus-within [data-orb-sidebar-chat-menu],
+[data-orb-sidebar-chat-list] [data-orb-sidebar-chat-menu][aria-expanded='true'] {
+  opacity: 1;
+}
+
+[data-orb-dictate-safer-draft-placeholder] {
+  border: 1px dashed rgba(99, 102, 241, 0.28);
+  border-radius: 0.75rem;
+  background: rgba(248, 250, 252, 0.92);
+  padding: 0.85rem 1rem;
+  font-size: 0.8125rem;
+  color: var(--orb-muted);
 }

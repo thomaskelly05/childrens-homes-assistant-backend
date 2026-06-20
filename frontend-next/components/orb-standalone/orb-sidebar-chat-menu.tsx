@@ -90,22 +90,22 @@ function OrbSidebarChatMenu({
         <MoreHorizontal className="h-3.5 w-3.5" />
       </button>
       <OrbSidebarFloatingMenu open={open} anchorRef={anchorRef} onClose={() => setOpen(false)}>
-        <button type="button" onClick={() => { onRename(); setOpen(false) }}>
+        <button type="button" role="menuitem" className="orb-sidebar-dropdown-menu__item" onClick={() => { onRename(); setOpen(false) }}>
           Rename
         </button>
-        <button type="button" onClick={() => { onPin(); setOpen(false) }}>
+        <button type="button" role="menuitem" className="orb-sidebar-dropdown-menu__item" onClick={() => { onPin(); setOpen(false) }}>
           {chat.pinned ? 'Unpin' : 'Pin'}
         </button>
-        <button type="button" onClick={() => { onArchive(); setOpen(false) }}>
-          <Archive className="mr-1 inline h-3 w-3" aria-hidden />
+        <button type="button" role="menuitem" className="orb-sidebar-dropdown-menu__item" onClick={() => { onArchive(); setOpen(false) }}>
+          <Archive className="mr-1.5 inline h-3 w-3 shrink-0" aria-hidden />
           Archive
         </button>
         {onMoveToProject ? (
-          <button type="button" onClick={() => { onMoveToProject(); setOpen(false) }}>
+          <button type="button" role="menuitem" className="orb-sidebar-dropdown-menu__item" onClick={() => { onMoveToProject(); setOpen(false) }}>
             Move to project
           </button>
         ) : null}
-        <button type="button" className="orb-sidebar-dropdown-menu__danger" onClick={() => { onDelete(); setOpen(false) }}>
+        <button type="button" role="menuitem" className="orb-sidebar-dropdown-menu__item orb-sidebar-dropdown-menu__danger" onClick={() => { onDelete(); setOpen(false) }}>
           Delete
         </button>
       </OrbSidebarFloatingMenu>
@@ -175,14 +175,15 @@ function OrbSidebarFloatingMenu({
     <>
       <button
         type="button"
-        className="fixed inset-0 z-[9998] cursor-default bg-transparent"
+        className="orb-sidebar-dropdown-menu__backdrop fixed inset-0 z-[9998] cursor-default bg-transparent"
         aria-label="Close menu"
         onClick={onClose}
       />
       <div
-        className="orb-sidebar-dropdown-menu fixed"
+        className="orb-sidebar-dropdown-menu orb-sidebar-dropdown-menu--chat fixed z-[9999] flex flex-col"
         style={{ top: position.top, left: position.left }}
         role="menu"
+        data-orb-sidebar-chat-actions-menu
       >
         {children}
       </div>

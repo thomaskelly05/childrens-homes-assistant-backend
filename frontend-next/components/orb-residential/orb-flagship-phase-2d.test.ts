@@ -14,7 +14,7 @@ function read(relativePath: string) {
 
 describe('ORB Residential Phase 2H flagship UX convergence', () => {
   it('build version marker is phase-3b on shell and visual build', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-3b')
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-3c')
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
     const layout = read('app/orb/layout.tsx')
     assert.match(companion, /data-orb-build-version=\{ORB_BUILD_VISUAL_VERSION\}/)
@@ -175,9 +175,10 @@ describe('ORB Residential Phase 2H flagship UX convergence', () => {
   it('communicate explains its purpose and renders a premium support pack', () => {
     const create = read('components/orb-communicate/orb-communicate-create-flow.tsx')
     const pack = read('components/orb-communicate/orb-communicate-support-pack-view.tsx')
-    assert.match(create, /Create accessible explanations, visual supports and social stories so people can understand, express[\s\S]*themselves and be heard before the record is written\./)
+    assert.match(create, /Describe the communication need/)
+    assert.match(create, /ORB can help create accessible explanations, visual supports, social story sections/)
     assert.match(create, /ORB_COMMUNICATE_CREATOR_HEADLINE/)
-    assert.match(create, /Describe what the person needs to understand, express or prepare for/)
+    assert.match(create, /What does the person need to understand, say, choose or prepare for/)
     assert.match(create, /ORB_COMMUNICATE_PACK_PREVIEW/)
     assert.match(create, /data-orb-communicate-output-type/)
     assert.match(create, /data-orb-communicate-prompt-input/)

@@ -184,6 +184,10 @@ import {
   standaloneGreetingLocalAnswer,
   tryStandaloneGuestLocalAnswer
 } from '@/lib/orb/standalone-guest-response'
+import {
+  buildResidentialGuidedChatFallback,
+  reshapeGenericResidentialChatAnswer
+} from '@/lib/orb/orb-residential-chat-response-guide'
 import { profileInitialsFromName } from '@/lib/orb/orb-profile-initials'
 import { OrbHelpPanel } from '@/components/orb-standalone/orb-help-panel'
 import { OrbVoiceSettingsPanel } from '@/components/orb-standalone/orb-voice-settings-panel'
@@ -1612,7 +1616,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
         mode,
         conversation_id: sessionConversationId,
         history: historyForRequest.slice(0, -1),
-        detail: voiceSettings.answerStyle,
+        detail: voiceOriginatedSend ? voiceSettings.answerStyle : 'concise',
         images: imagePayload.length ? imagePayload : undefined,
         document_text: pendingDocument?.text,
         document_source_id: composerDocumentSourceId || pendingDocument?.sourceId || undefined,
@@ -1706,6 +1710,9 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
         const answer =
           resolvedAnswer.trim() ||
           STANDALONE_ORB_EMPTY_ANSWER_MESSAGE
+        const shapedAnswer = residentialSurface
+          ? reshapeGenericResidentialChatAnswer(answer, trimmed || messageBody, mode)
+          : answer
         const streamIncomplete =
           Boolean(response.error_detail) ||
           isOrbFastOpeningOnlyCompletion(answer, {
@@ -1713,10 +1720,10 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
             streamedPartial: streamPartialRef.current
           })
         const displayAnswer = options?.streamErrorNote
-          ? `${answer}\n\n*(${options.streamErrorNote})*`
+          ? `${shapedAnswer}\n\n*(${options.streamErrorNote})*`
           : streamIncomplete && !options?.streamErrorNote
-            ? `${answer}\n\n*(ORB could not finish the full answer — please try again or ask for the next section.)*`
-            : answer
+            ? `${shapedAnswer}\n\n*(ORB could not finish the full answer — please try again or ask for the next section.)*`
+            : shapedAnswer
         if (lastSendHadImagesRef.current && response.image_understanding_available === false) {
           setImageUnderstandingNote(
             'Image understanding is not available in this environment. ORB answered using your text only.'

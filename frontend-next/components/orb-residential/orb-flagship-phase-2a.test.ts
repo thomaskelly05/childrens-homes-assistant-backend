@@ -52,7 +52,7 @@ describe('ORB Residential Phase 2A identity and station maturity', () => {
   it('communicate hero explains purpose and outputs', () => {
     const flow = read('components/orb-communicate/orb-communicate-create-flow.tsx')
     assert.match(flow, /data-orb-communicate-subtitle/)
-    assert.match(flow, /visual supports and social stories/)
+    assert.match(flow, /social story sections/)
     assert.match(flow, /data-orb-communicate-supporting-line/)
     assert.match(flow, /data-orb-communicate-outputs/)
     assert.match(flow, /Explain that contact has changed/)

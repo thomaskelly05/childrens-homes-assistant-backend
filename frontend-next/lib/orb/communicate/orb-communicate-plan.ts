@@ -24,7 +24,7 @@ const LEADING_QUESTION_PATTERNS = [
 ]
 
 export const ORB_COMMUNICATE_COMPACT_SAFETY =
-  'ORB Communicate supports accessible communication. Adults remain responsible for review, judgement and local safeguarding procedures.'
+  'Visuals support communication and do not imply universal understanding. Adults must personalise and review before use.'
 
 export const ORB_COMMUNICATE_FULL_SAFETY =
   'ORB Communicate supports accessible communication and safer recording. It does not replace professional judgement, safeguarding procedures, SALT, PBS, clinical advice or local policy.'

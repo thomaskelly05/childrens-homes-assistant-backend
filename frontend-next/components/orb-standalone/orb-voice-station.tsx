@@ -1597,8 +1597,8 @@ export function OrbVoiceStation({
             </p>
           ) : null}
 
-          <p className="mt-2 text-center text-[11px] text-[var(--orb-muted)]" data-orb-voice-audio-storage-note>
-            Audio is not stored. Review any transcript before use.
+          <p className="mt-2 text-center text-[11px] text-[var(--orb-muted)]" data-orb-voice-audio-storage-note data-orb-voice-safety-line>
+            Voice is for reflective support. Audio is not stored. Review any transcript before use.
           </p>
 
           {audioPlaybackBlocked ? (

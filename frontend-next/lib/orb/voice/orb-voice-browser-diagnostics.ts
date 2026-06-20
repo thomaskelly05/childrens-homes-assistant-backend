@@ -200,8 +200,8 @@ export const ORB_VOICE_WEB_NO_TRANSCRIPT =
   "I didn't catch that. Try again, use Dictate, or use Chat."
 
 export const ORB_VOICE_WEB_BOUNDARY_COPY = [
-  'Voice uses your microphone while listening.',
-  'Audio is not stored by ORB.',
-  'If voice is unavailable, use Dictate or Chat instead.',
-  'Review any output before use.'
+  'Voice is for reflective support.',
+  'Audio is not stored.',
+  'Review any transcript before use.',
+  'If voice is unavailable, use Dictate or Chat instead.'
 ] as const

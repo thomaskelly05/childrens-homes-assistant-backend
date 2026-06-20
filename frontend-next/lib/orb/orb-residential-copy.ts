@@ -278,7 +278,8 @@ export const ORB_WRITE_STUDIO_REVIEW_CHECKS = [
   'Have I separated observation from interpretation?',
   'Is the adult response clear?',
   'Is follow-up or management oversight needed?',
-  'Does this wording preserve dignity?'
+  'Does this wording preserve dignity?',
+  'Is the record factual, balanced and child-centred?'
 ] as const
 
 /** Action-led empty heading — child-centred, ORB-specific. */

@@ -37,10 +37,12 @@ export const ORB_COMMUNICATE_OUTPUT_TYPES = [
 ] as const
 
 export const ORB_COMMUNICATE_CREATOR_HEADLINE =
-  'Describe what the person needs to understand, express or prepare for. ORB will create an adult-reviewed communication support pack.'
+  'ORB can help create accessible explanations, visual supports, social story sections, staff guidance and recording prompts — for adult review.'
+
+export const ORB_COMMUNICATE_MAIN_HEADING = 'Describe the communication need.'
 
 export const ORB_COMMUNICATE_PROMPT_PLACEHOLDER =
-  'What do you need to explain, support or create?'
+  'What does the person need to understand, say, choose or prepare for?'
 
 export const ORB_COMMUNICATE_PACK_PREVIEW =
   'Describe the communication need. ORB creates an adult-reviewed support pack with consistent accessible visuals that can be personalised around the way each person communicates.'
@@ -146,15 +148,14 @@ export function OrbCommunicateCreateFlow({
           <GlassOrbMark size="sm" pulse aria-hidden />
         </div>
         <div className="min-w-0 flex-1">
-          <h2 className="text-xl font-semibold tracking-tight text-[var(--orb-res-navy)] sm:text-2xl">
-            ORB Communicate
+          <h2 className="text-xl font-semibold tracking-tight text-[var(--orb-res-navy)] sm:text-2xl" data-orb-communicate-main-heading>
+            {ORB_COMMUNICATE_MAIN_HEADING}
           </h2>
           <p className="mt-1.5 text-sm leading-relaxed text-[var(--orb-res-workspace-text)]" data-orb-communicate-subtitle>
-            Create accessible explanations, visual supports and social stories so people can understand, express
-            themselves and be heard before the record is written.
+            {ORB_COMMUNICATE_CREATOR_HEADLINE}
           </p>
           <p className="mt-2 text-xs leading-relaxed text-[var(--orb-res-workspace-muted)]" data-orb-communicate-supporting-line>
-            {ORB_COMMUNICATE_CREATOR_HEADLINE}
+            {ORB_COMMUNICATE_PACK_PREVIEW}
           </p>
         </div>
       </header>
@@ -162,7 +163,7 @@ export function OrbCommunicateCreateFlow({
       <div className="orb-communicate-creator-grid grid gap-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(18rem,0.75fr)]" data-orb-communicate-creator-grid>
       <form className="orb-communicate-create__form orb-station-workspace space-y-3" onSubmit={handleCreate} data-orb-communicate-create-block>
         <p className="text-sm font-medium text-[var(--orb-res-navy)]" data-orb-communicate-creator-prompt>
-          {ORB_COMMUNICATE_PROMPT_PLACEHOLDER}
+          Describe the communication need
         </p>
         <label className="sr-only" htmlFor="orb-communicate-prompt">
           Describe what you need

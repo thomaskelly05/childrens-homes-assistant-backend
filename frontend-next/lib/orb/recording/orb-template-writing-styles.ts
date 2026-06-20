@@ -107,15 +107,6 @@ export const ORB_WRITE_WRITING_STYLE_OPTIONS: OrbTemplateWritingStyle[] = [
   },
   ...ORB_TEMPLATE_WRITING_STYLE_CHIPS.filter((s) => s.id !== 'concise'),
   {
-    id: 'inspection_ready',
-    label: 'inspection-readiness',
-    chipLabel: 'inspection-readiness',
-    description: 'Evidence-focused, impact clear, audit-ready structure',
-    editMode: 'ofsted_ready',
-    instruction: 'Polish for inspection evidence — impact on child clear, structure audit-ready',
-    surfaces: ['orb_write']
-  },
-  {
     id: 'manager_summary',
     label: 'Manager summary',
     chipLabel: 'Manager summary',

@@ -33,9 +33,9 @@ export const ORB_SAVED_RECORD_LABEL = 'saved record'
 export const ORB_DICTATE_TITLE = 'Dictate'
 export const ORB_DICTATE_SUBTITLE =
   'Record, paste or upload what happened. ORB helps turn rough information into a safer draft for adult review.'
-export const ORB_DICTATE_CAPTURE_PROMPT = 'Start with speech, paste notes or upload audio'
+export const ORB_DICTATE_CAPTURE_PROMPT = 'Capture studio'
 export const ORB_DICTATE_CAPTURE_GUIDANCE =
-  'Speak or paste what happened. ORB helps turn rough information into a safer draft for adult review.'
+  'Speak naturally, paste rough notes or upload audio. ORB will help structure what was shared, what was observed and what may need follow-up.'
 export const ORB_DICTATE_REVIEW_HINT =
   'ORB will help you check time, sequence, observable facts, the child\u2019s voice, adult response and follow-up before you finalise.'
 export const ORB_DICTATE_RESPONSIBILITY =

@@ -18,7 +18,7 @@ function read(relativePath: string) {
 
 describe('ORB Residential Phase 3B unified station experience', () => {
   it('build version marker is phase-3b', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-3b')
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-3c')
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
     const layout = read('app/orb/layout.tsx')
     assert.match(companion, /data-orb-build-version=\{ORB_BUILD_VISUAL_VERSION\}/)
@@ -58,12 +58,12 @@ describe('ORB Residential Phase 3B unified station experience', () => {
     assert.match(workspace, /data-orb-dictate-journey="Capture → Transcript → ORB Review → Safer Draft → ORB Write"/)
     assert.match(workspace, /data-orb-dictate-capture-affordances/)
     assert.match(workspace, /data-orb-dictate-paste-notes-control/)
-    assert.match(workspace, /Capture rough information/)
+    assert.match(workspace, /ORB_RESIDENTIAL_DICTATE_COPY|ORB_DICTATE_RESPONSIBILITY/)
+    assert.match(workspace, /data-orb-dictate-capture-guidance/)
     assert.match(brain, /data-orb-dictate-review-sections/)
     assert.match(brain, /ORB_CORE_REVIEW_CHECKS/)
     assert.match(brain, /data-orb-dictate-review-section/)
     assert.match(workspace, /data-orb-dictate-safety-footer/)
-    assert.match(workspace, /ORB_RESIDENTIAL_DICTATE_COPY|ORB_DICTATE_RESPONSIBILITY/)
   })
 
   it('voice main screen renders styles, reasoning modes, carousel and push to talk', () => {
@@ -112,10 +112,7 @@ describe('ORB Residential Phase 3B unified station experience', () => {
   it('communicate renders support-pack creator language and placeholder visual cards', () => {
     const flow = read('components/orb-communicate/orb-communicate-create-flow.tsx')
     assert.match(flow, /ORB_COMMUNICATE_CREATOR_HEADLINE/)
-    assert.match(
-      flow,
-      /Describe what the person needs to understand, express or prepare for/
-    )
+    assert.match(flow, /Describe the communication need/)
     assert.match(flow, /Create support pack/)
     assert.match(flow, /data-orb-communicate-visual-preview/)
     assert.doesNotMatch(flow, /Widgit|Makaton|universally understood/i)
@@ -148,6 +145,7 @@ describe('ORB Residential Phase 3B unified station experience', () => {
     const voice = read('components/orb-standalone/orb-voice-station.tsx')
     assert.match(companion, /data-orb-home-safety-line/)
     assert.match(voice, /Audio is not stored/)
+    assert.match(voice, /Voice is for reflective support/)
   })
 
   it('sidebar powered-by tagline uses shorter IndiCare label', () => {
