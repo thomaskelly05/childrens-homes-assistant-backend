@@ -26,7 +26,7 @@ describe('ORB Residential desktop polish', () => {
     assert.doesNotMatch(sidebar, /data-orb-sidebar-section="library"/)
     assert.doesNotMatch(sidebar, /data-orb-sidebar-section="profiles"/)
     assert.match(sidebar, /Recent chats/)
-    assert.match(layout, /orb-chat-sidebar/)
+    assert.match(layout, /orb-sidebar/)
     assert.match(layout, /lg:static/)
   })
 

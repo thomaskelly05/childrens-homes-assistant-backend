@@ -46,14 +46,16 @@ describe('ORB Residential desktop convergence sprint', () => {
     assert.match(liquid, /\.orb-composer-plus-dropdown\.orb-liquid-panel/)
   })
 
-  it('desktop shell and settings use liquid glass tokens', () => {
+  it('desktop shell and settings use canonical product modal tokens', () => {
     const settings = read('components/orb-standalone/orb-standalone-settings-panel.tsx')
     const shell = read('components/orb/orb-shell.tsx')
+    const shellCss = read('app/orb/orb-residential-shell.css')
     const desktop = read('app/orb/orb-desktop.css')
 
     assert.match(shell, /OrbCareCompanion/)
-    assert.match(settings, /orb-liquid-panel/)
+    assert.match(settings, /data-orb-modal="product"/)
     assert.match(settings, /data-orb-settings-scroll/)
+    assert.match(shellCss, /\[data-orb-modal='product'\]/)
     assert.match(desktop, /\[data-orb-settings-scroll\]/)
     assert.match(desktop, /ORB Residential — desktop calm shell/)
   })
@@ -66,7 +68,7 @@ describe('ORB Residential desktop convergence sprint', () => {
     assert.match(presence, /orb-liquid-orb/)
     assert.match(desktop, /\[data-orb-residential-empty\][\s\S]*--orb-presence-size:\s*clamp\(9\.5rem/)
     assert.match(desktop, /desktop premium convergence pass/)
-    assert.match(companion, /data-orb-home-v2-starters/)
+    assert.match(companion, /data-orb-workspace-starters/)
     assert.match(companion, /data-orb-starter-expanded-groups/)
     assert.doesNotMatch(companion, /orb-presence--hero[\s\S]*mobile-only/)
   })
@@ -79,7 +81,7 @@ describe('ORB Residential desktop convergence sprint', () => {
     assert.match(companion, /data-orb-residential-empty/)
     assert.match(companion, /data-orb-empty-heading-desktop/)
     assert.match(companion, /ORB_RESIDENTIAL_BRAND_EMOTIONAL_LINE/)
-    assert.match(desktop, /\[data-orb-starter-primary-chips\]/)
+    assert.match(companion, /data-orb-workspace-starters/)
     assert.match(composer, /orb-liquid-composer/)
     assert.doesNotMatch(composer, /data-orb-privacy-guidance-trigger/)
     assert.match(composer, /data-testid="orb-standalone-composer"/)

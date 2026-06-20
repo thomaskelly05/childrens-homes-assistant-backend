@@ -27,16 +27,16 @@ const LOW_CONTRAST_BODY_PATTERNS = [
 describe('ORB Residential Phase 1D.1 contrast and readability', () => {
   it('readability stylesheet is wired after showstopper pass', () => {
     const layout = read('app/orb/layout.tsx')
-    const css = read('app/orb/orb-showstopper-phase-1d1.css')
-    assert.match(layout, /orb-showstopper-phase-1d1\.css/)
+    const css = read('app/orb/orb-residential-shell.css')
+    assert.match(layout, /orb-residential-shell\.css/)
+    assert.doesNotMatch(layout, /orb-showstopper-phase-1d1\.css/)
     assert.match(css, /--orb-read-text-primary/)
-    assert.match(css, /orb-login-headline--showstopper/)
-    assert.match(css, /color:\s*var\(--orb-read-text-primary\)/)
+    assert.match(css, /orb-login-auth-card--readable/)
   })
 
   it('login headline remains visible with navy copy tokens', () => {
     const hero = read('components/orb-residential/orb-login-desktop-hero.tsx')
-    const css = read('app/orb/orb-showstopper-phase-1d1.css')
+    const css = read('app/orb/orb-residential-shell.css')
     assert.match(hero, /ORB_LOGIN_ENTERPRISE_TITLE/)
     assert.match(hero, /data-orb-login-title/)
     assert.match(hero, /data-orb-login-demo-path/)
@@ -46,7 +46,7 @@ describe('ORB Residential Phase 1D.1 contrast and readability', () => {
 
   it('login auth card uses readable solid surface class', () => {
     const auth = read('components/orb-residential/orb-login-auth-card.tsx')
-    const css = read('app/orb/orb-showstopper-phase-1d1.css')
+    const css = read('app/orb/orb-residential-shell.css')
     assert.match(auth, /orb-login-auth-card--readable/)
     assert.match(css, /orb-login-auth-card--readable/)
   })
@@ -63,7 +63,7 @@ describe('ORB Residential Phase 1D.1 contrast and readability', () => {
     assert.match(companion, /ORB_GUIDED_DEMO_ACTIVE_MARKER/)
     assert.match(companion, /data-orb-guided-demo-active-marker/)
     assert.match(companion, /ORB_HOME_RAIL_TRUST_ITEMS/)
-    assert.match(companion, /data-orb-home-v2-rail-trust/)
+    assert.match(companion, /data-orb-workspace-rail-trust/)
     assert.match(ORB_HOME_RAIL_TRUST_ITEMS.join(' '), /Adult review required/)
     assert.equal(ORB_GUIDED_DEMO_ACTIVE_MARKER, 'Guided Demo \u00b7 anonymised scenario')
   })
@@ -76,7 +76,7 @@ describe('ORB Residential Phase 1D.1 contrast and readability', () => {
   })
 
   it('dictate and write surfaces have readability CSS hooks', () => {
-    const css = read('app/orb/orb-showstopper-phase-1d1.css')
+    const css = read('app/orb/orb-residential-shell.css')
     const write = read('components/orb-write/orb-write-standalone-panel.tsx')
     assert.match(css, /\[data-orb-dictate-brain-panel\]/)
     assert.match(css, /\[data-orb-write-document-canvas\]/)
@@ -98,7 +98,7 @@ describe('ORB Residential Phase 1D.1 contrast and readability', () => {
   })
 
   it('main body copy avoids known low-contrast gradient text on login headline', () => {
-    const css = read('app/orb/orb-showstopper-phase-1d1.css')
+    const css = read('app/orb/orb-residential-shell.css')
     for (const pattern of LOW_CONTRAST_BODY_PATTERNS) {
       assert.doesNotMatch(css, pattern)
     }

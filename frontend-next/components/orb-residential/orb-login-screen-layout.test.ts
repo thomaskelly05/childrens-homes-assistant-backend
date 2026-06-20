@@ -17,9 +17,7 @@ describe('ORB premium login screen layout', () => {
     const css = read('app/orb/orb-login.css')
 
     assert.match(login, /data-orb-login-two-column/)
-    assert.match(login, /orb-login-flagship-shell/)
-    assert.match(login, /orb-login-full-viewport-shell/)
-    assert.match(login, /orb-login-enterprise/)
+    assert.match(login, /orb-login-shell/)
     assert.match(login, /lg:grid-cols-\[58%_42%\]/)
     assert.match(login, /OrbLoginDesktopHero/)
     assert.match(hero, /data-orb-login-hero-top-aligned/)
@@ -44,7 +42,7 @@ describe('ORB premium login screen layout', () => {
     const css = read('app/orb/orb-login.css')
 
     const sphereIdx = hero.indexOf('data-orb-login-hero-sphere')
-    const brandIdx = hero.indexOf('data-orb-login-brand')
+    const brandIdx = hero.indexOf('data-orb-login-hero-brand')
     const titleIdx = hero.indexOf('data-orb-login-title')
 
     assert.ok(sphereIdx < brandIdx, 'ORB visual should precede product name')

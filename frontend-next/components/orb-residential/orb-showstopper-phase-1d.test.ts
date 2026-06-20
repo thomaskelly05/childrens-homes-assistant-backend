@@ -37,9 +37,9 @@ describe('ORB Residential Phase 1D showstopper UI', () => {
   it('home empty state exposes trust rail and workspace grid', () => {
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
     assert.match(companion, /ORB_HOME_RAIL_TRUST_ITEMS/)
-    assert.match(companion, /data-orb-home-v2-rail-trust/)
-    assert.match(companion, /data-orb-full-viewport-home-grid/)
-    assert.match(companion, /data-orb-full-viewport-home-rail/)
+    assert.match(companion, /data-orb-workspace-rail-trust/)
+    assert.match(companion, /data-orb-workspace-home-grid/)
+    assert.match(companion, /data-orb-workspace-home-rail/)
     assert.match(ORB_HOME_RAIL_TRUST_ITEMS.join(' '), /Adult review required/)
     assert.match(ORB_HOME_RAIL_TRUST_ITEMS.join(' '), /Child-centred recording/)
   })
@@ -80,7 +80,8 @@ describe('ORB Residential Phase 1D showstopper UI', () => {
 
   it('showstopper stylesheet is wired into orb layout', () => {
     const layout = read('app/orb/layout.tsx')
-    assert.match(layout, /orb-showstopper-phase-1d\.css/)
+    assert.match(layout, /orb-residential-shell\.css/)
+    assert.doesNotMatch(layout, /orb-showstopper-phase-1d\.css/)
   })
 
   it('primary nav labels and safety copy remain unchanged', () => {

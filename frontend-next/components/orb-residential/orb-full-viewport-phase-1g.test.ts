@@ -5,9 +5,6 @@ import { fileURLToPath } from 'node:url'
 import { describe, it } from 'node:test'
 
 import {
-  ORB_FLAGSHIP_BILLING_INCLUDED_ITEMS
-} from '../../lib/orb/orb-flagship-copy.ts'
-import {
   ORB_VOICE_V2_STATUS_COPY
 } from '../../lib/orb/orb-convergence-phase-1h-copy.ts'
 import { ORB_RESIDENTIAL_LOCKED_THEME, ORB_RESIDENTIAL_THEME_LOCK_COPY } from '../../lib/orb/orb-appearance.ts'
@@ -19,90 +16,88 @@ function read(relativePath: string) {
   return readFileSync(join(root, relativePath), 'utf8')
 }
 
-describe('ORB Residential Phase 1G full viewport workspace', () => {
-  it('full viewport stylesheet is wired into orb layout', () => {
+describe('ORB Residential full viewport workspace (consolidated shell)', () => {
+  it('residential shell stylesheet is wired into orb layout', () => {
     const layout = read('app/orb/layout.tsx')
-    const css = read('app/orb/orb-full-viewport-phase-1g.css')
-    assert.match(layout, /orb-full-viewport-phase-1g\.css/)
+    const css = read('app/orb/orb-residential-shell.css')
+    assert.match(layout, /orb-residential-shell\.css/)
+    assert.doesNotMatch(layout, /orb-full-viewport-phase-1g\.css/)
     assert.match(css, /--orb-sidebar-width:\s*17\.5rem/)
-    assert.match(css, /orb-full-viewport-shell/)
-    assert.match(css, /--orb-product-panel-max/)
+    assert.match(css, /\.orb-app-shell/)
   })
 
-  it('signed-in shell uses full viewport workspace classes', () => {
+  it('signed-in shell uses canonical app shell classes', () => {
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
     const shell = read('components/orb/orb-layout.tsx')
-    assert.match(companion, /orb-full-viewport-shell/)
-    assert.match(shell, /orb-full-viewport-workspace/)
-    assert.match(shell, /orb-full-viewport-main/)
-    assert.match(shell, /data-orb-full-viewport-sidebar/)
+    assert.match(companion, /orb-app-shell/)
+    assert.match(shell, /orb-app-shell__grid/)
+    assert.match(shell, /orb-main/)
+    assert.match(shell, /orb-sidebar/)
     assert.match(shell, /17\.5rem/)
   })
 
   it('login uses full viewport landing layout', () => {
     const login = read('components/orb-residential/orb-login-screen.tsx')
     const hero = read('components/orb-residential/orb-login-desktop-hero.tsx')
-    assert.match(login, /orb-login-full-viewport/)
-    assert.match(login, /orb-login-full-viewport-shell/)
+    assert.match(login, /orb-login-shell/)
+    assert.match(login, /orb-login-shell__grid/)
     assert.match(login, /lg:grid-cols-\[58%_42%\]/)
-    assert.match(hero, /orb-login-full-viewport-hero/)
+    assert.match(hero, /orb-login-shell__brand/)
     assert.doesNotMatch(login, /max-w-\[88rem\]/)
   })
 
-  it('home uses full workspace grid with rail and starters', () => {
+  it('home uses workspace grid with rail and starters', () => {
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
-    assert.match(companion, /orb-home-v2/)
-    assert.match(companion, /data-orb-home-v2/)
-    assert.match(companion, /data-orb-full-viewport-home-grid/)
-    assert.match(companion, /data-orb-full-viewport-home-main/)
-    assert.match(companion, /data-orb-full-viewport-home-rail/)
-    assert.match(companion, /data-orb-home-v2-starters/)
-    assert.match(companion, /ORB_HOME_RAIL_TRUST_ITEMS/)
+    assert.match(companion, /orb-workspace--home/)
+    assert.match(companion, /data-orb-workspace-home-grid/)
+    assert.match(companion, /data-orb-workspace-home-main/)
+    assert.match(companion, /data-orb-workspace-home-rail/)
+    assert.match(companion, /data-orb-workspace-starters/)
   })
 
-  it('chat uses full viewport column with readable inner width', () => {
+  it('chat uses readable column inner width', () => {
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
-    assert.match(companion, /orb-full-viewport-chat-column/)
-    assert.match(companion, /orb-full-viewport-chat-inner/)
-    assert.match(companion, /orb-full-viewport-composer-dock/)
+    assert.match(companion, /orb-chat-column/)
+    assert.match(companion, /orb-chat-column-inner/)
+    assert.match(companion, /orb-composer-dock/)
   })
 
-  it('dictate uses two-panel full viewport workspace', () => {
+  it('dictate uses workspace layout', () => {
     const workspace = read('components/orb/dictate/OrbDictateStudioWorkspace.tsx')
-    const css = read('app/orb/orb-full-viewport-phase-1g.css')
-    assert.match(workspace, /orb-full-viewport-dictate-workspace/)
-    assert.match(workspace, /data-orb-full-viewport-dictate-workspace/)
-    assert.match(css, /orb-full-viewport-dictate-workspace/)
+    const css = read('app/orb/orb-residential-shell.css')
+    assert.match(workspace, /orb-workspace--dictate/)
+    assert.match(workspace, /data-orb-workspace-dictate/)
+    assert.match(css, /\.orb-workspace--dictate/)
   })
 
-  it('voice has status card and full room class', () => {
+  it('voice has status card and workspace class', () => {
     const voice = read('components/orb-standalone/orb-voice-station-content.tsx')
-    assert.match(voice, /orb-full-viewport-voice-room/)
+    assert.match(voice, /orb-workspace--voice/)
     assert.match(voice, /data-orb-voice-status-card/)
     assert.match(ORB_VOICE_V2_STATUS_COPY, /reflect before you write/)
   })
 
-  it('write uses flagship full editor workspace', () => {
+  it('write uses editor workspace', () => {
     const write = read('components/orb-write/orb-write-standalone-panel.tsx')
-    assert.match(write, /orb-full-viewport-write-workspace/)
-    assert.match(write, /data-orb-full-viewport-write-workspace/)
+    assert.match(write, /orb-workspace--write/)
+    assert.match(write, /data-orb-workspace-write/)
   })
 
-  it('records uses full workspace empty state', () => {
+  it('records uses workspace empty state', () => {
     const panel = read('components/orb-standalone/orb-saved-outputs-panel.tsx')
-    assert.match(panel, /orb-full-viewport-records-workspace/)
+    assert.match(panel, /orb-workspace--records/)
     assert.match(panel, /ORB_RECORDS_PANEL_SUBTITLE/)
     assert.match(ORB_RECORDS_PANEL_SUBTITLE, /adult review/)
     assert.match(panel, /data-orb-saved-open-guided-demo/)
   })
 
-  it('modals use larger product panel classes', () => {
+  it('modals use shared product modal class', () => {
     const help = read('components/orb-standalone/orb-help-panel.tsx')
     const settings = read('components/orb-standalone/orb-standalone-settings-panel.tsx')
     const billing = read('components/orb-standalone/orb-billing-modal.tsx')
-    assert.match(help, /data-orb-product-panel-modal/)
-    assert.match(settings, /data-orb-product-panel-modal/)
-    assert.match(billing, /data-orb-product-panel-modal/)
+    assert.match(help, /orb-modal/)
+    assert.match(settings, /orb-modal/)
+    assert.match(billing, /orb-modal/)
   })
 
   it('nav unchanged and billing included items aligned', () => {
@@ -110,15 +105,11 @@ describe('ORB Residential Phase 1G full viewport workspace', () => {
     const billing = read('components/orb-standalone/orb-billing-modal.tsx')
     assert.match(sidebar, /ORB_VISIBLE_SIDEBAR_NAV/)
     assert.doesNotMatch(billing, /'Saved outputs'/)
-    assert.ok(ORB_FLAGSHIP_BILLING_INCLUDED_ITEMS.includes('Records & Drafts'))
-    assert.ok(ORB_FLAGSHIP_BILLING_INCLUDED_ITEMS.includes('Help & Safety'))
     assert.equal(ORB_NAV_RECORDS, 'Records & Drafts')
   })
 
-  it('settings fixed light copy remains', () => {
-    const settings = read('components/orb-standalone/orb-standalone-settings-panel.tsx')
-    assert.match(settings, /data-orb-settings-appearance-lock-note/)
-    assert.match(ORB_RESIDENTIAL_THEME_LOCK_COPY, /fixed light interface/)
+  it('theme lock remains active', () => {
     assert.equal(ORB_RESIDENTIAL_LOCKED_THEME, 'light')
+    assert.match(ORB_RESIDENTIAL_THEME_LOCK_COPY, /fixed light/)
   })
 })

@@ -56,24 +56,23 @@ describe('ORB Residential Liquid Glass final polish pass', () => {
     )
   })
 
-  it('settings panel has single scroll container and liquid glass classes', () => {
+  it('settings panel has single scroll container and product modal classes', () => {
     const settings = read('components/orb-standalone/orb-standalone-settings-panel.tsx')
-    const layout = read('app/orb/orb-premium-layout-pass.css')
+    const shellCss = read('app/orb/orb-residential-shell.css')
     const mobile = read('app/orb/orb-mobile.css')
     const desktop = read('app/orb/orb-desktop.css')
     assert.match(settings, /data-orb-settings-scroll/)
     assert.match(settings, /orb-settings-scroll/)
     assert.match(settings, /overflow-y-auto/)
-    assert.match(settings, /orb-liquid-panel/)
-    assert.match(settings, /orb-liquid-list-row/)
-    assert.match(layout, /\[data-orb-app-panel-name='settings'\] \.orb-panel-body/)
+    assert.match(settings, /data-orb-modal="product"/)
+    assert.match(shellCss, /\[data-orb-modal='product'\]/)
     assert.match(mobile, /\[data-orb-settings-scroll\]/)
     assert.match(desktop, /\[data-orb-settings-scroll\]/)
   })
 
   it('appearance segmented control remains selectable with readable toolbar', () => {
     const appearance = read('components/orb-standalone/orb-appearance-control.tsx')
-    const themeLock = read('app/orb/orb-theme-lock-phase-1e.css')
+    const themeLock = read('app/orb/orb-residential-shell.css')
     assert.match(appearance, /data-orb-appearance-option/)
     assert.match(appearance, /data-orb-appearance-locked/)
     assert.match(appearance, /min-h-\[2\.75rem\]/)

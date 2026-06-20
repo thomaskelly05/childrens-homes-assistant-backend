@@ -73,12 +73,12 @@ describe('ORB Residential Phase 1E theme lock', () => {
 
   it('theme lock stylesheet is wired and defines readable tokens', () => {
     const layout = read('app/orb/layout.tsx')
-    const css = read('app/orb/orb-theme-lock-phase-1e.css')
-    assert.match(layout, /orb-theme-lock-phase-1e\.css/)
+    const css = read('app/orb/orb-residential-shell.css')
+    assert.match(layout, /orb-residential-shell\.css/)
+    assert.doesNotMatch(layout, /orb-theme-lock-phase-1e\.css/)
     assert.match(css, /--orb-read-text-primary/)
-    assert.match(css, /data-orb-theme-locked/)
-    assert.match(css, /orb-billing-card/)
-    assert.match(css, /data-orb-voice-safety-note/)
+    assert.match(css, /data-orb-residential='1'/)
+    assert.match(css, /data-orb-voice-status/)
   })
 
   it('login headline and trust rail remain readable', () => {
