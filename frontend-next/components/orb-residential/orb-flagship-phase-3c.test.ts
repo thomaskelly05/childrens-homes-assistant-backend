@@ -17,7 +17,7 @@ function read(relativePath: string) {
 
 describe('ORB Residential Phase 3C live product repair', () => {
   it('build version marker is phase-3c', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-3k-chatgpt-home-message-polish')
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-3l-dictate-capture-workflow')
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
     const layout = read('app/orb/layout.tsx')
     assert.match(companion, /data-orb-build-version=\{ORB_BUILD_VISUAL_VERSION\}/)
@@ -53,21 +53,20 @@ describe('ORB Residential Phase 3C live product repair', () => {
     assert.match(router, /requested_action: 'residential_guided_chat'/)
   })
 
-  it('dictate capture studio is primary with journey, choices and safer draft placeholder', () => {
+  it('dictate capture studio is primary with journey, choices and safer draft stage', () => {
     const workspace = read('components/orb/dictate/OrbDictateStudioWorkspace.tsx')
-    const topBar = read('components/orb/dictate/OrbDictateTopBar.tsx')
-    assert.match(workspace, /data-orb-dictate-journey="Capture → Transcript → ORB Review → Safer Draft → ORB Write"/)
-    assert.match(workspace, /data-orb-dictate-capture-affordances/)
-    assert.match(workspace, /data-orb-dictate-paste-notes-control/)
-    assert.match(workspace, /data-orb-dictate-safer-draft-placeholder/)
-    assert.match(workspace, /Your safer draft will appear here after ORB Review/)
-    assert.match(topBar, /Start recording/)
-    assert.match(topBar, /Review with ORB/)
-    assert.match(topBar, /Create safer draft/)
-    assert.match(topBar, /Send to ORB Write/)
-    assert.doesNotMatch(topBar, /Create final draft/)
-    assert.match(workspace, /ORB_DICTATE_RESPONSIBILITY|ORB_RESIDENTIAL_DICTATE_COPY/)
-    assert.match(ORB_DICTATE_CAPTURE_GUIDANCE, /Speak, paste or upload what happened/)
+    const draft = read('components/orb/dictate/OrbDictateSaferDraftPanel.tsx')
+    assert.match(workspace, /data-orb-dictate-journey-step="safer-draft"/)
+    assert.match(workspace, /data-orb-dictate-capture-methods/)
+    assert.match(workspace, /data-orb-dictate-paste-notes/)
+    assert.match(workspace, /OrbDictateSaferDraftPanel/)
+    assert.match(draft, /ORB_DICTATE_DRAFT_REVIEW_LABEL/)
+    assert.match(workspace, /data-orb-dictate-top-record/)
+    assert.match(workspace, /ORB_DICTATE_REVIEW_WITH_ORB/)
+    assert.match(workspace, /Create safer draft/)
+    assert.match(draft, /ORB_DICTATE_ACTION_OPEN_WRITE/)
+    assert.match(workspace, /ORB_DICTATE_CAPTURE_BOUNDARY|ORB_DICTATE_ADULT_RESPONSIBILITY/)
+    assert.match(ORB_DICTATE_CAPTURE_GUIDANCE, /Start with what happened/)
   })
 
   it('voice shows style and reasoning carousels on main screen with push to talk', () => {

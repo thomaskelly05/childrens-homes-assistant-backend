@@ -104,10 +104,10 @@ describe('ORB Dictate studio premium polish', () => {
     assert.doesNotMatch(workspace, /child.profile|childProfile|ChildProfile/)
   })
 
-  it('suggested outputs action rail appears when transcript exists', () => {
+  it('safer draft output actions appear when draft exists', () => {
     const workspace = readComponent('components/orb/dictate/OrbDictateStudioWorkspace.tsx')
-    const outputs = readComponent('components/orb/dictate/OrbDictateSuggestedOutputs.tsx')
-    assert.match(workspace, /data-orb-dictate-action-rail/)
-    assert.match(outputs, /data-orb-suggested-outputs-variant/)
+    const draft = readComponent('components/orb/dictate/OrbDictateSaferDraftPanel.tsx')
+    assert.match(workspace, /OrbDictateSaferDraftPanel/)
+    assert.match(draft, /data-orb-dictate-output-actions/)
   })
 })

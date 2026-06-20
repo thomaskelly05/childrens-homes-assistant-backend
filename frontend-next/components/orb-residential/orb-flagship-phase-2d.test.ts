@@ -14,7 +14,7 @@ function read(relativePath: string) {
 
 describe('ORB Residential Phase 2H flagship UX convergence', () => {
   it('build version marker is phase-3b on shell and visual build', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-3k-chatgpt-home-message-polish')
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-3l-dictate-capture-workflow')
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
     const layout = read('app/orb/layout.tsx')
     assert.match(companion, /data-orb-build-version=\{ORB_BUILD_VISUAL_VERSION\}/)
@@ -102,26 +102,20 @@ describe('ORB Residential Phase 2H flagship UX convergence', () => {
 
   it('dictate flagship structure uses studio header, capture canvas and ORB Review without developer progression', () => {
     const workspace = read('components/orb/dictate/OrbDictateStudioWorkspace.tsx')
-    const transcript = read('components/orb/dictate/OrbTranscriptPanel.tsx')
-    const topBar = read('components/orb/dictate/OrbDictateTopBar.tsx')
-    assert.match(workspace, /data-orb-dictate-journey="Capture → Transcript → ORB Review → Safer Draft → ORB Write"/)
-    assert.match(workspace, /data-orb-dictate-capture-affordances/)
+    assert.match(workspace, /data-orb-dictate-journey-step="capture"/)
+    assert.match(workspace, /data-orb-dictate-capture-methods/)
     assert.match(workspace, /data-orb-dictate-capture-panel/)
     assert.match(workspace, /data-orb-dictate-review-panel/)
     assert.match(workspace, /data-orb-dictate-designed-workflow/)
-    for (const label of ['Capture', 'Transcript', 'ORB Review', 'Output']) {
+    for (const label of ['Capture', 'ORB Review', 'Safer Draft']) {
       assert.match(workspace, new RegExp(label))
     }
     assert.match(workspace, /data-orb-dictate-stage-interface/)
-    assert.match(workspace, /data-orb-dictate-paste-notes-control/)
-    assert.match(workspace, /data-orb-dictate-output-stage/)
+    assert.match(workspace, /data-orb-dictate-paste-notes/)
+    assert.match(workspace, /OrbDictateSaferDraftPanel/)
     assert.match(workspace, /Create safer draft/)
-    assert.match(topBar, /Create safer draft/)
-    assert.match(topBar, /Send to ORB Write/)
-    assert.match(transcript, /data-orb-dictate-capture-zone/)
-    assert.match(topBar, /data-orb-dictate-capture-controls/)
-    assert.match(topBar, /OrbIcon/)
-    assert.match(read('lib/orb/orb-user-facing-names.ts'), /Record, paste or upload what happened\. ORB helps turn rough information into a safer draft for adult review\./)
+    assert.match(read('components/orb/dictate/OrbDictateSaferDraftPanel.tsx'), /ORB_DICTATE_ACTION_OPEN_WRITE/)
+    assert.match(read('lib/orb/orb-user-facing-names.ts'), /Turn rough speech, notes or uploads into safer adult-reviewed records\./)
     assert.match(read('components/orb/dictate/OrbDictateBrainPanel.tsx'), /What may be missing/)
   })
 

@@ -163,7 +163,8 @@ export function OrbDictateBrainPanel({
   studioTemplateId,
   recordTypeId,
   onAnalyse,
-  hasTranscript
+  hasTranscript,
+  embedded = false
 }: {
   analysis: OrbDictateBrainAnalysis | null
   loading?: boolean
@@ -172,6 +173,7 @@ export function OrbDictateBrainPanel({
   recordTypeId?: OrbRecordingRecordTypeId | string
   onAnalyse?: () => void
   hasTranscript?: boolean
+  embedded?: boolean
 }) {
   const [collapsed, setCollapsed] = useState(false)
 
@@ -182,7 +184,7 @@ export function OrbDictateBrainPanel({
       data-orb-dictate-side-panel
       data-orb-dictate-brain-collapsed={collapsed ? 'true' : 'false'}
     >
-      <header className="flex shrink-0 items-center gap-2 border-b border-[var(--orb-line)]/25 px-3 py-2">
+      <header className={`flex shrink-0 items-center gap-2 ${embedded ? 'hidden' : 'border-b border-[var(--orb-line)]/25 px-3 py-2'}`}>
         <Sparkles className="h-4 w-4 shrink-0 text-[var(--orb-primary)]" aria-hidden />
         <div className="min-w-0 flex-1">
           <h3 className="truncate text-sm font-semibold text-[var(--orb-foreground)]">ORB Review</h3>

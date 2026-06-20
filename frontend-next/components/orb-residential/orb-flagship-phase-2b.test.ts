@@ -84,11 +84,10 @@ describe('ORB Residential Phase 2B repair pass', () => {
 
   it('dictate has hero strip and capture review flow', () => {
     const workspace = read('components/orb/dictate/OrbDictateStudioWorkspace.tsx')
-    const topBar = read('components/orb/dictate/OrbDictateTopBar.tsx')
-    assert.match(workspace, /data-orb-dictate-hero-strip/)
+    assert.match(workspace, /data-orb-dictate-capture-hero/)
     assert.match(workspace, /data-orb-dictate-capture-panel/)
     assert.match(workspace, /data-orb-dictate-review-panel/)
-    assert.match(topBar, /Create final draft|Review with ORB/)
+    assert.match(workspace, /ORB_DICTATE_REVIEW_WITH_ORB/)
   })
 
   it('ORB Write uses care studio framing and grouped toolbar', () => {

@@ -67,10 +67,10 @@ describe('ORB Residential Phase 1F flagship UI', () => {
     const workspace = read('components/orb/dictate/OrbDictateStudioWorkspace.tsx')
     assert.match(workspace, /orb-workspace--dictate/)
     assert.match(workspace, /data-orb-dictate-title/)
-    assert.match(workspace, /ORB_DICTATE_TITLE/)
-    assert.match(workspace, /ORB_DICTATE_SUBTITLE/)
+    assert.match(workspace, /ORB_DICTATE_CAPTURE_HEADLINE/)
+    assert.match(workspace, /ORB_DICTATE_CAPTURE_SUBTITLE/)
     assert.equal(ORB_DICTATE_TITLE, 'Dictate')
-    assert.match(ORB_DICTATE_SUBTITLE, /Record, paste or upload what happened/)
+    assert.match(ORB_DICTATE_SUBTITLE, /Turn rough speech, notes or uploads/)
   })
 
   it('voice has reflective support status card', () => {

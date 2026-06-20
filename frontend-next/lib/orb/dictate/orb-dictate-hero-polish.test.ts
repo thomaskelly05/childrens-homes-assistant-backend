@@ -40,7 +40,7 @@ describe('ORB Dictate hero polish', () => {
     assert.match(types, /ORB_DICTATE_PRODUCT_SUBTITLE/)
     assert.match(topBar, /data-orb-dictate-title/)
     assert.match(station, /data-orb-dictate-subtitle/)
-    assert.match(workspace, /OrbTranscriptPanel/)
+    assert.match(workspace, /OrbDictateReviewChecklist/)
     assert.match(workspace, /OrbDictateBrainPanel/)
     assert.match(topBar, /OrbDictateTemplateSelector/)
   })

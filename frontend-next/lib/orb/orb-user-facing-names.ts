@@ -32,14 +32,14 @@ export const ORB_SAVED_RECORD_LABEL = 'saved record'
 /** Dictate — single visible product name (no Magic Notes). */
 export const ORB_DICTATE_TITLE = 'Dictate'
 export const ORB_DICTATE_SUBTITLE =
-  'Record, paste or upload what happened. ORB helps turn rough information into a safer draft for adult review.'
-export const ORB_DICTATE_CAPTURE_PROMPT = 'Capture rough information'
+  'Turn rough speech, notes or uploads into safer adult-reviewed records.'
+export const ORB_DICTATE_CAPTURE_PROMPT = 'Speak, paste or upload what happened'
 export const ORB_DICTATE_CAPTURE_GUIDANCE =
-  'Speak, paste or upload what happened. ORB helps structure what was shared, what was observed and what may need follow-up.'
+  'Start with what happened. ORB will help structure the record, check what may be missing and keep the child\u2019s experience central.'
 export const ORB_DICTATE_REVIEW_HINT =
-  'ORB will help you check time, sequence, observable facts, the child\u2019s voice, adult response and follow-up before you finalise.'
+  'Before drafting, ORB checks whether the record has enough detail to be safe, factual and child-centred.'
 export const ORB_DICTATE_RESPONSIBILITY =
-  'Confirm names, roles, sequence and accuracy before using any draft. ORB does not verify identity or replace adult review.'
+  'Generated drafts must be reviewed by an adult before use. Follow your home\u2019s safeguarding and recording policy.'
 
 /** Chat home — child-centred empty state (Phase 3H calm welcome). */
 export const ORB_CHAT_EMPTY_HEADING = 'What do you need help thinking through?'

@@ -52,7 +52,7 @@ describe('ORB Residential minimal canvas (Phase 1L)', () => {
 
   it('dictate keeps capture and review without workflow strip clutter', () => {
     const workspace = read('components/orb/dictate/OrbDictateStudioWorkspace.tsx')
-    assert.match(workspace, /OrbTranscriptPanel/)
+    assert.match(workspace, /OrbDictateReviewChecklist/)
     assert.match(workspace, /OrbDictateBrainPanel/)
     assert.doesNotMatch(workspace, /OrbWorkflowStrip/)
     assert.doesNotMatch(workspace, /OrbDictatePrivacyStrip/)

@@ -58,10 +58,9 @@ describe('ORB Residential personality pass (Phase 1M)', () => {
   })
 
   it('dictate keeps one primary start recording action', () => {
-    const topBar = read('components/orb/dictate/OrbDictateTopBar.tsx')
     const workspace = read('components/orb/dictate/OrbDictateStudioWorkspace.tsx')
-    assert.match(topBar, /Start recording/)
-    assert.match(workspace, /OrbDictateTopBar/)
+    assert.match(workspace, /data-orb-dictate-top-record/)
+    assert.match(workspace, /Start recording|aria-label="Start recording"/)
     assert.doesNotMatch(workspace, /OrbWorkflowStrip/)
   })
 

@@ -50,7 +50,8 @@ describe('ORB Premium Studio Layouts', () => {
     const dictate = read('components/orb/dictate/OrbDictateStudioWorkspace.tsx')
     assert.match(dictate, /OrbStudioShell/)
     assert.match(dictate, /data-orb-dictate-studio-workspace/)
-    assert.match(dictate, /data-orb-dictate-action-rail/)
+    assert.match(dictate, /data-orb-dictate-capture-workflow/)
+    assert.match(dictate, /OrbDictateSaferDraftPanel/)
   })
 
   it('Documents knowledge library uses studio hero', () => {

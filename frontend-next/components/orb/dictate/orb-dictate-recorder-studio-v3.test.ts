@@ -22,19 +22,18 @@ describe('ORB Dictate recorder studio v3', () => {
 
   it('transcript and ORB analysis panels render in studio workspace', () => {
     const workspace = read('components/orb/dictate/OrbDictateStudioWorkspace.tsx')
-    const transcript = read('components/orb/dictate/OrbTranscriptPanel.tsx')
     const brain = read('components/orb/dictate/OrbDictateBrainPanel.tsx')
-    assert.match(workspace, /OrbTranscriptPanel/)
+    assert.match(workspace, /OrbDictateReviewChecklist/)
     assert.match(workspace, /OrbDictateBrainPanel/)
-    assert.match(transcript, /data-orb-transcript-panel/)
+    assert.match(workspace, /data-orb-dictate-paste-notes/)
     assert.match(brain, /data-orb-dictate-brain-panel|OrbDictateBrainPanel/)
   })
 
   it('bottom output rail and privacy strip remain', () => {
     const workspace = read('components/orb/dictate/OrbDictateStudioWorkspace.tsx')
     const privacy = read('components/orb/dictate/OrbDictatePrivacyStrip.tsx')
-    assert.match(workspace, /data-orb-dictate-action-rail/)
-    assert.match(workspace, /OrbDictateSuggestedOutputs/)
+    assert.match(workspace, /OrbDictateSaferDraftPanel/)
+    assert.match(read('components/orb/dictate/OrbDictateSaferDraftPanel.tsx'), /data-orb-dictate-output-actions/)
     assert.match(workspace, /data-orb-dictate-safety-footer/)
     assert.match(privacy, /data-orb-dictate-privacy-strip/)
   })

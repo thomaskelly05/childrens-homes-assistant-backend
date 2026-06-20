@@ -1,7 +1,7 @@
 /**
  * ORB Residential — single canonical UI design system (Phase 1K blank canvas, 1M personality).
  * One file for shell, workspace, composer, login, mobile, stations and modals.
- * Visual build marker: phase-3k-chatgpt-home-message-polish.
+ * Visual build marker: phase-3l-dictate-capture-workflow.
  */
 
 :root {
@@ -2822,4 +2822,54 @@ html[data-orb-residential='1'] .orb-write-integrated-studio [data-orb-write-layo
 
 html[data-orb-residential='1'] [data-orb-write-adult-responsibility] {
   padding-bottom: 0.35rem;
+}
+
+/* Phase 3L — ORB Dictate flagship capture workflow */
+.orb-dictate-capture-workflow {
+  background: var(--orb-res-workspace-bg);
+}
+
+.orb-dictate-capture-column {
+  scrollbar-gutter: stable;
+}
+
+.orb-dictate-workflow--phase3l span[data-orb-dictate-journey-step] {
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  background: rgba(99, 102, 241, 0.08);
+  color: var(--orb-res-workspace-text);
+}
+
+.orb-dictate-capture-card,
+.orb-dictate-orb-review-stage,
+.orb-dictate-safer-draft {
+  box-shadow: 0 4px 24px rgba(15, 23, 42, 0.04);
+}
+
+.orb-dictate-review-status--present {
+  background: rgba(16, 185, 129, 0.1);
+  color: #047857;
+}
+
+.orb-dictate-review-status--missing {
+  background: rgba(245, 158, 11, 0.12);
+  color: #b45309;
+}
+
+.orb-dictate-review-status--decision {
+  background: rgba(99, 102, 241, 0.1);
+  color: #4338ca;
+}
+
+html[data-orb-residential='1'] [data-orb-dictate-capture-workflow] .orb-dictate-hero-record {
+  min-height: 3.5rem;
+  min-width: 3.5rem;
+}
+
+html[data-orb-residential='1'] [data-orb-dictate-paste-notes] {
+  min-height: 10rem;
+}
+
+html[data-orb-residential='1'] [data-orb-dictate-output-actions] button[data-orb-dictate-open-write] {
+  order: -1;
 }

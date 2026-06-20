@@ -108,9 +108,9 @@ describe('ORB Residential Phase 2A identity and station maturity', () => {
     const workspace = read('components/orb/dictate/OrbDictateStudioWorkspace.tsx')
     assert.match(workspace, /data-orb-dictate-capture-panel/)
     assert.match(workspace, /data-orb-dictate-review-panel/)
-    assert.match(workspace, /OrbTranscriptPanel/)
+    assert.match(workspace, /OrbDictateReviewChecklist/)
     assert.match(workspace, /OrbDictateBrainPanel/)
-    assert.match(workspace, /data-orb-dictate-action-rail/)
+    assert.match(workspace, /OrbDictateSaferDraftPanel/)
   })
 
   it('records empty state includes Communicate', () => {

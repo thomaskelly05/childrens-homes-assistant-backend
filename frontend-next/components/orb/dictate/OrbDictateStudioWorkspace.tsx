@@ -1,27 +1,36 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Loader2, Mic, Upload } from 'lucide-react'
 
 import { OrbDictateBrainPanel } from '@/components/orb/dictate/OrbDictateBrainPanel'
+import { OrbDictateRecordTypeSuggestion } from '@/components/orb/dictate/OrbDictateRecordTypeSuggestion'
+import { OrbDictateReviewChecklist } from '@/components/orb/dictate/OrbDictateReviewChecklist'
+import { OrbDictateSaferDraftPanel } from '@/components/orb/dictate/OrbDictateSaferDraftPanel'
 import { GlassOrbMark } from '@/components/orb-residential/ui/glass-orb-mark'
-import { useOrbDictatePanelLayout } from '@/components/orb/dictate/OrbDictatePanelLayoutControl'
-import { OrbDictateSuggestedOutputs } from '@/components/orb/dictate/OrbDictateSuggestedOutputs'
-import {
-  OrbDictateTopBar,
-  type OrbDictatePrimaryAction
-} from '@/components/orb/dictate/OrbDictateTopBar'
-import { OrbTranscriptPanel } from '@/components/orb/dictate/OrbTranscriptPanel'
+import { OrbIcon } from '@/components/orb-residential/ui/orb-icon'
 import { OrbStudioShell } from '@/components/orb/premium'
-import { ORB_RESIDENTIAL_DICTATE_COPY } from '@/lib/orb/orb-residential-copy'
-import { ORB_DICTATE_RESPONSIBILITY, ORB_DICTATE_SUBTITLE, ORB_DICTATE_TITLE } from '@/lib/orb/orb-user-facing-names'
-import { OrbResizableWorkspace } from '@/components/orb/resizable-panels/orb-resizable-workspace'
 import {
-  OrbDictateAudioUpload,
-  OrbDictateGovernanceConsent,
-  OrbDictateParticipantsPanel,
-  consentReadyForGenerate
-} from '@/components/orb-standalone/orb-dictate-station-extras'
-import { OrbDictateDocumentReference } from '@/components/orb-standalone/orb-dictate-document-reference'
+  ORB_DICTATE_ADULT_RESPONSIBILITY,
+  ORB_DICTATE_CAPTURE_BOUNDARY,
+  ORB_DICTATE_CAPTURE_HEADLINE,
+  ORB_DICTATE_CAPTURE_JOURNEY,
+  ORB_DICTATE_CAPTURE_SUBTITLE,
+  ORB_DICTATE_CAPTURE_SUPPORTING,
+  ORB_DICTATE_CONSENT_REMINDER,
+  ORB_DICTATE_PASTE_LABEL,
+  ORB_DICTATE_PASTE_PLACEHOLDER,
+  ORB_DICTATE_REVIEW_SUPPORTING,
+  ORB_DICTATE_REVIEW_TITLE,
+  ORB_DICTATE_REVIEW_WITH_ORB,
+  ORB_DICTATE_SPEAK_GUIDANCE,
+  ORB_DICTATE_SPEAK_LABEL,
+  ORB_DICTATE_SPEAK_ROUGH_LABEL,
+  ORB_DICTATE_STORY_LINE,
+  ORB_DICTATE_UPLOAD_BOUNDARY,
+  ORB_DICTATE_UPLOAD_LABEL,
+  ORB_DICTATE_UPLOAD_PLACEHOLDER
+} from '@/lib/orb/dictate/orb-dictate-capture-copy'
 import {
   buildBrainAnalysisFromGenerate,
   type OrbDictateBrainAnalysis,
@@ -29,17 +38,20 @@ import {
 } from '@/lib/orb/dictate/orb-dictate-brain-analysis'
 import { analyzeOrbDictateSession } from '@/lib/orb/dictate/orb-dictate-client'
 import {
-  readOrbDictateFocusMode,
-  writeOrbDictateFocusMode
-} from '@/lib/orb/dictate/orb-dictate-focus-mode'
-import {
   recordTypeIdForStudioTemplate,
+  templateById,
   type OrbDictateStudioTemplate
 } from '@/lib/orb/dictate/orb-dictate-studio-templates'
 import type { OrbDictateMode, OrbDictateParticipant, OrbDictateTranscriptSegment } from '@/lib/orb/dictate/orb-dictate-speaker'
 import { suggestParticipantsFromText } from '@/lib/orb/dictate/orb-dictate-speaker'
-import { writeOrbSidebarCollapsed } from '@/lib/orb/orb-sidebar-preference'
 import type { OrbDictateGenerateResult, OrbDictateNoteType } from '@/lib/orb/dictate/orb-dictate-types'
+import {
+  OrbDictateAudioUpload,
+  OrbDictateGovernanceConsent,
+  OrbDictateParticipantsPanel,
+  consentReadyForGenerate
+} from '@/components/orb-standalone/orb-dictate-station-extras'
+import { OrbDictateDocumentReference } from '@/components/orb-standalone/orb-dictate-document-reference'
 
 export type OrbDictateStudioWorkspaceProps = {
   selectedTemplateId: string
@@ -70,8 +82,11 @@ export type OrbDictateStudioWorkspaceProps = {
   generating: boolean
   onGenerate: () => void
   onFinalise: () => void
+  onCopy: () => void
+  onSave: () => void
   canGenerate: boolean
   output: OrbDictateGenerateResult | null
+  editedNote?: string
   generatedTypes: OrbDictateNoteType[]
   onSelectOutputType: (noteType: OrbDictateNoteType) => void
   onSuggestionsChange: (suggestions: OrbDictateBrainSuggestion[]) => void
@@ -89,14 +104,14 @@ export type OrbDictateStudioWorkspaceProps = {
   uploadingAudio: boolean
   uploadFileLabel: string | null
   uploadError: string | null
+  uploadReady?: boolean
 }
+
+type CaptureMethod = 'speak' | 'paste' | 'upload'
 
 function OrbDictateAdvancedOptions(props: OrbDictateStudioWorkspaceProps & { effectiveText: string }) {
   return (
-    <details
-      className="text-[10px] text-[var(--orb-muted)]"
-      data-orb-dictate-advanced-options
-    >
+    <details className="text-[10px] text-[var(--orb-muted)]" data-orb-dictate-advanced-options>
       <summary className="cursor-pointer font-medium hover:text-[var(--orb-foreground)]">Advanced options</summary>
       <div className="mt-2 space-y-2">
         <OrbDictateParticipantsPanel
@@ -106,12 +121,6 @@ function OrbDictateAdvancedOptions(props: OrbDictateStudioWorkspaceProps & { eff
           onImportFromTranscript={() => {
             props.onParticipantsChange(suggestParticipantsFromText(props.effectiveText))
           }}
-        />
-        <OrbDictateAudioUpload
-          onFile={props.onAudioUpload}
-          uploading={props.uploadingAudio}
-          fileLabel={props.uploadFileLabel}
-          error={props.uploadError}
         />
         <OrbDictateDocumentReference />
         <OrbDictateGovernanceConsent
@@ -136,18 +145,15 @@ export function OrbDictateStudioWorkspace(props: OrbDictateStudioWorkspaceProps)
   const [brainAnalysis, setBrainAnalysis] = useState<OrbDictateBrainAnalysis | null>(null)
   const [brainLoading, setBrainLoading] = useState(false)
   const [analysisRequested, setAnalysisRequested] = useState(false)
-  const [focusMode, setFocusMode] = useState(false)
-  const { layout: panelLayout, updateLayout: updatePanelLayout } = useOrbDictatePanelLayout()
+  const [captureMethod, setCaptureMethod] = useState<CaptureMethod>('speak')
+  const [pasteDraft, setPasteDraft] = useState('')
 
-  const effectiveText = props.liveTranscript.trim() || props.transcript.trim()
+  const effectiveText = props.liveTranscript.trim() || props.transcript.trim() || pasteDraft.trim()
   const hasTranscript = effectiveText.length > 0
   const hasDraft = Boolean(props.output)
   const hasAnalysis = Boolean(brainAnalysis) && !brainLoading
   const recordTypeId = recordTypeIdForStudioTemplate(props.selectedTemplateId)
-
-  useEffect(() => {
-    setFocusMode(readOrbDictateFocusMode())
-  }, [])
+  const draftText = props.editedNote || props.output?.professional_note || ''
 
   const updateSuggestion = useCallback(
     (id: string, status: OrbDictateBrainSuggestion['status']) => {
@@ -223,29 +229,28 @@ export function OrbDictateStudioWorkspace(props: OrbDictateStudioWorkspaceProps)
     return () => window.clearTimeout(timer)
   }, [effectiveText, props.output, analysisRequested, runAnalysis, recordTypeId])
 
-  const primaryAction: OrbDictatePrimaryAction = useMemo(() => {
-    if (!hasTranscript) return 'disabled'
-    if (hasAnalysis || hasDraft) return 'generate'
-    return 'analyse'
-  }, [hasTranscript, hasDraft, hasAnalysis])
+  const handleReviewWithOrb = useCallback(() => {
+    if (captureMethod === 'paste' && pasteDraft.trim() && !props.transcript.trim()) {
+      props.onTranscriptChange(pasteDraft.trim())
+    }
+    void runAnalysis()
+  }, [captureMethod, pasteDraft, props, runAnalysis])
 
-  const handlePrimaryAction = useCallback(() => {
-    if (!hasTranscript) return
-    if (primaryAction === 'analyse') {
-      void runAnalysis()
+  const handleCreateDraft = useCallback(() => {
+    if (hasAnalysis || brainAnalysis) {
+      props.onGenerate()
       return
     }
-    props.onGenerate()
-  }, [hasTranscript, primaryAction, props, runAnalysis])
+    void runAnalysis().then(() => props.onGenerate())
+  }, [brainAnalysis, hasAnalysis, props, runAnalysis])
 
-  const toggleFocusMode = useCallback(() => {
-    setFocusMode((prev) => {
-      const next = !prev
-      writeOrbDictateFocusMode(next)
-      writeOrbSidebarCollapsed(next)
-      return next
-    })
-  }, [])
+  const handleTemplateSelect = useCallback(
+    (templateId: string) => {
+      const template = templateById(templateId)
+      if (template) props.onTemplateChange(template)
+    },
+    [props]
+  )
 
   const governanceOk = consentReadyForGenerate(props.dictateMode, {
     authorityConsent: props.authorityConsent,
@@ -255,200 +260,314 @@ export function OrbDictateStudioWorkspace(props: OrbDictateStudioWorkspaceProps)
     investigationConfirmed: props.investigationConfirmed
   })
 
-  const advancedFooter = <OrbDictateAdvancedOptions {...props} effectiveText={effectiveText} />
+  const activeStage = useMemo(() => {
+    if (hasDraft) return 'safer-draft'
+    if (hasAnalysis || analysisRequested) return 'orb-review'
+    return 'capture'
+  }, [analysisRequested, hasAnalysis, hasDraft])
+
+  const uploadPlaceholderOnly = props.uploadReady === false
 
   return (
     <OrbStudioShell
       studioId="dictate"
-      className="orb-dictate-studio-workspace orb-workspace orb-workspace--dictate flex min-h-0 flex-1 flex-col gap-1 overflow-hidden px-1 sm:px-2"
+      className="orb-dictate-studio-workspace orb-dictate-capture-workflow orb-workspace orb-workspace--dictate flex min-h-0 flex-1 flex-col overflow-hidden"
       data-orb-dictate-studio-workspace
+      data-orb-dictate-capture-workflow
       data-orb-workspace-dictate
-      data-orb-dictate-focus-mode={focusMode ? 'true' : 'false'}
       data-orb-dictate-empty={!hasTranscript ? 'true' : undefined}
-      style={{ minHeight: 'min(100dvh - 4.5rem, calc(100svh - 4.5rem))' }}
+      data-orb-dictate-active-stage={activeStage}
     >
-      <header className="orb-station-hero orb-dictate-hero-strip shrink-0 rounded-xl border border-[var(--orb-line)]/35 bg-gradient-to-br from-[var(--orb-res-navy)] to-[#1e293b] px-3 py-3 text-white sm:px-4" data-orb-dictate-hero-strip data-orb-dictate-studio-hero>
-        <div className="flex min-w-0 items-start gap-3">
-          <GlassOrbMark size="sm" pulse className="shrink-0" aria-hidden />
-          <div className="min-w-0 flex-1">
-            <h2 className="text-sm font-semibold tracking-tight" data-orb-dictate-title>
-              {ORB_DICTATE_TITLE === 'Dictate' ? 'ORB Dictate' : ORB_DICTATE_TITLE}
-            </h2>
-            <p className="mt-0.5 text-xs leading-relaxed text-slate-200/90" data-orb-dictate-subtitle-header>
-              {ORB_DICTATE_SUBTITLE}
-            </p>
-            <nav
-              className="orb-station-journey orb-dictate-workflow orb-dictate-workflow--compact mt-1.5 flex flex-wrap items-center gap-0.5 text-[9px] font-medium opacity-80"
-              aria-label="Dictate journey"
-              data-orb-dictate-designed-workflow
-              data-orb-dictate-journey="Capture → Transcript → ORB Review → Safer Draft → ORB Write"
-            >
-              <span data-orb-dictate-journey-step="capture">Capture</span>
-              <span aria-hidden className="opacity-60">→</span>
-              <span data-orb-dictate-journey-step="transcript">Transcript</span>
-              <span aria-hidden className="opacity-60">→</span>
-              <span data-orb-dictate-journey-step="orb-review">ORB Review</span>
-              <span aria-hidden className="opacity-60">→</span>
-              <span data-orb-dictate-journey-step="safer-draft">Safer Draft</span>
-            </nav>
+      <div className="orb-dictate-capture-column mx-auto flex min-h-0 w-full max-w-[var(--orb-res-chat-column-max,47.5rem)] flex-1 flex-col gap-4 overflow-y-auto px-3 py-4 sm:px-4">
+        <header className="orb-dictate-capture-hero text-center" data-orb-dictate-capture-hero>
+          <div className="mx-auto mb-2 flex justify-center">
+            <GlassOrbMark size="sm" pulse={props.recordingActive} aria-hidden />
           </div>
-        </div>
-      </header>
+          <h2 className="text-lg font-semibold tracking-tight text-[var(--orb-foreground)]" data-orb-dictate-title>
+            {ORB_DICTATE_CAPTURE_HEADLINE}
+          </h2>
+          <p className="mt-1 text-sm text-[var(--orb-muted)]" data-orb-dictate-subtitle-header>
+            {ORB_DICTATE_CAPTURE_SUBTITLE}
+          </p>
+          <p className="mt-2 text-xs leading-relaxed text-[var(--orb-muted)]" data-orb-dictate-capture-supporting>
+            {ORB_DICTATE_CAPTURE_SUPPORTING}
+          </p>
+          <nav
+            className="orb-dictate-workflow orb-dictate-workflow--phase3l mt-3 inline-flex flex-wrap items-center justify-center gap-1 text-[11px] font-medium"
+            aria-label="Dictate journey"
+            data-orb-dictate-designed-workflow
+            data-orb-dictate-journey={ORB_DICTATE_CAPTURE_JOURNEY}
+          >
+            <span data-orb-dictate-journey-step="capture" data-orb-dictate-stage="capture">
+              Capture
+            </span>
+            <span aria-hidden className="text-[var(--orb-muted)]">→</span>
+            <span data-orb-dictate-journey-step="orb-review" data-orb-dictate-stage="orb-review">
+              ORB Review
+            </span>
+            <span aria-hidden className="text-[var(--orb-muted)]">→</span>
+            <span data-orb-dictate-journey-step="safer-draft" data-orb-dictate-stage="safer-draft">
+              Safer Draft
+            </span>
+          </nav>
+        </header>
+
+        <section
+          className="orb-dictate-capture-card rounded-2xl border border-[var(--orb-line)]/15 bg-[var(--orb-surface)]/80 p-4 shadow-sm"
+          data-orb-dictate-capture-panel
+          data-orb-dictate-capture-canvas
+        >
+          <div
+            className="orb-dictate-capture-methods flex flex-wrap gap-2"
+            role="tablist"
+            aria-label="Capture methods"
+            data-orb-dictate-capture-methods
+          >
+            {(
+              [
+                { id: 'speak' as const, label: ORB_DICTATE_SPEAK_LABEL, icon: Mic },
+                { id: 'paste' as const, label: ORB_DICTATE_PASTE_LABEL, icon: null },
+                { id: 'upload' as const, label: ORB_DICTATE_UPLOAD_LABEL, icon: Upload }
+              ] as const
+            ).map((method) => (
+              <button
+                key={method.id}
+                type="button"
+                role="tab"
+                aria-selected={captureMethod === method.id}
+                data-orb-dictate-capture-method={method.id}
+                className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition ${
+                  captureMethod === method.id
+                    ? 'border-[var(--orb-primary)]/40 bg-[var(--orb-primary-soft)] text-[var(--orb-foreground)]'
+                    : 'border-[var(--orb-line)]/30 bg-white/80 text-[var(--orb-muted)] hover:text-[var(--orb-foreground)]'
+                }`}
+                onClick={() => setCaptureMethod(method.id)}
+              >
+                {method.icon ? <method.icon className="h-3.5 w-3.5" aria-hidden /> : null}
+                {method.label}
+              </button>
+            ))}
+          </div>
+
+          {captureMethod === 'speak' ? (
+            <div className="mt-4 text-center" data-orb-dictate-speak-panel>
+              <p className="text-xs text-[var(--orb-muted)]" data-orb-dictate-speak-guidance>
+                {ORB_DICTATE_SPEAK_GUIDANCE}
+              </p>
+              <p className="mt-1 text-[10px] font-medium text-[var(--orb-primary)]" data-orb-dictate-rough-capture-label>
+                {ORB_DICTATE_SPEAK_ROUGH_LABEL}
+              </p>
+              <div className="mt-4 flex flex-col items-center gap-2">
+                {!props.recordingActive && !props.captureStarting ? (
+                  <button
+                    type="button"
+                    data-orb-dictate-top-record
+                    disabled={props.speechStartDisabled}
+                    className="orb-dictate-hero-record inline-flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-sky-500 to-indigo-600 text-white shadow-lg shadow-indigo-500/20 transition hover:brightness-105 disabled:opacity-50"
+                    onClick={props.onStartRecording}
+                    aria-label="Start recording"
+                  >
+                    <OrbIcon name="record" size="lg" className="text-white" />
+                  </button>
+                ) : props.captureStarting ? (
+                  <div className="flex h-14 w-14 items-center justify-center rounded-full border border-[var(--orb-line)]/40">
+                    <Loader2 className="h-5 w-5 animate-spin text-[var(--orb-muted)]" />
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      data-orb-dictate-top-record
+                      className="inline-flex items-center gap-2 rounded-full border border-red-400/40 bg-red-500/10 px-4 py-2 text-sm font-semibold text-red-700"
+                      onClick={props.onStopRecording}
+                    >
+                      <span className="inline-flex h-2 w-2 animate-pulse rounded-full bg-red-500" aria-hidden />
+                      {props.formatTimer(props.timerSec)}
+                    </button>
+                    {props.recordingPaused ? (
+                      <button type="button" className="rounded-lg border px-2 py-1 text-xs" onClick={props.onResumeRecording}>
+                        Resume
+                      </button>
+                    ) : (
+                      <button type="button" className="rounded-lg border px-2 py-1 text-xs" onClick={props.onPauseRecording}>
+                        Pause
+                      </button>
+                    )}
+                    <button type="button" className="rounded-lg border px-2 py-1 text-xs" onClick={props.onStopRecording}>
+                      Stop
+                    </button>
+                  </div>
+                )}
+                <p className="text-[10px] text-[var(--orb-muted)]" data-orb-dictate-recording-status>
+                  {props.recordingActive
+                    ? props.recordingPaused
+                      ? 'Paused'
+                      : 'Recording'
+                    : props.micStatus || 'Ready to capture'}
+                </p>
+              </div>
+              {effectiveText ? (
+                <div className="mt-4 rounded-xl border border-[var(--orb-line)]/15 bg-white/90 p-3 text-left text-sm leading-relaxed" data-orb-dictate-live-transcript>
+                  <p className="whitespace-pre-wrap">{props.liveTranscript || props.transcript}</p>
+                  {props.interimText ? (
+                    <p className="mt-1 text-[var(--orb-muted)] opacity-80">{props.interimText}</p>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+
+          {captureMethod === 'paste' ? (
+            <div className="mt-4" data-orb-dictate-paste-panel>
+              <textarea
+                value={pasteDraft || props.transcript}
+                onChange={(e) => {
+                  setPasteDraft(e.target.value)
+                  props.onTranscriptChange(e.target.value)
+                }}
+                rows={8}
+                placeholder={ORB_DICTATE_PASTE_PLACEHOLDER}
+                className="orb-dictate-paste-input w-full resize-y rounded-xl border border-[var(--orb-line)]/25 bg-white/95 px-3 py-3 text-sm leading-relaxed text-[var(--orb-foreground)] outline-none focus:border-[var(--orb-primary)]/35 focus:ring-2 focus:ring-[var(--orb-primary)]/10"
+                data-orb-dictate-paste-notes
+              />
+              <button
+                type="button"
+                data-orb-dictate-review-with-orb
+                disabled={!effectiveText.trim() || props.generating}
+                className="mt-3 inline-flex w-full items-center justify-center rounded-xl border border-[var(--orb-primary)]/35 bg-[var(--orb-primary-soft)] px-4 py-2.5 text-sm font-semibold text-[var(--orb-foreground)] disabled:opacity-45"
+                onClick={handleReviewWithOrb}
+              >
+                {props.generating ? 'Reviewing…' : ORB_DICTATE_REVIEW_WITH_ORB}
+              </button>
+            </div>
+          ) : null}
+
+          {captureMethod === 'upload' ? (
+            <div className="mt-4" data-orb-dictate-upload-panel>
+              {uploadPlaceholderOnly ? (
+                <p className="rounded-xl border border-dashed border-[var(--orb-line)]/35 bg-white/70 px-4 py-6 text-center text-xs leading-relaxed text-[var(--orb-muted)]" data-orb-dictate-upload-placeholder>
+                  {ORB_DICTATE_UPLOAD_PLACEHOLDER}
+                </p>
+              ) : (
+                <>
+                  <OrbDictateAudioUpload
+                    variant="capture"
+                    onFile={props.onAudioUpload}
+                    uploading={props.uploadingAudio}
+                    fileLabel={props.uploadFileLabel}
+                    error={props.uploadError}
+                  />
+                  <p className="mt-2 text-[10px] leading-relaxed text-[var(--orb-muted)]" data-orb-dictate-upload-boundary>
+                    {ORB_DICTATE_UPLOAD_BOUNDARY}
+                  </p>
+                </>
+              )}
+            </div>
+          ) : null}
+
+          <p className="mt-4 text-[10px] leading-relaxed text-[var(--orb-muted)]" data-orb-dictate-consent-reminder>
+            {ORB_DICTATE_CONSENT_REMINDER}
+          </p>
+        </section>
+
+        {hasTranscript ? (
+          <OrbDictateRecordTypeSuggestion
+            selectedTemplateId={props.selectedTemplateId}
+            onSelectTemplate={handleTemplateSelect}
+          />
+        ) : null}
+
+        <section
+          className="orb-dictate-orb-review-stage rounded-2xl border border-[var(--orb-line)]/15 bg-[var(--orb-surface)]/60 p-4"
+          data-orb-dictate-review-panel
+          data-orb-dictate-orb-review-stage
+        >
+          <h3 className="text-sm font-semibold text-[var(--orb-foreground)]" data-orb-dictate-review-label>
+            {ORB_DICTATE_REVIEW_TITLE}
+          </h3>
+          <p className="mt-1 text-xs leading-relaxed text-[var(--orb-muted)]" data-orb-dictate-review-supporting>
+            {ORB_DICTATE_REVIEW_SUPPORTING}
+          </p>
+
+          <div className="mt-4">
+            <OrbDictateReviewChecklist analysis={brainAnalysis} hasTranscript={hasTranscript} loading={brainLoading} />
+          </div>
+
+          {hasTranscript ? (
+            <div className="mt-4 flex flex-wrap gap-2">
+              <button
+                type="button"
+                data-orb-dictate-generate
+                data-orb-dictate-review-with-orb
+                disabled={props.generating || !hasTranscript}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--orb-primary)]/35 bg-[var(--orb-primary-soft)] px-3 py-2 text-xs font-semibold disabled:opacity-45"
+                onClick={handleReviewWithOrb}
+              >
+                {brainLoading ? 'Reviewing…' : ORB_DICTATE_REVIEW_WITH_ORB}
+              </button>
+              <button
+                type="button"
+                data-orb-dictate-create-draft-action
+                disabled={props.generating || !governanceOk || !hasTranscript}
+                className="inline-flex items-center gap-1.5 rounded-xl bg-[var(--orb-primary)] px-3 py-2 text-xs font-semibold text-white disabled:opacity-45"
+                onClick={handleCreateDraft}
+              >
+                {props.generating ? 'Creating draft…' : 'Create safer draft'}
+              </button>
+            </div>
+          ) : null}
+
+          {brainAnalysis ? (
+            <div className="mt-4 border-t border-[var(--orb-line)]/15 pt-4">
+              <OrbDictateBrainPanel
+                analysis={brainAnalysis}
+                loading={brainLoading}
+                onSuggestionUpdate={updateSuggestion}
+                studioTemplateId={props.selectedTemplateId}
+                recordTypeId={recordTypeId}
+                hasTranscript={hasTranscript}
+                embedded
+              />
+            </div>
+          ) : null}
+        </section>
+
+        {hasDraft && props.output ? (
+          <OrbDictateSaferDraftPanel
+            output={props.output}
+            draftText={draftText}
+            templateId={props.selectedTemplateId}
+            onCopy={props.onCopy}
+            onSave={props.onSave}
+            onOpenInWrite={props.onFinalise}
+            saving={props.generating}
+          />
+        ) : null}
+
+        <footer className="orb-dictate-capture-footer space-y-2 pb-2 text-center" data-orb-dictate-safety-footer>
+          <p className="text-[11px] leading-relaxed text-[var(--orb-muted)]" data-orb-dictate-boundary-line>
+            {ORB_DICTATE_CAPTURE_BOUNDARY}
+          </p>
+          <p className="text-[11px] leading-relaxed text-[var(--orb-muted)]" data-orb-dictate-adult-responsibility>
+            {ORB_DICTATE_ADULT_RESPONSIBILITY}
+          </p>
+          <p className="text-[10px] italic text-[var(--orb-muted)]/90" data-orb-dictate-story-line>
+            {ORB_DICTATE_STORY_LINE}
+          </p>
+          <OrbDictateAdvancedOptions {...props} effectiveText={effectiveText} />
+        </footer>
+      </div>
 
       <section
         className="orb-dictate-stage-map sr-only"
         aria-hidden
         data-orb-dictate-stage-interface
-        data-orb-dictate-journey="Capture → Transcript → ORB Review → Safer Draft → ORB Write"
+        data-orb-dictate-journey={ORB_DICTATE_CAPTURE_JOURNEY}
       >
         <span data-orb-dictate-stage="capture">Capture</span>
-        <span data-orb-dictate-stage="transcript">Transcript</span>
         <span data-orb-dictate-stage="orb-review">ORB Review</span>
-        <span data-orb-dictate-stage="output">Safer Draft</span>
+        <span data-orb-dictate-stage="safer-draft">Safer Draft</span>
       </section>
-
-      <OrbDictateTopBar
-        selectedTemplateId={props.selectedTemplateId}
-        onTemplateChange={props.onTemplateChange}
-        recordingActive={props.recordingActive}
-        recordingPaused={props.recordingPaused}
-        captureStarting={props.captureStarting}
-        timerSec={props.timerSec}
-        formatTimer={props.formatTimer}
-        onStartRecording={props.onStartRecording}
-        onPauseRecording={props.onPauseRecording}
-        onResumeRecording={props.onResumeRecording}
-        onStopRecording={props.onStopRecording}
-        onPrimaryAction={handlePrimaryAction}
-        onFinalise={props.onFinalise}
-        generating={props.generating || brainLoading}
-        hasTranscript={hasTranscript}
-        hasAnalysis={hasAnalysis}
-        hasDraft={hasDraft}
-        primaryAction={primaryAction}
-        speechStartDisabled={props.speechStartDisabled}
-        focusMode={focusMode}
-        onToggleFocusMode={toggleFocusMode}
-        panelLayout={panelLayout}
-        onPanelLayoutChange={updatePanelLayout}
-      />
-
-      <OrbResizableWorkspace
-        hidePresetToolbar
-        layout={panelLayout}
-        onLayoutChange={updatePanelLayout}
-        showPreview={false}
-        minPanelHeight="min(74dvh, calc(100svh - 8.5rem))"
-        left={
-          <div className="orb-dictate-capture-canvas orb-station-workspace flex min-h-0 flex-1 flex-col gap-3" data-orb-dictate-capture-panel data-orb-dictate-capture-canvas data-orb-dictate-transcript-stage>
-            <div className="orb-dictate-capture-empty rounded-2xl border border-[var(--orb-line)]/25 bg-[var(--orb-surface)]/70 p-4">
-              <p className="text-sm font-semibold text-[var(--orb-foreground)]" data-orb-dictate-capture-prompt>
-                {ORB_RESIDENTIAL_DICTATE_COPY.capturePrompt}
-              </p>
-              <p className="mt-1 text-xs leading-relaxed text-[var(--orb-muted)]" data-orb-dictate-capture-guidance>
-                {ORB_RESIDENTIAL_DICTATE_COPY.captureGuidance}
-              </p>
-              <div
-                className="orb-dictate-capture-affordances mt-3 flex flex-wrap items-center gap-2"
-                data-orb-dictate-capture-affordances
-              >
-              <OrbDictateAudioUpload
-                variant="capture"
-                onFile={props.onAudioUpload}
-                uploading={props.uploadingAudio}
-                fileLabel={props.uploadFileLabel}
-                error={props.uploadError}
-              />
-              <button
-                type="button"
-                className="orb-dictate-capture-action inline-flex items-center rounded-lg border border-[var(--orb-line)]/45 bg-[var(--orb-surface-elevated)] px-2.5 py-1.5 text-[10px] font-semibold text-[var(--orb-foreground)] hover:bg-[var(--orb-surface-hover)]"
-                onClick={() => props.onTranscriptChange(props.transcript)}
-                data-orb-dictate-paste-notes-control
-              >
-                Paste notes
-              </button>
-              </div>
-            </div>
-            <p className="px-1 text-[10px] text-[var(--orb-muted)]" data-orb-dictate-adult-review-reminder>
-              {ORB_DICTATE_RESPONSIBILITY}
-            </p>
-            <div className="orb-dictate-transcript-area min-h-[12rem] flex-1 rounded-xl">
-            <OrbTranscriptPanel
-            liveTranscript={props.liveTranscript}
-            transcript={props.transcript}
-            onTranscriptChange={props.onTranscriptChange}
-            segments={props.segments}
-            participants={props.participants}
-            onSegmentsChange={props.onSegmentsChange}
-            onParticipantsChange={props.onParticipantsChange}
-            recordingActive={props.recordingActive}
-            recordingPaused={props.recordingPaused}
-            timerSec={props.timerSec}
-            formatTimer={props.formatTimer}
-            micStatus={props.micStatus}
-            onClearTranscript={props.onClearTranscript}
-            interimText={props.interimText}
-            footerSlot={advancedFooter}
-            />
-            </div>
-          </div>
-        }
-        right={
-          <div className="orb-studio-panel orb-dictate-review-surface flex min-h-0 flex-col gap-2" data-orb-dictate-review-panel data-orb-dictate-review-surface data-orb-dictate-orb-review-stage>
-            <p className="px-1 text-xs font-semibold uppercase tracking-wide text-[var(--orb-muted)]" data-orb-dictate-review-label>
-              ORB Review
-            </p>
-            <OrbDictateBrainPanel
-            analysis={brainAnalysis}
-            loading={brainLoading}
-            onSuggestionUpdate={updateSuggestion}
-            studioTemplateId={props.selectedTemplateId}
-            recordTypeId={recordTypeId}
-            onAnalyse={handlePrimaryAction}
-            hasTranscript={hasTranscript}
-            />
-            {!hasDraft && hasTranscript ? (
-              <div
-                className="mx-1 mt-2"
-                data-orb-dictate-safer-draft-placeholder
-                aria-live="polite"
-              >
-                Your safer draft will appear here after ORB Review.
-              </div>
-            ) : null}
-            </div>
-        }
-      />
-
-      <div
-        className="orb-dictate-output-stage shrink-0 px-1 py-1"
-        data-orb-dictate-output-stage
-        data-orb-dictate-suggested-outputs
-      >
-      {hasTranscript ? (
-        <div
-          className="orb-studio-action-rail"
-          data-orb-dictate-action-rail
-        >
-          <OrbDictateSuggestedOutputs
-            variant="rail"
-            activeNoteType={props.noteType}
-            studioTemplateId={props.selectedTemplateId}
-            generatedTypes={props.generatedTypes}
-            onSelectOutput={props.onSelectOutputType}
-            disabled={props.generating || !governanceOk}
-          />
-        </div>
-      ) : (
-        <div className="orb-studio-action-rail orb-studio-action-rail--placeholder">
-          <p className="text-xs font-semibold text-[var(--orb-foreground)]">Suggested outputs</p>
-          <p className="mt-1 text-[11px] text-[var(--orb-muted)]">Create safer draft and Send to ORB Write become active once the transcript is ready.</p>
-        </div>
-      )}
-      </div>
-      <p className="orb-workspace-station-safety shrink-0 px-2 pb-2 text-center text-xs text-[var(--orb-muted)]" data-orb-dictate-safety-footer>
-        {ORB_RESIDENTIAL_DICTATE_COPY.responsibility}
-      </p>
     </OrbStudioShell>
   )
 }

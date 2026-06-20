@@ -18,7 +18,7 @@ function read(relativePath: string) {
 
 describe('ORB Residential Phase 3D station behaviour hardening', () => {
   it('build version marker is phase-3d', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-3k-chatgpt-home-message-polish')
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-3l-dictate-capture-workflow')
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
     const layout = read('app/orb/layout.tsx')
     assert.match(companion, /data-orb-build-version=\{ORB_BUILD_VISUAL_VERSION\}/)
@@ -46,24 +46,21 @@ describe('ORB Residential Phase 3D station behaviour hardening', () => {
 
   it('dictate capture studio is primary with single review checklist', () => {
     const workspace = read('components/orb/dictate/OrbDictateStudioWorkspace.tsx')
-    const brain = read('components/orb/dictate/OrbDictateBrainPanel.tsx')
-    const topBar = read('components/orb/dictate/OrbDictateTopBar.tsx')
-    assert.equal(ORB_DICTATE_CAPTURE_PROMPT, 'Capture rough information')
-    assert.match(ORB_DICTATE_CAPTURE_GUIDANCE, /Speak, paste or upload what happened/)
+    const checklist = read('components/orb/dictate/OrbDictateReviewChecklist.tsx')
+    assert.equal(ORB_DICTATE_CAPTURE_PROMPT, 'Speak, paste or upload what happened')
+    assert.match(ORB_DICTATE_CAPTURE_GUIDANCE, /Start with what happened/)
     const extras = read('components/orb-standalone/orb-dictate-station-extras.tsx')
     assert.match(workspace, /data-orb-dictate-capture-canvas/)
-    assert.match(workspace, /data-orb-dictate-paste-notes-control/)
-    assert.match(workspace, /variant="capture"/)
+    assert.match(workspace, /data-orb-dictate-paste-notes/)
+    assert.match(workspace, /data-orb-dictate-capture-method=\{method\.id\}/)
     assert.match(extras, /data-orb-dictate-audio-upload/)
-    assert.match(workspace, /orb-dictate-workflow--compact/)
-    assert.match(brain, /data-orb-dictate-review-checklist/)
-    assert.match(brain, /ORB_CORE_REVIEW_CHECKS/)
+    assert.match(workspace, /data-orb-dictate-designed-workflow/)
+    assert.match(checklist, /data-orb-dictate-review-checklist/)
     const copy = read('lib/orb/orb-residential-copy.ts')
     assert.match(copy, /Time, date and sequence/)
     assert.match(copy, /Management oversight where needed/)
-    assert.match(topBar, /Review with ORB/)
-    assert.match(topBar, /Create safer draft/)
-    assert.match(topBar, /Send to ORB Write/)
+    assert.match(workspace, /Create safer draft/)
+    assert.match(read('components/orb/dictate/OrbDictateSaferDraftPanel.tsx'), /ORB_DICTATE_ACTION_OPEN_WRITE/)
   })
 
   it('voice shows style and reasoning carousels on main screen without broken end summary', () => {

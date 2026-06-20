@@ -17,7 +17,7 @@ function read(relativePath: string) {
 
 describe('ORB Residential Phase 3A specialist station alignment', () => {
   it('build version marker is phase-3b', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-3k-chatgpt-home-message-polish')
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-3l-dictate-capture-workflow')
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
     const layout = read('app/orb/layout.tsx')
     assert.match(companion, /data-orb-build-version=\{ORB_BUILD_VISUAL_VERSION\}/)
@@ -51,11 +51,12 @@ describe('ORB Residential Phase 3A specialist station alignment', () => {
     assert.match(selector, /data-orb-voice-reasoning-option/)
   })
 
-  it('dictate renders Capture → Transcript → ORB Review → Safer Draft → ORB Write journey', () => {
+  it('dictate renders Capture → ORB Review → Safer Draft journey', () => {
     const workspace = read('components/orb/dictate/OrbDictateStudioWorkspace.tsx')
-    assert.match(workspace, /data-orb-dictate-journey="Capture → Transcript → ORB Review → Safer Draft → ORB Write"/)
-    assert.match(workspace, /data-orb-dictate-stage="transcript"/)
-    assert.match(workspace, /Safer draft|Safer Draft/)
+    assert.match(workspace, /data-orb-dictate-journey-step="capture"/)
+    assert.match(workspace, /data-orb-dictate-journey-step="orb-review"/)
+    assert.match(workspace, /data-orb-dictate-journey-step="safer-draft"/)
+    assert.match(workspace, /Safer Draft/)
     assert.match(workspace, /ORB Review/)
   })
 

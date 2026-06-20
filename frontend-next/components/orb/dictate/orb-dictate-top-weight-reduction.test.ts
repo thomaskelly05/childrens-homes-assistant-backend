@@ -89,11 +89,9 @@ describe('ORB Dictate top-weight reduction', () => {
 
   it('transcript and brain panels follow trust strip immediately', () => {
     const workspace = readComponent('components/orb/dictate/OrbDictateStudioWorkspace.tsx')
-    const topBarIdx = workspace.indexOf('<OrbDictateTopBar')
-    const privacyIdx = workspace.indexOf('<OrbDictatePrivacyStrip')
-    const panelsIdx = workspace.indexOf('<OrbResizableWorkspace')
-    assert.ok(topBarIdx >= 0 && privacyIdx > topBarIdx)
-    assert.ok(panelsIdx > privacyIdx)
+    const captureIdx = workspace.indexOf('data-orb-dictate-capture-card')
+    const reviewIdx = workspace.indexOf('data-orb-dictate-orb-review-stage')
+    assert.ok(captureIdx >= 0 && reviewIdx > captureIdx)
   })
 
   it('no child profile selector in dictate workspace', () => {
@@ -122,11 +120,9 @@ describe('ORB Dictate top-weight reduction', () => {
     assert.match(frame, /compactChrome/)
   })
 
-  it('advanced options live in transcript panel footer', () => {
+  it('advanced options live in capture workflow footer', () => {
     const workspace = readComponent('components/orb/dictate/OrbDictateStudioWorkspace.tsx')
-    const transcript = readComponent('components/orb/dictate/OrbTranscriptPanel.tsx')
-    assert.match(workspace, /footerSlot={advancedFooter}/)
-    assert.match(transcript, /footerSlot/)
     assert.match(workspace, /data-orb-dictate-advanced-options/)
+    assert.match(workspace, /OrbDictateAdvancedOptions/)
   })
 })

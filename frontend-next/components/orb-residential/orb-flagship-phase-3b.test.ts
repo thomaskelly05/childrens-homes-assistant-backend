@@ -18,7 +18,7 @@ function read(relativePath: string) {
 
 describe('ORB Residential Phase 3B unified station experience', () => {
   it('build version marker is phase-3b', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-3k-chatgpt-home-message-polish')
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-3l-dictate-capture-workflow')
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
     const layout = read('app/orb/layout.tsx')
     assert.match(companion, /data-orb-build-version=\{ORB_BUILD_VISUAL_VERSION\}/)
@@ -54,16 +54,15 @@ describe('ORB Residential Phase 3B unified station experience', () => {
 
   it('dictate renders capture journey, actions, review sections and safety copy', () => {
     const workspace = read('components/orb/dictate/OrbDictateStudioWorkspace.tsx')
-    const brain = read('components/orb/dictate/OrbDictateBrainPanel.tsx')
-    assert.match(workspace, /data-orb-dictate-journey="Capture → Transcript → ORB Review → Safer Draft → ORB Write"/)
-    assert.match(workspace, /data-orb-dictate-capture-affordances/)
-    assert.match(workspace, /data-orb-dictate-paste-notes-control/)
-    assert.match(workspace, /ORB_RESIDENTIAL_DICTATE_COPY|ORB_DICTATE_RESPONSIBILITY/)
-    assert.match(workspace, /data-orb-dictate-capture-guidance/)
-    assert.match(brain, /data-orb-dictate-review-sections/)
-    assert.match(brain, /ORB_CORE_REVIEW_CHECKS/)
-    assert.match(brain, /What ORB will check/)
-    assert.doesNotMatch(brain, /What ORB will help you check/)
+    const checklist = read('components/orb/dictate/OrbDictateReviewChecklist.tsx')
+    assert.match(workspace, /data-orb-dictate-journey-step="capture"/)
+    assert.match(workspace, /data-orb-dictate-capture-methods/)
+    assert.match(workspace, /data-orb-dictate-paste-notes/)
+    assert.match(workspace, /ORB_DICTATE_ADULT_RESPONSIBILITY|ORB_DICTATE_CAPTURE_BOUNDARY/)
+    assert.match(workspace, /data-orb-dictate-review-supporting/)
+    assert.match(checklist, /data-orb-dictate-review-checklist/)
+    assert.match(checklist, /ORB_DICTATE_REVIEW_CHECKLIST_ITEMS/)
+    assert.match(read('lib/orb/dictate/orb-dictate-capture-copy.ts'), /child say, show or communicate/i)
     assert.match(workspace, /data-orb-dictate-safety-footer/)
   })
 

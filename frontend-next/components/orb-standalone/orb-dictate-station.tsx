@@ -1472,6 +1472,9 @@ export function OrbDictateStation({
           generating={generating || finalising}
           onGenerate={() => void runGenerate()}
           onFinalise={() => void handleFinalise()}
+          onCopy={() => void handleCopy()}
+          onSave={() => void handleSave()}
+          editedNote={editedNote}
           canGenerate={effectiveInputText.trim().length > 0}
           output={output}
           generatedTypes={generatedTypes}
