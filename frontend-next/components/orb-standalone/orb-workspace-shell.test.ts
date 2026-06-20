@@ -91,7 +91,7 @@ describe('ORB main workspace shell', () => {
   })
 
   it('premium tokens do not force dark markdown in light mode', () => {
-    const premium = readComponent('app/orb/orb-premium-tokens.css')
+    const premium = readComponent('app/orb/_legacy-ui-archive/orb-premium-tokens.css')
     assert.match(premium, /orb-chat-layout--residential\.orb-theme-dark/)
     assert.doesNotMatch(
       premium,

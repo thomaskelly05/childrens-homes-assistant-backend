@@ -54,7 +54,7 @@ function readComponent(relativePath: string) {
 describe('ORB mobile home shell', () => {
   it('mobile home greeting is visible and uses strong heading tokens', () => {
     const companion = readComponent('components/orb-standalone/orb-care-companion.tsx')
-    const mobileCss = readComponent('app/orb/orb-mobile.css')
+    const mobileCss = readComponent('app/orb/_legacy-ui-archive/orb-mobile.css')
     assert.match(companion, /data-orb-empty-heading-mobile/)
     assert.match(
       companion,
@@ -66,7 +66,7 @@ describe('ORB mobile home shell', () => {
 
   it('starter prompts render as premium cards not hidden on mobile', () => {
     const companion = readComponent('components/orb-standalone/orb-care-companion.tsx')
-    const mobileCss = readComponent('app/orb/orb-mobile.css')
+    const mobileCss = readComponent('app/orb/_legacy-ui-archive/orb-mobile.css')
     assert.match(companion, /data-orb-starter-cards/)
     assert.match(companion, /data-orb-starter-card/)
     assert.match(mobileCss, /\[data-orb-starter-cards\]/)
@@ -75,7 +75,7 @@ describe('ORB mobile home shell', () => {
   })
 
   it('mobile layout avoids horizontal overflow on empty state', () => {
-    const mobileCss = readComponent('app/orb/orb-mobile.css')
+    const mobileCss = readComponent('app/orb/_legacy-ui-archive/orb-mobile.css')
     assert.match(mobileCss, /overflow-x:\s*hidden/)
     assert.match(mobileCss, /max-width:\s*100vw/)
   })
@@ -274,7 +274,7 @@ describe('ORB mobile shell and composer', () => {
 
   it('no duplicate conflicting mic buttons in mobile composer rail', () => {
     const composer = readComponent('components/orb-standalone/orb-standalone-composer.tsx')
-    const mobileCss = readComponent('app/orb/orb-mobile.css')
+    const mobileCss = readComponent('app/orb/_legacy-ui-archive/orb-mobile.css')
     const micButtons = (composer.match(/data-orb-composer-mic(?!-)/g) || []).length
     assert.ok(micButtons >= 1 && micButtons <= 2, 'compact and desktop layouts each expose one mic control')
     assert.match(mobileCss, /data-orb-composer-mic|data-orb-composer-voice-send/)
@@ -282,7 +282,7 @@ describe('ORB mobile shell and composer', () => {
   })
 
   it('mobile product tokens are defined', () => {
-    const tokens = readComponent('app/orb/orb-premium-tokens.css')
+    const tokens = readComponent('app/orb/_legacy-ui-archive/orb-premium-tokens.css')
     for (const name of [
       '--orb-mobile-bg',
       '--orb-mobile-card',

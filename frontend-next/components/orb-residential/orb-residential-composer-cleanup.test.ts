@@ -55,7 +55,7 @@ describe('ORB Residential composer and shell cleanup', () => {
   })
 
   it('premium tokens expose residential light and dark theme selectors', () => {
-    const premium = readComponent('app/orb/orb-premium-tokens.css')
+    const premium = readComponent('app/orb/_legacy-ui-archive/orb-premium-tokens.css')
     assert.doesNotMatch(premium, /ORB Residential launch lock/)
     assert.match(premium, /\.orb-chat-layout--residential\.orb-theme-light/)
     assert.match(premium, /\.orb-chat-layout--residential\.orb-theme-dark/)

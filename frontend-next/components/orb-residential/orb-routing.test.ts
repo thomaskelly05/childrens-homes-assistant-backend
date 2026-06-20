@@ -82,7 +82,7 @@ describe('ORB Residential routing', () => {
   })
 
   it('viewport scroll rules: sidebar and chat areas scroll independently', () => {
-    const css = readApp('app/orb/orb-desktop.css')
+    const css = readApp('app/orb/_legacy-ui-archive/orb-desktop.css')
     const sidebar = readApp('components/orb-residential/orb-residential-sidebar.tsx')
     assert.match(css, /orb-chat-layout--residential/)
     assert.match(css, /overflow:\s*hidden/)

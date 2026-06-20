@@ -35,7 +35,7 @@ describe('ORB mobile convergence sprint', () => {
 
   it('dictate mobile prioritises start recording in premium capture panel with ORB visual', () => {
     const dictate = read('components/orb-standalone/orb-dictate-mobile-experience.tsx')
-    const mobileCss = read('app/orb/orb-mobile.css')
+    const mobileCss = read('app/orb/_legacy-ui-archive/orb-mobile.css')
     const statusIdx = dictate.indexOf('data-orb-dictate-status-line')
     const actionIdx = dictate.indexOf('data-orb-dictate-primary-action')
     const panelIdx = dictate.indexOf('data-orb-dictate-capture-panel')
@@ -96,14 +96,14 @@ describe('ORB mobile convergence sprint', () => {
   })
 
   it('dictate mobile landing scrolls and respects safe area', () => {
-    const mobileCss = readFileSync(join(root, 'app/orb/orb-mobile.css'), 'utf8')
+    const mobileCss = readFileSync(join(root, 'app/orb/_legacy-ui-archive/orb-mobile.css'), 'utf8')
     assert.match(mobileCss, /orb-dictate-mobile/)
     assert.match(mobileCss, /safe-area-inset-bottom/)
     assert.match(mobileCss, /data-orb-dictate-primary-action/)
   })
 
   it('write mobile toolbar scrolls and ask orb stays in action sheets', () => {
-    const mobileCss = readFileSync(join(root, 'app/orb/orb-mobile.css'), 'utf8')
+    const mobileCss = readFileSync(join(root, 'app/orb/_legacy-ui-archive/orb-mobile.css'), 'utf8')
     const toolbar = read('components/orb-write/orb-write-mobile-toolbar.tsx')
     assert.match(mobileCss, /orb-write-mobile-toolbar/)
     assert.match(toolbar, /data-orb-write-ask-orb/)
@@ -111,12 +111,12 @@ describe('ORB mobile convergence sprint', () => {
   })
 
   it('documents search is responsive on mobile', () => {
-    const mobileCss = readFileSync(join(root, 'app/orb/orb-mobile.css'), 'utf8')
+    const mobileCss = readFileSync(join(root, 'app/orb/_legacy-ui-archive/orb-mobile.css'), 'utf8')
     assert.match(mobileCss, /data-orb-documents-search|data-orb-knowledge-search/)
   })
 
   it('settings panel scrolls inside modal on mobile', () => {
-    const mobileCss = readFileSync(join(root, 'app/orb/orb-mobile.css'), 'utf8')
+    const mobileCss = readFileSync(join(root, 'app/orb/_legacy-ui-archive/orb-mobile.css'), 'utf8')
     assert.match(mobileCss, /data-orb-settings-panel|data-orb-settings-scroll/)
   })
 })

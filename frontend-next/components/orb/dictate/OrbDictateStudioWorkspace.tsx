@@ -268,11 +268,11 @@ export function OrbDictateStudioWorkspace(props: OrbDictateStudioWorkspaceProps)
       data-orb-dictate-empty={!hasTranscript ? 'true' : undefined}
       style={{ minHeight: 'min(100dvh - 4.5rem, calc(100svh - 4.5rem))' }}
     >
-      <header className="orb-flagship-page-header shrink-0 px-1 sm:px-0" data-orb-flagship-dictate-header>
-        <h2 className="orb-flagship-page-title" data-orb-dictate-flagship-title>
+      <header className="orb-workspace-header shrink-0 px-1 sm:px-0" data-orb-dictate-header>
+        <h2 className="orb-workspace-header-title" data-orb-dictate-title>
           {ORB_DICTATE_TITLE}
         </h2>
-        <p className="orb-flagship-page-lead" data-orb-dictate-flagship-subtitle>
+        <p className="orb-workspace-header-lead" data-orb-dictate-subtitle-header>
           {ORB_DICTATE_SUBTITLE}
         </p>
       </header>

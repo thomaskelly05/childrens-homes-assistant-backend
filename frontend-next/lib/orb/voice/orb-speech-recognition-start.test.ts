@@ -146,7 +146,7 @@ describe('ORB voice hook confirmed capture', () => {
   })
 
   it('light mode voice and dictate use orb theme tokens', () => {
-    const tokens = readFileSync(join(root, 'app/orb/orb-premium-tokens.css'), 'utf8')
+    const tokens = readFileSync(join(root, 'app/orb/_legacy-ui-archive/orb-premium-tokens.css'), 'utf8')
     assert.match(tokens, /--orb-background: #f7fbff/)
     assert.match(tokens, /--orb-surface: #ffffff/)
     const voice = readComponent('components/orb-standalone/orb-voice-station.tsx')

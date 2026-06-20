@@ -36,10 +36,9 @@ export function OrbGuidedDemoPanel({
       data-orb-guided-demo-panel
       data-orb-guided-demo-step={step.id}
       data-orb-guided-demo-step-index={stepIndex}
-      data-orb-flagship-guided-demo
     >
       <div
-        className="orb-guided-demo-panel__sheet orb-guided-demo-panel__sheet--flagship max-h-[min(92dvh,calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-1rem))] w-full max-w-4xl overflow-y-auto rounded-3xl p-5 sm:p-6"
+        className="orb-modal orb-guided-demo-panel__sheet max-h-[min(92dvh,calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-1rem))] w-full max-w-4xl overflow-y-auto rounded-3xl p-5 sm:p-6"
         style={{ marginBottom: 'env(safe-area-inset-bottom, 0px)' }}
       >
         <div className="flex items-start justify-between gap-3">
@@ -83,7 +82,7 @@ export function OrbGuidedDemoPanel({
           </button>
         </div>
 
-        <div className="orb-flagship-guided-demo-grid" data-orb-flagship-guided-demo-grid>
+        <div className="orb-guided-demo-grid" data-orb-guided-demo-grid>
           <div className="orb-guided-demo-panel__main min-w-0" data-orb-guided-demo-main>
             <p className="orb-guided-demo-panel__safety" data-orb-guided-demo-safety-note>
               {ORB_GUIDED_DEMO_SAFETY_NOTE}

@@ -7,6 +7,7 @@ import postcss from 'postcss'
 
 import {
   ORB_CANONICAL_CSS_FILES,
+  ORB_CSS_CONTRACT,
   ORB_IMPLEMENTATION_CSS_FILES,
   ORB_LAYOUT_CSS_FILES,
   ORB_LEGACY_CSS_PATHS,
@@ -46,43 +47,27 @@ describe('ORB CSS parse and import contract', () => {
     }
   })
 
-  it('/orb layout imports only approved canonical ORB CSS files', () => {
+  it('/orb layout imports only orb-residential-shell.css', () => {
     const layout = read('app/orb/layout.tsx')
     const importMatches = [...layout.matchAll(/import\s+['"]([^'"]+\.css)['"]/g)].map((match) => match[1])
 
-    assert.deepEqual(importMatches, [
-      './orb-theme.css',
-      './orb-components.css',
-      './orb-shell.css',
-      './orb-stations.css',
-      './orb-login.css'
-    ])
+    assert.deepEqual(importMatches, ['./orb-residential-shell.css'])
+    assert.equal(ORB_CSS_CONTRACT, 'orb-residential-shell-only')
 
     for (const legacy of ORB_LEGACY_CSS_PATHS) {
       assert.doesNotMatch(layout, new RegExp(legacy.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))
     }
   })
 
-  it('canonical layout layers aggregate implementation modules', () => {
-    const theme = read('app/orb/orb-theme.css')
-    const components = read('app/orb/orb-components.css')
-    const shell = read('app/orb/orb-shell.css')
-    const stations = read('app/orb/orb-stations.css')
-
-    for (const file of ['orb-premium-tokens.css', 'orb-brand-asset.css']) {
-      assert.match(theme, new RegExp(`@import\\s+['"]\\./${file}['"]`))
-    }
-    assert.match(components, /@import\s+['"]@\/components\/orb\/premium\/orb-premium-v2\.css['"]/)
-    for (const file of ['orb-desktop.css', 'orb-premium-layout-pass.css', 'orb-mobile.css']) {
-      assert.match(shell, new RegExp(`@import\\s+['"]\\./${file}['"]`))
-    }
-    assert.match(shell, /@import\s+['"]@\/components\/orb\/premium\/orb-premium-studio-v3\.css['"]/)
-    for (const file of ['orb-dictate-studio-polish.css', 'orb-light-layer-fix.css']) {
-      assert.match(stations, new RegExp(`@import\\s+['"]\\./${file}['"]`))
-    }
-
-    assert.equal(ORB_LAYOUT_CSS_FILES.length, 5)
-    assert.equal(ORB_IMPLEMENTATION_CSS_FILES.length, 9)
+  it('canonical layout is a single shell CSS file with no implementation modules', () => {
+    const shell = read('app/orb/orb-residential-shell.css')
+    assert.match(shell, /\.orb-app-shell/)
+    assert.match(shell, /\.orb-sidebar/)
+    assert.match(shell, /\.orb-main/)
+    assert.match(shell, /\.orb-composer-dock/)
+    assert.match(shell, /\.orb-login-shell/)
+    assert.equal(ORB_LAYOUT_CSS_FILES.length, 1)
+    assert.equal(ORB_IMPLEMENTATION_CSS_FILES.length, 0)
   })
 
   it('no legacy indicare-ai voice CSS is imported into /orb', () => {
@@ -122,15 +107,15 @@ describe('ORB CSS parse and import contract', () => {
     assert.match(css, /\.orb-voice-companion \.orb-sphere[\s\S]*display:\s*none/)
   })
 
-  it('login uses canonical login CSS and front-door version marker', () => {
+  it('login uses canonical shell CSS and front-door version marker', () => {
     const login = read('components/orb-residential/orb-login-screen.tsx')
     const layout = read('app/orb/layout.tsx')
 
-    assert.match(layout, /import '\.\/orb-login\.css'/)
+    assert.match(layout, /import '\.\/orb-residential-shell\.css'/)
     assert.match(login, /data-orb-login-version=\{ORB_LOGIN_VERSION\}/)
     assert.match(login, new RegExp(`ORB_LOGIN_VERSION`))
     assert.equal(ORB_LOGIN_VERSION, 'front-door-v6')
-    assert.equal(ORB_LOGIN_CSS_FILE, 'app/orb/orb-login.css')
+    assert.equal(ORB_LOGIN_CSS_FILE, 'app/orb/orb-residential-shell.css')
   })
 
   it('layout and voice expose orb-style-v1 and living-core-v1 version markers', () => {

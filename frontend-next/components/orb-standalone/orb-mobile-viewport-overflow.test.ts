@@ -12,7 +12,7 @@ function readComponent(relativePath: string) {
 
 describe('ORB mobile viewport overflow guards', () => {
   it('residential sidebar grid is desktop-only (no reserved column on mobile)', () => {
-    const premium = readComponent('app/orb/orb-premium-tokens.css')
+    const premium = readComponent('app/orb/_legacy-ui-archive/orb-premium-tokens.css')
     const gridBlock = premium.match(
       /@media \(min-width: 1024px\)\s*\{[\s\S]*?\.orb-chat-layout--residential \.orb-chat-shell\s*\{[\s\S]*?grid-template-columns/
     )
@@ -24,7 +24,7 @@ describe('ORB mobile viewport overflow guards', () => {
   })
 
   it('mobile CSS uses flex shell and viewport-bounded composer', () => {
-    const mobileCss = readComponent('app/orb/orb-mobile.css')
+    const mobileCss = readComponent('app/orb/_legacy-ui-archive/orb-mobile.css')
     assert.match(mobileCss, /\[data-orb-shell='true'\]/)
     assert.match(mobileCss, /\.orb-residential-root/)
     assert.match(mobileCss, /\.orb-chat-shell\s*\{[^}]*display:\s*flex/)

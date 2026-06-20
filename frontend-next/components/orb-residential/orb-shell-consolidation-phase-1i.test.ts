@@ -1,22 +1,15 @@
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, it } from 'node:test'
 
-import { ORB_FLAGSHIP_BILLING_INCLUDED_ITEMS } from '../../lib/orb/orb-flagship-copy.ts'
+import { ORB_RESIDENTIAL_BILLING_INCLUDED_ITEMS } from '../../lib/orb/orb-residential-ui-copy.ts'
 import { ORB_RESIDENTIAL_LOCKED_THEME } from '../../lib/orb/orb-appearance.ts'
 import { ORB_VISIBLE_SIDEBAR_NAV } from '../../lib/orb/orb-user-facing-names.ts'
+import { ORB_ARCHIVED_PHASE_CSS_FILES } from '../../lib/orb/orb-visual-build.ts'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '../..')
-const PHASE_CSS = [
-  'orb-showstopper-phase-1d.css',
-  'orb-showstopper-phase-1d1.css',
-  'orb-theme-lock-phase-1e.css',
-  'orb-flagship-phase-1f.css',
-  'orb-full-viewport-phase-1g.css',
-  'orb-convergence-phase-1h.css'
-] as const
 
 function read(relativePath: string) {
   return readFileSync(join(root, relativePath), 'utf8')
@@ -26,8 +19,10 @@ describe('ORB Residential Phase 1I single shell consolidation', () => {
   it('/orb imports only one active ORB Residential UI CSS system', () => {
     const layout = read('app/orb/layout.tsx')
     assert.match(layout, /orb-residential-shell\.css/)
-    for (const phase of PHASE_CSS) {
-      assert.doesNotMatch(layout, new RegExp(phase.replace('.', '\\.')))
+    for (const archived of ORB_ARCHIVED_PHASE_CSS_FILES) {
+      const basename = archived.split('/').pop()!
+      assert.doesNotMatch(layout, new RegExp(basename.replace('.', '\\.')))
+      assert.ok(existsSync(join(root, archived)), `${archived} should exist in archive`)
     }
   })
 
@@ -72,8 +67,8 @@ describe('ORB Residential Phase 1I single shell consolidation', () => {
     assert.doesNotMatch(billing, /'Saved outputs'/)
     assert.doesNotMatch(billing, /'Templates'/)
     assert.doesNotMatch(billing, /'Documents'/)
-    assert.ok(ORB_FLAGSHIP_BILLING_INCLUDED_ITEMS.includes('Records & Drafts'))
-    assert.ok(ORB_FLAGSHIP_BILLING_INCLUDED_ITEMS.includes('Help & Safety'))
+    assert.ok(ORB_RESIDENTIAL_BILLING_INCLUDED_ITEMS.includes('Records & Drafts'))
+    assert.ok(ORB_RESIDENTIAL_BILLING_INCLUDED_ITEMS.includes('Help & Safety'))
   })
 
   it('login uses one login shell without signed-in workspace shell classes', () => {

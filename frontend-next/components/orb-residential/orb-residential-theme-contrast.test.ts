@@ -22,20 +22,20 @@ describe('ORB Residential theme contrast tokens', () => {
   })
 
   it('dark premium composer and glass shadows remain on dark theme only', () => {
-    const premium = read('app/orb/orb-premium-tokens.css')
+    const premium = read('app/orb/_legacy-ui-archive/orb-premium-tokens.css')
     assert.match(premium, /\.orb-chat-layout--residential\.orb-theme-dark \.orb-composer-glass/)
     assert.match(premium, /\.orb-chat-layout--residential\.orb-theme-light \.orb-composer-glass/)
     assert.match(premium, /orb-theme-dark[\s\S]*orb-panel-overlay[\s\S]*rgba\(0,\s*0,\s*0/)
   })
 
   it('dark mode workspace panels keep premium dark card defaults', () => {
-    const mobileCss = read('app/orb/orb-mobile.css')
+    const mobileCss = read('app/orb/_legacy-ui-archive/orb-mobile.css')
     assert.match(mobileCss, /orb-theme-dark[\s\S]*orb-main-workspace[\s\S]*#070b14|rgba\(8,\s*17,\s*31/)
     assert.match(mobileCss, /orb-theme-light[\s\S]*orb-main-workspace[\s\S]*#f7fbff|var\(--orb-mobile-ws-panel/)
   })
 
   it('light starter cards do not inherit unscoped dark residential text overrides', () => {
-    const mobileCss = read('app/orb/orb-mobile.css')
+    const mobileCss = read('app/orb/_legacy-ui-archive/orb-mobile.css')
     assert.match(mobileCss, /orb-theme-light \[data-orb-starter-card\]/)
     assert.match(mobileCss, /orb-theme-dark \[data-orb-starter-card\]/)
   })

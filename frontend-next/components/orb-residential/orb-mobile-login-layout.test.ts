@@ -13,7 +13,7 @@ function read(relativePath: string) {
 describe('ORB mobile login layout', () => {
   it('uses single-column mobile markers and scrollable page', () => {
     const login = read('components/orb-residential/orb-login-screen.tsx')
-    const css = read('app/orb/orb-login.css')
+    const css = read('app/orb/_legacy-ui-archive/orb-login.css')
     assert.match(login, /data-orb-login-mobile-single-column/)
     assert.match(login, /data-orb-login-scrollable/)
     assert.match(css, /100svh/)
@@ -24,7 +24,7 @@ describe('ORB mobile login layout', () => {
   it('mobile login renders compact brand area', () => {
     const mobile = read('components/orb-residential/orb-login-mobile-header.tsx')
     const login = read('components/orb-residential/orb-login-screen.tsx')
-    const css = read('app/orb/orb-login.css')
+    const css = read('app/orb/_legacy-ui-archive/orb-login.css')
 
     assert.match(login, /OrbLoginMobileHeader/)
     assert.match(mobile, /data-orb-login-mobile-brand/)
@@ -39,7 +39,7 @@ describe('ORB mobile login layout', () => {
 
   it('mobile login heading Sign in to continue is present and left-aligned', () => {
     const authCard = read('components/orb-residential/orb-login-auth-card.tsx')
-    const css = read('app/orb/orb-login.css')
+    const css = read('app/orb/_legacy-ui-archive/orb-login.css')
     assert.match(authCard, /Sign in to continue/)
     assert.match(authCard, /data-orb-login-signin-title-mobile/)
     assert.match(authCard, /text-left/)
@@ -106,7 +106,7 @@ describe('ORB mobile login layout', () => {
   it('settings mobile layout uses stacked screen pattern not clipped desktop modal', () => {
     const settings = read('components/orb-standalone/orb-standalone-settings-panel.tsx')
     const shell = read('components/orb-standalone/orb-standalone-panel-shell.tsx')
-    const css = read('app/orb/orb-mobile.css')
+    const css = read('app/orb/_legacy-ui-archive/orb-mobile.css')
     assert.match(settings, /data-orb-settings-mobile-layout/)
     assert.match(settings, /data-orb-settings-mobile-back/)
     assert.match(settings, /useOrbResponsiveMode/)
@@ -162,7 +162,7 @@ describe('ORB mobile login layout', () => {
   })
 
   it('mobile login avoids modal card chrome', () => {
-    const css = read('app/orb/orb-login.css')
+    const css = read('app/orb/_legacy-ui-archive/orb-login.css')
     assert.match(css, /Flat mobile surface/)
     assert.match(css, /border:\s*none/)
     assert.match(css, /box-shadow:\s*none/)
@@ -185,7 +185,7 @@ describe('ORB mobile login layout', () => {
 
   it('mobile shell applies shared safe-area class', () => {
     const shell = read('components/orb-residential/orb-mobile-shell.tsx')
-    const shellCss = read('app/orb/orb-mobile-shell.css')
+    const shellCss = read('app/orb/_legacy-ui-archive/orb-mobile-shell.css')
     const login = read('components/orb-residential/orb-login-screen.tsx')
     const theme = read('lib/orb/orb-theme.ts')
     assert.match(shell, /ORB_MOBILE_SAFE_AREA_CLASS/)
@@ -210,21 +210,21 @@ describe('ORB mobile login layout', () => {
 
   it('account menu keeps Sign out reachable', () => {
     const menu = read('components/orb-residential/orb-account-menu.tsx')
-    const css = read('app/orb/orb-mobile.css')
+    const css = read('app/orb/_legacy-ui-archive/orb-mobile.css')
     assert.match(menu, /data-orb-account-menu-sign-out-wrap/)
     assert.match(menu, /Sign out/)
     assert.match(css, /data-orb-account-menu-sign-out-wrap/)
   })
 
   it('Dictate and Voice CTAs remain reachable on mobile', () => {
-    const css = read('app/orb/orb-mobile.css')
+    const css = read('app/orb/_legacy-ui-archive/orb-mobile.css')
     assert.match(css, /data-orb-dictate-primary-action/)
     assert.match(css, /data-orb-voice-actions/)
     assert.match(css, /safe-area-inset-bottom/)
   })
 
   it('document view action remains reachable on mobile', () => {
-    const css = read('app/orb/orb-mobile.css')
+    const css = read('app/orb/_legacy-ui-archive/orb-mobile.css')
     const toolbar = read('components/orb-write/orb-write-mobile-toolbar.tsx')
     assert.match(css, /orb-write-mobile-toolbar/)
     assert.match(toolbar, /data-orb-write-approve/)
@@ -232,7 +232,7 @@ describe('ORB mobile login layout', () => {
   })
 
   it('mobile viewport utilities avoid browser-specific regression', () => {
-    const shellCss = read('app/orb/orb-mobile-shell.css')
+    const shellCss = read('app/orb/_legacy-ui-archive/orb-mobile-shell.css')
     assert.match(shellCss, /100dvh/)
     assert.match(shellCss, /100svh/)
     assert.match(shellCss, /-webkit-fill-available/)

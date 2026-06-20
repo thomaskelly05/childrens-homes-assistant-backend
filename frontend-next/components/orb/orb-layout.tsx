@@ -174,8 +174,8 @@ export function OrbLayout({
               {thread}
               {scrollFab}
             </div>
-            {composer}
           </section>
+          {composer}
         </main>
 
         {rightPanel ? (

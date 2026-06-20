@@ -25,8 +25,8 @@ describe('ORB mobile-safe markdown tables', () => {
   })
 
   it('mobile CSS enables horizontal table scroll without letter-break collapse', () => {
-    const mobileCss = readComponent('app/orb/orb-mobile.css')
-    const desktopCss = readComponent('app/orb/orb-desktop.css')
+    const mobileCss = readComponent('app/orb/_legacy-ui-archive/orb-mobile.css')
+    const desktopCss = readComponent('app/orb/_legacy-ui-archive/orb-desktop.css')
     assert.match(mobileCss, /\[data-orb-table-scroll\]/)
     assert.match(mobileCss, /overflow-x:\s*auto/)
     assert.match(mobileCss, /min-width:\s*max-content/)
@@ -37,8 +37,8 @@ describe('ORB mobile-safe markdown tables', () => {
   })
 
   it('table cells do not use word-break break-all in route CSS', () => {
-    const mobileCss = readComponent('app/orb/orb-mobile.css')
-    const desktopCss = readComponent('app/orb/orb-desktop.css')
+    const mobileCss = readComponent('app/orb/_legacy-ui-archive/orb-mobile.css')
+    const desktopCss = readComponent('app/orb/_legacy-ui-archive/orb-desktop.css')
     assert.doesNotMatch(mobileCss, /orb-md-table[\s\S]*break-all/)
     assert.doesNotMatch(desktopCss, /orb-md-table[\s\S]*break-all/)
   })
@@ -52,14 +52,14 @@ describe('ORB mobile-safe markdown tables', () => {
   })
 
   it('desktop table styles remain defined', () => {
-    const desktopCss = readComponent('app/orb/orb-desktop.css')
+    const desktopCss = readComponent('app/orb/_legacy-ui-archive/orb-desktop.css')
     assert.match(desktopCss, /\.orb-markdown-answer \.orb-md-table/)
     assert.match(desktopCss, /\.orb-markdown-answer \.orb-md-th/)
     assert.match(desktopCss, /border-collapse/)
   })
 
   it('dark mode table border contrast is preserved', () => {
-    const desktopCss = readComponent('app/orb/orb-desktop.css')
+    const desktopCss = readComponent('app/orb/_legacy-ui-archive/orb-desktop.css')
     assert.match(desktopCss, /html\[data-orb-theme='dark'\][\s\S]*orb-md-th/)
     assert.match(desktopCss, /rgba\(255,\s*255,\s*255,\s*0\.12\)/)
   })

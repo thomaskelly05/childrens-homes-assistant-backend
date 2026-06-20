@@ -37,7 +37,7 @@ describe('ORB Residential desktop convergence sprint', () => {
 
   it('desktop plus menu uses liquid glass and upload boundary copy', () => {
     const plusMenu = read('components/orb-standalone/orb-composer-plus-menu.tsx')
-    const liquid = read('app/orb/orb-liquid-glass.css')
+    const liquid = read('app/orb/_legacy-ui-archive/orb-liquid-glass.css')
 
     assert.match(plusMenu, /orb-liquid-panel/)
     assert.match(plusMenu, /ORB_COMPOSER_UPLOAD_BOUNDARY_LINES/)
@@ -50,7 +50,7 @@ describe('ORB Residential desktop convergence sprint', () => {
     const settings = read('components/orb-standalone/orb-standalone-settings-panel.tsx')
     const shell = read('components/orb/orb-shell.tsx')
     const shellCss = read('app/orb/orb-residential-shell.css')
-    const desktop = read('app/orb/orb-desktop.css')
+    const desktop = read('app/orb/_legacy-ui-archive/orb-desktop.css')
 
     assert.match(shell, /OrbCareCompanion/)
     assert.match(settings, /data-orb-modal="product"/)
@@ -62,7 +62,7 @@ describe('ORB Residential desktop convergence sprint', () => {
 
   it('desktop ORB presence uses shared liquid orb treatment', () => {
     const presence = read('components/orb-residential/ui/orb-presence.tsx')
-    const desktop = read('app/orb/orb-desktop.css')
+    const desktop = read('app/orb/_legacy-ui-archive/orb-desktop.css')
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
 
     assert.match(presence, /orb-liquid-orb/)
@@ -76,7 +76,7 @@ describe('ORB Residential desktop convergence sprint', () => {
   it('desktop home uses calm starter chips and composer without shield', () => {
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
     const composer = read('components/orb-standalone/orb-standalone-composer.tsx')
-    const desktop = read('app/orb/orb-desktop.css')
+    const desktop = read('app/orb/_legacy-ui-archive/orb-desktop.css')
 
     assert.match(companion, /data-orb-residential-empty/)
     assert.match(companion, /data-orb-empty-heading-desktop/)
@@ -89,7 +89,7 @@ describe('ORB Residential desktop convergence sprint', () => {
 
   it('desktop sidebar nav, search and liquid glass account card remain wired', () => {
     const sidebar = read('components/orb-residential/orb-residential-sidebar.tsx')
-    const desktop = read('app/orb/orb-desktop.css')
+    const desktop = read('app/orb/_legacy-ui-archive/orb-desktop.css')
 
     assert.match(sidebar, /data-orb-sidebar-search/)
     assert.match(sidebar, /data-orb-sidebar-new-chat/)
@@ -105,7 +105,7 @@ describe('ORB Residential desktop convergence sprint', () => {
     const settings = read('components/orb-standalone/orb-standalone-settings-panel.tsx')
     const privacy = read('components/orb-residential/orb-privacy-data-settings-section.tsx')
     const sheet = read('components/orb-residential/orb-privacy-detail-sheet.tsx')
-    const desktop = read('app/orb/orb-desktop.css')
+    const desktop = read('app/orb/_legacy-ui-archive/orb-desktop.css')
 
     assert.match(settings, /overflow-y-auto/)
     assert.match(privacy, /OrbPrivacyDetailSheet/)
@@ -148,7 +148,7 @@ describe('ORB Residential desktop convergence sprint', () => {
     const write = read('components/orb-write/orb-write-station.tsx')
     const writePanel = read('components/orb-write/orb-write-standalone-panel.tsx')
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
-    const desktop = read('app/orb/orb-desktop.css')
+    const desktop = read('app/orb/_legacy-ui-archive/orb-desktop.css')
 
     assert.match(voice, /orb-liquid-card/)
     assert.match(voice, /orb-liquid-button/)
@@ -174,7 +174,7 @@ describe('ORB Residential desktop convergence sprint', () => {
     const billing = read('components/orb-standalone/orb-billing-modal.tsx')
     const appearance = read('components/orb-standalone/orb-appearance-control.tsx')
     const privacy = read('components/orb-residential/orb-privacy-data-settings-section.tsx')
-    const desktop = read('app/orb/orb-desktop.css')
+    const desktop = read('app/orb/_legacy-ui-archive/orb-desktop.css')
 
     assert.match(settings, /data-orb-settings-scroll/)
     assert.match(appearance, /data-orb-appearance-option/)
@@ -183,7 +183,7 @@ describe('ORB Residential desktop convergence sprint', () => {
     assert.match(billing, /data-orb-billing-refresh/)
     assert.match(billing, /data-orb-billing-portal|data-orb-billing-upgrade|data-orb-billing-trial/)
     assert.match(billing, /data-orb-billing-desktop-layout="sheet"/)
-    assert.match(billing, /orb-liquid-card/)
+    assert.match(billing, /orb-billing-card/)
     const billingCtaMatches = billing.match(/data-orb-billing-(trial|upgrade|portal)/g) ?? []
     assert.ok(billingCtaMatches.length >= 1)
     assert.match(billing, /data-orb-billing-sticky-footer/)
@@ -196,7 +196,7 @@ describe('ORB Residential desktop convergence sprint', () => {
   it('documents and templates desktop surfaces keep search and library actions', () => {
     const documents = read('components/orb-standalone/orb-document-panel.tsx')
     const templates = read('components/orb-standalone/orb-templates-panel.tsx')
-    const desktop = read('app/orb/orb-desktop.css')
+    const desktop = read('app/orb/_legacy-ui-archive/orb-desktop.css')
 
     assert.match(documents, /searchSurfaceId="documents_guidance"/)
     assert.match(documents, /data-orb-document-dropzone/)
@@ -224,7 +224,7 @@ describe('ORB Residential desktop convergence sprint', () => {
   it('mobile regression: plus sheet, no shield, speech fallback and settings scroll intact', () => {
     const composer = read('components/orb-standalone/orb-standalone-composer.tsx')
     const tools = read('components/orb-residential/orb-residential-composer-tools-sheet.tsx')
-    const mobile = read('app/orb/orb-mobile.css')
+    const mobile = read('app/orb/_legacy-ui-archive/orb-mobile.css')
     const privacy = read('components/orb-residential/orb-privacy-detail-sheet.tsx')
 
     assert.match(composer, /OrbResidentialComposerToolsSheet/)

@@ -78,7 +78,7 @@ describe('ORB Residential ChatGPT parity', () => {
   })
 
   it('main chat does not render white background under residential root', () => {
-    const premium = readComponent('app/orb/orb-premium-tokens.css')
+    const premium = readComponent('app/orb/_legacy-ui-archive/orb-premium-tokens.css')
     const shell = readComponent('components/orb/orb-shell.tsx')
     const theme = readComponent('lib/orb/orb-theme.ts')
     assert.match(premium, /html\[data-orb-residential='1'\]/)
@@ -133,7 +133,7 @@ describe('ORB Residential ChatGPT parity', () => {
 
   it('composer compact mode without duplicated mode pill or in-dock footer on residential', () => {
     const composer = readComponent('components/orb-standalone/orb-standalone-composer.tsx')
-    const premium = readComponent('app/orb/orb-premium-tokens.css')
+    const premium = readComponent('app/orb/_legacy-ui-archive/orb-premium-tokens.css')
     assert.match(composer, /residentialSurface/)
     assert.match(composer, /orb-composer-glass--compact/)
     assert.doesNotMatch(composer, /orb-residential-footer/)

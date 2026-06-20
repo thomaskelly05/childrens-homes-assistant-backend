@@ -15,7 +15,7 @@ function readComponent(relativePath: string) {
 
 describe('ORB Residential workflow correction pass', () => {
   it('mobile empty state scroll container aligns content from top not flex-end', () => {
-    const mobileCss = readComponent('app/orb/orb-mobile.css')
+    const mobileCss = readComponent('app/orb/_legacy-ui-archive/orb-mobile.css')
     assert.match(
       mobileCss,
       /\[data-orb-chat-scroll-container\]:has\(\[data-orb-residential-empty\]\)[\s\S]*justify-content:\s*flex-start/
@@ -28,7 +28,7 @@ describe('ORB Residential workflow correction pass', () => {
   })
 
   it('mobile light theme empty heading uses readable dark text', () => {
-    const mobileCss = readComponent('app/orb/orb-mobile.css')
+    const mobileCss = readComponent('app/orb/_legacy-ui-archive/orb-mobile.css')
     assert.match(
       mobileCss,
       /\.orb-theme-light \[data-orb-empty-heading-mobile\][\s\S]{0,120}--orb-res-text,\s*#0f172a/
@@ -61,7 +61,7 @@ describe('ORB Residential workflow correction pass', () => {
 
   it('markdown renderer supports GFM tables and checklist inputs', () => {
     const markdown = readComponent('components/orb-standalone/orb-markdown-answer.tsx')
-    const desktopCss = readComponent('app/orb/orb-desktop.css')
+    const desktopCss = readComponent('app/orb/_legacy-ui-archive/orb-desktop.css')
     assert.match(markdown, /orb-md-table/)
     assert.match(markdown, /type === 'checkbox'/)
     assert.match(desktopCss, /\.orb-markdown-answer \.orb-md-table/)
@@ -87,7 +87,7 @@ describe('ORB Residential workflow correction pass', () => {
   })
 
   it('powered-by brand uses premium navy token', () => {
-    const tokens = readComponent('app/orb/orb-premium-tokens.css')
+    const tokens = readComponent('app/orb/_legacy-ui-archive/orb-premium-tokens.css')
     const mark = readComponent('components/orb-residential/ui/glass-orb-mark.tsx')
     const theme = readComponent('lib/orb/orb-theme.ts')
     assert.match(tokens, /--orb-brand-navy,\s*#0b1f3a/)

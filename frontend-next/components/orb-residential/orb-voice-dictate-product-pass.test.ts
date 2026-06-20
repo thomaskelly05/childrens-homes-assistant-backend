@@ -20,7 +20,7 @@ function read(relativePath: string) {
 describe('ORB Voice + Dictate product pass', () => {
   it('Dictate mobile has premium capture stage without form card border', () => {
     const dictate = read('components/orb-standalone/orb-dictate-mobile-experience.tsx')
-    const mobileCss = read('app/orb/orb-mobile.css')
+    const mobileCss = read('app/orb/_legacy-ui-archive/orb-mobile.css')
     assert.match(dictate, /data-orb-dictate-capture-stage/)
     assert.match(dictate, /orb-dictate-mobile-capture-stage/)
     assert.match(dictate, /GlassOrbMark/)
@@ -132,7 +132,7 @@ describe('ORB Voice + Dictate product pass', () => {
 
   it('mobile safe-area action dock and voice modes use workspace scroll containment', () => {
     const content = read('components/orb-standalone/orb-voice-station-content.tsx')
-    const mobileCss = read('app/orb/orb-mobile.css')
+    const mobileCss = read('app/orb/_legacy-ui-archive/orb-mobile.css')
     assert.match(content, /data-orb-voice-mobile-action-dock/)
     assert.match(content, /env\(safe-area-inset-bottom\)/)
     assert.match(mobileCss, /\[data-orb-voice-workspace-mode='live'\]/)

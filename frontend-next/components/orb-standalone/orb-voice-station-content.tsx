@@ -6,7 +6,11 @@ import { OrbVoiceHeroStage } from '@/components/orb-standalone/orb-voice-hero-st
 import { OrbVoiceResponsibilityStrip } from '@/components/orb-standalone/orb-voice-responsibility-strip'
 import { useOrbMobileViewport } from '@/components/orb-standalone/use-orb-mobile-viewport'
 import type { OrbVoiceCompanionState } from '@/components/orb-residential/orb-voice-companion'
-import { ORB_VOICE_V2_STATUS_COPY } from '@/lib/orb/orb-convergence-phase-1h-copy'
+import {
+  ORB_VOICE_STATUS_CARD_COPY,
+  ORB_VOICE_V2_PROMPT,
+  ORB_VOICE_V2_TITLE
+} from '@/lib/orb/orb-residential-ui-copy'
 
 /**
  * Canonical Voice station body — shared hero column for desktop and mobile.
@@ -59,6 +63,22 @@ export function OrbVoiceStationContent({
           }`}
         >
           <div className={`orb-voice-station-content__hero flex w-full flex-col items-center ${showDesktopSplit ? 'md:max-w-sm md:flex-1' : ''}`}>
+            {workspaceMode === 'idle' ? (
+              <div className="orb-voice-station-content__intro mb-3 text-center" data-orb-voice-v2-intro>
+                <h2
+                  className="orb-voice-station-content__title text-base font-semibold text-[var(--orb-text,var(--orb-foreground))]"
+                  data-orb-voice-v2-title
+                >
+                  {ORB_VOICE_V2_TITLE}
+                </h2>
+                <p
+                  className="orb-voice-station-content__prompt mt-1 text-sm text-[var(--orb-muted)]"
+                  data-orb-voice-v2-prompt
+                >
+                  {ORB_VOICE_V2_PROMPT}
+                </p>
+              </div>
+            ) : null}
             <OrbVoiceHeroStage
               companionState={companionState}
               statusLine={statusLine}
@@ -75,7 +95,7 @@ export function OrbVoiceStationContent({
                 data-orb-voice-status
                 data-orb-voice-safety-note
               >
-                {ORB_VOICE_V2_STATUS_COPY}
+                {ORB_VOICE_STATUS_CARD_COPY}
               </p>
             ) : null}
           </div>

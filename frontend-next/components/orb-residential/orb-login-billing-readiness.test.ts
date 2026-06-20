@@ -62,7 +62,7 @@ describe('ORB login and billing readiness', () => {
 
   it('active billing modal shows manage subscription and individual plan', () => {
     const billing = read('components/orb-standalone/orb-billing-modal.tsx')
-    assert.match(billing, /ORB Residential — Individual/)
+    assert.match(billing, /ORB_RESIDENTIAL_BILLING_SUBTITLE/)
     assert.match(billing, /£9\.99\/month/)
     assert.match(billing, /data-orb-billing-portal/)
     assert.match(billing, /data-orb-billing-upgrade/)

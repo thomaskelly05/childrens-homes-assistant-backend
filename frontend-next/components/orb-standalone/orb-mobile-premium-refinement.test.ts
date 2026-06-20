@@ -48,7 +48,7 @@ describe('ORB appearance system default', () => {
   })
 
   it('does not force dark lock on ORB Residential root CSS', () => {
-    const tokens = readComponent('app/orb/orb-premium-tokens.css')
+    const tokens = readComponent('app/orb/_legacy-ui-archive/orb-premium-tokens.css')
     assert.match(tokens, /data-orb-theme='dark'\]/)
     assert.doesNotMatch(tokens, /ORB Residential launch lock/)
     assert.match(tokens, /--orb-res-bg/)
@@ -78,7 +78,7 @@ describe('ORB personalised greeting', () => {
 
 describe('ORB mobile shell layout', () => {
   it('mobile shell avoids horizontal overflow and offsets', () => {
-    const mobileCss = readComponent('app/orb/orb-mobile.css')
+    const mobileCss = readComponent('app/orb/_legacy-ui-archive/orb-mobile.css')
     const companion = readComponent('components/orb-standalone/orb-care-companion.tsx')
     assert.match(mobileCss, /overflow-x:\s*hidden/)
     assert.match(mobileCss, /max-width:\s*100vw/)
@@ -88,7 +88,7 @@ describe('ORB mobile shell layout', () => {
   })
 
   it('composer respects safe area on mobile', () => {
-    const mobileCss = readComponent('app/orb/orb-mobile.css')
+    const mobileCss = readComponent('app/orb/_legacy-ui-archive/orb-mobile.css')
     assert.match(mobileCss, /safe-area-inset-bottom/)
   })
 
@@ -170,7 +170,7 @@ describe('ORB flight recorder debug polish', () => {
 
   it('positions recorder away from bottom CTAs on mobile', () => {
     const recorder = readComponent('components/orb-standalone/orb-client-flight-recorder.tsx')
-    const mobileCss = readComponent('app/orb/orb-mobile.css')
+    const mobileCss = readComponent('app/orb/_legacy-ui-archive/orb-mobile.css')
     assert.match(recorder, /top-\[max/)
     assert.match(mobileCss, /\.orb-flight-recorder/)
   })

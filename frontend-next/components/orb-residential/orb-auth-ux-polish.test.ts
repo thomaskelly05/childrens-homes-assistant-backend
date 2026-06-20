@@ -38,7 +38,7 @@ describe('ORB auth UX polish', () => {
 
   it('access screen uses front-door styling with recovery actions', () => {
     const upgrade = read('components/orb-standalone/orb-upgrade-screen.tsx')
-    const css = read('app/orb/orb-login.css')
+    const css = read('app/orb/_legacy-ui-archive/orb-login.css')
     assert.match(upgrade, /data-orb-return-to-orb/)
     assert.match(upgrade, /data-orb-switch-account/)
     assert.match(upgrade, /Switch account/)

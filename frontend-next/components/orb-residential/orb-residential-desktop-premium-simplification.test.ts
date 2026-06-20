@@ -13,7 +13,7 @@ function read(relativePath: string) {
 describe('ORB Residential desktop premium simplification pass', () => {
   it('desktop home uses lightweight primary chips with progressive disclosure', () => {
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
-    const desktop = read('app/orb/orb-desktop.css')
+    const desktop = read('app/orb/_legacy-ui-archive/orb-desktop.css')
 
     assert.match(companion, /data-orb-workspace-starters/)
     assert.match(companion, /data-orb-starter-expanded-groups/)
@@ -44,7 +44,7 @@ describe('ORB Residential desktop premium simplification pass', () => {
     const voiceContent = read('components/orb-standalone/orb-voice-station-content.tsx')
     const voiceHero = read('components/orb-standalone/orb-voice-hero-stage.tsx')
     const voiceStrip = read('components/orb-standalone/orb-voice-responsibility-strip.tsx')
-    const desktop = read('app/orb/orb-desktop.css')
+    const desktop = read('app/orb/_legacy-ui-archive/orb-desktop.css')
 
     assert.match(voiceContent, /data-orb-voice-desktop-spacious/)
     assert.match(voiceContent, /OrbVoiceResponsibilityStrip/)
@@ -90,7 +90,7 @@ describe('ORB Residential desktop premium simplification pass', () => {
 
   it('billing modal uses full-width summary and desktop two-column grid', () => {
     const billing = read('components/orb-standalone/orb-billing-modal.tsx')
-    const desktop = read('app/orb/orb-desktop.css')
+    const desktop = read('app/orb/_legacy-ui-archive/orb-desktop.css')
 
     assert.match(billing, /data-orb-billing-plan-card/)
     assert.match(billing, /data-orb-billing-desktop-grid/)
@@ -108,7 +108,7 @@ describe('ORB Residential desktop premium simplification pass', () => {
     const settings = read('components/orb-standalone/orb-standalone-settings-panel.tsx')
     const appearance = read('components/orb-standalone/orb-appearance-control.tsx')
     const privacy = read('components/orb-residential/orb-privacy-data-settings-section.tsx')
-    const desktop = read('app/orb/orb-desktop.css')
+    const desktop = read('app/orb/_legacy-ui-archive/orb-desktop.css')
 
     assert.match(settings, /data-orb-settings-scroll/)
     assert.match(appearance, /data-orb-appearance-option/)

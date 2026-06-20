@@ -35,7 +35,7 @@ describe('ORB Write template picker', () => {
 
   it('mobile template picker footer is sticky with safe-area padding', () => {
     const picker = read('components/orb-write/orb-write-template-picker.tsx')
-    const mobileCss = read('app/orb/orb-mobile.css')
+    const mobileCss = read('app/orb/_legacy-ui-archive/orb-mobile.css')
     assert.match(picker, /data-orb-write-template-picker-footer/)
     assert.match(picker, /data-orb-write-template-picker-mobile/)
     assert.match(mobileCss, /\[data-orb-write-template-picker-footer\]/)

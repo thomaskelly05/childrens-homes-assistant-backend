@@ -60,7 +60,7 @@ describe('ORB composer plus menu and instant capture pass', () => {
   it('draft notice uses readable contrast tokens', () => {
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
     const notice = read('lib/orb/orb-draft-notice.ts')
-    const mobileCss = read('app/orb/orb-mobile.css')
+    const mobileCss = read('app/orb/_legacy-ui-archive/orb-mobile.css')
     assert.match(companion, /ORB_DRAFT_NOTICE_CLASS/)
     assert.match(companion, /data-orb-draft-notice/)
     assert.doesNotMatch(companion, /text-amber-50.*draftNotice|draftNotice[\s\S]*text-amber-50/)

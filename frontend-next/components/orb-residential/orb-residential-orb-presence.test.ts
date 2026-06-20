@@ -56,7 +56,7 @@ describe('ORB Residential orb presence layout', () => {
   it('living sphere uses CSS gradients and pseudo-elements not static image', () => {
     const presence = read('components/orb-residential/ui/orb-presence.tsx')
     const sphere = read('components/orb-core/orb-sphere.tsx')
-    const premium = read('app/orb/orb-premium-tokens.css')
+    const premium = read('app/orb/_legacy-ui-archive/orb-premium-tokens.css')
     assert.match(presence, /OrbSphere/)
     assert.doesNotMatch(presence, /OrbBrandImage|orb-brand\.png/)
     assert.match(sphere, /orb-living-sphere/)
@@ -68,8 +68,8 @@ describe('ORB Residential orb presence layout', () => {
   })
 
   it('residential CSS does not hide living sphere or orb-sphere in product', () => {
-    const premium = read('app/orb/orb-premium-tokens.css')
-    const brand = read('app/orb/orb-brand-asset.css')
+    const premium = read('app/orb/_legacy-ui-archive/orb-premium-tokens.css')
+    const brand = read('app/orb/_legacy-ui-archive/orb-brand-asset.css')
     assert.doesNotMatch(premium, /\.orb-living-sphere\s*\{[^}]*display:\s*none/)
     assert.doesNotMatch(premium, /\.orb-sphere\s*\{[^}]*display:\s*none/)
     assert.doesNotMatch(
@@ -82,7 +82,7 @@ describe('ORB Residential orb presence layout', () => {
   })
 
   it('hero and workspace variant sizes stay within mobile/desktop bounds in CSS', () => {
-    const premium = read('app/orb/orb-premium-tokens.css')
+    const premium = read('app/orb/_legacy-ui-archive/orb-premium-tokens.css')
     assert.match(premium, /\.orb-presence--hero[\s\S]*clamp\(8rem/)
     assert.match(premium, /\.orb-presence--hero[\s\S]*9\.75rem/)
     assert.match(premium, /@media \(min-width: 768px\)[\s\S]*\.orb-presence--hero[\s\S]*13\.75rem/)
@@ -91,8 +91,8 @@ describe('ORB Residential orb presence layout', () => {
   })
 
   it('empty state layout uses flex column without absolute orb over heading', () => {
-    const premium = read('app/orb/orb-premium-tokens.css')
-    const mobile = read('app/orb/orb-mobile.css')
+    const premium = read('app/orb/_legacy-ui-archive/orb-premium-tokens.css')
+    const mobile = read('app/orb/_legacy-ui-archive/orb-mobile.css')
     assert.match(premium, /\[data-orb-residential-empty\][\s\S]*gap:/)
     assert.match(premium, /pointer-events:\s*none/)
     assert.doesNotMatch(
@@ -103,7 +103,7 @@ describe('ORB Residential orb presence layout', () => {
   })
 
   it('light and dark theme both style living sphere with high contrast', () => {
-    const premium = read('app/orb/orb-premium-tokens.css')
+    const premium = read('app/orb/_legacy-ui-archive/orb-premium-tokens.css')
     assert.match(premium, /\.orb-theme-light \.orb-living-sphere/)
     assert.match(premium, /\.orb-theme-dark \.orb-living-sphere/)
     assert.match(premium, /html\[data-orb-residential='1'\] \.orb-living-sphere[\s\S]*visibility:\s*visible/)

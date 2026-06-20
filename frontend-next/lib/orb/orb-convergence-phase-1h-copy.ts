@@ -32,8 +32,11 @@ export const ORB_COMPOSER_V2_PLACEHOLDER_CHAT =
 export const ORB_COMPOSER_V2_PLACEHOLDER_DICTATE = 'Paste rough notes or speak naturally\u2026'
 export const ORB_COMPOSER_V2_PLACEHOLDER_WRITE = 'Ask ORB to improve this draft\u2026'
 
+export const ORB_HOME_SAFETY_LINE =
+  'ORB supports professional judgement. Review before use. Follow local safeguarding procedures.'
+
 export const ORB_VOICE_V2_STATUS_COPY =
-  'Talk it through. ORB will help you reflect before you write.'
+  'Talk it through. ORB can help you reflect before you write.'
 
 export const ORB_RECORDS_V2_EMPTY_SUBTITLE =
   'Save from Chat, Dictate, Voice or ORB Write when wording is ready for adult review.'

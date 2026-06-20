@@ -8,7 +8,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '../..')
 
 const ORB_BUILD_VISUAL_VERSION = 'premium-final'
 const ORB_STYLE_VERSION = 'orb-style-v1'
-const ORB_CSS_CONTRACT = 'premium-viewport-final'
+const ORB_CSS_CONTRACT = 'orb-residential-shell-only'
 const ORB_LOGIN_VERSION = 'front-door-v6'
 const ORB_VOICE_VERSION = 'living-core-v1'
 const ORB_VOICE_COMPONENT_NAME = 'OrbVoiceCompanion'
@@ -28,7 +28,7 @@ function read(relativePath: string) {
 /** CSS import map — canonical hub: app/orb/layout.tsx + component co-located CSS */
 const ORB_CSS_AUDIT_MAP = [
   {
-    file: 'app/orb/orb-theme.css',
+    file: 'app/orb/_legacy-ui-archive/orb-theme.css',
     importedBy: ['app/orb/layout.tsx'],
     voice: [],
     login: [],
@@ -36,7 +36,7 @@ const ORB_CSS_AUDIT_MAP = [
     status: 'canonical (tokens layer)'
   },
   {
-    file: 'app/orb/orb-components.css',
+    file: 'app/orb/_legacy-ui-archive/orb-components.css',
     importedBy: ['app/orb/layout.tsx'],
     voice: [],
     login: [],
@@ -44,7 +44,7 @@ const ORB_CSS_AUDIT_MAP = [
     status: 'canonical (components layer)'
   },
   {
-    file: 'app/orb/orb-shell.css',
+    file: 'app/orb/_legacy-ui-archive/orb-shell.css',
     importedBy: ['app/orb/layout.tsx'],
     voice: ['.orb-main-workspace .orb-voice-room', '[data-orb-voice-mobile]'],
     login: ['.orb-login-shell', '.orb-login-hero', '[data-orb-login-mobile-brand]'],
@@ -52,7 +52,7 @@ const ORB_CSS_AUDIT_MAP = [
     status: 'canonical (shell layer)'
   },
   {
-    file: 'app/orb/orb-stations.css',
+    file: 'app/orb/_legacy-ui-archive/orb-stations.css',
     importedBy: ['app/orb/layout.tsx'],
     voice: [],
     login: [],
@@ -60,7 +60,7 @@ const ORB_CSS_AUDIT_MAP = [
     status: 'canonical (shared station polish)'
   },
   {
-    file: 'app/orb/orb-login.css',
+    file: 'app/orb/_legacy-ui-archive/orb-login.css',
     importedBy: ['app/orb/layout.tsx'],
     voice: [],
     login: ['.orb-login-shell', '.orb-login-hero-sphere-wrap', '.orb-login-panel'],
@@ -68,7 +68,7 @@ const ORB_CSS_AUDIT_MAP = [
     status: 'canonical (login visual authority)'
   },
   {
-    file: 'app/orb/orb-premium-tokens.css',
+    file: 'app/orb/_legacy-ui-archive/orb-premium-tokens.css',
     importedBy: ['app/orb/orb-theme.css'],
     voice: ['.orb-presence--voice', '.orb-living-sphere', '.orb-voice-room'],
     login: ['.orb-login-root--light', '.orb-login-panel', '.orb-login-input'],
@@ -92,7 +92,7 @@ const ORB_CSS_AUDIT_MAP = [
     status: 'supporting'
   },
   {
-    file: 'app/orb/orb-dictate-studio-polish.css',
+    file: 'app/orb/_legacy-ui-archive/orb-dictate-studio-polish.css',
     importedBy: ['app/orb/orb-stations.css'],
     voice: [],
     login: [],
@@ -100,7 +100,7 @@ const ORB_CSS_AUDIT_MAP = [
     status: 'supporting (dictate station)'
   },
   {
-    file: 'app/orb/orb-premium-layout-pass.css',
+    file: 'app/orb/_legacy-ui-archive/orb-premium-layout-pass.css',
     importedBy: ['app/orb/orb-shell.css'],
     voice: [],
     login: ['.orb-login-shell', '.orb-login-hero', '[data-orb-login-mobile-brand]'],
@@ -134,7 +134,7 @@ const ORB_CSS_AUDIT_MAP = [
     status: 'supporting (voice studio layout + hero containment)'
   },
   {
-    file: 'app/orb/orb-brand-asset.css',
+    file: 'app/orb/_legacy-ui-archive/orb-brand-asset.css',
     importedBy: ['app/orb/orb-theme.css'],
     voice: ['.orb-presence', '[data-orb-presence-state]'],
     login: [],
@@ -142,7 +142,7 @@ const ORB_CSS_AUDIT_MAP = [
     status: 'supporting'
   },
   {
-    file: 'app/orb/orb-light-layer-fix.css',
+    file: 'app/orb/_legacy-ui-archive/orb-light-layer-fix.css',
     importedBy: ['app/orb/orb-stations.css'],
     voice: [],
     login: [],
@@ -150,7 +150,7 @@ const ORB_CSS_AUDIT_MAP = [
     status: 'supporting (non-residential only)'
   },
   {
-    file: 'app/orb/orb-mobile.css',
+    file: 'app/orb/_legacy-ui-archive/orb-mobile.css',
     importedBy: ['app/orb/orb-shell.css'],
     voice: ['[data-orb-voice-mobile]', '.orb-voice-status-slot'],
     login: [],
@@ -243,7 +243,7 @@ describe('ORB visual render audit', () => {
   })
 
   it('legacy glass-orb voice sizing cannot override orb-presence--voice companion', () => {
-    const tokens = read('app/orb/orb-premium-tokens.css')
+    const tokens = read('app/orb/_legacy-ui-archive/orb-premium-tokens.css')
     assert.match(tokens, /\.orb-presence\.glass-orb-mark--voice:not\(\.orb-presence--voice\)/)
   })
 

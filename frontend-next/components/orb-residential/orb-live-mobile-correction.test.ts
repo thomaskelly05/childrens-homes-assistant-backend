@@ -23,7 +23,7 @@ function read(rel: string): string {
 describe('ORB live mobile correction pass', () => {
   it('mobile composer action rail has no shield trigger in source', () => {
     const composer = read('components/orb-standalone/orb-standalone-composer.tsx')
-    const mobileCss = read('app/orb/orb-mobile.css')
+    const mobileCss = read('app/orb/_legacy-ui-archive/orb-mobile.css')
     assert.doesNotMatch(composer, /OrbResidentialPrivacyGuidanceIcon/)
     assert.doesNotMatch(composer, /data-orb-privacy-guidance-trigger/)
     assert.match(mobileCss, /\[data-orb-composer-action-rail\] \[data-orb-privacy-guidance-trigger\]/)
@@ -31,7 +31,7 @@ describe('ORB live mobile correction pass', () => {
   })
 
   it('desktop composer hides privacy shield trigger', () => {
-    const desktopCss = read('app/orb/orb-desktop.css')
+    const desktopCss = read('app/orb/_legacy-ui-archive/orb-desktop.css')
     assert.match(desktopCss, /\[data-orb-composer-action-rail\] \[data-orb-privacy-guidance-trigger\]/)
   })
 
@@ -64,7 +64,7 @@ describe('ORB live mobile correction pass', () => {
 
   it('ORB presence uses shared liquid orb classes', () => {
     const presence = read('components/orb-residential/ui/orb-presence.tsx')
-    const liquid = read('app/orb/orb-liquid-glass.css')
+    const liquid = read('app/orb/_legacy-ui-archive/orb-liquid-glass.css')
     assert.match(presence, /orb-liquid-orb/)
     assert.match(liquid, /--orb-liquid-orb-aura/)
     assert.match(liquid, /\.orb-liquid-orb::after/)

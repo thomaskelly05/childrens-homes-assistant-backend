@@ -70,7 +70,7 @@ describe('ORB billing UI polish', () => {
     const display = read('lib/orb/orb-billing-display.ts')
     assert.match(billing, /formatOrbPlanLabel/)
     assert.match(display, /orb_residential_individual/)
-    assert.match(display, /ORB Residential — Individual/)
+    assert.match(billing, /ORB_RESIDENTIAL_BILLING_SUBTITLE/)
   })
 
   it('settings account billing hides trial chip when paid active via display helper', () => {

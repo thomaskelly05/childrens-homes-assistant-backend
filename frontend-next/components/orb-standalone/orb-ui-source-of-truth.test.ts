@@ -64,7 +64,7 @@ describe('ORB UI source of truth — overlays and responsive branches', () => {
   })
 
   it('desktop CSS does not duplicate copyright via disclaimer ::after', () => {
-    const css = read('app/orb/orb-desktop.css')
+    const css = read('app/orb/_legacy-ui-archive/orb-desktop.css')
     assert.doesNotMatch(css, /\[data-orb-composer-disclaimer\]::after[\s\S]*ORB Residential · ©/)
   })
 

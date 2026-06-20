@@ -14,7 +14,7 @@ describe('ORB Residential mobile hierarchy reset', () => {
   it('mobile home uses two suggestion cards, compact orb, and optional subline', () => {
     const copy = read('lib/orb/orb-residential-copy.ts')
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
-    const mobileCss = read('app/orb/orb-mobile.css')
+    const mobileCss = read('app/orb/_legacy-ui-archive/orb-mobile.css')
     assert.equal(
       copy.match(/ORB_RESIDENTIAL_MOBILE_PRIMARY_STARTER_COUNT = 2/)?.[0],
       'ORB_RESIDENTIAL_MOBILE_PRIMARY_STARTER_COUNT = 2'
@@ -29,7 +29,7 @@ describe('ORB Residential mobile hierarchy reset', () => {
   it('composer tools sheet replaces visible dictate/voice row on mobile', () => {
     const composer = read('components/orb-standalone/orb-standalone-composer.tsx')
     const tools = read('components/orb-residential/orb-residential-composer-tools-sheet.tsx')
-    const mobileCss = read('app/orb/orb-mobile.css')
+    const mobileCss = read('app/orb/_legacy-ui-archive/orb-mobile.css')
     assert.match(composer, /OrbResidentialComposerToolsSheet/)
     assert.match(composer, /data-orb-composer-tools-trigger/)
     assert.match(composer, /data-orb-composer-attach/)
@@ -46,7 +46,7 @@ describe('ORB Residential mobile hierarchy reset', () => {
 
   it('dictate mobile idle uses premium capture panel with compact ORB visual', () => {
     const dictate = read('components/orb-standalone/orb-dictate-mobile-experience.tsx')
-    const mobileCss = read('app/orb/orb-mobile.css')
+    const mobileCss = read('app/orb/_legacy-ui-archive/orb-mobile.css')
     assert.match(dictate, /data-orb-dictate-capture-idle/)
     assert.match(dictate, /data-orb-dictate-capture-panel/)
     assert.match(dictate, /data-orb-dictate-idle-shell/)
@@ -60,7 +60,7 @@ describe('ORB Residential mobile hierarchy reset', () => {
     const voiceContent = read('components/orb-standalone/orb-voice-station-content.tsx')
     const voiceHero = read('components/orb-standalone/orb-voice-hero-stage.tsx')
     const voiceStation = read('components/orb-standalone/orb-voice-station.tsx')
-    const mobileCss = read('app/orb/orb-mobile.css')
+    const mobileCss = read('app/orb/_legacy-ui-archive/orb-mobile.css')
     assert.match(voiceContent, /heroStageId=\{isMobileViewport \? 'mobile' : 'desktop'\}/)
     assert.match(voiceContent, /data-orb-voice-mobile-action-dock/)
     assert.match(voiceHero, /mobile-preview/)
@@ -87,7 +87,7 @@ describe('ORB Residential mobile hierarchy reset', () => {
 
   it('account menu stays compact without blur orb background', () => {
     const account = read('components/orb-residential/orb-account-menu.tsx')
-    const mobileCss = read('app/orb/orb-mobile.css')
+    const mobileCss = read('app/orb/_legacy-ui-archive/orb-mobile.css')
     assert.match(account, /min-h-\[2\.75rem\]/)
     assert.doesNotMatch(account, /backdrop-blur/)
     assert.match(mobileCss, /\.orb-account-menu[\s\S]*backdrop-filter:\s*none/)

@@ -5,7 +5,8 @@ import { fileURLToPath } from 'node:url'
 import { describe, it } from 'node:test'
 
 import {
-  ORB_FLAGSHIP_BILLING_INCLUDED_ITEMS
+  ORB_RESIDENTIAL_BILLING_INCLUDED_ITEMS,
+  ORB_VOICE_STATUS_CARD_COPY
 } from '../../lib/orb/orb-flagship-copy.ts'
 import {
   ORB_LOGIN_ENTERPRISE_TITLE,
@@ -56,18 +57,18 @@ describe('ORB Residential Phase 1F flagship UI', () => {
     assert.match(ORB_HOME_RAIL_TRUST_ITEMS.join(' '), /Adult review required/)
   })
 
-  it('guided demo modal uses flagship two-column layout', () => {
+  it('guided demo modal uses product modal two-column layout', () => {
     const panel = read('components/orb-residential/orb-guided-demo-panel.tsx')
-    assert.match(panel, /orb-guided-demo-panel__sheet--flagship/)
-    assert.match(panel, /orb-flagship-guided-demo-grid/)
+    assert.match(panel, /orb-modal/)
+    assert.match(panel, /orb-guided-demo-grid/)
     assert.match(panel, /data-orb-guided-demo-preview/)
     assert.match(panel, /data-orb-guided-demo-safety-note/)
   })
 
-  it('dictate has premium workspace sections', () => {
+  it('dictate has workspace header sections', () => {
     const workspace = read('components/orb/dictate/OrbDictateStudioWorkspace.tsx')
     assert.match(workspace, /orb-workspace--dictate/)
-    assert.match(workspace, /data-orb-dictate-flagship-title/)
+    assert.match(workspace, /data-orb-dictate-title/)
     assert.match(workspace, /ORB_DICTATE_TITLE/)
     assert.match(workspace, /ORB_DICTATE_SUBTITLE/)
     assert.equal(ORB_DICTATE_TITLE, 'Dictate')
@@ -78,8 +79,8 @@ describe('ORB Residential Phase 1F flagship UI', () => {
     const voice = read('components/orb-standalone/orb-voice-station-content.tsx')
     assert.match(voice, /orb-workspace--voice/)
     assert.match(voice, /data-orb-voice-status-card/)
-    assert.match(voice, /ORB_VOICE_V2_STATUS_COPY/)
-    assert.match(voice, /ORB_VOICE_V2_STATUS_COPY/)
+    assert.match(voice, /ORB_VOICE_STATUS_CARD_COPY/)
+    assert.match(ORB_VOICE_STATUS_CARD_COPY, /reflective support/)
   })
 
   it('records and drafts empty state copy guides next actions', () => {
@@ -93,12 +94,12 @@ describe('ORB Residential Phase 1F flagship UI', () => {
 
   it('billing does not list Saved outputs, Templates or Documents as primary included items', () => {
     const billing = read('components/orb-standalone/orb-billing-modal.tsx')
-    assert.match(billing, /ORB_FLAGSHIP_BILLING_INCLUDED_ITEMS/)
+    assert.match(billing, /ORB_RESIDENTIAL_BILLING_INCLUDED_ITEMS/)
     assert.doesNotMatch(billing, /'Saved outputs'/)
     assert.doesNotMatch(billing, /'Templates'/)
     assert.doesNotMatch(billing, /'Documents'/)
-    assert.ok(ORB_FLAGSHIP_BILLING_INCLUDED_ITEMS.includes('Records & Drafts'))
-    assert.ok(ORB_FLAGSHIP_BILLING_INCLUDED_ITEMS.includes('Help & Safety'))
+    assert.ok(ORB_RESIDENTIAL_BILLING_INCLUDED_ITEMS.includes('Records & Drafts'))
+    assert.ok(ORB_RESIDENTIAL_BILLING_INCLUDED_ITEMS.includes('Help & Safety'))
   })
 
   it('settings fixed light copy remains and help uses flagship modal treatment', () => {

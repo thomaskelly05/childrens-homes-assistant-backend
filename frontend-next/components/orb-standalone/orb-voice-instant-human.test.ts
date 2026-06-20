@@ -155,7 +155,7 @@ describe('ORB Voice instant-human refinement', () => {
 
   it('mobile safe-area dock and no duplicate voice shell', () => {
     const content = read('components/orb-standalone/orb-voice-station-content.tsx')
-    const mobileCss = read('app/orb/orb-mobile.css')
+    const mobileCss = read('app/orb/_legacy-ui-archive/orb-mobile.css')
     assert.match(content, /env\(safe-area-inset-bottom\)/)
     assert.match(mobileCss, /\[data-orb-voice-workspace-mode='live'\]/)
     assert.match(mobileCss, /\[data-orb-voice-after-call\]/)

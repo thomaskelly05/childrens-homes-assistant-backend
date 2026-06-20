@@ -13,14 +13,14 @@ function read(relativePath: string) {
 describe('ORB Residential unified mobile interface pass', () => {
   it('aligns JS mobile breakpoint with orb-mobile.css', () => {
     const hook = read('components/orb-standalone/use-orb-responsive-mode.ts')
-    const mobileCss = read('app/orb/orb-mobile.css')
+    const mobileCss = read('app/orb/_legacy-ui-archive/orb-mobile.css')
     assert.match(hook, /MOBILE_MAX_WIDTH_PX = 1024/)
     assert.match(mobileCss, /@media \(max-width: 1023px\)/)
   })
 
   it('marks unified mobile surface on residential shell', () => {
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
-    const mobileCss = read('app/orb/orb-mobile.css')
+    const mobileCss = read('app/orb/_legacy-ui-archive/orb-mobile.css')
     assert.match(companion, /data-orb-mobile-surface/)
     assert.match(mobileCss, /\[data-orb-mobile-surface='true'\]/)
   })
@@ -39,7 +39,7 @@ describe('ORB Residential unified mobile interface pass', () => {
 
   it('recording library uses flowing list on mobile', () => {
     const templates = read('components/orb-standalone/orb-templates-panel.tsx')
-    const mobileCss = read('app/orb/orb-mobile.css')
+    const mobileCss = read('app/orb/_legacy-ui-archive/orb-mobile.css')
     assert.match(templates, /divide-y divide-\[var\(--orb-line\)\]/)
     assert.match(mobileCss, /\[data-orb-templates-panel\] \[data-orb-recording-library-section\]/)
   })

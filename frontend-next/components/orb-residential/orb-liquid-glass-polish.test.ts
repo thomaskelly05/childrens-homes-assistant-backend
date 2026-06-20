@@ -59,8 +59,8 @@ describe('ORB Residential Liquid Glass final polish pass', () => {
   it('settings panel has single scroll container and product modal classes', () => {
     const settings = read('components/orb-standalone/orb-standalone-settings-panel.tsx')
     const shellCss = read('app/orb/orb-residential-shell.css')
-    const mobile = read('app/orb/orb-mobile.css')
-    const desktop = read('app/orb/orb-desktop.css')
+    const mobile = read('app/orb/_legacy-ui-archive/orb-mobile.css')
+    const desktop = read('app/orb/_legacy-ui-archive/orb-desktop.css')
     assert.match(settings, /data-orb-settings-scroll/)
     assert.match(settings, /orb-settings-scroll/)
     assert.match(settings, /overflow-y-auto/)
@@ -90,7 +90,7 @@ describe('ORB Residential Liquid Glass final polish pass', () => {
   it('ORB presence uses shared liquid orb treatment', () => {
     const presence = read('components/orb-residential/ui/orb-presence.tsx')
     const mark = read('components/orb-residential/ui/glass-orb-mark.tsx')
-    const liquid = read('app/orb/orb-liquid-glass.css')
+    const liquid = read('app/orb/_legacy-ui-archive/orb-liquid-glass.css')
     assert.match(presence, /orb-liquid-orb/)
     assert.match(mark, /OrbPresence/)
     assert.match(liquid, /--orb-liquid-orb-glow/)

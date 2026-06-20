@@ -55,7 +55,7 @@ describe('ORB Residential desktop polish', () => {
   it('empty state, composer, and layout markers exist without OS route coupling', () => {
     const companion = readComponent('components/orb-standalone/orb-care-companion.tsx')
     const composer = readComponent('components/orb-standalone/orb-standalone-composer.tsx')
-    const desktopCss = readComponent('app/orb/orb-desktop.css')
+    const desktopCss = readComponent('app/orb/_legacy-ui-archive/orb-desktop.css')
 
     assert.match(companion, /data-orb-empty-heading-desktop/)
     assert.match(companion, /data-orb-residential-empty/)
@@ -70,7 +70,7 @@ describe('ORB Residential desktop polish', () => {
   it('right contextual panel slot is structured for future panels', () => {
     const layout = readComponent('components/orb/orb-layout.tsx')
     const theme = readComponent('lib/orb/orb-theme.ts')
-    const desktopCss = readComponent('app/orb/orb-desktop.css')
+    const desktopCss = readComponent('app/orb/_legacy-ui-archive/orb-desktop.css')
 
     assert.match(layout, /data-orb-context-panel-slot/)
     assert.match(layout, /orb-context-panel-inner/)

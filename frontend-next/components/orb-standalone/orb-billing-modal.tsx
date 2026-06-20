@@ -7,8 +7,10 @@ import { OrbUserAvatar } from '@/components/orb-residential/orb-user-avatar'
 import { OrbLegalLinks } from '@/components/orb-residential/orb-legal-links'
 import { OrbAppModal } from '@/components/orb-standalone/orb-app-modal'
 import {
-  ORB_FLAGSHIP_BILLING_INCLUDED_ITEMS
-} from '@/lib/orb/orb-flagship-copy'
+  ORB_RESIDENTIAL_BILLING_INCLUDED_ITEMS,
+  ORB_RESIDENTIAL_BILLING_HEADER,
+  ORB_RESIDENTIAL_BILLING_SUBTITLE
+} from '@/lib/orb/orb-residential-ui-copy'
 import {
   ORB_RESIDENTIAL_BILLING_TRUST_COPY,
   ORB_RESIDENTIAL_BILLING_VALUE_ITEMS,
@@ -33,7 +35,7 @@ import {
   type OrbUsageSummary
 } from '@/lib/orb/orb-billing-client'
 
-const INDIVIDUAL_PLAN_FEATURES = ORB_FLAGSHIP_BILLING_INCLUDED_ITEMS
+const INDIVIDUAL_PLAN_FEATURES = ORB_RESIDENTIAL_BILLING_INCLUDED_ITEMS
 
 const TOP_UP_OPTIONS = [
   { label: '£5', pence: 500 },
@@ -44,9 +46,9 @@ const TOP_UP_OPTIONS = [
 
 function sectionClassName(compact = false) {
   if (compact) {
-    return 'orb-billing-card orb-billing-card--flat orb-liquid-card rounded-lg border-0 border-b border-[var(--orb-line)]/25 bg-transparent p-0 pb-2.5 sm:rounded-xl sm:border sm:border-[var(--orb-mobile-ws-card-border,var(--orb-line))]/30 sm:bg-[var(--orb-mobile-ws-card,var(--orb-surface-elevated))]/60 sm:p-3.5'
+    return 'orb-billing-card orb-billing-card--flat rounded-lg border-0 border-b border-[var(--orb-line)]/25 bg-transparent p-0 pb-2.5 sm:rounded-xl sm:border sm:border-[var(--orb-line)]/30 sm:bg-[var(--orb-surface)] sm:p-3.5'
   }
-  return 'orb-billing-card orb-mobile-workspace-card orb-liquid-card rounded-lg border border-[var(--orb-mobile-ws-card-border,var(--orb-line))]/30 bg-[var(--orb-mobile-ws-card,var(--orb-surface-elevated))]/60 p-2.5 sm:rounded-xl sm:p-3.5'
+  return 'orb-billing-card rounded-lg border border-[var(--orb-line)]/30 bg-[var(--orb-surface)] p-2.5 sm:rounded-xl sm:p-3.5'
 }
 
 export function OrbBillingModal({
@@ -244,8 +246,8 @@ export function OrbBillingModal({
   return (
     <OrbAppModal
       open={open}
-      title="Billing"
-      subtitle="ORB Residential — Individual"
+      title={ORB_RESIDENTIAL_BILLING_HEADER}
+      subtitle={ORB_RESIDENTIAL_BILLING_SUBTITLE}
       onClose={onClose}
       panelId="billing"
       size="wide"

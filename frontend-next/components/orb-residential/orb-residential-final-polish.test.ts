@@ -12,7 +12,7 @@ function readComponent(relativePath: string) {
 
 describe('ORB Residential final product polish', () => {
   it('viewport lock and composer zone on residential shell', () => {
-    const desktop = readComponent('app/orb/orb-desktop.css')
+    const desktop = readComponent('app/orb/_legacy-ui-archive/orb-desktop.css')
     const companion = readComponent('components/orb-standalone/orb-care-companion.tsx')
     const composer = readComponent('components/orb-standalone/orb-standalone-composer.tsx')
     assert.match(desktop, /height: 100dvh/)

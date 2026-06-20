@@ -17,7 +17,7 @@ function extractRule(css: string, selector: string) {
 
 describe('ORB Residential light theme polish', () => {
   it('mobile composer dock light mode must not use dark midnight gradient', () => {
-    const mobileCss = read('app/orb/orb-mobile.css')
+    const mobileCss = read('app/orb/_legacy-ui-archive/orb-mobile.css')
     const lightDock =
       extractRule(mobileCss, '.orb-chat-layout--residential.orb-theme-light .orb-composer-dock') ??
       extractRule(mobileCss, "html[data-orb-residential='1'] .orb-chat-layout--residential.orb-theme-light .orb-composer-dock")
@@ -28,7 +28,7 @@ describe('ORB Residential light theme polish', () => {
   })
 
   it('mobile light composer glass uses white glass not dark shadow stack', () => {
-    const mobileCss = read('app/orb/orb-mobile.css')
+    const mobileCss = read('app/orb/_legacy-ui-archive/orb-mobile.css')
     const lightGlass =
       extractRule(mobileCss, '.orb-chat-layout--residential.orb-theme-light .orb-composer-glass') ??
       extractRule(mobileCss, "html[data-orb-residential='1'] .orb-chat-layout--residential.orb-theme-light .orb-composer-glass")
@@ -38,7 +38,7 @@ describe('ORB Residential light theme polish', () => {
   })
 
   it('desktop residential dark shell rules are scoped to orb-theme-dark', () => {
-    const desktop = read('app/orb/orb-desktop.css')
+    const desktop = read('app/orb/_legacy-ui-archive/orb-desktop.css')
     assert.match(desktop, /\.orb-chat-layout--residential\.orb-theme-dark/)
     assert.doesNotMatch(
       desktop,
@@ -47,7 +47,7 @@ describe('ORB Residential light theme polish', () => {
   })
 
   it('premium tokens do not force white assistant text in light mode', () => {
-    const premium = read('app/orb/orb-premium-tokens.css')
+    const premium = read('app/orb/_legacy-ui-archive/orb-premium-tokens.css')
     const lightAssistant =
       extractRule(premium, 'html[data-orb-residential=\'1\'] .orb-chat-layout--residential.orb-theme-light .orb-message-assistant .orb-message-content') ??
       extractRule(premium, 'html[data-orb-residential=\'1\'] .orb-theme-light .orb-message-assistant .orb-message-content')
@@ -73,7 +73,7 @@ describe('ORB Residential light theme polish', () => {
   })
 
   it('mobile residential light workspace no longer ships dark lock', () => {
-    const mobileCss = read('app/orb/orb-mobile.css')
+    const mobileCss = read('app/orb/_legacy-ui-archive/orb-mobile.css')
     assert.doesNotMatch(mobileCss, /launch dark lock/i)
     assert.match(
       mobileCss,

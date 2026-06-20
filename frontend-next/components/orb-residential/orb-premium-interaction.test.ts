@@ -59,7 +59,7 @@ describe('ORB premium interaction pass', () => {
   it('documents viewport uses internal content scroll markers', () => {
     const documents = read('components/orb-standalone/orb-document-panel.tsx')
     const page = read('components/orb/premium/orb-premium-page.tsx')
-    const css = read('app/orb/orb-premium-layout-pass.css')
+    const css = read('app/orb/_legacy-ui-archive/orb-premium-layout-pass.css')
     assert.match(documents, /data-orb-documents-header/)
     assert.match(page, /data-orb-documents-content-scroll/)
     assert.match(css, /\[data-orb-documents-content-scroll\]/)
@@ -67,7 +67,7 @@ describe('ORB premium interaction pass', () => {
 
   it('ORB Write document-first layout markers', () => {
     const write = read('components/orb-write/orb-write-standalone-panel.tsx')
-    const css = read('app/orb/orb-premium-layout-pass.css')
+    const css = read('app/orb/_legacy-ui-archive/orb-premium-layout-pass.css')
     assert.match(write, /data-orb-write-document-first/)
     assert.match(write, /data-orb-write-source-collapsed/)
     assert.match(write, /data-orb-write-guidance-collapsed/)

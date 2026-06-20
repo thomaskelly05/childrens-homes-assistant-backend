@@ -134,9 +134,9 @@ describe('ORB Residential full-product convergence', () => {
   })
 
   it('mobile safe-area footers and desktop shell remain separated', () => {
-    const mobileCss = read('app/orb/orb-mobile.css')
-    const desktopCss = read('app/orb/orb-desktop.css')
-    const shellCss = read('app/orb/orb-shell.css')
+    const mobileCss = read('app/orb/_legacy-ui-archive/orb-mobile.css')
+    const desktopCss = read('app/orb/_legacy-ui-archive/orb-desktop.css')
+    const shellCss = read('app/orb/_legacy-ui-archive/orb-shell.css')
     assert.match(mobileCss, /safe-area-inset-bottom/)
     assert.match(desktopCss, /orb-chat-layout--residential/)
     assert.match(shellCss, /orb-desktop\.css/)

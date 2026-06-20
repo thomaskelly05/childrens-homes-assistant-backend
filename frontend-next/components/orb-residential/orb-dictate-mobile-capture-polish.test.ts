@@ -15,7 +15,7 @@ function read(relativePath: string) {
 describe('ORB Dictate mobile capture polish', () => {
   it('idle capture panel includes compact ORB visual and premium capture shell', () => {
     const dictate = read('components/orb-standalone/orb-dictate-mobile-experience.tsx')
-    const mobileCss = read('app/orb/orb-mobile.css')
+    const mobileCss = read('app/orb/_legacy-ui-archive/orb-mobile.css')
     assert.match(dictate, /GlassOrbMark/)
     assert.match(dictate, /variant="dictate"/)
     assert.match(dictate, /data-orb-dictate-capture-orb/)

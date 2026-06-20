@@ -32,9 +32,9 @@ describe('ORB Residential premium layout pass', () => {
 
   it('shell uses 100dvh viewport lock without page scroll', () => {
     const layout = read('app/orb/layout.tsx')
-    const css = read('app/orb/orb-premium-layout-pass.css')
+    const css = read('app/orb/_legacy-ui-archive/orb-premium-layout-pass.css')
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
-    assert.match(layout, /orb-shell\.css/)
+    assert.match(layout, /orb-residential-shell\.css/)
     assert.match(css, /100dvh/)
     assert.match(css, /overflow:\s*hidden/)
     assert.match(companion, /h-\[100dvh\]/)
@@ -43,7 +43,7 @@ describe('ORB Residential premium layout pass', () => {
   })
 
   it('station panels scroll internally inside one viewport', () => {
-    const css = read('app/orb/orb-premium-layout-pass.css')
+    const css = read('app/orb/_legacy-ui-archive/orb-premium-layout-pass.css')
     const page = read('components/orb/premium/orb-premium-page.tsx')
     assert.match(css, /\[data-orb-knowledge-library-body\]/)
     assert.match(css, /\[data-orb-template-list-scroll\]/)
@@ -55,7 +55,7 @@ describe('ORB Residential premium layout pass', () => {
 
   it('Documents & Guidance header stays visible above scroll body', () => {
     const documents = read('components/orb-standalone/orb-document-panel.tsx')
-    const css = read('app/orb/orb-premium-layout-pass.css')
+    const css = read('app/orb/_legacy-ui-archive/orb-premium-layout-pass.css')
     assert.match(documents, /data-orb-documents-station-header/)
     assert.match(documents, /data-orb-knowledge-library-tabs/)
     assert.match(documents, /compactChrome:\s*true/)
@@ -66,8 +66,8 @@ describe('ORB Residential premium layout pass', () => {
   it('login hero sphere is sized to avoid clipping', () => {
     const login = read('components/orb-residential/orb-login-screen.tsx')
     const desktopHero = read('components/orb-residential/orb-login-desktop-hero.tsx')
-    const css = read('app/orb/orb-login.css')
-    const passCss = read('app/orb/orb-premium-layout-pass.css')
+    const css = read('app/orb/_legacy-ui-archive/orb-login.css')
+    const passCss = read('app/orb/_legacy-ui-archive/orb-premium-layout-pass.css')
     const visualBuild = read('lib/orb/orb-visual-build.ts')
     assert.match(visualBuild, /ORB_LOGIN_VERSION = 'front-door-v6'/)
     assert.match(login, /data-orb-login-version=\{ORB_LOGIN_VERSION\}/)
@@ -82,7 +82,7 @@ describe('ORB Residential premium layout pass', () => {
 
   it('chat home uses prompt pills and more examples drawer', () => {
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
-    const css = read('app/orb/orb-premium-layout-pass.css')
+    const css = read('app/orb/_legacy-ui-archive/orb-premium-layout-pass.css')
     assert.match(companion, /data-orb-starter-pills/)
     assert.match(companion, /data-orb-starter-pill/)
     assert.match(companion, /ORB_RESIDENTIAL_PRIMARY_STARTER_COUNT/)
@@ -97,7 +97,7 @@ describe('ORB Residential premium layout pass', () => {
     const topBar = read('components/orb/dictate/OrbDictateTopBar.tsx')
     const transcript = read('components/orb/dictate/OrbTranscriptPanel.tsx')
     const brain = read('components/orb/dictate/OrbDictateBrainPanel.tsx')
-    const css = read('app/orb/orb-premium-layout-pass.css')
+    const css = read('app/orb/_legacy-ui-archive/orb-premium-layout-pass.css')
     assert.match(dictate, /OrbDictateTopBar/)
     assert.match(topBar, /data-orb-dictate-top-bar/)
     assert.match(transcript, /data-orb-dictate-transcript-panel/)
@@ -108,7 +108,7 @@ describe('ORB Residential premium layout pass', () => {
   it('ORB Write has central document canvas and collapsible side panels', () => {
     const panel = read('components/orb-write/orb-write-standalone-panel.tsx')
     const editor = read('components/orb-write/orb-write-editor.tsx')
-    const css = read('app/orb/orb-premium-layout-pass.css')
+    const css = read('app/orb/_legacy-ui-archive/orb-premium-layout-pass.css')
     assert.match(panel, /data-orb-write-layout/)
     assert.match(panel, /data-orb-write-source-open/)
     assert.match(panel, /data-orb-write-guidance-open/)
@@ -121,7 +121,7 @@ describe('ORB Residential premium layout pass', () => {
 
   it('template cards tuck therapeutic guidance into expandable detail', () => {
     const cards = read('components/orb/recording/OrbRecordingLibraryCards.tsx')
-    const css = read('app/orb/orb-premium-layout-pass.css')
+    const css = read('app/orb/_legacy-ui-archive/orb-premium-layout-pass.css')
     assert.match(cards, /data-orb-recording-writing-detail/)
     assert.match(cards, /Writing guidance & therapeutic prompts/)
     assert.match(css, /\[data-orb-recording-writing-detail\]/)
@@ -161,6 +161,6 @@ describe('ORB Residential premium layout pass', () => {
     const gate = read('components/orb-residential/orb-auth-gate.tsx')
     assert.match(shell, /OrbAuthGate/)
     assert.match(gate, /OrbLoginScreen/)
-    assert.doesNotMatch(read('app/orb/orb-premium-layout-pass.css'), /OrbAuthGate/)
+    assert.doesNotMatch(read('app/orb/_legacy-ui-archive/orb-premium-layout-pass.css'), /OrbAuthGate/)
   })
 })

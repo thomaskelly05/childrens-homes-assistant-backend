@@ -10,9 +10,8 @@ import {
   ORB_HOME_V2_HEADLINE,
   ORB_LOGIN_ENTERPRISE_TITLE,
   ORB_RECORDS_V2_EMPTY_SUBTITLE,
-  ORB_VOICE_V2_STATUS_COPY
 } from '../../lib/orb/orb-convergence-phase-1h-copy.ts'
-import { ORB_FLAGSHIP_BILLING_INCLUDED_ITEMS } from '../../lib/orb/orb-flagship-copy.ts'
+import { ORB_RESIDENTIAL_BILLING_INCLUDED_ITEMS, ORB_VOICE_STATUS_CARD_COPY } from '../../lib/orb/orb-flagship-copy.ts'
 import { ORB_RESIDENTIAL_LOCKED_THEME, ORB_RESIDENTIAL_THEME_LOCK_COPY } from '../../lib/orb/orb-appearance.ts'
 import {
   ORB_CHAT_EMPTY_HEADING,
@@ -112,10 +111,10 @@ describe('ORB Residential canonical shell (Phase 1H copy retained)', () => {
     const voice = read('components/orb-standalone/orb-voice-station-content.tsx')
     const css = read('app/orb/orb-residential-shell.css')
     assert.match(voice, /orb-workspace--voice/)
-    assert.match(voice, /ORB_VOICE_V2_STATUS_COPY/)
+    assert.match(voice, /ORB_VOICE_STATUS_CARD_COPY/)
     assert.match(voice, /data-orb-voice-status/)
     assert.match(css, /\.orb-workspace--voice/)
-    assert.match(ORB_VOICE_V2_STATUS_COPY, /Talk it through/)
+    assert.match(ORB_VOICE_STATUS_CARD_COPY, /reflective support/)
   })
 
   it('ORB Write has editor workspace and guidance panel markers', () => {
@@ -167,7 +166,7 @@ describe('ORB Residential canonical shell (Phase 1H copy retained)', () => {
       assert.doesNotMatch(billing, new RegExp(`['"]${label}['"]`))
     }
     assert.doesNotMatch(billing, /'Saved outputs'/)
-    assert.ok(ORB_FLAGSHIP_BILLING_INCLUDED_ITEMS.includes('Records & Drafts'))
-    assert.ok(ORB_FLAGSHIP_BILLING_INCLUDED_ITEMS.includes('Help & Safety'))
+    assert.ok(ORB_RESIDENTIAL_BILLING_INCLUDED_ITEMS.includes('Records & Drafts'))
+    assert.ok(ORB_RESIDENTIAL_BILLING_INCLUDED_ITEMS.includes('Help & Safety'))
   })
 })

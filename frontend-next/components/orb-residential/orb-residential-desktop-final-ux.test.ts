@@ -12,8 +12,8 @@ function read(relativePath: string) {
 
 describe('ORB Residential desktop final UX regressions', () => {
   it('desktop calm shell CSS is lg+ scoped under html[data-orb-residential]', () => {
-    const desktop = read('app/orb/orb-desktop.css')
-    const mobile = read('app/orb/orb-mobile.css')
+    const desktop = read('app/orb/_legacy-ui-archive/orb-desktop.css')
+    const mobile = read('app/orb/_legacy-ui-archive/orb-mobile.css')
 
     assert.match(desktop, /ORB Residential — desktop calm shell \(lg\+ only/)
     assert.match(desktop, /\[data-orb-sidebar-scroll\][\s\S]*overflow-y:\s*auto/)
@@ -54,7 +54,7 @@ describe('ORB Residential desktop final UX regressions', () => {
   })
 
   it('home orb overlap guard and capped hero size on desktop', () => {
-    const desktop = read('app/orb/orb-desktop.css')
+    const desktop = read('app/orb/_legacy-ui-archive/orb-desktop.css')
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
 
     assert.match(desktop, /\[data-orb-residential-empty\][\s\S]*--orb-presence-size:\s*clamp\(9\.5rem/)
@@ -64,7 +64,7 @@ describe('ORB Residential desktop final UX regressions', () => {
   })
 
   it('settings desktop width capped and appearance segmented control limited', () => {
-    const desktop = read('app/orb/orb-desktop.css')
+    const desktop = read('app/orb/_legacy-ui-archive/orb-desktop.css')
     const settings = read('components/orb-standalone/orb-standalone-settings-panel.tsx')
 
     assert.match(desktop, /\[data-orb-settings-panel\][\s\S]*--orb-desktop-settings-max/)
@@ -73,7 +73,7 @@ describe('ORB Residential desktop final UX regressions', () => {
   })
 
   it('workspace pages use capped content containers on desktop', () => {
-    const desktop = read('app/orb/orb-desktop.css')
+    const desktop = read('app/orb/_legacy-ui-archive/orb-desktop.css')
 
     assert.match(desktop, /\[data-orb-document-panel\],[\s\S]*--orb-desktop-page-max/)
     assert.match(desktop, /\[data-orb-workspace-panel\][\s\S]*max-width:\s*var\(--orb-desktop-page-max/)
@@ -82,7 +82,7 @@ describe('ORB Residential desktop final UX regressions', () => {
   })
 
   it('billing and account modals fit viewport with internal scroll on desktop', () => {
-    const desktop = read('app/orb/orb-desktop.css')
+    const desktop = read('app/orb/_legacy-ui-archive/orb-desktop.css')
     const account = read('components/orb-standalone/orb-account-modal.tsx')
     const billing = read('components/orb-standalone/orb-billing-modal.tsx')
 
@@ -96,7 +96,7 @@ describe('ORB Residential desktop final UX regressions', () => {
   })
 
   it('mobile layout rules do not use desktop-only max-width tokens', () => {
-    const mobile = read('app/orb/orb-mobile.css')
+    const mobile = read('app/orb/_legacy-ui-archive/orb-mobile.css')
 
     assert.doesNotMatch(mobile, /--orb-desktop-page-max/)
     assert.doesNotMatch(mobile, /desktop calm shell/)
@@ -104,7 +104,7 @@ describe('ORB Residential desktop final UX regressions', () => {
 
   it('saved outputs empty state avoids desktop split admin table', () => {
     const saved = read('components/orb-standalone/orb-saved-outputs-panel.tsx')
-    const desktop = read('app/orb/orb-desktop.css')
+    const desktop = read('app/orb/_legacy-ui-archive/orb-desktop.css')
 
     assert.match(saved, /data-orb-saved-outputs-empty/)
     assert.match(desktop, /\[data-orb-saved-outputs-empty='true'\][\s\S]*saved-output-detail/)

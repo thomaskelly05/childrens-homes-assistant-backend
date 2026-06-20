@@ -25,7 +25,7 @@ describe('ORB living presence', () => {
   })
 
   it('premium tokens style listening thinking and responding living sphere states', () => {
-    const css = read('app/orb/orb-premium-tokens.css')
+    const css = read('app/orb/_legacy-ui-archive/orb-premium-tokens.css')
     assert.match(css, /\[data-orb-presence-state='listening'\] \.orb-sphere-wrap/)
     assert.match(css, /\[data-orb-presence-state='thinking'\] \.orb-living-sphere/)
     assert.match(css, /\[data-orb-presence-state='responding'\] \.orb-sphere-wrap/)

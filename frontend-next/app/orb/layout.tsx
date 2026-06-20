@@ -1,12 +1,7 @@
 import type { Metadata } from 'next'
 import { ReactNode } from 'react'
 
-/* Canonical ORB design layers — single residential shell (Phase 1I). */
-import './orb-theme.css'
-import './orb-components.css'
-import './orb-shell.css'
-import './orb-stations.css'
-import './orb-login.css'
+/* ORB Residential — single design system (Phase 1K blank canvas). */
 import './orb-residential-shell.css'
 import { OrbResidentialThemeRoot } from '@/app/orb/orb-theme-root'
 import { ORB_APPEARANCE_BOOTSTRAP_SCRIPT } from '@/lib/orb/orb-appearance'
@@ -36,10 +31,10 @@ const ORB_VISUAL_BUILD_SCRIPT = `window.__ORB_VISUAL_BUILD__=${JSON.stringify({
 export const metadata: Metadata = {
   title: 'ORB Residential',
   description:
-    "ORB Residential — Powered by IndiCare Intelligence. Standalone premium intelligence for adults working in children's residential care.",
+    "ORB Residential — Powered by IndiCare Intelligence. Ethical intelligence for children's homes.",
   manifest: '/manifest.json',
   appleWebApp: { capable: true, title: 'ORB Residential' },
-  themeColor: '#f7fbff'
+  themeColor: '#ffffff'
 }
 
 export default function OrbLayout({ children }: { children: ReactNode }) {

@@ -14,13 +14,13 @@ describe('ORB Premium Visual System v2', () => {
   it('v2 CSS layer ships with design tokens and imports in layout', () => {
     const css = read('components/orb/premium/orb-premium-v2.css')
     const layout = read('app/orb/layout.tsx')
-    const tokens = read('app/orb/orb-premium-tokens.css')
+    const tokens = read('app/orb/_legacy-ui-archive/orb-premium-tokens.css')
     assert.match(css, /--orb-v2-bg-workspace/)
     assert.match(css, /--orb-v2-glass-surface/)
     assert.match(css, /--orb-v2-primary-gradient/)
     assert.match(css, /data-orb-visual-system='v2'/)
     assert.match(tokens, /orb-v2-atmosphere|orb-presence--hero/)
-    assert.match(layout, /orb-premium-tokens\.css|orb-theme\.css/)
+    assert.match(layout, /orb-residential-shell\.css/)
   })
 
   it('bootstrap sets data-orb-visual-system=v2 on html', () => {

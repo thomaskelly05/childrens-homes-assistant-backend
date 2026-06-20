@@ -54,7 +54,7 @@ describe('ORB Residential station identity pass', () => {
     const hero = read('components/orb-standalone/orb-voice-hero-stage.tsx')
     const content = read('components/orb-standalone/orb-voice-station-content.tsx')
     const strip = read('components/orb-standalone/orb-voice-responsibility-strip.tsx')
-    const desktopCss = read('app/orb/orb-desktop.css')
+    const desktopCss = read('app/orb/_legacy-ui-archive/orb-desktop.css')
     const actions = read('components/orb-standalone/orb-voice-actions.tsx')
 
     assert.match(hero, /orb-voice-hero-aura/)
@@ -117,7 +117,7 @@ describe('ORB Residential station identity pass', () => {
     const copy = read('lib/orb/orb-residential-copy.ts')
     const panel = read('components/orb-write/orb-write-standalone-panel.tsx')
     const editor = read('components/orb-write/orb-write-editor.tsx')
-    const desktopCss = read('app/orb/orb-desktop.css')
+    const desktopCss = read('app/orb/_legacy-ui-archive/orb-desktop.css')
 
     assert.match(copy, /Structure, review and finalise with adult approval/)
 

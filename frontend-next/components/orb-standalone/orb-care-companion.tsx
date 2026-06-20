@@ -136,7 +136,8 @@ import {
 import {
   ORB_COMPOSER_V2_PLACEHOLDER_CHAT,
   ORB_COMPOSER_V2_PLACEHOLDER_HOME,
-  ORB_HOME_RAIL_TRUST_ITEMS
+  ORB_HOME_RAIL_TRUST_ITEMS,
+  ORB_HOME_SAFETY_LINE
 } from '@/lib/orb/orb-convergence-phase-1h-copy'
 import { ORB_REQUEST_DEMO_URL } from '@/lib/orb/orb-user-facing-names'
 import { OrbStandaloneSidebar } from '@/components/orb-standalone/orb-standalone-sidebar'
@@ -3324,6 +3325,11 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
           </button>
         ))}
       </div>
+    ) : null}
+    {residentialSurface && showEmptyState ? (
+      <p className="orb-workspace-home-safety" data-orb-home-safety-line>
+        {ORB_HOME_SAFETY_LINE}
+      </p>
     ) : null}
     </div>
   )

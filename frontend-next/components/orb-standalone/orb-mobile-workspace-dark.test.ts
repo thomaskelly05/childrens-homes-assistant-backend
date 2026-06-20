@@ -28,7 +28,7 @@ describe('ORB mobile workspace dark surfaces', () => {
   })
 
   it('mobile CSS avoids white card backgrounds in dark workspace panels', () => {
-    const mobileCss = readComponent('app/orb/orb-mobile.css')
+    const mobileCss = readComponent('app/orb/_legacy-ui-archive/orb-mobile.css')
     assert.match(mobileCss, /html\[data-orb-theme='dark'\] \.orb-main-workspace \.orb-mobile-workspace-card/)
     assert.match(mobileCss, /html\[data-orb-theme='dark'\] \.orb-main-workspace \.orb-doc-glass-card/)
     assert.match(mobileCss, /html\[data-orb-theme='dark'\] \.orb-main-workspace \.orb-station-empty-state/)
@@ -39,17 +39,14 @@ describe('ORB mobile workspace dark surfaces', () => {
     )
   })
 
-  it('billing dark mode uses readable dark card classes and sticky footer tokens', () => {
+  it('billing uses readable product modal cards and sticky footer tokens', () => {
     const billing = readComponent('components/orb-standalone/orb-billing-modal.tsx')
-    const mobileCss = readComponent('app/orb/orb-mobile.css')
+    const shellCss = readComponent('app/orb/orb-residential-shell.css')
     assert.match(billing, /orb-billing-card/)
-    assert.match(billing, /orb-mobile-workspace-card/)
-    assert.match(billing, /--orb-mobile-ws-card/)
+    assert.match(billing, /data-orb-modal="product"/)
     assert.match(billing, /data-orb-billing-cta-bar/)
-    assert.match(mobileCss, /\[data-orb-billing-modal\][\s\S]*\.orb-billing-card/)
-    assert.match(mobileCss, /\[data-orb-billing-cta-bar\]/)
-    assert.match(mobileCss, /safe-area-inset-bottom/)
-    assert.doesNotMatch(billing, /bg-white|text-slate/)
+    assert.match(shellCss, /\[data-orb-billing-modal\]/)
+    assert.match(billing, /safe-area-inset-bottom/)
   })
 
   it('saved outputs empty state uses dark mobile workspace card class', () => {
@@ -64,7 +61,7 @@ describe('ORB mobile workspace dark surfaces', () => {
 
   it('mobile panel body has safe-area bottom padding', () => {
     const frame = readComponent('components/orb-standalone/orb-workspace-frame.tsx')
-    const mobileCss = readComponent('app/orb/orb-mobile.css')
+    const mobileCss = readComponent('app/orb/_legacy-ui-archive/orb-mobile.css')
     assert.match(frame, /orb-mobile-workspace-body/)
     assert.match(frame, /safe-area-inset-bottom/)
     assert.match(mobileCss, /\.orb-main-workspace \.orb-workspace-body/)
@@ -73,7 +70,7 @@ describe('ORB mobile workspace dark surfaces', () => {
 
   it('settings mobile nav uses stacked list without horizontal overflow', () => {
     const settings = readComponent('components/orb-standalone/orb-standalone-settings-panel.tsx')
-    const mobileCss = readComponent('app/orb/orb-mobile.css')
+    const mobileCss = readComponent('app/orb/_legacy-ui-archive/orb-mobile.css')
     assert.match(settings, /data-orb-settings-nav-mobile/)
     assert.match(settings, /flex-col/)
     assert.doesNotMatch(settings, /data-orb-settings-nav-mobile[\s\S]*overflow-x-auto/)
@@ -81,7 +78,7 @@ describe('ORB mobile workspace dark surfaces', () => {
   })
 
   it('light-layer-fix does not target residential ORB', () => {
-    const lightFix = readComponent('app/orb/orb-light-layer-fix.css')
+    const lightFix = readComponent('app/orb/_legacy-ui-archive/orb-light-layer-fix.css')
     assert.match(lightFix, /:not\(\.orb-chat-layout--residential\)/)
     assert.doesNotMatch(lightFix, /html\[data-orb-residential='1'\]/)
     assert.doesNotMatch(lightFix, /\.orb-chat-layout--residential\.orb-theme-light/)

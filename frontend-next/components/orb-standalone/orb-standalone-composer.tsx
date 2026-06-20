@@ -756,7 +756,7 @@ export function OrbStandaloneComposer({
               }
               data-orb-composer-placeholder={
                 composerPlaceholder
-                  ? 'orb-composer-v2'
+                  ? 'orb-composer'
                   : compactResidential
                     ? 'ask-orb-anything'
                     : 'ask-anything'

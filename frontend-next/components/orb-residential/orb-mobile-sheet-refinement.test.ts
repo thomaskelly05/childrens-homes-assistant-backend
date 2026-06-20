@@ -13,7 +13,7 @@ function read(relativePath: string) {
 describe('ORB mobile sheet refinement pass', () => {
   it('template picker uses mobile bottom sheet with sticky footer and internal scroll', () => {
     const picker = read('components/orb-write/orb-write-template-picker.tsx')
-    const mobileCss = read('app/orb/orb-mobile.css')
+    const mobileCss = read('app/orb/_legacy-ui-archive/orb-mobile.css')
     assert.match(picker, /useOrbResponsiveMode/)
     assert.match(picker, /data-orb-write-template-picker-mobile/)
     assert.match(picker, /data-orb-write-template-picker-footer/)
@@ -28,7 +28,7 @@ describe('ORB mobile sheet refinement pass', () => {
 
   it('dictate capture panel has title spacing and does not collide with orb', () => {
     const dictate = read('components/orb-standalone/orb-dictate-mobile-experience.tsx')
-    const mobileCss = read('app/orb/orb-mobile.css')
+    const mobileCss = read('app/orb/_legacy-ui-archive/orb-mobile.css')
     assert.match(dictate, /data-orb-dictate-title-spacing/)
     assert.match(dictate, /data-orb-dictate-header/)
     assert.match(mobileCss, /\[data-orb-dictate-title-spacing\]/)
@@ -37,7 +37,7 @@ describe('ORB mobile sheet refinement pass', () => {
 
   it('settings appearance mobile detail scrolls without dead space stretch', () => {
     const settings = read('components/orb-standalone/orb-standalone-settings-panel.tsx')
-    const mobileCss = read('app/orb/orb-mobile.css')
+    const mobileCss = read('app/orb/_legacy-ui-archive/orb-mobile.css')
     assert.match(settings, /data-orb-settings-mobile-detail/)
     assert.match(settings, /orb-settings-scroll/)
     assert.match(settings, /min-h-0/)
@@ -50,7 +50,7 @@ describe('ORB mobile sheet refinement pass', () => {
 
   it('account menu is compact with 44px touch targets', () => {
     const menu = read('components/orb-residential/orb-account-menu.tsx')
-    const mobileCss = read('app/orb/orb-mobile.css')
+    const mobileCss = read('app/orb/_legacy-ui-archive/orb-mobile.css')
     assert.match(menu, /min\(15rem/)
     assert.match(menu, /min\(21rem/)
     assert.match(menu, /min-h-\[2\.75rem\]/)
@@ -61,7 +61,7 @@ describe('ORB mobile sheet refinement pass', () => {
 
   it('saved outputs mobile hides dominant filters behind filter control', () => {
     const saved = read('components/orb-standalone/orb-saved-outputs-panel.tsx')
-    const mobileCss = read('app/orb/orb-mobile.css')
+    const mobileCss = read('app/orb/_legacy-ui-archive/orb-mobile.css')
     assert.match(saved, /useOrbResponsiveMode/)
     assert.match(saved, /data-orb-saved-outputs-filter-toggle/)
     assert.match(saved, /data-orb-saved-outputs-mobile-filters/)
@@ -75,7 +75,7 @@ describe('ORB mobile sheet refinement pass', () => {
 
   it('documents and guidance mobile uses compact action rows not dashboard tabs', () => {
     const documents = read('components/orb-standalone/orb-document-panel.tsx')
-    const mobileCss = read('app/orb/orb-mobile.css')
+    const mobileCss = read('app/orb/_legacy-ui-archive/orb-mobile.css')
     assert.match(documents, /useOrbResponsiveMode/)
     assert.match(documents, /data-orb-documents-mobile-actions/)
     assert.match(documents, /data-orb-documents-mobile-action/)
@@ -88,7 +88,7 @@ describe('ORB mobile sheet refinement pass', () => {
   it('desktop saved outputs and documents behaviour unchanged', () => {
     const saved = read('components/orb-standalone/orb-saved-outputs-panel.tsx')
     const documents = read('components/orb-standalone/orb-document-panel.tsx')
-    const desktop = read('app/orb/orb-desktop.css')
+    const desktop = read('app/orb/_legacy-ui-archive/orb-desktop.css')
     assert.match(saved, /!isMobile \?/)
     assert.match(saved, /ORB_RECORDS_PANEL_TITLE/)
     assert.match(saved, /ORB_RECORDS_FOOTER/)

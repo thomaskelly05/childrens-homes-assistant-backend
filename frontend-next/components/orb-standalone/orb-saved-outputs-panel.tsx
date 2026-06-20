@@ -412,7 +412,7 @@ export function OrbSavedOutputsPanel({
               <OrbStudioEmptyState
                 title={ORB_RECORDS_EMPTY_TITLE}
                 description={isMobile ? undefined : ORB_RECORDS_EMPTY_SUBTITLE}
-                className={`${isMobile ? '!px-4 !py-6' : ''} ${residentialSurface ? 'orb-flagship-records-empty' : ''}`.trim()}
+                className={isMobile ? '!px-4 !py-6' : undefined}
                 actions={
                   <>
                     {onStartInOrbWrite ? (

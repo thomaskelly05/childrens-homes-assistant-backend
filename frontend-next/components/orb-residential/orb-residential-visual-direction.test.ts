@@ -16,7 +16,7 @@ describe('ORB Residential visual direction regressions', () => {
     assert.match(presence, /OrbSphere/)
     assert.match(presence, /getOrbHueProfile/)
     assert.doesNotMatch(presence, /OrbBrandImage/)
-    const premium = read('app/orb/orb-premium-tokens.css')
+    const premium = read('app/orb/_legacy-ui-archive/orb-premium-tokens.css')
     assert.match(premium, /\.orb-presence \.orb-sphere-wrap/)
     const glow = read('components/orb-standalone/orb-glow.tsx')
     assert.match(glow, /OrbSphere/)
@@ -24,7 +24,7 @@ describe('ORB Residential visual direction regressions', () => {
   })
 
   it('light mode mobile workspace must not use launch dark lock panel colours', () => {
-    const mobile = read('app/orb/orb-mobile.css')
+    const mobile = read('app/orb/_legacy-ui-archive/orb-mobile.css')
     assert.doesNotMatch(mobile, /launch dark lock/i)
     const lightWs = mobile.match(
       /\.orb-chat-layout--residential\.orb-theme-light \.orb-main-workspace[\s\S]*?\}/
@@ -37,7 +37,7 @@ describe('ORB Residential visual direction regressions', () => {
   })
 
   it('desktop residential tailwind remap is scoped to dark theme only', () => {
-    const desktop = read('app/orb/orb-desktop.css')
+    const desktop = read('app/orb/_legacy-ui-archive/orb-desktop.css')
     assert.doesNotMatch(
       desktop,
       /\.orb-chat-layout--residential \.bg-slate-50[\s\S]*#05070d/
@@ -46,7 +46,7 @@ describe('ORB Residential visual direction regressions', () => {
   })
 
   it('dark-only surfaces in premium tokens are scoped to orb-theme-dark', () => {
-    const premium = read('app/orb/orb-premium-tokens.css')
+    const premium = read('app/orb/_legacy-ui-archive/orb-premium-tokens.css')
     assert.match(premium, /\.orb-theme-dark \[data-orb-app-modal='true'\] \.orb-panel-modal/)
     assert.match(premium, /\.orb-theme-light \[data-orb-app-modal='true'\] \.orb-panel-modal/)
     assert.match(premium, /\.orb-theme-light \.orb-document-panel \.orb-doc-glass-card/)
@@ -54,7 +54,7 @@ describe('ORB Residential visual direction regressions', () => {
   })
 
   it('residential root fallbacks default to light palette before theme hydration', () => {
-    const premium = read('app/orb/orb-premium-tokens.css')
+    const premium = read('app/orb/_legacy-ui-archive/orb-premium-tokens.css')
     const rootBlock = premium.match(/\.orb-residential-root\s*\{[^}]+\}/s)?.[0]
     assert.ok(rootBlock, 'expected .orb-residential-root block')
     assert.match(rootBlock!, /--orb-premium-bg-deep:[\s\S]*#f7fbff/)
@@ -63,7 +63,7 @@ describe('ORB Residential visual direction regressions', () => {
   })
 
   it('header brand text has explicit light and dark residential rules', () => {
-    const premium = read('app/orb/orb-premium-tokens.css')
+    const premium = read('app/orb/_legacy-ui-archive/orb-premium-tokens.css')
     assert.match(premium, /\.orb-theme-light[\s\S]*\[data-orb-header-title\][\s\S]*#0f172a/)
     assert.match(premium, /\.orb-theme-light[\s\S]*\[data-orb-mobile-header-tagline\][\s\S]*#475569/)
     assert.match(premium, /\.orb-theme-dark[\s\S]*\[data-orb-mobile-header-tagline\][\s\S]*#94a3b8/)
@@ -73,7 +73,7 @@ describe('ORB Residential visual direction regressions', () => {
   })
 
   it('light mode composer input text is not forced to premium white', () => {
-    const mobile = read('app/orb/orb-mobile.css')
+    const mobile = read('app/orb/_legacy-ui-archive/orb-mobile.css')
     assert.match(mobile, /orb-theme-light[\s\S]*orb-composer-glass[\s\S]*#0f172a|var\(--orb-res-text/)
     assert.doesNotMatch(
       mobile,
@@ -82,13 +82,13 @@ describe('ORB Residential visual direction regressions', () => {
   })
 
   it('account and billing light modal cards use white semantic surfaces on mobile', () => {
-    const mobile = read('app/orb/orb-mobile.css')
+    const mobile = read('app/orb/_legacy-ui-archive/orb-mobile.css')
     assert.match(mobile, /orb-theme-light[\s\S]*\[data-orb-billing-modal\][\s\S]*#ffffff/)
     assert.match(mobile, /orb-theme-light[\s\S]*\[data-orb-account-modal\][\s\S]*#ffffff/)
   })
 
   it('residential mobile tokens use light fallbacks not launch-dark lock', () => {
-    const premium = read('app/orb/orb-premium-tokens.css')
+    const premium = read('app/orb/_legacy-ui-archive/orb-premium-tokens.css')
     assert.doesNotMatch(premium, /residential launch is dark-only/i)
     const mobileBlock = premium.match(/html\[data-orb-residential='1'\]\s*\{[^}]+\}/s)?.[0]
     assert.ok(mobileBlock)
@@ -98,7 +98,7 @@ describe('ORB Residential visual direction regressions', () => {
   })
 
   it('login auth buttons have high-contrast enabled styles in light and dark', () => {
-    const premium = read('app/orb/orb-premium-tokens.css')
+    const premium = read('app/orb/_legacy-ui-archive/orb-premium-tokens.css')
     assert.match(premium, /\.orb-login-root--light \.orb-auth-button--enabled/)
     assert.match(premium, /\.orb-login-root--dark \.orb-auth-button--enabled/)
     const login = read('components/orb-residential/orb-login-screen.tsx')

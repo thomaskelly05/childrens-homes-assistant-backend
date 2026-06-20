@@ -96,7 +96,7 @@ describe('ORB Residential mobile continuity and composer upload pass', () => {
 
   it('selected files appear as composer attachment chips with horizontal scroll on mobile', () => {
     const composer = read('components/orb-standalone/orb-standalone-composer.tsx')
-    const mobileCss = read('app/orb/orb-mobile.css')
+    const mobileCss = read('app/orb/_legacy-ui-archive/orb-mobile.css')
     assert.match(composer, /data-orb-composer-attachments/)
     assert.match(composer, /data-orb-composer-attachment/)
     assert.match(composer, /data-orb-composer-attachment-remove/)
@@ -124,7 +124,7 @@ describe('ORB Residential mobile continuity and composer upload pass', () => {
 
   it('saved outputs mobile renders one empty state only', () => {
     const saved = read('components/orb-standalone/orb-saved-outputs-panel.tsx')
-    const mobileCss = read('app/orb/orb-mobile.css')
+    const mobileCss = read('app/orb/_legacy-ui-archive/orb-mobile.css')
     assert.match(saved, /isMobile && items\.length === 0 \? 'hidden'/)
     assert.match(saved, /data-orb-saved-outputs-empty/)
     assert.match(saved, /items\.length === 0 && !isMobile \?/)
@@ -135,7 +135,7 @@ describe('ORB Residential mobile continuity and composer upload pass', () => {
 
   it('recording library mobile list is not nested card-heavy', () => {
     const templates = read('components/orb-standalone/orb-templates-panel.tsx')
-    const mobileCss = read('app/orb/orb-mobile.css')
+    const mobileCss = read('app/orb/_legacy-ui-archive/orb-mobile.css')
     assert.match(templates, /divide-y divide-\[var\(--orb-line\)\]/)
     assert.doesNotMatch(templates, /data-orb-templates-mobile-record-list[\s\S]{0,400}rounded-xl border/)
     assert.match(mobileCss, /\[data-orb-templates-panel\] \[data-orb-recording-library-section\][\s\S]*border: 0/)
@@ -153,7 +153,7 @@ describe('ORB Residential mobile continuity and composer upload pass', () => {
   })
 
   it('mobile safe-area respected for composer attachment sheet', () => {
-    const mobileCss = read('app/orb/orb-mobile.css')
+    const mobileCss = read('app/orb/_legacy-ui-archive/orb-mobile.css')
     const tools = read('components/orb-residential/orb-residential-composer-tools-sheet.tsx')
     assert.match(mobileCss, /safe-area-inset-bottom/)
     assert.match(mobileCss, /\[data-orb-composer-attach-sheet='true'\]/)
@@ -165,7 +165,7 @@ describe('ORB Residential mobile continuity and composer upload pass', () => {
 
   it('desktop saved outputs detail empty state preserved', () => {
     const saved = read('components/orb-standalone/orb-saved-outputs-panel.tsx')
-    const desktop = read('app/orb/orb-desktop.css')
+    const desktop = read('app/orb/_legacy-ui-archive/orb-desktop.css')
     assert.match(saved, /items\.length === 0 && !isMobile/)
     assert.match(desktop, /\[data-orb-saved-outputs-empty='true'\] \[data-orb-saved-output-detail\]/)
   })

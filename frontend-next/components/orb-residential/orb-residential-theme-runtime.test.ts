@@ -59,13 +59,13 @@ describe('ORB residential theme runtime', () => {
     assert.match(sphere, /orb-living-sphere/)
     assert.match(sphere, /data-orb-living-sphere/)
     assert.doesNotMatch(sphere, /orb-sphere-depth|orb-sphere-liquid/)
-    const brandCss = read('app/orb/orb-brand-asset.css')
+    const brandCss = read('app/orb/_legacy-ui-archive/orb-brand-asset.css')
     assert.doesNotMatch(brandCss, /\.orb-sphere-wrap[\s\S]*display:\s*none/)
     assert.match(brandCss, /\.orb-brand-image[\s\S]*display:\s*none/)
   })
 
   it('living sphere CSS is cross-browser without blend-mode-only visibility', () => {
-    const premium = read('app/orb/orb-premium-tokens.css')
+    const premium = read('app/orb/_legacy-ui-archive/orb-premium-tokens.css')
     assert.match(premium, /\.orb-living-sphere/)
     assert.match(premium, /radial-gradient/)
     assert.match(premium, /border-radius:\s*9999px/)
@@ -75,7 +75,7 @@ describe('ORB residential theme runtime', () => {
   it('login OAuth uses theme tokens not white-on-white', () => {
     const login = read('components/orb-residential/orb-login-screen.tsx')
     assert.match(login, /getOrbThemeCssVariables/)
-    const premium = read('app/orb/orb-premium-tokens.css')
+    const premium = read('app/orb/_legacy-ui-archive/orb-premium-tokens.css')
     assert.match(premium, /\.orb-login-root--light \.orb-auth-button--enabled/)
     assert.match(premium, /var\(--orb-res-text|#0f172a/)
     assert.doesNotMatch(
@@ -110,7 +110,7 @@ describe('ORB residential theme runtime', () => {
   })
 
   it('no unscoped residential dark lock on workspace inputs', () => {
-    const mobile = read('app/orb/orb-mobile.css')
+    const mobile = read('app/orb/_legacy-ui-archive/orb-mobile.css')
     assert.doesNotMatch(mobile, /launch lock/)
     assert.match(mobile, /orb-theme-light/)
     assert.match(mobile, /orb-theme-dark/)

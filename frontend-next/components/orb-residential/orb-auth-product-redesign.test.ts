@@ -92,7 +92,7 @@ describe('ORB auth product redesign', () => {
   })
 
   it('uses warm product front-door styling markers', () => {
-    const css = read('app/orb/orb-login.css')
+    const css = read('app/orb/_legacy-ui-archive/orb-login.css')
     const hero = read('components/orb-residential/orb-login-desktop-hero.tsx')
     assert.match(css, /orb-front-door-root/)
     assert.match(css, /orb-login-auth-section/)

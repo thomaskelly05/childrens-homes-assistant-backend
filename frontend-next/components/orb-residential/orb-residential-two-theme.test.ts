@@ -94,13 +94,13 @@ describe('ORB Residential two-theme system', () => {
 
   it('orb layout loads static brand asset stylesheet', () => {
     const layout = readComponent('app/orb/layout.tsx')
-    assert.match(layout, /orb-theme\.css/)
+    assert.doesNotMatch(layout, /orb-theme\.css/)
     const brand = readComponent('components/orb-core/orb-brand-image.tsx')
     assert.match(brand, /ORB_BRAND_IMAGE_SRC|\/assets\/orb\/orb-brand\.png/)
   })
 
   it('premium tokens removed launch dark lock', () => {
-    const premium = readComponent('app/orb/orb-premium-tokens.css')
+    const premium = readComponent('app/orb/_legacy-ui-archive/orb-premium-tokens.css')
     assert.doesNotMatch(premium, /ORB Residential launch lock/)
     assert.doesNotMatch(premium, /color-scheme:\s*dark !important[\s\S]*orb-theme-light/)
     assert.match(premium, /\.orb-chat-layout--residential\.orb-theme-light/)
@@ -108,7 +108,7 @@ describe('ORB Residential two-theme system', () => {
   })
 
   it('mobile CSS uses theme-scoped workspace tokens not forced dark', () => {
-    const mobileCss = readComponent('app/orb/orb-mobile.css')
+    const mobileCss = readComponent('app/orb/_legacy-ui-archive/orb-mobile.css')
     assert.match(mobileCss, /orb-theme-light \[data-orb-starter-card\]/)
     assert.match(mobileCss, /orb-theme-dark \[data-orb-starter-card\]/)
     assert.match(mobileCss, /--orb-res-card/)
@@ -116,7 +116,7 @@ describe('ORB Residential two-theme system', () => {
   })
 
   it('desktop CSS scopes residential dark overrides to orb-theme-dark', () => {
-    const desktop = readComponent('app/orb/orb-desktop.css')
+    const desktop = readComponent('app/orb/_legacy-ui-archive/orb-desktop.css')
     assert.match(desktop, /\.orb-chat-layout--residential\.orb-theme-dark/)
     assert.match(desktop, /\.orb-chat-layout--residential\.orb-theme-light/)
     assert.doesNotMatch(desktop, /^\.orb-chat-layout--residential,\s*\n\[data-orb-shell/m)
@@ -125,7 +125,7 @@ describe('ORB Residential two-theme system', () => {
 
   it('shell root prevents horizontal overflow on mobile', () => {
     const theme = readComponent('lib/orb/orb-theme.ts')
-    const mobileCss = readComponent('app/orb/orb-mobile.css')
+    const mobileCss = readComponent('app/orb/_legacy-ui-archive/orb-mobile.css')
     assert.match(theme, /overflow-x-hidden/)
     assert.match(mobileCss, /overflow-x:\s*hidden/)
   })

@@ -68,7 +68,7 @@ describe('ORB mobile composer single-layer interaction audit', () => {
   })
 
   it('mobile CSS keeps input column from intercepting rail taps', () => {
-    const mobileCss = read('app/orb/orb-mobile.css')
+    const mobileCss = read('app/orb/_legacy-ui-archive/orb-mobile.css')
     assert.match(mobileCss, /\.orb-composer-input-column[\s\S]*pointer-events: none/)
     assert.match(mobileCss, /\.orb-composer-input-column textarea[\s\S]*pointer-events: auto/)
     assert.match(mobileCss, /max-width: calc\(100% - 8\.5rem\)/)

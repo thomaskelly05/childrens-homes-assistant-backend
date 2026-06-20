@@ -12,9 +12,9 @@ function read(relativePath: string) {
 
 describe('ORB Residential desktop layout system', () => {
   it('desktop layout CSS is scoped to lg+ only and does not alter mobile breakpoints', () => {
-    const desktop = read('app/orb/orb-desktop.css')
-    const mobile = read('app/orb/orb-mobile.css')
-    const premium = read('app/orb/orb-premium-tokens.css')
+    const desktop = read('app/orb/_legacy-ui-archive/orb-desktop.css')
+    const mobile = read('app/orb/_legacy-ui-archive/orb-mobile.css')
+    const premium = read('app/orb/_legacy-ui-archive/orb-premium-tokens.css')
 
     assert.match(desktop, /ORB Residential — desktop layout system \(lg\+ only/)
     assert.match(desktop, /@media \(min-width: 1024px\)[\s\S]*--orb-desktop-page-max:\s*75rem/)
@@ -29,8 +29,8 @@ describe('ORB Residential desktop layout system', () => {
   })
 
   it('desktop home hero uses centred layout tokens and overlap-safe spacing', () => {
-    const desktop = read('app/orb/orb-desktop.css')
-    const premium = read('app/orb/orb-premium-tokens.css')
+    const desktop = read('app/orb/_legacy-ui-archive/orb-desktop.css')
+    const premium = read('app/orb/_legacy-ui-archive/orb-premium-tokens.css')
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
 
     assert.match(desktop, /\[data-orb-residential-empty\][\s\S]*\[data-orb-empty-heading-desktop\]/)
@@ -44,7 +44,7 @@ describe('ORB Residential desktop layout system', () => {
   })
 
   it('desktop settings content is constrained and segmented controls capped', () => {
-    const desktop = read('app/orb/orb-desktop.css')
+    const desktop = read('app/orb/_legacy-ui-archive/orb-desktop.css')
     const settings = read('components/orb-standalone/orb-standalone-settings-panel.tsx')
 
     assert.match(desktop, /\[data-orb-settings-panel\][\s\S]*max-width:\s*var\(--orb-desktop-settings-max\)/)
@@ -56,7 +56,7 @@ describe('ORB Residential desktop layout system', () => {
 
   it('desktop saved outputs uses lg split layout without md two-column bleed', () => {
     const saved = read('components/orb-standalone/orb-saved-outputs-panel.tsx')
-    const desktop = read('app/orb/orb-desktop.css')
+    const desktop = read('app/orb/_legacy-ui-archive/orb-desktop.css')
 
     assert.match(saved, /lg:flex-row/)
     assert.doesNotMatch(saved, /md:flex-row/)
@@ -66,7 +66,7 @@ describe('ORB Residential desktop layout system', () => {
   })
 
   it('desktop Documents and Shift Builder share max-width container', () => {
-    const desktop = read('app/orb/orb-desktop.css')
+    const desktop = read('app/orb/_legacy-ui-archive/orb-desktop.css')
     const documents = read('components/orb-standalone/orb-document-panel.tsx')
     const premiumPage = read('components/orb/premium/orb-premium-page.tsx')
     const shift = read('components/orb-standalone/shift-builder/orb-shift-builder-panel.tsx')
@@ -101,7 +101,7 @@ describe('ORB Residential desktop layout system', () => {
   })
 
   it('desktop Dictate uses deliberate studio workspace layout', () => {
-    const desktop = read('app/orb/orb-desktop.css')
+    const desktop = read('app/orb/_legacy-ui-archive/orb-desktop.css')
     const dictate = read('components/orb-standalone/orb-dictate-station.tsx')
     const workspace = read('components/orb/dictate/OrbDictateStudioWorkspace.tsx')
 
@@ -112,7 +112,7 @@ describe('ORB Residential desktop layout system', () => {
   })
 
   it('light and dark theme classes remain the layout authority', () => {
-    const desktop = read('app/orb/orb-desktop.css')
+    const desktop = read('app/orb/_legacy-ui-archive/orb-desktop.css')
     const theme = read('lib/orb/orb-theme.ts')
 
     assert.match(desktop, /\.orb-chat-layout--residential\.orb-theme-dark/)

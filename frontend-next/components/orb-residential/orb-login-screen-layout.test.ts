@@ -14,7 +14,7 @@ describe('ORB premium login screen layout', () => {
   it('desktop two-column layout markers exist', () => {
     const login = read('components/orb-residential/orb-login-screen.tsx')
     const hero = read('components/orb-residential/orb-login-desktop-hero.tsx')
-    const css = read('app/orb/orb-login.css')
+    const css = read('app/orb/_legacy-ui-archive/orb-login.css')
 
     assert.match(login, /data-orb-login-two-column/)
     assert.match(login, /orb-login-shell/)
@@ -30,7 +30,7 @@ describe('ORB premium login screen layout', () => {
   it('right sign-in panel is centred in a premium card', () => {
     const login = read('components/orb-residential/orb-login-screen.tsx')
     const authCard = read('components/orb-residential/orb-login-auth-card.tsx')
-    const css = read('app/orb/orb-login.css')
+    const css = read('app/orb/_legacy-ui-archive/orb-login.css')
     assert.match(login, /OrbLoginAuthCard/)
     assert.match(authCard, /orb-login-card/)
     assert.match(authCard, /orb-login-panel-inner/)
@@ -39,7 +39,7 @@ describe('ORB premium login screen layout', () => {
 
   it('left hero places ORB visual above brand and copy in document flow', () => {
     const hero = read('components/orb-residential/orb-login-desktop-hero.tsx')
-    const css = read('app/orb/orb-login.css')
+    const css = read('app/orb/_legacy-ui-archive/orb-login.css')
 
     const sphereIdx = hero.indexOf('data-orb-login-hero-sphere')
     const brandIdx = hero.indexOf('data-orb-login-hero-brand')
@@ -124,7 +124,7 @@ describe('ORB premium login screen layout', () => {
   })
 
   it('desktop card scrolls on short viewports with safe bottom padding', () => {
-    const css = read('app/orb/orb-login.css')
+    const css = read('app/orb/_legacy-ui-archive/orb-login.css')
     assert.match(css, /max-height:\s*calc\([\s\S]*100svh/)
     assert.match(css, /overflow-y:\s*auto/)
     assert.match(css, /scroll-padding-bottom/)

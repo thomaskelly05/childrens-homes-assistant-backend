@@ -40,7 +40,7 @@ describe('ORB ChatGPT UI structure', () => {
     const layout = readComponent('app/orb/layout.tsx')
     assert.match(layout, /ORB_APPEARANCE_BOOTSTRAP_SCRIPT/)
     assert.match(layout, /orb-appearance-bootstrap/)
-    assert.match(layout, /orb-shell\.css/)
+    assert.match(layout, /orb-residential-shell\.css/)
     assert.doesNotMatch(layout, /import '\.\/orb-mobile\.css'/)
     assert.match(layout, /data-orb-light-ui-build/)
     assert.match(layout, /__ORB_LIGHT_UI_BUILD__/)
@@ -53,7 +53,7 @@ describe('ORB ChatGPT UI structure', () => {
 
   it('globals and route CSS ship ChatGPT-light build marker and hue pulse classes', () => {
     const globals = readComponent('app/globals.css')
-    const routeCss = readComponent('app/orb/orb-desktop.css')
+    const routeCss = readComponent('app/orb/_legacy-ui-archive/orb-desktop.css')
     assert.match(globals, /orb-chatgpt-light-build-marker-1338/)
     assert.match(routeCss, /orb-chatgpt-light-build-marker-1338/)
     assert.match(globals, /orb-hue-response-pulse|orb-response-active/)
@@ -64,7 +64,7 @@ describe('ORB ChatGPT UI structure', () => {
 
   it('citation chips use readable light-mode styling', () => {
     const citation = readComponent('components/orb-standalone/orb-inline-citation.tsx')
-    const routeCss = readComponent('app/orb/orb-desktop.css')
+    const routeCss = readComponent('app/orb/_legacy-ui-archive/orb-desktop.css')
     assert.match(citation, /orb-citation-chip-light/)
     assert.match(routeCss, /#0284c7/)
     assert.match(routeCss, /#075985/)
@@ -252,8 +252,8 @@ describe('ORB ChatGPT UI structure', () => {
 
   it('error cards use high-contrast ORB classes', () => {
     const companion = readComponent('components/orb-standalone/orb-care-companion.tsx')
-    const mobileCss = readComponent('app/orb/orb-mobile.css')
-    const desktopCss = readComponent('app/orb/orb-desktop.css')
+    const mobileCss = readComponent('app/orb/_legacy-ui-archive/orb-mobile.css')
+    const desktopCss = readComponent('app/orb/_legacy-ui-archive/orb-desktop.css')
     assert.match(companion, /orb-message-error-card/)
     assert.match(companion, /orb-message-error-card__body/)
     assert.match(desktopCss, /\.orb-message-error-card[\s\S]*#78350f/)
@@ -262,7 +262,7 @@ describe('ORB ChatGPT UI structure', () => {
 
   it('mobile sidebar overlay covers full viewport without harsh grey strip', () => {
     const layout = readComponent('components/orb/orb-layout.tsx')
-    const mobileCss = readComponent('app/orb/orb-mobile.css')
+    const mobileCss = readComponent('app/orb/_legacy-ui-archive/orb-mobile.css')
     assert.match(layout, /orb-panel-overlay fixed inset-0/)
     assert.match(mobileCss, /width:\s*100vw/)
     assert.match(mobileCss, /height:\s*100dvh/)

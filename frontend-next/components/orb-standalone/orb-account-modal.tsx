@@ -113,8 +113,8 @@ export function OrbAccountModal({
       ariaLabel="ORB account"
       {...orbOverlayDrawerShellProps('wide')}
     >
-      <div className="space-y-4 p-3 sm:p-4" data-orb-account-modal>
-        <div className="orb-studio-modal-section orb-mobile-workspace-card rounded-2xl border border-[var(--orb-line)]/60 bg-[var(--orb-surface-elevated)] px-3 py-4 sm:px-4">
+      <div className="orb-modal space-y-4 p-3 sm:p-4" data-orb-modal="product" data-orb-account-modal>
+        <div className="orb-billing-card rounded-2xl border border-[var(--orb-line)]/60 bg-[var(--orb-surface-elevated)] px-3 py-4 sm:px-4">
           <div className="flex items-start gap-3">
             <OrbUserAvatar name={displayName} avatarUrl={avatarUrl} size="lg" />
             <div className="min-w-0 flex-1">

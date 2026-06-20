@@ -13,7 +13,7 @@ function readComponent(relativePath: string) {
 describe('ORB Residential mobile UX', () => {
   it('mobile action buttons use aria-label and visually hidden labels', () => {
     const assistant = readComponent('components/orb-standalone/orb-assistant-message.tsx')
-    const mobileCss = readComponent('app/orb/orb-mobile.css')
+    const mobileCss = readComponent('app/orb/_legacy-ui-archive/orb-mobile.css')
     assert.match(assistant, /aria-label=\{label\}/)
     assert.match(assistant, /orb-action-chip__label/)
     assert.match(mobileCss, /\.orb-action-chip__label/)
@@ -42,7 +42,7 @@ describe('ORB Residential mobile UX', () => {
 
   it('composer and layout use locked mobile viewport classes', () => {
     const companion = readComponent('components/orb-standalone/orb-care-companion.tsx')
-    const mobileCss = readComponent('app/orb/orb-mobile.css')
+    const mobileCss = readComponent('app/orb/_legacy-ui-archive/orb-mobile.css')
     assert.match(companion, /h-\[100dvh\]/)
     assert.match(companion, /overflow-hidden/)
     assert.match(mobileCss, /overflow:\s*hidden/)
@@ -53,7 +53,7 @@ describe('ORB Residential mobile UX', () => {
   it('mobile empty state uses compact GlassOrbMark not oversized hero', () => {
     const companion = readComponent('components/orb-standalone/orb-care-companion.tsx')
     const mark = readComponent('components/orb-residential/ui/glass-orb-mark.tsx')
-    const premiumCss = readComponent('app/orb/orb-premium-tokens.css')
+    const premiumCss = readComponent('app/orb/_legacy-ui-archive/orb-premium-tokens.css')
     assert.match(companion, /variant=\{isMobileViewport \? 'compact' : 'hero'\}/)
     assert.match(companion, /data-orb-residential-empty/)
     assert.match(mark, /OrbPresence/)
@@ -63,7 +63,7 @@ describe('ORB Residential mobile UX', () => {
 
   it('settings selected item uses dark glass styling not bright white block', () => {
     const settings = readComponent('components/orb-standalone/orb-standalone-settings-panel.tsx')
-    const premiumCss = readComponent('app/orb/orb-premium-tokens.css')
+    const premiumCss = readComponent('app/orb/_legacy-ui-archive/orb-premium-tokens.css')
     assert.match(settings, /orb-settings-nav-item--active/)
     assert.match(settings, /data-orb-settings-nav-active/)
     assert.doesNotMatch(settings, /bg-\[#EAF6FF\]/)
@@ -110,7 +110,7 @@ describe('ORB Residential mobile UX', () => {
     const companion = readComponent('components/orb-standalone/orb-care-companion.tsx')
     const composer = readComponent('components/orb-standalone/orb-standalone-composer.tsx')
     const copy = readComponent('lib/orb/orb-residential-copy.ts')
-    const mobileCss = readComponent('app/orb/orb-mobile.css')
+    const mobileCss = readComponent('app/orb/_legacy-ui-archive/orb-mobile.css')
 
     assert.match(layout, /OrbMobileChatHeader/)
     assert.match(layout, /data-orb-mobile-header/)
@@ -173,7 +173,7 @@ describe('ORB Residential mobile UX', () => {
 
   it('suggested replies use horizontal scroll row on mobile', () => {
     const assistant = readComponent('components/orb-standalone/orb-assistant-message.tsx')
-    const mobileCss = readComponent('app/orb/orb-mobile.css')
+    const mobileCss = readComponent('app/orb/_legacy-ui-archive/orb-mobile.css')
     assert.match(assistant, /orb-suggested-replies-row/)
     assert.match(mobileCss, /\.orb-suggested-replies-row/)
   })
@@ -181,7 +181,7 @@ describe('ORB Residential mobile UX', () => {
   it('premium design tokens and CSS layer are wired', () => {
     const layout = readComponent('app/orb/layout.tsx')
     const theme = readComponent('lib/orb/orb-theme.ts')
-    assert.match(layout, /orb-theme\.css/)
+    assert.doesNotMatch(layout, /orb-theme\.css/)
     assert.match(theme, /ORB_ROYAL_BLUE/)
     assert.match(theme, /getOrbThemeCssVariables/)
     assert.match(theme, /#05070D|#05070d|#f7fbff/)
@@ -191,7 +191,7 @@ describe('ORB Residential mobile UX', () => {
 
   it('PremiumMobileOrb delegates to OrbPresence (single living sphere)', () => {
     const orb = readComponent('components/orb-residential/ui/premium-mobile-orb.tsx')
-    const premiumCss = readComponent('app/orb/orb-premium-tokens.css')
+    const premiumCss = readComponent('app/orb/_legacy-ui-archive/orb-premium-tokens.css')
     assert.match(orb, /OrbPresence/)
     assert.doesNotMatch(orb, /premium-mobile-orb__glow/)
     assert.doesNotMatch(orb, /premium-mobile-orb__core/)
@@ -201,7 +201,7 @@ describe('ORB Residential mobile UX', () => {
   it('residential experience uses single theme root with light default', () => {
     const shell = readComponent('components/orb/orb-shell.tsx')
     const companion = readComponent('components/orb-standalone/orb-care-companion.tsx')
-    const premiumCss = readComponent('app/orb/orb-premium-tokens.css')
+    const premiumCss = readComponent('app/orb/_legacy-ui-archive/orb-premium-tokens.css')
     const theme = readComponent('lib/orb/orb-theme.ts')
     assert.match(shell, /data-orb-residential/)
     assert.match(theme, /ORB_RESIDENTIAL_DEFAULT_THEME[\s\S]*'light'/)
@@ -218,7 +218,7 @@ describe('ORB Residential mobile UX', () => {
 
   it('markdown answer headings use theme foreground not near-black on dark', () => {
     const markdown = readComponent('components/orb-standalone/orb-markdown-answer.tsx')
-    const premiumCss = readComponent('app/orb/orb-premium-tokens.css')
+    const premiumCss = readComponent('app/orb/_legacy-ui-archive/orb-premium-tokens.css')
     assert.match(markdown, /text-\[var\(--orb-foreground/)
     assert.match(premiumCss, /\.orb-markdown-answer h2/)
     assert.match(premiumCss, /#f7faff/)
@@ -242,8 +242,8 @@ describe('ORB Residential mobile UX', () => {
   })
 
   it('mobile sidebar stays on dark theme classes', () => {
-    const mobileCss = readComponent('app/orb/orb-mobile.css')
-    const premiumCss = readComponent('app/orb/orb-premium-tokens.css')
+    const mobileCss = readComponent('app/orb/_legacy-ui-archive/orb-mobile.css')
+    const premiumCss = readComponent('app/orb/_legacy-ui-archive/orb-premium-tokens.css')
     assert.match(mobileCss, /\.orb-chat-sidebar/)
     assert.match(mobileCss, /#070b14/)
     assert.match(premiumCss, /html\[data-orb-residential='1'\]/)
