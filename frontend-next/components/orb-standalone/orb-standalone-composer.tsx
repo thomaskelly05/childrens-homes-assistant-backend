@@ -12,7 +12,6 @@ import {
   OrbResidentialPrivacyGuidanceSheet
 } from '@/components/orb-residential/orb-privacy-guidance-sheet'
 import { OrbResidentialComposerToolsSheet } from '@/components/orb-residential/orb-residential-composer-tools-sheet'
-import { OrbComposerCopyright } from '@/components/orb-standalone/orb-composer-copyright'
 import { OrbFooter } from '@/components/orb-standalone/orb-footer'
 import { logTapTarget } from '@/lib/interaction/mobile-tap-debug'
 import { traceOrbComposerInteraction } from '@/lib/orb/orb-composer-interaction-trace'
@@ -320,7 +319,8 @@ export function OrbStandaloneComposer({
   const [toolsSheetOpen, setToolsSheetOpen] = useState(false)
   const [privacyGuidanceOpen, setPrivacyGuidanceOpen] = useState(false)
   const [privacyReturnOrigin, setPrivacyReturnOrigin] = useState<'tools_menu'>('tools_menu')
-  const showComposerQuickActions = compactResidential && !mobileViewport
+  const homeEmptyCalm = compactResidential && !chatHasMessages
+  const showComposerQuickActions = compactResidential && !mobileViewport && chatHasMessages
 
   useEffect(() => {
     if (!toolsSheetOpen) {
@@ -922,10 +922,14 @@ export function OrbStandaloneComposer({
           ) : null}
         </form>
 
-        <div className="mt-2 space-y-2 px-2" data-orb-composer-privacy-zone>
-          <OrbPrivacyInputWarning text={value} />
-          {!compactResidential || !mobileViewport ? <OrbPrivacyNotice surface="chat" /> : null}
-        </div>
+        {!homeEmptyCalm || value.trim() ? (
+          <div className="mt-2 space-y-2 px-2" data-orb-composer-privacy-zone>
+            <OrbPrivacyInputWarning text={value} />
+            {!homeEmptyCalm && (!compactResidential || !mobileViewport) ? (
+              <OrbPrivacyNotice surface="chat" />
+            ) : null}
+          </div>
+        ) : null}
 
         {!compactResidential ? (
           <OrbFooter
@@ -933,8 +937,6 @@ export function OrbStandaloneComposer({
             disclaimer="ORB Residential can make mistakes. ORB Residential does not access IndiCare OS records."
             copyright=""
           />
-        ) : compactResidential && !mobileViewport ? (
-          <OrbComposerCopyright className="mt-2 px-2 pb-1" />
         ) : null}
       </div>
       {privacyGuidanceOpen ? (

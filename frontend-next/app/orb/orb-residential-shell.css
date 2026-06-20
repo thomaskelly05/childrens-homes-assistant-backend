@@ -1,7 +1,7 @@
 /**
  * ORB Residential — single canonical UI design system (Phase 1K blank canvas, 1M personality).
  * One file for shell, workspace, composer, login, mobile, stations and modals.
- * Visual build marker: phase-3h-calm-home-chat.
+ * Visual build marker: phase-3i-calm-composer.
  */
 
 :root {
@@ -330,7 +330,16 @@ html[data-orb-residential='1'] :focus-visible {
 }
 
 .orb-workspace--home-calm {
-  min-height: min(42vh, calc(100dvh - 16rem));
+  min-height: min(32vh, calc(100dvh - 18rem));
+}
+
+[data-orb-home-empty='true'] .orb-workspace--home-calm {
+  min-height: 0;
+}
+
+[data-orb-home-empty='true'] .orb-residential-empty--desktop {
+  min-height: 0;
+  padding-bottom: 0;
 }
 
 .orb-workspace-hero--premium {
@@ -543,15 +552,17 @@ body[data-orb-composer-focused='true'] [data-orb-home-empty='true'] .orb-home-or
 [data-orb-home-empty='true'] .orb-composer-dock {
   border-top: none !important;
   background: transparent !important;
-  padding-top: 0.35rem;
+  padding-top: 0.15rem;
+  margin-top: -0.25rem;
 }
 
 [data-orb-home-empty='true'] .orb-composer-dock .orb-composer,
 [data-orb-home-empty='true'] .orb-composer-dock .orb-composer--premium {
-  border: 1px solid rgba(15, 23, 42, 0.06);
-  background: rgba(255, 255, 255, 0.96);
-  box-shadow: 0 4px 24px rgba(15, 23, 42, 0.06), 0 1px 3px rgba(15, 23, 42, 0.04);
-  max-width: min(42rem, var(--orb-composer-dock-max, 48rem));
+  border: 1px solid rgba(15, 23, 42, 0.05);
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 8px 32px rgba(15, 23, 42, 0.07), 0 2px 8px rgba(15, 23, 42, 0.04);
+  max-width: min(44rem, var(--orb-composer-dock-max, 48rem));
+  border-radius: 1.25rem;
 }
 
 [data-orb-home-empty='true'] .orb-composer-dock .orb-composer--premium:focus-within {
@@ -563,6 +574,12 @@ body[data-orb-composer-focused='true'] [data-orb-home-empty='true'] .orb-home-or
   border: none;
   background: transparent;
   box-shadow: none;
+  max-width: min(44rem, var(--orb-composer-dock-max, 48rem));
+}
+
+[data-orb-home-empty='true'] .orb-composer-dock-safety [data-orb-privacy-classification-link] {
+  display: inline;
+  margin-left: 0.15rem;
 }
 
 [data-orb-chat-active='true'] .orb-composer-dock-safety {
@@ -1508,7 +1525,7 @@ html[data-orb-residential='1'] [data-orb-billing-modal] {
 }
 
 .orb-workspace--home .orb-workspace-hero--premium {
-  padding: clamp(1rem, 3vh, 2.25rem) 1rem 0;
+  padding: clamp(0.75rem, 2vh, 1.5rem) 1rem 0;
 }
 
 .orb-workspace--home .orb-presence--hero {

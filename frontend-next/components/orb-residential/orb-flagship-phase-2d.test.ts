@@ -14,7 +14,7 @@ function read(relativePath: string) {
 
 describe('ORB Residential Phase 2H flagship UX convergence', () => {
   it('build version marker is phase-3b on shell and visual build', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-3h-calm-home-chat')
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-3i-calm-composer')
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
     const layout = read('app/orb/layout.tsx')
     assert.match(companion, /data-orb-build-version=\{ORB_BUILD_VISUAL_VERSION\}/)
@@ -75,7 +75,7 @@ describe('ORB Residential Phase 2H flagship UX convergence', () => {
     assert.doesNotMatch(sidebar, /label:\s*['"]Billing['"]/)
     assert.doesNotMatch(read('components/orb-residential/orb-account-menu.tsx'), /testId="billing"/)
     assert.match(sidebar, /hasVisibleProjects \|\| projectEditorOpen \? \(/)
-    assert.match(sidebar, /filteredChats\.length \? \(/)
+    assert.match(sidebar, /meaningfulRecentChats\.length \? \(/)
     assert.match(settings, /id: 'account_billing', label: 'Account & Billing'/)
   })
 

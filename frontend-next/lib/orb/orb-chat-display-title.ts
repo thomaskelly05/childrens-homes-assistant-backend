@@ -12,3 +12,14 @@ export function formatOrbChatDisplayTitle(title: string | null | undefined): str
   }
   return trimmed
 }
+
+const PLACEHOLDER_CHAT_TITLES = new Set(['Untitled chat', 'New conversation', 'New chat'])
+
+/** True when a chat has messages or a user-given title worth showing in Recent chats. */
+export function isMeaningfulOrbRecentChat(chat: {
+  title: string
+  messages: readonly unknown[]
+}): boolean {
+  if (chat.messages.length > 0) return true
+  return !PLACEHOLDER_CHAT_TITLES.has(formatOrbChatDisplayTitle(chat.title))
+}

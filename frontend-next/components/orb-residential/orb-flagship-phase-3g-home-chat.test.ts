@@ -24,8 +24,8 @@ function read(relativePath: string) {
 }
 
 describe('ORB Residential Phase 3G home and chat experience', () => {
-  it('build version marker is phase-3h-calm-home-chat', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-3h-calm-home-chat')
+  it('build version marker is phase-3i-calm-composer', () => {
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-3i-calm-composer')
     const layout = read('app/orb/layout.tsx')
     assert.match(layout, /orb-residential-shell\.css/)
     assert.doesNotMatch(layout, /orb-flagship-phase|orb-login\.css/)
@@ -110,7 +110,7 @@ ${'## Section\nMore text. '.repeat(20)}`
 
   it('home CSS includes living ORB presence hooks without duplicate shells', () => {
     const css = read('app/orb/orb-residential-shell.css')
-    assert.match(css, /phase-3h-calm-home-chat/)
+    assert.match(css, /phase-3i-calm-composer/)
     assert.match(css, /orb-home-breathe/)
     assert.match(css, /data-orb-composer-focused/)
     assert.match(css, /orb-home-start-row/)

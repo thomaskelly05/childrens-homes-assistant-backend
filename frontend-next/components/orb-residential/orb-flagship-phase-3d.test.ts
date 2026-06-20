@@ -18,7 +18,7 @@ function read(relativePath: string) {
 
 describe('ORB Residential Phase 3D station behaviour hardening', () => {
   it('build version marker is phase-3d', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-3h-calm-home-chat')
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-3i-calm-composer')
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
     const layout = read('app/orb/layout.tsx')
     assert.match(companion, /data-orb-build-version=\{ORB_BUILD_VISUAL_VERSION\}/)

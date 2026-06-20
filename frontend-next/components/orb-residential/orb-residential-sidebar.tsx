@@ -41,6 +41,7 @@ import {
   writeOrbSidebarSectionCollapsed,
   type OrbSidebarSectionKey
 } from '@/lib/orb/orb-sidebar-section-preference'
+import { formatOrbChatDisplayTitle, isMeaningfulOrbRecentChat } from '@/lib/orb/orb-chat-display-title'
 import { asArray } from '@/lib/orb/orb-safe-array'
 import type { AdultProfile } from '@/lib/orb/adult-profile-store'
 import { OrbSidebarChatList } from '@/components/orb-standalone/orb-sidebar-chat-menu'
@@ -403,7 +404,11 @@ export function OrbResidentialSidebar({
       }),
     [chats, chatSearch, workspace.activeProjectId]
   )
-  const timeGroupedChats = useMemo(() => groupChatsByRecency(filteredChats), [filteredChats])
+  const meaningfulRecentChats = useMemo(
+    () => (chatSearch.trim() ? filteredChats : filteredChats.filter(isMeaningfulOrbRecentChat)),
+    [chatSearch, filteredChats]
+  )
+  const timeGroupedChats = useMemo(() => groupChatsByRecency(meaningfulRecentChats), [meaningfulRecentChats])
 
   const activeProject = projects.find((project) => project.id === workspace.activeProjectId)
 
@@ -684,7 +689,7 @@ export function OrbResidentialSidebar({
                 </button>
               )
             })}
-            {chats.length ? (
+            {meaningfulRecentChats.length ? (
               <button
                 type="button"
                 onClick={() => {
@@ -805,7 +810,7 @@ export function OrbResidentialSidebar({
           </SidebarCollapsibleSection>
         ) : null}
 
-        {filteredChats.length ? (
+        {meaningfulRecentChats.length ? (
           <SidebarCollapsibleSection
             sectionKey="recents"
             title="Recent chats"

@@ -140,6 +140,7 @@ import {
 } from '@/lib/orb/orb-residential-shell-copy'
 import { formatOrbChatDisplayTitle } from '@/lib/orb/orb-chat-display-title'
 import { ORB_REQUEST_DEMO_URL } from '@/lib/orb/orb-user-facing-names'
+import { OrbPrivacyClassificationLink } from '@/components/orb/privacy/orb-privacy-classification-link'
 import { OrbStandaloneSidebar } from '@/components/orb-standalone/orb-standalone-sidebar'
 import {
   OrbResidentialSidebar,
@@ -3331,7 +3332,8 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
           className="orb-composer-dock-safety mx-auto mt-2 max-w-[var(--orb-composer-dock-max,48rem)] px-2 text-center text-[11px] leading-relaxed text-[var(--orb-muted)]"
           data-orb-home-safety-line
         >
-          {ORB_HOME_SAFETY_LINE}
+          {ORB_HOME_SAFETY_LINE}{' '}
+          <OrbPrivacyClassificationLink className="text-[11px] font-normal text-[var(--orb-muted)] underline underline-offset-2 hover:text-[var(--orb-foreground)]" />
         </p>
       ) : null}
     </div>
@@ -4234,7 +4236,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
               <div className={`mx-auto w-full ${residentialSurface ? 'orb-chat-column' : 'max-w-[var(--orb-chat-column-max,50rem)]'}`}>
                 {showEmptyState ? (
                   <div
-                    className={`flex min-h-0 flex-col items-center justify-start px-2 py-2 text-center md:min-h-[min(42vh,22rem)] md:justify-center md:py-6 ${residentialSurface ? 'orb-residential-empty orb-residential-empty--desktop orb-workspace--home orb-workspace--home-calm' : ''}`}
+                    className={`flex min-h-0 flex-col items-center justify-start px-2 py-2 text-center md:min-h-[min(28vh,16rem)] md:justify-center md:py-4 ${residentialSurface ? 'orb-residential-empty orb-residential-empty--desktop orb-workspace--home orb-workspace--home-calm' : ''}`}
                     data-orb-empty-state
                     {...(residentialSurface ? { 'data-orb-residential-empty': true, 'data-orb-workspace-home': true } : {})}
                   >
