@@ -14,7 +14,7 @@ function read(relativePath: string) {
 
 describe('ORB Residential Phase 2H flagship UX convergence', () => {
   it('build version marker is phase-3b on shell and visual build', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-3d')
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-3e-login')
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
     const layout = read('app/orb/layout.tsx')
     assert.match(companion, /data-orb-build-version=\{ORB_BUILD_VISUAL_VERSION\}/)
@@ -34,17 +34,19 @@ describe('ORB Residential Phase 2H flagship UX convergence', () => {
     const shell = read('components/orb-residential/orb-login-screen.tsx')
     const auth = read('components/orb-residential/orb-login-auth-card.tsx')
     const copy = read('lib/orb/orb-login-stations-copy.ts')
-    assert.match(hero, /data-orb-login-premium-entrance/)
+    assert.match(hero, /data-orb-login-entrance/)
     assert.match(hero, /data-orb-login-luminous-orb/)
-    assert.match(hero, /The specialist intelligence workspace for children&apos;s homes\./)
-    assert.match(hero, /Record safer\. Reflect stronger\. Evidence the child&apos;s experience more clearly\./)
-    assert.match(copy, /Built for the adults who care, centred on the children who matter\./)
-    assert.match(hero, /data-orb-login-station-preview/)
-    for (const label of ['Chat', 'Dictate', 'Voice', 'Communicate', 'ORB Write', 'Records & Drafts']) {
+    assert.match(hero, /ORB_LOGIN_ENTERPRISE_SUBHEADLINE/)
+    assert.match(hero, /ORB_LOGIN_ENTERPRISE_SUPPORTING/)
+    assert.match(copy, /ORB_LOGIN_ETHICAL_INTELLIGENCE_LINE/)
+    assert.match(copy, /ORB_LOGIN_FOUNDER_LINE/)
+    assert.match(hero, /data-orb-login-capability-groups/)
+    for (const label of ['Think', 'Capture', 'Evidence']) {
       assert.match(hero + copy, new RegExp(label))
     }
     assert.match(shell, /data-orb-login-auth-connected/)
     assert.match(auth, /data-orb-login-demo-visible/)
+    assert.doesNotMatch(hero, /data-orb-login-stations-scroll/)
   })
 
   it('ORB identity has explicit square circular geometry and is reused across core surfaces', () => {

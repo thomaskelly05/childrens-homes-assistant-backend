@@ -13,7 +13,7 @@ function read(relativePath: string) {
 describe('ORB login and billing readiness', () => {
   it('sign-in page renders grouped auth methods', () => {
     const authCard = read('components/orb-residential/orb-login-auth-card.tsx')
-    assert.match(authCard, /Sign in or create your account to continue/)
+    assert.match(authCard, /specialist intelligence workspace/)
     assert.match(authCard, /Sign in with email/)
     assert.match(authCard, /Use passkey/)
     assert.match(authCard, /Continue with Microsoft/)
@@ -33,12 +33,13 @@ describe('ORB login and billing readiness', () => {
 
   it('login hero uses premium positioning copy', () => {
     const hero = read('components/orb-residential/orb-login-desktop-hero.tsx')
+    const copy = read('lib/orb/orb-login-stations-copy.ts')
     assert.match(hero, /ORB_LOGIN_ENTERPRISE_TITLE/)
     assert.match(hero, /Powered by IndiCare Intelligence/)
-    assert.match(hero, /ORB_LOGIN_ENTERPRISE_TITLE/)
     assert.match(hero, /ORB_LOGIN_ENTERPRISE_SUBHEADLINE/)
+    assert.match(hero, /ORB_LOGIN_ETHICAL_INTELLIGENCE_LINE/)
     assert.match(hero, /orb-login-headline--showstopper/)
-    assert.match(hero, /professional judgement/)
+    assert.match(copy, /professional judgement/)
     assert.match(hero, /data-orb-login-demo-path/)
   })
 

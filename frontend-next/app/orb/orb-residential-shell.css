@@ -1,7 +1,7 @@
 /**
  * ORB Residential — single canonical UI design system (Phase 1K blank canvas, 1M personality).
  * One file for shell, workspace, composer, login, mobile, stations and modals.
- * Visual build marker: phase-3d.
+ * Visual build marker: phase-3e-login.
  */
 
 :root {
@@ -529,7 +529,7 @@ html[data-orb-residential='1'] .orb-composer--premium textarea::placeholder {
 
 @media (min-width: 1024px) {
   .orb-login-shell__grid {
-    grid-template-columns: minmax(0, 56%) minmax(25rem, 44%);
+    grid-template-columns: minmax(0, 58%) minmax(0, 42%);
   }
 }
 
@@ -607,6 +607,83 @@ html[data-orb-residential='1'] .orb-composer--premium textarea::placeholder {
   display: flex;
   align-items: flex-start;
   overflow: visible;
+}
+
+@media (min-width: 1024px) {
+  .orb-login-hero {
+    min-height: 0;
+    max-height: 100svh;
+    justify-content: center;
+    padding-top: clamp(1.25rem, 12vh, 3.5rem);
+    padding-bottom: clamp(0.75rem, 2vh, 1.25rem);
+    overflow: visible;
+  }
+
+  .orb-login-panel {
+    min-height: 0;
+    max-height: 100svh;
+    align-items: center;
+    justify-content: flex-start;
+    padding-top: clamp(2.75rem, 11vh, 4.5rem);
+    padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px));
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    scroll-padding-bottom: max(1.25rem, calc(1rem + env(safe-area-inset-bottom, 0px)));
+  }
+
+  .orb-login-card {
+    max-height: calc(
+      100svh - 2rem - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)
+    );
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    scroll-padding-bottom: max(1.25rem, calc(1rem + env(safe-area-inset-bottom, 0px)));
+  }
+}
+
+@media (min-width: 1024px) and (max-height: 760px) {
+  .orb-login-shell {
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 0px));
+  }
+
+  .orb-login-card {
+    max-height: calc(
+      100svh - 0.75rem - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)
+    );
+  }
+}
+
+[data-orb-login-scrollable] {
+  min-height: 100svh;
+  overflow-y: auto;
+}
+
+@media (max-width: 1023px) {
+  /* Flat mobile surface — not a floating modal card */
+  .orb-login-card {
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    backdrop-filter: none;
+    max-height: none;
+    overflow: visible;
+  }
+
+  .orb-login-signin-title {
+    text-align: left;
+  }
+
+  .orb-login-mobile-header {
+    max-height: none;
+    overflow: visible;
+    text-align: left;
+  }
+
+  .orb-login-mobile-mark {
+    width: 3rem;
+    height: 3rem;
+  }
 }
 
 /* ── Stations ─────────────────────────────────────────────────────────────── */
@@ -1042,11 +1119,9 @@ html[data-orb-residential='1'] [data-orb-billing-modal] [data-orb-billing-provid
   filter: drop-shadow(0 0 10px rgba(99, 102, 241, 0.28));
 }
 
-[data-orb-login-stations-scroll] {
-  max-height: min(42vh, 18rem);
-  overflow-y: auto;
-  overscroll-behavior: contain;
+[data-orb-login-capability-groups] {
   min-width: 0;
+  overflow: visible;
 }
 
 [data-orb-communicate-station-layout] {
@@ -1215,17 +1290,11 @@ html[data-orb-residential='1'] [data-orb-build-version] {
   min-width: 0;
 }
 
-.orb-login-stations {
-  border-top: 1px solid rgba(255, 255, 255, 0.12);
-  padding-top: 1rem;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.55rem 1rem;
-}
-
-.orb-login-station-row {
-  border-left: 2px solid rgba(255, 255, 255, 0.2);
-  padding-left: 0.75rem;
+.orb-login-capability-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
 }
 
 [data-orb-help-panel] {
@@ -1308,24 +1377,41 @@ html[data-orb-residential='1'] [data-orb-billing-modal] {
 }
 
 .orb-login-stations {
-  grid-template-columns: 1fr !important;
-  border-top: 1px solid rgba(255,255,255,.14);
-  padding-top: .85rem;
+  display: none;
 }
 
-.orb-login-stations-scroll {
-  grid-template-columns: repeat(2, minmax(0,1fr));
-  gap: .55rem !important;
-  max-height: min(13rem, 29dvh) !important;
+.orb-login-capability-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
 }
 
-.orb-login-station-row {
-  min-height: 3.6rem;
-  padding: .55rem .65rem;
-  border: 1px solid rgba(255,255,255,.11);
-  border-radius: .75rem;
-  background: rgba(255,255,255,.055);
-  backdrop-filter: blur(10px);
+.orb-login-capability {
+  padding: 0.55rem 0.15rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.orb-login-capability:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.orb-login-professional-boundary,
+.orb-login-boundary {
+  max-width: 36rem;
+}
+
+.orb-login-ethical-line {
+  color: rgba(226, 232, 240, 0.92);
+}
+
+.orb-login-founder-line {
+  max-width: 34rem;
+  color: rgba(203, 213, 225, 0.95);
+}
+
+.orb-login-product-explainer {
+  max-width: 36rem;
 }
 
 .orb-login-shell__auth::before {
@@ -1791,8 +1877,8 @@ html[data-orb-residential='1'] [data-orb-write-document-canvas] article {
     padding: 1rem !important;
   }
 
-  .orb-login-stations {
-    grid-template-columns: 1fr;
+  .orb-login-capability-grid {
+    gap: 0.45rem;
   }
 }
 
@@ -1837,19 +1923,14 @@ html[data-orb-residential='1'] .orb-login-brand-orb-field::before {
   z-index: -1;
 }
 
-html[data-orb-residential='1'] .orb-login-station-preview {
-  border: 1px solid rgba(226, 232, 240, 0.14);
-  border-radius: 1.25rem;
-  background: rgba(15, 23, 42, 0.32);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 24px 70px rgba(2, 6, 23, 0.22);
-  padding: 1rem;
-  backdrop-filter: blur(18px);
+html[data-orb-residential='1'] .orb-login-capability-grid .orb-login-capability {
+  border-color: rgba(226, 232, 240, 0.12);
 }
 
-html[data-orb-residential='1'] .orb-login-station-row {
-  border-color: rgba(226, 232, 240, 0.14);
-  background: rgba(255, 255, 255, 0.07);
-  box-shadow: none;
+html[data-orb-residential='1'] .orb-login-professional-boundary {
+  border-color: rgba(148, 163, 184, 0.22);
+  background: rgba(15, 23, 42, 0.28);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 html[data-orb-residential='1'] .orb-login-shell__auth {
@@ -2114,7 +2195,9 @@ html[data-orb-residential='1'] .orb-communicate-preview-section p {
 }
 
 html[data-orb-residential='1'] .orb-login-hero-inner[data-orb-login-above-fold] {
-  padding-block: clamp(1rem, 2.5vh, 1.5rem);
+  padding-block: clamp(0.65rem, 1.8vh, 1.25rem);
+  overflow: visible;
+  max-height: none;
 }
 
 html[data-orb-residential='1'] .orb-login-brand-orb-field .glass-orb-mark {
@@ -2236,7 +2319,9 @@ html[data-orb-residential='1'] [data-orb-voice-reasoning-carousel] {
 }
 
 html[data-orb-residential='1'] .orb-login-hero-inner[data-orb-login-above-fold] {
-  padding-block: clamp(1rem, 2.5vh, 1.5rem);
+  padding-block: clamp(0.65rem, 1.8vh, 1.25rem);
+  overflow: visible;
+  max-height: none;
 }
 
 html[data-orb-residential='1'] .orb-login-brand-orb-field .glass-orb-mark {

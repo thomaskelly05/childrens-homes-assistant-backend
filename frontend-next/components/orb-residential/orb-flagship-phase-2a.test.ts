@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url'
 import { describe, it } from 'node:test'
 
 import { ORB_RESIDENTIAL_BILLING_INCLUDED_ITEMS } from '../../lib/orb/orb-residential-ui-copy.ts'
-import { ORB_LOGIN_STATION_DESCRIPTIONS } from '../../lib/orb/orb-login-stations-copy.ts'
+import { ORB_LOGIN_CAPABILITY_GROUPS } from '../../lib/orb/orb-login-stations-copy.ts'
 import { ORB_RECORDS_EMPTY_SUBTITLE } from '../../lib/orb/orb-user-facing-names.ts'
 import { ORB_LAYOUT_CSS_FILES } from '../../lib/orb/orb-visual-build.ts'
 
@@ -58,13 +58,12 @@ describe('ORB Residential Phase 2A identity and station maturity', () => {
     assert.match(flow, /Explain that contact has changed/)
   })
 
-  it('login page includes station descriptions including Communicate', () => {
+  it('login page includes capability groups and Communicate in product copy', () => {
     const hero = read('components/orb-residential/orb-login-desktop-hero.tsx')
-    assert.match(hero, /data-orb-login-stations/)
-    assert.match(hero, /ORB_LOGIN_STATION_DESCRIPTIONS/)
-    assert.match(hero, /data-orb-login-station=\{station\.id\}/)
+    assert.match(hero, /data-orb-login-capability-groups/)
+    assert.match(hero, /ORB_LOGIN_CAPABILITY_GROUPS/)
     assert.match(hero, /GlassOrbMark/)
-    assert.ok(ORB_LOGIN_STATION_DESCRIPTIONS.some((station) => station.id === 'communicate'))
+    assert.ok(ORB_LOGIN_CAPABILITY_GROUPS.some((group) => group.id === 'evidence'))
   })
 
   it('help and safety modal has scroll-safe layout', () => {

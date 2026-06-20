@@ -6,7 +6,7 @@ import { describe, it } from 'node:test'
 
 import { formatOrbChatDisplayTitle } from '../../lib/orb/orb-chat-display-title.ts'
 import { ORB_HOME_SAFETY_LINE } from '../../lib/orb/orb-residential-shell-copy.ts'
-import { ORB_LOGIN_STATION_DESCRIPTIONS } from '../../lib/orb/orb-login-stations-copy.ts'
+import { ORB_LOGIN_CAPABILITY_GROUPS } from '../../lib/orb/orb-login-stations-copy.ts'
 import { ORB_RECORDS_EMPTY_SUBTITLE } from '../../lib/orb/orb-user-facing-names.ts'
 import { ORB_BUILD_VISUAL_VERSION, ORB_LAYOUT_CSS_FILES } from '../../lib/orb/orb-visual-build.ts'
 
@@ -18,7 +18,7 @@ function read(relativePath: string) {
 
 describe('ORB Residential Phase 3B unified station experience', () => {
   it('build version marker is phase-3b', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-3d')
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-3e-login')
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
     const layout = read('app/orb/layout.tsx')
     assert.match(companion, /data-orb-build-version=\{ORB_BUILD_VISUAL_VERSION\}/)
@@ -122,13 +122,13 @@ describe('ORB Residential Phase 3B unified station experience', () => {
     }
   })
 
-  it('login renders station descriptions, request demo and above-fold layout hooks', () => {
+  it('login renders capability groups, request demo and above-fold layout hooks', () => {
     const hero = read('components/orb-residential/orb-login-desktop-hero.tsx')
-    assert.match(hero, /data-orb-login-stations/)
+    assert.match(hero, /data-orb-login-capability-groups/)
     assert.match(hero, /data-orb-login-above-fold/)
-    assert.match(hero, /OrbRequestDemoLink|data-orb-login-demo-path/)
-    assert.ok(ORB_LOGIN_STATION_DESCRIPTIONS.some((s) => s.id === 'chat'))
-    assert.ok(ORB_LOGIN_STATION_DESCRIPTIONS.some((s) => s.id === 'write'))
+    assert.match(hero, /OrbRequestDemoLink|data-orb-login-demo-route/)
+    assert.ok(ORB_LOGIN_CAPABILITY_GROUPS.some((g) => g.id === 'think'))
+    assert.ok(ORB_LOGIN_CAPABILITY_GROUPS.some((g) => g.id === 'evidence'))
   })
 
   it('records empty state mentions all stations and billing stays under settings', () => {

@@ -5,7 +5,9 @@ import Link from 'next/link'
 
 import { OrbAuthButton } from '@/components/orb-residential/ui/orb-auth-button'
 import { OrbLoginLegalFooter } from '@/components/orb-residential/orb-login-legal-footer'
+import { OrbRequestDemoLink } from '@/components/orb-residential/orb-request-demo-link'
 import type { OrbLegalPaths } from '@/components/orb-residential/orb-legal-links'
+import { ORB_LOGIN_PROFESSIONAL_BOUNDARY } from '@/lib/orb/orb-login-stations-copy'
 import { orbOAuthRedirectMessage } from '@/lib/orb/orb-oauth-redirect-state'
 
 const OAUTH_UNAVAILABLE_COPY: Record<'google' | 'microsoft', string> = {
@@ -71,7 +73,7 @@ export function OrbLoginAuthCard({
 
   return (
     <div
-      className="orb-login-card orb-login-panel-inner orb-login-auth-card--readable orb-login-flagship-auth mx-auto w-full max-w-md p-0 lg:rounded-[1.75rem] lg:border lg:p-7 lg:shadow-xl"
+      className="orb-login-auth-card orb-login-card orb-login-panel-inner orb-login-auth-card--readable orb-login-flagship-auth mx-auto w-full max-w-md p-0 lg:rounded-[1.75rem] lg:border lg:p-7 lg:shadow-xl"
       data-orb-login-flagship-auth
       data-orb-login-auth-card
     >
@@ -80,17 +82,13 @@ export function OrbLoginAuthCard({
         data-orb-login-signin-title
         data-orb-login-signin-title-mobile
       >
-        <span className="lg:hidden">Sign in to continue</span>
-        <span className="hidden lg:inline">Welcome to ORB Residential</span>
+        Welcome to ORB Residential
       </h2>
       <p
         className="orb-login-lead mt-1.5 text-left text-sm leading-relaxed text-[var(--orb-muted)]"
         data-orb-login-mobile-lead
       >
-        <span className="lg:hidden">
-          Use Google, Microsoft, email or passkey to access ORB.
-        </span>
-        <span className="hidden lg:inline">Sign in or create your account to continue.</span>
+        Sign in to continue to the specialist intelligence workspace for children&apos;s homes.
       </p>
 
       {error ? (
@@ -276,12 +274,26 @@ export function OrbLoginAuthCard({
         </p>
       )}
 
+      <p className="orb-login-adult-reviewed mt-4 text-center text-xs leading-relaxed text-[var(--orb-muted)]" data-orb-login-adult-reviewed>
+        Every output remains adult-reviewed.
+      </p>
+
+      <p
+        className="orb-login-boundary mt-3 hidden rounded-xl border border-[var(--orb-line)]/45 bg-[var(--orb-surface-elevated)]/50 px-3 py-2 text-xs leading-relaxed text-[var(--orb-muted)] lg:block"
+        data-orb-login-auth-boundary
+      >
+        {ORB_LOGIN_PROFESSIONAL_BOUNDARY}
+      </p>
+
       <OrbLoginLegalFooter legalPaths={legalPaths} />
 
-      <p className="orb-login-demo-link mt-4 text-center text-sm" data-orb-login-demo-path data-orb-login-demo-visible>
-        <Link href="/orb/signup" className="font-semibold text-[var(--orb-primary)] underline-offset-2 hover:underline">
-          Request demo
-        </Link>
+      <p className="orb-login-demo-route mt-4 text-center text-sm lg:hidden" data-orb-login-demo-path data-orb-login-demo-visible data-orb-login-demo-route>
+        Not using ORB yet?{' '}
+        <OrbRequestDemoLink surface="login" className="font-semibold text-[var(--orb-primary)] underline-offset-2 hover:underline" />
+      </p>
+      <p className="orb-login-demo-route mt-4 hidden text-center text-sm lg:block" data-orb-login-demo-path data-orb-login-demo-visible data-orb-login-demo-route>
+        Not using ORB yet?{' '}
+        <OrbRequestDemoLink surface="login" className="font-semibold text-[var(--orb-primary)] underline-offset-2 hover:underline" />
       </p>
     </div>
   )

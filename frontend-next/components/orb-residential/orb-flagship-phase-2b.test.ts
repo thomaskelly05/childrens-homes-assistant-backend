@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url'
 import { describe, it } from 'node:test'
 
 import { ORB_RESIDENTIAL_BILLING_INCLUDED_ITEMS } from '../../lib/orb/orb-residential-ui-copy.ts'
-import { ORB_LOGIN_STATION_DESCRIPTIONS } from '../../lib/orb/orb-login-stations-copy.ts'
+import { ORB_LOGIN_CAPABILITY_GROUPS } from '../../lib/orb/orb-login-stations-copy.ts'
 import { ORB_LAYOUT_CSS_FILES } from '../../lib/orb/orb-visual-build.ts'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '../..')
@@ -61,12 +61,12 @@ describe('ORB Residential Phase 2B repair pass', () => {
     assert.match(companion, /data-orb-brand-eyebrow|GlassOrbMark/)
   })
 
-  it('login includes stations and compact scroll layout', () => {
+  it('login includes capability groups and founder line', () => {
     const hero = read('components/orb-residential/orb-login-desktop-hero.tsx')
-    assert.match(hero, /ORB_LOGIN_STATION_DESCRIPTIONS/)
-    assert.match(hero, /data-orb-login-stations-scroll/)
+    assert.match(hero, /ORB_LOGIN_CAPABILITY_GROUPS/)
+    assert.match(hero, /data-orb-login-capability-groups/)
     assert.match(hero, /ORB_LOGIN_FOUNDER_LINE/)
-    assert.ok(ORB_LOGIN_STATION_DESCRIPTIONS.some((s) => s.id === 'communicate'))
+    assert.ok(ORB_LOGIN_CAPABILITY_GROUPS.some((g) => g.id === 'capture'))
   })
 
   it('communicate explains support pack output', () => {

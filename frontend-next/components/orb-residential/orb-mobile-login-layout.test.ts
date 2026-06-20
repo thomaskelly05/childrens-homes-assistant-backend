@@ -11,9 +11,11 @@ function read(relativePath: string) {
 }
 
 describe('ORB mobile login layout', () => {
+  const loginCss = 'app/orb/orb-residential-shell.css'
+
   it('uses single-column mobile markers and scrollable page', () => {
     const login = read('components/orb-residential/orb-login-screen.tsx')
-    const css = read('app/orb/_legacy-ui-archive/orb-login.css')
+    const css = read(loginCss)
     assert.match(login, /data-orb-login-mobile-single-column/)
     assert.match(login, /data-orb-login-scrollable/)
     assert.match(css, /100svh/)
@@ -24,13 +26,13 @@ describe('ORB mobile login layout', () => {
   it('mobile login renders compact brand area', () => {
     const mobile = read('components/orb-residential/orb-login-mobile-header.tsx')
     const login = read('components/orb-residential/orb-login-screen.tsx')
-    const css = read('app/orb/_legacy-ui-archive/orb-login.css')
+    const css = read(loginCss)
 
     assert.match(login, /OrbLoginMobileHeader/)
     assert.match(mobile, /data-orb-login-mobile-brand/)
     assert.match(mobile, /data-orb-login-engine-line/)
     assert.match(mobile, /data-orb-login-mobile-mark/)
-    assert.match(mobile, /PremiumMobileOrb/)
+    assert.match(mobile, /GlassOrbMark/)
     assert.match(mobile, /flex items-center gap-3/)
     assert.doesNotMatch(mobile, /OrbHeroSphere/)
     assert.match(css, /orb-login-mobile-mark/)
@@ -39,7 +41,7 @@ describe('ORB mobile login layout', () => {
 
   it('mobile login heading Sign in to continue is present and left-aligned', () => {
     const authCard = read('components/orb-residential/orb-login-auth-card.tsx')
-    const css = read('app/orb/_legacy-ui-archive/orb-login.css')
+    const css = read(loginCss)
     assert.match(authCard, /Sign in to continue/)
     assert.match(authCard, /data-orb-login-signin-title-mobile/)
     assert.match(authCard, /text-left/)
@@ -156,13 +158,17 @@ describe('ORB mobile login layout', () => {
     assert.match(login, /OrbAuthLoadingScreen/)
   })
 
-  it('mobile supporting copy mentions Google Microsoft email and passkey', () => {
+  it('mobile supporting copy mentions specialist workspace and auth options', () => {
     const authCard = read('components/orb-residential/orb-login-auth-card.tsx')
-    assert.match(authCard, /Use Google, Microsoft, email or passkey to access ORB/)
+    assert.match(authCard, /specialist intelligence workspace/)
+    assert.match(authCard, /Continue with Google/)
+    assert.match(authCard, /Continue with Microsoft/)
+    assert.match(authCard, /Sign in with email/)
+    assert.match(authCard, /Use passkey/)
   })
 
   it('mobile login avoids modal card chrome', () => {
-    const css = read('app/orb/_legacy-ui-archive/orb-login.css')
+    const css = read(loginCss)
     assert.match(css, /Flat mobile surface/)
     assert.match(css, /border:\s*none/)
     assert.match(css, /box-shadow:\s*none/)

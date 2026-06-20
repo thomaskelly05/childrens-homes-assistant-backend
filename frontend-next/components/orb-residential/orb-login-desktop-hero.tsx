@@ -3,30 +3,35 @@ import Link from 'next/link'
 import { GlassOrbMark } from '@/components/orb-residential/ui/glass-orb-mark'
 import { OrbRequestDemoLink } from '@/components/orb-residential/orb-request-demo-link'
 import {
-  ORB_LOGIN_ENTERPRISE_TITLE,
   ORB_LOGIN_ENTERPRISE_SUBHEADLINE,
-  ORB_LOGIN_ENTERPRISE_SUPPORTING
+  ORB_LOGIN_ENTERPRISE_SUPPORTING,
+  ORB_LOGIN_ENTERPRISE_TITLE
 } from '@/lib/orb/orb-residential-shell-copy'
 import {
+  ORB_LOGIN_CAPABILITY_GROUPS,
+  ORB_LOGIN_ETHICAL_INTELLIGENCE_LINE,
   ORB_LOGIN_FOUNDER_LINE,
   ORB_LOGIN_PRODUCT_EXPLANATION,
-  ORB_LOGIN_STATION_DESCRIPTIONS
+  ORB_LOGIN_PROFESSIONAL_BOUNDARY
 } from '@/lib/orb/orb-login-stations-copy'
 
-/** Desktop/tablet left hero — compact product entrance above the fold. */
+/** Desktop/tablet left hero — premium single product entrance above the fold. */
 export function OrbLoginDesktopHero() {
   return (
     <div
-      className="orb-login-hero orb-login-shell__brand orb-login-brand-panel relative hidden flex-col justify-center lg:flex lg:px-4 xl:px-8"
+      className="orb-login-entrance orb-login-hero orb-login-shell__brand orb-login-brand-panel relative hidden flex-col justify-center lg:flex lg:px-4 xl:px-8"
+      data-orb-login-entrance
       data-orb-login-hero-top-aligned
       data-orb-login-desktop-hero
       data-orb-login-brand-panel
       data-orb-login-premium-entrance
-      data-orb-login-enterprise-copy={`${ORB_LOGIN_ENTERPRISE_SUBHEADLINE} ${ORB_LOGIN_ENTERPRISE_SUPPORTING}`}
     >
       <div className="orb-login-hero-glow pointer-events-none absolute inset-0" aria-hidden />
-      <div className="orb-login-hero-inner relative mx-auto flex w-full max-w-2xl flex-col justify-center py-4 lg:max-h-[100dvh] lg:overflow-y-auto lg:overscroll-contain" data-orb-login-above-fold>
-        <div className="orb-login-brand-orb-field flex flex-col items-start gap-3" data-orb-login-hero-visual data-orb-login-luminous-orb>
+      <div
+        className="orb-login-hero-inner relative mx-auto flex w-full max-w-2xl flex-col justify-center py-3 lg:max-h-[100dvh] lg:overflow-visible"
+        data-orb-login-above-fold
+      >
+        <div className="orb-login-brand-orb-field orb-login-brand-orb flex flex-col items-start gap-2.5" data-orb-login-hero-visual data-orb-login-luminous-orb>
           <div className="orb-login-hero-sphere-wrap shrink-0" data-orb-login-hero-sphere>
             <GlassOrbMark variant="hero" pulse data-orb-login-brand-mark />
           </div>
@@ -37,49 +42,54 @@ export function OrbLoginDesktopHero() {
             <p className="orb-login-tagline mt-0.5 text-xs" data-orb-login-engine-line>
               Powered by IndiCare Intelligence
             </p>
+            <p className="orb-login-ethical-line mt-1 text-sm font-medium text-slate-200/95" data-orb-login-brand-promise>
+              {ORB_LOGIN_ETHICAL_INTELLIGENCE_LINE}
+            </p>
           </div>
         </div>
 
         <p
-          className="orb-login-headline--showstopper mt-4 text-2xl font-semibold leading-tight text-slate-100 xl:text-3xl"
+          className="orb-login-headline--showstopper mt-3 text-2xl font-semibold leading-tight text-slate-100 xl:text-[1.65rem]"
           data-orb-login-title
           data-orb-login-subheadline
         >
-          The specialist intelligence workspace for children&apos;s homes.
+          {ORB_LOGIN_ENTERPRISE_SUBHEADLINE}
         </p>
 
-        <p className="orb-login-supporting mt-3 text-base leading-relaxed text-slate-200" data-orb-login-supporting>
-          Record safer. Reflect stronger. Evidence the child&apos;s experience more clearly.
+        <p className="orb-login-supporting mt-2 text-[0.9375rem] leading-relaxed text-slate-200" data-orb-login-supporting>
+          {ORB_LOGIN_ENTERPRISE_SUPPORTING}
         </p>
 
-        <p className="orb-login-founder-line mt-4 text-sm font-medium leading-relaxed" data-orb-login-founder-line>
+        <p className="orb-login-founder-line mt-3 text-sm font-medium leading-relaxed text-slate-300/95" data-orb-login-founder-line>
           {ORB_LOGIN_FOUNDER_LINE}
         </p>
 
-        <p className="orb-login-product-explainer mt-3 max-w-xl text-sm leading-relaxed text-slate-200" data-orb-login-product-explainer>
+        <p className="orb-login-product-explainer mt-2.5 max-w-xl text-sm leading-relaxed text-slate-300/90" data-orb-login-product-explainer>
           {ORB_LOGIN_PRODUCT_EXPLANATION}
         </p>
 
-        <div className="orb-login-stations orb-login-station-preview mt-4" data-orb-login-stations data-orb-login-station-preview>
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Station preview</p>
-          <div
-            className="orb-login-stations-scroll grid max-h-[min(10rem,24dvh)] gap-1.5 overflow-y-auto overscroll-contain sm:grid-cols-2"
-            data-orb-login-stations-scroll
-          >
-            {ORB_LOGIN_STATION_DESCRIPTIONS.map((station) => (
-              <div key={station.id} className="orb-login-station-row min-w-0" data-orb-login-station={station.id}>
-                <p className="text-sm font-semibold text-slate-100">{station.label}</p>
-                <p className="text-[11px] leading-relaxed text-slate-300">{station.description}</p>
-              </div>
-            ))}
-          </div>
+        <div className="orb-login-capability-grid mt-4 space-y-2.5" data-orb-login-capability-groups>
+          {ORB_LOGIN_CAPABILITY_GROUPS.map((group) => (
+            <article
+              key={group.id}
+              className="orb-login-capability min-w-0"
+              data-orb-login-capability={group.id}
+            >
+              <p className="text-sm font-semibold text-slate-100">{group.label}</p>
+              <p className="mt-0.5 text-[12px] leading-relaxed text-slate-300/90">{group.description}</p>
+            </article>
+          ))}
         </div>
 
-        <p className="orb-login-muted mt-4 text-xs leading-relaxed opacity-90">
-          ORB supports professional judgement. It does not replace safeguarding procedures or local policy.
+        <p
+          className="orb-login-boundary orb-login-professional-boundary mt-4 rounded-xl border border-slate-400/20 bg-slate-900/25 px-3 py-2.5 text-xs leading-relaxed text-slate-200"
+          data-orb-login-professional-boundary
+        >
+          {ORB_LOGIN_PROFESSIONAL_BOUNDARY}
         </p>
 
-        <p className="orb-login-demo-link mt-4 text-sm" data-orb-login-demo-path>
+        <p className="orb-login-demo-route mt-3 text-sm" data-orb-login-demo-path data-orb-login-demo-route>
+          Not using ORB yet?{' '}
           <OrbRequestDemoLink
             surface="login"
             className="font-semibold text-slate-100 underline-offset-2 hover:underline"
