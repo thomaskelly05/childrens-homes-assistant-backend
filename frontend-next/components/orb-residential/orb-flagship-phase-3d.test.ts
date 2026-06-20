@@ -18,7 +18,7 @@ function read(relativePath: string) {
 
 describe('ORB Residential Phase 3D station behaviour hardening', () => {
   it('build version marker is phase-3d', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-3l-dictate-capture-workflow')
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-3m-dictate-staged-recording')
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
     const layout = read('app/orb/layout.tsx')
     assert.match(companion, /data-orb-build-version=\{ORB_BUILD_VISUAL_VERSION\}/)
@@ -59,7 +59,7 @@ describe('ORB Residential Phase 3D station behaviour hardening', () => {
     const copy = read('lib/orb/orb-residential-copy.ts')
     assert.match(copy, /Time, date and sequence/)
     assert.match(copy, /Management oversight where needed/)
-    assert.match(workspace, /Create safer draft/)
+    assert.match(workspace, /ORB_DICTATE_CREATE_SAFER_DRAFT/)
     assert.match(read('components/orb/dictate/OrbDictateSaferDraftPanel.tsx'), /ORB_DICTATE_ACTION_OPEN_WRITE/)
   })
 

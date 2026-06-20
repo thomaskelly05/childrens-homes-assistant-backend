@@ -73,3 +73,30 @@ export function pushOrbDictateVersion(
   const versions = [entry, ...draft.versions].slice(0, 30)
   return { ...draft, versions, updated_at: entry.created_at }
 }
+
+export type OrbDictateRecentCaptureRow = {
+  id: string
+  title: string
+  updated_at: string
+  note_type: OrbDictateNoteType
+  status: 'rough_capture' | 'reviewed' | 'draft_created'
+}
+
+/** Recent local Dictate captures for the capture station list — empty when none exist. */
+export function listOrbDictateRecentCaptures(limit = 5): OrbDictateRecentCaptureRow[] {
+  return readAllDrafts()
+    .slice(0, limit)
+    .map((draft) => ({
+      id: draft.note_id ?? draft.updated_at,
+      title: draft.title?.trim() || 'Untitled capture',
+      updated_at: draft.updated_at,
+      note_type: draft.note_type,
+      status: draft.is_draft
+        ? draft.readiness_label
+          ? 'reviewed'
+          : draft.current_text?.trim()
+            ? 'rough_capture'
+            : 'rough_capture'
+        : 'draft_created'
+    }))
+}

@@ -1,7 +1,7 @@
 /**
  * ORB Residential — single canonical UI design system (Phase 1K blank canvas, 1M personality).
  * One file for shell, workspace, composer, login, mobile, stations and modals.
- * Visual build marker: phase-3l-dictate-capture-workflow.
+ * Visual build marker: phase-3m-dictate-staged-recording.
  */
 
 :root {
@@ -2873,3 +2873,41 @@ html[data-orb-residential='1'] [data-orb-dictate-paste-notes] {
 html[data-orb-residential='1'] [data-orb-dictate-output-actions] button[data-orb-dictate-open-write] {
   order: -1;
 }
+
+/* Phase 3M — Dictate staged recording station (phase-3m-dictate-staged-recording) */
+html[data-orb-residential='1'] [data-orb-dictate-staged-recording] .orb-dictate-capture-column {
+  max-width: var(--orb-res-chat-column-max, 47.5rem);
+}
+
+html[data-orb-residential='1'] [data-orb-dictate-capture-station] {
+  text-align: center;
+}
+
+html[data-orb-residential='1'] [data-orb-dictate-staged-recording] .orb-dictate-hero-record {
+  min-height: 5rem;
+  min-width: 5rem;
+  box-shadow: 0 12px 32px rgba(79, 70, 229, 0.28);
+}
+
+html[data-orb-residential='1'] [data-orb-dictate-recording-stage] {
+  text-align: center;
+}
+
+html[data-orb-residential='1'] .orb-dictate-recording-pulse {
+  box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.18);
+}
+
+html[data-orb-residential='1'] [data-orb-dictate-recent-captures] {
+  opacity: 0.92;
+}
+
+html[data-orb-residential='1'] [data-orb-dictate-recent-captures-title] {
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+html[data-orb-residential='1'] [data-orb-dictate-rough-capture-stage] {
+  border-color: rgba(99, 102, 241, 0.12);
+}
+
+/* phase-3m-dictate-staged-recording marker end */

@@ -1,17 +1,41 @@
-/** Phase 3L — ORB Dictate flagship capture workflow copy. */
+/** Phase 3L/3M — ORB Dictate capture workflow copy. */
 
 export const ORB_DICTATE_CAPTURE_HEADLINE = 'Dictate' as const
 
 export const ORB_DICTATE_CAPTURE_SUBTITLE =
-  'Turn rough speech, notes or uploads into safer adult-reviewed records.' as const
+  'Speak, paste or upload rough information. ORB will help structure it after capture.' as const
 
 export const ORB_DICTATE_CAPTURE_SUPPORTING =
-  'Start with what happened. ORB will help structure the record, check what may be missing and keep the child\u2019s experience central.' as const
+  'Start capturing what happened. ORB will help structure it safely afterwards.' as const
 
 export const ORB_DICTATE_CAPTURE_BOUNDARY =
   'Generated drafts must be reviewed by an adult before use. Follow your home\u2019s safeguarding and recording policy.' as const
 
-export const ORB_DICTATE_CAPTURE_JOURNEY = 'Capture \u2192 ORB Review \u2192 Safer Draft' as const
+export const ORB_DICTATE_CAPTURE_JOURNEY =
+  'Capture Station \u2192 Recording \u2192 Rough Capture \u2192 ORB Review \u2192 Safer Draft' as const
+
+export const ORB_DICTATE_READY_TO_CAPTURE = 'Ready to capture' as const
+
+export const ORB_DICTATE_CREATE_ROUGH_CAPTURE = 'Create rough capture' as const
+
+export const ORB_DICTATE_RECORDING_LABEL = 'Recording rough capture' as const
+
+export const ORB_DICTATE_RECORDING_NOT_RECORD =
+  'This is not a record yet. ORB will help structure it after capture.' as const
+
+export const ORB_DICTATE_ROUGH_CAPTURE_TITLE = 'Rough capture' as const
+
+export const ORB_DICTATE_NOT_YET_RECORD = 'Not yet a record' as const
+
+export const ORB_DICTATE_CAPTURE_AGAIN = 'Capture again' as const
+
+export const ORB_DICTATE_EDIT_ROUGH_CAPTURE = 'Edit rough capture' as const
+
+export const ORB_DICTATE_CREATE_SAFER_DRAFT = 'Create safer draft' as const
+
+export const ORB_DICTATE_RECENT_CAPTURES_TITLE = 'Recent captures' as const
+
+export const ORB_DICTATE_RECENT_CAPTURES_EMPTY = 'No recent captures yet.' as const
 
 export const ORB_DICTATE_STORY_LINE =
   'Records are not just admin. They are part of a child\u2019s story.' as const
@@ -26,7 +50,7 @@ export const ORB_DICTATE_SPEAK_GUIDANCE =
 export const ORB_DICTATE_SPEAK_ROUGH_LABEL = 'Rough capture \u2014 not yet a record' as const
 
 export const ORB_DICTATE_CONSENT_REMINDER =
-  'Only record where this is appropriate, transparent and in line with your home\u2019s policy.' as const
+  'Only record where it is appropriate, transparent and in line with your home\u2019s policy.' as const
 
 export const ORB_DICTATE_PASTE_PLACEHOLDER =
   'Paste rough notes here. Use anonymised or minimal identifiable details where possible.' as const
@@ -42,7 +66,7 @@ export const ORB_DICTATE_UPLOAD_PLACEHOLDER =
 export const ORB_DICTATE_REVIEW_TITLE = 'ORB Review' as const
 
 export const ORB_DICTATE_REVIEW_SUPPORTING =
-  'Before drafting, ORB checks whether the record has enough detail to be safe, factual and child-centred.' as const
+  'ORB checks whether the rough capture has enough detail to become a safe, factual and child-centred draft.' as const
 
 export const ORB_DICTATE_REVIEW_STATUS_PRESENT = 'Present' as const
 export const ORB_DICTATE_REVIEW_STATUS_MAY_MISSING = 'May be missing' as const
@@ -122,7 +146,14 @@ export const ORB_DICTATE_REVIEW_CHECKLIST_ITEMS = [
   'What did adults observe?',
   'What did adults do to support, reassure or de-escalate?',
   'What was the outcome?',
-  'What follow-up is needed?',
-  'Is manager oversight needed?',
+  'What follow-up or management oversight is needed?',
   'Is the language factual, balanced and child-centred?'
 ] as const
+
+export type OrbDictateRecentCaptureStatus = 'rough_capture' | 'reviewed' | 'draft_created'
+
+export const ORB_DICTATE_RECENT_CAPTURE_STATUS_LABELS: Record<OrbDictateRecentCaptureStatus, string> = {
+  rough_capture: 'Rough capture',
+  reviewed: 'Reviewed',
+  draft_created: 'Draft created'
+}
