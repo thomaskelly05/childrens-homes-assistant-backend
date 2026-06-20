@@ -35,7 +35,7 @@ export function OrbWriteGuidancePanel({
     >
       <header className="flex shrink-0 items-center gap-2 border-b border-[var(--orb-line)]/40 px-3 py-2">
         <BookOpen className="h-4 w-4 text-[var(--orb-primary)]" aria-hidden />
-        <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--orb-muted)]">
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-600">
           Use guidance
         </h3>
       </header>

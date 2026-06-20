@@ -27,10 +27,10 @@ export function OrbGuidedDemoEntry({ onStart }: OrbGuidedDemoEntryProps) {
           <Compass className="h-4 w-4" />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--orb-muted)]">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">
             Provider walkthrough
           </p>
-          <h3 className="mt-0.5 text-base font-semibold text-[var(--orb-foreground)]" data-orb-guided-demo-entry-title>
+          <h3 className="mt-0.5 text-base font-semibold text-slate-900" data-orb-guided-demo-entry-title>
             {ORB_GUIDED_DEMO_LABEL}
           </h3>
           <p

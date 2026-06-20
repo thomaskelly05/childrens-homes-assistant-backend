@@ -61,7 +61,7 @@ export function OrbLoginDesktopHero() {
           {VALUE_CHIPS.map((point) => (
             <li
               key={point}
-              className="orb-login-value-chip flex items-center gap-2 rounded-xl border border-[var(--orb-line)]/25 bg-[var(--orb-surface-elevated)]/35 px-3 py-2"
+              className="orb-login-value-chip flex items-center gap-2 rounded-xl border px-3 py-2"
             >
               <span
                 className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--orb-res-primary,#818cf8)]"
@@ -81,11 +81,11 @@ export function OrbLoginDesktopHero() {
         </p>
 
         <div className="orb-login-demo-card" data-orb-login-demo-path>
-          <p className="text-xs leading-relaxed text-[var(--orb-muted)]">{ORB_DEMO_BEFORE_TRIAL_COPY}</p>
+          <p className="text-xs leading-relaxed">{ORB_DEMO_BEFORE_TRIAL_COPY}</p>
           <p className="mt-2">
             <OrbRequestDemoLink
               surface="login"
-              className="text-sm font-semibold text-[var(--orb-primary)] underline-offset-2 hover:underline"
+              className="inline-flex min-h-[2.25rem] items-center rounded-full border border-indigo-200 bg-indigo-50 px-4 py-1.5 text-sm font-semibold text-indigo-800 underline-offset-2 hover:bg-indigo-100 hover:underline"
             />
           </p>
         </div>

@@ -466,10 +466,10 @@ export function OrbWriteStandalonePanel({
               data-orb-write-studio-header
             >
               <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-0.5">
-                <h2 className="text-sm font-semibold text-[var(--orb-foreground)]" data-orb-write-studio-title>
+                <h2 className="text-sm font-semibold text-slate-900" data-orb-write-studio-title>
                   Write with ORB
                 </h2>
-                <p className="text-[11px] text-[var(--orb-muted)]" data-orb-write-studio-subtitle>
+                <p className="text-[11px] text-slate-600" data-orb-write-studio-subtitle>
                   Review, structure and finalise safer recording.
                 </p>
               </div>
@@ -482,21 +482,21 @@ export function OrbWriteStandalonePanel({
                   onSelect={(nextRecordType) => requestRecordTypeChange(nextRecordType.id)}
                   onOpenFullPicker={() => setTemplatePickerOpen(true)}
                 />
-                <p className="hidden text-[10px] text-[var(--orb-muted)] lg:block" data-orb-write-template-hint>
+                <p className="hidden text-[10px] text-slate-600 lg:block" data-orb-write-template-hint>
                   Choose the structure ORB should help you write.
                 </p>
                 <input
                   data-orb-write-title-input
                   value={doc.title}
                   onChange={(e) => setDoc((prev) => (prev ? { ...prev, title: e.target.value } : prev))}
-                  className="min-w-0 flex-1 bg-transparent text-lg font-semibold text-[var(--orb-foreground)] focus:outline-none"
+                  className="min-w-0 flex-1 bg-transparent text-lg font-semibold text-slate-900 focus:outline-none"
                 />
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 <button
                   type="button"
                   onClick={() => setSourcePanelOpen((open) => !open)}
-                  className="hidden items-center gap-1 rounded-lg border border-[var(--orb-line)]/50 px-2 py-1.5 text-[10px] font-semibold text-[var(--orb-muted)] hover:bg-[var(--orb-surface-hover)] hover:text-[var(--orb-foreground)] lg:inline-flex"
+                  className="hidden items-center gap-1 rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-[10px] font-semibold text-slate-700 hover:bg-slate-50 hover:text-slate-900 lg:inline-flex"
                   data-orb-write-panel-toggle
                   data-orb-write-source-toggle
                   aria-pressed={sourcePanelOpen}
@@ -508,7 +508,7 @@ export function OrbWriteStandalonePanel({
                 <button
                   type="button"
                   onClick={() => setGuidancePanelOpen((open) => !open)}
-                  className="hidden items-center gap-1 rounded-lg border border-[var(--orb-line)]/50 px-2 py-1.5 text-[10px] font-semibold text-[var(--orb-muted)] hover:bg-[var(--orb-surface-hover)] hover:text-[var(--orb-foreground)] lg:inline-flex"
+                  className="hidden items-center gap-1 rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-[10px] font-semibold text-slate-700 hover:bg-slate-50 hover:text-slate-900 lg:inline-flex"
                   data-orb-write-panel-toggle
                   data-orb-write-guidance-toggle
                   aria-pressed={guidancePanelOpen}
@@ -521,7 +521,7 @@ export function OrbWriteStandalonePanel({
                   type="button"
                   onClick={() => void runAnalysis()}
                   disabled={analysing || !roughText.trim()}
-                  className="hidden items-center gap-1.5 rounded-lg border border-[var(--orb-line)] px-3 py-1.5 text-xs font-semibold disabled:opacity-50 md:inline-flex"
+                  className="hidden items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-800 disabled:border-slate-200 disabled:bg-slate-50 disabled:text-slate-500 disabled:opacity-100 md:inline-flex"
                   data-orb-write-analyse
                 >
                   <Sparkles className="h-3.5 w-3.5" aria-hidden />
@@ -531,7 +531,7 @@ export function OrbWriteStandalonePanel({
                   type="button"
                   onClick={() => void runGenerate()}
                   disabled={generating || !roughText.trim()}
-                  className="hidden items-center gap-1.5 rounded-lg bg-[var(--orb-primary)] px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50 md:inline-flex"
+                  className="hidden items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white disabled:bg-indigo-300 disabled:opacity-100 md:inline-flex"
                   data-orb-write-generate
                 >
                   Create draft record

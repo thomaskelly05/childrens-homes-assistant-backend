@@ -1,0 +1,476 @@
+/**
+ * Phase 1D.1 — Contrast, readability and premium UI correction.
+ * Solid surfaces, navy body copy, white cards — glass as accent only.
+ */
+
+:root {
+  --orb-read-text-primary: #0f172a;
+  --orb-read-text-secondary: #334155;
+  --orb-read-text-muted: #475569;
+  --orb-read-text-subtle: #64748b;
+  --orb-read-surface: #ffffff;
+  --orb-read-surface-soft: #f8fafc;
+  --orb-read-surface-tint: #f1f5f9;
+  --orb-read-border: rgba(15, 23, 42, 0.12);
+  --orb-read-border-strong: rgba(15, 23, 42, 0.18);
+  --orb-read-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
+}
+
+.orb-login-auth-card--readable {
+  background: var(--orb-read-surface) !important;
+  border-color: var(--orb-read-border-strong) !important;
+  box-shadow: var(--orb-read-shadow) !important;
+  backdrop-filter: none !important;
+}
+
+.orb-login-root--light .orb-login-auth-card--readable {
+  background: var(--orb-read-surface) !important;
+}
+
+/* ── Login — navy copy, white cards ─────────────────────────────────────── */
+
+.orb-login-headline--showstopper {
+  background: none !important;
+  -webkit-background-clip: border-box !important;
+  background-clip: border-box !important;
+  color: var(--orb-read-text-primary) !important;
+}
+
+.orb-login-root--light .orb-login-headline--showstopper {
+  background: none !important;
+  -webkit-background-clip: border-box !important;
+  background-clip: border-box !important;
+  color: var(--orb-read-text-primary) !important;
+}
+
+.orb-login-lead--showstopper {
+  color: var(--orb-read-text-secondary) !important;
+}
+
+.orb-login-root--light .orb-login-lead--showstopper {
+  color: var(--orb-read-text-secondary) !important;
+}
+
+.orb-login-value-chip {
+  border-color: var(--orb-read-border) !important;
+  background: var(--orb-read-surface) !important;
+  color: var(--orb-read-text-secondary) !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.orb-login-root--light .orb-login-value-chip {
+  background: var(--orb-read-surface) !important;
+  color: var(--orb-read-text-secondary) !important;
+}
+
+.orb-login-demo-card {
+  border: 1px solid var(--orb-read-border-strong) !important;
+  background: var(--orb-read-surface) !important;
+  box-shadow: var(--orb-read-shadow) !important;
+}
+
+.orb-login-root--light .orb-login-demo-card {
+  background: var(--orb-read-surface) !important;
+  box-shadow: var(--orb-read-shadow) !important;
+}
+
+.orb-login-demo-card p {
+  color: var(--orb-read-text-muted) !important;
+}
+
+.orb-login-demo-card a {
+  color: #4338ca !important;
+}
+
+.orb-login-muted {
+  color: var(--orb-read-text-muted) !important;
+}
+
+.orb-login-root--light .orb-login-muted {
+  color: var(--orb-read-text-muted) !important;
+}
+
+.orb-login-card[data-orb-login-auth-card] {
+  background: var(--orb-read-surface) !important;
+  border-color: var(--orb-read-border-strong) !important;
+}
+
+.orb-login-root--light .orb-login-card[data-orb-login-auth-card] {
+  background: var(--orb-read-surface) !important;
+}
+
+.orb-login-signin-title,
+[data-orb-login-signin-title] {
+  color: var(--orb-read-text-primary) !important;
+}
+
+.orb-login-card .orb-login-lead {
+  color: var(--orb-read-text-muted) !important;
+}
+
+.orb-login-secondary-toggle,
+.orb-login-create-account {
+  color: var(--orb-read-text-secondary) !important;
+}
+
+/* ── Home — crisp trust strip and surface card ────────────────────────────── */
+
+.orb-home-trust-strip {
+  border: 1px solid rgba(99, 102, 241, 0.22) !important;
+  background: #eef2ff !important;
+  color: var(--orb-read-text-secondary) !important;
+  font-size: 0.6875rem;
+  font-weight: 600;
+}
+
+.orb-chat-layout--residential.orb-theme-light .orb-home-trust-strip,
+.orb-chat-layout--residential .orb-home-trust-strip {
+  background: #eef2ff !important;
+  color: var(--orb-read-text-secondary) !important;
+}
+
+.orb-home-surface-card {
+  border: 1px solid var(--orb-read-border) !important;
+  background: var(--orb-read-surface) !important;
+  box-shadow: var(--orb-read-shadow) !important;
+}
+
+.orb-chat-layout--residential.orb-theme-light .orb-home-surface-card,
+.orb-chat-layout--residential .orb-home-surface-card {
+  background: var(--orb-read-surface) !important;
+}
+
+[data-orb-guided-demo-entry].orb-guided-demo-entry--premium {
+  border: 1px solid var(--orb-read-border-strong) !important;
+  background: var(--orb-read-surface) !important;
+  box-shadow: var(--orb-read-shadow) !important;
+}
+
+.orb-chat-layout--residential.orb-theme-light [data-orb-guided-demo-entry].orb-guided-demo-entry--premium,
+.orb-chat-layout--residential [data-orb-guided-demo-entry].orb-guided-demo-entry--premium {
+  background: var(--orb-read-surface) !important;
+}
+
+[data-orb-guided-demo-entry] [data-orb-guided-demo-entry-subline] {
+  color: var(--orb-read-text-muted) !important;
+}
+
+.orb-guided-demo-active-marker {
+  border: 1px solid rgba(99, 102, 241, 0.28) !important;
+  background: #eef2ff !important;
+  color: var(--orb-read-text-secondary) !important;
+  backdrop-filter: none;
+}
+
+/* Starter chips — readable borders and text */
+.orb-chat-layout--residential [data-orb-starter-card],
+.orb-chat-layout--residential .orb-starter-pill {
+  border-color: var(--orb-read-border) !important;
+  color: var(--orb-read-text-primary) !important;
+  background: var(--orb-read-surface) !important;
+}
+
+.orb-chat-layout--residential [data-orb-starter-card]:hover,
+.orb-chat-layout--residential .orb-starter-pill:hover {
+  border-color: rgba(99, 102, 241, 0.35) !important;
+  background: var(--orb-read-surface-soft) !important;
+}
+
+/* ── Guided Demo modal — white sheet, dark copy ─────────────────────────── */
+
+.orb-guided-demo-panel__sheet {
+  border: 1px solid var(--orb-read-border) !important;
+  background: var(--orb-read-surface) !important;
+  box-shadow: 0 28px 80px rgba(15, 23, 42, 0.18) !important;
+  color: var(--orb-read-text-primary);
+}
+
+[data-orb-guided-demo-panel] [data-orb-guided-demo-progress] {
+  color: var(--orb-read-text-subtle) !important;
+}
+
+.orb-guided-demo-panel__title {
+  color: var(--orb-read-text-primary) !important;
+}
+
+.orb-guided-demo-panel__dot {
+  background: #e2e8f0 !important;
+}
+
+.orb-guided-demo-panel__dot--done {
+  background: #a5b4fc !important;
+}
+
+.orb-guided-demo-panel__safety {
+  border: 1px solid #fcd34d !important;
+  background: #fffbeb !important;
+  color: #78350f !important;
+}
+
+.orb-guided-demo-panel__note-card {
+  border: 1px solid var(--orb-read-border) !important;
+  background: var(--orb-read-surface-soft) !important;
+  color: var(--orb-read-text-muted) !important;
+}
+
+.orb-guided-demo-panel__note-card .font-semibold {
+  color: var(--orb-read-text-primary) !important;
+}
+
+.orb-guided-demo-panel__scenario {
+  border: 1px solid #bae6fd !important;
+  background: #f0f9ff !important;
+}
+
+.orb-guided-demo-panel__scenario p {
+  color: var(--orb-read-text-secondary) !important;
+}
+
+.orb-guided-demo-panel__scenario [data-orb-guided-demo-scenario-summary] {
+  color: var(--orb-read-text-muted) !important;
+}
+
+.orb-guided-demo-panel__secondary {
+  border: 1px solid #cbd5e1 !important;
+  background: var(--orb-read-surface) !important;
+  color: var(--orb-read-text-secondary) !important;
+}
+
+[data-orb-guided-demo-explanation] {
+  color: var(--orb-read-text-secondary) !important;
+}
+
+/* ── Assistant answers — readable body and headings ─────────────────────── */
+
+.orb-chat-layout--residential .orb-assistant-answer-card {
+  border: 1px solid var(--orb-read-border) !important;
+  background: var(--orb-read-surface) !important;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06) !important;
+  color: var(--orb-read-text-primary);
+}
+
+.orb-chat-layout--residential.orb-theme-light .orb-assistant-answer-card {
+  background: var(--orb-read-surface) !important;
+}
+
+.orb-markdown-answer--residential {
+  color: var(--orb-read-text-primary);
+}
+
+.orb-markdown-answer--residential p,
+.orb-markdown-answer--residential li {
+  color: var(--orb-read-text-secondary);
+}
+
+.orb-markdown-answer--residential .orb-md-h2,
+.orb-markdown-answer--residential .orb-md-h3 {
+  color: var(--orb-read-text-primary) !important;
+  border-bottom-color: var(--orb-read-border) !important;
+}
+
+.orb-markdown-answer--residential .orb-md-section--facts,
+.orb-markdown-answer--residential .orb-md-section--child,
+.orb-markdown-answer--residential .orb-md-section--staff,
+.orb-markdown-answer--residential .orb-md-section--oversight,
+.orb-markdown-answer--residential .orb-md-section--policy {
+  color: var(--orb-read-text-primary) !important;
+}
+
+.orb-response-action-bar--residential .orb-action-chip {
+  border: 1px solid var(--orb-read-border) !important;
+  background: var(--orb-read-surface) !important;
+  color: var(--orb-read-text-secondary) !important;
+}
+
+.orb-response-action-bar--residential .orb-action-chip:hover {
+  border-color: rgba(99, 102, 241, 0.3) !important;
+  color: var(--orb-read-text-primary) !important;
+}
+
+/* ── Composer — solid readable surface ──────────────────────────────────── */
+
+.orb-chat-layout--residential .orb-composer-glass--showstopper {
+  border: 1px solid var(--orb-read-border) !important;
+  background: var(--orb-read-surface) !important;
+  box-shadow: var(--orb-read-shadow) !important;
+}
+
+.orb-chat-layout--residential.orb-theme-light .orb-composer-glass--showstopper {
+  background: var(--orb-read-surface) !important;
+}
+
+/* ── Sidebar — confident labels and active state ────────────────────────── */
+
+.orb-chat-layout--residential .orb-sidebar-nav-item {
+  color: var(--orb-read-text-secondary) !important;
+}
+
+.orb-chat-layout--residential .orb-sidebar-nav-item .text-sm {
+  color: var(--orb-read-text-primary) !important;
+}
+
+.orb-chat-layout--residential .orb-sidebar-nav-item .text-\[10px\] {
+  color: var(--orb-read-text-muted) !important;
+}
+
+.orb-chat-layout--residential .orb-sidebar-nav-item--active {
+  background: #eef2ff !important;
+  border-inline-start: 3px solid #4f46e5 !important;
+  color: var(--orb-read-text-primary) !important;
+}
+
+.orb-chat-layout--residential .orb-sidebar-nav-item--active .text-sm {
+  color: var(--orb-read-text-primary) !important;
+  font-weight: 600;
+}
+
+.orb-chat-layout--residential [data-orb-sidebar-account],
+.orb-chat-layout--residential [data-orb-account-menu-trigger] {
+  color: var(--orb-read-text-secondary) !important;
+}
+
+/* ── Dictate — readable panels and controls ─────────────────────────────── */
+
+html[data-orb-residential='1'] [data-orb-dictate-station] {
+  color: var(--orb-read-text-primary);
+}
+
+html[data-orb-residential='1'] [data-orb-dictate-brain-panel] {
+  border: 1px solid var(--orb-read-border) !important;
+  background: var(--orb-read-surface) !important;
+  color: var(--orb-read-text-secondary);
+}
+
+html[data-orb-residential='1'] [data-orb-dictate-brain-panel] [data-orb-brain-section],
+html[data-orb-residential='1'] [data-orb-dictate-brain-panel] [data-orb-brain-suggestion] {
+  border: 1px solid var(--orb-read-border) !important;
+  background: var(--orb-read-surface-soft) !important;
+  color: var(--orb-read-text-secondary) !important;
+}
+
+html[data-orb-residential='1'] [data-orb-dictate-transcript-panel] textarea,
+html[data-orb-residential='1'] [data-orb-dictate-transcript-panel] [contenteditable='true'],
+html[data-orb-residential='1'] [data-orb-dictate-rough-notes] {
+  background: var(--orb-read-surface) !important;
+  color: var(--orb-read-text-primary) !important;
+  border-color: var(--orb-read-border) !important;
+}
+
+html[data-orb-residential='1'] [data-orb-dictate-action-rail] {
+  border: 1px solid var(--orb-read-border) !important;
+  background: var(--orb-read-surface-soft) !important;
+}
+
+html[data-orb-residential='1'] [data-orb-dictate-station] [role='status'],
+html[data-orb-residential='1'] [data-orb-dictate-boundary-copy],
+html[data-orb-residential='1'] [data-orb-dictate-governance] {
+  color: var(--orb-read-text-secondary) !important;
+}
+
+html[data-orb-residential='1'] [data-orb-dictate-station] button:disabled,
+html[data-orb-residential='1'] [data-orb-dictate-station] [aria-disabled='true'] {
+  opacity: 0.62 !important;
+  color: var(--orb-read-text-muted) !important;
+  border-color: var(--orb-read-border) !important;
+}
+
+html[data-orb-residential='1'] [data-orb-dictate-station] .text-\[var\(--orb-muted\)\] {
+  color: var(--orb-read-text-muted) !important;
+}
+
+/* ── ORB Write — document canvas and guidance ───────────────────────────── */
+
+html[data-orb-residential='1'] [data-orb-write-studio-header] {
+  border-bottom-color: var(--orb-read-border) !important;
+}
+
+html[data-orb-residential='1'] [data-orb-write-studio-title],
+html[data-orb-residential='1'] [data-orb-write-title-input] {
+  color: var(--orb-read-text-primary) !important;
+}
+
+html[data-orb-residential='1'] [data-orb-write-studio-subtitle],
+html[data-orb-residential='1'] [data-orb-write-template-hint] {
+  color: var(--orb-read-text-muted) !important;
+}
+
+html[data-orb-residential='1'] [data-orb-write-panel-toggle] {
+  border: 1px solid var(--orb-read-border) !important;
+  background: var(--orb-read-surface) !important;
+  color: var(--orb-read-text-secondary) !important;
+}
+
+html[data-orb-residential='1'] [data-orb-write-panel-toggle]:hover {
+  background: var(--orb-read-surface-soft) !important;
+  color: var(--orb-read-text-primary) !important;
+}
+
+html[data-orb-residential='1'] [data-orb-write-analyse] {
+  border: 1px solid var(--orb-read-border-strong) !important;
+  background: var(--orb-read-surface) !important;
+  color: var(--orb-read-text-primary) !important;
+}
+
+html[data-orb-residential='1'] [data-orb-write-generate] {
+  background: #4f46e5 !important;
+  color: #ffffff !important;
+}
+
+html[data-orb-residential='1'] [data-orb-write-analyse]:disabled,
+html[data-orb-residential='1'] [data-orb-write-generate]:disabled {
+  opacity: 0.58 !important;
+}
+
+html[data-orb-residential='1'] [data-orb-write-guidance-panel],
+html[data-orb-residential='1'] [data-orb-write-guidance-panel-host] [data-orb-write-guidance-panel] {
+  border: 1px solid var(--orb-read-border) !important;
+  background: var(--orb-read-surface) !important;
+}
+
+html[data-orb-residential='1'] [data-orb-write-guidance-panel] h3,
+html[data-orb-residential='1'] [data-orb-write-guidance-panel] header {
+  color: var(--orb-read-text-muted) !important;
+}
+
+html[data-orb-residential='1'] [data-orb-write-guidance-chip] {
+  border: 1px solid rgba(99, 102, 241, 0.25) !important;
+  background: #eef2ff !important;
+  color: var(--orb-read-text-primary) !important;
+}
+
+html[data-orb-residential='1'] [data-orb-write-document-canvas] {
+  background: #e8eaed !important;
+}
+
+html[data-orb-residential='1'] [data-orb-write-document-canvas] .bg-white {
+  background: #ffffff !important;
+  color: var(--orb-read-text-primary) !important;
+}
+
+html[data-orb-residential='1'] [data-orb-write-page-title],
+html[data-orb-residential='1'] [data-orb-write-title-input] {
+  color: var(--orb-read-text-primary) !important;
+}
+
+html[data-orb-residential='1'] [data-orb-write-editor] {
+  border-color: var(--orb-read-border) !important;
+  background: var(--orb-read-surface-soft) !important;
+}
+
+/* Review / draft chips — high contrast */
+html[data-orb-residential='1'] [data-orb-write-editor] .text-emerald-800,
+html[data-orb-residential='1'] [data-orb-write-document-canvas] .text-emerald-800 {
+  color: #065f46 !important;
+}
+
+html[data-orb-residential='1'] [data-orb-write-editor] .text-amber-900,
+html[data-orb-residential='1'] [data-orb-write-document-canvas] .text-amber-900 {
+  color: #92400e !important;
+}
+
+/* ── Disabled controls — legible but clearly inactive ───────────────────── */
+
+html[data-orb-residential='1'] button:disabled:not([data-orb-composer-send]),
+html[data-orb-residential='1'] [aria-disabled='true'] {
+  opacity: 0.58;
+}

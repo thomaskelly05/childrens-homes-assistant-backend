@@ -44,7 +44,7 @@ export function OrbGuidedDemoPanel({
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
             <p
-              className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--orb-muted)]"
+              className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500"
               data-orb-guided-demo-progress
             >
               Step {step.order} of {ORB_GUIDED_DEMO_STEPS.length}
@@ -86,27 +86,27 @@ export function OrbGuidedDemoPanel({
           {ORB_GUIDED_DEMO_SAFETY_NOTE}
         </p>
 
-        <p className="mt-4 text-sm leading-relaxed text-[var(--orb-foreground)]" data-orb-guided-demo-explanation>
+        <p className="mt-4 text-sm leading-relaxed text-slate-700" data-orb-guided-demo-explanation>
           {step.explanation}
         </p>
 
         <div className="mt-3 space-y-2.5">
-          <p className="orb-guided-demo-panel__note-card text-xs leading-relaxed text-[var(--orb-muted)] md:text-sm" data-orb-guided-demo-child-note>
-            <span className="font-semibold text-[var(--orb-foreground)]">Child-centred: </span>
+          <p className="orb-guided-demo-panel__note-card text-xs leading-relaxed md:text-sm" data-orb-guided-demo-child-note>
+            <span className="font-semibold text-slate-900">Child-centred: </span>
             {step.childCentredNote}
           </p>
-          <p className="orb-guided-demo-panel__note-card text-xs leading-relaxed text-[var(--orb-muted)] md:text-sm" data-orb-guided-demo-adult-review-note>
-            <span className="font-semibold text-[var(--orb-foreground)]">Adult review: </span>
+          <p className="orb-guided-demo-panel__note-card text-xs leading-relaxed md:text-sm" data-orb-guided-demo-adult-review-note>
+            <span className="font-semibold text-slate-900">Adult review: </span>
             {step.adultReviewNote}
           </p>
         </div>
 
         <div className="orb-guided-demo-panel__scenario mt-4">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--orb-muted)]">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">
             Anonymised scenario
           </p>
-          <p className="mt-1 text-sm font-medium text-[var(--orb-foreground)]">{ORB_GUIDED_DEMO_SCENARIO.title}</p>
-          <p className="mt-2 text-xs leading-relaxed text-[var(--orb-muted)]" data-orb-guided-demo-scenario-summary>
+          <p className="mt-1 text-sm font-medium text-slate-900">{ORB_GUIDED_DEMO_SCENARIO.title}</p>
+          <p className="mt-2 text-xs leading-relaxed text-slate-600" data-orb-guided-demo-scenario-summary>
             {ORB_GUIDED_DEMO_SCENARIO.summary}
           </p>
         </div>
