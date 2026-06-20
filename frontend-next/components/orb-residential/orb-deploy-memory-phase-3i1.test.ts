@@ -24,8 +24,8 @@ function readRepo(relativePath: string) {
 }
 
 describe('ORB Residential Phase 3I.1 deploy memory rescue', () => {
-  it('build version marker is phase-3i1-deploy-rescue', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-3i1-deploy-rescue')
+  it('build version marker is phase-3j-active-chat-calm', () => {
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-3j-active-chat-calm')
     assert.deepEqual(ORB_LAYOUT_CSS_FILES, ['app/orb/orb-residential-shell.css'])
   })
 
@@ -81,6 +81,6 @@ describe('ORB Residential Phase 3I.1 deploy memory rescue', () => {
     assert.match(companion, /showEmptyState \?/)
     const composer = read('components/orb-standalone/orb-standalone-composer.tsx')
     assert.match(composer, /homeEmptyCalm = compactResidential && !chatHasMessages/)
-    assert.match(composer, /showComposerQuickActions = compactResidential && !mobileViewport && chatHasMessages/)
+    assert.match(composer, /showComposerQuickActions[\s\S]*!residentialSurface/)
   })
 })

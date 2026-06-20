@@ -22,8 +22,8 @@ function read(relativePath: string) {
 }
 
 describe('ORB Residential Phase 3I calm floating composer', () => {
-  it('build version marker is phase-3i1-deploy-rescue', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-3i1-deploy-rescue')
+  it('build version marker is phase-3j-active-chat-calm', () => {
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-3j-active-chat-calm')
     const layout = read('app/orb/layout.tsx')
     assert.match(layout, /orb-residential-shell\.css/)
     assert.doesNotMatch(layout, /orb-flagship-phase|orb-login\.css/)
@@ -32,7 +32,7 @@ describe('ORB Residential Phase 3I calm floating composer', () => {
 
   it('home empty state does not render separate Dictate/Voice pill row above composer', () => {
     const composer = read('components/orb-standalone/orb-standalone-composer.tsx')
-    assert.match(composer, /showComposerQuickActions = compactResidential && !mobileViewport && chatHasMessages/)
+    assert.match(composer, /showComposerQuickActions[\s\S]*!residentialSurface/)
     assert.match(composer, /homeEmptyCalm = compactResidential && !chatHasMessages/)
   })
 
@@ -101,6 +101,6 @@ describe('ORB Residential Phase 3I calm floating composer', () => {
     assert.match(companion, /orb-app-shell/)
     assert.doesNotMatch(companion, /orb-home-shell|orb-chat-shell/)
     const css = read('app/orb/orb-residential-shell.css')
-    assert.match(css, /phase-3i1-deploy-rescue/)
+    assert.match(css, /phase-3j-active-chat-calm/)
   })
 })

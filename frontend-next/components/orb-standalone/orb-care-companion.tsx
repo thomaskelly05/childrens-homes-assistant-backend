@@ -141,6 +141,11 @@ import {
 import { formatOrbChatDisplayTitle } from '@/lib/orb/orb-chat-display-title'
 import { ORB_REQUEST_DEMO_URL } from '@/lib/orb/orb-user-facing-names'
 import { OrbPrivacyClassificationLink } from '@/components/orb/privacy/orb-privacy-classification-link'
+import {
+  contextualResidentialCalmFollowUps,
+  RESIDENTIAL_MAX_FOLLOW_UP_CHIPS
+} from '@/lib/orb/orb-residential-active-chat-follow-ups'
+import { isOrbDeveloperMode } from '@/lib/orb/orb-developer-mode'
 import { OrbStandaloneSidebar } from '@/components/orb-standalone/orb-standalone-sidebar'
 import {
   OrbResidentialSidebar,
@@ -209,7 +214,6 @@ import { useOrbAccountState } from '@/contexts/orb-account-context'
 import { getOrbBillingDisplayStatus } from '@/lib/orb/orb-billing-display'
 import { shouldAllowOrbProductFetch } from '@/lib/orb/orb-product-bootstrap-guard'
 import { normaliseRole } from '@/lib/auth/permissions'
-import { isOrbDeveloperMode } from '@/lib/orb/orb-developer-mode'
 import {
   canUseComposerMic,
   orbMicDevLog,
@@ -3037,7 +3041,11 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
     options?: { prefill?: string }
   ) {
     if (options?.prefill?.trim()) {
-      setMessage(options.prefill.trim())
+      const prefill = options.prefill.trim()
+      const messageBody = prefill.endsWith('\n\n')
+        ? `${prefill}${sourceContent.slice(0, 2400)}`
+        : prefill
+      setMessage(messageBody)
       inputRef.current?.focus()
       return
     }
@@ -3327,13 +3335,19 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
         residentialSurface ? ORB_COMPOSER_V2_PLACEHOLDER_HOME : undefined
       }
     />
-      {residentialSurface && showEmptyState ? (
+      {residentialSurface ? (
         <p
           className="orb-composer-dock-safety mx-auto mt-2 max-w-[var(--orb-composer-dock-max,48rem)] px-2 text-center text-[11px] leading-relaxed text-[var(--orb-muted)]"
-          data-orb-home-safety-line
+          data-orb-composer-safety-line
+          {...(showEmptyState ? { 'data-orb-home-safety-line': true } : { 'data-orb-chat-safety-line': true })}
         >
-          {ORB_HOME_SAFETY_LINE}{' '}
-          <OrbPrivacyClassificationLink className="text-[11px] font-normal text-[var(--orb-muted)] underline underline-offset-2 hover:text-[var(--orb-foreground)]" />
+          {ORB_HOME_SAFETY_LINE}
+          {showEmptyState ? (
+            <>
+              {' '}
+              <OrbPrivacyClassificationLink className="text-[11px] font-normal text-[var(--orb-muted)] underline underline-offset-2 hover:text-[var(--orb-foreground)]" />
+            </>
+          ) : null}
         </p>
       ) : null}
     </div>
@@ -3726,6 +3740,9 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
       data-orb-residential-surface={residentialSurface ? 'true' : undefined}
       data-orb-home-empty={residentialSurface && showEmptyState ? 'true' : undefined}
       data-orb-chat-active={residentialSurface && !showEmptyState ? 'true' : undefined}
+      data-orb-residential-calm-chat={
+        residentialSurface && !showEmptyState && !isOrbDeveloperMode() ? 'true' : undefined
+      }
       data-orb-light-ui-build={ORB_LIGHT_UI_BUILD}
       data-orb-build-version={ORB_BUILD_VISUAL_VERSION}
       data-orb-appearance-mode={appearanceMode}
@@ -4451,7 +4468,11 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
                             showCognitionLabels={
                               !residentialSurface && !minimalTurn && chatUiSettings.showCognitionLabels
                             }
-                            showExplainability={!minimalTurn && entry.status !== 'streaming'}
+                            showExplainability={
+                              !minimalTurn &&
+                              entry.status !== 'streaming' &&
+                              (!residentialSurface || isOrbDeveloperMode())
+                            }
                             residentialSurface={residentialSurface}
                             heading={entry.outputTitle}
                             userRole={adultProfile?.role ?? account.role ?? undefined}
@@ -4467,7 +4488,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
                             }}
                           />
                             {orbErrorCallToAction(entry.content, '')}
-                            {entry.documentSuggestion?.needs_document ? (
+                            {entry.documentSuggestion?.needs_document && (!residentialSurface || isOrbDeveloperMode()) ? (
                               <div className="mt-3 flex flex-wrap gap-2">
                                 <button
                                   type="button"
@@ -4503,7 +4524,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
                                 </button>
                               </div>
                             ) : null}
-                            {entry.agentSuggestion?.suggested && entry.agentSuggestion.agent_type ? (
+                            {entry.agentSuggestion?.suggested && entry.agentSuggestion.agent_type && (!residentialSurface || isOrbDeveloperMode()) ? (
                               <div className="mt-3 flex flex-wrap gap-2">
                                 <button
                                   type="button"
@@ -4618,7 +4639,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
                                       : (action, content) => void handleOrbFollowUp(action, content, index)
                                   }
                                 />
-                                {!minimalTurn ? (
+                                {!minimalTurn && (!residentialSurface || isOrbDeveloperMode()) ? (
                                 <OrbMessageFeedback
                                   payload={{
                                     message_id: entry.id,
@@ -4658,8 +4679,17 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
                                 entry.status === 'complete' &&
                                 index === visibleMessages.length - 1 ? (
                                   <OrbSuggestedReplyChips
+                                    maxVisible={
+                                      residentialSurface ? RESIDENTIAL_MAX_FOLLOW_UP_CHIPS : 6
+                                    }
                                     suggestions={
-                                      entry.outputKind
+                                      residentialSurface
+                                        ? contextualResidentialCalmFollowUps({
+                                            mode,
+                                            messageHint,
+                                            content: entry.content
+                                          })
+                                        : entry.outputKind
                                         ? contextualSuggestedRepliesForOutput({
                                             outputKind: entry.outputKind,
                                             content: entry.content,
@@ -4698,7 +4728,8 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
                           />
                           {(entry.imageDataUrls?.length ?? 0) > 0 &&
                           index === visibleMessages.length - 1 &&
-                          !pending ? (
+                          !pending &&
+                          (!residentialSurface || isOrbDeveloperMode()) ? (
                             <OrbAskAboutThisChips onSelect={handleAttachmentFollowUp} />
                           ) : null}
                           </>

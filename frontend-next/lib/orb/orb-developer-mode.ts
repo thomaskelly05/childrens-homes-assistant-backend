@@ -13,6 +13,11 @@ export function isOrbDeveloperMode(): boolean {
   }
 }
 
+/** Residential calm chat — hide debug panels and action clutter unless developer mode is on. */
+export function isOrbResidentialCalmActiveChat(residentialSurface: boolean): boolean {
+  return residentialSurface && !isOrbDeveloperMode()
+}
+
 export function setOrbDeveloperMode(enabled: boolean): void {
   try {
     if (enabled) window.localStorage.setItem(STORAGE_KEY, '1')

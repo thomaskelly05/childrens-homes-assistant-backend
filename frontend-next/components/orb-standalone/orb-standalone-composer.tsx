@@ -320,7 +320,8 @@ export function OrbStandaloneComposer({
   const [privacyGuidanceOpen, setPrivacyGuidanceOpen] = useState(false)
   const [privacyReturnOrigin, setPrivacyReturnOrigin] = useState<'tools_menu'>('tools_menu')
   const homeEmptyCalm = compactResidential && !chatHasMessages
-  const showComposerQuickActions = compactResidential && !mobileViewport && chatHasMessages
+  const showComposerQuickActions =
+    compactResidential && !mobileViewport && chatHasMessages && !residentialSurface
 
   useEffect(() => {
     if (!toolsSheetOpen) {

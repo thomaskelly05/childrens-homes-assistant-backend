@@ -44,7 +44,7 @@ import {
   buildIntelligenceContextActionChips
 } from '@/lib/orb/indicare-intelligence-core'
 import { userHasFounderAccess } from '@/lib/founder/access'
-import { isOrbDeveloperMode } from '@/lib/orb/orb-developer-mode'
+import { isOrbDeveloperMode, isOrbResidentialCalmActiveChat } from '@/lib/orb/orb-developer-mode'
 import { ORB_NAV_RECORDS } from '@/lib/orb/orb-user-facing-names'
 import { sanitiseOrbUserFacingStatus } from '@/lib/orb/orb-user-facing-copy'
 import { OrbIntelligenceActionCtas } from '@/components/orb-standalone/orb-intelligence-core-panel'
@@ -249,6 +249,7 @@ export function OrbAssistantMessageBody({
     cognitionContext?.context_used as Record<string, unknown> | undefined
   )
   const founderDebugAccess = userHasFounderAccess(userRole)
+  const residentialCalmChat = isOrbResidentialCalmActiveChat(residentialSurface)
   const displayContent = stripSourcesBasisSection(content)
   const displayStreamStatus = sanitiseOrbUserFacingStatus(streamStatus)
   const [showSkeleton, setShowSkeleton] = useState(false)
@@ -300,7 +301,7 @@ export function OrbAssistantMessageBody({
             <OrbMarkdownAnswer content={displayContent} sources={sources} residentialSurface={residentialSurface} />
           ) : null}
         </div>
-        {showExplainability && !streaming ? (
+        {showExplainability && !streaming && !residentialCalmChat ? (
           <OrbExplainabilityPanel
             explainability={explainability}
             cognitionModeLabel={cognitionLabel}
@@ -308,10 +309,10 @@ export function OrbAssistantMessageBody({
             userRole={userRole}
           />
         ) : null}
-        {showExplainability && !streaming ? (
+        {showExplainability && !streaming && !residentialCalmChat ? (
           <OrbSourcesDetail content={content} sources={sources} modelRouting={modelRouting} />
         ) : null}
-        {!streaming && (intelligenceCore || qualityGate) ? (
+        {!streaming && (intelligenceCore || qualityGate) && !residentialCalmChat ? (
           <>
             <OrbIntelligenceActionCtas
               showRecordProperly={shouldShowRecordProperlyCta(messageHint || content, intelligenceCore)}
@@ -322,10 +323,18 @@ export function OrbAssistantMessageBody({
             <OrbIntelligenceCorePanel
               core={intelligenceCore}
               qualityGate={qualityGate}
-              showTechnicalDetails={founderDebugAccess}
+              showTechnicalDetails={founderDebugAccess || isOrbDeveloperMode()}
               userRole={userRole}
             />
           </>
+        ) : null}
+        {!streaming && (intelligenceCore || qualityGate) && residentialCalmChat && isOrbDeveloperMode() ? (
+          <OrbIntelligenceCorePanel
+            core={intelligenceCore}
+            qualityGate={qualityGate}
+            showTechnicalDetails
+            userRole={userRole}
+          />
         ) : null}
       </div>
     </article>
@@ -625,12 +634,14 @@ export function OrbAskAboutThisChips({
 
 export function OrbSuggestedReplyChips({
   onSelect,
-  suggestions
+  suggestions,
+  maxVisible = 6
 }: {
   onSelect: (item: OrbSuggestedReplyItem) => void
   suggestions?: OrbSuggestedReplyItem[]
+  maxVisible?: number
 }) {
-  const items = suggestions?.length ? suggestions : ORB_INLINE_SUGGESTED_REPLIES
+  const items = (suggestions?.length ? suggestions : ORB_INLINE_SUGGESTED_REPLIES).slice(0, maxVisible)
   if (!items.length) return null
   return (
     <div
@@ -731,6 +742,10 @@ export function OrbResponseActionBar({
 
   const copyLabel =
     copyFeedback === 'copied' ? 'Copied' : copyFeedback === 'failed' ? 'Copy failed' : 'Copy'
+
+  if (residentialSurface && !isOrbDeveloperMode()) {
+    return null
+  }
 
   if (minimal) {
     return (

@@ -1,7 +1,7 @@
 /**
  * ORB Residential — single canonical UI design system (Phase 1K blank canvas, 1M personality).
  * One file for shell, workspace, composer, login, mobile, stations and modals.
- * Visual build marker: phase-3i1-deploy-rescue.
+ * Visual build marker: phase-3j-active-chat-calm.
  */
 
 :root {
@@ -583,7 +583,69 @@ body[data-orb-composer-focused='true'] [data-orb-home-empty='true'] .orb-home-or
 }
 
 [data-orb-chat-active='true'] .orb-composer-dock-safety {
-  display: none;
+  display: block;
+  opacity: 0.9;
+  font-size: 0.6875rem;
+  line-height: 1.45;
+  margin-top: 0.35rem;
+}
+
+[data-orb-residential-calm-chat='true'] .orb-chat-column-inner {
+  max-width: min(42rem, var(--orb-res-chat-column-max));
+  margin-inline: auto;
+}
+
+[data-orb-residential-calm-chat='true'] .orb-message-assistant {
+  gap: 0.75rem;
+}
+
+[data-orb-residential-calm-chat='true'] .orb-assistant-answer-card,
+[data-orb-residential-calm-chat='true'] .orb-message-content {
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
+}
+
+[data-orb-residential-calm-chat='true'] .orb-suggested-replies-row {
+  margin-top: 0.85rem;
+  justify-content: flex-start;
+  gap: 0.5rem;
+  overflow: visible;
+  flex-wrap: wrap;
+}
+
+[data-orb-residential-calm-chat='true'] .orb-suggested-reply-chip {
+  border-color: rgba(15, 23, 42, 0.08);
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--orb-res-workspace-text);
+  font-size: 0.75rem;
+  padding: 0.4rem 0.85rem;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.04);
+}
+
+[data-orb-residential-calm-chat='true'] .orb-suggested-reply-chip:hover {
+  border-color: rgba(99, 102, 241, 0.22);
+  background: #ffffff;
+}
+
+[data-orb-residential-calm-chat='true'] [data-orb-explainability],
+[data-orb-residential-calm-chat='true'] [data-orb-sources-detail],
+[data-orb-residential-calm-chat='true'] [data-orb-intelligence-ctas],
+[data-orb-residential-calm-chat='true'] [data-orb-response-support-panel],
+[data-orb-residential-calm-chat='true'] [data-orb-response-action-bar],
+[data-orb-residential-calm-chat='true'] [data-orb-message-feedback] {
+  display: none !important;
+}
+
+[data-orb-chat-active='true'] .orb-composer-dock {
+  border-top: none;
+  background: transparent;
+}
+
+[data-orb-chat-active='true'] .orb-composer-dock .orb-composer--premium {
+  border-color: rgba(15, 23, 42, 0.06);
+  box-shadow: 0 6px 24px rgba(15, 23, 42, 0.06);
 }
 
 .orb-workspace-home-grid {
