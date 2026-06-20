@@ -105,7 +105,8 @@ export function OrbStandaloneComposer({
   chatHasMessages = false,
   onPlusMenuAction,
   onOpenDictateFallback,
-  inlineVoiceShowDictateFallback = false
+  inlineVoiceShowDictateFallback = false,
+  composerPlaceholder
 }: {
   value: string
   pending: boolean
@@ -164,6 +165,7 @@ export function OrbStandaloneComposer({
   onPlusMenuAction?: (action: OrbComposerPlusAction) => void
   onOpenDictateFallback?: () => void
   inlineVoiceShowDictateFallback?: boolean
+  composerPlaceholder?: string
 }) {
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const photoLibraryInputRef = useRef<HTMLInputElement | null>(null)
@@ -489,9 +491,10 @@ export function OrbStandaloneComposer({
               />
             ) : null}
           <div
-            className={`orb-composer-glass orb-liquid-composer ${compactResidential ? 'orb-composer-glass--compact orb-composer-glass--showstopper p-2 sm:p-2.5' : 'p-2.5 sm:p-3'} ${residentialSurface ? 'orb-composer-glass--showstopper' : ''} ${answering ? 'orb-composer-answering orb-answering-pulse' : ''}`}
+            className={`orb-composer-glass orb-liquid-composer orb-composer-v2 ${compactResidential ? 'orb-composer-glass--compact orb-composer-glass--showstopper p-2 sm:p-2.5' : 'p-2.5 sm:p-3'} ${residentialSurface ? 'orb-composer-glass--showstopper' : ''} ${answering ? 'orb-composer-answering orb-answering-pulse' : ''}`}
             data-orb-composer-answering={answering ? 'true' : 'false'}
             data-orb-composer-card
+            data-orb-composer-v2={residentialSurface ? 'true' : undefined}
             data-orb-composer-compact={compactResidential ? 'true' : undefined}
           >
             {!compactResidential ? (
@@ -747,8 +750,17 @@ export function OrbStandaloneComposer({
                   ? 'min-h-[2.5rem] max-h-[8.75rem] w-full min-w-0 resize-none overflow-y-auto bg-transparent px-1 py-2.5 text-[0.9375rem] leading-6 text-[var(--orb-foreground)] outline-none placeholder:text-[var(--orb-muted)] md:max-h-[13.75rem]'
                   : 'mt-1.5 max-h-40 min-h-[3.25rem] w-full resize-none bg-transparent px-0.5 py-2 text-[0.9375rem] leading-6 text-[var(--orb-foreground)] outline-none focus:outline-none focus-visible:outline-none placeholder:text-slate-500'
               }
-              placeholder={compactResidential ? 'Ask ORB anything...' : 'Ask anything'}
-              data-orb-composer-placeholder={compactResidential ? 'ask-orb-anything' : 'ask-anything'}
+              placeholder={
+                composerPlaceholder ??
+                (compactResidential ? 'Ask ORB anything...' : 'Ask anything')
+              }
+              data-orb-composer-placeholder={
+                composerPlaceholder
+                  ? 'orb-composer-v2'
+                  : compactResidential
+                    ? 'ask-orb-anything'
+                    : 'ask-anything'
+              }
               disabled={pending}
               aria-describedby="orb-standalone-status"
               autoCapitalize="sentences"

@@ -233,12 +233,13 @@ export function OrbStandaloneSettingsPanel({
         : { layout: 'center' as const, wide: true, mobileMode: 'full' as const })}
     >
       <div
-        className="orb-studio-shell orb-liquid-panel flex min-h-0 flex-1 flex-col overflow-hidden md:flex-row"
+        className="orb-studio-shell orb-liquid-panel orb-product-modal-v2 flex min-h-0 flex-1 flex-col overflow-hidden md:flex-row"
         data-orb-settings-panel
         data-orb-settings-drawer
         data-orb-settings-layout="premium-cards"
         data-orb-flagship-product-modal="true"
         data-orb-product-panel-modal="true"
+        data-orb-product-modal-v2="true"
         data-orb-settings-mobile-layout={isMobile ? 'stack' : 'desktop'}
         data-orb-studio-shell="settings"
       >

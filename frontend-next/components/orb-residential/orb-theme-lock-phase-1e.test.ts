@@ -5,10 +5,12 @@ import { fileURLToPath } from 'node:url'
 import { describe, it } from 'node:test'
 
 import {
-  ORB_GUIDED_DEMO_ACTIVE_MARKER,
-  ORB_HOME_TRUST_STRIP,
-  ORB_LOGIN_HERO_HEADLINE
+  ORB_GUIDED_DEMO_ACTIVE_MARKER
 } from '../../lib/orb/orb-showstopper-copy.ts'
+import {
+  ORB_HOME_RAIL_TRUST_ITEMS,
+  ORB_LOGIN_ENTERPRISE_TITLE
+} from '../../lib/orb/orb-convergence-phase-1h-copy.ts'
 import {
   ORB_NAV_RECORDS
 } from '../../lib/orb/orb-user-facing-names.ts'
@@ -79,13 +81,13 @@ describe('ORB Residential Phase 1E theme lock', () => {
     assert.match(css, /data-orb-voice-safety-note/)
   })
 
-  it('login headline and trust strip remain readable', () => {
+  it('login headline and trust rail remain readable', () => {
     const hero = read('components/orb-residential/orb-login-desktop-hero.tsx')
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
-    assert.match(hero, /ORB_LOGIN_HERO_HEADLINE/)
-    assert.equal(ORB_LOGIN_HERO_HEADLINE, 'Ethical intelligence for children\u2019s homes.')
-    assert.match(companion, /ORB_HOME_TRUST_STRIP/)
-    assert.match(ORB_HOME_TRUST_STRIP, /Adult review required/)
+    assert.match(hero, /ORB_LOGIN_ENTERPRISE_TITLE/)
+    assert.equal(ORB_LOGIN_ENTERPRISE_TITLE, 'ORB Residential')
+    assert.match(companion, /ORB_HOME_RAIL_TRUST_ITEMS/)
+    assert.match(ORB_HOME_RAIL_TRUST_ITEMS.join(' '), /Adult review required/)
   })
 
   it('guided demo safety note and modal classes remain present', () => {

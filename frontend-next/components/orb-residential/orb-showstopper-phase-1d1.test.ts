@@ -5,10 +5,12 @@ import { fileURLToPath } from 'node:url'
 import { describe, it } from 'node:test'
 
 import {
-  ORB_GUIDED_DEMO_ACTIVE_MARKER,
-  ORB_HOME_TRUST_STRIP,
-  ORB_LOGIN_HERO_HEADLINE
+  ORB_GUIDED_DEMO_ACTIVE_MARKER
 } from '../../lib/orb/orb-showstopper-copy.ts'
+import {
+  ORB_HOME_RAIL_TRUST_ITEMS,
+  ORB_LOGIN_ENTERPRISE_TITLE
+} from '../../lib/orb/orb-convergence-phase-1h-copy.ts'
 import { ORB_NAV_RECORDS } from '../../lib/orb/orb-user-facing-names.ts'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '../..')
@@ -35,10 +37,10 @@ describe('ORB Residential Phase 1D.1 contrast and readability', () => {
   it('login headline remains visible with navy copy tokens', () => {
     const hero = read('components/orb-residential/orb-login-desktop-hero.tsx')
     const css = read('app/orb/orb-showstopper-phase-1d1.css')
-    assert.match(hero, /ORB_LOGIN_HERO_HEADLINE/)
+    assert.match(hero, /ORB_LOGIN_ENTERPRISE_TITLE/)
     assert.match(hero, /data-orb-login-title/)
     assert.match(hero, /data-orb-login-demo-path/)
-    assert.equal(ORB_LOGIN_HERO_HEADLINE, 'Ethical intelligence for children\u2019s homes.')
+    assert.equal(ORB_LOGIN_ENTERPRISE_TITLE, 'ORB Residential')
     assert.doesNotMatch(css, /orb-login-headline--showstopper[\s\S]{0,200}color:\s*transparent\s*!important/)
   })
 
@@ -56,13 +58,13 @@ describe('ORB Residential Phase 1D.1 contrast and readability', () => {
     assert.match(hero, /data-orb-login-demo-path/)
   })
 
-  it('guided demo marker and trust strip remain present', () => {
+  it('guided demo marker and trust rail remain present', () => {
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
     assert.match(companion, /ORB_GUIDED_DEMO_ACTIVE_MARKER/)
     assert.match(companion, /data-orb-guided-demo-active-marker/)
-    assert.match(companion, /ORB_HOME_TRUST_STRIP/)
-    assert.match(companion, /data-orb-home-trust-strip/)
-    assert.match(ORB_HOME_TRUST_STRIP, /Adult review required/)
+    assert.match(companion, /ORB_HOME_RAIL_TRUST_ITEMS/)
+    assert.match(companion, /data-orb-home-v2-rail-trust/)
+    assert.match(ORB_HOME_RAIL_TRUST_ITEMS.join(' '), /Adult review required/)
     assert.equal(ORB_GUIDED_DEMO_ACTIVE_MARKER, 'Guided Demo \u00b7 anonymised scenario')
   })
 

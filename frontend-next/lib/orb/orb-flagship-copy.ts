@@ -23,4 +23,4 @@ export const ORB_DICTATE_FLAGSHIP_WORKFLOW = [
 ] as const
 
 export const ORB_RECORDS_EMPTY_GUIDANCE =
-  'Create a document, start in Dictate, or continue Guided Demo when active.'
+  'Save from Chat, Dictate, Voice or ORB Write when wording is ready for adult review.'

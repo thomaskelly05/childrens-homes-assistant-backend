@@ -5,13 +5,11 @@ import { fileURLToPath } from 'node:url'
 import { describe, it } from 'node:test'
 
 import {
-  ORB_FLAGSHIP_BILLING_INCLUDED_ITEMS,
-  ORB_VOICE_STATUS_CARD_COPY
+  ORB_FLAGSHIP_BILLING_INCLUDED_ITEMS
 } from '../../lib/orb/orb-flagship-copy.ts'
 import {
-  ORB_HOME_PRODUCT_CONTEXT_ROW,
-  ORB_HOME_TRUST_STRIP
-} from '../../lib/orb/orb-showstopper-copy.ts'
+  ORB_VOICE_V2_STATUS_COPY
+} from '../../lib/orb/orb-convergence-phase-1h-copy.ts'
 import { ORB_RESIDENTIAL_LOCKED_THEME, ORB_RESIDENTIAL_THEME_LOCK_COPY } from '../../lib/orb/orb-appearance.ts'
 import { ORB_NAV_RECORDS, ORB_RECORDS_PANEL_SUBTITLE } from '../../lib/orb/orb-user-facing-names.ts'
 
@@ -53,15 +51,13 @@ describe('ORB Residential Phase 1G full viewport workspace', () => {
 
   it('home uses full workspace grid with rail and starters', () => {
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
-    assert.match(companion, /orb-full-viewport-home/)
+    assert.match(companion, /orb-home-v2/)
+    assert.match(companion, /data-orb-home-v2/)
     assert.match(companion, /data-orb-full-viewport-home-grid/)
     assert.match(companion, /data-orb-full-viewport-home-main/)
     assert.match(companion, /data-orb-full-viewport-home-rail/)
-    assert.match(companion, /orb-full-viewport-starter-grid/)
-    assert.match(companion, /data-orb-full-viewport-safety-panel/)
-    assert.match(companion, /ORB_HOME_PRODUCT_CONTEXT_ROW/)
-    assert.match(ORB_HOME_TRUST_STRIP, /Adult review required/)
-    assert.equal(ORB_HOME_PRODUCT_CONTEXT_ROW, 'Chat \u00b7 Dictate \u00b7 Voice \u00b7 ORB Write \u00b7 Records & Drafts')
+    assert.match(companion, /data-orb-home-v2-starters/)
+    assert.match(companion, /ORB_HOME_RAIL_TRUST_ITEMS/)
   })
 
   it('chat uses full viewport column with readable inner width', () => {
@@ -83,7 +79,7 @@ describe('ORB Residential Phase 1G full viewport workspace', () => {
     const voice = read('components/orb-standalone/orb-voice-station-content.tsx')
     assert.match(voice, /orb-full-viewport-voice-room/)
     assert.match(voice, /data-orb-voice-status-card/)
-    assert.match(ORB_VOICE_STATUS_CARD_COPY, /reflective support/)
+    assert.match(ORB_VOICE_V2_STATUS_COPY, /reflect before you write/)
   })
 
   it('write uses flagship full editor workspace', () => {

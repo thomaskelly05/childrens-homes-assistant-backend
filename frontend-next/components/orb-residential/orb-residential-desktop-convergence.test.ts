@@ -66,7 +66,7 @@ describe('ORB Residential desktop convergence sprint', () => {
     assert.match(presence, /orb-liquid-orb/)
     assert.match(desktop, /\[data-orb-residential-empty\][\s\S]*--orb-presence-size:\s*clamp\(9\.5rem/)
     assert.match(desktop, /desktop premium convergence pass/)
-    assert.match(companion, /data-orb-starter-primary-chips/)
+    assert.match(companion, /data-orb-home-v2-starters/)
     assert.match(companion, /data-orb-starter-expanded-groups/)
     assert.doesNotMatch(companion, /orb-presence--hero[\s\S]*mobile-only/)
   })

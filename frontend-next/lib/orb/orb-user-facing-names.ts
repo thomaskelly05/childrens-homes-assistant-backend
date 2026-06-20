@@ -20,7 +20,7 @@ export const ORB_RECORDS_PANEL_SUBTITLE =
   'Saved records and drafts for adult review — part of a child\u2019s story, not admin clutter.'
 export const ORB_RECORDS_EMPTY_TITLE = 'No records or drafts yet.'
 export const ORB_RECORDS_EMPTY_SUBTITLE =
-  'Create a document, start in Dictate, or continue Guided Demo when active.'
+  'Save from Chat, Dictate, Voice or ORB Write when wording is ready for adult review.'
 export const ORB_RECORDS_FOOTER =
   'Records and drafts are standalone ORB artefacts. Adult review required before use in practice.'
 export const ORB_RECORDS_LOAD_ERROR = 'Could not load records and drafts'
@@ -39,11 +39,11 @@ export const ORB_DICTATE_REVIEW_HINT =
   'ORB will help check what may be missing before you write the final record.'
 export const ORB_DICTATE_RESPONSIBILITY = 'Adult review required before use.'
 
-/** Chat home — child-centred empty state. */
+/** Chat home — child-centred empty state (Phase 1H). */
 export const ORB_CHAT_EMPTY_HEADING =
-  'Start with what happened, what you noticed, or what you need to record.'
+  'What needs recording, reflecting on or evidencing today?'
 export const ORB_CHAT_EMPTY_SUBLINE =
-  'ORB helps adults in children\u2019s homes think, write and evidence with greater care. Start with what happened, shape a safer draft, and keep the child\u2019s experience central.'
+  'Start with what happened. ORB can help you think, structure and write with the child\u2019s experience central.'
 export const ORB_HOME_VALUE_PROPOSITION = ORB_CHAT_EMPTY_SUBLINE
 
 /** Starter action — not a competing station name. */

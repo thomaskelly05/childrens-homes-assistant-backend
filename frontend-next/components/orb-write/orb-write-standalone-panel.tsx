@@ -458,7 +458,7 @@ export function OrbWriteStandalonePanel({
       presentation="workspace"
       compactChrome
     >
-      <OrbStudioShell studioId="write" className="orb-flagship-write-workspace orb-full-viewport-write-workspace min-h-0 flex-1 gap-3" data-orb-write-standalone data-orb-flagship-write-workspace data-orb-full-viewport-write-workspace>
+      <OrbStudioShell studioId="write" className="orb-flagship-write-workspace orb-full-viewport-write-workspace orb-write-v2-workspace min-h-0 flex-1 gap-3" data-orb-write-standalone data-orb-flagship-write-workspace data-orb-full-viewport-write-workspace data-orb-write-v2-workspace>
         {doc ? (
           <div className="flex min-h-0 flex-1 flex-col gap-3" data-orb-write-studio-editor>
             <header

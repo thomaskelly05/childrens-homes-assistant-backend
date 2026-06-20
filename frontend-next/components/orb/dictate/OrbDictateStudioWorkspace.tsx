@@ -261,11 +261,12 @@ export function OrbDictateStudioWorkspace(props: OrbDictateStudioWorkspaceProps)
   return (
     <OrbStudioShell
       studioId="dictate"
-      className="orb-dictate-studio-workspace orb-flagship-dictate-workspace orb-full-viewport-dictate-workspace flex min-h-0 flex-1 flex-col gap-1 overflow-hidden px-1 sm:px-2"
+      className="orb-dictate-studio-workspace orb-flagship-dictate-workspace orb-full-viewport-dictate-workspace orb-dictate-v2-workspace flex min-h-0 flex-1 flex-col gap-1 overflow-hidden px-1 sm:px-2"
       data-orb-dictate-studio-workspace
       data-orb-dictate-studio
       data-orb-flagship-dictate-workspace
       data-orb-full-viewport-dictate-workspace
+      data-orb-dictate-v2-workspace
       data-orb-dictate-focus-mode={focusMode ? 'true' : 'false'}
       data-orb-dictate-empty={!hasTranscript ? 'true' : undefined}
       style={{ minHeight: 'min(100dvh - 4.5rem, calc(100svh - 4.5rem))' }}

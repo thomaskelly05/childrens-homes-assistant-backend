@@ -15,7 +15,7 @@ describe('ORB Residential desktop premium simplification pass', () => {
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
     const desktop = read('app/orb/orb-desktop.css')
 
-    assert.match(companion, /data-orb-starter-primary-chips/)
+    assert.match(companion, /data-orb-home-v2-starters/)
     assert.match(companion, /data-orb-starter-expanded-groups/)
     assert.match(companion, /setMoreExamplesExpanded/)
     assert.match(companion, /Fewer examples/)
@@ -23,7 +23,6 @@ describe('ORB Residential desktop premium simplification pass', () => {
       companion,
       /!isMobileViewport \? \([\s\S]*ORB_RESIDENTIAL_STARTER_GROUPS\.map\([\s\S]*orb-liquid-card/
     )
-    assert.match(desktop, /\[data-orb-starter-primary-chips\]/)
     assert.match(desktop, /\[data-orb-starter-expanded-groups\]/)
   })
 

@@ -50,7 +50,7 @@ describe('orb guided demo module', () => {
   it('exports single request demo label and URL', () => {
     assert.equal(ORB_REQUEST_DEMO_LABEL, 'Request a demo')
     assert.equal(ORB_REQUEST_DEMO_URL, 'https://www.indicare.co.uk/contact')
-    assert.match(ORB_HOME_VALUE_PROPOSITION, /children\u2019s homes/)
+    assert.match(ORB_HOME_VALUE_PROPOSITION, /child\u2019s experience central/)
   })
 
   it('defines five ordered steps ending with request demo', () => {

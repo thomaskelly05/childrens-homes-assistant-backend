@@ -5,14 +5,12 @@ import { fileURLToPath } from 'node:url'
 import { describe, it } from 'node:test'
 
 import {
-  ORB_FLAGSHIP_BILLING_INCLUDED_ITEMS,
-  ORB_VOICE_STATUS_CARD_COPY
+  ORB_FLAGSHIP_BILLING_INCLUDED_ITEMS
 } from '../../lib/orb/orb-flagship-copy.ts'
 import {
-  ORB_HOME_PRODUCT_CONTEXT_ROW,
-  ORB_HOME_TRUST_STRIP,
-  ORB_LOGIN_HERO_HEADLINE
-} from '../../lib/orb/orb-showstopper-copy.ts'
+  ORB_LOGIN_ENTERPRISE_TITLE,
+  ORB_HOME_RAIL_TRUST_ITEMS
+} from '../../lib/orb/orb-convergence-phase-1h-copy.ts'
 import { ORB_RESIDENTIAL_LOCKED_THEME, ORB_RESIDENTIAL_THEME_LOCK_COPY } from '../../lib/orb/orb-appearance.ts'
 import {
   ORB_DICTATE_SUBTITLE,
@@ -42,21 +40,22 @@ describe('ORB Residential Phase 1F flagship UI', () => {
     const hero = read('components/orb-residential/orb-login-desktop-hero.tsx')
     const auth = read('components/orb-residential/orb-login-auth-card.tsx')
     assert.match(screen, /orb-login-flagship-shell/)
+    assert.match(screen, /orb-login-enterprise/)
     assert.match(hero, /orb-login-flagship-hero/)
     assert.match(auth, /orb-login-flagship-auth/)
-    assert.equal(ORB_LOGIN_HERO_HEADLINE, 'Ethical intelligence for children\u2019s homes.')
+    assert.equal(ORB_LOGIN_ENTERPRISE_TITLE, 'ORB Residential')
   })
 
-  it('home has substantial guided demo card and product context row', () => {
+  it('home has guided demo card and calm trust rail', () => {
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
     const entry = read('components/orb-residential/orb-guided-demo-entry.tsx')
     assert.match(companion, /orb-flagship-home/)
-    assert.match(companion, /ORB_HOME_PRODUCT_CONTEXT_ROW/)
-    assert.match(companion, /data-orb-home-product-context/)
+    assert.match(companion, /orb-home-v2/)
+    assert.match(companion, /ORB_HOME_RAIL_TRUST_ITEMS/)
+    assert.match(companion, /data-orb-home-v2-rail-trust/)
     assert.match(companion, /orb-guided-demo-continue-card--flagship/)
     assert.match(entry, /orb-guided-demo-entry--flagship/)
-    assert.equal(ORB_HOME_PRODUCT_CONTEXT_ROW, 'Chat \u00b7 Dictate \u00b7 Voice \u00b7 ORB Write \u00b7 Records & Drafts')
-    assert.match(ORB_HOME_TRUST_STRIP, /Adult review required/)
+    assert.match(ORB_HOME_RAIL_TRUST_ITEMS.join(' '), /Adult review required/)
   })
 
   it('guided demo modal uses flagship two-column layout', () => {
@@ -80,10 +79,10 @@ describe('ORB Residential Phase 1F flagship UI', () => {
   it('voice has reflective support status card', () => {
     const voice = read('components/orb-standalone/orb-voice-station-content.tsx')
     assert.match(voice, /orb-flagship-voice-room/)
+    assert.match(voice, /orb-voice-v2-room/)
     assert.match(voice, /data-orb-voice-status-card/)
-    assert.match(voice, /ORB_VOICE_STATUS_CARD_COPY/)
-    assert.match(ORB_VOICE_STATUS_CARD_COPY, /reflective support/)
-    assert.match(ORB_VOICE_STATUS_CARD_COPY, /Audio is not stored/)
+    assert.match(voice, /ORB_VOICE_V2_STATUS_COPY/)
+    assert.match(voice, /ORB_VOICE_V2_STATUS_COPY/)
   })
 
   it('records and drafts empty state copy guides next actions', () => {
@@ -91,8 +90,7 @@ describe('ORB Residential Phase 1F flagship UI', () => {
     assert.match(panel, /ORB_RECORDS_EMPTY_SUBTITLE/)
     assert.match(panel, /data-orb-saved-start-write/)
     assert.match(panel, /data-orb-saved-start-dictate/)
-    assert.match(panel, /data-orb-saved-open-guided-demo/)
-    assert.match(ORB_RECORDS_EMPTY_SUBTITLE, /Guided Demo/)
+    assert.match(ORB_RECORDS_EMPTY_SUBTITLE, /Save from Chat, Dictate, Voice or ORB Write/)
     assert.equal(ORB_NAV_RECORDS, 'Records & Drafts')
   })
 

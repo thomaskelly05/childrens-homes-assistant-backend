@@ -1,0 +1,446 @@
+/**
+ * Phase 1H — ChatGPT-level UI convergence for ORB Residential.
+ * One shared workspace system: shell, sidebar, home, composer, stations, modals.
+ */
+
+:root {
+  --orb-res-shell-bg: #05070d;
+  --orb-res-sidebar-bg: #0b1220;
+  --orb-res-sidebar-border: rgba(148, 163, 184, 0.12);
+  --orb-res-sidebar-text: #e2e8f0;
+  --orb-res-sidebar-muted: #94a3b8;
+  --orb-res-sidebar-active: rgba(99, 102, 241, 0.18);
+  --orb-res-workspace-bg: #f8fafc;
+  --orb-res-workspace-surface: #ffffff;
+  --orb-res-workspace-text: #0f172a;
+  --orb-res-workspace-muted: #475569;
+  --orb-res-workspace-border: rgba(15, 23, 42, 0.08);
+  --orb-res-composer-shadow: 0 12px 40px rgba(15, 23, 42, 0.08);
+  --orb-res-composer-radius: 1.25rem;
+  --orb-res-modal-max: 57.5rem;
+  --orb-res-modal-min: 47.5rem;
+  --orb-res-chat-column-max: 47.5rem; /* ~760px */
+}
+
+/* ── 1. App shell ─────────────────────────────────────────────────────────── */
+
+[data-orb-residential='true'].orb-residential-app-shell {
+  width: 100vw;
+  height: 100dvh;
+  max-height: 100dvh;
+  overflow: hidden;
+}
+
+[data-orb-residential='true'] .orb-residential-app-shell__workspace,
+[data-orb-residential='true'] .orb-residential-app-shell.orb-chat-shell {
+  display: grid;
+  grid-template-columns: var(--orb-sidebar-width, 17.5rem) minmax(0, 1fr);
+  min-height: 0;
+  flex: 1;
+  width: 100%;
+  overflow: hidden;
+}
+
+[data-orb-residential='true'] .orb-residential-main {
+  background: var(--orb-res-workspace-bg);
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ── 2. Sidebar v2 ────────────────────────────────────────────────────────── */
+
+.orb-residential-sidebar-v2,
+[data-orb-residential-sidebar-v2='true'] {
+  background: var(--orb-res-sidebar-bg) !important;
+  border-color: var(--orb-res-sidebar-border) !important;
+  color: var(--orb-res-sidebar-text);
+}
+
+[data-orb-residential-sidebar-v2='true'] .orb-sidebar-header,
+[data-orb-residential-sidebar-v2='true'] .orb-sidebar-group,
+[data-orb-residential-sidebar-v2='true'] .orb-sidebar-footer {
+  border-color: var(--orb-res-sidebar-border);
+}
+
+[data-orb-residential-sidebar-v2='true'] [data-orb-sidebar-brand],
+[data-orb-residential-sidebar-v2='true'] .orb-sidebar-nav-item span {
+  color: var(--orb-res-sidebar-text);
+}
+
+[data-orb-residential-sidebar-v2='true'] .orb-sidebar-powered-tagline,
+[data-orb-residential-sidebar-v2='true'] [data-orb-sidebar-search-wrap] input::placeholder {
+  color: var(--orb-res-sidebar-muted);
+}
+
+[data-orb-residential-sidebar-v2='true'] .orb-sidebar-nav-item:hover,
+[data-orb-residential-sidebar-v2='true'] .orb-sidebar-nav-item--active {
+  background: var(--orb-res-sidebar-active);
+}
+
+[data-orb-residential-sidebar-v2='true'] .orb-sidebar-search {
+  background: rgba(15, 23, 42, 0.55) !important;
+  border-color: var(--orb-res-sidebar-border) !important;
+}
+
+[data-orb-residential-sidebar-v2='true'] .orb-sidebar-account-row {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0.25rem 0 !important;
+}
+
+[data-orb-residential-sidebar-v2='true'] .orb-sidebar-account-row .orb-sidebar-nav-item {
+  border-radius: 0.65rem;
+  min-height: 2.25rem;
+  padding: 0.35rem 0.5rem;
+}
+
+[data-orb-residential-sidebar-v2='true'] .orb-sidebar-account-row [data-orb-sidebar-account-trigger] {
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+}
+
+/* ── 3. Login enterprise ──────────────────────────────────────────────────── */
+
+.orb-login-enterprise {
+  min-height: 100dvh;
+  width: 100%;
+  overflow: hidden;
+}
+
+.orb-login-enterprise .orb-login-enterprise-shell {
+  width: 100% !important;
+  max-width: none !important;
+  min-height: 100dvh;
+  margin: 0 !important;
+  display: grid;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 1024px) {
+  .orb-login-enterprise .orb-login-enterprise-shell {
+    grid-template-columns: 58% 42%;
+  }
+}
+
+.orb-login-enterprise .orb-login-enterprise-hero {
+  position: relative;
+  min-height: min(100dvh, 56rem);
+  padding: clamp(2rem, 5vw, 4rem) clamp(1.75rem, 4vw, 3.5rem) !important;
+  background:
+    radial-gradient(ellipse 80% 60% at 30% 40%, rgba(99, 102, 241, 0.22) 0%, transparent 65%),
+    radial-gradient(ellipse 50% 40% at 70% 80%, rgba(56, 189, 248, 0.12) 0%, transparent 55%),
+    linear-gradient(160deg, #05070d 0%, #0b1220 45%, #0f172a 100%);
+  border-right: 1px solid rgba(148, 163, 184, 0.12);
+  color: #f1f5f9;
+}
+
+.orb-login-enterprise .orb-login-enterprise-hero .orb-login-headline {
+  color: #f8fafc;
+  font-size: clamp(1.75rem, 3vw, 2.25rem);
+  font-weight: 600;
+  letter-spacing: -0.03em;
+}
+
+.orb-login-enterprise .orb-login-enterprise-hero .orb-login-lead {
+  color: #cbd5e1;
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.orb-login-enterprise .orb-login-enterprise-hero .orb-login-brand-link {
+  color: #e2e8f0;
+}
+
+.orb-login-enterprise .orb-login-enterprise-hero .orb-login-tagline {
+  color: #94a3b8;
+}
+
+.orb-login-enterprise .orb-login-trust-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  background: rgba(15, 23, 42, 0.45);
+  padding: 0.4rem 0.85rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: #e2e8f0;
+}
+
+.orb-login-enterprise .orb-login-founder-line {
+  color: #94a3b8;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.orb-login-enterprise .orb-login-panel {
+  min-height: min(100dvh, 56rem);
+  justify-content: center;
+  background: var(--orb-res-workspace-bg);
+  padding: clamp(1.5rem, 4vw, 3rem) clamp(1.25rem, 4vw, 3rem) !important;
+}
+
+.orb-login-enterprise .orb-login-flagship-auth {
+  width: 100% !important;
+  max-width: 26.25rem !important; /* ~420px */
+}
+
+/* ── 4. Home v2 ───────────────────────────────────────────────────────────── */
+
+.orb-home-v2 {
+  width: 100%;
+  min-height: min(68vh, calc(100dvh - 14rem));
+}
+
+.orb-home-v2 .orb-home-v2-hero {
+  max-width: 40rem;
+  margin-inline: auto;
+}
+
+.orb-home-v2 .orb-home-v2-headline {
+  color: var(--orb-res-workspace-text);
+  font-size: clamp(1.35rem, 2.5vw, 1.75rem);
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1.25;
+}
+
+.orb-home-v2 .orb-home-v2-subline {
+  color: var(--orb-res-workspace-muted);
+  font-size: 0.9375rem;
+  line-height: 1.55;
+}
+
+.orb-home-v2-rail {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.orb-home-v2-rail-trust {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.8125rem;
+  color: var(--orb-res-workspace-muted);
+}
+
+.orb-home-v2-rail-trust li {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.orb-home-v2-rail-trust li::before {
+  content: '';
+  width: 0.35rem;
+  height: 0.35rem;
+  border-radius: 999px;
+  background: #6366f1;
+  flex-shrink: 0;
+}
+
+/* Home empty — composer as hero */
+[data-orb-home-v2-empty='true'] [data-orb-chat-body] {
+  display: flex;
+  flex-direction: column;
+}
+
+[data-orb-home-v2-empty='true'] .orb-chat-thread {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 0.5rem;
+}
+
+[data-orb-home-v2-empty='true'] .orb-composer-v2-dock {
+  flex: 0 0 auto;
+  padding-top: 0 !important;
+  border-top: none !important;
+  background: transparent !important;
+}
+
+[data-orb-home-v2-empty='true'] .orb-composer-v2-dock .orb-composer-v2 {
+  box-shadow: var(--orb-res-composer-shadow);
+}
+
+.orb-home-v2-starters {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem;
+  max-width: var(--orb-res-chat-column-max);
+  margin: 0.75rem auto 0;
+  padding: 0 clamp(1rem, 2.5vw, 2rem) max(0.5rem, env(safe-area-inset-bottom));
+}
+
+.orb-home-v2-starter {
+  border: none;
+  background: rgba(15, 23, 42, 0.04);
+  color: var(--orb-res-workspace-text);
+  border-radius: 999px;
+  padding: 0.45rem 0.9rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  transition: background 0.15s ease;
+}
+
+.orb-home-v2-starter:hover {
+  background: rgba(15, 23, 42, 0.08);
+}
+
+@media (min-width: 1024px) {
+  .orb-home-v2-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) min(18rem, 28vw);
+    gap: clamp(1rem, 2.5vw, 1.75rem);
+    width: 100%;
+    align-items: start;
+  }
+}
+
+/* ── 5. Composer v2 ───────────────────────────────────────────────────────── */
+
+.orb-composer-v2-dock {
+  padding: 0.75rem clamp(1rem, 2.5vw, 2rem) max(0.75rem, env(safe-area-inset-bottom));
+}
+
+.orb-composer-v2.orb-composer-glass--showstopper,
+.orb-composer-v2[data-orb-composer-v2='true'] {
+  min-height: 3.5rem;
+  border-radius: var(--orb-res-composer-radius) !important;
+  border: 1px solid var(--orb-res-workspace-border) !important;
+  background: var(--orb-res-workspace-surface) !important;
+  box-shadow: var(--orb-res-composer-shadow) !important;
+}
+
+.orb-composer-v2 textarea {
+  font-size: 1rem !important;
+  line-height: 1.5 !important;
+}
+
+/* ── 6. Chat v2 ─────────────────────────────────────────────────────────────── */
+
+.orb-chat-v2-column {
+  width: 100%;
+  max-width: none;
+}
+
+.orb-chat-v2-inner {
+  width: 100%;
+  max-width: min(var(--orb-res-chat-column-max), 100%);
+  margin-inline: auto;
+}
+
+[data-orb-residential='true'] [data-orb-message-role='assistant'] .orb-chat-message-body,
+[data-orb-residential='true'] [data-orb-message-role='assistant'] .orb-markdown-body {
+  line-height: 1.65;
+  font-size: 0.9375rem;
+}
+
+[data-orb-residential='true'] [data-orb-message-role='assistant'] .orb-chat-message-surface {
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+/* ── 7. Dictate v2 ─────────────────────────────────────────────────────────── */
+
+.orb-dictate-v2-workspace {
+  min-height: calc(100dvh - 5rem);
+  width: 100%;
+}
+
+.orb-dictate-v2-workspace .orb-transcript-panel {
+  min-height: calc(100dvh - 14rem) !important;
+  border: none !important;
+  background: var(--orb-res-workspace-surface);
+  border-radius: 1rem;
+  box-shadow: 0 4px 24px rgba(15, 23, 42, 0.04);
+}
+
+.orb-dictate-v2-workspace [data-orb-dictate-brain-panel] {
+  border: none !important;
+  background: rgba(15, 23, 42, 0.02);
+  border-radius: 1rem;
+}
+
+/* ── 8. Voice v2 ────────────────────────────────────────────────────────────── */
+
+.orb-voice-v2-room {
+  min-height: calc(100dvh - 6rem);
+}
+
+.orb-voice-v2-room .orb-voice-hero-stage {
+  padding: clamp(1.5rem, 4vw, 3rem) 1rem;
+}
+
+.orb-voice-v2-status {
+  font-size: 1rem;
+  color: var(--orb-res-workspace-muted);
+  text-align: center;
+  max-width: 28rem;
+  line-height: 1.55;
+}
+
+/* ── 9. Write v2 ────────────────────────────────────────────────────────────── */
+
+.orb-write-v2-workspace {
+  min-height: calc(100dvh - 4rem);
+  background: var(--orb-res-workspace-bg);
+}
+
+.orb-write-v2-workspace [data-orb-write-guidance-panel] {
+  border: none !important;
+  background: rgba(15, 23, 42, 0.02);
+  border-radius: 1rem;
+}
+
+/* ── 10. Records v2 ─────────────────────────────────────────────────────────── */
+
+.orb-records-v2-workspace .orb-studio-empty-state {
+  border: none !important;
+  background: transparent !important;
+}
+
+.orb-records-v2-workspace [data-orb-records-empty] {
+  padding: clamp(2rem, 5vw, 4rem) 1.5rem;
+  text-align: center;
+}
+
+/* ── 11. Product modal v2 ─────────────────────────────────────────────────── */
+
+.orb-product-modal-v2,
+[data-orb-product-modal-v2='true'] {
+  width: min(var(--orb-res-modal-max), calc(100vw - 2rem)) !important;
+  min-width: min(var(--orb-res-modal-min), 100%) !important;
+  max-height: 80dvh !important;
+}
+
+.orb-product-modal-v2 .orb-app-panel-body,
+[data-orb-product-modal-v2='true'] .orb-app-panel-body {
+  padding: 1.25rem 1.5rem !important;
+  overflow-y: auto;
+}
+
+/* ── Reduce Windows-98 patterns ───────────────────────────────────────────── */
+
+[data-orb-residential='true'] .orb-starter-card {
+  border: none !important;
+  background: rgba(15, 23, 42, 0.04) !important;
+  box-shadow: none !important;
+}
+
+[data-orb-residential='true'] .orb-liquid-card {
+  border: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}

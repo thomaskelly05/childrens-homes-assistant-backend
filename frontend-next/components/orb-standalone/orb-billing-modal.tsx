@@ -252,10 +252,11 @@ export function OrbBillingModal({
       mobileMode="full"
     >
       <div
-        className="space-y-2 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:space-y-3 sm:p-4"
+        className="space-y-2 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:space-y-3 sm:p-4 orb-product-modal-v2"
         data-orb-billing-modal
         data-orb-flagship-product-modal="true"
         data-orb-product-panel-modal="true"
+        data-orb-product-modal-v2="true"
         data-orb-billing-mobile-layout="compact"
         data-orb-billing-desktop-layout="sheet"
       >
