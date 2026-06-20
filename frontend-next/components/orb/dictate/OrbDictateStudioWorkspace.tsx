@@ -277,6 +277,9 @@ export function OrbDictateStudioWorkspace(props: OrbDictateStudioWorkspaceProps)
             <p className="mt-0.5 text-xs leading-relaxed text-[var(--orb-muted)]" data-orb-dictate-subtitle-header>
               {ORB_DICTATE_SUBTITLE}
             </p>
+            <div className="orb-dictate-workflow mt-2 flex flex-wrap items-center gap-1.5 text-[10px]" data-orb-dictate-designed-workflow>
+              <span>Capture</span><span aria-hidden>→</span><span>Review with ORB</span><span aria-hidden>→</span><span>Create safer draft</span><span aria-hidden>→</span><span>ORB Write</span>
+            </div>
           </div>
         </div>
       </header>
@@ -355,7 +358,7 @@ export function OrbDictateStudioWorkspace(props: OrbDictateStudioWorkspaceProps)
           </div>
         }
         right={
-          <div className="flex min-h-0 flex-col gap-2" data-orb-dictate-review-panel>
+          <div className="orb-studio-panel orb-dictate-review-surface flex min-h-0 flex-col gap-2" data-orb-dictate-review-panel data-orb-dictate-review-surface>
             <p className="px-1 text-xs font-semibold uppercase tracking-wide text-[var(--orb-muted)]" data-orb-dictate-review-label>
               ORB Review
             </p>

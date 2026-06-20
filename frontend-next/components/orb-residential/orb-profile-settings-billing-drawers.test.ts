@@ -18,7 +18,7 @@ describe('ORB profile settings billing drawers', () => {
     assert.match(account, /data-orb-account-quick-actions/)
     assert.match(account, /data-orb-account-inactive/)
     assert.match(account, /Sign out/)
-    assert.match(account, /Manage billing/)
+    assert.doesNotMatch(account, /Manage billing/)
   })
 
   it('settings opens as premium drawer with sections', () => {

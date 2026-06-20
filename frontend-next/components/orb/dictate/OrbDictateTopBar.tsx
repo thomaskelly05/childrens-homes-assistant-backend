@@ -13,7 +13,7 @@ export type OrbDictatePrimaryAction = 'analyse' | 'generate' | 'disabled'
 function primaryActionLabel(action: OrbDictatePrimaryAction, generating: boolean): string {
   if (generating) return 'Working…'
   if (action === 'analyse') return 'Review with ORB'
-  if (action === 'generate') return 'Create final draft'
+  if (action === 'generate') return 'Create safer draft'
   return 'Review with ORB'
 }
 
@@ -88,6 +88,7 @@ export function OrbDictateTopBar({
       data-orb-dictate-top-bar
       data-orb-dictate-recorder-bar
       data-orb-dictate-capture-controls
+      data-orb-action-cluster
     >
       <div className="flex flex-col gap-2">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
@@ -202,6 +203,7 @@ export function OrbDictateTopBar({
             type="button"
             data-orb-dictate-generate
             data-orb-dictate-primary-action={primaryAction}
+            data-orb-dictate-create-draft-action={primaryAction === 'generate' ? 'true' : undefined}
             disabled={primaryDisabled}
             title={primaryActionHint(primaryAction, hasTranscript)}
             className="inline-flex h-9 items-center gap-1 rounded-xl border border-[var(--orb-primary)]/40 bg-[var(--orb-primary-soft)] px-3 text-xs font-semibold text-[var(--orb-foreground)] disabled:cursor-not-allowed disabled:opacity-45"

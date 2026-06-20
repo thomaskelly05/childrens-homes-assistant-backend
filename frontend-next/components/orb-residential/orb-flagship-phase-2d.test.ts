@@ -12,9 +12,9 @@ function read(relativePath: string) {
   return readFileSync(join(root, relativePath), 'utf8')
 }
 
-describe('ORB Residential Phase 2F visual system repair', () => {
-  it('build version marker is phase-2f on shell and visual build', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-2f')
+describe('ORB Residential Phase 2G flagship UX convergence', () => {
+  it('build version marker is phase-2g on shell and visual build', () => {
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-2g')
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
     const layout = read('app/orb/layout.tsx')
     assert.match(companion, /data-orb-build-version=\{ORB_BUILD_VISUAL_VERSION\}/)
@@ -35,6 +35,7 @@ describe('ORB Residential Phase 2F visual system repair', () => {
     assert.match(presence, /data-orb-presence/)
     assert.match(css, /\.orb-presence\s*\{[\s\S]*aspect-ratio:\s*1/)
     assert.match(css, /\.orb-presence \.orb-living-sphere[\s\S]*border-radius:\s*50%/)
+    assert.match(css, /\.orb-presence::after[\s\S]*radial-gradient/)
     assert.match(read('components/orb-residential/orb-login-desktop-hero.tsx'), /variant="hero"/)
     assert.match(read('components/orb-residential/orb-user-avatar.tsx'), /GlassOrbMark/)
   })
@@ -53,6 +54,8 @@ describe('ORB Residential Phase 2F visual system repair', () => {
     assert.doesNotMatch(sidebar, /data-orb-sidebar-billing/)
     assert.doesNotMatch(sidebar, /label:\s*['"]Billing['"]/)
     assert.doesNotMatch(read('components/orb-residential/orb-account-menu.tsx'), /testId="billing"/)
+    assert.match(sidebar, /hasVisibleProjects \|\| projectEditorOpen \? \(/)
+    assert.match(sidebar, /filteredChats\.length \? \(/)
     assert.match(settings, /id: 'account_billing', label: 'Account & Billing'/)
   })
 
@@ -86,7 +89,9 @@ describe('ORB Residential Phase 2F visual system repair', () => {
     assert.match(workspace, /data-orb-dictate-capture-affordances/)
     assert.match(workspace, /data-orb-dictate-capture-panel/)
     assert.match(workspace, /data-orb-dictate-review-panel/)
-    assert.match(topBar, /Create final draft/)
+    assert.match(workspace, /data-orb-dictate-designed-workflow/)
+    assert.match(workspace, /Create safer draft/)
+    assert.match(topBar, /Create safer draft/)
     assert.match(topBar, /Open in ORB Write/)
     assert.match(transcript, /data-orb-dictate-capture-zone/)
     assert.match(topBar, /data-orb-dictate-capture-controls/)
@@ -99,7 +104,8 @@ describe('ORB Residential Phase 2F visual system repair', () => {
     const panel = read('components/orb-write/orb-write-standalone-panel.tsx')
     const toolbar = read('components/orb-write/orb-write-toolbar.tsx')
     assert.match(panel, /GlassOrbMark/)
-    assert.match(panel, /specialist care documentation studio/)
+    assert.match(panel, /care documentation studio/)
+    assert.match(panel, /data-orb-write-integrated-studio-surface/)
     for (const group of ['structure', 'format', 'review', 'export']) {
       assert.match(toolbar, new RegExp(`data-orb-write-toolbar-group="${group}"`))
     }
@@ -124,8 +130,9 @@ describe('ORB Residential Phase 2F visual system repair', () => {
     assert.match(read('components/orb-standalone/orb-voice-hero-stage.tsx'), /data-orb-voice-main-mode-controls/)
     assert.match(selector, /data-orb-voice-mode-central/)
     assert.match(selector, /data-orb-voice-mode-selection-label/)
-    assert.match(selector, /aria-label="Previous voice style"/)
-    assert.match(selector, /aria-label="Next reasoning mode"/)
+    assert.match(selector, /data-orb-voice-style-controls/)
+    assert.match(selector, /data-orb-voice-reasoning-controls/)
+    assert.match(selector, /data-orb-voice-mode-summary/)
     const modes = read('lib/orb/orb-voice-mode-carousel.ts')
     for (const label of ['Calm', 'Warm', 'Direct', 'Reflective', 'Talk it through', 'Safeguarding thinking', 'Supervision prep', 'Clear summary']) {
       assert.match(modes, new RegExp(label))
@@ -163,6 +170,14 @@ describe('ORB Residential Phase 2F visual system repair', () => {
     assert.match(billing, /data-orb-billing-provider/)
     assert.match(billing, /data-orb-billing-trust/)
     assert.match(read('lib/orb/orb-residential-ui-copy.ts'), /'Communicate'/)
+  })
+
+  it('account quick actions keep billing exclusively inside Settings', () => {
+    const account = read('components/orb-standalone/orb-account-modal.tsx')
+    assert.doesNotMatch(account, /Manage billing/)
+    assert.doesNotMatch(account, /data-orb-account-billing/)
+    assert.doesNotMatch(account, /data-orb-account-subscribe/)
+    assert.match(read('components/orb-standalone/orb-standalone-settings-panel.tsx'), /account_billing/)
   })
 
   it('help, settings and account overlays remain scroll-safe and viewport-bound', () => {

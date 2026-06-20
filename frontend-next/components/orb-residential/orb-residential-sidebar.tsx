@@ -393,6 +393,7 @@ export function OrbResidentialSidebar({
 
   const chats = asArray<StandaloneChat>(workspace.chats)
   const projects = asArray<StandaloneProject>(workspace.projects)
+  const hasVisibleProjects = projects.some((project) => project.id !== STANDALONE_GENERAL_PROJECT_ID)
 
   const filteredChats = useMemo(
     () =>
@@ -678,29 +679,32 @@ export function OrbResidentialSidebar({
                 </button>
               )
             })}
-            <button
-              type="button"
-              onClick={() => {
-                setRecentsCollapsed(false)
-                writeOrbSidebarSectionCollapsed('recents', false)
-                onClose?.()
-              }}
-              className="orb-sidebar-nav-item w-full"
-              data-orb-sidebar-recent-chats-shortcut
-            >
-              <BookOpen className="h-4 w-4 shrink-0" />
-              <span className="text-sm">Recent chats</span>
-            </button>
+            {chats.length ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setRecentsCollapsed(false)
+                  writeOrbSidebarSectionCollapsed('recents', false)
+                  onClose?.()
+                }}
+                className="orb-sidebar-nav-item w-full"
+                data-orb-sidebar-recent-chats-shortcut
+              >
+                <BookOpen className="h-4 w-4 shrink-0" />
+                <span className="text-sm">Recent chats</span>
+              </button>
+            ) : null}
           </nav>
         ) : null}
 
-        <SidebarCollapsibleSection
-          sectionKey="projects"
-          title="Projects"
-          collapsed={projectsCollapsed}
-          onToggle={() => toggleSection('projects', projectsCollapsed, setProjectsCollapsed)}
-        >
-          <div data-orb-sidebar-projects className="space-y-0.5">
+        {hasVisibleProjects || projectEditorOpen ? (
+          <SidebarCollapsibleSection
+            sectionKey="projects"
+            title="Projects"
+            collapsed={projectsCollapsed}
+            onToggle={() => toggleSection('projects', projectsCollapsed, setProjectsCollapsed)}
+          >
+            <div data-orb-sidebar-projects className="space-y-0.5">
               {projectEditorOpen ? (
                 <div className="rounded-xl border border-[var(--orb-line)]/50 bg-[var(--orb-surface-elevated)] p-2">
                   <input
@@ -792,18 +796,17 @@ export function OrbResidentialSidebar({
                   Add optional project memory
                 </button>
               ) : null}
-          </div>
-        </SidebarCollapsibleSection>
+            </div>
+          </SidebarCollapsibleSection>
+        ) : null}
 
-        <SidebarCollapsibleSection
-          sectionKey="recents"
-          title="Recent chats"
-          collapsed={recentsCollapsed}
-          onToggle={() => toggleSection('recents', recentsCollapsed, setRecentsCollapsed)}
-        >
-          {filteredChats.length === 0 ? (
-            <p className="px-3 py-2 text-xs text-[var(--orb-muted)]">No chats yet — ask ORB anything.</p>
-          ) : (
+        {filteredChats.length ? (
+          <SidebarCollapsibleSection
+            sectionKey="recents"
+            title="Recent chats"
+            collapsed={recentsCollapsed}
+            onToggle={() => toggleSection('recents', recentsCollapsed, setRecentsCollapsed)}
+          >
             <div className="space-y-2.5" data-orb-sidebar-recents>
               {timeGroupedChats.map((group) => (
                 <div key={group.label}>
@@ -823,8 +826,8 @@ export function OrbResidentialSidebar({
                 </div>
               ))}
             </div>
-          )}
-        </SidebarCollapsibleSection>
+          </SidebarCollapsibleSection>
+        ) : null}
 
         {!isMobile ? (
           <nav className="mb-2 space-y-0.5" aria-label="ORB desktop navigation" data-orb-sidebar-desktop-nav>

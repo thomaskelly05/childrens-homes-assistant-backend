@@ -1,7 +1,7 @@
 /**
  * ORB Residential — single canonical UI design system (Phase 1K blank canvas, 1M personality).
  * One file for shell, workspace, composer, login, mobile, stations and modals.
- * Visual build marker: phase-2f.
+ * Visual build marker: phase-2g.
  */
 
 :root {
@@ -103,12 +103,22 @@ html[data-orb-residential='1'] :focus-visible {
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.72);
   background:
-    radial-gradient(circle at 30% 22%, rgba(255, 255, 255, 0.98) 0 8%, transparent 23%),
-    radial-gradient(circle at 17% 48%, rgba(34, 211, 238, 0.95), transparent 36%),
-    radial-gradient(circle at 80% 34%, rgba(129, 140, 248, 0.92), transparent 38%),
-    radial-gradient(circle at 54% 82%, rgba(217, 70, 239, 0.76), transparent 38%),
-    radial-gradient(circle at 50% 50%, #60a5fa 0%, #2563eb 42%, #312e81 72%, #0b102c 100%);
-  box-shadow: inset 0 0 24px rgba(255,255,255,.42), inset -10px -14px 24px rgba(15,23,42,.28), 0 0 24px rgba(56,189,248,.44), 0 0 54px rgba(99,102,241,.28);
+    radial-gradient(circle at 38% 32%, #fff 0 5%, rgba(255,255,255,.94) 8%, transparent 24%),
+    radial-gradient(circle at 16% 46%, rgba(34, 211, 238, 1), transparent 38%),
+    radial-gradient(circle at 82% 32%, rgba(139, 92, 246, .98), transparent 40%),
+    radial-gradient(circle at 55% 84%, rgba(236, 72, 153, .92), transparent 40%),
+    radial-gradient(circle at 50% 48%, #93c5fd 0%, #3b82f6 35%, #4338ca 67%, #11153c 100%);
+  box-shadow: inset 0 0 30px rgba(255,255,255,.58), inset -12px -16px 26px rgba(15,23,42,.24), 0 0 30px rgba(34,211,238,.58), 0 0 68px rgba(124,58,237,.38), 0 0 94px rgba(236,72,153,.16);
+}
+
+.orb-presence::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  inset: -48%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(125,211,252,.26), rgba(139,92,246,.14) 38%, rgba(236,72,153,.07) 56%, transparent 72%);
+  filter: blur(10px);
 }
 
 .orb-presence .orb-living-sphere::before {
@@ -128,7 +138,7 @@ html[data-orb-residential='1'] :focus-visible {
   position: absolute;
   inset: 6%;
   border-radius: inherit;
-  background: radial-gradient(circle at 31% 23%, rgba(255,255,255,.78), transparent 19%), radial-gradient(circle at 70% 76%, rgba(196,181,253,.32), transparent 30%);
+  background: radial-gradient(circle at 38% 32%, rgba(255,255,255,.96), transparent 18%), radial-gradient(circle at 70% 76%, rgba(244,114,182,.34), transparent 32%);
 }
 
 .orb-presence--pulse .orb-living-sphere { animation: orb-residential-breathe 4.6s ease-in-out infinite; }
@@ -1451,6 +1461,205 @@ html[data-orb-residential='1'] [data-orb-write-document-canvas] article {
 .orb-help-safety-panel__header {
   border: 0 !important;
   background: linear-gradient(135deg, #eef2ff, #f0f9ff) !important;
+}
+
+/* ── Unified station language ────────────────────────────────────────────── */
+
+.orb-station-hero,
+[data-orb-communicate-station-hero],
+[data-orb-dictate-studio-hero] {
+  position: relative;
+  border-radius: 1.25rem;
+  overflow: hidden;
+}
+
+.orb-station-surface,
+.orb-studio-panel,
+.orb-write-integrated-studio,
+.orb-communicate-create__form {
+  border-radius: 1.15rem;
+  background: rgba(255,255,255,.9);
+  box-shadow: 0 12px 38px rgba(15,23,42,.065);
+}
+
+.orb-action-cluster,
+[data-orb-action-cluster] {
+  border: 0 !important;
+  background: rgba(255,255,255,.88) !important;
+  box-shadow: 0 8px 26px rgba(15,23,42,.06) !important;
+}
+
+.orb-mode-selector,
+.orb-voice-mode-selector[data-orb-voice-mode-central] {
+  border: 0;
+  background: rgba(255,255,255,.88);
+  backdrop-filter: blur(18px);
+}
+
+[data-orb-home-empty='true'] .orb-composer-dock {
+  padding-top: .25rem;
+  background: radial-gradient(ellipse at 50% 0%, rgba(99,102,241,.075), transparent 70%) !important;
+}
+
+.orb-workspace--home .orb-workspace-home-grid {
+  transform: translateY(.75rem);
+}
+
+.orb-workspace--home .orb-home-orb-glow {
+  width: min(28rem, 78vw);
+  height: min(28rem, 78vw);
+  top: -5rem;
+  background: radial-gradient(circle, rgba(34,211,238,.12), rgba(99,102,241,.10) 35%, rgba(236,72,153,.045) 52%, transparent 72%);
+}
+
+.orb-sidebar [data-orb-sidebar-scroll] {
+  padding-top: .45rem;
+}
+
+.orb-sidebar [data-orb-sidebar-scroll] > nav + * {
+  margin-top: .35rem;
+}
+
+.orb-sidebar .orb-sidebar-nav-item {
+  min-height: 2.55rem;
+  padding-inline: .75rem;
+}
+
+.orb-sidebar .orb-sidebar-nav-item--active {
+  background: linear-gradient(90deg, rgba(37,99,235,.105), rgba(99,102,241,.055)) !important;
+  box-shadow: inset 3px 0 0 #4f46e5, 0 3px 12px rgba(37,99,235,.05);
+}
+
+.orb-workspace--voice [data-orb-voice-companion-size='hero'] {
+  --orb-voice-head-width: clamp(7.75rem, min(25vh, 12vw), 10.75rem);
+  --orb-voice-head-height: clamp(7.75rem, min(25vh, 12vw), 10.75rem);
+  --orb-voice-core-size: var(--orb-voice-head-width);
+}
+
+.orb-workspace--voice .orb-voice-hero-stage__headline {
+  margin-top: .15rem;
+}
+
+.orb-workspace--voice .orb-voice-hero-stage__subline {
+  max-width: 32rem;
+  margin-top: .2rem;
+}
+
+.orb-workspace--voice .orb-voice-hero-stage__waveform {
+  margin-block: .2rem !important;
+  min-height: 1.25rem;
+}
+
+.orb-voice-mode-selector[data-orb-voice-mode-central] {
+  padding: .75rem 1rem;
+  box-shadow: 0 12px 34px rgba(15,23,42,.07), 0 0 54px rgba(99,102,241,.07);
+}
+
+.orb-mode-selector__summary {
+  padding-bottom: .5rem;
+  border-bottom: 1px solid rgba(99,102,241,.11);
+}
+
+.orb-voice-mode-selector [role='radio'] {
+  min-height: 1.9rem;
+  padding: .32rem .75rem;
+  border-color: rgba(99,102,241,.13) !important;
+  background: rgba(248,250,252,.82);
+}
+
+.orb-voice-mode-selector [role='radio'][aria-checked='true'] {
+  color: #fff !important;
+  background: linear-gradient(135deg, #0f172a, #3730a3) !important;
+  box-shadow: 0 5px 14px rgba(49,46,129,.22);
+}
+
+.orb-voice-hero-stage__cta {
+  margin-top: .65rem;
+}
+
+.orb-dictate-workflow {
+  color: rgba(226,232,240,.76);
+}
+
+.orb-dictate-workflow span:nth-child(odd) {
+  padding: .25rem .55rem;
+  border-radius: 999px;
+  background: rgba(255,255,255,.09);
+  color: #f8fafc;
+  font-weight: 600;
+}
+
+.orb-dictate-review-surface {
+  background: linear-gradient(155deg, rgba(255,255,255,.98), rgba(245,243,255,.88));
+}
+
+.orb-dictate-capture-empty {
+  border: 0 !important;
+  background: radial-gradient(circle at 50% 0%, rgba(99,102,241,.11), transparent 15rem), #f8faff !important;
+}
+
+.orb-dictate-transcript-area {
+  border: 0 !important;
+  background: #fbfcff !important;
+  box-shadow: inset 0 0 0 1px rgba(99,102,241,.08);
+}
+
+.orb-write-integrated-studio {
+  overflow: hidden;
+  border: 1px solid rgba(99,102,241,.08);
+  box-shadow: 0 16px 44px rgba(15,23,42,.075);
+}
+
+.orb-write-integrated-studio .orb-write-studio-header {
+  margin: 0;
+  padding: .8rem 1rem;
+  border: 0 !important;
+  border-radius: 0;
+  box-shadow: none;
+  background: linear-gradient(105deg, #fff, #f7f8ff) !important;
+}
+
+.orb-write-integrated-studio [data-orb-write-layout] {
+  padding: 0;
+  background: #f3f5fa;
+}
+
+.orb-write-integrated-studio [data-orb-write-editor] {
+  border: 0 !important;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.orb-write-integrated-studio .orb-write-toolbar {
+  border-radius: 0;
+  border-top: 1px solid rgba(99,102,241,.07);
+  border-bottom: 1px solid rgba(99,102,241,.07);
+  box-shadow: none;
+  background: rgba(255,255,255,.96);
+}
+
+.orb-write-integrated-studio [data-orb-write-canvas-workspace] {
+  padding: 1.25rem !important;
+  background: radial-gradient(circle at 50% 0%, rgba(99,102,241,.07), transparent 28rem), #eef1f6 !important;
+}
+
+.orb-write-integrated-studio [data-orb-write-document-canvas] article {
+  min-height: 70vh;
+  padding: clamp(2rem, 5vw, 4.5rem);
+}
+
+.orb-account-menu,
+[data-orb-account-modal] {
+  --orb-account-chip-gap: .35rem;
+}
+
+[data-orb-account-modal] [data-orb-account-status-chips] {
+  gap: var(--orb-account-chip-gap);
+}
+
+[data-orb-account-modal] [data-orb-account-chip] {
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 
 /* ── Guided demo ──────────────────────────────────────────────────────────── */

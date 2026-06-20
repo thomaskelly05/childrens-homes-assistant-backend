@@ -460,21 +460,30 @@ export function OrbWriteStandalonePanel({
       presentation="workspace"
       compactChrome
     >
-      <OrbStudioShell studioId="write" className="orb-workspace orb-workspace--write min-h-0 flex-1 gap-3" data-orb-write-standalone data-orb-workspace-write>
+      <OrbStudioShell
+        studioId="write"
+        className="orb-workspace orb-workspace--write min-h-0 flex-1 gap-0"
+        data-orb-write-standalone
+        data-orb-workspace-write
+      >
         {doc ? (
-          <div className="flex min-h-0 flex-1 flex-col gap-3" data-orb-write-studio-editor>
+          <div
+            className="orb-write-integrated-studio flex min-h-0 flex-1 flex-col"
+            data-orb-write-studio-editor
+            data-orb-write-integrated-studio-surface
+          >
             <header
-              className="orb-write-studio-header flex shrink-0 flex-col gap-2 border-b border-[var(--orb-line)]/40 pb-3"
+              className="orb-write-studio-header flex shrink-0 flex-col gap-2"
               data-orb-write-studio-header
             >
               <div className="flex min-w-0 items-start gap-3">
                 <GlassOrbMark size="sm" pulse className="mt-0.5 shrink-0" aria-hidden />
                 <div className="min-w-0 flex-1">
-                  <h2 className="text-sm font-semibold text-slate-900" data-orb-write-studio-title>
-                    ORB Write
-                  </h2>
+                  <p className="text-sm font-semibold text-slate-900" data-orb-write-studio-title>
+                    IndiCare Intelligence’s care documentation studio
+                  </p>
                   <p className="text-[11px] text-slate-600" data-orb-write-studio-subtitle>
-                    A specialist care documentation studio for drafting, reviewing and finalising adult-led records.
+                    Draft, review and finalise adult-led records in one calm workspace.
                   </p>
                 </div>
               </div>
@@ -547,7 +556,7 @@ export function OrbWriteStandalonePanel({
               </div>
             </header>
             <div
-              className="orb-write-studio-grid min-h-0 flex-1 gap-3"
+              className="orb-write-studio-grid min-h-0 flex-1 gap-2"
               data-orb-write-layout
               data-orb-write-document-first={documentFirst ? 'true' : 'false'}
               data-orb-write-source-collapsed={sourcePanelOpen ? 'false' : 'true'}
@@ -619,24 +628,19 @@ export function OrbWriteStandalonePanel({
                 </div>
               ) : null}
             </div>
-            <footer
-              className={`flex shrink-0 flex-wrap items-center justify-between gap-2 border-t border-[var(--orb-line)]/40 pt-2 text-[10px] text-[var(--orb-muted)] ${isMobile ? 'hidden' : ''}`}
-              data-orb-write-status-footer
-            >
+            <footer className="sr-only" data-orb-write-status-footer aria-label="Document status">
               <span data-orb-write-word-count-display>{wordCount} words</span>
               <span>{doc.is_finalised ? 'Approved' : 'Draft'}</span>
               <span>{lastEdited ? `Last edited ${lastEdited}` : null}</span>
             </footer>
-            <OrbPrivacyNotice surface="write" className={`shrink-0 ${isMobile ? 'hidden' : ''}`} />
+            <OrbPrivacyNotice surface="write" className="sr-only" />
             {isMobile ? (
               <details className="shrink-0 text-[10px] text-[var(--orb-muted)]" data-orb-write-safety-disclosure>
                 <summary className="cursor-pointer font-medium">Adult approval required.</summary>
                 <p className="mt-1">{ORB_WRITE_SAFETY_COPY.responsibility}</p>
                 <p className="mt-1">{ORB_WRITE_SAFETY_COPY.judgement}</p>
               </details>
-            ) : (
-              <p className="shrink-0 text-[10px] text-[var(--orb-muted)]">{ORB_WRITE_SAFETY_COPY.responsibility}</p>
-            )}
+            ) : null}
             {statusMessage ? (
               <p className="text-xs text-[var(--orb-primary)]" role="status">
                 {statusMessage}

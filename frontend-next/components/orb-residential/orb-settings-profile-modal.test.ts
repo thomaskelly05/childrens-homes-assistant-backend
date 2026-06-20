@@ -30,7 +30,7 @@ describe('ORB settings profile and billing modals', () => {
     assert.match(account, /data-orb-account-saved-count/)
     assert.match(account, /data-orb-account-inactive/)
     assert.match(account, /data-orb-account-local-mode/)
-    assert.match(account, /Manage billing/)
+    assert.doesNotMatch(account, /Manage billing/)
     assert.match(account, /Sign out/)
   })
 

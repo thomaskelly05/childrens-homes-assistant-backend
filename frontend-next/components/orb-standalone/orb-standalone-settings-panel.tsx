@@ -520,6 +520,9 @@ export function OrbStandaloneSettingsPanel({
                 onClearProfiles={onClearProfiles}
                 onClearProjects={onClearProjects}
               />
+              <p className="text-[11px] leading-5 text-[var(--orb-muted)]" data-orb-settings-provider-trust>
+                Provider AI trust settings follow your organisation’s permissions and remain subject to adult review.
+              </p>
               {passkeyStatus ? (
                 <p className="text-xs leading-5 text-[var(--orb-muted)]" data-orb-passkey-status>
                   {passkeyStatus}

@@ -1,7 +1,5 @@
 'use client'
 
-import { ChevronLeft, ChevronRight } from 'lucide-react'
-
 import {
   ORB_VOICE_REASONING_OPTIONS,
   ORB_VOICE_STYLE_OPTIONS,
@@ -21,65 +19,32 @@ export function OrbVoiceModeSelector({
   onVoiceStyleChange: (style: OrbVoiceStyleId) => void
   onReasoningModeChange: (mode: OrbVoiceReasoningModeId) => void
 }) {
-  const styleIndex = ORB_VOICE_STYLE_OPTIONS.findIndex((option) => option.id === voiceStyle)
-  const reasoningIndex = ORB_VOICE_REASONING_OPTIONS.findIndex((option) => option.id === reasoningMode)
   const selection = describeVoiceModeSelection(voiceStyle, reasoningMode)
 
-  function shiftStyle(delta: number) {
-    const next =
-      ORB_VOICE_STYLE_OPTIONS[(styleIndex + delta + ORB_VOICE_STYLE_OPTIONS.length) % ORB_VOICE_STYLE_OPTIONS.length]
-    onVoiceStyleChange(next.id)
-  }
-
-  function shiftReasoning(delta: number) {
-    const next =
-      ORB_VOICE_REASONING_OPTIONS[
-        (reasoningIndex + delta + ORB_VOICE_REASONING_OPTIONS.length) % ORB_VOICE_REASONING_OPTIONS.length
-      ]
-    onReasoningModeChange(next.id)
-  }
-
   return (
-    <div className="orb-voice-mode-selector w-full max-w-lg space-y-3" data-orb-voice-mode-selector data-orb-voice-mode-central>
-      <p
-        className="text-center text-sm font-medium text-[var(--orb-foreground)]"
-        data-orb-voice-mode-selection-label
-        role="status"
-      >
-        {selection.headline}
-      </p>
-      <p className="text-center text-xs leading-relaxed text-[var(--orb-muted)]" data-orb-voice-mode-selection-description>
-        {selection.description}
-      </p>
-      <div className="space-y-1.5">
+    <div
+      className="orb-voice-mode-selector w-full max-w-lg space-y-2.5"
+      data-orb-voice-mode-selector
+      data-orb-voice-mode-central
+    >
+      <div className="orb-mode-selector__summary text-center" data-orb-voice-mode-summary role="status">
+        <p
+          className="text-sm font-semibold text-[var(--orb-foreground)]"
+          data-orb-voice-mode-selection-label
+          data-orb-voice-mode-headline
+        >
+          {selection.headline}
+        </p>
+        <p
+          className="mt-1 text-xs leading-relaxed text-[var(--orb-muted)]"
+          data-orb-voice-mode-selection-description
+          data-orb-voice-mode-description
+        >
+          {selection.description}
+        </p>
+      </div>
+      <div className="space-y-1.5" data-orb-voice-style-controls>
         <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--orb-muted)]">Voice style</p>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            className="orb-voice-mode-selector__nav rounded-full border border-[var(--orb-line)] p-1.5 text-[var(--orb-muted)] hover:bg-[var(--orb-surface-hover)]"
-            onClick={() => shiftStyle(-1)}
-            aria-label="Previous voice style"
-            data-orb-voice-style-prev
-          >
-            <ChevronLeft className="h-4 w-4" aria-hidden />
-          </button>
-          <div
-            className="min-w-0 flex-1 rounded-full border border-[var(--orb-line)]/60 bg-[var(--orb-surface-elevated)] px-3 py-2 text-center text-sm font-medium text-[var(--orb-foreground)]"
-            data-orb-voice-style-value
-            role="status"
-          >
-            {ORB_VOICE_STYLE_OPTIONS[styleIndex]?.label ?? 'Calm'}
-          </div>
-          <button
-            type="button"
-            className="orb-voice-mode-selector__nav rounded-full border border-[var(--orb-line)] p-1.5 text-[var(--orb-muted)] hover:bg-[var(--orb-surface-hover)]"
-            onClick={() => shiftStyle(1)}
-            aria-label="Next voice style"
-            data-orb-voice-style-next
-          >
-            <ChevronRight className="h-4 w-4" aria-hidden />
-          </button>
-        </div>
         <div className="flex flex-wrap justify-center gap-1.5" role="radiogroup" aria-label="Voice style">
           {ORB_VOICE_STYLE_OPTIONS.map((option) => (
             <button
@@ -101,35 +66,8 @@ export function OrbVoiceModeSelector({
         </div>
       </div>
 
-      <div className="space-y-1.5">
-        <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--orb-muted)]">Reasoning mode</p>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            className="orb-voice-mode-selector__nav rounded-full border border-[var(--orb-line)] p-1.5 text-[var(--orb-muted)] hover:bg-[var(--orb-surface-hover)]"
-            onClick={() => shiftReasoning(-1)}
-            aria-label="Previous reasoning mode"
-            data-orb-voice-reasoning-prev
-          >
-            <ChevronLeft className="h-4 w-4" aria-hidden />
-          </button>
-          <div
-            className="min-w-0 flex-1 rounded-full border border-[var(--orb-line)]/60 bg-[var(--orb-surface-elevated)] px-3 py-2 text-center text-sm font-medium text-[var(--orb-foreground)]"
-            data-orb-voice-reasoning-value
-            role="status"
-          >
-            {ORB_VOICE_REASONING_OPTIONS[reasoningIndex]?.label ?? 'Talk it through'}
-          </div>
-          <button
-            type="button"
-            className="orb-voice-mode-selector__nav rounded-full border border-[var(--orb-line)] p-1.5 text-[var(--orb-muted)] hover:bg-[var(--orb-surface-hover)]"
-            onClick={() => shiftReasoning(1)}
-            aria-label="Next reasoning mode"
-            data-orb-voice-reasoning-next
-          >
-            <ChevronRight className="h-4 w-4" aria-hidden />
-          </button>
-        </div>
+      <div className="space-y-1.5" data-orb-voice-reasoning-controls>
+        <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--orb-muted)]">Reasoning</p>
         <div className="flex flex-wrap justify-center gap-1.5" role="radiogroup" aria-label="Reasoning mode">
           {ORB_VOICE_REASONING_OPTIONS.map((option) => (
             <button
@@ -151,14 +89,6 @@ export function OrbVoiceModeSelector({
         </div>
       </div>
 
-      <div className="rounded-xl border border-[var(--orb-line)]/50 bg-[var(--orb-surface-elevated)]/70 px-3 py-2.5 text-center" data-orb-voice-mode-summary>
-        <p className="text-xs font-semibold text-[var(--orb-foreground)]" data-orb-voice-mode-headline>
-          {selection.headline}
-        </p>
-        <p className="mt-1 text-[11px] leading-relaxed text-[var(--orb-muted)]" data-orb-voice-mode-description>
-          {selection.description}
-        </p>
-      </div>
     </div>
   )
 }

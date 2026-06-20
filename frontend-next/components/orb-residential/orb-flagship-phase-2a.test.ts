@@ -101,7 +101,7 @@ describe('ORB Residential Phase 2A identity and station maturity', () => {
     assert.match(voice, /OrbVoiceModeSelector/)
     assert.match(selector, /data-orb-voice-mode-selector/)
     assert.match(selector, /role="radio"/)
-    assert.match(selector, /aria-label="Previous voice style"/)
+    assert.match(selector, /data-orb-voice-style-controls/)
     assert.match(selector, /data-orb-voice-reasoning-option/)
   })
 

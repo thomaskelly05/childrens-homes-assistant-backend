@@ -50,9 +50,9 @@ export function OrbTranscriptPanel({
     <div className="flex min-h-0 flex-1 flex-col orb-dictate-capture-canvas" data-orb-transcript-panel data-orb-dictate-transcript-panel data-orb-dictate-capture-zone>
       <header className="flex shrink-0 items-center justify-between gap-3 border-b border-[var(--orb-line)]/40 px-4 py-3">
         <div>
-          <h3 className="text-sm font-semibold text-[var(--orb-foreground)]">Capture rough notes</h3>
+          <h3 className="text-sm font-semibold text-[var(--orb-foreground)]">Speak or paste what happened</h3>
           <p className="mt-0.5 text-[11px] text-[var(--orb-muted)]">
-            Capture rough notes here. You can edit before review.
+            ORB helps turn rough information into a safer draft for adult review.
           </p>
           <p className="text-[10px] text-[var(--orb-muted)]/80" data-orb-dictate-recording-status>
             {recordingActive ? (recordingPaused ? 'Paused' : 'Recording') : 'Ready to capture'}
@@ -74,7 +74,7 @@ export function OrbTranscriptPanel({
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden p-4">
         {isEmpty && !recordingActive ? (
           <div
-            className="orb-dictate-capture-empty mb-3 flex shrink-0 flex-col items-center rounded-xl border border-dashed border-[var(--orb-line)]/45 bg-[var(--orb-surface)]/40 px-6 py-8 text-center"
+            className="orb-dictate-capture-empty mb-3 flex shrink-0 flex-col items-center rounded-xl bg-[var(--orb-surface)]/40 px-6 py-10 text-center"
             data-orb-dictate-transcript-empty
           >
             <OrbIcon name="record" size="lg" className="mb-3 text-[var(--orb-primary)]/80" />

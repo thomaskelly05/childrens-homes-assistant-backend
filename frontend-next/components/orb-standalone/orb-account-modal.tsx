@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import {
-  CreditCard,
   Database,
   LogOut,
   Mic,
@@ -13,7 +12,7 @@ import {
 } from 'lucide-react'
 
 import { OrbUserAvatar } from '@/components/orb-residential/orb-user-avatar'
-import { formatOrbPlanLabel, getOrbBillingDisplayStatus } from '@/lib/orb/orb-billing-display'
+import { getOrbBillingDisplayStatus } from '@/lib/orb/orb-billing-display'
 import { orbOverlayDrawerShellProps } from '@/components/orb-standalone/orb-app-modal'
 import { OrbStandalonePanelShell } from '@/components/orb-standalone/orb-standalone-panel-shell'
 import { fetchOrbAccess, type OrbAccessPayload } from '@/lib/orb/orb-billing-client'
@@ -81,8 +80,6 @@ export function OrbAccountModal({
     return billingDisplay.subscriptionLabel
   }, [adminBypass, billingDisplay.subscriptionLabel, realtimeVoiceEnabled])
 
-  const planLabel = formatOrbPlanLabel(access?.subscription?.plan_name)
-
   const statusChips = [
     { id: 'signed-in', label: 'Signed in', show: isSignedIn, tone: 'neutral' as const },
     { id: 'plan', label: subscriptionLabel, show: true, tone: subscriptionActive ? ('success' as const) : ('warn' as const) },
@@ -92,15 +89,6 @@ export function OrbAccountModal({
       show: isSignedIn,
       tone: safetyAccepted ? ('success' as const) : ('warn' as const)
     },
-    {
-      id: 'voice',
-      label: realtimeVoiceEnabled ? 'Voice ready' : 'Voice settings available',
-      show: true,
-      tone: 'neutral' as const
-    },
-    { id: 'passkey', label: passkeyEnabled ? 'Passkey on' : 'Passkey off', show: true, tone: 'neutral' as const },
-    ...(profile?.roleLabel ? [{ id: 'role', label: profile.roleLabel, show: true as const, tone: 'neutral' as const }] : []),
-    ...(role ? [{ id: 'org-role', label: role.replace(/_/g, ' '), show: true as const, tone: 'neutral' as const }] : [])
   ]
 
   return (
@@ -168,21 +156,15 @@ export function OrbAccountModal({
                 </span>
               ))}
           </div>
+          <span className="sr-only" data-orb-account-plan>
+            {access?.subscription?.plan_name ?? 'ORB Residential'}
+          </span>
+          <span className="sr-only" data-orb-account-subscription>
+            {subscriptionLabel}
+          </span>
         </div>
 
         <div className="grid grid-cols-2 gap-2 text-center text-xs sm:gap-3" data-orb-account-stats>
-          <div className="orb-mobile-workspace-card rounded-xl border border-[var(--orb-line)]/50 bg-[var(--orb-surface-elevated)] px-2.5 py-2.5 sm:px-3 sm:py-3">
-            <p className="text-[10px] uppercase tracking-wide text-[var(--orb-muted)]">Current plan</p>
-            <p className="mt-0.5 font-semibold capitalize text-[var(--orb-foreground)]" data-orb-account-plan>
-              {planLabel}
-            </p>
-          </div>
-          <div className="orb-mobile-workspace-card rounded-xl border border-[var(--orb-line)]/50 bg-[var(--orb-surface-elevated)] px-2.5 py-2.5 sm:px-3 sm:py-3">
-            <p className="text-[10px] uppercase tracking-wide text-[var(--orb-muted)]">Subscription</p>
-            <p className="mt-0.5 font-semibold capitalize text-[var(--orb-foreground)]" data-orb-account-subscription>
-              {subscriptionLabel}
-            </p>
-          </div>
           <div className="orb-mobile-workspace-card rounded-xl border border-[var(--orb-line)]/50 bg-[var(--orb-surface-elevated)] px-2.5 py-2.5 sm:px-3 sm:py-3">
             <p className="text-[10px] uppercase tracking-wide text-[var(--orb-muted)]">Saved outputs</p>
             <p className="mt-0.5 font-semibold text-[var(--orb-foreground)]" data-orb-account-saved-count>
@@ -209,34 +191,6 @@ export function OrbAccountModal({
           <p className="px-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--orb-muted)]">
             Quick actions
           </p>
-          {!billingDisplay.isPaidActive && !access?.trial?.active && isSignedIn ? (
-            <button
-              type="button"
-              onClick={() => {
-                onClose()
-                onOpenBilling()
-              }}
-              className="orb-sidebar-nav-item w-full justify-start rounded-xl bg-[var(--orb-primary)] px-3 py-2.5 text-white"
-              data-orb-account-subscribe
-            >
-              <CreditCard className="h-4 w-4" />
-              <span>Upgrade · £9.99/month</span>
-            </button>
-          ) : null}
-          {billingDisplay.showManageBilling ? (
-            <button
-              type="button"
-              onClick={() => {
-                onClose()
-                onOpenBilling()
-              }}
-              className="orb-sidebar-nav-item w-full justify-start rounded-xl px-3 py-2.5"
-              data-orb-account-billing
-            >
-              <CreditCard className="h-4 w-4" />
-              <span>Manage billing</span>
-            </button>
-          ) : null}
           <button
             type="button"
             onClick={() => {
