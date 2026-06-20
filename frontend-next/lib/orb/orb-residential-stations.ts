@@ -5,7 +5,12 @@
 
 import { ORB_DICTATE_SUBTITLE } from './orb-user-facing-names.ts'
 
-export type OrbResidentialStationId = 'chat' | 'orb_voice' | 'orb_dictate' | 'orb_write'
+export type OrbResidentialStationId =
+  | 'chat'
+  | 'orb_voice'
+  | 'orb_dictate'
+  | 'orb_communicate'
+  | 'orb_write'
 
 export type OrbResidentialStationDefinition = {
   id: OrbResidentialStationId
@@ -37,6 +42,12 @@ export const ORB_RESIDENTIAL_STATION_DEFINITIONS: Record<
     label: 'Dictate',
     tagline: ORB_DICTATE_SUBTITLE,
     helper: 'Speak or paste rough notes for a clearer draft'
+  },
+  orb_communicate: {
+    id: 'orb_communicate',
+    label: 'Communicate',
+    tagline: 'Accessible explanations, visual supports and reflection.',
+    helper: 'Easy read, visual boards, social stories and communication profiles'
   },
   orb_write: {
     id: 'orb_write',

@@ -9,6 +9,7 @@ export const ORB_NAV_HOME = 'Home'
 export const ORB_NAV_CHAT = 'Chat'
 export const ORB_NAV_DICTATE = 'Dictate'
 export const ORB_NAV_VOICE = 'Voice'
+export const ORB_NAV_COMMUNICATE = 'Communicate'
 export const ORB_NAV_WRITE = 'ORB Write'
 export const ORB_NAV_RECORDS = 'Records & Drafts'
 export const ORB_NAV_HELP = 'Help & Safety'
@@ -87,6 +88,7 @@ export const ORB_VISIBLE_SIDEBAR_NAV = [
   { id: 'chat' as const, label: ORB_NAV_CHAT },
   { id: 'orb_dictate' as const, label: ORB_NAV_DICTATE },
   { id: 'orb_voice' as const, label: ORB_NAV_VOICE },
+  { id: 'orb_communicate' as const, label: ORB_NAV_COMMUNICATE },
   { id: 'orb_write' as const, label: ORB_NAV_WRITE },
   { id: 'saved' as const, label: ORB_NAV_RECORDS },
   { id: 'help' as const, label: ORB_NAV_HELP },

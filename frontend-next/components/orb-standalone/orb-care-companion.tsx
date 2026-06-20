@@ -375,6 +375,13 @@ const OrbWriteStandalonePanel = dynamic(
     ),
   { loading: () => null, ssr: false }
 )
+const OrbCommunicateStation = dynamic(
+  () =>
+    import('@/components/orb-communicate/orb-communicate-station').then(
+      (mod) => mod.OrbCommunicateStation
+    ),
+  { loading: () => null, ssr: false }
+)
 const OrbBillingModal = dynamic(
   () =>
     import('@/components/orb-standalone/orb-billing-modal').then((mod) => mod.OrbBillingModal),
@@ -1007,6 +1014,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
     [openPanel]
   )
   const openOrbWritePanel = useCallback(() => openPanel('orb_write'), [openPanel])
+  const openOrbCommunicatePanel = useCallback(() => openPanel('orb_communicate'), [openPanel])
 
   const openOrbWriteWithContent = useCallback(
     (opts: {
@@ -2432,6 +2440,9 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
       case 'orb_dictate':
         openOrbDictatePanel()
         break
+      case 'orb_communicate':
+        openOrbCommunicatePanel()
+        break
       case 'orb_write':
         openOrbWritePanel()
         break
@@ -2529,7 +2540,9 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
         ? 'orb_dictate'
         : stationParam === 'write'
           ? 'orb_write'
-          : stationParam
+          : stationParam === 'communicate'
+            ? 'orb_communicate'
+            : stationParam
     ) as OrbResidentialStationId | null
     const lens = searchParams.get('lens')
     if (station) openResidentialStation(station)
@@ -3684,6 +3697,10 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
         onSendToChat={(text) => void sendMessage(text)}
         onOpenOrbVoice={openOrbVoicePanel}
         onOpenTemplates={residentialSurface && isMobileViewport ? undefined : openTemplatesPanel}
+      />
+      <OrbCommunicateStation
+        open={activePanel === 'orb_communicate'}
+        onClose={closePanel}
       />
       <OrbWriteStandalonePanel
         open={activePanel === 'orb_write'}

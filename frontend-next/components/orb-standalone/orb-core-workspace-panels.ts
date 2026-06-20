@@ -3,6 +3,7 @@ import type { OrbStandalonePanel } from '@/components/orb-standalone/orb-standal
 /** Core ORB tools that render in the main workspace (not centred modals) on `/orb`. */
 export const ORB_CORE_WORKSPACE_PANELS = [
   'orb_dictate',
+  'orb_communicate',
   'orb_write',
   'orb_voice',
   'documents',

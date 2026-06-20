@@ -428,6 +428,14 @@ html[data-orb-residential='1'] :focus-visible {
   background: var(--orb-res-workspace-bg);
 }
 
+.orb-workspace--communicate {
+  min-height: 0;
+}
+
+.orb-workspace--communicate [data-orb-communicate-hub] {
+  width: 100%;
+}
+
 .orb-workspace--records [data-orb-records-empty] {
   padding: clamp(2rem, 5vw, 4rem) 1.5rem;
   text-align: center;

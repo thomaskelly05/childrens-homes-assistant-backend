@@ -30,6 +30,7 @@ export const ORB_VISIBLE_SIDEBAR_NAV_IDS = [
   'chat',
   'orb_dictate',
   'orb_voice',
+  'orb_communicate',
   'orb_write',
   'saved',
   'help',
@@ -41,6 +42,7 @@ export const ORB_VISIBLE_MAIN_NAV_IDS = [
   'chat',
   'orb_dictate',
   'orb_voice',
+  'orb_communicate',
   'orb_write'
 ] as const
 
