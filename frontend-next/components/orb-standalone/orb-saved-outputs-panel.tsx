@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Archive, Loader2, Trash2 } from 'lucide-react'
 
+import { GlassOrbMark } from '@/components/orb-residential/ui/glass-orb-mark'
 import {
   OrbPremiumButton,
   OrbPremiumPill,
@@ -253,8 +254,10 @@ export function OrbSavedOutputsPanel({
         {showRecordsEmptyCanvas ? (
           <div className="flex w-full max-w-md flex-col items-center justify-center py-8" data-orb-records-empty>
             <OrbStudioEmptyState
+              icon={<GlassOrbMark size="sm" pulse aria-hidden />}
               title={ORB_RECORDS_EMPTY_TITLE}
               description={ORB_RECORDS_EMPTY_SUBTITLE}
+              className="orb-records-empty-state"
               actions={
                 <>
                   {onStartInDictate ? (

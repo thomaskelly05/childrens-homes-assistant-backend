@@ -178,7 +178,7 @@ export function OrbDictateBrainPanel({
 
   return (
     <div
-      className="flex min-h-0 flex-1 flex-col rounded-xl border border-[var(--orb-line)]/25 bg-[var(--orb-surface)]/70"
+      className="flex min-h-0 flex-1 flex-col"
       data-orb-dictate-brain-panel
       data-orb-dictate-side-panel
       data-orb-dictate-brain-collapsed={collapsed ? 'true' : 'false'}
@@ -188,8 +188,8 @@ export function OrbDictateBrainPanel({
         <div className="min-w-0 flex-1">
           <h3 className="truncate text-sm font-semibold text-[var(--orb-foreground)]">ORB Review</h3>
           {!collapsed ? (
-            <p className="truncate text-[10px] text-[var(--orb-muted)]">
-              {ORB_RESIDENTIAL_DICTATE_COPY.reviewHint} You remain responsible for the final record.
+            <p className="text-xs leading-relaxed text-[var(--orb-muted)]" data-orb-brain-review-intro>
+              {ORB_RESIDENTIAL_DICTATE_COPY.reviewHint}
             </p>
           ) : null}
         </div>

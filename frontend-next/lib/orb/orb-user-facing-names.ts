@@ -37,7 +37,7 @@ export const ORB_DICTATE_CAPTURE_PROMPT = 'Start with speech, paste notes or upl
 export const ORB_DICTATE_CAPTURE_GUIDANCE =
   'ORB will help structure what was shared, what was observed and what may need follow-up.'
 export const ORB_DICTATE_REVIEW_HINT =
-  'ORB will help check what may be missing before you write the final record.'
+  'I\u2019ll help you check what may be missing before you write the final record.'
 export const ORB_DICTATE_RESPONSIBILITY = 'Adult review required before use.'
 
 /** Chat home — child-centred empty state (Phase 1H). */

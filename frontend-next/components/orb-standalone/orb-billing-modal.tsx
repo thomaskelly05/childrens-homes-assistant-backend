@@ -9,6 +9,7 @@ import { OrbAppModal } from '@/components/orb-standalone/orb-app-modal'
 import {
   ORB_RESIDENTIAL_BILLING_INCLUDED_ITEMS,
   ORB_RESIDENTIAL_BILLING_HEADER,
+  ORB_RESIDENTIAL_BILLING_PROVIDER_COPY,
   ORB_RESIDENTIAL_BILLING_SUBTITLE
 } from '@/lib/orb/orb-residential-ui-copy'
 import {
@@ -618,11 +619,8 @@ export function OrbBillingModal({
             <summary className="cursor-pointer list-none text-xs font-semibold uppercase tracking-wide text-[var(--orb-muted)] [&::-webkit-details-marker]:hidden">
               Provider team plans
             </summary>
-            <p className="mt-1.5 text-xs leading-5 text-[var(--orb-muted)]">
-              Team billing and seat management for provider organisations.
-            </p>
-            <p className="mt-1 text-[10px] font-medium uppercase tracking-wide text-[var(--orb-muted)]">
-              Coming soon
+            <p className="mt-1.5 text-xs leading-5 text-[var(--orb-muted)]" data-orb-billing-provider-copy>
+              {ORB_RESIDENTIAL_BILLING_PROVIDER_COPY}
             </p>
             <a
               href="mailto:support@indicare.co.uk?subject=ORB%20Residential%20provider%20team"
@@ -636,11 +634,8 @@ export function OrbBillingModal({
             <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--orb-muted)]">
               Provider team plans
             </h3>
-            <p className="mt-1.5 text-xs leading-5 text-[var(--orb-muted)]">
-              Team billing and seat management for provider organisations.
-            </p>
-            <p className="mt-1 text-[10px] font-medium uppercase tracking-wide text-[var(--orb-muted)]">
-              Coming soon
+            <p className="mt-1.5 text-xs leading-5 text-[var(--orb-muted)]" data-orb-billing-provider-copy>
+              {ORB_RESIDENTIAL_BILLING_PROVIDER_COPY}
             </p>
             <a
               href="mailto:support@indicare.co.uk?subject=ORB%20Residential%20provider%20team"

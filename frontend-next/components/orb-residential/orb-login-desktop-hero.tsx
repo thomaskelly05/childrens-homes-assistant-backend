@@ -4,6 +4,7 @@ import { OrbHeroSphere } from '@/components/orb-residential/ui/orb-hero-sphere'
 import { OrbRequestDemoLink } from '@/components/orb-residential/orb-request-demo-link'
 import {
   ORB_LOGIN_ENTERPRISE_SUBHEADLINE,
+  ORB_LOGIN_ENTERPRISE_SUPPORTING,
   ORB_LOGIN_ENTERPRISE_TITLE
 } from '@/lib/orb/orb-convergence-phase-1h-copy'
 
@@ -41,6 +42,9 @@ export function OrbLoginDesktopHero() {
         </h1>
         <p className="orb-login-lead orb-login-lead--showstopper mt-3 max-w-lg leading-relaxed" data-orb-login-subheadline>
           {ORB_LOGIN_ENTERPRISE_SUBHEADLINE}
+        </p>
+        <p className="orb-login-supporting mt-4 max-w-lg text-sm leading-relaxed text-slate-300" data-orb-login-supporting>
+          {ORB_LOGIN_ENTERPRISE_SUPPORTING}
         </p>
 
         <p className="orb-login-muted mt-6 max-w-lg text-sm leading-relaxed opacity-90">

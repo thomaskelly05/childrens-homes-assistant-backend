@@ -4267,10 +4267,12 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
                         className={residentialSurface ? 'orb-workspace-home-main w-full' : 'w-full'}
                         {...(residentialSurface ? { 'data-orb-workspace-home-main': true } : {})}
                       >
-                    <div className="orb-workspace-hero" data-orb-workspace-hero>
+                    <div className="orb-workspace-hero orb-workspace-hero--premium" data-orb-workspace-hero>
+                    {residentialSurface ? <div className="orb-home-orb-glow" aria-hidden /> : null}
                     <div
                       className="relative flex shrink-0 justify-center"
                       data-orb-empty-sphere
+                      data-orb-identity-mark
                       data-orb-presence-slot="hero"
                     >
                       {residentialSurface ? (
@@ -4287,11 +4289,11 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
                     </div>
                     {residentialSurface ? (
                       <>
-                        <p className="mt-2 text-xs text-[var(--orb-muted)]" data-orb-brand-powered>
-                          Powered by IndiCare Intelligence
+                        <p className="orb-brand-eyebrow" data-orb-brand-eyebrow>
+                          ORB Residential
                         </p>
                         <h2
-                          className="orb-workspace-headline mt-4 text-xl font-semibold tracking-tight text-slate-900 md:mt-6 md:text-[1.5rem]"
+                          className="orb-workspace-headline mt-3 text-xl font-semibold tracking-tight text-slate-900 md:mt-4 md:text-[1.5rem]"
                           data-orb-empty-heading
                           data-orb-empty-heading-desktop
                           data-orb-workspace-headline

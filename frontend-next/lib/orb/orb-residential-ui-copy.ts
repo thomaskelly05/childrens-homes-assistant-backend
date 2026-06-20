@@ -4,8 +4,10 @@ export const ORB_HOME_PRODUCT_CONTEXT_ROW =
   'Chat \u00b7 Dictate \u00b7 Voice \u00b7 ORB Write \u00b7 Records & Drafts'
 
 export const ORB_RESIDENTIAL_BILLING_HEADER = 'ORB Residential'
-export const ORB_RESIDENTIAL_BILLING_SUBTITLE =
-  'Specialist intelligence for children\u2019s homes, designed to support safer recording, stronger reflection and clearer evidence.'
+export const ORB_RESIDENTIAL_BILLING_SUBTITLE = 'Specialist intelligence for children\u2019s homes.'
+
+export const ORB_RESIDENTIAL_BILLING_PROVIDER_COPY =
+  'Provider plans are being shaped with early users and organisations.'
 
 export const ORB_VOICE_STATUS_CARD_COPY =
   'Voice is for reflective support. Audio is not stored. Review any transcript before use.'

@@ -81,7 +81,8 @@ describe('ORB Residential desktop convergence sprint', () => {
 
     assert.match(companion, /data-orb-residential-empty/)
     assert.match(companion, /data-orb-empty-heading-desktop/)
-    assert.match(companion, /Powered by IndiCare Intelligence/)
+    assert.match(companion, /data-orb-brand-eyebrow/)
+    assert.match(companion, /ORB Residential/)
     assert.match(companion, /data-orb-workspace-starters/)
     assert.match(composer, /orb-liquid-composer/)
     assert.doesNotMatch(composer, /data-orb-privacy-guidance-trigger/)
