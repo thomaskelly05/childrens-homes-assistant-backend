@@ -470,7 +470,7 @@ export function OrbWriteStandalonePanel({
                   ORB Write
                 </h2>
                 <p className="text-[11px] text-slate-600" data-orb-write-studio-subtitle>
-                  A specialist care documentation studio — draft, review and finalise records with ORB.
+                  A care documentation studio — draft, review and finalise records with ORB.
                 </p>
               </div>
               <p className="text-[11px] leading-relaxed text-slate-600" data-orb-write-studio-guidance>

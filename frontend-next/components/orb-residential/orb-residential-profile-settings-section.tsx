@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 
+import { GlassOrbMark } from '@/components/orb-residential/ui/glass-orb-mark'
 import { OrbUserAvatar } from '@/components/orb-residential/orb-user-avatar'
 import type { AdultProfileRole } from '@/lib/orb/adult-profile-store'
 import { CANONICAL_ADULT_PROFILE_ROLES, roleLabelFor } from '@/lib/orb/adult-profile-store'
@@ -57,18 +58,27 @@ export function OrbResidentialProfileSettingsSection({
   }
 
   const previewAvatar = avatarDataUrl || authAvatarUrl || null
+  const showOrbFallback = !previewAvatar
 
   return (
-    <section className="space-y-4" data-orb-settings-profile-section>
+    <section className="orb-settings-profile-card space-y-4 rounded-xl border border-[var(--orb-line)]/40 bg-[var(--orb-surface)]/60 p-4" data-orb-settings-profile-section>
       <div>
-        <h3 className="text-sm font-semibold text-[var(--orb-foreground)]">Profile</h3>
-        <p className="mt-1 text-xs text-[var(--orb-muted)]">
-          Edit how you appear in ORB Residential. Saved locally on this device until backend sync is available.
+        <h3 className="text-sm font-semibold text-[var(--orb-foreground)]">Your profile</h3>
+        <p className="mt-1 text-xs text-[var(--orb-muted)]" data-orb-settings-profile-local-note>
+          How you appear in ORB Residential. Saved on this device until account sync is available.
         </p>
       </div>
 
-      <div className="flex items-center gap-3">
-        <OrbUserAvatar name={displayName || authName || 'User'} avatarUrl={previewAvatar} size="md" />
+      <div className="flex items-center gap-4">
+        <div className="relative shrink-0">
+          {showOrbFallback ? (
+            <div className="flex h-12 w-12 items-center justify-center rounded-full border border-[var(--orb-line)]/50 bg-[var(--orb-surface-elevated)]" data-orb-settings-profile-orb-fallback>
+              <GlassOrbMark size="sm" aria-hidden />
+            </div>
+          ) : (
+            <OrbUserAvatar name={displayName || authName || 'User'} avatarUrl={previewAvatar} size="lg" />
+          )}
+        </div>
         <label className="inline-flex cursor-pointer rounded-lg border border-[var(--orb-line)] px-3 py-2 text-xs font-medium text-[var(--orb-foreground)] hover:bg-[var(--orb-surface-hover)]">
           Change photo
           <input

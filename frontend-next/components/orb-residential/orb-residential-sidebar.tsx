@@ -22,6 +22,8 @@ import {
 } from 'lucide-react'
 
 import { GlassOrbMark } from '@/components/orb-residential/ui/glass-orb-mark'
+import { OrbBrandMark } from '@/components/orb-residential/ui/orb-brand-mark'
+import { OrbIcon } from '@/components/orb-residential/ui/orb-icon'
 import { OrbUserAvatar } from '@/components/orb-residential/orb-user-avatar'
 import { OrbProjectMemoryModal } from '@/components/orb-residential/orb-project-memory-modal'
 import { ORB_RESIDENTIAL_TAGLINE } from '@/lib/orb/orb-residential-copy'
@@ -83,10 +85,22 @@ const NAV_ICON_BY_ID: Record<string, typeof Home> = {
   settings: Settings
 }
 
+const NAV_ICON_NAME_BY_ID: Record<string, import('@/components/orb-residential/ui/orb-icon').OrbIconName> = {
+  home: 'home',
+  chat: 'chat',
+  orb_dictate: 'dictate',
+  orb_voice: 'voice',
+  orb_communicate: 'communicate',
+  orb_write: 'write',
+  saved: 'records',
+  help: 'help',
+  settings: 'settings'
+}
+
 /** Phase 1A — single visible sidebar list (no Library section). */
 const RESIDENTIAL_VISIBLE_NAV = ORB_VISIBLE_SIDEBAR_NAV.map((entry) => ({
   ...entry,
-  icon: NAV_ICON_BY_ID[entry.id] ?? MessageSquare
+  iconName: NAV_ICON_NAME_BY_ID[entry.id] ?? 'chat'
 }))
 
 export type OrbResidentialStationId = (typeof NAV_ITEMS)[number]['id']
@@ -527,9 +541,7 @@ export function OrbResidentialSidebar({
           <MessageSquarePlus className="h-4 w-4 shrink-0" />
         </SidebarIconButton>
         <nav className="flex w-full flex-col gap-0.5 px-1" aria-label="ORB navigation">
-          {RESIDENTIAL_VISIBLE_NAV.map((entry) => {
-            const Icon = entry.icon
-            return (
+          {RESIDENTIAL_VISIBLE_NAV.map((entry) => (
               <SidebarIconButton
                 key={entry.id}
                 label={entry.label}
@@ -540,10 +552,9 @@ export function OrbResidentialSidebar({
                     : `orb-sidebar-station-${entry.id}`
                 }
               >
-                <Icon className="h-4 w-4 shrink-0" />
+                <OrbIcon name={entry.iconName} size="md" />
               </SidebarIconButton>
-            )
-          })}
+            ))}
         </nav>
         <div className="mt-auto flex w-full flex-col gap-0.5 px-1">
           <SidebarIconButton
@@ -572,18 +583,8 @@ export function OrbResidentialSidebar({
   return (
     <div className="flex h-full min-h-0 flex-col orb-sidebar" data-orb-sidebar-panel data-orb-sidebar-state="expanded">
       <div className="orb-sidebar-header shrink-0 px-3 py-3" data-orb-sidebar-header>
-        <div className="flex items-center gap-2.5">
-          <GlassOrbMark size="sm" className="shrink-0" pulse data-orb-sidebar-brand-mark />
-          <div className="min-w-0 flex-1">
-            <div className="flex min-w-0 items-center gap-2">
-              <p className="truncate text-sm font-semibold leading-tight text-[var(--orb-foreground)]" data-orb-sidebar-brand>
-                ORB Residential
-              </p>
-            </div>
-            <p className="orb-sidebar-powered-tagline mt-0.5 text-[10px]" data-orb-sidebar-powered>
-              {ORB_RESIDENTIAL_TAGLINE}
-            </p>
-          </div>
+        <div className="flex items-start justify-between gap-2" data-orb-sidebar-brand>
+          <OrbBrandMark size="sm" pulse className="min-w-0 flex-1" />
           <div className="flex shrink-0 items-center gap-0.5">
             {onToggleCollapse ? (
               <button
@@ -616,8 +617,8 @@ export function OrbResidentialSidebar({
           data-orb-sidebar-new-chat
           aria-label="New chat"
         >
-          <MessageSquarePlus className="h-4 w-4" aria-hidden />
-          <span>New chat</span>
+          <OrbIcon name="new_chat" size="md" className="text-white" />
+          <span className="orb-sidebar-new-chat-label">New chat</span>
         </button>
         <label
           className="orb-sidebar-search mt-2 flex items-center gap-2 rounded-lg border border-[var(--orb-line)]/40 bg-white px-3 py-2"
@@ -653,7 +654,6 @@ export function OrbResidentialSidebar({
               <span className="text-sm">Search</span>
             </button>
             {RESIDENTIAL_VISIBLE_NAV.map((item) => {
-              const Icon = item.icon
               const badge =
                 item.id === 'saved' && savedOutputsCount ? String(savedOutputsCount) : undefined
               return (
@@ -668,7 +668,7 @@ export function OrbResidentialSidebar({
                   data-orb-sidebar-station={item.id}
                   {...(item.id === 'orb_dictate' ? { 'data-orb-sidebar-dictate': true } : {})}
                 >
-                  <Icon className="h-4 w-4 shrink-0" />
+                  <OrbIcon name={item.iconName} size="md" />
                   <span className="text-sm">{item.label}</span>
                   {badge ? (
                     <span className="rounded-full bg-[var(--orb-surface-hover)] px-2 py-0.5 text-[10px]">
@@ -829,9 +829,7 @@ export function OrbResidentialSidebar({
         {!isMobile ? (
           <nav className="mb-2 space-y-0.5" aria-label="ORB desktop navigation" data-orb-sidebar-desktop-nav>
             <ul className="space-y-0.5" data-orb-sidebar-main>
-              {RESIDENTIAL_VISIBLE_NAV.map((entry) => {
-                const Icon = entry.icon
-                return (
+              {RESIDENTIAL_VISIBLE_NAV.map((entry) => (
                   <li key={entry.id}>
                     <button
                       type="button"
@@ -842,7 +840,7 @@ export function OrbResidentialSidebar({
                         ? { 'data-orb-sidebar-chat': true }
                         : { 'data-orb-sidebar-station': entry.id })}
                     >
-                      <Icon className="h-4 w-4 shrink-0" aria-hidden />
+                      <OrbIcon name={entry.iconName} size="md" />
                       <span className="min-w-0 flex-1 truncate text-left text-sm">{entry.label}</span>
                       {entry.id === 'saved' && savedOutputsCount ? (
                         <span className="rounded-full bg-[var(--orb-surface-hover)] px-2 py-0.5 text-[10px]">
@@ -851,8 +849,7 @@ export function OrbResidentialSidebar({
                       ) : null}
                     </button>
                   </li>
-                )
-              })}
+                ))}
             </ul>
           </nav>
         ) : null}

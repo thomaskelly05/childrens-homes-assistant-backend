@@ -7,6 +7,10 @@ import { OrbUserAvatar } from '@/components/orb-residential/orb-user-avatar'
 import { formatOrbPlanLabel, getOrbBillingDisplayStatus } from '@/lib/orb/orb-billing-display'
 import { traceOrbComposerInteraction } from '@/lib/orb/orb-composer-interaction-trace'
 import {
+  ORB_RESIDENTIAL_BILLING_INCLUDED_ITEMS,
+  ORB_RESIDENTIAL_BILLING_PROVIDER_COPY
+} from '@/lib/orb/orb-residential-ui-copy'
+import {
   fetchOrbAccess,
   fetchOrbBillingMeter,
   openOrbBillingPortal,
@@ -220,9 +224,26 @@ export function OrbBillingSettingsSection({
         ) : null}
       </div>
 
-      <p className="text-[10px] leading-5 text-[var(--orb-muted)]">
-        ORB Residential billing is separate from IndiCare OS.
-      </p>
+      <div className="rounded-xl border border-[var(--orb-line)]/40 bg-[var(--orb-surface)]/40 p-3" data-orb-billing-included>
+        <p className="text-xs font-semibold text-[var(--orb-foreground)]">What&apos;s included</p>
+        <ul className="mt-2 flex flex-wrap gap-1.5">
+          {ORB_RESIDENTIAL_BILLING_INCLUDED_ITEMS.map((item) => (
+            <li
+              key={item}
+              className="rounded-full border border-[var(--orb-line)]/50 bg-[var(--orb-surface-elevated)] px-2 py-0.5 text-[10px] text-[var(--orb-muted)]"
+            >
+              {item}
+            </li>
+          ))}
+        </ul>
+        <p className="mt-3 text-[10px] leading-5 text-[var(--orb-muted)]" data-orb-billing-provider-copy>
+          {ORB_RESIDENTIAL_BILLING_PROVIDER_COPY}
+        </p>
+        <p className="mt-2 text-[10px] leading-5 text-[var(--orb-muted)]" data-orb-billing-trust-note>
+          ORB Residential billing is separate from IndiCare OS. Your data stays under adult control — review every
+          output before use in practice.
+        </p>
+      </div>
     </div>
   )
 }

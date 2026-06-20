@@ -2,18 +2,14 @@ import Link from 'next/link'
 
 import { GlassOrbMark } from '@/components/orb-residential/ui/glass-orb-mark'
 import { OrbRequestDemoLink } from '@/components/orb-residential/orb-request-demo-link'
-import {
-  ORB_LOGIN_ENTERPRISE_SUBHEADLINE,
-  ORB_LOGIN_ENTERPRISE_SUPPORTING,
-  ORB_LOGIN_ENTERPRISE_TITLE
-} from '@/lib/orb/orb-convergence-phase-1h-copy'
+import { ORB_LOGIN_ENTERPRISE_TITLE, ORB_LOGIN_ENTERPRISE_SUBHEADLINE, ORB_LOGIN_ENTERPRISE_SUPPORTING } from '@/lib/orb/orb-convergence-phase-1h-copy'
 import {
   ORB_LOGIN_FOUNDER_LINE,
   ORB_LOGIN_PRODUCT_EXPLANATION,
   ORB_LOGIN_STATION_DESCRIPTIONS
 } from '@/lib/orb/orb-login-stations-copy'
 
-/** Desktop/tablet left hero — calm brand panel with ORB identity. */
+/** Desktop/tablet left hero — compact product entrance above the fold. */
 export function OrbLoginDesktopHero() {
   return (
     <div
@@ -23,56 +19,61 @@ export function OrbLoginDesktopHero() {
       data-orb-login-brand-panel
     >
       <div className="orb-login-hero-glow pointer-events-none absolute inset-0" aria-hidden />
-      <div className="orb-login-hero-inner relative mx-auto flex w-full max-w-lg flex-col justify-center">
-        <div className="orb-login-hero-visual mb-6" data-orb-login-hero-visual>
-          <div className="orb-login-hero-sphere-wrap flex justify-center" data-orb-login-hero-sphere>
-            <GlassOrbMark size="lg" pulse data-orb-login-brand-mark />
+      <div className="orb-login-hero-inner relative mx-auto flex w-full max-w-lg flex-col justify-center py-6 lg:max-h-[100dvh] lg:overflow-y-auto lg:overscroll-contain">
+        <div className="flex flex-col items-start gap-3" data-orb-login-hero-visual>
+          <div className="orb-login-hero-sphere-wrap shrink-0" data-orb-login-hero-sphere>
+            <GlassOrbMark size="md" pulse data-orb-login-brand-mark />
+          </div>
+          <div className="min-w-0" data-orb-login-hero-brand>
+            <Link href="/orb" className="orb-login-brand-link text-sm font-semibold tracking-wide" data-orb-login-brand>
+              {ORB_LOGIN_ENTERPRISE_TITLE}
+            </Link>
+            <p className="orb-login-tagline mt-0.5 text-xs" data-orb-login-engine-line>
+              Powered by IndiCare Intelligence
+            </p>
           </div>
         </div>
 
-        <div className="orb-login-hero-brand" data-orb-login-hero-brand>
-          <Link href="/orb" className="orb-login-brand-link text-sm font-semibold tracking-wide" data-orb-login-brand>
-            {ORB_LOGIN_ENTERPRISE_TITLE}
-          </Link>
-          <p className="orb-login-tagline mt-0.5 text-xs" data-orb-login-engine-line>
-            Powered by IndiCare Intelligence
-          </p>
-        </div>
+        <p
+          className="orb-login-headline--showstopper mt-4 text-base font-semibold leading-snug text-slate-100"
+          data-orb-login-title
+          data-orb-login-subheadline
+        >
+          {ORB_LOGIN_ENTERPRISE_SUBHEADLINE}
+        </p>
 
-        <p className="orb-login-founder-line mt-4 max-w-lg text-sm font-medium leading-relaxed" data-orb-login-founder-line>
+        <p className="orb-login-supporting mt-2 text-sm leading-relaxed text-slate-200" data-orb-login-supporting>
+          {ORB_LOGIN_ENTERPRISE_SUPPORTING}
+        </p>
+
+        <p className="orb-login-founder-line mt-4 text-sm font-medium leading-relaxed" data-orb-login-founder-line>
           {ORB_LOGIN_FOUNDER_LINE}
         </p>
 
-        <h1
-          className="orb-login-headline orb-login-headline--showstopper mt-5 max-w-lg font-semibold leading-tight tracking-tight"
-          data-orb-login-title
-        >
-          {ORB_LOGIN_ENTERPRISE_TITLE}
-        </h1>
-        <p className="orb-login-lead orb-login-lead--showstopper mt-3 max-w-lg leading-relaxed" data-orb-login-subheadline>
-          {ORB_LOGIN_ENTERPRISE_SUBHEADLINE}
-        </p>
-        <p className="orb-login-supporting mt-4 max-w-lg text-sm leading-relaxed text-slate-300" data-orb-login-supporting>
-          {ORB_LOGIN_ENTERPRISE_SUPPORTING}
-        </p>
-        <p className="orb-login-product-explainer mt-4 max-w-lg text-sm leading-relaxed text-slate-200" data-orb-login-product-explainer>
+        <p className="orb-login-product-explainer mt-3 text-sm leading-relaxed text-slate-200" data-orb-login-product-explainer>
           {ORB_LOGIN_PRODUCT_EXPLANATION}
         </p>
 
-        <div className="orb-login-stations mt-6 space-y-2.5" data-orb-login-stations>
-          {ORB_LOGIN_STATION_DESCRIPTIONS.map((station) => (
-            <div key={station.id} className="orb-login-station-row" data-orb-login-station={station.id}>
-              <p className="text-sm font-semibold text-slate-100">{station.label}</p>
-              <p className="text-xs leading-relaxed text-slate-300">{station.description}</p>
-            </div>
-          ))}
+        <div className="orb-login-stations mt-5" data-orb-login-stations>
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">ORB stations</p>
+          <div
+            className="orb-login-stations-scroll grid max-h-[min(14rem,32dvh)] gap-2 overflow-y-auto overscroll-contain sm:grid-cols-2"
+            data-orb-login-stations-scroll
+          >
+            {ORB_LOGIN_STATION_DESCRIPTIONS.map((station) => (
+              <div key={station.id} className="orb-login-station-row min-w-0" data-orb-login-station={station.id}>
+                <p className="text-sm font-semibold text-slate-100">{station.label}</p>
+                <p className="text-[11px] leading-relaxed text-slate-300">{station.description}</p>
+              </div>
+            ))}
+          </div>
         </div>
 
-        <p className="orb-login-muted mt-6 max-w-lg text-sm leading-relaxed opacity-90">
+        <p className="orb-login-muted mt-4 text-xs leading-relaxed opacity-90">
           ORB supports professional judgement. It does not replace safeguarding procedures or local policy.
         </p>
 
-        <p className="orb-login-demo-link mt-6 text-sm" data-orb-login-demo-path>
+        <p className="orb-login-demo-link mt-4 text-sm" data-orb-login-demo-path>
           <OrbRequestDemoLink
             surface="login"
             className="font-semibold text-slate-100 underline-offset-2 hover:underline"

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { OrbDictateBrainPanel } from '@/components/orb/dictate/OrbDictateBrainPanel'
+import { GlassOrbMark } from '@/components/orb-residential/ui/glass-orb-mark'
 import { useOrbDictatePanelLayout } from '@/components/orb/dictate/OrbDictatePanelLayoutControl'
 import { OrbDictateSuggestedOutputs } from '@/components/orb/dictate/OrbDictateSuggestedOutputs'
 import {
@@ -266,13 +267,18 @@ export function OrbDictateStudioWorkspace(props: OrbDictateStudioWorkspaceProps)
       data-orb-dictate-empty={!hasTranscript ? 'true' : undefined}
       style={{ minHeight: 'min(100dvh - 4.5rem, calc(100svh - 4.5rem))' }}
     >
-      <header className="orb-workspace-header shrink-0 px-1 sm:px-0" data-orb-dictate-header>
-        <h2 className="orb-workspace-header-title" data-orb-dictate-title>
-          {ORB_DICTATE_TITLE}
-        </h2>
-        <p className="orb-workspace-header-lead" data-orb-dictate-subtitle-header>
-          {ORB_DICTATE_SUBTITLE}
-        </p>
+      <header className="orb-dictate-hero-strip shrink-0 rounded-xl border border-[var(--orb-line)]/40 bg-[var(--orb-surface-elevated)]/80 px-3 py-3 sm:px-4" data-orb-dictate-hero-strip>
+        <div className="flex min-w-0 items-start gap-3">
+          <GlassOrbMark size="sm" pulse className="shrink-0" aria-hidden />
+          <div className="min-w-0 flex-1">
+            <h2 className="text-sm font-semibold tracking-tight text-[var(--orb-foreground)]" data-orb-dictate-title>
+              ORB Dictate
+            </h2>
+            <p className="mt-0.5 text-xs leading-relaxed text-[var(--orb-muted)]" data-orb-dictate-subtitle-header>
+              Speak, paste or upload rough notes. ORB helps shape them into safer drafts for adult review.
+            </p>
+          </div>
+        </div>
       </header>
 
       <OrbDictateTopBar

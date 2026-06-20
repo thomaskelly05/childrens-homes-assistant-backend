@@ -77,16 +77,8 @@ export function OrbWriteToolbar({
       role="toolbar"
       aria-label="Document formatting and actions"
     >
-      <div className="flex flex-wrap items-center gap-1" data-orb-write-toolbar-group="format">
-      <span className="sr-only">Format</span>
-      <button type="button" className={btn} disabled={!canUndo} data-orb-write-undo onClick={() => onCommand('undo')} aria-label="Undo">
-        <Undo2 className="h-3.5 w-3.5" />
-      </button>
-      <button type="button" className={btn} disabled={!canRedo} data-orb-write-redo onClick={() => onCommand('redo')} aria-label="Redo">
-        <Redo2 className="h-3.5 w-3.5" />
-      </button>
-      <span className="mx-0.5 h-5 w-px bg-[var(--orb-line)]/40" aria-hidden />
-
+      <div className="flex flex-wrap items-center gap-1" data-orb-write-toolbar-group="structure">
+      <span className="hidden px-1 text-[9px] font-semibold uppercase tracking-wide text-[var(--orb-muted)] sm:inline">Structure</span>
       <label className="sr-only" htmlFor="orb-write-block-style">
         Paragraph style
       </label>
@@ -104,13 +96,25 @@ export function OrbWriteToolbar({
           </option>
         ))}
       </select>
-
       <button type="button" className={btn} data-orb-write-h1 onClick={() => onCommand('formatBlock', 'h1')} aria-label="Heading 1">
         <Heading1 className="h-3.5 w-3.5" />
       </button>
       <button type="button" className={btn} data-orb-write-h2 onClick={() => onCommand('formatBlock', 'h2')} aria-label="Heading 2">
         <Heading2 className="h-3.5 w-3.5" />
       </button>
+      </div>
+
+      <span className="mx-0.5 hidden h-5 w-px bg-[var(--orb-line)]/40 sm:block" aria-hidden />
+
+      <div className="flex flex-wrap items-center gap-1" data-orb-write-toolbar-group="format">
+      <span className="hidden px-1 text-[9px] font-semibold uppercase tracking-wide text-[var(--orb-muted)] sm:inline">Format</span>
+      <button type="button" className={btn} disabled={!canUndo} data-orb-write-undo onClick={() => onCommand('undo')} aria-label="Undo">
+        <Undo2 className="h-3.5 w-3.5" />
+      </button>
+      <button type="button" className={btn} disabled={!canRedo} data-orb-write-redo onClick={() => onCommand('redo')} aria-label="Redo">
+        <Redo2 className="h-3.5 w-3.5" />
+      </button>
+      <span className="mx-0.5 h-5 w-px bg-[var(--orb-line)]/40" aria-hidden />
       <button type="button" className={btn} data-orb-write-bold onClick={() => onCommand('bold')} aria-label="Bold">
         <Bold className="h-3.5 w-3.5" />
       </button>
@@ -157,7 +161,7 @@ export function OrbWriteToolbar({
       ) : null}
 
       <div className="ml-auto flex flex-wrap items-center gap-1" data-orb-write-toolbar-group="export">
-      <span className="sr-only">Export</span>
+      <span className="hidden px-1 text-[9px] font-semibold uppercase tracking-wide text-[var(--orb-muted)] sm:inline">Export</span>
         <OrbWriteZoomControls
           zoomMode={zoomMode}
           zoomPercent={zoomPercent}

@@ -178,6 +178,18 @@ html[data-orb-residential='1'] :focus-visible {
   outline-offset: 2px;
 }
 
+.orb-sidebar .orb-sidebar-nav-item--primary .orb-sidebar-new-chat-label {
+  color: #ffffff !important;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+
+.orb-sidebar .orb-sidebar-nav-item--primary span {
+  color: inherit;
+}
+
 .orb-sidebar-brand-lockup {
   display: flex;
   align-items: center;
@@ -864,6 +876,54 @@ html[data-orb-residential='1'] [data-orb-billing-modal] [data-orb-billing-provid
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
+}
+
+.orb-modal--no-clip,
+.orb-modal--no-clip .orb-modal-section,
+.orb-modal--no-clip p,
+.orb-modal--no-clip h3 {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.orb-modal--no-clip {
+  max-width: 100%;
+}
+
+.orb-brand-mark [data-orb-sidebar-brand-mark],
+.orb-brand-mark .glass-orb-mark {
+  width: 2rem;
+  height: 2rem;
+  flex-shrink: 0;
+}
+
+.orb-dictate-hero-strip {
+  min-width: 0;
+}
+
+.orb-dictate-hero-strip .glass-orb-mark {
+  filter: drop-shadow(0 0 10px rgba(99, 102, 241, 0.28));
+}
+
+[data-orb-login-stations-scroll] {
+  max-height: min(42vh, 18rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  min-width: 0;
+}
+
+[data-orb-communicate-station-layout] {
+  min-width: 0;
+}
+
+.orb-settings-profile-card {
+  min-width: 0;
+}
+
+.orb-voice-mode-selector {
+  width: min(100%, 36rem);
+  margin-inline: auto;
 }
 
 .orb-settings-scroll,

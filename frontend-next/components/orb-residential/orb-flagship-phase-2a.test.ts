@@ -28,10 +28,10 @@ describe('ORB Residential Phase 2A identity and station maturity', () => {
 
   it('sidebar brand includes ORB identity mark', () => {
     const sidebar = read('components/orb-residential/orb-residential-sidebar.tsx')
-    assert.match(sidebar, /GlassOrbMark/)
-    assert.match(sidebar, /data-orb-sidebar-brand/)
-    assert.match(sidebar, /data-orb-sidebar-brand-mark/)
-    assert.match(sidebar, /Powered by IndiCare Intelligence|ORB_RESIDENTIAL_TAGLINE/)
+    const brand = read('components/orb-residential/ui/orb-brand-mark.tsx')
+    assert.match(sidebar, /OrbBrandMark/)
+    assert.match(brand, /data-orb-sidebar-brand/)
+    assert.match(brand, /ORB_RESIDENTIAL_TAGLINE/)
   })
 
   it('new chat button is primary with accessible label', () => {

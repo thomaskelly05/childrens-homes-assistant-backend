@@ -19,11 +19,11 @@ import { GlassOrbMark } from '@/components/orb-residential/ui/glass-orb-mark'
 
 export const ORB_COMMUNICATE_EXAMPLE_PROMPTS = [
   'Explain that contact has changed',
-  'Create a visual routine for bedtime',
+  'Help explain a change of plan',
+  'Create a bedtime visual routine',
   'Prepare for a hospital appointment',
-  'Support someone to say how they feel',
   'Introduce a new staff member',
-  'Help explain a change of plan'
+  'Support someone to say how they feel'
 ] as const
 
 export const ORB_COMMUNICATE_OUTPUT_TYPES = [
@@ -34,6 +34,9 @@ export const ORB_COMMUNICATE_OUTPUT_TYPES = [
   'Recording prompts',
   'Reflect-and-record starter'
 ] as const
+
+export const ORB_COMMUNICATE_PACK_PREVIEW =
+  'ORB can create an adult-reviewed support pack with easy-read wording, visual cards, staff guidance and recording prompts.'
 
 export function OrbCommunicateCreateFlow({
   onPackCreated,
@@ -93,27 +96,28 @@ export function OrbCommunicateCreateFlow({
   }
 
   return (
-    <div className="orb-communicate-create space-y-6" data-orb-communicate-create-flow>
-      <div className="orb-communicate-create__hero text-center">
-        <div className="mx-auto mb-4 flex justify-center">
+    <div className="orb-communicate-create orb-communicate-station space-y-5" data-orb-communicate-create-flow data-orb-communicate-station-layout>
+      <header className="orb-communicate-station__hero flex gap-4">
+        <div className="shrink-0 pt-1">
           <GlassOrbMark size="sm" pulse aria-hidden />
         </div>
-        <h2 className="text-xl font-semibold tracking-tight text-[var(--orb-res-navy)] sm:text-2xl">
-          ORB Communicate
-        </h2>
-        <p className="mt-2 text-base font-medium text-[var(--orb-res-workspace-text)]" data-orb-communicate-subtitle>
-          Create accessible explanations, visual supports and social stories so people can understand, express
-          themselves and be heard before the record is written.
-        </p>
-        <p className="mt-2 text-sm text-[var(--orb-res-workspace-muted)]" data-orb-communicate-supporting-line>
-          Describe what you need to explain or support. ORB will help create the right communication support pack for
-          adult review.
-        </p>
-      </div>
+        <div className="min-w-0 flex-1">
+          <h2 className="text-xl font-semibold tracking-tight text-[var(--orb-res-navy)] sm:text-2xl">
+            ORB Communicate
+          </h2>
+          <p className="mt-1.5 text-sm leading-relaxed text-[var(--orb-res-workspace-text)]" data-orb-communicate-subtitle>
+            ORB Communicate helps adults create accessible explanations, visual supports and social stories so people
+            can understand, express themselves and be heard before the record is written.
+          </p>
+          <p className="mt-2 text-xs leading-relaxed text-[var(--orb-res-workspace-muted)]" data-orb-communicate-supporting-line>
+            Describe what you need to explain or support. ORB will shape an adult-reviewed communication support pack.
+          </p>
+        </div>
+      </header>
 
       <div className="orb-communicate-outputs space-y-2" data-orb-communicate-outputs>
         <p className="text-xs font-semibold uppercase tracking-wide text-[var(--orb-res-workspace-muted)]">
-          What ORB can create
+          What you can create
         </p>
         <ul className="flex flex-wrap gap-2">
           {ORB_COMMUNICATE_OUTPUT_TYPES.map((item) => (
@@ -126,16 +130,19 @@ export function OrbCommunicateCreateFlow({
             </li>
           ))}
         </ul>
+        <p className="text-xs leading-relaxed text-[var(--orb-res-workspace-muted)]" data-orb-communicate-pack-preview>
+          {ORB_COMMUNICATE_PACK_PREVIEW}
+        </p>
       </div>
 
-      <form className="space-y-4" onSubmit={handleCreate}>
+      <form className="orb-communicate-create__form space-y-4" onSubmit={handleCreate}>
         <label className="sr-only" htmlFor="orb-communicate-prompt">
           Describe what you need
         </label>
         <textarea
           id="orb-communicate-prompt"
-          className="orb-communicate-prompt min-h-[8.5rem] w-full resize-y"
-          placeholder="Describe what you need to explain, support or create…"
+          className="orb-communicate-prompt min-h-[9.5rem] w-full resize-y text-base"
+          placeholder="Describe what you need to explain, support or create for adult review…"
           value={prompt}
           onChange={(event) => setPrompt(event.target.value)}
           data-orb-communicate-prompt-input
@@ -174,7 +181,7 @@ export function OrbCommunicateCreateFlow({
           disabled={!prompt.trim() || creating}
           data-orb-communicate-create-support
         >
-          {creating ? 'Creating support…' : 'Create support'}
+          {creating ? 'Creating support…' : 'Create support pack'}
         </button>
       </form>
 

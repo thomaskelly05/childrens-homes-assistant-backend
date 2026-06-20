@@ -1582,7 +1582,6 @@ export function OrbVoiceStation({
           {voiceWorkspaceMode === 'live' && isMobileViewport ? livePanel : null}
           {voiceWorkspaceMode === 'idle' ? (
           <div className="orb-voice-session-extras w-full" data-orb-voice-session-extras>
-          {!isMobileViewport ? (
           <div className="mt-4 flex w-full justify-center px-2">
             <OrbVoiceModeSelector
               voiceStyle={voiceStyle}
@@ -1591,9 +1590,8 @@ export function OrbVoiceStation({
               onReasoningModeChange={handleReasoningModeChange}
             />
           </div>
-          ) : null}
 
-          {!isMobileViewport && !voiceSessionLive ? (
+          {!voiceSessionLive ? (
             <p className="mt-2 text-center text-[11px] text-[var(--orb-muted)]">
               Voice: {selectedProfileLabel} — {getOrbVoiceProfile(voice.settings.voicePresetId).description}
             </p>
