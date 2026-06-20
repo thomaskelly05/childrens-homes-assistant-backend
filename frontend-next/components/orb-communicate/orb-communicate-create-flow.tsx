@@ -16,6 +16,7 @@ import type {
   CommunicationSupportPackOutput
 } from '@/lib/orb/communicate/orb-communicate-types'
 import { GlassOrbMark } from '@/components/orb-residential/ui/glass-orb-mark'
+import { OrbCommunicateSymbolPlaceholder } from '@/components/orb-communicate/orb-communicate-shared'
 
 export const ORB_COMMUNICATE_EXAMPLE_PROMPTS = [
   'Explain that contact has changed',
@@ -61,7 +62,19 @@ const ORB_COMMUNICATE_PREVIEW_SECTIONS = [
   }
 ] as const
 
-const ORB_COMMUNICATE_PLACEHOLDER_VISUALS = ['Now', 'Next', 'Choice', 'Feeling'] as const
+export const ORB_COMMUNICATE_PLACEHOLDER_VISUAL_CARDS = [
+  'Now',
+  'Next',
+  'Choice',
+  'Feeling',
+  'Safe adult',
+  'Break',
+  'Later',
+  'Finished'
+] as const
+
+export const ORB_COMMUNICATE_VISUAL_PREVIEW_COPY =
+  'Consistent accessible visuals that can be personalised around the way each person communicates.'
 
 export function OrbCommunicateCreateFlow({
   onPackCreated,
@@ -224,8 +237,8 @@ export function OrbCommunicateCreateFlow({
             Uses original placeholder visual cards only. Visuals support communication and do not imply universal understanding.
           </p>
         </header>
-        <div className="mt-4 grid grid-cols-2 gap-2" data-orb-communicate-placeholder-visual-cards>
-          {ORB_COMMUNICATE_PLACEHOLDER_VISUALS.map((label) => (
+        <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4" data-orb-communicate-placeholder-visual-cards data-orb-communicate-visual-preview>
+          {ORB_COMMUNICATE_PLACEHOLDER_VISUAL_CARDS.map((label) => (
             <div key={label} className="orb-communicate-preview-symbol" data-orb-communicate-placeholder-card={label}>
               <span aria-hidden />
               <strong>{label}</strong>

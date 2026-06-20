@@ -223,7 +223,7 @@ export function OrbDictateTopBar({
             onClick={onFinalise}
           >
             <OrbIcon name="write" size="sm" className="text-white" />
-            <span className="hidden md:inline">Open in ORB Write</span>
+            <span className="hidden md:inline">Send to ORB Write</span>
             <span className="md:hidden">Write</span>
           </button>
         </div>

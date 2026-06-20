@@ -31,9 +31,11 @@ export const ORB_RESIDENTIAL_BILLING_INCLUDED_ITEMS = [
 export const ORB_FLAGSHIP_BILLING_INCLUDED_ITEMS = ORB_RESIDENTIAL_BILLING_INCLUDED_ITEMS
 
 export const ORB_DICTATE_FLAGSHIP_WORKFLOW = [
-  'Capture rough notes',
-  'Review with ORB',
-  'Create safer draft'
+  'Capture',
+  'Transcript',
+  'ORB Review',
+  'Safer Draft',
+  'ORB Write'
 ] as const
 
 export const ORB_RECORDS_EMPTY_GUIDANCE =

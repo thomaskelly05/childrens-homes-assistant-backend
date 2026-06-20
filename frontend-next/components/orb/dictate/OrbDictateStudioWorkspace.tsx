@@ -288,6 +288,8 @@ export function OrbDictateStudioWorkspace(props: OrbDictateStudioWorkspaceProps)
         className="orb-dictate-stage-map grid shrink-0 gap-2 sm:grid-cols-2 xl:grid-cols-4"
         aria-label="Dictate journey"
         data-orb-dictate-stage-interface
+        data-orb-dictate-progression
+        data-orb-dictate-journey="Capture → Transcript → ORB Review → Safer Draft → ORB Write"
       >
         <article className="orb-dictate-stage-card" data-orb-dictate-stage="capture">
           <p className="orb-dictate-stage-card__label">Stage 1</p>

@@ -20,6 +20,8 @@ export function OrbVoiceModeSelector({
   onReasoningModeChange: (mode: OrbVoiceReasoningModeId) => void
 }) {
   const selection = describeVoiceModeSelection(voiceStyle, reasoningMode)
+  const activeStyle = ORB_VOICE_STYLE_OPTIONS[styleIndex]
+  const activeReasoning = ORB_VOICE_REASONING_OPTIONS[reasoningIndex]
 
   return (
     <div
@@ -64,6 +66,14 @@ export function OrbVoiceModeSelector({
             </button>
           ))}
         </div>
+        {activeStyle ? (
+          <p
+            className="text-center text-[11px] leading-relaxed text-[var(--orb-muted)]"
+            data-orb-voice-style-description
+          >
+            {activeStyle.description}
+          </p>
+        ) : null}
       </div>
 
       <div className="space-y-1.5" data-orb-voice-reasoning-controls>
@@ -87,6 +97,14 @@ export function OrbVoiceModeSelector({
             </button>
           ))}
         </div>
+        {activeReasoning ? (
+          <p
+            className="text-center text-[11px] leading-relaxed text-[var(--orb-muted)]"
+            data-orb-voice-reasoning-description
+          >
+            {activeReasoning.description}
+          </p>
+        ) : null}
       </div>
 
     </div>

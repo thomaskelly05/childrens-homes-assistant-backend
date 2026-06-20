@@ -73,7 +73,7 @@ describe('ORB Residential canonical shell (Phase 1H copy retained)', () => {
     assert.match(companion, /ORB_COMPOSER_V2_PLACEHOLDER_CHAT/)
     assert.match(composer, /orb-composer/)
     assert.match(composer, /data-orb-composer/)
-    assert.match(ORB_COMPOSER_V2_PLACEHOLDER_HOME, /recording, reflecting on or evidencing/)
+    assert.match(ORB_COMPOSER_V2_PLACEHOLDER_HOME, /thinking through/)
     assert.match(ORB_COMPOSER_V2_PLACEHOLDER_CHAT, /recording, reflection, evidence/)
   })
 
@@ -134,7 +134,7 @@ describe('ORB Residential canonical shell (Phase 1H copy retained)', () => {
     assert.match(panel, /data-orb-records-empty/)
     assert.match(panel, /ORB_RECORDS_EMPTY_SUBTITLE/)
     assert.equal(ORB_RECORDS_EMPTY_SUBTITLE, ORB_RECORDS_V2_EMPTY_SUBTITLE)
-    assert.match(ORB_RECORDS_EMPTY_SUBTITLE, /Save from Chat, Dictate, Voice, Communicate or ORB Write/)
+    assert.match(ORB_RECORDS_EMPTY_SUBTITLE, /Saved adult-reviewed outputs from Chat, Dictate, Voice, Communicate and ORB Write/)
   })
 
   it('modals use shared product modal class', () => {

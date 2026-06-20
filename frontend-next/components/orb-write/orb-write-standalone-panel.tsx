@@ -97,7 +97,7 @@ export function OrbWriteStandalonePanel({
   const [selectedGuidance, setSelectedGuidance] = useState<OrbWriteSelectedGuidance | null>(null)
   const [templatePickerOpen, setTemplatePickerOpen] = useState(false)
   const [sourcePanelOpen, setSourcePanelOpen] = useState(false)
-  const [guidancePanelOpen, setGuidancePanelOpen] = useState(false)
+  const [guidancePanelOpen, setGuidancePanelOpen] = useState(true)
   const [compactWriteHeight, setCompactWriteHeight] = useState(false)
   const { isMobile } = useOrbResponsiveMode()
 
@@ -479,11 +479,11 @@ export function OrbWriteStandalonePanel({
               <div className="flex min-w-0 items-start gap-3">
                 <GlassOrbMark size="sm" pulse className="mt-0.5 shrink-0" aria-hidden />
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-slate-900" data-orb-write-studio-title>
-                    IndiCare Intelligence’s care documentation studio
-                  </p>
-                  <p className="text-[11px] text-slate-600" data-orb-write-studio-subtitle>
-                    Draft, review and finalise adult-led records in one calm workspace.
+                  <h2 className="text-sm font-semibold text-slate-900" data-orb-write-studio-title>
+                    ORB Write
+                  </h2>
+                  <p className="text-[11px] text-slate-600" data-orb-write-studio-subtitle data-orb-write-care-studio>
+                    Care documentation studio — draft, review and finalise adult-led records with ORB.
                   </p>
                 </div>
               </div>
@@ -600,6 +600,7 @@ export function OrbWriteStandalonePanel({
                   className="flex min-h-0 flex-col gap-3 overflow-hidden"
                   data-orb-write-assistant-panel
                   data-orb-write-guidance-panel-host
+                  data-orb-write-review-panel
                 >
                   <div className="min-h-[200px] overflow-hidden rounded-xl border border-[var(--orb-line)]/50 bg-[var(--orb-surface-elevated)] lg:min-h-0">
                     <OrbDictateBrainPanel

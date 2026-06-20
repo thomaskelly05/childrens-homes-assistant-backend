@@ -101,7 +101,7 @@ describe('ORB Residential station identity pass', () => {
     assert.match(workspace, /data-orb-dictate-safety-footer/)
     assert.match(workspace, /data-orb-dictate-studio/)
     assert.match(topBar, /Review with ORB/)
-    assert.match(topBar, /Open in ORB Write/)
+    assert.match(topBar, /Send to ORB Write/)
     assert.match(transcript, /ORB_RESIDENTIAL_DICTATE_COPY\.capturePrompt/)
     assert.match(transcript, /data-orb-dictate-capture-guidance/)
     assert.match(brain, /ORB Review/)
@@ -119,7 +119,7 @@ describe('ORB Residential station identity pass', () => {
     const editor = read('components/orb-write/orb-write-editor.tsx')
     const desktopCss = read('app/orb/_legacy-ui-archive/orb-desktop.css')
 
-    assert.match(copy, /Structure, review and finalise with adult approval/)
+    assert.match(copy, /Draft, review and finalise adult-led records with ORB/)
 
     assert.match(panel, /ORB Write/)
     assert.match(panel, /data-orb-write-studio-subtitle/)

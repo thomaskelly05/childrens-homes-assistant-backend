@@ -1,40 +1,40 @@
-/** Phase 2A — login product storytelling for ORB stations. */
+/** Phase 3A — login product storytelling for ORB stations. */
 
 export const ORB_LOGIN_FOUNDER_LINE =
   'Built for the adults who care, centred on the children who matter.'
 
 export const ORB_LOGIN_PRODUCT_EXPLANATION =
-  'ORB Residential helps adults in children\u2019s homes think through situations, prepare records, create accessible communication support and keep professional judgement at the centre of every output.'
+  'A specialist intelligence workspace for Ofsted-regulated children\u2019s homes \u2014 helping adults think before they write, capture rough information, talk through situations and evidence the child\u2019s experience more clearly.'
 
 export const ORB_LOGIN_STATION_DESCRIPTIONS = [
   {
     id: 'chat',
     label: 'Chat',
-    description: 'Think through situations and recording decisions with ORB.'
+    description: 'Think through incidents, recording decisions, reflections and safeguarding before you write.'
   },
   {
     id: 'dictate',
     label: 'Dictate',
-    description: 'Speak or paste rough notes and shape them into safer drafts.'
+    description: 'Capture rough notes, audio or voice memos and turn them into safer drafts for adult review.'
   },
   {
     id: 'voice',
     label: 'Voice',
-    description: 'Talk things through before you write.'
+    description: 'Talk it through with ORB before you write.'
   },
   {
     id: 'communicate',
     label: 'Communicate',
-    description: 'Create accessible explanations and visual supports.'
+    description: 'Create accessible explanations, visual supports and evidence of the child\u2019s voice.'
   },
   {
     id: 'write',
     label: 'ORB Write',
-    description: 'Draft, review and finalise records.'
+    description: 'Create, review and finalise safer care records.'
   },
   {
     id: 'records',
     label: 'Records & Drafts',
-    description: 'Keep adult-reviewed outputs together.'
+    description: 'Saved adult-reviewed outputs from Chat, Dictate, Voice, Communicate and ORB Write.'
   }
 ] as const

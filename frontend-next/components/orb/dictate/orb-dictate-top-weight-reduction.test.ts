@@ -112,7 +112,7 @@ describe('ORB Dictate top-weight reduction', () => {
     const topBar = readComponent('components/orb/dictate/OrbDictateTopBar.tsx')
     assert.match(topBar, /writeDisabled = !hasDraft/)
     assert.match(topBar, /data-orb-dictate-finalise/)
-    assert.match(topBar, /Open in ORB Write/)
+    assert.match(topBar, /Send to ORB Write/)
   })
 
   it('workspace uses compact modal chrome on desktop', () => {

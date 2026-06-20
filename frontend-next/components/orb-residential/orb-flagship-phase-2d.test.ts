@@ -13,8 +13,8 @@ function read(relativePath: string) {
 }
 
 describe('ORB Residential Phase 2H flagship UX convergence', () => {
-  it('build version marker is phase-2h on shell and visual build', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-2h')
+  it('build version marker is phase-3a on shell and visual build', () => {
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-3a')
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
     const layout = read('app/orb/layout.tsx')
     assert.match(companion, /data-orb-build-version=\{ORB_BUILD_VISUAL_VERSION\}/)
@@ -102,8 +102,7 @@ describe('ORB Residential Phase 2H flagship UX convergence', () => {
     const workspace = read('components/orb/dictate/OrbDictateStudioWorkspace.tsx')
     const transcript = read('components/orb/dictate/OrbTranscriptPanel.tsx')
     const topBar = read('components/orb/dictate/OrbDictateTopBar.tsx')
-    assert.doesNotMatch(workspace, /data-orb-dictate-progression/)
-    assert.doesNotMatch(workspace, /orb-dictate-progression/)
+    assert.match(workspace, /data-orb-dictate-journey="Capture → Transcript → ORB Review → Safer Draft → ORB Write"/)
     assert.match(workspace, /data-orb-dictate-capture-affordances/)
     assert.match(workspace, /data-orb-dictate-capture-panel/)
     assert.match(workspace, /data-orb-dictate-review-panel/)
@@ -116,7 +115,7 @@ describe('ORB Residential Phase 2H flagship UX convergence', () => {
     assert.match(workspace, /data-orb-dictate-output-stage/)
     assert.match(workspace, /Create safer draft/)
     assert.match(topBar, /Create safer draft/)
-    assert.match(topBar, /Open in ORB Write/)
+    assert.match(topBar, /Send to ORB Write/)
     assert.match(transcript, /data-orb-dictate-capture-zone/)
     assert.match(topBar, /data-orb-dictate-capture-controls/)
     assert.match(topBar, /OrbIcon/)
@@ -237,7 +236,7 @@ describe('ORB Residential Phase 2H flagship UX convergence', () => {
   it('records empty state includes Communicate and all three creation routes', () => {
     const records = read('components/orb-standalone/orb-saved-outputs-panel.tsx')
     const names = read('lib/orb/orb-user-facing-names.ts')
-    assert.match(names, /Save from Chat, Dictate, Voice, Communicate or ORB Write when wording is ready for adult review\./)
+    assert.match(names, /Saved adult-reviewed outputs from Chat, Dictate, Voice, Communicate and ORB Write appear here\./)
     assert.match(records, /Start in Dictate/)
     assert.match(records, /Start in Communicate/)
     assert.match(records, /Create in ORB Write/)

@@ -95,7 +95,7 @@ describe('ORB Residential Phase 2B repair pass', () => {
     const panel = read('components/orb-write/orb-write-standalone-panel.tsx')
     const toolbar = read('components/orb-write/orb-write-toolbar.tsx')
     assert.match(panel, /data-orb-write-studio-guidance/)
-    assert.match(panel, /care documentation studio/)
+    assert.match(panel, /Care documentation studio/)
     assert.match(toolbar, /data-orb-write-toolbar-group="structure"/)
     assert.match(toolbar, /data-orb-write-toolbar-group="export"/)
   })

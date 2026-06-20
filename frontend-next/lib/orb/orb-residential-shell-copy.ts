@@ -15,7 +15,7 @@ export const ORB_LOGIN_ENTERPRISE_FOUNDER_LINE =
   'Built for the adults who care, centred on the children who matter.'
 
 export const ORB_HOME_V2_HEADLINE =
-  'What needs recording, reflecting on or evidencing today?'
+  'What needs thinking through, recording or evidencing today?'
 export const ORB_HOME_V2_SUBLINE =
   'Start with what happened. ORB can help you think, structure and write with the child\u2019s experience central.'
 
@@ -26,7 +26,7 @@ export const ORB_HOME_RAIL_TRUST_ITEMS = [
 ] as const
 
 export const ORB_COMPOSER_V2_PLACEHOLDER_HOME =
-  'Ask ORB what needs recording, reflecting on or evidencing\u2026'
+  'What do you need help thinking through\u2026'
 export const ORB_COMPOSER_V2_PLACEHOLDER_CHAT =
   'Ask ORB about recording, reflection, evidence or practice\u2026'
 export const ORB_COMPOSER_V2_PLACEHOLDER_DICTATE = 'Paste rough notes or speak naturally\u2026'
@@ -39,4 +39,4 @@ export const ORB_VOICE_V2_STATUS_COPY =
   'Talk it through. ORB can help you reflect before you write.'
 
 export const ORB_RECORDS_V2_EMPTY_SUBTITLE =
-  'Save from Chat, Dictate, Voice, Communicate or ORB Write when wording is ready for adult review.'
+  'Saved adult-reviewed outputs from Chat, Dictate, Voice, Communicate and ORB Write appear here.'

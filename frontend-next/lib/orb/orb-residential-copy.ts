@@ -230,9 +230,9 @@ export const ORB_RESIDENTIAL_DICTATE_MAGIC_NOTES_COPY = ORB_RESIDENTIAL_DICTATE_
 
 /** Calm IndiCare Intelligence product language — one line per station, not over-branded. */
 export const ORB_RESIDENTIAL_STATION_PRODUCT_COPY = {
-  voice: 'Talk it through with ORB.',
+  voice: 'Talk it through with ORB before you write.',
   dictate: ORB_DICTATE_SUBTITLE,
-  write: 'Structure, review and finalise with adult approval.',
+  write: 'Draft, review and finalise adult-led records with ORB.',
   documents: 'Use authorised documents as sources. ORB shows what it used.',
   templates: 'Choose a structure that keeps the child central.'
 } as const

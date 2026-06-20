@@ -86,7 +86,7 @@ describe('ORB Residential Phase 1F flagship UI', () => {
     assert.match(panel, /ORB_RECORDS_EMPTY_SUBTITLE/)
     assert.match(panel, /data-orb-saved-start-write/)
     assert.match(panel, /data-orb-saved-start-dictate/)
-    assert.match(ORB_RECORDS_EMPTY_SUBTITLE, /Save from Chat, Dictate, Voice, Communicate or ORB Write/)
+    assert.match(ORB_RECORDS_EMPTY_SUBTITLE, /Saved adult-reviewed outputs from Chat, Dictate, Voice, Communicate and ORB Write/)
     assert.equal(ORB_NAV_RECORDS, 'Records & Drafts')
   })
 

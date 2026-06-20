@@ -17,7 +17,7 @@ describe('ORB Dictate recorder studio v3', () => {
     assert.match(topBar, /data-orb-dictate-top-record/)
     assert.match(topBar, /data-orb-dictate-generate/)
     assert.match(topBar, /data-orb-dictate-finalise/)
-    assert.match(topBar, /Open in ORB Write/)
+    assert.match(topBar, /Send to ORB Write/)
   })
 
   it('transcript and ORB analysis panels render in studio workspace', () => {

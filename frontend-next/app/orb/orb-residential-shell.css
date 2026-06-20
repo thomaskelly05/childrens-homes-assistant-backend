@@ -759,6 +759,43 @@ html[data-orb-residential='1'] .orb-communicate-pack [data-orb-communicate-symbo
   color: var(--orb-res-workspace-text);
 }
 
+html[data-orb-residential='1'] .orb-communicate-visual-preview [data-orb-communicate-symbol] {
+  border-color: var(--orb-res-workspace-border);
+  background: linear-gradient(160deg, rgba(99, 102, 241, 0.08), rgba(37, 99, 235, 0.04));
+  color: var(--orb-res-navy);
+  min-height: 4.5rem;
+}
+
+html[data-orb-residential='1'] .orb-communicate-visual-preview [data-orb-communicate-symbol] span {
+  color: var(--orb-res-workspace-text);
+  font-size: 0.65rem;
+  font-weight: 600;
+}
+
+.orb-dictate-progression ol {
+  gap: 0.25rem;
+}
+
+.orb-voice-mode-selector {
+  max-width: 32rem;
+}
+
+.orb-write-studio-grid[data-orb-write-review-panel='true'],
+.orb-write-studio-grid [data-orb-write-review-panel] {
+  min-width: 16rem;
+}
+
+.orb-workspace--write .orb-write-studio-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(16rem, 22rem);
+}
+
+@media (max-width: 1023px) {
+  .orb-workspace--write .orb-write-studio-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 .orb-workspace--records [data-orb-records-empty] {
   padding: clamp(2rem, 5vw, 4rem) 1.5rem;
   text-align: center;

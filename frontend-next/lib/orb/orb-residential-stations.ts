@@ -28,32 +28,32 @@ export const ORB_RESIDENTIAL_STATION_DEFINITIONS: Record<
   chat: {
     id: 'chat',
     label: 'Chat',
-    tagline: 'Ask, reflect and prepare.',
-    helper: 'Ask, reflect and plan'
+    tagline: 'Think it through.',
+    helper: 'Think through situations before you write'
   },
   orb_voice: {
     id: 'orb_voice',
     label: 'Voice',
-    tagline: 'Talk it through.',
-    helper: 'Talk through situations with ORB'
+    tagline: 'Talk it through with ORB before you write.',
+    helper: 'Talk through situations with ORB before you write'
   },
   orb_dictate: {
     id: 'orb_dictate',
     label: 'Dictate',
     tagline: ORB_DICTATE_SUBTITLE,
-    helper: 'Speak or paste rough notes for a clearer draft'
+    helper: 'Capture rough notes, audio or voice memos for safer drafts'
   },
   orb_communicate: {
     id: 'orb_communicate',
     label: 'Communicate',
-    tagline: 'Accessible explanations, visual supports and reflection.',
-    helper: 'Easy read, visual boards, social stories and communication profiles'
+    tagline: 'Accessible explanations, visual supports and evidence of voice.',
+    helper: 'Easy read, visual supports, social stories and recording prompts'
   },
   orb_write: {
     id: 'orb_write',
     label: 'ORB Write',
-    tagline: 'Review and finalise.',
-    helper: 'Edit, approve and export documents'
+    tagline: 'Care documentation studio.',
+    helper: 'Draft, review and finalise adult-led records'
   }
 }
 
