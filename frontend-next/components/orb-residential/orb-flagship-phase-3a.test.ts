@@ -17,7 +17,7 @@ function read(relativePath: string) {
 
 describe('ORB Residential Phase 3A specialist station alignment', () => {
   it('build version marker is phase-3b', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-3f-login-final')
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-3g-home-chat')
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
     const layout = read('app/orb/layout.tsx')
     assert.match(companion, /data-orb-build-version=\{ORB_BUILD_VISUAL_VERSION\}/)
@@ -109,7 +109,7 @@ describe('ORB Residential Phase 3A specialist station alignment', () => {
     const dictate = read('components/orb/dictate/OrbDictateStudioWorkspace.tsx')
     const communicatePlan = read('lib/orb/communicate/orb-communicate-plan.ts')
     assert.match(companion, /data-orb-home-safety-line/)
-    assert.equal(ORB_HOME_SAFETY_LINE, 'ORB supports professional judgement. Review before use. Follow local safeguarding procedures.')
+    assert.match(ORB_HOME_SAFETY_LINE, /local safeguarding procedures/)
     assert.match(voiceCopy, /Audio is not stored/)
     assert.match(dictate, /data-orb-dictate-safety-footer/)
     assert.match(communicatePlan, /personalise and review before use/)

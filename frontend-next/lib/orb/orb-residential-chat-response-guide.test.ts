@@ -23,12 +23,11 @@ describe('ORB Residential guided chat response guide', () => {
   it('safeguarding query returns guided structured response rather than generic essay', () => {
     const message = 'I need help with a safeguarding concern after a disclosure'
     const fallback = buildResidentialGuidedChatFallback(message, 'Safeguarding')
-    assert.match(fallback, /think this through safely/i)
-    assert.match(fallback, /immediate risk/i)
-    assert.match(fallback, /local safeguarding and emergency procedures/i)
+    assert.match(fallback, /I can help you think this through/i)
+    assert.match(fallback, /immediate safety and local safeguarding procedures/i)
     assert.match(fallback, /1\. What happened/)
     assert.match(fallback, /child say, show or communicate/i)
-    assert.match(fallback, /safeguarding reflection|incident record|handover note/i)
+    assert.match(fallback, /factual, child-centred record/i)
     assert.doesNotMatch(fallback, /it is important to note that safeguarding is everyone's responsibility/i)
 
     const genericEssay = `# Safeguarding overview
@@ -46,7 +45,7 @@ ${'## Section\nMore text. '.repeat(20)}`
 
     assert.ok(isGenericResidentialSafeguardingEssay(genericEssay))
     const reshaped = reshapeResidentialChatAnswer(genericEssay, message, 'Safeguarding')
-    assert.match(reshaped, /immediate risk|think this through safely/i)
+    assert.match(reshaped, /immediate safety|I can help you think this through/i)
     assert.match(reshaped, /local policy|professional judgement/i)
     assert.doesNotMatch(reshaped, /safeguarding is everyone's responsibility/)
   })
@@ -57,7 +56,7 @@ ${'## Section\nMore text. '.repeat(20)}`
       'General'
     )
     assert.match(fallback, /child say, show or communicate/i)
-    assert.match(fallback, /observed, heard or shared/i)
+    assert.match(fallback, /adults observe/i)
     assert.match(fallback, /observation from interpretation/i)
   })
 

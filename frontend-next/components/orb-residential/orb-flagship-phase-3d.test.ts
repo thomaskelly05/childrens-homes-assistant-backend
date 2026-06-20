@@ -18,7 +18,7 @@ function read(relativePath: string) {
 
 describe('ORB Residential Phase 3D station behaviour hardening', () => {
   it('build version marker is phase-3d', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-3f-login-final')
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-3g-home-chat')
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
     const layout = read('app/orb/layout.tsx')
     assert.match(companion, /data-orb-build-version=\{ORB_BUILD_VISUAL_VERSION\}/)
@@ -38,7 +38,7 @@ describe('ORB Residential Phase 3D station behaviour hardening', () => {
     const guide = read('lib/orb/orb-residential-chat-response-guide.ts')
     assert.match(companion, /reshapeResidentialChatAnswer/)
     assert.match(guide, /shouldApplyResidentialChatGuidance/)
-    assert.match(guide, /think this through safely/i)
+    assert.match(guide, /I can help you think this through/i)
     assert.match(menu, /data-orb-sidebar-chat-actions-menu/)
     assert.match(menu, /role="menuitem"/)
     assert.equal(formatOrbChatDisplayTitle('[NAME_1].'), 'Untitled chat')

@@ -1,13 +1,14 @@
 'use client'
 
 import { GlassOrbMark } from '@/components/orb-residential/ui/glass-orb-mark'
-import { ORB_RESIDENTIAL_TAGLINE } from '@/lib/orb/orb-residential-copy'
+import { ORB_RESIDENTIAL_TAGLINE_FULL } from '@/lib/orb/orb-residential-copy'
 
 /** Horizontal ORB Residential brand lockup — sidebar, headers, settings. */
 export function OrbBrandMark({
   size = 'md',
   pulse = false,
   showTagline = true,
+  tagline,
   className = '',
   titleClassName = '',
   taglineClassName = ''
@@ -15,6 +16,8 @@ export function OrbBrandMark({
   size?: 'sm' | 'md' | 'lg'
   pulse?: boolean
   showTagline?: boolean
+  /** Override sidebar tagline — defaults to full IndiCare Intelligence line. */
+  tagline?: string
   className?: string
   titleClassName?: string
   taglineClassName?: string
@@ -38,7 +41,7 @@ export function OrbBrandMark({
             className={`orb-sidebar-powered-tagline mt-0.5 text-[10px] leading-snug ${taglineClassName}`.trim()}
             data-orb-sidebar-powered
           >
-            {ORB_RESIDENTIAL_TAGLINE}
+            {tagline ?? ORB_RESIDENTIAL_TAGLINE_FULL}
           </p>
         ) : null}
       </div>

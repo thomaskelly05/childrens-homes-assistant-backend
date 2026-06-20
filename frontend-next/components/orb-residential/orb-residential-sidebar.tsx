@@ -26,7 +26,7 @@ import { OrbBrandMark } from '@/components/orb-residential/ui/orb-brand-mark'
 import { OrbIcon } from '@/components/orb-residential/ui/orb-icon'
 import { OrbUserAvatar } from '@/components/orb-residential/orb-user-avatar'
 import { OrbProjectMemoryModal } from '@/components/orb-residential/orb-project-memory-modal'
-import { ORB_RESIDENTIAL_TAGLINE } from '@/lib/orb/orb-residential-copy'
+import { ORB_RESIDENTIAL_TAGLINE, ORB_RESIDENTIAL_TAGLINE_FULL } from '@/lib/orb/orb-residential-copy'
 import {
   ORB_NAV_RECORDS,
   ORB_NAV_WRITE,
@@ -585,7 +585,12 @@ export function OrbResidentialSidebar({
     <div className="flex h-full min-h-0 flex-col orb-sidebar" data-orb-sidebar-panel data-orb-sidebar-state="expanded">
       <div className="orb-sidebar-header shrink-0 px-3 py-3" data-orb-sidebar-header>
         <div className="flex items-start justify-between gap-2" data-orb-sidebar-brand>
-          <OrbBrandMark size="sm" pulse className="min-w-0 flex-1" />
+          <OrbBrandMark
+            size="sm"
+            pulse
+            className="min-w-0 flex-1"
+            tagline={collapsed ? ORB_RESIDENTIAL_TAGLINE : ORB_RESIDENTIAL_TAGLINE_FULL}
+          />
           <div className="flex shrink-0 items-center gap-0.5">
             {onToggleCollapse ? (
               <button

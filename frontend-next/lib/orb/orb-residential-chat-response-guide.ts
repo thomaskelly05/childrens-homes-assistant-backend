@@ -25,20 +25,32 @@ export type ResidentialChatSupportType =
   | 'general'
 
 const SAFEGUARDING_RE =
-  /\b(safeguard|abuse|disclos|allegat|missing from care|exploit|county lines|self[- ]?harm|suicid|CSE|CCE|LADO)\b/i
+  /\b(safeguard|abuse|disclos|allegat|missing from care|exploit|county lines|self[- ]?harm|suicid|CSE|CCE|LADO|bullying)\b/i
 
 const INCIDENT_RE =
-  /\b(incident|restraint|physical intervention|abscond|missing episode|missing from|assault|fight|damage|injur|harm)\b/i
+  /\b(incident|restraint|physical intervention|abscond|missing episode|missing from|assault|fight|damage|injur|harm|behaviou?r incident)\b/i
 
 const SUPERVISION_RE = /\b(supervision|reflective practice|management discussion|handover)\b/i
 
 const WORDING_RE = /\b(wording|phrase|rewrite|tone|assumption|interpret)\b/i
 
-const RECORD_RE = /\b(record|recording|daily record|write up|log|note|chronolog)\b/i
+const RECORD_RE = /\b(record|recording|daily record|write up|log|note|chronolog|key[- ]?work)\b/i
 
 const BEHAVIOUR_RE = /\b(behaviou?r|meltdown|dysregulat|aggress|escalat)\b/i
 
-const CONCERN_RE = /\b(concern|risk|worried|worry|escalat)\b/i
+const CONCERN_RE = /\b(concern|risk|worried|worry|escalat|complaint)\b/i
+
+const MEDICATION_RE = /\b(medication|meds|prescription)\b/i
+
+const POLICE_RE = /\b(police|999|101)\b/i
+
+const OFSTED_RE = /\b(ofsted|inspection)\b/i
+
+const REGULATION_RE = /\b(regulation 44|regulation 45|reg 44|reg 45)\b/i
+
+const CARE_PLAN_RE = /\b(care plan|placement plan)\b/i
+
+const CHILD_VOICE_RE = /\b(child('s)? voice|child('s)? experience|what the child said)\b/i
 
 /** Detect the primary support type from the adult’s message. */
 export function detectResidentialChatSupportType(
@@ -49,11 +61,15 @@ export function detectResidentialChatSupportType(
   const modeLower = String(mode || '').toLowerCase()
 
   if (modeLower.includes('safeguard') || SAFEGUARDING_RE.test(text)) return 'safeguarding_concern'
+  if (POLICE_RE.test(text) || MEDICATION_RE.test(text)) return 'safeguarding_concern'
   if (INCIDENT_RE.test(text) || BEHAVIOUR_RE.test(text)) return 'incident_reflection'
   if (SUPERVISION_RE.test(text)) return 'supervision_prep'
   if (WORDING_RE.test(text)) return 'wording_support'
   if (RECORD_RE.test(text) || modeLower.includes('record')) return 'prepare_record'
-  if (CONCERN_RE.test(text)) return 'safeguarding_concern'
+  if (CONCERN_RE.test(text) || OFSTED_RE.test(text) || REGULATION_RE.test(text)) {
+    return SAFEGUARDING_RE.test(text) ? 'safeguarding_concern' : 'think_through'
+  }
+  if (CARE_PLAN_RE.test(text) || CHILD_VOICE_RE.test(text)) return 'prepare_record'
   if (/\bthink|help me|what should|how do i|prepare\b/i.test(text)) return 'think_through'
   return 'general'
 }
@@ -66,6 +82,16 @@ export function shouldApplyResidentialChatGuidance(
   return detectResidentialChatSupportType(message, mode) !== 'general'
 }
 
+const INCIDENT_SAFEGUARDING_QUESTIONS = [
+  'What happened, in order?',
+  'Who was present?',
+  'What did the child say, show or communicate?',
+  'What did adults observe?',
+  'What did adults do to support, reassure or de-escalate?',
+  'What was the outcome?',
+  'What follow-up or management oversight is needed?'
+] as const
+
 const FOCUSED_QUESTIONS: Record<ResidentialChatSupportType, string[]> = {
   think_through: [
     'What happened, in observable terms?',
@@ -77,22 +103,8 @@ const FOCUSED_QUESTIONS: Record<ResidentialChatSupportType, string[]> = {
     'What did the child say or show, in their own words where known?',
     'What was the adult response and follow-up?'
   ],
-  incident_reflection: [
-    'What happened, in the order it happened?',
-    'What was directly observed, heard or shared?',
-    'What did the child say, show or communicate?',
-    'What did adults do to keep the child safe?',
-    'Who was informed and when?',
-    'What follow-up or management oversight is needed?'
-  ],
-  safeguarding_concern: [
-    'What happened, in the order it happened?',
-    'What was directly observed, heard or shared?',
-    'What did the child say, show or communicate?',
-    'What did adults do to keep the child safe?',
-    'Who was informed and when?',
-    'What follow-up or management oversight is needed?'
-  ],
+  incident_reflection: [...INCIDENT_SAFEGUARDING_QUESTIONS],
+  safeguarding_concern: [...INCIDENT_SAFEGUARDING_QUESTIONS],
   supervision_prep: [
     'What do you want to take to supervision?',
     'What felt difficult or unresolved?',
@@ -121,10 +133,10 @@ const OUTPUT_OFFERS: Record<ResidentialChatSupportType, string> = {
   general: 'a daily record, incident reflection, supervision note or safeguarding reflection'
 }
 
-function safeguardingOpening(): string {
-  return `Let’s think this through safely.
+function specialistGuidedOpening(): string {
+  return `I can help you think this through.
 
-First, is anyone at immediate risk right now? If yes, follow your local safeguarding and emergency procedures before writing the record.`
+First, make sure immediate safety and local safeguarding procedures are being followed.`
 }
 
 function boundaryFooter(): string {
@@ -142,20 +154,20 @@ export function buildResidentialGuidedChatFallback(
 
   if (supportType === 'safeguarding_concern' || supportType === 'incident_reflection') {
     return [
-      safeguardingOpening(),
+      specialistGuidedOpening(),
       '',
-      'To help you record this clearly, tell me:',
+      'To help you record this safely, start with:',
       '',
       ...questions.map((q, i) => `${i + 1}. ${q}`),
       '',
-      `Once you share the details, I can help shape this into ${outputs} for adult review.`,
+      'When you are ready, I can help turn your notes into a factual, child-centred record for adult review.',
       '',
       boundaryFooter()
     ].join('\n')
   }
 
   const lines = [
-    'Let’s work through this with the child’s experience central.',
+    'I can help you think this through.',
     '',
     '**To move forward, it would help to know:**',
     ...questions.map((q) => `- ${q}`),
@@ -187,11 +199,11 @@ export function answerLooksGuidedResidentialChat(content: string): boolean {
   if (text.length < 120) return false
   const hasQuestions = /\?\s/m.test(text.slice(0, 900))
   const hasSafetyOrBoundary =
-    /\b(immediate risk|local (safeguarding|policy|emergency)|professional judgement|observation from interpretation|child('s)? voice|observed|exact words)\b/i.test(
+    /\b(immediate (risk|safety)|local (safeguarding|policy|emergency)|professional judgement|observation from interpretation|child('s)? voice|observed|exact words)\b/i.test(
       text
     )
   const hasOutputOffer =
-    /\b(daily record|incident reflection|supervision note|safeguarding reflection|handover note|for adult review)\b/i.test(
+    /\b(daily record|incident reflection|supervision note|safeguarding reflection|handover note|for adult review|child-centred record)\b/i.test(
       text
     )
   return hasQuestions && hasSafetyOrBoundary && hasOutputOffer

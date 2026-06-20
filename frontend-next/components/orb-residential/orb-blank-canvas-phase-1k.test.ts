@@ -214,7 +214,7 @@ describe('ORB Residential Phase 1K blank canvas reset', () => {
     assert.match(companion, /data-orb-home-safety-line/)
     assert.equal(
       ORB_HOME_SAFETY_LINE,
-      'ORB supports professional judgement. Review before use. Follow local safeguarding procedures.'
+      'Do not include unnecessary identifiable information. Use anonymised or minimal details where possible. Follow your local safeguarding procedures.'
     )
     assert.match(companion, /OrbGuidedDemo|guided-demo|data-orb-guided-demo/i)
     assert.match(read('components/orb-residential/orb-login-auth-card.tsx'), /OrbRequestDemoLink/)

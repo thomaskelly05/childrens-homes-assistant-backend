@@ -73,7 +73,7 @@ describe('ORB Residential canonical shell (Phase 1H copy retained)', () => {
     assert.match(companion, /ORB_COMPOSER_V2_PLACEHOLDER_CHAT/)
     assert.match(composer, /orb-composer/)
     assert.match(composer, /data-orb-composer/)
-    assert.match(ORB_COMPOSER_V2_PLACEHOLDER_HOME, /thinking through/)
+    assert.match(ORB_COMPOSER_V2_PLACEHOLDER_HOME, /Describe what happened|reflect/)
     assert.match(ORB_COMPOSER_V2_PLACEHOLDER_CHAT, /recording, reflection, evidence/)
   })
 

@@ -270,6 +270,7 @@ export function residentialStarterPrompt(starter: ResidentialStarter): string {
 /** User-facing product copy for ORB Residential — safe, regulatory-aware language. */
 export const ORB_RESIDENTIAL_PRODUCT_NAME = 'ORB Residential'
 export const ORB_RESIDENTIAL_TAGLINE = 'Powered by IndiCare'
+export const ORB_RESIDENTIAL_TAGLINE_FULL = 'Powered by IndiCare Intelligence'
 
 /** Visible ORB Write studio review prompts — adult-led checks before finalising. */
 export const ORB_WRITE_STUDIO_REVIEW_CHECKS = [

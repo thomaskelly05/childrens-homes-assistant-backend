@@ -114,6 +114,7 @@ import { ORB_MOBILE_SHELL_CLASS } from '@/components/orb-residential/orb-mobile-
 import { OrbAccountModal } from '@/components/orb-standalone/orb-account-modal'
 import { OrbAdultProfileDrawer } from '@/components/orb-standalone/orb-adult-profile-drawer'
 import { OrbLayout, OrbMobileChatHeader } from '@/components/orb/orb-layout'
+import { OrbHomeStartRow } from '@/components/orb-residential/orb-home-start-row'
 import { GlassOrbMark } from '@/components/orb-residential/ui/glass-orb-mark'
 import { OrbGuidedDemoEntry } from '@/components/orb-residential/orb-guided-demo-entry'
 import { OrbGuidedDemoPanel } from '@/components/orb-residential/orb-guided-demo-panel'
@@ -136,8 +137,10 @@ import {
 import {
   ORB_COMPOSER_V2_PLACEHOLDER_CHAT,
   ORB_COMPOSER_V2_PLACEHOLDER_HOME,
+  ORB_HOME_BRAND_TRUTH_LINE,
   ORB_HOME_SAFETY_LINE
 } from '@/lib/orb/orb-residential-shell-copy'
+import { formatOrbChatDisplayTitle } from '@/lib/orb/orb-chat-display-title'
 import { ORB_REQUEST_DEMO_URL } from '@/lib/orb/orb-user-facing-names'
 import { OrbStandaloneSidebar } from '@/components/orb-standalone/orb-standalone-sidebar'
 import {
@@ -3234,6 +3237,14 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
           />
         </div>
       ) : null}
+      {residentialSurface && showEmptyState ? (
+        <OrbHomeStartRow
+          onSelect={(prompt) => {
+            setMessage(prompt)
+            inputRef.current?.focus()
+          }}
+        />
+      ) : null}
       <OrbIntelligenceMicroStatus
         active={isAnswering}
         expertDepth={answeringExpertDepth}
@@ -3718,6 +3729,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
       {...(residentialSurface ? { 'data-orb-residential': 'true' as const } : {})}
       data-orb-residential-surface={residentialSurface ? 'true' : undefined}
       data-orb-home-empty={residentialSurface && showEmptyState ? 'true' : undefined}
+      data-orb-chat-active={residentialSurface && !showEmptyState ? 'true' : undefined}
       data-orb-light-ui-build={ORB_LIGHT_UI_BUILD}
       data-orb-build-version={ORB_BUILD_VISUAL_VERSION}
       data-orb-appearance-mode={appearanceMode}
@@ -4048,7 +4060,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
             </button>
             <div className="min-w-0 flex-1">
               <h1 className="truncate text-sm font-semibold text-[var(--orb-foreground)] md:text-base" data-orb-header-title>
-                {showEmptyState ? 'ORB' : activeChat?.title || 'ORB'}
+                {showEmptyState ? 'ORB' : formatOrbChatDisplayTitle(activeChat?.title) || 'ORB'}
               </h1>
             </div>
             {activeChat?.temporary ? (
@@ -4244,16 +4256,17 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
                     <div className="orb-workspace-hero orb-workspace-hero--premium" data-orb-workspace-hero>
                     {residentialSurface ? <div className="orb-home-orb-glow" aria-hidden /> : null}
                     <div
-                      className="relative flex shrink-0 justify-center"
+                      className="relative flex shrink-0 justify-center orb-home-hero-presence"
                       data-orb-empty-sphere
                       data-orb-identity-mark
                       data-orb-presence-slot="hero"
+                      data-orb-home-hero-presence
                     >
                       {residentialSurface ? (
                         <GlassOrbMark
                           variant={isMobileViewport ? 'compact' : 'hero'}
                           pulse
-                          state="idle"
+                          state={isAnswering ? 'thinking' : 'idle'}
                           data-orb-empty-sphere-mark
                         />
                       ) : null}
@@ -4305,9 +4318,17 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
                         {emptyWelcome.subline || ORB_RESIDENTIAL_EMPTY_SUBLINE}
                       </p>
                     ) : null}
+                    {residentialSurface ? (
+                      <p
+                        className="orb-home-brand-truth mt-2 max-w-lg text-xs leading-relaxed text-[var(--orb-muted)]"
+                        data-orb-home-brand-truth
+                      >
+                        {ORB_HOME_BRAND_TRUTH_LINE}
+                      </p>
+                    ) : null}
                     {residentialSurface && showEmptyState ? (
                       <p
-                        className="orb-workspace-home-safety mt-3 max-w-lg text-xs leading-relaxed text-[var(--orb-muted)]"
+                        className="orb-workspace-home-safety mt-2.5 max-w-lg text-[11px] leading-relaxed text-[var(--orb-muted)]"
                         data-orb-home-safety-line
                       >
                         {ORB_HOME_SAFETY_LINE}

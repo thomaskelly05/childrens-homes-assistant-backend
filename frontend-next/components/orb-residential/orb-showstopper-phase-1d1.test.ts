@@ -65,7 +65,7 @@ describe('ORB Residential Phase 1D.1 contrast and readability', () => {
     assert.match(companion, /data-orb-guided-demo-active-marker/)
     assert.match(companion, /data-orb-home-safety-line/)
     assert.match(companion, /ORB_HOME_SAFETY_LINE/)
-    assert.match(ORB_HOME_SAFETY_LINE, /professional judgement/)
+    assert.match(ORB_HOME_SAFETY_LINE, /local safeguarding procedures/)
     assert.equal(ORB_GUIDED_DEMO_ACTIVE_MARKER, 'Guided Demo \u00b7 anonymised scenario')
   })
 
