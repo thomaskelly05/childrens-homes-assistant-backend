@@ -236,7 +236,7 @@ export function OrbStandaloneSettingsPanel({
         : { layout: 'center' as const, wide: true, mobileMode: 'full' as const })}
     >
       <div
-        className="orb-studio-shell flex min-h-0 flex-1 flex-col overflow-hidden md:flex-row orb-modal"
+        className="orb-settings-layout min-h-0 h-full overflow-hidden"
         data-orb-settings-panel
         data-orb-settings-drawer
         data-orb-settings-layout="premium-cards"
@@ -245,7 +245,7 @@ export function OrbStandaloneSettingsPanel({
         data-orb-studio-shell="settings"
       >
         <nav
-          className={`shrink-0 border-b border-[var(--orb-line)] p-2 md:w-44 md:border-b-0 md:border-r ${
+          className={`orb-settings-nav shrink-0 border-b border-[var(--orb-line)] p-2 md:border-b-0 md:border-r ${
             showMobileList ? 'flex flex-col gap-1' : 'hidden md:block'
           }`}
           data-orb-settings-nav
@@ -273,7 +273,7 @@ export function OrbStandaloneSettingsPanel({
         </nav>
 
         <div
-          className={`orb-settings-scroll min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain pb-[max(1rem,env(safe-area-inset-bottom))] ${
+          className={`orb-settings-scroll min-h-0 overflow-x-hidden overflow-y-auto overscroll-contain pb-[max(1rem,env(safe-area-inset-bottom))] ${
             showMobileList ? 'hidden' : 'p-4'
           } ${showMobileDetail ? 'pt-3' : ''}`}
           data-orb-settings-scroll
@@ -593,7 +593,10 @@ function SettingsBlock({
   suppressHeader?: boolean
 }) {
   return (
-    <section>
+    <section
+      className="orb-settings-section"
+      data-orb-settings-content-section={title.toLowerCase().replaceAll(' ', '-')}
+    >
       {!suppressHeader ? (
         <>
           <h3 className="text-sm font-semibold text-[var(--orb-foreground)]">{title}</h3>

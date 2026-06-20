@@ -46,24 +46,24 @@ export function OrbHelpPanel({ open, onClose }: { open: boolean; onClose: () => 
         className="orb-help-panel-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain"
         data-orb-help-panel-scroll
       >
-        <div className="space-y-5 p-4 orb-modal orb-modal--plain orb-modal--scroll-safe orb-modal--no-clip" data-orb-help-panel data-orb-modal="product">
-        <header className="flex items-start gap-3 pb-1">
-          <GlassOrbMark size="sm" aria-hidden />
-          <div className="min-w-0">
-            <p className="text-xs font-semibold uppercase tracking-wide text-[var(--orb-muted)]">ORB Residential</p>
-            <p className="text-sm text-[var(--orb-muted)]">{ORB_HELP_PANEL_SUBTITLE}</p>
-          </div>
-        </header>
-        {SECTIONS.map((section) => (
-          <section key={section.title} className="orb-modal-section">
-            <h3 className="text-sm font-semibold text-[var(--orb-foreground)]">{section.title}</h3>
-            <p className="mt-1.5 text-sm leading-6 text-[var(--orb-muted)]">{section.body}</p>
-          </section>
-        ))}
-        <p className="text-sm leading-6 text-[var(--orb-muted)]" data-orb-help-safeguarding-boundary>
-          If a child is at immediate risk, follow local safeguarding and emergency procedures. ORB supports
-          professional judgement — it does not replace safeguarding procedures or local policy.
-        </p>
+        <div className="orb-help-safety-panel space-y-3 p-4 orb-modal--plain orb-modal--scroll-safe orb-modal--no-clip" data-orb-help-panel data-orb-modal="product">
+          <header className="orb-help-safety-panel__header flex items-start gap-3 rounded-xl border border-indigo-100 bg-indigo-50/60 p-3">
+            <GlassOrbMark size="sm" aria-hidden />
+            <div className="min-w-0">
+              <p className="text-xs font-semibold uppercase tracking-wide text-[var(--orb-muted)]">ORB Residential</p>
+              <p className="text-sm text-[var(--orb-muted)]">{ORB_HELP_PANEL_SUBTITLE}</p>
+            </div>
+          </header>
+          {SECTIONS.map((section) => (
+            <section key={section.title} className="orb-modal-section">
+              <h3 className="text-sm font-semibold text-[var(--orb-foreground)]">{section.title}</h3>
+              <p className="mt-1.5 text-sm leading-6 text-[var(--orb-muted)]">{section.body}</p>
+            </section>
+          ))}
+          <p className="text-sm leading-6 text-[var(--orb-muted)]" data-orb-help-safeguarding-boundary>
+            If a child is at immediate risk, follow local safeguarding and emergency procedures. ORB supports
+            professional judgement — it does not replace safeguarding procedures or local policy.
+          </p>
         </div>
       </div>
     </OrbStandalonePanelShell>

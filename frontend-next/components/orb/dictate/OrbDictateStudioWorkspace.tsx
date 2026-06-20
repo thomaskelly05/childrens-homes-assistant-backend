@@ -257,20 +257,6 @@ export function OrbDictateStudioWorkspace(props: OrbDictateStudioWorkspaceProps)
 
   const advancedFooter = <OrbDictateAdvancedOptions {...props} effectiveText={effectiveText} />
 
-  const progressionStep = useMemo(() => {
-    if (!hasTranscript) return 'capture'
-    if (hasDraft) return 'write'
-    if (hasAnalysis || primaryAction === 'generate') return 'draft'
-    return 'review'
-  }, [hasTranscript, hasDraft, hasAnalysis, primaryAction])
-
-  const progressionSteps = [
-    { id: 'capture', label: 'Capture' },
-    { id: 'review', label: 'ORB Review' },
-    { id: 'draft', label: 'Create final draft' },
-    { id: 'write', label: 'Send to ORB Write' }
-  ] as const
-
   return (
     <OrbStudioShell
       studioId="dictate"
@@ -294,41 +280,6 @@ export function OrbDictateStudioWorkspace(props: OrbDictateStudioWorkspaceProps)
           </div>
         </div>
       </header>
-
-      <nav
-        className="orb-dictate-progression shrink-0 px-1"
-        aria-label="Dictate workflow"
-        data-orb-dictate-progression
-      >
-        <ol className="flex flex-wrap items-center gap-1 text-[10px] font-medium text-[var(--orb-muted)]">
-          {progressionSteps.map((step, index) => {
-            const active = step.id === progressionStep
-            const complete =
-              progressionSteps.findIndex((item) => item.id === progressionStep) > index
-            return (
-              <li
-                key={step.id}
-                className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 ${
-                  active
-                    ? 'border-[var(--orb-primary)]/50 bg-[var(--orb-primary-soft)] text-[var(--orb-foreground)]'
-                    : complete
-                      ? 'border-[var(--orb-line)]/40 text-[var(--orb-foreground)]/80'
-                      : 'border-transparent'
-                }`}
-                data-orb-dictate-step={step.id}
-                aria-current={active ? 'step' : undefined}
-              >
-                {step.label}
-                {index < progressionSteps.length - 1 ? (
-                  <span className="hidden text-[var(--orb-muted)]/60 sm:inline" aria-hidden>
-                    →
-                  </span>
-                ) : null}
-              </li>
-            )
-          })}
-        </ol>
-      </nav>
 
       <OrbDictateTopBar
         selectedTemplateId={props.selectedTemplateId}

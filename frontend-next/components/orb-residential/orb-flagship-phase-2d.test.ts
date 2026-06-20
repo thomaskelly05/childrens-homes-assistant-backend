@@ -12,9 +12,9 @@ function read(relativePath: string) {
   return readFileSync(join(root, relativePath), 'utf8')
 }
 
-describe('ORB Residential Phase 2D deploy verification and flagship completion', () => {
-  it('build version marker is phase-2d on shell and visual build', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-2d')
+describe('ORB Residential Phase 2E live UI composition repair', () => {
+  it('build version marker is phase-2e on shell and visual build', () => {
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-2e')
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
     const layout = read('app/orb/layout.tsx')
     assert.match(companion, /data-orb-build-version=\{ORB_BUILD_VISUAL_VERSION\}/)
@@ -66,16 +66,17 @@ describe('ORB Residential Phase 2D deploy verification and flagship completion',
     assert.doesNotMatch(companion, /data-orb-home-demo-strip/)
   })
 
-  it('dictate flagship structure includes progression and capture studio', () => {
+  it('dictate flagship structure uses studio header, capture canvas and ORB Review without developer progression', () => {
     const workspace = read('components/orb/dictate/OrbDictateStudioWorkspace.tsx')
     const transcript = read('components/orb/dictate/OrbTranscriptPanel.tsx')
     const topBar = read('components/orb/dictate/OrbDictateTopBar.tsx')
-    assert.match(workspace, /data-orb-dictate-progression/)
+    assert.doesNotMatch(workspace, /data-orb-dictate-progression/)
+    assert.doesNotMatch(workspace, /orb-dictate-progression/)
     assert.match(workspace, /data-orb-dictate-capture-affordances/)
     assert.match(workspace, /data-orb-dictate-capture-panel/)
     assert.match(workspace, /data-orb-dictate-review-panel/)
-    assert.match(workspace, /Create final draft/)
-    assert.match(workspace, /Send to ORB Write/)
+    assert.match(topBar, /Create final draft/)
+    assert.match(topBar, /Open in ORB Write/)
     assert.match(transcript, /data-orb-dictate-capture-zone/)
     assert.match(topBar, /data-orb-dictate-capture-controls/)
     assert.match(topBar, /OrbIcon/)
@@ -134,12 +135,20 @@ describe('ORB Residential Phase 2D deploy verification and flagship completion',
   })
 
   it('settings profile and billing sections remain complete', () => {
+    const settings = read('components/orb-standalone/orb-standalone-settings-panel.tsx')
     const profile = read('components/orb-residential/orb-residential-profile-settings-section.tsx')
     const billing = read('components/orb-standalone/orb-billing-settings-section.tsx')
+    assert.match(settings, /className="orb-settings-layout/)
+    assert.match(settings, /data-orb-settings-nav/)
+    assert.match(settings, /data-orb-settings-scroll/)
+    assert.doesNotMatch(settings, /orb-studio-shell[^\n]+orb-modal/)
     assert.match(profile, /data-orb-settings-profile-save/)
     assert.match(profile, /data-orb-settings-profile-local-note/)
     assert.match(billing, /data-orb-billing-included/)
     assert.match(billing, /data-orb-billing-plan-card/)
+    assert.match(billing, /data-orb-billing-usage/)
+    assert.match(billing, /data-orb-billing-provider/)
+    assert.match(billing, /data-orb-billing-trust/)
     assert.match(read('lib/orb/orb-residential-ui-copy.ts'), /'Communicate'/)
   })
 

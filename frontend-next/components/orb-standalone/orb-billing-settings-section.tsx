@@ -164,7 +164,7 @@ export function OrbBillingSettingsSection({
           <dt className="text-[var(--orb-muted)]">Billing</dt>
           <dd className="font-medium sm:mt-0.5">{priceLabel}</dd>
         </div>
-        <div className="flex justify-between gap-3 sm:block">
+        <div className="flex justify-between gap-3 sm:block" data-orb-billing-usage>
           <dt className="text-[var(--orb-muted)]">Usage</dt>
           <dd className="font-medium sm:mt-0.5">{usageRequests} requests</dd>
         </div>
@@ -236,10 +236,16 @@ export function OrbBillingSettingsSection({
             </li>
           ))}
         </ul>
-        <p className="mt-3 text-[10px] leading-5 text-[var(--orb-muted)]" data-orb-billing-provider-copy>
+      </div>
+      <div className="rounded-xl border border-[var(--orb-line)]/40 bg-indigo-50/40 p-3" data-orb-billing-provider>
+        <p className="text-xs font-semibold text-[var(--orb-foreground)]">Provider plans &amp; support</p>
+        <p className="mt-1 text-[10px] leading-5 text-[var(--orb-muted)]" data-orb-billing-provider-copy>
           {ORB_RESIDENTIAL_BILLING_PROVIDER_COPY}
         </p>
-        <p className="mt-2 text-[10px] leading-5 text-[var(--orb-muted)]" data-orb-billing-trust-note>
+      </div>
+      <div className="rounded-xl border border-emerald-200/60 bg-emerald-50/45 p-3" data-orb-billing-trust>
+        <p className="text-xs font-semibold text-[var(--orb-foreground)]">Trust &amp; data</p>
+        <p className="mt-1 text-[10px] leading-5 text-[var(--orb-muted)]" data-orb-billing-trust-note>
           ORB Residential billing is separate from IndiCare OS. Your data stays under adult control — review every
           output before use in practice.
         </p>
