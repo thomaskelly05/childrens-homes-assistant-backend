@@ -57,6 +57,7 @@ export function OrbVoiceModeSelector({
           className="text-sm font-semibold text-[var(--orb-foreground)]"
           data-orb-voice-mode-selection-label
           data-orb-voice-mode-headline
+          data-orb-voice-mode-selection-summary
         >
           {selection.headline}
         </p>

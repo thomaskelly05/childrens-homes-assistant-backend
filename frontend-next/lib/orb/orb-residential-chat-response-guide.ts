@@ -25,16 +25,20 @@ export type ResidentialChatSupportType =
   | 'general'
 
 const SAFEGUARDING_RE =
-  /\b(safeguard|abuse|disclos|allegat|missing from care|exploit|county lines|self[- ]?harm|suicid|CSE|CCE)\b/i
+  /\b(safeguard|abuse|disclos|allegat|missing from care|exploit|county lines|self[- ]?harm|suicid|CSE|CCE|LADO)\b/i
 
 const INCIDENT_RE =
-  /\b(incident|restraint|physical intervention|abscond|missing|assault|fight|damage)\b/i
+  /\b(incident|restraint|physical intervention|abscond|missing episode|missing from|assault|fight|damage|injur|harm)\b/i
 
 const SUPERVISION_RE = /\b(supervision|reflective practice|management discussion|handover)\b/i
 
 const WORDING_RE = /\b(wording|phrase|rewrite|tone|assumption|interpret)\b/i
 
-const RECORD_RE = /\b(record|recording|daily record|write up|log|note)\b/i
+const RECORD_RE = /\b(record|recording|daily record|write up|log|note|chronolog)\b/i
+
+const BEHAVIOUR_RE = /\b(behaviou?r|meltdown|dysregulat|aggress|escalat)\b/i
+
+const CONCERN_RE = /\b(concern|risk|worried|worry|escalat)\b/i
 
 /** Detect the primary support type from the adult’s message. */
 export function detectResidentialChatSupportType(
@@ -45,22 +49,21 @@ export function detectResidentialChatSupportType(
   const modeLower = String(mode || '').toLowerCase()
 
   if (modeLower.includes('safeguard') || SAFEGUARDING_RE.test(text)) return 'safeguarding_concern'
-  if (INCIDENT_RE.test(text)) return 'incident_reflection'
+  if (INCIDENT_RE.test(text) || BEHAVIOUR_RE.test(text)) return 'incident_reflection'
   if (SUPERVISION_RE.test(text)) return 'supervision_prep'
   if (WORDING_RE.test(text)) return 'wording_support'
   if (RECORD_RE.test(text) || modeLower.includes('record')) return 'prepare_record'
+  if (CONCERN_RE.test(text)) return 'safeguarding_concern'
   if (/\bthink|help me|what should|how do i|prepare\b/i.test(text)) return 'think_through'
   return 'general'
 }
 
-const SUPPORT_LABELS: Record<ResidentialChatSupportType, string> = {
-  think_through: 'Think it through',
-  prepare_record: 'Prepare a record',
-  incident_reflection: 'Reflect after an incident',
-  safeguarding_concern: 'Safeguarding concern',
-  supervision_prep: 'Supervision preparation',
-  wording_support: 'Wording support',
-  general: 'Specialist care support'
+/** True when ORB should apply specialist guided shaping rather than generic chat. */
+export function shouldApplyResidentialChatGuidance(
+  message: string,
+  mode?: StandaloneOrbMode | string | null
+): boolean {
+  return detectResidentialChatSupportType(message, mode) !== 'general'
 }
 
 const FOCUSED_QUESTIONS: Record<ResidentialChatSupportType, string[]> = {
@@ -75,14 +78,20 @@ const FOCUSED_QUESTIONS: Record<ResidentialChatSupportType, string[]> = {
     'What was the adult response and follow-up?'
   ],
   incident_reflection: [
-    'What happened first — times, sequence and who was present?',
-    'What was observed versus interpreted?',
-    'What helped or did not help for the child?'
+    'What happened, in the order it happened?',
+    'What was directly observed, heard or shared?',
+    'What did the child say, show or communicate?',
+    'What did adults do to keep the child safe?',
+    'Who was informed and when?',
+    'What follow-up or management oversight is needed?'
   ],
   safeguarding_concern: [
-    'What was observed or disclosed, in exact words where possible?',
-    'Is there immediate risk requiring local emergency or safeguarding procedures now?',
-    'Who has been informed or may need management or safeguarding lead oversight?'
+    'What happened, in the order it happened?',
+    'What was directly observed, heard or shared?',
+    'What did the child say, show or communicate?',
+    'What did adults do to keep the child safe?',
+    'Who was informed and when?',
+    'What follow-up or management oversight is needed?'
   ],
   supervision_prep: [
     'What do you want to take to supervision?',
@@ -101,24 +110,59 @@ const FOCUSED_QUESTIONS: Record<ResidentialChatSupportType, string[]> = {
   ]
 }
 
+const OUTPUT_OFFERS: Record<ResidentialChatSupportType, string> = {
+  think_through:
+    'a daily record, incident reflection, supervision note or safeguarding reflection',
+  prepare_record: 'a daily record, incident reflection, handover note or chronology entry',
+  incident_reflection: 'an incident record, safeguarding reflection or handover note',
+  safeguarding_concern: 'a safeguarding reflection, incident record or handover note',
+  supervision_prep: 'a supervision note, reflective summary or handover note',
+  wording_support: 'safer record wording, incident reflection or daily record sections',
+  general: 'a daily record, incident reflection, supervision note or safeguarding reflection'
+}
+
+function safeguardingOpening(): string {
+  return `Let’s think this through safely.
+
+First, is anyone at immediate risk right now? If yes, follow your local safeguarding and emergency procedures before writing the record.`
+}
+
+function boundaryFooter(): string {
+  return `**Remember:** Separate observation from interpretation. ORB does not investigate, make findings or replace professional judgement. Follow local policy and seek manager or safeguarding lead oversight where needed.`
+}
+
 /** Build a guided local fallback when streaming is unavailable or for structured first response. */
 export function buildResidentialGuidedChatFallback(
   message: string,
   mode?: StandaloneOrbMode | string | null
 ): string {
   const supportType = detectResidentialChatSupportType(message, mode)
-  const label = SUPPORT_LABELS[supportType]
   const questions = FOCUSED_QUESTIONS[supportType]
+  const outputs = OUTPUT_OFFERS[supportType]
+
+  if (supportType === 'safeguarding_concern' || supportType === 'incident_reflection') {
+    return [
+      safeguardingOpening(),
+      '',
+      'To help you record this clearly, tell me:',
+      '',
+      ...questions.map((q, i) => `${i + 1}. ${q}`),
+      '',
+      `Once you share the details, I can help shape this into ${outputs} for adult review.`,
+      '',
+      boundaryFooter()
+    ].join('\n')
+  }
 
   const lines = [
-    `I can help you with **${label.toLowerCase()}** — keeping the child’s experience central.`,
+    'Let’s work through this with the child’s experience central.',
     '',
     '**To move forward, it would help to know:**',
     ...questions.map((q) => `- ${q}`),
     '',
-    '**I can turn this into:** a daily record, incident reflection, supervision note or safeguarding reflection — for your review before use.',
+    `**I can turn this into:** ${outputs} — for your review before use.`,
     '',
-    '**Safeguarding boundaries:** If there is immediate risk, follow your local emergency and safeguarding procedures now. ORB does not investigate, make findings or replace professional judgement. Record exact words and observations; seek manager or safeguarding lead oversight where needed.'
+    boundaryFooter()
   ]
 
   return lines.join('\n')
@@ -127,14 +171,30 @@ export function buildResidentialGuidedChatFallback(
 /** Detect overly generic long safeguarding essays that should be reshaped. */
 export function isGenericResidentialSafeguardingEssay(content: string): boolean {
   const text = content.trim()
-  if (text.length < 900) return false
+  if (text.length < 700) return false
   const sectionCount = (text.match(/\n#{1,3}\s|\n\*\*[A-Z]/g) || []).length
   const hasGenericOpen =
-    /\b(it is important to note|in any safeguarding situation|safeguarding is everyone's responsibility|best practice suggests that)\b/i.test(
+    /\b(it is important to note|in any safeguarding situation|safeguarding is everyone's responsibility|best practice suggests that|safeguarding is a shared responsibility)\b/i.test(
       text
     )
-  const lacksQuestions = !/\?\s/m.test(text.slice(0, 600))
-  return hasGenericOpen && sectionCount >= 4 && lacksQuestions
+  const lacksFocusedQuestions = !/\?\s/m.test(text.slice(0, 800))
+  return (hasGenericOpen && sectionCount >= 3 && lacksFocusedQuestions) || (text.length > 1400 && lacksFocusedQuestions)
+}
+
+/** True when a streamed answer already follows the guided specialist pattern. */
+export function answerLooksGuidedResidentialChat(content: string): boolean {
+  const text = content.trim()
+  if (text.length < 120) return false
+  const hasQuestions = /\?\s/m.test(text.slice(0, 900))
+  const hasSafetyOrBoundary =
+    /\b(immediate risk|local (safeguarding|policy|emergency)|professional judgement|observation from interpretation|child('s)? voice|observed|exact words)\b/i.test(
+      text
+    )
+  const hasOutputOffer =
+    /\b(daily record|incident reflection|supervision note|safeguarding reflection|handover note|for adult review)\b/i.test(
+      text
+    )
+  return hasQuestions && hasSafetyOrBoundary && hasOutputOffer
 }
 
 /** If a streamed answer looks like a generic essay, prepend a shorter guided structure. */
@@ -142,4 +202,22 @@ export function reshapeGenericResidentialChatAnswer(content: string, userMessage
   if (!isGenericResidentialSafeguardingEssay(content)) return content
   const guide = buildResidentialGuidedChatFallback(userMessage, mode)
   return `${guide}\n\n---\n\n**Additional context from ORB (review and edit before use):**\n\n${content.slice(0, 1200)}${content.length > 1200 ? '…' : ''}`
+}
+
+/** Main residential chat shaping — guided specialist responses, not generic essays. */
+export function reshapeResidentialChatAnswer(
+  content: string,
+  userMessage: string,
+  mode?: StandaloneOrbMode | string | null
+): string {
+  if (!shouldApplyResidentialChatGuidance(userMessage, mode)) {
+    return reshapeGenericResidentialChatAnswer(content, userMessage, mode ?? undefined)
+  }
+  if (answerLooksGuidedResidentialChat(content) && !isGenericResidentialSafeguardingEssay(content)) {
+    return content
+  }
+  if (isGenericResidentialSafeguardingEssay(content)) {
+    return buildResidentialGuidedChatFallback(userMessage, mode)
+  }
+  return buildResidentialGuidedChatFallback(userMessage, mode)
 }

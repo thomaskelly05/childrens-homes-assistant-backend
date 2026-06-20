@@ -97,16 +97,6 @@ export function OrbVoiceLaunchControls({
           Voice settings
         </button>
       ) : null}
-
-      <button
-        type="button"
-        data-orb-voice-end-summary
-        disabled
-        title="Summary creation will be available after your voice session"
-        className="w-full rounded-full border border-[var(--orb-line)]/45 py-2 text-xs text-[var(--orb-muted)] disabled:cursor-not-allowed disabled:opacity-55"
-      >
-        End and create summary
-      </button>
     </div>
   )
 }

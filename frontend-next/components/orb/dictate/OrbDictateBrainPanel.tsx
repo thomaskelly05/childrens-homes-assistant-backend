@@ -4,7 +4,7 @@ import { useState, type ReactNode } from 'react'
 import { Loader2, PanelRightClose, PanelRightOpen, Sparkles } from 'lucide-react'
 
 import type { OrbDictateBrainAnalysis, OrbDictateBrainSuggestion } from '@/lib/orb/dictate/orb-dictate-brain-analysis'
-import { ORB_RESIDENTIAL_DICTATE_COPY, orbResidentialReviewChecks, ORB_CORE_REVIEW_CHECKS } from '@/lib/orb/orb-residential-copy'
+import { ORB_RESIDENTIAL_DICTATE_COPY, ORB_CORE_REVIEW_CHECKS } from '@/lib/orb/orb-residential-copy'
 import {
   orbRecordingSuggestedOutputs,
   resolveOrbRecordingRecordType
@@ -96,7 +96,6 @@ function BrainEmptyState({
   analysing?: boolean
 }) {
   const recordType = resolveOrbRecordingRecordType({ studioTemplateId, recordTypeId })
-  const orbChecks = orbResidentialReviewChecks(recordType.id)
   const outputs = orbRecordingSuggestedOutputs(recordType.id)
 
   return (
@@ -109,24 +108,11 @@ function BrainEmptyState({
 
       <section className="mt-4" data-orb-dictate-review-sections data-orb-brain-review-sections>
         <h4 className="text-[10px] font-semibold uppercase tracking-wider text-[var(--orb-muted)]">
-          What ORB helps you check
+          What ORB will check
         </h4>
-        <ul className="mt-1.5 space-y-1 text-xs text-[var(--orb-foreground)]">
+        <ul className="mt-1.5 space-y-1 text-xs text-[var(--orb-foreground)]" data-orb-dictate-review-checklist>
           {ORB_CORE_REVIEW_CHECKS.map((check) => (
             <li key={check} data-orb-dictate-review-section={check}>
-              {check}
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      <section className="mt-4" data-orb-brain-empty-orb-checks>
-        <h4 className="text-[10px] font-semibold uppercase tracking-wider text-[var(--orb-muted)]">
-          What ORB will help you check
-        </h4>
-        <ul className="mt-1.5 space-y-1.5 text-xs text-[var(--orb-foreground)]">
-          {orbChecks.map((check) => (
-            <li key={check} data-orb-brain-orb-check-empty data-orb-brain-check-item>
               {check}
             </li>
           ))}
@@ -257,7 +243,7 @@ export function OrbDictateBrainPanel({
             ) : null}
 
             {analysis.orb_will_check?.length ? (
-              <AnalysisSection title="What ORB will help you check" dataAttr="orb-checks">
+              <AnalysisSection title="What ORB will check" dataAttr="orb-checks">
                 <ul className="space-y-1.5 text-xs">
                   {analysis.orb_will_check.map((c) => (
                     <li key={c} data-orb-brain-orb-check data-orb-brain-check-item>

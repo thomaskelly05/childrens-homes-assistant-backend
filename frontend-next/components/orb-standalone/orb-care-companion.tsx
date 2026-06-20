@@ -185,8 +185,7 @@ import {
   tryStandaloneGuestLocalAnswer
 } from '@/lib/orb/standalone-guest-response'
 import {
-  buildResidentialGuidedChatFallback,
-  reshapeGenericResidentialChatAnswer
+  reshapeResidentialChatAnswer
 } from '@/lib/orb/orb-residential-chat-response-guide'
 import { profileInitialsFromName } from '@/lib/orb/orb-profile-initials'
 import { OrbHelpPanel } from '@/components/orb-standalone/orb-help-panel'
@@ -1711,7 +1710,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
           resolvedAnswer.trim() ||
           STANDALONE_ORB_EMPTY_ANSWER_MESSAGE
         const shapedAnswer = residentialSurface
-          ? reshapeGenericResidentialChatAnswer(answer, trimmed || messageBody, mode)
+          ? reshapeResidentialChatAnswer(answer, trimmed || messageBody, mode)
           : answer
         const streamIncomplete =
           Boolean(response.error_detail) ||

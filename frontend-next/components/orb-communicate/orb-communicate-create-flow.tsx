@@ -37,7 +37,7 @@ export const ORB_COMMUNICATE_OUTPUT_TYPES = [
 ] as const
 
 export const ORB_COMMUNICATE_CREATOR_HEADLINE =
-  'ORB can help create accessible explanations, visual supports, social story sections, staff guidance and recording prompts — for adult review.'
+  'Create accessible explanations, visual supports, social story sections, staff guidance and recording prompts for adult review.'
 
 export const ORB_COMMUNICATE_MAIN_HEADING = 'Describe the communication need.'
 
@@ -49,23 +49,23 @@ export const ORB_COMMUNICATE_PACK_PREVIEW =
 
 const ORB_COMMUNICATE_PREVIEW_SECTIONS = [
   {
-    title: 'Easy-read explanation preview',
+    title: 'Easy-read explanation',
     body: 'Short sentences, clear sequence and a calm explanation of what is happening.'
   },
   {
-    title: 'Visual support cards preview',
+    title: 'Visual support cards',
     body: 'Original generic cards for people, places, feelings and next steps.'
   },
   {
-    title: 'Social story preview',
+    title: 'Social story section',
     body: 'Respectful first-person structure that can be personalised before sharing.'
   },
   {
-    title: 'Staff guidance preview',
+    title: 'Staff guidance',
     body: 'How adults can introduce, check understanding and avoid assumptions.'
   },
   {
-    title: 'Recording prompts preview',
+    title: 'Recording prompts',
     body: 'What the person expressed, what helped, adult response and follow-up.'
   }
 ] as const
@@ -220,8 +220,8 @@ export function OrbCommunicateCreateFlow({
           <p className="text-xs font-semibold uppercase tracking-wide text-[var(--orb-res-workspace-muted)]">
             Support-pack preview
           </p>
-          <h3 className="mt-1 text-lg font-semibold text-[var(--orb-res-navy)]">
-            Adult-reviewed pack structure
+          <h3 className="mt-1 text-lg font-semibold text-[var(--orb-res-navy)]" data-orb-communicate-pack-preview-title>
+            Adult-reviewed support pack
           </h3>
           <p className="mt-1 text-xs leading-relaxed text-[var(--orb-res-workspace-muted)]">
             Uses original placeholder visual cards only. Visuals support communication and do not imply universal understanding.

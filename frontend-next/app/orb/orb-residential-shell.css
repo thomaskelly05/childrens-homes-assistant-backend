@@ -1,7 +1,7 @@
 /**
  * ORB Residential — single canonical UI design system (Phase 1K blank canvas, 1M personality).
  * One file for shell, workspace, composer, login, mobile, stations and modals.
- * Visual build marker: phase-3c.
+ * Visual build marker: phase-3d.
  */
 
 :root {
@@ -2337,4 +2337,41 @@ html[data-orb-theme='dark'] .orb-sidebar-dropdown-menu__danger {
   padding: 0.85rem 1rem;
   font-size: 0.8125rem;
   color: var(--orb-muted);
+}
+
+/* Phase 3D — capture-first Dictate, compact journey strip */
+.orb-dictate-workflow--compact span:nth-child(odd) {
+  padding: 0.12rem 0.4rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+html[data-orb-residential='1'] .orb-dictate-hero-strip {
+  padding-block: 0.65rem;
+}
+
+html[data-orb-residential='1'] .orb-dictate-capture-canvas {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+html[data-orb-residential='1'] .orb-dictate-transcript-area {
+  min-height: 14rem;
+  flex: 1 1 auto;
+}
+
+html[data-orb-residential='1'] .orb-dictate-capture-empty {
+  padding: 0.85rem 1rem;
+}
+
+html[data-orb-residential='1'] [data-orb-dictate-capture-affordances] .orb-dictate-capture-action {
+  min-height: 2rem;
+}
+
+html[data-orb-residential='1'] .orb-write-integrated-studio [data-orb-write-layout] {
+  min-height: min(72dvh, calc(100svh - 9rem));
+}
+
+html[data-orb-residential='1'] [data-orb-write-adult-responsibility] {
+  padding-bottom: 0.35rem;
 }

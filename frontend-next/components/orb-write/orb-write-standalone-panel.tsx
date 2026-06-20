@@ -110,7 +110,6 @@ export function OrbWriteStandalonePanel({
       setCompactWriteHeight(compact)
       if (compact) {
         setSourcePanelOpen(false)
-        setGuidancePanelOpen(false)
       }
     }
     sync()
@@ -643,7 +642,14 @@ export function OrbWriteStandalonePanel({
                 <p className="mt-1">{ORB_WRITE_SAFETY_COPY.responsibility}</p>
                 <p className="mt-1">{ORB_WRITE_SAFETY_COPY.judgement}</p>
               </details>
-            ) : null}
+            ) : (
+              <p
+                className="shrink-0 px-1 text-center text-[11px] leading-relaxed text-[var(--orb-muted)]"
+                data-orb-write-adult-responsibility
+              >
+                {ORB_WRITE_SAFETY_COPY.responsibility}
+              </p>
+            )}
             {statusMessage ? (
               <p className="text-xs text-[var(--orb-primary)]" role="status">
                 {statusMessage}

@@ -43,5 +43,6 @@ export const ORB_WRITE_PRIVACY_NOTICE =
 export const ORB_WRITE_SAFETY_COPY = {
   review: 'Review required before saving or exporting.',
   judgement: 'ORB supports professional judgement. It does not replace it.',
-  responsibility: 'Adult remains responsible for the final record.'
+  responsibility:
+    'Adult remains responsible for the final record. ORB can improve wording, but staff must verify accuracy.'
 } as const

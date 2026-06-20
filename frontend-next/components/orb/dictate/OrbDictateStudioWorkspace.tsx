@@ -278,7 +278,7 @@ export function OrbDictateStudioWorkspace(props: OrbDictateStudioWorkspaceProps)
               {ORB_DICTATE_SUBTITLE}
             </p>
             <nav
-              className="orb-station-journey orb-dictate-workflow mt-2 flex flex-wrap items-center gap-1 text-[10px] font-medium"
+              className="orb-station-journey orb-dictate-workflow orb-dictate-workflow--compact mt-1.5 flex flex-wrap items-center gap-0.5 text-[9px] font-medium opacity-80"
               aria-label="Dictate journey"
               data-orb-dictate-designed-workflow
               data-orb-dictate-journey="Capture → Transcript → ORB Review → Safer Draft → ORB Write"
@@ -353,6 +353,7 @@ export function OrbDictateStudioWorkspace(props: OrbDictateStudioWorkspaceProps)
                 data-orb-dictate-capture-affordances
               >
               <OrbDictateAudioUpload
+                variant="capture"
                 onFile={props.onAudioUpload}
                 uploading={props.uploadingAudio}
                 fileLabel={props.uploadFileLabel}
@@ -360,7 +361,7 @@ export function OrbDictateStudioWorkspace(props: OrbDictateStudioWorkspaceProps)
               />
               <button
                 type="button"
-                className="rounded-lg border border-[var(--orb-line)]/45 px-2.5 py-1 text-[10px] font-semibold text-[var(--orb-muted)]"
+                className="orb-dictate-capture-action inline-flex items-center rounded-lg border border-[var(--orb-line)]/45 bg-[var(--orb-surface-elevated)] px-2.5 py-1.5 text-[10px] font-semibold text-[var(--orb-foreground)] hover:bg-[var(--orb-surface-hover)]"
                 onClick={() => props.onTranscriptChange(props.transcript)}
                 data-orb-dictate-paste-notes-control
               >

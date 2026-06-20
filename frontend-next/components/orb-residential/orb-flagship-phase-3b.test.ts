@@ -18,7 +18,7 @@ function read(relativePath: string) {
 
 describe('ORB Residential Phase 3B unified station experience', () => {
   it('build version marker is phase-3b', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-3c')
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-3d')
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
     const layout = read('app/orb/layout.tsx')
     assert.match(companion, /data-orb-build-version=\{ORB_BUILD_VISUAL_VERSION\}/)
@@ -62,7 +62,8 @@ describe('ORB Residential Phase 3B unified station experience', () => {
     assert.match(workspace, /data-orb-dictate-capture-guidance/)
     assert.match(brain, /data-orb-dictate-review-sections/)
     assert.match(brain, /ORB_CORE_REVIEW_CHECKS/)
-    assert.match(brain, /data-orb-dictate-review-section/)
+    assert.match(brain, /What ORB will check/)
+    assert.doesNotMatch(brain, /What ORB will help you check/)
     assert.match(workspace, /data-orb-dictate-safety-footer/)
   })
 
@@ -145,7 +146,6 @@ describe('ORB Residential Phase 3B unified station experience', () => {
     const voice = read('components/orb-standalone/orb-voice-station.tsx')
     assert.match(companion, /data-orb-home-safety-line/)
     assert.match(voice, /Audio is not stored/)
-    assert.match(voice, /Voice is for reflective support/)
   })
 
   it('sidebar powered-by tagline uses shorter IndiCare label', () => {

@@ -17,7 +17,7 @@ function read(relativePath: string) {
 
 describe('ORB Residential Phase 3C live product repair', () => {
   it('build version marker is phase-3c', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-3c')
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-3d')
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
     const layout = read('app/orb/layout.tsx')
     assert.match(companion, /data-orb-build-version=\{ORB_BUILD_VISUAL_VERSION\}/)
@@ -48,7 +48,7 @@ describe('ORB Residential Phase 3C live product repair', () => {
   it('chat uses residential guided response shaping and concise detail', () => {
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
     const router = read('lib/orb/orb-brain-router.ts')
-    assert.match(companion, /reshapeGenericResidentialChatAnswer/)
+    assert.match(companion, /reshapeResidentialChatAnswer/)
     assert.match(companion, /detail: voiceOriginatedSend \? voiceSettings\.answerStyle : 'concise'/)
     assert.match(router, /requested_action: 'residential_guided_chat'/)
   })
@@ -67,7 +67,7 @@ describe('ORB Residential Phase 3C live product repair', () => {
     assert.match(topBar, /Send to ORB Write/)
     assert.doesNotMatch(topBar, /Create final draft/)
     assert.match(workspace, /ORB_DICTATE_RESPONSIBILITY|ORB_RESIDENTIAL_DICTATE_COPY/)
-    assert.match(ORB_DICTATE_CAPTURE_GUIDANCE, /Speak naturally, paste rough notes or upload audio/)
+    assert.match(ORB_DICTATE_CAPTURE_GUIDANCE, /Speak, paste or upload what happened/)
   })
 
   it('voice shows style and reasoning carousels on main screen with push to talk', () => {
@@ -77,10 +77,9 @@ describe('ORB Residential Phase 3C live product repair', () => {
     assert.match(selector, /data-orb-voice-style-carousel/)
     assert.match(selector, /data-orb-voice-reasoning-carousel/)
     assert.match(voice, /data-orb-voice-controls-not-settings/)
-    assert.match(voice, /Voice is for reflective support/)
+    assert.match(voice, /Audio is not stored/)
     assert.match(launch, /data-orb-voice-ptt-primary/)
-    assert.match(launch, /data-orb-voice-end-summary/)
-    assert.match(launch, /End and create summary/)
+    assert.doesNotMatch(launch, /data-orb-voice-end-summary/)
   })
 
   it('communicate is support-pack creator with natural language input and placeholder visuals', () => {

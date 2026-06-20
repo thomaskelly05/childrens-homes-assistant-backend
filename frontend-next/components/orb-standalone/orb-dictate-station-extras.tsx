@@ -245,18 +245,35 @@ export function OrbDictateAudioUpload({
   onFile,
   uploading,
   fileLabel,
-  error
+  error,
+  variant = 'panel'
 }: {
   onFile: (file: File) => void
   uploading: boolean
   fileLabel: string | null
   error: string | null
+  variant?: 'panel' | 'capture'
 }) {
+  const capture = variant === 'capture'
   return (
-    <section className="rounded-xl border border-[var(--orb-line)]/60 bg-[var(--orb-surface-elevated)] p-3" data-orb-dictate-upload>
-      <label className="flex cursor-pointer items-center gap-2 text-xs text-sky-200">
-        <Upload className="h-4 w-4" aria-hidden />
-        <span>{uploading ? 'Transcribing audio…' : 'Upload audio file'}</span>
+    <section
+      className={
+        capture
+          ? 'orb-dictate-capture-action inline-flex'
+          : 'rounded-xl border border-[var(--orb-line)]/60 bg-[var(--orb-surface-elevated)] p-3'
+      }
+      data-orb-dictate-upload
+      data-orb-dictate-audio-upload
+    >
+      <label
+        className={
+          capture
+            ? 'orb-dictate-capture-action inline-flex cursor-pointer items-center rounded-lg border border-[var(--orb-line)]/45 bg-[var(--orb-surface-elevated)] px-2.5 py-1.5 text-[10px] font-semibold text-[var(--orb-foreground)] hover:bg-[var(--orb-surface-hover)]'
+            : 'flex cursor-pointer items-center gap-2 text-xs text-[var(--orb-foreground)]'
+        }
+      >
+        <Upload className={capture ? 'mr-1 h-3.5 w-3.5' : 'h-4 w-4'} aria-hidden />
+        <span>{uploading ? 'Transcribing audio…' : capture ? 'Upload audio' : 'Upload audio file'}</span>
         <input
           type="file"
           accept="audio/webm,audio/mp3,audio/mpeg,audio/wav,audio/m4a,audio/mp4,.webm,.mp3,.wav,.m4a,.mp4"
@@ -270,9 +287,9 @@ export function OrbDictateAudioUpload({
           }}
         />
       </label>
-      {fileLabel ? <p className="mt-1 text-[10px] text-[var(--orb-muted)]">{fileLabel}</p> : null}
+      {fileLabel && !capture ? <p className="mt-1 text-[10px] text-[var(--orb-muted)]">{fileLabel}</p> : null}
       {error ? (
-        <p className="mt-1 text-[10px] text-amber-200/90" role="alert">
+        <p className={`${capture ? 'ml-2' : 'mt-1'} text-[10px] text-amber-700 dark:text-amber-200/90`} role="alert">
           {error}
         </p>
       ) : null}
