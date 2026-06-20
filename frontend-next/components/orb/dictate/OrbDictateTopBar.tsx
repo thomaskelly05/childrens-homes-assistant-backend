@@ -1,11 +1,11 @@
 'use client'
 
-import { Maximize2, Mic, Minimize2, Pause, PenLine, Play, Sparkles, Square } from 'lucide-react'
+import { Maximize2, Minimize2 } from 'lucide-react'
 
 import { OrbDictatePanelLayoutControl } from '@/components/orb/dictate/OrbDictatePanelLayoutControl'
 import { OrbDictateTemplateSelector } from '@/components/orb/dictate/OrbDictateTemplateSelector'
+import { OrbIcon } from '@/components/orb-residential/ui/orb-icon'
 import type { OrbDictatePanelLayout } from '@/lib/orb/dictate/orb-dictate-panel-layout'
-import { ORB_RESIDENTIAL_DICTATE_COPY } from '@/lib/orb/orb-residential-copy'
 import type { OrbDictateStudioTemplate } from '@/lib/orb/dictate/orb-dictate-studio-templates'
 
 export type OrbDictatePrimaryAction = 'analyse' | 'generate' | 'disabled'
@@ -84,54 +84,61 @@ export function OrbDictateTopBar({
 
   return (
     <header
-      className="orb-dictate-top-bar orb-dictate-recorder-bar orb-liquid-toolbar sticky top-0 z-10 shrink-0 border-b border-[var(--orb-line)]/40 bg-[var(--orb-surface-elevated)]/95 py-1.5 backdrop-blur-sm"
+      className="orb-dictate-top-bar orb-dictate-recorder-bar orb-liquid-toolbar sticky top-0 z-10 shrink-0 border-b border-[var(--orb-line)]/40 bg-[var(--orb-surface-elevated)]/95 px-2 py-2 backdrop-blur-sm"
       data-orb-dictate-top-bar
       data-orb-dictate-recorder-bar
+      data-orb-dictate-capture-controls
     >
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-        <div className="flex min-w-0 items-start gap-2">
-          <h2
-            className="hidden shrink-0 pt-1 text-sm font-semibold tracking-tight text-[var(--orb-foreground)] sm:block"
-            data-orb-dictate-title
-          >
-            {ORB_RESIDENTIAL_DICTATE_COPY.title}
-          </h2>
-          <div className="hidden min-w-0 flex-col lg:flex">
-            <p
-              className="max-w-xs text-[11px] leading-snug text-[var(--orb-muted)]"
-              data-orb-dictate-subtitle
-            >
-              {ORB_RESIDENTIAL_DICTATE_COPY.subtitle}
-            </p>
-          </div>
+      <div className="flex flex-col gap-2">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+          <span className="sr-only" data-orb-dictate-title>
+            ORB Dictate
+          </span>
           <OrbDictateTemplateSelector
             selectedTemplateId={selectedTemplateId}
             onTemplateChange={onTemplateChange}
             variant="compact"
           />
+
+          <div
+            className="flex items-center gap-1.5 rounded-full border border-[var(--orb-line)]/45 bg-[var(--orb-surface)] px-2.5 py-0.5 text-[11px]"
+            data-orb-dictate-recording-status
+          >
+            <span
+              className={`inline-flex h-1.5 w-1.5 rounded-full ${
+                recordingActive && !recordingPaused
+                  ? 'animate-pulse bg-red-400'
+                  : recordingPaused
+                    ? 'bg-amber-400'
+                    : 'bg-emerald-400/80'
+              }`}
+              aria-hidden
+            />
+            <span className="font-medium text-[var(--orb-foreground)]">{recordingLabel}</span>
+            <span className="tabular-nums text-[var(--orb-muted)]" data-orb-dictate-timer>
+              {formatTimer(timerSec)}
+            </span>
+          </div>
+
+          {panelLayout && onPanelLayoutChange ? (
+            <OrbDictatePanelLayoutControl layout={panelLayout} onLayoutChange={onPanelLayoutChange} />
+          ) : null}
+
+          {onToggleFocusMode ? (
+            <button
+              type="button"
+              data-orb-dictate-focus-mode
+              aria-pressed={focusMode}
+              title={focusMode ? 'Exit focus mode' : 'Focus mode'}
+              className="ml-auto inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--orb-line)]/45 text-[var(--orb-muted)] hover:bg-[var(--orb-surface-hover)]"
+              onClick={onToggleFocusMode}
+            >
+              {focusMode ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+            </button>
+          ) : null}
         </div>
 
-        <div
-          className="flex items-center gap-1.5 rounded-full border border-[var(--orb-line)]/45 bg-[var(--orb-surface)] px-2.5 py-0.5 text-[11px]"
-          data-orb-dictate-recording-status
-        >
-          <span
-            className={`inline-flex h-1.5 w-1.5 rounded-full ${
-              recordingActive && !recordingPaused
-                ? 'animate-pulse bg-red-400'
-                : recordingPaused
-                  ? 'bg-amber-400'
-                  : 'bg-emerald-400/80'
-            }`}
-            aria-hidden
-          />
-          <span className="font-medium text-[var(--orb-foreground)]">{recordingLabel}</span>
-          <span className="tabular-nums text-[var(--orb-muted)]" data-orb-dictate-timer>
-            {formatTimer(timerSec)}
-          </span>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-1.5 sm:ml-auto">
+        <div className="flex flex-wrap items-center gap-1.5">
           {!recordingActive && !captureStarting ? (
             <button
               type="button"
@@ -140,7 +147,7 @@ export function OrbDictateTopBar({
               disabled={speechStartDisabled}
               onClick={onStartRecording}
             >
-              <Mic className="h-4 w-4" aria-hidden />
+              <OrbIcon name="record" size="md" className="text-slate-950" />
               Start recording
             </button>
           ) : captureStarting ? (
@@ -168,7 +175,7 @@ export function OrbDictateTopBar({
                   onClick={onResumeRecording}
                   aria-label="Resume recording"
                 >
-                  <Play className="h-4 w-4" />
+                  <OrbIcon name="play" size="md" />
                 </button>
               ) : (
                 <button
@@ -177,7 +184,7 @@ export function OrbDictateTopBar({
                   onClick={onPauseRecording}
                   aria-label="Pause recording"
                 >
-                  <Pause className="h-4 w-4" />
+                  <OrbIcon name="pause" size="md" />
                 </button>
               )}
               <button
@@ -186,7 +193,7 @@ export function OrbDictateTopBar({
                 onClick={onStopRecording}
                 aria-label="Stop recording"
               >
-                <Square className="h-4 w-4" />
+                <OrbIcon name="stop" size="md" />
               </button>
             </div>
           )}
@@ -200,7 +207,7 @@ export function OrbDictateTopBar({
             className="inline-flex h-9 items-center gap-1 rounded-xl border border-[var(--orb-primary)]/40 bg-[var(--orb-primary-soft)] px-3 text-xs font-semibold text-[var(--orb-foreground)] disabled:cursor-not-allowed disabled:opacity-45"
             onClick={onPrimaryAction}
           >
-            <Sparkles className="h-3.5 w-3.5 shrink-0" aria-hidden />
+            <OrbIcon name="review" size="sm" />
             <span className="hidden sm:inline">{primaryLabel}</span>
             <span className="sm:hidden">Review</span>
           </button>
@@ -213,27 +220,10 @@ export function OrbDictateTopBar({
             className="inline-flex h-9 items-center gap-1 rounded-xl bg-[var(--orb-primary)] px-3 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-45"
             onClick={onFinalise}
           >
-            <PenLine className="h-3.5 w-3.5 shrink-0" aria-hidden />
+            <OrbIcon name="write" size="sm" className="text-white" />
             <span className="hidden md:inline">Open in ORB Write</span>
             <span className="md:hidden">Write</span>
           </button>
-
-          {onToggleFocusMode ? (
-            <button
-              type="button"
-              data-orb-dictate-focus-mode
-              aria-pressed={focusMode}
-              title={focusMode ? 'Exit focus mode' : 'Focus mode'}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--orb-line)]/45 text-[var(--orb-muted)] hover:bg-[var(--orb-surface-hover)]"
-              onClick={onToggleFocusMode}
-            >
-              {focusMode ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
-            </button>
-          ) : null}
-
-          {panelLayout && onPanelLayoutChange ? (
-            <OrbDictatePanelLayoutControl layout={panelLayout} onLayoutChange={onPanelLayoutChange} />
-          ) : null}
         </div>
       </div>
     </header>

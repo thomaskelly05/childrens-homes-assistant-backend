@@ -13,7 +13,7 @@ import {
 import { OrbTranscriptPanel } from '@/components/orb/dictate/OrbTranscriptPanel'
 import { OrbStudioShell } from '@/components/orb/premium'
 import { ORB_RESIDENTIAL_DICTATE_COPY } from '@/lib/orb/orb-residential-copy'
-import { ORB_DICTATE_SUBTITLE, ORB_DICTATE_TITLE } from '@/lib/orb/orb-user-facing-names'
+import { ORB_DICTATE_RESPONSIBILITY, ORB_DICTATE_SUBTITLE, ORB_DICTATE_TITLE } from '@/lib/orb/orb-user-facing-names'
 import { OrbResizableWorkspace } from '@/components/orb/resizable-panels/orb-resizable-workspace'
 import {
   OrbDictateAudioUpload,
@@ -257,6 +257,20 @@ export function OrbDictateStudioWorkspace(props: OrbDictateStudioWorkspaceProps)
 
   const advancedFooter = <OrbDictateAdvancedOptions {...props} effectiveText={effectiveText} />
 
+  const progressionStep = useMemo(() => {
+    if (!hasTranscript) return 'capture'
+    if (hasDraft) return 'write'
+    if (hasAnalysis || primaryAction === 'generate') return 'draft'
+    return 'review'
+  }, [hasTranscript, hasDraft, hasAnalysis, primaryAction])
+
+  const progressionSteps = [
+    { id: 'capture', label: 'Capture' },
+    { id: 'review', label: 'ORB Review' },
+    { id: 'draft', label: 'Create final draft' },
+    { id: 'write', label: 'Send to ORB Write' }
+  ] as const
+
   return (
     <OrbStudioShell
       studioId="dictate"
@@ -272,14 +286,49 @@ export function OrbDictateStudioWorkspace(props: OrbDictateStudioWorkspaceProps)
           <GlassOrbMark size="sm" pulse className="shrink-0" aria-hidden />
           <div className="min-w-0 flex-1">
             <h2 className="text-sm font-semibold tracking-tight text-[var(--orb-foreground)]" data-orb-dictate-title>
-              ORB Dictate
+              {ORB_DICTATE_TITLE === 'Dictate' ? 'ORB Dictate' : ORB_DICTATE_TITLE}
             </h2>
             <p className="mt-0.5 text-xs leading-relaxed text-[var(--orb-muted)]" data-orb-dictate-subtitle-header>
-              Speak, paste or upload rough notes. ORB helps shape them into safer drafts for adult review.
+              {ORB_DICTATE_SUBTITLE}
             </p>
           </div>
         </div>
       </header>
+
+      <nav
+        className="orb-dictate-progression shrink-0 px-1"
+        aria-label="Dictate workflow"
+        data-orb-dictate-progression
+      >
+        <ol className="flex flex-wrap items-center gap-1 text-[10px] font-medium text-[var(--orb-muted)]">
+          {progressionSteps.map((step, index) => {
+            const active = step.id === progressionStep
+            const complete =
+              progressionSteps.findIndex((item) => item.id === progressionStep) > index
+            return (
+              <li
+                key={step.id}
+                className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 ${
+                  active
+                    ? 'border-[var(--orb-primary)]/50 bg-[var(--orb-primary-soft)] text-[var(--orb-foreground)]'
+                    : complete
+                      ? 'border-[var(--orb-line)]/40 text-[var(--orb-foreground)]/80'
+                      : 'border-transparent'
+                }`}
+                data-orb-dictate-step={step.id}
+                aria-current={active ? 'step' : undefined}
+              >
+                {step.label}
+                {index < progressionSteps.length - 1 ? (
+                  <span className="hidden text-[var(--orb-muted)]/60 sm:inline" aria-hidden>
+                    →
+                  </span>
+                ) : null}
+              </li>
+            )
+          })}
+        </ol>
+      </nav>
 
       <OrbDictateTopBar
         selectedTemplateId={props.selectedTemplateId}
@@ -315,9 +364,26 @@ export function OrbDictateStudioWorkspace(props: OrbDictateStudioWorkspaceProps)
         minPanelHeight="min(74dvh, calc(100svh - 8.5rem))"
         left={
           <div className="flex min-h-0 flex-col gap-2" data-orb-dictate-capture-panel>
-            <p className="px-1 text-xs font-semibold uppercase tracking-wide text-[var(--orb-muted)]" data-orb-dictate-capture-label>
-              Capture
-            </p>
+            <div className="flex items-center justify-between gap-2 px-1">
+              <p className="text-xs font-semibold uppercase tracking-wide text-[var(--orb-muted)]" data-orb-dictate-capture-label>
+                Capture
+              </p>
+              <p className="text-[10px] text-[var(--orb-muted)]" data-orb-dictate-adult-review-reminder>
+                {ORB_DICTATE_RESPONSIBILITY}
+              </p>
+            </div>
+            <div
+              className="orb-dictate-capture-affordances flex flex-wrap items-center gap-2 rounded-lg border border-[var(--orb-line)]/35 bg-[var(--orb-surface)]/50 px-3 py-2"
+              data-orb-dictate-capture-affordances
+            >
+              <OrbDictateAudioUpload
+                onFile={props.onAudioUpload}
+                uploading={props.uploadingAudio}
+                fileLabel={props.uploadFileLabel}
+                error={props.uploadError}
+              />
+              <p className="text-[10px] text-[var(--orb-muted)]">Or paste notes in the transcript area below.</p>
+            </div>
             <OrbTranscriptPanel
             liveTranscript={props.liveTranscript}
             transcript={props.transcript}

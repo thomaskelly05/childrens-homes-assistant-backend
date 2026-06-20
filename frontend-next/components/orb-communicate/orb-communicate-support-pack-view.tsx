@@ -1,5 +1,6 @@
 'use client'
 
+import { GlassOrbMark } from '@/components/orb-residential/ui/glass-orb-mark'
 import { OrbCommunicateSymbolPlaceholder } from '@/components/orb-communicate/orb-communicate-shared'
 import { ORB_COMMUNICATE_FULL_SAFETY } from '@/lib/orb/communicate/orb-communicate-plan'
 import type {
@@ -49,9 +50,7 @@ function packPlainText(pack: CommunicationSupportPackOutput): string {
 function handleSectionAction(action: CommunicationSupportPackAction, section: CommunicationSupportPackSection) {
   if (action === 'copy_section') {
     void copyTextToClipboard(sectionPlainText(section))
-    return
   }
-  // Placeholder actions — no backend or missing endpoints called.
 }
 
 function handlePackAction(
@@ -68,7 +67,6 @@ function handlePackAction(
       break
     case 'save':
     case 'write':
-      // TODO: wire save pack and ORB Write hand-off when backend routes are available.
       break
     case 'reflect':
       onStartReflect?.()
@@ -85,22 +83,29 @@ export function OrbCommunicateSupportPackView({
   onBack: () => void
   onStartReflect?: () => void
 }) {
+  const isSensitive = pack.sensitivity.includes('safeguarding') || pack.sensitivity.includes('high')
+
   return (
-    <div className="orb-communicate-pack space-y-6" data-orb-communicate-support-pack>
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <button
-            type="button"
-            className="mb-3 text-sm font-medium text-[var(--orb-res-accent)] hover:underline"
-            onClick={onBack}
-            data-orb-communicate-pack-back
-          >
-            ← Back
-          </button>
-          <h2 className="text-xl font-semibold text-[var(--orb-res-navy)]">{pack.packTitle}</h2>
-          <p className="mt-1 text-sm text-[var(--orb-res-workspace-muted)]">
-            {pack.audience.replace('_', ' ')} · {pack.sensitivity.replace('_', ' ')}
-          </p>
+    <div className="orb-communicate-pack space-y-5" data-orb-communicate-support-pack>
+      <header className="orb-communicate-pack-header flex flex-wrap items-start justify-between gap-3 border-b border-[var(--orb-res-workspace-border)] pb-4">
+        <div className="flex min-w-0 items-start gap-3">
+          <GlassOrbMark size="sm" className="mt-1 shrink-0" aria-hidden />
+          <div className="min-w-0">
+            <button
+              type="button"
+              className="mb-2 text-sm font-medium text-[var(--orb-res-accent)] hover:underline"
+              onClick={onBack}
+              data-orb-communicate-pack-back
+            >
+              ← Back
+            </button>
+            <h2 className="text-xl font-semibold text-[var(--orb-res-navy)]" data-orb-communicate-pack-title>
+              {pack.packTitle}
+            </h2>
+            <p className="mt-1 text-sm text-[var(--orb-res-workspace-muted)]" data-orb-communicate-pack-meta>
+              {pack.audience.replace('_', ' ')} · {pack.sensitivity.replace('_', ' ')}
+            </p>
+          </div>
         </div>
         <div className="flex flex-wrap gap-2" data-orb-communicate-pack-actions>
           <button
@@ -146,22 +151,35 @@ export function OrbCommunicateSupportPackView({
             Start Reflect & Record
           </button>
         </div>
-      </div>
+      </header>
 
       {pack.myVoiceProfileNotice ? (
-        <p className="rounded-lg border border-[var(--orb-res-workspace-border)] bg-[var(--orb-res-workspace-surface)] px-3 py-2 text-sm text-[var(--orb-res-workspace-muted)]">
+        <p
+          className="rounded-lg border border-[var(--orb-res-workspace-border)] bg-[var(--orb-res-workspace-surface)] px-3 py-2 text-sm text-[var(--orb-res-workspace-muted)]"
+          data-orb-communicate-pack-voice-profile
+        >
+          <span className="font-medium text-[var(--orb-res-workspace-text)]">My Voice Profile: </span>
           {pack.myVoiceProfileNotice}
         </p>
       ) : null}
 
-      <div className="space-y-4">
+      {isSensitive ? (
+        <p
+          className="rounded-lg border border-amber-200/60 bg-amber-50 px-3 py-2 text-sm text-amber-900"
+          data-orb-communicate-pack-safeguarding-mode
+        >
+          Safeguarding-sensitive content — review carefully with a responsible adult before sharing or recording.
+        </p>
+      ) : null}
+
+      <div className="space-y-4" data-orb-communicate-pack-sections>
         {pack.sections.map((section) => (
           <article
             key={section.id}
             className="orb-communicate-pack-section rounded-xl border border-[var(--orb-res-workspace-border)] bg-[var(--orb-res-workspace-surface)] p-4"
             data-orb-communicate-pack-section={section.type}
           >
-            <header className="mb-2">
+            <header className="mb-3 border-b border-[var(--orb-res-workspace-border)]/60 pb-2">
               <h3 className="text-base font-semibold text-[var(--orb-res-navy)]">{section.heading}</h3>
               <p className="text-sm text-[var(--orb-res-workspace-muted)]">{section.description}</p>
             </header>
@@ -187,10 +205,11 @@ export function OrbCommunicateSupportPackView({
                   onClick={() => handleSectionAction(action, section)}
                   data-orb-communicate-section-action={action}
                   {...(PLACEHOLDER_ACTIONS.has(action)
-                    ? { 'data-orb-communicate-action-placeholder': action }
+                    ? { 'data-orb-communicate-action-placeholder': action, title: 'Coming soon — not yet live' }
                     : {})}
                 >
                   {ACTION_LABELS[action]}
+                  {PLACEHOLDER_ACTIONS.has(action) ? ' · soon' : ''}
                 </button>
               ))}
             </div>
@@ -198,7 +217,10 @@ export function OrbCommunicateSupportPackView({
         ))}
       </div>
 
-      <aside className="rounded-xl border border-[var(--orb-res-workspace-border)] bg-[var(--orb-res-shell-bg)] px-4 py-3 text-sm text-[var(--orb-res-workspace-muted)]">
+      <aside
+        className="rounded-xl border border-[var(--orb-res-workspace-border)] bg-[var(--orb-res-shell-bg)] px-4 py-3 text-sm text-[var(--orb-res-workspace-muted)]"
+        data-orb-communicate-pack-recording-prompts
+      >
         <p className="font-medium text-[var(--orb-res-workspace-text)]">Suggested next steps</p>
         <ul className="mt-2 list-disc space-y-1 pl-5">
           {pack.suggestedActions.map((line) => (

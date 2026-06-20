@@ -40,7 +40,17 @@ export function OrbVoiceModeSelector({
   }
 
   return (
-    <div className="orb-voice-mode-selector w-full max-w-md space-y-3" data-orb-voice-mode-selector>
+    <div className="orb-voice-mode-selector w-full max-w-lg space-y-3" data-orb-voice-mode-selector data-orb-voice-mode-central>
+      <p
+        className="text-center text-sm font-medium text-[var(--orb-foreground)]"
+        data-orb-voice-mode-selection-label
+        role="status"
+      >
+        {selection.headline}
+      </p>
+      <p className="text-center text-xs leading-relaxed text-[var(--orb-muted)]" data-orb-voice-mode-selection-description>
+        {selection.description}
+      </p>
       <div className="space-y-1.5">
         <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--orb-muted)]">Voice style</p>
         <div className="flex items-center gap-2">

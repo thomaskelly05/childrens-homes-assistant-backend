@@ -926,6 +926,62 @@ html[data-orb-residential='1'] [data-orb-billing-modal] [data-orb-billing-provid
   margin-inline: auto;
 }
 
+.orb-voice-mode-selector[data-orb-voice-mode-central] {
+  padding: 0.75rem 1rem;
+  border-radius: 1rem;
+  border: 1px solid var(--orb-res-sidebar-border, rgba(15, 23, 42, 0.08));
+  background: var(--orb-surface-elevated, #fff);
+}
+
+.orb-dictate-progression {
+  min-width: 0;
+}
+
+.orb-dictate-capture-canvas,
+.orb-dictate-capture-affordances,
+.orb-dictate-capture-empty {
+  min-width: 0;
+}
+
+.orb-dictate-capture-empty {
+  background: linear-gradient(180deg, rgba(99, 102, 241, 0.04), transparent);
+}
+
+.orb-dictate-top-bar[data-orb-dictate-capture-controls] {
+  gap: 0.5rem;
+}
+
+.orb-write-studio-header {
+  min-width: 0;
+}
+
+.orb-workspace--write .orb-write-editor-canvas,
+[data-orb-write-editor] {
+  max-width: 48rem;
+  margin-inline: auto;
+}
+
+.orb-communicate-pack-header,
+.orb-communicate-pack-section {
+  min-width: 0;
+}
+
+.orb-communicate-pack-action[data-orb-communicate-action-placeholder] {
+  opacity: 0.72;
+}
+
+.orb-billing-plan-card {
+  min-width: 0;
+}
+
+.orb-settings-profile-card {
+  min-width: 0;
+}
+
+html[data-orb-residential='1'] [data-orb-build-version] {
+  /* hidden marker — inspect in devtools only */
+}
+
 .orb-settings-scroll,
 [data-orb-settings-scroll] {
   min-width: 0;

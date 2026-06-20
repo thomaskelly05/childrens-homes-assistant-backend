@@ -162,6 +162,7 @@ import { useOrbAppearance } from '@/components/orb-standalone/use-orb-appearance
 import { OrbUiAuditBootstrap } from '@/components/orb-standalone/orb-ui-audit-bootstrap'
 import { useOrbMobileViewport } from '@/components/orb-standalone/use-orb-mobile-viewport'
 import { ORB_LIGHT_UI_BUILD } from '@/lib/orb/orb-light-ui-build'
+import { ORB_BUILD_VISUAL_VERSION } from '@/lib/orb/orb-visual-build'
 import { ORB_DATA_BOUNDARY, ORB_DATA_BOUNDARY_SHORT, ORB_PRODUCT_NAME } from '@/lib/orb/orb-product-copy'
 import {
   buildAdultProfilePromptBlock,
@@ -3712,6 +3713,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
       data-orb-residential-surface={residentialSurface ? 'true' : undefined}
       data-orb-home-empty={residentialSurface && showEmptyState ? 'true' : undefined}
       data-orb-light-ui-build={ORB_LIGHT_UI_BUILD}
+      data-orb-build-version={ORB_BUILD_VISUAL_VERSION}
       data-orb-appearance-mode={appearanceMode}
       data-orb-system-theme={effectiveTheme}
       data-orb-mobile-shell={isMobileViewport ? 'true' : undefined}

@@ -280,8 +280,8 @@ export function OrbDictateBrainPanel({
             ) : null}
 
             {analysis.missing_information.length ? (
-              <AnalysisSection title="Missing information" dataAttr="missing">
-                <ul className="list-disc space-y-1 pl-4 text-xs">
+              <AnalysisSection title="What may be missing" dataAttr="missing">
+                <ul className="list-disc space-y-1 pl-4 text-xs" data-orb-brain-missing-heading>
                   {analysis.missing_information.map((m) => (
                     <li key={m}>{m}</li>
                   ))}

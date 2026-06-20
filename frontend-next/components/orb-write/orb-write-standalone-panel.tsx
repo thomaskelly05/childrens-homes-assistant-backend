@@ -1,7 +1,9 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { FileEdit, PanelLeft, PanelRight, Sparkles } from 'lucide-react'
+import { PanelLeft, PanelRight, Sparkles } from 'lucide-react'
+
+import { GlassOrbMark } from '@/components/orb-residential/ui/glass-orb-mark'
 
 import { OrbPrivacyNotice } from '@/components/orb/privacy/orb-privacy-notice'
 import { useOrbResponsiveMode } from '@/components/orb-standalone/use-orb-responsive-mode'
@@ -462,23 +464,25 @@ export function OrbWriteStandalonePanel({
         {doc ? (
           <div className="flex min-h-0 flex-1 flex-col gap-3" data-orb-write-studio-editor>
             <header
-              className="flex shrink-0 flex-col gap-2 border-b border-[var(--orb-line)]/40 pb-2"
+              className="orb-write-studio-header flex shrink-0 flex-col gap-2 border-b border-[var(--orb-line)]/40 pb-3"
               data-orb-write-studio-header
             >
-              <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-0.5">
-                <h2 className="text-sm font-semibold text-slate-900" data-orb-write-studio-title>
-                  ORB Write
-                </h2>
-                <p className="text-[11px] text-slate-600" data-orb-write-studio-subtitle>
-                  A care documentation studio — draft, review and finalise records with ORB.
-                </p>
+              <div className="flex min-w-0 items-start gap-3">
+                <GlassOrbMark size="sm" pulse className="mt-0.5 shrink-0" aria-hidden />
+                <div className="min-w-0 flex-1">
+                  <h2 className="text-sm font-semibold text-slate-900" data-orb-write-studio-title>
+                    ORB Write
+                  </h2>
+                  <p className="text-[11px] text-slate-600" data-orb-write-studio-subtitle>
+                    A specialist care documentation studio for drafting, reviewing and finalising adult-led records.
+                  </p>
+                </div>
               </div>
               <p className="text-[11px] leading-relaxed text-slate-600" data-orb-write-studio-guidance>
-                ORB is helping you keep observation, interpretation, child&apos;s voice and adult response clearly
-                separated.
+                ORB is helping you separate observation, interpretation, the child&apos;s voice, adult response and
+                follow-up.
               </p>
               <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
-                <FileEdit className="h-4 w-4 shrink-0 text-[var(--orb-primary)]" aria-hidden />
                 <OrbWriteRecordTypeSelector
                   recordTypeId={recordTypeId}
                   variant="compact"

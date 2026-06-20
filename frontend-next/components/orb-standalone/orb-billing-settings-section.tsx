@@ -149,7 +149,7 @@ export function OrbBillingSettingsSection({
         </div>
       </div>
 
-      <dl className="grid gap-2 text-xs sm:grid-cols-2">
+      <dl className="orb-billing-plan-card grid gap-2 rounded-xl border border-[var(--orb-line)]/40 bg-[var(--orb-surface)]/60 p-3 text-xs sm:grid-cols-2" data-orb-billing-plan-card>
         <div className="flex justify-between gap-3 sm:block">
           <dt className="text-[var(--orb-muted)]">Plan</dt>
           <dd className="font-medium sm:mt-0.5">{planName}</dd>

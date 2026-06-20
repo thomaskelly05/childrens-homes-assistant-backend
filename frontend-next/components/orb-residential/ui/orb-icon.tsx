@@ -2,19 +2,40 @@
 
 import type { LucideIcon } from 'lucide-react'
 import {
+  AlignLeft,
+  Bold,
+  Check,
+  ClipboardCopy,
+  Download,
+  Eraser,
   FileEdit,
+  Heading1,
+  Heading2,
   HelpCircle,
   Home,
+  Italic,
   LifeBuoy,
+  List,
+  ListOrdered,
   MessageSquare,
   MessageSquarePlus,
   MessagesSquare,
   Mic,
+  Minus,
+  Pause,
   PenLine,
+  Play,
+  Printer,
+  Quote,
+  Redo2,
   Save,
   Send,
   Settings,
   Sparkles,
+  Square,
+  Table,
+  Underline,
+  Undo2,
   Upload
 } from 'lucide-react'
 
@@ -34,6 +55,28 @@ export type OrbIconName =
   | 'review'
   | 'save'
   | 'export'
+  | 'record'
+  | 'pause'
+  | 'play'
+  | 'stop'
+  | 'undo'
+  | 'redo'
+  | 'bold'
+  | 'italic'
+  | 'underline'
+  | 'list'
+  | 'list_ordered'
+  | 'quote'
+  | 'table'
+  | 'copy'
+  | 'print'
+  | 'download'
+  | 'check'
+  | 'divider'
+  | 'align_left'
+  | 'clear_format'
+  | 'heading1'
+  | 'heading2'
 
 const ORB_ICON_MAP: Record<OrbIconName, LucideIcon> = {
   home: Home,
@@ -50,7 +93,29 @@ const ORB_ICON_MAP: Record<OrbIconName, LucideIcon> = {
   upload: Upload,
   review: Sparkles,
   save: Save,
-  export: FileEdit
+  export: Download,
+  record: Mic,
+  pause: Pause,
+  play: Play,
+  stop: Square,
+  undo: Undo2,
+  redo: Redo2,
+  bold: Bold,
+  italic: Italic,
+  underline: Underline,
+  list: List,
+  list_ordered: ListOrdered,
+  quote: Quote,
+  table: Table,
+  copy: ClipboardCopy,
+  print: Printer,
+  download: Download,
+  check: Check,
+  divider: Minus,
+  align_left: AlignLeft,
+  clear_format: Eraser,
+  heading1: Heading1,
+  heading2: Heading2
 }
 
 const SIZE_CLASS = {
@@ -82,3 +147,5 @@ export function OrbIcon({
     />
   )
 }
+
+export { ORB_ICON_MAP }

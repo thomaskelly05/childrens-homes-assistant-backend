@@ -57,7 +57,7 @@ export function OrbLoginDesktopHero() {
         <div className="orb-login-stations mt-5" data-orb-login-stations>
           <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">ORB stations</p>
           <div
-            className="orb-login-stations-scroll grid max-h-[min(14rem,32dvh)] gap-2 overflow-y-auto overscroll-contain sm:grid-cols-2"
+            className="orb-login-stations-scroll grid max-h-[min(12rem,28dvh)] gap-2 overflow-y-auto overscroll-contain sm:grid-cols-2"
             data-orb-login-stations-scroll
           >
             {ORB_LOGIN_STATION_DESCRIPTIONS.map((station) => (

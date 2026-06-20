@@ -1,10 +1,11 @@
 'use client'
 
 import type { ReactNode } from 'react'
-import { Mic, Trash2 } from 'lucide-react'
+import { Trash2 } from 'lucide-react'
 
 import { OrbDictateTranscriptSegmentsEditor } from '@/components/orb-standalone/orb-dictate-station-extras'
 import { OrbDictateSpeakerLabelling } from '@/components/orb/dictate/OrbDictateSpeakerLabelling'
+import { OrbIcon } from '@/components/orb-residential/ui/orb-icon'
 import { ORB_RESIDENTIAL_DICTATE_COPY } from '@/lib/orb/orb-residential-copy'
 import type { OrbDictateParticipant, OrbDictateTranscriptSegment } from '@/lib/orb/dictate/orb-dictate-speaker'
 import { SPEAKER_BOUNDARY_COPY } from '@/lib/orb/dictate/orb-dictate-speaker-model'
@@ -46,7 +47,7 @@ export function OrbTranscriptPanel({
   const isEmpty = !displayText.trim()
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col" data-orb-transcript-panel data-orb-dictate-transcript-panel>
+    <div className="flex min-h-0 flex-1 flex-col orb-dictate-capture-canvas" data-orb-transcript-panel data-orb-dictate-transcript-panel data-orb-dictate-capture-zone>
       <header className="flex shrink-0 items-center justify-between gap-3 border-b border-[var(--orb-line)]/40 px-4 py-3">
         <div>
           <h3 className="text-sm font-semibold text-[var(--orb-foreground)]">Capture rough notes</h3>
@@ -73,10 +74,10 @@ export function OrbTranscriptPanel({
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden p-4">
         {isEmpty && !recordingActive ? (
           <div
-            className="mb-3 flex shrink-0 flex-col items-center rounded-xl border border-dashed border-[var(--orb-line)]/45 bg-[var(--orb-surface)]/40 px-6 py-5 text-center"
+            className="orb-dictate-capture-empty mb-3 flex shrink-0 flex-col items-center rounded-xl border border-dashed border-[var(--orb-line)]/45 bg-[var(--orb-surface)]/40 px-6 py-8 text-center"
             data-orb-dictate-transcript-empty
           >
-            <Mic className="mb-2 h-7 w-7 text-[var(--orb-primary)]/70" aria-hidden />
+            <OrbIcon name="record" size="lg" className="mb-3 text-[var(--orb-primary)]/80" />
             <p className="text-sm font-medium text-[var(--orb-foreground)]" data-orb-dictate-capture-prompt>
               {ORB_RESIDENTIAL_DICTATE_COPY.capturePrompt}
             </p>
@@ -91,7 +92,7 @@ export function OrbTranscriptPanel({
           value={displayText}
           onChange={(e) => onTranscriptChange(e.target.value)}
           placeholder="Live transcript appears here… Speak or paste rough notes. Edit before finalising."
-          className="min-h-[16rem] w-full flex-1 resize-none rounded-xl border border-[var(--orb-line)]/40 bg-[var(--orb-surface)] p-4 text-sm leading-relaxed text-[var(--orb-foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--orb-primary)]/35 sm:min-h-[18rem]"
+          className="orb-dictate-transcript-area min-h-[18rem] w-full flex-1 resize-none rounded-xl border border-[var(--orb-line)]/40 bg-[var(--orb-surface)] p-4 text-sm leading-relaxed text-[var(--orb-foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--orb-primary)]/35 sm:min-h-[20rem]"
         />
         {interimText && recordingActive ? (
           <p className="mt-2 text-xs italic text-[var(--orb-muted)]" data-orb-dictate-interim>
