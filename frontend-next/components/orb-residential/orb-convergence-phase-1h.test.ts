@@ -56,6 +56,7 @@ describe('ORB Residential canonical shell (Phase 1H copy retained)', () => {
       'Chat',
       'Dictate',
       'Voice',
+      'Communicate',
       'ORB Write',
       'Records & Drafts',
       'Help & Safety',

@@ -21,6 +21,7 @@ describe('ORB main workspace shell', () => {
       'documents',
       'inspection_readiness',
       'knowledge',
+      'orb_communicate',
       'orb_dictate',
       'orb_voice',
       'orb_write',
@@ -35,6 +36,7 @@ describe('ORB main workspace shell', () => {
     assert.equal(isOrbCoreWorkspacePanel('settings'), false)
     assert.equal(isOrbCoreWorkspacePanel('billing'), false)
     assert.equal(isOrbCoreWorkspacePanel('orb_voice'), true)
+    assert.equal(isOrbCoreWorkspacePanel('orb_communicate'), true)
   })
 
   it('residential stations use workspace presentation instead of centred modal', () => {
