@@ -39,7 +39,8 @@ import {
   ORB_DICTATE_UPLOAD_LABEL,
   ORB_DICTATE_UPLOAD_PLACEHOLDER,
   ORB_DICTATE_WORKING_DOC_PARTIAL,
-  ORB_DICTATE_WORKING_DOC_UPDATED
+  ORB_DICTATE_WORKING_DOC_UPDATED,
+  type OrbDictateContentSource
 } from '@/lib/orb/dictate/orb-dictate-capture-copy'
 import {
   buildBrainAnalysisFromGenerate,
@@ -66,6 +67,7 @@ import {
   reshapeWorkingDocument,
   workingDocumentTypeLabel
 } from '@/lib/orb/dictate/orb-dictate-working-document'
+import type { OrbDictateRecordingMedia } from '@/lib/orb/dictate/orb-dictate-recording-media'
 import {
   OrbDictateAudioUpload,
   OrbDictateGovernanceConsent,
@@ -126,6 +128,10 @@ export type OrbDictateStudioWorkspaceProps = {
   uploadFileLabel: string | null
   uploadError: string | null
   uploadReady?: boolean
+  recordingMedia?: OrbDictateRecordingMedia | null
+  contentSource?: OrbDictateContentSource
+  onClearRecording?: () => void
+  onContentSourceChange?: (source: OrbDictateContentSource) => void
 }
 
 type CaptureMethod = 'speak' | 'paste' | 'upload'
@@ -371,6 +377,7 @@ export function OrbDictateStudioWorkspace(props: OrbDictateStudioWorkspaceProps)
     const text = pasteDraft.trim()
     if (!text) return
     setCaptureSource('paste')
+    props.onContentSourceChange?.('paste')
     props.onTranscriptChange(text)
   }, [pasteDraft, props])
 
@@ -403,6 +410,7 @@ export function OrbDictateStudioWorkspace(props: OrbDictateStudioWorkspaceProps)
     setBrainAnalysis(null)
     setCaptureMethod('speak')
     setCaptureSource('speak')
+    props.onClearRecording?.()
   }, [props])
 
   const handleEditTranscript = useCallback(() => {
@@ -440,12 +448,13 @@ export function OrbDictateStudioWorkspace(props: OrbDictateStudioWorkspaceProps)
   return (
     <OrbStudioShell
       studioId="dictate"
-      className="orb-dictate-studio-workspace orb-dictate-capture-workflow orb-dictate-staged-recording orb-dictate-transcript-workflow orb-dictate-working-document-flow orb-workspace orb-workspace--dictate flex min-h-0 flex-1 flex-col overflow-hidden"
+      className="orb-dictate-studio-workspace orb-dictate-capture-workflow orb-dictate-staged-recording orb-dictate-transcript-workflow orb-dictate-working-document-flow orb-dictate-recording-media-flow orb-workspace orb-workspace--dictate flex min-h-0 flex-1 flex-col overflow-hidden"
       data-orb-dictate-studio-workspace
       data-orb-dictate-capture-workflow
       data-orb-dictate-staged-recording
       data-orb-dictate-transcript-workflow
       data-orb-dictate-working-document-flow
+      data-orb-dictate-recording-media-flow
       data-orb-workspace-dictate
       data-orb-dictate-empty={showCaptureStation ? 'true' : undefined}
       data-orb-dictate-active-stage={stage}
@@ -677,6 +686,8 @@ export function OrbDictateStudioWorkspace(props: OrbDictateStudioWorkspaceProps)
             editNote={editNote}
             applyStatus={applyStatus}
             interactive={stage === 'transcript-workspace'}
+            recordingMedia={props.recordingMedia}
+            contentSource={props.contentSource ?? captureSource}
           />
         ) : null}
 
@@ -740,6 +751,7 @@ export function OrbDictateStudioWorkspace(props: OrbDictateStudioWorkspaceProps)
             output={props.output!}
             draftText={draftText}
             templateId={props.selectedTemplateId}
+            recordingMedia={props.recordingMedia}
             onCopy={props.onCopy}
             onSave={props.onSave}
             onOpenInWrite={props.onFinalise}

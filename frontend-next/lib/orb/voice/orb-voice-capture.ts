@@ -72,14 +72,25 @@ export async function probeMicrophoneAccess(): Promise<MicrophoneAccessResult> {
 }
 
 /** Acquire a microphone stream for active capture — caller must call releaseMicrophoneStream. */
-export async function acquireMicrophoneStream(): Promise<MicrophoneAccessResult> {
+export async function acquireMicrophoneStream(
+  constraints: MediaStreamConstraints = { audio: true }
+): Promise<MicrophoneAccessResult> {
   if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
     return { ok: false, permission: 'unknown', stream: null }
   }
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+    const stream = await navigator.mediaDevices.getUserMedia(constraints)
     return { ok: true, permission: 'granted', stream }
   } catch (error) {
+    const basicAudio = constraints.audio === true || JSON.stringify(constraints) === JSON.stringify({ audio: true })
+    if (!basicAudio) {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+        return { ok: true, permission: 'granted', stream }
+      } catch (fallbackError) {
+        return { ok: false, permission: permissionFromError(fallbackError), stream: null }
+      }
+    }
     return { ok: false, permission: permissionFromError(error), stream: null }
   }
 }

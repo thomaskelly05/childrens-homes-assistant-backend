@@ -105,6 +105,48 @@ export const ORB_DICTATE_SPEAK_ROUGH_LABEL = 'Rough capture \u2014 not yet a rec
 export const ORB_DICTATE_CONSENT_REMINDER =
   'Only record where it is appropriate, transparent and in line with your home\u2019s policy.' as const
 
+export const ORB_DICTATE_RECORDING_START_FAILED =
+  'Recording could not start. Check microphone permission and try again.' as const
+
+export const ORB_DICTATE_RECORDING_UNSUPPORTED =
+  'This browser does not support in-browser recording. Paste notes or upload audio instead.' as const
+
+export const ORB_DICTATE_RECORDING_PERMISSION_NEEDED = 'Microphone permission needed' as const
+
+export const ORB_DICTATE_RECORDING_PROCESSING = 'Processing audio\u2026' as const
+
+export const ORB_DICTATE_RECORDING_TRANSCRIBING = 'Transcribing\u2026' as const
+
+export const ORB_DICTATE_RECORDING_TRANSCRIPT_READY = 'Transcript ready' as const
+
+export const ORB_DICTATE_RECORDING_TRANSCRIPTION_FAILED =
+  'The recording was saved for this session, but transcription failed. You can replay it and type notes manually.' as const
+
+export const ORB_DICTATE_RECORDING_ATTACHED_TITLE = 'Recording attached' as const
+
+export const ORB_DICTATE_RECORDING_ATTACHED_SUPPORTING =
+  'Adults can revisit the original recording where policy allows.' as const
+
+export const ORB_DICTATE_RECORDING_LOCAL_STORAGE_NOTE =
+  'Recording attached locally to this draft. Permanent media storage is not yet enabled.' as const
+
+export const ORB_DICTATE_SOURCE_FROM_RECORDING = 'Source: transcript from attached recording' as const
+
+export const ORB_DICTATE_SOURCE_FROM_PASTE = 'Source: pasted notes' as const
+
+export const ORB_DICTATE_SOURCE_FROM_UPLOAD = 'Source: uploaded audio' as const
+
+export const ORB_DICTATE_WRITE_FROM_RECORDING_NOTE =
+  'This draft was created from an ORB Dictate recording. Review against the original recording where available.' as const
+
+export type OrbDictateContentSource = 'recording' | 'paste' | 'upload' | 'speak'
+
+export function orbDictateContentSourceLabel(source: OrbDictateContentSource): string {
+  if (source === 'recording' || source === 'speak') return ORB_DICTATE_SOURCE_FROM_RECORDING
+  if (source === 'upload') return ORB_DICTATE_SOURCE_FROM_UPLOAD
+  return ORB_DICTATE_SOURCE_FROM_PASTE
+}
+
 export const ORB_DICTATE_PASTE_PLACEHOLDER =
   'Paste rough notes here. Use anonymised or minimal identifiable details where possible.' as const
 

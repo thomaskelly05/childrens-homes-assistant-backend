@@ -25,6 +25,21 @@ export type OrbWriteHandoffPayload = {
   generate_result?: OrbDictateGenerateResult
   participants: OrbDictateParticipant[]
   segments: OrbDictateTranscriptSegment[]
+  dictate_capture_source?: 'recording' | 'paste' | 'upload' | 'speak'
+  dictate_source_note?: string
+  recording_media?: {
+    id: string
+    filename: string
+    mimeType: string
+    sizeBytes: number
+    durationMs: number
+    createdAt: string
+    source: 'microphone' | 'upload'
+    status: 'recorded' | 'transcribing' | 'transcribed' | 'failed'
+    storageMode: 'local' | 'backend'
+    transcriptionNotice?: string
+    hasLocalPlayback: boolean
+  }
 }
 
 export function saveOrbWriteHandoff(payload: OrbWriteHandoffPayload): void {

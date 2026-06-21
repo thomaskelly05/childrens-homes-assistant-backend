@@ -1,6 +1,7 @@
 'use client'
 
 import { OrbDictateEditAssistant } from '@/components/orb/dictate/OrbDictateEditAssistant'
+import { OrbDictateRecordingAttachment } from '@/components/orb/dictate/OrbDictateRecordingAttachment'
 import { OrbDictateWorkingDocument } from '@/components/orb/dictate/OrbDictateWorkingDocument'
 import { OrbDictateWriteTemplateSelector } from '@/components/orb/dictate/OrbDictateWriteTemplateSelector'
 import {
@@ -9,8 +10,10 @@ import {
   ORB_DICTATE_ORIGINAL_TRANSCRIPT_LABEL,
   ORB_DICTATE_REVIEW_WITH_ORB,
   ORB_DICTATE_TRANSCRIPT_WORKSPACE_SUPPORTING,
-  ORB_DICTATE_TRANSCRIPT_WORKSPACE_TITLE
+  ORB_DICTATE_TRANSCRIPT_WORKSPACE_TITLE,
+  type OrbDictateContentSource
 } from '@/lib/orb/dictate/orb-dictate-capture-copy'
+import type { OrbDictateRecordingMedia } from '@/lib/orb/dictate/orb-dictate-recording-media'
 
 export type OrbDictateCaptureSource = 'speak' | 'paste' | 'upload'
 
@@ -32,6 +35,8 @@ export type OrbDictateTranscriptWorkspaceProps = {
   editNote: string | null
   applyStatus: string | null
   interactive: boolean
+  recordingMedia?: OrbDictateRecordingMedia | null
+  contentSource?: OrbDictateContentSource
 }
 
 export function OrbDictateTranscriptWorkspace(props: OrbDictateTranscriptWorkspaceProps) {
@@ -73,6 +78,11 @@ export function OrbDictateTranscriptWorkspace(props: OrbDictateTranscriptWorkspa
             data-orb-dictate-original-transcript
             data-orb-dictate-rough-capture-text
           />
+          {props.recordingMedia ? (
+            <div className="mt-3">
+              <OrbDictateRecordingAttachment media={props.recordingMedia} />
+            </div>
+          ) : null}
         </div>
 
         <div className="orb-dictate-transcript-workspace-side flex min-w-0 flex-col gap-3">
@@ -98,6 +108,7 @@ export function OrbDictateTranscriptWorkspace(props: OrbDictateTranscriptWorkspa
           documentMarkdown={props.workingDocument}
           onDocumentChange={props.onWorkingDocumentChange}
           templateLabel={props.templateLabel}
+          contentSource={props.contentSource}
           readOnly={!props.interactive}
         />
       </div>

@@ -3,7 +3,9 @@
 import {
   ORB_DICTATE_WORKING_DOC_LABEL,
   ORB_DICTATE_WORKING_DOC_SUPPORTING,
-  ORB_DICTATE_WORKING_DOC_TITLE
+  ORB_DICTATE_WORKING_DOC_TITLE,
+  orbDictateContentSourceLabel,
+  type OrbDictateContentSource
 } from '@/lib/orb/dictate/orb-dictate-capture-copy'
 import {
   parseWorkingDocument,
@@ -15,6 +17,7 @@ export type OrbDictateWorkingDocumentProps = {
   documentMarkdown: string
   onDocumentChange: (markdown: string) => void
   templateLabel: string
+  contentSource?: OrbDictateContentSource
   readOnly?: boolean
 }
 
@@ -31,6 +34,7 @@ export function OrbDictateWorkingDocument({
   documentMarkdown,
   onDocumentChange,
   templateLabel,
+  contentSource,
   readOnly = false
 }: OrbDictateWorkingDocumentProps) {
   const sections = parseWorkingDocument(documentMarkdown)
@@ -60,6 +64,11 @@ export function OrbDictateWorkingDocument({
         <p className="mt-2 text-xs leading-relaxed text-[var(--orb-muted)]" data-orb-dictate-working-document-supporting>
           {ORB_DICTATE_WORKING_DOC_SUPPORTING}
         </p>
+        {contentSource ? (
+          <p className="mt-1 text-[10px] text-[var(--orb-muted)]" data-orb-dictate-working-document-source={contentSource}>
+            {orbDictateContentSourceLabel(contentSource)}
+          </p>
+        ) : null}
       </header>
 
       <div className="orb-dictate-working-document-sections mt-4 space-y-4">

@@ -52,6 +52,8 @@ export type OrbSavedOutputSaveExtras = {
   lens?: string
   focus?: string
   action_id?: string
+  recording_media?: Record<string, unknown>
+  dictate_capture_source?: string
 }
 
 export type OrbSavedOutputRerunKind =
@@ -183,6 +185,8 @@ export function buildSavedOutputMetadata(
   if (extras.lens) metadata.lens = extras.lens
   if (extras.focus) metadata.focus = extras.focus
   if (extras.action_id) metadata.action_id = extras.action_id
+  if (extras.recording_media) metadata.recording_media = extras.recording_media
+  if (extras.dictate_capture_source) metadata.dictate_capture_source = extras.dictate_capture_source
   return metadata
 }
 

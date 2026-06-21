@@ -10,12 +10,15 @@ import {
   ORB_DICTATE_SAFER_DRAFT_TITLE,
   dictateDraftSectionsForTemplate
 } from '@/lib/orb/dictate/orb-dictate-capture-copy'
+import type { OrbDictateRecordingMedia } from '@/lib/orb/dictate/orb-dictate-recording-media'
+import { OrbDictateRecordingAttachment } from '@/components/orb/dictate/OrbDictateRecordingAttachment'
 import type { OrbDictateGenerateResult } from '@/lib/orb/dictate/orb-dictate-types'
 
 export function OrbDictateSaferDraftPanel({
   output,
   draftText,
   templateId,
+  recordingMedia,
   onCopy,
   onSave,
   onOpenInWrite,
@@ -25,6 +28,7 @@ export function OrbDictateSaferDraftPanel({
   output: OrbDictateGenerateResult
   draftText: string
   templateId: string
+  recordingMedia?: OrbDictateRecordingMedia | null
   onCopy: () => void
   onSave: () => void
   onOpenInWrite: () => void
@@ -77,6 +81,12 @@ export function OrbDictateSaferDraftPanel({
       >
         <pre className="whitespace-pre-wrap font-sans">{draftText || output.professional_note}</pre>
       </div>
+
+      {recordingMedia ? (
+        <div className="mt-3" data-orb-dictate-safer-draft-recording>
+          <OrbDictateRecordingAttachment media={recordingMedia} />
+        </div>
+      ) : null}
 
       <div
         className="orb-dictate-output-actions mt-4 flex flex-wrap items-center gap-2"
