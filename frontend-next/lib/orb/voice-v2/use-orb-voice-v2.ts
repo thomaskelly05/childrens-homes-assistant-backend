@@ -7,17 +7,30 @@ import {
   fetchOrbVoiceV2Status,
   requestOrbVoiceV2Respond,
   requestOrbVoiceV2Speak,
+  resolveOrbVoiceV2KatherineStatusMessage,
   transcribeOrbVoiceV2Audio
 } from './orb-voice-v2-client.ts'
-import { startOrbVoiceV2Capture, type OrbVoiceV2CaptureSession } from './orb-voice-v2-capture.ts'
+import { OrbVoiceV2CaptureError, startOrbVoiceV2Capture, type OrbVoiceV2CaptureSession } from './orb-voice-v2-capture.ts'
 import {
-  ORB_VOICE_V2_KATHERINE_FALLBACK,
+  ORB_VOICE_V2_AUDIO_PLAYBACK_BLOCKED,
+  ORB_VOICE_V2_MIC_DENIED,
   ORB_VOICE_V2_PREPARING_VOICE,
   ORB_VOICE_V2_TRANSCRIPTION_ERROR
 } from './orb-voice-v2-copy.ts'
+import {
+  isNotAllowedError,
+  isOrbVoiceV2CaptureNotAllowed,
+  permissionNoticeForState
+} from './orb-voice-v2-permissions.ts'
 import { buildOrbVoiceV2Handoff, buildOrbVoiceV2Summary } from './orb-voice-v2-summary.ts'
 import { createOrbVoiceV2Turn, orbVoiceV2RecentTurns } from './orb-voice-v2-turns.ts'
-import type { OrbVoiceV2HandoffPayload, OrbVoiceV2Mode, OrbVoiceV2State, OrbVoiceV2Turn } from './orb-voice-v2-types.ts'
+import type {
+  OrbVoiceV2HandoffPayload,
+  OrbVoiceV2Mode,
+  OrbVoiceV2PermissionState,
+  OrbVoiceV2State,
+  OrbVoiceV2Turn
+} from './orb-voice-v2-types.ts'
 
 export function useOrbVoiceV2(open: boolean) {
   const [state, setState] = useState<OrbVoiceV2State>('idle')
@@ -25,6 +38,8 @@ export function useOrbVoiceV2(open: boolean) {
   const [turns, setTurns] = useState<OrbVoiceV2Turn[]>([])
   const [summary, setSummary] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [permissionState, setPermissionState] = useState<OrbVoiceV2PermissionState>('ready')
+  const [autoResumeBlocked, setAutoResumeBlocked] = useState(false)
   const [voicePreparing, setVoicePreparing] = useState(false)
   const [voicePreparingLongWait, setVoicePreparingLongWait] = useState(false)
   const [voicePreparingSkipAvailable, setVoicePreparingSkipAvailable] = useState(false)
@@ -43,10 +58,19 @@ export function useOrbVoiceV2(open: boolean) {
   const stateRef = useRef(state)
   const turnsRef = useRef(turns)
   const modeRef = useRef(mode)
+  const autoResumeBlockedRef = useRef(false)
+  const conversationStartedRef = useRef(false)
 
   stateRef.current = state
   turnsRef.current = turns
   modeRef.current = mode
+  autoResumeBlockedRef.current = autoResumeBlocked
+
+  const applyKatherineStatus = useCallback((status: Awaited<ReturnType<typeof fetchOrbVoiceV2Status>>) => {
+    setKatherineReady(status.katherineReady)
+    setTtsProvider(status.ttsProviderEffective)
+    setFallbackNotice(status.katherineReady ? null : resolveOrbVoiceV2KatherineStatusMessage(status))
+  }, [])
 
   const resetLiveSession = useCallback(() => {
     captureRef.current?.dispose()
@@ -65,6 +89,10 @@ export function useOrbVoiceV2(open: boolean) {
     skipTimerRef.current = null
     spokenTurnKeysRef.current.clear()
     processingRef.current = false
+    conversationStartedRef.current = false
+    autoResumeBlockedRef.current = false
+    setAutoResumeBlocked(false)
+    setPermissionState('ready')
     setState('idle')
     setTurns([])
     setSummary(null)
@@ -83,14 +111,8 @@ export function useOrbVoiceV2(open: boolean) {
       return
     }
     resetLiveSession()
-    void fetchOrbVoiceV2Status().then((status) => {
-      setKatherineReady(status.katherineReady)
-      setTtsProvider(status.ttsProviderEffective)
-      if (status.ttsProviderForced === 'openai' || status.fallbackReason === 'provider_forced_openai') {
-        setFallbackNotice(ORB_VOICE_V2_KATHERINE_FALLBACK)
-      }
-    })
-  }, [open, resetLiveSession])
+    void fetchOrbVoiceV2Status().then(applyKatherineStatus)
+  }, [applyKatherineStatus, open, resetLiveSession])
 
   const clearVoicePreparing = useCallback(() => {
     if (prepareTimerRef.current) window.clearTimeout(prepareTimerRef.current)
@@ -100,6 +122,21 @@ export function useOrbVoiceV2(open: boolean) {
     setVoicePreparing(false)
     setVoicePreparingLongWait(false)
     setVoicePreparingSkipAvailable(false)
+  }, [])
+
+  const markAutoResumeBlocked = useCallback(() => {
+    if (autoResumeBlockedRef.current) return
+    autoResumeBlockedRef.current = true
+    setAutoResumeBlocked(true)
+    setPermissionState('auto_resume_blocked')
+    setState('paused')
+  }, [])
+
+  const handleMicBlocked = useCallback(() => {
+    setPermissionState('microphone_denied')
+    setError(ORB_VOICE_V2_MIC_DENIED)
+    setShowTypeFallback(true)
+    setState('error')
   }, [])
 
   const stopOrbAudio = useCallback(() => {
@@ -112,53 +149,92 @@ export function useOrbVoiceV2(open: boolean) {
       audioRef.current = null
     }
     clearVoicePreparing()
-    if (stateRef.current === 'speaking') setState('listening')
+    if (stateRef.current === 'speaking') setState('paused')
   }, [clearVoicePreparing])
 
   const speakReplyRef = useRef<(turnId: string, text: string) => Promise<void>>(async () => {})
 
-  const resumeListening = useCallback(async () => {
-    if (processingRef.current) return
-    const current = stateRef.current
-    if (current === 'paused' || current === 'summary_ready') return
-    setError(null)
-    setState('requesting_microphone')
-    try {
-      const session = await startOrbVoiceV2Capture({
-        onSpeechStart: () => setState('speech_detected'),
-        onEndOfTurn: (blob, mimeType) => {
-          void (async () => {
-            if (processingRef.current) return
-            processingRef.current = true
-            captureRef.current?.dispose()
-            captureRef.current = null
-            setState('transcribing')
-            try {
-              const transcript = await transcribeOrbVoiceV2Audio(blob, mimeType)
-              await commitAdultTurnRef.current(transcript)
-            } catch {
-              setError(ORB_VOICE_V2_TRANSCRIPTION_ERROR)
-              setShowTypeFallback(true)
-              setState('error')
-            } finally {
-              processingRef.current = false
-            }
-          })()
-        },
-        onError: () => {
-          setError(ORB_VOICE_V2_TRANSCRIPTION_ERROR)
-          setShowTypeFallback(true)
-          setState('error')
+  const resumeListening = useCallback(
+    async (options?: { fromUserGesture?: boolean }) => {
+      if (processingRef.current) return
+      const current = stateRef.current
+      if (current === 'summary_ready') return
+      if (autoResumeBlockedRef.current && !options?.fromUserGesture) {
+        markAutoResumeBlocked()
+        return
+      }
+      if (options?.fromUserGesture) {
+        autoResumeBlockedRef.current = false
+        setAutoResumeBlocked(false)
+        if (permissionState === 'auto_resume_blocked') {
+          setPermissionState('ready')
         }
-      })
-      captureRef.current = session
-      setState('listening')
-    } catch {
-      setError(ORB_VOICE_V2_TRANSCRIPTION_ERROR)
-      setShowTypeFallback(true)
-      setState('error')
+      }
+      setError(null)
+      setPermissionState('microphone_prompt')
+      setState('requesting_microphone')
+      try {
+        const session = await startOrbVoiceV2Capture({
+          onSpeechStart: () => setState('speech_detected'),
+          onEndOfTurn: (blob, mimeType) => {
+            void (async () => {
+              if (processingRef.current) return
+              processingRef.current = true
+              captureRef.current?.dispose()
+              captureRef.current = null
+              setState('transcribing')
+              try {
+                const transcript = await transcribeOrbVoiceV2Audio(blob, mimeType)
+                await commitAdultTurnRef.current(transcript)
+              } catch {
+                setError(ORB_VOICE_V2_TRANSCRIPTION_ERROR)
+                setShowTypeFallback(true)
+                setState('error')
+              } finally {
+                processingRef.current = false
+              }
+            })()
+          },
+          onError: () => {
+            setError(ORB_VOICE_V2_TRANSCRIPTION_ERROR)
+            setShowTypeFallback(true)
+            setState('error')
+          }
+        })
+        captureRef.current = session
+        setPermissionState('ready')
+        setState('listening')
+      } catch (error) {
+        if (isOrbVoiceV2CaptureNotAllowed(error) || error instanceof OrbVoiceV2CaptureError && error.code === 'not_allowed') {
+          handleMicBlocked()
+          return
+        }
+        if (isNotAllowedError(error)) {
+          if (options?.fromUserGesture) {
+            handleMicBlocked()
+          } else {
+            markAutoResumeBlocked()
+          }
+          return
+        }
+        setError(ORB_VOICE_V2_TRANSCRIPTION_ERROR)
+        setShowTypeFallback(true)
+        setState('error')
+      }
+    },
+    [handleMicBlocked, markAutoResumeBlocked, permissionState]
+  )
+
+  const tryAutoResumeListening = useCallback(async () => {
+    if (autoResumeBlockedRef.current) return
+    try {
+      await resumeListening()
+    } catch (error) {
+      if (isNotAllowedError(error) || isOrbVoiceV2CaptureNotAllowed(error)) {
+        markAutoResumeBlocked()
+      }
     }
-  }, [])
+  }, [markAutoResumeBlocked, resumeListening])
 
   const speakReply = useCallback(
     async (turnId: string, text: string) => {
@@ -166,8 +242,7 @@ export function useOrbVoiceV2(open: boolean) {
       spokenTurnKeysRef.current.add(turnId)
       const spoken = capOrbVoiceV2SpokenText(text)
       if (!spoken) {
-        setState('listening')
-        void resumeListening()
+        void tryAutoResumeListening()
         return
       }
       setVoicePreparing(true)
@@ -176,11 +251,12 @@ export function useOrbVoiceV2(open: boolean) {
       const result = await requestOrbVoiceV2Speak(spoken)
       if (!result.ok || !result.blob) {
         clearVoicePreparing()
-        setState('listening')
-        void resumeListening()
+        void tryAutoResumeListening()
         return
       }
-      if (result.fallbackUsed) setFallbackNotice(ORB_VOICE_V2_KATHERINE_FALLBACK)
+      if (result.fallbackUsed) {
+        void fetchOrbVoiceV2Status().then(applyKatherineStatus)
+      }
       if (result.provider) setTtsProvider(result.provider)
       clearVoicePreparing()
       setState('speaking')
@@ -190,18 +266,28 @@ export function useOrbVoiceV2(open: boolean) {
       audio.onended = () => {
         URL.revokeObjectURL(url)
         audioRef.current = null
-        setState('listening')
-        void resumeListening()
+        void tryAutoResumeListening()
       }
       audio.onerror = () => {
         URL.revokeObjectURL(url)
         audioRef.current = null
-        setState('listening')
-        void resumeListening()
+        void tryAutoResumeListening()
       }
-      await audio.play()
+      try {
+        await audio.play()
+      } catch (error) {
+        URL.revokeObjectURL(url)
+        audioRef.current = null
+        if (isNotAllowedError(error)) {
+          setPermissionState('audio_playback_blocked')
+          setError(ORB_VOICE_V2_AUDIO_PLAYBACK_BLOCKED)
+          markAutoResumeBlocked()
+          return
+        }
+        void tryAutoResumeListening()
+      }
     },
-    [clearVoicePreparing, resumeListening]
+    [applyKatherineStatus, clearVoicePreparing, markAutoResumeBlocked, tryAutoResumeListening]
   )
 
   speakReplyRef.current = speakReply
@@ -210,8 +296,7 @@ export function useOrbVoiceV2(open: boolean) {
     async (transcript: string) => {
       const trimmed = transcript.trim()
       if (!trimmed) {
-        setState('listening')
-        void resumeListening()
+        void tryAutoResumeListening()
         return
       }
       const adultTurn = createOrbVoiceV2Turn('adult', trimmed)
@@ -234,7 +319,7 @@ export function useOrbVoiceV2(open: boolean) {
         setState('error')
       }
     },
-    [resumeListening]
+    [tryAutoResumeListening]
   )
 
   const commitAdultTurnRef = useRef(commitAdultTurn)
@@ -245,8 +330,13 @@ export function useOrbVoiceV2(open: boolean) {
       resetLiveSession()
     }
     setSummary(null)
-    await resumeListening()
+    conversationStartedRef.current = true
+    await resumeListening({ fromUserGesture: true })
   }, [resetLiveSession, resumeListening])
+
+  const continueConversation = useCallback(async () => {
+    await resumeListening({ fromUserGesture: true })
+  }, [resumeListening])
 
   const pauseConversation = useCallback(() => {
     captureRef.current?.dispose()
@@ -266,8 +356,7 @@ export function useOrbVoiceV2(open: boolean) {
 
   const continueWithoutVoice = useCallback(() => {
     stopOrbAudio()
-    setState('listening')
-    void resumeListening()
+    void resumeListening({ fromUserGesture: true })
   }, [resumeListening, stopOrbAudio])
 
   const sendTypedTurn = useCallback(async () => {
@@ -282,12 +371,11 @@ export function useOrbVoiceV2(open: boolean) {
     ? buildOrbVoiceV2Handoff(turns, mode, summary, ttsProvider)
     : null
 
+  const permissionNotice = permissionNoticeForState(permissionState)
   const detailLine =
     voicePreparing && !audioRef.current
-      ? voicePreparingLongWait
-        ? ORB_VOICE_V2_PREPARING_VOICE
-        : ORB_VOICE_V2_PREPARING_VOICE
-      : error || fallbackNotice
+      ? ORB_VOICE_V2_PREPARING_VOICE
+      : permissionNotice || error || fallbackNotice
 
   return {
     state,
@@ -297,6 +385,8 @@ export function useOrbVoiceV2(open: boolean) {
     summary,
     error,
     detailLine,
+    permissionState,
+    autoResumeBlocked,
     katherineReady,
     fallbackNotice,
     typedDraft,
@@ -305,6 +395,7 @@ export function useOrbVoiceV2(open: boolean) {
     voicePreparing,
     voicePreparingSkipAvailable,
     startConversation,
+    continueConversation,
     pauseConversation,
     stopOrbAudio,
     endAndSummarise,

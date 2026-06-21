@@ -1,5 +1,6 @@
 import { authFetchResponse } from '@/lib/auth/api'
 
+import { resolveOrbVoiceV2KatherineStatusMessage } from './orb-voice-v2-permissions.ts'
 import type {
   OrbVoiceV2Mode,
   OrbVoiceV2RespondResult,
@@ -8,24 +9,36 @@ import type {
 } from './orb-voice-v2-types.ts'
 import { ORB_VOICE_V2_LIVE_SPOKEN_CAP } from './orb-voice-v2-copy.ts'
 
+function parseOrbVoiceV2Status(data: Record<string, unknown>): OrbVoiceV2Status {
+  return {
+    katherineReady: Boolean(data.katherineReady),
+    ttsProviderEffective: String(data.ttsProviderEffective || data.preferredProvider || 'text_only'),
+    ttsProviderForced:
+      typeof data.ttsProviderForced === 'string'
+        ? data.ttsProviderForced
+        : typeof data.forcedProvider === 'string'
+          ? data.forcedProvider
+          : null,
+    fallbackReason: typeof data.fallbackReason === 'string' ? data.fallbackReason : null,
+    elevenLabsConfigured: Boolean(data.elevenLabsConfigured),
+    katherineConfigured: Boolean(data.katherineConfigured ?? data.katherineReady)
+  }
+}
+
 export async function fetchOrbVoiceV2Status(): Promise<OrbVoiceV2Status> {
   try {
     const response = await authFetchResponse('/orb/voice/v2/status', { method: 'GET' })
     if (!response.ok) {
-      return { katherineReady: false, ttsProviderEffective: 'text_only' }
+      return { katherineReady: false, ttsProviderEffective: 'text_only', elevenLabsConfigured: false }
     }
     const data = (await response.json()) as Record<string, unknown>
-    return {
-      katherineReady: Boolean(data.katherineReady),
-      ttsProviderEffective: String(data.ttsProviderEffective || data.preferredProvider || 'text_only'),
-      ttsProviderForced:
-        typeof data.ttsProviderForced === 'string' ? data.ttsProviderForced : null,
-      fallbackReason: typeof data.fallbackReason === 'string' ? data.fallbackReason : null
-    }
+    return parseOrbVoiceV2Status(data)
   } catch {
-    return { katherineReady: false, ttsProviderEffective: 'text_only' }
+    return { katherineReady: false, ttsProviderEffective: 'text_only', elevenLabsConfigured: false }
   }
 }
+
+export { resolveOrbVoiceV2KatherineStatusMessage }
 
 export async function requestOrbVoiceV2Respond(input: {
   mode: OrbVoiceV2Mode
@@ -74,7 +87,8 @@ export async function requestOrbVoiceV2Speak(text: string): Promise<OrbVoiceV2Sp
       blob,
       provider: response.headers.get('X-ORB-TTS-Provider') || undefined,
       voiceName: response.headers.get('X-ORB-Voice-Name') || undefined,
-      fallbackUsed: response.headers.get('X-ORB-TTS-Fallback') === 'true'
+      fallbackUsed: response.headers.get('X-ORB-TTS-Fallback') === 'true',
+      fallbackReason: response.headers.get('X-ORB-TTS-Fallback-Reason') || null
     }
   } catch {
     return { ok: false, error: 'network' }

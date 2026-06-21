@@ -13,6 +13,7 @@ import {
 import { createOrbSavedOutput } from '@/lib/orb/standalone-client'
 import {
   ORB_VOICE_V2_ADULT_REVIEW_LABEL,
+  ORB_VOICE_V2_CONTINUE_CONVERSATION,
   ORB_VOICE_V2_CONTINUE_WITHOUT_VOICE,
   ORB_VOICE_V2_MODES,
   ORB_VOICE_V2_MODE_PROMPT,
@@ -57,7 +58,9 @@ export function OrbVoiceStation({
     voice.state === 'summary_ready' ? 'after_call' : conversationLive ? 'live' : 'idle'
 
   const companionState = mapOrbVoiceV2ToCompanionState(voice.state)
-  const statusLine = orbVoiceV2PrimaryLabel(voice.state)
+  const statusLine = voice.autoResumeBlocked
+    ? ORB_VOICE_V2_CONTINUE_CONVERSATION
+    : orbVoiceV2PrimaryLabel(voice.state)
   const primaryDisabled =
     !isSignedIn ||
     voice.state === 'requesting_microphone' ||
@@ -74,12 +77,16 @@ export function OrbVoiceStation({
       onSignIn?.()
       return
     }
+    if (voice.autoResumeBlocked) {
+      void voice.continueConversation()
+      return
+    }
     if (voice.state === 'idle' || voice.state === 'summary_ready') {
       void voice.startConversation()
       return
     }
     if (voice.state === 'paused') {
-      void voice.startConversation()
+      void voice.continueConversation()
     }
   }, [isSignedIn, onSignIn, voice])
 
@@ -228,11 +235,17 @@ export function OrbVoiceStation({
   const sidePanel = summaryPanel ?? transcriptPanel
 
   const secondaryControls =
-    conversationLive || voice.state === 'paused' ? (
+    conversationLive || voice.state === 'paused' || voice.autoResumeBlocked ? (
       <div className="flex flex-wrap items-center justify-center gap-2" data-orb-voice-secondary-controls>
-        {voice.state === 'paused' ? (
-          <button type="button" className="orb-liquid-button rounded-full px-4 py-2 text-xs" onClick={() => void voice.startConversation()} data-orb-voice-resume>
-            Resume
+        {voice.state === 'paused' || voice.autoResumeBlocked ? (
+          <button
+            type="button"
+            className="orb-liquid-button rounded-full px-4 py-2 text-xs"
+            onClick={() => void voice.continueConversation()}
+            data-orb-voice-resume
+            data-orb-voice-continue-conversation
+          >
+            {voice.autoResumeBlocked ? ORB_VOICE_V2_CONTINUE_CONVERSATION : 'Resume'}
           </button>
         ) : (
           <button type="button" className="orb-liquid-button rounded-full px-4 py-2 text-xs" onClick={voice.pauseConversation} data-orb-voice-pause>
@@ -283,6 +296,8 @@ export function OrbVoiceStation({
         data-orb-voice-station
         data-orb-voice-v2
         data-orb-voice-ui-state={voice.state}
+        data-orb-voice-permission-state={voice.permissionState}
+        data-orb-voice-auto-resume-blocked={voice.autoResumeBlocked ? true : undefined}
       >
         <OrbVoiceStationContent
           companionState={companionState}
@@ -310,7 +325,8 @@ export function OrbVoiceStation({
                   disabled={primaryDisabled}
                   onClick={handlePrimary}
                   data-orb-voice-primary
-                  data-orb-voice-start-conversation
+                  data-orb-voice-start-conversation={voice.autoResumeBlocked ? undefined : true}
+                  data-orb-voice-continue-conversation={voice.autoResumeBlocked ? true : undefined}
                 >
                   {statusLine}
                 </button>

@@ -19,8 +19,8 @@ function read(relativePath: string) {
 }
 
 describe('ORB Residential Phase 3H calm home and chat', () => {
-  it('build version marker is phase-5a-voice-clean-rebuild', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5a-voice-clean-rebuild')
+  it('build version marker is phase-5b-voice-v2-safari-katherine-hardening', () => {
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5b-voice-v2-safari-katherine-hardening')
     const layout = read('app/orb/layout.tsx')
     assert.match(layout, /orb-residential-shell\.css/)
     assert.doesNotMatch(layout, /orb-flagship-phase|orb-login\.css/)
@@ -70,6 +70,6 @@ describe('ORB Residential Phase 3H calm home and chat', () => {
     assert.match(companion, /orb-app-shell/)
     assert.doesNotMatch(companion, /orb-home-shell|orb-chat-shell/)
     const css = read('app/orb/orb-residential-shell.css')
-    assert.match(css, /phase-5a-voice-clean-rebuild/)
+    assert.match(css, /phase-5b-voice-v2-safari-katherine-hardening/)
   })
 })

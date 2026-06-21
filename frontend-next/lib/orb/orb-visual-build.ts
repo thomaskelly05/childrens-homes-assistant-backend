@@ -1,5 +1,5 @@
 /** Canonical ORB Residential visual contract — bump when CSS/render paths change. */
-export const ORB_BUILD_VISUAL_VERSION = 'phase-5a-voice-clean-rebuild' as const
+export const ORB_BUILD_VISUAL_VERSION = 'phase-5b-voice-v2-safari-katherine-hardening' as const
 export const ORB_STYLE_VERSION = 'orb-style-v1' as const
 export const ORB_LOGIN_VERSION = 'front-door-v6' as const
 export const ORB_AUTH_BUILD_VARIANT = 'orb-auth-product-redesign' as const

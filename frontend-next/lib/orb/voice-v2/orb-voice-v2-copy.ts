@@ -13,6 +13,17 @@ export const ORB_VOICE_V2_TYPE_PLACEHOLDER = 'Type what you wanted to say to ORB
 export const ORB_VOICE_V2_SEND_TYPED = 'Send to ORB' as const
 export const ORB_VOICE_V2_PREPARING_VOICE = 'ORB is preparing voice…' as const
 export const ORB_VOICE_V2_CONTINUE_WITHOUT_VOICE = 'Continue without voice' as const
+export const ORB_VOICE_V2_CONTINUE_CONVERSATION = 'Continue conversation' as const
+export const ORB_VOICE_V2_MIC_DENIED =
+  'Microphone permission is blocked. Check Safari settings or type instead.' as const
+export const ORB_VOICE_V2_SAFARI_AUTO_RESUME =
+  'Safari needs you to tap once to continue listening.' as const
+export const ORB_VOICE_V2_AUDIO_PLAYBACK_BLOCKED =
+  'Audio playback was blocked. ORB’s reply is shown as text.' as const
+export const ORB_VOICE_V2_KATHERINE_FORCED_OPENAI =
+  'Katherine is unavailable — OpenAI fallback is forced in server settings.' as const
+export const ORB_VOICE_V2_KATHERINE_MISSING_ELEVENLABS =
+  'Katherine is unavailable — ElevenLabs is not configured.' as const
 export const ORB_VOICE_V2_KATHERINE_FALLBACK =
   'Katherine is unavailable, so ORB is using a fallback voice.' as const
 export const ORB_VOICE_V2_LIVE_SPOKEN_CAP = 320

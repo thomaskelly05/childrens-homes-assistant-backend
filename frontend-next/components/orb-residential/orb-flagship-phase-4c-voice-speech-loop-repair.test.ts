@@ -27,8 +27,8 @@ function read(relativePath: string) {
 }
 
 describe('ORB Residential Phase 4C Voice speech loop repair', () => {
-  it('build version marker is phase-5a-voice-clean-rebuild', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5a-voice-clean-rebuild')
+  it('build version marker is phase-5b-voice-v2-safari-katherine-hardening', () => {
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5b-voice-v2-safari-katherine-hardening')
     const layout = read('app/orb/layout.tsx')
     assert.match(layout, /orb-residential-shell\.css/)
     assert.deepEqual(ORB_LAYOUT_CSS_FILES, ['app/orb/orb-residential-shell.css'])
@@ -65,7 +65,7 @@ describe('ORB Residential Phase 4C Voice speech loop repair', () => {
   it('Katherine TTS path and spoken fallback copy exist', () => {
     const hook = read('lib/orb/voice-v2/use-orb-voice-v2.ts')
     assert.match(hook, /requestOrbVoiceV2Speak/)
-    assert.match(hook, /ORB_VOICE_V2_KATHERINE_FALLBACK/)
+    assert.match(hook, /resolveOrbVoiceV2KatherineStatusMessage/)
     assert.match(hook, /voicePreparingSkipAvailable/)
   })
 
@@ -108,7 +108,7 @@ describe('ORB Residential Phase 4C Voice speech loop repair', () => {
   it('audio storage honesty and single shell remain', () => {
     const shell = read('app/orb/orb-residential-shell.css')
     const station = read('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(shell, /phase-5a-voice-clean-rebuild/)
+    assert.match(shell, /phase-5b-voice-v2-safari-katherine-hardening/)
     assert.match(station, /ORB_VOICE_V2_SAFETY_FOOTER/)
     assert.match(ORB_VOICE_MIC_ERROR, /microphone permission/)
     assert.doesNotMatch(station, /compliance guarantee|Ofsted approved/i)

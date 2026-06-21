@@ -98,6 +98,7 @@ class ORBVoiceTTSResult:
     provider: str
     voice_name: str
     fallback_used: bool = False
+    fallback_reason: str | None = None
 
 
 def _normalise_provider_preference(value: str | None) -> str | None:
@@ -483,6 +484,7 @@ async def synthesize_spoken_reply(
     resolved_format = "m4a" if (audio_format or "mp3").strip().lower() == "m4a" else "mp3"
 
     primary = _resolve_primary_tts_provider()
+    katherine_requested = resolved_voice == "katherine"
     if primary != "elevenlabs":
         unavailable = _elevenlabs_unavailable_reason()
         if unavailable:
@@ -491,6 +493,11 @@ async def synthesize_spoken_reply(
                 unavailable,
                 resolved_voice,
             )
+            if katherine_requested and unavailable == "provider_forced_openai":
+                logger.info(
+                    "orb_voice_tts_katherine_blocked reason=provider_forced_openai voice_id=%s",
+                    resolved_voice,
+                )
 
     providers: list[str] = [primary]
     fallback = _fallback_provider()
@@ -512,6 +519,13 @@ async def synthesize_spoken_reply(
                 ),
                 timeout=ORB_TTS_TIMEOUT_SECONDS,
             )
+            unavailable = _elevenlabs_unavailable_reason()
+            provider_fallback = index > 0
+            katherine_fallback = katherine_requested and result.provider != "elevenlabs"
+            fallback_used = provider_fallback or katherine_fallback
+            fallback_reason: str | None = None
+            if fallback_used:
+                fallback_reason = unavailable or ("provider_fallback" if provider_fallback else None)
             final = ORBVoiceTTSResult(
                 audio_bytes=result.audio_bytes,
                 content_type=result.content_type,
@@ -521,9 +535,10 @@ async def synthesize_spoken_reply(
                 voice_name=_display_voice_name(
                     result.voice_id,
                     result.provider,
-                    fallback_used=index > 0,
+                    fallback_used=fallback_used,
                 ),
-                fallback_used=index > 0,
+                fallback_used=fallback_used,
+                fallback_reason=fallback_reason,
             )
             logger.info(
                 "orb_voice_turn_trace stage=tts provider=%s voice=%s fallback=%s text_chars=%s voice_id=%s spoken_cap=%s",

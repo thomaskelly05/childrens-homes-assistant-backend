@@ -16,13 +16,13 @@ import {
   orbVoiceProfileLabel
 } from '@/lib/orb/voice/orb-voice-profiles'
 import {
+  fetchOrbVoiceV2Status,
+  resolveOrbVoiceV2KatherineStatusMessage
+} from '@/lib/orb/voice-v2/orb-voice-v2-client.ts'
+import {
   fetchOrbVoiceProviderStatus,
   type OrbVoiceProviderStatus
 } from '@/lib/orb/voice/orb-voice-provider'
-import {
-  fetchOrbVoiceRealtimeStatus,
-  type OrbVoiceRuntimeDiagnostics
-} from '@/lib/orb/voice/orb-realtime-availability'
 import type { OrbSpokenAnswerLength, OrbVoicePresetId } from '@/lib/orb/voice/orb-voice-types'
 import { ORB_VOICE_BOUNDARY_COPY } from '@/lib/orb/voice/orb-voice-launch-mode'
 import { ORB_VOICE_AUDIO_TRANSCRIPT_REVIEW_NOTE } from '@/lib/orb/voice/orb-voice-reflective-copy'
@@ -83,14 +83,19 @@ export function OrbVoiceSettingsPanel({
   const curatedProfiles = listCuratedOrbVoiceProfiles()
   const selectedProfile = getOrbVoiceProfile(settings.voicePresetId)
   const [advancedOpen, setAdvancedOpen] = useState(false)
+  const [v2Status, setV2Status] = useState<Awaited<ReturnType<typeof fetchOrbVoiceV2Status>> | null>(null)
   const [providerStatus, setProviderStatus] = useState<OrbVoiceProviderStatus | null>(null)
-  const [runtimeStatus, setRuntimeStatus] = useState<OrbVoiceRuntimeDiagnostics | null>(null)
 
   useEffect(() => {
     if (!open) return
+    void fetchOrbVoiceV2Status().then(setV2Status)
     void fetchOrbVoiceProviderStatus().then(setProviderStatus)
-    void fetchOrbVoiceRealtimeStatus().then((status) => setRuntimeStatus(status.runtime ?? null))
   }, [open])
+
+  const katherineStatusLine =
+    selectedProfile.id === 'katherine' && v2Status
+      ? resolveOrbVoiceV2KatherineStatusMessage(v2Status)
+      : 'Choose how ORB sounds. ORB uses your device&apos;s best matching voice when premium voice is unavailable.'
 
   return (
     <OrbStandalonePanelShell
@@ -103,14 +108,7 @@ export function OrbVoiceSettingsPanel({
     >
       <div className="space-y-4 p-4" data-orb-voice-settings-panel>
         <p className="text-[11px] leading-5 text-[var(--orb-muted)]" data-orb-voice-settings-help>
-          {selectedProfile.id === 'katherine'
-            ? runtimeStatus?.katherineReady
-              ? 'Katherine ready'
-              : runtimeStatus?.ttsProviderForced === 'openai' ||
-                  runtimeStatus?.forcedProvider === 'openai'
-                ? 'Katherine unavailable — OpenAI fallback is active.'
-                : 'Katherine unavailable — fallback voice active'
-            : 'Choose how ORB sounds. ORB uses your device&apos;s best matching voice when premium voice is unavailable.'}
+          {katherineStatusLine}
         </p>
 
         {onOpenOrbVoice ? (

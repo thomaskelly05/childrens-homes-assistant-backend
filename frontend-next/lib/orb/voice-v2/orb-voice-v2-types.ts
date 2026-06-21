@@ -1,3 +1,11 @@
+export type OrbVoiceV2PermissionState =
+  | 'ready'
+  | 'microphone_prompt'
+  | 'microphone_denied'
+  | 'autoplay_blocked'
+  | 'auto_resume_blocked'
+  | 'audio_playback_blocked'
+
 export type OrbVoiceV2State =
   | 'idle'
   | 'requesting_microphone'
@@ -37,6 +45,7 @@ export type OrbVoiceV2SpeakResult = {
   provider?: string
   voiceName?: string
   fallbackUsed?: boolean
+  fallbackReason?: string | null
   error?: string
 }
 
@@ -45,6 +54,8 @@ export type OrbVoiceV2Status = {
   ttsProviderEffective: string
   ttsProviderForced?: string | null
   fallbackReason?: string | null
+  elevenLabsConfigured?: boolean
+  katherineConfigured?: boolean
 }
 
 export type OrbVoiceV2HandoffPayload = {

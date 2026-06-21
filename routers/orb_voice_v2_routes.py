@@ -138,15 +138,18 @@ async def orb_voice_v2_speak_route(
         result = await voice_v2_speak(text=payload.text, context=payload.context or "live_voice")
     except ORBVoiceTTSError as exc:
         raise HTTPException(status_code=exc.status_code, detail={"error": exc.code, "message": exc.message}) from exc
-    return Response(
-        content=result["audio_bytes"],
-        media_type=result["content_type"],
-        headers={
+    headers = {
             "X-ORB-TTS-Provider": str(result["provider"]),
             "X-ORB-Voice-Name": str(result["voiceName"]),
             "X-ORB-TTS-Fallback": "true" if result["fallbackUsed"] else "false",
             "Cache-Control": "no-store",
-        },
+        }
+    if result.get("fallbackReason"):
+        headers["X-ORB-TTS-Fallback-Reason"] = str(result["fallbackReason"])
+    return Response(
+        content=result["audio_bytes"],
+        media_type=result["content_type"],
+        headers=headers,
     )
 
 

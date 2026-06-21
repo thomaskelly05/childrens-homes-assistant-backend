@@ -6,9 +6,27 @@ const SILENCE_MS = 1400
 const MIN_RECORDING_MS = 400
 const MAX_RECORDING_MS = 45_000
 
+export class OrbVoiceV2CaptureError extends Error {
+  readonly code: 'not_allowed' | 'empty_audio' | 'capture_failed'
+
+  constructor(code: 'not_allowed' | 'empty_audio' | 'capture_failed', message: string) {
+    super(message)
+    this.name = 'OrbVoiceV2CaptureError'
+    this.code = code
+  }
+}
+
 function isSafari(): boolean {
   if (typeof navigator === 'undefined') return false
   return /^((?!chrome|android).)*safari/i.test(navigator.userAgent)
+}
+
+function isNotAllowedError(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false
+  const name = 'name' in error ? String((error as { name?: string }).name) : ''
+  if (name === 'NotAllowedError') return true
+  const message = 'message' in error ? String((error as { message?: string }).message) : ''
+  return /not allowed|permission denied|user denied/i.test(message)
 }
 
 function pickMimeType(): string {
@@ -32,7 +50,16 @@ export async function startOrbVoiceV2Capture(input: {
   onEndOfTurn: (blob: Blob, mimeType: string) => void
   onError: (message: string) => void
 }): Promise<OrbVoiceV2CaptureSession> {
-  const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+  let stream: MediaStream
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+  } catch (error) {
+    if (isNotAllowedError(error)) {
+      throw new OrbVoiceV2CaptureError('not_allowed', 'microphone_not_allowed')
+    }
+    throw new OrbVoiceV2CaptureError('capture_failed', 'microphone_unavailable')
+  }
+
   const mimeType = pickMimeType()
   const chunks: BlobPart[] = []
   let recorder: MediaRecorder
@@ -49,6 +76,18 @@ export async function startOrbVoiceV2Capture(input: {
   let disposed = false
 
   const audioContext = new AudioContext()
+  try {
+    if (audioContext.state === 'suspended') {
+      await audioContext.resume()
+    }
+  } catch (error) {
+    if (isNotAllowedError(error)) {
+      stream.getTracks().forEach((track) => track.stop())
+      void audioContext.close()
+      throw new OrbVoiceV2CaptureError('not_allowed', 'audio_context_not_allowed')
+    }
+  }
+
   const source = audioContext.createMediaStreamSource(stream)
   const analyser = audioContext.createAnalyser()
   analyser.fftSize = 512

@@ -100,6 +100,7 @@ async def voice_v2_speak(*, text: str, context: str = "live_voice") -> dict[str,
         "provider": result.provider,
         "voiceName": result.voice_name,
         "fallbackUsed": result.fallback_used,
+        "fallbackReason": result.fallback_reason,
         "spokenCapApplied": capped,
         "ttsTextChars": len(spoken),
     }

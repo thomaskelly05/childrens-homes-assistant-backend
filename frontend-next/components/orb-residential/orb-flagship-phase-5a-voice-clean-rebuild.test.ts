@@ -71,11 +71,11 @@ describe('ORB Voice v2 flow contracts', () => {
 })
 
 describe('ORB Residential Phase 5A Voice clean rebuild', () => {
-  it('build version marker is phase-5a-voice-clean-rebuild', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5a-voice-clean-rebuild')
+  it('build version marker is phase-5b-voice-v2-safari-katherine-hardening', () => {
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5b-voice-v2-safari-katherine-hardening')
     assert.match(read('app/orb/layout.tsx'), /orb-residential-shell\.css/)
     assert.deepEqual(ORB_LAYOUT_CSS_FILES, ['app/orb/orb-residential-shell.css'])
-    assert.match(read('app/orb/orb-residential-shell.css'), /phase-5a-voice-clean-rebuild/)
+    assert.match(read('app/orb/orb-residential-shell.css'), /phase-5b-voice-v2-safari-katherine-hardening/)
   })
 
   it('active voice station uses v2 hook and not legacy voice modules', () => {
@@ -114,7 +114,7 @@ describe('ORB Residential Phase 5A Voice clean rebuild', () => {
   it('Katherine fallback copy and audio-not-stored footer are present', () => {
     const station = read('components/orb-standalone/orb-voice-station.tsx')
     assert.match(station, /ORB_VOICE_V2_SAFETY_FOOTER/)
-    assert.match(read('lib/orb/voice-v2/use-orb-voice-v2.ts'), /ORB_VOICE_V2_KATHERINE_FALLBACK/)
+    assert.match(read('lib/orb/voice-v2/use-orb-voice-v2.ts'), /resolveOrbVoiceV2KatherineStatusMessage/)
     assert.match(station, /Generated for adult review|ORB_VOICE_V2_ADULT_REVIEW_LABEL/)
     assert.doesNotMatch(station, /compliance guarantee|Ofsted approved/i)
   })
