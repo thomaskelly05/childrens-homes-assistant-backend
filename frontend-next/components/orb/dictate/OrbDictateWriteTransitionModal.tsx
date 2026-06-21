@@ -86,7 +86,7 @@ export function OrbDictateWriteTransitionModal({
           {failed ? (
             <button
               type="button"
-              className="rounded-xl border border-[var(--orb-line)]/30 px-4 py-2 text-sm font-medium"
+              className="orb-dictate-secondary-action rounded-xl border border-[var(--orb-line)]/35 px-4 py-2 text-sm font-semibold text-[var(--orb-foreground)]"
               onClick={onDismiss}
               data-orb-dictate-write-transition-dismiss
             >
@@ -96,16 +96,16 @@ export function OrbDictateWriteTransitionModal({
             <button
               type="button"
               disabled
-              className="inline-flex items-center gap-2 rounded-xl bg-[var(--orb-primary)] px-4 py-2 text-sm font-semibold text-white opacity-80"
+              className="orb-dictate-primary-action inline-flex items-center gap-2 rounded-xl bg-[var(--orb-primary)] px-4 py-2.5 text-sm font-semibold text-white opacity-85"
               data-orb-dictate-write-transition-preparing
             >
-              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+              <Loader2 className="h-4 w-4 animate-spin text-white" aria-hidden />
               {ORB_DICTATE_WRITE_TRANSITION_PREPARING}
             </button>
           ) : (
             <button
               type="button"
-              className="rounded-xl bg-[var(--orb-primary)] px-4 py-2 text-sm font-semibold text-white"
+              className="orb-dictate-primary-action rounded-xl bg-[var(--orb-primary)] px-4 py-2.5 text-sm font-semibold text-white shadow-sm"
               onClick={onContinue}
               data-orb-dictate-write-transition-continue
             >

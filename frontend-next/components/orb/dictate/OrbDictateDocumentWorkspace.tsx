@@ -47,6 +47,7 @@ export type OrbDictateDocumentWorkspaceProps = {
   recordingMedia?: OrbDictateRecordingMedia | null
   contentSource?: OrbDictateContentSource
   peopleToConfirm?: OrbDictatePersonConfirmItem[]
+  onPeopleToConfirmChange?: (items: OrbDictatePersonConfirmItem[]) => void
 }
 
 export function OrbDictateDocumentWorkspace(props: OrbDictateDocumentWorkspaceProps) {
@@ -62,6 +63,7 @@ export function OrbDictateDocumentWorkspace(props: OrbDictateDocumentWorkspacePr
       data-orb-dictate-transcript-workspace
       data-orb-dictate-orb-write-converged
       data-orb-dictate-sidebar-safe="true"
+      data-orb-dictate-document-quality
     >
       <header className="mb-3">
         <h3 className="text-base font-semibold text-[var(--orb-foreground)]" data-orb-dictate-document-workspace-title>
@@ -71,7 +73,12 @@ export function OrbDictateDocumentWorkspace(props: OrbDictateDocumentWorkspacePr
 
       {props.peopleToConfirm?.length ? (
         <div className="mb-4" data-orb-dictate-people-confirm-top>
-          <OrbDictatePeopleConfirm items={props.peopleToConfirm} prominent />
+          <OrbDictatePeopleConfirm
+            items={props.peopleToConfirm}
+            prominent
+            interactive={props.interactive}
+            onItemsChange={props.onPeopleToConfirmChange}
+          />
         </div>
       ) : null}
 
@@ -157,7 +164,7 @@ export function OrbDictateDocumentWorkspace(props: OrbDictateDocumentWorkspacePr
               type="button"
               data-orb-dictate-open-write
               disabled={!hasWorkingDoc}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--orb-primary)]/30 bg-[var(--orb-primary-soft)] px-4 py-2 text-xs font-semibold text-[var(--orb-foreground)]"
+              className="orb-dictate-secondary-action inline-flex items-center gap-1.5 rounded-xl border border-[var(--orb-primary)]/35 bg-[var(--orb-primary-soft)] px-4 py-2 text-xs font-semibold text-[var(--orb-foreground)] disabled:opacity-55"
               onClick={props.onOpenInWrite}
             >
               {ORB_DICTATE_ACTION_OPEN_WRITE}
@@ -168,7 +175,7 @@ export function OrbDictateDocumentWorkspace(props: OrbDictateDocumentWorkspacePr
               type="button"
               data-orb-dictate-copy
               disabled={!hasWorkingDoc}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--orb-line)]/30 bg-white/90 px-4 py-2 text-xs font-medium"
+              className="orb-dictate-secondary-action inline-flex items-center gap-1.5 rounded-xl border border-[var(--orb-line)]/35 bg-white px-4 py-2 text-xs font-semibold text-[var(--orb-foreground)] disabled:opacity-55"
               onClick={props.onCopy}
             >
               {ORB_DICTATE_ACTION_COPY}
@@ -179,7 +186,7 @@ export function OrbDictateDocumentWorkspace(props: OrbDictateDocumentWorkspacePr
               type="button"
               data-orb-dictate-save-draft
               disabled={!hasWorkingDoc}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--orb-line)]/30 bg-white/90 px-4 py-2 text-xs font-medium"
+              className="orb-dictate-secondary-action inline-flex items-center gap-1.5 rounded-xl border border-[var(--orb-line)]/35 bg-white px-4 py-2 text-xs font-semibold text-[var(--orb-foreground)] disabled:opacity-55"
               onClick={props.onSave}
             >
               {ORB_DICTATE_ACTION_SAVE}
@@ -188,7 +195,7 @@ export function OrbDictateDocumentWorkspace(props: OrbDictateDocumentWorkspacePr
           <button
             type="button"
             data-orb-dictate-capture-again
-            className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--orb-line)]/30 bg-white/80 px-4 py-2 text-xs font-medium text-[var(--orb-muted)] hover:text-[var(--orb-foreground)]"
+            className="orb-dictate-secondary-action inline-flex items-center gap-1.5 rounded-xl border border-[var(--orb-line)]/35 bg-white px-4 py-2 text-xs font-semibold text-[var(--orb-foreground)]"
             onClick={props.onCaptureAgain}
           >
             {ORB_DICTATE_CAPTURE_AGAIN}

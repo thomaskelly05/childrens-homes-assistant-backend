@@ -1807,6 +1807,7 @@ export function OrbDictateStation({
           onContentSourceChange={setContentSource}
           processingStage={processingStage}
           peopleToConfirm={peopleToConfirm}
+          onPeopleToConfirmChange={setPeopleToConfirm}
         />
         {output ? (
           <div className="mt-2 flex shrink-0 flex-wrap gap-2">

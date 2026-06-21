@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 
 import {
   ORB_DICTATE_WORKING_DOC_LABEL,
@@ -9,6 +9,7 @@ import {
   type OrbDictateContentSource
 } from '@/lib/orb/dictate/orb-dictate-capture-copy'
 import {
+  isOrbDictateSectionPlaceholder,
   parseWorkingDocument,
   serializeWorkingDocument,
   type OrbDictateWorkingDocumentSection
@@ -32,6 +33,12 @@ function applySectionUpdate(
   return serializeWorkingDocument(next)
 }
 
+function paragraphRows(body: string): number {
+  const lines = body.split('\n').length
+  const wrapped = Math.ceil(body.length / 88)
+  return Math.max(2, Math.min(10, Math.max(lines, wrapped)))
+}
+
 export function OrbDictateWorkingDocument({
   documentMarkdown,
   onDocumentChange,
@@ -41,6 +48,8 @@ export function OrbDictateWorkingDocument({
   prominent = false
 }: OrbDictateWorkingDocumentProps) {
   const sections = parseWorkingDocument(documentMarkdown)
+  const [editingHeading, setEditingHeading] = useState<string | null>(null)
+  const [documentTitle, setDocumentTitle] = useState(templateLabel)
   const dateLine = useMemo(
     () =>
       new Date().toLocaleString('en-GB', {
@@ -51,41 +60,60 @@ export function OrbDictateWorkingDocument({
   )
 
   const sectionEditor = (
-    <div className={`orb-dictate-working-document-sections space-y-5 ${prominent ? 'mt-2' : 'mt-4'}`}>
+    <div
+      className={`orb-dictate-working-document-sections space-y-6 ${prominent ? 'mt-2' : 'mt-4'}`}
+      data-orb-dictate-document-blocks
+    >
       {sections.length === 0 ? (
-        <textarea
-          value={documentMarkdown}
-          onChange={(e) => onDocumentChange(e.target.value)}
-          readOnly={readOnly}
-          rows={12}
-          className="orb-dictate-write-section-body w-full resize-y bg-transparent text-sm leading-relaxed outline-none"
-          data-orb-dictate-working-document-body
-          aria-label="ORB working document"
-        />
+        <div className="orb-dictate-write-paragraph-block">
+          <textarea
+            value={documentMarkdown}
+            onChange={(e) => onDocumentChange(e.target.value)}
+            readOnly={readOnly}
+            rows={8}
+            className="orb-dictate-write-section-body w-full resize-y bg-transparent text-[15px] leading-[1.65] text-slate-800 outline-none"
+            data-orb-dictate-working-document-body
+            aria-label="ORB working document"
+          />
+        </div>
       ) : (
-        sections.map((section) => (
-          <div
-            key={section.heading}
-            className="orb-dictate-working-document-section orb-dictate-write-section-block"
-            data-orb-dictate-working-document-section={section.heading}
-          >
-            <h2
-              className="text-sm font-semibold tracking-tight text-slate-800"
-              data-orb-dictate-working-document-heading={section.heading}
+        sections.map((section) => {
+          const isGuidance = isOrbDictateSectionPlaceholder(section.body)
+          const isEditing = editingHeading === section.heading
+          return (
+            <div
+              key={section.heading}
+              className="orb-dictate-working-document-section orb-dictate-write-section-block"
+              data-orb-dictate-working-document-section={section.heading}
             >
-              {section.heading}
-            </h2>
-            <textarea
-              value={section.body}
-              onChange={(e) => onDocumentChange(applySectionUpdate(sections, section.heading, e.target.value))}
-              readOnly={readOnly}
-              rows={Math.max(3, Math.min(8, section.body.split('\n').length + 2))}
-              className="orb-dictate-write-section-body mt-2 w-full resize-y border-0 bg-transparent px-0 py-1 text-sm leading-relaxed text-slate-800 outline-none focus:ring-0"
-              data-orb-dictate-working-document-section-body={section.heading}
-              aria-label={section.heading}
-            />
-          </div>
-        ))
+              <h2
+                className="text-[13px] font-semibold uppercase tracking-[0.08em] text-slate-600"
+                data-orb-dictate-working-document-heading={section.heading}
+              >
+                {section.heading}
+              </h2>
+              <div
+                className={`orb-dictate-write-paragraph-block mt-2 ${
+                  isGuidance ? 'orb-dictate-write-paragraph-block--guidance' : ''
+                } ${isEditing ? 'orb-dictate-write-paragraph-block--editing' : ''}`}
+                data-orb-dictate-write-paragraph-block
+              >
+                <textarea
+                  value={section.body}
+                  onChange={(e) => onDocumentChange(applySectionUpdate(sections, section.heading, e.target.value))}
+                  onFocus={() => setEditingHeading(section.heading)}
+                  onBlur={() => setEditingHeading((current) => (current === section.heading ? null : current))}
+                  readOnly={readOnly}
+                  rows={paragraphRows(section.body)}
+                  className="orb-dictate-write-section-body w-full resize-none border-0 bg-transparent px-0 py-0 text-[15px] leading-[1.65] text-slate-800 outline-none focus:ring-0"
+                  data-orb-dictate-working-document-section-body={section.heading}
+                  data-orb-dictate-section-placeholder={isGuidance ? 'true' : undefined}
+                  aria-label={section.heading}
+                />
+              </div>
+            </div>
+          )
+        })
       )}
     </div>
   )
@@ -115,6 +143,7 @@ export function OrbDictateWorkingDocument({
       data-orb-dictate-working-document
       data-orb-dictate-working-document-prominent="true"
       data-orb-dictate-write-converged
+      data-orb-dictate-document-quality
     >
       <div
         className="orb-dictate-write-canvas-workspace orb-studio-document-canvas-workspace min-h-[28rem] overflow-auto rounded-xl bg-[#e8eaed] p-4 md:p-5"
@@ -127,20 +156,32 @@ export function OrbDictateWorkingDocument({
           >
             <header className="mb-6 border-b border-slate-200 pb-4">
               <div className="flex flex-wrap items-start justify-between gap-2">
-                <h1 className="text-xl font-semibold text-slate-900" data-orb-write-page-title data-orb-dictate-working-document-title>
-                  {templateLabel}
-                </h1>
+                {readOnly ? (
+                  <h1 className="text-xl font-semibold text-slate-900" data-orb-write-page-title data-orb-dictate-working-document-title>
+                    {documentTitle}
+                  </h1>
+                ) : (
+                  <input
+                    type="text"
+                    value={documentTitle}
+                    onChange={(e) => setDocumentTitle(e.target.value)}
+                    className="orb-dictate-document-title-input w-full min-w-0 border-0 bg-transparent text-xl font-semibold text-slate-900 outline-none focus:ring-0"
+                    data-orb-write-page-title
+                    data-orb-dictate-working-document-title
+                    aria-label="Document title"
+                  />
+                )}
                 <span
-                  className="inline-flex shrink-0 items-center rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-900"
+                  className="inline-flex shrink-0 items-center rounded-full border border-slate-300 bg-slate-100 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-800"
                   data-orb-write-review-badge
                   data-orb-dictate-working-document-label
                 >
                   {ORB_DICTATE_WORKING_DOC_LABEL}
                 </span>
               </div>
-              <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+              <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-600">
                 <span
-                  className="inline-flex rounded-full border border-sky-200 bg-sky-50 px-2 py-0.5 font-medium text-sky-800"
+                  className="inline-flex rounded-full border border-sky-200 bg-sky-50 px-2 py-0.5 font-medium text-sky-900"
                   data-orb-write-record-type-badge
                   data-orb-dictate-working-document-type
                 >

@@ -125,6 +125,7 @@ export type OrbDictateStudioWorkspaceProps = {
   onContentSourceChange?: (source: OrbDictateContentSource) => void
   processingStage?: OrbDictateProcessingStageId | null
   peopleToConfirm?: OrbDictatePersonConfirmItem[]
+  onPeopleToConfirmChange?: (items: OrbDictatePersonConfirmItem[]) => void
 }
 
 type CaptureMethod = 'speak' | 'paste' | 'upload'
@@ -602,6 +603,7 @@ export function OrbDictateStudioWorkspace(props: OrbDictateStudioWorkspaceProps)
             recordingMedia={props.recordingMedia}
             contentSource={props.contentSource ?? captureSource}
             peopleToConfirm={props.peopleToConfirm}
+            onPeopleToConfirmChange={props.onPeopleToConfirmChange}
           />
         ) : null}
 

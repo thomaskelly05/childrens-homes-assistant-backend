@@ -1,7 +1,7 @@
 /**
  * ORB Residential — single canonical UI design system (Phase 1K blank canvas, 1M personality).
  * One file for shell, workspace, composer, login, mobile, stations and modals.
- * Visual build marker: phase-3r-dictate-orb-write-convergence.
+ * Visual build marker: phase-3s-dictate-document-quality.
  */
 
 :root {
@@ -3068,3 +3068,66 @@ html[data-orb-residential='1'] .orb-dictate-write-transition-modal {
 }
 
 /* phase-3r-dictate-orb-write-convergence marker end */
+
+/* Phase 3S — Dictate document quality (phase-3s-dictate-document-quality) */
+html[data-orb-residential='1'] .orb-dictate-write-paragraph-block {
+  border-radius: 0.35rem;
+  padding: 0.15rem 0;
+  transition: box-shadow 0.15s ease, background-color 0.15s ease;
+}
+
+html[data-orb-residential='1'] .orb-dictate-write-paragraph-block--guidance .orb-dictate-write-section-body {
+  color: #64748b;
+  font-style: italic;
+}
+
+html[data-orb-residential='1'] .orb-dictate-write-paragraph-block--editing {
+  background: rgba(248, 250, 252, 0.9);
+  box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.35);
+  padding: 0.35rem 0.5rem;
+}
+
+html[data-orb-residential='1'] .orb-dictate-write-paragraph-block:hover:not(.orb-dictate-write-paragraph-block--editing) {
+  box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.2);
+}
+
+html[data-orb-residential='1'] .orb-dictate-document-title-input {
+  color: #0f172a !important;
+}
+
+html[data-orb-residential='1'] [data-orb-dictate-people-confirm-surface='neutral'] {
+  background: rgba(255, 255, 255, 0.96) !important;
+}
+
+html[data-orb-residential='1'] .orb-dictate-secondary-action {
+  color: var(--orb-foreground) !important;
+}
+
+html[data-orb-residential='1'] .orb-dictate-secondary-action:disabled {
+  color: var(--orb-muted) !important;
+  opacity: 0.65 !important;
+}
+
+html[data-orb-residential='1'] .orb-dictate-primary-action:not(:disabled) {
+  color: #fff !important;
+}
+
+html[data-orb-residential='1'] .orb-dictate-primary-action:disabled {
+  color: #fff !important;
+  opacity: 0.55 !important;
+}
+
+html[data-orb-residential='1'] .orb-dictate-template-select {
+  color: var(--orb-foreground) !important;
+  background: #fff !important;
+}
+
+html[data-orb-residential='1'] [data-orb-dictate-assistant-rail-premium] {
+  background: #fff;
+}
+
+html[data-orb-residential='1'] .orb-dictate-assistant-status {
+  color: var(--orb-primary) !important;
+}
+
+/* phase-3s-dictate-document-quality marker end */
