@@ -4,7 +4,7 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, it } from 'node:test'
 
-import { ORB_BUILD_VISUAL_VERSION, ORB_LAYOUT_CSS_FILES } from '../../lib/orb/orb-visual-build.ts'
+import { ORB_LAYOUT_CSS_FILES } from '../../lib/orb/orb-visual-build.ts'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '../..')
 
@@ -13,13 +13,6 @@ function read(relativePath: string) {
 }
 
 describe('ORB Residential Phase 3T Dictate transcript data flow', () => {
-  it('build version marker is phase-3t-dictate-transcript-data-flow', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-3t-dictate-transcript-data-flow')
-    const layout = read('app/orb/layout.tsx')
-    assert.match(layout, /orb-residential-shell\.css/)
-    assert.deepEqual(ORB_LAYOUT_CSS_FILES, ['app/orb/orb-residential-shell.css'])
-  })
-
   it('transcript mapping utilities and lifecycle hooks exist', () => {
     const util = read('lib/orb/dictate/orb-dictate-working-document.ts')
     const studio = read('components/orb/dictate/OrbDictateStudioWorkspace.tsx')

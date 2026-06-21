@@ -387,6 +387,7 @@ def governed_transcribe_audio_file(
     result_dict = result.model_dump() if hasattr(result, "model_dump") else result
     transcript = str(result_dict.get("text") or "").strip()
     redacted, redaction_applied = redact_plain_text(transcript, mode=decision.redaction_mode)
+    working_transcript = transcript if feature == FEATURE_DICTATE else redacted
 
     record_model_usage(
         feature=feature,
@@ -402,8 +403,11 @@ def governed_transcribe_audio_file(
     )
 
     return {
-        "transcript": redacted,
+        "transcript": working_transcript,
+        "original_transcript": transcript,
+        "redacted_transcript": redacted,
         "segments": [],
         "duration": result_dict.get("duration"),
         "redaction_applied": redaction_applied,
+        "transcript_privacy_mode": "internal_working" if feature == FEATURE_DICTATE else "redacted_export",
     }

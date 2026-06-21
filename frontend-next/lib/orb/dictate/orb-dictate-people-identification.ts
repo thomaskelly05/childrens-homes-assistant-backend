@@ -49,9 +49,82 @@ const REGISTERED_MANAGER_PATTERN =
 const NAME_INTRO_PATTERNS: RegExp[] = [
   /\bmy name(?:'s| is)\s+(\[[A-Z_]+\d+\]|[A-Za-z][A-Za-z.' -]{1,40})/i,
   /\bthis is\s+(\[[A-Z_]+\d+\]|[A-Za-z][A-Za-z.' -]{1,40})/i,
+  /\bI(?:'m| am)\s+((?!(?:the|a)\s+registered)[A-Za-z][A-Za-z.' -]{1,40})/i,
   /\bI(?:'m| am)\s+(\[[A-Z_]+\d+\])/i,
   /\b([A-Za-z][A-Za-z.' -]{1,40})\s+speaking\b/i
 ]
+
+function parseNameListChunk(chunk: string): string[] {
+  const names: string[] = []
+  const parts = chunk.replace(/\s+and\s+/gi, ',').split(',').map((part) => part.trim()).filter(Boolean)
+  for (const part of parts) {
+    const match = part.match(/^([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/)
+    if (match?.[1]) names.push(normalizeDetectedName(match[1]))
+  }
+  return names
+}
+
+const EXCLUDED_PRESENT_NAMES = new Set(['she', 'he', 'they', 'we', 'i', 'the', 'a'])
+
+/** Cautious detection of people introduced as present (not necessarily speaking). */
+export function extractPresentPeopleNames(text: string, speakerLabel?: string): string[] {
+  const names: string[] = []
+  const seen = new Set<string>()
+  const addName = (raw: string) => {
+    const name = normalizeDetectedName(raw)
+    if (!name || /^\[NAME_/i.test(name)) return
+    if (EXCLUDED_PRESENT_NAMES.has(name.toLowerCase())) return
+    if (speakerLabel && name.toLowerCase() === speakerLabel.toLowerCase()) return
+    const key = name.toLowerCase()
+    if (seen.has(key)) return
+    seen.add(key)
+    names.push(name)
+  }
+
+  const hereWith = text.match(
+    /\b(?:I(?:'m| am)|we(?:'re| are)|and I(?:'m| am))\s+here with\s+([^.!?]+)/i
+  )
+  if (hereWith?.[1]) {
+    for (const name of parseNameListChunk(hereWith[1])) addName(name)
+  }
+
+  const presentList = text.match(/\b(?:we have|in the room today are)\s+([^.!?]+?)\s+present\b/i)
+  if (presentList?.[1]) {
+    for (const name of parseNameListChunk(presentList[1])) addName(name)
+  }
+
+  for (const match of text.matchAll(
+    /\b([A-Z][a-z]+)\s+is here for (?:his|her|their |monthly )?supervision\b/gi
+  )) {
+    if (match[1]) addName(match[1])
+  }
+
+  return names
+}
+
+function detectPresentParticipants(
+  text: string,
+  speakerLabel?: string
+): OrbDictatePersonConfirmItem[] {
+  return extractPresentPeopleNames(text, speakerLabel).map((name) => {
+    const supervisionParticipant = new RegExp(`\\b${name}\\s+is here for (?:his|her|their |monthly )?supervision\\b`, 'i').test(
+      text
+    )
+    const hereForSupervision =
+      supervisionParticipant || /\b[Ss]he is here for supervision\b/.test(text) || /\b[Hh]e is here for supervision\b/.test(text)
+
+    return {
+      id: `present_${name.toLowerCase().replace(/[^\w]/g, '_')}`,
+      label: name,
+      status: 'may_include' as const,
+      detail: hereForSupervision
+        ? 'May be present — supervision participant — needs adult confirmation'
+        : 'May be present — needs adult confirmation',
+      speakerConfidence: 'suggested' as const,
+      role: hereForSupervision ? ('staff' as const) : ('unknown' as const)
+    }
+  })
+}
 
 function normalizeDetectedName(raw: string): string {
   return raw.trim().replace(/[.,;:!?].*$/, '').trim()
@@ -82,7 +155,7 @@ function detectNamedSpeakers(text: string): OrbDictatePersonConfirmItem[] {
       label,
       status: 'needs_confirmation',
       detail: managerMentioned
-        ? 'Appears to be speaker; registered manager role mentioned — needs adult confirmation'
+        ? 'Appears to be speaker — Registered Manager — needs adult confirmation'
         : 'Appears to be speaker — needs adult confirmation',
       speakerConfidence: 'needs_confirmation',
       role: managerMentioned && (isManagerName || /^\[NAME_/i.test(label)) ? 'registered_manager' : 'unknown'
@@ -143,6 +216,9 @@ export function buildPeopleToConfirm(
 
   const namedSpeakers = detectNamedSpeakers(text)
   items.push(...namedSpeakers)
+
+  const speakerLabel = namedSpeakers[0]?.label
+  items.push(...detectPresentParticipants(text, speakerLabel))
 
   const speakerLabels = new Set<string>()
   for (const segment of segments) {

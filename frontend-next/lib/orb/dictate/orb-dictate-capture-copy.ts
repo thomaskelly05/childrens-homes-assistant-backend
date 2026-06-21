@@ -223,8 +223,14 @@ export function orbDictateContentSourceLabel(source: OrbDictateContentSource): s
   return ORB_DICTATE_SOURCE_FROM_PASTE
 }
 
+export const ORB_DICTATE_TRANSCRIPT_PRIVACY_NOTE =
+  'Use only necessary details. You can redact or anonymise before sharing outside the home.' as const
+
+export const ORB_DICTATE_RAW_TRANSCRIPT_UNAVAILABLE =
+  'Raw transcript unavailable. Transcription provider returned redacted text.' as const
+
 export const ORB_DICTATE_PASTE_PLACEHOLDER =
-  'Paste rough notes here. Use anonymised or minimal identifiable details where possible.' as const
+  'Paste rough notes here. Use only necessary details for this working draft.' as const
 
 export const ORB_DICTATE_REVIEW_WITH_ORB = 'Review with ORB' as const
 

@@ -135,12 +135,18 @@ import {
   ORB_DICTATE_RECORDING_TRANSCRIPTION_FAILED,
   ORB_DICTATE_RECORDING_UNSUPPORTED,
   ORB_DICTATE_RECORDING_PROCESSING_NOTE,
+  ORB_DICTATE_RAW_TRANSCRIPT_UNAVAILABLE,
   ORB_DICTATE_WRITE_FROM_RECORDING_NOTE,
   ORB_DICTATE_WRITE_HANDOFF_SOURCE_NOTE,
   type OrbDictateContentSource,
   type OrbDictateProcessingStageId
 } from '@/lib/orb/dictate/orb-dictate-capture-copy'
 import { buildPeopleToConfirm, type OrbDictatePersonConfirmItem } from '@/lib/orb/dictate/orb-dictate-people-identification'
+import {
+  buildTranscriptBundleFromText,
+  ORB_DICTATE_DEFAULT_TRANSCRIPT_PRIVACY_MODE,
+  type OrbDictateTranscriptBundle
+} from '@/lib/orb/dictate/orb-dictate-transcript-privacy'
 import { tryPersistDictateRecording } from '@/lib/orb/dictate/orb-dictate-media-persistence'
 import { workingDocumentTypeLabel } from '@/lib/orb/dictate/orb-dictate-working-document'
 import {
@@ -214,6 +220,7 @@ export function OrbDictateStation({
   const [startMode, setStartMode] = useState<OrbDictateStartMode | null>(null)
   const [noteType, setNoteType] = useState<OrbDictateNoteType>(initialNoteType ?? 'daily_record')
   const [transcript, setTranscript] = useState('')
+  const [transcriptBundle, setTranscriptBundle] = useState<OrbDictateTranscriptBundle | null>(null)
   const [pasteText, setPasteText] = useState('')
   const [recordingUiState, setRecordingUiState] = useState<OrbDictateRecordingUiState>('idle')
   const [recordingPaused, setRecordingPaused] = useState(false)
@@ -520,8 +527,10 @@ export function OrbDictateStation({
         conversation_consent_confirmed: effectiveNeedsConsent ? authorityConsent && consentConfirmed : undefined
       })
       setBackendTranscriptionAvailable(true)
-      const merged = result.transcript.trim()
-      const segs = result.segments ?? textToSegments(result.transcript, 'upload', result.participants ?? [])
+      const bundle = result.transcriptBundle
+      setTranscriptBundle(bundle)
+      const merged = bundle.workingTranscript.trim()
+      const segs = result.segments ?? textToSegments(merged, 'upload', result.participants ?? [])
       setProcessingStage('identifying_people')
       const people = buildPeopleToConfirm(merged, result.participants ?? participants, segs)
       setPeopleToConfirm(people)
@@ -543,7 +552,11 @@ export function OrbDictateStation({
       setOutputTab('transcript')
       setRecordingUiState('stopped')
       setProcessingStage('ready')
-      setStatusMessage(ORB_DICTATE_RECORDING_TRANSCRIPT_READY)
+      setStatusMessage(
+        bundle.rawTranscriptUnavailable
+          ? ORB_DICTATE_RAW_TRANSCRIPT_UNAVAILABLE
+          : ORB_DICTATE_RECORDING_TRANSCRIPT_READY
+      )
       emitOrbClientDebug({
         area: 'dictate',
         event: 'dictate_transcript_ready',
@@ -589,6 +602,22 @@ export function OrbDictateStation({
     const segs = segments.length ? segments : textToSegments(text, 'paste', participants)
     setPeopleToConfirm(buildPeopleToConfirm(text, participants, segs))
   }, [transcript, participants, segments, processingStage])
+
+  useEffect(() => {
+    const trimmed = transcript.trim()
+    if (!trimmed) {
+      setTranscriptBundle(null)
+      return
+    }
+    setTranscriptBundle((prev) => {
+      if (prev?.workingTranscript === trimmed) return prev
+      if (prev?.redactedTranscript && prev.originalTranscript !== trimmed) {
+        return { ...prev, originalTranscript: trimmed, workingTranscript: trimmed }
+      }
+      if (prev?.redactedTranscript) return prev
+      return buildTranscriptBundleFromText(trimmed, prev?.transcriptPrivacyMode)
+    })
+  }, [transcript])
 
   async function handleStartDictateRecording() {
     if (dictateStartInFlightRef.current || recordingUiState === 'starting' || recordingUiState === 'recording') {
@@ -1049,6 +1078,7 @@ export function OrbDictateStation({
 
   function handleClearTranscript() {
     setTranscript('')
+    setTranscriptBundle(null)
     setPasteText('')
     transcriptBufferRef.current = []
     lastDictateTranscriptRef.current = ''
@@ -1645,6 +1675,12 @@ export function OrbDictateStation({
         data-orb-dictate-recording-state={recordingUiState}
         data-orb-dictate-recorder-mode={recorderMode}
         data-orb-dictate-transcript-length={String(effectiveInputText.length)}
+        data-orb-dictate-transcript-privacy-mode={
+          transcriptBundle?.transcriptPrivacyMode ?? ORB_DICTATE_DEFAULT_TRANSCRIPT_PRIVACY_MODE
+        }
+        data-orb-dictate-raw-transcript-unavailable={
+          transcriptBundle?.rawTranscriptUnavailable ? 'true' : undefined
+        }
         data-orb-dictate-audio-size={lastAudioByteSize > 0 ? String(lastAudioByteSize) : undefined}
         data-orb-dictate-capture-source={lastCaptureSource !== 'none' ? lastCaptureSource : undefined}
         data-orb-dictate-chunk-count={lastChunkCount > 0 ? String(lastChunkCount) : undefined}

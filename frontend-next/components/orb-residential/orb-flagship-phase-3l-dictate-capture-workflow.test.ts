@@ -31,8 +31,8 @@ function read(relativePath: string) {
 }
 
 describe('ORB Residential Phase 3L Dictate capture workflow', () => {
-  it('build version marker is phase-3t-dictate-transcript-data-flow', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-3t-dictate-transcript-data-flow')
+  it('build version marker is phase-3u-dictate-identity-mapping', () => {
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-3u-dictate-identity-mapping')
     const layout = read('app/orb/layout.tsx')
     assert.match(layout, /orb-residential-shell\.css/)
     assert.deepEqual(ORB_LAYOUT_CSS_FILES, ['app/orb/orb-residential-shell.css'])
@@ -59,7 +59,7 @@ describe('ORB Residential Phase 3L Dictate capture workflow', () => {
 
   it('paste notes area and consent reminder are present', () => {
     const capture = read('components/orb/dictate/OrbDictateCaptureStation.tsx')
-    assert.equal(ORB_DICTATE_PASTE_PLACEHOLDER, 'Paste rough notes here. Use anonymised or minimal identifiable details where possible.')
+    assert.equal(ORB_DICTATE_PASTE_PLACEHOLDER, 'Paste rough notes here. Use only necessary details for this working draft.')
     assert.match(capture, /data-orb-dictate-paste-notes/)
     assert.match(capture, /data-orb-dictate-consent-reminder/)
     assert.match(capture, /ORB_DICTATE_CONSENT_REMINDER/)
@@ -110,7 +110,7 @@ describe('ORB Residential Phase 3L Dictate capture workflow', () => {
   it('single shell and one CSS import remain true', () => {
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
     assert.match(companion, /orb-app-shell/)
-    assert.match(read('app/orb/orb-residential-shell.css'), /phase-3t-dictate-transcript-data-flow/)
+    assert.match(read('app/orb/orb-residential-shell.css'), /phase-3u-dictate-identity-mapping/)
     assert.match(read('app/orb/orb-residential-shell.css'), /Phase 3N/)
   })
 })

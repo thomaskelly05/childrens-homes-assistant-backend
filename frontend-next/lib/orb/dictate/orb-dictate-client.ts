@@ -11,6 +11,11 @@ import type {
 } from '@/lib/orb/dictate/orb-dictate-speaker'
 import type { OrbDictateEditMode } from '@/lib/orb/dictate/orb-dictate-studio-actions'
 import { buildLocalDictateBrainMetadata } from '@/lib/orb/dictate/orb-dictate-brain-metadata'
+import {
+  buildTranscriptBundleFromApiPayload,
+  type OrbDictateTranscriptBundle,
+  type OrbDictateTranscriptPrivacyMode
+} from '@/lib/orb/dictate/orb-dictate-transcript-privacy'
 import type { OrbDictateBrainAnalysis } from '@/lib/orb/dictate/orb-dictate-brain-analysis'
 import type { OrbDictateBrainSuggestion } from '@/lib/orb/dictate/orb-dictate-brain-analysis'
 import type {
@@ -57,6 +62,13 @@ export type GenerateOrbDictatePayload = {
 
 export type TranscribeAudioResult = {
   transcript: string
+  workingTranscript: string
+  originalTranscript: string
+  redactedTranscript?: string
+  transcriptPrivacyMode: OrbDictateTranscriptPrivacyMode
+  redactionApplied?: boolean
+  rawTranscriptUnavailable?: boolean
+  transcriptBundle: OrbDictateTranscriptBundle
   segments: OrbDictateTranscriptSegment[]
   participants: OrbDictateParticipant[]
   speaker_summary?: { known_speakers: number; unknown_speakers: number; needs_review: boolean }
@@ -119,8 +131,16 @@ export async function transcribeOrbDictateAudio(
   const json = (await res.json()) as { success: boolean; data: Record<string, unknown> }
   if (!json.success) throw new Error('Transcription failed')
   const data = json.data
+  const bundle = buildTranscriptBundleFromApiPayload(data)
   return {
-    transcript: String(data.transcript ?? ''),
+    transcript: bundle.workingTranscript,
+    workingTranscript: bundle.workingTranscript,
+    originalTranscript: bundle.originalTranscript,
+    redactedTranscript: bundle.redactedTranscript,
+    transcriptPrivacyMode: bundle.transcriptPrivacyMode,
+    redactionApplied: bundle.redactionApplied,
+    rawTranscriptUnavailable: bundle.rawTranscriptUnavailable,
+    transcriptBundle: bundle,
     segments: (Array.isArray(data.segments) ? data.segments : []).map((s) =>
       normalizeSegment(s as Record<string, unknown>)
     ),
@@ -357,7 +377,7 @@ export function buildLocalDictateEditFallback(
   if (/team meeting|introduction|introduce/.test(lowerInstruction)) {
     revised =
       documentText.trim() ||
-      '## Summary\n\nThis appears to be a meeting or team introduction. Add who was present, the purpose of the meeting, and any key points discussed.\n\n## Key details captured\n\nNot captured yet. Add what was observed or known.\n\n## What may need clarifying\n\nConfirm the meeting purpose, attendees, and any actions agreed.\n\n## Suggested next step\n\nContinue recording or add the main discussion before creating a final draft.'
+      '## Summary\n\nThe transcript appears to be an introduction for a team meeting or supervision-related discussion.\n\n## Key details captured\n\nThe speaker introduced themselves and identified their role. The discussion appears to relate to supervision and outcomes for young people in the home.\n\n## What may need clarifying\n\nConfirm who was present, the purpose of the meeting, key discussion points, decisions made and any actions agreed.\n\n## Suggested next step\n\nContinue recording or add the main discussion before creating a final record.'
     change_summary.push('Prepared meeting/introduction working document structure (offline).')
   } else if (mode === 'missing_information') {
     revised += '\n\n## Follow-up questions for staff\n\n- What was the child\'s voice?\n- What action was taken?\n- Was the manager informed?\n'

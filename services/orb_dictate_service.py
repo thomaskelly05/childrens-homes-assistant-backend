@@ -38,7 +38,6 @@ from services.orb_dictate_speaker import (
 )
 from schemas.orb_saved_outputs import OrbSavedOutputCreate
 from services.ai_note_export_service import create_docx_export, create_pdf_export, safe_filename
-from services.ai_notes_service import transcribe_audio
 from services.orb_dictate_template_registry import get_dictate_template, list_dictate_templates
 from services.orb_recording_framework_service import (
     build_structured_write_body,
@@ -355,13 +354,21 @@ def generate_dictate_note(
 
 
 async def transcribe_dictate_audio(file_path: str) -> dict[str, Any]:
+    from services.ai_external_call_governance import FEATURE_DICTATE, governed_transcribe_audio_file
     from services.orb_dictate_diarisation import (
         diarisation_confidence_warnings,
         map_diarisation_to_orb_transcript_segments,
     )
 
-    result = await transcribe_audio(file_path)
-    transcript = str(result.get("transcript") or result.get("text") or "").strip()
+    result = await asyncio.to_thread(
+        governed_transcribe_audio_file,
+        file_path,
+        feature=FEATURE_DICTATE,
+        metadata={"route": "orb_dictate_service.transcribe", "transcript_privacy_mode": "internal_working"},
+    )
+    original = str(result.get("original_transcript") or result.get("transcript") or "").strip()
+    redacted = str(result.get("redacted_transcript") or "").strip()
+    transcript = original or redacted
     raw_segments = result.get("segments") or []
     diarisation_warnings: list[str] = []
     has_provider_diarisation = False
@@ -381,6 +388,12 @@ async def transcribe_dictate_audio(file_path: str) -> dict[str, Any]:
     diarisation_warnings.extend(diarisation_confidence_warnings(segments))
     payload: dict[str, Any] = {
         "transcript": transcript,
+        "original_transcript": original or transcript,
+        "redacted_transcript": redacted or None,
+        "working_transcript": transcript,
+        "transcript_privacy_mode": "internal_working",
+        "redaction_applied": bool(result.get("redaction_applied")),
+        "raw_transcript_unavailable": not original and bool(redacted),
         "segments": [s.model_dump() for s in segments],
         "participants": [p.model_dump() for p in participants],
         "speaker_summary": build_speaker_summary(participants, segments).model_dump(),

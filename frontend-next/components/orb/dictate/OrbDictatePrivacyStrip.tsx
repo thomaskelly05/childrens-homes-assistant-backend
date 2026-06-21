@@ -4,6 +4,7 @@ import { Shield } from 'lucide-react'
 
 import { OrbPrivacyClassificationLink } from '@/components/orb/privacy/orb-privacy-classification-link'
 import { getOrbDataClassificationNotice } from '@/lib/orb/privacy/orb-data-classification'
+import { ORB_DICTATE_TRANSCRIPT_PRIVACY_NOTE } from '@/lib/orb/dictate/orb-dictate-capture-copy'
 import { ORB_WRITE_SAFETY_COPY } from '@/lib/orb/write/orb-write-types'
 
 const TRUST_STRIP =
@@ -28,6 +29,7 @@ export function OrbDictatePrivacyStrip() {
             data-orb-dictate-privacy-banner
           >
             <p data-orb-dictate-privacy-notice>{DICTATE_NOTICE}</p>
+            <p data-orb-dictate-transcript-privacy-note>{ORB_DICTATE_TRANSCRIPT_PRIVACY_NOTE}</p>
             <p data-orb-dictate-safety-review>{ORB_WRITE_SAFETY_COPY.review}</p>
             <p data-orb-dictate-safety-judgement>{ORB_WRITE_SAFETY_COPY.judgement}</p>
             <p data-orb-dictate-safety-responsibility>{ORB_WRITE_SAFETY_COPY.responsibility}</p>

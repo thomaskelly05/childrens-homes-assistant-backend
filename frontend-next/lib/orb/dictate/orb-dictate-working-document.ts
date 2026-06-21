@@ -1,5 +1,6 @@
-/** Phase 3O / 3S / 3T — ORB Dictate working document structure and local generation. */
+/** Phase 3O / 3S / 3T / 3U — ORB Dictate working document structure and local generation. */
 
+import { extractPresentPeopleNames } from './orb-dictate-people-identification.ts'
 import { ORB_DICTATE_RECORD_TYPE_SUGGESTIONS } from './orb-dictate-capture-copy.ts'
 
 export type OrbDictateWorkingDocumentSection = {
@@ -240,6 +241,7 @@ function extractSpeakerLabel(text: string): { label?: string; isRedacted: boolea
   const patterns = [
     /\bmy name(?:'s| is)\s+(\[[A-Z_]+\d+\]|[A-Za-z][A-Za-z.' -]{1,40})/i,
     /\bthis is\s+(\[[A-Z_]+\d+\]|[A-Za-z][A-Za-z.' -]{1,40})/i,
+    /\bI(?:'m| am)\s+((?!(?:the|a)\s+registered)[A-Za-z][A-Za-z.' -]{1,40})/i,
     /\bI(?:'m| am)\s+(\[[A-Z_]+\d+\])/i,
     /\b([A-Za-z][A-Za-z.' -]{1,40})\s+speaking\b/i
   ]
@@ -378,7 +380,58 @@ function synthesizeChildVoice(signals: TranscriptSignals): string {
   return placeholderForSectionHeading('Child\u2019s voice', 'daily_record')
 }
 
-function mapGeneralDictation(signals: TranscriptSignals, headings: readonly string[]): OrbDictateWorkingDocumentSection[] {
+function mapTeamMeetingIntroduction(
+  signals: TranscriptSignals,
+  headings: readonly string[]
+): OrbDictateWorkingDocumentSection[] {
+  const keyDetailParts = [
+    signals.speakerLabel || signals.registeredManagerMentioned
+      ? 'The speaker introduced themselves and identified their role.'
+      : null,
+    signals.supervisionMentioned || /\byoung people\b/i.test(signals.raw)
+      ? 'The discussion appears to relate to supervision and outcomes for young people in the home.'
+      : null
+  ].filter(Boolean)
+
+  return headings.map((heading) => {
+    if (heading === 'Summary') {
+      return {
+        heading,
+        body: 'The transcript appears to be an introduction for a team meeting or supervision-related discussion.'
+      }
+    }
+    if (heading === 'Key details captured') {
+      return {
+        heading,
+        body: keyDetailParts.join(' ') || placeholderForSectionHeading(heading, 'general')
+      }
+    }
+    if (heading === 'What may need clarifying') {
+      return {
+        heading,
+        body:
+          'Confirm who was present, the purpose of the meeting, key discussion points, decisions made and any actions agreed.'
+      }
+    }
+    if (heading === 'Suggested next step') {
+      return {
+        heading,
+        body: 'Continue recording or add the main discussion before creating a final record.'
+      }
+    }
+    return { heading, body: joinOrPlaceholder([], heading, 'general') }
+  })
+}
+
+function mapGeneralDictation(
+  signals: TranscriptSignals,
+  headings: readonly string[],
+  adultInstruction?: string
+): OrbDictateWorkingDocumentSection[] {
+  if (adultInstruction && /team meeting|introduction|introduce/.test(adultInstruction.toLowerCase())) {
+    return mapTeamMeetingIntroduction(signals, headings)
+  }
+
   const speaker = signals.speakerLabel ?? 'Speaker'
   const rolePart = signals.registeredManagerMentioned ? ' as the registered manager' : ''
   const datePart = signals.dateMentioned ? ` on ${signals.dateMentioned}` : ''
@@ -422,16 +475,41 @@ function mapGeneralDictation(signals: TranscriptSignals, headings: readonly stri
 
 function mapSupervisionReflection(signals: TranscriptSignals, headings: readonly string[]): OrbDictateWorkingDocumentSection[] {
   const speaker = signals.speakerLabel ?? 'Speaker'
-  const roleClause = signals.registeredManagerMentioned ? ' as the registered manager' : ''
-  const whatHappened = signals.supervisionMentioned
-    ? `${speaker} introduced themselves${roleClause} and indicated this was a supervision discussion.`
-    : `${speaker} introduced themselves${roleClause}.`
+  const presentNames = extractPresentPeopleNames(signals.raw, signals.speakerLabel)
+  const monthlySupervision =
+    (/\b(?:for|this)(?:\s+the)?\s+month(?:ly)?\b/i.test(signals.raw) ||
+      /\bthis month\b/i.test(signals.raw)) &&
+    signals.supervisionMentioned
+
+  let whatHappened: string
+  if (signals.speakerIsRedacted && presentNames.length === 0 && monthlySupervision) {
+    whatHappened =
+      `${speaker} introduced themselves as the Registered Manager and stated that another person was present for monthly supervision.`
+  } else if (presentNames.length && signals.registeredManagerMentioned) {
+    whatHappened = `${speaker} introduced themselves as the Registered Manager and stated that ${presentNames[0]} was present for monthly supervision.`
+  } else if (presentNames.length) {
+    whatHappened = `${speaker} introduced themselves and stated that ${presentNames[0]} was present for supervision.`
+  } else if (signals.supervisionMentioned) {
+    whatHappened = `${speaker} introduced themselves${
+      signals.registeredManagerMentioned ? ' as the Registered Manager' : ''
+    } and indicated this was a supervision discussion.`
+  } else {
+    whatHappened = `${speaker} introduced themselves${
+      signals.registeredManagerMentioned ? ' as the Registered Manager' : ''
+    }.`
+  }
+
+  const outcomesFocus =
+    /\b(?:focus(?:ed|ing)? on|going to focus on)\s+(?:the\s+)?outcomes?\b/i.test(signals.raw) ||
+    /\boutcomes?\s+(?:for|of)\s+(?:young people|children)/i.test(signals.raw)
+
+  const impactBody = outcomesFocus
+    ? 'The supervision was focused on outcomes for young people within the home.'
+    : placeholderForSectionHeading('Impact on practice', 'supervision_prep')
 
   return headings.map((heading) => {
     if (heading === 'What happened') return { heading, body: whatHappened }
-    if (heading === 'Impact on practice') {
-      return { heading, body: placeholderForSectionHeading(heading, 'supervision_prep') }
-    }
+    if (heading === 'Impact on practice') return { heading, body: impactBody }
     if (heading === 'What went well') {
       return { heading, body: placeholderForSectionHeading(heading, 'supervision_prep') }
     }
@@ -550,7 +628,8 @@ function mapBySentenceBuckets(
 /** Map transcript sentences into template sections with cautious placeholders for gaps. */
 export function mapTranscriptToSections(
   transcript: string,
-  templateId: string
+  templateId: string,
+  options?: { adultInstruction?: string }
 ): OrbDictateWorkingDocumentSection[] {
   const headings = workingDocumentSectionsForTemplate(templateId)
   const text = transcript.trim()
@@ -564,7 +643,7 @@ export function mapTranscriptToSections(
 
   const signals = extractTranscriptSignals(text)
 
-  if (templateId === 'general') return mapGeneralDictation(signals, headings)
+  if (templateId === 'general') return mapGeneralDictation(signals, headings, options?.adultInstruction)
   if (templateId === 'supervision_prep') return mapSupervisionReflection(signals, headings)
   if (templateId === 'daily_record') return mapDailyRecord(signals, headings)
 
@@ -592,8 +671,12 @@ export function serializeWorkingDocument(sections: OrbDictateWorkingDocumentSect
   return sections.map((s) => `## ${s.heading}\n\n${s.body}`.trimEnd()).join('\n\n')
 }
 
-export function buildInitialWorkingDocument(transcript: string, templateId: string): string {
-  return serializeWorkingDocument(mapTranscriptToSections(transcript, templateId))
+export function buildInitialWorkingDocument(
+  transcript: string,
+  templateId: string,
+  options?: { adultInstruction?: string }
+): string {
+  return serializeWorkingDocument(mapTranscriptToSections(transcript, templateId, options))
 }
 
 /** Reshape working document headings when the adult changes ORB Write template. */
