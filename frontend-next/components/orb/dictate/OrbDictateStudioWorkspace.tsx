@@ -32,13 +32,14 @@ import {
   ORB_DICTATE_RECORDING_NOT_RECORD,
   ORB_DICTATE_REVIEW_SUPPORTING,
   ORB_DICTATE_REVIEW_TITLE,
-  ORB_DICTATE_REVIEW_WITH_ORB,
   ORB_DICTATE_SPEAK_LABEL,
   ORB_DICTATE_SPEAK_ROUGH_LABEL,
   ORB_DICTATE_STORY_LINE,
   ORB_DICTATE_UPLOAD_BOUNDARY,
   ORB_DICTATE_UPLOAD_LABEL,
-  ORB_DICTATE_UPLOAD_PLACEHOLDER
+  ORB_DICTATE_UPLOAD_PLACEHOLDER,
+  ORB_DICTATE_WORKING_DOC_PARTIAL,
+  ORB_DICTATE_WORKING_DOC_UPDATED
 } from '@/lib/orb/dictate/orb-dictate-capture-copy'
 import {
   buildBrainAnalysisFromGenerate,
@@ -48,7 +49,8 @@ import {
 import {
   analyzeOrbDictateSession,
   buildLocalDictateEditFallback,
-  editOrbDictateDocument
+  editOrbDictateDocument,
+  type GenerateOrbDictatePayload
 } from '@/lib/orb/dictate/orb-dictate-client'
 import type { OrbDictateEditMode } from '@/lib/orb/dictate/orb-dictate-studio-actions'
 import {
@@ -60,10 +62,14 @@ import type { OrbDictateMode, OrbDictateParticipant, OrbDictateTranscriptSegment
 import { suggestParticipantsFromText } from '@/lib/orb/dictate/orb-dictate-speaker'
 import type { OrbDictateGenerateResult, OrbDictateNoteType } from '@/lib/orb/dictate/orb-dictate-types'
 import {
+  buildInitialWorkingDocument,
+  reshapeWorkingDocument,
+  workingDocumentTypeLabel
+} from '@/lib/orb/dictate/orb-dictate-working-document'
+import {
   OrbDictateAudioUpload,
   OrbDictateGovernanceConsent,
-  OrbDictateParticipantsPanel,
-  consentReadyForGenerate
+  OrbDictateParticipantsPanel
 } from '@/components/orb-standalone/orb-dictate-station-extras'
 import { OrbDictateDocumentReference } from '@/components/orb-standalone/orb-dictate-document-reference'
 
@@ -94,10 +100,11 @@ export type OrbDictateStudioWorkspaceProps = {
   speechStartDisabled?: boolean
   interimText?: string
   generating: boolean
-  onGenerate: () => void
+  onGenerate: (overrides?: Partial<GenerateOrbDictatePayload>) => void
   onFinalise: () => void
   onCopy: () => void
   onSave: () => void
+  onEditedNoteChange?: (text: string) => void
   canGenerate: boolean
   output: OrbDictateGenerateResult | null
   editedNote?: string
@@ -140,6 +147,18 @@ function editModeForInstruction(instruction: string): OrbDictateEditMode | undef
   return undefined
 }
 
+function templateIdFromInstruction(instruction: string): string | null {
+  const lower = instruction.toLowerCase()
+  if (lower.includes('missing from home')) return 'missing'
+  if (lower.includes('daily record')) return 'daily_record'
+  if (lower.includes('incident')) return 'incident'
+  if (lower.includes('key-work') || lower.includes('keywork')) return 'keywork'
+  if (lower.includes('safeguarding')) return 'safeguarding'
+  if (lower.includes('handover')) return 'handover'
+  if (lower.includes('supervision')) return 'supervision_prep'
+  return null
+}
+
 function OrbDictateAdvancedOptions(props: OrbDictateStudioWorkspaceProps & { effectiveText: string }) {
   return (
     <details className="text-[10px] text-[var(--orb-muted)]" data-orb-dictate-advanced-options>
@@ -180,16 +199,20 @@ export function OrbDictateStudioWorkspace(props: OrbDictateStudioWorkspaceProps)
   const [captureSource, setCaptureSource] = useState<OrbDictateCaptureSource>('speak')
   const [pasteDraft, setPasteDraft] = useState('')
   const [orbInstruction, setOrbInstruction] = useState('')
+  const [workingDocument, setWorkingDocument] = useState('')
   const [applyingEdit, setApplyingEdit] = useState(false)
   const [editNote, setEditNote] = useState<string | null>(null)
+  const [applyStatus, setApplyStatus] = useState<string | null>(null)
 
   const committedText = props.transcript.trim()
   const hasCommittedCapture = committedText.length > 0
+  const workingDocumentText = workingDocument.trim()
+  const reviewInputText = workingDocumentText || committedText
   const effectiveText = committedText || props.liveTranscript.trim()
   const hasDraft = Boolean(props.output)
   const hasAnalysis = Boolean(brainAnalysis) && !brainLoading
   const recordTypeId = recordTypeIdForStudioTemplate(props.selectedTemplateId)
-  const draftText = props.editedNote || props.output?.professional_note || ''
+  const draftText = props.editedNote || props.output?.professional_note || workingDocumentText || ''
   const isRecording = props.recordingActive || props.captureStarting
 
   const stage = useMemo((): DictateStage => {
@@ -214,12 +237,23 @@ export function OrbDictateStudioWorkspace(props: OrbDictateStudioWorkspaceProps)
     [props]
   )
 
+  useEffect(() => {
+    if (!hasCommittedCapture) {
+      setWorkingDocument('')
+      return
+    }
+    setWorkingDocument((prev) => {
+      if (prev.trim()) return prev
+      return buildInitialWorkingDocument(committedText, props.selectedTemplateId)
+    })
+  }, [committedText, hasCommittedCapture, props.selectedTemplateId])
+
   const runAnalysis = useCallback(async () => {
-    if (!effectiveText) return
+    if (!reviewInputText) return
     setBrainLoading(true)
     try {
       const result = await analyzeOrbDictateSession({
-        input_text: effectiveText,
+        input_text: reviewInputText,
         note_type: props.noteType,
         mode: props.dictateMode,
         template_id: props.selectedTemplateId,
@@ -241,14 +275,14 @@ export function OrbDictateStudioWorkspace(props: OrbDictateStudioWorkspaceProps)
           },
           summary: orbInstruction.trim()
             ? `Adult instruction: ${orbInstruction.trim()}`
-            : 'Review the capture for missing residential record detail.',
+            : 'Review the working document for missing residential record detail.',
           actions: []
         })
       )
     } finally {
       setBrainLoading(false)
     }
-  }, [effectiveText, orbInstruction, props.dictateMode, props.noteType, props.selectedTemplateId, recordTypeId])
+  }, [orbInstruction, props.dictateMode, props.noteType, props.selectedTemplateId, recordTypeId, reviewInputText])
 
   useEffect(() => {
     if (props.output) {
@@ -265,7 +299,7 @@ export function OrbDictateStudioWorkspace(props: OrbDictateStudioWorkspaceProps)
       return
     }
     if (!reviewRequested) return
-    if (!effectiveText) {
+    if (!reviewInputText) {
       setBrainAnalysis(null)
       return
     }
@@ -273,32 +307,64 @@ export function OrbDictateStudioWorkspace(props: OrbDictateStudioWorkspaceProps)
       void runAnalysis()
     }, 400)
     return () => window.clearTimeout(timer)
-  }, [effectiveText, props.output, reviewRequested, runAnalysis, recordTypeId])
+  }, [reviewInputText, props.output, reviewRequested, runAnalysis, recordTypeId])
 
   const applyOrbChange = useCallback(
     async (instruction: string) => {
-      const text = props.transcript.trim()
-      if (!text || !instruction.trim()) return
+      const transcript = props.transcript.trim()
+      const resolvedInstruction = instruction.trim() || DEFAULT_IMPROVE_INSTRUCTION
+      if (!transcript && !workingDocumentText) return
+
+      const templateHint = templateIdFromInstruction(resolvedInstruction)
+      if (templateHint) {
+        const template = templateById(templateHint)
+        if (template) props.onTemplateChange(template)
+      }
+
+      const effectiveTemplateId = templateHint || props.selectedTemplateId
+      const docBase =
+        workingDocument.trim() || buildInitialWorkingDocument(transcript, effectiveTemplateId)
+      const contextualInstruction = [
+        resolvedInstruction,
+        `Working document type: ${workingDocumentTypeLabel(effectiveTemplateId)}`,
+        transcript ? `Original transcript for reference:\n${transcript}` : ''
+      ]
+        .filter(Boolean)
+        .join('\n\n')
+
       setApplyingEdit(true)
       setEditNote(null)
-      const mode = editModeForInstruction(instruction)
+      setApplyStatus(null)
+      const mode = editModeForInstruction(resolvedInstruction)
       try {
         const result = await editOrbDictateDocument({
-          document_text: text,
-          instruction: instruction.trim(),
+          document_text: docBase,
+          instruction: contextualInstruction,
           note_type: props.noteType,
           mode
         })
-        props.onTranscriptChange(result.revised_text)
+        setWorkingDocument(result.revised_text)
+        setApplyStatus(ORB_DICTATE_WORKING_DOC_UPDATED)
       } catch {
-        const fallback = buildLocalDictateEditFallback(text, mode ?? 'professional_language', instruction.trim())
-        props.onTranscriptChange(fallback.revised_text)
+        const fallback = buildLocalDictateEditFallback(
+          docBase,
+          mode ?? 'professional_language',
+          contextualInstruction
+        )
+        const nextDoc =
+          committedText.length < 80
+            ? reshapeWorkingDocument(fallback.revised_text, effectiveTemplateId, transcript)
+            : fallback.revised_text
+        setWorkingDocument(nextDoc)
         setEditNote(ORB_DICTATE_EDIT_OFFLINE_NOTE)
+        setApplyStatus(
+          committedText.length < 80 ? ORB_DICTATE_WORKING_DOC_PARTIAL : ORB_DICTATE_WORKING_DOC_UPDATED
+        )
       } finally {
         setApplyingEdit(false)
       }
     },
-    [props]
+    [committedText.length, props, workingDocument, workingDocumentText]
   )
 
   const handleCreateRoughCapture = useCallback(() => {
@@ -312,29 +378,27 @@ export function OrbDictateStudioWorkspace(props: OrbDictateStudioWorkspaceProps)
     setReviewRequested(true)
   }, [])
 
-  const handleAskOrbImprove = useCallback(() => {
-    const instruction = orbInstruction.trim() || DEFAULT_IMPROVE_INSTRUCTION
-    if (!orbInstruction.trim()) setOrbInstruction(instruction)
-    void applyOrbChange(instruction)
-  }, [applyOrbChange, orbInstruction])
-
   const handleApplyOrbChange = useCallback(() => {
     void applyOrbChange(orbInstruction)
   }, [applyOrbChange, orbInstruction])
 
   const handleCreateDraft = useCallback(() => {
+    const text = workingDocumentText || committedText
+    props.onEditedNoteChange?.(text)
     if (hasAnalysis || brainAnalysis) {
-      props.onGenerate()
+      props.onGenerate({ input_text: text })
       return
     }
-    void runAnalysis().then(() => props.onGenerate())
-  }, [brainAnalysis, hasAnalysis, props, runAnalysis])
+    void runAnalysis().then(() => props.onGenerate({ input_text: text }))
+  }, [brainAnalysis, committedText, hasAnalysis, props, runAnalysis, workingDocumentText])
 
   const handleCaptureAgain = useCallback(() => {
     props.onClearTranscript()
     setPasteDraft('')
     setOrbInstruction('')
+    setWorkingDocument('')
     setEditNote(null)
+    setApplyStatus(null)
     setReviewRequested(false)
     setBrainAnalysis(null)
     setCaptureMethod('speak')
@@ -350,22 +414,21 @@ export function OrbDictateStudioWorkspace(props: OrbDictateStudioWorkspaceProps)
     (templateId: string) => {
       const template = templateById(templateId)
       if (template) props.onTemplateChange(template)
+      setWorkingDocument((prev) =>
+        reshapeWorkingDocument(
+          prev || buildInitialWorkingDocument(committedText, templateId),
+          templateId,
+          committedText
+        )
+      )
     },
-    [props]
+    [committedText, props]
   )
 
   const handleStartRecording = useCallback(() => {
     setCaptureSource('speak')
     props.onStartRecording()
   }, [props])
-
-  const governanceOk = consentReadyForGenerate(props.dictateMode, {
-    authorityConsent: props.authorityConsent,
-    draftReviewConfirmed: props.draftReviewConfirmed,
-    participantsAwareConfirmed: props.participantsAware,
-    noAutoSubmitConfirmed: props.noAutoSubmitConfirmed,
-    investigationConfirmed: props.investigationConfirmed
-  })
 
   const uploadPlaceholderOnly = props.uploadReady === false
   const showCaptureStation = stage === 'capture-station'
@@ -377,11 +440,12 @@ export function OrbDictateStudioWorkspace(props: OrbDictateStudioWorkspaceProps)
   return (
     <OrbStudioShell
       studioId="dictate"
-      className="orb-dictate-studio-workspace orb-dictate-capture-workflow orb-dictate-staged-recording orb-dictate-transcript-workflow orb-workspace orb-workspace--dictate flex min-h-0 flex-1 flex-col overflow-hidden"
+      className="orb-dictate-studio-workspace orb-dictate-capture-workflow orb-dictate-staged-recording orb-dictate-transcript-workflow orb-dictate-working-document-flow orb-workspace orb-workspace--dictate flex min-h-0 flex-1 flex-col overflow-hidden"
       data-orb-dictate-studio-workspace
       data-orb-dictate-capture-workflow
       data-orb-dictate-staged-recording
       data-orb-dictate-transcript-workflow
+      data-orb-dictate-working-document-flow
       data-orb-workspace-dictate
       data-orb-dictate-empty={showCaptureStation ? 'true' : undefined}
       data-orb-dictate-active-stage={stage}
@@ -598,17 +662,20 @@ export function OrbDictateStudioWorkspace(props: OrbDictateStudioWorkspaceProps)
           <OrbDictateTranscriptWorkspace
             transcript={props.transcript}
             onTranscriptChange={props.onTranscriptChange}
+            workingDocument={workingDocument}
+            onWorkingDocumentChange={setWorkingDocument}
+            templateLabel={workingDocumentTypeLabel(props.selectedTemplateId)}
             captureSource={captureSource}
             selectedTemplateId={props.selectedTemplateId}
             onSelectTemplate={handleTemplateSelect}
             orbInstruction={orbInstruction}
             onOrbInstructionChange={setOrbInstruction}
             onApplyOrbChange={handleApplyOrbChange}
-            onAskOrbImprove={handleAskOrbImprove}
             onReviewWithOrb={handleReviewWithOrb}
             onCaptureAgain={handleCaptureAgain}
             applyingEdit={applyingEdit}
             editNote={editNote}
+            applyStatus={applyStatus}
             interactive={stage === 'transcript-workspace'}
           />
         ) : null}
@@ -627,7 +694,7 @@ export function OrbDictateStudioWorkspace(props: OrbDictateStudioWorkspaceProps)
             </p>
 
             <div className="mt-4">
-              <OrbDictateReviewChecklist analysis={brainAnalysis} hasTranscript={hasCommittedCapture} loading={brainLoading} />
+              <OrbDictateReviewChecklist analysis={brainAnalysis} hasTranscript={Boolean(reviewInputText)} loading={brainLoading} />
             </div>
 
             {!hasDraft ? (
@@ -635,7 +702,7 @@ export function OrbDictateStudioWorkspace(props: OrbDictateStudioWorkspaceProps)
                 <button
                   type="button"
                   data-orb-dictate-create-draft-action
-                  disabled={props.generating || !hasCommittedCapture}
+                  disabled={props.generating || !reviewInputText}
                   className="inline-flex items-center gap-1.5 rounded-xl bg-[var(--orb-primary)] px-4 py-2 text-xs font-semibold text-white disabled:opacity-45"
                   onClick={handleCreateDraft}
                 >
@@ -660,7 +727,7 @@ export function OrbDictateStudioWorkspace(props: OrbDictateStudioWorkspaceProps)
                   onSuggestionUpdate={updateSuggestion}
                   studioTemplateId={props.selectedTemplateId}
                   recordTypeId={recordTypeId}
-                  hasTranscript={hasCommittedCapture}
+                  hasTranscript={Boolean(reviewInputText)}
                   embedded
                 />
               </div>

@@ -1,4 +1,4 @@
-/** Phase 3L–3N — ORB Dictate capture workflow copy. */
+/** Phase 3L–3O — ORB Dictate capture workflow copy. */
 
 export const ORB_DICTATE_CAPTURE_HEADLINE = 'Dictate' as const
 
@@ -49,7 +49,20 @@ export const ORB_DICTATE_APPLY_ORB_CHANGE = 'Apply ORB change' as const
 export const ORB_DICTATE_WRITE_TEMPLATE_TITLE = 'Use an ORB Write template' as const
 
 export const ORB_DICTATE_WRITE_TEMPLATE_SUPPORTING =
-  'Choose the structure you want ORB to apply to the transcript.' as const
+  'Choose the structure ORB should apply to the working document.' as const
+
+export const ORB_DICTATE_WORKING_DOC_TITLE = 'ORB working document' as const
+
+export const ORB_DICTATE_WORKING_DOC_LABEL = 'Generated from transcript for adult review' as const
+
+export const ORB_DICTATE_WORKING_DOC_SUPPORTING =
+  'Ask ORB to shape this into the record you need. You can edit before saving or opening in ORB Write.' as const
+
+export const ORB_DICTATE_WORKING_DOC_UPDATED =
+  'ORB updated the working document for adult review.' as const
+
+export const ORB_DICTATE_WORKING_DOC_PARTIAL =
+  'ORB could not create a full record from this yet. It has noted what appears present and what may be missing.' as const
 
 export const ORB_DICTATE_EDIT_OFFLINE_NOTE =
   'Full ORB transform may need a connection \u2014 a local preparation was applied. Review before continuing.' as const
@@ -106,7 +119,7 @@ export const ORB_DICTATE_UPLOAD_PLACEHOLDER =
 export const ORB_DICTATE_REVIEW_TITLE = 'ORB Review' as const
 
 export const ORB_DICTATE_REVIEW_SUPPORTING =
-  'ORB checks whether the rough capture has enough detail to become a safe, factual and child-centred draft.' as const
+  'ORB checks whether the working document has enough detail to become a safe, factual and child-centred draft.' as const
 
 export const ORB_DICTATE_REVIEW_STATUS_PRESENT = 'Present' as const
 export const ORB_DICTATE_REVIEW_STATUS_MAY_MISSING = 'May be missing' as const

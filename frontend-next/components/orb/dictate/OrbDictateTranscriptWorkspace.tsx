@@ -1,9 +1,9 @@
 'use client'
 
 import { OrbDictateEditAssistant } from '@/components/orb/dictate/OrbDictateEditAssistant'
+import { OrbDictateWorkingDocument } from '@/components/orb/dictate/OrbDictateWorkingDocument'
 import { OrbDictateWriteTemplateSelector } from '@/components/orb/dictate/OrbDictateWriteTemplateSelector'
 import {
-  ORB_DICTATE_ASK_ORB_IMPROVE,
   ORB_DICTATE_CAPTURE_AGAIN,
   ORB_DICTATE_ORIGINAL_NOTES_LABEL,
   ORB_DICTATE_ORIGINAL_TRANSCRIPT_LABEL,
@@ -17,22 +17,27 @@ export type OrbDictateCaptureSource = 'speak' | 'paste' | 'upload'
 export type OrbDictateTranscriptWorkspaceProps = {
   transcript: string
   onTranscriptChange: (value: string) => void
+  workingDocument: string
+  onWorkingDocumentChange: (value: string) => void
+  templateLabel: string
   captureSource: OrbDictateCaptureSource
   selectedTemplateId: string
   onSelectTemplate: (templateId: string) => void
   orbInstruction: string
   onOrbInstructionChange: (value: string) => void
   onApplyOrbChange: () => void
-  onAskOrbImprove: () => void
   onReviewWithOrb: () => void
   onCaptureAgain: () => void
   applyingEdit: boolean
   editNote: string | null
+  applyStatus: string | null
   interactive: boolean
 }
 
 export function OrbDictateTranscriptWorkspace(props: OrbDictateTranscriptWorkspaceProps) {
-  const hasText = props.transcript.trim().length > 0
+  const hasTranscript = props.transcript.trim().length > 0
+  const hasWorkingDoc = props.workingDocument.trim().length > 0
+  const canAct = hasTranscript || hasWorkingDoc
   const originalLabel =
     props.captureSource === 'paste' ? ORB_DICTATE_ORIGINAL_NOTES_LABEL : ORB_DICTATE_ORIGINAL_TRANSCRIPT_LABEL
 
@@ -51,7 +56,7 @@ export function OrbDictateTranscriptWorkspace(props: OrbDictateTranscriptWorkspa
         </p>
       </header>
 
-      <div className="orb-dictate-transcript-workspace-grid mt-4 grid gap-4 lg:grid-cols-2">
+      <div className="orb-dictate-transcript-workspace-grid mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
         <div className="orb-dictate-original-transcript-panel min-w-0">
           <p
             className="text-[11px] font-medium text-[var(--orb-primary)]"
@@ -62,7 +67,7 @@ export function OrbDictateTranscriptWorkspace(props: OrbDictateTranscriptWorkspa
           <textarea
             value={props.transcript}
             onChange={(e) => props.onTranscriptChange(e.target.value)}
-            rows={12}
+            rows={8}
             className="orb-dictate-original-transcript mt-2 w-full resize-y rounded-xl border border-[var(--orb-line)]/20 bg-white/95 px-3 py-3 text-sm leading-relaxed text-[var(--orb-foreground)] outline-none focus:border-[var(--orb-primary)]/35 focus:ring-2 focus:ring-[var(--orb-primary)]/10"
             aria-label={originalLabel}
             data-orb-dictate-original-transcript
@@ -76,8 +81,10 @@ export function OrbDictateTranscriptWorkspace(props: OrbDictateTranscriptWorkspa
             onInstructionChange={props.onOrbInstructionChange}
             onApply={props.onApplyOrbChange}
             applying={props.applyingEdit}
-            disabled={!hasText || !props.interactive}
+            disabled={!props.interactive}
+            canApply={props.interactive && canAct}
             editNote={props.editNote}
+            applyStatus={props.applyStatus}
           />
           <OrbDictateWriteTemplateSelector
             selectedTemplateId={props.selectedTemplateId}
@@ -86,22 +93,22 @@ export function OrbDictateTranscriptWorkspace(props: OrbDictateTranscriptWorkspa
         </div>
       </div>
 
+      <div className="mt-4">
+        <OrbDictateWorkingDocument
+          documentMarkdown={props.workingDocument}
+          onDocumentChange={props.onWorkingDocumentChange}
+          templateLabel={props.templateLabel}
+          readOnly={!props.interactive}
+        />
+      </div>
+
       {props.interactive ? (
         <div className="mt-4 flex flex-wrap gap-2" data-orb-dictate-transcript-workspace-actions>
           <button
             type="button"
-            data-orb-dictate-ask-orb-improve
-            disabled={!hasText || props.applyingEdit}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--orb-primary)]/35 bg-[var(--orb-primary-soft)] px-4 py-2 text-xs font-semibold text-[var(--orb-foreground)] disabled:opacity-45"
-            onClick={props.onAskOrbImprove}
-          >
-            {ORB_DICTATE_ASK_ORB_IMPROVE}
-          </button>
-          <button
-            type="button"
             data-orb-dictate-review-with-orb
-            disabled={!hasText}
-            className="inline-flex items-center gap-1.5 rounded-xl bg-[var(--orb-primary)] px-4 py-2 text-xs font-semibold text-white disabled:opacity-45"
+            disabled={!canAct}
+            className="orb-dictate-primary-action inline-flex items-center gap-1.5 rounded-xl bg-[var(--orb-primary)] px-4 py-2 text-xs font-semibold text-white shadow-sm disabled:cursor-not-allowed disabled:opacity-40"
             onClick={props.onReviewWithOrb}
           >
             {ORB_DICTATE_REVIEW_WITH_ORB}

@@ -1470,10 +1470,11 @@ export function OrbDictateStation({
           speechStartDisabled={(needsConsent && !consentConfirmed) || !speechStartAvailable || uploadingAudio || finalising}
           interimText={realtimeInterim || voice.interimTranscript}
           generating={generating || finalising}
-          onGenerate={() => void runGenerate()}
+          onGenerate={(overrides) => void runGenerate(overrides)}
           onFinalise={() => void handleFinalise()}
           onCopy={() => void handleCopy()}
           onSave={() => void handleSave()}
+          onEditedNoteChange={setEditedNote}
           editedNote={editedNote}
           canGenerate={effectiveInputText.trim().length > 0}
           output={output}

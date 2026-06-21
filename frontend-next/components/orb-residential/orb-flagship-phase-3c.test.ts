@@ -17,7 +17,7 @@ function read(relativePath: string) {
 
 describe('ORB Residential Phase 3C live product repair', () => {
   it('build version marker is phase-3c', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-3n-dictate-transcript-workspace')
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-3o-dictate-working-document')
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
     const layout = read('app/orb/layout.tsx')
     assert.match(companion, /data-orb-build-version=\{ORB_BUILD_VISUAL_VERSION\}/)
@@ -55,6 +55,7 @@ describe('ORB Residential Phase 3C live product repair', () => {
 
   it('dictate capture studio is primary with journey, choices and safer draft stage', () => {
     const workspace = read('components/orb/dictate/OrbDictateStudioWorkspace.tsx')
+    const transcriptWorkspace = read('components/orb/dictate/OrbDictateTranscriptWorkspace.tsx')
     const draft = read('components/orb/dictate/OrbDictateSaferDraftPanel.tsx')
     assert.match(workspace, /data-orb-dictate-journey-step="safer-draft"/)
     assert.match(workspace, /data-orb-dictate-capture-methods/)
@@ -62,7 +63,7 @@ describe('ORB Residential Phase 3C live product repair', () => {
     assert.match(workspace, /OrbDictateSaferDraftPanel/)
     assert.match(draft, /ORB_DICTATE_DRAFT_REVIEW_LABEL/)
     assert.match(workspace, /data-orb-dictate-top-record/)
-    assert.match(workspace, /ORB_DICTATE_REVIEW_WITH_ORB/)
+    assert.match(transcriptWorkspace, /ORB_DICTATE_REVIEW_WITH_ORB/)
     assert.match(workspace, /ORB_DICTATE_CREATE_SAFER_DRAFT/)
     assert.match(draft, /ORB_DICTATE_ACTION_OPEN_WRITE/)
     assert.match(workspace, /ORB_DICTATE_CAPTURE_BOUNDARY|ORB_DICTATE_ADULT_RESPONSIBILITY/)

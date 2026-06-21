@@ -9,7 +9,6 @@ import {
   ORB_DICTATE_ACTION_OPEN_WRITE,
   ORB_DICTATE_ACTION_SAVE,
   ORB_DICTATE_APPLY_ORB_CHANGE,
-  ORB_DICTATE_ASK_ORB_IMPROVE,
   ORB_DICTATE_DRAFT_REVIEW_LABEL,
   ORB_DICTATE_EDIT_ASSISTANT_TITLE,
   ORB_DICTATE_EDIT_INSTRUCTION_PLACEHOLDER,
@@ -21,6 +20,8 @@ import {
   ORB_DICTATE_REVIEW_WITH_ORB,
   ORB_DICTATE_SAFER_DRAFT_TITLE,
   ORB_DICTATE_TRANSCRIPT_WORKSPACE_TITLE,
+  ORB_DICTATE_WORKING_DOC_LABEL,
+  ORB_DICTATE_WORKING_DOC_TITLE,
   ORB_DICTATE_WRITE_TEMPLATE_TITLE
 } from '../../lib/orb/dictate/orb-dictate-capture-copy.ts'
 import { ORB_BUILD_VISUAL_VERSION, ORB_LAYOUT_CSS_FILES } from '../../lib/orb/orb-visual-build.ts'
@@ -32,8 +33,8 @@ function read(relativePath: string) {
 }
 
 describe('ORB Residential Phase 3N Dictate transcript workspace', () => {
-  it('build version marker is phase-3n-dictate-transcript-workspace', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-3n-dictate-transcript-workspace')
+  it('build version marker is phase-3o-dictate-working-document', () => {
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-3o-dictate-working-document')
     const layout = read('app/orb/layout.tsx')
     assert.match(layout, /orb-residential-shell\.css/)
     assert.deepEqual(ORB_LAYOUT_CSS_FILES, ['app/orb/orb-residential-shell.css'])
@@ -51,10 +52,11 @@ describe('ORB Residential Phase 3N Dictate transcript workspace', () => {
     assert.match(panel, /onTranscriptChange/)
   })
 
-  it('Review with ORB is enabled when transcript text exists', () => {
+  it('Review with ORB is enabled when transcript or working document text exists', () => {
     const panel = read('components/orb/dictate/OrbDictateTranscriptWorkspace.tsx')
     assert.match(panel, /data-orb-dictate-review-with-orb/)
-    assert.match(panel, /disabled=\{!hasText\}/)
+    assert.match(panel, /const canAct = hasTranscript \|\| hasWorkingDoc/)
+    assert.match(panel, /disabled=\{!canAct\}/)
     assert.doesNotMatch(panel, /data-orb-dictate-review-with-orb[\s\S]{0,120}props\.generating/)
   })
 
@@ -85,7 +87,7 @@ describe('ORB Residential Phase 3N Dictate transcript workspace', () => {
     assert.match(selector, /data-orb-dictate-write-template-option/)
   })
 
-  it('workspace wires template selection, ORB review and edit API', () => {
+  it('workspace wires template selection, working document, ORB review and edit API', () => {
     const workspace = read('components/orb/dictate/OrbDictateStudioWorkspace.tsx')
     const panel = read('components/orb/dictate/OrbDictateTranscriptWorkspace.tsx')
     assert.match(workspace, /handleTemplateSelect/)
@@ -93,8 +95,10 @@ describe('ORB Residential Phase 3N Dictate transcript workspace', () => {
     assert.match(workspace, /editOrbDictateDocument/)
     assert.match(workspace, /buildLocalDictateEditFallback/)
     assert.match(workspace, /adult_instruction/)
-    assert.equal(ORB_DICTATE_ASK_ORB_IMPROVE, 'Ask ORB to improve this')
-    assert.match(panel, /data-orb-dictate-ask-orb-improve/)
+    assert.match(workspace, /setWorkingDocument/)
+    assert.match(panel, /OrbDictateWorkingDocument/)
+    assert.equal(ORB_DICTATE_WORKING_DOC_TITLE, 'ORB working document')
+    assert.equal(ORB_DICTATE_WORKING_DOC_LABEL, 'Generated from transcript for adult review')
   })
 
   it('ORB Review and Safer Draft remain gated with honest output actions', () => {
@@ -123,7 +127,7 @@ describe('ORB Residential Phase 3N Dictate transcript workspace', () => {
   it('single shell and one CSS import remain true', () => {
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
     assert.match(companion, /orb-app-shell/)
-    assert.match(read('app/orb/orb-residential-shell.css'), /phase-3n-dictate-transcript-workspace/)
-    assert.match(read('app/orb/orb-residential-shell.css'), /Phase 3N/)
+    assert.match(read('app/orb/orb-residential-shell.css'), /phase-3o-dictate-working-document/)
+    assert.match(read('app/orb/orb-residential-shell.css'), /Phase 3O/)
   })
 })
