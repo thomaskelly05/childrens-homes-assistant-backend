@@ -586,7 +586,6 @@ export function OrbDictateStation({
       if (!processingStage) setPeopleToConfirm([])
       return
     }
-    if (processingStage && processingStage !== 'ready') return
     const segs = segments.length ? segments : textToSegments(text, 'paste', participants)
     setPeopleToConfirm(buildPeopleToConfirm(text, participants, segs))
   }, [transcript, participants, segments, processingStage])

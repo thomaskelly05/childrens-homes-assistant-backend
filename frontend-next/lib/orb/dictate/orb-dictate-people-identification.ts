@@ -1,4 +1,4 @@
-/** Phase 3Q / 3S — cautious local people/speaker hints from Dictate transcript. */
+/** Phase 3Q / 3S / 3T — cautious local people/speaker hints from Dictate transcript. */
 
 import type { OrbDictateParticipant, OrbDictateTranscriptSegment } from '@/lib/orb/dictate/orb-dictate-speaker'
 
@@ -43,55 +43,79 @@ const CHILD_PATTERNS = /\b(child|young person|yp|resident)\b/i
 const STAFF_PATTERNS = /\b(staff|keyworker|key worker|carer|worker|team member)\b/i
 const MANAGER_PATTERNS = /\b(registered manager|duty manager|senior)\b/i
 
-const NAME_INTRO_PATTERNS: Array<{ regex: RegExp; role?: OrbDictatePersonRole }> = [
-  { regex: /\bmy name is\s+([A-Za-z][A-Za-z.' -]{0,38}[A-Za-z])\b/i },
-  { regex: /\bI am\s+([A-Za-z][A-Za-z.' -]{0,38}[A-Za-z])\b/i },
-  { regex: /\bthis is\s+([A-Za-z][A-Za-z.' -]{0,38}[A-Za-z])\b/i },
-  { regex: /\bI['\u2019]m\s+([A-Za-z][A-Za-z.' -]{0,38}[A-Za-z])\b/i }
+const REGISTERED_MANAGER_PATTERN =
+  /\bI(?:'m| am)\s+(?:the\s+|a\s+)?registered manager\b/i
+
+const NAME_INTRO_PATTERNS: RegExp[] = [
+  /\bmy name(?:'s| is)\s+(\[[A-Z_]+\d+\]|[A-Za-z][A-Za-z.' -]{1,40})/i,
+  /\bthis is\s+(\[[A-Z_]+\d+\]|[A-Za-z][A-Za-z.' -]{1,40})/i,
+  /\bI(?:'m| am)\s+(\[[A-Z_]+\d+\])/i,
+  /\b([A-Za-z][A-Za-z.' -]{1,40})\s+speaking\b/i
 ]
+
+function normalizeDetectedName(raw: string): string {
+  return raw.trim().replace(/[.,;:!?].*$/, '').trim()
+}
+
+function hasRegisteredManagerMention(text: string): boolean {
+  return REGISTERED_MANAGER_PATTERN.test(text) || /\bregistered manager\b/i.test(text)
+}
 
 function detectNamedSpeakers(text: string): OrbDictatePersonConfirmItem[] {
   const items: OrbDictatePersonConfirmItem[] = []
   const seen = new Set<string>()
+  const managerMentioned = hasRegisteredManagerMention(text)
 
-  for (const { regex, role } of NAME_INTRO_PATTERNS) {
+  for (const regex of NAME_INTRO_PATTERNS) {
     const match = text.match(regex)
-    if (!match?.[1]) continue
-    const name = match[1].trim()
-    const key = name.toLowerCase()
+    const label = match?.[1] ? normalizeDetectedName(match[1]) : undefined
+    if (!label) continue
+    const key = label.toLowerCase()
     if (seen.has(key)) continue
     seen.add(key)
+
+    const isManagerName =
+      managerMentioned && !/^\[NAME_/i.test(label) && /\bmanager\b/i.test(label) && label.split(/\s+/).length <= 3
+
     items.push({
-      id: `name_${key.replace(/\s+/g, '_')}`,
-      label: name,
+      id: `name_${key.replace(/[^\w]/g, '_')}`,
+      label,
       status: 'needs_confirmation',
-      detail: 'Appears to be speaker — needs adult confirmation',
+      detail: managerMentioned
+        ? 'Appears to be speaker; registered manager role mentioned — needs adult confirmation'
+        : 'Appears to be speaker — needs adult confirmation',
       speakerConfidence: 'needs_confirmation',
-      role: role ?? 'unknown'
+      role: managerMentioned && (isManagerName || /^\[NAME_/i.test(label)) ? 'registered_manager' : 'unknown'
     })
+    break
   }
 
-  const redactedMatches = text.match(/\[NAME_\d+\]/gi) ?? []
-  for (const token of redactedMatches) {
-    const key = token.toLowerCase()
-    if (seen.has(key)) continue
-    seen.add(key)
-    items.push({
-      id: `redacted_${key.replace(/[^\w]/g, '_')}`,
-      label: token,
-      status: 'needs_confirmation',
-      detail: 'Appears to be speaker — needs adult confirmation',
-      speakerConfidence: 'needs_confirmation',
-      role: 'unknown'
-    })
+  if (!items.length) {
+    const redactedMatches = text.match(/\[NAME_\d+\]/gi) ?? []
+    for (const token of redactedMatches) {
+      const key = token.toLowerCase()
+      if (seen.has(key)) continue
+      seen.add(key)
+      items.push({
+        id: `redacted_${key.replace(/[^\w]/g, '_')}`,
+        label: token,
+        status: 'needs_confirmation',
+        detail: managerMentioned
+          ? 'Appears to be speaker; registered manager role mentioned — needs adult confirmation'
+          : 'Appears to be speaker — needs adult confirmation',
+        speakerConfidence: 'needs_confirmation',
+        role: managerMentioned ? 'registered_manager' : 'unknown'
+      })
+      break
+    }
   }
 
-  if (/\bI am the registered manager\b/i.test(text)) {
+  if (!items.length && managerMentioned) {
     items.push({
-      id: 'speaker_registered_manager_intro',
-      label: 'Registered Manager mentioned',
+      id: 'speaker_registered_manager',
+      label: 'Registered Manager',
       status: 'may_include',
-      detail: 'May include speaker — needs adult confirmation',
+      detail: 'Role mentioned / may apply to speaker — needs adult confirmation',
       speakerConfidence: 'needs_confirmation',
       role: 'registered_manager'
     })
@@ -174,12 +198,15 @@ export function buildPeopleToConfirm(
       role: 'staff'
     })
   }
-  if (MANAGER_PATTERNS.test(text) && !items.some((item) => item.id === 'speaker_registered_manager_intro')) {
+  if (
+    MANAGER_PATTERNS.test(text) &&
+    !items.some((item) => item.role === 'registered_manager' || item.id === 'speaker_registered_manager')
+  ) {
     items.push({
       id: 'manager_mentioned',
       label: 'Registered Manager mentioned',
       status: 'may_include',
-      detail: 'May include speaker — needs adult confirmation',
+      detail: 'Role mentioned / may apply to speaker — needs adult confirmation',
       role: 'registered_manager'
     })
   }
@@ -202,14 +229,6 @@ export function buildPeopleToConfirm(
       id: 'context_incident',
       label: 'May be incident-related',
       status: 'may_include'
-    })
-  }
-
-  if (!items.some((item) => item.id === 'people_unclear') && text.split(/\s+/).length < 12) {
-    items.push({
-      id: 'people_unclear',
-      label: 'Others present unclear',
-      status: 'needs_confirmation'
     })
   }
 

@@ -352,7 +352,14 @@ export function buildLocalDictateEditFallback(
   let revised = documentText
   const change_summary: string[] = ['Offline edit — review carefully before use.']
   const warnings: string[] = ['Reconnect for full ORB intelligence editing.']
-  if (mode === 'missing_information') {
+  const lowerInstruction = instruction.toLowerCase()
+
+  if (/team meeting|introduction|introduce/.test(lowerInstruction)) {
+    revised =
+      documentText.trim() ||
+      '## Summary\n\nThis appears to be a meeting or team introduction. Add who was present, the purpose of the meeting, and any key points discussed.\n\n## Key details captured\n\nNot captured yet. Add what was observed or known.\n\n## What may need clarifying\n\nConfirm the meeting purpose, attendees, and any actions agreed.\n\n## Suggested next step\n\nContinue recording or add the main discussion before creating a final draft.'
+    change_summary.push('Prepared meeting/introduction working document structure (offline).')
+  } else if (mode === 'missing_information') {
     revised += '\n\n## Follow-up questions for staff\n\n- What was the child\'s voice?\n- What action was taken?\n- Was the manager informed?\n'
     change_summary.push('Added follow-up questions (offline).')
   } else if (mode === 'spelling_grammar') {

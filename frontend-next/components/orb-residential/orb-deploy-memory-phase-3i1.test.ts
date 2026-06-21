@@ -24,8 +24,8 @@ function readRepo(relativePath: string) {
 }
 
 describe('ORB Residential Phase 3I.1 deploy memory rescue', () => {
-  it('build version marker is phase-3s-dictate-document-quality', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-3s-dictate-document-quality')
+  it('build version marker is phase-3t-dictate-transcript-data-flow', () => {
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-3t-dictate-transcript-data-flow')
     assert.deepEqual(ORB_LAYOUT_CSS_FILES, ['app/orb/orb-residential-shell.css'])
   })
 

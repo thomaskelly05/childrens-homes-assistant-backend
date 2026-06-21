@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Loader2 } from 'lucide-react'
 
 import { OrbDictateBrainPanel } from '@/components/orb/dictate/OrbDictateBrainPanel'
@@ -55,6 +55,7 @@ import { suggestParticipantsFromText } from '@/lib/orb/dictate/orb-dictate-speak
 import type { OrbDictateGenerateResult, OrbDictateNoteType } from '@/lib/orb/dictate/orb-dictate-types'
 import {
   buildInitialWorkingDocument,
+  isWorkingDocumentUnmappedScaffold,
   reshapeWorkingDocument,
   workingDocumentTypeLabel
 } from '@/lib/orb/dictate/orb-dictate-working-document'
@@ -201,6 +202,8 @@ export function OrbDictateStudioWorkspace(props: OrbDictateStudioWorkspaceProps)
   const [pasteDraft, setPasteDraft] = useState('')
   const [orbInstruction, setOrbInstruction] = useState('')
   const [workingDocument, setWorkingDocument] = useState('')
+  const [hasAdultEditedWorkingDocument, setHasAdultEditedWorkingDocument] = useState(false)
+  const lastAutoDocumentRef = useRef('')
   const [applyingEdit, setApplyingEdit] = useState(false)
   const [editNote, setEditNote] = useState<string | null>(null)
   const [applyStatus, setApplyStatus] = useState<string | null>(null)
@@ -242,13 +245,37 @@ export function OrbDictateStudioWorkspace(props: OrbDictateStudioWorkspaceProps)
   useEffect(() => {
     if (!hasCommittedCapture) {
       setWorkingDocument('')
+      setHasAdultEditedWorkingDocument(false)
+      lastAutoDocumentRef.current = ''
       return
     }
-    setWorkingDocument((prev) => {
-      if (prev.trim() && !isProcessingCapture) return prev
-      return buildInitialWorkingDocument(committedText, props.selectedTemplateId)
-    })
-  }, [committedText, hasCommittedCapture, isProcessingCapture, props.selectedTemplateId])
+    if (!committedText) return
+    if (hasAdultEditedWorkingDocument) return
+
+    const next = buildInitialWorkingDocument(committedText, props.selectedTemplateId)
+    const shouldReplace =
+      !workingDocument.trim() ||
+      isWorkingDocumentUnmappedScaffold(workingDocument) ||
+      next !== lastAutoDocumentRef.current
+
+    if (shouldReplace) {
+      lastAutoDocumentRef.current = next
+      setWorkingDocument(next)
+    }
+  }, [
+    committedText,
+    hasAdultEditedWorkingDocument,
+    hasCommittedCapture,
+    props.selectedTemplateId,
+    workingDocument
+  ])
+
+  const handleWorkingDocumentChange = useCallback((value: string) => {
+    setWorkingDocument(value)
+    if (value.trim() !== lastAutoDocumentRef.current.trim()) {
+      setHasAdultEditedWorkingDocument(true)
+    }
+  }, [])
 
   useEffect(() => {
     if (workingDocumentText) {
@@ -381,7 +408,10 @@ export function OrbDictateStudioWorkspace(props: OrbDictateStudioWorkspaceProps)
     setCaptureSource('paste')
     props.onContentSourceChange?.('paste')
     props.onTranscriptChange(text)
-    setWorkingDocument(buildInitialWorkingDocument(text, props.selectedTemplateId))
+    const next = buildInitialWorkingDocument(text, props.selectedTemplateId)
+    lastAutoDocumentRef.current = next
+    setHasAdultEditedWorkingDocument(false)
+    setWorkingDocument(next)
     setPasteDraft('')
   }, [pasteDraft, props])
 
@@ -408,6 +438,8 @@ export function OrbDictateStudioWorkspace(props: OrbDictateStudioWorkspaceProps)
     setPasteDraft('')
     setOrbInstruction('')
     setWorkingDocument('')
+    setHasAdultEditedWorkingDocument(false)
+    lastAutoDocumentRef.current = ''
     setEditNote(null)
     setApplyStatus(null)
     setReviewRequested(false)
@@ -426,16 +458,18 @@ export function OrbDictateStudioWorkspace(props: OrbDictateStudioWorkspaceProps)
     (templateId: string) => {
       const template = templateById(templateId)
       if (template) props.onTemplateChange(template)
-      setWorkingDocument((prev) =>
-        reshapeWorkingDocument(
-          prev || buildInitialWorkingDocument(committedText, templateId),
-          templateId,
-          committedText
-        )
-      )
+      const next = hasAdultEditedWorkingDocument
+        ? reshapeWorkingDocument(
+            workingDocument || buildInitialWorkingDocument(committedText, templateId),
+            templateId,
+            committedText
+          )
+        : buildInitialWorkingDocument(committedText, templateId)
+      lastAutoDocumentRef.current = next
+      setWorkingDocument(next)
       setApplyStatus(ORB_DICTATE_DOCUMENT_STRUCTURE_UPDATED)
     },
-    [committedText, props]
+    [committedText, hasAdultEditedWorkingDocument, props, workingDocument]
   )
 
   const handleStartRecording = useCallback(() => {
@@ -464,6 +498,7 @@ export function OrbDictateStudioWorkspace(props: OrbDictateStudioWorkspaceProps)
       data-orb-dictate-orb-write-converged
       data-orb-workspace-dictate
       data-orb-dictate-sidebar-safe="true"
+      data-orb-dictate-has-adult-edited-working-document={hasAdultEditedWorkingDocument ? 'true' : undefined}
       data-orb-dictate-empty={showCaptureStation ? 'true' : undefined}
       data-orb-dictate-active-stage={stage}
     >
@@ -583,7 +618,7 @@ export function OrbDictateStudioWorkspace(props: OrbDictateStudioWorkspaceProps)
             transcript={props.transcript}
             onTranscriptChange={props.onTranscriptChange}
             workingDocument={workingDocument}
-            onWorkingDocumentChange={setWorkingDocument}
+            onWorkingDocumentChange={handleWorkingDocumentChange}
             templateLabel={workingDocumentTypeLabel(props.selectedTemplateId)}
             captureSource={captureSource}
             selectedTemplateId={props.selectedTemplateId}

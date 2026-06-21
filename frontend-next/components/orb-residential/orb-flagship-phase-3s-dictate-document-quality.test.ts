@@ -18,8 +18,8 @@ function read(relativePath: string) {
 }
 
 describe('ORB Residential Phase 3S Dictate document quality', () => {
-  it('build version marker is phase-3s-dictate-document-quality', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-3s-dictate-document-quality')
+  it('build version marker is phase-3t-dictate-transcript-data-flow', () => {
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-3t-dictate-transcript-data-flow')
     const layout = read('app/orb/layout.tsx')
     assert.match(layout, /orb-residential-shell\.css/)
     assert.deepEqual(ORB_LAYOUT_CSS_FILES, ['app/orb/orb-residential-shell.css'])
@@ -65,7 +65,7 @@ describe('ORB Residential Phase 3S Dictate document quality', () => {
 
   it('detects my name is Tom Kelly and redacted NAME patterns cautiously', () => {
     const util = read('lib/orb/dictate/orb-dictate-people-identification.ts')
-    assert.match(util, /my name is/)
+    assert.match(util, /NAME_INTRO_PATTERNS/)
     assert.match(util, /\[NAME_/)
     assert.match(util, /Appears to be speaker/)
     assert.match(util, /detectNamedSpeakers/)
@@ -82,9 +82,9 @@ describe('ORB Residential Phase 3S Dictate document quality', () => {
 
   it('registered manager role detection appears when transcript includes it', () => {
     const util = read('lib/orb/dictate/orb-dictate-people-identification.ts')
-    assert.match(util, /I am the registered manager/)
+    assert.match(util, /REGISTERED_MANAGER_PATTERN/)
     assert.match(util, /registered_manager/)
-    assert.match(util, /May include speaker/)
+    assert.match(util, /may apply to speaker/)
   })
 
   it('Dictate buttons use accessible visible label classes', () => {
