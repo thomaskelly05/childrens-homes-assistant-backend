@@ -150,7 +150,7 @@ describe('ORB Voice instant-human refinement', () => {
     const hook = read('lib/orb/voice-v2/use-orb-voice-v2.ts')
     assert.match(hook, /processingRef/)
     assert.match(hook, /setState\('requesting_microphone'\)/)
-    assert.match(read('lib/orb/voice-v2/orb-voice-v2-state.ts'), /Connecting microphone…/)
+    assert.match(read('lib/orb/voice-v2/orb-voice-v2-state.ts'), /Requesting microphone…/)
   })
 
   it('mobile safe-area dock and no duplicate voice shell', () => {

@@ -3181,3 +3181,30 @@ html[data-orb-residential='1'] [data-orb-voice-companion-state='summary_ready'] 
     animation: none;
   }
 }
+
+/* phase-5d-voice-v2-clickable-idle — Voice v2 idle controls stay above decorative ORB layers */
+html[data-orb-residential='1'] [data-orb-voice-station] [data-orb-voice-companion],
+html[data-orb-residential='1'] [data-orb-voice-station] .orb-voice-companion,
+html[data-orb-residential='1'] [data-orb-voice-station] .orb-voice-companion__stage,
+html[data-orb-residential='1'] [data-orb-voice-station] .orb-voice-companion__core-shell,
+html[data-orb-residential='1'] [data-orb-voice-station] .orb-voice-core,
+html[data-orb-residential='1'] [data-orb-voice-station] .orb-voice-hero-aura,
+html[data-orb-residential='1'] [data-orb-voice-station] .orb-voice-studio-waveform {
+  pointer-events: none;
+}
+
+html[data-orb-residential='1'] [data-orb-voice-station] .orb-voice-controls,
+html[data-orb-residential='1'] [data-orb-voice-station] [data-orb-voice-controls],
+html[data-orb-residential='1'] [data-orb-voice-station] [data-orb-voice-hero-cta],
+html[data-orb-residential='1'] [data-orb-voice-station] [data-orb-voice-main-mode-controls],
+html[data-orb-residential='1'] [data-orb-voice-station] .orb-voice-station-content__mobile-dock {
+  position: relative;
+  z-index: 5;
+  pointer-events: auto;
+}
+
+html[data-orb-residential='1'] [data-orb-voice-station] [data-orb-voice-v2-mode-select],
+html[data-orb-residential='1'] [data-orb-voice-station] [data-orb-voice-primary] {
+  pointer-events: auto;
+  touch-action: manipulation;
+}

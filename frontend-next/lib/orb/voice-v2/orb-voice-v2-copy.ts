@@ -20,6 +20,8 @@ export const ORB_VOICE_V2_SAFARI_AUTO_RESUME =
   'Safari needs you to tap once to continue listening.' as const
 export const ORB_VOICE_V2_AUDIO_PLAYBACK_BLOCKED =
   'Safari blocked automatic playback. Tap Play ORB voice to hear the reply.' as const
+export const ORB_VOICE_V2_AUDIO_UNLOCK_SOFT_FAIL =
+  'Audio playback may need a tap later. You can still start the conversation.' as const
 export const ORB_VOICE_V2_PLAY_ORB_VOICE = 'Play ORB voice' as const
 export const ORB_VOICE_V2_FALLBACK_VOICE_TURN = 'Using fallback voice for this reply.' as const
 export const ORB_VOICE_V2_KATHERINE_FORCED_OPENAI =

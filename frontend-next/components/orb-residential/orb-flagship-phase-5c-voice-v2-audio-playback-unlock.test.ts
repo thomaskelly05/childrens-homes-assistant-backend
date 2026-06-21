@@ -4,7 +4,7 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, it } from 'node:test'
 
-import { ORB_BUILD_VISUAL_VERSION, ORB_LAYOUT_CSS_FILES } from '../../lib/orb/orb-visual-build.ts'
+import { ORB_LAYOUT_CSS_FILES } from '../../lib/orb/orb-visual-build.ts'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '../..')
 
@@ -13,11 +13,9 @@ function read(relativePath: string) {
 }
 
 describe('ORB Residential Phase 5C Voice v2 audio playback unlock', () => {
-  it('build marker is phase-5c-voice-v2-audio-playback-unlock', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5c-voice-v2-audio-playback-unlock')
+  it('voice v2 audio playback hardening remains in place', () => {
     assert.match(read('app/orb/layout.tsx'), /orb-residential-shell\.css/)
-    assert.deepEqual(ORB_LAYOUT_CSS_FILES, ['app/orb/orb-residential-shell.css'])
-    assert.match(read('app/orb/orb-residential-shell.css'), /phase-5c-voice-v2-audio-playback-unlock/)
+    assert.match(read('lib/orb/voice-v2/orb-voice-v2-playback.ts'), /playOrbVoiceV2Audio/)
   })
 
   it('Start conversation unlocks audio playback pathway', () => {

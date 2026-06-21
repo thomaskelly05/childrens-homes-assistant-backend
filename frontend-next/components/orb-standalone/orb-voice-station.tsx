@@ -26,6 +26,7 @@ import {
   ORB_VOICE_V2_TYPE_PLACEHOLDER
 } from '@/lib/orb/voice-v2/orb-voice-v2-copy.ts'
 import { mapOrbVoiceV2ToCompanionState, orbVoiceV2PrimaryLabel } from '@/lib/orb/voice-v2/orb-voice-v2-state.ts'
+import { traceOrbVoiceV2StartClick } from '@/lib/orb/voice-v2/orb-voice-v2-click-trace.ts'
 import { useOrbVoiceV2 } from '@/lib/orb/voice-v2/use-orb-voice-v2.ts'
 
 export function OrbVoiceStation({
@@ -63,10 +64,10 @@ export function OrbVoiceStation({
     ? ORB_VOICE_V2_CONTINUE_CONVERSATION
     : orbVoiceV2PrimaryLabel(voice.state)
   const primaryDisabled =
-    !isSignedIn ||
     voice.state === 'requesting_microphone' ||
     voice.state === 'transcribing' ||
     voice.state === 'thinking'
+  const primaryIdleReady = voice.state === 'idle' && isSignedIn
 
   const handleClose = useCallback(() => {
     voice.resetLiveSession()
@@ -74,6 +75,12 @@ export function OrbVoiceStation({
   }, [onClose, voice])
 
   const handlePrimary = useCallback(() => {
+    traceOrbVoiceV2StartClick({
+      currentState: voice.state,
+      buttonDisabled: primaryDisabled,
+      audioUnlocked: voice.audioUnlocked,
+      permissionState: voice.permissionState
+    })
     if (!isSignedIn) {
       onSignIn?.()
       return
@@ -89,7 +96,7 @@ export function OrbVoiceStation({
     if (voice.state === 'paused') {
       void voice.continueConversation()
     }
-  }, [isSignedIn, onSignIn, voice])
+  }, [isSignedIn, onSignIn, primaryDisabled, voice])
 
   const handleCopySummary = useCallback(async () => {
     if (!voice.summary) return
@@ -122,7 +129,7 @@ export function OrbVoiceStation({
   }, [voice.handoffPayload, voice.summary])
 
   const modeSelector = (
-    <div className="w-full max-w-sm" data-orb-voice-mode-selector>
+    <div className="orb-voice-controls w-full max-w-sm" data-orb-voice-mode-selector data-orb-voice-controls>
       <label className="block text-xs font-medium text-[var(--orb-muted)]" htmlFor="orb-voice-v2-mode">
         {ORB_VOICE_V2_MODE_PROMPT}
       </label>
@@ -297,6 +304,8 @@ export function OrbVoiceStation({
         data-orb-voice-station
         data-orb-voice-v2
         data-orb-voice-ui-state={voice.state}
+        data-orb-voice-capture-active={conversationLive ? true : false}
+        data-orb-voice-idle-ready={primaryIdleReady ? true : undefined}
         data-orb-voice-permission-state={voice.permissionState}
         data-orb-voice-auto-resume-blocked={voice.autoResumeBlocked ? true : undefined}
         data-orb-voice-playback-blocked={voice.playbackBlocked ? true : undefined}
@@ -311,7 +320,7 @@ export function OrbVoiceStation({
           secondaryControls={secondaryControls}
           controls={
             workspaceMode === 'after_call' ? null : (
-              <div className="flex w-full max-w-sm flex-col items-center gap-2">
+              <div className="orb-voice-controls flex w-full max-w-sm flex-col items-center gap-2" data-orb-voice-controls>
                 {voice.playbackBlocked ? (
                   <button
                     type="button"
@@ -336,10 +345,12 @@ export function OrbVoiceStation({
                   type="button"
                   className="orb-liquid-button w-full rounded-full bg-gradient-to-r from-[var(--orb-primary-blue,#168bff)] to-[var(--orb-primary-blue-2,#0d5fcc)] px-6 py-3 text-sm font-semibold text-white disabled:opacity-50"
                   disabled={primaryDisabled}
+                  aria-disabled={primaryDisabled ? true : undefined}
                   onClick={handlePrimary}
                   data-orb-voice-primary
                   data-orb-voice-start-conversation={voice.autoResumeBlocked ? undefined : true}
                   data-orb-voice-continue-conversation={voice.autoResumeBlocked ? true : undefined}
+                  data-orb-voice-primary-disabled={primaryDisabled ? true : undefined}
                 >
                   {statusLine}
                 </button>

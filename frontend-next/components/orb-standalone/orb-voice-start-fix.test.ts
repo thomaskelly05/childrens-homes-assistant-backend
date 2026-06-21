@@ -88,7 +88,7 @@ describe('ORB Voice start fix — start click path', () => {
   })
 
   it('immediate UI uses v2 connecting copy', () => {
-    assert.match(readComponent('lib/orb/voice-v2/orb-voice-v2-state.ts'), /Connecting microphone…/)
+    assert.match(readComponent('lib/orb/voice-v2/orb-voice-v2-state.ts'), /Requesting microphone…/)
     assert.match(hook(), /setState\('requesting_microphone'\)/)
   })
 

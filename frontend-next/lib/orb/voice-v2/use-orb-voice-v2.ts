@@ -13,6 +13,7 @@ import {
 import { OrbVoiceV2CaptureError, startOrbVoiceV2Capture, type OrbVoiceV2CaptureSession } from './orb-voice-v2-capture.ts'
 import {
   ORB_VOICE_V2_AUDIO_PLAYBACK_BLOCKED,
+  ORB_VOICE_V2_AUDIO_UNLOCK_SOFT_FAIL,
   ORB_VOICE_V2_FALLBACK_VOICE_TURN,
   ORB_VOICE_V2_MIC_DENIED,
   ORB_VOICE_V2_PREPARING_VOICE,
@@ -60,6 +61,7 @@ export function useOrbVoiceV2(open: boolean) {
   const [audioUnlocked, setAudioUnlocked] = useState(false)
   const [playbackState, setPlaybackState] = useState<OrbVoiceV2PlaybackState>('idle')
   const [turnFallbackNotice, setTurnFallbackNotice] = useState<string | null>(null)
+  const [audioUnlockNotice, setAudioUnlockNotice] = useState<string | null>(null)
 
   const captureRef = useRef<OrbVoiceV2CaptureSession | null>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null)
@@ -117,6 +119,7 @@ export function useOrbVoiceV2(open: boolean) {
     setVoicePreparingSkipAvailable(false)
     setFallbackNotice(null)
     setTurnFallbackNotice(null)
+    setAudioUnlockNotice(null)
     setTypedDraft('')
     setShowTypeFallback(false)
     setAudioUnlocked(false)
@@ -385,8 +388,19 @@ export function useOrbVoiceV2(open: boolean) {
     }
     setSummary(null)
     conversationStartedRef.current = true
-    const unlocked = await unlockOrbVoiceV2AudioPlayback()
+    setError(null)
+    setAudioUnlockNotice(null)
+    setState('requesting_microphone')
+    let unlocked = false
+    try {
+      unlocked = await unlockOrbVoiceV2AudioPlayback()
+    } catch {
+      unlocked = false
+    }
     setAudioUnlocked(unlocked)
+    if (!unlocked) {
+      setAudioUnlockNotice(ORB_VOICE_V2_AUDIO_UNLOCK_SOFT_FAIL)
+    }
     await resumeListening({ fromUserGesture: true })
   }, [resetLiveSession, resumeListening])
 
@@ -434,7 +448,7 @@ export function useOrbVoiceV2(open: boolean) {
       ? ORB_VOICE_V2_PREPARING_VOICE
       : playbackBlocked
         ? ORB_VOICE_V2_AUDIO_PLAYBACK_BLOCKED
-        : permissionNotice || error || turnFallbackNotice || fallbackNotice
+        : permissionNotice || error || audioUnlockNotice || turnFallbackNotice || fallbackNotice
 
   return {
     state,
@@ -452,6 +466,7 @@ export function useOrbVoiceV2(open: boolean) {
     katherineReady,
     fallbackNotice,
     turnFallbackNotice,
+    audioUnlockNotice,
     typedDraft,
     setTypedDraft,
     showTypeFallback,

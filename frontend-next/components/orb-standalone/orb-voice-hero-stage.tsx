@@ -73,13 +73,13 @@ export function OrbVoiceHeroStage({
       <OrbVoiceStudioWaveform state={companionState} className="orb-voice-hero-stage__waveform" />
 
       {middleSlot ? (
-        <div className="orb-voice-hero-stage__modes w-full" data-orb-voice-main-mode-controls>
+        <div className="orb-voice-controls orb-voice-hero-stage__modes w-full" data-orb-voice-main-mode-controls data-orb-voice-controls>
           {middleSlot}
         </div>
       ) : null}
 
       {cta ? (
-        <div className="orb-voice-hero-stage__cta w-full max-w-sm" data-orb-voice-hero-cta>
+        <div className="orb-voice-controls orb-voice-hero-stage__cta w-full max-w-sm" data-orb-voice-hero-cta data-orb-voice-controls>
           {cta}
         </div>
       ) : null}

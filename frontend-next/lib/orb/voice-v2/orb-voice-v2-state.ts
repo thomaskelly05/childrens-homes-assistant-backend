@@ -2,7 +2,7 @@ import type { OrbVoiceV2State } from './orb-voice-v2-types.ts'
 
 export const ORB_VOICE_V2_STATUS_LABEL: Record<OrbVoiceV2State, string> = {
   idle: 'Ready',
-  requesting_microphone: 'Connecting microphone…',
+  requesting_microphone: 'Requesting microphone…',
   listening: 'Listening…',
   speech_detected: 'Listening…',
   transcribing: 'Processing your voice…',

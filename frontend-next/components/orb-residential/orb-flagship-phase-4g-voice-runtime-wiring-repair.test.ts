@@ -14,11 +14,11 @@ function read(relativePath: string) {
 }
 
 describe('ORB Residential Phase 4G Voice runtime wiring repair', () => {
-  it('build version marker is phase-5c-voice-v2-audio-playback-unlock', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5c-voice-v2-audio-playback-unlock')
+  it('build version marker is phase-5d-voice-v2-clickable-idle', () => {
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5d-voice-v2-clickable-idle')
     assert.match(read('app/orb/layout.tsx'), /orb-residential-shell\.css/)
     assert.deepEqual(ORB_LAYOUT_CSS_FILES, ['app/orb/orb-residential-shell.css'])
-    assert.match(read('app/orb/orb-residential-shell.css'), /phase-5c-voice-v2-audio-playback-unlock/)
+    assert.match(read('app/orb/orb-residential-shell.css'), /phase-5d-voice-v2-clickable-idle/)
   })
 
   it('voice v2 hook owns respond and speak without companion assistant relay', () => {

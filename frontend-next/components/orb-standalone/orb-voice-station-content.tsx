@@ -121,8 +121,9 @@ export function OrbVoiceStationContent({
 
       {isMobileViewport && controls && workspaceMode !== 'after_call' ? (
         <div
-          className="orb-voice-station-content__mobile-dock shrink-0 border-t border-[var(--orb-line)]/30 px-4 py-2.5 pb-[max(0.75rem,env(safe-area-inset-bottom))]"
+          className="orb-voice-controls orb-voice-station-content__mobile-dock shrink-0 border-t border-[var(--orb-line)]/30 px-4 py-2.5 pb-[max(0.75rem,env(safe-area-inset-bottom))]"
           data-orb-voice-mobile-action-dock
+          data-orb-voice-controls
         >
           <div className="mx-auto w-full max-w-lg space-y-2">{controls}</div>
         </div>
