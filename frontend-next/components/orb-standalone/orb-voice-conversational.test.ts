@@ -17,12 +17,11 @@ function readLib(relativePath: string) {
 describe('ORB Voice conversational sprint', () => {
   it('station renders premium voice room with explicit start', () => {
     const station = readComponent('components/orb-standalone/orb-voice-station.tsx')
-    const actions = readComponent('components/orb-standalone/orb-voice-actions.tsx')
     assert.match(station, /data-orb-voice-station/)
-    assert.match(station, /data-orb-voice-start-stage/)
-    assert.match(station, /OrbVoiceActions/)
-    assert.match(actions, /data-orb-voice-primary-action/)
-    assert.match(readLib('orb/voice/orb-voice-ui-state.ts'), /ORB_VOICE_BUTTON_START/)
+    assert.match(station, /data-orb-voice-ui-state=\{voice\.state\}/)
+    assert.match(station, /data-orb-voice-primary/)
+    assert.match(station, /data-orb-voice-start-conversation/)
+    assert.match(readLib('orb/voice-v2/orb-voice-v2-state.ts'), /Start conversation/)
     assert.match(station, /ORB_VOICE_PANEL_SUBTITLE/)
   })
 
@@ -71,10 +70,10 @@ describe('ORB Voice conversational sprint', () => {
     assert.match(hook, /voicePresetId/)
   })
 
-  it('ORB Voice modal shows selected voice label not raw OpenAI id', () => {
+  it('ORB Voice modal shows v2 mode selector not raw OpenAI id', () => {
     const station = readComponent('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(station, /orbVoiceProfileLabel/)
-    assert.match(station, /selectedProfileLabel/)
+    assert.match(station, /ORB_VOICE_V2_MODES/)
+    assert.match(station, /data-orb-voice-v2-mode-select/)
     assert.doesNotMatch(station, /<option[^>]*>coral<\/option>/)
     const panel = readComponent('components/orb-standalone/orb-voice-settings-panel.tsx')
     assert.match(panel, /profile\.label/)
@@ -87,7 +86,7 @@ describe('ORB Voice conversational sprint', () => {
 
   it('voice station links to dictate', () => {
     const voice = readComponent('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(voice, /OrbVoiceTranscriptActions/)
+    assert.match(voice, /data-orb-voice-send-to-dictate/)
     assert.match(voice, /onOpenDictate/)
   })
 
@@ -96,10 +95,9 @@ describe('ORB Voice conversational sprint', () => {
     assert.match(actions, /data-orb-voice-to-dictate/)
   })
 
-  it('ORB Voice links to dictate from transcript actions', () => {
+  it('ORB Voice links to dictate from summary actions', () => {
     const voice = readComponent('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(voice, /OrbVoiceTranscriptActions/)
-    const actions = readComponent('components/orb-standalone/orb-voice-transcript-actions.tsx')
-    assert.match(actions, /Send to Dictate/)
+    assert.match(voice, /data-orb-voice-summary-actions/)
+    assert.match(voice, /Send to Dictate/)
   })
 })

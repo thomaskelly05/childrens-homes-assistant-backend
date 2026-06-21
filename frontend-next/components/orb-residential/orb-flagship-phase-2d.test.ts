@@ -14,7 +14,7 @@ function read(relativePath: string) {
 
 describe('ORB Residential Phase 2H flagship UX convergence', () => {
   it('build version marker is phase-3b on shell and visual build', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-4h-voice-fresh-low-latency')
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5a-voice-clean-rebuild')
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
     const layout = read('app/orb/layout.tsx')
     assert.match(companion, /data-orb-build-version=\{ORB_BUILD_VISUAL_VERSION\}/)
@@ -151,18 +151,18 @@ describe('ORB Residential Phase 2H flagship UX convergence', () => {
   it('voice mode selector is visible and central', () => {
     const voice = read('components/orb-standalone/orb-voice-station.tsx')
     const selector = read('components/orb-residential/orb-voice-mode-selector.tsx')
-    assert.match(voice, /OrbVoiceModeSelector/)
-    assert.match(read('components/orb-standalone/orb-voice-hero-stage.tsx'), /data-orb-voice-main-mode-controls/)
+    assert.match(voice, /data-orb-voice-v2-mode-select|ORB_VOICE_V2_MODES/)
+    assert.match(read('components/orb-standalone/orb-voice-station-content.tsx'), /data-orb-voice-station-content/)
     assert.match(selector, /data-orb-voice-mode-central/)
     assert.match(selector, /data-orb-voice-mode-selection-label/)
     assert.match(selector, /data-orb-voice-style-controls/)
     assert.match(selector, /data-orb-voice-reasoning-controls/)
     assert.match(selector, /data-orb-voice-mode-summary/)
-    assert.match(voice, /data-orb-voice-controls-main-screen/)
-    assert.match(voice, /data-orb-voice-controls-not-settings/)
-    assert.match(voice, /ORB_VOICE_AUDIO_NOT_STORED|ORB_VOICE_AUDIO_TRANSCRIPT_REVIEW_NOTE/)
-    assert.match(read('lib/orb/voice/orb-voice-ui-state.ts'), /ORB_VOICE_BUTTON_START/)
-    assert.match(read('lib/orb/voice/orb-voice-ui-state.ts'), /return 'Ready to talk'/)
+    assert.match(voice, /data-orb-voice-mode-selector/)
+    assert.match(voice, /data-orb-voice-secondary-controls/)
+    assert.match(voice, /ORB_VOICE_V2_SAFETY_FOOTER|ORB_VOICE_V2_TRANSCRIPT_NOTE/)
+    assert.match(read('lib/orb/voice-v2/orb-voice-v2-state.ts'), /Start conversation/)
+    assert.match(read('lib/orb/voice-v2/orb-voice-v2-state.ts'), /Ready/)
     const modes = read('lib/orb/orb-voice-mode-carousel.ts')
     for (const label of ['Calm', 'Warm', 'Direct', 'Reflective', 'Talk it through', 'Safeguarding thinking', 'Supervision prep', 'Clear summary']) {
       assert.match(modes, new RegExp(label))

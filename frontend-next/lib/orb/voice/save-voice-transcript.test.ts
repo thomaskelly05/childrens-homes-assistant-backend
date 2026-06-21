@@ -36,14 +36,11 @@ describe('save voice transcript to saved outputs', () => {
 
   it('voice station shows save and route actions when transcript exists', () => {
     const station = readComponent('components/orb-standalone/orb-voice-station.tsx')
-    const actions = readComponent('components/orb-standalone/orb-voice-transcript-actions.tsx')
-    assert.match(station, /OrbVoiceTranscriptActions/)
-    assert.match(actions, /data-orb-voice-save-to-orb/)
-    assert.match(actions, /Save to ORB/)
-    assert.match(actions, /data-orb-voice-copy-transcript/)
-    assert.match(actions, /data-orb-voice-to-dictate/)
-    assert.match(actions, /data-orb-voice-send-to-orb/)
-    assert.match(actions, /Send to ORB chat/)
+    assert.match(station, /data-orb-voice-save-reflection/)
+    assert.match(station, /createOrbSavedOutput/)
+    assert.match(station, /data-orb-voice-send-to-dictate/)
+    assert.match(station, /data-orb-voice-copy-summary/)
+    assert.match(station, /data-orb-voice-open-write/)
   })
 
   it('saved output detail supports dictate, ask orb, shift builder and rerun notice', () => {
@@ -55,10 +52,9 @@ describe('save voice transcript to saved outputs', () => {
   })
 
   it('launch controls delegate transcript actions', () => {
-    const controls = readComponent('components/orb-standalone/orb-voice-launch-controls.tsx')
-    const actions = readComponent('components/orb-standalone/orb-voice-transcript-actions.tsx')
-    assert.match(controls, /OrbVoiceTranscriptActions/)
-    assert.match(actions, /data-orb-voice-send-to-orb/)
-    assert.match(actions, /data-orb-voice-to-dictate/)
+    const station = readComponent('components/orb-standalone/orb-voice-station.tsx')
+    assert.match(station, /data-orb-voice-summary-actions/)
+    assert.match(station, /data-orb-voice-send-to-dictate/)
+    assert.match(station, /data-orb-voice-open-write/)
   })
 })

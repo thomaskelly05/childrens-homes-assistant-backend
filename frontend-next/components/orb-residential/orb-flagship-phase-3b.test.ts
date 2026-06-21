@@ -18,7 +18,7 @@ function read(relativePath: string) {
 
 describe('ORB Residential Phase 3B unified station experience', () => {
   it('build version marker is phase-3b', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-4h-voice-fresh-low-latency')
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5a-voice-clean-rebuild')
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
     const layout = read('app/orb/layout.tsx')
     assert.match(companion, /data-orb-build-version=\{ORB_BUILD_VISUAL_VERSION\}/)
@@ -87,7 +87,7 @@ describe('ORB Residential Phase 3B unified station experience', () => {
       assert.match(carousel, new RegExp(`label: '${label}'`))
     }
     const launch = read('components/orb-standalone/orb-voice-launch-controls.tsx')
-    assert.match(voice, /OrbVoiceLaunchControls|data-orb-voice-ptt-primary/)
+    assert.match(voice, /data-orb-voice-start-conversation|handlePrimary/)
     assert.match(launch, /data-orb-voice-ptt-primary|Start talking/i)
   })
 
@@ -146,7 +146,7 @@ describe('ORB Residential Phase 3B unified station experience', () => {
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
     const voice = read('components/orb-standalone/orb-voice-station.tsx')
     assert.match(companion, /data-orb-home-safety-line/)
-    assert.match(voice, /ORB_VOICE_AUDIO_NOT_STORED/)
+    assert.match(voice, /ORB_VOICE_V2_SAFETY_FOOTER|ORB_VOICE_V2_TRANSCRIPT_NOTE/)
   })
 
   it('sidebar powered-by tagline uses shorter IndiCare label', () => {

@@ -40,12 +40,14 @@ describe('orb-voice-transcript', () => {
     assert.match(hook, /resolveBrowserSpeechCaptureText/)
   })
 
-  it('send actions use display transcript including interim', () => {
+  it('send actions use v2 turns and typed fallback', () => {
     const station = readFileSync(
       join(root, 'components/orb-standalone/orb-voice-station.tsx'),
       'utf8'
     )
-    assert.match(station, /voiceEngine\.displayTranscript \|\| voice\.displayTranscript/)
-    assert.match(station, /onSendToOrb\(voiceTranscriptText/)
+    const hook = readFileSync(join(root, 'lib/orb/voice-v2/use-orb-voice-v2.ts'), 'utf8')
+    assert.match(station, /voice\.turns/)
+    assert.match(station, /sendTypedTurn|voice\.sendTypedTurn/)
+    assert.match(hook, /commitAdultTurn/)
   })
 })

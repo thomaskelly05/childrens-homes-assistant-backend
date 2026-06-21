@@ -18,7 +18,7 @@ function read(relativePath: string) {
 
 describe('ORB Residential Phase 3D station behaviour hardening', () => {
   it('build version marker is phase-3d', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-4h-voice-fresh-low-latency')
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5a-voice-clean-rebuild')
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
     const layout = read('app/orb/layout.tsx')
     assert.match(companion, /data-orb-build-version=\{ORB_BUILD_VISUAL_VERSION\}/)
@@ -72,8 +72,8 @@ describe('ORB Residential Phase 3D station behaviour hardening', () => {
     assert.match(selector, /data-orb-voice-style-carousel/)
     assert.match(selector, /data-orb-voice-reasoning-carousel/)
     assert.match(selector, /data-orb-voice-mode-selection-summary/)
-    assert.match(voice, /data-orb-voice-controls-not-settings/)
-    assert.match(voice, /ORB_VOICE_AUDIO_NOT_STORED/)
+    assert.match(voice, /data-orb-voice-secondary-controls/)
+    assert.match(voice, /ORB_VOICE_V2_SAFETY_FOOTER/)
     assert.match(launch, /data-orb-voice-ptt-primary/)
     assert.doesNotMatch(launch, /data-orb-voice-end-summary/)
     for (const label of ['Calm', 'Warm', 'Direct', 'Reflective']) {

@@ -55,8 +55,8 @@ describe('ORB Voice UI state — ready before session', () => {
     assert.equal(orbVoiceUiStatusLine('ready'), "Ready to talk")
     assert.equal(orbVoiceUiPrimaryLabel('ready'), 'Start conversation')
     const station = readComponent('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(station, /data-orb-voice-ui-state=\{uiState\}/)
-    assert.match(readComponent('components/orb-standalone/orb-voice-actions.tsx'), /data-orb-voice-ui-state=\{uiState\}/)
+    assert.match(station, /data-orb-voice-ui-state=\{voice\.state\}/)
+    assert.match(station, /orbVoiceV2PrimaryLabel/)
   })
 
   it('hasClientSecret false before start does not affect ready state resolver', () => {
@@ -71,7 +71,7 @@ describe('ORB Voice UI state — ready before session', () => {
     const station = readComponent('components/orb-standalone/orb-voice-station.tsx')
     assert.doesNotMatch(station, /hasClientSecret/)
     assert.match(station, /primaryDisabled/)
-    assert.match(station, /useBrowserLaunch/)
+    assert.match(station, /useOrbVoiceV2/)
   })
 
   it('provider openai is accepted as configured', () => {
@@ -92,10 +92,10 @@ describe('ORB Voice UI state — ready before session', () => {
       resolveOrbVoiceUiState({ ...baseInput, startStage: 'starting', transportLive: false }),
       'preparing'
     )
-    const availability = readLib('orb/voice/orb-realtime-availability.ts')
-    assert.match(availability, /beginOrbRealtimeVoiceConversation/)
-    assert.match(readComponent('components/orb-standalone/orb-voice-station.tsx'), /setVoiceStartStage\('starting'\)/)
-    assert.match(readComponent('components/orb-standalone/orb-voice-station.tsx'), /beginOrbRealtimeVoiceConversation/)
+    const hook = readComponent('lib/orb/voice-v2/use-orb-voice-v2.ts')
+    assert.match(hook, /setState\('requesting_microphone'\)/)
+    assert.match(hook, /startConversation/)
+    assert.match(readComponent('components/orb-standalone/orb-voice-station.tsx'), /voice\.startConversation/)
   })
 
   it('transportLive false before Start does not imply unavailable', () => {

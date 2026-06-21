@@ -49,67 +49,47 @@ describe('ORB Voice start fix — WebKit speech recognition', () => {
 
 describe('ORB Voice start fix — start click path', () => {
   const station = () => readComponent('components/orb-standalone/orb-voice-station.tsx')
-  const actions = () => readComponent('components/orb-standalone/orb-voice-actions.tsx')
-  const hook = () => readComponent('components/orb-standalone/use-standalone-orb-voice.ts')
+  const legacyHook = () => readComponent('components/orb-standalone/use-standalone-orb-voice.ts')
+  const hook = () => readComponent('lib/orb/voice-v2/use-orb-voice-v2.ts')
 
-  it('Start click emits debug events through handlePrimary and handleStart', () => {
-    const events = [
-      'voice_start_click_received',
-      'voice_start_handle_primary_called',
-      'voice_start_handle_start_called',
-      'voice_start_capabilities',
-      'voice_start_branch_selected',
-      'voice_start_attempt_browser_engine',
-      'voice_engine_start_called',
-      'voice_engine_start_success',
-      'voice_engine_start_failed',
-      'voice_engine_transcript_submitted',
-      'voice_start_unsupported_visible',
-      'voice_start_realtime_attempt',
-      'voice_start_realtime_failed',
-      'voice_start_noop_prevented'
-    ]
-    const sources = `${actions()}\n${station()}`
-    for (const event of events) {
-      assert.match(sources, new RegExp(event))
-    }
+  it('Start click routes through handlePrimary and startConversation', () => {
+    assert.match(station(), /handlePrimary/)
+    assert.match(station(), /voice\.startConversation/)
+    assert.match(hook(), /startConversation/)
+    assert.match(station(), /data-orb-voice-start-conversation/)
   })
 
-  it('handleStart calls handleBrowserVoicePrimary when realtime unavailable', () => {
-    assert.match(station(), /!realtimeVoiceReady[\s\S]*handleBrowserVoicePrimary/)
-    assert.match(station(), /voice_start_branch_selected[\s\S]*browser_fallback_no_realtime/)
+  it('v2 capture starts without legacy browser/realtime branch', () => {
+    assert.match(hook(), /startOrbVoiceV2Capture/)
+    assert.match(hook(), /fetchOrbVoiceV2Status/)
+    assert.doesNotMatch(station(), /handleBrowserVoicePrimary/)
   })
 
-  it('browser launch path is not delayed by pre-unlock audio awaits', () => {
-    const body = station().match(/async function handleStart\(\)[\s\S]*?async function handleBrowserVoicePrimary/m)?.[0] ?? ''
-    const browserBranch = body.indexOf("branch: 'browser_launch'")
-    const fallbackBranch = body.indexOf("branch: 'browser_fallback_no_realtime'")
-    const firstAudioAwait = body.indexOf('await preUnlock.play()')
-    assert.ok(browserBranch >= 0)
-    assert.ok(fallbackBranch >= 0)
-    assert.equal(firstAudioAwait, -1, 'browser SpeechRecognition start must not be preceded by awaited audio unlock')
+  it('capture start is not delayed by pre-unlock audio awaits', () => {
+    const hookSrc = hook()
+    assert.doesNotMatch(hookSrc, /await preUnlock\.play\(\)/)
+    assert.match(hookSrc, /startOrbVoiceV2Capture/)
   })
 
-  it('browser fallback has an optimistic starting launch state so the UI cannot stay ready after click', () => {
-    assert.match(station(), /BrowserStartStage/)
-    assert.match(station(), /browserStartStage === 'starting'[\s\S]*\? 'starting'/)
-    assert.match(station(), /setBrowserStartStage\('starting'\)/)
+  it('optimistic requesting_microphone state prevents idle UI after click', () => {
+    assert.match(hook(), /setState\('requesting_microphone'\)/)
+    assert.match(station(), /requesting_microphone/)
   })
 
-  it('browser voice uses ORBWebVoiceEngine in voice station', () => {
-    assert.match(station(), /useOrbWebVoiceEngine/)
-    assert.match(station(), /voiceEngine\.start/)
-    assert.match(station(), /voiceEngine\.stop/)
+  it('voice station uses v2 hook and capture loop', () => {
+    assert.match(station(), /useOrbVoiceV2/)
+    assert.match(hook(), /startOrbVoiceV2Capture/)
+    assert.match(hook(), /captureRef\.current\?\.dispose/)
   })
 
-  it('mic permission is requested on fallback after recognition start fails', () => {
-    assert.match(hook(), /setVoiceCaptureState\('requesting_permission'\)/)
-    assert.match(hook(), /ORB_VOICE_MIC_BLOCKED_MESSAGE/)
+  it('mic errors surface typed fallback in v2 hook', () => {
+    assert.match(hook(), /ORB_VOICE_V2_TRANSCRIPTION_ERROR/)
+    assert.match(hook(), /setShowTypeFallback\(true\)/)
   })
 
-  it('immediate UI uses staged opening copy', () => {
-    assert.match(station(), /Opening microphone…/)
-    assert.match(hook(), /setVoiceCaptureState\('starting'\)/)
+  it('immediate UI uses v2 connecting copy', () => {
+    assert.match(readComponent('lib/orb/voice-v2/orb-voice-v2-state.ts'), /Connecting microphone…/)
+    assert.match(hook(), /setState\('requesting_microphone'\)/)
   })
 
   it('launch UI maps requesting_permission to starting state', () => {
@@ -125,20 +105,18 @@ describe('ORB Voice start fix — start click path', () => {
     )
   })
 
-  it('empty recognition shows visible no-hear message', () => {
-    assert.match(hook(), /ORB_VOICE_NO_HEAR_MESSAGE/)
-    assert.match(hook(), /I didn't catch that\. Try again, use Dictate, or use Chat\./)
+  it('voice station exposes v2 ui state markers', () => {
+    assert.match(station(), /data-orb-voice-ui-state=\{voice\.state\}/)
+    assert.match(station(), /data-orb-voice-v2/)
+    assert.match(station(), /data-orb-voice-primary/)
   })
 
-  it('voice station exposes launch and error data markers', () => {
-    assert.match(station(), /data-orb-voice-launch-state/)
-    assert.match(station(), /data-orb-voice-browser-supported/)
-    assert.match(station(), /data-orb-voice-mic-permission/)
-    assert.match(station(), /data-orb-voice-start-error/)
+  it('station wires handlePrimary on start conversation button', () => {
+    assert.match(station(), /onClick=\{handlePrimary\}/)
+    assert.match(station(), /data-orb-voice-start-conversation/)
   })
 
-  it('OrbVoiceActions wires handlePrimary to onPrimary for ready state', () => {
-    assert.match(actions(), /onClick=\{handlePrimary\}/)
-    assert.match(station(), /onPrimary=\{\(\) => void handleStart\(\)\}/)
+  it('legacy standalone hook still guards empty recognition', () => {
+    assert.match(legacyHook(), /ORB_VOICE_NO_HEAR_MESSAGE/)
   })
 })

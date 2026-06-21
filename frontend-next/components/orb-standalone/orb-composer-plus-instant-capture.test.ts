@@ -206,9 +206,10 @@ describe('ORB composer plus menu and instant capture pass', () => {
       'opening_mic'
     )
     const station = read('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(station, /resolveOrbVoiceStartProgressStage/)
-    assert.match(station, /orbVoiceStartProgressLine/)
-    assert.match(station, /markOrbInteractionLatency\('voice_mic_permission_requested'\)/)
+    const hook = read('lib/orb/voice-v2/use-orb-voice-v2.ts')
+    assert.match(station, /orbVoiceV2PrimaryLabel/)
+    assert.match(station, /statusLine/)
+    assert.match(hook, /setState\('requesting_microphone'\)/)
     assert.doesNotMatch(station, /'Preparing voice…'/)
   })
 

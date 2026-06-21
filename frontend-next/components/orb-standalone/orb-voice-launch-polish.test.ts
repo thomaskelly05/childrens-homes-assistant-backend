@@ -37,8 +37,8 @@ describe('ORB Voice launch polish', () => {
     assert.equal(orbVoiceLaunchStatusLabel('transcribing'), 'Transcribing')
     assert.equal(orbVoiceLaunchStatusLabel('unavailable'), 'Unavailable')
     const station = readComponent('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(station, /data-orb-voice-launch-status-label/)
-    assert.match(station, /data-orb-voice-launch-state/)
+    assert.match(station, /statusLine/)
+    assert.match(station, /data-orb-voice-ui-state=\{voice\.state\}/)
   })
 
   it('composer voice button exists with unavailable aria', () => {
@@ -91,7 +91,7 @@ describe('ORB Voice launch polish', () => {
     assert.ok(ORB_VOICE_BOUNDARY_COPY.some((line) => line.includes('emergencies')))
     assert.ok(ORB_VOICE_BOUNDARY_COPY.some((line) => line.includes('live care records')))
     const station = readComponent('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(station, /data-orb-voice-boundary-copy|SAFETY_COPY/)
+    assert.match(station, /ORB_VOICE_V2_SAFETY_FOOTER/)
   })
 
   it('safeguarding suppresses auto read-aloud', () => {

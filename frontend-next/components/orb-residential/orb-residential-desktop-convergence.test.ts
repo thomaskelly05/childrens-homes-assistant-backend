@@ -152,9 +152,9 @@ describe('ORB Residential desktop convergence sprint', () => {
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
     const desktop = read('app/orb/_legacy-ui-archive/orb-desktop.css')
 
-    assert.match(voice, /orb-liquid-card/)
+    assert.match(voice, /orb-voice-room/)
     assert.match(voice, /orb-liquid-button/)
-    assert.match(voice, /data-orb-voice-dictate-bridge/)
+    assert.match(voice, /data-orb-voice-send-to-dictate/)
     assert.match(voiceContent, /data-orb-voice-station-content/)
     assert.match(desktop, /\[data-orb-voice-station-content\]/)
     assert.match(dictate, /desktop-runtime/)

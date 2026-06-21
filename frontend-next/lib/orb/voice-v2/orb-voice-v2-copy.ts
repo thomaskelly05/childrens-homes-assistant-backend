@@ -1,0 +1,28 @@
+export const ORB_VOICE_V2_TITLE = 'Voice' as const
+export const ORB_VOICE_V2_SUBTITLE = 'Talk it through with ORB before you write.' as const
+export const ORB_VOICE_V2_MODE_PROMPT = 'What are you talking through?' as const
+export const ORB_VOICE_V2_TRANSCRIPT_LABEL = 'Voice conversation' as const
+export const ORB_VOICE_V2_TRANSCRIPT_NOTE = 'Reflection notes — not yet a record' as const
+export const ORB_VOICE_V2_SAFETY_FOOTER =
+  'Voice is for reflective support. Audio is not stored. Review any summary before use.' as const
+export const ORB_VOICE_V2_ADULT_REVIEW_LABEL = 'Generated for adult review' as const
+export const ORB_VOICE_V2_TRANSCRIPTION_ERROR =
+  'Voice could not hear that clearly. You can try again or type what you wanted to say.' as const
+export const ORB_VOICE_V2_TYPE_INSTEAD = 'Type instead' as const
+export const ORB_VOICE_V2_TYPE_PLACEHOLDER = 'Type what you wanted to say to ORB…' as const
+export const ORB_VOICE_V2_SEND_TYPED = 'Send to ORB' as const
+export const ORB_VOICE_V2_PREPARING_VOICE = 'ORB is preparing voice…' as const
+export const ORB_VOICE_V2_CONTINUE_WITHOUT_VOICE = 'Continue without voice' as const
+export const ORB_VOICE_V2_KATHERINE_FALLBACK =
+  'Katherine is unavailable, so ORB is using a fallback voice.' as const
+export const ORB_VOICE_V2_LIVE_SPOKEN_CAP = 320
+
+export const ORB_VOICE_V2_MODES = [
+  { id: 'just_talk', label: 'Just talk it through' },
+  { id: 'incident_reflection', label: 'Reflect after an incident' },
+  { id: 'safeguarding_thinking', label: 'Safeguarding thinking' },
+  { id: 'supervision_prep', label: 'Supervision prep' },
+  { id: 'daily_reflection', label: 'Daily reflection' },
+  { id: 'missing_from_home_debrief', label: 'Missing from home debrief' },
+  { id: 'wording_support', label: 'Wording support' }
+] as const

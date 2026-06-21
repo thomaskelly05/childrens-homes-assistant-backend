@@ -138,8 +138,8 @@ describe('ORB Voice instant-human refinement', () => {
   it('turn speech into record uses shared template selector and preserves transcript', () => {
     const station = read('components/orb-standalone/orb-voice-station.tsx')
     const after = read('components/orb-standalone/orb-voice-after-call-panel.tsx')
-    assert.match(station, /handleCreateDraftFromVoice/)
-    assert.match(station, /onOpenDictate\(transcript/)
+    assert.match(station, /handleSaveReflection/)
+    assert.match(station, /onOpenDictate\(voice\.summary/)
     assert.match(after, /OrbDictateTemplateSelector/)
     assert.match(after, /data-orb-voice-create-draft-record/)
     assert.doesNotMatch(station, /orb-voice-mobile-experience/)
@@ -147,10 +147,10 @@ describe('ORB Voice instant-human refinement', () => {
 
   it('optimistic preparing on start and double-tap guard', () => {
     const station = read('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(station, /start_in_flight/)
-    assert.match(station, /setBrowserStartStage\('starting'\)/)
-    assert.match(station, /setVoiceStartStage\('starting'\)/)
-    assert.match(station, /Opening microphone…/)
+    const hook = read('lib/orb/voice-v2/use-orb-voice-v2.ts')
+    assert.match(hook, /processingRef/)
+    assert.match(hook, /setState\('requesting_microphone'\)/)
+    assert.match(read('lib/orb/voice-v2/orb-voice-v2-state.ts'), /Connecting microphone…/)
   })
 
   it('mobile safe-area dock and no duplicate voice shell', () => {

@@ -42,7 +42,7 @@ describe('ORB Residential orb presence layout', () => {
     const voiceMobile = read('components/orb-standalone/orb-voice-mobile-experience.tsx')
     const dictateMobile = read('components/orb-standalone/orb-dictate-mobile-experience.tsx')
     assert.match(voice, /OrbVoiceStationContent/)
-    assert.match(voice, /mapOrbVoiceUiToCompanionState/)
+    assert.match(voice, /mapOrbVoiceV2ToCompanionState/)
     assert.match(voiceMobile, /OrbVoiceStationContent/)
     assert.match(dictateMobile, /variant="dictate"/)
     assert.doesNotMatch(voice, /variant="hero"/)

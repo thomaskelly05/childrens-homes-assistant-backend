@@ -42,8 +42,7 @@ describe('ORB Voice hero companion sizing contract', () => {
     const css = read('components/orb-residential/orb-voice.css')
     const studioCss = read('components/orb-standalone/orb-voice-studio-layout.css')
 
-    assert.match(station, /OrbVoiceDebugVisualShowcase/)
-    assert.match(station, /debugVisual \?/)
+    assert.match(station, /data-orb-voice-secondary-controls/)
     assert.match(studio, /OrbVoiceStatePanel/)
     assert.match(studio, /OrbVoiceMobilePreviewStrip/)
     assert.match(studio, /OrbVoiceTrustStrip/)
@@ -90,7 +89,7 @@ describe('ORB Voice hero companion sizing contract', () => {
     assert.match(studioCss, /\[data-orb-voice-capture-active='true'\][\s\S]*overflow-y:\s*auto/)
     assert.match(studioCss, /\[data-orb-voice-capture-active='false'\][\s\S]*overflow:\s*hidden/)
     assert.match(station, /OrbVoiceStationContent/)
-    assert.match(station, /data-orb-voice-session-extras/)
+    assert.match(station, /secondaryControls/)
     assert.doesNotMatch(station, /orb-voice-studio__body/)
     assert.doesNotMatch(station, /orb-voice-studio__workspace/)
   })

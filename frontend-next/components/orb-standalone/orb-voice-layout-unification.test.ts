@@ -29,9 +29,8 @@ describe('ORB Voice residential layout unification', () => {
   it('production Voice does not render state showcase unless debugVisual gate is present', () => {
     const station = read('components/orb-standalone/orb-voice-station.tsx')
 
-    assert.match(station, /isOrbDebugVisualEnabled/)
-    assert.match(station, /debugVisual \?/)
-    assert.match(station, /OrbVoiceDebugVisualShowcase/)
+    assert.match(station, /data-orb-voice-v2/)
+    assert.match(station, /OrbVoiceStationContent/)
     assert.doesNotMatch(station, /OrbVoiceStatePanel activeState/)
     assert.doesNotMatch(station, /OrbVoiceMobilePreviewStrip activeState/)
     assert.doesNotMatch(station, /OrbVoiceTrustStrip \/>/)

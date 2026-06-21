@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url'
 import { describe, it } from 'node:test'
 
 import { ORB_BUILD_VISUAL_VERSION, ORB_LAYOUT_CSS_FILES } from '../../lib/orb/orb-visual-build.ts'
-import { ORB_VOICE_START_CONVERSATION } from '../../lib/orb/voice/orb-voice-free-flowing-conversation.ts'
+import { orbVoiceV2PrimaryLabel } from '../../lib/orb/voice-v2/orb-voice-v2-state.ts'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '../..')
 
@@ -14,26 +14,25 @@ function read(relativePath: string) {
 }
 
 describe('ORB Residential Phase 4G Voice runtime wiring repair', () => {
-  it('build version marker is phase-4h-voice-fresh-low-latency', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-4h-voice-fresh-low-latency')
+  it('build version marker is phase-5a-voice-clean-rebuild', () => {
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5a-voice-clean-rebuild')
     assert.match(read('app/orb/layout.tsx'), /orb-residential-shell\.css/)
     assert.deepEqual(ORB_LAYOUT_CSS_FILES, ['app/orb/orb-residential-shell.css'])
-    assert.match(read('app/orb/orb-residential-shell.css'), /phase-4h-voice-fresh-low-latency/)
+    assert.match(read('app/orb/orb-residential-shell.css'), /phase-5a-voice-clean-rebuild/)
   })
 
-  it('companion only exposes complete assistant replies to the voice station', () => {
-    const companion = read('components/orb-standalone/orb-care-companion.tsx')
-    assert.match(companion, /pending\) return null/)
-    assert.match(companion, /entry\.status !== 'streaming'/)
-    assert.match(companion, /isOrbVoiceAssistantTurnReady/)
+  it('voice v2 hook owns respond and speak without companion assistant relay', () => {
+    const hook = read('lib/orb/voice-v2/use-orb-voice-v2.ts')
+    assert.match(hook, /requestOrbVoiceV2Respond/)
+    assert.match(hook, /requestOrbVoiceV2Speak/)
+    assert.doesNotMatch(read('components/orb-standalone/orb-care-companion.tsx'), /voiceStationAssistant/)
   })
 
-  it('voice station blocks TTS until respond completes and uses full reply text', () => {
-    const station = read('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(station, /ORB_VOICE_MIN_SPOKEN_CHARS/)
-    assert.match(station, /resolveOrbVoiceTurnTtsText/)
-    assert.match(station, /voiceFastPromptTier/)
-    assert.match(station, /beginOrbVoiceTurnTrace/)
+  it('voice station shows ORB text before audio via state ordering', () => {
+    const hook = read('lib/orb/voice-v2/use-orb-voice-v2.ts')
+    assert.match(hook, /setTurns[\s\S]*setState\('speaking'\)/)
+    assert.match(hook, /capOrbVoiceV2SpokenText/)
+    assert.match(hook, /voicePreparing/)
   })
 
   it('settings panel shows Katherine ready vs fallback honestly', () => {
@@ -44,7 +43,7 @@ describe('ORB Residential Phase 4G Voice runtime wiring repair', () => {
   })
 
   it('single shell and start conversation label remain', () => {
-    assert.equal(ORB_VOICE_START_CONVERSATION, 'Start conversation')
+    assert.equal(orbVoiceV2PrimaryLabel('idle'), 'Start conversation')
     assert.match(read('components/orb-standalone/orb-voice-station.tsx'), /OrbVoiceStationContent/)
     assert.doesNotMatch(read('components/orb-standalone/orb-care-companion.tsx'), /compliance guarantee/i)
   })

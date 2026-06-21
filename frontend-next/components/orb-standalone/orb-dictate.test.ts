@@ -140,7 +140,7 @@ describe('ORB Dictate', () => {
   it('ORB Voice links to dictate', () => {
     const voice = readComponent('components/orb-standalone/orb-voice-station.tsx')
     const actions = readComponent('components/orb-standalone/orb-voice-transcript-actions.tsx')
-    assert.match(voice, /data-orb-voice-use-dictate|OrbVoiceTranscriptActions/)
+    assert.match(voice, /data-orb-voice-send-to-dictate|data-orb-voice-summary-actions/)
     assert.match(actions, /data-orb-voice-to-dictate/)
     assert.match(voice, /onOpenDictate/)
   })

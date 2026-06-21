@@ -65,11 +65,12 @@ describe('ORB Voice realtime availability', () => {
 
   it('voice station requires realtime before live session', () => {
     const station = readComponent('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(station, /fetchOrbVoiceRealtimeStatus|isRealtimeVoiceProvider/)
-    assert.match(station, /realtimeVoiceReady/)
-    assert.match(station, /resolveOrbVoiceUiState|unsupported/)
-    assert.match(station, /voiceTransportLive/)
-    assert.match(station, /data-orb-voice-transport-live/)
+    const hook = readComponent('lib/orb/voice-v2/use-orb-voice-v2.ts')
+    assert.match(hook, /fetchOrbVoiceV2Status/)
+    assert.match(hook, /katherineReady/)
+    assert.match(hook, /setState\('error'\)/)
+    assert.match(hook, /startOrbVoiceV2Capture/)
+    assert.match(station, /data-orb-voice-ui-state=\{voice\.state\}/)
   })
 })
 

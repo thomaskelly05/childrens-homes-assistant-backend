@@ -52,10 +52,9 @@ describe('ORB live mobile correction pass', () => {
 
   it('voice station keeps speech recognition failures calm and actionable', () => {
     const station = read('components/orb-standalone/orb-voice-station.tsx')
-    const hero = read('components/orb-standalone/orb-voice-hero-stage.tsx')
-    assert.match(station, /orbVoiceCalmSpeechNotice/)
-    assert.match(station, /isOrbSpeechRecognitionErrorMessage/)
-    assert.match(hero, /data-orb-voice-speech-notice/)
+    assert.match(station, /ORB_VOICE_V2_TRANSCRIPTION_ERROR|voice\.detailLine/)
+    assert.match(read('lib/orb/voice-v2/use-orb-voice-v2.ts'), /setShowTypeFallback\(true\)/)
+    assert.match(read('components/orb-standalone/orb-voice-station-content.tsx'), /detailLine/)
     const calm = orbVoiceCalmSpeechNotice('Speech recognition could not start. Open Dictate or type instead.')
     assert.ok(calm)
     assert.doesNotMatch(calm!, /could not start/i)

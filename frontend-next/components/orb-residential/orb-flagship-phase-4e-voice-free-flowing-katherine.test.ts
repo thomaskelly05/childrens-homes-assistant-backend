@@ -5,12 +5,7 @@ import { fileURLToPath } from 'node:url'
 import { describe, it } from 'node:test'
 
 import { ORB_BUILD_VISUAL_VERSION, ORB_LAYOUT_CSS_FILES } from '../../lib/orb/orb-visual-build.ts'
-import {
-  END_OF_TURN_DEBOUNCE_MS,
-  ORB_VOICE_FREE_FLOW_DEFAULTS,
-  ORB_VOICE_START_CONVERSATION
-} from '../../lib/orb/voice/orb-voice-free-flowing-conversation.ts'
-import { ORB_VOICE_AUDIO_NOT_STORED } from '../../lib/orb/voice/orb-voice-reflective-copy.ts'
+import { orbVoiceV2PrimaryLabel } from '../../lib/orb/voice-v2/orb-voice-v2-state.ts'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '../..')
 
@@ -19,65 +14,55 @@ function read(relativePath: string) {
 }
 
 describe('ORB Residential Phase 4E Voice free-flowing Katherine', () => {
-  it('build version marker is phase-4h-voice-fresh-low-latency', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-4h-voice-fresh-low-latency')
+  it('build version marker is phase-5a-voice-clean-rebuild', () => {
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5a-voice-clean-rebuild')
     assert.match(read('app/orb/layout.tsx'), /orb-residential-shell\.css/)
     assert.deepEqual(ORB_LAYOUT_CSS_FILES, ['app/orb/orb-residential-shell.css'])
   })
 
-  it('default mode is continuous conversation, not push-to-talk', () => {
-    const hook = read('components/orb-standalone/use-standalone-orb-voice.ts')
-    assert.equal(ORB_VOICE_FREE_FLOW_DEFAULTS.pushToTalk, false)
-    assert.equal(ORB_VOICE_FREE_FLOW_DEFAULTS.continuousConversation, true)
-    assert.match(hook, /autoListenAfterReply: true/)
-    assert.match(hook, /autoSubmitOnPause: true/)
+  it('voice v2 uses continuous conversation without push-to-send', () => {
+    const hook = read('lib/orb/voice-v2/use-orb-voice-v2.ts')
+    assert.match(hook, /resumeListening/)
+    assert.doesNotMatch(read('components/orb-standalone/orb-voice-station.tsx'), /Stop and send/)
   })
 
   it('primary button says Start conversation and listening does not require send', () => {
     const station = read('components/orb-standalone/orb-voice-station.tsx')
-    const launch = read('lib/orb/voice/orb-voice-launch-mode.ts')
-    assert.equal(ORB_VOICE_START_CONVERSATION, 'Start conversation')
-    assert.match(launch, /ORB_VOICE_BUTTON_LISTENING/)
-    assert.match(station, /isOrbVoiceFreeFlowMode/)
-    assert.match(station, /resumeListeningAfterTurn/)
+    assert.equal(orbVoiceV2PrimaryLabel('idle'), 'Start conversation')
+    assert.match(station, /orbVoiceV2PrimaryLabel/)
+    assert.match(station, /data-orb-voice-start-conversation/)
   })
 
   it('end-of-turn debounce auto-submits and blocks empty transcript', () => {
-    const station = read('components/orb-standalone/orb-voice-station.tsx')
-    assert.equal(END_OF_TURN_DEBOUNCE_MS, 1_400)
-    assert.match(station, /scheduleAutoSubmit/)
-    assert.match(station, /commitVoiceTranscriptOrBlock/)
+    const capture = read('lib/orb/voice-v2/orb-voice-v2-capture.ts')
+    assert.match(capture, /SILENCE_MS = 1400/)
+    assert.match(capture, /blob\.size < 256/)
   })
 
-  it('voice uses lightweight respond route instead of deep standalone stream', () => {
-    const transport = read('hooks/use-orb-conversation.ts')
-    const client = read('lib/orb/voice/orb-voice-respond-client.ts')
-    const service = read('../services/orb_voice_respond_service.py')
-    const route = read('../routers/orb_voice_residential_routes.py')
-    assert.match(transport, /requestOrbVoiceRespond/)
-    assert.match(client, /\/orb\/voice\/respond/)
-    assert.match(service, /prompt_tier=voice_fast/)
-    assert.match(service, /embeddings=0/)
+  it('voice uses lightweight v2 respond route instead of deep standalone stream', () => {
+    const client = read('lib/orb/voice-v2/orb-voice-v2-client.ts')
+    const service = read('../services/orb_voice_v2_service.py')
+    const route = read('../routers/orb_voice_v2_routes.py')
+    assert.match(client, /\/orb\/voice\/v2\/respond/)
+    assert.match(service, /voice_fast/)
     assert.match(route, /\/respond/)
   })
 
   it('TTS prefers ElevenLabs Katherine with provider metadata', () => {
     const tts = read('../services/orb_voice_tts_service.py')
-    const ttsRoute = read('../routers/orb_voice_tts_routes.py')
-    const client = read('lib/orb/voice/orb-voice-client.ts')
-    assert.match(tts, /_resolve_primary_tts_provider/)
+    const route = read('../routers/orb_voice_v2_routes.py')
+    const client = read('lib/orb/voice-v2/orb-voice-v2-client.ts')
     assert.match(tts, /elevenlabs/)
-    assert.match(tts, /voice_name/)
-    assert.match(ttsRoute, /X-ORB-Voice-Name/)
+    assert.match(route, /X-ORB-Voice-Name/)
     assert.match(client, /X-ORB-TTS-Provider/)
   })
 
   it('companion avoids duplicate voice TTS when station owns speech', () => {
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
-    const station = read('components/orb-standalone/orb-voice-station.tsx')
+    const hook = read('lib/orb/voice-v2/use-orb-voice-v2.ts')
     assert.match(companion, /!voiceOriginatedSend/)
-    assert.match(station, /lastAutoSpokenKeyRef/)
-    assert.match(station, /speakAloud/)
+    assert.match(hook, /spokenTurnKeysRef/)
+    assert.match(hook, /requestOrbVoiceV2Speak/)
   })
 
   it('CSP allows blob audio playback', () => {
@@ -85,16 +70,16 @@ describe('ORB Residential Phase 4E Voice free-flowing Katherine', () => {
     assert.match(middleware, /media-src 'self' blob: data: https:/)
   })
 
-  it('session status fetch is cached and fails quietly', () => {
-    const availability = read('lib/orb/voice/orb-realtime-availability.ts')
-    assert.match(availability, /VOICE_STATUS_CACHE_MS/)
-    assert.match(availability, /cachedVoiceStatus/)
+  it('session status fetch fails quietly in v2 client', () => {
+    const client = read('lib/orb/voice-v2/orb-voice-v2-client.ts')
+    assert.match(client, /fetchOrbVoiceV2Status/)
+    assert.match(client, /catch \{/)
   })
 
   it('audio-not-stored copy and single shell remain true', () => {
     const station = read('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(station, /ORB_VOICE_AUDIO_NOT_STORED/)
-    assert.match(read('app/orb/orb-residential-shell.css'), /phase-4h-voice-fresh-low-latency/)
+    assert.match(station, /ORB_VOICE_V2_SAFETY_FOOTER/)
+    assert.match(read('app/orb/orb-residential-shell.css'), /phase-5a-voice-clean-rebuild/)
     assert.doesNotMatch(station, /compliance guarantee|Ofsted approved/i)
   })
 })

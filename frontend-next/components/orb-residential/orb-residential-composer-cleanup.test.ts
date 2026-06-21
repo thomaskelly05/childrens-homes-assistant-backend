@@ -51,7 +51,8 @@ describe('ORB Residential composer and shell cleanup', () => {
     assert.match(actions, /data-orb-voice-primary-action=\{isStartVoice \? 'start'/)
     assert.match(actions, /onClick=\{handlePrimary\}/)
     const station = readComponent('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(station, /OrbVoiceActions/)
+    assert.match(station, /handlePrimary/)
+    assert.match(station, /data-orb-voice-start-conversation/)
   })
 
   it('premium tokens expose residential light and dark theme selectors', () => {

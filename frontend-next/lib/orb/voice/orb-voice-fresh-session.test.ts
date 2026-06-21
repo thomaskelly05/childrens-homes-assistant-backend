@@ -11,29 +11,27 @@ function read(relativePath: string) {
 }
 
 describe('ORB Voice fresh session lifecycle', () => {
-  it('exports resetOrbVoiceLiveSession used by the voice station', () => {
-    assert.match(read('components/orb-standalone/orb-voice-station.tsx'), /resetOrbVoiceLiveSession/)
-    assert.match(read('lib/orb/voice/orb-voice-fresh-session.ts'), /export function resetOrbVoiceLiveSession/)
+  it('voice v2 hook exports resetLiveSession used by the voice station', () => {
+    assert.match(read('components/orb-standalone/orb-voice-station.tsx'), /resetLiveSession/)
+    assert.match(read('lib/orb/voice-v2/use-orb-voice-v2.ts'), /resetLiveSession/)
   })
 
   it('resets on Voice open and close transitions', () => {
-    const station = read('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(station, /prevVoiceOpenRef/)
-    assert.match(station, /open && !prevVoiceOpenRef\.current/)
-    assert.match(station, /!open && prevVoiceOpenRef\.current/)
+    const hook = read('lib/orb/voice-v2/use-orb-voice-v2.ts')
+    assert.match(hook, /if \(!open\)/)
+    assert.match(hook, /resetLiveSession\(\)/)
+    assert.match(hook, /useEffect\([\s\S]*open/)
   })
 
-  it('companion clears voice session chat when leaving Voice', () => {
+  it('companion stops composer audio when leaving Voice', () => {
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
-    assert.match(companion, /setVoiceSessionChatId\(null\)/)
     assert.match(companion, /activePanel === 'orb_voice'/)
-    assert.match(companion, /createStandaloneChat[\s\S]*temporary: true[\s\S]*ORB Voice/)
+    assert.match(companion, /voice\.cancelSpeaking/)
   })
 
-  it('fresh session module clears reply and TTS guard refs', () => {
-    const source = read('lib/orb/voice/orb-voice-fresh-session.ts')
-    assert.match(source, /lastSyncedReplyKeyRef/)
-    assert.match(source, /lastAutoSpokenKeyRef/)
-    assert.match(source, /spokenTurnGuardRef/)
+  it('v2 hook clears spoken turn guard refs on reset', () => {
+    const source = read('lib/orb/voice-v2/use-orb-voice-v2.ts')
+    assert.match(source, /spokenTurnKeysRef/)
+    assert.match(source, /spokenTurnKeysRef\.current\.clear/)
   })
 })

@@ -86,20 +86,18 @@ describe('ORB Voice runtime wiring (Phase 4G)', () => {
     assert.equal(guard.shouldSpeak('orb-1', 'adult'), false)
   })
 
-  it('turn trace module exists on station and hook', () => {
-    const station = read('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(station, /beginOrbVoiceTurnTrace/)
-    assert.match(station, /patchOrbVoiceTurnTrace/)
+  it('turn trace module exists on v2 hook', () => {
+    const hook = read('lib/orb/voice-v2/use-orb-voice-v2.ts')
+    assert.match(hook, /requestOrbVoiceV2Respond/)
+    assert.match(hook, /requestOrbVoiceV2Speak/)
     assert.match(read('lib/orb/voice/orb-voice-turn-trace.ts'), /voice_turn_trace/)
   })
 
-  it('station waits for complete reply before TTS and uses orb_turn source', () => {
-    const station = read('components/orb-standalone/orb-voice-station.tsx')
-    const hook = read('components/orb-standalone/use-standalone-orb-voice.ts')
-    assert.match(station, /resolveOrbVoiceTurnTtsText/)
-    assert.match(station, /!pending/)
-    assert.match(station, /source: 'orb_turn'/)
-    assert.match(hook, /shouldInvokeOrbVoiceTts/)
+  it('v2 hook commits text before TTS on each ORB turn', () => {
+    const hook = read('lib/orb/voice-v2/use-orb-voice-v2.ts')
+    assert.match(hook, /capOrbVoiceV2SpokenText/)
+    assert.match(hook, /setTurns[\s\S]*requestOrbVoiceV2Speak/)
+    assert.match(hook, /spokenTurnKeysRef/)
   })
 
   it('backend prefers ElevenLabs and logs unavailable reasons', () => {

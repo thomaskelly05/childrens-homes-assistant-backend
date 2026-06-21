@@ -61,18 +61,20 @@ function createMockRecognition(behaviour: {
 }
 
 describe('ORB mic state wiring', () => {
-  it('voice session live requires realtime session connected', () => {
+  it('voice session live requires capture loop in v2 hook', () => {
     const station = readComponent('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(station, /realtimeSessionConnected/)
-    assert.match(station, /voiceTransportLive/)
-    assert.match(station, /voiceSessionLive[\s\S]*voiceTransportLive/)
-    assert.match(station, /data-orb-voice-session-connected/)
+    const hook = readComponent('lib/orb/voice-v2/use-orb-voice-v2.ts')
+    assert.match(hook, /startOrbVoiceV2Capture/)
+    assert.match(hook, /captureRef/)
+    assert.match(station, /data-orb-voice-ui-state=\{voice\.state\}/)
+    assert.match(station, /conversationLive/)
   })
 
-  it('prevents fake active voice without realtime connection', () => {
-    const station = readComponent('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(station, /voice_fake_active_prevented/)
-    assert.match(station, /setVoiceStartStage\('failed'\)/)
+  it('prevents fake active voice without capture session', () => {
+    const hook = readComponent('lib/orb/voice-v2/use-orb-voice-v2.ts')
+    assert.match(hook, /processingRef/)
+    assert.match(hook, /setState\('error'\)/)
+    assert.match(hook, /ORB_VOICE_V2_TRANSCRIPTION_ERROR/)
   })
 
   it('SpeechRecognition confirmed start fails if onend occurs before minimumHoldMs', async () => {
@@ -127,19 +129,19 @@ describe('ORB mic state wiring', () => {
     assert.match(dictate, /data-orb-dictate-recording-state/)
   })
 
-  it('Voice does not show Speak/End during start stage', () => {
+  it('Voice does not show secondary controls until conversation is live', () => {
     const station = readComponent('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(station, /voiceSessionLive \?/)
-    assert.match(station, /uiState === 'preparing' \|\| uiState === 'reconnecting'/)
-    assert.match(station, /handleCancelStart/)
-    const startBlock = station.match(/uiState === 'preparing'[\s\S]*? : \([\s\S]*?\) : \([\s\S]*?voiceSessionLive/)?.[0] ?? ''
+    assert.match(station, /conversationLive \|\| voice\.state === 'paused'/)
+    assert.match(station, /voice\.state === 'requesting_microphone'/)
+    assert.match(station, /data-orb-voice-secondary-controls/)
+    const startBlock = station.match(/workspaceMode === 'after_call'[\s\S]*?data-orb-voice-start-conversation/)?.[0] ?? ''
     assert.doesNotMatch(startBlock, /\bSpeak\b/)
   })
 
-  it('Voice shows Cancel during start stage', () => {
+  it('Voice shows pause control during live conversation', () => {
     const station = readComponent('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(station, /handleCancelStart/)
-    assert.match(station, /Cancel/)
+    assert.match(station, /voice\.pauseConversation/)
+    assert.match(station, /data-orb-voice-pause/)
   })
 
   it('Dictate shows Stop only once capture has started', () => {
@@ -151,10 +153,10 @@ describe('ORB mic state wiring', () => {
     assert.doesNotMatch(mobile, /captureStarting \? 'Starting…'/)
   })
 
-  it('Voice tracks voiceStartStage through handleStart', () => {
-    const station = readComponent('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(station, /setVoiceStartStage\('starting'\)/)
-    assert.match(station, /setVoiceStartStage\('active'\)/)
-    assert.match(station, /setVoiceStartStage\('failed'\)/)
+  it('Voice tracks v2 state through startConversation', () => {
+    const hook = readComponent('lib/orb/voice-v2/use-orb-voice-v2.ts')
+    assert.match(hook, /setState\('requesting_microphone'\)/)
+    assert.match(hook, /setState\('listening'\)/)
+    assert.match(hook, /setState\('error'\)/)
   })
 })

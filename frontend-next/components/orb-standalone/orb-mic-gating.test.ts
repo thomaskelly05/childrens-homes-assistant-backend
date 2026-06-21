@@ -32,9 +32,8 @@ describe('ORB mic gating and routing', () => {
     )
     assert.equal(ui.state, 'subscription_inactive')
     const station = readComponent('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(station, /primaryDisabled|liveVoiceAllowed/)
     assert.match(station, /primaryDisabled/)
-    assert.match(station, /data-orb-voice-start-stage/)
+    assert.match(station, /data-orb-voice-ui-state=\{voice\.state\}/)
   })
 
   it('inactive subscription keeps Open Dictate enabled', () => {
@@ -81,7 +80,7 @@ describe('ORB mic gating and routing', () => {
     assert.equal(canUseLiveVoice({ subscriptionActive: false }), false)
     const station = readComponent('components/orb-standalone/orb-voice-station.tsx')
     assert.match(station, /primaryDisabled/)
-    assert.match(station, /liveVoiceAllowed/)
+    assert.match(station, /voice\.state === 'requesting_microphone'/)
   })
 
   it('dictate Record note button fires recording handler', () => {
@@ -93,24 +92,25 @@ describe('ORB mic gating and routing', () => {
     assert.match(dictate, /orbMicDevLog\('dictate speech start clicked'/)
   })
 
-  it('voice requires realtime before browser speech session, not MediaRecorder', () => {
-    const hook = readComponent('components/orb-standalone/use-standalone-orb-voice.ts')
+  it('voice uses v2 capture loop in hook, not legacy MediaRecorder in station', () => {
+    const hook = readComponent('lib/orb/voice-v2/use-orb-voice-v2.ts')
+    const legacyHook = readComponent('components/orb-standalone/use-standalone-orb-voice.ts')
     const station = readComponent('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(hook, /beginSpeechRecognitionCapture/)
-    assert.match(hook, /beginDictateSpeechCapture/)
-    assert.match(station, /fetchOrbVoiceRealtimeStatus|isRealtimeVoiceProvider/)
-    assert.match(station, /realtimeVoiceReady/)
+    assert.match(legacyHook, /beginSpeechRecognitionCapture/)
+    assert.match(legacyHook, /beginDictateSpeechCapture/)
+    assert.match(hook, /fetchOrbVoiceV2Status/)
+    assert.match(hook, /startOrbVoiceV2Capture/)
     assert.doesNotMatch(station, /beginUserVoiceCapture\(\)/)
-    assert.match(station, /data-orb-voice-capture-active/)
-    assert.match(station, /voiceSessionLive/)
+    assert.match(station, /data-orb-voice-ui-state=\{voice\.state\}/)
+    assert.match(station, /conversationLive/)
   })
 
-  it('voice routes to dictate when realtime voice unavailable', () => {
+  it('voice routes to typed fallback when capture fails', () => {
     const station = readComponent('components/orb-standalone/orb-voice-station.tsx')
-    const actions = readComponent('components/orb-standalone/orb-voice-actions.tsx')
-    assert.match(actions, /Turn speech into a record/)
-    assert.match(actions, /data-orb-voice-use-dictate/)
-    assert.match(station, /resolveOrbVoiceUiState|unsupported/)
+    const hook = readComponent('lib/orb/voice-v2/use-orb-voice-v2.ts')
+    assert.match(station, /data-orb-voice-type-fallback/)
+    assert.match(hook, /setShowTypeFallback\(true\)/)
+    assert.match(hook, /setState\('error'\)/)
   })
 
   it('composer mic supports forced mic query routing', () => {

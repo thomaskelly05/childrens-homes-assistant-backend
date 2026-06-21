@@ -20,13 +20,14 @@ describe('ORB Voice realtime provider pass', () => {
     assert.doesNotMatch(client, /getUserMedia\(\{ audio: true \}\)[\s\S]*constructor/)
   })
 
-  it('voice station probes realtime status before live conversation', () => {
+  it('voice station probes v2 status before live conversation', () => {
     const station = readComponent('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(station, /fetchOrbVoiceRealtimeStatus/)
-    assert.match(station, /beginOrbRealtimeVoiceConversation/)
-    assert.match(station, /data-orb-voice-start-stage/)
-    assert.match(station, /testMicrophoneLevel/)
-    assert.match(station, /resolveOrbVoiceUiState|unsupported/)
+    const hook = readComponent('lib/orb/voice-v2/use-orb-voice-v2.ts')
+    assert.match(hook, /fetchOrbVoiceV2Status/)
+    assert.match(hook, /startConversation/)
+    assert.match(station, /data-orb-voice-ui-state=\{voice\.state\}/)
+    assert.match(hook, /startOrbVoiceV2Capture/)
+    assert.match(hook, /voice\.state === 'error'|setState\('error'\)/)
     assert.doesNotMatch(station, /new OrbRealtimeVoiceClient/)
     assert.doesNotMatch(station, /beginSpeechRecognitionCapture\(/)
   })
@@ -67,17 +68,16 @@ describe('ORB Voice realtime provider pass', () => {
     assert.match(save, /source_text/)
   })
 
-  it('voice station exposes save to ORB when transcript exists', () => {
+  it('voice station exposes save reflection when summary exists', () => {
     const station = readComponent('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(station, /OrbVoiceTranscriptActions/)
-    const actions = readComponent('components/orb-standalone/orb-voice-transcript-actions.tsx')
-    assert.match(actions, /data-orb-voice-save-to-orb/)
+    assert.match(station, /data-orb-voice-save-reflection/)
+    assert.match(station, /handleSaveReflection/)
   })
 
   it('developer details available in developer mode only', () => {
-    const station = readComponent('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(station, /isOrbDeveloperMode/)
-    assert.match(station, /developerMode \?/)
+    const companion = readComponent('components/orb-standalone/orb-care-companion.tsx')
+    assert.match(companion, /isOrbDeveloperMode/)
+    assert.match(companion, /isOrbDeveloperMode\(\)/)
   })
 
   it('shared event contract names', () => {
@@ -87,8 +87,10 @@ describe('ORB Voice realtime provider pass', () => {
 
   it('voice station does not show active orb without capture', () => {
     const station = readComponent('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(station, /voiceSessionLive/)
-    assert.match(station, /data-orb-voice-capture-active/)
+    const hook = readComponent('lib/orb/voice-v2/use-orb-voice-v2.ts')
+    assert.match(station, /conversationLive/)
+    assert.match(hook, /setState\('listening'\)/)
+    assert.match(hook, /setState\('speech_detected'\)/)
   })
 
   it('dictate uses recordingUiState before showing recording', () => {

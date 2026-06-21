@@ -33,8 +33,8 @@ function read(relativePath: string) {
 }
 
 describe('ORB Residential Phase 4B Voice human conversation', () => {
-  it('build version marker is phase-4h-voice-fresh-low-latency', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-4h-voice-fresh-low-latency')
+  it('build version marker is phase-5a-voice-clean-rebuild', () => {
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5a-voice-clean-rebuild')
     const layout = read('app/orb/layout.tsx')
     assert.match(layout, /orb-residential-shell\.css/)
     assert.deepEqual(ORB_LAYOUT_CSS_FILES, ['app/orb/orb-residential-shell.css'])
@@ -42,15 +42,12 @@ describe('ORB Residential Phase 4B Voice human conversation', () => {
 
   it('single primary voice station and conversation path', () => {
     const station = read('components/orb-standalone/orb-voice-station.tsx')
-    const engine = read('lib/orb/voice/orb-voice-conversation-engine.ts')
-    const human = read('lib/orb/voice/orb-voice-human-conversation.ts')
+    const hook = read('lib/orb/voice-v2/use-orb-voice-v2.ts')
     assert.match(station, /orb-voice-station/)
-    assert.match(station, /buildOrbVoiceRespondHistory/)
-    assert.match(station, /voiceRespond/)
-    assert.match(station, /OrbVoiceConversationPanel/)
+    assert.match(station, /useOrbVoiceV2/)
+    assert.match(hook, /requestOrbVoiceV2Respond/)
+    assert.match(station, /data-orb-voice-conversation-panel/)
     assert.doesNotMatch(station, /orb-voice-station-duplicate/i)
-    assert.match(engine, /evaluateOrbVoiceConversation/)
-    assert.match(human, /buildVoiceSessionMemory/)
   })
 
   it('Katherine is primary ORB voice with server TTS mapping', () => {
@@ -87,40 +84,37 @@ describe('ORB Residential Phase 4B Voice human conversation', () => {
   })
 
   it('conversation transcript uses Adult and ORB labels', () => {
-    const panel = read('components/orb-residential/OrbVoiceConversationPanel.tsx')
-    assert.match(panel, /Adult/)
-    assert.match(panel, /ORB/)
-    assert.equal(ORB_VOICE_CONVERSATION_SUBLABEL, 'Reflection notes — not yet a record')
-    assert.match(panel, /ORB_VOICE_CONVERSATION_SUBLABEL/)
+    const station = read('components/orb-standalone/orb-voice-station.tsx')
+    assert.match(station, /Adult/)
+    assert.match(station, /ORB/)
+    assert.match(station, /ORB_VOICE_V2_TRANSCRIPT_NOTE/)
   })
 
-  it('auto speak and slow thinking are wired in voice station', () => {
-    const station = read('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(station, /speakAloud/)
-    assert.match(station, /ORB_VOICE_SLOW_THINKING_MESSAGE/)
-    assert.equal(ORB_VOICE_SLOW_THINKING_MESSAGE, 'ORB is still thinking. You can pause or continue typing instead.')
+  it('auto speak and slow thinking are wired in voice v2 hook', () => {
+    const hook = read('lib/orb/voice-v2/use-orb-voice-v2.ts')
+    assert.match(hook, /requestOrbVoiceV2Speak/)
+    assert.match(hook, /setState\('thinking'\)/)
+    assert.match(hook, /voicePreparing/)
   })
 
   it('pause, reset and stop ORB controls exist', () => {
     const station = read('components/orb-standalone/orb-voice-station.tsx')
-    const live = read('components/orb-standalone/orb-voice-live-panel.tsx')
-    assert.match(station, /handlePauseConversation/)
-    assert.match(station, /handleResetConversation/)
-    assert.match(station, /handleStopOrbSpeaking/)
-    assert.match(live, /ORB_VOICE_PAUSE_CONVERSATION/)
-    assert.match(live, /ORB_VOICE_RESET_CONVERSATION/)
-    assert.equal(ORB_VOICE_PAUSE_CONVERSATION, 'Pause conversation')
-    assert.equal(ORB_VOICE_RESET_CONVERSATION, 'Reset conversation')
-    assert.equal(ORB_VOICE_STOP_ORB, 'Stop ORB')
+    const hook = read('lib/orb/voice-v2/use-orb-voice-v2.ts')
+    assert.match(station, /pauseConversation/)
+    assert.match(station, /resetLiveSession/)
+    assert.match(station, /stopOrbAudio/)
+    assert.match(hook, /pauseConversation/)
+    assert.match(hook, /resetLiveSession/)
+    assert.match(hook, /stopOrbAudio/)
   })
 
   it('summary and handoff preserve voice metadata', () => {
-    const handoff = read('lib/orb/voice/orb-voice-handoff.ts')
+    const handoff = read('lib/orb/voice-v2/orb-voice-v2-summary.ts')
     const station = read('components/orb-standalone/orb-voice-station.tsx')
     assert.match(handoff, /selectedVoice/)
     assert.match(handoff, /audioStored: false/)
     assert.match(handoff, /conversationTranscript/)
-    assert.match(station, /buildOrbVoiceHandoffWithTts/)
+    assert.match(station, /handoffPayload/)
     assert.equal(ORB_VOICE_ADULT_REVIEW_LABEL, 'Generated for adult review')
   })
 
@@ -143,7 +137,7 @@ describe('ORB Residential Phase 4B Voice human conversation', () => {
   it('single shell CSS import and no compliance guarantee language', () => {
     const shell = read('app/orb/orb-residential-shell.css')
     const station = read('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(shell, /phase-4h-voice-fresh-low-latency/)
+    assert.match(shell, /phase-5a-voice-clean-rebuild/)
     assert.doesNotMatch(station, /Ofsted approved|compliance guarantee/i)
     assert.doesNotMatch(station, /ORB makes safeguarding decisions/i)
   })

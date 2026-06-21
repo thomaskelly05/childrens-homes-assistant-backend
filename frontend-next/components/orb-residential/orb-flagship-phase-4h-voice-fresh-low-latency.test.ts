@@ -5,11 +5,7 @@ import { fileURLToPath } from 'node:url'
 import { describe, it } from 'node:test'
 
 import { ORB_BUILD_VISUAL_VERSION, ORB_LAYOUT_CSS_FILES } from '../../lib/orb/orb-visual-build.ts'
-import { ORB_VOICE_START_CONVERSATION } from '../../lib/orb/voice/orb-voice-free-flowing-conversation.ts'
-import {
-  ORB_VOICE_LIVE_SPOKEN_CAP,
-  resolveOrbVoiceSpokenText
-} from '../../lib/orb/voice/orb-voice-low-latency.ts'
+import { orbVoiceV2PrimaryLabel } from '../../lib/orb/voice-v2/orb-voice-v2-state.ts'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '../..')
 
@@ -18,17 +14,16 @@ function read(relativePath: string) {
 }
 
 describe('ORB Residential Phase 4H Voice fresh sessions and low latency', () => {
-  it('build version marker is phase-4h-voice-fresh-low-latency', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-4h-voice-fresh-low-latency')
+  it('build version marker is phase-5a-voice-clean-rebuild', () => {
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5a-voice-clean-rebuild')
     assert.match(read('app/orb/layout.tsx'), /orb-residential-shell\.css/)
     assert.deepEqual(ORB_LAYOUT_CSS_FILES, ['app/orb/orb-residential-shell.css'])
-    assert.match(read('app/orb/orb-residential-shell.css'), /phase-4h-voice-fresh-low-latency/)
+    assert.match(read('app/orb/orb-residential-shell.css'), /phase-5a-voice-clean-rebuild/)
   })
 
   it('/orb opens Home by default without persisting station param', () => {
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
     assert.match(companion, /shouldOpenOrbResidentialLandingFresh/)
-    assert.match(companion, /createStandaloneChat[\s\S]*temporary: true[\s\S]*title: 'ORB'/)
     assert.match(companion, /stripOrbResidentialStationParam/)
     assert.match(companion, /setActivePanel\(null\)/)
   })
@@ -42,45 +37,38 @@ describe('ORB Residential Phase 4H Voice fresh sessions and low latency', () => 
 
   it('Voice mount resets live session and blocks startup TTS', () => {
     const station = read('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(station, /resetOrbVoiceLiveSession/)
-    assert.match(station, /prevVoiceOpenRef/)
-    const companion = read('components/orb-standalone/orb-care-companion.tsx')
-    assert.match(companion, /voiceSessionChatId/)
-    assert.match(companion, /if \(lastUserIdx < 0\) return null/)
+    const hook = read('lib/orb/voice-v2/use-orb-voice-v2.ts')
+    assert.match(station, /useOrbVoiceV2/)
+    assert.match(hook, /resetLiveSession/)
+    assert.match(hook, /if \(!open\)/)
+    assert.doesNotMatch(hook, /audio\.play\(\)[\s\S]*open/)
   })
 
   it('Katherine readiness and forced OpenAI fallback copy are honest', () => {
-    const panel = read('components/orb-standalone/orb-voice-settings-panel.tsx')
-    assert.match(panel, /katherineReady/)
-    assert.match(panel, /Katherine unavailable — OpenAI fallback is active/)
-    const availability = read('lib/orb/voice/orb-realtime-availability.ts')
-    assert.match(availability, /katherineReady/)
-    assert.match(availability, /ttsProviderEffective/)
-    assert.match(availability, /fallbackReason/)
+    const hook = read('lib/orb/voice-v2/use-orb-voice-v2.ts')
+    assert.match(hook, /fetchOrbVoiceV2Status/)
+    assert.match(hook, /ORB_VOICE_V2_KATHERINE_FALLBACK/)
+    const service = read('../services/orb_voice_v2_service.py')
+    assert.match(service, /voice_v2_status_payload/)
   })
 
   it('text-first TTS: visible reply before audio and spoken cap', () => {
-    const voiceHook = read('components/orb-standalone/use-standalone-orb-voice.ts')
-    assert.match(voiceHook, /voicePreparing/)
-    assert.match(voiceHook, /ORB_VOICE_LIVE_SPOKEN_CAP/)
-    assert.match(voiceHook, /context: options\?\.source === 'orb_turn' \? 'live_voice'/)
+    const hook = read('lib/orb/voice-v2/use-orb-voice-v2.ts')
+    assert.match(hook, /voicePreparing/)
+    assert.match(hook, /capOrbVoiceV2SpokenText/)
+    assert.match(hook, /setTurns[\s\S]*requestOrbVoiceV2Speak/)
     const station = read('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(station, /ORB_VOICE_TTS_PREPARING/)
-    assert.match(station, /ORB_VOICE_CONTINUE_WITHOUT_VOICE/)
-    const long = 'A'.repeat(400)
-    const spoken = resolveOrbVoiceSpokenText({ visibleReply: long, promptTier: 'voice_fast' })
-    assert.ok(spoken.spokenText.length <= ORB_VOICE_LIVE_SPOKEN_CAP)
-    assert.equal(spoken.spokenCapApplied, true)
+    assert.match(station, /ORB_VOICE_V2_CONTINUE_WITHOUT_VOICE/)
   })
 
-  it('resetOrbVoiceLiveSession is wired through the voice station', () => {
+  it('resetLiveSession is wired through the voice v2 hook and station', () => {
     const station = read('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(station, /resetOrbVoiceLiveSession/)
-    assert.match(read('lib/orb/voice/orb-voice-fresh-session.ts'), /export function resetOrbVoiceLiveSession/)
+    assert.match(station, /resetLiveSession/)
+    assert.match(read('lib/orb/voice-v2/use-orb-voice-v2.ts'), /export function useOrbVoiceV2/)
   })
 
   it('single shell and start conversation label remain', () => {
-    assert.equal(ORB_VOICE_START_CONVERSATION, 'Start conversation')
+    assert.equal(orbVoiceV2PrimaryLabel('idle'), 'Start conversation')
     assert.match(read('components/orb-standalone/orb-voice-station.tsx'), /OrbVoiceStationContent/)
     assert.doesNotMatch(read('components/orb-standalone/orb-care-companion.tsx'), /compliance guarantee/i)
   })

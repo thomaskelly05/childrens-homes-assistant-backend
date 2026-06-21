@@ -249,7 +249,6 @@ import {
   shouldPauseVoiceAutoSend
 } from '@/lib/orb/indicare-intelligence-core'
 import { resolveOrbVoiceSpeechDecision } from '@/lib/orb/voice/orb-voice-speech-policy'
-import { isOrbVoiceAssistantTurnReady } from '@/lib/orb/voice/orb-voice-runtime-wiring'
 import {
   shouldOpenOrbResidentialLandingFresh,
   stripOrbResidentialStationParam
@@ -770,7 +769,6 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [activePanel, setActivePanel] = useState<OrbStandalonePanel>(null)
-  const [voiceSessionChatId, setVoiceSessionChatId] = useState<string | null>(null)
   const [dictateImportTranscript, setDictateImportTranscript] = useState<string | undefined>()
   const [dictateImportNoteType, setDictateImportNoteType] = useState<OrbDictateNoteType | undefined>()
   const [dictateImportStudio, setDictateImportStudio] = useState(false)
@@ -955,39 +953,6 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
     return workspace.chats.find((c) => c.id === workspace.activeChatId) ?? null
   }, [workspace.activeChatId, workspace.chats])
 
-  const voiceStationAssistant = useMemo(() => {
-    if (activePanel !== 'orb_voice' || !voiceSessionChatId || pending) return null
-    const chat = workspace.chats.find((entry) => entry.id === voiceSessionChatId) ?? null
-    if (!chat) return null
-    const messages = chat.messages
-    const lastUserIdx = messages.reduce((acc, message, index) => (message.role === 'user' ? index : acc), -1)
-    if (lastUserIdx < 0) return null
-    const afterUser = messages.slice(lastUserIdx + 1)
-    const lastAssistant = [...afterUser]
-      .reverse()
-      .find(
-        (entry) =>
-          entry.role === 'assistant' &&
-          entry.status !== 'thinking' &&
-          entry.status !== 'error' &&
-          entry.status !== 'streaming' &&
-          entry.content.trim().length >= 8 &&
-          isOrbVoiceAssistantTurnReady({
-            status: entry.status,
-            content: entry.content,
-            pending: false
-          })
-      )
-    if (!lastAssistant) return null
-    const lastUser = messages[lastUserIdx]
-    return {
-      key: lastAssistant.id,
-      text: lastAssistant.content,
-      userHint: lastUser?.content,
-      contextUsed: lastAssistant.contextUsed
-    }
-  }, [activePanel, voiceSessionChatId, workspace.chats, pending])
-
   const messages = activeChat?.messages ?? []
   const visibleMessages = useMemo(() => dedupeOrbMessages(messages), [messages])
   const mode =
@@ -1053,18 +1018,8 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
     voice.cancelSpeaking()
     voice.cancelListening()
     voice.clearVoicePreparing?.()
-    const chat = createStandaloneChat(workspace.activeProjectId, 'Ask ORB', {
-      temporary: true,
-      title: 'ORB Voice'
-    })
-    setVoiceSessionChatId(chat.id)
-    setWorkspace((current) => ({
-      ...current,
-      activeChatId: chat.id,
-      chats: [chat, ...current.chats]
-    }))
     openPanel('orb_voice')
-  }, [openPanel, voice, workspace.activeProjectId])
+  }, [openPanel, voice])
   const openOrbDictatePanel = useCallback(
     (opts?: {
       transcript?: string
@@ -2605,7 +2560,6 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
 
   useEffect(() => {
     if (activePanel === 'orb_voice') return
-    setVoiceSessionChatId(null)
     voice.cancelSpeaking()
     voice.cancelListening()
     voice.clearVoicePreparing?.()
@@ -3707,24 +3661,9 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
       <OrbVoiceStation
         open={activePanel === 'orb_voice'}
         onClose={closePanel}
-        voice={voice}
-        pending={pending}
-        subscriptionActive={account.hasConfirmedAccess}
         isSignedIn={account.hasBackendSession}
-        isAdminUser={account.adminBypass || normaliseRole(account.role ?? '') === 'admin'}
-        assistantReply={voiceStationAssistant?.text ?? null}
-        assistantReplyKey={voiceStationAssistant?.key ?? null}
-        assistantReplyUserHint={voiceStationAssistant?.userHint ?? null}
-        assistantReplyContext={voiceStationAssistant?.contextUsed ?? null}
-        onSendToOrb={(text, opts) =>
-          void sendMessage(text, { source: 'voice', ...(opts || {}) })
-        }
         onSignIn={() => {
           window.location.href = account.signInUrl
-        }}
-        onTypeInstead={() => {
-          closePanel()
-          inputRef.current?.focus()
         }}
         onOpenDictate={(transcript, noteType, opts) =>
           openOrbDictatePanel({

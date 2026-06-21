@@ -50,15 +50,10 @@ test('voice station requires explicit start', () => {
     new URL('../orb-standalone/orb-voice-station.tsx', import.meta.url),
     'utf8'
   )
-  assert.match(voice, /orb-voice-readiness|orbVoiceReadinessPresentation/)
-  assert.match(voice, /data-orb-voice-start-stage/)
-  const voiceActions = readFileSync(
-    new URL('../orb-standalone/orb-voice-actions.tsx', import.meta.url),
-    'utf8'
-  )
-  assert.match(voice, /OrbVoiceActions/)
-  assert.match(voiceActions, /data-orb-voice-primary-action/)
-  const uiState = readFileSync(new URL('../../lib/orb/voice/orb-voice-ui-state.ts', import.meta.url), 'utf8')
-  assert.match(uiState, /ORB_VOICE_BUTTON_START/)
-  assert.match(voice, /onTestMicrophone|Diagnostics/)
+  assert.match(voice, /useOrbVoiceV2/)
+  assert.match(voice, /data-orb-voice-ui-state=\{voice\.state\}/)
+  assert.match(voice, /data-orb-voice-primary/)
+  assert.match(voice, /data-orb-voice-start-conversation/)
+  assert.match(readFileSync(new URL('../../lib/orb/voice-v2/orb-voice-v2-state.ts', import.meta.url), 'utf8'), /Start conversation/)
+  assert.match(voice, /onOpenVoiceSettings/)
 })

@@ -78,7 +78,7 @@ describe('ORB Residential Phase 2B repair pass', () => {
 
   it('voice mode selector visible on all viewports', () => {
     const voice = read('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(voice, /OrbVoiceModeSelector/)
+    assert.match(voice, /data-orb-voice-v2-mode-select|ORB_VOICE_V2_MODES/)
     assert.doesNotMatch(voice, /!isMobileViewport \? \([\s\S]*OrbVoiceModeSelector/s)
   })
 

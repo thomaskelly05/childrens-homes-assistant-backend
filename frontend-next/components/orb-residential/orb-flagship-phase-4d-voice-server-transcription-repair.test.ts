@@ -23,8 +23,8 @@ function read(relativePath: string) {
 }
 
 describe('ORB Residential Phase 4D Voice server transcription repair', () => {
-  it('build version marker is phase-4h-voice-fresh-low-latency', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-4h-voice-fresh-low-latency')
+  it('build version marker is phase-5a-voice-clean-rebuild', () => {
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5a-voice-clean-rebuild')
     const layout = read('app/orb/layout.tsx')
     assert.match(layout, /orb-residential-shell\.css/)
     assert.deepEqual(ORB_LAYOUT_CSS_FILES, ['app/orb/orb-residential-shell.css'])
@@ -58,24 +58,19 @@ describe('ORB Residential Phase 4D Voice server transcription repair', () => {
     assert.match(route, /voice_transcription_unavailable/)
   })
 
-  it('successful transcription commits adult turn and brain path', () => {
-    const station = read('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(station, /appendUserTurn/)
-    assert.match(station, /sendToOrbWithVoiceContext/)
-    assert.match(station, /speakAloud/)
+  it('successful transcription commits adult turn through v2 hook', () => {
+    const hook = read('lib/orb/voice-v2/use-orb-voice-v2.ts')
+    assert.match(hook, /commitAdultTurn/)
+    assert.match(hook, /createOrbVoiceV2Turn\('adult'/)
+    assert.match(hook, /requestOrbVoiceV2Respond/)
   })
 
-  it('backend 503 shows transcription unavailable copy and type-in fallback', () => {
+  it('transcription failure shows type-in fallback', () => {
     const station = read('components/orb-standalone/orb-voice-station.tsx')
-    const client = read('lib/orb/voice/orb-voice-server-transcription.ts')
-    assert.equal(
-      ORB_VOICE_TRANSCRIPTION_UNAVAILABLE,
-      'Voice transcription is not available right now. Type your reflection instead.'
-    )
-    assert.match(client, /voice_transcription_unavailable/)
-    assert.match(station, /transcription_unavailable/)
-    assert.match(station, /data-orb-voice-type-in-fallback/)
-    assert.match(station, /ORB_VOICE_TRANSCRIPTION_UNAVAILABLE/)
+    const hook = read('lib/orb/voice-v2/use-orb-voice-v2.ts')
+    assert.match(hook, /ORB_VOICE_V2_TRANSCRIPTION_ERROR/)
+    assert.match(station, /data-orb-voice-type-fallback/)
+    assert.match(station, /sendTypedTurn/)
   })
 
   it('distinguishes no speech from transcription unavailable', () => {
@@ -91,21 +86,20 @@ describe('ORB Residential Phase 4D Voice server transcription repair', () => {
 
   it('type-in fallback uses same conversation path', () => {
     const station = read('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(station, /handleTypeInSend/)
-    assert.match(station, /appendUserTurn/)
-    assert.equal(ORB_VOICE_TYPE_INSTEAD_SEND, 'Send to ORB')
+    assert.match(station, /sendTypedTurn/)
+    assert.match(station, /ORB_VOICE_V2_SEND_TYPED/)
   })
 
   it('summarise and audio honesty preserved', () => {
     const station = read('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(station, /OrbVoiceSummaryPanel/)
-    assert.equal(ORB_VOICE_END_AND_SUMMARISE, 'End and summarise')
-    assert.match(station, /ORB_VOICE_AUDIO_NOT_STORED/)
+    assert.match(station, /data-orb-voice-summary-panel/)
+    assert.match(station, /End and summarise/)
+    assert.match(station, /ORB_VOICE_V2_SAFETY_FOOTER/)
   })
 
   it('single shell and no compliance guarantee language', () => {
     const shell = read('app/orb/orb-residential-shell.css')
-    assert.match(shell, /phase-4h-voice-fresh-low-latency/)
+    assert.match(shell, /phase-5a-voice-clean-rebuild/)
     const station = read('components/orb-standalone/orb-voice-station.tsx')
     assert.doesNotMatch(station, /compliance guarantee|Ofsted approved/i)
   })

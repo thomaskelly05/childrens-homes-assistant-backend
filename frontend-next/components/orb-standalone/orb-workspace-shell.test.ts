@@ -77,12 +77,9 @@ describe('ORB main workspace shell', () => {
 
   it('voice start falls back to browser push-to-talk when realtime is unavailable', () => {
     const station = readComponent('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(station, /voice_start_clicked/)
-    assert.match(station, /voice_realtime_fallback_browser/)
-    assert.match(station, /handleBrowserVoicePrimary/)
-    assert.match(station, /detectSpeechRecognitionSupported/)
-    const actions = readComponent('components/orb-standalone/orb-voice-actions.tsx')
-    assert.match(actions, /data-orb-voice-primary-action/)
+    assert.match(station, /handlePrimary/)
+    assert.match(station, /voice\.startConversation/)
+    assert.match(station, /data-orb-voice-start-conversation/)
   })
 
   it('workspace frame exposes back navigation and panel markers', () => {

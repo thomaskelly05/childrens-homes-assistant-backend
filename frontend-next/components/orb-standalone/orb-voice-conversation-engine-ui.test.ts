@@ -19,37 +19,17 @@ describe('ORB Voice conversation engine UI integration', () => {
     assert.match(live, /data-orb-voice-barge-in-fallback/)
   })
 
-  it('station wires conversation engine without duplicate shell', () => {
+  it('station wires voice v2 without duplicate shell', () => {
     const station = read('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(station, /evaluateOrbVoiceConversation/)
-    assert.match(station, /orb-voice-conversation-engine/)
+    assert.match(station, /useOrbVoiceV2/)
     assert.doesNotMatch(station, /OrbVoiceMobileExperience/)
     assert.match(station, /OrbVoiceStationContent/)
   })
 
-  it('after-call panel shows upgraded sections and suggested record type', () => {
-    const after = read('components/orb-standalone/orb-voice-after-call-panel.tsx')
-    assert.match(after, /data-orb-voice-child-voice/)
-    assert.match(after, /data-orb-voice-adult-response/)
-    assert.match(after, /data-orb-voice-missing-information/)
-    assert.match(after, /data-orb-voice-suggested-record-type/)
-    assert.match(after, /OrbDictateTemplateSelector/)
-  })
-
-  it('voice prompt includes conversational style instructions', () => {
-    const prompt = read('lib/orb/voice/orb-voice-prompt.ts')
-    const engine = read('lib/orb/voice/orb-voice-conversation-engine.ts')
-    assert.match(prompt, /ORB_VOICE_CONVERSATION_STYLE_INSTRUCTIONS/)
-    assert.match(prompt, /One follow-up question at a time/i)
-    assert.match(engine, /one to three useful questions/i)
-    assert.match(engine, /professional judgement/i)
-    assert.match(engine, /safeguarding/i)
-  })
-
-  it('turn into record uses existing dictate framework', () => {
+  it('summary handoff uses dictate framework via station actions', () => {
     const station = read('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(station, /handleCreateDraftFromVoice/)
-    assert.match(station, /templateById/)
+    assert.match(station, /onOpenDictate/)
+    assert.match(station, /data-orb-voice-send-to-dictate/)
     assert.doesNotMatch(station, /orb-voice-mobile-experience/)
   })
 })

@@ -130,11 +130,12 @@ describe('ORB voice hook confirmed capture', () => {
     assert.match(hook, /await startRecognitionSessionConfirmed/)
   })
 
-  it('voice station only treats session as live when realtime session is connected', () => {
+  it('voice station only treats session as live when v2 capture is active', () => {
     const station = readComponent('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(station, /voiceTransportLive/)
-    assert.match(station, /data-orb-voice-transport-live/)
-    assert.match(station, /voice_fake_active_prevented/)
+    const hook = readComponent('lib/orb/voice-v2/use-orb-voice-v2.ts')
+    assert.match(hook, /startOrbVoiceV2Capture/)
+    assert.match(station, /data-orb-voice-ui-state=\{voice\.state\}/)
+    assert.match(hook, /processingRef/)
   })
 
   it('dictate uses recordingUiState before showing recording', () => {

@@ -82,13 +82,14 @@ describe('ORB server transcription finalize state', () => {
     assert.match(capture, /dataavailable/)
   })
 
-  it('voice station guards no-transcript panel during recording', () => {
+  it('voice station guards transcription errors with typed fallback', () => {
     const station = read('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(station, /canShowServerTranscriptionNoSpeechPanel/)
-    assert.match(station, /isServerTranscriptionFinalizeInProgress/)
-    assert.match(station, /setIsFinalizingRecording\(true\)/)
-    assert.match(station, /await voiceEngine\.stop\(\)/)
-    assert.match(station, /serverTranscriptionStatus === 'failed'/)
+    const hook = read('lib/orb/voice-v2/use-orb-voice-v2.ts')
+    assert.match(station, /data-orb-voice-type-fallback/)
+    assert.match(hook, /transcribeOrbVoiceV2Audio/)
+    assert.match(hook, /setState\('transcribing'\)/)
+    assert.match(hook, /ORB_VOICE_V2_TRANSCRIPTION_ERROR/)
+    assert.match(hook, /setShowTypeFallback\(true\)/)
   })
 
   it('chrome browser speech route unchanged in capability selector', () => {

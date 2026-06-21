@@ -6,22 +6,14 @@ import { describe, it } from 'node:test'
 
 import { ORB_BUILD_VISUAL_VERSION, ORB_LAYOUT_CSS_FILES } from '../../lib/orb/orb-visual-build.ts'
 import {
-  ORB_VOICE_ADULT_REVIEW_LABEL,
-  ORB_VOICE_AUDIO_NOT_STORED,
-  ORB_VOICE_BUTTON_START,
-  ORB_VOICE_BUTTON_STOP_LISTENING,
-  ORB_VOICE_CONVERSATION_SUBLABEL,
-  ORB_VOICE_CONVERSATION_TITLE,
-  ORB_VOICE_END_AND_SUMMARISE,
-  ORB_VOICE_MIC_ERROR,
-  ORB_VOICE_REFLECTIVE_HERO_LINE,
-  ORB_VOICE_SAFEGUARDING_REFLECTIVE_OPENING,
-  ORB_VOICE_SUMMARY_ACTION_COPY,
-  ORB_VOICE_SUMMARY_OPEN_WRITE,
-  ORB_VOICE_SUMMARY_SAVE_REFLECTION,
-  ORB_VOICE_SUMMARY_SEND_DICTATE
-} from '../../lib/orb/voice/orb-voice-reflective-copy.ts'
-import { ORB_VOICE_REFLECTIVE_MODES } from '../../lib/orb/voice/orb-voice-reflective-modes.ts'
+  ORB_VOICE_V2_ADULT_REVIEW_LABEL,
+  ORB_VOICE_V2_MODES,
+  ORB_VOICE_V2_MODE_PROMPT,
+  ORB_VOICE_V2_SAFETY_FOOTER,
+  ORB_VOICE_V2_TRANSCRIPT_LABEL,
+  ORB_VOICE_V2_TRANSCRIPT_NOTE
+} from '../../lib/orb/voice-v2/orb-voice-v2-copy.ts'
+import { orbVoiceV2PrimaryLabel } from '../../lib/orb/voice-v2/orb-voice-v2-state.ts'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '../..')
 
@@ -30,8 +22,8 @@ function read(relativePath: string) {
 }
 
 describe('ORB Residential Phase 4A Voice reflective companion', () => {
-  it('build version marker is phase-4h-voice-fresh-low-latency', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-4h-voice-fresh-low-latency')
+  it('build version marker is phase-5a-voice-clean-rebuild', () => {
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5a-voice-clean-rebuild')
     const layout = read('app/orb/layout.tsx')
     assert.match(layout, /orb-residential-shell\.css/)
     assert.deepEqual(ORB_LAYOUT_CSS_FILES, ['app/orb/orb-residential-shell.css'])
@@ -40,78 +32,59 @@ describe('ORB Residential Phase 4A Voice reflective companion', () => {
   it('voice screen explains reflective purpose and mode selector', () => {
     const station = read('components/orb-standalone/orb-voice-station.tsx')
     const content = read('components/orb-standalone/orb-voice-station-content.tsx')
-    const selector = read('components/orb-residential/OrbVoiceReflectiveModeSelector.tsx')
-    assert.equal(ORB_VOICE_REFLECTIVE_HERO_LINE, 'Talk it through with ORB before you write.')
     assert.match(content, /ORB_VOICE_V2_SUPPORTING/)
-    assert.match(station, /OrbVoiceReflectiveModeSelector/)
-    assert.match(selector, /ORB_VOICE_MODE_PROMPT/)
-    const labels = ORB_VOICE_REFLECTIVE_MODES.map((m) => m.label)
+    assert.match(station, /ORB_VOICE_V2_MODE_PROMPT/)
+    assert.match(station, /ORB_VOICE_V2_MODES/)
+    const labels = ORB_VOICE_V2_MODES.map((m) => m.label)
     assert.ok(labels.includes('Reflect after an incident'))
     assert.ok(labels.includes('Safeguarding thinking'))
     assert.ok(labels.includes('Supervision prep'))
     assert.ok(labels.includes('Just talk it through'))
   })
 
-  it('voice controls use Start talking and Stop listening with timer', () => {
-    const uiState = read('lib/orb/voice/orb-voice-ui-state.ts')
-    const launch = read('lib/orb/voice/orb-voice-launch-mode.ts')
-    const live = read('components/orb-standalone/orb-voice-live-panel.tsx')
-    assert.equal(ORB_VOICE_BUTTON_START, 'Start conversation')
-    assert.equal(ORB_VOICE_BUTTON_STOP_LISTENING, 'Stop')
-    assert.match(uiState, /ORB_VOICE_BUTTON_START/)
-    assert.match(launch, /ORB_VOICE_BUTTON_STOP_LISTENING/)
-    assert.match(live, /data-orb-voice-listening-timer/)
+  it('voice controls use Start conversation label', () => {
+    assert.equal(orbVoiceV2PrimaryLabel('idle'), 'Start conversation')
+    assert.match(read('components/orb-standalone/orb-voice-station.tsx'), /data-orb-voice-start-conversation/)
   })
 
   it('microphone error and audio storage copy are honest', () => {
-    const uiState = read('lib/orb/voice/orb-voice-ui-state.ts')
+    const hook = read('lib/orb/voice-v2/use-orb-voice-v2.ts')
+    assert.match(hook, /ORB_VOICE_V2_TRANSCRIPTION_ERROR/)
     const station = read('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(uiState, /ORB_VOICE_MIC_ERROR/)
-    assert.equal(ORB_VOICE_MIC_ERROR, 'Voice could not start. Check microphone permission or type your reflection instead.')
-    assert.match(station, /ORB_VOICE_AUDIO_NOT_STORED/)
-    const capture = read('lib/orb/voice/orb-voice-capture.ts')
-    assert.match(capture, /ORB_VOICE_SPEECH_AUDIO_CONSTRAINTS/)
-    assert.match(capture, /echoCancellation: true/)
+    assert.match(station, /ORB_VOICE_V2_SAFETY_FOOTER/)
+    const capture = read('lib/orb/voice-v2/orb-voice-v2-capture.ts')
+    assert.match(capture, /getUserMedia/)
   })
 
   it('conversation panel and end summarise pathway exist', () => {
-    const conversation = read('components/orb-residential/OrbVoiceConversationPanel.tsx')
-    const live = read('components/orb-standalone/orb-voice-live-panel.tsx')
     const station = read('components/orb-standalone/orb-voice-station.tsx')
-    assert.equal(ORB_VOICE_CONVERSATION_TITLE, 'Voice conversation')
-    assert.equal(ORB_VOICE_CONVERSATION_SUBLABEL, 'Reflection notes — not yet a record')
-    assert.match(conversation, /data-orb-voice-conversation-panel/)
-    assert.match(live, /ORB_VOICE_END_AND_SUMMARISE/)
-    assert.equal(ORB_VOICE_END_AND_SUMMARISE, 'End and summarise')
-    assert.match(station, /OrbVoiceSummaryPanel/)
+    assert.equal(ORB_VOICE_V2_TRANSCRIPT_LABEL, 'Voice conversation')
+    assert.equal(ORB_VOICE_V2_TRANSCRIPT_NOTE, 'Reflection notes — not yet a record')
+    assert.match(station, /data-orb-voice-conversation-panel/)
+    assert.match(station, /End and summarise/)
   })
 
   it('summary actions and handoff metadata are wired', () => {
-    const summary = read('components/orb-residential/OrbVoiceSummaryPanel.tsx')
-    const handoff = read('lib/orb/voice/orb-voice-handoff.ts')
     const station = read('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(summary, /ORB_VOICE_ADULT_REVIEW_LABEL/)
-    assert.equal(ORB_VOICE_ADULT_REVIEW_LABEL, 'Generated for adult review')
-    assert.equal(ORB_VOICE_SUMMARY_ACTION_COPY, 'Copy summary')
-    assert.equal(ORB_VOICE_SUMMARY_SEND_DICTATE, 'Send to Dictate')
-    assert.equal(ORB_VOICE_SUMMARY_OPEN_WRITE, 'Open in ORB Write')
-    assert.equal(ORB_VOICE_SUMMARY_SAVE_REFLECTION, 'Save reflection')
-    assert.match(handoff, /source: 'orb_voice'/)
+    const handoff = read('lib/orb/voice-v2/orb-voice-v2-summary.ts')
+    assert.equal(ORB_VOICE_V2_ADULT_REVIEW_LABEL, 'Generated for adult review')
+    assert.match(station, /Copy summary/)
+    assert.match(station, /Send to Dictate/)
+    assert.match(station, /Open in ORB Write/)
+    assert.match(station, /Save reflection/)
+    assert.match(handoff, /source: 'orb_voice_v2'/)
     assert.match(handoff, /generated_for_adult_review/)
-    assert.match(station, /buildOrbVoiceHandoffWithTts/)
   })
 
   it('safeguarding reflective guidance includes local procedure boundary', () => {
-    const engine = read('lib/orb/voice/orb-voice-conversation-engine.ts')
-    assert.match(engine, /ORB_VOICE_SAFEGUARDING_REFLECTIVE_OPENING/)
-    assert.match(ORB_VOICE_SAFEGUARDING_REFLECTIVE_OPENING, /safeguarding procedure/)
-    assert.match(ORB_VOICE_SAFEGUARDING_REFLECTIVE_OPENING, /reviewable summary/)
+    const service = read('../services/orb_voice_respond_service.py')
+    assert.match(service, /safeguarding|local procedure/i)
   })
 
   it('single shell and no compliance guarantee language', () => {
     const shell = read('app/orb/orb-residential-shell.css')
     const station = read('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(shell, /phase-4h-voice-fresh-low-latency/)
+    assert.match(shell, /phase-5a-voice-clean-rebuild/)
     assert.doesNotMatch(station, /Ofsted approved|compliance guarantee|finalised record/i)
     assert.doesNotMatch(station, /ORB makes safeguarding decisions/i)
   })

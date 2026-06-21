@@ -103,7 +103,7 @@ describe('ORB residential theme runtime', () => {
     const voiceHero = read('components/orb-standalone/orb-voice-hero-stage.tsx')
     const dictateMobile = read('components/orb-standalone/orb-dictate-mobile-experience.tsx')
     assert.match(voice, /OrbVoiceStationContent/)
-    assert.match(voice, /mapOrbVoiceUiToCompanionState/)
+    assert.match(voice, /mapOrbVoiceV2ToCompanionState/)
     assert.match(voiceHero, /OrbVoiceCompanion/)
     assert.match(dictateMobile, /variant="dictate"/)
     assert.doesNotMatch(voice, /variant="hero"/)

@@ -28,8 +28,8 @@ function read(relativePath: string) {
 }
 
 describe('ORB Voice platform rebuild (Phase 4F)', () => {
-  it('build marker is phase-4h-voice-fresh-low-latency', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-4h-voice-fresh-low-latency')
+  it('build marker is phase-5a-voice-clean-rebuild', () => {
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5a-voice-clean-rebuild')
   })
 
   it('session state machine resolves listening and thinking', () => {
@@ -132,17 +132,16 @@ describe('ORB Voice platform rebuild (Phase 4F)', () => {
     assert.match(read('../services/orb_voice_respond_service.py'), /embeddings=0/)
   })
 
-  it('audit map points to single voice platform modules', () => {
+  it('audit map points to single voice v2 platform modules', () => {
     assert.equal(ORB_VOICE_SESSION_AUDIT.station, 'components/orb-standalone/orb-voice-station.tsx')
-    assert.equal(ORB_VOICE_SESSION_AUDIT.respondRoute, 'POST /orb/voice/respond')
-    assert.match(read('components/orb-standalone/orb-voice-station.tsx'), /createOrbVoiceCaptureController/)
-    assert.match(read('components/orb-standalone/orb-voice-station.tsx'), /resolveOrbVoiceSessionState/)
+    assert.match(read('components/orb-standalone/orb-voice-station.tsx'), /useOrbVoiceV2/)
+    assert.match(read('lib/orb/voice-v2/use-orb-voice-v2.ts'), /startOrbVoiceV2Capture|orb-voice-v2-capture/)
+    assert.match(read('../routers/orb_voice_v2_routes.py'), /@router\.post\("\/respond"\)|orb_voice_v2_respond_route/)
   })
 
   it('Safari MIME and CSP media-src blob are wired', () => {
     assert.match(read('middleware.ts'), /media-src 'self' blob: data: https:/)
-    const capture = read('lib/orb/voice/orb-voice-capture.ts')
+    const capture = read('lib/orb/voice-v2/orb-voice-v2-capture.ts')
     assert.match(capture, /audio\/mp4/)
-    assert.match(capture, /voice-capture\.mp4/)
   })
 })

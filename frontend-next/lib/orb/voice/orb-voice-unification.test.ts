@@ -73,7 +73,8 @@ describe('ORB Voice unification', () => {
   it('configured status does not render configure realtime copy in station', () => {
     const station = readComponent('components/orb-standalone/orb-voice-station.tsx')
     assert.doesNotMatch(station, /Configure realtime voice/i)
-    assert.match(station, /resolveOrbVoiceUiState/)
+    assert.match(station, /useOrbVoiceV2/)
+    assert.match(station, /orbVoiceV2PrimaryLabel/)
   })
 
   it('session 200 but WebRTC fail shows Dictate-ready headline', () => {
@@ -88,11 +89,12 @@ describe('ORB Voice unification', () => {
     assert.match(availability, /Live voice could not connect\. Dictate is ready\./)
   })
 
-  it('voice live requires transport not only session API success', () => {
+  it('voice live requires capture loop not only status probe', () => {
     const station = readComponent('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(station, /voiceTransportLive/)
-    assert.match(station, /data-orb-voice-transport-live/)
-    assert.match(readComponent('lib/orb/voice/orb-realtime-availability.ts'), /waitForVoiceTransportLive/)
+    const hook = readComponent('lib/orb/voice-v2/use-orb-voice-v2.ts')
+    assert.match(hook, /startOrbVoiceV2Capture/)
+    assert.match(station, /data-orb-voice-ui-state=\{voice\.state\}/)
+    assert.match(hook, /resumeListening/)
   })
 
   it('no env vars in normal voice UI sources', () => {

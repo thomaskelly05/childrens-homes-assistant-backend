@@ -27,66 +27,54 @@ function read(relativePath: string) {
 }
 
 describe('ORB Residential Phase 4C Voice speech loop repair', () => {
-  it('build version marker is phase-4h-voice-fresh-low-latency', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-4h-voice-fresh-low-latency')
+  it('build version marker is phase-5a-voice-clean-rebuild', () => {
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5a-voice-clean-rebuild')
     const layout = read('app/orb/layout.tsx')
     assert.match(layout, /orb-residential-shell\.css/)
     assert.deepEqual(ORB_LAYOUT_CSS_FILES, ['app/orb/orb-residential-shell.css'])
   })
 
-  it('station wires auto-submit, guards and speech input status', () => {
-    const station = read('components/orb-standalone/orb-voice-station.tsx')
-    const loop = read('lib/orb/voice/orb-voice-speech-loop.ts')
-    assert.match(station, /commitVoiceTranscriptOrBlock/)
-    assert.match(station, /submitCapturedTranscript/)
-    assert.match(station, /scheduleAutoSubmit/)
-    assert.match(station, /voiceInputStatus/)
-    assert.match(station, /onFinalTranscriptRef/)
-    assert.match(station, /ORB_VOICE_AUTO_SUBMIT_DEBOUNCE_MS/)
-    assert.match(station, /ORB_VOICE_NO_SPEECH_TIMEOUT_MS/)
-    assert.match(loop, /VoiceInputStatus/)
+  it('voice v2 hook wires end-of-turn capture and speech input status', () => {
+    const hook = read('lib/orb/voice-v2/use-orb-voice-v2.ts')
+    const capture = read('lib/orb/voice-v2/orb-voice-v2-capture.ts')
+    assert.match(hook, /startOrbVoiceV2Capture/)
+    assert.match(hook, /setState\('transcribing'\)/)
+    assert.match(hook, /setState\('speech_detected'\)/)
+    assert.match(capture, /onEndOfTurn/)
+    assert.match(read('lib/orb/voice/orb-voice-speech-loop.ts'), /VoiceInputStatus/)
   })
 
   it('listening copy tells adult to speak now', () => {
-    assert.equal(ORB_VOICE_LISTENING_SPEAK_NOW, 'Listening… speak now.')
-    const station = read('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(station, /voiceInputStatusLabel/)
+    const state = read('lib/orb/voice-v2/orb-voice-v2-state.ts')
+    assert.match(state, /listening: 'Listening…'/)
   })
 
-  it('no-speech and empty transcript do not call ORB brain', () => {
-    const station = read('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(ORB_VOICE_NO_SPEECH_DETECTED, /No speech was detected/)
-    assert.match(station, /no_speech_detected/)
+  it('empty transcript does not call ORB brain', () => {
+    const hook = read('lib/orb/voice-v2/use-orb-voice-v2.ts')
+    assert.match(hook, /if \(!trimmed\)/)
     assert.deepEqual(commitVoiceTranscriptOrBlock(''), { ok: false, reason: 'empty' })
-    assert.match(station, /if \(!committed\.ok\)/)
   })
 
-  it('non-empty transcript creates adult turn and triggers brain path', () => {
-    const station = read('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(station, /role: 'user'/)
-    assert.match(station, /sendToOrbWithVoiceContext/)
-    assert.match(station, /speakAloud/)
+  it('non-empty transcript creates adult turn and triggers respond path', () => {
+    const hook = read('lib/orb/voice-v2/use-orb-voice-v2.ts')
+    assert.match(hook, /createOrbVoiceV2Turn\('adult'/)
+    assert.match(hook, /requestOrbVoiceV2Respond/)
+    assert.match(hook, /requestOrbVoiceV2Speak/)
   })
 
   it('Katherine TTS path and spoken fallback copy exist', () => {
-    const hook = read('components/orb-standalone/use-standalone-orb-voice.ts')
-    const station = read('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(hook, /requestOrbPremiumTts/)
-    assert.match(hook, /ORB_VOICE_TTS_SPOKEN_FALLBACK/)
-    assert.equal(
-      ORB_VOICE_TTS_SPOKEN_FALLBACK,
-      'ORB could not speak the response, but the written reply is shown below.'
-    )
-    assert.match(station, /data-orb-voice-tts-spoken-fallback/)
+    const hook = read('lib/orb/voice-v2/use-orb-voice-v2.ts')
+    assert.match(hook, /requestOrbVoiceV2Speak/)
+    assert.match(hook, /ORB_VOICE_V2_KATHERINE_FALLBACK/)
+    assert.match(hook, /voicePreparingSkipAvailable/)
   })
 
-  it('Stop ORB stops premium audio and browser synthesis', () => {
-    const hook = read('components/orb-standalone/use-standalone-orb-voice.ts')
+  it('Stop ORB stops premium audio', () => {
+    const hook = read('lib/orb/voice-v2/use-orb-voice-v2.ts')
     const station = read('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(hook, /activeAudioRef/)
-    assert.match(hook, /speechSynthesis\?\.cancel/)
-    assert.match(station, /handleStopOrbSpeaking/)
-    assert.match(station, /cancelSpeaking/)
+    assert.match(hook, /audioRef/)
+    assert.match(hook, /stopOrbAudio/)
+    assert.match(station, /stopOrbAudio/)
   })
 
   it('browser speech transport restarts recognition and ignores benign no-speech', () => {
@@ -97,34 +85,31 @@ describe('ORB Residential Phase 4C Voice speech loop repair', () => {
 
   it('type-in fallback uses same voice brain path', () => {
     const station = read('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(station, /data-orb-voice-type-in-fallback/)
-    assert.match(station, /handleTypeInSend/)
-    assert.match(station, /appendUserTurn/)
-    assert.equal(ORB_VOICE_TYPE_INSTEAD_LABEL, 'Type instead')
-    assert.equal(ORB_VOICE_TYPE_INSTEAD_SEND, 'Send to ORB')
+    assert.match(station, /data-orb-voice-type-fallback/)
+    assert.match(station, /sendTypedTurn/)
+    assert.match(station, /ORB_VOICE_V2_TYPE_INSTEAD/)
+    assert.match(station, /ORB_VOICE_V2_SEND_TYPED/)
   })
 
   it('unsupported speech shows type-in guidance', () => {
-    const station = read('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(station, /ORB_VOICE_SPEECH_UNSUPPORTED/)
-    assert.match(ORB_VOICE_SPEECH_UNSUPPORTED, /type your reflection instead/)
-    assert.match(station, /speech_unsupported/)
+    const hook = read('lib/orb/voice-v2/use-orb-voice-v2.ts')
+    assert.match(hook, /ORB_VOICE_V2_TRANSCRIPTION_ERROR/)
+    assert.match(hook, /setShowTypeFallback\(true\)/)
   })
 
   it('conversation transcript and summarise still wired', () => {
     const station = read('components/orb-standalone/orb-voice-station.tsx')
-    const panel = read('components/orb-residential/OrbVoiceConversationPanel.tsx')
-    assert.match(panel, /Adult/)
-    assert.match(panel, /ORB/)
-    assert.match(station, /OrbVoiceSummaryPanel/)
+    assert.match(station, /Adult/)
+    assert.match(station, /ORB/)
+    assert.match(station, /data-orb-voice-summary-panel/)
     assert.equal(ORB_VOICE_END_AND_SUMMARISE, 'End and summarise')
   })
 
   it('audio storage honesty and single shell remain', () => {
     const shell = read('app/orb/orb-residential-shell.css')
     const station = read('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(shell, /phase-4h-voice-fresh-low-latency/)
-    assert.match(station, /ORB_VOICE_AUDIO_NOT_STORED/)
+    assert.match(shell, /phase-5a-voice-clean-rebuild/)
+    assert.match(station, /ORB_VOICE_V2_SAFETY_FOOTER/)
     assert.match(ORB_VOICE_MIC_ERROR, /microphone permission/)
     assert.doesNotMatch(station, /compliance guarantee|Ofsted approved/i)
   })

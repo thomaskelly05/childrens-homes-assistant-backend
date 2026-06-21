@@ -195,18 +195,19 @@ describe('ORB mobile premium Voice copy', () => {
     const content = readComponent('components/orb-standalone/orb-voice-station-content.tsx')
     const actions = readComponent('components/orb-standalone/orb-voice-actions.tsx')
     assert.match(voice, /OrbVoiceStationContent/)
-    assert.match(voice, /OrbVoiceActions/)
-    assert.match(content, /data-orb-voice-station-controls/)
-    assert.match(actions, /data-orb-voice-primary-action|orbVoiceUiPrimaryLabel/)
+    assert.match(voice, /data-orb-voice-primary/)
+    assert.match(voice, /data-orb-voice-start-conversation/)
+    assert.match(content, /data-orb-voice-station-content/)
+    assert.match(voice, /orbVoiceV2PrimaryLabel/)
     assert.match(voice, /ORB_VOICE_PANEL_SUBTITLE/)
   })
 
-  it('provider unavailable shows Use Dictate and Type instead via shared actions', () => {
+  it('provider unavailable shows typed fallback and dictate handoff in station', () => {
     const voice = readComponent('components/orb-standalone/orb-voice-station.tsx')
-    const actions = readComponent('components/orb-standalone/orb-voice-actions.tsx')
-    assert.match(voice, /OrbVoiceActions/)
-    assert.match(actions, /data-orb-voice-use-dictate/)
-    assert.match(actions, /data-orb-voice-type-instead/)
+    const hook = readComponent('lib/orb/voice-v2/use-orb-voice-v2.ts')
+    assert.match(voice, /data-orb-voice-type-fallback/)
+    assert.match(voice, /data-orb-voice-send-to-dictate/)
+    assert.match(hook, /setShowTypeFallback\(true\)/)
     assert.equal(
       voiceMobileStatusLine({ uiState: 'unsupported', blockedReason: null }),
       'Voice is not available in this browser.'
@@ -221,7 +222,7 @@ describe('ORB mobile premium Voice copy', () => {
     const voice = readComponent('components/orb-standalone/orb-voice-station.tsx')
     const content = readComponent('components/orb-standalone/orb-voice-station-content.tsx')
     const messages = readComponent('lib/orb/voice/orb-voice-user-messages.ts')
-    assert.match(voice, /sanitizeOrbVoiceUserMessage/)
+    assert.match(voice, /voice\.detailLine/)
     assert.match(content, /data-orb-voice-mobile/)
     assert.match(messages, /ORB_VOICE_DEBUG_CONFIG_HINT/)
     assert.equal(
@@ -240,19 +241,19 @@ describe('ORB mobile premium Voice copy', () => {
     assert.match(messages, /Realtime voice not configured/)
   })
 
-  it('active session shows one End via primary action wiring', () => {
+  it('active session exposes pause and end controls via secondary actions', () => {
     assert.equal(voiceMobilePrimaryButton({ uiState: 'listening', sessionLive: true, starting: false }), 'End')
-    assert.match(readComponent('components/orb-standalone/orb-voice-station.tsx'), /onPrimary=\{handleEnd\}/)
+    const voice = readComponent('components/orb-standalone/orb-voice-station.tsx')
+    assert.match(voice, /data-orb-voice-pause/)
+    assert.match(voice, /data-orb-voice-end-summarise/)
   })
 
-  it('post-session shows after-call panel and record handoff without duplicate fallbacks', () => {
+  it('post-session shows summary panel and record handoff without duplicate fallbacks', () => {
     const voice = readComponent('components/orb-standalone/orb-voice-station.tsx')
-    const after = readComponent('components/orb-standalone/orb-voice-after-call-panel.tsx')
-    assert.match(voice, /OrbVoiceAfterCallPanel/)
-    assert.match(after, /data-orb-voice-after-call/)
-    assert.match(after, /data-orb-voice-create-draft-record/)
-    assert.match(after, /Copy transcript/)
-    assert.match(after, /New voice session/)
+    assert.match(voice, /data-orb-voice-summary-panel/)
+    assert.match(voice, /data-orb-voice-summary-ready/)
+    assert.match(voice, /data-orb-voice-copy-summary/)
+    assert.match(voice, /data-orb-voice-start-new/)
     assert.doesNotMatch(voice, /Open Dictate instead/)
     assert.doesNotMatch(voice, /Open Dictate again/)
   })
