@@ -4,6 +4,7 @@
  */
 
 import type { VoiceTurn } from './orb-voice-types.ts'
+import { ORB_VOICE_SAFEGUARDING_REFLECTIVE_OPENING } from './orb-voice-reflective-copy.ts'
 
 /** Studio template labels — mirrors `orb-recording-framework.json` studio_template_id values. */
 const STUDIO_TEMPLATE_LABELS: Record<string, string> = {
@@ -210,8 +211,7 @@ const RECORD_TYPE_RULES: Array<{ templateId: string; patterns: RegExp[] }> = [
   { templateId: 'daily_record', patterns: [/\bdaily\b/i, /\bmeal\b/i, /\bschool\b/i, /\beducation\b/i, /\bpresentation\b/i, /\broutine\b/i] }
 ]
 
-const SAFETY_PROMPT_COPY =
-  'If there is immediate danger, follow your local safeguarding and emergency procedures. Inform your manager or designated safeguarding lead where appropriate. Record factually — do not delay escalation for conversation with ORB.'
+const SAFETY_PROMPT_COPY = ORB_VOICE_SAFEGUARDING_REFLECTIVE_OPENING
 
 function userTextFromTurns(turns: VoiceTurn[]): string {
   return turns

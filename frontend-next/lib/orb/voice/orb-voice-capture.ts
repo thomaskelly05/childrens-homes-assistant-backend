@@ -27,6 +27,18 @@ export type MicrophoneAccessResult = {
 
 export type MediaRecorderCaptureSource = 'media_recorder' | 'web_audio_wav' | 'none'
 
+/** Speech-friendly microphone constraints for ORB Voice capture. */
+export const ORB_VOICE_SPEECH_AUDIO_CONSTRAINTS: MediaTrackConstraints = {
+  echoCancellation: true,
+  noiseSuppression: true,
+  autoGainControl: true,
+  channelCount: 1
+}
+
+export const ORB_VOICE_GET_USER_MEDIA_CONSTRAINTS: MediaStreamConstraints = {
+  audio: ORB_VOICE_SPEECH_AUDIO_CONSTRAINTS
+}
+
 export type MediaRecorderStopResult = {
   blob: Blob | null
   mimeType: string
@@ -73,7 +85,7 @@ export async function probeMicrophoneAccess(): Promise<MicrophoneAccessResult> {
 
 /** Acquire a microphone stream for active capture — caller must call releaseMicrophoneStream. */
 export async function acquireMicrophoneStream(
-  constraints: MediaStreamConstraints = { audio: true }
+  constraints: MediaStreamConstraints = ORB_VOICE_GET_USER_MEDIA_CONSTRAINTS
 ): Promise<MicrophoneAccessResult> {
   if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
     return { ok: false, permission: 'unknown', stream: null }

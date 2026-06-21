@@ -8,6 +8,12 @@ import {
   ORB_RESIDENTIAL_VOICE_SAFETY_STRIP
 } from '../orb-residential-safety-copy.ts'
 import { orbResidentialStation } from '../orb-residential-stations.ts'
+import {
+  ORB_VOICE_BUTTON_SPEAKING,
+  ORB_VOICE_BUTTON_START,
+  ORB_VOICE_BUTTON_STOP_LISTENING,
+  ORB_VOICE_BUTTON_THINKING
+} from './orb-voice-reflective-copy.ts'
 import { isOrbWebRealtimeVoiceEnabled } from './orb-web-voice-config.ts'
 
 const ORB_REALTIME_CONFIGURED_PROVIDERS = ['openai', 'openai_realtime'] as const
@@ -152,9 +158,11 @@ export function orbVoiceLaunchPrimaryLabel(
   options?: { pushToTalk?: boolean; listening?: boolean }
 ): string {
   if (state === 'unavailable' || state === 'error') return 'Use Dictate or type'
-  if (state === 'listening') return options?.pushToTalk !== false ? 'Release to finish' : 'Stop listening'
-  if (state === 'transcribing' || state === 'thinking' || state === 'speaking') return 'Cancel'
-  return options?.pushToTalk !== false ? 'Push to talk' : 'Start listening'
+  if (state === 'listening') return ORB_VOICE_BUTTON_STOP_LISTENING
+  if (state === 'transcribing') return ORB_VOICE_BUTTON_THINKING
+  if (state === 'thinking') return ORB_VOICE_BUTTON_THINKING
+  if (state === 'speaking') return ORB_VOICE_BUTTON_SPEAKING
+  return ORB_VOICE_BUTTON_START
 }
 
 /** Whether ORB chat auto-read should be suppressed for safeguarding-sensitive modes. */

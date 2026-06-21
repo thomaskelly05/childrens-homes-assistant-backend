@@ -11,6 +11,7 @@ import {
 export type OrbVoiceActionsProps = {
   uiState: OrbVoiceUiState
   primaryDisabled?: boolean
+  primaryLabelOverride?: string
   onPrimary: () => void
   onSignIn?: () => void
   onTypeInstead?: () => void
@@ -26,6 +27,7 @@ export type OrbVoiceActionsProps = {
 export function OrbVoiceActions({
   uiState,
   primaryDisabled = false,
+  primaryLabelOverride,
   onPrimary,
   onSignIn,
   onTypeInstead,
@@ -38,8 +40,8 @@ export function OrbVoiceActions({
   const wrap = stack ? 'flex flex-col gap-2' : 'flex flex-wrap items-center justify-center gap-2'
 
   const normalisedState = normaliseOrbVoiceUiState(uiState)
-  const primaryLabel = orbVoiceUiPrimaryLabel(uiState)
-  const isStartVoice = primaryLabel === 'Push to talk'
+  const primaryLabel = primaryLabelOverride ?? orbVoiceUiPrimaryLabel(uiState)
+  const isStartVoice = primaryLabel === 'Start talking'
 
   const showTypeInstead =
     normalisedState === 'unauthenticated' ||

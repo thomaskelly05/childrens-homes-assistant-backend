@@ -3135,3 +3135,49 @@ html[data-orb-residential='1'] .orb-dictate-assistant-status {
 /* phase-3u-dictate-identity-mapping marker — logic-only pass */
 
 /* phase-3v-dictate-intelligence-evidence-save marker — logic-only pass */
+
+/* phase-4a-voice-reflective-companion — Voice companion state motion */
+html[data-orb-residential='1'] [data-orb-voice-companion-state='listening'] .orb-voice-hero-aura {
+  animation: orb-voice-listen-pulse 2.4s ease-in-out infinite;
+}
+
+html[data-orb-residential='1'] [data-orb-voice-companion-state='thinking'] .orb-voice-core {
+  animation: orb-voice-think-shimmer 3.2s ease-in-out infinite;
+}
+
+html[data-orb-residential='1'] [data-orb-voice-companion-state='speaking'] .orb-voice-hero-waveform {
+  opacity: 1;
+}
+
+html[data-orb-residential='1'] [data-orb-voice-companion-state='summary_ready'] .orb-voice-hero-aura {
+  opacity: 0.55;
+}
+
+@keyframes orb-voice-listen-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.72;
+  }
+  50% {
+    transform: scale(1.04);
+    opacity: 0.92;
+  }
+}
+
+@keyframes orb-voice-think-shimmer {
+  0%,
+  100% {
+    filter: brightness(1);
+  }
+  50% {
+    filter: brightness(1.08);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-orb-residential='1'] [data-orb-voice-companion-state='listening'] .orb-voice-hero-aura,
+  html[data-orb-residential='1'] [data-orb-voice-companion-state='thinking'] .orb-voice-core {
+    animation: none;
+  }
+}

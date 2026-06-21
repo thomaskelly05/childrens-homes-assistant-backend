@@ -73,10 +73,10 @@ describe('ORB Voice instant-human refinement', () => {
   })
 
   it('permission denied and connection failed copy', () => {
-    assert.equal(orbVoiceUiStatusLine('failed_permission'), 'Microphone access is needed.')
+    assert.equal(orbVoiceUiStatusLine('failed_permission'), 'Voice could not start.')
     assert.equal(
       orbVoiceUiDetailLine('failed_permission'),
-      'You can still type or use Dictate.'
+      'Voice could not start. Check microphone permission or type your reflection instead.'
     )
     assert.equal(orbVoiceUiStatusLine('failed_connection'), 'Voice could not connect.')
     assert.equal(
@@ -172,9 +172,9 @@ describe('ORB Voice instant-human refinement', () => {
   })
 
   it('primary labels remain human on failure and live session', () => {
-    assert.equal(orbVoiceUiPrimaryLabel('ready'), 'Push to talk')
+    assert.equal(orbVoiceUiPrimaryLabel('ready'), 'Start talking')
     assert.equal(orbVoiceUiPrimaryLabel('preparing'), 'Cancel')
-    assert.equal(orbVoiceUiPrimaryLabel('listening'), 'End')
+    assert.equal(orbVoiceUiPrimaryLabel('listening'), 'Stop listening')
     assert.equal(orbVoiceUiPrimaryLabel('unsupported'), 'Try voice again')
   })
 })

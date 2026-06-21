@@ -10,7 +10,14 @@ import { ORB_VOICE_VERSION } from '@/lib/orb/orb-visual-build'
 import { getOrbHueProfile, type OrbVisualState } from '@/lib/orb/rendering/visual-system'
 
 /** Visual-only voice companion states — safe fallbacks when transport state is unavailable. */
-export type OrbVoiceCompanionState = 'idle' | 'listening' | 'thinking' | 'speaking' | 'paused' | 'error'
+export type OrbVoiceCompanionState =
+  | 'idle'
+  | 'listening'
+  | 'thinking'
+  | 'speaking'
+  | 'paused'
+  | 'summary_ready'
+  | 'error'
 
 /** Scoped companion render sizes — hero is the main voice studio centre piece. */
 export type OrbVoiceCompanionSize = 'hero' | 'mini' | 'mobile-preview'
@@ -44,6 +51,7 @@ function companionToVisualState(state: OrbVoiceCompanionState): OrbVisualState {
     case 'speaking':
       return 'speaking'
     case 'paused':
+    case 'summary_ready':
       return 'idle'
     case 'error':
       return 'offline'
@@ -60,7 +68,7 @@ function resolveCoreScale(state: OrbVoiceCompanionState, speechEnergy: number): 
   if (state === 'speaking') return 1 + speechEnergy * 0.03
   if (state === 'listening') return 1.018
   if (state === 'thinking') return 1.012
-  if (state === 'paused') return 0.992
+  if (state === 'paused' || state === 'summary_ready') return 0.992
   return 1
 }
 
@@ -68,7 +76,7 @@ function resolveCoreBrightness(state: OrbVoiceCompanionState, speechEnergy: numb
   if (state === 'speaking') return 1.22 + speechEnergy * 0.22
   if (state === 'listening') return 1.26
   if (state === 'thinking') return 1.2
-  if (state === 'paused') return 1.06
+  if (state === 'paused' || state === 'summary_ready') return 1.06
   if (state === 'error') return 0.86
   return 1.18
 }
@@ -77,7 +85,7 @@ function resolveAuraOpacity(state: OrbVoiceCompanionState, speechEnergy: number)
   if (state === 'speaking') return 0.72 + speechEnergy * 0.36
   if (state === 'listening') return 0.78
   if (state === 'thinking') return 0.74
-  if (state === 'paused') return 0.5
+  if (state === 'paused' || state === 'summary_ready') return 0.5
   if (state === 'error') return 0.28
   return 0.68
 }
@@ -86,7 +94,7 @@ function resolveWarmStrength(state: OrbVoiceCompanionState, speechEnergy: number
   if (state === 'speaking') return 0.82 + speechEnergy * 0.18
   if (state === 'listening') return 0.58
   if (state === 'thinking') return 0.72
-  if (state === 'paused') return 0.52
+  if (state === 'paused' || state === 'summary_ready') return 0.52
   if (state === 'error') return 0.38
   return 0.64
 }
@@ -100,6 +108,7 @@ function resolveHueShift(state: OrbVoiceCompanionState): number {
     case 'speaking':
       return 6
     case 'paused':
+    case 'summary_ready':
       return -4
     default:
       return 0
@@ -115,6 +124,7 @@ function resolveStateHue(state: OrbVoiceCompanionState): number {
     case 'speaking':
       return 312
     case 'paused':
+    case 'summary_ready':
       return 228
     case 'error':
       return 24
@@ -127,7 +137,7 @@ function resolveRimStrength(state: OrbVoiceCompanionState, speechEnergy: number)
   if (state === 'speaking') return 0.84 + speechEnergy * 0.42
   if (state === 'listening') return 0.88
   if (state === 'thinking') return 0.82
-  if (state === 'paused') return 0.58
+  if (state === 'paused' || state === 'summary_ready') return 0.58
   if (state === 'error') return 0.34
   return 0.8
 }
@@ -220,6 +230,7 @@ export function OrbVoiceHead({
     <div
       className={`orb-voice-companion flex shrink-0 items-center justify-center ${sizeClass} ${className}`.trim()}
       data-orb-voice-companion
+      data-orb-voice-companion-state={state}
       data-orb-voice-companion-size={resolvedSize}
       data-orb-voice-version={ORB_VOICE_VERSION}
       data-orb-voice-state={state}

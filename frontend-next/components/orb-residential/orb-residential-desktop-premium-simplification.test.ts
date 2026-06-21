@@ -45,7 +45,7 @@ describe('ORB Residential desktop premium simplification pass', () => {
     assert.match(voiceStrip, /data-orb-voice-privacy-note/)
     assert.match(desktop, /\[data-orb-voice-desktop-spacious='true'\]/)
     assert.match(desktop, /\[data-orb-voice-responsibility-strip\]/)
-    assert.match(read('components/orb-standalone/orb-voice-actions.tsx'), /Push to talk|Type instead|Turn speech/)
+    assert.match(read('components/orb-standalone/orb-voice-actions.tsx'), /Start talking|Type instead|Turn speech/)
   })
 
   it('dictate exposes Dictate copy while preserving workflow', () => {

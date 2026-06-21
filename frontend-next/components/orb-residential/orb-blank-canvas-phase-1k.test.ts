@@ -194,9 +194,9 @@ describe('ORB Residential Phase 1K blank canvas reset', () => {
     assert.match(voice, /ORB_VOICE_V2_TITLE/)
     assert.match(voice, /ORB_VOICE_V2_PROMPT/)
     assert.match(voice, /ORB_VOICE_STATUS_CARD_COPY/)
-    assert.equal(ORB_VOICE_V2_TITLE, 'Ready to talk')
+    assert.equal(ORB_VOICE_V2_TITLE, 'Voice')
     assert.equal(ORB_VOICE_V2_PROMPT, 'Talk it through with ORB before you write.')
-    assert.match(ORB_VOICE_STATUS_CARD_COPY, /Audio is not stored/)
+    assert.match(ORB_VOICE_STATUS_CARD_COPY, /Review any summary/)
     assert.match(voice, /data-orb-voice-status-card/)
   })
 

@@ -9,6 +9,7 @@ import type { OrbVoiceCompanionState } from '@/components/orb-residential/orb-vo
 import {
   ORB_VOICE_STATUS_CARD_COPY,
   ORB_VOICE_V2_PROMPT,
+  ORB_VOICE_V2_SUPPORTING,
   ORB_VOICE_V2_TITLE
 } from '@/lib/orb/orb-residential-ui-copy'
 
@@ -74,8 +75,15 @@ export function OrbVoiceStationContent({
                 <p
                   className="orb-voice-station-content__prompt mt-1 text-sm text-[var(--orb-muted)]"
                   data-orb-voice-v2-prompt
+                  data-orb-voice-hero-line
                 >
                   {ORB_VOICE_V2_PROMPT}
+                </p>
+                <p
+                  className="orb-voice-station-content__supporting mt-2 text-xs leading-relaxed text-[var(--orb-muted)]"
+                  data-orb-voice-v2-supporting
+                >
+                  {ORB_VOICE_V2_SUPPORTING}
                 </p>
               </div>
             ) : null}

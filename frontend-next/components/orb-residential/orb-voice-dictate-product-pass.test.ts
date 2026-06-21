@@ -89,7 +89,7 @@ describe('ORB Voice + Dictate product pass', () => {
     const hero = read('components/orb-standalone/orb-voice-hero-stage.tsx')
     const content = read('components/orb-standalone/orb-voice-station-content.tsx')
     assert.match(companion, /Ready to talk/)
-    assert.match(actions, /Push to talk/)
+    assert.match(actions, /Start talking/)
     assert.match(actions, /Type instead/)
     assert.match(actions, /Turn speech into a record/)
     assert.match(hero, /OrbVoiceCompanion/)

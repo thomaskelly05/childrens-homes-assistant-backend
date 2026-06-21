@@ -49,10 +49,10 @@ describe('ORB Voice copilot rebuild — auth', () => {
 })
 
 describe('ORB Voice copilot rebuild — ready', () => {
-  it('configured status renders Push to talk', () => {
-    assert.equal(orbVoiceUiPrimaryLabel('ready'), 'Push to talk')
+  it('configured status renders Start talking', () => {
+    assert.equal(orbVoiceUiPrimaryLabel('ready'), 'Start talking')
     const actions = readComponent('components/orb-standalone/orb-voice-actions.tsx')
-    assert.match(actions, /Push to talk/)
+    assert.match(actions, /Start talking/)
   })
 
   it('ready state does not render Open Dictate as primary', () => {
@@ -92,7 +92,7 @@ describe('ORB Voice copilot rebuild — fallback', () => {
 
 describe('ORB Voice copilot rebuild — conversation', () => {
   it('transport live renders End button', () => {
-    assert.equal(orbVoiceUiPrimaryLabel('listening'), 'End')
+    assert.equal(orbVoiceUiPrimaryLabel('listening'), 'Stop listening')
     const station = readComponent('components/orb-standalone/orb-voice-station.tsx')
     assert.match(station, /voiceTransportLive/)
     assert.match(station, /data-orb-voice-transport-live/)

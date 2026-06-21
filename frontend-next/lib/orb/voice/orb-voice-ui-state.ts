@@ -3,6 +3,14 @@
  */
 
 import type { OrbRealtimeVoiceStatus } from './orb-realtime-availability'
+import {
+  ORB_VOICE_BUTTON_SPEAKING,
+  ORB_VOICE_BUTTON_START,
+  ORB_VOICE_BUTTON_STOP_LISTENING,
+  ORB_VOICE_BUTTON_THINKING,
+  ORB_VOICE_MIC_ERROR,
+  ORB_VOICE_REFLECTIVE_HERO_LINE
+} from './orb-voice-reflective-copy.ts'
 
 export const ORB_REALTIME_CONFIGURED_PROVIDERS = ['openai', 'openai_realtime'] as const
 
@@ -174,7 +182,7 @@ export function orbVoiceUiStatusLine(state: OrbVoiceUiState): string {
     case 'ended':
       return 'Voice session captured'
     case 'failed_permission':
-      return 'Microphone access is needed.'
+      return ORB_VOICE_MIC_ERROR.split('.')[0] + '.'
     case 'failed_connection':
       return 'Voice could not connect.'
     case 'unsupported':
@@ -190,7 +198,7 @@ export function orbVoiceUiDetailLine(state: OrbVoiceUiState, dictateReady?: bool
     case 'unauthenticated':
       return 'Sign in to start a live conversation with ORB.'
     case 'ready':
-      return 'Talk it through with ORB before you write.'
+      return ORB_VOICE_REFLECTIVE_HERO_LINE
     case 'preparing':
       return 'Getting voice ready…'
     case 'listening':
@@ -204,7 +212,7 @@ export function orbVoiceUiDetailLine(state: OrbVoiceUiState, dictateReady?: bool
     case 'reconnecting':
       return 'Trying to restore your voice connection…'
     case 'failed_permission':
-      return 'You can still type or use Dictate.'
+      return ORB_VOICE_MIC_ERROR
     case 'failed_connection':
       return 'You can try again, type instead, or use Dictate.'
     case 'unsupported':
@@ -221,15 +229,17 @@ export function orbVoiceUiPrimaryLabel(state: OrbVoiceUiState): string {
     case 'unauthenticated':
       return 'Sign in'
     case 'ready':
-      return 'Push to talk'
+      return ORB_VOICE_BUTTON_START
     case 'preparing':
     case 'reconnecting':
       return 'Cancel'
     case 'listening':
     case 'user_speaking':
+      return ORB_VOICE_BUTTON_STOP_LISTENING
     case 'thinking':
+      return ORB_VOICE_BUTTON_THINKING
     case 'speaking':
-      return 'End'
+      return ORB_VOICE_BUTTON_SPEAKING
     case 'ended':
       return 'Start new voice conversation'
     case 'failed_permission':
@@ -237,7 +247,7 @@ export function orbVoiceUiPrimaryLabel(state: OrbVoiceUiState): string {
     case 'unsupported':
       return 'Try voice again'
     default:
-      return 'Push to talk'
+      return ORB_VOICE_BUTTON_START
   }
 }
 

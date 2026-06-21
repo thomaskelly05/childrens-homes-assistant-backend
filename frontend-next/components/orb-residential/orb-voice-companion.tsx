@@ -16,6 +16,7 @@ export const ORB_VOICE_COMPANION_STATES = [
   'thinking',
   'speaking',
   'paused',
+  'summary_ready',
   'error'
 ] as const
 
@@ -28,6 +29,7 @@ export const ORB_VOICE_COMPANION_STATE_LABELS: Record<
   thinking: 'Thinking',
   speaking: 'Speaking',
   paused: 'Paused / Finished',
+  summary_ready: 'Summary ready',
   error: 'Error / Unavailable'
 }
 
@@ -40,6 +42,7 @@ export const ORB_VOICE_COMPANION_HEADLINES: Record<
   thinking: 'Thinking with you…',
   speaking: 'ORB is responding.',
   paused: 'Voice session captured',
+  summary_ready: 'Summary ready for adult review',
   error: 'Voice is unavailable right now.'
 }
 
@@ -50,7 +53,8 @@ export const ORB_VOICE_COMPANION_SUBLINES: Partial<
   listening: 'Speak naturally. You can pause.',
   thinking: "I'm structuring what you shared.",
   speaking: 'You can continue when I finish.',
-  paused: 'Review what was discussed before turning it into a record.'
+  paused: 'Review what was discussed before turning it into a record.',
+  summary_ready: 'Review the summary before saving or sending to Dictate.'
 }
 
 export function mapOrbVoiceUiToCompanionState(
@@ -72,6 +76,8 @@ export function mapOrbVoiceUiToCompanionState(
     case 'paused':
     case 'interrupted':
       return 'paused'
+    case 'summary_ready':
+      return 'summary_ready'
     case 'provider_unavailable':
     case 'webrtc_failed':
     case 'failed_permission':

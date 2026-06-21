@@ -189,8 +189,8 @@ describe('ORB mobile premium Dictate copy', () => {
 })
 
 describe('ORB mobile premium Voice copy', () => {
-  it('idle shows one primary Push to talk control', () => {
-    assert.equal(voiceMobilePrimaryButton({ uiState: 'ready', sessionLive: false, starting: false }), 'Push to talk')
+  it('idle shows one primary Start talking control', () => {
+    assert.equal(voiceMobilePrimaryButton({ uiState: 'ready', sessionLive: false, starting: false }), 'Start talking')
     const voice = readComponent('components/orb-standalone/orb-voice-station.tsx')
     const content = readComponent('components/orb-standalone/orb-voice-station-content.tsx')
     const actions = readComponent('components/orb-standalone/orb-voice-actions.tsx')

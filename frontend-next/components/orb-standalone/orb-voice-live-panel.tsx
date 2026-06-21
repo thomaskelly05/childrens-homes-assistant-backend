@@ -2,6 +2,8 @@
 
 import { Mic, MicOff, Square } from 'lucide-react'
 
+import { OrbVoiceConversationPanel } from '@/components/orb-residential/OrbVoiceConversationPanel'
+import { ORB_VOICE_END_AND_SUMMARISE } from '@/lib/orb/voice/orb-voice-reflective-copy'
 import type { VoiceTurn } from '@/lib/orb/voice/orb-voice-types'
 
 export type OrbVoiceLivePanelState =
@@ -52,6 +54,7 @@ export function OrbVoiceLivePanel({
   onEnd,
   onTurnIntoRecord,
   statusLabelOverride,
+  listeningSeconds = 0,
   className = ''
 }: {
   turns: VoiceTurn[]
@@ -71,6 +74,8 @@ export function OrbVoiceLivePanel({
   onEnd: () => void
   onTurnIntoRecord?: () => void
   statusLabelOverride?: string | null
+  /** Elapsed seconds while listening — shown when &gt; 0 */
+  listeningSeconds?: number
   className?: string
 }) {
   const dialogue = turns.filter((t) => t.role === 'user' || t.role === 'assistant')
@@ -79,8 +84,9 @@ export function OrbVoiceLivePanel({
   const promptLine =
     livePrompt?.trim() ||
     (pauseHint && liveState === 'listening'
-      ? "You can keep going, or I can help turn what you've said into a record."
+      ? "You can keep going, or end when you're ready for a reviewable summary."
       : null)
+  const showConversation = dialogue.length > 0 || Boolean(interimTranscript?.trim())
 
   return (
     <div
@@ -93,11 +99,33 @@ export function OrbVoiceLivePanel({
         {stateLabel}
       </p>
 
+      {(liveState === 'listening' || liveState === 'user_speaking') && listeningSeconds > 0 ? (
+        <p className="text-center text-[11px] tabular-nums text-[var(--orb-muted)]" data-orb-voice-listening-timer>
+          {Math.floor(listeningSeconds / 60)}:{String(listeningSeconds % 60).padStart(2, '0')}
+        </p>
+      ) : null}
+
       {promptLine ? (
         <p className="text-center text-[11px] leading-5 text-[var(--orb-muted)]" data-orb-voice-live-prompt>
           {promptLine}
         </p>
       ) : null}
+
+      {showConversation ? (
+        <OrbVoiceConversationPanel turns={turns} interimTranscript={interimTranscript} />
+      ) : (
+        <div
+          className="rounded-2xl border border-[var(--orb-line)]/25 bg-[var(--orb-surface-elevated)]/40 p-3 text-center"
+          data-orb-voice-live-empty
+        >
+          <p className="text-xs text-[var(--orb-muted)]">Start speaking when you&apos;re ready.</p>
+          {pauseHint && liveState === 'listening' && !promptLine ? (
+            <p className="mt-3 text-[11px] leading-5 text-[var(--orb-muted)]" data-orb-voice-pause-hint>
+              Take your time.
+            </p>
+          ) : null}
+        </div>
+      )}
 
       {safetyPrompt ? (
         <p
@@ -119,48 +147,6 @@ export function OrbVoiceLivePanel({
           {bargeInFallback}
         </p>
       ) : null}
-
-      <div
-        className="max-h-[min(36dvh,18rem)] overflow-y-auto rounded-2xl border border-[var(--orb-line)]/25 bg-[var(--orb-surface-elevated)]/40 p-3 backdrop-blur-sm"
-        data-orb-voice-live-transcript
-      >
-        {dialogue.length ? (
-          <div className="space-y-2">
-            {dialogue.map((line) => (
-              <div
-                key={line.id}
-                className={`rounded-xl px-3 py-2 text-xs leading-5 ${
-                  line.role === 'user'
-                    ? 'ml-4 bg-[var(--orb-primary-soft)]/35 text-[var(--orb-foreground)]'
-                    : 'mr-4 bg-[var(--orb-surface)]/80 text-[var(--orb-foreground)]'
-                }`}
-                data-orb-voice-transcript-turn={line.role}
-              >
-                <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--orb-muted)]">
-                  {line.role === 'user' ? 'Adult' : 'ORB'}
-                </span>
-                <p className="mt-0.5 whitespace-pre-wrap">{line.text}</p>
-              </div>
-            ))}
-          </div>
-        ) : interimTranscript?.trim() ? (
-          <p className="text-xs leading-5 text-[var(--orb-foreground)]">{interimTranscript}</p>
-        ) : (
-          <p className="text-xs text-[var(--orb-muted)]" data-orb-voice-live-empty>
-            Start speaking when you&apos;re ready.
-          </p>
-        )}
-        {interimTranscript?.trim() && dialogue.length ? (
-          <p className="mt-2 text-[10px] italic text-[var(--orb-muted)]" data-orb-voice-interim>
-            {interimTranscript}
-          </p>
-        ) : null}
-        {pauseHint && liveState === 'listening' && !promptLine ? (
-          <p className="mt-3 text-[11px] leading-5 text-[var(--orb-muted)]" data-orb-voice-pause-hint>
-            Take your time.
-          </p>
-        ) : null}
-      </div>
 
       <div className="flex flex-wrap items-center justify-center gap-2" data-orb-voice-live-controls>
         {onToggleMute ? (
@@ -189,10 +175,11 @@ export function OrbVoiceLivePanel({
           type="button"
           className="inline-flex min-h-[2.75rem] items-center gap-1.5 rounded-full bg-gradient-to-r from-[var(--orb-primary-blue,#168bff)] to-[var(--orb-primary-blue-2,#0d5fcc)] px-5 py-2 text-xs font-semibold text-white shadow-lg shadow-sky-500/20"
           data-orb-voice-end
+          data-orb-voice-end-and-summarise
           onClick={onEnd}
         >
           <Square className="h-3 w-3 fill-current" aria-hidden />
-          End
+          {ORB_VOICE_END_AND_SUMMARISE}
         </button>
       </div>
     </div>

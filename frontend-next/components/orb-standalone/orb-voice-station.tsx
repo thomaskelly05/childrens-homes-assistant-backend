@@ -33,6 +33,22 @@ import { isOrbDeveloperMode } from '@/lib/orb/orb-developer-mode'
 import { isOrbVoiceDebugMode } from '@/lib/orb/orb-voice-debug'
 import { getOrbVoiceProfile, orbVoiceProfileLabel } from '@/lib/orb/voice/orb-voice-profiles'
 import { OrbVoiceModeSelector } from '@/components/orb-residential/orb-voice-mode-selector'
+import { OrbVoiceReflectiveModeSelector } from '@/components/orb-residential/OrbVoiceReflectiveModeSelector'
+import { OrbVoiceConversationPanel } from '@/components/orb-residential/OrbVoiceConversationPanel'
+import { OrbVoiceSummaryPanel } from '@/components/orb-residential/OrbVoiceSummaryPanel'
+import {
+  ORB_VOICE_AUDIO_NOT_STORED,
+  ORB_VOICE_AUDIO_TRANSCRIPT_REVIEW_NOTE,
+  ORB_VOICE_END_AND_SUMMARISE,
+  ORB_VOICE_MIC_ERROR
+} from '@/lib/orb/voice/orb-voice-reflective-copy'
+import { buildOrbVoiceHandoffPayload } from '@/lib/orb/voice/orb-voice-handoff'
+import {
+  ORB_VOICE_REFLECTIVE_MODE_DEFAULT,
+  orbVoiceReflectiveModeById,
+  type OrbVoiceReflectiveModeId
+} from '@/lib/orb/voice/orb-voice-reflective-modes'
+import { buildOrbVoiceReflectiveSummary } from '@/lib/orb/voice/orb-voice-reflective-summary'
 import {
   ORB_VOICE_REASONING_OPTIONS,
   ORB_VOICE_STYLE_OPTIONS,
@@ -260,6 +276,10 @@ export function OrbVoiceStation({
   const [voiceStartError, setVoiceStartError] = useState<string | null>(null)
   const [browserStartStage, setBrowserStartStage] = useState<BrowserStartStage>('idle')
   const [voiceRecordTemplateId, setVoiceRecordTemplateId] = useState('general')
+  const [reflectiveModeId, setReflectiveModeId] = useState<OrbVoiceReflectiveModeId>(
+    ORB_VOICE_REFLECTIVE_MODE_DEFAULT
+  )
+  const [listeningElapsedSec, setListeningElapsedSec] = useState(0)
   const [silenceDurationMs, setSilenceDurationMs] = useState(0)
   const [noTranscriptFallback, setNoTranscriptFallback] = useState(false)
   const [isFinalizingRecording, setIsFinalizingRecording] = useState(false)
@@ -283,6 +303,18 @@ export function OrbVoiceStation({
     (styleId: OrbVoiceStyleId) => {
       setVoiceStyle(styleId)
       voice.setVoicePresetId(resolveVoiceStyleProfileId(styleId))
+    },
+    [voice]
+  )
+
+  const handleReflectiveModeChange = useCallback(
+    (modeId: OrbVoiceReflectiveModeId) => {
+      setReflectiveModeId(modeId)
+      const mode = orbVoiceReflectiveModeById(modeId)
+      voice.setVoiceMode(mode.voiceModeId)
+      if (mode.suggestedTemplateId) {
+        setVoiceRecordTemplateId(mode.suggestedTemplateId)
+      }
     },
     [voice]
   )
@@ -511,6 +543,60 @@ export function OrbVoiceStation({
     [conversationTurns]
   )
 
+  const reflectiveSummary = useMemo(
+    () =>
+      buildOrbVoiceReflectiveSummary(
+        reflectiveModeId,
+        conversationTurns,
+        fullConversationText || voiceTranscriptText || browserTranscriptText
+      ),
+    [
+      reflectiveModeId,
+      conversationTurns,
+      fullConversationText,
+      voiceTranscriptText,
+      browserTranscriptText
+    ]
+  )
+
+  const handleCopySummary = useCallback(() => {
+    void navigator.clipboard?.writeText(reflectiveSummary.markdown)
+    setSaveNotice('Summary copied for adult review.')
+  }, [reflectiveSummary.markdown])
+
+  const handleSendSummaryToDictate = useCallback(() => {
+    if (!onOpenDictate) return
+    const mode = orbVoiceReflectiveModeById(reflectiveModeId)
+    const transcript = fullConversationText || voiceTranscriptText || browserTranscriptText
+    const payload = buildOrbVoiceHandoffPayload({
+      mode: reflectiveModeId,
+      conversationTranscript: transcript,
+      summary: reflectiveSummary.markdown,
+      suggestedTemplateId: mode.suggestedTemplateId
+    })
+    onOpenDictate(
+      `${payload.summary}\n\n---\n\nSource conversation:\n${payload.conversationTranscript}`,
+      undefined,
+      { studio: true }
+    )
+  }, [
+    browserTranscriptText,
+    fullConversationText,
+    onOpenDictate,
+    reflectiveModeId,
+    reflectiveSummary.markdown,
+    voiceTranscriptText
+  ])
+
+  const handleOpenSummaryInWrite = useCallback(() => {
+    if (!onOpenWrite) return
+    const mode = orbVoiceReflectiveModeById(reflectiveModeId)
+    onOpenWrite(reflectiveSummary.markdown, {
+      title: 'ORB Voice reflection summary',
+      recordTypeId: mode.suggestedTemplateId
+    })
+  }, [onOpenWrite, reflectiveModeId, reflectiveSummary.markdown])
+
   const turnsForSave = useCallback((): VoiceTurn[] => conversationTurns, [conversationTurns])
 
   const voiceStartProgressStage = resolveOrbVoiceStartProgressStage({
@@ -604,14 +690,6 @@ export function OrbVoiceStation({
           ? 'Microphone access is needed to use Voice. You can still type or use Dictate.'
           : null)
 
-  const companionState = useBrowserLaunch
-    ? mapOrbVoiceUiToCompanionState(
-        usesServerTranscription && voiceEngine.state === 'transcribing'
-          ? 'thinking'
-          : launchUiState
-      )
-    : mapOrbVoiceUiToCompanionState(uiState)
-
   const hasMeaningfulTranscript =
     Boolean(browserTranscriptText) ||
     hasUserFacingTranscript(turns) ||
@@ -632,6 +710,18 @@ export function OrbVoiceStation({
           ? 'live'
           : 'idle'
 
+  const companionState = useBrowserLaunch
+    ? mapOrbVoiceUiToCompanionState(
+        voiceWorkspaceMode === 'after_call'
+          ? 'summary_ready'
+          : usesServerTranscription && voiceEngine.state === 'transcribing'
+            ? 'thinking'
+            : launchUiState
+      )
+    : mapOrbVoiceUiToCompanionState(
+        voiceWorkspaceMode === 'after_call' ? 'summary_ready' : uiState
+      )
+
   const livePanelState: OrbVoiceLivePanelState =
     usesServerTranscription && voiceEngine.state === 'transcribing'
       ? 'thinking'
@@ -645,7 +735,7 @@ export function OrbVoiceStation({
               ? 'thinking'
               : uiState === 'speaking' || voiceEngine.state === 'speaking'
                 ? 'speaking'
-                : companionState === 'paused'
+                : voiceWorkspaceMode === 'after_call'
                   ? 'paused'
                   : 'listening'
 
@@ -710,6 +800,23 @@ export function OrbVoiceStation({
       window.clearTimeout(hintTimer)
     }
   }, [livePanelState, realtimeState, voiceWorkspaceMode])
+
+  useEffect(() => {
+    const capturing =
+      voiceWorkspaceMode === 'live' &&
+      (livePanelState === 'listening' ||
+        livePanelState === 'user_speaking' ||
+        launchUiState === 'listening')
+    if (!capturing) {
+      setListeningElapsedSec(0)
+      return
+    }
+    const started = Date.now()
+    const tick = window.setInterval(() => {
+      setListeningElapsedSec(Math.floor((Date.now() - started) / 1000))
+    }, 1000)
+    return () => window.clearInterval(tick)
+  }, [launchUiState, livePanelState, voiceWorkspaceMode])
 
   useEffect(() => {
     if (realtimeState === 'speech_detected' || realtimeState === 'speaking' || realtimeState === 'thinking') {
@@ -1402,7 +1509,18 @@ export function OrbVoiceStation({
   const afterCallTranscript = fullConversationText || voiceTranscriptText || browserTranscriptText
 
   const afterCallPanel = hasMeaningfulTranscript ? (
-    <OrbVoiceAfterCallPanel
+    <div className="space-y-5" data-orb-voice-after-call-wrap>
+      <OrbVoiceSummaryPanel
+        summary={reflectiveSummary}
+        onCopySummary={handleCopySummary}
+        onSendToDictate={onOpenDictate ? handleSendSummaryToDictate : undefined}
+        onOpenWrite={onOpenWrite ? handleOpenSummaryInWrite : undefined}
+        onSaveReflection={
+          voice.settings.saveTranscript ? () => void handleSaveTranscript() : undefined
+        }
+        saving={savingTranscript}
+      />
+      <OrbVoiceAfterCallPanel
       turns={conversationTurns}
       transcriptText={afterCallTranscript}
       voiceSummary={assistantReply}
@@ -1425,6 +1543,7 @@ export function OrbVoiceStation({
       onCopyTranscript={handleCopyTranscript}
       onNewSession={handleNewConversation}
     />
+    </div>
   ) : null
 
   const noTranscriptPanel = (
@@ -1461,6 +1580,7 @@ export function OrbVoiceStation({
       }
       onEnd={() => void handleEnd()}
       onTurnIntoRecord={onOpenDictate ? () => handleCreateDraftFromVoice(voiceRecordTemplateId) : undefined}
+      listeningSeconds={listeningElapsedSec}
     />
   )
 
@@ -1545,7 +1665,12 @@ export function OrbVoiceStation({
                       Stop speaking
                     </button>
                   ) : null}
-                  <OrbVoiceActions uiState="listening" onPrimary={handleEnd} layout="stack" />
+                  <OrbVoiceActions
+                    uiState="listening"
+                    primaryLabelOverride={ORB_VOICE_END_AND_SUMMARISE}
+                    onPrimary={handleEnd}
+                    layout="stack"
+                  />
                 </div>
               ) : uiState === 'preparing' || uiState === 'reconnecting' ? (
                 <OrbVoiceActions uiState={uiState} onPrimary={handleCancelStart} layout="stack" />
@@ -1582,13 +1707,25 @@ export function OrbVoiceStation({
           {voiceWorkspaceMode === 'live' && isMobileViewport ? livePanel : null}
           {voiceWorkspaceMode === 'idle' ? (
           <div className="orb-voice-session-extras w-full" data-orb-voice-session-extras data-orb-voice-controls-main-screen>
-          <div className="mt-4 flex w-full justify-center px-2" data-orb-voice-controls-not-settings>
-            <OrbVoiceModeSelector
-              voiceStyle={voiceStyle}
-              reasoningMode={reasoningMode}
-              onVoiceStyleChange={handleVoiceStyleChange}
-              onReasoningModeChange={handleReasoningModeChange}
+          <div className="mt-4 flex w-full flex-col items-center gap-3 px-2" data-orb-voice-controls-not-settings>
+            <OrbVoiceReflectiveModeSelector
+              value={reflectiveModeId}
+              onChange={handleReflectiveModeChange}
+              disabled={voiceSessionLive}
             />
+            <details className="w-full max-w-2xl text-[10px] text-[var(--orb-muted)]" data-orb-voice-advanced-modes>
+              <summary className="cursor-pointer text-center font-medium hover:text-[var(--orb-foreground)]">
+                Voice style &amp; tone
+              </summary>
+              <div className="mt-2">
+                <OrbVoiceModeSelector
+                  voiceStyle={voiceStyle}
+                  reasoningMode={reasoningMode}
+                  onVoiceStyleChange={handleVoiceStyleChange}
+                  onReasoningModeChange={handleReasoningModeChange}
+                />
+              </div>
+            </details>
           </div>
 
           {!voiceSessionLive ? (
@@ -1598,7 +1735,9 @@ export function OrbVoiceStation({
           ) : null}
 
           <p className="mt-2 text-center text-[11px] text-[var(--orb-muted)]" data-orb-voice-audio-storage-note data-orb-voice-safety-line>
-            Audio is not stored. Review any transcript before use.
+            {conversationTurns.length || browserTranscriptText
+              ? ORB_VOICE_AUDIO_TRANSCRIPT_REVIEW_NOTE
+              : ORB_VOICE_AUDIO_NOT_STORED}
           </p>
 
           {audioPlaybackBlocked ? (

@@ -17,7 +17,7 @@ function read(relativePath: string) {
 
 describe('ORB Residential Phase 3C live product repair', () => {
   it('build version marker is phase-3c', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-3v-dictate-intelligence-evidence-save')
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-4a-voice-reflective-companion')
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
     const layout = read('app/orb/layout.tsx')
     assert.match(companion, /data-orb-build-version=\{ORB_BUILD_VISUAL_VERSION\}/)
@@ -78,7 +78,7 @@ describe('ORB Residential Phase 3C live product repair', () => {
     assert.match(selector, /data-orb-voice-style-carousel/)
     assert.match(selector, /data-orb-voice-reasoning-carousel/)
     assert.match(voice, /data-orb-voice-controls-not-settings/)
-    assert.match(voice, /Audio is not stored/)
+    assert.match(voice, /ORB_VOICE_AUDIO_NOT_STORED/)
     assert.match(launch, /data-orb-voice-ptt-primary/)
     assert.doesNotMatch(launch, /data-orb-voice-end-summary/)
   })

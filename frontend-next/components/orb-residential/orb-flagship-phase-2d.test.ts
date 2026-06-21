@@ -14,7 +14,7 @@ function read(relativePath: string) {
 
 describe('ORB Residential Phase 2H flagship UX convergence', () => {
   it('build version marker is phase-3b on shell and visual build', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-3v-dictate-intelligence-evidence-save')
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-4a-voice-reflective-companion')
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
     const layout = read('app/orb/layout.tsx')
     assert.match(companion, /data-orb-build-version=\{ORB_BUILD_VISUAL_VERSION\}/)
@@ -160,8 +160,8 @@ describe('ORB Residential Phase 2H flagship UX convergence', () => {
     assert.match(selector, /data-orb-voice-mode-summary/)
     assert.match(voice, /data-orb-voice-controls-main-screen/)
     assert.match(voice, /data-orb-voice-controls-not-settings/)
-    assert.match(voice, /Audio is not stored\. Review any transcript before use\./)
-    assert.match(read('lib/orb/voice/orb-voice-ui-state.ts'), /return 'Push to talk'/)
+    assert.match(voice, /ORB_VOICE_AUDIO_NOT_STORED|ORB_VOICE_AUDIO_TRANSCRIPT_REVIEW_NOTE/)
+    assert.match(read('lib/orb/voice/orb-voice-ui-state.ts'), /ORB_VOICE_BUTTON_START/)
     assert.match(read('lib/orb/voice/orb-voice-ui-state.ts'), /return 'Ready to talk'/)
     const modes = read('lib/orb/orb-voice-mode-carousel.ts')
     for (const label of ['Calm', 'Warm', 'Direct', 'Reflective', 'Talk it through', 'Safeguarding thinking', 'Supervision prep', 'Clear summary']) {
