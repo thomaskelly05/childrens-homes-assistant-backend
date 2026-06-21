@@ -18,8 +18,8 @@ function read(relativePath: string) {
 }
 
 describe('ORB Residential Phase 3S Dictate document quality', () => {
-  it('build version marker is phase-5b-voice-v2-safari-katherine-hardening', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5b-voice-v2-safari-katherine-hardening')
+  it('build version marker is phase-5c-voice-v2-audio-playback-unlock', () => {
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5c-voice-v2-audio-playback-unlock')
     const layout = read('app/orb/layout.tsx')
     assert.match(layout, /orb-residential-shell\.css/)
     assert.deepEqual(ORB_LAYOUT_CSS_FILES, ['app/orb/orb-residential-shell.css'])

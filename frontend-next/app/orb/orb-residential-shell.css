@@ -3136,7 +3136,7 @@ html[data-orb-residential='1'] .orb-dictate-assistant-status {
 
 /* phase-3v-dictate-intelligence-evidence-save marker — logic-only pass */
 
-/* phase-5b-voice-v2-safari-katherine-hardening — Voice v2 Safari permissions and Katherine status */
+/* phase-5c-voice-v2-audio-playback-unlock — Voice v2 Safari audio unlock and playback fallback */
 html[data-orb-residential='1'] [data-orb-voice-companion-state='listening'] .orb-voice-hero-aura {
   animation: orb-voice-listen-pulse 2.4s ease-in-out infinite;
 }

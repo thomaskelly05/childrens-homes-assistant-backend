@@ -131,7 +131,7 @@ describe('ORB OpenAI realtime voice response flow', () => {
     const content = readFileSync(join(root, 'components/orb-standalone/orb-voice-station-content.tsx'), 'utf8')
     const hook = readFileSync(join(root, 'lib/orb/voice-v2/use-orb-voice-v2.ts'), 'utf8')
     assert.match(hook, /requestOrbVoiceV2Speak/)
-    assert.match(hook, /audio\.play\(\)/)
+    assert.match(hook, /playOrbVoiceV2Audio|unlockOrbVoiceV2AudioPlayback/)
     assert.match(station, /ORB_VOICE_V2_PREPARING_VOICE|voicePreparing/)
     assert.match(content, /data-orb-voice-station-content/)
   })

@@ -13,10 +13,19 @@ import {
 import { OrbVoiceV2CaptureError, startOrbVoiceV2Capture, type OrbVoiceV2CaptureSession } from './orb-voice-v2-capture.ts'
 import {
   ORB_VOICE_V2_AUDIO_PLAYBACK_BLOCKED,
+  ORB_VOICE_V2_FALLBACK_VOICE_TURN,
   ORB_VOICE_V2_MIC_DENIED,
   ORB_VOICE_V2_PREPARING_VOICE,
   ORB_VOICE_V2_TRANSCRIPTION_ERROR
 } from './orb-voice-v2-copy.ts'
+import {
+  createOrbVoiceV2PlaybackSession,
+  disposeOrbVoiceV2PlaybackSession,
+  playOrbVoiceV2Audio,
+  unlockOrbVoiceV2AudioPlayback,
+  type OrbVoiceV2PlaybackSession,
+  type OrbVoiceV2PlaybackState
+} from './orb-voice-v2-playback.ts'
 import {
   isNotAllowedError,
   isOrbVoiceV2CaptureNotAllowed,
@@ -48,9 +57,13 @@ export function useOrbVoiceV2(open: boolean) {
   const [typedDraft, setTypedDraft] = useState('')
   const [showTypeFallback, setShowTypeFallback] = useState(false)
   const [ttsProvider, setTtsProvider] = useState<string | null>(null)
+  const [audioUnlocked, setAudioUnlocked] = useState(false)
+  const [playbackState, setPlaybackState] = useState<OrbVoiceV2PlaybackState>('idle')
+  const [turnFallbackNotice, setTurnFallbackNotice] = useState<string | null>(null)
 
   const captureRef = useRef<OrbVoiceV2CaptureSession | null>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null)
+  const pendingPlaybackRef = useRef<OrbVoiceV2PlaybackSession | null>(null)
   const spokenTurnKeysRef = useRef<Set<string>>(new Set())
   const processingRef = useRef(false)
   const prepareTimerRef = useRef<number | null>(null)
@@ -83,6 +96,8 @@ export function useOrbVoiceV2(open: boolean) {
       }
       audioRef.current = null
     }
+    disposeOrbVoiceV2PlaybackSession(pendingPlaybackRef.current)
+    pendingPlaybackRef.current = null
     if (prepareTimerRef.current) window.clearTimeout(prepareTimerRef.current)
     if (skipTimerRef.current) window.clearTimeout(skipTimerRef.current)
     prepareTimerRef.current = null
@@ -101,8 +116,11 @@ export function useOrbVoiceV2(open: boolean) {
     setVoicePreparingLongWait(false)
     setVoicePreparingSkipAvailable(false)
     setFallbackNotice(null)
+    setTurnFallbackNotice(null)
     setTypedDraft('')
     setShowTypeFallback(false)
+    setAudioUnlocked(false)
+    setPlaybackState('idle')
   }, [])
 
   useEffect(() => {
@@ -148,6 +166,9 @@ export function useOrbVoiceV2(open: boolean) {
       }
       audioRef.current = null
     }
+    disposeOrbVoiceV2PlaybackSession(pendingPlaybackRef.current)
+    pendingPlaybackRef.current = null
+    setPlaybackState('idle')
     clearVoicePreparing()
     if (stateRef.current === 'speaking') setState('paused')
   }, [clearVoicePreparing])
@@ -255,40 +276,73 @@ export function useOrbVoiceV2(open: boolean) {
         return
       }
       if (result.fallbackUsed) {
+        setTurnFallbackNotice(ORB_VOICE_V2_FALLBACK_VOICE_TURN)
         void fetchOrbVoiceV2Status().then(applyKatherineStatus)
+      } else {
+        setTurnFallbackNotice(null)
       }
       if (result.provider) setTtsProvider(result.provider)
       clearVoicePreparing()
+
+      disposeOrbVoiceV2PlaybackSession(pendingPlaybackRef.current)
+      const session = createOrbVoiceV2PlaybackSession(result.blob)
+      pendingPlaybackRef.current = session
+      audioRef.current = session.audio
+
+      const finishPlayback = () => {
+        disposeOrbVoiceV2PlaybackSession(pendingPlaybackRef.current)
+        pendingPlaybackRef.current = null
+        audioRef.current = null
+        setPlaybackState('idle')
+        void tryAutoResumeListening()
+      }
+
+      session.audio.onended = finishPlayback
+      session.audio.onerror = finishPlayback
+
       setState('speaking')
-      const url = URL.createObjectURL(result.blob)
-      const audio = new Audio(url)
-      audioRef.current = audio
-      audio.onended = () => {
-        URL.revokeObjectURL(url)
-        audioRef.current = null
-        void tryAutoResumeListening()
+      const playResult = await playOrbVoiceV2Audio(session)
+      if (playResult.ok) {
+        setPlaybackState('playing')
+        setPermissionState('ready')
+        setError(null)
+        return
       }
-      audio.onerror = () => {
-        URL.revokeObjectURL(url)
-        audioRef.current = null
-        void tryAutoResumeListening()
+      if (playResult.state === 'blocked') {
+        setPlaybackState('blocked')
+        setPermissionState('audio_playback_blocked')
+        setError(ORB_VOICE_V2_AUDIO_PLAYBACK_BLOCKED)
+        setState('paused')
+        return
       }
-      try {
-        await audio.play()
-      } catch (error) {
-        URL.revokeObjectURL(url)
-        audioRef.current = null
-        if (isNotAllowedError(error)) {
-          setPermissionState('audio_playback_blocked')
-          setError(ORB_VOICE_V2_AUDIO_PLAYBACK_BLOCKED)
-          markAutoResumeBlocked()
-          return
-        }
-        void tryAutoResumeListening()
-      }
+      setPlaybackState('failed')
+      finishPlayback()
     },
-    [applyKatherineStatus, clearVoicePreparing, markAutoResumeBlocked, tryAutoResumeListening]
+    [applyKatherineStatus, clearVoicePreparing, tryAutoResumeListening]
   )
+
+  const playOrbVoice = useCallback(async () => {
+    const session = pendingPlaybackRef.current
+    if (!session) return
+    setError(null)
+    audioRef.current = session.audio
+    setState('speaking')
+    const playResult = await playOrbVoiceV2Audio(session)
+    if (playResult.ok) {
+      setPlaybackState('playing')
+      setPermissionState('ready')
+      return
+    }
+    if (playResult.state === 'blocked') {
+      setPlaybackState('blocked')
+      setPermissionState('audio_playback_blocked')
+      setError(ORB_VOICE_V2_AUDIO_PLAYBACK_BLOCKED)
+      setState('paused')
+      return
+    }
+    setPlaybackState('failed')
+    setState('paused')
+  }, [])
 
   speakReplyRef.current = speakReply
 
@@ -331,6 +385,8 @@ export function useOrbVoiceV2(open: boolean) {
     }
     setSummary(null)
     conversationStartedRef.current = true
+    const unlocked = await unlockOrbVoiceV2AudioPlayback()
+    setAudioUnlocked(unlocked)
     await resumeListening({ fromUserGesture: true })
   }, [resetLiveSession, resumeListening])
 
@@ -372,10 +428,13 @@ export function useOrbVoiceV2(open: boolean) {
     : null
 
   const permissionNotice = permissionNoticeForState(permissionState)
+  const playbackBlocked = playbackState === 'blocked'
   const detailLine =
     voicePreparing && !audioRef.current
       ? ORB_VOICE_V2_PREPARING_VOICE
-      : permissionNotice || error || fallbackNotice
+      : playbackBlocked
+        ? ORB_VOICE_V2_AUDIO_PLAYBACK_BLOCKED
+        : permissionNotice || error || turnFallbackNotice || fallbackNotice
 
   return {
     state,
@@ -387,8 +446,12 @@ export function useOrbVoiceV2(open: boolean) {
     detailLine,
     permissionState,
     autoResumeBlocked,
+    audioUnlocked,
+    playbackState,
+    playbackBlocked,
     katherineReady,
     fallbackNotice,
+    turnFallbackNotice,
     typedDraft,
     setTypedDraft,
     showTypeFallback,
@@ -396,6 +459,7 @@ export function useOrbVoiceV2(open: boolean) {
     voicePreparingSkipAvailable,
     startConversation,
     continueConversation,
+    playOrbVoice,
     pauseConversation,
     stopOrbAudio,
     endAndSummarise,

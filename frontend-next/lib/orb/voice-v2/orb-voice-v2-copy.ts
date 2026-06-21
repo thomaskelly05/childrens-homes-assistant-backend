@@ -19,7 +19,9 @@ export const ORB_VOICE_V2_MIC_DENIED =
 export const ORB_VOICE_V2_SAFARI_AUTO_RESUME =
   'Safari needs you to tap once to continue listening.' as const
 export const ORB_VOICE_V2_AUDIO_PLAYBACK_BLOCKED =
-  'Audio playback was blocked. ORB’s reply is shown as text.' as const
+  'Safari blocked automatic playback. Tap Play ORB voice to hear the reply.' as const
+export const ORB_VOICE_V2_PLAY_ORB_VOICE = 'Play ORB voice' as const
+export const ORB_VOICE_V2_FALLBACK_VOICE_TURN = 'Using fallback voice for this reply.' as const
 export const ORB_VOICE_V2_KATHERINE_FORCED_OPENAI =
   'Katherine is unavailable — OpenAI fallback is forced in server settings.' as const
 export const ORB_VOICE_V2_KATHERINE_MISSING_ELEVENLABS =

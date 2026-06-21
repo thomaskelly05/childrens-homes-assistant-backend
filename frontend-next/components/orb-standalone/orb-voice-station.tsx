@@ -17,6 +17,7 @@ import {
   ORB_VOICE_V2_CONTINUE_WITHOUT_VOICE,
   ORB_VOICE_V2_MODES,
   ORB_VOICE_V2_MODE_PROMPT,
+  ORB_VOICE_V2_PLAY_ORB_VOICE,
   ORB_VOICE_V2_SAFETY_FOOTER,
   ORB_VOICE_V2_SEND_TYPED,
   ORB_VOICE_V2_TRANSCRIPT_LABEL,
@@ -298,6 +299,8 @@ export function OrbVoiceStation({
         data-orb-voice-ui-state={voice.state}
         data-orb-voice-permission-state={voice.permissionState}
         data-orb-voice-auto-resume-blocked={voice.autoResumeBlocked ? true : undefined}
+        data-orb-voice-playback-blocked={voice.playbackBlocked ? true : undefined}
+        data-orb-voice-audio-unlocked={voice.audioUnlocked ? true : undefined}
       >
         <OrbVoiceStationContent
           companionState={companionState}
@@ -309,6 +312,16 @@ export function OrbVoiceStation({
           controls={
             workspaceMode === 'after_call' ? null : (
               <div className="flex w-full max-w-sm flex-col items-center gap-2">
+                {voice.playbackBlocked ? (
+                  <button
+                    type="button"
+                    className="orb-liquid-button w-full rounded-full border border-[var(--orb-primary-blue,#168bff)]/50 bg-[var(--orb-primary-blue,#168bff)]/10 px-6 py-3 text-sm font-semibold text-[var(--orb-foreground)]"
+                    onClick={() => void voice.playOrbVoice()}
+                    data-orb-voice-play-orb-voice
+                  >
+                    {ORB_VOICE_V2_PLAY_ORB_VOICE}
+                  </button>
+                ) : null}
                 {voice.voicePreparingSkipAvailable && voice.voicePreparing ? (
                   <button
                     type="button"

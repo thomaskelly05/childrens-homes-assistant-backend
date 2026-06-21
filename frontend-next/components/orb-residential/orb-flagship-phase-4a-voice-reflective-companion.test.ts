@@ -22,8 +22,8 @@ function read(relativePath: string) {
 }
 
 describe('ORB Residential Phase 4A Voice reflective companion', () => {
-  it('build version marker is phase-5b-voice-v2-safari-katherine-hardening', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5b-voice-v2-safari-katherine-hardening')
+  it('build version marker is phase-5c-voice-v2-audio-playback-unlock', () => {
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5c-voice-v2-audio-playback-unlock')
     const layout = read('app/orb/layout.tsx')
     assert.match(layout, /orb-residential-shell\.css/)
     assert.deepEqual(ORB_LAYOUT_CSS_FILES, ['app/orb/orb-residential-shell.css'])
@@ -84,7 +84,7 @@ describe('ORB Residential Phase 4A Voice reflective companion', () => {
   it('single shell and no compliance guarantee language', () => {
     const shell = read('app/orb/orb-residential-shell.css')
     const station = read('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(shell, /phase-5b-voice-v2-safari-katherine-hardening/)
+    assert.match(shell, /phase-5c-voice-v2-audio-playback-unlock/)
     assert.doesNotMatch(station, /Ofsted approved|compliance guarantee|finalised record/i)
     assert.doesNotMatch(station, /ORB makes safeguarding decisions/i)
   })
