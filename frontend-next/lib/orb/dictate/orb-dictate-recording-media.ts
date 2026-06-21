@@ -26,6 +26,8 @@ export type OrbDictateRecordingMedia = {
   status: OrbDictateRecordingMediaStatus
   localObjectUrl?: string
   storageMode: OrbDictateRecordingMediaStorageMode
+  persistenceStatus?: 'local_only' | 'uploading' | 'saved_with_draft' | 'upload_failed' | 'permanent_not_enabled'
+  persistenceMessage?: string
   transcriptionNotice?: string
 }
 

@@ -1,5 +1,6 @@
 import type { OrbDictateGenerateResult, OrbDictateNoteType } from '@/lib/orb/dictate/orb-dictate-types'
 import type { OrbDictateBrainSuggestion } from '@/lib/orb/dictate/orb-dictate-brain-analysis'
+import type { OrbDictatePersonConfirmItem } from '@/lib/orb/dictate/orb-dictate-people-identification'
 import type { OrbDictateParticipant, OrbDictateTranscriptSegment } from '@/lib/orb/dictate/orb-dictate-speaker'
 import {
   resolveOrbRecordingRecordType,
@@ -27,6 +28,8 @@ export type OrbWriteHandoffPayload = {
   segments: OrbDictateTranscriptSegment[]
   dictate_capture_source?: 'recording' | 'paste' | 'upload' | 'speak'
   dictate_source_note?: string
+  working_document?: string
+  people_to_confirm?: OrbDictatePersonConfirmItem[]
   recording_media?: {
     id: string
     filename: string

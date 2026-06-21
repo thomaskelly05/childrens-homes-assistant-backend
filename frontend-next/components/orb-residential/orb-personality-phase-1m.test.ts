@@ -58,10 +58,10 @@ describe('ORB Residential personality pass (Phase 1M)', () => {
   })
 
   it('dictate keeps one primary start recording action', () => {
-    const workspace = read('components/orb/dictate/OrbDictateStudioWorkspace.tsx')
-    assert.match(workspace, /data-orb-dictate-top-record/)
-    assert.match(workspace, /Start recording|aria-label="Start recording"/)
-    assert.doesNotMatch(workspace, /OrbWorkflowStrip/)
+    const capture = read('components/orb/dictate/OrbDictateCaptureStation.tsx')
+    assert.match(capture, /data-orb-dictate-top-record/)
+    assert.match(capture, /Start recording|aria-label="Start recording"/)
+    assert.doesNotMatch(capture, /OrbWorkflowStrip/)
   })
 
   it('voice has one push-to-talk primary action', () => {

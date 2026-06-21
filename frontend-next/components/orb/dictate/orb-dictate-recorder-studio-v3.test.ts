@@ -22,10 +22,11 @@ describe('ORB Dictate recorder studio v3', () => {
 
   it('transcript and ORB analysis panels render in studio workspace', () => {
     const workspace = read('components/orb/dictate/OrbDictateStudioWorkspace.tsx')
+    const capture = read('components/orb/dictate/OrbDictateCaptureStation.tsx')
     const brain = read('components/orb/dictate/OrbDictateBrainPanel.tsx')
     assert.match(workspace, /OrbDictateReviewChecklist/)
     assert.match(workspace, /OrbDictateBrainPanel/)
-    assert.match(workspace, /data-orb-dictate-paste-notes/)
+    assert.match(capture, /data-orb-dictate-paste-notes/)
     assert.match(brain, /data-orb-dictate-brain-panel|OrbDictateBrainPanel/)
   })
 

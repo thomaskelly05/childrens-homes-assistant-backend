@@ -19,6 +19,7 @@ export type OrbDictateWorkingDocumentProps = {
   templateLabel: string
   contentSource?: OrbDictateContentSource
   readOnly?: boolean
+  prominent?: boolean
 }
 
 function applySectionUpdate(
@@ -35,22 +36,31 @@ export function OrbDictateWorkingDocument({
   onDocumentChange,
   templateLabel,
   contentSource,
-  readOnly = false
+  readOnly = false,
+  prominent = false
 }: OrbDictateWorkingDocumentProps) {
   const sections = parseWorkingDocument(documentMarkdown)
 
   return (
     <section
-      className="orb-dictate-working-document rounded-2xl border border-[var(--orb-line)]/20 bg-white p-4 shadow-sm"
+      className={`orb-dictate-working-document rounded-2xl border bg-white shadow-sm ${
+        prominent
+          ? 'border-[var(--orb-line)]/10 p-5 shadow-md ring-1 ring-[var(--orb-line)]/8'
+          : 'border-[var(--orb-line)]/20 p-4'
+      }`}
       data-orb-dictate-working-document
+      data-orb-dictate-working-document-prominent={prominent ? 'true' : undefined}
     >
-      <header className="border-b border-[var(--orb-line)]/10 pb-3">
+      <header className={`border-b border-[var(--orb-line)]/10 ${prominent ? 'pb-4' : 'pb-3'}`}>
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div>
-            <h4 className="text-sm font-semibold text-[var(--orb-foreground)]" data-orb-dictate-working-document-title>
-              {ORB_DICTATE_WORKING_DOC_TITLE}
+            <h4
+              className={`font-semibold text-[var(--orb-foreground)] ${prominent ? 'text-base' : 'text-sm'}`}
+              data-orb-dictate-working-document-title
+            >
+              {templateLabel}
             </h4>
-            <p className="mt-0.5 text-[11px] font-medium text-[var(--orb-primary)]" data-orb-dictate-working-document-label>
+            <p className="mt-1 text-[11px] font-medium text-[var(--orb-primary)]" data-orb-dictate-working-document-label>
               {ORB_DICTATE_WORKING_DOC_LABEL}
             </p>
           </div>
@@ -61,17 +71,14 @@ export function OrbDictateWorkingDocument({
             {templateLabel}
           </span>
         </div>
-        <p className="mt-2 text-xs leading-relaxed text-[var(--orb-muted)]" data-orb-dictate-working-document-supporting>
-          {ORB_DICTATE_WORKING_DOC_SUPPORTING}
-        </p>
         {contentSource ? (
-          <p className="mt-1 text-[10px] text-[var(--orb-muted)]" data-orb-dictate-working-document-source={contentSource}>
+          <p className="mt-2 text-[11px] text-[var(--orb-muted)]" data-orb-dictate-working-document-source={contentSource}>
             {orbDictateContentSourceLabel(contentSource)}
           </p>
         ) : null}
       </header>
 
-      <div className="orb-dictate-working-document-sections mt-4 space-y-4">
+      <div className={`orb-dictate-working-document-sections space-y-4 ${prominent ? 'mt-5' : 'mt-4'}`}>
         {sections.length === 0 ? (
           <textarea
             value={documentMarkdown}
@@ -100,7 +107,11 @@ export function OrbDictateWorkingDocument({
                 onChange={(e) => onDocumentChange(applySectionUpdate(sections, section.heading, e.target.value))}
                 readOnly={readOnly}
                 rows={Math.max(2, Math.min(6, section.body.split('\n').length + 1))}
-                className="mt-1.5 w-full resize-y rounded-lg border border-[var(--orb-line)]/12 bg-[var(--orb-surface)]/25 px-3 py-2 text-sm leading-relaxed text-[var(--orb-foreground)] outline-none focus:border-[var(--orb-primary)]/30 focus:ring-1 focus:ring-[var(--orb-primary)]/10"
+                className={`mt-1.5 w-full resize-y rounded-lg border px-3 py-2.5 text-sm leading-relaxed text-[var(--orb-foreground)] outline-none focus:border-[var(--orb-primary)]/30 focus:ring-1 focus:ring-[var(--orb-primary)]/10 ${
+                  prominent
+                    ? 'min-h-[4.5rem] border-[var(--orb-line)]/10 bg-white'
+                    : 'border-[var(--orb-line)]/12 bg-[var(--orb-surface)]/25'
+                }`}
                 data-orb-dictate-working-document-section-body={section.heading}
                 aria-label={section.heading}
               />

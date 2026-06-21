@@ -18,7 +18,7 @@ function read(relativePath: string) {
 
 describe('ORB Residential Phase 3B unified station experience', () => {
   it('build version marker is phase-3b', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-3p-dictate-recording-media')
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-3q-dictate-template-document-workspace')
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
     const layout = read('app/orb/layout.tsx')
     assert.match(companion, /data-orb-build-version=\{ORB_BUILD_VISUAL_VERSION\}/)
@@ -54,10 +54,11 @@ describe('ORB Residential Phase 3B unified station experience', () => {
 
   it('dictate renders capture journey, actions, review sections and safety copy', () => {
     const workspace = read('components/orb/dictate/OrbDictateStudioWorkspace.tsx')
+    const capture = read('components/orb/dictate/OrbDictateCaptureStation.tsx')
     const checklist = read('components/orb/dictate/OrbDictateReviewChecklist.tsx')
     assert.match(workspace, /data-orb-dictate-journey-step="capture"/)
-    assert.match(workspace, /data-orb-dictate-capture-methods/)
-    assert.match(workspace, /data-orb-dictate-paste-notes/)
+    assert.match(capture, /data-orb-dictate-capture-methods/)
+    assert.match(capture, /data-orb-dictate-paste-notes/)
     assert.match(workspace, /ORB_DICTATE_ADULT_RESPONSIBILITY|ORB_DICTATE_CAPTURE_BOUNDARY/)
     assert.match(workspace, /data-orb-dictate-review-supporting/)
     assert.match(checklist, /data-orb-dictate-review-checklist/)

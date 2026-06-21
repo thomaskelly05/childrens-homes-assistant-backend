@@ -14,7 +14,7 @@ function read(relativePath: string) {
 
 describe('ORB Residential Phase 2H flagship UX convergence', () => {
   it('build version marker is phase-3b on shell and visual build', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-3p-dictate-recording-media')
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-3q-dictate-template-document-workspace')
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
     const layout = read('app/orb/layout.tsx')
     assert.match(companion, /data-orb-build-version=\{ORB_BUILD_VISUAL_VERSION\}/)
@@ -102,16 +102,17 @@ describe('ORB Residential Phase 2H flagship UX convergence', () => {
 
   it('dictate flagship structure uses studio header, capture canvas and ORB Review without developer progression', () => {
     const workspace = read('components/orb/dictate/OrbDictateStudioWorkspace.tsx')
+    const capture = read('components/orb/dictate/OrbDictateCaptureStation.tsx')
     assert.match(workspace, /data-orb-dictate-journey-step="capture"/)
-    assert.match(workspace, /data-orb-dictate-capture-methods/)
-    assert.match(workspace, /data-orb-dictate-capture-panel/)
+    assert.match(capture, /data-orb-dictate-capture-methods/)
+    assert.match(capture, /data-orb-dictate-capture-panel/)
     assert.match(workspace, /data-orb-dictate-review-panel/)
     assert.match(workspace, /data-orb-dictate-designed-workflow/)
     for (const label of ['Capture', 'ORB Review', 'Safer Draft']) {
       assert.match(workspace, new RegExp(label))
     }
     assert.match(workspace, /data-orb-dictate-stage-interface/)
-    assert.match(workspace, /data-orb-dictate-paste-notes/)
+    assert.match(capture, /data-orb-dictate-paste-notes/)
     assert.match(workspace, /OrbDictateSaferDraftPanel/)
     assert.match(workspace, /ORB_DICTATE_CREATE_SAFER_DRAFT/)
     assert.match(read('components/orb/dictate/OrbDictateSaferDraftPanel.tsx'), /ORB_DICTATE_ACTION_OPEN_WRITE/)

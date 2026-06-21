@@ -106,7 +106,8 @@ describe('ORB Residential Phase 2A identity and station maturity', () => {
 
   it('dictate exposes capture, review and draft flow', () => {
     const workspace = read('components/orb/dictate/OrbDictateStudioWorkspace.tsx')
-    assert.match(workspace, /data-orb-dictate-capture-panel/)
+    const capture = read('components/orb/dictate/OrbDictateCaptureStation.tsx')
+    assert.match(capture, /data-orb-dictate-capture-panel/)
     assert.match(workspace, /data-orb-dictate-review-panel/)
     assert.match(workspace, /OrbDictateReviewChecklist/)
     assert.match(workspace, /OrbDictateBrainPanel/)

@@ -76,6 +76,14 @@ const ORB_DICTATE_WORKING_SECTIONS_SUPERVISION = [
   'Actions / learning'
 ] as const
 
+const ORB_DICTATE_WORKING_SECTIONS_MANAGER = [
+  'Reason for oversight',
+  'Information reviewed',
+  'Management view',
+  'Actions agreed',
+  'Follow-up'
+] as const
+
 /** Section headings for the ORB working document by studio template id. */
 export function workingDocumentSectionsForTemplate(templateId: string): readonly string[] {
   if (templateId === 'daily_record') return ORB_DICTATE_WORKING_SECTIONS_DAILY
@@ -85,6 +93,7 @@ export function workingDocumentSectionsForTemplate(templateId: string): readonly
   if (templateId === 'safeguarding') return ORB_DICTATE_WORKING_SECTIONS_SAFEGUARDING
   if (templateId === 'handover') return ORB_DICTATE_WORKING_SECTIONS_HANDOVER
   if (templateId === 'supervision_prep') return ORB_DICTATE_WORKING_SECTIONS_SUPERVISION
+  if (templateId === 'manager') return ORB_DICTATE_WORKING_SECTIONS_MANAGER
   return ORB_DICTATE_WORKING_SECTIONS_UNSTRUCTURED
 }
 

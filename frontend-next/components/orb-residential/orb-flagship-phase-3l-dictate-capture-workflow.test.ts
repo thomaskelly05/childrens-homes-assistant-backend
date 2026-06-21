@@ -31,8 +31,8 @@ function read(relativePath: string) {
 }
 
 describe('ORB Residential Phase 3L Dictate capture workflow', () => {
-  it('build version marker is phase-3p-dictate-recording-media', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-3p-dictate-recording-media')
+  it('build version marker is phase-3q-dictate-template-document-workspace', () => {
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-3q-dictate-template-document-workspace')
     const layout = read('app/orb/layout.tsx')
     assert.match(layout, /orb-residential-shell\.css/)
     assert.deepEqual(ORB_LAYOUT_CSS_FILES, ['app/orb/orb-residential-shell.css'])
@@ -50,19 +50,19 @@ describe('ORB Residential Phase 3L Dictate capture workflow', () => {
   })
 
   it('capture methods exist: Speak, Paste notes, Upload audio', () => {
-    const workspace = read('components/orb/dictate/OrbDictateStudioWorkspace.tsx')
+    const capture = read('components/orb/dictate/OrbDictateCaptureStation.tsx')
     assert.equal(ORB_DICTATE_SPEAK_LABEL, 'Speak')
     assert.equal(ORB_DICTATE_PASTE_LABEL, 'Paste notes')
     assert.equal(ORB_DICTATE_UPLOAD_LABEL, 'Upload audio')
-    assert.match(workspace, /data-orb-dictate-capture-method=\{method\.id\}/)
+    assert.match(capture, /data-orb-dictate-capture-method=\{method\.id\}/)
   })
 
   it('paste notes area and consent reminder are present', () => {
-    const workspace = read('components/orb/dictate/OrbDictateStudioWorkspace.tsx')
+    const capture = read('components/orb/dictate/OrbDictateCaptureStation.tsx')
     assert.equal(ORB_DICTATE_PASTE_PLACEHOLDER, 'Paste rough notes here. Use anonymised or minimal identifiable details where possible.')
-    assert.match(workspace, /data-orb-dictate-paste-notes/)
-    assert.match(workspace, /data-orb-dictate-consent-reminder/)
-    assert.match(workspace, /ORB_DICTATE_CONSENT_REMINDER/)
+    assert.match(capture, /data-orb-dictate-paste-notes/)
+    assert.match(capture, /data-orb-dictate-consent-reminder/)
+    assert.match(capture, /ORB_DICTATE_CONSENT_REMINDER/)
   })
 
   it('ORB Review section uses checklist with child voice and uncertain status labels', () => {
@@ -95,7 +95,7 @@ describe('ORB Residential Phase 3L Dictate capture workflow', () => {
     const selector = read('components/orb/dictate/OrbDictateWriteTemplateSelector.tsx')
     assert.match(selector, /data-orb-dictate-write-template-section/)
     assert.match(selector, /data-orb-dictate-write-template-option/)
-    assert.match(read('components/orb/dictate/OrbDictateTranscriptWorkspace.tsx'), /OrbDictateWriteTemplateSelector/)
+    assert.match(read('components/orb/dictate/OrbDictateDocumentWorkspace.tsx'), /OrbDictateWriteTemplateSelector/)
   })
 
   it('does not claim compliance or finalisation', () => {
@@ -110,7 +110,7 @@ describe('ORB Residential Phase 3L Dictate capture workflow', () => {
   it('single shell and one CSS import remain true', () => {
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
     assert.match(companion, /orb-app-shell/)
-    assert.match(read('app/orb/orb-residential-shell.css'), /phase-3p-dictate-recording-media/)
+    assert.match(read('app/orb/orb-residential-shell.css'), /phase-3q-dictate-template-document-workspace/)
     assert.match(read('app/orb/orb-residential-shell.css'), /Phase 3N/)
   })
 })

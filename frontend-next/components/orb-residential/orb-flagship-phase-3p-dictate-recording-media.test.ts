@@ -22,8 +22,8 @@ function read(relativePath: string) {
 }
 
 describe('ORB Residential Phase 3P Dictate recording media', () => {
-  it('build version marker is phase-3p-dictate-recording-media', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-3p-dictate-recording-media')
+  it('build version marker is phase-3q-dictate-template-document-workspace', () => {
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-3q-dictate-template-document-workspace')
     const layout = read('app/orb/layout.tsx')
     assert.match(layout, /orb-residential-shell\.css/)
     assert.deepEqual(ORB_LAYOUT_CSS_FILES, ['app/orb/orb-residential-shell.css'])
@@ -32,11 +32,13 @@ describe('ORB Residential Phase 3P Dictate recording media', () => {
   it('dictate record button uses dedicated start handler', () => {
     const station = read('components/orb-standalone/orb-dictate-station.tsx')
     const workspace = read('components/orb/dictate/OrbDictateStudioWorkspace.tsx')
+    const capture = read('components/orb/dictate/OrbDictateCaptureStation.tsx')
     assert.match(station, /handleStartDictateRecording/)
     assert.match(station, /beginOrbDictateRecording/)
     assert.match(station, /onStartRecording=\{\(\) => void handleStartDictateRecording\(\)\}/)
-    assert.match(workspace, /onClick={handleStartRecording}/)
-    assert.match(workspace, /data-orb-dictate-top-record/)
+    assert.match(workspace, /OrbDictateCaptureStation/)
+    assert.match(workspace, /onStartRecording={handleStartRecording}/)
+    assert.match(capture, /data-orb-dictate-top-record/)
   })
 
   it('recording unsupported and microphone error copy exist', () => {
@@ -71,7 +73,7 @@ describe('ORB Residential Phase 3P Dictate recording media', () => {
   })
 
   it('transcript workspace shows recording attached panel and playback', () => {
-    const panel = read('components/orb/dictate/OrbDictateTranscriptWorkspace.tsx')
+    const panel = read('components/orb/dictate/OrbDictateDocumentWorkspace.tsx')
     const attachment = read('components/orb/dictate/OrbDictateRecordingAttachment.tsx')
     assert.equal(ORB_DICTATE_RECORDING_ATTACHED_TITLE, 'Recording attached')
     assert.match(panel, /OrbDictateRecordingAttachment/)
@@ -98,11 +100,7 @@ describe('ORB Residential Phase 3P Dictate recording media', () => {
     assert.match(station, /recording_media:/)
     assert.match(handoff, /recording_media\?:/)
     assert.match(handoff, /dictate_capture_source\?:/)
-    assert.equal(
-      ORB_DICTATE_RECORDING_LOCAL_STORAGE_NOTE,
-      'Recording attached locally to this draft. Permanent media storage is not yet enabled.'
-    )
-    assert.match(station, /ORB_DICTATE_WRITE_FROM_RECORDING_NOTE/)
+    assert.match(station, /ORB_DICTATE_WRITE_HANDOFF_SOURCE_NOTE/)
     assert.equal(ORB_DICTATE_SOURCE_FROM_RECORDING, 'Source: transcript from attached recording')
     assert.doesNotMatch(station, /permanently stored|permanent storage enabled/i)
   })
@@ -122,7 +120,7 @@ describe('ORB Residential Phase 3P Dictate recording media', () => {
   it('single shell and one CSS import remain true', () => {
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
     assert.match(companion, /orb-app-shell/)
-    assert.match(read('app/orb/orb-residential-shell.css'), /phase-3p-dictate-recording-media/)
+    assert.match(read('app/orb/orb-residential-shell.css'), /phase-3q-dictate-template-document-workspace/)
     assert.match(read('app/orb/orb-residential-shell.css'), /Phase 3P/)
   })
 })

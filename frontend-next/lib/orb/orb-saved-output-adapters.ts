@@ -54,6 +54,10 @@ export type OrbSavedOutputSaveExtras = {
   action_id?: string
   recording_media?: Record<string, unknown>
   dictate_capture_source?: string
+  template_id?: string
+  working_document?: string
+  people_to_confirm?: unknown[]
+  dictate_source_note?: string
 }
 
 export type OrbSavedOutputRerunKind =
@@ -187,6 +191,10 @@ export function buildSavedOutputMetadata(
   if (extras.action_id) metadata.action_id = extras.action_id
   if (extras.recording_media) metadata.recording_media = extras.recording_media
   if (extras.dictate_capture_source) metadata.dictate_capture_source = extras.dictate_capture_source
+  if (extras.template_id) metadata.template_id = extras.template_id
+  if (extras.working_document?.trim()) metadata.working_document = extras.working_document.trim()
+  if (extras.people_to_confirm?.length) metadata.people_to_confirm = extras.people_to_confirm
+  if (extras.dictate_source_note) metadata.dictate_source_note = extras.dictate_source_note
   return metadata
 }
 

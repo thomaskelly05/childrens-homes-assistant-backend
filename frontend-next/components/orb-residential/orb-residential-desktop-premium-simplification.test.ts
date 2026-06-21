@@ -53,10 +53,11 @@ describe('ORB Residential desktop premium simplification pass', () => {
     const station = read('components/orb-standalone/orb-dictate-station.tsx')
     const brain = read('components/orb/dictate/OrbDictateBrainPanel.tsx')
 
+    const capture = read('components/orb/dictate/OrbDictateCaptureStation.tsx')
     assert.match(workspace, /ORB_DICTATE_CAPTURE_SUBTITLE/)
     assert.match(workspace, /data-orb-dictate-capture-workflow/)
-    assert.match(workspace, /data-orb-dictate-paste-notes/)
-    assert.match(workspace, /data-orb-dictate-top-record/)
+    assert.match(capture, /data-orb-dictate-paste-notes/)
+    assert.match(capture, /data-orb-dictate-top-record/)
     assert.match(brain, /ORB Review/)
     assert.match(read('lib/orb/orb-residential-copy.ts'), /ORB_DICTATE_SUBTITLE/)
     assert.match(station, /OrbDictateStudioWorkspace/)

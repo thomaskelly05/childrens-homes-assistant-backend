@@ -3,8 +3,11 @@
 import {
   ORB_DICTATE_RECORDING_ATTACHED_SUPPORTING,
   ORB_DICTATE_RECORDING_ATTACHED_TITLE,
-  ORB_DICTATE_RECORDING_LOCAL_STORAGE_NOTE
+  ORB_DICTATE_RECORDING_LOCAL_PERSISTENCE_NOTE,
+  ORB_DICTATE_RECORDING_LOCAL_STORAGE_NOTE,
+  ORB_DICTATE_RECORDING_SAVED_WITH_DRAFT
 } from '@/lib/orb/dictate/orb-dictate-capture-copy'
+import { orbDictateMediaPersistenceLabel } from '@/lib/orb/dictate/orb-dictate-media-persistence'
 import {
   formatOrbDictateRecordingCreatedAt,
   formatOrbDictateRecordingDuration,
@@ -18,7 +21,18 @@ export type OrbDictateRecordingAttachmentProps = {
 
 export function OrbDictateRecordingAttachment({ media }: OrbDictateRecordingAttachmentProps) {
   const statusLabel = orbDictateRecordingStatusLabel(media.status)
-  const storageLabel = media.storageMode === 'local' ? 'Local only' : 'Stored'
+  const persistenceLabel = media.persistenceStatus
+    ? orbDictateMediaPersistenceLabel(media.persistenceStatus)
+    : media.storageMode === 'local'
+      ? 'Local only'
+      : 'Saved with draft'
+  const persistenceNote =
+    media.persistenceMessage ||
+    (media.persistenceStatus === 'saved_with_draft'
+      ? ORB_DICTATE_RECORDING_SAVED_WITH_DRAFT
+      : media.storageMode === 'local'
+        ? ORB_DICTATE_RECORDING_LOCAL_PERSISTENCE_NOTE
+        : null)
 
   return (
     <section
@@ -58,7 +72,9 @@ export function OrbDictateRecordingAttachment({ media }: OrbDictateRecordingAtta
           </div>
           <div>
             <dt className="sr-only">Storage</dt>
-            <dd data-orb-dictate-recording-storage-mode={media.storageMode}>{storageLabel}</dd>
+            <dd data-orb-dictate-recording-storage-mode={media.persistenceStatus || media.storageMode}>
+              {persistenceLabel}
+            </dd>
           </div>
         </div>
       </dl>
@@ -80,7 +96,11 @@ export function OrbDictateRecordingAttachment({ media }: OrbDictateRecordingAtta
         </p>
       ) : null}
 
-      {media.storageMode === 'local' ? (
+      {persistenceNote ? (
+        <p className="mt-2 text-[10px] leading-relaxed text-[var(--orb-muted)]" data-orb-dictate-recording-local-note>
+          {persistenceNote}
+        </p>
+      ) : media.storageMode === 'local' ? (
         <p className="mt-2 text-[10px] leading-relaxed text-[var(--orb-muted)]" data-orb-dictate-recording-local-note>
           {ORB_DICTATE_RECORDING_LOCAL_STORAGE_NOTE}
         </p>

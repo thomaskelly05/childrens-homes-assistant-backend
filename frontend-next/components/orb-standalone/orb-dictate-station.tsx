@@ -131,8 +131,13 @@ import {
   ORB_DICTATE_RECORDING_TRANSCRIPTION_FAILED,
   ORB_DICTATE_RECORDING_UNSUPPORTED,
   ORB_DICTATE_WRITE_FROM_RECORDING_NOTE,
-  type OrbDictateContentSource
+  ORB_DICTATE_WRITE_HANDOFF_SOURCE_NOTE,
+  type OrbDictateContentSource,
+  type OrbDictateProcessingStageId
 } from '@/lib/orb/dictate/orb-dictate-capture-copy'
+import { buildPeopleToConfirm, type OrbDictatePersonConfirmItem } from '@/lib/orb/dictate/orb-dictate-people-identification'
+import { tryPersistDictateRecording } from '@/lib/orb/dictate/orb-dictate-media-persistence'
+import { workingDocumentTypeLabel } from '@/lib/orb/dictate/orb-dictate-working-document'
 import {
   beginOrbDictateRecording,
   cancelOrbDictateRecording,
@@ -250,6 +255,8 @@ export function OrbDictateStation({
   const [lastChunkCount, setLastChunkCount] = useState(0)
   const [lastSampleCount, setLastSampleCount] = useState(0)
   const [recordingMedia, setRecordingMedia] = useState<OrbDictateRecordingMedia | null>(null)
+  const [processingStage, setProcessingStage] = useState<OrbDictateProcessingStageId | null>(null)
+  const [peopleToConfirm, setPeopleToConfirm] = useState<OrbDictatePersonConfirmItem[]>([])
   const [contentSource, setContentSource] = useState<OrbDictateContentSource | undefined>()
   const dictateRecorderActiveRef = useRef(false)
   const [captureMode, setCaptureMode] = useState<DictateCaptureMode>('none')
@@ -468,14 +475,13 @@ export function OrbDictateStation({
     cancelOrbDictateRecording()
     dictateRecorderActiveRef.current = false
     setContentSource(undefined)
+    setProcessingStage(null)
+    setPeopleToConfirm([])
   }
 
-  useEffect(() => {
-    return () => {
-      revokeOrbDictateRecordingMediaUrl(recordingMedia)
-      cancelOrbDictateRecording()
-    }
-  }, [recordingMedia])
+  async function pauseForProcessingStage(ms = 120) {
+    await new Promise((resolve) => window.setTimeout(resolve, ms))
+  }
 
   async function attachAndTranscribeRecording(
     blob: Blob,
@@ -492,9 +498,12 @@ export function OrbDictateStation({
     setRecordingMedia(media)
     setRecordingUiState('processing')
     setUploadingAudio(true)
+    setProcessingStage('saving_audio')
     setStatusMessage(ORB_DICTATE_RECORDING_TRANSCRIBING)
     setContentSource(source === 'upload' ? 'upload' : 'recording')
     try {
+      await pauseForProcessingStage()
+      setProcessingStage('transcribing')
       const ext = extensionForAudioMime(mimeType)
       const file = new File([blob], `dictate-recording-${Date.now()}${ext}`, { type: mimeType })
       const result = await transcribeOrbDictateAudio(file, {
@@ -502,21 +511,36 @@ export function OrbDictateStation({
       })
       setBackendTranscriptionAvailable(true)
       const merged = result.transcript.trim()
+      const segs = result.segments ?? textToSegments(result.transcript, 'upload', result.participants ?? [])
+      setProcessingStage('identifying_people')
+      const people = buildPeopleToConfirm(merged, result.participants ?? participants, segs)
+      setPeopleToConfirm(people)
+      if (result.participants?.length) setParticipants(result.participants)
+      setProcessingStage('structuring_document')
+      const persistResult = await tryPersistDictateRecording(blob, media)
+      media = {
+        ...media,
+        status: 'transcribed',
+        persistenceStatus: persistResult.status,
+        persistenceMessage: persistResult.message,
+        storageMode: persistResult.storageMode
+      }
+      setRecordingMedia(media)
       transcriptBufferRef.current = merged ? [merged] : []
       setTranscript(merged)
-      setSegments(result.segments ?? textToSegments(result.transcript, 'upload', result.participants ?? []))
-      if (result.participants?.length) setParticipants(result.participants)
-      media = { ...media, status: 'transcribed' }
-      setRecordingMedia(media)
+      setSegments(segs)
       setStartMode('paste')
       setOutputTab('transcript')
       setRecordingUiState('stopped')
+      setProcessingStage('ready')
       setStatusMessage(ORB_DICTATE_RECORDING_TRANSCRIPT_READY)
       emitOrbClientDebug({
         area: 'dictate',
         event: 'dictate_transcript_ready',
         detail: { transcriptLength: merged.length, mode: 'dictate_media' }
       })
+      await pauseForProcessingStage(350)
+      setProcessingStage(null)
     } catch {
       setBackendTranscriptionAvailable(false)
       media = {
@@ -526,6 +550,7 @@ export function OrbDictateStation({
       }
       setRecordingMedia(media)
       setRecordingUiState('stopped')
+      setProcessingStage(null)
       setStatusMessage(ORB_DICTATE_RECORDING_TRANSCRIPTION_FAILED)
       setUploadError(ORB_DICTATE_RECORDING_TRANSCRIPTION_FAILED)
       emitOrbClientDebug({
@@ -537,6 +562,24 @@ export function OrbDictateStation({
       setUploadingAudio(false)
     }
   }
+
+  useEffect(() => {
+    return () => {
+      revokeOrbDictateRecordingMediaUrl(recordingMedia)
+      cancelOrbDictateRecording()
+    }
+  }, [recordingMedia])
+
+  useEffect(() => {
+    const text = transcript.trim()
+    if (!text) {
+      if (!processingStage) setPeopleToConfirm([])
+      return
+    }
+    if (processingStage && processingStage !== 'ready') return
+    const segs = segments.length ? segments : textToSegments(text, 'paste', participants)
+    setPeopleToConfirm(buildPeopleToConfirm(text, participants, segs))
+  }, [transcript, participants, segments, processingStage])
 
   async function handleStartDictateRecording() {
     if (dictateStartInFlightRef.current || recordingUiState === 'starting' || recordingUiState === 'recording') {
@@ -1001,6 +1044,8 @@ export function OrbDictateStation({
     transcriptBufferRef.current = []
     lastDictateTranscriptRef.current = ''
     setRecordedAudioLabel(null)
+    setPeopleToConfirm([])
+    setProcessingStage(null)
     clearDictateRecordingMedia()
     voice.clearTranscript()
   }
@@ -1067,7 +1112,6 @@ export function OrbDictateStation({
       setUploadError('Unsupported file type. Use webm, mp3, wav or m4a — or paste a transcript instead.')
       return
     }
-    clearDictateRecordingMedia()
     setUploadingAudio(true)
     setUploadFileLabel(file.name)
     let durationMs = 0
@@ -1089,44 +1133,11 @@ export function OrbDictateStation({
           })
         : null
       setUploadFileLabel(durationHint ? `${file.name} · ${durationHint}` : file.name)
-      let media = createOrbDictateRecordingMediaFromBlob(file, {
-        durationMs,
-        source: 'upload',
-        status: 'transcribing'
-      })
-      setRecordingMedia(media)
-      setContentSource('upload')
-      const result = await transcribeOrbDictateAudio(file, {
-        conversation_consent_confirmed: needsConsent ? authorityConsent && consentConfirmed : undefined
-      })
-      setTranscript(result.transcript)
-      setSegments(result.segments ?? textToSegments(result.transcript, 'upload', result.participants ?? []))
-      if (result.participants?.length) setParticipants(result.participants)
-      setBackendTranscriptionAvailable(true)
-      media = { ...media, status: 'transcribed' }
-      setRecordingMedia(media)
-      setStartMode('paste')
       setCaptureMode('upload')
       setStartSource('upload')
-      setOutputTab('transcript')
-      setStatusMessage('Audio transcribed — review speaker labels before generating.')
+      await attachAndTranscribeRecording(file, file.type || 'audio/webm', durationMs, 'upload')
     } catch {
       setBackendTranscriptionAvailable(false)
-      setRecordingMedia((current) =>
-        current
-          ? {
-              ...current,
-              status: 'failed',
-              transcriptionNotice: ORB_DICTATE_RECORDING_TRANSCRIPTION_FAILED
-            }
-          : createOrbDictateRecordingMediaFromBlob(file, {
-              durationMs,
-              source: 'upload',
-              status: 'failed',
-              transcriptionNotice: ORB_DICTATE_RECORDING_TRANSCRIPTION_FAILED
-            })
-      )
-      setContentSource('upload')
       setUploadError(ORB_DICTATE_RECORDING_TRANSCRIPTION_FAILED)
     } finally {
       setUploadingAudio(false)
@@ -1140,11 +1151,13 @@ export function OrbDictateStation({
   }
 
   function dictateHandoffMetadata() {
+    const workingDoc = editedNote.trim()
     return {
       dictate_capture_source: contentSource,
       recording_media: recordingMedia ? serializeOrbDictateRecordingMediaForSave(recordingMedia) : undefined,
-      dictate_source_note:
-        contentSource === 'recording' ? ORB_DICTATE_WRITE_FROM_RECORDING_NOTE : undefined
+      dictate_source_note: ORB_DICTATE_WRITE_HANDOFF_SOURCE_NOTE,
+      working_document: workingDoc || undefined,
+      people_to_confirm: peopleToConfirm.length ? peopleToConfirm : undefined
     }
   }
 
@@ -1295,38 +1308,62 @@ export function OrbDictateStation({
   }
 
   async function handleSave() {
-    const text = editedNote || output?.professional_note
-    if (!text || !output) return
-    const title = resolveOrbGuidedDemoSaveTitle(output.title)
+    const workingDoc = editedNote.trim()
+    const transcriptText = transcript.trim()
+    const text = workingDoc || output?.professional_note
+    if (!text) return
+    const title = resolveOrbGuidedDemoSaveTitle(
+      output?.title ?? workingDocumentTypeLabel(selectedTemplateId)
+    )
+    const saveExtras = {
+      source_feature: 'dictate' as const,
+      brain_metadata: output?.brain_metadata,
+      source_text: transcriptText || text,
+      template_id: selectedTemplateId,
+      working_document: workingDoc || undefined,
+      people_to_confirm: peopleToConfirm.length ? peopleToConfirm : undefined,
+      dictate_source_note: ORB_DICTATE_WRITE_HANDOFF_SOURCE_NOTE,
+      recording_media: recordingMedia
+        ? (serializeOrbDictateRecordingMediaForSave(recordingMedia) as Record<string, unknown>)
+        : undefined,
+      dictate_capture_source: contentSource
+    }
     try {
-      const saved = await saveOrbDictateNote({
-        title,
-        note_type: output.note_type,
-        professional_note: text,
-        summary: output.summary,
-        transcript: output.transcript,
-        actions: output.actions
-      })
-      setStatusMessage(orbGuidedDemoSaveStatusMessage(saved.message || 'Saved to Records & Drafts.'))
+      if (output) {
+        const saved = await saveOrbDictateNote({
+          title,
+          note_type: output.note_type,
+          professional_note: text,
+          summary: output.summary,
+          transcript: transcriptText || output.transcript,
+          actions: output.actions
+        })
+        setStatusMessage(orbGuidedDemoSaveStatusMessage(saved.message || 'Saved to Records & Drafts.'))
+        return
+      }
+      await createOrbSavedOutput(
+        buildSavedOutputCreateBody({
+          title,
+          type: 'recording_rewrite',
+          summary: workingDocumentTypeLabel(selectedTemplateId),
+          content_markdown: text,
+          tags: ['orb-dictate', noteType, selectedTemplateId],
+          created_from: 'dictate',
+          extras: saveExtras
+        })
+      )
+      setStatusMessage(orbGuidedDemoSaveStatusMessage('Saved to Records & Drafts.'))
     } catch {
       try {
         await createOrbSavedOutput(
           buildSavedOutputCreateBody({
             title,
             type: 'recording_rewrite',
-            summary: output.summary,
+            summary: workingDocumentTypeLabel(selectedTemplateId),
             content_markdown: text,
-            tags: ['orb-dictate', output.note_type],
+            tags: ['orb-dictate', noteType, selectedTemplateId],
             created_from: 'dictate',
-            extras: {
-              source_feature: 'dictate',
-              brain_metadata: output.brain_metadata,
-              source_text: output.transcript || text,
-              recording_media: recordingMedia
-                ? (serializeOrbDictateRecordingMediaForSave(recordingMedia) as Record<string, unknown>)
-                : undefined,
-              dictate_capture_source: contentSource
-            }
+            extras: saveExtras
           })
         )
         setStatusMessage(orbGuidedDemoSaveStatusMessage('Saved to Records & Drafts.'))
@@ -1696,6 +1733,8 @@ export function OrbDictateStation({
           contentSource={contentSource}
           onClearRecording={clearDictateRecordingMedia}
           onContentSourceChange={setContentSource}
+          processingStage={processingStage}
+          peopleToConfirm={peopleToConfirm}
         />
         {output ? (
           <div className="mt-2 flex shrink-0 flex-wrap gap-2">

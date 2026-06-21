@@ -1,9 +1,56 @@
-/** Phase 3L–3O — ORB Dictate capture workflow copy. */
+/** Phase 3L–3Q — ORB Dictate capture workflow copy. */
 
 export const ORB_DICTATE_CAPTURE_HEADLINE = 'Dictate' as const
 
 export const ORB_DICTATE_CAPTURE_SUBTITLE =
-  'Speak, paste or upload rough information. ORB will help structure it after capture.' as const
+  'Choose what you need to record, then capture the rough information. ORB will structure it for adult review.' as const
+
+export const ORB_DICTATE_WHAT_ARE_YOU_RECORDING = 'What are you recording?' as const
+
+export const ORB_DICTATE_RECORDING_AS_PREFIX = 'Recording as:' as const
+
+export type OrbDictateProcessingStageId =
+  | 'saving_audio'
+  | 'transcribing'
+  | 'identifying_people'
+  | 'structuring_document'
+  | 'ready'
+
+export const ORB_DICTATE_PROCESSING_STAGES = [
+  { id: 'saving_audio' as const, label: 'Saving audio' },
+  { id: 'transcribing' as const, label: 'Transcribing' },
+  { id: 'identifying_people' as const, label: 'Identifying speakers / people present' },
+  { id: 'structuring_document' as const, label: 'Structuring document' },
+  { id: 'ready' as const, label: 'Ready for adult review' }
+] as const
+
+export const ORB_DICTATE_DOCUMENT_WORKSPACE_TITLE = 'Document workspace' as const
+
+export const ORB_DICTATE_SOURCE_TRANSCRIPT_TOGGLE = 'View original transcript' as const
+
+export const ORB_DICTATE_SOURCE_TRANSCRIPT_LABEL = 'Source transcript' as const
+
+export const ORB_DICTATE_PEOPLE_CONFIRM_TITLE = 'People and speakers to confirm' as const
+
+export const ORB_DICTATE_ASSISTANT_TITLE = 'What changes should ORB make?' as const
+
+export const ORB_DICTATE_ASSISTANT_SUPPORTING =
+  'Ask ORB to restructure, clarify, make language safer, or check what may be missing.' as const
+
+export const ORB_DICTATE_ASSISTANT_PLACEHOLDER =
+  'For example: make this a missing from home report, remove judgemental language, or check what is missing.' as const
+
+export const ORB_DICTATE_APPLY_CHANGE = 'Apply change' as const
+
+export const ORB_DICTATE_DOCUMENT_STRUCTURE_UPDATED =
+  'Document structure updated for adult review.' as const
+
+export const ORB_DICTATE_WRITE_HANDOFF_SOURCE_NOTE = 'Created from ORB Dictate' as const
+
+export const ORB_DICTATE_RECORDING_SAVED_WITH_DRAFT = 'Recording saved with this draft.' as const
+
+export const ORB_DICTATE_RECORDING_LOCAL_PERSISTENCE_NOTE =
+  'Recording attached locally. Permanent recording storage is not yet enabled.' as const
 
 export const ORB_DICTATE_CAPTURE_SUPPORTING =
   'Start capturing what happened. ORB will help structure it safely afterwards.' as const
@@ -36,24 +83,22 @@ export const ORB_DICTATE_ORIGINAL_NOTES_LABEL = 'Original notes \u2014 not yet a
 
 export const ORB_DICTATE_ASK_ORB_IMPROVE = 'Ask ORB to improve this' as const
 
-export const ORB_DICTATE_EDIT_ASSISTANT_TITLE = 'Ask ORB to help with this transcript' as const
+export const ORB_DICTATE_EDIT_ASSISTANT_TITLE = ORB_DICTATE_ASSISTANT_TITLE
 
-export const ORB_DICTATE_EDIT_ASSISTANT_SUPPORTING =
-  'Tell ORB what you want changed. ORB can structure, clarify or prepare the capture for an adult-reviewed record.' as const
+export const ORB_DICTATE_EDIT_ASSISTANT_SUPPORTING = ORB_DICTATE_ASSISTANT_SUPPORTING
 
-export const ORB_DICTATE_EDIT_INSTRUCTION_PLACEHOLDER =
-  'For example: Make this more child-centred, structure it as a daily record, or check what may be missing.' as const
+export const ORB_DICTATE_EDIT_INSTRUCTION_PLACEHOLDER = ORB_DICTATE_ASSISTANT_PLACEHOLDER
 
-export const ORB_DICTATE_APPLY_ORB_CHANGE = 'Apply ORB change' as const
+export const ORB_DICTATE_APPLY_ORB_CHANGE = ORB_DICTATE_APPLY_CHANGE
 
-export const ORB_DICTATE_WRITE_TEMPLATE_TITLE = 'Use an ORB Write template' as const
+export const ORB_DICTATE_WRITE_TEMPLATE_TITLE = 'Document type' as const
 
 export const ORB_DICTATE_WRITE_TEMPLATE_SUPPORTING =
-  'Choose the structure ORB should apply to the working document.' as const
+  'Choose the structure ORB should apply to this document.' as const
 
 export const ORB_DICTATE_WORKING_DOC_TITLE = 'ORB working document' as const
 
-export const ORB_DICTATE_WORKING_DOC_LABEL = 'Generated from transcript for adult review' as const
+export const ORB_DICTATE_WORKING_DOC_LABEL = 'Generated for adult review' as const
 
 export const ORB_DICTATE_WORKING_DOC_SUPPORTING =
   'Ask ORB to shape this into the record you need. You can edit before saving or opening in ORB Write.' as const
@@ -69,13 +114,12 @@ export const ORB_DICTATE_EDIT_OFFLINE_NOTE =
 
 /** Quick ORB edit prompt chips — populate instruction input only; adult submits. */
 export const ORB_DICTATE_QUICK_EDIT_PROMPTS = [
-  { id: 'professional', label: 'Make it more professional', instruction: 'Make this more professional' },
-  { id: 'child_centred', label: 'Make it more child-centred', instruction: 'Make this more child-centred' },
+  { id: 'child_centred', label: 'Make more child-centred', instruction: 'Make this more child-centred' },
   { id: 'less_judgemental', label: 'Remove judgemental language', instruction: 'Remove judgemental language' },
-  { id: 'missing', label: 'What information is missing?', instruction: 'What information is missing?' },
-  { id: 'daily_record', label: 'Turn into daily record', instruction: 'Structure this as a daily record' },
-  { id: 'incident', label: 'Turn into incident reflection', instruction: 'Structure this as an incident reflection' },
-  { id: 'missing_home', label: 'Use missing from home template', instruction: 'Structure this using the missing from home template' }
+  { id: 'missing', label: 'What is missing?', instruction: 'What information is missing?' },
+  { id: 'manager_oversight', label: 'Add manager oversight', instruction: 'Add a manager oversight section' },
+  { id: 'change_template', label: 'Change template', instruction: 'Use the daily record template' },
+  { id: 'handover', label: 'Summarise for handover', instruction: 'Summarise this for handover' }
 ] as const
 
 export const ORB_DICTATE_NOT_YET_RECORD = 'Not yet a record' as const
@@ -182,12 +226,13 @@ export const ORB_DICTATE_RECORD_TYPE_PROMPT = 'Looks like this may be\u2026' as 
 /** Lightweight record-type suggestions — user can change after capture. */
 export const ORB_DICTATE_RECORD_TYPE_SUGGESTIONS = [
   { templateId: 'daily_record', label: 'Daily record' },
-  { templateId: 'incident', label: 'Incident reflection' },
   { templateId: 'missing', label: 'Missing from home' },
+  { templateId: 'incident', label: 'Incident reflection' },
   { templateId: 'keywork', label: 'Key-work session' },
   { templateId: 'safeguarding', label: 'Safeguarding note' },
   { templateId: 'handover', label: 'Handover' },
   { templateId: 'supervision_prep', label: 'Supervision reflection' },
+  { templateId: 'manager', label: 'Manager oversight note' },
   { templateId: 'general', label: 'Other' }
 ] as const
 

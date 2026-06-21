@@ -92,12 +92,16 @@ describe('ORB Residential premium layout pass', () => {
     assert.match(css, /orb-v2-atmosphere[\s\S]*opacity:\s*0\.42/)
   })
 
-  it('Dictate studio keeps recorder bar and transcript as primary surface', () => {
-    const dictate = read('components/orb/dictate/OrbDictateStudioWorkspace.tsx')
+  it('Dictate studio keeps document workspace as primary surface with capture station record action', () => {
+    const workspace = read('components/orb/dictate/OrbDictateStudioWorkspace.tsx')
+    const capture = read('components/orb/dictate/OrbDictateCaptureStation.tsx')
+    const documentWorkspace = read('components/orb/dictate/OrbDictateDocumentWorkspace.tsx')
     const brain = read('components/orb/dictate/OrbDictateBrainPanel.tsx')
     const css = read('app/orb/_legacy-ui-archive/orb-premium-layout-pass.css')
-    assert.match(dictate, /data-orb-dictate-top-record/)
-    assert.match(dictate, /data-orb-dictate-paste-notes/)
+    assert.match(capture, /data-orb-dictate-top-record/)
+    assert.match(capture, /data-orb-dictate-paste-notes/)
+    assert.match(documentWorkspace, /data-orb-dictate-document-workspace/)
+    assert.match(workspace, /OrbDictateDocumentWorkspace/)
     assert.match(brain, /data-orb-dictate-brain-collapse-toggle/)
     assert.match(css, /\[data-orb-dictate-transcript-panel\]/)
   })

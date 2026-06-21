@@ -18,7 +18,7 @@ function read(relativePath: string) {
 
 describe('ORB Residential Phase 3D station behaviour hardening', () => {
   it('build version marker is phase-3d', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-3p-dictate-recording-media')
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-3q-dictate-template-document-workspace')
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
     const layout = read('app/orb/layout.tsx')
     assert.match(companion, /data-orb-build-version=\{ORB_BUILD_VISUAL_VERSION\}/)
@@ -46,13 +46,14 @@ describe('ORB Residential Phase 3D station behaviour hardening', () => {
 
   it('dictate capture studio is primary with single review checklist', () => {
     const workspace = read('components/orb/dictate/OrbDictateStudioWorkspace.tsx')
+    const capture = read('components/orb/dictate/OrbDictateCaptureStation.tsx')
     const checklist = read('components/orb/dictate/OrbDictateReviewChecklist.tsx')
     assert.equal(ORB_DICTATE_CAPTURE_PROMPT, 'Speak, paste or upload what happened')
     assert.match(ORB_DICTATE_CAPTURE_GUIDANCE, /Start with what happened/)
     const extras = read('components/orb-standalone/orb-dictate-station-extras.tsx')
-    assert.match(workspace, /data-orb-dictate-capture-canvas/)
-    assert.match(workspace, /data-orb-dictate-paste-notes/)
-    assert.match(workspace, /data-orb-dictate-capture-method=\{method\.id\}/)
+    assert.match(capture, /data-orb-dictate-capture-station/)
+    assert.match(capture, /data-orb-dictate-paste-notes/)
+    assert.match(capture, /data-orb-dictate-capture-method=\{method\.id\}/)
     assert.match(extras, /data-orb-dictate-audio-upload/)
     assert.match(workspace, /data-orb-dictate-designed-workflow/)
     assert.match(checklist, /data-orb-dictate-review-checklist/)
