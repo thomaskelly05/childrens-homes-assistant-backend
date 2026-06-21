@@ -23,7 +23,7 @@ ORB_TTS_ENABLED = os.environ.get("ORB_TTS_ENABLED", "false").strip().lower() in 
     "yes",
     "on",
 }
-ORB_TTS_PROVIDER = (os.environ.get("ORB_TTS_PROVIDER") or "openai").strip().lower()
+ORB_TTS_PROVIDER = (os.environ.get("ORB_TTS_PROVIDER") or "").strip().lower()
 ORB_TTS_FALLBACK_PROVIDER = (os.environ.get("ORB_TTS_FALLBACK_PROVIDER") or "").strip().lower()
 ORB_TTS_DEFAULT_VOICE_ID = (os.environ.get("ORB_TTS_DEFAULT_VOICE_ID") or "orb_british_female").strip()
 ORB_TTS_DEFAULT_STYLE = (os.environ.get("ORB_TTS_DEFAULT_STYLE") or "calm_therapeutic").strip().lower()
@@ -140,10 +140,58 @@ def _fallback_provider() -> str | None:
     return fallback
 
 
+def _elevenlabs_unavailable_reason() -> str | None:
+    if not ORB_TTS_ENABLED:
+        return "tts_disabled"
+    explicit = (os.environ.get("ORB_TTS_PROVIDER") or "").strip().lower()
+    if explicit and explicit not in {"elevenlabs", ""}:
+        if explicit == "openai":
+            return "provider_forced_openai"
+        return f"provider_forced_{explicit}"
+    if not (os.environ.get("ELEVENLABS_API_KEY") or "").strip():
+        return "missing_api_key"
+    if not (os.environ.get("ELEVENLABS_VOICE_ID") or "").strip():
+        return "missing_voice_id"
+    return None
+
+
+def _display_voice_name(voice_id: str, provider: str, *, fallback_used: bool) -> str:
+    if provider == "elevenlabs" and not fallback_used:
+        return _voice_name_for(voice_id)
+    profile = VOICE_PROFILES.get(voice_id) or VOICE_PROFILES.get("katherine") or {}
+    openai_voice = str(profile.get("openai_voice") or "nova")
+    return f"Fallback voice ({openai_voice})"
+
+
+def voice_runtime_tts_status_payload() -> dict[str, Any]:
+    primary = _resolve_primary_tts_provider()
+    eleven_configured = _provider_configured("elevenlabs")
+    unavailable = _elevenlabs_unavailable_reason()
+    forced = (os.environ.get("ORB_TTS_PROVIDER") or "").strip().lower() or None
+    if eleven_configured and not unavailable:
+        preferred: str = "elevenlabs"
+    elif _provider_configured("openai"):
+        preferred = "openai"
+    elif ORB_TTS_ENABLED:
+        preferred = "browser"
+    else:
+        preferred = "text_only"
+    return {
+        "ttsEnabled": ORB_TTS_ENABLED and (
+            _provider_configured(primary) or bool(_fallback_provider())
+        ),
+        "preferredProvider": preferred,
+        "elevenLabsConfigured": eleven_configured,
+        "katherineConfigured": eleven_configured,
+        "forcedProvider": forced,
+    }
+
+
 def tts_status_payload() -> dict[str, Any]:
     primary = _resolve_primary_tts_provider()
     configured = ORB_TTS_ENABLED and _provider_configured(primary)
     fallback = _fallback_provider()
+    runtime = voice_runtime_tts_status_payload()
     return {
         "ok": True,
         "enabled": configured,
@@ -152,6 +200,7 @@ def tts_status_payload() -> dict[str, Any]:
         "default_voice_id": ORB_TTS_DEFAULT_VOICE_ID,
         "default_style": ORB_TTS_DEFAULT_STYLE,
         "fallback_provider": fallback,
+        **runtime,
         "available_voices": [
             {"id": voice_id, "label": profile["label"], "description": profile["description"]}
             for voice_id, profile in VOICE_PROFILES.items()
@@ -282,7 +331,7 @@ def _synthesize_openai_sync(*, text: str, voice_id: str, voice_style: str, audio
         voice_id=voice_id,
         voice_style=voice_style,
         provider="openai",
-        voice_name=_voice_name_for(voice_id),
+        voice_name=_display_voice_name(voice_id, "openai", fallback_used=False),
         fallback_used=False,
     )
 
@@ -348,7 +397,7 @@ def _synthesize_elevenlabs_sync(*, text: str, voice_id: str, voice_style: str, a
         voice_id=voice_id,
         voice_style=voice_style,
         provider="elevenlabs",
-        voice_name=_voice_name_for(voice_id),
+        voice_name=_display_voice_name(voice_id, "elevenlabs", fallback_used=False),
         fallback_used=False,
     )
 
@@ -378,6 +427,15 @@ async def synthesize_spoken_reply(
     resolved_format = "m4a" if (audio_format or "mp3").strip().lower() == "m4a" else "mp3"
 
     primary = _resolve_primary_tts_provider()
+    if primary != "elevenlabs":
+        unavailable = _elevenlabs_unavailable_reason()
+        if unavailable:
+            logger.info(
+                "orb_voice_tts_elevenlabs_unavailable reason=%s voice_id=%s",
+                unavailable,
+                resolved_voice,
+            )
+
     providers: list[str] = [primary]
     fallback = _fallback_provider()
     if fallback and _provider_configured(fallback):
@@ -397,15 +455,28 @@ async def synthesize_spoken_reply(
                 ),
                 timeout=ORB_TTS_TIMEOUT_SECONDS,
             )
-            return ORBVoiceTTSResult(
+            final = ORBVoiceTTSResult(
                 audio_bytes=result.audio_bytes,
                 content_type=result.content_type,
                 voice_id=result.voice_id,
                 voice_style=result.voice_style,
                 provider=result.provider,
-                voice_name=result.voice_name,
+                voice_name=_display_voice_name(
+                    result.voice_id,
+                    result.provider,
+                    fallback_used=index > 0,
+                ),
                 fallback_used=index > 0,
             )
+            logger.info(
+                "orb_voice_turn_trace stage=tts provider=%s voice=%s fallback=%s text_chars=%s voice_id=%s",
+                final.provider,
+                final.voice_name,
+                final.fallback_used,
+                len(cleaned),
+                final.voice_id,
+            )
+            return final
         except ORBVoiceTTSError as exc:
             last_error = exc
             logger.warning(

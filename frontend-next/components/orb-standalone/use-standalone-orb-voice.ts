@@ -53,6 +53,19 @@ import { ORB_VOICE_MIC_ERROR } from '@/lib/orb/voice/orb-voice-reflective-copy'
 import { resolveTtsVoiceProfileId } from '@/lib/orb/voice/orb-voice-human-conversation'
 import { ORB_VOICE_TTS_SPOKEN_FALLBACK } from '@/lib/orb/voice/orb-voice-speech-loop'
 import { ORB_VOICE_KATHERINE_UNAVAILABLE } from '@/lib/orb/voice/orb-voice-free-flowing-conversation'
+import {
+  ORB_VOICE_MIN_SPOKEN_CHARS,
+  ORB_VOICE_TTS_TOO_SHORT_MESSAGE,
+  resolveOrbVoiceTurnTtsText,
+  resolveOrbVoiceLaunchUiCaptureState,
+  shouldInvokeOrbVoiceTts
+} from '@/lib/orb/voice/orb-voice-runtime-wiring'
+import {
+  beginOrbVoiceTurnTrace,
+  logOrbVoiceTurnTrace,
+  patchOrbVoiceTurnTrace,
+  resetOrbVoiceTurnTrace
+} from '@/lib/orb/voice/orb-voice-turn-trace'
 import { requestOrbPremiumTts, requestOrbVoiceSpeak } from '@/lib/orb/voice/orb-voice-client'
 import { requestOrbVoiceProviderSpeak } from '@/lib/orb/voice/orb-voice-provider'
 import {
@@ -427,8 +440,24 @@ export function useStandaloneOrbVoice() {
   }, [])
 
   const runSpeech = useCallback(
-    async (text: string, onEnd?: () => void) => {
-      if (typeof window === 'undefined' || !text.trim()) return
+    async (
+      text: string,
+      onEnd?: () => void,
+      options?: { source?: 'orb_turn' | 'manual' | 'preview' }
+    ) => {
+      if (typeof window === 'undefined') return
+      const trimmed = text.trim()
+      if (!trimmed) return
+      if (
+        options?.source !== 'preview' &&
+        options?.source !== 'manual' &&
+        !shouldInvokeOrbVoiceTts(trimmed)
+      ) {
+        patchOrbVoiceTurnTrace({ ttsRequestSent: false, ttsTextChars: trimmed.length })
+        logOrbVoiceTurnTrace('tts_blocked_short_text')
+        setSpeechPlaybackError(ORB_VOICE_TTS_TOO_SHORT_MESSAGE)
+        return
+      }
       startSafariKeepAlive()
       setSpeechPlaybackError(null)
       setSpeaking(true)
@@ -436,8 +465,9 @@ export function useStandaloneOrbVoice() {
       setPhase('speaking')
 
       const profileId = activeSpeakProfileId(settingsRef.current)
+      patchOrbVoiceTurnTrace({ ttsRequestSent: true, ttsTextChars: trimmed.length })
       const premium = await requestOrbPremiumTts({
-        text,
+        text: trimmed,
         voice_id: profileId,
         voice_style: 'calm_therapeutic'
       })
@@ -445,10 +475,18 @@ export function useStandaloneOrbVoice() {
         if (premium.fallbackUsed) {
           setSpeechPlaybackError(ORB_VOICE_KATHERINE_UNAVAILABLE)
         }
+        patchOrbVoiceTurnTrace({
+          ttsProvider: premium.provider || null,
+          ttsVoiceName: premium.voiceName || null,
+          ttsFallback: Boolean(premium.fallbackUsed)
+        })
         try {
           const url = URL.createObjectURL(premium.blob)
           const audio = new Audio(url)
           activeAudioRef.current = audio
+          audio.onplay = () => {
+            patchOrbVoiceTurnTrace({ audioPlayStarted: true })
+          }
           audio.onended = () => {
             URL.revokeObjectURL(url)
             activeAudioRef.current = null
@@ -456,6 +494,8 @@ export function useStandaloneOrbVoice() {
             setSpeaking(false)
             setVoiceCaptureState('idle')
             setPhase('idle')
+            patchOrbVoiceTurnTrace({ audioPlayEnded: true })
+            logOrbVoiceTurnTrace('premium_tts_complete')
             onEnd?.()
             onSpeakEndRef.current?.()
           }
@@ -517,13 +557,19 @@ export function useStandaloneOrbVoice() {
     [startSafariKeepAlive, stopSafariKeepAlive]
   )
 
-  const speak = useCallback((text: string, onEnd?: () => void) => {
-    void runSpeech(text, onEnd)
-  }, [runSpeech])
+  const speak = useCallback(
+    (text: string, onEnd?: () => void, options?: { source?: 'orb_turn' | 'manual' | 'preview' }) => {
+      void runSpeech(text, onEnd, options)
+    },
+    [runSpeech]
+  )
 
-  const speakAloud = useCallback((text: string, onEnd?: () => void) => {
-    void runSpeech(text, onEnd)
-  }, [runSpeech])
+  const speakAloud = useCallback(
+    (text: string, onEnd?: () => void, options?: { source?: 'orb_turn' | 'manual' | 'preview' }) => {
+      void runSpeech(text, onEnd, options)
+    },
+    [runSpeech]
+  )
 
   const previewVoiceProfile = useCallback(async (profileId?: OrbVoicePresetId) => {
     const id = profileId ?? settingsRef.current.voicePresetId
@@ -552,7 +598,7 @@ export function useStandaloneOrbVoice() {
     } catch {
       /* fall through */
     }
-    speakAloud(SPEECH_TEST_PHRASE)
+    speakAloud(SPEECH_TEST_PHRASE, undefined, { source: 'preview' })
   }, [speakAloud])
 
   const testSelectedVoice = useCallback(() => {

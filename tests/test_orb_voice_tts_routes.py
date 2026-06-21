@@ -157,6 +157,19 @@ def test_tts_post_uses_elevenlabs_when_selected(tts_client, monkeypatch):
     assert response.headers.get("X-ORB-TTS-Provider") == "elevenlabs"
 
 
+def test_tts_status_prefers_elevenlabs_when_provider_unset(tts_client, monkeypatch):
+    monkeypatch.delenv("ORB_TTS_PROVIDER", raising=False)
+    monkeypatch.setenv("ORB_TTS_ENABLED", "true")
+    monkeypatch.setenv("ELEVENLABS_API_KEY", "test-eleven-key")
+    monkeypatch.setenv("ELEVENLABS_VOICE_ID", "voice-abc123")
+    response = tts_client.get("/orb/voice/tts/status")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["provider"] == "elevenlabs"
+    assert body["katherineConfigured"] is True
+    assert body["preferredProvider"] == "elevenlabs"
+
+
 def test_tts_post_returns_503_when_provider_disabled(tts_client, monkeypatch):
     monkeypatch.setenv("ORB_TTS_ENABLED", "false")
     response = tts_client.post(

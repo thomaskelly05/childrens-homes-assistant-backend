@@ -44,8 +44,7 @@ import {
 } from '@/lib/orb/voice/orb-voice-reflective-copy'
 import {
   buildVoiceSessionMemory,
-  ORB_VOICE_SLOW_THINKING_MESSAGE,
-  stripForSpokenReply
+  ORB_VOICE_SLOW_THINKING_MESSAGE
 } from '@/lib/orb/voice/orb-voice-human-conversation'
 import {
   buildOrbVoiceRespondHistory,
@@ -58,6 +57,18 @@ import {
   createOrbVoiceSpokenTurnGuard,
   createVoiceTurnId
 } from '@/lib/orb/voice/orb-voice-conversation-loop'
+import {
+  ORB_VOICE_MIN_SPOKEN_CHARS,
+  ORB_VOICE_TTS_TOO_SHORT_MESSAGE,
+  resolveOrbVoiceTurnTtsText,
+  resolveOrbVoiceLaunchUiCaptureState
+} from '@/lib/orb/voice/orb-voice-runtime-wiring'
+import {
+  beginOrbVoiceTurnTrace,
+  logOrbVoiceTurnTrace,
+  patchOrbVoiceTurnTrace,
+  resetOrbVoiceTurnTrace
+} from '@/lib/orb/voice/orb-voice-turn-trace'
 import {
   createOrbVoiceCaptureController,
   type OrbVoiceCaptureController
@@ -569,21 +580,30 @@ export function OrbVoiceStation({
     .filter((t) => t.role === 'user' || t.role === 'assistant')
     .slice(-6)
 
-  const handleSpeakAgain = useCallback(() => {
-    if (!displayedOrbReply || !speechDecision?.allowManualSpeak || !speechDecision.spokenText) return
-    const spoken = stripMarkdownForSpeech(speechDecision.spokenText)
-    if (!spoken.trim()) return
-    voice.speakAloud(spoken)
-  }, [displayedOrbReply, speechDecision, voice])
+  const voiceFastPromptTier =
+    typeof assistantReplyContext?.prompt_tier === 'string'
+      ? assistantReplyContext.prompt_tier
+      : typeof assistantReplyContext?.promptTier === 'string'
+        ? assistantReplyContext.promptTier
+        : null
 
-  const engineCaptureState =
-    isFinalizingRecording || voiceEngine.state === 'transcribing'
-      ? 'transcribing'
-      : voiceEngine.state === 'capturing' || voiceEngine.state === 'listening'
-        ? 'recording'
-        : voiceEngine.state === 'thinking'
-          ? 'thinking'
-          : voice.voiceCaptureState
+  const handleSpeakAgain = useCallback(() => {
+    if (!displayedOrbReply || !speechDecision?.allowManualSpeak) return
+    const tts = resolveOrbVoiceTurnTtsText({
+      visibleReply: displayedOrbReply,
+      speechDecision,
+      promptTier: voiceFastPromptTier
+    })
+    if (!tts.spokenText) return
+    voice.speakAloud(tts.spokenText, undefined, { source: 'manual' })
+  }, [displayedOrbReply, speechDecision, voice, voiceFastPromptTier])
+
+  const engineCaptureState = resolveOrbVoiceLaunchUiCaptureState({
+    pending,
+    isFinalizingRecording,
+    engineState: voiceEngine.state,
+    voiceCaptureState: voice.voiceCaptureState
+  })
 
   const resolvedLaunchUiState = resolveOrbVoiceLaunchUiState({
     launchMode,
@@ -998,6 +1018,7 @@ export function OrbVoiceStation({
     lastAutoSpokenKeyRef.current = null
     spokenTurnGuardRef.current.reset()
     captureControllerRef.current?.dispose()
+    resetOrbVoiceTurnTrace()
     setConversationActive(false)
     resetOrbVoiceLatencyMarks()
     clearActiveOrbRealtimeVoiceClient()
@@ -1043,6 +1064,15 @@ export function OrbVoiceStation({
       }
       const trimmed = committed.text
       markOrbVoiceLatency('first_transcript')
+      const turnId = createVoiceTurnId('adult')
+      beginOrbVoiceTurnTrace(turnId)
+      patchOrbVoiceTurnTrace({
+        sessionState,
+        captureMethod: getOrbVoiceBrowserDiagnostics().activeTransport || voiceEngine.transport,
+        transcriptChars: trimmed.length,
+        adultTurnCommitted: true,
+        respondRequestSent: true
+      })
       const provider =
         getOrbVoiceBrowserDiagnostics().activeTransport === 'server_transcription'
           ? 'server_transcription'
@@ -1050,7 +1080,7 @@ export function OrbVoiceStation({
       setTurns((prev) => [
         ...prev,
         {
-          id: newTurnId(),
+          id: turnId,
           role: 'user',
           text: trimmed,
           startedAt: new Date().toISOString(),
@@ -1061,7 +1091,7 @@ export function OrbVoiceStation({
       setVoiceInputStatus('transcript_ready')
       void sendToOrbWithVoiceContext(trimmed)
     },
-    [sendToOrbWithVoiceContext, voice.settings.voiceMode]
+    [sendToOrbWithVoiceContext, sessionState, voice.settings.voiceMode, voiceEngine.transport]
   )
 
   const submitCapturedTranscript = useCallback(
@@ -1086,6 +1116,11 @@ export function OrbVoiceStation({
           return
         }
         appendUserTurn(toSend.text)
+        patchOrbVoiceBrowserDiagnostics({
+          userFacingMessage: 'ORB is thinking…',
+          serverTranscriptionStatus: 'completed'
+        })
+        setVoiceInputStatus('idle')
         if (freeFlow) {
           setBrowserStartStage('active')
           setConversationActive(true)
@@ -1181,6 +1216,8 @@ export function OrbVoiceStation({
 
   useEffect(() => {
     return voice.registerAfterSpeakListener(() => {
+      patchOrbVoiceTurnTrace({ autoResumeTriggered: true })
+      logOrbVoiceTurnTrace('auto_resume_listening')
       void resumeListeningAfterTurn()
     })
   }, [resumeListeningAfterTurn, voice])
@@ -1212,42 +1249,66 @@ export function OrbVoiceStation({
     voiceEngine
   ])
 
-  /** Auto-speak ORB replies with Katherine / browser fallback when policy allows. */
+  /** Auto-speak ORB replies after the voice brain returns a complete reply. */
   useEffect(() => {
     const reply = (assistantReply || '').trim()
     const key = assistantReplyKey ?? null
-    if (!reply || !key) return
+    if (!reply || !key || pending) return
+    if (reply.length < ORB_VOICE_MIN_SPOKEN_CHARS) return
     if (sessionEnded || conversationPaused) return
-    if (!speechDecision?.allowAutoSpeak || !speechDecision.spokenText) return
-    if (!spokenTurnGuardRef.current.shouldSpeak(key)) return
+    if (!voice.settings.voiceReplies) return
+    if (!speechDecision?.allowAutoSpeak) return
+
+    const tts = resolveOrbVoiceTurnTtsText({
+      visibleReply: reply,
+      speechDecision,
+      promptTier: voiceFastPromptTier
+    })
+    if (!tts.spokenText || tts.spokenText.length < ORB_VOICE_MIN_SPOKEN_CHARS) return
+    if (!spokenTurnGuardRef.current.shouldSpeak(key, 'orb')) return
     if (lastAutoSpokenKeyRef.current === key) return
     lastAutoSpokenKeyRef.current = key
-    const spoken = stripForSpokenReply(stripMarkdownForSpeech(speechDecision.spokenText))
-    if (!spoken.trim()) return
-    voice.speakAloud(spoken)
+
+    patchOrbVoiceTurnTrace({
+      replyChars: reply.length,
+      ttsTextChars: tts.spokenText.length,
+      sessionState
+    })
+    voice.speakAloud(tts.spokenText, undefined, { source: 'orb_turn' })
   }, [
     assistantReply,
     assistantReplyKey,
     conversationPaused,
+    pending,
     sessionEnded,
+    sessionState,
     speechDecision,
-    voice
+    voice,
+    voiceFastPromptTier
   ])
 
   /** Sync ORB brain replies into the two-sided voice transcript (adult + ORB turns). */
   useEffect(() => {
     const reply = (assistantReply || '').trim()
     const key = assistantReplyKey ?? null
-    if (!reply || !key || key === lastSyncedReplyKeyRef.current) return
+    if (!reply || !key || pending) return
+    if (reply.length < ORB_VOICE_MIN_SPOKEN_CHARS) return
+    if (key === lastSyncedReplyKeyRef.current) return
     lastSyncedReplyKeyRef.current = key
     markOrbVoiceLatency('first_response')
+    patchOrbVoiceTurnTrace({
+      replyChars: reply.length,
+      respondStatus: 200,
+      orbTurnCommitted: true
+    })
+    logOrbVoiceTurnTrace('orb_turn_committed')
     setTurns((prev) => {
       const last = prev[prev.length - 1]
       if (last?.role === 'assistant' && last.text.trim() === reply) return prev
       return [
         ...prev,
         {
-          id: newTurnId(),
+          id: key,
           role: 'assistant',
           text: reply,
           startedAt: new Date().toISOString(),
@@ -1256,7 +1317,7 @@ export function OrbVoiceStation({
         }
       ]
     })
-  }, [assistantReply, assistantReplyKey, voice.settings.voiceMode])
+  }, [assistantReply, assistantReplyKey, pending, voice.settings.voiceMode])
 
   useEffect(() => {
     if (!open) resetSession()

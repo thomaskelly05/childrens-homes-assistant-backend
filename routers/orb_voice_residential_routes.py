@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 import shutil
 import uuid
+import logging
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from pydantic import BaseModel, ConfigDict, Field
@@ -35,6 +36,7 @@ from services.orb_voice_transcription_service import (
     transcribe_voice_audio,
 )
 from services.orb_voice_respond_service import generate_voice_response
+from services.orb_voice_tts_service import voice_runtime_tts_status_payload
 from services.orb_voice_realtime_config import (
     _openai_realtime_configured,
     _provider_has_stt_credentials,
@@ -47,6 +49,8 @@ from services.orb_voice_provider_service import OrbVoiceSpeakRequest, orb_voice_
 from services.orb_voice_realtime_session_store import orb_voice_realtime_session_store
 from services.orb_voice_realtime_ws_handler import orb_voice_realtime_ws_handler
 from services.orb_brain_metadata_service import attach_to_payload, build_brain_metadata
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/orb/voice", tags=["ORB Residential Voice"])
 
@@ -99,6 +103,14 @@ def _voice_brain_metadata() -> dict:
 
 def _voice_status_payload(body: dict) -> dict:
     return attach_to_payload(body, surface="orb_residential", feature="voice")
+
+
+def _voice_runtime_status_payload(body: dict) -> dict:
+    runtime = {
+        **voice_runtime_tts_status_payload(),
+        "serverTranscriptionAvailable": _provider_has_stt_credentials(),
+    }
+    return _voice_status_payload({**body, **runtime})
 
 
 def _user_id_from(current_user: dict) -> int | None:
@@ -211,7 +223,7 @@ def _session_response_base(
 async def orb_voice_session_status(_current_user=Depends(require_orb_product_bootstrap_access)):
     """Honest realtime configuration probe — always 200, never 500 for missing env."""
     if _openai_realtime_configured():
-        return _voice_status_payload(
+        return _voice_runtime_status_payload(
             {
                 "ok": True,
                 "realtime_enabled": True,
@@ -226,7 +238,7 @@ async def orb_voice_session_status(_current_user=Depends(require_orb_product_boo
         _, session_status, _, fallback_reason = resolve_voice_provider(provider)  # type: ignore[arg-type]
         enabled = session_status == "ready" and provider != "browser_fallback"
         if enabled:
-            return _voice_status_payload(
+            return _voice_runtime_status_payload(
                 {
                     "ok": True,
                     "realtime_enabled": True,
@@ -236,7 +248,7 @@ async def orb_voice_session_status(_current_user=Depends(require_orb_product_boo
                     "reason": "configured",
                 }
             )
-        return _voice_status_payload(
+        return _voice_runtime_status_payload(
             {
                 "ok": True,
                 "realtime_enabled": False,
@@ -245,7 +257,7 @@ async def orb_voice_session_status(_current_user=Depends(require_orb_product_boo
                 "message": fallback_reason or "Realtime voice is not configured.",
             }
         )
-    return _voice_status_payload(
+    return _voice_runtime_status_payload(
         {
             "ok": True,
             "realtime_enabled": False,
@@ -523,6 +535,12 @@ async def orb_voice_transcribe_audio(
             raise HTTPException(status_code=400, detail="Audio file is too large.")
         result = await transcribe_voice_audio(path, mime_type=content_type)
         transcript = str(result.get("transcript") or "").strip()
+        logger.info(
+            "orb_voice_turn_trace stage=transcribe status=success transcript_chars=%s mime=%s bytes=%s",
+            len(transcript),
+            content_type or result.get("mime_type") or "unknown",
+            file_size,
+        )
         return {
             "success": True,
             "transcript": transcript,
@@ -602,6 +620,11 @@ async def orb_voice_respond(
         ) from exc
 
     reply = str(result.get("reply") or "").strip()
+    logger.info(
+        "orb_voice_turn_trace stage=respond status=success reply_chars=%s prompt_tier=%s",
+        len(reply),
+        result.get("prompt_tier") or "voice_fast",
+    )
     return _voice_status_payload(
         {
             "ok": True,

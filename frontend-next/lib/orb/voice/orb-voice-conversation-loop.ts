@@ -59,7 +59,8 @@ export function buildOrbVoiceRespondPayload(input: {
 export function createOrbVoiceSpokenTurnGuard() {
   const spokenTurnIds = new Set<string>()
   return {
-    shouldSpeak(turnKey: string | null | undefined): boolean {
+    shouldSpeak(turnKey: string | null | undefined, role: 'orb' | 'adult' = 'orb'): boolean {
+      if (role !== 'orb') return false
       if (!turnKey) return false
       if (spokenTurnIds.has(turnKey)) return false
       spokenTurnIds.add(turnKey)

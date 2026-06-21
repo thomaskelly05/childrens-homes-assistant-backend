@@ -249,6 +249,7 @@ import {
   shouldPauseVoiceAutoSend
 } from '@/lib/orb/indicare-intelligence-core'
 import { resolveOrbVoiceSpeechDecision } from '@/lib/orb/voice/orb-voice-speech-policy'
+import { isOrbVoiceAssistantTurnReady } from '@/lib/orb/voice/orb-voice-runtime-wiring'
 import {
   buildProfileContextBlock,
   clearStandaloneCustomProjects,
@@ -935,27 +936,35 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
   }, [workspace.activeChatId, workspace.chats])
 
   const voiceStationAssistant = useMemo(() => {
-    if (activePanel !== 'orb_voice' || !activeChat) return null
-    const lastAssistant = [...activeChat.messages]
+    if (activePanel !== 'orb_voice' || !activeChat || pending) return null
+    const messages = activeChat.messages
+    const lastUserIdx = messages.reduce((acc, message, index) => (message.role === 'user' ? index : acc), -1)
+    if (lastUserIdx < 0) return null
+    const afterUser = messages.slice(lastUserIdx + 1)
+    const lastAssistant = [...afterUser]
       .reverse()
       .find(
         (entry) =>
           entry.role === 'assistant' &&
           entry.status !== 'thinking' &&
           entry.status !== 'error' &&
-          (entry.content.trim() || entry.status === 'streaming')
+          entry.status !== 'streaming' &&
+          entry.content.trim().length >= 8 &&
+          isOrbVoiceAssistantTurnReady({
+            status: entry.status,
+            content: entry.content,
+            pending: false
+          })
       )
     if (!lastAssistant) return null
-    const lastUser = [...activeChat.messages]
-      .reverse()
-      .find((entry) => entry.role === 'user' && entry.content.trim())
+    const lastUser = messages[lastUserIdx]
     return {
       key: lastAssistant.id,
       text: lastAssistant.content,
       userHint: lastUser?.content,
       contextUsed: lastAssistant.contextUsed
     }
-  }, [activePanel, activeChat])
+  }, [activePanel, activeChat, pending])
 
   const messages = activeChat?.messages ?? []
   const visibleMessages = useMemo(() => dedupeOrbMessages(messages), [messages])

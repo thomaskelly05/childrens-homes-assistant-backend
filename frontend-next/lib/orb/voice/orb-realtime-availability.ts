@@ -8,6 +8,15 @@ import { isRealtimeVoiceProvider, type OrbVoiceSessionResponse } from './orb-voi
 import { getOrbVoiceCachedAuthStatus, markOrbVoiceUnauthenticated, probeOrbVoiceAuth } from './orb-voice-auth'
 import type { OrbRealtimeVoiceState } from './orb-realtime-voice-client'
 
+export type OrbVoiceRuntimeDiagnostics = {
+  ttsEnabled: boolean
+  preferredProvider: 'elevenlabs' | 'openai' | 'browser' | 'text_only' | string
+  elevenLabsConfigured: boolean
+  katherineConfigured: boolean
+  forcedProvider?: string | null
+  serverTranscriptionAvailable: boolean
+}
+
 export type OrbRealtimeVoiceStatus = {
   ok: boolean
   realtime_enabled: boolean
@@ -15,6 +24,7 @@ export type OrbRealtimeVoiceStatus = {
   model?: string | null
   requires_client_secret?: boolean
   reason: 'configured' | 'not_configured' | 'endpoint_failed'
+  runtime?: OrbVoiceRuntimeDiagnostics
 }
 
 export type OrbRealtimeVoiceAvailability = {
@@ -99,6 +109,15 @@ export async function fetchOrbVoiceRealtimeStatus(): Promise<OrbRealtimeVoiceSta
       return STATUS_UNAVAILABLE
     }
     const data = payload as Record<string, unknown>
+    const runtime: OrbVoiceRuntimeDiagnostics = {
+      ttsEnabled: Boolean(data.ttsEnabled),
+      preferredProvider:
+        typeof data.preferredProvider === 'string' ? data.preferredProvider : 'text_only',
+      elevenLabsConfigured: Boolean(data.elevenLabsConfigured),
+      katherineConfigured: Boolean(data.katherineConfigured),
+      forcedProvider: typeof data.forcedProvider === 'string' ? data.forcedProvider : null,
+      serverTranscriptionAvailable: Boolean(data.serverTranscriptionAvailable)
+    }
     const status: OrbRealtimeVoiceStatus = {
       ok: Boolean(data.ok ?? true),
       realtime_enabled: Boolean(data.realtime_enabled),
@@ -110,7 +129,8 @@ export async function fetchOrbVoiceRealtimeStatus(): Promise<OrbRealtimeVoiceSta
           ? data.reason
           : data.realtime_enabled
             ? 'configured'
-            : 'not_configured'
+            : 'not_configured',
+      runtime
     }
     setOrbVoiceDiagStatus(status, response.status)
     emitOrbClientDebug({

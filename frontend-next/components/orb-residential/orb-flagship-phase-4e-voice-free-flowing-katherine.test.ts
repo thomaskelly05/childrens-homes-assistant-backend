@@ -19,8 +19,8 @@ function read(relativePath: string) {
 }
 
 describe('ORB Residential Phase 4E Voice free-flowing Katherine', () => {
-  it('build version marker is phase-4f-voice-platform-rebuild', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-4f-voice-platform-rebuild')
+  it('build version marker is phase-4g-voice-runtime-wiring-repair', () => {
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-4g-voice-runtime-wiring-repair')
     assert.match(read('app/orb/layout.tsx'), /orb-residential-shell\.css/)
     assert.deepEqual(ORB_LAYOUT_CSS_FILES, ['app/orb/orb-residential-shell.css'])
   })
@@ -94,7 +94,7 @@ describe('ORB Residential Phase 4E Voice free-flowing Katherine', () => {
   it('audio-not-stored copy and single shell remain true', () => {
     const station = read('components/orb-standalone/orb-voice-station.tsx')
     assert.match(station, /ORB_VOICE_AUDIO_NOT_STORED/)
-    assert.match(read('app/orb/orb-residential-shell.css'), /phase-4f-voice-platform-rebuild/)
+    assert.match(read('app/orb/orb-residential-shell.css'), /phase-4g-voice-runtime-wiring-repair/)
     assert.doesNotMatch(station, /compliance guarantee|Ofsted approved/i)
   })
 })

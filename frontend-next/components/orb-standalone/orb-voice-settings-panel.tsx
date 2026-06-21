@@ -19,6 +19,10 @@ import {
   fetchOrbVoiceProviderStatus,
   type OrbVoiceProviderStatus
 } from '@/lib/orb/voice/orb-voice-provider'
+import {
+  fetchOrbVoiceRealtimeStatus,
+  type OrbVoiceRuntimeDiagnostics
+} from '@/lib/orb/voice/orb-realtime-availability'
 import type { OrbSpokenAnswerLength, OrbVoicePresetId } from '@/lib/orb/voice/orb-voice-types'
 import { ORB_VOICE_BOUNDARY_COPY } from '@/lib/orb/voice/orb-voice-launch-mode'
 import { ORB_VOICE_AUDIO_TRANSCRIPT_REVIEW_NOTE } from '@/lib/orb/voice/orb-voice-reflective-copy'
@@ -80,10 +84,12 @@ export function OrbVoiceSettingsPanel({
   const selectedProfile = getOrbVoiceProfile(settings.voicePresetId)
   const [advancedOpen, setAdvancedOpen] = useState(false)
   const [providerStatus, setProviderStatus] = useState<OrbVoiceProviderStatus | null>(null)
+  const [runtimeStatus, setRuntimeStatus] = useState<OrbVoiceRuntimeDiagnostics | null>(null)
 
   useEffect(() => {
     if (!open) return
     void fetchOrbVoiceProviderStatus().then(setProviderStatus)
+    void fetchOrbVoiceRealtimeStatus().then((status) => setRuntimeStatus(status.runtime ?? null))
   }, [open])
 
   return (
@@ -98,7 +104,9 @@ export function OrbVoiceSettingsPanel({
       <div className="space-y-4 p-4" data-orb-voice-settings-panel>
         <p className="text-[11px] leading-5 text-[var(--orb-muted)]" data-orb-voice-settings-help>
           {selectedProfile.id === 'katherine'
-            ? 'ORB voice: Katherine — British, calm and professional. Premium voice uses your configured ElevenLabs profile when available.'
+            ? runtimeStatus?.katherineConfigured
+              ? 'Katherine ready'
+              : 'Katherine unavailable — fallback voice active'
             : 'Choose how ORB sounds. ORB uses your device&apos;s best matching voice when premium voice is unavailable.'}
         </p>
 
