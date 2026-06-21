@@ -24,8 +24,8 @@ function readRepo(relativePath: string) {
 }
 
 describe('ORB Residential Phase 3I.1 deploy memory rescue', () => {
-  it('build version marker is phase-5d-voice-v2-clickable-idle', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5d-voice-v2-clickable-idle')
+  it('build version marker is phase-5e-render-build-memory-fix', () => {
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5e-render-build-memory-fix')
     assert.deepEqual(ORB_LAYOUT_CSS_FILES, ['app/orb/orb-residential-shell.css'])
   })
 
@@ -57,8 +57,8 @@ describe('ORB Residential Phase 3I.1 deploy memory rescue', () => {
     assert.match(pkg.scripts['build:render'], /render-safe-next-build/)
     const renderYaml = readRepo('render.yaml')
     assert.match(renderYaml, /npm ci --omit=optional && npm run build:render/)
-    assert.match(renderYaml, /--max-old-space-size=3072/)
-    assert.equal(DEFAULT_HEAP_MB, 3072)
+    assert.match(renderYaml, /--max-old-space-size=2560/)
+    assert.equal(DEFAULT_HEAP_MB, 2560)
   })
 
   it('next config disables expensive build-time checks and limits webpack memory', () => {

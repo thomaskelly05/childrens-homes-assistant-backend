@@ -14,7 +14,7 @@ services:
       - key: NODE_VERSION
         value: "22"
       - key: NODE_OPTIONS
-        value: --max-old-space-size=3072
+        value: --max-old-space-size=2560
       - key: NEXT_TELEMETRY_DISABLED
         value: "1"
       - key: NODE_ENV

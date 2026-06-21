@@ -55,6 +55,8 @@ const nextConfig: NextConfig = {
   webpack: (config, { dev, webpack }) => {
     if (!dev) {
       config.parallelism = 1
+      // Drop persistent cache on Render — lowers peak RSS during constrained builds.
+      config.cache = false
       config.plugins.push(
         new webpack.IgnorePlugin({
           checkResource(resource: string) {

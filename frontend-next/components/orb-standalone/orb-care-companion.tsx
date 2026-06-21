@@ -61,9 +61,6 @@ import {
 } from '@/components/orb-standalone/orb-assistant-message'
 import { OrbMessageFeedback } from '@/components/orb-standalone/orb-message-feedback'
 import { OrbScrollToBottomFab } from '@/components/orb-standalone/orb-scroll-to-bottom-fab'
-import { OrbAgentPanel } from '@/components/orb-standalone/orb-agent-panel'
-import { OrbResidentialAgentsPanel } from '@/components/orb-standalone/orb-residential-agents-panel'
-import { OrbDocumentContextPanel } from '@/components/orb-standalone/orb-document-context-panel'
 import type { OrbRecordingLibraryAction } from '@/components/orb/recording/OrbRecordingLibraryCards'
 import {
   convergedHandoffToOrbWrite,
@@ -71,7 +68,6 @@ import {
   handoffSavedOutputToOrbWrite
 } from '@/lib/orb/write/orb-write-converged-handoff'
 import type { OrbRecordingRecordType } from '@/lib/orb/recording/orb-recording-types'
-import { buildOrbWriteTemplateSectionBody } from '@/lib/orb/recording/orb-recording-framework'
 import {
   ORB_RESIDENTIAL_BRAND_EMOTIONAL_LINE,
   ORB_RESIDENTIAL_EMPTY_HEADING_DESKTOP,
@@ -88,17 +84,10 @@ import {
   type ResidentialStarter
 } from '@/lib/orb/orb-residential-copy'
 import { OrbStandaloneAccessibilityPanel } from '@/components/orb-standalone/orb-accessibility-panel'
-import { OrbIntelligenceMapPanel } from '@/components/orb-standalone/orb-intelligence-map-panel'
 import { OrbMemoryPanel } from '@/components/orb-standalone/orb-memory-panel'
 import { OrbPermissionsPanel } from '@/components/orb-standalone/orb-permissions-panel'
 import { OrbToolsPanel } from '@/components/orb-standalone/orb-tools-panel'
-import { OrbReviewPanel } from '@/components/orb-standalone/orb-review-panel'
-import { OrbSkillsPanel } from '@/components/orb-standalone/orb-skills-panel'
 import type { OrbSkillDefinition } from '@/lib/orb/orb-skills-catalog'
-import {
-  OrbWriteTemplatePicker,
-  type OrbWriteTemplateApplyMode
-} from '@/components/orb-write/orb-write-template-picker'
 import type { OrbDictateNoteType } from '@/lib/orb/dictate/orb-dictate-types'
 import type { OrbComposerPlusAction } from '@/components/orb-standalone/orb-composer-plus-menu'
 import type { OrbSettingsSectionId } from '@/components/orb-standalone/orb-standalone-settings-panel'
@@ -116,7 +105,6 @@ import { OrbAdultProfileDrawer } from '@/components/orb-standalone/orb-adult-pro
 import { OrbLayout, OrbMobileChatHeader } from '@/components/orb/orb-layout'
 import { GlassOrbMark } from '@/components/orb-residential/ui/glass-orb-mark'
 import { OrbGuidedDemoEntry } from '@/components/orb-residential/orb-guided-demo-entry'
-import { OrbGuidedDemoPanel } from '@/components/orb-residential/orb-guided-demo-panel'
 import {
   advanceOrbGuidedDemoStep,
   clearOrbGuidedDemoState,
@@ -196,7 +184,6 @@ import {
 } from '@/lib/orb/orb-residential-chat-response-guide'
 import { profileInitialsFromName } from '@/lib/orb/orb-profile-initials'
 import { OrbHelpPanel } from '@/components/orb-standalone/orb-help-panel'
-import { OrbVoiceSettingsPanel } from '@/components/orb-standalone/orb-voice-settings-panel'
 import {
   agentForMode,
   atmosphereClassForMode,
@@ -405,6 +392,58 @@ const OrbStandaloneSettingsPanel = dynamic(
   () =>
     import('@/components/orb-standalone/orb-standalone-settings-panel').then(
       (mod) => mod.OrbStandaloneSettingsPanel
+    ),
+  { loading: () => null, ssr: false }
+)
+const OrbAgentPanel = dynamic(
+  () => import('@/components/orb-standalone/orb-agent-panel').then((mod) => mod.OrbAgentPanel),
+  { loading: () => null, ssr: false }
+)
+const OrbResidentialAgentsPanel = dynamic(
+  () =>
+    import('@/components/orb-standalone/orb-residential-agents-panel').then(
+      (mod) => mod.OrbResidentialAgentsPanel
+    ),
+  { loading: () => null, ssr: false }
+)
+const OrbDocumentContextPanel = dynamic(
+  () =>
+    import('@/components/orb-standalone/orb-document-context-panel').then(
+      (mod) => mod.OrbDocumentContextPanel
+    ),
+  { loading: () => null, ssr: false }
+)
+const OrbIntelligenceMapPanel = dynamic(
+  () =>
+    import('@/components/orb-standalone/orb-intelligence-map-panel').then(
+      (mod) => mod.OrbIntelligenceMapPanel
+    ),
+  { loading: () => null, ssr: false }
+)
+const OrbReviewPanel = dynamic(
+  () => import('@/components/orb-standalone/orb-review-panel').then((mod) => mod.OrbReviewPanel),
+  { loading: () => null, ssr: false }
+)
+const OrbSkillsPanel = dynamic(
+  () => import('@/components/orb-standalone/orb-skills-panel').then((mod) => mod.OrbSkillsPanel),
+  { loading: () => null, ssr: false }
+)
+const OrbGuidedDemoPanel = dynamic(
+  () =>
+    import('@/components/orb-residential/orb-guided-demo-panel').then((mod) => mod.OrbGuidedDemoPanel),
+  { loading: () => null, ssr: false }
+)
+const OrbVoiceSettingsPanel = dynamic(
+  () =>
+    import('@/components/orb-standalone/orb-voice-settings-panel').then(
+      (mod) => mod.OrbVoiceSettingsPanel
+    ),
+  { loading: () => null, ssr: false }
+)
+const OrbWriteTemplatePicker = dynamic(
+  () =>
+    import('@/components/orb-write/orb-write-template-picker').then(
+      (mod) => mod.OrbWriteTemplatePicker
     ),
   { loading: () => null, ssr: false }
 )
@@ -3722,17 +3761,22 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
           mode
         }: {
           recordType: OrbRecordingRecordType
-          mode: OrbWriteTemplateApplyMode
+          mode: 'full' | 'headings_only' | 'style_guidance' | 'replace' | 'merge'
         }) => {
           if (mode === 'style_guidance') {
             setComposerRecordTypePickerOpen(false)
             return
           }
-          convergedTemplateHandoff(recordType, {
-            structuredBody: buildOrbWriteTemplateSectionBody(recordType)
-          })
-          setComposerRecordTypePickerOpen(false)
-          openOrbWritePanel()
+          void (async () => {
+            const { buildOrbWriteTemplateSectionBody } = await import(
+              '@/lib/orb/recording/orb-recording-framework'
+            )
+            convergedTemplateHandoff(recordType, {
+              structuredBody: buildOrbWriteTemplateSectionBody(recordType)
+            })
+            setComposerRecordTypePickerOpen(false)
+            openOrbWritePanel()
+          })()
         }}
       />
     </>

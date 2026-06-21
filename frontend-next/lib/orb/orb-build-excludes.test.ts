@@ -44,6 +44,13 @@ describe('production build excludes', () => {
     assert.match(nextConfig, /typescript:[\s\S]*ignoreBuildErrors:\s*true/)
     assert.match(nextConfig, /cpus:\s*1/)
     assert.match(nextConfig, /config\.parallelism\s*=\s*1/)
+    assert.match(nextConfig, /config\.cache\s*=\s*false/)
+  })
+
+  it('orb shell lazy-loads care companion', () => {
+    const shell = read('components/orb/orb-shell.tsx')
+    assert.match(shell, /import dynamic from 'next\/dynamic'/)
+    assert.match(shell, /import\('@\/components\/orb-standalone\/orb-care-companion'\)/)
   })
 
   it('runtime ORB shell does not statically import heavy stations', () => {

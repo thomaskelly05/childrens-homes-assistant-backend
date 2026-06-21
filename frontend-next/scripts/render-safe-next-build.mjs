@@ -12,7 +12,7 @@ import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 /** Stay below Render starter RAM; heap + webpack overhead must fit ~8 GB total. */
-export const DEFAULT_HEAP_MB = 3072
+export const DEFAULT_HEAP_MB = 2560
 const MAX_OLD_SPACE_SIZE_PATTERN = /--max-old-space-size(?:=\d+)?(?:\s|$)/
 
 /**

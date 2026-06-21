@@ -1,16 +1,22 @@
 'use client'
 
+import dynamic from 'next/dynamic'
 import { Suspense, useCallback } from 'react'
 
 import { OrbAuthGate } from '@/components/orb-residential/orb-auth-gate'
 import { OrbAuthLoadingScreen } from '@/components/orb-residential/orb-auth-loading-screen'
-import { OrbCareCompanion } from '@/components/orb-standalone/orb-care-companion'
 import { OrbResidentialErrorBoundary } from '@/components/orb-residential/orb-residential-error-boundary'
 import { OrbSafetyModal } from '@/components/orb-residential/orb-safety-modal'
 import { useOrbResidentialThemeSync } from '@/components/orb-residential/use-orb-residential-theme-sync'
 import { useOrbAppearance } from '@/components/orb-standalone/use-orb-appearance'
 import { useOrbAccountState } from '@/contexts/orb-account-context'
 import { getOrbThemeCssVariables, ORB_SHELL_ROOT_CLASS } from '@/lib/orb/orb-theme'
+
+const OrbCareCompanion = dynamic(
+  () =>
+    import('@/components/orb-standalone/orb-care-companion').then((mod) => mod.OrbCareCompanion),
+  { loading: () => null, ssr: false }
+)
 
 /** ORB product chrome — only mounts when OrbAuthGate reaches `ready`. */
 function OrbProductShell() {

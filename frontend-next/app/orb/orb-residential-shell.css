@@ -3208,3 +3208,5 @@ html[data-orb-residential='1'] [data-orb-voice-station] [data-orb-voice-primary]
   pointer-events: auto;
   touch-action: manipulation;
 }
+
+/* phase-5e-render-build-memory-fix — /orb lazy-loads heavy stations; Voice v2 idle click rules above unchanged */
