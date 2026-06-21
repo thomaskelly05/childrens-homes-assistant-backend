@@ -30,8 +30,8 @@ function read(relativePath: string) {
 }
 
 describe('ORB Residential Phase 4A Voice reflective companion', () => {
-  it('build version marker is phase-4e-voice-free-flowing-katherine', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-4e-voice-free-flowing-katherine')
+  it('build version marker is phase-4f-voice-platform-rebuild', () => {
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-4f-voice-platform-rebuild')
     const layout = read('app/orb/layout.tsx')
     assert.match(layout, /orb-residential-shell\.css/)
     assert.deepEqual(ORB_LAYOUT_CSS_FILES, ['app/orb/orb-residential-shell.css'])
@@ -98,7 +98,7 @@ describe('ORB Residential Phase 4A Voice reflective companion', () => {
     assert.equal(ORB_VOICE_SUMMARY_SAVE_REFLECTION, 'Save reflection')
     assert.match(handoff, /source: 'orb_voice'/)
     assert.match(handoff, /generated_for_adult_review/)
-    assert.match(station, /buildOrbVoiceHandoffPayload/)
+    assert.match(station, /buildOrbVoiceHandoffWithTts/)
   })
 
   it('safeguarding reflective guidance includes local procedure boundary', () => {
@@ -111,7 +111,7 @@ describe('ORB Residential Phase 4A Voice reflective companion', () => {
   it('single shell and no compliance guarantee language', () => {
     const shell = read('app/orb/orb-residential-shell.css')
     const station = read('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(shell, /phase-4e-voice-free-flowing-katherine/)
+    assert.match(shell, /phase-4f-voice-platform-rebuild/)
     assert.doesNotMatch(station, /Ofsted approved|compliance guarantee|finalised record/i)
     assert.doesNotMatch(station, /ORB makes safeguarding decisions/i)
   })

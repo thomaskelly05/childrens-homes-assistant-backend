@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import os
 import re
+import time
 from typing import Any
 
 from services.ai_external_call_governance import FEATURE_VOICE_RESPOND, governed_draft_text
@@ -49,9 +50,12 @@ def _normalise_history(history: list[dict[str, Any]] | None) -> list[dict[str, s
     for item in history or []:
         role = str(item.get("role") or "").strip().lower()
         content = str(item.get("content") or item.get("text") or "").strip()
-        if role not in {"user", "assistant"} or not content:
+        if not content:
             continue
-        rows.append({"role": role, "content": content})
+        if role in {"adult", "user"}:
+            rows.append({"role": "user", "content": content})
+        elif role in {"orb", "assistant"}:
+            rows.append({"role": "assistant", "content": content})
     return rows[-8:]
 
 
@@ -123,7 +127,9 @@ def generate_voice_response(
 ) -> dict[str, Any]:
     cleaned = (message or "").strip()
     if not cleaned:
-        raise ValueError("message_required")
+        raise ValueError("transcript_required")
+
+    started = time.perf_counter()
 
     safety_boundary = _needs_safety_boundary(cleaned, mode)
     policy_lookup = _needs_policy_retrieval(cleaned)
@@ -173,7 +179,8 @@ def generate_voice_response(
     reply = _cap_words(reply)
 
     logger.info(
-        "orb_voice_respond success prompt_tier=voice_fast reply_chars=%s safety_boundary=%s",
+        "orb_voice_respond ok prompt_tier=voice_fast elapsed_ms=%s reply_chars=%s safety_boundary=%s",
+        int((time.perf_counter() - started) * 1000),
         len(reply),
         safety_boundary,
     )
@@ -184,6 +191,7 @@ def generate_voice_response(
         "safetyBoundaryApplied": safety_boundary,
         "shouldEscalateToPolicyReminder": safety_boundary,
         "prompt_tier": "voice_fast",
+        "promptTier": "voice_fast",
         "embeddings_used": False,
         "retrieval_used": policy_lookup,
     }

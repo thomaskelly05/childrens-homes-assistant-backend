@@ -42,7 +42,6 @@ import {
   ORB_VOICE_END_AND_SUMMARISE,
   ORB_VOICE_MIC_ERROR
 } from '@/lib/orb/voice/orb-voice-reflective-copy'
-import { buildOrbVoiceHandoffPayload } from '@/lib/orb/voice/orb-voice-handoff'
 import {
   buildVoiceSessionMemory,
   ORB_VOICE_SLOW_THINKING_MESSAGE,
@@ -53,6 +52,22 @@ import {
   isOrbVoiceFreeFlowMode,
   shouldAutoResumeListening
 } from '@/lib/orb/voice/orb-voice-free-flowing-conversation'
+import {
+  buildOrbVoiceRespondPayload,
+  buildOrbVoiceHandoffWithTts,
+  createOrbVoiceSpokenTurnGuard,
+  createVoiceTurnId
+} from '@/lib/orb/voice/orb-voice-conversation-loop'
+import {
+  createOrbVoiceCaptureController,
+  type OrbVoiceCaptureController
+} from '@/lib/orb/voice/orb-voice-capture-controller'
+import {
+  orbVoiceSessionPrimaryLabel,
+  orbVoiceSessionBlocksPrimaryAction,
+  resolveOrbVoiceSessionState,
+  type OrbVoiceSessionState
+} from '@/lib/orb/voice/orb-voice-session-state'
 import { ORB_VOICE_BUTTON_PAUSE, ORB_VOICE_BUTTON_STOP_ORB } from '@/lib/orb/voice/orb-voice-reflective-copy'
 import {
   commitVoiceTranscriptOrBlock,
@@ -266,8 +281,11 @@ export function OrbVoiceStation({
     options?: {
       source?: 'voice' | 'chat'
       voiceRespond?: {
-        message: string
+        message?: string
+        transcript?: string
         mode?: string
+        sessionTurns?: Array<{ role: 'adult' | 'orb'; text: string }>
+        sessionMemory?: Record<string, unknown>
         history?: Array<{ role: 'user' | 'assistant'; content: string }>
         session_memory?: Record<string, unknown>
       }
@@ -297,6 +315,9 @@ export function OrbVoiceStation({
   const [turns, setTurns] = useState<VoiceTurn[]>([])
   const lastSyncedReplyKeyRef = useRef<string | null>(null)
   const lastAutoSpokenKeyRef = useRef<string | null>(null)
+  const spokenTurnGuardRef = useRef(createOrbVoiceSpokenTurnGuard())
+  const captureControllerRef = useRef<OrbVoiceCaptureController | null>(null)
+  const [conversationActive, setConversationActive] = useState(false)
   const [saveNotice, setSaveNotice] = useState<string | null>(null)
   const [savingTranscript, setSavingTranscript] = useState(false)
   const [micPermission, setMicPermission] = useState<MicrophonePermissionState>('unknown')
@@ -449,6 +470,37 @@ export function OrbVoiceStation({
     secureContext: typeof window === 'undefined' ? true : window.isSecureContext
   })
   const useBrowserLaunch = launchMode === 'browser_ptt'
+
+  const sessionState: OrbVoiceSessionState = useMemo(
+    () =>
+      resolveOrbVoiceSessionState({
+        engineState: voiceEngine.state,
+        pending,
+        speaking: voice.speaking,
+        paused: conversationPaused,
+        sessionEnded,
+        inputStatus: voiceInputStatus,
+        conversationActive
+      }),
+    [
+      conversationActive,
+      conversationPaused,
+      pending,
+      sessionEnded,
+      voice.speaking,
+      voiceEngine.state,
+      voiceInputStatus
+    ]
+  )
+
+  const sessionPrimaryLabel = orbVoiceSessionPrimaryLabel(sessionState, {
+    pushToTalk: voice.settings.pushToTalk,
+    continuousConversation: voice.settings.continuousConversation
+  })
+  const sessionPrimaryDisabled = orbVoiceSessionBlocksPrimaryAction(sessionState, {
+    pushToTalk: voice.settings.pushToTalk,
+    continuousConversation: voice.settings.continuousConversation
+  })
 
   const voiceDiagnostics = getOrbVoiceBrowserDiagnostics()
   const usesServerTranscription = isOrbServerTranscriptionTransport(
@@ -630,17 +682,20 @@ export function OrbVoiceStation({
     (text: string) => {
       const trimmed = text.trim()
       if (!trimmed) return
-      const history = buildOrbVoiceRespondHistory([
-        ...conversationTurns,
-        { role: 'user', text: trimmed }
-      ])
+      const respondPayload = buildOrbVoiceRespondPayload({
+        mode: reflectiveModeId,
+        transcript: trimmed,
+        turns: conversationTurns,
+        sessionMemory: voiceSessionMemory
+      })
       void onSendToOrb(trimmed, {
         source: 'voice',
         voiceRespond: {
           message: trimmed,
-          mode: reflectiveModeId,
-          history,
-          session_memory: voiceSessionMemory as Record<string, unknown>
+          transcript: respondPayload.transcript,
+          mode: respondPayload.mode,
+          sessionTurns: respondPayload.sessionTurns,
+          sessionMemory: respondPayload.sessionMemory as Record<string, unknown>
         }
       })
     },
@@ -656,12 +711,19 @@ export function OrbVoiceStation({
     if (!onOpenDictate) return
     const mode = orbVoiceReflectiveModeById(reflectiveModeId)
     const transcript = fullConversationText || voiceTranscriptText || browserTranscriptText
-    const payload = buildOrbVoiceHandoffPayload({
+    const diag = getOrbVoiceBrowserDiagnostics()
+    const fallbackUsed = diag.ttsProvider != null && diag.ttsProvider !== 'elevenlabs'
+    const payload = buildOrbVoiceHandoffWithTts({
       mode: reflectiveModeId,
       conversationTranscript: transcript,
       summary: reflectiveSummary.markdown,
       suggestedTemplateId: mode.suggestedTemplateId,
-      sessionMemory: voiceSessionMemory
+      sessionMemory: voiceSessionMemory,
+      tts: {
+        provider: diag.ttsProvider,
+        voiceName: diag.ttsProvider === 'elevenlabs' ? 'Katherine' : diag.ttsProvider || undefined,
+        fallbackUsed
+      }
     })
     onOpenDictate(
       `${payload.summary}\n\n---\n\nSource conversation:\n${payload.conversationTranscript}`,
@@ -934,6 +996,9 @@ export function OrbVoiceStation({
   const resetSession = useCallback(() => {
     lastSyncedReplyKeyRef.current = null
     lastAutoSpokenKeyRef.current = null
+    spokenTurnGuardRef.current.reset()
+    captureControllerRef.current?.dispose()
+    setConversationActive(false)
     resetOrbVoiceLatencyMarks()
     clearActiveOrbRealtimeVoiceClient()
     setVoiceStartStage('idle')
@@ -1009,10 +1074,7 @@ export function OrbVoiceStation({
       }
       if (submitInFlightRef.current) return
       submitInFlightRef.current = true
-      if (autoSubmitTimerRef.current) {
-        window.clearTimeout(autoSubmitTimerRef.current)
-        autoSubmitTimerRef.current = null
-      }
+      captureControllerRef.current?.cancelEndOfTurnSubmit()
       setVoiceInputStatus('transcribing')
       const freeFlow = isOrbVoiceFreeFlowMode(voice.settings)
       try {
@@ -1026,6 +1088,7 @@ export function OrbVoiceStation({
         appendUserTurn(toSend.text)
         if (freeFlow) {
           setBrowserStartStage('active')
+          setConversationActive(true)
           setVoiceInputStatus('idle')
           voice.clearTranscript()
         } else {
@@ -1042,15 +1105,36 @@ export function OrbVoiceStation({
 
   submitCapturedTranscriptRef.current = submitCapturedTranscript
 
+  useEffect(() => {
+    captureControllerRef.current?.dispose()
+    captureControllerRef.current = createOrbVoiceCaptureController(voice.settings, {
+      onPartialSpeech: () => {
+        setVoiceInputStatus('speech_detected')
+        captureControllerRef.current?.disarmNoSpeechTimeout()
+      },
+      onFinalSpeech: () => {
+        setVoiceInputStatus('speech_detected')
+      },
+      onSubmitTranscript: async (text) => {
+        await submitCapturedTranscriptRef.current(text)
+      },
+      onNoSpeechTimeout: () => {
+        setVoiceInputStatus('no_speech_detected')
+        setVoiceStartError(ORB_VOICE_NO_SPEECH_DETECTED)
+        void voiceEngine.stop().then(() => voiceEngine.reset())
+        setBrowserStartStage('idle')
+      }
+    })
+    return () => {
+      captureControllerRef.current?.dispose()
+    }
+  }, [voice.settings, voiceEngine])
+
   const scheduleAutoSubmit = useCallback(
     (text: string) => {
-      if (voice.settings.pushToTalk || voice.settings.autoSubmitOnPause === false) return
-      if (autoSubmitTimerRef.current) window.clearTimeout(autoSubmitTimerRef.current)
-      autoSubmitTimerRef.current = window.setTimeout(() => {
-        void submitCapturedTranscriptRef.current(text)
-      }, ORB_VOICE_AUTO_SUBMIT_DEBOUNCE_MS)
+      captureControllerRef.current?.scheduleEndOfTurnSubmit(text)
     },
-    [voice.settings.autoSubmitOnPause, voice.settings.pushToTalk]
+    []
   )
 
   const resumeListeningAfterTurn = useCallback(async () => {
@@ -1067,21 +1151,11 @@ export function OrbVoiceStation({
   }, [conversationPaused, pending, sessionEnded, voice, voiceEngine, voice.settings])
 
   onPartialTranscriptRef.current = () => {
-    setVoiceInputStatus('speech_detected')
-    if (autoSubmitTimerRef.current) {
-      window.clearTimeout(autoSubmitTimerRef.current)
-      autoSubmitTimerRef.current = null
-    }
-    if (noSpeechTimerRef.current) {
-      window.clearTimeout(noSpeechTimerRef.current)
-      noSpeechTimerRef.current = null
-    }
+    captureControllerRef.current?.handlePartialTranscript()
   }
 
   onFinalTranscriptRef.current = (text: string) => {
-    if (!text.trim()) return
-    setVoiceInputStatus('speech_detected')
-    if (!voice.settings.pushToTalk) scheduleAutoSubmit(text)
+    captureControllerRef.current?.handleFinalTranscript(text)
   }
 
   const handleTypeInSend = useCallback(() => {
@@ -1119,25 +1193,16 @@ export function OrbVoiceStation({
       !voice.settings.pushToTalk &&
       !submitInFlightRef.current
     if (!listening) {
-      if (noSpeechTimerRef.current) {
-        window.clearTimeout(noSpeechTimerRef.current)
-        noSpeechTimerRef.current = null
-      }
+      captureControllerRef.current?.disarmNoSpeechTimeout()
       return
     }
-    if (voiceEngine.displayTranscript.trim()) return
-    noSpeechTimerRef.current = window.setTimeout(() => {
-      if (voiceEngine.displayTranscript.trim()) return
-      setVoiceInputStatus('no_speech_detected')
-      setVoiceStartError(ORB_VOICE_NO_SPEECH_DETECTED)
-      void voiceEngine.stop().then(() => voiceEngine.reset())
-      setBrowserStartStage('idle')
-    }, ORB_VOICE_NO_SPEECH_TIMEOUT_MS)
+    if (voiceEngine.displayTranscript.trim()) {
+      captureControllerRef.current?.disarmNoSpeechTimeout()
+      return
+    }
+    captureControllerRef.current?.armNoSpeechTimeout()
     return () => {
-      if (noSpeechTimerRef.current) {
-        window.clearTimeout(noSpeechTimerRef.current)
-        noSpeechTimerRef.current = null
-      }
+      captureControllerRef.current?.disarmNoSpeechTimeout()
     }
   }, [
     useBrowserLaunch,
@@ -1151,9 +1216,11 @@ export function OrbVoiceStation({
   useEffect(() => {
     const reply = (assistantReply || '').trim()
     const key = assistantReplyKey ?? null
-    if (!reply || !key || key === lastAutoSpokenKeyRef.current) return
+    if (!reply || !key) return
     if (sessionEnded || conversationPaused) return
     if (!speechDecision?.allowAutoSpeak || !speechDecision.spokenText) return
+    if (!spokenTurnGuardRef.current.shouldSpeak(key)) return
+    if (lastAutoSpokenKeyRef.current === key) return
     lastAutoSpokenKeyRef.current = key
     const spoken = stripForSpokenReply(stripMarkdownForSpeech(speechDecision.spokenText))
     if (!spoken.trim()) return
@@ -1564,7 +1631,9 @@ export function OrbVoiceStation({
     const started = await voiceEngine.start()
     if (started) {
       setBrowserStartStage('active')
+      setConversationActive(true)
       setVoiceInputStatus('listening')
+      captureControllerRef.current?.armNoSpeechTimeout()
       markOrbInteractionLatency('voice_stream_ready')
       emitOrbClientDebug({
         area: 'voice',
@@ -1787,7 +1856,7 @@ export function OrbVoiceStation({
 
   const primaryDisabled =
     useBrowserLaunch
-      ? launchUiState === 'ready' && permissionDenied
+      ? (launchUiState === 'ready' && permissionDenied) || sessionPrimaryDisabled
       : uiState === 'ready' && (!liveVoiceAllowed || permissionDenied)
 
   const readiness = assessOrbVoiceReadiness({
@@ -1972,6 +2041,7 @@ export function OrbVoiceStation({
                   continuousConversation={voice.settings.continuousConversation}
                   transcript={browserTranscriptText}
                   primaryDisabled={primaryDisabled}
+                  primaryLabelOverride={sessionPrimaryLabel}
                   onPrimary={() => void handleBrowserVoicePrimary()}
                   onPause={handlePauseConversation}
                   onSendToOrb={(text) => sendToOrbWithVoiceContext(text)}

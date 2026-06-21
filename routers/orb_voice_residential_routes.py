@@ -136,13 +136,25 @@ class OrbVoiceHistoryTurn(BaseModel):
     content: str = Field(..., max_length=8_000)
 
 
+class OrbVoiceSessionTurn(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    role: str = Field(..., max_length=32)
+    text: str = Field(..., max_length=8_000)
+
+
 class OrbVoiceRespondRequest(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
-    message: str = Field(..., min_length=1, max_length=8_000)
     mode: str | None = Field(default="conversational", max_length=80)
-    history: list[OrbVoiceHistoryTurn] | None = None
+    transcript: str | None = Field(default=None, max_length=8_000)
+    sessionTurns: list[OrbVoiceSessionTurn] | None = None
     session_memory: dict | None = None
+    message: str | None = Field(default=None, max_length=8_000)
+    history: list[OrbVoiceHistoryTurn] | None = None
+
+    def resolved_transcript(self) -> str:
+        return (self.transcript or self.message or "").strip()
 
 
 def _user_id(current_user: dict) -> int | None:
@@ -551,13 +563,28 @@ async def orb_voice_respond(
 ):
     """Fast reflective voice reply — no deep standalone retrieval chain."""
     user_id = _user_id(current_user)
+    transcript = payload.resolved_transcript()
+    if not transcript:
+        raise HTTPException(status_code=400, detail="transcript_required")
     enforce_daily_ai_call_budget(user_id)
-    enforce_transcript_length(payload.message, user_id=user_id)
+    enforce_transcript_length(transcript, user_id=user_id)
+    session_turns = payload.sessionTurns or []
+    history = payload.history or []
+    if session_turns:
+        history_payload = [
+            {
+                "role": "user" if turn.role in {"adult", "user"} else "assistant",
+                "content": turn.text,
+            }
+            for turn in session_turns
+        ]
+    else:
+        history_payload = [turn.model_dump() for turn in history]
     try:
         result = generate_voice_response(
-            message=payload.message,
+            message=transcript,
             mode=payload.mode,
-            history=[turn.model_dump() for turn in (payload.history or [])],
+            history=history_payload,
             session_memory=payload.session_memory,
             user_id=user_id,
             provider_id=_provider_id(current_user),
@@ -584,6 +611,7 @@ async def orb_voice_respond(
             "safetyBoundaryApplied": bool(result.get("safetyBoundaryApplied")),
             "shouldEscalateToPolicyReminder": bool(result.get("shouldEscalateToPolicyReminder")),
             "prompt_tier": result.get("prompt_tier") or "voice_fast",
+            "promptTier": result.get("prompt_tier") or "voice_fast",
             "embeddings_used": bool(result.get("embeddings_used")),
             "retrieval_used": bool(result.get("retrieval_used")),
             "context_used": {

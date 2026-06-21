@@ -434,8 +434,11 @@ type SendMessageOptions = {
   /** When voice sends a transcript, preserve it if the brain request fails. */
   source?: 'voice' | 'chat'
   voiceRespond?: {
-    message: string
+    message?: string
+    transcript?: string
     mode?: string
+    sessionTurns?: Array<{ role: 'adult' | 'orb'; text: string }>
+    sessionMemory?: Record<string, unknown>
     history?: Array<{ role: 'user' | 'assistant'; content: string }>
     session_memory?: Record<string, unknown>
   }

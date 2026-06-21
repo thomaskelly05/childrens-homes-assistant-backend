@@ -15,6 +15,7 @@ export function OrbVoiceLaunchControls({
   serverTranscription = false,
   transcript = '',
   primaryDisabled = false,
+  primaryLabelOverride,
   onPrimary,
   onSendToOrb,
   onSendToDictate,
@@ -32,6 +33,7 @@ export function OrbVoiceLaunchControls({
   serverTranscription?: boolean
   transcript?: string
   primaryDisabled?: boolean
+  primaryLabelOverride?: string
   onPrimary: () => void
   onSendToOrb?: (text: string) => void
   onSendToDictate?: (text: string) => void
@@ -46,9 +48,11 @@ export function OrbVoiceLaunchControls({
 
   const trimmed = transcript.trim()
   const showSendActions = Boolean(trimmed) && launchUiState === 'ready'
-  const primaryLabel = serverTranscription
-    ? orbVoiceServerTranscriptionPrimaryLabel(launchUiState, { continuousConversation, pushToTalk })
-    : orbVoiceLaunchPrimaryLabel(launchUiState, { pushToTalk, listening: launchUiState === 'listening', continuousConversation })
+  const primaryLabel =
+    primaryLabelOverride ||
+    (serverTranscription
+      ? orbVoiceServerTranscriptionPrimaryLabel(launchUiState, { continuousConversation, pushToTalk })
+      : orbVoiceLaunchPrimaryLabel(launchUiState, { pushToTalk, listening: launchUiState === 'listening', continuousConversation }))
   const primaryDisabledWithWait =
     primaryDisabled && launchUiState === 'ready'
       ? true

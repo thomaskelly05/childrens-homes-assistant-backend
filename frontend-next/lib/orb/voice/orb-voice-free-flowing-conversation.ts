@@ -62,13 +62,19 @@ export function shouldAutoResumeListening(settings: Partial<OrbVoiceFreeFlowSett
 }
 
 export type OrbVoiceRespondHistoryTurn = {
-  role: 'user' | 'assistant'
-  content: string
+  role: 'user' | 'assistant' | 'adult' | 'orb'
+  content?: string
+  text?: string
 }
 
 export type OrbVoiceRespondRequest = {
-  message: string
   mode?: string
+  /** Phase 4F canonical field */
+  transcript?: string
+  sessionTurns?: Array<{ role: 'adult' | 'orb'; text: string }>
+  sessionMemory?: OrbVoiceSessionMemory
+  /** Backward-compatible aliases */
+  message?: string
   history?: OrbVoiceRespondHistoryTurn[]
   session_memory?: OrbVoiceSessionMemory
 }

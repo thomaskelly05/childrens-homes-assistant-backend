@@ -464,6 +464,42 @@ def test_orb_voice_respond_returns_fast_reply(voice_client, monkeypatch):
     assert data["context_used"]["embeddings_used"] is False
 
 
+def test_orb_voice_respond_accepts_session_turns_contract(voice_client, monkeypatch):
+    captured = {}
+
+    def fake_generate(**kwargs):
+        captured.update(kwargs)
+        return {
+            "reply": "That sounds worth taking into supervision. What part do you want to focus on most?",
+            "mode": "supervision_prep",
+            "safetyBoundaryApplied": False,
+            "prompt_tier": "voice_fast",
+            "embeddings_used": False,
+            "retrieval_used": False,
+        }
+
+    monkeypatch.setattr(
+        "routers.orb_voice_residential_routes.generate_voice_response",
+        fake_generate,
+    )
+    response = voice_client.post(
+        "/orb/voice/respond",
+        json={
+            "mode": "supervision_prep",
+            "transcript": "I need to reflect on an incident after contact.",
+            "sessionTurns": [
+                {"role": "adult", "text": "Earlier I was worried about contact."},
+                {"role": "orb", "text": "What felt most difficult about that?"},
+                {"role": "adult", "text": "I need to reflect on an incident after contact."},
+            ],
+        },
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["promptTier"] == "voice_fast" or data.get("context_used", {}).get("prompt_tier") == "voice_fast"
+    assert captured.get("message") == "I need to reflect on an incident after contact."
+
+
 def test_orb_voice_tts_prefers_elevenlabs_when_configured(monkeypatch):
     from services.orb_voice_tts_service import _resolve_primary_tts_provider
 

@@ -14,6 +14,8 @@ export type OrbVoiceHandoffPayload = {
   selectedVoice: typeof ORB_KATHERINE_VOICE_LABEL | string
   adultReviewStatus: 'generated_for_adult_review'
   audioStored: false
+  ttsProvider?: string
+  ttsFallbackUsed?: boolean
   sourceNote?: string
   suggestedTemplateId?: string
   sessionMemory?: OrbVoiceSessionMemory

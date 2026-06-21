@@ -29,7 +29,12 @@ export type ExecuteOrbConversationTransportOptions = {
   internalRetry?: boolean
   /** Lightweight voice brain payload for /orb/voice/respond */
   voiceRespond?: {
+    message?: string
+    transcript?: string
     mode?: string
+    sessionTurns?: Array<{ role: 'adult' | 'orb'; text: string }>
+    sessionMemory?: Record<string, unknown>
+    /** Backward-compatible aliases */
     history?: Array<{ role: 'user' | 'assistant'; content: string }>
     session_memory?: Record<string, unknown>
   }
@@ -63,7 +68,10 @@ export async function executeOrbConversationTransport(
     const voiceResult = await requestOrbVoiceRespond(
       {
         message: request.message,
+        transcript: voiceRespond.transcript ?? voiceRespond.message ?? request.message,
         mode: voiceRespond.mode,
+        sessionTurns: voiceRespond.sessionTurns,
+        sessionMemory: (voiceRespond.sessionMemory ?? voiceRespond.session_memory) as never,
         history: voiceRespond.history,
         session_memory: voiceRespond.session_memory as never
       },
