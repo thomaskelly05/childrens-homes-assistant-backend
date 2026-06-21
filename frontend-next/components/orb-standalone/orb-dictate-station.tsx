@@ -17,6 +17,10 @@ import {
 
 import { OrbAppModal } from '@/components/orb-standalone/orb-app-modal'
 import { OrbDictateStudioWorkspace } from '@/components/orb/dictate/OrbDictateStudioWorkspace'
+import {
+  OrbDictateWriteTransitionModal,
+  type OrbDictateWriteTransitionStepId
+} from '@/components/orb/dictate/OrbDictateWriteTransitionModal'
 import { OrbWriteStation } from '@/components/orb-write/orb-write-station'
 import { OrbDictateBoundaryCopy } from '@/components/orb-standalone/orb-dictate-boundary-copy'
 import { OrbDictateMobileExperience } from '@/components/orb-standalone/orb-dictate-mobile-experience'
@@ -130,6 +134,7 @@ import {
   ORB_DICTATE_RECORDING_TRANSCRIBING,
   ORB_DICTATE_RECORDING_TRANSCRIPTION_FAILED,
   ORB_DICTATE_RECORDING_UNSUPPORTED,
+  ORB_DICTATE_RECORDING_PROCESSING_NOTE,
   ORB_DICTATE_WRITE_FROM_RECORDING_NOTE,
   ORB_DICTATE_WRITE_HANDOFF_SOURCE_NOTE,
   type OrbDictateContentSource,
@@ -271,6 +276,10 @@ export function OrbDictateStation({
   const [mobileRecordingOpen, setMobileRecordingOpen] = useState(false)
   const [mobileAdvancedOpen, setMobileAdvancedOpen] = useState(false)
   const [mobileOutputOpen, setMobileOutputOpen] = useState(false)
+  const [writeTransitionOpen, setWriteTransitionOpen] = useState(false)
+  const [writeTransitionPreparing, setWriteTransitionPreparing] = useState(false)
+  const [writeTransitionFailed, setWriteTransitionFailed] = useState(false)
+  const [writeTransitionSteps, setWriteTransitionSteps] = useState<OrbDictateWriteTransitionStepId[]>([])
   const dictateRealtimeRef = useRef<OrbDictateRealtimeTranscription | null>(null)
   const developerMode = isOrbDeveloperMode()
   const isMobile = useOrbMobileViewport()
@@ -504,6 +513,7 @@ export function OrbDictateStation({
     try {
       await pauseForProcessingStage()
       setProcessingStage('transcribing')
+      setStatusMessage(ORB_DICTATE_RECORDING_PROCESSING_NOTE)
       const ext = extensionForAudioMime(mimeType)
       const file = new File([blob], `dictate-recording-${Date.now()}${ext}`, { type: mimeType })
       const result = await transcribeOrbDictateAudio(file, {
@@ -1161,11 +1171,19 @@ export function OrbDictateStation({
     }
   }
 
-  async function handleFinalise() {
+  async function pauseForTransitionStep(ms = 140) {
+    await new Promise((resolve) => window.setTimeout(resolve, ms))
+  }
+
+  function markWriteTransitionStep(step: OrbDictateWriteTransitionStepId) {
+    setWriteTransitionSteps((current) => (current.includes(step) ? current : [...current, step]))
+  }
+
+  async function performWriteHandoff(): Promise<boolean> {
     const input = effectiveInputText
     if (!input) {
       setStatusMessage('Add a transcript before finalising.')
-      return
+      return false
     }
     setFinalising(true)
     setStatusMessage('Preparing document for ORB Write…')
@@ -1211,6 +1229,7 @@ export function OrbDictateStation({
       setWriteDocument(handoffToOrbWriteDocument(handoff))
       setPhase('write')
       setStatusMessage('Document opened in ORB Write — review before saving or exporting.')
+      return true
     } catch {
       const fallback = output ?? buildLocalDictateFallback(input, noteType)
       const body = applyAcceptedSuggestionsToDraft(editedNote || fallback.professional_note, acceptedSuggestions)
@@ -1231,9 +1250,53 @@ export function OrbDictateStation({
       setWriteDocument(handoffToOrbWriteDocument(handoff))
       setPhase('write')
       setStatusMessage('Opened local draft in ORB Write — reconnect to refine with ORB intelligence.')
+      return true
     } finally {
       setFinalising(false)
     }
+  }
+
+  async function handleRequestOpenInWrite() {
+    setWriteTransitionOpen(true)
+    setWriteTransitionPreparing(true)
+    setWriteTransitionFailed(false)
+    setWriteTransitionSteps([])
+    markWriteTransitionStep('template')
+    await pauseForTransitionStep()
+    markWriteTransitionStep('working_document')
+    await pauseForTransitionStep()
+    markWriteTransitionStep('source_transcript')
+    await pauseForTransitionStep()
+    markWriteTransitionStep('recording_metadata')
+    await pauseForTransitionStep()
+    markWriteTransitionStep('adult_review')
+    const ok = await performWriteHandoff()
+    setWriteTransitionPreparing(false)
+    if (!ok) {
+      setWriteTransitionFailed(true)
+      return
+    }
+    setWriteTransitionOpen(false)
+  }
+
+  async function handleFinalise() {
+    await handleRequestOpenInWrite()
+  }
+
+  function handleDictateWorkspaceClose() {
+    const inDocumentFlow =
+      Boolean(transcript.trim()) ||
+      Boolean(editedNote.trim()) ||
+      Boolean(recordingMedia) ||
+      Boolean(processingStage) ||
+      Boolean(output)
+    if (inDocumentFlow && phase === 'capture') {
+      handleClearTranscript()
+      setPhase('capture')
+      setStatusMessage('Returned to Dictate capture station.')
+      return
+    }
+    onClose()
   }
 
   async function runGenerate(overrides?: Partial<Parameters<typeof generateOrbDictateNote>[0]>) {
@@ -1561,12 +1624,12 @@ export function OrbDictateStation({
           ? 'Refine your draft with ORB side-by-side'
           : ORB_DICTATE_PRODUCT_SUBTITLE
       }
-      onClose={onClose}
       panelId="orb-dictate"
       size="xlarge"
       ariaLabel={phase === 'studio' ? 'Dictate Studio' : ORB_DICTATE_PRODUCT_TITLE}
       presentation="workspace"
       compactChrome
+      onClose={handleDictateWorkspaceClose}
     >
       <div
         className="orb-dictate pointer-events-auto flex min-h-0 flex-1 flex-col"
@@ -1590,7 +1653,16 @@ export function OrbDictateStation({
         data-orb-dictate-status={(statusMessage ?? dictateState).slice(0, 120)}
         data-orb-dictate-speech-error={speechError ?? undefined}
         data-orb-dictate-restart-count={speechRestartCount > 0 ? String(speechRestartCount) : undefined}
+        data-orb-dictate-sidebar-safe="true"
       >
+        <OrbDictateWriteTransitionModal
+          open={writeTransitionOpen}
+          preparing={writeTransitionPreparing}
+          failed={writeTransitionFailed}
+          completedSteps={writeTransitionSteps}
+          onContinue={() => setWriteTransitionOpen(false)}
+          onDismiss={() => setWriteTransitionOpen(false)}
+        />
         {phase === 'studio' && output ? (
           <OrbDictateStudio output={output} participants={participants} segments={segments} onBack={() => setPhase('capture')} onSendToChat={onSendToChat} onOpenOrbVoice={onOpenOrbVoice} onStatusMessage={setStatusMessage} />
         ) : isMobile ? (
@@ -1702,7 +1774,7 @@ export function OrbDictateStation({
           interimText={realtimeInterim || voice.interimTranscript}
           generating={generating || finalising}
           onGenerate={(overrides) => void runGenerate(overrides)}
-          onFinalise={() => void handleFinalise()}
+          onFinalise={() => void handleRequestOpenInWrite()}
           onCopy={() => void handleCopy()}
           onSave={() => void handleSave()}
           onEditedNoteChange={setEditedNote}

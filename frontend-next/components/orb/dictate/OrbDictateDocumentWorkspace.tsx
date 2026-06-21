@@ -17,6 +17,7 @@ import {
   ORB_DICTATE_REVIEW_WITH_ORB,
   ORB_DICTATE_SOURCE_TRANSCRIPT_LABEL,
   ORB_DICTATE_SOURCE_TRANSCRIPT_TOGGLE,
+  ORB_DICTATE_SPEECH_QUALITY_NOTE,
   type OrbDictateContentSource
 } from '@/lib/orb/dictate/orb-dictate-capture-copy'
 import type { OrbDictatePersonConfirmItem } from '@/lib/orb/dictate/orb-dictate-people-identification'
@@ -56,15 +57,23 @@ export function OrbDictateDocumentWorkspace(props: OrbDictateDocumentWorkspacePr
 
   return (
     <section
-      className="orb-dictate-document-workspace rounded-2xl border border-[var(--orb-line)]/15 bg-[var(--orb-surface)]/50 p-4 shadow-sm"
+      className="orb-dictate-document-workspace orb-dictate-orb-write-converged rounded-2xl border border-[var(--orb-line)]/15 bg-[var(--orb-surface)]/40 p-3 shadow-sm sm:p-4"
       data-orb-dictate-document-workspace
       data-orb-dictate-transcript-workspace
+      data-orb-dictate-orb-write-converged
+      data-orb-dictate-sidebar-safe="true"
     >
-      <header className="mb-4">
+      <header className="mb-3">
         <h3 className="text-base font-semibold text-[var(--orb-foreground)]" data-orb-dictate-document-workspace-title>
           {ORB_DICTATE_DOCUMENT_WORKSPACE_TITLE}
         </h3>
       </header>
+
+      {props.peopleToConfirm?.length ? (
+        <div className="mb-4" data-orb-dictate-people-confirm-top>
+          <OrbDictatePeopleConfirm items={props.peopleToConfirm} prominent />
+        </div>
+      ) : null}
 
       <div className="orb-dictate-document-workspace-grid grid gap-4 lg:grid-cols-[minmax(0,7fr)_minmax(0,3fr)]">
         <div className="orb-dictate-document-main min-w-0 space-y-3">
@@ -78,6 +87,10 @@ export function OrbDictateDocumentWorkspace(props: OrbDictateDocumentWorkspacePr
           />
 
           {props.recordingMedia ? <OrbDictateRecordingAttachment media={props.recordingMedia} /> : null}
+
+          <p className="text-xs leading-relaxed text-[var(--orb-muted)]" data-orb-dictate-speech-quality-note>
+            {ORB_DICTATE_SPEECH_QUALITY_NOTE}
+          </p>
 
           <details
             className="orb-dictate-source-transcript rounded-xl border border-[var(--orb-line)]/12 bg-white/70"
@@ -109,7 +122,7 @@ export function OrbDictateDocumentWorkspace(props: OrbDictateDocumentWorkspacePr
           </details>
         </div>
 
-        <aside className="orb-dictate-assistant-rail flex min-w-0 flex-col gap-3">
+        <aside className="orb-dictate-assistant-rail flex min-w-0 flex-col gap-3" data-orb-dictate-assistant-rail>
           <OrbDictateEditAssistant
             instruction={props.orbInstruction}
             onInstructionChange={props.onOrbInstructionChange}
@@ -123,13 +136,13 @@ export function OrbDictateDocumentWorkspace(props: OrbDictateDocumentWorkspacePr
           <OrbDictateWriteTemplateSelector
             selectedTemplateId={props.selectedTemplateId}
             onSelectTemplate={props.onSelectTemplate}
+            compact
           />
-          {props.peopleToConfirm?.length ? <OrbDictatePeopleConfirm items={props.peopleToConfirm} /> : null}
         </aside>
       </div>
 
       {props.interactive ? (
-        <div className="mt-4 flex flex-wrap gap-2" data-orb-dictate-document-workspace-actions>
+        <div className="mt-4 flex flex-wrap gap-2 border-t border-[var(--orb-line)]/10 pt-4" data-orb-dictate-document-workspace-actions>
           <button
             type="button"
             data-orb-dictate-review-with-orb
@@ -144,7 +157,7 @@ export function OrbDictateDocumentWorkspace(props: OrbDictateDocumentWorkspacePr
               type="button"
               data-orb-dictate-open-write
               disabled={!hasWorkingDoc}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--orb-line)]/30 bg-white/90 px-4 py-2 text-xs font-medium"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--orb-primary)]/30 bg-[var(--orb-primary-soft)] px-4 py-2 text-xs font-semibold text-[var(--orb-foreground)]"
               onClick={props.onOpenInWrite}
             >
               {ORB_DICTATE_ACTION_OPEN_WRITE}

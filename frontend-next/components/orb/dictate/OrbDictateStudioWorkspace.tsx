@@ -149,7 +149,7 @@ function editModeForInstruction(instruction: string): OrbDictateEditMode | undef
 function templateIdFromInstruction(instruction: string): string | null {
   const lower = instruction.toLowerCase()
   if (lower.includes('missing from home')) return 'missing'
-  if (lower.includes('daily record')) return 'daily_record'
+  if (lower.includes('change this into a daily record') || lower.includes('daily record')) return 'daily_record'
   if (lower.includes('incident')) return 'incident'
   if (lower.includes('key-work') || lower.includes('keywork')) return 'keywork'
   if (lower.includes('safeguarding')) return 'safeguarding'
@@ -205,7 +205,8 @@ export function OrbDictateStudioWorkspace(props: OrbDictateStudioWorkspaceProps)
   const [applyStatus, setApplyStatus] = useState<string | null>(null)
 
   const committedText = props.transcript.trim()
-  const hasCommittedCapture = committedText.length > 0
+  const isProcessingCapture = Boolean(props.processingStage) && props.processingStage !== 'ready'
+  const hasCommittedCapture = committedText.length > 0 || isProcessingCapture
   const workingDocumentText = workingDocument.trim()
   const reviewInputText = workingDocumentText || committedText
   const effectiveText = committedText || props.liveTranscript.trim()
@@ -243,10 +244,10 @@ export function OrbDictateStudioWorkspace(props: OrbDictateStudioWorkspaceProps)
       return
     }
     setWorkingDocument((prev) => {
-      if (prev.trim()) return prev
+      if (prev.trim() && !isProcessingCapture) return prev
       return buildInitialWorkingDocument(committedText, props.selectedTemplateId)
     })
-  }, [committedText, hasCommittedCapture, props.selectedTemplateId])
+  }, [committedText, hasCommittedCapture, isProcessingCapture, props.selectedTemplateId])
 
   useEffect(() => {
     if (workingDocumentText) {
@@ -451,7 +452,7 @@ export function OrbDictateStudioWorkspace(props: OrbDictateStudioWorkspaceProps)
   return (
     <OrbStudioShell
       studioId="dictate"
-      className="orb-dictate-studio-workspace orb-dictate-capture-workflow orb-dictate-staged-recording orb-dictate-transcript-workflow orb-dictate-working-document-flow orb-dictate-recording-media-flow orb-dictate-template-document-workspace orb-workspace orb-workspace--dictate flex min-h-0 flex-1 flex-col overflow-hidden"
+      className="orb-dictate-studio-workspace orb-dictate-capture-workflow orb-dictate-staged-recording orb-dictate-transcript-workflow orb-dictate-working-document-flow orb-dictate-recording-media-flow orb-dictate-template-document-workspace orb-dictate-orb-write-convergence orb-workspace orb-workspace--dictate flex min-h-0 flex-1 flex-col overflow-hidden"
       data-orb-dictate-studio-workspace
       data-orb-dictate-capture-workflow
       data-orb-dictate-staged-recording
@@ -459,7 +460,9 @@ export function OrbDictateStudioWorkspace(props: OrbDictateStudioWorkspaceProps)
       data-orb-dictate-working-document-flow
       data-orb-dictate-recording-media-flow
       data-orb-dictate-template-document-workspace
+      data-orb-dictate-orb-write-converged
       data-orb-workspace-dictate
+      data-orb-dictate-sidebar-safe="true"
       data-orb-dictate-empty={showCaptureStation ? 'true' : undefined}
       data-orb-dictate-active-stage={stage}
     >

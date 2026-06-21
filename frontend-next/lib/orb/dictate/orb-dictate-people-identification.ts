@@ -13,6 +13,8 @@ export type OrbDictatePersonConfirmItem = {
   label: string
   status: OrbDictatePersonConfirmStatus
   detail?: string
+  speakerConfidence?: 'suggested' | 'needs_confirmation' | 'unclear'
+  transcriptQuality?: 'clear' | 'mixed' | 'unclear'
 }
 
 function statusLabel(status: OrbDictatePersonConfirmStatus): string {

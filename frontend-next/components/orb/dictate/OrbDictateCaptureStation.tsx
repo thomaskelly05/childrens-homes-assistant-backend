@@ -53,18 +53,16 @@ export function OrbDictateCaptureStation(props: OrbDictateCaptureStationProps) {
         data-orb-dictate-template-first-station
       >
         <div className="text-center">
-          <h3 className="text-base font-semibold text-[var(--orb-foreground)]" data-orb-dictate-what-are-you-recording>
-            {ORB_DICTATE_WHAT_ARE_YOU_RECORDING}
-          </h3>
-          <p className="mt-2 text-sm font-medium text-[var(--orb-primary)]" data-orb-dictate-recording-as>
+          <p className="mt-2 text-sm font-semibold text-[var(--orb-primary)]" data-orb-dictate-recording-as>
             {ORB_DICTATE_RECORDING_AS_PREFIX} {templateLabel}
           </p>
         </div>
 
-        <div className="mt-4">
+        <div className="mt-4" data-orb-dictate-what-are-you-recording>
           <OrbDictateWriteTemplateSelector
             selectedTemplateId={props.selectedTemplateId}
             onSelectTemplate={props.onSelectTemplate}
+            label={ORB_DICTATE_WHAT_ARE_YOU_RECORDING}
           />
         </div>
 

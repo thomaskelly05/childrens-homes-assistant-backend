@@ -17,11 +17,43 @@ export type OrbDictateProcessingStageId =
   | 'ready'
 
 export const ORB_DICTATE_PROCESSING_STAGES = [
-  { id: 'saving_audio' as const, label: 'Saving audio' },
-  { id: 'transcribing' as const, label: 'Transcribing' },
-  { id: 'identifying_people' as const, label: 'Identifying speakers / people present' },
+  { id: 'saving_audio' as const, label: 'Saving recording' },
+  { id: 'transcribing' as const, label: 'Transcribing audio' },
+  { id: 'identifying_people' as const, label: 'Identifying speakers to confirm' },
   { id: 'structuring_document' as const, label: 'Structuring document' },
   { id: 'ready' as const, label: 'Ready for adult review' }
+] as const
+
+export const ORB_DICTATE_RECORDING_PROCESSING_NOTE =
+  'Recording saved for this session. Transcript is still processing.' as const
+
+export const ORB_DICTATE_PEOPLE_CONFIRM_DISCLAIMER =
+  'ORB may identify speakers or people mentioned, but adults must confirm accuracy.' as const
+
+export const ORB_DICTATE_SPEAKER_DETECTION_NOTE =
+  'Speaker detection is suggested for adult confirmation.' as const
+
+export const ORB_DICTATE_SPEECH_QUALITY_NOTE =
+  'Speech clarity may vary depending on microphone, distance, background noise and accent.' as const
+
+export const ORB_DICTATE_WRITE_TRANSITION_TITLE = 'Opening in ORB Write' as const
+
+export const ORB_DICTATE_WRITE_TRANSITION_BODY =
+  'ORB is preparing this working document in ORB Write so you can continue reviewing, editing and finalising it.' as const
+
+export const ORB_DICTATE_WRITE_TRANSITION_PREPARING = 'Preparing ORB Write…' as const
+
+export const ORB_DICTATE_WRITE_TRANSITION_CONTINUE = 'Continue to ORB Write' as const
+
+export const ORB_DICTATE_WRITE_TRANSITION_FAILED =
+  'ORB could not open this in ORB Write. Your Dictate document has not been lost.' as const
+
+export const ORB_DICTATE_WRITE_TRANSITION_STEPS = [
+  { id: 'template' as const, label: 'Carrying over selected template' },
+  { id: 'working_document' as const, label: 'Carrying over working document' },
+  { id: 'source_transcript' as const, label: 'Linking source transcript' },
+  { id: 'recording_metadata' as const, label: 'Linking recording metadata where available' },
+  { id: 'adult_review' as const, label: 'Keeping adult-review status' }
 ] as const
 
 export const ORB_DICTATE_DOCUMENT_WORKSPACE_TITLE = 'Document workspace' as const
@@ -233,7 +265,7 @@ export const ORB_DICTATE_RECORD_TYPE_SUGGESTIONS = [
   { templateId: 'handover', label: 'Handover' },
   { templateId: 'supervision_prep', label: 'Supervision reflection' },
   { templateId: 'manager', label: 'Manager oversight note' },
-  { templateId: 'general', label: 'Other' }
+  { templateId: 'general', label: 'Other / General dictation' }
 ] as const
 
 export const ORB_DICTATE_DRAFT_SECTIONS_DEFAULT = [

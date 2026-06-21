@@ -24,8 +24,8 @@ function read(relativePath: string) {
 }
 
 describe('ORB Residential Phase 3Q Dictate template document workspace', () => {
-  it('build version marker is phase-3q-dictate-template-document-workspace', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-3q-dictate-template-document-workspace')
+  it('build version marker is phase-3r-dictate-orb-write-convergence', () => {
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-3r-dictate-orb-write-convergence')
     const layout = read('app/orb/layout.tsx')
     assert.match(layout, /orb-residential-shell\.css/)
     assert.deepEqual(ORB_LAYOUT_CSS_FILES, ['app/orb/orb-residential-shell.css'])
@@ -60,8 +60,8 @@ describe('ORB Residential Phase 3Q Dictate template document workspace', () => {
     const stages = read('components/orb/dictate/OrbDictateProcessingStages.tsx')
     const copy = read('lib/orb/dictate/orb-dictate-capture-copy.ts')
     const labels = ORB_DICTATE_PROCESSING_STAGES.map((item) => item.label)
-    assert.ok(labels.includes('Saving audio'))
-    assert.ok(labels.includes('Transcribing'))
+    assert.ok(labels.includes('Saving recording'))
+    assert.ok(labels.includes('Transcribing audio'))
     assert.ok(labels.includes('Structuring document'))
     assert.match(stages, /data-orb-dictate-processing-stages/)
     assert.match(copy, /identifying_people/)
@@ -155,6 +155,6 @@ describe('ORB Residential Phase 3Q Dictate template document workspace', () => {
     assert.match(companion, /orb-app-shell/)
     assert.match(layout, /import '\.\/orb-residential-shell\.css'/)
     assert.doesNotMatch(layout, /import '\.\/.*\.css'[\s\S]*import '\.\/.*\.css'/)
-    assert.match(read('app/orb/orb-residential-shell.css'), /phase-3q-dictate-template-document-workspace/)
+    assert.match(read('app/orb/orb-residential-shell.css'), /phase-3r-dictate-orb-write-convergence/)
   })
 })
