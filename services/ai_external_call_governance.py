@@ -26,6 +26,7 @@ FEATURE_REPORT_DRAFTING = "report_drafting"
 FEATURE_AI_NOTES = "ai_notes"
 FEATURE_DICTATE = "dictate"
 FEATURE_DICTATE_EDIT = "dictate_edit"
+FEATURE_VOICE_TRANSCRIPTION = "voice_transcription"
 FEATURE_KNOWLEDGE_EMBEDDING = "knowledge_embedding"
 FEATURE_LEGACY_STREAMING = "legacy_assistant_stream"
 
@@ -387,7 +388,9 @@ def governed_transcribe_audio_file(
     result_dict = result.model_dump() if hasattr(result, "model_dump") else result
     transcript = str(result_dict.get("text") or "").strip()
     redacted, redaction_applied = redact_plain_text(transcript, mode=decision.redaction_mode)
-    working_transcript = transcript if feature == FEATURE_DICTATE else redacted
+    working_transcript = (
+        transcript if feature in {FEATURE_DICTATE, FEATURE_VOICE_TRANSCRIPTION} else redacted
+    )
 
     record_model_usage(
         feature=feature,
@@ -409,5 +412,11 @@ def governed_transcribe_audio_file(
         "segments": [],
         "duration": result_dict.get("duration"),
         "redaction_applied": redaction_applied,
-        "transcript_privacy_mode": "internal_working" if feature == FEATURE_DICTATE else "redacted_export",
+        "transcript_privacy_mode": (
+            "internal_working"
+            if feature == FEATURE_DICTATE
+            else "session_only"
+            if feature == FEATURE_VOICE_TRANSCRIPTION
+            else "redacted_export"
+        ),
     }

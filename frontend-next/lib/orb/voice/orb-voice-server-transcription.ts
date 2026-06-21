@@ -7,6 +7,11 @@ import { authFetch, authFetchResponse } from '@/lib/auth/api'
 import { emitOrbClientDebug } from '@/lib/orb/orb-client-debug'
 import { OrbOpenAIRealtimeWebRTCClient } from '@/lib/orb/voice/orb-openai-realtime-webrtc-client'
 import { fetchOrbVoiceRealtimeStatus } from '@/lib/orb/voice/orb-realtime-availability'
+import {
+  ORB_VOICE_NO_AUDIO_CAPTURED,
+  ORB_VOICE_NO_SPEECH_DETECTED,
+  ORB_VOICE_TRANSCRIPTION_UNAVAILABLE
+} from '@/lib/orb/voice/orb-voice-speech-loop'
 
 export type OrbVoiceServerTranscriptionSession = {
   ok: boolean
@@ -28,8 +33,46 @@ export type OrbVoiceServerTranscriptionCallbacks = {
   onError?: (message: string) => void
 }
 
+export type OrbVoiceServerTranscriptionResult = {
+  transcript: string
+  provider: string
+  source: 'server_transcription'
+  mimeType?: string
+  durationMs?: number
+}
+
+export class OrbVoiceTranscriptionRequestError extends Error {
+  readonly code: string
+  readonly status: number
+
+  constructor(code: string, message: string, status: number) {
+    super(message)
+    this.name = 'OrbVoiceTranscriptionRequestError'
+    this.code = code
+    this.status = status
+  }
+}
+
 const NOT_CONFIGURED_MESSAGE =
   'Server transcription is not available. Use Dictate or Chat instead.'
+
+function parseErrorPayload(json: unknown): { error?: string; message?: string } {
+  if (!json || typeof json !== 'object') return {}
+  const body = json as Record<string, unknown>
+  const detail = body.detail
+  if (detail && typeof detail === 'object') {
+    const d = detail as Record<string, unknown>
+    return {
+      error: typeof d.error === 'string' ? d.error : undefined,
+      message: typeof d.message === 'string' ? d.message : undefined
+    }
+  }
+  if (typeof detail === 'string') return { message: detail }
+  return {
+    error: typeof body.error === 'string' ? body.error : undefined,
+    message: typeof body.message === 'string' ? body.message : undefined
+  }
+}
 
 export async function isOrbVoiceServerTranscriptionRealtimeAvailable(): Promise<boolean> {
   const status = await fetchOrbVoiceRealtimeStatus()
@@ -76,19 +119,59 @@ export async function requestOrbVoiceServerTranscriptionSession(): Promise<OrbVo
 export async function transcribeOrbVoiceAudioBlob(
   blob: Blob,
   filename = 'voice-capture.webm'
-): Promise<string> {
+): Promise<OrbVoiceServerTranscriptionResult> {
+  if (!blob.size) {
+    throw new OrbVoiceTranscriptionRequestError(
+      'voice_transcription_empty',
+      ORB_VOICE_NO_AUDIO_CAPTURED,
+      400
+    )
+  }
+
   const form = new FormData()
   form.append('file', blob, filename)
   const res = await authFetchResponse('/orb/voice/transcribe/audio', {
     method: 'POST',
     body: form
   })
-  if (!res.ok) throw new Error('Voice transcription failed')
-  const json = (await res.json()) as { success?: boolean; data?: { transcript?: string }; transcript?: string }
-  if (json.success === false) throw new Error('Voice transcription failed')
-  const transcript = String(json.data?.transcript ?? json.transcript ?? '').trim()
-  if (!transcript) throw new Error('No speech detected in recording')
-  return transcript
+
+  let json: unknown = null
+  try {
+    json = await res.json()
+  } catch {
+    json = null
+  }
+
+  if (!res.ok) {
+    const parsed = parseErrorPayload(json)
+    const code = parsed.error || 'voice_transcription_unavailable'
+    const message =
+      parsed.message ||
+      (res.status === 503 ? ORB_VOICE_TRANSCRIPTION_UNAVAILABLE : ORB_VOICE_TRANSCRIPTION_UNAVAILABLE)
+    if (code === 'voice_transcription_empty') {
+      throw new OrbVoiceTranscriptionRequestError(code, ORB_VOICE_NO_SPEECH_DETECTED, res.status)
+    }
+    throw new OrbVoiceTranscriptionRequestError(code, message, res.status)
+  }
+
+  const body = (json || {}) as Record<string, unknown>
+  const data = (body.data || {}) as Record<string, unknown>
+  const transcript = String(body.transcript ?? data.transcript ?? '').trim()
+  if (!transcript) {
+    throw new OrbVoiceTranscriptionRequestError(
+      'voice_transcription_empty',
+      ORB_VOICE_NO_SPEECH_DETECTED,
+      400
+    )
+  }
+
+  return {
+    transcript,
+    provider: String(body.provider ?? 'openai'),
+    source: 'server_transcription',
+    mimeType: typeof body.mime_type === 'string' ? body.mime_type : blob.type || undefined,
+    durationMs: typeof body.duration_ms === 'number' ? body.duration_ms : undefined
+  }
 }
 
 /** Live server transcription for Voice (transcription-only WebRTC). */

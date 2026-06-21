@@ -12,7 +12,15 @@ import {
 import { patchOrbVoiceBrowserDiagnostics } from '@/lib/orb/voice/orb-voice-browser-diagnostics'
 import { ORB_VOICE_TRANSCRIPTION_FAILED_MESSAGE } from '@/lib/orb/voice/orb-voice-server-transcription-state'
 import { ORB_VOICE_SERVER_NO_TRANSCRIPT_HEADLINE } from '@/lib/orb/voice/orb-voice-server-transcription-ui'
-import { transcribeOrbVoiceAudioBlob } from '@/lib/orb/voice/orb-voice-server-transcription'
+import {
+  OrbVoiceTranscriptionRequestError,
+  transcribeOrbVoiceAudioBlob
+} from '@/lib/orb/voice/orb-voice-server-transcription'
+import { filenameForVoiceCaptureMime } from '@/lib/orb/voice/orb-voice-capture'
+import {
+  ORB_VOICE_NO_AUDIO_CAPTURED,
+  ORB_VOICE_TRANSCRIPTION_UNAVAILABLE
+} from '@/lib/orb/voice/orb-voice-speech-loop'
 
 export type OrbServerTranscriptionTransportCallbacks = {
   onPartialTranscript: (text: string) => void
@@ -144,19 +152,20 @@ export class OrbServerTranscriptionTransport {
     if (!result?.blob || size === 0) {
       patchOrbVoiceBrowserDiagnostics({
         serverTranscriptionStatus: 'empty',
-        serverTranscriptionError: null,
+        serverTranscriptionError: 'empty_audio_blob',
         noTranscriptReason: 'empty_audio_blob',
         resolvedTranscriptLength: 0,
-        userFacingMessage: ORB_VOICE_SERVER_NO_TRANSCRIPT_HEADLINE
+        userFacingMessage: ORB_VOICE_NO_AUDIO_CAPTURED
       })
       this.stopInFlight = false
       return ''
     }
 
     try {
-      const filename = result.mimeType.includes('wav') ? 'voice.wav' : 'voice.webm'
-      const text = await transcribeOrbVoiceAudioBlob(result.blob, filename)
-      const trimmed = text.trim()
+      const mimeType = result.mimeType || result.recorderMimeType || 'audio/webm'
+      const filename = filenameForVoiceCaptureMime(mimeType)
+      const uploaded = await transcribeOrbVoiceAudioBlob(result.blob, filename)
+      const trimmed = uploaded.transcript.trim()
       if (!trimmed) {
         patchOrbVoiceBrowserDiagnostics({
           serverTranscriptionStatus: 'empty',
@@ -183,14 +192,28 @@ export class OrbServerTranscriptionTransport {
       this.stopInFlight = false
       return trimmed
     } catch (error) {
-      const code = safeTranscriptionErrorCode(error)
+      const isUnavailable =
+        error instanceof OrbVoiceTranscriptionRequestError &&
+        (error.code === 'voice_transcription_unavailable' || error.status === 503)
+      const isEmpty =
+        error instanceof OrbVoiceTranscriptionRequestError &&
+        error.code === 'voice_transcription_empty'
+      const message =
+        error instanceof OrbVoiceTranscriptionRequestError
+          ? error.message
+          : ORB_VOICE_TRANSCRIPTION_FAILED_MESSAGE
+      const code =
+        error instanceof OrbVoiceTranscriptionRequestError
+          ? error.code
+          : safeTranscriptionErrorCode(error)
       patchOrbVoiceBrowserDiagnostics({
         serverTranscriptionStatus: 'failed',
         serverTranscriptionError: code,
-        userFacingMessage: ORB_VOICE_TRANSCRIPTION_FAILED_MESSAGE
+        noTranscriptReason: isEmpty ? 'empty_transcript' : isUnavailable ? 'transcription_unavailable' : 'transcription_failed',
+        userFacingMessage: message
       })
       this.stopInFlight = false
-      throw new Error(ORB_VOICE_TRANSCRIPTION_FAILED_MESSAGE)
+      throw error instanceof Error ? error : new Error(message)
     }
   }
 

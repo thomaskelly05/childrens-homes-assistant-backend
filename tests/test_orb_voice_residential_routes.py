@@ -350,3 +350,90 @@ def test_orb_voice_session_instructions_include_residential_guidance(voice_clien
     assert "ORB Voice" in instructions
     assert "Reflective Practice" in instructions
     assert captured.get("voice") == "sage"
+
+
+def test_orb_voice_transcribe_audio_empty_file_returns_400(voice_client):
+    response = voice_client.post(
+        "/orb/voice/transcribe/audio",
+        files={"file": ("voice-capture.webm", b"", "audio/webm")},
+    )
+    assert response.status_code == 400
+    detail = response.json()["detail"]
+    assert detail["error"] == "voice_transcription_empty"
+    assert "No audio was captured" in detail["message"]
+
+
+def test_orb_voice_transcribe_audio_unavailable_without_api_key(voice_client, monkeypatch):
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    response = voice_client.post(
+        "/orb/voice/transcribe/audio",
+        files={"file": ("voice-capture.webm", b"\x00\x01\x02", "audio/webm")},
+    )
+    assert response.status_code == 503
+    detail = response.json()["detail"]
+    assert detail["error"] == "voice_transcription_unavailable"
+    assert "Type your reflection instead" in detail["message"]
+
+
+def test_orb_voice_transcribe_audio_success(voice_client, monkeypatch):
+    async def fake_transcribe(_path, *, mime_type=None):
+        return {
+            "transcript": "I need to reflect on an incident after contact.",
+            "provider": "gpt-4o-transcribe",
+            "source": "server_transcription",
+            "duration_ms": 1200,
+            "mime_type": mime_type,
+            "audio_stored": False,
+        }
+
+    monkeypatch.setattr(
+        "routers.orb_voice_residential_routes.transcribe_voice_audio",
+        fake_transcribe,
+    )
+    response = voice_client.post(
+        "/orb/voice/transcribe/audio",
+        files={"file": ("voice-capture.mp4", b"\x00\x01\x02\x03", "audio/mp4")},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["success"] is True
+    assert data["transcript"] == "I need to reflect on an incident after contact."
+    assert data["provider"] == "gpt-4o-transcribe"
+    assert data["source"] == "server_transcription"
+    assert data["mime_type"] == "audio/mp4"
+    assert data["audio_stored"] is False
+
+
+def test_orb_voice_transcription_logs_exclude_transcript_content(monkeypatch, caplog):
+    import logging
+    import tempfile
+
+    from services.orb_voice_transcription_service import _transcribe_voice_audio_sync
+
+    caplog.set_level(logging.INFO, logger="services.orb_voice_transcription_service")
+    path = None
+    with tempfile.NamedTemporaryFile(suffix=".webm", delete=False) as tmp:
+        tmp.write(b"\x00\x01\x02\x03")
+        path = tmp.name
+
+    def fake_governed(*_args, **_kwargs):
+        return {
+            "original_transcript": "Sensitive child name spoke here",
+            "duration": 1.2,
+        }
+
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+    monkeypatch.setattr(
+        "services.orb_voice_transcription_service.governed_transcribe_audio_file",
+        fake_governed,
+    )
+    try:
+        result = _transcribe_voice_audio_sync(path, mime_type="audio/webm")
+        assert result["transcript"] == "Sensitive child name spoke here"
+        log_text = "\n".join(record.message for record in caplog.records)
+        assert "Sensitive child name" not in log_text
+        assert "transcript_chars=32" in log_text
+    finally:
+        if path and os.path.exists(path):
+            os.remove(path)
+

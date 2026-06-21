@@ -120,12 +120,32 @@ export type MediaRecorderCapture = {
   recorder?: MediaRecorder
 }
 
+export const ORB_VOICE_PREFERRED_MIME_TYPES = [
+  'audio/webm;codecs=opus',
+  'audio/webm',
+  'audio/mp4',
+  'audio/mpeg',
+  'audio/wav'
+] as const
+
+export const ORB_VOICE_NO_AUDIO_CAPTURED =
+  'No audio was captured. Check microphone permission and try again.' as const
+
+export function filenameForVoiceCaptureMime(mimeType: string): string {
+  const mime = mimeType.toLowerCase()
+  if (mime.includes('wav')) return 'voice-capture.wav'
+  if (mime.includes('mp4') || mime.includes('m4a')) return 'voice-capture.mp4'
+  if (mime.includes('mpeg') || mime.includes('mp3')) return 'voice-capture.mpeg'
+  if (mime.includes('ogg')) return 'voice-capture.ogg'
+  if (mime.includes('aac')) return 'voice-capture.aac'
+  if (mime.includes('flac')) return 'voice-capture.flac'
+  return 'voice-capture.webm'
+}
+
 function pickMediaRecorderMimeType(preferred?: string): string {
   if (typeof MediaRecorder === 'undefined') return ''
-  const safari = isSafariLike()
-  const candidates = safari
-    ? [preferred, 'audio/mp4', 'audio/mpeg', 'audio/webm;codecs=opus', 'audio/webm']
-    : [preferred, 'audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/mpeg']
+  const candidates: string[] = [...ORB_VOICE_PREFERRED_MIME_TYPES]
+  if (preferred) candidates.unshift(preferred)
   try {
     for (const candidate of candidates.filter(Boolean) as string[]) {
       if (MediaRecorder.isTypeSupported(candidate)) return candidate

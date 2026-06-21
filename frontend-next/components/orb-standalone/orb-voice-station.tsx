@@ -61,6 +61,8 @@ import {
   ORB_VOICE_TYPE_INSTEAD_LABEL,
   ORB_VOICE_TYPE_INSTEAD_PLACEHOLDER,
   ORB_VOICE_TYPE_INSTEAD_SEND,
+  ORB_VOICE_TRANSCRIPTION_UNAVAILABLE,
+  voiceInputStatusFromTranscriptionFailure,
   voiceInputStatusLabel,
   type VoiceInputStatus
 } from '@/lib/orb/voice/orb-voice-speech-loop'
@@ -1460,10 +1462,18 @@ export function OrbVoiceStation({
           detail: { length: text.length, transport: voiceEngine.transport }
         })
       } else if (postStopDiagnostics.serverTranscriptionStatus === 'failed') {
-        setBrowserStartStage('idle')
+        const failureStatus = voiceInputStatusFromTranscriptionFailure({
+          noTranscriptReason: postStopDiagnostics.noTranscriptReason,
+          errorCode: postStopDiagnostics.serverTranscriptionError
+        })
+        setVoiceInputStatus(failureStatus)
         setVoiceStartError(
           postStopDiagnostics.userFacingMessage || ORB_VOICE_TRANSCRIPTION_FAILED_MESSAGE
         )
+        if (failureStatus === 'transcription_unavailable' || failureStatus === 'no_audio_captured') {
+          setNoTranscriptFallback(true)
+        }
+        setBrowserStartStage('idle')
         void voiceEngine.reset()
       } else if (
         !isServerTranscriptionFinalizeInProgress(
@@ -2008,6 +2018,8 @@ export function OrbVoiceStation({
           </p>
 
           {(voiceInputStatus === 'no_speech_detected' ||
+            voiceInputStatus === 'no_audio_captured' ||
+            voiceInputStatus === 'transcription_unavailable' ||
             voiceInputStatus === 'speech_unsupported' ||
             voiceInputStatus === 'microphone_error' ||
             noTranscriptFallback ||
@@ -2040,6 +2052,9 @@ export function OrbVoiceStation({
               </button>
               {voiceInputStatus === 'speech_unsupported' ? (
                 <p className="mt-2 text-[10px] text-[var(--orb-muted)]">{ORB_VOICE_SPEECH_UNSUPPORTED}</p>
+              ) : null}
+              {voiceInputStatus === 'transcription_unavailable' ? (
+                <p className="mt-2 text-[10px] text-[var(--orb-muted)]">{ORB_VOICE_TRANSCRIPTION_UNAVAILABLE}</p>
               ) : null}
             </div>
           )}

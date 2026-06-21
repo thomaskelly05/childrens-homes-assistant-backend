@@ -30,7 +30,10 @@ from services.orb_voice_profiles import (
     resolve_openai_voice,
     resolve_voice_profile_for_session,
 )
-from services.orb_dictate_service import transcribe_dictate_audio
+from services.orb_voice_transcription_service import (
+    OrbVoiceTranscriptionError,
+    transcribe_voice_audio,
+)
 from services.orb_voice_realtime_config import (
     _openai_realtime_configured,
     _provider_has_stt_credentials,
@@ -57,6 +60,31 @@ VOICE_ALLOWED_AUDIO_SUFFIXES = frozenset(
 VOICE_BLOCKED_UPLOAD_SUFFIXES = frozenset(
     {".exe", ".bat", ".cmd", ".com", ".msi", ".scr", ".sh", ".bash", ".php", ".html", ".htm", ".js", ".jar"}
 )
+
+MIME_TO_SUFFIX = {
+    "audio/webm": ".webm",
+    "audio/webm;codecs=opus": ".webm",
+    "audio/wav": ".wav",
+    "audio/x-wav": ".wav",
+    "audio/mp4": ".mp4",
+    "audio/m4a": ".m4a",
+    "audio/mpeg": ".mpeg",
+    "audio/mp3": ".mp3",
+    "audio/ogg": ".ogg",
+    "audio/flac": ".flac",
+    "audio/aac": ".aac",
+}
+
+
+def _resolve_voice_audio_suffix(filename: str | None, content_type: str | None) -> str:
+    suffix = (os.path.splitext(filename or "")[1] or "").lower()
+    if suffix in VOICE_ALLOWED_AUDIO_SUFFIXES:
+        return suffix
+    mime = (content_type or "").split(";")[0].strip().lower()
+    mapped = MIME_TO_SUFFIX.get(mime) or MIME_TO_SUFFIX.get(content_type or "")
+    if mapped:
+        return mapped
+    return ".webm"
 
 VOICE_REALTIME_TRANSCRIPTION_INSTRUCTIONS = (
     "You are a silent transcription assistant for ORB Voice in residential childcare. "
@@ -445,27 +473,52 @@ async def orb_voice_transcribe_audio(
     _current_user=Depends(require_orb_voice_premium),
 ):
     """Transient audio transcription for ORB Voice — audio is not stored after processing."""
-    suffix = (os.path.splitext(file.filename or "audio.webm")[1] or ".webm").lower()
+    content_type = (file.content_type or "").strip() or None
+    suffix = _resolve_voice_audio_suffix(file.filename, content_type)
     if suffix in VOICE_BLOCKED_UPLOAD_SUFFIXES or suffix not in VOICE_ALLOWED_AUDIO_SUFFIXES:
         raise HTTPException(status_code=400, detail="Unsupported audio file type.")
     path = os.path.join(VOICE_UPLOAD_DIR, f"{uuid.uuid4().hex}{suffix}")
     try:
         with open(path, "wb") as handle:
             shutil.copyfileobj(file.file, handle)
-        if os.path.getsize(path) > VOICE_MAX_AUDIO_BYTES:
+        file_size = os.path.getsize(path)
+        if file_size <= 0:
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error": "voice_transcription_empty",
+                    "message": "No audio was captured. Check microphone permission and try again.",
+                },
+            )
+        if file_size > VOICE_MAX_AUDIO_BYTES:
             raise HTTPException(status_code=400, detail="Audio file is too large.")
-        result = await transcribe_dictate_audio(path)
+        result = await transcribe_voice_audio(path, mime_type=content_type)
         transcript = str(result.get("transcript") or "").strip()
         return {
             "success": True,
-            "data": {"transcript": transcript},
-            "provider": "server",
+            "transcript": transcript,
+            "provider": result.get("provider") or "openai",
+            "source": result.get("source") or "server_transcription",
+            "duration_ms": result.get("duration_ms"),
+            "mime_type": result.get("mime_type") or content_type,
             "audio_stored": False,
+            "data": {"transcript": transcript},
         }
+    except OrbVoiceTranscriptionError as exc:
+        raise HTTPException(
+            status_code=exc.status_code,
+            detail={"error": exc.error, "message": exc.message},
+        ) from exc
     except HTTPException:
         raise
     except Exception:
-        raise HTTPException(status_code=503, detail="Voice transcription is temporarily unavailable.")
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "error": "voice_transcription_unavailable",
+                "message": "Voice transcription is not available right now. Type your reflection instead.",
+            },
+        )
     finally:
         if os.path.exists(path):
             try:

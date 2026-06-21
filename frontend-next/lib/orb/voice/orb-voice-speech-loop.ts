@@ -7,6 +7,8 @@ export type VoiceInputStatus =
   | 'speech_detected'
   | 'transcribing'
   | 'no_speech_detected'
+  | 'no_audio_captured'
+  | 'transcription_unavailable'
   | 'transcript_ready'
   | 'speech_unsupported'
   | 'microphone_error'
@@ -16,6 +18,12 @@ export const ORB_VOICE_LISTENING_SPEAK_NOW =
 
 export const ORB_VOICE_NO_SPEECH_DETECTED =
   'No speech was detected. Try again, check your microphone, or type your reflection instead.' as const
+
+export const ORB_VOICE_NO_AUDIO_CAPTURED =
+  'No audio was captured. Check microphone permission and try again.' as const
+
+export const ORB_VOICE_TRANSCRIPTION_UNAVAILABLE =
+  'Voice transcription is not available right now. Type your reflection instead.' as const
 
 export const ORB_VOICE_SPEECH_UNSUPPORTED =
   'Speech detection is not available in this browser. You can type your reflection instead.' as const
@@ -44,6 +52,23 @@ export function commitVoiceTranscriptOrBlock(transcript: string): CommitVoiceTra
   return { ok: true, text: clean }
 }
 
+export function voiceInputStatusFromTranscriptionFailure(input: {
+  noTranscriptReason?: string | null
+  errorCode?: string | null
+}): VoiceInputStatus {
+  const reason = input.noTranscriptReason || ''
+  const code = input.errorCode || ''
+  if (reason === 'transcription_unavailable' || code === 'voice_transcription_unavailable') {
+    return 'transcription_unavailable'
+  }
+  if (reason === 'empty_audio_blob' || code === 'empty_audio_blob') return 'no_audio_captured'
+  if (reason === 'empty_transcript' || code === 'voice_transcription_empty') {
+    return 'no_speech_detected'
+  }
+  if (reason === 'transcription_failed') return 'transcription_unavailable'
+  return 'no_speech_detected'
+}
+
 export function voiceInputStatusLabel(status: VoiceInputStatus): string | null {
   switch (status) {
     case 'requesting_microphone':
@@ -56,6 +81,10 @@ export function voiceInputStatusLabel(status: VoiceInputStatus): string | null {
       return 'Processing what you said…'
     case 'no_speech_detected':
       return ORB_VOICE_NO_SPEECH_DETECTED
+    case 'no_audio_captured':
+      return ORB_VOICE_NO_AUDIO_CAPTURED
+    case 'transcription_unavailable':
+      return ORB_VOICE_TRANSCRIPTION_UNAVAILABLE
     case 'transcript_ready':
       return null
     case 'speech_unsupported':

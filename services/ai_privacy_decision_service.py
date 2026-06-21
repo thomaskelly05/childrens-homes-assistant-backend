@@ -128,6 +128,7 @@ class AIPrivacyDecisionService:
                 "ai_notes",
                 "dictate",
                 "dictate_edit",
+                "voice_transcription",
                 "knowledge_embedding",
                 "orb_text_fallback",
                 "metadata",
