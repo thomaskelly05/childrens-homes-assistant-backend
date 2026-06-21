@@ -1,7 +1,7 @@
 /** Curated ORB voice profiles — staff-friendly labels; browser voice matching by terms. */
 
-import { pickBritishFemaleVoice } from '@/lib/orb/voice/orb-voice-browser'
-import type { OrbVoiceModeId } from '@/lib/orb/voice/orb-voice-types'
+import { pickBritishFemaleVoice } from './orb-voice-browser.ts'
+import type { OrbVoiceModeId } from './orb-voice-types.ts'
 
 export type OrbVoiceProfile = {
   id: string
@@ -27,7 +27,7 @@ export type OrbVoiceProfile = {
   curated?: boolean
 }
 
-export const DEFAULT_ORB_VOICE_PROFILE_ID = 'orb_british_female'
+export const DEFAULT_ORB_VOICE_PROFILE_ID = 'katherine'
 
 export const ORB_VOICE_PREVIEW_PHRASE =
   "Hello, I'm ORB. I'll speak calmly and clearly while helping you with residential childcare practice."
@@ -40,6 +40,7 @@ const LEGACY_PROFILE_ALIASES: Record<string, string> = {
 
 /** Primary curated profiles shown in ORB Voice settings (no raw browser list). */
 export const ORB_VOICE_CURATED_PROFILE_IDS = [
+  'katherine',
   'calm_female',
   'calm_male',
   'neutral_professional',
@@ -59,6 +60,32 @@ export const MODE_DEFAULT_VOICE_PROFILE: Record<OrbVoiceModeId, string> = {
 }
 
 const CURATED_PROFILES: OrbVoiceProfile[] = [
+  {
+    id: 'katherine',
+    label: 'Katherine',
+    description: 'ORB voice: Katherine — British, calm and professional',
+    provider: 'premium_tts',
+    locale: 'en-GB',
+    openaiVoice: 'nova',
+    preferredVoiceTerms: ['en-GB', 'female', 'British', 'Katherine'],
+    fallbackTerms: ['en-GB', 'female', 'British'],
+    defaultRate: 0.92,
+    defaultPitch: 1,
+    defaultVolume: 1,
+    suitableModes: [
+      'conversational',
+      'reflective_practice',
+      'recording_support',
+      'safeguarding_support',
+      'learning_coach'
+    ],
+    recommendedFor: ['Voice reflection', 'Supervision prep', 'Safeguarding thinking'],
+    spokenStyleGuidance: 'Calm British English. Short reflective turns. Professional and warm.',
+    instructions:
+      'Speak as Katherine — a calm British professional colleague supporting residential childcare reflection.',
+    bestFor: ['Voice reflection', 'Incident debrief', 'Supervision prep'],
+    curated: true
+  },
   {
     id: 'calm_female',
     label: 'Calm Female',

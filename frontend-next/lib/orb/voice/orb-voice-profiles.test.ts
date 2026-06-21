@@ -11,11 +11,12 @@ function readVoiceProfilesSource() {
 }
 
 describe('ORB voice profiles registry', () => {
-  it('defaults to ORB British Female', () => {
+  it('defaults to Katherine premium ORB voice', () => {
     const src = readVoiceProfilesSource()
-    assert.match(src, /DEFAULT_ORB_VOICE_PROFILE_ID = 'orb_british_female'/)
-    assert.match(src, /id: 'orb_british_female'/)
-    assert.match(src, /label: 'ORB British Female'/)
+    assert.match(src, /DEFAULT_ORB_VOICE_PROFILE_ID = 'katherine'/)
+    assert.match(src, /id: 'katherine'/)
+    assert.match(src, /label: 'Katherine'/)
+    assert.match(src, /ORB voice: Katherine/)
   })
 
   it('lists curated premium profiles', () => {

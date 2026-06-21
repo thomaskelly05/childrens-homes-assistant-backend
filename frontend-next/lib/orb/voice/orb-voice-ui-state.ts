@@ -7,6 +7,7 @@ import {
   ORB_VOICE_BUTTON_SPEAKING,
   ORB_VOICE_BUTTON_START,
   ORB_VOICE_BUTTON_STOP_LISTENING,
+  ORB_VOICE_BUTTON_STOP_ORB,
   ORB_VOICE_BUTTON_THINKING,
   ORB_VOICE_MIC_ERROR,
   ORB_VOICE_REFLECTIVE_HERO_LINE
@@ -176,7 +177,7 @@ export function orbVoiceUiStatusLine(state: OrbVoiceUiState): string {
     case 'thinking':
       return 'Thinking with you…'
     case 'speaking':
-      return 'ORB is responding.'
+      return 'ORB is responding…'
     case 'reconnecting':
       return 'Reconnecting…'
     case 'ended':
@@ -239,7 +240,7 @@ export function orbVoiceUiPrimaryLabel(state: OrbVoiceUiState): string {
     case 'thinking':
       return ORB_VOICE_BUTTON_THINKING
     case 'speaking':
-      return ORB_VOICE_BUTTON_SPEAKING
+      return ORB_VOICE_BUTTON_STOP_ORB
     case 'ended':
       return 'Start new voice conversation'
     case 'failed_permission':

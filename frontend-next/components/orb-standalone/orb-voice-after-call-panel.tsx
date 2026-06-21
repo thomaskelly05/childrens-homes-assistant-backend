@@ -13,6 +13,7 @@ import {
 } from '@/lib/orb/voice/orb-voice-after-call'
 import type { OrbDictateStudioTemplate } from '@/lib/orb/dictate/orb-dictate-studio-templates'
 import type { VoiceTurn } from '@/lib/orb/voice/orb-voice-types'
+import { ORB_VOICE_CONTINUE_TALKING } from '@/lib/orb/voice/orb-voice-reflective-copy'
 
 export function OrbVoiceAfterCallPanel({
   turns,
@@ -245,7 +246,7 @@ export function OrbVoiceAfterCallPanel({
           data-orb-voice-continue-talking
           onClick={onContinueTalking}
         >
-          Continue talking
+          {ORB_VOICE_CONTINUE_TALKING}
         </button>
 
         <button

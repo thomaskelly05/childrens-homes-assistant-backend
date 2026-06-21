@@ -69,7 +69,7 @@ describe('ORB Voice instant-human refinement', () => {
     )
     assert.equal(orbVoiceUiStatusLine('user_speaking'), 'I heard that.')
     assert.equal(orbVoiceUiStatusLine('thinking'), 'Thinking with you…')
-    assert.equal(orbVoiceUiStatusLine('speaking'), 'ORB is responding.')
+    assert.equal(orbVoiceUiStatusLine('speaking'), 'ORB is responding…')
   })
 
   it('permission denied and connection failed copy', () => {
@@ -122,7 +122,7 @@ describe('ORB Voice instant-human refinement', () => {
   it('after-call actions and safeguarding prompts', () => {
     const after = read('components/orb-standalone/orb-voice-after-call-panel.tsx')
     assert.match(after, /Voice session captured/)
-    assert.match(after, /Continue talking/)
+    assert.match(after, /ORB_VOICE_CONTINUE_TALKING/)
     assert.match(after, /Turn speech into a record/)
     assert.match(after, /Send to ORB Write/)
     assert.match(after, /Copy transcript/)
@@ -174,7 +174,7 @@ describe('ORB Voice instant-human refinement', () => {
   it('primary labels remain human on failure and live session', () => {
     assert.equal(orbVoiceUiPrimaryLabel('ready'), 'Start talking')
     assert.equal(orbVoiceUiPrimaryLabel('preparing'), 'Cancel')
-    assert.equal(orbVoiceUiPrimaryLabel('listening'), 'Stop listening')
+    assert.equal(orbVoiceUiPrimaryLabel('listening'), 'Stop')
     assert.equal(orbVoiceUiPrimaryLabel('unsupported'), 'Try voice again')
   })
 })

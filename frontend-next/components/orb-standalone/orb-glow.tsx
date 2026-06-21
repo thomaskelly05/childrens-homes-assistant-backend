@@ -258,7 +258,7 @@ export function OrbGlow({
           className="group rounded-full outline-none transition focus-visible:ring-2 focus-visible:ring-cyan-300/80 focus-visible:ring-offset-4 focus-visible:ring-offset-slate-950"
           aria-label={
             state === 'listening' || state === 'continuous_listening'
-              ? 'Stop listening'
+              ? 'Stop'
               : state === 'speaking'
                 ? 'Interrupt and listen'
                 : 'Tap to speak — start voice input'

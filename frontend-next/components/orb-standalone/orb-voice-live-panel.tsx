@@ -4,6 +4,11 @@ import { Mic, MicOff, Square } from 'lucide-react'
 
 import { OrbVoiceConversationPanel } from '@/components/orb-residential/OrbVoiceConversationPanel'
 import { ORB_VOICE_END_AND_SUMMARISE } from '@/lib/orb/voice/orb-voice-reflective-copy'
+import {
+  ORB_VOICE_PAUSE_CONVERSATION,
+  ORB_VOICE_RESET_CONVERSATION,
+  ORB_VOICE_STOP_ORB
+} from '@/lib/orb/voice/orb-voice-human-conversation'
 import type { VoiceTurn } from '@/lib/orb/voice/orb-voice-types'
 
 export type OrbVoiceLivePanelState =
@@ -30,7 +35,7 @@ export function orbVoiceLivePanelStatusLabel(
     case 'thinking':
       return 'Thinking with you…'
     case 'speaking':
-      return 'ORB is responding.'
+      return 'ORB is responding…'
     case 'paused':
       return 'Paused'
     default:
@@ -53,6 +58,10 @@ export function OrbVoiceLivePanel({
   onToggleMute,
   onEnd,
   onTurnIntoRecord,
+  onPause,
+  onReset,
+  onStopOrb,
+  showStopOrb = false,
   statusLabelOverride,
   listeningSeconds = 0,
   className = ''
@@ -73,6 +82,10 @@ export function OrbVoiceLivePanel({
   onToggleMute?: () => void
   onEnd: () => void
   onTurnIntoRecord?: () => void
+  onPause?: () => void
+  onReset?: () => void
+  onStopOrb?: () => void
+  showStopOrb?: boolean
   statusLabelOverride?: string | null
   /** Elapsed seconds while listening — shown when &gt; 0 */
   listeningSeconds?: number
@@ -149,6 +162,37 @@ export function OrbVoiceLivePanel({
       ) : null}
 
       <div className="flex flex-wrap items-center justify-center gap-2" data-orb-voice-live-controls>
+        {showStopOrb && onStopOrb ? (
+          <button
+            type="button"
+            className="inline-flex min-h-[2.75rem] items-center gap-1.5 rounded-full border border-[var(--orb-line)]/60 px-4 py-2 text-xs font-medium text-[var(--orb-foreground)]"
+            data-orb-voice-stop-orb
+            aria-label={ORB_VOICE_STOP_ORB}
+            onClick={onStopOrb}
+          >
+            {ORB_VOICE_STOP_ORB}
+          </button>
+        ) : null}
+        {onPause ? (
+          <button
+            type="button"
+            className="inline-flex min-h-[2.75rem] items-center rounded-full border border-[var(--orb-line)]/60 px-4 py-2 text-xs font-medium text-[var(--orb-muted)]"
+            data-orb-voice-pause-conversation
+            onClick={onPause}
+          >
+            {ORB_VOICE_PAUSE_CONVERSATION}
+          </button>
+        ) : null}
+        {onReset ? (
+          <button
+            type="button"
+            className="inline-flex min-h-[2.75rem] items-center rounded-full border border-[var(--orb-line)]/60 px-4 py-2 text-xs font-medium text-[var(--orb-muted)]"
+            data-orb-voice-reset-conversation
+            onClick={onReset}
+          >
+            {ORB_VOICE_RESET_CONVERSATION}
+          </button>
+        ) : null}
         {onToggleMute ? (
           <button
             type="button"

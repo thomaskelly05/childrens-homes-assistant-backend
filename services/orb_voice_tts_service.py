@@ -41,6 +41,13 @@ ALLOWED_STYLES = {
 }
 
 VOICE_PROFILES: dict[str, dict[str, Any]] = {
+    "katherine": {
+        "label": "Katherine",
+        "description": "ORB voice: Katherine — British, calm and professional",
+        "openai_voice": "nova",
+        "base_speed": 0.92,
+        "elevenlabs_voice_env": "ELEVENLABS_VOICE_ID",
+    },
     "orb_british_female": {
         "label": "ORB British Female",
         "description": "Calm, confident British-English female delivery.",

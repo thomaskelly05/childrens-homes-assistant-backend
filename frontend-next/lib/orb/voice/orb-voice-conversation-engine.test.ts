@@ -116,8 +116,8 @@ describe('ORB Voice conversation engine', () => {
   })
 
   it('exposes conversational voice style instructions', () => {
-    assert.match(ORB_VOICE_CONVERSATION_STYLE_INSTRUCTIONS, /one question at a time/i)
-    assert.match(ORB_VOICE_CONVERSATION_STYLE_INSTRUCTIONS, /British English/i)
+    assert.match(ORB_VOICE_CONVERSATION_STYLE_INSTRUCTIONS, /one to three useful questions/i)
+    assert.match(ORB_VOICE_CONVERSATION_STYLE_INSTRUCTIONS, /residential childcare/i)
     assert.match(ORB_VOICE_CONVERSATION_STYLE_INSTRUCTIONS, /professional judgement/i)
     assert.match(ORB_VOICE_CONVERSATION_STYLE_INSTRUCTIONS, /safeguarding/i)
   })

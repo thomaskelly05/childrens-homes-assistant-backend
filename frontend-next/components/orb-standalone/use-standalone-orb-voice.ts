@@ -49,6 +49,8 @@ import {
   normaliseOrbVoiceProfileId,
   resolveBrowserVoice
 } from '@/lib/orb/voice/orb-voice-profiles'
+import { ORB_VOICE_MIC_ERROR } from '@/lib/orb/voice/orb-voice-reflective-copy'
+import { resolveTtsVoiceProfileId } from '@/lib/orb/voice/orb-voice-human-conversation'
 import { requestOrbPremiumTts, requestOrbVoiceSpeak } from '@/lib/orb/voice/orb-voice-client'
 import { requestOrbVoiceProviderSpeak } from '@/lib/orb/voice/orb-voice-provider'
 import {
@@ -133,12 +135,12 @@ const SILENCE_TIMEOUT_MS = 12_000
 const MAX_WAKE_RESTART_ATTEMPTS = 6
 
 const DEFAULT_SETTINGS: StandaloneOrbVoiceSettings = {
-  voiceReplies: false,
+  voiceReplies: true,
   autoSend: false,
   britishFemalePreference: true,
   showTranscriptBeforeSend: true,
   wakePhrase: false,
-  continuousConversation: false,
+  continuousConversation: true,
   answerStyle: 'balanced',
   selectedVoiceUri: null,
   speechRate: 0.92,
@@ -149,7 +151,7 @@ const DEFAULT_SETTINGS: StandaloneOrbVoiceSettings = {
   userChoseVoice: false,
   spokenAnswerLength: 'balanced',
   allowInterruption: true,
-  pushToTalk: true,
+  pushToTalk: false,
   saveTranscript: true,
   useBrowserFallback: true,
   privacyMode: false,
@@ -162,8 +164,7 @@ const SAFARI_KEEPALIVE_MS = 140
 export const RECOGNITION_START_TIMEOUT_MS = 2500
 export const ORB_VOICE_NO_HEAR_MESSAGE =
   "I didn't catch that. Try again, use Dictate, or use Chat."
-export const ORB_VOICE_MIC_BLOCKED_MESSAGE =
-  'Voice could not start. Dictate is available, or you can use Chat instead.'
+export const ORB_VOICE_MIC_BLOCKED_MESSAGE = ORB_VOICE_MIC_ERROR
 export const ORB_VOICE_UNSUPPORTED_MESSAGE =
   'Voice is not supported in this browser. Use Dictate or Chat instead.'
 export { ORB_VOICE_SAFARI_NO_SPEECH_MESSAGE } from '@/lib/orb/voice/orb-browser-speech-capture'
@@ -194,8 +195,9 @@ function getSpeechRecognitionCtor(): SpeechRecognitionCtor | null {
   return w.SpeechRecognition || w.webkitSpeechRecognition || null
 }
 
-function activeSpeakProfileId(settings: StandaloneOrbVoiceSettings): OrbVoicePresetId {
-  return normaliseOrbVoiceProfileId(settings.readAloudProfileId ?? settings.voicePresetId)
+function activeSpeakProfileId(settings: StandaloneOrbVoiceSettings): string {
+  const profileId = normaliseOrbVoiceProfileId(settings.readAloudProfileId ?? settings.voicePresetId)
+  return resolveTtsVoiceProfileId(profileId)
 }
 
 function britishPreferenceForPreset(profileId: OrbVoicePresetId): boolean {
@@ -240,6 +242,7 @@ export function useStandaloneOrbVoice() {
   const speakGenerationRef = useRef(0)
   const speakChunksRef = useRef<string[]>([])
   const speakChunkIndexRef = useRef(0)
+  const activeAudioRef = useRef<HTMLAudioElement | null>(null)
   const transcriptRef = useRef('')
   const settingsRef = useRef(settings)
   const phaseRef = useRef<StandaloneOrbVoicePhase>('idle')
@@ -398,6 +401,15 @@ export function useStandaloneOrbVoice() {
     speakGenerationRef.current += 1
     speakChunksRef.current = []
     speakChunkIndexRef.current = 0
+    if (activeAudioRef.current) {
+      try {
+        activeAudioRef.current.pause()
+        activeAudioRef.current.currentTime = 0
+      } catch {
+        /* ignore */
+      }
+      activeAudioRef.current = null
+    }
     try {
       window.speechSynthesis?.cancel()
     } catch {
@@ -427,8 +439,10 @@ export function useStandaloneOrbVoice() {
         try {
           const url = URL.createObjectURL(premium.blob)
           const audio = new Audio(url)
+          activeAudioRef.current = audio
           audio.onended = () => {
             URL.revokeObjectURL(url)
+            activeAudioRef.current = null
             stopSafariKeepAlive()
             setSpeaking(false)
             setVoiceCaptureState('idle')
@@ -437,6 +451,7 @@ export function useStandaloneOrbVoice() {
           }
           audio.onerror = () => {
             URL.revokeObjectURL(url)
+            activeAudioRef.current = null
             stopSafariKeepAlive()
             setSpeaking(false)
             setSpeechPlaybackError('Speech playback is unavailable in this browser.')
@@ -446,6 +461,7 @@ export function useStandaloneOrbVoice() {
           await audio.play()
           return
         } catch {
+          activeAudioRef.current = null
           /* fall through to browser synthesis */
         }
       }

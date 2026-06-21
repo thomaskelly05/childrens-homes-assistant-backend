@@ -44,6 +44,13 @@ import {
 } from '@/lib/orb/voice/orb-voice-reflective-copy'
 import { buildOrbVoiceHandoffPayload } from '@/lib/orb/voice/orb-voice-handoff'
 import {
+  buildVoiceBrainMessage,
+  buildVoiceSessionMemory,
+  ORB_VOICE_SLOW_THINKING_MESSAGE,
+  stripForSpokenReply
+} from '@/lib/orb/voice/orb-voice-human-conversation'
+import { ORB_VOICE_BUTTON_STOP_ORB } from '@/lib/orb/voice/orb-voice-reflective-copy'
+import {
   ORB_VOICE_REFLECTIVE_MODE_DEFAULT,
   orbVoiceReflectiveModeById,
   type OrbVoiceReflectiveModeId
@@ -257,6 +264,7 @@ export function OrbVoiceStation({
   const [sessionEnded, setSessionEnded] = useState(false)
   const [turns, setTurns] = useState<VoiceTurn[]>([])
   const lastSyncedReplyKeyRef = useRef<string | null>(null)
+  const lastAutoSpokenKeyRef = useRef<string | null>(null)
   const [saveNotice, setSaveNotice] = useState<string | null>(null)
   const [savingTranscript, setSavingTranscript] = useState(false)
   const [micPermission, setMicPermission] = useState<MicrophonePermissionState>('unknown')
@@ -283,6 +291,8 @@ export function OrbVoiceStation({
   const [silenceDurationMs, setSilenceDurationMs] = useState(0)
   const [noTranscriptFallback, setNoTranscriptFallback] = useState(false)
   const [isFinalizingRecording, setIsFinalizingRecording] = useState(false)
+  const [conversationPaused, setConversationPaused] = useState(false)
+  const [slowThinkingVisible, setSlowThinkingVisible] = useState(false)
   const silenceStartedAtRef = useRef<number | null>(null)
   const statusFetchedRef = useRef(false)
   const isMobileViewport = useOrbMobileViewport()
@@ -559,6 +569,37 @@ export function OrbVoiceStation({
     ]
   )
 
+  const voiceSessionMemory = useMemo(
+    () =>
+      buildVoiceSessionMemory({
+        modeId: reflectiveModeId,
+        turns: conversationTurns,
+        summaryRequested: sessionEnded
+      }),
+    [conversationTurns, reflectiveModeId, sessionEnded]
+  )
+
+  const sendToOrbWithVoiceContext = useCallback(
+    (text: string) => {
+      const trimmed = text.trim()
+      if (!trimmed) return
+      const framed = buildVoiceBrainMessage(trimmed, {
+        reflectiveModeId,
+        spokenAnswerLength: voice.settings.spokenAnswerLength,
+        voiceProfileId: voice.settings.voicePresetId,
+        sessionMemory: voiceSessionMemory
+      })
+      void onSendToOrb(framed)
+    },
+    [
+      onSendToOrb,
+      reflectiveModeId,
+      voice.settings.spokenAnswerLength,
+      voice.settings.voicePresetId,
+      voiceSessionMemory
+    ]
+  )
+
   const handleCopySummary = useCallback(() => {
     void navigator.clipboard?.writeText(reflectiveSummary.markdown)
     setSaveNotice('Summary copied for adult review.')
@@ -572,7 +613,8 @@ export function OrbVoiceStation({
       mode: reflectiveModeId,
       conversationTranscript: transcript,
       summary: reflectiveSummary.markdown,
-      suggestedTemplateId: mode.suggestedTemplateId
+      suggestedTemplateId: mode.suggestedTemplateId,
+      sessionMemory: voiceSessionMemory
     })
     onOpenDictate(
       `${payload.summary}\n\n---\n\nSource conversation:\n${payload.conversationTranscript}`,
@@ -585,6 +627,7 @@ export function OrbVoiceStation({
     onOpenDictate,
     reflectiveModeId,
     reflectiveSummary.markdown,
+    voiceSessionMemory,
     voiceTranscriptText
   ])
 
@@ -675,7 +718,11 @@ export function OrbVoiceStation({
         ? orbVoiceStartProgressLine(voiceStartProgressStage)
         : orbVoiceUiStatusLine(uiState))
   const detailLine =
-    showNoTranscriptPanel
+    slowThinkingVisible && pending
+      ? ORB_VOICE_SLOW_THINKING_MESSAGE
+      : conversationPaused
+        ? 'Conversation paused. Continue talking when you are ready.'
+        : showNoTranscriptPanel
       ? isSafariBrowser()
         ? ORB_VOICE_SERVER_NO_TRANSCRIPT_SAFARI
         : ORB_VOICE_SERVER_NO_TRANSCRIPT_DETAIL
@@ -723,7 +770,9 @@ export function OrbVoiceStation({
       )
 
   const livePanelState: OrbVoiceLivePanelState =
-    usesServerTranscription && voiceEngine.state === 'transcribing'
+    conversationPaused
+      ? 'paused'
+      : usesServerTranscription && voiceEngine.state === 'transcribing'
       ? 'thinking'
       : uiState === 'preparing' || voiceStarting
         ? 'preparing'
@@ -834,10 +883,13 @@ export function OrbVoiceStation({
 
   const resetSession = useCallback(() => {
     lastSyncedReplyKeyRef.current = null
+    lastAutoSpokenKeyRef.current = null
     resetOrbVoiceLatencyMarks()
     clearActiveOrbRealtimeVoiceClient()
     setVoiceStartStage('idle')
     setSessionEnded(false)
+    setConversationPaused(false)
+    setSlowThinkingVisible(false)
     setRealtimeSessionConnected(false)
     setVoiceTransportLive(false)
     setWebrtcFailed(false)
@@ -877,12 +929,41 @@ export function OrbVoiceStation({
           provider
         }
       ])
-      void onSendToOrb(trimmed)
+      void sendToOrbWithVoiceContext(trimmed)
     },
-    [onSendToOrb, voice.settings.voiceMode]
+    [sendToOrbWithVoiceContext, voice.settings.voiceMode]
   )
 
   appendUserTurnRef.current = appendUserTurn
+
+  useEffect(() => {
+    if (!pending) {
+      setSlowThinkingVisible(false)
+      return
+    }
+    const timer = window.setTimeout(() => setSlowThinkingVisible(true), 8000)
+    return () => window.clearTimeout(timer)
+  }, [pending])
+
+  /** Auto-speak ORB replies with Katherine / browser fallback when policy allows. */
+  useEffect(() => {
+    const reply = (assistantReply || '').trim()
+    const key = assistantReplyKey ?? null
+    if (!reply || !key || key === lastAutoSpokenKeyRef.current) return
+    if (sessionEnded || conversationPaused) return
+    if (!speechDecision?.allowAutoSpeak || !speechDecision.spokenText) return
+    lastAutoSpokenKeyRef.current = key
+    const spoken = stripForSpokenReply(stripMarkdownForSpeech(speechDecision.spokenText))
+    if (!spoken.trim()) return
+    voice.speakAloud(spoken)
+  }, [
+    assistantReply,
+    assistantReplyKey,
+    conversationPaused,
+    sessionEnded,
+    speechDecision,
+    voice
+  ])
 
   /** Sync ORB brain replies into the two-sided voice transcript (adult + ORB turns). */
   useEffect(() => {
@@ -1409,7 +1490,33 @@ export function OrbVoiceStation({
 
   function handleContinueTalking() {
     setSessionEnded(false)
-    void handleStart()
+    if (conversationPaused) {
+      setConversationPaused(false)
+      voice.resumeVoiceSession()
+      return
+    }
+    setConversationPaused(false)
+  }
+
+  function handlePauseConversation() {
+    setConversationPaused(true)
+    voice.pauseVoiceSession()
+    voice.cancelSpeaking()
+  }
+
+  function handleResetConversation() {
+    lastSyncedReplyKeyRef.current = null
+    lastAutoSpokenKeyRef.current = null
+    setTurns([])
+    setSessionEnded(false)
+    setConversationPaused(false)
+    voice.clearTranscript()
+    voice.cancelListening()
+    voice.cancelSpeaking()
+  }
+
+  function handleStopOrbSpeaking() {
+    voice.cancelSpeaking()
   }
 
   async function handleRetryVoice() {
@@ -1579,6 +1686,10 @@ export function OrbVoiceStation({
         (conversationEngine.suggestRecordCreation || orbVoiceConversationHasEnoughTranscript(conversationTurns))
       }
       onEnd={() => void handleEnd()}
+      onPause={handlePauseConversation}
+      onReset={handleResetConversation}
+      onStopOrb={handleStopOrbSpeaking}
+      showStopOrb={voice.speaking || uiState === 'speaking' || voiceEngine.state === 'speaking'}
       onTurnIntoRecord={onOpenDictate ? () => handleCreateDraftFromVoice(voiceRecordTemplateId) : undefined}
       listeningSeconds={listeningElapsedSec}
     />
@@ -1643,7 +1754,7 @@ export function OrbVoiceStation({
                   transcript={browserTranscriptText}
                   primaryDisabled={primaryDisabled}
                   onPrimary={() => void handleBrowserVoicePrimary()}
-                  onSendToOrb={(text) => void onSendToOrb(text)}
+                  onSendToOrb={(text) => sendToOrbWithVoiceContext(text)}
                   onSendToDictate={onOpenDictate ? (text) => onOpenDictate(text) : undefined}
                   onCopyTranscript={handleCopyTranscript}
                   onSaveTranscript={() => void handleSaveTranscript()}
@@ -1653,16 +1764,16 @@ export function OrbVoiceStation({
                 />
               ) : voiceSessionLive ? (
                 <div className="flex flex-col items-center gap-2">
-                  {realtimeState === 'speaking' ? (
+                  {realtimeState === 'speaking' || voice.speaking ? (
                     <button
                       type="button"
-                      onClick={voice.cancelSpeaking}
+                      onClick={handleStopOrbSpeaking}
                       className="inline-flex items-center gap-2 rounded-full border border-[var(--orb-line)] px-4 py-2 text-sm font-medium text-[var(--orb-muted)]"
                       data-orb-voice-stop-speaking
-                      aria-label="Stop speaking"
+                      aria-label={ORB_VOICE_BUTTON_STOP_ORB}
                     >
                       <Square className="h-3.5 w-3.5 fill-current" />
-                      Stop speaking
+                      {ORB_VOICE_BUTTON_STOP_ORB}
                     </button>
                   ) : null}
                   <OrbVoiceActions

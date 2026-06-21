@@ -41,7 +41,7 @@ describe('ORB Voice conversation engine UI integration', () => {
     const engine = read('lib/orb/voice/orb-voice-conversation-engine.ts')
     assert.match(prompt, /ORB_VOICE_CONVERSATION_STYLE_INSTRUCTIONS/)
     assert.match(prompt, /One follow-up question at a time/i)
-    assert.match(engine, /one question at a time/i)
+    assert.match(engine, /one to three useful questions/i)
     assert.match(engine, /professional judgement/i)
     assert.match(engine, /safeguarding/i)
   })

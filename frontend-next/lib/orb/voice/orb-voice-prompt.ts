@@ -1,6 +1,6 @@
-import { getOrbVoiceProfile } from '@/lib/orb/voice/orb-voice-profiles'
-import { ORB_VOICE_CONVERSATION_STYLE_INSTRUCTIONS } from '@/lib/orb/voice/orb-voice-conversation-engine'
-import type { OrbVoiceModeId, OrbSpokenAnswerLength } from '@/lib/orb/voice/orb-voice-types'
+import { getOrbVoiceProfile } from './orb-voice-profiles.ts'
+import { ORB_VOICE_CONVERSATION_STYLE_INSTRUCTIONS } from './orb-voice-conversation-engine.ts'
+import type { OrbVoiceModeId, OrbSpokenAnswerLength } from './orb-voice-types.ts'
 
 const MODE_INSTRUCTIONS: Record<OrbVoiceModeId, string> = {
   conversational:

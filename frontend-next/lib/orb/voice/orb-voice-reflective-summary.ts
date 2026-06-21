@@ -54,7 +54,15 @@ const SUPERVISION_HEADINGS = [
   'Possible actions'
 ] as const
 
+const WORDING_HEADINGS = [
+  'Original wording concern',
+  'Safer wording direction',
+  'What to avoid',
+  'Suggested wording'
+] as const
+
 function headingsForMode(modeId: OrbVoiceReflectiveModeId): readonly string[] {
+  if (modeId === 'wording_support') return WORDING_HEADINGS
   if (modeId === 'supervision_prep') return SUPERVISION_HEADINGS
   if (isSafeguardingReflectiveMode(modeId)) return SAFEGUARDING_HEADINGS
   return DEFAULT_HEADINGS
@@ -75,7 +83,30 @@ export function buildOrbVoiceReflectiveSummary(
   const headings = headingsForMode(modeId)
   const sections: OrbVoiceSummarySection[] = []
 
-  if (modeId === 'supervision_prep') {
+  if (modeId === 'wording_support') {
+    sections.push({
+      heading: headings[0],
+      body: joinOrPlaceholder(users, 'Add what felt difficult or judgemental in your original wording.')
+    })
+    sections.push({
+      heading: headings[1],
+      body: joinOrPlaceholder(
+        assistants.filter((l) => /factual|respectful|plain|calm/i.test(l)),
+        'Note the calmer, factual direction discussed with ORB.'
+      )
+    })
+    sections.push({
+      heading: headings[2],
+      body: joinOrPlaceholder(
+        assistants.filter((l) => /avoid|judgement|blame|assumption/i.test(l)),
+        'List wording to avoid after adult review.'
+      )
+    })
+    sections.push({
+      heading: headings[3],
+      body: joinOrPlaceholder(users.slice(-2), 'Add suggested wording after review.')
+    })
+  } else if (modeId === 'supervision_prep') {
     sections.push({ heading: headings[0], body: joinOrPlaceholder(users.slice(0, 2), 'Add what you want to bring to supervision.') })
     sections.push({ heading: headings[1], body: discussed })
     sections.push({

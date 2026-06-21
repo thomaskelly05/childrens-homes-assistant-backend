@@ -21,6 +21,7 @@ import {
 } from '@/lib/orb/voice/orb-voice-provider'
 import type { OrbSpokenAnswerLength, OrbVoicePresetId } from '@/lib/orb/voice/orb-voice-types'
 import { ORB_VOICE_BOUNDARY_COPY } from '@/lib/orb/voice/orb-voice-launch-mode'
+import { ORB_VOICE_AUDIO_TRANSCRIPT_REVIEW_NOTE } from '@/lib/orb/voice/orb-voice-reflective-copy'
 import { detectSpeechRecognitionSupported } from '@/lib/orb/voice/orb-voice-readiness'
 
 const PACE_LABELS: Record<OrbSpeechRatePreset, string> = {
@@ -95,8 +96,10 @@ export function OrbVoiceSettingsPanel({
       panelId="voice"
     >
       <div className="space-y-4 p-4" data-orb-voice-settings-panel>
-        <p className="text-[11px] leading-6 text-[var(--orb-muted)]" data-orb-voice-settings-help>
-          Choose how ORB sounds. ORB uses your device&apos;s best matching voice — voices vary by browser.
+        <p className="text-[11px] leading-5 text-[var(--orb-muted)]" data-orb-voice-settings-help>
+          {selectedProfile.id === 'katherine'
+            ? 'ORB voice: Katherine — British, calm and professional. Premium voice uses your configured ElevenLabs profile when available.'
+            : 'Choose how ORB sounds. ORB uses your device&apos;s best matching voice when premium voice is unavailable.'}
         </p>
 
         {onOpenOrbVoice ? (
@@ -350,6 +353,10 @@ export function OrbVoiceSettingsPanel({
             {voiceSelectionNote}
           </p>
         ) : null}
+
+        <p className="text-[11px] leading-5 text-[var(--orb-muted)]" data-orb-voice-settings-audio-storage>
+          {ORB_VOICE_AUDIO_TRANSCRIPT_REVIEW_NOTE}
+        </p>
 
         <p className="text-[11px] leading-5 text-[var(--orb-muted)]" data-orb-voice-settings-privacy>
           Privacy: audio and transcripts stay in this session unless you save or send them elsewhere. Retention controls

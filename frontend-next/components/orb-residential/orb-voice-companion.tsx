@@ -40,7 +40,7 @@ export const ORB_VOICE_COMPANION_HEADLINES: Record<
   idle: 'Ready to talk',
   listening: 'Listening…',
   thinking: 'Thinking with you…',
-  speaking: 'ORB is responding.',
+  speaking: 'ORB is responding…',
   paused: 'Voice session captured',
   summary_ready: 'Summary ready for adult review',
   error: 'Voice is unavailable right now.'

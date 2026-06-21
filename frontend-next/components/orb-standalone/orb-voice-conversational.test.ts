@@ -48,9 +48,9 @@ describe('ORB Voice conversational sprint', () => {
     assert.match(panel, /data-orb-voice-auto-speak/)
   })
 
-  it('voice profile registry returns ORB British Female default', () => {
+  it('voice profile registry returns Katherine as default', () => {
     const profiles = readLib('orb/voice/orb-voice-profiles.ts')
-    assert.match(profiles, /DEFAULT_ORB_VOICE_PROFILE_ID = 'orb_british_female'/)
+    assert.match(profiles, /DEFAULT_ORB_VOICE_PROFILE_ID = 'katherine'/)
     assert.match(profiles, /ORB_VOICE_PROFILES/)
   })
 
