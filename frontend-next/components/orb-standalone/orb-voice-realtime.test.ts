@@ -89,8 +89,8 @@ describe('ORB Voice realtime provider pass', () => {
     const station = readComponent('components/orb-standalone/orb-voice-station.tsx')
     const hook = readComponent('lib/orb/voice-v2/use-orb-voice-v2.ts')
     assert.match(station, /conversationLive/)
-    assert.match(hook, /setState\('listening'\)/)
-    assert.match(hook, /setState\('speech_detected'\)/)
+    assert.match(hook, /transitionState\('listening'\)/)
+    assert.match(hook, /transitionState\('speech_detected'\)/)
   })
 
   it('dictate uses recordingUiState before showing recording', () => {

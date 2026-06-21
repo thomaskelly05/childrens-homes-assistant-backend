@@ -93,7 +93,7 @@ describe('ORB Voice UI state — ready before session', () => {
       'preparing'
     )
     const hook = readComponent('lib/orb/voice-v2/use-orb-voice-v2.ts')
-    assert.match(hook, /setState\('requesting_microphone'\)/)
+    assert.match(hook, /transitionState\('requesting_microphone'\)/)
     assert.match(hook, /startConversation/)
     assert.match(readComponent('components/orb-standalone/orb-voice-station.tsx'), /voice\.startConversation/)
   })

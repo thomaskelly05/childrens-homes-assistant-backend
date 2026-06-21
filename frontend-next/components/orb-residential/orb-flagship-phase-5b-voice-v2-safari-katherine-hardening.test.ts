@@ -39,7 +39,7 @@ describe('ORB Residential Phase 5B Voice v2 Safari and Katherine hardening', () 
 
   it('type fallback remains after mic denial', () => {
     const hook = read('lib/orb/voice-v2/use-orb-voice-v2.ts')
-    assert.match(hook, /handleMicBlocked/)
+    assert.match(hook, /handleMicFailure/)
     assert.match(hook, /setShowTypeFallback\(true\)/)
     assert.match(read('components/orb-standalone/orb-voice-station.tsx'), /data-orb-voice-type-fallback/)
   })

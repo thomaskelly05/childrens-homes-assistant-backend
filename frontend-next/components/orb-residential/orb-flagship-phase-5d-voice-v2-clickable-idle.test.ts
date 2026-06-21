@@ -33,7 +33,7 @@ describe('ORB Residential Phase 5D Voice v2 clickable idle', () => {
     const hook = read('lib/orb/voice-v2/use-orb-voice-v2.ts')
     assert.match(station, /traceOrbVoiceV2StartClick/)
     assert.match(station, /startConversation/)
-    assert.match(hook, /setState\('requesting_microphone'\)/)
+    assert.match(hook, /transitionState\('requesting_microphone'\)/)
   })
 
   it('mode selector and controls layers are interactive', () => {

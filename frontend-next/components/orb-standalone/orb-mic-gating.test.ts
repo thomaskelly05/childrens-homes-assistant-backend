@@ -110,7 +110,7 @@ describe('ORB mic gating and routing', () => {
     const hook = readComponent('lib/orb/voice-v2/use-orb-voice-v2.ts')
     assert.match(station, /data-orb-voice-type-fallback/)
     assert.match(hook, /setShowTypeFallback\(true\)/)
-    assert.match(hook, /setState\('error'\)/)
+    assert.match(hook, /transitionState\('error'\)/)
   })
 
   it('composer mic supports forced mic query routing', () => {

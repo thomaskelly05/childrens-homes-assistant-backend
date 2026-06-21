@@ -155,8 +155,8 @@ describe('ORB mic state wiring', () => {
 
   it('Voice tracks v2 state through startConversation', () => {
     const hook = readComponent('lib/orb/voice-v2/use-orb-voice-v2.ts')
-    assert.match(hook, /setState\('requesting_microphone'\)/)
-    assert.match(hook, /setState\('listening'\)/)
-    assert.match(hook, /setState\('error'\)/)
+    assert.match(hook, /transitionState\('requesting_microphone'\)/)
+    assert.match(hook, /transitionState\('listening'\)/)
+    assert.match(hook, /transitionState\('error'\)/)
   })
 })

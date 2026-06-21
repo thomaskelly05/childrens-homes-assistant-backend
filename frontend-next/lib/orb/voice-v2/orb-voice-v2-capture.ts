@@ -2,14 +2,26 @@
  * ORB Voice v2 — single capture path with end-of-turn silence detection.
  */
 
+import { traceOrbVoiceV2Lifecycle } from './orb-voice-v2-lifecycle-trace.ts'
+
 const SILENCE_MS = 1400
 const MIN_RECORDING_MS = 400
 const MAX_RECORDING_MS = 45_000
 
-export class OrbVoiceV2CaptureError extends Error {
-  readonly code: 'not_allowed' | 'empty_audio' | 'capture_failed'
+export type OrbVoiceV2CaptureErrorCode =
+  | 'not_allowed'
+  | 'not_found'
+  | 'not_readable'
+  | 'security_error'
+  | 'abort'
+  | 'empty_audio'
+  | 'capture_failed'
+  | 'timeout'
 
-  constructor(code: 'not_allowed' | 'empty_audio' | 'capture_failed', message: string) {
+export class OrbVoiceV2CaptureError extends Error {
+  readonly code: OrbVoiceV2CaptureErrorCode
+
+  constructor(code: OrbVoiceV2CaptureErrorCode, message: string) {
     super(message)
     this.name = 'OrbVoiceV2CaptureError'
     this.code = code
@@ -21,12 +33,27 @@ function isSafari(): boolean {
   return /^((?!chrome|android).)*safari/i.test(navigator.userAgent)
 }
 
-function isNotAllowedError(error: unknown): boolean {
-  if (!error || typeof error !== 'object') return false
+function mapGetUserMediaError(error: unknown): OrbVoiceV2CaptureError {
+  if (!error || typeof error !== 'object') {
+    return new OrbVoiceV2CaptureError('capture_failed', 'microphone_unavailable')
+  }
   const name = 'name' in error ? String((error as { name?: string }).name) : ''
-  if (name === 'NotAllowedError') return true
-  const message = 'message' in error ? String((error as { message?: string }).message) : ''
-  return /not allowed|permission denied|user denied/i.test(message)
+  if (name === 'NotAllowedError') {
+    return new OrbVoiceV2CaptureError('not_allowed', 'microphone_not_allowed')
+  }
+  if (name === 'NotFoundError') {
+    return new OrbVoiceV2CaptureError('not_found', 'microphone_not_found')
+  }
+  if (name === 'NotReadableError') {
+    return new OrbVoiceV2CaptureError('not_readable', 'microphone_not_readable')
+  }
+  if (name === 'AbortError') {
+    return new OrbVoiceV2CaptureError('abort', 'microphone_aborted')
+  }
+  if (name === 'SecurityError') {
+    return new OrbVoiceV2CaptureError('security_error', 'microphone_security_error')
+  }
+  return new OrbVoiceV2CaptureError('capture_failed', 'microphone_unavailable')
 }
 
 function pickMimeType(): string {
@@ -46,18 +73,20 @@ export type OrbVoiceV2CaptureSession = {
 }
 
 export async function startOrbVoiceV2Capture(input: {
+  onListeningReady?: () => void
   onSpeechStart: () => void
   onEndOfTurn: (blob: Blob, mimeType: string) => void
   onError: (message: string) => void
 }): Promise<OrbVoiceV2CaptureSession> {
+  traceOrbVoiceV2Lifecycle('voice_v2_get_user_media_start')
   let stream: MediaStream
   try {
     stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+    traceOrbVoiceV2Lifecycle('voice_v2_get_user_media_success')
   } catch (error) {
-    if (isNotAllowedError(error)) {
-      throw new OrbVoiceV2CaptureError('not_allowed', 'microphone_not_allowed')
-    }
-    throw new OrbVoiceV2CaptureError('capture_failed', 'microphone_unavailable')
+    const mapped = mapGetUserMediaError(error)
+    traceOrbVoiceV2Lifecycle('voice_v2_get_user_media_error', { code: mapped.code })
+    throw mapped
   }
 
   const mimeType = pickMimeType()
@@ -65,8 +94,10 @@ export async function startOrbVoiceV2Capture(input: {
   let recorder: MediaRecorder
   try {
     recorder = new MediaRecorder(stream, { mimeType })
+    traceOrbVoiceV2Lifecycle('voice_v2_recorder_created')
   } catch {
     recorder = new MediaRecorder(stream)
+    traceOrbVoiceV2Lifecycle('voice_v2_recorder_created', { fallback: true })
   }
   const resolvedMime = recorder.mimeType || mimeType
   let speechDetected = false
@@ -81,11 +112,11 @@ export async function startOrbVoiceV2Capture(input: {
       await audioContext.resume()
     }
   } catch (error) {
-    if (isNotAllowedError(error)) {
-      stream.getTracks().forEach((track) => track.stop())
-      void audioContext.close()
-      throw new OrbVoiceV2CaptureError('not_allowed', 'audio_context_not_allowed')
-    }
+    const mapped = mapGetUserMediaError(error)
+    stream.getTracks().forEach((track) => track.stop())
+    void audioContext.close()
+    traceOrbVoiceV2Lifecycle('voice_v2_get_user_media_error', { code: mapped.code, stage: 'audio_context' })
+    throw mapped
   }
 
   const source = audioContext.createMediaStreamSource(stream)
@@ -136,6 +167,8 @@ export async function startOrbVoiceV2Capture(input: {
   }
 
   recorder.start(250)
+  traceOrbVoiceV2Lifecycle('voice_v2_recorder_started')
+  input.onListeningReady?.()
 
   maxTimer = window.setTimeout(() => {
     if (speechDetected) commitTurn()
@@ -175,3 +208,5 @@ export async function startOrbVoiceV2Capture(input: {
     dispose: finalize
   }
 }
+
+export { mapGetUserMediaError as mapOrbVoiceV2GetUserMediaError }

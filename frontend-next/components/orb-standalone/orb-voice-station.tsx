@@ -62,7 +62,7 @@ export function OrbVoiceStation({
   const companionState = mapOrbVoiceV2ToCompanionState(voice.state)
   const statusLine = voice.autoResumeBlocked
     ? ORB_VOICE_V2_CONTINUE_CONVERSATION
-    : orbVoiceV2PrimaryLabel(voice.state)
+    : orbVoiceV2PrimaryLabel(voice.state, voice.state === 'error' && voice.showTypeFallback)
   const primaryDisabled =
     voice.state === 'requesting_microphone' ||
     voice.state === 'transcribing' ||
@@ -91,6 +91,10 @@ export function OrbVoiceStation({
     }
     if (voice.state === 'idle' || voice.state === 'summary_ready') {
       void voice.startConversation()
+      return
+    }
+    if (voice.state === 'error' && voice.showTypeFallback) {
+      void voice.retryMicrophone()
       return
     }
     if (voice.state === 'paused') {

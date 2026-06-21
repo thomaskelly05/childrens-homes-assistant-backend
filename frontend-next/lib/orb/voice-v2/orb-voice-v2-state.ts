@@ -13,10 +13,11 @@ export const ORB_VOICE_V2_STATUS_LABEL: Record<OrbVoiceV2State, string> = {
   error: 'Voice unavailable'
 }
 
-export function orbVoiceV2PrimaryLabel(state: OrbVoiceV2State): string {
+export function orbVoiceV2PrimaryLabel(state: OrbVoiceV2State, micRetry = false): string {
   if (state === 'idle') return 'Start conversation'
   if (state === 'paused') return 'Resume'
   if (state === 'summary_ready') return 'Start new conversation'
+  if (state === 'error' && micRetry) return 'Try again'
   return ORB_VOICE_V2_STATUS_LABEL[state]
 }
 

@@ -16,6 +16,16 @@ export const ORB_VOICE_V2_CONTINUE_WITHOUT_VOICE = 'Continue without voice' as c
 export const ORB_VOICE_V2_CONTINUE_CONVERSATION = 'Continue conversation' as const
 export const ORB_VOICE_V2_MIC_DENIED =
   'Microphone permission is blocked. Check Safari settings or type instead.' as const
+export const ORB_VOICE_V2_MIC_NOT_FOUND =
+  'No microphone was found. Check your device or type instead.' as const
+export const ORB_VOICE_V2_MIC_NOT_READABLE =
+  'The microphone could not start. Try again or type instead.' as const
+export const ORB_VOICE_V2_MIC_UNAVAILABLE =
+  'The microphone could not start. Try again or type instead.' as const
+export const ORB_VOICE_V2_MIC_TIMEOUT =
+  'Microphone did not respond. Check Safari permissions or type instead.' as const
+export const ORB_VOICE_V2_TRY_AGAIN = 'Try again' as const
+export const ORB_VOICE_V2_LISTENING_HINT = 'Speak naturally. You can pause.' as const
 export const ORB_VOICE_V2_SAFARI_AUTO_RESUME =
   'Safari needs you to tap once to continue listening.' as const
 export const ORB_VOICE_V2_AUDIO_PLAYBACK_BLOCKED =

@@ -209,7 +209,7 @@ describe('ORB composer plus menu and instant capture pass', () => {
     const hook = read('lib/orb/voice-v2/use-orb-voice-v2.ts')
     assert.match(station, /orbVoiceV2PrimaryLabel/)
     assert.match(station, /statusLine/)
-    assert.match(hook, /setState\('requesting_microphone'\)/)
+    assert.match(hook, /transitionState\('requesting_microphone'\)/)
     assert.doesNotMatch(station, /'Preparing voice…'/)
   })
 

@@ -149,7 +149,7 @@ describe('ORB Voice instant-human refinement', () => {
     const station = read('components/orb-standalone/orb-voice-station.tsx')
     const hook = read('lib/orb/voice-v2/use-orb-voice-v2.ts')
     assert.match(hook, /processingRef/)
-    assert.match(hook, /setState\('requesting_microphone'\)/)
+    assert.match(hook, /transitionState\('requesting_microphone'\)/)
     assert.match(read('lib/orb/voice-v2/orb-voice-v2-state.ts'), /Requesting microphone…/)
   })
 

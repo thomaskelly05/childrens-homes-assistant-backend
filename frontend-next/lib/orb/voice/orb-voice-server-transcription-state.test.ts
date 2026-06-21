@@ -87,7 +87,7 @@ describe('ORB server transcription finalize state', () => {
     const hook = read('lib/orb/voice-v2/use-orb-voice-v2.ts')
     assert.match(station, /data-orb-voice-type-fallback/)
     assert.match(hook, /transcribeOrbVoiceV2Audio/)
-    assert.match(hook, /setState\('transcribing'\)/)
+    assert.match(hook, /transitionState\('transcribing'\)/)
     assert.match(hook, /ORB_VOICE_V2_TRANSCRIPTION_ERROR/)
     assert.match(hook, /setShowTypeFallback\(true\)/)
   })

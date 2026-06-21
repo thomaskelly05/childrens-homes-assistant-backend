@@ -2191,6 +2191,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
 
   useEffect(() => {
     if (!mounted || shouldSkipAuthenticatedOrbFetch()) return
+    if (residentialSurface) return
     let cancelled = false
     void isOrbRealtimeVoiceAvailable().then((availability) => {
       if (cancelled) return
@@ -2199,14 +2200,17 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
     return () => {
       cancelled = true
     }
-  }, [mounted])
+  }, [mounted, residentialSurface])
 
   const micQueryParam = mounted ? searchParams.get('mic')?.toLowerCase() : null
 
   const voiceBrowserCapable = voice.recognitionAvailable || voice.synthesisAvailable
   const voiceGenuinelyAvailable =
-    orbMicAccess.canUseLiveVoice && (realtimeVoiceAvailable || voiceBrowserCapable)
-  const voicePanelUnavailable = !voiceBrowserCapable && !realtimeVoiceAvailable
+    orbMicAccess.canUseLiveVoice &&
+    (residentialSurface ? voiceBrowserCapable : realtimeVoiceAvailable || voiceBrowserCapable)
+  const voicePanelUnavailable = residentialSurface
+    ? !voiceBrowserCapable
+    : !voiceBrowserCapable && !realtimeVoiceAvailable
 
   const composerMicRoute = useMemo((): 'dictate' | 'voice' => {
     if (micQueryParam === 'dictate') return 'dictate'
