@@ -24,8 +24,8 @@ function readRepo(relativePath: string) {
 }
 
 describe('ORB Residential Phase 3I.1 deploy memory rescue', () => {
-  it('build version marker is phase-4b-voice-human-conversation', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-4b-voice-human-conversation')
+  it('build version marker is phase-4c-voice-speech-loop-repair', () => {
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-4c-voice-speech-loop-repair')
     assert.deepEqual(ORB_LAYOUT_CSS_FILES, ['app/orb/orb-residential-shell.css'])
   })
 

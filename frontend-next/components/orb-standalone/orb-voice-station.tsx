@@ -51,6 +51,20 @@ import {
 } from '@/lib/orb/voice/orb-voice-human-conversation'
 import { ORB_VOICE_BUTTON_STOP_ORB } from '@/lib/orb/voice/orb-voice-reflective-copy'
 import {
+  commitVoiceTranscriptOrBlock,
+  ORB_VOICE_AUTO_SUBMIT_DEBOUNCE_MS,
+  ORB_VOICE_LISTENING_SPEAK_NOW,
+  ORB_VOICE_NO_SPEECH_DETECTED,
+  ORB_VOICE_NO_SPEECH_TIMEOUT_MS,
+  ORB_VOICE_SPEECH_UNSUPPORTED,
+  ORB_VOICE_TTS_SPOKEN_FALLBACK,
+  ORB_VOICE_TYPE_INSTEAD_LABEL,
+  ORB_VOICE_TYPE_INSTEAD_PLACEHOLDER,
+  ORB_VOICE_TYPE_INSTEAD_SEND,
+  voiceInputStatusLabel,
+  type VoiceInputStatus
+} from '@/lib/orb/voice/orb-voice-speech-loop'
+import {
   ORB_VOICE_REFLECTIVE_MODE_DEFAULT,
   orbVoiceReflectiveModeById,
   type OrbVoiceReflectiveModeId
@@ -293,7 +307,15 @@ export function OrbVoiceStation({
   const [isFinalizingRecording, setIsFinalizingRecording] = useState(false)
   const [conversationPaused, setConversationPaused] = useState(false)
   const [slowThinkingVisible, setSlowThinkingVisible] = useState(false)
+  const [voiceInputStatus, setVoiceInputStatus] = useState<VoiceInputStatus>('idle')
+  const [typeInDraft, setTypeInDraft] = useState('')
   const silenceStartedAtRef = useRef<number | null>(null)
+  const autoSubmitTimerRef = useRef<number | null>(null)
+  const noSpeechTimerRef = useRef<number | null>(null)
+  const submitInFlightRef = useRef(false)
+  const onPartialTranscriptRef = useRef<() => void>(() => {})
+  const onFinalTranscriptRef = useRef<(text: string) => void>(() => {})
+  const submitCapturedTranscriptRef = useRef<(text: string) => Promise<void>>(async () => {})
   const statusFetchedRef = useRef(false)
   const isMobileViewport = useOrbMobileViewport()
 
@@ -375,9 +397,16 @@ export function OrbVoiceStation({
 
   const voiceEngine = useOrbWebVoiceEngine({
     onSubmitTranscript: (text) => appendUserTurnRef.current(text),
+    onPartialTranscript: () => onPartialTranscriptRef.current(),
+    onFinalTranscript: (text) => onFinalTranscriptRef.current(text),
     speakFallback: (text, onEnd) => voice.speak(text, onEnd),
     onUserMessage: (message) => setVoiceStartError(message),
     onStateChange: (engineState) => {
+      if (engineState === 'requesting_permission') setVoiceInputStatus('requesting_microphone')
+      else if (engineState === 'listening' || engineState === 'capturing') setVoiceInputStatus('listening')
+      else if (engineState === 'transcribing') setVoiceInputStatus('transcribing')
+      else if (engineState === 'unsupported') setVoiceInputStatus('speech_unsupported')
+      else if (engineState === 'failed' && micPermission === 'denied') setVoiceInputStatus('microphone_error')
       if (engineState === 'listening' || engineState === 'capturing') {
         setBrowserStartStage('active')
       } else if (engineState === 'failed' || engineState === 'unsupported') {
@@ -718,24 +747,27 @@ export function OrbVoiceStation({
         ? orbVoiceStartProgressLine(voiceStartProgressStage)
         : orbVoiceUiStatusLine(uiState))
   const detailLine =
-    slowThinkingVisible && pending
-      ? ORB_VOICE_SLOW_THINKING_MESSAGE
-      : conversationPaused
-        ? 'Conversation paused. Continue talking when you are ready.'
-        : showNoTranscriptPanel
-      ? isSafariBrowser()
-        ? ORB_VOICE_SERVER_NO_TRANSCRIPT_SAFARI
-        : ORB_VOICE_SERVER_NO_TRANSCRIPT_DETAIL
-      : transcriptionFailed
-        ? ORB_VOICE_TRANSCRIPTION_FAILED_MESSAGE
-      : speechRecognitionNotice ||
-        (usesServerTranscription ? orbVoiceServerTranscriptionDetailLine(voiceEngine.state) : null) ||
-        startBlockedMessage ||
-        (audioPlaybackBlocked ? 'Tap to hear ORB' : null) ||
-        (usesServerTranscription ? null : orbVoiceUiDetailLine(uiState, dictateRealtimeReady)) ||
-        (permissionDenied && uiState === 'ready'
-          ? 'Microphone access is needed to use Voice. You can still type or use Dictate.'
-          : null)
+    voice.speechPlaybackError && displayedOrbReply
+      ? voice.speechPlaybackError
+      : voiceInputStatusLabel(voiceInputStatus) ||
+        (slowThinkingVisible && pending
+          ? ORB_VOICE_SLOW_THINKING_MESSAGE
+          : conversationPaused
+            ? 'Conversation paused. Continue talking when you are ready.'
+            : showNoTranscriptPanel
+              ? isSafariBrowser()
+                ? ORB_VOICE_SERVER_NO_TRANSCRIPT_SAFARI
+                : ORB_VOICE_SERVER_NO_TRANSCRIPT_DETAIL
+              : transcriptionFailed
+                ? ORB_VOICE_TRANSCRIPTION_FAILED_MESSAGE
+                : speechRecognitionNotice ||
+                  (usesServerTranscription ? orbVoiceServerTranscriptionDetailLine(voiceEngine.state) : null) ||
+                  startBlockedMessage ||
+                  (audioPlaybackBlocked ? 'Tap to hear ORB' : null) ||
+                  (usesServerTranscription ? null : orbVoiceUiDetailLine(uiState, dictateRealtimeReady)) ||
+                  (permissionDenied && uiState === 'ready'
+                    ? 'Microphone access is needed to use Voice. You can still type or use Dictate.'
+                    : null))
 
   const hasMeaningfulTranscript =
     Boolean(browserTranscriptText) ||
@@ -890,6 +922,15 @@ export function OrbVoiceStation({
     setSessionEnded(false)
     setConversationPaused(false)
     setSlowThinkingVisible(false)
+    setVoiceInputStatus('idle')
+    if (autoSubmitTimerRef.current) {
+      window.clearTimeout(autoSubmitTimerRef.current)
+      autoSubmitTimerRef.current = null
+    }
+    if (noSpeechTimerRef.current) {
+      window.clearTimeout(noSpeechTimerRef.current)
+      noSpeechTimerRef.current = null
+    }
     setRealtimeSessionConnected(false)
     setVoiceTransportLive(false)
     setWebrtcFailed(false)
@@ -911,8 +952,13 @@ export function OrbVoiceStation({
 
   const appendUserTurn = useCallback(
     (text: string) => {
-      const trimmed = text.trim()
-      if (!trimmed) return
+      const committed = commitVoiceTranscriptOrBlock(text)
+      if (!committed.ok) {
+        setVoiceInputStatus('no_speech_detected')
+        setVoiceStartError(ORB_VOICE_NO_SPEECH_DETECTED)
+        return
+      }
+      const trimmed = committed.text
       markOrbVoiceLatency('first_transcript')
       const provider =
         getOrbVoiceBrowserDiagnostics().activeTransport === 'server_transcription'
@@ -929,10 +975,82 @@ export function OrbVoiceStation({
           provider
         }
       ])
+      setVoiceInputStatus('transcript_ready')
       void sendToOrbWithVoiceContext(trimmed)
     },
     [sendToOrbWithVoiceContext, voice.settings.voiceMode]
   )
+
+  const submitCapturedTranscript = useCallback(
+    async (rawText: string) => {
+      const committed = commitVoiceTranscriptOrBlock(rawText)
+      if (!committed.ok) {
+        setVoiceInputStatus('no_speech_detected')
+        setVoiceStartError(ORB_VOICE_NO_SPEECH_DETECTED)
+        return
+      }
+      if (submitInFlightRef.current) return
+      submitInFlightRef.current = true
+      if (autoSubmitTimerRef.current) {
+        window.clearTimeout(autoSubmitTimerRef.current)
+        autoSubmitTimerRef.current = null
+      }
+      setVoiceInputStatus('transcribing')
+      try {
+        const stoppedText = voiceEngine.isListening ? await voiceEngine.stop() : committed.text
+        const toSend = commitVoiceTranscriptOrBlock(stoppedText || committed.text)
+        if (!toSend.ok) {
+          setVoiceInputStatus('no_speech_detected')
+          setVoiceStartError(ORB_VOICE_NO_SPEECH_DETECTED)
+          return
+        }
+        appendUserTurn(toSend.text)
+        setBrowserStartStage('idle')
+        await voiceEngine.reset()
+        setVoiceInputStatus('idle')
+      } finally {
+        submitInFlightRef.current = false
+      }
+    },
+    [appendUserTurn, voiceEngine]
+  )
+
+  submitCapturedTranscriptRef.current = submitCapturedTranscript
+
+  const scheduleAutoSubmit = useCallback(
+    (text: string) => {
+      if (voice.settings.pushToTalk) return
+      if (autoSubmitTimerRef.current) window.clearTimeout(autoSubmitTimerRef.current)
+      autoSubmitTimerRef.current = window.setTimeout(() => {
+        void submitCapturedTranscriptRef.current(text)
+      }, ORB_VOICE_AUTO_SUBMIT_DEBOUNCE_MS)
+    },
+    [voice.settings.pushToTalk]
+  )
+
+  onPartialTranscriptRef.current = () => {
+    setVoiceInputStatus('speech_detected')
+    if (noSpeechTimerRef.current) {
+      window.clearTimeout(noSpeechTimerRef.current)
+      noSpeechTimerRef.current = null
+    }
+  }
+
+  onFinalTranscriptRef.current = (text: string) => {
+    if (!text.trim()) return
+    setVoiceInputStatus('speech_detected')
+    if (!voice.settings.pushToTalk) scheduleAutoSubmit(text)
+  }
+
+  const handleTypeInSend = useCallback(() => {
+    const committed = commitVoiceTranscriptOrBlock(typeInDraft)
+    if (!committed.ok) return
+    appendUserTurn(committed.text)
+    setTypeInDraft('')
+    setVoiceInputStatus('idle')
+    setVoiceStartError(null)
+    setNoTranscriptFallback(false)
+  }, [appendUserTurn, typeInDraft])
 
   appendUserTurnRef.current = appendUserTurn
 
@@ -944,6 +1062,42 @@ export function OrbVoiceStation({
     const timer = window.setTimeout(() => setSlowThinkingVisible(true), 8000)
     return () => window.clearTimeout(timer)
   }, [pending])
+
+  /** No-speech timeout while listening in conversational mode. */
+  useEffect(() => {
+    const listening =
+      useBrowserLaunch &&
+      voiceEngine.isListening &&
+      !voice.settings.pushToTalk &&
+      !submitInFlightRef.current
+    if (!listening) {
+      if (noSpeechTimerRef.current) {
+        window.clearTimeout(noSpeechTimerRef.current)
+        noSpeechTimerRef.current = null
+      }
+      return
+    }
+    if (voiceEngine.displayTranscript.trim()) return
+    noSpeechTimerRef.current = window.setTimeout(() => {
+      if (voiceEngine.displayTranscript.trim()) return
+      setVoiceInputStatus('no_speech_detected')
+      setVoiceStartError(ORB_VOICE_NO_SPEECH_DETECTED)
+      void voiceEngine.stop().then(() => voiceEngine.reset())
+      setBrowserStartStage('idle')
+    }, ORB_VOICE_NO_SPEECH_TIMEOUT_MS)
+    return () => {
+      if (noSpeechTimerRef.current) {
+        window.clearTimeout(noSpeechTimerRef.current)
+        noSpeechTimerRef.current = null
+      }
+    }
+  }, [
+    useBrowserLaunch,
+    voice.settings.pushToTalk,
+    voiceEngine.displayTranscript,
+    voiceEngine.isListening,
+    voiceEngine
+  ])
 
   /** Auto-speak ORB replies with Katherine / browser fallback when policy allows. */
   useEffect(() => {
@@ -1351,6 +1505,7 @@ export function OrbVoiceStation({
     const started = await voiceEngine.start()
     if (started) {
       setBrowserStartStage('active')
+      setVoiceInputStatus('listening')
       markOrbInteractionLatency('voice_stream_ready')
       emitOrbClientDebug({
         area: 'voice',
@@ -1360,6 +1515,7 @@ export function OrbVoiceStation({
       return
     }
     setBrowserStartStage('failed')
+    setVoiceInputStatus(micPermission === 'denied' ? 'microphone_error' : 'speech_unsupported')
     const message =
       voiceEngine.userMessage ||
       voice.error ||
@@ -1851,6 +2007,63 @@ export function OrbVoiceStation({
               : ORB_VOICE_AUDIO_NOT_STORED}
           </p>
 
+          {(voiceInputStatus === 'no_speech_detected' ||
+            voiceInputStatus === 'speech_unsupported' ||
+            voiceInputStatus === 'microphone_error' ||
+            noTranscriptFallback ||
+            launchMode === 'unavailable' ||
+            permissionDenied) && (
+            <div
+              className="mt-4 w-full max-w-md rounded-2xl border border-[var(--orb-line)]/50 bg-[var(--orb-surface-elevated)]/60 p-4"
+              data-orb-voice-type-in-fallback
+            >
+              <label className="mb-2 block text-xs font-medium text-[var(--orb-muted)]" htmlFor="orb-voice-type-in">
+                {ORB_VOICE_TYPE_INSTEAD_LABEL}
+              </label>
+              <textarea
+                id="orb-voice-type-in"
+                value={typeInDraft}
+                onChange={(e) => setTypeInDraft(e.target.value)}
+                placeholder={ORB_VOICE_TYPE_INSTEAD_PLACEHOLDER}
+                rows={3}
+                className="orb-profile-input mb-2 w-full resize-y text-sm"
+                data-orb-voice-type-in-input
+              />
+              <button
+                type="button"
+                onClick={() => handleTypeInSend()}
+                disabled={!typeInDraft.trim()}
+                className="w-full rounded-full bg-gradient-to-r from-[var(--orb-primary-blue,#168bff)] to-[var(--orb-primary-blue-2,#0d5fcc)] py-2.5 text-sm font-semibold text-white disabled:opacity-50"
+                data-orb-voice-type-in-send
+              >
+                {ORB_VOICE_TYPE_INSTEAD_SEND}
+              </button>
+              {voiceInputStatus === 'speech_unsupported' ? (
+                <p className="mt-2 text-[10px] text-[var(--orb-muted)]">{ORB_VOICE_SPEECH_UNSUPPORTED}</p>
+              ) : null}
+            </div>
+          )}
+
+          {spokenReplyBlockedReason && displayedOrbReply ? (
+            <p
+              className="mt-3 text-center text-[11px] text-[var(--orb-muted)]"
+              data-orb-voice-spoken-fallback
+              role="status"
+            >
+              {spokenReplyBlockedReason}
+            </p>
+          ) : null}
+
+          {voice.speechPlaybackError && displayedOrbReply ? (
+            <p
+              className="mt-2 text-center text-[11px] text-[var(--orb-muted)]"
+              data-orb-voice-tts-spoken-fallback
+              role="status"
+            >
+              {voice.speechPlaybackError || ORB_VOICE_TTS_SPOKEN_FALLBACK}
+            </p>
+          ) : null}
+
           {audioPlaybackBlocked ? (
             <button
               type="button"
@@ -1912,6 +2125,17 @@ export function OrbVoiceStation({
                 </button>
               </div>
             </div>
+          ) : null}
+
+          {developerMode ? (
+            <p
+              className="mt-2 max-w-md text-center font-mono text-[10px] text-[var(--orb-muted)]"
+              data-orb-voice-speech-loop-debug
+            >
+              input={voiceInputStatus} transport={voiceEngine.transport || 'none'} transcriptLen=
+              {browserTranscriptText.length} tts={voice.speechPlaybackError ? 'error' : 'ok'} mic=
+              {micPermission}
+            </p>
           ) : null}
 
           {developerMode ? (

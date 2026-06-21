@@ -21,8 +21,8 @@ export const ORB_VOICE_PAUSE_CONVERSATION = 'Pause conversation' as const
 export const ORB_VOICE_RESET_CONVERSATION = 'Reset conversation' as const
 export const ORB_VOICE_SLOW_THINKING_MESSAGE =
   'ORB is still thinking. You can pause or continue typing instead.' as const
-export const ORB_VOICE_TTS_FALLBACK_NOTE =
-  'Premium ORB voice is unavailable. Responses may use your browser voice or text only.' as const
+export const ORB_VOICE_TTS_SPOKEN_FALLBACK =
+  'ORB could not speak the response, but the written reply is shown below.' as const
 
 export type OrbVoiceSessionMemory = {
   modeId: OrbVoiceReflectiveModeId

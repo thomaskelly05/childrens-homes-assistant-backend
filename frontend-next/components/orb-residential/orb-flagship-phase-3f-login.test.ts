@@ -21,8 +21,8 @@ function read(relativePath: string) {
 }
 
 describe('ORB Residential Phase 3F final login entrance', () => {
-  it('build version marker is phase-4b-voice-human-conversation', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-4b-voice-human-conversation')
+  it('build version marker is phase-4c-voice-speech-loop-repair', () => {
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-4c-voice-speech-loop-repair')
     const layout = read('app/orb/layout.tsx')
     assert.match(layout, /orb-residential-shell\.css/)
     assert.doesNotMatch(layout, /orb-flagship-phase|orb-login\.css/)
@@ -83,7 +83,7 @@ describe('ORB Residential Phase 3F final login entrance', () => {
     const css = read('app/orb/orb-residential-shell.css')
     assert.match(css, /\.orb-login-capability-grid/)
     assert.match(css, /\.orb-login-auth-mark/)
-    assert.match(css, /phase-4b-voice-human-conversation/)
+    assert.match(css, /phase-4c-voice-speech-loop-repair/)
     assert.doesNotMatch(css, /data-orb-login-stations-scroll/)
     assert.doesNotMatch(css, /\.orb-login-station-preview/)
   })

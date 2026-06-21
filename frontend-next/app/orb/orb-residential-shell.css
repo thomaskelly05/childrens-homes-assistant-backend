@@ -3136,7 +3136,7 @@ html[data-orb-residential='1'] .orb-dictate-assistant-status {
 
 /* phase-3v-dictate-intelligence-evidence-save marker — logic-only pass */
 
-/* phase-4b-voice-human-conversation — Voice companion state motion */
+/* phase-4c-voice-speech-loop-repair — Voice companion state motion */
 html[data-orb-residential='1'] [data-orb-voice-companion-state='listening'] .orb-voice-hero-aura {
   animation: orb-voice-listen-pulse 2.4s ease-in-out infinite;
 }

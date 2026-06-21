@@ -51,6 +51,7 @@ import {
 } from '@/lib/orb/voice/orb-voice-profiles'
 import { ORB_VOICE_MIC_ERROR } from '@/lib/orb/voice/orb-voice-reflective-copy'
 import { resolveTtsVoiceProfileId } from '@/lib/orb/voice/orb-voice-human-conversation'
+import { ORB_VOICE_TTS_SPOKEN_FALLBACK } from '@/lib/orb/voice/orb-voice-speech-loop'
 import { requestOrbPremiumTts, requestOrbVoiceSpeak } from '@/lib/orb/voice/orb-voice-client'
 import { requestOrbVoiceProviderSpeak } from '@/lib/orb/voice/orb-voice-provider'
 import {
@@ -136,7 +137,7 @@ const MAX_WAKE_RESTART_ATTEMPTS = 6
 
 const DEFAULT_SETTINGS: StandaloneOrbVoiceSettings = {
   voiceReplies: true,
-  autoSend: false,
+  autoSend: true,
   britishFemalePreference: true,
   showTranscriptBeforeSend: true,
   wakePhrase: false,
@@ -454,7 +455,7 @@ export function useStandaloneOrbVoice() {
             activeAudioRef.current = null
             stopSafariKeepAlive()
             setSpeaking(false)
-            setSpeechPlaybackError('Speech playback is unavailable in this browser.')
+            setSpeechPlaybackError(ORB_VOICE_TTS_SPOKEN_FALLBACK)
             setVoiceCaptureState('idle')
             setPhase('idle')
           }
@@ -492,7 +493,7 @@ export function useStandaloneOrbVoice() {
       utterance.onerror = () => {
         stopSafariKeepAlive()
         setSpeaking(false)
-        setSpeechPlaybackError('Speech playback is unavailable in this browser.')
+        setSpeechPlaybackError(ORB_VOICE_TTS_SPOKEN_FALLBACK)
         setVoiceCaptureState('idle')
         setPhase('idle')
       }

@@ -110,6 +110,7 @@ export class OrbBrowserSpeechTransport {
     recognition.onerror = (event) => {
       const speechEvent = event as Event & { error?: string; message?: string }
       const code = speechEvent.error ?? 'unknown'
+      if (code === 'no-speech' && this.userInitiated) return
       this.userInitiated = false
       patchOrbVoiceBrowserDiagnostics({
         recognitionErrorEvent: true,
@@ -129,8 +130,16 @@ export class OrbBrowserSpeechTransport {
         this.interim = ''
         callbacks.onFinalTranscript(this.transcript)
       }
-      callbacks.onListeningChange(false)
+      const shouldRestart = this.userInitiated
       this.recognition = null
+      if (shouldRestart) {
+        window.setTimeout(() => {
+          if (!this.userInitiated || !this.callbacks) return
+          void this.restartRecognition(this.callbacks)
+        }, 450)
+        return
+      }
+      callbacks.onListeningChange(false)
     }
 
     this.recognition = recognition
@@ -169,6 +178,100 @@ export class OrbBrowserSpeechTransport {
     this.transcript = ''
     this.interim = ''
     this.callbacks?.onListeningChange(false)
+  }
+
+  private async restartRecognition(callbacks: OrbBrowserSpeechTransportCallbacks): Promise<void> {
+    const Recognition = getSpeechRecognitionCtor()
+    if (!Recognition || !this.userInitiated) {
+      callbacks.onListeningChange(false)
+      return
+    }
+
+    const recognition = new Recognition()
+    recognition.lang = ORB_BROWSER_SPEECH_LANG
+    recognition.interimResults = true
+    recognition.continuous = true
+    recognition.maxAlternatives = 1
+
+    recognition.onstart = () => {
+      patchOrbVoiceBrowserDiagnostics({ recognitionStartEvent: true })
+      callbacks.onListeningChange(true)
+    }
+
+    recognition.onresult = (event) => {
+      const speechEvent = event as SpeechRecognitionResultEvent
+      const diag = getOrbVoiceBrowserDiagnostics()
+      patchOrbVoiceBrowserDiagnostics({
+        recognitionResultEventCount: diag.recognitionResultEventCount + 1
+      })
+      let interim = ''
+      let finalText = ''
+      for (let i = speechEvent.resultIndex; i < speechEvent.results.length; i += 1) {
+        const piece = speechEvent.results[i]?.[0]?.transcript ?? ''
+        if (speechEvent.results[i]?.isFinal) finalText += piece
+        else interim += piece
+      }
+      if (interim.trim()) {
+        this.interim = interim.trim()
+        callbacks.onPartialTranscript(this.displayText())
+        patchOrbVoiceBrowserDiagnostics({ interimTranscriptLength: this.interim.length })
+      }
+      if (finalText.trim()) {
+        this.transcript = this.transcript
+          ? `${this.transcript} ${finalText.trim()}`.trim()
+          : finalText.trim()
+        this.interim = ''
+        callbacks.onFinalTranscript(this.transcript)
+        patchOrbVoiceBrowserDiagnostics({
+          finalTranscriptLength: this.transcript.length,
+          lastTranscriptLength: this.transcript.length,
+          lastTranscriptPreview: this.transcript.slice(0, 80)
+        })
+      }
+    }
+
+    recognition.onerror = (event) => {
+      const speechEvent = event as Event & { error?: string; message?: string }
+      const code = speechEvent.error ?? 'unknown'
+      if (code === 'no-speech' && this.userInitiated) return
+      this.userInitiated = false
+      patchOrbVoiceBrowserDiagnostics({
+        recognitionErrorEvent: true,
+        lastRecognitionError: code,
+        lastRecognitionErrorMessage: speechEvent.message ?? null,
+        stopReason: `recognition_error_${code}`
+      })
+      callbacks.onError(recognitionErrorUserMessage(code, speechEvent.message, 'voice'), code)
+      callbacks.onListeningChange(false)
+    }
+
+    recognition.onend = () => {
+      patchOrbVoiceBrowserDiagnostics({ recognitionEndEvent: true })
+      const merged = promoteInterimTranscriptCommitted(this.transcript, this.interim)
+      if (merged && merged !== this.transcript) {
+        this.transcript = merged
+        this.interim = ''
+        callbacks.onFinalTranscript(this.transcript)
+      }
+      const shouldRestart = this.userInitiated
+      this.recognition = null
+      if (shouldRestart) {
+        window.setTimeout(() => {
+          if (!this.userInitiated || !this.callbacks) return
+          void this.restartRecognition(this.callbacks)
+        }, 450)
+        return
+      }
+      callbacks.onListeningChange(false)
+    }
+
+    this.recognition = recognition
+    const confirmed = await confirmSpeechRecognitionStart(recognition)
+    if (!confirmed.ok) {
+      this.recognition = null
+      this.userInitiated = false
+      callbacks.onListeningChange(false)
+    }
   }
 
   private displayText(): string {
