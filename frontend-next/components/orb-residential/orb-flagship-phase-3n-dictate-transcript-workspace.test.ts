@@ -33,8 +33,8 @@ function read(relativePath: string) {
 }
 
 describe('ORB Residential Phase 3N Dictate transcript workspace', () => {
-  it('build version marker is phase-3u-dictate-identity-mapping', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-3u-dictate-identity-mapping')
+  it('build version marker is phase-3v-dictate-intelligence-evidence-save', () => {
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-3v-dictate-intelligence-evidence-save')
     const layout = read('app/orb/layout.tsx')
     assert.match(layout, /orb-residential-shell\.css/)
     assert.deepEqual(ORB_LAYOUT_CSS_FILES, ['app/orb/orb-residential-shell.css'])
@@ -92,8 +92,9 @@ describe('ORB Residential Phase 3N Dictate transcript workspace', () => {
     const panel = read('components/orb/dictate/OrbDictateDocumentWorkspace.tsx')
     assert.match(workspace, /handleTemplateSelect/)
     assert.match(workspace, /handleReviewWithOrb/)
-    assert.match(workspace, /editOrbDictateDocument/)
-    assert.match(workspace, /buildLocalDictateEditFallback/)
+    assert.match(workspace, /applyDictateIntelligenceEdit/)
+    const intelligence = read('lib/orb/dictate/orb-dictate-intelligence.ts')
+    assert.match(intelligence, /buildLocalDictateEditFallback/)
     assert.match(workspace, /adult_instruction/)
     assert.match(workspace, /setWorkingDocument/)
     assert.match(panel, /OrbDictateWorkingDocument/)
@@ -127,7 +128,7 @@ describe('ORB Residential Phase 3N Dictate transcript workspace', () => {
   it('single shell and one CSS import remain true', () => {
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
     assert.match(companion, /orb-app-shell/)
-    assert.match(read('app/orb/orb-residential-shell.css'), /phase-3u-dictate-identity-mapping/)
+    assert.match(read('app/orb/orb-residential-shell.css'), /phase-3v-dictate-intelligence-evidence-save/)
     assert.match(read('app/orb/orb-residential-shell.css'), /Phase 3O/)
   })
 })

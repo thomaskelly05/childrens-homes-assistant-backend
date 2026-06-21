@@ -344,6 +344,14 @@ export async function editOrbDictateDocument(payload: {
   note_type: OrbDictateNoteType
   mode?: OrbDictateEditMode
   preserve_facts?: boolean
+  template_id?: string
+  transcript_privacy_mode?: string
+  working_transcript?: string
+  original_transcript?: string
+  redacted_transcript?: string
+  participants?: OrbDictateParticipant[]
+  segments?: OrbDictateTranscriptSegment[]
+  people_to_confirm?: unknown[]
 }): Promise<OrbDictateEditResult> {
   try {
     const json = await authFetch<unknown>(DICTATE_BASE + '/edit', {
@@ -355,7 +363,30 @@ export async function editOrbDictateDocument(payload: {
         note_type: payload.note_type,
         mode: payload.mode,
         preserve_facts: payload.preserve_facts ?? true,
-        standalone_boundary: true
+        standalone_boundary: true,
+        template_id: payload.template_id,
+        transcript_privacy_mode: payload.transcript_privacy_mode,
+        working_transcript: payload.working_transcript,
+        original_transcript: payload.original_transcript,
+        redacted_transcript: payload.redacted_transcript,
+        participants: payload.participants?.map((p) => ({
+          id: p.id,
+          name: p.name,
+          role: p.role,
+          organisation: p.organisation,
+          initials: p.initials,
+          introduced_by: p.introducedBy ?? 'unknown'
+        })),
+        segments: payload.segments?.map((s) => ({
+          id: s.id,
+          speaker_id: s.speaker_id,
+          speaker_label: s.speaker_label,
+          text: s.text,
+          source: s.source,
+          is_direct_quote: s.is_direct_quote,
+          needs_review: s.needs_review
+        })),
+        people_to_confirm: payload.people_to_confirm
       })
     })
     return parseEnvelope<OrbDictateEditResult>(json)

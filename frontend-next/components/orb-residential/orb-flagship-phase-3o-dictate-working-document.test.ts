@@ -27,8 +27,8 @@ function read(relativePath: string) {
 }
 
 describe('ORB Residential Phase 3O Dictate working document', () => {
-  it('build version marker is phase-3u-dictate-identity-mapping', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-3u-dictate-identity-mapping')
+  it('build version marker is phase-3v-dictate-intelligence-evidence-save', () => {
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-3v-dictate-intelligence-evidence-save')
     const layout = read('app/orb/layout.tsx')
     assert.match(layout, /orb-residential-shell\.css/)
     assert.deepEqual(ORB_LAYOUT_CSS_FILES, ['app/orb/orb-residential-shell.css'])
@@ -49,8 +49,8 @@ describe('ORB Residential Phase 3O Dictate working document', () => {
     const assistant = read('components/orb/dictate/OrbDictateEditAssistant.tsx')
     assert.match(assistant, /data-orb-dictate-edit-instruction/)
     assert.equal(ORB_DICTATE_APPLY_ORB_CHANGE, 'Apply change')
-    assert.match(workspace, /editOrbDictateDocument/)
-    assert.match(workspace, /setWorkingDocument\(result\.revised_text\)/)
+    assert.match(workspace, /applyDictateIntelligenceEdit/)
+    assert.match(workspace, /setWorkingDocument\(result\.workingDocument\)/)
     assert.match(workspace, /ORB_DICTATE_WORKING_DOC_UPDATED/)
     assert.equal(ORB_DICTATE_WORKING_DOC_UPDATED, 'ORB updated the working document for adult review.')
   })
@@ -112,7 +112,7 @@ describe('ORB Residential Phase 3O Dictate working document', () => {
   it('single shell and one CSS import remain true', () => {
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
     assert.match(companion, /orb-app-shell/)
-    assert.match(read('app/orb/orb-residential-shell.css'), /phase-3u-dictate-identity-mapping/)
+    assert.match(read('app/orb/orb-residential-shell.css'), /phase-3v-dictate-intelligence-evidence-save/)
     assert.match(read('app/orb/orb-residential-shell.css'), /Phase 3O/)
   })
 })

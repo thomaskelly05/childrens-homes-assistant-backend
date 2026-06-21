@@ -41,6 +41,8 @@ export type OrbDictateDocumentWorkspaceProps = {
   onSave?: () => void
   onOpenInWrite?: () => void
   applyingEdit: boolean
+  structuringDocument?: boolean
+  structuringSlow?: boolean
   editNote: string | null
   applyStatus: string | null
   interactive: boolean
@@ -92,6 +94,11 @@ export function OrbDictateDocumentWorkspace(props: OrbDictateDocumentWorkspacePr
             readOnly={!props.interactive}
             prominent
           />
+          {props.structuringDocument ? (
+            <p className="text-xs text-[var(--orb-muted)]" data-orb-dictate-structuring-document>
+              {props.structuringSlow ? 'ORB is still working. You can continue editing while this completes.' : 'ORB is structuring the working document…'}
+            </p>
+          ) : null}
 
           {props.recordingMedia ? <OrbDictateRecordingAttachment media={props.recordingMedia} /> : null}
 

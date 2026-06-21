@@ -23,8 +23,8 @@ function read(relativePath: string) {
 }
 
 describe('ORB Residential Phase 3R Dictate ORB Write convergence', () => {
-  it('build version marker is phase-3u-dictate-identity-mapping', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-3u-dictate-identity-mapping')
+  it('build version marker is phase-3v-dictate-intelligence-evidence-save', () => {
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-3v-dictate-intelligence-evidence-save')
     const layout = read('app/orb/layout.tsx')
     assert.match(layout, /orb-residential-shell\.css/)
     assert.deepEqual(ORB_LAYOUT_CSS_FILES, ['app/orb/orb-residential-shell.css'])
@@ -70,8 +70,8 @@ describe('ORB Residential Phase 3R Dictate ORB Write convergence', () => {
     const assistant = read('components/orb/dictate/OrbDictateEditAssistant.tsx')
     const studio = read('components/orb/dictate/OrbDictateStudioWorkspace.tsx')
     assert.match(assistant, /data-orb-dictate-edit-instruction/)
-    assert.match(studio, /editOrbDictateDocument/)
-    assert.match(studio, /setWorkingDocument\(result\.revised_text\)/)
+    assert.match(studio, /applyDictateIntelligenceEdit/)
+    assert.match(studio, /setWorkingDocument\(result\.workingDocument\)/)
   })
 
   it('workspace document type uses dropdown and reshapes headings on change', () => {
@@ -136,7 +136,7 @@ describe('ORB Residential Phase 3R Dictate ORB Write convergence', () => {
     const workspace = read('components/orb/dictate/OrbDictateStudioWorkspace.tsx')
     assert.match(companion, /orb-app-shell/)
     assert.match(layout, /import '\.\/orb-residential-shell\.css'/)
-    assert.match(read('app/orb/orb-residential-shell.css'), /phase-3u-dictate-identity-mapping/)
+    assert.match(read('app/orb/orb-residential-shell.css'), /phase-3v-dictate-intelligence-evidence-save/)
     assert.doesNotMatch(workspace, /guarantee compliance|Ofsted approved/i)
   })
 })

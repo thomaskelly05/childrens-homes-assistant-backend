@@ -143,6 +143,12 @@ import {
 } from '@/lib/orb/dictate/orb-dictate-capture-copy'
 import { buildPeopleToConfirm, type OrbDictatePersonConfirmItem } from '@/lib/orb/dictate/orb-dictate-people-identification'
 import {
+  buildCleanDictateCopy,
+  buildDictateIntelligenceRequest,
+  buildDictateSavePacket,
+  ORB_DICTATE_MEDIA_SAVED_LOCAL_NOTE
+} from '@/lib/orb/dictate/orb-dictate-intelligence'
+import {
   buildTranscriptBundleFromText,
   ORB_DICTATE_DEFAULT_TRANSCRIPT_PRIVACY_MODE,
   type OrbDictateTranscriptBundle
@@ -1189,14 +1195,45 @@ export function OrbDictateStation({
     if (template.mode) setDictateMode(template.mode)
   }
 
+  function buildIntelligenceRequest(workingDoc?: string) {
+    return buildDictateIntelligenceRequest({
+      templateId: selectedTemplateId,
+      transcript,
+      transcriptBundle,
+      workingDocument: workingDoc ?? editedNote,
+      peopleToConfirm,
+      recordingMedia,
+      contentSource,
+      noteType,
+      segments,
+      participants
+    })
+  }
+
   function dictateHandoffMetadata() {
     const workingDoc = editedNote.trim()
+    const request = buildIntelligenceRequest(workingDoc)
+    const packet = buildDictateSavePacket({
+      request,
+      workingDocument: workingDoc,
+      saferDraft: output?.professional_note,
+      recordingMedia: recordingMedia
+        ? (serializeOrbDictateRecordingMediaForSave(recordingMedia) as Record<string, unknown>)
+        : undefined
+    })
     return {
       dictate_capture_source: contentSource,
       recording_media: recordingMedia ? serializeOrbDictateRecordingMediaForSave(recordingMedia) : undefined,
       dictate_source_note: ORB_DICTATE_WRITE_HANDOFF_SOURCE_NOTE,
       working_document: workingDoc || undefined,
-      people_to_confirm: peopleToConfirm.length ? peopleToConfirm : undefined
+      people_to_confirm: peopleToConfirm.length ? peopleToConfirm : undefined,
+      original_transcript: request.originalTranscript,
+      redacted_transcript: request.redactedTranscript,
+      working_transcript: request.workingTranscript,
+      transcript_privacy_mode: request.transcriptPrivacyMode,
+      adult_review_status: 'generated_for_adult_review',
+      safer_draft: output?.professional_note,
+      dictate_save_packet: packet as unknown as Record<string, unknown>
     }
   }
 
@@ -1393,32 +1430,54 @@ export function OrbDictateStation({
   }
 
   async function handleCopy() {
-    const text = editedNote || output?.professional_note
-    if (!text) return
+    const raw = editedNote || output?.professional_note
+    if (!raw) return
+    const text = buildCleanDictateCopy(raw, { stripPlaceholders: true })
     const ok = await copyTextToClipboard(text)
-    setStatusMessage(ok ? 'Copied to clipboard.' : 'Copy failed — select and copy manually.')
+    setStatusMessage(ok ? 'Copied clean document to clipboard.' : 'Copy failed — select and copy manually.')
   }
 
   async function handleSave() {
     const workingDoc = editedNote.trim()
-    const transcriptText = transcript.trim()
-    const text = workingDoc || output?.professional_note
+    const text = buildCleanDictateCopy(workingDoc || output?.professional_note || '', { stripPlaceholders: false })
     if (!text) return
+    const request = buildIntelligenceRequest(workingDoc)
+    const serializedMedia = recordingMedia
+      ? (serializeOrbDictateRecordingMediaForSave(recordingMedia) as Record<string, unknown>)
+      : undefined
+    const packet = buildDictateSavePacket({
+      request,
+      workingDocument: workingDoc || text,
+      saferDraft: output?.professional_note,
+      recordingMedia: serializedMedia
+    })
     const title = resolveOrbGuidedDemoSaveTitle(
       output?.title ?? workingDocumentTypeLabel(selectedTemplateId)
     )
     const saveExtras = {
       source_feature: 'dictate' as const,
       brain_metadata: output?.brain_metadata,
-      source_text: transcriptText || text,
+      source_text: request.workingTranscript || transcript.trim() || text,
       template_id: selectedTemplateId,
-      working_document: workingDoc || undefined,
+      working_document: workingDoc || text,
       people_to_confirm: peopleToConfirm.length ? peopleToConfirm : undefined,
       dictate_source_note: ORB_DICTATE_WRITE_HANDOFF_SOURCE_NOTE,
-      recording_media: recordingMedia
-        ? (serializeOrbDictateRecordingMediaForSave(recordingMedia) as Record<string, unknown>)
-        : undefined,
-      dictate_capture_source: contentSource
+      recording_media: serializedMedia,
+      dictate_capture_source: contentSource,
+      original_transcript: request.originalTranscript,
+      redacted_transcript: request.redactedTranscript,
+      working_transcript: request.workingTranscript,
+      transcript_privacy_mode: request.transcriptPrivacyMode,
+      adult_review_status: 'generated_for_adult_review',
+      safer_draft: output?.professional_note,
+      dictate_save_packet: packet as unknown as Record<string, unknown>
+    }
+    if (recordingMedia) {
+      setRecordingMedia({
+        ...recordingMedia,
+        persistenceStatus: 'saved_with_draft',
+        persistenceMessage: ORB_DICTATE_MEDIA_SAVED_LOCAL_NOTE
+      })
     }
     try {
       if (output) {
@@ -1427,7 +1486,7 @@ export function OrbDictateStation({
           note_type: output.note_type,
           professional_note: text,
           summary: output.summary,
-          transcript: transcriptText || output.transcript,
+          transcript: request.workingTranscript || transcript.trim() || output.transcript,
           actions: output.actions
         })
         setStatusMessage(orbGuidedDemoSaveStatusMessage(saved.message || 'Saved to Records & Drafts.'))
@@ -1843,6 +1902,7 @@ export function OrbDictateStation({
           processingStage={processingStage}
           peopleToConfirm={peopleToConfirm}
           onPeopleToConfirmChange={setPeopleToConfirm}
+          transcriptBundle={transcriptBundle}
         />
         {output ? (
           <div className="mt-2 flex shrink-0 flex-wrap gap-2">

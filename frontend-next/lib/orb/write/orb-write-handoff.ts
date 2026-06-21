@@ -6,6 +6,7 @@ import {
   resolveOrbRecordingRecordType,
   structureOrbWriteDocumentBody
 } from '@/lib/orb/recording/orb-recording-framework'
+import { ORB_DICTATE_WRITE_HANDOFF_REVIEW_NOTE } from '@/lib/orb/dictate/orb-dictate-intelligence'
 import {
   ORB_WRITE_REVIEW_STATEMENT,
   type OrbWriteDocument,
@@ -30,6 +31,13 @@ export type OrbWriteHandoffPayload = {
   dictate_source_note?: string
   working_document?: string
   people_to_confirm?: OrbDictatePersonConfirmItem[]
+  original_transcript?: string
+  redacted_transcript?: string
+  working_transcript?: string
+  transcript_privacy_mode?: string
+  adult_review_status?: string
+  safer_draft?: string
+  dictate_save_packet?: Record<string, unknown>
   recording_media?: {
     id: string
     filename: string
@@ -96,6 +104,7 @@ export function handoffToOrbWriteDocument(
     body: rawBody,
     missingNotes: missingNotes.length ? missingNotes : undefined
   })
+  const bodyWithSourceNote = `${body.trim()}\n\n---\n\n*${payload.dictate_source_note ?? ORB_DICTATE_WRITE_HANDOFF_REVIEW_NOTE}*`
   const now = payload.timestamp || new Date().toISOString()
   const version: OrbWriteDocumentVersion = {
     id: 'v_initial',
@@ -111,8 +120,8 @@ export function handoffToOrbWriteDocument(
     record_type_id: recordType.id,
     record_type_label: recordTypeLabel ?? recordType.label,
     document_headings: recordType.pdf_heading_order,
-    body,
-    transcript: payload.transcript,
+    body: bodyWithSourceNote,
+    transcript: payload.working_transcript || payload.original_transcript || payload.transcript,
     template_id: payload.template_id,
     summary: result?.summary ?? payload.brain_analysis_summary ?? '',
     quality_checks: result?.quality_checks ?? {
@@ -129,7 +138,7 @@ export function handoffToOrbWriteDocument(
     created_at: now,
     updated_at: now,
     versions: [version],
-    word_count: body.trim().split(/\s+/).filter(Boolean).length,
+    word_count: bodyWithSourceNote.trim().split(/\s+/).filter(Boolean).length,
     is_draft: true,
     is_finalised: false
   }

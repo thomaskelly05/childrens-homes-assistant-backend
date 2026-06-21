@@ -329,7 +329,11 @@ def edit_dictate_document(
 
     mode = _resolve_mode(request)
     system, user = _build_edit_prompt(request, mode)
-    redacted_user, _ = redact_plain_text(user, mode="strict")
+    privacy_mode = (request.transcript_privacy_mode or "internal_working").strip()
+    if privacy_mode == "internal_working":
+        redacted_user = user
+    else:
+        redacted_user, _ = redact_plain_text(user, mode="strict")
 
     gateway_response = try_governed_draft_text(
         feature=FEATURE_DICTATE_EDIT,

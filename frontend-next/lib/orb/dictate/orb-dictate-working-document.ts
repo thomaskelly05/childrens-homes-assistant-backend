@@ -3,10 +3,21 @@
 import { extractPresentPeopleNames } from './orb-dictate-people-identification.ts'
 import { ORB_DICTATE_RECORD_TYPE_SUGGESTIONS } from './orb-dictate-capture-copy.ts'
 
+export type OrbDictateSectionSourceType =
+  | 'transcript'
+  | 'adult_instruction'
+  | 'orb_inference'
+  | 'missing_guidance'
+
 export type OrbDictateWorkingDocumentSection = {
   heading: string
   body: string
+  sourceSnippets?: string[]
+  sourceType?: OrbDictateSectionSourceType
 }
+
+const SECTION_META_START = '<!-- orb-dictate-section-meta\n'
+const SECTION_META_END = '\n-->'
 
 export const ORB_DICTATE_UNSTRUCTURED_NOTE_LABEL = 'Unstructured note' as const
 
@@ -508,18 +519,27 @@ function mapSupervisionReflection(signals: TranscriptSignals, headings: readonly
     : placeholderForSectionHeading('Impact on practice', 'supervision_prep')
 
   return headings.map((heading) => {
-    if (heading === 'What happened') return { heading, body: whatHappened }
-    if (heading === 'Impact on practice') return { heading, body: impactBody }
+    if (heading === 'What happened') {
+      return enrichSection(heading, whatHappened, signals.sentences.slice(0, 2))
+    }
+    if (heading === 'Impact on practice') {
+      return enrichSection(
+        heading,
+        impactBody,
+        outcomesFocus ? signals.sentences.filter((s) => /outcomes?|focus/i.test(s)) : undefined,
+        !outcomesFocus
+      )
+    }
     if (heading === 'What went well') {
-      return { heading, body: placeholderForSectionHeading(heading, 'supervision_prep') }
+      return enrichSection(heading, placeholderForSectionHeading(heading, 'supervision_prep'), undefined, true)
     }
     if (heading === 'What needs support') {
-      return { heading, body: placeholderForSectionHeading(heading, 'supervision_prep') }
+      return enrichSection(heading, placeholderForSectionHeading(heading, 'supervision_prep'), undefined, true)
     }
     if (heading === 'Actions / learning') {
-      return { heading, body: placeholderForSectionHeading(heading, 'supervision_prep') }
+      return enrichSection(heading, placeholderForSectionHeading(heading, 'supervision_prep'), undefined, true)
     }
-    return { heading, body: placeholderForSectionHeading(heading, 'supervision_prep') }
+    return enrichSection(heading, placeholderForSectionHeading(heading, 'supervision_prep'), undefined, true)
   })
 }
 
@@ -619,10 +639,11 @@ function mapBySentenceBuckets(
     buckets.set(primaryHeading, [signals.raw])
   }
 
-  return headings.map((heading) => ({
-    heading,
-    body: joinOrPlaceholder(buckets.get(heading) ?? [], heading, templateId)
-  }))
+  return headings.map((heading) => {
+    const snippets = buckets.get(heading) ?? []
+    const body = joinOrPlaceholder(snippets, heading, templateId)
+    return enrichSection(heading, body, snippets)
+  })
 }
 
 /** Map transcript sentences into template sections with cautious placeholders for gaps. */
@@ -650,25 +671,69 @@ export function mapTranscriptToSections(
   return mapBySentenceBuckets(signals, templateId, headings)
 }
 
-export function parseWorkingDocument(markdown: string): OrbDictateWorkingDocumentSection[] {
-  const trimmed = markdown.trim()
-  if (!trimmed) return []
+function enrichSection(
+  heading: string,
+  body: string,
+  sourceSnippets?: string[],
+  forceMissing = false
+): OrbDictateWorkingDocumentSection {
+  const isPlaceholder = isOrbDictateSectionPlaceholder(body)
+  return {
+    heading,
+    body,
+    sourceType: forceMissing || isPlaceholder ? 'missing_guidance' : 'transcript',
+    sourceSnippets: isPlaceholder ? undefined : sourceSnippets?.filter(Boolean).slice(0, 3)
+  }
+}
 
-  const parts = trimmed.split(/^## /m).filter(Boolean)
+export function parseWorkingDocument(markdown: string): OrbDictateWorkingDocumentSection[] {
+  let content = markdown.trim()
+  let meta: Record<string, { sourceType?: OrbDictateSectionSourceType; sourceSnippets?: string[] }> = {}
+  const metaIdx = content.lastIndexOf(SECTION_META_START)
+  if (metaIdx !== -1) {
+    const endIdx = content.indexOf(SECTION_META_END, metaIdx)
+    if (endIdx !== -1) {
+      try {
+        meta = JSON.parse(content.slice(metaIdx + SECTION_META_START.length, endIdx)) as typeof meta
+        content = content.slice(0, metaIdx).trim()
+      } catch {
+        /* ignore invalid meta */
+      }
+    }
+  }
+
+  if (!content) return []
+
+  const parts = content.split(/^## /m).filter(Boolean)
   if (parts.length === 0) {
-    return [{ heading: 'Summary', body: trimmed }]
+    return [{ heading: 'Summary', body: content }]
   }
 
   return parts.map((part) => {
     const newline = part.indexOf('\n')
     const heading = (newline === -1 ? part : part.slice(0, newline)).trim()
     const body = (newline === -1 ? '' : part.slice(newline + 1)).trim()
-    return { heading, body }
+    const stored = meta[heading]
+    return {
+      heading,
+      body,
+      sourceType: stored?.sourceType,
+      sourceSnippets: stored?.sourceSnippets
+    }
   })
 }
 
 export function serializeWorkingDocument(sections: OrbDictateWorkingDocumentSection[]): string {
-  return sections.map((s) => `## ${s.heading}\n\n${s.body}`.trimEnd()).join('\n\n')
+  const body = sections.map((s) => `## ${s.heading}\n\n${s.body}`.trimEnd()).join('\n\n')
+  const metaEntries = sections
+    .filter((section) => section.sourceType || section.sourceSnippets?.length)
+    .map((section) => [
+      section.heading,
+      { sourceType: section.sourceType, sourceSnippets: section.sourceSnippets }
+    ])
+  if (!metaEntries.length) return body
+  const meta = Object.fromEntries(metaEntries)
+  return `${body}\n\n${SECTION_META_START}${JSON.stringify(meta)}${SECTION_META_END}`
 }
 
 export function buildInitialWorkingDocument(

@@ -58,6 +58,13 @@ export type OrbSavedOutputSaveExtras = {
   working_document?: string
   people_to_confirm?: unknown[]
   dictate_source_note?: string
+  original_transcript?: string
+  redacted_transcript?: string
+  working_transcript?: string
+  transcript_privacy_mode?: string
+  adult_review_status?: string
+  safer_draft?: string
+  dictate_save_packet?: Record<string, unknown>
 }
 
 export type OrbSavedOutputRerunKind =
@@ -195,6 +202,13 @@ export function buildSavedOutputMetadata(
   if (extras.working_document?.trim()) metadata.working_document = extras.working_document.trim()
   if (extras.people_to_confirm?.length) metadata.people_to_confirm = extras.people_to_confirm
   if (extras.dictate_source_note) metadata.dictate_source_note = extras.dictate_source_note
+  if (extras.original_transcript?.trim()) metadata.original_transcript = extras.original_transcript.trim()
+  if (extras.redacted_transcript?.trim()) metadata.redacted_transcript = extras.redacted_transcript.trim()
+  if (extras.working_transcript?.trim()) metadata.working_transcript = extras.working_transcript.trim()
+  if (extras.transcript_privacy_mode) metadata.transcript_privacy_mode = extras.transcript_privacy_mode
+  if (extras.adult_review_status) metadata.adult_review_status = extras.adult_review_status
+  if (extras.safer_draft?.trim()) metadata.safer_draft = extras.safer_draft.trim()
+  if (extras.dictate_save_packet) metadata.dictate_save_packet = extras.dictate_save_packet
   return metadata
 }
 

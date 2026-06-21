@@ -21,11 +21,26 @@ export type OrbDictatePersonConfirmItem = {
   label: string
   status: OrbDictatePersonConfirmStatus
   detail?: string
+  basis?: string
+  confidence?: 'suggested' | 'needs_confirmation' | 'confirmed'
+  sourceSnippet?: string
   speakerConfidence?: 'suggested' | 'needs_confirmation' | 'unclear'
   transcriptQuality?: 'clear' | 'mixed' | 'unclear'
   role?: OrbDictatePersonRole
   confirmed?: boolean
   removed?: boolean
+}
+
+export function createManualPersonConfirmItem(label = 'Person'): OrbDictatePersonConfirmItem {
+  const key = label.toLowerCase().replace(/[^\w]/g, '_') || 'manual'
+  return {
+    id: `manual_${key}_${Date.now()}`,
+    label,
+    status: 'needs_confirmation',
+    basis: 'Added manually by adult',
+    confidence: 'needs_confirmation',
+    role: 'unknown'
+  }
 }
 
 function statusLabel(status: OrbDictatePersonConfirmStatus): string {
@@ -117,6 +132,9 @@ function detectPresentParticipants(
       id: `present_${name.toLowerCase().replace(/[^\w]/g, '_')}`,
       label: name,
       status: 'may_include' as const,
+      basis: 'Mentioned as present in transcript',
+      confidence: 'suggested' as const,
+      sourceSnippet: text.match(new RegExp(`[^.!?]*${name}[^.!?]*`, 'i'))?.[0]?.trim(),
       detail: hereForSupervision
         ? 'May be present — supervision participant — needs adult confirmation'
         : 'May be present — needs adult confirmation',
@@ -154,6 +172,9 @@ function detectNamedSpeakers(text: string): OrbDictatePersonConfirmItem[] {
       id: `name_${key.replace(/[^\w]/g, '_')}`,
       label,
       status: 'needs_confirmation',
+      basis: 'Introduced in transcript',
+      confidence: 'needs_confirmation',
+      sourceSnippet: match?.[0]?.trim(),
       detail: managerMentioned
         ? 'Appears to be speaker — Registered Manager — needs adult confirmation'
         : 'Appears to be speaker — needs adult confirmation',

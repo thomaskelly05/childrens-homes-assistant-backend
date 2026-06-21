@@ -311,6 +311,12 @@ class OrbDictateEditRequest(BaseModel):
     quality_checks: dict[str, Any] = Field(default_factory=dict)
     preserve_facts: bool = True
     standalone_boundary: bool = True
+    template_id: str | None = Field(default=None, max_length=80)
+    transcript_privacy_mode: str | None = Field(default="internal_working", max_length=40)
+    working_transcript: str | None = Field(default=None, max_length=120_000)
+    original_transcript: str | None = Field(default=None, max_length=120_000)
+    redacted_transcript: str | None = Field(default=None, max_length=120_000)
+    people_to_confirm: list[dict[str, Any]] = Field(default_factory=list)
 
 
 class OrbDictateEditResponse(BaseModel):

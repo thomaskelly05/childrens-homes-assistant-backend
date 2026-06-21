@@ -6,6 +6,7 @@ import {
   ORB_DICTATE_SPEAKER_DETECTION_NOTE
 } from '@/lib/orb/dictate/orb-dictate-capture-copy'
 import {
+  createManualPersonConfirmItem,
   orbDictatePersonConfirmStatusLabel,
   type OrbDictatePersonConfirmItem,
   type OrbDictatePersonRole
@@ -32,11 +33,16 @@ export function OrbDictatePeopleConfirm({
   onItemsChange?: (items: OrbDictatePersonConfirmItem[]) => void
 }) {
   const visibleItems = items.filter((item) => !item.removed)
-  if (!visibleItems.length) return null
+  if (!visibleItems.length && !interactive) return null
 
   const updateItem = (id: string, patch: Partial<OrbDictatePersonConfirmItem>) => {
     if (!onItemsChange) return
     onItemsChange(items.map((item) => (item.id === id ? { ...item, ...patch } : item)))
+  }
+
+  const addPerson = () => {
+    if (!onItemsChange) return
+    onItemsChange([...items, createManualPersonConfirmItem('Person')])
   }
 
   return (
@@ -98,6 +104,16 @@ export function OrbDictatePeopleConfirm({
             {item.detail ? (
               <p className="mt-1 text-[11px] leading-relaxed text-[var(--orb-muted)]">{item.detail}</p>
             ) : null}
+            {item.basis ? (
+              <p className="mt-1 text-[10px] text-[var(--orb-muted)]" data-orb-dictate-people-basis>
+                Basis: {item.basis}
+              </p>
+            ) : null}
+            {item.sourceSnippet ? (
+              <p className="mt-1 text-[10px] italic text-[var(--orb-muted)]" data-orb-dictate-people-source-snippet>
+                “{item.sourceSnippet}”
+              </p>
+            ) : null}
 
             {interactive && onItemsChange ? (
               <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -123,7 +139,7 @@ export function OrbDictatePeopleConfirm({
                   disabled={item.confirmed}
                   className="orb-dictate-secondary-action rounded-lg border border-[var(--orb-primary)]/30 bg-[var(--orb-primary-soft)] px-2.5 py-1 text-xs font-semibold text-[var(--orb-foreground)] disabled:opacity-60"
                   data-orb-dictate-people-confirm-confirm
-                  onClick={() => updateItem(item.id, { confirmed: true, status: 'appears_to_include' })}
+                  onClick={() => updateItem(item.id, { confirmed: true, status: 'appears_to_include', confidence: 'confirmed' })}
                 >
                   Confirm
                 </button>
@@ -140,6 +156,16 @@ export function OrbDictatePeopleConfirm({
           </li>
         ))}
       </ul>
+      {interactive && onItemsChange ? (
+        <button
+          type="button"
+          className="mt-3 rounded-lg border border-[var(--orb-line)]/30 bg-white px-3 py-1.5 text-xs font-medium text-[var(--orb-foreground)]"
+          data-orb-dictate-people-add
+          onClick={addPerson}
+        >
+          Add person
+        </button>
+      ) : null}
     </section>
   )
 }

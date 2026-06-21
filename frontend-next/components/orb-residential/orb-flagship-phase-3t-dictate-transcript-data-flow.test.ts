@@ -50,7 +50,7 @@ describe('ORB Residential Phase 3T Dictate transcript data flow', () => {
     assert.match(studio, /reshapeWorkingDocument/)
     assert.match(studio, /reviewInputText/)
     assert.match(studio, /input_text: reviewInputText/)
-    assert.match(studio, /editOrbDictateDocument/)
+    assert.match(studio, /applyDictateIntelligenceEdit/)
     assert.match(client, /team meeting|introduction|introduce/)
   })
 

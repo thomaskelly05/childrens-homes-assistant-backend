@@ -15,6 +15,41 @@ import {
   type OrbDictateWorkingDocumentSection
 } from '@/lib/orb/dictate/orb-dictate-working-document'
 
+function SectionSourceEvidence({ section }: { section: OrbDictateWorkingDocumentSection }) {
+  const [open, setOpen] = useState(false)
+  const isMissing = section.sourceType === 'missing_guidance' || isOrbDictateSectionPlaceholder(section.body)
+  if (isMissing) {
+    return (
+      <p className="mt-1 text-[11px] text-slate-500" data-orb-dictate-section-source-missing>
+        Not captured in transcript
+      </p>
+    )
+  }
+  if (!section.sourceSnippets?.length && section.sourceType !== 'transcript') return null
+  return (
+    <details
+      className="mt-1"
+      open={open}
+      onToggle={(event) => setOpen((event.target as HTMLDetailsElement).open)}
+      data-orb-dictate-section-source
+    >
+      <summary className="cursor-pointer text-[11px] font-medium text-sky-800 hover:underline">
+        View source
+      </summary>
+      <div className="mt-1 rounded-md border border-slate-200 bg-slate-50 px-2 py-1.5 text-[11px] leading-relaxed text-slate-600">
+        <p className="font-medium text-slate-700">
+          {section.sourceType === 'adult_instruction' ? 'Based on adult instruction' : 'Based on captured transcript'}
+        </p>
+        {section.sourceSnippets?.map((snippet) => (
+          <p key={snippet} className="mt-1 whitespace-pre-wrap">
+            {snippet}
+          </p>
+        ))}
+      </div>
+    </details>
+  )
+}
+
 export type OrbDictateWorkingDocumentProps = {
   documentMarkdown: string
   onDocumentChange: (markdown: string) => void
@@ -111,6 +146,7 @@ export function OrbDictateWorkingDocument({
                   aria-label={section.heading}
                 />
               </div>
+              <SectionSourceEvidence section={section} />
             </div>
           )
         })

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Loader2 } from 'lucide-react'
 
 import { OrbDictateBrainPanel } from '@/components/orb/dictate/OrbDictateBrainPanel'
+import { OrbDictateMissingInfoReview } from '@/components/orb/dictate/OrbDictateMissingInfoReview'
 import { OrbDictateCaptureStation } from '@/components/orb/dictate/OrbDictateCaptureStation'
 import { OrbDictateDocumentWorkspace } from '@/components/orb/dictate/OrbDictateDocumentWorkspace'
 import { OrbDictateProcessingStages } from '@/components/orb/dictate/OrbDictateProcessingStages'
@@ -40,10 +41,15 @@ import {
 } from '@/lib/orb/dictate/orb-dictate-brain-analysis'
 import {
   analyzeOrbDictateSession,
-  buildLocalDictateEditFallback,
-  editOrbDictateDocument,
   type GenerateOrbDictatePayload
 } from '@/lib/orb/dictate/orb-dictate-client'
+import {
+  applyDictateIntelligenceEdit,
+  buildDictateIntelligenceRequest,
+  ORB_DICTATE_INTELLIGENCE_SLOW_MESSAGE,
+  requestWorkingDocumentFromOrb,
+  type OrbDictateIntelligenceRequest
+} from '@/lib/orb/dictate/orb-dictate-intelligence'
 import type { OrbDictateEditMode } from '@/lib/orb/dictate/orb-dictate-studio-actions'
 import {
   recordTypeIdForStudioTemplate,
@@ -60,6 +66,7 @@ import {
   workingDocumentTypeLabel
 } from '@/lib/orb/dictate/orb-dictate-working-document'
 import type { OrbDictateRecordingMedia } from '@/lib/orb/dictate/orb-dictate-recording-media'
+import type { OrbDictateTranscriptBundle } from '@/lib/orb/dictate/orb-dictate-transcript-privacy'
 import type { OrbDictatePersonConfirmItem } from '@/lib/orb/dictate/orb-dictate-people-identification'
 import {
   OrbDictateGovernanceConsent,
@@ -127,6 +134,7 @@ export type OrbDictateStudioWorkspaceProps = {
   processingStage?: OrbDictateProcessingStageId | null
   peopleToConfirm?: OrbDictatePersonConfirmItem[]
   onPeopleToConfirmChange?: (items: OrbDictatePersonConfirmItem[]) => void
+  transcriptBundle?: OrbDictateTranscriptBundle | null
 }
 
 type CaptureMethod = 'speak' | 'paste' | 'upload'
@@ -205,8 +213,40 @@ export function OrbDictateStudioWorkspace(props: OrbDictateStudioWorkspaceProps)
   const [hasAdultEditedWorkingDocument, setHasAdultEditedWorkingDocument] = useState(false)
   const lastAutoDocumentRef = useRef('')
   const [applyingEdit, setApplyingEdit] = useState(false)
+  const [structuringDocument, setStructuringDocument] = useState(false)
+  const [structuringSlow, setStructuringSlow] = useState(false)
   const [editNote, setEditNote] = useState<string | null>(null)
   const [applyStatus, setApplyStatus] = useState<string | null>(null)
+
+  const intelligenceRequest = useMemo(
+    (): OrbDictateIntelligenceRequest =>
+      buildDictateIntelligenceRequest({
+        templateId: props.selectedTemplateId,
+        transcript: props.transcript,
+        transcriptBundle: props.transcriptBundle,
+        workingDocument,
+        adultInstruction: orbInstruction,
+        peopleToConfirm: props.peopleToConfirm,
+        recordingMedia: props.recordingMedia,
+        contentSource: props.contentSource,
+        noteType: props.noteType,
+        segments: props.segments,
+        participants: props.participants
+      }),
+    [
+      orbInstruction,
+      props.contentSource,
+      props.noteType,
+      props.participants,
+      props.peopleToConfirm,
+      props.recordingMedia,
+      props.segments,
+      props.selectedTemplateId,
+      props.transcript,
+      props.transcriptBundle,
+      workingDocument
+    ]
+  )
 
   const committedText = props.transcript.trim()
   const isProcessingCapture = Boolean(props.processingStage) && props.processingStage !== 'ready'
@@ -252,22 +292,69 @@ export function OrbDictateStudioWorkspace(props: OrbDictateStudioWorkspaceProps)
     if (!committedText) return
     if (hasAdultEditedWorkingDocument) return
 
-    const next = buildInitialWorkingDocument(committedText, props.selectedTemplateId)
+    const localNext = buildInitialWorkingDocument(committedText, props.selectedTemplateId)
     const shouldReplace =
       !workingDocument.trim() ||
       isWorkingDocumentUnmappedScaffold(workingDocument) ||
-      next !== lastAutoDocumentRef.current
+      workingDocument === lastAutoDocumentRef.current
 
     if (shouldReplace) {
-      lastAutoDocumentRef.current = next
-      setWorkingDocument(next)
+      lastAutoDocumentRef.current = localNext
+      setWorkingDocument(localNext)
+    }
+
+    let cancelled = false
+    let slowTimer: number | undefined
+    setStructuringDocument(true)
+    setStructuringSlow(false)
+    slowTimer = window.setTimeout(() => {
+      if (!cancelled) setStructuringSlow(true)
+    }, 4000)
+
+    void requestWorkingDocumentFromOrb({
+      ...buildDictateIntelligenceRequest({
+        templateId: props.selectedTemplateId,
+        transcript: props.transcript,
+        transcriptBundle: props.transcriptBundle,
+        peopleToConfirm: props.peopleToConfirm,
+        recordingMedia: props.recordingMedia,
+        contentSource: props.contentSource,
+        noteType: props.noteType,
+        segments: props.segments,
+        participants: props.participants
+      })
+    }).then((result) => {
+      if (cancelled || hasAdultEditedWorkingDocument) return
+      if (result.workingDocument.trim()) {
+        lastAutoDocumentRef.current = result.workingDocument
+        setWorkingDocument(result.workingDocument)
+      }
+      if (result.usedFallback && result.offlineNote) setEditNote(result.offlineNote)
+    }).finally(() => {
+      if (!cancelled) {
+        setStructuringDocument(false)
+        setStructuringSlow(false)
+      }
+      if (slowTimer) window.clearTimeout(slowTimer)
+    })
+
+    return () => {
+      cancelled = true
+      if (slowTimer) window.clearTimeout(slowTimer)
     }
   }, [
     committedText,
     hasAdultEditedWorkingDocument,
     hasCommittedCapture,
+    props.contentSource,
+    props.noteType,
+    props.participants,
+    props.peopleToConfirm,
+    props.recordingMedia,
+    props.segments,
     props.selectedTemplateId,
-    workingDocument
+    props.transcript,
+    props.transcriptBundle
   ])
 
   const handleWorkingDocumentChange = useCallback((value: string) => {
@@ -346,9 +433,8 @@ export function OrbDictateStudioWorkspace(props: OrbDictateStudioWorkspaceProps)
 
   const applyOrbChange = useCallback(
     async (instruction: string) => {
-      const transcript = props.transcript.trim()
       const resolvedInstruction = instruction.trim() || DEFAULT_IMPROVE_INSTRUCTION
-      if (!transcript && !workingDocumentText) return
+      if (!props.transcript.trim() && !workingDocumentText) return
 
       const templateHint = templateIdFromInstruction(resolvedInstruction)
       if (templateHint) {
@@ -356,50 +442,34 @@ export function OrbDictateStudioWorkspace(props: OrbDictateStudioWorkspaceProps)
         if (template) props.onTemplateChange(template)
       }
 
-      const effectiveTemplateId = templateHint || props.selectedTemplateId
-      const docBase =
-        workingDocument.trim() || buildInitialWorkingDocument(transcript, effectiveTemplateId)
-      const contextualInstruction = [
-        resolvedInstruction,
-        `Working document type: ${workingDocumentTypeLabel(effectiveTemplateId)}`,
-        transcript ? `Original transcript for reference:\n${transcript}` : ''
-      ]
-        .filter(Boolean)
-        .join('\n\n')
-
       setApplyingEdit(true)
       setEditNote(null)
       setApplyStatus(null)
       const mode = editModeForInstruction(resolvedInstruction)
+      const request = buildDictateIntelligenceRequest({
+        templateId: templateHint || props.selectedTemplateId,
+        transcript: props.transcript,
+        transcriptBundle: props.transcriptBundle,
+        workingDocument,
+        adultInstruction: resolvedInstruction,
+        peopleToConfirm: props.peopleToConfirm,
+        recordingMedia: props.recordingMedia,
+        contentSource: props.contentSource,
+        noteType: props.noteType,
+        segments: props.segments,
+        participants: props.participants
+      })
+
       try {
-        const result = await editOrbDictateDocument({
-          document_text: docBase,
-          instruction: contextualInstruction,
-          note_type: props.noteType,
-          mode
-        })
-        setWorkingDocument(result.revised_text)
+        const result = await applyDictateIntelligenceEdit(request, resolvedInstruction, mode)
+        setWorkingDocument(result.workingDocument)
         setApplyStatus(ORB_DICTATE_WORKING_DOC_UPDATED)
-      } catch {
-        const fallback = buildLocalDictateEditFallback(
-          docBase,
-          mode ?? 'professional_language',
-          contextualInstruction
-        )
-        const nextDoc =
-          committedText.length < 80
-            ? reshapeWorkingDocument(fallback.revised_text, effectiveTemplateId, transcript)
-            : fallback.revised_text
-        setWorkingDocument(nextDoc)
-        setEditNote(ORB_DICTATE_EDIT_OFFLINE_NOTE)
-        setApplyStatus(
-          committedText.length < 80 ? ORB_DICTATE_WORKING_DOC_PARTIAL : ORB_DICTATE_WORKING_DOC_UPDATED
-        )
+        if (result.usedFallback && result.offlineNote) setEditNote(result.offlineNote)
       } finally {
         setApplyingEdit(false)
       }
     },
-    [committedText.length, props, workingDocument, workingDocumentText]
+    [props, workingDocument, workingDocumentText]
   )
 
   const handleCreateRoughCapture = useCallback(() => {
@@ -632,6 +702,8 @@ export function OrbDictateStudioWorkspace(props: OrbDictateStudioWorkspaceProps)
             onSave={props.onSave}
             onOpenInWrite={props.onFinalise}
             applyingEdit={applyingEdit}
+            structuringDocument={structuringDocument}
+            structuringSlow={structuringSlow}
             editNote={editNote}
             applyStatus={applyStatus}
             interactive={stage === 'transcript-workspace'}
@@ -656,8 +728,18 @@ export function OrbDictateStudioWorkspace(props: OrbDictateStudioWorkspaceProps)
             </p>
 
             <div className="mt-4">
+              <OrbDictateMissingInfoReview request={intelligenceRequest} />
+            </div>
+
+            <div className="mt-4">
               <OrbDictateReviewChecklist analysis={brainAnalysis} hasTranscript={Boolean(reviewInputText)} loading={brainLoading} />
             </div>
+
+            {structuringSlow ? (
+              <p className="mt-3 text-xs text-[var(--orb-muted)]" data-orb-dictate-intelligence-slow>
+                {ORB_DICTATE_INTELLIGENCE_SLOW_MESSAGE}
+              </p>
+            ) : null}
 
             {!hasDraft ? (
               <div className="mt-4 flex flex-wrap gap-2">
