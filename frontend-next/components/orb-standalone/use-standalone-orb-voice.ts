@@ -66,6 +66,7 @@ import {
   patchOrbVoiceTurnTrace,
   resetOrbVoiceTurnTrace
 } from '@/lib/orb/voice/orb-voice-turn-trace'
+import { ORB_VOICE_LIVE_SPOKEN_CAP } from '@/lib/orb/voice/orb-voice-low-latency'
 import { requestOrbPremiumTts, requestOrbVoiceSpeak } from '@/lib/orb/voice/orb-voice-client'
 import { requestOrbVoiceProviderSpeak } from '@/lib/orb/voice/orb-voice-provider'
 import {
@@ -253,6 +254,9 @@ export function useStandaloneOrbVoice() {
   const [wakeStatus, setWakeStatus] = useState<StandaloneOrbWakeStatus>('off')
   const [voiceSessionPaused, setVoiceSessionPaused] = useState(false)
   const [voiceCaptureState, setVoiceCaptureState] = useState<OrbVoiceCaptureState>('idle')
+  const [voicePreparing, setVoicePreparing] = useState(false)
+  const [voicePreparingLongWait, setVoicePreparingLongWait] = useState(false)
+  const [voicePreparingSkipAvailable, setVoicePreparingSkipAvailable] = useState(false)
 
   const recognitionRef = useRef<BrowserSpeechRecognition | null>(null)
   const recognitionModeRef = useRef<'active' | 'continuous' | null>(null)
@@ -262,6 +266,9 @@ export function useStandaloneOrbVoice() {
   const speakChunksRef = useRef<string[]>([])
   const speakChunkIndexRef = useRef(0)
   const activeAudioRef = useRef<HTMLAudioElement | null>(null)
+  const skipVoicePlaybackRef = useRef(false)
+  const voicePrepareTimerRef = useRef<number | null>(null)
+  const voicePrepareLongTimerRef = useRef<number | null>(null)
   const transcriptRef = useRef('')
   const settingsRef = useRef(settings)
   const phaseRef = useRef<StandaloneOrbVoicePhase>('idle')
@@ -418,8 +425,20 @@ export function useStandaloneOrbVoice() {
 
   const cancelSpeaking = useCallback(() => {
     speakGenerationRef.current += 1
+    skipVoicePlaybackRef.current = true
     speakChunksRef.current = []
     speakChunkIndexRef.current = 0
+    if (voicePrepareTimerRef.current) {
+      window.clearTimeout(voicePrepareTimerRef.current)
+      voicePrepareTimerRef.current = null
+    }
+    if (voicePrepareLongTimerRef.current) {
+      window.clearTimeout(voicePrepareLongTimerRef.current)
+      voicePrepareLongTimerRef.current = null
+    }
+    setVoicePreparing(false)
+    setVoicePreparingLongWait(false)
+    setVoicePreparingSkipAvailable(false)
     if (activeAudioRef.current) {
       try {
         activeAudioRef.current.pause()
@@ -438,6 +457,26 @@ export function useStandaloneOrbVoice() {
     setVoiceCaptureState('idle')
     setPhase('idle')
   }, [])
+
+  const clearVoicePreparing = useCallback(() => {
+    if (voicePrepareTimerRef.current) {
+      window.clearTimeout(voicePrepareTimerRef.current)
+      voicePrepareTimerRef.current = null
+    }
+    if (voicePrepareLongTimerRef.current) {
+      window.clearTimeout(voicePrepareLongTimerRef.current)
+      voicePrepareLongTimerRef.current = null
+    }
+    setVoicePreparing(false)
+    setVoicePreparingLongWait(false)
+    setVoicePreparingSkipAvailable(false)
+  }, [])
+
+  const continueWithoutVoice = useCallback(() => {
+    skipVoicePlaybackRef.current = true
+    cancelSpeaking()
+    onSpeakEndRef.current?.()
+  }, [cancelSpeaking])
 
   const runSpeech = useCallback(
     async (
@@ -458,19 +497,42 @@ export function useStandaloneOrbVoice() {
         setSpeechPlaybackError(ORB_VOICE_TTS_TOO_SHORT_MESSAGE)
         return
       }
+      skipVoicePlaybackRef.current = false
+      clearVoicePreparing()
       startSafariKeepAlive()
       setSpeechPlaybackError(null)
-      setSpeaking(true)
-      setVoiceCaptureState('speaking')
-      setPhase('speaking')
+      setVoicePreparing(options?.source === 'orb_turn')
+      setVoicePreparingLongWait(false)
+      setVoicePreparingSkipAvailable(false)
+      if (options?.source === 'orb_turn') {
+        voicePrepareTimerRef.current = window.setTimeout(() => {
+          setVoicePreparingLongWait(true)
+        }, 2500)
+        voicePrepareLongTimerRef.current = window.setTimeout(() => {
+          setVoicePreparingSkipAvailable(true)
+        }, 6000)
+      }
+      setSpeaking(false)
+      setVoiceCaptureState('idle')
+      setPhase('idle')
 
       const profileId = activeSpeakProfileId(settingsRef.current)
-      patchOrbVoiceTurnTrace({ ttsRequestSent: true, ttsTextChars: trimmed.length })
+      const cappedText = trimmed.slice(0, ORB_VOICE_LIVE_SPOKEN_CAP)
+      patchOrbVoiceTurnTrace({ ttsRequestSent: true, ttsTextChars: cappedText.length })
+      if (skipVoicePlaybackRef.current) {
+        clearVoicePreparing()
+        return
+      }
       const premium = await requestOrbPremiumTts({
-        text: trimmed,
+        text: cappedText,
         voice_id: profileId,
-        voice_style: 'calm_therapeutic'
+        voice_style: 'calm_therapeutic',
+        context: options?.source === 'orb_turn' ? 'live_voice' : 'summary'
       })
+      if (skipVoicePlaybackRef.current) {
+        clearVoicePreparing()
+        return
+      }
       if (premium.ok) {
         if (premium.fallbackUsed) {
           setSpeechPlaybackError(ORB_VOICE_KATHERINE_UNAVAILABLE)
@@ -484,6 +546,10 @@ export function useStandaloneOrbVoice() {
           const url = URL.createObjectURL(premium.blob)
           const audio = new Audio(url)
           activeAudioRef.current = audio
+          clearVoicePreparing()
+          setSpeaking(true)
+          setVoiceCaptureState('speaking')
+          setPhase('speaking')
           audio.onplay = () => {
             patchOrbVoiceTurnTrace({ audioPlayStarted: true })
           }
@@ -491,6 +557,7 @@ export function useStandaloneOrbVoice() {
             URL.revokeObjectURL(url)
             activeAudioRef.current = null
             stopSafariKeepAlive()
+            clearVoicePreparing()
             setSpeaking(false)
             setVoiceCaptureState('idle')
             setPhase('idle')
@@ -503,6 +570,7 @@ export function useStandaloneOrbVoice() {
             URL.revokeObjectURL(url)
             activeAudioRef.current = null
             stopSafariKeepAlive()
+            clearVoicePreparing()
             setSpeaking(false)
             setSpeechPlaybackError(ORB_VOICE_TTS_SPOKEN_FALLBACK)
             setVoiceCaptureState('idle')
@@ -518,13 +586,18 @@ export function useStandaloneOrbVoice() {
 
       if (typeof window === 'undefined' || !window.speechSynthesis) {
         patchOrbVoiceBrowserDiagnostics({ ttsStatus: 'skipped_no_synthesis', ttsProvider: null })
+        clearVoicePreparing()
         setSpeaking(false)
         setVoiceCaptureState('idle')
         setPhase('idle')
         return
       }
 
-      const utterance = new SpeechSynthesisUtterance(text)
+      const utterance = new SpeechSynthesisUtterance(cappedText)
+      clearVoicePreparing()
+      setSpeaking(true)
+      setVoiceCaptureState('speaking')
+      setPhase('speaking')
       utterance.rate = settingsRef.current.speechRate
       utterance.pitch = settingsRef.current.speechPitch
       utterance.voice = resolveBrowserVoice(
@@ -534,6 +607,7 @@ export function useStandaloneOrbVoice() {
       ) ?? null
       utterance.onend = () => {
         stopSafariKeepAlive()
+        clearVoicePreparing()
         setSpeaking(false)
         setVoiceCaptureState('idle')
         setPhase('idle')
@@ -542,6 +616,7 @@ export function useStandaloneOrbVoice() {
       }
       utterance.onerror = () => {
         stopSafariKeepAlive()
+        clearVoicePreparing()
         setSpeaking(false)
         setSpeechPlaybackError(ORB_VOICE_TTS_SPOKEN_FALLBACK)
         setVoiceCaptureState('idle')
@@ -554,7 +629,7 @@ export function useStandaloneOrbVoice() {
         ttsProvider: 'browser_speech_synthesis'
       })
     },
-    [startSafariKeepAlive, stopSafariKeepAlive]
+    [clearVoicePreparing, continueWithoutVoice, startSafariKeepAlive, stopSafariKeepAlive]
   )
 
   const speak = useCallback(
@@ -1197,6 +1272,11 @@ export function useStandaloneOrbVoice() {
     cancelSpeaking,
     speak,
     speakAloud,
+    clearVoicePreparing,
+    continueWithoutVoice,
+    voicePreparing,
+    voicePreparingLongWait,
+    voicePreparingSkipAvailable,
     clearTranscript: () => {
       setTranscript('')
       setInterimTranscript('')

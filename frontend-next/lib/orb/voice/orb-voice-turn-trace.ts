@@ -22,6 +22,7 @@ export type OrbVoiceTurnTrace = {
   orbTurnCommitted: boolean
   ttsRequestSent: boolean
   ttsTextChars: number | null
+  spokenCapApplied: boolean | null
   ttsProvider: string | null
   ttsVoiceName: string | null
   ttsFallback: boolean | null
@@ -47,6 +48,7 @@ export function beginOrbVoiceTurnTrace(turnId: string): OrbVoiceTurnTrace {
     orbTurnCommitted: false,
     ttsRequestSent: false,
     ttsTextChars: null,
+    spokenCapApplied: null,
     ttsProvider: null,
     ttsVoiceName: null,
     ttsFallback: null,

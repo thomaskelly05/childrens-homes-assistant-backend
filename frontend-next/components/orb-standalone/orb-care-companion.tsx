@@ -251,6 +251,10 @@ import {
 import { resolveOrbVoiceSpeechDecision } from '@/lib/orb/voice/orb-voice-speech-policy'
 import { isOrbVoiceAssistantTurnReady } from '@/lib/orb/voice/orb-voice-runtime-wiring'
 import {
+  shouldOpenOrbResidentialLandingFresh,
+  stripOrbResidentialStationParam
+} from '@/lib/orb/orb-residential-home-default'
+import {
   buildProfileContextBlock,
   clearStandaloneCustomProjects,
   clearStandaloneLocalState,
@@ -745,6 +749,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
   const { resolvedTheme, appearanceMode, setAppearanceMode } = useOrbAppearance()
   const isMobileViewport = useOrbMobileViewport()
   const searchParams = useSearchParams()
+  const router = useRouter()
   const initialQuery = mounted ? searchParams.get('q')?.trim() || '' : ''
   const recordingContext = mounted && searchParams.get('context') === 'recording'
   const queryMode = mounted ? modeFromQuery(searchParams.get('mode')) : undefined
@@ -765,6 +770,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [activePanel, setActivePanel] = useState<OrbStandalonePanel>(null)
+  const [voiceSessionChatId, setVoiceSessionChatId] = useState<string | null>(null)
   const [dictateImportTranscript, setDictateImportTranscript] = useState<string | undefined>()
   const [dictateImportNoteType, setDictateImportNoteType] = useState<OrbDictateNoteType | undefined>()
   const [dictateImportStudio, setDictateImportStudio] = useState(false)
@@ -861,12 +867,26 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
     if (residentialSurface) {
       next = ensureResidentialWorkspaceProjects(next)
       setSidebarCollapsed(readOrbSidebarCollapsed())
+      if (shouldOpenOrbResidentialLandingFresh(searchParams)) {
+        const homeChat = createStandaloneChat(next.activeProjectId, 'Ask ORB', {
+          temporary: true,
+          title: 'ORB'
+        })
+        next = {
+          ...next,
+          activeChatId: homeChat.id,
+          chats: [homeChat, ...next.chats]
+        }
+        setActivePanel(null)
+        const stripped = stripOrbResidentialStationParam(searchParams)
+        if (stripped) router.replace(stripped, { scroll: false })
+      }
     }
     setWorkspace(next)
     setA11yPrefs(loadStandaloneOrbAccessibility())
     setAdultProfile(readAdultProfile())
     workspaceHydratedRef.current = true
-  }, [residentialSurface])
+  }, [residentialSurface, router, searchParams])
 
   useEffect(() => {
     if (!residentialSurface || !workspaceHydratedRef.current) return
@@ -936,8 +956,10 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
   }, [workspace.activeChatId, workspace.chats])
 
   const voiceStationAssistant = useMemo(() => {
-    if (activePanel !== 'orb_voice' || !activeChat || pending) return null
-    const messages = activeChat.messages
+    if (activePanel !== 'orb_voice' || !voiceSessionChatId || pending) return null
+    const chat = workspace.chats.find((entry) => entry.id === voiceSessionChatId) ?? null
+    if (!chat) return null
+    const messages = chat.messages
     const lastUserIdx = messages.reduce((acc, message, index) => (message.role === 'user' ? index : acc), -1)
     if (lastUserIdx < 0) return null
     const afterUser = messages.slice(lastUserIdx + 1)
@@ -964,7 +986,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
       userHint: lastUser?.content,
       contextUsed: lastAssistant.contextUsed
     }
-  }, [activePanel, activeChat, pending])
+  }, [activePanel, voiceSessionChatId, workspace.chats, pending])
 
   const messages = activeChat?.messages ?? []
   const visibleMessages = useMemo(() => dedupeOrbMessages(messages), [messages])
@@ -985,7 +1007,9 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
 
   const closeAllPanels = useCallback(() => {
     setActivePanel(null)
-  }, [])
+    const stripped = stripOrbResidentialStationParam(searchParams)
+    if (stripped) router.replace(stripped, { scroll: false })
+  }, [router, searchParams])
 
   const closePanel = closeAllPanels
 
@@ -1025,7 +1049,22 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
   const openPermissionsPanel = useCallback(() => openPanel('permissions'), [openPanel])
   const openIntelligenceMap = useCallback(() => openPanel('intelligence_map'), [openPanel])
   const openBillingPanel = useCallback(() => openSettingsPanel('account_billing'), [openSettingsPanel])
-  const openOrbVoicePanel = useCallback(() => openPanel('orb_voice'), [openPanel])
+  const openOrbVoicePanel = useCallback(() => {
+    voice.cancelSpeaking()
+    voice.cancelListening()
+    voice.clearVoicePreparing?.()
+    const chat = createStandaloneChat(workspace.activeProjectId, 'Ask ORB', {
+      temporary: true,
+      title: 'ORB Voice'
+    })
+    setVoiceSessionChatId(chat.id)
+    setWorkspace((current) => ({
+      ...current,
+      activeChatId: chat.id,
+      chats: [chat, ...current.chats]
+    }))
+    openPanel('orb_voice')
+  }, [openPanel, voice, workspace.activeProjectId])
   const openOrbDictatePanel = useCallback(
     (opts?: {
       transcript?: string
@@ -2565,6 +2604,14 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
   }, [convergenceNotice])
 
   useEffect(() => {
+    if (activePanel === 'orb_voice') return
+    setVoiceSessionChatId(null)
+    voice.cancelSpeaking()
+    voice.cancelListening()
+    voice.clearVoicePreparing?.()
+  }, [activePanel, voice])
+
+  useEffect(() => {
     if (!residentialSurface || !mounted) return
     const stationParam = searchParams.get('station')
     const station = (
@@ -2574,7 +2621,9 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
           ? 'orb_write'
           : stationParam === 'communicate'
             ? 'orb_communicate'
-            : stationParam
+            : stationParam === 'voice'
+              ? 'orb_voice'
+              : stationParam
     ) as OrbResidentialStationId | null
     const lens = searchParams.get('lens')
     if (station) openResidentialStation(station)

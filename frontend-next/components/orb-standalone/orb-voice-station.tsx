@@ -63,6 +63,12 @@ import {
   resolveOrbVoiceTurnTtsText,
   resolveOrbVoiceLaunchUiCaptureState
 } from '@/lib/orb/voice/orb-voice-runtime-wiring'
+import { resetOrbVoiceLiveSession } from '@/lib/orb/voice/orb-voice-fresh-session'
+import {
+  ORB_VOICE_CONTINUE_WITHOUT_VOICE,
+  ORB_VOICE_TTS_PREPARING,
+  ORB_VOICE_TTS_VOICE_LOADING
+} from '@/lib/orb/voice/orb-voice-low-latency'
 import {
   beginOrbVoiceTurnTrace,
   logOrbVoiceTurnTrace,
@@ -847,7 +853,11 @@ export function OrbVoiceStation({
         ? orbVoiceStartProgressLine(voiceStartProgressStage)
         : orbVoiceUiStatusLine(uiState))
   const detailLine =
-    voice.speechPlaybackError && displayedOrbReply
+    voice.voicePreparing && displayedOrbReply && !voice.speaking
+      ? voice.voicePreparingLongWait
+        ? ORB_VOICE_TTS_VOICE_LOADING
+        : ORB_VOICE_TTS_PREPARING
+      : voice.speechPlaybackError && displayedOrbReply
       ? voice.speechPlaybackError
       : voiceInputStatusLabel(voiceInputStatus) ||
         (slowThinkingVisible && pending
@@ -1014,27 +1024,24 @@ export function OrbVoiceStation({
   }, [realtimeState])
 
   const resetSession = useCallback(() => {
-    lastSyncedReplyKeyRef.current = null
-    lastAutoSpokenKeyRef.current = null
-    spokenTurnGuardRef.current.reset()
-    captureControllerRef.current?.dispose()
-    resetOrbVoiceTurnTrace()
+    resetOrbVoiceLiveSession({
+      voice,
+      refs: {
+        lastSyncedReplyKeyRef,
+        lastAutoSpokenKeyRef,
+        spokenTurnGuardRef,
+        autoSubmitTimerRef,
+        noSpeechTimerRef,
+        captureControllerRef,
+        statusFetchedRef
+      }
+    })
     setConversationActive(false)
-    resetOrbVoiceLatencyMarks()
-    clearActiveOrbRealtimeVoiceClient()
     setVoiceStartStage('idle')
     setSessionEnded(false)
     setConversationPaused(false)
     setSlowThinkingVisible(false)
     setVoiceInputStatus('idle')
-    if (autoSubmitTimerRef.current) {
-      window.clearTimeout(autoSubmitTimerRef.current)
-      autoSubmitTimerRef.current = null
-    }
-    if (noSpeechTimerRef.current) {
-      window.clearTimeout(noSpeechTimerRef.current)
-      noSpeechTimerRef.current = null
-    }
     setRealtimeSessionConnected(false)
     setVoiceTransportLive(false)
     setWebrtcFailed(false)
@@ -1048,10 +1055,6 @@ export function OrbVoiceStation({
     setBrowserStartStage('idle')
     setNoTranscriptFallback(false)
     setIsFinalizingRecording(false)
-    voice.cancelListening()
-    voice.cancelSpeaking()
-    voice.clearTranscript()
-    voice.endVoiceSession()
   }, [voice])
 
   const appendUserTurn = useCallback(
@@ -1272,6 +1275,7 @@ export function OrbVoiceStation({
     patchOrbVoiceTurnTrace({
       replyChars: reply.length,
       ttsTextChars: tts.spokenText.length,
+      spokenCapApplied: tts.spokenCapApplied,
       sessionState
     })
     voice.speakAloud(tts.spokenText, undefined, { source: 'orb_turn' })
@@ -1319,8 +1323,15 @@ export function OrbVoiceStation({
     })
   }, [assistantReply, assistantReplyKey, pending, voice.settings.voiceMode])
 
+  const prevVoiceOpenRef = useRef(false)
   useEffect(() => {
-    if (!open) resetSession()
+    if (open && !prevVoiceOpenRef.current) {
+      resetSession()
+    }
+    if (!open && prevVoiceOpenRef.current) {
+      resetSession()
+    }
+    prevVoiceOpenRef.current = open
   }, [open, resetSession])
 
   useEffect(() => {
@@ -2115,6 +2126,16 @@ export function OrbVoiceStation({
                 />
               ) : voiceSessionLive ? (
                 <div className="flex flex-col items-center gap-2">
+                  {voice.voicePreparingSkipAvailable && voice.voicePreparing ? (
+                    <button
+                      type="button"
+                      onClick={() => voice.continueWithoutVoice?.()}
+                      className="inline-flex items-center gap-2 rounded-full border border-[var(--orb-line)] px-4 py-2 text-sm font-medium text-[var(--orb-muted)]"
+                      data-orb-voice-continue-without-voice
+                    >
+                      {ORB_VOICE_CONTINUE_WITHOUT_VOICE}
+                    </button>
+                  ) : null}
                   {realtimeState === 'speaking' || voice.speaking ? (
                     <button
                       type="button"

@@ -81,6 +81,7 @@ async def orb_voice_tts(
             voice_id=payload.voice_id,
             voice_style=payload.voice_style,
             audio_format=payload.format or "mp3",
+            context=payload.context,
         )
     except ORBVoiceTTSError as exc:
         logger.info(

@@ -1,11 +1,9 @@
 /**
- * Phase 4G — Voice runtime wiring invariants (reply → TTS, state guards).
+ * Phase 4G/4H — Voice runtime wiring invariants (reply → TTS, state guards).
  */
 
-import { stripMarkdownForSpeech } from '../orb-speech-text.ts'
-
-import { stripForSpokenReply } from './orb-voice-human-conversation.ts'
 import type { OrbVoiceSpeechDecision } from './orb-voice-speech-policy.ts'
+import { resolveOrbVoiceSpokenText } from './orb-voice-low-latency.ts'
 
 export const ORB_VOICE_MIN_SPOKEN_CHARS = 8
 export const ORB_VOICE_MIN_TTS_TEXT_CHARS = ORB_VOICE_MIN_SPOKEN_CHARS
@@ -17,6 +15,7 @@ export type OrbVoiceTurnTtsText = {
   spokenText: string
   visibleText: string
   source: 'full_reply' | 'summary' | 'none'
+  spokenCapApplied: boolean
 }
 
 export function shouldInvokeOrbVoiceTts(text: string): boolean {
@@ -28,25 +27,13 @@ export function resolveOrbVoiceTurnTtsText(input: {
   speechDecision?: OrbVoiceSpeechDecision | null
   promptTier?: string | null
 }): OrbVoiceTurnTtsText {
-  const visibleText = input.visibleReply.trim()
-  if (!visibleText) {
-    return { spokenText: '', visibleText: '', source: 'none' }
+  const resolved = resolveOrbVoiceSpokenText(input)
+  return {
+    spokenText: resolved.spokenText,
+    visibleText: resolved.visibleText,
+    source: resolved.source,
+    spokenCapApplied: resolved.spokenCapApplied
   }
-
-  const voiceFast = (input.promptTier || '').trim().toLowerCase() === 'voice_fast'
-  if (voiceFast) {
-    const spokenText = stripForSpokenReply(stripMarkdownForSpeech(visibleText)).slice(0, 500)
-    return { spokenText, visibleText, source: 'full_reply' }
-  }
-
-  const summary = input.speechDecision?.spokenText?.trim()
-  if (summary) {
-    const spokenText = stripForSpokenReply(stripMarkdownForSpeech(summary))
-    return { spokenText, visibleText, source: 'summary' }
-  }
-
-  const spokenText = stripForSpokenReply(stripMarkdownForSpeech(visibleText)).slice(0, 500)
-  return { spokenText, visibleText, source: 'full_reply' }
 }
 
 export function resolveOrbVoiceLaunchUiCaptureState(input: {

@@ -104,9 +104,12 @@ export function OrbVoiceSettingsPanel({
       <div className="space-y-4 p-4" data-orb-voice-settings-panel>
         <p className="text-[11px] leading-5 text-[var(--orb-muted)]" data-orb-voice-settings-help>
           {selectedProfile.id === 'katherine'
-            ? runtimeStatus?.katherineConfigured
+            ? runtimeStatus?.katherineReady
               ? 'Katherine ready'
-              : 'Katherine unavailable — fallback voice active'
+              : runtimeStatus?.ttsProviderForced === 'openai' ||
+                  runtimeStatus?.forcedProvider === 'openai'
+                ? 'Katherine unavailable — OpenAI fallback is active.'
+                : 'Katherine unavailable — fallback voice active'
             : 'Choose how ORB sounds. ORB uses your device&apos;s best matching voice when premium voice is unavailable.'}
         </p>
 

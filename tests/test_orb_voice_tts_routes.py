@@ -208,3 +208,33 @@ def test_tts_logs_do_not_include_full_text(tts_client, monkeypatch, caplog):
     assert response.status_code == 200
     combined_logs = "\n".join(record.getMessage() for record in caplog.records)
     assert spoken not in combined_logs
+
+
+def test_tts_status_reports_katherine_ready_when_elevenlabs_configured(tts_client, monkeypatch):
+    monkeypatch.setenv("ORB_TTS_ENABLED", "true")
+    monkeypatch.delenv("ORB_TTS_PROVIDER", raising=False)
+    monkeypatch.setenv("ELEVENLABS_API_KEY", "test-eleven-key")
+    monkeypatch.setenv("ELEVENLABS_VOICE_ID", "voice-abc123")
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+    response = tts_client.get("/orb/voice/tts/status")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["katherineReady"] is True
+    assert body["ttsProviderEffective"] == "elevenlabs"
+    assert body.get("fallbackReason") is None
+    assert "voice-abc123" not in response.text
+
+
+def test_tts_status_reports_forced_openai_fallback_reason(tts_client, monkeypatch):
+    monkeypatch.setenv("ORB_TTS_ENABLED", "true")
+    monkeypatch.setenv("ORB_TTS_PROVIDER", "openai")
+    monkeypatch.setenv("ELEVENLABS_API_KEY", "test-eleven-key")
+    monkeypatch.setenv("ELEVENLABS_VOICE_ID", "voice-abc123")
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+    response = tts_client.get("/orb/voice/tts/status")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["katherineReady"] is False
+    assert body["ttsProviderForced"] == "openai"
+    assert body["fallbackReason"] == "provider_forced_openai"
+

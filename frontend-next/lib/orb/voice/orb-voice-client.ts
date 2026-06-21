@@ -183,6 +183,7 @@ export async function requestOrbPremiumTts(options: {
   text: string
   voice_id?: string
   voice_style?: string
+  context?: 'live_voice' | 'summary' | 'replay' | string
 }): Promise<
   | { ok: true; blob: Blob; provider?: string; voiceName?: string; fallbackUsed?: boolean }
   | { ok: false; status: number }
@@ -191,11 +192,15 @@ export async function requestOrbPremiumTts(options: {
   const { patchOrbVoiceBrowserDiagnostics } = await import('@/lib/orb/voice/orb-voice-browser-diagnostics')
   patchOrbVoiceBrowserDiagnostics({ ttsRequestAttempted: true, ttsAttempted: true })
   try {
-    const trimmed = options.text.trim().slice(0, 500)
+    const trimmed = options.text.trim().slice(0, 320)
     if (!trimmed) {
       patchOrbVoiceBrowserDiagnostics({ ttsStatus: 'skipped_empty', ttsProvider: null })
       return { ok: false, status: 400 }
     }
+    const context =
+      options.context === 'live_voice' || options.context === 'summary' || options.context === 'replay'
+        ? options.context
+        : 'live_voice'
     const response = await authFetchResponse('/orb/voice/tts', {
       method: 'POST',
       headers: {
@@ -207,7 +212,7 @@ export async function requestOrbPremiumTts(options: {
         voice_id: options.voice_id ?? 'orb_british_female',
         voice_style: options.voice_style ?? 'calm_therapeutic',
         format: 'mp3',
-        context: 'orb_residential_web_voice_reply'
+        context
       })
     })
     if (!response.ok) {

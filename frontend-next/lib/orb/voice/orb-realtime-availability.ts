@@ -11,8 +11,12 @@ import type { OrbRealtimeVoiceState } from './orb-realtime-voice-client'
 export type OrbVoiceRuntimeDiagnostics = {
   ttsEnabled: boolean
   preferredProvider: 'elevenlabs' | 'openai' | 'browser' | 'text_only' | string
+  ttsProviderEffective?: 'elevenlabs' | 'openai' | 'browser' | 'text_only' | string
+  ttsProviderForced?: string | null
   elevenLabsConfigured: boolean
   katherineConfigured: boolean
+  katherineReady?: boolean
+  fallbackReason?: string | null
   forcedProvider?: string | null
   serverTranscriptionAvailable: boolean
 }
@@ -113,8 +117,14 @@ export async function fetchOrbVoiceRealtimeStatus(): Promise<OrbRealtimeVoiceSta
       ttsEnabled: Boolean(data.ttsEnabled),
       preferredProvider:
         typeof data.preferredProvider === 'string' ? data.preferredProvider : 'text_only',
+      ttsProviderEffective:
+        typeof data.ttsProviderEffective === 'string' ? data.ttsProviderEffective : undefined,
+      ttsProviderForced:
+        typeof data.ttsProviderForced === 'string' ? data.ttsProviderForced : null,
       elevenLabsConfigured: Boolean(data.elevenLabsConfigured),
       katherineConfigured: Boolean(data.katherineConfigured),
+      katherineReady: Boolean(data.katherineReady),
+      fallbackReason: typeof data.fallbackReason === 'string' ? data.fallbackReason : null,
       forcedProvider: typeof data.forcedProvider === 'string' ? data.forcedProvider : null,
       serverTranscriptionAvailable: Boolean(data.serverTranscriptionAvailable)
     }

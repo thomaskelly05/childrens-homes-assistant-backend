@@ -28,7 +28,10 @@ ORB_TTS_FALLBACK_PROVIDER = (os.environ.get("ORB_TTS_FALLBACK_PROVIDER") or "").
 ORB_TTS_DEFAULT_VOICE_ID = (os.environ.get("ORB_TTS_DEFAULT_VOICE_ID") or "orb_british_female").strip()
 ORB_TTS_DEFAULT_STYLE = (os.environ.get("ORB_TTS_DEFAULT_STYLE") or "calm_therapeutic").strip().lower()
 ORB_TTS_MODEL = (os.environ.get("ORB_TTS_MODEL") or "tts-1-hd").strip()
+ORB_TTS_LIVE_MODEL = (os.environ.get("ORB_TTS_LIVE_MODEL") or "tts-1").strip()
+ORB_TTS_LATENCY_MODE = (os.environ.get("ORB_TTS_LATENCY_MODE") or "live").strip().lower()
 ORB_TTS_MAX_TEXT_CHARS = int(os.environ.get("ORB_TTS_MAX_TEXT_CHARS") or "500")
+ORB_TTS_LIVE_MAX_TEXT_CHARS = int(os.environ.get("ORB_TTS_LIVE_MAX_TEXT_CHARS") or "320")
 ORB_TTS_TIMEOUT_SECONDS = float(os.environ.get("ORB_TTS_TIMEOUT_SECONDS") or "20")
 ELEVENLABS_MODEL_ID = (os.environ.get("ELEVENLABS_MODEL_ID") or "eleven_multilingual_v2").strip()
 ELEVENLABS_OUTPUT_FORMAT = (os.environ.get("ELEVENLABS_OUTPUT_FORMAT") or "mp3_44100_128").strip()
@@ -97,8 +100,15 @@ class ORBVoiceTTSResult:
     fallback_used: bool = False
 
 
+def _normalise_provider_preference(value: str | None) -> str | None:
+    explicit = (value or "").strip().lower()
+    if not explicit or explicit in {"auto", "default"}:
+        return None
+    return explicit
+
+
 def _resolve_primary_tts_provider() -> str:
-    explicit = (os.environ.get("ORB_TTS_PROVIDER") or "").strip().lower()
+    explicit = _normalise_provider_preference(os.environ.get("ORB_TTS_PROVIDER"))
     if explicit:
         return explicit
     if _provider_configured("elevenlabs"):
@@ -143,8 +153,8 @@ def _fallback_provider() -> str | None:
 def _elevenlabs_unavailable_reason() -> str | None:
     if not ORB_TTS_ENABLED:
         return "tts_disabled"
-    explicit = (os.environ.get("ORB_TTS_PROVIDER") or "").strip().lower()
-    if explicit and explicit not in {"elevenlabs", ""}:
+    explicit = _normalise_provider_preference(os.environ.get("ORB_TTS_PROVIDER"))
+    if explicit and explicit not in {"elevenlabs"}:
         if explicit == "openai":
             return "provider_forced_openai"
         return f"provider_forced_{explicit}"
@@ -153,6 +163,24 @@ def _elevenlabs_unavailable_reason() -> str | None:
     if not (os.environ.get("ELEVENLABS_VOICE_ID") or "").strip():
         return "missing_voice_id"
     return None
+
+
+def _resolve_openai_tts_model(context: str | None = None) -> str:
+    ctx = (context or "").strip().lower()
+    if ctx in {"summary", "replay"}:
+        return ORB_TTS_MODEL
+    if ORB_TTS_LATENCY_MODE == "quality":
+        return ORB_TTS_MODEL
+    if ctx in {"live_voice", "orb_residential_web_voice_reply"}:
+        return ORB_TTS_LIVE_MODEL
+    return ORB_TTS_LIVE_MODEL
+
+
+def _resolve_tts_text_cap(context: str | None = None) -> int:
+    ctx = (context or "").strip().lower()
+    if ctx in {"live_voice", "orb_residential_web_voice_reply"}:
+        return ORB_TTS_LIVE_MAX_TEXT_CHARS
+    return ORB_TTS_MAX_TEXT_CHARS
 
 
 def _display_voice_name(voice_id: str, provider: str, *, fallback_used: bool) -> str:
@@ -167,22 +195,36 @@ def voice_runtime_tts_status_payload() -> dict[str, Any]:
     primary = _resolve_primary_tts_provider()
     eleven_configured = _provider_configured("elevenlabs")
     unavailable = _elevenlabs_unavailable_reason()
-    forced = (os.environ.get("ORB_TTS_PROVIDER") or "").strip().lower() or None
+    raw_forced = (os.environ.get("ORB_TTS_PROVIDER") or "").strip().lower() or None
+    forced = (
+        raw_forced
+        if raw_forced and raw_forced not in {"", "auto", "default", "elevenlabs"}
+        else None
+    )
     if eleven_configured and not unavailable:
         preferred: str = "elevenlabs"
+        effective = "elevenlabs"
     elif _provider_configured("openai"):
         preferred = "openai"
+        effective = "openai"
     elif ORB_TTS_ENABLED:
         preferred = "browser"
+        effective = "browser"
     else:
         preferred = "text_only"
+        effective = "text_only"
+    katherine_ready = eleven_configured and unavailable is None and primary == "elevenlabs"
     return {
         "ttsEnabled": ORB_TTS_ENABLED and (
             _provider_configured(primary) or bool(_fallback_provider())
         ),
         "preferredProvider": preferred,
+        "ttsProviderEffective": effective,
+        "ttsProviderForced": forced,
         "elevenLabsConfigured": eleven_configured,
         "katherineConfigured": eleven_configured,
+        "katherineReady": katherine_ready,
+        "fallbackReason": unavailable,
         "forcedProvider": forced,
     }
 
@@ -262,6 +304,7 @@ def generate_speech(
     voice_style: str,
     audio_format: str,
     provider: str,
+    context: str | None = None,
 ) -> ORBVoiceTTSResult:
     if provider == "openai":
         return _synthesize_openai_sync(
@@ -269,6 +312,7 @@ def generate_speech(
             voice_id=voice_id,
             voice_style=voice_style,
             audio_format=audio_format,
+            context=context,
         )
     if provider == "elevenlabs":
         return _synthesize_elevenlabs_sync(
@@ -280,7 +324,14 @@ def generate_speech(
     raise ORBVoiceTTSError("tts_provider_unsupported", "TTS provider is not supported.", 503)
 
 
-def _synthesize_openai_sync(*, text: str, voice_id: str, voice_style: str, audio_format: str) -> ORBVoiceTTSResult:
+def _synthesize_openai_sync(
+    *,
+    text: str,
+    voice_id: str,
+    voice_style: str,
+    audio_format: str,
+    context: str | None = None,
+) -> ORBVoiceTTSResult:
     api_key = (os.environ.get("OPENAI_API_KEY") or "").strip()
     if not api_key:
         raise ORBVoiceTTSError("tts_unconfigured", "Premium ORB Voice is not configured.", 503)
@@ -296,10 +347,11 @@ def _synthesize_openai_sync(*, text: str, voice_id: str, voice_style: str, audio
     response_format = "aac" if audio_format == "m4a" else "mp3"
 
     started = time.perf_counter()
+    model = _resolve_openai_tts_model(context)
     client = OpenAI(api_key=api_key, timeout=ORB_TTS_TIMEOUT_SECONDS)
     try:
         response = client.audio.speech.create(
-            model=ORB_TTS_MODEL,
+            model=model,
             voice=provider_voice,
             input=text,
             response_format=response_format,
@@ -307,10 +359,11 @@ def _synthesize_openai_sync(*, text: str, voice_id: str, voice_style: str, audio
         )
     except Exception as exc:
         logger.warning(
-            "orb_voice_tts_openai_failed error=%s latency_ms=%s text_len=%s",
+            "orb_voice_tts_openai_failed error=%s latency_ms=%s text_len=%s model=%s",
             exc.__class__.__name__,
             int((time.perf_counter() - started) * 1000),
             len(text),
+            model,
         )
         raise ORBVoiceTTSError("tts_provider_failed", "Premium ORB Voice could not be generated.", 503) from exc
 
@@ -319,10 +372,11 @@ def _synthesize_openai_sync(*, text: str, voice_id: str, voice_style: str, audio
         raise ORBVoiceTTSError("tts_empty_audio", "Premium ORB Voice returned no audio.", 503)
 
     logger.info(
-        "orb_voice_tts_openai_ok latency_ms=%s text_len=%s bytes=%s",
+        "orb_voice_tts_openai_ok latency_ms=%s text_len=%s bytes=%s model=%s",
         int((time.perf_counter() - started) * 1000),
         len(text),
         len(audio_bytes),
+        model,
     )
 
     return ORBVoiceTTSResult(
@@ -408,6 +462,7 @@ async def synthesize_spoken_reply(
     voice_id: str | None = None,
     voice_style: str | None = None,
     audio_format: str = "mp3",
+    context: str | None = None,
 ) -> ORBVoiceTTSResult:
     if not is_configured():
         raise ORBVoiceTTSError("tts_disabled", "Premium ORB Voice is not enabled.", 503)
@@ -415,10 +470,11 @@ async def synthesize_spoken_reply(
     cleaned = _normalise_text(text)
     if not cleaned:
         raise ORBVoiceTTSError("empty_text", "Spoken text is required.", 400)
-    if len(cleaned) > ORB_TTS_MAX_TEXT_CHARS:
+    max_chars = _resolve_tts_text_cap(context)
+    if len(cleaned) > max_chars:
         raise ORBVoiceTTSError(
             "text_too_long",
-            f"Spoken text must be {ORB_TTS_MAX_TEXT_CHARS} characters or fewer.",
+            f"Spoken text must be {max_chars} characters or fewer.",
             400,
         )
 
@@ -452,6 +508,7 @@ async def synthesize_spoken_reply(
                     voice_style=resolved_style,
                     audio_format=resolved_format,
                     provider=provider,
+                    context=context,
                 ),
                 timeout=ORB_TTS_TIMEOUT_SECONDS,
             )
@@ -469,12 +526,13 @@ async def synthesize_spoken_reply(
                 fallback_used=index > 0,
             )
             logger.info(
-                "orb_voice_turn_trace stage=tts provider=%s voice=%s fallback=%s text_chars=%s voice_id=%s",
+                "orb_voice_turn_trace stage=tts provider=%s voice=%s fallback=%s text_chars=%s voice_id=%s spoken_cap=%s",
                 final.provider,
                 final.voice_name,
                 final.fallback_used,
                 len(cleaned),
                 final.voice_id,
+                len(cleaned) < len(_normalise_text(text)),
             )
             return final
         except ORBVoiceTTSError as exc:

@@ -29,7 +29,7 @@ describe('ORB Voice runtime wiring (Phase 4G)', () => {
     assert.match(ORB_VOICE_TTS_TOO_SHORT_MESSAGE, /shown as text/)
   })
 
-  it('voice_fast replies use full ORB text for TTS', () => {
+  it('voice_fast replies cap spoken text for live TTS', () => {
     const reply =
       'I can help you think that through. First, make sure everyone is safe and your home’s procedure has been followed. What happened just before the young person became upset?'
     const resolved = resolveOrbVoiceTurnTtsText({
@@ -37,7 +37,7 @@ describe('ORB Voice runtime wiring (Phase 4G)', () => {
       promptTier: 'voice_fast'
     })
     assert.equal(resolved.source, 'full_reply')
-    assert.ok(resolved.spokenText.length > 40)
+    assert.ok(resolved.spokenText.length <= 320)
     assert.ok(resolved.spokenText.includes('think that through'))
   })
 
