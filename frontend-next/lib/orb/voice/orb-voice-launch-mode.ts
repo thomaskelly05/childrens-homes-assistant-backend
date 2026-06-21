@@ -9,6 +9,7 @@ import {
 } from '../orb-residential-safety-copy.ts'
 import { orbResidentialStation } from '../orb-residential-stations.ts'
 import {
+  ORB_VOICE_BUTTON_LISTENING,
   ORB_VOICE_BUTTON_SPEAKING,
   ORB_VOICE_BUTTON_START,
   ORB_VOICE_BUTTON_STOP_LISTENING,
@@ -155,10 +156,13 @@ export function orbVoiceLaunchHeadline(
 
 export function orbVoiceLaunchPrimaryLabel(
   state: OrbVoiceLaunchUiState,
-  options?: { pushToTalk?: boolean; listening?: boolean }
+  options?: { pushToTalk?: boolean; listening?: boolean; continuousConversation?: boolean }
 ): string {
   if (state === 'unavailable' || state === 'error') return 'Use Dictate or type'
-  if (state === 'listening') return ORB_VOICE_BUTTON_STOP_LISTENING
+  if (state === 'listening') {
+    if (options?.continuousConversation && options?.pushToTalk === false) return ORB_VOICE_BUTTON_LISTENING
+    return ORB_VOICE_BUTTON_STOP_LISTENING
+  }
   if (state === 'transcribing') return ORB_VOICE_BUTTON_THINKING
   if (state === 'thinking') return ORB_VOICE_BUTTON_THINKING
   if (state === 'speaking') return ORB_VOICE_BUTTON_SPEAKING

@@ -36,7 +36,13 @@ export type OrbVoiceSessionMemory = {
 }
 
 export function resolveTtsVoiceProfileId(profileId: string): string {
-  if (profileId === ORB_KATHERINE_VOICE_ID) return 'orb_british_female'
+  if (
+    profileId === ORB_KATHERINE_VOICE_ID ||
+    profileId === 'orb_british_female' ||
+    profileId === 'orb_british_female_warm'
+  ) {
+    return ORB_KATHERINE_VOICE_ID
+  }
   return profileId
 }
 

@@ -437,3 +437,39 @@ def test_orb_voice_transcription_logs_exclude_transcript_content(monkeypatch, ca
         if path and os.path.exists(path):
             os.remove(path)
 
+
+def test_orb_voice_respond_returns_fast_reply(voice_client, monkeypatch):
+    def fake_generate(**_kwargs):
+        return {
+            "reply": "I can help you think that through. What happened just before things escalated?",
+            "mode": "conversational",
+            "safetyBoundaryApplied": False,
+            "prompt_tier": "voice_fast",
+            "embeddings_used": False,
+            "retrieval_used": False,
+        }
+
+    monkeypatch.setattr(
+        "routers.orb_voice_residential_routes.generate_voice_response",
+        fake_generate,
+    )
+    response = voice_client.post(
+        "/orb/voice/respond",
+        json={"message": "I need to reflect on an incident after contact."},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert "think that through" in data["reply"]
+    assert data["context_used"]["prompt_tier"] == "voice_fast"
+    assert data["context_used"]["embeddings_used"] is False
+
+
+def test_orb_voice_tts_prefers_elevenlabs_when_configured(monkeypatch):
+    from services.orb_voice_tts_service import _resolve_primary_tts_provider
+
+    monkeypatch.delenv("ORB_TTS_PROVIDER", raising=False)
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+    monkeypatch.setenv("ELEVENLABS_API_KEY", "test-eleven")
+    monkeypatch.setenv("ELEVENLABS_VOICE_ID", "voice-abc")
+    assert _resolve_primary_tts_provider() == "elevenlabs"
+

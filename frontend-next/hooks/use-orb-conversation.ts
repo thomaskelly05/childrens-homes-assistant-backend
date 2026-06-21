@@ -3,6 +3,7 @@
 import { useCallback, useRef, useState } from 'react'
 
 import { buildOrbBrainConversationRequest, askOrbBrain } from '@/lib/orb/orb-brain-router'
+import { requestOrbVoiceRespond } from '@/lib/orb/voice/orb-voice-respond-client'
 import {
   queryStandaloneOrbConversation,
   type StandaloneOrbConversationRequest,
@@ -26,6 +27,12 @@ export type ExecuteOrbConversationTransportOptions = {
   runPostFallback: () => Promise<StandaloneOrbConversationResponse>
   refreshSession?: () => Promise<void>
   internalRetry?: boolean
+  /** Lightweight voice brain payload for /orb/voice/respond */
+  voiceRespond?: {
+    mode?: string
+    history?: Array<{ role: 'user' | 'assistant'; content: string }>
+    session_memory?: Record<string, unknown>
+  }
 }
 
 export type OrbConversationTransportResult = {
@@ -48,8 +55,47 @@ export async function executeOrbConversationTransport(
     stream,
     runPostFallback,
     refreshSession,
-    internalRetry
+    internalRetry,
+    voiceRespond
   } = options
+
+  if (context?.source === 'voice' && voiceRespond) {
+    const voiceResult = await requestOrbVoiceRespond(
+      {
+        message: request.message,
+        mode: voiceRespond.mode,
+        history: voiceRespond.history,
+        session_memory: voiceRespond.session_memory as never
+      },
+      signal
+    )
+    const answer = voiceResult.reply
+    if (stream?.onToken) {
+      await streamTextIntoView({
+        text: answer,
+        signal,
+        onChunk: (partial) => {
+          stream.onToken?.('', partial)
+        }
+      })
+    }
+    return {
+      response: {
+        ok: true,
+        standalone: true,
+        os_records_accessed: false,
+        answer,
+        context_used: {
+          prompt_tier: voiceResult.prompt_tier || 'voice_fast',
+          voice_fast_path: true,
+          embeddings_used: voiceResult.embeddings_used ?? false,
+          retrieval_used: voiceResult.retrieval_used ?? false
+        } as StandaloneOrbConversationResponse['context_used']
+      },
+      usedPostFallback: false,
+      streamInterrupted: false
+    }
+  }
 
   let response: StandaloneOrbConversationResponse | null = null
   let streamFailedBeforeToken = false

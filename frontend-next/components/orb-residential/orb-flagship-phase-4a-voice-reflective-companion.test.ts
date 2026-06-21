@@ -30,8 +30,8 @@ function read(relativePath: string) {
 }
 
 describe('ORB Residential Phase 4A Voice reflective companion', () => {
-  it('build version marker is phase-4d-voice-server-transcription-repair', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-4d-voice-server-transcription-repair')
+  it('build version marker is phase-4e-voice-free-flowing-katherine', () => {
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-4e-voice-free-flowing-katherine')
     const layout = read('app/orb/layout.tsx')
     assert.match(layout, /orb-residential-shell\.css/)
     assert.deepEqual(ORB_LAYOUT_CSS_FILES, ['app/orb/orb-residential-shell.css'])
@@ -56,7 +56,7 @@ describe('ORB Residential Phase 4A Voice reflective companion', () => {
     const uiState = read('lib/orb/voice/orb-voice-ui-state.ts')
     const launch = read('lib/orb/voice/orb-voice-launch-mode.ts')
     const live = read('components/orb-standalone/orb-voice-live-panel.tsx')
-    assert.equal(ORB_VOICE_BUTTON_START, 'Start talking')
+    assert.equal(ORB_VOICE_BUTTON_START, 'Start conversation')
     assert.equal(ORB_VOICE_BUTTON_STOP_LISTENING, 'Stop')
     assert.match(uiState, /ORB_VOICE_BUTTON_START/)
     assert.match(launch, /ORB_VOICE_BUTTON_STOP_LISTENING/)
@@ -111,7 +111,7 @@ describe('ORB Residential Phase 4A Voice reflective companion', () => {
   it('single shell and no compliance guarantee language', () => {
     const shell = read('app/orb/orb-residential-shell.css')
     const station = read('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(shell, /phase-4d-voice-server-transcription-repair/)
+    assert.match(shell, /phase-4e-voice-free-flowing-katherine/)
     assert.doesNotMatch(station, /Ofsted approved|compliance guarantee|finalised record/i)
     assert.doesNotMatch(station, /ORB makes safeguarding decisions/i)
   })

@@ -44,18 +44,23 @@ import {
 } from '@/lib/orb/voice/orb-voice-reflective-copy'
 import { buildOrbVoiceHandoffPayload } from '@/lib/orb/voice/orb-voice-handoff'
 import {
-  buildVoiceBrainMessage,
   buildVoiceSessionMemory,
   ORB_VOICE_SLOW_THINKING_MESSAGE,
   stripForSpokenReply
 } from '@/lib/orb/voice/orb-voice-human-conversation'
-import { ORB_VOICE_BUTTON_STOP_ORB } from '@/lib/orb/voice/orb-voice-reflective-copy'
+import {
+  buildOrbVoiceRespondHistory,
+  isOrbVoiceFreeFlowMode,
+  shouldAutoResumeListening
+} from '@/lib/orb/voice/orb-voice-free-flowing-conversation'
+import { ORB_VOICE_BUTTON_PAUSE, ORB_VOICE_BUTTON_STOP_ORB } from '@/lib/orb/voice/orb-voice-reflective-copy'
 import {
   commitVoiceTranscriptOrBlock,
   ORB_VOICE_AUTO_SUBMIT_DEBOUNCE_MS,
   ORB_VOICE_LISTENING_SPEAK_NOW,
   ORB_VOICE_NO_SPEECH_DETECTED,
   ORB_VOICE_NO_SPEECH_TIMEOUT_MS,
+  ORB_VOICE_SLOW_RESPONSE_NOTICE_MS,
   ORB_VOICE_SPEECH_UNSUPPORTED,
   ORB_VOICE_TTS_SPOKEN_FALLBACK,
   ORB_VOICE_TYPE_INSTEAD_LABEL,
@@ -256,7 +261,18 @@ export function OrbVoiceStation({
   open: boolean
   onClose: () => void
   voice: VoiceApi
-  onSendToOrb: (text: string) => void | Promise<void>
+  onSendToOrb: (
+    text: string,
+    options?: {
+      source?: 'voice' | 'chat'
+      voiceRespond?: {
+        message: string
+        mode?: string
+        history?: Array<{ role: 'user' | 'assistant'; content: string }>
+        session_memory?: Record<string, unknown>
+      }
+    }
+  ) => void | Promise<void>
   pending?: boolean
   assistantReply?: string | null
   assistantReplyKey?: string | null
@@ -614,21 +630,21 @@ export function OrbVoiceStation({
     (text: string) => {
       const trimmed = text.trim()
       if (!trimmed) return
-      const framed = buildVoiceBrainMessage(trimmed, {
-        reflectiveModeId,
-        spokenAnswerLength: voice.settings.spokenAnswerLength,
-        voiceProfileId: voice.settings.voicePresetId,
-        sessionMemory: voiceSessionMemory
+      const history = buildOrbVoiceRespondHistory([
+        ...conversationTurns,
+        { role: 'user', text: trimmed }
+      ])
+      void onSendToOrb(trimmed, {
+        source: 'voice',
+        voiceRespond: {
+          message: trimmed,
+          mode: reflectiveModeId,
+          history,
+          session_memory: voiceSessionMemory as Record<string, unknown>
+        }
       })
-      void onSendToOrb(framed)
     },
-    [
-      onSendToOrb,
-      reflectiveModeId,
-      voice.settings.spokenAnswerLength,
-      voice.settings.voicePresetId,
-      voiceSessionMemory
-    ]
+    [conversationTurns, onSendToOrb, reflectiveModeId, voiceSessionMemory]
   )
 
   const handleCopySummary = useCallback(() => {
@@ -998,6 +1014,7 @@ export function OrbVoiceStation({
         autoSubmitTimerRef.current = null
       }
       setVoiceInputStatus('transcribing')
+      const freeFlow = isOrbVoiceFreeFlowMode(voice.settings)
       try {
         const stoppedText = voiceEngine.isListening ? await voiceEngine.stop() : committed.text
         const toSend = commitVoiceTranscriptOrBlock(stoppedText || committed.text)
@@ -1007,31 +1024,54 @@ export function OrbVoiceStation({
           return
         }
         appendUserTurn(toSend.text)
-        setBrowserStartStage('idle')
-        await voiceEngine.reset()
-        setVoiceInputStatus('idle')
+        if (freeFlow) {
+          setBrowserStartStage('active')
+          setVoiceInputStatus('idle')
+          voice.clearTranscript()
+        } else {
+          setBrowserStartStage('idle')
+          await voiceEngine.reset()
+          setVoiceInputStatus('idle')
+        }
       } finally {
         submitInFlightRef.current = false
       }
     },
-    [appendUserTurn, voiceEngine]
+    [appendUserTurn, voice, voiceEngine, voice.settings]
   )
 
   submitCapturedTranscriptRef.current = submitCapturedTranscript
 
   const scheduleAutoSubmit = useCallback(
     (text: string) => {
-      if (voice.settings.pushToTalk) return
+      if (voice.settings.pushToTalk || voice.settings.autoSubmitOnPause === false) return
       if (autoSubmitTimerRef.current) window.clearTimeout(autoSubmitTimerRef.current)
       autoSubmitTimerRef.current = window.setTimeout(() => {
         void submitCapturedTranscriptRef.current(text)
       }, ORB_VOICE_AUTO_SUBMIT_DEBOUNCE_MS)
     },
-    [voice.settings.pushToTalk]
+    [voice.settings.autoSubmitOnPause, voice.settings.pushToTalk]
   )
+
+  const resumeListeningAfterTurn = useCallback(async () => {
+    if (!shouldAutoResumeListening(voice.settings)) return
+    if (conversationPaused || sessionEnded || pending || voice.speaking) return
+    if (submitInFlightRef.current) return
+    voice.clearTranscript()
+    const started = await voiceEngine.start()
+    if (started) {
+      setBrowserStartStage('active')
+      setVoiceInputStatus('listening')
+      setVoiceStartError(null)
+    }
+  }, [conversationPaused, pending, sessionEnded, voice, voiceEngine, voice.settings])
 
   onPartialTranscriptRef.current = () => {
     setVoiceInputStatus('speech_detected')
+    if (autoSubmitTimerRef.current) {
+      window.clearTimeout(autoSubmitTimerRef.current)
+      autoSubmitTimerRef.current = null
+    }
     if (noSpeechTimerRef.current) {
       window.clearTimeout(noSpeechTimerRef.current)
       noSpeechTimerRef.current = null
@@ -1061,9 +1101,15 @@ export function OrbVoiceStation({
       setSlowThinkingVisible(false)
       return
     }
-    const timer = window.setTimeout(() => setSlowThinkingVisible(true), 8000)
+    const timer = window.setTimeout(() => setSlowThinkingVisible(true), ORB_VOICE_SLOW_RESPONSE_NOTICE_MS)
     return () => window.clearTimeout(timer)
   }, [pending])
+
+  useEffect(() => {
+    return voice.registerAfterSpeakListener(() => {
+      void resumeListeningAfterTurn()
+    })
+  }, [resumeListeningAfterTurn, voice])
 
   /** No-speech timeout while listening in conversational mode. */
   useEffect(() => {
@@ -1441,6 +1487,9 @@ export function OrbVoiceStation({
       detail: { listening: voiceEngine.isListening, engineState: voiceEngine.state }
     })
     if (voiceEngine.isListening || (usesServerTranscription && voiceEngine.state === 'capturing')) {
+      if (isOrbVoiceFreeFlowMode(voice.settings) && !voice.settings.pushToTalk) {
+        return
+      }
       setNoTranscriptFallback(false)
       setIsFinalizingRecording(true)
       const text = await voiceEngine.stop()
@@ -1668,6 +1717,9 @@ export function OrbVoiceStation({
     setConversationPaused(true)
     voice.pauseVoiceSession()
     voice.cancelSpeaking()
+    void voiceEngine.stop().then(() => voiceEngine.reset())
+    setBrowserStartStage('idle')
+    setVoiceInputStatus('idle')
   }
 
   function handleResetConversation() {
@@ -1917,9 +1969,11 @@ export function OrbVoiceStation({
                   launchUiState={launchUiState}
                   serverTranscription={usesServerTranscription}
                   pushToTalk={voice.settings.pushToTalk}
+                  continuousConversation={voice.settings.continuousConversation}
                   transcript={browserTranscriptText}
                   primaryDisabled={primaryDisabled}
                   onPrimary={() => void handleBrowserVoicePrimary()}
+                  onPause={handlePauseConversation}
                   onSendToOrb={(text) => sendToOrbWithVoiceContext(text)}
                   onSendToDictate={onOpenDictate ? (text) => onOpenDictate(text) : undefined}
                   onCopyTranscript={handleCopyTranscript}

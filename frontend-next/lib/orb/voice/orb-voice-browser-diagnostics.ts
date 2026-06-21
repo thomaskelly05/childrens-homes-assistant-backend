@@ -35,6 +35,8 @@ export type OrbVoiceBrowserDiagnostics = {
   ttsAttempted: boolean
   ttsStatus: string | null
   ttsProvider: string | null
+  ttsVoiceName: string | null
+  ttsFallbackUsed: boolean
   ttsConfigured: boolean | null
   recognitionResultEventCount: number
   interimTranscriptLength: number
@@ -103,6 +105,8 @@ const empty: OrbVoiceBrowserDiagnostics = {
   ttsAttempted: false,
   ttsStatus: null,
   ttsProvider: null,
+  ttsVoiceName: null,
+  ttsFallbackUsed: false,
   ttsConfigured: null,
   recognitionResultEventCount: 0,
   interimTranscriptLength: 0,

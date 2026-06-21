@@ -183,7 +183,10 @@ export async function requestOrbPremiumTts(options: {
   text: string
   voice_id?: string
   voice_style?: string
-}): Promise<{ ok: true; blob: Blob } | { ok: false; status: number }> {
+}): Promise<
+  | { ok: true; blob: Blob; provider?: string; voiceName?: string; fallbackUsed?: boolean }
+  | { ok: false; status: number }
+> {
   const { authFetchResponse } = await import('@/lib/auth/api')
   const { patchOrbVoiceBrowserDiagnostics } = await import('@/lib/orb/voice/orb-voice-browser-diagnostics')
   patchOrbVoiceBrowserDiagnostics({ ttsRequestAttempted: true, ttsAttempted: true })
@@ -219,8 +222,22 @@ export async function requestOrbPremiumTts(options: {
       patchOrbVoiceBrowserDiagnostics({ ttsStatus: 'failed_empty', ttsProvider: null })
       return { ok: false, status: 502 }
     }
-    patchOrbVoiceBrowserDiagnostics({ ttsStatus: 'success', ttsProvider: 'premium_tts' })
-    return { ok: true, blob }
+    const provider = response.headers.get('X-ORB-TTS-Provider')
+    const voiceName = response.headers.get('X-ORB-Voice-Name')
+    const fallbackUsed = response.headers.get('X-ORB-TTS-Fallback') === 'true'
+    patchOrbVoiceBrowserDiagnostics({
+      ttsStatus: 'success',
+      ttsProvider: provider || 'premium_tts',
+      ttsVoiceName: voiceName,
+      ttsFallbackUsed: fallbackUsed
+    })
+    return {
+      ok: true,
+      blob,
+      provider: provider || undefined,
+      voiceName: voiceName || undefined,
+      fallbackUsed
+    }
   } catch {
     patchOrbVoiceBrowserDiagnostics({ ttsStatus: 'failed_network', ttsProvider: null })
     return { ok: false, status: 0 }

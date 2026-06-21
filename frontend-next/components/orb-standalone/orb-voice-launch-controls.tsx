@@ -11,6 +11,7 @@ export function OrbVoiceLaunchControls({
   launchMode,
   launchUiState,
   pushToTalk = true,
+  continuousConversation = true,
   serverTranscription = false,
   transcript = '',
   primaryDisabled = false,
@@ -21,11 +22,13 @@ export function OrbVoiceLaunchControls({
   onSaveTranscript,
   savingTranscript = false,
   onCancel,
+  onPause,
   onOpenSettings
 }: {
   launchMode: OrbVoiceLaunchMode
   launchUiState: OrbVoiceLaunchUiState
   pushToTalk?: boolean
+  continuousConversation?: boolean
   serverTranscription?: boolean
   transcript?: string
   primaryDisabled?: boolean
@@ -36,6 +39,7 @@ export function OrbVoiceLaunchControls({
   onSaveTranscript?: () => void
   savingTranscript?: boolean
   onCancel?: () => void
+  onPause?: () => void
   onOpenSettings?: () => void
 }) {
   if (launchMode !== 'browser_ptt') return null
@@ -43,13 +47,14 @@ export function OrbVoiceLaunchControls({
   const trimmed = transcript.trim()
   const showSendActions = Boolean(trimmed) && launchUiState === 'ready'
   const primaryLabel = serverTranscription
-    ? orbVoiceServerTranscriptionPrimaryLabel(launchUiState)
-    : orbVoiceLaunchPrimaryLabel(launchUiState, { pushToTalk, listening: launchUiState === 'listening' })
+    ? orbVoiceServerTranscriptionPrimaryLabel(launchUiState, { continuousConversation, pushToTalk })
+    : orbVoiceLaunchPrimaryLabel(launchUiState, { pushToTalk, listening: launchUiState === 'listening', continuousConversation })
   const primaryDisabledWithWait =
     primaryDisabled && launchUiState === 'ready'
       ? true
       : serverTranscription &&
           (launchUiState === 'transcribing' || launchUiState === 'thinking' || launchUiState === 'speaking')
+  const listeningContinuous = continuousConversation && !pushToTalk && launchUiState === 'listening'
 
   return (
     <div className="flex w-full max-w-sm flex-col gap-2" data-orb-voice-launch-controls data-orb-voice-launch-mode={launchMode}>
@@ -68,14 +73,25 @@ export function OrbVoiceLaunchControls({
         type="button"
         data-orb-voice-ptt-primary
         data-orb-voice-primary-action={launchUiState === 'ready' ? 'start' : undefined}
-        disabled={primaryDisabledWithWait}
+        disabled={primaryDisabledWithWait || listeningContinuous}
         onClick={onPrimary}
         className="w-full rounded-full bg-gradient-to-r from-[var(--orb-primary-blue,#168bff)] to-[var(--orb-primary-blue-2,#0d5fcc)] py-3 text-sm font-semibold text-white shadow-lg shadow-sky-500/20 disabled:cursor-not-allowed disabled:opacity-50"
       >
         {primaryLabel}
       </button>
 
-      {!serverTranscription && (launchUiState === 'listening' || launchUiState === 'transcribing') ? (
+      {!serverTranscription && launchUiState === 'listening' && continuousConversation && !pushToTalk && onPause ? (
+        <button
+          type="button"
+          data-orb-voice-pause-conversation
+          onClick={onPause}
+          className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-[var(--orb-line)] py-2.5 text-sm text-[var(--orb-muted)]"
+        >
+          Pause
+        </button>
+      ) : null}
+
+      {!serverTranscription && (launchUiState === 'listening' || launchUiState === 'transcribing') && pushToTalk ? (
         <button
           type="button"
           data-orb-voice-cancel-capture

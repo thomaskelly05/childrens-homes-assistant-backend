@@ -52,6 +52,7 @@ import {
 import { ORB_VOICE_MIC_ERROR } from '@/lib/orb/voice/orb-voice-reflective-copy'
 import { resolveTtsVoiceProfileId } from '@/lib/orb/voice/orb-voice-human-conversation'
 import { ORB_VOICE_TTS_SPOKEN_FALLBACK } from '@/lib/orb/voice/orb-voice-speech-loop'
+import { ORB_VOICE_KATHERINE_UNAVAILABLE } from '@/lib/orb/voice/orb-voice-free-flowing-conversation'
 import { requestOrbPremiumTts, requestOrbVoiceSpeak } from '@/lib/orb/voice/orb-voice-client'
 import { requestOrbVoiceProviderSpeak } from '@/lib/orb/voice/orb-voice-provider'
 import {
@@ -114,6 +115,8 @@ export type StandaloneOrbVoiceSettings = {
   spokenAnswerLength: OrbSpokenAnswerLength
   allowInterruption: boolean
   pushToTalk: boolean
+  autoListenAfterReply: boolean
+  autoSubmitOnPause: boolean
   saveTranscript: boolean
   useBrowserFallback: boolean
   privacyMode: boolean
@@ -153,6 +156,8 @@ const DEFAULT_SETTINGS: StandaloneOrbVoiceSettings = {
   spokenAnswerLength: 'balanced',
   allowInterruption: true,
   pushToTalk: false,
+  autoListenAfterReply: true,
+  autoSubmitOnPause: true,
   saveTranscript: true,
   useBrowserFallback: true,
   privacyMode: false,
@@ -437,6 +442,9 @@ export function useStandaloneOrbVoice() {
         voice_style: 'calm_therapeutic'
       })
       if (premium.ok) {
+        if (premium.fallbackUsed) {
+          setSpeechPlaybackError(ORB_VOICE_KATHERINE_UNAVAILABLE)
+        }
         try {
           const url = URL.createObjectURL(premium.blob)
           const audio = new Audio(url)
@@ -449,6 +457,7 @@ export function useStandaloneOrbVoice() {
             setVoiceCaptureState('idle')
             setPhase('idle')
             onEnd?.()
+            onSpeakEndRef.current?.()
           }
           audio.onerror = () => {
             URL.revokeObjectURL(url)
@@ -489,6 +498,7 @@ export function useStandaloneOrbVoice() {
         setVoiceCaptureState('idle')
         setPhase('idle')
         onEnd?.()
+        onSpeakEndRef.current?.()
       }
       utterance.onerror = () => {
         stopSafariKeepAlive()

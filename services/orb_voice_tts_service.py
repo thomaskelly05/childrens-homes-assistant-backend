@@ -93,6 +93,17 @@ class ORBVoiceTTSResult:
     voice_id: str
     voice_style: str
     provider: str
+    voice_name: str
+    fallback_used: bool = False
+
+
+def _resolve_primary_tts_provider() -> str:
+    explicit = (os.environ.get("ORB_TTS_PROVIDER") or "").strip().lower()
+    if explicit:
+        return explicit
+    if _provider_configured("elevenlabs"):
+        return "elevenlabs"
+    return "openai"
 
 
 class ORBVoiceTTSError(Exception):
@@ -117,7 +128,7 @@ def _provider_configured(provider: str) -> bool:
 def is_configured() -> bool:
     if not ORB_TTS_ENABLED:
         return False
-    return _provider_configured(ORB_TTS_PROVIDER)
+    return _provider_configured(_resolve_primary_tts_provider())
 
 
 def _fallback_provider() -> str | None:
@@ -130,13 +141,14 @@ def _fallback_provider() -> str | None:
 
 
 def tts_status_payload() -> dict[str, Any]:
-    configured = is_configured()
+    primary = _resolve_primary_tts_provider()
+    configured = ORB_TTS_ENABLED and _provider_configured(primary)
     fallback = _fallback_provider()
     return {
         "ok": True,
-        "enabled": ORB_TTS_ENABLED and configured,
+        "enabled": configured,
         "configured": configured,
-        "provider": ORB_TTS_PROVIDER,
+        "provider": primary,
         "default_voice_id": ORB_TTS_DEFAULT_VOICE_ID,
         "default_style": ORB_TTS_DEFAULT_STYLE,
         "fallback_provider": fallback,
@@ -153,9 +165,16 @@ def _normalise_text(value: str | None) -> str:
 
 def _resolve_voice_id(requested: str | None) -> str:
     voice_id = (requested or ORB_TTS_DEFAULT_VOICE_ID).strip()
+    if voice_id == "orb_british_female":
+        return "katherine"
     if voice_id not in VOICE_PROFILES:
-        return ORB_TTS_DEFAULT_VOICE_ID
+        return ORB_TTS_DEFAULT_VOICE_ID if ORB_TTS_DEFAULT_VOICE_ID in VOICE_PROFILES else "katherine"
     return voice_id
+
+
+def _voice_name_for(voice_id: str) -> str:
+    profile = VOICE_PROFILES.get(voice_id) or VOICE_PROFILES.get("katherine") or {}
+    return str(profile.get("label") or "Katherine")
 
 
 def _resolve_style(requested: str | None) -> str:
@@ -263,6 +282,8 @@ def _synthesize_openai_sync(*, text: str, voice_id: str, voice_style: str, audio
         voice_id=voice_id,
         voice_style=voice_style,
         provider="openai",
+        voice_name=_voice_name_for(voice_id),
+        fallback_used=False,
     )
 
 
@@ -327,6 +348,8 @@ def _synthesize_elevenlabs_sync(*, text: str, voice_id: str, voice_style: str, a
         voice_id=voice_id,
         voice_style=voice_style,
         provider="elevenlabs",
+        voice_name=_voice_name_for(voice_id),
+        fallback_used=False,
     )
 
 
@@ -354,15 +377,16 @@ async def synthesize_spoken_reply(
     resolved_style = _resolve_style(voice_style)
     resolved_format = "m4a" if (audio_format or "mp3").strip().lower() == "m4a" else "mp3"
 
-    providers: list[str] = [ORB_TTS_PROVIDER]
+    primary = _resolve_primary_tts_provider()
+    providers: list[str] = [primary]
     fallback = _fallback_provider()
     if fallback and _provider_configured(fallback):
         providers.append(fallback)
 
     last_error: ORBVoiceTTSError | None = None
-    for provider in providers:
+    for index, provider in enumerate(providers):
         try:
-            return await asyncio.wait_for(
+            result = await asyncio.wait_for(
                 asyncio.to_thread(
                     generate_speech,
                     text=cleaned,
@@ -372,6 +396,15 @@ async def synthesize_spoken_reply(
                     provider=provider,
                 ),
                 timeout=ORB_TTS_TIMEOUT_SECONDS,
+            )
+            return ORBVoiceTTSResult(
+                audio_bytes=result.audio_bytes,
+                content_type=result.content_type,
+                voice_id=result.voice_id,
+                voice_style=result.voice_style,
+                provider=result.provider,
+                voice_name=result.voice_name,
+                fallback_used=index > 0,
             )
         except ORBVoiceTTSError as exc:
             last_error = exc

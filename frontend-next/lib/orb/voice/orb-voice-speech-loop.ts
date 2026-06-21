@@ -37,10 +37,13 @@ export const ORB_VOICE_TYPE_INSTEAD_PLACEHOLDER =
 export const ORB_VOICE_TYPE_INSTEAD_SEND = 'Send to ORB' as const
 
 /** Milliseconds of silence after the last final transcript chunk before auto-submit. */
-export const ORB_VOICE_AUTO_SUBMIT_DEBOUNCE_MS = 2_500
+export const ORB_VOICE_AUTO_SUBMIT_DEBOUNCE_MS = 1_400
 
 /** Listening timeout when no partial/final speech is captured. */
 export const ORB_VOICE_NO_SPEECH_TIMEOUT_MS = 15_000
+
+/** Show slow-thinking notice if ORB has not replied within this window. */
+export const ORB_VOICE_SLOW_RESPONSE_NOTICE_MS = 3_500
 
 export type CommitVoiceTranscriptResult =
   | { ok: true; text: string }

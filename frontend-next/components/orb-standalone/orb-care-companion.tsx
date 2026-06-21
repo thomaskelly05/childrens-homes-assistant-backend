@@ -433,6 +433,12 @@ type SendMessageOptions = {
   editMessageId?: string
   /** When voice sends a transcript, preserve it if the brain request fails. */
   source?: 'voice' | 'chat'
+  voiceRespond?: {
+    message: string
+    mode?: string
+    history?: Array<{ role: 'user' | 'assistant'; content: string }>
+    session_memory?: Record<string, unknown>
+  }
 }
 
 function buildExplainabilityFromResponse(
@@ -1617,7 +1623,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
 
       const projectMemory = (activeProject?.memory || activeProject?.description || '').trim()
       const conversationRequest = {
-        message: framedMessage,
+        message: options?.voiceRespond?.message ?? framedMessage,
         mode,
         conversation_id: sessionConversationId,
         history: historyForRequest.slice(0, -1),
@@ -1812,7 +1818,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
           spokenAnswerLength: voiceSettings.spokenAnswerLength,
           sensitiveSpokenRepliesEnabled: voiceSettings.sensitiveSpokenReplies
         })
-        if (STANDALONE_ORB_VOICE_CAPTURE_ENABLED && voice.synthesisAvailable && speechDecision.allowAutoSpeak) {
+        if (STANDALONE_ORB_VOICE_CAPTURE_ENABLED && voice.synthesisAvailable && speechDecision.allowAutoSpeak && !voiceOriginatedSend) {
           const spoken = stripMarkdownForSpeech(speechDecision.spokenText || displayAnswer)
           if (spoken.trim()) {
             setSpeakingMessageId(assistantId)
@@ -1850,6 +1856,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
             source: voiceOriginatedSend ? 'voice' : 'chat',
             mode
           },
+          voiceRespond: options?.voiceRespond,
           signal: streamSignal,
           stream: {
             onToken: (_delta, partial) => {
@@ -3648,7 +3655,9 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
         assistantReplyKey={voiceStationAssistant?.key ?? null}
         assistantReplyUserHint={voiceStationAssistant?.userHint ?? null}
         assistantReplyContext={voiceStationAssistant?.contextUsed ?? null}
-        onSendToOrb={(text) => void sendMessage(text, { source: 'voice' })}
+        onSendToOrb={(text, opts) =>
+          void sendMessage(text, { source: 'voice', ...(opts || {}) })
+        }
         onSignIn={() => {
           window.location.href = account.signInUrl
         }}

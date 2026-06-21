@@ -172,7 +172,7 @@ describe('ORB Voice instant-human refinement', () => {
   })
 
   it('primary labels remain human on failure and live session', () => {
-    assert.equal(orbVoiceUiPrimaryLabel('ready'), 'Start talking')
+    assert.equal(orbVoiceUiPrimaryLabel('ready'), 'Start conversation')
     assert.equal(orbVoiceUiPrimaryLabel('preparing'), 'Cancel')
     assert.equal(orbVoiceUiPrimaryLabel('listening'), 'Stop')
     assert.equal(orbVoiceUiPrimaryLabel('unsupported'), 'Try voice again')

@@ -27,6 +27,7 @@ FEATURE_AI_NOTES = "ai_notes"
 FEATURE_DICTATE = "dictate"
 FEATURE_DICTATE_EDIT = "dictate_edit"
 FEATURE_VOICE_TRANSCRIPTION = "voice_transcription"
+FEATURE_VOICE_RESPOND = "voice_respond"
 FEATURE_KNOWLEDGE_EMBEDDING = "knowledge_embedding"
 FEATURE_LEGACY_STREAMING = "legacy_assistant_stream"
 

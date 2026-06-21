@@ -34,6 +34,7 @@ from services.orb_voice_transcription_service import (
     OrbVoiceTranscriptionError,
     transcribe_voice_audio,
 )
+from services.orb_voice_respond_service import generate_voice_response
 from services.orb_voice_realtime_config import (
     _openai_realtime_configured,
     _provider_has_stt_credentials,
@@ -126,6 +127,22 @@ class OrbVoiceTranscribeRequest(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
     text: str | None = Field(default=None, max_length=50_000)
+
+
+class OrbVoiceHistoryTurn(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    role: str = Field(..., max_length=32)
+    content: str = Field(..., max_length=8_000)
+
+
+class OrbVoiceRespondRequest(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    message: str = Field(..., min_length=1, max_length=8_000)
+    mode: str | None = Field(default="conversational", max_length=80)
+    history: list[OrbVoiceHistoryTurn] | None = None
+    session_memory: dict | None = None
 
 
 def _user_id(current_user: dict) -> int | None:
@@ -525,6 +542,58 @@ async def orb_voice_transcribe_audio(
                 os.remove(path)
             except OSError:
                 pass
+
+
+@router.post("/respond")
+async def orb_voice_respond(
+    payload: OrbVoiceRespondRequest,
+    current_user=Depends(require_orb_voice_premium),
+):
+    """Fast reflective voice reply — no deep standalone retrieval chain."""
+    user_id = _user_id(current_user)
+    enforce_daily_ai_call_budget(user_id)
+    enforce_transcript_length(payload.message, user_id=user_id)
+    try:
+        result = generate_voice_response(
+            message=payload.message,
+            mode=payload.mode,
+            history=[turn.model_dump() for turn in (payload.history or [])],
+            session_memory=payload.session_memory,
+            user_id=user_id,
+            provider_id=_provider_id(current_user),
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        logger.warning("orb_voice_respond_failed error=%s", exc.__class__.__name__, exc_info=True)
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "error": "voice_respond_unavailable",
+                "message": "ORB Voice could not respond right now. Type your reflection instead.",
+            },
+        ) from exc
+
+    reply = str(result.get("reply") or "").strip()
+    return _voice_status_payload(
+        {
+            "ok": True,
+            "reply": reply,
+            "answer": reply,
+            "mode": result.get("mode"),
+            "safetyBoundaryApplied": bool(result.get("safetyBoundaryApplied")),
+            "shouldEscalateToPolicyReminder": bool(result.get("shouldEscalateToPolicyReminder")),
+            "prompt_tier": result.get("prompt_tier") or "voice_fast",
+            "embeddings_used": bool(result.get("embeddings_used")),
+            "retrieval_used": bool(result.get("retrieval_used")),
+            "context_used": {
+                "prompt_tier": "voice_fast",
+                "voice_fast_path": True,
+                "embeddings_used": False,
+                "retrieval_used": bool(result.get("retrieval_used")),
+            },
+        }
+    )
 
 
 @router.post("/transcribe")

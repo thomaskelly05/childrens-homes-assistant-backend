@@ -13,7 +13,9 @@ export const ORB_VOICE_CONVERSATION_SUBLABEL = 'Reflection notes — not yet a r
 
 export const ORB_VOICE_ADULT_REVIEW_LABEL = 'Generated for adult review' as const
 
-export const ORB_VOICE_BUTTON_START = 'Start talking' as const
+export const ORB_VOICE_BUTTON_START = 'Start conversation' as const
+export const ORB_VOICE_BUTTON_LISTENING = 'Listening…' as const
+export const ORB_VOICE_BUTTON_PAUSE = 'Pause' as const
 export const ORB_VOICE_BUTTON_STOP_LISTENING = 'Stop' as const
 export const ORB_VOICE_BUTTON_STOP_ORB = 'Stop ORB' as const
 export const ORB_VOICE_CONTINUE_TALKING = 'Continue talking' as const

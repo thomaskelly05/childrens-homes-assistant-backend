@@ -110,6 +110,8 @@ async def orb_voice_tts(
             "X-ORB-Voice-Id": result.voice_id,
             "X-ORB-Voice-Style": result.voice_style,
             "X-ORB-TTS-Provider": result.provider,
+            "X-ORB-Voice-Name": result.voice_name,
+            "X-ORB-TTS-Fallback": "true" if result.fallback_used else "false",
             "Cache-Control": "no-store",
         },
     )

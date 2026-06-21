@@ -44,21 +44,28 @@ export function orbVoiceServerTranscriptionHeadline(
 }
 
 export function orbVoiceServerTranscriptionPrimaryLabel(
-  state: OrbVoiceLaunchUiState
+  state: OrbVoiceLaunchUiState,
+  options?: { continuousConversation?: boolean; pushToTalk?: boolean }
 ): string {
-  if (state === 'listening') return 'Stop and send'
+  if (state === 'listening') {
+    if (options?.continuousConversation && options?.pushToTalk === false) return 'Listening…'
+    return 'Stop and send'
+  }
   if (state === 'transcribing' || state === 'thinking' || state === 'speaking') return 'Please wait…'
   if (state === 'unavailable' || state === 'error') return 'Use Dictate or type'
-  return 'Start recording'
+  return 'Start conversation'
 }
 
 export function orbVoiceServerTranscriptionDetailLine(
-  engineState: OrbWebVoiceEngineState
+  engineState: OrbWebVoiceEngineState,
+  options?: { continuousConversation?: boolean }
 ): string | null {
   switch (engineState) {
     case 'listening':
     case 'capturing':
-      return 'Speak naturally, then tap Stop and send.'
+      return options?.continuousConversation
+        ? 'Speak naturally. ORB will respond after a brief pause.'
+        : 'Speak naturally, then tap Stop and send.'
     case 'transcribing':
       return 'Sending your recording for transcription…'
     case 'thinking':

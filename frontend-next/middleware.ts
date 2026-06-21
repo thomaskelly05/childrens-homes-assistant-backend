@@ -114,6 +114,7 @@ export function middleware(request: NextRequest) {
       "default-src 'self'; base-uri 'self'; frame-ancestors 'self'; object-src 'none'; " +
         "img-src 'self' data: blob: https:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; " +
         "script-src 'self' 'unsafe-inline' 'unsafe-eval'; connect-src 'self' https: wss:; " +
+        "media-src 'self' blob: data: https:; " +
         "frame-src 'self' https://js.stripe.com https://checkout.stripe.com;"
     )
   }

@@ -39,6 +39,9 @@ const STATUS_UNAVAILABLE: OrbRealtimeVoiceStatus = {
   reason: 'endpoint_failed'
 }
 
+let cachedVoiceStatus: { value: OrbRealtimeVoiceStatus; fetchedAt: number } | null = null
+const VOICE_STATUS_CACHE_MS = 60_000
+
 export type OrbVoiceTranscriptCallbacks = {
   onPartialTranscript?: (text: string) => void
   onFinalTranscript?: (text: string) => void
@@ -67,6 +70,10 @@ export async function fetchOrbVoiceRealtimeStatus(): Promise<OrbRealtimeVoiceSta
     return STATUS_UNAVAILABLE
   }
   recordOrbVoiceStatusBootstrapRequest()
+
+  if (cachedVoiceStatus && Date.now() - cachedVoiceStatus.fetchedAt < VOICE_STATUS_CACHE_MS) {
+    return cachedVoiceStatus.value
+  }
 
   try {
     emitOrbClientDebug({ area: 'voice', event: 'voice_status_requested', detail: {} })
@@ -123,6 +130,7 @@ export async function fetchOrbVoiceRealtimeStatus(): Promise<OrbRealtimeVoiceSta
         detail: { reason: status.reason }
       })
     }
+    cachedVoiceStatus = { value: status, fetchedAt: Date.now() }
     return status
   } catch (error) {
     if (error instanceof AuthApiError && (error.status === 401 || error.status === 403)) {

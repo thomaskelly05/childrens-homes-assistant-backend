@@ -37,12 +37,12 @@ describe('ORB Voice human conversation runtime', () => {
   })
 
   it('maps Katherine to premium TTS profile without hardcoding secrets', () => {
-    assert.equal(resolveTtsVoiceProfileId('katherine'), 'orb_british_female')
-    assert.equal(resolveTtsVoiceProfileId('orb_british_female'), 'orb_british_female')
+    assert.equal(resolveTtsVoiceProfileId('katherine'), ORB_KATHERINE_VOICE_ID)
+    assert.equal(resolveTtsVoiceProfileId('orb_british_female'), ORB_KATHERINE_VOICE_ID)
   })
 
   it('turn-taking labels match Phase 4B copy', () => {
-    assert.equal(ORB_VOICE_BUTTON_START, 'Start talking')
+    assert.equal(ORB_VOICE_BUTTON_START, 'Start conversation')
     assert.equal(ORB_VOICE_BUTTON_STOP_LISTENING, 'Stop')
     assert.equal(ORB_VOICE_LISTENING_LABEL, 'Listening…')
     assert.equal(ORB_VOICE_BUTTON_THINKING, 'ORB is thinking…')
