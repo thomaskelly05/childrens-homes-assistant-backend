@@ -19,9 +19,9 @@ function read(relativePath: string) {
 }
 
 describe('ORB Residential Phase 5L Voice realtime beta and Siri convergence', () => {
-  it('build marker is phase-5l1-voice-idle-siri-hero-activation', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5l1-voice-idle-siri-hero-activation')
-    assert.match(read('app/orb/orb-residential-shell.css'), /phase-5l1-voice-idle-siri-hero-activation/)
+  it('build marker is phase-5m-voice-realtime-env-convergence', () => {
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5m-voice-realtime-env-convergence')
+    assert.match(read('app/orb/orb-residential-shell.css'), /phase-5m-voice-realtime-env-convergence/)
     assert.deepEqual(ORB_LAYOUT_CSS_FILES, ['app/orb/orb-residential-shell.css'])
   })
 
@@ -98,6 +98,7 @@ describe('ORB Residential Phase 5L Voice realtime beta and Siri convergence', ()
   it('Safari hybrid fallback resolves to voice v2 capture path', () => {
     const mode = resolveOrbVoiceRealtimeMode(
       { available: false, reason: 'not_configured', fallback: 'voice_v2', hybridSpeech: true },
+      false,
       false
     )
     assert.equal(mode, 'fallback')

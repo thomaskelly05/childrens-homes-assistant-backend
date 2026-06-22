@@ -9,6 +9,7 @@ export type OrbVoiceV2LifecycleEvent =
   | 'voice_v2_recorder_started'
   | 'voice_v2_state_transition'
   | 'voice_v2_microphone_timeout'
+  | 'voice_v2_realtime_webrtc_fallback'
 
 export function traceOrbVoiceV2Lifecycle(
   event: OrbVoiceV2LifecycleEvent,

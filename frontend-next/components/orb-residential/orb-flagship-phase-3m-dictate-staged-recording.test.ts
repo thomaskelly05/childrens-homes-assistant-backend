@@ -37,8 +37,8 @@ function read(relativePath: string) {
 }
 
 describe('ORB Residential Phase 3M Dictate staged recording', () => {
-  it('build version marker is phase-5l1-voice-idle-siri-hero-activation', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5l1-voice-idle-siri-hero-activation')
+  it('build version marker is phase-5m-voice-realtime-env-convergence', () => {
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5m-voice-realtime-env-convergence')
     const layout = read('app/orb/layout.tsx')
     assert.match(layout, /orb-residential-shell\.css/)
     assert.deepEqual(ORB_LAYOUT_CSS_FILES, ['app/orb/orb-residential-shell.css'])
@@ -160,7 +160,7 @@ describe('ORB Residential Phase 3M Dictate staged recording', () => {
   it('single shell and one CSS import remain true', () => {
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
     assert.match(companion, /orb-app-shell/)
-    assert.match(read('app/orb/orb-residential-shell.css'), /phase-5l1-voice-idle-siri-hero-activation/)
+    assert.match(read('app/orb/orb-residential-shell.css'), /phase-5m-voice-realtime-env-convergence/)
     assert.match(read('app/orb/orb-residential-shell.css'), /Phase 3N/)
   })
 })

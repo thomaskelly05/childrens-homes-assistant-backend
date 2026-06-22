@@ -5,43 +5,67 @@ import {
   ORB_VOICE_V2_BARGE_IN_STOPPED_COPY,
   ORB_VOICE_V2_WAKE_PHRASE_HINT,
   isOrbVoiceHybridSpeechAvailable,
+  isOrbVoiceWebRtcSupported,
   orbVoiceRealtimeAvailable,
   orbVoiceRealtimeEnabled,
-  resolveOrbVoiceRealtimeMode
+  resolveOrbVoiceRealtimeMode,
+  resolveOrbVoiceRealtimeSetupLabel
 } from './orb-voice-v2-realtime-beta.ts'
 import { detectOrbWakePhrase, stripOrbWakePhrase } from './orb-voice-v2-wake-phrase.ts'
 
 describe('ORB Voice v2 realtime beta layer', () => {
-  it('resolves fallback when realtime is not configured', () => {
+  it('resolves webrtc when configured and supported', () => {
     const mode = resolveOrbVoiceRealtimeMode(
-      { available: false, reason: 'not_configured', fallback: 'voice_v2', hybridSpeech: true },
+      {
+        available: true,
+        provider: 'openai',
+        mode: 'webrtc',
+        fallback: 'voice_v2',
+        hybridSpeech: true,
+        transport: 'openai_realtime'
+      },
+      true,
       true
     )
-    assert.equal(mode, 'beta')
+    assert.equal(mode, 'webrtc')
+    assert.equal(resolveOrbVoiceRealtimeSetupLabel(mode), 'Realtime: Available')
+  })
+
+  it('resolves hybrid on safari-style fallback path', () => {
+    const mode = resolveOrbVoiceRealtimeMode(
+      { available: false, provider: 'none', mode: 'fallback', fallback: 'voice_v2', hybridSpeech: true },
+      true,
+      false
+    )
+    assert.equal(mode, 'hybrid')
     const safariFallback = resolveOrbVoiceRealtimeMode(
-      { available: false, reason: 'not_configured', fallback: 'voice_v2', hybridSpeech: true },
+      { available: false, provider: 'none', mode: 'fallback', fallback: 'voice_v2', hybridSpeech: true },
+      false,
       false
     )
     assert.equal(safariFallback, 'fallback')
   })
 
-  it('orbVoiceRealtimeEnabled tracks beta mode only', () => {
-    assert.equal(orbVoiceRealtimeEnabled('beta'), true)
+  it('orbVoiceRealtimeEnabled tracks webrtc and hybrid modes', () => {
+    assert.equal(orbVoiceRealtimeEnabled('webrtc'), true)
+    assert.equal(orbVoiceRealtimeEnabled('hybrid'), true)
     assert.equal(orbVoiceRealtimeEnabled('fallback'), false)
     assert.equal(orbVoiceRealtimeEnabled('off'), false)
   })
 
-  it('orbVoiceRealtimeAvailable mirrors enabled beta', () => {
+  it('orbVoiceRealtimeAvailable mirrors enabled non-fallback modes', () => {
     assert.equal(
       orbVoiceRealtimeAvailable(
-        { available: false, reason: 'not_configured', fallback: 'voice_v2', hybridSpeech: true },
+        { available: true, provider: 'openai', mode: 'webrtc', fallback: 'voice_v2', hybridSpeech: true },
+        true,
         true
       ),
       true
     )
     assert.equal(
       orbVoiceRealtimeAvailable(
-        { available: false, reason: 'not_configured', fallback: 'voice_v2', hybridSpeech: true },
+        { available: false, provider: 'none', mode: 'fallback', fallback: 'voice_v2', hybridSpeech: true },
+        false,
         false
       ),
       false
@@ -56,7 +80,8 @@ describe('ORB Voice v2 realtime beta layer', () => {
     assert.equal(ORB_VOICE_V2_BARGE_IN_STOPPED_COPY, 'Stopped. I’m listening.')
   })
 
-  it('hybrid speech availability is false without window', () => {
+  it('hybrid speech and webrtc availability are false without window', () => {
     assert.equal(isOrbVoiceHybridSpeechAvailable(), false)
+    assert.equal(isOrbVoiceWebRtcSupported(), false)
   })
 })

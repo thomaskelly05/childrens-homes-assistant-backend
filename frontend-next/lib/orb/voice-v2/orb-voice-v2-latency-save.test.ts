@@ -39,14 +39,14 @@ function capSpokenWords(text: string): string {
 }
 
 describe('orb-voice-v2-latency-save', () => {
-  it('build marker is phase-5l1-voice-idle-siri-hero-activation', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5l1-voice-idle-siri-hero-activation')
+  it('build marker is phase-5m-voice-realtime-env-convergence', () => {
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5m-voice-realtime-env-convergence')
   })
 
   it('tiny transcript under threshold does not call respond', () => {
     const hook = read('lib/orb/voice-v2/use-orb-voice-v2.ts')
     assert.equal(isOrbVoiceV2TurnSubstantial('a'), false)
-    assert.match(hook, /isOrbVoiceV2TurnSubstantial\(transcript\)/)
+    assert.match(hook, /isOrbVoiceV2TurnSubstantial\(trimmed\)/)
     assert.match(hook, /traceOrbVoiceV2IgnoredTinyTurn/)
     assert.doesNotMatch(
       hook,

@@ -12,6 +12,7 @@ import {
 } from './orb-voice-v2-client.ts'
 import { OrbVoiceV2CaptureError, startOrbVoiceV2Capture, type OrbVoiceV2CaptureSession } from './orb-voice-v2-capture.ts'
 import { startOrbVoiceV2HybridCapture } from './orb-voice-v2-hybrid-capture.ts'
+import { startOrbVoiceV2RealtimeWebRtcCapture } from './orb-voice-v2-realtime-webrtc-capture.ts'
 import {
   ORB_VOICE_V2_AUDIO_PLAYBACK_BLOCKED,
   ORB_VOICE_V2_AUDIO_UNLOCK_SOFT_FAIL,
@@ -51,9 +52,14 @@ import {
 import {
   ORB_VOICE_V2_BARGE_IN_STOPPED_COPY,
   ORB_VOICE_V2_WAKE_PHRASE_HINT,
+  isOrbVoiceHybridMode,
   isOrbVoiceHybridSpeechAvailable,
+  isOrbVoiceWebRtcMode,
+  isOrbVoiceWebRtcSupported,
   orbVoiceRealtimeEnabled,
   resolveOrbVoiceRealtimeMode,
+  resolveOrbVoiceRealtimeSetupDetail,
+  resolveOrbVoiceRealtimeSetupLabel,
   type OrbVoiceRealtimeMode
 } from './orb-voice-v2-realtime-beta.ts'
 import { fetchOrbVoiceRealtimeBetaStatus } from './orb-voice-v2-realtime-client.ts'
@@ -76,6 +82,7 @@ import type {
   OrbVoiceV2Mode,
   OrbVoiceV2PermissionState,
   OrbVoiceV2PersonalityId,
+  OrbVoiceRealtimeBetaStatus,
   OrbVoiceV2SessionMemory,
   OrbVoiceV2State,
   OrbVoiceV2Turn,
@@ -113,6 +120,7 @@ export function useOrbVoiceV2(open: boolean) {
   const [lastBrainTier, setLastBrainTier] = useState<OrbVoiceV2BrainTier | null>(null)
   const [partialTranscript, setPartialTranscript] = useState<string | null>(null)
   const [realtimeMode, setRealtimeMode] = useState<OrbVoiceRealtimeMode>('fallback')
+  const [realtimeStatus, setRealtimeStatus] = useState<OrbVoiceRealtimeBetaStatus | null>(null)
 
   const captureRef = useRef<OrbVoiceV2CaptureSession | null>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null)
@@ -214,6 +222,7 @@ export function useOrbVoiceV2(open: boolean) {
     setPartialTranscript(null)
     setRealtimeMode('fallback')
     realtimeModeRef.current = 'fallback'
+    setRealtimeStatus(null)
   }, [])
 
   const fireInstantAcknowledgement = useCallback(() => {
@@ -231,7 +240,12 @@ export function useOrbVoiceV2(open: boolean) {
     }
     void fetchOrbVoiceV2Status().then(applyKatherineStatus)
     void fetchOrbVoiceRealtimeBetaStatus().then((status) => {
-      const mode = resolveOrbVoiceRealtimeMode(status, isOrbVoiceHybridSpeechAvailable())
+      setRealtimeStatus(status)
+      const mode = resolveOrbVoiceRealtimeMode(
+        status,
+        isOrbVoiceHybridSpeechAvailable(),
+        isOrbVoiceWebRtcSupported()
+      )
       setRealtimeMode(mode)
       realtimeModeRef.current = mode
     })
@@ -331,6 +345,8 @@ export function useOrbVoiceV2(open: boolean) {
 
   const speakReplyRef = useRef<(turnId: string, text: string) => Promise<void>>(async () => {})
 
+  const processCapturedTranscriptRef = useRef<(transcript: string) => Promise<void>>(async () => {})
+
   const resumeListening = useCallback(
     async (options?: { fromUserGesture?: boolean }) => {
       if (processingRef.current) return
@@ -353,95 +369,144 @@ export function useOrbVoiceV2(open: boolean) {
       transitionState('requesting_microphone')
       void queryOrbVoiceV2MicPermission()
       try {
-        const useHybrid = orbVoiceRealtimeEnabled(realtimeModeRef.current)
-        const startCapture = useHybrid ? startOrbVoiceV2HybridCapture : startOrbVoiceV2Capture
-        const session = await withTimeout(
-          startCapture({
-            onListeningReady: () => {
-              setPermissionState('ready')
-              transitionState('listening')
-            },
-            onSpeechStart: () => {
+        const mode = realtimeModeRef.current
+        const sharedCallbacks = {
+          onListeningReady: () => {
+            setPermissionState('ready')
+            transitionState('listening')
+          },
+          onSpeechStart: () => {
+            setPartialTranscript(null)
+            transitionState('speech_detected')
+          },
+          onPartialTranscript: (text: string) => setPartialTranscript(text),
+          onWakePhrase: () => handleWakePhraseRef.current(),
+          onEndOfTurnFromTranscript: (transcript: string) => {
+            void (async () => {
+              if (processingRef.current) return
+              processingRef.current = true
+              captureRef.current?.dispose()
+              captureRef.current = null
               setPartialTranscript(null)
-              transitionState('speech_detected')
-            },
-            ...(useHybrid
-              ? {
-                  onPartialTranscript: (text: string) => setPartialTranscript(text),
-                  onWakePhrase: () => handleWakePhraseRef.current()
+              fireInstantAcknowledgement()
+              transitionState('transcribing')
+              try {
+                await processCapturedTranscriptRef.current(transcript)
+              } finally {
+                processingRef.current = false
+              }
+            })()
+          },
+          onEndOfTurnFromAudio: (blob: Blob, mimeType: string, options?: { transcriptHint?: string }) => {
+            void (async () => {
+              if (processingRef.current) return
+              processingRef.current = true
+              captureRef.current?.dispose()
+              captureRef.current = null
+              setPartialTranscript(null)
+              fireInstantAcknowledgement()
+              transitionState('transcribing')
+              try {
+                const hint = options?.transcriptHint?.trim()
+                const transcript =
+                  hint && isOrbVoiceV2TurnSubstantial(hint)
+                    ? hint
+                    : (await transcribeOrbVoiceV2Audio(blob, mimeType)).trim()
+                await processCapturedTranscriptRef.current(transcript)
+              } catch (error) {
+                const message = error instanceof Error ? error.message : ''
+                if (message.includes('empty') || message.includes('transcription_failed')) {
+                  traceOrbVoiceV2IgnoredTinyTurn(0)
+                  setTinyTurnNotice(ORB_VOICE_V2_DIDNT_CATCH_COPY)
+                  acknowledgementRef.current = null
+                  setAcknowledgement(null)
+                  void resumeListening()
+                  return
                 }
-              : {}),
-            onEndOfTurn: (blob, mimeType, options) => {
-              void (async () => {
-                if (processingRef.current) return
-                processingRef.current = true
-                captureRef.current?.dispose()
-                captureRef.current = null
-                setPartialTranscript(null)
-                fireInstantAcknowledgement()
-                transitionState('transcribing')
-                try {
-                  const hint = options?.transcriptHint?.trim()
-                  const transcript =
-                    hint && isOrbVoiceV2TurnSubstantial(hint)
-                      ? hint
-                      : (await transcribeOrbVoiceV2Audio(blob, mimeType)).trim()
-                  if (!transcript) {
-                    traceOrbVoiceV2IgnoredTinyTurn(0)
-                    setTinyTurnNotice(ORB_VOICE_V2_DIDNT_CATCH_COPY)
-                    acknowledgementRef.current = null
-                    setAcknowledgement(null)
-                    processingRef.current = false
-                    void resumeListening()
-                    return
-                  }
-                  if (!isOrbVoiceV2TurnSubstantial(transcript)) {
-                    traceOrbVoiceV2IgnoredTinyTurn(transcript.length)
-                    const partialKey = transcript.trim().toLowerCase()
-                    if (lastIgnoredPartialRef.current !== partialKey) {
-                      setTinyTurnNotice(ORB_VOICE_V2_DIDNT_CATCH_COPY)
-                    }
-                    lastIgnoredPartialRef.current = partialKey
-                    acknowledgementRef.current = null
-                    setAcknowledgement(null)
-                    processingRef.current = false
-                    void resumeListening()
-                    return
-                  }
-                  lastIgnoredPartialRef.current = null
-                  setTinyTurnNotice(null)
-                  await commitAdultTurnRef.current(transcript)
-                } catch (error) {
-                  const message = error instanceof Error ? error.message : ''
-                  if (message.includes('empty') || message.includes('transcription_failed')) {
-                    traceOrbVoiceV2IgnoredTinyTurn(0)
-                    setTinyTurnNotice(ORB_VOICE_V2_DIDNT_CATCH_COPY)
-                    acknowledgementRef.current = null
-                    setAcknowledgement(null)
-                    processingRef.current = false
-                    void resumeListening()
-                    return
-                  }
-                  setError(ORB_VOICE_V2_TRANSCRIPTION_ERROR)
-                  setShowTypeFallback(true)
-                  transitionState('error')
-                } finally {
-                  processingRef.current = false
-                }
-              })()
-            },
-            onError: () => {
-              setError(ORB_VOICE_V2_TRANSCRIPTION_ERROR)
-              setShowTypeFallback(true)
-              transitionState('error')
-            }
-          }),
-          MICROPHONE_REQUEST_TIMEOUT_MS,
-          () => {
-            traceOrbVoiceV2Lifecycle('voice_v2_microphone_timeout')
-            return new OrbVoiceV2CaptureError('timeout', 'microphone_timeout')
+                setError(ORB_VOICE_V2_TRANSCRIPTION_ERROR)
+                setShowTypeFallback(true)
+                transitionState('error')
+              } finally {
+                processingRef.current = false
+              }
+            })()
+          },
+          onCaptureError: () => {
+            setError(ORB_VOICE_V2_TRANSCRIPTION_ERROR)
+            setShowTypeFallback(true)
+            transitionState('error')
           }
-        )
+        }
+
+        const startCaptureSession = async (): Promise<OrbVoiceV2CaptureSession> => {
+          if (isOrbVoiceWebRtcMode(mode)) {
+            return startOrbVoiceV2RealtimeWebRtcCapture({
+              onListeningReady: sharedCallbacks.onListeningReady,
+              onSpeechStart: sharedCallbacks.onSpeechStart,
+              onPartialTranscript: sharedCallbacks.onPartialTranscript,
+              onWakePhrase: sharedCallbacks.onWakePhrase,
+              onEndOfTurn: sharedCallbacks.onEndOfTurnFromTranscript,
+              onError: sharedCallbacks.onCaptureError
+            })
+          }
+          if (isOrbVoiceHybridMode(mode)) {
+            return startOrbVoiceV2HybridCapture({
+              onListeningReady: sharedCallbacks.onListeningReady,
+              onSpeechStart: sharedCallbacks.onSpeechStart,
+              onPartialTranscript: sharedCallbacks.onPartialTranscript,
+              onWakePhrase: sharedCallbacks.onWakePhrase,
+              onEndOfTurn: sharedCallbacks.onEndOfTurnFromAudio,
+              onError: sharedCallbacks.onCaptureError
+            })
+          }
+          return startOrbVoiceV2Capture({
+            onListeningReady: sharedCallbacks.onListeningReady,
+            onSpeechStart: sharedCallbacks.onSpeechStart,
+            onEndOfTurn: (blob, mimeType) => sharedCallbacks.onEndOfTurnFromAudio(blob, mimeType),
+            onError: sharedCallbacks.onCaptureError
+          })
+        }
+
+        let session: OrbVoiceV2CaptureSession
+        try {
+          session = await withTimeout(
+            startCaptureSession(),
+            MICROPHONE_REQUEST_TIMEOUT_MS,
+            () => {
+              traceOrbVoiceV2Lifecycle('voice_v2_microphone_timeout')
+              return new OrbVoiceV2CaptureError('timeout', 'microphone_timeout')
+            }
+          )
+        } catch (webrtcError) {
+          if (!isOrbVoiceWebRtcMode(mode)) throw webrtcError
+          traceOrbVoiceV2Lifecycle('voice_v2_realtime_webrtc_fallback', {
+            reason: webrtcError instanceof Error ? webrtcError.message : 'webrtc_failed'
+          })
+          realtimeModeRef.current = isOrbVoiceHybridSpeechAvailable() ? 'hybrid' : 'fallback'
+          setRealtimeMode(realtimeModeRef.current)
+          session = await withTimeout(
+            isOrbVoiceHybridMode(realtimeModeRef.current)
+              ? startOrbVoiceV2HybridCapture({
+                  onListeningReady: sharedCallbacks.onListeningReady,
+                  onSpeechStart: sharedCallbacks.onSpeechStart,
+                  onPartialTranscript: sharedCallbacks.onPartialTranscript,
+                  onWakePhrase: sharedCallbacks.onWakePhrase,
+                  onEndOfTurn: sharedCallbacks.onEndOfTurnFromAudio,
+                  onError: sharedCallbacks.onCaptureError
+                })
+              : startOrbVoiceV2Capture({
+                  onListeningReady: sharedCallbacks.onListeningReady,
+                  onSpeechStart: sharedCallbacks.onSpeechStart,
+                  onEndOfTurn: (blob, mimeType) => sharedCallbacks.onEndOfTurnFromAudio(blob, mimeType),
+                  onError: sharedCallbacks.onCaptureError
+                }),
+            MICROPHONE_REQUEST_TIMEOUT_MS,
+            () => {
+              traceOrbVoiceV2Lifecycle('voice_v2_microphone_timeout')
+              return new OrbVoiceV2CaptureError('timeout', 'microphone_timeout')
+            }
+          )
+        }
         captureRef.current = session
         if (stateRef.current === 'requesting_microphone') {
           setPermissionState('ready')
@@ -634,6 +699,38 @@ export function useOrbVoiceV2(open: boolean) {
 
   const commitAdultTurnRef = useRef(commitAdultTurn)
   commitAdultTurnRef.current = commitAdultTurn
+
+  const processCapturedTranscript = useCallback(
+    async (transcript: string) => {
+      const trimmed = transcript.trim()
+      if (!trimmed) {
+        traceOrbVoiceV2IgnoredTinyTurn(0)
+        setTinyTurnNotice(ORB_VOICE_V2_DIDNT_CATCH_COPY)
+        acknowledgementRef.current = null
+        setAcknowledgement(null)
+        void tryAutoResumeListening()
+        return
+      }
+      if (!isOrbVoiceV2TurnSubstantial(trimmed)) {
+        traceOrbVoiceV2IgnoredTinyTurn(trimmed.length)
+        const partialKey = trimmed.toLowerCase()
+        if (lastIgnoredPartialRef.current !== partialKey) {
+          setTinyTurnNotice(ORB_VOICE_V2_DIDNT_CATCH_COPY)
+        }
+        lastIgnoredPartialRef.current = partialKey
+        acknowledgementRef.current = null
+        setAcknowledgement(null)
+        void tryAutoResumeListening()
+        return
+      }
+      lastIgnoredPartialRef.current = null
+      setTinyTurnNotice(null)
+      await commitAdultTurnRef.current(trimmed)
+    },
+    [tryAutoResumeListening]
+  )
+
+  processCapturedTranscriptRef.current = processCapturedTranscript
 
   const startConversation = useCallback(async () => {
     if (stateRef.current === 'summary_ready') {
@@ -852,6 +949,9 @@ export function useOrbVoiceV2(open: boolean) {
     lastBrainTier,
     partialTranscript,
     realtimeMode,
+    realtimeStatus,
+    realtimeSetupLabel: resolveOrbVoiceRealtimeSetupLabel(realtimeMode),
+    realtimeSetupDetail: resolveOrbVoiceRealtimeSetupDetail(realtimeMode, realtimeStatus?.reason),
     wakePhraseHint: ORB_VOICE_V2_WAKE_PHRASE_HINT,
     orbVoiceRealtimeAvailable: orbVoiceRealtimeEnabled(realtimeMode),
     handoffPayload

@@ -1,45 +1,24 @@
-"""ORB Voice realtime beta scaffolding — safe status without exposing secrets."""
+"""ORB Voice realtime beta — status/token surfaces backed by canonical env config."""
 
 from __future__ import annotations
 
-import os
 from typing import Any
 
-from services.orb_voice_realtime_config import _openai_realtime_configured
+from services.orb_voice_realtime_config_service import (
+    is_openai_realtime_available,
+    public_realtime_status_payload,
+)
 
 
 def realtime_beta_status_payload() -> dict[str, Any]:
     """Report whether full realtime or hybrid beta is available; always safe to call."""
-    configured = _openai_realtime_configured()
-    hybrid_enabled = os.environ.get("ORB_VOICE_HYBRID_BETA", "1").strip().lower() not in {
-        "0",
-        "false",
-        "off",
-        "no",
-    }
-    if configured:
-        return {
-            "available": True,
-            "reason": "configured",
-            "mode": "beta",
-            "transport": "openai_realtime",
-            "hybridSpeech": hybrid_enabled,
-            "fallback": "voice_v2",
-        }
-    return {
-        "available": False,
-        "reason": "not_configured",
-        "mode": "fallback",
-        "transport": None,
-        "hybridSpeech": hybrid_enabled,
-        "fallback": "voice_v2",
-    }
+    return public_realtime_status_payload()
 
 
 def realtime_beta_token_payload(*, user_id: int | None = None) -> dict[str, Any]:
-    """Token/session hint for frontend — never returns API secrets."""
-    status = realtime_beta_status_payload()
-    if not status.get("available"):
+    """Token/session hint for frontend — never returns provider API secrets."""
+    status = public_realtime_status_payload()
+    if not is_openai_realtime_available():
         return {
             "ok": False,
             "reason": status.get("reason") or "not_configured",

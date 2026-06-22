@@ -236,6 +236,16 @@ export function OrbVoiceStation({
 
   const preferenceControls = voiceSettingsOpen ? (
     <div className="flex w-full max-w-sm flex-col gap-3" data-orb-voice-v2-preferences data-orb-voice-setup-panel>
+      <div className="rounded-xl border border-[var(--orb-line)]/30 bg-[var(--orb-surface)]/40 px-3 py-2 text-left" data-orb-voice-realtime-setup>
+        <p className="text-[10px] font-medium text-[var(--orb-foreground)]" data-orb-voice-realtime-setup-label>
+          {voice.realtimeSetupLabel}
+        </p>
+        {voice.realtimeSetupDetail ? (
+          <p className="mt-0.5 text-[10px] leading-relaxed text-[var(--orb-muted)]" data-orb-voice-realtime-setup-detail>
+            {voice.realtimeSetupDetail}
+          </p>
+        ) : null}
+      </div>
       <OrbVoiceV2Carousel
         label="Purpose"
         items={ORB_VOICE_V2_PURPOSE_MODES}

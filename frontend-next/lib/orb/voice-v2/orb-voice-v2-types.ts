@@ -86,8 +86,11 @@ export type OrbVoiceV2SessionMemory = {
 
 export type OrbVoiceRealtimeBetaStatus = {
   available: boolean
-  reason?: string
-  mode?: string
+  provider?: 'openai' | 'none' | string
+  reason?: string | null
+  mode?: 'webrtc' | 'hybrid' | 'fallback' | string
+  model?: string | null
+  transcriptionModel?: string | null
   transport?: string | null
   hybridSpeech?: boolean
   fallback: 'voice_v2'
