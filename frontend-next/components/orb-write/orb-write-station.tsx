@@ -134,7 +134,7 @@ export function OrbWriteStation({
       presentation="workspace"
     >
       <div
-        className="orb-write-integrated-studio flex min-h-0 flex-1 flex-col gap-3"
+        className="orb-write-integrated-studio orb-premium-surface orb-premium-studio flex min-h-0 flex-1 flex-col gap-3"
         data-orb-write-station
         data-orb-write-full-width-studio
         data-orb-write-integrated-studio-surface

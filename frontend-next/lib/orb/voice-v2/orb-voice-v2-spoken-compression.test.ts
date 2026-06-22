@@ -3,6 +3,7 @@ import { describe, it } from 'node:test'
 
 import {
   VOICE_FAST_MAX_WORDS,
+  VOICE_FAST_SPOKEN_CHAR_CAP,
   VOICE_SAFEGUARDING_MAX_WORDS,
   VOICE_SPECIALIST_MAX_WORDS,
   VOICE_TTS_CHAR_HARD_CAP,
@@ -41,6 +42,6 @@ describe('orb-voice-v2-spoken-compression', () => {
   it('enforces hard char cap for TTS', () => {
     const reply = `${'Reflective question about the incident. '.repeat(20)}What happened next?`
     const compressed = compressOrbVoiceReplyForSpeech(reply, 'general_reflection', 'voice_fast')
-    assert.ok(compressed.length <= VOICE_TTS_CHAR_HARD_CAP)
+    assert.ok(compressed.length <= VOICE_FAST_SPOKEN_CHAR_CAP)
   })
 })

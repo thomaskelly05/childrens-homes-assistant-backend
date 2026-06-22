@@ -1720,7 +1720,7 @@ export function OrbDictateStation({
       onClose={handleDictateWorkspaceClose}
     >
       <div
-        className="orb-dictate pointer-events-auto flex min-h-0 flex-1 flex-col"
+        className="orb-dictate orb-premium-surface orb-premium-capture-station pointer-events-auto flex min-h-0 flex-1 flex-col"
         data-orb-dictate-station
         data-orb-dictate-magic-notes
         data-orb-dictate-title={ORB_DICTATE_PRODUCT_TITLE}

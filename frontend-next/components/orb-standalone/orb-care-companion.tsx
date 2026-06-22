@@ -37,6 +37,10 @@ import {
   syncOrbProjectsDebounced
 } from '@/lib/orb/orb-projects-resilience'
 import { fetchOrbSavedOutputsSummaryResilient } from '@/lib/orb/orb-saved-outputs-resilience'
+import {
+  scheduleOrbDeferredLoad,
+  shouldFetchOrbSavedOutputsSummaryImmediately
+} from '@/lib/orb/orb-loading-behaviour'
 import { markOrbUserInitiatedConversationStream } from '@/lib/orb/orb-request-storm-guard'
 import { shouldSkipAuthenticatedOrbFetch } from '@/lib/orb/orb-session-gate'
 import {
@@ -891,12 +895,25 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
     [workspace.projects, workspace.activeProjectId]
   )
 
+  const savedOutputsSummaryLoadedRef = useRef(false)
+
   useEffect(() => {
     if (!orbSessionReady || shouldSkipAuthenticatedOrbFetch()) return
     if (!shouldAllowOrbProductFetch('saved_outputs_summary')) return
-    void fetchOrbSavedOutputsSummaryResilient()
-      .then((summary) => setSavedOutputsCount(summary.total || 0))
-      .catch(() => setSavedOutputsCount(0))
+
+    const loadSummary = () => {
+      savedOutputsSummaryLoadedRef.current = true
+      void fetchOrbSavedOutputsSummaryResilient()
+        .then((summary) => setSavedOutputsCount(summary.total || 0))
+        .catch(() => setSavedOutputsCount(0))
+    }
+
+    if (shouldFetchOrbSavedOutputsSummaryImmediately(activePanel)) {
+      loadSummary()
+      return
+    }
+    if (savedOutputsSummaryLoadedRef.current) return
+    return scheduleOrbDeferredLoad(loadSummary, 1500)
   }, [activePanel, orbSessionReady])
 
   useEffect(() => {
@@ -4324,7 +4341,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
                         className={residentialSurface ? 'orb-workspace-home-main w-full' : 'w-full'}
                         {...(residentialSurface ? { 'data-orb-workspace-home-main': true } : {})}
                       >
-                    <div className="orb-workspace-hero orb-workspace-hero--premium" data-orb-workspace-hero>
+                    <div className="orb-workspace-hero orb-workspace-hero--premium orb-premium-hero" data-orb-workspace-hero>
                     {residentialSurface ? <div className="orb-home-orb-glow" aria-hidden /> : null}
                     <div
                       className="relative flex shrink-0 justify-center orb-home-hero-presence"

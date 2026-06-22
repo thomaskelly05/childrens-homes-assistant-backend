@@ -16,9 +16,9 @@ function readComponent(relativePath: string) {
 }
 
 describe('ORB Voice unification', () => {
-  it('status probe emits voice_status_requested and voice_status_received', () => {
+  it('status probe emits voice_runtime_probe_requested and voice_status_received', () => {
     const availability = readComponent('lib/orb/voice/orb-realtime-availability.ts')
-    assert.match(availability, /voice_status_requested/)
+    assert.match(availability, /voice_runtime_probe_requested/)
     assert.match(availability, /voice_status_received/)
     assert.match(availability, /configured: status\.reason === 'configured'/)
     assert.match(availability, /voice_status_skipped_unauthenticated/)

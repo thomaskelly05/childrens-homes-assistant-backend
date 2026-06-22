@@ -7,6 +7,8 @@ import re
 VOICE_FAST_MAX_WORDS = 40
 VOICE_SPECIALIST_MAX_WORDS = 55
 VOICE_SAFEGUARDING_MAX_WORDS = 65
+VOICE_FAST_SPOKEN_CHAR_CAP = 120
+VOICE_FAST_SPOKEN_CHAR_IDEAL = 90
 VOICE_TTS_CHAR_SOFT_CAP = 180
 VOICE_TTS_CHAR_HARD_CAP = 220
 
@@ -79,6 +81,13 @@ def _resolve_max_words(tier: str | None) -> int:
     return VOICE_FAST_MAX_WORDS
 
 
+def _resolve_char_caps(tier: str | None) -> tuple[int, int]:
+    normalised = (tier or "voice_fast").strip().lower()
+    if normalised in {"voice_specialist", "voice_safeguarding"}:
+        return VOICE_TTS_CHAR_SOFT_CAP, VOICE_TTS_CHAR_HARD_CAP
+    return VOICE_FAST_SPOKEN_CHAR_IDEAL, VOICE_FAST_SPOKEN_CHAR_CAP
+
+
 def compress_voice_reply_for_speech(
     reply: str,
     *,
@@ -107,4 +116,5 @@ def compress_voice_reply_for_speech(
         combined = f"{cleaned} {boundary}"
         cleaned = _cap_words(combined, max_words + 12) if _count_words(combined) > max_words + 12 else combined
 
-    return _cap_chars(cleaned, VOICE_TTS_CHAR_HARD_CAP, VOICE_TTS_CHAR_SOFT_CAP)
+    soft_cap, hard_cap = _resolve_char_caps(tier)
+    return _cap_chars(cleaned, hard_cap, soft_cap)

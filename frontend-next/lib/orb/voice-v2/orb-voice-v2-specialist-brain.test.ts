@@ -16,8 +16,8 @@ function read(relativePath: string) {
 }
 
 describe('orb-voice-v2-specialist-brain', () => {
-  it('build marker is phase-5n3-voice-fast-capture-modern-ui', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5n3-voice-fast-capture-modern-ui')
+  it('build marker is phase-5o-orb-premium-ui-voice-timing-cleanup', () => {
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5o-orb-premium-ui-voice-timing-cleanup')
   })
 
   it('reflection packet includes bullying specialist sections', () => {

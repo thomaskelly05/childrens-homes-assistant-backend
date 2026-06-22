@@ -4,7 +4,7 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, it } from 'node:test'
 
-import { compressOrbVoiceReplyForSpeech, VOICE_TTS_CHAR_SOFT_CAP } from './orb-voice-v2-spoken-compression.ts'
+import { compressOrbVoiceReplyForSpeech, VOICE_FAST_SPOKEN_CHAR_CAP } from './orb-voice-v2-spoken-compression.ts'
 import { pickOrbVoiceV2Acknowledgement } from './orb-voice-v2-showstopper.ts'
 import { traceOrbVoiceRealtime } from './orb-voice-v2-realtime-trace.ts'
 
@@ -28,7 +28,7 @@ describe('orb-voice-v2-latency-flow', () => {
       'The child was upset after tea. ' +
       'What support do you think they need tonight?'
     const spoken = compressOrbVoiceReplyForSpeech(long, 'general_reflection', 'voice_fast')
-    assert.ok(spoken.length <= VOICE_TTS_CHAR_SOFT_CAP + 40)
+    assert.ok(spoken.length <= VOICE_FAST_SPOKEN_CHAR_CAP)
   })
 
   it('commit flow sets written turn before async speak', () => {

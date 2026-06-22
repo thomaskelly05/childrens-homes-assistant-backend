@@ -28,8 +28,8 @@ function read(relativePath: string) {
 }
 
 describe('ORB Voice platform rebuild (Phase 4F)', () => {
-  it('build marker is phase-5n3-voice-fast-capture-modern-ui', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5n3-voice-fast-capture-modern-ui')
+  it('build marker is phase-5o-orb-premium-ui-voice-timing-cleanup', () => {
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5o-orb-premium-ui-voice-timing-cleanup')
   })
 
   it('session state machine resolves listening and thinking', () => {

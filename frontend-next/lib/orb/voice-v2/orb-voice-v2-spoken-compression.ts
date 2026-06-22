@@ -5,6 +5,8 @@ import type { OrbVoiceV2BrainTier, OrbVoiceV2Intent, OrbVoiceV2PersonalityId } f
 export const VOICE_FAST_MAX_WORDS = 40
 export const VOICE_SPECIALIST_MAX_WORDS = 55
 export const VOICE_SAFEGUARDING_MAX_WORDS = 65
+export const VOICE_FAST_SPOKEN_CHAR_CAP = 120
+export const VOICE_FAST_SPOKEN_CHAR_IDEAL = 90
 export const VOICE_TTS_CHAR_SOFT_CAP = 180
 export const VOICE_TTS_CHAR_HARD_CAP = 220
 
@@ -54,6 +56,16 @@ function resolveMaxWords(tier: OrbVoiceV2BrainTier | null | undefined): number {
   if (tier === 'voice_safeguarding') return VOICE_SAFEGUARDING_MAX_WORDS
   if (tier === 'voice_specialist') return VOICE_SPECIALIST_MAX_WORDS
   return VOICE_FAST_MAX_WORDS
+}
+
+export function resolveOrbVoiceSpokenCharCaps(tier: OrbVoiceV2BrainTier | null | undefined): {
+  soft: number
+  hard: number
+} {
+  if (tier === 'voice_specialist' || tier === 'voice_safeguarding') {
+    return { soft: VOICE_TTS_CHAR_SOFT_CAP, hard: VOICE_TTS_CHAR_HARD_CAP }
+  }
+  return { soft: VOICE_FAST_SPOKEN_CHAR_IDEAL, hard: VOICE_FAST_SPOKEN_CHAR_CAP }
 }
 
 function intentFallback(intent: OrbVoiceV2Intent | string | null | undefined): string | null {
@@ -107,5 +119,6 @@ export function compressOrbVoiceReplyForSpeech(
     cleaned = countWords(combined) > maxWords + 12 ? capWords(combined, maxWords + 12) : combined
   }
 
-  return capChars(cleaned, VOICE_TTS_CHAR_HARD_CAP, VOICE_TTS_CHAR_SOFT_CAP)
+  const { soft, hard } = resolveOrbVoiceSpokenCharCaps(tier)
+  return capChars(cleaned, hard, soft)
 }

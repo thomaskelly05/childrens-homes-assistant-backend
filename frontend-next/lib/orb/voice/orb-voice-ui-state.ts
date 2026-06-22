@@ -15,7 +15,7 @@ import {
 
 export const ORB_REALTIME_CONFIGURED_PROVIDERS = ['openai', 'openai_realtime'] as const
 
-/** True when GET /orb/voice/session/status reports realtime ready (no session/client secret required). */
+/** True when realtime + v2 status probe reports realtime ready (no legacy session/status). */
 export function isOrbRealtimeStatusConfigured(
   status: OrbRealtimeVoiceStatus | null | undefined
 ): boolean {

@@ -622,7 +622,11 @@ export function useOrbVoiceV2(open: boolean) {
       setVoicePreparing(true)
       prepareTimerRef.current = window.setTimeout(() => setVoicePreparingLongWait(true), 2500)
       skipTimerRef.current = window.setTimeout(() => setVoicePreparingSkipAvailable(true), 6000)
-      const result = await requestOrbVoiceV2Speak(spoken, { voice })
+      const result = await requestOrbVoiceV2Speak(spoken, {
+        voice,
+        context: 'live_voice',
+        tier: lastBrainTierRef.current
+      })
       if (generation !== speakGenerationRef.current || bargeInRef.current) return
       if (!result.ok || !result.blob) {
         clearVoicePreparing()

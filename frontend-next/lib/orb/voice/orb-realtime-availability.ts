@@ -64,7 +64,7 @@ export type OrbVoiceTranscriptCallbacks = {
   onStateChange?: (state: OrbRealtimeVoiceState) => void
 }
 
-/** Probe GET /orb/voice/session/status — never throws; skips when unauthenticated. */
+/** Probe v2 + realtime status — never calls legacy /orb/voice/session/status. */
 export async function fetchOrbVoiceRealtimeStatus(): Promise<OrbRealtimeVoiceStatus> {
   const { emitOrbClientDebug } = await import('@/lib/orb/orb-client-debug')
   const { setOrbVoiceDiagStatus, registerOrbVoiceDiagGlobal } = await import('./orb-voice-diag')
@@ -79,7 +79,7 @@ export async function fetchOrbVoiceRealtimeStatus(): Promise<OrbRealtimeVoiceSta
   const { shouldAllowOrbProductFetch, recordOrbVoiceStatusBootstrapRequest } = await import(
     '@/lib/orb/orb-product-bootstrap-guard'
   )
-  if (!shouldAllowOrbProductFetch('voice_session_status')) {
+  if (!shouldAllowOrbProductFetch('voice_runtime_probe')) {
     emitOrbClientDebug({ area: 'voice', event: 'voice_status_skipped_gate', detail: {} })
     return STATUS_UNAVAILABLE
   }
@@ -90,59 +90,81 @@ export async function fetchOrbVoiceRealtimeStatus(): Promise<OrbRealtimeVoiceSta
   }
 
   try {
-    emitOrbClientDebug({ area: 'voice', event: 'voice_status_requested', detail: {} })
-    const response = await authFetchResponse('/orb/voice/session/status', { method: 'GET' })
-    if (response.status === 401 || response.status === 402 || response.status === 403) {
-      if (response.status === 401) markOrbVoiceUnauthenticated()
+    emitOrbClientDebug({ area: 'voice', event: 'voice_runtime_probe_requested', detail: {} })
+    const [realtimeResponse, v2Response] = await Promise.all([
+      authFetchResponse('/orb/voice/realtime/status', { method: 'GET' }),
+      authFetchResponse('/orb/voice/v2/status', { method: 'GET' })
+    ])
+    const blockedStatus = realtimeResponse.status === 401 || realtimeResponse.status === 402 || realtimeResponse.status === 403
+      ? realtimeResponse.status
+      : v2Response.status === 401 || v2Response.status === 402 || v2Response.status === 403
+        ? v2Response.status
+        : null
+    if (blockedStatus) {
+      if (blockedStatus === 401) markOrbVoiceUnauthenticated()
       const { handleOrbProductBootstrapBlockedResponse } = await import('@/lib/orb/orb-product-bootstrap-response')
       handleOrbProductBootstrapBlockedResponse(
-        'voice_session_status',
-        new AuthApiError(response.status, { message: 'ORB voice bootstrap blocked' })
+        'voice_runtime_probe',
+        new AuthApiError(blockedStatus, { message: 'ORB voice bootstrap blocked' })
       )
       emitOrbClientDebug({
         area: 'voice',
         event: 'voice_status_skipped_unauthenticated',
-        detail: { status: response.status }
+        detail: { status: blockedStatus }
       })
-      setOrbVoiceDiagStatus(STATUS_UNAVAILABLE, response.status)
+      setOrbVoiceDiagStatus(STATUS_UNAVAILABLE, blockedStatus)
       return STATUS_UNAVAILABLE
     }
-    const payload = await response.json().catch(() => undefined)
-    if (!response.ok || !payload || typeof payload !== 'object') {
-      setOrbVoiceDiagStatus(STATUS_UNAVAILABLE, response.status)
-      return STATUS_UNAVAILABLE
-    }
-    const data = payload as Record<string, unknown>
+
+    const realtimePayload = realtimeResponse.ok
+      ? ((await realtimeResponse.json().catch(() => ({}))) as Record<string, unknown>)
+      : {}
+    const v2Payload = v2Response.ok
+      ? ((await v2Response.json().catch(() => ({}))) as Record<string, unknown>)
+      : {}
+
+    const realtimeEnabled = Boolean(realtimePayload.available ?? realtimePayload.realtime_enabled)
+    const provider =
+      typeof realtimePayload.provider === 'string'
+        ? realtimePayload.provider
+        : realtimeEnabled
+          ? 'openai'
+          : null
     const runtime: OrbVoiceRuntimeDiagnostics = {
-      ttsEnabled: Boolean(data.ttsEnabled),
+      ttsEnabled: Boolean(v2Payload.ttsEnabled ?? v2Payload.katherineReady),
       preferredProvider:
-        typeof data.preferredProvider === 'string' ? data.preferredProvider : 'text_only',
+        typeof v2Payload.preferredProvider === 'string' ? v2Payload.preferredProvider : 'text_only',
       ttsProviderEffective:
-        typeof data.ttsProviderEffective === 'string' ? data.ttsProviderEffective : undefined,
+        typeof v2Payload.ttsProviderEffective === 'string' ? v2Payload.ttsProviderEffective : undefined,
       ttsProviderForced:
-        typeof data.ttsProviderForced === 'string' ? data.ttsProviderForced : null,
-      elevenLabsConfigured: Boolean(data.elevenLabsConfigured),
-      katherineConfigured: Boolean(data.katherineConfigured),
-      katherineReady: Boolean(data.katherineReady),
-      fallbackReason: typeof data.fallbackReason === 'string' ? data.fallbackReason : null,
-      forcedProvider: typeof data.forcedProvider === 'string' ? data.forcedProvider : null,
-      serverTranscriptionAvailable: Boolean(data.serverTranscriptionAvailable)
+        typeof v2Payload.ttsProviderForced === 'string' ? v2Payload.ttsProviderForced : null,
+      elevenLabsConfigured: Boolean(v2Payload.elevenLabsConfigured),
+      katherineConfigured: Boolean(v2Payload.katherineConfigured ?? v2Payload.katherineReady),
+      katherineReady: Boolean(v2Payload.katherineReady),
+      fallbackReason: typeof v2Payload.fallbackReason === 'string' ? v2Payload.fallbackReason : null,
+      forcedProvider: typeof v2Payload.forcedProvider === 'string' ? v2Payload.forcedProvider : null,
+      serverTranscriptionAvailable: Boolean(v2Payload.serverTranscriptionAvailable)
     }
+    const reason: OrbRealtimeVoiceStatus['reason'] =
+      realtimePayload.reason === 'configured' ||
+      realtimePayload.reason === 'not_configured' ||
+      realtimePayload.reason === 'endpoint_failed'
+        ? realtimePayload.reason
+        : realtimeEnabled && provider && provider !== 'none'
+          ? 'configured'
+          : realtimeResponse.ok || v2Response.ok
+            ? 'not_configured'
+            : 'endpoint_failed'
     const status: OrbRealtimeVoiceStatus = {
-      ok: Boolean(data.ok ?? true),
-      realtime_enabled: Boolean(data.realtime_enabled),
-      provider: typeof data.provider === 'string' ? data.provider : data.provider === null ? null : null,
-      model: typeof data.model === 'string' ? data.model : null,
-      requires_client_secret: Boolean(data.requires_client_secret),
-      reason:
-        data.reason === 'configured' || data.reason === 'not_configured' || data.reason === 'endpoint_failed'
-          ? data.reason
-          : data.realtime_enabled
-            ? 'configured'
-            : 'not_configured',
+      ok: realtimeResponse.ok || v2Response.ok,
+      realtime_enabled: realtimeEnabled,
+      provider,
+      model: typeof realtimePayload.model === 'string' ? realtimePayload.model : null,
+      requires_client_secret: false,
+      reason,
       runtime
     }
-    setOrbVoiceDiagStatus(status, response.status)
+    setOrbVoiceDiagStatus(status, realtimeResponse.status || v2Response.status)
     emitOrbClientDebug({
       area: 'voice',
       event: 'voice_status_received',

@@ -23,8 +23,8 @@ function read(relativePath: string) {
 }
 
 describe('ORB Residential Phase 4D Voice server transcription repair', () => {
-  it('build version marker is phase-5n3-voice-fast-capture-modern-ui', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5n3-voice-fast-capture-modern-ui')
+  it('build version marker is phase-5o-orb-premium-ui-voice-timing-cleanup', () => {
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5o-orb-premium-ui-voice-timing-cleanup')
     const layout = read('app/orb/layout.tsx')
     assert.match(layout, /orb-residential-shell\.css/)
     assert.deepEqual(ORB_LAYOUT_CSS_FILES, ['app/orb/orb-residential-shell.css'])
@@ -100,7 +100,7 @@ describe('ORB Residential Phase 4D Voice server transcription repair', () => {
 
   it('single shell and no compliance guarantee language', () => {
     const shell = read('app/orb/orb-residential-shell.css')
-    assert.match(shell, /phase-5n3-voice-fast-capture-modern-ui/)
+    assert.match(shell, /phase-5o-orb-premium-ui-voice-timing-cleanup/)
     const station = read('components/orb-standalone/orb-voice-station.tsx')
     assert.doesNotMatch(station, /compliance guarantee|Ofsted approved/i)
   })

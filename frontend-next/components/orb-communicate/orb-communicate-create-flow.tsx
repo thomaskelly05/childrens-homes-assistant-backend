@@ -142,7 +142,7 @@ export function OrbCommunicateCreateFlow({
   }
 
   return (
-    <div className="orb-communicate-create orb-communicate-station space-y-4" data-orb-communicate-create-flow data-orb-communicate-station-layout>
+    <div className="orb-communicate-create orb-communicate-station orb-premium-surface space-y-4" data-orb-communicate-create-flow data-orb-communicate-station-layout>
       <header className="orb-communicate-station__hero flex gap-4" data-orb-communicate-station-hero>
         <div className="shrink-0 pt-1">
           <GlassOrbMark size="sm" pulse aria-hidden />
@@ -170,7 +170,7 @@ export function OrbCommunicateCreateFlow({
         </label>
         <textarea
           id="orb-communicate-prompt"
-          className="orb-communicate-prompt min-h-[9rem] w-full resize-y text-base"
+          className="orb-communicate-prompt orb-premium-input min-h-[9rem] w-full resize-y text-base"
           placeholder={ORB_COMMUNICATE_PROMPT_PLACEHOLDER}
           value={prompt}
           onChange={(event) => setPrompt(event.target.value)}
@@ -187,7 +187,7 @@ export function OrbCommunicateCreateFlow({
               <button
                 key={example}
                 type="button"
-                className="orb-communicate-example-chip"
+                className="orb-communicate-example-chip orb-premium-chip"
                 onClick={() => applyExample(example)}
                 data-orb-communicate-example={example}
               >

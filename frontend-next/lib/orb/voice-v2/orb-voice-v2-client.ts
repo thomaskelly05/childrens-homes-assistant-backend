@@ -14,9 +14,10 @@ import type {
 } from './orb-voice-v2-types.ts'
 import {
   compressOrbVoiceReplyForSpeech,
+  resolveOrbVoiceSpokenCharCaps,
+  VOICE_FAST_SPOKEN_CHAR_CAP,
   VOICE_TTS_CHAR_HARD_CAP
 } from './orb-voice-v2-spoken-compression.ts'
-import { ORB_VOICE_V2_LIVE_SPOKEN_CAP } from './orb-voice-v2-copy.ts'
 
 function parseOrbVoiceV2Status(data: Record<string, unknown>): OrbVoiceV2Status {
   return {
@@ -96,9 +97,12 @@ export async function requestOrbVoiceV2Respond(input: {
 
 export async function requestOrbVoiceV2Speak(
   text: string,
-  options?: { voice?: string; context?: string }
+  options?: { voice?: string; context?: string; tier?: OrbVoiceV2BrainTier | null }
 ): Promise<OrbVoiceV2SpeakResult> {
-  const trimmed = text.trim().slice(0, VOICE_TTS_CHAR_HARD_CAP)
+  const { hard } = resolveOrbVoiceSpokenCharCaps(options?.tier)
+  const speakCap =
+    options?.context === 'live_voice' ? Math.min(hard, VOICE_FAST_SPOKEN_CHAR_CAP) : VOICE_TTS_CHAR_HARD_CAP
+  const trimmed = text.trim().slice(0, speakCap)
   if (!trimmed) return { ok: false, error: 'empty_text' }
   try {
     const response = await authFetchResponse('/orb/voice/v2/speak', {
@@ -172,6 +176,7 @@ export function capOrbVoiceV2SpokenText(
     { safetyBoundaryApplied: options?.safetyBoundaryApplied }
   )
   if (!compressed) return compressed
-  if (compressed.length <= ORB_VOICE_V2_LIVE_SPOKEN_CAP) return compressed
-  return compressed.slice(0, ORB_VOICE_V2_LIVE_SPOKEN_CAP).trim()
+  const { hard } = resolveOrbVoiceSpokenCharCaps(options?.tier)
+  if (compressed.length <= hard) return compressed
+  return compressed.slice(0, hard).trim()
 }

@@ -45,7 +45,7 @@ export function OrbVoiceLiveRail({
 }) {
   return (
     <aside
-      className="orb-voice-live-rail orb-voice-live-rail--glass flex h-full min-h-0 w-full flex-col"
+      className="orb-voice-live-rail orb-voice-live-rail--glass orb-premium-glass orb-premium-rail flex h-full min-h-0 w-full flex-col"
       data-orb-voice-live-rail
       data-orb-voice-live-rail-mounted
     >

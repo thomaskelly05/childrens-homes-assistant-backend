@@ -28,9 +28,10 @@ describe('orb-no-product-api-before-ready', () => {
     assert.match(source, /shouldAllowOrbProductFetch\('standalone_config'\)/)
   })
 
-  it('voice session status checks bootstrap guard', () => {
+  it('voice runtime probe checks bootstrap guard', () => {
     const source = read('lib/orb/voice/orb-realtime-availability.ts')
-    assert.match(source, /shouldAllowOrbProductFetch\('voice_session_status'\)/)
+    assert.match(source, /shouldAllowOrbProductFetch\('voice_runtime_probe'\)/)
+    assert.doesNotMatch(source, /\/orb\/voice\/session\/status/)
   })
 
   it('OrbCareCompanion guards bootstrap effects', () => {
