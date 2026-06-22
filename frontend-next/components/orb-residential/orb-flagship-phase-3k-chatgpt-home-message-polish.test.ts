@@ -18,8 +18,8 @@ function read(relativePath: string) {
 }
 
 describe('ORB Residential Phase 3K ChatGPT home and message polish', () => {
-  it('build version marker is phase-5l-voice-realtime-beta-siri-convergence', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5l-voice-realtime-beta-siri-convergence')
+  it('build version marker is phase-5l1-voice-idle-siri-hero-activation', () => {
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5l1-voice-idle-siri-hero-activation')
     const layout = read('app/orb/layout.tsx')
     assert.match(layout, /orb-residential-shell\.css/)
     assert.doesNotMatch(layout, /orb-residential-shell-v2|orb-mobile\.css/)
@@ -117,6 +117,6 @@ describe('ORB Residential Phase 3K ChatGPT home and message polish', () => {
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
     assert.match(companion, /orb-app-shell/)
     assert.doesNotMatch(companion, /orb-home-shell|orb-chat-shell/)
-    assert.match(read('app/orb/orb-residential-shell.css'), /phase-5l-voice-realtime-beta-siri-convergence/)
+    assert.match(read('app/orb/orb-residential-shell.css'), /phase-5l1-voice-idle-siri-hero-activation/)
   })
 })

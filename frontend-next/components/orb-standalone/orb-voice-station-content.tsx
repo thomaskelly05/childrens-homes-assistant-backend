@@ -7,9 +7,8 @@ import { OrbVoiceResponsibilityStrip } from '@/components/orb-standalone/orb-voi
 import { useOrbMobileViewport } from '@/components/orb-standalone/use-orb-mobile-viewport'
 import type { OrbVoiceCompanionState } from '@/components/orb-residential/orb-voice-companion'
 import { ORB_VOICE_V2_ONE_SCREEN_WORKSPACE } from '@/lib/orb/voice-v2/orb-voice-v2-one-screen-workspace.ts'
-import {
-  ORB_VOICE_V2_TITLE
-} from '@/lib/orb/orb-residential-ui-copy'
+import { ORB_VOICE_V2_IDLE_PROMPT } from '@/lib/orb/voice-v2/orb-voice-v2-copy.ts'
+import { ORB_VOICE_V2_TITLE } from '@/lib/orb/orb-residential-ui-copy'
 
 /**
  * Phase 5J — one persistent live Voice workspace.
@@ -59,6 +58,7 @@ export function OrbVoiceStationContent({
       data-orb-voice-mobile={isMobileViewport ? true : undefined}
       data-orb-voice-desktop-spacious={!isMobileViewport ? true : undefined}
       data-orb-voice-session-started={sessionStarted ? true : undefined}
+      data-orb-voice-idle-hero={!sessionStarted ? true : undefined}
     >
       <div className="orb-voice-station-content__scroll orb-voice-one-screen-workspace__scroll min-h-0 flex-1 overscroll-contain px-4 py-2 md:px-6 md:py-4">
         <div className="orb-voice-one-screen-workspace__grid mx-auto flex w-full max-w-6xl flex-col gap-4 md:flex-row md:items-stretch md:gap-6">
@@ -77,6 +77,11 @@ export function OrbVoiceStationContent({
               >
                 {ORB_VOICE_V2_TITLE}
               </h2>
+              {!sessionStarted ? (
+                <p className="orb-voice-station-content__subtitle mt-0.5 text-xs text-[var(--orb-muted)]" data-orb-voice-v2-subtitle>
+                  {ORB_VOICE_V2_IDLE_PROMPT}
+                </p>
+              ) : null}
             </div>
 
             {preferenceBadges ? (

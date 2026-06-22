@@ -483,7 +483,7 @@ export function OrbVoiceStation({
           companionState={companionState}
           voiceV2State={voice.state}
           statusLine={statusLine}
-          detailLine={voice.detailLine}
+          detailLine={sessionStarted ? voice.detailLine : null}
           sessionStarted={sessionStarted}
           preferenceBadges={preferenceBadges}
           liveRail={liveRail}

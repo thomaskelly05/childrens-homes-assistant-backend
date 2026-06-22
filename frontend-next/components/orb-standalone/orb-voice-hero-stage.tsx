@@ -52,7 +52,11 @@ export function OrbVoiceHeroStage({
       ? ({ 'data-orb-voice-mobile-hero-stage': true, 'data-orb-voice-hero-stage': true } as const)
       : ({ 'data-orb-voice-hero-stage': true } as const)
 
-  const subline = detailLine ?? ORB_VOICE_COMPANION_SUBLINES[companionState]
+  const subline =
+    detailLine ??
+    (oneScreenWorkspace && companionState === 'idle'
+      ? null
+      : ORB_VOICE_COMPANION_SUBLINES[companionState])
   const headline = statusLine ?? ORB_VOICE_COMPANION_HEADLINES[companionState]
   const showSubline = Boolean(subline) && (isMobile || companionState !== 'paused')
 

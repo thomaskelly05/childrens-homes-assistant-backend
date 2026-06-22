@@ -19,9 +19,9 @@ function read(relativePath: string) {
 }
 
 describe('ORB Residential Phase 5K Voice hero and spoken-response tightening', () => {
-  it('build marker is phase-5l-voice-realtime-beta-siri-convergence', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5l-voice-realtime-beta-siri-convergence')
-    assert.match(read('app/orb/orb-residential-shell.css'), /phase-5l-voice-realtime-beta-siri-convergence/)
+  it('build marker is phase-5l1-voice-idle-siri-hero-activation', () => {
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5l1-voice-idle-siri-hero-activation')
+    assert.match(read('app/orb/orb-residential-shell.css'), /phase-5l1-voice-idle-siri-hero-activation/)
     assert.deepEqual(ORB_LAYOUT_CSS_FILES, ['app/orb/orb-residential-shell.css'])
   })
 

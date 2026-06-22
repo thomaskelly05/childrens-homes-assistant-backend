@@ -14,8 +14,8 @@ function read(relativePath: string) {
 }
 
 describe('ORB Residential Phase 3U Dictate identity mapping', () => {
-  it('build version marker is phase-5l-voice-realtime-beta-siri-convergence', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5l-voice-realtime-beta-siri-convergence')
+  it('build version marker is phase-5l1-voice-idle-siri-hero-activation', () => {
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5l1-voice-idle-siri-hero-activation')
     const layout = read('app/orb/layout.tsx')
     assert.match(layout, /orb-residential-shell\.css/)
     assert.deepEqual(ORB_LAYOUT_CSS_FILES, ['app/orb/orb-residential-shell.css'])
