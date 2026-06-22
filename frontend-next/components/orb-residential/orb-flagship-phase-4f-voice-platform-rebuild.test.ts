@@ -14,11 +14,11 @@ function read(relativePath: string) {
 }
 
 describe('ORB Residential Phase 4F Voice platform rebuild', () => {
-  it('build version marker is phase-5i-voice-showstopper-convergence', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5i-voice-showstopper-convergence')
+  it('build version marker is phase-5j-voice-one-screen-live-workspace', () => {
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5j-voice-one-screen-live-workspace')
     assert.match(read('app/orb/layout.tsx'), /orb-residential-shell\.css/)
     assert.deepEqual(ORB_LAYOUT_CSS_FILES, ['app/orb/orb-residential-shell.css'])
-    assert.match(read('app/orb/orb-residential-shell.css'), /phase-5i-voice-showstopper-convergence/)
+    assert.match(read('app/orb/orb-residential-shell.css'), /phase-5j-voice-one-screen-live-workspace/)
   })
 
   it('there is one primary Voice station path', () => {
@@ -37,8 +37,8 @@ describe('ORB Residential Phase 4F Voice platform rebuild', () => {
 
   it('primary button says Start conversation and listening does not show Stop and send', () => {
     const station = read('components/orb-standalone/orb-voice-station.tsx')
-    assert.equal(orbVoiceV2PrimaryLabel('idle'), 'Start conversation')
-    assert.match(station, /orbVoiceV2PrimaryLabel/)
+    assert.match(station, /orbVoiceV2PrimaryActionLabel/)
+    assert.match(station, /startConversation/)
     assert.match(station, /startOrbVoiceV2Capture|use-orb-voice-v2/)
   })
 
@@ -87,7 +87,7 @@ describe('ORB Residential Phase 4F Voice platform rebuild', () => {
 
   it('audio-not-stored copy and single shell remain true', () => {
     const station = read('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(station, /ORB_VOICE_V2_SAFETY_FOOTER/)
+    assert.match(read('components/orb-standalone/orb-voice-live-rail.tsx'), /ORB_VOICE_V2_SAFETY_FOOTER/)
     assert.doesNotMatch(station, /compliance guarantee|Ofsted approved/i)
   })
 

@@ -16,8 +16,8 @@ function read(relativePath: string) {
 }
 
 describe('orb-voice-v2-specialist-brain', () => {
-  it('build marker is phase-5i-voice-showstopper-convergence', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5i-voice-showstopper-convergence')
+  it('build marker is phase-5j-voice-one-screen-live-workspace', () => {
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5j-voice-one-screen-live-workspace')
   })
 
   it('reflection packet includes bullying specialist sections', () => {

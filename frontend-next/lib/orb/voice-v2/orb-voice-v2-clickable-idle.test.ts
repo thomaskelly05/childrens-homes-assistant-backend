@@ -3,11 +3,12 @@ import { describe, it } from 'node:test'
 
 import { ORB_VOICE_V2_AUDIO_UNLOCK_SOFT_FAIL } from './orb-voice-v2-copy.ts'
 import { traceOrbVoiceV2StartClick } from './orb-voice-v2-click-trace.ts'
+import { orbVoiceV2PrimaryActionLabel } from './orb-voice-v2-one-screen-workspace.ts'
 import { orbVoiceV2PrimaryLabel } from './orb-voice-v2-state.ts'
 
 describe('orb-voice-v2-clickable-idle', () => {
   it('idle primary label is Start conversation', () => {
-    assert.equal(orbVoiceV2PrimaryLabel('idle'), 'Start conversation')
+    assert.equal(orbVoiceV2PrimaryActionLabel('idle'), 'Start conversation')
   })
 
   it('start click trace emits safe QA payload', () => {

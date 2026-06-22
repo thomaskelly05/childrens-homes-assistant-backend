@@ -56,7 +56,7 @@ describe('ORB Voice UI state — ready before session', () => {
     assert.equal(orbVoiceUiPrimaryLabel('ready'), 'Start conversation')
     const station = readComponent('components/orb-standalone/orb-voice-station.tsx')
     assert.match(station, /data-orb-voice-ui-state=\{voice\.state\}/)
-    assert.match(station, /orbVoiceV2PrimaryLabel/)
+    assert.match(station, /orbVoiceV2PrimaryActionLabel/)
   })
 
   it('hasClientSecret false before start does not affect ready state resolver', () => {

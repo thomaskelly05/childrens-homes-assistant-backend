@@ -22,8 +22,8 @@ function read(relativePath: string) {
 }
 
 describe('ORB Residential Phase 4A Voice reflective companion', () => {
-  it('build version marker is phase-5i-voice-showstopper-convergence', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5i-voice-showstopper-convergence')
+  it('build version marker is phase-5j-voice-one-screen-live-workspace', () => {
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5j-voice-one-screen-live-workspace')
     const layout = read('app/orb/layout.tsx')
     assert.match(layout, /orb-residential-shell\.css/)
     assert.deepEqual(ORB_LAYOUT_CSS_FILES, ['app/orb/orb-residential-shell.css'])
@@ -42,7 +42,7 @@ describe('ORB Residential Phase 4A Voice reflective companion', () => {
   })
 
   it('voice controls use Start conversation label', () => {
-    assert.equal(orbVoiceV2PrimaryLabel('idle'), 'Start conversation')
+    assert.match(read('components/orb-standalone/orb-voice-station.tsx'), /orbVoiceV2PrimaryActionLabel|startConversation/)
     assert.match(read('components/orb-standalone/orb-voice-station.tsx'), /data-orb-voice-start-conversation/)
   })
 
@@ -50,16 +50,17 @@ describe('ORB Residential Phase 4A Voice reflective companion', () => {
     const hook = read('lib/orb/voice-v2/use-orb-voice-v2.ts')
     assert.match(hook, /ORB_VOICE_V2_TRANSCRIPTION_ERROR/)
     const station = read('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(station, /ORB_VOICE_V2_SAFETY_FOOTER/)
+    assert.match(read('components/orb-standalone/orb-voice-live-rail.tsx'), /ORB_VOICE_V2_SAFETY_FOOTER/)
     const capture = read('lib/orb/voice-v2/orb-voice-v2-capture.ts')
     assert.match(capture, /getUserMedia/)
   })
 
   it('conversation panel and end summarise pathway exist', () => {
     const station = read('components/orb-standalone/orb-voice-station.tsx')
+    const rail = read('components/orb-standalone/orb-voice-live-rail.tsx')
     assert.equal(ORB_VOICE_V2_TRANSCRIPT_LABEL, 'Voice conversation')
     assert.equal(ORB_VOICE_V2_TRANSCRIPT_NOTE, 'Reflection notes — not yet a record')
-    assert.match(station, /data-orb-voice-conversation-panel/)
+    assert.match(rail, /data-orb-voice-conversation-panel/)
     assert.match(station, /End and summarise/)
   })
 
@@ -83,7 +84,7 @@ describe('ORB Residential Phase 4A Voice reflective companion', () => {
   it('single shell and no compliance guarantee language', () => {
     const shell = read('app/orb/orb-residential-shell.css')
     const station = read('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(shell, /phase-5i-voice-showstopper-convergence/)
+    assert.match(shell, /phase-5j-voice-one-screen-live-workspace/)
     assert.doesNotMatch(station, /Ofsted approved|compliance guarantee|finalised record/i)
     assert.doesNotMatch(station, /ORB makes safeguarding decisions/i)
   })

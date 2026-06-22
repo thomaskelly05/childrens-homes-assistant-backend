@@ -10,6 +10,7 @@ import {
   ORB_VOICE_V2_PREPARING_VOICE,
   ORB_VOICE_V2_TINY_TURN
 } from './orb-voice-v2-copy.ts'
+import { ORB_VOICE_V2_DIDNT_CATCH_COPY } from './orb-voice-v2-one-screen-workspace.ts'
 import { buildOrbVoiceV2ReflectionPacket } from './orb-voice-v2-reflection.ts'
 import { createOrbVoiceV2Turn } from './orb-voice-v2-turns.ts'
 import {
@@ -38,8 +39,8 @@ function capSpokenWords(text: string): string {
 }
 
 describe('orb-voice-v2-latency-save', () => {
-  it('build marker is phase-5i-voice-showstopper-convergence', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5i-voice-showstopper-convergence')
+  it('build marker is phase-5j-voice-one-screen-live-workspace', () => {
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5j-voice-one-screen-live-workspace')
   })
 
   it('tiny transcript under threshold does not call respond', () => {
@@ -55,8 +56,9 @@ describe('orb-voice-v2-latency-save', () => {
 
   it('tiny transcript returns to listening', () => {
     const hook = read('lib/orb/voice-v2/use-orb-voice-v2.ts')
-    assert.match(hook, /setTinyTurnNotice\(ORB_VOICE_V2_TINY_TURN\)/)
+    assert.match(hook, /setTinyTurnNotice\(ORB_VOICE_V2_DIDNT_CATCH_COPY\)/)
     assert.match(hook, /void resumeListening\(\)/)
+    assert.match(ORB_VOICE_V2_DIDNT_CATCH_COPY, /didn’t catch enough/i)
     assert.equal(ORB_VOICE_V2_TINY_TURN, 'I didn’t catch enough to respond. You can continue speaking.')
   })
 

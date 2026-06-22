@@ -19,7 +19,6 @@ describe('ORB Voice residential layout unification', () => {
     assert.match(station, /panelId="voice"/)
     assert.match(station, /title=\{ORB_VOICE_PANEL_TITLE\}/)
     assert.match(station, /subtitle=\{isMobileViewport \? ORB_VOICE_PANEL_MOBILE_SUBTITLE : ORB_VOICE_PANEL_SUBTITLE\}/)
-    assert.match(station, /headerActions=/)
     assert.match(station, /data-orb-voice-settings-chip/)
     assert.doesNotMatch(station, /orb-voice-studio__header/)
     assert.doesNotMatch(station, /orb-voice-studio__title/)

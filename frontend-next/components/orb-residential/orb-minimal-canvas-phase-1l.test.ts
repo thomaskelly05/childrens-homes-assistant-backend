@@ -62,7 +62,7 @@ describe('ORB Residential minimal canvas (Phase 1L)', () => {
   it('voice keeps one quiet safety note on idle', () => {
     const voice = read('components/orb-standalone/orb-voice-station-content.tsx')
     assert.match(voice, /ORB_VOICE_STATUS_CARD_COPY/)
-    assert.match(voice, /workspaceMode !== 'idle'/)
+    assert.match(voice, /!sessionStarted/)
     assert.match(voice, /OrbVoiceResponsibilityStrip/)
   })
 

@@ -40,11 +40,11 @@ describe('ORB Residential Phase 5C Voice v2 audio playback unlock', () => {
 
   it('manual play keeps fetched blob and ORB text stays visible', () => {
     const hook = read('lib/orb/voice-v2/use-orb-voice-v2.ts')
-    const station = read('components/orb-standalone/orb-voice-station.tsx')
+    const rail = read('components/orb-standalone/orb-voice-live-rail.tsx')
     assert.match(hook, /pendingPlaybackRef/)
     assert.match(hook, /createOrbVoiceV2PlaybackSession/)
-    assert.match(station, /data-orb-voice-turns/)
-    assert.match(station, /data-orb-voice-v2-transcript/)
+    assert.match(rail, /data-orb-voice-turns/)
+    assert.match(rail, /data-orb-voice-v2-transcript/)
   })
 
   it('fallback provider copy uses backend status', () => {

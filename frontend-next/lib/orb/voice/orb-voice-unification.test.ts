@@ -74,7 +74,7 @@ describe('ORB Voice unification', () => {
     const station = readComponent('components/orb-standalone/orb-voice-station.tsx')
     assert.doesNotMatch(station, /Configure realtime voice/i)
     assert.match(station, /useOrbVoiceV2/)
-    assert.match(station, /orbVoiceV2PrimaryLabel/)
+    assert.match(station, /orbVoiceV2PrimaryActionLabel/)
   })
 
   it('session 200 but WebRTC fail shows Dictate-ready headline', () => {

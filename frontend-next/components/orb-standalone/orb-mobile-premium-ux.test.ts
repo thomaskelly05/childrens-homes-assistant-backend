@@ -198,7 +198,7 @@ describe('ORB mobile premium Voice copy', () => {
     assert.match(voice, /data-orb-voice-primary/)
     assert.match(voice, /data-orb-voice-start-conversation/)
     assert.match(content, /data-orb-voice-station-content/)
-    assert.match(voice, /orbVoiceV2PrimaryLabel/)
+    assert.match(voice, /orbVoiceV2PrimaryActionLabel/)
     assert.match(voice, /ORB_VOICE_PANEL_SUBTITLE/)
   })
 
@@ -250,10 +250,11 @@ describe('ORB mobile premium Voice copy', () => {
 
   it('post-session shows summary panel and record handoff without duplicate fallbacks', () => {
     const voice = readComponent('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(voice, /data-orb-voice-summary-panel/)
+    const rail = readComponent('components/orb-standalone/orb-voice-live-rail.tsx')
+    assert.match(rail, /data-orb-voice-summary-panel/)
     assert.match(voice, /data-orb-voice-summary-ready/)
     assert.match(voice, /data-orb-voice-copy-summary/)
-    assert.match(voice, /data-orb-voice-start-new/)
+    assert.match(voice, /data-orb-voice-reset/)
     assert.doesNotMatch(voice, /Open Dictate instead/)
     assert.doesNotMatch(voice, /Open Dictate again/)
   })

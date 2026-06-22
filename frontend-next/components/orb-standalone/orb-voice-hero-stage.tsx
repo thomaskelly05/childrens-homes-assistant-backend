@@ -23,7 +23,8 @@ export function OrbVoiceHeroStage({
   middleSlot,
   cta,
   className = '',
-  heroStageId = 'desktop'
+  heroStageId = 'desktop',
+  oneScreenWorkspace = false
 }: {
   companionState: OrbVoiceCompanionState
   /** Raw Voice v2 state for premium showstopper waveform (includes interrupted). */
@@ -37,6 +38,8 @@ export function OrbVoiceHeroStage({
   className?: string
   /** `desktop` uses data-orb-voice-hero-stage; `mobile` uses data-orb-voice-mobile-hero-stage */
   heroStageId?: 'desktop' | 'mobile'
+  /** Phase 5J — wave-only hero without duplicate companion orb. */
+  oneScreenWorkspace?: boolean
 }) {
   const { isMobile } = useOrbResponsiveMode()
   const stageAttr =
@@ -54,7 +57,9 @@ export function OrbVoiceHeroStage({
       {...stageAttr}
     >
       <div className="orb-voice-hero-aura pointer-events-none absolute inset-x-0 top-0 -z-10 h-[min(28rem,70%)]" aria-hidden />
-      <OrbVoiceCompanion state={companionState} size="hero" className="orb-voice-hero-stage__orb shrink-0" />
+      {oneScreenWorkspace ? null : (
+        <OrbVoiceCompanion state={companionState} size="hero" className="orb-voice-hero-stage__orb shrink-0" />
+      )}
 
       <p
         className="orb-voice-hero-stage__headline text-center text-sm font-medium text-[var(--orb-text,var(--orb-foreground))]"

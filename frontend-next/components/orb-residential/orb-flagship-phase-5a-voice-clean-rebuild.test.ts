@@ -16,7 +16,7 @@ function read(relativePath: string) {
 
 describe('ORB Voice v2 state machine', () => {
   it('primary labels match product copy', () => {
-    assert.equal(orbVoiceV2PrimaryLabel('idle'), 'Start conversation')
+    assert.match(read('components/orb-standalone/orb-voice-station.tsx'), /orbVoiceV2PrimaryActionLabel|startConversation/)
     assert.equal(orbVoiceV2PrimaryLabel('listening'), 'Listening…')
     assert.equal(orbVoiceV2PrimaryLabel('thinking'), 'Thinking this through…')
     assert.equal(orbVoiceV2PrimaryLabel('speaking'), 'ORB is responding…')
@@ -73,11 +73,11 @@ describe('ORB Voice v2 flow contracts', () => {
 })
 
 describe('ORB Residential Phase 5A Voice clean rebuild', () => {
-  it('build version marker is phase-5i-voice-showstopper-convergence', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5i-voice-showstopper-convergence')
+  it('build version marker is phase-5j-voice-one-screen-live-workspace', () => {
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5j-voice-one-screen-live-workspace')
     assert.match(read('app/orb/layout.tsx'), /orb-residential-shell\.css/)
     assert.deepEqual(ORB_LAYOUT_CSS_FILES, ['app/orb/orb-residential-shell.css'])
-    assert.match(read('app/orb/orb-residential-shell.css'), /phase-5i-voice-showstopper-convergence/)
+    assert.match(read('app/orb/orb-residential-shell.css'), /phase-5j-voice-one-screen-live-workspace/)
   })
 
   it('active voice station uses v2 hook and not legacy voice modules', () => {
@@ -115,7 +115,7 @@ describe('ORB Residential Phase 5A Voice clean rebuild', () => {
 
   it('Katherine fallback copy and audio-not-stored footer are present', () => {
     const station = read('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(station, /ORB_VOICE_V2_SAFETY_FOOTER/)
+    assert.match(read('components/orb-standalone/orb-voice-live-rail.tsx'), /ORB_VOICE_V2_SAFETY_FOOTER/)
     assert.match(read('lib/orb/voice-v2/use-orb-voice-v2.ts'), /resolveOrbVoiceV2KatherineStatusMessage/)
     assert.match(station, /Generated for adult review|ORB_VOICE_V2_ADULT_REVIEW_LABEL/)
     assert.doesNotMatch(station, /compliance guarantee|Ofsted approved/i)

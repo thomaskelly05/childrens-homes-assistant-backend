@@ -6,6 +6,7 @@ import { OrbVoiceHeroStage } from '@/components/orb-standalone/orb-voice-hero-st
 import { OrbVoiceResponsibilityStrip } from '@/components/orb-standalone/orb-voice-responsibility-strip'
 import { useOrbMobileViewport } from '@/components/orb-standalone/use-orb-mobile-viewport'
 import type { OrbVoiceCompanionState } from '@/components/orb-residential/orb-voice-companion'
+import { ORB_VOICE_V2_ONE_SCREEN_WORKSPACE } from '@/lib/orb/voice-v2/orb-voice-v2-one-screen-workspace.ts'
 import {
   ORB_VOICE_STATUS_CARD_COPY,
   ORB_VOICE_V2_PROMPT,
@@ -14,8 +15,8 @@ import {
 } from '@/lib/orb/orb-residential-ui-copy'
 
 /**
- * Canonical Voice station body — shared hero column for desktop and mobile.
- * Uses standard ORB workspace chrome from OrbWorkspaceFrame; no duplicate titles.
+ * Phase 5J — one persistent live Voice workspace.
+ * Hero + wave stay mounted; right rail always present on desktop.
  */
 export function OrbVoiceStationContent({
   companionState,
@@ -23,10 +24,11 @@ export function OrbVoiceStationContent({
   statusLine,
   detailLine,
   children,
+  preferenceBadges,
   controls,
   secondaryControls,
-  sidePanel,
-  workspaceMode = 'idle',
+  liveRail,
+  sessionStarted = false,
   className = ''
 }: {
   voiceV2State?: string
@@ -34,74 +36,81 @@ export function OrbVoiceStationContent({
   statusLine: string
   detailLine: string | null
   children?: ReactNode
-  /** Primary CTA — rendered in the hero stack below the waveform. */
+  preferenceBadges?: ReactNode
   controls: ReactNode | null
-  /** Optional secondary actions below the hero (transcript tools, etc.). */
   secondaryControls?: ReactNode
-  /** Desktop transcript / summary column when live or after call. */
-  sidePanel?: ReactNode
-  workspaceMode?: 'idle' | 'live' | 'after_call' | 'no_transcript'
+  /** Persistent right rail — always mounted on desktop. */
+  liveRail: ReactNode
+  sessionStarted?: boolean
   className?: string
 }) {
   const isMobileViewport = useOrbMobileViewport()
-  const showDesktopSplit = !isMobileViewport && Boolean(sidePanel) && workspaceMode !== 'idle'
 
   return (
     <div
-      className={`orb-voice-station-content orb-workspace orb-workspace--voice flex min-h-0 flex-1 flex-col overflow-hidden ${className}`.trim()}
+      className={`orb-voice-station-content orb-voice-one-screen-workspace orb-workspace orb-workspace--voice flex min-h-0 flex-1 flex-col overflow-hidden ${className}`.trim()}
       data-orb-voice-station-content
+      data-orb-voice-one-screen-workspace
       data-orb-workspace-voice
+      data-orb-voice-workspace-mode={ORB_VOICE_V2_ONE_SCREEN_WORKSPACE}
       data-orb-voice-mobile={isMobileViewport ? true : undefined}
       data-orb-voice-desktop-spacious={!isMobileViewport ? true : undefined}
-      data-orb-voice-workspace-mode={workspaceMode}
+      data-orb-voice-session-started={sessionStarted ? true : undefined}
     >
-      <div
-        className={`orb-voice-station-content__scroll min-h-0 flex-1 overscroll-contain px-4 py-2 md:px-6 md:py-6 ${
-          showDesktopSplit ? 'orb-voice-station-content__scroll--split' : ''
-        }`}
-      >
-        <div
-          className={`mx-auto flex w-full max-w-lg flex-col items-center ${
-            showDesktopSplit ? 'orb-voice-station-content__split md:max-w-none md:flex-row md:items-start md:gap-6' : ''
-          }`}
-        >
-          <div className={`orb-voice-station-content__hero flex w-full flex-col items-center ${showDesktopSplit ? 'md:max-w-sm md:flex-1' : ''}`}>
-            {workspaceMode === 'idle' ? (
-              <div className="orb-voice-station-content__intro mb-3 text-center" data-orb-voice-v2-intro>
-                <h2
-                  className="orb-voice-station-content__title text-base font-semibold text-[var(--orb-text,var(--orb-foreground))]"
-                  data-orb-voice-v2-title
-                >
-                  {ORB_VOICE_V2_TITLE}
-                </h2>
-                <p
-                  className="orb-voice-station-content__prompt mt-1 text-sm text-[var(--orb-muted)]"
-                  data-orb-voice-v2-prompt
-                  data-orb-voice-hero-line
-                >
-                  {ORB_VOICE_V2_PROMPT}
-                </p>
-                <p
-                  className="orb-voice-station-content__supporting mt-2 text-xs leading-relaxed text-[var(--orb-muted)]"
-                  data-orb-voice-v2-supporting
-                >
-                  {ORB_VOICE_V2_SUPPORTING}
-                </p>
+      <div className="orb-voice-station-content__scroll orb-voice-one-screen-workspace__scroll min-h-0 flex-1 overscroll-contain px-4 py-2 md:px-6 md:py-4">
+        <div className="orb-voice-one-screen-workspace__grid mx-auto flex w-full max-w-6xl flex-col gap-4 md:flex-row md:items-stretch md:gap-6">
+          <div className="orb-voice-one-screen-workspace__main flex min-h-0 w-full flex-col items-center md:flex-1">
+            <div
+              className={`orb-voice-station-content__intro mb-2 w-full text-center transition-opacity ${
+                sessionStarted ? 'opacity-80' : ''
+              }`}
+              data-orb-voice-v2-intro
+            >
+              <h2
+                className="orb-voice-station-content__title text-base font-semibold text-[var(--orb-text,var(--orb-foreground))]"
+                data-orb-voice-v2-title
+              >
+                {ORB_VOICE_V2_TITLE}
+              </h2>
+              {!sessionStarted ? (
+                <>
+                  <p
+                    className="orb-voice-station-content__prompt mt-1 text-sm text-[var(--orb-muted)]"
+                    data-orb-voice-v2-prompt
+                    data-orb-voice-hero-line
+                  >
+                    {ORB_VOICE_V2_PROMPT}
+                  </p>
+                  <p
+                    className="orb-voice-station-content__supporting mt-2 text-xs leading-relaxed text-[var(--orb-muted)]"
+                    data-orb-voice-v2-supporting
+                  >
+                    {ORB_VOICE_V2_SUPPORTING}
+                  </p>
+                </>
+              ) : null}
+            </div>
+
+            {preferenceBadges ? (
+              <div className="mb-2 w-full max-w-sm" data-orb-voice-session-badges>
+                {preferenceBadges}
               </div>
             ) : null}
+
             <OrbVoiceHeroStage
               companionState={companionState}
               voiceV2State={voiceV2State}
               statusLine={statusLine}
               detailLine={detailLine}
-              middleSlot={workspaceMode === 'idle' ? children : undefined}
-              cta={isMobileViewport && workspaceMode === 'idle' ? undefined : controls}
+              middleSlot={children}
+              cta={isMobileViewport ? undefined : controls}
               heroStageId={isMobileViewport ? 'mobile' : 'desktop'}
+              oneScreenWorkspace
             />
-            {isMobileViewport && workspaceMode !== 'idle' ? children : null}
-            {workspaceMode === 'idle' ? (
+
+            {!sessionStarted ? (
               <p
-                className="orb-workspace-voice-status"
+                className="orb-workspace-voice-status mt-2"
                 role="status"
                 data-orb-voice-status-card
                 data-orb-voice-status
@@ -111,18 +120,17 @@ export function OrbVoiceStationContent({
               </p>
             ) : null}
           </div>
-          {showDesktopSplit ? (
-            <aside
-              className="orb-voice-station-content__side min-h-0 w-full min-w-0 md:max-w-md md:flex-1"
-              data-orb-voice-desktop-side-panel
-            >
-              {sidePanel}
-            </aside>
-          ) : null}
+
+          <div
+            className="orb-voice-one-screen-workspace__rail min-h-[12rem] w-full md:max-w-md md:flex-1"
+            data-orb-voice-live-rail-slot
+          >
+            {liveRail}
+          </div>
         </div>
       </div>
 
-      {isMobileViewport && controls && workspaceMode !== 'after_call' ? (
+      {isMobileViewport && controls ? (
         <div
           className="orb-voice-controls orb-voice-station-content__mobile-dock shrink-0 border-t border-[var(--orb-line)]/30 px-4 py-2.5 pb-[max(0.75rem,env(safe-area-inset-bottom))]"
           data-orb-voice-mobile-action-dock
@@ -141,9 +149,7 @@ export function OrbVoiceStationContent({
         </div>
       ) : null}
 
-      {workspaceMode !== 'idle' ? (
-        <OrbVoiceResponsibilityStrip className="pb-[max(0.5rem,env(safe-area-inset-bottom))]" />
-      ) : null}
+      <OrbVoiceResponsibilityStrip className="pb-[max(0.5rem,env(safe-area-inset-bottom))]" />
     </div>
   )
 }

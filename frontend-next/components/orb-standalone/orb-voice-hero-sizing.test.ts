@@ -29,7 +29,7 @@ describe('ORB Voice hero companion sizing contract', () => {
 
     assert.match(station, /OrbVoiceStationContent/)
     assert.match(hero, /data-orb-voice-hero-stage/)
-    assert.match(hero, /<OrbVoiceCompanion state=\{companionState\} size="hero"/)
+    assert.match(hero, /oneScreenWorkspace \? null : \([\s\S]*<OrbVoiceCompanion state=\{companionState\} size="hero"/)
     assert.match(head, /data-orb-voice-companion-size=\{resolvedSize\}/)
     assert.match(head, /data-orb-voice-head/)
     assert.match(head, /OrbVoiceCore/)
@@ -85,7 +85,7 @@ describe('ORB Voice hero companion sizing contract', () => {
     const studioCss = read('components/orb-standalone/orb-voice-studio-layout.css')
 
     assert.match(content, /orb-voice-station-content__scroll/)
-    assert.match(content, /orb-voice-station-content__hero/)
+    assert.match(content, /OrbVoiceHeroStage/)
     assert.match(studioCss, /\[data-orb-voice-capture-active='true'\][\s\S]*overflow-y:\s*auto/)
     assert.match(studioCss, /\[data-orb-voice-capture-active='false'\][\s\S]*overflow:\s*hidden/)
     assert.match(station, /OrbVoiceStationContent/)

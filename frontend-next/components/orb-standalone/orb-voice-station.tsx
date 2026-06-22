@@ -1,8 +1,9 @@
 'use client'
 
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { OrbAppModal } from '@/components/orb-standalone/orb-app-modal'
+import { OrbVoiceLiveRail } from '@/components/orb-standalone/orb-voice-live-rail'
 import { OrbVoiceStationContent } from '@/components/orb-standalone/orb-voice-station-content'
 import { OrbVoiceV2Carousel } from '@/components/orb-standalone/orb-voice-v2-carousel'
 import { useOrbMobileViewport } from '@/components/orb-standalone/use-orb-mobile-viewport'
@@ -18,24 +19,26 @@ import {
   ORB_VOICE_V2_CONTINUE_CONVERSATION,
   ORB_VOICE_V2_CONTINUE_WITHOUT_VOICE,
   ORB_VOICE_V2_PLAY_ORB_VOICE,
-  ORB_VOICE_V2_SAFETY_FOOTER,
   ORB_VOICE_V2_SAVE_FAILED,
   ORB_VOICE_V2_SAVE_TO_RECORDS,
   ORB_VOICE_V2_SEND_TYPED,
   ORB_VOICE_V2_SUMMARY_REVIEW_NOTE,
   ORB_VOICE_V2_SUMMARY_TITLE,
-  ORB_VOICE_V2_TRANSCRIPT_LABEL,
-  ORB_VOICE_V2_TRANSCRIPT_NOTE,
   ORB_VOICE_V2_TYPE_INSTEAD,
   ORB_VOICE_V2_TYPE_PLACEHOLDER
 } from '@/lib/orb/voice-v2/orb-voice-v2-copy.ts'
+import {
+  isOrbVoiceV2SpecialistTier,
+  orbVoiceV2PrimaryActionLabel,
+  type OrbVoiceLiveRailTab
+} from '@/lib/orb/voice-v2/orb-voice-v2-one-screen-workspace.ts'
 import {
   ORB_VOICE_V2_PERSONALITY_OPTIONS,
   ORB_VOICE_V2_PURPOSE_MODES,
   ORB_VOICE_V2_VOICE_OPTIONS
 } from '@/lib/orb/voice-v2/orb-voice-v2-showstopper.ts'
 import type { OrbVoiceV2Mode, OrbVoiceV2PersonalityId, OrbVoiceV2VoiceId } from '@/lib/orb/voice-v2/orb-voice-v2-types.ts'
-import { mapOrbVoiceV2ToCompanionState, orbVoiceV2PrimaryLabel } from '@/lib/orb/voice-v2/orb-voice-v2-state.ts'
+import { mapOrbVoiceV2ToCompanionState, ORB_VOICE_V2_STATUS_LABEL } from '@/lib/orb/voice-v2/orb-voice-v2-state.ts'
 import { traceOrbVoiceV2StartClick } from '@/lib/orb/voice-v2/orb-voice-v2-click-trace.ts'
 import { useOrbVoiceV2 } from '@/lib/orb/voice-v2/use-orb-voice-v2.ts'
 
@@ -64,21 +67,29 @@ export function OrbVoiceStation({
   const voice = useOrbVoiceV2(open)
   const [saveNotice, setSaveNotice] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
-  const [transcriptExpanded, setTranscriptExpanded] = useState(false)
+  const [railTab, setRailTab] = useState<OrbVoiceLiveRailTab>('transcript')
+  const [voiceSettingsOpen, setVoiceSettingsOpen] = useState(false)
 
+  const sessionStarted = voice.state !== 'idle'
   const conversationLive = voice.state !== 'idle' && voice.state !== 'summary_ready'
-  const workspaceMode =
-    voice.state === 'summary_ready' ? 'after_call' : conversationLive ? 'live' : 'idle'
-
   const companionState = mapOrbVoiceV2ToCompanionState(voice.state)
   const statusLine = voice.autoResumeBlocked
     ? ORB_VOICE_V2_CONTINUE_CONVERSATION
-    : orbVoiceV2PrimaryLabel(voice.state, voice.state === 'error' && voice.showTypeFallback)
+    : ORB_VOICE_V2_STATUS_LABEL[voice.state] ?? 'Ready'
+  const primaryLabel = orbVoiceV2PrimaryActionLabel(voice.state, {
+    speaking: voice.state === 'speaking',
+    voicePreparing: voice.voicePreparing,
+    micRetry: voice.state === 'error' && voice.showTypeFallback
+  })
   const primaryDisabled =
     voice.state === 'requesting_microphone' ||
     voice.state === 'transcribing' ||
     voice.state === 'thinking'
   const primaryIdleReady = voice.state === 'idle' && isSignedIn
+
+  useEffect(() => {
+    if (voice.state === 'summary_ready') setRailTab('summary')
+  }, [voice.state])
 
   const handleClose = useCallback(() => {
     voice.resetLiveSession()
@@ -96,6 +107,10 @@ export function OrbVoiceStation({
       onSignIn?.()
       return
     }
+    if (voice.state === 'speaking' || voice.voicePreparing) {
+      void voice.bargeIn()
+      return
+    }
     if (voice.autoResumeBlocked) {
       void voice.continueConversation()
       return
@@ -110,10 +125,6 @@ export function OrbVoiceStation({
     }
     if (voice.state === 'paused') {
       void voice.continueConversation()
-      return
-    }
-    if (voice.state === 'speaking' || voice.voicePreparing) {
-      void voice.bargeIn()
     }
   }, [isSignedIn, onSignIn, primaryDisabled, voice])
 
@@ -179,232 +190,138 @@ export function OrbVoiceStation({
     }
   }, [voice.handoffPayload, voice.reflectionPacket, voice.summary])
 
-  const preferenceCarousels = (
+  const purposeLabel = ORB_VOICE_V2_PURPOSE_MODES.find((m) => m.id === voice.mode)?.label ?? 'Talk it through'
+  const personalityLabel =
+    ORB_VOICE_V2_PERSONALITY_OPTIONS.find((p) => p.id === voice.personality)?.label ?? 'Reflective'
+  const voiceLabel = ORB_VOICE_V2_VOICE_OPTIONS.find((v) => v.id === voice.selectedVoice)?.label ?? 'Katherine'
+
+  const preferenceBadges = sessionStarted ? (
+    <div className="flex flex-wrap items-center justify-center gap-1.5" data-orb-voice-preference-badges>
+      <span className="rounded-full border border-[var(--orb-line)]/50 px-2 py-0.5 text-[10px] text-[var(--orb-muted)]">
+        {purposeLabel}
+      </span>
+      <span className="rounded-full border border-[var(--orb-line)]/50 px-2 py-0.5 text-[10px] text-[var(--orb-muted)]">
+        {personalityLabel}
+      </span>
+      <span className="rounded-full border border-[var(--orb-line)]/50 px-2 py-0.5 text-[10px] text-[var(--orb-muted)]">
+        {voiceLabel}
+      </span>
+      <button
+        type="button"
+        className="text-[10px] font-medium text-[var(--orb-primary-blue,#168bff)] underline"
+        onClick={() => setVoiceSettingsOpen((current) => !current)}
+        data-orb-voice-settings-toggle
+      >
+        {voiceSettingsOpen ? 'Hide voice setup' : 'Voice setup'}
+      </button>
+    </div>
+  ) : null
+
+  const preferenceControls = (
     <div className="flex w-full max-w-sm flex-col gap-3" data-orb-voice-v2-preferences>
-      <OrbVoiceV2Carousel
-        label="Purpose"
-        items={ORB_VOICE_V2_PURPOSE_MODES}
-        value={voice.mode}
-        disabled={conversationLive}
-        onChange={(id) => voice.setMode(id as OrbVoiceV2Mode)}
-        dataAttr="purpose"
-      />
-      <OrbVoiceV2Carousel
-        label="Voice"
-        items={ORB_VOICE_V2_VOICE_OPTIONS.map((entry) => ({
-          id: entry.id,
-          label: entry.label,
-          description: entry.configured ? entry.description : `${entry.description} (preference)`
-        }))}
-        value={voice.selectedVoice}
-        disabled={conversationLive}
-        onChange={(id) => voice.setSelectedVoice(id as OrbVoiceV2VoiceId)}
-        dataAttr="voice"
-      />
-      <OrbVoiceV2Carousel
-        label="Personality"
-        items={ORB_VOICE_V2_PERSONALITY_OPTIONS}
-        value={voice.personality}
-        disabled={conversationLive}
-        onChange={(id) => voice.setPersonality(id as OrbVoiceV2PersonalityId)}
-        dataAttr="personality"
-      />
+      {!sessionStarted ? (
+        <OrbVoiceV2Carousel
+          label="Purpose"
+          items={ORB_VOICE_V2_PURPOSE_MODES}
+          value={voice.mode}
+          disabled={conversationLive}
+          onChange={(id) => voice.setMode(id as OrbVoiceV2Mode)}
+          dataAttr="purpose"
+        />
+      ) : null}
+      {(!sessionStarted || voiceSettingsOpen) && (
+        <>
+          <OrbVoiceV2Carousel
+            label="Voice"
+            items={ORB_VOICE_V2_VOICE_OPTIONS.map((entry) => ({
+              id: entry.id,
+              label: entry.label,
+              description: entry.configured ? entry.description : `${entry.description} (preference)`
+            }))}
+            value={voice.selectedVoice}
+            disabled={conversationLive}
+            onChange={(id) => voice.setSelectedVoice(id as OrbVoiceV2VoiceId)}
+            dataAttr="voice"
+          />
+          <OrbVoiceV2Carousel
+            label="Personality"
+            items={ORB_VOICE_V2_PERSONALITY_OPTIONS}
+            value={voice.personality}
+            disabled={conversationLive}
+            onChange={(id) => voice.setPersonality(id as OrbVoiceV2PersonalityId)}
+            dataAttr="personality"
+          />
+        </>
+      )}
     </div>
   )
 
-  const modeSelector = preferenceCarousels
-
-  const transcriptPanel = useMemo(() => {
-    if (voice.turns.length === 0 && voice.state !== 'summary_ready') return null
+  const summaryBody = useMemo(() => {
+    if (!voice.summary) return null
     return (
-      <section className="space-y-3" data-orb-voice-conversation-panel data-orb-voice-v2-transcript>
-        <div>
-          <p className="text-sm font-semibold text-[var(--orb-foreground)]">{ORB_VOICE_V2_TRANSCRIPT_LABEL}</p>
-          <p className="text-xs text-[var(--orb-muted)]">{ORB_VOICE_V2_TRANSCRIPT_NOTE}</p>
-        </div>
-        <div className="space-y-3 rounded-2xl border border-[var(--orb-line)]/50 p-3" data-orb-voice-turns>
-          {voice.turns.map((turn) => (
-            <div key={turn.id} data-orb-voice-turn={turn.role}>
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--orb-muted)]">
-                {turn.role === 'adult' ? 'Adult' : 'ORB'}
-              </p>
-              <p className="mt-1 text-sm leading-6 text-[var(--orb-foreground)] whitespace-pre-wrap">{turn.text}</p>
-            </div>
-          ))}
-        </div>
-        <p className="text-xs text-[var(--orb-muted)]" data-orb-voice-safety-note>
-          {ORB_VOICE_V2_SAFETY_FOOTER}
+      <div className="space-y-3" data-orb-voice-summary-ready>
+        <p className="text-sm font-semibold text-[var(--orb-foreground)]" data-orb-voice-summary-title>
+          {ORB_VOICE_V2_SUMMARY_TITLE}
         </p>
-      </section>
-    )
-  }, [voice.state, voice.turns])
-
-  const summaryPanel =
-    voice.state === 'summary_ready' && voice.summary ? (
-      <section className="space-y-4" data-orb-voice-summary-panel data-orb-voice-summary-ready>
-        <div>
-          <p className="text-sm font-semibold text-[var(--orb-foreground)]" data-orb-voice-summary-title>
-            {ORB_VOICE_V2_SUMMARY_TITLE}
-          </p>
-          <p
-            className="mt-1 inline-flex rounded-full border border-[var(--orb-line)]/50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--orb-muted)]"
-            data-orb-voice-adult-review-label
-          >
-            {ORB_VOICE_V2_ADULT_REVIEW_LABEL}
-          </p>
-          <p className="mt-2 text-xs text-[var(--orb-muted)]" data-orb-voice-summary-review-note>
-            {ORB_VOICE_V2_SUMMARY_REVIEW_NOTE}
-          </p>
-        </div>
+        <p className="text-xs text-[var(--orb-muted)]" data-orb-voice-summary-review-note>
+          {ORB_VOICE_V2_SUMMARY_REVIEW_NOTE}
+        </p>
         {voice.reflectionPacket?.sections ? (
-          <div className="space-y-3 rounded-2xl border border-[var(--orb-line)]/50 p-3" data-orb-voice-summary-sections>
+          <div className="space-y-3 rounded-xl border border-[var(--orb-line)]/40 p-2.5" data-orb-voice-summary-sections>
             {voice.reflectionPacket.sections.youngPeopleInvolved ? (
               <>
-                <div data-orb-voice-summary-section="what-was-discussed">
-                  <p className="text-xs font-semibold text-[var(--orb-foreground)]">What was discussed</p>
-                  <p className="mt-1 text-sm leading-6 text-[var(--orb-foreground)]">
-                    {voice.reflectionPacket.sections.whatWasDiscussed}
-                  </p>
-                </div>
                 <div data-orb-voice-summary-section="young-people-involved">
-                  <p className="text-xs font-semibold text-[var(--orb-foreground)]">Young people involved</p>
-                  <p className="mt-1 text-sm leading-6 text-[var(--orb-foreground)]">
-                    {voice.reflectionPacket.sections.youngPeopleInvolved}
-                  </p>
+                  <p className="text-xs font-semibold">Young people involved</p>
+                  <p className="mt-1 text-sm leading-6">{voice.reflectionPacket.sections.youngPeopleInvolved}</p>
                 </div>
                 <div data-orb-voice-summary-section="observed-reported">
-                  <p className="text-xs font-semibold text-[var(--orb-foreground)]">What was observed or reported</p>
-                  <p className="mt-1 text-sm leading-6 text-[var(--orb-foreground)]">
-                    {voice.reflectionPacket.sections.observedOrReported}
-                  </p>
-                </div>
-                <div data-orb-voice-summary-section="adult-response">
-                  <p className="text-xs font-semibold text-[var(--orb-foreground)]">Adult response</p>
-                  <p className="mt-1 text-sm leading-6 text-[var(--orb-foreground)]">
-                    {voice.reflectionPacket.sections.adultResponse}
-                  </p>
-                </div>
-              </>
-            ) : voice.reflectionPacket.sections.immediateSafety ? (
-              <>
-                <div data-orb-voice-summary-section="what-was-discussed">
-                  <p className="text-xs font-semibold text-[var(--orb-foreground)]">What was discussed</p>
-                  <p className="mt-1 text-sm leading-6 text-[var(--orb-foreground)]">
-                    {voice.reflectionPacket.sections.whatWasDiscussed}
-                  </p>
-                </div>
-                <div data-orb-voice-summary-section="immediate-safety">
-                  <p className="text-xs font-semibold text-[var(--orb-foreground)]">Immediate safety / procedure considerations</p>
-                  <p className="mt-1 text-sm leading-6 text-[var(--orb-foreground)]">
-                    {voice.reflectionPacket.sections.immediateSafety}
-                  </p>
-                </div>
-                <div data-orb-voice-summary-section="child-voice">
-                  <p className="text-xs font-semibold text-[var(--orb-foreground)]">Child’s voice or presentation</p>
-                  <p className="mt-1 text-sm leading-6 text-[var(--orb-foreground)]">
-                    {voice.reflectionPacket.sections.childVoiceOrPresentation}
-                  </p>
-                </div>
-                <div data-orb-voice-summary-section="known-facts">
-                  <p className="text-xs font-semibold text-[var(--orb-foreground)]">Known facts</p>
-                  <p className="mt-1 text-sm leading-6 text-[var(--orb-foreground)]">
-                    {voice.reflectionPacket.sections.knownFacts}
-                  </p>
-                </div>
-                <div data-orb-voice-summary-section="gaps">
-                  <p className="text-xs font-semibold text-[var(--orb-foreground)]">Gaps / questions</p>
-                  <p className="mt-1 text-sm leading-6 text-[var(--orb-foreground)]">
-                    {voice.reflectionPacket.sections.gapsOrQuestions}
-                  </p>
+                  <p className="text-xs font-semibold">What was observed or reported</p>
+                  <p className="mt-1 text-sm leading-6">{voice.reflectionPacket.sections.observedOrReported}</p>
                 </div>
               </>
             ) : voice.reflectionPacket.sections.whatHappened ? (
-              <>
-                <div data-orb-voice-summary-section="what-happened">
-                  <p className="text-xs font-semibold text-[var(--orb-foreground)]">What happened</p>
-                  <p className="mt-1 text-sm leading-6 text-[var(--orb-foreground)]">
-                    {voice.reflectionPacket.sections.whatHappened}
-                  </p>
-                </div>
-                <div data-orb-voice-summary-section="child-voice">
-                  <p className="text-xs font-semibold text-[var(--orb-foreground)]">Child’s voice or presentation</p>
-                  <p className="mt-1 text-sm leading-6 text-[var(--orb-foreground)]">
-                    {voice.reflectionPacket.sections.childVoiceOrPresentation}
-                  </p>
-                </div>
-                <div data-orb-voice-summary-section="adult-response">
-                  <p className="text-xs font-semibold text-[var(--orb-foreground)]">Adult response</p>
-                  <p className="mt-1 text-sm leading-6 text-[var(--orb-foreground)]">
-                    {voice.reflectionPacket.sections.adultResponse}
-                  </p>
-                </div>
-              </>
-            ) : (
-              <>
-                <div data-orb-voice-summary-section="what-was-discussed">
-                  <p className="text-xs font-semibold text-[var(--orb-foreground)]">What was discussed</p>
-                  <p className="mt-1 text-sm leading-6 text-[var(--orb-foreground)]">
-                    {voice.reflectionPacket.sections.whatWasDiscussed}
-                  </p>
-                </div>
-                <div data-orb-voice-summary-section="key-reflections">
-                  <p className="text-xs font-semibold text-[var(--orb-foreground)]">Key reflections</p>
-                  <p className="mt-1 text-sm leading-6 text-[var(--orb-foreground)]">
-                    {voice.reflectionPacket.sections.keyReflections}
-                  </p>
-                </div>
-              </>
-            )}
+              <div data-orb-voice-summary-section="what-happened">
+                <p className="text-xs font-semibold">What happened</p>
+                <p className="mt-1 text-sm leading-6">{voice.reflectionPacket.sections.whatHappened}</p>
+              </div>
+            ) : null}
             <div data-orb-voice-summary-section="recording">
-              <p className="text-xs font-semibold text-[var(--orb-foreground)]">What may need recording</p>
-              <p className="mt-1 text-sm leading-6 text-[var(--orb-foreground)]">
-                {voice.reflectionPacket.sections.whatMayNeedRecording}
-              </p>
+              <p className="text-xs font-semibold">What may need recording</p>
+              <p className="mt-1 text-sm leading-6">{voice.reflectionPacket.sections.whatMayNeedRecording}</p>
             </div>
             <div data-orb-voice-summary-section="follow-up">
-              <p className="text-xs font-semibold text-[var(--orb-foreground)]">Follow-up / oversight</p>
-              <p className="mt-1 text-sm leading-6 text-[var(--orb-foreground)]">
-                {voice.reflectionPacket.sections.followUpOrOversight}
-              </p>
+              <p className="text-xs font-semibold">Follow-up / oversight</p>
+              <p className="mt-1 text-sm leading-6">{voice.reflectionPacket.sections.followUpOrOversight}</p>
             </div>
           </div>
         ) : (
-          <p className="whitespace-pre-wrap text-sm leading-6 text-[var(--orb-foreground)]">{voice.summary}</p>
+          <p className="whitespace-pre-wrap text-sm leading-6">{voice.summary}</p>
         )}
-        {voice.turns.length > 0 ? (
-          <div data-orb-voice-summary-transcript-collapsible>
-            <button
-              type="button"
-              className="text-xs font-medium text-[var(--orb-primary-blue,#168bff)] underline"
-              onClick={() => setTranscriptExpanded((current) => !current)}
-              data-orb-voice-summary-transcript-toggle
-              aria-expanded={transcriptExpanded}
-            >
-              {transcriptExpanded ? 'Hide full transcript' : 'Show full transcript'}
-            </button>
-            {transcriptExpanded ? (
-              <div className="mt-3 space-y-3 rounded-2xl border border-[var(--orb-line)]/50 p-3" data-orb-voice-summary-transcript>
-                {voice.turns.map((turn) => (
-                  <div key={turn.id} data-orb-voice-turn={turn.role}>
-                    <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--orb-muted)]">
-                      {turn.role === 'adult' ? 'Adult' : 'ORB'}
-                    </p>
-                    <p className="mt-1 text-sm leading-6 text-[var(--orb-foreground)] whitespace-pre-wrap">{turn.text}</p>
-                  </div>
-                ))}
-              </div>
-            ) : null}
-          </div>
-        ) : null}
-        {saveNotice ? (
-          <p className="text-xs text-[var(--orb-muted)]" role="status" data-orb-voice-save-notice>
-            {saveNotice}
-          </p>
-        ) : null}
-        <div className="flex flex-col gap-2" data-orb-voice-summary-actions>
+        <p
+          className="inline-flex rounded-full border border-[var(--orb-line)]/50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--orb-muted)]"
+          data-orb-voice-adult-review-label
+        >
+          {ORB_VOICE_V2_ADULT_REVIEW_LABEL}
+        </p>
+      </div>
+    )
+  }, [voice.reflectionPacket, voice.summary])
+
+  const toolsPanel = (
+    <div className="flex flex-col gap-2" data-orb-voice-tools-panel data-orb-voice-summary-actions>
+      <button
+        type="button"
+        className="w-full rounded-full border border-[var(--orb-line)]/60 py-2 text-xs font-medium"
+        onClick={voice.endAndSummarise}
+        data-orb-voice-end-summarise
+      >
+        End and summarise
+      </button>
+      {voice.summary ? (
+        <>
           <button
             type="button"
-            className="w-full rounded-full border border-[var(--orb-line)]/60 py-2.5 text-sm font-medium"
+            className="w-full rounded-full border border-[var(--orb-line)]/60 py-2 text-xs font-medium"
             onClick={() => void handleCopySummary()}
             data-orb-voice-copy-summary
           >
@@ -413,7 +330,7 @@ export function OrbVoiceStation({
           {onOpenDictate ? (
             <button
               type="button"
-              className="w-full rounded-full bg-gradient-to-r from-[var(--orb-primary-blue,#168bff)] to-[var(--orb-primary-blue-2,#0d5fcc)] py-2.5 text-sm font-semibold text-white"
+              className="w-full rounded-full bg-gradient-to-r from-[var(--orb-primary-blue,#168bff)] to-[var(--orb-primary-blue-2,#0d5fcc)] py-2 text-xs font-semibold text-white"
               onClick={() => onOpenDictate(voice.summary ?? '', undefined, { studio: false })}
               data-orb-voice-send-to-dictate
             >
@@ -423,10 +340,8 @@ export function OrbVoiceStation({
           {onOpenWrite ? (
             <button
               type="button"
-              className="w-full rounded-full border border-[var(--orb-line)]/60 py-2.5 text-sm font-medium"
-              onClick={() =>
-                onOpenWrite(voice.summary ?? '', { title: ORB_VOICE_V2_SUMMARY_TITLE })
-              }
+              className="w-full rounded-full border border-[var(--orb-line)]/60 py-2 text-xs font-medium"
+              onClick={() => onOpenWrite(voice.summary ?? '', { title: ORB_VOICE_V2_SUMMARY_TITLE })}
               data-orb-voice-open-write
             >
               Open in ORB Write
@@ -434,7 +349,7 @@ export function OrbVoiceStation({
           ) : null}
           <button
             type="button"
-            className="w-full rounded-full border border-[var(--orb-line)]/60 py-2.5 text-sm font-medium disabled:opacity-50"
+            className="w-full rounded-full border border-[var(--orb-line)]/60 py-2 text-xs font-medium disabled:opacity-50"
             onClick={() => void handleSaveReflection()}
             disabled={saving}
             data-orb-voice-save-reflection
@@ -442,60 +357,92 @@ export function OrbVoiceStation({
           >
             {saving ? 'Saving…' : ORB_VOICE_V2_SAVE_TO_RECORDS}
           </button>
-          <button
-            type="button"
-            className="w-full rounded-full border border-[var(--orb-line)]/60 py-2.5 text-sm font-medium"
-            onClick={() => {
-              voice.resetLiveSession()
-              setSaveNotice(null)
-            }}
-            data-orb-voice-start-new
-          >
-            Start new conversation
-          </button>
-        </div>
-      </section>
-    ) : null
+        </>
+      ) : null}
+      {saveNotice ? (
+        <p className="text-xs text-[var(--orb-muted)]" role="status" data-orb-voice-save-notice>
+          {saveNotice}
+        </p>
+      ) : null}
+      {onOpenVoiceSettings ? (
+        <button
+          type="button"
+          className="w-full rounded-full border border-[var(--orb-line)]/60 py-2 text-xs font-medium"
+          onClick={onOpenVoiceSettings}
+          data-orb-voice-settings-chip
+        >
+          Voice settings
+        </button>
+      ) : null}
+    </div>
+  )
 
-  const sidePanel = summaryPanel ?? transcriptPanel
+  const liveRail = (
+    <OrbVoiceLiveRail
+      activeTab={railTab}
+      onTabChange={setRailTab}
+      turns={voice.turns}
+      acknowledgement={voice.acknowledgement}
+      lastIntent={voice.lastIntent}
+      specialistActive={isOrbVoiceV2SpecialistTier(voice.lastBrainTier)}
+      summaryPanel={summaryBody}
+      toolsPanel={toolsPanel}
+    />
+  )
 
-  const secondaryControls =
-    conversationLive || voice.state === 'paused' || voice.autoResumeBlocked ? (
-      <div className="flex flex-wrap items-center justify-center gap-2" data-orb-voice-secondary-controls>
-        {voice.state === 'paused' || voice.autoResumeBlocked ? (
-          <button
-            type="button"
-            className="orb-liquid-button rounded-full px-4 py-2 text-xs"
-            onClick={() => void voice.continueConversation()}
-            data-orb-voice-resume
-            data-orb-voice-continue-conversation
-          >
-            {voice.autoResumeBlocked ? ORB_VOICE_V2_CONTINUE_CONVERSATION : 'Resume'}
-          </button>
-        ) : (
-          <button type="button" className="orb-liquid-button rounded-full px-4 py-2 text-xs" onClick={voice.pauseConversation} data-orb-voice-pause>
-            Pause
-          </button>
-        )}
-        <button type="button" className="orb-liquid-button rounded-full px-4 py-2 text-xs" onClick={() => void voice.bargeIn()} data-orb-voice-barge-in>
+  const secondaryControls = sessionStarted ? (
+    <div className="flex flex-wrap items-center justify-center gap-2" data-orb-voice-secondary-controls>
+      {voice.state === 'paused' || voice.autoResumeBlocked ? (
+        <button
+          type="button"
+          className="orb-liquid-button rounded-full px-4 py-2 text-xs"
+          onClick={() => void voice.continueConversation()}
+          data-orb-voice-resume
+        >
+          {voice.autoResumeBlocked ? ORB_VOICE_V2_CONTINUE_CONVERSATION : 'Resume'}
+        </button>
+      ) : conversationLive ? (
+        <button
+          type="button"
+          className="orb-liquid-button rounded-full px-4 py-2 text-xs"
+          onClick={voice.pauseConversation}
+          data-orb-voice-pause
+        >
+          Pause
+        </button>
+      ) : null}
+      {voice.state === 'speaking' || voice.voicePreparing ? (
+        <button
+          type="button"
+          className="orb-liquid-button rounded-full px-4 py-2 text-xs"
+          onClick={() => void voice.bargeIn()}
+          data-orb-voice-barge-in
+        >
           Interrupt
         </button>
-        <button type="button" className="orb-liquid-button rounded-full px-4 py-2 text-xs" onClick={() => voice.stopOrbAudio()} data-orb-voice-stop-orb>
-          Stop ORB
-        </button>
-        <button type="button" className="orb-liquid-button rounded-full px-4 py-2 text-xs" onClick={voice.resetLiveSession} data-orb-voice-reset>
-          Reset
-        </button>
-        <button type="button" className="orb-liquid-button rounded-full px-4 py-2 text-xs" onClick={voice.endAndSummarise} data-orb-voice-end-summarise>
-          End and summarise
-        </button>
-        {onOpenVoiceSettings ? (
-          <button type="button" className="orb-liquid-button rounded-full px-4 py-2 text-xs" onClick={onOpenVoiceSettings} data-orb-voice-settings-chip>
-            Voice settings
-          </button>
-        ) : null}
-      </div>
-    ) : null
+      ) : null}
+      <button
+        type="button"
+        className="orb-liquid-button rounded-full px-4 py-2 text-xs"
+        onClick={() => voice.stopOrbAudio()}
+        data-orb-voice-stop-orb
+      >
+        Stop ORB
+      </button>
+      <button
+        type="button"
+        className="orb-liquid-button rounded-full px-4 py-2 text-xs"
+        onClick={() => {
+          voice.resetLiveSession()
+          setRailTab('transcript')
+          setSaveNotice(null)
+        }}
+        data-orb-voice-reset
+      >
+        Reset
+      </button>
+    </div>
+  ) : null
 
   return (
     <OrbAppModal
@@ -506,31 +453,15 @@ export function OrbVoiceStation({
       panelId="voice"
       size="wide"
       presentation="workspace"
-      headerActions={
-        onOpenVoiceSettings ? (
-          <button
-            type="button"
-            onClick={onOpenVoiceSettings}
-            className="orb-liquid-button rounded-full border border-[var(--orb-line)]/50 px-3 py-1.5 text-xs font-medium text-[var(--orb-foreground)]"
-            data-orb-voice-settings-chip
-          >
-            Voice settings
-          </button>
-        ) : null
-      }
     >
       <div
         className="orb-voice-room pointer-events-auto flex min-h-0 flex-1 flex-col"
         data-orb-voice-station
         data-orb-voice-v2
+        data-orb-voice-one-screen-workspace
         data-orb-voice-ui-state={voice.state}
         data-orb-voice-capture-active={conversationLive ? true : false}
         data-orb-voice-idle-ready={primaryIdleReady ? true : undefined}
-        data-orb-voice-permission-state={voice.permissionState}
-        data-orb-voice-auto-resume-blocked={voice.autoResumeBlocked ? true : undefined}
-        data-orb-voice-playback-blocked={voice.playbackBlocked ? true : undefined}
-        data-orb-voice-audio-unlocked={voice.audioUnlocked ? true : undefined}
-        data-orb-voice-preparing-long={voice.voicePreparingLongWait ? true : undefined}
         data-orb-voice-acknowledgement={voice.acknowledgement ?? undefined}
       >
         <OrbVoiceStationContent
@@ -538,50 +469,49 @@ export function OrbVoiceStation({
           voiceV2State={voice.state}
           statusLine={statusLine}
           detailLine={voice.detailLine}
-          workspaceMode={workspaceMode}
-          sidePanel={sidePanel}
+          sessionStarted={sessionStarted}
+          preferenceBadges={preferenceBadges}
+          liveRail={liveRail}
           secondaryControls={secondaryControls}
           controls={
-            workspaceMode === 'after_call' ? null : (
-              <div className="orb-voice-controls flex w-full max-w-sm flex-col items-center gap-2" data-orb-voice-controls>
-                {voice.playbackBlocked ? (
-                  <button
-                    type="button"
-                    className="orb-liquid-button w-full rounded-full border border-[var(--orb-primary-blue,#168bff)]/50 bg-[var(--orb-primary-blue,#168bff)]/10 px-6 py-3 text-sm font-semibold text-[var(--orb-foreground)]"
-                    onClick={() => void voice.playOrbVoice()}
-                    data-orb-voice-play-orb-voice
-                  >
-                    {ORB_VOICE_V2_PLAY_ORB_VOICE}
-                  </button>
-                ) : null}
-                {voice.voicePreparingSkipAvailable && voice.voicePreparing ? (
-                  <button
-                    type="button"
-                    className="text-xs font-medium text-[var(--orb-primary-blue,#168bff)] underline"
-                    onClick={voice.continueWithoutVoice}
-                    data-orb-voice-continue-without-voice
-                  >
-                    {ORB_VOICE_V2_CONTINUE_WITHOUT_VOICE}
-                  </button>
-                ) : null}
+            <div className="orb-voice-controls flex w-full max-w-sm flex-col items-center gap-2" data-orb-voice-controls>
+              {voice.playbackBlocked ? (
                 <button
                   type="button"
-                  className="orb-liquid-button w-full rounded-full bg-gradient-to-r from-[var(--orb-primary-blue,#168bff)] to-[var(--orb-primary-blue-2,#0d5fcc)] px-6 py-3 text-sm font-semibold text-white disabled:opacity-50"
-                  disabled={primaryDisabled}
-                  aria-disabled={primaryDisabled ? true : undefined}
-                  onClick={handlePrimary}
-                  data-orb-voice-primary
-                  data-orb-voice-start-conversation={voice.autoResumeBlocked ? undefined : true}
-                  data-orb-voice-continue-conversation={voice.autoResumeBlocked ? true : undefined}
-                  data-orb-voice-primary-disabled={primaryDisabled ? true : undefined}
+                  className="orb-liquid-button w-full rounded-full border border-[var(--orb-primary-blue,#168bff)]/50 bg-[var(--orb-primary-blue,#168bff)]/10 px-6 py-3 text-sm font-semibold"
+                  onClick={() => void voice.playOrbVoice()}
+                  data-orb-voice-play-orb-voice
                 >
-                  {statusLine}
+                  {ORB_VOICE_V2_PLAY_ORB_VOICE}
                 </button>
-              </div>
-            )
+              ) : null}
+              {voice.voicePreparingSkipAvailable && voice.voicePreparing ? (
+                <button
+                  type="button"
+                  className="text-xs font-medium text-[var(--orb-primary-blue,#168bff)] underline"
+                  onClick={voice.continueWithoutVoice}
+                  data-orb-voice-continue-without-voice
+                >
+                  {ORB_VOICE_V2_CONTINUE_WITHOUT_VOICE}
+                </button>
+              ) : null}
+              <button
+                type="button"
+                className="orb-liquid-button w-full rounded-full bg-gradient-to-r from-[var(--orb-primary-blue,#168bff)] to-[var(--orb-primary-blue-2,#0d5fcc)] px-6 py-3 text-sm font-semibold text-white disabled:opacity-50"
+                disabled={primaryDisabled}
+                onClick={handlePrimary}
+                data-orb-voice-primary
+                data-orb-voice-primary-label={primaryLabel}
+                data-orb-voice-primary-disabled={primaryDisabled ? true : undefined}
+                data-orb-voice-continue-conversation={voice.autoResumeBlocked ? true : undefined}
+                data-orb-voice-start-conversation={voice.state === 'idle' ? true : undefined}
+              >
+                {primaryLabel}
+              </button>
+            </div>
           }
         >
-          {workspaceMode === 'idle' ? modeSelector : null}
+          {preferenceControls}
         </OrbVoiceStationContent>
 
         {voice.showTypeFallback ? (

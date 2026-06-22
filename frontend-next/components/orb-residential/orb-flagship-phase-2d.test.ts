@@ -14,7 +14,7 @@ function read(relativePath: string) {
 
 describe('ORB Residential Phase 2H flagship UX convergence', () => {
   it('build version marker is phase-3b on shell and visual build', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5i-voice-showstopper-convergence')
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5j-voice-one-screen-live-workspace')
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
     const layout = read('app/orb/layout.tsx')
     assert.match(companion, /data-orb-build-version=\{ORB_BUILD_VISUAL_VERSION\}/)
@@ -160,7 +160,7 @@ describe('ORB Residential Phase 2H flagship UX convergence', () => {
     assert.match(selector, /data-orb-voice-mode-summary/)
     assert.match(voice, /data-orb-voice-v2-preferences/)
     assert.match(voice, /data-orb-voice-secondary-controls/)
-    assert.match(voice, /ORB_VOICE_V2_SAFETY_FOOTER|ORB_VOICE_V2_TRANSCRIPT_NOTE/)
+    assert.match(read('components/orb-standalone/orb-voice-live-rail.tsx'), /ORB_VOICE_V2_SAFETY_FOOTER|ORB_VOICE_V2_TRANSCRIPT_NOTE/)
     assert.match(read('lib/orb/voice-v2/orb-voice-v2-state.ts'), /Start conversation/)
     assert.match(read('lib/orb/voice-v2/orb-voice-v2-state.ts'), /Ready/)
     const modes = read('lib/orb/orb-voice-mode-carousel.ts')

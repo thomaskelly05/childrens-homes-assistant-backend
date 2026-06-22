@@ -91,7 +91,7 @@ describe('ORB Voice launch polish', () => {
     assert.ok(ORB_VOICE_BOUNDARY_COPY.some((line) => line.includes('emergencies')))
     assert.ok(ORB_VOICE_BOUNDARY_COPY.some((line) => line.includes('live care records')))
     const station = readComponent('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(station, /ORB_VOICE_V2_SAFETY_FOOTER/)
+    assert.match(readComponent('components/orb-standalone/orb-voice-live-rail.tsx'), /ORB_VOICE_V2_SAFETY_FOOTER/)
   })
 
   it('safeguarding suppresses auto read-aloud', () => {

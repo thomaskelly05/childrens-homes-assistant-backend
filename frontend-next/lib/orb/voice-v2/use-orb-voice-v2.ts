@@ -17,7 +17,6 @@ import {
   ORB_VOICE_V2_FALLBACK_VOICE_TURN,
   ORB_VOICE_V2_LISTENING_HINT,
   ORB_VOICE_V2_PREPARING_VOICE,
-  ORB_VOICE_V2_TINY_TURN,
   ORB_VOICE_V2_TRANSCRIPTION_ERROR
 } from './orb-voice-v2-copy.ts'
 import { buildOrbVoiceV2ReflectionPacket, type OrbVoiceV2ReflectionPacket } from './orb-voice-v2-reflection.ts'
@@ -49,12 +48,16 @@ import {
   traceOrbVoiceV2IgnoredTinyTurn
 } from './orb-voice-v2-turn-guard.ts'
 import {
-  ORB_VOICE_V2_THINKING_COPY,
+  ORB_VOICE_V2_DIDNT_CATCH_COPY,
+  resolveOrbVoiceV2LiveStatusCopy
+} from './orb-voice-v2-one-screen-workspace.ts'
+import {
   pickOrbVoiceV2Acknowledgement,
   resolveSpeakVoiceId,
   traceOrbVoiceV2BargeIn
 } from './orb-voice-v2-showstopper.ts'
 import type {
+  OrbVoiceV2BrainTier,
   OrbVoiceV2HandoffPayload,
   OrbVoiceV2Intent,
   OrbVoiceV2Mode,
@@ -94,6 +97,7 @@ export function useOrbVoiceV2(open: boolean) {
   const [reflectionPacket, setReflectionPacket] = useState<OrbVoiceV2ReflectionPacket | null>(null)
   const [sessionMemory, setSessionMemory] = useState<OrbVoiceV2SessionMemory | null>(null)
   const [lastIntent, setLastIntent] = useState<OrbVoiceV2Intent | null>(null)
+  const [lastBrainTier, setLastBrainTier] = useState<OrbVoiceV2BrainTier | null>(null)
 
   const captureRef = useRef<OrbVoiceV2CaptureSession | null>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null)
@@ -159,6 +163,7 @@ export function useOrbVoiceV2(open: boolean) {
     setTinyTurnNotice(null)
     setSessionMemory(null)
     setLastIntent(null)
+    setLastBrainTier(null)
     setAcknowledgement(null)
     setVoicePreferenceNotice(null)
     recentAcksRef.current = []
@@ -316,17 +321,32 @@ export function useOrbVoiceV2(open: boolean) {
                 captureRef.current = null
                 transitionState('transcribing')
                 try {
-                  const transcript = await transcribeOrbVoiceV2Audio(blob, mimeType)
+                  const transcript = (await transcribeOrbVoiceV2Audio(blob, mimeType)).trim()
+                  if (!transcript) {
+                    traceOrbVoiceV2IgnoredTinyTurn(0)
+                    setTinyTurnNotice(ORB_VOICE_V2_DIDNT_CATCH_COPY)
+                    processingRef.current = false
+                    void resumeListening()
+                    return
+                  }
                   if (!isOrbVoiceV2TurnSubstantial(transcript)) {
-                    traceOrbVoiceV2IgnoredTinyTurn(transcript.trim().length)
-                    setTinyTurnNotice(ORB_VOICE_V2_TINY_TURN)
+                    traceOrbVoiceV2IgnoredTinyTurn(transcript.length)
+                    setTinyTurnNotice(ORB_VOICE_V2_DIDNT_CATCH_COPY)
                     processingRef.current = false
                     void resumeListening()
                     return
                   }
                   setTinyTurnNotice(null)
                   await commitAdultTurnRef.current(transcript)
-                } catch {
+                } catch (error) {
+                  const message = error instanceof Error ? error.message : ''
+                  if (message.includes('empty') || message.includes('transcription_failed')) {
+                    traceOrbVoiceV2IgnoredTinyTurn(0)
+                    setTinyTurnNotice(ORB_VOICE_V2_DIDNT_CATCH_COPY)
+                    processingRef.current = false
+                    void resumeListening()
+                    return
+                  }
                   setError(ORB_VOICE_V2_TRANSCRIPTION_ERROR)
                   setShowTypeFallback(true)
                   transitionState('error')
@@ -478,7 +498,7 @@ export function useOrbVoiceV2(open: boolean) {
       if (!trimmed || !isOrbVoiceV2TurnSubstantial(trimmed)) {
         if (trimmed) {
           traceOrbVoiceV2IgnoredTinyTurn(trimmed.length)
-          setTinyTurnNotice(ORB_VOICE_V2_TINY_TURN)
+          setTinyTurnNotice(ORB_VOICE_V2_DIDNT_CATCH_COPY)
         }
         void tryAutoResumeListening()
         return
@@ -505,6 +525,7 @@ export function useOrbVoiceV2(open: boolean) {
         setAcknowledgement(null)
         if (response.sessionMemory) setSessionMemory(response.sessionMemory)
         if (response.intent) setLastIntent(response.intent)
+        if (response.brainTier) setLastBrainTier(response.brainTier)
         const orbTurn = createOrbVoiceV2Turn('orb', response.reply)
         setTurns((current) => [...current, orbTurn])
         transitionState('speaking')
@@ -584,6 +605,14 @@ export function useOrbVoiceV2(open: boolean) {
     speakGenerationRef.current += 1
     bargeInRef.current = true
     traceOrbVoiceV2BargeIn()
+    // Full speech-detected duplex barge-in requires continuous VAD during playback and is intentionally deferred.
+    setTurns((current) => {
+      const last = current[current.length - 1]
+      if (last?.role === 'orb') {
+        return [...current.slice(0, -1), { ...last, interrupted: true }]
+      }
+      return current
+    })
     stopOrbAudio({ interrupted: true })
     setAcknowledgement(null)
     setVoicePreparing(false)
@@ -608,22 +637,25 @@ export function useOrbVoiceV2(open: boolean) {
 
   const permissionNotice = permissionNoticeForState(permissionState)
   const playbackBlocked = playbackState === 'blocked'
+  const liveStatusCopy = resolveOrbVoiceV2LiveStatusCopy({
+    state,
+    acknowledgement,
+    tinyTurnNotice,
+    voicePreparing,
+    brainTier: lastBrainTier,
+    listeningHint: ORB_VOICE_V2_LISTENING_HINT,
+    preparingVoice: ORB_VOICE_V2_PREPARING_VOICE
+  })
   const detailLine =
-    tinyTurnNotice ||
-    acknowledgement ||
-    (state === 'thinking' ? ORB_VOICE_V2_THINKING_COPY : null) ||
-    (state === 'listening' || state === 'speech_detected'
-      ? ORB_VOICE_V2_LISTENING_HINT
-      : voicePreparing && state === 'speaking'
-        ? ORB_VOICE_V2_PREPARING_VOICE
-        : playbackBlocked
-          ? ORB_VOICE_V2_AUDIO_PLAYBACK_BLOCKED
-          : voicePreferenceNotice ||
-            permissionNotice ||
-            error ||
-            audioUnlockNotice ||
-            turnFallbackNotice ||
-            fallbackNotice)
+    liveStatusCopy ||
+    (playbackBlocked
+      ? ORB_VOICE_V2_AUDIO_PLAYBACK_BLOCKED
+      : voicePreferenceNotice ||
+        permissionNotice ||
+        error ||
+        audioUnlockNotice ||
+        turnFallbackNotice ||
+        fallbackNotice)
 
   return {
     state,
@@ -666,6 +698,8 @@ export function useOrbVoiceV2(open: boolean) {
     resetLiveSession,
     continueWithoutVoice,
     sendTypedTurn,
+    lastIntent,
+    lastBrainTier,
     handoffPayload
   }
 }

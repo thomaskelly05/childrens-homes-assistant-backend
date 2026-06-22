@@ -10,7 +10,7 @@ export const ORB_VOICE_V2_ACKNOWLEDGEMENTS = [
   'Give me a moment.',
   'Let’s think this through.',
   'I’m just organising that.',
-  'That sounds important — let me check the right frame.'
+  'That sounds important — let me frame it safely.'
 ] as const
 
 export const ORB_VOICE_V2_VOICE_OPTIONS: ReadonlyArray<{

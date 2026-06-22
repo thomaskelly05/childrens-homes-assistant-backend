@@ -33,8 +33,8 @@ function read(relativePath: string) {
 }
 
 describe('ORB Residential Phase 4B Voice human conversation', () => {
-  it('build version marker is phase-5i-voice-showstopper-convergence', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5i-voice-showstopper-convergence')
+  it('build version marker is phase-5j-voice-one-screen-live-workspace', () => {
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5j-voice-one-screen-live-workspace')
     const layout = read('app/orb/layout.tsx')
     assert.match(layout, /orb-residential-shell\.css/)
     assert.deepEqual(ORB_LAYOUT_CSS_FILES, ['app/orb/orb-residential-shell.css'])
@@ -46,7 +46,7 @@ describe('ORB Residential Phase 4B Voice human conversation', () => {
     assert.match(station, /orb-voice-station/)
     assert.match(station, /useOrbVoiceV2/)
     assert.match(hook, /requestOrbVoiceV2Respond/)
-    assert.match(station, /data-orb-voice-conversation-panel/)
+    assert.match(read('components/orb-standalone/orb-voice-live-rail.tsx'), /data-orb-voice-conversation-panel/)
     assert.doesNotMatch(station, /orb-voice-station-duplicate/i)
   })
 
@@ -84,10 +84,10 @@ describe('ORB Residential Phase 4B Voice human conversation', () => {
   })
 
   it('conversation transcript uses Adult and ORB labels', () => {
-    const station = read('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(station, /Adult/)
-    assert.match(station, /ORB/)
-    assert.match(station, /ORB_VOICE_V2_TRANSCRIPT_NOTE/)
+    const rail = read('components/orb-standalone/orb-voice-live-rail.tsx')
+    assert.match(rail, /Adult/)
+    assert.match(rail, /ORB/)
+    assert.match(rail, /ORB_VOICE_V2_TRANSCRIPT_NOTE/)
   })
 
   it('auto speak and slow thinking are wired in voice v2 hook', () => {
@@ -137,7 +137,7 @@ describe('ORB Residential Phase 4B Voice human conversation', () => {
   it('single shell CSS import and no compliance guarantee language', () => {
     const shell = read('app/orb/orb-residential-shell.css')
     const station = read('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(shell, /phase-5i-voice-showstopper-convergence/)
+    assert.match(shell, /phase-5j-voice-one-screen-live-workspace/)
     assert.doesNotMatch(station, /Ofsted approved|compliance guarantee/i)
     assert.doesNotMatch(station, /ORB makes safeguarding decisions/i)
   })

@@ -27,8 +27,8 @@ function read(relativePath: string) {
 }
 
 describe('ORB Residential Phase 4C Voice speech loop repair', () => {
-  it('build version marker is phase-5i-voice-showstopper-convergence', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5i-voice-showstopper-convergence')
+  it('build version marker is phase-5j-voice-one-screen-live-workspace', () => {
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5j-voice-one-screen-live-workspace')
     const layout = read('app/orb/layout.tsx')
     assert.match(layout, /orb-residential-shell\.css/)
     assert.deepEqual(ORB_LAYOUT_CSS_FILES, ['app/orb/orb-residential-shell.css'])
@@ -98,18 +98,20 @@ describe('ORB Residential Phase 4C Voice speech loop repair', () => {
   })
 
   it('conversation transcript and summarise still wired', () => {
+    const rail = read('components/orb-standalone/orb-voice-live-rail.tsx')
     const station = read('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(station, /Adult/)
-    assert.match(station, /ORB/)
-    assert.match(station, /data-orb-voice-summary-panel/)
+    assert.match(rail, /Adult/)
+    assert.match(rail, /ORB/)
+    assert.match(rail, /data-orb-voice-summary-panel/)
     assert.equal(ORB_VOICE_END_AND_SUMMARISE, 'End and summarise')
+    assert.match(station, /End and summarise/)
   })
 
   it('audio storage honesty and single shell remain', () => {
     const shell = read('app/orb/orb-residential-shell.css')
     const station = read('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(shell, /phase-5i-voice-showstopper-convergence/)
-    assert.match(station, /ORB_VOICE_V2_SAFETY_FOOTER/)
+    assert.match(shell, /phase-5j-voice-one-screen-live-workspace/)
+    assert.match(read('components/orb-standalone/orb-voice-live-rail.tsx'), /ORB_VOICE_V2_SAFETY_FOOTER/)
     assert.match(ORB_VOICE_MIC_ERROR, /microphone permission/)
     assert.doesNotMatch(station, /compliance guarantee|Ofsted approved/i)
   })

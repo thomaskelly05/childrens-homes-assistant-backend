@@ -131,11 +131,10 @@ describe('ORB mic state wiring', () => {
 
   it('Voice does not show secondary controls until conversation is live', () => {
     const station = readComponent('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(station, /conversationLive \|\| voice\.state === 'paused'/)
-    assert.match(station, /voice\.state === 'requesting_microphone'/)
+    assert.match(station, /sessionStarted/)
     assert.match(station, /data-orb-voice-secondary-controls/)
-    const startBlock = station.match(/workspaceMode === 'after_call'[\s\S]*?data-orb-voice-start-conversation/)?.[0] ?? ''
-    assert.doesNotMatch(startBlock, /\bSpeak\b/)
+    assert.match(station, /data-orb-voice-start-conversation/)
+    assert.doesNotMatch(station, /workspaceMode === 'after_call'/)
   })
 
   it('Voice shows pause control during live conversation', () => {

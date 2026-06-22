@@ -569,3 +569,90 @@ html[data-orb-residential='1'] [data-orb-workspace-panel='voice'] [data-orb-voic
   70% { opacity: 0.15; transform: scale(1.15); }
   100% { opacity: 0; transform: scale(1.2); }
 }
+
+/* Phase 5J — Siri-style horizontal wave + central core */
+.orb-voice-showstopper-wave--siri {
+  width: min(100%, 20rem);
+  height: 4.5rem;
+  margin: 1rem auto 0.5rem;
+  align-items: center;
+  justify-content: center;
+}
+
+.orb-voice-showstopper-wave__bars {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.18rem;
+  width: 100%;
+}
+
+.orb-voice-showstopper-wave__core {
+  flex-shrink: 0;
+  width: 2.25rem;
+  height: 2.25rem;
+  margin: 0 0.35rem;
+  border-radius: 999px;
+  background: radial-gradient(circle at 35% 30%, #e0f2fe, #38bdf8 42%, #6366f1 72%, #a855f7 100%);
+  box-shadow:
+    0 0 24px color-mix(in srgb, #38bdf8 55%, transparent),
+    0 0 48px color-mix(in srgb, #a855f7 25%, transparent);
+  animation: orb-voice-showstopper-core-breathe 2.6s ease-in-out infinite;
+}
+
+.orb-voice-showstopper-wave__sweep {
+  position: absolute;
+  inset: 15% 5%;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, #22d3ee 22%, transparent) 45%,
+    color-mix(in srgb, #ec4899 18%, transparent) 55%,
+    transparent
+  );
+  opacity: 0;
+  pointer-events: none;
+}
+
+[data-orb-voice-wave-state='thinking'] .orb-voice-showstopper-wave__sweep {
+  opacity: 1;
+  animation: orb-voice-showstopper-sweep 1.8s ease-in-out infinite;
+}
+
+[data-orb-voice-wave-state='speaking'] .orb-voice-showstopper-wave__core {
+  animation: orb-voice-showstopper-core-speak 0.5s ease-in-out infinite;
+}
+
+.orb-voice-one-screen-workspace__grid {
+  min-height: min(70vh, 36rem);
+}
+
+.orb-voice-live-rail {
+  min-height: 14rem;
+  max-height: min(70vh, 36rem);
+}
+
+@media (max-width: 767px) {
+  .orb-voice-one-screen-workspace__rail {
+    order: 2;
+  }
+}
+
+@keyframes orb-voice-showstopper-core-breathe {
+  0%, 100% { transform: scale(0.94); opacity: 0.88; }
+  50% { transform: scale(1.06); opacity: 1; }
+}
+
+@keyframes orb-voice-showstopper-core-speak {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.12); }
+}
+
+@keyframes orb-voice-showstopper-sweep {
+  0% { transform: translateX(-30%); opacity: 0; }
+  40% { opacity: 0.7; }
+  100% { transform: translateX(30%); opacity: 0; }
+}

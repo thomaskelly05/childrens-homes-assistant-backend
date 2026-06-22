@@ -13,9 +13,9 @@ function read(relativePath: string) {
 }
 
 describe('ORB Residential Phase 5I Voice showstopper convergence', () => {
-  it('build marker is phase-5i-voice-showstopper-convergence', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5i-voice-showstopper-convergence')
-    assert.match(read('app/orb/orb-residential-shell.css'), /phase-5i-voice-showstopper-convergence/)
+  it('build marker is phase-5j-voice-one-screen-live-workspace', () => {
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5j-voice-one-screen-live-workspace')
+    assert.match(read('app/orb/orb-residential-shell.css'), /phase-5j-voice-one-screen-live-workspace/)
     assert.deepEqual(ORB_LAYOUT_CSS_FILES, ['app/orb/orb-residential-shell.css'])
   })
 
@@ -81,7 +81,7 @@ describe('ORB Residential Phase 5I Voice showstopper convergence', () => {
     const station = read('components/orb-standalone/orb-voice-station.tsx')
     assert.match(station, /ORB_VOICE_V2_ADULT_REVIEW_LABEL/)
     assert.match(station, /data-orb-voice-save-records-drafts/)
-    assert.match(station, /data-orb-voice-summary-transcript-collapsible/)
+    assert.match(read('components/orb-standalone/orb-voice-live-rail.tsx'), /data-orb-voice-summary-integrated/)
   })
 
   it('open flicker fix — reset only on close', () => {

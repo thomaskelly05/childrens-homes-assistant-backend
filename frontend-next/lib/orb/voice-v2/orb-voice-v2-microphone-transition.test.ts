@@ -7,6 +7,7 @@ import {
   ORB_VOICE_V2_MIC_NOT_FOUND,
   ORB_VOICE_V2_MIC_TIMEOUT
 } from './orb-voice-v2-copy.ts'
+import { orbVoiceV2PrimaryActionLabel } from './orb-voice-v2-one-screen-workspace.ts'
 import { orbVoiceV2PrimaryLabel } from './orb-voice-v2-state.ts'
 import {
   AUDIO_UNLOCK_PARALLEL_TIMEOUT_MS,
@@ -16,7 +17,7 @@ import {
 
 describe('orb-voice-v2-microphone-transition', () => {
   it('start label and try again label', () => {
-    assert.equal(orbVoiceV2PrimaryLabel('idle'), 'Start conversation')
+    assert.equal(orbVoiceV2PrimaryActionLabel('idle'), 'Start conversation')
     assert.equal(orbVoiceV2PrimaryLabel('requesting_microphone'), 'Requesting microphone…')
     assert.equal(orbVoiceV2PrimaryLabel('listening'), 'Listening…')
     assert.equal(orbVoiceV2PrimaryLabel('error', true), 'Try again')

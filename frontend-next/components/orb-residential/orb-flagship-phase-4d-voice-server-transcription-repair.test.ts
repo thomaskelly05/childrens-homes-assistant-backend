@@ -23,8 +23,8 @@ function read(relativePath: string) {
 }
 
 describe('ORB Residential Phase 4D Voice server transcription repair', () => {
-  it('build version marker is phase-5i-voice-showstopper-convergence', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5i-voice-showstopper-convergence')
+  it('build version marker is phase-5j-voice-one-screen-live-workspace', () => {
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5j-voice-one-screen-live-workspace')
     const layout = read('app/orb/layout.tsx')
     assert.match(layout, /orb-residential-shell\.css/)
     assert.deepEqual(ORB_LAYOUT_CSS_FILES, ['app/orb/orb-residential-shell.css'])
@@ -92,14 +92,15 @@ describe('ORB Residential Phase 4D Voice server transcription repair', () => {
 
   it('summarise and audio honesty preserved', () => {
     const station = read('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(station, /data-orb-voice-summary-panel/)
+    const rail = read('components/orb-standalone/orb-voice-live-rail.tsx')
+    assert.match(rail, /data-orb-voice-summary-panel/)
     assert.match(station, /End and summarise/)
-    assert.match(station, /ORB_VOICE_V2_SAFETY_FOOTER/)
+    assert.match(rail, /ORB_VOICE_V2_SAFETY_FOOTER/)
   })
 
   it('single shell and no compliance guarantee language', () => {
     const shell = read('app/orb/orb-residential-shell.css')
-    assert.match(shell, /phase-5i-voice-showstopper-convergence/)
+    assert.match(shell, /phase-5j-voice-one-screen-live-workspace/)
     const station = read('components/orb-standalone/orb-voice-station.tsx')
     assert.doesNotMatch(station, /compliance guarantee|Ofsted approved/i)
   })

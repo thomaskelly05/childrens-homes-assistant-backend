@@ -44,6 +44,7 @@ export type OrbVoiceV2Turn = {
   id: string
   role: 'adult' | 'orb'
   text: string
+  interrupted?: boolean
 }
 
 export type OrbVoiceV2BrainTier = 'voice_fast' | 'voice_specialist' | 'voice_safeguarding'
