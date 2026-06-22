@@ -59,10 +59,10 @@ describe('ORB Residential minimal canvas (Phase 1L)', () => {
     assert.match(workspace, /data-orb-dictate-safety-footer/)
   })
 
-  it('voice keeps one quiet safety note on idle', () => {
+  it('voice keeps calm idle hero without form clutter', () => {
     const voice = read('components/orb-standalone/orb-voice-station-content.tsx')
-    assert.match(voice, /ORB_VOICE_STATUS_CARD_COPY/)
-    assert.match(voice, /!sessionStarted/)
+    assert.match(voice, /data-orb-voice-v2-title/)
+    assert.doesNotMatch(voice, /ORB_VOICE_V2_PROMPT/)
     assert.match(voice, /OrbVoiceResponsibilityStrip/)
   })
 

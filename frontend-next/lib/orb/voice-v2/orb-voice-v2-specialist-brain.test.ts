@@ -16,8 +16,8 @@ function read(relativePath: string) {
 }
 
 describe('orb-voice-v2-specialist-brain', () => {
-  it('build marker is phase-5j-voice-one-screen-live-workspace', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5j-voice-one-screen-live-workspace')
+  it('build marker is phase-5k-voice-hero-response-tightening', () => {
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5k-voice-hero-response-tightening')
   })
 
   it('reflection packet includes bullying specialist sections', () => {
@@ -40,8 +40,8 @@ describe('orb-voice-v2-specialist-brain', () => {
   })
 
   it('spoken word cap aligned to specialist range', () => {
-    assert.equal(ORB_VOICE_V2_LIVE_SPOKEN_MAX_WORDS, 70)
-    assert.match(read('../services/orb_voice_respond_service.py'), /VOICE_RESPOND_MAX_WORDS.*70/)
+    assert.equal(ORB_VOICE_V2_LIVE_SPOKEN_MAX_WORDS, 55)
+    assert.match(read('../services/orb_voice_spoken_compression_service.py'), /VOICE_SPECIALIST_MAX_WORDS = 55/)
   })
 
   it('brain route logging is safe', () => {

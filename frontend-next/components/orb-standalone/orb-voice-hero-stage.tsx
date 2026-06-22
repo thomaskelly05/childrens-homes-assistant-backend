@@ -38,7 +38,7 @@ export function OrbVoiceHeroStage({
   className?: string
   /** `desktop` uses data-orb-voice-hero-stage; `mobile` uses data-orb-voice-mobile-hero-stage */
   heroStageId?: 'desktop' | 'mobile'
-  /** Phase 5J — wave-only hero without duplicate companion orb. */
+  /** Phase 5J/5K — wave-only hero without duplicate companion orb. */
   oneScreenWorkspace?: boolean
 }) {
   const { isMobile } = useOrbResponsiveMode()
@@ -51,40 +51,55 @@ export function OrbVoiceHeroStage({
   const headline = statusLine ?? ORB_VOICE_COMPANION_HEADLINES[companionState]
   const showSubline = Boolean(subline) && (isMobile || companionState !== 'paused')
 
+  const wave = (
+    <OrbVoiceShowstopperWave
+      state={mapVoiceStateToShowstopperWave(voiceV2State ?? companionState)}
+      className={`orb-voice-hero-stage__waveform ${oneScreenWorkspace ? 'orb-voice-hero-stage__waveform--dominant' : ''}`.trim()}
+    />
+  )
+
   return (
     <div
-      className={`orb-voice-hero-stage relative flex shrink-0 flex-col items-center text-center ${className}`.trim()}
+      className={`orb-voice-hero-stage relative flex shrink-0 flex-col items-center text-center ${oneScreenWorkspace ? 'orb-voice-hero-stage--dominant' : ''} ${className}`.trim()}
       {...stageAttr}
+      data-orb-voice-hero-dominant={oneScreenWorkspace ? true : undefined}
     >
       <div className="orb-voice-hero-aura pointer-events-none absolute inset-x-0 top-0 -z-10 h-[min(28rem,70%)]" aria-hidden />
-      {oneScreenWorkspace ? null : (
-        <OrbVoiceCompanion state={companionState} size="hero" className="orb-voice-hero-stage__orb shrink-0" />
+      {oneScreenWorkspace ? (
+        wave
+      ) : (
+        <>
+          <OrbVoiceCompanion state={companionState} size="hero" className="orb-voice-hero-stage__orb shrink-0" />
+          {wave}
+        </>
       )}
 
       <p
-        className="orb-voice-hero-stage__headline text-center text-sm font-medium text-[var(--orb-text,var(--orb-foreground))]"
+        className={`orb-voice-hero-stage__headline text-center font-medium text-[var(--orb-text,var(--orb-foreground))] ${
+          oneScreenWorkspace ? 'mt-3 text-xs' : 'text-sm'
+        }`}
         data-orb-voice-status-label
       >
         {headline}
       </p>
       {showSubline ? (
         <p
-          className={`orb-voice-hero-stage__subline text-center text-xs ${
+          className={`orb-voice-hero-stage__subline text-center ${
+            oneScreenWorkspace ? 'mt-1 text-sm font-medium' : 'text-xs'
+          } ${
             subline === detailLine && subline?.includes('Browser speech recognition is optional')
               ? 'text-[var(--orb-muted)] opacity-90'
-              : 'text-[var(--orb-muted)]'
+              : oneScreenWorkspace
+                ? 'text-[var(--orb-foreground)]'
+                : 'text-[var(--orb-muted)]'
           }`}
           data-orb-voice-status-subline
+          data-orb-voice-progress-line={oneScreenWorkspace && subline === detailLine ? true : undefined}
           data-orb-voice-speech-notice={subline?.includes('Browser speech recognition is optional') ? 'true' : undefined}
         >
           {subline}
         </p>
       ) : null}
-
-      <OrbVoiceShowstopperWave
-        state={mapVoiceStateToShowstopperWave(voiceV2State ?? companionState)}
-        className="orb-voice-hero-stage__waveform"
-      />
 
       {middleSlot ? (
         <div className="orb-voice-controls orb-voice-hero-stage__modes w-full" data-orb-voice-main-mode-controls data-orb-voice-controls>

@@ -7,6 +7,10 @@ import re
 from typing import Any
 
 from services.orb_voice_respond_service import generate_voice_response
+from services.orb_voice_spoken_compression_service import (
+    VOICE_TTS_CHAR_HARD_CAP,
+    compress_voice_reply_for_speech,
+)
 from services.orb_voice_tts_service import (
     ORBVoiceTTSError,
     _resolve_tts_text_cap,
@@ -17,7 +21,7 @@ from services.orb_voice_transcription_service import OrbVoiceTranscriptionError,
 
 logger = logging.getLogger(__name__)
 
-VOICE_V2_SPOKEN_CAP = 320
+VOICE_V2_SPOKEN_CAP = VOICE_TTS_CHAR_HARD_CAP
 
 
 def normalise_recent_turns(turns: list[dict[str, Any]] | None) -> list[dict[str, str]]:
@@ -76,6 +80,14 @@ async def voice_v2_respond(
     reply = str(result.get("reply") or "").strip()
     prompt_tier = str(result.get("promptTier") or result.get("prompt_tier") or "voice_fast")
     intent = str(result.get("intent") or "general_reflection")
+    safety_boundary = bool(result.get("safetyBoundaryApplied"))
+    reply = compress_voice_reply_for_speech(
+        reply,
+        intent=intent,
+        tier=prompt_tier,
+        personality=personality,
+        safety_boundary_applied=safety_boundary,
+    )
     logger.info(
         "orb_voice_v2_respond reply_chars=%s prompt_tier=%s intent=%s mode=%s",
         len(reply),

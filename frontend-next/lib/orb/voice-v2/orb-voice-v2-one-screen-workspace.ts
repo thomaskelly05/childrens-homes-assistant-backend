@@ -1,6 +1,7 @@
 /** Phase 5J — one persistent live Voice workspace helpers. */
 
 import type { OrbVoiceV2BrainTier, OrbVoiceV2State } from './orb-voice-v2-types.ts'
+import { ORB_VOICE_V2_PREPARING_VOICE } from './orb-voice-v2-copy.ts'
 import { ORB_VOICE_V2_THINKING_COPY } from './orb-voice-v2-showstopper.ts'
 
 export const ORB_VOICE_V2_ONE_SCREEN_WORKSPACE = 'one_screen_live' as const
@@ -11,7 +12,10 @@ export const ORB_VOICE_V2_DIDNT_CATCH_COPY =
 export const ORB_VOICE_V2_CHECKING_FRAME_COPY = 'Checking the right frame…' as const
 
 export const ORB_VOICE_V2_SPECIALIST_BRAIN_COPY =
-  'Using ORB’s residential childcare brain…' as const
+  'Residential childcare brain' as const
+
+export const ORB_VOICE_V2_PROGRESS_LISTENING = 'Listening' as const
+export const ORB_VOICE_V2_PROGRESS_SPEAKING = 'Speaking' as const
 
 /** Full speech-detected duplex barge-in requires continuous VAD during playback and is intentionally deferred. */
 export const ORB_VOICE_V2_DUPLEX_BARGE_IN_DEFERRED = true
@@ -38,6 +42,25 @@ export function orbVoiceV2PrimaryActionLabel(
   if (state === 'transcribing' || state === 'thinking') return ORB_VOICE_V2_THINKING_COPY
   if (state === 'speaking') return 'Interrupt'
   return 'Continue'
+}
+
+export function resolveOrbVoiceV2ProgressLine(input: {
+  state: OrbVoiceV2State
+  acknowledgement?: string | null
+  voicePreparing?: boolean
+}): string | null {
+  if (input.state === 'listening' || input.state === 'speech_detected') {
+    return ORB_VOICE_V2_PROGRESS_LISTENING
+  }
+  if (input.acknowledgement) return input.acknowledgement
+  if (input.state === 'transcribing' || input.state === 'thinking') {
+    return ORB_VOICE_V2_THINKING_COPY
+  }
+  if (input.voicePreparing && input.state === 'speaking') {
+    return ORB_VOICE_V2_PREPARING_VOICE
+  }
+  if (input.state === 'speaking') return ORB_VOICE_V2_PROGRESS_SPEAKING
+  return null
 }
 
 export function resolveOrbVoiceV2LiveStatusCopy(input: {

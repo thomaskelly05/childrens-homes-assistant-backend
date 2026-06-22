@@ -191,13 +191,11 @@ describe('ORB Residential Phase 1K blank canvas reset', () => {
 
   it('voice station uses Phase 1K copy from orb-residential-ui-copy', () => {
     const voice = read('components/orb-standalone/orb-voice-station-content.tsx')
+    const rail = read('components/orb-standalone/orb-voice-live-rail.tsx')
     assert.match(voice, /ORB_VOICE_V2_TITLE/)
-    assert.match(voice, /ORB_VOICE_V2_PROMPT/)
-    assert.match(voice, /ORB_VOICE_STATUS_CARD_COPY/)
     assert.equal(ORB_VOICE_V2_TITLE, 'Voice')
-    assert.equal(ORB_VOICE_V2_PROMPT, 'Talk it through with ORB before you write.')
+    assert.match(rail, /ORB_VOICE_V2_SAFETY_FOOTER/)
     assert.match(ORB_VOICE_STATUS_CARD_COPY, /Review any summary/)
-    assert.match(voice, /data-orb-voice-status-card/)
   })
 
   it('approved nav labels remain exactly nine items', () => {

@@ -109,10 +109,10 @@ describe('ORB Residential canonical shell (Phase 1H copy retained)', () => {
 
   it('voice has premium voice room classes and copy', () => {
     const voice = read('components/orb-standalone/orb-voice-station-content.tsx')
+    const rail = read('components/orb-standalone/orb-voice-live-rail.tsx')
     const css = read('app/orb/orb-residential-shell.css')
     assert.match(voice, /orb-workspace--voice/)
-    assert.match(voice, /ORB_VOICE_STATUS_CARD_COPY/)
-    assert.match(voice, /data-orb-voice-status/)
+    assert.match(rail, /ORB_VOICE_V2_SAFETY_FOOTER/)
     assert.match(css, /\.orb-workspace--voice/)
     assert.match(ORB_VOICE_STATUS_CARD_COPY, /reflective support/)
   })

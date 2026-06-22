@@ -12,6 +12,12 @@ from services.ai_external_call_governance import FEATURE_VOICE_RESPOND, governed
 from services.orb_brain_convergence_orchestrator_service import orb_brain_convergence_orchestrator_service
 from services.orb_recording_contract_service import build_recording_contract_prompt_block
 from services.orb_safety_scaffold_service import orb_safety_scaffold_service
+from services.orb_voice_spoken_compression_service import (
+    VOICE_FAST_MAX_WORDS,
+    VOICE_SAFEGUARDING_MAX_WORDS,
+    VOICE_SPECIALIST_MAX_WORDS,
+    compress_voice_reply_for_speech,
+)
 from services.orb_voice_brain_router_service import (
     classify_voice_intent,
     log_voice_brain_route,
@@ -20,8 +26,8 @@ from services.orb_voice_brain_router_service import (
 
 logger = logging.getLogger(__name__)
 
-VOICE_RESPOND_MAX_WORDS = int(os.environ.get("ORB_VOICE_RESPOND_MAX_WORDS") or "70")
-VOICE_RESPOND_MIN_WORDS = 30
+VOICE_RESPOND_MAX_WORDS = int(os.environ.get("ORB_VOICE_RESPOND_MAX_WORDS") or str(VOICE_SPECIALIST_MAX_WORDS))
+VOICE_RESPOND_MIN_WORDS = 12
 VOICE_RESPOND_MODEL = (os.environ.get("ORB_VOICE_RESPOND_MODEL") or "gpt-4o-mini").strip()
 VOICE_RESPOND_MAX_OUTPUT_TOKENS = int(os.environ.get("ORB_VOICE_RESPOND_MAX_OUTPUT_TOKENS") or "200")
 VOICE_SPECIALIST_MODEL = (os.environ.get("ORB_VOICE_SPECIALIST_MODEL") or VOICE_RESPOND_MODEL).strip()
@@ -33,7 +39,7 @@ VOICE_SYSTEM_PROMPT_BASE = (
     "Ask one focused question (not a checklist unless the adult asks for more). "
     "Do not diagnose, make safeguarding decisions, or offer compliance guarantees. "
     "Do not use generic wellbeing language like 'emotional well-being' when practical facts are needed. "
-    f"Keep each live reply between {VOICE_RESPOND_MIN_WORDS} and {VOICE_RESPOND_MAX_WORDS} words."
+    f"Keep each live reply concise — aim for one focused question, typically {VOICE_RESPOND_MIN_WORDS}–{VOICE_FAST_MAX_WORDS} words for quick turns and up to {VOICE_SPECIALIST_MAX_WORDS} for specialist topics."
 )
 
 SAFETY_BOUNDARY_LINE = (
@@ -79,11 +85,20 @@ def _needs_policy_retrieval(message: str) -> bool:
     return any(phrase in lower for phrase in _POLICY_RETRIEVAL_PHRASES)
 
 
-def _cap_words(text: str, max_words: int = VOICE_RESPOND_MAX_WORDS) -> str:
+def _cap_words(text: str, max_words: int | None = None) -> str:
+    limit = max_words if max_words is not None else VOICE_RESPOND_MAX_WORDS
     words = re.findall(r"\S+", text.strip())
-    if len(words) <= max_words:
+    if len(words) <= limit:
         return text.strip()
-    return " ".join(words[:max_words]).rstrip(".,;:") + "…"
+    return " ".join(words[:limit]).rstrip(".,;:") + "…"
+
+
+def _tier_max_words(tier: str) -> int:
+    if tier == "voice_safeguarding":
+        return VOICE_SAFEGUARDING_MAX_WORDS
+    if tier == "voice_specialist":
+        return VOICE_SPECIALIST_MAX_WORDS
+    return VOICE_FAST_MAX_WORDS
 
 
 def _tier_system_prompt(tier: str, protocol_block: str, convergence_block: str, scaffold_block: str) -> str:
@@ -279,7 +294,7 @@ def generate_voice_response(
         },
     )
 
-    reply = _cap_words(str(gateway.text or "").strip())
+    reply = _cap_words(str(gateway.text or "").strip(), _tier_max_words(route.brain_tier))
     if not reply:
         if route.intent == "bullying_or_peer_conflict":
             reply = (
@@ -296,7 +311,13 @@ def generate_voice_response(
     if safety_boundary and SAFETY_BOUNDARY_LINE.lower() not in reply.lower():
         reply = f"{reply} {SAFETY_BOUNDARY_LINE}"
 
-    reply = _cap_words(reply)
+    reply = compress_voice_reply_for_speech(
+        reply,
+        intent=route.intent,
+        tier=route.brain_tier,
+        personality=personality,
+        safety_boundary_applied=safety_boundary,
+    )
     elapsed_ms = int((time.perf_counter() - started) * 1000)
     log_voice_brain_route(route, elapsed_ms=elapsed_ms)
 

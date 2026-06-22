@@ -43,8 +43,8 @@ describe('ORB Voice v2 state machine', () => {
 })
 
 describe('ORB Voice v2 flow contracts', () => {
-  it('spoken text is capped at 320 characters', () => {
-    assert.equal(ORB_VOICE_V2_LIVE_SPOKEN_CAP, 320)
+  it('spoken text is capped at 220 characters', () => {
+    assert.equal(ORB_VOICE_V2_LIVE_SPOKEN_CAP, 220)
   })
 
   it('handoff payload uses orb_voice_v2 source', () => {
@@ -73,11 +73,11 @@ describe('ORB Voice v2 flow contracts', () => {
 })
 
 describe('ORB Residential Phase 5A Voice clean rebuild', () => {
-  it('build version marker is phase-5j-voice-one-screen-live-workspace', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5j-voice-one-screen-live-workspace')
+  it('build version marker is phase-5k-voice-hero-response-tightening', () => {
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5k-voice-hero-response-tightening')
     assert.match(read('app/orb/layout.tsx'), /orb-residential-shell\.css/)
     assert.deepEqual(ORB_LAYOUT_CSS_FILES, ['app/orb/orb-residential-shell.css'])
-    assert.match(read('app/orb/orb-residential-shell.css'), /phase-5j-voice-one-screen-live-workspace/)
+    assert.match(read('app/orb/orb-residential-shell.css'), /phase-5k-voice-hero-response-tightening/)
   })
 
   it('active voice station uses v2 hook and not legacy voice modules', () => {

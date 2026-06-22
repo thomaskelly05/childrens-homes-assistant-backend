@@ -8,9 +8,6 @@ import { useOrbMobileViewport } from '@/components/orb-standalone/use-orb-mobile
 import type { OrbVoiceCompanionState } from '@/components/orb-residential/orb-voice-companion'
 import { ORB_VOICE_V2_ONE_SCREEN_WORKSPACE } from '@/lib/orb/voice-v2/orb-voice-v2-one-screen-workspace.ts'
 import {
-  ORB_VOICE_STATUS_CARD_COPY,
-  ORB_VOICE_V2_PROMPT,
-  ORB_VOICE_V2_SUPPORTING,
   ORB_VOICE_V2_TITLE
 } from '@/lib/orb/orb-residential-ui-copy'
 
@@ -61,38 +58,23 @@ export function OrbVoiceStationContent({
         <div className="orb-voice-one-screen-workspace__grid mx-auto flex w-full max-w-6xl flex-col gap-4 md:flex-row md:items-stretch md:gap-6">
           <div className="orb-voice-one-screen-workspace__main flex min-h-0 w-full flex-col items-center md:flex-1">
             <div
-              className={`orb-voice-station-content__intro mb-2 w-full text-center transition-opacity ${
+              className={`orb-voice-station-content__intro mb-1 w-full text-center transition-opacity ${
                 sessionStarted ? 'opacity-80' : ''
               }`}
               data-orb-voice-v2-intro
             >
               <h2
-                className="orb-voice-station-content__title text-base font-semibold text-[var(--orb-text,var(--orb-foreground))]"
+                className={`orb-voice-station-content__title font-semibold text-[var(--orb-text,var(--orb-foreground))] ${
+                  sessionStarted ? 'text-base' : 'text-sm'
+                }`}
                 data-orb-voice-v2-title
               >
                 {ORB_VOICE_V2_TITLE}
               </h2>
-              {!sessionStarted ? (
-                <>
-                  <p
-                    className="orb-voice-station-content__prompt mt-1 text-sm text-[var(--orb-muted)]"
-                    data-orb-voice-v2-prompt
-                    data-orb-voice-hero-line
-                  >
-                    {ORB_VOICE_V2_PROMPT}
-                  </p>
-                  <p
-                    className="orb-voice-station-content__supporting mt-2 text-xs leading-relaxed text-[var(--orb-muted)]"
-                    data-orb-voice-v2-supporting
-                  >
-                    {ORB_VOICE_V2_SUPPORTING}
-                  </p>
-                </>
-              ) : null}
             </div>
 
             {preferenceBadges ? (
-              <div className="mb-2 w-full max-w-sm" data-orb-voice-session-badges>
+              <div className="mb-1 w-full max-w-sm" data-orb-voice-session-badges>
                 {preferenceBadges}
               </div>
             ) : null}
@@ -107,18 +89,6 @@ export function OrbVoiceStationContent({
               heroStageId={isMobileViewport ? 'mobile' : 'desktop'}
               oneScreenWorkspace
             />
-
-            {!sessionStarted ? (
-              <p
-                className="orb-workspace-voice-status mt-2"
-                role="status"
-                data-orb-voice-status-card
-                data-orb-voice-status
-                data-orb-voice-safety-note
-              >
-                {ORB_VOICE_STATUS_CARD_COPY}
-              </p>
-            ) : null}
           </div>
 
           <div

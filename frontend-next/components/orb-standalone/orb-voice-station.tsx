@@ -197,64 +197,75 @@ export function OrbVoiceStation({
 
   const preferenceBadges = sessionStarted ? (
     <div className="flex flex-wrap items-center justify-center gap-1.5" data-orb-voice-preference-badges>
-      <span className="rounded-full border border-[var(--orb-line)]/50 px-2 py-0.5 text-[10px] text-[var(--orb-muted)]">
+      <span className="rounded-full border border-[var(--orb-line)]/40 bg-[var(--orb-surface)]/60 px-2 py-0.5 text-[10px] text-[var(--orb-muted)]">
         {purposeLabel}
       </span>
-      <span className="rounded-full border border-[var(--orb-line)]/50 px-2 py-0.5 text-[10px] text-[var(--orb-muted)]">
-        {personalityLabel}
-      </span>
-      <span className="rounded-full border border-[var(--orb-line)]/50 px-2 py-0.5 text-[10px] text-[var(--orb-muted)]">
+      <span className="rounded-full border border-[var(--orb-line)]/40 bg-[var(--orb-surface)]/60 px-2 py-0.5 text-[10px] text-[var(--orb-muted)]">
         {voiceLabel}
+      </span>
+      <span className="rounded-full border border-[var(--orb-line)]/40 bg-[var(--orb-surface)]/60 px-2 py-0.5 text-[10px] text-[var(--orb-muted)]">
+        {personalityLabel}
       </span>
       <button
         type="button"
-        className="text-[10px] font-medium text-[var(--orb-primary-blue,#168bff)] underline"
+        className="text-[10px] font-medium text-[var(--orb-primary-blue,#168bff)]"
+        onClick={() => setVoiceSettingsOpen((current) => !current)}
+        data-orb-voice-settings-toggle
+      >
+        {voiceSettingsOpen ? 'Hide setup' : 'Voice setup'}
+      </button>
+    </div>
+  ) : (
+    <div className="flex flex-wrap items-center justify-center gap-2" data-orb-voice-idle-preferences>
+      <span
+        className="rounded-full border border-[var(--orb-line)]/40 bg-[var(--orb-surface)]/60 px-2.5 py-0.5 text-[10px] text-[var(--orb-muted)]"
+        data-orb-voice-purpose-badge
+      >
+        {purposeLabel}
+      </span>
+      <button
+        type="button"
+        className="rounded-full border border-[var(--orb-line)]/40 px-2.5 py-0.5 text-[10px] font-medium text-[var(--orb-primary-blue,#168bff)]"
         onClick={() => setVoiceSettingsOpen((current) => !current)}
         data-orb-voice-settings-toggle
       >
         {voiceSettingsOpen ? 'Hide voice setup' : 'Voice setup'}
       </button>
     </div>
-  ) : null
-
-  const preferenceControls = (
-    <div className="flex w-full max-w-sm flex-col gap-3" data-orb-voice-v2-preferences>
-      {!sessionStarted ? (
-        <OrbVoiceV2Carousel
-          label="Purpose"
-          items={ORB_VOICE_V2_PURPOSE_MODES}
-          value={voice.mode}
-          disabled={conversationLive}
-          onChange={(id) => voice.setMode(id as OrbVoiceV2Mode)}
-          dataAttr="purpose"
-        />
-      ) : null}
-      {(!sessionStarted || voiceSettingsOpen) && (
-        <>
-          <OrbVoiceV2Carousel
-            label="Voice"
-            items={ORB_VOICE_V2_VOICE_OPTIONS.map((entry) => ({
-              id: entry.id,
-              label: entry.label,
-              description: entry.configured ? entry.description : `${entry.description} (preference)`
-            }))}
-            value={voice.selectedVoice}
-            disabled={conversationLive}
-            onChange={(id) => voice.setSelectedVoice(id as OrbVoiceV2VoiceId)}
-            dataAttr="voice"
-          />
-          <OrbVoiceV2Carousel
-            label="Personality"
-            items={ORB_VOICE_V2_PERSONALITY_OPTIONS}
-            value={voice.personality}
-            disabled={conversationLive}
-            onChange={(id) => voice.setPersonality(id as OrbVoiceV2PersonalityId)}
-            dataAttr="personality"
-          />
-        </>
-      )}
-    </div>
   )
+
+  const preferenceControls = voiceSettingsOpen ? (
+    <div className="flex w-full max-w-sm flex-col gap-3" data-orb-voice-v2-preferences data-orb-voice-setup-panel>
+      <OrbVoiceV2Carousel
+        label="Purpose"
+        items={ORB_VOICE_V2_PURPOSE_MODES}
+        value={voice.mode}
+        disabled={conversationLive}
+        onChange={(id) => voice.setMode(id as OrbVoiceV2Mode)}
+        dataAttr="purpose"
+      />
+      <OrbVoiceV2Carousel
+        label="Voice"
+        items={ORB_VOICE_V2_VOICE_OPTIONS.map((entry) => ({
+          id: entry.id,
+          label: entry.label,
+          description: entry.configured ? entry.description : `${entry.description} (preference)`
+        }))}
+        value={voice.selectedVoice}
+        disabled={conversationLive}
+        onChange={(id) => voice.setSelectedVoice(id as OrbVoiceV2VoiceId)}
+        dataAttr="voice"
+      />
+      <OrbVoiceV2Carousel
+        label="Personality"
+        items={ORB_VOICE_V2_PERSONALITY_OPTIONS}
+        value={voice.personality}
+        disabled={conversationLive}
+        onChange={(id) => voice.setPersonality(id as OrbVoiceV2PersonalityId)}
+        dataAttr="personality"
+      />
+    </div>
+  ) : null
 
   const summaryBody = useMemo(() => {
     if (!voice.summary) return null

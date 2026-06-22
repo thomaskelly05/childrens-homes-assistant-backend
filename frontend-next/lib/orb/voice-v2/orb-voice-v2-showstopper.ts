@@ -110,6 +110,11 @@ export function pickOrbVoiceV2Acknowledgement(recent: string[]): string {
   return choices[Math.floor(Math.random() * choices.length)] ?? ORB_VOICE_V2_ACKNOWLEDGEMENTS[0]
 }
 
+export function traceOrbVoiceV2InstantAck(): void {
+  if (typeof console === 'undefined' || typeof console.debug !== 'function') return
+  console.debug('[orb-voice-v2]', { event: 'orb_voice_v2_instant_ack' })
+}
+
 export function traceOrbVoiceV2BargeIn(): void {
   if (typeof console === 'undefined' || typeof console.debug !== 'function') return
   console.debug('[orb-voice-v2]', { event: 'orb_voice_v2_barge_in' })

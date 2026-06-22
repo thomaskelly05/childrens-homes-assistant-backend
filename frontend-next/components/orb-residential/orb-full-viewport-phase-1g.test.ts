@@ -72,8 +72,9 @@ describe('ORB Residential full viewport workspace (consolidated shell)', () => {
 
   it('voice has status card and workspace class', () => {
     const voice = read('components/orb-standalone/orb-voice-station-content.tsx')
+    const rail = read('components/orb-standalone/orb-voice-live-rail.tsx')
     assert.match(voice, /orb-workspace--voice/)
-    assert.match(voice, /data-orb-voice-status-card/)
+    assert.match(rail, /ORB_VOICE_V2_SAFETY_FOOTER/)
     assert.match(ORB_VOICE_V2_STATUS_COPY, /reflect before you write/)
   })
 

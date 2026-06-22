@@ -40,12 +40,12 @@ export function OrbVoiceLiveRail({
 }) {
   return (
     <aside
-      className="orb-voice-live-rail flex min-h-0 w-full flex-col rounded-2xl border border-[var(--orb-line)]/40 bg-[var(--orb-surface)]/80 backdrop-blur-sm"
+      className="orb-voice-live-rail flex min-h-0 w-full flex-col rounded-2xl border border-[var(--orb-line)]/20 bg-[var(--orb-surface)]/50"
       data-orb-voice-live-rail
       data-orb-voice-live-rail-mounted
     >
       <div
-        className="orb-voice-live-rail__tabs flex gap-1 border-b border-[var(--orb-line)]/30 p-2"
+        className="orb-voice-live-rail__tabs flex gap-1.5 px-3 pb-2 pt-3"
         role="tablist"
         aria-label="Voice workspace rail"
       >
@@ -55,10 +55,10 @@ export function OrbVoiceLiveRail({
             type="button"
             role="tab"
             aria-selected={activeTab === tab.id}
-            className={`rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide transition ${
+            className={`rounded-full px-3 py-1 text-[10px] font-medium tracking-wide transition ${
               activeTab === tab.id
-                ? 'bg-[var(--orb-primary-blue,#168bff)]/12 text-[var(--orb-foreground)]'
-                : 'text-[var(--orb-muted)] hover:text-[var(--orb-foreground)]'
+                ? 'bg-[var(--orb-primary-blue,#168bff)]/10 text-[var(--orb-foreground)]'
+                : 'text-[var(--orb-muted)] hover:bg-[var(--orb-line)]/10 hover:text-[var(--orb-foreground)]'
             }`}
             onClick={() => onTabChange(tab.id)}
             data-orb-voice-live-rail-tab={tab.id}
@@ -68,17 +68,18 @@ export function OrbVoiceLiveRail({
         ))}
       </div>
 
-      <div className="orb-voice-live-rail__body min-h-0 flex-1 overflow-y-auto p-3">
+      <div className="orb-voice-live-rail__body min-h-0 flex-1 overflow-y-auto px-4 pb-4 pt-1">
         {activeTab === 'transcript' ? (
           <section data-orb-voice-conversation-panel data-orb-voice-v2-transcript>
-            <div className="mb-2 flex flex-wrap items-center gap-1.5">
-              <p className="text-sm font-semibold text-[var(--orb-foreground)]">{ORB_VOICE_V2_TRANSCRIPT_LABEL}</p>
+            <div className="mb-3 flex flex-wrap items-center gap-2">
+              <p className="text-sm font-medium text-[var(--orb-foreground)]">{ORB_VOICE_V2_TRANSCRIPT_LABEL}</p>
               {specialistActive ? (
                 <span
-                  className="rounded-full border border-[var(--orb-line)]/50 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-[var(--orb-muted)]"
+                  className="rounded-full bg-[var(--orb-primary-blue,#168bff)]/8 px-2 py-0.5 text-[9px] font-medium text-[var(--orb-muted)]"
                   data-orb-voice-intent-badge
+                  data-orb-voice-specialist-badge
                 >
-                  Specialist brain
+                  Residential childcare brain
                 </span>
               ) : null}
               {lastIntent ? (
@@ -90,10 +91,10 @@ export function OrbVoiceLiveRail({
                 </span>
               ) : null}
             </div>
-            <p className="mb-3 text-xs text-[var(--orb-muted)]">{ORB_VOICE_V2_TRANSCRIPT_NOTE}</p>
-            <div className="space-y-3" data-orb-voice-turns>
+            <p className="mb-4 text-xs leading-relaxed text-[var(--orb-muted)]">{ORB_VOICE_V2_TRANSCRIPT_NOTE}</p>
+            <div className="space-y-4" data-orb-voice-turns>
               {turns.length === 0 && !acknowledgement ? (
-                <p className="text-xs text-[var(--orb-muted)]" data-orb-voice-transcript-empty>
+                <p className="text-sm leading-relaxed text-[var(--orb-muted)]" data-orb-voice-transcript-empty>
                   {emptyTranscriptHint ?? 'Your conversation will appear here as you talk with ORB.'}
                 </p>
               ) : null}

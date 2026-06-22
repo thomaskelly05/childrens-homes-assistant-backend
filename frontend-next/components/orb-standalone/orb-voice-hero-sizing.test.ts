@@ -29,7 +29,8 @@ describe('ORB Voice hero companion sizing contract', () => {
 
     assert.match(station, /OrbVoiceStationContent/)
     assert.match(hero, /data-orb-voice-hero-stage/)
-    assert.match(hero, /oneScreenWorkspace \? null : \([\s\S]*<OrbVoiceCompanion state=\{companionState\} size="hero"/)
+    assert.match(hero, /<OrbVoiceCompanion state=\{companionState\} size="hero"/)
+    assert.match(hero, /data-orb-voice-hero-dominant/)
     assert.match(head, /data-orb-voice-companion-size=\{resolvedSize\}/)
     assert.match(head, /data-orb-voice-head/)
     assert.match(head, /OrbVoiceCore/)

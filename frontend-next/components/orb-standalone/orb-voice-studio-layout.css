@@ -656,3 +656,49 @@ html[data-orb-residential='1'] [data-orb-workspace-panel='voice'] [data-orb-voic
   40% { opacity: 0.7; }
   100% { transform: translateX(30%); opacity: 0; }
 }
+
+/* Phase 5K — dominant hero wave and calmer live rail */
+.orb-voice-hero-stage--dominant {
+  min-height: min(42vh, 22rem);
+  justify-content: center;
+  padding-top: 0.5rem;
+}
+
+.orb-voice-hero-stage__waveform--dominant.orb-voice-showstopper-wave--siri {
+  width: min(100%, 24rem);
+  height: min(9rem, 28vw);
+  margin: 0.5rem auto 0.75rem;
+}
+
+.orb-voice-hero-stage__waveform--dominant .orb-voice-showstopper-wave__core {
+  width: 1.35rem;
+  height: 1.35rem;
+}
+
+.orb-voice-hero-stage__waveform--dominant .orb-voice-showstopper-wave__bar {
+  width: 0.34rem;
+  height: 1.1rem;
+}
+
+.orb-voice-hero-stage__waveform--dominant .orb-voice-showstopper-wave__glow {
+  inset: 0 4% -10%;
+  opacity: 0.85;
+  filter: blur(18px);
+}
+
+[data-orb-voice-hero-dominant='true'] .orb-voice-hero-aura {
+  background: radial-gradient(
+    ellipse 80% 60% at 50% 35%,
+    color-mix(in srgb, #22d3ee 22%, transparent),
+    color-mix(in srgb, #a855f7 12%, transparent) 55%,
+    transparent 75%
+  );
+}
+
+.orb-voice-one-screen-workspace__main {
+  justify-content: center;
+}
+
+.orb-voice-live-rail {
+  box-shadow: none;
+}

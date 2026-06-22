@@ -2,6 +2,8 @@ import { authFetchResponse } from '@/lib/auth/api'
 
 import { resolveOrbVoiceV2KatherineStatusMessage } from './orb-voice-v2-permissions.ts'
 import type {
+  OrbVoiceV2BrainTier,
+  OrbVoiceV2Intent,
   OrbVoiceV2Mode,
   OrbVoiceV2PersonalityId,
   OrbVoiceV2RespondResult,
@@ -10,7 +12,11 @@ import type {
   OrbVoiceV2Status,
   OrbVoiceV2VoiceId
 } from './orb-voice-v2-types.ts'
-import { ORB_VOICE_V2_LIVE_SPOKEN_CAP, ORB_VOICE_V2_LIVE_SPOKEN_MAX_WORDS } from './orb-voice-v2-copy.ts'
+import {
+  compressOrbVoiceReplyForSpeech,
+  VOICE_TTS_CHAR_HARD_CAP
+} from './orb-voice-v2-spoken-compression.ts'
+import { ORB_VOICE_V2_LIVE_SPOKEN_CAP } from './orb-voice-v2-copy.ts'
 
 function parseOrbVoiceV2Status(data: Record<string, unknown>): OrbVoiceV2Status {
   return {
@@ -90,7 +96,7 @@ export async function requestOrbVoiceV2Speak(
   text: string,
   options?: { voice?: string; context?: string }
 ): Promise<OrbVoiceV2SpeakResult> {
-  const trimmed = text.trim().slice(0, ORB_VOICE_V2_LIVE_SPOKEN_CAP)
+  const trimmed = text.trim().slice(0, VOICE_TTS_CHAR_HARD_CAP)
   if (!trimmed) return { ok: false, error: 'empty_text' }
   try {
     const response = await authFetchResponse('/orb/voice/v2/speak', {
@@ -147,13 +153,23 @@ export async function transcribeOrbVoiceV2Audio(blob: Blob, mimeType: string): P
   return transcript
 }
 
-export function capOrbVoiceV2SpokenText(text: string): string {
-  const cleaned = text.replace(/\*\*/g, '').replace(/[#*_`]/g, '').trim()
-  const words = cleaned.split(/\s+/).filter(Boolean)
-  const wordCapped =
-    words.length <= ORB_VOICE_V2_LIVE_SPOKEN_MAX_WORDS
-      ? cleaned
-      : `${words.slice(0, ORB_VOICE_V2_LIVE_SPOKEN_MAX_WORDS).join(' ').replace(/[.,;:!?]+$/, '')}…`
-  if (wordCapped.length <= ORB_VOICE_V2_LIVE_SPOKEN_CAP) return wordCapped
-  return wordCapped.slice(0, ORB_VOICE_V2_LIVE_SPOKEN_CAP).trim()
+export function capOrbVoiceV2SpokenText(
+  text: string,
+  options?: {
+    intent?: OrbVoiceV2Intent | string | null
+    tier?: OrbVoiceV2BrainTier | null
+    personality?: OrbVoiceV2PersonalityId | string | null
+    safetyBoundaryApplied?: boolean
+  }
+): string {
+  const compressed = compressOrbVoiceReplyForSpeech(
+    text,
+    options?.intent,
+    options?.tier,
+    options?.personality,
+    { safetyBoundaryApplied: options?.safetyBoundaryApplied }
+  )
+  if (!compressed) return compressed
+  if (compressed.length <= ORB_VOICE_V2_LIVE_SPOKEN_CAP) return compressed
+  return compressed.slice(0, ORB_VOICE_V2_LIVE_SPOKEN_CAP).trim()
 }

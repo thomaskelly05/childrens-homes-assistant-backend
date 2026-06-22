@@ -26,7 +26,7 @@ describe('ORB Voice v2 one-screen workspace', () => {
     )
     assert.match(
       resolveOrbVoiceV2LiveStatusCopy({ state: 'thinking', brainTier: 'voice_specialist' }) ?? '',
-      /residential childcare brain/
+      /Residential childcare brain/
     )
   })
 
