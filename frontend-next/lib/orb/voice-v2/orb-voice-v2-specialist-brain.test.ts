@@ -16,8 +16,8 @@ function read(relativePath: string) {
 }
 
 describe('orb-voice-v2-specialist-brain', () => {
-  it('build marker is phase-5l2-voice-siri-hero-layout-repair', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5l2-voice-siri-hero-layout-repair')
+  it('build marker is phase-5n1-voice-full-viewport-canvas', () => {
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5n1-voice-full-viewport-canvas')
   })
 
   it('reflection packet includes bullying specialist sections', () => {

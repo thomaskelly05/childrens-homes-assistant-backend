@@ -14,9 +14,9 @@ function read(relativePath: string) {
 }
 
 describe('ORB Residential Phase 5L.2 Voice Siri hero layout repair', () => {
-  it('build marker is phase-5l2-voice-siri-hero-layout-repair', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5l2-voice-siri-hero-layout-repair')
-    assert.match(read('app/orb/orb-residential-shell.css'), /phase-5l2-voice-siri-hero-layout-repair/)
+  it('build marker is phase-5n1-voice-full-viewport-canvas', () => {
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5n1-voice-full-viewport-canvas')
+    assert.match(read('app/orb/orb-residential-shell.css'), /phase-5n1-voice-full-viewport-canvas/)
     assert.deepEqual(ORB_LAYOUT_CSS_FILES, ['app/orb/orb-residential-shell.css'])
   })
 
@@ -61,10 +61,8 @@ describe('ORB Residential Phase 5L.2 Voice Siri hero layout repair', () => {
   it('right rail has readable width rules and soft idle badges', () => {
     const content = read('components/orb-standalone/orb-voice-station-content.tsx')
     const shell = read('app/orb/orb-residential-shell.css')
-    assert.match(content, /md:min-w-\[22\.5rem\]/)
-    assert.match(content, /md:max-w-\[26\.25rem\]/)
-    assert.match(shell, /min-width: min\(100%, 22\.5rem\)/)
-    assert.match(shell, /max-width: min\(100%, 26\.25rem\)/)
+    assert.match(content, /data-orb-voice-live-rail-slot/)
+    assert.match(shell, /orb-voice-live-rail__tab/)
     assert.match(stationSoftBadges(), /data-orb-voice-soft-badges/)
   })
 

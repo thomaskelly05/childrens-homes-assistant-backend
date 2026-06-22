@@ -53,6 +53,7 @@ export function OrbVoiceStationContent({
       className={`orb-voice-station-content orb-voice-one-screen-workspace orb-workspace orb-workspace--voice flex min-h-0 flex-1 flex-col overflow-hidden ${className}`.trim()}
       data-orb-voice-station-content
       data-orb-voice-one-screen-workspace
+      data-orb-voice-full-viewport="true"
       data-orb-workspace-voice
       data-orb-voice-workspace-mode={ORB_VOICE_V2_ONE_SCREEN_WORKSPACE}
       data-orb-voice-mobile={isMobileViewport ? true : undefined}
@@ -60,8 +61,8 @@ export function OrbVoiceStationContent({
       data-orb-voice-session-started={sessionStarted ? true : undefined}
       data-orb-voice-idle-hero={!sessionStarted ? true : undefined}
     >
-      <div className="orb-voice-station-content__scroll orb-voice-one-screen-workspace__scroll min-h-0 flex-1 overscroll-contain px-4 py-2 md:px-6 md:py-4">
-        <div className="orb-voice-one-screen-workspace__grid mx-auto flex w-full max-w-[88rem] flex-col gap-4 md:flex-row md:items-stretch md:gap-8">
+      <div className="orb-voice-station-content__scroll orb-voice-one-screen-workspace__scroll min-h-0 flex-1 overscroll-contain px-3 py-1 md:px-4 md:py-2">
+        <div className="orb-voice-one-screen-workspace__grid flex w-full max-w-none flex-col gap-4 md:grid md:items-stretch md:gap-[clamp(24px,3vw,44px)]">
           <div className="orb-voice-one-screen-workspace__main flex min-h-0 w-full flex-col items-center md:min-w-0 md:flex-1">
             <div
               className={`orb-voice-station-content__intro mb-1 w-full text-center transition-opacity ${
@@ -113,7 +114,7 @@ export function OrbVoiceStationContent({
           </div>
 
           <div
-            className="orb-voice-one-screen-workspace__rail min-h-[12rem] w-full md:w-[min(100%,26.25rem)] md:min-w-[22.5rem] md:max-w-[26.25rem] md:shrink-0"
+            className="orb-voice-one-screen-workspace__rail min-h-[12rem] w-full md:min-w-[23.75rem] md:max-w-[27.5rem] md:shrink-0"
             data-orb-voice-live-rail-slot
           >
             {liveRail}

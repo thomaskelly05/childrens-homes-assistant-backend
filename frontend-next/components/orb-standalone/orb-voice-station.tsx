@@ -476,6 +476,7 @@ export function OrbVoiceStation({
         data-orb-voice-station
         data-orb-voice-v2
         data-orb-voice-one-screen-workspace
+      data-orb-voice-full-viewport="true"
         data-orb-voice-ui-state={voice.state}
         data-orb-voice-capture-active={conversationLive ? true : false}
         data-orb-voice-idle-ready={primaryIdleReady ? true : undefined}
