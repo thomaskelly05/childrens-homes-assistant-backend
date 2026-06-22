@@ -14,7 +14,7 @@ function read(relativePath: string) {
 
 describe('ORB Residential Phase 5H Voice v2 specialist brain', () => {
   it('specialist brain routing and session memory remain', () => {
-    assert.match(read('app/orb/orb-residential-shell.css'), /phase-5n2-voice-realtime-latency-full-canvas|phase-5n2-voice-realtime-latency-full-canvas/)
+    assert.match(read('app/orb/orb-residential-shell.css'), /phase-5n3-voice-fast-capture-modern-ui|phase-5n3-voice-fast-capture-modern-ui/)
     assert.deepEqual(ORB_LAYOUT_CSS_FILES, ['app/orb/orb-residential-shell.css'])
   })
 

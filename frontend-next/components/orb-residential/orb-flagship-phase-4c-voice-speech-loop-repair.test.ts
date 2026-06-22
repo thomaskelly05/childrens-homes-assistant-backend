@@ -27,8 +27,8 @@ function read(relativePath: string) {
 }
 
 describe('ORB Residential Phase 4C Voice speech loop repair', () => {
-  it('build version marker is phase-5n2-voice-realtime-latency-full-canvas', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5n2-voice-realtime-latency-full-canvas')
+  it('build version marker is phase-5n3-voice-fast-capture-modern-ui', () => {
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5n3-voice-fast-capture-modern-ui')
     const layout = read('app/orb/layout.tsx')
     assert.match(layout, /orb-residential-shell\.css/)
     assert.deepEqual(ORB_LAYOUT_CSS_FILES, ['app/orb/orb-residential-shell.css'])
@@ -110,7 +110,7 @@ describe('ORB Residential Phase 4C Voice speech loop repair', () => {
   it('audio storage honesty and single shell remain', () => {
     const shell = read('app/orb/orb-residential-shell.css')
     const station = read('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(shell, /phase-5n2-voice-realtime-latency-full-canvas/)
+    assert.match(shell, /phase-5n3-voice-fast-capture-modern-ui/)
     assert.match(read('components/orb-standalone/orb-voice-live-rail.tsx'), /ORB_VOICE_V2_SAFETY_FOOTER/)
     assert.match(ORB_VOICE_MIC_ERROR, /microphone permission/)
     assert.doesNotMatch(station, /compliance guarantee|Ofsted approved/i)

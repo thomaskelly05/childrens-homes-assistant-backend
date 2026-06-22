@@ -84,6 +84,19 @@ export type OrbVoiceV2SessionMemory = {
   protocolSlots?: OrbVoiceV2ProtocolSlots
 }
 
+export type OrbVoiceActiveCaptureMode =
+  | 'webrtc_active'
+  | 'hybrid_active'
+  | 'standard_capture'
+  | 'fallback'
+  | 'unavailable'
+
+export type OrbVoiceTranscriptSource =
+  | 'webrtc_final'
+  | 'hybrid_final'
+  | 'standard_transcribe'
+  | 'fallback_transcribe'
+
 export type OrbVoiceRealtimeBetaStatus = {
   available: boolean
   provider?: 'openai' | 'none' | string

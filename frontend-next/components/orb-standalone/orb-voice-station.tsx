@@ -226,12 +226,30 @@ export function OrbVoiceStation({
   const setupPanel = (
     <div className="flex w-full flex-col gap-4" data-orb-voice-v2-preferences>
       <div className="flex flex-col gap-1.5" data-orb-voice-realtime-setup>
-        <span
-          className="orb-voice-realtime-badge inline-flex w-fit rounded-full px-2.5 py-1 text-[11px] font-medium"
-          data-orb-voice-realtime-setup-label
-        >
-          {voice.realtimeSetupLabel}
-        </span>
+        {voice.configuredRealtimeLabel ? (
+          <span
+            className="orb-voice-realtime-badge orb-voice-realtime-badge--configured inline-flex w-fit rounded-full px-2.5 py-1 text-[11px] font-medium"
+            data-orb-voice-realtime-configured-label
+          >
+            {voice.configuredRealtimeLabel}
+          </span>
+        ) : (
+          <span
+            className="orb-voice-realtime-badge inline-flex w-fit rounded-full px-2.5 py-1 text-[11px] font-medium"
+            data-orb-voice-realtime-setup-label
+          >
+            {voice.realtimeSetupLabel}
+          </span>
+        )}
+        {sessionStarted ? (
+          <span
+            className="orb-voice-runtime-badge inline-flex w-fit rounded-full px-2.5 py-1 text-[11px] font-medium"
+            data-orb-voice-active-capture-label
+            data-orb-voice-active-capture-mode={voice.activeCaptureMode}
+          >
+            {voice.activeCaptureLabel}
+          </span>
+        ) : null}
         {voice.realtimeSetupDetail ? (
           <p className="text-xs leading-relaxed text-[var(--orb-muted)]" data-orb-voice-realtime-setup-detail>
             {voice.realtimeSetupDetail}
@@ -482,6 +500,8 @@ export function OrbVoiceStation({
         data-orb-voice-idle-ready={primaryIdleReady ? true : undefined}
         data-orb-voice-acknowledgement={voice.acknowledgement ?? undefined}
         data-orb-voice-realtime-mode={voice.realtimeMode}
+        data-orb-voice-active-capture-mode={voice.activeCaptureMode}
+        data-orb-voice-transcript-source={voice.lastTranscriptSource ?? undefined}
       >
         <OrbVoiceStationContent
           companionState={companionState}

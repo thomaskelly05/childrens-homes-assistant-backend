@@ -59,7 +59,7 @@ export function resolveOrbVoiceV2ProgressLine(input: {
   if (input.voicePreparing && input.state === 'speaking') {
     return ORB_VOICE_V2_PREPARING_VOICE
   }
-  if (input.state === 'speaking') return ORB_VOICE_V2_PROGRESS_SPEAKING
+  if (input.state === 'speaking') return 'Katherine is responding'
   return null
 }
 

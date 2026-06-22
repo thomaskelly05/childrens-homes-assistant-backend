@@ -16,9 +16,9 @@ import {
 import {
   isOrbVoiceWebRtcMode,
   isOrbVoiceWebRtcSupported,
-  resolveOrbVoiceRealtimeMode,
-  resolveOrbVoiceRealtimeSetupCaptureLabel
+  resolveOrbVoiceRealtimeMode
 } from '../../lib/orb/voice-v2/orb-voice-v2-realtime-beta.ts'
+import { resolveOrbVoiceActiveCaptureLabel } from '../../lib/orb/voice-v2/orb-voice-v2-runtime-mode.ts'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '../..')
 
@@ -27,9 +27,9 @@ function read(relativePath: string) {
 }
 
 describe('ORB Residential Phase 5N.2 Voice realtime latency and full canvas', () => {
-  it('build marker is phase-5n2-voice-realtime-latency-full-canvas', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5n2-voice-realtime-latency-full-canvas')
-    assert.match(read('app/orb/orb-residential-shell.css'), /phase-5n2-voice-realtime-latency-full-canvas/)
+  it('build marker is phase-5n3-voice-fast-capture-modern-ui', () => {
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5n3-voice-fast-capture-modern-ui')
+    assert.match(read('app/orb/orb-residential-shell.css'), /phase-5n3-voice-fast-capture-modern-ui/)
     assert.deepEqual(ORB_LAYOUT_CSS_FILES, ['app/orb/orb-residential-shell.css'])
   })
 
@@ -119,10 +119,7 @@ describe('ORB Residential Phase 5N.2 Voice realtime latency and full canvas', ()
       'webrtc'
     )
     assert.ok(isOrbVoiceWebRtcMode('webrtc'))
-    assert.match(
-      resolveOrbVoiceRealtimeSetupCaptureLabel('webrtc', 'Realtime available'),
-      /WebRTC capture/
-    )
+    assert.equal(resolveOrbVoiceActiveCaptureLabel('webrtc_active'), 'WebRTC capture active')
     const hook = read('lib/orb/voice-v2/use-orb-voice-v2.ts')
     assert.match(hook, /startOrbVoiceV2RealtimeWebRtcCapture/)
     assert.match(hook, /orb_voice_realtime_mode_selected/)

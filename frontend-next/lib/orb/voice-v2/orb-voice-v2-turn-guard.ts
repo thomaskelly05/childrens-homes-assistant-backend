@@ -1,6 +1,8 @@
 /** End-of-turn capture tuning — trim latency without cutting mid-sentence. */
 export const END_OF_TURN_DEBOUNCE_MS = 1000
+export const SAFARI_END_OF_TURN_DEBOUNCE_MS = 850
 export const MIN_SPEECH_MS = 350
+export const SAFARI_MIN_SPEECH_MS = 300
 /** Phase 5K — ignore turns with fewer than 8 meaningful characters. */
 export const MIN_TRANSCRIPT_CHARS = 8
 export const MIN_TRANSCRIPT_WORDS = 2

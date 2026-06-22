@@ -58,13 +58,23 @@ import {
   isOrbVoiceWebRtcSupported,
   orbVoiceRealtimeEnabled,
   resolveOrbVoiceRealtimeMode,
-  resolveOrbVoiceRealtimeSetupCaptureLabel,
-  resolveOrbVoiceRealtimeSetupDetail,
   resolveOrbVoiceRealtimeSetupLabel,
   type OrbVoiceRealtimeMode
 } from './orb-voice-v2-realtime-beta.ts'
 import { fetchOrbVoiceRealtimeBetaStatus } from './orb-voice-v2-realtime-client.ts'
 import { traceOrbVoiceRealtime } from './orb-voice-v2-realtime-trace.ts'
+import {
+  traceOrbVoiceCapture,
+  traceOrbVoiceCaptureModeSelected,
+  traceOrbVoiceTranscriptSource
+} from './orb-voice-v2-capture-source.ts'
+import {
+  mapRealtimeModeToActiveCapture,
+  resolveOrbVoiceActiveCaptureLabel,
+  resolveOrbVoiceConfiguredRealtimeLabel,
+  resolveOrbVoiceRuntimeSetupDetail,
+  resolveOrbVoiceRuntimeStatusCopy
+} from './orb-voice-v2-runtime-mode.ts'
 import {
   ORB_VOICE_V2_DIDNT_CATCH_COPY,
   resolveOrbVoiceV2LiveStatusCopy,
@@ -84,7 +94,9 @@ import type {
   OrbVoiceV2Mode,
   OrbVoiceV2PermissionState,
   OrbVoiceV2PersonalityId,
+  OrbVoiceActiveCaptureMode,
   OrbVoiceRealtimeBetaStatus,
+  OrbVoiceTranscriptSource,
   OrbVoiceV2SessionMemory,
   OrbVoiceV2State,
   OrbVoiceV2Turn,
@@ -123,6 +135,8 @@ export function useOrbVoiceV2(open: boolean) {
   const [partialTranscript, setPartialTranscript] = useState<string | null>(null)
   const [realtimeMode, setRealtimeMode] = useState<OrbVoiceRealtimeMode>('fallback')
   const [realtimeStatus, setRealtimeStatus] = useState<OrbVoiceRealtimeBetaStatus | null>(null)
+  const [activeCaptureMode, setActiveCaptureMode] = useState<OrbVoiceActiveCaptureMode>('fallback')
+  const [lastTranscriptSource, setLastTranscriptSource] = useState<OrbVoiceTranscriptSource | null>(null)
 
   const captureRef = useRef<OrbVoiceV2CaptureSession | null>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null)
@@ -147,6 +161,7 @@ export function useOrbVoiceV2(open: boolean) {
   const speakGenerationRef = useRef(0)
   const bargeInRef = useRef(false)
   const realtimeModeRef = useRef<OrbVoiceRealtimeMode>('fallback')
+  const activeCaptureModeRef = useRef<OrbVoiceActiveCaptureMode>('fallback')
   const playbackStateRef = useRef<OrbVoiceV2PlaybackState>('idle')
   const voicePreparingRef = useRef(false)
   const handleWakePhraseRef = useRef<() => void>(() => {})
@@ -159,6 +174,7 @@ export function useOrbVoiceV2(open: boolean) {
   selectedVoiceRef.current = selectedVoice
   autoResumeBlockedRef.current = autoResumeBlocked
   realtimeModeRef.current = realtimeMode
+  activeCaptureModeRef.current = activeCaptureMode
   playbackStateRef.current = playbackState
   voicePreparingRef.current = voicePreparing
 
@@ -225,6 +241,9 @@ export function useOrbVoiceV2(open: boolean) {
     setRealtimeMode('fallback')
     realtimeModeRef.current = 'fallback'
     setRealtimeStatus(null)
+    setActiveCaptureMode('fallback')
+    activeCaptureModeRef.current = 'fallback'
+    setLastTranscriptSource(null)
   }, [])
 
   const fireInstantAcknowledgement = useCallback(() => {
@@ -234,6 +253,36 @@ export function useOrbVoiceV2(open: boolean) {
     setAcknowledgement(ack)
     traceOrbVoiceV2InstantAck()
   }, [])
+
+  const resolveTranscriptFromAudio = useCallback(
+    async (
+      blob: Blob,
+      mimeType: string,
+      hint?: string
+    ): Promise<{ transcript: string; source: OrbVoiceTranscriptSource }> => {
+      traceOrbVoiceCapture('orb_voice_standard_audio_blob', {
+        size: blob.size,
+        mime: mimeType
+      })
+      const trimmedHint = hint?.trim()
+      if (trimmedHint && isOrbVoiceV2TurnSubstantial(trimmedHint)) {
+        traceOrbVoiceCapture('orb_voice_transcribe_skipped', { source: 'hybrid_final' })
+        return { transcript: trimmedHint, source: 'hybrid_final' }
+      }
+      const captureSource =
+        activeCaptureModeRef.current === 'hybrid_active' ? 'fallback_transcribe' : 'standard_transcribe'
+      traceOrbVoiceCapture('orb_voice_transcribe_started', { source: captureSource })
+      const started = typeof performance !== 'undefined' ? performance.now() : Date.now()
+      const transcript = (await transcribeOrbVoiceV2Audio(blob, mimeType)).trim()
+      const finished = typeof performance !== 'undefined' ? performance.now() : Date.now()
+      traceOrbVoiceCapture('orb_voice_transcribe_finished', {
+        source: captureSource,
+        duration_ms: Math.round(finished - started)
+      })
+      return { transcript, source: captureSource }
+    },
+    []
+  )
 
   useEffect(() => {
     if (!open) {
@@ -348,7 +397,9 @@ export function useOrbVoiceV2(open: boolean) {
 
   const speakReplyRef = useRef<(turnId: string, text: string) => Promise<void>>(async () => {})
 
-  const processCapturedTranscriptRef = useRef<(transcript: string) => Promise<void>>(async () => {})
+  const processCapturedTranscriptRef = useRef<
+    (transcript: string, source?: OrbVoiceTranscriptSource) => Promise<void>
+  >(async () => {})
 
   const resumeListening = useCallback(
     async (options?: { fromUserGesture?: boolean }) => {
@@ -384,7 +435,7 @@ export function useOrbVoiceV2(open: boolean) {
           },
           onPartialTranscript: (text: string) => setPartialTranscript(text),
           onWakePhrase: () => handleWakePhraseRef.current(),
-          onEndOfTurnFromTranscript: (transcript: string) => {
+          onEndOfTurnFromTranscript: (transcript: string, source: OrbVoiceTranscriptSource = 'webrtc_final') => {
             void (async () => {
               if (processingRef.current) return
               processingRef.current = true
@@ -394,7 +445,8 @@ export function useOrbVoiceV2(open: boolean) {
               fireInstantAcknowledgement()
               transitionState('thinking')
               try {
-                await processCapturedTranscriptRef.current(transcript)
+                traceOrbVoiceTranscriptSource(source)
+                await processCapturedTranscriptRef.current(transcript, source)
               } finally {
                 processingRef.current = false
               }
@@ -410,12 +462,13 @@ export function useOrbVoiceV2(open: boolean) {
               fireInstantAcknowledgement()
               transitionState('thinking')
               try {
-                const hint = options?.transcriptHint?.trim()
-                const transcript =
-                  hint && isOrbVoiceV2TurnSubstantial(hint)
-                    ? hint
-                    : (await transcribeOrbVoiceV2Audio(blob, mimeType)).trim()
-                await processCapturedTranscriptRef.current(transcript)
+                const { transcript, source } = await resolveTranscriptFromAudio(
+                  blob,
+                  mimeType,
+                  options?.transcriptHint
+                )
+                traceOrbVoiceTranscriptSource(source)
+                await processCapturedTranscriptRef.current(transcript, source)
               } catch (error) {
                 const message = error instanceof Error ? error.message : ''
                 if (message.includes('empty') || message.includes('transcription_failed')) {
@@ -443,6 +496,10 @@ export function useOrbVoiceV2(open: boolean) {
 
         const startCaptureSession = async (): Promise<OrbVoiceV2CaptureSession> => {
           if (isOrbVoiceWebRtcMode(mode)) {
+            const active = mapRealtimeModeToActiveCapture('webrtc')
+            setActiveCaptureMode(active)
+            activeCaptureModeRef.current = active
+            traceOrbVoiceCaptureModeSelected(active)
             return startOrbVoiceV2RealtimeWebRtcCapture({
               onListeningReady: sharedCallbacks.onListeningReady,
               onSpeechStart: sharedCallbacks.onSpeechStart,
@@ -453,6 +510,10 @@ export function useOrbVoiceV2(open: boolean) {
             })
           }
           if (isOrbVoiceHybridMode(mode)) {
+            const active = mapRealtimeModeToActiveCapture('hybrid')
+            setActiveCaptureMode(active)
+            activeCaptureModeRef.current = active
+            traceOrbVoiceCaptureModeSelected(active)
             return startOrbVoiceV2HybridCapture({
               onListeningReady: sharedCallbacks.onListeningReady,
               onSpeechStart: sharedCallbacks.onSpeechStart,
@@ -462,6 +523,10 @@ export function useOrbVoiceV2(open: boolean) {
               onError: sharedCallbacks.onCaptureError
             })
           }
+          const active = mapRealtimeModeToActiveCapture('fallback')
+          setActiveCaptureMode(active)
+          activeCaptureModeRef.current = active
+          traceOrbVoiceCaptureModeSelected(active)
           return startOrbVoiceV2Capture({
             onListeningReady: sharedCallbacks.onListeningReady,
             onSpeechStart: sharedCallbacks.onSpeechStart,
@@ -487,6 +552,10 @@ export function useOrbVoiceV2(open: boolean) {
           })
           realtimeModeRef.current = isOrbVoiceHybridSpeechAvailable() ? 'hybrid' : 'fallback'
           setRealtimeMode(realtimeModeRef.current)
+          const fallbackActive = mapRealtimeModeToActiveCapture(realtimeModeRef.current)
+          setActiveCaptureMode(fallbackActive)
+          activeCaptureModeRef.current = fallbackActive
+          traceOrbVoiceCaptureModeSelected(fallbackActive)
           session = await withTimeout(
             isOrbVoiceHybridMode(realtimeModeRef.current)
               ? startOrbVoiceV2HybridCapture({
@@ -519,7 +588,7 @@ export function useOrbVoiceV2(open: boolean) {
         handleMicFailure(error, options)
       }
     },
-    [fireInstantAcknowledgement, handleMicFailure, markAutoResumeBlocked, permissionState, transitionState]
+    [fireInstantAcknowledgement, handleMicFailure, markAutoResumeBlocked, permissionState, resolveTranscriptFromAudio, transitionState]
   )
 
   const tryAutoResumeListening = useCallback(async () => {
@@ -708,7 +777,8 @@ export function useOrbVoiceV2(open: boolean) {
   commitAdultTurnRef.current = commitAdultTurn
 
   const processCapturedTranscript = useCallback(
-    async (transcript: string) => {
+    async (transcript: string, source?: OrbVoiceTranscriptSource) => {
+      if (source) setLastTranscriptSource(source)
       const trimmed = transcript.trim()
       if (!trimmed) {
         traceOrbVoiceV2IgnoredTinyTurn(0)
@@ -898,9 +968,15 @@ export function useOrbVoiceV2(open: boolean) {
     listeningHint: ORB_VOICE_V2_LISTENING_HINT,
     preparingVoice: ORB_VOICE_V2_PREPARING_VOICE
   })
+  const runtimeStatusCopy = resolveOrbVoiceRuntimeStatusCopy({
+    state,
+    activeCaptureMode,
+    voicePreparing
+  })
   const detailLine =
     tinyTurnNotice ||
     progressLine ||
+    runtimeStatusCopy ||
     liveStatusCopy ||
     (playbackBlocked
       ? ORB_VOICE_V2_AUDIO_PLAYBACK_BLOCKED
@@ -957,11 +1033,19 @@ export function useOrbVoiceV2(open: boolean) {
     partialTranscript,
     realtimeMode,
     realtimeStatus,
-    realtimeSetupLabel: resolveOrbVoiceRealtimeSetupCaptureLabel(
-      realtimeMode,
-      resolveOrbVoiceRealtimeSetupLabel(realtimeMode)
-    ),
-    realtimeSetupDetail: resolveOrbVoiceRealtimeSetupDetail(realtimeMode, realtimeStatus?.reason),
+    activeCaptureMode,
+    lastTranscriptSource,
+    configuredRealtimeLabel: resolveOrbVoiceConfiguredRealtimeLabel(realtimeStatus, realtimeMode),
+    activeCaptureLabel: resolveOrbVoiceActiveCaptureLabel(activeCaptureMode),
+    realtimeSetupLabel:
+      resolveOrbVoiceConfiguredRealtimeLabel(realtimeStatus, realtimeMode) ??
+      resolveOrbVoiceRealtimeSetupLabel(realtimeMode),
+    realtimeSetupDetail: resolveOrbVoiceRuntimeSetupDetail({
+      status: realtimeStatus,
+      resolvedMode: realtimeMode,
+      activeCaptureMode,
+      sessionStarted: state !== 'idle'
+    }),
     wakePhraseHint: ORB_VOICE_V2_WAKE_PHRASE_HINT,
     orbVoiceRealtimeAvailable: orbVoiceRealtimeEnabled(realtimeMode),
     handoffPayload

@@ -28,7 +28,7 @@ describe('ORB Voice v2 realtime beta layer', () => {
       true
     )
     assert.equal(mode, 'webrtc')
-    assert.equal(resolveOrbVoiceRealtimeSetupLabel(mode), 'Realtime available')
+    assert.equal(resolveOrbVoiceRealtimeSetupLabel(mode), 'Realtime configured')
   })
 
   it('resolves hybrid on safari-style fallback path', () => {

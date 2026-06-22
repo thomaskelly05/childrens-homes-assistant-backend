@@ -73,11 +73,11 @@ describe('ORB Voice v2 flow contracts', () => {
 })
 
 describe('ORB Residential Phase 5A Voice clean rebuild', () => {
-  it('build version marker is phase-5n2-voice-realtime-latency-full-canvas', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5n2-voice-realtime-latency-full-canvas')
+  it('build version marker is phase-5n3-voice-fast-capture-modern-ui', () => {
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5n3-voice-fast-capture-modern-ui')
     assert.match(read('app/orb/layout.tsx'), /orb-residential-shell\.css/)
     assert.deepEqual(ORB_LAYOUT_CSS_FILES, ['app/orb/orb-residential-shell.css'])
-    assert.match(read('app/orb/orb-residential-shell.css'), /phase-5n2-voice-realtime-latency-full-canvas/)
+    assert.match(read('app/orb/orb-residential-shell.css'), /phase-5n3-voice-fast-capture-modern-ui/)
   })
 
   it('active voice station uses v2 hook and not legacy voice modules', () => {

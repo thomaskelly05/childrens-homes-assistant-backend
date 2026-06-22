@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+import time
 from typing import Any
 
 from services.ai_external_call_governance import (
@@ -16,6 +17,15 @@ logger = logging.getLogger(__name__)
 
 VOICE_TRANSCRIPTION_UNAVAILABLE = "voice_transcription_unavailable"
 VOICE_TRANSCRIPTION_EMPTY = "voice_transcription_empty"
+VOICE_TRANSCRIPTION_MODEL_ENV = "ORB_VOICE_TRANSCRIPTION_MODEL"
+
+
+def _resolve_voice_transcription_model() -> str:
+    return (
+        os.getenv(VOICE_TRANSCRIPTION_MODEL_ENV)
+        or os.getenv("AI_NOTES_TRANSCRIBE_MODEL")
+        or "gpt-4o-transcribe"
+    ).strip()
 
 
 class OrbVoiceTranscriptionError(Exception):
@@ -58,7 +68,17 @@ def _transcribe_voice_audio_sync(file_path: str, *, mime_type: str | None = None
             provider=None,
         )
 
+    model = _resolve_voice_transcription_model()
+    started = time.perf_counter()
+    logger.info(
+        "orb_voice_transcription received mime=%s size=%s model=%s",
+        mime_type or "unknown",
+        size,
+        model,
+    )
+
     try:
+        provider_started = time.perf_counter()
         result = governed_transcribe_audio_file(
             file_path,
             feature=FEATURE_VOICE_TRANSCRIPTION,
@@ -67,8 +87,10 @@ def _transcribe_voice_audio_sync(file_path: str, *, mime_type: str | None = None
                 "transcript_privacy_mode": "session_only",
                 "audio_stored": False,
                 "mime_type": mime_type,
+                "model": model,
             },
         )
+        provider_latency_ms = int((time.perf_counter() - provider_started) * 1000)
     except RuntimeError as exc:
         detail = str(exc).strip() or "Voice transcription is not available."
         logger.warning(
@@ -96,12 +118,15 @@ def _transcribe_voice_audio_sync(file_path: str, *, mime_type: str | None = None
         ) from exc
 
     transcript = str(result.get("original_transcript") or result.get("transcript") or "").strip()
+    total_duration_ms = int((time.perf_counter() - started) * 1000)
     logger.info(
-        "orb_voice_transcription request mime=%s size=%s provider=openai status=%s transcript_chars=%s",
+        "orb_voice_transcription finished mime=%s size=%s model=%s provider_latency_ms=%s total_duration_ms=%s status=%s",
         mime_type or "unknown",
         size,
+        model,
+        provider_latency_ms,
+        total_duration_ms,
         "success" if transcript else "empty",
-        len(transcript),
     )
     if not transcript:
         raise OrbVoiceTranscriptionError(
@@ -110,13 +135,13 @@ def _transcribe_voice_audio_sync(file_path: str, *, mime_type: str | None = None
             status_code=400,
         )
 
-    provider = (os.getenv("AI_NOTES_TRANSCRIBE_MODEL") or "gpt-4o-transcribe").strip()
+    provider = model
     duration = result.get("duration")
     return {
         "transcript": transcript,
         "provider": provider,
         "source": "server_transcription",
-        "duration_ms": int(float(duration) * 1000) if isinstance(duration, (int, float)) else None,
+        "duration_ms": int(float(duration) * 1000) if isinstance(duration, (int, float)) else total_duration_ms,
         "mime_type": mime_type,
         "audio_stored": False,
     }

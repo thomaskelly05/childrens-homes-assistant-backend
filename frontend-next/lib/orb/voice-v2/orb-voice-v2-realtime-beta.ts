@@ -63,8 +63,8 @@ export function orbVoiceRealtimeAvailable(
 }
 
 export function resolveOrbVoiceRealtimeSetupLabel(mode: OrbVoiceRealtimeMode): string {
-  if (mode === 'webrtc') return 'Realtime available'
-  if (mode === 'hybrid') return 'Hybrid beta'
+  if (mode === 'webrtc') return 'Realtime configured'
+  if (mode === 'hybrid') return 'Hybrid configured'
   return 'Standard voice mode'
 }
 
@@ -72,8 +72,8 @@ export function resolveOrbVoiceRealtimeSetupCaptureLabel(
   mode: OrbVoiceRealtimeMode,
   baseLabel: string
 ): string {
-  if (mode === 'webrtc') return `${baseLabel} · WebRTC capture`
-  if (mode === 'hybrid') return `${baseLabel} · Hybrid partials`
+  if (mode === 'webrtc') return baseLabel
+  if (mode === 'hybrid') return baseLabel
   return baseLabel
 }
 

@@ -5,10 +5,12 @@
 import { traceOrbVoiceV2Lifecycle } from './orb-voice-v2-lifecycle-trace.ts'
 import {
   END_OF_TURN_DEBOUNCE_MS,
-  MIN_SPEECH_MS
+  MIN_SPEECH_MS,
+  SAFARI_END_OF_TURN_DEBOUNCE_MS,
+  SAFARI_MIN_SPEECH_MS
 } from './orb-voice-v2-turn-guard.ts'
 
-export { END_OF_TURN_DEBOUNCE_MS, MIN_SPEECH_MS }
+export { END_OF_TURN_DEBOUNCE_MS, MIN_SPEECH_MS, SAFARI_END_OF_TURN_DEBOUNCE_MS, SAFARI_MIN_SPEECH_MS }
 const MAX_RECORDING_MS = 45_000
 
 export type OrbVoiceV2CaptureErrorCode =
@@ -95,8 +97,12 @@ export async function startOrbVoiceV2Capture(input: {
   const mimeType = pickMimeType()
   const chunks: BlobPart[] = []
   let recorder: MediaRecorder
+  const recorderOptions: MediaRecorderOptions = { mimeType }
+  if (!isSafari() && (mimeType.includes('opus') || mimeType.includes('webm'))) {
+    recorderOptions.audioBitsPerSecond = 24_000
+  }
   try {
-    recorder = new MediaRecorder(stream, { mimeType })
+    recorder = new MediaRecorder(stream, recorderOptions)
     traceOrbVoiceV2Lifecycle('voice_v2_recorder_created')
   } catch {
     recorder = new MediaRecorder(stream)
@@ -169,7 +175,10 @@ export async function startOrbVoiceV2Capture(input: {
     if (!disposed) commitTurn()
   }
 
-  recorder.start(250)
+  const endOfTurnDebounceMs = isSafari() ? SAFARI_END_OF_TURN_DEBOUNCE_MS : END_OF_TURN_DEBOUNCE_MS
+  const minSpeechMs = isSafari() ? SAFARI_MIN_SPEECH_MS : MIN_SPEECH_MS
+
+  recorder.start(isSafari() ? 100 : 200)
   traceOrbVoiceV2Lifecycle('voice_v2_recorder_started')
   input.onListeningReady?.()
 
@@ -193,11 +202,11 @@ export async function startOrbVoiceV2Capture(input: {
         window.clearTimeout(silenceTimer)
         silenceTimer = null
       }
-    } else if (speechDetected && Date.now() - startedAt > MIN_SPEECH_MS) {
+    } else if (speechDetected && Date.now() - startedAt > minSpeechMs) {
       if (!silenceTimer) {
         silenceTimer = window.setTimeout(() => {
           if (recorder.state === 'recording') recorder.stop()
-        }, END_OF_TURN_DEBOUNCE_MS)
+        }, endOfTurnDebounceMs)
       }
     }
     rafId = window.requestAnimationFrame(monitor)
