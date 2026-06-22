@@ -11,6 +11,7 @@ import {
   transcribeOrbVoiceV2Audio
 } from './orb-voice-v2-client.ts'
 import { OrbVoiceV2CaptureError, startOrbVoiceV2Capture, type OrbVoiceV2CaptureSession } from './orb-voice-v2-capture.ts'
+import { startOrbVoiceV2HybridCapture } from './orb-voice-v2-hybrid-capture.ts'
 import {
   ORB_VOICE_V2_AUDIO_PLAYBACK_BLOCKED,
   ORB_VOICE_V2_AUDIO_UNLOCK_SOFT_FAIL,
@@ -48,6 +49,15 @@ import {
   traceOrbVoiceV2IgnoredTinyTurn
 } from './orb-voice-v2-turn-guard.ts'
 import {
+  ORB_VOICE_V2_BARGE_IN_STOPPED_COPY,
+  ORB_VOICE_V2_WAKE_PHRASE_HINT,
+  isOrbVoiceHybridSpeechAvailable,
+  orbVoiceRealtimeEnabled,
+  resolveOrbVoiceRealtimeMode,
+  type OrbVoiceRealtimeMode
+} from './orb-voice-v2-realtime-beta.ts'
+import { fetchOrbVoiceRealtimeBetaStatus } from './orb-voice-v2-realtime-client.ts'
+import {
   ORB_VOICE_V2_DIDNT_CATCH_COPY,
   resolveOrbVoiceV2LiveStatusCopy,
   resolveOrbVoiceV2ProgressLine
@@ -56,7 +66,8 @@ import {
   pickOrbVoiceV2Acknowledgement,
   resolveSpeakVoiceId,
   traceOrbVoiceV2BargeIn,
-  traceOrbVoiceV2InstantAck
+  traceOrbVoiceV2InstantAck,
+  type OrbVoiceV2BargeInSource
 } from './orb-voice-v2-showstopper.ts'
 import type {
   OrbVoiceV2BrainTier,
@@ -100,6 +111,8 @@ export function useOrbVoiceV2(open: boolean) {
   const [sessionMemory, setSessionMemory] = useState<OrbVoiceV2SessionMemory | null>(null)
   const [lastIntent, setLastIntent] = useState<OrbVoiceV2Intent | null>(null)
   const [lastBrainTier, setLastBrainTier] = useState<OrbVoiceV2BrainTier | null>(null)
+  const [partialTranscript, setPartialTranscript] = useState<string | null>(null)
+  const [realtimeMode, setRealtimeMode] = useState<OrbVoiceRealtimeMode>('fallback')
 
   const captureRef = useRef<OrbVoiceV2CaptureSession | null>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null)
@@ -123,6 +136,11 @@ export function useOrbVoiceV2(open: boolean) {
   const lastBrainTierRef = useRef<OrbVoiceV2BrainTier | null>(null)
   const speakGenerationRef = useRef(0)
   const bargeInRef = useRef(false)
+  const realtimeModeRef = useRef<OrbVoiceRealtimeMode>('fallback')
+  const playbackStateRef = useRef<OrbVoiceV2PlaybackState>('idle')
+  const voicePreparingRef = useRef(false)
+  const handleWakePhraseRef = useRef<() => void>(() => {})
+  const bargeInFnRef = useRef<(source?: OrbVoiceV2BargeInSource) => Promise<void>>(async () => {})
 
   stateRef.current = state
   turnsRef.current = turns
@@ -130,6 +148,9 @@ export function useOrbVoiceV2(open: boolean) {
   personalityRef.current = personality
   selectedVoiceRef.current = selectedVoice
   autoResumeBlockedRef.current = autoResumeBlocked
+  realtimeModeRef.current = realtimeMode
+  playbackStateRef.current = playbackState
+  voicePreparingRef.current = voicePreparing
 
   const applyKatherineStatus = useCallback((status: Awaited<ReturnType<typeof fetchOrbVoiceV2Status>>) => {
     setKatherineReady(status.katherineReady)
@@ -190,6 +211,9 @@ export function useOrbVoiceV2(open: boolean) {
     setShowTypeFallback(false)
     setAudioUnlocked(false)
     setPlaybackState('idle')
+    setPartialTranscript(null)
+    setRealtimeMode('fallback')
+    realtimeModeRef.current = 'fallback'
   }, [])
 
   const fireInstantAcknowledgement = useCallback(() => {
@@ -206,6 +230,11 @@ export function useOrbVoiceV2(open: boolean) {
       return
     }
     void fetchOrbVoiceV2Status().then(applyKatherineStatus)
+    void fetchOrbVoiceRealtimeBetaStatus().then((status) => {
+      const mode = resolveOrbVoiceRealtimeMode(status, isOrbVoiceHybridSpeechAvailable())
+      setRealtimeMode(mode)
+      realtimeModeRef.current = mode
+    })
   }, [applyKatherineStatus, open, resetLiveSession])
 
   const clearVoicePreparing = useCallback(() => {
@@ -324,23 +353,39 @@ export function useOrbVoiceV2(open: boolean) {
       transitionState('requesting_microphone')
       void queryOrbVoiceV2MicPermission()
       try {
+        const useHybrid = orbVoiceRealtimeEnabled(realtimeModeRef.current)
+        const startCapture = useHybrid ? startOrbVoiceV2HybridCapture : startOrbVoiceV2Capture
         const session = await withTimeout(
-          startOrbVoiceV2Capture({
+          startCapture({
             onListeningReady: () => {
               setPermissionState('ready')
               transitionState('listening')
             },
-            onSpeechStart: () => transitionState('speech_detected'),
-            onEndOfTurn: (blob, mimeType) => {
+            onSpeechStart: () => {
+              setPartialTranscript(null)
+              transitionState('speech_detected')
+            },
+            ...(useHybrid
+              ? {
+                  onPartialTranscript: (text: string) => setPartialTranscript(text),
+                  onWakePhrase: () => handleWakePhraseRef.current()
+                }
+              : {}),
+            onEndOfTurn: (blob, mimeType, options) => {
               void (async () => {
                 if (processingRef.current) return
                 processingRef.current = true
                 captureRef.current?.dispose()
                 captureRef.current = null
+                setPartialTranscript(null)
                 fireInstantAcknowledgement()
                 transitionState('transcribing')
                 try {
-                  const transcript = (await transcribeOrbVoiceV2Audio(blob, mimeType)).trim()
+                  const hint = options?.transcriptHint?.trim()
+                  const transcript =
+                    hint && isOrbVoiceV2TurnSubstantial(hint)
+                      ? hint
+                      : (await transcribeOrbVoiceV2Audio(blob, mimeType)).trim()
                   if (!transcript) {
                     traceOrbVoiceV2IgnoredTinyTurn(0)
                     setTinyTurnNotice(ORB_VOICE_V2_DIDNT_CATCH_COPY)
@@ -648,29 +693,78 @@ export function useOrbVoiceV2(open: boolean) {
     void resumeListening({ fromUserGesture: true })
   }, [resumeListening, stopOrbAudio])
 
-  const bargeIn = useCallback(async () => {
-    if (stateRef.current !== 'speaking' && playbackState !== 'playing' && !voicePreparing) return
-    speakGenerationRef.current += 1
-    bargeInRef.current = true
-    traceOrbVoiceV2BargeIn()
-    // Full speech-detected duplex barge-in requires continuous VAD during playback and is intentionally deferred.
-    setTurns((current) => {
-      const last = current[current.length - 1]
-      if (last?.role === 'orb') {
-        return [...current.slice(0, -1), { ...last, interrupted: true }]
+  const bargeIn = useCallback(
+    async (source: OrbVoiceV2BargeInSource = 'tap') => {
+      if (stateRef.current !== 'speaking' && playbackStateRef.current !== 'playing' && !voicePreparingRef.current) {
+        return
       }
-      return current
-    })
-    stopOrbAudio({ interrupted: true })
-    setAcknowledgement(null)
-    acknowledgementRef.current = null
-    setVoicePreparing(false)
-    try {
-      await resumeListening({ fromUserGesture: true })
-    } finally {
-      bargeInRef.current = false
+      speakGenerationRef.current += 1
+      bargeInRef.current = true
+      traceOrbVoiceV2BargeIn(source)
+      setTurns((current) => {
+        const last = current[current.length - 1]
+        if (last?.role === 'orb') {
+          return [...current.slice(0, -1), { ...last, interrupted: true }]
+        }
+        return current
+      })
+      stopOrbAudio({ interrupted: true })
+      if (source === 'wake' || source === 'vad') {
+        acknowledgementRef.current = ORB_VOICE_V2_BARGE_IN_STOPPED_COPY
+        setAcknowledgement(ORB_VOICE_V2_BARGE_IN_STOPPED_COPY)
+      } else {
+        setAcknowledgement(null)
+        acknowledgementRef.current = null
+      }
+      setVoicePreparing(false)
+      try {
+        await resumeListening({ fromUserGesture: true })
+      } finally {
+        bargeInRef.current = false
+      }
+    },
+    [resumeListening, stopOrbAudio]
+  )
+
+  bargeInFnRef.current = bargeIn
+
+  // Full speech-detected duplex barge-in during playback is intentionally deferred (see ORB_VOICE_V2_DUPLEX_VAD_BARGE_IN_ENABLED).
+
+  const handleWakePhrase = useCallback(() => {
+    if (!conversationStartedRef.current) return
+    const current = stateRef.current
+    if (
+      current === 'speaking' ||
+      voicePreparingRef.current ||
+      playbackStateRef.current === 'playing'
+    ) {
+      void bargeInFnRef.current('wake')
+      return
     }
-  }, [playbackState, resumeListening, stopOrbAudio, voicePreparing])
+    if (current === 'paused') {
+      void resumeListening({ fromUserGesture: true })
+    }
+  }, [resumeListening])
+
+  handleWakePhraseRef.current = handleWakePhrase
+
+  useEffect(() => {
+    if (!open) return
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return
+      if (
+        stateRef.current !== 'speaking' &&
+        playbackStateRef.current !== 'playing' &&
+        !voicePreparingRef.current
+      ) {
+        return
+      }
+      event.preventDefault()
+      void bargeInFnRef.current('keyboard')
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [open])
 
   const sendTypedTurn = useCallback(async () => {
     const trimmed = typedDraft.trim()
@@ -756,6 +850,10 @@ export function useOrbVoiceV2(open: boolean) {
     sendTypedTurn,
     lastIntent,
     lastBrainTier,
+    partialTranscript,
+    realtimeMode,
+    wakePhraseHint: ORB_VOICE_V2_WAKE_PHRASE_HINT,
+    orbVoiceRealtimeAvailable: orbVoiceRealtimeEnabled(realtimeMode),
     handoffPayload
   }
 }

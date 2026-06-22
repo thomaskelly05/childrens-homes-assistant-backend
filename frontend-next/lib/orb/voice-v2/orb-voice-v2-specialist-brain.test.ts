@@ -16,8 +16,8 @@ function read(relativePath: string) {
 }
 
 describe('orb-voice-v2-specialist-brain', () => {
-  it('build marker is phase-5k-voice-hero-response-tightening', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5k-voice-hero-response-tightening')
+  it('build marker is phase-5l-voice-realtime-beta-siri-convergence', () => {
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5l-voice-realtime-beta-siri-convergence')
   })
 
   it('reflection packet includes bullying specialist sections', () => {
@@ -48,6 +48,6 @@ describe('orb-voice-v2-specialist-brain', () => {
     const router = read('../services/orb_voice_brain_router_service.py')
     assert.match(router, /orb_voice_v2_brain_route/)
     assert.match(router, /intent=%s tier=%s/)
-    assert.doesNotMatch(router, /transcript=/)
+    assert.doesNotMatch(router, /logger\.(info|debug|warning)\([^)]*transcript=/)
   })
 })

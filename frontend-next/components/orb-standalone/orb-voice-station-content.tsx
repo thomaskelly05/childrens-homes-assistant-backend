@@ -26,6 +26,9 @@ export function OrbVoiceStationContent({
   secondaryControls,
   liveRail,
   sessionStarted = false,
+  onWaveInterrupt,
+  waveInterruptible = false,
+  wakePhraseHint,
   className = ''
 }: {
   voiceV2State?: string
@@ -39,6 +42,9 @@ export function OrbVoiceStationContent({
   /** Persistent right rail — always mounted on desktop. */
   liveRail: ReactNode
   sessionStarted?: boolean
+  onWaveInterrupt?: () => void
+  waveInterruptible?: boolean
+  wakePhraseHint?: string
   className?: string
 }) {
   const isMobileViewport = useOrbMobileViewport()
@@ -88,7 +94,17 @@ export function OrbVoiceStationContent({
               cta={isMobileViewport ? undefined : controls}
               heroStageId={isMobileViewport ? 'mobile' : 'desktop'}
               oneScreenWorkspace
+              onWaveInterrupt={onWaveInterrupt}
+              waveInterruptible={waveInterruptible}
             />
+            {wakePhraseHint && sessionStarted ? (
+              <p
+                className="mt-2 max-w-md text-center text-[10px] leading-relaxed text-[var(--orb-muted)]"
+                data-orb-voice-wake-phrase-hint
+              >
+                {wakePhraseHint}
+              </p>
+            ) : null}
           </div>
 
           <div

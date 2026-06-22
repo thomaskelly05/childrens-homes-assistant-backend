@@ -21,6 +21,7 @@ export function OrbVoiceLiveRail({
   activeTab,
   onTabChange,
   turns,
+  partialTranscript,
   acknowledgement,
   lastIntent,
   specialistActive,
@@ -31,6 +32,7 @@ export function OrbVoiceLiveRail({
   activeTab: OrbVoiceLiveRailTab
   onTabChange: (tab: OrbVoiceLiveRailTab) => void
   turns: OrbVoiceV2Turn[]
+  partialTranscript?: string | null
   acknowledgement?: string | null
   lastIntent?: OrbVoiceV2Intent | null
   specialistActive?: boolean
@@ -111,6 +113,14 @@ export function OrbVoiceLiveRail({
                   <p className="mt-1 text-sm leading-6 text-[var(--orb-foreground)] whitespace-pre-wrap">{turn.text}</p>
                 </div>
               ))}
+              {partialTranscript ? (
+                <div data-orb-voice-turn="adult" data-orb-voice-partial-transcript>
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--orb-muted)]">Adult · live</p>
+                  <p className="mt-1 text-sm leading-6 text-[var(--orb-foreground)] opacity-80 whitespace-pre-wrap">
+                    {partialTranscript}
+                  </p>
+                </div>
+              ) : null}
               {acknowledgement ? (
                 <div data-orb-voice-turn="orb" data-orb-voice-acknowledgement-rail>
                   <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--orb-muted)]">ORB</p>

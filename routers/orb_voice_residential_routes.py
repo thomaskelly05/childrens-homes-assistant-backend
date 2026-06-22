@@ -46,6 +46,10 @@ from services.orb_voice_realtime_config import (
 
 DEFAULT_OPENAI_REALTIME_MODEL = os.getenv("ORB_REALTIME_MODEL", "gpt-realtime").strip() or "gpt-realtime"
 from services.orb_voice_provider_service import OrbVoiceSpeakRequest, orb_voice_provider_service
+from services.orb_voice_realtime_beta_service import (
+    realtime_beta_status_payload,
+    realtime_beta_token_payload,
+)
 from services.orb_voice_realtime_session_store import orb_voice_realtime_session_store
 from services.orb_voice_realtime_ws_handler import orb_voice_realtime_ws_handler
 from services.orb_brain_metadata_service import attach_to_payload, build_brain_metadata
@@ -265,6 +269,20 @@ async def orb_voice_session_status(_current_user=Depends(require_orb_product_boo
             "reason": "not_configured",
         }
     )
+
+
+@router.get("/realtime/status")
+async def orb_voice_realtime_beta_status(
+    _current_user=Depends(require_orb_product_bootstrap_access),
+):
+    """Realtime beta capability probe — safe flags only, voice v2 remains fallback."""
+    return realtime_beta_status_payload()
+
+
+@router.post("/realtime/token")
+async def orb_voice_realtime_beta_token(current_user=Depends(require_orb_voice_premium)):
+    """Realtime token scaffolding — never returns provider API secrets."""
+    return realtime_beta_token_payload(user_id=_user_id(current_user))
 
 
 @router.post("/realtime/session", response_model=OrbVoiceSessionResponse)

@@ -18,6 +18,10 @@ from services.orb_voice_spoken_compression_service import (
     VOICE_SPECIALIST_MAX_WORDS,
     compress_voice_reply_for_speech,
 )
+from services.orb_voice_protocol_progression_service import (
+    protocol_progression_prompt_block,
+    refine_voice_reply_for_progression,
+)
 from services.orb_voice_brain_router_service import (
     classify_voice_intent,
     log_voice_brain_route,
@@ -149,6 +153,9 @@ def _build_prompt(
     if memory.get("missingInfo") or memory.get("missing_info"):
         gaps = memory.get("missingInfo") or memory.get("missing_info") or []
         lines.append(f"Gaps to explore if helpful: {', '.join(str(g) for g in gaps[:4])}.")
+    progression = protocol_progression_prompt_block(memory, route_intent)
+    if progression:
+        lines.append(progression)
     if history:
         lines.append("Recent conversation:")
         for turn in history:
@@ -311,6 +318,11 @@ def generate_voice_response(
     if safety_boundary and SAFETY_BOUNDARY_LINE.lower() not in reply.lower():
         reply = f"{reply} {SAFETY_BOUNDARY_LINE}"
 
+    reply = refine_voice_reply_for_progression(
+        reply,
+        intent=route.intent,
+        memory=updated_memory,
+    )
     reply = compress_voice_reply_for_speech(
         reply,
         intent=route.intent,

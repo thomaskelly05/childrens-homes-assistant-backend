@@ -62,6 +62,17 @@ export type OrbVoiceV2Intent =
   | 'daily_reflection'
   | 'general_reflection'
 
+export type OrbVoiceV2ProtocolSlots = {
+  peopleInvolvedKnown?: boolean
+  observedOrReportedKnown?: boolean
+  adultResponseKnown?: boolean
+  immediateSafetyKnown?: boolean
+  ongoingRiskKnown?: boolean
+  sequenceKnown?: boolean
+  childPresentationKnown?: boolean
+  knownVsSuspectedKnown?: boolean
+}
+
 export type OrbVoiceV2SessionMemory = {
   possibleRecordType?: string
   keyPeopleMentioned?: string[]
@@ -70,6 +81,16 @@ export type OrbVoiceV2SessionMemory = {
   possibleFollowUp?: string[]
   lastIntent?: string
   lastBrainTier?: string
+  protocolSlots?: OrbVoiceV2ProtocolSlots
+}
+
+export type OrbVoiceRealtimeBetaStatus = {
+  available: boolean
+  reason?: string
+  mode?: string
+  transport?: string | null
+  hybridSpeech?: boolean
+  fallback: 'voice_v2'
 }
 
 export type OrbVoiceV2RespondResult = {

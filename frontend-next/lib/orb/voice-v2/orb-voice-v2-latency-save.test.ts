@@ -39,8 +39,8 @@ function capSpokenWords(text: string): string {
 }
 
 describe('orb-voice-v2-latency-save', () => {
-  it('build marker is phase-5k-voice-hero-response-tightening', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5k-voice-hero-response-tightening')
+  it('build marker is phase-5l-voice-realtime-beta-siri-convergence', () => {
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5l-voice-realtime-beta-siri-convergence')
   })
 
   it('tiny transcript under threshold does not call respond', () => {

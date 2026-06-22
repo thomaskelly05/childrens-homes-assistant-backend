@@ -3210,3 +3210,33 @@ html[data-orb-residential='1'] [data-orb-voice-station] [data-orb-voice-primary]
 }
 
 /* phase-5k-voice-hero-response-tightening — dominant wave hero + spoken reply caps; 5j workspace preserved */
+
+/* phase-5l-voice-realtime-beta-siri-convergence — glass rail, wave-led stage, lighter chrome */
+html[data-orb-residential='1'] [data-orb-voice-one-screen-workspace] .orb-voice-one-screen-workspace__main {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+
+html[data-orb-residential='1'] [data-orb-voice-live-rail-slot] .orb-voice-live-rail {
+  background: rgba(255, 255, 255, 0.42);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid rgba(99, 102, 241, 0.12);
+  border-radius: 1.25rem;
+  box-shadow: 0 8px 32px rgba(15, 23, 42, 0.06);
+}
+
+html[data-orb-residential='1'] .orb-voice-hero-stage__waveform--dominant {
+  min-height: clamp(6rem, 18vh, 9rem);
+}
+
+html[data-orb-residential='1'] .orb-voice-hero-stage__waveform-wrap--interruptible {
+  cursor: pointer;
+  border-radius: 999px;
+  outline: none;
+}
+
+html[data-orb-residential='1'] .orb-voice-hero-stage__waveform-wrap--interruptible:focus-visible {
+  box-shadow: 0 0 0 2px rgba(34, 211, 238, 0.45);
+}

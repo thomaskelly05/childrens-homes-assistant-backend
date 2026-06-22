@@ -108,7 +108,7 @@ export function OrbVoiceStation({
       return
     }
     if (voice.state === 'speaking' || voice.voicePreparing) {
-      void voice.bargeIn()
+      void voice.bargeIn('mic')
       return
     }
     if (voice.autoResumeBlocked) {
@@ -388,11 +388,14 @@ export function OrbVoiceStation({
     </div>
   )
 
+  const waveInterruptible = voice.state === 'speaking' || voice.voicePreparing
+
   const liveRail = (
     <OrbVoiceLiveRail
       activeTab={railTab}
       onTabChange={setRailTab}
       turns={voice.turns}
+      partialTranscript={voice.partialTranscript}
       acknowledgement={voice.acknowledgement}
       lastIntent={voice.lastIntent}
       specialistActive={isOrbVoiceV2SpecialistTier(voice.lastBrainTier)}
@@ -426,7 +429,7 @@ export function OrbVoiceStation({
         <button
           type="button"
           className="orb-liquid-button rounded-full px-4 py-2 text-xs"
-          onClick={() => void voice.bargeIn()}
+          onClick={() => void voice.bargeIn('tap')}
           data-orb-voice-barge-in
         >
           Interrupt
@@ -474,6 +477,7 @@ export function OrbVoiceStation({
         data-orb-voice-capture-active={conversationLive ? true : false}
         data-orb-voice-idle-ready={primaryIdleReady ? true : undefined}
         data-orb-voice-acknowledgement={voice.acknowledgement ?? undefined}
+        data-orb-voice-realtime-mode={voice.realtimeMode}
       >
         <OrbVoiceStationContent
           companionState={companionState}
@@ -484,6 +488,9 @@ export function OrbVoiceStation({
           preferenceBadges={preferenceBadges}
           liveRail={liveRail}
           secondaryControls={secondaryControls}
+          onWaveInterrupt={() => void voice.bargeIn('wave')}
+          waveInterruptible={waveInterruptible}
+          wakePhraseHint={voice.wakePhraseHint}
           controls={
             <div className="orb-voice-controls flex w-full max-w-sm flex-col items-center gap-2" data-orb-voice-controls>
               {voice.playbackBlocked ? (

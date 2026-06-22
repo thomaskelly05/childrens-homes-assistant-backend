@@ -115,9 +115,11 @@ export function traceOrbVoiceV2InstantAck(): void {
   console.debug('[orb-voice-v2]', { event: 'orb_voice_v2_instant_ack' })
 }
 
-export function traceOrbVoiceV2BargeIn(): void {
+export type OrbVoiceV2BargeInSource = 'tap' | 'wave' | 'mic' | 'vad' | 'wake' | 'keyboard'
+
+export function traceOrbVoiceV2BargeIn(source: OrbVoiceV2BargeInSource = 'tap'): void {
   if (typeof console === 'undefined' || typeof console.debug !== 'function') return
-  console.debug('[orb-voice-v2]', { event: 'orb_voice_v2_barge_in' })
+  console.debug('[orb-voice-v2]', { event: 'orb_voice_v2_barge_in', source })
 }
 
 export function resolveSpeakVoiceId(

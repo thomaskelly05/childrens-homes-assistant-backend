@@ -22,6 +22,8 @@ export function OrbVoiceHeroStage({
   detailLine,
   middleSlot,
   cta,
+  onWaveInterrupt,
+  waveInterruptible = false,
   className = '',
   heroStageId = 'desktop',
   oneScreenWorkspace = false
@@ -35,6 +37,9 @@ export function OrbVoiceHeroStage({
   middleSlot?: ReactNode
   /** Primary voice action — anchored directly below the waveform. */
   cta?: ReactNode
+  /** Phase 5L — tap wave to interrupt while ORB is speaking. */
+  onWaveInterrupt?: () => void
+  waveInterruptible?: boolean
   className?: string
   /** `desktop` uses data-orb-voice-hero-stage; `mobile` uses data-orb-voice-mobile-hero-stage */
   heroStageId?: 'desktop' | 'mobile'
@@ -52,10 +57,29 @@ export function OrbVoiceHeroStage({
   const showSubline = Boolean(subline) && (isMobile || companionState !== 'paused')
 
   const wave = (
-    <OrbVoiceShowstopperWave
-      state={mapVoiceStateToShowstopperWave(voiceV2State ?? companionState)}
-      className={`orb-voice-hero-stage__waveform ${oneScreenWorkspace ? 'orb-voice-hero-stage__waveform--dominant' : ''}`.trim()}
-    />
+    <div
+      className={`orb-voice-hero-stage__waveform-wrap ${waveInterruptible ? 'orb-voice-hero-stage__waveform-wrap--interruptible' : ''}`.trim()}
+      data-orb-voice-wave-interruptible={waveInterruptible ? true : undefined}
+      onClick={waveInterruptible ? onWaveInterrupt : undefined}
+      onKeyDown={
+        waveInterruptible
+          ? (event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault()
+                onWaveInterrupt?.()
+              }
+            }
+          : undefined
+      }
+      role={waveInterruptible ? 'button' : undefined}
+      tabIndex={waveInterruptible ? 0 : undefined}
+      aria-label={waveInterruptible ? 'Interrupt ORB' : undefined}
+    >
+      <OrbVoiceShowstopperWave
+        state={mapVoiceStateToShowstopperWave(voiceV2State ?? companionState)}
+        className={`orb-voice-hero-stage__waveform ${oneScreenWorkspace ? 'orb-voice-hero-stage__waveform--dominant' : ''}`.trim()}
+      />
+    </div>
   )
 
   return (

@@ -47,10 +47,10 @@ describe('ORB Voice v2 showstopper helpers', () => {
       logs.push(args)
     }
     try {
-      traceOrbVoiceV2BargeIn()
+      traceOrbVoiceV2BargeIn('wave')
       assert.equal(logs.length, 1)
       const payload = logs[0] as unknown[]
-      assert.deepEqual(payload[1], { event: 'orb_voice_v2_barge_in' })
+      assert.deepEqual(payload[1], { event: 'orb_voice_v2_barge_in', source: 'wave' })
     } finally {
       console.debug = original
     }

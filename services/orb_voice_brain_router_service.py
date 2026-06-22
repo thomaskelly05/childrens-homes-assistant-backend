@@ -8,6 +8,7 @@ from dataclasses import asdict, dataclass, field
 from typing import Any, Literal
 
 from services.orb_voice_protocol_service import protocol_block_for_intent, suggested_record_type_for_intent
+from services.orb_voice_protocol_progression_service import update_protocol_slots
 
 logger = logging.getLogger(__name__)
 
@@ -312,7 +313,11 @@ def update_session_memory(
         memory.possible_follow_up.append("management oversight")
     memory.last_intent = route.intent
     memory.last_brain_tier = route.brain_tier
-    return memory.to_dict()
+    result = memory.to_dict()
+    protocol_slots = update_protocol_slots(result, transcript=trimmed, intent=route.intent)
+    if protocol_slots:
+        result["protocolSlots"] = protocol_slots
+    return result
 
 
 def log_voice_brain_route(route: OrbVoiceRouteDecision, *, elapsed_ms: int) -> None:
