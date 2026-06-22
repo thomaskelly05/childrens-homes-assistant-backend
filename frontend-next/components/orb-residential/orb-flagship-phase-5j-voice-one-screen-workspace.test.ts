@@ -13,9 +13,9 @@ function read(relativePath: string) {
 }
 
 describe('ORB Residential Phase 5J Voice one-screen live workspace', () => {
-  it('build marker is phase-5n1-voice-full-viewport-canvas', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5n1-voice-full-viewport-canvas')
-    assert.match(read('app/orb/orb-residential-shell.css'), /phase-5n1-voice-full-viewport-canvas/)
+  it('build marker is phase-5n2-voice-realtime-latency-full-canvas', () => {
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5n2-voice-realtime-latency-full-canvas')
+    assert.match(read('app/orb/orb-residential-shell.css'), /phase-5n2-voice-realtime-latency-full-canvas/)
     assert.deepEqual(ORB_LAYOUT_CSS_FILES, ['app/orb/orb-residential-shell.css'])
   })
 

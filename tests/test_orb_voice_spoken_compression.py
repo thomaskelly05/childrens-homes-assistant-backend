@@ -9,7 +9,7 @@ from services.orb_voice_spoken_compression_service import (
 
 
 def test_voice_spoken_caps_constants():
-    assert VOICE_FAST_MAX_WORDS == 45
+    assert VOICE_FAST_MAX_WORDS == 40
     assert VOICE_SPECIALIST_MAX_WORDS == 55
     assert VOICE_SAFEGUARDING_MAX_WORDS == 65
     assert VOICE_TTS_CHAR_SOFT_CAP == 180

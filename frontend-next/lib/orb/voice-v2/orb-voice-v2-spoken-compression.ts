@@ -2,7 +2,7 @@
 
 import type { OrbVoiceV2BrainTier, OrbVoiceV2Intent, OrbVoiceV2PersonalityId } from './orb-voice-v2-types.ts'
 
-export const VOICE_FAST_MAX_WORDS = 45
+export const VOICE_FAST_MAX_WORDS = 40
 export const VOICE_SPECIALIST_MAX_WORDS = 55
 export const VOICE_SAFEGUARDING_MAX_WORDS = 65
 export const VOICE_TTS_CHAR_SOFT_CAP = 180

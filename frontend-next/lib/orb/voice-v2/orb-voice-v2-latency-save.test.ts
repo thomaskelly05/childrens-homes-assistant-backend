@@ -39,8 +39,8 @@ function capSpokenWords(text: string): string {
 }
 
 describe('orb-voice-v2-latency-save', () => {
-  it('build marker is phase-5n1-voice-full-viewport-canvas', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5n1-voice-full-viewport-canvas')
+  it('build marker is phase-5n2-voice-realtime-latency-full-canvas', () => {
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5n2-voice-realtime-latency-full-canvas')
   })
 
   it('tiny transcript under threshold does not call respond', () => {
@@ -76,10 +76,10 @@ describe('orb-voice-v2-latency-save', () => {
     const commitStart = hook.indexOf('const commitAdultTurn = useCallback')
     const commitEnd = hook.indexOf('const commitAdultTurnRef = useRef', commitStart)
     const commitBlock = hook.slice(commitStart, commitEnd)
-    const setTurnsOrb = commitBlock.indexOf("createOrbVoiceV2Turn('orb'")
+    const setTurnsOrb = commitBlock.indexOf("createOrbVoiceV2Turn('orb', writtenReply)")
     const speakIndex = commitBlock.indexOf('speakReplyRef.current')
     assert.ok(setTurnsOrb > -1 && speakIndex > setTurnsOrb)
-    assert.match(commitBlock, /transitionState\('speaking'\)[\s\S]{0,120}speakReplyRef\.current/)
+    assert.doesNotMatch(commitBlock, /transitionState\('speaking'\)[\s\S]{0,120}speakReplyRef\.current/)
   })
 
   it('TTS loading copy appears while voice prepares', () => {
@@ -96,7 +96,7 @@ describe('orb-voice-v2-latency-save', () => {
     const wordCount = capped.replace(/…$/, '').split(/\s+/).filter(Boolean).length
     assert.ok(wordCount <= ORB_VOICE_V2_LIVE_SPOKEN_MAX_WORDS)
     assert.equal(ORB_VOICE_V2_LIVE_SPOKEN_MAX_WORDS, 55)
-    assert.match(read('../services/orb_voice_spoken_compression_service.py'), /VOICE_FAST_MAX_WORDS = 45/)
+    assert.match(read('../services/orb_voice_spoken_compression_service.py'), /VOICE_FAST_MAX_WORDS = 40/)
     assert.match(read('lib/orb/voice-v2/orb-voice-v2-client.ts'), /capOrbVoiceV2SpokenText/)
   })
 

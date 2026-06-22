@@ -36,7 +36,7 @@ describe('ORB Voice v2 showstopper helpers', () => {
   })
 
   it('thinking and barge-in copy are stable', () => {
-    assert.equal(ORB_VOICE_V2_THINKING_COPY, 'Thinking this through…')
+    assert.equal(ORB_VOICE_V2_THINKING_COPY, 'ORB is thinking this through')
     assert.match(ORB_VOICE_V2_BARGE_IN_COPY, /listening/i)
   })
 

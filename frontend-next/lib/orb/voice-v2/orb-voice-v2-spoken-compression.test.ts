@@ -12,7 +12,7 @@ import {
 
 describe('orb-voice-v2-spoken-compression', () => {
   it('exports tier word caps and TTS char caps', () => {
-    assert.equal(VOICE_FAST_MAX_WORDS, 45)
+    assert.equal(VOICE_FAST_MAX_WORDS, 40)
     assert.equal(VOICE_SPECIALIST_MAX_WORDS, 55)
     assert.equal(VOICE_SAFEGUARDING_MAX_WORDS, 65)
     assert.equal(VOICE_TTS_CHAR_SOFT_CAP, 180)

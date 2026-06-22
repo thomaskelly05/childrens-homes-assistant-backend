@@ -98,6 +98,8 @@ export type OrbVoiceRealtimeBetaStatus = {
 
 export type OrbVoiceV2RespondResult = {
   reply: string
+  writtenReply?: string
+  spokenReply?: string
   safetyBoundaryApplied: boolean
   promptTier: OrbVoiceV2BrainTier
   intent?: OrbVoiceV2Intent

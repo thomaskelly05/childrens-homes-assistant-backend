@@ -6,7 +6,7 @@ export const ORB_VOICE_V2_STATUS_LABEL: Record<OrbVoiceV2State, string> = {
   listening: 'Listening…',
   speech_detected: 'Listening…',
   transcribing: 'Processing your voice…',
-  thinking: 'Thinking this through…',
+  thinking: 'ORB is thinking this through',
   speaking: 'ORB is responding…',
   interrupted: 'Stopped. I’m listening.',
   paused: 'Paused',

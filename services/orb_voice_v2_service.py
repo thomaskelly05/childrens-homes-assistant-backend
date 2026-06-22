@@ -77,26 +77,30 @@ async def voice_v2_respond(
         user_id=user_id,
         provider_id=provider_id,
     )
-    reply = str(result.get("reply") or "").strip()
+    written_reply = str(result.get("writtenReply") or result.get("reply") or "").strip()
+    spoken_reply = str(result.get("spokenReply") or "").strip()
+    if not spoken_reply and written_reply:
+        spoken_reply = compress_voice_reply_for_speech(
+            written_reply,
+            intent=str(result.get("intent") or "general_reflection"),
+            tier=str(result.get("promptTier") or result.get("prompt_tier") or "voice_fast"),
+            personality=personality,
+            safety_boundary_applied=bool(result.get("safetyBoundaryApplied")),
+        )
     prompt_tier = str(result.get("promptTier") or result.get("prompt_tier") or "voice_fast")
     intent = str(result.get("intent") or "general_reflection")
-    safety_boundary = bool(result.get("safetyBoundaryApplied"))
-    reply = compress_voice_reply_for_speech(
-        reply,
-        intent=intent,
-        tier=prompt_tier,
-        personality=personality,
-        safety_boundary_applied=safety_boundary,
-    )
     logger.info(
-        "orb_voice_v2_respond reply_chars=%s prompt_tier=%s intent=%s mode=%s",
-        len(reply),
+        "orb_voice_v2_respond written_chars=%s spoken_chars=%s prompt_tier=%s intent=%s mode=%s",
+        len(written_reply),
+        len(spoken_reply),
         prompt_tier,
         intent,
         mode or "just_talk",
     )
     return {
-        "reply": reply,
+        "reply": written_reply,
+        "writtenReply": written_reply,
+        "spokenReply": spoken_reply,
         "safetyBoundaryApplied": bool(result.get("safetyBoundaryApplied")),
         "promptTier": prompt_tier,
         "intent": intent,

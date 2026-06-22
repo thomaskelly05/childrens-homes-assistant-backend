@@ -2,15 +2,15 @@
 
 import type { OrbVoiceV2PersonalityId, OrbVoiceV2VoiceId } from './orb-voice-v2-types.ts'
 
-export const ORB_VOICE_V2_THINKING_COPY = 'Thinking this through…' as const
+export const ORB_VOICE_V2_THINKING_COPY = 'ORB is thinking this through' as const
 export const ORB_VOICE_V2_BARGE_IN_COPY = 'Stopped. I’m listening.' as const
 
 export const ORB_VOICE_V2_ACKNOWLEDGEMENTS = [
-  'I’ve got that.',
-  'Give me a moment.',
+  'I’m with you.',
   'Let’s think this through.',
-  'I’m just organising that.',
-  'That sounds important — let me frame it safely.'
+  'I’ll keep this centred on the child.',
+  'I’ll help you structure this safely.',
+  'Give me a moment.'
 ] as const
 
 export const ORB_VOICE_V2_VOICE_OPTIONS: ReadonlyArray<{

@@ -19,9 +19,9 @@ function read(relativePath: string) {
 }
 
 describe('ORB Residential Phase 5K Voice hero and spoken-response tightening', () => {
-  it('build marker is phase-5n1-voice-full-viewport-canvas', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5n1-voice-full-viewport-canvas')
-    assert.match(read('app/orb/orb-residential-shell.css'), /phase-5n1-voice-full-viewport-canvas/)
+  it('build marker is phase-5n2-voice-realtime-latency-full-canvas', () => {
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5n2-voice-realtime-latency-full-canvas')
+    assert.match(read('app/orb/orb-residential-shell.css'), /phase-5n2-voice-realtime-latency-full-canvas/)
     assert.deepEqual(ORB_LAYOUT_CSS_FILES, ['app/orb/orb-residential-shell.css'])
   })
 
@@ -59,7 +59,7 @@ describe('ORB Residential Phase 5K Voice hero and spoken-response tightening', (
   })
 
   it('spoken compression caps and backend mirror exist', () => {
-    assert.equal(VOICE_FAST_MAX_WORDS, 45)
+    assert.equal(VOICE_FAST_MAX_WORDS, 40)
     assert.equal(VOICE_TTS_CHAR_HARD_CAP, 220)
     assert.match(read('../services/orb_voice_spoken_compression_service.py'), /compress_voice_reply_for_speech/)
     assert.match(read('lib/orb/voice-v2/use-orb-voice-v2.ts'), /capOrbVoiceV2SpokenText/)

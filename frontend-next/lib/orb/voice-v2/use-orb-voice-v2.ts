@@ -58,11 +58,13 @@ import {
   isOrbVoiceWebRtcSupported,
   orbVoiceRealtimeEnabled,
   resolveOrbVoiceRealtimeMode,
+  resolveOrbVoiceRealtimeSetupCaptureLabel,
   resolveOrbVoiceRealtimeSetupDetail,
   resolveOrbVoiceRealtimeSetupLabel,
   type OrbVoiceRealtimeMode
 } from './orb-voice-v2-realtime-beta.ts'
 import { fetchOrbVoiceRealtimeBetaStatus } from './orb-voice-v2-realtime-client.ts'
+import { traceOrbVoiceRealtime } from './orb-voice-v2-realtime-trace.ts'
 import {
   ORB_VOICE_V2_DIDNT_CATCH_COPY,
   resolveOrbVoiceV2LiveStatusCopy,
@@ -248,6 +250,7 @@ export function useOrbVoiceV2(open: boolean) {
       )
       setRealtimeMode(mode)
       realtimeModeRef.current = mode
+      traceOrbVoiceRealtime('orb_voice_realtime_mode_selected', { mode })
     })
   }, [applyKatherineStatus, open, resetLiveSession])
 
@@ -389,7 +392,7 @@ export function useOrbVoiceV2(open: boolean) {
               captureRef.current = null
               setPartialTranscript(null)
               fireInstantAcknowledgement()
-              transitionState('transcribing')
+              transitionState('thinking')
               try {
                 await processCapturedTranscriptRef.current(transcript)
               } finally {
@@ -405,7 +408,7 @@ export function useOrbVoiceV2(open: boolean) {
               captureRef.current = null
               setPartialTranscript(null)
               fireInstantAcknowledgement()
-              transitionState('transcribing')
+              transitionState('thinking')
               try {
                 const hint = options?.transcriptHint?.trim()
                 const transcript =
@@ -479,7 +482,7 @@ export function useOrbVoiceV2(open: boolean) {
           )
         } catch (webrtcError) {
           if (!isOrbVoiceWebRtcMode(mode)) throw webrtcError
-          traceOrbVoiceV2Lifecycle('voice_v2_realtime_webrtc_fallback', {
+          traceOrbVoiceRealtime('orb_voice_realtime_fallback', {
             reason: webrtcError instanceof Error ? webrtcError.message : 'webrtc_failed'
           })
           realtimeModeRef.current = isOrbVoiceHybridSpeechAvailable() ? 'hybrid' : 'fallback'
@@ -656,6 +659,7 @@ export function useOrbVoiceV2(open: boolean) {
       const adultTurn = createOrbVoiceV2Turn('adult', trimmed)
       const nextTurns = [...turnsRef.current, adultTurn]
       setTurns(nextTurns)
+      setPartialTranscript(null)
       transitionState('thinking')
       try {
         const response = await requestOrbVoiceV2Respond({
@@ -678,16 +682,19 @@ export function useOrbVoiceV2(open: boolean) {
           setLastBrainTier(response.brainTier)
           lastBrainTierRef.current = response.brainTier
         }
-        const displayReply = capOrbVoiceV2SpokenText(response.reply, {
-          intent: response.intent,
-          tier: response.brainTier,
-          personality: personalityRef.current,
-          safetyBoundaryApplied: response.safetyBoundaryApplied
-        })
-        const orbTurn = createOrbVoiceV2Turn('orb', displayReply)
+        const writtenReply = (response.writtenReply ?? response.reply).trim()
+        const spokenReply = (
+          response.spokenReply ??
+          capOrbVoiceV2SpokenText(writtenReply, {
+            intent: response.intent,
+            tier: response.brainTier,
+            personality: personalityRef.current,
+            safetyBoundaryApplied: response.safetyBoundaryApplied
+          })
+        ).trim()
+        const orbTurn = createOrbVoiceV2Turn('orb', writtenReply)
         setTurns((current) => [...current, orbTurn])
-        transitionState('speaking')
-        void speakReplyRef.current(orbTurn.id, displayReply)
+        void speakReplyRef.current(orbTurn.id, spokenReply)
       } catch {
         setError('ORB could not respond right now. You can type instead.')
         setShowTypeFallback(true)
@@ -950,7 +957,10 @@ export function useOrbVoiceV2(open: boolean) {
     partialTranscript,
     realtimeMode,
     realtimeStatus,
-    realtimeSetupLabel: resolveOrbVoiceRealtimeSetupLabel(realtimeMode),
+    realtimeSetupLabel: resolveOrbVoiceRealtimeSetupCaptureLabel(
+      realtimeMode,
+      resolveOrbVoiceRealtimeSetupLabel(realtimeMode)
+    ),
     realtimeSetupDetail: resolveOrbVoiceRealtimeSetupDetail(realtimeMode, realtimeStatus?.reason),
     wakePhraseHint: ORB_VOICE_V2_WAKE_PHRASE_HINT,
     orbVoiceRealtimeAvailable: orbVoiceRealtimeEnabled(realtimeMode),

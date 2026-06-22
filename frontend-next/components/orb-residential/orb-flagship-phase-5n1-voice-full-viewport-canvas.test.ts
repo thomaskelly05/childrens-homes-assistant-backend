@@ -13,9 +13,9 @@ function read(relativePath: string) {
 }
 
 describe('ORB Residential Phase 5N.1 Voice full viewport canvas', () => {
-  it('build marker is phase-5n1-voice-full-viewport-canvas', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5n1-voice-full-viewport-canvas')
-    assert.match(read('app/orb/orb-residential-shell.css'), /phase-5n1-voice-full-viewport-canvas/)
+  it('build marker is phase-5n2-voice-realtime-latency-full-canvas', () => {
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5n2-voice-realtime-latency-full-canvas')
+    assert.match(read('app/orb/orb-residential-shell.css'), /phase-5n2-voice-realtime-latency-full-canvas/)
     assert.deepEqual(ORB_LAYOUT_CSS_FILES, ['app/orb/orb-residential-shell.css'])
   })
 
@@ -49,8 +49,8 @@ describe('ORB Residential Phase 5N.1 Voice full viewport canvas', () => {
     const rail = read('components/orb-standalone/orb-voice-live-rail.tsx')
     const shell = read('app/orb/orb-residential-shell.css')
     assert.match(content, /md:min-w-\[23\.75rem\]/)
-    assert.match(content, /md:max-w-\[27\.5rem\]/)
-    assert.match(shell, /minmax\(380px, 440px\)/)
+    assert.match(content, /md:max-w-\[28\.75rem\]/)
+    assert.match(shell, /minmax\(380px, 440px\)|clamp\(380px, 28vw, 460px\)/)
     assert.match(shell, /grid-template-columns: minmax\(0, 1fr\) minmax\(380px, 440px\)/)
     assert.match(rail, /h-full/)
   })

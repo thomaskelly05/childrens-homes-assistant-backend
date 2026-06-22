@@ -75,7 +75,9 @@ export async function requestOrbVoiceV2Respond(input: {
   const data = (await response.json()) as Record<string, unknown>
   const promptTier = String(data.promptTier || data.prompt_tier || 'voice_fast') as OrbVoiceV2RespondResult['promptTier']
   return {
-    reply: String(data.reply || data.answer || '').trim(),
+    reply: String(data.reply || data.writtenReply || data.answer || '').trim(),
+    writtenReply: typeof data.writtenReply === 'string' ? data.writtenReply.trim() : undefined,
+    spokenReply: typeof data.spokenReply === 'string' ? data.spokenReply.trim() : undefined,
     safetyBoundaryApplied: Boolean(data.safetyBoundaryApplied),
     promptTier,
     intent: typeof data.intent === 'string' ? (data.intent as OrbVoiceV2RespondResult['intent']) : undefined,

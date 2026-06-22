@@ -62,8 +62,8 @@ export function OrbVoiceStationContent({
       data-orb-voice-idle-hero={!sessionStarted ? true : undefined}
     >
       <div className="orb-voice-station-content__scroll orb-voice-one-screen-workspace__scroll min-h-0 flex-1 overscroll-contain px-3 py-1 md:px-4 md:py-2">
-        <div className="orb-voice-one-screen-workspace__grid flex w-full max-w-none flex-col gap-4 md:grid md:items-stretch md:gap-[clamp(24px,3vw,44px)]">
-          <div className="orb-voice-one-screen-workspace__main flex min-h-0 w-full flex-col items-center md:min-w-0 md:flex-1">
+        <div className="orb-voice-one-screen-workspace__grid orb-voice-full-canvas-grid w-full max-w-none flex-col gap-4 md:grid md:items-stretch">
+          <div className="orb-voice-one-screen-workspace__main orb-voice-full-canvas-main flex min-h-0 w-full max-w-none flex-col items-stretch md:min-w-0 md:flex-1">
             <div
               className={`orb-voice-station-content__intro mb-1 w-full text-center transition-opacity ${
                 sessionStarted ? 'opacity-80' : ''
@@ -99,7 +99,7 @@ export function OrbVoiceStationContent({
             />
 
             {preferenceBadges ? (
-              <div className="orb-voice-preference-badges mt-3 w-full max-w-lg" data-orb-voice-session-badges>
+              <div className="orb-voice-preference-badges mt-3 w-full max-w-none" data-orb-voice-session-badges>
                 {preferenceBadges}
               </div>
             ) : null}
@@ -114,7 +114,7 @@ export function OrbVoiceStationContent({
           </div>
 
           <div
-            className="orb-voice-one-screen-workspace__rail min-h-[12rem] w-full md:min-w-[23.75rem] md:max-w-[27.5rem] md:shrink-0"
+            className="orb-voice-one-screen-workspace__rail orb-voice-full-canvas-rail min-h-[12rem] w-full md:min-w-[23.75rem] md:max-w-[28.75rem] md:shrink-0"
             data-orb-voice-live-rail-slot
           >
             {liveRail}
@@ -128,7 +128,7 @@ export function OrbVoiceStationContent({
           data-orb-voice-mobile-action-dock
           data-orb-voice-controls
         >
-          <div className="mx-auto w-full max-w-lg space-y-2">{controls}</div>
+          <div className="mx-auto w-full max-w-none space-y-2">{controls}</div>
         </div>
       ) : null}
 
@@ -137,7 +137,7 @@ export function OrbVoiceStationContent({
           className="orb-voice-station-content__controls shrink-0 space-y-2 px-4 py-2 md:px-6"
           data-orb-voice-station-controls
         >
-          <div className="mx-auto w-full max-w-lg">{secondaryControls}</div>
+          <div className="mx-auto w-full max-w-none">{secondaryControls}</div>
         </div>
       ) : null}
 

@@ -34,6 +34,7 @@ VOICE_RESPOND_MAX_WORDS = int(os.environ.get("ORB_VOICE_RESPOND_MAX_WORDS") or s
 VOICE_RESPOND_MIN_WORDS = 12
 VOICE_RESPOND_MODEL = (os.environ.get("ORB_VOICE_RESPOND_MODEL") or "gpt-4o-mini").strip()
 VOICE_RESPOND_MAX_OUTPUT_TOKENS = int(os.environ.get("ORB_VOICE_RESPOND_MAX_OUTPUT_TOKENS") or "200")
+VOICE_RESPOND_FAST_MAX_OUTPUT_TOKENS = int(os.environ.get("ORB_VOICE_RESPOND_FAST_MAX_OUTPUT_TOKENS") or "96")
 VOICE_SPECIALIST_MODEL = (os.environ.get("ORB_VOICE_SPECIALIST_MODEL") or VOICE_RESPOND_MODEL).strip()
 
 VOICE_SYSTEM_PROMPT_BASE = (
@@ -243,17 +244,19 @@ def generate_voice_response(
 
     route = classify_voice_intent(transcript=cleaned, mode=mode, recent_turns=turns_for_intent)
     updated_memory = update_session_memory(session_memory, transcript=cleaned, route=route)
-    policy_lookup = _needs_policy_retrieval(cleaned) or route.retrieval_needed
+    policy_lookup = False if route.brain_tier == "voice_fast" else (
+        _needs_policy_retrieval(cleaned) or route.retrieval_needed
+    )
 
     convergence_block, scaffold_block, recording_extra, brain_meta = _brain_blocks(
         message=cleaned,
         mode=mode,
         tier=route.brain_tier,
-        history=compact_history,
+        history=compact_history[-4:] if route.brain_tier == "voice_fast" else compact_history,
         retrieval_needed=policy_lookup,
     )
 
-    protocol_block = route.protocol_block
+    protocol_block = "" if route.brain_tier == "voice_fast" else route.protocol_block
     if recording_extra:
         protocol_block = f"{protocol_block}\n\n{recording_extra}".strip()
 
@@ -268,7 +271,11 @@ def generate_voice_response(
     )
 
     model = VOICE_SPECIALIST_MODEL if route.brain_tier != "voice_fast" else VOICE_RESPOND_MODEL
-    max_tokens = VOICE_RESPOND_MAX_OUTPUT_TOKENS if route.brain_tier == "voice_fast" else min(240, VOICE_RESPOND_MAX_OUTPUT_TOKENS + 40)
+    max_tokens = (
+        VOICE_RESPOND_FAST_MAX_OUTPUT_TOKENS
+        if route.brain_tier == "voice_fast"
+        else min(240, VOICE_RESPOND_MAX_OUTPUT_TOKENS + 40)
+    )
 
     logger.info(
         "orb_voice_respond request prompt_tier=%s intent=%s embeddings=0 retrieval=%s text_len=%s history_turns=%s",
@@ -323,8 +330,9 @@ def generate_voice_response(
         intent=route.intent,
         memory=updated_memory,
     )
-    reply = compress_voice_reply_for_speech(
-        reply,
+    written_reply = reply
+    spoken_reply = compress_voice_reply_for_speech(
+        written_reply,
         intent=route.intent,
         tier=route.brain_tier,
         personality=personality,
@@ -334,16 +342,19 @@ def generate_voice_response(
     log_voice_brain_route(route, elapsed_ms=elapsed_ms)
 
     logger.info(
-        "orb_voice_respond ok prompt_tier=%s intent=%s elapsed_ms=%s reply_chars=%s safety_boundary=%s",
+        "orb_voice_respond ok prompt_tier=%s intent=%s elapsed_ms=%s written_chars=%s spoken_chars=%s safety_boundary=%s",
         route.brain_tier,
         route.intent,
         elapsed_ms,
-        len(reply),
+        len(written_reply),
+        len(spoken_reply),
         safety_boundary,
     )
 
     return {
-        "reply": reply,
+        "reply": written_reply,
+        "writtenReply": written_reply,
+        "spokenReply": spoken_reply,
         "mode": (mode or "conversational").strip(),
         "intent": route.intent,
         "brainTier": route.brain_tier,

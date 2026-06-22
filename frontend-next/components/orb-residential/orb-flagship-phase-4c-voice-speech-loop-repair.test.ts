@@ -27,8 +27,8 @@ function read(relativePath: string) {
 }
 
 describe('ORB Residential Phase 4C Voice speech loop repair', () => {
-  it('build version marker is phase-5n1-voice-full-viewport-canvas', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5n1-voice-full-viewport-canvas')
+  it('build version marker is phase-5n2-voice-realtime-latency-full-canvas', () => {
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5n2-voice-realtime-latency-full-canvas')
     const layout = read('app/orb/layout.tsx')
     assert.match(layout, /orb-residential-shell\.css/)
     assert.deepEqual(ORB_LAYOUT_CSS_FILES, ['app/orb/orb-residential-shell.css'])
@@ -38,7 +38,7 @@ describe('ORB Residential Phase 4C Voice speech loop repair', () => {
     const hook = read('lib/orb/voice-v2/use-orb-voice-v2.ts')
     const capture = read('lib/orb/voice-v2/orb-voice-v2-capture.ts')
     assert.match(hook, /startOrbVoiceV2Capture/)
-    assert.match(hook, /transitionState\('transcribing'\)/)
+    assert.match(hook, /transitionState\('thinking'\)/)
     assert.match(hook, /transitionState\('speech_detected'\)/)
     assert.match(capture, /onEndOfTurn/)
     assert.match(read('lib/orb/voice/orb-voice-speech-loop.ts'), /VoiceInputStatus/)
@@ -110,7 +110,7 @@ describe('ORB Residential Phase 4C Voice speech loop repair', () => {
   it('audio storage honesty and single shell remain', () => {
     const shell = read('app/orb/orb-residential-shell.css')
     const station = read('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(shell, /phase-5n1-voice-full-viewport-canvas/)
+    assert.match(shell, /phase-5n2-voice-realtime-latency-full-canvas/)
     assert.match(read('components/orb-standalone/orb-voice-live-rail.tsx'), /ORB_VOICE_V2_SAFETY_FOOTER/)
     assert.match(ORB_VOICE_MIC_ERROR, /microphone permission/)
     assert.doesNotMatch(station, /compliance guarantee|Ofsted approved/i)

@@ -11,6 +11,7 @@ import {
 
 import type { OrbVoiceV2CaptureSession } from './orb-voice-v2-capture.ts'
 import { detectOrbWakePhrase } from './orb-voice-v2-wake-phrase.ts'
+import { traceOrbVoiceRealtime } from './orb-voice-v2-realtime-trace.ts'
 
 function extractClientSecret(session: OrbVoiceSessionResponse): string | null {
   const secret = session.openai_session?.client_secret
@@ -40,12 +41,16 @@ export async function startOrbVoiceV2RealtimeWebRtcCapture(input: {
   const model = session.openai_session?.model ?? 'gpt-realtime'
   const client = new OrbOpenAIRealtimeWebRTCClient({
     onPartialTranscript: (text) => {
-      if (text.trim()) input.onPartialTranscript?.(text)
+      if (text.trim()) {
+        traceOrbVoiceRealtime('orb_voice_realtime_partial_received')
+        input.onPartialTranscript?.(text)
+      }
       if (detectOrbWakePhrase(text)) input.onWakePhrase?.()
     },
     onFinalTranscript: (text) => {
       const trimmed = text.trim()
       if (!trimmed) return
+      traceOrbVoiceRealtime('orb_voice_realtime_final_received')
       if (detectOrbWakePhrase(trimmed)) {
         input.onWakePhrase?.()
         return
@@ -62,6 +67,7 @@ export async function startOrbVoiceV2RealtimeWebRtcCapture(input: {
       model,
       transcriptionOnly: true
     })
+    traceOrbVoiceRealtime('orb_voice_realtime_session_started')
     input.onListeningReady?.()
   } catch (error) {
     client.close()

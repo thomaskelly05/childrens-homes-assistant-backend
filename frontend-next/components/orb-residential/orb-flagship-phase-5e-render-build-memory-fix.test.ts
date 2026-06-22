@@ -17,7 +17,7 @@ describe('ORB Residential Phase 5E Render build memory fix', () => {
   it('Render build memory lazy-load contract remains', () => {
     assert.match(read('app/orb/layout.tsx'), /orb-residential-shell\.css/)
     assert.deepEqual(ORB_LAYOUT_CSS_FILES, ['app/orb/orb-residential-shell.css'])
-    assert.match(read('app/orb/orb-residential-shell.css'), /phase-5e-render-build-memory-fix|phase-5f-voice-v2-microphone-transition|phase-5n1-voice-full-viewport-canvas/)
+    assert.match(read('app/orb/orb-residential-shell.css'), /phase-5e-render-build-memory-fix|phase-5f-voice-v2-microphone-transition|phase-5n2-voice-realtime-latency-full-canvas/)
   })
 
   it('Voice v2 clickable idle fix remains intact', () => {
