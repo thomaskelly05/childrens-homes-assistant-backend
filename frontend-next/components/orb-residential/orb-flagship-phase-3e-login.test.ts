@@ -19,8 +19,8 @@ function read(relativePath: string) {
 }
 
 describe('ORB Residential Phase 3E premium login entrance', () => {
-  it('build version marker is phase-5m-voice-realtime-env-convergence', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5m-voice-realtime-env-convergence')
+  it('build version marker is phase-5l2-voice-siri-hero-layout-repair', () => {
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5l2-voice-siri-hero-layout-repair')
     const layout = read('app/orb/layout.tsx')
     assert.match(layout, /orb-residential-shell\.css/)
     assert.doesNotMatch(layout, /orb-flagship-phase|orb-login\.css/)

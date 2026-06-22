@@ -43,7 +43,7 @@ describe('ORB Voice v2 realtime env convergence', () => {
       true
     )
     assert.equal(mode, 'webrtc')
-    assert.equal(resolveOrbVoiceRealtimeSetupLabel(mode), 'Realtime: Available')
+    assert.equal(resolveOrbVoiceRealtimeSetupLabel(mode), 'Realtime available')
   })
 
   it('falls back when webrtc unavailable in browser', () => {

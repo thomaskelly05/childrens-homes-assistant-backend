@@ -68,7 +68,10 @@ export function OrbVoiceStation({
   const [saveNotice, setSaveNotice] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [railTab, setRailTab] = useState<OrbVoiceLiveRailTab>('transcript')
-  const [voiceSettingsOpen, setVoiceSettingsOpen] = useState(false)
+
+  const openVoiceSetup = useCallback(() => {
+    setRailTab('setup')
+  }, [])
 
   const sessionStarted = voice.state !== 'idle'
   const conversationLive = voice.state !== 'idle' && voice.state !== 'summary_ready'
@@ -195,53 +198,42 @@ export function OrbVoiceStation({
     ORB_VOICE_V2_PERSONALITY_OPTIONS.find((p) => p.id === voice.personality)?.label ?? 'Reflective'
   const voiceLabel = ORB_VOICE_V2_VOICE_OPTIONS.find((v) => v.id === voice.selectedVoice)?.label ?? 'Katherine'
 
-  const preferenceBadges = sessionStarted ? (
-    <div className="flex flex-wrap items-center justify-center gap-1.5" data-orb-voice-preference-badges>
-      <span className="rounded-full border border-[var(--orb-line)]/40 bg-[var(--orb-surface)]/60 px-2 py-0.5 text-[10px] text-[var(--orb-muted)]">
-        {purposeLabel}
-      </span>
-      <span className="rounded-full border border-[var(--orb-line)]/40 bg-[var(--orb-surface)]/60 px-2 py-0.5 text-[10px] text-[var(--orb-muted)]">
-        {voiceLabel}
-      </span>
-      <span className="rounded-full border border-[var(--orb-line)]/40 bg-[var(--orb-surface)]/60 px-2 py-0.5 text-[10px] text-[var(--orb-muted)]">
-        {personalityLabel}
-      </span>
+  const preferenceBadges = (
+    <div
+      className="flex flex-col items-center gap-2"
+      data-orb-voice-preference-badges={sessionStarted ? true : undefined}
+      data-orb-voice-idle-preferences={!sessionStarted ? true : undefined}
+    >
+      <p
+        className="orb-voice-soft-badges text-[11px] font-medium tracking-wide text-[rgba(248,250,252,0.78)]"
+        data-orb-voice-soft-badges
+      >
+        {purposeLabel} · {voiceLabel} · {personalityLabel}
+      </p>
       <button
         type="button"
-        className="text-[10px] font-medium text-[var(--orb-primary-blue,#168bff)]"
-        onClick={() => setVoiceSettingsOpen((current) => !current)}
+        className="orb-voice-setup-trigger text-xs font-medium text-[#7dd3fc] underline-offset-2 hover:underline"
+        onClick={openVoiceSetup}
         data-orb-voice-settings-toggle
+        data-orb-voice-setup-trigger
+        aria-current={railTab === 'setup' ? 'page' : undefined}
       >
-        {voiceSettingsOpen ? 'Hide setup' : 'Voice setup'}
-      </button>
-    </div>
-  ) : (
-    <div className="flex flex-wrap items-center justify-center gap-2" data-orb-voice-idle-preferences>
-      <span
-        className="rounded-full border border-[var(--orb-line)]/40 bg-[var(--orb-surface)]/60 px-2.5 py-0.5 text-[10px] text-[var(--orb-muted)]"
-        data-orb-voice-purpose-badge
-      >
-        {purposeLabel}
-      </span>
-      <button
-        type="button"
-        className="rounded-full border border-[var(--orb-line)]/40 px-2.5 py-0.5 text-[10px] font-medium text-[var(--orb-primary-blue,#168bff)]"
-        onClick={() => setVoiceSettingsOpen((current) => !current)}
-        data-orb-voice-settings-toggle
-      >
-        {voiceSettingsOpen ? 'Hide voice setup' : 'Voice setup'}
+        Voice setup
       </button>
     </div>
   )
 
-  const preferenceControls = voiceSettingsOpen ? (
-    <div className="flex w-full max-w-sm flex-col gap-3" data-orb-voice-v2-preferences data-orb-voice-setup-panel>
-      <div className="rounded-xl border border-[var(--orb-line)]/30 bg-[var(--orb-surface)]/40 px-3 py-2 text-left" data-orb-voice-realtime-setup>
-        <p className="text-[10px] font-medium text-[var(--orb-foreground)]" data-orb-voice-realtime-setup-label>
+  const setupPanel = (
+    <div className="flex w-full flex-col gap-4" data-orb-voice-v2-preferences>
+      <div className="flex flex-col gap-1.5" data-orb-voice-realtime-setup>
+        <span
+          className="orb-voice-realtime-badge inline-flex w-fit rounded-full px-2.5 py-1 text-[11px] font-medium"
+          data-orb-voice-realtime-setup-label
+        >
           {voice.realtimeSetupLabel}
-        </p>
+        </span>
         {voice.realtimeSetupDetail ? (
-          <p className="mt-0.5 text-[10px] leading-relaxed text-[var(--orb-muted)]" data-orb-voice-realtime-setup-detail>
+          <p className="text-xs leading-relaxed text-[var(--orb-muted)]" data-orb-voice-realtime-setup-detail>
             {voice.realtimeSetupDetail}
           </p>
         ) : null}
@@ -275,7 +267,7 @@ export function OrbVoiceStation({
         dataAttr="personality"
       />
     </div>
-  ) : null
+  )
 
   const summaryBody = useMemo(() => {
     if (!voice.summary) return null
@@ -411,6 +403,7 @@ export function OrbVoiceStation({
       specialistActive={isOrbVoiceV2SpecialistTier(voice.lastBrainTier)}
       summaryPanel={summaryBody}
       toolsPanel={toolsPanel}
+      setupPanel={setupPanel}
     />
   )
 
@@ -502,7 +495,7 @@ export function OrbVoiceStation({
           waveInterruptible={waveInterruptible}
           wakePhraseHint={voice.wakePhraseHint}
           controls={
-            <div className="orb-voice-controls flex w-full max-w-sm flex-col items-center gap-2" data-orb-voice-controls>
+            <div className="orb-voice-controls flex w-full max-w-md flex-col items-center gap-3" data-orb-voice-controls>
               {voice.playbackBlocked ? (
                 <button
                   type="button"
@@ -525,7 +518,7 @@ export function OrbVoiceStation({
               ) : null}
               <button
                 type="button"
-                className="orb-liquid-button w-full rounded-full bg-gradient-to-r from-[var(--orb-primary-blue,#168bff)] to-[var(--orb-primary-blue-2,#0d5fcc)] px-6 py-3 text-sm font-semibold text-white disabled:opacity-50"
+                className="orb-liquid-button orb-voice-primary-cta w-full rounded-full bg-gradient-to-r from-[var(--orb-primary-blue,#168bff)] to-[var(--orb-primary-blue-2,#0d5fcc)] px-8 py-3.5 text-base font-semibold text-white shadow-lg shadow-[#168bff]/25 disabled:opacity-50"
                 disabled={primaryDisabled}
                 onClick={handlePrimary}
                 data-orb-voice-primary
@@ -538,9 +531,7 @@ export function OrbVoiceStation({
               </button>
             </div>
           }
-        >
-          {preferenceControls}
-        </OrbVoiceStationContent>
+        />
 
         {voice.showTypeFallback ? (
           <div className="mx-auto w-full max-w-lg px-4 pb-4" data-orb-voice-type-fallback>

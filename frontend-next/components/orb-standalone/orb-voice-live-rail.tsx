@@ -14,7 +14,8 @@ import {
 const RAIL_TABS: Array<{ id: OrbVoiceLiveRailTab; label: string }> = [
   { id: 'transcript', label: 'Live transcript' },
   { id: 'summary', label: 'Summary' },
-  { id: 'tools', label: 'Recording tools' }
+  { id: 'tools', label: 'Recording tools' },
+  { id: 'setup', label: 'Voice setup' }
 ]
 
 export function OrbVoiceLiveRail({
@@ -27,6 +28,7 @@ export function OrbVoiceLiveRail({
   specialistActive,
   summaryPanel,
   toolsPanel,
+  setupPanel,
   emptyTranscriptHint
 }: {
   activeTab: OrbVoiceLiveRailTab
@@ -38,6 +40,7 @@ export function OrbVoiceLiveRail({
   specialistActive?: boolean
   summaryPanel?: ReactNode
   toolsPanel?: ReactNode
+  setupPanel?: ReactNode
   emptyTranscriptHint?: string
 }) {
   return (
@@ -47,7 +50,7 @@ export function OrbVoiceLiveRail({
       data-orb-voice-live-rail-mounted
     >
       <div
-        className="orb-voice-live-rail__tabs flex gap-1.5 px-3 pb-2 pt-3"
+        className="orb-voice-live-rail__tabs flex flex-wrap gap-1.5 px-3 pb-2 pt-3"
         role="tablist"
         aria-label="Voice workspace rail"
       >
@@ -57,7 +60,7 @@ export function OrbVoiceLiveRail({
             type="button"
             role="tab"
             aria-selected={activeTab === tab.id}
-            className={`rounded-full px-3 py-1 text-[10px] font-medium tracking-wide transition ${
+            className={`orb-voice-live-rail__tab rounded-full px-3 py-1.5 text-[11px] font-medium tracking-wide transition ${
               activeTab === tab.id
                 ? 'bg-[var(--orb-primary-blue,#168bff)]/10 text-[var(--orb-foreground)]'
                 : 'text-[var(--orb-muted)] hover:bg-[var(--orb-line)]/10 hover:text-[var(--orb-foreground)]'
@@ -151,6 +154,16 @@ export function OrbVoiceLiveRail({
         ) : null}
 
         {activeTab === 'tools' ? <div data-orb-voice-recording-tools>{toolsPanel}</div> : null}
+
+        {activeTab === 'setup' ? (
+          <section data-orb-voice-setup-rail data-orb-voice-setup-panel>
+            {setupPanel ?? (
+              <p className="text-sm leading-relaxed text-[var(--orb-muted)]">
+                Choose purpose, voice and personality for this session.
+              </p>
+            )}
+          </section>
+        ) : null}
       </div>
     </aside>
   )

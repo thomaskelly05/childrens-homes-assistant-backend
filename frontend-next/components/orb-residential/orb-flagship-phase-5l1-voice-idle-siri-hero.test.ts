@@ -14,9 +14,9 @@ function read(relativePath: string) {
 }
 
 describe('ORB Residential Phase 5L.1 Voice idle Siri hero activation', () => {
-  it('build marker is phase-5m-voice-realtime-env-convergence', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5m-voice-realtime-env-convergence')
-    assert.match(read('app/orb/orb-residential-shell.css'), /phase-5m-voice-realtime-env-convergence/)
+  it('build marker is phase-5l2-voice-siri-hero-layout-repair', () => {
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5l2-voice-siri-hero-layout-repair')
+    assert.match(read('app/orb/orb-residential-shell.css'), /phase-5l2-voice-siri-hero-layout-repair/)
     assert.deepEqual(ORB_LAYOUT_CSS_FILES, ['app/orb/orb-residential-shell.css'])
   })
 
@@ -45,7 +45,8 @@ describe('ORB Residential Phase 5L.1 Voice idle Siri hero activation', () => {
     const hero = read('components/orb-standalone/orb-voice-hero-stage.tsx')
     assert.equal(ORB_VOICE_V2_IDLE_PROMPT, 'Talk it through with ORB.')
     assert.match(hero, /companionState === 'idle'/)
-    assert.match(station, /voiceSettingsOpen \?/)
+    assert.match(station, /openVoiceSetup/)
+    assert.match(station, /data-orb-voice-setup-trigger/)
     assert.match(station, /data-orb-voice-start-conversation/)
     assert.match(station, /detailLine=\{sessionStarted \? voice\.detailLine : null\}/)
   })

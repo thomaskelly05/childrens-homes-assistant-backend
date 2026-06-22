@@ -61,8 +61,8 @@ export function OrbVoiceStationContent({
       data-orb-voice-idle-hero={!sessionStarted ? true : undefined}
     >
       <div className="orb-voice-station-content__scroll orb-voice-one-screen-workspace__scroll min-h-0 flex-1 overscroll-contain px-4 py-2 md:px-6 md:py-4">
-        <div className="orb-voice-one-screen-workspace__grid mx-auto flex w-full max-w-6xl flex-col gap-4 md:flex-row md:items-stretch md:gap-6">
-          <div className="orb-voice-one-screen-workspace__main flex min-h-0 w-full flex-col items-center md:flex-1">
+        <div className="orb-voice-one-screen-workspace__grid mx-auto flex w-full max-w-[88rem] flex-col gap-4 md:flex-row md:items-stretch md:gap-8">
+          <div className="orb-voice-one-screen-workspace__main flex min-h-0 w-full flex-col items-center md:min-w-0 md:flex-1">
             <div
               className={`orb-voice-station-content__intro mb-1 w-full text-center transition-opacity ${
                 sessionStarted ? 'opacity-80' : ''
@@ -84,12 +84,6 @@ export function OrbVoiceStationContent({
               ) : null}
             </div>
 
-            {preferenceBadges ? (
-              <div className="mb-1 w-full max-w-sm" data-orb-voice-session-badges>
-                {preferenceBadges}
-              </div>
-            ) : null}
-
             <OrbVoiceHeroStage
               companionState={companionState}
               voiceV2State={voiceV2State}
@@ -102,6 +96,12 @@ export function OrbVoiceStationContent({
               onWaveInterrupt={onWaveInterrupt}
               waveInterruptible={waveInterruptible}
             />
+
+            {preferenceBadges ? (
+              <div className="orb-voice-preference-badges mt-3 w-full max-w-lg" data-orb-voice-session-badges>
+                {preferenceBadges}
+              </div>
+            ) : null}
             {wakePhraseHint && sessionStarted ? (
               <p
                 className="mt-2 max-w-md text-center text-[10px] leading-relaxed text-[var(--orb-muted)]"
@@ -113,7 +113,7 @@ export function OrbVoiceStationContent({
           </div>
 
           <div
-            className="orb-voice-one-screen-workspace__rail min-h-[12rem] w-full md:max-w-md md:flex-1"
+            className="orb-voice-one-screen-workspace__rail min-h-[12rem] w-full md:w-[min(100%,26.25rem)] md:min-w-[22.5rem] md:max-w-[26.25rem] md:shrink-0"
             data-orb-voice-live-rail-slot
           >
             {liveRail}

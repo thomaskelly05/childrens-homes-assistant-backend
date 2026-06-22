@@ -19,9 +19,9 @@ function read(relativePath: string) {
 }
 
 describe('ORB Residential Phase 5L Voice realtime beta and Siri convergence', () => {
-  it('build marker is phase-5m-voice-realtime-env-convergence', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5m-voice-realtime-env-convergence')
-    assert.match(read('app/orb/orb-residential-shell.css'), /phase-5m-voice-realtime-env-convergence/)
+  it('build marker is phase-5l2-voice-siri-hero-layout-repair', () => {
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5l2-voice-siri-hero-layout-repair')
+    assert.match(read('app/orb/orb-residential-shell.css'), /phase-5l2-voice-siri-hero-layout-repair/)
     assert.deepEqual(ORB_LAYOUT_CSS_FILES, ['app/orb/orb-residential-shell.css'])
   })
 
@@ -66,12 +66,13 @@ describe('ORB Residential Phase 5L Voice realtime beta and Siri convergence', ()
     assert.equal(ORB_VOICE_V2_WAKE_PHRASE_HINT.includes('Voice session'), true)
   })
 
-  it('one-screen wave-led workspace with setup collapsed', () => {
+  it('one-screen wave-led workspace with setup in right rail', () => {
     const station = read('components/orb-standalone/orb-voice-station.tsx')
+    const rail = read('components/orb-standalone/orb-voice-live-rail.tsx')
     const content = read('components/orb-standalone/orb-voice-station-content.tsx')
     assert.match(content, /data-orb-voice-one-screen-workspace/)
-    assert.match(station, /data-orb-voice-setup-panel/)
-    assert.match(station, /voiceSettingsOpen \?/)
+    assert.match(rail, /data-orb-voice-setup-panel/)
+    assert.match(station, /openVoiceSetup/)
     assert.match(station, /useOrbVoiceV2/)
     assert.doesNotMatch(station, /useStandaloneOrbVoice/)
   })

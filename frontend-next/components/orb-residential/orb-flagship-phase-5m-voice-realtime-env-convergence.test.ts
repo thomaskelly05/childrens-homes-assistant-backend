@@ -13,8 +13,8 @@ function read(relativePath: string) {
 }
 
 describe('ORB Residential Phase 5M Voice realtime env convergence', () => {
-  it('build marker is phase-5m-voice-realtime-env-convergence', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5m-voice-realtime-env-convergence')
+  it('build marker is phase-5l2-voice-siri-hero-layout-repair', () => {
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5l2-voice-siri-hero-layout-repair')
     assert.deepEqual(ORB_LAYOUT_CSS_FILES, ['app/orb/orb-residential-shell.css'])
   })
 

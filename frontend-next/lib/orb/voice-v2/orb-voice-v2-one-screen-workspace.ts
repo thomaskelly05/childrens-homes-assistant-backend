@@ -20,7 +20,7 @@ export const ORB_VOICE_V2_PROGRESS_SPEAKING = 'Speaking' as const
 /** Full speech-detected duplex barge-in requires continuous VAD during playback and is intentionally deferred. */
 export const ORB_VOICE_V2_DUPLEX_BARGE_IN_DEFERRED = true
 
-export type OrbVoiceLiveRailTab = 'transcript' | 'summary' | 'tools'
+export type OrbVoiceLiveRailTab = 'transcript' | 'summary' | 'tools' | 'setup'
 
 export function resolveOrbVoiceLiveRailTab(state: OrbVoiceV2State): OrbVoiceLiveRailTab {
   if (state === 'summary_ready') return 'summary'

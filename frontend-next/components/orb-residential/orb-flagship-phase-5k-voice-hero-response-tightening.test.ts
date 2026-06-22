@@ -19,9 +19,9 @@ function read(relativePath: string) {
 }
 
 describe('ORB Residential Phase 5K Voice hero and spoken-response tightening', () => {
-  it('build marker is phase-5m-voice-realtime-env-convergence', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5m-voice-realtime-env-convergence')
-    assert.match(read('app/orb/orb-residential-shell.css'), /phase-5m-voice-realtime-env-convergence/)
+  it('build marker is phase-5l2-voice-siri-hero-layout-repair', () => {
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5l2-voice-siri-hero-layout-repair')
+    assert.match(read('app/orb/orb-residential-shell.css'), /phase-5l2-voice-siri-hero-layout-repair/)
     assert.deepEqual(ORB_LAYOUT_CSS_FILES, ['app/orb/orb-residential-shell.css'])
   })
 
@@ -33,19 +33,20 @@ describe('ORB Residential Phase 5K Voice hero and spoken-response tightening', (
     assert.match(css, /orb-voice-hero-stage--dominant/)
   })
 
-  it('setup carousels collapse behind Voice setup panel by default', () => {
+  it('setup carousels collapse behind Voice setup rail tab by default', () => {
     const station = read('components/orb-standalone/orb-voice-station.tsx')
+    const rail = read('components/orb-standalone/orb-voice-live-rail.tsx')
     assert.match(station, /data-orb-voice-idle-preferences/)
-    assert.match(station, /data-orb-voice-setup-panel/)
-    assert.match(station, /voiceSettingsOpen \?/)
+    assert.match(rail, /data-orb-voice-setup-panel/)
+    assert.match(station, /openVoiceSetup/)
     assert.match(station, /data-orb-voice-start-conversation/)
     assert.match(station, /orbVoiceV2PrimaryActionLabel/)
   })
 
-  it('selected purpose voice personality badges remain visible', () => {
+  it('selected purpose voice personality soft badges remain visible', () => {
     const station = read('components/orb-standalone/orb-voice-station.tsx')
     assert.match(station, /data-orb-voice-preference-badges/)
-    assert.match(station, /data-orb-voice-purpose-badge/)
+    assert.match(station, /data-orb-voice-soft-badges/)
   })
 
   it('right rail remains mounted with calmer companion styling', () => {
