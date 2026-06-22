@@ -235,7 +235,67 @@ export function OrbVoiceStation({
         </div>
         {voice.reflectionPacket?.sections ? (
           <div className="space-y-3 rounded-2xl border border-[var(--orb-line)]/50 p-3" data-orb-voice-summary-sections>
-            {voice.reflectionPacket.sections.whatHappened ? (
+            {voice.reflectionPacket.sections.youngPeopleInvolved ? (
+              <>
+                <div data-orb-voice-summary-section="what-was-discussed">
+                  <p className="text-xs font-semibold text-[var(--orb-foreground)]">What was discussed</p>
+                  <p className="mt-1 text-sm leading-6 text-[var(--orb-foreground)]">
+                    {voice.reflectionPacket.sections.whatWasDiscussed}
+                  </p>
+                </div>
+                <div data-orb-voice-summary-section="young-people-involved">
+                  <p className="text-xs font-semibold text-[var(--orb-foreground)]">Young people involved</p>
+                  <p className="mt-1 text-sm leading-6 text-[var(--orb-foreground)]">
+                    {voice.reflectionPacket.sections.youngPeopleInvolved}
+                  </p>
+                </div>
+                <div data-orb-voice-summary-section="observed-reported">
+                  <p className="text-xs font-semibold text-[var(--orb-foreground)]">What was observed or reported</p>
+                  <p className="mt-1 text-sm leading-6 text-[var(--orb-foreground)]">
+                    {voice.reflectionPacket.sections.observedOrReported}
+                  </p>
+                </div>
+                <div data-orb-voice-summary-section="adult-response">
+                  <p className="text-xs font-semibold text-[var(--orb-foreground)]">Adult response</p>
+                  <p className="mt-1 text-sm leading-6 text-[var(--orb-foreground)]">
+                    {voice.reflectionPacket.sections.adultResponse}
+                  </p>
+                </div>
+              </>
+            ) : voice.reflectionPacket.sections.immediateSafety ? (
+              <>
+                <div data-orb-voice-summary-section="what-was-discussed">
+                  <p className="text-xs font-semibold text-[var(--orb-foreground)]">What was discussed</p>
+                  <p className="mt-1 text-sm leading-6 text-[var(--orb-foreground)]">
+                    {voice.reflectionPacket.sections.whatWasDiscussed}
+                  </p>
+                </div>
+                <div data-orb-voice-summary-section="immediate-safety">
+                  <p className="text-xs font-semibold text-[var(--orb-foreground)]">Immediate safety / procedure considerations</p>
+                  <p className="mt-1 text-sm leading-6 text-[var(--orb-foreground)]">
+                    {voice.reflectionPacket.sections.immediateSafety}
+                  </p>
+                </div>
+                <div data-orb-voice-summary-section="child-voice">
+                  <p className="text-xs font-semibold text-[var(--orb-foreground)]">Child’s voice or presentation</p>
+                  <p className="mt-1 text-sm leading-6 text-[var(--orb-foreground)]">
+                    {voice.reflectionPacket.sections.childVoiceOrPresentation}
+                  </p>
+                </div>
+                <div data-orb-voice-summary-section="known-facts">
+                  <p className="text-xs font-semibold text-[var(--orb-foreground)]">Known facts</p>
+                  <p className="mt-1 text-sm leading-6 text-[var(--orb-foreground)]">
+                    {voice.reflectionPacket.sections.knownFacts}
+                  </p>
+                </div>
+                <div data-orb-voice-summary-section="gaps">
+                  <p className="text-xs font-semibold text-[var(--orb-foreground)]">Gaps / questions</p>
+                  <p className="mt-1 text-sm leading-6 text-[var(--orb-foreground)]">
+                    {voice.reflectionPacket.sections.gapsOrQuestions}
+                  </p>
+                </div>
+              </>
+            ) : voice.reflectionPacket.sections.whatHappened ? (
               <>
                 <div data-orb-voice-summary-section="what-happened">
                   <p className="text-xs font-semibold text-[var(--orb-foreground)]">What happened</p>

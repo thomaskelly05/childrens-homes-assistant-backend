@@ -4,7 +4,7 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, it } from 'node:test'
 
-import { ORB_BUILD_VISUAL_VERSION, ORB_LAYOUT_CSS_FILES } from '../../lib/orb/orb-visual-build.ts'
+import { ORB_LAYOUT_CSS_FILES } from '../../lib/orb/orb-visual-build.ts'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '../..')
 
@@ -13,9 +13,11 @@ function read(relativePath: string) {
 }
 
 describe('ORB Residential Phase 5G Voice v2 latency and save reflection', () => {
-  it('build marker is phase-5g-voice-v2-latency-save', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5g-voice-v2-latency-save')
-    assert.match(read('app/orb/orb-residential-shell.css'), /phase-5g-voice-v2-latency-save/)
+  it('latency and tiny-turn regressions remain', () => {
+    const guard = read('lib/orb/voice-v2/orb-voice-v2-turn-guard.ts')
+    const hook = read('lib/orb/voice-v2/use-orb-voice-v2.ts')
+    assert.match(guard, /isOrbVoiceV2TurnSubstantial/)
+    assert.match(hook, /traceOrbVoiceV2IgnoredTinyTurn/)
     assert.deepEqual(ORB_LAYOUT_CSS_FILES, ['app/orb/orb-residential-shell.css'])
   })
 

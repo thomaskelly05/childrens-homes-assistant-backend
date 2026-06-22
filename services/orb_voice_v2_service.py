@@ -47,6 +47,7 @@ async def voice_v2_respond(
     transcript: str,
     mode: str | None,
     recent_turns: list[dict[str, Any]] | None,
+    session_memory: dict[str, Any] | None = None,
     user_id: int | None,
     provider_id: int | None,
 ) -> dict[str, Any]:
@@ -54,24 +55,39 @@ async def voice_v2_respond(
     if not message:
         raise ValueError("transcript_required")
     history = normalise_recent_turns(recent_turns)
+    memory_input = dict(session_memory or {})
+    memory_input.setdefault(
+        "adultTurnCount",
+        len([t for t in history if t.get("role") == "user"]) + 1,
+    )
     result = generate_voice_response(
         message=message,
         mode=mode,
         history=history,
-        session_memory={"adultTurnCount": len([t for t in history if t.get("role") == "user"]) + 1},
+        recent_turns=recent_turns,
+        session_memory=memory_input,
         user_id=user_id,
         provider_id=provider_id,
     )
     reply = str(result.get("reply") or "").strip()
+    prompt_tier = str(result.get("promptTier") or result.get("prompt_tier") or "voice_fast")
+    intent = str(result.get("intent") or "general_reflection")
     logger.info(
-        "orb_voice_v2_respond reply_chars=%s prompt_tier=voice_fast mode=%s",
+        "orb_voice_v2_respond reply_chars=%s prompt_tier=%s intent=%s mode=%s",
         len(reply),
+        prompt_tier,
+        intent,
         mode or "just_talk",
     )
     return {
         "reply": reply,
         "safetyBoundaryApplied": bool(result.get("safetyBoundaryApplied")),
-        "promptTier": "voice_fast",
+        "promptTier": prompt_tier,
+        "intent": intent,
+        "brainTier": result.get("brainTier") or prompt_tier,
+        "riskLevel": result.get("riskLevel"),
+        "sessionMemory": result.get("sessionMemory") or {},
+        "suggestedProtocol": result.get("suggestedProtocol"),
     }
 
 

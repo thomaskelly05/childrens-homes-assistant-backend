@@ -20,7 +20,7 @@ export const ORB_VOICE_V2_SUMMARY_REVIEW_NOTE =
 export const ORB_VOICE_V2_SAVE_TO_RECORDS = 'Save to Records & Drafts' as const
 export const ORB_VOICE_V2_SAVE_FAILED =
   'Could not save the reflection. You can copy it instead.' as const
-export const ORB_VOICE_V2_LIVE_SPOKEN_MAX_WORDS = 60
+export const ORB_VOICE_V2_LIVE_SPOKEN_MAX_WORDS = 70
 export const ORB_VOICE_V2_LIVE_SPOKEN_CAP = 320
 export const ORB_VOICE_V2_MIC_DENIED =
   'Microphone permission is blocked. Check Safari settings or type instead.' as const

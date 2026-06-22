@@ -33,10 +33,40 @@ export type OrbVoiceV2Turn = {
   text: string
 }
 
+export type OrbVoiceV2BrainTier = 'voice_fast' | 'voice_specialist' | 'voice_safeguarding'
+
+export type OrbVoiceV2Intent =
+  | 'incident_reflection'
+  | 'bullying_or_peer_conflict'
+  | 'safeguarding_thinking'
+  | 'missing_from_home'
+  | 'restraint_or_physical_intervention'
+  | 'allegation_or_complaint'
+  | 'supervision_prep'
+  | 'recording_wording'
+  | 'manager_oversight'
+  | 'daily_reflection'
+  | 'general_reflection'
+
+export type OrbVoiceV2SessionMemory = {
+  possibleRecordType?: string
+  keyPeopleMentioned?: string[]
+  knownFacts?: string[]
+  missingInfo?: string[]
+  possibleFollowUp?: string[]
+  lastIntent?: string
+  lastBrainTier?: string
+}
+
 export type OrbVoiceV2RespondResult = {
   reply: string
   safetyBoundaryApplied: boolean
-  promptTier: 'voice_fast'
+  promptTier: OrbVoiceV2BrainTier
+  intent?: OrbVoiceV2Intent
+  brainTier?: OrbVoiceV2BrainTier
+  riskLevel?: 'low' | 'medium' | 'high'
+  sessionMemory?: OrbVoiceV2SessionMemory
+  suggestedProtocol?: string
 }
 
 export type OrbVoiceV2SpeakResult = {
@@ -71,4 +101,6 @@ export type OrbVoiceV2HandoffPayload = {
   ttsProvider: string | null
   adultReviewStatus: 'generated_for_adult_review'
   createdAt?: string
+  intent?: OrbVoiceV2Intent
+  sessionMemory?: OrbVoiceV2SessionMemory
 }

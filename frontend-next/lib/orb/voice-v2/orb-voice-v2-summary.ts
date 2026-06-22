@@ -27,6 +27,8 @@ export function buildOrbVoiceV2Handoff(
     selectedVoice: packet.selectedVoice,
     ttsProvider: packet.ttsProvider,
     adultReviewStatus: packet.adultReviewStatus,
-    createdAt: packet.createdAt
+    createdAt: packet.createdAt,
+    intent: packet.intent,
+    sessionMemory: packet.sessionMemory
   }
 }

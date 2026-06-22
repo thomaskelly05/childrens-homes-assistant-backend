@@ -38,8 +38,8 @@ function capSpokenWords(text: string): string {
 }
 
 describe('orb-voice-v2-latency-save', () => {
-  it('build marker is phase-5g-voice-v2-latency-save', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5g-voice-v2-latency-save')
+  it('build marker is phase-5h-voice-v2-specialist-brain', () => {
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5h-voice-v2-specialist-brain')
   })
 
   it('tiny transcript under threshold does not call respond', () => {
@@ -93,8 +93,8 @@ describe('orb-voice-v2-latency-save', () => {
     const capped = capSpokenWords(long)
     const wordCount = capped.replace(/…$/, '').split(/\s+/).filter(Boolean).length
     assert.ok(wordCount <= ORB_VOICE_V2_LIVE_SPOKEN_MAX_WORDS)
-    assert.equal(ORB_VOICE_V2_LIVE_SPOKEN_MAX_WORDS, 60)
-    assert.match(read('../services/orb_voice_respond_service.py'), /VOICE_RESPOND_MAX_WORDS.*60/)
+    assert.equal(ORB_VOICE_V2_LIVE_SPOKEN_MAX_WORDS, 70)
+    assert.match(read('../services/orb_voice_respond_service.py'), /VOICE_RESPOND_MAX_WORDS.*70/)
     assert.match(read('lib/orb/voice-v2/orb-voice-v2-client.ts'), /capOrbVoiceV2SpokenText/)
   })
 

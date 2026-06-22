@@ -22,8 +22,8 @@ function read(relativePath: string) {
 }
 
 describe('ORB Residential Phase 3J active chat calm', () => {
-  it('build version marker is phase-5g-voice-v2-latency-save', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5g-voice-v2-latency-save')
+  it('build version marker is phase-5h-voice-v2-specialist-brain', () => {
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5h-voice-v2-specialist-brain')
     const layout = read('app/orb/layout.tsx')
     assert.match(layout, /orb-residential-shell\.css/)
     assert.deepEqual(ORB_LAYOUT_CSS_FILES, ['app/orb/orb-residential-shell.css'])
@@ -99,6 +99,6 @@ describe('ORB Residential Phase 3J active chat calm', () => {
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
     assert.match(companion, /orb-app-shell/)
     assert.doesNotMatch(companion, /orb-home-shell|orb-chat-shell/)
-    assert.match(read('app/orb/orb-residential-shell.css'), /phase-5g-voice-v2-latency-save/)
+    assert.match(read('app/orb/orb-residential-shell.css'), /phase-5h-voice-v2-specialist-brain/)
   })
 })

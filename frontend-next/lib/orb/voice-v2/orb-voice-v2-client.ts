@@ -4,6 +4,7 @@ import { resolveOrbVoiceV2KatherineStatusMessage } from './orb-voice-v2-permissi
 import type {
   OrbVoiceV2Mode,
   OrbVoiceV2RespondResult,
+  OrbVoiceV2SessionMemory,
   OrbVoiceV2SpeakResult,
   OrbVoiceV2Status
 } from './orb-voice-v2-types.ts'
@@ -44,6 +45,7 @@ export async function requestOrbVoiceV2Respond(input: {
   mode: OrbVoiceV2Mode
   transcript: string
   recentTurns: Array<{ role: 'adult' | 'orb'; text: string }>
+  sessionMemory?: OrbVoiceV2SessionMemory | null
 }): Promise<OrbVoiceV2RespondResult> {
   const response = await authFetchResponse('/orb/voice/v2/respond', {
     method: 'POST',
@@ -51,17 +53,30 @@ export async function requestOrbVoiceV2Respond(input: {
     body: JSON.stringify({
       mode: input.mode,
       transcript: input.transcript.trim(),
-      recentTurns: input.recentTurns
+      recentTurns: input.recentTurns,
+      sessionMemory: input.sessionMemory ?? undefined
     })
   })
   if (!response.ok) {
     throw new Error('ORB Voice could not respond right now.')
   }
   const data = (await response.json()) as Record<string, unknown>
+  const promptTier = String(data.promptTier || data.prompt_tier || 'voice_fast') as OrbVoiceV2RespondResult['promptTier']
   return {
     reply: String(data.reply || data.answer || '').trim(),
     safetyBoundaryApplied: Boolean(data.safetyBoundaryApplied),
-    promptTier: 'voice_fast'
+    promptTier,
+    intent: typeof data.intent === 'string' ? (data.intent as OrbVoiceV2RespondResult['intent']) : undefined,
+    brainTier: typeof data.brainTier === 'string' ? (data.brainTier as OrbVoiceV2RespondResult['brainTier']) : promptTier,
+    riskLevel:
+      data.riskLevel === 'low' || data.riskLevel === 'medium' || data.riskLevel === 'high'
+        ? data.riskLevel
+        : undefined,
+    sessionMemory:
+      data.sessionMemory && typeof data.sessionMemory === 'object'
+        ? (data.sessionMemory as OrbVoiceV2RespondResult['sessionMemory'])
+        : undefined,
+    suggestedProtocol: typeof data.suggestedProtocol === 'string' ? data.suggestedProtocol : undefined
   }
 }
 

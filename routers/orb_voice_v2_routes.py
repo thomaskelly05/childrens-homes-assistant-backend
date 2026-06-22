@@ -5,6 +5,8 @@ import os
 import shutil
 import uuid
 
+from typing import Any
+
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.responses import Response
 from pydantic import BaseModel, ConfigDict, Field
@@ -88,6 +90,7 @@ class OrbVoiceV2RespondRequest(BaseModel):
     mode: str | None = Field(default="just_talk", max_length=80)
     transcript: str = Field(..., min_length=1, max_length=8000)
     recentTurns: list[OrbVoiceV2Turn] | None = None
+    sessionMemory: dict[str, Any] | None = None
 
 
 class OrbVoiceV2SpeakRequest(BaseModel):
@@ -117,6 +120,7 @@ async def orb_voice_v2_respond_route(
             transcript=payload.transcript,
             mode=payload.mode,
             recent_turns=[turn.model_dump() for turn in payload.recentTurns or []],
+            session_memory=payload.sessionMemory,
             user_id=user_id,
             provider_id=_provider_id(current_user),
         )

@@ -50,8 +50,10 @@ import {
 } from './orb-voice-v2-turn-guard.ts'
 import type {
   OrbVoiceV2HandoffPayload,
+  OrbVoiceV2Intent,
   OrbVoiceV2Mode,
   OrbVoiceV2PermissionState,
+  OrbVoiceV2SessionMemory,
   OrbVoiceV2State,
   OrbVoiceV2Turn
 } from './orb-voice-v2-types.ts'
@@ -78,6 +80,8 @@ export function useOrbVoiceV2(open: boolean) {
   const [audioUnlockNotice, setAudioUnlockNotice] = useState<string | null>(null)
   const [tinyTurnNotice, setTinyTurnNotice] = useState<string | null>(null)
   const [reflectionPacket, setReflectionPacket] = useState<OrbVoiceV2ReflectionPacket | null>(null)
+  const [sessionMemory, setSessionMemory] = useState<OrbVoiceV2SessionMemory | null>(null)
+  const [lastIntent, setLastIntent] = useState<OrbVoiceV2Intent | null>(null)
 
   const captureRef = useRef<OrbVoiceV2CaptureSession | null>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null)
@@ -134,6 +138,8 @@ export function useOrbVoiceV2(open: boolean) {
     setSummary(null)
     setReflectionPacket(null)
     setTinyTurnNotice(null)
+    setSessionMemory(null)
+    setLastIntent(null)
     setError(null)
     setVoicePreparing(false)
     setVoicePreparingLongWait(false)
@@ -443,8 +449,11 @@ export function useOrbVoiceV2(open: boolean) {
         const response = await requestOrbVoiceV2Respond({
           mode: modeRef.current,
           transcript: trimmed,
-          recentTurns: orbVoiceV2RecentTurns(nextTurns)
+          recentTurns: orbVoiceV2RecentTurns(nextTurns),
+          sessionMemory: sessionMemory
         })
+        if (response.sessionMemory) setSessionMemory(response.sessionMemory)
+        if (response.intent) setLastIntent(response.intent)
         const orbTurn = createOrbVoiceV2Turn('orb', response.reply)
         setTurns((current) => [...current, orbTurn])
         transitionState('speaking')
@@ -455,7 +464,7 @@ export function useOrbVoiceV2(open: boolean) {
         transitionState('error')
       }
     },
-    [transitionState, tryAutoResumeListening]
+    [sessionMemory, transitionState, tryAutoResumeListening]
   )
 
   const commitAdultTurnRef = useRef(commitAdultTurn)
@@ -503,11 +512,16 @@ export function useOrbVoiceV2(open: boolean) {
     captureRef.current?.dispose()
     captureRef.current = null
     stopOrbAudio()
-    const packet = buildOrbVoiceV2ReflectionPacket(turnsRef.current, modeRef.current, ttsProvider)
+    const packet = buildOrbVoiceV2ReflectionPacket(
+      turnsRef.current,
+      modeRef.current,
+      ttsProvider,
+      { sessionMemory, intent: lastIntent }
+    )
     setReflectionPacket(packet)
     setSummary(packet.summaryMarkdown)
     transitionState('summary_ready')
-  }, [stopOrbAudio, transitionState, ttsProvider])
+  }, [lastIntent, sessionMemory, stopOrbAudio, transitionState, ttsProvider])
 
   const continueWithoutVoice = useCallback(() => {
     stopOrbAudio()
