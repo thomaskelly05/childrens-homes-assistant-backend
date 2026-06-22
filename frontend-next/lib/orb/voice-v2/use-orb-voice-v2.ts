@@ -17,8 +17,10 @@ import {
   ORB_VOICE_V2_FALLBACK_VOICE_TURN,
   ORB_VOICE_V2_LISTENING_HINT,
   ORB_VOICE_V2_PREPARING_VOICE,
+  ORB_VOICE_V2_TINY_TURN,
   ORB_VOICE_V2_TRANSCRIPTION_ERROR
 } from './orb-voice-v2-copy.ts'
+import { buildOrbVoiceV2ReflectionPacket, type OrbVoiceV2ReflectionPacket } from './orb-voice-v2-reflection.ts'
 import { traceOrbVoiceV2Lifecycle } from './orb-voice-v2-lifecycle-trace.ts'
 import {
   AUDIO_UNLOCK_PARALLEL_TIMEOUT_MS,
@@ -40,8 +42,12 @@ import {
   isOrbVoiceV2CaptureNotAllowed,
   permissionNoticeForState
 } from './orb-voice-v2-permissions.ts'
-import { buildOrbVoiceV2Handoff, buildOrbVoiceV2Summary } from './orb-voice-v2-summary.ts'
+import { buildOrbVoiceV2Handoff } from './orb-voice-v2-summary.ts'
 import { createOrbVoiceV2Turn, orbVoiceV2RecentTurns } from './orb-voice-v2-turns.ts'
+import {
+  isOrbVoiceV2TurnSubstantial,
+  traceOrbVoiceV2IgnoredTinyTurn
+} from './orb-voice-v2-turn-guard.ts'
 import type {
   OrbVoiceV2HandoffPayload,
   OrbVoiceV2Mode,
@@ -70,6 +76,8 @@ export function useOrbVoiceV2(open: boolean) {
   const [playbackState, setPlaybackState] = useState<OrbVoiceV2PlaybackState>('idle')
   const [turnFallbackNotice, setTurnFallbackNotice] = useState<string | null>(null)
   const [audioUnlockNotice, setAudioUnlockNotice] = useState<string | null>(null)
+  const [tinyTurnNotice, setTinyTurnNotice] = useState<string | null>(null)
+  const [reflectionPacket, setReflectionPacket] = useState<OrbVoiceV2ReflectionPacket | null>(null)
 
   const captureRef = useRef<OrbVoiceV2CaptureSession | null>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null)
@@ -124,6 +132,8 @@ export function useOrbVoiceV2(open: boolean) {
     setState('idle')
     setTurns([])
     setSummary(null)
+    setReflectionPacket(null)
+    setTinyTurnNotice(null)
     setError(null)
     setVoicePreparing(false)
     setVoicePreparingLongWait(false)
@@ -271,6 +281,14 @@ export function useOrbVoiceV2(open: boolean) {
                 transitionState('transcribing')
                 try {
                   const transcript = await transcribeOrbVoiceV2Audio(blob, mimeType)
+                  if (!isOrbVoiceV2TurnSubstantial(transcript)) {
+                    traceOrbVoiceV2IgnoredTinyTurn(transcript.trim().length)
+                    setTinyTurnNotice(ORB_VOICE_V2_TINY_TURN)
+                    processingRef.current = false
+                    void resumeListening()
+                    return
+                  }
+                  setTinyTurnNotice(null)
                   await commitAdultTurnRef.current(transcript)
                 } catch {
                   setError(ORB_VOICE_V2_TRANSCRIPTION_ERROR)
@@ -408,14 +426,19 @@ export function useOrbVoiceV2(open: boolean) {
   const commitAdultTurn = useCallback(
     async (transcript: string) => {
       const trimmed = transcript.trim()
-      if (!trimmed) {
+      if (!trimmed || !isOrbVoiceV2TurnSubstantial(trimmed)) {
+        if (trimmed) {
+          traceOrbVoiceV2IgnoredTinyTurn(trimmed.length)
+          setTinyTurnNotice(ORB_VOICE_V2_TINY_TURN)
+        }
         void tryAutoResumeListening()
         return
       }
+      setTinyTurnNotice(null)
       const adultTurn = createOrbVoiceV2Turn('adult', trimmed)
       const nextTurns = [...turnsRef.current, adultTurn]
       setTurns(nextTurns)
-      setState('thinking')
+      transitionState('thinking')
       try {
         const response = await requestOrbVoiceV2Respond({
           mode: modeRef.current,
@@ -424,15 +447,15 @@ export function useOrbVoiceV2(open: boolean) {
         })
         const orbTurn = createOrbVoiceV2Turn('orb', response.reply)
         setTurns((current) => [...current, orbTurn])
-        setState('speaking')
+        transitionState('speaking')
         void speakReplyRef.current(orbTurn.id, response.reply)
       } catch {
         setError('ORB could not respond right now. You can type instead.')
         setShowTypeFallback(true)
-        setState('error')
+        transitionState('error')
       }
     },
-    [tryAutoResumeListening]
+    [transitionState, tryAutoResumeListening]
   )
 
   const commitAdultTurnRef = useRef(commitAdultTurn)
@@ -480,10 +503,11 @@ export function useOrbVoiceV2(open: boolean) {
     captureRef.current?.dispose()
     captureRef.current = null
     stopOrbAudio()
-    const built = buildOrbVoiceV2Summary(turnsRef.current, modeRef.current)
-    setSummary(built)
-    setState('summary_ready')
-  }, [stopOrbAudio])
+    const packet = buildOrbVoiceV2ReflectionPacket(turnsRef.current, modeRef.current, ttsProvider)
+    setReflectionPacket(packet)
+    setSummary(packet.summaryMarkdown)
+    transitionState('summary_ready')
+  }, [stopOrbAudio, transitionState, ttsProvider])
 
   const continueWithoutVoice = useCallback(() => {
     stopOrbAudio()
@@ -498,20 +522,21 @@ export function useOrbVoiceV2(open: boolean) {
     await commitAdultTurn(trimmed)
   }, [commitAdultTurn, typedDraft])
 
-  const handoffPayload: OrbVoiceV2HandoffPayload | null = summary
-    ? buildOrbVoiceV2Handoff(turns, mode, summary, ttsProvider)
+  const handoffPayload: OrbVoiceV2HandoffPayload | null = reflectionPacket
+    ? buildOrbVoiceV2Handoff(turns, mode, reflectionPacket.summaryMarkdown, ttsProvider)
     : null
 
   const permissionNotice = permissionNoticeForState(permissionState)
   const playbackBlocked = playbackState === 'blocked'
   const detailLine =
-    state === 'listening' || state === 'speech_detected'
+    tinyTurnNotice ||
+    (state === 'listening' || state === 'speech_detected'
       ? ORB_VOICE_V2_LISTENING_HINT
-      : voicePreparing && !audioRef.current
+      : voicePreparing && state === 'speaking'
         ? ORB_VOICE_V2_PREPARING_VOICE
         : playbackBlocked
           ? ORB_VOICE_V2_AUDIO_PLAYBACK_BLOCKED
-          : permissionNotice || error || audioUnlockNotice || turnFallbackNotice || fallbackNotice
+          : permissionNotice || error || audioUnlockNotice || turnFallbackNotice || fallbackNotice)
 
   return {
     state,
@@ -519,8 +544,10 @@ export function useOrbVoiceV2(open: boolean) {
     setMode,
     turns,
     summary,
+    reflectionPacket,
     error,
     detailLine,
+    tinyTurnNotice,
     permissionState,
     autoResumeBlocked,
     audioUnlocked,
@@ -534,6 +561,7 @@ export function useOrbVoiceV2(open: boolean) {
     setTypedDraft,
     showTypeFallback,
     voicePreparing,
+    voicePreparingLongWait,
     voicePreparingSkipAvailable,
     startConversation,
     retryMicrophone,

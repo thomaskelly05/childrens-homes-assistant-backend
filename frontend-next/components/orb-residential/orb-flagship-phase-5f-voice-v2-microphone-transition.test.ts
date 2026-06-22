@@ -4,7 +4,7 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, it } from 'node:test'
 
-import { ORB_BUILD_VISUAL_VERSION, ORB_LAYOUT_CSS_FILES } from '../../lib/orb/orb-visual-build.ts'
+import { ORB_LAYOUT_CSS_FILES } from '../../lib/orb/orb-visual-build.ts'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '../..')
 
@@ -13,12 +13,6 @@ function read(relativePath: string) {
 }
 
 describe('ORB Residential Phase 5F Voice v2 microphone transition', () => {
-  it('build marker is phase-5f-voice-v2-microphone-transition', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5f-voice-v2-microphone-transition')
-    assert.match(read('app/orb/orb-residential-shell.css'), /phase-5f-voice-v2-microphone-transition/)
-    assert.deepEqual(ORB_LAYOUT_CSS_FILES, ['app/orb/orb-residential-shell.css'])
-  })
-
   it('Voice v2 click fix and memory lazy-load regressions remain', () => {
     const station = read('components/orb-standalone/orb-voice-station.tsx')
     const shell = read('components/orb/orb-shell.tsx')

@@ -11,6 +11,7 @@ import {
   ORB_VOICE_PANEL_TITLE
 } from '@/lib/orb/voice/orb-voice-launch-mode'
 import { createOrbSavedOutput } from '@/lib/orb/standalone-client'
+import { buildSavedOutputCreateBody } from '@/lib/orb/orb-saved-output-adapters'
 import {
   ORB_VOICE_V2_ADULT_REVIEW_LABEL,
   ORB_VOICE_V2_CONTINUE_CONVERSATION,
@@ -19,7 +20,11 @@ import {
   ORB_VOICE_V2_MODE_PROMPT,
   ORB_VOICE_V2_PLAY_ORB_VOICE,
   ORB_VOICE_V2_SAFETY_FOOTER,
+  ORB_VOICE_V2_SAVE_FAILED,
+  ORB_VOICE_V2_SAVE_TO_RECORDS,
   ORB_VOICE_V2_SEND_TYPED,
+  ORB_VOICE_V2_SUMMARY_REVIEW_NOTE,
+  ORB_VOICE_V2_SUMMARY_TITLE,
   ORB_VOICE_V2_TRANSCRIPT_LABEL,
   ORB_VOICE_V2_TRANSCRIPT_NOTE,
   ORB_VOICE_V2_TYPE_INSTEAD,
@@ -116,21 +121,53 @@ export function OrbVoiceStation({
     if (!voice.summary || !voice.handoffPayload) return
     setSaving(true)
     setSaveNotice(null)
+    const packet = voice.reflectionPacket ?? voice.handoffPayload
+    const sections = voice.reflectionPacket?.sections
+    const sectionEntries = sections
+      ? [
+          ...(sections.whatHappened
+            ? [
+                { title: 'What happened', body: sections.whatHappened },
+                { title: 'Child’s voice or presentation', body: sections.childVoiceOrPresentation ?? '—' },
+                { title: 'Adult response', body: sections.adultResponse ?? '—' }
+              ]
+            : [
+                { title: 'What was discussed', body: sections.whatWasDiscussed },
+                { title: 'Key reflections', body: sections.keyReflections }
+              ]),
+          { title: 'What may need recording', body: sections.whatMayNeedRecording },
+          { title: 'Follow-up / oversight', body: sections.followUpOrOversight }
+        ]
+      : undefined
+    const body = buildSavedOutputCreateBody({
+      title: 'Voice reflection',
+      type: 'voice_transcript',
+      summary: voice.summary.slice(0, 800),
+      content_markdown: voice.summary,
+      created_from: 'orb_voice_v2',
+      extras: {
+        source_feature: 'voice',
+        adult_review_status: 'generated_for_adult_review',
+        source_text: voice.handoffPayload.conversationTranscript,
+        sections: sectionEntries
+      }
+    })
     try {
       await createOrbSavedOutput({
-        title: 'ORB Voice reflection',
-        type: 'voice_transcript',
-        content_markdown: voice.summary,
-        metadata: { ...voice.handoffPayload },
-        created_from: 'orb_voice_v2'
+        ...body,
+        metadata: {
+          ...body.metadata,
+          voice_reflection_packet: packet,
+          ...voice.handoffPayload
+        }
       })
-      setSaveNotice('Reflection saved.')
+      setSaveNotice('Saved to Records & Drafts.')
     } catch {
-      setSaveNotice('Could not save reflection.')
+      setSaveNotice(ORB_VOICE_V2_SAVE_FAILED)
     } finally {
       setSaving(false)
     }
-  }, [voice.handoffPayload, voice.summary])
+  }, [voice.handoffPayload, voice.reflectionPacket, voice.summary])
 
   const modeSelector = (
     <div className="orb-voice-controls w-full max-w-sm" data-orb-voice-mode-selector data-orb-voice-controls>
@@ -182,12 +219,77 @@ export function OrbVoiceStation({
   const summaryPanel =
     voice.state === 'summary_ready' && voice.summary ? (
       <section className="space-y-4" data-orb-voice-summary-panel data-orb-voice-summary-ready>
-        <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--orb-muted)]" data-orb-voice-adult-review-label>
-          {ORB_VOICE_V2_ADULT_REVIEW_LABEL}
-        </p>
-        <p className="whitespace-pre-wrap text-sm leading-6 text-[var(--orb-foreground)]">{voice.summary}</p>
+        <div>
+          <p className="text-sm font-semibold text-[var(--orb-foreground)]" data-orb-voice-summary-title>
+            {ORB_VOICE_V2_SUMMARY_TITLE}
+          </p>
+          <p
+            className="mt-1 inline-flex rounded-full border border-[var(--orb-line)]/50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--orb-muted)]"
+            data-orb-voice-adult-review-label
+          >
+            {ORB_VOICE_V2_ADULT_REVIEW_LABEL}
+          </p>
+          <p className="mt-2 text-xs text-[var(--orb-muted)]" data-orb-voice-summary-review-note>
+            {ORB_VOICE_V2_SUMMARY_REVIEW_NOTE}
+          </p>
+        </div>
+        {voice.reflectionPacket?.sections ? (
+          <div className="space-y-3 rounded-2xl border border-[var(--orb-line)]/50 p-3" data-orb-voice-summary-sections>
+            {voice.reflectionPacket.sections.whatHappened ? (
+              <>
+                <div data-orb-voice-summary-section="what-happened">
+                  <p className="text-xs font-semibold text-[var(--orb-foreground)]">What happened</p>
+                  <p className="mt-1 text-sm leading-6 text-[var(--orb-foreground)]">
+                    {voice.reflectionPacket.sections.whatHappened}
+                  </p>
+                </div>
+                <div data-orb-voice-summary-section="child-voice">
+                  <p className="text-xs font-semibold text-[var(--orb-foreground)]">Child’s voice or presentation</p>
+                  <p className="mt-1 text-sm leading-6 text-[var(--orb-foreground)]">
+                    {voice.reflectionPacket.sections.childVoiceOrPresentation}
+                  </p>
+                </div>
+                <div data-orb-voice-summary-section="adult-response">
+                  <p className="text-xs font-semibold text-[var(--orb-foreground)]">Adult response</p>
+                  <p className="mt-1 text-sm leading-6 text-[var(--orb-foreground)]">
+                    {voice.reflectionPacket.sections.adultResponse}
+                  </p>
+                </div>
+              </>
+            ) : (
+              <>
+                <div data-orb-voice-summary-section="what-was-discussed">
+                  <p className="text-xs font-semibold text-[var(--orb-foreground)]">What was discussed</p>
+                  <p className="mt-1 text-sm leading-6 text-[var(--orb-foreground)]">
+                    {voice.reflectionPacket.sections.whatWasDiscussed}
+                  </p>
+                </div>
+                <div data-orb-voice-summary-section="key-reflections">
+                  <p className="text-xs font-semibold text-[var(--orb-foreground)]">Key reflections</p>
+                  <p className="mt-1 text-sm leading-6 text-[var(--orb-foreground)]">
+                    {voice.reflectionPacket.sections.keyReflections}
+                  </p>
+                </div>
+              </>
+            )}
+            <div data-orb-voice-summary-section="recording">
+              <p className="text-xs font-semibold text-[var(--orb-foreground)]">What may need recording</p>
+              <p className="mt-1 text-sm leading-6 text-[var(--orb-foreground)]">
+                {voice.reflectionPacket.sections.whatMayNeedRecording}
+              </p>
+            </div>
+            <div data-orb-voice-summary-section="follow-up">
+              <p className="text-xs font-semibold text-[var(--orb-foreground)]">Follow-up / oversight</p>
+              <p className="mt-1 text-sm leading-6 text-[var(--orb-foreground)]">
+                {voice.reflectionPacket.sections.followUpOrOversight}
+              </p>
+            </div>
+          </div>
+        ) : (
+          <p className="whitespace-pre-wrap text-sm leading-6 text-[var(--orb-foreground)]">{voice.summary}</p>
+        )}
         {saveNotice ? (
-          <p className="text-xs text-[var(--orb-muted)]" role="status">
+          <p className="text-xs text-[var(--orb-muted)]" role="status" data-orb-voice-save-notice>
             {saveNotice}
           </p>
         ) : null}
@@ -214,7 +316,9 @@ export function OrbVoiceStation({
             <button
               type="button"
               className="w-full rounded-full border border-[var(--orb-line)]/60 py-2.5 text-sm font-medium"
-              onClick={() => onOpenWrite(voice.summary ?? '', { title: 'ORB Voice reflection summary' })}
+              onClick={() =>
+                onOpenWrite(voice.summary ?? '', { title: ORB_VOICE_V2_SUMMARY_TITLE })
+              }
               data-orb-voice-open-write
             >
               Open in ORB Write
@@ -226,8 +330,9 @@ export function OrbVoiceStation({
             onClick={() => void handleSaveReflection()}
             disabled={saving}
             data-orb-voice-save-reflection
+            data-orb-voice-save-records-drafts
           >
-            {saving ? 'Saving…' : 'Save reflection'}
+            {saving ? 'Saving…' : ORB_VOICE_V2_SAVE_TO_RECORDS}
           </button>
           <button
             type="button"
@@ -314,6 +419,7 @@ export function OrbVoiceStation({
         data-orb-voice-auto-resume-blocked={voice.autoResumeBlocked ? true : undefined}
         data-orb-voice-playback-blocked={voice.playbackBlocked ? true : undefined}
         data-orb-voice-audio-unlocked={voice.audioUnlocked ? true : undefined}
+        data-orb-voice-preparing-long={voice.voicePreparingLongWait ? true : undefined}
       >
         <OrbVoiceStationContent
           companionState={companionState}

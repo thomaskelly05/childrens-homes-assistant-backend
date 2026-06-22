@@ -70,7 +70,7 @@ describe('ORB brain router convergence', () => {
   it('write receives voice content via converged handoff with voice source', () => {
     const voice = readSource('components/orb-standalone/orb-voice-station.tsx')
     assert.match(voice, /data-orb-voice-open-write/)
-    assert.match(voice, /title: 'ORB Voice reflection summary'/)
+    assert.match(voice, /ORB_VOICE_V2_SUMMARY_TITLE|title: 'Voice reflection'/)
     const companion = readSource('components/orb-standalone/orb-care-companion.tsx')
     assert.match(companion, /source: 'voice'/)
     const handoff = readSource('lib/orb/write/orb-write-converged-handoff.ts')

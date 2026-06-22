@@ -14,11 +14,11 @@ function read(relativePath: string) {
 }
 
 describe('ORB Residential Phase 4H Voice fresh sessions and low latency', () => {
-  it('build version marker is phase-5f-voice-v2-microphone-transition', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5f-voice-v2-microphone-transition')
+  it('build version marker is phase-5g-voice-v2-latency-save', () => {
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5g-voice-v2-latency-save')
     assert.match(read('app/orb/layout.tsx'), /orb-residential-shell\.css/)
     assert.deepEqual(ORB_LAYOUT_CSS_FILES, ['app/orb/orb-residential-shell.css'])
-    assert.match(read('app/orb/orb-residential-shell.css'), /phase-5f-voice-v2-microphone-transition/)
+    assert.match(read('app/orb/orb-residential-shell.css'), /phase-5g-voice-v2-latency-save/)
   })
 
   it('/orb opens Home by default without persisting station param', () => {

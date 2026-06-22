@@ -63,8 +63,12 @@ export type OrbVoiceV2HandoffPayload = {
   mode: OrbVoiceV2Mode
   conversationTranscript: string
   summary: string
+  summaryMarkdown?: string
+  whatMayNeedRecording?: string
+  followUpOrOversight?: string
   audioStored: false
   selectedVoice: 'katherine'
   ttsProvider: string | null
   adultReviewStatus: 'generated_for_adult_review'
+  createdAt?: string
 }

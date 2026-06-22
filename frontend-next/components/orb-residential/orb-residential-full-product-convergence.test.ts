@@ -81,7 +81,7 @@ describe('ORB Residential full-product convergence', () => {
     assert.match(handoff, /convergedHandoffToOrbWrite/)
     assert.match(content, /'voice'/)
     assert.match(voice, /data-orb-voice-open-write/)
-    assert.match(voice, /title: 'ORB Voice reflection summary'/)
+    assert.match(voice, /ORB_VOICE_V2_SUMMARY_TITLE|title: 'Voice reflection'/)
     assert.match(companion, /source: 'voice'/)
     assert.match(dictate, /saveOrbWriteHandoff|convergedDictateSessionHandoff/)
     assert.match(companion, /convergedHandoffToOrbWrite/)

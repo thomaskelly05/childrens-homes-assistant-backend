@@ -67,7 +67,7 @@ describe('ORB Voice honest realtime', () => {
     assert.match(hook, /startConversation/)
     assert.match(station, /useOrbVoiceV2/)
     assert.doesNotMatch(station, /beginSpeechRecognitionCapture/)
-    assert.match(hook, /setState\('error'\)/)
+    assert.match(hook, /transitionState\('error'\)/)
     assert.match(station, /data-orb-voice-ui-state=\{voice\.state\}/)
   })
 })

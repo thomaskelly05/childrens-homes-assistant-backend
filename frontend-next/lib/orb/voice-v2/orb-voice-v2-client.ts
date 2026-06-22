@@ -7,7 +7,7 @@ import type {
   OrbVoiceV2SpeakResult,
   OrbVoiceV2Status
 } from './orb-voice-v2-types.ts'
-import { ORB_VOICE_V2_LIVE_SPOKEN_CAP } from './orb-voice-v2-copy.ts'
+import { ORB_VOICE_V2_LIVE_SPOKEN_CAP, ORB_VOICE_V2_LIVE_SPOKEN_MAX_WORDS } from './orb-voice-v2-copy.ts'
 
 function parseOrbVoiceV2Status(data: Record<string, unknown>): OrbVoiceV2Status {
   return {
@@ -121,6 +121,11 @@ export async function transcribeOrbVoiceV2Audio(blob: Blob, mimeType: string): P
 
 export function capOrbVoiceV2SpokenText(text: string): string {
   const cleaned = text.replace(/\*\*/g, '').replace(/[#*_`]/g, '').trim()
-  if (cleaned.length <= ORB_VOICE_V2_LIVE_SPOKEN_CAP) return cleaned
-  return cleaned.slice(0, ORB_VOICE_V2_LIVE_SPOKEN_CAP).trim()
+  const words = cleaned.split(/\s+/).filter(Boolean)
+  const wordCapped =
+    words.length <= ORB_VOICE_V2_LIVE_SPOKEN_MAX_WORDS
+      ? cleaned
+      : `${words.slice(0, ORB_VOICE_V2_LIVE_SPOKEN_MAX_WORDS).join(' ').replace(/[.,;:!?]+$/, '')}…`
+  if (wordCapped.length <= ORB_VOICE_V2_LIVE_SPOKEN_CAP) return wordCapped
+  return wordCapped.slice(0, ORB_VOICE_V2_LIVE_SPOKEN_CAP).trim()
 }

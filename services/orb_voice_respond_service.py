@@ -12,7 +12,7 @@ from services.ai_external_call_governance import FEATURE_VOICE_RESPOND, governed
 
 logger = logging.getLogger(__name__)
 
-VOICE_RESPOND_MAX_WORDS = int(os.environ.get("ORB_VOICE_RESPOND_MAX_WORDS") or "80")
+VOICE_RESPOND_MAX_WORDS = int(os.environ.get("ORB_VOICE_RESPOND_MAX_WORDS") or "60")
 VOICE_RESPOND_MODEL = (os.environ.get("ORB_VOICE_RESPOND_MODEL") or "gpt-4o-mini").strip()
 VOICE_RESPOND_MAX_OUTPUT_TOKENS = int(os.environ.get("ORB_VOICE_RESPOND_MAX_OUTPUT_TOKENS") or "180")
 
@@ -20,8 +20,8 @@ VOICE_SYSTEM_PROMPT = (
     "You are ORB Voice, a reflective voice companion for adults in Ofsted-regulated children's homes. "
     "Respond briefly, warmly and professionally in British English. Ask one useful reflective question. "
     "Keep the child central. Do not make safeguarding decisions. "
-    "If risk or safeguarding is mentioned, remind the adult to follow local policy and management oversight. "
-    f"Keep each reply under {VOICE_RESPOND_MAX_WORDS} words unless the adult explicitly asks for more detail."
+    "Do not repeat policy reminders every turn — only add a safeguarding boundary when risk or safeguarding is clearly present. "
+    f"Keep each live reply under {VOICE_RESPOND_MAX_WORDS} words (about 40–60) unless the adult explicitly asks for more detail."
 )
 
 RISK_KEYWORDS = (
@@ -111,7 +111,10 @@ def _build_prompt(
             label = "Adult" if turn["role"] == "user" else "ORB"
             lines.append(f"{label}: {turn['content']}")
     lines.append(f"Adult now says: {message.strip()}")
-    lines.append("Reply in 1–4 short spoken sentences with one reflective question.")
+    lines.append(
+        "Reply in 1–3 short spoken sentences with one reflective question. "
+        "Sound conversational, not like a written report."
+    )
     return "\n".join(lines)
 
 

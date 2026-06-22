@@ -14,11 +14,11 @@ function read(relativePath: string) {
 }
 
 describe('ORB Residential Phase 4F Voice platform rebuild', () => {
-  it('build version marker is phase-5f-voice-v2-microphone-transition', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5f-voice-v2-microphone-transition')
+  it('build version marker is phase-5g-voice-v2-latency-save', () => {
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5g-voice-v2-latency-save')
     assert.match(read('app/orb/layout.tsx'), /orb-residential-shell\.css/)
     assert.deepEqual(ORB_LAYOUT_CSS_FILES, ['app/orb/orb-residential-shell.css'])
-    assert.match(read('app/orb/orb-residential-shell.css'), /phase-5f-voice-v2-microphone-transition/)
+    assert.match(read('app/orb/orb-residential-shell.css'), /phase-5g-voice-v2-latency-save/)
   })
 
   it('there is one primary Voice station path', () => {
@@ -44,7 +44,9 @@ describe('ORB Residential Phase 4F Voice platform rebuild', () => {
 
   it('end-of-turn auto-submits transcript via v2 capture', () => {
     const capture = read('lib/orb/voice-v2/orb-voice-v2-capture.ts')
-    assert.match(capture, /SILENCE_MS = 1400/)
+    const guard = read('lib/orb/voice-v2/orb-voice-v2-turn-guard.ts')
+    assert.match(capture, /END_OF_TURN_DEBOUNCE_MS/)
+    assert.match(guard, /END_OF_TURN_DEBOUNCE_MS = 1000/)
     assert.match(capture, /onEndOfTurn/)
     assert.match(capture, /blob\.size < 256/)
   })

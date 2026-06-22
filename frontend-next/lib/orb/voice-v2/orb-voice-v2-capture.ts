@@ -3,9 +3,12 @@
  */
 
 import { traceOrbVoiceV2Lifecycle } from './orb-voice-v2-lifecycle-trace.ts'
+import {
+  END_OF_TURN_DEBOUNCE_MS,
+  MIN_SPEECH_MS
+} from './orb-voice-v2-turn-guard.ts'
 
-const SILENCE_MS = 1400
-const MIN_RECORDING_MS = 400
+export { END_OF_TURN_DEBOUNCE_MS, MIN_SPEECH_MS }
 const MAX_RECORDING_MS = 45_000
 
 export type OrbVoiceV2CaptureErrorCode =
@@ -190,11 +193,11 @@ export async function startOrbVoiceV2Capture(input: {
         window.clearTimeout(silenceTimer)
         silenceTimer = null
       }
-    } else if (speechDetected && Date.now() - startedAt > MIN_RECORDING_MS) {
+    } else if (speechDetected && Date.now() - startedAt > MIN_SPEECH_MS) {
       if (!silenceTimer) {
         silenceTimer = window.setTimeout(() => {
           if (recorder.state === 'recording') recorder.stop()
-        }, SILENCE_MS)
+        }, END_OF_TURN_DEBOUNCE_MS)
       }
     }
     rafId = window.requestAnimationFrame(monitor)

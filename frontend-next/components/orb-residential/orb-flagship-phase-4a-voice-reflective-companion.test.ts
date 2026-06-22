@@ -22,8 +22,8 @@ function read(relativePath: string) {
 }
 
 describe('ORB Residential Phase 4A Voice reflective companion', () => {
-  it('build version marker is phase-5f-voice-v2-microphone-transition', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5f-voice-v2-microphone-transition')
+  it('build version marker is phase-5g-voice-v2-latency-save', () => {
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5g-voice-v2-latency-save')
     const layout = read('app/orb/layout.tsx')
     assert.match(layout, /orb-residential-shell\.css/)
     assert.deepEqual(ORB_LAYOUT_CSS_FILES, ['app/orb/orb-residential-shell.css'])
@@ -66,12 +66,12 @@ describe('ORB Residential Phase 4A Voice reflective companion', () => {
 
   it('summary actions and handoff metadata are wired', () => {
     const station = read('components/orb-standalone/orb-voice-station.tsx')
-    const handoff = read('lib/orb/voice-v2/orb-voice-v2-summary.ts')
+    const handoff = read('lib/orb/voice-v2/orb-voice-v2-reflection.ts')
     assert.equal(ORB_VOICE_V2_ADULT_REVIEW_LABEL, 'Generated for adult review')
     assert.match(station, /Copy summary/)
     assert.match(station, /Send to Dictate/)
     assert.match(station, /Open in ORB Write/)
-    assert.match(station, /Save reflection/)
+    assert.match(station, /ORB_VOICE_V2_SAVE_TO_RECORDS|Save to Records & Drafts/)
     assert.match(handoff, /source: 'orb_voice_v2'/)
     assert.match(handoff, /generated_for_adult_review/)
   })
@@ -84,7 +84,7 @@ describe('ORB Residential Phase 4A Voice reflective companion', () => {
   it('single shell and no compliance guarantee language', () => {
     const shell = read('app/orb/orb-residential-shell.css')
     const station = read('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(shell, /phase-5f-voice-v2-microphone-transition/)
+    assert.match(shell, /phase-5g-voice-v2-latency-save/)
     assert.doesNotMatch(station, /Ofsted approved|compliance guarantee|finalised record/i)
     assert.doesNotMatch(station, /ORB makes safeguarding decisions/i)
   })

@@ -33,8 +33,8 @@ function read(relativePath: string) {
 }
 
 describe('ORB Residential Phase 4B Voice human conversation', () => {
-  it('build version marker is phase-5f-voice-v2-microphone-transition', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5f-voice-v2-microphone-transition')
+  it('build version marker is phase-5g-voice-v2-latency-save', () => {
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5g-voice-v2-latency-save')
     const layout = read('app/orb/layout.tsx')
     assert.match(layout, /orb-residential-shell\.css/)
     assert.deepEqual(ORB_LAYOUT_CSS_FILES, ['app/orb/orb-residential-shell.css'])
@@ -93,7 +93,7 @@ describe('ORB Residential Phase 4B Voice human conversation', () => {
   it('auto speak and slow thinking are wired in voice v2 hook', () => {
     const hook = read('lib/orb/voice-v2/use-orb-voice-v2.ts')
     assert.match(hook, /requestOrbVoiceV2Speak/)
-    assert.match(hook, /setState\('thinking'\)/)
+    assert.match(hook, /transitionState\('thinking'\)/)
     assert.match(hook, /voicePreparing/)
   })
 
@@ -137,7 +137,7 @@ describe('ORB Residential Phase 4B Voice human conversation', () => {
   it('single shell CSS import and no compliance guarantee language', () => {
     const shell = read('app/orb/orb-residential-shell.css')
     const station = read('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(shell, /phase-5f-voice-v2-microphone-transition/)
+    assert.match(shell, /phase-5g-voice-v2-latency-save/)
     assert.doesNotMatch(station, /Ofsted approved|compliance guarantee/i)
     assert.doesNotMatch(station, /ORB makes safeguarding decisions/i)
   })

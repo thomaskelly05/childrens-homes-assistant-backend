@@ -48,7 +48,7 @@ describe('ORB Voice v2 flow contracts', () => {
   })
 
   it('handoff payload uses orb_voice_v2 source', () => {
-    const summary = read('lib/orb/voice-v2/orb-voice-v2-summary.ts')
+    const summary = read('lib/orb/voice-v2/orb-voice-v2-reflection.ts')
     assert.match(summary, /source: 'orb_voice_v2'/)
     assert.match(summary, /generated_for_adult_review/)
     assert.match(summary, /audioStored: false/)
@@ -64,18 +64,20 @@ describe('ORB Voice v2 flow contracts', () => {
 
   it('capture uses silence end-of-turn and Safari mime preference', () => {
     const capture = read('lib/orb/voice-v2/orb-voice-v2-capture.ts')
-    assert.match(capture, /SILENCE_MS = 1400/)
+    const guard = read('lib/orb/voice-v2/orb-voice-v2-turn-guard.ts')
+    assert.match(capture, /END_OF_TURN_DEBOUNCE_MS/)
+    assert.match(guard, /END_OF_TURN_DEBOUNCE_MS = 1000/)
     assert.match(capture, /audio\/mp4/)
     assert.match(capture, /blob\.size < 256/)
   })
 })
 
 describe('ORB Residential Phase 5A Voice clean rebuild', () => {
-  it('build version marker is phase-5f-voice-v2-microphone-transition', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5f-voice-v2-microphone-transition')
+  it('build version marker is phase-5g-voice-v2-latency-save', () => {
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5g-voice-v2-latency-save')
     assert.match(read('app/orb/layout.tsx'), /orb-residential-shell\.css/)
     assert.deepEqual(ORB_LAYOUT_CSS_FILES, ['app/orb/orb-residential-shell.css'])
-    assert.match(read('app/orb/orb-residential-shell.css'), /phase-5f-voice-v2-microphone-transition/)
+    assert.match(read('app/orb/orb-residential-shell.css'), /phase-5g-voice-v2-latency-save/)
   })
 
   it('active voice station uses v2 hook and not legacy voice modules', () => {

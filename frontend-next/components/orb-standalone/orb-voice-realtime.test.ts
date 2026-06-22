@@ -27,7 +27,7 @@ describe('ORB Voice realtime provider pass', () => {
     assert.match(hook, /startConversation/)
     assert.match(station, /data-orb-voice-ui-state=\{voice\.state\}/)
     assert.match(hook, /startOrbVoiceV2Capture/)
-    assert.match(hook, /voice\.state === 'error'|setState\('error'\)/)
+    assert.match(hook, /voice\.state === 'error'|transitionState\('error'\)/)
     assert.doesNotMatch(station, /new OrbRealtimeVoiceClient/)
     assert.doesNotMatch(station, /beginSpeechRecognitionCapture\(/)
   })

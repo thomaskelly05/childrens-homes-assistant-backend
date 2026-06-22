@@ -3209,4 +3209,4 @@ html[data-orb-residential='1'] [data-orb-voice-station] [data-orb-voice-primary]
   touch-action: manipulation;
 }
 
-/* phase-5f-voice-v2-microphone-transition — mic timeout/fallback; Voice v2 idle click rules from 5d unchanged */
+/* phase-5g-voice-v2-latency-save — faster end-of-turn; saveable Voice reflection; mic rules from 5f unchanged */

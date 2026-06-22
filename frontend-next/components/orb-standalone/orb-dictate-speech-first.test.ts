@@ -68,7 +68,7 @@ describe('ORB Voice realtime availability', () => {
     const hook = readComponent('lib/orb/voice-v2/use-orb-voice-v2.ts')
     assert.match(hook, /fetchOrbVoiceV2Status/)
     assert.match(hook, /katherineReady/)
-    assert.match(hook, /setState\('error'\)/)
+    assert.match(hook, /transitionState\('error'\)/)
     assert.match(hook, /startOrbVoiceV2Capture/)
     assert.match(station, /data-orb-voice-ui-state=\{voice\.state\}/)
   })

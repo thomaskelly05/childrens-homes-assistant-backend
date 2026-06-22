@@ -11,9 +11,17 @@ export const ORB_VOICE_V2_TRANSCRIPTION_ERROR =
 export const ORB_VOICE_V2_TYPE_INSTEAD = 'Type instead' as const
 export const ORB_VOICE_V2_TYPE_PLACEHOLDER = 'Type what you wanted to say to ORB…' as const
 export const ORB_VOICE_V2_SEND_TYPED = 'Send to ORB' as const
-export const ORB_VOICE_V2_PREPARING_VOICE = 'ORB is preparing voice…' as const
-export const ORB_VOICE_V2_CONTINUE_WITHOUT_VOICE = 'Continue without voice' as const
-export const ORB_VOICE_V2_CONTINUE_CONVERSATION = 'Continue conversation' as const
+export const ORB_VOICE_V2_PREPARING_VOICE = 'Katherine is preparing voice…' as const
+export const ORB_VOICE_V2_TINY_TURN =
+  'I didn’t catch enough to respond. You can continue speaking.' as const
+export const ORB_VOICE_V2_SUMMARY_TITLE = 'Voice reflection summary' as const
+export const ORB_VOICE_V2_SUMMARY_REVIEW_NOTE =
+  'Review this before saving or using it in a record.' as const
+export const ORB_VOICE_V2_SAVE_TO_RECORDS = 'Save to Records & Drafts' as const
+export const ORB_VOICE_V2_SAVE_FAILED =
+  'Could not save the reflection. You can copy it instead.' as const
+export const ORB_VOICE_V2_LIVE_SPOKEN_MAX_WORDS = 60
+export const ORB_VOICE_V2_LIVE_SPOKEN_CAP = 320
 export const ORB_VOICE_V2_MIC_DENIED =
   'Microphone permission is blocked. Check Safari settings or type instead.' as const
 export const ORB_VOICE_V2_MIC_NOT_FOUND =
@@ -40,7 +48,8 @@ export const ORB_VOICE_V2_KATHERINE_MISSING_ELEVENLABS =
   'Katherine is unavailable — ElevenLabs is not configured.' as const
 export const ORB_VOICE_V2_KATHERINE_FALLBACK =
   'Katherine is unavailable, so ORB is using a fallback voice.' as const
-export const ORB_VOICE_V2_LIVE_SPOKEN_CAP = 320
+export const ORB_VOICE_V2_CONTINUE_WITHOUT_VOICE = 'Continue without voice' as const
+export const ORB_VOICE_V2_CONTINUE_CONVERSATION = 'Continue conversation' as const
 
 export const ORB_VOICE_V2_MODES = [
   { id: 'just_talk', label: 'Just talk it through' },

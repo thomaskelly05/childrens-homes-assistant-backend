@@ -73,7 +73,7 @@ describe('ORB mic state wiring', () => {
   it('prevents fake active voice without capture session', () => {
     const hook = readComponent('lib/orb/voice-v2/use-orb-voice-v2.ts')
     assert.match(hook, /processingRef/)
-    assert.match(hook, /setState\('error'\)/)
+    assert.match(hook, /transitionState\('error'\)/)
     assert.match(hook, /ORB_VOICE_V2_TRANSCRIPTION_ERROR/)
   })
 
