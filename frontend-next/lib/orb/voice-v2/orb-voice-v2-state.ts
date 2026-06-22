@@ -6,8 +6,9 @@ export const ORB_VOICE_V2_STATUS_LABEL: Record<OrbVoiceV2State, string> = {
   listening: 'Listening…',
   speech_detected: 'Listening…',
   transcribing: 'Processing your voice…',
-  thinking: 'ORB is thinking…',
+  thinking: 'Thinking this through…',
   speaking: 'ORB is responding…',
+  interrupted: 'Stopped. I’m listening.',
   paused: 'Paused',
   summary_ready: 'Summary ready',
   error: 'Voice unavailable'
@@ -27,6 +28,7 @@ export function mapOrbVoiceV2ToCompanionState(
   if (state === 'requesting_microphone' || state === 'speech_detected' || state === 'transcribing') {
     return state === 'transcribing' ? 'thinking' : 'listening'
   }
+  if (state === 'interrupted') return 'listening'
   if (state === 'listening') return 'listening'
   if (state === 'thinking') return 'thinking'
   if (state === 'speaking') return 'speaking'

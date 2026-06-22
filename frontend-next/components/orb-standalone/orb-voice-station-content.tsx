@@ -19,6 +19,7 @@ import {
  */
 export function OrbVoiceStationContent({
   companionState,
+  voiceV2State,
   statusLine,
   detailLine,
   children,
@@ -28,6 +29,7 @@ export function OrbVoiceStationContent({
   workspaceMode = 'idle',
   className = ''
 }: {
+  voiceV2State?: string
   companionState: OrbVoiceCompanionState
   statusLine: string
   detailLine: string | null
@@ -89,6 +91,7 @@ export function OrbVoiceStationContent({
             ) : null}
             <OrbVoiceHeroStage
               companionState={companionState}
+              voiceV2State={voiceV2State}
               statusLine={statusLine}
               detailLine={detailLine}
               middleSlot={workspaceMode === 'idle' ? children : undefined}

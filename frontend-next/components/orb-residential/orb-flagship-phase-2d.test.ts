@@ -14,7 +14,7 @@ function read(relativePath: string) {
 
 describe('ORB Residential Phase 2H flagship UX convergence', () => {
   it('build version marker is phase-3b on shell and visual build', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5h-voice-v2-specialist-brain')
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5i-voice-showstopper-convergence')
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
     const layout = read('app/orb/layout.tsx')
     assert.match(companion, /data-orb-build-version=\{ORB_BUILD_VISUAL_VERSION\}/)
@@ -151,14 +151,14 @@ describe('ORB Residential Phase 2H flagship UX convergence', () => {
   it('voice mode selector is visible and central', () => {
     const voice = read('components/orb-standalone/orb-voice-station.tsx')
     const selector = read('components/orb-residential/orb-voice-mode-selector.tsx')
-    assert.match(voice, /data-orb-voice-v2-mode-select|ORB_VOICE_V2_MODES/)
+    assert.match(voice, /OrbVoiceV2Carousel|ORB_VOICE_V2_PURPOSE_MODES/)
     assert.match(read('components/orb-standalone/orb-voice-station-content.tsx'), /data-orb-voice-station-content/)
     assert.match(selector, /data-orb-voice-mode-central/)
     assert.match(selector, /data-orb-voice-mode-selection-label/)
     assert.match(selector, /data-orb-voice-style-controls/)
     assert.match(selector, /data-orb-voice-reasoning-controls/)
     assert.match(selector, /data-orb-voice-mode-summary/)
-    assert.match(voice, /data-orb-voice-mode-selector/)
+    assert.match(voice, /data-orb-voice-v2-preferences/)
     assert.match(voice, /data-orb-voice-secondary-controls/)
     assert.match(voice, /ORB_VOICE_V2_SAFETY_FOOTER|ORB_VOICE_V2_TRANSCRIPT_NOTE/)
     assert.match(read('lib/orb/voice-v2/orb-voice-v2-state.ts'), /Start conversation/)

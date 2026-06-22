@@ -21,6 +21,8 @@ _MODE_INTENT: dict[str, str] = {
     "daily_reflection": "daily_reflection",
     "missing_from_home_debrief": "missing_from_home",
     "wording_support": "recording_wording",
+    "manager_oversight": "manager_oversight",
+    "key_work_prep": "supervision_prep",
     "just_talk": "general_reflection",
 }
 

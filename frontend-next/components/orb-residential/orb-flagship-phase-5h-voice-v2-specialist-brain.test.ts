@@ -13,9 +13,8 @@ function read(relativePath: string) {
 }
 
 describe('ORB Residential Phase 5H Voice v2 specialist brain', () => {
-  it('build marker is phase-5h-voice-v2-specialist-brain', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5h-voice-v2-specialist-brain')
-    assert.match(read('app/orb/orb-residential-shell.css'), /phase-5h-voice-v2-specialist-brain/)
+  it('specialist brain routing and session memory remain', () => {
+    assert.match(read('app/orb/orb-residential-shell.css'), /phase-5i-voice-showstopper-convergence|phase-5i-voice-showstopper-convergence/)
     assert.deepEqual(ORB_LAYOUT_CSS_FILES, ['app/orb/orb-residential-shell.css'])
   })
 

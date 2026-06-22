@@ -22,24 +22,23 @@ function read(relativePath: string) {
 }
 
 describe('ORB Residential Phase 4A Voice reflective companion', () => {
-  it('build version marker is phase-5h-voice-v2-specialist-brain', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5h-voice-v2-specialist-brain')
+  it('build version marker is phase-5i-voice-showstopper-convergence', () => {
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5i-voice-showstopper-convergence')
     const layout = read('app/orb/layout.tsx')
     assert.match(layout, /orb-residential-shell\.css/)
     assert.deepEqual(ORB_LAYOUT_CSS_FILES, ['app/orb/orb-residential-shell.css'])
   })
 
-  it('voice screen explains reflective purpose and mode selector', () => {
+  it('voice screen explains reflective purpose and purpose carousel', () => {
     const station = read('components/orb-standalone/orb-voice-station.tsx')
     const content = read('components/orb-standalone/orb-voice-station-content.tsx')
+    const showstopper = read('lib/orb/voice-v2/orb-voice-v2-showstopper.ts')
     assert.match(content, /ORB_VOICE_V2_SUPPORTING/)
-    assert.match(station, /ORB_VOICE_V2_MODE_PROMPT/)
-    assert.match(station, /ORB_VOICE_V2_MODES/)
-    const labels = ORB_VOICE_V2_MODES.map((m) => m.label)
-    assert.ok(labels.includes('Reflect after an incident'))
-    assert.ok(labels.includes('Safeguarding thinking'))
-    assert.ok(labels.includes('Supervision prep'))
-    assert.ok(labels.includes('Just talk it through'))
+    assert.match(station, /ORB_VOICE_V2_PURPOSE_MODES/)
+    assert.match(station, /OrbVoiceV2Carousel/)
+    for (const label of ['Talk it through', 'Safeguarding concern', 'Supervision prep', 'Incident reflection']) {
+      assert.match(showstopper, new RegExp(label))
+    }
   })
 
   it('voice controls use Start conversation label', () => {
@@ -84,7 +83,7 @@ describe('ORB Residential Phase 4A Voice reflective companion', () => {
   it('single shell and no compliance guarantee language', () => {
     const shell = read('app/orb/orb-residential-shell.css')
     const station = read('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(shell, /phase-5h-voice-v2-specialist-brain/)
+    assert.match(shell, /phase-5i-voice-showstopper-convergence/)
     assert.doesNotMatch(station, /Ofsted approved|compliance guarantee|finalised record/i)
     assert.doesNotMatch(station, /ORB makes safeguarding decisions/i)
   })

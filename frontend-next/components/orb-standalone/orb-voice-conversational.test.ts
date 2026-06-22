@@ -70,10 +70,10 @@ describe('ORB Voice conversational sprint', () => {
     assert.match(hook, /voicePresetId/)
   })
 
-  it('ORB Voice modal shows v2 mode selector not raw OpenAI id', () => {
+  it('ORB Voice modal shows v2 purpose carousel not raw OpenAI id', () => {
     const station = readComponent('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(station, /ORB_VOICE_V2_MODES/)
-    assert.match(station, /data-orb-voice-v2-mode-select/)
+    assert.match(station, /ORB_VOICE_V2_PURPOSE_MODES/)
+    assert.match(station, /OrbVoiceV2Carousel/)
     assert.doesNotMatch(station, /<option[^>]*>coral<\/option>/)
     const panel = readComponent('components/orb-standalone/orb-voice-settings-panel.tsx')
     assert.match(panel, /profile\.label/)

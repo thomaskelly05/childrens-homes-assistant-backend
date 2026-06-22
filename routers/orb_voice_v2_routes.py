@@ -91,6 +91,8 @@ class OrbVoiceV2RespondRequest(BaseModel):
     transcript: str = Field(..., min_length=1, max_length=8000)
     recentTurns: list[OrbVoiceV2Turn] | None = None
     sessionMemory: dict[str, Any] | None = None
+    personality: str | None = Field(default=None, max_length=40)
+    voice: str | None = Field(default=None, max_length=40)
 
 
 class OrbVoiceV2SpeakRequest(BaseModel):
@@ -121,6 +123,8 @@ async def orb_voice_v2_respond_route(
             mode=payload.mode,
             recent_turns=[turn.model_dump() for turn in payload.recentTurns or []],
             session_memory=payload.sessionMemory,
+            personality=payload.personality,
+            voice=payload.voice,
             user_id=user_id,
             provider_id=_provider_id(current_user),
         )
@@ -139,7 +143,11 @@ async def orb_voice_v2_speak_route(
 ):
     _ = current_user
     try:
-        result = await voice_v2_speak(text=payload.text, context=payload.context or "live_voice")
+        result = await voice_v2_speak(
+            text=payload.text,
+            context=payload.context or "live_voice",
+            voice=payload.voice,
+        )
     except ORBVoiceTTSError as exc:
         raise HTTPException(status_code=exc.status_code, detail={"error": exc.code, "message": exc.message}) from exc
     headers = {

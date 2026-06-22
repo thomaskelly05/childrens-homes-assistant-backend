@@ -191,10 +191,10 @@ describe('ORB Voice companion visual convergence', () => {
     assert.doesNotMatch(css, /\.glass-orb-mark--voice \.glass-orb-mark__sphere/)
   })
 
-  it('shared voice experience includes studio waveform and hero CTA without production state panel', () => {
+  it('shared voice experience includes showstopper waveform and hero CTA without production state panel', () => {
     const hero = read('components/orb-standalone/orb-voice-hero-stage.tsx')
     const content = read('components/orb-standalone/orb-voice-station-content.tsx')
-    assert.match(hero, /OrbVoiceStudioWaveform/)
+    assert.match(hero, /OrbVoiceShowstopperWave/)
     assert.match(hero, /data-orb-voice-hero-cta/)
     assert.match(content, /cta=\{/)
     assert.doesNotMatch(hero, /OrbVoiceStatePanel/)

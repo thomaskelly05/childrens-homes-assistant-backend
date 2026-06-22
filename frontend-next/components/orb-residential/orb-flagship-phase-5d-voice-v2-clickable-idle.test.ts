@@ -36,11 +36,11 @@ describe('ORB Residential Phase 5D Voice v2 clickable idle', () => {
     assert.match(hook, /transitionState\('requesting_microphone'\)/)
   })
 
-  it('mode selector and controls layers are interactive', () => {
+  it('purpose carousel and controls layers are interactive', () => {
     const station = read('components/orb-standalone/orb-voice-station.tsx')
     const hero = read('components/orb-standalone/orb-voice-hero-stage.tsx')
     const css = read('app/orb/orb-residential-shell.css')
-    assert.match(station, /data-orb-voice-v2-mode-select/)
+    assert.match(station, /OrbVoiceV2Carousel/)
     assert.match(station, /data-orb-voice-controls/)
     assert.match(hero, /orb-voice-controls/)
     assert.match(css, /pointer-events:\s*none/)

@@ -48,6 +48,8 @@ async def voice_v2_respond(
     mode: str | None,
     recent_turns: list[dict[str, Any]] | None,
     session_memory: dict[str, Any] | None = None,
+    personality: str | None = None,
+    voice: str | None = None,
     user_id: int | None,
     provider_id: int | None,
 ) -> dict[str, Any]:
@@ -66,6 +68,8 @@ async def voice_v2_respond(
         history=history,
         recent_turns=recent_turns,
         session_memory=memory_input,
+        personality=personality,
+        voice=voice,
         user_id=user_id,
         provider_id=provider_id,
     )
@@ -91,13 +95,16 @@ async def voice_v2_respond(
     }
 
 
-async def voice_v2_speak(*, text: str, context: str = "live_voice") -> dict[str, Any]:
+async def voice_v2_speak(*, text: str, context: str = "live_voice", voice: str | None = None) -> dict[str, Any]:
     spoken, capped = cap_spoken_text(text, context=context)
     if not spoken:
         raise ORBVoiceTTSError("empty_text", "Spoken text is required.", 400)
+    voice_id = (voice or "katherine").strip().lower()
+    if voice_id != "katherine":
+        voice_id = "katherine"
     result = await synthesize_spoken_reply(
         text=spoken,
-        voice_id="katherine",
+        voice_id=voice_id,
         voice_style="calm_therapeutic",
         audio_format="mp3",
         context=context,

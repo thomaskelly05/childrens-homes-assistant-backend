@@ -50,6 +50,15 @@ _POLICY_RETRIEVAL_PHRASES = (
     "children's homes regulations",
 )
 
+_PERSONALITY_STYLE: dict[str, str] = {
+    "reflective": "Emphasise calm reflection and one thoughtful question.",
+    "direct": "Be direct and practical — fewer softeners, clear next step.",
+    "therapeutic": "Use warm therapeutic tone while staying factual and professional.",
+    "recording_focused": "Highlight what may need recording without inventing facts.",
+    "manager_oversight": "Frame for manager oversight — proportionate, accountable, escalation-aware.",
+    "safeguarding_aware": "Stay safeguarding-aware — immediate safety first, no decisions for the adult.",
+}
+
 
 def _normalise_history(history: list[dict[str, Any]] | None) -> list[dict[str, str]]:
     rows: list[dict[str, str]] = []
@@ -105,8 +114,12 @@ def _build_prompt(
     mode: str | None,
     session_memory: dict[str, Any] | None,
     route_intent: str,
+    personality: str | None = None,
 ) -> str:
     lines = [f"Reflective mode: {(mode or 'conversational').strip()}.", f"Detected intent: {route_intent}."]
+    style = _PERSONALITY_STYLE.get((personality or "reflective").strip().lower())
+    if style:
+        lines.append(f"Personality emphasis: {style}")
     memory = session_memory or {}
     if memory.get("adultTurnCount"):
         lines.append(f"Voice session turn: {memory.get('adultTurnCount')}.")
@@ -189,6 +202,8 @@ def generate_voice_response(
     history: list[dict[str, Any]] | None = None,
     session_memory: dict[str, Any] | None = None,
     recent_turns: list[dict[str, Any]] | None = None,
+    personality: str | None = None,
+    voice: str | None = None,
     user_id: int | None = None,
     provider_id: int | None = None,
     home_id: int | None = None,
@@ -227,6 +242,7 @@ def generate_voice_response(
         mode=mode,
         session_memory=updated_memory,
         route_intent=route.intent,
+        personality=personality,
     )
 
     model = VOICE_SPECIALIST_MODEL if route.brain_tier != "voice_fast" else VOICE_RESPOND_MODEL
@@ -254,6 +270,8 @@ def generate_voice_response(
             "route": "orb_voice_respond",
             "prompt_tier": route.brain_tier,
             "voice_intent": route.intent,
+            "voice_personality": (personality or "reflective"),
+            "voice_preference": (voice or "katherine"),
             "embeddings_used": False,
             "retrieval_used": policy_lookup,
             "session_only": True,

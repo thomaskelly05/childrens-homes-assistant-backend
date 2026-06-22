@@ -18,7 +18,7 @@ describe('ORB Voice v2 state machine', () => {
   it('primary labels match product copy', () => {
     assert.equal(orbVoiceV2PrimaryLabel('idle'), 'Start conversation')
     assert.equal(orbVoiceV2PrimaryLabel('listening'), 'Listening…')
-    assert.equal(orbVoiceV2PrimaryLabel('thinking'), 'ORB is thinking…')
+    assert.equal(orbVoiceV2PrimaryLabel('thinking'), 'Thinking this through…')
     assert.equal(orbVoiceV2PrimaryLabel('speaking'), 'ORB is responding…')
     assert.equal(orbVoiceV2PrimaryLabel('paused'), 'Resume')
   })
@@ -73,11 +73,11 @@ describe('ORB Voice v2 flow contracts', () => {
 })
 
 describe('ORB Residential Phase 5A Voice clean rebuild', () => {
-  it('build version marker is phase-5h-voice-v2-specialist-brain', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5h-voice-v2-specialist-brain')
+  it('build version marker is phase-5i-voice-showstopper-convergence', () => {
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5i-voice-showstopper-convergence')
     assert.match(read('app/orb/layout.tsx'), /orb-residential-shell\.css/)
     assert.deepEqual(ORB_LAYOUT_CSS_FILES, ['app/orb/orb-residential-shell.css'])
-    assert.match(read('app/orb/orb-residential-shell.css'), /phase-5h-voice-v2-specialist-brain/)
+    assert.match(read('app/orb/orb-residential-shell.css'), /phase-5i-voice-showstopper-convergence/)
   })
 
   it('active voice station uses v2 hook and not legacy voice modules', () => {

@@ -4,6 +4,7 @@ import { useCallback, useMemo, useState } from 'react'
 
 import { OrbAppModal } from '@/components/orb-standalone/orb-app-modal'
 import { OrbVoiceStationContent } from '@/components/orb-standalone/orb-voice-station-content'
+import { OrbVoiceV2Carousel } from '@/components/orb-standalone/orb-voice-v2-carousel'
 import { useOrbMobileViewport } from '@/components/orb-standalone/use-orb-mobile-viewport'
 import {
   ORB_VOICE_PANEL_MOBILE_SUBTITLE,
@@ -16,8 +17,6 @@ import {
   ORB_VOICE_V2_ADULT_REVIEW_LABEL,
   ORB_VOICE_V2_CONTINUE_CONVERSATION,
   ORB_VOICE_V2_CONTINUE_WITHOUT_VOICE,
-  ORB_VOICE_V2_MODES,
-  ORB_VOICE_V2_MODE_PROMPT,
   ORB_VOICE_V2_PLAY_ORB_VOICE,
   ORB_VOICE_V2_SAFETY_FOOTER,
   ORB_VOICE_V2_SAVE_FAILED,
@@ -30,6 +29,12 @@ import {
   ORB_VOICE_V2_TYPE_INSTEAD,
   ORB_VOICE_V2_TYPE_PLACEHOLDER
 } from '@/lib/orb/voice-v2/orb-voice-v2-copy.ts'
+import {
+  ORB_VOICE_V2_PERSONALITY_OPTIONS,
+  ORB_VOICE_V2_PURPOSE_MODES,
+  ORB_VOICE_V2_VOICE_OPTIONS
+} from '@/lib/orb/voice-v2/orb-voice-v2-showstopper.ts'
+import type { OrbVoiceV2Mode, OrbVoiceV2PersonalityId, OrbVoiceV2VoiceId } from '@/lib/orb/voice-v2/orb-voice-v2-types.ts'
 import { mapOrbVoiceV2ToCompanionState, orbVoiceV2PrimaryLabel } from '@/lib/orb/voice-v2/orb-voice-v2-state.ts'
 import { traceOrbVoiceV2StartClick } from '@/lib/orb/voice-v2/orb-voice-v2-click-trace.ts'
 import { useOrbVoiceV2 } from '@/lib/orb/voice-v2/use-orb-voice-v2.ts'
@@ -59,6 +64,7 @@ export function OrbVoiceStation({
   const voice = useOrbVoiceV2(open)
   const [saveNotice, setSaveNotice] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  const [transcriptExpanded, setTranscriptExpanded] = useState(false)
 
   const conversationLive = voice.state !== 'idle' && voice.state !== 'summary_ready'
   const workspaceMode =
@@ -104,6 +110,10 @@ export function OrbVoiceStation({
     }
     if (voice.state === 'paused') {
       void voice.continueConversation()
+      return
+    }
+    if (voice.state === 'speaking' || voice.voicePreparing) {
+      void voice.bargeIn()
     }
   }, [isSignedIn, onSignIn, primaryDisabled, voice])
 
@@ -169,27 +179,40 @@ export function OrbVoiceStation({
     }
   }, [voice.handoffPayload, voice.reflectionPacket, voice.summary])
 
-  const modeSelector = (
-    <div className="orb-voice-controls w-full max-w-sm" data-orb-voice-mode-selector data-orb-voice-controls>
-      <label className="block text-xs font-medium text-[var(--orb-muted)]" htmlFor="orb-voice-v2-mode">
-        {ORB_VOICE_V2_MODE_PROMPT}
-      </label>
-      <select
-        id="orb-voice-v2-mode"
-        className="mt-1 w-full rounded-xl border border-[var(--orb-line)]/60 bg-[var(--orb-surface)] px-3 py-2 text-sm text-[var(--orb-foreground)]"
+  const preferenceCarousels = (
+    <div className="flex w-full max-w-sm flex-col gap-3" data-orb-voice-v2-preferences>
+      <OrbVoiceV2Carousel
+        label="Purpose"
+        items={ORB_VOICE_V2_PURPOSE_MODES}
         value={voice.mode}
         disabled={conversationLive}
-        onChange={(event) => voice.setMode(event.target.value as (typeof ORB_VOICE_V2_MODES)[number]['id'])}
-        data-orb-voice-v2-mode-select
-      >
-        {ORB_VOICE_V2_MODES.map((entry) => (
-          <option key={entry.id} value={entry.id}>
-            {entry.label}
-          </option>
-        ))}
-      </select>
+        onChange={(id) => voice.setMode(id as OrbVoiceV2Mode)}
+        dataAttr="purpose"
+      />
+      <OrbVoiceV2Carousel
+        label="Voice"
+        items={ORB_VOICE_V2_VOICE_OPTIONS.map((entry) => ({
+          id: entry.id,
+          label: entry.label,
+          description: entry.configured ? entry.description : `${entry.description} (preference)`
+        }))}
+        value={voice.selectedVoice}
+        disabled={conversationLive}
+        onChange={(id) => voice.setSelectedVoice(id as OrbVoiceV2VoiceId)}
+        dataAttr="voice"
+      />
+      <OrbVoiceV2Carousel
+        label="Personality"
+        items={ORB_VOICE_V2_PERSONALITY_OPTIONS}
+        value={voice.personality}
+        disabled={conversationLive}
+        onChange={(id) => voice.setPersonality(id as OrbVoiceV2PersonalityId)}
+        dataAttr="personality"
+      />
     </div>
   )
+
+  const modeSelector = preferenceCarousels
 
   const transcriptPanel = useMemo(() => {
     if (voice.turns.length === 0 && voice.state !== 'summary_ready') return null
@@ -348,6 +371,31 @@ export function OrbVoiceStation({
         ) : (
           <p className="whitespace-pre-wrap text-sm leading-6 text-[var(--orb-foreground)]">{voice.summary}</p>
         )}
+        {voice.turns.length > 0 ? (
+          <div data-orb-voice-summary-transcript-collapsible>
+            <button
+              type="button"
+              className="text-xs font-medium text-[var(--orb-primary-blue,#168bff)] underline"
+              onClick={() => setTranscriptExpanded((current) => !current)}
+              data-orb-voice-summary-transcript-toggle
+              aria-expanded={transcriptExpanded}
+            >
+              {transcriptExpanded ? 'Hide full transcript' : 'Show full transcript'}
+            </button>
+            {transcriptExpanded ? (
+              <div className="mt-3 space-y-3 rounded-2xl border border-[var(--orb-line)]/50 p-3" data-orb-voice-summary-transcript>
+                {voice.turns.map((turn) => (
+                  <div key={turn.id} data-orb-voice-turn={turn.role}>
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--orb-muted)]">
+                      {turn.role === 'adult' ? 'Adult' : 'ORB'}
+                    </p>
+                    <p className="mt-1 text-sm leading-6 text-[var(--orb-foreground)] whitespace-pre-wrap">{turn.text}</p>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
         {saveNotice ? (
           <p className="text-xs text-[var(--orb-muted)]" role="status" data-orb-voice-save-notice>
             {saveNotice}
@@ -429,7 +477,10 @@ export function OrbVoiceStation({
             Pause
           </button>
         )}
-        <button type="button" className="orb-liquid-button rounded-full px-4 py-2 text-xs" onClick={voice.stopOrbAudio} data-orb-voice-stop-orb>
+        <button type="button" className="orb-liquid-button rounded-full px-4 py-2 text-xs" onClick={() => void voice.bargeIn()} data-orb-voice-barge-in>
+          Interrupt
+        </button>
+        <button type="button" className="orb-liquid-button rounded-full px-4 py-2 text-xs" onClick={() => voice.stopOrbAudio()} data-orb-voice-stop-orb>
           Stop ORB
         </button>
         <button type="button" className="orb-liquid-button rounded-full px-4 py-2 text-xs" onClick={voice.resetLiveSession} data-orb-voice-reset>
@@ -480,9 +531,11 @@ export function OrbVoiceStation({
         data-orb-voice-playback-blocked={voice.playbackBlocked ? true : undefined}
         data-orb-voice-audio-unlocked={voice.audioUnlocked ? true : undefined}
         data-orb-voice-preparing-long={voice.voicePreparingLongWait ? true : undefined}
+        data-orb-voice-acknowledgement={voice.acknowledgement ?? undefined}
       >
         <OrbVoiceStationContent
           companionState={companionState}
+          voiceV2State={voice.state}
           statusLine={statusLine}
           detailLine={voice.detailLine}
           workspaceMode={workspaceMode}

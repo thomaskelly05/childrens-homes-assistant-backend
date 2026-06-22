@@ -9,11 +9,15 @@ import {
   type OrbVoiceCompanionState
 } from '@/components/orb-residential/orb-voice-companion'
 import { useOrbResponsiveMode } from '@/components/orb-standalone/use-orb-responsive-mode'
-import { OrbVoiceStudioWaveform } from '@/components/orb-standalone/orb-voice-studio-layout'
+import {
+  OrbVoiceShowstopperWave,
+  mapVoiceStateToShowstopperWave
+} from '@/components/orb-standalone/orb-voice-showstopper-wave'
 
 /** Shared hero column — living head, headline, waveform, CTA, and status for Voice stations. */
 export function OrbVoiceHeroStage({
   companionState,
+  voiceV2State,
   statusLine,
   detailLine,
   middleSlot,
@@ -22,6 +26,8 @@ export function OrbVoiceHeroStage({
   heroStageId = 'desktop'
 }: {
   companionState: OrbVoiceCompanionState
+  /** Raw Voice v2 state for premium showstopper waveform (includes interrupted). */
+  voiceV2State?: string
   statusLine?: string
   detailLine?: string | null
   /** Idle-mode controls shown between the ORB waveform and primary action. */
@@ -70,7 +76,10 @@ export function OrbVoiceHeroStage({
         </p>
       ) : null}
 
-      <OrbVoiceStudioWaveform state={companionState} className="orb-voice-hero-stage__waveform" />
+      <OrbVoiceShowstopperWave
+        state={mapVoiceStateToShowstopperWave(voiceV2State ?? companionState)}
+        className="orb-voice-hero-stage__waveform"
+      />
 
       {middleSlot ? (
         <div className="orb-voice-controls orb-voice-hero-stage__modes w-full" data-orb-voice-main-mode-controls data-orb-voice-controls>

@@ -3,10 +3,12 @@ import { authFetchResponse } from '@/lib/auth/api'
 import { resolveOrbVoiceV2KatherineStatusMessage } from './orb-voice-v2-permissions.ts'
 import type {
   OrbVoiceV2Mode,
+  OrbVoiceV2PersonalityId,
   OrbVoiceV2RespondResult,
   OrbVoiceV2SessionMemory,
   OrbVoiceV2SpeakResult,
-  OrbVoiceV2Status
+  OrbVoiceV2Status,
+  OrbVoiceV2VoiceId
 } from './orb-voice-v2-types.ts'
 import { ORB_VOICE_V2_LIVE_SPOKEN_CAP, ORB_VOICE_V2_LIVE_SPOKEN_MAX_WORDS } from './orb-voice-v2-copy.ts'
 
@@ -46,6 +48,8 @@ export async function requestOrbVoiceV2Respond(input: {
   transcript: string
   recentTurns: Array<{ role: 'adult' | 'orb'; text: string }>
   sessionMemory?: OrbVoiceV2SessionMemory | null
+  personality?: OrbVoiceV2PersonalityId
+  voice?: OrbVoiceV2VoiceId
 }): Promise<OrbVoiceV2RespondResult> {
   const response = await authFetchResponse('/orb/voice/v2/respond', {
     method: 'POST',
@@ -54,7 +58,9 @@ export async function requestOrbVoiceV2Respond(input: {
       mode: input.mode,
       transcript: input.transcript.trim(),
       recentTurns: input.recentTurns,
-      sessionMemory: input.sessionMemory ?? undefined
+      sessionMemory: input.sessionMemory ?? undefined,
+      personality: input.personality ?? undefined,
+      voice: input.voice ?? undefined
     })
   })
   if (!response.ok) {
@@ -80,7 +86,10 @@ export async function requestOrbVoiceV2Respond(input: {
   }
 }
 
-export async function requestOrbVoiceV2Speak(text: string): Promise<OrbVoiceV2SpeakResult> {
+export async function requestOrbVoiceV2Speak(
+  text: string,
+  options?: { voice?: string; context?: string }
+): Promise<OrbVoiceV2SpeakResult> {
   const trimmed = text.trim().slice(0, ORB_VOICE_V2_LIVE_SPOKEN_CAP)
   if (!trimmed) return { ok: false, error: 'empty_text' }
   try {
@@ -90,7 +99,11 @@ export async function requestOrbVoiceV2Speak(text: string): Promise<OrbVoiceV2Sp
         'Content-Type': 'application/json',
         Accept: 'audio/mpeg, audio/mp4, application/json'
       },
-      body: JSON.stringify({ text: trimmed, voice: 'katherine', context: 'live_voice' })
+      body: JSON.stringify({
+        text: trimmed,
+        voice: options?.voice ?? 'katherine',
+        context: options?.context ?? 'live_voice'
+      })
     })
     if (!response.ok) {
       return { ok: false, error: `tts_${response.status}` }

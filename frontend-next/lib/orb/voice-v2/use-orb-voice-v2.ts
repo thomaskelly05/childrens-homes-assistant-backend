@@ -48,19 +48,31 @@ import {
   isOrbVoiceV2TurnSubstantial,
   traceOrbVoiceV2IgnoredTinyTurn
 } from './orb-voice-v2-turn-guard.ts'
+import {
+  ORB_VOICE_V2_THINKING_COPY,
+  pickOrbVoiceV2Acknowledgement,
+  resolveSpeakVoiceId,
+  traceOrbVoiceV2BargeIn
+} from './orb-voice-v2-showstopper.ts'
 import type {
   OrbVoiceV2HandoffPayload,
   OrbVoiceV2Intent,
   OrbVoiceV2Mode,
   OrbVoiceV2PermissionState,
+  OrbVoiceV2PersonalityId,
   OrbVoiceV2SessionMemory,
   OrbVoiceV2State,
-  OrbVoiceV2Turn
+  OrbVoiceV2Turn,
+  OrbVoiceV2VoiceId
 } from './orb-voice-v2-types.ts'
 
 export function useOrbVoiceV2(open: boolean) {
   const [state, setState] = useState<OrbVoiceV2State>('idle')
   const [mode, setMode] = useState<OrbVoiceV2Mode>('just_talk')
+  const [personality, setPersonality] = useState<OrbVoiceV2PersonalityId>('reflective')
+  const [selectedVoice, setSelectedVoice] = useState<OrbVoiceV2VoiceId>('katherine')
+  const [acknowledgement, setAcknowledgement] = useState<string | null>(null)
+  const [voicePreferenceNotice, setVoicePreferenceNotice] = useState<string | null>(null)
   const [turns, setTurns] = useState<OrbVoiceV2Turn[]>([])
   const [summary, setSummary] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -94,12 +106,19 @@ export function useOrbVoiceV2(open: boolean) {
   const stateRef = useRef(state)
   const turnsRef = useRef(turns)
   const modeRef = useRef(mode)
+  const personalityRef = useRef(personality)
+  const selectedVoiceRef = useRef(selectedVoice)
   const autoResumeBlockedRef = useRef(false)
   const conversationStartedRef = useRef(false)
+  const recentAcksRef = useRef<string[]>([])
+  const speakGenerationRef = useRef(0)
+  const bargeInRef = useRef(false)
 
   stateRef.current = state
   turnsRef.current = turns
   modeRef.current = mode
+  personalityRef.current = personality
+  selectedVoiceRef.current = selectedVoice
   autoResumeBlockedRef.current = autoResumeBlocked
 
   const applyKatherineStatus = useCallback((status: Awaited<ReturnType<typeof fetchOrbVoiceV2Status>>) => {
@@ -140,6 +159,11 @@ export function useOrbVoiceV2(open: boolean) {
     setTinyTurnNotice(null)
     setSessionMemory(null)
     setLastIntent(null)
+    setAcknowledgement(null)
+    setVoicePreferenceNotice(null)
+    recentAcksRef.current = []
+    speakGenerationRef.current = 0
+    bargeInRef.current = false
     setError(null)
     setVoicePreparing(false)
     setVoicePreparingLongWait(false)
@@ -158,7 +182,6 @@ export function useOrbVoiceV2(open: boolean) {
       resetLiveSession()
       return
     }
-    resetLiveSession()
     void fetchOrbVoiceV2Status().then(applyKatherineStatus)
   }, [applyKatherineStatus, open, resetLiveSession])
 
@@ -231,21 +254,28 @@ export function useOrbVoiceV2(open: boolean) {
     })()
   }, [])
 
-  const stopOrbAudio = useCallback(() => {
-    if (audioRef.current) {
-      try {
-        audioRef.current.pause()
-      } catch {
-        /* ignore */
+  const stopOrbAudio = useCallback(
+    (options?: { interrupted?: boolean }) => {
+      if (audioRef.current) {
+        try {
+          audioRef.current.pause()
+        } catch {
+          /* ignore */
+        }
+        audioRef.current = null
       }
-      audioRef.current = null
-    }
-    disposeOrbVoiceV2PlaybackSession(pendingPlaybackRef.current)
-    pendingPlaybackRef.current = null
-    setPlaybackState('idle')
-    clearVoicePreparing()
-    if (stateRef.current === 'speaking') setState('paused')
-  }, [clearVoicePreparing])
+      disposeOrbVoiceV2PlaybackSession(pendingPlaybackRef.current)
+      pendingPlaybackRef.current = null
+      setPlaybackState('idle')
+      clearVoicePreparing()
+      if (options?.interrupted) {
+        transitionState('interrupted')
+        return
+      }
+      if (stateRef.current === 'speaking') setState('paused')
+    },
+    [clearVoicePreparing, transitionState]
+  )
 
   const speakReplyRef = useRef<(turnId: string, text: string) => Promise<void>>(async () => {})
 
@@ -343,16 +373,21 @@ export function useOrbVoiceV2(open: boolean) {
   const speakReply = useCallback(
     async (turnId: string, text: string) => {
       if (spokenTurnKeysRef.current.has(turnId)) return
+      if (bargeInRef.current) return
       spokenTurnKeysRef.current.add(turnId)
+      const generation = speakGenerationRef.current
       const spoken = capOrbVoiceV2SpokenText(text)
       if (!spoken) {
         void tryAutoResumeListening()
         return
       }
+      const { voice, fallbackNotice } = resolveSpeakVoiceId(selectedVoiceRef.current, katherineReady)
+      if (fallbackNotice) setVoicePreferenceNotice(fallbackNotice)
       setVoicePreparing(true)
       prepareTimerRef.current = window.setTimeout(() => setVoicePreparingLongWait(true), 2500)
       skipTimerRef.current = window.setTimeout(() => setVoicePreparingSkipAvailable(true), 6000)
-      const result = await requestOrbVoiceV2Speak(spoken)
+      const result = await requestOrbVoiceV2Speak(spoken, { voice })
+      if (generation !== speakGenerationRef.current || bargeInRef.current) return
       if (!result.ok || !result.blob) {
         clearVoicePreparing()
         void tryAutoResumeListening()
@@ -383,8 +418,16 @@ export function useOrbVoiceV2(open: boolean) {
       session.audio.onended = finishPlayback
       session.audio.onerror = finishPlayback
 
+      if (generation !== speakGenerationRef.current || bargeInRef.current) {
+        disposeOrbVoiceV2PlaybackSession(session)
+        return
+      }
       setState('speaking')
       const playResult = await playOrbVoiceV2Audio(session)
+      if (generation !== speakGenerationRef.current || bargeInRef.current) {
+        finishPlayback()
+        return
+      }
       if (playResult.ok) {
         setPlaybackState('playing')
         setPermissionState('ready')
@@ -401,7 +444,7 @@ export function useOrbVoiceV2(open: boolean) {
       setPlaybackState('failed')
       finishPlayback()
     },
-    [applyKatherineStatus, clearVoicePreparing, tryAutoResumeListening]
+    [applyKatherineStatus, clearVoicePreparing, katherineReady, tryAutoResumeListening]
   )
 
   const playOrbVoice = useCallback(async () => {
@@ -441,6 +484,10 @@ export function useOrbVoiceV2(open: boolean) {
         return
       }
       setTinyTurnNotice(null)
+      bargeInRef.current = false
+      const ack = pickOrbVoiceV2Acknowledgement(recentAcksRef.current)
+      recentAcksRef.current = [...recentAcksRef.current, ack].slice(-3)
+      setAcknowledgement(ack)
       const adultTurn = createOrbVoiceV2Turn('adult', trimmed)
       const nextTurns = [...turnsRef.current, adultTurn]
       setTurns(nextTurns)
@@ -450,8 +497,12 @@ export function useOrbVoiceV2(open: boolean) {
           mode: modeRef.current,
           transcript: trimmed,
           recentTurns: orbVoiceV2RecentTurns(nextTurns),
-          sessionMemory: sessionMemory
+          sessionMemory: sessionMemory,
+          personality: personalityRef.current,
+          voice: selectedVoiceRef.current
         })
+        if (bargeInRef.current) return
+        setAcknowledgement(null)
         if (response.sessionMemory) setSessionMemory(response.sessionMemory)
         if (response.intent) setLastIntent(response.intent)
         const orbTurn = createOrbVoiceV2Turn('orb', response.reply)
@@ -528,6 +579,21 @@ export function useOrbVoiceV2(open: boolean) {
     void resumeListening({ fromUserGesture: true })
   }, [resumeListening, stopOrbAudio])
 
+  const bargeIn = useCallback(async () => {
+    if (stateRef.current !== 'speaking' && playbackState !== 'playing' && !voicePreparing) return
+    speakGenerationRef.current += 1
+    bargeInRef.current = true
+    traceOrbVoiceV2BargeIn()
+    stopOrbAudio({ interrupted: true })
+    setAcknowledgement(null)
+    setVoicePreparing(false)
+    try {
+      await resumeListening({ fromUserGesture: true })
+    } finally {
+      bargeInRef.current = false
+    }
+  }, [playbackState, resumeListening, stopOrbAudio, voicePreparing])
+
   const sendTypedTurn = useCallback(async () => {
     const trimmed = typedDraft.trim()
     if (!trimmed) return
@@ -544,18 +610,30 @@ export function useOrbVoiceV2(open: boolean) {
   const playbackBlocked = playbackState === 'blocked'
   const detailLine =
     tinyTurnNotice ||
+    acknowledgement ||
+    (state === 'thinking' ? ORB_VOICE_V2_THINKING_COPY : null) ||
     (state === 'listening' || state === 'speech_detected'
       ? ORB_VOICE_V2_LISTENING_HINT
       : voicePreparing && state === 'speaking'
         ? ORB_VOICE_V2_PREPARING_VOICE
         : playbackBlocked
           ? ORB_VOICE_V2_AUDIO_PLAYBACK_BLOCKED
-          : permissionNotice || error || audioUnlockNotice || turnFallbackNotice || fallbackNotice)
+          : voicePreferenceNotice ||
+            permissionNotice ||
+            error ||
+            audioUnlockNotice ||
+            turnFallbackNotice ||
+            fallbackNotice)
 
   return {
     state,
     mode,
     setMode,
+    personality,
+    setPersonality,
+    selectedVoice,
+    setSelectedVoice,
+    acknowledgement,
     turns,
     summary,
     reflectionPacket,
@@ -583,6 +661,7 @@ export function useOrbVoiceV2(open: boolean) {
     playOrbVoice,
     pauseConversation,
     stopOrbAudio,
+    bargeIn,
     endAndSummarise,
     resetLiveSession,
     continueWithoutVoice,

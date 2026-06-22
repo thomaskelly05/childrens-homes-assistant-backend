@@ -14,9 +14,20 @@ export type OrbVoiceV2State =
   | 'transcribing'
   | 'thinking'
   | 'speaking'
+  | 'interrupted'
   | 'paused'
   | 'summary_ready'
   | 'error'
+
+export type OrbVoiceV2PersonalityId =
+  | 'reflective'
+  | 'direct'
+  | 'therapeutic'
+  | 'recording_focused'
+  | 'manager_oversight'
+  | 'safeguarding_aware'
+
+export type OrbVoiceV2VoiceId = 'katherine' | 'alex' | 'maya' | 'noah'
 
 export type OrbVoiceV2Mode =
   | 'incident_reflection'
@@ -25,6 +36,8 @@ export type OrbVoiceV2Mode =
   | 'daily_reflection'
   | 'missing_from_home_debrief'
   | 'wording_support'
+  | 'manager_oversight'
+  | 'key_work_prep'
   | 'just_talk'
 
 export type OrbVoiceV2Turn = {

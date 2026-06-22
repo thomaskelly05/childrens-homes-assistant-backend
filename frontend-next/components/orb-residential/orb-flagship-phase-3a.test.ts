@@ -17,7 +17,7 @@ function read(relativePath: string) {
 
 describe('ORB Residential Phase 3A specialist station alignment', () => {
   it('build version marker is phase-3b', () => {
-    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5h-voice-v2-specialist-brain')
+    assert.equal(ORB_BUILD_VISUAL_VERSION, 'phase-5i-voice-showstopper-convergence')
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
     const layout = read('app/orb/layout.tsx')
     assert.match(companion, /data-orb-build-version=\{ORB_BUILD_VISUAL_VERSION\}/)
@@ -35,17 +35,17 @@ describe('ORB Residential Phase 3A specialist station alignment', () => {
     const selector = read('components/orb-residential/orb-voice-mode-selector.tsx')
     const carousel = read('lib/orb/orb-voice-mode-carousel.ts')
     const voice = read('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(voice, /data-orb-voice-v2-mode-select|ORB_VOICE_V2_MODES/)
+    assert.match(voice, /OrbVoiceV2Carousel|ORB_VOICE_V2_PURPOSE_MODES/)
     for (const label of ['Calm', 'Warm', 'Direct', 'Reflective']) {
       assert.match(carousel, new RegExp(`label: '${label}'`))
     }
     for (const label of [
       'Talk it through',
-      'Safeguarding thinking',
+      'Safeguarding concern',
       'Supervision prep',
-      'Clear summary'
+      'Help me record this'
     ]) {
-      assert.match(carousel, new RegExp(`label: '${label}'`))
+      assert.match(read('lib/orb/voice-v2/orb-voice-v2-showstopper.ts'), new RegExp(label))
     }
     assert.match(selector, /data-orb-voice-style-option/)
     assert.match(selector, /data-orb-voice-reasoning-option/)

@@ -97,8 +97,8 @@ describe('ORB Residential Phase 2A identity and station maturity', () => {
   it('voice mode selector exists and is accessible', () => {
     const voice = read('components/orb-standalone/orb-voice-station.tsx')
     const selector = read('components/orb-residential/orb-voice-mode-selector.tsx')
-    assert.match(voice, /data-orb-voice-v2-mode-select|ORB_VOICE_V2_MODES/)
-    assert.match(selector, /data-orb-voice-mode-selector/)
+    assert.match(voice, /OrbVoiceV2Carousel|ORB_VOICE_V2_PURPOSE_MODES/)
+    assert.match(voice, /data-orb-voice-v2-preferences/)
     assert.match(selector, /role="radio"/)
     assert.match(selector, /data-orb-voice-style-controls/)
     assert.match(selector, /data-orb-voice-reasoning-option/)
