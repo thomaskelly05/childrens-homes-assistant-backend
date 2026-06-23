@@ -10,10 +10,16 @@ from pydantic import BaseModel, Field
 from auth.orb_standalone_premium_dependency import (
     require_rich_orb_premium_access as require_standalone_orb_access,
 )
+from schemas.orb_template_working_document import (
+    OrbTemplateSectionOrbHelpRequest,
+    OrbTemplateWorkingDocumentBuildRequest,
+    OrbTemplateWorkingDocumentSaveRequest,
+)
 from services.orb_template_generation_service import orb_template_generation_service
 from services.orb_template_library_registry import orb_template_library_registry
 from services.orb_template_taxonomy_service import orb_template_taxonomy_service
 from services.orb_regulation_practice_anchor_service import orb_regulation_practice_anchor_service
+from services.orb_template_working_document_service import orb_template_working_document_service
 
 router = APIRouter(prefix="/templates", tags=["ORB Templates"])
 
@@ -197,6 +203,190 @@ async def get_taxonomy_entry(
     if not entry:
         raise HTTPException(status_code=404, detail="Template taxonomy entry not found")
     return _success(entry)
+
+
+class WorkingDocumentBuildBody(BaseModel):
+    title: str | None = None
+    source_station: str = "write"
+    context_text: str | None = None
+    home_id: str | None = None
+    child_id: str | None = None
+    linked_home_document_ids: list[str] = Field(default_factory=list)
+
+
+class WorkingDocumentFromContentBody(BaseModel):
+    content: str = Field(..., min_length=1, max_length=500_000)
+    source_station: str = "chat"
+
+
+class WorkingDocumentChartBody(BaseModel):
+    document_id: str
+    table_id: str
+    chart_type: str
+
+
+class WorkingDocumentOrbHelpBody(BaseModel):
+    document_id: str
+    section_id: str
+    instruction: str = Field(..., min_length=1, max_length=2000)
+    current_body: str | None = None
+
+
+@router.post("/working-document/build")
+async def build_working_document(
+    body: OrbTemplateWorkingDocumentBuildRequest,
+    current_user=Depends(require_standalone_orb_access),
+):
+    try:
+        context = body.model_dump(exclude={"template_id"})
+        context["owner_user_id"] = str(getattr(current_user, "id", ""))
+        context["user_context"] = {
+            "user_id": getattr(current_user, "id", 0),
+            "current_user": current_user if isinstance(current_user, dict) else {"id": getattr(current_user, "id", 0)},
+        }
+        doc = orb_template_working_document_service.build_working_document(
+            body.template_id, context
+        )
+        return _success(doc.model_dump())
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.get("/working-document/search")
+async def search_working_document_templates(
+    q: str = Query("", max_length=200),
+    station: str | None = None,
+    current_user=Depends(require_standalone_orb_access),
+):
+    _ = current_user
+    templates = orb_template_taxonomy_service.search(q, station=station) if q else []
+    if not templates and not q:
+        templates = orb_template_taxonomy_service.templates_for_station(station or "write")
+    return _success({"query": q, "station": station or "write", "templates": templates})
+
+
+@router.get("/working-document/{template_id}/components")
+async def suggest_working_document_components(
+    template_id: str,
+    current_user=Depends(require_standalone_orb_access),
+):
+    _ = current_user
+    try:
+        return _success(orb_template_working_document_service.suggest_document_components(template_id))
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.post("/working-document/{template_id}/open")
+async def open_working_document(
+    template_id: str,
+    body: WorkingDocumentBuildBody,
+    current_user=Depends(require_standalone_orb_access),
+):
+    try:
+        context = body.model_dump()
+        context["owner_user_id"] = str(getattr(current_user, "id", ""))
+        context["user_context"] = {
+            "user_id": getattr(current_user, "id", 0),
+            "current_user": current_user if isinstance(current_user, dict) else {"id": getattr(current_user, "id", 0)},
+        }
+        doc = orb_template_working_document_service.build_working_document(template_id, context)
+        return _success(doc.model_dump())
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.post("/working-document/{template_id}/from-answer")
+async def convert_answer_to_working_document(
+    template_id: str,
+    body: WorkingDocumentFromContentBody,
+    current_user=Depends(require_standalone_orb_access),
+):
+    _ = current_user
+    try:
+        doc = orb_template_working_document_service.convert_answer_to_working_document(
+            body.content, template_id, source_station=body.source_station
+        )
+        return _success(doc.model_dump())
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.post("/working-document/{template_id}/from-dictation")
+async def convert_dictation_to_working_document(
+    template_id: str,
+    body: WorkingDocumentFromContentBody,
+    current_user=Depends(require_standalone_orb_access),
+):
+    _ = current_user
+    try:
+        doc = orb_template_working_document_service.convert_dictation_to_working_document(
+            body.content, template_id, source_station=body.source_station or "dictate"
+        )
+        return _success(doc.model_dump())
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.post("/working-document/section-orb-help")
+async def working_document_section_orb_help(
+    body: WorkingDocumentOrbHelpBody,
+    current_user=Depends(require_standalone_orb_access),
+):
+    _ = current_user
+    return _success(
+        orb_template_working_document_service.update_section_with_orb_help(
+            body.document_id,
+            body.section_id,
+            body.instruction,
+            current_body=body.current_body,
+        )
+    )
+
+
+@router.post("/working-document/generate-chart")
+async def working_document_generate_chart(
+    body: WorkingDocumentChartBody,
+    current_user=Depends(require_standalone_orb_access),
+):
+    _ = current_user
+    return _success(
+        orb_template_working_document_service.generate_chart_from_table(
+            body.document_id, body.table_id, body.chart_type
+        )
+    )
+
+
+@router.post("/working-document/save")
+async def save_working_document(
+    body: OrbTemplateWorkingDocumentSaveRequest,
+    current_user=Depends(require_standalone_orb_access),
+):
+    user_id = getattr(current_user, "id", None)
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    result = orb_template_working_document_service.save_working_document_to_records_workspace(
+        body.document,
+        user_id=int(user_id),
+        workspace_section=body.workspace_section,
+    )
+    return _success(result)
+
+
+@router.get("/working-document/{template_id}/home-documents")
+async def list_template_home_documents(
+    template_id: str,
+    current_user=Depends(require_standalone_orb_access),
+):
+    user_context = {
+        "user_id": getattr(current_user, "id", 0),
+        "current_user": current_user if isinstance(current_user, dict) else {"id": getattr(current_user, "id", 0)},
+    }
+    return _success(
+        orb_template_working_document_service.list_relevant_home_documents_for_template(
+            template_id, user_context
+        )
+    )
 
 
 @router.get("/{template_id}")

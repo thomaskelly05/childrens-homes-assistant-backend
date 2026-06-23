@@ -20,11 +20,14 @@ export type OrbOutputReuseAction =
   | 'incident_reflective'
   | 'explain_criteria'
   | 'assessor_feedback'
+  | 'use_template_in_write'
+  | 'turn_into_record'
 
 export type OrbSuggestedReplyItem = {
   action: OrbOutputReuseAction
   label: string
   prefill?: string
+  template_id?: string
 }
 
 /** Contextual reuse chips for document intelligence and action-engine results. */
