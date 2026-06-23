@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import time
 from typing import Any
 
@@ -129,8 +130,50 @@ SIMPLE_STANDARD_CONTRACT_FAMILIES = frozenset(
         "make_more_concise",
         "convert_to_recording_wording",
         "voice_response",
+        "incident_record",
+        "child_voice_evidence_recording",
     }
 )
+
+# Governance / oversight prep — concise residential framing without full institutional banks.
+RESIDENTIAL_CONCISE_GOVERNANCE_FAMILIES = frozenset(
+    {
+        "reg44_visitor",
+        "ofsted_preparation",
+        "manager_oversight_note",
+    }
+)
+
+
+def _qualifies_for_residential_concise_contract(
+    family_id: str | None,
+    family: dict[str, Any],
+    lower: str,
+) -> bool:
+    """Shift-speed concise path for everyday recording and governance prep prompts."""
+    if not family_id or any(term in lower for term in HIGH_RISK_TERMS):
+        return False
+    if family_id == "incident_record" and re.search(
+        r"whistleblow|protected\s+disclosure|falsifying\s+records|"
+        r"colleague'?s?\s+conduct\s+towards\s+children",
+        lower,
+        re.I,
+    ):
+        return False
+    if family_id == "missing_return_record" and re.search(
+        r"late\s+return.{0,50}not\s+yet\s+(?:a\s+)?missing|how\s+do\s+we\s+record\s+a\s+late\s+return",
+        lower,
+        re.I,
+    ):
+        return True
+    if family_id in SIMPLE_STANDARD_CONTRACT_FAMILIES and family.get("depth_tier") in {
+        "standard",
+        "light",
+    }:
+        return True
+    if family_id in RESIDENTIAL_CONCISE_GOVERNANCE_FAMILIES:
+        return True
+    return False
 
 
 def _text(value: Any) -> str:
@@ -175,11 +218,7 @@ class OrbKnowledgeRetrievalService:
 
         family_id = detect_contract_family(message)
         family = get_contract_family(family_id) or {}
-        is_simple_standard = (
-            family_id in SIMPLE_STANDARD_CONTRACT_FAMILIES
-            and family.get("depth_tier") == "standard"
-            and not any(term in lower for term in HIGH_RISK_TERMS)
-        )
+        is_simple_standard = _qualifies_for_residential_concise_contract(family_id, family, lower)
         module_cap = 1 if is_simple_standard else 8
         selected_modules = select_relevant_python_knowledge(message, max_modules=module_cap)
         module_sources = build_knowledge_source_summary(selected_modules)
@@ -414,8 +453,13 @@ class OrbKnowledgeRetrievalService:
         elif depth in ("residential_light", "residential_standard") and prompt_tier == "fast":
             prompt_tier = "residential"
         if family_prompt_cap and tier_order.index(prompt_tier) > tier_order.index(str(family_prompt_cap)):
-            prompt_tier = str(family_prompt_cap)
-        if family_id in {
+            if depth != "safeguarding_critical":
+                prompt_tier = str(family_prompt_cap)
+        if family and family.get("depth_tier") == "mandatory":
+            mandatory_cap = str(family.get("prompt_tier_cap") or "deep")
+            if mandatory_cap == "deep" and prompt_tier not in {"deep", "fast"}:
+                prompt_tier = "deep"
+        concise_deep_to_residential = {
             "accessible_child_support_plan",
             "template_generation",
             "daily_record",
@@ -424,7 +468,49 @@ class OrbKnowledgeRetrievalService:
             "medication_refusal_guidance",
             "keywork_session",
             "policy_practice_question",
-        } and prompt_tier == "deep":
+            "child_voice_evidence_recording",
+            *RESIDENTIAL_CONCISE_GOVERNANCE_FAMILIES,
+        }
+        if family_id in concise_deep_to_residential and prompt_tier == "deep":
+            prompt_tier = "residential"
+        if family_id == "policy_practice_question" and prompt_tier == "deep":
+            prompt_tier = "residential"
+        if (
+            family_id == "incident_record"
+            and prompt_tier == "deep"
+            and is_simple_standard
+            and not any(term in _lower(message) for term in HIGH_RISK_TERMS)
+            and not re.search(
+                r"physical\s+intervention|restraint|restrictive\s+physical",
+                _lower(message),
+                re.I,
+            )
+        ):
+            prompt_tier = "residential"
+        if family_id == "incident_record" and re.search(
+            r"whistleblow|protected\s+disclosure|falsifying\s+records|"
+            r"colleague'?s?\s+conduct\s+towards\s+children",
+            _lower(message),
+            re.I,
+        ) and re.search(r"record|recording", _lower(message), re.I):
+            prompt_tier = "deep"
+        if family_id == "incident_record" and re.search(
+            r"physical\s+intervention|restraint|restrictive\s+physical",
+            _lower(message),
+            re.I,
+        ):
+            if re.search(
+                r"\b(?:help\s+me\s+record|record\s+a|recording\s+and\s+escalation|hurt|injury)\b",
+                _lower(message),
+                re.I,
+            ) and not re.search(r"debrief|post-incident|belongs\s+in", _lower(message), re.I):
+                if prompt_tier not in {"deep", "fast"}:
+                    prompt_tier = "deep"
+        if family_id == "missing_return_record" and re.search(
+            r"late\s+return.{0,50}not\s+yet\s+(?:a\s+)?missing|how\s+do\s+we\s+record\s+a\s+late\s+return",
+            _lower(message),
+            re.I,
+        ):
             prompt_tier = "residential"
         retrieval_count = len(packs) + len((spine.get("modules") or {}))
         if expert_block:
