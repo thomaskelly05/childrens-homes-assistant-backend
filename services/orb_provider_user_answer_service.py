@@ -9,6 +9,7 @@ from typing import Any
 
 from assistant.knowledge.adult_identity_language import (
     strip_indicare_product_boilerplate,
+    sanitize_visible_final_answer,
     user_asked_about_indicare,
 )
 
@@ -121,6 +122,9 @@ def sanitize_user_visible_provider_answer(
         issue = "product_boilerplate_leakage"
 
     if not issue:
+        polished = sanitize_visible_final_answer(text, source_text=source_text)
+        if polished != text:
+            return polished, None
         return text, None
 
     if not is_sign_off_or_deployed_context():

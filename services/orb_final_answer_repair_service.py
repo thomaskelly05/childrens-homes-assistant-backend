@@ -10,11 +10,7 @@ from services.orb_final_answer_contract_validator_service import validate_final_
 from services.orb_placeholder_quality_guard_service import sanitize_placeholders_in_answer
 from services.orb_execution_policy_service import MISSING_RETURN_SUBSTANCE_DETERMINISTIC_ANSWER
 from services.orb_mandatory_response_contract_service import find_inappropriate_lado_reference
-from assistant.knowledge.adult_identity_language import (
-    is_record_generation_request,
-    sanitize_live_record_output,
-    sanitize_residential_answer_polish,
-)
+from assistant.knowledge.adult_identity_language import sanitize_visible_final_answer
 from assistant.knowledge.residential_safeguarding_terminology import (
     find_inappropriate_dsl_reference,
     find_inappropriate_medication_error_reference,
@@ -229,10 +225,8 @@ def apply_deterministic_repairs(
 
 
 def _apply_record_output_discipline(answer: str, *, message: str) -> str:
-    polished = sanitize_residential_answer_polish(answer, source_text=message)
-    if not is_record_generation_request(message):
-        return polished
-    return sanitize_live_record_output(polished, source_text=message)
+    polished = sanitize_visible_final_answer(answer, source_text=message)
+    return polished
 
 
 def _apply_residential_answer_polish(answer: str, *, message: str) -> str:

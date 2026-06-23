@@ -11,6 +11,7 @@ from assistant.knowledge.adult_identity_language import (
     apply_adult_identity_language,
     fix_broken_adult_heading_wording,
     sanitize_residential_answer_polish,
+    sanitize_visible_final_answer,
     strip_inline_source_basis_block,
     strip_indicare_product_boilerplate,
     strip_internal_prompt_leakage,
@@ -76,6 +77,28 @@ def test_how_the_adult_responded_repaired():
     fixed = fix_broken_adult_heading_wording(raw)
     assert "how The adult responded" not in fixed
     assert "how staff responded" in fixed
+
+
+def test_specific_the_adult_interactions_repaired():
+    raw = "Include specific the adult interactions in the record."
+    fixed = fix_broken_adult_heading_wording(raw)
+    assert "specific the adult interactions" not in fixed
+    assert "specific staff interactions" in fixed
+
+
+def test_visible_final_sanitizer_on_routine_daily_record_form():
+    form_like = (
+        "Daily Record: [Date]\nYoung Person: [Name]\n"
+        "staff present: [Names of staff present]\nManager Review: [Manager's name]"
+    )
+    prompt = (
+        "Help me write a daily record — calm breakfast, chose toast, watched TV before handover."
+    )
+    cleaned = sanitize_visible_final_answer(form_like, source_text=prompt)
+    lower = cleaned.lower()
+    assert "manager review" not in lower
+    assert "here is a simple daily record draft" in lower
+    assert "before saving" in lower
 
 
 def test_apply_adult_identity_preserves_how_staff_responded():
