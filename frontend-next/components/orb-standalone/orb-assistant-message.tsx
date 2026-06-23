@@ -205,6 +205,7 @@ function OrbStreamingSkeleton() {
 
 export function OrbAssistantMessageBody({
   content,
+  instantPrelude,
   sources,
   mode,
   streaming,
@@ -222,6 +223,7 @@ export function OrbAssistantMessageBody({
   onManagerOversight
 }: {
   content: string
+  instantPrelude?: string
   sources?: StandaloneOrbSource[]
   mode: string
   streaming?: boolean
@@ -251,17 +253,19 @@ export function OrbAssistantMessageBody({
   const founderDebugAccess = userHasFounderAccess(userRole)
   const residentialCalmChat = isOrbResidentialCalmActiveChat(residentialSurface)
   const displayContent = stripSourcesBasisSection(content)
+  const preludeText = (instantPrelude || '').trim()
+  const showTypingCursor = Boolean(streaming && displayContent.trim())
   const displayStreamStatus = sanitiseOrbUserFacingStatus(streamStatus)
   const [showSkeleton, setShowSkeleton] = useState(false)
 
   useEffect(() => {
-    if (!streaming || displayContent.trim()) {
+    if (!streaming || displayContent.trim() || preludeText) {
       setShowSkeleton(false)
       return
     }
     const timer = window.setTimeout(() => setShowSkeleton(true), 120)
     return () => window.clearTimeout(timer)
-  }, [streaming, displayContent])
+  }, [streaming, displayContent, preludeText])
 
   return (
     <article
@@ -296,9 +300,25 @@ export function OrbAssistantMessageBody({
           </p>
         ) : null}
         <div className={`orb-message-content text-[15px] leading-relaxed text-[var(--orb-foreground)] md:leading-7 ${residentialSurface ? 'orb-assistant-answer-card' : ''}`} data-orb-assistant-answer-card={residentialSurface ? 'true' : undefined}>
-          {showSkeleton && !displayContent.trim() ? <OrbStreamingSkeleton /> : null}
+          {preludeText ? (
+            <p
+              className="orb-instant-prelude mb-3 text-[15px] leading-relaxed text-[var(--orb-muted,#64748B)]"
+              data-orb-instant-prelude
+              data-orb-instant-category={undefined}
+            >
+              {preludeText}
+            </p>
+          ) : null}
+          {showSkeleton && !displayContent.trim() && !preludeText ? <OrbStreamingSkeleton /> : null}
           {displayContent.trim() ? (
-            <OrbMarkdownAnswer content={displayContent} sources={sources} residentialSurface={residentialSurface} />
+            <div className={showTypingCursor ? 'orb-streaming-answer-body' : undefined} data-orb-streaming-answer={showTypingCursor ? 'true' : undefined}>
+              <OrbMarkdownAnswer content={displayContent} sources={sources} residentialSurface={residentialSurface} />
+              {showTypingCursor ? (
+                <span className="orb-streaming-cursor ml-0.5 inline-block h-[1.05em] w-[2px] translate-y-[2px] animate-pulse bg-[var(--orb-accent,#0EA5E9)]" aria-hidden data-orb-streaming-cursor />
+              ) : null}
+            </div>
+          ) : streaming && preludeText && !displayContent.trim() ? (
+            <span className="orb-streaming-cursor ml-0.5 inline-block h-[1.05em] w-[2px] translate-y-[2px] animate-pulse bg-[var(--orb-accent,#0EA5E9)]" aria-hidden data-orb-streaming-cursor />
           ) : null}
         </div>
         {showExplainability && !streaming && !residentialCalmChat ? (

@@ -3,6 +3,8 @@
 export type OrbChatLatencyMark =
   | 'send_clicked'
   | 'thinking_visible'
+  | 'first_visible_assistant'
+  | 'instant_line_visible'
   | 'request_started'
   | 'first_byte'
   | 'first_token'
@@ -62,12 +64,16 @@ export function getOrbChatLatencySnapshot(): Record<string, number | string | nu
     request_id: activeRequestId,
     send_clicked_ms: find('send_clicked'),
     thinking_visible_ms: find('thinking_visible'),
+    first_visible_assistant_ms: find('first_visible_assistant'),
+    instant_line_visible_ms: find('instant_line_visible'),
     request_started_ms: find('request_started'),
     first_byte_ms: find('first_byte'),
     first_token_ms: find('first_token'),
     final_chunk_ms: find('final_chunk'),
     render_complete_ms: find('render_complete'),
     send_to_thinking_ms: delta('send_clicked', 'thinking_visible'),
+    send_to_first_visible_assistant_ms: delta('send_clicked', 'first_visible_assistant'),
+    send_to_instant_line_ms: delta('send_clicked', 'instant_line_visible'),
     send_to_first_token_ms: delta('send_clicked', 'first_token'),
     send_to_final_ms: delta('send_clicked', 'final_chunk'),
     request_to_first_token_ms: delta('request_started', 'first_token')

@@ -7,7 +7,14 @@ export type StandaloneOrbStreamStatus = {
   expert_depth?: string
 }
 
+export type StandaloneOrbStreamPrelude = {
+  text: string
+  kind?: string
+  category?: string
+}
+
 export type StandaloneOrbStreamEvent =
+  | { event: 'prelude'; prelude: StandaloneOrbStreamPrelude }
   | { event: 'token'; delta: string }
   | { event: 'status'; status: StandaloneOrbStreamStatus }
   // Metadata is normalised by standalone-client.ts into the concrete ORB response shape.
@@ -34,6 +41,13 @@ export function parseStandaloneOrbSseBlock(block: string): StandaloneOrbStreamEv
   try {
     parsed = JSON.parse(raw)
   } catch {
+    return null
+  }
+  if (eventName === 'prelude') {
+    const record = parsed as StandaloneOrbStreamPrelude
+    if (typeof record.text === 'string' && record.text.trim()) {
+      return { event: 'prelude', prelude: record }
+    }
     return null
   }
   if (eventName === 'token') {

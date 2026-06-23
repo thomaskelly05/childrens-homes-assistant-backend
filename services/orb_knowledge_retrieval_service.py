@@ -583,11 +583,22 @@ class OrbKnowledgeRetrievalService:
             _lower(message),
             re.I,
         ):
-            if re.search(
-                r"\b(?:help\s+me\s+record|record\s+a|recording\s+and\s+escalation|hurt|injury)\b",
-                _lower(message),
-                re.I,
-            ) and not re.search(r"debrief|post-incident|belongs\s+in", _lower(message), re.I):
+            is_recording_help = bool(
+                re.search(
+                    r"\b(?:help\s+me\s+record|how\s+(?:do|should)\s+(?:i|we)\s+record|"
+                    r"record\s+a\s+physical\s+intervention)\b",
+                    _lower(message),
+                    re.I,
+                )
+            )
+            if (
+                is_recording_help
+                and is_simple_standard
+                and not safeguarding_deep_recording
+                and not re.search(r"debrief|post-incident|belongs\s+in", _lower(message), re.I)
+            ):
+                prompt_tier = "residential"
+            elif not is_recording_help:
                 if prompt_tier not in {"deep", "fast"}:
                     prompt_tier = "deep"
         if family_id == "missing_return_record" and re.search(

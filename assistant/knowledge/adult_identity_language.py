@@ -541,15 +541,44 @@ _DISPROPORTIONATE_SAFETY_OPENING_RES: tuple[re.Pattern[str], ...] = (
 
 _CLUNKY_PLACEHOLDER_REPLACEMENTS: tuple[tuple[re.Pattern[str], str], ...] = (
     (re.compile(r"\[Young Person'?s Name\]", re.I), "the young person"),
+    (re.compile(r"\[Child'?s Name\]", re.I), "the young person"),
     (re.compile(r"\[Staff Names?\]", re.I), "staff"),
+    (re.compile(r"\[Insert (?:The )?[Aa]dult Names?\]", re.I), "staff"),
     (re.compile(r"\[Direct quote if available\]", re.I), "record the young person's exact words where known"),
     (re.compile(r"\[Child'?s words not stated\]", re.I), "record the young person's exact words where known"),
 )
 
+_BROKEN_ADULT_HEADING_REPLACEMENTS: tuple[tuple[re.Pattern[str], str], ...] = (
+    (re.compile(r"\b[Tt]he adult\s+Present\b"), "Staff present"),
+    (re.compile(r"\b[Tt]he adult\s+Actions?\b"), "Staff response"),
+    (re.compile(r"\b[Tt]he adult\s+facilitated\b"), "Staff supported"),
+    (re.compile(r"\b[Tt]he adult\s+Response\b"), "Staff response"),
+    (re.compile(r"\b[Tt]he adult\s+Observed\b"), "Staff observed"),
+    (re.compile(r"\b[Tt]he adult\s+Supported\b"), "Staff supported"),
+)
+
+_INTERNAL_PROMPT_LEAKAGE_RES: tuple[re.Pattern[str], ...] = (
+    re.compile(
+        r"Adult profile preferences \(user-provided[^\n]*\)[\s\S]*?(?=\n\n[A-Z]|\Z)",
+        re.I,
+    ),
+    re.compile(r"^Role:\s*Residential support worker\s*$", re.I | re.M),
+    re.compile(r"^- Default lenses to weave in when relevant:.*$", re.I | re.M),
+    re.compile(r"^- Therapeutic preferences:.*$", re.I | re.M),
+    re.compile(r"^- Apply longitudinal/chronology thinking.*$", re.I | re.M),
+    re.compile(r"^IndiCare Intelligence depth:.*$", re.I | re.M),
+    re.compile(r"^Answer style:.*$", re.I | re.M),
+)
+
 _GENERIC_RESIDENTIAL_ENDING_RES: tuple[re.Pattern[str], ...] = (
     re.compile(r"\bBy following these guidelines[^.!?]*[.!?]", re.I),
+    re.compile(r"\bBy following these steps[^.!?]*[.!?]", re.I),
     re.compile(r"\bThis approach ensures[^.!?]*[.!?]", re.I),
     re.compile(r"\bcomprehensive account[^.!?]*[.!?]", re.I),
+    re.compile(r"\bIf you have any further questions[^.!?]*[.!?]", re.I),
+    re.compile(r"\bcontribute to a safer environment[^.!?]*[.!?]", re.I),
+    re.compile(r"^#+\s*Conclusion\s*$[\s\S]*?(?=\n#+\s|\Z)", re.I | re.M),
+    re.compile(r"^Conclusion\s*$[\s\S]*?(?=\n[A-Z#]|\Z)", re.I | re.M),
 )
 
 _RESIDENTIAL_PREFERRED_CLOSER = (
@@ -636,6 +665,27 @@ def replace_clunky_placeholders(text: str) -> str:
     return result
 
 
+def fix_broken_adult_heading_wording(text: str) -> str:
+    """Repair 'The adult Present/Actions' heading bugs from over-eager staff→adult substitution."""
+    result = str(text or "")
+    for pattern, replacement in _BROKEN_ADULT_HEADING_REPLACEMENTS:
+        result = pattern.sub(replacement, result)
+    return result
+
+
+def strip_internal_prompt_leakage(text: str) -> str:
+    """Remove internal profile/prompt scaffolding from user-visible answers."""
+    result = str(text or "")
+    for pattern in _INTERNAL_PROMPT_LEAKAGE_RES:
+        result = pattern.sub("", result)
+    return re.sub(r"\n{3,}", "\n\n", result).strip()
+
+
+def strip_inline_source_basis_block(text: str) -> str:
+    """Remove inline Sources / basis dumps from chat answers (chips/metadata remain)."""
+    return re.sub(r"\n+Sources\s*/\s*basis[\s\S]*$", "", str(text or ""), flags=re.I).strip()
+
+
 def strip_disproportionate_safety_opening(text: str, *, source_text: str = "") -> str:
     """Remove emergency safety-first openers from low-risk daily recording answers."""
     if has_safeguarding_cue(source_text):
@@ -660,9 +710,12 @@ def sanitize_residential_answer_polish(text: str, *, source_text: str = "") -> s
     """Apply live RM polish: terminology, medication-error guard, placeholders, proportionality."""
     from assistant.knowledge.residential_safeguarding_terminology import sanitize_medication_error_wording
 
-    cleaned = sanitize_childrens_home_terminology(text, source_text=source_text)
+    cleaned = strip_internal_prompt_leakage(text)
+    cleaned = strip_inline_source_basis_block(cleaned)
+    cleaned = sanitize_childrens_home_terminology(cleaned, source_text=source_text)
     cleaned = sanitize_medication_error_wording(cleaned, source_text=source_text)
     cleaned = replace_clunky_placeholders(cleaned)
+    cleaned = fix_broken_adult_heading_wording(cleaned)
     cleaned = strip_disproportionate_safety_opening(cleaned, source_text=source_text)
     cleaned = strip_generic_residential_endings(cleaned)
     return re.sub(r"\n{3,}", "\n\n", cleaned).strip()

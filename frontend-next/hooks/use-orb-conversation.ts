@@ -112,6 +112,7 @@ export async function executeOrbConversationTransport(
 
   const streamCallbacks: StandaloneOrbStreamCallbacks | undefined = stream
     ? {
+        onPrelude: stream.onPrelude,
         onToken: (delta, partial) => {
           streamPartial = partial
           stream.onToken?.(delta, partial)

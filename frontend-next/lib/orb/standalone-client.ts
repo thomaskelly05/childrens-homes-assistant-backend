@@ -702,6 +702,7 @@ export const sendStandaloneOrbMessage = queryStandaloneOrbConversation
 export type { StandaloneOrbStreamStatus } from '@/lib/orb/standalone-sse-parser'
 
 export type StandaloneOrbStreamEvent =
+  | { event: 'prelude'; prelude: import('@/lib/orb/standalone-sse-parser').StandaloneOrbStreamPrelude }
   | { event: 'token'; delta: string }
   | { event: 'status'; status: import('@/lib/orb/standalone-sse-parser').StandaloneOrbStreamStatus }
   | { event: 'metadata'; payload: StandaloneOrbConversationResponse }
@@ -712,6 +713,7 @@ export { parseStandaloneOrbSseBlock }
 export type { StandaloneOrbStreamEventBase }
 
 export type StandaloneOrbStreamCallbacks = {
+  onPrelude?: (prelude: import('@/lib/orb/standalone-sse-parser').StandaloneOrbStreamPrelude) => void
   onToken: (delta: string, partial: string) => void
   onStatus?: (status: import('@/lib/orb/standalone-sse-parser').StandaloneOrbStreamStatus) => void
   onMetadata?: (response: StandaloneOrbConversationResponse) => void
@@ -851,6 +853,7 @@ export async function sendStandaloneOrbMessageStream(
   const decoder = new TextDecoder()
   let buffer = ''
   let partial = ''
+  let preludeText = ''
   let sawToken = false
   let sawFirstByte = false
   let metadata: StandaloneOrbConversationResponse | null = null
@@ -872,7 +875,15 @@ export async function sendStandaloneOrbMessageStream(
       for (const block of blocks) {
         const event = parseStandaloneOrbSseBlock(block)
         if (!event) continue
-        if (event.event === 'token') {
+        if (event.event === 'prelude') {
+          preludeText = event.prelude.text.trim()
+          if (!sawToken) {
+            sawToken = true
+            markOrbChatLatency('first_token')
+            markOrbChatLatency('instant_line_visible')
+          }
+          callbacks.onPrelude?.(event.prelude)
+        } else if (event.event === 'token') {
           if (!sawToken) {
             sawToken = true
             markOrbChatLatency('first_token')

@@ -87,6 +87,13 @@ async def _live_stream(message: str, user: dict[str, Any]) -> dict[str, Any]:
                 continue
             if event == "status":
                 status_events.append(str(payload.get("label") or payload.get("phase") or ""))
+            elif event == "prelude":
+                prelude_text = str(payload.get("text") or "").strip()
+                if prelude_text:
+                    if first_token_ms is None:
+                        first_token_ms = int((time.perf_counter() - started) * 1000)
+                        first_token_text = prelude_text
+                    token_events.append(prelude_text)
             elif event == "token":
                 delta = payload.get("delta") or ""
                 if delta:
@@ -238,8 +245,8 @@ def _assess_prompt(category_id: str, label: str, result: dict[str, Any]) -> dict
         concerns.append("many paragraph breaks — possible wall of text")
 
     # 12: telemetry fields
-    for field in ("instant_first_lines_ms", "instant_category", "first_token_ms", "total_ms"):
-        if result.get(field) is None and field != "instant_first_lines_ms":
+    for field in ("instant_first_lines_ms", "instant_category", "first_token_ms", "total_ms", "provider_ms", "answer_chars"):
+        if result.get(field) is None and field not in {"instant_first_lines_ms", "provider_ms"}:
             failures.append(f"missing telemetry: {field}")
         elif field == "instant_first_lines_ms" and result.get("instant_lines_used") and result.get(field) is None:
             failures.append("missing telemetry: instant_first_lines_ms")

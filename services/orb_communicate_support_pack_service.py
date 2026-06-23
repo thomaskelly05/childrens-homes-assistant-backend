@@ -64,7 +64,7 @@ AUDIENCE_LABELS: dict[str, str] = {
 
 CONTEXT_LABELS: dict[str, str] = {
     "contact": "contact with someone important",
-    "health": "health and wellbeing",
+    "health": "a hospital visit or health appointment",
     "safety": "safety and feeling secure",
     "routine": "daily routine",
     "transition": "a change or transition",
@@ -266,11 +266,16 @@ class OrbCommunicateSupportPackService:
             return "safe_unsafe_communication"
         if re.search(r"\b(medication|medicine|tablet|inhaler|dose|prescription)\b", text):
             return "medication_explanation"
-        if re.search(r"\b(contact|mum|dad|parent|visit|visiting|changed today|contact has changed)\b", text):
+        if re.search(r"\b(hospital|hospital visit|hospital appointment|clinic|doctor|a&e|ae)\b", text):
+            return "hospital_appointment"
+        if re.search(
+            r"\b(contact|mum|dad|parent|contact has changed|visiting (?:mum|dad|parent)|changed today)\b",
+            text,
+        ):
             return "contact_change"
         if re.search(r"\b(new staff|new worker|someone new|meet.*staff|starting.*shift)\b", text):
             return "new_staff_member"
-        if re.search(r"\b(hospital|appointment|clinic|doctor|a&e|ae)\b", text):
+        if re.search(r"\b(appointment|visit|visiting)\b", text) and "hospital" not in text:
             return "hospital_appointment"
         if re.search(r"\b(bedtime|sleep|night|can't sleep|cant sleep|bed time)\b", text):
             return "bedtime_worries"
@@ -365,8 +370,15 @@ class OrbCommunicateSupportPackService:
         sections = [
             "What is happening",
             (
-                f"This easy-read is about {context_label}. "
-                f"{who.capitalize()} needs to understand: {topic}."
+                (
+                    f"This easy-read is about the hospital visit or appointment. "
+                    f"{who.capitalize()} needs to understand: {topic}."
+                )
+                if plan.intent == "hospital_appointment"
+                else (
+                    f"This easy-read is about {context_label}. "
+                    f"{who.capitalize()} needs to understand: {topic}."
+                )
             ),
             "",
             "Why it is happening",
