@@ -19,7 +19,10 @@ from services.orb_citation_service import orb_citation_service
 from services.ai_provider_registry import ai_provider_registry
 from services.orb_converged_general_assistant_service import orb_converged_general_assistant_service
 from services.orb_general_assistant_service import orb_general_assistant_service
-from services.orb_knowledge_retrieval_service import orb_knowledge_retrieval_service
+from services.orb_knowledge_retrieval_service import (
+    RESIDENTIAL_CONCISE_GOVERNANCE_FAMILIES,
+    orb_knowledge_retrieval_service,
+)
 from services.indicare_intelligence_route_finalize_service import merge_intelligence_into_context
 from services.orb_residential_finalization_service import finalize_orb_residential_answer
 from services.indicare_intelligence_core_service import indicare_intelligence_core_service
@@ -34,6 +37,12 @@ from services.orb_fast_opening_service import (
     is_fast_opening_only_answer,
     merge_stream_answer,
     strip_streaming_artifacts_from_answer,
+)
+from services.orb_instant_first_lines_service import (
+    instant_first_lines_for_message,
+    merge_instant_lines_with_answer,
+    should_skip_instant_lines,
+    strip_duplicate_instant_prefix,
 )
 from services.orb_stream_status_service import (
     stream_status_payload,
@@ -252,7 +261,14 @@ def _build_standalone_request_context(
     )
     if prompt_tier == "fast":
         shared_runtime_block = ""
-    elif simple_standard_contract and not _requests_institutional_cognition(user_message):
+    elif simple_standard_contract and (
+        not _requests_institutional_cognition(user_message)
+        or (
+            retrieval_bundle.get("selected_contract")
+            or (retrieval_bundle.get("indicare_intelligence") or {}).get("selected_contract")
+        )
+        in RESIDENTIAL_CONCISE_GOVERNANCE_FAMILIES
+    ):
         shared_runtime_block = ""
     else:
         shared_runtime_block = shared_institutional_cognition_runtime.prompt_addendum(
@@ -1562,11 +1578,31 @@ async def standalone_orb_conversation_stream(
         for status_event in stream_status_sequence(quick_depth, message=user_message):
             yield _sse_event("status", status_event)
 
+        instant_result = instant_first_lines_for_message(
+            user_message,
+            route="/orb/standalone/conversation/stream",
+            source_surface="orb_standalone",
+        )
+        instant_lines_emitted = False
+        instant_lines_text = ""
+        if not should_skip_instant_lines(
+            expert_depth=quick_depth,
+            guarded_stream_delivery=False,
+        ):
+            instant_lines_text = instant_result.text
+            if instant_lines_text:
+                instant_lines_emitted = True
+                answer_parts.append(f"{instant_lines_text}\n\n")
+                if first_token_ms is None:
+                    first_token_ms = int((time.perf_counter() - request_started) * 1000)
+                    timing.mark("first_token")
+                yield _sse_event("token", {"delta": f"{instant_lines_text}\n\n"})
+
         fast_opening = fast_opening_for_message(
             user_message,
             expert_depth=quick_depth,
             mode=mode,
-        )
+        ) if not instant_lines_emitted else ""
         fast_opening_emitted = False
         model_token_count = 0
 
@@ -1631,7 +1667,17 @@ async def standalone_orb_conversation_stream(
         safety_scaffold = ctx.get("safety_scaffold") or {}
         guarded_stream_delivery = _requires_guarded_stream_delivery(safety_scaffold, mode=mode)
 
-        if fast_opening and not guarded_stream_delivery:
+        if guarded_stream_delivery and instant_lines_emitted:
+            answer_parts.clear()
+            instant_lines_emitted = False
+            instant_lines_text = ""
+            fast_opening = fast_opening_for_message(
+                user_message,
+                expert_depth=quick_depth,
+                mode=mode,
+            )
+
+        if fast_opening and not guarded_stream_delivery and not instant_lines_emitted:
             fast_opening_emitted = True
             answer_parts.append(f"{fast_opening}\n\n")
             if first_token_ms is None:
@@ -1724,11 +1770,18 @@ async def standalone_orb_conversation_stream(
             assistant_data = dict(stream_meta)
             streamed_text = "".join(answer_parts).strip()
             model_answer = str(assistant_data.get("answer") or "").strip()
+            if instant_lines_text:
+                model_answer = strip_duplicate_instant_prefix(model_answer, instant_lines_text)
             merged_answer = merge_stream_answer(
                 fast_opening=fast_opening,
                 model_answer=model_answer,
-                streamed_text=streamed_text,
+                streamed_text=streamed_text if not instant_lines_text else strip_duplicate_instant_prefix(streamed_text, instant_lines_text),
             )
+            if instant_lines_text:
+                merged_answer = merge_instant_lines_with_answer(
+                    instant_lines=instant_lines_text,
+                    full_answer=merged_answer,
+                )
             assistant_data["answer"] = merged_answer or streamed_text
 
             if is_fast_opening_only_answer(
@@ -1881,7 +1934,13 @@ async def standalone_orb_conversation_stream(
                 shared_cognition_skipped=bool(shared_cognition.get("skipped")),
                 expert_depth=expert_depth,
                 stream_mode="provider_tokens",
-                extra={"request_started": True},
+                extra={
+                    "request_started": True,
+                    "instant_first_lines_ms": round(instant_result.elapsed_ms, 2),
+                    "instant_category": instant_result.category_id,
+                    "instant_lines_used": bool(instant_lines_emitted),
+                    "total_ms": total_elapsed_ms,
+                },
             )
             log_orb_route_timing(
                 "/orb/standalone/conversation/stream",
