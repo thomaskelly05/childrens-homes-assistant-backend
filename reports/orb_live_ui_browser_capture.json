@@ -1,0 +1,106 @@
+{
+  "frontend": "http://127.0.0.1:3001",
+  "communicate_hidden_from_nav": true,
+  "prompts": [
+    {
+      "category_id": "daily_recording",
+      "label": "Daily recording",
+      "first_visible_ms": 971,
+      "answer_chars": 0,
+      "answer_preview": "",
+      "source_chips_visible": 0,
+      "screenshot": "reports/orb_live_ui_screenshots/daily_recording.png",
+      "instant_preserved": false
+    },
+    {
+      "category_id": "missing_from_care",
+      "label": "Missing from care",
+      "first_visible_ms": 584,
+      "answer_chars": 1021,
+      "answer_preview": "This looks like a missing-from-care concern. Follow the home's missing procedure, inform the manager/on-call, and record times, actions and decisions clearly.\n\nMissing return \u2014 immediate actions on shift:\n\nImmediate welfare check\n\nCalm welcome back \u2014 check injuries, distress, int",
+      "source_chips_visible": 0,
+      "screenshot": "reports/orb_live_ui_screenshots/missing_from_care.png",
+      "instant_preserved": true
+    },
+    {
+      "category_id": "allegations_lado",
+      "label": "Allegation against staff / LADO",
+      "first_visible_ms": 692,
+      "answer_chars": 2050,
+      "answer_preview": "This looks like an allegation involving staff. Make sure the young person is safe, preserve their exact words, inform the manager/on-call, and follow the LADO/local allegations route.\n\nORB has returned the safety fallback because this scenario contains safeguarding, legal, data p",
+      "source_chips_visible": 0,
+      "screenshot": "reports/orb_live_ui_screenshots/allegations_lado.png",
+      "instant_preserved": true
+    },
+    {
+      "category_id": "self_harm_suicide",
+      "label": "Self-harm",
+      "first_visible_ms": 1314,
+      "answer_chars": 1074,
+      "answer_preview": "This may involve immediate safety. Stay with the young person if there is concern, inform the manager/on-call, and follow the home's safeguarding and self-harm procedure.\n\nORB has returned the safety fallback because this scenario contains safeguarding, legal, data protection or ",
+      "source_chips_visible": 0,
+      "screenshot": "reports/orb_live_ui_screenshots/self_harm_suicide.png",
+      "instant_preserved": true
+    },
+    {
+      "category_id": "medication_refusal_support",
+      "label": "Medication refusal",
+      "first_visible_ms": 801,
+      "answer_chars": 754,
+      "answer_preview": "I'm treating this as a medication refusal. Record the refusal on the MAR, follow the home's medication policy, and seek health advice where risk is present.\n\nORB mock engine response. Task received (120 chars). Configure OPENAI_API_KEY for live answers.\n\nRecord the refusal on the",
+      "source_chips_visible": 0,
+      "screenshot": "reports/orb_live_ui_screenshots/medication_refusal_support.png",
+      "instant_preserved": true
+    },
+    {
+      "category_id": "orb_communicate",
+      "label": "ORB Communicate support pack",
+      "first_visible_ms": 797,
+      "answer_chars": 3364,
+      "answer_preview": "Easy-read explanation\n\nWhat is happening This easy-read is about contact with someone important. The young person needs to understand: Create a communication support pack for a hospital visit tomorrow..\n\nWhy it is happening Adults want everyone to understand what is happening. Th",
+      "source_chips_visible": 0,
+      "screenshot": "reports/orb_live_ui_screenshots/orb_communicate.png",
+      "instant_preserved": true
+    },
+    {
+      "category_id": "regulation_45",
+      "label": "Reg 45 evidence",
+      "first_visible_ms": 838,
+      "answer_chars": 477,
+      "answer_preview": "ORB mock engine response. Task received (47 chars). Configure OPENAI_API_KEY for live answers.\n\nORB can help you turn this into an Inspection evidence preparation checklist, Reg 44/45 preparation note, or evidence review.\n\nBefore you use this:* Review the wording, separate observ",
+      "source_chips_visible": 0,
+      "screenshot": "reports/orb_live_ui_screenshots/regulation_45.png",
+      "instant_preserved": true
+    },
+    {
+      "category_id": "aac_child_voice",
+      "label": "Child voice / gestures and symbols",
+      "first_visible_ms": 839,
+      "answer_chars": 258,
+      "answer_preview": "I'm treating this as AAC / symbols / gestures child voice evidence. Record what was observed, how the young person communicated, and do not invent direct quotes.\n\nORB mock engine response. Task received (120 chars). Configure OPENAI_API_KEY for live answers.",
+      "source_chips_visible": 0,
+      "screenshot": "reports/orb_live_ui_screenshots/aac_child_voice.png",
+      "instant_preserved": true
+    },
+    {
+      "category_id": "physical_intervention_restraint",
+      "label": "Physical intervention",
+      "first_visible_ms": 881,
+      "answer_chars": 1123,
+      "answer_preview": "I'm treating this as physical intervention recording. Check everyone is safe, record why intervention was necessary and proportionate, and plan the debrief.\n\nORB has returned the safety fallback because this scenario contains safeguarding, legal, data protection or emergency risk",
+      "source_chips_visible": 0,
+      "screenshot": "reports/orb_live_ui_screenshots/physical_intervention_restraint.png",
+      "instant_preserved": true
+    },
+    {
+      "category_id": "management_oversight_drift",
+      "label": "Management oversight",
+      "first_visible_ms": 1469,
+      "answer_chars": 330,
+      "answer_preview": "ORB mock engine response. Task received (75 chars). Configure OPENAI_API_KEY for live answers.\n\nBefore you use this:* Review the wording, separate observation from interpretation, and follow local safeguarding procedures. I can also help turn your notes into an incident record, s",
+      "source_chips_visible": 0,
+      "screenshot": "reports/orb_live_ui_screenshots/management_oversight_drift.png",
+      "instant_preserved": true
+    }
+  ]
+}
