@@ -259,7 +259,7 @@ export function OrbAssistantMessageBody({
       setShowSkeleton(false)
       return
     }
-    const timer = window.setTimeout(() => setShowSkeleton(true), 400)
+    const timer = window.setTimeout(() => setShowSkeleton(true), 120)
     return () => window.clearTimeout(timer)
   }, [streaming, displayContent])
 

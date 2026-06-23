@@ -511,7 +511,11 @@ class IndicareIntelligenceCoreService:
                 "residential_deep",
                 "safeguarding_critical",
             )
-            if cap_order.index(depth) > cap_order.index(str(family_cap)):
+            cap_index = cap_order.index(str(family_cap))
+            depth_index = cap_order.index(depth)
+            if depth_index > cap_index:
+                depth = str(family_cap)
+            elif depth_index < cap_index:
                 depth = str(family_cap)
         return depth
 

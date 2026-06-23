@@ -70,3 +70,7 @@ services:
         sync: false
       - key: OPENAI_API_KEY
         sync: false
+      - key: AI_PROVIDER_STRICT
+        value: "true"
+      - key: AI_DEFAULT_PROVIDER
+        value: openai

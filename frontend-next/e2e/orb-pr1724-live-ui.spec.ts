@@ -1,5 +1,7 @@
 /**
- * ORB PR #1724 live UI stream verification — mocked auth, real backend stream.
+ * ORB PR #1724 live UI stream verification — mocked auth + stream route.
+ * Uses mocked SSE (not staging session). For staging live-LLM sign-off, run
+ * `ORB_LIVE_SIGN_OFF=1 python scripts/run_orb_live_ui_verification_pr1724.py`.
  */
 import { test, expect } from '@playwright/test'
 import { setupOrbE2eMocks } from './orb-audit-helpers'
@@ -100,12 +102,14 @@ test.describe('ORB PR #1724 chat stream UI', () => {
       await page.keyboard.press('Enter')
 
       const assistantBubble = page.locator('[data-orb-assistant-answer-card="true"]').last()
-      await assistantBubble.waitFor({ state: 'visible', timeout: 45_000 })
+      const assistantText = page.locator('[data-orb-assistant-answer-text="true"]').last()
+      await assistantText.waitFor({ state: 'visible', timeout: 45_000 })
       const firstVisibleMs = Date.now() - started
 
-      await page.waitForTimeout(2500)
-      const answerText = (await assistantBubble.innerText()).trim()
+      await page.waitForTimeout(1500)
+      const answerText = (await assistantText.innerText()).trim()
       expect(answerText.length).toBeGreaterThan(40)
+      expect(answerText).not.toMatch(/mock engine response|configure openai_api_key/i)
 
       const sources = page.locator('[data-orb-source-chip], [data-orb-practice-anchor], .orb-source-chip')
       const sourceCount = await sources.count()
@@ -114,6 +118,8 @@ test.describe('ORB PR #1724 chat stream UI', () => {
         path: `e2e/artifacts/orb-pr1724-${prompt.id}.png`,
         fullPage: false
       })
+
+      await expect(assistantBubble).toBeVisible()
 
       console.log(
         JSON.stringify({
