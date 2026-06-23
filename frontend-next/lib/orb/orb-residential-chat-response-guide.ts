@@ -180,56 +180,143 @@ export function buildResidentialGuidedChatFallback(
   return lines.join('\n')
 }
 
+const RESIDENTIAL_SCENARIO_MARKERS_RE =
+  /\b(child('s)? voice|immediate (safety|steps|action)|escalat|manager|LADO|DSL|safeguarding lead|designated|missing from care|return[- ]?home|observ|record|chronolog|welfare|de-escalat|contact|staff response|what (happened|to do)|boundaries|do not investigate|exact words|communicat|allegat|whistleblow|AAC|symbols|gestures)\b/i
+
+const GENERIC_ESSAY_OPENERS_RE =
+  /\b(it is important to note|in any safeguarding situation|safeguarding is everyone's responsibility|best practice suggests that|safeguarding is a shared responsibility)\b/i
+
+/** True when the backend returned no usable answer body. */
+export function isEmptyResidentialChatAnswer(content: string): boolean {
+  const text = content.trim()
+  if (!text) return true
+  return /^I'm here, but I could not generate a full response/i.test(text)
+}
+
+/** True for deterministic safety/firewall fallback answers that must not be reshaped. */
+export function isResidentialSafetyFallbackAnswer(content: string): boolean {
+  const text = content.trim()
+  return (
+    /\b1\.\s*safety position\b/i.test(text) ||
+    /\b9\.\s*boundary caveat\b/i.test(text) ||
+    /\bsafety firewall|privacy block|cannot provide guidance on\b/i.test(text)
+  )
+}
+
+/** Detect substantive scenario-specific backend answers that should remain primary. */
+export function isStrongResidentialBackendAnswer(content: string): boolean {
+  const text = content.trim()
+  if (text.length < 150) return false
+
+  const hasGenericOpen = GENERIC_ESSAY_OPENERS_RE.test(text)
+  const lacksFocusedContent = !RESIDENTIAL_SCENARIO_MARKERS_RE.test(text)
+  if (hasGenericOpen && lacksFocusedContent && text.length >= 700) return false
+
+  const hasStructure =
+    /^#{1,3}\s/m.test(text) ||
+    /\n\*\*[A-Z][^*]+\*\*/m.test(text) ||
+    /\n[-*•]\s+\S/m.test(text) ||
+    /\n\d+\.\s+\S/m.test(text)
+
+  return hasStructure && RESIDENTIAL_SCENARIO_MARKERS_RE.test(text)
+}
+
+/** True when an answer is too short or generic to surface without guided fallback. */
+export function isLowValueResidentialAnswer(content: string): boolean {
+  const text = content.trim()
+  if (!text || text.length < 80) return true
+  if (
+    text.length < 200 &&
+    /\b(I can help|happy to help|let me know|feel free)\b/i.test(text) &&
+    !RESIDENTIAL_SCENARIO_MARKERS_RE.test(text)
+  ) {
+    return true
+  }
+  return false
+}
+
+/** Short support note appended when guidance helps but the answer should stay primary. */
+export function buildResidentialChatSupportPrompt(
+  userMessage: string,
+  mode?: StandaloneOrbMode | string | null
+): string {
+  const supportType = detectResidentialChatSupportType(userMessage, mode)
+  const outputs = OUTPUT_OFFERS[supportType]
+  return `**Before you use this:** Review the wording, separate observation from interpretation, and follow local safeguarding procedures. I can also help turn your notes into ${outputs} if useful.`
+}
+
 /** Detect overly generic long safeguarding essays that should be reshaped. */
 export function isGenericResidentialSafeguardingEssay(content: string): boolean {
   const text = content.trim()
   if (text.length < 700) return false
+  if (isStrongResidentialBackendAnswer(text)) return false
+
   const sectionCount = (text.match(/\n#{1,3}\s|\n\*\*[A-Z]/g) || []).length
-  const hasGenericOpen =
-    /\b(it is important to note|in any safeguarding situation|safeguarding is everyone's responsibility|best practice suggests that|safeguarding is a shared responsibility)\b/i.test(
-      text
-    )
-  const lacksFocusedQuestions = !/\?\s/m.test(text.slice(0, 800))
-  return (hasGenericOpen && sectionCount >= 3 && lacksFocusedQuestions) || (text.length > 1400 && lacksFocusedQuestions)
+  const hasGenericOpen = GENERIC_ESSAY_OPENERS_RE.test(text)
+  const lacksFocusedContent = !RESIDENTIAL_SCENARIO_MARKERS_RE.test(text)
+  return (hasGenericOpen && sectionCount >= 3) || (text.length > 1400 && hasGenericOpen && lacksFocusedContent)
 }
 
 /** True when a streamed answer already follows the guided specialist pattern. */
 export function answerLooksGuidedResidentialChat(content: string): boolean {
   const text = content.trim()
   if (text.length < 120) return false
-  const hasQuestions = /\?\s/m.test(text.slice(0, 900))
+  if (isStrongResidentialBackendAnswer(text)) return true
+
+  const hasQuestions = /\?\s/m.test(text)
+  const hasStructure =
+    /^#{1,3}\s/m.test(text) || /\n[-*•]\s+\S/m.test(text) || /\n\d+\.\s+\S/m.test(text)
   const hasSafetyOrBoundary =
-    /\b(immediate (risk|safety)|local (safeguarding|policy|emergency)|professional judgement|observation from interpretation|child('s)? voice|observed|exact words)\b/i.test(
+    /\b(immediate (risk|safety|steps)|local (safeguarding|policy|emergency)|professional judgement|observation from interpretation|child('s)? voice|observed|exact words|do not investigate)\b/i.test(
       text
     )
   const hasOutputOffer =
     /\b(daily record|incident reflection|supervision note|safeguarding reflection|handover note|for adult review|child-centred record)\b/i.test(
       text
     )
+
+  if (hasStructure && hasSafetyOrBoundary) return true
   return hasQuestions && hasSafetyOrBoundary && hasOutputOffer
 }
 
-/** If a streamed answer looks like a generic essay, prepend a shorter guided structure. */
+/** If a streamed answer looks like a generic essay, replace with guided fallback. */
 export function reshapeGenericResidentialChatAnswer(content: string, userMessage: string, mode?: string): string {
+  if (isStrongResidentialBackendAnswer(content)) return content
   if (!isGenericResidentialSafeguardingEssay(content)) return content
-  const guide = buildResidentialGuidedChatFallback(userMessage, mode)
-  return `${guide}\n\n---\n\n**Additional context from ORB (review and edit before use):**\n\n${content.slice(0, 1200)}${content.length > 1200 ? '…' : ''}`
+  return buildResidentialGuidedChatFallback(userMessage, mode)
 }
 
-/** Main residential chat shaping — guided specialist responses, not generic essays. */
+/** Main residential chat shaping — preserve strong backend answers; fallback only when needed. */
 export function reshapeResidentialChatAnswer(
   content: string,
   userMessage: string,
   mode?: StandaloneOrbMode | string | null
 ): string {
-  if (!shouldApplyResidentialChatGuidance(userMessage, mode)) {
-    return reshapeGenericResidentialChatAnswer(content, userMessage, mode ?? undefined)
-  }
-  if (answerLooksGuidedResidentialChat(content) && !isGenericResidentialSafeguardingEssay(content)) {
-    return content
-  }
-  if (isGenericResidentialSafeguardingEssay(content)) {
+  const text = content.trim()
+
+  if (!text || isEmptyResidentialChatAnswer(text)) {
     return buildResidentialGuidedChatFallback(userMessage, mode)
   }
-  return buildResidentialGuidedChatFallback(userMessage, mode)
+
+  if (isResidentialSafetyFallbackAnswer(text)) {
+    return text
+  }
+
+  if (isStrongResidentialBackendAnswer(text)) {
+    return text
+  }
+
+  if (answerLooksGuidedResidentialChat(text) && !isGenericResidentialSafeguardingEssay(text)) {
+    return text
+  }
+
+  if (!shouldApplyResidentialChatGuidance(userMessage, mode)) {
+    return reshapeGenericResidentialChatAnswer(text, userMessage, mode ?? undefined)
+  }
+
+  if (isGenericResidentialSafeguardingEssay(text) || isLowValueResidentialAnswer(text)) {
+    return buildResidentialGuidedChatFallback(userMessage, mode)
+  }
+
+  return `${text}\n\n---\n\n${buildResidentialChatSupportPrompt(userMessage, mode)}`
 }
