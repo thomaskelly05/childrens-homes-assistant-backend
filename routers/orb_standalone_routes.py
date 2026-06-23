@@ -39,6 +39,7 @@ from services.orb_fast_opening_service import (
     strip_streaming_artifacts_from_answer,
 )
 from services.orb_instant_first_lines_service import (
+    guarded_instant_lines_for_message,
     instant_first_lines_for_message,
     merge_instant_lines_with_answer,
     should_skip_instant_lines,
@@ -1667,15 +1668,20 @@ async def standalone_orb_conversation_stream(
         safety_scaffold = ctx.get("safety_scaffold") or {}
         guarded_stream_delivery = _requires_guarded_stream_delivery(safety_scaffold, mode=mode)
 
-        if guarded_stream_delivery and instant_lines_emitted:
-            answer_parts.clear()
-            instant_lines_emitted = False
-            instant_lines_text = ""
-            fast_opening = fast_opening_for_message(
+        if guarded_stream_delivery and not instant_lines_emitted:
+            instant_result = guarded_instant_lines_for_message(
                 user_message,
-                expert_depth=quick_depth,
-                mode=mode,
+                route="/orb/standalone/conversation/stream",
+                source_surface="orb_standalone",
             )
+            instant_lines_text = instant_result.text
+            if instant_lines_text:
+                instant_lines_emitted = True
+                answer_parts.append(f"{instant_lines_text}\n\n")
+                if first_token_ms is None:
+                    first_token_ms = int((time.perf_counter() - request_started) * 1000)
+                    timing.mark("first_token")
+                yield _sse_event("token", {"delta": f"{instant_lines_text}\n\n"})
 
         if fast_opening and not guarded_stream_delivery and not instant_lines_emitted:
             fast_opening_emitted = True
@@ -1730,7 +1736,13 @@ async def standalone_orb_conversation_stream(
                 )
                 stream_meta.update(assistant_data)
                 guarded_answer = str(assistant_data.get("answer") or "").strip()
-                if fast_opening and guarded_answer:
+                if instant_lines_text and guarded_answer:
+                    guarded_answer = merge_instant_lines_with_answer(
+                        instant_lines=instant_lines_text,
+                        full_answer=guarded_answer,
+                    )
+                    assistant_data["answer"] = guarded_answer
+                elif fast_opening and guarded_answer:
                     guarded_answer = merge_stream_answer(
                         fast_opening=fast_opening,
                         model_answer=guarded_answer,
@@ -1909,6 +1921,11 @@ async def standalone_orb_conversation_stream(
                     timing=timing,
                 )
                 context_used = merge_intelligence_into_context(context_used, intel_meta)
+            if instant_lines_text:
+                answer = merge_instant_lines_with_answer(
+                    instant_lines=instant_lines_text,
+                    full_answer=answer,
+                )
             context_used = _attach_execution_policy_context(
                 context_used,
                 ctx=ctx,

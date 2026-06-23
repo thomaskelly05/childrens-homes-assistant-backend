@@ -159,15 +159,25 @@ def build_standalone_sources(
     return filter_display_sources(payload, message=message, mode=mode)
 
 
+def _is_mock_visible_answer(text: str) -> bool:
+    return "ORB mock engine response" in (text or "")
+
+
 def append_sources_basis_section(
     answer: str,
     sources: list[dict[str, Any]],
     *,
     message: str | None = None,
     mode: str | None = None,
+    suppress_visible_basis: bool = False,
+    provider: str | None = None,
 ) -> str:
     text = str(answer or "").strip()
     if not text:
+        return text
+    if suppress_visible_basis or _is_mock_visible_answer(text):
+        return text
+    if provider and str(provider).lower() == "mock":
         return text
     if re.search(r"\[[^\]]+\]", text):
         return text
