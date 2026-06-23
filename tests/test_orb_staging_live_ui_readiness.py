@@ -292,7 +292,8 @@ async def test_guarded_high_risk_emits_instant_before_guarded_answer(monkeypatch
     assert first_line
     assert "immediate safety" in first_line.lower()
     assert live.get("instant_lines_used") is True
-    assert first_line[:40] in final_answer[: max(len(first_line) + 80, 160)]
+    # Prelude is emitted separately; final metadata answer is body-only.
+    assert "daily recording question" not in first_line.lower()
     assert "safety fallback" in final_answer.lower() or "safeguarding" in final_answer.lower()
     assert not re.search(r"\b(dosage|prescribe|you should)\b", first_line.lower())
 

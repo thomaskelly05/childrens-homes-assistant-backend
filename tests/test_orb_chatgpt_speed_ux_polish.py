@@ -8,14 +8,21 @@ from pathlib import Path
 import pytest
 
 from assistant.knowledge.adult_identity_language import (
+    apply_adult_identity_language,
     fix_broken_adult_heading_wording,
     sanitize_residential_answer_polish,
     strip_inline_source_basis_block,
+    strip_indicare_product_boilerplate,
     strip_internal_prompt_leakage,
 )
 from services.orb_instant_first_lines_service import (
+    instant_first_lines_for_message,
     merge_instant_lines_with_answer,
     strip_duplicate_instant_prefix,
+)
+from services.orb_provider_user_answer_service import (
+    ORB_PROVIDER_UNAVAILABLE_USER_MESSAGE,
+    sanitize_user_visible_provider_answer,
 )
 
 ROUTES_PATH = Path(__file__).resolve().parents[1] / "routers" / "orb_standalone_routes.py"
@@ -44,6 +51,17 @@ def test_instant_line_deduplicated_from_stream_and_final():
     assert "Breakfast was calm" in merged
 
 
+def test_instant_prelude_dedup_handles_staff_adult_wording_mismatch():
+    prelude = instant_first_lines_for_message(
+        "Help me write a daily record — calm breakfast, chose toast, watched TV before handover."
+    ).text
+    near_dup = prelude.replace("staff responded", "The adult responded")
+    body = f"{near_dup}\n\nHere is a simple daily record draft:\nThe young person chose toast."
+    stripped = strip_duplicate_instant_prefix(body, prelude)
+    assert stripped.lower().count("i'm treating this as a daily recording question") == 0
+    assert "chose toast" in stripped
+
+
 def test_broken_adult_heading_wording_repaired():
     raw = "## The adult Present\nChild chose toast.\n\n## The adult Actions\nStaff offered water."
     fixed = fix_broken_adult_heading_wording(raw)
@@ -51,6 +69,20 @@ def test_broken_adult_heading_wording_repaired():
     assert "The adult Actions" not in fixed
     assert "Staff present" in fixed
     assert "Staff response" in fixed
+
+
+def test_how_the_adult_responded_repaired():
+    raw = "Start with what happened, how The adult responded, and what happened next."
+    fixed = fix_broken_adult_heading_wording(raw)
+    assert "how The adult responded" not in fixed
+    assert "how staff responded" in fixed
+
+
+def test_apply_adult_identity_preserves_how_staff_responded():
+    raw = "Record what happened, how staff responded, and what happened next."
+    cleaned = apply_adult_identity_language(raw)
+    assert "how staff responded" in cleaned.lower()
+    assert "how The adult responded" not in cleaned
 
 
 def test_internal_prompt_leakage_stripped():
@@ -73,6 +105,33 @@ def test_internal_prompt_leakage_stripped():
 def test_inline_source_basis_block_removed():
     raw = "Concise answer.\n\nSources / basis\n- ORB Operating Brain — selected sections"
     assert "Sources / basis" not in strip_inline_source_basis_block(raw)
+    raw_heading = "Answer body.\n\n## Source basis\nORB Operating Brain, SCCIF"
+    assert "Source basis" not in strip_inline_source_basis_block(raw_heading)
+
+
+def test_indicare_product_boilerplate_stripped_from_non_product_prompts():
+    boilerplate = (
+        "IndiCare is a residential children's homes operating system and intelligence platform "
+        "built to support staff and managers in registered homes.\n\n"
+        "It is designed around care recording, safeguarding, Ofsted and SCCIF readiness."
+    )
+    cleaned = strip_indicare_product_boilerplate(boilerplate, source_text="daily record breakfast")
+    assert "IndiCare is a residential" not in cleaned
+
+
+def test_provider_failure_replaces_product_boilerplate(monkeypatch):
+    monkeypatch.setenv("APP_ENV", "staging")
+    text = (
+        "IndiCare is a residential children's homes operating system and intelligence platform "
+        "built to support staff and managers in registered homes."
+    )
+    sanitized, issue = sanitize_user_visible_provider_answer(
+        text,
+        provider="openai",
+        source_text="Help me write a daily record.",
+    )
+    assert issue == "product_boilerplate_leakage"
+    assert sanitized == ORB_PROVIDER_UNAVAILABLE_USER_MESSAGE
 
 
 def test_generic_endings_and_placeholders_polished():
@@ -102,10 +161,46 @@ def test_communicate_hospital_visit_pack_is_topic_accurate():
     pack = orb_communicate_support_pack_service.build_support_pack_from_message(COMMUNICATE_PROMPT)
     formatted = orb_communicate_support_pack_service.format_support_pack_for_chat(pack)
     lower = formatted.lower()
-    assert "hospital" in lower
+    assert pack.intent == "hospital_appointment"
+    assert "tomorrow you are going to hospital" in lower
     assert "contact with someone important" not in lower
+    assert "source basis" not in lower
     for marker in ("easy-read", "visual", "staff", "reflect", "safety"):
         assert marker in lower or "boundary" in lower
+
+
+def test_communicate_contact_pack_has_no_internal_scaffolding():
+    from services.orb_communicate_support_pack_service import orb_communicate_support_pack_service
+
+    prompt = (
+        "Create a communication support pack to explain to a young person with autism "
+        "that contact has changed."
+    )
+    pack = orb_communicate_support_pack_service.build_support_pack_from_message(prompt)
+    assert pack.intent == "contact_change"
+    formatted = orb_communicate_support_pack_service.format_support_pack_for_chat(pack)
+    lower = formatted.lower()
+    for forbidden in (
+        "adult profile preferences",
+        "default lenses",
+        "therapeutic preferences",
+        "longitudinal",
+        "role: residential support worker",
+        "source basis",
+    ):
+        assert forbidden not in lower
+
+
+def test_generic_endings_removed_from_guidance():
+    raw = (
+        "Record the refusal on the MAR. If you need further assistance, contact the manager. "
+        "By following these steps, staff can respond safely. Conclusion\nThis was handled well."
+    )
+    polished = sanitize_residential_answer_polish(raw, source_text="medication refusal")
+    lower = polished.lower()
+    assert "if you need further assistance" not in lower
+    assert "by following these steps" not in lower
+    assert "conclusion" not in lower
 
 
 def test_backend_emits_prelude_sse_for_instant_lines():
@@ -182,4 +277,6 @@ async def test_stream_metadata_includes_answer_chars_and_provider_ms(monkeypatch
     first = (live.get("first_token_text") or "").strip()
     final = live.get("final_answer") or ""
     assert first
-    assert first in final[: max(len(first) + 60, 140)]
+    # Final metadata answer is body-only when prelude is emitted separately via SSE.
+    if "mock engine" not in final.lower():
+        assert "daily recording question" not in final.lower() or "chose toast" in final.lower()

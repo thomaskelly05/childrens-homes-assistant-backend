@@ -75,7 +75,9 @@ def test_hospital_appointment_easy_read(client: TestClient):
         },
     )
     assert data["intent"] == "hospital_appointment"
-    assert "easy-read" in data["easy_read_explanation"].lower()
+    easy_read = data["easy_read_explanation"].lower()
+    assert "hospital" in easy_read
+    assert "tomorrow you are going to hospital" in easy_read
     assert any(
         card.get("category") in {"health", "place"} for card in data["visual_card_suggestions"]
     )

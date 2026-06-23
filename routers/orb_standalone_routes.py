@@ -1939,17 +1939,15 @@ async def standalone_orb_conversation_stream(
                 )
                 context_used = merge_intelligence_into_context(context_used, intel_meta)
             if instant_lines_text:
-                answer = merge_instant_lines_with_answer(
-                    instant_lines=instant_lines_text,
-                    full_answer=answer,
-                )
+                answer = strip_duplicate_instant_prefix(answer, instant_lines_text)
             if not (answer or "").strip() and instant_lines_text:
-                answer = instant_lines_text
+                answer = ""
             sanitized_answer, provider_issue = sanitize_user_visible_provider_answer(
                 answer,
                 provider=model_routing.get("provider"),
                 error_detail=assistant_data.get("error_detail"),
                 log_context={"route": "/orb/standalone/conversation/stream"},
+                source_text=user_message,
             )
             if provider_issue:
                 answer = sanitized_answer

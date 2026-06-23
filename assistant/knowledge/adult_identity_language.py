@@ -555,19 +555,54 @@ _BROKEN_ADULT_HEADING_REPLACEMENTS: tuple[tuple[re.Pattern[str], str], ...] = (
     (re.compile(r"\b[Tt]he adult\s+Response\b"), "Staff response"),
     (re.compile(r"\b[Tt]he adult\s+Observed\b"), "Staff observed"),
     (re.compile(r"\b[Tt]he adult\s+Supported\b"), "Staff supported"),
+    (re.compile(r"\bhow\s+[Tt]he adult\s+responded\b"), "how staff responded"),
+    (re.compile(r"\b[Tt]he adult\s+responded\b"), "staff responded"),
+    (re.compile(r"\[Insert\s+[Tt]he adult Names?\]", re.I), "staff names, if known"),
 )
+
+# Staff phrases that must not be forced to "the adult" during identity substitution.
+_STAFF_PHRASE_PROTECTED_RES: tuple[tuple[re.Pattern[str], str], ...] = (
+    (re.compile(r"\bhow staff responded\b", re.I), "__ORB_STAFF_RESPONDED__"),
+    (re.compile(r"\bstaff present\b", re.I), "__ORB_STAFF_PRESENT__"),
+    (re.compile(r"\bstaff response\b", re.I), "__ORB_STAFF_RESPONSE__"),
+    (re.compile(r"\bstaff supported\b", re.I), "__ORB_STAFF_SUPPORTED__"),
+    (re.compile(r"\bstaff names?\b", re.I), "__ORB_STAFF_NAMES__"),
+    (re.compile(r"\bstaff offered\b", re.I), "__ORB_STAFF_OFFERED__"),
+    (re.compile(r"\bstaff observed\b", re.I), "__ORB_STAFF_OBSERVED__"),
+)
+
+_STAFF_PHRASE_RESTORE: dict[str, str] = {
+    "__ORB_STAFF_RESPONDED__": "how staff responded",
+    "__ORB_STAFF_PRESENT__": "staff present",
+    "__ORB_STAFF_RESPONSE__": "staff response",
+    "__ORB_STAFF_SUPPORTED__": "staff supported",
+    "__ORB_STAFF_NAMES__": "staff names",
+    "__ORB_STAFF_OFFERED__": "staff offered",
+    "__ORB_STAFF_OBSERVED__": "staff observed",
+}
 
 _INTERNAL_PROMPT_LEAKAGE_RES: tuple[re.Pattern[str], ...] = (
     re.compile(
         r"Adult profile preferences \(user-provided[^\n]*\)[\s\S]*?(?=\n\n[A-Z]|\Z)",
         re.I,
     ),
+    re.compile(r"^Adult profile preferences.*$", re.I | re.M),
     re.compile(r"^Role:\s*Residential support worker\s*$", re.I | re.M),
+    re.compile(r"^Service type:.*$", re.I | re.M),
+    re.compile(r"^Preferred tone:.*$", re.I | re.M),
+    re.compile(r"^Answer length:.*$", re.I | re.M),
+    re.compile(r"^Confidence framing:.*$", re.I | re.M),
+    re.compile(r"^Safeguarding intensity framing:.*$", re.I | re.M),
+    re.compile(r"^Writing style:.*$", re.I | re.M),
+    re.compile(r"^Reasoning depth:.*$", re.I | re.M),
+    re.compile(r"^Role emphasis:.*$", re.I | re.M),
     re.compile(r"^- Default lenses to weave in when relevant:.*$", re.I | re.M),
+    re.compile(r"^- Default lenses:.*$", re.I | re.M),
     re.compile(r"^- Therapeutic preferences:.*$", re.I | re.M),
     re.compile(r"^- Apply longitudinal/chronology thinking.*$", re.I | re.M),
     re.compile(r"^IndiCare Intelligence depth:.*$", re.I | re.M),
     re.compile(r"^Answer style:.*$", re.I | re.M),
+    re.compile(r"user-provided;\s*does not access OS records", re.I),
 )
 
 _GENERIC_RESIDENTIAL_ENDING_RES: tuple[re.Pattern[str], ...] = (
@@ -576,9 +611,23 @@ _GENERIC_RESIDENTIAL_ENDING_RES: tuple[re.Pattern[str], ...] = (
     re.compile(r"\bThis approach ensures[^.!?]*[.!?]", re.I),
     re.compile(r"\bcomprehensive account[^.!?]*[.!?]", re.I),
     re.compile(r"\bIf you have any further questions[^.!?]*[.!?]", re.I),
+    re.compile(r"\bIf you need further assistance[^.!?]*[.!?]", re.I),
     re.compile(r"\bcontribute to a safer environment[^.!?]*[.!?]", re.I),
     re.compile(r"^#+\s*Conclusion\s*$[\s\S]*?(?=\n#+\s|\Z)", re.I | re.M),
     re.compile(r"^Conclusion\s*$[\s\S]*?(?=\n[A-Z#]|\Z)", re.I | re.M),
+    re.compile(r"\bConclusion\s*\n[\s\S]*$", re.I),
+)
+
+_INDICARE_PRODUCT_BOILERPLATE_RES: tuple[re.Pattern[str], ...] = (
+    re.compile(
+        r"IndiCare is a residential children's homes operating system and intelligence platform\b[\s\S]*",
+        re.I,
+    ),
+)
+
+_USER_ASKED_ABOUT_INDICARE_RE = re.compile(
+    r"\b(?:what is indicare|tell me about indicare|about orb|what is orb|care companion|indicare os)\b",
+    re.I,
 )
 
 _RESIDENTIAL_PREFERRED_CLOSER = (
@@ -683,7 +732,34 @@ def strip_internal_prompt_leakage(text: str) -> str:
 
 def strip_inline_source_basis_block(text: str) -> str:
     """Remove inline Sources / basis dumps from chat answers (chips/metadata remain)."""
-    return re.sub(r"\n+Sources\s*/\s*basis[\s\S]*$", "", str(text or ""), flags=re.I).strip()
+    result = str(text or "")
+    result = re.sub(r"\n+Sources\s*/\s*basis[\s\S]*$", "", result, flags=re.I).strip()
+    result = re.sub(r"\n+#+\s*Source basis[\s\S]*$", "", result, flags=re.I).strip()
+    result = re.sub(r"\n+Source basis\s*\n[\s\S]*$", "", result, flags=re.I).strip()
+    return result
+
+
+def user_asked_about_indicare(text: str) -> bool:
+    """True when the user explicitly asked about IndiCare or ORB as a product."""
+    return bool(_USER_ASKED_ABOUT_INDICARE_RE.search(str(text or "")))
+
+
+def strip_indicare_product_boilerplate(text: str, *, source_text: str = "") -> str:
+    """Remove IndiCare product marketing dumps unless the user asked about the product."""
+    if user_asked_about_indicare(source_text):
+        return str(text or "")
+    result = str(text or "")
+    for pattern in _INDICARE_PRODUCT_BOILERPLATE_RES:
+        result = pattern.sub("", result)
+    return re.sub(r"\n{3,}", "\n\n", result).strip()
+
+
+def _normalize_prelude_for_dedup(text: str) -> str:
+    """Normalize prelude/body text for near-duplicate comparison."""
+    normalized = str(text or "").lower()
+    normalized = re.sub(r"\bthe adult\b", "staff", normalized)
+    normalized = re.sub(r"\s+", " ", normalized).strip(" .")
+    return normalized
 
 
 def strip_disproportionate_safety_opening(text: str, *, source_text: str = "") -> str:
@@ -712,6 +788,7 @@ def sanitize_residential_answer_polish(text: str, *, source_text: str = "") -> s
 
     cleaned = strip_internal_prompt_leakage(text)
     cleaned = strip_inline_source_basis_block(cleaned)
+    cleaned = strip_indicare_product_boilerplate(cleaned, source_text=source_text)
     cleaned = sanitize_childrens_home_terminology(cleaned, source_text=source_text)
     cleaned = sanitize_medication_error_wording(cleaned, source_text=source_text)
     cleaned = replace_clunky_placeholders(cleaned)
@@ -1044,6 +1121,20 @@ def is_record_generation_request(text: str) -> bool:
     return False
 
 
+def _protect_staff_phrases(text: str) -> str:
+    result = str(text or "")
+    for pattern, token in _STAFF_PHRASE_PROTECTED_RES:
+        result = pattern.sub(token, result)
+    return result
+
+
+def _restore_staff_phrases(text: str) -> str:
+    result = str(text or "")
+    for token, phrase in _STAFF_PHRASE_RESTORE.items():
+        result = result.replace(token, phrase)
+    return result
+
+
 def apply_adult_identity_language(text: str, *, supplied_initials: list[str] | None = None) -> str:
     """Replace generic Staff defaults with supplied Adult XX or the adult/adults."""
     value = str(text or "")
@@ -1058,6 +1149,8 @@ def apply_adult_identity_language(text: str, *, supplied_initials: list[str] | N
         value,
     )
     initials = supplied_initials if supplied_initials is not None else extract_supplied_adult_initials(value)
+    if not initials:
+        value = _protect_staff_phrases(value)
     if initials:
         staff_index = 0
 
@@ -1067,8 +1160,11 @@ def apply_adult_identity_language(text: str, *, supplied_initials: list[str] | N
             staff_index += 1
             return label
 
-        return _STAFF_TO_ADULT_RE.sub(_replace_staff, value)
-    return _STAFF_TO_ADULT_RE.sub("The adult", value)
+        value = _STAFF_TO_ADULT_RE.sub(_replace_staff, value)
+    else:
+        value = _STAFF_TO_ADULT_RE.sub("the adult", value)
+        value = _restore_staff_phrases(value)
+    return fix_broken_adult_heading_wording(value)
 
 
 def sanitize_observation_interpretation_language(text: str, *, source_text: str = "") -> str:
