@@ -2,8 +2,9 @@ from __future__ import annotations
 
 """Fast deterministic information classification for ORB Residential.
 
-This service sits before model routing. It does not call an LLM and is designed
-to be cheap, predictable and fast enough for Chat, Voice, Dictate and Write.
+DEPRECATED: Superseded by the live governance stack:
+``ai_external_call_governance`` → ``ai_privacy_decision_service`` + ``ai_redaction_service``.
+Do not wire this service into new routes.
 """
 
 import re
@@ -45,7 +46,9 @@ class InformationClassification:
 
 
 class OrbInformationClassificationService:
-    VERSION = "orb-information-classification-v1"
+    """DEPRECATED — use ``ai_privacy_decision_service`` and ``DataClassification`` enums."""
+
+    VERSION = "orb-information-classification-v1-deprecated"
 
     def classify(self, text: str, *, surface: str | None = None) -> InformationClassification:
         body = text or ""

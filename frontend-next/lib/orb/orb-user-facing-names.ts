@@ -88,12 +88,14 @@ export const ORB_VISIBLE_SIDEBAR_NAV = [
   { id: 'chat' as const, label: ORB_NAV_CHAT },
   { id: 'orb_dictate' as const, label: ORB_NAV_DICTATE },
   { id: 'orb_voice' as const, label: ORB_NAV_VOICE },
-  { id: 'orb_communicate' as const, label: ORB_NAV_COMMUNICATE },
   { id: 'orb_write' as const, label: ORB_NAV_WRITE },
   { id: 'saved' as const, label: ORB_NAV_RECORDS },
   { id: 'help' as const, label: ORB_NAV_HELP },
   { id: 'settings' as const, label: ORB_NAV_SETTINGS }
 ] as const
+
+/** Stations kept routable but hidden from primary launch navigation until backend workflows ship. */
+export const ORB_HIDDEN_LAUNCH_STATION_IDS = ['orb_communicate'] as const
 
 export type OrbVisibleSidebarNavId = (typeof ORB_VISIBLE_SIDEBAR_NAV)[number]['id']
 

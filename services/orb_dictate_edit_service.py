@@ -16,15 +16,14 @@ from schemas.orb_dictate import (
 )
 from services.orb_dictate_quality import compute_quality_checks
 from services.ai_external_call_governance import (
-    FEATURE_DICTATE_EDIT,
     redact_plain_text,
-    try_governed_draft_text,
 )
 from services.indicare_intelligence_core_service import indicare_intelligence_core_service
 from services.orb_dictate_service import STANDALONE_BOUNDARY, _dictate_brain_metadata, _finalize_dictate_text
 from services.orb_document_brain_adapter_service import orb_document_brain_adapter_service
 from services.orb_recording_contract_service import build_recording_contract_prompt_block
 from services.orb_therapeutic_language_contract_service import build_therapeutic_language_contract_block
+from services.orb_unified_brain_gateway import orb_unified_brain_gateway
 from services.recording_intelligence_service import recording_intelligence_service
 
 logger = logging.getLogger("indicare.orb_dictate_edit")
@@ -335,22 +334,28 @@ def edit_dictate_document(
     else:
         redacted_user, _ = redact_plain_text(user, mode="strict")
 
-    gateway_response = try_governed_draft_text(
-        feature=FEATURE_DICTATE_EDIT,
+    gateway_response = orb_unified_brain_gateway.edit_dictate_draft(
         system_prompt=system,
-        prompt=redacted_user,
-        model=os.environ.get("ORB_DICTATE_MODEL", "gpt-4.1-mini"),
+        user_prompt=redacted_user,
+        note_type=request.note_type,
+        mode=mode,
+        document_text=request.document_text,
         provider_id=provider_id,
         home_id=home_id,
         user_id=user_id,
-        data_classification=DataClassification.CONFIDENTIAL_CHILD,
-        metadata={"route": "orb_dictate_edit_service.edit_dictate_document", "mode": mode},
+        privacy_mode=privacy_mode,
     )
-    if gateway_response is None:
-        return _fallback_edit(request, mode)
+    raw_text, gateway_meta = gateway_response
+    if raw_text is None:
+        fallback = _fallback_edit(request, mode)
+        if gateway_meta.get("brain_metadata"):
+            merged_meta = dict(gateway_meta["brain_metadata"])
+            merged_meta.update(fallback.brain_metadata or {})
+            return fallback.model_copy(update={"brain_metadata": merged_meta})
+        return fallback
 
     try:
-        raw = gateway_response.text or "{}"
+        raw = raw_text or "{}"
         parsed: dict[str, Any] = json.loads(raw)
     except Exception:
         logger.exception("ORB Dictate edit failed — using fallback")
@@ -381,6 +386,21 @@ def edit_dictate_document(
     )
     quality: OrbDictateQualityChecks = compute_quality_checks(revised, request.note_type)
 
+    brain_metadata = _dictate_brain_metadata(
+        note_type=request.note_type,
+        transcript_text=request.document_text,
+        feature="dictate_edit",
+        intelligence_meta=intel_meta,
+    )
+    gateway_brain = gateway_meta.get("brain_metadata") or {}
+    if gateway_brain:
+        for key, value in gateway_brain.items():
+            if key == "indicare_intelligence_core" and brain_metadata.get("indicare_intelligence_core"):
+                continue
+            brain_metadata[key] = value
+    brain_metadata["unified_brain_gateway"] = gateway_meta.get("gateway_version")
+    brain_metadata["brain_decision_used_for_generation"] = True
+
     return OrbDictateEditResponse(
         revised_text=revised,
         change_summary=change_summary,
@@ -389,10 +409,5 @@ def edit_dictate_document(
         suggested_actions=suggested_actions or ["Review revised draft before saving"],
         version_label=EDIT_MODE_LABELS.get(mode, mode),
         standalone_boundary=STANDALONE_BOUNDARY,
-        brain_metadata=_dictate_brain_metadata(
-            note_type=request.note_type,
-            transcript_text=request.document_text,
-            feature="dictate_edit",
-            intelligence_meta=intel_meta,
-        ),
+        brain_metadata=brain_metadata,
     )

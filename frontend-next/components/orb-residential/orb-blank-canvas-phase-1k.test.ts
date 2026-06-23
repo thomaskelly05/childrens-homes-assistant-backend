@@ -198,10 +198,10 @@ describe('ORB Residential Phase 1K blank canvas reset', () => {
     assert.match(ORB_VOICE_STATUS_CARD_COPY, /Review any summary/)
   })
 
-  it('approved nav labels remain exactly nine items', () => {
+  it('approved nav labels remain exactly eight launch items', () => {
     assert.deepEqual(
       ORB_VISIBLE_SIDEBAR_NAV.map((entry) => entry.label),
-      ['Home', 'Chat', 'Dictate', 'Voice', 'Communicate', 'ORB Write', 'Records & Drafts', 'Help & Safety', 'Settings']
+      ['Home', 'Chat', 'Dictate', 'Voice', 'ORB Write', 'Records & Drafts', 'Help & Safety', 'Settings']
     )
   })
 

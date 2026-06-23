@@ -2,8 +2,9 @@ from __future__ import annotations
 
 """Fast PII masking for ORB Residential.
 
-The aim is not perfect legal anonymisation; it is a fast pre-model protection
-layer that removes obvious identifiers before prompts leave the ORB boundary.
+DEPRECATED: Superseded by the live governance stack:
+``ai_external_call_governance`` → ``ai_redaction_service.redact_*``.
+Do not wire this service into new routes.
 """
 
 import re
@@ -31,7 +32,9 @@ class PiiProtectionResult:
 
 
 class OrbPiiProtectionService:
-    VERSION = "orb-pii-protection-v1"
+    """DEPRECATED — use ``ai_redaction_service`` via ``ai_external_call_governance``."""
+
+    VERSION = "orb-pii-protection-v1-deprecated"
 
     PATTERNS: tuple[tuple[str, re.Pattern[str], str], ...] = (
         ("email", _EMAIL_RE, "[Email]"),

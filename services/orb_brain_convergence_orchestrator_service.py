@@ -13,6 +13,7 @@ from services.ai_model_router_service import ai_model_router_service
 from services.orb_brain_route_map_service import orb_brain_route_map_service
 from services.orb_brain_route_service import OrbBrainRouteDecision, orb_brain_route_service
 from services.orb_data_vault_registry_service import orb_data_vault_registry_service
+from services.orb_domain_convergence_service import orb_domain_convergence_service
 from services.orb_indicare_intelligence_convergence_service import (
     orb_indicare_intelligence_convergence_service,
 )
@@ -72,6 +73,11 @@ class OrbBrainConvergenceDecision:
     contract_family: str | None = None
     public_considerations: list[str] = field(default_factory=list)
     universal_contract_block: str = ""
+    active_final_domains: list[str] = field(default_factory=list)
+    source_anchors: list[str] = field(default_factory=list)
+    public_source_chips: list[dict[str, Any]] = field(default_factory=list)
+    domain_prompt_block: str = ""
+    domain_convergence_version: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -223,11 +229,24 @@ class OrbBrainConvergenceOrchestratorService:
         )
         family_block = build_family_contract_prompt_block(contract_family)
         depth_hint = f"ORB answer depth tier: {depth_tier} — adapt length and structure accordingly."
+
+        domain_packet = orb_domain_convergence_service.build_packet(
+            user_message,
+            mode=normalised_mode,
+            feature=feature,
+            note_type=resolved_note_type,
+            scenario_types=scenario_types,
+            risk_level=risk_level,
+            active_brains=active_brains,
+        )
+        domain_prompt_block = orb_domain_convergence_service.prompt_block(domain_packet)
+
         prompt_addendum = self._join_prompt_blocks(
             mandatory_block,
             universal_block,
             family_block,
             depth_hint,
+            domain_prompt_block,
         )
 
         decision = OrbBrainConvergenceDecision(
@@ -257,6 +276,11 @@ class OrbBrainConvergenceOrchestratorService:
             contract_family=contract_family,
             public_considerations=public_considerations,
             universal_contract_block=universal_block,
+            active_final_domains=list(domain_packet.active_domains),
+            source_anchors=list(domain_packet.source_anchors),
+            public_source_chips=list(domain_packet.public_source_chips),
+            domain_prompt_block=domain_prompt_block,
+            domain_convergence_version=orb_domain_convergence_service.VERSION,
         )
 
         if include_route_map:
@@ -305,11 +329,44 @@ class OrbBrainConvergenceOrchestratorService:
             "boundaries": list(decision.boundaries),
             "standalone_boundary": decision.standalone_boundary,
             "public_considerations": list(decision.public_considerations),
+            "active_final_domains": list(decision.active_final_domains),
+            "source_anchors": list(decision.source_anchors),
+            "public_source_chips": list(decision.public_source_chips),
+            "domain_convergence": orb_domain_convergence_service.VERSION,
             "orchestrator": self.VERSION,
         }
         if route:
             payload["route"] = route
         return payload
+
+    def convergence_source_chips_as_sources(
+        self,
+        decision: OrbBrainConvergenceDecision | dict[str, Any],
+    ) -> list[dict[str, Any]]:
+        """Map domain convergence chips into the existing frontend sources contract."""
+        chips = (
+            decision.public_source_chips
+            if isinstance(decision, OrbBrainConvergenceDecision)
+            else list(decision.get("public_source_chips") or [])
+        )
+        sources: list[dict[str, Any]] = []
+        for chip in chips:
+            label = str(chip.get("label") or "").strip()
+            if not label:
+                continue
+            sources.append(
+                {
+                    "id": chip.get("id") or label.lower().replace(" ", "_"),
+                    "label": label,
+                    "type": chip.get("type") or "source_family",
+                    "anchor": chip.get("anchor"),
+                    "precision": chip.get("precision") or "source_family_anchor",
+                    "domains": list(chip.get("domains") or []),
+                    "basis": "ORB domain convergence source-family anchor",
+                    "live_retrieved": False,
+                }
+            )
+        return sources
 
     def build_shared_cognition(
         self,
@@ -359,7 +416,14 @@ class OrbBrainConvergenceOrchestratorService:
         payload.pop("indicare_intelligence_convergence", None)
         payload.pop("mandatory_contracts", None)
         payload.pop("prompt_addendum", None)
+        payload.pop("domain_prompt_block", None)
         payload["active_cognition"] = decision.active_cognition
+        payload["domain_convergence"] = {
+            "version": decision.domain_convergence_version,
+            "active_final_domains": list(decision.active_final_domains),
+            "source_anchors": list(decision.source_anchors),
+            "public_source_chip_count": len(decision.public_source_chips),
+        }
         return self._sanitize_debug_payload(payload)
 
     def _resolve_risk_level(
