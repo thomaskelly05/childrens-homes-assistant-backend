@@ -295,7 +295,10 @@ def _build_standalone_request_context(
     from services.orb_safety_scaffold_service import OrbSafetyScaffold
 
     guardrail_block = ""
-    if scaffold.get("guardrail_active"):
+    suppress_guardrail = simple_standard_contract and not orb_safety_scaffold_service.has_explicit_critical_terms(
+        user_message
+    )
+    if scaffold.get("guardrail_active") and not suppress_guardrail:
         scaffold_for_prompt = scaffold_obj or OrbSafetyScaffold(
             **{k: v for k, v in scaffold.items() if k in OrbSafetyScaffold.__dataclass_fields__}
         )

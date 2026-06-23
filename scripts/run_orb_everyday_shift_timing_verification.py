@@ -224,6 +224,13 @@ def _print_table(rows: list[dict[str, Any]], *, live: bool) -> None:
 
 
 def _slow_paths(rows: list[dict[str, Any]], *, live: bool) -> list[str]:
+    from services.orb_universal_answer_contract_map_service import (
+        CONTACT_DISTRESS_PROMPT_CHAR_CAP,
+        EVERYDAY_SHIFT_PROMPT_CHAR_CAP,
+        MEDICATION_REFUSAL_PROMPT_CHAR_CAP,
+        get_family_prompt_char_cap,
+    )
+
     issues: list[str] = []
     for row in rows:
         pid = row["id"]
@@ -235,9 +242,17 @@ def _slow_paths(rows: list[dict[str, Any]], *, live: bool) -> list[str]:
                 issues.append(f"{pid}: expected residential/fast tier, got {tier}")
             if depth not in {"residential_light", "residential_standard"}:
                 issues.append(f"{pid}: expected residential_light/standard depth, got {depth}")
-            if chars > 8000:
-                issues.append(f"{pid}: prompt_chars {chars} exceeds 8k everyday cap")
-            if row.get("scaffold_guardrail_active") and pid in {"1_refused_school", "2_upset_after_contact"}:
+            cap = EVERYDAY_SHIFT_PROMPT_CHAR_CAP
+            if pid == "2_upset_after_contact":
+                cap = CONTACT_DISTRESS_PROMPT_CHAR_CAP
+            elif pid == "3_refused_medication":
+                cap = MEDICATION_REFUSAL_PROMPT_CHAR_CAP
+            contract = row.get("contract_family")
+            if contract:
+                cap = get_family_prompt_char_cap(contract)
+            if chars > cap:
+                issues.append(f"{pid}: prompt_chars {chars} exceeds {cap} cap")
+            if row.get("scaffold_guardrail_active") and pid in {"1_refused_school", "2_upset_after_contact", "3_refused_medication"}:
                 issues.append(f"{pid}: scaffold guardrail unexpectedly active")
         if pid.startswith(("4_", "5_")):
             if tier != "deep":

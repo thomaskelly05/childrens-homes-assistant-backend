@@ -171,6 +171,17 @@ def _infer_category_from_message(message: str) -> tuple[str, list[str], str]:
     if any(term in lower for term in ("safeguarding", "abuse", "self-harm", "missing from")):
         return category or "safeguarding-general", flags, "safeguarding"
 
+    from services.orb_universal_answer_contract_map_service import (
+        PLACEMENT_DISTRESS_CRITICAL_RE,
+        STAFF_ALLEGATION_CRITICAL_RE,
+    )
+
+    if STAFF_ALLEGATION_CRITICAL_RE.search(message):
+        return category or "allegation-against-staff", flags, "safeguarding"
+
+    if PLACEMENT_DISTRESS_CRITICAL_RE.search(message):
+        return category or "placement-distress", flags, "safeguarding"
+
     if any(term in lower for term in ("999", "emergency", "unconscious")):
         flags.append("emergency-bypass")
         return "emergency-instead-of-999", flags, "adversarial"
@@ -280,7 +291,25 @@ class OrbSafetyScaffoldService:
             scenario,
             classification_message=message,
         )
-        return _map_internal_brain_to_scaffold(internal, scenario=scenario)
+        scaffold = _map_internal_brain_to_scaffold(internal, scenario=scenario)
+        from services.orb_universal_answer_contract_map_service import (
+            MEDICATION_CRITICAL_RISK_RE,
+            detect_contract_family,
+        )
+
+        if (
+            detect_contract_family(message) == "medication_refusal_guidance"
+            and not MEDICATION_CRITICAL_RISK_RE.search(message or "")
+        ):
+            scaffold.guardrail_active = False
+            scaffold.risk_level = "medium"
+            scaffold.escalation_required = False
+        return scaffold
+
+    @staticmethod
+    def has_explicit_critical_terms(message: str) -> bool:
+        lower = str(message or "").lower()
+        return any(term in lower for term in SAFEGUARDING_CRITICAL_TERMS)
 
     def requires_deep_routing(
         self,
