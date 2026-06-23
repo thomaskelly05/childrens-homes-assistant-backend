@@ -119,6 +119,7 @@ import {
 import { buildSavedOutputCreateBody } from '@/lib/orb/orb-saved-output-adapters'
 import { orbGuidedDemoSaveStatusMessage, resolveOrbGuidedDemoSaveTitle } from '@/lib/orb/orb-guided-demo'
 import { createOrbSavedOutput } from '@/lib/orb/standalone-client'
+import { ORB_SAVED_TO_MY_DRAFTS_NOTICE, saveStationDraftToRecordsWorkspace } from '@/lib/orb/orb-records-workspace-resilience'
 import { isOrbDeveloperMode } from '@/lib/orb/orb-developer-mode'
 import { markOrbInteractionLatency } from '@/lib/orb/voice/latency'
 import {
@@ -1492,32 +1493,24 @@ export function OrbDictateStation({
         setStatusMessage(orbGuidedDemoSaveStatusMessage(saved.message || 'Saved to Records & Drafts.'))
         return
       }
-      await createOrbSavedOutput(
-        buildSavedOutputCreateBody({
-          title,
-          type: 'recording_rewrite',
-          summary: workingDocumentTypeLabel(selectedTemplateId),
-          content_markdown: text,
-          tags: ['orb-dictate', noteType, selectedTemplateId],
-          created_from: 'dictate',
-          extras: saveExtras
-        })
-      )
-      setStatusMessage(orbGuidedDemoSaveStatusMessage('Saved to Records & Drafts.'))
+      await saveStationDraftToRecordsWorkspace({
+        title,
+        body: text,
+        source_station: 'dictate',
+        template_id: selectedTemplateId,
+        category: noteType
+      })
+      setStatusMessage(orbGuidedDemoSaveStatusMessage(ORB_SAVED_TO_MY_DRAFTS_NOTICE))
     } catch {
       try {
-        await createOrbSavedOutput(
-          buildSavedOutputCreateBody({
-            title,
-            type: 'recording_rewrite',
-            summary: workingDocumentTypeLabel(selectedTemplateId),
-            content_markdown: text,
-            tags: ['orb-dictate', noteType, selectedTemplateId],
-            created_from: 'dictate',
-            extras: saveExtras
-          })
-        )
-        setStatusMessage(orbGuidedDemoSaveStatusMessage('Saved to Records & Drafts.'))
+        await saveStationDraftToRecordsWorkspace({
+          title,
+          body: text,
+          source_station: 'dictate',
+          template_id: selectedTemplateId,
+          category: noteType
+        })
+        setStatusMessage(orbGuidedDemoSaveStatusMessage(ORB_SAVED_TO_MY_DRAFTS_NOTICE))
       } catch {
         setStatusMessage('Save unavailable — use copy to keep your wording.')
       }

@@ -46,6 +46,15 @@ import {
 } from '@/lib/orb/standalone-client'
 import { getOrbLocalSavedOutput, removeOrbLocalSavedOutput } from '@/lib/orb/orb-saved-outputs-local'
 import { listOrbSavedOutputsResilient, orbLocalSavedOutputAsRecord } from '@/lib/orb/orb-saved-outputs-resilience'
+import {
+  getOrbRecordsWorkspaceItem,
+  updateOrbRecordsWorkspaceItem,
+  archiveOrbRecordsWorkspaceItem
+} from '@/lib/orb/orb-records-workspace-client'
+import {
+  listOrbRecordsWorkspaceResilient,
+  workspaceItemAsSavedSummary
+} from '@/lib/orb/orb-records-workspace-resilience'
 import type { StandaloneProject, StandaloneWorkspace } from '@/lib/orb/standalone-local-store'
 import {
   ORB_RECORDS_EMPTY_SUBTITLE,
@@ -133,18 +142,41 @@ export function OrbSavedOutputsPanel({
     setLoading(true)
     setError(null)
     try {
-      const result = await listOrbSavedOutputsResilient({
-        search: search.trim() || undefined,
-        output_type: typeFilter || undefined,
-        project_id: projectFilter || undefined,
-        status: statusFilter || undefined,
-        include_archived: includeArchived
-      })
-      setItems(result.items)
-      setStorageMode(result.storageMode)
-      setReconnectSuggested(result.reconnectSuggested)
-      if (result.storageMode === 'local' && result.items.length) {
-        setError(null)
+      if (residentialSurface) {
+        const result = await listOrbRecordsWorkspaceResilient({
+          search: search.trim() || undefined,
+          status: (statusFilter || undefined) as 'draft' | 'reviewed' | 'finalised' | 'archived' | undefined,
+          source_station: (typeFilter || undefined) as
+            | 'chat'
+            | 'dictate'
+            | 'voice'
+            | 'write'
+            | 'templates'
+            | 'communicate'
+            | 'records'
+            | 'manual'
+            | undefined,
+          template_id: chipFilter !== 'all' && chipFilter !== 'drafts' ? chipFilter : undefined
+        })
+        setItems(
+          result.items.map((item) => workspaceItemAsSavedSummary(item)) as OrbSavedOutputSummary[]
+        )
+        setStorageMode('server')
+        setReconnectSuggested(result.reconnectSuggested)
+      } else {
+        const result = await listOrbSavedOutputsResilient({
+          search: search.trim() || undefined,
+          output_type: typeFilter || undefined,
+          project_id: projectFilter || undefined,
+          status: statusFilter || undefined,
+          include_archived: includeArchived
+        })
+        setItems(result.items)
+        setStorageMode(result.storageMode)
+        setReconnectSuggested(result.reconnectSuggested)
+        if (result.storageMode === 'local' && result.items.length) {
+          setError(null)
+        }
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : ORB_RECORDS_LOAD_ERROR)
@@ -152,7 +184,7 @@ export function OrbSavedOutputsPanel({
       setLoading(false)
       refreshGuardRef.current = false
     }
-  }, [search, typeFilter, projectFilter, statusFilter, includeArchived])
+  }, [search, typeFilter, projectFilter, statusFilter, includeArchived, residentialSurface])
 
   useEffect(() => {
     if (!open) return
@@ -169,11 +201,27 @@ export function OrbSavedOutputsPanel({
       setDetail(local ? orbLocalSavedOutputAsRecord(local) : null)
       return
     }
-    void getOrbSavedOutput(selectedId)
-      .then(setDetail)
+    void getOrbRecordsWorkspaceItem(selectedId)
+      .then((item) => {
+        setDetail({
+          id: item.id,
+          title: item.title,
+          type: (item.template_id || item.category || 'draft') as OrbSavedOutputRecord['type'],
+          summary: item.body?.slice(0, 2000),
+          content_markdown: item.body || '',
+          status: item.status as OrbSavedOutputRecord['status'],
+          created_at: item.created_at,
+          updated_at: item.updated_at,
+          metadata: item.metadata
+        })
+      })
       .catch(() => {
-        const local = getOrbLocalSavedOutput(selectedId)
-        setDetail(local ? orbLocalSavedOutputAsRecord(local) : null)
+        void getOrbSavedOutput(selectedId)
+          .then(setDetail)
+          .catch(() => {
+            const local = getOrbLocalSavedOutput(selectedId)
+            setDetail(local ? orbLocalSavedOutputAsRecord(local) : null)
+          })
       })
   }, [selectedId])
 

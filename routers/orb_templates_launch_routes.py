@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from auth.orb_standalone_premium_dependency import (
@@ -88,6 +88,56 @@ async def export_docx(body: TemplateExportBody, current_user=Depends(require_sta
         )
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.get("/taxonomy/search")
+async def taxonomy_search(
+    q: str = Query(..., min_length=1, max_length=200),
+    lifecycle_group: str | None = None,
+    station: str | None = None,
+    regulation_anchor: str | None = None,
+    current_user=Depends(require_standalone_orb_access),
+):
+    _ = current_user
+    return _success(
+        {
+            "query": q,
+            "templates": orb_template_taxonomy_service.search(
+                q,
+                lifecycle_group=lifecycle_group,
+                station=station,
+                regulation_anchor=regulation_anchor,
+            ),
+        }
+    )
+
+
+@router.get("/taxonomy/by-station/{station_id}")
+async def taxonomy_by_station(
+    station_id: str,
+    current_user=Depends(require_standalone_orb_access),
+):
+    _ = current_user
+    return _success(
+        {
+            "station": station_id,
+            "templates": orb_template_taxonomy_service.templates_for_station(station_id),
+        }
+    )
+
+
+@router.get("/taxonomy/by-category/{category}")
+async def taxonomy_by_category(
+    category: str,
+    current_user=Depends(require_standalone_orb_access),
+):
+    _ = current_user
+    return _success(
+        {
+            "category": category,
+            "templates": orb_template_taxonomy_service.templates_for_category(category),
+        }
+    )
 
 
 @router.get("/taxonomy/lifecycle-groups")

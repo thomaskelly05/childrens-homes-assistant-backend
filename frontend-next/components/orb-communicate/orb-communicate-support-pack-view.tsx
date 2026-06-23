@@ -8,6 +8,7 @@ import type {
   CommunicationSupportPackOutput,
   CommunicationSupportPackSection
 } from '@/lib/orb/communicate/orb-communicate-types'
+import { saveStationDraftToRecordsWorkspace } from '@/lib/orb/orb-records-workspace-resilience'
 import { copyTextToClipboard } from '@/lib/orb/orb-clipboard'
 
 const ACTION_LABELS: Record<CommunicationSupportPackAction, string> = {
@@ -66,6 +67,14 @@ function handlePackAction(
       if (typeof window !== 'undefined') window.print()
       break
     case 'save':
+      void saveStationDraftToRecordsWorkspace({
+        title: pack.packTitle || 'Communication support pack',
+        body: packPlainText(pack),
+        source_station: 'communicate',
+        template_id: 'orb_communicate_support_pack_record',
+        category: 'communicate'
+      })
+      break
     case 'write':
       break
     case 'reflect':

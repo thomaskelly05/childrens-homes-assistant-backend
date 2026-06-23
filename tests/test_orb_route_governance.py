@@ -19,6 +19,7 @@ CRITICAL_ORB_ROUTERS = frozenset(
         "routers.orb_voice_residential_routes",
         "routers.orb_dictate_routes",
         "routers.orb_saved_outputs_launch_routes",
+        "routers.orb_records_workspace_launch_routes",
         "routers.orb_system_routes",
     }
 )

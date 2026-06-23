@@ -12,6 +12,42 @@ from services.orb_template_taxonomy_data import (
 )
 from services.orb_therapeutic_template_factory_service import enrich_template
 
+# Synonym expansion for taxonomy search — maps common practice terms to search tokens.
+TAXONOMY_SEARCH_SYNONYMS: dict[str, list[str]] = {
+    "missing": ["missing_from_care", "missing return", "abscond"],
+    "mfc": ["missing_from_care", "missing from care"],
+    "lado": ["allegation", "staff allegation", "lado_referral"],
+    "complaint": ["complaint_record", "complaints"],
+    "reg 45": ["regulation_45", "reg 45", "regulation 45"],
+    "reg 44": ["regulation_44", "reg 44", "regulation 44"],
+    "physical intervention": ["restraint", "physical_intervention", "hold"],
+    "restraint": ["physical_intervention", "restraint_record"],
+    "self-harm": ["self_harm", "suicide", "self harm"],
+    "self harm": ["self_harm", "suicide"],
+    "transition": ["transition_planning", "moving_on", "pathway"],
+    "referral": ["referral_summary", "admission"],
+    "admission": ["referral_summary", "admission_planning", "welcome_plan"],
+    "placement": ["placement_plan", "referral_summary"],
+    "contact": ["contact_note", "family_time", "contact_change"],
+    "exploitation": ["exploitation_risk", "cse", "cce", "county lines"],
+    "medication": ["medication_record", "medication_error", "meds"],
+    "incident": ["incident_record", "behaviour_incident"],
+    "daily": ["daily_record", "shift note"],
+    "handover": ["handover_note", "shift handover"],
+    "safeguarding": ["safeguarding_concern", "protection"],
+    "manager": ["manager_review", "manager oversight"],
+}
+
+
+def _expand_search_tokens(query: str) -> set[str]:
+    q = query.lower().strip()
+    tokens = {q}
+    for phrase, expansions in TAXONOMY_SEARCH_SYNONYMS.items():
+        if phrase in q:
+            tokens.update(expansions)
+            tokens.add(phrase)
+    return tokens
+
 
 class OrbTemplateTaxonomyService:
     """Extends the canonical registry with lifecycle taxonomy and station wiring metadata."""
@@ -41,14 +77,8 @@ class OrbTemplateTaxonomyService:
                 if any(anchor in a.lower() for a in t.get("regulation_anchors", []))
             ]
         if search:
-            q = search.lower()
-            items = [
-                t
-                for t in items
-                if q in t["title"].lower()
-                or q in t["template_id"].lower()
-                or q in t.get("lifecycle_family", "").lower()
-            ]
+            tokens = _expand_search_tokens(search)
+            items = [t for t in items if self._matches_search(t, tokens)]
         results: list[dict[str, Any]] = []
         for meta in sorted(items, key=lambda x: (x["lifecycle_group"], x["title"])):
             entry = dict(meta)
@@ -87,6 +117,28 @@ class OrbTemplateTaxonomyService:
     def templates_for_station(self, station: str) -> list[dict[str, Any]]:
         return self.list_taxonomy(station=station)
 
+    def _matches_search(self, meta: dict[str, Any], tokens: set[str]) -> bool:
+        haystack_parts = [
+            meta.get("title", ""),
+            meta.get("template_id", ""),
+            meta.get("lifecycle_family", ""),
+            meta.get("lifecycle_group", ""),
+            " ".join(meta.get("regulation_anchors", [])),
+            " ".join(meta.get("station_availability", [])),
+            meta.get("save_destination", ""),
+        ]
+        canonical = ORB_TEMPLATE_REGISTRY.get(meta["template_id"])
+        if canonical:
+            haystack_parts.extend(
+                [
+                    canonical.get("purpose", ""),
+                    canonical.get("category", ""),
+                    canonical.get("when_to_use", ""),
+                ]
+            )
+        haystack = " ".join(str(p) for p in haystack_parts).lower()
+        return any(token in haystack for token in tokens)
+
     def search(
         self,
         query: str,
@@ -101,6 +153,46 @@ class OrbTemplateTaxonomyService:
             regulation_anchor=regulation_anchor,
             search=query,
         )
+
+    def templates_for_category(self, category: str) -> list[dict[str, Any]]:
+        cat = category.lower().strip()
+        matched_ids: set[str] = set()
+        for meta in ORB_TEMPLATE_TAXONOMY.values():
+            canonical = ORB_TEMPLATE_REGISTRY.get(meta["template_id"], {})
+            registry_category = str(canonical.get("category", "")).lower()
+            lifecycle_family = str(meta.get("lifecycle_family", "")).lower()
+            if cat in registry_category or cat in lifecycle_family or cat in meta["template_id"].lower():
+                matched_ids.add(meta["template_id"])
+        return [entry for entry in self.list_taxonomy() if entry["template_id"] in matched_ids]
+
+    def suggest_for_content(
+        self,
+        content: str,
+        *,
+        station: str = "chat",
+        limit: int = 3,
+    ) -> list[dict[str, Any]]:
+        """Suggest up to N relevant templates based on answer content."""
+        text = (content or "").lower()
+        registry_id = orb_template_library_registry.resolve_template_id(content)
+        scored: list[tuple[int, dict[str, Any]]] = []
+        station_templates = self.templates_for_station(station)
+        for meta in station_templates:
+            score = 0
+            if registry_id and meta["template_id"] == registry_id:
+                score += 100
+            title = meta["title"].lower()
+            if title in text or meta["template_id"].replace("_", " ") in text:
+                score += 50
+            for token in _expand_search_tokens(text[:2000]):
+                if self._matches_search(meta, {token}):
+                    score += 10
+            if score > 0:
+                entry = dict(meta)
+                entry["suggestion_label"] = f"Use {meta['title'].lower()} template"
+                scored.append((score, entry))
+        scored.sort(key=lambda x: (-x[0], x[1]["title"]))
+        return [entry for _, entry in scored[:limit]]
 
     def coverage_report(self) -> dict[str, Any]:
         missing = sorted(

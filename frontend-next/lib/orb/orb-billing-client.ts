@@ -75,7 +75,10 @@ export const ORB_TEMPLATES_API = {
   categories: '/templates/categories',
   generate: '/templates/generate',
   exportPdf: '/templates/export/pdf',
-  exportDocx: '/templates/export/docx'
+  exportDocx: '/templates/export/docx',
+  taxonomySearch: '/templates/taxonomy/search',
+  taxonomyByStation: (stationId: string) => `/templates/taxonomy/by-station/${encodeURIComponent(stationId)}`,
+  taxonomyByCategory: (category: string) => `/templates/taxonomy/by-category/${encodeURIComponent(category)}`
 } as const
 
 export const ORB_SAVED_OUTPUTS_API = {
