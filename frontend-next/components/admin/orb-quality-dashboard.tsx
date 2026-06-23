@@ -18,6 +18,7 @@ import { AuthApiError } from '@/lib/auth/api'
 import { useAuth } from '@/contexts/auth-context'
 import { getQualityRuns } from '@/lib/founder/quality-lab'
 import { computeOrbLaunchQualityGate } from '@/lib/orb/quality/launch-quality-gate'
+import { getPrivacyRetentionReviewed } from '@/lib/orb/quality/launch-governance-store'
 import Link from 'next/link'
 
 const REASON_LABELS: Record<string, string> = {
@@ -134,7 +135,14 @@ export function OrbQualityDashboard() {
   }
 
   const helpfulPct = summary ? `${Math.round((summary.helpful_ratio || 0) * 1000) / 10}%` : '—'
-  const launchGate = computeOrbLaunchQualityGate({ runs: getQualityRuns(), privacyRetentionReviewed: false })
+  const privacyRetentionReviewed = getPrivacyRetentionReviewed()
+  const launchGate = computeOrbLaunchQualityGate({
+    runs: getQualityRuns(),
+    privacyRetentionReviewed
+  })
+  const publicLaunchBlockedByPrivacy =
+    !privacyRetentionReviewed &&
+    launchGate.blockers.some((blocker) => /privacy and retention review/i.test(blocker))
 
   return (
     <div className="space-y-8" data-orb-admin-quality-dashboard>
@@ -165,6 +173,14 @@ export function OrbQualityDashboard() {
               <li key={blocker}>{blocker}</li>
             ))}
           </ul>
+        ) : null}
+        {publicLaunchBlockedByPrivacy ? (
+          <p
+            className="mt-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-950"
+            data-orb-admin-privacy-retention-warning
+          >
+            Public launch is blocked until privacy and retention review is recorded in Quality Lab.
+          </p>
         ) : null}
         <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
           Live LLM Quality Lab uses synthetic scenarios only. It must not include real child records.

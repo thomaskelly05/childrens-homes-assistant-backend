@@ -29,6 +29,11 @@ import { assessOrbPilotPrivacyStatus, computeOrbPilotReadinessGate } from '@/lib
 import { getEvaluationRuns } from '@/lib/orb/evaluation'
 import { getQualityLabAgentIntegration } from '@/lib/founder/agents/autonomous/founder-agent-service'
 import { computeOrbLaunchQualityGate } from '@/lib/orb/quality/launch-quality-gate'
+import {
+  getLaunchGovernanceRecord,
+  getPrivacyRetentionReviewed,
+  recordPrivacyRetentionReview
+} from '@/lib/orb/quality/launch-governance-store'
 
 const PRIORITY_TONE: Record<string, string> = {
   critical: 'text-rose-300 border-rose-400/30 bg-rose-500/10',
@@ -181,6 +186,8 @@ export function FounderQualityLabPage() {
   const openProposals = getOpenQualityProposals()
 
   const privacyStatus = useMemo(() => assessOrbPilotPrivacyStatus(), [])
+  const privacyRetentionReviewed = getPrivacyRetentionReviewed()
+  const launchGovernance = getLaunchGovernanceRecord()
 
   const launchGate = useMemo(
     () =>
@@ -188,9 +195,9 @@ export function FounderQualityLabPage() {
         runs,
         evaluationRuns: getEvaluationRuns(),
         whistleblowingCovered: overview?.coverage?.whistleblowing_covered ?? true,
-        privacyRetentionReviewed: false
+        privacyRetentionReviewed
       }),
-    [runs, overview]
+    [runs, overview, privacyRetentionReviewed]
   )
 
   const pilotReadinessGate = useMemo(
@@ -211,9 +218,9 @@ export function FounderQualityLabPage() {
         qualityRuns: runs,
         evaluationRuns: getEvaluationRuns(),
         whistleblowingCovered: overview?.coverage?.whistleblowing_covered ?? true,
-        privacyRetentionReviewed: false
+        privacyRetentionReviewed
       }),
-    [runs, overview]
+    [runs, overview, privacyRetentionReviewed]
   )
 
   async function handleRunPack() {
@@ -308,6 +315,16 @@ export function FounderQualityLabPage() {
     refresh()
   }
 
+  function handleRecordPrivacyRetentionReview() {
+    recordPrivacyRetentionReview({ reviewedBy: 'founder' })
+    refresh()
+  }
+
+  const publicLaunchBlockedByPrivacy =
+    !privacyRetentionReviewed &&
+    launchGate.recommendation !== 'public-launch-ready' &&
+    launchGate.blockers.some((blocker) => /privacy and retention review/i.test(blocker))
+
   const latestRun = summary.latestRun
   const riskCounts = latestRun ? riskBreakdown(latestRun.results) : {}
 
@@ -365,6 +382,58 @@ export function FounderQualityLabPage() {
                 <li key={blocker}>{blocker}</li>
               ))}
             </ul>
+          ) : null}
+          <div
+            className="mt-4 rounded-2xl border border-white/10 bg-white/[0.03] p-4"
+            data-testid="quality-lab-privacy-retention-review"
+          >
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500">
+                  Privacy &amp; retention review
+                </p>
+                <p className="mt-2 text-sm text-slate-300">
+                  Public launch requires a recorded privacy and retention governance review. Closed pilot can proceed
+                  without this sign-off.
+                </p>
+                <p className="mt-2 text-sm text-slate-400">
+                  Status:{' '}
+                  <span className={privacyRetentionReviewed ? 'text-emerald-300' : 'text-amber-300'}>
+                    {privacyRetentionReviewed ? 'recorded' : 'not recorded'}
+                  </span>
+                  {launchGovernance.reviewedAt ? (
+                    <span className="text-slate-500">
+                      {' '}
+                      · {new Date(launchGovernance.reviewedAt).toLocaleString('en-GB')}
+                    </span>
+                  ) : null}
+                </p>
+              </div>
+              {!privacyRetentionReviewed ? (
+                <button
+                  type="button"
+                  onClick={handleRecordPrivacyRetentionReview}
+                  className="inline-flex items-center gap-2 rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-3 py-2 text-xs font-bold text-emerald-200"
+                >
+                  <ShieldCheck className="h-3.5 w-3.5" aria-hidden />
+                  Record privacy &amp; retention review
+                </button>
+              ) : null}
+            </div>
+          </div>
+          {publicLaunchBlockedByPrivacy ? (
+            <div
+              className="mt-3 rounded-2xl border border-amber-400/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100"
+              data-testid="quality-lab-public-launch-warning"
+            >
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+                <p>
+                  Public launch remains blocked until privacy and retention review is recorded. Other launch gates may
+                  also still apply.
+                </p>
+              </div>
+            </div>
           ) : null}
           <p className="mt-3 text-xs text-slate-500">
             Quality Lab = curated GOLD scenarios. ORB Evaluation = broad synthetic and adversarial red team testing.
