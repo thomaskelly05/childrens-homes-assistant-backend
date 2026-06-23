@@ -68,6 +68,14 @@ import { ORB_WRITE_SAFETY_COPY } from '@/lib/orb/write/orb-write-types'
 import { ORB_RESIDENTIAL_STATION_PRODUCT_COPY } from '@/lib/orb/orb-residential-copy'
 import { orbGuidedDemoSaveStatusMessage, resolveOrbGuidedDemoSaveTitle } from '@/lib/orb/orb-guided-demo'
 import { OrbWriteStudioReviewChecklist } from '@/components/orb-write/orb-write-studio-review-checklist'
+import { OrbWriteTemplateLibraryPanel } from '@/components/orb-write/orb-write-template-library-panel'
+import { OrbWriteWorkingDocumentEditor } from '@/components/orb-write/orb-write-working-document-editor'
+import type { OrbTemplateWorkingDocument } from '@/lib/orb/template/orb-template-working-document-types'
+import {
+  clearOrbWriteWorkingDocumentHandoff,
+  loadOrbWriteWorkingDocumentHandoff,
+  workingDocumentToWriteBody
+} from '@/lib/orb/write/orb-write-working-document-handoff'
 
 export function OrbWriteStandalonePanel({
   open,
@@ -97,6 +105,8 @@ export function OrbWriteStandalonePanel({
   const [hasLocalDraft, setHasLocalDraft] = useState(false)
   const [selectedGuidance, setSelectedGuidance] = useState<OrbWriteSelectedGuidance | null>(null)
   const [templatePickerOpen, setTemplatePickerOpen] = useState(false)
+  const [templateLibraryOpen, setTemplateLibraryOpen] = useState(false)
+  const [workingDoc, setWorkingDoc] = useState<OrbTemplateWorkingDocument | null>(null)
   const [sourcePanelOpen, setSourcePanelOpen] = useState(false)
   const [guidancePanelOpen, setGuidancePanelOpen] = useState(true)
   const [compactWriteHeight, setCompactWriteHeight] = useState(false)
@@ -125,6 +135,23 @@ export function OrbWriteStandalonePanel({
   useEffect(() => {
     if (!open) return
     setHasLocalDraft(hasOrbWriteLocalDraft())
+    const workingHandoff = loadOrbWriteWorkingDocumentHandoff()
+    if (workingHandoff && !initialDocument) {
+      setWorkingDoc(workingHandoff.working_document)
+      const recordType = resolveOrbRecordingRecordType({
+        recordTypeId: workingHandoff.working_document.template_id
+      })
+      setRecordTypeId(recordType.id)
+      setDoc(
+        createBlankOrbWriteDocumentFromRecordType(recordType, {
+          body: workingDocumentToWriteBody(workingHandoff.working_document),
+          transcript: workingHandoff.working_document.rendered_body
+        })
+      )
+      clearOrbWriteWorkingDocumentHandoff()
+      setStatusMessage(`Working document loaded — ${workingHandoff.source_label}.`)
+      return
+    }
     const contentHandoff = loadOrbWriteContentHandoff()
     if (contentHandoff && !initialDocument) {
       const document = contentHandoffToOrbWriteDocument(contentHandoff)
@@ -492,6 +519,14 @@ export function OrbWriteStandalonePanel({
                 follow-up.
               </p>
               <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setTemplateLibraryOpen(true)}
+                  className="inline-flex items-center gap-1 rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-[10px] font-semibold text-slate-700 hover:bg-slate-50"
+                  data-orb-write-open-template-library
+                >
+                  Template library
+                </button>
                 <OrbWriteRecordTypeSelector
                   recordTypeId={recordTypeId}
                   variant="compact"
@@ -578,22 +613,43 @@ export function OrbWriteStandalonePanel({
                 />
               ) : null}
               <div className="orb-write-studio-editor min-h-0 overflow-hidden" data-orb-write-document-canvas-host>
-                <OrbWriteEditor
-                  document={doc}
-                  onChange={updateBody}
-                  onWordCountChange={setWordCount}
-                  lastEdited={`Last edited ${lastEdited}`}
-                  onCopy={() => void handleCopy()}
-                  onPrint={() => printOrbWriteDocument(doc)}
-                  onExportPdf={() => void exportOrbWritePdf(doc)}
-                  onSaveDraft={() => void handleSaveDraft()}
-                  onApprove={handleApprove}
-                  onAskOrb={() => void runAnalysis()}
-                  onOpenSource={() => setSourcePanelOpen(true)}
-                  onOpenGuidance={() => setGuidancePanelOpen(true)}
-                  onOpenTemplatePicker={() => setTemplatePickerOpen(true)}
-                  onRecordTypeSelect={requestRecordTypeChange}
-                />
+                {workingDoc ? (
+                  <OrbWriteWorkingDocumentEditor
+                    document={workingDoc}
+                    onDocumentChange={(next) => {
+                      setWorkingDoc(next)
+                      setDoc((prev) =>
+                        prev
+                          ? {
+                              ...prev,
+                              title: next.title,
+                              body: workingDocumentToWriteBody(next),
+                              template_id: next.template_id,
+                              updated_at: next.updated_at
+                            }
+                          : prev
+                      )
+                    }}
+                    onSaved={(id) => setStatusMessage(`Saved to My Drafts (${id}). Adult review required.`)}
+                  />
+                ) : (
+                  <OrbWriteEditor
+                    document={doc}
+                    onChange={updateBody}
+                    onWordCountChange={setWordCount}
+                    lastEdited={`Last edited ${lastEdited}`}
+                    onCopy={() => void handleCopy()}
+                    onPrint={() => printOrbWriteDocument(doc)}
+                    onExportPdf={() => void exportOrbWritePdf(doc)}
+                    onSaveDraft={() => void handleSaveDraft()}
+                    onApprove={handleApprove}
+                    onAskOrb={() => void runAnalysis()}
+                    onOpenSource={() => setSourcePanelOpen(true)}
+                    onOpenGuidance={() => setGuidancePanelOpen(true)}
+                    onOpenTemplatePicker={() => setTemplatePickerOpen(true)}
+                    onRecordTypeSelect={requestRecordTypeChange}
+                  />
+                )}
               </div>
               {guidancePanelOpen ? (
                 <div
@@ -663,6 +719,24 @@ export function OrbWriteStandalonePanel({
           hasExistingContent={hasExistingContent}
           onClose={() => setTemplatePickerOpen(false)}
           onApply={applyTemplate}
+        />
+        <OrbWriteTemplateLibraryPanel
+          open={templateLibraryOpen}
+          onClose={() => setTemplateLibraryOpen(false)}
+          onOpenDocument={(document) => {
+            setWorkingDoc(document)
+            const recordType = resolveOrbRecordingRecordType({
+              recordTypeId: document.template_id
+            })
+            setRecordTypeId(recordType.id)
+            setDoc(
+              createBlankOrbWriteDocumentFromRecordType(recordType, {
+                body: workingDocumentToWriteBody(document),
+                transcript: document.rendered_body
+              })
+            )
+            setStatusMessage(`Opened ${document.title} as working document.`)
+          }}
         />
       </OrbStudioShell>
     </OrbAppModal>

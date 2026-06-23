@@ -1,5 +1,7 @@
 import type { OrbSuggestedReplyItem } from '@/lib/orb/orb-output-reuse'
 import { searchOrbTemplateTaxonomy, type OrbTemplateTaxonomyEntry } from '@/lib/orb/orb-records-workspace-client'
+import { convertAnswerToWorkingDocument } from '@/lib/orb/template/orb-template-working-document-client'
+import { saveOrbWriteWorkingDocumentHandoff } from '@/lib/orb/write/orb-write-working-document-handoff'
 
 const SAFEGUARDING_RE =
   /\b(safeguard|abuse|disclos|allegat|missing from|exploit|self[- ]?harm|suicid|CSE|CCE|LADO|restraint|physical intervention)\b/i
@@ -20,9 +22,10 @@ function localTemplateHints(content: string): string[] {
 function toSuggestionChip(entry: OrbTemplateTaxonomyEntry): OrbSuggestedReplyItem {
   const label = entry.suggestion_label || `Use ${entry.title.toLowerCase()} template`
   return {
-    action: 'recording_wording',
+    action: 'use_template_in_write',
     label,
-    prefill: `Use the ${entry.title} template for this:\n\n`
+    prefill: `Use the ${entry.title} template for this:\n\n`,
+    template_id: entry.template_id
   }
 }
 
@@ -88,4 +91,25 @@ export async function resolveChatRecordTemplate(content: string): Promise<{
     }
   }
   return {}
+}
+
+/** Open a chat answer in ORB Write as a working document from the best template match. */
+export async function openChatAnswerInOrbWrite(
+  content: string,
+  opts?: { template_id?: string; onNavigate?: () => void }
+): Promise<{ template_id: string; opened: boolean }> {
+  const templateId =
+    opts?.template_id ?? (await resolveChatRecordTemplate(content)).template_id
+  if (!templateId) return { template_id: '', opened: false }
+  try {
+    const doc = await convertAnswerToWorkingDocument(templateId, content, 'chat')
+    saveOrbWriteWorkingDocumentHandoff(doc, {
+      source_station: 'chat',
+      source_label: `From chat — ${doc.title}`
+    })
+    opts?.onNavigate?.()
+    return { template_id: templateId, opened: true }
+  } catch {
+    return { template_id: templateId, opened: false }
+  }
 }
