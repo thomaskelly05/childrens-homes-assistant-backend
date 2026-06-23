@@ -58,7 +58,19 @@ def test_openai_key_placeholder_detection(monkeypatch):
     assert openai_key_configured()
 
 
-def test_sign_off_context_from_env(monkeypatch):
+def test_sanitize_replaces_product_boilerplate_in_deployed_context(monkeypatch):
+    monkeypatch.setenv("APP_ENV", "staging")
+    text = (
+        "IndiCare is a residential children's homes operating system and intelligence platform "
+        "built to support staff and managers in registered homes."
+    )
+    sanitized, issue = sanitize_user_visible_provider_answer(
+        text,
+        provider="openai",
+        source_text="Help me write a daily record.",
+    )
+    assert issue == "product_boilerplate_leakage"
+    assert sanitized == ORB_PROVIDER_UNAVAILABLE_USER_MESSAGE
     monkeypatch.delenv("ORB_LIVE_SIGN_OFF", raising=False)
     monkeypatch.delenv("AI_PROVIDER_STRICT", raising=False)
     monkeypatch.setenv("APP_ENV", "development")

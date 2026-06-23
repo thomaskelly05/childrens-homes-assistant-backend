@@ -442,17 +442,21 @@ def merge_instant_lines_with_answer(
     full_answer: str,
 ) -> str:
     instant = (instant_lines or "").strip()
-    answer = (full_answer or "").strip()
+    answer = strip_duplicate_instant_prefix((full_answer or "").strip(), instant)
     if not instant:
         return answer
     if not answer:
         return instant
-    if answer.lower().startswith(instant.lower()):
-        return answer
-    first_line = instant.split("\n", 1)[0].strip().lower()
-    if answer.lower().startswith(first_line):
-        return answer
     return f"{instant}\n\n{answer}"
+
+
+def _normalize_instant_prefix(text: str) -> str:
+    """Normalize instant/prelude text for near-duplicate comparison."""
+    normalized = (text or "").lower()
+    normalized = re.sub(r"\bthe adult\b", "staff", normalized)
+    normalized = re.sub(r"[^\w\s]", " ", normalized)
+    normalized = re.sub(r"\s+", " ", normalized).strip()
+    return normalized
 
 
 def strip_duplicate_instant_prefix(streamed_text: str, instant_lines: str) -> str:
@@ -463,6 +467,7 @@ def strip_duplicate_instant_prefix(streamed_text: str, instant_lines: str) -> st
         return streamed_text
     result = streamed
     previous = ""
+    instant_norm = _normalize_instant_prefix(instant)
     while result != previous:
         previous = result
         if result.lower().startswith(instant.lower()):
@@ -472,5 +477,18 @@ def strip_duplicate_instant_prefix(streamed_text: str, instant_lines: str) -> st
         if first_line and result.lower().startswith(first_line.lower()):
             result = result[len(first_line) :].lstrip(" .\n")
             continue
+        # Near-duplicate: same wording but staff/the adult or punctuation differs.
+        probe = result[: max(len(instant) + 80, len(first_line) + 40)]
+        if _normalize_instant_prefix(probe).startswith(instant_norm):
+            lines = result.splitlines()
+            instant_line_count = len(instant.splitlines())
+            if instant_line_count and len(lines) >= instant_line_count:
+                joined = "\n".join(lines[:instant_line_count])
+                if _normalize_instant_prefix(joined) == instant_norm:
+                    result = "\n".join(lines[instant_line_count:]).lstrip("\n")
+                    continue
+            if first_line and lines and _normalize_instant_prefix(lines[0]) == _normalize_instant_prefix(first_line):
+                result = "\n".join(lines[1:]).lstrip("\n")
+                continue
         break
     return result

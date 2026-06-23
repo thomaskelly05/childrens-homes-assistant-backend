@@ -330,6 +330,52 @@ export function sanitizeChildrensHomeTerminology(text: string, sourceText = ''):
     .replace(/\bDSL\b/g, 'manager')
 }
 
+const STAFF_PHRASE_PROTECTED_RES: Array<{ pattern: RegExp; token: string }> = [
+  { pattern: /\bhow staff responded\b/gi, token: '__ORB_STAFF_RESPONDED__' },
+  { pattern: /\bstaff present\b/gi, token: '__ORB_STAFF_PRESENT__' },
+  { pattern: /\bstaff response\b/gi, token: '__ORB_STAFF_RESPONSE__' },
+  { pattern: /\bstaff supported\b/gi, token: '__ORB_STAFF_SUPPORTED__' },
+  { pattern: /\bstaff names?\b/gi, token: '__ORB_STAFF_NAMES__' },
+  { pattern: /\bstaff offered\b/gi, token: '__ORB_STAFF_OFFERED__' },
+  { pattern: /\bstaff observed\b/gi, token: '__ORB_STAFF_OBSERVED__' }
+]
+
+const STAFF_PHRASE_RESTORE: Record<string, string> = {
+  __ORB_STAFF_RESPONDED__: 'how staff responded',
+  __ORB_STAFF_PRESENT__: 'staff present',
+  __ORB_STAFF_RESPONSE__: 'staff response',
+  __ORB_STAFF_SUPPORTED__: 'staff supported',
+  __ORB_STAFF_NAMES__: 'staff names',
+  __ORB_STAFF_OFFERED__: 'staff offered',
+  __ORB_STAFF_OBSERVED__: 'staff observed'
+}
+
+function protectStaffPhrases(text: string): string {
+  let result = String(text || '')
+  for (const { pattern, token } of STAFF_PHRASE_PROTECTED_RES) {
+    result = result.replace(pattern, token)
+  }
+  return result
+}
+
+function restoreStaffPhrases(text: string): string {
+  let result = String(text || '')
+  for (const [token, phrase] of Object.entries(STAFF_PHRASE_RESTORE)) {
+    result = result.replaceAll(token, phrase)
+  }
+  return result
+}
+
+function fixBrokenAdultHeadingWording(text: string): string {
+  return String(text || '')
+    .replace(/\b[Tt]he adult\s+Present\b/g, 'Staff present')
+    .replace(/\b[Tt]he adult\s+Actions?\b/g, 'Staff response')
+    .replace(/\b[Tt]he adult\s+facilitated\b/g, 'Staff supported')
+    .replace(/\b[Tt]he adult\s+Response\b/g, 'Staff response')
+    .replace(/\bhow\s+[Tt]he adult\s+responded\b/g, 'how staff responded')
+    .replace(/\[Insert\s+[Tt]he adult Names?\]/gi, 'staff names, if known')
+}
+
 export function applyAdultIdentityLanguage(text: string, suppliedInitials?: string[]): string {
   let value = String(text || '')
   if (!value.trim()) return value
@@ -337,15 +383,21 @@ export function applyAdultIdentityLanguage(text: string, suppliedInitials?: stri
   value = value.replace(STAFF_ON_DUTY_RE, () =>
     initials.length ? `Adults involved: ${initials.map((i) => `Adult ${i}`).join(', ')}` : 'Adults involved'
   )
+  if (!initials.length) {
+    value = protectStaffPhrases(value)
+  }
   if (initials.length) {
     let staffIndex = 0
-    return value.replace(/\b[Ss]taff\b/g, () => {
+    value = value.replace(/\b[Ss]taff\b/g, () => {
       const label = `Adult ${initials[staffIndex % initials.length]}`
       staffIndex += 1
       return label
     })
+  } else {
+    value = value.replace(/\b[Ss]taff\b/g, 'the adult')
+    value = restoreStaffPhrases(value)
   }
-  return value.replace(/\b[Ss]taff\b/g, 'The adult')
+  return fixBrokenAdultHeadingWording(value)
 }
 
 export function sanitizeObservationInterpretationLanguage(text: string, sourceText = ''): string {

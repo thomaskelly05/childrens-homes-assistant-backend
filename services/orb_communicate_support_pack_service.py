@@ -32,6 +32,12 @@ CommunicateIntent = Literal[
     "feelings_expression",
     "bedtime_worries",
     "visual_routine",
+    "school_change",
+    "moving_home",
+    "family_time",
+    "health_appointment",
+    "social_worker_meeting",
+    "court_review_meeting",
     "general",
 ]
 
@@ -71,6 +77,10 @@ CONTEXT_LABELS: dict[str, str] = {
     "safeguarding": "keeping safe and being listened to",
     "behaviour_support": "support when things feel difficult",
     "medication": "medication and health support",
+    "school": "a school change",
+    "family_time": "family time",
+    "social_worker": "a meeting with a social worker",
+    "court": "a court or review meeting",
     "other": "something important",
 }
 
@@ -268,6 +278,16 @@ class OrbCommunicateSupportPackService:
             return "medication_explanation"
         if re.search(r"\b(hospital|hospital visit|hospital appointment|clinic|doctor|a&e|ae)\b", text):
             return "hospital_appointment"
+        if re.search(r"\b(court|review meeting|looked after review|lac review)\b", text):
+            return "court_review_meeting"
+        if re.search(r"\b(social worker|sw visit|sw meeting)\b", text):
+            return "social_worker_meeting"
+        if re.search(r"\b(moving home|new home|placement move|transition to|moving to)\b", text):
+            return "moving_home"
+        if re.search(r"\b(school change|new school|changing school|school move)\b", text):
+            return "school_change"
+        if re.search(r"\b(family time|contact time|visiting family)\b", text):
+            return "family_time"
         if re.search(
             r"\b(contact|mum|dad|parent|contact has changed|visiting (?:mum|dad|parent)|changed today)\b",
             text,
@@ -275,8 +295,10 @@ class OrbCommunicateSupportPackService:
             return "contact_change"
         if re.search(r"\b(new staff|new worker|someone new|meet.*staff|starting.*shift)\b", text):
             return "new_staff_member"
+        if re.search(r"\b(health appointment|gp appointment|dentist|optician)\b", text):
+            return "health_appointment"
         if re.search(r"\b(appointment|visit|visiting)\b", text) and "hospital" not in text:
-            return "hospital_appointment"
+            return "health_appointment"
         if re.search(r"\b(bedtime|sleep|night|can't sleep|cant sleep|bed time)\b", text):
             return "bedtime_worries"
         if re.search(
@@ -295,11 +317,17 @@ class OrbCommunicateSupportPackService:
 
         context_map: dict[CommunicateIntent, str] = {
             "contact_change": "contact",
+            "family_time": "family_time",
             "hospital_appointment": "health",
+            "health_appointment": "health",
             "medication_explanation": "medication",
             "safeguarding_disclosure": "safeguarding",
             "safe_unsafe_communication": "safety",
             "new_staff_member": "transition",
+            "moving_home": "transition",
+            "school_change": "school",
+            "social_worker_meeting": "social_worker",
+            "court_review_meeting": "court",
             "bedtime_worries": "behaviour_support",
             "feelings_expression": "behaviour_support",
             "visual_routine": "routine",
@@ -367,19 +395,26 @@ class OrbCommunicateSupportPackService:
         person_context = (request.person_context or "").strip()
         comm_needs = (request.communication_needs or "").strip()
 
+        if plan.intent == "hospital_appointment":
+            opening = (
+                "Tomorrow you are going to hospital for a visit or appointment. "
+                "A trusted adult will go with you. Staff will explain what is happening step by step."
+            )
+            what_happening = opening
+        elif plan.intent == "health_appointment":
+            what_happening = (
+                f"This easy-read is about a health appointment. "
+                f"{who.capitalize()} needs to understand: {topic}."
+            )
+        else:
+            what_happening = (
+                f"This easy-read is about {context_label}. "
+                f"{who.capitalize()} needs to understand: {topic}."
+            )
+
         sections = [
             "What is happening",
-            (
-                (
-                    f"This easy-read is about the hospital visit or appointment. "
-                    f"{who.capitalize()} needs to understand: {topic}."
-                )
-                if plan.intent == "hospital_appointment"
-                else (
-                    f"This easy-read is about {context_label}. "
-                    f"{who.capitalize()} needs to understand: {topic}."
-                )
-            ),
+            what_happening,
             "",
             "Why it is happening",
             (
@@ -676,6 +711,8 @@ class OrbCommunicateSupportPackService:
         return self.build_support_pack(self.parse_support_pack_request_from_message(message))
 
     def format_support_pack_for_chat(self, output: SupportPackOutput) -> str:
+        from assistant.knowledge.adult_identity_language import sanitize_residential_answer_polish
+
         visual_lines = []
         for card in output.visual_card_suggestions[:8]:
             label = str(card.get("label") or card.get("plain_language") or "Card")
@@ -684,10 +721,6 @@ class OrbCommunicateSupportPackService:
 
         reflect_lines = [f"- {prompt}" for prompt in output.reflect_and_record_prompts[:6]]
         boundary_lines = [f"- {item}" for item in output.safety_boundaries[:6]]
-        chip_labels = [
-            str(chip.get("label") or chip) if isinstance(chip, dict) else str(chip)
-            for chip in output.source_chips
-        ]
 
         sections = [
             "## Easy-read explanation",
@@ -722,9 +755,8 @@ class OrbCommunicateSupportPackService:
                 *boundary_lines,
             ]
         )
-        if chip_labels:
-            sections.extend(["", "## Source basis", ", ".join(chip_labels[:8])])
-        return "\n".join(sections).strip()
+        formatted = "\n".join(sections).strip()
+        return sanitize_residential_answer_polish(formatted, source_text=output.easy_read_explanation)
 
 
 orb_communicate_support_pack_service = OrbCommunicateSupportPackService()

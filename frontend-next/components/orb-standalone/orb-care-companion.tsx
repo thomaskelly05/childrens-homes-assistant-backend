@@ -1736,7 +1736,8 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
           provider: extras?.modelRouting?.provider,
           errorDetail: extras?.contextUsed
             ? String((extras.contextUsed as Record<string, unknown>).error_detail || '')
-            : undefined
+            : undefined,
+          sourceText: trimmed || messageBody
         })
         streamPartialRef.current = visiblePartial
         setWorkspace((current) => {
@@ -1779,7 +1780,8 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
         )
         const providerSafeAnswer = sanitizeUserVisibleProviderAnswer(resolvedAnswer, {
           provider: response.context_used?.model_routing?.provider,
-          errorDetail: response.error_detail
+          errorDetail: response.error_detail,
+          sourceText: trimmed || messageBody
         })
         const answer =
           providerSafeAnswer.trim() ||

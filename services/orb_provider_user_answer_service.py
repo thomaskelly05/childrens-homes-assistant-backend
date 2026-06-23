@@ -7,6 +7,11 @@ import os
 import re
 from typing import Any
 
+from assistant.knowledge.adult_identity_language import (
+    strip_indicare_product_boilerplate,
+    user_asked_about_indicare,
+)
+
 logger = logging.getLogger(__name__)
 
 ORB_PROVIDER_UNAVAILABLE_USER_MESSAGE = (
@@ -18,6 +23,11 @@ _MOCK_LEAKAGE_PATTERNS: tuple[re.Pattern[str], ...] = (
     re.compile(r"orb\s+mock\s+engine\s+response", re.IGNORECASE),
     re.compile(r"\bmock\s+provider\b", re.IGNORECASE),
     re.compile(r"\bplaceholder\s+provider\b", re.IGNORECASE),
+)
+
+_INDICARE_PRODUCT_LEAKAGE_RE = re.compile(
+    r"IndiCare is a residential children's homes operating system and intelligence platform",
+    re.IGNORECASE,
 )
 
 
@@ -75,12 +85,23 @@ def assert_live_provider_for_signoff() -> None:
         )
 
 
+def is_indicare_product_boilerplate_leakage(text: str, *, source_text: str = "") -> bool:
+    """True when answer contains IndiCare product marketing the user did not ask for."""
+    if user_asked_about_indicare(source_text):
+        return False
+    cleaned = (text or "").strip()
+    if not cleaned:
+        return False
+    return bool(_INDICARE_PRODUCT_LEAKAGE_RE.search(cleaned))
+
+
 def sanitize_user_visible_provider_answer(
     text: str,
     *,
     provider: str | None = None,
     error_detail: str | None = None,
     log_context: dict[str, Any] | None = None,
+    source_text: str = "",
 ) -> tuple[str, str | None]:
     """
     Replace mock/provider config leakage with a safe user message.
@@ -96,11 +117,15 @@ def sanitize_user_visible_provider_answer(
         issue = str(error_detail)
     elif is_mock_provider_leakage(cleaned):
         issue = "mock_leakage_text"
+    elif is_indicare_product_boilerplate_leakage(cleaned, source_text=source_text):
+        issue = "product_boilerplate_leakage"
 
     if not issue:
         return text, None
 
     if not is_sign_off_or_deployed_context():
+        if issue == "product_boilerplate_leakage":
+            return strip_indicare_product_boilerplate(text, source_text=source_text), issue
         return text, issue
 
     ctx = log_context or {}
