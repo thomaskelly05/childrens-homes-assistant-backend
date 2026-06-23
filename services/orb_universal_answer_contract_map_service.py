@@ -24,6 +24,60 @@ from services.orb_therapeutic_language_contract_service import (
 # Warn in QA/tests when standard non-risk prompt assembly exceeds this size.
 STANDARD_DEPTH_PROMPT_CHAR_CAP = 25000
 EVERYDAY_SHIFT_PROMPT_CHAR_CAP = 8000
+CONTACT_DISTRESS_PROMPT_CHAR_CAP = 12000
+MEDICATION_REFUSAL_PROMPT_CHAR_CAP = 12000
+
+# Universal answer shape for "how should staff record this?" shift prompts.
+STAFF_RECORDING_QUESTION_RE = re.compile(
+    r"how\s+should\s+staff\s+record|what\s+should\s+(?:staff|we)\s+record|"
+    r"how\s+(?:do|should)\s+(?:i|we)\s+record|how\s+to\s+record\s+this",
+    re.I,
+)
+
+STAFF_RECORDING_ANSWER_SHAPE: tuple[str, ...] = (
+    "Direct recording structure first (headings, chronology, what to capture)",
+    "Example safer wording (observation vs interpretation)",
+    "Follow-up questions only after practical guidance",
+    "Observation vs interpretation reminder; local policy boundary",
+)
+
+RECORDING_FORBIDDEN_OPENERS: tuple[str, ...] = (
+    "tell me more",
+    "what would be helpful",
+    "could you tell me more",
+    "can you share more",
+    "what happened exactly",
+    "before we proceed",
+)
+
+MEDICATION_CRITICAL_RISK_RE = re.compile(
+    r"\b(overdose|wrong\s+dose|medication\s+error|severe\s+reaction|anaphylaxis|"
+    r"given\s+wrong\s+medicine|took\s+too\s+many)\b",
+    re.I,
+)
+
+PLACEMENT_DISTRESS_CRITICAL_RE = re.compile(
+    r"\b("
+    r"do(?:n'?t| not)\s+want\s+to\s+be\s+here|"
+    r"don'?t\s+want\s+to\s+live|"
+    r"no\s+point\s+being\s+here|"
+    r"can'?t\s+do\s+this\s+anymore|"
+    r"doesn'?t\s+want\s+to\s+wake\s+up|"
+    r"want\s+to\s+die|"
+    r"kill\s+(?:my|him|her|them)self"
+    r")\b",
+    re.I,
+)
+
+STAFF_ALLEGATION_CRITICAL_RE = re.compile(
+    r"\b("
+    r"allegat(?:ion|ed)|"
+    r"(?:staff|member\s+of\s+staff).{0,40}(?:grabbed|hit|touched|threatened|hurt)|"
+    r"(?:grabbed|hit|touched|threatened|hurt).{0,40}(?:staff|member\s+of\s+staff)|"
+    r"said\s+staff\s+(?:grabbed|hit|touched|threatened|hurt)"
+    r")\b",
+    re.I,
+)
 
 # Universal forbidden patterns in final answers (streaming leakage, generic AI filler, broken placeholders).
 UNIVERSAL_FORBIDDEN_PATTERNS: tuple[str, ...] = (
@@ -71,6 +125,9 @@ SCENARIO_TO_FAMILY: dict[str, str] = {
     "restraint_intervention": "incident_record",
     "online_harm_image_sharing": "incident_record",
     "online_harm": "incident_record",
+    "child_refuses_medication": "medication_refusal_guidance",
+    "family_time_cancelled_distress": "contact_distress_recording",
+    "child_refuses_school": "school_refusal_recording",
 }
 
 ORB_ANSWER_CONTRACT_FAMILIES: dict[str, dict[str, Any]] = {
@@ -143,6 +200,7 @@ ORB_ANSWER_CONTRACT_FAMILIES: dict[str, dict[str, Any]] = {
         "depth_tier": "standard",
         "expert_depth_cap": "residential_standard",
         "prompt_tier_cap": "residential",
+        "prompt_char_cap": EVERYDAY_SHIFT_PROMPT_CHAR_CAP,
         "streamable": True,
         "orb_write_handoff": True,
         "trigger_patterns": [
@@ -152,23 +210,120 @@ ORB_ANSWER_CONTRACT_FAMILIES: dict[str, dict[str, Any]] = {
                 r"refused\s+school|refused\s+to\s+go\s+to\s+school|education\s+concern|family\s+contact|"
                 r"contact\s+was|behaviour\s+support|sensory\s+support|"
                 r"consequences\s+and\s+boundaries|boundaries\s+fairly|"
-                r"evidence\s+quality\s+of\s+care|quality\s+of\s+care\s+in\s+daily",
+                r"evidence\s+quality\s+of\s+care|quality\s+of\s+care\s+in\s+daily|"
+                r"how\s+should\s+staff\s+record",
                 re.I,
             ),
         ],
         "required_markers": ["factual", "staff", "outcome"],
-        "required_sections": [
+        "required_sections": list(STAFF_RECORDING_ANSWER_SHAPE)
+        + [
             "Factual language; no invented facts",
             "What happened; staff response; emotional presentation",
             "Choices/offers; outcome; follow-up if needed",
         ],
-        "forbidden_patterns": list(UNIVERSAL_FORBIDDEN_PATTERNS[:4]),
+        "forbidden_patterns": list(UNIVERSAL_FORBIDDEN_PATTERNS[:4]) + list(RECORDING_FORBIDDEN_OPENERS),
         "public_considerations": [
             "Recording quality",
             "Child-centred recording",
             "Therapeutic language",
             "Child's voice considered",
             "Trauma-informed practice",
+        ],
+    },
+    "school_refusal_recording": {
+        "label": "School refusal recording",
+        "contract_mode": "recording",
+        "depth_tier": "standard",
+        "expert_depth_cap": "residential_light",
+        "prompt_tier_cap": "residential",
+        "prompt_char_cap": EVERYDAY_SHIFT_PROMPT_CHAR_CAP,
+        "streamable": True,
+        "orb_write_handoff": True,
+        "trigger_patterns": [
+            re.compile(
+                r"refused\s+(?:to\s+go\s+to\s+)?school|school\s+refusal|"
+                r"won'?t\s+go\s+to\s+school|refused\s+school\s+today",
+                re.I,
+            ),
+        ],
+        "required_markers": ["school", "factual", "staff", "barrier"],
+        "required_sections": list(STAFF_RECORDING_ANSWER_SHAPE)
+        + [
+            "Attendance context; barriers (SEND/sensory/relationships) not defiance framing",
+            "Offers, advocacy, transport/plan steps; outcome and follow-up",
+        ],
+        "forbidden_patterns": list(UNIVERSAL_FORBIDDEN_PATTERNS[:4]) + list(RECORDING_FORBIDDEN_OPENERS),
+        "public_considerations": [
+            "Recording quality",
+            "Child-centred recording",
+            "Therapeutic language",
+            "SEND",
+        ],
+    },
+    "contact_distress_recording": {
+        "label": "Contact / emotional wellbeing daily record",
+        "contract_mode": "recording",
+        "depth_tier": "standard",
+        "expert_depth_cap": "residential_standard",
+        "prompt_tier_cap": "residential",
+        "prompt_char_cap": CONTACT_DISTRESS_PROMPT_CHAR_CAP,
+        "streamable": True,
+        "orb_write_handoff": True,
+        "trigger_patterns": [
+            re.compile(
+                r"(?:upset|distressed|dysregulated)\s+(?:after|following)\s+(?:contact|family\s+time)|"
+                r"upset\s+following\s+family\s+time|"
+                r"(?:contact|family\s+time)\s+(?:cancelled|changed|didn'?t\s+happen)|"
+                r"after\s+(?:contact|family\s+time).{0,40}(?:upset|distressed|tearful|dysregulated)",
+                re.I,
+            ),
+        ],
+        "required_markers": ["contact", "factual", "staff", "presentation"],
+        "required_sections": list(STAFF_RECORDING_ANSWER_SHAPE)
+        + [
+            "Contact context (who, planned/changed, duration if known)",
+            "Emotional presentation on return; co-regulation offered",
+            "Child's words where known; staff response; outcome and follow-up",
+        ],
+        "forbidden_patterns": list(UNIVERSAL_FORBIDDEN_PATTERNS[:4]) + list(RECORDING_FORBIDDEN_OPENERS),
+        "public_considerations": [
+            "Recording quality",
+            "Child-centred recording",
+            "Therapeutic language",
+            "Child's voice considered",
+        ],
+    },
+    "medication_refusal_guidance": {
+        "label": "Medication refusal / health note",
+        "contract_mode": "guidance",
+        "depth_tier": "standard",
+        "expert_depth_cap": "residential_standard",
+        "prompt_tier_cap": "residential",
+        "prompt_char_cap": MEDICATION_REFUSAL_PROMPT_CHAR_CAP,
+        "streamable": True,
+        "orb_write_handoff": True,
+        "trigger_patterns": [
+            re.compile(
+                r"refused\s+medication|refusing\s+medication|refuses\s+medication|"
+                r"won'?t\s+take\s+(?:their\s+)?medication|refusing\s+(?:tablets|medicine|meds)|"
+                r"medication\s+refusal",
+                re.I,
+            ),
+        ],
+        "required_markers": ["medication", "mar", "manager", "clinical"],
+        "required_sections": [
+            "Direct practical steps first — MAR recording, what was offered/refused, time",
+            "Capacity/consent boundary; do not force unless lawful emergency protocol",
+            "Clinical/manager/local medication policy boundary — who to notify",
+            "Observation vs interpretation; child voice where known",
+            "Follow-up questions only after guidance",
+        ],
+        "forbidden_patterns": list(UNIVERSAL_FORBIDDEN_PATTERNS[:4]) + list(RECORDING_FORBIDDEN_OPENERS),
+        "public_considerations": [
+            "Health and medication",
+            "Recording quality",
+            "Professional judgement needed",
         ],
     },
     "incident_record": {
@@ -240,11 +395,23 @@ ORB_ANSWER_CONTRACT_FAMILIES: dict[str, dict[str, Any]] = {
         "streamable": True,
         "orb_write_handoff": False,
         "trigger_patterns": [
-            re.compile(r"allegation|staff\s+member\s+(touched|hurt|abuse)", re.I),
+            re.compile(
+                r"allegat(?:ion|ed)|"
+                r"(?:staff|member\s+of\s+staff).{0,40}(?:grabbed|hit|touched|threatened|hurt|abuse)|"
+                r"(?:grabbed|hit|touched|threatened|hurt).{0,40}(?:staff|member\s+of\s+staff)|"
+                r"said\s+staff\s+(?:grabbed|hit|touched|threatened|hurt)|"
+                r"staff\s+member\s+(?:touched|hurt|abuse|grabbed|hit|threatened)",
+                re.I,
+            ),
         ],
-        "required_markers": ["do not investigate", "lado", "manager", "record"],
-        "required_sections": MANDATORY_CONTRACTS["allegation_against_staff"]["mandatory_sections"],
-        "forbidden_patterns": list(UNIVERSAL_FORBIDDEN_PATTERNS[:4]),
+        "required_markers": ["do not investigate", "lado", "manager", "record", "exact words"],
+        "required_sections": MANDATORY_CONTRACTS["allegation_against_staff"]["mandatory_sections"]
+        + [
+            "Preserve the young person's exact words — do not paraphrase as fact",
+            "Do not investigate or ask leading questions",
+            "Manager/LADO/local policy route; separate accounts",
+        ],
+        "forbidden_patterns": list(UNIVERSAL_FORBIDDEN_PATTERNS[:4]) + list(RECORDING_FORBIDDEN_OPENERS),
         "public_considerations": ["Safeguarding responsibilities", "Professional accountability"],
     },
     "abuse_disclosure": {
@@ -267,7 +434,7 @@ ORB_ANSWER_CONTRACT_FAMILIES: dict[str, dict[str, Any]] = {
         "public_considerations": ["Safeguarding responsibilities"],
     },
     "suicidal_self_harm": {
-        "label": "Suicidal ideation / self-harm",
+        "label": "Suicidal ideation / self-harm / placement distress",
         "contract_mode": "safeguarding",
         "depth_tier": "mandatory",
         "expert_depth_cap": "safeguarding_critical",
@@ -275,11 +442,26 @@ ORB_ANSWER_CONTRACT_FAMILIES: dict[str, dict[str, Any]] = {
         "streamable": True,
         "orb_write_handoff": False,
         "trigger_patterns": [
-            re.compile(r"suicid|self[- ]?harm|hurt\s+(my|him|her|them)self|blade|overdose", re.I),
+            re.compile(
+                r"suicid|self[- ]?harm|hurt\s+(?:my|him|her|them)self|blade|overdose|"
+                r"do(?:n'?t| not)\s+want\s+to\s+be\s+here|"
+                r"don'?t\s+want\s+to\s+live|"
+                r"no\s+point\s+being\s+here|"
+                r"can'?t\s+do\s+this\s+anymore|"
+                r"doesn'?t\s+want\s+to\s+wake\s+up|"
+                r"want\s+to\s+die|"
+                r"kill\s+(?:my|him|her|them)self",
+                re.I,
+            ),
         ],
         "required_markers": ["immediate safety", "do not leave alone", "manager", "record"],
-        "required_sections": MANDATORY_CONTRACTS["suicide_self_harm"]["mandatory_sections"],
-        "forbidden_patterns": list(UNIVERSAL_FORBIDDEN_PATTERNS[:4]),
+        "required_sections": MANDATORY_CONTRACTS["suicide_self_harm"]["mandatory_sections"]
+        + [
+            "Immediate safety first — stay with the young person if concerned",
+            "Manager/on-call notification; urgent help if immediate risk",
+            "No generic 'what would be helpful?' opening",
+        ],
+        "forbidden_patterns": list(UNIVERSAL_FORBIDDEN_PATTERNS[:4]) + list(RECORDING_FORBIDDEN_OPENERS),
         "public_considerations": ["Safeguarding responsibilities"],
     },
     "parent_removal_conflict": {
@@ -646,6 +828,9 @@ _FAMILY_DETECTION_ORDER: tuple[str, ...] = (
     "missing_return_record",
     "accessible_child_support_plan",
     "incident_record",
+    "medication_refusal_guidance",
+    "contact_distress_recording",
+    "school_refusal_recording",
     "daily_record",
     "keywork_session",
     "manager_oversight_note",
@@ -764,6 +949,31 @@ GOLDEN_PROMPT_QA_PACK: list[dict[str, str]] = [
 ]
 
 
+def get_family_prompt_char_cap(family_id: str | None) -> int:
+    """Per-family prompt assembly cap for shift-speed QA."""
+    family = get_contract_family(family_id) or {}
+    cap = family.get("prompt_char_cap")
+    if isinstance(cap, int) and cap > 0:
+        return cap
+    if family_id in {
+        "contact_distress_recording",
+        "medication_refusal_guidance",
+    }:
+        return CONTACT_DISTRESS_PROMPT_CHAR_CAP
+    if family.get("depth_tier") == "standard" and family.get("contract_mode") in {
+        "recording",
+        "guidance",
+    }:
+        return EVERYDAY_SHIFT_PROMPT_CHAR_CAP
+    return STANDARD_DEPTH_PROMPT_CHAR_CAP
+
+
+def _family_match_excluded(family_id: str, text: str) -> bool:
+    if family_id == "medication_refusal_guidance" and MEDICATION_CRITICAL_RISK_RE.search(text):
+        return True
+    return False
+
+
 def detect_contract_family(
     message: str,
     *,
@@ -811,7 +1021,11 @@ def detect_contract_family(
         family = ORB_ANSWER_CONTRACT_FAMILIES.get(family_id) or {}
         patterns: list[Pattern[str]] = list(family.get("trigger_patterns") or [])
         if any(pattern.search(text) for pattern in patterns):
+            if _family_match_excluded(family_id, text):
+                continue
             return family_id
+    if STAFF_RECORDING_QUESTION_RE.search(text):
+        return "daily_record"
     return None
 
 
@@ -831,6 +1045,43 @@ def build_contract_prompt_block(family_id: str | None) -> str:
         "Required answer shape:",
         *[f"- {section}" for section in (family.get("required_sections") or [])[:14]],
     ]
+    if family.get("contract_mode") == "recording" or family_id in {
+        "school_refusal_recording",
+        "contact_distress_recording",
+        "medication_refusal_guidance",
+    }:
+        lines.extend(
+            [
+                "",
+                "Shift recording answer order (mandatory):",
+                "1. Give direct recording structure / practical guidance first.",
+                "2. Then example safer wording (observation vs interpretation).",
+                "3. Then follow-up questions if information is missing.",
+                "4. Then local policy / professional judgement boundary.",
+                "Do NOT open with generic clarifying questions ('tell me more', 'what would be helpful?').",
+            ]
+        )
+    if family_id == "suicidal_self_harm":
+        lines.extend(
+            [
+                "",
+                "Safeguarding answer order (mandatory):",
+                "1. Immediate safety and stay-with-young-person if concerned.",
+                "2. Manager/on-call; urgent help if immediate risk.",
+                "3. Recording boundaries; do not leave alone if high risk.",
+                "Do NOT open with generic 'what would be helpful?' or clarifying questions.",
+            ]
+        )
+    if family_id == "allegation_lado":
+        lines.extend(
+            [
+                "",
+                "Allegation answer order (mandatory):",
+                "1. Preserve exact words; listen calmly; do not investigate.",
+                "2. Immediate safety; separate accounts; no leading questions.",
+                "3. Manager/LADO/local policy route and recording boundaries.",
+            ]
+        )
     if family_id == "accessible_child_support_plan":
         lines.extend(
             [
