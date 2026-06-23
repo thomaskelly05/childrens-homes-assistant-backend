@@ -1,0 +1,20 @@
+{
+  "generatedAt": "2026-06-23T09:51:10.308450+00:00",
+  "gateRun": "orb-closed-pilot-gate-run",
+  "privacyRetentionReviewed": false,
+  "internalBrainHighRisk": {
+    "runId": "gate-run-20260623-high-risk",
+    "completedAt": "2026-06-23T09:51:10.308491+00:00",
+    "passRate": 100.0,
+    "criticalFailures": 0,
+    "scenarioCount": 50,
+    "passed": true,
+    "scoringVersion": "internal-brain-v2",
+    "auditFile": "scripts/audit_high-risk_internal_brain.json"
+  },
+  "liveGoldRunCompleted": false,
+  "liveLlmAvailable": false,
+  "highRiskHumanReviewed": false,
+  "highRiskGoldScenarioCount": 59,
+  "highRiskGoldRequiresHumanReview": true
+}
