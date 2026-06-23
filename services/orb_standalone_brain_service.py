@@ -371,7 +371,7 @@ class OrbStandaloneBrainService:
         if "allegations_lado_brain" in brains:
             contract.extend([
                 "Differentiate allegation, complaint, low-level concern, conduct issue and safeguarding concern where useful.",
-                "Remind that allegations against adults require prompt manager/DSL/LADO consideration under local procedures.",
+                "Remind that allegations against adults require prompt manager/on-call/LADO consideration under local procedures.",
                 "Use inline anchors [Reg 12], [Reg 13], [SCCIF], [Working Together], [LADO] and [Recording quality] beside the relevant points.",
                 "Explain what evidence Ofsted/SCCIF scrutiny may expect, what should be recorded, what management must oversee, and how to protect therapeutic rapport and emotional safety — without deciding thresholds.",
             ])

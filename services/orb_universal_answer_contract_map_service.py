@@ -98,6 +98,14 @@ UNIVERSAL_FORBIDDEN_PATTERNS: tuple[str, ...] = (
     "shared_institutional_cognition_runtime",
 )
 
+PLAN_UPDATE_RECORDING_RE = re.compile(
+    r"(?:support|care|placement|behaviour|communication|sensory|education)\s+plan.{0,40}"
+    r"(?:changed|updated|reviewed|amended)|"
+    r"(?:changed|updated|reviewed|amended).{0,40}(?:support|care|placement)\s+plan|"
+    r"how\s+should\s+staff\s+record.{0,40}plan\s+update",
+    re.I,
+)
+
 BROKEN_PLACEHOLDER_RE = re.compile(
     r"\[[^\]]*(?:…|\.\.\.)[^\]]*\]",
     re.IGNORECASE,
@@ -131,6 +139,43 @@ SCENARIO_TO_FAMILY: dict[str, str] = {
 }
 
 ORB_ANSWER_CONTRACT_FAMILIES: dict[str, dict[str, Any]] = {
+    "child_voice_evidence_recording": {
+        "label": "Child voice evidence in daily records (AAC / gestures / symbols)",
+        "contract_mode": "recording",
+        "depth_tier": "standard",
+        "expert_depth_cap": "residential_standard",
+        "prompt_tier_cap": "residential",
+        "prompt_char_cap": EVERYDAY_SHIFT_PROMPT_CHAR_CAP,
+        "streamable": True,
+        "orb_write_handoff": True,
+        "trigger_patterns": [
+            re.compile(
+                r"(?:evidence|record|capture).{0,80}(?:child'?s?|young\s+person'?s?).{0,60}"
+                r"(?:voice|communication|views?|wishes?)|"
+                r"(?:gestures?|symbols?|aac|widget).{0,80}(?:daily\s+record|record|evidence|log)|"
+                r"communicate\s+mainly\s+through\s+(?:gestures?|symbols?|aac|a\s+symbol\s+board)|"
+                r"(?:non[\s-]?verbal|minimal\s+verbal).{0,60}(?:daily\s+record|record\s+their\s+voice)",
+                re.I,
+            ),
+        ],
+        "required_markers": ["communication", "record", "gesture", "symbol", "aac", "adult"],
+        "required_sections": list(STAFF_RECORDING_ANSWER_SHAPE)
+        + [
+            "How the young person communicated (AAC, symbols, gestures, device) — not only adult inference",
+            "What was shown, selected or indicated; how adults checked understanding",
+            "Adult support, pacing and environmental adjustments",
+            "Do not invent quotes — use [communicated via symbol/gesture] where words are unknown",
+        ],
+        "forbidden_patterns": list(UNIVERSAL_FORBIDDEN_PATTERNS[:4])
+        + list(RECORDING_FORBIDDEN_OPENERS)
+        + ["my support plan", "dreams and aspirations", "creating a child-friendly support plan"],
+        "public_considerations": [
+            "Child's voice considered",
+            "Recording quality",
+            "SEND",
+            "Communication support",
+        ],
+    },
     "accessible_child_support_plan": {
         "label": "Accessible child-friendly support plan",
         "contract_mode": "guidance",
@@ -141,10 +186,10 @@ ORB_ANSWER_CONTRACT_FAMILIES: dict[str, dict[str, Any]] = {
         "orb_write_handoff": True,
         "trigger_patterns": [
             re.compile(
-                r"support\s+plan|child[- ]friendly\s+plan|"
+                r"(?:child[- ]friendly\s+)?support\s+plan|"
                 r"\bgdd\b|global\s+developmental\s+delay|"
-                r"\bwidgets?\b|\baac\b|symbols?|communication\s+board|visual\s+plan|"
-                r"dreams?|aspirations?|preparing\s+for\s+adulthood|independence",
+                r"(?:template|plan).{0,40}(?:widgets?|aac|symbol\s+board)|"
+                r"dreams?\s+and\s+aspirations?|preparing\s+for\s+adulthood",
                 re.I,
             ),
         ],
@@ -319,7 +364,9 @@ ORB_ANSWER_CONTRACT_FAMILIES: dict[str, dict[str, Any]] = {
             "Observation vs interpretation; child voice where known",
             "Follow-up questions only after guidance",
         ],
-        "forbidden_patterns": list(UNIVERSAL_FORBIDDEN_PATTERNS[:4]) + list(RECORDING_FORBIDDEN_OPENERS),
+        "forbidden_patterns": list(UNIVERSAL_FORBIDDEN_PATTERNS[:4])
+        + list(RECORDING_FORBIDDEN_OPENERS)
+        + ["medication error", "administration error", "wrong dose given"],
         "public_considerations": [
             "Health and medication",
             "Recording quality",
@@ -338,7 +385,10 @@ ORB_ANSWER_CONTRACT_FAMILIES: dict[str, dict[str, Any]] = {
             re.compile(
                 r"incident\s+(report|record)|write.*incident|help\s+me.*incident|"
                 r"restorative\s+repair|nude\s+image|blackmail\s+online|online\s+safety|"
-                r"physical\s+intervention|restraint",
+                r"physical\s+intervention|restraint|"
+                r"medication\s+error|wrong\s+dose|given\s+wrong\s+(?:dose|medicine|medication)|"
+                r"whistleblow|falsifying\s+records|staff\s+conduct|protected\s+disclosure|"
+                r"formal\s+complaint|behaviour\s+incident|property\s+damage|threw\s+an",
                 re.I,
             ),
         ],
@@ -826,6 +876,7 @@ _FAMILY_DETECTION_ORDER: tuple[str, ...] = (
     "orb_write_output",
     "voice_response",
     "missing_return_record",
+    "child_voice_evidence_recording",
     "accessible_child_support_plan",
     "incident_record",
     "medication_refusal_guidance",
@@ -958,6 +1009,7 @@ def get_family_prompt_char_cap(family_id: str | None) -> int:
     if family_id in {
         "contact_distress_recording",
         "medication_refusal_guidance",
+        "child_voice_evidence_recording",
     }:
         return CONTACT_DISTRESS_PROMPT_CHAR_CAP
     if family.get("depth_tier") == "standard" and family.get("contract_mode") in {
@@ -970,6 +1022,14 @@ def get_family_prompt_char_cap(family_id: str | None) -> int:
 
 def _family_match_excluded(family_id: str, text: str) -> bool:
     if family_id == "medication_refusal_guidance" and MEDICATION_CRITICAL_RISK_RE.search(text):
+        return True
+    if family_id == "accessible_child_support_plan" and PLAN_UPDATE_RECORDING_RE.search(text):
+        return True
+    if family_id == "accessible_child_support_plan" and re.search(
+        r"how\s+(?:can|should|do)\s+(?:staff|we|i)\s+(?:evidence|record)",
+        text,
+        re.I,
+    ):
         return True
     return False
 
@@ -1049,6 +1109,8 @@ def build_contract_prompt_block(family_id: str | None) -> str:
         "school_refusal_recording",
         "contact_distress_recording",
         "medication_refusal_guidance",
+        "child_voice_evidence_recording",
+        "daily_record",
     }:
         lines.extend(
             [
@@ -1059,6 +1121,9 @@ def build_contract_prompt_block(family_id: str | None) -> str:
                 "3. Then follow-up questions if information is missing.",
                 "4. Then local policy / professional judgement boundary.",
                 "Do NOT open with generic clarifying questions ('tell me more', 'what would be helpful?').",
+                "",
+                "Children's home recording language: use manager, on-call manager, safeguarding lead, "
+                "Registered Manager and local safeguarding procedure — not default DSL unless the user supplied it.",
             ]
         )
     if family_id == "suicidal_self_harm":

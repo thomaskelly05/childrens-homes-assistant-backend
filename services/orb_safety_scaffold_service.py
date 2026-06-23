@@ -51,7 +51,14 @@ _MESSAGE_CATEGORY_PATTERNS: list[tuple[str, re.Pattern[str]]] = [
         ),
     ),
     ("punitive-wording", re.compile(r"\b(attention[- ]seeking|manipulative|defiant|naughty|punitive)\b", re.I)),
-    ("diagnosis-request", re.compile(r"\bdiagnos\w*\b|\b(adhd|autism|conduct disorder|what disorder)\b", re.I)),
+    (
+        "diagnosis-request",
+        re.compile(
+            r"\b(?:diagnos\w*|what\s+disorder|does\s+(?:this|he|she|they)\s+have\s+(?:adhd|autism)|"
+            r"is\s+(?:this|he|she|they)\s+(?:adhd|autistic))\b|\b(?:adhd|conduct\s+disorder)\b",
+            re.I,
+        ),
+    ),
     ("fake-regulation", re.compile(r"\bregulation\s+9[5-9]\b|\bfake regulation\b|\binvent.*regulation\b", re.I)),
     ("identifiable-data", re.compile(r"\b(nhs number|full address|date of birth|dob|postcode)\b", re.I)),
     ("bypass-local-policy", re.compile(r"\bignore (our |the )?policy\b|\bwithout telling anyone\b", re.I)),
@@ -149,7 +156,11 @@ def _infer_category_from_message(message: str) -> tuple[str, list[str], str]:
     flags: list[str] = []
     category = ""
 
+    from assistant.knowledge.residential_safeguarding_terminology import should_skip_diagnosis_firewall
+
     for cat, pattern in _MESSAGE_CATEGORY_PATTERNS:
+        if cat == "diagnosis-request" and should_skip_diagnosis_firewall(message):
+            continue
         if pattern.search(message):
             category = cat
             flags.append(cat.replace("-request", "").replace("-wording", "-wording"))
@@ -302,6 +313,15 @@ class OrbSafetyScaffoldService:
             and not MEDICATION_CRITICAL_RISK_RE.search(message or "")
         ):
             scaffold.guardrail_active = False
+            scaffold.risk_level = "medium"
+            scaffold.escalation_required = False
+        from assistant.knowledge.residential_safeguarding_terminology import should_skip_diagnosis_firewall
+
+        if should_skip_diagnosis_firewall(message or ""):
+            scaffold.guardrail_active = False
+            scaffold.detected_category = ""
+            scaffold.fallback_category = None
+            scaffold.no_diagnosis_required = False
             scaffold.risk_level = "medium"
             scaffold.escalation_required = False
         return scaffold

@@ -107,19 +107,19 @@ def _build_decision(level: SafeguardingLevel, matched: list[dict[str, Any]], tex
     if level == "urgent" and score >= 5:
         threshold: ThresholdView = "immediate_action"
         headline = "Immediate safeguarding action may be required."
-        decision = "Do not treat this as a routine recording matter. Prioritise immediate safety, manager/DSL oversight and local safeguarding procedures."
+        decision = "Do not treat this as a routine recording matter. Prioritise immediate safety, manager/on-call oversight and local safeguarding procedures."
     elif level == "urgent":
         threshold = "likely_referral"
         headline = "This is likely to require safeguarding escalation."
-        decision = "The information includes urgent safeguarding indicators. A manager/DSL should review immediately and decide the correct referral route."
+        decision = "The information includes urgent safeguarding indicators. A manager or on-call manager should review immediately and decide the correct referral route."
     elif level == "concern" and score >= 4:
         threshold = "possible_referral"
         headline = "This may meet the threshold for safeguarding referral or consultation."
-        decision = "The concern should be shared with the manager/DSL and considered against local safeguarding thresholds, the child’s plan and known context."
+        decision = "The concern should be shared with the manager or safeguarding lead and considered against local safeguarding thresholds, the child's plan and known context."
     elif level == "concern":
         threshold = "monitor"
         headline = "This requires internal safeguarding oversight and monitoring."
-        decision = "The information should be recorded clearly, shared with the manager/DSL, and reviewed for patterns or escalation needs."
+        decision = "The information should be recorded clearly, shared with the manager or on-call manager, and reviewed for patterns or escalation needs."
     elif explicit_threshold_question:
         threshold = "not_indicated"
         headline = "A referral threshold is not clearly indicated from the information provided alone."
@@ -170,11 +170,11 @@ def analyse_safeguarding_escalation(message: str) -> dict[str, Any]:
     if level == "urgent":
         banner = (
             "Urgent safeguarding indicators are present. Prioritise immediate safety, follow your home’s safeguarding procedures, "
-            "inform the relevant manager/DSL without delay, and consider whether emergency services, the local authority, police, LADO or placing authority need to be contacted according to the situation and local procedure."
+            "inform the relevant manager or on-call manager without delay, and consider whether emergency services, the local authority, police, LADO or placing authority need to be contacted according to the situation and local procedure."
         )
     elif level == "concern":
         banner = (
-            "Safeguarding indicators may be present. Ensure the concern is recorded clearly, shared with the relevant manager/DSL, "
+            "Safeguarding indicators may be present. Ensure the concern is recorded clearly, shared with the relevant manager or safeguarding lead, "
             "and reviewed against the child’s plan, risk assessment and local safeguarding procedures."
         )
     else:
@@ -200,7 +200,7 @@ def analyse_safeguarding_escalation(message: str) -> dict[str, Any]:
                     "payload": {"record_type": "safeguarding", "priority": level},
                 },
                 {
-                    "label": "Notify manager / DSL",
+                    "label": "Notify manager / on-call manager",
                     "action_type": "escalation_prompt",
                     "payload": {"recipient_role": "manager_or_dsl", "priority": level},
                 },
@@ -223,7 +223,7 @@ Safeguarding decision support:
 
 Mandatory response behaviour:
 - Include a clearly labelled "Safeguarding threshold" section when answering safeguarding/threshold questions.
-- Use threshold-aware language: "may meet", "appears to require", "requires manager/DSL review", rather than making an unsafe definitive statutory decision.
+- Use threshold-aware language: "may meet", "appears to require", "requires manager or safeguarding lead review", rather than making an unsafe definitive statutory decision.
 - Include why, what to record, who should review, and what evidence should be checked.
 - If confidentiality is requested by the child, explain that confidentiality cannot be promised where safeguarding duties require information sharing.
 - Reference the protection of children standard, Working Together principles and Ofsted help-and-protection expectations where relevant.

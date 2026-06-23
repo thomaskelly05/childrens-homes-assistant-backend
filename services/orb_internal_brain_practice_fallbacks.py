@@ -57,7 +57,7 @@ PRACTICE_CATEGORY_FALLBACKS: dict[str, CategoryFallbackContent] = {
             "Provide first aid and seek medical advice where injuries require it.",
             "Remove means where safe to do so without creating further risk.",
             "Set supervision/observation level according to policy.",
-            "Escalate to manager, DSL and health services — safeguarding referral where threshold met.",
+            "Escalate to manager, safeguarding lead and health services — safeguarding referral where threshold met.",
         ],
         recording_guidance=[
             "Record words, presentation, actions taken and who was informed.",
@@ -72,7 +72,7 @@ PRACTICE_CATEGORY_FALLBACKS: dict[str, CategoryFallbackContent] = {
             "Do not shame or blame; prioritise safety and relationship.",
         ],
         escalation_policy=[
-            "Manager/DSL/health escalation without delay.",
+            "Manager/on-call/health escalation without delay.",
             "Health support and safeguarding referral according to local policy.",
             "Call 999 if there is immediate risk to life.",
         ],
@@ -123,7 +123,7 @@ PRACTICE_CATEGORY_FALLBACKS: dict[str, CategoryFallbackContent] = {
         ),
         cannot_do=[
             "ORB cannot promise secrecy or investigate beyond staff role.",
-            "ORB cannot decide strategy meeting attendance — escalate through DSL/manager.",
+            "ORB cannot decide strategy meeting attendance — escalate through manager/on-call.",
         ],
         what_to_do=[
             "Make a safeguarding referral through local procedures.",
@@ -144,7 +144,7 @@ PRACTICE_CATEGORY_FALLBACKS: dict[str, CategoryFallbackContent] = {
             "Use trauma-informed, non-shaming language.",
         ],
         escalation_policy=[
-            "Manager/DSL escalation; safeguarding referral without delay.",
+            "Manager/on-call escalation; safeguarding referral without delay.",
             "Multi-agency partners where threshold met.",
         ],
         regulatory_orientation=[
@@ -163,7 +163,7 @@ PRACTICE_CATEGORY_FALLBACKS: dict[str, CategoryFallbackContent] = {
         what_to_do=[
             "Safeguarding referral through local procedures.",
             "Consider criminal exploitation and county lines indicators.",
-            "Police notification where threshold met; manager/DSL escalation.",
+            "Police notification where threshold met; manager/on-call escalation.",
             "Multi-agency response where threshold met.",
         ],
         recording_guidance=[
@@ -179,7 +179,7 @@ PRACTICE_CATEGORY_FALLBACKS: dict[str, CategoryFallbackContent] = {
             "Avoid criminalising the child; focus on safety and support.",
         ],
         escalation_policy=[
-            "Manager/DSL escalation; police notification where threshold met.",
+            "Manager/on-call escalation; police notification where threshold met.",
             "Safeguarding referral and safety planning.",
         ],
         regulatory_orientation=[
@@ -196,7 +196,7 @@ PRACTICE_CATEGORY_FALLBACKS: dict[str, CategoryFallbackContent] = {
             "Do not investigate beyond your role — preserve evidence according to policy.",
         ],
         what_to_do=[
-            "Online safety safeguarding escalation to manager/DSL.",
+            "Online safety safeguarding escalation to manager/on-call.",
             "Preserve evidence according to policy without exceeding staff role.",
             "Police/social care route where threshold met.",
             "Support device safety and reassurance for the young person.",
@@ -214,7 +214,7 @@ PRACTICE_CATEGORY_FALLBACKS: dict[str, CategoryFallbackContent] = {
             "Child-centred reassurance alongside firm safeguarding action.",
         ],
         escalation_policy=[
-            "Manager/DSL escalation; CEOP or police/social care where threshold met.",
+            "Manager/on-call escalation; CEOP or police/social care where threshold met.",
         ],
         regulatory_orientation=[
             "KCSIE online safety principles and SCCIF apply — verify locally.",
@@ -248,11 +248,11 @@ PRACTICE_CATEGORY_FALLBACKS: dict[str, CategoryFallbackContent] = {
             "Avoid discriminatory assumptions; behaviour is communication.",
         ],
         escalation_policy=[
-            "Manager oversight and DSL consultation.",
+            "Manager oversight and safeguarding lead consultation.",
             "Multi-agency partners where threshold met.",
         ],
         regulatory_orientation=[
-            "Prevent duty proportionality applies — verify locally with DSL guidance.",
+            "Prevent duty proportionality applies — verify locally with safeguarding lead guidance.",
         ],
     ),
     "bullying": CategoryFallbackContent(
@@ -445,7 +445,7 @@ PRACTICE_CATEGORY_FALLBACKS: dict[str, CategoryFallbackContent] = {
             "Contact can be emotionally complex — validate without taking sides.",
         ],
         escalation_policy=[
-            "Escalate safeguarding concerns to manager/DSL per policy.",
+            "Escalate safeguarding concerns to manager/on-call per policy.",
         ],
         regulatory_orientation=[
             "Regulation 14 contact and SCCIF apply — verify locally.",
@@ -760,7 +760,7 @@ PRACTICE_CATEGORY_FALLBACKS: dict[str, CategoryFallbackContent] = {
             "Do not minimise a pattern of concerns.",
         ],
         what_to_do=[
-            "Staff conduct review with manager/DSL escalation.",
+            "Staff conduct review with manager/on-call escalation.",
             "Record child's words factually; consider LADO threshold.",
             "Allegation/disciplinary route if threshold met; protect children.",
         ],
@@ -774,7 +774,7 @@ PRACTICE_CATEGORY_FALLBACKS: dict[str, CategoryFallbackContent] = {
             "Neutral, child-centred response — children must feel safe to speak.",
         ],
         escalation_policy=[
-            "Manager/DSL escalation; LADO referral where threshold met.",
+            "Manager/on-call escalation; LADO referral where threshold met.",
         ],
         regulatory_orientation=[
             "Regulation 24 conduct and Regulation 27 safeguarding apply — verify locally.",

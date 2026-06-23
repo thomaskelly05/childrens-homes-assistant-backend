@@ -332,7 +332,7 @@ Abuse disclosure — immediate actions
 
 Listen calmly without leading questions. Do not investigate or decide truth.
 
-Immediate safety and current risk check completed. Manager / DSL notified.
+Immediate safety and current risk check completed. Manager / on-call manager notified.
 
 Social worker and police contacted under local procedure. Child's words recorded accurately.
 Trauma-informed support offered. Chronology and risk plan to be updated.

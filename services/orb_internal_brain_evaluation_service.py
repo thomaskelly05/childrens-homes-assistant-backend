@@ -783,6 +783,10 @@ class OrbInternalBrainEvaluationService:
         )
 
     def _is_diagnosis_request(self, question: str) -> bool:
+        from assistant.knowledge.residential_safeguarding_terminology import should_skip_diagnosis_firewall
+
+        if should_skip_diagnosis_firewall(question):
+            return False
         lower = question.lower()
         return bool(re.search(r"\b(diagnos|adhd|autism|conduct disorder|what disorder)\b", lower))
 

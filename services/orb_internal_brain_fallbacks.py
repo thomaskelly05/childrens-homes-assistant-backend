@@ -41,11 +41,11 @@ _CATEGORY_FALLBACKS: dict[str, CategoryFallbackContent] = {
         cannot_do=[
             "ORB cannot promise secrecy or confidentiality about safeguarding concerns — do not promise secrecy.",
             "ORB cannot help you avoid reporting abuse, neglect or serious harm.",
-            "Safeguarding concerns cannot be kept hidden from the manager, DSL or safeguarding lead.",
+            "Safeguarding concerns cannot be kept hidden from the manager, on-call manager or safeguarding lead.",
         ],
         what_to_do=[
             "Prioritise immediate safety for the young person now.",
-            "Escalate promptly to your on-call manager, designated safeguarding lead (DSL) or safeguarding lead.",
+            "Escalate promptly to your on-call manager or safeguarding lead.",
             "Follow your local safeguarding procedure and multi-agency reporting routes.",
             "Record the child's words where known — do not invent quotes.",
             "Reassure the young person they have done the right thing by telling someone.",
@@ -64,7 +64,7 @@ _CATEGORY_FALLBACKS: dict[str, CategoryFallbackContent] = {
             "Behaviour and disclosures are communication; respond with safety and reassurance.",
         ],
         escalation_policy=[
-            "Notify manager/on-call/DSL without delay.",
+            "Notify manager/on-call without delay.",
             "Call 999 if there is immediate risk to life.",
         ],
         regulatory_orientation=[
@@ -122,7 +122,7 @@ _CATEGORY_FALLBACKS: dict[str, CategoryFallbackContent] = {
         ],
         what_to_do=[
             "Record facts accurately, including staff actions that may need management review.",
-            "Notify manager, DSL or on-call where policy requires — especially if notification was missed.",
+            "Notify manager or on-call where policy requires — especially if notification was missed.",
             "Use balanced, chronological, child-centred wording rather than defensive framing.",
             "For restraint records: document proportionality, injury checks, notifications, debrief and management review.",
             "Escalate safeguarding concerns through local policy without delay.",
@@ -256,7 +256,7 @@ _CATEGORY_FALLBACKS: dict[str, CategoryFallbackContent] = {
         what_to_do=[
             "Follow local policy unless immediate risk to life requires emergency action.",
             "Call 999 immediately if there is immediate danger.",
-            "Notify manager/on-call/DSL as soon as it is safe.",
+            "Notify manager/on-call as soon as it is safe.",
             "Record rationale, actions taken and who was informed.",
         ],
         recording_guidance=[
@@ -270,7 +270,7 @@ _CATEGORY_FALLBACKS: dict[str, CategoryFallbackContent] = {
         ],
         escalation_policy=[
             "Call 999 when there is immediate risk to life.",
-            "Notify manager/on-call/DSL as soon as it is safe to do so.",
+            "Notify manager/on-call as soon as it is safe to do so.",
         ],
         regulatory_orientation=[
             "Regulation 27 and local safeguarding policy set escalation expectations — verify locally.",
@@ -318,7 +318,7 @@ _CATEGORY_FALLBACKS: dict[str, CategoryFallbackContent] = {
         what_to_do=[
             "Call 999 immediately if there is immediate risk to life or the child is unconscious.",
             "Provide first aid within training while awaiting emergency services.",
-            "Notify manager/on-call/DSL as soon as it is safe.",
+            "Notify manager/on-call as soon as it is safe.",
         ],
         recording_guidance=[
             "Recording comes after safety — then document timeline, actions, who was informed, "
@@ -332,7 +332,7 @@ _CATEGORY_FALLBACKS: dict[str, CategoryFallbackContent] = {
         ],
         escalation_policy=[
             "Call 999 first for immediate risk to life.",
-            "Inform manager/on-call/DSL when safe.",
+            "Inform manager/on-call when safe.",
         ],
         regulatory_orientation=[
             "Emergency response duties sit above inspection preparation — verify local emergency policy.",
@@ -351,7 +351,7 @@ _CATEGORY_FALLBACKS: dict[str, CategoryFallbackContent] = {
             "Preserve safety and evidence — separate parties if needed by policy.",
             "Follow allegation protocol — do not investigate informally beyond immediate safety.",
             "The accused person must not manage the concern or contact witnesses alone.",
-            "Escalate to manager, DSL and LADO where threshold met.",
+            "Escalate to Registered Manager, on-call manager and LADO where threshold met.",
             "Record facts, not opinions — protect child and staff rights.",
         ],
         recording_guidance=[
@@ -366,7 +366,7 @@ _CATEGORY_FALLBACKS: dict[str, CategoryFallbackContent] = {
             "Use neutral, non-blaming language; avoid prejudging outcomes.",
         ],
         escalation_policy=[
-            "Notify manager/DSL promptly; LADO referral where threshold met.",
+            "Notify manager/on-call promptly; LADO referral where threshold met.",
             "Call 999 if there is immediate risk to life.",
         ],
         regulatory_orientation=[
@@ -399,7 +399,7 @@ _CATEGORY_FALLBACKS: dict[str, CategoryFallbackContent] = {
         ],
         escalation_policy=[
             "Escalate through whistleblowing and safeguarding routes per local policy.",
-            "Notify manager/on-call/DSL where children's safety may be affected.",
+            "Notify manager/on-call where children's safety may be affected.",
         ],
         regulatory_orientation=[
             "Regulation 24 and whistleblowing policy set governance expectations — verify locally.",
@@ -1033,7 +1033,10 @@ def build_structured_fallback_answer(
         for warning in data_protection_warnings:
             lines.append(warning)
 
-    return "\n".join(lines).strip()
+    from assistant.knowledge.adult_identity_language import sanitize_childrens_home_terminology
+
+    result = "\n".join(lines).strip()
+    return sanitize_childrens_home_terminology(result)
 
 
 def get_category_fallback_content(category: str) -> CategoryFallbackContent | None:
