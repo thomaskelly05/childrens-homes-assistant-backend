@@ -166,3 +166,38 @@ def test_edit_dictate_uses_unified_gateway(monkeypatch):
     meta = result.brain_metadata or {}
     assert meta.get("unified_brain_gateway")
     assert meta.get("brain_decision_used_for_generation") is True
+
+
+def test_whistleblowing_prompt_detected_and_routes_multi_agency():
+    message = "Manager told staff not to log missing episode to 'avoid Ofsted noise'."
+    decision = _decision(message)
+    assert "whistleblowing" in decision.scenario_types
+    assert "multi_agency" in decision.active_final_domains
+    assert decision.public_source_chips
+
+
+def test_whistleblowing_professional_curiosity_topic():
+    from services.orb_professional_curiosity_service import orb_professional_curiosity_service
+
+    message = "Manager told staff not to log missing episode to 'avoid Ofsted noise'."
+    topic = orb_professional_curiosity_service.detect_topic(message)
+    assert topic == "staff_culture"
+    lenses = orb_professional_curiosity_service.lenses_for(message)
+    assert any("whistleblowing" in lens.lower() for lens in lenses)
+
+
+def test_safeguarding_escalation_contract_for_self_harm():
+    decision = _decision("He says he is going to hurt himself tonight and has a blade.")
+    assert "suicide_self_harm" in decision.scenario_types
+    contract_text = " ".join(decision.response_contract).lower()
+    assert "immediate safety" in contract_text
+    assert "do not leave alone" in contract_text
+
+
+def test_whistleblowing_source_chips_use_family_anchor_precision():
+    decision = _decision("Staff whistleblowing concern — manager said not to log missing episode.")
+    chips = orb_brain_convergence_orchestrator_service.convergence_source_chips_as_sources(decision)
+    assert chips
+    for chip in chips:
+        assert chip.get("precision") == "source_family_anchor"
+        assert chip.get("type") == "source_family"

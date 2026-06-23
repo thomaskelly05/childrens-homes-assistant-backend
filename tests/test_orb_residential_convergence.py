@@ -33,7 +33,7 @@ def test_voice_and_chat_share_ask_orb_brain():
     router = _read("lib/orb/orb-brain-router.ts")
     companion = _read("components/orb-standalone/orb-care-companion.tsx")
     assert "export async function askOrbBrain" in router
-    assert "askOrbBrain" in companion
+    assert "buildOrbBrainConversationRequest" in companion
     assert "source: voiceOriginatedSend ? 'voice' : 'chat'" in companion
 
 
@@ -93,19 +93,20 @@ def test_live_lookup_routes_without_hallucination_note():
 
 def test_voice_station_two_sided_transcript_sync():
     station = _read("components/orb-standalone/orb-voice-station.tsx")
-    assert "lastSyncedReplyKeyRef" in station
-    assert "role: 'assistant'" in station
-    assert "provider: 'orb_brain'" in station
-    assert "formatVoiceTurnsPlainText" in station
+    voice_v2 = _read("lib/orb/voice-v2/use-orb-voice-v2.ts")
+    assert "data-orb-voice-v2" in station
+    assert "data-orb-voice-transcript-source" in station
+    assert "useOrbVoiceV2" in station
+    assert "transcript" in voice_v2.lower()
 
 
 def test_voice_transcript_actions_include_handoffs():
     station = _read("components/orb-standalone/orb-voice-station.tsx")
     actions = _read("components/orb-standalone/orb-voice-transcript-actions.tsx")
     assert "data-orb-voice-to-dictate" in actions
-    assert "data-orb-voice-to-write" in station
-    assert "data-orb-voice-manager-oversight" in station
-    assert "data-orb-voice-action-list" in station
+    assert "data-orb-voice-open-write" in station
+    assert "data-orb-voice-send-to-dictate" in station
+    assert "data-orb-voice-summary-actions" in station
     assert "Copy full conversation" in actions
 
 
@@ -170,7 +171,7 @@ def test_write_therapeutic_actions_exist():
 
 def test_shared_capture_prompts_defined():
     assert len(SHARED_CAPTURE_PROMPTS) >= 10
-    assert "What did the child say?" in SHARED_CAPTURE_PROMPTS
+    assert "What did the child say or communicate?" in SHARED_CAPTURE_PROMPTS
 
 
 def test_quality_layer_callable_from_dictate():

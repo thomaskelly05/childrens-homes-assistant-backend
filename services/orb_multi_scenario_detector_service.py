@@ -108,6 +108,18 @@ SCENARIO_SIGNATURES: dict[str, tuple[str, ...]] = {
         "image sharing",
         "blackmail online",
     ),
+    "whistleblowing": (
+        "whistleblow",
+        "whistleblowing",
+        "not to log",
+        "avoid ofsted",
+        "cover up",
+        "cover-up",
+        "suppress safeguarding",
+        "not reporting",
+        "do not record",
+        "don't record",
+    ),
 }
 
 
