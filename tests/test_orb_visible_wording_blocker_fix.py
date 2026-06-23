@@ -6,8 +6,12 @@ import re
 
 from assistant.knowledge.adult_identity_language import (
     apply_adult_identity_language,
+    build_simple_daily_record_draft,
     fix_broken_adult_heading_wording,
+    is_daily_record_draft_mode,
+    looks_like_daily_record_draft_violation,
     reshape_routine_daily_record_chat_answer,
+    sanitize_daily_record_draft_wording,
     sanitize_visible_final_answer,
     strip_self_harm_generic_fillers,
     user_requested_blank_template,
@@ -173,6 +177,90 @@ def test_provider_polish_applies_visible_sanitizer():
     assert issue is None
     assert "how The adult responded" not in polished
     assert "[Child's Name]" not in polished
+
+
+def test_no_engaging_positively_with_the_adult():
+    raw = "Include engaging positively with the adult during breakfast."
+    fixed = fix_broken_adult_heading_wording(raw)
+    assert "engaging positively with the adult" not in fixed.lower()
+    assert "engaging calmly with staff" in fixed.lower()
+
+
+def test_live_breakfast_prompt_produces_narrative_draft_not_form():
+    raw = """
+Daily Record: [Date]
+staff present: [Insert staff names]
+Young Person: [Insert young person's name]
+
+The young person had a calm breakfast and chose toast. They watched TV before handover.
+
+Include engaging positively with the adult and specific the adult interactions.
+"""
+    cleaned = sanitize_visible_final_answer(raw, source_text=BREAKFAST_DAILY_PROMPT)
+    lower = cleaned.lower()
+    assert is_daily_record_draft_mode(BREAKFAST_DAILY_PROMPT)
+    assert "here is a simple daily record draft" in lower
+    assert "daily record: add the date" not in lower
+    assert "staff present:" not in lower
+    assert "young person:" not in lower
+    assert "[insert" not in lower
+    assert "engaging positively with the adult" not in lower
+    assert "specific the adult interactions" not in lower
+    assert "appeared calm during breakfast" in lower
+    assert "before saving" in lower
+
+
+def test_daily_record_draft_no_appeared_calmer_without_comparison():
+    raw = "The young person appeared calmer during breakfast and expressed enjoyment while watching TV."
+    cleaned = sanitize_daily_record_draft_wording(raw, source_text=BREAKFAST_DAILY_PROMPT)
+    lower = cleaned.lower()
+    assert "appeared calmer" not in lower
+    assert "appeared calm" in lower
+    assert "expressed enjoyment" not in lower
+
+
+def test_daily_record_draft_keeps_appeared_calmer_when_comparison_given():
+    prompt = "Help me write a daily record — they were upset earlier but appeared calmer at breakfast."
+    raw = "The young person appeared calmer at breakfast."
+    cleaned = sanitize_daily_record_draft_wording(raw, source_text=prompt)
+    assert "appeared calmer" in cleaned.lower()
+
+
+def test_daily_record_draft_violation_detects_post_placeholder_form():
+    polluted = "Daily Record: add the date before saving\nYoung Person: the young person"
+    assert looks_like_daily_record_draft_violation(polluted)
+
+
+def test_self_harm_strips_it_is_crucial_opening():
+    raw = (
+        "It is crucial to respond immediately. "
+        "Stay with the young person. Inform the manager/on-call and follow the home's self-harm procedure. "
+        "Record exact words."
+    )
+    cleaned = strip_self_harm_generic_fillers(raw, source_text=SELF_HARM_PROMPT)
+    lower = cleaned.lower()
+    assert "it is crucial" not in lower
+    assert "manager/on-call" in lower
+
+
+def test_self_harm_strips_by_taking_these_steps():
+    raw = (
+        "Stay with the young person. Inform the manager/on-call. "
+        "By taking these steps, you can ensure the young person's safety."
+    )
+    cleaned = strip_self_harm_generic_fillers(raw, source_text=SELF_HARM_PROMPT)
+    assert "by taking these steps" not in cleaned.lower()
+    assert "manager/on-call" in cleaned.lower()
+
+
+def test_build_simple_daily_record_draft_matches_expected_shape():
+    draft = build_simple_daily_record_draft(BREAKFAST_DAILY_PROMPT)
+    lower = draft.lower()
+    assert "here is a simple daily record draft" in lower
+    assert "appeared calm during breakfast" in lower
+    assert "chose toast" in lower
+    assert "watched television before handover" in lower
+    assert "before saving" in lower
 
 
 def test_answer_preservation_for_clean_strong_answer():

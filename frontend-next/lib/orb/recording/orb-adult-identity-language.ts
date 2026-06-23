@@ -355,7 +355,7 @@ const STAFF_PHRASE_RESTORE: Record<string, string> = {
 }
 
 const BLANK_TEMPLATE_REQUEST_RE =
-  /\b(?:blank\s+template|blank\s+form|full\s+document|form\s+to\s+complete|structured\s+report|template\s+to\s+fill|empty\s+template|give\s+me\s+a\s+template|provide\s+a\s+template)\b/i
+  /\b(?:blank\s+template|blank\s+form|full\s+document|form\s+to\s+complete|structured\s+report|template\s+to\s+fill|empty\s+template|give\s+me\s+a\s+template|provide\s+a\s+template|report\s+template|(?:give|provide|need|want|show)\s+(?:me\s+)?(?:a\s+)?template\b|(?:form|record)\s+(?:structure|layout|fields)\b|fields\s+to\s+complete)\b/i
 
 const ROUTINE_DAILY_BEFORE_SAVING_LIST =
   'Before saving, add:\n- the time\n- who was present\n- anything the young person said or communicated\n- whether any follow-up is needed.'
@@ -363,10 +363,26 @@ const ROUTINE_DAILY_BEFORE_SAVING_LIST =
 const SELF_HARM_GENERIC_FILLER_RES: RegExp[] = [
   /\bAlways prioritise[^.!?]*[.!?]/gi,
   /\bIt is important to prioritise[^.!?]*[.!?]/gi,
+  /\bIt is crucial[^.!?]*[.!?]/gi,
+  /\bBy taking these steps[^.!?]*[.!?]/gi,
   /\bMental health is a complex[^.!?]*[.!?]/gi,
   /\bRemember that self-harm[^.!?]*[.!?]/gi,
   /\bIf you have concerns about (?:their\s+)?mental health[^.!?]*[.!?]/gi,
   /\bSeeking professional help is (?:always\s+)?important[^.!?]*[.!?]/gi
+]
+
+const SELF_HARM_GENERIC_OPENING_RES: RegExp[] = [
+  /^It is crucial[^.!?]*[.!?]\s*/gim,
+  /^Self-harm is a serious[^.!?]*[.!?]\s*/gim,
+  /^Self-harm and suicidal ideation require[^.!?]*[.!?]\s*/gim
+]
+
+const DAILY_RECORD_FIELD_HEADING_RES: RegExp[] = [
+  /^Daily Record:\s*/im,
+  /^Young Person:\s*/im,
+  /^(?:staff|Staff)\s+present:\s*/im,
+  /^Manager Review:\s*/im,
+  /^#{1,3}\s*Manager Review\s*$/im
 ]
 
 function protectStaffPhrases(text: string): string {
@@ -397,17 +413,21 @@ export function fixBrokenAdultHeadingWording(text: string): string {
     .replace(/\b[Tt]he adult\s+responded\b/g, 'staff responded')
     .replace(/\bspecific\s+[Tt]he adult interactions\b/g, 'specific staff interactions')
     .replace(/\b[Tt]he adult interactions\b/g, 'staff interactions')
+    .replace(/\bengaging positively with the adult\b/gi, 'engaging calmly with staff')
     .replace(/\[Insert\s+[Tt]he adult Names?\]/gi, 'staff names, if known')
 }
 
-export function replaceClunkyPlaceholders(text: string): string {
+export function replaceClunkyPlaceholders(text: string, sourceText = ''): string {
+  if (isDailyRecordDraftMode(sourceText)) return String(text || '')
   return String(text || '')
     .replace(/\[Young Person'?s Name\]/gi, 'the young person')
     .replace(/\[Child'?s Name\]/gi, 'the young person')
     .replace(/\[Name\]/gi, 'the young person')
     .replace(/\[Staff Names?\]/gi, 'staff')
     .replace(/\[Names of staff present\]/gi, 'staff')
-    .replace(/\[Insert (?:The )?[Aa]dult Names?\]/gi, 'staff')
+    .replace(/\[Insert (?:staff|Staff) Names?\]/gi, 'staff names, if known')
+    .replace(/\[Insert (?:young person'?s|Young Person'?s) [Nn]ame\]/gi, 'the young person')
+    .replace(/\[Insert (?:The )?[Aa]dult Names?\]/gi, 'staff names, if known')
     .replace(/\[Manager'?s name\]/gi, "add the manager's name before saving")
     .replace(/\[Date\]/gi, 'add the date before saving')
     .replace(/\[Time\]/gi, 'add the time before saving')
@@ -422,13 +442,13 @@ export function userRequestedBlankTemplate(text: string): boolean {
 function looksLikeFormStyleDailyRecord(text: string): boolean {
   const value = String(text || '')
   const markers = [
-    /Daily Record:\s*\[Date\]/i,
-    /Young Person:\s*\[/i,
-    /(?:staff|Staff)\s+present:\s*\[/i,
-    /Manager Review:\s*\[Manager/i,
-    /Manager Review:\s*$/im
+    /Daily Record:\s*(?:\[Date\]|add the date)/i,
+    /Young Person:\s*(?:\[|add|insert)/i,
+    /(?:staff|Staff)\s+present:\s*(?:\[|insert|add)/i,
+    /Manager Review:\s*(?:\[Manager|$)/im,
+    /\[Insert\s+/i
   ]
-  return markers.filter((pattern) => pattern.test(value)).length >= 2
+  return markers.filter((pattern) => pattern.test(value)).length >= 1
 }
 
 function placeholderHeavyForChat(text: string): boolean {
@@ -441,9 +461,58 @@ function placeholderHeavyForChat(text: string): boolean {
     '[time]',
     "[manager's name]",
     '[names of staff present]',
-    '[staff names]'
+    '[staff names]',
+    '[insert'
   ]
-  return markers.filter((marker) => lower.includes(marker)).length >= 2
+  return markers.filter((marker) => lower.includes(marker)).length >= 1
+}
+
+export function isDailyRecordDraftMode(sourceText: string): boolean {
+  const source = String(sourceText || '')
+  return (
+    isDailyRecordRequest(source) &&
+    promptContainsDailyRecordingFacts(source) &&
+    !userRequestedBlankTemplate(source) &&
+    !hasSafeguardingCue(source)
+  )
+}
+
+export function looksLikeDailyRecordDraftViolation(text: string): boolean {
+  const value = String(text || '')
+  if (looksLikeFormStyleDailyRecord(value) || placeholderHeavyForChat(value)) return true
+  if (DAILY_RECORD_FIELD_HEADING_RES.some((pattern) => pattern.test(value))) return true
+  if (/\[Insert\s+/i.test(value)) return true
+  return false
+}
+
+function sourceSupportsComparativeCalm(sourceText: string): boolean {
+  const lower = String(sourceText || '').toLowerCase()
+  return ['calmer', 'more calm', 'settled more', 'improved', 'before and after', 'later settled', 'became calmer'].some(
+    (term) => lower.includes(term)
+  )
+}
+
+export function sanitizeDailyRecordDraftWording(text: string, sourceText = ''): string {
+  if (!isDailyRecordDraftMode(sourceText)) return String(text || '')
+  let result = String(text || '')
+  if (!sourceSupportsComparativeCalm(sourceText)) {
+    result = result.replace(/\bappeared calmer\b/gi, 'appeared calm')
+  }
+  const sourceLower = String(sourceText || '').toLowerCase()
+  if (!sourceLower.includes('enjoy') && !sourceLower.includes('enjoyment')) {
+    result = result.replace(/\bexpressed enjoyment\b[^.!?]*[.!?]?/gi, '')
+  }
+  return result.replace(/\n{3,}/g, '\n\n').trim()
+}
+
+function stripDailyRecordDraftForbiddenSections(text: string, sourceText = ''): string {
+  if (!isDailyRecordDraftMode(sourceText)) return String(text || '')
+  let result = String(text || '')
+  result = result.replace(/^#{0,3}\s*What this means in practice\s*$[\s\S]*?(?=\n#{1,3}\s|\Z)/gim, '')
+  result = result.replace(/\bWhat this means in practice\b[\s\S]*$/gi, '')
+  result = result.replace(/^#{0,3}\s*Follow-up prompts\s*$[\s\S]*?(?=\n#{1,3}\s|\Z)/gim, '')
+  result = result.replace(/^#{0,3}\s*Manager Review\s*$[\s\S]*?(?=\n#{1,3}\s|\Z)/gim, '')
+  return result.replace(/\n{3,}/g, '\n\n').trim()
 }
 
 export function promptContainsDailyRecordingFacts(text: string): boolean {
@@ -489,26 +558,32 @@ export function reshapeRoutineDailyRecordChatAnswer(text: string, sourceText = '
   if (hasSafeguardingCue(sourceText)) return String(text || '')
   if (!promptContainsDailyRecordingFacts(sourceText)) return String(text || '')
 
-  const wasFormLike = looksLikeFormStyleDailyRecord(text) || placeholderHeavyForChat(text)
+  if (looksLikeDailyRecordDraftViolation(text)) {
+    return buildSimpleDailyRecordDraft(sourceText)
+  }
+
   let cleaned = String(text || '')
     .split('\n')
     .filter((line) => {
       const stripped = line.trim()
       return !(
-        /^Daily Record:\s*\[Date\]/i.test(stripped) ||
-        /^Young Person:\s*\[/i.test(stripped) ||
-        /^(?:staff|Staff)\s+present:\s*\[/i.test(stripped) ||
-        /^Manager Review:/i.test(stripped)
+        /^Daily Record:\s*/i.test(stripped) ||
+        /^Young Person:\s*/i.test(stripped) ||
+        /^(?:staff|Staff)\s+present:\s*/i.test(stripped) ||
+        /^Manager Review:/i.test(stripped) ||
+        /^#{1,3}\s*Follow-up prompts/i.test(stripped) ||
+        /\[Insert\s+/i.test(stripped)
       )
     })
     .join('\n')
     .replace(/\n{3,}/g, '\n\n')
     .trim()
 
+  cleaned = stripDailyRecordDraftForbiddenSections(cleaned, sourceText)
+  cleaned = sanitizeDailyRecordDraftWording(cleaned, sourceText)
+
   if (
-    wasFormLike ||
-    looksLikeFormStyleDailyRecord(cleaned) ||
-    placeholderHeavyForChat(cleaned) ||
+    looksLikeDailyRecordDraftViolation(cleaned) ||
     (cleaned.split(/\s+/).length < 25 && promptContainsDailyRecordingFacts(sourceText))
   ) {
     cleaned = buildSimpleDailyRecordDraft(sourceText)
@@ -523,6 +598,9 @@ export function stripSelfHarmGenericFillers(text: string, sourceText = ''): stri
     return String(text || '')
   }
   let result = String(text || '').replace(/\s+$/, '')
+  for (const pattern of SELF_HARM_GENERIC_OPENING_RES) {
+    result = result.replace(pattern, '').replace(/^\s+/, '')
+  }
   for (const pattern of SELF_HARM_GENERIC_FILLER_RES) {
     result = result.replace(pattern, '').replace(/\s+$/, '')
   }
@@ -1116,10 +1194,26 @@ export function sanitizeLiveRecordOutput(text: string, sourceText = ''): string 
 export function isDailyRecordRequest(text: string): boolean {
   const value = String(text || '')
   const lowered = value.toLowerCase()
-  if (/\b(?:create|write|draft|turn|make)\b.{0,40}\b(?:a\s+)?daily\s+record\b/i.test(value)) return true
+  if (
+    /\b(?:create|write|draft|turn|make|help\s+me\s+(?:write|record))\b.{0,40}\b(?:a\s+)?daily\s+record\b/i.test(
+      value
+    )
+  ) {
+    return true
+  }
+  if (
+    /\b(?:write this as|turn this into|make this more child-centred).{0,40}\b(?:a\s+)?(?:daily\s+)?record\b/i.test(
+      value
+    )
+  ) {
+    return true
+  }
+  if (lowered.includes('child-centred') && lowered.includes('record')) return true
   return (
     lowered.includes('daily record') &&
-    ['create', 'write', 'draft', 'from the following', 'rough notes'].some((needle) => lowered.includes(needle))
+    ['create', 'write', 'draft', 'from the following', 'rough notes', 'turn', 'make'].some((needle) =>
+      lowered.includes(needle)
+    )
   )
 }
 
