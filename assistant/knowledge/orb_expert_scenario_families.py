@@ -337,7 +337,7 @@ ORB_SCENARIO_FAMILIES: list[dict[str, Any]] = [
         "school_refusal",
         "School refusal",
         "Child refusing education attendance.",
-        triggers=["school refusal", "won't go to school"],
+        triggers=["school refusal", "refused school", "refused to go to school", "won't go to school"],
         red_flags=["exclusion", "bullying", "after contact"],
         risk="medium",
         anchors=["send_code_of_practice"],

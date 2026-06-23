@@ -191,9 +191,14 @@ class OrbInternalBrainEvaluationResult:
 class OrbInternalBrainEvaluationService:
     """Evaluate synthetic scenarios through ORB's internal routing and safety layers only."""
 
-    def evaluate_scenario(self, scenario: dict[str, Any]) -> OrbInternalBrainEvaluationResult:
+    def evaluate_scenario(
+        self,
+        scenario: dict[str, Any],
+        *,
+        classification_message: str | None = None,
+    ) -> OrbInternalBrainEvaluationResult:
         scenario_id = str(scenario.get("id") or "")
-        question = str(scenario.get("question") or "")
+        question = str(scenario.get("question") or scenario.get("prompt") or "")
         domain = str(scenario.get("domain") or "daily-practice")
         category = str(scenario.get("category") or "")
         risk_level = str(scenario.get("riskLevel") or scenario.get("risk_level") or "medium").lower()
@@ -203,20 +208,21 @@ class OrbInternalBrainEvaluationService:
         regulatory_anchors = [str(a) for a in (scenario.get("requiredRegulatoryAnchors") or [])]
 
         message = build_evaluation_message(scenario)
+        routing_message = str(classification_message or question or "").strip() or message
         orb_mode = mode_for_scenario(scenario)
 
         expert = orb_expert_answer_engine_service.classify_scenario(
-            message,
+            routing_message,
             mode=orb_mode,
             profile_role=role.replace("-", "_"),
         )
-        retrieval = orb_knowledge_retrieval_service.classify_query(message, mode=orb_mode)
-        ai_risk = ai_model_router_service.classify_risk(message, mode=orb_mode).value
-        contract_family = detect_contract_family(message)
+        retrieval = orb_knowledge_retrieval_service.classify_query(routing_message, mode=orb_mode)
+        ai_risk = ai_model_router_service.classify_risk(routing_message, mode=orb_mode).value
+        contract_family = detect_contract_family(routing_message)
         contract = get_contract_family(contract_family) or {}
-        policy = orb_execution_policy_service.resolve(message, brain_convergence={"mode": orb_mode})
+        policy = orb_execution_policy_service.resolve(routing_message, brain_convergence={"mode": orb_mode})
         deterministic = orb_execution_policy_service.try_deterministic_answer(
-            message,
+            routing_message,
             policy=policy,
             brain_convergence={"mode": orb_mode},
         )

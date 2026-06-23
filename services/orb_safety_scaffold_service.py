@@ -8,6 +8,7 @@ from typing import Any
 
 from services.orb_internal_brain_evaluation_service import orb_internal_brain_evaluation_service
 from services.orb_internal_brain_fallbacks import resolve_fallback_category
+from services.indicare_intelligence_core_service import SAFEGUARDING_CRITICAL_TERMS
 
 _LOCAL_POLICY_CAVEAT = (
     "Apply your organisation's local policy and use professional judgement — "
@@ -177,6 +178,12 @@ def _infer_category_from_message(message: str) -> tuple[str, list[str], str]:
     return category, flags, "daily-practice"
 
 
+def has_explicit_critical_terms(message: str) -> bool:
+    """True when the raw user message contains explicit safeguarding-critical language."""
+    lower = str(message or "").lower()
+    return any(term in lower for term in SAFEGUARDING_CRITICAL_TERMS)
+
+
 def build_scenario_dict_from_message(message: str, *, mode: str | None = None) -> dict[str, Any]:
     """Build a minimal scenario dict from a live user message for scaffold precheck."""
     category, flags, domain = _infer_category_from_message(message)
@@ -269,10 +276,46 @@ class OrbSafetyScaffoldService:
         if not scenario.get("category") and mode and "safeguarding" in str(mode).lower():
             scenario["domain"] = "safeguarding"
             scenario["riskLevel"] = "high"
-        return self.build_from_scenario(scenario)
+        internal = orb_internal_brain_evaluation_service.evaluate_scenario(
+            scenario,
+            classification_message=message,
+        )
+        return _map_internal_brain_to_scaffold(internal, scenario=scenario)
 
-    def requires_deep_routing(self, scaffold: OrbSafetyScaffold) -> bool:
-        return scaffold.guardrail_active and scaffold.risk_level in ("high", "critical")
+    def requires_deep_routing(
+        self,
+        scaffold: OrbSafetyScaffold,
+        *,
+        message: str | None = None,
+        simple_standard_contract: bool = False,
+    ) -> bool:
+        if not scaffold.guardrail_active or scaffold.risk_level not in ("high", "critical"):
+            return False
+        if simple_standard_contract and message and not has_explicit_critical_terms(message):
+            return False
+        return True
+
+    def scaffold_expert_depth_override(
+        self,
+        scaffold: OrbSafetyScaffold,
+        *,
+        message: str | None = None,
+        simple_standard_contract: bool = False,
+    ) -> str | None:
+        if not self.requires_deep_routing(
+            scaffold,
+            message=message,
+            simple_standard_contract=simple_standard_contract,
+        ):
+            return None
+        if message and has_explicit_critical_terms(message):
+            return "safeguarding_critical"
+        if scaffold.detected_domain in ("adversarial", "safeguarding") and scaffold.risk_level in (
+            "high",
+            "critical",
+        ):
+            return "safeguarding_critical"
+        return None
 
 
 orb_safety_scaffold_service = OrbSafetyScaffoldService()

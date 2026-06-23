@@ -177,6 +177,10 @@ def _build_standalone_request_context(
     prompt_tier = retrieval_bundle["prompt_tier"]
     grounding_context = retrieval_bundle["grounding_context"]
     retrieval_preview = retrieval_bundle["source_packs"]
+    initial_prompt_tier = prompt_tier
+    simple_standard_contract = bool(retrieval_bundle.get("simple_standard_contract"))
+    expert_depth_before_scaffold = retrieval_bundle.get("expert_depth")
+    scaffold_override_reason: str | None = None
 
     scaffold_obj = (
         orb_safety_scaffold_service.build_from_message(user_message, mode=mode)
@@ -184,17 +188,38 @@ def _build_standalone_request_context(
         else None
     )
     scaffold = safety_scaffold if safety_scaffold is not None else (scaffold_obj.to_dict() if scaffold_obj else {})
-    if scaffold_obj and orb_safety_scaffold_service.requires_deep_routing(scaffold_obj):
-        prompt_tier = "deep"
-        retrieval_bundle["prompt_tier"] = "deep"
-    elif scaffold.get("guardrail_active") and scaffold.get("risk_level") in ("high", "critical"):
-        prompt_tier = "deep"
-        retrieval_bundle["prompt_tier"] = "deep"
-    expert_depth_override = (
-        "safeguarding_critical"
-        if scaffold.get("guardrail_active") and scaffold.get("risk_level") in ("high", "critical")
-        else None
+    would_deep_route = bool(
+        scaffold_obj
+        and scaffold_obj.guardrail_active
+        and scaffold_obj.risk_level in ("high", "critical")
     )
+    if scaffold_obj and orb_safety_scaffold_service.requires_deep_routing(
+        scaffold_obj,
+        message=user_message,
+        simple_standard_contract=simple_standard_contract,
+    ):
+        prompt_tier = "deep"
+        retrieval_bundle["prompt_tier"] = "deep"
+        scaffold_override_reason = "scaffold_high_risk"
+    elif would_deep_route and simple_standard_contract:
+        scaffold_override_reason = "simple_standard_contract_cap"
+    elif scaffold.get("guardrail_active") and scaffold.get("risk_level") in ("high", "critical"):
+        if not simple_standard_contract or orb_safety_scaffold_service.has_explicit_critical_terms(user_message):
+            prompt_tier = "deep"
+            retrieval_bundle["prompt_tier"] = "deep"
+            scaffold_override_reason = "scaffold_high_risk"
+        else:
+            scaffold_override_reason = "simple_standard_contract_cap"
+    expert_depth_override = None
+    if scaffold_obj:
+        expert_depth_override = orb_safety_scaffold_service.scaffold_expert_depth_override(
+            scaffold_obj,
+            message=user_message,
+            simple_standard_contract=simple_standard_contract,
+        )
+    elif scaffold.get("guardrail_active") and scaffold.get("risk_level") in ("high", "critical"):
+        if not simple_standard_contract or orb_safety_scaffold_service.has_explicit_critical_terms(user_message):
+            expert_depth_override = "safeguarding_critical"
 
     standalone_operational_context: dict[str, Any] = {}
     if payload.document_text:
@@ -226,6 +251,8 @@ def _build_standalone_request_context(
         operational_context=standalone_operational_context or None,
     )
     if prompt_tier == "fast":
+        shared_runtime_block = ""
+    elif simple_standard_contract and not _requests_institutional_cognition(user_message):
         shared_runtime_block = ""
     else:
         shared_runtime_block = shared_institutional_cognition_runtime.prompt_addendum(
@@ -273,7 +300,12 @@ def _build_standalone_request_context(
             **{k: v for k, v in scaffold.items() if k in OrbSafetyScaffold.__dataclass_fields__}
         )
         guardrail_block = build_guardrail_prompt_block(scaffold_for_prompt)
-    framed_message = _build_framed_message(
+    mandatory_contract_block = brain_convergence.prompt_addendum or None
+    if simple_standard_contract:
+        mandatory_contract_block = orb_brain_convergence_orchestrator_service.concise_prompt_addendum(
+            brain_convergence
+        )
+    framed_message, per_layer_prompt_chars = _build_framed_message(
         mode=mode,
         user_message=user_message,
         detail=detail,
@@ -283,8 +315,9 @@ def _build_standalone_request_context(
         shared_runtime_block=shared_runtime_block,
         project_memory_block=project_memory_block or None,
         expert_depth=expert_depth,
-        mandatory_contract_block=brain_convergence.prompt_addendum or None,
+        mandatory_contract_block=mandatory_contract_block,
         guardrail_block=guardrail_block or None,
+        simple_standard_contract=simple_standard_contract,
     )
     if timing:
         timing.mark("prompt_build_complete")
@@ -317,6 +350,15 @@ def _build_standalone_request_context(
         "execution_policy": execution_policy.to_dict(),
         "user_message": user_message,
         "safety_scaffold": scaffold,
+        "routing_telemetry": {
+            "initial_prompt_tier": initial_prompt_tier,
+            "final_prompt_tier": prompt_tier,
+            "scaffold_override_reason": scaffold_override_reason,
+            "expert_depth_before_scaffold": expert_depth_before_scaffold,
+            "expert_depth_after_scaffold": expert_depth,
+            "per_layer_prompt_chars": per_layer_prompt_chars,
+            "simple_standard_contract": simple_standard_contract,
+        },
     }
 
 def _attach_execution_policy_context(
@@ -362,6 +404,9 @@ def _attach_execution_policy_context(
     context_used["execution_telemetry"] = telemetry
     if telemetry.get("optimisation_gap"):
         context_used["optimisation_gap"] = telemetry["optimisation_gap"]
+    routing_telemetry = dict(ctx.get("routing_telemetry") or {})
+    if routing_telemetry:
+        context_used.update(routing_telemetry)
     return context_used
 
 
@@ -583,6 +628,31 @@ def _standalone_contract() -> dict[str, Any]:
     }
 
 
+EVERYDAY_BRAIN_BLOCK_CAP = 2000
+EVERYDAY_INCIDENT_BLOCK_CAP = 800
+
+
+def _requests_institutional_cognition(message: str) -> bool:
+    lower = str(message or "").lower()
+    terms = (
+        "institutional cognition",
+        "governance drift",
+        "provider drift",
+        "responsible individual",
+        "reg 44",
+        "reg 45",
+        "regulation 44",
+        "ofsted lens",
+        "inspection evidence",
+        "institutional depth",
+    )
+    return any(term in lower for term in terms)
+
+
+def _layer_char_counts(layers: dict[str, str]) -> dict[str, int]:
+    return {name: len(text or "") for name, text in layers.items()}
+
+
 def _resolve_detail(mode: str, requested: str | None) -> str:
     if requested == "voice_concise":
         return "voice_concise"
@@ -610,7 +680,8 @@ def _build_framed_message(
     expert_depth: str | None = None,
     mandatory_contract_block: str | None = None,
     guardrail_block: str | None = None,
-) -> str:
+    simple_standard_contract: bool = False,
+) -> tuple[str, dict[str, int]]:
     resolved_mode = orb_standalone_brain_service.normalise_mode(mode)
     mode_hint = MODE_BEHAVIOUR.get(resolved_mode) or MODE_BEHAVIOUR.get(mode, "")
     detail_hint = ""
@@ -631,76 +702,83 @@ def _build_framed_message(
             "ORB shell — brain has scanned this request; adapt answer length and framing to depth."
         )
     if prompt_tier == "fast" and expert_depth == "general_light":
-        parts = [
-            STANDALONE_ORB_IDENTITY,
-            STANDALONE_ORB_BOUNDARIES,
-            depth_hint,
-            guardrail_block or "",
-            project_memory_block or "",
-            grounding_context or "",
-            mode_hint,
-            detail_hint,
-            f"Mode: {resolved_mode}",
-            f"User message: {user_message}",
-        ]
-        return "\n\n".join(part for part in parts if part)
+        layers = {
+            "identity": STANDALONE_ORB_IDENTITY,
+            "boundaries": STANDALONE_ORB_BOUNDARIES,
+            "depth_hint": depth_hint,
+            "guardrail": guardrail_block or "",
+            "project_memory": project_memory_block or "",
+            "grounding": grounding_context or "",
+            "mode_hint": mode_hint,
+            "detail_hint": detail_hint,
+            "user_message": f"Mode: {resolved_mode}\n\nUser message: {user_message}",
+        }
+        framed = "\n\n".join(part for part in layers.values() if part)
+        return framed, _layer_char_counts(layers)
 
-    brain_block = orb_standalone_brain_service.build_prompt_block(user_message, mode=resolved_mode)
+    brain_kwargs: dict[str, Any] = {"mode": resolved_mode}
+    if simple_standard_contract:
+        brain_kwargs["incident_block_cap"] = EVERYDAY_INCIDENT_BLOCK_CAP
+        brain_kwargs["total_cap"] = EVERYDAY_BRAIN_BLOCK_CAP
+    brain_block = orb_standalone_brain_service.build_prompt_block(user_message, **brain_kwargs)
     mandatory_block = (mandatory_contract_block or "").strip()
     incident_contract_block = ""
     if is_incident_report_draft_request(user_message):
         incident_contract_block = build_incident_report_prompt_block(user_message)
-    if shared_runtime_block is None:
+        if simple_standard_contract and len(incident_contract_block) > EVERYDAY_INCIDENT_BLOCK_CAP:
+            incident_contract_block = f"{incident_contract_block[:EVERYDAY_INCIDENT_BLOCK_CAP].rstrip()}..."
+    if shared_runtime_block is None and not simple_standard_contract:
         shared_runtime_block = shared_institutional_cognition_runtime.prompt_addendum(
             surface="standalone_orb",
             message=user_message,
             mode=resolved_mode,
             history=history,
         )
+    elif shared_runtime_block is None:
+        shared_runtime_block = ""
 
     if prompt_tier == "deep":
-        parts = [
-            STANDALONE_ORB_IDENTITY,
-            STANDALONE_ORB_CAPABILITIES,
-            STANDALONE_ORB_PRODUCT_KNOWLEDGE,
-            STANDALONE_ORB_BOUNDARIES,
-            STANDALONE_ORB_CITATIONS,
-            shared_runtime_block,
-            guardrail_block or "",
-            project_memory_block or "",
-            grounding_context or "",
-            STANDALONE_ORB_TONE,
-            brain_block,
-            mandatory_block,
-            incident_contract_block,
-            mode_hint,
-            detail_hint,
-            depth_hint,
-            f"Mode: {resolved_mode}",
-            f"User message: {user_message}",
-        ]
-        return "\n\n".join(part for part in parts if part)
+        layers = {
+            "identity": STANDALONE_ORB_IDENTITY,
+            "capabilities": STANDALONE_ORB_CAPABILITIES,
+            "product_knowledge": STANDALONE_ORB_PRODUCT_KNOWLEDGE,
+            "boundaries": STANDALONE_ORB_BOUNDARIES,
+            "citations": STANDALONE_ORB_CITATIONS,
+            "institutional_cognition": shared_runtime_block,
+            "guardrail": guardrail_block or "",
+            "project_memory": project_memory_block or "",
+            "grounding": grounding_context or "",
+            "tone": STANDALONE_ORB_TONE,
+            "brain_block": brain_block,
+            "mandatory_contract": mandatory_block,
+            "incident_contract": incident_contract_block,
+            "hints": "\n\n".join(
+                part for part in (mode_hint, detail_hint, depth_hint, f"Mode: {resolved_mode}") if part
+            ),
+            "user_message": f"User message: {user_message}",
+        }
+        framed = "\n\n".join(part for part in layers.values() if part)
+        return framed, _layer_char_counts(layers)
 
-    # residential standard path — omit full product essay and citation essay unless needed
-    parts = [
-        STANDALONE_ORB_IDENTITY,
-        STANDALONE_ORB_BOUNDARIES,
-        STANDALONE_ORB_CAPABILITIES,
-        shared_runtime_block,
-        guardrail_block or "",
-        project_memory_block or "",
-        grounding_context or "",
-        STANDALONE_ORB_TONE,
-        brain_block,
-        mandatory_block,
-        incident_contract_block,
-        mode_hint,
-        detail_hint,
-        depth_hint,
-        f"Mode: {resolved_mode}",
-        f"User message: {user_message}",
-    ]
-    return "\n\n".join(part for part in parts if part)
+    layers = {
+        "identity": STANDALONE_ORB_IDENTITY,
+        "boundaries": STANDALONE_ORB_BOUNDARIES,
+        "capabilities": STANDALONE_ORB_CAPABILITIES,
+        "institutional_cognition": shared_runtime_block,
+        "guardrail": guardrail_block or "",
+        "project_memory": project_memory_block or "",
+        "grounding": grounding_context or "",
+        "tone": STANDALONE_ORB_TONE,
+        "brain_block": brain_block,
+        "mandatory_contract": mandatory_block,
+        "incident_contract": incident_contract_block,
+        "hints": "\n\n".join(
+            part for part in (mode_hint, detail_hint, depth_hint, f"Mode: {resolved_mode}") if part
+        ),
+        "user_message": f"User message: {user_message}",
+    }
+    framed = "\n\n".join(part for part in layers.values() if part)
+    return framed, _layer_char_counts(layers)
 
 
 @router.get("/health")

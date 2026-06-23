@@ -50,6 +50,14 @@ ADULT_SHORTHAND_RE = re.compile(
     re.I,
 )
 
+SCHOOL_REFUSAL_RE = re.compile(
+    r"\b("
+    r"refused\s+(?:to\s+go\s+to\s+)?school|school\s+refusal|"
+    r"won'?t\s+go\s+to\s+school|wont\s+go\s+to\s+school"
+    r")\b",
+    re.I,
+)
+
 # Judgemental or shaming phrases flagged by the therapeutic wording guard.
 JUDGEMENTAL_PHRASE_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("attention_seeking", re.compile(r"\battention[\s-]?seeking\b", re.I)),
@@ -416,6 +424,20 @@ def detect_adult_shorthand(text: str) -> list[str]:
     return list({match.group(0).lower() for match in ADULT_SHORTHAND_RE.finditer(str(text or ""))})
 
 
+def is_school_refusal_recording_prompt(text: str) -> bool:
+    """True when the prompt is about education attendance refusal, not behaviour shorthand."""
+    return bool(SCHOOL_REFUSAL_RE.search(str(text or "")))
+
+
+def _has_behaviour_shorthand(text: str) -> bool:
+    """Detect punitive behaviour shorthand, excluding school-refusal factual wording."""
+    value = str(text or "")
+    if is_school_refusal_recording_prompt(value):
+        remainder = SCHOOL_REFUSAL_RE.sub(" ", value)
+        return bool(ADULT_SHORTHAND_RE.search(remainder))
+    return bool(ADULT_SHORTHAND_RE.search(value))
+
+
 def is_residential_incident_scenario(text: str) -> bool:
     """True when a short residential behaviour/recording scenario needs full brain activation."""
     value = str(text or "").strip()
@@ -423,8 +445,10 @@ def is_residential_incident_scenario(text: str) -> bool:
         return False
     if is_incident_report_draft_request(value):
         return True
+    if is_school_refusal_recording_prompt(value) and not _has_behaviour_shorthand(value):
+        return False
     lowered = value.lower()
-    has_shorthand = bool(ADULT_SHORTHAND_RE.search(value))
+    has_shorthand = _has_behaviour_shorthand(value)
     has_residential_context = any(term in lowered for term in RESIDENTIAL_CONTEXT_TERMS)
     has_child_name = bool(extract_young_person_name(value))
     if has_shorthand and (has_residential_context or has_child_name):
@@ -432,6 +456,8 @@ def is_residential_incident_scenario(text: str) -> bool:
     if has_child_name and has_residential_context and any(
         term in lowered for term in ("after", "following", "today", "unsettled", "dysregulated", "upset")
     ):
+        if is_school_refusal_recording_prompt(value) and not has_shorthand:
+            return False
         return True
     return False
 

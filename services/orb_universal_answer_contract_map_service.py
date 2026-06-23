@@ -23,6 +23,7 @@ from services.orb_therapeutic_language_contract_service import (
 
 # Warn in QA/tests when standard non-risk prompt assembly exceeds this size.
 STANDARD_DEPTH_PROMPT_CHAR_CAP = 25000
+EVERYDAY_SHIFT_PROMPT_CHAR_CAP = 8000
 
 # Universal forbidden patterns in final answers (streaming leakage, generic AI filler, broken placeholders).
 UNIVERSAL_FORBIDDEN_PATTERNS: tuple[str, ...] = (
@@ -148,7 +149,7 @@ ORB_ANSWER_CONTRACT_FAMILIES: dict[str, dict[str, Any]] = {
             re.compile(
                 r"daily\s+(record|note|log)|shift\s+note|write\s+(a\s+)?daily|"
                 r"help\s+me\s+record\s+today|health\s+appointment|"
-                r"refused\s+school|education\s+concern|family\s+contact|"
+                r"refused\s+school|refused\s+to\s+go\s+to\s+school|education\s+concern|family\s+contact|"
                 r"contact\s+was|behaviour\s+support|sensory\s+support|"
                 r"consequences\s+and\s+boundaries|boundaries\s+fairly|"
                 r"evidence\s+quality\s+of\s+care|quality\s+of\s+care\s+in\s+daily",
