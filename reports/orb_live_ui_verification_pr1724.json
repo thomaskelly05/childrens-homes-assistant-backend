@@ -1,22 +1,23 @@
 {
-  "provider": "mock-fallback (no OPENAI_API_KEY)",
+  "provider": "openai-live",
   "results": [
     {
       "category_id": "daily_recording",
       "label": "Daily recording",
       "verdict": "concern",
       "concerns": [
+        "first_token_ms=559 (target instant feel <500ms)",
         "instant_lines_used=false"
       ],
       "failures": [],
       "instant_first_line": "ORB mock engine re",
-      "final_answer_preview": "ORB mock engine response Task received (120 chars) Configure OPENAI_API_KEY for live answers Sources / basis | - ORB Operating Brain: Selected sections: product_statement, answer_standard, safety_rules, confidence_levels, source_referencing_rules, routing_map_recording, review_checklist_incident, hidden_template_checks, routing_map_manager_oversight, review_checklist_manager_oversight, role_based_behaviour | - ORB Knowledge Spine: Selected modules: safe_recording, leadership_management | - Therapeutic",
-      "final_answer_chars": 3763,
+      "final_answer_preview": "ORB mock engine response Task received (120 chars) Configure OPENAI_API_KEY for live answers",
+      "final_answer_chars": 92,
       "timing": {
         "instant_first_lines_ms": 0.17,
         "instant_category": "daily_recording",
-        "first_token_ms": 79,
-        "total_ms": 85
+        "first_token_ms": 559,
+        "total_ms": 562
       },
       "sources_count": 24,
       "expert_depth": "general_light",
@@ -27,20 +28,17 @@
     {
       "category_id": "missing_from_care",
       "label": "Missing from care",
-      "verdict": "concern",
-      "concerns": [
-        "instant_lines_used=false",
-        "instant first line may not be preserved in final answer"
-      ],
+      "verdict": "pass",
+      "concerns": [],
       "failures": [],
       "instant_first_line": "This looks like a missing-from-care concern.\nFollow the home's missing procedure, inform the manager/on-call, and record times, actions and decisions clearly.",
-      "final_answer_preview": "Missing return \u2014 immediate actions on shift: |  | Immediate welfare check | * Calm welcome back \u2014 check injuries, distress, intoxication, hunger, fatigue and immediate medical need | * Do not accuse or shame |  | Missing procedure | * Follow local missing procedure | * Update police if the missing episode was still active | * Notify manager/on-call | * Notify social worker/placing authority; EDT if out of hours |  | Health and safety | * Consider health advice \u2014 111 or 999 if unwell or intoxicated |  | Contextual safeguardin",
-      "final_answer_chars": 879,
+      "final_answer_preview": "This looks like a missing-from-care concern. | Follow the home's missing procedure, inform the manager/on-call, and record times, actions and decisions clearly. |  | Missing return \u2014 immediate actions on shift: |  | Immediate welfare check | * Calm welcome back \u2014 check injuries, distress, intoxication, hunger, fatigue and immediate medical need | * Do not accuse or shame |  | Missing procedure | * Follow local missing procedure | * Update police if the missing episode was still active | * Notify manager/on-call | * Notif",
+      "final_answer_chars": 1039,
       "timing": {
         "instant_first_lines_ms": 0.05,
         "instant_category": "missing_from_care",
         "first_token_ms": 0,
-        "total_ms": 61
+        "total_ms": 230
       },
       "sources_count": 17,
       "expert_depth": "safeguarding_critical",
@@ -51,20 +49,17 @@
     {
       "category_id": "allegations_lado",
       "label": "Allegation against staff / LADO",
-      "verdict": "concern",
-      "concerns": [
-        "instant_lines_used=false",
-        "instant first line may not be preserved in final answer"
-      ],
+      "verdict": "pass",
+      "concerns": [],
       "failures": [],
       "instant_first_line": "This looks like an allegation involving staff.\nMake sure the young person is safe, preserve their exact words, inform the manager/on-call, and follow the LADO/local allegations route.",
-      "final_answer_preview": "ORB has returned the safety fallback because this scenario contains safeguarding, legal, data protection or emergency risk boundaries. |  | [ORB Internal Brain \u2014 deterministic fallback. No external LLM was called.] |  | 1. Safety position | An allegation against staff requires immediate safety, evidence preservation and formal escalation. |  | 2. What ORB cannot do | - The accused staff member must not investigate, influence or manage the concern. | - Do not investigate informally alone or beyond immediate safety",
-      "final_answer_chars": 1975,
+      "final_answer_preview": "This looks like an allegation involving staff. | Make sure the young person is safe, preserve their exact words, inform the manager/on-call, and follow the LADO/local allegations route. |  | ORB has returned the safety fallback because this scenario contains safeguarding, legal, data protection or emergency risk boundaries. |  | [ORB Internal Brain \u2014 deterministic fallback. No external LLM was called.] |  | 1. Safety position | An allegation against staff requires immediate safety, evidence preservation and for",
+      "final_answer_chars": 2160,
       "timing": {
         "instant_first_lines_ms": 0.03,
         "instant_category": "allegations_lado",
         "first_token_ms": 0,
-        "total_ms": 45
+        "total_ms": 233
       },
       "sources_count": 31,
       "expert_depth": "safeguarding_critical",
@@ -75,20 +70,17 @@
     {
       "category_id": "self_harm_suicide",
       "label": "Self-harm",
-      "verdict": "concern",
-      "concerns": [
-        "instant_lines_used=false",
-        "instant first line may not be preserved in final answer"
-      ],
+      "verdict": "pass",
+      "concerns": [],
       "failures": [],
       "instant_first_line": "This may involve immediate safety.\nStay with the young person if there is concern, inform the manager/on-call, and follow the home's safeguarding and self-harm procedure.",
-      "final_answer_preview": "ORB has returned the safety fallback because this scenario contains safeguarding, legal, data protection or emergency risk boundaries. |  | [ORB Internal Brain \u2014 deterministic fallback. No external LLM was called.] |  | 1. Safety position | Safeguarding scenario detected \u2014 immediate safety and escalation boundaries apply. | Escalate through safeguarding procedures \u2014 this cannot be managed in isolation. |  | 5. Child voice | - Record the young person's words where known \u2014 do not invent quotes. | - Capture wishes, fe",
-      "final_answer_chars": 962,
+      "final_answer_preview": "This may involve immediate safety. | Stay with the young person if there is concern, inform the manager/on-call, and follow the home's safeguarding and self-harm procedure. |  | ORB has returned the safety fallback because this scenario contains safeguarding, legal, data protection or emergency risk boundaries. |  | [ORB Internal Brain \u2014 deterministic fallback. No external LLM was called.] |  | 1. Safety position | Safeguarding scenario detected \u2014 immediate safety and escalation boundaries apply. | Escalate throu",
+      "final_answer_chars": 1134,
       "timing": {
         "instant_first_lines_ms": 0.01,
         "instant_category": "self_harm_suicide",
         "first_token_ms": 0,
-        "total_ms": 56
+        "total_ms": 213
       },
       "sources_count": 15,
       "expert_depth": "safeguarding_critical",
@@ -106,10 +98,10 @@
       "final_answer_preview": "I'm treating this as a medication refusal. | Record the refusal on the MAR, follow the home's medication policy, and seek health advice where risk is present. |  | ORB mock engine response. Task received (120 chars). Configure OPENAI_API_KEY for live answers. |  | Record the refusal on the MAR, follow home medication policy, notify the manager or on-call manager as required, seek pharmacy/GP/NHS 111 or emergency advice where relevant, monitor health risks, record the young person's words or communication,",
       "final_answer_chars": 519,
       "timing": {
-        "instant_first_lines_ms": 0.07,
+        "instant_first_lines_ms": 0.08,
         "instant_category": "medication_refusal_support",
         "first_token_ms": 0,
-        "total_ms": 34
+        "total_ms": 142
       },
       "sources_count": 16,
       "expert_depth": "residential_light",
@@ -132,8 +124,8 @@
       "timing": {
         "instant_first_lines_ms": 0.06,
         "instant_category": "orb_communicate",
-        "first_token_ms": 9,
-        "total_ms": 10
+        "first_token_ms": 100,
+        "total_ms": 101
       },
       "sources_count": 5,
       "expert_depth": "general_light",
@@ -153,10 +145,10 @@
       "final_answer_preview": "ORB mock engine response. Task received (47 chars). Configure OPENAI_API_KEY for live answers. |  | ORB can help you turn this into an Inspection evidence preparation checklist, Reg 44/45 preparation note, or evidence review.",
       "final_answer_chars": 221,
       "timing": {
-        "instant_first_lines_ms": 0.07,
-        "instant_category": "management_oversight_drift",
-        "first_token_ms": 10,
-        "total_ms": 11
+        "instant_first_lines_ms": 0.08,
+        "instant_category": "regulation_45",
+        "first_token_ms": 127,
+        "total_ms": 129
       },
       "sources_count": 8,
       "expert_depth": "general_light",
@@ -167,19 +159,17 @@
     {
       "category_id": "aac_child_voice",
       "label": "Child voice / gestures and symbols",
-      "verdict": "concern",
-      "concerns": [
-        "many paragraph breaks \u2014 possible wall of text"
-      ],
+      "verdict": "pass",
+      "concerns": [],
       "failures": [],
       "instant_first_line": "I'm treating this as AAC / symbols / gestures child voice evidence.\nRecord what was observed, how the young person communicated, and do not invent direct quotes.",
-      "final_answer_preview": "I'm treating this as AAC / symbols / gestures child voice evidence. | Record what was observed, how the young person communicated, and do not invent direct quotes. |  | ORB mock engine response. Task received (120 chars). Configure OPENAI_API_KEY for live answers. | Sources / basis | - ORB Operating Brain: Selected sections: product_statement, answer_standard, safety_rules, confidence_levels, source_referencing_rules | - ORB Knowledge Spine: Selected modules: safe_recording | - Ofsted SCCIF Overview \u2014 Section",
-      "final_answer_chars": 3752,
+      "final_answer_preview": "I'm treating this as AAC / symbols / gestures child voice evidence. | Record what was observed, how the young person communicated, and do not invent direct quotes. |  | ORB mock engine response. Task received (120 chars). Configure OPENAI_API_KEY for live answers.",
+      "final_answer_chars": 258,
       "timing": {
         "instant_first_lines_ms": 0.07,
         "instant_category": "aac_symbols_gestures",
         "first_token_ms": 0,
-        "total_ms": 33
+        "total_ms": 139
       },
       "sources_count": 28,
       "expert_depth": "residential_light",
@@ -190,20 +180,17 @@
     {
       "category_id": "physical_intervention_restraint",
       "label": "Physical intervention",
-      "verdict": "concern",
-      "concerns": [
-        "instant_lines_used=false",
-        "instant first line may not be preserved in final answer"
-      ],
+      "verdict": "pass",
+      "concerns": [],
       "failures": [],
-      "instant_first_line": "I'm treating this as incident recording.\nStart with immediate safety, factual chronology, child voice, staff response, and notifications.",
-      "final_answer_preview": "ORB has returned the safety fallback because this scenario contains safeguarding, legal, data protection or emergency risk boundaries. |  | [ORB Internal Brain \u2014 deterministic fallback. No external LLM was called.] |  | 1. Safety position | Safeguarding scenario detected \u2014 immediate safety and escalation boundaries apply. | Escalate through safeguarding procedures \u2014 this cannot be managed in isolation. |  | 5. Child voice | - Record the young person's words where known \u2014 do not invent quotes. | - Capture wishes, fe",
-      "final_answer_chars": 1025,
+      "instant_first_line": "I'm treating this as physical intervention recording.\nCheck everyone is safe, record why intervention was necessary and proportionate, and plan the debrief.",
+      "final_answer_preview": "I'm treating this as physical intervention recording. | Check everyone is safe, record why intervention was necessary and proportionate, and plan the debrief. |  | ORB has returned the safety fallback because this scenario contains safeguarding, legal, data protection or emergency risk boundaries. |  | [ORB Internal Brain \u2014 deterministic fallback. No external LLM was called.] |  | 1. Safety position | Safeguarding scenario detected \u2014 immediate safety and escalation boundaries apply. | Escalate through safeguardin",
+      "final_answer_chars": 1183,
       "timing": {
-        "instant_first_lines_ms": 0.17,
-        "instant_category": "incident_recording",
+        "instant_first_lines_ms": 0.1,
+        "instant_category": "physical_intervention_restraint",
         "first_token_ms": 1,
-        "total_ms": 51
+        "total_ms": 234
       },
       "sources_count": 29,
       "expert_depth": "residential_light",
@@ -223,10 +210,10 @@
       "final_answer_preview": "ORB mock engine response. Task received (75 chars). Configure OPENAI_API_KEY for live answers.",
       "final_answer_chars": 94,
       "timing": {
-        "instant_first_lines_ms": 0.11,
+        "instant_first_lines_ms": 0.12,
         "instant_category": "management_oversight_drift",
-        "first_token_ms": 11,
-        "total_ms": 12
+        "first_token_ms": 97,
+        "total_ms": 98
       },
       "sources_count": 8,
       "expert_depth": "general_light",

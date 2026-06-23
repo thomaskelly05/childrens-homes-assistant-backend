@@ -195,6 +195,10 @@ _CATEGORY_FIRST_LINES: dict[str, tuple[str, ...]] = {
         "I'm treating this as Regulation 45 quality of care reporting.",
         "Structure themes, child experience findings, actions and RI reporting.",
     ),
+    "reg_45_review": (
+        "I'm treating this as Regulation 45 quality of care reporting.",
+        "Structure themes, child experience findings, actions and RI reporting.",
+    ),
     "ofsted_sccif_readiness": (
         "I'm treating this as Ofsted / SCCIF readiness.",
         "Focus on help and protection evidence, child experience, and proportionate inspection preparation.",
@@ -250,6 +254,13 @@ _CONTRACT_TO_CATEGORY: dict[str, str] = {
     "template_generation": "handover_team_communication",
 }
 
+# Beat broader contract families (incident_record, manager_oversight_note) for precise labels.
+_PRIORITY_CATEGORY_PATTERNS: list[tuple[Pattern[str], str]] = [
+    (re.compile(r"reg\s*44|regulation\s*44", re.I), "regulation_44"),
+    (re.compile(r"reg\s*45|regulation\s*45|reg\s*45\s+review", re.I), "regulation_45"),
+    (re.compile(r"physical intervention|restraint|\bhold\b", re.I), "physical_intervention_restraint"),
+]
+
 _CATEGORY_PATTERNS: list[tuple[Pattern[str], str]] = [
     (re.compile(r"missing from care|absent|awol|late return|whereabouts", re.I), "missing_from_care"),
     (re.compile(r"self[- ]?harm|suicidal|want to die|blade", re.I), "self_harm_suicide"),
@@ -257,9 +268,6 @@ _CATEGORY_PATTERNS: list[tuple[Pattern[str], str]] = [
     (re.compile(r"medication error|wrong dose|double dose", re.I), "medication_error"),
     (re.compile(r"refused medication|medication refusal|will not take.*tablet", re.I), "medication_refusal_support"),
     (re.compile(r"communication support pack|communicate support pack", re.I), "orb_communicate"),
-    (re.compile(r"physical intervention|restraint|\bhold\b", re.I), "physical_intervention_restraint"),
-    (re.compile(r"reg\s*44|regulation\s*44", re.I), "regulation_44"),
-    (re.compile(r"reg\s*45|regulation\s*45", re.I), "regulation_45"),
     (re.compile(r"ofsted|sccif|inspection", re.I), "ofsted_sccif_readiness"),
     (re.compile(r"handover", re.I), "handover_team_communication"),
     (re.compile(r"whistleblow|protected disclosure|falsifying records", re.I), "whistleblowing_staff_conduct"),
@@ -286,6 +294,26 @@ class InstantFirstLinesResult:
         return "\n".join(self.lines)
 
 
+_GUARDED_SAFE_ESCALATION_LINES: tuple[str, ...] = (
+    "This may involve immediate safety.",
+    "Follow the home's safeguarding procedure, inform the manager/on-call, and keep a clear record while I prepare the full response.",
+)
+
+_GUARDED_GENERIC_INSTANT_CATEGORIES: frozenset[str] = frozenset(
+    {
+        "self_harm_suicide",
+        "missing_from_care",
+        "allegations_lado",
+        "family_risk_disclosures_contact",
+        "harmful_sexual_behaviour",
+        "weapons_violence_police",
+        "fire_setting_ligatures_environmental",
+        "medication_error",
+        "exploitation_contextual_safeguarding",
+    }
+)
+
+
 def detect_playbook_category(
     message: str,
     *,
@@ -294,6 +322,9 @@ def detect_playbook_category(
     text = (message or "").strip()
     if not text:
         return "daily_recording"
+    for pattern, category_id in _PRIORITY_CATEGORY_PATTERNS:
+        if pattern.search(text):
+            return category_id
     family = contract_family or detect_contract_family(text)
     if family and family in _CONTRACT_TO_CATEGORY:
         mapped = _CONTRACT_TO_CATEGORY[family]
@@ -368,9 +399,37 @@ def should_skip_instant_lines(
     expert_depth: str,
     guarded_stream_delivery: bool,
 ) -> bool:
-    if guarded_stream_delivery:
-        return True
+    """Skip only for lightweight general prompts — guarded routes still get safe instant lines."""
+    del guarded_stream_delivery
     return expert_depth == "general_light"
+
+
+def guarded_instant_lines_for_message(
+    message: str,
+    *,
+    route: str = "/orb/standalone/conversation/stream",
+    contract_family: str | None = None,
+    category_id: str | None = None,
+    source_surface: str = "orb_standalone",
+) -> InstantFirstLinesResult:
+    """Deterministic safe first lines for guarded high-risk stream delivery."""
+    result = instant_first_lines_for_message(
+        message,
+        route=route,
+        contract_family=contract_family,
+        category_id=category_id,
+        source_surface=source_surface,
+    )
+    if result.category_id in _GUARDED_GENERIC_INSTANT_CATEGORIES or result.risk_level == "high":
+        return InstantFirstLinesResult(
+            lines=_GUARDED_SAFE_ESCALATION_LINES,
+            category_id=result.category_id,
+            contract_family=result.contract_family,
+            risk_level=result.risk_level,
+            source_surface=result.source_surface,
+            elapsed_ms=result.elapsed_ms,
+        )
+    return result
 
 
 def merge_instant_lines_with_answer(

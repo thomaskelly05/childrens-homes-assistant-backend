@@ -781,7 +781,7 @@ class OrbGeneralAssistantService:
         sources = retrieval["sources"]
         citations = retrieval["citations"]
         result = {
-            "answer": append_sources_basis_section(fallback, sources),
+            "answer": append_sources_basis_section(fallback, sources, provider="mock"),
             "sources": sources,
             "citations": citations,
             "context_used": self._retrieval_context_used(retrieval),
@@ -1062,7 +1062,9 @@ class OrbGeneralAssistantService:
             mode=mode,
             history=history,
         )
-        resolved = append_sources_basis_section(resolved, sources, message=message, mode=mode)
+        resolved = append_sources_basis_section(
+            resolved, sources, message=message, mode=mode, provider=model_routing.get("provider")
+        )
         resolved, expert_check = self._apply_expert_self_check(
             resolved, retrieval, citations=citations
         )
@@ -1397,7 +1399,8 @@ class OrbGeneralAssistantService:
                 history=history,
             )
             resolved = append_sources_basis_section(
-                resolved, retrieval["sources"], message=user_message, mode=mode
+                resolved, retrieval["sources"], message=user_message, mode=mode,
+                provider=(model_routing or {}).get("provider"),
             )
             resolved, expert_check = self._apply_expert_self_check(
                 resolved,
@@ -1451,7 +1454,7 @@ class OrbGeneralAssistantService:
 
         fallback = self._fallback_answer(message, retrieval=retrieval)
         sources = retrieval["sources"]
-        answer = append_sources_basis_section(fallback, sources)
+        answer = append_sources_basis_section(fallback, sources, provider="mock")
         meta.update(
             {
                 "answer": answer,

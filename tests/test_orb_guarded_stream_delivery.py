@@ -62,7 +62,7 @@ def test_context_build_precedes_fast_opening_token_emission():
     source = _stream_route_source()
     build_idx = source.index("_build_standalone_request_context(")
     guarded_idx = source.index("_requires_guarded_stream_delivery(")
-    fast_opening_gate = "if fast_opening and not guarded_stream_delivery:"
+    fast_opening_gate = "if fast_opening and not guarded_stream_delivery and not instant_lines_emitted:"
     assert fast_opening_gate in source
     fast_gate_idx = source.index(fast_opening_gate)
     assert build_idx < guarded_idx < fast_gate_idx
@@ -79,9 +79,16 @@ def test_guarded_path_buffers_with_post_answer_before_client_tokens():
     assert "assistant_runtime.stream_answer(" not in guarded_block.split("else:")[0]
 
 
-def test_fast_opening_suppressed_when_guarded():
+def test_fast_opening_suppressed_when_guarded_unless_instant_lines():
     source = _stream_route_source()
-    assert "if fast_opening and not guarded_stream_delivery:" in source
+    assert "if fast_opening and not guarded_stream_delivery and not instant_lines_emitted:" in source
+    assert "guarded_instant_lines_for_message" in source
+
+
+def test_guarded_route_does_not_clear_emitted_instant_lines():
+    source = _stream_route_source()
+    assert "if guarded_stream_delivery and instant_lines_emitted:" not in source
+    assert "instant_lines_text = \"\"\n            fast_opening" not in source
 
 
 def test_route_documents_guarded_delivery_intent():
