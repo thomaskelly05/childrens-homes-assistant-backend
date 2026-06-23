@@ -171,6 +171,30 @@ _TEMPLATE_SPECS: list[tuple[str, str, str, list[str]]] = [
         "Children overview", "Key events", "Risks and triggers", "Medication/health",
         "Safeguarding flags", "Tasks for next shift", "Manager instructions",
     ]),
+    ("medication_refusal_record", "Medication refusal record", "recording", "Record medication refusal on the MAR with clinical boundaries.", [
+        "Medication offered", "Refusal details", "Young person's presentation", "MAR entry",
+        "Advice sought", "Manager notification", "Follow-up actions",
+    ]),
+    ("medication_error_record", "Medication error record", "recording", "Record a medication error incident factually.", [
+        "What happened", "Immediate actions", "Health advice sought", "Notifications",
+        "Young person welfare", "Manager review", "Learning and prevention",
+    ]),
+    ("physical_intervention_record", "Physical intervention record", "recording", "Record restrictive physical intervention proportionately.", [
+        "Antecedents", "Safety rationale", "Technique and duration", "Injury checks",
+        "Child voice", "Debrief", "Manager oversight",
+    ]),
+    ("complaint_record", "Complaint record", "recording", "Record a young person's complaint with child voice.", [
+        "Complaint summary", "Child's words", "Acknowledgement", "Actions agreed",
+        "Manager response", "Outcome", "Review date",
+    ]),
+    ("privacy_minimised_safeguarding_record", "Privacy-minimised safeguarding record", "safeguarding", "Record safeguarding concerns with data minimisation.", [
+        "Concern summary", "Relevant facts only", "Child voice", "Immediate safety",
+        "Sharing decisions", "Escalation", "Manager oversight",
+    ]),
+    ("orb_communicate_support_pack_record", "ORB Communicate support pack record", "recording", "Record use of communication support materials.", [
+        "Communication need", "Tools used", "Young person response", "Staff guidance followed",
+        "Reflect and record", "Plan updates",
+    ]),
     ("reflective_recording", "Reflective recording template", "recording", "Reflect on practice with child-centred learning.", [
         "Situation", "Thoughts and feelings", "Child experience lens", "What went well",
         "What to improve", "Learning and supervision needs",

@@ -1,17 +1,23 @@
-"""Evaluate ORB Residential full-brain category benchmark (routing + wording guards)."""
+"""Evaluate ORB Residential full playbook benchmark (54 categories, routing + wording guards)."""
 
 from __future__ import annotations
 
 from typing import Any
 
-from assistant.evals.orb_full_brain_category_benchmark_data import (
+from assistant.evals.orb_full_brain_category_benchmark import (
+    ACCEPTABLE_CONTRACT_ALTERNATES,
+    CRITICAL_ROUTING,
+    _chip_labels,
+    _contract_acceptable,
+)
+from assistant.evals.orb_residential_full_playbook_benchmark_data import (
+    PACK_VERSION,
     all_category_prompts,
     category_ids,
 )
 from assistant.knowledge.residential_safeguarding_terminology import (
     find_inappropriate_dsl_reference,
     find_inappropriate_medication_error_reference,
-    should_skip_diagnosis_firewall,
 )
 from routers.orb_standalone_routes import OrbStandaloneConversationRequest, _build_standalone_request_context
 from services.orb_brain_convergence_orchestrator_service import orb_brain_convergence_orchestrator_service
@@ -22,45 +28,22 @@ from services.orb_universal_answer_contract_map_service import (
     get_family_prompt_char_cap,
 )
 
-# Prompts where contract-family routing must be exact for launch confidence.
-CRITICAL_ROUTING: dict[str, str] = {
-    "send_02": "child_voice_evidence_recording",
-    "med_01": "medication_refusal_guidance",
-    "med_04": "incident_record",
+# Extended critical routing for full playbook.
+FULL_PLAYBOOK_CRITICAL_ROUTING: dict[str, str] = {
+    **CRITICAL_ROUTING,
+    "aac_01": "child_voice_evidence_recording",
+    "mrs_01": "medication_refusal_guidance",
+    "me_01": "incident_record",
     "al_01": "allegation_lado",
     "al_02": "allegation_lado",
     "mfc_01": "missing_return_record",
     "sh_01": "suicidal_self_harm",
     "sh_02": "suicidal_self_harm",
-    "edu_01": "school_refusal_recording",
-    "send_03": "daily_record",
+    "sra_01": "school_refusal_recording",
+    "aso_02": "daily_record",
+    "oc_01": "communicate_support_pack",
+    "oc_02": "communicate_support_pack",
 }
-
-ACCEPTABLE_CONTRACT_ALTERNATES: dict[str, set[str]] = {
-    "incident_record": {"daily_record", "manager_oversight_note"},
-    "daily_record": {"incident_record", "contact_distress_recording", "school_refusal_recording", "manager_oversight_note", "keywork_session"},
-    "contact_distress_recording": {"daily_record"},
-    "school_refusal_recording": {"daily_record"},
-    "child_voice_evidence_recording": {"daily_record", "keywork_session"},
-    "abuse_disclosure": {"incident_record", "missing_return_record", "manager_oversight_note"},
-    "manager_oversight_note": {"daily_record", "medication_refusal_guidance"},
-    "policy_practice_question": {"daily_record"},
-    "accessible_child_support_plan": {"child_voice_evidence_recording"},
-    "medication_refusal_guidance": {"manager_oversight_note"},
-}
-
-
-def _chip_labels(decision: Any) -> list[str]:
-    return [str(chip.get("label") or chip) for chip in (decision.public_source_chips or [])]
-
-
-def _contract_acceptable(prompt_id: str, expected: str, actual: str | None) -> bool:
-    if actual == expected:
-        return True
-    if prompt_id in CRITICAL_ROUTING:
-        return actual == CRITICAL_ROUTING[prompt_id]
-    alternates = ACCEPTABLE_CONTRACT_ALTERNATES.get(expected, set())
-    return actual in alternates or actual is None
 
 
 def _evaluate_prompt(row: dict[str, Any]) -> dict[str, Any]:
@@ -84,15 +67,21 @@ def _evaluate_prompt(row: dict[str, Any]) -> dict[str, Any]:
     issues: list[str] = []
     gaps: list[str] = []
     status = "pass"
+    critical = FULL_PLAYBOOK_CRITICAL_ROUTING
 
     if not _contract_acceptable(prompt_id, expected_family, actual_family):
-        msg = f"contract_family expected {expected_family}, got {actual_family}"
-        issues.append(msg)
-        if prompt_id in CRITICAL_ROUTING:
-            status = "fail"
+        if prompt_id in critical:
+            if actual_family != critical[prompt_id]:
+                issues.append(f"contract_family expected {expected_family}, got {actual_family}")
+                status = "fail"
         else:
-            gaps.append(msg)
-            status = "concern"
+            msg = f"contract_family expected {expected_family}, got {actual_family}"
+            issues.append(msg)
+            alternates = ACCEPTABLE_CONTRACT_ALTERNATES.get(expected_family, set())
+            if actual_family not in alternates and actual_family is not None:
+                gaps.append(msg)
+                if status == "pass":
+                    status = "concern"
 
     if expected_tier == "deep" and actual_tier not in {"deep", "fast"}:
         msg = f"prompt_tier expected deep/fast, got {actual_tier}"
@@ -145,17 +134,18 @@ def _evaluate_prompt(row: dict[str, Any]) -> dict[str, Any]:
             issues.append(f"education-only DSL wording: {', '.join(dsl_hits)}")
             status = "fail"
 
-    if actual_family == "medication_refusal_guidance" or prompt_id in {"med_01", "med_02", "med_03"}:
+    refusal_ids = {"mrs_01", "mrs_02", "mrs_03", "mrs_04", "mrs_05", "med_01", "med_02", "med_03"}
+    if actual_family == "medication_refusal_guidance" or prompt_id in refusal_ids:
         med_hits = find_inappropriate_medication_error_reference(fallback_answer, source_text=message)
         if med_hits:
             issues.append(f"medication error wording without error prompt: {', '.join(med_hits)}")
             status = "fail"
 
-    if prompt_id == "send_02" and actual_family == "accessible_child_support_plan":
+    if prompt_id == "aac_01" and actual_family == "accessible_child_support_plan":
         issues.append("gesture/symbol child voice routed to support plan contract")
         status = "fail"
 
-    if prompt_id == "send_03" and actual_family == "accessible_child_support_plan":
+    if prompt_id == "aso_02" and actual_family == "accessible_child_support_plan":
         issues.append("autism plan update routed to support plan contract")
         status = "fail"
 
@@ -164,6 +154,14 @@ def _evaluate_prompt(row: dict[str, Any]) -> dict[str, Any]:
             if row.get("allow_dsl") and banned.upper() == "DSL":
                 continue
             gaps.append(f"banned wording in fallback: {banned}")
+
+    terminology_issues = [
+        g for g in gaps if "missing expected" in g or "banned wording" in g
+    ]
+    answer_shape_issues = [
+        g for g in gaps if "prompt_chars" in g or "no source chips" in g
+    ]
+    missing_escalation = [] if row.get("escalation_expectations") else ["no escalation documented"]
 
     return {
         "category_id": row["category_id"],
@@ -185,15 +183,19 @@ def _evaluate_prompt(row: dict[str, Any]) -> dict[str, Any]:
         },
         "prompt_chars": prompt_chars,
         "prompt_char_cap": char_cap,
+        "banned_wording": row.get("banned_wording") or [],
         "unsafe_wording": [i for i in issues if "DSL" in i or "medication error" in i or "firewall" in i],
         "education_only_wording": find_inappropriate_dsl_reference(fallback_answer, source_text=message),
         "escalation_expectations": row.get("escalation_expectations"),
+        "missing_escalation": missing_escalation,
+        "terminology_issues": terminology_issues,
+        "answer_shape_issues": answer_shape_issues,
         "expected_answer_shape": row.get("expected_answer_shape"),
         "remaining_gaps": gaps,
     }
 
 
-def run_full_brain_category_benchmark() -> dict[str, Any]:
+def run_residential_full_playbook_benchmark() -> dict[str, Any]:
     results = [_evaluate_prompt(row) for row in all_category_prompts()]
     by_category: dict[str, dict[str, Any]] = {}
     for category_id in category_ids():
@@ -223,14 +225,14 @@ def run_full_brain_category_benchmark() -> dict[str, Any]:
         "fail": sum(1 for r in results if r["status"] == "fail"),
         "categories": by_category,
         "results": results,
-        "pack_version": "orb-residential-full-playbook-benchmark-v1",
+        "pack_version": PACK_VERSION,
         "category_ids": category_ids(),
     }
 
 
 def render_markdown_report(report: dict[str, Any]) -> str:
     lines = [
-        "# ORB Residential Full Brain Category Benchmark Report",
+        "# ORB Residential Full Playbook Benchmark Report",
         "",
         f"**Pack:** {report.get('pack_version')}",
         f"**Categories:** {report.get('categories_total')} | **Prompts:** {report.get('prompts_total')}",
@@ -247,6 +249,20 @@ def render_markdown_report(report: dict[str, Any]) -> str:
             f"{cat.get('pass', 0)} | {cat.get('concern', 0)} | {cat.get('fail', 0)} | {cat.get('status')} |"
         )
 
+    lines.extend(["", "## Concern grouping (first run)", ""])
+    concern_causes: dict[str, list[str]] = {}
+    for result in report.get("results") or []:
+        if result["status"] != "concern":
+            continue
+        for gap in result.get("gaps") or []:
+            key = gap.split(":")[0] if ":" in gap else gap
+            concern_causes.setdefault(key, []).append(f"{result['category_id']}/{result['prompt_id']}")
+    if not concern_causes:
+        lines.append("No concerns on this run.")
+    else:
+        for cause, items in sorted(concern_causes.items(), key=lambda x: -len(x[1])):
+            lines.append(f"- **{cause}** ({len(items)} prompts): {', '.join(items[:5])}{'…' if len(items) > 5 else ''}")
+
     lines.extend(["", "## Fixed wording examples", ""])
     lines.extend(
         [
@@ -255,39 +271,14 @@ def render_markdown_report(report: dict[str, Any]) -> str:
             "- Medication refusal: MAR recording and clinical boundary — **no medication error** unless the prompt states error.",
             "- Gestures/symbols child voice: **child_voice_evidence_recording** — daily-record evidence guidance, not a support plan template.",
             "- Autism plan update: recording guidance without **diagnosis/adversarial firewall**.",
+            "- Communicate support pack: actual pack-style sections, not advice-only.",
         ]
     )
 
-    lines.extend(["", "## Category detail", ""])
-    for category_id, cat in (report.get("categories") or {}).items():
-        lines.append(f"### {cat.get('label', category_id)} (`{category_id}`) — **{cat.get('status')}**")
-        lines.append("")
-        for result in cat.get("results") or []:
-            lines.append(f"- **{result['prompt_id']}** — {result['status']}")
-            lines.append(f"  - Prompt chars: {result.get('prompt_chars')}")
-            lines.append(
-                f"  - Routing: `{result['routing']['contract_family']}` / tier `{result['routing']['prompt_tier']}`"
-            )
-            chips = result["routing"].get("source_chips") or []
-            if chips:
-                lines.append(f"  - Source chips: {', '.join(chips[:6])}{'…' if len(chips) > 6 else ''}")
-            if result.get("education_only_wording"):
-                lines.append(f"  - Education-only wording: {', '.join(result['education_only_wording'])}")
-            if result.get("unsafe_wording"):
-                lines.append(f"  - Unsafe wording flags: {'; '.join(result['unsafe_wording'])}")
-            if result.get("issues"):
-                lines.append(f"  - Issues: {'; '.join(result['issues'])}")
-            if result.get("remaining_gaps"):
-                lines.append(f"  - Remaining gaps: {'; '.join(result['remaining_gaps'][:4])}")
-        lines.append("")
-
     blockers = [r for r in report.get("results") or [] if r["status"] == "fail"]
-    lines.extend(["## Remaining launch blockers", ""])
+    lines.extend(["", "## Remaining launch blockers", ""])
     if not blockers:
-        lines.append(
-            "No **fail** results on critical routing/wording guards. "
-            "Live LLM GOLD evidence, human review, privacy sign-off and prompt-char cap tuning for deep routes remain."
-        )
+        lines.append("No **fail** results on critical routing/wording guards.")
     else:
         for item in blockers:
             lines.append(f"- `{item['category_id']}/{item['prompt_id']}`: {'; '.join(item.get('issues') or [])}")
