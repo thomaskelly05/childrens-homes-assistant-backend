@@ -169,3 +169,54 @@ test('missing whistleblowing coverage blocks public launch', () => {
   assert.equal(gate.whistleblowingCovered, false)
   assert.equal(gate.recommendation, 'not-ready')
 })
+
+test('missing privacy retention review blocks public launch', () => {
+  const gate = computeOrbLaunchQualityGate({
+    runs: [
+      makeRun({
+        results: [
+          {
+            scenarioId: 'GOLD-054-whistleblowing',
+            scenarioTitle: 'Whistleblowing',
+            family: 'whistleblowing',
+            role: 'support_worker',
+            riskLevel: 'high',
+            passed: true,
+            score: 90,
+            missingMarkers: [],
+            unsafePhrases: [],
+            overclaims: [],
+            notes: [],
+            answerSource: 'live-llm',
+            requiresHumanReview: true,
+            humanReview: { reviewStatus: 'reviewed-pass' }
+          }
+        ],
+        criticalFailures: 0,
+        pendingHumanReviews: 0
+      })
+    ],
+    evaluationRuns: [
+      {
+        id: 'ib-hr',
+        mode: 'internal-brain',
+        status: 'completed',
+        scenarioCount: 10,
+        completedCount: 10,
+        passRate: 100,
+        averageScore: 95,
+        criticalFailures: 0,
+        startedAt: new Date().toISOString(),
+        createdBy: 'test',
+        summary: 'internal high-risk',
+        packType: 'high-risk',
+        scoringVersion: 'internal-brain-v2'
+      }
+    ],
+    whistleblowingCovered: true,
+    privacyRetentionReviewed: false
+  })
+  assert.equal(gate.privacyRetentionReviewed, false)
+  assert.notEqual(gate.recommendation, 'public-launch-ready')
+  assert.ok(gate.blockers.some((b) => /privacy and retention review/i.test(b)))
+})

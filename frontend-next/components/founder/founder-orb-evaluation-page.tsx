@@ -8,6 +8,7 @@ import { FounderNavHeader } from '@/components/founder/founder-nav-header'
 import { FounderSectionCard } from '@/components/founder/founder-section-card'
 import { getQualityRuns } from '@/lib/founder/quality-lab'
 import { computeOrbLaunchQualityGate } from '@/lib/orb/quality/launch-quality-gate'
+import { getPrivacyRetentionReviewed } from '@/lib/orb/quality/launch-governance-store'
 import {
   ACTIVE_INTERNAL_BRAIN_RUN_MESSAGE,
   assertCompletedEvaluationRunSaved,
@@ -89,7 +90,8 @@ export function FounderOrbEvaluationPage() {
     () =>
       computeOrbLaunchQualityGate({
         runs: getQualityRuns(),
-        evaluationRuns: runs
+        evaluationRuns: runs,
+        privacyRetentionReviewed: getPrivacyRetentionReviewed()
       }),
     [runs]
   )

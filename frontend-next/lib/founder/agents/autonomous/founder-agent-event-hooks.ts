@@ -2,6 +2,7 @@ import type { QualityRun } from '@/lib/founder/quality-lab/quality-lab-types'
 import { getQualityRuns } from '@/lib/founder/quality-lab/quality-run-store'
 import type { OrbEvaluationRun } from '@/lib/orb/evaluation/orb-evaluation-types'
 import { getEvaluationRuns } from '@/lib/orb/evaluation/orb-evaluation-store'
+import { getPrivacyRetentionReviewed } from '@/lib/orb/quality/launch-governance-store'
 
 import { buildFounderCoverageMap } from './founder-agent-coverage-map'
 import { ingestEvaluationRunCompleted, ingestQualityLabSignals } from './founder-agent-event-ingestion'
@@ -19,7 +20,7 @@ export function onEvaluationRunPersisted(run: OrbEvaluationRun): void {
         qualityRuns: getQualityRuns(),
         evaluationRuns: getEvaluationRuns(),
         weakAreas: coverage.weakAreas.slice(0, 5),
-        privacyRetentionReviewed: false
+        privacyRetentionReviewed: getPrivacyRetentionReviewed()
       })
     }
   } catch {
@@ -38,7 +39,7 @@ export function onQualityRunCompleted(run: QualityRun): void {
       qualityRuns: getQualityRuns(),
       evaluationRuns: getEvaluationRuns(),
       weakAreas: coverage.weakAreas.slice(0, 5),
-      privacyRetentionReviewed: false
+      privacyRetentionReviewed: getPrivacyRetentionReviewed()
     })
   } catch {
     // Non-fatal.

@@ -26,6 +26,8 @@ test('founder quality lab page has overview and run controls', () => {
   assert.match(dashboard, /data-testid="quality-lab-run-mode"/)
   assert.match(dashboard, /data-testid="quality-lab-synthetic-warning"/)
   assert.match(dashboard, /data-testid="quality-lab-launch-gate"/)
+  assert.match(dashboard, /quality-lab-privacy-retention-review/)
+  assert.match(dashboard, /quality-lab-public-launch-warning/)
 })
 
 test('founder quality lab page has proposals and build brief actions', () => {
