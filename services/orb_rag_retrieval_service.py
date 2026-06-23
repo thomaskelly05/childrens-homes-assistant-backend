@@ -91,6 +91,8 @@ class OrbRagRetrievalService:
         mode: str | None = None,
         profile_context: bool = False,
         attachments: list[Any] | None = None,
+        current_user: dict[str, Any] | None = None,
+        viewer_user_id: int | None = None,
     ) -> dict[str, Any]:
         classification = orb_knowledge_retrieval_service.classify_query(
             message,
@@ -135,7 +137,7 @@ class OrbRagRetrievalService:
         )
         merged_citations = self.merge_with_source_pack_citations(pack_citations, document_results)
 
-        return {
+        result = {
             "classification": classification,
             "source_packs": packs,
             "pack_citations": pack_citations,
@@ -160,6 +162,18 @@ class OrbRagRetrievalService:
                 "expanded_concepts": expansion.get("concepts") or [],
             },
         }
+
+        if current_user is not None and viewer_user_id is not None:
+            from services.orb_home_aware_answer_service import orb_home_aware_answer_service
+
+            result = orb_home_aware_answer_service.enrich_rag_retrieval(
+                result,
+                query=message,
+                user_id=viewer_user_id,
+                current_user=current_user,
+            )
+
+        return result
 
     def score_chunk(
         self,

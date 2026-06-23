@@ -13,6 +13,7 @@ from auth.permissions import require_admin
 from schemas.orb_feedback import OrbCandidateReviewRequest, OrbFeedbackMarkReviewedRequest
 from services.orb_admin_quality_service import orb_admin_quality_service
 from services.orb_billing_meter_service import orb_billing_meter_service
+from services.orb_home_documents_service import orb_home_documents_service
 from services.orb_improvement_candidate_service import orb_improvement_candidate_service
 
 router = APIRouter(prefix="/orb/admin", tags=["ORB Admin Quality Review"])
@@ -140,3 +141,8 @@ async def admin_orb_billing_usage(
     _admin=Depends(require_admin),
 ):
     return _success(orb_billing_meter_service.admin_usage_summary(days=days))
+
+
+@router.get("/home-documents/analytics")
+async def admin_home_documents_analytics(_admin=Depends(require_admin)):
+    return _success(orb_home_documents_service.founder_analytics())
