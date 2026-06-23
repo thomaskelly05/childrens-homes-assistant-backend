@@ -32,8 +32,14 @@ import { computeOrbLaunchQualityGate } from '@/lib/orb/quality/launch-quality-ga
 import {
   getLaunchGovernanceRecord,
   getPrivacyRetentionReviewed,
-  recordPrivacyRetentionReview
+  recordPrivacyRetentionReview,
+  syncLaunchGovernanceFromEvaluationRuns
 } from '@/lib/orb/quality/launch-governance-store'
+import {
+  buildManualGoldWorkflow,
+  MANUAL_GOLD_WORKFLOW_INTRO,
+  manualGoldWorkflowRequired
+} from '@/lib/orb/quality/launch-manual-gold-workflow'
 
 const PRIORITY_TONE: Record<string, string> = {
   critical: 'text-rose-300 border-rose-400/30 bg-rose-500/10',
@@ -46,6 +52,22 @@ const GATE_TONE: Record<string, string> = {
   'not-ready': 'text-rose-300 border-rose-400/30 bg-rose-500/10',
   'closed-pilot-ready': 'text-amber-300 border-amber-400/30 bg-amber-500/10',
   'public-launch-ready': 'text-emerald-300 border-emerald-400/30 bg-emerald-500/10'
+}
+
+const READINESS_FLAG_TONE = {
+  pass: 'text-emerald-300',
+  fail: 'text-amber-300'
+} as const
+
+function LaunchReadinessFlag({ label, passed }: { label: string; passed: boolean }) {
+  return (
+    <p className="text-sm text-slate-400">
+      {label}:{' '}
+      <span className={passed ? READINESS_FLAG_TONE.pass : READINESS_FLAG_TONE.fail}>
+        {passed ? 'yes' : 'no'}
+      </span>
+    </p>
+  )
 }
 
 function RunResultsTable({
@@ -178,6 +200,7 @@ export function FounderQualityLabPage() {
         if (data?.default_run_mode) setRunMode(data.default_run_mode)
       })
       .catch(() => setOverview(null))
+    syncLaunchGovernanceFromEvaluationRuns(getEvaluationRuns())
   }, [])
 
   const summary = getQualityLabSummary(overview?.gold_scenario_count ?? 100)
@@ -222,6 +245,21 @@ export function FounderQualityLabPage() {
       }),
     [runs, overview, privacyRetentionReviewed]
   )
+
+  const manualGoldWorkflow = useMemo(
+    () =>
+      buildManualGoldWorkflow({
+        liveLlmAvailable: overview?.live_llm_available ?? false,
+        internalBrainHighRiskPassed: launchGate.internalBrainHighRiskPassed,
+        liveGoldRunCompleted: launchGate.liveGoldRunCompleted,
+        highRiskHumanReviewed: launchGate.highRiskHumanReviewed
+      }),
+    [overview, launchGate]
+  )
+
+  const showManualGoldWorkflow = manualGoldWorkflowRequired({
+    liveLlmAvailable: overview?.live_llm_available ?? false
+  })
 
   async function handleRunPack() {
     setLoading(true)
@@ -320,6 +358,11 @@ export function FounderQualityLabPage() {
     refresh()
   }
 
+  function handleRefreshGovernance() {
+    syncLaunchGovernanceFromEvaluationRuns(getEvaluationRuns())
+    refresh()
+  }
+
   const publicLaunchBlockedByPrivacy =
     !privacyRetentionReviewed &&
     launchGate.recommendation !== 'public-launch-ready' &&
@@ -376,6 +419,38 @@ export function FounderQualityLabPage() {
               Open ORB Evaluation →
             </Link>
           </div>
+          <div
+            className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-3"
+            data-testid="quality-lab-launch-readiness-status"
+          >
+            <LaunchReadinessFlag
+              label="internalBrainHighRiskPassed"
+              passed={launchGate.internalBrainHighRiskPassed}
+            />
+            <LaunchReadinessFlag label="liveGoldRunCompleted" passed={launchGate.liveGoldRunCompleted} />
+            <LaunchReadinessFlag label="highRiskHumanReviewed" passed={launchGate.highRiskHumanReviewed} />
+            <LaunchReadinessFlag label="privacyRetentionReviewed" passed={launchGate.privacyRetentionReviewed} />
+            <LaunchReadinessFlag label="closedPilotReady" passed={launchGate.closedPilotReady} />
+            <LaunchReadinessFlag label="publicLaunchReady" passed={launchGate.publicLaunchReady} />
+          </div>
+          {launchGovernance.internalBrainHighRisk ? (
+            <p className="mt-3 text-xs text-slate-500" data-testid="quality-lab-internal-brain-governance">
+              Internal-brain high-risk governance: run {launchGovernance.internalBrainHighRisk.runId} ·{' '}
+              {launchGovernance.internalBrainHighRisk.criticalFailures} critical ·{' '}
+              {new Date(launchGovernance.internalBrainHighRisk.completedAt).toLocaleString('en-GB')}
+            </p>
+          ) : (
+            <p className="mt-3 text-xs text-slate-500" data-testid="quality-lab-internal-brain-governance">
+              Internal-brain high-risk governance: not recorded in session store
+              <button
+                type="button"
+                onClick={handleRefreshGovernance}
+                className="ml-2 text-cyan-300 hover:text-cyan-200"
+              >
+                Sync from evaluation runs
+              </button>
+            </p>
+          )}
           {launchGate.blockers.length > 0 ? (
             <ul className="mt-3 list-inside list-disc text-sm text-rose-200">
               {launchGate.blockers.map((blocker) => (
@@ -440,6 +515,47 @@ export function FounderQualityLabPage() {
             Public launch is blocked if either latest GOLD or high-risk red team live run has critical failures.
           </p>
         </FounderSectionCard>
+
+        {showManualGoldWorkflow ? (
+          <FounderSectionCard
+            eyebrow="Manual verification"
+            title="Live LLM GOLD manual workflow"
+            description={MANUAL_GOLD_WORKFLOW_INTRO}
+          >
+            <ol className="space-y-4" data-testid="quality-lab-manual-gold-workflow">
+              {manualGoldWorkflow.map((step, index) => (
+                <li
+                  key={step.id}
+                  className="rounded-2xl border border-white/10 bg-white/[0.03] p-4"
+                  data-testid={`quality-lab-manual-gold-step-${step.id}`}
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500">
+                        Step {index + 1}
+                        {step.completed ? (
+                          <span className="ml-2 text-emerald-300">complete</span>
+                        ) : (
+                          <span className="ml-2 text-amber-300">pending</span>
+                        )}
+                      </p>
+                      <p className="mt-2 text-sm font-semibold text-white">{step.title}</p>
+                      <p className="mt-1 text-sm text-slate-400">{step.description}</p>
+                    </div>
+                    {step.actionHref ? (
+                      <Link
+                        href={step.actionHref}
+                        className="rounded-xl border border-cyan-400/30 bg-cyan-500/10 px-3 py-2 text-xs font-bold text-cyan-200"
+                      >
+                        {step.actionLabel ?? 'Open'}
+                      </Link>
+                    ) : null}
+                  </div>
+                </li>
+              ))}
+            </ol>
+          </FounderSectionCard>
+        ) : null}
 
         <FounderSectionCard eyebrow="Agent OS" title="Quality Lab agent integration">
           <div className="space-y-3 text-sm" data-testid="quality-lab-agent-integration">

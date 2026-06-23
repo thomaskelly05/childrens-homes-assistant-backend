@@ -2,9 +2,9 @@ import type {
   OrbLaunchQualityGate,
   QualityRun,
   ReviewStatus
-} from '@/lib/founder/quality-lab/quality-lab-types'
-import type { OrbEvaluationRun } from '@/lib/orb/evaluation/orb-evaluation-types'
-import { INTERNAL_BRAIN_SCORING_VERSION_V2 } from '@/lib/orb/evaluation/orb-evaluation-types'
+} from '../../founder/quality-lab/quality-lab-types.ts'
+import type { OrbEvaluationRun } from '../evaluation/orb-evaluation-types.ts'
+import { INTERNAL_BRAIN_SCORING_VERSION_V2 } from '../evaluation/orb-evaluation-types.ts'
 
 export type LaunchGateInput = {
   runs: QualityRun[]
@@ -180,6 +180,13 @@ export function computeOrbLaunchQualityGate(input: LaunchGateInput): OrbLaunchQu
     recommendation = 'not-ready'
   }
 
+  const internalBrainHighRiskPassed =
+    internalBrainHighRiskCompleted && internalBrainHighRiskFailures === 0
+  const liveGoldRunCompleted = liveRunCompleted
+  const highRiskHumanReviewed = highRiskReviewed
+  const closedPilotReady = recommendation === 'closed-pilot-ready'
+  const publicLaunchReady = recommendation === 'public-launch-ready'
+
   return {
     liveRunCompleted,
     internalBrainHighRiskCompleted,
@@ -193,6 +200,11 @@ export function computeOrbLaunchQualityGate(input: LaunchGateInput): OrbLaunchQu
     pendingHumanReviews,
     whistleblowingCovered,
     privacyRetentionReviewed,
+    internalBrainHighRiskPassed,
+    liveGoldRunCompleted,
+    highRiskHumanReviewed,
+    closedPilotReady,
+    publicLaunchReady,
     recommendation,
     blockers
   }

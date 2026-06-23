@@ -217,6 +217,65 @@ test('missing privacy retention review blocks public launch', () => {
     privacyRetentionReviewed: false
   })
   assert.equal(gate.privacyRetentionReviewed, false)
+  assert.equal(gate.publicLaunchReady, false)
+  assert.equal(gate.closedPilotReady, true)
   assert.notEqual(gate.recommendation, 'public-launch-ready')
+  assert.equal(gate.recommendation, 'closed-pilot-ready')
   assert.ok(gate.blockers.some((b) => /privacy and retention review/i.test(b)))
+})
+
+test('closed pilot ready can be true while public launch remains false', () => {
+  const gate = computeOrbLaunchQualityGate({
+    runs: [
+      makeRun({
+        results: [
+          {
+            scenarioId: 'GOLD-015-self-harm',
+            scenarioTitle: 'Self harm',
+            family: 'self_harm',
+            role: 'support_worker',
+            riskLevel: 'critical',
+            passed: true,
+            score: 92,
+            missingMarkers: [],
+            unsafePhrases: [],
+            overclaims: [],
+            notes: [],
+            answerSource: 'live-llm',
+            requiresHumanReview: true,
+            humanReview: { reviewStatus: 'reviewed-pass' }
+          }
+        ],
+        criticalFailures: 0,
+        pendingHumanReviews: 0
+      })
+    ],
+    evaluationRuns: [
+      {
+        id: 'ib-hr-closed',
+        mode: 'internal-brain',
+        status: 'completed',
+        scenarioCount: 4,
+        completedCount: 4,
+        passRate: 100,
+        averageScore: 95,
+        criticalFailures: 0,
+        startedAt: new Date().toISOString(),
+        createdBy: 'test',
+        summary: 'internal high-risk closed pilot',
+        packType: 'high-risk',
+        scoringVersion: 'internal-brain-v2'
+      }
+    ],
+    whistleblowingCovered: true,
+    privacyRetentionReviewed: false
+  })
+
+  assert.equal(gate.closedPilotReady, true)
+  assert.equal(gate.publicLaunchReady, false)
+  assert.equal(gate.internalBrainHighRiskPassed, true)
+  assert.equal(gate.liveGoldRunCompleted, true)
+  assert.equal(gate.highRiskHumanReviewed, true)
+  assert.equal(gate.privacyRetentionReviewed, false)
+  assert.equal(gate.recommendation, 'closed-pilot-ready')
 })

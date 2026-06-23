@@ -8,7 +8,7 @@ import { FounderNavHeader } from '@/components/founder/founder-nav-header'
 import { FounderSectionCard } from '@/components/founder/founder-section-card'
 import { getQualityRuns } from '@/lib/founder/quality-lab'
 import { computeOrbLaunchQualityGate } from '@/lib/orb/quality/launch-quality-gate'
-import { getPrivacyRetentionReviewed } from '@/lib/orb/quality/launch-governance-store'
+import { getPrivacyRetentionReviewed, syncLaunchGovernanceFromEvaluationRuns } from '@/lib/orb/quality/launch-governance-store'
 import {
   ACTIVE_INTERNAL_BRAIN_RUN_MESSAGE,
   assertCompletedEvaluationRunSaved,
@@ -109,6 +109,7 @@ export function FounderOrbEvaluationPage() {
         runs: runsPayload.runs,
         scenarios: scenariosPayload.scenarios
       })
+      syncLaunchGovernanceFromEvaluationRuns(runsPayload.runs)
       const recovered = recoverStaleInternalBrainRuns()
       if (recovered.length > 0) {
         setMessage(STALE_RUN_INTERRUPTED_MESSAGE)
@@ -699,6 +700,47 @@ export function FounderOrbEvaluationPage() {
       </FounderSectionCard>
 
       <FounderSectionCard eyebrow="Quality Lab" title="Launch gate integration">
+        <div
+          className="mb-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-3"
+          data-testid="orb-eval-launch-readiness-status"
+        >
+          <p className="text-sm text-slate-400">
+            internalBrainHighRiskPassed:{' '}
+            <span className={launchGate.internalBrainHighRiskPassed ? 'text-emerald-300' : 'text-amber-300'}>
+              {launchGate.internalBrainHighRiskPassed ? 'yes' : 'no'}
+            </span>
+          </p>
+          <p className="text-sm text-slate-400">
+            liveGoldRunCompleted:{' '}
+            <span className={launchGate.liveGoldRunCompleted ? 'text-emerald-300' : 'text-amber-300'}>
+              {launchGate.liveGoldRunCompleted ? 'yes' : 'no'}
+            </span>
+          </p>
+          <p className="text-sm text-slate-400">
+            highRiskHumanReviewed:{' '}
+            <span className={launchGate.highRiskHumanReviewed ? 'text-emerald-300' : 'text-amber-300'}>
+              {launchGate.highRiskHumanReviewed ? 'yes' : 'no'}
+            </span>
+          </p>
+          <p className="text-sm text-slate-400">
+            privacyRetentionReviewed:{' '}
+            <span className={launchGate.privacyRetentionReviewed ? 'text-emerald-300' : 'text-amber-300'}>
+              {launchGate.privacyRetentionReviewed ? 'yes' : 'no'}
+            </span>
+          </p>
+          <p className="text-sm text-slate-400">
+            closedPilotReady:{' '}
+            <span className={launchGate.closedPilotReady ? 'text-emerald-300' : 'text-amber-300'}>
+              {launchGate.closedPilotReady ? 'yes' : 'no'}
+            </span>
+          </p>
+          <p className="text-sm text-slate-400">
+            publicLaunchReady:{' '}
+            <span className={launchGate.publicLaunchReady ? 'text-emerald-300' : 'text-amber-300'}>
+              {launchGate.publicLaunchReady ? 'yes' : 'no'}
+            </span>
+          </p>
+        </div>
         <div className="flex flex-wrap items-start gap-4">
           <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
             <div className="flex items-center gap-2 text-cyan-300">

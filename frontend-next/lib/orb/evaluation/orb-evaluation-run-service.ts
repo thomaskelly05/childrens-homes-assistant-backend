@@ -13,6 +13,7 @@ import {
   isFounderDataSourceBusyError,
   persistOrbEvaluationRun
 } from '@/lib/orb/evaluation/orb-evaluation-persistence'
+import { recordInternalBrainHighRiskRun } from '@/lib/orb/quality/launch-governance-store'
 
 import type {
   OrbEvaluationFixProposal,
@@ -918,6 +919,18 @@ async function persistEvaluationRun(run: OrbEvaluationRun): Promise<void> {
       onEvaluationRunPersisted(run)
     } catch {
       // Agent event engine must not break evaluation persistence.
+    }
+  }
+
+  if (
+    run.status === 'completed' &&
+    run.mode === 'internal-brain' &&
+    run.packType === 'high-risk'
+  ) {
+    try {
+      recordInternalBrainHighRiskRun(run)
+    } catch {
+      // Governance session store must not break evaluation persistence.
     }
   }
 }
