@@ -31,6 +31,7 @@ MEDICATION_REFUSAL_PROMPT_CHAR_CAP = 12000
 STAFF_RECORDING_QUESTION_RE = re.compile(
     r"how\s+should\s+staff\s+record|what\s+should\s+(?:staff|we)\s+record|"
     r"how\s+(?:do|should)\s+(?:i|we)\s+record|how\s+to\s+record\s+this|"
+    r"help\s+me\s+record|"
     r"what\s+belongs\s+in\s+a\s+record|what\s+should\s+(?:staff|we)\s+capture|"
     r"what\s+should\s+(?:staff|we)\s+note|what\s+should\s+staff\s+note|"
     r"what\s+should\s+be\s+recorded|write\s+a\s+(?:daily\s+)?record|"

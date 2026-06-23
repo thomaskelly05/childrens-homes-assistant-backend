@@ -1599,7 +1599,14 @@ async def standalone_orb_conversation_stream(
                 if first_token_ms is None:
                     first_token_ms = int((time.perf_counter() - request_started) * 1000)
                     timing.mark("first_token")
-                yield _sse_event("token", {"delta": f"{instant_lines_text}\n\n"})
+                yield _sse_event(
+                    "prelude",
+                    {
+                        "text": instant_lines_text,
+                        "kind": "instant_line",
+                        "category": instant_result.category_id,
+                    },
+                )
 
         fast_opening = fast_opening_for_message(
             user_message,
@@ -1683,7 +1690,14 @@ async def standalone_orb_conversation_stream(
                 if first_token_ms is None:
                     first_token_ms = int((time.perf_counter() - request_started) * 1000)
                     timing.mark("first_token")
-                yield _sse_event("token", {"delta": f"{instant_lines_text}\n\n"})
+                yield _sse_event(
+                    "prelude",
+                    {
+                        "text": instant_lines_text,
+                        "kind": "instant_line",
+                        "category": instant_result.category_id,
+                    },
+                )
 
         if fast_opening and not guarded_stream_delivery and not instant_lines_emitted:
             fast_opening_emitted = True
@@ -1970,6 +1984,8 @@ async def standalone_orb_conversation_stream(
                     "instant_category": instant_result.category_id,
                     "instant_lines_used": bool(instant_lines_emitted),
                     "total_ms": total_elapsed_ms,
+                    "provider_ms": model_routing.get("latency_ms") or provider_elapsed_ms,
+                    "answer_chars": len(answer or ""),
                 },
             )
             log_orb_route_timing(
@@ -1999,6 +2015,8 @@ async def standalone_orb_conversation_stream(
                     "instant_lines_used": route_timing.get("instant_lines_used"),
                     "first_token_ms": route_timing.get("first_token_ms"),
                     "total_ms": route_timing.get("total_ms"),
+                    "provider_ms": route_timing.get("provider_ms"),
+                    "answer_chars": route_timing.get("answer_chars"),
                     "provider": route_timing.get("provider"),
                     "expert_depth": route_timing.get("expert_depth"),
                     "prompt_tier": route_timing.get("prompt_tier"),

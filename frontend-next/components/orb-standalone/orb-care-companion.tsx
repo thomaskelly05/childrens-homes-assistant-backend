@@ -323,6 +323,7 @@ import {
   resolveOrbStreamedAnswer
 } from '@/lib/orb/orb-fast-opening'
 import { sanitizeUserVisibleProviderAnswer } from '@/lib/orb/orb-provider-user-answer'
+import { stripDuplicatePreludeFromAnswer } from '@/lib/orb/orb-stream-prelude'
 import { collectCognitionDisplayLabels } from '@/lib/orb/residential-agents'
 import {
   contextualDocumentActions,
@@ -886,6 +887,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
   const streamAbortRef = useRef<AbortController | null>(null)
   const streamGenerationRef = useRef(0)
   const streamPartialRef = useRef('')
+  const streamPreludeRef = useRef('')
   const workspaceHydratedRef = useRef(false)
 
   const voice = useStandaloneOrbVoice()
@@ -1399,7 +1401,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
       let targetChatId = options?.chatId || workspace.activeChatId
       let targetChat = targetChatId ? workspace.chats.find((c) => c.id === targetChatId) ?? null : null
       const userMessageId = `u-${now}`
-      const thinkingMessageId = `a-thinking-${now}`
+      const assistantId = `a-${now}`
       const optimisticUserContent =
         trimmed ||
         (hasImages ? '[Image attachment]' : hasDocuments ? '[Document attachment]' : '')
@@ -1410,7 +1412,13 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
         status: 'sent',
         createdAt: now
       }
-      const thinkingMessage = createThinkingPlaceholder(thinkingMessageId)
+      const streamingPlaceholder: StandaloneChatMessage = {
+        id: assistantId,
+        role: 'assistant',
+        content: '',
+        status: 'streaming',
+        createdAt: now
+      }
 
       const existingMessages = dedupeOrbMessages(targetChat?.messages ?? [])
       let priorMessages = existingMessages
@@ -1420,13 +1428,13 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
           priorMessages = [
             ...existingMessages.slice(0, editIndex),
             { ...existingMessages[editIndex], content: trimmed || userMessage.content, createdAt: now },
-            thinkingMessage
+            streamingPlaceholder
           ]
         } else {
-          priorMessages = [...existingMessages, userMessage, thinkingMessage]
+          priorMessages = [...existingMessages, userMessage, streamingPlaceholder]
         }
       } else if (options?.retry) {
-        priorMessages = [...stripTrailingTurnPlaceholders(existingMessages), thinkingMessage]
+        priorMessages = [...stripTrailingTurnPlaceholders(existingMessages), streamingPlaceholder]
       } else {
         const lastMessage = existingMessages[existingMessages.length - 1]
         const isRapidDuplicate =
@@ -1435,8 +1443,8 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
           typeof lastMessage.createdAt === 'number' &&
           now - lastMessage.createdAt < SUBMIT_GUARD_MS
         priorMessages = isRapidDuplicate
-          ? [...stripTrailingTurnPlaceholders(existingMessages), thinkingMessage]
-          : [...existingMessages, userMessage, thinkingMessage]
+          ? [...stripTrailingTurnPlaceholders(existingMessages), streamingPlaceholder]
+          : [...existingMessages, userMessage, streamingPlaceholder]
       }
       priorMessages = dedupeOrbMessages(priorMessages)
       const titleContext = {
@@ -1494,6 +1502,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
       setRetryPayload(null)
       setAnsweringStreamStatus(null)
       markOrbChatLatency('thinking_visible')
+      markOrbChatLatency('first_visible_assistant')
       traceOrbSend('pending_state', { sendGeneration, pending: true, early: true })
 
       const imagePayload = await Promise.all(
@@ -1587,7 +1596,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
           createdAt: Date.now()
         }
         persistChat(targetChatId!, {
-          messages: dedupeOrbMessages(replaceMessageById(priorMessages, thinkingMessageId, assistantMessage))
+          messages: dedupeOrbMessages(replaceMessageById(priorMessages, assistantId, assistantMessage))
         })
         setLastSendStatus('success')
         setError(null)
@@ -1626,7 +1635,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
           ]
         }
         persistChat(targetChatId!, {
-          messages: dedupeOrbMessages(replaceMessageById(priorMessages, thinkingMessageId, boundaryMessage))
+          messages: dedupeOrbMessages(replaceMessageById(priorMessages, assistantId, boundaryMessage))
         })
         setLastSendStatus('success')
         traceOrbSend('pending_state', { sendGeneration, pending: false, reason: 'os_boundary' })
@@ -1649,7 +1658,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
           explainability: { cognition_display_labels: ['ORB'] }
         }
         persistChat(targetChatId!, {
-          messages: dedupeOrbMessages(replaceMessageById(priorMessages, thinkingMessageId, assistantMessage))
+          messages: dedupeOrbMessages(replaceMessageById(priorMessages, assistantId, assistantMessage))
         })
         setLastSendStatus('success')
         setError(null)
@@ -1711,31 +1720,9 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
         return queryStandaloneOrbConversation(brainRoutedRequest, requestController.signal)
       }
 
-      const assistantId = `a-${Date.now()}`
-      const streamingMessage: StandaloneChatMessage = {
-        id: assistantId,
-        role: 'assistant',
-        content: '',
-        status: 'streaming',
-        createdAt: Date.now()
-      }
-
-      traceOrbSend('placeholder_replace', {
-        sendGeneration,
-        from: thinkingMessageId,
-        to: assistantId,
-        status: 'streaming'
-      })
-      setWorkspace((current) => {
-        const chat = current.chats.find((c) => c.id === targetChatId)
-        if (!chat) return current
-        return patchActiveChat(current, chat.id, {
-          messages: replaceMessageById(chat.messages, thinkingMessageId, streamingMessage)
-        })
-      })
-
       const streamGeneration = ++streamGenerationRef.current
       streamPartialRef.current = ''
+      streamPreludeRef.current = ''
       streamAbortRef.current?.abort()
       const streamController = new AbortController()
       streamAbortRef.current = streamController
@@ -1743,7 +1730,9 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
 
       const applyStreamingPartial = (partial: string, extras?: Partial<StandaloneChatMessage>) => {
         if (streamGenerationRef.current !== streamGeneration) return
-        const visiblePartial = sanitizeUserVisibleProviderAnswer(partial, {
+        const prelude = streamPreludeRef.current
+        const bodyOnly = prelude ? stripDuplicatePreludeFromAnswer(partial, prelude) : partial
+        const visiblePartial = sanitizeUserVisibleProviderAnswer(bodyOnly, {
           provider: extras?.modelRouting?.provider,
           errorDetail: extras?.contextUsed
             ? String((extras.contextUsed as Record<string, unknown>).error_detail || '')
@@ -1759,6 +1748,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
             ...streaming,
             ...extras,
             content: visiblePartial,
+            instantPrelude: prelude || streaming.instantPrelude,
             status: 'streaming'
           }
           return patchActiveChat(current, chat.id, {
@@ -1838,12 +1828,21 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
               source_anchors?: string[]
             }
           | undefined
+        const prelude = streamPreludeRef.current.trim()
+        const bodyAnswer = prelude
+          ? stripDuplicatePreludeFromAnswer(displayAnswer, prelude)
+          : displayAnswer
         const assistantMessage: StandaloneChatMessage = {
           id: assistantId,
           role: 'assistant',
-          content: displayAnswer,
+          content: bodyAnswer,
+          instantPrelude: prelude || undefined,
+          instantCategory:
+            (response.context_used?.timing as Record<string, unknown> | undefined)?.instant_category as
+              | string
+              | undefined,
           status: 'complete',
-          createdAt: streamingMessage.createdAt,
+          createdAt: now,
           sources: responseSources.length ? responseSources : undefined,
           modelRouting: modelRouting ?? undefined,
           explainability: explainabilityRaw,
@@ -1932,6 +1931,26 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
           voiceRespond: options?.voiceRespond,
           signal: streamSignal,
           stream: {
+            onPrelude: (prelude) => {
+              const text = prelude.text.trim()
+              if (!text) return
+              streamPreludeRef.current = text
+              markOrbChatLatency('instant_line_visible')
+              setWorkspace((current) => {
+                const chat = current.chats.find((c) => c.id === targetChatId)
+                if (!chat) return current
+                const streaming = chat.messages.find((m) => m.id === assistantId)
+                if (!streaming) return current
+                return patchActiveChat(current, chat.id, {
+                  messages: replaceMessageById(chat.messages, assistantId, {
+                    ...streaming,
+                    instantPrelude: text,
+                    instantCategory: prelude.category,
+                    status: 'streaming'
+                  })
+                })
+              })
+            },
             onToken: (_delta, partial) => {
               applyStreamingPartial(partial)
             },
@@ -2024,12 +2043,16 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
           traceOrbSend('stream_abort', { sendGeneration, streamGeneration })
           if (!isCurrentSend() || streamGenerationRef.current !== streamGeneration) return
           const partial = streamPartialRef.current.trim()
+          const prelude = streamPreludeRef.current.trim()
           const stoppedMessage: StandaloneChatMessage = {
-            ...streamingMessage,
+            id: assistantId,
+            role: 'assistant',
             content: partial
-              ? `${partial}\n\n*(Stopped — partial answer kept.)*`
-              : '*(Stopped before ORB finished responding.)*',
-            status: 'stopped'
+              ? `${prelude ? stripDuplicatePreludeFromAnswer(partial, prelude) : partial}\n\n*(Stopped — partial answer kept.)*`
+              : prelude || '*(Stopped before ORB finished responding.)*',
+            instantPrelude: prelude || undefined,
+            status: 'stopped',
+            createdAt: now
           }
           setWorkspace((current) => {
             const chat = current.chats.find((c) => c.id === targetChatId)
@@ -2080,7 +2103,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
         const errorMessage = createErrorPlaceholder(`a-error-${Date.now()}`, displayMessage)
         traceOrbSend('placeholder_replace', {
           sendGeneration,
-          from: thinkingMessageId,
+          from: assistantId,
           status: 'error'
         })
         setWorkspace((current) => {
@@ -4297,7 +4320,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
 
           {showUrgentSafeguardingBanner ? (
             <div
-              className="mx-auto mt-3 flex max-w-[var(--orb-chat-column-max,52.5rem)] items-start gap-3 rounded-xl border border-rose-300 bg-rose-50 px-4 py-3 text-sm leading-6 text-rose-950 shadow-sm md:px-6"
+              className="orb-safeguarding-urgent-banner mx-auto mt-3 flex max-w-[var(--orb-chat-column-max,52.5rem)] items-start gap-3 rounded-xl border border-slate-600/80 bg-slate-800 px-4 py-3.5 text-sm leading-6 text-slate-50 shadow-md md:px-6"
               role="alert"
               data-orb-safeguarding-urgent-banner
             >
@@ -4544,6 +4567,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
                               <>
                           <OrbAssistantMessageBody
                             content={entry.content}
+                            instantPrelude={entry.instantPrelude}
                             sources={minimalTurn ? [] : entry.sources}
                             mode={mode}
                             streaming={entry.status === 'streaming'}

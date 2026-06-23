@@ -48,6 +48,9 @@ export type StandaloneChatMessage = {
   status?: StandaloneChatMessageStatus
   /** Shown while status is thinking (defaults to ORB is thinking...). */
   thinkingLabel?: string
+  /** Deterministic instant first line from backend prelude SSE (visually distinct from model answer). */
+  instantPrelude?: string
+  instantCategory?: string
   /** Latest backend stream status line (residential/deep perceived speed). */
   streamStatus?: string
   sources?: StandaloneOrbSource[]

@@ -461,11 +461,16 @@ def strip_duplicate_instant_prefix(streamed_text: str, instant_lines: str) -> st
     instant = (instant_lines or "").strip()
     if not streamed or not instant:
         return streamed_text
-    if streamed.lower().startswith(instant.lower()):
-        remainder = streamed[len(instant) :].lstrip("\n")
-        return remainder
-    first_line = instant.split("\n", 1)[0].strip()
-    if streamed.lower().startswith(first_line.lower()):
-        remainder = streamed[len(first_line) :].lstrip(" .\n")
-        return remainder
-    return streamed_text
+    result = streamed
+    previous = ""
+    while result != previous:
+        previous = result
+        if result.lower().startswith(instant.lower()):
+            result = result[len(instant) :].lstrip("\n")
+            continue
+        first_line = instant.split("\n", 1)[0].strip()
+        if first_line and result.lower().startswith(first_line.lower()):
+            result = result[len(first_line) :].lstrip(" .\n")
+            continue
+        break
+    return result
