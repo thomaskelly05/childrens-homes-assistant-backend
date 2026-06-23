@@ -186,6 +186,7 @@ export function OrbMarkdownAnswer({
     <div
       className={`orb-markdown-answer ${residentialSurface ? 'orb-markdown-answer--residential' : ''}`}
       data-orb-markdown-answer
+      data-orb-assistant-answer-text={residentialSurface ? 'true' : undefined}
       data-orb-markdown-answer-residential={residentialSurface ? 'true' : undefined}
     >
       <ReactMarkdown remarkPlugins={[remarkGfm]} components={buildMarkdownComponents(sources, residentialSurface)}>

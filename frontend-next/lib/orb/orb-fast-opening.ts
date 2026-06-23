@@ -63,9 +63,11 @@ export function resolveOrbStreamedAnswer(
   const partial = ensureFastOpeningSpacing(streamedPartial || '', options?.fastOpening)
   const metadataAnswer = ensureFastOpeningSpacing(responseAnswer || '', options?.fastOpening)
 
-  // Post-stream server finalisation (repair + record discipline) always wins when present.
+  // Post-stream server finalisation (repair + record discipline) wins when present and non-empty.
   if (metadataAnswer && (options?.answerRepaired || !options?.errorDetail)) {
-    return metadataAnswer
+    if (metadataAnswer.trim() || !partial.trim()) {
+      return metadataAnswer
+    }
   }
 
   if (metadataAnswer && partial) {

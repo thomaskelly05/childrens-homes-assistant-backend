@@ -157,6 +157,48 @@ export async function setupOrbE2eMocks(page: Page) {
   await page.route('**/orb/standalone/access**', (route) => json(route, MOCK_ACCESS))
   await page.route('**/orb/standalone/config**', (route) => json(route, MOCK_CONFIG))
   await page.route('**/orb/auth/providers**', (route) => json(route, MOCK_AUTH_PROVIDERS))
+  await page.route('**/auth/me**', (route) =>
+    json(route, {
+      user: {
+        id: 9001,
+        email: 'e2e.manager@indicare.local',
+        role: 'manager',
+        home_id: 1,
+        provider_id: 1,
+        first_name: 'E2E',
+        last_name: 'Manager',
+        is_active: true,
+        permissions: [],
+        subscription_active: true,
+        subscription_status: 'active',
+        plan_name: 'ORB Residential',
+        mfa_enabled: false,
+        mfa_verified: false,
+        has_passkeys: true
+      }
+    })
+  )
+  await page.route('**/backend/auth/me**', (route) =>
+    json(route, {
+      user: {
+        id: 9001,
+        email: 'e2e.manager@indicare.local',
+        role: 'manager',
+        home_id: 1,
+        provider_id: 1,
+        first_name: 'E2E',
+        last_name: 'Manager',
+        is_active: true,
+        permissions: [],
+        subscription_active: true,
+        subscription_status: 'active',
+        plan_name: 'ORB Residential',
+        mfa_enabled: false,
+        mfa_verified: false,
+        has_passkeys: true
+      }
+    })
+  )
   await page.route('**/orb/standalone/passkeys**', (route) => json(route, MOCK_PASSKEYS))
   await page.route('**/orb/standalone/outputs/summary**', (route) => json(route, MOCK_OUTPUTS_SUMMARY))
   await page.route('**/orb/standalone/voice/status**', (route) => json(route, MOCK_VOICE_STATUS))

@@ -16,6 +16,7 @@ from auth.orb_standalone_premium_dependency import (
     require_rich_orb_premium_access as require_standalone_orb_access,
 )
 from services.orb_citation_service import orb_citation_service
+from services.orb_provider_user_answer_service import sanitize_user_visible_provider_answer
 from services.ai_provider_registry import ai_provider_registry
 from services.orb_converged_general_assistant_service import orb_converged_general_assistant_service
 from services.orb_general_assistant_service import orb_general_assistant_service
@@ -1589,6 +1590,7 @@ async def standalone_orb_conversation_stream(
         if not should_skip_instant_lines(
             expert_depth=quick_depth,
             guarded_stream_delivery=False,
+            category_id=instant_result.category_id,
         ):
             instant_lines_text = instant_result.text
             if instant_lines_text:
@@ -1909,6 +1911,7 @@ async def standalone_orb_conversation_stream(
             provider_elapsed_ms = (
                 int((time.perf_counter() - provider_started) * 1000) if provider_started else None
             )
+            intel_meta: dict[str, Any] = {}
             if indicare_intelligence:
                 answer, intel_meta = finalize_orb_residential_answer(
                     answer,
@@ -1926,6 +1929,16 @@ async def standalone_orb_conversation_stream(
                     instant_lines=instant_lines_text,
                     full_answer=answer,
                 )
+            if not (answer or "").strip() and instant_lines_text:
+                answer = instant_lines_text
+            sanitized_answer, provider_issue = sanitize_user_visible_provider_answer(
+                answer,
+                provider=model_routing.get("provider"),
+                error_detail=assistant_data.get("error_detail"),
+                log_context={"route": "/orb/standalone/conversation/stream"},
+            )
+            if provider_issue:
+                answer = sanitized_answer
             context_used = _attach_execution_policy_context(
                 context_used,
                 ctx=ctx,
@@ -1968,6 +1981,7 @@ async def standalone_orb_conversation_stream(
             answer_repaired = bool(
                 intel_meta.get("answer_repaired") or intel_meta.get("final_answer_repair_applied")
             ) if indicare_intelligence else False
+            route_timing = context_used.get("timing") or {}
             metadata_payload = {
                 "ok": True,
                 "standalone": True,
@@ -1979,11 +1993,21 @@ async def standalone_orb_conversation_stream(
                 "sources": response_sources,
                 "citations": response_citations,
                 "context_used": sanitized_context,
+                "timing": {
+                    "instant_first_lines_ms": route_timing.get("instant_first_lines_ms"),
+                    "instant_category": route_timing.get("instant_category"),
+                    "instant_lines_used": route_timing.get("instant_lines_used"),
+                    "first_token_ms": route_timing.get("first_token_ms"),
+                    "total_ms": route_timing.get("total_ms"),
+                    "provider": route_timing.get("provider"),
+                    "expert_depth": route_timing.get("expert_depth"),
+                    "prompt_tier": route_timing.get("prompt_tier"),
+                },
                 "cognition_display_labels": list(
                     sanitized_context.get("cognition_display_labels") or cognition_labels
                 ),
                 "image_understanding_available": assistant_data.get("image_understanding_available"),
-                "error_detail": assistant_data.get("error_detail"),
+                "error_detail": "provider_unavailable" if provider_issue else assistant_data.get("error_detail"),
                 "answer_repaired": answer_repaired,
                 "final_answer_repair_applied": answer_repaired,
             }

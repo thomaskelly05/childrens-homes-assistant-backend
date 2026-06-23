@@ -398,9 +398,13 @@ def should_skip_instant_lines(
     *,
     expert_depth: str,
     guarded_stream_delivery: bool,
+    category_id: str | None = None,
 ) -> bool:
-    """Skip only for lightweight general prompts — guarded routes still get safe instant lines."""
-    del guarded_stream_delivery
+    """Skip only for lightweight general prompts — playbook categories always get instant lines."""
+    if guarded_stream_delivery:
+        return False
+    if category_id and category_id not in {"general", "general_chat", ""}:
+        return False
     return expert_depth == "general_light"
 
 

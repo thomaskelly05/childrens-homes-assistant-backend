@@ -100,7 +100,7 @@ async def _live_stream(message: str, user: dict[str, Any]) -> dict[str, Any]:
     streamed = "".join(token_events)
     final_answer = str(metadata.get("answer") or streamed).strip()
     context_used = metadata.get("context_used") or {}
-    timing = context_used.get("timing") or {}
+    timing = metadata.get("timing") or context_used.get("timing") or {}
     sources = metadata.get("sources") or []
     explainability = context_used.get("explainability") or {}
     source_anchors = explainability.get("source_anchors") or context_used.get("source_anchors") or []
@@ -140,12 +140,38 @@ def _has_medication_error(text: str) -> bool:
     return bool(find_inappropriate_medication_error_reference(text))
 
 
+def _is_sign_off_mode() -> bool:
+    raw = os.getenv("ORB_LIVE_SIGN_OFF", "").strip().lower()
+    return raw in {"1", "true", "yes", "on"}
+
+
+def _has_mock_leakage(text: str) -> bool:
+    from services.orb_provider_user_answer_service import is_mock_provider_leakage
+
+    return is_mock_provider_leakage(text)
+
+
 def _assess_prompt(category_id: str, label: str, result: dict[str, Any]) -> dict[str, Any]:
     answer = result.get("final_answer") or ""
     streamed = result.get("streamed_text") or ""
     lower = answer.lower()
     concerns: list[str] = []
     failures: list[str] = []
+    sign_off = _is_sign_off_mode()
+
+    # Provider / mock leakage — hard fail in sign-off and for any visible answer
+    provider = str(result.get("provider") or "").strip().lower()
+    if sign_off and provider == "mock":
+        failures.append("provider=mock in live sign-off run")
+    if _has_mock_leakage(answer) or _has_mock_leakage(streamed):
+        if sign_off:
+            failures.append("mock/provider config text visible in answer")
+        else:
+            concerns.append("mock/provider config text visible in answer")
+    if category_id == "daily_recording" and result.get("answer_chars", 0) == 0:
+        failures.append("daily_recording produced empty assistant answer")
+    if sign_off and category_id == "daily_recording" and not result.get("instant_lines_used"):
+        failures.append("daily_recording missing instant first lines in sign-off")
 
     # 1–2: instant first line + streaming
     instant_ms = result.get("instant_first_lines_ms")
@@ -155,7 +181,10 @@ def _assess_prompt(category_id: str, label: str, result: dict[str, Any]) -> dict
     elif first_token_ms > 500:
         concerns.append(f"first_token_ms={first_token_ms} (target instant feel <500ms)")
     if not result.get("instant_lines_used"):
-        concerns.append("instant_lines_used=false")
+        if sign_off and category_id in {"daily_recording", "medication_refusal_support"}:
+            failures.append("instant_lines_used=false")
+        else:
+            concerns.append("instant_lines_used=false")
     elif instant_ms is not None and instant_ms > 50:
         concerns.append(f"instant_first_lines_ms={instant_ms} exceeds 50ms target")
 
@@ -245,7 +274,16 @@ def _assess_prompt(category_id: str, label: str, result: dict[str, Any]) -> dict
 
 
 async def main() -> int:
+    from services.orb_provider_user_answer_service import (
+        assert_live_provider_for_signoff,
+        openai_key_configured,
+    )
     from tests.conftest import TEST_USER_ID
+
+    sign_off = _is_sign_off_mode()
+    if sign_off:
+        assert_live_provider_for_signoff()
+        os.environ["AI_PROVIDER_STRICT"] = "true"
 
     user = {
         "id": TEST_USER_ID,
@@ -259,14 +297,23 @@ async def main() -> int:
     }
     _patch_access_for_local(user)
 
-    has_openai = bool(os.getenv("OPENAI_API_KEY", "").strip()) and "replace" not in os.getenv("OPENAI_API_KEY", "")
-    provider_note = "openai-live" if has_openai else "mock-fallback (no OPENAI_API_KEY)"
-    if not has_openai:
-        os.environ["AI_PROVIDER_STRICT"] = "false"
+    has_openai = openai_key_configured()
+    strict = os.getenv("AI_PROVIDER_STRICT", "").strip().lower() in {"1", "true", "yes", "on"}
+    if sign_off:
+        provider_note = "openai-live-sign-off"
+    elif has_openai:
+        provider_note = "openai-live"
+    elif strict:
+        provider_note = "strict-no-key (provider unavailable expected)"
+    else:
+        provider_note = "mock-fallback (no OPENAI_API_KEY)"
+        if not has_openai:
+            os.environ["AI_PROVIDER_STRICT"] = "false"
 
     print(f"# ORB Live UI Verification — PR #1724\n")
     print(f"Environment: thomaskelly05/childrens-homes-assistant-backend")
-    print(f"Provider: {provider_note}\n")
+    print(f"Provider: {provider_note}")
+    print(f"Sign-off mode: {'yes' if sign_off else 'no'}\n")
 
     rows: list[dict[str, Any]] = []
     for category_id, label, message in REPRESENTATIVE_PROMPTS:
@@ -287,11 +334,24 @@ async def main() -> int:
 
     out_path = ROOT / "reports" / "orb_live_ui_verification_pr1724.json"
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    out_path.write_text(json.dumps({"provider": provider_note, "results": rows}, indent=2))
+    out_path.write_text(
+        json.dumps(
+            {
+                "provider": provider_note,
+                "sign_off": sign_off,
+                "openai_configured": has_openai,
+                "ai_provider_strict": strict,
+                "results": rows,
+            },
+            indent=2,
+        )
+    )
     print(f"\nWrote {out_path}")
 
     fail_count = sum(1 for r in rows if r["verdict"] == "fail")
     concern_count = sum(1 for r in rows if r["verdict"] == "concern")
+    if sign_off and fail_count:
+        return 1
     return 1 if fail_count else (0 if concern_count == 0 else 0)
 
 

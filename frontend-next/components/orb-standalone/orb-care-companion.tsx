@@ -322,6 +322,7 @@ import {
   isOrbFastOpeningOnlyCompletion,
   resolveOrbStreamedAnswer
 } from '@/lib/orb/orb-fast-opening'
+import { sanitizeUserVisibleProviderAnswer } from '@/lib/orb/orb-provider-user-answer'
 import { collectCognitionDisplayLabels } from '@/lib/orb/residential-agents'
 import {
   contextualDocumentActions,
@@ -1742,7 +1743,13 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
 
       const applyStreamingPartial = (partial: string, extras?: Partial<StandaloneChatMessage>) => {
         if (streamGenerationRef.current !== streamGeneration) return
-        streamPartialRef.current = partial
+        const visiblePartial = sanitizeUserVisibleProviderAnswer(partial, {
+          provider: extras?.modelRouting?.provider,
+          errorDetail: extras?.contextUsed
+            ? String((extras.contextUsed as Record<string, unknown>).error_detail || '')
+            : undefined
+        })
+        streamPartialRef.current = visiblePartial
         setWorkspace((current) => {
           const chat = current.chats.find((c) => c.id === targetChatId)
           if (!chat) return current
@@ -1751,7 +1758,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
           const updated: StandaloneChatMessage = {
             ...streaming,
             ...extras,
-            content: partial,
+            content: visiblePartial,
             status: 'streaming'
           }
           return patchActiveChat(current, chat.id, {
@@ -1780,8 +1787,12 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
               )
           }
         )
+        const providerSafeAnswer = sanitizeUserVisibleProviderAnswer(resolvedAnswer, {
+          provider: response.context_used?.model_routing?.provider,
+          errorDetail: response.error_detail
+        })
         const answer =
-          resolvedAnswer.trim() ||
+          providerSafeAnswer.trim() ||
           STANDALONE_ORB_EMPTY_ANSWER_MESSAGE
         const shapedAnswer = residentialSurface
           ? reshapeResidentialChatAnswer(answer, trimmed || messageBody, mode)

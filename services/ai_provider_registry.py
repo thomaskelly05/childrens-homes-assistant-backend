@@ -181,6 +181,8 @@ class AiProviderRegistry:
             "default_provider": self.get_default_provider().value,
             "providers": providers,
             "strict": _env_bool("AI_PROVIDER_STRICT", False),
+            "openai_configured": openai_provider.is_available(),
+            "live_signoff_ready": openai_provider.is_available() and _env_bool("AI_PROVIDER_STRICT", False),
         }
 
     def iter_registered_provider_names(self) -> Iterable[str]:
