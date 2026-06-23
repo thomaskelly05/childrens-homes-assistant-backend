@@ -30,9 +30,19 @@ def lado_appropriate_for_prompt(message: str) -> bool:
     return any(trigger in lower for trigger in ADULT_POSITION_OF_TRUST_TRIGGERS)
 
 
-def find_inappropriate_lado_reference(answer: str, message: str) -> bool:
+_LADO_SCENARIO_TYPES = frozenset({"allegation_against_staff"})
+
+
+def find_inappropriate_lado_reference(
+    answer: str,
+    message: str,
+    *,
+    scenario_types: list[str] | None = None,
+) -> bool:
     """True when LADO appears in an answer but the prompt has no adult-position-of-trust trigger."""
     if not LADO_FORBIDDEN_WITHOUT_ADULT_TRIGGER.search(str(answer or "")):
+        return False
+    if any(st in _LADO_SCENARIO_TYPES for st in (scenario_types or [])):
         return False
     if lado_appropriate_for_prompt(message):
         return False
@@ -294,7 +304,11 @@ class OrbMandatoryResponseContractService:
             markers = list(spec.get("validation_markers") or [])
             missing = [marker for marker in markers if marker.lower() not in lower]
             inappropriate_lado = False
-            if find_inappropriate_lado_reference(answer_text, source_message):
+            if find_inappropriate_lado_reference(
+                answer_text,
+                source_message,
+                scenario_types=scenario_types,
+            ):
                 inappropriate_lado = True
                 missing.append("inappropriate_lado_reference")
             results.append(

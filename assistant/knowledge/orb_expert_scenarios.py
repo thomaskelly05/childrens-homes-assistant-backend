@@ -666,8 +666,15 @@ GOLD_ORB_EXPERT_SCENARIOS: list[dict[str, Any]] = [
         "support_worker",
         "high",
         "Manager told staff not to log missing episode to 'avoid Ofsted noise'.",
-        expected_markers=["governance", "record integrity", "RI/provider", "cannot suppress safeguarding"],
+        expected_markers=[
+            "whistleblowing",
+            "governance",
+            "record integrity",
+            "RI/provider",
+            "cannot suppress safeguarding",
+        ],
         must_not_say=["that's fine to not record"],
+        source_anchors=["childrens_homes_regulations_2015", "working_together_safeguarding"],
     ),
     _gold(
         "GOLD-055-weak-supervision",

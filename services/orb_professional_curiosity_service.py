@@ -256,6 +256,19 @@ class OrbProfessionalCuriosityService:
             return "recording"
         if any(term in text for term in ("staff was shouting", "staff member was shouting", "shouting at a child")):
             return "supervision"
+        if any(
+            term in text
+            for term in (
+                "whistleblow",
+                "not to log",
+                "avoid ofsted",
+                "cover up",
+                "cover-up",
+                "suppress safeguarding",
+                "not reporting",
+            )
+        ):
+            return "staff_culture"
         if self._is_cumulative_concern(text):
             return "cumulative_concern"
         if any(
