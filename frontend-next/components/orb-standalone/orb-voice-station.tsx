@@ -13,6 +13,7 @@ import {
   ORB_VOICE_PANEL_TITLE
 } from '@/lib/orb/voice/orb-voice-launch-mode'
 import { createOrbSavedOutput } from '@/lib/orb/standalone-client'
+import { ORB_SAVED_TO_MY_DRAFTS_NOTICE, saveStationDraftToRecordsWorkspace } from '@/lib/orb/orb-records-workspace-resilience'
 import { buildSavedOutputCreateBody } from '@/lib/orb/orb-saved-output-adapters'
 import {
   ORB_VOICE_V2_ADULT_REVIEW_LABEL,
@@ -177,15 +178,14 @@ export function OrbVoiceStation({
       }
     })
     try {
-      await createOrbSavedOutput({
-        ...body,
-        metadata: {
-          ...body.metadata,
-          voice_reflection_packet: packet,
-          ...voice.handoffPayload
-        }
+      await saveStationDraftToRecordsWorkspace({
+        title: body.title,
+        body: body.content_markdown || voice.summary,
+        source_station: 'voice',
+        category: 'voice_transcript',
+        template_id: voice.suggestedRecordTypeId || undefined
       })
-      setSaveNotice('Saved to Records & Drafts.')
+      setSaveNotice(ORB_SAVED_TO_MY_DRAFTS_NOTICE)
     } catch {
       setSaveNotice(ORB_VOICE_V2_SAVE_FAILED)
     } finally {

@@ -137,6 +137,15 @@ import {
   contextualResidentialCalmFollowUps,
   RESIDENTIAL_MAX_FOLLOW_UP_CHIPS
 } from '@/lib/orb/orb-residential-active-chat-follow-ups'
+import { OrbChatFollowUpsWithTemplates } from '@/components/orb-standalone/orb-chat-follow-ups-with-templates'
+import {
+  listOrbRecordsWorkspaceResilient,
+  ORB_SAVED_TO_MY_DRAFTS_NOTICE,
+  resolveChatRecordTemplate,
+  saveChatToRecordsWorkspace,
+  saveStationDraftToRecordsWorkspace,
+  workspaceItemAsSavedSummary
+} from '@/lib/orb/orb-records-workspace-resilience'
 import { isOrbDeveloperMode } from '@/lib/orb/orb-developer-mode'
 import { OrbStandaloneSidebar } from '@/components/orb-standalone/orb-standalone-sidebar'
 import {
@@ -3175,6 +3184,25 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
       inputRef.current?.focus()
       return
     }
+    if (action === 'recording_wording' && residentialSurface) {
+      try {
+        const resolved = await resolveChatRecordTemplate(sourceContent)
+        await saveChatToRecordsWorkspace({
+          title: resolved.title
+            ? `${resolved.title} draft`
+            : generateOrbChatTitle(sourceContent, { mode }) || 'ORB record draft',
+          content: sourceContent,
+          template_id: resolved.template_id,
+          category: resolved.category,
+          turn_into_record: true
+        })
+        setDraftNotice(ORB_SAVED_TO_MY_DRAFTS_NOTICE)
+        return
+      } catch {
+        handleModeChange('Record This Properly')
+        return
+      }
+    }
     if (action === 'ofsted_lens') handleModeChange('Ofsted Lens')
     if (action === 'safeguarding_lens') handleModeChange('Safeguarding Thinking')
     if (action === 'recording_wording') handleModeChange('Record This Properly')
@@ -3214,33 +3242,18 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
         entry.outputKind === 'actions' ||
         entry.outputKind === 'action_plan' ||
         Boolean(entry.feedbackContext?.action_id)
-      await createOrbSavedOutput(
-        buildSavedOutputCreateBody({
-          title: savedTitle,
-          type: isAction ? 'action_plan' : 'general_research',
-          project_id: workspace.activeProjectId,
-          project_name: activeProject?.name,
-          summary: entry.content.slice(0, 800),
-          content_markdown: entry.content,
-          intelligence_output: {
-            title: savedTitle,
-            summary: entry.content.slice(0, 2000),
-            type: entry.outputKind || 'answer'
-          },
-          sources: entry.sources,
-          created_from: isAction ? 'action_engine' : 'chat',
-          created_from_id: entry.id,
-          extras: {
-            source_feature: isAction ? 'action_engine' : 'chat',
-            source_text: entry.content,
-            action_id: entry.feedbackContext?.action_id,
-            lens: entry.feedbackContext?.document_lens
-          }
-        })
-      )
+      const resolved = await resolveChatRecordTemplate(entry.content)
+      await saveChatToRecordsWorkspace({
+        title: savedTitle,
+        content: entry.content,
+        sources: entry.sources,
+        template_id: resolved.template_id,
+        category: resolved.category || (isAction ? 'action_plan' : 'general_research'),
+        message_id: entry.id
+      })
       setSavedOutputMessageIds((current) => new Set(current).add(entry.id))
       setSaveFeedbackByMessageId((current) => ({ ...current, [entry.id]: 'saved' }))
-      setDraftNotice('Saved — ORB Residential artefact (not an OS record).')
+      setDraftNotice(ORB_SAVED_TO_MY_DRAFTS_NOTICE)
       const summary = await fetchOrbSavedOutputsSummaryResilient()
       setSavedOutputsCount(summary.total || 0)
     } catch {
@@ -4668,11 +4681,12 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
                                 {!minimalTurn &&
                                 entry.status === 'complete' &&
                                 index === visibleMessages.length - 1 ? (
-                                  <OrbSuggestedReplyChips
+                                  <OrbChatFollowUpsWithTemplates
                                     maxVisible={
                                       residentialSurface ? RESIDENTIAL_MAX_FOLLOW_UP_CHIPS : 6
                                     }
-                                    suggestions={
+                                    content={entry.content}
+                                    followUps={
                                       residentialSurface
                                         ? contextualResidentialCalmFollowUps({
                                             mode,
