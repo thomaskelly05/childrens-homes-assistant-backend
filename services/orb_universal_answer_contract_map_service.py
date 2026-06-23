@@ -154,7 +154,8 @@ ORB_ANSWER_CONTRACT_FAMILIES: dict[str, dict[str, Any]] = {
                 r"(?:voice|communication|views?|wishes?)|"
                 r"(?:gestures?|symbols?|aac|widget).{0,80}(?:daily\s+record|record|evidence|log)|"
                 r"communicate\s+mainly\s+through\s+(?:gestures?|symbols?|aac|a\s+symbol\s+board)|"
-                r"(?:non[\s-]?verbal|minimal\s+verbal).{0,60}(?:daily\s+record|record\s+their\s+voice)",
+                r"(?:non[\s-]?verbal|minimal\s+verbal).{0,60}(?:daily\s+record|record\s+their\s+voice)|"
+                r"adults\s+do\s+not\s+listen|evidenced\s+in\s+records",
                 re.I,
             ),
         ],
@@ -189,7 +190,8 @@ ORB_ANSWER_CONTRACT_FAMILIES: dict[str, dict[str, Any]] = {
                 r"(?:child[- ]friendly\s+)?support\s+plan|"
                 r"\bgdd\b|global\s+developmental\s+delay|"
                 r"(?:template|plan).{0,40}(?:widgets?|aac|symbol\s+board)|"
-                r"dreams?\s+and\s+aspirations?|preparing\s+for\s+adulthood",
+                r"dreams?\s+and\s+aspirations?|preparing\s+for\s+adulthood|"
+                r"communication-friendly\s+wording|signs\s+and\s+gestures",
                 re.I,
             ),
         ],
@@ -256,6 +258,7 @@ ORB_ANSWER_CONTRACT_FAMILIES: dict[str, dict[str, Any]] = {
                 r"contact\s+was|behaviour\s+support|sensory\s+support|"
                 r"consequences\s+and\s+boundaries|boundaries\s+fairly|"
                 r"evidence\s+quality\s+of\s+care|quality\s+of\s+care\s+in\s+daily|"
+                r"pep\s+meeting|attendance|refused\s+food|gestures?\s+to\s+refuse|non[\s-]?verbal|"
                 r"how\s+should\s+staff\s+record",
                 re.I,
             ),
@@ -320,7 +323,8 @@ ORB_ANSWER_CONTRACT_FAMILIES: dict[str, dict[str, Any]] = {
                 r"(?:upset|distressed|dysregulated)\s+(?:after|following)\s+(?:contact|family\s+time)|"
                 r"upset\s+following\s+family\s+time|"
                 r"(?:contact|family\s+time)\s+(?:cancelled|changed|didn'?t\s+happen)|"
-                r"after\s+(?:contact|family\s+time).{0,40}(?:upset|distressed|tearful|dysregulated)",
+                r"after\s+(?:contact|family\s+time).{0,40}(?:upset|distressed|tearful|dysregulated)|"
+                r"refused\s+contact|dysregulated\s+after.{0,60}contact|unsupervised\s+contact",
                 re.I,
             ),
         ],
@@ -352,6 +356,7 @@ ORB_ANSWER_CONTRACT_FAMILIES: dict[str, dict[str, Any]] = {
             re.compile(
                 r"refused\s+medication|refusing\s+medication|refuses\s+medication|"
                 r"won'?t\s+take\s+(?:their\s+)?medication|refusing\s+(?:tablets|medicine|meds)|"
+                r"will\s+not\s+take\s+(?:their\s+)?(?:evening\s+)?(?:tablets|medication|medicine|meds)|"
                 r"medication\s+refusal",
                 re.I,
             ),
@@ -379,6 +384,7 @@ ORB_ANSWER_CONTRACT_FAMILIES: dict[str, dict[str, Any]] = {
         "depth_tier": "standard",
         "expert_depth_cap": "residential_standard",
         "prompt_tier_cap": "residential",
+        "prompt_char_cap": EVERYDAY_SHIFT_PROMPT_CHAR_CAP,
         "streamable": True,
         "orb_write_handoff": True,
         "trigger_patterns": [
@@ -388,7 +394,9 @@ ORB_ANSWER_CONTRACT_FAMILIES: dict[str, dict[str, Any]] = {
                 r"physical\s+intervention|restraint|"
                 r"medication\s+error|wrong\s+dose|given\s+wrong\s+(?:dose|medicine|medication)|"
                 r"whistleblow|falsifying\s+records|staff\s+conduct|protected\s+disclosure|"
-                r"formal\s+complaint|behaviour\s+incident|property\s+damage|threw\s+an",
+                r"formal\s+complaint|behaviour\s+incident|property\s+damage|threw\s+an|"
+                r"colleague.{0,30}(?:rude|conduct)|rude\s+to\s+a\s+young\s+person|"
+                r"colleague'?s?\s+conduct\s+towards\s+children",
                 re.I,
             ),
         ],
@@ -420,6 +428,7 @@ ORB_ANSWER_CONTRACT_FAMILIES: dict[str, dict[str, Any]] = {
             re.compile(
                 r"returned\s+(?:from|after)\s+missing|(?:come|came)\s+back\s+from\s+missing|"
                 r"back\s+from\s+missing|missing\s+from\s+(?:care|the\s+home|home)|"
+                r"missing-from-care|active\s+missing|missing\s+search|"
                 r"young\s+person\s+is\s+missing|missing\s+right\s+now|gone\s+missing|"
                 r"smells?\s+of\s+cannabis|smell\s+of\s+cannabis|"
                 r"\bawol\b|late\s+return|whereabouts",
@@ -447,10 +456,13 @@ ORB_ANSWER_CONTRACT_FAMILIES: dict[str, dict[str, Any]] = {
         "trigger_patterns": [
             re.compile(
                 r"allegat(?:ion|ed)|"
+                r"alleges?\s+staff|"
+                r"excessive\s+force|"
                 r"(?:staff|member\s+of\s+staff).{0,40}(?:grabbed|hit|touched|threatened|hurt|abuse)|"
                 r"(?:grabbed|hit|touched|threatened|hurt).{0,40}(?:staff|member\s+of\s+staff)|"
                 r"said\s+staff\s+(?:grabbed|hit|touched|threatened|hurt)|"
-                r"staff\s+member\s+(?:touched|hurt|abuse|grabbed|hit|threatened)",
+                r"staff\s+member\s+(?:touched|hurt|abuse|grabbed|hit|threatened)|"
+                r"touched\s+(?:them|him|her).{0,30}inappropriately",
                 re.I,
             ),
         ],
@@ -474,7 +486,10 @@ ORB_ANSWER_CONTRACT_FAMILIES: dict[str, dict[str, Any]] = {
         "orb_write_handoff": False,
         "trigger_patterns": [
             re.compile(
-                r"disclosed\s+(abuse|sexual)|sexual\s+abuse|told\s+me.*(hurt|abuse)",
+                r"disclosed\s+(abuse|sexual)|sexual\s+abuse|told\s+me.*(hurt|abuse)|"
+                r"county\s+lines|criminal\s+exploitation|contextual\s+safeguarding|"
+                r"unexplained\s+cash|gifts?\s+from\s+an\s+unknown|older\s+adult\s+in\s+the\s+community|"
+                r"\bcce\b|\bcse\b|grooming",
                 re.I,
             ),
         ],
@@ -494,6 +509,7 @@ ORB_ANSWER_CONTRACT_FAMILIES: dict[str, dict[str, Any]] = {
         "trigger_patterns": [
             re.compile(
                 r"suicid|self[- ]?harm|hurt\s+(?:my|him|her|them)self|blade|overdose|"
+                r"fresh\s+cuts|showed\s+cuts|"
                 r"do(?:n'?t| not)\s+want\s+to\s+be\s+here|"
                 r"don'?t\s+want\s+to\s+live|"
                 r"no\s+point\s+being\s+here|"
@@ -570,10 +586,10 @@ ORB_ANSWER_CONTRACT_FAMILIES: dict[str, dict[str, Any]] = {
         "trigger_patterns": [
             re.compile(
                 r"manager\s+oversight|management\s+oversight|oversight\s+note|"
-                r"manager\s+review\s+note|create_manager_oversight|reg\s*45|"
+                r"manager\s+review\s+note|create_manager_oversight|reg\s*45|regulation\s+45|"
                 r"placement\s+plan\s+review|risk\s+assessment\s+review|"
                 r"leadership\s+record|leadership\s+and\s+management|"
-                r"safer\s+recruitment|workforce\s+compliance",
+                r"safer\s+recruitment|workforce\s+compliance|quality\s+of\s+care\s+summary",
                 re.I,
             ),
         ],
@@ -670,9 +686,9 @@ ORB_ANSWER_CONTRACT_FAMILIES: dict[str, dict[str, Any]] = {
         "trigger_patterns": [
             re.compile(
                 r"what\s+(is|does)\s+(the\s+)?(policy|procedure|regulation)|"
-                r"best\s+practice\s+for|how\s+should\s+we\s+handle|"
+                r"best\s+practice\s+for|good\s+practice\s+when|how\s+should\s+we\s+handle|"
                 r"staff\s+supervision|professional\s+curiosity|complaint\s+about\s+staff|"
-                r"notify\s+ofsted|serious\s+event|sccif",
+                r"notify\s+ofsted|serious\s+event|sccif|personal\s+information|privacy",
                 re.I,
             ),
         ],

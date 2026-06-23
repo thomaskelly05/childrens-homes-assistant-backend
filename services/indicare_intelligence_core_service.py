@@ -483,6 +483,10 @@ class IndicareIntelligenceCoreService:
 
         family_id = detect_contract_family(message)
         family = get_contract_family(family_id)
+        if family and family.get("depth_tier") == "mandatory":
+            if family.get("expert_depth_cap") == "safeguarding_critical":
+                return "safeguarding_critical"
+
         family_cap = (family or {}).get("expert_depth_cap")
 
         if mode in RESIDENTIAL_MODES or mode in ("Safeguarding Thinking", "Safeguarding"):
