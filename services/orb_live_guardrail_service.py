@@ -993,7 +993,7 @@ def build_guardrail_prompt_block(scaffold: OrbSafetyScaffold) -> str:
         lines.extend(
             [
                 "- You CANNOT promise secrecy or help keep safeguarding concerns secret.",
-                "- Escalate to manager/DSL/on-call, follow safeguarding procedures, record child's words.",
+                "- Escalate to manager/on-call/safeguarding lead, follow safeguarding procedures, record child's words.",
                 "- Call 999 if immediate risk to life.",
             ]
         )
@@ -1042,7 +1042,7 @@ def build_guardrail_prompt_block(scaffold: OrbSafetyScaffold) -> str:
     if scaffold.local_policy_caveat:
         lines.append(f"- Include local policy/professional judgement caveat: {scaffold.local_policy_caveat}")
     if scaffold.escalation_required:
-        lines.append("- Include clear escalation to manager/DSL/on-call where required.")
+        lines.append("- Include clear escalation to manager/on-call/safeguarding lead where required.")
     if scaffold.child_voice_prompts:
         lines.append("- Include child voice: record young person's words where known.")
     if scaffold.minimum_required_phrases:

@@ -182,7 +182,7 @@ class OrbScenarioPlaybookService:
                 "Try to engage and delay verbally; use her name calmly.",
                 "Ask who the person is and where she is going.",
                 "Assess known CSE/CCE/missing risk from care plan and chronology.",
-                "Alert manager/DSL immediately; another staff member should call police if immediate risk.",
+                "Alert manager/on-call immediately; another staff member should call police if immediate risk.",
                 "Record car registration, make/model, colour, driver description, direction of travel.",
                 "Do not put staff at unsafe risk by standing in front of a moving vehicle.",
                 "Do not use force simply because she is leaving or staff disagree with her choice.",
@@ -219,7 +219,7 @@ class OrbScenarioPlaybookService:
             ),
             escalation_prompts=(
                 "Call police now if immediate risk, unknown adult, exploitation/coercion or unsafe vehicle.",
-                "Call manager/DSL immediately.",
+                "Call manager/on-call immediately.",
                 "Trigger missing procedure if she leaves.",
             ),
             recording_requirements=(
@@ -286,7 +286,7 @@ class OrbScenarioPlaybookService:
                 "ORB cannot authorise restraint for you."
             ),
             escalation_prompts=(
-                "Alert manager/DSL; call police/ambulance if immediate risk.",
+                "Alert manager/on-call; call police/ambulance if immediate risk.",
             ),
             recording_requirements=(
                 "Antecedent, alternatives tried, rationale, duration, injury check, debrief, manager review.",
@@ -336,7 +336,7 @@ class OrbScenarioPlaybookService:
                 "Police / Emergency Escalation Vault",
             ),
             professional_boundary="Follow missing-from-care and physical intervention policy; seek manager advice.",
-            escalation_prompts=("Manager/DSL immediately; police if immediate risk.",),
+            escalation_prompts=("Manager/on-call immediately; police if immediate risk.",),
             recording_requirements=("Chronology, child's words, actions taken, agencies informed.",),
             opening_anchor="This is a live safeguarding and missing-risk situation — act calmly, escalate early, record clearly.",
         )
@@ -697,7 +697,7 @@ class OrbScenarioPlaybookService:
             ),
             must_include=(
                 "Dynamic risk assessment in the moment.",
-                "Manager/DSL escalation where indicated.",
+                "Manager/on-call escalation where indicated.",
                 "Child voice and chronology.",
                 "Local procedure and multi-agency routes.",
             ),
@@ -707,8 +707,8 @@ class OrbScenarioPlaybookService:
                 "Generic safeguarding bullet lists without practical structure.",
             ),
             recommended_vaults=vaults,
-            professional_boundary="ORB supports professional judgement; follow local policy and escalate to manager/DSL/agencies.",
-            escalation_prompts=("Manager/DSL; police/ambulance/EDT/social worker as risk indicates.",),
+            professional_boundary="ORB supports professional judgement; follow local policy and escalate to manager/on-call/agencies.",
+            escalation_prompts=("Manager/on-call; police/ambulance/EDT/social worker as risk indicates.",),
             recording_requirements=("Facts, child's words, actions, rationale, who was informed, manager review.",),
             opening_anchor=opening,
             depth_level="high" if topic not in {"live_safeguarding_incident"} else "critical",
