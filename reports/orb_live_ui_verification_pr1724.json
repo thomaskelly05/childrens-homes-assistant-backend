@@ -1,27 +1,28 @@
 {
-  "provider": "mock-fallback (no OPENAI_API_KEY)",
+  "provider": "openai-live",
+  "sign_off": false,
+  "openai_configured": true,
+  "ai_provider_strict": true,
   "results": [
     {
       "category_id": "daily_recording",
       "label": "Daily recording",
-      "verdict": "concern",
-      "concerns": [
-        "instant_lines_used=false"
-      ],
+      "verdict": "pass",
+      "concerns": [],
       "failures": [],
-      "instant_first_line": "ORB mock engine re",
-      "final_answer_preview": "ORB mock engine response Task received (120 chars) Configure OPENAI_API_KEY for live answers",
-      "final_answer_chars": 92,
+      "instant_first_line": "I'm treating this as a daily recording question.\nStart with what happened, what the young person said or showed, how staff responded, and what happened next.",
+      "final_answer_preview": "I'm treating this as a daily recording question. | Start with what happened, what the young person said or showed, how staff responded, and what happened next. |  | I'm treating this as a daily recording question Start with what happened, what the young person said or showed, how The adult responded, and what happened next |  | IndiCare is a residential children's homes operating system and intelligence platform built to support The adult and managers in registered homes |  | It is designed around care record",
+      "final_answer_chars": 1333,
       "timing": {
-        "instant_first_lines_ms": 0.2,
+        "instant_first_lines_ms": 0.17,
         "instant_category": "daily_recording",
-        "first_token_ms": 96,
-        "total_ms": 99
+        "first_token_ms": 4,
+        "total_ms": 631
       },
       "sources_count": 24,
-      "expert_depth": "general_light",
+      "expert_depth": "residential_standard",
       "prompt_tier": "residential",
-      "provider": "mock",
+      "provider": null,
       "message": "Help me write a daily record \u2014 calm breakfast, chose toast, watched TV before handover."
     },
     {
@@ -34,15 +35,15 @@
       "final_answer_preview": "This looks like a missing-from-care concern. | Follow the home's missing procedure, inform the manager/on-call, and record times, actions and decisions clearly. |  | Missing return \u2014 immediate actions on shift: |  | Immediate welfare check | * Calm welcome back \u2014 check injuries, distress, intoxication, hunger, fatigue and immediate medical need | * Do not accuse or shame |  | Missing procedure | * Follow local missing procedure | * Update police if the missing episode was still active | * Notify manager/on-call | * Notif",
       "final_answer_chars": 1039,
       "timing": {
-        "instant_first_lines_ms": 0.05,
+        "instant_first_lines_ms": 0.06,
         "instant_category": "missing_from_care",
         "first_token_ms": 0,
-        "total_ms": 65
+        "total_ms": 123
       },
       "sources_count": 17,
       "expert_depth": "safeguarding_critical",
       "prompt_tier": "deep",
-      "provider": "mock",
+      "provider": null,
       "message": "A young person is missing from care right now. What should staff do?"
     },
     {
@@ -52,18 +53,18 @@
       "concerns": [],
       "failures": [],
       "instant_first_line": "This looks like an allegation involving staff.\nMake sure the young person is safe, preserve their exact words, inform the manager/on-call, and follow the LADO/local allegations route.",
-      "final_answer_preview": "This looks like an allegation involving staff. | Make sure the young person is safe, preserve their exact words, inform the manager/on-call, and follow the LADO/local allegations route. |  | ORB has returned the safety fallback because this scenario contains safeguarding, legal, data protection or emergency risk boundaries. |  | [ORB Internal Brain \u2014 deterministic fallback. No external LLM was called.] |  | 1. Safety position | An allegation against staff requires immediate safety, evidence preservation and for",
-      "final_answer_chars": 2160,
+      "final_answer_preview": "This looks like an allegation involving staff. | Make sure the young person is safe, preserve their exact words, inform the manager/on-call, and follow the LADO/local allegations route. |  | IndiCare is a residential children's homes operating system and intelligence platform built to support staff and managers in registered homes. |  | It is designed around care recording, safeguarding, Ofsted and SCCIF readiness, Quality Standards, governance, workforce support and reflective practice. The aim is to sim",
+      "final_answer_chars": 1201,
       "timing": {
         "instant_first_lines_ms": 0.03,
         "instant_category": "allegations_lado",
         "first_token_ms": 0,
-        "total_ms": 53
+        "total_ms": 115
       },
       "sources_count": 31,
       "expert_depth": "safeguarding_critical",
       "prompt_tier": "deep",
-      "provider": "mock",
+      "provider": null,
       "message": "A young person alleged a member of staff grabbed them."
     },
     {
@@ -73,18 +74,18 @@
       "concerns": [],
       "failures": [],
       "instant_first_line": "This may involve immediate safety.\nStay with the young person if there is concern, inform the manager/on-call, and follow the home's safeguarding and self-harm procedure.",
-      "final_answer_preview": "This may involve immediate safety. | Stay with the young person if there is concern, inform the manager/on-call, and follow the home's safeguarding and self-harm procedure. |  | ORB has returned the safety fallback because this scenario contains safeguarding, legal, data protection or emergency risk boundaries. |  | [ORB Internal Brain \u2014 deterministic fallback. No external LLM was called.] |  | 1. Safety position | Safeguarding scenario detected \u2014 immediate safety and escalation boundaries apply. | Escalate throu",
-      "final_answer_chars": 1134,
+      "final_answer_preview": "This may involve immediate safety. | Stay with the young person if there is concern, inform the manager/on-call, and follow the home's safeguarding and self-harm procedure. |  | IndiCare is a residential children's homes operating system and intelligence platform built to support staff and managers in registered homes. |  | It is designed around care recording, safeguarding, Ofsted and SCCIF readiness, Quality Standards, governance, workforce support and reflective practice. The aim is to simplify recordi",
+      "final_answer_chars": 1188,
       "timing": {
-        "instant_first_lines_ms": 0.01,
+        "instant_first_lines_ms": 0.02,
         "instant_category": "self_harm_suicide",
         "first_token_ms": 0,
-        "total_ms": 56
+        "total_ms": 123
       },
       "sources_count": 15,
       "expert_depth": "safeguarding_critical",
       "prompt_tier": "deep",
-      "provider": "mock",
+      "provider": null,
       "message": "Young person disclosed self-harm and said they want to die."
     },
     {
@@ -94,65 +95,60 @@
       "concerns": [],
       "failures": [],
       "instant_first_line": "I'm treating this as a medication refusal.\nRecord the refusal on the MAR, follow the home's medication policy, and seek health advice where risk is present.",
-      "final_answer_preview": "I'm treating this as a medication refusal. | Record the refusal on the MAR, follow the home's medication policy, and seek health advice where risk is present. |  | ORB mock engine response. Task received (120 chars). Configure OPENAI_API_KEY for live answers. |  | Record the refusal on the MAR, follow home medication policy, notify the manager or on-call manager as required, seek pharmacy/GP/NHS 111 or emergency advice where relevant, monitor health risks, record the young person's words or communication,",
-      "final_answer_chars": 519,
+      "final_answer_preview": "I'm treating this as a medication refusal. | Record the refusal on the MAR, follow the home's medication policy, and seek health advice where risk is present. |  | IndiCare is a residential children's homes operating system and intelligence platform built to support staff and managers in registered homes. |  | It is designed around care recording, safeguarding, Ofsted and SCCIF readiness, Quality Standards, governance, workforce support and reflective practice. The aim is to simplify recording and oversig",
+      "final_answer_chars": 1174,
       "timing": {
-        "instant_first_lines_ms": 0.09,
+        "instant_first_lines_ms": 0.08,
         "instant_category": "medication_refusal_support",
         "first_token_ms": 0,
-        "total_ms": 28
+        "total_ms": 218
       },
       "sources_count": 16,
-      "expert_depth": "residential_light",
+      "expert_depth": "residential_standard",
       "prompt_tier": "residential",
-      "provider": "mock",
+      "provider": null,
       "message": "A young person refused medication. What should we consider?"
     },
     {
       "category_id": "orb_communicate",
       "label": "ORB Communicate support pack",
-      "verdict": "concern",
-      "concerns": [
-        "instant_lines_used=false",
-        "instant first line may not be preserved in final answer"
-      ],
+      "verdict": "pass",
+      "concerns": [],
       "failures": [],
-      "instant_first_line": "ORB mock engine re",
-      "final_answer_preview": "## Easy-read explanation | What is happening | This easy-read is about contact with someone important. The young person needs to understand: Create a communication support pack for a hospital visit tomorrow.. |  | Why it is happening | Adults want everyone to understand what is happening. This matters because it affects the young person and the people who support them. |  | What happens next | A trusted adult will explain step by step. There will be time to ask questions, use communication support or take a bre",
-      "final_answer_chars": 3442,
+      "instant_first_line": "I'm treating this as a communication support request.\nI'll create clear language, visual card suggestions, staff guidance and reflect-and-record prompts.",
+      "final_answer_preview": "I'm treating this as a communication support request. | I'll create clear language, visual card suggestions, staff guidance and reflect-and-record prompts. |  | ## Easy-read explanation | What is happening | This easy-read is about the hospital visit or appointment. The young person needs to understand: Create a communication support pack for a hospital visit tomorrow.. |  | Why it is happening | Adults want everyone to understand what is happening. This matters because it affects the young person and the peopl",
+      "final_answer_chars": 3574,
       "timing": {
-        "instant_first_lines_ms": 0.07,
+        "instant_first_lines_ms": 0.06,
         "instant_category": "orb_communicate",
-        "first_token_ms": 9,
-        "total_ms": 10
+        "first_token_ms": 0,
+        "total_ms": 193
       },
       "sources_count": 5,
-      "expert_depth": "general_light",
-      "prompt_tier": "fast",
-      "provider": "mock",
+      "expert_depth": "residential_standard",
+      "prompt_tier": "residential",
+      "provider": null,
       "message": "Create a communication support pack for a hospital visit tomorrow."
     },
     {
       "category_id": "regulation_45",
       "label": "Reg 45 evidence",
-      "verdict": "concern",
-      "concerns": [
-        "instant_lines_used=false"
-      ],
+      "verdict": "pass",
+      "concerns": [],
       "failures": [],
-      "instant_first_line": "ORB mock engine re",
-      "final_answer_preview": "ORB mock engine response. Task received (47 chars). Configure OPENAI_API_KEY for live answers. |  | ORB can help you turn this into an Inspection evidence preparation checklist, Reg 44/45 preparation note, or evidence review.",
-      "final_answer_chars": 221,
+      "instant_first_line": "I'm treating this as Regulation 45 quality of care reporting.\nStructure themes, child experience findings, actions and RI reporting.",
+      "final_answer_preview": "I'm treating this as Regulation 45 quality of care reporting. | Structure themes, child experience findings, actions and RI reporting. |  | IndiCare is a residential children's homes operating system and intelligence platform built to support staff and managers in registered homes. |  | It is designed around care recording, safeguarding, Ofsted and SCCIF readiness, Quality Standards, governance, workforce support and reflective practice. The aim is to simplify recording and oversight while making records ",
+      "final_answer_chars": 1150,
       "timing": {
-        "instant_first_lines_ms": 0.08,
+        "instant_first_lines_ms": 0.07,
         "instant_category": "regulation_45",
-        "first_token_ms": 10,
-        "total_ms": 12
+        "first_token_ms": 0,
+        "total_ms": 211
       },
       "sources_count": 8,
-      "expert_depth": "general_light",
-      "prompt_tier": "fast",
-      "provider": "mock",
+      "expert_depth": "residential_deep",
+      "prompt_tier": "residential",
+      "provider": null,
       "message": "What should a Reg 45 review cover this quarter?"
     },
     {
@@ -162,18 +158,18 @@
       "concerns": [],
       "failures": [],
       "instant_first_line": "I'm treating this as AAC / symbols / gestures child voice evidence.\nRecord what was observed, how the young person communicated, and do not invent direct quotes.",
-      "final_answer_preview": "I'm treating this as AAC / symbols / gestures child voice evidence. | Record what was observed, how the young person communicated, and do not invent direct quotes. |  | ORB mock engine response. Task received (120 chars). Configure OPENAI_API_KEY for live answers.",
-      "final_answer_chars": 258,
+      "final_answer_preview": "I'm treating this as AAC / symbols / gestures child voice evidence. | Record what was observed, how the young person communicated, and do not invent direct quotes. |  | IndiCare is a residential children's homes operating system and intelligence platform built to support staff and managers in registered homes. |  | It is designed around care recording, safeguarding, Ofsted and SCCIF readiness, Quality Standards, governance, workforce support and reflective practice. The aim is to simplify recording and ov",
+      "final_answer_chars": 1179,
       "timing": {
         "instant_first_lines_ms": 0.07,
         "instant_category": "aac_symbols_gestures",
         "first_token_ms": 0,
-        "total_ms": 29
+        "total_ms": 244
       },
       "sources_count": 28,
-      "expert_depth": "residential_light",
+      "expert_depth": "residential_standard",
       "prompt_tier": "residential",
-      "provider": "mock",
+      "provider": null,
       "message": "How can I evidence a young person's voice when they communicate mainly through gestures and symbols?"
     },
     {
@@ -183,41 +179,39 @@
       "concerns": [],
       "failures": [],
       "instant_first_line": "I'm treating this as physical intervention recording.\nCheck everyone is safe, record why intervention was necessary and proportionate, and plan the debrief.",
-      "final_answer_preview": "I'm treating this as physical intervention recording. | Check everyone is safe, record why intervention was necessary and proportionate, and plan the debrief. |  | ORB has returned the safety fallback because this scenario contains safeguarding, legal, data protection or emergency risk boundaries. |  | [ORB Internal Brain \u2014 deterministic fallback. No external LLM was called.] |  | 1. Safety position | Safeguarding scenario detected \u2014 immediate safety and escalation boundaries apply. | Escalate through safeguardin",
-      "final_answer_chars": 1183,
+      "final_answer_preview": "I'm treating this as physical intervention recording. | Check everyone is safe, record why intervention was necessary and proportionate, and plan the debrief. |  | IndiCare is a residential children's homes operating system and intelligence platform built to support staff and managers in registered homes. |  | It is designed around care recording, safeguarding, Ofsted and SCCIF readiness, Quality Standards, governance, workforce support and reflective practice. The aim is to simplify recording and oversig",
+      "final_answer_chars": 1174,
       "timing": {
-        "instant_first_lines_ms": 0.13,
+        "instant_first_lines_ms": 0.09,
         "instant_category": "physical_intervention_restraint",
         "first_token_ms": 1,
-        "total_ms": 44
+        "total_ms": 157
       },
       "sources_count": 29,
-      "expert_depth": "residential_light",
+      "expert_depth": "residential_standard",
       "prompt_tier": "deep",
-      "provider": "mock",
+      "provider": null,
       "message": "Help me record a physical intervention used to guide a young person away from danger."
     },
     {
       "category_id": "management_oversight_drift",
       "label": "Management oversight",
-      "verdict": "concern",
-      "concerns": [
-        "instant_lines_used=false"
-      ],
+      "verdict": "pass",
+      "concerns": [],
       "failures": [],
-      "instant_first_line": "ORB mock engine re",
-      "final_answer_preview": "ORB mock engine response. Task received (75 chars). Configure OPENAI_API_KEY for live answers.",
-      "final_answer_chars": 94,
+      "instant_first_line": "I'm treating this as management oversight and drift.\nRecord patterns, actions taken, review dates, and RI oversight where needed.",
+      "final_answer_preview": "I'm treating this as management oversight and drift. | Record patterns, actions taken, review dates, and RI oversight where needed. |  | IndiCare is a residential children's homes operating system and intelligence platform built to support staff and managers in registered homes. |  | It is designed around care recording, safeguarding, Ofsted and SCCIF readiness, Quality Standards, governance, workforce support and reflective practice. The aim is to simplify recording and oversight while making records mor",
+      "final_answer_chars": 1147,
       "timing": {
         "instant_first_lines_ms": 0.11,
         "instant_category": "management_oversight_drift",
-        "first_token_ms": 11,
-        "total_ms": 12
+        "first_token_ms": 0,
+        "total_ms": 173
       },
       "sources_count": 8,
-      "expert_depth": "general_light",
-      "prompt_tier": "fast",
-      "provider": "mock",
+      "expert_depth": "residential_deep",
+      "prompt_tier": "residential",
+      "provider": null,
       "message": "What management oversight is needed when incident frequency is drifting up?"
     }
   ]
