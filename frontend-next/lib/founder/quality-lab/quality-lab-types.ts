@@ -165,6 +165,11 @@ export type OrbLaunchQualityGate = {
   pendingHumanReviews: number
   whistleblowingCovered: boolean
   privacyRetentionReviewed: boolean
+  internalBrainHighRiskPassed: boolean
+  liveGoldRunCompleted: boolean
+  highRiskHumanReviewed: boolean
+  closedPilotReady: boolean
+  publicLaunchReady: boolean
   recommendation: LaunchRecommendation
   blockers: string[]
 }
