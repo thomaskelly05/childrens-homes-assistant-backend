@@ -4,6 +4,7 @@
  */
 
 import type { StandaloneOrbMode } from '@/lib/orb/standalone-client'
+import { sanitizeVisibleFinalAnswer } from '@/lib/orb/orb-visible-final-answer'
 
 export const ORB_RESIDENTIAL_CHAT_RESPONSE_PATTERN = [
   'Acknowledge the adult’s purpose in one short sentence.',
@@ -303,20 +304,26 @@ export function reshapeResidentialChatAnswer(
   }
 
   if (isStrongResidentialBackendAnswer(text)) {
-    return text
+    return sanitizeVisibleFinalAnswer(text, userMessage)
   }
 
   if (answerLooksGuidedResidentialChat(text) && !isGenericResidentialSafeguardingEssay(text)) {
-    return text
+    return sanitizeVisibleFinalAnswer(text, userMessage)
   }
 
   if (!shouldApplyResidentialChatGuidance(userMessage, mode)) {
-    return reshapeGenericResidentialChatAnswer(text, userMessage, mode ?? undefined)
+    return sanitizeVisibleFinalAnswer(
+      reshapeGenericResidentialChatAnswer(text, userMessage, mode ?? undefined),
+      userMessage
+    )
   }
 
   if (isGenericResidentialSafeguardingEssay(text) || isLowValueResidentialAnswer(text)) {
     return buildResidentialGuidedChatFallback(userMessage, mode)
   }
 
-  return `${text}\n\n---\n\n${buildResidentialChatSupportPrompt(userMessage, mode)}`
+  return sanitizeVisibleFinalAnswer(
+    `${text}\n\n---\n\n${buildResidentialChatSupportPrompt(userMessage, mode)}`,
+    userMessage
+  )
 }

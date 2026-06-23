@@ -711,7 +711,7 @@ class OrbCommunicateSupportPackService:
         return self.build_support_pack(self.parse_support_pack_request_from_message(message))
 
     def format_support_pack_for_chat(self, output: SupportPackOutput) -> str:
-        from assistant.knowledge.adult_identity_language import sanitize_residential_answer_polish
+        from assistant.knowledge.adult_identity_language import sanitize_visible_final_answer
 
         visual_lines = []
         for card in output.visual_card_suggestions[:8]:
@@ -756,7 +756,7 @@ class OrbCommunicateSupportPackService:
             ]
         )
         formatted = "\n".join(sections).strip()
-        return sanitize_residential_answer_polish(formatted, source_text=output.easy_read_explanation)
+        return sanitize_visible_final_answer(formatted, source_text=output.easy_read_explanation)
 
 
 orb_communicate_support_pack_service = OrbCommunicateSupportPackService()

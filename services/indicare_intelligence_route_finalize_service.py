@@ -7,6 +7,7 @@ from typing import Any
 
 from services.indicare_intelligence_core_service import indicare_intelligence_core_service
 from services.orb_final_answer_repair_service import repair_and_validate_final_answer
+from assistant.knowledge.adult_identity_language import sanitize_visible_final_answer
 from services.orb_universal_answer_contract_map_service import detect_contract_family
 from services.orb_chat_timing_service import OrbChatTimingTracker
 from services.orb_response_support_service import build_response_support_chips
@@ -177,6 +178,7 @@ def finalize_standalone_intelligence(
         fast_opening=None,
     )
     answer = repaired_answer
+    answer = sanitize_visible_final_answer(answer, source_text=message or prompt_text)
     meta["selected_contract"] = family_id
     meta["final_answer_validation_passed"] = contract_meta.get("final_answer_validation_passed")
     meta["final_answer_repair_applied"] = contract_meta.get("repair_applied", False)

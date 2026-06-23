@@ -19,7 +19,10 @@ from assistant.knowledge.residential_safeguarding_terminology import (
     find_inappropriate_dsl_reference,
     find_inappropriate_medication_error_reference,
 )
-from assistant.knowledge.adult_identity_language import sanitize_residential_answer_polish
+from assistant.knowledge.adult_identity_language import (
+    sanitize_residential_answer_polish,
+    sanitize_visible_final_answer,
+)
 from services.orb_universal_answer_contract_map_service import (
     UNIVERSAL_FORBIDDEN_PATTERNS,
     find_forbidden_patterns,
@@ -160,7 +163,7 @@ def validate_final_answer_contract(
         fast_opening=fast_opening,
     )
     sanitized, placeholder_issues = sanitize_placeholders_in_answer(sanitized)
-    sanitized = sanitize_residential_answer_polish(sanitized, source_text=source_text or "")
+    sanitized = sanitize_visible_final_answer(sanitized, source_text=source_text or "")
     forbidden = list(
         dict.fromkeys(
             _find_family_forbidden(answer, contract_family)

@@ -323,6 +323,10 @@ import {
   resolveOrbStreamedAnswer
 } from '@/lib/orb/orb-fast-opening'
 import { sanitizeUserVisibleProviderAnswer } from '@/lib/orb/orb-provider-user-answer'
+import {
+  sanitizeStreamingVisiblePartial,
+  sanitizeVisibleFinalAnswer
+} from '@/lib/orb/orb-visible-final-answer'
 import { stripDuplicatePreludeFromAnswer } from '@/lib/orb/orb-stream-prelude'
 import { collectCognitionDisplayLabels } from '@/lib/orb/residential-agents'
 import {
@@ -1732,13 +1736,16 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
         if (streamGenerationRef.current !== streamGeneration) return
         const prelude = streamPreludeRef.current
         const bodyOnly = prelude ? stripDuplicatePreludeFromAnswer(partial, prelude) : partial
-        const visiblePartial = sanitizeUserVisibleProviderAnswer(bodyOnly, {
-          provider: extras?.modelRouting?.provider,
-          errorDetail: extras?.contextUsed
-            ? String((extras.contextUsed as Record<string, unknown>).error_detail || '')
-            : undefined,
-          sourceText: trimmed || messageBody
-        })
+        const visiblePartial = sanitizeStreamingVisiblePartial(
+          sanitizeUserVisibleProviderAnswer(bodyOnly, {
+            provider: extras?.modelRouting?.provider,
+            errorDetail: extras?.contextUsed
+              ? String((extras.contextUsed as Record<string, unknown>).error_detail || '')
+              : undefined,
+            sourceText: trimmed || messageBody
+          }),
+          trimmed || messageBody
+        )
         streamPartialRef.current = visiblePartial
         setWorkspace((current) => {
           const chat = current.chats.find((c) => c.id === targetChatId)
@@ -1783,8 +1790,9 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
           errorDetail: response.error_detail,
           sourceText: trimmed || messageBody
         })
+        const polishedAnswer = sanitizeVisibleFinalAnswer(providerSafeAnswer, trimmed || messageBody)
         const answer =
-          providerSafeAnswer.trim() ||
+          polishedAnswer.trim() ||
           STANDALONE_ORB_EMPTY_ANSWER_MESSAGE
         const shapedAnswer = residentialSurface
           ? reshapeResidentialChatAnswer(answer, trimmed || messageBody, mode)
