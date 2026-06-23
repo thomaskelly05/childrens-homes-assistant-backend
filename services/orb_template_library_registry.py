@@ -411,6 +411,222 @@ _TEMPLATE_SPECS: list[tuple[str, str, str, list[str]]] = [
     ("learning_from_safeguarding_review", "Learning from safeguarding review", "learning_academy", "Learn from safeguarding reviews.", [
         "Review theme", "Practice implications", "Recording implications", "Leadership actions",
     ]),
+    # A — Referral, matching and admission (lifecycle group A)
+    ("referral_summary", "Referral summary", "care_planning", "Summarise referral information for matching decisions.", [
+        "Referral source", "Child overview", "Known risks and needs", "Strengths", "Matching questions", "Manager review",
+    ]),
+    ("matching_assessment", "Matching assessment", "care_planning", "Assess placement matching suitability.", [
+        "Matching criteria", "Home capacity and skills", "Risk compatibility", "Child voice where available",
+        "Recommendation", "Manager decision",
+    ]),
+    ("impact_risk_summary", "Impact risk summary", "care_planning", "Summarise impact and risk for admission panel.", [
+        "Known risks", "Protective factors", "Impact on existing group", "Mitigations", "Manager/RI review",
+    ]),
+    ("admission_planning_checklist", "Admission planning checklist", "care_planning", "Checklist for safe admission.", [
+        "Documents received", "Room and belongings", "Key adults identified", "Health/education contacts",
+        "Risk plans in place", "Welcome arrangements",
+    ]),
+    ("welcome_plan", "Welcome plan", "care_planning", "Plan a child-centred welcome.", [
+        "What matters to the child", "First day arrangements", "Key relationships", "Child voice",
+        "Sensory/communication needs", "Review after 24 hours",
+    ]),
+    ("first_24_hours_record", "First 24 hours record", "recording", "Record the child's first 24 hours in placement.", [
+        "Arrival and settling", "Child voice and presentation", "Meals and sleep", "Contacts made",
+        "Concerns or positives", "Manager review",
+    ]),
+    ("first_72_hours_review", "First 72 hours review", "care_planning", "Review early placement progress.", [
+        "Settling summary", "Child voice", "Risks observed", "Plan adjustments", "Multi-agency updates",
+    ]),
+    ("initial_risk_needs_summary", "Initial risk and needs summary", "care_planning", "Initial summary of risks and needs.", [
+        "Identified needs", "Risks", "Protective factors", "Immediate controls", "Review date",
+    ]),
+    ("placement_planning_evidence_summary", "Placement planning evidence summary", "care_planning", "Evidence summary for placement planning.", [
+        "Placement purpose", "Evidence of matching", "Risk controls", "Child voice", "Review triggers",
+    ]),
+    # B — Care planning extensions
+    ("care_plan_review_note", "Care plan review note", "care_planning", "Record a care plan review.", [
+        "Review focus", "Child voice", "Progress and gaps", "Plan updates", "Multi-agency actions",
+    ]),
+    ("positive_behaviour_support_reflection", "Positive behaviour support reflection", "care_planning", "Reflect on PBS implementation.", [
+        "Behaviour observed", "Strategies used", "Child experience", "What worked", "Plan updates",
+    ]),
+    ("transition_moving_on_plan", "Transition / moving-on plan", "care_planning", "Plan transition or moving on.", [
+        "Transition goals", "Child voice", "Support network", "Practical steps", "Review date",
+    ]),
+    # C — Daily care extensions
+    ("morning_routine_record", "Morning routine record", "recording", "Record morning routine support.", [
+        "Wake and presentation", "Personal care", "Breakfast", "Child voice", "Staff response",
+    ]),
+    ("bedtime_routine_record", "Bedtime routine record", "recording", "Record bedtime routine support.", [
+        "Evening activities", "Bedtime preparation", "Sleep presentation", "Child voice", "Overnight notes",
+    ]),
+    ("meal_food_concern_record", "Meal / food concern record", "recording", "Record food-related concerns.", [
+        "Meal context", "Concern observed", "Child voice", "Actions taken", "Health/dietician follow-up",
+    ]),
+    ("activity_record", "Activity record", "recording", "Record activities and engagement.", [
+        "Activity", "Participation", "Child voice", "Skills demonstrated", "Impact on wellbeing",
+    ]),
+    ("child_voice_note", "Child voice note", "recording", "Capture child voice as primary record.", [
+        "Child's words or communication", "Context", "Presentation", "Wishes and feelings", "Adult response",
+    ]),
+    # D — Safeguarding extensions
+    ("missing_from_care_record", "Missing from care record", "safeguarding", "Record a missing-from-care episode.", [
+        "Last seen", "Immediate actions", "Notifications", "Search activity", "Manager oversight", "Return plan",
+    ]),
+    ("self_harm_suicide_concern_record", "Self-harm / suicide concern record", "safeguarding", "Record self-harm or suicide concerns with immediate safety focus.", [
+        "Concern summary", "Child voice (exact words)", "Immediate safety actions", "Presentation",
+        "Risk indicators", "Escalation and notifications", "Manager oversight", "Follow-up plan",
+    ]),
+    ("online_safety_concern_record", "Online safety concern record", "safeguarding", "Record online safety concerns.", [
+        "Concern summary", "Platforms/contacts", "Child voice", "Immediate safety", "Escalation", "Plan updates",
+    ]),
+    ("hsb_concern_record", "Harmful sexual behaviour concern record", "safeguarding", "Record HSB concerns proportionately.", [
+        "Concern summary", "Context", "Child voice", "Risk assessment", "Specialist advice", "Manager review",
+    ]),
+    ("substance_use_concern_record", "Substance use concern record", "safeguarding", "Record substance use concerns.", [
+        "Observation", "Child voice", "Immediate safety", "Health advice", "Plan updates", "Manager review",
+    ]),
+    ("fire_ligature_environmental_safety_record", "Fire / ligature / environmental safety record", "safeguarding", "Record environmental safety concerns.", [
+        "Concern type", "Immediate actions", "Environmental changes", "Child voice", "Review and oversight",
+    ]),
+    ("whistleblowing_concern_record", "Whistleblowing concern record", "safeguarding", "Record whistleblowing concerns.", [
+        "Concern summary", "Who raised it", "Immediate actions", "Escalation route", "Manager/RI review",
+    ]),
+    ("bullying_peer_harm_record", "Bullying / peer-on-peer harm record", "safeguarding", "Record peer-on-peer harm concerns.", [
+        "Incident summary", "Child voice", "Immediate safety", "Restorative response", "Plan updates",
+    ]),
+    ("police_involvement_arrest_record", "Police involvement / arrest record", "safeguarding", "Record police involvement factually.", [
+        "Circumstances", "Police actions", "Child welfare", "Notifications", "Follow-up support",
+    ]),
+    # E — Incident and restorative extensions
+    ("de_escalation_reflection", "De-escalation reflection", "recording", "Reflect on de-escalation practice.", [
+        "Situation", "Strategies used", "Child experience", "What worked", "Learning",
+    ]),
+    ("restorative_conversation_note", "Restorative conversation note", "recording", "Record a restorative conversation.", [
+        "Purpose", "Child voice", "Harm acknowledged", "Repair agreed", "Follow-up",
+    ]),
+    ("damage_property_reflection", "Damage to property reflection", "recording", "Reflect on property damage incident.", [
+        "What happened", "Child voice", "Repair plan", "Learning", "Manager review if needed",
+    ]),
+    ("consequence_sanction_proportionality_review", "Consequence / sanction proportionality review", "leadership_ri", "Review proportionality of consequences.", [
+        "Incident context", "Consequence applied", "Child voice", "Proportionality analysis", "Manager decision",
+    ]),
+    ("repair_relationship_reflection", "Repair and relationship reflection", "recording", "Reflect on relationship repair.", [
+        "Relationship context", "Repair steps", "Child voice", "Progress", "Next steps",
+    ]),
+    # F — Family and identity extensions
+    ("contact_change_support_note", "Contact change support note", "care_planning", "Support a child through contact changes.", [
+        "Change summary", "Child voice", "Preparation", "Support offered", "Review",
+    ]),
+    ("family_disclosure_after_contact_record", "Family disclosure after contact record", "safeguarding", "Record disclosures after family contact.", [
+        "Contact context", "Disclosure (child's words)", "Immediate safety", "Escalation", "Manager review",
+    ]),
+    ("identity_culture_religion_support_note", "Identity / culture / religion support note", "recording", "Record identity and cultural support.", [
+        "Identity focus", "Child voice", "Support provided", "Impact", "Plan links",
+    ]),
+    ("life_story_contribution", "Life story contribution", "recording", "Contribute to life story work.", [
+        "Memory or event", "Child voice", "Significance", "How recorded", "Consent/sharing",
+    ]),
+    ("memory_photo_important_event_record", "Memory / photo / important event record", "recording", "Record important memories or events.", [
+        "Event description", "Child voice", "Photos/artefacts", "Significance", "Life story link",
+    ]),
+    ("relationship_repair_note", "Relationship repair note", "recording", "Document relationship repair work.", [
+        "Relationships affected", "Repair steps", "Child voice", "Progress", "Next session",
+    ]),
+    # G — Education, health and SEND extensions
+    ("school_refusal_record", "School refusal record", "recording", "Record school refusal episodes.", [
+        "Presentation", "Triggers", "Child voice", "Actions taken", "Education plan link",
+    ]),
+    ("education_attendance_support_note", "Education attendance support note", "care_planning", "Support education attendance.", [
+        "Attendance pattern", "Barriers", "Child voice", "Interventions", "Review date",
+    ]),
+    ("pep_contribution", "PEP contribution", "care_planning", "Contribute to Personal Education Plan.", [
+        "Education focus", "Progress", "Child voice", "Actions agreed", "Virtual School liaison",
+    ]),
+    ("virtual_school_update", "Virtual School update", "care_planning", "Update Virtual School on education.", [
+        "Update summary", "Attendance/progress", "Barriers", "Actions", "Next review",
+    ]),
+    ("health_appointment_record", "Health appointment record", "recording", "Record health appointments.", [
+        "Appointment type", "Attendees", "Outcomes", "Child voice", "Follow-up actions",
+    ]),
+    ("camhs_mental_health_appointment_note", "CAMHS / mental health appointment note", "recording", "Record mental health appointments.", [
+        "Appointment summary", "Child voice", "Recommendations", "Actions for home", "Review date",
+    ]),
+    ("autism_sensory_support_record", "Autism / sensory support record", "recording", "Record autism and sensory support.", [
+        "Sensory presentation", "Strategies used", "Child voice", "Impact", "Plan updates",
+    ]),
+    ("learning_disability_communication_record", "Learning disability communication record", "recording", "Record communication support for LD.", [
+        "Communication methods", "Child voice", "Support provided", "Barriers", "Plan links",
+    ]),
+    ("aac_child_voice_record", "AAC / symbols / gestures child voice record", "recording", "Record child voice via AAC/gestures.", [
+        "Communication method", "What was communicated", "Context", "Adult interpretation (tentative)", "Plan impact",
+    ]),
+    # H — Rights and advocacy extensions
+    ("advocacy_referral_note", "Advocacy referral note", "recording", "Record advocacy referral.", [
+        "Reason for referral", "Child voice", "Advocate details", "Consent", "Follow-up",
+    ]),
+    ("independent_visitor_note", "Independent visitor note", "recording", "Record independent visitor contact.", [
+        "Visit summary", "Child voice", "Themes discussed", "Actions", "Next visit",
+    ]),
+    ("rights_discussion_record", "Rights discussion record", "recording", "Record rights discussions with child.", [
+        "Rights topic", "Child voice", "Understanding demonstrated", "Actions", "Review",
+    ]),
+    ("participation_choice_record", "Participation / choice record", "recording", "Record participation and choices.", [
+        "Choice offered", "Child decision", "Support provided", "Outcome", "Review",
+    ]),
+    ("young_person_meeting_preparation", "Young person's meeting preparation", "care_planning", "Prepare child for meetings.", [
+        "Meeting purpose", "Child voice and wishes", "Preparation support", "Questions for child", "Attendees",
+    ]),
+    ("young_person_feedback_summary", "Young person's feedback summary", "recording", "Summarise young person's feedback.", [
+        "Feedback source", "Child's words", "Themes", "Actions agreed", "Review date",
+    ]),
+    # I — Leadership and governance extensions
+    ("quality_standards_evidence_note", "Quality Standards evidence note", "ofsted_sccif", "Note evidence against Quality Standards.", [
+        "Standard", "Evidence seen", "Child impact", "Gaps", "Actions",
+    ]),
+    ("regulation_evidence_tracker", "Regulation evidence tracker", "ofsted_sccif", "Track regulation evidence.", [
+        "Regulation/theme", "Evidence", "Gaps", "Owner", "Review date",
+    ]),
+    ("staff_practice_concern_record", "Staff practice concern record", "leadership_ri", "Record staff practice concerns.", [
+        "Concern summary", "Evidence", "Immediate actions", "Supervision plan", "Manager review",
+    ]),
+    ("poor_recording_quality_reflection", "Poor recording quality reflection", "leadership_ri", "Reflect on recording quality issues.", [
+        "Record reviewed", "Strengths", "Gaps", "Learning", "Improvement actions",
+    ]),
+    ("team_meeting_action_log", "Team meeting action log", "leadership_ri", "Log team meeting actions.", [
+        "Meeting focus", "Decisions", "Actions", "Owners", "Review date",
+    ]),
+    ("audit_action_plan", "Audit action plan", "leadership_ri", "Plan actions from audit findings.", [
+        "Audit theme", "Finding", "Action", "Owner", "Due date", "Evidence of completion",
+    ]),
+    ("lessons_learned_review", "Lessons learned review", "leadership_ri", "Review lessons learned.", [
+        "Event/theme", "What happened", "Learning", "Actions embedded", "Review date",
+    ]),
+    # J — Transition and moving on
+    ("transition_planning_note", "Transition planning note", "care_planning", "Plan transition support.", [
+        "Transition goals", "Child voice", "Timeline", "Support needed", "Review",
+    ]),
+    ("pathway_leaving_care_contribution", "Pathway / leaving care contribution", "care_planning", "Contribute to pathway plan.", [
+        "Pathway focus", "Child voice", "Skills and needs", "Actions", "Review date",
+    ]),
+    ("moving_on_support_plan", "Moving-on support plan", "care_planning", "Plan moving-on support.", [
+        "Destination", "Child voice", "Practical support", "Relationships", "Review",
+    ]),
+    ("final_placement_summary", "Final placement summary", "care_planning", "Summarise placement at end.", [
+        "Placement overview", "Progress", "Child voice", "Outstanding needs", "Recommendations",
+    ]),
+    ("life_story_letter", "Life story letter", "recording", "Draft a life story letter.", [
+        "Purpose", "Key memories", "Child voice", "Messages", "Adult review before sharing",
+    ]),
+    ("later_life_record_explanation", "Later-life record explanation", "recording", "Explain records for later life.", [
+        "Records included", "Purpose", "Child voice", "Access guidance", "Review date",
+    ]),
+    ("ending_support_reflection", "Ending support reflection", "recording", "Reflect on ending support.", [
+        "Ending context", "Child voice", "Support provided", "Feelings", "Next steps",
+    ]),
+    ("positive_memory_record", "Positive memory record", "recording", "Record a positive memory.", [
+        "Memory", "Child voice", "Significance", "How celebrated", "Life story link",
+    ]),
 ]
 
 
