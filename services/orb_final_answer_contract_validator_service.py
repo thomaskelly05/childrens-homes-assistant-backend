@@ -65,6 +65,13 @@ FAMILY_EXTRA_FORBIDDEN: dict[str, tuple[str, ...]] = {
         "what this means in practice",
         "in this context",
         "it is important to remember",
+        "follow-up prompts",
+        "young person: [",
+        "staff present: [",
+        "daily record: add the date",
+        "engaging positively with the adult",
+        "specific the adult interactions",
+        "expressed enjoyment",
     ),
 }
 

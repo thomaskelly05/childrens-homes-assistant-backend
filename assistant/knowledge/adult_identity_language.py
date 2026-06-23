@@ -179,7 +179,8 @@ _ROLE_WITHOUT_INITIALS_PATTERN = re.compile(
     re.I,
 )
 _DAILY_RECORD_REQUEST = re.compile(
-    r"\b(?:create|write|draft|turn|make)\b.{0,40}\b(?:a\s+)?daily\s+record\b",
+    r"\b(?:create|write|draft|turn|make|help\s+me\s+(?:write|record))\b.{0,40}\b(?:a\s+)?daily\s+record\b|"
+    r"\b(?:write this as|turn this into|make this more child-centred).{0,40}\b(?:a\s+)?(?:daily\s+)?record\b",
     re.I,
 )
 _RECORD_GENERATION_REQUEST = re.compile(
@@ -545,7 +546,9 @@ _CLUNKY_PLACEHOLDER_REPLACEMENTS: tuple[tuple[re.Pattern[str], str], ...] = (
     (re.compile(r"\[Name\]", re.I), "the young person"),
     (re.compile(r"\[Staff Names?\]", re.I), "staff"),
     (re.compile(r"\[Names of staff present\]", re.I), "staff"),
-    (re.compile(r"\[Insert (?:The )?[Aa]dult Names?\]", re.I), "staff"),
+    (re.compile(r"\[Insert (?:staff|Staff) Names?\]", re.I), "staff names, if known"),
+    (re.compile(r"\[Insert (?:young person'?s|Young Person'?s) [Nn]ame\]", re.I), "the young person"),
+    (re.compile(r"\[Insert (?:The )?[Aa]dult Names?\]", re.I), "staff names, if known"),
     (re.compile(r"\[Manager'?s name\]", re.I), "add the manager's name before saving"),
     (re.compile(r"\[Date\]", re.I), "add the date before saving"),
     (re.compile(r"\[Time\]", re.I), "add the time before saving"),
@@ -564,22 +567,34 @@ _BROKEN_ADULT_HEADING_REPLACEMENTS: tuple[tuple[re.Pattern[str], str], ...] = (
     (re.compile(r"\b[Tt]he adult\s+responded\b"), "staff responded"),
     (re.compile(r"\bspecific\s+[Tt]he adult interactions\b"), "specific staff interactions"),
     (re.compile(r"\b[Tt]he adult interactions\b"), "staff interactions"),
+    (re.compile(r"\bengaging positively with the adult\b"), "engaging calmly with staff"),
     (re.compile(r"\[Insert\s+[Tt]he adult Names?\]", re.I), "staff names, if known"),
 )
 
 _BLANK_TEMPLATE_REQUEST_RE = re.compile(
     r"\b(?:blank\s+template|blank\s+form|full\s+document|form\s+to\s+complete|structured\s+report|"
-    r"template\s+to\s+fill|empty\s+template|give\s+me\s+a\s+template|provide\s+a\s+template)\b",
+    r"template\s+to\s+fill|empty\s+template|give\s+me\s+a\s+template|provide\s+a\s+template|"
+    r"report\s+template|(?:give|provide|need|want|show)\s+(?:me\s+)?(?:a\s+)?template\b|"
+    r"(?:form|record)\s+(?:structure|layout|fields)\b|fields\s+to\s+complete)\b",
     re.I,
 )
 
 _FORM_STYLE_DAILY_RECORD_MARKERS: tuple[re.Pattern[str], ...] = (
-    re.compile(r"Daily Record:\s*\[Date\]", re.I),
+    re.compile(r"Daily Record:\s*(?:\[Date\]|add the date)", re.I),
+    re.compile(r"Young Person:\s*(?:\[|add|insert)", re.I),
     re.compile(r"Young Person:\s*\[Name\]", re.I),
     re.compile(r"Young Person:\s*\[Child'?s Name\]", re.I),
-    re.compile(r"(?:staff|Staff)\s+present:\s*\[Names", re.I),
-    re.compile(r"Manager Review:\s*\[Manager", re.I),
-    re.compile(r"Manager Review:\s*$", re.I | re.M),
+    re.compile(r"(?:staff|Staff)\s+present:\s*(?:\[|insert|add)", re.I),
+    re.compile(r"Manager Review:\s*(?:\[Manager|$)", re.I | re.M),
+    re.compile(r"\[Insert\s+", re.I),
+)
+
+_DAILY_RECORD_FIELD_HEADING_RES: tuple[re.Pattern[str], ...] = (
+    re.compile(r"^Daily Record:\s*", re.I | re.M),
+    re.compile(r"^Young Person:\s*", re.I | re.M),
+    re.compile(r"^(?:staff|Staff)\s+present:\s*", re.I | re.M),
+    re.compile(r"^Manager Review:\s*", re.I | re.M),
+    re.compile(r"^#{1,3}\s*Manager Review\s*$", re.I | re.M),
 )
 
 _ROUTINE_DAILY_BEFORE_SAVING_LIST = (
@@ -598,10 +613,18 @@ _SELF_HARM_CUE_RE = re.compile(
 _SELF_HARM_GENERIC_FILLER_RES: tuple[re.Pattern[str], ...] = (
     re.compile(r"\bAlways prioritise[^.!?]*[.!?]", re.I),
     re.compile(r"\bIt is important to prioritise[^.!?]*[.!?]", re.I),
+    re.compile(r"\bIt is crucial[^.!?]*[.!?]", re.I),
+    re.compile(r"\bBy taking these steps[^.!?]*[.!?]", re.I),
     re.compile(r"\bMental health is a complex[^.!?]*[.!?]", re.I),
     re.compile(r"\bRemember that self-harm[^.!?]*[.!?]", re.I),
     re.compile(r"\bIf you have concerns about (?:their\s+)?mental health[^.!?]*[.!?]", re.I),
     re.compile(r"\bSeeking professional help is (?:always\s+)?important[^.!?]*[.!?]", re.I),
+)
+
+_SELF_HARM_GENERIC_OPENING_RES: tuple[re.Pattern[str], ...] = (
+    re.compile(r"^It is crucial[^.!?]*[.!?]\s*", re.I | re.M),
+    re.compile(r"^Self-harm is a serious[^.!?]*[.!?]\s*", re.I | re.M),
+    re.compile(r"^Self-harm and suicidal ideation require[^.!?]*[.!?]\s*", re.I | re.M),
 )
 
 # Staff phrases that must not be forced to "the adult" during identity substitution.
@@ -755,8 +778,10 @@ def is_low_risk_daily_recording(text: str) -> bool:
     return bool(_LOW_RISK_DAILY_RECORDING_RE.search(source)) and not has_safeguarding_cue(source)
 
 
-def replace_clunky_placeholders(text: str) -> str:
+def replace_clunky_placeholders(text: str, *, source_text: str = "") -> str:
     """Prefer natural residential wording over bracketed name/quote placeholders."""
+    if is_daily_record_draft_mode(source_text):
+        return str(text or "")
     result = str(text or "")
     for pattern, replacement in _CLUNKY_PLACEHOLDER_REPLACEMENTS:
         result = pattern.sub(replacement, result)
@@ -836,6 +861,79 @@ def user_requested_blank_template(text: str) -> bool:
     return bool(_BLANK_TEMPLATE_REQUEST_RE.search(str(text or "")))
 
 
+def is_daily_record_draft_mode(source_text: str) -> bool:
+    """Routine daily recording chat with facts — narrative draft, not a blank form."""
+    source = str(source_text or "")
+    return (
+        is_daily_record_request(source)
+        and prompt_contains_daily_recording_facts(source)
+        and not user_requested_blank_template(source)
+        and not has_safeguarding_cue(source)
+    )
+
+
+def looks_like_daily_record_draft_violation(text: str) -> bool:
+    """Detect form templates, field headings or placeholders forbidden in draft mode."""
+    value = str(text or "")
+    if looks_like_form_style_daily_record(value) or _placeholder_heavy_for_chat(value):
+        return True
+    if any(pattern.search(value) for pattern in _DAILY_RECORD_FIELD_HEADING_RES):
+        return True
+    if re.search(r"\[Insert\s+", value, re.I):
+        return True
+    return False
+
+
+def _source_supports_comparative_calm(source_text: str) -> bool:
+    """Whether the prompt states a before/after or comparative calm change."""
+    lower = str(source_text or "").lower()
+    return any(
+        term in lower
+        for term in (
+            "calmer",
+            "more calm",
+            "settled more",
+            "improved",
+            "before and after",
+            "later settled",
+            "became calmer",
+        )
+    )
+
+
+def sanitize_daily_record_draft_wording(text: str, *, source_text: str = "") -> str:
+    """Remove unsupported emotional interpretation from routine daily record drafts."""
+    if not is_daily_record_draft_mode(source_text):
+        return str(text or "")
+    result = str(text or "")
+    if not _source_supports_comparative_calm(source_text):
+        result = re.sub(r"\bappeared calmer\b", "appeared calm", result, flags=re.I)
+    source_lower = str(source_text or "").lower()
+    if "enjoy" not in source_lower and "enjoyment" not in source_lower:
+        result = re.sub(r"\bexpressed enjoyment\b[^.!?]*[.!?]?", "", result, flags=re.I)
+    return re.sub(r"\n{3,}", "\n\n", result).strip()
+
+
+def strip_daily_record_draft_forbidden_sections(text: str, *, source_text: str = "") -> str:
+    """Remove essay sections from simple daily record drafts unless explicitly requested."""
+    if not is_daily_record_draft_mode(source_text):
+        return str(text or "")
+    result = strip_what_this_means_in_practice(text, source_text=source_text)
+    result = re.sub(
+        r"^#{0,3}\s*Follow-up prompts\s*$[\s\S]*?(?=\n#{1,3}\s|\Z)",
+        "",
+        result,
+        flags=re.I | re.M,
+    )
+    result = re.sub(
+        r"^#{0,3}\s*Manager Review\s*$[\s\S]*?(?=\n#{1,3}\s|\Z)",
+        "",
+        result,
+        flags=re.I | re.M,
+    )
+    return re.sub(r"\n{3,}", "\n\n", result).strip()
+
+
 def looks_like_form_style_daily_record(text: str) -> bool:
     """Detect over-templated daily record forms with bracket placeholders."""
     value = str(text or "")
@@ -882,12 +980,13 @@ def strip_form_style_daily_record_lines(text: str, *, source_text: str = "") -> 
         return str(text or "")
     lines = str(text or "").splitlines()
     drop_patterns = (
-        re.compile(r"^Daily Record:\s*\[Date\]", re.I),
-        re.compile(r"^Young Person:\s*\[", re.I),
-        re.compile(r"^(?:staff|Staff)\s+present:\s*\[", re.I),
+        re.compile(r"^Daily Record:\s*", re.I),
+        re.compile(r"^Young Person:\s*", re.I),
+        re.compile(r"^(?:staff|Staff)\s+present:\s*", re.I),
         re.compile(r"^Manager Review:", re.I),
         re.compile(r"^#{1,3}\s*Manager Review", re.I),
-        re.compile(r"^#{1,3}\s*Daily Record:\s*\[", re.I),
+        re.compile(r"^#{1,3}\s*Follow-up prompts", re.I),
+        re.compile(r".*\[Insert\s+", re.I),
     )
     kept: list[str] = []
     for line in lines:
@@ -948,13 +1047,15 @@ def reshape_routine_daily_record_chat_answer(text: str, *, source_text: str = ""
     if not prompt_contains_daily_recording_facts(source_text):
         return str(text or "")
 
-    was_form_like = looks_like_form_style_daily_record(text) or _placeholder_heavy_for_chat(text)
+    if looks_like_daily_record_draft_violation(text):
+        return build_simple_daily_record_draft(source_text)
+
     cleaned = strip_form_style_daily_record_lines(text, source_text=source_text)
-    cleaned = strip_what_this_means_in_practice(cleaned, source_text=source_text)
+    cleaned = strip_daily_record_draft_forbidden_sections(cleaned, source_text=source_text)
+    cleaned = sanitize_daily_record_draft_wording(cleaned, source_text=source_text)
+
     if (
-        was_form_like
-        or looks_like_form_style_daily_record(cleaned)
-        or _placeholder_heavy_for_chat(cleaned)
+        looks_like_daily_record_draft_violation(cleaned)
         or (len(cleaned.split()) < 25 and prompt_contains_daily_recording_facts(source_text))
     ):
         cleaned = build_simple_daily_record_draft(source_text)
@@ -963,7 +1064,7 @@ def reshape_routine_daily_record_chat_answer(text: str, *, source_text: str = ""
     elif (
         "before saving" not in cleaned.lower()
         and prompt_contains_daily_recording_facts(source_text)
-        and not looks_like_form_style_daily_record(cleaned)
+        and not looks_like_daily_record_draft_violation(cleaned)
         and len(cleaned.split()) >= 20
     ):
         cleaned = f"{cleaned.rstrip()}\n\n{_ROUTINE_DAILY_BEFORE_SAVING_LIST}"
@@ -974,7 +1075,7 @@ def strip_default_chat_placeholders(text: str, *, source_text: str = "") -> str:
     """Replace default bracket placeholders in normal chat unless a blank template was requested."""
     if user_requested_blank_template(source_text):
         return str(text or "")
-    return replace_clunky_placeholders(str(text or ""))
+    return replace_clunky_placeholders(str(text or ""), source_text=source_text)
 
 
 def strip_self_harm_generic_fillers(text: str, *, source_text: str = "") -> str:
@@ -982,6 +1083,8 @@ def strip_self_harm_generic_fillers(text: str, *, source_text: str = "") -> str:
     if not _SELF_HARM_CUE_RE.search(str(source_text or "")):
         return str(text or "")
     result = str(text or "").rstrip()
+    for pattern in _SELF_HARM_GENERIC_OPENING_RES:
+        result = pattern.sub("", result).lstrip()
     for pattern in _SELF_HARM_GENERIC_FILLER_RES:
         result = pattern.sub("", result).rstrip()
     return re.sub(r"\n{3,}", "\n\n", result).strip()
@@ -996,7 +1099,7 @@ def sanitize_residential_answer_polish(text: str, *, source_text: str = "") -> s
     cleaned = strip_indicare_product_boilerplate(cleaned, source_text=source_text)
     cleaned = sanitize_childrens_home_terminology(cleaned, source_text=source_text)
     cleaned = sanitize_medication_error_wording(cleaned, source_text=source_text)
-    cleaned = replace_clunky_placeholders(cleaned)
+    cleaned = replace_clunky_placeholders(cleaned, source_text=source_text)
     cleaned = fix_broken_adult_heading_wording(cleaned)
     cleaned = strip_disproportionate_safety_opening(cleaned, source_text=source_text)
     cleaned = strip_generic_residential_endings(cleaned)
@@ -1663,7 +1766,7 @@ def sanitize_live_record_output(text: str, *, source_text: str = "") -> str:
     # 2. safeguarding/proportionality stripping
     cleaned = sanitize_childrens_home_terminology(cleaned, source_text=source_text)
     cleaned = strip_disproportionate_safety_opening(cleaned, source_text=source_text)
-    cleaned = replace_clunky_placeholders(cleaned)
+    cleaned = replace_clunky_placeholders(cleaned, source_text=source_text)
     if is_daily_record_request(source_text) and not has_safeguarding_cue(source_text):
         cleaned = strip_unnecessary_daily_record_sections(cleaned, source_text=source_text)
 
@@ -1716,6 +1819,8 @@ def sanitize_visible_final_answer(text: str, *, source_text: str = "") -> str:
         cleaned = strip_default_chat_placeholders(cleaned, source_text=source_text)
     if is_daily_record_request(source_text):
         cleaned = reshape_routine_daily_record_chat_answer(cleaned, source_text=source_text)
+        if is_daily_record_draft_mode(source_text):
+            cleaned = sanitize_daily_record_draft_wording(cleaned, source_text=source_text)
     if _SELF_HARM_CUE_RE.search(str(source_text or "")):
         cleaned = strip_self_harm_generic_fillers(cleaned, source_text=source_text)
     cleaned = fix_broken_adult_heading_wording(cleaned)
@@ -1727,8 +1832,11 @@ def is_daily_record_request(text: str) -> bool:
     if _DAILY_RECORD_REQUEST.search(text or ""):
         return True
     if "daily record" in lowered and any(
-        verb in lowered for verb in ("create", "write", "draft", "from the following", "rough notes")
+        verb in lowered
+        for verb in ("create", "write", "draft", "from the following", "rough notes", "turn", "make")
     ):
+        return True
+    if "child-centred" in lowered and "record" in lowered:
         return True
     return False
 

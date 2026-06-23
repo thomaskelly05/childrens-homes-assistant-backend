@@ -10,7 +10,12 @@ from services.orb_final_answer_contract_validator_service import validate_final_
 from services.orb_placeholder_quality_guard_service import sanitize_placeholders_in_answer
 from services.orb_execution_policy_service import MISSING_RETURN_SUBSTANCE_DETERMINISTIC_ANSWER
 from services.orb_mandatory_response_contract_service import find_inappropriate_lado_reference
-from assistant.knowledge.adult_identity_language import sanitize_visible_final_answer
+from assistant.knowledge.adult_identity_language import (
+    build_simple_daily_record_draft,
+    is_daily_record_draft_mode,
+    looks_like_daily_record_draft_violation,
+    sanitize_visible_final_answer,
+)
 from assistant.knowledge.residential_safeguarding_terminology import (
     find_inappropriate_dsl_reference,
     find_inappropriate_medication_error_reference,
@@ -221,6 +226,12 @@ def apply_deterministic_repairs(
                 **repair_meta,
                 "repair_reason": "communicate_support_pack",
             }
+    if contract_family == "daily_record" and is_daily_record_draft_mode(message):
+        if looks_like_daily_record_draft_violation(cleaned):
+            return build_simple_daily_record_draft(message), {
+                **repair_meta,
+                "repair_reason": "daily_record_draft",
+            }
     return cleaned, repair_meta
 
 
@@ -381,13 +392,16 @@ Trauma-informed support offered. Chronology and risk plan to be updated.
     "suicidal_self_harm": """
 Self-harm / suicidal ideation — immediate actions
 
+Treat this as an immediate safeguarding and wellbeing concern. Stay with the young person if there is any current risk, keep the environment safe, and inform the manager/on-call without delay.
+
 Immediate safety:
-Do not leave alone while immediate risk remains. Blade removed safely where possible.
+Do not leave alone while immediate risk remains. Remove or secure any means of harm where possible without escalating risk.
 
 Direct safety questions asked. Crisis route considered if risk escalates.
 
-Manager / on-call notified. Risk and safety plan to be updated.
+Manager / on-call notified. Follow the home's self-harm / safeguarding procedure.
 Exact words and actions recorded.
+Call 999 or urgent health support if there is immediate danger.
 """.strip(),
     "parent_removal_conflict": """
 Parent demanding removal — immediate actions

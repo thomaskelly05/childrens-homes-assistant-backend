@@ -25,6 +25,7 @@ from assistant.knowledge.adult_identity_language import (
     TIMELINE_DISCIPLINE_PRINCIPLE,
     TRAILING_MARKDOWN_DISCIPLINE_PRINCIPLE,
     build_adult_identity_prompt_block,
+    is_daily_record_draft_mode,
     is_daily_record_request,
     is_self_commentary_paragraph,
     sanitize_live_record_output,
@@ -587,6 +588,21 @@ def build_therapeutic_language_contract_block(
         "   • Assumed emotional states (frustrated, angry, upset) unless stated by the adult",
         "   • Stating 'became emotionally dysregulated' as fact without observable support",
     ]
+    if is_daily_record_draft_mode(prompt_text):
+        lines.extend(
+            [
+                "",
+                "ROUTINE DAILY RECORD DRAFT MODE (user supplied shift facts — not a blank template):",
+                "   • Return a short finished narrative draft paragraph using only the facts provided.",
+                "   • Then add a brief 'Before saving, add:' checklist (time, who was present, child's words, follow-up).",
+                "   • Do NOT output form field headings (Daily Record:, Young Person:, Staff present:, Manager Review).",
+                "   • Do NOT use bracket placeholders or [Insert...] fields.",
+                "   • Do NOT include 'What this means in practice', 'Follow-up prompts' or Manager Review unless safeguarding requires it.",
+                "   • Use 'appeared calm' not 'appeared calmer' unless the user stated a comparison.",
+                "   • Do not add 'expressed enjoyment' or similar emotional interpretation unless the user provided those words.",
+                "   • Prefer 'staff' / 'staff responded' in chat drafts — not 'the adult interactions'.",
+            ]
+        )
     if include_headings:
         heading_source = (
             DAILY_RECORD_PREFERRED_HEADINGS

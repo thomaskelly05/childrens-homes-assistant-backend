@@ -5,10 +5,12 @@
 
 import {
   fixBrokenAdultHeadingWording,
+  isDailyRecordDraftMode,
   isDailyRecordRequest,
   promptContainsDailyRecordingFacts,
   replaceClunkyPlaceholders,
   reshapeRoutineDailyRecordChatAnswer,
+  sanitizeDailyRecordDraftWording,
   stripSelfHarmGenericFillers,
   userRequestedBlankTemplate
 } from './recording/orb-adult-identity-language.ts'
@@ -20,15 +22,18 @@ export function sanitizeVisibleFinalAnswer(text: string, sourceText = ''): strin
   let cleaned = String(text || '')
   if (!cleaned.trim()) return cleaned
 
-  cleaned = replaceClunkyPlaceholders(cleaned)
+  cleaned = replaceClunkyPlaceholders(cleaned, sourceText)
   cleaned = fixBrokenAdultHeadingWording(cleaned)
 
   if (!userRequestedBlankTemplate(sourceText)) {
-    cleaned = replaceClunkyPlaceholders(cleaned)
+    cleaned = replaceClunkyPlaceholders(cleaned, sourceText)
   }
 
   if (isDailyRecordRequest(sourceText)) {
     cleaned = reshapeRoutineDailyRecordChatAnswer(cleaned, sourceText)
+    if (isDailyRecordDraftMode(sourceText)) {
+      cleaned = sanitizeDailyRecordDraftWording(cleaned, sourceText)
+    }
   }
 
   if (SELF_HARM_CUE_RE.test(sourceText || '')) {
@@ -43,7 +48,7 @@ export function sanitizeStreamingVisiblePartial(text: string, sourceText = ''): 
   let cleaned = String(text || '')
   if (!cleaned.trim()) return cleaned
   if (!userRequestedBlankTemplate(sourceText)) {
-    cleaned = replaceClunkyPlaceholders(cleaned)
+    cleaned = replaceClunkyPlaceholders(cleaned, sourceText)
   }
   cleaned = fixBrokenAdultHeadingWording(cleaned)
   return cleaned
