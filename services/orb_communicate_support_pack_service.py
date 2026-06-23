@@ -35,6 +35,13 @@ CommunicateIntent = Literal[
     "general",
 ]
 
+COMMUNICATE_SUPPORT_PACK_REQUEST_RE = re.compile(
+    r"(?:create|build|make|generate|prepare|draft).{0,50}communication\s+support\s+pack|"
+    r"communication\s+support\s+pack.{0,120}(?:explain|contact|autism|aac|changed)|"
+    r"support\s+pack.{0,60}(?:explain|contact\s+has\s+changed|autism|aac)",
+    re.I,
+)
+
 LEADING_QUESTION_PATTERNS: tuple[re.Pattern[str], ...] = (
     re.compile(r"\bwhy did you\b", re.I),
     re.compile(r"\bwhy do you\b", re.I),
@@ -632,6 +639,80 @@ class OrbCommunicateSupportPackService:
             "standalone_boundary": True,
             "service": self.VERSION,
         }
+
+    def is_communicate_support_pack_request(self, message: str) -> bool:
+        return bool(COMMUNICATE_SUPPORT_PACK_REQUEST_RE.search(str(message or "")))
+
+    def parse_support_pack_request_from_message(self, message: str) -> SupportPackRequest:
+        text = str(message or "").strip()
+        lower = text.lower()
+        audience: CommunicateAudience = "autism" if re.search(r"\bautis", lower) else "young_person"
+        communication_needs = None
+        if re.search(r"\bautis", lower):
+            communication_needs = "autism — predictable structure, processing time, reduced sensory load"
+        elif re.search(r"\b(?:aac|symbol|widget|non[\s-]?verbal|gesture)\b", lower):
+            communication_needs = "AAC/symbols/gestures — check understanding without leading questions"
+        return SupportPackRequest(
+            situation=text,
+            person_context=communication_needs,
+            communication_needs=communication_needs,
+            audience=audience,
+            pack_goal="Explain clearly using accessible communication support",
+        )
+
+    def build_support_pack_from_message(self, message: str) -> SupportPackOutput:
+        return self.build_support_pack(self.parse_support_pack_request_from_message(message))
+
+    def format_support_pack_for_chat(self, output: SupportPackOutput) -> str:
+        visual_lines = []
+        for card in output.visual_card_suggestions[:8]:
+            label = str(card.get("label") or card.get("plain_language") or "Card")
+            plain = str(card.get("plain_language") or label)
+            visual_lines.append(f"- **{label}** — {plain}")
+
+        reflect_lines = [f"- {prompt}" for prompt in output.reflect_and_record_prompts[:6]]
+        boundary_lines = [f"- {item}" for item in output.safety_boundaries[:6]]
+        chip_labels = [
+            str(chip.get("label") or chip) if isinstance(chip, dict) else str(chip)
+            for chip in output.source_chips
+        ]
+
+        sections = [
+            "## Easy-read explanation",
+            output.easy_read_explanation.strip(),
+            "",
+            "## Visual card suggestions",
+            *(visual_lines or ["- [Add personalised visual cards before use]"]),
+            "",
+            "## Staff delivery guidance",
+            output.staff_delivery_guidance.strip(),
+        ]
+        if output.regulation_support.strip():
+            sections.extend(["", "## Regulation support", output.regulation_support.strip()])
+        if output.safeguarding_reminders_if_relevant:
+            sections.extend(
+                [
+                    "",
+                    "## Safeguarding reminders (if relevant)",
+                    *[f"- {item}" for item in output.safeguarding_reminders_if_relevant[:4]],
+                ]
+            )
+        sections.extend(
+            [
+                "",
+                "## Reflect and record prompts",
+                *reflect_lines,
+                "",
+                "## Reflective record starter",
+                output.reflective_record_starter.strip(),
+                "",
+                "## Safety boundaries",
+                *boundary_lines,
+            ]
+        )
+        if chip_labels:
+            sections.extend(["", "## Source basis", ", ".join(chip_labels[:8])])
+        return "\n".join(sections).strip()
 
 
 orb_communicate_support_pack_service = OrbCommunicateSupportPackService()

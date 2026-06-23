@@ -79,6 +79,9 @@ def sanitize_placeholders_in_answer(answer: str) -> tuple[str, list[str]]:
     issues: list[str] = []
     cleaned = strip_generic_intros(answer)
     cleaned, placeholder_issues = clean_placeholders(cleaned)
+    from assistant.knowledge.adult_identity_language import replace_clunky_placeholders
+
+    cleaned = replace_clunky_placeholders(cleaned)
     issues.extend(placeholder_issues)
     cleaned = re.sub(r"\n{3,}", "\n\n", cleaned).strip()
     return cleaned, issues

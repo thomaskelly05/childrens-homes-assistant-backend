@@ -57,6 +57,21 @@ _SCENARIO_OPENINGS: list[tuple[Pattern[str], str]] = [
         "First, check immediate physical safety and whether medical help is needed.",
     ),
     (
+        re.compile(
+            r"(?:create|build|make|generate|prepare).{0,40}communication\s+support\s+pack|"
+            r"communication\s+support\s+pack",
+            re.I,
+        ),
+        "I'll build a Communication Support Pack with easy-read explanation, visual cards, staff delivery guidance and recording prompts.",
+    ),
+    (
+        re.compile(
+            r"(?:refused\s+breakfast|difficult\s+morning|routine\s+refusal|daily\s+record|quiet\s+evening)",
+            re.I,
+        ),
+        "I'll help you record this proportionately — what happened, staff response, child voice and outcome.",
+    ),
+    (
         re.compile(r"\brestraint\b|physical intervention|hold\b", re.I),
         "First, check everyone is safe and record why the intervention was necessary and proportionate.",
     ),

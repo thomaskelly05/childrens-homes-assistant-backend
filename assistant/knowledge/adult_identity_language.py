@@ -519,6 +519,44 @@ _DSL_DEFAULT_REPLACEMENTS: tuple[tuple[re.Pattern[str], str], ...] = (
     (re.compile(r"\bDSL\b"), "manager"),
 )
 
+_LOW_RISK_DAILY_RECORDING_RE = re.compile(
+    r"\b(?:refused\s+breakfast|difficult\s+morning|routine\s+refusal|refused\s+food|quiet\s+evening|"
+    r"calm\s+breakfast|settled\s+shift|played\s+football|early\s+night|chose\s+toast)\b",
+    re.I,
+)
+
+_DISPROPORTIONATE_SAFETY_OPENING_RES: tuple[re.Pattern[str], ...] = (
+    re.compile(
+        r"^(?:#+\s*)?(?:Immediate\s+)?Safety(?:\s+first)?\s*\n+"
+        r"(?:First,\s+)?check\s+(?:everyone|everyone\s+nearby)\s+(?:is|are)\s+safe\.?\s*\n*",
+        re.I | re.M,
+    ),
+    re.compile(
+        r"^First,\s+check\s+(?:the\s+young\s+person|child\s+[A-Za-z]|\[[^\]]+\])\s+and\s+everyone\s+nearby\s+are\s+safe\.?\s*\n*",
+        re.I | re.M,
+    ),
+    re.compile(r"^First,\s+check\s+everyone\s+(?:is|are)\s+safe\.?\s*\n*", re.I | re.M),
+    re.compile(r"^Check\s+everyone\s+(?:is|are)\s+safe(?:\s+now)?\.?\s*\n*", re.I | re.M),
+)
+
+_CLUNKY_PLACEHOLDER_REPLACEMENTS: tuple[tuple[re.Pattern[str], str], ...] = (
+    (re.compile(r"\[Young Person'?s Name\]", re.I), "the young person"),
+    (re.compile(r"\[Staff Names?\]", re.I), "staff"),
+    (re.compile(r"\[Direct quote if available\]", re.I), "record the young person's exact words where known"),
+    (re.compile(r"\[Child'?s words not stated\]", re.I), "record the young person's exact words where known"),
+)
+
+_GENERIC_RESIDENTIAL_ENDING_RES: tuple[re.Pattern[str], ...] = (
+    re.compile(r"\bBy following these guidelines[^.!?]*[.!?]", re.I),
+    re.compile(r"\bThis approach ensures[^.!?]*[.!?]", re.I),
+    re.compile(r"\bcomprehensive account[^.!?]*[.!?]", re.I),
+)
+
+_RESIDENTIAL_PREFERRED_CLOSER = (
+    "This helps the record show what happened, how the child was supported, "
+    "and what needs to happen next."
+)
+
 _UNNECESSARY_DAILY_SECTION_HEADINGS: tuple[re.Pattern[str], ...] = (
     re.compile(r"^(?:#+\s*)?Safeguarding\s+Note\s*:?\s*$", re.I | re.M),
     re.compile(r"^(?:#+\s*)?Child(?:'s|\s)Voice(?:\s*/\s*Presentation)?\s*:?\s*$", re.I | re.M),
@@ -582,6 +620,52 @@ def resolve_adult_reference(*, initials: list[str], index: int = 0, plural: bool
 def user_provided_dsl_term(text: str) -> bool:
     """True when the user explicitly included DSL or Designated Safeguarding Lead."""
     return bool(_DSL_USER_PROVIDED_RE.search(str(text or "")))
+
+
+def is_low_risk_daily_recording(text: str) -> bool:
+    """Routine daily recording prompts without safeguarding risk indicators."""
+    source = str(text or "")
+    return bool(_LOW_RISK_DAILY_RECORDING_RE.search(source)) and not has_safeguarding_cue(source)
+
+
+def replace_clunky_placeholders(text: str) -> str:
+    """Prefer natural residential wording over bracketed name/quote placeholders."""
+    result = str(text or "")
+    for pattern, replacement in _CLUNKY_PLACEHOLDER_REPLACEMENTS:
+        result = pattern.sub(replacement, result)
+    return result
+
+
+def strip_disproportionate_safety_opening(text: str, *, source_text: str = "") -> str:
+    """Remove emergency safety-first openers from low-risk daily recording answers."""
+    if has_safeguarding_cue(source_text):
+        return str(text or "")
+    if not (is_low_risk_daily_recording(source_text) or is_daily_record_request(source_text)):
+        return str(text or "")
+    result = str(text or "")
+    for pattern in _DISPROPORTIONATE_SAFETY_OPENING_RES:
+        result = pattern.sub("", result)
+    return result.lstrip()
+
+
+def strip_generic_residential_endings(text: str) -> str:
+    """Remove overused generic essay endings from residential recording guidance."""
+    result = str(text or "").rstrip()
+    for pattern in _GENERIC_RESIDENTIAL_ENDING_RES:
+        result = pattern.sub("", result).rstrip()
+    return result
+
+
+def sanitize_residential_answer_polish(text: str, *, source_text: str = "") -> str:
+    """Apply live RM polish: terminology, medication-error guard, placeholders, proportionality."""
+    from assistant.knowledge.residential_safeguarding_terminology import sanitize_medication_error_wording
+
+    cleaned = sanitize_childrens_home_terminology(text, source_text=source_text)
+    cleaned = sanitize_medication_error_wording(cleaned, source_text=source_text)
+    cleaned = replace_clunky_placeholders(cleaned)
+    cleaned = strip_disproportionate_safety_opening(cleaned, source_text=source_text)
+    cleaned = strip_generic_residential_endings(cleaned)
+    return re.sub(r"\n{3,}", "\n\n", cleaned).strip()
 
 
 def has_safeguarding_cue(text: str) -> bool:
@@ -1224,6 +1308,8 @@ def sanitize_live_record_output(text: str, *, source_text: str = "") -> str:
 
     # 2. safeguarding/proportionality stripping
     cleaned = sanitize_childrens_home_terminology(cleaned, source_text=source_text)
+    cleaned = strip_disproportionate_safety_opening(cleaned, source_text=source_text)
+    cleaned = replace_clunky_placeholders(cleaned)
     if is_daily_record_request(source_text) and not has_safeguarding_cue(source_text):
         cleaned = strip_unnecessary_daily_record_sections(cleaned, source_text=source_text)
 
