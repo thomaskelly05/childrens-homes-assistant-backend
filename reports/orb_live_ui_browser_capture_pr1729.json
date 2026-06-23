@@ -1,0 +1,253 @@
+{
+  "environment": "thomaskelly05/childrens-homes-assistant-backend",
+  "commit": "a6e33cc5",
+  "pr": "#1729",
+  "frontend": "http://127.0.0.1:3001",
+  "communicate_hidden_from_nav": true,
+  "openai_configured": false,
+  "ai_provider_strict": true,
+  "orb_live_sign_off": true,
+  "prompts": [
+    {
+      "category_id": "daily_recording",
+      "label": "Daily recording",
+      "message": "Help me write a daily record — calm breakfast, chose toast, watched TV before handover.",
+      "verdict": "concern",
+      "concerns": [
+        "first_visible_ms=904 (>500ms target)",
+        "missing first_visible_assistant_ms telemetry"
+      ],
+      "failures": [],
+      "first_visible_ms": 904,
+      "instant_line_visible_ms": null,
+      "first_token_ms": null,
+      "send_to_first_visible_assistant_ms": null,
+      "answer_chars": 1405,
+      "instant_prelude_text": "I'm treating this as a daily recording question. Start with what happened, what the young person said or showed, how staff responded, and what happened next.",
+      "answer_preview": "I'm treating this as a daily recording question Start with what happened, what the young person said or showed, how The adult responded, and what happened next\n\nIndiCare is a residential children's homes operating system and intelligence platform built to support The adult and managers in registered homes\n\nIt is designed around care recording, safeguarding, Ofsted and SCCIF readiness, Quality Standards, governance, workforce support and reflective practice The aim is to simplify recording and ov",
+      "instant_preserved": true,
+      "source_chips_visible": 0,
+      "safeguarding_banner_visible": false,
+      "screenshot": "reports/orb_live_ui_screenshots_pr1729/daily_recording.png",
+      "timing_snapshot": {
+        "raw": "[orb-timing] request_end {sendGeneration: 1, frontend_request_started_at: 1782251164538, frontend_request_completed_at: 1782251165096, frontend_elapsed_ms: 558, route: /orb/standalone/conversation/stream}"
+      }
+    },
+    {
+      "category_id": "missing_from_care",
+      "label": "Missing from care",
+      "message": "A young person is missing from care right now. What should staff do?",
+      "verdict": "concern",
+      "concerns": [
+        "missing first_visible_assistant_ms telemetry"
+      ],
+      "failures": [],
+      "first_visible_ms": 194,
+      "instant_line_visible_ms": null,
+      "first_token_ms": null,
+      "send_to_first_visible_assistant_ms": null,
+      "answer_chars": 861,
+      "instant_prelude_text": "This looks like a missing-from-care concern. Follow the home's missing procedure, inform the manager/on-call, and record times, actions and decisions clearly.",
+      "answer_preview": "Missing return — immediate actions on shift:\n\nImmediate welfare check\n\nCalm welcome back — check injuries, distress, intoxication, hunger, fatigue and immediate medical need\nDo not accuse or shame\n\nMissing procedure\n\nFollow local missing procedure\nUpdate police if the missing episode was still active\nNotify manager/on-call\nNotify social worker/placing authority; EDT if out of hours\n\nHealth and safety\n\nConsider health advice — 111 or 999 if unwell or intoxicated\n\nContextual safeguarding\n\nRemain c",
+      "instant_preserved": false,
+      "source_chips_visible": 0,
+      "safeguarding_banner_visible": true,
+      "screenshot": "reports/orb_live_ui_screenshots_pr1729/missing_from_care.png",
+      "timing_snapshot": {
+        "raw": "[orb-timing] request_end {sendGeneration: 2, frontend_request_started_at: 1782251168105, frontend_request_completed_at: 1782251168417, frontend_elapsed_ms: 312, route: /orb/standalone/conversation/stream}"
+      }
+    },
+    {
+      "category_id": "allegations_lado",
+      "label": "Allegation / LADO",
+      "message": "A young person alleged a member of staff grabbed them.",
+      "verdict": "concern",
+      "concerns": [
+        "missing first_visible_assistant_ms telemetry"
+      ],
+      "failures": [],
+      "first_visible_ms": 208,
+      "instant_line_visible_ms": null,
+      "first_token_ms": null,
+      "send_to_first_visible_assistant_ms": null,
+      "answer_chars": 1016,
+      "instant_prelude_text": "This looks like an allegation involving staff. Make sure the young person is safe, preserve their exact words, inform the manager/on-call, and follow the LADO/local allegations route.",
+      "answer_preview": "IndiCare is a residential children's homes operating system and intelligence platform built to support staff and managers in registered homes.\n\nIt is designed around care recording, safeguarding, Ofsted and SCCIF readiness, Quality Standards, governance, workforce support and reflective practice. The aim is to simplify recording and oversight while making records more child-centred, evidence-led and easier to review.\n\nKey areas include Care Hub (command centre), Record, Young People, Chronology,",
+      "instant_preserved": false,
+      "source_chips_visible": 0,
+      "safeguarding_banner_visible": false,
+      "screenshot": "reports/orb_live_ui_screenshots_pr1729/allegations_lado.png",
+      "timing_snapshot": {
+        "raw": "[orb-timing] request_end {sendGeneration: 3, frontend_request_started_at: 1782251170904, frontend_request_completed_at: 1782251171281, frontend_elapsed_ms: 377, route: /orb/standalone/conversation/stream}"
+      }
+    },
+    {
+      "category_id": "self_harm_suicide",
+      "label": "Self-harm",
+      "message": "Young person disclosed self-harm and said they want to die.",
+      "verdict": "concern",
+      "concerns": [
+        "missing first_visible_assistant_ms telemetry"
+      ],
+      "failures": [],
+      "first_visible_ms": 226,
+      "instant_line_visible_ms": null,
+      "first_token_ms": null,
+      "send_to_first_visible_assistant_ms": null,
+      "answer_chars": 1251,
+      "instant_prelude_text": "This may involve immediate safety. Stay with the young person if there is concern, inform the manager/on-call, and follow the home's safeguarding and self-harm procedure.",
+      "answer_preview": "IndiCare is a residential children's homes operating system and intelligence platform built to support staff and managers in registered homes.\n\nIt is designed around care recording, safeguarding, Ofsted and SCCIF readiness, Quality Standards, governance, workforce support and reflective practice. The aim is to simplify recording and oversight while making records more child-centred, evidence-led and easier to review.\n\nKey areas include Care Hub (command centre), Record, Young People, Chronology,",
+      "instant_preserved": false,
+      "source_chips_visible": 0,
+      "safeguarding_banner_visible": true,
+      "screenshot": "reports/orb_live_ui_screenshots_pr1729/self_harm_suicide.png",
+      "timing_snapshot": {
+        "raw": "[orb-timing] request_end {sendGeneration: 4, frontend_request_started_at: 1782251173714, frontend_request_completed_at: 1782251174082, frontend_elapsed_ms: 368, route: /orb/standalone/conversation/stream}"
+      }
+    },
+    {
+      "category_id": "medication_refusal_support",
+      "label": "Medication refusal",
+      "message": "A young person refused medication. What should we consider?",
+      "verdict": "concern",
+      "concerns": [
+        "missing first_visible_assistant_ms telemetry"
+      ],
+      "failures": [],
+      "first_visible_ms": 227,
+      "instant_line_visible_ms": null,
+      "first_token_ms": null,
+      "send_to_first_visible_assistant_ms": null,
+      "answer_chars": 1251,
+      "instant_prelude_text": "I'm treating this as a medication refusal. Record the refusal on the MAR, follow the home's medication policy, and seek health advice where risk is present.",
+      "answer_preview": "IndiCare is a residential children's homes operating system and intelligence platform built to support staff and managers in registered homes.\n\nIt is designed around care recording, safeguarding, Ofsted and SCCIF readiness, Quality Standards, governance, workforce support and reflective practice. The aim is to simplify recording and oversight while making records more child-centred, evidence-led and easier to review.\n\nKey areas include Care Hub (command centre), Record, Young People, Chronology,",
+      "instant_preserved": false,
+      "source_chips_visible": 0,
+      "safeguarding_banner_visible": false,
+      "screenshot": "reports/orb_live_ui_screenshots_pr1729/medication_refusal_support.png",
+      "timing_snapshot": {
+        "raw": "[orb-timing] request_end {sendGeneration: 5, frontend_request_started_at: 1782251176568, frontend_request_completed_at: 1782251176932, frontend_elapsed_ms: 364, route: /orb/standalone/conversation/stream}"
+      }
+    },
+    {
+      "category_id": "orb_communicate",
+      "label": "ORB Communicate",
+      "message": "Create a communication support pack for a hospital visit tomorrow.",
+      "verdict": "concern",
+      "concerns": [
+        "missing first_visible_assistant_ms telemetry"
+      ],
+      "failures": [],
+      "first_visible_ms": 262,
+      "instant_line_visible_ms": null,
+      "first_token_ms": null,
+      "send_to_first_visible_assistant_ms": null,
+      "answer_chars": 3341,
+      "instant_prelude_text": "I'm treating this as a communication support request. I'll create clear language, visual card suggestions, staff guidance and reflect-and-record prompts.",
+      "answer_preview": "Easy-read explanation\n\nWhat is happening This easy-read is about the hospital visit or appointment. The young person needs to understand: Create a communication support pack for a hospital visit tomorrow..\n\nWhy it is happening Adults want everyone to understand what is happening. This matters because it affects the young person and the people who support them.\n\nWhat happens next A trusted adult will explain step by step. There will be time to ask questions, use communication support or take a br",
+      "instant_preserved": false,
+      "source_chips_visible": 0,
+      "safeguarding_banner_visible": false,
+      "screenshot": "reports/orb_live_ui_screenshots_pr1729/orb_communicate.png",
+      "timing_snapshot": {
+        "raw": "[orb-timing] request_end {sendGeneration: 6, frontend_request_started_at: 1782251179411, frontend_request_completed_at: 1782251179717, frontend_elapsed_ms: 306, route: /orb/standalone/conversation/stream}"
+      }
+    },
+    {
+      "category_id": "regulation_45",
+      "label": "Reg 45",
+      "message": "What should a Reg 45 review cover this quarter?",
+      "verdict": "concern",
+      "concerns": [
+        "missing first_visible_assistant_ms telemetry"
+      ],
+      "failures": [],
+      "first_visible_ms": 298,
+      "instant_line_visible_ms": null,
+      "first_token_ms": null,
+      "send_to_first_visible_assistant_ms": null,
+      "answer_chars": 1272,
+      "instant_prelude_text": "I'm treating this as Regulation 45 quality of care reporting. Structure themes, child experience findings, actions and RI reporting.",
+      "answer_preview": "IndiCare is a residential children's homes operating system and intelligence platform built to support staff and managers in registered homes.\n\nIt is designed around care recording, safeguarding, Ofsted and SCCIF readiness, Quality Standards, governance, workforce support and reflective practice. The aim is to simplify recording and oversight while making records more child-centred, evidence-led and easier to review.\n\nKey areas include Care Hub (command centre), Record, Young People, Chronology,",
+      "instant_preserved": false,
+      "source_chips_visible": 0,
+      "safeguarding_banner_visible": false,
+      "screenshot": "reports/orb_live_ui_screenshots_pr1729/regulation_45.png",
+      "timing_snapshot": {
+        "raw": "[orb-timing] request_end {sendGeneration: 7, frontend_request_started_at: 1782251182356, frontend_request_completed_at: 1782251182718, frontend_elapsed_ms: 362, route: /orb/standalone/conversation/stream}"
+      }
+    },
+    {
+      "category_id": "aac_child_voice",
+      "label": "Child voice / AAC",
+      "message": "How can I evidence a young person's voice when they communicate mainly through gestures and symbols?",
+      "verdict": "concern",
+      "concerns": [
+        "missing first_visible_assistant_ms telemetry"
+      ],
+      "failures": [],
+      "first_visible_ms": 308,
+      "instant_line_visible_ms": null,
+      "first_token_ms": null,
+      "send_to_first_visible_assistant_ms": null,
+      "answer_chars": 1016,
+      "instant_prelude_text": "I'm treating this as AAC / symbols / gestures child voice evidence. Record what was observed, how the young person communicated, and do not invent direct quotes.",
+      "answer_preview": "IndiCare is a residential children's homes operating system and intelligence platform built to support staff and managers in registered homes.\n\nIt is designed around care recording, safeguarding, Ofsted and SCCIF readiness, Quality Standards, governance, workforce support and reflective practice. The aim is to simplify recording and oversight while making records more child-centred, evidence-led and easier to review.\n\nKey areas include Care Hub (command centre), Record, Young People, Chronology,",
+      "instant_preserved": false,
+      "source_chips_visible": 0,
+      "safeguarding_banner_visible": false,
+      "screenshot": "reports/orb_live_ui_screenshots_pr1729/aac_child_voice.png",
+      "timing_snapshot": {
+        "raw": "[orb-timing] request_end {sendGeneration: 8, frontend_request_started_at: 1782251185307, frontend_request_completed_at: 1782251185761, frontend_elapsed_ms: 454, route: /orb/standalone/conversation/stream}"
+      }
+    },
+    {
+      "category_id": "physical_intervention_restraint",
+      "label": "Physical intervention",
+      "message": "Help me record a physical intervention used to guide a young person away from danger.",
+      "verdict": "concern",
+      "concerns": [
+        "missing first_visible_assistant_ms telemetry"
+      ],
+      "failures": [],
+      "first_visible_ms": 318,
+      "instant_line_visible_ms": null,
+      "first_token_ms": null,
+      "send_to_first_visible_assistant_ms": null,
+      "answer_chars": 1252,
+      "instant_prelude_text": "I'm treating this as physical intervention recording. Check everyone is safe, record why intervention was necessary and proportionate, and plan the debrief.",
+      "answer_preview": "IndiCare is a residential children's homes operating system and intelligence platform built to support staff and managers in registered homes.\n\nIt is designed around care recording, safeguarding, Ofsted and SCCIF readiness, Quality Standards, governance, workforce support and reflective practice. The aim is to simplify recording and oversight while making records more child-centred, evidence-led and easier to review.\n\nKey areas include Care Hub (command centre), Record, Young People, Chronology,",
+      "instant_preserved": false,
+      "source_chips_visible": 0,
+      "safeguarding_banner_visible": false,
+      "screenshot": "reports/orb_live_ui_screenshots_pr1729/physical_intervention_restraint.png",
+      "timing_snapshot": {
+        "raw": "[orb-timing] request_end {sendGeneration: 9, frontend_request_started_at: 1782251188226, frontend_request_completed_at: 1782251188619, frontend_elapsed_ms: 393, route: /orb/standalone/conversation/stream}"
+      }
+    },
+    {
+      "category_id": "management_oversight_drift",
+      "label": "Management oversight",
+      "message": "What management oversight is needed when incident frequency is drifting up?",
+      "verdict": "concern",
+      "concerns": [
+        "missing first_visible_assistant_ms telemetry"
+      ],
+      "failures": [],
+      "first_visible_ms": 341,
+      "instant_line_visible_ms": null,
+      "first_token_ms": null,
+      "send_to_first_visible_assistant_ms": null,
+      "answer_chars": 1252,
+      "instant_prelude_text": "I'm treating this as management oversight and drift. Record patterns, actions taken, review dates, and RI oversight where needed.",
+      "answer_preview": "IndiCare is a residential children's homes operating system and intelligence platform built to support staff and managers in registered homes.\n\nIt is designed around care recording, safeguarding, Ofsted and SCCIF readiness, Quality Standards, governance, workforce support and reflective practice. The aim is to simplify recording and oversight while making records more child-centred, evidence-led and easier to review.\n\nKey areas include Care Hub (command centre), Record, Young People, Chronology,",
+      "instant_preserved": false,
+      "source_chips_visible": 0,
+      "safeguarding_banner_visible": false,
+      "screenshot": "reports/orb_live_ui_screenshots_pr1729/management_oversight_drift.png",
+      "timing_snapshot": {
+        "raw": "[orb-timing] request_end {sendGeneration: 10, frontend_request_started_at: 1782251191182, frontend_request_completed_at: 1782251191546, frontend_elapsed_ms: 364, route: /orb/standalone/conversation/stream}"
+      }
+    }
+  ]
+}
