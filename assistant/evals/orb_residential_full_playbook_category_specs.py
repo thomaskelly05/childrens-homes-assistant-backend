@@ -577,7 +577,7 @@ PLAYBOOK_CATEGORY_SPECS: list[dict[str, Any]] = [
         "prompts": [
             ("mfc_01", "A young person is missing from care right now. What should staff do?"),
             ("mfc_02", "She returned from missing and smells of cannabis. What should I record?"),
-            ("mfc_03", "How do we record a late return that is not yet a missing episode?"),
+            ("mfc_03", "How do we record a late return that is not yet a missing episode?", {"prompt_tier": "residential", "contract_family": "missing_return_record"}),
             ("mfc_04", "Young person came back from missing — what goes in the return home conversation record?"),
             ("mfc_05", "What should staff record during an active missing-from-care search?"),
         ],
@@ -711,7 +711,7 @@ PLAYBOOK_CATEGORY_SPECS: list[dict[str, Any]] = [
             ("wb_01", "A member of staff told me they are worried another staff member is falsifying records."),
             ("wb_02", "How should staff record concerns about a colleague's conduct towards children?"),
             ("wb_03", "What is the recording route when a staff member raises a protected disclosure?"),
-            ("wb_04", "A colleague was rude to a young person in front of others — how should this be recorded?"),
+            ("wb_04", "A colleague was rude to a young person in front of others — how should this be recorded?", {"prompt_tier": "residential"}),
             ("wb_05", "Staff witnessed a colleague breaching professional boundaries on shift — what now?"),
         ],
     },

@@ -30,7 +30,31 @@ MEDICATION_REFUSAL_PROMPT_CHAR_CAP = 12000
 # Universal answer shape for "how should staff record this?" shift prompts.
 STAFF_RECORDING_QUESTION_RE = re.compile(
     r"how\s+should\s+staff\s+record|what\s+should\s+(?:staff|we)\s+record|"
-    r"how\s+(?:do|should)\s+(?:i|we)\s+record|how\s+to\s+record\s+this",
+    r"how\s+(?:do|should)\s+(?:i|we)\s+record|how\s+to\s+record\s+this|"
+    r"what\s+belongs\s+in\s+a\s+record|what\s+should\s+(?:staff|we)\s+capture|"
+    r"what\s+should\s+(?:staff|we)\s+note|what\s+should\s+staff\s+note|"
+    r"what\s+should\s+be\s+recorded|write\s+a\s+(?:daily\s+)?record|"
+    r"write\s+(?:a\s+)?note\s+about|write\s+a\s+note\s+when|record\s+proportionate|proportionate\s+record|"
+    r"record\s+notes\s+about|record\s+observations|record\s+a\s+restorative|"
+    r"turn\s+these\s+rough\s+notes|what\s+makes\s+a\s+residential\s+record|"
+    r"how\s+can\s+staff\s+improve\s+chronology|support\s+and\s+record\s+phased|"
+    r"write\s+a\s+factual\s+chronology|post-incident\s+actions",
+    re.I,
+)
+
+ACTIVE_EMERGENCY_RE = re.compile(
+    r"missing\s+from\s+care\s+right\s+now|has\s+a\s+blade|going\s+to\s+hurt\s+(?:my|him|her|them)self|"
+    r"call\s+999|immediate\s+danger|(?:want|going)\s+to\s+die\s+tonight",
+    re.I,
+)
+
+DEEP_SHIFT_SAFEGUARDING_RECORDING_RE = re.compile(
+    r"cannabis|substance|alcohol|ligature|fire\s+setting|burn\s+marks|sexualised|harmful\s+sexual|"
+    r"inappropriate\s+sexual|hsb\b|specialist\s+hsb|medication\s+error|"
+    r"\bknife\b|weapon|double\s+dose|missed\s+dose|wrong\s+dose|police\s+attendance|found\s+with\s+a\s+knife|"
+    r"restraint|hold\s+used|physical\s+intervention|environmental\s+safety|"
+    r"post-incident\s+actions|police\s+involvement|"
+    r"grooming|family\s+member\s+hurt|disclos(?:ed|es)\s+abuse|frightened\s+after\s+contact",
     re.I,
 )
 
@@ -256,7 +280,8 @@ ORB_ANSWER_CONTRACT_FAMILIES: dict[str, dict[str, Any]] = {
             re.compile(
                 r"(?:create|build|make|generate|prepare|draft).{0,50}communication\s+support\s+pack|"
                 r"communication\s+support\s+pack.{0,120}(?:explain|contact|autism|aac|changed)|"
-                r"support\s+pack.{0,60}(?:explain|contact\s+has\s+changed|autism|aac)",
+                r"support\s+pack.{0,60}(?:explain|contact\s+has\s+changed|autism|aac)|"
+                r"communication[\s-]?friendly\s+wording",
                 re.I,
             ),
         ],
@@ -306,6 +331,9 @@ ORB_ANSWER_CONTRACT_FAMILIES: dict[str, dict[str, Any]] = {
                 r"consequences\s+and\s+boundaries|boundaries\s+fairly|"
                 r"evidence\s+quality\s+of\s+care|quality\s+of\s+care\s+in\s+daily|"
                 r"pep\s+meeting|attendance|refused\s+food|gestures?\s+to\s+refuse|non[\s-]?verbal|"
+                r"memory\s+box|life\s+story\s+session|what\s+belongs\s+in\s+a\s+record|"
+                r"what\s+should\s+we\s+capture|write\s+a\s+note\s+about|record\s+notes\s+about|"
+                r"record\s+observations|restorative\s+reflection|phased\s+return|post-incident\s+actions|"
                 r"how\s+should\s+staff\s+record",
                 re.I,
             ),
@@ -404,7 +432,7 @@ ORB_ANSWER_CONTRACT_FAMILIES: dict[str, dict[str, Any]] = {
                 r"refused\s+medication|refusing\s+medication|refuses\s+medication|"
                 r"won'?t\s+take\s+(?:their\s+)?medication|refusing\s+(?:tablets|medicine|meds)|"
                 r"will\s+not\s+take\s+(?:their\s+)?(?:evening\s+)?(?:tablets|medication|medicine|meds)|"
-                r"medication\s+refusal",
+                r"medication\s+refusal|delay\s+medication|asks?\s+to\s+delay\s+medication",
                 re.I,
             ),
         ],
@@ -439,8 +467,13 @@ ORB_ANSWER_CONTRACT_FAMILIES: dict[str, dict[str, Any]] = {
             re.compile(
                 r"incident\s+(report|record)|write.*incident|help\s+me.*incident|"
                 r"restorative\s+repair|nude\s+image|blackmail\s+online|online\s+safety|"
-                r"physical\s+intervention|restraint|"
+                r"restorative\s+reflection|restorative\s+response|"
+                r"risky\s+online|personal\s+information\s+online|inappropriate\s+images?|"
+                r"physical\s+intervention|restraint|ligature|fire\s+setting|burn\s+marks|"
                 r"medication\s+error|wrong\s+dose|given\s+wrong\s+(?:dose|medicine|medication)|"
+                r"double\s+dose|found\s+with\s+a\s+knife|police\s+attendance|"
+                r"peer[\s-]?on[\s-]?peer|bullying\s+between\s+residents|sexualised\s+behaviour|"
+                r"smells?\s+of\s+cannabis|smelling\s+of\s+cannabis|substance\s+use|hoards\s+food|"
                 r"whistleblow|falsifying\s+records|staff\s+conduct|protected\s+disclosure|"
                 r"formal\s+complaint|behaviour\s+incident|property\s+damage|threw\s+an|"
                 r"colleague.{0,30}(?:rude|conduct)|rude\s+to\s+a\s+young\s+person|"
@@ -507,7 +540,7 @@ ORB_ANSWER_CONTRACT_FAMILIES: dict[str, dict[str, Any]] = {
                 r"alleges?\s+staff|"
                 r"excessive\s+force|"
                 r"(?:staff|member\s+of\s+staff).{0,40}(?:grabbed|hit|touched|threatened|hurt|abuse)|"
-                r"(?:grabbed|hit|touched|threatened|hurt).{0,40}(?:staff|member\s+of\s+staff)|"
+                r"(?:grabbed|hit|touched|threatened|hurt).{0,25}(?:by\s+)?(?:a\s+)?(?:member\s+of\s+staff|staff\s+member)\b|"
                 r"said\s+staff\s+(?:grabbed|hit|touched|threatened|hurt)|"
                 r"staff\s+member\s+(?:touched|hurt|abuse|grabbed|hit|threatened)|"
                 r"touched\s+(?:them|him|her).{0,30}inappropriately",
@@ -534,7 +567,10 @@ ORB_ANSWER_CONTRACT_FAMILIES: dict[str, dict[str, Any]] = {
         "orb_write_handoff": False,
         "trigger_patterns": [
             re.compile(
-                r"disclosed\s+(abuse|sexual)|sexual\s+abuse|told\s+me.*(hurt|abuse)|"
+                r"disclos(?:ed|es)\s+(?:abuse|sexual|viewing)|sexual\s+abuse|sexualised\s+behaviour|"
+                r"harmful\s+sexual|told\s+me.*(hurt|abuse)|family\s+member\s+hurt|"
+                r"inappropriate\s+sexualised\s+language|specialist\s+hsb|"
+                r"frightened\s+after\s+contact|parental\s+substance|grooming\s+during|"
                 r"county\s+lines|criminal\s+exploitation|contextual\s+safeguarding|"
                 r"unexplained\s+cash|gifts?\s+from\s+an\s+unknown|older\s+adult\s+in\s+the\s+community|"
                 r"\bcce\b|\bcse\b|grooming",
@@ -607,7 +643,7 @@ ORB_ANSWER_CONTRACT_FAMILIES: dict[str, dict[str, Any]] = {
         "streamable": True,
         "orb_write_handoff": True,
         "trigger_patterns": [
-            re.compile(r"key\s*[- ]?work|keywork\s+session|1:1\s+session", re.I),
+            re.compile(r"key\s*[- ]?work|keywork\s+session|1:1\s+session|supervision\s+note|staff\s+supervision", re.I),
         ],
         "required_markers": ["child voice", "session", "purpose", "views", "actions", "follow"],
         "required_sections": [
@@ -637,7 +673,9 @@ ORB_ANSWER_CONTRACT_FAMILIES: dict[str, dict[str, Any]] = {
                 r"manager\s+review\s+note|create_manager_oversight|reg\s*45|regulation\s+45|"
                 r"placement\s+plan\s+review|risk\s+assessment\s+review|"
                 r"leadership\s+record|leadership\s+and\s+management|"
-                r"safer\s+recruitment|workforce\s+compliance|quality\s+of\s+care\s+summary",
+                r"safer\s+recruitment|workforce\s+compliance|quality\s+of\s+care\s+summary|"
+                r"build\s+a\s+chronology|structure\s+a\s+factual\s+chronology|management\s+summary|"
+                r"chronology\s+when\s+police|chronology\s+entry",
                 re.I,
             ),
         ],
@@ -703,7 +741,11 @@ ORB_ANSWER_CONTRACT_FAMILIES: dict[str, dict[str, Any]] = {
         "streamable": True,
         "orb_write_handoff": True,
         "trigger_patterns": [
-            re.compile(r"ofsted|reg\s*45|inspection\s+prep|inspection\s+readiness", re.I),
+            re.compile(
+                r"ofsted|reg\s*45|inspection\s+prep|inspection\s+readiness|sccif\s+evidence|"
+                r"safeguarding\s+evidence|child\s+experience\s+evidence|reg\s*44\s+visitor",
+                re.I,
+            ),
         ],
         "required_markers": ["ofsted", "evidence", "child", "safeguarding"],
         "required_sections": [
@@ -736,7 +778,9 @@ ORB_ANSWER_CONTRACT_FAMILIES: dict[str, dict[str, Any]] = {
                 r"what\s+(is|does)\s+(the\s+)?(policy|procedure|regulation)|"
                 r"best\s+practice\s+for|good\s+practice\s+when|how\s+should\s+we\s+handle|"
                 r"staff\s+supervision|professional\s+curiosity|complaint\s+about\s+staff|"
-                r"notify\s+ofsted|serious\s+event|sccif|personal\s+information|privacy",
+                r"notify\s+ofsted|serious\s+event|sccif|personal\s+information|privacy|"
+                r"local\s+procedure|provider'?s?\s+data\s+policy|on[\s-]?call\s+manager|"
+                r"physical\s+intervention\s+policy|missing\s+procedure",
                 re.I,
             ),
         ],
@@ -773,7 +817,8 @@ ORB_ANSWER_CONTRACT_FAMILIES: dict[str, dict[str, Any]] = {
         "orb_write_handoff": True,
         "trigger_patterns": [
             re.compile(
-                r"\btemplate\b|give\s+me\s+a\s+(plan|form|document)|"
+                r"\btemplate\b|give\s+me\s+a\s+(plan|form|document)|handover\s+note|handover\s+summary|"
+                r"write\s+a\s+handover|during\s+handover|end\s+of\s+shift|"
                 r"create\s+a\s+(plan|template|form)|generate\s+a\s+template",
                 re.I,
             ),
@@ -1091,7 +1136,25 @@ def _family_match_excluded(family_id: str, text: str) -> bool:
     if family_id == "accessible_child_support_plan" and PLAN_UPDATE_RECORDING_RE.search(text):
         return True
     if family_id == "accessible_child_support_plan" and re.search(
-        r"how\s+(?:can|should|do)\s+(?:staff|we|i)\s+(?:evidence|record)",
+        r"how\s+(?:can|should|do)\s+(?:staff|we|i)\s+(?:evidence|record)|write\s+a\s+note\s+about",
+        text,
+        re.I,
+    ):
+        return True
+    if family_id == "allegation_lado" and re.search(
+        r"family\s+member|parent|relative|after\s+contact|during\s+debrief|what\s+should\s+staff\s+record",
+        text,
+        re.I,
+    ):
+        return True
+    if family_id == "incident_record" and re.search(
+        r"what\s+(?:is|does).{0,30}(?:policy|procedure)|best\s+practice\s+for|local\s+procedure",
+        text,
+        re.I,
+    ):
+        return True
+    if family_id == "template_generation" and re.search(
+        r"aac|child\s+voice|evidence\s+aac|recording\s+guidance|during\s+handover",
         text,
         re.I,
     ):

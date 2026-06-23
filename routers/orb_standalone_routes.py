@@ -19,7 +19,10 @@ from services.orb_citation_service import orb_citation_service
 from services.ai_provider_registry import ai_provider_registry
 from services.orb_converged_general_assistant_service import orb_converged_general_assistant_service
 from services.orb_general_assistant_service import orb_general_assistant_service
-from services.orb_knowledge_retrieval_service import orb_knowledge_retrieval_service
+from services.orb_knowledge_retrieval_service import (
+    RESIDENTIAL_CONCISE_GOVERNANCE_FAMILIES,
+    orb_knowledge_retrieval_service,
+)
 from services.indicare_intelligence_route_finalize_service import merge_intelligence_into_context
 from services.orb_residential_finalization_service import finalize_orb_residential_answer
 from services.indicare_intelligence_core_service import indicare_intelligence_core_service
@@ -258,7 +261,14 @@ def _build_standalone_request_context(
     )
     if prompt_tier == "fast":
         shared_runtime_block = ""
-    elif simple_standard_contract and not _requests_institutional_cognition(user_message):
+    elif simple_standard_contract and (
+        not _requests_institutional_cognition(user_message)
+        or (
+            retrieval_bundle.get("selected_contract")
+            or (retrieval_bundle.get("indicare_intelligence") or {}).get("selected_contract")
+        )
+        in RESIDENTIAL_CONCISE_GOVERNANCE_FAMILIES
+    ):
         shared_runtime_block = ""
     else:
         shared_runtime_block = shared_institutional_cognition_runtime.prompt_addendum(
