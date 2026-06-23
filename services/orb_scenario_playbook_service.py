@@ -602,7 +602,7 @@ class OrbScenarioPlaybookService:
         return self._standard_playbook(
             id="child_refuses_school",
             topic="education_health",
-            trigger_terms=("refuses school", "school refusal", "won't go to school"),
+            trigger_terms=("refuses school", "refused school", "school refusal", "won't go to school", "refused to go to school"),
             labels=("Education", "Child experience", "Recording quality"),
             vaults=("Child Journey Vault", "Therapeutic Vault"),
             opening="School refusal is often communication of distress — explore barriers, advocacy and chronology, not only compliance.",

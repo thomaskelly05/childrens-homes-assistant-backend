@@ -486,6 +486,19 @@ class OrbBrainConvergenceOrchestratorService:
             out.append(item)
         return out
 
+    def concise_prompt_addendum(self, decision: OrbBrainConvergenceDecision) -> str:
+        """Compact convergence addendum for everyday simple-standard recording prompts."""
+        lines = [
+            "ORB brain convergence (concise everyday path):",
+            f"- Contract family: {decision.contract_family or 'daily_record'}",
+            f"- Depth tier: {decision.depth_tier}",
+            "- Factual, child-centred recording support; do not invent facts.",
+        ]
+        if decision.response_contract:
+            lines.append("Response contract:")
+            lines.extend(f"- {line}" for line in decision.response_contract[:6])
+        return "\n".join(lines)
+
     def _join_prompt_blocks(self, *blocks: str) -> str:
         parts = [block.strip() for block in blocks if block and block.strip()]
         if not parts:

@@ -258,13 +258,22 @@ class OrbStandaloneBrainService:
             dual_brain_route=route,
         )
 
-    def build_prompt_block(self, message: str, *, mode: str | None = None) -> str:
+    def build_prompt_block(
+        self,
+        message: str,
+        *,
+        mode: str | None = None,
+        incident_block_cap: int | None = None,
+        total_cap: int | None = None,
+    ) -> str:
         frame = self.frame(message, mode=mode)
         incident_block = ""
         if is_incident_report_draft_request(message):
             incident_block = build_incident_report_prompt_block(message)
         elif is_residential_incident_scenario(message):
             incident_block = build_residential_scenario_prompt_block(message)
+        if incident_block_cap and len(incident_block) > incident_block_cap:
+            incident_block = f"{incident_block[:incident_block_cap].rstrip()}..."
         lines = [
             "Standalone ORB dual-brain frame:",
             f"- Mode: {frame.mode}",
@@ -287,7 +296,10 @@ class OrbStandaloneBrainService:
         ]
         if incident_block:
             lines.extend(["", incident_block])
-        return "\n".join(lines)
+        block = "\n".join(lines)
+        if total_cap and len(block) > total_cap:
+            return f"{block[:total_cap].rstrip()}..."
+        return block
 
     def context_payload(self, message: str, *, mode: str | None = None) -> dict[str, Any]:
         return self.frame(message, mode=mode).to_dict()

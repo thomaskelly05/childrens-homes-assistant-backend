@@ -21,6 +21,18 @@ from services.orb_expert_scenario_evaluator_service import (
 from services.orb_human_practice_brain_service import orb_human_practice_brain_service
 
 _RISK_ORDER = {"low": 0, "medium": 1, "high": 2, "critical": 3}
+_SHORT_TOKEN_MAX_LEN = 3
+
+
+def _term_matches(combined: str, term: str) -> bool:
+    """Match multi-word phrases as substrings; short tokens use word boundaries."""
+    token = str(term or "").strip().lower()
+    if not token:
+        return False
+    if " " in token or len(token) > _SHORT_TOKEN_MAX_LEN:
+        return token in combined
+    return bool(re.search(rf"\b{re.escape(token)}\b", combined, re.I))
+
 
 # Extra phrase → family boosts (beyond family common_triggers).
 _EXTRA_PHRASE_FAMILIES: list[tuple[str, str]] = [
@@ -117,7 +129,9 @@ def _detect_output_mode(message: str, mode: str | None) -> str | None:
         return "nvq_evidence_mapping"
     if "safeguarding" in mode_lower or "safeguarding lens" in lower:
         return "safeguarding_lens"
-    if any(t in lower for t in ("ri ", "responsible individual", "governance", "provider drift")):
+    if _term_matches(lower, "ri") or any(
+        t in lower for t in ("responsible individual", "governance", "provider drift")
+    ):
         return "ri_governance"
     return None
 
@@ -127,13 +141,13 @@ def _score_families(combined: str) -> list[tuple[str, int]]:
     for family in ORB_SCENARIO_FAMILIES:
         fid = family["id"]
         for trigger in family.get("common_triggers") or []:
-            if trigger.lower() in combined:
+            if _term_matches(combined, trigger):
                 scores[fid] = scores.get(fid, 0) + 2
         for flag in family.get("red_flags") or []:
-            if flag.lower() in combined:
+            if _term_matches(combined, flag):
                 scores[fid] = scores.get(fid, 0) + 1
     for phrase, fid in _EXTRA_PHRASE_FAMILIES:
-        if phrase in combined:
+        if _term_matches(combined, phrase):
             scores[fid] = scores.get(fid, 0) + 2
     if "missing" in combined and any(t in combined for t in ("returned", "absent", "awol", "run away")):
         scores["missing_from_care"] = scores.get("missing_from_care", 0) + 4
