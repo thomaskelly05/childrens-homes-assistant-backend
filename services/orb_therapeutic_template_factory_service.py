@@ -49,6 +49,17 @@ REQUIRED_TEMPLATE_FAMILIES: dict[str, str] = {
     "advocacy_rights_record": "direct_work_summary",
     "orb_communicate_support_pack": "orb_communicate_support_pack_record",
     "privacy_minimised_safeguarding_record": "privacy_minimised_safeguarding_record",
+    # Full residential taxonomy extensions (lifecycle groups A–J)
+    "referral_summary": "referral_summary",
+    "welcome_plan": "welcome_plan",
+    "first_24_hours_record": "first_24_hours_record",
+    "self_harm_suicide_concern_record": "self_harm_suicide_concern_record",
+    "online_safety_concern_record": "online_safety_concern_record",
+    "school_refusal_record": "school_refusal_record",
+    "pep_contribution": "pep_contribution",
+    "aac_child_voice_record": "aac_child_voice_record",
+    "transition_planning_note": "transition_planning_note",
+    "quality_standards_evidence_note": "quality_standards_evidence_note",
 }
 
 _THERAPEUTIC_EXAMPLES: dict[str, list[str]] = {
