@@ -36,16 +36,13 @@ class UnifiedCognitionRuntimeResult:
 
 
 class OrbUnifiedCognitionRuntime:
-    """Central orchestration layer for ORB cognition.
+    """DEPRECATED alternate cognition orchestrator — not on the live ORB Residential path.
 
-    This service is the conductor. It does not replace the specialist cognition
-    services; it activates and combines them into one coherent runtime context.
-
-    Standalone mode must not access live care records. Operational mode can later
-    pass permissioned operational context into this runtime.
+    Canonical runtime: ``shared_institutional_cognition_runtime`` via
+    ``orb_brain_convergence_orchestrator_service.build_shared_cognition``.
     """
 
-    VERSION = "orb-unified-cognition-runtime-v2"
+    VERSION = "orb-unified-cognition-runtime-v2-deprecated"
 
     def build(
         self,

@@ -30,6 +30,10 @@ from services.orb_voice_brain_router_service import (
 
 logger = logging.getLogger(__name__)
 
+VOICE_FAST_LIMITATIONS = (
+    "voice_fast skips ORB brain convergence, safety scaffold, policy retrieval and domain source chips "
+    "for speed. Use Chat or a specialist voice turn for full convergence metadata."
+)
 VOICE_RESPOND_MAX_WORDS = int(os.environ.get("ORB_VOICE_RESPOND_MAX_WORDS") or str(VOICE_SPECIALIST_MAX_WORDS))
 VOICE_RESPOND_MIN_WORDS = 12
 VOICE_RESPOND_MODEL = (os.environ.get("ORB_VOICE_RESPOND_MODEL") or "gpt-4o-mini").strip()
@@ -183,6 +187,8 @@ def _brain_blocks(
     brain_meta: dict[str, Any] = {"brain_convergence": False, "safety_scaffold": False, "retrieval_used": False}
 
     if tier == "voice_fast":
+        brain_meta["voice_fast_limitations"] = VOICE_FAST_LIMITATIONS
+        brain_meta["domain_convergence"] = False
         return convergence_block, scaffold_block, "", brain_meta
 
     scaffold = orb_safety_scaffold_service.build_from_message(message, mode=mode or "voice")
@@ -203,11 +209,15 @@ def _brain_blocks(
         history=[{"role": t["role"], "content": t["content"]} for t in history],
     )
     convergence_block = orb_brain_convergence_orchestrator_service.build_convergence_prompt_block(decision)
-    brain_meta["brain_convergence"] = True
-    brain_meta["brain_metadata"] = orb_brain_convergence_orchestrator_service.convergence_metadata(
+    convergence_meta = orb_brain_convergence_orchestrator_service.convergence_metadata(
         decision,
         route="/orb/voice/v2/respond",
     )
+    brain_meta["brain_convergence"] = True
+    brain_meta["brain_metadata"] = convergence_meta
+    brain_meta["public_source_chips"] = convergence_meta.get("public_source_chips") or []
+    brain_meta["active_final_domains"] = convergence_meta.get("active_final_domains") or []
+    brain_meta["source_anchors"] = convergence_meta.get("source_anchors") or []
 
     recording_block = ""
     if retrieval_needed:
@@ -367,4 +377,8 @@ def generate_voice_response(
         "retrieval_used": policy_lookup,
         "sessionMemory": updated_memory,
         "suggestedProtocol": route.suggested_protocol,
+        "brainMetadata": brain_meta.get("brain_metadata") or {},
+        "publicSourceChips": brain_meta.get("public_source_chips") or [],
+        "voiceFastLimitations": brain_meta.get("voice_fast_limitations"),
+        "activeFinalDomains": brain_meta.get("active_final_domains") or [],
     }

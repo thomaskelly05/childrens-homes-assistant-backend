@@ -28,6 +28,12 @@ describe('ORB navigation convergence', () => {
     }
   })
 
+  it('communicate is hidden from launch nav but remains routable', () => {
+    const names = readComponent('lib/orb/orb-user-facing-names.ts')
+    assert.match(names, /ORB_HIDDEN_LAUNCH_STATION_IDS/)
+    assert.doesNotMatch(names, /id: 'orb_communicate'[\s\S]*ORB_VISIBLE_SIDEBAR_NAV/)
+  })
+
   it('primary sidebar does not render Shift Builder, Review, Skills, Library or Magic Notes', () => {
     const sidebar = readComponent('components/orb-residential/orb-residential-sidebar.tsx')
     const visibleNav = sidebar.slice(

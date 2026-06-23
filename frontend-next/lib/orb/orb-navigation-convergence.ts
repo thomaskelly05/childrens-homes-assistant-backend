@@ -30,19 +30,20 @@ export const ORB_VISIBLE_SIDEBAR_NAV_IDS = [
   'chat',
   'orb_dictate',
   'orb_voice',
-  'orb_communicate',
   'orb_write',
   'saved',
   'help',
   'settings'
 ] as const
 
+/** Hidden from primary launch nav — deep links and in-app routes remain available. */
+export const ORB_HIDDEN_LAUNCH_STATION_IDS = ['orb_communicate'] as const
+
 /** @deprecated Use ORB_VISIBLE_SIDEBAR_NAV_IDS — kept for transitional imports. */
 export const ORB_VISIBLE_MAIN_NAV_IDS = [
   'chat',
   'orb_dictate',
   'orb_voice',
-  'orb_communicate',
   'orb_write'
 ] as const
 

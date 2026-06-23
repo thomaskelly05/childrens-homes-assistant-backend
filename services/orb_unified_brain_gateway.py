@@ -1,22 +1,32 @@
 """Unified ORB brain gateway — single internal contract for generation across surfaces.
 
-Phase 1: Dictate generate proof case. Other surfaces delegate here in later phases.
+Dictate generate, edit/improve and Write brain context converge here.
+Chat and Voice continue through their route handlers but share orchestrator metadata.
 """
 
 from __future__ import annotations
 
+import json
+import logging
 import os
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
 from schemas.ai_models import AiModelCapability, AiQualityTier
 from schemas.data_protection import DataClassification
-from schemas.orb_dictate import OrbDictateGenerateRequest
-from services.ai_external_call_governance import FEATURE_DICTATE, redact_plain_text, try_governed_draft_text
+from schemas.orb_dictate import OrbDictateEditRequest, OrbDictateGenerateRequest, OrbDictatePrepareWriteRequest
+from services.ai_external_call_governance import (
+    FEATURE_DICTATE,
+    FEATURE_DICTATE_EDIT,
+    redact_plain_text,
+    try_governed_draft_text,
+)
 from services.ai_provider_registry import ai_provider_registry
 from services.orb_brain_convergence_orchestrator_service import orb_brain_convergence_orchestrator_service
 from services.orb_document_brain_adapter_service import orb_document_brain_adapter_service
 from services.orb_prompt_registry import PROMPT_REGISTRY_VERSION, orb_prompt_registry
+
+logger = logging.getLogger(__name__)
 
 OrbBrainSurface = Literal["chat", "dictate", "voice", "write"]
 OrbBrainResponseFormat = Literal["text", "structured", "stream"]
@@ -116,6 +126,117 @@ def _brain_metadata_from_context(
 
 class OrbUnifiedBrainGateway:
     """Future single entry point for ORB Residential generation."""
+
+    def build_write_brain_context(
+        self,
+        request: OrbDictatePrepareWriteRequest,
+        *,
+        source_text: str,
+    ) -> dict[str, Any]:
+        """Write prepare — orchestrator metadata without LLM generation."""
+        note_type = request.note_type
+        ctx = orb_document_brain_adapter_service.build_document_brain_context(
+            source_text or "write preparation",
+            mode=note_type,
+            feature="write",
+            note_type=note_type,
+        )
+        brain_convergence = ctx["brain_convergence"]
+        brain_decision = orb_brain_convergence_orchestrator_service.convergence_metadata(
+            brain_convergence,
+            route="/orb/dictate/prepare-write",
+        )
+        meta = dict(ctx["brain_metadata"])
+        meta.update(
+            {
+                "feature": "write",
+                "output_type": note_type,
+                "indicare_intelligence_core": ctx["intelligence_summary"],
+                "brain_adapter": ctx["adapter"],
+                "unified_brain_gateway": GATEWAY_VERSION,
+                "brain_decision_used_for_generation": True,
+                "brain_convergence": brain_decision,
+                "public_source_chips": brain_decision.get("public_source_chips") or [],
+            }
+        )
+        return {
+            "brain_metadata": meta,
+            "brain_decision": brain_decision,
+            "document_context": ctx,
+        }
+
+    def edit_dictate_draft(
+        self,
+        *,
+        system_prompt: str,
+        user_prompt: str,
+        note_type: str,
+        mode: str,
+        document_text: str,
+        provider_id: int | None = None,
+        home_id: int | None = None,
+        user_id: int | None = None,
+        privacy_mode: str = "internal_working",
+    ) -> tuple[str | None, dict[str, Any]]:
+        """Dictate edit/improve — brain decision first, then governed draft generation."""
+        ctx = orb_document_brain_adapter_service.build_document_brain_context(
+            document_text,
+            mode=note_type,
+            feature="dictate_edit",
+            note_type=note_type,
+        )
+        brain_convergence = ctx["brain_convergence"]
+        brain_decision = orb_brain_convergence_orchestrator_service.convergence_metadata(
+            brain_convergence,
+            route="/orb/dictate/edit",
+        )
+        model, model_policy = resolve_dictate_model(
+            depth_tier=brain_convergence.depth_tier,
+            note_type=note_type,
+        )
+        if privacy_mode == "internal_working":
+            redacted_user = user_prompt
+        else:
+            redacted_user, _ = redact_plain_text(user_prompt, mode="strict")
+
+        gateway_response = try_governed_draft_text(
+            feature=FEATURE_DICTATE_EDIT,
+            system_prompt=system_prompt,
+            prompt=redacted_user,
+            model=model,
+            provider_id=provider_id,
+            home_id=home_id,
+            user_id=user_id,
+            data_classification=DataClassification.CONFIDENTIAL_CHILD,
+            metadata={
+                "route": "orb_unified_brain_gateway.edit_dictate_draft",
+                "note_type": note_type,
+                "surface": "dictate",
+                "mode": mode,
+                "brain_convergence": brain_decision,
+                "model_policy": model_policy,
+                "unified_brain_gateway": GATEWAY_VERSION,
+            },
+        )
+        meta = {
+            "brain_decision": brain_decision,
+            "model_policy": model_policy,
+            "gateway_version": GATEWAY_VERSION,
+            "brain_metadata": _brain_metadata_from_context(
+                ctx,
+                note_type=note_type,
+                mode=mode,
+                model_policy=model_policy,
+                prompt_version=PROMPT_REGISTRY_VERSION,
+            ),
+        }
+        if gateway_response is None:
+            meta["blocked"] = True
+            return None, meta
+        meta["blocked"] = False
+        meta["model_used"] = gateway_response.model
+        meta["governance"] = gateway_response.governance
+        return gateway_response.text, meta
 
     def generate_dictate_draft(
         self,

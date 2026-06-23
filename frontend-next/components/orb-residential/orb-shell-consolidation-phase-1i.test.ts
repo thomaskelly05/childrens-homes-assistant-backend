@@ -48,14 +48,13 @@ describe('ORB Residential Phase 1I single shell consolidation', () => {
     assert.doesNotMatch(companion, /orb-residential-app-shell__workspace/)
   })
 
-  it('sidebar visible nav remains the nine approved items', () => {
+  it('sidebar visible nav remains the eight approved launch items', () => {
     const labels = ORB_VISIBLE_SIDEBAR_NAV.map((entry) => entry.label)
     assert.deepEqual(labels, [
       'Home',
       'Chat',
       'Dictate',
       'Voice',
-      'Communicate',
       'ORB Write',
       'Records & Drafts',
       'Help & Safety',

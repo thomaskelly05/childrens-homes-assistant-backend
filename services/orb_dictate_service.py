@@ -735,6 +735,10 @@ def prepare_write_document(request: OrbDictatePrepareWriteRequest) -> OrbDictate
         missing_prompts=missing or None,
     )
     quality = compute_quality_checks(structured, note_type)
+    write_brain = orb_unified_brain_gateway.build_write_brain_context(
+        request,
+        source_text=source_text or structured,
+    )
     intel_packet = indicare_intelligence_core_service.build_intelligence_packet(
         source_text or structured,
         mode=note_type,
@@ -745,6 +749,9 @@ def prepare_write_document(request: OrbDictatePrepareWriteRequest) -> OrbDictate
         intel_packet=intel_packet,
         source_text=source_text or transcript,
     )
+    brain_metadata = dict(write_brain["brain_metadata"])
+    if intel_meta:
+        brain_metadata.update({k: v for k, v in intel_meta.items() if k not in brain_metadata})
     template = get_dictate_template(note_type)  # type: ignore[arg-type]
     section_prompts = [
         p for section in template.sections for p in section.prompts[:1]
@@ -760,12 +767,7 @@ def prepare_write_document(request: OrbDictatePrepareWriteRequest) -> OrbDictate
         section_prompts=section_prompts[:20],
         quality_checks=quality,
         standalone_boundary=STANDALONE_BOUNDARY,
-        brain_metadata=_dictate_brain_metadata(
-            note_type=note_type,
-            transcript_text=source_text,
-            feature="write",
-            intelligence_meta=intel_meta,
-        ),
+        brain_metadata=brain_metadata,
     )
 
 

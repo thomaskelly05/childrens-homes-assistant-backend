@@ -929,6 +929,33 @@ def _merge_cognition_labels(
     )
 
 
+def _append_convergence_source_chips(
+    sources: list[dict[str, Any]],
+    *,
+    brain_convergence: dict[str, Any] | None,
+) -> list[dict[str, Any]]:
+    """Attach domain convergence source-family chips without extra LLM calls."""
+    chip_sources = orb_brain_convergence_orchestrator_service.convergence_source_chips_as_sources(
+        brain_convergence or {}
+    )
+    if not chip_sources:
+        return sources
+    seen = {str(item.get("id") or item.get("label") or "") for item in sources}
+    merged = list(sources)
+    for chip in chip_sources:
+        key = str(chip.get("id") or chip.get("label") or "")
+        if key and key in seen:
+            continue
+        if key:
+            seen.add(key)
+        merged.append(chip)
+    return merged
+
+
+def _convergence_source_anchors(brain_convergence: dict[str, Any] | None) -> list[str]:
+    return list((brain_convergence or {}).get("source_anchors") or [])
+
+
 def _apply_cognition_context(
     context_used: dict[str, Any],
     *,
@@ -1186,6 +1213,10 @@ async def standalone_orb_conversation(
             response_sources = orb_citation_service.frontend_sources_payload(response_citations)
         elif response_citations:
             response_sources.extend(orb_citation_service.frontend_sources_payload(response_citations))
+        response_sources = _append_convergence_source_chips(
+            response_sources,
+            brain_convergence=ctx.get("brain_convergence"),
+        )
         timing.mark("citations_complete")
         confidence = str(assistant_data.get("confidence") or "medium")
         shared_explain = shared_cognition.get("explainability") or {}
@@ -1204,7 +1235,12 @@ async def standalone_orb_conversation(
             reasoning_lenses=list(shared_explain.get("reasoning_lenses") or shared_cognition.get("active_lenses") or []),
             vault_domains=list(shared_explain.get("vault_domains") or []),
             shared_explainability=shared_explain,
-            source_anchors=list(shared_explain.get("source_anchors") or []),
+            source_anchors=list(
+                dict.fromkeys(
+                    list(shared_explain.get("source_anchors") or [])
+                    + _convergence_source_anchors(ctx.get("brain_convergence"))
+                )
+            ),
         )
         timing.mark("explainability_complete")
         response_sources = filter_display_sources(response_sources, message=payload.message, mode=mode)
@@ -1332,6 +1368,10 @@ async def standalone_orb_conversation(
         citations.extend(shared_cognition.get("citations") or [])
         if citations:
             sources.extend(orb_citation_service.frontend_sources_payload(citations))
+        sources = _append_convergence_source_chips(
+            sources,
+            brain_convergence=ctx.get("brain_convergence"),
+        )
         classification = orb_knowledge_retrieval_service.classify_query(
             payload.message,
             mode=mode,
@@ -1354,7 +1394,12 @@ async def standalone_orb_conversation(
             reasoning_lenses=list(shared_explain.get("reasoning_lenses") or shared_cognition.get("active_lenses") or []),
             vault_domains=list(shared_explain.get("vault_domains") or []),
             shared_explainability=shared_explain,
-            source_anchors=list(shared_explain.get("source_anchors") or []),
+            source_anchors=list(
+                dict.fromkeys(
+                    list(shared_explain.get("source_anchors") or [])
+                    + _convergence_source_anchors(ctx.get("brain_convergence"))
+                )
+            ),
         )
         sources = filter_display_sources(sources, message=payload.message, mode=mode)
         citations = filter_display_sources(citations, message=payload.message, mode=mode)
@@ -1650,6 +1695,10 @@ async def standalone_orb_conversation_stream(
                 response_sources = orb_citation_service.frontend_sources_payload(response_citations)
             elif response_citations:
                 response_sources.extend(orb_citation_service.frontend_sources_payload(response_citations))
+            response_sources = _append_convergence_source_chips(
+                response_sources,
+                brain_convergence=ctx.get("brain_convergence"),
+            )
             timing.mark("citations_complete")
 
             confidence = str(assistant_data.get("confidence") or "medium")
@@ -1669,7 +1718,12 @@ async def standalone_orb_conversation_stream(
                 reasoning_lenses=list(shared_explain.get("reasoning_lenses") or shared_cognition.get("active_lenses") or []),
                 vault_domains=list(shared_explain.get("vault_domains") or []),
                 shared_explainability=shared_explain,
-                source_anchors=list(shared_explain.get("source_anchors") or []),
+                source_anchors=list(
+                    dict.fromkeys(
+                        list(shared_explain.get("source_anchors") or [])
+                        + _convergence_source_anchors(ctx.get("brain_convergence"))
+                    )
+                ),
             )
             timing.mark("explainability_complete")
             response_sources = filter_display_sources(response_sources, message=payload.message, mode=mode)
