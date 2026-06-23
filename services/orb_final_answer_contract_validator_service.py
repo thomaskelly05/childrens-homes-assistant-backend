@@ -15,6 +15,11 @@ from services.orb_therapeutic_language_contract_service import (
     validate_therapeutic_wording,
 )
 from services.orb_mandatory_response_contract_service import find_inappropriate_lado_reference
+from assistant.knowledge.residential_safeguarding_terminology import (
+    find_inappropriate_dsl_reference,
+    find_inappropriate_medication_error_reference,
+)
+from assistant.knowledge.adult_identity_language import sanitize_residential_answer_polish
 from services.orb_universal_answer_contract_map_service import (
     UNIVERSAL_FORBIDDEN_PATTERNS,
     find_forbidden_patterns,
@@ -155,6 +160,7 @@ def validate_final_answer_contract(
         fast_opening=fast_opening,
     )
     sanitized, placeholder_issues = sanitize_placeholders_in_answer(sanitized)
+    sanitized = sanitize_residential_answer_polish(sanitized, source_text=source_text or "")
     forbidden = list(
         dict.fromkeys(
             _find_family_forbidden(answer, contract_family)
@@ -180,6 +186,12 @@ def validate_final_answer_contract(
         sanitized, source_text or ""
     ):
         forbidden.append("inappropriate_lado_reference")
+    dsl_hits = find_inappropriate_dsl_reference(sanitized, source_text=source_text or "")
+    if dsl_hits:
+        forbidden.append(f"education-only DSL wording: {', '.join(dsl_hits)}")
+    med_hits = find_inappropriate_medication_error_reference(sanitized, source_text=source_text or "")
+    if med_hits:
+        forbidden.append(f"medication error wording without error prompt: {', '.join(med_hits)}")
 
     passed = (
         not forbidden

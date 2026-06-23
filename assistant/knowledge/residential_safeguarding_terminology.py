@@ -15,9 +15,18 @@ DSL_IN_ANSWER_RE = re.compile(
     re.I,
 )
 
-MEDICATION_ERROR_RE = re.compile(r"\bmedication\s+error\b", re.I)
+MEDICATION_ERROR_RE = re.compile(
+    r"\b(?:medication\s+error|administration\s+error|so\s+the\s+error\s+is\s+not\s+repeated|"
+    r"the\s+error\s+is\s+not\s+repeated)\b",
+    re.I,
+)
 MEDICATION_ERROR_IN_PROMPT_RE = re.compile(
     r"\b(?:medication\s+error|wrong\s+dose|given\s+wrong|administration\s+error)\b",
+    re.I,
+)
+MEDICATION_REFUSAL_IN_PROMPT_RE = re.compile(
+    r"\b(?:refused\s+medication|refusing\s+medication|refuses\s+medication|medication\s+refusal|"
+    r"won'?t\s+take\s+(?:their\s+)?(?:medication|medicine|meds|tablets))\b",
     re.I,
 )
 
@@ -71,13 +80,57 @@ def find_inappropriate_dsl_reference(answer: str, *, source_text: str = "") -> l
     return hits
 
 
+def is_medication_refusal_prompt(text: str) -> bool:
+    """True when the prompt is about medication refusal rather than a medication error."""
+    source = str(text or "")
+    if MEDICATION_ERROR_IN_PROMPT_RE.search(source):
+        return False
+    return bool(MEDICATION_REFUSAL_IN_PROMPT_RE.search(source))
+
+
+def is_medication_error_prompt(text: str) -> bool:
+    """True when the prompt explicitly describes a medication error."""
+    return bool(MEDICATION_ERROR_IN_PROMPT_RE.search(str(text or "")))
+
+
 def find_inappropriate_medication_error_reference(answer: str, *, source_text: str = "") -> list[str]:
     """Medication error wording is inappropriate unless the prompt mentions an error."""
     if MEDICATION_ERROR_IN_PROMPT_RE.search(str(source_text or "")):
         return []
-    if MEDICATION_ERROR_RE.search(str(answer or "")):
-        return ["medication error"]
-    return []
+    hits: list[str] = []
+    for match in MEDICATION_ERROR_RE.finditer(str(answer or "")):
+        term = match.group(0)
+        if term not in hits:
+            hits.append(term)
+    return hits
+
+
+def sanitize_medication_error_wording(answer: str, *, source_text: str = "") -> str:
+    """Remove medication-error framing from refusal/routine health answers."""
+    if MEDICATION_ERROR_IN_PROMPT_RE.search(str(source_text or "")):
+        return str(answer or "")
+    result = str(answer or "")
+    replacements: tuple[tuple[re.Pattern[str], str], ...] = (
+        (
+            re.compile(
+                r"review the handover system so the error is not repeated\.?",
+                re.I,
+            ),
+            (
+                "follow home medication policy, notify the manager or on-call manager as required, "
+                "and monitor for health risks."
+            ),
+        ),
+        (
+            re.compile(r"\b(?:this may be|could be)\s+a\s+medication\s+error\b[^.!?]*[.!?]?", re.I),
+            "Record the refusal on the MAR and follow home medication policy.",
+        ),
+        (re.compile(r"\bmedication\s+error\b", re.I), "medication concern"),
+        (re.compile(r"\badministration\s+error\b", re.I), "administration concern"),
+    )
+    for pattern, replacement in replacements:
+        result = pattern.sub(replacement, result)
+    return result
 
 
 def should_skip_diagnosis_firewall(message: str) -> bool:

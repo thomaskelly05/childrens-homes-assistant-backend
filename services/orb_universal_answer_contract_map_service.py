@@ -96,6 +96,9 @@ UNIVERSAL_FORBIDDEN_PATTERNS: tuple[str, ...] = (
     "mandatory_contract",
     "scenario_detector",
     "shared_institutional_cognition_runtime",
+    "by following these guidelines",
+    "this approach ensures",
+    "comprehensive account",
 )
 
 PLAN_UPDATE_RECORDING_RE = re.compile(
@@ -241,6 +244,50 @@ ORB_ANSWER_CONTRACT_FAMILIES: dict[str, dict[str, Any]] = {
             "Residential childcare practice",
         ],
     },
+    "communicate_support_pack": {
+        "label": "ORB Communicate — Communication Support Pack",
+        "contract_mode": "communicate",
+        "depth_tier": "standard",
+        "expert_depth_cap": "residential_standard",
+        "prompt_tier_cap": "residential",
+        "streamable": False,
+        "orb_write_handoff": False,
+        "trigger_patterns": [
+            re.compile(
+                r"(?:create|build|make|generate|prepare|draft).{0,50}communication\s+support\s+pack|"
+                r"communication\s+support\s+pack.{0,120}(?:explain|contact|autism|aac|changed)|"
+                r"support\s+pack.{0,60}(?:explain|contact\s+has\s+changed|autism|aac)",
+                re.I,
+            ),
+        ],
+        "required_markers": [
+            "easy-read",
+            "visual",
+            "staff delivery",
+            "reflect",
+            "safety",
+        ],
+        "required_sections": [
+            "Easy-read explanation",
+            "Visual card suggestions",
+            "Staff delivery guidance",
+            "Reflect and record prompts",
+            "Reflective record starter",
+            "Safety boundaries",
+        ],
+        "forbidden_patterns": list(UNIVERSAL_FORBIDDEN_PATTERNS[:4])
+        + [
+            "you could create a pack",
+            "consider creating a communication pack",
+            "here are some tips for creating",
+            "you might want to prepare",
+        ],
+        "public_considerations": [
+            "Communication support",
+            "SEND",
+            "Child-centred recording",
+        ],
+    },
     "daily_record": {
         "label": "Daily record / daily note",
         "contract_mode": "recording",
@@ -364,9 +411,10 @@ ORB_ANSWER_CONTRACT_FAMILIES: dict[str, dict[str, Any]] = {
         "required_markers": ["medication", "mar", "manager", "clinical"],
         "required_sections": [
             "Direct practical steps first — MAR recording, what was offered/refused, time",
+            "Follow home medication policy; notify manager/on-call as required",
+            "Seek pharmacy/GP/NHS 111/emergency advice where relevant; monitor health risks",
+            "Record the young person's words or communication; do not coerce",
             "Capacity/consent boundary; do not force unless lawful emergency protocol",
-            "Clinical/manager/local medication policy boundary — who to notify",
-            "Observation vs interpretation; child voice where known",
             "Follow-up questions only after guidance",
         ],
         "forbidden_patterns": list(UNIVERSAL_FORBIDDEN_PATTERNS[:4])
@@ -894,6 +942,7 @@ _FAMILY_DETECTION_ORDER: tuple[str, ...] = (
     "missing_return_record",
     "child_voice_evidence_recording",
     "accessible_child_support_plan",
+    "communicate_support_pack",
     "incident_record",
     "medication_refusal_guidance",
     "contact_distress_recording",
@@ -1177,6 +1226,20 @@ def build_contract_prompt_block(family_id: str | None) -> str:
                 "  Adult guidance for using this plan.",
                 "- Use clean [Add ...] placeholders only — never truncate with ellipsis inside brackets.",
                 "- Do not begin with generic AI introductions.",
+            ]
+        )
+    if family_id == "communicate_support_pack":
+        lines.extend(
+            [
+                "",
+                "Communication Support Pack answer order (mandatory):",
+                "1. Easy-read explanation — short, concrete sentences for the young person.",
+                "2. Visual card suggestions — labelled placeholders staff can personalise.",
+                "3. Staff delivery guidance — how to explain calmly without leading questions.",
+                "4. Reflect and record prompts — factual recording after delivery.",
+                "5. Reflective record starter — draft chronology wording.",
+                "6. Safety boundaries — ORB Communicate limits and safeguarding reminders if relevant.",
+                "Produce the actual pack sections — do not only advise staff to create a pack.",
             ]
         )
     forbidden = family.get("forbidden_patterns") or []

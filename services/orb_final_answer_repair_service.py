@@ -13,7 +13,13 @@ from services.orb_mandatory_response_contract_service import find_inappropriate_
 from assistant.knowledge.adult_identity_language import (
     is_record_generation_request,
     sanitize_live_record_output,
+    sanitize_residential_answer_polish,
 )
+from assistant.knowledge.residential_safeguarding_terminology import (
+    find_inappropriate_dsl_reference,
+    find_inappropriate_medication_error_reference,
+)
+from services.orb_communicate_support_pack_service import orb_communicate_support_pack_service
 from services.orb_recording_contract_service import extract_known_incident_facts
 from services.orb_therapeutic_language_contract_service import (
     apply_deterministic_therapeutic_repairs,
@@ -159,6 +165,13 @@ def repair_accessible_child_support_plan(answer: str, *, message: str = "") -> s
     return _personalise_support_plan_template(message)
 
 
+def repair_communicate_support_pack(answer: str, *, message: str = "") -> str:
+    """Deterministic Communication Support Pack for Chat communicate prompts."""
+    _ = answer
+    output = orb_communicate_support_pack_service.build_support_pack_from_message(message)
+    return orb_communicate_support_pack_service.format_support_pack_for_chat(output)
+
+
 def apply_deterministic_repairs(
     answer: str,
     *,
@@ -195,13 +208,35 @@ def apply_deterministic_repairs(
         ) or len(cleaned) < 400
         if needs_full_rewrite:
             return repair_accessible_child_support_plan(cleaned, message=message), repair_meta
+    if contract_family == "communicate_support_pack":
+        lower = cleaned.lower()
+        needs_pack = any(
+            phrase in lower
+            for phrase in (
+                "you could create",
+                "consider creating",
+                "here are some tips",
+                "you might want to prepare",
+                "communication support pack could",
+            )
+        ) or "## Easy-read explanation" not in cleaned
+        if needs_pack:
+            return repair_communicate_support_pack(cleaned, message=message), {
+                **repair_meta,
+                "repair_reason": "communicate_support_pack",
+            }
     return cleaned, repair_meta
 
 
 def _apply_record_output_discipline(answer: str, *, message: str) -> str:
+    polished = sanitize_residential_answer_polish(answer, source_text=message)
     if not is_record_generation_request(message):
-        return answer
-    return sanitize_live_record_output(answer, source_text=message)
+        return polished
+    return sanitize_live_record_output(polished, source_text=message)
+
+
+def _apply_residential_answer_polish(answer: str, *, message: str) -> str:
+    return _apply_record_output_discipline(answer, message=message)
 
 
 def repair_and_validate_final_answer(
@@ -226,7 +261,7 @@ def repair_and_validate_final_answer(
         (validation.get("therapeutic_validation") or {}).get("judgemental_phrases")
     )
     if validation["passed"]:
-        sanitized = _apply_record_output_discipline(validation["sanitized_answer"], message=message)
+        sanitized = _apply_residential_answer_polish(validation["sanitized_answer"], message=message)
         return sanitized, {
             "final_answer_validation_passed": True,
             "repair_applied": original_had_judgemental or sanitized != validation["sanitized_answer"],
@@ -261,6 +296,18 @@ def repair_and_validate_final_answer(
             fast_opening=fast_opening,
             source_text=message,
         )
+    if contract_family == "communicate_support_pack" and (
+        not revalidation["passed"] or "## Easy-read explanation" not in repaired
+    ):
+        repaired = repair_communicate_support_pack(repaired, message=message)
+        revalidation = validate_final_answer_contract(
+            repaired,
+            contract_family=contract_family,
+            depth_tier=depth_tier,
+            mode=mode,
+            fast_opening=fast_opening,
+            source_text=message,
+        )
     validation = revalidation
 
     repair_reason = (
@@ -273,7 +320,7 @@ def repair_and_validate_final_answer(
         or original_had_judgemental
         or repair_reason == "therapeutic_language"
     )
-    final_answer = _apply_record_output_discipline(validation["sanitized_answer"], message=message)
+    final_answer = _apply_residential_answer_polish(validation["sanitized_answer"], message=message)
     if final_answer != validation["sanitized_answer"]:
         answer_repaired = True
         repair_reason = repair_reason or "live_record_discipline"

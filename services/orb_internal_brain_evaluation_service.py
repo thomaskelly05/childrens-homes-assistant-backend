@@ -602,8 +602,8 @@ class OrbInternalBrainEvaluationService:
             )
         elif category in ("staff-practice-concern", "allegation-against-staff"):
             lines.append(
-                "Allegations against staff require prompt manager/DSL consideration and LADO referral "
-                "under local procedures — do not investigate internally beyond immediate safety."
+                "Allegations against staff require prompt Registered Manager/on-call manager consideration "
+                "and LADO referral under local procedures — do not investigate internally beyond immediate safety."
             )
         elif category in ("child-sexual-exploitation", "criminal-exploitation", "online-harm"):
             lines.append(

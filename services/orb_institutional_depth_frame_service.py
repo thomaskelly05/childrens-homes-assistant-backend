@@ -53,7 +53,7 @@ class OrbInstitutionalDepthFrameService:
         if topic == "complaints":
             return self._complaints_frame()
         if topic == "medication":
-            return self._medication_frame()
+            return self._medication_frame(message=message)
         if topic == "self_harm":
             return self._self_harm_frame()
         if topic == "exploitation":
@@ -740,7 +740,48 @@ class OrbInstitutionalDepthFrameService:
             ],
         }
 
-    def _medication_frame(self) -> dict[str, Any]:
+    def _medication_frame(self, *, message: str = "") -> dict[str, Any]:
+        from assistant.knowledge.residential_safeguarding_terminology import (
+            is_medication_error_prompt,
+            is_medication_refusal_prompt,
+        )
+
+        refusal = is_medication_refusal_prompt(message) and not is_medication_error_prompt(message)
+        if refusal:
+            return {
+                "topic": "health / medication refusal",
+                "purpose": (
+                    "Registered-manager-level medication refusal recording: MAR entry, policy boundary, "
+                    "clinical advice routes and proportionate follow-up — not a medication error."
+                ),
+                "opening_anchor": (
+                    "Open with practical MAR recording steps — what was offered/refused, time, and "
+                    "observable presentation. Do not frame refusal as a medication error."
+                ),
+                "response_structure": [
+                    "## MAR recording",
+                    "## Policy and clinical boundary",
+                    "## Child voice and observation",
+                    "## Follow-up and manager oversight",
+                ],
+                "required_lenses": [
+                    "Record refusal on the MAR with time, medicine name, dose offered and reason if known.",
+                    "Follow home medication policy; do not coerce unless lawful emergency protocol applies.",
+                    "Notify manager/on-call as required; seek pharmacy/GP/NHS 111 or emergency advice where relevant.",
+                    "Monitor health risks proportionately; record the young person's words or communication.",
+                ],
+                "closing_guidance": (
+                    "End with: 'Record the refusal on the MAR, follow home medication policy, notify the manager "
+                    "or on-call manager as required, seek pharmacy/GP/NHS 111 or emergency advice where relevant, "
+                    "monitor health risks, record the young person's words, and do not coerce.' "
+                    "Do not describe refusal as a medication error."
+                ),
+                "avoid": [
+                    "Calling refusal a medication error.",
+                    "Giving clinical treatment advice beyond professional boundaries.",
+                    "Coercive administration language.",
+                ],
+            }
         return {
             "topic": "health / medication oversight",
             "purpose": "Registered-manager-level medication incident thinking: safety, recording, advice, oversight and learning — not clinical diagnosis.",

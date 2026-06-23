@@ -5,6 +5,10 @@ from typing import Any
 
 from services.orb_academy_nvq_anchor_service import orb_academy_nvq_anchor_service
 from services.orb_professional_curiosity_service import orb_professional_curiosity_service
+from assistant.knowledge.residential_safeguarding_terminology import (
+    is_medication_error_prompt,
+    is_medication_refusal_prompt,
+)
 
 
 class OrbGroundedAnswerStyleService:
@@ -60,6 +64,11 @@ class OrbGroundedAnswerStyleService:
     )
 
     TOPIC_CLOSERS: dict[str, str] = {
+        "medication_refusal": (
+            "\n\nRecord the refusal on the MAR, follow home medication policy, notify the manager or "
+            "on-call manager as required, seek pharmacy/GP/NHS 111 or emergency advice where relevant, "
+            "monitor health risks, record the young person's words or communication, and do not coerce."
+        ),
         "medication": (
             "\n\nThe key is to check safety, seek pharmacy/GP/NHS 111 or emergency advice where needed, record "
             "transparently on the MAR, notify the right people, and review the handover system so the error is "
@@ -383,6 +392,11 @@ class OrbGroundedAnswerStyleService:
     )
 
     TOPIC_CLOSER_MARKERS: dict[str, tuple[str, ...]] = {
+        "medication_refusal": (
+            "record the refusal on the mar",
+            "follow home medication policy",
+            "do not coerce",
+        ),
         "medication": ("transparently on the mar", "handover system", "not repeated"),
         "missing": ("missing-from-care procedure", "chronology update and visible manager oversight"),
         "therapeutic": ("hold the emotional meaning", "feel safe, heard and supported"),
@@ -486,6 +500,10 @@ class OrbGroundedAnswerStyleService:
             return self.TOPIC_CLOSERS.get(topic)
         if topic == "leadership":
             return self.TOPIC_CLOSERS.get("leadership")
+        if topic == "medication":
+            if is_medication_refusal_prompt(message) and not is_medication_error_prompt(message):
+                return self.TOPIC_CLOSERS.get("medication_refusal")
+            return self.TOPIC_CLOSERS.get("medication")
         if topic in self.TOPIC_CLOSERS:
             return self.TOPIC_CLOSERS.get(topic)
         if topic == "restraint" and not self._safeguarding_closer_indicated(message):

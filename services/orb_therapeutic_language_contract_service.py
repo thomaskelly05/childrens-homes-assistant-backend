@@ -353,6 +353,9 @@ GENERIC_WEAK_PHRASES: tuple[str, ...] = (
     "safeguarding practices",
     "underlying issues",
     "maintain clarity and transparency",
+    "by following these guidelines",
+    "this approach ensures",
+    "comprehensive account",
 )
 
 SHORT_RESIDENTIAL_MAX_WORDS = 15
@@ -572,7 +575,7 @@ def build_therapeutic_language_contract_block(
         *[f"   • {rule}" for rule in OBSERVATION_VS_INTERPRETATION_GUIDANCE[:4]],
         "",
         "Preferred natural residential wording:",
-        "   • First, check everyone is safe.",
+        "   • Start with practical recording guidance for routine daily events.",
         "   • Use shorthand only as shorthand, not final recording wording.",
         "   • Record what was seen, heard and done.",
         "   • Add the child's words when they are ready to share them.",
@@ -631,7 +634,9 @@ def build_residential_scenario_prompt_block(source_text: str) -> str:
         structure = [
             "",
             "SHORT RESIDENTIAL SCENARIO — concise recording-support format (not a long essay):",
-            "1. Safety first — one short sentence (e.g. 'First, check [name] and everyone nearby are safe.').",
+            "1. Safety first — one short sentence only if risk indicators are present "
+            "(e.g. 'First, check [name] and everyone nearby are safe.'). "
+            "For routine daily recording, start with practical recording guidance instead.",
             "2. Recording language warning — shorthand must be clarified, not used as final wording.",
             "3. What is known — 2 to 4 bullets from adult input only.",
             "4. What to clarify — concise checklist (observable behaviour, child voice, staff response,",
@@ -778,7 +783,20 @@ def build_safe_residential_scenario_scaffold(source_text: str) -> str:
     shorthand = facts.get("shorthand_behaviour") or (shorthand_terms[0] if shorthand_terms else None)
     name = facts.get("young_person") or "the young person"
 
-    safety_line = f"First, check {name} and everyone nearby are safe."
+    from assistant.knowledge.adult_identity_language import (
+        has_safeguarding_cue,
+        is_low_risk_daily_recording,
+    )
+
+    if is_low_risk_daily_recording(source_text) or (
+        facts.get("refused_school") is None
+        and not shorthand
+        and not has_safeguarding_cue(source_text)
+        and any(term in (source_text or "").lower() for term in ("refused breakfast", "difficult morning", "daily record"))
+    ):
+        safety_line = "Start with what happened, who was involved, and what staff observed."
+    else:
+        safety_line = f"First, check {name} and everyone nearby are safe."
     warning = _concise_shorthand_warning(shorthand)
     known_bullets = _concise_known_bullets(facts, name, shorthand)
     clarify = _concise_clarify_questions(facts, name, shorthand)
