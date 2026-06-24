@@ -345,8 +345,8 @@ const STAFF_PHRASE_PROTECTED_RES: Array<{ pattern: RegExp; token: string }> = [
 const STAFF_PHRASE_RESTORE: Record<string, string> = {
   __ORB_STAFF_RESPONDED__: 'how staff responded',
   __ORB_STAFF_PRESENT__: 'staff present',
-  __ORB_STAFF_RESPONSE__: 'staff response',
-  __ORB_STAFF_SUPPORTED__: 'staff supported',
+  __ORB_STAFF_RESPONSE__: 'Staff response',
+  __ORB_STAFF_SUPPORTED__: 'Staff supported',
   __ORB_STAFF_NAMES__: 'staff names',
   __ORB_STAFF_OFFERED__: 'staff offered',
   __ORB_STAFF_OBSERVED__: 'staff observed',
@@ -483,6 +483,131 @@ export function looksLikeDailyRecordDraftViolation(text: string): boolean {
   if (DAILY_RECORD_FIELD_HEADING_RES.some((pattern) => pattern.test(value))) return true
   if (/\[Insert\s+/i.test(value)) return true
   return false
+}
+
+export function isStructuredDailyRecordDraft(text: string): boolean {
+  const value = String(text || '')
+  const lower = value.toLowerCase()
+  const markers = [
+    'context / routine',
+    'what happened',
+    "young person's presentation",
+    "young person's voice",
+    'staff response',
+    'outcome'
+  ]
+  const hits = markers.filter((marker) => lower.includes(marker)).length
+  const hasCompletion = lower.includes('to complete before saving') || lower.includes('before saving')
+  return hits >= 4 && (hasCompletion || lower.includes('daily record draft'))
+}
+
+const DAILY_SECTION_HEADING_CANONICAL: Record<string, string> = {
+  'context / routine': 'Context / routine',
+  'what happened': 'What happened',
+  "young person's presentation": "Young person's presentation",
+  "young person's voice or communication": "Young person's voice or communication",
+  'staff response': 'Staff response',
+  outcome: 'Outcome',
+  'to complete before saving': 'To complete before saving'
+}
+
+const STRUCTURED_DAILY_SECTION_HEADING_ONLY_RE =
+  /^(Context\s*\/\s*routine|What happened|Young person'?s presentation|Young person'?s voice or communication|Staff response|Outcome|To complete before saving)\s*:?\s*$/i
+
+const STRUCTURED_DAILY_SECTION_INLINE_RE =
+  /^(Context\s*\/\s*routine|What happened|Young person'?s presentation|Young person'?s voice or communication|Staff response|Outcome)\s*:\s*(.+)$/i
+
+const STRUCTURED_DAILY_BODY_BOUNDARY_RES: Array<{ pattern: RegExp; replacement: string }> = [
+  { pattern: /\b(breakfast)\s+(They)\b/, replacement: '$1. $2' },
+  { pattern: /\b(toast)\s+(They)\b/, replacement: '$1. $2' },
+  { pattern: /\b(note)\s+(Add)\b/i, replacement: '$1. $2' },
+  { pattern: /\b(period)\s+(Staff)\b/i, replacement: '$1. $2' },
+  { pattern: /\b(handover)\s+(Staff)\b/i, replacement: '$1. $2' },
+  { pattern: /\b(saving)\s+(Staff)\b/i, replacement: '$1. $2' }
+]
+
+function canonicalDailySectionHeading(raw: string): string {
+  const key = String(raw || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+  return DAILY_SECTION_HEADING_CANONICAL[key] ?? String(raw || '').trim()
+}
+
+function expandDailyRecordBulletItems(line: string): string[] {
+  const value = String(line || '').trim()
+  if (!value) return []
+  const stripped = value.startsWith('*') ? value.replace(/^\*\s*/, '').trim() : value
+  const parts = stripped.split(/\s*\*\s+/).map((part) => part.trim()).filter(Boolean)
+  return parts.map((part) => {
+    if (/[.!?]$/.test(part)) return part
+    return `${part}.`
+  })
+}
+
+function repairStructuredDailyBodyPunctuation(body: string): string {
+  let result = String(body || '').trim()
+  if (!result) return result
+  for (const { pattern, replacement } of STRUCTURED_DAILY_BODY_BOUNDARY_RES) {
+    result = result.replace(pattern, replacement)
+  }
+  if (!/[.!?]$/.test(result)) result = `${result}.`
+  return result
+}
+
+export function formatStructuredDailyRecordDraftForMarkdown(text: string): string {
+  if (!isStructuredDailyRecordDraft(text)) return String(text || '')
+  const rawLines = String(text || '')
+    .split('\n')
+    .map((line) => line.trimEnd())
+  const sections: Array<{ heading: string; body: string[] }> = []
+  let currentHeading = ''
+  let currentBody: string[] = []
+
+  const flush = () => {
+    if (currentHeading || currentBody.length) {
+      sections.push({ heading: currentHeading, body: currentBody })
+    }
+    currentHeading = ''
+    currentBody = []
+  }
+
+  for (const line of rawLines) {
+    const stripped = line.trim()
+    if (!stripped || stripped.toLowerCase() === 'daily record draft') continue
+    const headingOnly = stripped.match(STRUCTURED_DAILY_SECTION_HEADING_ONLY_RE)
+    const headingInline = stripped.match(STRUCTURED_DAILY_SECTION_INLINE_RE)
+    if (headingOnly) {
+      flush()
+      currentHeading = canonicalDailySectionHeading(headingOnly[1])
+      continue
+    }
+    if (headingInline) {
+      flush()
+      currentHeading = canonicalDailySectionHeading(headingInline[1])
+      currentBody = [headingInline[2].trim()]
+      continue
+    }
+    if (currentHeading) currentBody.push(stripped)
+  }
+  flush()
+
+  const output: string[] = ['## Daily Record Draft', '']
+  for (const section of sections) {
+    output.push(`### ${section.heading}`, '')
+    if (section.heading.toLowerCase() === 'to complete before saving') {
+      for (const line of section.body) {
+        for (const item of expandDailyRecordBulletItems(line)) {
+          output.push(`- ${item}`)
+        }
+      }
+    } else {
+      const bodyText = repairStructuredDailyBodyPunctuation(section.body.join(' ').trim())
+      if (bodyText) output.push(bodyText)
+    }
+    output.push('')
+  }
+  return output.join('\n').replace(/\n{3,}/g, '\n\n').trim()
 }
 
 function sourceSupportsComparativeCalm(sourceText: string): boolean {
@@ -795,6 +920,7 @@ function trimExplanatoryClauses(sentence: string): string {
 export function stripExplanatoryDailyRecordPhrases(text: string, sourceText = ''): string {
   if (hasSafeguardingCue(sourceText) || userExplicitlyRequestsExplanation(sourceText)) return String(text || '')
   if (!isDailyRecordRequest(sourceText)) return String(text || '')
+  if (isStructuredDailyRecordDraft(text)) return String(text || '')
   const paragraphs = String(text || '').split(/\n\s*\n/)
   const cleaned: string[] = []
   for (const paragraph of paragraphs) {

@@ -14,6 +14,7 @@ from assistant.knowledge.adult_identity_language import (
     reshape_routine_daily_record_chat_answer,
     sanitize_daily_record_draft_wording,
     sanitize_visible_final_answer,
+    strip_explanatory_daily_record_phrases,
     strip_self_harm_generic_fillers,
     user_requested_blank_template,
 )
@@ -269,6 +270,31 @@ def test_build_simple_daily_record_draft_matches_expected_shape():
     assert "watched television before handover" in lower
     assert "to complete before saving" in lower
     assert "no concerns" not in lower
+
+
+def test_structured_daily_record_draft_preserves_formatting_after_visible_sanitize():
+    draft = build_simple_daily_record_draft(BREAKFAST_DAILY_PROMPT)
+    cleaned = sanitize_visible_final_answer(draft, source_text=BREAKFAST_DAILY_PROMPT)
+    assert "### Staff response" in cleaned
+    assert "breakfast. They chose toast." in cleaned
+    assert "- Add the time." in cleaned
+    assert "- Add who was present." in cleaned
+    assert "- Add anything the young person said or communicated." in cleaned
+    assert "- Add any relevant follow-up, if needed." in cleaned
+    assert "staff response:" not in cleaned.lower()
+
+
+def test_strip_explanatory_phrases_skips_structured_daily_record_draft():
+    draft = build_simple_daily_record_draft(BREAKFAST_DAILY_PROMPT)
+    cleaned = strip_explanatory_daily_record_phrases(draft, source_text=BREAKFAST_DAILY_PROMPT)
+    assert cleaned == draft
+
+
+def test_apply_adult_identity_keeps_staff_response_heading_capitalised():
+    text = "Staff response:\nStaff supported the routine."
+    cleaned = apply_adult_identity_language(text)
+    assert cleaned.startswith("Staff response:")
+    assert "staff supported" not in cleaned.splitlines()[0].lower()
 
 
 def test_answer_preservation_for_clean_strong_answer():

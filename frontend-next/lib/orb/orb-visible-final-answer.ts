@@ -5,6 +5,7 @@
 
 import {
   fixBrokenAdultHeadingWording,
+  formatStructuredDailyRecordDraftForMarkdown,
   isDailyRecordDraftMode,
   isDailyRecordRequest,
   promptContainsDailyRecordingFacts,
@@ -34,6 +35,7 @@ export function sanitizeVisibleFinalAnswer(text: string, sourceText = ''): strin
     if (isDailyRecordDraftMode(sourceText)) {
       cleaned = sanitizeDailyRecordDraftWording(cleaned, sourceText)
     }
+    cleaned = formatStructuredDailyRecordDraftForMarkdown(cleaned)
   }
 
   if (SELF_HARM_CUE_RE.test(sourceText || '')) {

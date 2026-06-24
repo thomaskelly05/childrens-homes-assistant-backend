@@ -18,6 +18,8 @@ describe('Flow 1 pilot smoke fix', () => {
     assert.match(suggestions, /Open in ORB Write using Daily Record template/)
     assert.match(suggestions, /Save to Records & Drafts/)
     assert.match(suggestions, /save_to_records/)
+    assert.match(suggestions, /ROUTINE_DAILY_UNRELATED_TEMPLATES/)
+    assert.match(suggestions, /suggestionKey/)
   })
 
   it('saved output detail exposes primary Open in ORB Write workflow', () => {
