@@ -27,18 +27,18 @@ export function OrbStationReconnectBanner({
 }) {
   return (
     <div
-      className="orb-station-reconnect-banner mb-3 rounded-xl border border-amber-400/25 bg-amber-400/10 px-3 py-2.5 text-xs leading-5 text-amber-100/95"
+      className="orb-station-reconnect-banner mb-3 rounded-xl border-2 border-amber-500/60 bg-amber-100 px-3 py-2.5 text-xs leading-5 text-amber-950 dark:border-amber-400/50 dark:bg-amber-950/70 dark:text-amber-50"
       data-orb-station-reconnect-banner
       role="status"
     >
-      <p className="font-medium">Reconnect to sync</p>
-      <p className="mt-0.5 text-amber-100/80">
+      <p className="font-semibold">Reconnect to sync</p>
+      <p className="mt-0.5 text-amber-900 dark:text-amber-100/95">
         You are signed in — local content is still available. Refresh when your connection is stable.
       </p>
       {onRefresh ? (
         <button
           type="button"
-          className="mt-2 rounded-full border border-amber-300/40 px-3 py-1 text-[11px] font-semibold text-amber-50 hover:bg-amber-400/15"
+          className="mt-2 rounded-full border border-amber-700/30 bg-white/70 px-3 py-1 text-[11px] font-semibold text-amber-950 hover:bg-amber-50 dark:border-amber-300/40 dark:bg-amber-900/40 dark:text-amber-50 dark:hover:bg-amber-900/60"
           onClick={onRefresh}
           data-orb-station-reconnect-refresh
         >

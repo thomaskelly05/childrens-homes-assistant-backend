@@ -294,6 +294,34 @@ export function OrbSavedOutputsPanel({
 
   const showRecordsEmptyCanvas = residentialSurface && items.length === 0 && !loading && !error
 
+  async function handleFinalise(id: string) {
+    if (id.startsWith('local_')) {
+      setNotice('Finalise is available after syncing this draft.')
+      return
+    }
+    try {
+      await updateOrbRecordsWorkspaceItem(id, { status: 'finalised' })
+      setNotice('Draft finalised.')
+      void refresh()
+      if (selectedId === id) {
+        setDetail((current) =>
+          current
+            ? {
+                ...current,
+                metadata: {
+                  ...(current.metadata || {}),
+                  finalised: true,
+                  workspace_status: 'finalised'
+                }
+              }
+            : current
+        )
+      }
+    } catch {
+      setNotice('Could not finalise this draft right now.')
+    }
+  }
+
   async function handleArchive(id: string) {
     await archiveOrbSavedOutput(id)
     setNotice('Output archived.')
@@ -656,9 +684,11 @@ export function OrbSavedOutputsPanel({
                   }
                   onUseInShiftBuilder={onUseInShiftBuilder}
                   onReuseInChat={onReuseInChat}
+                  onArchive={() => void handleArchive(detail.id)}
+                  onFinalise={() => void handleFinalise(detail.id)}
                   onRerun={onRerun ? handleRerun : undefined}
                 />
-                <OrbIntelligenceOutput output={recordToView(detail)} />
+                <OrbIntelligenceOutput output={recordToView(detail)} variant="records" />
               </div>
             </>
           ) : (

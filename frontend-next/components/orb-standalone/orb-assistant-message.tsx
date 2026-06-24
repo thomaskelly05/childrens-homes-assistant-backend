@@ -448,6 +448,7 @@ export type OrbResponseFollowUpAction =
   | 'assessor_feedback'
   | 'use_template_in_write'
   | 'turn_into_record'
+  | 'save_to_records'
 
 export type { OrbSuggestedReplyItem } from '@/lib/orb/orb-output-reuse'
 

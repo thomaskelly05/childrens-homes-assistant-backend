@@ -1225,6 +1225,18 @@ html[data-orb-residential='1'] .orb-communicate-visual-preview [data-orb-communi
   }
 }
 
+.orb-workspace--records [data-orb-intelligence-output='records'] {
+  color: var(--orb-mobile-ws-text, var(--orb-foreground, #0f172a));
+}
+
+.orb-workspace--records [data-orb-saved-output-detail-actions] [data-orb-saved-output-open-write] {
+  font-weight: 600;
+}
+
+.orb-workspace--records [data-orb-saved-output-boundary] {
+  color: var(--orb-read-text-secondary, #374151) !important;
+}
+
 .orb-workspace--records [data-orb-records-empty] {
   padding: clamp(2rem, 5vw, 4rem) 1.5rem;
   text-align: center;

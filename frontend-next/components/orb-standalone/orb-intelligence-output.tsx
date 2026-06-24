@@ -36,12 +36,30 @@ export type OrbIntelligenceOutputView = {
 
 export function OrbIntelligenceOutput({
   output,
-  onCopy
+  onCopy,
+  variant = 'default'
 }: {
   output: OrbIntelligenceOutputView
   onCopy?: () => void
+  variant?: 'default' | 'records'
 }) {
   const markdown = buildCopyMarkdown(output)
+  const isRecords = variant === 'records'
+  const titleClass = isRecords
+    ? 'text-sm font-semibold text-[var(--orb-mobile-ws-text,var(--orb-foreground))]'
+    : 'text-sm font-semibold text-white'
+  const bodyClass = isRecords
+    ? 'text-sm text-[var(--orb-mobile-ws-text,var(--orb-foreground))] whitespace-pre-wrap leading-6'
+    : 'text-sm text-slate-300 whitespace-pre-wrap'
+  const sectionHeadingClass = isRecords
+    ? 'text-xs font-semibold uppercase tracking-wide text-[var(--orb-read-text-secondary,#374151)]'
+    : 'text-xs font-semibold uppercase tracking-wide text-slate-500'
+  const listClass = isRecords
+    ? 'mt-2 list-disc pl-5 text-sm text-[var(--orb-mobile-ws-text,var(--orb-foreground))]'
+    : 'mt-2 list-disc pl-5 text-sm text-slate-300'
+  const buttonClass = isRecords
+    ? 'inline-flex shrink-0 items-center gap-1 rounded-lg border border-[var(--orb-mobile-ws-card-border,var(--orb-line))] px-2 py-1 text-xs text-[var(--orb-mobile-ws-text,var(--orb-foreground))] hover:bg-[var(--orb-surface-hover)]'
+    : 'inline-flex shrink-0 items-center gap-1 rounded-lg border border-white/10 px-2 py-1 text-xs text-slate-300 hover:bg-white/[0.06]'
 
   function handleCopy() {
     void navigator.clipboard.writeText(markdown)
@@ -49,25 +67,25 @@ export function OrbIntelligenceOutput({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" data-orb-intelligence-output={variant}>
       <div className="flex items-start justify-between gap-2">
-        <h3 className="text-sm font-semibold text-white">{output.title}</h3>
+        <h3 className={titleClass}>{output.title}</h3>
         <button
           type="button"
           onClick={handleCopy}
-          className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-white/10 px-2 py-1 text-xs text-slate-300 hover:bg-white/[0.06]"
+          className={buttonClass}
         >
           <Copy className="h-3.5 w-3.5" aria-hidden />
           Copy markdown
         </button>
       </div>
 
-      {output.summary ? <p className="text-sm text-slate-300 whitespace-pre-wrap">{output.summary}</p> : null}
+      {output.summary ? <p className={bodyClass}>{output.summary}</p> : null}
 
       {output.key_points?.length ? (
         <section>
-          <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-500">Key points</h4>
-          <ul className="mt-2 list-disc pl-5 text-sm text-slate-300">
+          <h4 className={sectionHeadingClass}>Key points</h4>
+          <ul className={listClass}>
             {output.key_points.map((point) => (
               <li key={point}>{point}</li>
             ))}
@@ -78,8 +96,8 @@ export function OrbIntelligenceOutput({
       {output.sections?.map((section) =>
         section.id === 'body' ? null : (
           <section key={section.id}>
-            <h4 className="text-sm font-semibold text-white">{section.title}</h4>
-            <p className="mt-2 whitespace-pre-wrap text-sm text-slate-300">{section.body}</p>
+            <h4 className={isRecords ? sectionHeadingClass : 'text-sm font-semibold text-white'}>{section.title}</h4>
+            <p className={isRecords ? bodyClass : 'mt-2 whitespace-pre-wrap text-sm text-slate-300'}>{section.body}</p>
           </section>
         )
       )}

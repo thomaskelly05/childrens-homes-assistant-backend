@@ -2,6 +2,8 @@
 
 import { useMemo, useState } from 'react'
 import {
+  Archive,
+  CheckCircle2,
   ClipboardList,
   Copy,
   Download,
@@ -23,6 +25,11 @@ import {
 } from '@/lib/orb/orb-saved-output-adapters'
 import { exportOrbSavedOutput, reuseOrbSavedOutput, type OrbSavedOutputRecord } from '@/lib/orb/standalone-client'
 
+const RECORDS_ACTION_PRIMARY =
+  'inline-flex items-center gap-1.5 rounded-lg border border-sky-500/50 bg-sky-500/15 px-3 py-1.5 text-xs font-semibold text-[var(--orb-mobile-ws-text,var(--orb-foreground))] hover:bg-sky-500/25'
+const RECORDS_ACTION_SECONDARY =
+  'inline-flex items-center gap-1 rounded-lg border border-[var(--orb-mobile-ws-card-border,var(--orb-line))] px-2 py-1 text-xs text-[var(--orb-mobile-ws-text,var(--orb-foreground))] hover:bg-[var(--orb-surface-hover)] disabled:cursor-not-allowed disabled:opacity-45'
+
 export function OrbSavedOutputDetailActions({
   record,
   onNotice,
@@ -31,6 +38,8 @@ export function OrbSavedOutputDetailActions({
   onOpenInOrbWrite,
   onUseInShiftBuilder,
   onReuseInChat,
+  onArchive,
+  onFinalise,
   onRerun
 }: {
   record: OrbSavedOutputRecord
@@ -40,10 +49,14 @@ export function OrbSavedOutputDetailActions({
   onOpenInOrbWrite?: () => void
   onUseInShiftBuilder?: (notes: string, focus?: string) => void
   onReuseInChat?: (prompt: string) => void
+  onArchive?: () => void
+  onFinalise?: () => void
   onRerun?: (state: OrbSavedOutputRerunState) => void
 }) {
   const [rerunNotice, setRerunNotice] = useState<string | null>(null)
   const rerun = useMemo(() => resolveSavedOutputRerun(record), [record])
+  const isFinalised =
+    record.metadata?.finalised === true || record.metadata?.workspace_status === 'finalised'
 
   const markdown = record.content_markdown || record.summary || ''
 
@@ -114,69 +127,19 @@ export function OrbSavedOutputDetailActions({
 
   return (
     <div className="space-y-3" data-orb-saved-output-detail-actions>
+      {onOpenInOrbWrite ? (
+        <button
+          type="button"
+          onClick={onOpenInOrbWrite}
+          className={`${RECORDS_ACTION_PRIMARY} w-full justify-center sm:w-auto`}
+          data-orb-saved-output-open-write
+        >
+          <PenLine className="h-4 w-4" aria-hidden />
+          Open in ORB Write
+        </button>
+      ) : null}
+
       <div className="flex flex-wrap gap-2">
-        <button
-          type="button"
-          onClick={() => void handleCopy()}
-          className="inline-flex items-center gap-1 rounded-lg border border-white/10 px-2 py-1 text-xs text-slate-300"
-          data-orb-saved-output-copy
-        >
-          <Copy className="h-3.5 w-3.5" aria-hidden />
-          Copy
-        </button>
-        <button
-          type="button"
-          onClick={() => void handleExport()}
-          className="inline-flex items-center gap-1 rounded-lg border border-white/10 px-2 py-1 text-xs text-slate-300"
-          data-orb-saved-output-export
-        >
-          <Download className="h-3.5 w-3.5" aria-hidden />
-          Export .md
-        </button>
-        {(onAskOrb || onReuseInChat) ? (
-          <button
-            type="button"
-            onClick={() => void handleAskOrb()}
-            className="inline-flex items-center gap-1 rounded-lg border border-violet-400/30 bg-violet-500/10 px-2 py-1 text-xs text-violet-100"
-            data-orb-saved-output-ask-orb
-          >
-            <MessageSquare className="h-3.5 w-3.5" aria-hidden />
-            Ask ORB about this
-          </button>
-        ) : null}
-        {onSendToDictate ? (
-          <button
-            type="button"
-            onClick={handleSendToDictate}
-            className="inline-flex items-center gap-1 rounded-lg border border-white/10 px-2 py-1 text-xs text-slate-300"
-            data-orb-saved-output-send-dictate
-          >
-            <Mic className="h-3.5 w-3.5" aria-hidden />
-            Send to Dictate
-          </button>
-        ) : null}
-        {onOpenInOrbWrite ? (
-          <button
-            type="button"
-            onClick={onOpenInOrbWrite}
-            className="inline-flex items-center gap-1 rounded-lg border border-sky-400/30 bg-sky-500/10 px-2 py-1 text-xs text-sky-100"
-            data-orb-saved-output-open-write
-          >
-            <PenLine className="h-3.5 w-3.5" aria-hidden />
-            Open in ORB Write
-          </button>
-        ) : null}
-        {onUseInShiftBuilder ? (
-          <button
-            type="button"
-            onClick={handleShiftBuilder}
-            className="inline-flex items-center gap-1 rounded-lg border border-white/10 px-2 py-1 text-xs text-slate-300"
-            data-orb-saved-output-shift-builder
-          >
-            <ClipboardList className="h-3.5 w-3.5" aria-hidden />
-            Create handover plan
-          </button>
-        ) : null}
         {onReuseInChat ? (
           <button
             type="button"
@@ -188,11 +151,86 @@ export function OrbSavedOutputDetailActions({
                 onReuseInChat(buildAskOrbAboutSavedOutputPrompt(record))
               }
             }}
-            className="inline-flex items-center gap-1 rounded-lg border border-white/10 px-2 py-1 text-xs text-slate-300"
+            className={RECORDS_ACTION_SECONDARY}
             data-orb-saved-output-reuse-chat
           >
             <Sparkles className="h-3.5 w-3.5" aria-hidden />
-            Reuse in chat
+            Reuse in Chat
+          </button>
+        ) : null}
+        <button
+          type="button"
+          onClick={() => void handleCopy()}
+          className={RECORDS_ACTION_SECONDARY}
+          data-orb-saved-output-copy
+        >
+          <Copy className="h-3.5 w-3.5" aria-hidden />
+          Copy
+        </button>
+        <button
+          type="button"
+          onClick={() => void handleExport()}
+          className={RECORDS_ACTION_SECONDARY}
+          data-orb-saved-output-export
+        >
+          <Download className="h-3.5 w-3.5" aria-hidden />
+          Export
+        </button>
+        {onArchive ? (
+          <button
+            type="button"
+            onClick={onArchive}
+            className={RECORDS_ACTION_SECONDARY}
+            data-orb-saved-output-archive
+          >
+            <Archive className="h-3.5 w-3.5" aria-hidden />
+            Archive
+          </button>
+        ) : null}
+        {onFinalise ? (
+          <button
+            type="button"
+            onClick={onFinalise}
+            disabled={isFinalised}
+            className={RECORDS_ACTION_SECONDARY}
+            data-orb-saved-output-finalise
+            data-orb-saved-output-finalise-disabled={isFinalised ? 'true' : 'false'}
+          >
+            <CheckCircle2 className="h-3.5 w-3.5" aria-hidden />
+            Finalise
+          </button>
+        ) : null}
+        {(onAskOrb || onReuseInChat) ? (
+          <button
+            type="button"
+            onClick={() => void handleAskOrb()}
+            className={RECORDS_ACTION_SECONDARY}
+            data-orb-saved-output-ask-orb
+          >
+            <MessageSquare className="h-3.5 w-3.5" aria-hidden />
+            Ask ORB about this
+          </button>
+        ) : null}
+        {onSendToDictate ? (
+          <button
+            type="button"
+            onClick={handleSendToDictate}
+            className={RECORDS_ACTION_SECONDARY}
+            data-orb-saved-output-send-dictate
+          >
+            <Mic className="h-3.5 w-3.5" aria-hidden />
+            Send to Dictate
+          </button>
+        ) : null}
+        {onUseInShiftBuilder ? (
+          <button
+            type="button"
+            onClick={handleShiftBuilder}
+            className={RECORDS_ACTION_SECONDARY}
+            data-orb-saved-output-shift-builder
+          >
+            <ClipboardList className="h-3.5 w-3.5" aria-hidden />
+            Create handover plan
           </button>
         ) : null}
         {rerun ? (
@@ -200,7 +238,7 @@ export function OrbSavedOutputDetailActions({
             type="button"
             onClick={handleRerun}
             disabled={!rerun.available && !onRerun}
-            className="inline-flex items-center gap-1 rounded-lg border border-cyan-400/25 bg-cyan-500/10 px-2 py-1 text-xs text-cyan-100 disabled:opacity-40"
+            className={RECORDS_ACTION_SECONDARY}
             data-orb-saved-output-rerun
             data-orb-saved-output-rerun-available={rerun.available ? 'true' : 'false'}
           >
@@ -208,33 +246,24 @@ export function OrbSavedOutputDetailActions({
             {rerun.label}
           </button>
         ) : null}
-        <button
-          type="button"
-          onClick={() => {
-            void navigator.clipboard.writeText(markdown)
-            onNotice?.('Full content copied.')
-          }}
-          className="inline-flex items-center gap-1 rounded-lg border border-white/10 px-2 py-1 text-xs text-slate-300"
-          data-orb-saved-output-copy-full
-        >
-          <PenLine className="h-3.5 w-3.5" aria-hidden />
-          Copy full content
-        </button>
       </div>
 
       {rerunNotice ? (
-        <p className="text-xs text-amber-300/90" data-orb-saved-output-rerun-unavailable>
+        <p className="text-xs text-amber-900 dark:text-amber-100" data-orb-saved-output-rerun-unavailable>
           {rerunNotice}
         </p>
       ) : rerun && !rerun.available ? (
-        <p className="text-xs text-slate-500" data-orb-saved-output-rerun-unavailable>
+        <p className="text-xs text-[var(--orb-read-text-secondary,#374151)]" data-orb-saved-output-rerun-unavailable>
           {rerun.reason}
         </p>
       ) : null}
 
       <OrbPrivacyNotice surface="export" className="text-left" />
 
-      <ul className="space-y-1 text-[11px] leading-relaxed text-slate-500" data-orb-saved-output-boundary>
+      <ul
+        className="space-y-1 text-[11px] leading-relaxed text-[var(--orb-read-text-secondary,#374151)]"
+        data-orb-saved-output-boundary
+      >
         {ORB_SAVED_OUTPUT_BOUNDARY_LINES.map((line) => (
           <li key={line}>{line}</li>
         ))}

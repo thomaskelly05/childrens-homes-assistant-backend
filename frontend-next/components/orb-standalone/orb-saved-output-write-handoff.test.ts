@@ -22,6 +22,8 @@ describe('ORB saved output write handoff', () => {
     const panel = read('components/orb-standalone/orb-saved-outputs-panel.tsx')
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
     assert.match(detail, /data-orb-saved-output-open-write/)
+    assert.match(detail, /Open in ORB Write/)
+    assert.match(detail, /data-orb-saved-output-finalise/)
     assert.match(panel, /onOpenSavedOutputInOrbWrite/)
     assert.match(companion, /handoffSavedOutputToOrbWrite/)
   })

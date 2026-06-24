@@ -598,11 +598,27 @@ _DAILY_RECORD_FIELD_HEADING_RES: tuple[re.Pattern[str], ...] = (
 )
 
 _ROUTINE_DAILY_BEFORE_SAVING_LIST = (
-    "Before saving, add:\n"
-    "- the time\n"
-    "- who was present\n"
-    "- anything the young person said or communicated\n"
-    "- whether any follow-up is needed."
+    "To complete before saving:\n\n"
+    "* Add the time.\n"
+    "* Add who was present.\n"
+    "* Add anything the young person said or communicated.\n"
+    "* Add any relevant follow-up, if needed."
+)
+
+DAILY_RECORD_CHAT_SECTION_HEADINGS: tuple[str, ...] = (
+    "Context / routine",
+    "What happened",
+    "Young person's presentation",
+    "Young person's voice or communication",
+    "Staff response",
+    "Outcome",
+)
+
+_STRUCTURED_DAILY_SECTION_RE = re.compile(
+    r"^(?:#{1,3}\s*)?(Context\s*/\s*routine|What happened|Young person'?s presentation|"
+    r"Young person'?s voice or communication|Staff response|Outcome|"
+    r"To complete before saving|Before saving)\s*:?\s*$",
+    re.I | re.M,
 )
 
 _SELF_HARM_CUE_RE = re.compile(
@@ -1008,38 +1024,112 @@ def strip_what_this_means_in_practice(text: str, *, source_text: str = "") -> st
     return re.sub(r"\n{3,}", "\n\n", result).strip()
 
 
-def build_simple_daily_record_draft(source_text: str) -> str:
-    """Deterministic short daily record draft from routine facts in the user prompt."""
+def is_structured_daily_record_draft(text: str) -> bool:
+    """True when chat output uses the structured daily record section scaffold."""
+    value = str(text or "")
+    lower = value.lower()
+    markers = (
+        "context / routine",
+        "what happened",
+        "young person's presentation",
+        "young person's voice",
+        "staff response",
+        "outcome",
+    )
+    hits = sum(1 for marker in markers if marker in lower)
+    has_completion = "to complete before saving" in lower or "before saving" in lower
+    return hits >= 4 and (has_completion or "daily record draft" in lower)
+
+
+def _extract_daily_record_facts(source_text: str) -> dict[str, str]:
+    """Extract routine facts from the adult prompt — does not invent details."""
     lower = str(source_text or "").lower()
-    opening = "The young person appeared calm during breakfast." if "calm" in lower and "breakfast" in lower else "During the shift,"
-    body_parts: list[str] = []
+    facts: dict[str, str] = {}
+
+    happened_parts: list[str] = []
+    if "breakfast" in lower:
+        happened_parts.append("The young person had breakfast")
     if "chose toast" in lower:
-        body_parts.append("They chose toast")
+        happened_parts.append("They chose toast")
     if "watched tv" in lower or "watched television" in lower:
-        body_parts.append(
-            "watched television before handover" if "handover" in lower else "watched television"
+        happened_parts.append(
+            "They then watched television before handover"
+            if "handover" in lower
+            else "They then watched television"
         )
-    if body_parts:
-        narrative = (
-            f"{opening} {' and then '.join(body_parts)}."
-            if opening.endswith(".")
-            else f"{opening} {' and then '.join(body_parts)}."
+    if happened_parts:
+        facts["what_happened"] = " ".join(happened_parts) + "."
+
+    if "breakfast" in lower and "handover" in lower:
+        facts["context"] = (
+            "The record relates to the young person's morning routine before handover."
+        )
+    elif "breakfast" in lower:
+        facts["context"] = "The record relates to the young person's breakfast routine."
+    elif "handover" in lower:
+        facts["context"] = "The record relates to the period before handover."
+    else:
+        facts["context"] = "The record relates to the shift period described."
+
+    if "calm" in lower:
+        facts["presentation"] = "The young person appeared calm during this period."
+
+    child_spoke = any(
+        term in lower
+        for term in (" said ", " asked ", " told ", " spoke ", " communicated ", " shouted ", " replied ")
+    )
+    if not child_spoke:
+        facts["voice"] = (
+            "No direct words from the young person were provided in the note. "
+            "Add anything they said, asked for or communicated before saving."
+        )
+
+    if "breakfast" in lower or "toast" in lower:
+        facts["staff_response"] = (
+            "Staff supported the routine, offered choice around breakfast and maintained a calm environment."
         )
     else:
-        narrative = opening if opening.endswith(".") else f"{opening} events were recorded proportionately."
-    if "staff" not in narrative.lower():
-        narrative += " Staff offered choice and maintained a calm routine."
-    if "no concerns" not in narrative.lower():
-        narrative += " No concerns were observed during this period."
-    return (
-        "Here is a simple daily record draft:\n\n"
-        f"{narrative}\n\n"
-        f"{_ROUTINE_DAILY_BEFORE_SAVING_LIST}"
-    )
+        facts["staff_response"] = "Staff supported the routine and maintained a calm environment."
+
+    if "calm" in lower:
+        facts["outcome"] = (
+            "The morning period appears to have remained settled based on the information provided."
+            if "breakfast" in lower or "morning" in lower
+            else "The period appears to have remained settled based on the information provided."
+        )
+
+    return facts
+
+
+def build_simple_daily_record_draft(source_text: str) -> str:
+    """Deterministic structured daily record draft from routine facts in the user prompt."""
+    facts = _extract_daily_record_facts(source_text)
+    sections: list[tuple[str, str]] = [
+        ("Context / routine", facts.get("context", "Describe the routine or context for this record.")),
+        ("What happened", facts.get("what_happened", "Add what happened during this period.")),
+        (
+            "Young person's presentation",
+            facts.get("presentation", "Add how the young person presented during this period."),
+        ),
+        (
+            "Young person's voice or communication",
+            facts.get(
+                "voice",
+                "Add what the young person said, asked for or communicated during this period.",
+            ),
+        ),
+        ("Staff response", facts.get("staff_response", "Add how staff responded and supported.")),
+        ("Outcome", facts.get("outcome", "Add what happened next or how the period ended.")),
+    ]
+    lines = ["Daily Record Draft", ""]
+    for heading, body in sections:
+        lines.extend([f"{heading}:", body, ""])
+    lines.append(_ROUTINE_DAILY_BEFORE_SAVING_LIST)
+    return "\n".join(lines).strip()
 
 
 def reshape_routine_daily_record_chat_answer(text: str, *, source_text: str = "") -> str:
-    """Prefer short narrative drafts over form templates for routine daily recording chat."""
+    """Prefer structured daily record drafts over form templates or one-paragraph compression."""
     if user_requested_blank_template(source_text) or not is_daily_record_request(source_text):
         return str(text or "")
     if has_safeguarding_cue(source_text):
@@ -1047,26 +1137,16 @@ def reshape_routine_daily_record_chat_answer(text: str, *, source_text: str = ""
     if not prompt_contains_daily_recording_facts(source_text):
         return str(text or "")
 
-    if looks_like_daily_record_draft_violation(text):
+    if looks_like_daily_record_draft_violation(text) or not is_structured_daily_record_draft(text):
         return build_simple_daily_record_draft(source_text)
 
     cleaned = strip_form_style_daily_record_lines(text, source_text=source_text)
     cleaned = strip_daily_record_draft_forbidden_sections(cleaned, source_text=source_text)
     cleaned = sanitize_daily_record_draft_wording(cleaned, source_text=source_text)
 
-    if (
-        looks_like_daily_record_draft_violation(cleaned)
-        or (len(cleaned.split()) < 25 and prompt_contains_daily_recording_facts(source_text))
-    ):
+    if looks_like_daily_record_draft_violation(cleaned) or not is_structured_daily_record_draft(cleaned):
         cleaned = build_simple_daily_record_draft(source_text)
-    elif "before saving" not in cleaned.lower() and "here is a simple daily record draft" in cleaned.lower():
-        cleaned = f"{cleaned.rstrip()}\n\n{_ROUTINE_DAILY_BEFORE_SAVING_LIST}"
-    elif (
-        "before saving" not in cleaned.lower()
-        and prompt_contains_daily_recording_facts(source_text)
-        and not looks_like_daily_record_draft_violation(cleaned)
-        and len(cleaned.split()) >= 20
-    ):
+    elif "to complete before saving" not in cleaned.lower() and "before saving" not in cleaned.lower():
         cleaned = f"{cleaned.rstrip()}\n\n{_ROUTINE_DAILY_BEFORE_SAVING_LIST}"
     return cleaned
 

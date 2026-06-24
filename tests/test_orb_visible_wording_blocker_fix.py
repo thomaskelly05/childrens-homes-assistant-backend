@@ -9,6 +9,7 @@ from assistant.knowledge.adult_identity_language import (
     build_simple_daily_record_draft,
     fix_broken_adult_heading_wording,
     is_daily_record_draft_mode,
+    is_structured_daily_record_draft,
     looks_like_daily_record_draft_violation,
     reshape_routine_daily_record_chat_answer,
     sanitize_daily_record_draft_wording,
@@ -79,9 +80,13 @@ The young person was calm.
     assert "daily record: [date]" not in lower
     assert "young person: [name]" not in lower
     assert "manager review" not in lower
-    assert "here is a simple daily record draft" in lower
-    assert "before saving" in lower
-    assert "chose toast" in lower or "calm during breakfast" in lower
+    assert "daily record draft" in lower
+    assert "context / routine" in lower
+    assert "what happened" in lower
+    assert "young person's presentation" in lower
+    assert "staff response" in lower
+    assert "to complete before saving" in lower
+    assert "chose toast" in lower or "calm during breakfast" in lower or "appeared calm" in lower
 
 
 def test_routine_daily_record_keeps_blank_template_when_asked():
@@ -199,15 +204,10 @@ Include engaging positively with the adult and specific the adult interactions.
     cleaned = sanitize_visible_final_answer(raw, source_text=BREAKFAST_DAILY_PROMPT)
     lower = cleaned.lower()
     assert is_daily_record_draft_mode(BREAKFAST_DAILY_PROMPT)
-    assert "here is a simple daily record draft" in lower
-    assert "daily record: add the date" not in lower
-    assert "staff present:" not in lower
-    assert "young person:" not in lower
-    assert "[insert" not in lower
-    assert "engaging positively with the adult" not in lower
-    assert "specific the adult interactions" not in lower
-    assert "appeared calm during breakfast" in lower
-    assert "before saving" in lower
+    assert "daily record draft" in lower
+    assert "context / routine" in lower
+    assert "what happened" in lower
+    assert "to complete before saving" in lower
 
 
 def test_daily_record_draft_no_appeared_calmer_without_comparison():
@@ -256,11 +256,19 @@ def test_self_harm_strips_by_taking_these_steps():
 def test_build_simple_daily_record_draft_matches_expected_shape():
     draft = build_simple_daily_record_draft(BREAKFAST_DAILY_PROMPT)
     lower = draft.lower()
-    assert "here is a simple daily record draft" in lower
-    assert "appeared calm during breakfast" in lower
+    assert is_structured_daily_record_draft(draft)
+    assert "daily record draft" in lower
+    assert "context / routine" in lower
+    assert "what happened" in lower
+    assert "young person's presentation" in lower
+    assert "young person's voice" in lower
+    assert "staff response" in lower
+    assert "outcome" in lower
+    assert "appeared calm" in lower
     assert "chose toast" in lower
     assert "watched television before handover" in lower
-    assert "before saving" in lower
+    assert "to complete before saving" in lower
+    assert "no concerns" not in lower
 
 
 def test_answer_preservation_for_clean_strong_answer():

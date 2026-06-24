@@ -166,19 +166,37 @@ GENERATION_REQUIRED_PATTERNS = re.compile(
     re.I,
 )
 
-DAILY_NOTE_DETERMINISTIC_ANSWER = """Absolutely — paste your rough notes and I'll turn them into a clear, factual, child-centred daily note.
+DAILY_NOTE_DETERMINISTIC_ANSWER = """Absolutely — paste your rough notes and I'll turn them into a clear, factual, child-centred daily record.
 
 Use this structure:
-Date/time:
-Young person:
-Mood/presentation:
-What happened:
-Child's voice:
-Staff support:
-Outcome:
-Follow-up:
 
-When you send the rough notes, include what was seen/heard, what the child said, what staff did and what happened next."""
+Daily Record Draft
+
+Context / routine:
+Date/time and routine context.
+
+What happened:
+What was seen and heard.
+
+Young person's presentation:
+Mood, presentation and observable behaviour.
+
+Young person's voice or communication:
+Their words or how they communicated, if known.
+
+Staff response:
+What staff did to support.
+
+Outcome:
+What happened next.
+
+To complete before saving:
+* Add the time.
+* Add who was present.
+* Add anything the young person said or communicated.
+* Add any relevant follow-up, if needed.
+
+When you send rough notes, include what was seen/heard, what the young person said, what staff did and what happened next."""
 
 KEYWORK_SESSION_DETERMINISTIC_ANSWER = """Absolutely — paste your rough notes and I'll help you turn them into a clear key-work session record.
 
