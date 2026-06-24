@@ -189,7 +189,7 @@ export function workingDocumentSectionsForTemplate(templateId: string): readonly
 export function workingDocumentTypeLabel(templateId: string): string {
   const match = ORB_DICTATE_RECORD_TYPE_SUGGESTIONS.find((o) => o.templateId === templateId)
   if (match) return match.label
-  if (templateId === 'general') return ORB_DICTATE_UNSTRUCTURED_NOTE_LABEL
+  if (templateId === 'general') return 'Quick Record'
   return ORB_DICTATE_UNSTRUCTURED_NOTE_LABEL
 }
 

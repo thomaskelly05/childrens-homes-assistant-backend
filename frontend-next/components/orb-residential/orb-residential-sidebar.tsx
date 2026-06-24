@@ -317,6 +317,7 @@ export function OrbResidentialSidebar({
   onSelectMode,
   onOpenPracticePanel,
   activeMode,
+  activeNavId,
   onWorkspaceChange,
   onSelectProject,
   collapsed = false,
@@ -346,6 +347,8 @@ export function OrbResidentialSidebar({
   onSelectMode?: (mode: StandaloneOrbMode) => void
   onOpenPracticePanel?: (panel: OrbResidentialPracticePanelId) => void
   activeMode?: StandaloneOrbMode
+  /** Visible sidebar nav id for active station highlighting. */
+  activeNavId?: string | null
   onWorkspaceChange: (next: StandaloneWorkspace) => void
   onSelectProject?: (projectId: string) => void
   collapsed?: boolean
@@ -368,6 +371,15 @@ export function OrbResidentialSidebar({
   const accountDisplayName = userName?.trim() || adultProfile?.name?.trim() || 'Your account'
   const accountEmail = userEmail?.trim() || null
   const accountStatus = subscriptionStatusLabel?.trim() || null
+
+  function isNavActive(navId: string): boolean {
+    if (!activeNavId) return false
+    if (navId === activeNavId) return true
+    if (navId === 'home' && activeNavId === 'chat') return true
+    if (navId === 'chat' && activeNavId === 'home') return true
+    if (navId === 'saved' && activeNavId === 'saved_outputs') return true
+    return false
+  }
 
   /** Desktop first visit — collapse Projects/Recents for a calmer menu (mobile defaults unchanged). */
   useEffect(() => {
@@ -552,6 +564,7 @@ export function OrbResidentialSidebar({
                 key={entry.id}
                 label={entry.label}
                 onClick={() => handleVisibleNavClick(entry.id)}
+                active={isNavActive(entry.id)}
                 dataOrb={
                   entry.id === 'chat' || entry.id === 'home'
                     ? 'orb-sidebar-chat'
@@ -675,7 +688,7 @@ export function OrbResidentialSidebar({
                     onClose?.()
                     handleVisibleNavClick(item.id)
                   }}
-                  className="orb-sidebar-nav-item w-full"
+                  className={`orb-sidebar-nav-item w-full ${isNavActive(item.id) ? 'orb-sidebar-nav-item--active' : ''}`}
                   data-orb-sidebar-station={item.id}
                   {...(item.id === 'orb_dictate' ? { 'data-orb-sidebar-dictate': true } : {})}
                 >
@@ -847,7 +860,7 @@ export function OrbResidentialSidebar({
                     <button
                       type="button"
                       onClick={() => handleVisibleNavClick(entry.id)}
-                      className="orb-sidebar-nav-item w-full"
+                      className={`orb-sidebar-nav-item w-full ${isNavActive(entry.id) ? 'orb-sidebar-nav-item--active' : ''}`}
                       {...(entry.id === 'orb_dictate' ? { 'data-orb-sidebar-dictate': true } : {})}
                       {...(entry.id === 'chat' || entry.id === 'home'
                         ? { 'data-orb-sidebar-chat': true }

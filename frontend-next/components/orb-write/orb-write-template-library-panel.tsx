@@ -72,7 +72,7 @@ export function OrbWriteTemplateLibraryPanel({
         <header className="flex items-center justify-between border-b border-[var(--orb-line)]/50 px-4 py-3">
           <div className="flex items-center gap-2">
             <FileText className="h-4 w-4 text-[var(--orb-primary)]" aria-hidden />
-            <h2 className="text-sm font-semibold">Template library</h2>
+            <h2 className="text-sm font-semibold" data-orb-write-template-library-title>Use a template</h2>
           </div>
           <button type="button" onClick={onClose} className="rounded-lg p-1 text-[var(--orb-muted)]" aria-label="Close">
             <X className="h-4 w-4" />

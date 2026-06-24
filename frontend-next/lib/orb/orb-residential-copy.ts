@@ -232,7 +232,7 @@ export const ORB_RESIDENTIAL_DICTATE_MAGIC_NOTES_COPY = ORB_RESIDENTIAL_DICTATE_
 export const ORB_RESIDENTIAL_STATION_PRODUCT_COPY = {
   voice: 'Talk it through with ORB before you write.',
   dictate: ORB_DICTATE_SUBTITLE,
-  write: 'Draft, review and finalise adult-led records with ORB.',
+  write: 'Draft, review and finalise adult-led records in one calm workspace.',
   documents: 'Use authorised documents as sources. ORB shows what it used.',
   templates: 'Choose a structure that keeps the child central.'
 } as const

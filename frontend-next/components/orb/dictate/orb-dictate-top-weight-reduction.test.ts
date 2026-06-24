@@ -50,7 +50,7 @@ describe('ORB Dictate top-weight reduction', () => {
     assert.match(selector, /data-orb-dictate-template-menu/)
     assert.match(selector, /ORB_DICTATE_STUDIO_TEMPLATES\.map/)
     const labels = [
-      'General Dictation',
+      'Quick Record',
       'Daily Record',
       'Incident Reflection',
       'Missing From Home Record',

@@ -109,6 +109,11 @@ export function OrbWriteToolbar({
       <button type="button" className={btn} data-orb-write-numbered onClick={() => onCommand('insertOrderedList')} aria-label="Numbered list">
         <OrbIcon name="list_ordered" size="sm" />
       </button>
+      <details className="inline-block" data-orb-write-more-formatting>
+        <summary className="cursor-pointer list-none rounded-lg border border-[var(--orb-line)]/50 px-2 py-1 text-[10px] font-semibold text-[var(--orb-muted)] hover:bg-[var(--orb-surface-hover)] [&::-webkit-details-marker]:hidden">
+          More formatting
+        </summary>
+        <div className="absolute z-10 mt-1 flex flex-wrap gap-1 rounded-lg border border-[var(--orb-line)]/50 bg-[var(--orb-surface-elevated)] p-1.5 shadow-lg">
       <button type="button" className={btn} data-orb-write-quote onClick={() => onCommand('formatBlock', 'blockquote')} aria-label="Quote">
         <OrbIcon name="quote" size="sm" />
       </button>
@@ -124,6 +129,8 @@ export function OrbWriteToolbar({
       <button type="button" className={btn} data-orb-write-clear-format onClick={() => onCommand('removeFormat')} aria-label="Clear formatting">
         <OrbIcon name="clear_format" size="sm" />
       </button>
+        </div>
+      </details>
       </div>
 
       <span className="mx-0.5 hidden h-5 w-px bg-[var(--orb-line)]/40 sm:block" aria-hidden />

@@ -30,7 +30,7 @@
   --orb-res-modal-max: 57.5rem;
   --orb-res-modal-min: 47.5rem;
   --orb-res-chat-column-max: 47.5rem;
-  --orb-composer-dock-max: min(47.5rem, calc(100vw - var(--orb-sidebar-width) - 3rem));
+  --orb-composer-dock-max: min(52rem, calc(100vw - var(--orb-sidebar-width) - 3rem));
   --orb-foreground: #111827;
   --orb-muted: #6b7280;
   --orb-line: rgba(0, 0, 0, 0.08);
@@ -4011,4 +4011,54 @@ html[data-orb-residential='1'] [data-orb-communicate-station-layout] .orb-commun
 html[data-orb-residential='1'] [data-orb-write-integrated-studio-surface] .orb-write-studio-header {
   gap: 0.85rem;
   padding-bottom: 0.35rem;
+}
+
+/* Visual convergence pass — shared station surfaces */
+html[data-orb-residential='1'] .orb-residential-station-panel--light {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 252, 0.92));
+}
+
+html[data-orb-residential='1'] .orb-residential-primary-action-card {
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.04);
+}
+
+html[data-orb-residential='1'] .orb-dictate-capture-station {
+  border-color: rgba(148, 163, 184, 0.14);
+}
+
+html[data-orb-residential='1'] .orb-dictate-hero-record {
+  box-shadow: 0 16px 40px rgba(79, 70, 229, 0.22);
+}
+
+html[data-orb-residential='1'] .orb-voice-live-rail--glass {
+  background: rgba(15, 23, 42, 0.72);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  backdrop-filter: blur(16px);
+}
+
+html[data-orb-residential='1'] .orb-voice-live-rail__tab[aria-selected='true'] {
+  background: rgba(56, 189, 248, 0.18);
+  color: #f8fafc;
+}
+
+html[data-orb-residential='1'] .orb-voice-live-rail__tabs {
+  gap: 0.5rem;
+}
+
+html[data-orb-residential='1'] [data-orb-voice-transcript-empty] {
+  color: rgba(248, 250, 252, 0.78);
+  line-height: 1.65;
+}
+
+html[data-orb-residential='1'] .orb-starter-card[data-orb-home-quick-action] {
+  min-width: 9.5rem;
+}
+
+html[data-orb-residential='1'] [data-orb-write-use-template] {
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.12);
+}
+
+html[data-orb-residential='1'] .orb-residential-safety-footer {
+  max-width: var(--orb-composer-dock-max, 52rem);
+  margin-inline: auto;
 }
