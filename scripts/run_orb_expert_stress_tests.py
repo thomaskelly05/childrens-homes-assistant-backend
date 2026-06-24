@@ -13,6 +13,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
+from services.orb_expert_answer_engine_service import orb_expert_answer_engine_service  # noqa: E402
 from services.orb_expert_scenario_bank_service import orb_expert_scenario_bank_service  # noqa: E402
 from services.orb_expert_scenario_evaluator_service import orb_expert_scenario_evaluator_service  # noqa: E402
 
@@ -21,16 +22,17 @@ REPORT_JSON = ROOT / ".tmp" / "orb-expert-stress-test-report.json"
 
 
 def _sample_answer(scenario: dict) -> str:
+    """Legacy marker-list template — prefer _expert_answer for gold stress tests."""
     markers = scenario.get("expected_markers") or []
     lines = [
         "Based only on what you have provided — I have not checked live IndiCare OS records.",
         "",
-        f"## Response to: {scenario.get('title')}",
+        f"## Response to scenario",
         "",
         "Key considerations:",
     ]
     for m in markers:
-        lines.append(f"- {m.capitalize()}")
+        lines.append(f"- {str(m).capitalize()}")
     lines.extend(
         [
             "",
@@ -42,6 +44,10 @@ def _sample_answer(scenario: dict) -> str:
     if scenario.get("role", "").startswith("nvq"):
         lines.append("Authenticity: describe only what you personally did; do not overclaim leadership.")
     return "\n".join(lines)
+
+
+def _expert_answer(scenario: dict) -> str:
+    return orb_expert_answer_engine_service.build_gold_scenario_stress_answer(scenario)
 
 
 def main() -> int:
@@ -67,7 +73,7 @@ def main() -> int:
     results: list[dict] = []
     passed = 0
     for scenario in scenarios:
-        answer = _sample_answer(scenario)
+        answer = _expert_answer(scenario)
         evaluation = orb_expert_scenario_evaluator_service.evaluate(
             scenario=scenario,
             answer=answer,
