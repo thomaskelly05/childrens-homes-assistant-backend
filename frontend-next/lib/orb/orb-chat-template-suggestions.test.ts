@@ -4,6 +4,14 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, it } from 'node:test'
 
+import {
+  buildDailyRecordHandoffChips,
+  filterVisibleChatChips,
+  isDailyRecordHandoffChipContext,
+  mergeFollowUpsWithTemplateSuggestions,
+  suggestionKey
+} from './orb-chat-chip-handoff.ts'
+import { contextualResidentialCalmFollowUps } from './orb-residential-active-chat-follow-ups.ts'
 import { sanitizeVisibleFinalAnswer } from './orb-visible-final-answer.ts'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '../..')
@@ -42,28 +50,132 @@ To complete before saving:
 * Add anything the young person said or communicated.
 * Add any relevant follow-up, if needed.`
 
+function breakfastChipContext() {
+  const content = sanitizeVisibleFinalAnswer(STRUCTURED_DAILY_DRAFT, BREAKFAST_DAILY_PROMPT)
+  return { content, messageHint: BREAKFAST_DAILY_PROMPT }
+}
+
+function taxonomyNoiseChips() {
+  return [
+    { action: 'save_to_records' as const, label: 'Save to Records & Drafts' },
+    {
+      action: 'use_template_in_write' as const,
+      label: 'Use activity record template',
+      template_id: 'activity_record'
+    },
+    {
+      action: 'use_template_in_write' as const,
+      label: 'Use bedtime routine record template',
+      template_id: 'bedtime_routine_record'
+    }
+  ]
+}
+
 describe('orb chat template suggestions contracts', () => {
   it('daily_record intent ranks Daily Record template first for routine draft answers', () => {
     const suggestions = read('lib/orb/orb-chat-template-suggestions.ts')
-    assert.match(suggestions, /isRoutineDailyRecordDraftContext/)
-    assert.match(suggestions, /dailyRecordTemplateChip\(\)/)
-    assert.match(suggestions, /dailyRecordSaveChip\(\)/)
-    assert.match(suggestions, /ROUTINE_DAILY_UNRELATED_TEMPLATES/)
-    assert.match(suggestions, /shouldSuggestTemplateForRoutineDailyRecord/)
+    const handoff = read('lib/orb/orb-chat-chip-handoff.ts')
+    assert.match(suggestions, /isDailyRecordHandoffChipContext/)
+    assert.match(handoff, /buildDailyRecordHandoffChips/)
+    assert.match(handoff, /filterVisibleChatChips/)
+    assert.match(handoff, /ROUTINE_DAILY_UNRELATED_TEMPLATE_IDS/)
+    assert.match(handoff, /shouldSuggestTemplateForRoutineDailyRecord/)
   })
 
   it('activity_record and bedtime_routine are filtered for routine daily record drafts', () => {
-    const suggestions = read('lib/orb/orb-chat-template-suggestions.ts')
-    assert.match(suggestions, /activity_record/)
-    assert.match(suggestions, /bedtime_routine_record/)
-    assert.match(suggestions, /ACTIVITY_PROMPT_RE/)
-    assert.match(suggestions, /BEDTIME_PROMPT_RE/)
+    const handoff = read('lib/orb/orb-chat-chip-handoff.ts')
+    assert.match(handoff, /activity_record/)
+    assert.match(handoff, /bedtime_routine_record/)
+    assert.match(handoff, /ACTIVITY_PROMPT_RE/)
+    assert.match(handoff, /BEDTIME_PROMPT_RE/)
   })
 
   it('duplicate Save to Records & Drafts chip is deduped by action and label', () => {
-    const suggestions = read('lib/orb/orb-chat-template-suggestions.ts')
-    assert.match(suggestions, /function suggestionKey/)
-    assert.match(suggestions, /\$\{item\.action\}:\$\{item\.label/)
+    const handoff = read('lib/orb/orb-chat-chip-handoff.ts')
+    assert.match(handoff, /function suggestionKey/)
+    assert.match(handoff, /\$\{item\.action\}:\$\{item\.label/)
+  })
+})
+
+describe('Flow 1 breakfast daily record visible chips', () => {
+  it('detects structured daily record handoff from prompt and answer', () => {
+    const ctx = breakfastChipContext()
+    assert.equal(isDailyRecordHandoffChipContext(ctx), true)
+  })
+
+  it('browser-visible chip list equals ORB Write then Save for breakfast/handover prompt', () => {
+    const ctx = breakfastChipContext()
+    const merged = mergeFollowUpsWithTemplateSuggestions(
+      contextualResidentialCalmFollowUps({
+        mode: 'record',
+        messageHint: ctx.messageHint,
+        content: ctx.content
+      }),
+      taxonomyNoiseChips(),
+      3,
+      ctx
+    )
+    assert.deepEqual(
+      merged.map((chip) => chip.label),
+      ['Open in ORB Write using Daily Record template', 'Save to Records & Drafts']
+    )
+  })
+
+  it('suppresses activity and bedtime routine template chips for breakfast prompt', () => {
+    const ctx = breakfastChipContext()
+    const filtered = filterVisibleChatChips(taxonomyNoiseChips(), ctx, 3)
+    assert.ok(!filtered.some((chip) => /activity record template/i.test(chip.label)))
+    assert.ok(!filtered.some((chip) => /bedtime routine record template/i.test(chip.label)))
+  })
+
+  it('keeps Open in ORB Write action with daily_record template id', () => {
+    const [primary] = buildDailyRecordHandoffChips()
+    assert.equal(primary.action, 'use_template_in_write')
+    assert.equal(primary.template_id, 'daily_record')
+    assert.match(primary.label, /Open in ORB Write using Daily Record template/)
+  })
+
+  it('shows Save to Records & Drafts exactly once after merge and filter', () => {
+    const ctx = breakfastChipContext()
+    const merged = mergeFollowUpsWithTemplateSuggestions(
+      [
+        { action: 'save_to_records', label: 'Save to Records & Drafts' },
+        { action: 'what_missing', label: 'What may be missing?' }
+      ],
+      buildDailyRecordHandoffChips(),
+      3,
+      ctx
+    )
+    const saveChips = merged.filter((chip) => chip.action === 'save_to_records')
+    assert.equal(saveChips.length, 1)
+    assert.equal(saveChips[0]?.label, 'Save to Records & Drafts')
+  })
+
+  it('final visible chip dedupe runs after all sources merge', () => {
+    const ctx = breakfastChipContext()
+    const duplicateSave = [
+      { action: 'save_to_records' as const, label: 'Save to Records & Drafts' },
+      { action: 'save_to_records' as const, label: 'Save to Records & Drafts' },
+      ...taxonomyNoiseChips().slice(1)
+    ]
+    const keys = new Set<string>()
+    const filtered = filterVisibleChatChips(duplicateSave, ctx, 3)
+    for (const chip of filtered) {
+      const key = suggestionKey(chip)
+      assert.equal(keys.has(key), false)
+      keys.add(key)
+    }
+    assert.equal(filtered.length, 2)
+  })
+
+  it('calm residential follow-ups stay empty for structured daily record drafts', () => {
+    const ctx = breakfastChipContext()
+    const followUps = contextualResidentialCalmFollowUps({
+      mode: 'record',
+      messageHint: ctx.messageHint,
+      content: ctx.content
+    })
+    assert.deepEqual(followUps, [])
   })
 })
 
