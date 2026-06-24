@@ -659,8 +659,8 @@ _STAFF_PHRASE_PROTECTED_RES: tuple[tuple[re.Pattern[str], str], ...] = (
 _STAFF_PHRASE_RESTORE: dict[str, str] = {
     "__ORB_STAFF_RESPONDED__": "how staff responded",
     "__ORB_STAFF_PRESENT__": "staff present",
-    "__ORB_STAFF_RESPONSE__": "staff response",
-    "__ORB_STAFF_SUPPORTED__": "staff supported",
+    "__ORB_STAFF_RESPONSE__": "Staff response",
+    "__ORB_STAFF_SUPPORTED__": "Staff supported",
     "__ORB_STAFF_NAMES__": "staff names",
     "__ORB_STAFF_OFFERED__": "staff offered",
     "__ORB_STAFF_OBSERVED__": "staff observed",
@@ -1126,6 +1126,131 @@ def build_simple_daily_record_draft(source_text: str) -> str:
         lines.extend([f"{heading}:", body, ""])
     lines.append(_ROUTINE_DAILY_BEFORE_SAVING_LIST)
     return "\n".join(lines).strip()
+
+
+_DAILY_SECTION_HEADING_CANONICAL: dict[str, str] = {
+    "context / routine": "Context / routine",
+    "what happened": "What happened",
+    "young person's presentation": "Young person's presentation",
+    "young person's voice or communication": "Young person's voice or communication",
+    "staff response": "Staff response",
+    "outcome": "Outcome",
+    "to complete before saving": "To complete before saving",
+}
+
+_STRUCTURED_DAILY_SECTION_HEADING_ONLY_RE = re.compile(
+    r"^(Context\s*/\s*routine|What happened|Young person'?s presentation|"
+    r"Young person'?s voice or communication|Staff response|Outcome|"
+    r"To complete before saving)\s*:?\s*$",
+    re.I,
+)
+
+_STRUCTURED_DAILY_SECTION_INLINE_RE = re.compile(
+    r"^(Context\s*/\s*routine|What happened|Young person'?s presentation|"
+    r"Young person'?s voice or communication|Staff response|Outcome)\s*:\s*(.+)$",
+    re.I,
+)
+
+_STRUCTURED_DAILY_BODY_BOUNDARY_RES: tuple[tuple[re.Pattern[str], str], ...] = (
+    (re.compile(r"\b(breakfast)\s+(They)\b"), r"\1. \2"),
+    (re.compile(r"\b(toast)\s+(They)\b"), r"\1. \2"),
+    (re.compile(r"\b(note)\s+(Add)\b", re.I), r"\1. \2"),
+    (re.compile(r"\b(period)\s+(Staff)\b", re.I), r"\1. \2"),
+    (re.compile(r"\b(handover)\s+(Staff)\b", re.I), r"\1. \2"),
+    (re.compile(r"\b(saving)\s+(Staff)\b", re.I), r"\1. \2"),
+)
+
+
+def _canonical_daily_section_heading(raw: str) -> str:
+    key = re.sub(r"\s+", " ", str(raw or "").strip().lower())
+    return _DAILY_SECTION_HEADING_CANONICAL.get(key, str(raw or "").strip())
+
+
+def _expand_daily_record_bullet_items(line: str) -> list[str]:
+    """Split collapsed or inline checklist bullets back into separate items."""
+    value = str(line or "").strip()
+    if not value:
+        return []
+    if value.startswith("*"):
+        value = value.lstrip("*").strip()
+    parts = [part.strip() for part in re.split(r"\s*\*\s+", value) if part.strip()]
+    items: list[str] = []
+    for part in parts:
+        if not part.endswith((".", "!", "?")):
+            part = f"{part}."
+        items.append(part)
+    return items
+
+
+def _repair_structured_daily_body_punctuation(body: str) -> str:
+    """Repair joined sentences inside structured daily record section bodies."""
+    result = str(body or "").strip()
+    if not result:
+        return result
+    for pattern, replacement in _STRUCTURED_DAILY_BODY_BOUNDARY_RES:
+        result = pattern.sub(replacement, result)
+    if result and not result.endswith((".", "!", "?")):
+        result = f"{result}."
+    return result
+
+
+def format_structured_daily_record_draft_for_markdown(text: str) -> str:
+    """Render structured daily record drafts with markdown headings and bullet lists."""
+    if not is_structured_daily_record_draft(text):
+        return str(text or "")
+    raw_lines = [line.rstrip() for line in str(text or "").splitlines()]
+    title = "Daily Record Draft"
+    sections: list[tuple[str, list[str]]] = []
+    current_heading = ""
+    current_body: list[str] = []
+
+    def flush() -> None:
+        nonlocal current_heading, current_body
+        if current_heading or current_body:
+            sections.append((current_heading, current_body))
+        current_heading = ""
+        current_body = []
+
+    idx = 0
+    while idx < len(raw_lines):
+        stripped = raw_lines[idx].strip()
+        if not stripped:
+            idx += 1
+            continue
+        if stripped.lower() == "daily record draft":
+            idx += 1
+            continue
+        heading_only = _STRUCTURED_DAILY_SECTION_HEADING_ONLY_RE.match(stripped)
+        heading_inline = _STRUCTURED_DAILY_SECTION_INLINE_RE.match(stripped)
+        if heading_only:
+            flush()
+            current_heading = _canonical_daily_section_heading(heading_only.group(1))
+            idx += 1
+            continue
+        if heading_inline:
+            flush()
+            current_heading = _canonical_daily_section_heading(heading_inline.group(1))
+            current_body = [heading_inline.group(2).strip()]
+            idx += 1
+            continue
+        if current_heading:
+            current_body.append(stripped)
+        idx += 1
+    flush()
+
+    output: list[str] = [f"## {title}", ""]
+    for heading, body_lines in sections:
+        output.extend([f"### {heading}", ""])
+        if heading.lower() == "to complete before saving":
+            for line in body_lines:
+                for item in _expand_daily_record_bullet_items(line):
+                    output.append(f"- {item}")
+        else:
+            body_text = _repair_structured_daily_body_punctuation(" ".join(body_lines).strip())
+            if body_text:
+                output.append(body_text)
+        output.append("")
+    return re.sub(r"\n{3,}", "\n\n", "\n".join(output)).strip()
 
 
 def reshape_routine_daily_record_chat_answer(text: str, *, source_text: str = "") -> str:
@@ -1742,6 +1867,8 @@ def strip_explanatory_daily_record_phrases(text: str, *, source_text: str = "") 
         return str(text or "")
     if not is_daily_record_request(source_text):
         return str(text or "")
+    if is_structured_daily_record_draft(text):
+        return str(text or "")
     paragraphs = re.split(r"\n\s*\n", str(text or ""))
     cleaned_paragraphs: list[str] = []
     for paragraph in paragraphs:
@@ -1901,6 +2028,7 @@ def sanitize_visible_final_answer(text: str, *, source_text: str = "") -> str:
         cleaned = reshape_routine_daily_record_chat_answer(cleaned, source_text=source_text)
         if is_daily_record_draft_mode(source_text):
             cleaned = sanitize_daily_record_draft_wording(cleaned, source_text=source_text)
+        cleaned = format_structured_daily_record_draft_for_markdown(cleaned)
     if _SELF_HARM_CUE_RE.search(str(source_text or "")):
         cleaned = strip_self_harm_generic_fillers(cleaned, source_text=source_text)
     cleaned = fix_broken_adult_heading_wording(cleaned)

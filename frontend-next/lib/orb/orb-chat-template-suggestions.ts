@@ -8,8 +8,17 @@ const SAFEGUARDING_RE =
 const INCIDENT_RE = /\b(incident|restraint|physical intervention|behaviour|injur|harm)\b/i
 const DAILY_RE = /\b(daily record|key[- ]?work|shift note|log|handover)\b/i
 const MANAGER_RE = /\b(manager|oversight|review|supervision|RI|registered manager)\b/i
+const STRUCTURED_DAILY_DRAFT_RE =
+  /\b(daily record draft|context \/ routine|what happened|young person's presentation|to complete before saving)\b/i
+const ACTIVITY_PROMPT_RE = /\b(activity|football|outing|trip|club|swimming|cinema)\b/i
+const BEDTIME_PROMPT_RE = /\b(bedtime routine|bedtime|settle at night|sleep routine)\b/i
 
 const DAILY_RECORD_TEMPLATE_ID = 'daily_record'
+const ROUTINE_DAILY_UNRELATED_TEMPLATES = new Set([
+  'activity_record',
+  'bedtime_routine_record',
+  'morning_routine_record'
+])
 
 function localTemplateHints(content: string): string[] {
   const hints: string[] = []
@@ -19,6 +28,19 @@ function localTemplateHints(content: string): string[] {
   if (MANAGER_RE.test(content)) hints.push('manager')
   if (!hints.length) hints.push('daily')
   return hints.slice(0, 3)
+}
+
+function isRoutineDailyRecordDraftContext(content: string): boolean {
+  return DAILY_RE.test(content) && STRUCTURED_DAILY_DRAFT_RE.test(content)
+}
+
+function shouldSuggestTemplateForRoutineDailyRecord(templateId: string, content: string): boolean {
+  if (!ROUTINE_DAILY_UNRELATED_TEMPLATES.has(templateId)) return true
+  if (templateId === 'activity_record') return ACTIVITY_PROMPT_RE.test(content)
+  if (templateId === 'bedtime_routine_record' || templateId === 'morning_routine_record') {
+    return BEDTIME_PROMPT_RE.test(content)
+  }
+  return true
 }
 
 function toSuggestionChip(entry: OrbTemplateTaxonomyEntry): OrbSuggestedReplyItem {
@@ -36,6 +58,15 @@ function toSuggestionChip(entry: OrbTemplateTaxonomyEntry): OrbSuggestedReplyIte
   }
 }
 
+function dailyRecordTemplateChip(): OrbSuggestedReplyItem {
+  return {
+    action: 'use_template_in_write',
+    label: 'Open in ORB Write using Daily Record template',
+    prefill: 'Open this daily record draft in ORB Write:\n\n',
+    template_id: DAILY_RECORD_TEMPLATE_ID
+  }
+}
+
 function dailyRecordSaveChip(): OrbSuggestedReplyItem {
   return {
     action: 'save_to_records',
@@ -43,32 +74,84 @@ function dailyRecordSaveChip(): OrbSuggestedReplyItem {
   }
 }
 
+function suggestionKey(item: OrbSuggestedReplyItem): string {
+  return `${item.action}:${item.label.trim().toLowerCase()}`
+}
+
 /** Suggest up to 3 relevant templates after a chat answer. */
 export async function fetchChatTemplateSuggestions(content: string): Promise<OrbSuggestedReplyItem[]> {
   const hints = localTemplateHints(content)
   const seen = new Set<string>()
   const chips: OrbSuggestedReplyItem[] = []
-  const isDailyRecordAnswer = DAILY_RE.test(content)
+  const routineDailyDraft = isRoutineDailyRecordDraftContext(content)
 
-  if (isDailyRecordAnswer) {
-    chips.push(dailyRecordSaveChip())
-    seen.add(dailyRecordSaveChip().label.toLowerCase())
+  if (routineDailyDraft) {
+    const primary = dailyRecordTemplateChip()
+    chips.push(primary)
+    seen.add(suggestionKey(primary))
+    const saveChip = dailyRecordSaveChip()
+    chips.push(saveChip)
+    seen.add(suggestionKey(saveChip))
+    return chips
   }
+
+  const isDailyRecordAnswer = DAILY_RE.test(content)
+  let dailyTemplateAdded = false
 
   for (const hint of hints) {
     try {
       const result = await searchOrbTemplateTaxonomy(hint, { station: 'chat' })
-      for (const entry of result.templates ?? []) {
+      const templates = [...(result.templates ?? [])]
+      if (isDailyRecordAnswer) {
+        templates.sort((a, b) => {
+          if (a.template_id === DAILY_RECORD_TEMPLATE_ID) return -1
+          if (b.template_id === DAILY_RECORD_TEMPLATE_ID) return 1
+          return 0
+        })
+      }
+      for (const entry of templates) {
         if (seen.has(entry.template_id)) continue
+        if (isDailyRecordAnswer && !shouldSuggestTemplateForRoutineDailyRecord(entry.template_id, content)) {
+          continue
+        }
         seen.add(entry.template_id)
-        chips.push(toSuggestionChip(entry))
-        if (chips.length >= 3) return chips
+        const chip = toSuggestionChip(entry)
+        const chipKey = suggestionKey(chip)
+        if (seen.has(chipKey)) continue
+        seen.add(chipKey)
+        chips.push(chip)
+        if (entry.template_id === DAILY_RECORD_TEMPLATE_ID) dailyTemplateAdded = true
+        if (chips.length >= 3) break
       }
     } catch {
       // Taxonomy search is best-effort; follow-up chips still work without it.
     }
+    if (chips.length >= 3) break
   }
-  return chips
+
+  if (isDailyRecordAnswer) {
+    if (!dailyTemplateAdded) {
+      const primary = dailyRecordTemplateChip()
+      const primaryKey = suggestionKey(primary)
+      if (!seen.has(primaryKey)) {
+        chips.unshift(primary)
+        seen.add(primaryKey)
+      }
+    }
+    const saveChip = dailyRecordSaveChip()
+    const saveKey = suggestionKey(saveChip)
+    if (!seen.has(saveKey)) {
+      const insertAt = chips.findIndex((chip) => chip.template_id === DAILY_RECORD_TEMPLATE_ID)
+      if (insertAt >= 0) {
+        chips.splice(insertAt + 1, 0, saveChip)
+      } else {
+        chips.unshift(saveChip)
+      }
+      seen.add(saveKey)
+    }
+  }
+
+  return chips.slice(0, 3)
 }
 
 export function mergeFollowUpsWithTemplateSuggestions(
@@ -79,7 +162,7 @@ export function mergeFollowUpsWithTemplateSuggestions(
   const merged: OrbSuggestedReplyItem[] = []
   const seen = new Set<string>()
   for (const item of [...templateSuggestions, ...followUps]) {
-    const key = item.label.toLowerCase()
+    const key = suggestionKey(item)
     if (seen.has(key)) continue
     seen.add(key)
     merged.push(item)
@@ -98,7 +181,16 @@ export async function resolveChatRecordTemplate(content: string): Promise<{
   for (const hint of hints) {
     try {
       const result = await searchOrbTemplateTaxonomy(hint, { station: 'chat' })
-      const first = result.templates?.[0]
+      const templates = [...(result.templates ?? [])].sort((a, b) => {
+        if (a.template_id === DAILY_RECORD_TEMPLATE_ID) return -1
+        if (b.template_id === DAILY_RECORD_TEMPLATE_ID) return 1
+        return 0
+      })
+      const first = templates.find(
+        (entry) =>
+          entry.template_id === DAILY_RECORD_TEMPLATE_ID ||
+          shouldSuggestTemplateForRoutineDailyRecord(entry.template_id, content)
+      )
       if (first) {
         return {
           template_id: first.template_id,
