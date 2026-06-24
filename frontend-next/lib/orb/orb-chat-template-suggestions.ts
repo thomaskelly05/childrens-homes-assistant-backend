@@ -59,9 +59,16 @@ function toSuggestionChip(entry: OrbTemplateTaxonomyEntry): OrbSuggestedReplyIte
 /** Suggest up to 3 relevant templates after a chat answer. */
 export async function fetchChatTemplateSuggestions(
   content: string,
-  opts?: { messageHint?: string }
+  opts?: {
+    messageHint?: string
+    chatIntent?: string
+    templateId?: string
+    workingDocumentAvailable?: boolean
+    source?: string
+    feedbackContext?: { detected_family?: string }
+  }
 ): Promise<OrbSuggestedReplyItem[]> {
-  const ctx: OrbChatChipContext = { content, messageHint: opts?.messageHint }
+  const ctx: OrbChatChipContext = { content, messageHint: opts?.messageHint, ...opts }
   if (isDailyRecordHandoffChipContext(ctx)) {
     return buildDailyRecordHandoffChips()
   }
