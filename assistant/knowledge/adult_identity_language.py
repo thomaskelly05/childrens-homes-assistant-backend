@@ -1058,7 +1058,7 @@ def _extract_daily_record_facts(source_text: str) -> dict[str, str]:
             else "They then watched television"
         )
     if happened_parts:
-        facts["what_happened"] = " ".join(happened_parts) + "."
+        facts["what_happened"] = ". ".join(happened_parts) + "."
 
     if "breakfast" in lower and "handover" in lower:
         facts["context"] = (
