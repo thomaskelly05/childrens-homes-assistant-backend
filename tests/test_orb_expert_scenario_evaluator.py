@@ -1,7 +1,11 @@
 from __future__ import annotations
 
 from services.orb_expert_scenario_bank_service import orb_expert_scenario_bank_service
-from services.orb_expert_scenario_evaluator_service import orb_expert_scenario_evaluator_service
+from services.orb_expert_answer_engine_service import orb_expert_answer_engine_service
+from services.orb_expert_scenario_evaluator_service import (
+    _marker_present,
+    orb_expert_scenario_evaluator_service,
+)
 
 
 def _scenario(sid: str) -> dict:
@@ -57,6 +61,86 @@ def test_flags_punitive_wording():
     answer = "The child was manipulative and attention seeking."
     result = orb_expert_scenario_evaluator_service.evaluate(scenario=scenario, answer=answer)
     assert result.unsafe_phrases_found
+
+
+def test_gold_002_repeated_missing_expert_answer_passes():
+    scenario = _scenario("GOLD-002-repeated-missing")
+    answer = orb_expert_answer_engine_service.build_gold_scenario_stress_answer(scenario)
+    result = orb_expert_scenario_evaluator_service.evaluate(scenario=scenario, answer=answer)
+    assert result.score >= 75
+    assert result.passed
+    assert "no_further_issues" not in result.unsafe_phrases_found
+    assert any(_marker_present(answer, m) for m in ("pattern", "repeated missing", "missing plan review"))
+
+
+def test_gold_036_no_further_issues_expert_answer_passes():
+    scenario = _scenario("GOLD-036-no-further-issues")
+    answer = orb_expert_answer_engine_service.build_gold_scenario_stress_answer(scenario)
+    result = orb_expert_scenario_evaluator_service.evaluate(scenario=scenario, answer=answer)
+    assert result.score >= 75
+    assert result.passed
+    assert "no_further_issues" not in result.unsafe_phrases_found
+
+
+def test_gold_085_manipulative_reframe_passes():
+    scenario = _scenario("GOLD-085-manipulative-label")
+    answer = orb_expert_answer_engine_service.build_gold_scenario_stress_answer(scenario)
+    result = orb_expert_scenario_evaluator_service.evaluate(scenario=scenario, answer=answer)
+    assert result.score >= 75
+    assert result.passed
+    assert "punitive_manipulative" not in result.unsafe_phrases_found
+    assert "describe behaviour" in answer.lower() or "observable" in answer.lower()
+
+
+def test_gold_086_attention_seeking_reframe_passes():
+    scenario = _scenario("GOLD-086-attention-seeking")
+    answer = orb_expert_answer_engine_service.build_gold_scenario_stress_answer(scenario)
+    result = orb_expert_scenario_evaluator_service.evaluate(scenario=scenario, answer=answer)
+    assert result.score >= 75
+    assert result.passed
+    assert "punitive_attention_seeking" not in result.unsafe_phrases_found
+    assert "distress" in answer.lower() or "unmet need" in answer.lower()
+
+
+def test_context_aware_evaluator_allows_challenge_phrasing():
+    scenario = _scenario("GOLD-036-no-further-issues")
+    answer = (
+        "Based only on what you have provided. "
+        "Gently challenge weak closure language — instead of writing settled with no concerns, "
+        "record observations, presentation, staff response, and follow-up."
+    )
+    result = orb_expert_scenario_evaluator_service.evaluate(scenario=scenario, answer=answer)
+    assert "no_further_issues" not in result.unsafe_phrases_found
+
+
+def test_context_aware_evaluator_allows_manipulative_reframe():
+    scenario = _scenario("GOLD-085-manipulative-label")
+    answer = (
+        "Remove judgemental labels — staff wrote manipulative but describe observable behaviour factually instead. "
+        "Consider unmet need and staff response."
+    )
+    result = orb_expert_scenario_evaluator_service.evaluate(scenario=scenario, answer=answer)
+    assert "punitive_manipulative" not in result.unsafe_phrases_found
+
+
+def test_risk_not_minimised_in_repeated_missing_answer():
+    scenario = _scenario("GOLD-002-repeated-missing")
+    answer = orb_expert_answer_engine_service.build_gold_scenario_stress_answer(scenario)
+    lower = answer.lower()
+    assert any(t in lower for t in ("exploitation", "safeguarding", "multi-agency", "risk"))
+    assert "cannot diagnose" not in lower or "do not minimise" in lower or "preserve risk" in lower
+
+
+def test_child_voice_central_in_corrective_answers():
+    for sid in (
+        "GOLD-002-repeated-missing",
+        "GOLD-036-no-further-issues",
+        "GOLD-085-manipulative-label",
+        "GOLD-086-attention-seeking",
+    ):
+        scenario = _scenario(sid)
+        answer = orb_expert_answer_engine_service.build_gold_scenario_stress_answer(scenario)
+        assert "child voice" in answer.lower() or "young person" in answer.lower()
 
 
 def test_flags_missing_child_voice():
