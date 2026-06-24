@@ -109,3 +109,12 @@ export const ORB_RECORDS_FILTER_CHIPS: Array<{ id: string; label: string; type: 
   { id: 'manager', label: 'Manager review', type: 'manager_briefing' },
   { id: 'other', label: 'Other drafts', type: 'general_research' }
 ]
+
+/** Lifecycle status filter chips for Records & Drafts (pilot visibility). */
+export const ORB_RECORDS_STATUS_CHIPS: Array<{ id: string; label: string; status: string }> = [
+  { id: 'status_all', label: 'All statuses', status: '' },
+  { id: 'status_draft', label: 'Draft', status: 'draft' },
+  { id: 'status_reviewed', label: 'Reviewed', status: 'reviewed' },
+  { id: 'status_finalised', label: 'Finalised', status: 'finalised' },
+  { id: 'status_archived', label: 'Archived', status: 'archived' }
+]

@@ -72,7 +72,7 @@
   "record_types": [
     {
       "id": "general_dictation",
-      "label": "General Dictation",
+      "label": "Quick Record",
       "category": "recording",
       "description": "Rough shift notes converted to professional wording without a fixed form.",
       "purpose": "Capture informal notes and convert them to clear professional language.",

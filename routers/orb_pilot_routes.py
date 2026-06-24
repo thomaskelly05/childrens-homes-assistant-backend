@@ -46,6 +46,14 @@ async def list_orb_pilot_feedback_admin(
     return _success([row.model_dump(by_alias=True) for row in rows])
 
 
+@router.get("/readiness")
+async def orb_pilot_readiness(_founder=Depends(require_founder)):
+    from services.orb_pilot_readiness_service import run_pilot_readiness_checks
+
+    report = run_pilot_readiness_checks(require_database=True)
+    return _success(report.to_dict())
+
+
 @router.get("/summary/admin")
 async def orb_pilot_summary_admin(
     conn=Depends(get_db),

@@ -8,7 +8,7 @@ import { ORB_VOICE_SAFEGUARDING_REFLECTIVE_OPENING } from './orb-voice-reflectiv
 
 /** Studio template labels — mirrors `orb-recording-framework.json` studio_template_id values. */
 const STUDIO_TEMPLATE_LABELS: Record<string, string> = {
-  general: 'General Dictation',
+  general: 'Quick Record',
   daily_record: 'Daily Record',
   incident: 'Incident Reflection',
   missing: 'Missing Episode Note',
