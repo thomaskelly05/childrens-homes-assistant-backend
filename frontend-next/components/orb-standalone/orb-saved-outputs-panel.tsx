@@ -65,6 +65,7 @@ import {
   ORB_RECORDS_PANEL_SUBTITLE,
   ORB_RECORDS_PANEL_TITLE
 } from '@/lib/orb/orb-user-facing-names'
+import { isOrbCommunicateLaunchVisible } from '@/lib/orb/orb-navigation-convergence'
 
 function recordToView(record: OrbSavedOutputRecord): OrbIntelligenceOutputView {
   const intel = record.intelligence_output as OrbIntelligenceOutputView | undefined
@@ -135,6 +136,33 @@ export function OrbSavedOutputsPanel({
   const [storageMode, setStorageMode] = useState<'server' | 'local' | 'mixed'>('server')
   const [reconnectSuggested, setReconnectSuggested] = useState(false)
   const refreshGuardRef = useRef(false)
+
+  const showCommunicateStart = Boolean(onStartInCommunicate) && isOrbCommunicateLaunchVisible()
+
+  const recordsEmptyActions = (
+    <>
+      {onStartInChat ? (
+        <OrbPremiumButton variant="secondary" onClick={onStartInChat} data-orb-saved-start-chat>
+          Start in Chat
+        </OrbPremiumButton>
+      ) : null}
+      {onStartInDictate ? (
+        <OrbPremiumButton variant="secondary" onClick={onStartInDictate} data-orb-saved-start-dictate>
+          Start in Dictate
+        </OrbPremiumButton>
+      ) : null}
+      {showCommunicateStart ? (
+        <OrbPremiumButton variant="secondary" onClick={onStartInCommunicate} data-orb-saved-start-communicate>
+          Start in Communicate
+        </OrbPremiumButton>
+      ) : null}
+      {onStartInOrbWrite ? (
+        <OrbPremiumButton variant="primary" onClick={onStartInOrbWrite} data-orb-saved-start-write>
+          Create in ORB Write
+        </OrbPremiumButton>
+      ) : null}
+    </>
+  )
 
   const refresh = useCallback(async () => {
     if (refreshGuardRef.current) return
@@ -308,25 +336,7 @@ export function OrbSavedOutputsPanel({
               title={ORB_RECORDS_EMPTY_TITLE}
               description={ORB_RECORDS_EMPTY_SUBTITLE}
               className="orb-records-empty-state"
-              actions={
-                <>
-                  {onStartInDictate ? (
-                    <OrbPremiumButton variant="secondary" onClick={onStartInDictate} data-orb-saved-start-dictate>
-                      Start in Dictate
-                    </OrbPremiumButton>
-                  ) : null}
-                  {onStartInCommunicate ? (
-                    <OrbPremiumButton variant="secondary" onClick={onStartInCommunicate} data-orb-saved-start-communicate>
-                      Start in Communicate
-                    </OrbPremiumButton>
-                  ) : null}
-                  {onStartInOrbWrite ? (
-                    <OrbPremiumButton variant="primary" onClick={onStartInOrbWrite} data-orb-saved-start-write>
-                      Create in ORB Write
-                    </OrbPremiumButton>
-                  ) : null}
-                </>
-              }
+              actions={recordsEmptyActions}
             />
           </div>
         ) : (
@@ -498,16 +508,7 @@ export function OrbSavedOutputsPanel({
                 className={isMobile ? '!px-4 !py-6' : undefined}
                 actions={
                   <>
-                    {onStartInOrbWrite ? (
-                      <OrbPremiumButton variant="primary" onClick={onStartInOrbWrite} data-orb-saved-start-write>
-                        {isMobile ? 'Create in ORB Write' : 'Create document'}
-                      </OrbPremiumButton>
-                    ) : null}
-                    {onStartInDictate ? (
-                      <OrbPremiumButton variant="secondary" onClick={onStartInDictate} data-orb-saved-start-dictate>
-                        Start in Dictate
-                      </OrbPremiumButton>
-                    ) : null}
+                    {recordsEmptyActions}
                     {guidedDemoActive && onOpenGuidedDemo ? (
                       <OrbPremiumButton variant="secondary" onClick={onOpenGuidedDemo} data-orb-saved-open-guided-demo>
                         Open Guided Demo

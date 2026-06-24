@@ -52,7 +52,7 @@ export const ORB_RESIDENTIAL_STATION_DEFINITIONS: Record<
   orb_write: {
     id: 'orb_write',
     label: 'ORB Write',
-    tagline: 'Care documentation studio.',
+    tagline: 'Draft, review and finalise adult-led records in one calm workspace.',
     helper: 'Draft, review and finalise adult-led records'
   }
 }

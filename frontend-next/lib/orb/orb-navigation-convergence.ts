@@ -39,6 +39,14 @@ export const ORB_VISIBLE_SIDEBAR_NAV_IDS = [
 /** Hidden from primary launch nav — deep links and in-app routes remain available. */
 export const ORB_HIDDEN_LAUNCH_STATION_IDS = ['orb_communicate'] as const
 
+/** Communicate is hidden from primary nav unless explicitly feature-flagged for the current user. */
+export function isOrbCommunicateLaunchVisible(): boolean {
+  if (typeof process !== 'undefined' && process.env.NEXT_PUBLIC_ORB_COMMUNICATE_VISIBLE === '1') {
+    return true
+  }
+  return false
+}
+
 /** @deprecated Use ORB_VISIBLE_SIDEBAR_NAV_IDS — kept for transitional imports. */
 export const ORB_VISIBLE_MAIN_NAV_IDS = [
   'chat',

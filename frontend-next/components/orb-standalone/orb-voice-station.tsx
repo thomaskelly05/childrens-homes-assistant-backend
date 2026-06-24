@@ -15,6 +15,7 @@ import {
 import { createOrbSavedOutput } from '@/lib/orb/standalone-client'
 import { ORB_SAVED_TO_MY_DRAFTS_NOTICE, saveStationDraftToRecordsWorkspace } from '@/lib/orb/orb-records-workspace-resilience'
 import { buildSavedOutputCreateBody } from '@/lib/orb/orb-saved-output-adapters'
+import { ORB_VOICE_POST_CALL_ACTIONS } from '@/lib/orb/orb-residential-station-copy'
 import {
   ORB_VOICE_V2_ADULT_REVIEW_LABEL,
   ORB_VOICE_V2_CONTINUE_CONVERSATION,
@@ -361,10 +362,11 @@ export function OrbVoiceStation({
             <button
               type="button"
               className="w-full rounded-full bg-gradient-to-r from-[var(--orb-primary-blue,#168bff)] to-[var(--orb-primary-blue-2,#0d5fcc)] py-2 text-xs font-semibold text-white"
-              onClick={() => onOpenDictate(voice.summary ?? '', undefined, { studio: false })}
+              onClick={() => onOpenDictate(voice.summary ?? '', undefined, { studio: true })}
               data-orb-voice-send-to-dictate
+              data-orb-voice-create-draft-record
             >
-              Send to Dictate
+              {ORB_VOICE_POST_CALL_ACTIONS.createDraftRecord}
             </button>
           ) : null}
           {onOpenWrite ? (
@@ -374,9 +376,30 @@ export function OrbVoiceStation({
               onClick={() => onOpenWrite(voice.summary ?? '', { title: ORB_VOICE_V2_SUMMARY_TITLE })}
               data-orb-voice-open-write
             >
-              Open in ORB Write
+              {ORB_VOICE_POST_CALL_ACTIONS.openInOrbWrite}
             </button>
           ) : null}
+          <button
+            type="button"
+            className="w-full rounded-full border border-[var(--orb-line)]/60 py-2 text-xs font-medium"
+            onClick={() =>
+              onOpenWrite?.(
+                `${voice.summary ?? ''}\n\nWhat may be missing from this conversation for a safe record?`,
+                { title: 'Voice reflection — gaps review' }
+              )
+            }
+            data-orb-voice-what-missing
+          >
+            {ORB_VOICE_POST_CALL_ACTIONS.whatMayBeMissing}
+          </button>
+          <button
+            type="button"
+            className="w-full rounded-full border border-[var(--orb-line)]/60 py-2 text-xs font-medium"
+            onClick={voice.endAndSummarise}
+            data-orb-voice-summarise-conversation
+          >
+            {ORB_VOICE_POST_CALL_ACTIONS.summariseConversation}
+          </button>
           <button
             type="button"
             className="w-full rounded-full border border-[var(--orb-line)]/60 py-2 text-xs font-medium disabled:opacity-50"
@@ -384,8 +407,9 @@ export function OrbVoiceStation({
             disabled={saving}
             data-orb-voice-save-reflection
             data-orb-voice-save-records-drafts
+            data-orb-voice-save-my-drafts
           >
-            {saving ? 'Saving…' : ORB_VOICE_V2_SAVE_TO_RECORDS}
+            {saving ? 'Saving…' : ORB_VOICE_POST_CALL_ACTIONS.saveToMyDrafts}
           </button>
         </>
       ) : null}

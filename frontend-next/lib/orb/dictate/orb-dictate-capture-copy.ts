@@ -3,7 +3,7 @@
 export const ORB_DICTATE_CAPTURE_HEADLINE = 'Dictate' as const
 
 export const ORB_DICTATE_CAPTURE_SUBTITLE =
-  'Choose what you need to record, then capture the rough information. ORB will structure it for adult review.' as const
+  'Speak naturally. ORB will structure your words into a safer draft for adult review.' as const
 
 export const ORB_DICTATE_WHAT_ARE_YOU_RECORDING = 'What are you recording?' as const
 
@@ -164,7 +164,8 @@ export const ORB_DICTATE_CREATE_SAFER_DRAFT = 'Create safer draft' as const
 
 export const ORB_DICTATE_RECENT_CAPTURES_TITLE = 'Recent captures' as const
 
-export const ORB_DICTATE_RECENT_CAPTURES_EMPTY = 'No recent captures yet.' as const
+export const ORB_DICTATE_RECENT_CAPTURES_EMPTY =
+  'No captures yet. Speak naturally when you are ready. ORB will help structure your words into a clearer draft for review.' as const
 
 export const ORB_DICTATE_STORY_LINE =
   'Records are not just admin. They are part of a child\u2019s story.' as const
@@ -263,15 +264,13 @@ export const ORB_DICTATE_RECORD_TYPE_PROMPT = 'Looks like this may be\u2026' as 
 
 /** Lightweight record-type suggestions — user can change after capture. */
 export const ORB_DICTATE_RECORD_TYPE_SUGGESTIONS = [
-  { templateId: 'daily_record', label: 'Daily record' },
-  { templateId: 'missing', label: 'Missing from home' },
-  { templateId: 'incident', label: 'Incident reflection' },
-  { templateId: 'keywork', label: 'Key-work session' },
-  { templateId: 'safeguarding', label: 'Safeguarding note' },
+  { templateId: 'general', label: 'Quick Record' },
+  { templateId: 'daily_record', label: 'Daily Record' },
+  { templateId: 'incident', label: 'Incident Record' },
   { templateId: 'handover', label: 'Handover' },
-  { templateId: 'supervision_prep', label: 'Supervision reflection' },
-  { templateId: 'manager', label: 'Manager oversight note' },
-  { templateId: 'general', label: 'Other / General dictation' }
+  { templateId: 'keywork', label: 'Keywork Note' },
+  { templateId: 'manager', label: 'Manager Oversight' },
+  { templateId: 'general_note', label: 'General Note' }
 ] as const
 
 export const ORB_DICTATE_DRAFT_SECTIONS_DEFAULT = [

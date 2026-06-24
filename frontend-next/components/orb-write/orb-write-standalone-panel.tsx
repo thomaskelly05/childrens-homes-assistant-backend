@@ -68,6 +68,7 @@ import { ORB_WRITE_SAFETY_COPY } from '@/lib/orb/write/orb-write-types'
 import { ORB_RESIDENTIAL_STATION_PRODUCT_COPY } from '@/lib/orb/orb-residential-copy'
 import { orbGuidedDemoSaveStatusMessage, resolveOrbGuidedDemoSaveTitle } from '@/lib/orb/orb-guided-demo'
 import { OrbWriteStudioReviewChecklist } from '@/components/orb-write/orb-write-studio-review-checklist'
+import type { OrbWriteReviewCheckAction } from '@/lib/orb/orb-residential-station-copy'
 import { OrbWriteTemplateLibraryPanel } from '@/components/orb-write/orb-write-template-library-panel'
 import { OrbWriteWorkingDocumentEditor } from '@/components/orb-write/orb-write-working-document-editor'
 import type { OrbTemplateWorkingDocument } from '@/lib/orb/template/orb-template-working-document-types'
@@ -131,6 +132,29 @@ export function OrbWriteStandalonePanel({
     () => resolveOrbRecordingRecordType({ recordTypeId }),
     [recordTypeId]
   )
+
+  async function handleReviewAction(check: OrbWriteReviewCheckAction) {
+    if (!doc) return
+    setAnalysing(true)
+    setStatusMessage(null)
+    const plain = doc.body.replace(/<[^>]+>/g, '\n')
+    try {
+      const result = await editOrbDictateDocument({
+        document_text: plain,
+        instruction: check.instruction,
+        note_type: doc.record_type,
+        template_id: recordType.studio_template_id ?? undefined,
+        mode: check.id === 'factual_wording' ? 'less_judgemental' : 'recording_quality_review'
+      })
+      applyRevision(result.revised_text || plain, check.actionLabel)
+      setStatusMessage(`${check.actionLabel} applied — review before finalising.`)
+    } catch {
+      setStatusMessage('Could not apply review action — try Ask ORB instead.')
+    } finally {
+      setAnalysing(false)
+    }
+  }
+
 
   useEffect(() => {
     if (!open) return
@@ -514,7 +538,7 @@ export function OrbWriteStandalonePanel({
                     ORB Write
                   </h2>
                   <p className="text-[11px] text-slate-600" data-orb-write-studio-subtitle data-orb-write-care-studio>
-                    Care documentation studio — draft, review and finalise adult-led records in one calm workspace.
+                    Draft, review and finalise adult-led records in one calm workspace.
                   </p>
                 </div>
               </div>
@@ -526,10 +550,11 @@ export function OrbWriteStandalonePanel({
                 <button
                   type="button"
                   onClick={() => setTemplateLibraryOpen(true)}
-                  className="inline-flex items-center gap-1 rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-[10px] font-semibold text-slate-700 hover:bg-slate-50"
+                  className="inline-flex items-center gap-1 rounded-lg border border-[var(--orb-primary)]/35 bg-[var(--orb-primary-soft)]/50 px-3 py-1.5 text-[11px] font-semibold text-[var(--orb-primary)] hover:bg-[var(--orb-primary-soft)]"
                   data-orb-write-open-template-library
+                  data-orb-write-use-template
                 >
-                  Template library
+                  Use a template
                 </button>
                 <OrbWriteRecordTypeSelector
                   recordTypeId={recordTypeId}
@@ -663,7 +688,7 @@ export function OrbWriteStandalonePanel({
                   data-orb-write-guidance-panel-host
                   data-orb-write-review-panel
                 >
-                  <OrbWriteStudioReviewChecklist />
+                  <OrbWriteStudioReviewChecklist onApplyReviewAction={(check) => void handleReviewAction(check)} />
                   <div className="min-h-[200px] overflow-hidden rounded-xl border border-[var(--orb-line)]/50 bg-[var(--orb-surface-elevated)] lg:min-h-0">
                     <OrbDictateBrainPanel
                       analysis={brainAnalysis}

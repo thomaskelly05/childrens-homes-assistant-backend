@@ -73,6 +73,9 @@ import {
 } from '@/lib/orb/write/orb-write-converged-handoff'
 import type { OrbRecordingRecordType } from '@/lib/orb/recording/orb-recording-types'
 import {
+  ORB_HOME_QUICK_ACTIONS
+} from '@/lib/orb/orb-residential-station-copy'
+import {
   ORB_RESIDENTIAL_BRAND_EMOTIONAL_LINE,
   ORB_RESIDENTIAL_EMPTY_HEADING_DESKTOP,
   ORB_RESIDENTIAL_EMPTY_STARTERS,
@@ -1045,6 +1048,19 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
   const showEmptyState = visibleMessages.length === 0 && !pending && !error
   const activeWorkspacePanel =
     residentialSurface && isOrbCoreWorkspacePanel(activePanel) ? activePanel : null
+
+  const activeNavId = useMemo(() => {
+    if (!residentialSurface) return null
+    if (activePanel === 'saved_outputs') return 'saved'
+    if (activePanel === 'help') return 'help'
+    if (activePanel === 'settings') return 'settings'
+    if (activePanel === 'orb_dictate') return 'orb_dictate'
+    if (activePanel === 'orb_voice') return 'orb_voice'
+    if (activePanel === 'orb_write') return 'orb_write'
+    if (activePanel === null && showEmptyState) return 'chat'
+    if (activePanel === null) return 'chat'
+    return null
+  }, [activePanel, residentialSurface, showEmptyState])
 
   const closeAllPanels = useCallback(() => {
     setActivePanel(null)
@@ -4124,6 +4140,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
                 setSidebarOpen(false)
               }}
               activeMode={mode}
+              activeNavId={activeNavId}
               adultProfile={adultProfile}
               savedOutputsCount={savedOutputsCount}
               userName={account.userName}
@@ -4495,6 +4512,37 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
                     </div>
                     </div>
                     </div>
+                    {residentialSurface && showEmptyState ? (
+                      <div
+                        className="mt-5 flex w-full max-w-2xl flex-wrap justify-center gap-2 lg:max-w-3xl"
+                        data-orb-home-quick-actions
+                        data-orb-starter-pills
+                      >
+                        {ORB_HOME_QUICK_ACTIONS.map((action) => (
+                          <button
+                            key={action.id}
+                            type="button"
+                            onClick={() => {
+                              if ('action' in action && action.action === 'open_templates') {
+                                openTemplatesPanel()
+                                return
+                              }
+                              if ('action' in action && action.action === 'open_documents') {
+                                openDocumentsPanel()
+                                return
+                              }
+                              if ('prompt' in action && action.prompt) {
+                                applyPrompt({ text: action.label, prompt: action.prompt } as ResidentialStarter)
+                              }
+                            }}
+                            className="orb-starter-card px-4 py-3 text-sm leading-snug"
+                            data-orb-home-quick-action={action.id}
+                          >
+                            {action.label}
+                          </button>
+                        ))}
+                      </div>
+                    ) : null}
                     {!residentialSurface ? (
                       <div
                         className="mt-5 flex w-full max-w-2xl flex-wrap justify-center gap-2 lg:max-w-3xl"

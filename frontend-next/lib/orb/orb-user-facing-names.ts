@@ -17,11 +17,10 @@ export const ORB_NAV_SETTINGS = 'Settings'
 
 /** Records & drafts — user-facing (API may still use /outputs). */
 export const ORB_RECORDS_PANEL_TITLE = 'Records & Drafts'
-export const ORB_RECORDS_PANEL_SUBTITLE =
-  'Saved records and drafts for adult review — part of a child\u2019s story, not admin clutter.'
+export const ORB_RECORDS_PANEL_SUBTITLE = 'Your saved drafts, records and working documents.'
 export const ORB_RECORDS_EMPTY_TITLE = 'No records or drafts yet.'
 export const ORB_RECORDS_EMPTY_SUBTITLE =
-  'Saved adult-reviewed outputs from Chat, Dictate, Voice, Communicate and ORB Write appear here.'
+  'Saved adult-reviewed outputs from Chat, Dictate, Voice and ORB Write appear here.'
 export const ORB_RECORDS_FOOTER =
   'Records and drafts are standalone ORB artefacts. Adult review required before use in practice.'
 export const ORB_RECORDS_LOAD_ERROR = 'Could not load records and drafts'
@@ -32,7 +31,7 @@ export const ORB_SAVED_RECORD_LABEL = 'saved record'
 /** Dictate — single visible product name (no Magic Notes). */
 export const ORB_DICTATE_TITLE = 'Dictate'
 export const ORB_DICTATE_SUBTITLE =
-  'Turn rough speech, notes or uploads into safer adult-reviewed records.'
+  'Speak naturally. ORB will structure your words for adult review.'
 export const ORB_DICTATE_CAPTURE_PROMPT = 'Speak, paste or upload what happened'
 export const ORB_DICTATE_CAPTURE_GUIDANCE =
   'Start with what happened. ORB will help structure the record, check what may be missing and keep the child\u2019s experience central.'
