@@ -5,6 +5,7 @@
 
 import type { OrbRecordingRecordType } from '@/lib/orb/recording/orb-recording-types'
 import type { OrbSavedOutputRecord } from '@/lib/orb/standalone-client'
+import { handoffSavedOutputRecordToOrbWrite } from '@/lib/orb/write/orb-write-working-document-reopen'
 import { buildSavedOutputExportMarkdown } from '@/lib/orb/orb-saved-output-adapters'
 import {
   handoffTextToOrbWrite,
@@ -90,6 +91,7 @@ export function buildSavedOutputWriteHandoff(
 }
 
 export function handoffSavedOutputToOrbWrite(record: OrbSavedOutputRecord): void {
+  if (handoffSavedOutputRecordToOrbWrite(record)) return
   convergedHandoffToOrbWrite(buildSavedOutputWriteHandoff(record))
 }
 
