@@ -65,14 +65,21 @@ def test_daily_record_opens_as_narrative_not_form_only():
     assert doc.document_type == "short_record"
 
 
-def test_chat_use_template_creates_working_document_context():
-    answer = "The young person had a difficult evening after contact."
+def test_structured_daily_record_maps_to_template_sections():
+    from assistant.knowledge.adult_identity_language import build_simple_daily_record_draft
+
+    answer = build_simple_daily_record_draft(
+        "Help me write a daily record — calm breakfast, chose toast, watched TV before handover."
+    )
     doc = orb_template_working_document_service.convert_answer_to_working_document(
         answer, "daily_record", source_station="chat"
     )
-    assert doc.source_station == "chat"
-    assert doc.template_id == "daily_record"
+    by_heading = {s.heading: s.body for s in doc.sections}
+    assert "chose toast" in by_heading.get("What happened", "")
+    assert "appeared calm" in by_heading.get("Child voice and presentation", "")
+    assert "Staff supported" in by_heading.get("Staff response", "")
     assert doc.rendered_body
+    assert "chose toast" in doc.rendered_body
 
 
 def test_dictate_transcript_maps_to_working_document():

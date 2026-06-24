@@ -97,8 +97,9 @@ def test_visible_final_sanitizer_on_routine_daily_record_form():
     cleaned = sanitize_visible_final_answer(form_like, source_text=prompt)
     lower = cleaned.lower()
     assert "manager review" not in lower
-    assert "here is a simple daily record draft" in lower
-    assert "before saving" in lower
+    assert "daily record draft" in lower
+    assert "context / routine" in lower
+    assert "to complete before saving" in lower
 
 
 def test_apply_adult_identity_preserves_how_staff_responded():

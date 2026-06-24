@@ -2965,7 +2965,8 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
       explain_criteria: `Explain the criteria mentioned here in plain English for residential childcare.\n\n${excerpt}`,
       assessor_feedback: `Draft assessor feedback (support for judgement only) from what I describe.\n\n${excerpt}`,
       use_template_in_write: `Open the best template in ORB Write for this.\n\n${excerpt}`,
-      turn_into_record: `Turn this into a draft record in ORB Write.\n\n${excerpt}`
+      turn_into_record: `Turn this into a draft record in ORB Write.\n\n${excerpt}`,
+      save_to_records: `Save this draft to Records & Drafts.\n\n${excerpt}`
     }
     if (action === 'ofsted_lens') handleModeChange('Ofsted Lens')
     if (action === 'safeguarding_lens') handleModeChange('Safeguarding Thinking')
@@ -3197,6 +3198,16 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
     assistantIndex?: number,
     options?: { prefill?: string; template_id?: string }
   ) {
+    if (action === 'save_to_records') {
+      const entry =
+        typeof assistantIndex === 'number'
+          ? visibleMessages[assistantIndex]
+          : visibleMessages[visibleMessages.length - 1]
+      if (entry?.role === 'assistant') {
+        await saveChatNote(entry)
+      }
+      return
+    }
     if (action === 'use_template_in_write') {
       const result = await openChatTemplateInWrite(sourceContent, {
         template_id: options?.template_id,
@@ -3633,9 +3644,10 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
           openOrbWritePanel()
         }}
         onOpenSavedOutputInOrbWrite={(record) => {
-          handoffSavedOutputToOrbWrite(record)
-          closePanel()
-          openOrbWritePanel()
+          void handoffSavedOutputToOrbWrite(record).then(() => {
+            closePanel()
+            openOrbWritePanel()
+          })
         }}
         onStartInDictate={() => {
           closePanel()

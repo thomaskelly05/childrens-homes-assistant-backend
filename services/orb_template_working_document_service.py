@@ -125,11 +125,97 @@ def _render_body(document: OrbTemplateWorkingDocument) -> str:
     return "\n".join(parts).strip()
 
 
+def _parse_labeled_sections(transcript: str) -> dict[str, str]:
+    """Parse heading: body blocks from structured chat or template output."""
+    text = str(transcript or "").strip()
+    if not text:
+        return {}
+    lines = text.splitlines()
+    sections: dict[str, str] = {}
+    current_key = ""
+    body_lines: list[str] = []
+    for line in lines:
+        stripped = line.strip()
+        heading_match = _STRUCTURED_DAILY_SECTION_HEADING_RE.match(stripped) if stripped else None
+        if heading_match:
+            if current_key:
+                sections[current_key] = "\n".join(body_lines).strip()
+            current_key = heading_match.group(1).strip().lower()
+            body_lines = []
+            continue
+        if stripped.lower() in {"daily record draft", "here is a simple daily record draft:"}:
+            continue
+        if current_key:
+            body_lines.append(line)
+    if current_key:
+        sections[current_key] = "\n".join(body_lines).strip()
+    return sections
+
+
+_STRUCTURED_DAILY_SECTION_HEADING_RE = re.compile(
+    r"^(?:#{1,3}\s*)?(Context\s*/\s*routine|What happened|Young person'?s presentation|"
+    r"Young person'?s voice or communication|Staff response|Outcome|"
+    r"To complete before saving|Before saving(?: checklist)?)\s*:?\s*$",
+    re.I,
+)
+
+_CHAT_TO_TEMPLATE_HEADING_MAP: dict[str, str] = {
+    "context / routine": "Date and context",
+    "context": "Date and context",
+    "what happened": "What happened",
+    "young person's presentation": "Child voice and presentation",
+    "young person presentation": "Child voice and presentation",
+    "presentation": "Child voice and presentation",
+    "young person's voice or communication": "Child voice and presentation",
+    "child voice and presentation": "Child voice and presentation",
+    "staff response": "Staff response",
+    "outcome": "Outcome and impact",
+    "to complete before saving": "Before saving checklist",
+    "before saving": "Before saving checklist",
+    "before saving checklist": "Before saving checklist",
+}
+
+
+def _map_structured_daily_record_sections(
+    sections: list[OrbTemplateWorkingDocumentSection],
+    labeled: dict[str, str],
+) -> list[OrbTemplateWorkingDocumentSection]:
+    """Map structured chat daily record sections into canonical template sections."""
+    if not labeled:
+        return sections
+    updated = [s.model_copy() for s in sections]
+    heading_index = {s.heading.lower(): s for s in updated}
+    for chat_key, body in labeled.items():
+        if not body.strip():
+            continue
+        template_heading = _CHAT_TO_TEMPLATE_HEADING_MAP.get(chat_key.lower())
+        if not template_heading:
+            continue
+        target = heading_index.get(template_heading.lower())
+        if not target:
+            continue
+        if target.body and chat_key.lower() not in {
+            "young person's presentation",
+            "young person's voice or communication",
+        }:
+            continue
+        if target.body and chat_key.lower() == "young person's voice or communication":
+            target.body = f"{target.body.rstrip()}\n\n{body}".strip()
+        elif target.body and chat_key.lower() == "young person's presentation":
+            target.body = f"{body}\n\n{target.body}".strip()
+        else:
+            target.body = body
+    return updated
+
+
 def _map_transcript_to_sections(
     sections: list[OrbTemplateWorkingDocumentSection],
     transcript: str,
 ) -> list[OrbTemplateWorkingDocumentSection]:
-    """Best-effort paragraph mapping — does not invent content."""
+    """Best-effort mapping — preserves supplied text; does not invent content."""
+    labeled = _parse_labeled_sections(transcript)
+    if labeled:
+        return _map_structured_daily_record_sections(sections, labeled)
     paragraphs = [p.strip() for p in re.split(r"\n\s*\n", transcript.strip()) if p.strip()]
     if not paragraphs:
         return sections

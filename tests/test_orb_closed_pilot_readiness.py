@@ -127,11 +127,13 @@ def test_audit_and_migration_docs_exist():
 def test_daily_record_live_contract_narrative_no_placeholders():
     draft = build_simple_daily_record_draft(BREAKFAST_PROMPT)
     lower = draft.lower()
-    assert "here is a simple daily record draft" in lower
+    assert "daily record draft" in lower
+    assert "context / routine" in lower
+    assert "what happened" in lower
     assert "chose toast" in lower
     assert "[date]" not in lower
     assert "[name]" not in lower
-    assert "before saving" in lower
+    assert "to complete before saving" in lower
 
 
 def test_daily_record_instant_lines_category():

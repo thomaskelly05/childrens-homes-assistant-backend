@@ -9,6 +9,8 @@ const INCIDENT_RE = /\b(incident|restraint|physical intervention|behaviour|injur
 const DAILY_RE = /\b(daily record|key[- ]?work|shift note|log|handover)\b/i
 const MANAGER_RE = /\b(manager|oversight|review|supervision|RI|registered manager)\b/i
 
+const DAILY_RECORD_TEMPLATE_ID = 'daily_record'
+
 function localTemplateHints(content: string): string[] {
   const hints: string[] = []
   if (SAFEGUARDING_RE.test(content)) hints.push('safeguarding')
@@ -20,12 +22,24 @@ function localTemplateHints(content: string): string[] {
 }
 
 function toSuggestionChip(entry: OrbTemplateTaxonomyEntry): OrbSuggestedReplyItem {
-  const label = entry.suggestion_label || `Use ${entry.title.toLowerCase()} template`
+  const isDailyRecord = entry.template_id === DAILY_RECORD_TEMPLATE_ID
+  const label = isDailyRecord
+    ? 'Open in ORB Write using Daily Record template'
+    : entry.suggestion_label || `Use ${entry.title.toLowerCase()} template`
   return {
     action: 'use_template_in_write',
     label,
-    prefill: `Use the ${entry.title} template for this:\n\n`,
+    prefill: isDailyRecord
+      ? `Open this daily record draft in ORB Write:\n\n`
+      : `Use the ${entry.title} template for this:\n\n`,
     template_id: entry.template_id
+  }
+}
+
+function dailyRecordSaveChip(): OrbSuggestedReplyItem {
+  return {
+    action: 'save_to_records',
+    label: 'Save to Records & Drafts'
   }
 }
 
@@ -34,6 +48,12 @@ export async function fetchChatTemplateSuggestions(content: string): Promise<Orb
   const hints = localTemplateHints(content)
   const seen = new Set<string>()
   const chips: OrbSuggestedReplyItem[] = []
+  const isDailyRecordAnswer = DAILY_RE.test(content)
+
+  if (isDailyRecordAnswer) {
+    chips.push(dailyRecordSaveChip())
+    seen.add(dailyRecordSaveChip().label.toLowerCase())
+  }
 
   for (const hint of hints) {
     try {

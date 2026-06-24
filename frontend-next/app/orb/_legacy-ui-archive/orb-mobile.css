@@ -1874,14 +1874,28 @@
 
   [data-orb-draft-notice] {
     color: #451a03 !important;
-    background: #fffbeb !important;
-    border-color: rgba(217, 119, 6, 0.35) !important;
+    background: #fef3c7 !important;
+    border-color: #d97706 !important;
+    border-width: 2px !important;
   }
 
   html[data-orb-residential='1'] .orb-chat-layout--residential.orb-theme-dark [data-orb-draft-notice] {
-    color: #fef3c7 !important;
-    background: rgba(120, 53, 15, 0.42) !important;
-    border-color: rgba(251, 191, 36, 0.28) !important;
+    color: #fffbeb !important;
+    background: rgba(69, 26, 3, 0.88) !important;
+    border-color: rgba(251, 191, 36, 0.55) !important;
+  }
+
+  [data-orb-station-reconnect-banner] {
+    color: #451a03 !important;
+    background: #fef3c7 !important;
+    border-color: #d97706 !important;
+    border-width: 2px !important;
+  }
+
+  html[data-orb-residential='1'] .orb-chat-layout--residential.orb-theme-dark [data-orb-station-reconnect-banner] {
+    color: #fffbeb !important;
+    background: rgba(69, 26, 3, 0.88) !important;
+    border-color: rgba(251, 191, 36, 0.55) !important;
   }
 
   [data-orb-composer-attach-backdrop] {

@@ -5,6 +5,8 @@
 
 import type { OrbRecordingRecordType } from '@/lib/orb/recording/orb-recording-types'
 import type { OrbSavedOutputRecord } from '@/lib/orb/standalone-client'
+import { resolveChatRecordTemplate } from '@/lib/orb/orb-chat-template-suggestions'
+import { convertAnswerToWorkingDocument } from '@/lib/orb/template/orb-template-working-document-client'
 import { handoffSavedOutputRecordToOrbWrite } from '@/lib/orb/write/orb-write-working-document-reopen'
 import { buildSavedOutputExportMarkdown } from '@/lib/orb/orb-saved-output-adapters'
 import {
@@ -18,6 +20,7 @@ import {
   saveOrbWriteTemplateHandoff,
   type OrbWriteTemplateHandoffPayload
 } from '@/lib/orb/write/orb-write-template-handoff'
+import { saveOrbWriteWorkingDocumentHandoff } from '@/lib/orb/write/orb-write-working-document-handoff'
 
 export type OrbWriteConvergedHandoffInput = {
   source: OrbWriteContentHandoffSource
@@ -90,9 +93,36 @@ export function buildSavedOutputWriteHandoff(
   }
 }
 
-export function handoffSavedOutputToOrbWrite(record: OrbSavedOutputRecord): void {
-  if (handoffSavedOutputRecordToOrbWrite(record)) return
+async function handoffSavedOutputAsWorkingDocument(record: OrbSavedOutputRecord): Promise<boolean> {
+  const content =
+    record.content_markdown?.trim() ||
+    record.summary?.trim() ||
+    buildSavedOutputExportMarkdown(record)
+  if (!content) return false
+
+  const meta = record.metadata || {}
+  const templateId =
+    (typeof meta.template_id === 'string' && meta.template_id) ||
+    (await resolveChatRecordTemplate(content)).template_id ||
+    'daily_record'
+
+  try {
+    const doc = await convertAnswerToWorkingDocument(templateId, content, 'records')
+    saveOrbWriteWorkingDocumentHandoff(doc, {
+      source_station: 'records',
+      source_label: `Reopened from Records & Drafts — ${record.title}`
+    })
+    return true
+  } catch {
+    return false
+  }
+}
+
+export async function handoffSavedOutputToOrbWrite(record: OrbSavedOutputRecord): Promise<boolean> {
+  if (handoffSavedOutputRecordToOrbWrite(record)) return true
+  if (await handoffSavedOutputAsWorkingDocument(record)) return true
   convergedHandoffToOrbWrite(buildSavedOutputWriteHandoff(record))
+  return true
 }
 
 export function peekOrbWriteContentHandoff(): OrbWriteContentHandoffPayload | null {
