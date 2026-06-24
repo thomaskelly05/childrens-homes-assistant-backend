@@ -202,6 +202,11 @@ import {
 import {
   reshapeResidentialChatAnswer
 } from '@/lib/orb/orb-residential-chat-response-guide'
+import { buildDailyRecordChatMetadata } from '@/lib/orb/orb-chat-persistence-hydration'
+import {
+  isDailyRecordRequest,
+  isStructuredDailyRecordDraft
+} from '@/lib/orb/recording/orb-adult-identity-language'
 import { profileInitialsFromName } from '@/lib/orb/orb-profile-initials'
 import { OrbHelpPanel } from '@/components/orb-standalone/orb-help-panel'
 import {
@@ -1871,6 +1876,12 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
         const bodyAnswer = prelude
           ? stripDuplicatePreludeFromAnswer(displayAnswer, prelude)
           : displayAnswer
+        const userHint = trimmed || messageBody
+        const dailyRecordMessage =
+          isDailyRecordRequest(userHint) &&
+          (isStructuredDailyRecordDraft(bodyAnswer) ||
+            expertMeta?.detected_family === 'daily_record' ||
+            expertMeta?.detected_family === 'daily_recording')
         const assistantMessage: StandaloneChatMessage = {
           id: assistantId,
           role: 'assistant',
@@ -1890,9 +1901,12 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
           contextUsed: response.context_used
             ? (response.context_used as unknown as Record<string, unknown>)
             : undefined,
+          ...(dailyRecordMessage ? buildDailyRecordChatMetadata() : {}),
           feedbackContext: {
             prompt_tier: response.context_used?.prompt_tier ?? modelRouting?.cost_tier,
-            detected_family: expertMeta?.detected_family,
+            detected_family: dailyRecordMessage
+              ? expertMeta?.detected_family ?? 'daily_record'
+              : expertMeta?.detected_family,
             secondary_families: expertMeta?.secondary_families,
             source_anchors: expertMeta?.source_anchors
           }
@@ -2790,6 +2804,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
   function selectChat(chatId: string) {
     const chat = workspace.chats.find((c) => c.id === chatId)
     if (!chat) return
+    closePanel()
     setWorkspace((current) => ({
       ...current,
       activeChatId: chatId,
@@ -4755,6 +4770,13 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
                                     }
                                     content={entry.content}
                                     messageHint={messageHint}
+                                    chipMetadata={{
+                                      chatIntent: entry.chatIntent,
+                                      templateId: entry.templateId,
+                                      workingDocumentAvailable: entry.workingDocumentAvailable,
+                                      source: entry.source,
+                                      feedbackContext: entry.feedbackContext
+                                    }}
                                     followUps={
                                       residentialSurface
                                         ? contextualResidentialCalmFollowUps({

@@ -3,8 +3,13 @@
  * Used for local fallbacks and client-side response shaping hints.
  */
 
-import type { StandaloneOrbMode } from '@/lib/orb/standalone-client'
-import { sanitizeVisibleFinalAnswer } from '@/lib/orb/orb-visible-final-answer'
+import type { StandaloneOrbMode } from './standalone-client.ts'
+import { sanitizeVisibleFinalAnswer } from './orb-visible-final-answer.ts'
+import {
+  isDailyRecordRequest,
+  isStructuredDailyRecordDraft,
+  reshapeRoutineDailyRecordChatAnswer
+} from './recording/orb-adult-identity-language.ts'
 
 export const ORB_RESIDENTIAL_CHAT_RESPONSE_PATTERN = [
   'Acknowledge the adult’s purpose in one short sentence.',
@@ -64,8 +69,10 @@ export function detectResidentialChatSupportType(
   if (modeLower.includes('safeguard') || SAFEGUARDING_RE.test(text)) return 'safeguarding_concern'
   if (POLICE_RE.test(text) || MEDICATION_RE.test(text)) return 'safeguarding_concern'
   if (INCIDENT_RE.test(text) || BEHAVIOUR_RE.test(text)) return 'incident_reflection'
-  if (SUPERVISION_RE.test(text)) return 'supervision_prep'
   if (WORDING_RE.test(text)) return 'wording_support'
+  // Explicit daily-record prompts must not be routed to supervision because of "handover".
+  if (isDailyRecordRequest(text)) return 'prepare_record'
+  if (SUPERVISION_RE.test(text)) return 'supervision_prep'
   if (RECORD_RE.test(text) || modeLower.includes('record')) return 'prepare_record'
   if (CONCERN_RE.test(text) || OFSTED_RE.test(text) || REGULATION_RE.test(text)) {
     return SAFEGUARDING_RE.test(text) ? 'safeguarding_concern' : 'think_through'
@@ -287,6 +294,27 @@ export function reshapeGenericResidentialChatAnswer(content: string, userMessage
   return buildResidentialGuidedChatFallback(userMessage, mode)
 }
 
+/** True when content is the generic reflective/supervision guided fallback. */
+export function isResidentialReflectiveChatFallback(content: string): boolean {
+  const text = content.trim()
+  if (!text) return false
+  return (
+    /^I can help you think this through\./i.test(text) &&
+    /\bTo move forward, it would help to know:/i.test(text)
+  )
+}
+
+function preserveDailyRecordChatAnswer(content: string, userMessage: string): string | null {
+  if (!isDailyRecordRequest(userMessage)) return null
+  const sanitized = sanitizeVisibleFinalAnswer(content, userMessage)
+  if (isStructuredDailyRecordDraft(sanitized)) return sanitized
+  const reshaped = sanitizeVisibleFinalAnswer(
+    reshapeRoutineDailyRecordChatAnswer(content, userMessage),
+    userMessage
+  )
+  return isStructuredDailyRecordDraft(reshaped) ? reshaped : null
+}
+
 /** Main residential chat shaping — preserve strong backend answers; fallback only when needed. */
 export function reshapeResidentialChatAnswer(
   content: string,
@@ -294,13 +322,31 @@ export function reshapeResidentialChatAnswer(
   mode?: StandaloneOrbMode | string | null
 ): string {
   const text = content.trim()
+  const dailyRecordAnswer = preserveDailyRecordChatAnswer(text, userMessage)
+
+  if (dailyRecordAnswer) {
+    return dailyRecordAnswer
+  }
 
   if (!text || isEmptyResidentialChatAnswer(text)) {
+    if (isDailyRecordRequest(userMessage)) {
+      return (
+        preserveDailyRecordChatAnswer('', userMessage) ??
+        sanitizeVisibleFinalAnswer(reshapeRoutineDailyRecordChatAnswer('', userMessage), userMessage)
+      )
+    }
     return buildResidentialGuidedChatFallback(userMessage, mode)
   }
 
   if (isResidentialSafetyFallbackAnswer(text)) {
     return text
+  }
+
+  if (isResidentialReflectiveChatFallback(text) && isDailyRecordRequest(userMessage)) {
+    return (
+      preserveDailyRecordChatAnswer('', userMessage) ??
+      sanitizeVisibleFinalAnswer(reshapeRoutineDailyRecordChatAnswer('', userMessage), userMessage)
+    )
   }
 
   if (isStrongResidentialBackendAnswer(text)) {
@@ -319,6 +365,12 @@ export function reshapeResidentialChatAnswer(
   }
 
   if (isGenericResidentialSafeguardingEssay(text) || isLowValueResidentialAnswer(text)) {
+    if (isDailyRecordRequest(userMessage)) {
+      return (
+        preserveDailyRecordChatAnswer(text, userMessage) ??
+        sanitizeVisibleFinalAnswer(reshapeRoutineDailyRecordChatAnswer(text, userMessage), userMessage)
+      )
+    }
     return buildResidentialGuidedChatFallback(userMessage, mode)
   }
 

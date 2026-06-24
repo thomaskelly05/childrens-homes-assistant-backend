@@ -1,6 +1,7 @@
 'use client'
 
 import type { StandaloneOrbMode, StandaloneOrbModelRouting } from '@/lib/orb/standalone-client'
+import { repairHydratedChatMessages } from './orb-chat-persistence-hydration.ts'
 
 export type StandaloneOrbSourceType =
   | 'product_context'
@@ -93,6 +94,14 @@ export type StandaloneChatMessage = {
     action_id?: string
     document_lens?: string
   }
+  /** Persisted chat intent for hydration-safe chip and answer routing. */
+  chatIntent?: 'daily_record' | string
+  /** Best-matched template for ORB Write / Records handoff after reload. */
+  templateId?: string
+  /** Whether ORB Write working-document handoff is available for this answer. */
+  workingDocumentAvailable?: boolean
+  /** Origin station for downstream save/open flows. */
+  source?: string
 }
 
 export type StandaloneProject = {
@@ -245,25 +254,39 @@ function normaliseMessage(message: Partial<StandaloneChatMessage>): StandaloneCh
     createdAt: Number(message.createdAt || now()),
     status: message.status,
     thinkingLabel: message.thinkingLabel,
+    instantPrelude: message.instantPrelude,
+    instantCategory: message.instantCategory,
+    streamStatus: message.streamStatus,
     sources: Array.isArray(message.sources) ? message.sources : undefined,
     modelRouting: message.modelRouting,
     documentSuggestion: message.documentSuggestion,
     agentSuggestion: message.agentSuggestion,
     explainability: message.explainability,
+    contextUsed: message.contextUsed,
+    feedbackContext: message.feedbackContext,
     outputKind: message.outputKind,
     outputTitle: message.outputTitle,
-    documentTitle: message.documentTitle
+    documentTitle: message.documentTitle,
+    chatIntent: message.chatIntent,
+    templateId: message.templateId,
+    workingDocumentAvailable: message.workingDocumentAvailable,
+    source: message.source
   }
 }
 
 function normaliseChat(chat: Partial<StandaloneChat>): StandaloneChat {
   const timestamp = now()
+  const messages = Array.isArray(chat.messages)
+    ? repairHydratedChatMessages(
+        chat.messages.map(normaliseMessage).filter(Boolean) as StandaloneChatMessage[]
+      )
+    : []
   return {
     id: String(chat.id || makeId('chat')),
     title: String(chat.title || 'New chat'),
     projectId: String(chat.projectId || STANDALONE_GENERAL_PROJECT_ID),
     profileIds: Array.isArray(chat.profileIds) ? chat.profileIds.map(String) : [],
-    messages: Array.isArray(chat.messages) ? chat.messages.map(normaliseMessage).filter(Boolean) as StandaloneChatMessage[] : [],
+    messages,
     mode: chat.mode || 'Ask ORB',
     conversationId: String(chat.conversationId || makeId('conversation')),
     pinned: Boolean(chat.pinned),

@@ -10,6 +10,9 @@ import {
   shouldApplyResidentialChatGuidance
 } from './orb-residential-chat-response-guide.ts'
 
+const BREAKFAST_DAILY_PROMPT =
+  'Help me write a daily record — calm breakfast, chose toast, watched TV before handover.'
+
 describe('ORB Residential guided chat response guide', () => {
   it('detects safeguarding concern support type', () => {
     assert.equal(
@@ -83,5 +86,43 @@ Separate observation from interpretation. Follow local policy.`
     assert.ok(answerLooksGuidedResidentialChat(guided))
     const kept = reshapeResidentialChatAnswer(guided, 'safeguarding concern after disclosure', 'Safeguarding')
     assert.equal(kept, guided)
+  })
+
+  it('daily record with handover cue stays on prepare_record support type', () => {
+    const prompt =
+      'Help me write a daily record — calm breakfast, chose toast, watched TV before handover.'
+    assert.equal(detectResidentialChatSupportType(prompt), 'prepare_record')
+    const fallback = buildResidentialGuidedChatFallback(prompt)
+    assert.doesNotMatch(fallback, /What do you want to take to supervision/i)
+  })
+
+  it('reshapeResidentialChatAnswer never replaces structured daily record draft with reflective fallback', () => {
+    const draft = `Daily Record Draft
+
+Context / routine:
+Morning routine before handover.
+
+What happened:
+Breakfast and television before handover.
+
+Young person's presentation:
+Calm.
+
+Young person's voice or communication:
+No direct words provided.
+
+Staff response:
+Staff supported the routine.
+
+Outcome:
+Settled morning.
+
+To complete before saving:
+
+* Add the time.
+* Add who was present.`
+    const reshaped = reshapeResidentialChatAnswer(draft, BREAKFAST_DAILY_PROMPT, 'Ask ORB')
+    assert.doesNotMatch(reshaped, /What do you want to take to supervision/i)
+    assert.match(reshaped, /Context \/ routine|What happened/i)
   })
 })

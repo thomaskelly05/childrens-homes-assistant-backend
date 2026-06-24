@@ -1,5 +1,9 @@
 import type { OrbSuggestedReplyItem } from './orb-output-reuse.ts'
 import {
+  hasDailyRecordChatMetadata,
+  type OrbChatDailyRecordMetadata
+} from './orb-chat-persistence-hydration.ts'
+import {
   isDailyRecordRequest,
   isStructuredDailyRecordDraft
 } from './recording/orb-adult-identity-language.ts'
@@ -14,19 +18,23 @@ export const DAILY_RECORD_TEMPLATE_ID = 'daily_record'
 export const ROUTINE_DAILY_UNRELATED_TEMPLATE_IDS = new Set([
   'activity_record',
   'bedtime_routine_record',
-  'morning_routine_record'
+  'morning_routine_record',
+  'child_voice_note'
 ])
 
 const ROUTINE_TEMPLATE_LABEL_RES = [
   /use activity record template/i,
   /use bedtime routine record template/i,
-  /use morning routine record template/i
+  /use morning routine record template/i,
+  /use child voice note template/i
 ]
 
 export type OrbChatChipContext = {
   content: string
   messageHint?: string
-}
+} & Partial<OrbChatDailyRecordMetadata> & {
+    feedbackContext?: { detected_family?: string }
+  }
 
 export type OrbChatChipTraceEntry = {
   action: string
@@ -44,6 +52,7 @@ function isRoutineDailyRecordDraftContext(content: string): boolean {
 }
 
 export function isDailyRecordHandoffChipContext(ctx: OrbChatChipContext): boolean {
+  if (hasDailyRecordChatMetadata(ctx)) return true
   const content = String(ctx.content || '')
   const hint = String(ctx.messageHint || '')
   if (isStructuredDailyRecordDraft(content)) return true
@@ -135,7 +144,9 @@ export function filterVisibleChatChips(
             ? 'activity_record'
             : item.label.toLowerCase().includes('bedtime')
               ? 'bedtime_routine_record'
-              : 'morning_routine_record',
+              : item.label.toLowerCase().includes('child voice')
+                ? 'child_voice_note'
+                : 'morning_routine_record',
           combined
         )
       ) {

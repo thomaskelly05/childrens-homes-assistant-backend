@@ -358,7 +358,7 @@ const BLANK_TEMPLATE_REQUEST_RE =
   /\b(?:blank\s+template|blank\s+form|full\s+document|form\s+to\s+complete|structured\s+report|template\s+to\s+fill|empty\s+template|give\s+me\s+a\s+template|provide\s+a\s+template|report\s+template|(?:give|provide|need|want|show)\s+(?:me\s+)?(?:a\s+)?template\b|(?:form|record)\s+(?:structure|layout|fields)\b|fields\s+to\s+complete)\b/i
 
 const ROUTINE_DAILY_BEFORE_SAVING_LIST =
-  'Before saving, add:\n- the time\n- who was present\n- anything the young person said or communicated\n- whether any follow-up is needed.'
+  'To complete before saving:\n\n* Add the time.\n* Add who was present.\n* Add anything the young person said or communicated.\n* Add any relevant follow-up, if needed.'
 
 const SELF_HARM_GENERIC_FILLER_RES: RegExp[] = [
   /\bAlways prioritise[^.!?]*[.!?]/gi,
@@ -654,28 +654,83 @@ export function promptContainsDailyRecordingFacts(text: string): boolean {
   )
 }
 
-function buildSimpleDailyRecordDraft(sourceText: string): string {
+function extractDailyRecordFacts(sourceText: string): Record<string, string> {
   const lower = String(sourceText || '').toLowerCase()
-  const opening =
-    lower.includes('calm') && lower.includes('breakfast')
-      ? 'The young person appeared calm during breakfast.'
-      : 'During the shift,'
-  const bodyParts: string[] = []
-  if (lower.includes('chose toast')) bodyParts.push('They chose toast')
+  const facts: Record<string, string> = {}
+
+  const happenedParts: string[] = []
+  if (lower.includes('breakfast')) happenedParts.push('The young person had breakfast')
+  if (lower.includes('chose toast')) happenedParts.push('They chose toast')
   if (lower.includes('watched tv') || lower.includes('watched television')) {
-    bodyParts.push(lower.includes('handover') ? 'watched television before handover' : 'watched television')
+    happenedParts.push(
+      lower.includes('handover') ? 'They then watched television before handover' : 'They then watched television'
+    )
   }
-  let narrative =
-    bodyParts.length > 0
-      ? opening.endsWith('.')
-        ? `${opening} ${bodyParts.join(' and then ')}.`
-        : `${opening} ${bodyParts.join(' and then ')}.`
-      : opening.endsWith('.')
-        ? opening
-        : `${opening} events were recorded proportionately.`
-  if (!/staff/i.test(narrative)) narrative += ' Staff offered choice and maintained a calm routine.'
-  if (!/no concerns/i.test(narrative)) narrative += ' No concerns were observed during this period.'
-  return `Here is a simple daily record draft:\n\n${narrative}\n\n${ROUTINE_DAILY_BEFORE_SAVING_LIST}`
+  if (happenedParts.length) {
+    facts.what_happened = `${happenedParts.join('. ')}.`
+  }
+
+  if (lower.includes('breakfast') && lower.includes('handover')) {
+    facts.context = "The record relates to the young person's morning routine before handover."
+  } else if (lower.includes('breakfast')) {
+    facts.context = "The record relates to the young person's breakfast routine."
+  } else if (lower.includes('handover')) {
+    facts.context = 'The record relates to the period before handover.'
+  } else {
+    facts.context = 'The record relates to the shift period described.'
+  }
+
+  if (lower.includes('calm')) {
+    facts.presentation = 'The young person appeared calm during this period.'
+  }
+
+  const childSpoke = [' said ', ' asked ', ' told ', ' spoke ', ' communicated ', ' shouted ', ' replied '].some(
+    (term) => lower.includes(term)
+  )
+  if (!childSpoke) {
+    facts.voice =
+      'No direct words from the young person were provided in the note. Add anything they said, asked for or communicated before saving.'
+  }
+
+  if (lower.includes('breakfast') || lower.includes('toast')) {
+    facts.staff_response =
+      'Staff supported the routine, offered choice around breakfast and maintained a calm environment.'
+  } else {
+    facts.staff_response = 'Staff supported the routine and maintained a calm environment.'
+  }
+
+  if (lower.includes('calm')) {
+    facts.outcome =
+      lower.includes('breakfast') || lower.includes('morning')
+        ? 'The morning period appears to have remained settled based on the information provided.'
+        : 'The period appears to have remained settled based on the information provided.'
+  }
+
+  return facts
+}
+
+export function buildSimpleDailyRecordDraft(sourceText: string): string {
+  const facts = extractDailyRecordFacts(sourceText)
+  const sections: Array<[string, string]> = [
+    ['Context / routine', facts.context || 'Describe the routine or context for this record.'],
+    ['What happened', facts.what_happened || 'Add what happened during this period.'],
+    [
+      "Young person's presentation",
+      facts.presentation || 'Add how the young person presented during this period.'
+    ],
+    [
+      "Young person's voice or communication",
+      facts.voice || 'Add what the young person said, asked for or communicated during this period.'
+    ],
+    ['Staff response', facts.staff_response || 'Add how staff responded and supported.'],
+    ['Outcome', facts.outcome || 'Add what happened next or how the period ended.']
+  ]
+  const lines = ['Daily Record Draft', '']
+  for (const [heading, body] of sections) {
+    lines.push(`${heading}:`, body, '')
+  }
+  lines.push(ROUTINE_DAILY_BEFORE_SAVING_LIST)
+  return lines.join('\n').trim()
 }
 
 export function reshapeRoutineDailyRecordChatAnswer(text: string, sourceText = ''): string {

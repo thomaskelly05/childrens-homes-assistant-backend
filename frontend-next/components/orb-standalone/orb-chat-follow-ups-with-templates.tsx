@@ -11,23 +11,28 @@ import {
   mergeFollowUpsWithTemplateSuggestions,
   type OrbChatChipContext
 } from '@/lib/orb/orb-chat-template-suggestions'
+import type { OrbChatDailyRecordMetadata } from '@/lib/orb/orb-chat-persistence-hydration'
 
 export function OrbChatFollowUpsWithTemplates({
   content,
   messageHint,
+  chipMetadata,
   followUps,
   maxVisible,
   onSelect
 }: {
   content: string
   messageHint?: string
+  chipMetadata?: Partial<OrbChatDailyRecordMetadata> & {
+    feedbackContext?: { detected_family?: string }
+  }
   followUps: OrbSuggestedReplyItem[]
   maxVisible: number
   onSelect: (item: OrbSuggestedReplyItem) => void
 }) {
   const chipContext = useMemo<OrbChatChipContext>(
-    () => ({ content, messageHint }),
-    [content, messageHint]
+    () => ({ content, messageHint, ...chipMetadata }),
+    [chipMetadata, content, messageHint]
   )
   const syncHandoffChips = useMemo(
     () => (isDailyRecordHandoffChipContext(chipContext) ? buildDailyRecordHandoffChips() : null),
@@ -44,13 +49,13 @@ export function OrbChatFollowUpsWithTemplates({
       return
     }
     let cancelled = false
-    void fetchChatTemplateSuggestions(content, { messageHint }).then((items) => {
+    void fetchChatTemplateSuggestions(content, { messageHint, ...chipMetadata }).then((items) => {
       if (!cancelled) setTemplateSuggestions(items)
     })
     return () => {
       cancelled = true
     }
-  }, [content, messageHint, syncHandoffChips])
+  }, [chipMetadata, content, messageHint, syncHandoffChips])
 
   const suggestions = mergeFollowUpsWithTemplateSuggestions(
     followUps,
