@@ -149,7 +149,11 @@ export function OrbWriteStandalonePanel({
         })
       )
       clearOrbWriteWorkingDocumentHandoff()
-      setStatusMessage(`Working document loaded — ${workingHandoff.source_label}.`)
+      setStatusMessage(
+        workingHandoff.source_station === 'chat'
+          ? "I've opened this as a draft record in ORB Write."
+          : `Working document loaded — ${workingHandoff.source_label}.`
+      )
       return
     }
     const contentHandoff = loadOrbWriteContentHandoff()
@@ -630,7 +634,8 @@ export function OrbWriteStandalonePanel({
                           : prev
                       )
                     }}
-                    onSaved={(id) => setStatusMessage(`Saved to My Drafts (${id}). Adult review required.`)}
+                    onSaved={() => setStatusMessage('Saved to My Drafts')}
+                    onStatusMessage={setStatusMessage}
                   />
                 ) : (
                   <OrbWriteEditor

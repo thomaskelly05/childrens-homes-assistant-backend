@@ -182,8 +182,7 @@ export function OrbVoiceStation({
         title: body.title,
         body: body.content_markdown || voice.summary,
         source_station: 'voice',
-        category: 'voice_transcript',
-        template_id: voice.suggestedRecordTypeId || undefined
+        category: 'voice_transcript'
       })
       setSaveNotice(ORB_SAVED_TO_MY_DRAFTS_NOTICE)
     } catch {

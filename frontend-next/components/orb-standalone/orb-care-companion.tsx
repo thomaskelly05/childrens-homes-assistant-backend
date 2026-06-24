@@ -139,9 +139,13 @@ import {
 } from '@/lib/orb/orb-residential-active-chat-follow-ups'
 import { OrbChatFollowUpsWithTemplates } from '@/components/orb-standalone/orb-chat-follow-ups-with-templates'
 import {
+  openChatTemplateInWrite,
+  turnChatAnswerIntoWorkingDocument
+} from '@/lib/orb/write/orb-write-chat-handoff'
+import { resolveChatRecordTemplate } from '@/lib/orb/orb-chat-template-suggestions'
+import {
   listOrbRecordsWorkspaceResilient,
   ORB_SAVED_TO_MY_DRAFTS_NOTICE,
-  resolveChatRecordTemplate,
   saveChatToRecordsWorkspace,
   saveStationDraftToRecordsWorkspace,
   workspaceItemAsSavedSummary
@@ -2943,7 +2947,9 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
       supervision_reflect: `Link this supervision material to possible qualification evidence.\n\n${excerpt}`,
       incident_reflective: `Turn this into reflective learning from what I describe — no invented facts.\n\n${excerpt}`,
       explain_criteria: `Explain the criteria mentioned here in plain English for residential childcare.\n\n${excerpt}`,
-      assessor_feedback: `Draft assessor feedback (support for judgement only) from what I describe.\n\n${excerpt}`
+      assessor_feedback: `Draft assessor feedback (support for judgement only) from what I describe.\n\n${excerpt}`,
+      use_template_in_write: `Open the best template in ORB Write for this.\n\n${excerpt}`,
+      turn_into_record: `Turn this into a draft record in ORB Write.\n\n${excerpt}`
     }
     if (action === 'ofsted_lens') handleModeChange('Ofsted Lens')
     if (action === 'safeguarding_lens') handleModeChange('Safeguarding Thinking')
@@ -3173,8 +3179,29 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
     action: OrbResponseFollowUpAction,
     sourceContent: string,
     assistantIndex?: number,
-    options?: { prefill?: string }
+    options?: { prefill?: string; template_id?: string }
   ) {
+    if (action === 'use_template_in_write') {
+      const result = await openChatTemplateInWrite(sourceContent, {
+        template_id: options?.template_id,
+        onNavigate: () => {
+          closePanel()
+          openOrbWritePanel()
+        }
+      })
+      setDraftNotice(result.notice)
+      return
+    }
+    if (action === 'turn_into_record' || (action === 'recording_wording' && residentialSurface)) {
+      const result = await turnChatAnswerIntoWorkingDocument(sourceContent, {
+        onNavigate: () => {
+          closePanel()
+          openOrbWritePanel()
+        }
+      })
+      setDraftNotice(result.notice)
+      return
+    }
     if (options?.prefill?.trim()) {
       const prefill = options.prefill.trim()
       const messageBody = prefill.endsWith('\n\n')
@@ -3183,25 +3210,6 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
       setMessage(messageBody)
       inputRef.current?.focus()
       return
-    }
-    if (action === 'recording_wording' && residentialSurface) {
-      try {
-        const resolved = await resolveChatRecordTemplate(sourceContent)
-        await saveChatToRecordsWorkspace({
-          title: resolved.title
-            ? `${resolved.title} draft`
-            : generateOrbChatTitle(sourceContent, { mode }) || 'ORB record draft',
-          content: sourceContent,
-          template_id: resolved.template_id,
-          category: resolved.category,
-          turn_into_record: true
-        })
-        setDraftNotice(ORB_SAVED_TO_MY_DRAFTS_NOTICE)
-        return
-      } catch {
-        handleModeChange('Record This Properly')
-        return
-      }
     }
     if (action === 'ofsted_lens') handleModeChange('Ofsted Lens')
     if (action === 'safeguarding_lens') handleModeChange('Safeguarding Thinking')
@@ -4708,8 +4716,9 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
                                           })
                                     }
                                     onSelect={(item) =>
-                                      void handleOrbFollowUp(item.action, entry.content, index, {
-                                        prefill: item.prefill
+                                      void handleOrbFollowUp(item.action as OrbResponseFollowUpAction, entry.content, index, {
+                                        prefill: item.prefill,
+                                        template_id: item.template_id
                                       })
                                     }
                                   />

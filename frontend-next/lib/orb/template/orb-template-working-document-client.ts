@@ -101,6 +101,45 @@ export async function saveWorkingDocumentToRecords(
   return unwrap(payload)
 }
 
+/** Save new or update existing Records Workspace item when workspace_item_id is set. */
+export async function saveOrUpdateWorkingDocumentToRecords(
+  document: OrbTemplateWorkingDocument,
+  workspaceSection = 'my_drafts'
+): Promise<{ workspace_item_id: string; status: string; updated: boolean }> {
+  const existingId = document.metadata?.workspace_item_id
+  if (typeof existingId === 'string' && existingId.trim()) {
+    const { updateOrbRecordsWorkspaceItem } = await import('@/lib/orb/orb-records-workspace-client')
+    const { workingDocumentToWriteBody } = await import(
+      '@/lib/orb/write/orb-write-working-document-handoff'
+    )
+    const rendered = workingDocumentToWriteBody(document)
+    const item = await updateOrbRecordsWorkspaceItem(existingId, {
+      title: document.title,
+      body: rendered,
+      template_id: document.template_id,
+      status: document.status,
+      metadata: {
+        working_document_id: document.document_id,
+        document_type: document.document_type,
+        sections: document.sections,
+        tables: document.tables,
+        charts: document.charts,
+        source_chips: document.source_chips,
+        home_document_chips: document.home_document_chips,
+        linked_home_document_ids: document.linked_home_document_ids,
+        review_before_use_reminder: document.review_before_use_reminder,
+        compliance_disclaimer: document.compliance_disclaimer,
+        export_options: document.export_options,
+        rendered_body: rendered,
+        workspace_item_id: existingId
+      }
+    })
+    return { workspace_item_id: item.id, status: item.status, updated: true }
+  }
+  const result = await saveWorkingDocumentToRecords(document, workspaceSection)
+  return { ...result, updated: false }
+}
+
 export async function listTemplateHomeDocuments(templateId: string): Promise<{
   documents: Array<{
     document_id: string
