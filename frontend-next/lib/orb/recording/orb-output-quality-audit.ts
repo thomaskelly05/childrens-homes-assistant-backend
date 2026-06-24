@@ -168,7 +168,7 @@ export const ORB_OUTPUT_QUALITY_FIXTURES: OrbOutputQualityFixture[] = [
   },
   {
     recordTypeId: 'general_dictation',
-    label: 'General Dictation',
+    label: 'Quick Record',
     roughInput: 'quick note — meds late because pharmacy delivery. child fine. informed manager',
     expectedSectionThemes: ['observed', 'voice', 'adult response', 'outcome', 'follow-up'],
     expectedQualityThemes: ['factual', 'child'],

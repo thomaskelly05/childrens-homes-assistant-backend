@@ -60,6 +60,7 @@ import {
   ORB_RECORDS_EMPTY_SUBTITLE,
   ORB_RECORDS_EMPTY_TITLE,
   ORB_RECORDS_FILTER_CHIPS,
+  ORB_RECORDS_STATUS_CHIPS,
   ORB_RECORDS_FOOTER,
   ORB_RECORDS_LOAD_ERROR,
   ORB_RECORDS_PANEL_SUBTITLE,
@@ -127,6 +128,7 @@ export function OrbSavedOutputsPanel({
   const [chipFilter, setChipFilter] = useState('all')
   const [projectFilter, setProjectFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
+  const [statusChipFilter, setStatusChipFilter] = useState('status_all')
   const [includeArchived, setIncludeArchived] = useState(false)
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -272,6 +274,24 @@ export function OrbSavedOutputsPanel({
   const activeFilterCount =
     (chipFilter !== 'all' ? 1 : 0) + (projectFilter ? 1 : 0) + (includeArchived ? 1 : 0) + (statusFilter ? 1 : 0)
 
+  const statusFilterRow = (
+    <div className="flex flex-wrap gap-1.5" data-orb-saved-outputs-status-filters>
+      {ORB_RECORDS_STATUS_CHIPS.map((chip) => (
+        <OrbPremiumPill
+          key={chip.id}
+          active={statusChipFilter === chip.id}
+          onClick={() => {
+            setStatusChipFilter(chip.id)
+            setStatusFilter(chip.status)
+          }}
+          className="text-[11px] font-semibold"
+        >
+          {chip.label}
+        </OrbPremiumPill>
+      ))}
+    </div>
+  )
+
   const showRecordsEmptyCanvas = residentialSurface && items.length === 0 && !loading && !error
 
   async function handleArchive(id: string) {
@@ -396,6 +416,7 @@ export function OrbSavedOutputsPanel({
                             </OrbPremiumPill>
                           ))}
                         </div>
+                        {statusFilterRow}
                         <select
                           value={projectFilter}
                           onChange={(e) => setProjectFilter(e.target.value)}
@@ -447,6 +468,7 @@ export function OrbSavedOutputsPanel({
                 )
               }
             />
+            {statusFilterRow}
             {!isMobile ? (
               <>
                 <select
@@ -541,7 +563,7 @@ export function OrbSavedOutputsPanel({
                             <span className="text-sm font-medium text-[var(--orb-mobile-ws-text,var(--orb-foreground))] line-clamp-1">{item.title}</span>
                             <div className="flex shrink-0 flex-col items-end gap-1">
                               <span
-                                className="rounded bg-[var(--orb-mobile-ws-input,rgba(255,255,255,0.06))] px-1.5 py-0.5 text-[10px] text-[var(--orb-mobile-ws-muted,var(--orb-muted))]"
+                                className="rounded bg-[var(--orb-primary-soft,rgba(22,139,255,0.16))] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--orb-primary,#168bff)]"
                                 data-orb-saved-output-review-status
                               >
                                 {savedOutputReviewStatusLabel(item)}
