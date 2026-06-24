@@ -15,11 +15,14 @@ function read(relativePath: string) {
 describe('Flow 1 pilot smoke fix', () => {
   it('daily record chat suggestions include ORB Write and Records actions', () => {
     const suggestions = read('lib/orb/orb-chat-template-suggestions.ts')
+    const handoff = read('lib/orb/orb-chat-chip-handoff.ts')
+    const followUps = read('components/orb-standalone/orb-chat-follow-ups-with-templates.tsx')
     assert.match(suggestions, /Open in ORB Write using Daily Record template/)
-    assert.match(suggestions, /Save to Records & Drafts/)
-    assert.match(suggestions, /save_to_records/)
-    assert.match(suggestions, /ROUTINE_DAILY_UNRELATED_TEMPLATES/)
-    assert.match(suggestions, /suggestionKey/)
+    assert.match(handoff, /Save to Records & Drafts/)
+    assert.match(handoff, /save_to_records/)
+    assert.match(handoff, /filterVisibleChatChips/)
+    assert.match(handoff, /isDailyRecordHandoffChipContext/)
+    assert.match(followUps, /messageHint/)
   })
 
   it('saved output detail exposes primary Open in ORB Write workflow', () => {

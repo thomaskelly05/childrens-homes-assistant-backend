@@ -4754,6 +4754,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
                                       residentialSurface ? RESIDENTIAL_MAX_FOLLOW_UP_CHIPS : 6
                                     }
                                     content={entry.content}
+                                    messageHint={messageHint}
                                     followUps={
                                       residentialSurface
                                         ? contextualResidentialCalmFollowUps({

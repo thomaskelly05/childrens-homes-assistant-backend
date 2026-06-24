@@ -1,4 +1,5 @@
-import type { OrbSuggestedReplyItem } from '@/lib/orb/orb-output-reuse'
+import type { OrbSuggestedReplyItem } from './orb-output-reuse.ts'
+import { isStructuredDailyRecordDraft } from './recording/orb-adult-identity-language.ts'
 
 export const RESIDENTIAL_MAX_FOLLOW_UP_CHIPS = 3
 
@@ -17,6 +18,10 @@ export function contextualResidentialCalmFollowUps(options: {
   const hint = (options.messageHint || options.content || '').trim()
   const modeKey = String(options.mode || '').trim().toLowerCase()
   const combined = `${modeKey} ${hint}`.trim()
+
+  if (options.content && isStructuredDailyRecordDraft(options.content)) {
+    return []
+  }
 
   if (SAFEGUARDING_HINT_RE.test(combined) || modeKey.includes('safeguard')) {
     return capResidentialFollowUps([
