@@ -12,7 +12,8 @@ export function FounderGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const pathname = usePathname()
   const allowed = userHasFounderAccessFromProfile(user)
-  const returnTarget = pathname?.startsWith('/founder') ? pathname : '/founder'
+  const returnTarget =
+    pathname?.startsWith('/founder') || pathname?.startsWith('/indicare-lab') ? pathname : '/founder'
 
   useEffect(() => {
     if (status === 'unauthenticated') {

@@ -18,7 +18,12 @@ export type FounderAccessProfile = {
 
 export function isFounderDashboardRoute(pathname: string | null | undefined) {
   if (!pathname) return false
-  return pathname === '/founder' || pathname.startsWith('/founder/')
+  return (
+    pathname === '/founder' ||
+    pathname.startsWith('/founder/') ||
+    pathname === '/indicare-lab' ||
+    pathname.startsWith('/indicare-lab/')
+  )
 }
 
 export function userHasFounderAccess(role?: string | null) {
