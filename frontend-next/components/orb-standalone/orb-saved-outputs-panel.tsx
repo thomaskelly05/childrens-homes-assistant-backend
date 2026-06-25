@@ -44,7 +44,7 @@ import {
   type OrbSavedOutputRecord,
   type OrbSavedOutputSummary
 } from '@/lib/orb/standalone-client'
-import { getOrbLocalSavedOutput, isLegacyLocalSavedOutput, removeOrbLocalSavedOutput } from '@/lib/orb/orb-saved-outputs-local'
+import { getOrbLocalSavedOutput, isLegacyLocalSavedOutput, repairSavedOutputDisplayTitle, removeOrbLocalSavedOutput } from '@/lib/orb/orb-saved-outputs-local'
 import { listOrbSavedOutputsResilient, orbLocalSavedOutputAsRecord } from '@/lib/orb/orb-saved-outputs-resilience'
 import {
   getOrbRecordsWorkspaceItem,
@@ -618,7 +618,7 @@ export function OrbSavedOutputsPanel({
                           data-orb-saved-output-item
                         >
                           <div className="flex items-start justify-between gap-2">
-                            <span className="text-sm font-medium text-[var(--orb-mobile-ws-text,var(--orb-foreground))] line-clamp-1">{item.title}</span>
+                            <span className="text-sm font-medium text-[var(--orb-mobile-ws-text,var(--orb-foreground))] line-clamp-1">{repairSavedOutputDisplayTitle(item)}</span>
                             <div className="flex shrink-0 flex-col items-end gap-1">
                               {isLegacyLocalSavedOutput(item) ? (
                                 <span
@@ -680,7 +680,7 @@ export function OrbSavedOutputsPanel({
                 </div>
               ) : null}
               <div className="border-b border-[var(--orb-mobile-ws-card-border,var(--orb-line))] px-4 py-3">
-                <h3 className="text-base font-semibold text-[var(--orb-mobile-ws-text,var(--orb-foreground))]">{detail.title}</h3>
+                <h3 className="text-base font-semibold text-[var(--orb-mobile-ws-text,var(--orb-foreground))]">{repairSavedOutputDisplayTitle(detail)}</h3>
                 <p className="mt-1 text-xs text-[var(--orb-mobile-ws-muted,var(--orb-muted))]">
                   <span
                     className="font-medium text-[var(--orb-mobile-ws-text,var(--orb-foreground))]"

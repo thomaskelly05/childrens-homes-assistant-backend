@@ -119,4 +119,47 @@ describe('ORB Residential mobile polish pass', () => {
     assert.match(sidebar, /handleVisibleNavClick\(item\.id\)/)
     assert.match(companion, /setSidebarOpen\(false\)/)
   })
+
+  it('final native pass removes desktop hero card weight on mobile home', () => {
+    assert.match(companion, /data-orb-home-native-hero/)
+    assert.match(css, /Final mobile native polish pass/)
+    assert.match(css, /\[data-orb-home-native-hero='true'\]/)
+    assert.match(css, /background:\s*transparent/)
+  })
+
+  it('final native pass anchors home composer to bottom of mobile screen', () => {
+    assert.match(css, /\[data-orb-home-mobile-station='true'\] \.orb-composer-dock/)
+    assert.match(css, /margin-top:\s*auto/)
+  })
+
+  it('ORB Write mobile review is collapsed by default', () => {
+    assert.match(write, /mobileReviewOpen, setMobileReviewOpen\] = useState\(false\)/)
+    assert.match(write, /setMobileReviewOpen\(false\)/)
+  })
+
+  it('ORB Write lower sections have safe-area scroll padding on mobile', () => {
+    assert.match(css, /\[data-orb-write-notepad-body\]/)
+    assert.match(css, /safe-area-inset-bottom/)
+    assert.match(writeEditor, /data-orb-write-notepad-body/)
+  })
+
+  it('Records legacy drafts are hidden by default with repair labels available', () => {
+    const local = read('lib/orb/orb-saved-outputs-local.ts')
+    assert.match(saved, /showLegacyLocal/)
+    assert.match(saved, /data-orb-records-legacy-toggle/)
+    assert.match(saved, /repairSavedOutputDisplayTitle/)
+    assert.match(local, /isLegacyLocalSavedOutput/)
+    assert.match(local, /repairSavedOutputDisplayTitle/)
+  })
+
+  it('Voice transcript area has bottom safe padding on mobile', () => {
+    assert.match(css, /\[data-orb-voice-live-rail-slot\]/)
+    assert.match(css, /\[data-orb-voice-mobile-action-dock\]/)
+    assert.match(css, /safe-area-inset-bottom/)
+  })
+
+  it('ORB Write review nested surface avoids card-within-card on mobile', () => {
+    assert.match(write, /data-orb-write-review-nested-surface/)
+    assert.match(css, /\[data-orb-write-review-nested-surface\]/)
+  })
 })

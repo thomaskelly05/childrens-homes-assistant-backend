@@ -4458,7 +4458,11 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
                         className={residentialSurface ? 'orb-workspace-home-main w-full' : 'w-full'}
                         {...(residentialSurface ? { 'data-orb-workspace-home-main': true } : {})}
                       >
-                    <div className="orb-workspace-hero orb-workspace-hero--premium orb-premium-hero" data-orb-workspace-hero>
+                    <div
+                      className="orb-workspace-hero orb-workspace-hero--premium orb-premium-hero"
+                      data-orb-workspace-hero
+                      data-orb-home-native-hero={residentialSurface && isMobileViewport ? 'true' : undefined}
+                    >
                     {residentialSurface ? <div className="orb-home-orb-glow" aria-hidden /> : null}
                     <div
                       className="relative flex shrink-0 justify-center orb-home-hero-presence"

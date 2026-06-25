@@ -721,7 +721,10 @@ export function OrbWriteStandalonePanel({
                     data-orb-write-review-panel
                   >
                     <OrbWriteStudioReviewChecklist onApplyReviewAction={(check) => void handleReviewAction(check)} />
-                    <div className="min-h-[160px] overflow-hidden rounded-xl border border-[var(--orb-line)]/50 bg-[var(--orb-surface-elevated)]">
+                    <div
+                      className="min-h-[160px] overflow-hidden rounded-xl border border-[var(--orb-line)]/50 bg-[var(--orb-surface-elevated)]"
+                      data-orb-write-review-nested-surface
+                    >
                       <OrbDictateBrainPanel
                         analysis={brainAnalysis}
                         loading={analysing}

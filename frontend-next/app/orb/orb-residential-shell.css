@@ -4706,3 +4706,137 @@ html[data-orb-residential='1'] .orb-residential-safety-footer {
     padding-block: 0.65rem;
   }
 }
+
+/* ── Final mobile native polish pass — remove desktop card feel ───────────── */
+
+@media (max-width: 1023px) {
+  /* Global — full-width stations without nested card chrome */
+  html[data-orb-residential='1'][data-orb-mobile-shell='true'] .orb-workspace,
+  html[data-orb-residential='1'][data-orb-mobile-shell='true'] [data-orb-station-container] {
+    background: var(--orb-res-workspace-bg, #fafbfc);
+    border: none;
+    box-shadow: none;
+    border-radius: 0;
+  }
+
+  html[data-orb-residential='1'][data-orb-mobile-shell='true'] .orb-panel-card.orb-liquid-card {
+    border-color: rgba(15, 23, 42, 0.07);
+    box-shadow: none;
+  }
+
+  /* Home — flat native hero, not boxed premium card */
+  [data-orb-home-native-hero='true'] {
+    padding: 0.15rem 0.5rem 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+
+  [data-orb-home-mobile-station='true'] .orb-workspace--home-calm {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  [data-orb-home-mobile-station='true'] .orb-chat-thread {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  [data-orb-home-mobile-station='true'] .orb-composer-dock {
+    margin-top: auto;
+    width: 100%;
+    padding-inline: max(0.625rem, env(safe-area-inset-left, 0px)) max(0.625rem, env(safe-area-inset-right, 0px));
+  }
+
+  [data-orb-home-empty='true'][data-orb-mobile-shell='true'] .orb-composer-dock .orb-composer--premium {
+    border-color: rgba(15, 23, 42, 0.08);
+    box-shadow: 0 2px 12px rgba(15, 23, 42, 0.06);
+    border-radius: 1.125rem;
+  }
+
+  [data-orb-home-quick-actions-mobile='true'] .orb-starter-card[data-orb-home-quick-action] {
+    border: 1px solid rgba(15, 23, 42, 0.07);
+    background: rgba(248, 250, 252, 0.92);
+    box-shadow: none;
+  }
+
+  /* Voice — transcript/tools visible above Safari controls */
+  [data-orb-voice-live-rail-slot] {
+    min-height: 0;
+    flex: 1 1 auto;
+    padding-bottom: max(0.5rem, env(safe-area-inset-bottom, 0px));
+  }
+
+  html[data-orb-residential='1'] [data-orb-voice-one-screen-workspace][data-orb-voice-full-viewport='true'] .orb-voice-live-rail {
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 0px));
+    scroll-padding-bottom: max(1rem, calc(0.5rem + env(safe-area-inset-bottom, 0px)));
+  }
+
+  html[data-orb-residential='1'] [data-orb-voice-mobile-action-dock] {
+    padding-bottom: max(1.25rem, env(safe-area-inset-bottom, 0px));
+  }
+
+  /* ORB Write — flat mobile workspace, review collapsed surface */
+  [data-orb-write-mobile-layout='stacked'] {
+    border: none;
+    background: transparent;
+    box-shadow: none;
+    padding-inline: 0.625rem;
+  }
+
+  [data-orb-write-mobile='true'] [data-orb-write-notepad-surface] {
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  [data-orb-write-review-collapsible] {
+    border-color: rgba(15, 23, 42, 0.08);
+    background: rgba(248, 250, 252, 0.96);
+    box-shadow: none;
+  }
+
+  [data-orb-write-review-nested-surface] {
+    border: none !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    min-height: 8rem !important;
+  }
+
+  [data-orb-write-notepad-body] {
+    padding-bottom: max(1rem, calc(0.5rem + env(safe-area-inset-bottom, 0px)));
+    scroll-padding-bottom: max(1.25rem, calc(0.75rem + env(safe-area-inset-bottom, 0px)));
+  }
+
+  /* Records — calmer list density */
+  [data-orb-records-mobile-list='true'] [data-orb-premium-page='saved_outputs'] {
+    padding-top: 0.25rem;
+  }
+
+  [data-orb-workspace-records][data-orb-records-mobile-mode='list'] {
+    padding-top: 0;
+  }
+
+  /* Help & Safety — final paragraph above Safari bar */
+  [data-orb-help-panel-safe-bottom] {
+    height: max(1.5rem, calc(1rem + env(safe-area-inset-bottom, 0px)));
+  }
+
+  [data-orb-help-safeguarding-boundary] {
+    padding-bottom: 0.25rem;
+  }
+
+  [data-orb-help-safety-header] {
+    border: none;
+    background: transparent;
+    padding-inline: 0;
+  }
+
+  /* Settings — reachable bottom on mobile stack */
+  [data-orb-settings-mobile-layout='stack'] [data-orb-settings-nav-mobile='true'] {
+    padding-bottom: max(1.25rem, calc(0.75rem + env(safe-area-inset-bottom, 0px)));
+  }
+}
