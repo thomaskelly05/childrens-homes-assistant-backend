@@ -1,22 +1,41 @@
 'use client'
 
+import { useMemo, useState } from 'react'
 import { Check, ClipboardList, FileText, ListPlus } from 'lucide-react'
 
 import { LabSectionCard } from '@/components/indicare-lab/lab-section-card'
 import { ReviewRiskBadge, ReviewStatusBadge } from '@/components/indicare-lab/review-event-badges'
 import { formatLabDate } from '@/lib/indicare-lab/build-brief'
 import {
+  countRealShadowReviewEvents,
+  getLabDataModeConfig,
+  getVisibleReviewEvents,
+  normalizeReviewEventOrigin
+} from '@/lib/indicare-lab/lab-data-mode'
+import {
   FOUNDER_ACTION_ELIGIBLE_STATUSES,
+  REVIEW_ORIGIN_BADGE_TONE,
   REVIEW_ORIGIN_LABELS,
   REVIEW_SOURCE_LABELS,
   REVIEW_TASK_TYPE_LABELS,
   type ReviewEvent,
+  type ReviewEventOrigin,
   type ReviewEventSummary
 } from '@/lib/indicare-lab/review-events/types'
+
+const ORIGIN_FILTER_OPTIONS: { value: ReviewEventOrigin | 'all'; label: string }[] = [
+  { value: 'all', label: 'All visible' },
+  { value: 'shadow-review', label: 'Shadow review' },
+  { value: 'seeded-demo', label: 'Seeded demo' },
+  { value: 'internal-review-test', label: 'Internal test' },
+  { value: 'benchmark-generated', label: 'Benchmark generated' },
+  { value: 'imported', label: 'Imported' }
+]
 
 type ReviewEventsPanelProps = {
   events: ReviewEvent[]
   summary: ReviewEventSummary
+  investorSafeView?: boolean
   onCreateBuildBrief: (event: ReviewEvent) => void
   onAddToApprovalQueue: (event: ReviewEvent) => void
   onMarkReviewed: (eventId: string) => void
@@ -24,38 +43,106 @@ type ReviewEventsPanelProps = {
 
 export function ReviewEventsPanel({
   events,
-  summary,
+  investorSafeView,
   onCreateBuildBrief,
   onAddToApprovalQueue,
   onMarkReviewed
 }: ReviewEventsPanelProps) {
+  const [originFilter, setOriginFilter] = useState<ReviewEventOrigin | 'all'>('all')
+  const dataConfig = getLabDataModeConfig({ investorSafeOverride: investorSafeView })
+
+  const visibleEvents = useMemo(
+    () =>
+      getVisibleReviewEvents(events, {
+        originFilter,
+        config: dataConfig
+      }),
+    [events, originFilter, dataConfig]
+  )
+
+  const realShadowCount = countRealShadowReviewEvents(events)
+  const visibleSummary = useMemo(() => {
+    const byStatus = {
+      pass: 0,
+      rewrite: 0,
+      blocked: 0,
+      'needs-founder-review': 0,
+      reviewed: 0
+    }
+    let needsFounderAttention = 0
+
+    for (const event of visibleEvents) {
+      byStatus[event.status] += 1
+      if (FOUNDER_ACTION_ELIGIBLE_STATUSES.includes(event.status)) {
+        needsFounderAttention += 1
+      }
+    }
+
+    return {
+      total: visibleEvents.length,
+      needsFounderAttention,
+      byStatus
+    }
+  }, [visibleEvents])
+
+  const showRealEmptyState =
+    realShadowCount === 0 &&
+    (dataConfig.investorSafeView ||
+      dataConfig.mode === 'real-shadow-review' ||
+      originFilter === 'shadow-review')
+
   return (
     <LabSectionCard
       id="review-events"
       eyebrow="Runtime review"
       title="Review events feed"
-      description="Live and development-mode ORB review events. AI-modelled agent perspectives flag issues and support founder review — not compliance validation."
+      description="ORB review events with clear origin labels. Seeded demo events are hidden in real founder mode unless explicitly enabled."
       action={
         <div className="rounded-xl border border-amber-400/20 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
-          Internal evaluation · {summary.developmentModeCount} development-mode event
-          {summary.developmentModeCount === 1 ? '' : 's'}
+          {realShadowCount} real shadow · {visibleEvents.length} visible
         </div>
       }
     >
+      <div className="mb-4 flex flex-wrap gap-2">
+        {ORIGIN_FILTER_OPTIONS.map((option) => (
+          <button
+            key={option.value}
+            type="button"
+            onClick={() => setOriginFilter(option.value)}
+            className={`rounded-lg border px-3 py-1.5 text-xs font-bold transition ${
+              originFilter === option.value
+                ? 'border-cyan-400/40 bg-cyan-500/15 text-cyan-200'
+                : 'border-white/10 bg-white/[0.03] text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
+
       <div className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <SummaryStat label="Total events" value={String(summary.total)} />
-        <SummaryStat label="Needs founder attention" value={String(summary.needsFounderAttention)} />
-        <SummaryStat label="Blocked" value={String(summary.byStatus.blocked)} />
-        <SummaryStat label="Rewrite recommended" value={String(summary.byStatus.rewrite)} />
+        <SummaryStat label="Visible events" value={String(visibleSummary.total)} />
+        <SummaryStat label="Needs founder attention" value={String(visibleSummary.needsFounderAttention)} />
+        <SummaryStat label="Blocked" value={String(visibleSummary.byStatus.blocked)} />
+        <SummaryStat label="Rewrite recommended" value={String(visibleSummary.byStatus.rewrite)} />
       </div>
 
       <div className="space-y-4">
-        {events.length === 0 ? (
+        {showRealEmptyState && visibleEvents.length === 0 ? (
+          <div
+            className="rounded-2xl border border-dashed border-white/10 p-8 text-center text-sm text-slate-500"
+            data-testid="review-events-real-empty"
+          >
+            No real ORB shadow review events captured yet. Shadow review is ready. Once enabled, redacted ORB
+            outputs will appear here for founder review.
+          </div>
+        ) : visibleEvents.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-white/10 p-8 text-center text-sm text-slate-500">
-            No review events yet. Seeded development events or internal review tests will appear here.
+            No review events match the current filter. Adjust the origin filter or enable demo data in
+            development mode.
           </div>
         ) : (
-          events.map((event) => (
+          visibleEvents.map((event) => (
             <ReviewEventCard
               key={event.id}
               event={event}
@@ -91,11 +178,13 @@ function ReviewEventCard({
   onMarkReviewed: (eventId: string) => void
 }) {
   const eligibleForActions = FOUNDER_ACTION_ELIGIBLE_STATUSES.includes(event.status)
+  const origin = normalizeReviewEventOrigin(event.origin)
 
   return (
     <article
       className="rounded-2xl border border-white/10 bg-white/[0.04] p-5"
       data-testid={`review-event-${event.id}`}
+      data-event-origin={origin}
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
@@ -105,7 +194,7 @@ function ReviewEventCard({
             </p>
             {event.isDevelopment ? (
               <span className="rounded-full border border-amber-400/30 bg-amber-500/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.12em] text-amber-200">
-                Development mode
+                Development stage
               </span>
             ) : null}
             {event.isInternalEvaluation ? (
@@ -114,16 +203,15 @@ function ReviewEventCard({
               </span>
             ) : null}
             <span
-              className={`rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.12em] ${
-                event.origin === 'shadow-review'
-                  ? 'border-cyan-400/30 bg-cyan-500/10 text-cyan-200'
-                  : event.origin === 'internal-test'
-                    ? 'border-violet-400/30 bg-violet-500/10 text-violet-200'
-                    : 'border-slate-400/30 bg-slate-500/10 text-slate-300'
-              }`}
+              className={`rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.12em] ${REVIEW_ORIGIN_BADGE_TONE[origin]}`}
             >
-              {REVIEW_ORIGIN_LABELS[event.origin]}
+              {REVIEW_ORIGIN_LABELS[origin]}
             </span>
+            {origin === 'seeded-demo' ? (
+              <span className="rounded-full border border-slate-400/30 bg-slate-500/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.12em] text-slate-400">
+                Demo data
+              </span>
+            ) : null}
             {event.isRedacted ? (
               <span className="rounded-full border border-amber-400/30 bg-amber-500/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.12em] text-amber-200">
                 Redacted
@@ -231,8 +319,14 @@ function ReviewEventCard({
             Prompt & draft
           </summary>
           <div className="mt-2 space-y-2 text-xs text-slate-500">
-            {event.prompt ? <p><span className="font-bold text-slate-400">Prompt:</span> {event.prompt}</p> : null}
-            <p><span className="font-bold text-slate-400">Draft:</span> {event.draftAnswer}</p>
+            {event.prompt ? (
+              <p>
+                <span className="font-bold text-slate-400">Prompt:</span> {event.prompt}
+              </p>
+            ) : null}
+            <p>
+              <span className="font-bold text-slate-400">Draft:</span> {event.draftAnswer}
+            </p>
           </div>
         </details>
       ) : null}

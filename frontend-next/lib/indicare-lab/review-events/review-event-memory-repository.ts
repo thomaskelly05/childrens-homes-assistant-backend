@@ -1,3 +1,4 @@
+import { normalizeReviewEventOrigin } from '@/lib/indicare-lab/lab-data-mode'
 import { runReviewEngine } from '@/lib/indicare-lab/review-board/review-engine'
 import type {
   ReviewEventFounderAction,
@@ -115,7 +116,7 @@ export const SEEDED_REVIEW_EVENTS: ReviewEvent[] = [
     createdAt: '2026-06-24T09:15:00Z',
     isDevelopment: true,
     isInternalEvaluation: true,
-    origin: 'seeded',
+    origin: 'seeded-demo',
     isRedacted: false,
     fullTextStored: true,
     founderReviewed: false,
@@ -203,7 +204,7 @@ export const SEEDED_REVIEW_EVENTS: ReviewEvent[] = [
     createdAt: '2026-06-24T11:42:00Z',
     isDevelopment: true,
     isInternalEvaluation: true,
-    origin: 'seeded',
+    origin: 'seeded-demo',
     isRedacted: false,
     fullTextStored: true,
     founderReviewed: false,
@@ -290,7 +291,7 @@ export const SEEDED_REVIEW_EVENTS: ReviewEvent[] = [
     createdAt: '2026-06-24T15:20:00Z',
     isDevelopment: true,
     isInternalEvaluation: true,
-    origin: 'seeded',
+    origin: 'seeded-demo',
     isRedacted: false,
     fullTextStored: true,
     founderReviewed: false,
@@ -378,7 +379,7 @@ export const SEEDED_REVIEW_EVENTS: ReviewEvent[] = [
     createdAt: '2026-06-23T18:05:00Z',
     isDevelopment: true,
     isInternalEvaluation: true,
-    origin: 'seeded',
+    origin: 'seeded-demo',
     isRedacted: false,
     fullTextStored: true,
     founderReviewed: false,
@@ -409,6 +410,15 @@ function applyFilter(source: ReviewEvent[], filter?: ReviewEventFilter): ReviewE
   if (filter?.taskType) result = result.filter((e) => e.taskType === filter.taskType)
   if (filter?.status) result = result.filter((e) => e.status === filter.status)
   if (filter?.riskLevel) result = result.filter((e) => e.riskLevel === filter.riskLevel)
+  if (filter?.origin) {
+    result = result.filter(
+      (e) => normalizeReviewEventOrigin(e.origin) === normalizeReviewEventOrigin(filter.origin!)
+    )
+  }
+  if (filter?.origins?.length) {
+    const allowed = new Set(filter.origins.map((o) => normalizeReviewEventOrigin(o)))
+    result = result.filter((e) => allowed.has(normalizeReviewEventOrigin(e.origin)))
+  }
   if (filter?.developmentOnly) result = result.filter((e) => e.isDevelopment)
 
   result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
@@ -462,7 +472,7 @@ export class ReviewEventMemoryRepository implements ReviewEventRepository {
       draftAnswer: input.draftAnswer,
       context: input.context,
       isDevelopment: input.isDevelopment ?? true,
-      origin: 'internal-test',
+      origin: 'internal-review-test',
       isRedacted: false,
       fullTextStored: true
     })

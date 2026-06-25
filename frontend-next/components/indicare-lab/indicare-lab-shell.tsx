@@ -1,10 +1,12 @@
 'use client'
 
 import Link from 'next/link'
-import { Lock, Orbit } from 'lucide-react'
+import { Lock, Orbit, Shield } from 'lucide-react'
 import type { ReactNode } from 'react'
 
 import { DevelopmentModeBanner } from '@/components/indicare-lab/development-mode-banner'
+import { LAB_DATA_MODE_LABELS } from '@/lib/indicare-lab/lab-data-mode'
+import type { LabDataMode } from '@/lib/indicare-lab/lab-data-mode'
 import type { LabSectionId } from '@/lib/indicare-lab/types'
 
 const NAV_SECTIONS: { id: LabSectionId; label: string; hash: string }[] = [
@@ -16,6 +18,8 @@ const NAV_SECTIONS: { id: LabSectionId; label: string; hash: string }[] = [
   { id: 'review-board', label: 'Review board', hash: '#review-board' },
   { id: 'shadow-review', label: 'Shadow review', hash: '#shadow-review' },
   { id: 'review-events', label: 'Review events', hash: '#review-events' },
+  { id: 'real-suggestions', label: 'Real suggestions', hash: '#real-suggestions' },
+  { id: 'evidence-of-improvement', label: 'Evidence log', hash: '#evidence-of-improvement' },
   { id: 'pattern-intelligence', label: 'Patterns', hash: '#pattern-intelligence' },
   { id: 'evaluation-benchmarks', label: 'Benchmarks', hash: '#evaluation-benchmarks' },
   { id: 'review-test', label: 'Review test', hash: '#review-test' },
@@ -27,10 +31,16 @@ const NAV_SECTIONS: { id: LabSectionId; label: string; hash: string }[] = [
 
 export function IndiCareLabShell({
   children,
-  activeSection = 'overview'
+  activeSection = 'overview',
+  dataMode,
+  investorSafeView = false,
+  onInvestorSafeViewChange
 }: {
   children: ReactNode
   activeSection?: LabSectionId
+  dataMode?: LabDataMode
+  investorSafeView?: boolean
+  onInvestorSafeViewChange?: (enabled: boolean) => void
 }) {
   return (
     <div className="founder-dashboard min-h-screen" data-testid="indicare-lab-shell">
@@ -57,9 +67,9 @@ export function IndiCareLabShell({
                 </div>
               </div>
               <p className="mt-4 max-w-3xl text-sm leading-6 text-slate-400">
-                Intelligence and improvement console for ORB Residential. Continuously assesses brain quality,
-                knowledge coverage, safety, UI, UX, technology opportunities and product gaps. Supports founder
-                decisions — does not guarantee compliance or deploy high-risk changes silently.
+                Intelligence and improvement console for ORB Residential. Evidence-based suggestions from shadow
+                review, patterns, and synthetic benchmarks. Supports founder decisions — does not guarantee
+                compliance or deploy high-risk changes silently.
               </p>
             </div>
             <div className="flex flex-col items-end gap-2">
@@ -67,6 +77,11 @@ export function IndiCareLabShell({
                 <Lock className="h-3.5 w-3.5" aria-hidden />
                 Founder access only
               </span>
+              {dataMode ? (
+                <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">
+                  Data mode: {LAB_DATA_MODE_LABELS[dataMode]}
+                </span>
+              ) : null}
               <Link
                 href="/founder"
                 className="text-xs font-semibold text-cyan-300/80 transition hover:text-cyan-200"
@@ -77,6 +92,30 @@ export function IndiCareLabShell({
           </div>
 
           <DevelopmentModeBanner />
+
+          {onInvestorSafeViewChange ? (
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                onClick={() => onInvestorSafeViewChange(!investorSafeView)}
+                data-testid="investor-safe-toggle"
+                className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-xs font-bold transition ${
+                  investorSafeView
+                    ? 'border-emerald-400/40 bg-emerald-500/15 text-emerald-200'
+                    : 'border-white/10 bg-white/[0.03] text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <Shield className="h-4 w-4" aria-hidden />
+                Investor-safe view {investorSafeView ? 'on' : 'off'}
+              </button>
+              {investorSafeView ? (
+                <p className="text-xs text-slate-500">
+                  Demo data hidden · Synthetic benchmarks labelled · Real shadow review only · No misleading
+                  claims
+                </p>
+              ) : null}
+            </div>
+          ) : null}
 
           <nav
             aria-label="IndiCare Lab sections"
@@ -101,8 +140,8 @@ export function IndiCareLabShell({
         <main className="space-y-8">{children}</main>
 
         <footer className="border-t border-white/5 pt-6 text-center text-xs text-slate-600">
-          IndiCare Lab · Development mode · Internal evaluation only · Synthetic review perspectives are
-          AI-modelled, not human experts
+          IndiCare Lab · Internal evaluation only · Synthetic review perspectives are AI-modelled, not human
+          experts · No compliance guarantee
         </footer>
       </div>
     </div>

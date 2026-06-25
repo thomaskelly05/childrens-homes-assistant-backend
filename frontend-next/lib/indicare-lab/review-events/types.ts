@@ -24,7 +24,12 @@ export type ReviewStatus =
   | 'needs-founder-review'
   | 'reviewed'
 
-export type ReviewEventOrigin = 'seeded' | 'internal-test' | 'shadow-review'
+export type ReviewEventOrigin =
+  | 'seeded-demo'
+  | 'internal-review-test'
+  | 'shadow-review'
+  | 'benchmark-generated'
+  | 'imported'
 
 export type ReviewRiskLevel = 'critical' | 'high' | 'medium' | 'low'
 
@@ -97,6 +102,8 @@ export type ReviewEventFilter = {
   taskType?: ReviewTaskType
   status?: ReviewStatus
   riskLevel?: ReviewRiskLevel
+  origin?: ReviewEventOrigin
+  origins?: ReviewEventOrigin[]
   developmentOnly?: boolean
   limit?: number
 }
@@ -148,7 +155,17 @@ export const FOUNDER_ACTION_ELIGIBLE_STATUSES: ReviewStatus[] = [
 ]
 
 export const REVIEW_ORIGIN_LABELS: Record<ReviewEventOrigin, string> = {
-  seeded: 'Seeded demo',
-  'internal-test': 'Internal test',
-  'shadow-review': 'Shadow review'
+  'seeded-demo': 'Seeded demo',
+  'internal-review-test': 'Internal review test',
+  'shadow-review': 'Redacted shadow review',
+  'benchmark-generated': 'Synthetic benchmark',
+  imported: 'Imported'
+}
+
+export const REVIEW_ORIGIN_BADGE_TONE: Record<ReviewEventOrigin, string> = {
+  'seeded-demo': 'border-slate-400/30 bg-slate-500/10 text-slate-300',
+  'internal-review-test': 'border-violet-400/30 bg-violet-500/10 text-violet-200',
+  'shadow-review': 'border-cyan-400/30 bg-cyan-500/10 text-cyan-200',
+  'benchmark-generated': 'border-amber-400/30 bg-amber-500/10 text-amber-200',
+  imported: 'border-slate-400/30 bg-slate-500/10 text-slate-400'
 }

@@ -519,7 +519,7 @@ export function runReviewEngine(input: ReviewEngineInput): ReviewEvent {
     createdAt: new Date().toISOString(),
     isDevelopment: input.isDevelopment ?? true,
     isInternalEvaluation: true,
-    origin: input.origin ?? 'internal-test',
+    origin: input.origin ?? 'internal-review-test',
     isRedacted: input.isRedacted ?? false,
     fullTextStored: input.fullTextStored ?? true,
     founderReviewed: false,
