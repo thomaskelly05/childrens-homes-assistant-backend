@@ -96,6 +96,26 @@ export function isLegacyLocalSavedOutput(item: {
   return untitled && !body
 }
 
+/** Repair untitled local drafts for trustworthy list/detail labels during pilot review. */
+export function repairSavedOutputDisplayTitle(item: {
+  id: string
+  title?: string | null
+  summary?: string | null
+  content_markdown?: string | null
+}): string {
+  const title = item.title?.trim() || ''
+  if (title && !/^untitled/i.test(title)) return title
+  const body = item.content_markdown?.trim() || item.summary?.trim() || ''
+  if (!body) return 'Legacy draft'
+  const firstLine = body
+    .split(/\n/)[0]
+    ?.replace(/[#*_`>\-\s]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 64)
+  return firstLine || 'Legacy draft'
+}
+
 export function orbLocalSavedOutputAsRecord(item: OrbLocalSavedOutput): OrbSavedOutputRecord {
   const now = new Date().toISOString()
   return {
