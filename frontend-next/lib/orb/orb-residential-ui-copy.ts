@@ -13,9 +13,9 @@ export const ORB_VOICE_STATUS_CARD_COPY =
   'Voice is for reflective support. Review any summary before use.'
 
 export const ORB_VOICE_V2_TITLE = 'Voice'
-export const ORB_VOICE_V2_PROMPT = 'Talk it through with ORB before you write.'
+export const ORB_VOICE_V2_PROMPT = 'Talk it through before you write.'
 export const ORB_VOICE_V2_SUPPORTING =
-  'Use voice to reflect, organise your thoughts and prepare a reviewable summary. ORB supports professional judgement; it does not replace safeguarding procedures or management oversight.'
+  'Use this to reflect, organise your thoughts and prepare a safer record.'
 export const ORB_VOICE_V2_BUTTON = 'Start talking'
 
 export const ORB_RESIDENTIAL_BILLING_INCLUDED_ITEMS = [

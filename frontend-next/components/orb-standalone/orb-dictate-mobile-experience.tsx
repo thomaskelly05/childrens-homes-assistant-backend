@@ -35,7 +35,8 @@ import {
   type OrbDictateNoteType,
   type OrbDictateStartMode
 } from '@/lib/orb/dictate/orb-dictate-types'
-import { ORB_DICTATE_CAPTURE_MODE_COPY } from '@/lib/orb/dictate/orb-dictate-capability-map'
+import { ORB_DICTATE_QUICK_RECORD_EXPLANATION } from '@/lib/orb/dictate/orb-dictate-capture-copy'
+import { ORB_DICTATE_MOBILE_FRAMING } from '@/lib/orb/orb-care-led-mobile-copy'
 import { isOrbVoiceDebugMode } from '@/lib/orb/orb-voice-debug'
 
 type OutputTab = 'professional' | 'summary' | 'actions' | 'transcript' | 'evidence'
@@ -174,8 +175,11 @@ export function OrbDictateMobileExperience({
         <p className="mt-0.5 text-[11px] text-[var(--orb-muted)]" data-orb-dictate-subtitle>
           {ORB_DICTATE_PRODUCT_SUBTITLE}
         </p>
-        <p className="mt-1 text-[10px] text-[var(--orb-muted)]/90" data-orb-dictate-capture-mode>
-          {ORB_DICTATE_CAPTURE_MODE_COPY}
+        <p className="mt-1 text-[11px] leading-snug text-[var(--orb-muted)]" data-orb-dictate-capture-mode>
+          {ORB_DICTATE_MOBILE_FRAMING}
+        </p>
+        <p className="mt-1 text-[10px] text-[var(--orb-muted)]/85" data-orb-dictate-quick-record-hint>
+          {ORB_DICTATE_QUICK_RECORD_EXPLANATION}
         </p>
       </header>
       <div

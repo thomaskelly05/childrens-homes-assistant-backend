@@ -48,7 +48,7 @@ describe('ORB Residential visual convergence pass', () => {
 
   it('Dictate uses new ORB station copy and defaults', () => {
     assert.match(ORB_DICTATE_SUBTITLE, /Speak naturally/)
-    assert.match(ORB_STATION_DICTATE_SUBTITLE, /safer draft for adult review/)
+    assert.match(ORB_STATION_DICTATE_SUBTITLE, /adult-reviewed draft/)
     assert.equal(ORB_DICTATE_RECORD_TYPE_SUGGESTIONS[0]?.label, 'Quick Record')
     assert.doesNotMatch(ORB_DICTATE_RECORD_TYPE_SUGGESTIONS.map((r) => r.label).join(' '), /General [Dd]ictation/)
     assert.match(ORB_DICTATE_RECENT_CAPTURES_EMPTY, /No captures yet/)
@@ -106,7 +106,7 @@ describe('ORB Residential visual convergence pass', () => {
     assert.match(sidebar, /isNavActive/)
     assert.match(companion, /activeNavId=/)
     assert.equal(ORB_RESIDENTIAL_STATION_DEFINITIONS.orb_write.tagline, ORB_STATION_WRITE_SUBTITLE)
-    assert.match(ORB_RECORDS_PANEL_SUBTITLE, /Your saved drafts/)
+    assert.match(ORB_RECORDS_PANEL_SUBTITLE, /ready to review/)
   })
 
   it('mobile sidebar remains usable and Communicate hidden from primary nav', () => {

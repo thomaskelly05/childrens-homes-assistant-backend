@@ -40,11 +40,15 @@ describe('ORB Write mobile one-section studio', () => {
     assert.match(workspace, /data-orb-write-mobile-section-counter/)
   })
 
-  it('Previous Next and Sections controls exist', () => {
+  it('Previous Next and All parts controls exist', () => {
     assert.match(workspace, /data-orb-write-mobile-section-prev/)
+    assert.match(workspace, /data-orb-write-mobile-part-prev/)
     assert.match(workspace, /data-orb-write-mobile-section-next/)
+    assert.match(workspace, /data-orb-write-mobile-part-next/)
     assert.match(workspace, /data-orb-write-mobile-sections-toggle/)
+    assert.match(workspace, /data-orb-write-mobile-parts-toggle/)
     assert.match(workspace, /data-orb-write-mobile-sections-sheet/)
+    assert.match(workspace, /ORB_WRITE_MOBILE_ALL_PARTS/)
   })
 
   it('ORB Review is collapsed by default on mobile and opens in sheet', () => {
@@ -56,8 +60,14 @@ describe('ORB Write mobile one-section studio', () => {
     assert.doesNotMatch(panel, /data-orb-write-review-collapsible/)
   })
 
+  it('mobile ORB Write uses care-led studio header', () => {
+    const careCopy = read('lib/orb/orb-care-led-mobile-copy.ts')
+    assert.match(careCopy, /Shape the record/)
+    assert.match(panel, /OrbWriteMobileCareHeader/)
+    assert.match(workspace, /data-orb-write-mobile-care-header/)
+  })
+
   it('record type appears once and Use a template is secondary on mobile', () => {
-    assert.match(panel, /OrbWriteMobileCompactHeader/)
     assert.match(panel, /data-orb-write-record-type-suppressed=\{isMobile \? 'true'/)
     assert.match(workspace, /data-orb-write-use-template-secondary/)
     assert.match(css, /\[data-orb-write-use-template-secondary\]/)

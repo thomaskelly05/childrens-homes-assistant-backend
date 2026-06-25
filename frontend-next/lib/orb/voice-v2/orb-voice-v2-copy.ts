@@ -1,6 +1,6 @@
 export const ORB_VOICE_V2_TITLE = 'Voice' as const
-export const ORB_VOICE_V2_SUBTITLE = 'Talk it through with ORB before you write.' as const
-export const ORB_VOICE_V2_IDLE_PROMPT = 'Talk it through with ORB.' as const
+export const ORB_VOICE_V2_SUBTITLE = 'Talk it through before you write.' as const
+export const ORB_VOICE_V2_IDLE_PROMPT = 'Talk it through before you write.' as const
 export const ORB_VOICE_V2_MODE_PROMPT = 'What are you talking through?' as const
 export const ORB_VOICE_V2_TRANSCRIPT_LABEL = 'Voice conversation' as const
 export const ORB_VOICE_V2_TRANSCRIPT_NOTE = 'Reflection notes — not yet a record' as const

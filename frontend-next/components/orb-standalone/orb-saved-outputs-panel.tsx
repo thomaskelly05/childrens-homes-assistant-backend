@@ -64,8 +64,13 @@ import {
   ORB_RECORDS_FOOTER,
   ORB_RECORDS_LOAD_ERROR,
   ORB_RECORDS_PANEL_SUBTITLE,
-  ORB_RECORDS_PANEL_TITLE
+  ORB_RECORDS_PANEL_TITLE,
+  ORB_RECORDS_MOBILE_LIST_HEADING
 } from '@/lib/orb/orb-user-facing-names'
+import {
+  ORB_RECORDS_LEGACY_DRAFT_LABEL,
+  ORB_RECORDS_MOBILE_EMPTY_SUBTITLE
+} from '@/lib/orb/orb-care-led-mobile-copy'
 import { isOrbCommunicateLaunchVisible } from '@/lib/orb/orb-navigation-convergence'
 
 function recordToView(record: OrbSavedOutputRecord): OrbIntelligenceOutputView {
@@ -415,7 +420,12 @@ export function OrbSavedOutputsPanel({
             subtitle={ORB_RECORDS_PANEL_SUBTITLE}
             className="px-2 pb-2 lg:px-3"
           />
-          ) : null}
+          ) : (
+            <div className="px-3 pb-2 pt-1" data-orb-records-mobile-list-header>
+              <h2 className="text-base font-semibold text-[var(--orb-foreground)]">{ORB_RECORDS_MOBILE_LIST_HEADING}</h2>
+              <p className="mt-0.5 text-sm text-[var(--orb-muted)]">{ORB_RECORDS_PANEL_SUBTITLE}</p>
+            </div>
+          )}
           {reconnectSuggested && items.length ? (
             <div className="p-3 pb-0">
               <OrbStationReconnectBanner onRefresh={() => void refresh()} />
@@ -524,7 +534,7 @@ export function OrbSavedOutputsPanel({
                 data-orb-records-legacy-toggle
                 aria-pressed={showLegacyLocal}
               >
-                <span>{showLegacyLocal ? 'Hide legacy local drafts' : `Show ${legacyLocalCount} legacy local draft${legacyLocalCount === 1 ? '' : 's'}`}</span>
+                <span>{showLegacyLocal ? 'Hide legacy local drafts' : `Show ${legacyLocalCount} ${legacyLocalCount === 1 ? 'legacy draft' : 'legacy drafts'}`}</span>
               </button>
             ) : null}
             {!isMobile ? (
@@ -583,8 +593,8 @@ export function OrbSavedOutputsPanel({
             ) : items.length === 0 ? (
               <div data-orb-records-empty>
               <OrbStudioEmptyState
-                title={ORB_RECORDS_EMPTY_TITLE}
-                description={isMobile ? undefined : ORB_RECORDS_EMPTY_SUBTITLE}
+                title={isMobile ? ORB_RECORDS_MOBILE_LIST_HEADING : ORB_RECORDS_EMPTY_TITLE}
+                description={isMobile ? ORB_RECORDS_MOBILE_EMPTY_SUBTITLE : ORB_RECORDS_EMPTY_SUBTITLE}
                 className={isMobile ? '!px-4 !py-6' : undefined}
                 actions={
                   <>
@@ -625,7 +635,7 @@ export function OrbSavedOutputsPanel({
                                   className="rounded bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700"
                                   data-orb-records-legacy-badge
                                 >
-                                  Legacy
+                                  {ORB_RECORDS_LEGACY_DRAFT_LABEL}
                                 </span>
                               ) : null}
                               <span

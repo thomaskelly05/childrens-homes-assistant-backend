@@ -16,7 +16,7 @@ export const ORB_LOGIN_ENTERPRISE_FOUNDER_LINE =
 
 export const ORB_HOME_V2_HEADLINE = 'What do you need help thinking through?'
 export const ORB_HOME_V2_SUBLINE =
-  'Start with what happened, what you are unsure about, or what needs recording. ORB can help you reflect, structure and write with the child\u2019s experience central.'
+  'Start with what happened, what you are unsure about, or what needs recording. ORB helps you reflect, structure and write with the child\u2019s experience central.'
 
 export const ORB_HOME_BRAND_TRUTH_LINE = 'Built to help adults think before they write.'
 

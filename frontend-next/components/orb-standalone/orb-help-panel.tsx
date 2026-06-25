@@ -2,6 +2,7 @@
 
 import { GlassOrbMark } from '@/components/orb-residential/ui/glass-orb-mark'
 import { OrbStandalonePanelShell } from '@/components/orb-standalone/orb-standalone-panel-shell'
+import { ORB_HELP_WHEN_TO_SPEAK_TO_MANAGER } from '@/lib/orb/orb-care-led-mobile-copy'
 import {
   ORB_HELP_PANEL_SUBTITLE,
   ORB_HELP_PANEL_TITLE,
@@ -22,8 +23,8 @@ const SECTIONS = [
     body: 'Use minimal or anonymised details where possible. Review every output before use. ORB supports professional judgement — it does not replace management oversight or local policy.'
   },
   {
-    title: 'Safeguarding boundaries',
-    body: 'If a child is at immediate risk, follow local safeguarding and emergency procedures. ORB supports thinking and recording quality — not automated safeguarding decisions.'
+    title: ORB_HELP_WHEN_TO_SPEAK_TO_MANAGER,
+    body: 'If a child is at immediate risk, follow local safeguarding and emergency procedures. ORB supports thinking and recording quality — not automated safeguarding decisions. Speak to a manager when thresholds, notifications or oversight are unclear.'
   },
   {
     title: 'Data and privacy',
@@ -61,10 +62,6 @@ export function OrbHelpPanel({ open, onClose }: { open: boolean; onClose: () => 
               <p className="mt-1.5 text-sm leading-6 text-[var(--orb-muted)]">{section.body}</p>
             </section>
           ))}
-          <p className="text-sm leading-6 text-[var(--orb-muted)]" data-orb-help-safeguarding-boundary>
-            If a child is at immediate risk, follow local safeguarding and emergency procedures. ORB supports
-            professional judgement — it does not replace safeguarding procedures or local policy.
-          </p>
           <div aria-hidden data-orb-help-panel-safe-bottom />
         </div>
       </div>
