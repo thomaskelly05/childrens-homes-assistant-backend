@@ -1,12 +1,40 @@
 import type { AdminActionDescriptor, AdminActionKind } from './types'
 
-/** Phase 1: action descriptors — UI-ready, backend wiring tracked per action. */
+const WIRED_ACTIONS = new Set<AdminActionKind>([
+  'disable-user',
+  'reactivate-user',
+  'force-password-reset'
+])
+
+const UNWIRED_ACTIONS = new Set<AdminActionKind>(['resend-invite', 'revoke-sessions'])
+
+/** Phase 2: action descriptors — wired status reflects backend capability. */
 const ACTION_CATALOG: Record<AdminActionKind, Omit<AdminActionDescriptor, 'kind'>> = {
-  'resend-invite': { label: 'Resend invite', wired: false },
-  'force-password-reset': { label: 'Force password reset', wired: false },
-  'disable-user': { label: 'Disable user', wired: false },
-  'reactivate-user': { label: 'Reactivate user', wired: false },
-  'revoke-sessions': { label: 'Revoke sessions', wired: false },
+  'resend-invite': {
+    label: 'Resend invite',
+    wired: false,
+    description: 'Not wired to current auth provider yet'
+  },
+  'force-password-reset': {
+    label: 'Force password reset',
+    wired: true,
+    description: 'Sets a temporary password via admin API'
+  },
+  'disable-user': {
+    label: 'Disable user',
+    wired: true,
+    description: 'Deactivates account access'
+  },
+  'reactivate-user': {
+    label: 'Reactivate user',
+    wired: true,
+    description: 'Restores account access'
+  },
+  'revoke-sessions': {
+    label: 'Revoke sessions',
+    wired: false,
+    description: 'Not wired to current auth provider yet'
+  },
   'pause-provider': { label: 'Pause provider', wired: false },
   'add-home': { label: 'Add home', wired: false },
   'invite-manager': { label: 'Invite manager', wired: false },
@@ -27,7 +55,7 @@ export function getAdminAction(kind: AdminActionKind): AdminActionDescriptor {
   return {
     kind,
     ...entry,
-    description: entry.wired ? undefined : 'Action wiring pending'
+    description: entry.description ?? (entry.wired ? undefined : 'Not wired to current auth provider yet')
   }
 }
 
@@ -35,7 +63,14 @@ export function getAdminActions(kinds: AdminActionKind[]): AdminActionDescriptor
   return kinds.map(getAdminAction)
 }
 
-/** Future: every admin mutation should append to audit log via this hook. */
+export function isAdminActionGloballyWired(kind: AdminActionKind): boolean {
+  return WIRED_ACTIONS.has(kind)
+}
+
+export function isAdminActionGloballyUnwired(kind: AdminActionKind): boolean {
+  return UNWIRED_ACTIONS.has(kind)
+}
+
 export function describePendingAdminAction(kind: AdminActionKind, target: string): string {
   const action = getAdminAction(kind)
   return `${action.label} on ${target} — ${action.description ?? 'pending backend'}`
