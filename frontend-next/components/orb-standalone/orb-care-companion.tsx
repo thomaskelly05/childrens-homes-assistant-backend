@@ -3922,6 +3922,9 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
       {...(residentialSurface ? { 'data-orb-residential': 'true' as const } : {})}
       data-orb-residential-surface={residentialSurface ? 'true' : undefined}
       data-orb-home-empty={residentialSurface && showEmptyState ? 'true' : undefined}
+      data-orb-home-mobile-station={
+        residentialSurface && showEmptyState && isMobileViewport ? 'true' : undefined
+      }
       data-orb-chat-active={residentialSurface && !showEmptyState ? 'true' : undefined}
       data-orb-residential-calm-chat={
         residentialSurface && !showEmptyState && !isOrbDeveloperMode() ? 'true' : undefined
@@ -4430,7 +4433,9 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
           ) : (
             <div
               ref={scrollContainerRef}
-              className={`orb-chat-thread flex-1 overflow-y-auto overflow-x-hidden px-3 py-6 md:px-6 ${residentialSurface ? 'pb-4' : 'pb-32'}`}
+              className={`orb-chat-thread flex-1 overflow-y-auto overflow-x-hidden px-3 md:px-6 ${
+                residentialSurface && isMobileViewport && showEmptyState ? 'min-h-0 py-2' : 'py-6'
+              } ${residentialSurface ? 'pb-4' : 'pb-32'}`}
               role="log"
               aria-label="ORB conversation"
               data-orb-chat-scroll-container

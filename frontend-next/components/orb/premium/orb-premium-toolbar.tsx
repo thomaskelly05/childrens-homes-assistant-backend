@@ -42,9 +42,12 @@ export function OrbPremiumToolbar({
       {...(searchSurfaceId ? { 'data-orb-search-surface': searchSurfaceId } : {})}
     >
       {onSearchChange !== undefined ? (
-        <div className="orb-liquid-toolbar relative rounded-xl">
+        <div
+          className="orb-liquid-toolbar relative rounded-xl"
+          data-orb-premium-search-wrap
+        >
           <Search
-            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--orb-muted)]"
+            className="pointer-events-none absolute left-3 top-1/2 z-[1] h-4 w-4 -translate-y-1/2 text-[var(--orb-muted)]"
             aria-hidden
           />
           <OrbPremiumInput
@@ -55,7 +58,7 @@ export function OrbPremiumToolbar({
             }}
             placeholder={resolvedPlaceholder}
             aria-label={resolvedPlaceholder}
-            className="border-0 bg-transparent py-2.5 pl-10 pr-10 shadow-none focus-visible:ring-0"
+            className="orb-premium-search-input min-w-0 border-0 bg-transparent py-2.5 pl-11 pr-10 shadow-none focus-visible:ring-0"
             data-orb-premium-search
             {...(searchDataAttr ? { [searchDataAttr]: true } : {})}
             {...searchInputProps}

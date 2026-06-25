@@ -55,7 +55,8 @@ export function OrbWriteEditor({
   onOpenGuidance,
   onOpenTemplatePicker,
   onRecordTypeSelect,
-  lastEdited
+  lastEdited,
+  suppressRecordTypeBadge = false
 }: {
   document: OrbWriteDocument
   onChange: (body: string, plainText: string) => void
@@ -71,6 +72,8 @@ export function OrbWriteEditor({
   onOpenTemplatePicker?: () => void
   onRecordTypeSelect?: (recordTypeId: string) => void
   lastEdited?: string
+  /** When header already exposes record type on mobile, hide the notepad badge row duplicate. */
+  suppressRecordTypeBadge?: boolean
 }) {
   const { isMobile } = useOrbResponsiveMode()
   const editorRef = useRef<HTMLDivElement>(null)
@@ -163,7 +166,7 @@ export function OrbWriteEditor({
   )
 
   return (
-    <div className={`orb-write-studio-editor relative flex min-h-0 flex-1 flex-col overflow-hidden ${isMobile ? '' : 'rounded-xl border border-[var(--orb-line)]/50 bg-[var(--orb-surface-elevated)]'}`} data-orb-write-editor data-orb-write-mobile={isMobile ? 'true' : 'false'} data-orb-write-notepad={isMobile ? 'true' : 'false'}>
+    <div className={`orb-write-studio-editor relative flex min-h-0 flex-1 flex-col overflow-hidden ${isMobile ? '' : 'rounded-xl border border-[var(--orb-line)]/50 bg-[var(--orb-surface-elevated)]'}`} data-orb-write-editor data-orb-write-mobile={isMobile ? 'true' : 'false'} data-orb-write-notepad={isMobile ? 'true' : 'false'} data-orb-write-record-type-suppressed={isMobile && suppressRecordTypeBadge ? 'true' : undefined}>
       <div className="hidden md:block">
         <OrbWriteToolbar
           onCommand={runCommand}
@@ -187,12 +190,14 @@ export function OrbWriteEditor({
             className="flex shrink-0 flex-wrap items-center gap-1.5 border-b border-[var(--orb-line)]/40 px-3 py-1.5 text-[10px] text-[var(--orb-muted)]"
             data-orb-write-notepad-meta
           >
-            <OrbWriteRecordTypeSelector
-              recordTypeId={doc.record_type_id ?? 'general_dictation'}
-              variant="badge"
-              onOpenFullPicker={onOpenTemplatePicker}
-              onSelect={(recordType) => onRecordTypeSelect?.(recordType.id)}
-            />
+            {!suppressRecordTypeBadge ? (
+              <OrbWriteRecordTypeSelector
+                recordTypeId={doc.record_type_id ?? 'general_dictation'}
+                variant="badge"
+                onOpenFullPicker={onOpenTemplatePicker}
+                onSelect={(recordType) => onRecordTypeSelect?.(recordType.id)}
+              />
+            ) : null}
             {doc.is_finalised ? (
               <span
                 className="inline-flex shrink-0 items-center rounded-full border border-emerald-400/40 bg-emerald-500/10 px-2 py-0.5 font-semibold uppercase tracking-wide text-emerald-800"

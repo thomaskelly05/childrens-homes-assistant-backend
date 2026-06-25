@@ -110,8 +110,16 @@ export function OrbWriteStandalonePanel({
   const [workingDoc, setWorkingDoc] = useState<OrbTemplateWorkingDocument | null>(null)
   const [sourcePanelOpen, setSourcePanelOpen] = useState(false)
   const [guidancePanelOpen, setGuidancePanelOpen] = useState(true)
+  const [mobileReviewOpen, setMobileReviewOpen] = useState(false)
   const [compactWriteHeight, setCompactWriteHeight] = useState(false)
   const { isMobile } = useOrbResponsiveMode()
+
+  useEffect(() => {
+    if (isMobile) {
+      setGuidancePanelOpen(false)
+      setMobileReviewOpen(false)
+    }
+  }, [isMobile, open])
 
   useEffect(() => {
     if (!open || typeof window === 'undefined') return
@@ -531,6 +539,7 @@ export function OrbWriteStandalonePanel({
               className="orb-write-studio-header flex shrink-0 flex-col gap-2"
               data-orb-write-studio-header
               data-orb-write-mobile-layout={isMobile ? 'stacked' : undefined}
+              data-orb-write-record-type-suppressed={isMobile ? 'true' : undefined}
             >
               {!isMobile ? (
                 <div className="flex min-w-0 items-start gap-3">
@@ -693,10 +702,52 @@ export function OrbWriteStandalonePanel({
                     onOpenGuidance={() => setGuidancePanelOpen(true)}
                     onOpenTemplatePicker={() => setTemplatePickerOpen(true)}
                     onRecordTypeSelect={requestRecordTypeChange}
+                    suppressRecordTypeBadge={isMobile}
                   />
                 )}
               </div>
-              {guidancePanelOpen ? (
+              {isMobile ? (
+                <details
+                  className="shrink-0"
+                  data-orb-write-review-collapsible
+                  open={mobileReviewOpen}
+                  onToggle={(event) => setMobileReviewOpen((event.currentTarget as HTMLDetailsElement).open)}
+                >
+                  <summary>ORB Review &amp; guidance</summary>
+                  <div
+                    className="flex min-h-0 flex-col gap-3 overflow-hidden"
+                    data-orb-write-assistant-panel
+                    data-orb-write-guidance-panel-host
+                    data-orb-write-review-panel
+                  >
+                    <OrbWriteStudioReviewChecklist onApplyReviewAction={(check) => void handleReviewAction(check)} />
+                    <div className="min-h-[160px] overflow-hidden rounded-xl border border-[var(--orb-line)]/50 bg-[var(--orb-surface-elevated)]">
+                      <OrbDictateBrainPanel
+                        analysis={brainAnalysis}
+                        loading={analysing}
+                        studioTemplateId={recordType.studio_template_id ?? 'general'}
+                        recordTypeId={recordType.id}
+                        hasTranscript={roughText.trim().length > 0}
+                        onAnalyse={() => void runAnalysis()}
+                        onSuggestionUpdate={updateSuggestion}
+                      />
+                    </div>
+                    <OrbWriteWritingStylePanel
+                      document={doc}
+                      recordType={recordType}
+                      onApplyRevision={applyRevision}
+                    />
+                    <OrbWriteGuidancePanel
+                      document={doc}
+                      selected={selectedGuidance}
+                      onSelect={setSelectedGuidance}
+                      onClear={() => setSelectedGuidance(null)}
+                      onCheckDraft={(source) => void checkDraftAgainstGuidance(source)}
+                    />
+                    <OrbWriteAiPanel document={doc} onApplyRevision={applyRevision} />
+                  </div>
+                </details>
+              ) : guidancePanelOpen ? (
                 <div
                   className="flex min-h-0 flex-col gap-3 overflow-hidden"
                   data-orb-write-assistant-panel

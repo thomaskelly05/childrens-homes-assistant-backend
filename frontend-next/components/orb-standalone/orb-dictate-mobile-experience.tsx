@@ -178,7 +178,8 @@ export function OrbDictateMobileExperience({
         </p>
       </header>
       <div
-        className={`flex min-h-0 flex-1 flex-col px-2 ${showCapturedCard ? 'shrink-0' : 'justify-center'}`}
+        className={`flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] ${showCapturedCard ? 'shrink-0' : 'justify-start'}`}
+        data-orb-dictate-mobile-scroll
         data-orb-dictate-idle-shell={showCapturedCard ? undefined : 'true'}
       >
       <section
