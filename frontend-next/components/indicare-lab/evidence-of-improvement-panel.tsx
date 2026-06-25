@@ -12,6 +12,13 @@ export type EvidenceOfImprovementCounts = {
   buildBriefsFromEvidence: number
   founderDecisions: number
   productionChangesAutoDeployed: number
+  persistentReviewEvents: number
+  persistentSuggestions: number
+  persistentBuildBriefs: number
+  founderActionsLogged: number
+  auditEvents: number
+  storageMode: string
+  redactedStoragePercentage: number
 }
 
 type EvidenceOfImprovementPanelProps = {
@@ -21,6 +28,11 @@ type EvidenceOfImprovementPanelProps = {
 export function EvidenceOfImprovementPanel({ counts }: EvidenceOfImprovementPanelProps) {
   const items = [
     { label: 'Real shadow review events captured', value: counts.realShadowReviewEvents },
+    { label: 'Persistent review events stored', value: counts.persistentReviewEvents },
+    { label: 'Persistent suggestions stored', value: counts.persistentSuggestions },
+    { label: 'Persistent build briefs stored', value: counts.persistentBuildBriefs },
+    { label: 'Founder actions logged', value: counts.founderActionsLogged },
+    { label: 'Audit events recorded', value: counts.auditEvents },
     { label: 'Synthetic benchmark scenarios available', value: counts.syntheticBenchmarkScenarios },
     { label: 'Benchmark runs completed', value: counts.benchmarkRunsCompleted },
     { label: 'Failed high-risk benchmarks', value: counts.failedHighRiskBenchmarks },
@@ -31,7 +43,9 @@ export function EvidenceOfImprovementPanel({ counts }: EvidenceOfImprovementPane
     {
       label: 'Production changes automatically deployed',
       value: counts.productionChangesAutoDeployed
-    }
+    },
+    { label: 'Redacted storage percentage', value: `${counts.redactedStoragePercentage}%` },
+    { label: 'Storage mode', value: counts.storageMode, isText: true }
   ]
 
   return (
@@ -51,10 +65,12 @@ export function EvidenceOfImprovementPanel({ counts }: EvidenceOfImprovementPane
           <div
             key={item.label}
             className="rounded-xl border border-white/10 bg-white/[0.03] p-4"
-            data-testid={`evidence-count-${item.label.toLowerCase().replace(/\s+/g, '-')}`}
+            data-testid={`evidence-count-${item.label.toLowerCase().replace(/\s+/g, '-').replace(/%/g, 'pct')}`}
           >
             <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">{item.label}</p>
-            <p className="mt-2 text-3xl font-black text-white">{item.value}</p>
+            <p className={`mt-2 font-black text-white ${item.isText ? 'text-lg' : 'text-3xl'}`}>
+              {item.value}
+            </p>
           </div>
         ))}
       </div>

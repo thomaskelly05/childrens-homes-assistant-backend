@@ -67,7 +67,10 @@ describe('IndiCare Lab shadow review adapter', () => {
 
     const storage = readSource('lib/indicare-lab/review-events/review-event-storage.ts')
     assert.match(storage, /listReviewEventsByPatternInputs/)
-    assert.match(storage, /development fallback/i)
+    assert.match(storage, /lab-storage/)
+
+    const labStorage = readSource('lib/indicare-lab/storage/lab-storage.ts')
+    assert.match(labStorage, /in-memory|memory-fallback/i)
 
     const shell = readSource('components/indicare-lab/indicare-lab-shell.tsx')
     assert.match(shell, /pattern-intelligence/)

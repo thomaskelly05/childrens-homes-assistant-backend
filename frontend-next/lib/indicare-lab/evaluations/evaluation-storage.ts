@@ -5,10 +5,14 @@ import type {
   EvaluationRunSummary,
   EvaluationScenario
 } from '@/lib/indicare-lab/evaluations/types'
+import {
+  createEvaluationRun as labCreateEvaluationRun,
+  listEvaluationRuns as labListEvaluationRuns
+} from '@/lib/indicare-lab/storage/lab-storage'
 
 /**
  * Persistence-ready storage facade for evaluation benchmarks.
- * Uses in-memory repository as development fallback until database persistence is available.
+ * Writes route through lab-storage for audit trail; reads delegate to active repository.
  */
 const activeRepository = evaluationMemoryRepository
 
@@ -21,11 +25,11 @@ export function getScenarioById(id: string): EvaluationScenario | undefined {
 }
 
 export function createEvaluationRun(input: CreateEvaluationRunInput): EvaluationRun {
-  return activeRepository.createEvaluationRun(input)
+  return labCreateEvaluationRun(input)
 }
 
 export function listEvaluationRuns(): EvaluationRun[] {
-  return activeRepository.listEvaluationRuns()
+  return labListEvaluationRuns()
 }
 
 export function getEvaluationRunById(id: string): EvaluationRun | undefined {

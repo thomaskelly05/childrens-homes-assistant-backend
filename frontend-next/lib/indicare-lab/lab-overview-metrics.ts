@@ -195,6 +195,15 @@ export function buildEvidenceOfImprovementCounts(input: {
   suggestions: LabSuggestion[]
   buildBriefsFromEvidence: number
   founderDecisions: number
+  storageStats?: {
+    reviewEventCount: number
+    suggestionCount: number
+    buildBriefCount: number
+    founderActionCount: number
+    auditEventCount: number
+    backend: string
+    redactedStoragePercentage: number
+  }
 }): {
   realShadowReviewEvents: number
   syntheticBenchmarkScenarios: number
@@ -205,10 +214,19 @@ export function buildEvidenceOfImprovementCounts(input: {
   buildBriefsFromEvidence: number
   founderDecisions: number
   productionChangesAutoDeployed: number
+  persistentReviewEvents: number
+  persistentSuggestions: number
+  persistentBuildBriefs: number
+  founderActionsLogged: number
+  auditEvents: number
+  storageMode: string
+  redactedStoragePercentage: number
 } {
   const realPatterns = input.patterns.filter(
     (p) => !p.relatedEventIds.every((id) => id.startsWith('rev-seed-'))
   )
+
+  const storage = input.storageStats
 
   return {
     realShadowReviewEvents: countRealShadowReviewEvents(input.reviewEvents),
@@ -219,6 +237,13 @@ export function buildEvidenceOfImprovementCounts(input: {
     evidenceBasedSuggestions: input.suggestions.filter(isRealEvidenceSuggestion).length,
     buildBriefsFromEvidence: input.buildBriefsFromEvidence,
     founderDecisions: input.founderDecisions,
-    productionChangesAutoDeployed: 0
+    productionChangesAutoDeployed: 0,
+    persistentReviewEvents: storage?.reviewEventCount ?? input.reviewEvents.length,
+    persistentSuggestions: storage?.suggestionCount ?? 0,
+    persistentBuildBriefs: storage?.buildBriefCount ?? 0,
+    founderActionsLogged: storage?.founderActionCount ?? 0,
+    auditEvents: storage?.auditEventCount ?? 0,
+    storageMode: storage?.backend === 'database-backed' ? 'Database-backed' : 'Memory fallback',
+    redactedStoragePercentage: storage?.redactedStoragePercentage ?? 0
   }
 }

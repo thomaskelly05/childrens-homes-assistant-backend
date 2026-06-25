@@ -102,6 +102,8 @@ export type LabSectionId =
   | 'review-events'
   | 'real-suggestions'
   | 'evidence-of-improvement'
+  | 'evidence-timeline'
+  | 'governance-log'
   | 'pattern-intelligence'
   | 'evaluation-benchmarks'
   | 'review-test'
