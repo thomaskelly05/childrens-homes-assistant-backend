@@ -17,6 +17,7 @@ const NAV_SECTIONS: { id: LabSectionId; label: string; hash: string }[] = [
   { id: 'shadow-review', label: 'Shadow review', hash: '#shadow-review' },
   { id: 'review-events', label: 'Review events', hash: '#review-events' },
   { id: 'pattern-intelligence', label: 'Patterns', hash: '#pattern-intelligence' },
+  { id: 'evaluation-benchmarks', label: 'Benchmarks', hash: '#evaluation-benchmarks' },
   { id: 'review-test', label: 'Review test', hash: '#review-test' },
   { id: 'experiments', label: 'Experiments', hash: '#experiments' },
   { id: 'approvals', label: 'Approvals', hash: '#approvals' },

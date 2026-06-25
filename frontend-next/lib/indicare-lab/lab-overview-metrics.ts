@@ -2,14 +2,17 @@ import { getShadowReviewConfigSnapshot } from '@/lib/indicare-lab/review-events/
 import type { ReviewEventSummary } from '@/lib/indicare-lab/review-events/types'
 import { getMostCommonRewriteReason } from '@/lib/indicare-lab/patterns/pattern-detection-engine'
 import type { LabPattern } from '@/lib/indicare-lab/patterns/types'
+import type { EvaluationRunSummary } from '@/lib/indicare-lab/evaluations/types'
+import { EVALUATION_RUBRIC_DIMENSION_LABELS } from '@/lib/indicare-lab/evaluations/types'
 import type { LabOverviewMetric } from '@/lib/indicare-lab/types'
 
 export function buildLabOverviewMetrics(input: {
   reviewSummary: ReviewEventSummary
   patterns: LabPattern[]
   pendingApprovals: number
+  evaluationSummary?: EvaluationRunSummary
 }): LabOverviewMetric[] {
-  const { reviewSummary, patterns, pendingApprovals } = input
+  const { reviewSummary, patterns, pendingApprovals, evaluationSummary } = input
   const shadowConfig = getShadowReviewConfigSnapshot()
 
   const highestRiskPattern = patterns[0]
@@ -74,9 +77,43 @@ export function buildLabOverviewMetrics(input: {
     {
       id: 'brain-quality',
       label: 'Brain quality index',
-      value: '72 / 100',
-      hint: 'Synthetic development-mode score',
+      value: evaluationSummary?.latestOverallScore
+        ? `${Math.round(evaluationSummary.latestOverallScore * 20)} / 100`
+        : '72 / 100',
+      hint: evaluationSummary?.latestOverallScore
+        ? 'From latest internal synthetic benchmark'
+        : 'Synthetic development-mode score',
       tone: 'cyan'
+    },
+    {
+      id: 'benchmark-scenarios',
+      label: 'Benchmark scenarios',
+      value: String(evaluationSummary?.scenarioCount ?? 0),
+      hint: 'Internal synthetic benchmarks · Founder only',
+      tone: 'cyan'
+    },
+    {
+      id: 'failed-high-risk-benchmarks',
+      label: 'Failed high-risk scenarios',
+      value: String(evaluationSummary?.failedHighRiskScenarios ?? 0),
+      hint: 'Critical/high risk benchmark failures',
+      tone: evaluationSummary?.failedHighRiskScenarios ? 'rose' : 'emerald'
+    },
+    {
+      id: 'common-weak-dimension',
+      label: 'Common weak dimension',
+      value: evaluationSummary?.commonWeakDimension
+        ? EVALUATION_RUBRIC_DIMENSION_LABELS[evaluationSummary.commonWeakDimension]
+        : 'None yet',
+      hint: 'Across completed benchmark runs',
+      tone: 'violet'
+    },
+    {
+      id: 'comparison-tests',
+      label: 'Comparison tests run',
+      value: String(evaluationSummary?.comparisonRuns ?? 0),
+      hint: 'Current vs proposed answer evaluations',
+      tone: 'emerald'
     }
   ]
 }

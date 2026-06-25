@@ -4,6 +4,7 @@ import { useCallback, useMemo, useState } from 'react'
 
 import { BrainGapPanel } from '@/components/indicare-lab/brain-gap-panel'
 import { BuildBriefGeneratorPanel } from '@/components/indicare-lab/build-brief-generator-panel'
+import { EvaluationBenchmarksPanel } from '@/components/indicare-lab/evaluation-benchmarks-panel'
 import { ExperimentsPanel } from '@/components/indicare-lab/experiments-panel'
 import { FounderApprovalQueue } from '@/components/indicare-lab/founder-approval-queue'
 import { IndiCareLabShell } from '@/components/indicare-lab/indicare-lab-shell'
@@ -31,6 +32,7 @@ import {
   UI_UX_GAPS
 } from '@/lib/indicare-lab/demo-data'
 import { buildLabOverviewMetrics } from '@/lib/indicare-lab/lab-overview-metrics'
+import { summariseEvaluationRuns } from '@/lib/indicare-lab/evaluations/evaluation-storage'
 import {
   generateBuildBriefFromPattern,
   patternToApprovalItem
@@ -55,8 +57,15 @@ export function IndiCareLabPage() {
   const [reviewEvents, setReviewEvents] = useState<ReviewEvent[]>(() => listReviewEvents())
   const [approvalItems, setApprovalItems] = useState<ApprovalQueueItem[]>(APPROVAL_QUEUE)
   const [patternStatuses, setPatternStatuses] = useState<Record<string, LabPatternStatus>>({})
+  const [evaluationRunVersion, setEvaluationRunVersion] = useState(0)
 
   const reviewSummary = useMemo(() => summariseReviewEvents(), [reviewEvents])
+
+  const evaluationSummary = useMemo(
+    () => summariseEvaluationRuns(),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- refresh when benchmarks run
+    [evaluationRunVersion]
+  )
 
   const patternDetection = useMemo(() => detectPatternsFromReviewEvents(reviewEvents), [reviewEvents])
 
@@ -74,9 +83,10 @@ export function IndiCareLabPage() {
       buildLabOverviewMetrics({
         reviewSummary,
         patterns,
-        pendingApprovals: approvalItems.filter((item) => item.status === 'pending').length
+        pendingApprovals: approvalItems.filter((item) => item.status === 'pending').length,
+        evaluationSummary
       }),
-    [reviewSummary, patterns, approvalItems]
+    [reviewSummary, patterns, approvalItems, evaluationSummary]
   )
 
   const selectedGaps = useMemo(
@@ -149,6 +159,16 @@ export function IndiCareLabPage() {
     []
   )
 
+  const handleCreateBuildBriefFromBenchmark = useCallback((brief: BuildBrief) => {
+    setBriefs((prev) => [brief, ...prev])
+    setEvaluationRunVersion((v) => v + 1)
+    document.getElementById('build-briefs')?.scrollIntoView({ behavior: 'smooth' })
+  }, [])
+
+  const handleEvaluationRunComplete = useCallback(() => {
+    setEvaluationRunVersion((v) => v + 1)
+  }, [])
+
   const handleAddPatternToApprovalQueue = useCallback((pattern: LabPattern) => {
     const item = patternToApprovalItem(pattern)
     setApprovalItems((prev) => {
@@ -164,7 +184,7 @@ export function IndiCareLabPage() {
         id="overview"
         eyebrow="Dashboard"
         title="Overview"
-        description="Continuous assessment snapshot for ORB Residential. Metrics combine review events, pattern intelligence, and shadow review status — all internal evaluation."
+        description="Continuous assessment snapshot for ORB Residential. Metrics combine review events, pattern intelligence, evaluation benchmarks, and shadow review status — all internal evaluation."
       >
         <LabOverviewCards metrics={overviewMetrics} />
       </LabSectionCard>
@@ -210,6 +230,18 @@ export function IndiCareLabPage() {
         onCreateBuildBrief={handleCreateBuildBriefFromPattern}
         onAddToApprovalQueue={handleAddPatternToApprovalQueue}
         onUpdatePatternStatus={handleUpdatePatternStatus}
+        onNavigateToBenchmarks={(scenarioId) => {
+          const el = document.getElementById('evaluation-benchmarks')
+          el?.scrollIntoView({ behavior: 'smooth' })
+          if (scenarioId) {
+            window.location.hash = `#evaluation-benchmarks`
+          }
+        }}
+      />
+
+      <EvaluationBenchmarksPanel
+        onCreateBuildBrief={handleCreateBuildBriefFromBenchmark}
+        onRunComplete={handleEvaluationRunComplete}
       />
 
       <InternalReviewTestPanel onEventCreated={handleReviewEventCreated} />
