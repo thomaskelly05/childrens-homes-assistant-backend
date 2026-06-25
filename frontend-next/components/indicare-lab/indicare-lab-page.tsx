@@ -14,6 +14,7 @@ import { LabRoadmapPanel } from '@/components/indicare-lab/lab-roadmap-panel'
 import { LabSectionCard } from '@/components/indicare-lab/lab-section-card'
 import { ReviewBoardPanel } from '@/components/indicare-lab/review-board-panel'
 import { ReviewEventsPanel } from '@/components/indicare-lab/review-events-panel'
+import { ShadowReviewStatusCard } from '@/components/indicare-lab/shadow-review-status-card'
 import { TechnologyWatchPanel } from '@/components/indicare-lab/technology-watch-panel'
 import { UiUxGapPanel } from '@/components/indicare-lab/ui-ux-gap-panel'
 import { generateBuildBrief } from '@/lib/indicare-lab/build-brief'
@@ -138,6 +139,8 @@ export function IndiCareLabPage() {
       <TechnologyWatchPanel items={TECHNOLOGY_WATCH} />
 
       <ReviewBoardPanel agents={REVIEW_BOARD_AGENTS} />
+
+      <ShadowReviewStatusCard />
 
       <ReviewEventsPanel
         events={reviewEvents}
