@@ -83,22 +83,25 @@ export function OrbLoginAuthCard({
       data-orb-login-auth-card
     >
       <div className="orb-login-auth-header flex items-start gap-3" data-orb-login-auth-brand-hook>
-        <div className="orb-login-auth-mark shrink-0" aria-hidden data-orb-login-auth-mark>
+        <div className="orb-login-auth-mark hidden shrink-0 lg:block" aria-hidden data-orb-login-auth-mark>
           <GlassOrbMark size="sm" pulse className="orb-login-auth-mark-orb" />
         </div>
         <div className="min-w-0 flex-1">
           <h2
-            className="orb-login-signin-title text-left text-[1.375rem] font-semibold leading-tight tracking-tight lg:mt-0 lg:text-[1.625rem]"
+            className="orb-login-signin-title text-left text-[1.25rem] font-semibold leading-tight tracking-tight lg:mt-0 lg:text-[1.625rem]"
             data-orb-login-signin-title
             data-orb-login-signin-title-mobile
           >
             Welcome to ORB Residential
           </h2>
           <p
-            className="orb-login-lead mt-1.5 text-left text-sm leading-relaxed text-[var(--orb-muted)]"
+            className="orb-login-lead mt-1 text-left text-sm leading-relaxed text-[var(--orb-muted)] lg:mt-1.5"
             data-orb-login-mobile-lead
           >
-            Sign in to continue to the specialist intelligence workspace for children&apos;s homes.
+            <span className="lg:hidden">Sign in to continue.</span>
+            <span className="hidden lg:inline">
+              Sign in to continue to the specialist intelligence workspace for children&apos;s homes.
+            </span>
           </p>
         </div>
       </div>

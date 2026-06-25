@@ -33,10 +33,10 @@ describe('ORB mobile login layout', () => {
     assert.match(mobile, /data-orb-login-engine-line/)
     assert.match(mobile, /data-orb-login-mobile-mark/)
     assert.match(mobile, /GlassOrbMark/)
-    assert.match(mobile, /flex items-center gap-3/)
+    assert.match(mobile, /flex items-center gap-2\.5/)
     assert.doesNotMatch(mobile, /OrbHeroSphere/)
     assert.match(css, /orb-login-mobile-mark/)
-    assert.match(css, /3rem/)
+    assert.match(css, /2\.25rem/)
   })
 
   it('mobile login heading Sign in to continue is present and left-aligned', () => {
@@ -158,9 +158,12 @@ describe('ORB mobile login layout', () => {
     assert.match(login, /OrbAuthLoadingScreen/)
   })
 
-  it('mobile supporting copy mentions specialist workspace and auth options', () => {
+  it('mobile supporting copy keeps short lead and auth options', () => {
     const authCard = read('components/orb-residential/orb-login-auth-card.tsx')
-    assert.match(authCard, /specialist intelligence workspace/)
+    const mobile = read('components/orb-residential/orb-login-mobile-header.tsx')
+    assert.match(authCard, /Sign in to continue\./)
+    assert.match(mobile, /ORB_LOGIN_ENTERPRISE_SUBHEADLINE/)
+    assert.match(mobile, /data-orb-login-subheadline/)
     assert.match(authCard, /Continue with Google/)
     assert.match(authCard, /Continue with Microsoft/)
     assert.match(authCard, /Sign in with email/)
@@ -235,6 +238,46 @@ describe('ORB mobile login layout', () => {
     assert.match(css, /orb-write-mobile-toolbar/)
     assert.match(toolbar, /data-orb-write-approve/)
     assert.match(css, /safe-area-inset-bottom/)
+  })
+
+  it('mobile login collapses Think/Capture/Evidence by default', () => {
+    const mobile = read('components/orb-residential/orb-login-mobile-header.tsx')
+    assert.match(mobile, /data-orb-login-why-orb-toggle/)
+    assert.match(mobile, /Why ORB\?/)
+    assert.match(mobile, /data-orb-login-capability-groups-collapsed/)
+    assert.match(mobile, /useState\(false\)/)
+  })
+
+  it('mobile login includes safety boundary text in auth card', () => {
+    const authCard = read('components/orb-residential/orb-login-auth-card.tsx')
+    const copy = read('lib/orb/orb-login-stations-copy.ts')
+    assert.match(authCard, /data-orb-login-professional-boundary/)
+    assert.match(copy, /does not replace safeguarding procedures/)
+  })
+
+  it('mobile login uses safe-area bottom padding', () => {
+    const login = read('components/orb-residential/orb-login-screen.tsx')
+    const css = read(loginCss)
+    assert.match(login, /safe-area-inset-bottom/)
+    assert.match(css, /safe-area-inset-bottom/)
+    assert.match(css, /max\(1\.5rem, env\(safe-area-inset-bottom/)
+  })
+
+  it('mobile login places Google CTA after compact header in render order', () => {
+    const login = read('components/orb-residential/orb-login-screen.tsx')
+    const authCard = read('components/orb-residential/orb-login-auth-card.tsx')
+    const renderBlock = login.slice(login.indexOf('return ('))
+    const mobileIdx = renderBlock.indexOf('<OrbLoginMobileHeader')
+    const authIdx = renderBlock.indexOf('<OrbLoginAuthCard')
+    const oauthIdx = authCard.indexOf('data-orb-oauth-buttons')
+    assert.ok(mobileIdx > -1 && authIdx > mobileIdx, 'auth card should follow mobile header in render tree')
+    assert.ok(oauthIdx > -1, 'google oauth buttons should exist in auth card')
+  })
+
+  it('mobile login avoids horizontal overflow rules', () => {
+    const css = read(loginCss)
+    assert.match(css, /overflow-x:\s*hidden/)
+    assert.match(css, /max-width:\s*100%/)
   })
 
   it('mobile viewport utilities avoid browser-specific regression', () => {
