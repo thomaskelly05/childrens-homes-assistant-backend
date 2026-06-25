@@ -536,10 +536,11 @@ export function OrbWriteStandalonePanel({
             data-orb-write-integrated-studio-surface
           >
             <header
-              className="orb-write-studio-header flex shrink-0 flex-col gap-2"
+              className="orb-write-studio-header orb-mobile-station-header flex shrink-0 flex-col gap-2 pt-[max(0.25rem,env(safe-area-inset-top))]"
               data-orb-write-studio-header
               data-orb-write-mobile-layout={isMobile ? 'stacked' : undefined}
               data-orb-write-record-type-suppressed={isMobile ? 'true' : undefined}
+              data-orb-mobile-station-header={isMobile ? 'true' : undefined}
             >
               {!isMobile ? (
                 <div className="flex min-w-0 items-start gap-3">
