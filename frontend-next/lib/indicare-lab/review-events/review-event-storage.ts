@@ -1,6 +1,13 @@
 import type { ReviewEventFounderAction, ReviewEventPatternInputs } from '@/lib/indicare-lab/review-events/review-event-repository'
 import { reviewEventMemoryRepository } from '@/lib/indicare-lab/review-events/review-event-memory-repository'
 import type { CreateReviewEventInput } from '@/lib/indicare-lab/review-events/review-event-memory-repository'
+import {
+  createReviewEvent as labCreateReviewEvent,
+  listReviewEvents as labListReviewEvents,
+  resetLabStorageForTests,
+  storeShadowReviewEvent as labStoreShadowReviewEvent,
+  updateReviewEventStatus as labUpdateReviewEventStatus
+} from '@/lib/indicare-lab/storage/lab-storage'
 import type {
   ReviewEvent,
   ReviewEventFilter,
@@ -10,12 +17,12 @@ import type {
 
 /**
  * Persistence-ready storage facade for review events.
- * Uses in-memory repository as development fallback until database persistence is available.
+ * Writes route through lab-storage guard; reads delegate to active repository.
  */
 const activeRepository = reviewEventMemoryRepository
 
 export function listReviewEvents(filter?: ReviewEventFilter): ReviewEvent[] {
-  return activeRepository.listReviewEvents(filter)
+  return labListReviewEvents(filter)
 }
 
 export function getReviewEventById(id: string): ReviewEvent | undefined {
@@ -23,15 +30,15 @@ export function getReviewEventById(id: string): ReviewEvent | undefined {
 }
 
 export function createReviewEvent(input: CreateReviewEventInput): ReviewEvent {
-  return activeRepository.createReviewEvent(input)
+  return labCreateReviewEvent(input)
 }
 
 export function storeShadowReviewEvent(event: ReviewEvent): ReviewEvent {
-  return activeRepository.storeShadowReviewEvent(event)
+  return labStoreShadowReviewEvent(event)
 }
 
 export function updateReviewEventStatus(id: string, status: ReviewStatus): ReviewEvent | undefined {
-  return activeRepository.updateReviewEventStatus(id, status)
+  return labUpdateReviewEventStatus(id, status)
 }
 
 export function markReviewEventReviewed(id: string): ReviewEvent | undefined {
@@ -54,7 +61,7 @@ export function listReviewEventsByPatternInputs(inputs: ReviewEventPatternInputs
 }
 
 export function resetReviewEventStoreForTests(): void {
-  activeRepository.resetForTests()
+  resetLabStorageForTests()
 }
 
 export function getLastReviewEventId(): string | null {

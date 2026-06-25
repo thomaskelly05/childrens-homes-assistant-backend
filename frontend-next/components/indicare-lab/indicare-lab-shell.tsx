@@ -20,6 +20,8 @@ const NAV_SECTIONS: { id: LabSectionId; label: string; hash: string }[] = [
   { id: 'review-events', label: 'Review events', hash: '#review-events' },
   { id: 'real-suggestions', label: 'Real suggestions', hash: '#real-suggestions' },
   { id: 'evidence-of-improvement', label: 'Evidence log', hash: '#evidence-of-improvement' },
+  { id: 'evidence-timeline', label: 'Evidence timeline', hash: '#evidence-timeline' },
+  { id: 'governance-log', label: 'Governance log', hash: '#governance-log' },
   { id: 'pattern-intelligence', label: 'Patterns', hash: '#pattern-intelligence' },
   { id: 'evaluation-benchmarks', label: 'Benchmarks', hash: '#evaluation-benchmarks' },
   { id: 'review-test', label: 'Review test', hash: '#review-test' },

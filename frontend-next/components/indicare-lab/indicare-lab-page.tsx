@@ -1,13 +1,15 @@
 'use client'
 
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { BrainGapPanel } from '@/components/indicare-lab/brain-gap-panel'
 import { BuildBriefGeneratorPanel } from '@/components/indicare-lab/build-brief-generator-panel'
 import { EvaluationBenchmarksPanel } from '@/components/indicare-lab/evaluation-benchmarks-panel'
 import { EvidenceOfImprovementPanel } from '@/components/indicare-lab/evidence-of-improvement-panel'
+import { EvidenceTimelinePanel } from '@/components/indicare-lab/evidence-timeline-panel'
 import { ExperimentsPanel } from '@/components/indicare-lab/experiments-panel'
 import { FounderApprovalQueue } from '@/components/indicare-lab/founder-approval-queue'
+import { GovernanceLogPanel } from '@/components/indicare-lab/governance-log-panel'
 import { IndiCareLabShell } from '@/components/indicare-lab/indicare-lab-shell'
 import { InternalReviewTestPanel } from '@/components/indicare-lab/internal-review-test-panel'
 import { KnowledgeGapPanel } from '@/components/indicare-lab/knowledge-gap-panel'
@@ -35,6 +37,14 @@ import {
 } from '@/lib/indicare-lab/demo-data'
 import { listEvaluationRuns, summariseEvaluationRuns } from '@/lib/indicare-lab/evaluations/evaluation-storage'
 import {
+  evidenceLinkForApprovalItem,
+  evidenceLinkForBuildBrief,
+  evidenceLinkForPattern,
+  evidenceLinkForReviewEvent,
+  evidenceLinkForSuggestion,
+  logFounderAction
+} from '@/lib/indicare-lab/governance/founder-action-service'
+import {
   buildEvidenceOfImprovementCounts,
   buildLabOverviewMetrics
 } from '@/lib/indicare-lab/lab-overview-metrics'
@@ -59,13 +69,21 @@ import {
   summariseReviewEvents
 } from '@/lib/indicare-lab/review-events/review-event-storage'
 import type { ReviewEvent } from '@/lib/indicare-lab/review-events/types'
+import {
+  createBuildBrief,
+  createSuggestion,
+  getEvidenceTimeline,
+  getLabStorageStats,
+  listFounderActionLogs,
+  recordPatternDetection
+} from '@/lib/indicare-lab/storage/lab-storage'
 import { generateEvidenceSuggestions } from '@/lib/indicare-lab/suggestions/evidence-suggestion-engine'
 import {
   generateBuildBriefFromSuggestion,
   suggestionToApprovalItem
 } from '@/lib/indicare-lab/suggestions/suggestion-actions'
 import type { LabSuggestion, SuggestionStatus } from '@/lib/indicare-lab/suggestions/types'
-import type { ApprovalQueueItem, BuildBrief, LabGap } from '@/lib/indicare-lab/types'
+import type { ApprovalQueueItem, ApprovalStatus, BuildBrief, LabGap } from '@/lib/indicare-lab/types'
 
 export function IndiCareLabPage() {
   const [selectedGapIds, setSelectedGapIds] = useState<Set<string>>(new Set())
@@ -76,12 +94,17 @@ export function IndiCareLabPage() {
   const [suggestionStatuses, setSuggestionStatuses] = useState<Record<string, SuggestionStatus>>({})
   const [evaluationRunVersion, setEvaluationRunVersion] = useState(0)
   const [investorSafeView, setInvestorSafeView] = useState(false)
+  const [governanceVersion, setGovernanceVersion] = useState(0)
 
   const dataMode = getLabDataMode()
   const dataConfig = useMemo(
     () => getLabDataModeConfig({ investorSafeOverride: investorSafeView }),
     [investorSafeView]
   )
+
+  const refreshGovernance = useCallback(() => {
+    setGovernanceVersion((v) => v + 1)
+  }, [])
 
   const reviewSummary = useMemo(() => summariseReviewEvents(), [reviewEvents])
 
@@ -143,9 +166,43 @@ export function IndiCareLabPage() {
     [suggestionResult.suggestions, suggestionStatuses]
   )
 
+  useEffect(() => {
+    for (const suggestion of suggestions) {
+      createSuggestion(suggestion)
+    }
+  }, [suggestions])
+
+  useEffect(() => {
+    for (const pattern of patterns) {
+      recordPatternDetection(pattern.id, pattern.title, pattern.detectedAt)
+    }
+  }, [patterns])
+
   const realSuggestions = useMemo(
     () => suggestions.filter((s) => !s.isSyntheticEvidence),
     [suggestions]
+  )
+
+  const storageStats = useMemo(
+    () => getLabStorageStats(),
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- refresh when governance changes
+    [governanceVersion, reviewEvents, evaluationRunVersion]
+  )
+
+  const founderActions = useMemo(
+    () => listFounderActionLogs(),
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- refresh when governance changes
+    [governanceVersion]
+  )
+
+  const evidenceTimeline = useMemo(
+    () =>
+      getEvidenceTimeline({
+        includeDemo: dataConfig.showDemoData && !dataConfig.investorSafeView,
+        includeSynthetic: !dataConfig.investorSafeView
+      }),
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- refresh when governance changes
+    [governanceVersion, dataConfig.showDemoData, dataConfig.investorSafeView]
   )
 
   const buildBriefsFromEvidence = useMemo(
@@ -163,8 +220,9 @@ export function IndiCareLabPage() {
   const founderDecisions = useMemo(
     () =>
       approvalItems.filter((item) => item.status === 'approved' || item.status === 'rejected').length +
-      reviewEvents.filter((event) => event.founderReviewed).length,
-    [approvalItems, reviewEvents]
+      reviewEvents.filter((event) => event.founderReviewed).length +
+      founderActions.length,
+    [approvalItems, reviewEvents, founderActions]
   )
 
   const evidenceCounts = useMemo(
@@ -175,7 +233,8 @@ export function IndiCareLabPage() {
         evaluationSummary,
         suggestions,
         buildBriefsFromEvidence,
-        founderDecisions
+        founderDecisions,
+        storageStats
       }),
     [
       reviewEvents,
@@ -183,7 +242,8 @@ export function IndiCareLabPage() {
       evaluationSummary,
       suggestions,
       buildBriefsFromEvidence,
-      founderDecisions
+      founderDecisions,
+      storageStats
     ]
   )
 
@@ -208,7 +268,8 @@ export function IndiCareLabPage() {
 
   const refreshReviewEvents = useCallback(() => {
     setReviewEvents(listReviewEvents())
-  }, [])
+    refreshGovernance()
+  }, [refreshGovernance])
 
   const toggleSelect = useCallback((gapId: string) => {
     setSelectedGapIds((prev) => {
@@ -221,11 +282,30 @@ export function IndiCareLabPage() {
 
   const clearSelection = useCallback(() => setSelectedGapIds(new Set()), [])
 
-  const handleCreateBriefFromGap = useCallback((gap: LabGap) => {
-    const brief = generateBuildBrief([gap])
-    setBriefs((prev) => [brief, ...prev])
-    document.getElementById('build-briefs')?.scrollIntoView({ behavior: 'smooth' })
-  }, [])
+  const persistBuildBrief = useCallback(
+    (brief: BuildBrief, sourceType?: string, sourceId?: string) => {
+      createBuildBrief({ ...brief, sourceType, sourceId })
+      setBriefs((prev) => [brief, ...prev])
+      refreshGovernance()
+      document.getElementById('build-briefs')?.scrollIntoView({ behavior: 'smooth' })
+    },
+    [refreshGovernance]
+  )
+
+  const handleCreateBriefFromGap = useCallback(
+    (gap: LabGap) => {
+      const brief = generateBuildBrief([gap])
+      logFounderAction({
+        actionType: 'create-build-brief',
+        targetType: 'gap',
+        targetId: gap.id,
+        riskLevel: gap.riskLevel,
+        evidenceLinks: [evidenceLinkForBuildBrief(brief.id, brief.title)]
+      })
+      persistBuildBrief(brief, 'gap', gap.id)
+    },
+    [persistBuildBrief]
+  )
 
   const handleReviewEventCreated = useCallback(
     (_event: ReviewEvent) => {
@@ -235,57 +315,140 @@ export function IndiCareLabPage() {
     [refreshReviewEvents]
   )
 
-  const handleCreateBuildBriefFromEvent = useCallback((event: ReviewEvent) => {
-    const brief = generateBuildBriefFromReviewEvent(event)
-    setBriefs((prev) => [brief, ...prev])
-    document.getElementById('build-briefs')?.scrollIntoView({ behavior: 'smooth' })
-  }, [])
+  const handleCreateBuildBriefFromEvent = useCallback(
+    (event: ReviewEvent) => {
+      const brief = generateBuildBriefFromReviewEvent(event)
+      logFounderAction({
+        actionType: 'create-build-brief',
+        targetType: 'review-event',
+        targetId: event.id,
+        riskLevel: event.riskLevel,
+        evidenceLinks: [evidenceLinkForReviewEvent(event.id, event.reasonSummary)]
+      })
+      persistBuildBrief(brief, 'review-event', event.id)
+    },
+    [persistBuildBrief]
+  )
 
-  const handleAddEventToApprovalQueue = useCallback((event: ReviewEvent) => {
-    const item = reviewEventToApprovalItem(event)
-    setApprovalItems((prev) => {
-      if (prev.some((existing) => existing.id === item.id)) return prev
-      return [item, ...prev]
-    })
-    document.getElementById('approvals')?.scrollIntoView({ behavior: 'smooth' })
-  }, [])
+  const handleAddEventToApprovalQueue = useCallback(
+    (event: ReviewEvent) => {
+      const item = reviewEventToApprovalItem(event)
+      setApprovalItems((prev) => {
+        if (prev.some((existing) => existing.id === item.id)) return prev
+        return [item, ...prev]
+      })
+      logFounderAction({
+        actionType: 'add-to-approval-queue',
+        targetType: 'review-event',
+        targetId: event.id,
+        riskLevel: event.riskLevel,
+        evidenceLinks: [
+          evidenceLinkForReviewEvent(event.id),
+          evidenceLinkForApprovalItem(item.id, item.title)
+        ]
+      })
+      refreshGovernance()
+      document.getElementById('approvals')?.scrollIntoView({ behavior: 'smooth' })
+    },
+    [refreshGovernance]
+  )
 
   const handleMarkEventReviewed = useCallback(
     (eventId: string) => {
+      const event = reviewEvents.find((e) => e.id === eventId)
       markReviewEventReviewed(eventId)
+      if (event) {
+        logFounderAction({
+          actionType: 'mark-reviewed',
+          targetType: 'review-event',
+          targetId: eventId,
+          riskLevel: event.riskLevel,
+          reason: 'founder-reviewed',
+          evidenceLinks: [evidenceLinkForReviewEvent(eventId)]
+        })
+      }
       refreshReviewEvents()
     },
-    [refreshReviewEvents]
+    [reviewEvents, refreshReviewEvents]
   )
 
-  const handleUpdatePatternStatus = useCallback((patternId: string, status: LabPatternStatus) => {
-    setPatternStatuses((prev) => ({ ...prev, [patternId]: status }))
-  }, [])
+  const handleUpdatePatternStatus = useCallback(
+    (patternId: string, status: LabPatternStatus) => {
+      const pattern = patterns.find((p) => p.id === patternId)
+      setPatternStatuses((prev) => ({ ...prev, [patternId]: status }))
 
-  const handleCreateBuildBriefFromPattern = useCallback((pattern: LabPattern) => {
-    const brief = generateBuildBriefFromPattern(pattern)
-    setBriefs((prev) => [brief, ...prev])
-    document.getElementById('build-briefs')?.scrollIntoView({ behavior: 'smooth' })
-  }, [])
+      if (!pattern) return
 
-  const handleCreateBuildBriefFromBenchmark = useCallback((brief: BuildBrief) => {
-    setBriefs((prev) => [brief, ...prev])
-    setEvaluationRunVersion((v) => v + 1)
-    document.getElementById('build-briefs')?.scrollIntoView({ behavior: 'smooth' })
-  }, [])
+      const actionMap: Partial<Record<LabPatternStatus, Parameters<typeof logFounderAction>[0]['actionType']>> = {
+        accepted: 'accept-pattern',
+        dismissed: 'dismiss',
+        'needs-expert-review': 'send-to-expert-review',
+        'in-approval-queue': 'add-to-approval-queue'
+      }
+
+      const actionType = actionMap[status]
+      if (actionType) {
+        logFounderAction({
+          actionType,
+          targetType: 'pattern',
+          targetId: patternId,
+          riskLevel: pattern.riskLevel,
+          evidenceLinks: [evidenceLinkForPattern(patternId, pattern.title)]
+        })
+        refreshGovernance()
+      }
+    },
+    [patterns, refreshGovernance]
+  )
+
+  const handleCreateBuildBriefFromPattern = useCallback(
+    (pattern: LabPattern) => {
+      const brief = generateBuildBriefFromPattern(pattern)
+      logFounderAction({
+        actionType: 'create-build-brief',
+        targetType: 'pattern',
+        targetId: pattern.id,
+        riskLevel: pattern.riskLevel,
+        evidenceLinks: [evidenceLinkForPattern(pattern.id, pattern.title)]
+      })
+      persistBuildBrief(brief, 'pattern', pattern.id)
+      setPatternStatuses((prev) => ({ ...prev, [pattern.id]: 'build-brief-created' }))
+    },
+    [persistBuildBrief]
+  )
+
+  const handleCreateBuildBriefFromBenchmark = useCallback(
+    (brief: BuildBrief) => {
+      logFounderAction({
+        actionType: 'create-build-brief',
+        targetType: 'benchmark-run',
+        targetId: brief.id,
+        riskLevel: 'high',
+        evidenceLinks: [evidenceLinkForBuildBrief(brief.id, brief.title)]
+      })
+      persistBuildBrief(brief, 'benchmark-run', brief.id)
+      setEvaluationRunVersion((v) => v + 1)
+    },
+    [persistBuildBrief]
+  )
 
   const handleEvaluationRunComplete = useCallback(() => {
     setEvaluationRunVersion((v) => v + 1)
-  }, [])
+    refreshGovernance()
+  }, [refreshGovernance])
 
-  const handleAddPatternToApprovalQueue = useCallback((pattern: LabPattern) => {
-    const item = patternToApprovalItem(pattern)
-    setApprovalItems((prev) => {
-      if (prev.some((existing) => existing.id === item.id)) return prev
-      return [item, ...prev]
-    })
-    document.getElementById('approvals')?.scrollIntoView({ behavior: 'smooth' })
-  }, [])
+  const handleAddPatternToApprovalQueue = useCallback(
+    (pattern: LabPattern) => {
+      const item = patternToApprovalItem(pattern)
+      setApprovalItems((prev) => {
+        if (prev.some((existing) => existing.id === item.id)) return prev
+        return [item, ...prev]
+      })
+      handleUpdatePatternStatus(pattern.id, 'in-approval-queue')
+      document.getElementById('approvals')?.scrollIntoView({ behavior: 'smooth' })
+    },
+    [handleUpdatePatternStatus]
+  )
 
   const handleCreateBuildBriefFromSuggestion = useCallback(
     (suggestion: LabSuggestion) => {
@@ -294,25 +457,100 @@ export function IndiCareLabPage() {
       )
       const brief = generateBuildBriefFromSuggestion(suggestion, { pattern })
       if (brief) {
-        setBriefs((prev) => [brief, ...prev])
-        document.getElementById('build-briefs')?.scrollIntoView({ behavior: 'smooth' })
+        logFounderAction({
+          actionType: 'create-build-brief',
+          targetType: 'suggestion',
+          targetId: suggestion.id,
+          riskLevel: suggestion.riskLevel,
+          evidenceLinks: [evidenceLinkForSuggestion(suggestion.id, suggestion.title)]
+        })
+        persistBuildBrief(brief, 'suggestion', suggestion.id)
       }
     },
-    [patterns]
+    [patterns, persistBuildBrief]
   )
 
-  const handleAddSuggestionToApprovalQueue = useCallback((suggestion: LabSuggestion) => {
-    const item = suggestionToApprovalItem(suggestion)
-    setApprovalItems((prev) => {
-      if (prev.some((existing) => existing.id === item.id)) return prev
-      return [item, ...prev]
-    })
-    document.getElementById('approvals')?.scrollIntoView({ behavior: 'smooth' })
-  }, [])
+  const handleAddSuggestionToApprovalQueue = useCallback(
+    (suggestion: LabSuggestion) => {
+      const item = suggestionToApprovalItem(suggestion)
+      setApprovalItems((prev) => {
+        if (prev.some((existing) => existing.id === item.id)) return prev
+        return [item, ...prev]
+      })
+      logFounderAction({
+        actionType: 'add-to-approval-queue',
+        targetType: 'suggestion',
+        targetId: suggestion.id,
+        riskLevel: suggestion.riskLevel,
+        evidenceLinks: [
+          evidenceLinkForSuggestion(suggestion.id),
+          evidenceLinkForApprovalItem(item.id, item.title)
+        ]
+      })
+      refreshGovernance()
+      document.getElementById('approvals')?.scrollIntoView({ behavior: 'smooth' })
+    },
+    [refreshGovernance]
+  )
 
-  const handleUpdateSuggestionStatus = useCallback((suggestionId: string, status: SuggestionStatus) => {
-    setSuggestionStatuses((prev) => ({ ...prev, [suggestionId]: status }))
-  }, [])
+  const handleUpdateSuggestionStatus = useCallback(
+    (suggestionId: string, status: SuggestionStatus) => {
+      const suggestion = suggestions.find((s) => s.id === suggestionId)
+      setSuggestionStatuses((prev) => ({ ...prev, [suggestionId]: status }))
+
+      if (!suggestion) return
+
+      const actionMap: Partial<Record<SuggestionStatus, Parameters<typeof logFounderAction>[0]['actionType']>> = {
+        accepted: 'accept-suggestion',
+        dismissed: 'dismiss',
+        'needs-evidence': 'needs-more-evidence',
+        'sent-to-expert-review': 'send-to-expert-review'
+      }
+
+      const actionType = actionMap[status]
+      if (actionType) {
+        logFounderAction({
+          actionType,
+          targetType: 'suggestion',
+          targetId: suggestionId,
+          riskLevel: suggestion.riskLevel,
+          evidenceLinks: [evidenceLinkForSuggestion(suggestionId, suggestion.title)]
+        })
+        refreshGovernance()
+      }
+    },
+    [suggestions, refreshGovernance]
+  )
+
+  const handleApprovalStatusChange = useCallback(
+    (id: string, status: ApprovalStatus) => {
+      const item = approvalItems.find((i) => i.id === id)
+      setApprovalItems((prev) => prev.map((i) => (i.id === id ? { ...i, status } : i)))
+
+      if (!item) return
+
+      const actionMap: Partial<Record<ApprovalStatus, Parameters<typeof logFounderAction>[0]['actionType']>> = {
+        approved: 'approve',
+        rejected: 'reject',
+        'needs-evidence': 'needs-more-evidence',
+        'expert-review': 'send-to-expert-review'
+      }
+
+      const actionType = actionMap[status]
+      if (actionType) {
+        logFounderAction({
+          actionType,
+          targetType: 'approval-item',
+          targetId: id,
+          riskLevel: item.riskLevel,
+          reason: status === 'approved' ? 'approved-for-build' : status === 'rejected' ? 'rejected-by-founder' : undefined,
+          evidenceLinks: [evidenceLinkForApprovalItem(id, item.title)]
+        })
+        refreshGovernance()
+      }
+    },
+    [approvalItems, refreshGovernance]
+  )
 
   return (
     <IndiCareLabShell
@@ -375,6 +613,13 @@ export function IndiCareLabPage() {
 
       <EvidenceOfImprovementPanel counts={evidenceCounts} />
 
+      <EvidenceTimelinePanel
+        entries={evidenceTimeline}
+        storageMode={evidenceCounts.storageMode}
+      />
+
+      <GovernanceLogPanel actions={founderActions} />
+
       <PatternIntelligencePanel
         patterns={patterns}
         analysedEventCount={patternDetection.analysedEventCount}
@@ -399,7 +644,11 @@ export function IndiCareLabPage() {
 
       <ExperimentsPanel experiments={EXPERIMENTS} />
 
-      <FounderApprovalQueue items={approvalItems} onItemsChange={setApprovalItems} />
+      <FounderApprovalQueue
+        items={approvalItems}
+        onItemsChange={setApprovalItems}
+        onStatusChange={handleApprovalStatusChange}
+      />
 
       <LabRoadmapPanel items={ROADMAP_ITEMS} />
 

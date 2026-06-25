@@ -26,13 +26,16 @@ const STATUS_TONE: Record<ApprovalStatus, string> = {
 
 export function FounderApprovalQueue({
   items,
-  onItemsChange
+  onItemsChange,
+  onStatusChange
 }: {
   items: ApprovalQueueItem[]
   onItemsChange: (items: ApprovalQueueItem[]) => void
+  onStatusChange?: (id: string, status: ApprovalStatus) => void
 }) {
   function updateStatus(id: string, status: ApprovalStatus) {
     onItemsChange(items.map((item) => (item.id === id ? { ...item, status } : item)))
+    onStatusChange?.(id, status)
   }
 
   return (
