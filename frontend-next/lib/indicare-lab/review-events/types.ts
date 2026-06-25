@@ -24,6 +24,8 @@ export type ReviewStatus =
   | 'needs-founder-review'
   | 'reviewed'
 
+export type ReviewEventOrigin = 'seeded' | 'internal-test' | 'shadow-review'
+
 export type ReviewRiskLevel = 'critical' | 'high' | 'medium' | 'low'
 
 export type ReviewAgentDecision = 'pass' | 'rewrite' | 'block'
@@ -61,6 +63,12 @@ export type ReviewEvent = {
   createdAt: string
   isDevelopment: boolean
   isInternalEvaluation: boolean
+  /** Where the event originated — seeded demo, founder lab test, or live ORB shadow review. */
+  origin: ReviewEventOrigin
+  /** Whether sensitive content was redacted or truncated before storing. */
+  isRedacted: boolean
+  /** Whether full prompt/answer text was stored without redaction. */
+  fullTextStored: boolean
   founderReviewed?: boolean
   agentsPassed: number
   agentsRewrote: number
@@ -130,3 +138,9 @@ export const FOUNDER_ACTION_ELIGIBLE_STATUSES: ReviewStatus[] = [
   'blocked',
   'needs-founder-review'
 ]
+
+export const REVIEW_ORIGIN_LABELS: Record<ReviewEventOrigin, string> = {
+  seeded: 'Seeded demo',
+  'internal-test': 'Internal test',
+  'shadow-review': 'Shadow review'
+}

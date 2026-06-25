@@ -4,6 +4,7 @@ import {
   type ReviewAgentName,
   type ReviewAgentResult,
   type ReviewEvent,
+  type ReviewEventOrigin,
   type ReviewRiskLevel,
   type ReviewSource,
   type ReviewStatus,
@@ -17,6 +18,9 @@ export type ReviewEngineInput = {
   draftAnswer: string
   context?: string
   isDevelopment?: boolean
+  origin?: ReviewEventOrigin
+  isRedacted?: boolean
+  fullTextStored?: boolean
 }
 
 type AgentCheck = {
@@ -515,6 +519,9 @@ export function runReviewEngine(input: ReviewEngineInput): ReviewEvent {
     createdAt: new Date().toISOString(),
     isDevelopment: input.isDevelopment ?? true,
     isInternalEvaluation: true,
+    origin: input.origin ?? 'internal-test',
+    isRedacted: input.isRedacted ?? false,
+    fullTextStored: input.fullTextStored ?? true,
     founderReviewed: false,
     ...counts
   }

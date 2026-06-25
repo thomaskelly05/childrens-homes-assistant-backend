@@ -7,6 +7,7 @@ import { ReviewRiskBadge, ReviewStatusBadge } from '@/components/indicare-lab/re
 import { formatLabDate } from '@/lib/indicare-lab/build-brief'
 import {
   FOUNDER_ACTION_ELIGIBLE_STATUSES,
+  REVIEW_ORIGIN_LABELS,
   REVIEW_SOURCE_LABELS,
   REVIEW_TASK_TYPE_LABELS,
   type ReviewEvent,
@@ -110,6 +111,27 @@ function ReviewEventCard({
             {event.isInternalEvaluation ? (
               <span className="rounded-full border border-violet-400/30 bg-violet-500/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.12em] text-violet-200">
                 Internal evaluation
+              </span>
+            ) : null}
+            <span
+              className={`rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.12em] ${
+                event.origin === 'shadow-review'
+                  ? 'border-cyan-400/30 bg-cyan-500/10 text-cyan-200'
+                  : event.origin === 'internal-test'
+                    ? 'border-violet-400/30 bg-violet-500/10 text-violet-200'
+                    : 'border-slate-400/30 bg-slate-500/10 text-slate-300'
+              }`}
+            >
+              {REVIEW_ORIGIN_LABELS[event.origin]}
+            </span>
+            {event.isRedacted ? (
+              <span className="rounded-full border border-amber-400/30 bg-amber-500/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.12em] text-amber-200">
+                Redacted
+              </span>
+            ) : null}
+            {!event.fullTextStored ? (
+              <span className="rounded-full border border-slate-400/30 bg-slate-500/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.12em] text-slate-400">
+                Full text not stored
               </span>
             ) : null}
           </div>

@@ -14,6 +14,7 @@ const NAV_SECTIONS: { id: LabSectionId; label: string; hash: string }[] = [
   { id: 'ui-ux', label: 'UI / UX', hash: '#ui-ux-gaps' },
   { id: 'technology', label: 'Technology', hash: '#technology-watch' },
   { id: 'review-board', label: 'Review board', hash: '#review-board' },
+  { id: 'shadow-review', label: 'Shadow review', hash: '#shadow-review' },
   { id: 'review-events', label: 'Review events', hash: '#review-events' },
   { id: 'review-test', label: 'Review test', hash: '#review-test' },
   { id: 'experiments', label: 'Experiments', hash: '#experiments' },

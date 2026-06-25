@@ -103,6 +103,9 @@ const SEEDED_REVIEW_EVENTS: ReviewEvent[] = [
     createdAt: '2026-06-24T09:15:00Z',
     isDevelopment: true,
     isInternalEvaluation: true,
+    origin: 'seeded',
+    isRedacted: false,
+    fullTextStored: true,
     founderReviewed: false,
     agentsPassed: 3,
     agentsRewrote: 4,
@@ -188,6 +191,9 @@ const SEEDED_REVIEW_EVENTS: ReviewEvent[] = [
     createdAt: '2026-06-24T11:42:00Z',
     isDevelopment: true,
     isInternalEvaluation: true,
+    origin: 'seeded',
+    isRedacted: false,
+    fullTextStored: true,
     founderReviewed: false,
     agentsPassed: 6,
     agentsRewrote: 2,
@@ -272,6 +278,9 @@ const SEEDED_REVIEW_EVENTS: ReviewEvent[] = [
     createdAt: '2026-06-24T15:20:00Z',
     isDevelopment: true,
     isInternalEvaluation: true,
+    origin: 'seeded',
+    isRedacted: false,
+    fullTextStored: true,
     founderReviewed: false,
     agentsPassed: 8,
     agentsRewrote: 0,
@@ -357,6 +366,9 @@ const SEEDED_REVIEW_EVENTS: ReviewEvent[] = [
     createdAt: '2026-06-23T18:05:00Z',
     isDevelopment: true,
     isInternalEvaluation: true,
+    origin: 'seeded',
+    isRedacted: false,
+    fullTextStored: true,
     founderReviewed: false,
     agentsPassed: 6,
     agentsRewrote: 2,
@@ -414,8 +426,18 @@ export function createReviewEvent(input: CreateReviewEventInput): ReviewEvent {
     prompt: input.prompt,
     draftAnswer: input.draftAnswer,
     context: input.context,
-    isDevelopment: input.isDevelopment ?? true
+    isDevelopment: input.isDevelopment ?? true,
+    origin: 'internal-test',
+    isRedacted: false,
+    fullTextStored: true
   })
+  events.unshift(event)
+  lastReviewEventId = event.id
+  return event
+}
+
+/** Store a shadow review event produced by the ORB adapter (already reviewed and redacted). */
+export function storeShadowReviewEvent(event: ReviewEvent): ReviewEvent {
   events.unshift(event)
   lastReviewEventId = event.id
   return event

@@ -1,5 +1,9 @@
 import { authFetch, authFetchResponse } from '@/lib/auth/api'
 import {
+  mapOrbStationToReviewSource,
+  triggerShadowReviewForOrbOutput
+} from '@/lib/indicare-lab/review-events/orb-review-adapter'
+import {
   instrumentDictateCompleted,
   instrumentDictateStarted,
   instrumentPdfExport
@@ -294,6 +298,21 @@ export async function generateOrbDictateNote(
     })
     const result = parseEnvelope<OrbDictateGenerateResult>(json)
     instrumentDictateCompleted({ phase: 'generate', noteType: payload.note_type })
+    // Shadow review for dictate outputs — does not alter the returned note.
+    // TODO: wire orb-write, orb-communicate, and orb-voice/respond through the same adapter.
+    const reviewSource = mapOrbStationToReviewSource('dictate')
+    if (reviewSource) {
+      triggerShadowReviewForOrbOutput({
+        source: reviewSource,
+        prompt: payload.input_text,
+        draftAnswer: result.professional_note,
+        metadata: {
+          noteType: payload.note_type,
+          mode: payload.mode,
+          sourceSurface: 'dictate'
+        }
+      })
+    }
     return result
   } catch {
     throw new Error('Could not generate note')

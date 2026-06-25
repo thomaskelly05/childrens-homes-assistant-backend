@@ -3,6 +3,10 @@
  */
 
 import {
+  mapOrbStationToReviewSource,
+  triggerShadowReviewForOrbOutput
+} from '@/lib/indicare-lab/review-events/orb-review-adapter'
+import {
   routeOrbBrainIntent,
   type AskOrbBrainContext,
   type OrbBrainRoute,
@@ -33,6 +37,33 @@ export type AskOrbBrainOptions = {
   context?: AskOrbBrainContext
   signal?: AbortSignal
   stream?: StandaloneOrbStreamCallbacks
+}
+
+function shadowReviewSourceFromContext(context?: AskOrbBrainContext) {
+  return mapOrbStationToReviewSource(context?.source ?? 'chat')
+}
+
+function triggerOrbBrainShadowReview(
+  response: StandaloneOrbConversationResponse,
+  request: StandaloneOrbConversationRequest,
+  context?: AskOrbBrainContext
+): void {
+  const answer = response.answer?.trim()
+  if (!answer) return
+
+  const source = shadowReviewSourceFromContext(context)
+  if (!source) return
+
+  triggerShadowReviewForOrbOutput({
+    source,
+    prompt: request.message,
+    draftAnswer: answer,
+    metadata: {
+      mode: request.mode,
+      conversationId: response.conversation_id ?? request.conversation_id ?? undefined,
+      sourceSurface: context?.source ?? 'chat'
+    }
+  })
 }
 
 /**
@@ -70,10 +101,14 @@ export async function askOrbBrain(
   options: AskOrbBrainOptions
 ): Promise<StandaloneOrbConversationResponse> {
   const prepared = buildOrbBrainConversationRequest(options.request, options.context)
-  if (options.stream) {
-    return sendStandaloneOrbMessageStream(prepared, options.stream, options.signal)
-  }
-  return queryStandaloneOrbConversation(prepared, options.signal)
+  const response = options.stream
+    ? await sendStandaloneOrbMessageStream(prepared, options.stream, options.signal)
+    : await queryStandaloneOrbConversation(prepared, options.signal)
+
+  // Shadow review — fire-and-forget; never blocks or alters the live answer.
+  triggerOrbBrainShadowReview(response, prepared, options.context)
+
+  return response
 }
 
 /** Alias for askOrbBrain — shared runtime entrypoint name. */
