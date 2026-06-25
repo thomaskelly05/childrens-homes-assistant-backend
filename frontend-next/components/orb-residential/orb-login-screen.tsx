@@ -5,7 +5,6 @@ import { useRouter, useSearchParams } from 'next/navigation'
 
 import { OrbLoginAuthCard } from '@/components/orb-residential/orb-login-auth-card'
 import { OrbLoginDesktopHero } from '@/components/orb-residential/orb-login-desktop-hero'
-import { OrbLoginMobileHeader } from '@/components/orb-residential/orb-login-mobile-header'
 import { useOrbResidentialThemeSync } from '@/components/orb-residential/use-orb-residential-theme-sync'
 import { useOrbAppearance } from '@/components/orb-standalone/use-orb-appearance'
 import { getOrbThemeCssVariables } from '@/lib/orb/orb-theme'
@@ -76,6 +75,7 @@ function OrbLoginPanel({
   const [passkeySupported, setPasskeySupported] = useState(false)
   const [passkeyExpanded, setPasskeyExpanded] = useState(false)
   const [emailExpanded, setEmailExpanded] = useState(false)
+  const [moreSignInExpanded, setMoreSignInExpanded] = useState(false)
 
   const returnUrl = sanitizeOrbReturnUrl(returnUrlProp || searchParams.get('returnUrl') || ORB_RETURN)
   const autoRedirectAuthenticated = !embeddedGateMode
@@ -286,7 +286,6 @@ function OrbLoginPanel({
         <OrbLoginDesktopHero />
 
         <div className="orb-login-panel orb-login-shell__auth flex min-h-0 flex-col lg:px-2 xl:px-6" data-orb-login-panel-centered data-orb-login-auth-connected>
-          <OrbLoginMobileHeader />
           <OrbLoginAuthCard
             error={error}
             oauth={oauth}
@@ -303,12 +302,14 @@ function OrbLoginPanel({
             passkeyEmail={passkeyEmail}
             emailExpanded={emailExpanded}
             passkeyExpanded={passkeyExpanded}
+            moreSignInExpanded={moreSignInExpanded}
             onEmailChange={setEmail}
             onPasswordChange={setPassword}
             onRememberChange={setRemember}
             onPasskeyEmailChange={setPasskeyEmail}
             onEmailExpandedChange={setEmailExpanded}
             onPasskeyExpandedChange={setPasskeyExpanded}
+            onMoreSignInExpandedChange={setMoreSignInExpanded}
             onSubmit={handleSubmit}
             onPasskeySignIn={() => void handlePasskeySignIn()}
             orbOAuthStartUrl={orbOAuthStartUrl}
