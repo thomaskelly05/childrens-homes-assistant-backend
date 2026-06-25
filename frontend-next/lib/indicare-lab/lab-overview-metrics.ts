@@ -203,6 +203,8 @@ export function buildEvidenceOfImprovementCounts(input: {
     auditEventCount: number
     backend: string
     redactedStoragePercentage: number
+    lastSuccessfulWriteAt?: string | null
+    failedWriteCount?: number
   }
 }): {
   realShadowReviewEvents: number
@@ -221,6 +223,8 @@ export function buildEvidenceOfImprovementCounts(input: {
   auditEvents: number
   storageMode: string
   redactedStoragePercentage: number
+  lastSuccessfulWriteAt: string | null
+  failedWriteCount: number
 } {
   const realPatterns = input.patterns.filter(
     (p) => !p.relatedEventIds.every((id) => id.startsWith('rev-seed-'))
@@ -244,6 +248,8 @@ export function buildEvidenceOfImprovementCounts(input: {
     founderActionsLogged: storage?.founderActionCount ?? 0,
     auditEvents: storage?.auditEventCount ?? 0,
     storageMode: storage?.backend === 'database-backed' ? 'Database-backed' : 'Memory fallback',
-    redactedStoragePercentage: storage?.redactedStoragePercentage ?? 0
+    redactedStoragePercentage: storage?.redactedStoragePercentage ?? 0,
+    lastSuccessfulWriteAt: storage?.lastSuccessfulWriteAt ?? null,
+    failedWriteCount: storage?.failedWriteCount ?? 0
   }
 }

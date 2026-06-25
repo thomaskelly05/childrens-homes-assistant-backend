@@ -67,6 +67,12 @@ NO_DELETE_ENTITY_TYPES = frozenset({
     "safety_review",
     "founder_memory",
     "audit_log",
+    "lab_review_event",
+    "lab_suggestion",
+    "lab_evaluation_run",
+    "lab_build_brief",
+    "lab_founder_action",
+    "lab_audit_event",
 })
 
 BOOTSTRAP_ENTITY_TYPES = (

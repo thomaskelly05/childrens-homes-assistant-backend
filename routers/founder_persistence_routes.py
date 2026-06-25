@@ -66,6 +66,18 @@ ENTITY_ALIASES: dict[str, str] = {
     "evidence_packs": "evidence_pack",
     "relationships": "relationship",
     "relationship": "relationship",
+    "lab-review-events": "lab_review_event",
+    "lab_review_events": "lab_review_event",
+    "lab-suggestions": "lab_suggestion",
+    "lab_suggestions": "lab_suggestion",
+    "lab-evaluation-runs": "lab_evaluation_run",
+    "lab_evaluation_runs": "lab_evaluation_run",
+    "lab-build-briefs": "lab_build_brief",
+    "lab_build_briefs": "lab_build_brief",
+    "lab-founder-actions": "lab_founder_action",
+    "lab_founder_actions": "lab_founder_action",
+    "lab-audit-events": "lab_audit_event",
+    "lab_audit_events": "lab_audit_event",
 }
 
 

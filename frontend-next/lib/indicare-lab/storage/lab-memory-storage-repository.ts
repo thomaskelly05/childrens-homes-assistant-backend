@@ -401,7 +401,9 @@ export class LabMemoryStorageRepository implements LabStorageRepository {
       evaluationRunCount: this.listEvaluationRuns().length,
       founderActionCount: this.founderActionLogs.length,
       auditEventCount: this.auditEvents.length,
-      redactedStoragePercentage: computeRedactedStoragePercentage(classifications)
+      redactedStoragePercentage: computeRedactedStoragePercentage(classifications),
+      lastSuccessfulWriteAt: null,
+      failedWriteCount: 0
     }
   }
 
