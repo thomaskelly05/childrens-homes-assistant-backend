@@ -5,19 +5,14 @@ import { usePathname, useRouter } from 'next/navigation'
 import { ShieldAlert } from 'lucide-react'
 
 import { useAuth } from '@/contexts/auth-context'
-import { userHasFounderAccessFromProfile } from '@/lib/founder/access'
+import { userHasAdminCommandCentreAccessFromProfile } from '@/lib/founder/access'
 
-export function FounderGuard({ children }: { children: React.ReactNode }) {
+export function AdminGuard({ children }: { children: React.ReactNode }) {
   const { user, status } = useAuth()
   const router = useRouter()
   const pathname = usePathname()
-  const allowed = userHasFounderAccessFromProfile(user)
-  const returnTarget =
-    pathname?.startsWith('/founder') ||
-    pathname?.startsWith('/indicare-lab') ||
-    pathname?.startsWith('/admin')
-      ? pathname
-      : '/founder'
+  const allowed = userHasAdminCommandCentreAccessFromProfile(user)
+  const returnTarget = pathname?.startsWith('/admin') ? pathname : '/admin'
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -28,7 +23,7 @@ export function FounderGuard({ children }: { children: React.ReactNode }) {
   if (status === 'loading') {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#05070d] text-slate-300">
-        <p className="text-sm font-semibold">Verifying founder access…</p>
+        <p className="text-sm font-semibold">Verifying admin access…</p>
       </div>
     )
   }
@@ -46,7 +41,8 @@ export function FounderGuard({ children }: { children: React.ReactNode }) {
           </div>
           <h1 className="mt-5 text-2xl font-black text-white">Access denied</h1>
           <p className="mt-3 text-sm leading-6 text-slate-400">
-            The IndiCare Intelligence Command Centre is restricted to founder and administrator roles only.
+            The Admin Command Centre is restricted to authorised founders and administrators. Normal ORB users
+            cannot access this operational console.
           </p>
         </div>
       </div>

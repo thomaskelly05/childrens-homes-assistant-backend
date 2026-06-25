@@ -16,14 +16,30 @@ export type FounderAccessProfile = {
   isFounder?: boolean | null
 }
 
+export function isAdminCommandCentreRoute(pathname: string | null | undefined) {
+  if (!pathname) return false
+  return pathname === '/admin' || pathname.startsWith('/admin/')
+}
+
 export function isFounderDashboardRoute(pathname: string | null | undefined) {
   if (!pathname) return false
   return (
     pathname === '/founder' ||
     pathname.startsWith('/founder/') ||
     pathname === '/indicare-lab' ||
-    pathname.startsWith('/indicare-lab/')
+    pathname.startsWith('/indicare-lab/') ||
+    isAdminCommandCentreRoute(pathname)
   )
+}
+
+/**
+ * Phase 1: Admin Command Centre uses founder/admin access.
+ * Structured separately so future admin-only roles can diverge from founder access.
+ */
+export function userHasAdminCommandCentreAccessFromProfile(
+  profile?: FounderAccessProfile | null
+): boolean {
+  return userHasFounderAccessFromProfile(profile)
 }
 
 export function userHasFounderAccess(role?: string | null) {
