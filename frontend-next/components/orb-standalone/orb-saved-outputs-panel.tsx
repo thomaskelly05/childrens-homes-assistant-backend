@@ -385,10 +385,11 @@ export function OrbSavedOutputsPanel({
       {...orbStationShellProps(residentialSurface, 'wide')}
     >
       <div
-        className={`orb-studio-shell flex min-h-0 flex-col gap-2 p-2 sm:gap-3 sm:p-4 ${showRecordsEmptyCanvas ? 'items-center justify-center' : 'lg:flex-row'} ${residentialSurface ? 'orb-workspace orb-workspace--records' : ''}`}
+        className={`orb-studio-shell flex min-h-0 flex-col gap-2 p-2 sm:gap-3 sm:p-4 ${showRecordsEmptyCanvas ? 'items-center justify-center' : 'lg:flex-row'} ${residentialSurface ? 'orb-workspace orb-workspace--records' : ''} ${isMobile ? 'pt-1' : ''}`}
         data-orb-saved-outputs-panel
         data-orb-studio-shell="saved_outputs"
         data-orb-records-mobile-mode={isMobile ? (recordsMobileDetailMode ? 'detail' : 'list') : undefined}
+        data-orb-records-mobile-list-first={isMobile && !recordsMobileDetailMode ? 'true' : undefined}
         {...(residentialSurface ? { 'data-orb-workspace-records': true } : {})}
         {...(items.length === 0 && !loading ? { 'data-orb-saved-outputs-empty': true } : {})}
       >
@@ -563,10 +564,10 @@ export function OrbSavedOutputsPanel({
 
           <div className="max-h-[min(36vh,18rem)] flex-1 overflow-y-auto p-2 lg:max-h-none" data-orb-saved-outputs-list>
             {loading ? (
-              <p className="flex items-center gap-2 px-2 py-4 text-xs text-[var(--orb-mobile-ws-muted,var(--orb-muted))]">
-                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-                Loading…
-              </p>
+              <div className="text-xs text-[var(--orb-mobile-ws-muted,var(--orb-muted))]" data-orb-records-loading>
+                <Loader2 className="h-5 w-5 animate-spin text-[var(--orb-primary)]" aria-hidden />
+                <span>Loading records and drafts…</span>
+              </div>
             ) : error ? (
               shouldBlockStationForAuth(sessionReady, error) ? (
                 <OrbStationAuthError detail={error} />

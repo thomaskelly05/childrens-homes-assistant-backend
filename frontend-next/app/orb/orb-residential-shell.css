@@ -4402,3 +4402,307 @@ html[data-orb-residential='1'] .orb-residential-safety-footer {
     max-width: 100%;
   }
 }
+
+/* ── Mobile polish pass — ChatGPT-quality iPhone Safari feel ─────────────── */
+
+@media (max-width: 1023px) {
+  html[data-orb-residential='1'][data-orb-mobile-shell='true'] .orb-app-shell,
+  html[data-orb-residential='1'][data-orb-mobile-shell='true'] .orb-main,
+  html[data-orb-residential='1'][data-orb-mobile-shell='true'] .orb-workspace,
+  html[data-orb-residential='1'][data-orb-mobile-shell='true'] [data-orb-station-container] {
+    min-height: 0;
+    max-width: 100vw;
+    overflow-x: hidden;
+  }
+
+  [data-orb-app-panel-mobile-full='true'] .orb-panel-body,
+  [data-orb-app-panel-mobile-full='true'] .orb-panel-drawer,
+  [data-orb-help-panel-scroll],
+  [data-orb-settings-scroll],
+  [data-orb-records-mobile-detail-scroll],
+  [data-orb-dictate-mobile-scroll] {
+    padding-bottom: max(1.25rem, calc(0.75rem + env(safe-area-inset-bottom, 0px)));
+    scroll-padding-bottom: max(1.5rem, calc(1rem + env(safe-area-inset-bottom, 0px)));
+  }
+
+  /* Home — scrollable centre stack, composer pinned above Safari chrome */
+  [data-orb-home-empty='true'][data-orb-mobile-shell='true'] .orb-main {
+    justify-content: flex-start;
+    min-height: 100dvh;
+    max-height: 100dvh;
+  }
+
+  [data-orb-home-mobile-station='true'] .orb-workspace {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  [data-orb-home-mobile-station='true'] .orb-chat-thread {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    padding-top: 0.25rem;
+    padding-bottom: 0.5rem;
+  }
+
+  [data-orb-home-mobile-station='true'] .orb-composer-dock {
+    flex-shrink: 0;
+    margin-top: 0;
+    padding-top: 0.25rem;
+  }
+
+  [data-orb-home-mobile-station='true'] .orb-composer-dock-safety {
+    padding-bottom: max(0.25rem, env(safe-area-inset-bottom, 0px));
+  }
+
+  [data-orb-home-mobile-compact='true'] .orb-workspace-hero--premium {
+    padding-bottom: 0;
+  }
+
+  [data-orb-home-mobile-compact='true'] .orb-home-hero-presence .orb-presence--compact,
+  [data-orb-home-mobile-compact='true'] .orb-home-hero-presence [data-glass-orb-mark] .orb-presence {
+    --orb-presence-size: clamp(2.5rem, 12vw, 3.15rem);
+  }
+
+  [data-orb-home-mobile-compact='true'] .orb-home-orb-glow {
+    width: min(7.5rem, 36vw);
+    height: min(7.5rem, 36vw);
+    opacity: 0.42;
+  }
+
+  [data-orb-home-mobile-compact='true'] [data-orb-empty-heading-mobile] {
+    font-size: 1.0625rem;
+    line-height: 1.3;
+    margin-top: 0.35rem;
+  }
+
+  [data-orb-home-mobile-compact='true'] [data-orb-empty-subline-mobile] {
+    margin-top: 0.35rem;
+    font-size: 0.6875rem;
+    line-height: 1.4;
+  }
+
+  [data-orb-home-quick-actions-mobile='true'] {
+    margin-top: 0.5rem;
+    gap: 0.4rem;
+    padding-bottom: 0.25rem;
+  }
+
+  [data-orb-home-quick-actions-mobile='true'] .orb-starter-card[data-orb-home-quick-action] {
+    min-height: 2.625rem;
+    padding-block: 0.5rem;
+    font-size: 0.6875rem;
+  }
+
+  /* Composer — readable placeholder, wrapped chips, safe dock */
+  [data-orb-composer-safe-area='true'] {
+    padding-bottom: max(0.875rem, env(safe-area-inset-bottom, 0px));
+  }
+
+  html[data-orb-residential='1'] .orb-composer--premium textarea::placeholder,
+  html[data-orb-residential='1'] [data-orb-composer-mobile-safe='true'] textarea::placeholder {
+    color: #64748b;
+    opacity: 1;
+  }
+
+  [data-orb-composer-suggestions] {
+    flex-wrap: wrap;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  /* Dictate — less dead space, controls above Safari bar */
+  [data-orb-dictate-mobile-scroll] {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  [data-orb-dictate-mobile-branch='active'] .orb-dictate-mobile-capture-stage {
+    padding-block: 0.5rem;
+  }
+
+  [data-orb-dictate-mobile-branch='active'] [data-orb-dictate-idle-shell] {
+    justify-content: flex-start;
+    padding-top: 0.25rem;
+  }
+
+  [data-orb-dictate-mobile-branch='active'] [data-orb-dictate-upload-actions] {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+    width: 100%;
+  }
+
+  [data-orb-dictate-mobile-branch='active'] [data-orb-dictate-boundary-copy] {
+    margin-top: 0.5rem;
+    padding-bottom: 0.25rem;
+  }
+
+  /* Voice — compact cinematic card */
+  html[data-orb-residential='1'] [data-orb-voice-one-screen-workspace][data-orb-voice-full-viewport='true'] .orb-voice-hero-stage--dominant {
+    min-height: clamp(10rem, 28vh, 15rem);
+  }
+
+  html[data-orb-residential='1'] [data-orb-voice-one-screen-workspace][data-orb-voice-full-viewport='true'] .orb-voice-hero-stage__waveform-wrap,
+  html[data-orb-residential='1'] [data-orb-voice-one-screen-workspace][data-orb-voice-full-viewport='true'] .orb-voice-showstopper-wave {
+    min-height: clamp(8.5rem, 24vh, 12rem);
+    height: clamp(8.5rem, 24vh, 12rem);
+  }
+
+  html[data-orb-residential='1'] [data-orb-voice-one-screen-workspace][data-orb-voice-full-viewport='true'] [data-orb-voice-live-rail-slot] .orb-voice-live-rail {
+    max-height: min(36vh, 18rem);
+  }
+
+  /* ORB Write — no clip, stacked controls, review below editor */
+  [data-orb-write-mobile-layout='stacked'] {
+    padding-inline: 0.5rem;
+    gap: 0.5rem;
+  }
+
+  [data-orb-write-mobile-controls='stacked'] [data-orb-write-title-input] {
+    font-size: 1rem;
+    line-height: 1.35;
+    padding-inline: 0.125rem;
+  }
+
+  [data-orb-write-mobile-controls='stacked'] [data-orb-write-record-type-row] {
+    order: 2;
+  }
+
+  [data-orb-write-mobile-controls='stacked'] [data-orb-write-use-template] {
+    order: 1;
+    width: 100%;
+  }
+
+  [data-orb-write-record-type-suppressed='true'] [data-orb-write-notepad-meta] [data-orb-write-record-type-row],
+  [data-orb-write-record-type-suppressed='true'] [data-orb-write-notepad-meta] [data-orb-write-record-type-badge] {
+    display: none !important;
+  }
+
+  [data-orb-write-review-collapsible] {
+    order: 3;
+    width: 100%;
+    max-width: 100%;
+    margin-top: 0.5rem;
+    border: 1px solid var(--orb-line, #e2e8f0);
+    border-radius: 0.75rem;
+    background: var(--orb-surface-elevated, #fff);
+    overflow: hidden;
+  }
+
+  [data-orb-write-review-collapsible] summary {
+    list-style: none;
+    cursor: pointer;
+    padding: 0.65rem 0.85rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--orb-foreground, #0f172a);
+  }
+
+  [data-orb-write-review-collapsible] summary::-webkit-details-marker {
+    display: none;
+  }
+
+  [data-orb-write-review-collapsible][open] summary {
+    border-bottom: 1px solid var(--orb-line, #e2e8f0);
+  }
+
+  [data-orb-write-review-collapsible] [data-orb-write-review-panel] {
+    padding: 0.75rem;
+    max-height: min(42vh, 20rem);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .orb-workspace--write .orb-write-studio-grid {
+    gap: 0.5rem;
+  }
+
+  .orb-workspace--write [data-orb-write-document-canvas-host] {
+    order: 1;
+    flex: 1 1 auto;
+    min-height: 12rem;
+  }
+
+  /* Records — search icon clearance, deliberate loading */
+  [data-orb-premium-search-wrap] .orb-premium-search-input {
+    padding-left: 2.75rem !important;
+    padding-right: 2.5rem !important;
+  }
+
+  [data-orb-premium-search-wrap] [data-orb-premium-search] {
+    width: 100%;
+    min-width: 0;
+  }
+
+  [data-orb-records-loading] {
+    display: flex;
+    min-height: min(28vh, 12rem);
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 1.5rem 1rem;
+    text-align: center;
+  }
+
+  [data-orb-records-mobile-list='true'] {
+    padding-top: 0;
+  }
+
+  [data-orb-records-mobile-list='true'] [data-orb-premium-page='saved_outputs'] {
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+  }
+
+  [data-orb-workspace-records][data-orb-records-mobile-mode='list'] {
+    padding-top: 0.25rem;
+  }
+
+  /* Help & Safety — scroll + bottom breathing room */
+  [data-orb-help-panel-scroll] [data-orb-help-panel] {
+    padding-bottom: 0.5rem;
+  }
+
+  [data-orb-help-panel-safe-bottom] {
+    height: max(1rem, env(safe-area-inset-bottom, 0px));
+    flex-shrink: 0;
+  }
+
+  /* Settings — mobile page, not modal card */
+  [data-orb-settings-mobile-layout='stack'] {
+    min-height: 100dvh;
+    max-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  [data-orb-settings-mobile-layout='stack'] [data-orb-settings-nav-mobile='true'] {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px));
+  }
+
+  [data-orb-settings-mobile-layout='stack'] [data-orb-settings-scroll] {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  [data-orb-settings-mobile-layout='stack'] .orb-settings-nav-item {
+    min-height: 2.75rem;
+  }
+
+  /* Account sheet — reachable tap targets */
+  .orb-account-menu--mobile-sheet [data-orb-account-menu-items] [role='menuitem'] {
+    min-height: 2.75rem;
+    padding-block: 0.65rem;
+  }
+}

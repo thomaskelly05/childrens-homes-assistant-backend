@@ -65,6 +65,7 @@ export function OrbHelpPanel({ open, onClose }: { open: boolean; onClose: () => 
             If a child is at immediate risk, follow local safeguarding and emergency procedures. ORB supports
             professional judgement — it does not replace safeguarding procedures or local policy.
           </p>
+          <div aria-hidden data-orb-help-panel-safe-bottom />
         </div>
       </div>
     </OrbStandalonePanelShell>

@@ -390,6 +390,7 @@ export function OrbStandaloneComposer({
       onDrop={onDrop}
       data-orb-standalone-composer
       data-testid="orb-standalone-composer"
+      data-orb-composer-mobile-safe={compactResidential && mobileViewport ? 'true' : undefined}
       data-pending={pending ? 'true' : 'false'}
       data-last-send-status={lastSendStatus}
     >
