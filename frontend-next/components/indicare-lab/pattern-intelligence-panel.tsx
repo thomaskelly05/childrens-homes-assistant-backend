@@ -1,10 +1,11 @@
 'use client'
 
-import { Check, FileQuestion, FileText, ListPlus, X } from 'lucide-react'
+import { Check, FileQuestion, FileText, ListPlus, Scale, X } from 'lucide-react'
 
 import { LabSectionCard } from '@/components/indicare-lab/lab-section-card'
 import { PriorityBadge, RiskBadge } from '@/components/indicare-lab/lab-shared'
 import { formatLabDate } from '@/lib/indicare-lab/build-brief'
+import { suggestBenchmarkScenariosForPattern } from '@/lib/indicare-lab/evaluations/evaluation-actions'
 import {
   isPatternApprovalEligible,
   LAB_PATTERN_AREA_LABELS,
@@ -23,6 +24,7 @@ type PatternIntelligencePanelProps = {
   onCreateBuildBrief: (pattern: LabPattern) => void
   onAddToApprovalQueue: (pattern: LabPattern) => void
   onUpdatePatternStatus: (patternId: string, status: LabPatternStatus) => void
+  onNavigateToBenchmarks?: (scenarioId?: string) => void
 }
 
 export function PatternIntelligencePanel({
@@ -30,7 +32,8 @@ export function PatternIntelligencePanel({
   analysedEventCount,
   onCreateBuildBrief,
   onAddToApprovalQueue,
-  onUpdatePatternStatus
+  onUpdatePatternStatus,
+  onNavigateToBenchmarks
 }: PatternIntelligencePanelProps) {
   return (
     <LabSectionCard
@@ -64,6 +67,7 @@ export function PatternIntelligencePanel({
               onCreateBuildBrief={onCreateBuildBrief}
               onAddToApprovalQueue={onAddToApprovalQueue}
               onUpdatePatternStatus={onUpdatePatternStatus}
+              onNavigateToBenchmarks={onNavigateToBenchmarks}
             />
           ))
         )}
@@ -76,14 +80,17 @@ function PatternCard({
   pattern,
   onCreateBuildBrief,
   onAddToApprovalQueue,
-  onUpdatePatternStatus
+  onUpdatePatternStatus,
+  onNavigateToBenchmarks
 }: {
   pattern: LabPattern
   onCreateBuildBrief: (pattern: LabPattern) => void
   onAddToApprovalQueue: (pattern: LabPattern) => void
   onUpdatePatternStatus: (patternId: string, status: LabPatternStatus) => void
+  onNavigateToBenchmarks?: (scenarioId?: string) => void
 }) {
   const approvalEligible = isPatternApprovalEligible(pattern)
+  const suggestedBenchmarks = suggestBenchmarkScenariosForPattern(pattern.id)
 
   return (
     <article
@@ -165,6 +172,31 @@ function PatternCard({
       <p className="mt-3 text-xs text-slate-500">
         <span className="font-semibold text-slate-400">Recommended action:</span> {pattern.recommendedAction}
       </p>
+
+      {suggestedBenchmarks.length > 0 ? (
+        <div className="mt-3 rounded-xl border border-cyan-400/20 bg-cyan-500/5 p-3">
+          <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-cyan-300">
+            Suggested benchmark scenarios
+          </p>
+          <ul className="mt-2 space-y-1 text-xs text-slate-400">
+            {suggestedBenchmarks.map((scenario) => (
+              <li key={scenario.id} className="flex items-center justify-between gap-2">
+                <span>{scenario.title}</span>
+                {onNavigateToBenchmarks ? (
+                  <button
+                    type="button"
+                    onClick={() => onNavigateToBenchmarks(scenario.id)}
+                    className="inline-flex items-center gap-1 rounded-lg border border-cyan-400/20 bg-cyan-500/10 px-2 py-0.5 text-[9px] font-bold text-cyan-200 transition hover:bg-cyan-500/20"
+                  >
+                    <Scale className="h-3 w-3" aria-hidden />
+                    Run benchmark
+                  </button>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
 
       <div className="mt-4 flex flex-wrap gap-2">
         <button
