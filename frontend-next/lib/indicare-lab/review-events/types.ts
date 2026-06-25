@@ -49,6 +49,13 @@ export type ReviewAgentResult = {
   riskLevel: ReviewRiskLevel
 }
 
+export type ReviewEventFounderActionRecord = {
+  id: string
+  action: string
+  note?: string
+  createdAt: string
+}
+
 export type ReviewEvent = {
   id: string
   source: ReviewSource
@@ -70,6 +77,7 @@ export type ReviewEvent = {
   /** Whether full prompt/answer text was stored without redaction. */
   fullTextStored: boolean
   founderReviewed?: boolean
+  founderActions?: ReviewEventFounderActionRecord[]
   agentsPassed: number
   agentsRewrote: number
   agentsBlocked: number

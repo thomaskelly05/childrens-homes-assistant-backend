@@ -12,6 +12,7 @@ import { KnowledgeGapPanel } from '@/components/indicare-lab/knowledge-gap-panel
 import { LabOverviewCards } from '@/components/indicare-lab/lab-overview-cards'
 import { LabRoadmapPanel } from '@/components/indicare-lab/lab-roadmap-panel'
 import { LabSectionCard } from '@/components/indicare-lab/lab-section-card'
+import { PatternIntelligencePanel } from '@/components/indicare-lab/pattern-intelligence-panel'
 import { ReviewBoardPanel } from '@/components/indicare-lab/review-board-panel'
 import { ReviewEventsPanel } from '@/components/indicare-lab/review-events-panel'
 import { ShadowReviewStatusCard } from '@/components/indicare-lab/shadow-review-status-card'
@@ -24,12 +25,18 @@ import {
   BRAIN_GAPS,
   EXPERIMENTS,
   KNOWLEDGE_GAPS,
-  OVERVIEW_METRICS,
   REVIEW_BOARD_AGENTS,
   ROADMAP_ITEMS,
   TECHNOLOGY_WATCH,
   UI_UX_GAPS
 } from '@/lib/indicare-lab/demo-data'
+import { buildLabOverviewMetrics } from '@/lib/indicare-lab/lab-overview-metrics'
+import {
+  generateBuildBriefFromPattern,
+  patternToApprovalItem
+} from '@/lib/indicare-lab/patterns/pattern-actions'
+import { detectPatternsFromReviewEvents } from '@/lib/indicare-lab/patterns/pattern-detection-engine'
+import type { LabPattern, LabPatternStatus } from '@/lib/indicare-lab/patterns/types'
 import {
   generateBuildBriefFromReviewEvent,
   reviewEventToApprovalItem
@@ -38,7 +45,7 @@ import {
   listReviewEvents,
   markReviewEventReviewed,
   summariseReviewEvents
-} from '@/lib/indicare-lab/review-events/review-event-store'
+} from '@/lib/indicare-lab/review-events/review-event-storage'
 import type { ReviewEvent } from '@/lib/indicare-lab/review-events/types'
 import type { ApprovalQueueItem, BuildBrief, LabGap } from '@/lib/indicare-lab/types'
 
@@ -47,8 +54,30 @@ export function IndiCareLabPage() {
   const [briefs, setBriefs] = useState<BuildBrief[]>([])
   const [reviewEvents, setReviewEvents] = useState<ReviewEvent[]>(() => listReviewEvents())
   const [approvalItems, setApprovalItems] = useState<ApprovalQueueItem[]>(APPROVAL_QUEUE)
+  const [patternStatuses, setPatternStatuses] = useState<Record<string, LabPatternStatus>>({})
 
   const reviewSummary = useMemo(() => summariseReviewEvents(), [reviewEvents])
+
+  const patternDetection = useMemo(() => detectPatternsFromReviewEvents(reviewEvents), [reviewEvents])
+
+  const patterns = useMemo(
+    () =>
+      patternDetection.patterns.map((pattern) => ({
+        ...pattern,
+        founderDecisionStatus: patternStatuses[pattern.id] ?? pattern.founderDecisionStatus
+      })),
+    [patternDetection.patterns, patternStatuses]
+  )
+
+  const overviewMetrics = useMemo(
+    () =>
+      buildLabOverviewMetrics({
+        reviewSummary,
+        patterns,
+        pendingApprovals: approvalItems.filter((item) => item.status === 'pending').length
+      }),
+    [reviewSummary, patterns, approvalItems]
+  )
 
   const selectedGaps = useMemo(
     () => ALL_GAPS.filter((g) => selectedGapIds.has(g.id)),
@@ -76,10 +105,13 @@ export function IndiCareLabPage() {
     document.getElementById('build-briefs')?.scrollIntoView({ behavior: 'smooth' })
   }, [])
 
-  const handleReviewEventCreated = useCallback((_event: ReviewEvent) => {
-    refreshReviewEvents()
-    document.getElementById('review-events')?.scrollIntoView({ behavior: 'smooth' })
-  }, [refreshReviewEvents])
+  const handleReviewEventCreated = useCallback(
+    (_event: ReviewEvent) => {
+      refreshReviewEvents()
+      document.getElementById('review-events')?.scrollIntoView({ behavior: 'smooth' })
+    },
+    [refreshReviewEvents]
+  )
 
   const handleCreateBuildBriefFromEvent = useCallback((event: ReviewEvent) => {
     const brief = generateBuildBriefFromReviewEvent(event)
@@ -104,15 +136,37 @@ export function IndiCareLabPage() {
     [refreshReviewEvents]
   )
 
+  const handleUpdatePatternStatus = useCallback((patternId: string, status: LabPatternStatus) => {
+    setPatternStatuses((prev) => ({ ...prev, [patternId]: status }))
+  }, [])
+
+  const handleCreateBuildBriefFromPattern = useCallback(
+    (pattern: LabPattern) => {
+      const brief = generateBuildBriefFromPattern(pattern)
+      setBriefs((prev) => [brief, ...prev])
+      document.getElementById('build-briefs')?.scrollIntoView({ behavior: 'smooth' })
+    },
+    []
+  )
+
+  const handleAddPatternToApprovalQueue = useCallback((pattern: LabPattern) => {
+    const item = patternToApprovalItem(pattern)
+    setApprovalItems((prev) => {
+      if (prev.some((existing) => existing.id === item.id)) return prev
+      return [item, ...prev]
+    })
+    document.getElementById('approvals')?.scrollIntoView({ behavior: 'smooth' })
+  }, [])
+
   return (
     <IndiCareLabShell>
       <LabSectionCard
         id="overview"
         eyebrow="Dashboard"
         title="Overview"
-        description="Continuous assessment snapshot for ORB Residential. All metrics are synthetic development-mode evaluations."
+        description="Continuous assessment snapshot for ORB Residential. Metrics combine review events, pattern intelligence, and shadow review status — all internal evaluation."
       >
-        <LabOverviewCards metrics={OVERVIEW_METRICS} />
+        <LabOverviewCards metrics={overviewMetrics} />
       </LabSectionCard>
 
       <BrainGapPanel
@@ -148,6 +202,14 @@ export function IndiCareLabPage() {
         onCreateBuildBrief={handleCreateBuildBriefFromEvent}
         onAddToApprovalQueue={handleAddEventToApprovalQueue}
         onMarkReviewed={handleMarkEventReviewed}
+      />
+
+      <PatternIntelligencePanel
+        patterns={patterns}
+        analysedEventCount={patternDetection.analysedEventCount}
+        onCreateBuildBrief={handleCreateBuildBriefFromPattern}
+        onAddToApprovalQueue={handleAddPatternToApprovalQueue}
+        onUpdatePatternStatus={handleUpdatePatternStatus}
       />
 
       <InternalReviewTestPanel onEventCreated={handleReviewEventCreated} />

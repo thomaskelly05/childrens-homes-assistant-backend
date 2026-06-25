@@ -1,7 +1,7 @@
 import { runReviewEngine } from '@/lib/indicare-lab/review-board/review-engine'
 import { isShadowReviewEnabled } from '@/lib/indicare-lab/review-events/review-event-config'
 import { redactReviewEventFields } from '@/lib/indicare-lab/review-events/review-event-redaction'
-import { storeShadowReviewEvent } from '@/lib/indicare-lab/review-events/review-event-store'
+import { storeShadowReviewEvent } from '@/lib/indicare-lab/review-events/review-event-storage'
 import type { ReviewSource, ReviewTaskType } from '@/lib/indicare-lab/review-events/types'
 
 /** Minimum meaningful answer length before creating a shadow review event. */

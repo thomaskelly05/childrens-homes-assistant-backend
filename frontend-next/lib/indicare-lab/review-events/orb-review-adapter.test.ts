@@ -54,4 +54,22 @@ describe('IndiCare Lab shadow review adapter', () => {
     assert.match(panel, /Full text not stored/)
     assert.match(panel, /Redacted/)
   })
+
+  it('pattern intelligence panel and repository layer exist for Phase 4', () => {
+    const panel = readSource('components/indicare-lab/pattern-intelligence-panel.tsx')
+    assert.match(panel, /Pattern intelligence/)
+    assert.match(panel, /Create build brief/)
+    assert.match(panel, /Add to approval queue/)
+
+    const engine = readSource('lib/indicare-lab/patterns/pattern-detection-engine.ts')
+    assert.match(engine, /detectPatternsFromReviewEvents/)
+    assert.match(engine, /missing child voice/i)
+
+    const storage = readSource('lib/indicare-lab/review-events/review-event-storage.ts')
+    assert.match(storage, /listReviewEventsByPatternInputs/)
+    assert.match(storage, /development fallback/i)
+
+    const shell = readSource('components/indicare-lab/indicare-lab-shell.tsx')
+    assert.match(shell, /pattern-intelligence/)
+  })
 })
