@@ -27,7 +27,7 @@ import {
   X
 } from 'lucide-react'
 
-type MobileSheet = 'review' | 'format' | 'insert' | 'more' | null
+type MobileSheet = 'more' | 'format' | 'insert' | null
 
 export function OrbWriteMobileToolbar({
   onCommand,
@@ -41,7 +41,8 @@ export function OrbWriteMobileToolbar({
   onAskOrb,
   onOpenSource,
   onOpenGuidance,
-  onOpenTemplatePicker
+  onOpenTemplatePicker,
+  onOpenReview
 }: {
   onCommand: (command: string, value?: string) => void
   canUndo: boolean
@@ -55,6 +56,8 @@ export function OrbWriteMobileToolbar({
   onOpenSource?: () => void
   onOpenGuidance?: () => void
   onOpenTemplatePicker?: () => void
+  /** Opens ORB Review sheet — collapsed by default on mobile. */
+  onOpenReview?: () => void
 }) {
   const [sheet, setSheet] = useState<MobileSheet>(null)
 
@@ -73,32 +76,39 @@ export function OrbWriteMobileToolbar({
   return (
     <>
       <div
-        className="orb-write-mobile-toolbar flex shrink-0 items-stretch gap-1 border-t border-[var(--orb-line)]/40 bg-[var(--orb-surface-elevated)] p-2 md:hidden"
+        className="orb-write-mobile-toolbar orb-write-mobile-action-bar flex shrink-0 items-stretch gap-2 border-t border-[var(--orb-line)]/40 bg-[var(--orb-surface-elevated)] p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] md:hidden"
         data-orb-write-mobile-toolbar
+        data-orb-write-mobile-action-bar
         role="toolbar"
-        aria-label="Document tools"
+        aria-label="Document actions"
       >
+        {onSaveDraft ? (
+          <button
+            type="button"
+            className={`${btn} flex-1 gap-1.5 border-[var(--orb-primary)]/35 bg-[var(--orb-primary)] text-white`}
+            data-orb-write-save-draft
+            onClick={onSaveDraft}
+          >
+            <Save className="h-4 w-4 shrink-0" aria-hidden />
+            Save draft
+          </button>
+        ) : null}
         <button
           type="button"
           className={`${btn} flex-1 gap-1.5`}
+          data-orb-write-mobile-review-toggle
           data-orb-write-mobile-tab="review"
-          aria-expanded={sheet === 'review'}
-          onClick={() => setSheet((current) => (current === 'review' ? null : 'review'))}
+          onClick={() => {
+            if (onOpenReview) {
+              onOpenReview()
+              return
+            }
+            setSheet((current) => (current === 'more' ? null : 'more'))
+          }}
         >
           <Sparkles className="h-4 w-4 shrink-0" aria-hidden />
           Review
         </button>
-        {onApprove ? (
-          <button
-            type="button"
-            className={`${btn} flex-1 gap-1.5 border-emerald-400/40 bg-emerald-500/10 text-emerald-800`}
-            data-orb-write-approve
-            onClick={onApprove}
-          >
-            <Check className="h-4 w-4 shrink-0" aria-hidden />
-            Approve
-          </button>
-        ) : null}
         <button
           type="button"
           className={`${btn} flex-1`}
@@ -106,6 +116,7 @@ export function OrbWriteMobileToolbar({
           aria-expanded={sheet === 'more' || sheet === 'format' || sheet === 'insert'}
           onClick={() => setSheet((current) => (current === 'more' ? null : 'more'))}
         >
+          <MoreHorizontal className="h-4 w-4 shrink-0" aria-hidden />
           More
         </button>
       </div>
@@ -119,7 +130,7 @@ export function OrbWriteMobileToolbar({
         >
           <div className="flex items-center justify-between border-b border-[var(--orb-line)]/40 px-4 py-3">
             <p className="text-sm font-semibold capitalize text-[var(--orb-foreground)]">
-              {sheet === 'review' ? 'Review & export' : sheet === 'format' ? 'Format' : sheet === 'insert' ? 'Insert' : 'More'}
+              {sheet === 'format' ? 'Format' : sheet === 'insert' ? 'Insert' : 'More'}
             </p>
             <button
               type="button"
@@ -131,12 +142,20 @@ export function OrbWriteMobileToolbar({
             </button>
           </div>
           <div className="flex max-h-[min(42dvh,20rem)] flex-wrap gap-2 overflow-y-auto p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
-            {sheet === 'review' ? (
+            {sheet === 'more' ? (
               <>
-                {onSaveDraft ? (
-                  <button type="button" className={btn} onClick={() => { onSaveDraft(); closeSheet() }} data-orb-write-save-draft>
-                    <Save className="h-4 w-4" />
-                    Save draft
+                {onApprove ? (
+                  <button
+                    type="button"
+                    className={`${btn} gap-1.5 border-emerald-400/40 bg-emerald-500/10 text-emerald-800`}
+                    data-orb-write-approve
+                    onClick={() => {
+                      onApprove()
+                      closeSheet()
+                    }}
+                  >
+                    <Check className="h-4 w-4" />
+                    Approve
                   </button>
                 ) : null}
                 {onCopy ? (
@@ -157,21 +176,6 @@ export function OrbWriteMobileToolbar({
                     Export PDF
                   </button>
                 ) : null}
-                {onAskOrb ? (
-                  <button
-                    type="button"
-                    className={`${btn} w-full justify-center gap-2`}
-                    onClick={() => { onAskOrb(); closeSheet() }}
-                    data-orb-write-ask-orb
-                  >
-                    <MessageCircle className="h-4 w-4" />
-                    Ask ORB
-                  </button>
-                ) : null}
-              </>
-            ) : null}
-            {sheet === 'more' ? (
-              <>
                 {onOpenSource ? (
                   <button
                     type="button"

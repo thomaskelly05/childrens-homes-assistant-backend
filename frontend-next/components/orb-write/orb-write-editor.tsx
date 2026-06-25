@@ -1,7 +1,13 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
+import {
+  OrbWriteMobileActiveSection,
+  OrbWriteMobileSectionNav,
+  OrbWriteMobileSectionsSheet,
+  useOrbWriteMobileSectionState
+} from '@/components/orb-write/orb-write-mobile-section-workspace'
 import { OrbWriteMobileToolbar } from '@/components/orb-write/orb-write-mobile-toolbar'
 import { OrbWriteRecordTypeSelector } from '@/components/orb-write/orb-write-record-type-selector'
 import { OrbWriteToolbar } from '@/components/orb-write/orb-write-toolbar'
@@ -13,6 +19,12 @@ import {
   orbWriteBodyLooksLikeMarkdownTemplate,
   orbWriteBodyToMobileNotepadHtml
 } from '@/lib/orb/write/orb-write-mobile-body'
+import {
+  orbWriteBodyUsesMarkdownSections,
+  parseOrbWriteMobileSections,
+  rebuildOrbWriteMarkdownFromSections,
+  type OrbWriteMobileSection
+} from '@/lib/orb/write/orb-write-mobile-sections'
 import {
   readOrbWriteZoomPreference,
   writeOrbWriteZoomPreference,
@@ -41,6 +53,13 @@ function htmlToPlainText(html: string): string {
   return div.innerText || div.textContent || ''
 }
 
+function rebuildBodyFromSections(sections: OrbWriteMobileSection[], originalBody: string): string {
+  if (orbWriteBodyUsesMarkdownSections(originalBody)) {
+    return rebuildOrbWriteMarkdownFromSections(sections)
+  }
+  return rebuildOrbWriteMarkdownFromSections(sections)
+}
+
 export function OrbWriteEditor({
   document: doc,
   onChange,
@@ -55,8 +74,10 @@ export function OrbWriteEditor({
   onOpenGuidance,
   onOpenTemplatePicker,
   onRecordTypeSelect,
+  onOpenReview,
   lastEdited,
-  suppressRecordTypeBadge = false
+  suppressRecordTypeBadge = false,
+  mobileStudioLayout = false
 }: {
   document: OrbWriteDocument
   onChange: (body: string, plainText: string) => void
@@ -71,9 +92,12 @@ export function OrbWriteEditor({
   onOpenGuidance?: () => void
   onOpenTemplatePicker?: () => void
   onRecordTypeSelect?: (recordTypeId: string) => void
+  onOpenReview?: () => void
   lastEdited?: string
   /** When header already exposes record type on mobile, hide the notepad badge row duplicate. */
   suppressRecordTypeBadge?: boolean
+  /** Parent supplies summary bar + compact header — editor shows section workspace only. */
+  mobileStudioLayout?: boolean
 }) {
   const { isMobile } = useOrbResponsiveMode()
   const editorRef = useRef<HTMLDivElement>(null)
@@ -83,6 +107,12 @@ export function OrbWriteEditor({
   const [wordCount, setWordCount] = useState(doc.word_count)
   const [zoomMode, setZoomMode] = useState<OrbWriteZoomMode>('percent')
   const [zoomPercent, setZoomPercent] = useState<OrbWriteZoomLevel>(100)
+  const [mobileSections, setMobileSections] = useState<OrbWriteMobileSection[]>(() =>
+    parseOrbWriteMobileSections(doc.body)
+  )
+
+  const useMobileSectionLayout = isMobile
+  const sectionNav = useOrbWriteMobileSectionState(mobileSections.length)
 
   useEffect(() => {
     const pref = readOrbWriteZoomPreference()
@@ -91,12 +121,19 @@ export function OrbWriteEditor({
   }, [])
 
   useEffect(() => {
+    if (!useMobileSectionLayout) return
+    if (editorRef.current?.matches(':focus')) return
+    setMobileSections(parseOrbWriteMobileSections(doc.body))
+  }, [doc.body, useMobileSectionLayout])
+
+  useEffect(() => {
+    if (useMobileSectionLayout) return
     if (!editorRef.current) return
     const nextHtml = orbWriteBodyForEditor(doc.body)
     if (editorRef.current.innerHTML !== nextHtml && !editorRef.current.matches(':focus')) {
       editorRef.current.innerHTML = nextHtml
     }
-  }, [doc.body])
+  }, [doc.body, useMobileSectionLayout])
 
   const syncContent = useCallback(() => {
     if (!editorRef.current) return
@@ -109,6 +146,22 @@ export function OrbWriteEditor({
     setWordCount(words)
     onWordCountChange?.(words)
   }, [onChange, onWordCountChange])
+
+  const syncMobileSectionBody = useCallback(
+    (sectionIndex: number, body: string) => {
+      const nextSections = mobileSections.map((section, index) =>
+        index === sectionIndex ? { ...section, body } : section
+      )
+      setMobileSections(nextSections)
+      const rebuilt = rebuildBodyFromSections(nextSections, doc.body)
+      const plain = nextSections.map((s) => `${s.title}\n${s.body}`).join('\n\n')
+      const words = plain.trim().split(/\s+/).filter(Boolean).length
+      onChange(rebuilt, plain)
+      setWordCount(words)
+      onWordCountChange?.(words)
+    },
+    [doc.body, mobileSections, onChange, onWordCountChange]
+  )
 
   const runCommand = useCallback(
     (command: string, value?: string) => {
@@ -147,6 +200,8 @@ export function OrbWriteEditor({
 
   const scale = zoomMode === 'fit-width' ? undefined : zoomPercent / 100
 
+  const activeSection = mobileSections[sectionNav.activeIndex] ?? mobileSections[0]
+
   const editorBody = (
     <div
       ref={editorRef}
@@ -165,8 +220,52 @@ export function OrbWriteEditor({
     />
   )
 
+  const mobileSectionWorkspace = useMemo(() => {
+    if (!useMobileSectionLayout || !activeSection) return null
+    return (
+      <>
+        <OrbWriteMobileActiveSection
+          sectionIndex={sectionNav.activeIndex}
+          sectionCount={mobileSections.length}
+          section={activeSection}
+          readOnly={doc.is_finalised}
+          onBodyChange={(body) => syncMobileSectionBody(sectionNav.activeIndex, body)}
+        />
+        <OrbWriteMobileSectionNav
+          sectionIndex={sectionNav.activeIndex}
+          sectionCount={mobileSections.length}
+          onPrevious={sectionNav.goPrevious}
+          onNext={sectionNav.goNext}
+          onOpenSections={sectionNav.openSections}
+        />
+        <OrbWriteMobileSectionsSheet
+          open={sectionNav.sectionsSheetOpen}
+          sections={mobileSections}
+          activeIndex={sectionNav.activeIndex}
+          onSelect={sectionNav.setActiveIndex}
+          onClose={sectionNav.closeSections}
+        />
+      </>
+    )
+  }, [
+    activeSection,
+    doc.is_finalised,
+    mobileSections,
+    sectionNav,
+    syncMobileSectionBody,
+    useMobileSectionLayout
+  ])
+
   return (
-    <div className={`orb-write-studio-editor relative flex min-h-0 flex-1 flex-col overflow-hidden ${isMobile ? '' : 'rounded-xl border border-[var(--orb-line)]/50 bg-[var(--orb-surface-elevated)]'}`} data-orb-write-editor data-orb-write-mobile={isMobile ? 'true' : 'false'} data-orb-write-notepad={isMobile ? 'true' : 'false'} data-orb-write-record-type-suppressed={isMobile && suppressRecordTypeBadge ? 'true' : undefined}>
+    <div
+      className={`orb-write-studio-editor relative flex min-h-0 flex-1 flex-col overflow-hidden ${isMobile ? '' : 'rounded-xl border border-[var(--orb-line)]/50 bg-[var(--orb-surface-elevated)]'}`}
+      data-orb-write-editor
+      data-orb-write-mobile={isMobile ? 'true' : 'false'}
+      data-orb-write-mobile-studio={useMobileSectionLayout ? 'true' : undefined}
+      data-orb-write-mobile-layout={useMobileSectionLayout ? 'one-section' : undefined}
+      data-orb-write-notepad={isMobile && !useMobileSectionLayout ? 'true' : undefined}
+      data-orb-write-record-type-suppressed={isMobile && suppressRecordTypeBadge ? 'true' : undefined}
+    >
       <div className="hidden md:block">
         <OrbWriteToolbar
           onCommand={runCommand}
@@ -184,39 +283,48 @@ export function OrbWriteEditor({
           {...zoomHandlers}
         />
       </div>
-      {isMobile ? (
+      {useMobileSectionLayout ? (
+        <div
+          className="flex min-h-0 flex-1 flex-col overflow-hidden"
+          data-orb-write-mobile-section-workspace
+        >
+          {mobileSectionWorkspace}
+        </div>
+      ) : isMobile ? (
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden" data-orb-write-notepad-surface>
-          <div
-            className="flex shrink-0 flex-wrap items-center gap-1.5 border-b border-[var(--orb-line)]/40 px-3 py-1.5 text-[10px] text-[var(--orb-muted)]"
-            data-orb-write-notepad-meta
-          >
-            {!suppressRecordTypeBadge ? (
-              <OrbWriteRecordTypeSelector
-                recordTypeId={doc.record_type_id ?? 'general_dictation'}
-                variant="badge"
-                onOpenFullPicker={onOpenTemplatePicker}
-                onSelect={(recordType) => onRecordTypeSelect?.(recordType.id)}
-              />
-            ) : null}
-            {doc.is_finalised ? (
-              <span
-                className="inline-flex shrink-0 items-center rounded-full border border-emerald-400/40 bg-emerald-500/10 px-2 py-0.5 font-semibold uppercase tracking-wide text-emerald-800"
-                data-orb-write-approved-badge
-              >
-                Approved
+          {!mobileStudioLayout ? (
+            <div
+              className="flex shrink-0 flex-wrap items-center gap-1.5 border-b border-[var(--orb-line)]/40 px-3 py-1.5 text-[10px] text-[var(--orb-muted)]"
+              data-orb-write-notepad-meta
+            >
+              {!suppressRecordTypeBadge ? (
+                <OrbWriteRecordTypeSelector
+                  recordTypeId={doc.record_type_id ?? 'general_dictation'}
+                  variant="badge"
+                  onOpenFullPicker={onOpenTemplatePicker}
+                  onSelect={(recordType) => onRecordTypeSelect?.(recordType.id)}
+                />
+              ) : null}
+              {doc.is_finalised ? (
+                <span
+                  className="inline-flex shrink-0 items-center rounded-full border border-emerald-400/40 bg-emerald-500/10 px-2 py-0.5 font-semibold uppercase tracking-wide text-emerald-800"
+                  data-orb-write-approved-badge
+                >
+                  Approved
+                </span>
+              ) : (
+                <span
+                  className="inline-flex shrink-0 items-center rounded-full border border-amber-300/40 bg-amber-500/10 px-2 py-0.5 font-semibold uppercase tracking-wide text-amber-900"
+                  data-orb-write-review-badge
+                >
+                  Review
+                </span>
+              )}
+              <span className="ml-auto" data-orb-write-word-count-display>
+                {wordCount} words
               </span>
-            ) : (
-              <span
-                className="inline-flex shrink-0 items-center rounded-full border border-amber-300/40 bg-amber-500/10 px-2 py-0.5 font-semibold uppercase tracking-wide text-amber-900"
-                data-orb-write-review-badge
-              >
-                Review
-              </span>
-            )}
-            <span className="ml-auto" data-orb-write-word-count-display>
-              {wordCount} words
-            </span>
-          </div>
+            </div>
+          ) : null}
           <div
             className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-3 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]"
             data-orb-write-notepad-body
@@ -225,72 +333,72 @@ export function OrbWriteEditor({
           </div>
         </div>
       ) : (
-      <div
-        ref={canvasRef}
-        className="orb-studio-document-canvas-workspace min-h-0 flex-1 overflow-auto bg-[#e8eaed] p-4 md:p-6"
-        data-orb-write-canvas-workspace
-      >
         <div
-          className="mx-auto origin-top transition-transform duration-150"
-          style={{
-            width: zoomMode === 'fit-width' ? '100%' : '210mm',
-            maxWidth: zoomMode === 'fit-width' ? '210mm' : undefined,
-            transform: scale ? `scale(${scale})` : undefined
-          }}
-          data-orb-write-document-canvas
-          data-orb-write-zoom={zoomMode === 'fit-width' ? 'fit-width' : zoomPercent}
+          ref={canvasRef}
+          className="orb-studio-document-canvas-workspace min-h-0 flex-1 overflow-auto bg-[#e8eaed] p-4 md:p-6"
+          data-orb-write-canvas-workspace
         >
-          <article
-            className="min-h-[297mm] bg-white px-[20mm] py-[18mm] text-[#0f172a] shadow-[0_4px_24px_rgba(15,23,42,0.12)] print:shadow-none"
-            data-orb-write-print-page
+          <div
+            className="mx-auto origin-top transition-transform duration-150"
+            style={{
+              width: zoomMode === 'fit-width' ? '100%' : '210mm',
+              maxWidth: zoomMode === 'fit-width' ? '210mm' : undefined,
+              transform: scale ? `scale(${scale})` : undefined
+            }}
+            data-orb-write-document-canvas
+            data-orb-write-zoom={zoomMode === 'fit-width' ? 'fit-width' : zoomPercent}
           >
-            <header className="mb-6 border-b border-slate-200 pb-4">
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <h1 className="text-xl font-semibold text-slate-900" data-orb-write-page-title>
-                  {doc.title}
-                </h1>
-                {doc.is_finalised ? (
+            <article
+              className="min-h-[297mm] bg-white px-[20mm] py-[18mm] text-[#0f172a] shadow-[0_4px_24px_rgba(15,23,42,0.12)] print:shadow-none"
+              data-orb-write-print-page
+            >
+              <header className="mb-6 border-b border-slate-200 pb-4">
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <h1 className="text-xl font-semibold text-slate-900" data-orb-write-page-title>
+                    {doc.title}
+                  </h1>
+                  {doc.is_finalised ? (
+                    <span
+                      className="inline-flex shrink-0 items-center rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-800"
+                      data-orb-write-approved-badge
+                    >
+                      Adult approved
+                    </span>
+                  ) : (
+                    <span
+                      className="inline-flex shrink-0 items-center rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-900"
+                      data-orb-write-review-badge
+                    >
+                      Review required
+                    </span>
+                  )}
+                </div>
+                <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-500">
                   <span
-                    className="inline-flex shrink-0 items-center rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-800"
-                    data-orb-write-approved-badge
+                    className="inline-flex rounded-full border border-sky-200 bg-sky-50 px-2 py-0.5 font-medium text-sky-800"
+                    data-orb-write-record-type-badge
                   >
-                    Adult approved
+                    {doc.record_type_label}
                   </span>
-                ) : (
-                  <span
-                    className="inline-flex shrink-0 items-center rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-900"
-                    data-orb-write-review-badge
-                  >
-                    Review required
-                  </span>
-                )}
-              </div>
-              <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                <span
-                  className="inline-flex rounded-full border border-sky-200 bg-sky-50 px-2 py-0.5 font-medium text-sky-800"
-                  data-orb-write-record-type-badge
-                >
-                  {doc.record_type_label}
-                </span>
-                <time dateTime={doc.updated_at} data-orb-write-datetime>
-                  {dateLine}
-                </time>
-              </div>
-            </header>
+                  <time dateTime={doc.updated_at} data-orb-write-datetime>
+                    {dateLine}
+                  </time>
+                </div>
+              </header>
 
-            {editorBody}
+              {editorBody}
 
-            <footer className="mt-8 border-t border-slate-200 pt-4">
-              <p className="text-xs leading-relaxed text-slate-600" data-orb-write-review-notice>
-                {doc.review_required_statement}
-              </p>
-              <p className="mt-3 text-[10px] text-slate-400" data-orb-write-export-footer>
-                {PDF_FOOTER}
-              </p>
-            </footer>
-          </article>
+              <footer className="mt-8 border-t border-slate-200 pt-4">
+                <p className="text-xs leading-relaxed text-slate-600" data-orb-write-review-notice>
+                  {doc.review_required_statement}
+                </p>
+                <p className="mt-3 text-[10px] text-slate-400" data-orb-write-export-footer>
+                  {PDF_FOOTER}
+                </p>
+              </footer>
+            </article>
+          </div>
         </div>
-      </div>
       )}
       {isMobile ? (
         <OrbWriteMobileToolbar
@@ -306,6 +414,7 @@ export function OrbWriteEditor({
           onOpenSource={onOpenSource}
           onOpenGuidance={onOpenGuidance}
           onOpenTemplatePicker={onOpenTemplatePicker}
+          onOpenReview={onOpenReview}
         />
       ) : null}
     </div>
