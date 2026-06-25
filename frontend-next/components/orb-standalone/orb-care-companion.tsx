@@ -1062,7 +1062,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
     if (activePanel === 'orb_dictate') return 'orb_dictate'
     if (activePanel === 'orb_voice') return 'orb_voice'
     if (activePanel === 'orb_write') return 'orb_write'
-    if (activePanel === null && showEmptyState) return 'chat'
+    if (activePanel === null && showEmptyState) return 'home'
     if (activePanel === null) return 'chat'
     return null
   }, [activePanel, residentialSurface, showEmptyState])
@@ -3419,11 +3419,12 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
 
   const composer = (
     <div
-      className={`orb-composer-dock flex-none border-t border-transparent pt-2 ${
+      className={`orb-composer-dock orb-mobile-composer-dock flex-none border-t border-transparent pt-2 ${
         residentialSurface && showEmptyState ? 'orb-composer-dock--empty' : ''
       }`}
       data-orb-composer="main"
       data-orb-composer-mounted="true"
+      data-orb-composer-safe-area="true"
     >
       {documentLensActions.length ? (
         <div className="mx-auto max-w-3xl px-4 pt-3">
@@ -3932,6 +3933,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
       data-orb-mobile-shell={isMobileViewport ? 'true' : undefined}
       data-orb-mobile-surface={isMobileViewport && residentialSurface ? 'true' : undefined}
       data-orb-chat-layout={isMobileViewport ? 'mobile' : 'desktop'}
+      data-orb-no-horizontal-overflow={isMobileViewport ? 'true' : undefined}
       data-orb-active-panel={activePanel || 'none'}
       data-orb-close-all-panels
       data-orb-text-first-chat="true"

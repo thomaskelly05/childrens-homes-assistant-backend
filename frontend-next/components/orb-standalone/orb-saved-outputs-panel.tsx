@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Archive, Loader2, Trash2 } from 'lucide-react'
+import { Archive, ArrowLeft, Loader2, Trash2 } from 'lucide-react'
 
 import { GlassOrbMark } from '@/components/orb-residential/ui/glass-orb-mark'
 import {
@@ -274,6 +274,9 @@ export function OrbSavedOutputsPanel({
   const activeFilterCount =
     (chipFilter !== 'all' ? 1 : 0) + (projectFilter ? 1 : 0) + (includeArchived ? 1 : 0) + (statusFilter ? 1 : 0)
 
+  const recordsMobileListMode = isMobile && !selectedId
+  const recordsMobileDetailMode = isMobile && Boolean(selectedId)
+
   const statusFilterRow = (
     <div className="flex flex-wrap gap-1.5" data-orb-saved-outputs-status-filters>
       {ORB_RECORDS_STATUS_CHIPS.map((chip) => (
@@ -374,6 +377,7 @@ export function OrbSavedOutputsPanel({
         className={`orb-studio-shell flex min-h-0 flex-col gap-2 p-2 sm:gap-3 sm:p-4 ${showRecordsEmptyCanvas ? 'items-center justify-center' : 'lg:flex-row'} ${residentialSurface ? 'orb-workspace orb-workspace--records' : ''}`}
         data-orb-saved-outputs-panel
         data-orb-studio-shell="saved_outputs"
+        data-orb-records-mobile-mode={isMobile ? (recordsMobileDetailMode ? 'detail' : 'list') : undefined}
         {...(residentialSurface ? { 'data-orb-workspace-records': true } : {})}
         {...(items.length === 0 && !loading ? { 'data-orb-saved-outputs-empty': true } : {})}
       >
@@ -389,7 +393,10 @@ export function OrbSavedOutputsPanel({
           </div>
         ) : (
         <>
-        <div className="flex w-full shrink-0 flex-col lg:w-[var(--orb-desktop-saved-list-width,27.5rem)] lg:max-w-[var(--orb-desktop-saved-list-width,27.5rem)] lg:border-b-0 lg:border-r lg:border-[var(--orb-mobile-ws-card-border,var(--orb-line))]">
+        <div
+          className={`flex w-full shrink-0 flex-col lg:w-[var(--orb-desktop-saved-list-width,27.5rem)] lg:max-w-[var(--orb-desktop-saved-list-width,27.5rem)] lg:border-b-0 lg:border-r lg:border-[var(--orb-mobile-ws-card-border,var(--orb-line))] ${recordsMobileDetailMode ? 'hidden' : ''}`}
+          data-orb-records-mobile-list={isMobile ? 'true' : undefined}
+        >
           {!isMobile ? (
           <OrbStudioHeader
             title={ORB_RECORDS_PANEL_TITLE}
@@ -621,11 +628,26 @@ export function OrbSavedOutputsPanel({
         </div>
 
         <div
-          className={`flex min-h-[10rem] min-w-0 flex-1 flex-col lg:min-h-[12rem] lg:border-l lg:border-[var(--orb-mobile-ws-card-border,var(--orb-line))] ${isMobile && items.length === 0 ? 'hidden' : ''}`}
+          className={`flex min-h-[10rem] min-w-0 flex-1 flex-col lg:min-h-[12rem] lg:border-l lg:border-[var(--orb-mobile-ws-card-border,var(--orb-line))] ${isMobile && items.length === 0 ? 'hidden' : ''} ${recordsMobileListMode ? 'hidden' : ''}`}
           data-orb-saved-output-detail
+          data-orb-records-mobile-detail={isMobile ? 'true' : undefined}
         >
           {detail ? (
             <>
+              {recordsMobileDetailMode ? (
+                <div className="border-b border-[var(--orb-mobile-ws-card-border,var(--orb-line))] px-3 py-2">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedId(null)}
+                    className="inline-flex min-h-11 items-center gap-2 rounded-xl px-2 text-sm font-medium text-[var(--orb-foreground)] transition hover:bg-[var(--orb-surface-hover)]"
+                    data-orb-records-mobile-back
+                    aria-label="Back to records list"
+                  >
+                    <ArrowLeft className="h-4 w-4 shrink-0" aria-hidden />
+                    Records list
+                  </button>
+                </div>
+              ) : null}
               <div className="border-b border-[var(--orb-mobile-ws-card-border,var(--orb-line))] px-4 py-3">
                 <h3 className="text-base font-semibold text-[var(--orb-mobile-ws-text,var(--orb-foreground))]">{detail.title}</h3>
                 <p className="mt-1 text-xs text-[var(--orb-mobile-ws-muted,var(--orb-muted))]">
