@@ -1,7 +1,9 @@
 'use client'
 
 import { Menu, Settings, User } from 'lucide-react'
-import type { DragEvent, ReactNode } from 'react'
+import { useEffect, type DragEvent, type ReactNode } from 'react'
+
+import { useOrbMobileViewport } from '@/components/orb-standalone/use-orb-mobile-viewport'
 
 import { ORB_RESIDENTIAL_TAGLINE } from '@/lib/orb/orb-residential-copy'
 
@@ -29,12 +31,12 @@ export function OrbMobileChatHeader({
 
   return (
     <header
-      className="orb-main-header orb-mobile-chat-header relative z-10 flex shrink-0 items-center gap-2 border-b border-[var(--orb-line)]/40 bg-[var(--orb-bg-deep)]/90 px-3 py-2 backdrop-blur-sm lg:hidden"
+      className="orb-main-header orb-mobile-chat-header orb-mobile-safe-area-inline relative z-10 flex shrink-0 items-center gap-2 border-b border-[var(--orb-line)]/40 bg-[var(--orb-bg-deep)]/90 px-3 py-2 pt-[max(0.5rem,env(safe-area-inset-top))] backdrop-blur-sm lg:hidden"
       data-orb-mobile-header
     >
       <button
         type="button"
-        className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-[var(--orb-muted)] transition hover:bg-[var(--orb-surface-hover)] hover:text-[var(--orb-foreground)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--orb-royal-blue,#168bff)]"
+        className="inline-flex h-11 min-h-11 w-11 min-w-11 shrink-0 items-center justify-center rounded-xl text-[var(--orb-muted)] transition hover:bg-[var(--orb-surface-hover)] hover:text-[var(--orb-foreground)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--orb-royal-blue,#168bff)]"
         onClick={onOpenMenu}
         aria-label="Open menu"
         data-orb-mobile-menu
@@ -65,7 +67,7 @@ export function OrbMobileChatHeader({
 
       <button
         type="button"
-        className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-[var(--orb-muted)] transition hover:bg-[var(--orb-surface-hover)] hover:text-[var(--orb-royal-blue,#168bff)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--orb-royal-blue,#168bff)]"
+        className="inline-flex h-11 min-h-11 w-11 min-w-11 shrink-0 items-center justify-center rounded-xl text-[var(--orb-muted)] transition hover:bg-[var(--orb-surface-hover)] hover:text-[var(--orb-royal-blue,#168bff)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--orb-royal-blue,#168bff)]"
         onClick={(event) => onOpenAccount(event.currentTarget)}
         aria-label="Account and settings"
         data-orb-mobile-account
@@ -124,42 +126,66 @@ export function OrbLayout({
   onDrop,
   guidedDemoActive = false
 }: OrbLayoutProps) {
+  const isMobileViewport = useOrbMobileViewport()
+  const mobileDrawerOpen = isMobileViewport && sidebarOpen
+
+  useEffect(() => {
+    if (!mobileDrawerOpen) return
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onCloseSidebarOverlay()
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.body.style.overflow = previousOverflow
+      window.removeEventListener('keydown', onKeyDown)
+    }
+  }, [mobileDrawerOpen, onCloseSidebarOverlay])
+
   return (
     <>
-      {sidebarOpen ? (
+      {mobileDrawerOpen ? (
         <button
           type="button"
-          className="orb-panel-overlay fixed inset-0 z-40 lg:hidden"
+          className="orb-panel-overlay orb-mobile-drawer-backdrop fixed inset-0 z-40 lg:hidden"
           aria-label="Close sidebar"
+          data-orb-mobile-drawer-backdrop
           onClick={onCloseSidebarOverlay}
         />
       ) : null}
 
       <div
-        className={`relative min-h-0 flex-1 ${residentialSurface ? 'orb-app-shell__grid' : 'flex'}`}
+        className={`relative min-h-0 flex-1 overflow-x-hidden ${residentialSurface ? 'orb-app-shell__grid' : 'flex'}`}
         data-orb-sidebar-state={residentialSurface ? (sidebarCollapsed ? 'collapsed' : 'expanded') : undefined}
         data-orb-sidebar-collapsed={residentialSurface && sidebarCollapsed ? 'true' : undefined}
+        data-orb-sidebar-drawer-open={mobileDrawerOpen ? 'true' : undefined}
+        data-orb-no-horizontal-overflow={isMobileViewport ? 'true' : undefined}
       >
         <aside
-          className={`orb-sidebar fixed inset-y-0 left-0 z-50 flex flex-col border-r transition-[transform,width] duration-200 motion-reduce:transition-none lg:static lg:z-auto lg:translate-x-0 ${
+          className={`orb-sidebar orb-mobile-drawer fixed inset-y-0 left-0 z-50 flex max-h-[100dvh] flex-col border-r transition-[transform,width] duration-200 motion-reduce:transition-none lg:static lg:z-auto lg:max-h-none lg:translate-x-0 ${
             residentialSurface
               ? sidebarCollapsed
                 ? 'w-[var(--orb-sidebar-width-collapsed,4.25rem)] max-w-[var(--orb-sidebar-width-collapsed,4.25rem)] lg:w-[var(--orb-sidebar-width-collapsed,4.25rem)]'
-                : 'w-[min(100%,var(--orb-sidebar-width,17.5rem))] max-w-[var(--orb-sidebar-width,17.5rem)] lg:w-[var(--orb-sidebar-width,17.5rem)]'
-              : 'w-[min(100%,18.75rem)] lg:w-[18.75rem]'
+                : 'w-[min(90vw,360px)] max-w-[min(90vw,360px)] lg:w-[var(--orb-sidebar-width,17.5rem)] lg:max-w-[var(--orb-sidebar-width,17.5rem)]'
+              : 'w-[min(90vw,360px)] max-w-[min(90vw,360px)] lg:w-[18.75rem]'
           } ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}
           data-orb-sidebar={residentialSurface ? 'primary' : undefined}
           data-orb-sidebar-scroll-container
+          data-orb-mobile-drawer={isMobileViewport ? 'true' : undefined}
+          data-orb-sidebar-drawer-open={mobileDrawerOpen ? 'true' : 'false'}
           data-orb-sidebar-state={residentialSurface ? (sidebarCollapsed ? 'collapsed' : 'expanded') : undefined}
           data-orb-sidebar-collapsed={residentialSurface && sidebarCollapsed ? 'true' : undefined}
           data-orb-guided-demo-active={guidedDemoActive ? 'true' : undefined}
+          aria-hidden={isMobileViewport && !sidebarOpen ? true : undefined}
         >
           {sidebar}
         </aside>
 
         <main
-          className="orb-main flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
+          className={`orb-main flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden ${mobileDrawerOpen ? 'pointer-events-none lg:pointer-events-auto' : ''}`}
           data-orb-main={residentialSurface ? 'workspace' : undefined}
+          aria-hidden={mobileDrawerOpen ? true : undefined}
         >
           {mobileHeader}
           <div className={mobileHeader ? 'hidden lg:contents' : 'contents'}>{header}</div>

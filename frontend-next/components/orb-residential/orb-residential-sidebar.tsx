@@ -375,8 +375,6 @@ export function OrbResidentialSidebar({
   function isNavActive(navId: string): boolean {
     if (!activeNavId) return false
     if (navId === activeNavId) return true
-    if (navId === 'home' && activeNavId === 'chat') return true
-    if (navId === 'chat' && activeNavId === 'home') return true
     if (navId === 'saved' && activeNavId === 'saved_outputs') return true
     return false
   }
@@ -512,8 +510,10 @@ export function OrbResidentialSidebar({
   function handleVisibleNavClick(navId: string) {
     switch (navId) {
       case 'home':
+        onOpenHome?.()
+        break
       case 'chat':
-        onOpenHome?.() ?? onOpenChat?.()
+        onOpenChat?.()
         break
       case 'saved':
         onOpenSavedOutputs?.()
@@ -625,9 +625,10 @@ export function OrbResidentialSidebar({
             {onClose ? (
               <button
                 type="button"
-                className="rounded-lg p-1 text-[var(--orb-muted)] lg:hidden"
+                className="inline-flex h-11 min-h-11 w-11 min-w-11 items-center justify-center rounded-lg text-[var(--orb-muted)] lg:hidden"
                 onClick={onClose}
                 aria-label="Close sidebar"
+                data-orb-mobile-drawer-close
               >
                 <X className="h-5 w-5" />
               </button>
@@ -661,7 +662,7 @@ export function OrbResidentialSidebar({
         </label>
       </div>
 
-      <div className="orb-sidebar-group min-h-0 flex-1 overflow-y-auto px-2 py-2" data-orb-sidebar-scroll>
+      <div className="orb-sidebar-group min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 py-2" data-orb-sidebar-scroll>
 
         {isMobile ? (
           <nav className="mb-3 shrink-0 space-y-0.5" aria-label="ORB menu" data-orb-sidebar-mobile-quick-nav>
@@ -889,7 +890,7 @@ export function OrbResidentialSidebar({
         {isMobile ? (
           <SidebarCollapsibleSection
             sectionKey="account"
-            title="Account / Workspace"
+            title="Account"
             collapsed={accountCollapsed}
             onToggle={() => toggleSection('account', accountCollapsed, setAccountCollapsed)}
           >
@@ -927,8 +928,11 @@ export function OrbResidentialSidebar({
               </button>
               <button
                 type="button"
-                onClick={() => onOpenSettings?.()}
-                className="orb-sidebar-nav-item w-full"
+                onClick={() => {
+                  onClose?.()
+                  onOpenSettings?.()
+                }}
+                className={`orb-sidebar-nav-item w-full ${isNavActive('settings') ? 'orb-sidebar-nav-item--active' : ''}`}
                 data-orb-sidebar-settings
                 aria-label="Open settings"
               >

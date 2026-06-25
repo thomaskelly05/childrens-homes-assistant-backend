@@ -41,6 +41,7 @@ export function OrbHelpPanel({ open, onClose }: { open: boolean; onClose: () => 
       ariaLabel="ORB help and safety"
       panelId="help"
       layout="center"
+      mobileMode="full"
     >
       <div
         className="orb-help-panel-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain"
