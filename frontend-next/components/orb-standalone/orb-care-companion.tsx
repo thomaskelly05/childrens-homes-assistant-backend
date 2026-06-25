@@ -3503,7 +3503,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
       onDocumentActionPlan={() => void runDocumentLens('actions')}
       onSummariseDocument={() => void runDocumentLens('summary')}
       onAddDocumentToLibrary={() => openKnowledgeLibrary()}
-      onToolsClick={openToolsPanel}
+      onToolsClick={residentialSurface ? undefined : openToolsPanel}
       suggestions={undefined}
       agentLabel={residentialSurface ? undefined : activeAgent?.title ?? 'Ask ORB'}
       onAgentSelectorClick={residentialSurface ? undefined : () => setAgentsPanelOpen(true)}
@@ -3789,20 +3789,28 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
         }}
         onOpenSavedOutputs={openSavedOutputsPanel}
         onDocumentContext={(ctx) => setPendingDocument(ctx)}
-        onRunDeepResearch={(ctx) => {
-          setPendingDocument(ctx)
-          setAgentPanelType('deep_research')
-          setAgentPanelPrompt(
-            `Deep research on this document: ${ctx.title}. What does guidance say and what should we do next?`
-          )
-          openAgentsPanel()
-        }}
-        onRunDocumentAnalysisAgent={(ctx) => {
-          setPendingDocument(ctx)
-          setAgentPanelType('document_analysis')
-          setAgentPanelPrompt(`Analyse this document and create a manager briefing: ${ctx.title}`)
-          openAgentsPanel()
-        }}
+        onRunDeepResearch={
+          residentialSurface
+            ? undefined
+            : (ctx) => {
+                setPendingDocument(ctx)
+                setAgentPanelType('deep_research')
+                setAgentPanelPrompt(
+                  `Deep research on this document: ${ctx.title}. What does guidance say and what should we do next?`
+                )
+                openAgentsPanel()
+              }
+        }
+        onRunDocumentAnalysisAgent={
+          residentialSurface
+            ? undefined
+            : (ctx) => {
+                setPendingDocument(ctx)
+                setAgentPanelType('document_analysis')
+                setAgentPanelPrompt(`Analyse this document and create a manager briefing: ${ctx.title}`)
+                openAgentsPanel()
+              }
+        }
       />
       <OrbShiftBuilderPanel
         open={activePanel === 'shift_builder'}
