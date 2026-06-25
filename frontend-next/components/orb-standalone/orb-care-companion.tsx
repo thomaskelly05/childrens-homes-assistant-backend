@@ -4441,6 +4441,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
                     className={`flex min-h-0 flex-col items-center justify-center px-2 py-2 text-center md:min-h-[min(28vh,16rem)] md:py-4 ${residentialSurface ? 'orb-residential-empty orb-residential-empty--desktop orb-workspace--home orb-workspace--home-calm' : ''}`}
                     data-orb-empty-state
                     data-orb-home-centre-stack={residentialSurface ? 'true' : undefined}
+                    data-orb-home-mobile-compact={residentialSurface && isMobileViewport ? 'true' : undefined}
                     {...(residentialSurface ? { 'data-orb-residential-empty': true, 'data-orb-workspace-home': true } : {})}
                   >
                     {residentialSurface ? <div className="orb-v2-atmosphere" aria-hidden /> : null}
@@ -4475,20 +4476,28 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
                     </div>
                     {residentialSurface ? (
                       <>
-                        <p className="orb-brand-eyebrow" data-orb-brand-eyebrow>
-                          ORB RESIDENTIAL
-                        </p>
+                        {!isMobileViewport ? (
+                          <p className="orb-brand-eyebrow" data-orb-brand-eyebrow>
+                            ORB RESIDENTIAL
+                          </p>
+                        ) : null}
                         <h2
-                          className="orb-workspace-headline mt-2 text-xl font-semibold tracking-tight text-slate-900 md:mt-3 md:text-[1.45rem]"
+                          className={`orb-workspace-headline mt-2 font-semibold tracking-tight text-slate-900 ${
+                            isMobileViewport ? 'text-lg' : 'text-xl md:mt-3 md:text-[1.45rem]'
+                          }`}
                           data-orb-empty-heading
-                          data-orb-empty-heading-desktop
+                          {...(isMobileViewport
+                            ? { 'data-orb-empty-heading-mobile': true }
+                            : { 'data-orb-empty-heading-desktop': true })}
                           data-orb-workspace-headline
                         >
-                          {ORB_RESIDENTIAL_EMPTY_HEADING_DESKTOP}
+                          {isMobileViewport
+                            ? ORB_RESIDENTIAL_MOBILE_EMPTY_HEADING
+                            : ORB_RESIDENTIAL_EMPTY_HEADING_DESKTOP}
                         </h2>
                         {isMobileViewport ? (
                           <p
-                            className="mt-1.5 max-w-xs text-xs leading-snug text-[var(--orb-muted)] md:hidden"
+                            className="mt-1.5 max-w-sm px-1 text-xs leading-snug text-[var(--orb-muted)] md:hidden"
                             data-orb-empty-subline
                             data-orb-empty-subline-mobile
                           >
@@ -4504,7 +4513,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
                         {emptyHeadingMobile}
                       </h2>
                     )}
-                    {residentialSurface ? (
+                    {residentialSurface && !isMobileViewport ? (
                       <p
                         className="orb-workspace-subline mt-2 max-w-lg text-sm leading-relaxed text-[var(--orb-muted)]"
                         data-orb-empty-subline
@@ -4512,12 +4521,12 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
                       >
                         {ORB_RESIDENTIAL_EMPTY_SUBLINE}
                       </p>
-                    ) : (emptyWelcome.subline || ORB_RESIDENTIAL_EMPTY_SUBLINE) ? (
+                    ) : !residentialSurface && (emptyWelcome.subline || ORB_RESIDENTIAL_EMPTY_SUBLINE) ? (
                       <p className="mt-2 max-w-lg text-sm leading-7 text-slate-600" data-orb-empty-subline>
                         {emptyWelcome.subline || ORB_RESIDENTIAL_EMPTY_SUBLINE}
                       </p>
                     ) : null}
-                    {residentialSurface ? (
+                    {residentialSurface && !isMobileViewport ? (
                       <p
                         className="orb-home-brand-truth mt-1.5 max-w-lg text-xs leading-relaxed text-[var(--orb-muted)]"
                         data-orb-home-brand-truth
@@ -4527,7 +4536,9 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
                     ) : null}
                     {emptyWelcome.temporaryNote ? (
                       <p
-                        className="mt-2 max-w-lg text-xs font-medium leading-5 text-amber-800"
+                        className={`max-w-lg text-xs font-medium leading-5 text-amber-800 ${
+                          isMobileViewport ? 'mt-1.5 text-[11px]' : 'mt-2'
+                        }`}
                         data-orb-empty-temporary-note
                       >
                         {emptyWelcome.temporaryNote}
@@ -4543,8 +4554,13 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
                     </div>
                     {residentialSurface && showEmptyState ? (
                       <div
-                        className="mt-5 flex w-full max-w-2xl flex-wrap justify-center gap-2 lg:max-w-3xl"
+                        className={`w-full max-w-2xl gap-2 lg:max-w-3xl ${
+                          isMobileViewport
+                            ? 'mt-3 grid grid-cols-2 px-1'
+                            : 'mt-5 flex flex-wrap justify-center'
+                        }`}
                         data-orb-home-quick-actions
+                        data-orb-home-quick-actions-mobile={isMobileViewport ? 'true' : undefined}
                         data-orb-starter-pills
                       >
                         {ORB_HOME_QUICK_ACTIONS.map((action) => (
@@ -4564,7 +4580,9 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
                                 applyPrompt({ text: action.label, prompt: action.prompt } as ResidentialStarter)
                               }
                             }}
-                            className="orb-starter-card px-4 py-3 text-sm leading-snug"
+                            className={`orb-starter-card text-left leading-snug ${
+                              isMobileViewport ? 'min-h-11 px-3 py-2.5 text-xs' : 'px-4 py-3 text-sm'
+                            }`}
                             data-orb-home-quick-action={action.id}
                           >
                             {action.label}

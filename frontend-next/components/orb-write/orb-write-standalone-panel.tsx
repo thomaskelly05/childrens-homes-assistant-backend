@@ -530,48 +530,63 @@ export function OrbWriteStandalonePanel({
             <header
               className="orb-write-studio-header flex shrink-0 flex-col gap-2"
               data-orb-write-studio-header
+              data-orb-write-mobile-layout={isMobile ? 'stacked' : undefined}
             >
-              <div className="flex min-w-0 items-start gap-3">
-                <GlassOrbMark size="sm" pulse className="mt-0.5 shrink-0" aria-hidden />
-                <div className="min-w-0 flex-1">
-                  <h2 className="text-sm font-semibold text-slate-900" data-orb-write-studio-title>
-                    ORB Write
-                  </h2>
-                  <p className="text-[11px] text-slate-600" data-orb-write-studio-subtitle data-orb-write-care-studio>
-                    Draft, review and finalise adult-led records in one calm workspace.
-                  </p>
+              {!isMobile ? (
+                <div className="flex min-w-0 items-start gap-3">
+                  <GlassOrbMark size="sm" pulse className="mt-0.5 shrink-0" aria-hidden />
+                  <div className="min-w-0 flex-1">
+                    <h2 className="text-sm font-semibold text-slate-900" data-orb-write-studio-title>
+                      ORB Write
+                    </h2>
+                    <p className="text-[11px] text-slate-600" data-orb-write-studio-subtitle data-orb-write-care-studio>
+                      Draft, review and finalise adult-led records in one calm workspace.
+                    </p>
+                  </div>
                 </div>
-              </div>
-              <p className="text-[11px] leading-relaxed text-slate-600" data-orb-write-studio-guidance>
-                ORB is helping you separate observation, interpretation, the child&apos;s voice, adult response and
-                follow-up.
-              </p>
-              <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+              ) : null}
+              {!isMobile ? (
+                <p className="text-[11px] leading-relaxed text-slate-600" data-orb-write-studio-guidance>
+                  ORB is helping you separate observation, interpretation, the child&apos;s voice, adult response and
+                  follow-up.
+                </p>
+              ) : null}
+              <div
+                className={`min-w-0 gap-2 ${
+                  isMobile ? 'flex flex-col' : 'flex min-w-0 flex-1 flex-wrap items-center'
+                }`}
+                data-orb-write-header-controls
+                data-orb-write-mobile-controls={isMobile ? 'stacked' : undefined}
+              >
+                <input
+                  data-orb-write-title-input
+                  value={doc.title}
+                  onChange={(e) => setDoc((prev) => (prev ? { ...prev, title: e.target.value } : prev))}
+                  className={`w-full min-w-0 bg-transparent font-semibold text-slate-900 focus:outline-none ${
+                    isMobile ? 'text-base' : 'flex-1 text-lg'
+                  }`}
+                />
                 <button
                   type="button"
                   onClick={() => setTemplateLibraryOpen(true)}
-                  className="inline-flex items-center gap-1 rounded-lg border border-[var(--orb-primary)]/35 bg-[var(--orb-primary-soft)]/50 px-3 py-1.5 text-[11px] font-semibold text-[var(--orb-primary)] hover:bg-[var(--orb-primary-soft)]"
+                  className="inline-flex min-h-11 w-full items-center justify-center gap-1 rounded-lg border border-[var(--orb-primary)]/35 bg-[var(--orb-primary-soft)]/50 px-3 py-2 text-[11px] font-semibold text-[var(--orb-primary)] hover:bg-[var(--orb-primary-soft)] sm:w-auto sm:justify-start"
                   data-orb-write-open-template-library
                   data-orb-write-use-template
                 >
                   Use a template
                 </button>
-                <OrbWriteRecordTypeSelector
-                  recordTypeId={recordTypeId}
-                  variant="compact"
-                  selectorLabel="Record type"
-                  onSelect={(nextRecordType) => requestRecordTypeChange(nextRecordType.id)}
-                  onOpenFullPicker={() => setTemplatePickerOpen(true)}
-                />
+                <div className="w-full min-w-0 sm:w-auto" data-orb-write-record-type-row>
+                  <OrbWriteRecordTypeSelector
+                    recordTypeId={recordTypeId}
+                    variant="compact"
+                    selectorLabel="Record type"
+                    onSelect={(nextRecordType) => requestRecordTypeChange(nextRecordType.id)}
+                    onOpenFullPicker={() => setTemplatePickerOpen(true)}
+                  />
+                </div>
                 <p className="hidden text-[10px] text-slate-600 lg:block" data-orb-write-template-hint>
                   Choose the structure ORB should help you write.
                 </p>
-                <input
-                  data-orb-write-title-input
-                  value={doc.title}
-                  onChange={(e) => setDoc((prev) => (prev ? { ...prev, title: e.target.value } : prev))}
-                  className="min-w-0 flex-1 bg-transparent text-lg font-semibold text-slate-900 focus:outline-none"
-                />
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 <button

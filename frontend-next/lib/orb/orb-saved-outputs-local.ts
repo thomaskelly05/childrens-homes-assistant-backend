@@ -82,6 +82,20 @@ export function countOrbLocalSavedOutputs(): number {
   return readStore().length
 }
 
+/** Local-only drafts with no readable title or body — hidden during pilot unless legacy toggle is on. */
+export function isLegacyLocalSavedOutput(item: {
+  id: string
+  title?: string | null
+  summary?: string | null
+  content_markdown?: string | null
+}): boolean {
+  if (!item.id.startsWith('local_')) return false
+  const title = item.title?.trim() || ''
+  const body = item.content_markdown?.trim() || item.summary?.trim() || ''
+  const untitled = !title || /^untitled/i.test(title)
+  return untitled && !body
+}
+
 export function orbLocalSavedOutputAsRecord(item: OrbLocalSavedOutput): OrbSavedOutputRecord {
   const now = new Date().toISOString()
   return {

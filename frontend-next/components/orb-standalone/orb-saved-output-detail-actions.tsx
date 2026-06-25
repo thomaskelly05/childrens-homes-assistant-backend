@@ -40,7 +40,8 @@ export function OrbSavedOutputDetailActions({
   onReuseInChat,
   onArchive,
   onFinalise,
-  onRerun
+  onRerun,
+  mobileStacked = false
 }: {
   record: OrbSavedOutputRecord
   onNotice?: (message: string) => void
@@ -52,6 +53,7 @@ export function OrbSavedOutputDetailActions({
   onArchive?: () => void
   onFinalise?: () => void
   onRerun?: (state: OrbSavedOutputRerunState) => void
+  mobileStacked?: boolean
 }) {
   const [rerunNotice, setRerunNotice] = useState<string | null>(null)
   const rerun = useMemo(() => resolveSavedOutputRerun(record), [record])
@@ -126,7 +128,7 @@ export function OrbSavedOutputDetailActions({
   }
 
   return (
-    <div className="space-y-3" data-orb-saved-output-detail-actions>
+    <div className="space-y-3" data-orb-saved-output-detail-actions data-orb-records-detail-actions-mobile={mobileStacked ? 'true' : undefined}>
       {onOpenInOrbWrite ? (
         <button
           type="button"
@@ -139,7 +141,7 @@ export function OrbSavedOutputDetailActions({
         </button>
       ) : null}
 
-      <div className="flex flex-wrap gap-2">
+      <div className={`flex flex-wrap gap-2 ${mobileStacked ? 'grid grid-cols-2' : ''}`}>
         {onReuseInChat ? (
           <button
             type="button"

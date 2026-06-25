@@ -44,7 +44,7 @@ import {
   type OrbSavedOutputRecord,
   type OrbSavedOutputSummary
 } from '@/lib/orb/standalone-client'
-import { getOrbLocalSavedOutput, removeOrbLocalSavedOutput } from '@/lib/orb/orb-saved-outputs-local'
+import { getOrbLocalSavedOutput, isLegacyLocalSavedOutput, removeOrbLocalSavedOutput } from '@/lib/orb/orb-saved-outputs-local'
 import { listOrbSavedOutputsResilient, orbLocalSavedOutputAsRecord } from '@/lib/orb/orb-saved-outputs-resilience'
 import {
   getOrbRecordsWorkspaceItem,
@@ -131,6 +131,7 @@ export function OrbSavedOutputsPanel({
   const [statusChipFilter, setStatusChipFilter] = useState('status_all')
   const [includeArchived, setIncludeArchived] = useState(false)
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
+  const [showLegacyLocal, setShowLegacyLocal] = useState(false)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [detail, setDetail] = useState<OrbSavedOutputRecord | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
@@ -255,16 +256,26 @@ export function OrbSavedOutputsPanel({
       })
   }, [selectedId])
 
+  const legacyLocalCount = useMemo(
+    () => items.filter((item) => isLegacyLocalSavedOutput(item)).length,
+    [items]
+  )
+
+  const visibleItems = useMemo(() => {
+    if (showLegacyLocal) return items
+    return items.filter((item) => !isLegacyLocalSavedOutput(item))
+  }, [items, showLegacyLocal])
+
   const grouped = useMemo(() => {
     const map = new Map<string, OrbSavedOutputSummary[]>()
-    for (const item of items) {
+    for (const item of visibleItems) {
       const key = item.project_name || item.project_id || 'No project'
       const list = map.get(key) || []
       list.push(item)
       map.set(key, list)
     }
     return Array.from(map.entries())
-  }, [items])
+  }, [visibleItems])
 
   const detailBrain = useMemo(
     () => (detail ? extractSavedOutputBrainMetadata(detail) : null),
@@ -504,6 +515,17 @@ export function OrbSavedOutputsPanel({
               }
             />
             {statusFilterRow}
+            {legacyLocalCount > 0 ? (
+              <button
+                type="button"
+                onClick={() => setShowLegacyLocal((open) => !open)}
+                className="inline-flex min-h-11 w-full items-center justify-between rounded-lg border border-dashed border-[var(--orb-line)]/70 px-3 py-2 text-left text-xs text-[var(--orb-muted)]"
+                data-orb-records-legacy-toggle
+                aria-pressed={showLegacyLocal}
+              >
+                <span>{showLegacyLocal ? 'Hide legacy local drafts' : `Show ${legacyLocalCount} legacy local draft${legacyLocalCount === 1 ? '' : 's'}`}</span>
+              </button>
+            ) : null}
             {!isMobile ? (
               <>
                 <select
@@ -597,6 +619,14 @@ export function OrbSavedOutputsPanel({
                           <div className="flex items-start justify-between gap-2">
                             <span className="text-sm font-medium text-[var(--orb-mobile-ws-text,var(--orb-foreground))] line-clamp-1">{item.title}</span>
                             <div className="flex shrink-0 flex-col items-end gap-1">
+                              {isLegacyLocalSavedOutput(item) ? (
+                                <span
+                                  className="rounded bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700"
+                                  data-orb-records-legacy-badge
+                                >
+                                  Legacy
+                                </span>
+                              ) : null}
                               <span
                                 className="rounded bg-[var(--orb-primary-soft,rgba(22,139,255,0.16))] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--orb-primary,#168bff)]"
                                 data-orb-saved-output-review-status
@@ -662,40 +692,48 @@ export function OrbSavedOutputsPanel({
                   {savedOutputPlatformLabel(detail) ? ` · ${savedOutputPlatformLabel(detail)}` : ''} ·{' '}
                   {new Date(detail.created_at).toLocaleString()}
                 </p>
+                {isLegacyLocalSavedOutput(detail) ? (
+                  <p className="mt-1 text-[10px] text-amber-700" data-orb-records-legacy-notice>
+                    Legacy local draft — content may be incomplete. Open in ORB Write to repair or archive.
+                  </p>
+                ) : null}
                 {shouldShowOrbBrainIndicator(detailBrain) && detailBrain ? (
                   <p className="mt-1 text-[10px] text-cyan-300/80" data-orb-saved-output-brain>
                     {orbBrainIndicatorLabel(detailBrain)}
                   </p>
                 ) : null}
-                <div className="mt-2 flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() => void handleRename(detail.id, detail.title)}
-                    className="rounded-lg border border-[var(--orb-mobile-ws-card-border,var(--orb-line))] px-2 py-1 text-xs text-[var(--orb-mobile-ws-text,var(--orb-foreground))]"
-                  >
-                    Rename
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => void handleArchive(detail.id)}
-                    className="inline-flex items-center gap-1 rounded-lg border border-[var(--orb-mobile-ws-card-border,var(--orb-line))] px-2 py-1 text-xs text-[var(--orb-mobile-ws-text,var(--orb-foreground))]"
-                  >
-                    <Archive className="h-3.5 w-3.5" aria-hidden />
-                    Archive
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => void handleDelete(detail.id)}
-                    className="inline-flex items-center gap-1 rounded-lg border border-red-400/20 px-2 py-1 text-xs text-red-300"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" aria-hidden />
-                    Delete
-                  </button>
-                </div>
+                {!recordsMobileDetailMode ? (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => void handleRename(detail.id, detail.title)}
+                      className="rounded-lg border border-[var(--orb-mobile-ws-card-border,var(--orb-line))] px-2 py-1 text-xs text-[var(--orb-mobile-ws-text,var(--orb-foreground))]"
+                    >
+                      Rename
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void handleArchive(detail.id)}
+                      className="inline-flex items-center gap-1 rounded-lg border border-[var(--orb-mobile-ws-card-border,var(--orb-line))] px-2 py-1 text-xs text-[var(--orb-mobile-ws-text,var(--orb-foreground))]"
+                    >
+                      <Archive className="h-3.5 w-3.5" aria-hidden />
+                      Archive
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void handleDelete(detail.id)}
+                      className="inline-flex items-center gap-1 rounded-lg border border-red-400/20 px-2 py-1 text-xs text-red-300"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" aria-hidden />
+                      Delete
+                    </button>
+                  </div>
+                ) : null}
               </div>
-              <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              <div className="flex-1 overflow-y-auto p-4 space-y-4" data-orb-records-mobile-detail-scroll>
                 <OrbSavedOutputDetailActions
                   record={detail}
+                  mobileStacked={recordsMobileDetailMode}
                   onNotice={setNotice}
                   onAskOrb={onAskOrb || onReuseInChat}
                   onSendToDictate={onSendToDictate}
