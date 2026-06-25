@@ -68,6 +68,11 @@ import { ORB_WRITE_SAFETY_COPY } from '@/lib/orb/write/orb-write-types'
 import { ORB_RESIDENTIAL_STATION_PRODUCT_COPY } from '@/lib/orb/orb-residential-copy'
 import { orbGuidedDemoSaveStatusMessage, resolveOrbGuidedDemoSaveTitle } from '@/lib/orb/orb-guided-demo'
 import { OrbWriteStudioReviewChecklist } from '@/components/orb-write/orb-write-studio-review-checklist'
+import {
+  OrbWriteMobileCompactHeader,
+  OrbWriteMobileDocumentSummaryBar,
+  OrbWriteMobileReviewSheet
+} from '@/components/orb-write/orb-write-mobile-section-workspace'
 import type { OrbWriteReviewCheckAction } from '@/lib/orb/orb-residential-station-copy'
 import { OrbWriteTemplateLibraryPanel } from '@/components/orb-write/orb-write-template-library-panel'
 import { OrbWriteWorkingDocumentEditor } from '@/components/orb-write/orb-write-working-document-editor'
@@ -110,14 +115,14 @@ export function OrbWriteStandalonePanel({
   const [workingDoc, setWorkingDoc] = useState<OrbTemplateWorkingDocument | null>(null)
   const [sourcePanelOpen, setSourcePanelOpen] = useState(false)
   const [guidancePanelOpen, setGuidancePanelOpen] = useState(true)
-  const [mobileReviewOpen, setMobileReviewOpen] = useState(false)
+  const [mobileReviewSheetOpen, setMobileReviewSheetOpen] = useState(false)
   const [compactWriteHeight, setCompactWriteHeight] = useState(false)
   const { isMobile } = useOrbResponsiveMode()
 
   useEffect(() => {
     if (isMobile) {
       setGuidancePanelOpen(false)
-      setMobileReviewOpen(false)
+      setMobileReviewSheetOpen(false)
     }
   }, [isMobile, open])
 
@@ -510,6 +515,36 @@ export function OrbWriteStandalonePanel({
     [applyTemplate, hasExistingContent, recordTypeId]
   )
   const documentFirst = !sourcePanelOpen && !guidancePanelOpen
+  const documentStatus = doc?.is_finalised ? 'finalised' : 'draft'
+
+  const reviewPanelContent = doc ? (
+    <>
+      <OrbWriteStudioReviewChecklist onApplyReviewAction={(check) => void handleReviewAction(check)} />
+      <div
+        className="mt-3 min-h-[160px] overflow-hidden rounded-xl border border-[var(--orb-line)]/50 bg-[var(--orb-surface-elevated)]"
+        data-orb-write-review-nested-surface
+      >
+        <OrbDictateBrainPanel
+          analysis={brainAnalysis}
+          loading={analysing}
+          studioTemplateId={recordType.studio_template_id ?? 'general'}
+          recordTypeId={recordType.id}
+          hasTranscript={roughText.trim().length > 0}
+          onAnalyse={() => void runAnalysis()}
+          onSuggestionUpdate={updateSuggestion}
+        />
+      </div>
+      <OrbWriteWritingStylePanel document={doc} recordType={recordType} onApplyRevision={applyRevision} />
+      <OrbWriteGuidancePanel
+        document={doc}
+        selected={selectedGuidance}
+        onSelect={setSelectedGuidance}
+        onClear={() => setSelectedGuidance(null)}
+        onCheckDraft={(source) => void checkDraftAgainstGuidance(source)}
+      />
+      <OrbWriteAiPanel document={doc} onApplyRevision={applyRevision} />
+    </>
+  ) : null
 
   return (
     <OrbAppModal
@@ -534,14 +569,16 @@ export function OrbWriteStandalonePanel({
             className="orb-write-integrated-studio flex min-h-0 flex-1 flex-col"
             data-orb-write-studio-editor
             data-orb-write-integrated-studio-surface
+            data-orb-write-mobile-review-collapsed={isMobile && !mobileReviewSheetOpen ? 'true' : undefined}
           >
             <header
               className="orb-write-studio-header orb-mobile-station-header flex shrink-0 flex-col gap-2 pt-[max(0.25rem,env(safe-area-inset-top))]"
               data-orb-write-studio-header
-              data-orb-write-mobile-layout={isMobile ? 'stacked' : undefined}
+              data-orb-write-mobile-layout={isMobile ? 'one-section' : undefined}
               data-orb-write-record-type-suppressed={isMobile ? 'true' : undefined}
               data-orb-mobile-station-header={isMobile ? 'true' : undefined}
             >
+              {isMobile ? <OrbWriteMobileCompactHeader recordTypeLabel={recordType.label} /> : null}
               {!isMobile ? (
                 <div className="flex min-w-0 items-start gap-3">
                   <GlassOrbMark size="sm" pulse className="mt-0.5 shrink-0" aria-hidden />
@@ -563,7 +600,7 @@ export function OrbWriteStandalonePanel({
               ) : null}
               <div
                 className={`min-w-0 gap-2 ${
-                  isMobile ? 'flex flex-col' : 'flex min-w-0 flex-1 flex-wrap items-center'
+                  isMobile ? 'hidden' : 'flex min-w-0 flex-1 flex-wrap items-center'
                 }`}
                 data-orb-write-header-controls
                 data-orb-write-mobile-controls={isMobile ? 'stacked' : undefined}
@@ -598,6 +635,15 @@ export function OrbWriteStandalonePanel({
                   Choose the structure ORB should help you write.
                 </p>
               </div>
+              {isMobile ? (
+                <OrbWriteMobileDocumentSummaryBar
+                  documentTitle={doc.title}
+                  recordTypeLabel={recordType.label}
+                  wordCount={wordCount}
+                  status={documentStatus}
+                  onUseTemplate={() => setTemplateLibraryOpen(true)}
+                />
+              ) : null}
               <div className="flex flex-wrap items-center gap-2">
                 <button
                   type="button"
@@ -670,6 +716,8 @@ export function OrbWriteStandalonePanel({
                 {workingDoc ? (
                   <OrbWriteWorkingDocumentEditor
                     document={workingDoc}
+                    mobileStudioLayout={isMobile}
+                    onOpenReview={() => setMobileReviewSheetOpen(true)}
                     onDocumentChange={(next) => {
                       setWorkingDoc(next)
                       setDoc((prev) =>
@@ -690,6 +738,7 @@ export function OrbWriteStandalonePanel({
                 ) : (
                   <OrbWriteEditor
                     document={doc}
+                    mobileStudioLayout={isMobile}
                     onChange={updateBody}
                     onWordCountChange={setWordCount}
                     lastEdited={`Last edited ${lastEdited}`}
@@ -703,54 +752,18 @@ export function OrbWriteStandalonePanel({
                     onOpenGuidance={() => setGuidancePanelOpen(true)}
                     onOpenTemplatePicker={() => setTemplatePickerOpen(true)}
                     onRecordTypeSelect={requestRecordTypeChange}
+                    onOpenReview={() => setMobileReviewSheetOpen(true)}
                     suppressRecordTypeBadge={isMobile}
                   />
                 )}
               </div>
               {isMobile ? (
-                <details
-                  className="shrink-0"
-                  data-orb-write-review-collapsible
-                  open={mobileReviewOpen}
-                  onToggle={(event) => setMobileReviewOpen((event.currentTarget as HTMLDetailsElement).open)}
+                <OrbWriteMobileReviewSheet
+                  open={mobileReviewSheetOpen}
+                  onClose={() => setMobileReviewSheetOpen(false)}
                 >
-                  <summary>ORB Review &amp; guidance</summary>
-                  <div
-                    className="flex min-h-0 flex-col gap-3 overflow-hidden"
-                    data-orb-write-assistant-panel
-                    data-orb-write-guidance-panel-host
-                    data-orb-write-review-panel
-                  >
-                    <OrbWriteStudioReviewChecklist onApplyReviewAction={(check) => void handleReviewAction(check)} />
-                    <div
-                      className="min-h-[160px] overflow-hidden rounded-xl border border-[var(--orb-line)]/50 bg-[var(--orb-surface-elevated)]"
-                      data-orb-write-review-nested-surface
-                    >
-                      <OrbDictateBrainPanel
-                        analysis={brainAnalysis}
-                        loading={analysing}
-                        studioTemplateId={recordType.studio_template_id ?? 'general'}
-                        recordTypeId={recordType.id}
-                        hasTranscript={roughText.trim().length > 0}
-                        onAnalyse={() => void runAnalysis()}
-                        onSuggestionUpdate={updateSuggestion}
-                      />
-                    </div>
-                    <OrbWriteWritingStylePanel
-                      document={doc}
-                      recordType={recordType}
-                      onApplyRevision={applyRevision}
-                    />
-                    <OrbWriteGuidancePanel
-                      document={doc}
-                      selected={selectedGuidance}
-                      onSelect={setSelectedGuidance}
-                      onClear={() => setSelectedGuidance(null)}
-                      onCheckDraft={(source) => void checkDraftAgainstGuidance(source)}
-                    />
-                    <OrbWriteAiPanel document={doc} onApplyRevision={applyRevision} />
-                  </div>
-                </details>
+                  {reviewPanelContent}
+                </OrbWriteMobileReviewSheet>
               ) : guidancePanelOpen ? (
                 <div
                   className="flex min-h-0 flex-col gap-3 overflow-hidden"
@@ -758,31 +771,7 @@ export function OrbWriteStandalonePanel({
                   data-orb-write-guidance-panel-host
                   data-orb-write-review-panel
                 >
-                  <OrbWriteStudioReviewChecklist onApplyReviewAction={(check) => void handleReviewAction(check)} />
-                  <div className="min-h-[200px] overflow-hidden rounded-xl border border-[var(--orb-line)]/50 bg-[var(--orb-surface-elevated)] lg:min-h-0">
-                    <OrbDictateBrainPanel
-                      analysis={brainAnalysis}
-                      loading={analysing}
-                      studioTemplateId={recordType.studio_template_id ?? 'general'}
-                      recordTypeId={recordType.id}
-                      hasTranscript={roughText.trim().length > 0}
-                      onAnalyse={() => void runAnalysis()}
-                      onSuggestionUpdate={updateSuggestion}
-                    />
-                  </div>
-                  <OrbWriteWritingStylePanel
-                    document={doc}
-                    recordType={recordType}
-                    onApplyRevision={applyRevision}
-                  />
-                  <OrbWriteGuidancePanel
-                    document={doc}
-                    selected={selectedGuidance}
-                    onSelect={setSelectedGuidance}
-                    onClear={() => setSelectedGuidance(null)}
-                    onCheckDraft={(source) => void checkDraftAgainstGuidance(source)}
-                  />
-                  <OrbWriteAiPanel document={doc} onApplyRevision={applyRevision} />
+                  {reviewPanelContent}
                 </div>
               ) : null}
             </div>

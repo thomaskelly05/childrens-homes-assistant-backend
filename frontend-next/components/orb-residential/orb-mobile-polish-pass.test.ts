@@ -68,8 +68,9 @@ describe('ORB Residential mobile polish pass', () => {
   })
 
   it('ORB Write review panel is collapsible on mobile', () => {
-    assert.match(write, /data-orb-write-review-collapsible/)
-    assert.match(css, /\[data-orb-write-review-collapsible\]/)
+    assert.match(write, /data-orb-write-mobile-review-collapsed/)
+    assert.match(write, /OrbWriteMobileReviewSheet/)
+    assert.match(css, /\[data-orb-write-mobile-review-sheet\]/)
   })
 
   it('Records search icon does not overlap placeholder text', () => {

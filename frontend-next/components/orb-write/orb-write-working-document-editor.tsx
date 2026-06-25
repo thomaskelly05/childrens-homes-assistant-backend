@@ -18,6 +18,13 @@ import {
   X
 } from 'lucide-react'
 
+import {
+  OrbWriteMobileActiveSection,
+  OrbWriteMobileSectionNav,
+  OrbWriteMobileSectionsSheet,
+  useOrbWriteMobileSectionState
+} from '@/components/orb-write/orb-write-mobile-section-workspace'
+import { OrbWriteMobileToolbar } from '@/components/orb-write/orb-write-mobile-toolbar'
 import { useOrbResponsiveMode } from '@/components/orb-standalone/use-orb-responsive-mode'
 import { copyTextToClipboard } from '@/lib/orb/orb-clipboard'
 import {
@@ -322,12 +329,17 @@ export function OrbWriteWorkingDocumentEditor({
   document: initialDocument,
   onDocumentChange,
   onSaved,
-  onStatusMessage
+  onStatusMessage,
+  mobileStudioLayout = false,
+  onOpenReview
 }: {
   document: OrbTemplateWorkingDocument
   onDocumentChange?: (doc: OrbTemplateWorkingDocument) => void
   onSaved?: (workspaceItemId: string) => void
   onStatusMessage?: (message: string) => void
+  /** Parent supplies mobile summary bar — hide duplicate chrome and use one-section layout. */
+  mobileStudioLayout?: boolean
+  onOpenReview?: () => void
 }) {
   const { isMobile } = useOrbResponsiveMode()
   const [document, setDocument] = useState(initialDocument)
@@ -345,6 +357,14 @@ export function OrbWriteWorkingDocumentEditor({
   const [assistLoadingSection, setAssistLoadingSection] = useState<string | null>(null)
   const [activeSectionId, setActiveSectionId] = useState<string | null>(null)
   const mainRef = useRef<HTMLDivElement>(null)
+
+  const sortedSections = useMemo(
+    () => [...document.sections].sort((a, b) => a.sort_order - b.sort_order),
+    [document.sections]
+  )
+
+  const mobileSectionNav = useOrbWriteMobileSectionState(sortedSections.length)
+  const useMobileOneSection = isMobile
 
   const readOnly = document.status === 'archived' || document.status === 'finalised'
   const isHighRisk =
@@ -520,11 +540,6 @@ export function OrbWriteWorkingDocumentEditor({
     [document.source_chips, document.home_document_chips]
   )
 
-  const sortedSections = useMemo(
-    () => [...document.sections].sort((a, b) => a.sort_order - b.sort_order),
-    [document.sections]
-  )
-
   const leftPanel = (
     <aside
       className={`flex min-h-0 flex-col gap-3 overflow-hidden border-[var(--orb-line)]/40 ${
@@ -614,14 +629,68 @@ export function OrbWriteWorkingDocumentEditor({
     </aside>
   )
 
+  const [assistMenuOpen, setAssistMenuOpen] = useState(false)
+
+  const activeWorkingSection = sortedSections[mobileSectionNav.activeIndex]
+
+  const mobileSectionAskOrb =
+    activeWorkingSection?.orb_assist_enabled && !readOnly ? (
+      <div className="relative">
+        <button
+          type="button"
+          disabled={assistLoadingSection === activeWorkingSection.section_id}
+          onClick={() => setAssistMenuOpen((v) => !v)}
+          className="inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-xl border border-[var(--orb-primary)]/35 bg-[var(--orb-primary-soft)]/40 px-3 py-2 text-xs font-semibold text-[var(--orb-primary)] disabled:opacity-50"
+          data-orb-write-section-orb-help={activeWorkingSection.section_id}
+          aria-expanded={assistMenuOpen}
+        >
+          <Sparkles className="h-3.5 w-3.5" aria-hidden />
+          Ask ORB
+          <ChevronDown className={`h-3.5 w-3.5 transition ${assistMenuOpen ? 'rotate-180' : ''}`} aria-hidden />
+        </button>
+        {assistMenuOpen ? (
+          <ul
+            className="absolute bottom-full left-0 right-0 z-10 mb-1 rounded-lg border border-[var(--orb-line)] bg-[var(--orb-surface)] py-1 shadow-lg"
+            data-orb-write-section-assist-menu
+          >
+            {ORB_WRITE_SECTION_ASSIST_ACTIONS.map((action) => (
+              <li key={action.id}>
+                <button
+                  type="button"
+                  className="w-full px-3 py-2 text-left text-xs hover:bg-[var(--orb-surface-hover)]"
+                  data-orb-write-section-assist={action.id}
+                  onClick={() => {
+                    setAssistMenuOpen(false)
+                    void handleSectionAssist(activeWorkingSection, action.id)
+                  }}
+                >
+                  {action.label}
+                </button>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+      </div>
+    ) : null
+
+  const mobileSectionOutline = sortedSections.map((section) => ({
+    id: section.section_id,
+    title: section.heading,
+    hint: section.guidance || section.prompt || '',
+    body: section.body
+  }))
+
   return (
     <div
       className="flex min-h-0 flex-1 flex-col gap-0"
       data-orb-write-working-document
       data-orb-write-working-document-studio
       data-orb-write-mobile={isMobile ? 'true' : 'false'}
+      data-orb-write-mobile-studio={useMobileOneSection ? 'true' : undefined}
+      data-orb-write-mobile-layout={useMobileOneSection ? 'one-section' : undefined}
       data-orb-write-read-only={readOnly ? 'true' : 'false'}
     >
+      {!mobileStudioLayout ? (
       <header
         className="flex shrink-0 flex-wrap items-center gap-2 border-b border-[var(--orb-line)]/40 pb-2"
         data-orb-write-studio-top-bar
@@ -743,6 +812,7 @@ export function OrbWriteWorkingDocumentEditor({
           </div>
         </div>
       </header>
+      ) : null}
 
       {finaliseConfirmOpen ? (
         <div
@@ -798,6 +868,65 @@ export function OrbWriteWorkingDocumentEditor({
       <div className="flex min-h-0 flex-1 gap-2 pt-2">
         {!isMobile && leftPanelOpen ? leftPanel : null}
 
+        {useMobileOneSection && activeWorkingSection ? (
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden" data-orb-write-mobile-section-workspace>
+            <OrbWriteMobileActiveSection
+              sectionIndex={mobileSectionNav.activeIndex}
+              sectionCount={sortedSections.length}
+              section={{
+                id: activeWorkingSection.section_id,
+                title: activeWorkingSection.heading,
+                hint: activeWorkingSection.guidance || activeWorkingSection.prompt || '',
+                body: activeWorkingSection.body
+              }}
+              readOnly={readOnly}
+              onBodyChange={(body) => updateSection(activeWorkingSection.section_id, body)}
+              askOrbAction={mobileSectionAskOrb}
+            />
+            {mobileSectionNav.activeIndex === sortedSections.length - 1 ? (
+              <div className="shrink-0 space-y-2 overflow-x-hidden px-3 pb-2" data-orb-write-mobile-section-extras>
+                {document.tables.map((table) => (
+                  <EditableWorkingDocumentTable
+                    key={table.table_id}
+                    table={table}
+                    readOnly={readOnly}
+                    onChange={(next) => updateTable(table.table_id, next)}
+                  />
+                ))}
+                {document.charts.map((chart) => (
+                  <div
+                    key={chart.chart_id}
+                    className="rounded-lg border border-dashed border-[var(--orb-line)] px-3 py-2"
+                    data-orb-write-chart={chart.chart_id}
+                    data-orb-write-chart-has-data={chart.has_data ? 'true' : 'false'}
+                  >
+                    <p className="text-[10px] font-semibold">{chart.title}</p>
+                    <p className="text-[10px] text-[var(--orb-muted)]">
+                      {chart.has_data
+                        ? `Chart will appear when rendered (${chart.chart_type}).`
+                        : chart.empty_state_guidance ||
+                          'Chart will appear when enough data is added to the linked table.'}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+            <OrbWriteMobileSectionNav
+              sectionIndex={mobileSectionNav.activeIndex}
+              sectionCount={sortedSections.length}
+              onPrevious={mobileSectionNav.goPrevious}
+              onNext={mobileSectionNav.goNext}
+              onOpenSections={mobileSectionNav.openSections}
+            />
+            <OrbWriteMobileSectionsSheet
+              open={mobileSectionNav.sectionsSheetOpen}
+              sections={mobileSectionOutline}
+              activeIndex={mobileSectionNav.activeIndex}
+              onSelect={mobileSectionNav.setActiveIndex}
+              onClose={mobileSectionNav.closeSections}
+            />
+          </div>
+        ) : (
         <main ref={mainRef} className="min-h-0 flex-1 space-y-3 overflow-y-auto" data-orb-write-main-area>
           <div className="rounded-xl border border-amber-400/30 bg-amber-500/10 px-3 py-2" data-orb-write-review-reminder>
             <p className="text-[10px] text-[var(--orb-foreground)]">{document.review_before_use_reminder}</p>
@@ -865,12 +994,24 @@ export function OrbWriteWorkingDocumentEditor({
             {document.compliance_disclaimer}
           </p>
         </main>
+        )}
       </div>
 
       {status ? (
         <p className="shrink-0 text-[10px] text-[var(--orb-primary)]" role="status" data-orb-write-status>
           {status}
         </p>
+      ) : null}
+      {useMobileOneSection && mobileStudioLayout ? (
+        <OrbWriteMobileToolbar
+          onCommand={() => undefined}
+          canUndo={false}
+          canRedo={false}
+          onSaveDraft={readOnly ? undefined : () => void handleSaveDraft()}
+          onCopy={() => void handleCopyDocument()}
+          onPrint={handlePrint}
+          onOpenReview={onOpenReview}
+        />
       ) : null}
     </div>
   )
