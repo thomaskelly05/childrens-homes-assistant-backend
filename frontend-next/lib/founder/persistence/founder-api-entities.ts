@@ -19,7 +19,13 @@ export const FOUNDER_PERSISTENCE_ENTITY_SLUGS = [
   'memories',
   'evidence-packs',
   'relationships',
-  'audit-log'
+  'audit-log',
+  'lab-review-events',
+  'lab-suggestions',
+  'lab-evaluation-runs',
+  'lab-build-briefs',
+  'lab-founder-actions',
+  'lab-audit-events'
 ] as const
 
 export type FounderPersistenceEntitySlug = (typeof FOUNDER_PERSISTENCE_ENTITY_SLUGS)[number]

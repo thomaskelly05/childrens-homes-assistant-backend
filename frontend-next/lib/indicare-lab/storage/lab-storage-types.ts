@@ -55,6 +55,8 @@ export type LabStorageStats = {
   founderActionCount: number
   auditEventCount: number
   redactedStoragePercentage: number
+  lastSuccessfulWriteAt?: string | null
+  failedWriteCount?: number
 }
 
 export type SuggestionFilter = {

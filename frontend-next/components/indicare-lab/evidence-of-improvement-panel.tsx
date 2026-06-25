@@ -19,6 +19,8 @@ export type EvidenceOfImprovementCounts = {
   auditEvents: number
   storageMode: string
   redactedStoragePercentage: number
+  lastSuccessfulWriteAt?: string | null
+  failedWriteCount?: number
 }
 
 type EvidenceOfImprovementPanelProps = {
@@ -45,7 +47,13 @@ export function EvidenceOfImprovementPanel({ counts }: EvidenceOfImprovementPane
       value: counts.productionChangesAutoDeployed
     },
     { label: 'Redacted storage percentage', value: `${counts.redactedStoragePercentage}%` },
-    { label: 'Storage mode', value: counts.storageMode, isText: true }
+    { label: 'Storage mode', value: counts.storageMode, isText: true },
+    {
+      label: 'Last successful write',
+      value: counts.lastSuccessfulWriteAt ?? 'None yet',
+      isText: true
+    },
+    { label: 'Failed write count', value: counts.failedWriteCount ?? 0 }
   ]
 
   return (

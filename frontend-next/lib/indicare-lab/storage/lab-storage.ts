@@ -1,10 +1,7 @@
 /**
  * Unified persistence facade for IndiCare Lab evidence and governance.
- * Uses in-memory repository as development fallback until database persistence is available.
- *
- * TODO(database): Implement LabDatabaseStorageRepository using the founder persistence API
- * pattern (see lib/founder/persistence/repositories/repository-base.ts) when dedicated
- * lab entity routes are added to /api/founder. Do not call PostgreSQL directly from client code.
+ * Uses in-memory repository in development/test; database-backed write-through in production
+ * when INDICARE_LAB_STORAGE_MODE=database and founder persistence is available.
  */
 import type {
   FounderActionLog,
@@ -13,7 +10,10 @@ import type {
 import type { EvaluationRun } from '@/lib/indicare-lab/evaluations/types'
 import type { CreateReviewEventInput } from '@/lib/indicare-lab/review-events/review-event-memory-repository'
 import type { ReviewEvent, ReviewStatus } from '@/lib/indicare-lab/review-events/types'
+import { createLabDatabaseStorageRepository } from '@/lib/indicare-lab/storage/lab-storage-db-adapter'
+import { isLabDatabaseStorageEnabled } from '@/lib/indicare-lab/storage/lab-storage-config'
 import { labMemoryStorageRepository } from '@/lib/indicare-lab/storage/lab-memory-storage-repository'
+import type { LabStorageRepository } from '@/lib/indicare-lab/storage/lab-storage-repository'
 import type {
   CreateAuditEventInput,
   CreateBuildBriefInput,
@@ -35,8 +35,11 @@ import type {
   SuggestionFilter
 } from '@/lib/indicare-lab/storage/lab-storage-types'
 import type { CreateEvaluationRunInput } from '@/lib/indicare-lab/evaluations/evaluation-repository'
+import { resetLabStorageWriteHealthForTests } from '@/lib/indicare-lab/storage/lab-storage-write-health'
 
-const activeRepository = labMemoryStorageRepository
+const activeRepository: LabStorageRepository = isLabDatabaseStorageEnabled()
+  ? createLabDatabaseStorageRepository()
+  : labMemoryStorageRepository
 
 export function getLabStorageBackend(): LabStorageBackend {
   return activeRepository.getStorageStats().backend
@@ -111,16 +114,17 @@ export function getLabStorageStats(): LabStorageStats {
 
 export function recordPatternDetection(patternId: string, title: string, detectedAt: string): void {
   if ('recordPatternDetection' in activeRepository) {
-    ;(activeRepository as typeof labMemoryStorageRepository).recordPatternDetection(
-      patternId,
-      title,
-      detectedAt
-    )
+    ;(
+      activeRepository as LabStorageRepository & {
+        recordPatternDetection(patternId: string, title: string, detectedAt: string): void
+      }
+    ).recordPatternDetection(patternId, title, detectedAt)
   }
 }
 
 export function resetLabStorageForTests(): void {
   activeRepository.resetForTests()
+  resetLabStorageWriteHealthForTests()
 }
 
 export type {
