@@ -12,90 +12,107 @@ function read(relativePath: string) {
 
 describe('ORB mobile login layout', () => {
   const loginCss = 'app/orb/orb-residential-shell.css'
+  const authCard = () => read('components/orb-residential/orb-login-auth-card.tsx')
+  const login = () => read('components/orb-residential/orb-login-screen.tsx')
+  const css = () => read(loginCss)
 
   it('uses single-column mobile markers and scrollable page', () => {
-    const login = read('components/orb-residential/orb-login-screen.tsx')
-    const css = read(loginCss)
-    assert.match(login, /data-orb-login-mobile-single-column/)
-    assert.match(login, /data-orb-login-scrollable/)
-    assert.match(css, /100svh/)
-    assert.match(css, /safe-area-inset-bottom/)
-    assert.match(css, /overflow-y:\s*auto/)
+    assert.match(login(), /data-orb-login-mobile-single-column/)
+    assert.match(login(), /data-orb-login-scrollable/)
+    assert.match(css(), /100svh/)
+    assert.match(css(), /safe-area-inset-bottom/)
+    assert.match(css(), /overflow-y:\s*auto/)
   })
 
-  it('mobile login renders compact brand area', () => {
-    const mobile = read('components/orb-residential/orb-login-mobile-header.tsx')
-    const login = read('components/orb-residential/orb-login-screen.tsx')
-    const css = read(loginCss)
+  it('mobile login renders one unified auth surface inside the auth card', () => {
+    const card = authCard()
+    const screen = login()
 
-    assert.match(login, /OrbLoginMobileHeader/)
-    assert.match(mobile, /data-orb-login-mobile-brand/)
-    assert.match(mobile, /data-orb-login-engine-line/)
-    assert.match(mobile, /data-orb-login-mobile-mark/)
-    assert.match(mobile, /GlassOrbMark/)
-    assert.match(mobile, /flex items-center gap-2\.5/)
-    assert.doesNotMatch(mobile, /OrbHeroSphere/)
-    assert.match(css, /orb-login-mobile-mark/)
-    assert.match(css, /2\.25rem/)
+    assert.doesNotMatch(screen, /OrbLoginMobileHeader/)
+    assert.match(card, /data-orb-login-mobile-unified-surface/)
+    assert.match(card, /data-orb-login-mobile-brand/)
+    assert.match(card, /data-orb-login-auth-card/)
+    assert.match(card, /lg:hidden/)
+    assert.match(card, /ORB_LOGIN_ENTERPRISE_TITLE/)
+    assert.match(card, /data-orb-login-engine-line/)
+    assert.match(card, /data-orb-login-mobile-mark/)
+    assert.match(card, /GlassOrbMark/)
   })
 
-  it('mobile login heading Sign in to continue is present and left-aligned', () => {
-    const authCard = read('components/orb-residential/orb-login-auth-card.tsx')
-    const css = read(loginCss)
-    assert.match(authCard, /Sign in to continue/)
-    assert.match(authCard, /data-orb-login-signin-title-mobile/)
-    assert.match(authCard, /text-left/)
-    assert.match(css, /text-align:\s*left/)
+  it('mobile login does not render separate outer marketing card and inner welcome card', () => {
+    const card = authCard()
+    const screen = login()
+
+    assert.doesNotMatch(screen, /OrbLoginMobileHeader/)
+    const mobileBrandBlock = card.slice(card.indexOf('data-orb-login-mobile-brand'), card.indexOf('data-orb-login-auth-brand-hook'))
+    assert.doesNotMatch(mobileBrandBlock, /Welcome to ORB Residential/)
+    assert.match(card, /hidden items-start gap-3 lg:flex[\s\S]*Welcome to ORB Residential/)
+    assert.match(css(), /single unified auth card/)
   })
 
-  it('mobile login heading appears before auth actions', () => {
-    const authCard = read('components/orb-residential/orb-login-auth-card.tsx')
-    const titleIdx = authCard.indexOf('data-orb-login-signin-title')
-    const actionsIdx = authCard.indexOf('data-orb-login-auth-actions')
-    const oauthIdx = authCard.indexOf('data-orb-oauth-buttons')
-    assert.ok(titleIdx > -1 && actionsIdx > -1 && oauthIdx > -1)
-    assert.ok(titleIdx < actionsIdx, 'heading should precede auth actions section')
-    assert.ok(actionsIdx < oauthIdx, 'auth actions section should wrap oauth buttons')
+  it('mobile login shows one safety boundary statement only', () => {
+    const card = authCard()
+    assert.match(card, /data-orb-login-professional-boundary/)
+    assert.match(card, /hidden text-center text-xs[\s\S]*data-orb-login-adult-reviewed/)
+    assert.equal((card.match(/data-orb-login-professional-boundary/g) ?? []).length, 1)
+    assert.equal((card.match(/data-orb-login-adult-reviewed/g) ?? []).length, 1)
   })
 
-  it('Google button renders', () => {
-    const authCard = read('components/orb-residential/orb-login-auth-card.tsx')
-    assert.match(authCard, /Continue with Google/)
-    assert.match(authCard, /provider="google"/)
+  it('Google and Microsoft buttons render before collapsed secondary options', () => {
+    const card = authCard()
+    const oauthIdx = card.indexOf('data-orb-oauth-buttons')
+    const moreIdx = card.indexOf('data-orb-login-more-sign-in')
+    const createIdx = card.indexOf('data-orb-create-account')
+
+    assert.match(card, /Continue with Google/)
+    assert.match(card, /Continue with Microsoft/)
+    assert.ok(oauthIdx > -1 && moreIdx > oauthIdx, 'more sign-in should follow oauth buttons')
+    assert.ok(createIdx > moreIdx, 'create account should be inside more sign-in panel')
   })
 
-  it('Microsoft button renders', () => {
-    const authCard = read('components/orb-residential/orb-login-auth-card.tsx')
-    assert.match(authCard, /Continue with Microsoft/)
-    assert.match(authCard, /provider="microsoft"/)
+  it('create account, email and passkey are collapsed under More sign-in options by default', () => {
+    const screen = login()
+    const card = authCard()
+
+    assert.match(screen, /moreSignInExpanded/)
+    assert.match(screen, /useState\(false\)/)
+    assert.match(card, /data-orb-login-more-sign-in-toggle/)
+    assert.match(card, /More sign-in options/)
+    assert.match(card, /hidden lg:block/)
+    assert.match(card, /data-orb-email-collapsed/)
+    assert.match(card, /data-orb-passkey-collapsed/)
   })
 
-  it('Apple button does not render', () => {
-    const authCard = read('components/orb-residential/orb-login-auth-card.tsx')
-    assert.doesNotMatch(authCard, /Continue with Apple/)
-    assert.doesNotMatch(authCard, /provider="apple"/)
+  it('Why ORB is collapsed by default at the bottom of the mobile surface', () => {
+    const card = authCard()
+    const boundaryIdx = card.indexOf('data-orb-login-professional-boundary')
+    const whyIdx = card.indexOf('data-orb-login-why-orb')
+
+    assert.match(card, /data-orb-login-why-orb-toggle/)
+    assert.match(card, /Why ORB\?/)
+    assert.match(card, /data-orb-login-capability-groups-collapsed/)
+    assert.match(card, /useState\(false\)/)
+    assert.ok(whyIdx > boundaryIdx, 'Why ORB should follow the safety boundary on mobile')
+    assert.match(card, /orb-login-why-orb mt-3 lg:hidden/)
   })
 
-  it('email sign-in is collapsed by default on mobile', () => {
-    const login = read('components/orb-residential/orb-login-screen.tsx')
-    const authCard = read('components/orb-residential/orb-login-auth-card.tsx')
-    assert.match(login, /emailExpanded/)
-    assert.match(login, /useState\(false\)/)
-    assert.match(authCard, /data-orb-email-collapsed/)
-    assert.match(authCard, /data-orb-email-toggle/)
+  it('mobile brand copy includes subheadline and supporting line without duplicate welcome', () => {
+    const card = authCard()
+    assert.match(card, /ORB_LOGIN_ENTERPRISE_SUBHEADLINE/)
+    assert.match(card, /ORB_LOGIN_ENTERPRISE_SUPPORTING/)
+    assert.match(card, /data-orb-login-subheadline/)
+    assert.match(card, /data-orb-login-supporting/)
+    assert.doesNotMatch(card, /Sign in to continue\./)
   })
 
-  it('passkey is collapsed by default on mobile', () => {
-    const login = read('components/orb-residential/orb-login-screen.tsx')
-    const authCard = read('components/orb-residential/orb-login-auth-card.tsx')
-    assert.match(login, /passkeyExpanded/)
-    assert.match(authCard, /data-orb-passkey-collapsed/)
-    assert.match(authCard, /data-orb-passkey-toggle/)
-  })
-
-  it('footer links render separately', () => {
+  it('footer links render separately with compact mobile disclaimer', () => {
     const footer = read('components/orb-residential/orb-login-legal-footer.tsx')
     const links = read('components/orb-residential/orb-legal-links.tsx')
+    const card = authCard()
+
+    assert.match(card, /compactMobile/)
+    assert.match(footer, /compactMobile/)
+    assert.match(footer, /hidden lg:block/)
     assert.match(footer, /OrbLegalLinks/)
     assert.match(footer, /variant="auth"/)
     assert.match(links, /orb-legal-links-separator/)
@@ -108,13 +125,13 @@ describe('ORB mobile login layout', () => {
   it('settings mobile layout uses stacked screen pattern not clipped desktop modal', () => {
     const settings = read('components/orb-standalone/orb-standalone-settings-panel.tsx')
     const shell = read('components/orb-standalone/orb-standalone-panel-shell.tsx')
-    const css = read('app/orb/_legacy-ui-archive/orb-mobile.css')
+    const legacyCss = read('app/orb/_legacy-ui-archive/orb-mobile.css')
     assert.match(settings, /data-orb-settings-mobile-layout/)
     assert.match(settings, /data-orb-settings-mobile-back/)
     assert.match(settings, /useOrbResponsiveMode/)
     assert.match(shell, /mobileMode/)
     assert.match(shell, /layout === 'drawer' \? 'full'/)
-    assert.match(css, /data-orb-settings-mobile-layout='stack'/)
+    assert.match(legacyCss, /data-orb-settings-mobile-layout='stack'/)
   })
 
   it('billing mobile layout shows Manage billing and Refresh status', () => {
@@ -148,59 +165,47 @@ describe('ORB mobile login layout', () => {
   })
 
   it('auth loading states still work', () => {
-    const authCard = read('components/orb-residential/orb-login-auth-card.tsx')
+    const card = authCard()
     const button = read('components/orb-residential/ui/orb-auth-button.tsx')
-    const login = read('components/orb-residential/orb-login-screen.tsx')
-    assert.match(authCard, /loadingLabel/)
-    assert.match(authCard, /oauthRedirecting/)
+    assert.match(card, /loadingLabel/)
+    assert.match(card, /oauthRedirecting/)
     assert.match(button, /aria-busy/)
     assert.match(button, /orb-auth-button--loading/)
-    assert.match(login, /OrbAuthLoadingScreen/)
+    assert.match(login(), /OrbAuthLoadingScreen/)
   })
 
-  it('mobile supporting copy keeps short lead and auth options', () => {
-    const authCard = read('components/orb-residential/orb-login-auth-card.tsx')
-    const mobile = read('components/orb-residential/orb-login-mobile-header.tsx')
-    assert.match(authCard, /Sign in to continue\./)
-    assert.match(mobile, /ORB_LOGIN_ENTERPRISE_SUBHEADLINE/)
-    assert.match(mobile, /data-orb-login-subheadline/)
-    assert.match(authCard, /Continue with Google/)
-    assert.match(authCard, /Continue with Microsoft/)
-    assert.match(authCard, /Sign in with email/)
-    assert.match(authCard, /Use passkey/)
-  })
-
-  it('mobile login avoids modal card chrome', () => {
-    const css = read(loginCss)
-    assert.match(css, /Flat mobile surface/)
-    assert.match(css, /border:\s*none/)
-    assert.match(css, /box-shadow:\s*none/)
+  it('mobile login avoids modal card chrome and heavy blue framing', () => {
+    const sheet = css()
+    assert.match(sheet, /Flat mobile surface/)
+    assert.match(sheet, /border:\s*none/)
+    assert.match(sheet, /box-shadow:\s*none/)
+    assert.match(sheet, /background:\s*transparent/)
+    assert.match(sheet, /\.orb-login-shell__auth[\s\S]*background:\s*transparent/)
   })
 
   it('mobile login does not render large hero ORB in mobile header', () => {
-    const mobile = read('components/orb-residential/orb-login-mobile-header.tsx')
+    const card = authCard()
     const hero = read('components/orb-residential/orb-login-desktop-hero.tsx')
-    assert.doesNotMatch(mobile, /OrbHeroSphere/)
-    assert.doesNotMatch(mobile, /orb-presence--hero/)
+    assert.doesNotMatch(card, /OrbHeroSphere/)
+    assert.doesNotMatch(card, /orb-presence--hero/)
     assert.match(hero, /lg:flex/)
   })
 
-  it('email and passkey options are available', () => {
-    const authCard = read('components/orb-residential/orb-login-auth-card.tsx')
-    assert.match(authCard, /data-orb-email-toggle/)
-    assert.match(authCard, /data-orb-passkey-toggle/)
-    assert.match(authCard, /Use passkey/)
+  it('email and passkey options are available inside more sign-in panel', () => {
+    const card = authCard()
+    assert.match(card, /data-orb-email-toggle/)
+    assert.match(card, /data-orb-passkey-toggle/)
+    assert.match(card, /Use passkey/)
+    assert.match(card, /Sign in with email/)
   })
 
   it('mobile shell applies shared safe-area class', () => {
     const shell = read('components/orb-residential/orb-mobile-shell.tsx')
     const shellCss = read('app/orb/_legacy-ui-archive/orb-mobile-shell.css')
-    const login = read('components/orb-residential/orb-login-screen.tsx')
-    const theme = read('lib/orb/orb-theme.ts')
     assert.match(shell, /ORB_MOBILE_SAFE_AREA_CLASS/)
     assert.match(shellCss, /\.orb-mobile-safe-area/)
-    assert.match(login, /ORB_MOBILE_VIEWPORT_CLASS/)
-    assert.match(theme, /ORB_MOBILE_SAFE_AREA_CLASS/)
+    assert.match(login(), /ORB_MOBILE_VIEWPORT_CLASS/)
+    assert.match(read('lib/orb/orb-theme.ts'), /ORB_MOBILE_SAFE_AREA_CLASS/)
   })
 
   it('settings mobile uses full-screen native sheet mode', () => {
@@ -219,65 +224,46 @@ describe('ORB mobile login layout', () => {
 
   it('account menu keeps Sign out reachable', () => {
     const menu = read('components/orb-residential/orb-account-menu.tsx')
-    const css = read('app/orb/_legacy-ui-archive/orb-mobile.css')
+    const legacyCss = read('app/orb/_legacy-ui-archive/orb-mobile.css')
     assert.match(menu, /data-orb-account-menu-sign-out-wrap/)
     assert.match(menu, /Sign out/)
-    assert.match(css, /data-orb-account-menu-sign-out-wrap/)
+    assert.match(legacyCss, /data-orb-account-menu-sign-out-wrap/)
   })
 
   it('Dictate and Voice CTAs remain reachable on mobile', () => {
-    const css = read('app/orb/_legacy-ui-archive/orb-mobile.css')
-    assert.match(css, /data-orb-dictate-primary-action/)
-    assert.match(css, /data-orb-voice-actions/)
-    assert.match(css, /safe-area-inset-bottom/)
+    const legacyCss = read('app/orb/_legacy-ui-archive/orb-mobile.css')
+    assert.match(legacyCss, /data-orb-dictate-primary-action/)
+    assert.match(legacyCss, /data-orb-voice-actions/)
+    assert.match(legacyCss, /safe-area-inset-bottom/)
   })
 
   it('document view action remains reachable on mobile', () => {
-    const css = read('app/orb/_legacy-ui-archive/orb-mobile.css')
+    const legacyCss = read('app/orb/_legacy-ui-archive/orb-mobile.css')
     const toolbar = read('components/orb-write/orb-write-mobile-toolbar.tsx')
-    assert.match(css, /orb-write-mobile-toolbar/)
+    assert.match(legacyCss, /orb-write-mobile-toolbar/)
     assert.match(toolbar, /data-orb-write-approve/)
-    assert.match(css, /safe-area-inset-bottom/)
-  })
-
-  it('mobile login collapses Think/Capture/Evidence by default', () => {
-    const mobile = read('components/orb-residential/orb-login-mobile-header.tsx')
-    assert.match(mobile, /data-orb-login-why-orb-toggle/)
-    assert.match(mobile, /Why ORB\?/)
-    assert.match(mobile, /data-orb-login-capability-groups-collapsed/)
-    assert.match(mobile, /useState\(false\)/)
-  })
-
-  it('mobile login includes safety boundary text in auth card', () => {
-    const authCard = read('components/orb-residential/orb-login-auth-card.tsx')
-    const copy = read('lib/orb/orb-login-stations-copy.ts')
-    assert.match(authCard, /data-orb-login-professional-boundary/)
-    assert.match(copy, /does not replace safeguarding procedures/)
+    assert.match(legacyCss, /safe-area-inset-bottom/)
   })
 
   it('mobile login uses safe-area bottom padding', () => {
-    const login = read('components/orb-residential/orb-login-screen.tsx')
-    const css = read(loginCss)
-    assert.match(login, /safe-area-inset-bottom/)
-    assert.match(css, /safe-area-inset-bottom/)
-    assert.match(css, /max\(1\.5rem, env\(safe-area-inset-bottom/)
+    const screen = login()
+    const sheet = css()
+    assert.match(screen, /safe-area-inset-bottom/)
+    assert.match(sheet, /safe-area-inset-bottom/)
+    assert.match(sheet, /max\(1\.75rem, env\(safe-area-inset-bottom/)
   })
 
-  it('mobile login places Google CTA after compact header in render order', () => {
-    const login = read('components/orb-residential/orb-login-screen.tsx')
-    const authCard = read('components/orb-residential/orb-login-auth-card.tsx')
-    const renderBlock = login.slice(login.indexOf('return ('))
-    const mobileIdx = renderBlock.indexOf('<OrbLoginMobileHeader')
-    const authIdx = renderBlock.indexOf('<OrbLoginAuthCard')
-    const oauthIdx = authCard.indexOf('data-orb-oauth-buttons')
-    assert.ok(mobileIdx > -1 && authIdx > mobileIdx, 'auth card should follow mobile header in render tree')
-    assert.ok(oauthIdx > -1, 'google oauth buttons should exist in auth card')
+  it('mobile login places OAuth CTAs directly after unified brand header', () => {
+    const card = authCard()
+    const brandIdx = card.indexOf('data-orb-login-mobile-brand')
+    const oauthIdx = card.indexOf('data-orb-oauth-buttons')
+    assert.ok(brandIdx > -1 && oauthIdx > brandIdx, 'oauth buttons should follow unified mobile brand')
   })
 
   it('mobile login avoids horizontal overflow rules', () => {
-    const css = read(loginCss)
-    assert.match(css, /overflow-x:\s*hidden/)
-    assert.match(css, /max-width:\s*100%/)
+    const sheet = css()
+    assert.match(sheet, /overflow-x:\s*hidden/)
+    assert.match(sheet, /max-width:\s*100%/)
   })
 
   it('mobile viewport utilities avoid browser-specific regression', () => {
@@ -287,5 +273,18 @@ describe('ORB mobile login layout', () => {
     assert.match(shellCss, /-webkit-fill-available/)
     assert.match(shellCss, /safe-area-inset-top/)
     assert.match(shellCss, /safe-area-inset-bottom/)
+  })
+
+  it('desktop login still renders expected welcome layout', () => {
+    const screen = login()
+    const card = authCard()
+    const hero = read('components/orb-residential/orb-login-desktop-hero.tsx')
+
+    assert.match(screen, /OrbLoginDesktopHero/)
+    assert.match(screen, /lg:grid-cols-\[58%_42%\]/)
+    assert.match(card, /Welcome to ORB Residential/)
+    assert.match(card, /specialist intelligence workspace/)
+    assert.match(card, /Every output remains adult-reviewed/)
+    assert.match(hero, /hidden flex-col justify-center lg:flex/)
   })
 })

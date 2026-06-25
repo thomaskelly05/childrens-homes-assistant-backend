@@ -1042,15 +1042,23 @@ html[data-orb-residential='1'] .orb-composer--premium textarea::placeholder {
 }
 
 @media (max-width: 1023px) {
-  /* Flat mobile surface — not a floating modal card */
+  /* Flat mobile surface — single unified auth card, not layered marketing + welcome */
   .orb-login-root.orb-mobile-viewport {
     min-height: 100dvh;
     min-height: 100svh;
     min-height: -webkit-fill-available;
     padding-top: max(0.75rem, env(safe-area-inset-top, 0px));
-    padding-bottom: max(1.5rem, env(safe-area-inset-bottom, 0px));
+    padding-bottom: max(1.75rem, env(safe-area-inset-bottom, 0px));
     padding-left: max(0px, env(safe-area-inset-left, 0px));
     padding-right: max(0px, env(safe-area-inset-right, 0px));
+    background: var(--orb-res-workspace-bg);
+  }
+
+  .orb-login-shell__auth {
+    justify-content: flex-start;
+    padding-top: 0;
+    padding-bottom: max(1.75rem, env(safe-area-inset-bottom, 0px));
+    background: transparent;
   }
 
   .orb-login-mobile-header {
@@ -1058,19 +1066,15 @@ html[data-orb-residential='1'] .orb-composer--premium textarea::placeholder {
     overflow: visible;
     text-align: left;
     padding-top: 0.125rem;
-  }
-
-  .orb-login-shell__auth {
-    justify-content: flex-start;
-    padding-top: 0;
-    padding-bottom: max(1.5rem, env(safe-area-inset-bottom, 0px));
+    margin-bottom: 0.5rem;
   }
 
   .orb-login-panel {
-    gap: 0.25rem;
+    gap: 0;
   }
 
-  .orb-login-card {
+  .orb-login-card,
+  .orb-login-auth-card[data-orb-login-mobile-unified-surface] {
     border: none;
     border-radius: 0;
     background: transparent;
@@ -1104,11 +1108,11 @@ html[data-orb-residential='1'] .orb-composer--premium textarea::placeholder {
     line-height: 1.4;
   }
 
-  .orb-login-auth-header {
-    margin-bottom: 0.25rem;
+  .orb-login-auth-section:first-of-type {
+    margin-top: 0.25rem;
   }
 
-  .orb-login-auth-section:first-of-type {
+  .orb-login-more-sign-in-toggle {
     margin-top: 0.5rem;
   }
 
@@ -1117,6 +1121,13 @@ html[data-orb-residential='1'] .orb-composer--premium textarea::placeholder {
     background: transparent;
     padding-inline: 0;
     padding-block: 0.5rem 0;
+    margin-top: 0.75rem;
+    font-size: 0.6875rem;
+    line-height: 1.45;
+  }
+
+  .orb-login-footer {
+    padding-bottom: max(0.5rem, env(safe-area-inset-bottom, 0px));
   }
 
   .orb-login-root.orb-mobile-viewport,

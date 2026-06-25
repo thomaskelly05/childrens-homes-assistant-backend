@@ -70,20 +70,18 @@ describe('ORB premium login screen layout', () => {
     assert.match(css, /clamp\(1\.25rem,\s*12vh/)
   })
 
-  it('mobile layout is single column with separate compact header', () => {
+  it('mobile layout is single unified auth surface without separate header component', () => {
     const login = read('components/orb-residential/orb-login-screen.tsx')
-    const mobile = read('components/orb-residential/orb-login-mobile-header.tsx')
     const authCard = read('components/orb-residential/orb-login-auth-card.tsx')
     const hero = read('components/orb-residential/orb-login-desktop-hero.tsx')
 
     assert.match(login, /data-orb-login-mobile-single-column/)
-    assert.match(login, /OrbLoginMobileHeader/)
-    assert.match(mobile, /data-orb-login-mobile-layout/)
-    assert.match(mobile, /data-orb-login-mobile-mark/)
-    assert.match(mobile, /lg:hidden/)
+    assert.doesNotMatch(login, /OrbLoginMobileHeader/)
+    assert.match(authCard, /data-orb-login-mobile-unified-surface/)
+    assert.match(authCard, /data-orb-login-mobile-brand/)
+    assert.match(authCard, /data-orb-login-mobile-mark/)
     assert.match(hero, /hidden flex-col justify-center lg:flex/)
-    assert.match(mobile, /data-orb-login-mobile-brand/)
-    assert.doesNotMatch(authCard, /OrbLoginMobileHeader/)
+    assert.match(authCard, /data-orb-login-mobile-brand/)
   })
 
   it('authenticated users on login route redirect away', () => {
