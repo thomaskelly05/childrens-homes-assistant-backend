@@ -5,7 +5,7 @@ import { useState } from 'react'
 
 import { LabSectionCard } from '@/components/indicare-lab/lab-section-card'
 import { ReviewRiskBadge, ReviewStatusBadge } from '@/components/indicare-lab/review-event-badges'
-import { createReviewEvent } from '@/lib/indicare-lab/review-events/review-event-store'
+import { createReviewEvent } from '@/lib/indicare-lab/review-events/review-event-storage'
 import {
   REVIEW_TASK_TYPE_LABELS,
   type ReviewEvent,
