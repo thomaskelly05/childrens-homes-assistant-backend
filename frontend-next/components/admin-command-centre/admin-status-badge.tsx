@@ -28,7 +28,11 @@ const STATUS_STYLES: Record<string, string> = {
   low: 'border-slate-400/30 bg-slate-500/10 text-slate-300',
   medium: 'border-amber-400/30 bg-amber-500/10 text-amber-200',
   high: 'border-orange-400/30 bg-orange-500/10 text-orange-200',
-  critical: 'border-rose-400/30 bg-rose-500/10 text-rose-200'
+  critical: 'border-rose-400/30 bg-rose-500/10 text-rose-200',
+  unknown: 'border-slate-400/30 bg-slate-500/10 text-slate-400',
+  success: 'border-emerald-400/30 bg-emerald-500/10 text-emerald-200',
+  failed: 'border-rose-400/30 bg-rose-500/10 text-rose-200',
+  blocked: 'border-amber-400/30 bg-amber-500/10 text-amber-200'
 }
 
 export function AdminStatusBadge({

@@ -63,10 +63,28 @@ describe('Admin Command Centre', () => {
     assert.match(metrics, /DEMO_USERS/)
   })
 
-  it('admin actions are marked as wiring pending', () => {
-    const action = getAdminAction('disable-user')
-    assert.equal(action.wired, false)
-    assert.match(action.description ?? '', /pending/i)
+  it('admin actions reflect phase 2 wiring status', () => {
+    assert.equal(getAdminAction('disable-user').wired, true)
+    assert.equal(getAdminAction('resend-invite').wired, false)
+    assert.match(getAdminAction('resend-invite').description ?? '', /not wired/i)
+  })
+
+  it('users panel uses live directory service', () => {
+    const usersPanel = read('components/admin-command-centre/users-panel.tsx')
+    assert.match(usersPanel, /listAdminUsers/)
+    assert.match(usersPanel, /Placeholder users are hidden in live mode|listAdminUsers/)
+    assert.doesNotMatch(usersPanel, /DEMO_USERS/)
+  })
+
+  it('audit log panel uses admin audit repository', () => {
+    const auditPanel = read('components/admin-command-centre/audit-log-panel.tsx')
+    assert.match(auditPanel, /listAdminAuditLog/)
+    assert.doesNotMatch(auditPanel, /DEMO_AUDIT_LOG/)
+  })
+
+  it('admin user repository and audit modules exist', () => {
+    assert.match(read('lib/admin-command-centre/users/admin-user-repository.ts'), /fetchAdminUsersFromApi/)
+    assert.match(read('lib/admin-command-centre/audit/admin-audit-log.ts'), /appendAdminAuditLog/)
   })
 
   it('os app providers skip shell for admin routes', () => {

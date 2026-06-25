@@ -17,7 +17,7 @@ export type AdminSectionId =
   | 'audit-log'
   | 'settings'
 
-export type UserStatus = 'active' | 'invited' | 'disabled' | 'suspended' | 'deleted'
+export type UserStatus = 'active' | 'invited' | 'disabled' | 'suspended' | 'deleted' | 'unknown'
 
 export type ProviderStatus = 'active' | 'paused' | 'onboarding' | 'offboarding' | 'suspended'
 
