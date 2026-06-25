@@ -98,6 +98,8 @@ export type LabSectionId =
   | 'ui-ux'
   | 'technology'
   | 'review-board'
+  | 'review-events'
+  | 'review-test'
   | 'experiments'
   | 'approvals'
   | 'roadmap'
