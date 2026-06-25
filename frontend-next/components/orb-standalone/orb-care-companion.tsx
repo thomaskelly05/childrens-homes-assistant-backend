@@ -3419,11 +3419,12 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
 
   const composer = (
     <div
-      className={`orb-composer-dock orb-mobile-composer-dock flex-none border-t border-transparent pt-2 ${
+      className={`orb-composer-dock orb-mobile-composer-dock flex-none border-t border-transparent pt-1 ${
         residentialSurface && showEmptyState ? 'orb-composer-dock--empty' : ''
       }`}
       data-orb-composer="main"
       data-orb-composer-mounted="true"
+      data-orb-mobile-shell-bottom-composer
       data-orb-composer-safe-area="true"
     >
       {documentLensActions.length ? (
@@ -3527,15 +3528,16 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
     />
       {residentialSurface ? (
         <p
-          className="orb-composer-dock-safety mx-auto mt-2 max-w-[var(--orb-composer-dock-max,48rem)] px-2 text-center text-[11px] leading-relaxed text-[var(--orb-muted)]"
+          className="orb-composer-dock-safety orb-composer-dock-judgement mx-auto mt-1 max-w-[var(--orb-composer-dock-max,48rem)] px-2 text-center text-[10px] leading-snug text-[var(--orb-muted)]"
           data-orb-composer-safety-line
+          data-orb-composer-judgement-compact
           {...(showEmptyState ? { 'data-orb-home-safety-line': true } : { 'data-orb-chat-safety-line': true })}
         >
           {ORB_HOME_SAFETY_LINE}
           {showEmptyState ? (
             <>
               {' '}
-              <OrbPrivacyClassificationLink className="text-[11px] font-normal text-[var(--orb-muted)] underline underline-offset-2 hover:text-[var(--orb-foreground)]" />
+              <OrbPrivacyClassificationLink className="text-[10px] font-normal text-[var(--orb-muted)] underline underline-offset-2 hover:text-[var(--orb-foreground)]" />
             </>
           ) : null}
         </p>
@@ -4439,6 +4441,7 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
               role="log"
               aria-label="ORB conversation"
               data-orb-chat-scroll-container
+              data-orb-mobile-shell-scroll-region={isMobileViewport ? 'true' : undefined}
             >
               <div className={`mx-auto w-full ${residentialSurface ? 'orb-chat-column' : 'max-w-[var(--orb-chat-column-max,50rem)]'}`}>
                 {showEmptyState ? (

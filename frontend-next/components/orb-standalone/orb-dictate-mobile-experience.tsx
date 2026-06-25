@@ -163,9 +163,10 @@ export function OrbDictateMobileExperience({
       data-orb-dictate-capture-idle={showCapturedCard ? undefined : 'true'}
     >
       <header
-        className="shrink-0 px-2 pb-1.5 pt-1 text-center"
+        className="orb-mobile-station-header shrink-0 px-2 pb-1 pt-[max(0.25rem,env(safe-area-inset-top))] text-center"
         data-orb-dictate-header
         data-orb-dictate-title-spacing
+        data-orb-mobile-station-header
       >
         <h2 className="text-base font-semibold text-[var(--orb-text,var(--orb-foreground))]" data-orb-dictate-title>
           {ORB_DICTATE_PRODUCT_TITLE}

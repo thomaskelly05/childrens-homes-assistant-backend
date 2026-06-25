@@ -31,8 +31,10 @@ export function OrbMobileChatHeader({
 
   return (
     <header
-      className="orb-main-header orb-mobile-chat-header orb-mobile-safe-area-inline relative z-10 flex shrink-0 items-center gap-2 border-b border-[var(--orb-line)]/40 bg-[var(--orb-bg-deep)]/90 px-3 py-2 pt-[max(0.5rem,env(safe-area-inset-top))] backdrop-blur-sm lg:hidden"
+      className="orb-main-header orb-mobile-chat-header orb-mobile-station-header orb-mobile-safe-area-inline relative z-10 flex shrink-0 items-center gap-2 border-b border-[var(--orb-line)]/40 bg-[var(--orb-bg-deep)]/90 px-3 py-1 pt-[max(0.25rem,env(safe-area-inset-top))] backdrop-blur-sm lg:hidden"
       data-orb-mobile-header
+      data-orb-mobile-shell-top-bar
+      data-orb-mobile-station-header
     >
       <button
         type="button"
@@ -195,6 +197,7 @@ export function OrbLayout({
             onDragOver={onDragOver}
             onDrop={onDrop}
             data-orb-chat-body
+            {...(isMobileViewport ? { 'data-orb-mobile-shell-scroll': true } : {})}
           >
             <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
               {thread}

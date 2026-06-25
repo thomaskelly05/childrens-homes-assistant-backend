@@ -11,6 +11,21 @@ export const ORB_MOBILE_SAFE_AREA_CLASS = 'orb-mobile-safe-area'
 /** Cross-browser viewport height utility (svh/dvh + Safari fill-available). */
 export const ORB_MOBILE_VIEWPORT_CLASS = 'orb-mobile-viewport'
 
+/** Fixed compact top bar region (menu / title / account). */
+export const ORB_MOBILE_SHELL_TOP_BAR_ATTR = 'data-orb-mobile-shell-top-bar'
+
+/** Scrollable main content — only region that scrolls on home/chat. */
+export const ORB_MOBILE_SHELL_SCROLL_ATTR = 'data-orb-mobile-shell-scroll'
+
+/** Scrollable thread/station body inside the shell scroll region. */
+export const ORB_MOBILE_SHELL_SCROLL_REGION_ATTR = 'data-orb-mobile-shell-scroll-region'
+
+/** Fixed bottom composer + judgement line anchored above Safari chrome. */
+export const ORB_MOBILE_SHELL_BOTTOM_COMPOSER_ATTR = 'data-orb-mobile-shell-bottom-composer'
+
+/** Compact mobile station header (back / title / close). */
+export const ORB_MOBILE_STATION_HEADER_CLASS = 'orb-mobile-station-header'
+
 export type OrbMobileShellProps = {
   children: ReactNode
   /** Top app bar slot (title row, close, menu). */

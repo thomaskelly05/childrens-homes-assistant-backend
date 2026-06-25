@@ -40,11 +40,13 @@ export function OrbWorkspaceFrame({
       data-orb-app-panel-active="true"
     >
       <header
-        className={`orb-workspace-header flex shrink-0 items-center gap-2 border-b border-[var(--orb-mobile-ws-card-border,var(--orb-line))] bg-[var(--orb-mobile-ws-footer,var(--orb-surface-elevated))] ${
-          compactChrome ? 'px-2 py-1.5' : 'px-3 py-2.5 md:px-5'
+        className={`orb-workspace-header orb-mobile-station-header flex shrink-0 items-center gap-2 border-b border-[var(--orb-mobile-ws-card-border,var(--orb-line))] bg-[var(--orb-mobile-ws-footer,var(--orb-surface-elevated))] pt-[max(0.25rem,env(safe-area-inset-top))] ${
+          compactChrome ? 'px-2 py-1' : 'px-3 py-1.5 md:px-5 md:py-2.5'
         }`}
         data-orb-workspace-header
         data-orb-workspace-header-compact={compactChrome ? 'true' : undefined}
+        data-orb-mobile-station-header
+        data-orb-mobile-shell-top-bar
       >
         <button
           type="button"
@@ -88,6 +90,7 @@ export function OrbWorkspaceFrame({
             ? 'flex flex-col overflow-hidden'
             : 'overflow-y-auto'
         }`}
+        data-orb-mobile-shell-scroll-region
       >
         {children}
       </div>
