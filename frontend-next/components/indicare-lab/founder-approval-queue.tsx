@@ -1,7 +1,6 @@
 'use client'
 
 import { Check, FileQuestion, Send, X } from 'lucide-react'
-import { useState } from 'react'
 
 import { LabSectionCard } from '@/components/indicare-lab/lab-section-card'
 import { RiskBadge } from '@/components/indicare-lab/lab-shared'
@@ -25,11 +24,15 @@ const STATUS_TONE: Record<ApprovalStatus, string> = {
   'expert-review': 'text-cyan-300 border-cyan-400/30 bg-cyan-500/10'
 }
 
-export function FounderApprovalQueue({ initialItems }: { initialItems: ApprovalQueueItem[] }) {
-  const [items, setItems] = useState(initialItems)
-
+export function FounderApprovalQueue({
+  items,
+  onItemsChange
+}: {
+  items: ApprovalQueueItem[]
+  onItemsChange: (items: ApprovalQueueItem[]) => void
+}) {
   function updateStatus(id: string, status: ApprovalStatus) {
-    setItems((prev) => prev.map((item) => (item.id === id ? { ...item, status } : item)))
+    onItemsChange(items.map((item) => (item.id === id ? { ...item, status } : item)))
   }
 
   return (
