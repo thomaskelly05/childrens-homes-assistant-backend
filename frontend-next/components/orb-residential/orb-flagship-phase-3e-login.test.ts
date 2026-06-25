@@ -78,10 +78,12 @@ describe('ORB Residential Phase 3E premium login entrance', () => {
     assert.doesNotMatch(css, /\.orb-login-station-preview/)
   })
 
-  it('mobile login entrance includes promise and capability groups', () => {
+  it('mobile login entrance includes Why ORB toggle and safety boundary in auth card', () => {
     const mobile = read('components/orb-residential/orb-login-mobile-header.tsx')
-    assert.match(mobile, /data-orb-login-capability-groups/)
-    assert.match(mobile, /data-orb-login-professional-boundary/)
+    const authCard = read('components/orb-residential/orb-login-auth-card.tsx')
+    assert.match(mobile, /data-orb-login-why-orb-toggle/)
+    assert.match(mobile, /Why ORB\?/)
+    assert.match(authCard, /data-orb-login-professional-boundary/)
     assert.match(mobile, /Powered by IndiCare Intelligence/)
   })
 })

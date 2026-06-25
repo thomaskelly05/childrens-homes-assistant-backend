@@ -94,17 +94,15 @@ describe('ORB Residential Phase 3F final login entrance', () => {
     assert.doesNotMatch(hero, /Not using ORB yet/)
   })
 
-  it('mobile login renders narrative order with founder line and capabilities', () => {
+  it('mobile login renders calm order with collapsed Why ORB section', () => {
     const mobile = read('components/orb-residential/orb-login-mobile-header.tsx')
     const brandIdx = mobile.indexOf('data-orb-login-brand')
     const subIdx = mobile.indexOf('data-orb-login-subheadline')
-    const founderIdx = mobile.indexOf('data-orb-login-founder-line')
-    const capIdx = mobile.indexOf('data-orb-login-capability-groups')
-    const boundaryIdx = mobile.indexOf('data-orb-login-professional-boundary')
+    const whyIdx = mobile.indexOf('data-orb-login-why-orb')
+    const collapsedIdx = mobile.indexOf('data-orb-login-capability-groups-collapsed')
     assert.ok(brandIdx < subIdx)
-    assert.ok(subIdx < founderIdx)
-    assert.ok(founderIdx < capIdx)
-    assert.ok(capIdx < boundaryIdx)
+    assert.ok(subIdx < whyIdx)
+    assert.ok(collapsedIdx > -1)
     assert.doesNotMatch(mobile, /data-orb-login-demo-route/)
   })
 })
