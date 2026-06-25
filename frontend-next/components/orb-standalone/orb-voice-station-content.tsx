@@ -8,6 +8,7 @@ import { useOrbMobileViewport } from '@/components/orb-standalone/use-orb-mobile
 import type { OrbVoiceCompanionState } from '@/components/orb-residential/orb-voice-companion'
 import { ORB_VOICE_V2_ONE_SCREEN_WORKSPACE } from '@/lib/orb/voice-v2/orb-voice-v2-one-screen-workspace.ts'
 import { ORB_VOICE_V2_IDLE_PROMPT } from '@/lib/orb/voice-v2/orb-voice-v2-copy.ts'
+import { ORB_VOICE_MOBILE_SUPPORTING } from '@/lib/orb/orb-care-led-mobile-copy'
 import { ORB_VOICE_V2_TITLE } from '@/lib/orb/orb-residential-ui-copy'
 
 /**
@@ -79,9 +80,19 @@ export function OrbVoiceStationContent({
                 {ORB_VOICE_V2_TITLE}
               </h2>
               {!sessionStarted ? (
-                <p className="orb-voice-station-content__subtitle mt-0.5 text-xs text-[var(--orb-muted)]" data-orb-voice-v2-subtitle>
-                  {ORB_VOICE_V2_IDLE_PROMPT}
-                </p>
+                <>
+                  <p className="orb-voice-station-content__subtitle mt-0.5 text-xs text-[var(--orb-muted)]" data-orb-voice-v2-subtitle>
+                    {ORB_VOICE_V2_IDLE_PROMPT}
+                  </p>
+                  {isMobileViewport ? (
+                    <p
+                      className="orb-voice-station-content__care-framing mt-1 text-[11px] leading-snug text-[var(--orb-muted)]"
+                      data-orb-voice-mobile-care-framing
+                    >
+                      {ORB_VOICE_MOBILE_SUPPORTING}
+                    </p>
+                  ) : null}
+                </>
               ) : null}
             </div>
 

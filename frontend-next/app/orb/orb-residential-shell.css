@@ -4302,6 +4302,24 @@ html[data-orb-residential='1'] .orb-residential-safety-footer {
     min-height: 2.75rem;
     border-radius: 0.85rem;
     text-align: left;
+    border-color: color-mix(in srgb, var(--orb-line, #cbd5e1) 35%, transparent);
+    background: color-mix(in srgb, var(--orb-surface-elevated, #f8fafc) 55%, transparent);
+    box-shadow: none;
+    font-weight: 500;
+  }
+
+  [data-orb-write-mobile-metadata-secondary] .orb-write-mobile-status-badge,
+  [data-orb-write-mobile-metadata-secondary] .orb-write-mobile-word-count {
+    display: none;
+  }
+
+  [data-orb-write-mobile-care-header] {
+    background: transparent;
+    border-bottom-color: color-mix(in srgb, var(--orb-line, #cbd5e1) 20%, transparent);
+  }
+
+  [data-orb-records-mobile-list-header] {
+    border-bottom: 1px solid color-mix(in srgb, var(--orb-line, #cbd5e1) 18%, transparent);
   }
 
   [data-orb-empty-subline-desktop] {

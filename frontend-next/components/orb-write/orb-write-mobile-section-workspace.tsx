@@ -3,6 +3,15 @@
 import { useState } from 'react'
 import { ChevronLeft, ChevronRight, List, X } from 'lucide-react'
 
+import {
+  ORB_WRITE_MOBILE_ALL_PARTS,
+  ORB_WRITE_MOBILE_HEADER,
+  ORB_WRITE_MOBILE_NEXT_PART,
+  ORB_WRITE_MOBILE_PART_LABEL,
+  ORB_WRITE_MOBILE_PREVIOUS_PART,
+  ORB_WRITE_MOBILE_SUBHEADER,
+  orbWriteMobileCareLedSectionTitle
+} from '@/lib/orb/orb-care-led-mobile-copy'
 import type { OrbWriteMobileSection } from '@/lib/orb/write/orb-write-mobile-sections'
 
 export function OrbWriteMobileDocumentSummaryBar({
@@ -28,18 +37,19 @@ export function OrbWriteMobileDocumentSummaryBar({
 
   return (
     <div
-      className="flex shrink-0 flex-col gap-1.5 border-b border-[var(--orb-line)]/30 px-3 py-2"
+      className="flex shrink-0 flex-col gap-1 border-b border-[var(--orb-line)]/20 px-3 py-1.5"
       data-orb-write-mobile-summary-bar
+      data-orb-write-mobile-metadata-secondary
     >
       <div className="flex min-w-0 items-center gap-2">
         <p
-          className="min-w-0 flex-1 truncate text-sm font-semibold text-[var(--orb-foreground)]"
+          className="min-w-0 flex-1 truncate text-sm font-medium text-[var(--orb-foreground)]"
           data-orb-write-mobile-document-title
         >
           {documentTitle || recordTypeLabel}
         </p>
         <span
-          className={`inline-flex shrink-0 items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${statusClass}`}
+          className={`orb-write-mobile-status-badge inline-flex shrink-0 items-center rounded-full border px-2 py-0.5 text-[10px] font-medium ${statusClass}`}
           data-orb-write-mobile-status-badge
         >
           {statusLabel}
@@ -49,8 +59,12 @@ export function OrbWriteMobileDocumentSummaryBar({
         <span className="truncate" data-orb-write-mobile-record-type-label>
           {recordTypeLabel}
         </span>
-        <span aria-hidden>·</span>
-        <span data-orb-write-word-count-display>{wordCount} words</span>
+        <span className="orb-write-mobile-word-count" aria-hidden>
+          ·
+        </span>
+        <span className="orb-write-mobile-word-count" data-orb-write-word-count-display>
+          {wordCount} words
+        </span>
         {onUseTemplate ? (
           <>
             <span className="ml-auto" aria-hidden />
@@ -70,6 +84,23 @@ export function OrbWriteMobileDocumentSummaryBar({
   )
 }
 
+export function OrbWriteMobileCareHeader() {
+  return (
+    <div
+      className="flex shrink-0 flex-col gap-0.5 border-b border-[var(--orb-line)]/15 px-3 py-2"
+      data-orb-write-mobile-care-header
+      data-orb-write-mobile-compact-header
+    >
+      <h2 className="text-base font-semibold text-[var(--orb-foreground)]" data-orb-write-studio-title>
+        {ORB_WRITE_MOBILE_HEADER}
+      </h2>
+      <p className="text-[13px] leading-snug text-[var(--orb-muted)]" data-orb-write-mobile-care-subheader>
+        {ORB_WRITE_MOBILE_SUBHEADER}
+      </p>
+    </div>
+  )
+}
+
 export function OrbWriteMobileCompactHeader({
   recordTypeLabel
 }: {
@@ -77,15 +108,16 @@ export function OrbWriteMobileCompactHeader({
 }) {
   return (
     <div
-      className="flex shrink-0 items-center gap-2 border-b border-[var(--orb-line)]/25 px-3 py-1.5"
+      className="flex shrink-0 items-center gap-2 border-b border-[var(--orb-line)]/15 px-3 py-1.5"
       data-orb-write-mobile-compact-header
+      data-orb-write-mobile-metadata-secondary
     >
-      <h2 className="text-sm font-semibold text-[var(--orb-foreground)]" data-orb-write-studio-title>
-        ORB Write
+      <h2 className="text-sm font-medium text-[var(--orb-foreground)]" data-orb-write-studio-title>
+        {ORB_WRITE_MOBILE_HEADER}
       </h2>
       {recordTypeLabel ? (
         <span
-          className="truncate rounded-full border border-[var(--orb-line)]/50 px-2 py-0.5 text-[10px] text-[var(--orb-muted)]"
+          className="truncate rounded-full border border-[var(--orb-line)]/40 px-2 py-0.5 text-[10px] text-[var(--orb-muted)]"
           data-orb-write-mobile-header-record-type
         >
           {recordTypeLabel}
@@ -110,22 +142,27 @@ export function OrbWriteMobileActiveSection({
   onBodyChange: (body: string) => void
   askOrbAction?: React.ReactNode
 }) {
+  const displayTitle = orbWriteMobileCareLedSectionTitle(section.title)
+
   return (
     <div
       className="flex min-h-0 flex-1 flex-col overflow-hidden"
       data-orb-write-mobile-active-section
       data-orb-write-mobile-section-index={sectionIndex + 1}
       data-orb-write-mobile-section-total={sectionCount}
+      data-orb-write-mobile-part-index={sectionIndex + 1}
+      data-orb-write-mobile-part-total={sectionCount}
     >
       <div className="shrink-0 px-3 pt-2">
         <p className="text-[11px] font-medium text-[var(--orb-muted)]" data-orb-write-mobile-section-counter>
-          Section {sectionIndex + 1} of {sectionCount}
+          {ORB_WRITE_MOBILE_PART_LABEL} {sectionIndex + 1} of {sectionCount}
         </p>
         <h3
           className="mt-0.5 text-base font-semibold text-[var(--orb-foreground)]"
           data-orb-write-mobile-section-title
+          data-orb-write-mobile-part-title
         >
-          {section.title}
+          {displayTitle}
         </h3>
         {section.hint ? (
           <p
@@ -181,36 +218,39 @@ export function OrbWriteMobileSectionNav({
     <nav
       className="flex shrink-0 items-center gap-2 border-t border-[var(--orb-line)]/30 px-3 py-2"
       data-orb-write-mobile-section-nav
-      aria-label="Section navigation"
+      aria-label="Part navigation"
     >
       <button
         type="button"
         disabled={atStart}
         onClick={onPrevious}
-        className="inline-flex min-h-11 flex-1 items-center justify-center gap-1 rounded-xl border border-[var(--orb-line)]/50 bg-[var(--orb-surface)] px-3 text-xs font-semibold disabled:opacity-40"
+        className="inline-flex min-h-11 flex-1 items-center justify-center gap-1 rounded-xl border border-[var(--orb-line)]/40 bg-[var(--orb-surface)] px-3 text-xs font-medium disabled:opacity-40"
         data-orb-write-mobile-section-prev
+        data-orb-write-mobile-part-prev
       >
         <ChevronLeft className="h-4 w-4" aria-hidden />
-        Previous
+        {ORB_WRITE_MOBILE_PREVIOUS_PART}
       </button>
       <button
         type="button"
         onClick={onOpenSections}
-        className="inline-flex min-h-11 items-center justify-center gap-1 rounded-xl border border-[var(--orb-line)]/50 bg-[var(--orb-surface)] px-3 text-xs font-semibold"
+        className="inline-flex min-h-11 items-center justify-center gap-1 rounded-xl border border-[var(--orb-line)]/40 bg-[var(--orb-surface)] px-3 text-xs font-medium"
         data-orb-write-mobile-sections-toggle
-        aria-label="Open section list"
+        data-orb-write-mobile-parts-toggle
+        aria-label="Open part list"
       >
         <List className="h-4 w-4" aria-hidden />
-        Sections
+        {ORB_WRITE_MOBILE_ALL_PARTS}
       </button>
       <button
         type="button"
         disabled={atEnd}
         onClick={onNext}
-        className="inline-flex min-h-11 flex-1 items-center justify-center gap-1 rounded-xl border border-[var(--orb-line)]/50 bg-[var(--orb-surface)] px-3 text-xs font-semibold disabled:opacity-40"
+        className="inline-flex min-h-11 flex-1 items-center justify-center gap-1 rounded-xl border border-[var(--orb-line)]/40 bg-[var(--orb-surface)] px-3 text-xs font-medium disabled:opacity-40"
         data-orb-write-mobile-section-next
+        data-orb-write-mobile-part-next
       >
-        Next
+        {ORB_WRITE_MOBILE_NEXT_PART}
         <ChevronRight className="h-4 w-4" aria-hidden />
       </button>
     </nav>
@@ -242,10 +282,10 @@ export function OrbWriteMobileSectionsSheet({
         className="max-h-[70dvh] rounded-t-2xl border-t bg-[var(--orb-surface-elevated)] pb-[max(1rem,env(safe-area-inset-bottom))]"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
-        aria-label="Section list"
+        aria-label="Part list"
       >
         <div className="flex items-center justify-between border-b border-[var(--orb-line)]/40 px-4 py-3">
-          <p className="text-sm font-semibold">Sections</p>
+          <p className="text-sm font-semibold">{ORB_WRITE_MOBILE_ALL_PARTS}</p>
           <button type="button" onClick={onClose} className="inline-flex h-10 w-10 items-center justify-center rounded-full" aria-label="Close">
             <X className="h-5 w-5" />
           </button>
@@ -266,8 +306,10 @@ export function OrbWriteMobileSectionsSheet({
                 }`}
                 data-orb-write-outline-section={section.id}
               >
-                <span className="text-[11px] text-[var(--orb-muted)]">Section {index + 1}</span>
-                <span className="mt-0.5 block">{section.title}</span>
+                <span className="text-[11px] text-[var(--orb-muted)]">
+                  {ORB_WRITE_MOBILE_PART_LABEL} {index + 1}
+                </span>
+                <span className="mt-0.5 block">{orbWriteMobileCareLedSectionTitle(section.title)}</span>
               </button>
             </li>
           ))}

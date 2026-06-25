@@ -7,14 +7,14 @@ export const ORB_STATION_CHAT_HEADING = 'What do you need help thinking through?
 
 export const ORB_STATION_DICTATE_TITLE = 'Dictate'
 export const ORB_STATION_DICTATE_SUBTITLE =
-  'Speak naturally. ORB will structure your words into a safer draft for adult review.'
+  'Speak naturally. ORB will help structure your words into an adult-reviewed draft.'
 
-export const ORB_STATION_VOICE_SUBTITLE = 'Talk it through with ORB before you write.'
+export const ORB_STATION_VOICE_SUBTITLE = 'Talk it through before you write.'
 
 export const ORB_STATION_WRITE_SUBTITLE =
-  'Draft, review and finalise adult-led records in one calm workspace.'
+  'Write safely, keep the child central, and review before use.'
 
-export const ORB_STATION_RECORDS_SUBTITLE = 'Your saved drafts, records and working documents.'
+export const ORB_STATION_RECORDS_SUBTITLE = 'Your drafts, ready to review.'
 
 export const ORB_STATION_SAFETY_FOOTER =
   'ORB supports professional judgement. Review before use and follow local safeguarding procedures.'
@@ -25,7 +25,7 @@ export const ORB_STATION_DICTATE_SAFETY_STRIP =
 export const ORB_STATION_DICTATE_RECENT_CAPTURES_EMPTY =
   'No captures yet. Speak naturally when you are ready. ORB will help structure your words into a clearer draft for review.'
 
-export const ORB_STATION_RECORDS_EMPTY_TITLE = 'No records or drafts yet.'
+export const ORB_STATION_RECORDS_EMPTY_TITLE = 'Your drafts'
 export const ORB_STATION_RECORDS_EMPTY_SUBTITLE =
   'Saved adult-reviewed outputs from Chat, Dictate, Voice and ORB Write appear here.'
 

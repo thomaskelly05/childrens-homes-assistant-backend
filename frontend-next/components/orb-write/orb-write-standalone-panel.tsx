@@ -69,6 +69,7 @@ import { ORB_RESIDENTIAL_STATION_PRODUCT_COPY } from '@/lib/orb/orb-residential-
 import { orbGuidedDemoSaveStatusMessage, resolveOrbGuidedDemoSaveTitle } from '@/lib/orb/orb-guided-demo'
 import { OrbWriteStudioReviewChecklist } from '@/components/orb-write/orb-write-studio-review-checklist'
 import {
+  OrbWriteMobileCareHeader,
   OrbWriteMobileCompactHeader,
   OrbWriteMobileDocumentSummaryBar,
   OrbWriteMobileReviewSheet
@@ -578,7 +579,7 @@ export function OrbWriteStandalonePanel({
               data-orb-write-record-type-suppressed={isMobile ? 'true' : undefined}
               data-orb-mobile-station-header={isMobile ? 'true' : undefined}
             >
-              {isMobile ? <OrbWriteMobileCompactHeader recordTypeLabel={recordType.label} /> : null}
+              {isMobile ? <OrbWriteMobileCareHeader /> : null}
               {!isMobile ? (
                 <div className="flex min-w-0 items-start gap-3">
                   <GlassOrbMark size="sm" pulse className="mt-0.5 shrink-0" aria-hidden />

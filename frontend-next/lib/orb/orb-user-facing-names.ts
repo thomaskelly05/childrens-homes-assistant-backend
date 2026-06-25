@@ -17,8 +17,9 @@ export const ORB_NAV_SETTINGS = 'Settings'
 
 /** Records & drafts — user-facing (API may still use /outputs). */
 export const ORB_RECORDS_PANEL_TITLE = 'Records & Drafts'
-export const ORB_RECORDS_PANEL_SUBTITLE = 'Your saved drafts, records and working documents.'
-export const ORB_RECORDS_EMPTY_TITLE = 'No records or drafts yet.'
+export const ORB_RECORDS_PANEL_SUBTITLE = 'Your drafts, ready to review.'
+export const ORB_RECORDS_MOBILE_LIST_HEADING = 'Your drafts'
+export const ORB_RECORDS_EMPTY_TITLE = 'Your drafts'
 export const ORB_RECORDS_EMPTY_SUBTITLE =
   'Saved adult-reviewed outputs from Chat, Dictate, Voice and ORB Write appear here.'
 export const ORB_RECORDS_FOOTER =
@@ -31,7 +32,7 @@ export const ORB_SAVED_RECORD_LABEL = 'saved record'
 /** Dictate — single visible product name (no Magic Notes). */
 export const ORB_DICTATE_TITLE = 'Dictate'
 export const ORB_DICTATE_SUBTITLE =
-  'Speak naturally. ORB will structure your words for adult review.'
+  'Speak naturally. ORB will help structure your words into an adult-reviewed draft.'
 export const ORB_DICTATE_CAPTURE_PROMPT = 'Speak, paste or upload what happened'
 export const ORB_DICTATE_CAPTURE_GUIDANCE =
   'Start with what happened. ORB will help structure the record, check what may be missing and keep the child\u2019s experience central.'
@@ -43,7 +44,7 @@ export const ORB_DICTATE_RESPONSIBILITY =
 /** Chat home — child-centred empty state (Phase 3H calm welcome). */
 export const ORB_CHAT_EMPTY_HEADING = 'What do you need help thinking through?'
 export const ORB_CHAT_EMPTY_SUBLINE =
-  'Start with what happened, what you are unsure about, or what needs recording. ORB can help you reflect, structure and write with the child\u2019s experience central.'
+  'Start with what happened, what you are unsure about, or what needs recording. ORB helps you reflect, structure and write with the child\u2019s experience central.'
 export const ORB_HOME_VALUE_PROPOSITION = ORB_CHAT_EMPTY_SUBLINE
 
 /** Starter action — not a competing station name. */
@@ -112,9 +113,9 @@ export const ORB_RECORDS_FILTER_CHIPS: Array<{ id: string; label: string; type: 
 
 /** Lifecycle status filter chips for Records & Drafts (pilot visibility). */
 export const ORB_RECORDS_STATUS_CHIPS: Array<{ id: string; label: string; status: string }> = [
-  { id: 'status_all', label: 'All statuses', status: '' },
-  { id: 'status_draft', label: 'Draft', status: 'draft' },
-  { id: 'status_reviewed', label: 'Reviewed', status: 'reviewed' },
+  { id: 'status_all', label: 'All', status: '' },
+  { id: 'status_draft', label: 'Open and continue', status: 'draft' },
+  { id: 'status_reviewed', label: 'Ready for review', status: 'reviewed' },
   { id: 'status_finalised', label: 'Finalised', status: 'finalised' },
   { id: 'status_archived', label: 'Archived', status: 'archived' }
 ]

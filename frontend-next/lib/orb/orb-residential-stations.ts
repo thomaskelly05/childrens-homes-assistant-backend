@@ -4,6 +4,7 @@
  */
 
 import { ORB_DICTATE_SUBTITLE } from './orb-user-facing-names.ts'
+import { ORB_STATION_VOICE_SUBTITLE, ORB_STATION_WRITE_SUBTITLE } from './orb-residential-station-copy.ts'
 
 export type OrbResidentialStationId =
   | 'chat'
@@ -34,8 +35,8 @@ export const ORB_RESIDENTIAL_STATION_DEFINITIONS: Record<
   orb_voice: {
     id: 'orb_voice',
     label: 'Voice',
-    tagline: 'Talk it through with ORB before you write.',
-    helper: 'Talk through situations with ORB before you write'
+    tagline: ORB_STATION_VOICE_SUBTITLE,
+    helper: 'Talk through situations before you write'
   },
   orb_dictate: {
     id: 'orb_dictate',
@@ -52,8 +53,8 @@ export const ORB_RESIDENTIAL_STATION_DEFINITIONS: Record<
   orb_write: {
     id: 'orb_write',
     label: 'ORB Write',
-    tagline: 'Draft, review and finalise adult-led records in one calm workspace.',
-    helper: 'Draft, review and finalise adult-led records'
+    tagline: ORB_STATION_WRITE_SUBTITLE,
+    helper: 'Shape the record, review and save for adult use'
   }
 }
 

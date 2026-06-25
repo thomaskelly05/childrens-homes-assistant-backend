@@ -3,7 +3,7 @@
 export const ORB_DICTATE_CAPTURE_HEADLINE = 'Dictate' as const
 
 export const ORB_DICTATE_CAPTURE_SUBTITLE =
-  'Speak naturally. ORB will structure your words into a safer draft for adult review.' as const
+  'Speak naturally. ORB will help structure your words into an adult-reviewed draft.' as const
 
 export const ORB_DICTATE_WHAT_ARE_YOU_RECORDING = 'What are you recording?' as const
 
@@ -85,7 +85,7 @@ export const ORB_DICTATE_RECORDING_LOCAL_PERSISTENCE_NOTE =
   'Recording attached locally. Permanent recording storage is not yet enabled.' as const
 
 export const ORB_DICTATE_CAPTURE_SUPPORTING =
-  'Start capturing what happened. ORB will help structure it safely afterwards.' as const
+  'Start with what happened. ORB will help structure your words into an adult-reviewed draft.' as const
 
 export const ORB_DICTATE_CAPTURE_BOUNDARY =
   'Generated drafts must be reviewed by an adult before use. Follow your home\u2019s safeguarding and recording policy.' as const
@@ -173,6 +173,9 @@ export const ORB_DICTATE_STORY_LINE =
 export const ORB_DICTATE_SPEAK_LABEL = 'Speak' as const
 export const ORB_DICTATE_PASTE_LABEL = 'Paste notes' as const
 export const ORB_DICTATE_UPLOAD_LABEL = 'Upload audio' as const
+
+export const ORB_DICTATE_QUICK_RECORD_EXPLANATION =
+  'For rough notes, voice memos or quick observations that need safer wording.' as const
 
 export const ORB_DICTATE_SPEAK_GUIDANCE =
   'Speak naturally. ORB will help structure this after capture.' as const

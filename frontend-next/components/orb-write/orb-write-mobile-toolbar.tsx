@@ -2,6 +2,11 @@
 
 import { useState } from 'react'
 import {
+  ORB_WRITE_MOBILE_ASK_ORB_CHECK_WORDING,
+  ORB_WRITE_MOBILE_REVIEW_BEFORE_USE,
+  ORB_WRITE_MOBILE_SAVE_DRAFT
+} from '@/lib/orb/orb-care-led-mobile-copy'
+import {
   AlignLeft,
   Bold,
   Check,
@@ -90,7 +95,7 @@ export function OrbWriteMobileToolbar({
             onClick={onSaveDraft}
           >
             <Save className="h-4 w-4 shrink-0" aria-hidden />
-            Save draft
+            {ORB_WRITE_MOBILE_SAVE_DRAFT}
           </button>
         ) : null}
         <button
@@ -107,7 +112,7 @@ export function OrbWriteMobileToolbar({
           }}
         >
           <Sparkles className="h-4 w-4 shrink-0" aria-hidden />
-          Review
+          {ORB_WRITE_MOBILE_REVIEW_BEFORE_USE}
         </button>
         <button
           type="button"
@@ -229,7 +234,7 @@ export function OrbWriteMobileToolbar({
                     data-orb-write-ask-orb
                   >
                     <MessageCircle className="h-4 w-4" />
-                    Ask ORB
+                    {ORB_WRITE_MOBILE_ASK_ORB_CHECK_WORDING}
                   </button>
                 ) : null}
               </>

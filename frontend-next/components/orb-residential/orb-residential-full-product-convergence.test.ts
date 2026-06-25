@@ -43,9 +43,9 @@ describe('ORB Residential full-product convergence', () => {
     assert.match(voiceLaunch, /orbResidentialStation\('orb_voice'\)/)
     assert.match(dictateTypes, /orbResidentialStation\('orb_dictate'\)/)
     assert.match(tools, /ORB_RESIDENTIAL_STATION_DEFINITIONS/)
-    assert.equal(ORB_RESIDENTIAL_STATION_DEFINITIONS.orb_voice.tagline, 'Talk it through with ORB before you write.')
+    assert.equal(ORB_RESIDENTIAL_STATION_DEFINITIONS.orb_voice.tagline, 'Talk it through before you write.')
     assert.equal(ORB_RESIDENTIAL_STATION_DEFINITIONS.orb_dictate.tagline, ORB_DICTATE_SUBTITLE)
-    assert.equal(ORB_RESIDENTIAL_STATION_DEFINITIONS.orb_write.tagline, 'Draft, review and finalise adult-led records in one calm workspace.')
+    assert.equal(ORB_RESIDENTIAL_STATION_DEFINITIONS.orb_write.tagline, 'Write safely, keep the child central, and review before use.')
   })
 
   it('one recording framework without duplicate template registry in UI', () => {
