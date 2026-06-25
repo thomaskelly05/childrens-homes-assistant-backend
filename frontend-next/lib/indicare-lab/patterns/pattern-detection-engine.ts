@@ -1,5 +1,10 @@
 import { listReviewEvents } from '@/lib/indicare-lab/review-events/review-event-storage'
 import {
+  filterEventsForPatternDetection,
+  getDefaultPatternDetectionFilters,
+  type PatternDetectionFilters
+} from '@/lib/indicare-lab/lab-data-mode'
+import {
   FOUNDER_ACTION_ELIGIBLE_STATUSES,
   REVIEW_SOURCE_LABELS,
   REVIEW_TASK_TYPE_LABELS,
@@ -395,8 +400,23 @@ export type PatternDetectionResult = {
   detectedAt: string
 }
 
-export function detectPatternsFromReviewEvents(events?: ReviewEvent[]): PatternDetectionResult {
-  const sourceEvents = events ?? listReviewEvents()
+export function detectPatternsFromReviewEvents(
+  events?: ReviewEvent[],
+  filters?: PatternDetectionFilters
+): PatternDetectionResult {
+  const explicitEvents = events !== undefined
+  const allEvents = events ?? listReviewEvents()
+  const resolvedFilters =
+    filters ??
+    (explicitEvents
+      ? {
+          includeDemoEvents: true,
+          includeInternalTests: true,
+          includeShadowReviewEvents: true,
+          includeBenchmarkGenerated: true
+        }
+      : getDefaultPatternDetectionFilters())
+  const sourceEvents = filterEventsForPatternDetection(allEvents, resolvedFilters)
   const patterns: LabPattern[] = []
 
   for (const rule of PATTERN_RULES) {
@@ -454,3 +474,4 @@ export function getMostCommonRewriteReason(events?: ReviewEvent[]): string | nul
 }
 
 export { PATTERN_RULES }
+export type { PatternDetectionFilters }

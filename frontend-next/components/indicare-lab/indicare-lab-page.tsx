@@ -5,6 +5,7 @@ import { useCallback, useMemo, useState } from 'react'
 import { BrainGapPanel } from '@/components/indicare-lab/brain-gap-panel'
 import { BuildBriefGeneratorPanel } from '@/components/indicare-lab/build-brief-generator-panel'
 import { EvaluationBenchmarksPanel } from '@/components/indicare-lab/evaluation-benchmarks-panel'
+import { EvidenceOfImprovementPanel } from '@/components/indicare-lab/evidence-of-improvement-panel'
 import { ExperimentsPanel } from '@/components/indicare-lab/experiments-panel'
 import { FounderApprovalQueue } from '@/components/indicare-lab/founder-approval-queue'
 import { IndiCareLabShell } from '@/components/indicare-lab/indicare-lab-shell'
@@ -14,6 +15,7 @@ import { LabOverviewCards } from '@/components/indicare-lab/lab-overview-cards'
 import { LabRoadmapPanel } from '@/components/indicare-lab/lab-roadmap-panel'
 import { LabSectionCard } from '@/components/indicare-lab/lab-section-card'
 import { PatternIntelligencePanel } from '@/components/indicare-lab/pattern-intelligence-panel'
+import { RealSuggestionsPanel } from '@/components/indicare-lab/real-suggestions-panel'
 import { ReviewBoardPanel } from '@/components/indicare-lab/review-board-panel'
 import { ReviewEventsPanel } from '@/components/indicare-lab/review-events-panel'
 import { ShadowReviewStatusCard } from '@/components/indicare-lab/shadow-review-status-card'
@@ -31,8 +33,16 @@ import {
   TECHNOLOGY_WATCH,
   UI_UX_GAPS
 } from '@/lib/indicare-lab/demo-data'
-import { buildLabOverviewMetrics } from '@/lib/indicare-lab/lab-overview-metrics'
-import { summariseEvaluationRuns } from '@/lib/indicare-lab/evaluations/evaluation-storage'
+import { listEvaluationRuns, summariseEvaluationRuns } from '@/lib/indicare-lab/evaluations/evaluation-storage'
+import {
+  buildEvidenceOfImprovementCounts,
+  buildLabOverviewMetrics
+} from '@/lib/indicare-lab/lab-overview-metrics'
+import {
+  getDefaultPatternDetectionFilters,
+  getLabDataMode,
+  getLabDataModeConfig
+} from '@/lib/indicare-lab/lab-data-mode'
 import {
   generateBuildBriefFromPattern,
   patternToApprovalItem
@@ -49,6 +59,12 @@ import {
   summariseReviewEvents
 } from '@/lib/indicare-lab/review-events/review-event-storage'
 import type { ReviewEvent } from '@/lib/indicare-lab/review-events/types'
+import { generateEvidenceSuggestions } from '@/lib/indicare-lab/suggestions/evidence-suggestion-engine'
+import {
+  generateBuildBriefFromSuggestion,
+  suggestionToApprovalItem
+} from '@/lib/indicare-lab/suggestions/suggestion-actions'
+import type { LabSuggestion, SuggestionStatus } from '@/lib/indicare-lab/suggestions/types'
 import type { ApprovalQueueItem, BuildBrief, LabGap } from '@/lib/indicare-lab/types'
 
 export function IndiCareLabPage() {
@@ -57,7 +73,15 @@ export function IndiCareLabPage() {
   const [reviewEvents, setReviewEvents] = useState<ReviewEvent[]>(() => listReviewEvents())
   const [approvalItems, setApprovalItems] = useState<ApprovalQueueItem[]>(APPROVAL_QUEUE)
   const [patternStatuses, setPatternStatuses] = useState<Record<string, LabPatternStatus>>({})
+  const [suggestionStatuses, setSuggestionStatuses] = useState<Record<string, SuggestionStatus>>({})
   const [evaluationRunVersion, setEvaluationRunVersion] = useState(0)
+  const [investorSafeView, setInvestorSafeView] = useState(false)
+
+  const dataMode = getLabDataMode()
+  const dataConfig = useMemo(
+    () => getLabDataModeConfig({ investorSafeOverride: investorSafeView }),
+    [investorSafeView]
+  )
 
   const reviewSummary = useMemo(() => summariseReviewEvents(), [reviewEvents])
 
@@ -67,7 +91,27 @@ export function IndiCareLabPage() {
     [evaluationRunVersion]
   )
 
-  const patternDetection = useMemo(() => detectPatternsFromReviewEvents(reviewEvents), [reviewEvents])
+  const evaluationRuns = useMemo(
+    () => listEvaluationRuns(),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- refresh when benchmarks run
+    [evaluationRunVersion]
+  )
+
+  const patternFilters = useMemo(
+    () =>
+      getDefaultPatternDetectionFilters({
+        showDemoData: dataConfig.showDemoData,
+        investorSafeView: dataConfig.investorSafeView,
+        mode: dataConfig.mode,
+        showSyntheticBenchmarks: dataConfig.showSyntheticBenchmarks
+      }),
+    [dataConfig]
+  )
+
+  const patternDetection = useMemo(
+    () => detectPatternsFromReviewEvents(reviewEvents, patternFilters),
+    [reviewEvents, patternFilters]
+  )
 
   const patterns = useMemo(
     () =>
@@ -78,15 +122,83 @@ export function IndiCareLabPage() {
     [patternDetection.patterns, patternStatuses]
   )
 
+  const suggestionResult = useMemo(
+    () =>
+      generateEvidenceSuggestions({
+        reviewEvents,
+        patterns,
+        evaluationRuns,
+        approvalItems,
+        requireRealEvidence: dataConfig.requireRealEvidenceForSuggestions
+      }),
+    [reviewEvents, patterns, evaluationRuns, approvalItems, dataConfig.requireRealEvidenceForSuggestions]
+  )
+
+  const suggestions = useMemo(
+    () =>
+      suggestionResult.suggestions.map((suggestion) => ({
+        ...suggestion,
+        status: suggestionStatuses[suggestion.id] ?? suggestion.status
+      })),
+    [suggestionResult.suggestions, suggestionStatuses]
+  )
+
+  const realSuggestions = useMemo(
+    () => suggestions.filter((s) => !s.isSyntheticEvidence),
+    [suggestions]
+  )
+
+  const buildBriefsFromEvidence = useMemo(
+    () =>
+      briefs.filter(
+        (brief) =>
+          brief.id.startsWith('brief-rev-') ||
+          brief.id.startsWith('brief-pattern-') ||
+          brief.id.startsWith('brief-eval-') ||
+          brief.id.startsWith('brief-sug-')
+      ).length,
+    [briefs]
+  )
+
+  const founderDecisions = useMemo(
+    () =>
+      approvalItems.filter((item) => item.status === 'approved' || item.status === 'rejected').length +
+      reviewEvents.filter((event) => event.founderReviewed).length,
+    [approvalItems, reviewEvents]
+  )
+
+  const evidenceCounts = useMemo(
+    () =>
+      buildEvidenceOfImprovementCounts({
+        reviewEvents,
+        patterns,
+        evaluationSummary,
+        suggestions,
+        buildBriefsFromEvidence,
+        founderDecisions
+      }),
+    [
+      reviewEvents,
+      patterns,
+      evaluationSummary,
+      suggestions,
+      buildBriefsFromEvidence,
+      founderDecisions
+    ]
+  )
+
   const overviewMetrics = useMemo(
     () =>
       buildLabOverviewMetrics({
         reviewSummary,
+        reviewEvents,
         patterns,
         pendingApprovals: approvalItems.filter((item) => item.status === 'pending').length,
-        evaluationSummary
+        evaluationSummary,
+        suggestions,
+        investorSafeView: dataConfig.investorSafeView
       }),
-    [reviewSummary, patterns, approvalItems, evaluationSummary]
+    [reviewSummary, reviewEvents, patterns, approvalItems, evaluationSummary, suggestions, dataConfig.investorSafeView]
   )
 
   const selectedGaps = useMemo(
@@ -150,14 +262,11 @@ export function IndiCareLabPage() {
     setPatternStatuses((prev) => ({ ...prev, [patternId]: status }))
   }, [])
 
-  const handleCreateBuildBriefFromPattern = useCallback(
-    (pattern: LabPattern) => {
-      const brief = generateBuildBriefFromPattern(pattern)
-      setBriefs((prev) => [brief, ...prev])
-      document.getElementById('build-briefs')?.scrollIntoView({ behavior: 'smooth' })
-    },
-    []
-  )
+  const handleCreateBuildBriefFromPattern = useCallback((pattern: LabPattern) => {
+    const brief = generateBuildBriefFromPattern(pattern)
+    setBriefs((prev) => [brief, ...prev])
+    document.getElementById('build-briefs')?.scrollIntoView({ behavior: 'smooth' })
+  }, [])
 
   const handleCreateBuildBriefFromBenchmark = useCallback((brief: BuildBrief) => {
     setBriefs((prev) => [brief, ...prev])
@@ -178,13 +287,44 @@ export function IndiCareLabPage() {
     document.getElementById('approvals')?.scrollIntoView({ behavior: 'smooth' })
   }, [])
 
+  const handleCreateBuildBriefFromSuggestion = useCallback(
+    (suggestion: LabSuggestion) => {
+      const pattern = patterns.find((p) =>
+        suggestion.evidenceSources.some((s) => s.type === 'detected-pattern' && s.id === p.id)
+      )
+      const brief = generateBuildBriefFromSuggestion(suggestion, { pattern })
+      if (brief) {
+        setBriefs((prev) => [brief, ...prev])
+        document.getElementById('build-briefs')?.scrollIntoView({ behavior: 'smooth' })
+      }
+    },
+    [patterns]
+  )
+
+  const handleAddSuggestionToApprovalQueue = useCallback((suggestion: LabSuggestion) => {
+    const item = suggestionToApprovalItem(suggestion)
+    setApprovalItems((prev) => {
+      if (prev.some((existing) => existing.id === item.id)) return prev
+      return [item, ...prev]
+    })
+    document.getElementById('approvals')?.scrollIntoView({ behavior: 'smooth' })
+  }, [])
+
+  const handleUpdateSuggestionStatus = useCallback((suggestionId: string, status: SuggestionStatus) => {
+    setSuggestionStatuses((prev) => ({ ...prev, [suggestionId]: status }))
+  }, [])
+
   return (
-    <IndiCareLabShell>
+    <IndiCareLabShell
+      dataMode={dataMode}
+      investorSafeView={investorSafeView}
+      onInvestorSafeViewChange={setInvestorSafeView}
+    >
       <LabSectionCard
         id="overview"
         eyebrow="Dashboard"
         title="Overview"
-        description="Continuous assessment snapshot for ORB Residential. Metrics combine review events, pattern intelligence, evaluation benchmarks, and shadow review status — all internal evaluation."
+        description="Data-mode-aware snapshot for ORB Residential. Metrics reflect real shadow review evidence, synthetic benchmarks, and evidence-based suggestions — no fake usage numbers."
       >
         <LabOverviewCards metrics={overviewMetrics} />
       </LabSectionCard>
@@ -219,10 +359,21 @@ export function IndiCareLabPage() {
       <ReviewEventsPanel
         events={reviewEvents}
         summary={reviewSummary}
+        investorSafeView={investorSafeView}
         onCreateBuildBrief={handleCreateBuildBriefFromEvent}
         onAddToApprovalQueue={handleAddEventToApprovalQueue}
         onMarkReviewed={handleMarkEventReviewed}
       />
+
+      <RealSuggestionsPanel
+        suggestions={suggestions}
+        realSuggestions={realSuggestions}
+        onCreateBuildBrief={handleCreateBuildBriefFromSuggestion}
+        onAddToApprovalQueue={handleAddSuggestionToApprovalQueue}
+        onUpdateStatus={handleUpdateSuggestionStatus}
+      />
+
+      <EvidenceOfImprovementPanel counts={evidenceCounts} />
 
       <PatternIntelligencePanel
         patterns={patterns}

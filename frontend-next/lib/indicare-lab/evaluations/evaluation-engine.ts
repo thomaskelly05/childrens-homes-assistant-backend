@@ -204,7 +204,7 @@ export function evaluateDraftAnswer(
     draftAnswer,
     context: 'Internal synthetic benchmark · development mode only',
     isDevelopment: true,
-    origin: 'internal-test'
+    origin: 'internal-review-test'
   })
 
   const elementAdjustments = scoreScenarioElements(scenario, draftAnswer)

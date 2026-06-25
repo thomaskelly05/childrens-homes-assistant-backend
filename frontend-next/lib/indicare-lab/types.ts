@@ -100,6 +100,8 @@ export type LabSectionId =
   | 'review-board'
   | 'shadow-review'
   | 'review-events'
+  | 'real-suggestions'
+  | 'evidence-of-improvement'
   | 'pattern-intelligence'
   | 'evaluation-benchmarks'
   | 'review-test'
