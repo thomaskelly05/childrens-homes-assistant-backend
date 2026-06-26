@@ -49,11 +49,10 @@ describe('ORB Residential personality pass (Phase 1M)', () => {
 
   it('sidebar includes ORB Residential and approved nav only', () => {
     const sidebar = read('components/orb-residential/orb-residential-sidebar.tsx')
-    assert.match(sidebar, /ORB_VISIBLE_SIDEBAR_NAV/)
+    assert.match(sidebar, /buildOrbResidentialVisibleSidebarNav/)
     assert.match(sidebar, /GlassOrbMark/)
     assert.match(sidebar, /data-orb-sidebar-brand/)
     assert.match(sidebar, /ORB Residential/)
-    assert.match(sidebar, /RESIDENTIAL_VISIBLE_NAV = ORB_VISIBLE_SIDEBAR_NAV/)
     assert.doesNotMatch(sidebar, /Saved Outputs|Magic Notes/)
   })
 

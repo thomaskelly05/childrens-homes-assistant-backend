@@ -29,9 +29,9 @@ import { OrbProjectMemoryModal } from '@/components/orb-residential/orb-project-
 import { ORB_RESIDENTIAL_TAGLINE, ORB_RESIDENTIAL_TAGLINE_FULL } from '@/lib/orb/orb-residential-copy'
 import {
   ORB_NAV_RECORDS,
-  ORB_NAV_WRITE,
-  ORB_VISIBLE_SIDEBAR_NAV
+  ORB_NAV_WRITE
 } from '@/lib/orb/orb-user-facing-names'
+import { buildOrbResidentialVisibleSidebarNav } from '@/lib/orb/orb-voice-sidebar-visibility'
 import { getOrbSearchSurface } from '@/lib/orb/orb-search-registry'
 import type { StandaloneOrbMode } from '@/lib/orb/standalone-client'
 import {
@@ -98,11 +98,25 @@ const NAV_ICON_NAME_BY_ID: Record<string, import('@/components/orb-residential/u
   settings: 'settings'
 }
 
-/** Phase 1A — single visible sidebar list (no Library section). */
-const RESIDENTIAL_VISIBLE_NAV = ORB_VISIBLE_SIDEBAR_NAV.map((entry) => ({
+/** Phase 1A — filtered view of ORB_VISIBLE_SIDEBAR_NAV (Voice may hide for demos). */
+const RESIDENTIAL_VISIBLE_NAV = buildOrbResidentialVisibleSidebarNav().map((entry) => ({
   ...entry,
   iconName: NAV_ICON_NAME_BY_ID[entry.id] ?? 'chat'
 }))
+
+function OrbSidebarNavBadge({ badge, calm }: { badge: string; calm?: boolean }) {
+  return (
+    <span
+      className={
+        calm
+          ? 'rounded-full border border-[var(--orb-line)]/35 bg-[var(--orb-surface-elevated)] px-1.5 py-0.5 text-[10px] font-medium tracking-wide text-[var(--orb-muted)]'
+          : 'rounded-full bg-[var(--orb-surface-hover)] px-2 py-0.5 text-[10px]'
+      }
+    >
+      {badge}
+    </span>
+  )
+}
 
 export type OrbResidentialStationId = (typeof NAV_ITEMS)[number]['id']
 
@@ -562,7 +576,7 @@ export function OrbResidentialSidebar({
           {RESIDENTIAL_VISIBLE_NAV.map((entry) => (
               <SidebarIconButton
                 key={entry.id}
-                label={entry.label}
+                label={entry.accessibleLabel}
                 onClick={() => handleVisibleNavClick(entry.id)}
                 active={isNavActive(entry.id)}
                 dataOrb={
@@ -680,7 +694,9 @@ export function OrbResidentialSidebar({
             </button>
             {RESIDENTIAL_VISIBLE_NAV.map((item) => {
               const badge =
-                item.id === 'saved' && savedOutputsCount ? String(savedOutputsCount) : undefined
+                item.id === 'saved' && savedOutputsCount
+                  ? String(savedOutputsCount)
+                  : item.badge
               return (
                 <button
                   key={item.id}
@@ -691,15 +707,12 @@ export function OrbResidentialSidebar({
                   }}
                   className={`orb-sidebar-nav-item w-full ${isNavActive(item.id) ? 'orb-sidebar-nav-item--active' : ''}`}
                   data-orb-sidebar-station={item.id}
+                  aria-label={item.accessibleLabel}
                   {...(item.id === 'orb_dictate' ? { 'data-orb-sidebar-dictate': true } : {})}
                 >
                   <OrbIcon name={item.iconName} size="md" />
                   <span className="text-sm">{item.label}</span>
-                  {badge ? (
-                    <span className="rounded-full bg-[var(--orb-surface-hover)] px-2 py-0.5 text-[10px]">
-                      {badge}
-                    </span>
-                  ) : null}
+                  {badge ? <OrbSidebarNavBadge badge={badge} calm={item.id === 'orb_voice'} /> : null}
                 </button>
               )
             })}
@@ -862,6 +875,7 @@ export function OrbResidentialSidebar({
                       type="button"
                       onClick={() => handleVisibleNavClick(entry.id)}
                       className={`orb-sidebar-nav-item w-full ${isNavActive(entry.id) ? 'orb-sidebar-nav-item--active' : ''}`}
+                      aria-label={entry.accessibleLabel}
                       {...(entry.id === 'orb_dictate' ? { 'data-orb-sidebar-dictate': true } : {})}
                       {...(entry.id === 'chat' || entry.id === 'home'
                         ? { 'data-orb-sidebar-chat': true }
@@ -870,9 +884,9 @@ export function OrbResidentialSidebar({
                       <OrbIcon name={entry.iconName} size="md" />
                       <span className="min-w-0 flex-1 truncate text-left text-sm">{entry.label}</span>
                       {entry.id === 'saved' && savedOutputsCount ? (
-                        <span className="rounded-full bg-[var(--orb-surface-hover)] px-2 py-0.5 text-[10px]">
-                          {savedOutputsCount}
-                        </span>
+                        <OrbSidebarNavBadge badge={String(savedOutputsCount)} />
+                      ) : entry.badge ? (
+                        <OrbSidebarNavBadge badge={entry.badge} calm={entry.id === 'orb_voice'} />
                       ) : null}
                     </button>
                   </li>
