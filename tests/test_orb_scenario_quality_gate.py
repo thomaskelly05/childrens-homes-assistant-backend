@@ -13,10 +13,14 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from services.orb_scenario_quality_gate_service import orb_scenario_quality_gate_service  # noqa: E402
+from services.orb_scenario_quality_gate_service import (  # noqa: E402
+    PHASE_1_LAUNCH_SETS,
+    orb_scenario_quality_gate_service,
+)
 
 SETS_PATH = ROOT / "quality" / "orb_scenario_quality_gate_sets.json"
 RUNNER_PATH = ROOT / "scripts" / "run_orb_scenario_quality_gate.py"
+LAUNCH_RUNNER_PATH = ROOT / "scripts" / "run_orb_launch_quality_report.py"
 ACTIVE_MISSING_PROMPT = "a young person has gone missing, what do I do"
 
 
@@ -167,3 +171,166 @@ def test_return_cannabis_control_keeps_missing_return_heading():
     )
     heading = answer.split("\n", 1)[0]
     assert re.search(r"missing\s+return\s*[—\-]", heading, re.I)
+
+
+def test_launch_report_combines_phase1_sets():
+    report = orb_scenario_quality_gate_service.run_launch_report(
+        list(PHASE_1_LAUNCH_SETS),
+        use_live_provider=False,
+    )
+    assert report["report_type"] == "orb_launch_quality_report"
+    assert report["provider_mode"] == "mock"
+    assert set(report["sets_run"]) == set(PHASE_1_LAUNCH_SETS)
+    assert len(report["set_summaries"]) == 3
+    assert report["summary"]["total_scenarios"] == sum(
+        item["scenario_count"] for item in report["set_summaries"]
+    )
+    for set_name in PHASE_1_LAUNCH_SETS:
+        assert set_name in report["sets"]
+        assert report["sets"][set_name]["set_name"] == set_name
+    assert report["launch_recommendation"] in (
+        "pass",
+        "pass with caveats",
+        "fail",
+    )
+
+
+def test_launch_markdown_includes_recommendation_and_sections():
+    report = orb_scenario_quality_gate_service.run_launch_report(
+        ["smoke"],
+        use_live_provider=False,
+    )
+    md = orb_scenario_quality_gate_service.build_launch_markdown_report(report)
+    assert "# ORB Launch Quality Report" in md
+    assert "Launch recommendation" in md
+    assert "## Critical failures" in md
+    assert "## Repair needed" in md
+    assert "## Human review needed" in md
+    assert report["launch_recommendation"].upper() in md.upper()
+
+
+def test_launch_report_mock_mode_does_not_call_live_provider(monkeypatch):
+    called = {"live": False}
+
+    def _boom(*_args, **_kwargs):
+        called["live"] = True
+        raise AssertionError("live provider should not be called in mock mode")
+
+    monkeypatch.setattr(
+        orb_scenario_quality_gate_service,
+        "_generate_live_answer",
+        _boom,
+    )
+    report = orb_scenario_quality_gate_service.run_launch_report(
+        ["smoke"],
+        use_live_provider=False,
+    )
+    assert called["live"] is False
+    assert report["provider_mode"] == "mock"
+    assert all(
+        item.get("answer_provider") != "live_orb_brain"
+        for set_report in report["sets"].values()
+        for item in set_report.get("results") or []
+    )
+
+
+def test_launch_runner_script_smoke_mock(tmp_path: Path):
+    out_dir = tmp_path / "orb_quality"
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(LAUNCH_RUNNER_PATH),
+            "--set",
+            "smoke",
+            "--output-dir",
+            str(out_dir),
+        ],
+        capture_output=True,
+        text=True,
+        cwd=ROOT,
+        check=False,
+    )
+    assert proc.returncode in (0, 1), proc.stdout + proc.stderr
+    json_path = out_dir / "orb_launch_quality_report.json"
+    md_path = out_dir / "orb_launch_quality_report.md"
+    assert json_path.is_file()
+    assert md_path.is_file()
+    report = json.loads(json_path.read_text(encoding="utf-8"))
+    assert report["sets_run"] == ["smoke"]
+    assert "launch_recommendation" in report
+    assert "Critical failures" in md_path.read_text(encoding="utf-8")
+
+
+def test_launch_runner_fail_on_critical_exits_on_critical_failure(monkeypatch, tmp_path: Path):
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("orb_launch_runner", LAUNCH_RUNNER_PATH)
+    launch_mod = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(launch_mod)
+
+    def _failing_launch(*_args, **_kwargs):
+        return {
+            "generated_at": "2026-01-01T00:00:00+00:00",
+            "report_type": "orb_launch_quality_report",
+            "provider_mode": "mock",
+            "sets_run": ["smoke"],
+            "summary": {
+                "total_scenarios": 1,
+                "total_passed": 0,
+                "total_failed": 1,
+                "pass_rate": 0.0,
+            },
+            "set_summaries": [
+                {
+                    "set_name": "smoke",
+                    "scenario_count": 1,
+                    "passed": 0,
+                    "failed": 1,
+                    "pass_rate": 0.0,
+                    "provider_mode": "mock",
+                }
+            ],
+            "critical_failures": [
+                {
+                    "set_name": "smoke",
+                    "scenario_id": "QG-TEST",
+                    "title": "Test",
+                    "issues": ["scenario_frame"],
+                }
+            ],
+            "repair_needed": [],
+            "human_review_needed": [],
+            "launch_recommendation": "fail",
+            "sets": {},
+        }
+
+    monkeypatch.setattr(
+        launch_mod.orb_scenario_quality_gate_service,
+        "run_launch_report",
+        _failing_launch,
+    )
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            str(LAUNCH_RUNNER_PATH),
+            "--set",
+            "smoke",
+            "--fail-on-critical",
+            "--output-dir",
+            str(tmp_path),
+        ],
+    )
+    assert launch_mod.main() == 1
+
+
+def test_launch_runner_py_compile():
+    proc = subprocess.run(
+        [sys.executable, "-m", "py_compile", str(LAUNCH_RUNNER_PATH)],
+        capture_output=True,
+        text=True,
+        cwd=ROOT,
+        check=False,
+    )
+    assert proc.returncode == 0, proc.stderr
