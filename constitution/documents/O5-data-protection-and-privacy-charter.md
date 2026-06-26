@@ -4,9 +4,10 @@
 |---|---|
 | Document ID | O5 |
 | Layer | L2 — Operating Principles · **Binding charter** (value-rank #5; binds every layer) |
-| Version | 0.1 — Phase 2 Batch 2 draft |
-| Status | **Drafted — awaiting founder review. Not yet ratified.** |
-| Owner | **Data Protection Officer — TBC (current governance gap).** Held interim by the Founder. |
+| Version | 1.0 |
+| Status | **Ratified — Version 1** |
+| Ratified | 2026-06-26 (founder ratification; incorporates founder ownership decisions of the same date) |
+| Owner | **Data Protection Owner / ICO-named data protection contact — Tom Kelly (current, interim).** Founder-confirmed: IndiCare Intelligence is ICO registered; Tom Kelly is the ICO-named data protection contact. **Not** an independent DPO arrangement. |
 | Reads with | `00` (§2c), `C1` (Article 4), `docs/security/`, `docs/trust/` |
 | Evidence base | `constitution/phase-1-discovery/` |
 
@@ -14,6 +15,12 @@ This is a **binding charter**. Its value-authority (privacy, value-rank #5) over
 Product, Engineering, AI/Model, and Commercial concerns wherever they conflict (00 §2c). It
 makes **no claim of guaranteed compliance** with UK GDPR or any framework; it sets the
 standard and names the gaps.
+
+**Registration and ownership (founder-confirmed, 2026-06-26 — founder-attested, not
+repository-verified).** IndiCare Intelligence is **ICO registered**, and **Tom Kelly is the
+ICO-named data protection contact** and current (interim) Data Protection Owner. This is
+**not** an independent DPO arrangement. Independent or external data-protection support may
+be needed as the company scales, given the sensitivity of children's social care data.
 
 ---
 
@@ -83,7 +90,8 @@ This classification is referenced by the LLM provider and AI gateway (evidence E
 
 | Gap | Label | Note |
 |---|---|---|
-| **DPO unfilled** | UNVERIFIED ownership (Q3) | This charter's own owner seat is empty; held interim by the Founder. |
+| **No independent DPO** | INFERRED risk (Q3) | Data protection rests with the ICO-named contact, Tom Kelly (current, interim) — not an independent DPO. Independent/external support may be needed as the company scales. |
+| ICO registration / named contact | Founder-attested (2026-06-26) | Confirmed by the Founder; not independently verified from the repository. |
 | Provider-side no-training configuration | OUT OF SCOPE / UNVERIFIED | Cannot be verified from the repository; requires provider contract/assurance. |
 | Subprocessor register is a draft | VERIFIED | `docs/trust/orb-subprocessors.md` status "Draft"; must be kept accurate per deployment. |
 | No Record of Processing / DPIA evidenced in-repo | UNVERIFIED | Not found in discovery; Future Vision. |
@@ -96,12 +104,14 @@ This classification is referenced by the LLM provider and AI gateway (evidence E
 **Current State (VERIFIED).** In-repo privacy engineering is real and specific: typed data
 classification, redaction and privacy-decision services in the AI path, documented
 no-training stance, retention/deletion/export docs, a subprocessor register, and a
-no-raw-logging test. But there is **no appointed DPO**, the subprocessor register is a draft,
-provider-side training settings are out of scope, and no RoPA/DPIA was found.
+no-raw-logging test. IndiCare Intelligence is ICO registered with Tom Kelly as the ICO-named
+data protection contact (founder-attested), but there is **no independent DPO**, the
+subprocessor register is a draft, provider-side training settings are out of scope, and no
+RoPA/DPIA was found in-repo.
 
-**Future Vision (NOT YET BUILT).** An appointed DPO; a maintained Record of Processing and
-DPIA; verified provider-side no-training assurances in contract; a finalised subprocessor
-register per deployment; and enforced credential rotation.
+**Future Vision (NOT YET BUILT).** An independent or external DPO function; a maintained
+Record of Processing and DPIA; verified provider-side no-training assurances in contract; a
+finalised subprocessor register per deployment; and enforced credential rotation.
 
 ---
 
@@ -109,7 +119,8 @@ register per deployment; and enforced credential rotation.
 - It does **not** claim compliance with UK GDPR or any framework is achieved.
 - It does **not** claim the AI provider does not train on data; only that in-repo controls
   support that stance and the provider's configuration is out of scope here.
-- It does **not** fill the DPO role; that gap is recorded.
+- It does **not** present an independent DPO; data protection currently rests with the
+  ICO-named contact (Tom Kelly), and the need for independent/external support is recorded.
 
 ---
 
@@ -118,3 +129,4 @@ register per deployment; and enforced credential rotation.
 | Version | Date | Status | Notes |
 |---|---|---|---|
 | 0.1 | 2026-06-26 | Drafted (Phase 2 Batch 2) | Initial draft presented for founder review. Owner seat (DPO) recorded as unfilled. |
+| 1.0 | 2026-06-26 | **Ratified — Version 1** | Ratified by the Founder as a binding charter. Founder-confirmed: IndiCare Intelligence is ICO registered with Tom Kelly as the ICO-named data protection contact / current interim Data Protection Owner (not an independent DPO; independent/external support may be needed as the company scales). Any change requires an explicitly proposed, versioned, approved amendment. |

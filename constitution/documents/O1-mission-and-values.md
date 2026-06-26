@@ -4,8 +4,9 @@
 |---|---|
 | Document ID | O1 |
 | Layer | L2 — Operating Principles |
-| Version | 0.1 — Phase 2 Batch 2 draft |
-| Status | **Drafted — awaiting founder review. Not yet ratified.** |
+| Version | 1.0 |
+| Status | **Ratified — Version 1** |
+| Ratified | 2026-06-26 (founder ratification) |
 | Owner | Founder (Tom Kelly, interim) |
 | Reads with | `C1-indicare-intelligence-constitution.md`, `00-constitutional-hierarchy.md` |
 | Evidence base | `constitution/phase-1-discovery/` |
@@ -111,3 +112,4 @@ against real outcomes for children and homes rather than asserted.
 | Version | Date | Status | Notes |
 |---|---|---|---|
 | 0.1 | 2026-06-26 | Drafted (Phase 2 Batch 2) | Initial draft presented for founder review. |
+| 1.0 | 2026-06-26 | **Ratified — Version 1** | Ratified by the Founder. Any change requires an explicitly proposed, versioned, approved amendment. |

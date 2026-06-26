@@ -4,9 +4,10 @@
 |---|---|
 | Document ID | O3 |
 | Layer | L2 — Operating Principles |
-| Version | 0.1 — Phase 2 Batch 2 draft |
-| Status | **Drafted — awaiting founder review. Not yet ratified.** |
-| Owner | Commercial Owner (interim: Founder, Tom Kelly — **explicit assignment pending**, see O2 §3) |
+| Version | 1.0 |
+| Status | **Ratified — Version 1** |
+| Ratified | 2026-06-26 (founder ratification; incorporates founder ownership decisions of the same date) |
+| Owner | Commercial Owner — **Tom Kelly (confirmed interim)**, see O2 §2 |
 | Reads with | `00` (value-rank #9), `C1` (Article 7), `O5` (privacy in billing) |
 | Evidence base | `constitution/phase-1-discovery/` |
 
@@ -63,10 +64,13 @@ These are aligned with the cost-aware-AI rules in `ORB_ENGINEERING_PRINCIPLES.md
 
 ## 4. Decision ownership
 
-The **Commercial Owner** is accountable for this standard. **Honest record:** this role is
-**not yet explicitly assigned** (O2 §3); it is held interim by the Founder pending
-confirmation. Commercial decisions that touch safety, privacy, or truthfulness are not the
-Commercial Owner's to make alone — the relevant binding charter or higher-tier owner governs.
+The **Commercial Owner** is accountable for this standard. **VERIFIED (founder decision,
+2026-06-26):** the role is held by **Tom Kelly on a confirmed interim basis** (O2 §2) — one
+of seven roles concentrated in one person, recorded as a bus-factor/independence risk (O2
+§5). Commercial decisions that touch safety, privacy, or truthfulness are not the Commercial
+Owner's to make alone — the relevant binding charter or higher-tier owner governs, and
+commercial sustainability (value-rank #9) never overrides safeguarding, child welfare,
+privacy, truthfulness, or professional judgement.
 
 ---
 
@@ -74,7 +78,7 @@ Commercial Owner's to make alone — the relevant binding charter or higher-tier
 
 | Gap | Label | Note |
 |---|---|---|
-| Commercial Owner not explicitly assigned | UNVERIFIED / open (O2 §3) | Interim Founder. |
+| Commercial Owner is an interim concentration in one person | INFERRED risk (O2 §5) | Confirmed interim Tom Kelly; separation is Future Vision. |
 | Cost-governance completeness | UNVERIFIED | Soft limits and a usage loop exist; whether all AI egress is metered depends on the unproven gateway-sole-egress question (open-questions §E). |
 | Sustainable pricing model | FUTURE VISION | No pricing model is asserted in-repo. |
 
@@ -84,9 +88,10 @@ Commercial Owner's to make alone — the relevant binding charter or higher-tier
 
 **Current State (VERIFIED).** Real, partial cost governance exists: soft spend/token limits,
 a low-cost default model, a monthly usage report, explicit cost-estimate handling, and Stripe
-billing infrastructure. Ownership of the commercial role is interim and unconfirmed.
+billing infrastructure. The commercial role is held by Tom Kelly on a confirmed interim
+basis — one of seven roles concentrated in one person.
 
-**Future Vision (NOT YET BUILT).** A confirmed Commercial Owner; per-home and per-provider
+**Future Vision (NOT YET BUILT).** Commercial ownership separated from founder/product; per-home and per-provider
 cost transparency; metering proven to cover all AI egress; a documented, affordable, and
 sustainable pricing model for children's homes. None of this is claimed as present today.
 
@@ -104,3 +109,4 @@ sustainable pricing model for children's homes. None of this is claimed as prese
 | Version | Date | Status | Notes |
 |---|---|---|---|
 | 0.1 | 2026-06-26 | Drafted (Phase 2 Batch 2) | Initial draft presented for founder review. Commercial Owner assignment pending. |
+| 1.0 | 2026-06-26 | **Ratified — Version 1** | Ratified by the Founder. Commercial Owner confirmed as Tom Kelly (interim). Value-rank #9 reaffirmed: commercial sustainability never overrides higher values. Any change requires an explicitly proposed, versioned, approved amendment. |

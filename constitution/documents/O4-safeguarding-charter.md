@@ -4,9 +4,10 @@
 |---|---|
 | Document ID | O4 |
 | Layer | L2 — Operating Principles · **Binding charter** (value-rank #2; binds every layer) |
-| Version | 0.1 — Phase 2 Batch 2 draft |
-| Status | **Drafted — awaiting founder review. Not yet ratified.** |
-| Owner | **Safeguarding Lead — TBC (current governance gap).** Held interim by the Founder. |
+| Version | 1.0 |
+| Status | **Ratified — Version 1** |
+| Ratified | 2026-06-26 (founder ratification; incorporates founder ownership decisions of the same date) |
+| Owner | **Safeguarding Lead — TBC, not yet formally filled (current governance gap).** The Founder (Tom Kelly) is accountable for safeguarding posture during development; this is **not** an independent Safeguarding Lead appointment. |
 | Reads with | `00` (§2c binding charters), `C1` (Articles 2, 4), `docs/ai-safety.md` |
 | Evidence base | `constitution/phase-1-discovery/` |
 
@@ -103,7 +104,7 @@ are signals of intent and coverage, not proof of live robustness.
 
 | Gap | Label | Note |
 |---|---|---|
-| **Safeguarding Lead unfilled** | UNVERIFIED ownership (Q3) | This charter's own owner seat is empty; held interim by the Founder. The most important independence gap in the constitution. |
+| **Safeguarding Lead not yet formally filled** | UNVERIFIED ownership (Q3) | This charter's own owner seat is empty. The Founder is accountable for safeguarding posture during development, but this is **not** an independent Safeguarding Lead. The most important independence gap in the constitution; a future priority (founder decision, 2026-06-26). |
 | Cross-home trend aggregation may cross tenancy | OPEN (Q4) | Tenancy scoping exists (`core/provider_context.py`) but trend-aggregation enforcement was not verified at code level. |
 | AI gateway sole-egress unproven | UNVERIFIED (open-questions §E) | If any AI call bypasses the governed gateway, boundary enforcement could be inconsistent. |
 | Releases touching safeguarding surfaces lack a required human-review gate | UNVERIFIED (E3 R11) | Carried in E3; not yet enforced. |
@@ -137,3 +138,4 @@ boundary audits with live models.
 | Version | Date | Status | Notes |
 |---|---|---|---|
 | 0.1 | 2026-06-26 | Drafted (Phase 2 Batch 2) | Initial draft presented for founder review. Owner seat (Safeguarding Lead) recorded as unfilled. |
+| 1.0 | 2026-06-26 | **Ratified — Version 1** | Ratified by the Founder as a binding charter. Safeguarding Lead remains unfilled (founder-accountable during development, not an independent appointment) and recorded as a current governance gap and future priority. Any change requires an explicitly proposed, versioned, approved amendment. |
