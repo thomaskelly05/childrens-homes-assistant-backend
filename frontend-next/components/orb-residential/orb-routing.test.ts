@@ -103,9 +103,12 @@ describe('ORB Residential routing', () => {
 
   it('capability routes deep-link into /orb stations', () => {
     assert.match(readApp('app/orb/ask/page.tsx'), /redirect\('\/orb'\)/)
+    assert.match(readApp('app/orb/voice/page.tsx'), /redirect\('\/orb\?station=orb_voice'\)/)
     assert.match(readApp('app/orb/review/page.tsx'), /redirect\('\/orb\?station=orb_write'\)/)
     assert.match(readApp('app/orb/templates/page.tsx'), /redirect\('\/orb\?station=orb_dictate'\)/)
-    assert.match(readApp('app/orb/communicate/page.tsx'), /redirect\('\/orb\?station=communicate'\)/)
+    assert.match(readApp('app/orb/communicate/page.tsx'), /redirect\('\/orb\?station=orb_communicate'\)/)
+    assert.match(readApp('app/orb-residential/write/page.tsx'), /redirect\('\/orb\?station=orb_write'\)/)
+    assert.match(readApp('app/orb-residential/communicate/page.tsx'), /redirect\('\/orb\?station=orb_communicate'\)/)
     assert.match(readApp('app/orb/learn/page.tsx'), /redirect\('\/orb'\)/)
     assert.match(readApp('app/orb/saved/page.tsx'), /redirect\('\/orb\?station=saved'\)/)
     assert.match(readApp('app/orb/outputs/page.tsx'), /redirect\('\/orb\?station=saved'\)/)

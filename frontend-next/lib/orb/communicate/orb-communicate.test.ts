@@ -110,7 +110,7 @@ describe('ORB Communicate', () => {
     assert.match(companion, /OrbCommunicateStation/)
     assert.match(companion, /openOrbCommunicatePanel/)
     assert.match(companion, /stationParam === 'communicate'/)
-    assert.match(route, /station=communicate/)
+    assert.match(route, /station=orb_communicate/)
   })
 
   it('API paths are declared for future backend integration', () => {
