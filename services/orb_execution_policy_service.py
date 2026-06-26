@@ -589,6 +589,82 @@ CHILD_VOICE_GUIDANCE_ANSWER = """To capture the child's voice in daily recording
 
 Paste your rough notes and I can help turn them into clear, factual, child-centred recording wording."""
 
+_MISSING_RETURN_INDICATORS_RE = re.compile(
+    r"returned\s+(?:from|after)\s+missing|"
+    r"(?:come|came)\s+back\s+from\s+missing|"
+    r"back\s+from\s+missing|"
+    r"returned\s+missing|"
+    r"found\s+and\s+returned|"
+    r"smells?\s+of\s+cannabis|"
+    r"smell\s+of\s+cannabis|"
+    r"return\s+home\s+conversation\s+record|"
+    r"\bon\s+return\b",
+    re.I,
+)
+
+_ACTIVE_MISSING_INDICATORS_RE = re.compile(
+    r"missing\s+right\s+now|"
+    r"missing\s+from\s+(?:care|the\s+home|home)|"
+    r"young\s+person\s+is\s+missing|"
+    r"currently\s+missing|"
+    r"active\s+missing(?:\s*[- ]from\s*[- ]care)?\s+search|"
+    r"cannot\s+find\s+them|"
+    r"where\s+are\s+they|"
+    r"(?:has\s+)?gone\s+missing|"
+    r"\bis\s+missing\b",
+    re.I,
+)
+
+_HISTORICAL_MISSING_PATTERN_RE = re.compile(
+    r"\b(?:twice|three\s+times|several\s+times|\d+\s+times)\b",
+    re.I,
+)
+
+
+def is_active_missing_from_care_prompt(message: str) -> bool:
+    """True when the prompt describes a young person currently missing, not yet returned."""
+    text = str(message or "")
+    if not text.strip():
+        return False
+    if _MISSING_RETURN_INDICATORS_RE.search(text):
+        return False
+    if _HISTORICAL_MISSING_PATTERN_RE.search(text):
+        return False
+    return bool(_ACTIVE_MISSING_INDICATORS_RE.search(text))
+
+
+MISSING_FROM_CARE_ACTIVE_DETERMINISTIC_ANSWER = """Missing from care — immediate actions on shift:
+
+This is a missing-from-care concern. Follow your home's missing-from-care procedure immediately — ORB does not know your local steps.
+
+While the young person is still missing
+* Inform the manager/on-call without delay
+* Contact police, social worker and/or placing authority according to your local policy and risk assessment — let adult judgement and local thresholds guide this, not universal rules
+* Follow the home's missing procedure and any agreed missing plan
+* Record times, actions, decisions and who was informed as they happen
+* Keep a contemporaneous chronology of search actions and observations
+* Remain curious about exploitation/contextual safeguarding indicators where relevant
+
+ORB is not for emergencies — call 999 if there is immediate danger.
+
+When the young person returns
+* Offer a calm welcome back and immediate welfare check — injuries, distress, intoxication, hunger, fatigue and immediate medical need
+* Do not accuse or shame
+* Notify manager/on-call; update police if the episode was still active
+* Notify social worker/placing authority; EDT if out of hours
+* Return home interview / local missing procedure as required
+* Record exact words and observations; update missing, risk and placement plans with manager oversight
+
+Use professional judgement and your organisation's local policy throughout — ORB cannot guarantee compliance or replace manager, on-call, police or social worker decisions."""
+
+
+def deterministic_answer_for_missing_contract(message: str) -> str:
+    """Pick the missing-from-care or missing-return deterministic scaffold from the prompt."""
+    if is_active_missing_from_care_prompt(message):
+        return MISSING_FROM_CARE_ACTIVE_DETERMINISTIC_ANSWER
+    return MISSING_RETURN_SUBSTANCE_DETERMINISTIC_ANSWER
+
+
 MISSING_RETURN_SUBSTANCE_DETERMINISTIC_ANSWER = """Missing return — immediate actions on shift:
 
 Immediate welfare check
@@ -872,7 +948,10 @@ class OrbExecutionPolicyService:
             if contextual:
                 answer, family_id = contextual
         if not answer:
-            answer = DETERMINISTIC_ANSWERS.get(family_id or "")
+            if family_id == "missing_return_record":
+                answer = deterministic_answer_for_missing_contract(message)
+            else:
+                answer = DETERMINISTIC_ANSWERS.get(family_id or "")
         if not answer and self._is_child_voice_guidance(message):
             answer = CHILD_VOICE_GUIDANCE_ANSWER
             family_id = family_id or "daily_record"
