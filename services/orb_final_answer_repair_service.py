@@ -8,7 +8,12 @@ from typing import Any
 from services.orb_fast_opening_service import strip_streaming_artifacts_from_answer
 from services.orb_final_answer_contract_validator_service import validate_final_answer_contract
 from services.orb_placeholder_quality_guard_service import sanitize_placeholders_in_answer
-from services.orb_execution_policy_service import MISSING_RETURN_SUBSTANCE_DETERMINISTIC_ANSWER
+from services.orb_execution_policy_service import (
+    MISSING_FROM_CARE_ACTIVE_DETERMINISTIC_ANSWER,
+    MISSING_RETURN_SUBSTANCE_DETERMINISTIC_ANSWER,
+    deterministic_answer_for_missing_contract,
+    is_active_missing_from_care_prompt,
+)
 from services.orb_mandatory_response_contract_service import find_inappropriate_lado_reference
 from assistant.knowledge.adult_identity_language import (
     build_simple_daily_record_draft,
@@ -479,7 +484,20 @@ Use appeared / was observed where facts are not yet confirmed.
 
 
 def repair_missing_return_record(answer: str, *, message: str = "") -> str:
-    """Replace answers that wrongly route to LADO or miss mandatory missing-return markers."""
+    """Replace answers that wrongly route to LADO, miss markers, or treat active missing as return."""
+    target = deterministic_answer_for_missing_contract(message)
+    if is_active_missing_from_care_prompt(message):
+        lower = (answer or "").lower()
+        if re.search(r"missing\s+return\s*[—\-]", answer or "", re.I):
+            return target
+        if "welcome back" in lower and "when the young person returns" not in lower:
+            return target
+        if find_inappropriate_lado_reference(answer, message):
+            return target
+        required = ("missing", "manager", "procedure", "record")
+        if sum(1 for marker in required if marker in lower) < 3:
+            return target
+        return answer
     if find_inappropriate_lado_reference(answer, message):
         return MISSING_RETURN_SUBSTANCE_DETERMINISTIC_ANSWER
     lower = (answer or "").lower()
@@ -498,7 +516,7 @@ def canonical_answer_for_qa(contract_family: str, *, message: str = "") -> str |
         if detect_adult_shorthand(message) or facts.get("shorthand_behaviour"):
             return build_convert_to_recording_scaffold(message)
     if contract_family == "missing_return_record":
-        return MISSING_RETURN_SUBSTANCE_DETERMINISTIC_ANSWER
+        return deterministic_answer_for_missing_contract(message)
     return CANONICAL_QA_ANSWERS.get(contract_family)
 
 
