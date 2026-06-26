@@ -200,10 +200,69 @@ The gate supports safer recording by catching scenario-frame and safeguarding-co
 
 ---
 
-## Suggested Phase 3
+## CI (Phase 3)
+
+GitHub Actions workflow: `.github/workflows/orb-scenario-quality-gate.yml`
+
+All automated CI runs use **mock mode by default** (no live OpenAI calls, zero token cost).
+
+### PR check
+
+Triggers on pull requests that touch ORB brain/safety/quality paths:
+
+- `quality/**`
+- `services/orb_*.py`
+- quality gate scripts, tests, and this workflow file
+
+Steps:
+
+1. `py_compile` both runner scripts
+2. `smoke` set in mock mode → `reports/orb_quality/pr-smoke.json` (+ `.md`)
+3. `missing-from-care` set in mock mode → `reports/orb_quality/pr-missing-from-care.json` (+ `.md`)
+
+The job **fails the PR** when either set returns a non-zero exit code (any scenario failure). JSON and markdown reports are uploaded as workflow artifacts even when the job fails.
+
+### Nightly check
+
+Scheduled daily at **03:00 UTC**. Runs:
+
+```bash
+python scripts/run_orb_launch_quality_report.py \
+  --set critical-50 \
+  --output-dir reports/orb_quality
+```
+
+Mock mode only. Uploads `orb_launch_quality_report.json` and `.md` as artifacts. Does not block merges.
+
+### Manual dispatch
+
+From **Actions → ORB Scenario Quality Gate → Run workflow**:
+
+| Input | Options | Default |
+|-------|---------|---------|
+| `set` | `smoke`, `missing-from-care`, `critical-50`, `all-phase-1` | `smoke` |
+| `live_provider` | `true` / `false` | `false` |
+
+- Mock mode is the default (`live_provider: false`).
+- Live provider runs only when explicitly requested **and** the repository `OPENAI_API_KEY` secret is configured; otherwise the job fails early.
+- Uses `run_orb_launch_quality_report.py` and uploads the full `reports/orb_quality/` directory as an artifact.
+
+### Local parity checks
+
+Before pushing workflow changes:
+
+```bash
+source .venv/bin/activate
+python -m py_compile scripts/run_orb_scenario_quality_gate.py
+python -m py_compile scripts/run_orb_launch_quality_report.py
+pytest tests/test_orb_scenario_quality_gate.py -q
+```
+
+---
+
+## Future phases
 
 - Expand coverage toward the full GOLD bank and generated variant scenarios.
-- CI workflow wiring (GitHub Actions) for PR smoke + nightly critical-50.
 - Trend storage: compare pass rates across commits.
 - Founder quality-lab integration for human review sign-off on `human_review_needed` items.
 - Optional live-provider sampling (e.g. 10% of critical-50) to balance cost and signal.
