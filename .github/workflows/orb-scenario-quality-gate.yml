@@ -1,0 +1,182 @@
+name: ORB Scenario Quality Gate
+
+on:
+  pull_request:
+    paths:
+      - "quality/**"
+      - "services/orb_*.py"
+      - "scripts/run_orb_scenario_quality_gate.py"
+      - "scripts/run_orb_launch_quality_report.py"
+      - "tests/test_orb_scenario_quality_gate.py"
+      - ".github/workflows/orb-scenario-quality-gate.yml"
+  schedule:
+    # Nightly critical-50 mock run (03:00 UTC).
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+    inputs:
+      set:
+        description: Scenario set to evaluate
+        required: true
+        default: smoke
+        type: choice
+        options:
+          - smoke
+          - missing-from-care
+          - critical-50
+          - all-phase-1
+      live_provider:
+        description: Call live ORB brain (requires OPENAI_API_KEY repository secret)
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: orb-scenario-quality-gate-${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pr-check:
+    name: PR smoke + missing-from-care (mock)
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Compile quality gate scripts
+        run: |
+          python -m py_compile scripts/run_orb_scenario_quality_gate.py
+          python -m py_compile scripts/run_orb_launch_quality_report.py
+
+      - name: Run smoke set (mock)
+        run: >-
+          python scripts/run_orb_scenario_quality_gate.py
+          --set smoke
+          --no-live-provider
+          --output reports/orb_quality/pr-smoke.json
+
+      - name: Run missing-from-care set (mock)
+        run: >-
+          python scripts/run_orb_scenario_quality_gate.py
+          --set missing-from-care
+          --no-live-provider
+          --output reports/orb_quality/pr-missing-from-care.json
+
+      - name: Upload PR quality reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: orb-pr-quality-reports-${{ github.run_id }}
+          path: |
+            reports/orb_quality/pr-smoke.json
+            reports/orb_quality/pr-smoke.md
+            reports/orb_quality/pr-missing-from-care.json
+            reports/orb_quality/pr-missing-from-care.md
+          if-no-files-found: warn
+
+  nightly-critical:
+    name: Nightly critical-50 (mock)
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Compile quality gate scripts
+        run: |
+          python -m py_compile scripts/run_orb_scenario_quality_gate.py
+          python -m py_compile scripts/run_orb_launch_quality_report.py
+
+      - name: Run critical-50 launch report (mock)
+        run: >-
+          python scripts/run_orb_launch_quality_report.py
+          --set critical-50
+          --output-dir reports/orb_quality
+
+      - name: Upload nightly quality reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: orb-nightly-critical-50-${{ github.run_id }}
+          path: |
+            reports/orb_quality/orb_launch_quality_report.json
+            reports/orb_quality/orb_launch_quality_report.md
+          if-no-files-found: warn
+
+  manual-run:
+    name: Manual quality gate
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate live provider secret
+        if: inputs.live_provider
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          if [ -z "${OPENAI_API_KEY}" ]; then
+            echo "::error::live_provider was requested but OPENAI_API_KEY secret is not configured."
+            exit 1
+          fi
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Compile quality gate scripts
+        run: |
+          python -m py_compile scripts/run_orb_scenario_quality_gate.py
+          python -m py_compile scripts/run_orb_launch_quality_report.py
+
+      - name: Run selected set
+        env:
+          OPENAI_API_KEY: ${{ inputs.live_provider && secrets.OPENAI_API_KEY || '' }}
+        run: |
+          set -euo pipefail
+          args=(--set "${{ inputs.set }}" --output-dir reports/orb_quality)
+          if [ "${{ inputs.live_provider }}" = "true" ]; then
+            args+=(--live-provider)
+          fi
+          python scripts/run_orb_launch_quality_report.py "${args[@]}"
+
+      - name: Upload manual quality reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: orb-manual-${{ inputs.set }}-${{ github.run_id }}
+          path: reports/orb_quality/
+          if-no-files-found: warn
