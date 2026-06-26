@@ -217,10 +217,22 @@ ORB-prefixed (`orb_standalone_routes`, `orb_agent_routes`, `orb_knowledge_routes
 several legacy CSS/JS asset routes, and `/api/ai/governance/status`
 (`ai_governance_router` mounted in `create_app`). (`core/app_factory.py`)
 
+**VERIFIED — worked example of one router surface (`/assistant-api`).** To ground the
+otherwise filename-only inventory, one router was read in depth.
+`routers/assistant_routes.py` exposes `APIRouter(prefix="/assistant-api",
+tags=["Operational Assistant"])` with four scope types (`global`, `young_person`, `home`,
+`quality`) and four assistant types in the handlers (`public`, `young_people_os`,
+`home_os`, `quality_os`). Every endpoint depends on `require_assistant_access`
+(`auth/permissions.py`); cross-home access is gated by `is_provider_level_role`; message
+length is capped (3000 chars public, 20000 OS); responses stream via `generate_ai_stream`;
+and `/reports/preview` + `/reports/send-now` exist. Notably there is **route-layer
+prompt-injection defence** (`contains_prompt_injection_attempt` from
+`services/assistant_security.py`). (`routers/assistant_routes.py:1-31, 210-1091`)
+
 **Honesty note (UNVERIFIED):** A full, authoritative API surface map was **not**
-produced. With 229 routers and only the loader read, individual endpoint paths/verbs are
-inferred from filenames. A complete OpenAPI export would require running the app, which
-was not possible (no deps installed).
+produced. With 229 routers and only the loader plus this one router read, the remaining
+endpoint paths/verbs are inferred from filenames. A complete OpenAPI export would require
+running the app, which was not possible (no deps installed).
 
 ---
 
@@ -307,6 +319,18 @@ for safety, accuracy, and accountability." (`assistant/ai_boundaries.py:18-60`)
   and usage recording. Provider list is locked to OpenAI
   (`assistant/llm_provider.py:22`). Cost tables are explicitly labelled estimates with
   "provider invoices remain the source of truth." (`services/ai_gateway_service.py:27-33`)
+- **Standalone assistant identity & grounding (VERIFIED):** `assistant/prompts.py`
+  constructs the standalone assistant's identity from explicit, sector-grounded constants:
+  the nine Ofsted **Quality Standards** (`QUALITY_STANDARDS`), an `OFFICIAL_GUIDANCE_LINKS`
+  map to primary sources (Children's Homes (England) Regulations 2015 on
+  legislation.gov.uk, the Guide to the Regulations, the Ofsted SCCIF), a `COMMON_TASKS`
+  list (daily logs, handovers, body-map wording, chronologies, Reg 45 prep…), and
+  `CARE_VALUES` (child-centred, trauma-informed, autism-aware, non-punitive, defensible,
+  "warm but boundiered"). It pulls internal practice knowledge via
+  `assistant.knowledge_loader` (templates, reflective questions, micro-interventions,
+  shift flows, guidance sources). (`assistant/prompts.py:1-90`) This is consistent with
+  the mandatory stance: ORB supports reflection, recording and evidence gathering; adults
+  remain responsible for judgement, safeguarding escalation and final records.
 - **Knowledge (VERIFIED):** sector knowledge exists as code modules
   (`assistant/knowledge/*.py`: contextual safeguarding, medication/restraint, leadership,
   inspection readiness, plus `guidance_sources.json`,

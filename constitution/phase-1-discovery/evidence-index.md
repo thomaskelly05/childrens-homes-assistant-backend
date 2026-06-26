@@ -57,6 +57,11 @@ claim came from a shell query rather than a single file location.
 | E48 | conftest.py imports `CsrfProtectionMiddleware` (exists at security_middleware.py:159); AGENTS.md's note about missing `CSRFMiddleware` is stale | VERIFIED | `tests/conftest.py`; `middleware/security_middleware.py:159`; AGENTS.md |
 | E49 | Python deps not installed in discovery env (no code/tests run) | VERIFIED | `python3 -c "import fastapi"` → ModuleNotFoundError |
 | E50 | RLS SQL present (contents unread) | VERIFIED (existence) | `sql/008_os_command_permissions_rls.sql` |
+| E51 | `/assistant-api` router: 4 scopes, 4 assistant types (public/young_people_os/home_os/quality_os), all behind `require_assistant_access` | VERIFIED | `routers/assistant_routes.py:31,210,805,879,952` |
+| E52 | Route-layer prompt-injection defence | VERIFIED | `routers/assistant_routes.py:18` (`contains_prompt_injection_attempt` from `services/assistant_security.py`) |
+| E53 | Message length caps (3000 public / 20000 OS) and streaming responses | VERIFIED | `routers/assistant_routes.py:33-34` |
+| E54 | Standalone assistant grounded in 9 Ofsted Quality Standards + primary-source guidance links + care values | VERIFIED | `assistant/prompts.py:14-90` |
+| E55 | Standalone assistant loads internal practice knowledge via knowledge_loader | VERIFIED | `assistant/prompts.py:3-11` |
 
 ## Claims explicitly NOT backed by line-level evidence (carried as lower confidence)
 - Full API endpoint surface (paths/verbs) — INFERRED from router filenames only (§6, A6).

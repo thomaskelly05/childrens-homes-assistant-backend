@@ -25,9 +25,9 @@ opened beyond its name/file listing.
 |---|---|---|
 | `core/` | Read in full | Application assembly. `app_factory.py`, `middleware.py`, `lifespan.py`, `policy_engine.py`, `provider_context.py`, `router_loader.py` (head) all read. Highest-value evidence for architecture. |
 | `auth/` | Read selectively | `rbac.py` read in full; `current_user.py` read for the authentication mechanism; remaining 20 files listed but not all opened. |
-| `assistant/` | Read selectively | 74 Python files. `ai_boundaries.py`, `llm_provider.py` (head), `orchestrator.py` (head) read; the package's role as the AI brain confirmed. Per-feature modules (chronology, inspection, escalation) listed, not all read. |
+| `assistant/` | Read selectively | 74 Python files. `ai_boundaries.py`, `llm_provider.py` (head), `orchestrator.py` (head), `prompts.py` (head — standalone identity/grounding) read; the package's role as the AI brain confirmed. Per-feature modules (chronology, inspection, escalation) listed, not all read. |
 | `services/` | Read selectively | 692 Python files — the largest code area. `ai_gateway_service.py` and `ai_external_call_governance.py` (heads) read; `ai_providers/`, `ai_runtime/`, `intelligence/` subdirectories listed. The vast majority of the 692 files were **not** opened. |
-| `routers/` | Read selectively | 229 Python files. Inventory taken via `router_loader.py` (router groups + names). Individual router bodies not read except by inference from names. |
+| `routers/` | Read selectively | 229 Python files. Inventory taken via `router_loader.py` (router groups + names). One router body read in depth as a worked example: `assistant_routes.py` (`/assistant-api`). The remaining router bodies inferred from names. |
 | `middleware/` | Read selectively | All 7 filenames seen via `core/middleware.py` imports; `security_middleware.py` class names confirmed. Bodies not fully read. |
 | `db/` | Read selectively | Filenames listed; `connection.py` behaviour inferred from `lifespan.py` and AGENTS.md. Table-init modules confirmed by name. |
 | `db/migrations/`, `migrations/`, `sql/` | Read selectively | Three separate migration locations confirmed by listing. Individual migration contents not read. AGENTS.md states some schema is applied manually. |
