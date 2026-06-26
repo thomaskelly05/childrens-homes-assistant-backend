@@ -4,8 +4,9 @@
 |---|---|
 | Document ID | 00 |
 | Layer | L1 — Constitution (the spine all other documents hang from) |
-| Version | 0.1 — Phase 2 Batch 1 draft |
-| Status | **Drafted — awaiting founder review. Not yet ratified.** |
+| Version | 1.0 |
+| Status | **Ratified — Version 1** |
+| Ratified | 2026-06-26 (founder ratification) |
 | Owner | Founder (Tom Kelly, interim) |
 | Supersedes | The informal ordering implied across `CLAUDE.md`, `ORB_ENGINEERING_PRINCIPLES.md`, and `docs/architecture/` |
 | Evidence base | `constitution/phase-1-discovery/` (approved with conditions) |
@@ -202,7 +203,8 @@ Board (Investor lens). Amendment of this hierarchy requires Founder ratification
 ## 6. Current State vs Future Vision
 
 **Current State (VERIFIED / DERIVED).**
-- This hierarchy is newly established by Phase 2 Batch 1 and is **drafted, not ratified**.
+- This hierarchy was established in Phase 2 Batch 1 and **ratified as Version 1 on 2026-06-26**.
+  It remains newly adopted; the document set beneath it is only partially written.
 - Substantial governance *content* already exists, but **distributed** across 463 docs,
   code boundaries, and ADRs with no single ordering — the reason this document exists
   (`repository-discovery.md` §13–14, evidence E37, E40).
@@ -225,3 +227,12 @@ Board (Investor lens). Amendment of this hierarchy requires Founder ratification
   gaps, carried forward honestly across the constitution.
 - It does **not** edit or override `CLAUDE.md` or `ORB_ENGINEERING_PRINCIPLES.md`; it sits
   above them and references them. Those files remain unmodified.
+
+---
+
+## Version history
+
+| Version | Date | Status | Notes |
+|---|---|---|---|
+| 0.1 | 2026-06-26 | Drafted (Phase 2 Batch 1) | Initial draft presented for founder review. |
+| 1.0 | 2026-06-26 | **Ratified — Version 1** | Ratified by the Founder following Batch 1 review. Any change requires an explicitly proposed, versioned, approved amendment. |

@@ -4,8 +4,9 @@
 |---|---|
 | Document ID | E3 |
 | Layer | L3 — Engineering Principles |
-| Version | 0.1 — Phase 2 Batch 1 draft |
-| Status | **Drafted — awaiting founder review. Not yet ratified.** |
+| Version | 1.0 |
+| Status | **Ratified — Version 1** |
+| Ratified | 2026-06-26 (founder ratification) |
 | Owner | Release / Operations Owner (Tom Kelly, interim — Engineering Owner) |
 | Reads with | `00-constitutional-hierarchy.md`, `C1-indicare-intelligence-constitution.md` |
 | Evidence base | `constitution/phase-1-discovery/` |
@@ -132,3 +133,12 @@ assembly. None of these are asserted to exist today.
 - It does **not** assert any branch-protection or rollback control is in place; those are
   marked UNVERIFIED until evidenced.
 - It governs how to reduce operational risk; it does not pretend the risk is already removed.
+
+---
+
+## Version history
+
+| Version | Date | Status | Notes |
+|---|---|---|---|
+| 0.1 | 2026-06-26 | Drafted (Phase 2 Batch 1) | Initial draft presented for founder review. |
+| 1.0 | 2026-06-26 | **Ratified — Version 1** | Ratified by the Founder following Batch 1 review. UNVERIFIED controls (R1, R8, R11) remain UNVERIFIED pending external confirmation. Any change requires an explicitly proposed, versioned, approved amendment. |

@@ -4,8 +4,9 @@
 |---|---|
 | Document ID | C1 |
 | Layer | L1 — Constitution (supreme document) |
-| Version | 0.1 — Phase 2 Batch 1 draft |
-| Status | **Drafted — awaiting founder review. Not yet ratified.** |
+| Version | 1.0 |
+| Status | **Ratified — Version 1** |
+| Ratified | 2026-06-26 (founder ratification) |
 | Owner | Founder (Tom Kelly, interim) |
 | Reads with | `00-constitutional-hierarchy.md` (read that first) |
 | Evidence base | `constitution/phase-1-discovery/` |
@@ -184,19 +185,30 @@ inline. The ratified engineering successor (E1) will reference
 
 This constitution is amended only by the Founder (interim holder of multiple roles, Article
 5). Amendments are recorded with their date and rationale so that truthfulness (value #4) is
-preserved across the document's history. Ratification of this draft (moving from "drafted"
-to "ratified") requires explicit founder approval following Batch 1 review.
+preserved across the document's history. This document was ratified as **Version 1** by the
+Founder on **2026-06-26** following Batch 1 review. Any change to a ratified document
+requires an explicitly proposed, versioned, and approved amendment.
 
 ---
 
 ## Current State vs Future Vision (summary)
 
 **Current State (VERIFIED / DERIVED).** The product's *safety intent is strong and
-encoded* (Articles 2, 4). The *governance layer is new and incomplete*: this is a draft, two
-binding-charter owners are unfilled, enforcement is manual, and several operational risks
-(Article 6) are open. Much governance content exists but is distributed and unordered.
+encoded* (Articles 2, 4). The *governance layer is newly ratified (Version 1) but still
+incomplete*: two binding-charter owners are unfilled, enforcement is manual, and several
+operational risks (Article 6) are open. Much governance content exists but is distributed
+and unordered.
 
 **Future Vision (NOT YET BUILT).** A fully ratified 17-document constitution; appointed
 Safeguarding Lead and DPO; an enforced release/quality gate; a single source-of-truth index;
 and the multi-product framework extended cleanly to LifeEcho and beyond. None of this is
 claimed as present today.
+
+---
+
+## Version history
+
+| Version | Date | Status | Notes |
+|---|---|---|---|
+| 0.1 | 2026-06-26 | Drafted (Phase 2 Batch 1) | Initial draft presented for founder review. |
+| 1.0 | 2026-06-26 | **Ratified — Version 1** | Ratified by the Founder following Batch 1 review. Any change requires an explicitly proposed, versioned, approved amendment. |
