@@ -150,7 +150,7 @@ export function OrbLayout({
       {mobileDrawerOpen ? (
         <button
           type="button"
-          className="orb-panel-overlay orb-mobile-drawer-backdrop fixed inset-0 z-40 lg:hidden"
+          className="orb-panel-overlay fixed inset-0 z-40 orb-mobile-drawer-backdrop lg:hidden"
           aria-label="Close sidebar"
           data-orb-mobile-drawer-backdrop
           onClick={onCloseSidebarOverlay}
