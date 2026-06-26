@@ -1,0 +1,169 @@
+"""Tests for ORB scenario quality gate — Phase 1."""
+
+from __future__ import annotations
+
+import json
+import re
+import subprocess
+import sys
+from pathlib import Path
+
+import pytest
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+
+from services.orb_scenario_quality_gate_service import orb_scenario_quality_gate_service  # noqa: E402
+
+SETS_PATH = ROOT / "quality" / "orb_scenario_quality_gate_sets.json"
+RUNNER_PATH = ROOT / "scripts" / "run_orb_scenario_quality_gate.py"
+ACTIVE_MISSING_PROMPT = "a young person has gone missing, what do I do"
+
+
+def test_quality_gate_sets_file_exists_and_has_phase1_sets():
+    assert SETS_PATH.is_file()
+    data = json.loads(SETS_PATH.read_text(encoding="utf-8"))
+    sets = data.get("sets") or {}
+    assert "critical-50" in sets
+    assert "missing-from-care" in sets
+    assert "smoke" in sets
+    assert len(sets["critical-50"].get("gold_scenario_ids") or []) == 50
+
+
+def test_missing_from_care_set_includes_active_missing_prompt():
+    scenarios = orb_scenario_quality_gate_service.resolve_set_scenarios("missing-from-care")
+    prompts = [s.get("prompt") for s in scenarios]
+    assert ACTIVE_MISSING_PROMPT in prompts
+
+
+def test_active_missing_passes_quality_gate_mock_mode():
+    report = orb_scenario_quality_gate_service.run_set(
+        "missing-from-care",
+        use_live_provider=False,
+    )
+    active = next(
+        r for r in report["results"] if r["prompt"] == ACTIVE_MISSING_PROMPT
+    )
+    assert active["passed"] is True
+    frame = active["checks"]["scenario_frame"]
+    assert frame["passed"] is True
+    assert report["passed"] == report["scenario_count"]
+
+
+def test_active_missing_rejects_missing_return_main_frame():
+    scenarios = orb_scenario_quality_gate_service.resolve_set_scenarios("missing-from-care")
+    scenario = next(s for s in scenarios if s["prompt"] == ACTIVE_MISSING_PROMPT)
+    wrong_answer = (
+        "This looks like a missing-from-care concern.\n\n"
+        "Missing return — immediate actions on shift:\n\n"
+        "Immediate welfare check"
+    )
+    result = orb_scenario_quality_gate_service.evaluate_scenario(
+        scenario,
+        wrong_answer,
+        answer_provider="test_fixture",
+    )
+    assert result.passed is False
+    assert any("forbidden_main_frame" in issue for issue in result.issues)
+
+
+def test_smoke_set_includes_active_missing_scenario():
+    scenarios = orb_scenario_quality_gate_service.resolve_set_scenarios("smoke")
+    ids = {s["scenario_id"] for s in scenarios}
+    assert "QG-MFC-001-active-missing" in ids
+
+
+def test_run_set_produces_expected_report_fields():
+    report = orb_scenario_quality_gate_service.run_set(
+        "smoke",
+        use_live_provider=False,
+    )
+    assert report["set_name"] == "smoke"
+    assert "generated_at" in report
+    assert "pass_rate" in report
+    assert report["provider_mode"] == "mock"
+    for item in report["results"]:
+        assert "checks" in item
+        for check_name in (
+            "scenario_classification",
+            "required_inclusions",
+            "forbidden_phrases",
+            "local_policy_caveat",
+            "adult_responsibility",
+            "safeguarding_escalation",
+            "fact_vs_interpretation",
+            "scenario_frame",
+            "answer_safety_gate",
+        ):
+            assert check_name in item["checks"]
+
+
+def test_markdown_report_builder():
+    report = orb_scenario_quality_gate_service.run_set(
+        "missing-from-care",
+        use_live_provider=False,
+        limit=1,
+    )
+    md = orb_scenario_quality_gate_service.build_markdown_report(report)
+    assert "# ORB Scenario Quality Gate Report" in md
+    assert "missing-from-care" in md
+
+
+def test_runner_script_help_lists_sets():
+    proc = subprocess.run(
+        [sys.executable, str(RUNNER_PATH), "--help"],
+        capture_output=True,
+        text=True,
+        cwd=ROOT,
+        check=False,
+    )
+    assert proc.returncode == 0
+    assert "critical-50" in proc.stdout
+    assert "missing-from-care" in proc.stdout
+    assert "smoke" in proc.stdout
+
+
+def test_runner_script_missing_from_care_mock(tmp_path: Path):
+    out = tmp_path / "report.json"
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(RUNNER_PATH),
+            "--set",
+            "missing-from-care",
+            "--no-live-provider",
+            "--output",
+            str(out),
+        ],
+        capture_output=True,
+        text=True,
+        cwd=ROOT,
+        check=False,
+    )
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    assert out.is_file()
+    assert out.with_suffix(".md").is_file()
+    report = json.loads(out.read_text(encoding="utf-8"))
+    assert report["failed"] == 0
+
+
+def test_runner_py_compile():
+    proc = subprocess.run(
+        [sys.executable, "-m", "py_compile", str(RUNNER_PATH)],
+        capture_output=True,
+        text=True,
+        cwd=ROOT,
+        check=False,
+    )
+    assert proc.returncode == 0, proc.stderr
+
+
+def test_return_cannabis_control_keeps_missing_return_heading():
+    scenarios = orb_scenario_quality_gate_service.resolve_set_scenarios("missing-from-care")
+    scenario = next(s for s in scenarios if s["scenario_id"] == "QG-MFC-003-return-cannabis")
+    answer, _ = orb_scenario_quality_gate_service.generate_answer(
+        scenario,
+        use_live_provider=False,
+    )
+    heading = answer.split("\n", 1)[0]
+    assert re.search(r"missing\s+return\s*[—\-]", heading, re.I)
