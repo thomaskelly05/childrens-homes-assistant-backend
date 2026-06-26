@@ -35,9 +35,9 @@ describe('ORB Write standalone studio', () => {
     assert.match(companion, /stationParam === 'write'/)
   })
 
-  it('direct route redirects to station=write', () => {
+  it('direct route redirects to canonical station=orb_write', () => {
     const page = readComponent('app/orb-residential/write/page.tsx')
-    assert.match(page, /station=write/)
+    assert.match(page, /station=orb_write/)
   })
 
   it('start screen renders paste input and record type selector', () => {

@@ -28,8 +28,8 @@ describe('ORB Residential Phase 4H Voice fresh sessions and low latency', () => 
     assert.match(companion, /setActivePanel\(null\)/)
   })
 
-  it('deep link /orb/voice and ?station=voice still open Voice', () => {
-    assert.match(read('app/orb/voice/page.tsx'), /station=voice/)
+  it('deep link /orb/voice emits canonical param and legacy ?station=voice still opens Voice', () => {
+    assert.match(read('app/orb/voice/page.tsx'), /station=orb_voice/)
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
     assert.match(companion, /stationParam === 'voice'/)
     assert.match(companion, /'orb_voice'/)
