@@ -25,6 +25,9 @@ from services.orb_universal_answer_contract_map_service import detect_contract_f
 ROOT = Path(__file__).resolve().parents[1]
 SETS_PATH = ROOT / "quality" / "orb_scenario_quality_gate_sets.json"
 
+PHASE_1_LAUNCH_SETS: tuple[str, ...] = ("smoke", "missing-from-care", "critical-50")
+_LAUNCH_BLOCKING_SETS: frozenset[str] = frozenset({"smoke", "missing-from-care"})
+
 _LOCAL_POLICY_PHRASES = (
     "local policy",
     "local procedure",
@@ -420,6 +423,217 @@ class OrbScenarioQualityGateService:
                     lines.append(f"  - {check['details']}")
             lines.append("")
         return "\n".join(lines)
+
+    def run_launch_report(
+        self,
+        set_names: list[str] | None = None,
+        *,
+        use_live_provider: bool = False,
+    ) -> dict[str, Any]:
+        """Run multiple Phase 1 sets and produce a combined launch-readiness summary."""
+        names = list(set_names or PHASE_1_LAUNCH_SETS)
+        unknown = [name for name in names if name not in self.load_sets()]
+        if unknown:
+            raise KeyError(f"Unknown quality gate set(s): {', '.join(unknown)}")
+
+        set_reports: dict[str, dict[str, Any]] = {}
+        all_results: list[dict[str, Any]] = []
+        for set_name in names:
+            report = self.run_set(set_name, use_live_provider=use_live_provider)
+            set_reports[set_name] = report
+            for item in report.get("results") or []:
+                enriched = dict(item)
+                enriched["set_name"] = set_name
+                all_results.append(enriched)
+
+        total = len(all_results)
+        passed = sum(1 for item in all_results if item.get("passed"))
+        failed = total - passed
+        provider_mode = (
+            "live" if use_live_provider and self._live_llm_available() else "mock"
+        )
+
+        critical_failures = [
+            self._launch_item_summary(item)
+            for item in all_results
+            if not item.get("passed") and str(item.get("risk_level") or "").lower() == "critical"
+        ]
+        repair_needed = [
+            self._launch_item_summary(item)
+            for item in all_results
+            if not item.get("passed")
+        ]
+        human_review_needed = [
+            self._launch_item_summary(item)
+            for item in all_results
+            if item.get("passed")
+            and str(item.get("risk_level") or "").lower() in ("high", "critical")
+        ]
+
+        combined: dict[str, Any] = {
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "report_type": "orb_launch_quality_report",
+            "provider_mode": provider_mode,
+            "sets_run": names,
+            "summary": {
+                "total_scenarios": total,
+                "total_passed": passed,
+                "total_failed": failed,
+                "pass_rate": round((passed / total * 100) if total else 0.0, 1),
+            },
+            "set_summaries": [
+                {
+                    "set_name": name,
+                    "description": (set_reports[name].get("set_description") or ""),
+                    "scenario_count": set_reports[name].get("scenario_count", 0),
+                    "passed": set_reports[name].get("passed", 0),
+                    "failed": set_reports[name].get("failed", 0),
+                    "pass_rate": set_reports[name].get("pass_rate", 0.0),
+                    "provider_mode": set_reports[name].get("provider_mode", provider_mode),
+                }
+                for name in names
+            ],
+            "critical_failures": critical_failures,
+            "repair_needed": repair_needed,
+            "human_review_needed": human_review_needed,
+            "sets": set_reports,
+        }
+        combined["launch_recommendation"] = self._compute_launch_recommendation(combined)
+        return combined
+
+    def build_launch_markdown_report(self, report: dict[str, Any]) -> str:
+        summary = report.get("summary") or {}
+        recommendation = str(report.get("launch_recommendation") or "fail")
+        lines = [
+            "# ORB Launch Quality Report",
+            "",
+            f"- Generated: {report.get('generated_at')}",
+            f"- Provider mode: `{report.get('provider_mode')}`",
+            f"- Sets run: {', '.join(f'`{s}`' for s in (report.get('sets_run') or []))}",
+            f"- Total scenarios: {summary.get('total_scenarios', 0)}",
+            f"- Passed: {summary.get('total_passed', 0)} / {summary.get('total_scenarios', 0)} "
+            f"({summary.get('pass_rate', 0)}%)",
+            f"- **Launch recommendation: {recommendation.upper()}**",
+            "",
+            "## Pass / fail by set",
+            "",
+            "| Set | Passed | Failed | Pass rate | Provider |",
+            "| --- | ---: | ---: | ---: | --- |",
+        ]
+        for item in report.get("set_summaries") or []:
+            lines.append(
+                f"| `{item.get('set_name')}` | {item.get('passed', 0)} | "
+                f"{item.get('failed', 0)} | {item.get('pass_rate', 0)}% | "
+                f"`{item.get('provider_mode')}` |"
+            )
+        lines.extend(["", "## Critical failures", ""])
+        critical = report.get("critical_failures") or []
+        if critical:
+            for item in critical:
+                lines.append(
+                    f"- **{item.get('scenario_id')}** ({item.get('set_name')}): "
+                    f"{item.get('title')} — {', '.join(item.get('issues') or [])}"
+                )
+        else:
+            lines.append("- None")
+        lines.extend(["", "## Repair needed", ""])
+        repair = report.get("repair_needed") or []
+        if repair:
+            for item in repair:
+                lines.append(
+                    f"- **{item.get('scenario_id')}** ({item.get('set_name')}): "
+                    f"{item.get('title')} — {', '.join(item.get('issues') or [])}"
+                )
+        else:
+            lines.append("- None")
+        lines.extend(["", "## Human review needed", ""])
+        review = report.get("human_review_needed") or []
+        if review:
+            lines.append(
+                "These scenarios passed automated checks but remain high/critical risk — "
+                "professional review is still required before relying on ORB in live care."
+            )
+            lines.append("")
+            for item in review[:25]:
+                lines.append(
+                    f"- **{item.get('scenario_id')}** ({item.get('set_name')}): "
+                    f"{item.get('title')} — risk `{item.get('risk_level')}`"
+                )
+            if len(review) > 25:
+                lines.append(f"- ... and {len(review) - 25} more")
+        else:
+            lines.append("- None in this run")
+        lines.extend(
+            [
+                "",
+                "## Launch recommendation",
+                "",
+                self._launch_recommendation_rationale(report),
+                "",
+                "## Notes",
+                "",
+                "- Mock mode validates routing, frames, and deterministic safeguards without calling a live LLM.",
+                "- Live-provider mode adds real ORB brain answers but still does not replace manager judgement.",
+                "- A passing automated gate supports safer recording; it does not certify statutory decisions.",
+            ]
+        )
+        return "\n".join(lines)
+
+    def _launch_item_summary(self, item: dict[str, Any]) -> dict[str, Any]:
+        return {
+            "set_name": item.get("set_name"),
+            "scenario_id": item.get("scenario_id"),
+            "title": item.get("title"),
+            "family": item.get("family"),
+            "risk_level": item.get("risk_level"),
+            "issues": list(item.get("issues") or []),
+            "answer_provider": item.get("answer_provider"),
+        }
+
+    def _compute_launch_recommendation(self, report: dict[str, Any]) -> str:
+        for item in report.get("set_summaries") or []:
+            if item.get("set_name") in _LAUNCH_BLOCKING_SETS and item.get("failed", 0) > 0:
+                return "fail"
+        if report.get("critical_failures"):
+            return "fail"
+        summary = report.get("summary") or {}
+        if summary.get("total_failed", 0) > 0:
+            return "pass with caveats"
+        if report.get("human_review_needed"):
+            return "pass with caveats"
+        if report.get("provider_mode") == "mock":
+            return "pass with caveats"
+        return "pass"
+
+    def _launch_recommendation_rationale(self, report: dict[str, Any]) -> str:
+        recommendation = str(report.get("launch_recommendation") or "fail")
+        if recommendation == "fail":
+            blocking = [
+                f"`{item['set_name']}` ({item['failed']} failed)"
+                for item in (report.get("set_summaries") or [])
+                if item.get("set_name") in _LAUNCH_BLOCKING_SETS and item.get("failed", 0) > 0
+            ]
+            if blocking:
+                return (
+                    "**FAIL** — Blocking PR/smoke sets did not pass: "
+                    + ", ".join(blocking)
+                    + ". Fix scenario-frame or safeguarding failures before launch."
+                )
+            return (
+                "**FAIL** — One or more critical-risk scenarios failed automated checks. "
+                "Repair before launch."
+            )
+        if recommendation == "pass with caveats":
+            reasons: list[str] = []
+            if (report.get("summary") or {}).get("total_failed", 0) > 0:
+                reasons.append("some non-blocking scenario failures remain")
+            if report.get("human_review_needed"):
+                reasons.append("high/critical scenarios still require human review")
+            if report.get("provider_mode") == "mock":
+                reasons.append("report ran in mock mode — run with `--live-provider` before launch sign-off")
+            detail = "; ".join(reasons) if reasons else "review outstanding caveats"
+            return f"**PASS WITH CAVEATS** — Automated gate clear enough to proceed with documented review ({detail})."
+        return "**PASS** — All selected scenarios passed in the current provider mode."
 
     def _result_to_dict(self, result: ScenarioQualityGateResult) -> dict[str, Any]:
         return {
