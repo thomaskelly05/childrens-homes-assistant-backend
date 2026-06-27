@@ -4,8 +4,9 @@
 |---|---|
 | Document ID | E6 |
 | Layer | L3 — Engineering Principles |
-| Version | 0.1 — Phase 2 Batch 3 draft |
-| Status | **Drafted — awaiting founder review. Not yet ratified.** |
+| Version | 1.0 |
+| Status | **Ratified — Version 1 (Named Risk NR-1 remains OPEN)** |
+| Ratified | 2026-06-26 (founder ratification; NR-1 remains an open high-priority pre-launch remediation item) |
 | Owner | Engineering Owner (Tom Kelly, interim) |
 | Reads with | `E3` (Release Governance), `A1` (AI safety eval), `CLAUDE.md` checklist |
 | Evidence base | `constitution/phase-1-discovery/` |
@@ -129,3 +130,4 @@ eval coverage.
 |---|---|---|---|
 | 0.1 | 2026-06-26 | Drafted (Phase 2 Batch 3) | Initial draft presented for founder review. |
 | 0.2 | 2026-06-26 | Drafted (Batch 3 amendment) | Added §4a + control Q7: required future verification control for AI egress governance (repo scan, path classification, CI guard against new direct provider calls, re-verification before any "governed AI egress" claim) cross-referencing **Named Risk NR-1 (A2)**. Still awaiting founder review; not ratified. |
+| 1.0 | 2026-06-26 | **Ratified — Version 1 (NR-1 OPEN)** | Ratified by the Founder. The NR-1 verification control (Q7/§4a) is a required future control; NR-1 remains OPEN. Any change requires an explicitly proposed, versioned, approved amendment. |

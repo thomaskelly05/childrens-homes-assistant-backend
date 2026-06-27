@@ -4,8 +4,9 @@
 |---|---|
 | Document ID | A2 |
 | Layer | L4 — AI / Model Standards |
-| Version | 0.1 — Phase 2 Batch 3 draft |
-| Status | **Drafted — awaiting founder review. Not yet ratified.** |
+| Version | 1.0 |
+| Status | **Ratified — Version 1 (Named Risk NR-1 remains OPEN)** |
+| Ratified | 2026-06-26 (founder ratification; NR-1 remains an open high-priority pre-launch remediation item) |
 | Owner | AI Safety Owner (Tom Kelly, interim) |
 | Reads with | `A1` (AI Safety), `O5` (Privacy, binding), `O3` (Commercial cost) |
 | Evidence base | `constitution/phase-1-discovery/` |
@@ -180,3 +181,4 @@ approved provider can be added without changing call sites; per-feature cost tra
 |---|---|---|---|
 | 0.1 | 2026-06-26 | Drafted (Phase 2 Batch 3) | Initial draft presented for founder review. Covers prompt / memory / model-routing governance as planned. |
 | 0.2 | 2026-06-26 | Drafted (Batch 3 amendment) | Added **Named Risk NR-1** (AI egress not enforced through a single governed chokepoint) per founder decision, with documented (not implemented) remediation options; corrected §2 to reflect two-module governance and uneven adapter/TTS paths. Still awaiting founder review; not ratified. |
+| 1.0 | 2026-06-26 | **Ratified — Version 1 (NR-1 OPEN)** | Ratified by the Founder. **NR-1 remains OPEN** — high-priority pre-launch remediation; ratification does not resolve the risk. IndiCare Intelligence must not publicly claim all AI egress is governed until NR-1 is fixed or re-verified. Any change requires an explicitly proposed, versioned, approved amendment. |

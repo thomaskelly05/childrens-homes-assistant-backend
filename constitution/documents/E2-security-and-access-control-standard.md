@@ -4,8 +4,9 @@
 |---|---|
 | Document ID | E2 |
 | Layer | L3 — Engineering Principles |
-| Version | 0.1 — Phase 2 Batch 3 draft |
-| Status | **Drafted — awaiting founder review. Not yet ratified.** |
+| Version | 1.0 |
+| Status | **Ratified — Version 1 (Named Risk NR-1 remains OPEN)** |
+| Ratified | 2026-06-26 (founder ratification; NR-1 remains an open high-priority pre-launch remediation item) |
 | Owner | Engineering Owner (Tom Kelly, interim) |
 | Reads with | `O5` (Privacy Charter, binding), `E3` (Release Governance), `00`/`C1` |
 | Evidence base | `constitution/phase-1-discovery/` |
@@ -126,3 +127,4 @@ credential rotation; audited logging scope; a security owner distinct from found
 |---|---|---|---|
 | 0.1 | 2026-06-26 | Drafted (Phase 2 Batch 3) | Initial draft presented for founder review. |
 | 0.2 | 2026-06-26 | Drafted (Batch 3 amendment) | Added §4a and control S7 cross-referencing **Named Risk NR-1 (A2)**: provider/AI egress must be governed consistently, especially for sensitive children's social care data. Still awaiting founder review; not ratified. |
+| 1.0 | 2026-06-26 | **Ratified — Version 1 (NR-1 OPEN)** | Ratified by the Founder. NR-1 remains an OPEN high-priority pre-launch remediation item; ratification does not resolve it. Any change requires an explicitly proposed, versioned, approved amendment. |

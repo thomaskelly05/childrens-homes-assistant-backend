@@ -4,8 +4,9 @@
 |---|---|
 | Document ID | E1 |
 | Layer | L3 — Engineering Principles |
-| Version | 0.1 — Phase 2 Batch 3 draft |
-| Status | **Drafted — awaiting founder review. Not yet ratified.** |
+| Version | 1.0 |
+| Status | **Ratified — Version 1** |
+| Ratified | 2026-06-26 (founder ratification) |
 | Owner | Engineering Owner (Tom Kelly, interim) |
 | Relationship | **Successor that references** `ORB_ENGINEERING_PRINCIPLES.md` — it does **not** modify or replace that file. |
 | Evidence base | `constitution/phase-1-discovery/` |
@@ -109,3 +110,4 @@ filled by E4/E5; an independent Engineering Owner distinct from founder/product 
 | Version | Date | Status | Notes |
 |---|---|---|---|
 | 0.1 | 2026-06-26 | Drafted (Phase 2 Batch 3) | Initial draft presented for founder review. |
+| 1.0 | 2026-06-26 | **Ratified — Version 1** | Ratified by the Founder. Any change requires an explicitly proposed, versioned, approved amendment. |

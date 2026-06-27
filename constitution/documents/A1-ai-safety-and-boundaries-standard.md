@@ -4,8 +4,9 @@
 |---|---|
 | Document ID | A1 |
 | Layer | L4 — AI / Model Standards |
-| Version | 0.1 — Phase 2 Batch 3 draft |
-| Status | **Drafted — awaiting founder review. Not yet ratified.** |
+| Version | 1.0 |
+| Status | **Ratified — Version 1 (Named Risk NR-1 remains OPEN)** |
+| Ratified | 2026-06-26 (founder ratification; NR-1 remains an open high-priority pre-launch remediation item) |
 | Owner | AI Safety Owner (Tom Kelly, interim) |
 | Reads with | `O4` (Safeguarding Charter, binding), `O5` (Privacy Charter, binding), `A2` |
 | Evidence base | `constitution/phase-1-discovery/` |
@@ -109,3 +110,4 @@ robustness against live models; an independent AI Safety Owner; periodic boundar
 |---|---|---|---|
 | 0.1 | 2026-06-26 | Drafted (Phase 2 Batch 3) | Initial draft presented for founder review. |
 | 0.2 | 2026-06-26 | Drafted (Batch 3 amendment) | Cross-referenced **Named Risk NR-1** (A2): boundaries strongest on the governed chat/gateway path; sole-egress not proven across all AI routes. Still awaiting founder review; not ratified. |
+| 1.0 | 2026-06-26 | **Ratified — Version 1 (NR-1 OPEN)** | Ratified by the Founder. NR-1 remains OPEN; boundary coverage across all AI routes is not yet proven. Any change requires an explicitly proposed, versioned, approved amendment. |

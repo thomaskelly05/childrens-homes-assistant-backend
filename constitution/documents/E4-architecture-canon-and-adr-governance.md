@@ -4,8 +4,9 @@
 |---|---|
 | Document ID | E4 |
 | Layer | L3 — Engineering Principles |
-| Version | 0.1 — Phase 2 Batch 3 draft |
-| Status | **Drafted — awaiting founder review. Not yet ratified.** |
+| Version | 1.0 |
+| Status | **Ratified — Version 1** |
+| Ratified | 2026-06-26 (founder ratification) |
 | Owner | Engineering Owner (Tom Kelly, interim) |
 | Fills | The missing `ARCHITECTURE.md` referenced by `CLAUDE.md` (evidence E37) |
 | Evidence base | `constitution/phase-1-discovery/` |
@@ -97,3 +98,4 @@ that significant changes carry an ADR.
 | Version | Date | Status | Notes |
 |---|---|---|---|
 | 0.1 | 2026-06-26 | Drafted (Phase 2 Batch 3) | Initial draft presented for founder review. |
+| 1.0 | 2026-06-26 | **Ratified — Version 1** | Ratified by the Founder. Any change requires an explicitly proposed, versioned, approved amendment. |
