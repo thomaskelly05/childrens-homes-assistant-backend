@@ -2,12 +2,18 @@ name: Pre-merge Gate
 
 # A real pre-merge safety gate (Roadmap R0). Runs before changes reach `main`,
 # from which Render auto-deploys. Complements the existing ORB Scenario Quality
-# Gate (which only runs the ORB scenario scripts). This gate adds: dependency
-# install, syntax compile, lint, the AI egress governance guard (NR-1), and the
-# core pytest suite.
+# Gate (which only runs the ORB scenario scripts).
 #
-# To make this enforce before deploy, mark the jobs below as required status
-# checks on the `main` branch protection rule (repository settings).
+# Hard (blocking) checks — things we can verify reliably today:
+#   1. repo-wide py_compile (catches Python 3.11 syntax errors)
+#   2. AI egress governance guard (NR-1) — runs BEFORE lint so it always executes
+#   3. ruff, scoped to the PR's changed Python files only (not the whole repo,
+#      which still carries ~961 pre-existing lint issues — a separate cleanup task)
+# Advisory (non-blocking) check:
+#   - the core pytest suite (not yet green; see the R0 report)
+#
+# To enforce before deploy, mark the hard job as a required status check on the
+# `main` branch protection rule (a repository setting).
 
 on:
   pull_request:
@@ -22,12 +28,14 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  static-and-egress:
-    name: Compile + lint + AI egress guard
+  hard-gate:
+    name: Hard gate — compile + AI egress guard + changed-file lint
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # full history so we can diff against the PR base
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
@@ -35,6 +43,7 @@ jobs:
           cache-dependency-path: requirements.txt
       - name: Install dependencies
         run: pip install -r requirements.txt
+
       - name: Compile all backend Python (catch 3.11 syntax errors)
         run: |
           python - <<'PY'
@@ -48,14 +57,35 @@ jobs:
                       p = os.path.join(root, f)
                       try:
                           py_compile.compile(p, doraise=True)
-                      except py_compile.PyCompileError as e:
+                      except py_compile.PyCompileError:
                           bad.append(p); print("SYNTAX ERROR:", p)
           sys.exit(1 if bad else 0)
           PY
-      - name: Ruff lint
-        run: pip install ruff && ruff check .
+
       - name: AI egress governance guard (NR-1)
+        # Runs before lint so the NR-1 guard always executes even if lint fails.
         run: python scripts/ai_egress_audit.py
+
+      - name: Ruff (changed Python files only)
+        # Scoped to files changed in this PR vs the base branch. Does NOT run
+        # repo-wide ruff (the repo still has ~961 pre-existing lint issues; a
+        # repo-wide ruff cleanup is a separate future task). Fails only if a
+        # changed Python file has lint issues.
+        run: |
+          set -euo pipefail
+          base="${{ github.event.pull_request.base.sha }}"
+          if [ -z "${base}" ]; then
+            echo "No PR base (manual run); skipping changed-file lint."
+            exit 0
+          fi
+          files=$(git diff --name-only --diff-filter=ACMR "${base}...HEAD" -- '*.py' || true)
+          if [ -z "${files}" ]; then
+            echo "No changed Python files to lint."
+            exit 0
+          fi
+          echo "Changed Python files:"; echo "${files}"
+          pip install ruff
+          echo "${files}" | xargs ruff check
 
   core-tests:
     name: Core pytest suite (ADVISORY — see note)

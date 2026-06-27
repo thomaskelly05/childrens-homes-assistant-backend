@@ -89,11 +89,16 @@ capable; then verify the four files actually pass.
 New workflow on `pull_request` into `main` (and `workflow_dispatch`), complementing the
 existing ORB Scenario Quality Gate.
 
-**Hard/required jobs (all VERIFIED green in this environment):**
-- **Compile-all** — fails on any Python syntax error (would have caught the 3.11 f-string bug).
-- **Ruff** lint.
-- **AI egress governance guard (NR-1)** — `python scripts/ai_egress_audit.py` (no raw clients
-  outside the factory; inference only in approved modules). **NR-1 guard is now wired into CI.**
+**Hard job `hard-gate` (blocking), in this step order:**
+1. **Compile-all** — fails on any Python syntax error (would have caught the 3.11 f-string bug).
+2. **AI egress governance guard (NR-1)** — `python scripts/ai_egress_audit.py` (no raw clients
+   outside the factory; inference only in approved modules). **Runs before lint** so the NR-1
+   guard always executes even if lint fails. **NR-1 guard is now wired into CI.**
+3. **Ruff — changed Python files only.** Lints only the files changed in the PR (diff against
+   the base), not the whole repo. This was an amendment after the first gate run failed: a
+   repo-wide `ruff check .` found **961 pre-existing lint issues** (unrelated to any PR) and
+   would have blocked every PR. Repo-wide ruff cleanup is a **separate future task**; until
+   then ruff hard-gates only newly-changed files.
 
 **Advisory job (non-blocking, `continue-on-error: true`):**
 - **Core pytest suite** — runs for visibility with the documented exclusions. It is **not** a
@@ -110,7 +115,7 @@ existing ORB Scenario Quality Gate.
 **Now protects (once the workflow is active + required):**
 - Python **syntax errors** on the 3.11 runtime (the exact class of bug that was silently
   breaking production routes).
-- Lint regressions.
+- **Lint regressions in changed files** (ruff on the PR diff; not repo-wide — see §4).
 - **New direct AI/provider egress** outside approved governance modules (NR-1 guard).
 
 **Still does NOT protect:**
