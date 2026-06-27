@@ -2,11 +2,10 @@ from __future__ import annotations
 
 import json
 import logging
-from pathlib import Path
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException
-from fastapi.responses import HTMLResponse, StreamingResponse
+from fastapi import APIRouter, Depends
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field
 
 from auth.errors import unauthorised
@@ -18,8 +17,6 @@ from services.indicare_ai_orchestrator_service import IndiCareAIOrchestratorServ
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/assistant/general", tags=["General Assistant"])
-compat_router = APIRouter(tags=["Assistant Compatibility"])
-ui_router = APIRouter(tags=["Assistant UI"])
 orchestrator_service = IndiCareAIOrchestratorService()
 
 MAX_GENERAL_MESSAGE_CHARS = 80000
@@ -140,19 +137,6 @@ def _sse_done() -> str:
     return "event: done\ndata: [DONE]\n\n"
 
 
-def _assistant_component_path() -> Path:
-    return Path(__file__).resolve().parents[1] / "indicare-ai" / "assistant.html"
-
-
-@ui_router.get("/assistant", response_class=HTMLResponse)
-@ui_router.get("/assistant.html", response_class=HTMLResponse)
-def serve_ai_suite_assistant():
-    path = _assistant_component_path()
-    if not path.exists():
-        raise HTTPException(status_code=404, detail="Assistant page not found.")
-    return HTMLResponse(path.read_text(encoding="utf-8"))
-
-
 @router.post("/stream")
 async def stream_general_assistant(
     payload: GeneralAssistantRequest,
@@ -191,11 +175,3 @@ async def stream_general_assistant(
             "X-Accel-Buffering": "no",
         },
     )
-
-
-@compat_router.post("/assistant")
-async def stream_assistant(
-    payload: GeneralAssistantRequest,
-    current_user=Depends(require_assistant_access),
-):
-    return await stream_general_assistant(payload, current_user)

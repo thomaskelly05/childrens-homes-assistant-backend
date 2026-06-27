@@ -72,8 +72,9 @@ def test_os_quality_stream_denied_for_staff_role(client, fake_state):
     )
 
     assert response.status_code == 403
-    detail = response.json().get("detail", "").lower()
-    assert "role does not have access" in detail
+    detail = response.json().get("detail", "")
+    message = detail.get("message", "") if isinstance(detail, dict) else str(detail)
+    assert "role does not have access" in message.lower()
 
 
 def test_os_quality_stream_allowed_for_manager_role(client, fake_state, monkeypatch):

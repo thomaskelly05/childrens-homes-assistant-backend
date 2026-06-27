@@ -47,15 +47,14 @@ def test_auth_me_returns_401_when_not_authenticated(client):
     assert body["code"] in {"authentication_required", "not_authenticated"}
 
 
-def test_assistant_redirects_to_mfa_setup_when_logged_in_without_mfa(client, fake_state):
+def test_assistant_serves_html_shell_when_logged_in_without_mfa(client, fake_state):
     fake_state["accepted_legal"] = True
 
     login_user(client)
 
     response = client.get("/assistant", follow_redirects=False)
-    assert response.status_code in (302, 307, 401)
-    if response.status_code in (302, 307):
-        assert response.headers["location"] == "/mfa-setup"
+    assert response.status_code == 200
+    assert "text/html" in response.headers.get("content-type", "").lower()
 
 
 def test_api_route_returns_mfa_setup_required_when_logged_in_without_mfa(client, fake_state):
@@ -73,14 +72,13 @@ def test_api_route_returns_mfa_setup_required_when_logged_in_without_mfa(client,
         assert body["user"]["mfa_verified"] is False
 
 
-def test_assistant_redirects_to_assistant_when_legal_not_accepted(client):
+def test_assistant_serves_html_shell_when_legal_not_accepted(client):
     login_user(client)
     enable_mfa(client)
 
     response = client.get("/assistant", follow_redirects=False)
-    assert response.status_code in (302, 307, 401)
-    if response.status_code in (302, 307):
-        assert response.headers["location"] == "/assistant"
+    assert response.status_code == 200
+    assert "text/html" in response.headers.get("content-type", "").lower()
 
 
 def test_api_route_returns_legal_acceptance_required_when_legal_not_accepted(client):
