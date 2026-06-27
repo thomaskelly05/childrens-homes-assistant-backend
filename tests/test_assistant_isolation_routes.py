@@ -31,8 +31,9 @@ def enable_mfa(client):
 def fully_authenticate(client, fake_state, role: str, *, accepted_legal: bool = True):
     fake_state["user"]["role"] = role
     fake_state["accepted_legal"] = accepted_legal
-    login_user(client)
-    enable_mfa(client)
+    login = login_user(client)
+    if login.json().get("mfa_required"):
+        enable_mfa(client)
 
 
 def test_general_assistant_stream_blocks_prompt_injection(client, fake_state):

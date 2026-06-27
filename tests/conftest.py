@@ -1,4 +1,5 @@
 import os
+from contextlib import contextmanager
 
 import pyotp
 import pytest
@@ -21,7 +22,10 @@ import auth.current_user as current_user_module  # noqa: E402
 import auth.passwords as password_module  # noqa: E402
 import auth.legal_acceptance as legal_acceptance_module  # noqa: E402
 import core.lifespan as lifespan_module  # noqa: E402
+import db.connection as db_connection_module  # noqa: E402
 import db.legal_acceptance_db as legal_acceptance_db  # noqa: E402
+import services.security_rate_limit_service as security_rate_limit_module  # noqa: E402
+import middleware.access_scope_middleware as access_scope_module  # noqa: E402
 from middleware.security_middleware import CsrfProtectionMiddleware  # noqa: E402
 
 TEST_USER_ID = 5
@@ -65,6 +69,12 @@ def fake_state():
 
 @pytest.fixture()
 def client(monkeypatch, fake_state):
+    security_rate_limit_module.reset_rate_limiters_for_tests()
+    auth_routes.FAILED_BY_IP.clear()
+    auth_routes.FAILED_BY_EMAIL.clear()
+    auth_routes.LOCKED_IPS.clear()
+    auth_routes.LOCKED_EMAILS.clear()
+
     async def _bypass_csrf_dispatch(self, request, call_next):
         return await call_next(request)
 
@@ -87,56 +97,7 @@ def client(monkeypatch, fake_state):
     monkeypatch.setattr(lifespan_module, "run_startup_migrations", lambda: None)
 
     # -----------------------------
-    # Health DB mocks
-    # -----------------------------
-    class DummyCursor:
-        def __enter__(self):
-            return self
-
-        def __exit__(self, exc_type, exc, tb):
-            return False
-
-        def execute(self, *_args, **_kwargs):
-            return None
-
-        def fetchone(self):
-            return {"ok": True}
-
-    class DummyConn:
-        closed = False
-
-        def cursor(self, *args, **kwargs):
-            return DummyCursor()
-
-    monkeypatch.setattr(app_module, "get_db_connection", lambda: DummyConn(), raising=False)
-    monkeypatch.setattr(app_module, "release_db_connection", lambda conn: None, raising=False)
-
-    # -----------------------------
-    # Token / auth helpers
-    # -----------------------------
-    monkeypatch.setattr(
-        auth_routes,
-        "create_session_token",
-        lambda user_id, **_kwargs: f"test-token-{user_id}",
-    )
-    monkeypatch.setattr(
-        mfa_routes,
-        "create_session_token",
-        lambda user_id, **_kwargs: f"test-token-{user_id}",
-    )
-
-    def fake_decode_session_token(token):
-        if token == f"test-token-{TEST_USER_ID}":
-            return {"sub": str(TEST_USER_ID)}
-        return None
-
-    monkeypatch.setattr(auth_routes, "decode_session_token", fake_decode_session_token)
-    monkeypatch.setattr(app_module, "decode_session_token", fake_decode_session_token, raising=False)
-    monkeypatch.setattr(current_user_module, "decode_session_token", fake_decode_session_token)
-    monkeypatch.setattr(mfa_routes, "decode_session_token", fake_decode_session_token)
-
-    # -----------------------------
-    # Fake DB dependency for routes
+    # Fake DB for auth routes, current_user, and access-scope middleware
     # -----------------------------
     class FakeCursor:
         def __init__(self):
@@ -170,6 +131,9 @@ def client(monkeypatch, fake_state):
         def fetchone(self):
             return self._result
 
+        def fetchall(self):
+            return []
+
     class FakeConn:
         closed = False
 
@@ -182,11 +146,54 @@ def client(monkeypatch, fake_state):
         def rollback(self):
             return None
 
+    def fake_get_db_connection():
+        return FakeConn()
+
+    monkeypatch.setattr(db_connection_module, "get_db_connection", fake_get_db_connection)
+    monkeypatch.setattr(db_connection_module, "release_db_connection", lambda conn: None)
+    monkeypatch.setattr(access_scope_module, "get_db_connection", fake_get_db_connection)
+    monkeypatch.setattr(access_scope_module, "release_db_connection", lambda conn: None)
+    monkeypatch.setattr(app_module, "get_db_connection", fake_get_db_connection, raising=False)
+    monkeypatch.setattr(app_module, "release_db_connection", lambda conn: None, raising=False)
+
+    # -----------------------------
+    # Token / auth helpers
+    # -----------------------------
+    monkeypatch.setattr(
+        auth_routes,
+        "create_session_token",
+        lambda user_id, **_kwargs: f"test-token-{user_id}",
+    )
+    monkeypatch.setattr(
+        mfa_routes,
+        "create_session_token",
+        lambda user_id, **_kwargs: f"test-token-{user_id}",
+    )
+
+    def fake_decode_session_token(token):
+        if token == f"test-token-{TEST_USER_ID}":
+            return {"sub": str(TEST_USER_ID)}
+        return None
+
+    monkeypatch.setattr(auth_routes, "decode_session_token", fake_decode_session_token)
+    monkeypatch.setattr(app_module, "decode_session_token", fake_decode_session_token, raising=False)
+    monkeypatch.setattr(current_user_module, "decode_session_token", fake_decode_session_token)
+    monkeypatch.setattr(mfa_routes, "decode_session_token", fake_decode_session_token)
+    monkeypatch.setattr(access_scope_module, "decode_session_token", fake_decode_session_token)
+
+    # -----------------------------
+    # Fake DB dependency for FastAPI Depends(get_db)
+    # -----------------------------
     def fake_get_db():
         yield FakeConn()
 
+    @contextmanager
+    def fake_db_connection(*, commit=False):
+        yield FakeConn()
+
     app_module.app.dependency_overrides[auth_routes.get_db] = fake_get_db
-    app_module.app.dependency_overrides[current_user_module.get_db] = fake_get_db
+    monkeypatch.setattr(current_user_module, "db_connection", fake_db_connection)
+    monkeypatch.setattr(auth_routes, "db_connection", fake_db_connection)
 
     # -----------------------------
     # Password check mock
