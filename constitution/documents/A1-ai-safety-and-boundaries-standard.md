@@ -68,10 +68,18 @@ and the AI-governance no-raw-logging test. **Honest limit:** no test executed in
 
 ## 5. Carried-forward gaps (not hidden)
 
+**Cross-reference — Named Risk NR-1 (A2).** AI safety boundaries are **strongest where calls
+pass through the governed chat path (`assistant/llm_provider.py` `stream_chat`) and the named
+gateway (`services/ai_gateway_service.py`)**, where redaction and external-call evaluation run
+before egress. However, **sole-egress is not yet proven across all AI routes**: the provider
+adapter path and the ORB Voice TTS path do not yet demonstrate the same mandatory governance
+(see A2 Named Risk NR-1). Boundary enforcement is therefore only as consistent as the path
+taken, and the claim that boundaries apply to every AI call is **not currently supportable**.
+
 | Gap | Label | Note |
 |---|---|---|
 | Boundaries are prompt-appended; live jailbreak robustness unproven | INFERRED | Tested in mock; not executed live (E49). |
-| AI gateway sole-egress unproven | UNVERIFIED (open-questions §E) | If any call bypasses the gateway, boundary/redaction enforcement could be inconsistent. Shared with A2/O4. |
+| **AI egress not enforced through a single chokepoint (Named Risk NR-1, A2)** | OPEN — high-priority pre-launch risk | Boundaries strongest on the governed chat/gateway path; adapter and TTS paths uneven/direct. Shared with A2/E2/O4/O5. |
 | AI Safety Owner is interim and not independent | INFERRED risk (O2) | Same person as Engineering/Product. |
 
 ---
@@ -90,7 +98,8 @@ robustness against live models; an independent AI Safety Owner; periodic boundar
 
 ## 7. What this standard does not claim
 - It does **not** claim ORB is jailbreak-proof or that AI safety is guaranteed.
-- It does **not** claim every AI call is governed; gateway-sole-egress is UNVERIFIED.
+- It does **not** claim every AI call is governed; per **Named Risk NR-1 (A2)**, egress is not
+  enforced through a single chokepoint and boundary coverage across all routes is not proven.
 
 ---
 
@@ -99,3 +108,4 @@ robustness against live models; an independent AI Safety Owner; periodic boundar
 | Version | Date | Status | Notes |
 |---|---|---|---|
 | 0.1 | 2026-06-26 | Drafted (Phase 2 Batch 3) | Initial draft presented for founder review. |
+| 0.2 | 2026-06-26 | Drafted (Batch 3 amendment) | Cross-referenced **Named Risk NR-1** (A2): boundaries strongest on the governed chat/gateway path; sole-egress not proven across all AI routes. Still awaiting founder review; not ratified. |

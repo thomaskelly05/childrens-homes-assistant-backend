@@ -63,6 +63,35 @@ unverified."
 | Q4 | AI safety evaluation (boundaries, adversarial) | **Partial** | Adversarial firewall test exists (A1); coverage not audited. |
 | Q5 | "Verified, not assumed" definition of done | **Documented** | `CLAUDE.md`; not tooling-enforced. |
 | Q6 | Non-pytest scripts excluded/segregated from the suite | **Partial** | AGENTS.md documents manual exclusions. |
+| Q7 | **AI egress governance verification (Named Risk NR-1)** — see §4a | **Not yet (required future control)** | High-priority pre-launch; cross-ref A2 NR-1. |
+
+---
+
+## 4a. Required future verification control — AI egress governance (Named Risk NR-1)
+
+Because Phase 3 verification found that AI egress is **not** enforced through a single governed
+chokepoint (A2 Named Risk NR-1), this standard adds a **required future verification control**.
+Until it is in place and passing, IndiCare Intelligence must not publicly claim that all AI
+egress is governed.
+
+The control comprises:
+
+1. **Repository scan for direct provider calls** — enumerate every site that constructs a
+   provider client or calls a provider inference API (e.g. `chat.completions`, `responses`,
+   `embeddings`, `audio.*`), including raw clients that bypass the sanitised factory.
+2. **Classification of each AI egress path** — governed gateway path / approved provider
+   adapter path / mock-or-test path / legacy-or-direct path / unclear (as in the Phase 3
+   sole-egress note).
+3. **A test or CI guard that fails the build** if a new direct OpenAI/provider call is
+   introduced **outside approved governance modules** (e.g. outside
+   `services/ai_gateway_service.py`, `services/ai_external_call_governance.py`, and the
+   approved provider adapter once that adapter is itself governed).
+4. **Re-verification before any public claim of governed AI egress** — the scan and
+   classification must be re-run and pass, and NR-1 must be closed, before such a claim is made
+   or before live provider use involving real child, staff, home, or safeguarding data.
+
+This control is **specified, not implemented** here; implementation is a code-change item
+outside this constitution work (cross-ref A2 NR-1 remediation options).
 
 ---
 
@@ -73,6 +102,7 @@ unverified."
 | Full-suite/type/lint not gated | VERIFIED (E34) | Q1, Q2; tied to E3 R2. |
 | Suite health unknown at runtime | VERIFIED not-run (E49) | Run in an equipped environment before any "tests pass" claim. |
 | Test fixture fragility | VERIFIED | AGENTS.md. |
+| **No guard against new direct provider calls (Named Risk NR-1)** | OPEN — required future control (§4a) | Add CI/test guard; re-verify before any "governed AI egress" claim. |
 
 ---
 
@@ -98,3 +128,4 @@ eval coverage.
 | Version | Date | Status | Notes |
 |---|---|---|---|
 | 0.1 | 2026-06-26 | Drafted (Phase 2 Batch 3) | Initial draft presented for founder review. |
+| 0.2 | 2026-06-26 | Drafted (Batch 3 amendment) | Added §4a + control Q7: required future verification control for AI egress governance (repo scan, path classification, CI guard against new direct provider calls, re-verification before any "governed AI egress" claim) cross-referencing **Named Risk NR-1 (A2)**. Still awaiting founder review; not ratified. |

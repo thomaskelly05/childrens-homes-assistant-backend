@@ -67,6 +67,24 @@ Secrets are not stored in the repository: `DATABASE_URL`, `SECRET_KEY`, `OPENAI_
 | S4 | Sensitive data never in logs | **Partial** | Non-negotiable (`CLAUDE.md`) + no-raw-logging test; full coverage not verified (cross-ref O5). |
 | S5 | Audit logging covers security-relevant actions | **Partial** | `AuditLoggingMiddleware` exists; scope not audited. |
 | S6 | MFA enforced for privileged roles | **Partial (documented)** | AGENTS.md states enforcement for admin/manager; not executed in discovery. |
+| S7 | Provider/AI egress is governed consistently through enforced controls | **OPEN — see §4a** | Cross-references **Named Risk NR-1 (A2)**. |
+
+---
+
+## 4a. Provider egress as a security/access-control concern (Named Risk NR-1)
+
+**Cross-reference — A2 Named Risk NR-1.** Provider (AI) egress is a security and
+access-control concern, not only an AI concern: data leaving the platform to an external model
+must be governed **consistently**, especially where **sensitive children's social care data**
+(`DataClassification.CONFIDENTIAL_CHILD`, `SAFEGUARDING_SENSITIVE`, `HEALTH_SENSITIVE`) could be
+involved. Phase 3 verification found AI egress is **not** enforced through a single governed
+chokepoint: the primary chat path and named gateway are governed, but the provider-adapter path
+(`services/ai_providers/openai_provider.py` via `ai_model_router_service`) and the ORB Voice TTS
+path (`services/orb_voice_tts_service.py`) do not yet demonstrate mandatory
+redaction/evaluation before egress. From a security standpoint this is an **inconsistent
+egress-control surface** and is a **high-priority pre-launch remediation item**, especially
+before any live provider use involving real child, staff, home, or safeguarding data. Full
+detail and remediation options: A2 Named Risk NR-1.
 
 ---
 
@@ -77,6 +95,7 @@ Secrets are not stored in the repository: `DATABASE_URL`, `SECRET_KEY`, `OPENAI_
 | Default admin password shipped | VERIFIED (E43) | Enforce rotation (S1; E3 R7). |
 | Per-router policy enforcement unverified | UNVERIFIED (Q4/A6) | Audit all 229 routers (S2). |
 | RLS correctness unverified | UNVERIFIED (E50) | Review `sql/008` (S3). |
+| **AI/provider egress not consistently governed (Named Risk NR-1)** | OPEN — high-priority pre-launch risk | Govern adapter + TTS egress; see A2 NR-1 and E6 verification control. |
 
 ---
 
@@ -106,3 +125,4 @@ credential rotation; audited logging scope; a security owner distinct from found
 | Version | Date | Status | Notes |
 |---|---|---|---|
 | 0.1 | 2026-06-26 | Drafted (Phase 2 Batch 3) | Initial draft presented for founder review. |
+| 0.2 | 2026-06-26 | Drafted (Batch 3 amendment) | Added §4a and control S7 cross-referencing **Named Risk NR-1 (A2)**: provider/AI egress must be governed consistently, especially for sensitive children's social care data. Still awaiting founder review; not ratified. |
