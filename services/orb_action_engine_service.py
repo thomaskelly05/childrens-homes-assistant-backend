@@ -1203,6 +1203,9 @@ class OrbActionEngineService:
             detail_level=detail,
             research_intent=False,
             voice_mode=False,
+            surface="orb_action_engine",
+            route="orb_action_engine_service._llm_complete",
+            local_fallback_available=True,
         )
         text = _text(getattr(response, "text", None) or response)
         if not text:

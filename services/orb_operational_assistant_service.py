@@ -6,7 +6,6 @@ import logging
 import uuid
 from typing import Any
 
-from schemas.ai_models import AiRoutingRequest
 from schemas.orb_evaluation import OrbEvaluationRequest
 from schemas.orb_operational import (
     OrbOperationalContextSummary,
@@ -195,6 +194,9 @@ class OrbOperationalAssistantService:
                     },
                     detail_level="balanced",
                     surface="operational_os",
+                    user=current_user,
+                    route="orb_operational_assistant_service.answer",
+                    local_fallback_available=False,
                 )
                 routing_meta = ai_model_router_service.routing_metadata_for_context(
                     decision, trace, response=response

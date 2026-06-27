@@ -6,10 +6,9 @@ import logging
 import os
 from typing import Any
 
-logger = logging.getLogger("indicare.ai_external_call_governance")
-
 from fastapi import HTTPException
 
+from schemas.ai_models import AiProviderGovernanceContext
 from schemas.data_protection import AIPrivacyDecision, DataClassification
 from services.ai_privacy_decision_service import (
     AIPrivacyDecisionRequest,
@@ -18,6 +17,8 @@ from services.ai_privacy_decision_service import (
 from services.ai_redaction_service import ai_redaction_service
 from services.ai_usage_audit_service import ai_usage_audit_service
 from services.openai_header_sanitisation import create_sync_openai_client
+
+logger = logging.getLogger("indicare.ai_external_call_governance")
 
 # Feature keys used by legacy route convergence (allowlisted when external AI is enabled).
 FEATURE_DOCUMENT_GENERATION = "document_generation"
@@ -30,6 +31,61 @@ FEATURE_VOICE_TRANSCRIPTION = "voice_transcription"
 FEATURE_VOICE_RESPOND = "voice_respond"
 FEATURE_KNOWLEDGE_EMBEDDING = "knowledge_embedding"
 FEATURE_LEGACY_STREAMING = "legacy_assistant_stream"
+# Model-router / ORB chat surfaces (provider-agnostic governed egress).
+FEATURE_ORB_MODEL_ROUTER_CHAT = "orb_model_router_chat"
+FEATURE_ORB_MODEL_ROUTER_OPERATIONAL = "orb_model_router_operational"
+FEATURE_ORB_MODEL_ROUTER_AGENT = "orb_model_router_agent"
+FEATURE_ORB_MODEL_ROUTER_DOCUMENT = "orb_model_router_document"
+FEATURE_ORB_MODEL_ROUTER_ACTION = "orb_model_router_action"
+FEATURE_ORB_MODEL_ROUTER_GUARDRAIL = "orb_model_router_guardrail"
+
+SURFACE_FEATURE_MAP: dict[str, str] = {
+    "standalone_orb_ai": FEATURE_ORB_MODEL_ROUTER_CHAT,
+    "standalone_orb": FEATURE_ORB_MODEL_ROUTER_CHAT,
+    "operational_os": FEATURE_ORB_MODEL_ROUTER_OPERATIONAL,
+    "operational_os_context": FEATURE_ORB_MODEL_ROUTER_OPERATIONAL,
+    "orb_agent_orchestrator": FEATURE_ORB_MODEL_ROUTER_AGENT,
+    "orb_document_understanding": FEATURE_ORB_MODEL_ROUTER_DOCUMENT,
+    "orb_action_engine": FEATURE_ORB_MODEL_ROUTER_ACTION,
+    "orb_live_guardrail_repair": FEATURE_ORB_MODEL_ROUTER_GUARDRAIL,
+}
+
+
+def feature_for_surface(surface: str, *, override: str | None = None) -> str:
+    if override:
+        return override.strip().lower()
+    return SURFACE_FEATURE_MAP.get(str(surface or "").strip(), FEATURE_ORB_MODEL_ROUTER_CHAT)
+
+
+def build_router_governance_context(
+    *,
+    surface: str,
+    user: dict[str, Any] | None = None,
+    feature: str | None = None,
+    route: str | None = None,
+    child_id: int | None = None,
+    role: str | None = None,
+    data_classification: DataClassification | None = None,
+    local_fallback_available: bool = False,
+    metadata: dict[str, Any] | None = None,
+) -> AiProviderGovernanceContext:
+    ids = governance_ids_from_user(user)
+    resolved_role = role
+    if not resolved_role and isinstance(user, dict):
+        resolved_role = str(user.get("role") or user.get("user_role") or "").strip() or None
+    return AiProviderGovernanceContext(
+        feature=feature_for_surface(surface, override=feature),
+        surface=str(surface or "standalone_orb_ai").strip(),
+        provider_id=ids["provider_id"],
+        home_id=ids["home_id"],
+        user_id=ids["user_id"],
+        child_id=child_id,
+        role=resolved_role,
+        route=route,
+        data_classification=data_classification,
+        local_fallback_available=local_fallback_available,
+        metadata=metadata or {},
+    )
 
 
 def governance_ids_from_user(user: dict[str, Any] | None) -> dict[str, int | None]:

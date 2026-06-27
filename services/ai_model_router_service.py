@@ -3,7 +3,6 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
-import re
 import time
 from collections.abc import AsyncIterator
 from typing import Any
@@ -11,6 +10,7 @@ from typing import Any
 from schemas.ai_models import (
     AiCostTier,
     AiModelCapability,
+    AiProviderGovernanceContext,
     AiProviderName,
     AiProviderRequest,
     AiProviderResponse,
@@ -22,9 +22,9 @@ from schemas.ai_models import (
     AiModelRouterTrace,
 )
 from services.ai_cost_policy_service import ai_cost_policy_service
+from services.ai_external_call_governance import build_router_governance_context
+from services.ai_governed_egress import ai_governed_egress
 from services.ai_provider_registry import ai_provider_registry
-from services.ai_providers.mock_provider import mock_provider
-from services.ai_providers.openai_provider import openai_provider
 
 logger = logging.getLogger("indicare.ai_model_router")
 
@@ -270,24 +270,33 @@ class AiModelRouterService:
         )
 
     def _get_provider(self, name: AiProviderName):
-        if name == AiProviderName.OPENAI:
-            return openai_provider
-        return mock_provider
+        """Deprecated direct adapter access — use ai_governed_egress instead."""
+        from services.ai_provider_adapter_registry import ai_provider_adapter_registry
+
+        return ai_provider_adapter_registry.get(name)
 
     async def complete(
         self,
         request: AiProviderRequest,
         decision: AiRoutingDecision | None = None,
+        *,
+        governance: AiProviderGovernanceContext | None = None,
     ) -> AiProviderResponse:
-        provider_impl = self._get_provider(request.provider)
-        if not provider_impl.is_available():
+        resolved_governance = governance or request.governance
+        if resolved_governance is None:
             return AiProviderResponse(
                 text="",
                 provider=request.provider,
                 model=request.model,
-                error="provider_unavailable",
+                error="governance_context_required",
+                metadata={"governance_blocked": True},
             )
-        return await provider_impl.complete(request)
+        governed_request = request.model_copy(update={"governance": resolved_governance})
+        response, _egress = await ai_governed_egress.complete(
+            governed_request,
+            governance=resolved_governance,
+        )
+        return response
 
     async def complete_with_routing(
         self,
@@ -302,7 +311,17 @@ class AiModelRouterService:
         research_intent: bool = False,
         voice_mode: bool = False,
         surface: str = "standalone_orb_ai",
+        governance: AiProviderGovernanceContext | None = None,
+        user: dict[str, Any] | None = None,
+        route: str | None = None,
+        local_fallback_available: bool = False,
     ) -> tuple[AiProviderResponse, AiRoutingDecision, AiModelRouterTrace]:
+        resolved_governance = governance or build_router_governance_context(
+            surface=surface,
+            user=user,
+            route=route,
+            local_fallback_available=local_fallback_available,
+        )
         routing_request = AiRoutingRequest(
             message=message,
             system_prompt=system_prompt,
@@ -314,6 +333,7 @@ class AiModelRouterService:
             retrieval_context=retrieval_context,
             voice_mode=voice_mode,
             surface=surface,
+            governance=resolved_governance,
         )
         decision = self.route(routing_request)
         provider_request = AiProviderRequest(
@@ -326,15 +346,20 @@ class AiModelRouterService:
             max_output_tokens=decision.max_output_tokens,
             timeout_seconds=decision.timeout_seconds,
             metadata={"task_type": decision.task_type.value},
+            governance=resolved_governance,
         )
 
-        started = time.perf_counter()
-        response = await self.complete(provider_request, decision)
+        response = await self.complete(provider_request, decision, governance=resolved_governance)
         fallback_used = False
 
         strict = _env_bool("AI_PROVIDER_STRICT", False)
         if (response.error or not response.text) and not strict:
-            if decision.fallback_provider and decision.fallback_model:
+            if (
+                decision.fallback_provider
+                and decision.fallback_model
+                and response.error != "governance_context_required"
+                and not (response.metadata or {}).get("governance_blocked")
+            ):
                 fallback_used = True
                 fallback_request = provider_request.model_copy(
                     update={
@@ -342,7 +367,13 @@ class AiModelRouterService:
                         "model": decision.fallback_model,
                     }
                 )
-                response = await self.complete(fallback_request, decision)
+                response = await self.complete(
+                    fallback_request,
+                    decision,
+                    governance=resolved_governance.model_copy(
+                        update={"local_fallback_available": True}
+                    ),
+                )
 
         trace = AiModelRouterTrace(
             task_type=decision.task_type,
@@ -373,8 +404,18 @@ class AiModelRouterService:
         research_intent: bool = False,
         voice_mode: bool = False,
         surface: str = "standalone_orb_ai",
+        governance: AiProviderGovernanceContext | None = None,
+        user: dict[str, Any] | None = None,
+        route: str | None = None,
+        local_fallback_available: bool = False,
     ) -> AsyncIterator[tuple[str, AiRoutingDecision, AiModelRouterTrace]]:
         """Yield text deltas with routing metadata attached after the first chunk."""
+        resolved_governance = governance or build_router_governance_context(
+            surface=surface,
+            user=user,
+            route=route,
+            local_fallback_available=local_fallback_available,
+        )
         routing_request = AiRoutingRequest(
             message=message,
             system_prompt=system_prompt,
@@ -386,6 +427,7 @@ class AiModelRouterService:
             retrieval_context=retrieval_context,
             voice_mode=voice_mode,
             surface=surface,
+            governance=resolved_governance,
         )
         decision = self.route(routing_request)
         provider_request = AiProviderRequest(
@@ -398,6 +440,7 @@ class AiModelRouterService:
             max_output_tokens=decision.max_output_tokens,
             timeout_seconds=decision.timeout_seconds,
             metadata={"task_type": decision.task_type.value},
+            governance=resolved_governance,
         )
 
         started = time.perf_counter()
@@ -406,15 +449,32 @@ class AiModelRouterService:
         emitted = False
         strict = _env_bool("AI_PROVIDER_STRICT", False)
 
-        async def _yield_provider_stream(
+        async def _yield_governed_stream(
             request: AiProviderRequest,
             routed_decision: AiRoutingDecision,
-        ) -> None:
+            stream_governance: AiProviderGovernanceContext,
+        ) -> AsyncIterator[tuple[str, AiRoutingDecision, AiModelRouterTrace]]:
             nonlocal trace, emitted, fallback_used
-            provider_impl = self._get_provider(request.provider)
-            if not provider_impl.is_available():
-                return
-            async for delta in provider_impl.stream(request):
+            async for delta, egress in ai_governed_egress.stream(
+                request,
+                governance=stream_governance,
+            ):
+                if egress.governance_blocked and not delta:
+                    if trace is None:
+                        trace = AiModelRouterTrace(
+                            task_type=routed_decision.task_type,
+                            risk_level=routed_decision.risk_level,
+                            quality_tier=routed_decision.quality_tier,
+                            cost_tier=routed_decision.cost_tier,
+                            provider=request.provider,
+                            model=request.model,
+                            reason=routed_decision.reason,
+                            fallback_used=fallback_used,
+                            latency_ms=int((time.perf_counter() - started) * 1000),
+                            error=egress.blocked_reason or "governance_blocked",
+                            metadata={"governance_blocked": True},
+                        )
+                    continue
                 if not delta:
                     continue
                 emitted = True
@@ -432,7 +492,7 @@ class AiModelRouterService:
                     )
                 yield delta, routed_decision, trace
 
-        async for item in _yield_provider_stream(provider_request, decision):
+        async for item in _yield_governed_stream(provider_request, decision, resolved_governance):
             yield item
 
         if not emitted and not strict and decision.fallback_provider and decision.fallback_model:
@@ -443,13 +503,28 @@ class AiModelRouterService:
                     "model": decision.fallback_model,
                 }
             )
-            async for item in _yield_provider_stream(fallback_request, decision):
+            fallback_governance = resolved_governance.model_copy(
+                update={"local_fallback_available": True}
+            )
+            async for item in _yield_governed_stream(
+                fallback_request,
+                decision,
+                fallback_governance,
+            ):
                 yield item
 
         if not emitted:
-            response = await self.complete(provider_request, decision)
+            response = await self.complete(
+                provider_request,
+                decision,
+                governance=resolved_governance,
+            )
             if (response.error or not response.text) and not strict:
-                if decision.fallback_provider and decision.fallback_model:
+                if (
+                    decision.fallback_provider
+                    and decision.fallback_model
+                    and not (response.metadata or {}).get("governance_blocked")
+                ):
                     fallback_used = True
                     fallback_request = provider_request.model_copy(
                         update={
@@ -457,7 +532,13 @@ class AiModelRouterService:
                             "model": decision.fallback_model,
                         }
                     )
-                    response = await self.complete(fallback_request, decision)
+                    response = await self.complete(
+                        fallback_request,
+                        decision,
+                        governance=resolved_governance.model_copy(
+                            update={"local_fallback_available": True}
+                        ),
+                    )
             if response.text:
                 if trace is None:
                     trace = AiModelRouterTrace(
