@@ -178,9 +178,17 @@ export async function requestOrbVoiceTranscribe(options: {
   }
 }
 
+/** Server-side TTS intent contract (NR-1 Phase 2A). */
+export type OrbVoiceTtsSource =
+  | 'manual_speak'
+  | 'voice_mode'
+  | 'settings_preview'
+  | 'accessibility_read_aloud'
+
 /** Premium ORB Voice TTS — short spoken reply text only; no microphone audio. */
 export async function requestOrbPremiumTts(options: {
   text: string
+  source: OrbVoiceTtsSource
   voice_id?: string
   voice_style?: string
   context?: 'live_voice' | 'summary' | 'replay' | string
@@ -209,6 +217,7 @@ export async function requestOrbPremiumTts(options: {
       },
       body: JSON.stringify({
         text: trimmed,
+        source: options.source,
         voice_id: options.voice_id ?? 'orb_british_female',
         voice_style: options.voice_style ?? 'calm_therapeutic',
         format: 'mp3',

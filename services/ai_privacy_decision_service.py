@@ -130,6 +130,7 @@ class AIPrivacyDecisionService:
                 "dictate_edit",
                 "voice_transcription",
                 "voice_respond",
+                "orb_premium_tts",
                 "knowledge_embedding",
                 "orb_text_fallback",
                 "metadata",

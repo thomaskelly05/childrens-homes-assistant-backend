@@ -228,6 +228,8 @@ RATE_LIMIT_RULES: tuple[RateLimitRule, ...] = (
         frozenset({"POST"}),
         _prefix_matcher(
             "/orb/voice/speak",
+            "/orb/voice/tts",
+            "/orb/voice/v2/speak",
             "/orb/voice/transcribe",
             "/orb/voice/realtime/session",
             "/orb/voice/session",

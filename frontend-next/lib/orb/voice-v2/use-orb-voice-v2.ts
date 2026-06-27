@@ -623,6 +623,7 @@ export function useOrbVoiceV2(open: boolean) {
       prepareTimerRef.current = window.setTimeout(() => setVoicePreparingLongWait(true), 2500)
       skipTimerRef.current = window.setTimeout(() => setVoicePreparingSkipAvailable(true), 6000)
       const result = await requestOrbVoiceV2Speak(spoken, {
+        source: 'voice_mode',
         voice,
         context: 'live_voice',
         tier: lastBrainTierRef.current

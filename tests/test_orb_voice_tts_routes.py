@@ -8,6 +8,26 @@ from fastapi.testclient import TestClient
 
 from auth.orb_residential_dependencies import require_orb_residential_auth
 from routers.orb_voice_tts_routes import require_orb_voice_premium, router
+from schemas.data_protection import AIPrivacyDecision, DataClassification
+
+
+def _allowed_decision() -> AIPrivacyDecision:
+    return AIPrivacyDecision(
+        allowed=True,
+        reason="external_ai_allowed_with_governance",
+        mode="external_redacted",
+        redaction_mode="strict",
+        classification=DataClassification.INTERNAL_OPERATIONAL,
+    )
+
+
+@pytest.fixture
+def allow_tts_privacy():
+    with patch(
+        "services.orb_voice_tts_intent_service.evaluate_external_call",
+        return_value=_allowed_decision(),
+    ), patch("routers.orb_voice_tts_routes.is_configured", return_value=True):
+        yield
 
 
 @pytest.fixture
@@ -26,9 +46,7 @@ def tts_client():
 
 
 def test_tts_routes_are_registered_on_app():
-    from app import app as fastapi_app
-
-    paths = {getattr(route, "path", None) for route in fastapi_app.routes}
+    paths = {route.path for route in router.routes}
     assert "/orb/voice/tts/status" in paths
     assert "/orb/voice/tts" in paths
 
@@ -44,7 +62,7 @@ def test_tts_status_returns_200_when_disabled(tts_client, monkeypatch):
 
 
 def test_tts_status_returns_200_when_configured(tts_client, monkeypatch):
-    monkeypatch.setenv("ORB_TTS_ENABLED", "true")
+    monkeypatch.setattr("services.orb_voice_tts_service.ORB_TTS_ENABLED", True)
     monkeypatch.setenv("ORB_TTS_PROVIDER", "openai")
     monkeypatch.setenv("OPENAI_API_KEY", "test-key")
     response = tts_client.get("/orb/voice/tts/status")
@@ -59,9 +77,9 @@ def test_tts_status_returns_200_when_configured(tts_client, monkeypatch):
 
 
 def test_tts_status_shows_elevenlabs_when_configured(tts_client, monkeypatch):
-    monkeypatch.setenv("ORB_TTS_ENABLED", "true")
-    monkeypatch.setenv("ORB_TTS_PROVIDER", "elevenlabs")
-    monkeypatch.setenv("ORB_TTS_FALLBACK_PROVIDER", "openai")
+    monkeypatch.setattr("services.orb_voice_tts_service.ORB_TTS_ENABLED", True)
+    monkeypatch.setattr("services.orb_voice_tts_service.ORB_TTS_PROVIDER", "elevenlabs")
+    monkeypatch.setattr("services.orb_voice_tts_service.ORB_TTS_FALLBACK_PROVIDER", "openai")
     monkeypatch.setenv("ELEVENLABS_API_KEY", "test-eleven-key")
     monkeypatch.setenv("ELEVENLABS_VOICE_ID", "voice-abc123")
     response = tts_client.get("/orb/voice/tts/status")
@@ -74,18 +92,23 @@ def test_tts_status_shows_elevenlabs_when_configured(tts_client, monkeypatch):
     assert "test-eleven-key" not in response.text
 
 
-def test_tts_post_returns_503_when_disabled(tts_client, monkeypatch):
-    monkeypatch.setenv("ORB_TTS_ENABLED", "false")
-    response = tts_client.post(
-        "/orb/voice/tts",
-        json={"text": "Hello from ORB.", "voice_style": "calm_therapeutic"},
-    )
+def test_tts_post_returns_503_when_disabled(tts_client, monkeypatch, allow_tts_privacy):
+    monkeypatch.setattr("services.orb_voice_tts_service.ORB_TTS_ENABLED", False)
+    with patch("routers.orb_voice_tts_routes.is_configured", return_value=False):
+        response = tts_client.post(
+            "/orb/voice/tts",
+            json={
+                "text": "Hello from ORB.",
+                "source": "manual_speak",
+                "voice_style": "calm_therapeutic",
+            },
+        )
     assert response.status_code == 503
     assert response.json()["detail"]["error"] == "tts_disabled"
 
 
-def test_tts_post_returns_audio_when_configured(tts_client, monkeypatch):
-    monkeypatch.setenv("ORB_TTS_ENABLED", "true")
+def test_tts_post_returns_audio_when_configured(tts_client, monkeypatch, allow_tts_privacy):
+    monkeypatch.setattr("services.orb_voice_tts_service.ORB_TTS_ENABLED", True)
     monkeypatch.setenv("ORB_TTS_PROVIDER", "openai")
     monkeypatch.setenv("OPENAI_API_KEY", "test-key")
 
@@ -103,10 +126,15 @@ def test_tts_post_returns_audio_when_configured(tts_client, monkeypatch):
         def __init__(self, *args, **kwargs):
             self.audio = FakeAudio()
 
-    with patch("services.orb_voice_tts_service.OpenAI", FakeOpenAI):
+    with patch("services.openai_header_sanitisation.create_sync_openai_client") as mock_client_factory:
+        mock_client_factory.return_value = FakeOpenAI()
         response = tts_client.post(
             "/orb/voice/tts",
-            json={"text": "Hello from ORB.", "voice_style": "calm_therapeutic"},
+            json={
+                "text": "Hello from ORB.",
+                "source": "manual_speak",
+                "voice_style": "calm_therapeutic",
+            },
         )
 
     assert response.status_code == 200
@@ -115,8 +143,8 @@ def test_tts_post_returns_audio_when_configured(tts_client, monkeypatch):
     assert response.headers.get("X-ORB-TTS-Provider") == "openai"
 
 
-def test_tts_post_uses_elevenlabs_when_selected(tts_client, monkeypatch):
-    monkeypatch.setenv("ORB_TTS_ENABLED", "true")
+def test_tts_post_uses_elevenlabs_when_selected(tts_client, monkeypatch, allow_tts_privacy):
+    monkeypatch.setattr("services.orb_voice_tts_service.ORB_TTS_ENABLED", True)
     monkeypatch.setenv("ORB_TTS_PROVIDER", "elevenlabs")
     monkeypatch.setenv("ELEVENLABS_API_KEY", "test-eleven-key")
     monkeypatch.setenv("ELEVENLABS_VOICE_ID", "voice-abc123")
@@ -149,7 +177,11 @@ def test_tts_post_uses_elevenlabs_when_selected(tts_client, monkeypatch):
     with patch("services.orb_voice_tts_service.httpx.Client", FakeClient):
         response = tts_client.post(
             "/orb/voice/tts",
-            json={"text": "Hello from ORB.", "voice_style": "calm_therapeutic"},
+            json={
+                "text": "Hello from ORB.",
+                "source": "manual_speak",
+                "voice_style": "calm_therapeutic",
+            },
         )
 
     assert response.status_code == 200
@@ -158,8 +190,8 @@ def test_tts_post_uses_elevenlabs_when_selected(tts_client, monkeypatch):
 
 
 def test_tts_status_prefers_elevenlabs_when_provider_unset(tts_client, monkeypatch):
+    monkeypatch.setattr("services.orb_voice_tts_service.ORB_TTS_ENABLED", True)
     monkeypatch.delenv("ORB_TTS_PROVIDER", raising=False)
-    monkeypatch.setenv("ORB_TTS_ENABLED", "true")
     monkeypatch.setenv("ELEVENLABS_API_KEY", "test-eleven-key")
     monkeypatch.setenv("ELEVENLABS_VOICE_ID", "voice-abc123")
     response = tts_client.get("/orb/voice/tts/status")
@@ -170,17 +202,22 @@ def test_tts_status_prefers_elevenlabs_when_provider_unset(tts_client, monkeypat
     assert body["preferredProvider"] == "elevenlabs"
 
 
-def test_tts_post_returns_503_when_provider_disabled(tts_client, monkeypatch):
-    monkeypatch.setenv("ORB_TTS_ENABLED", "false")
-    response = tts_client.post(
-        "/orb/voice/tts",
-        json={"text": "Hello from ORB.", "voice_style": "calm_therapeutic"},
-    )
+def test_tts_post_returns_503_when_provider_disabled(tts_client, monkeypatch, allow_tts_privacy):
+    monkeypatch.setattr("services.orb_voice_tts_service.ORB_TTS_ENABLED", False)
+    with patch("routers.orb_voice_tts_routes.is_configured", return_value=False):
+        response = tts_client.post(
+            "/orb/voice/tts",
+            json={
+                "text": "Hello from ORB.",
+                "source": "manual_speak",
+                "voice_style": "calm_therapeutic",
+            },
+        )
     assert response.status_code == 503
 
 
-def test_tts_logs_do_not_include_full_text(tts_client, monkeypatch, caplog):
-    monkeypatch.setenv("ORB_TTS_ENABLED", "true")
+def test_tts_logs_do_not_include_full_text(tts_client, monkeypatch, caplog, allow_tts_privacy):
+    monkeypatch.setattr("services.orb_voice_tts_service.ORB_TTS_ENABLED", True)
     monkeypatch.setenv("ORB_TTS_PROVIDER", "openai")
     monkeypatch.setenv("OPENAI_API_KEY", "test-key")
 
@@ -199,10 +236,15 @@ def test_tts_logs_do_not_include_full_text(tts_client, monkeypatch, caplog):
             self.audio = FakeAudio()
 
     spoken = "Sensitive safeguarding detail should not appear in logs."
-    with patch("services.orb_voice_tts_service.OpenAI", FakeOpenAI):
+    with patch("services.openai_header_sanitisation.create_sync_openai_client") as mock_client_factory:
+        mock_client_factory.return_value = FakeOpenAI()
         response = tts_client.post(
             "/orb/voice/tts",
-            json={"text": spoken, "voice_style": "calm_therapeutic"},
+            json={
+                "text": spoken,
+                "source": "manual_speak",
+                "voice_style": "calm_therapeutic",
+            },
         )
 
     assert response.status_code == 200
@@ -211,7 +253,7 @@ def test_tts_logs_do_not_include_full_text(tts_client, monkeypatch, caplog):
 
 
 def test_tts_status_reports_katherine_ready_when_elevenlabs_configured(tts_client, monkeypatch):
-    monkeypatch.setenv("ORB_TTS_ENABLED", "true")
+    monkeypatch.setattr("services.orb_voice_tts_service.ORB_TTS_ENABLED", True)
     monkeypatch.delenv("ORB_TTS_PROVIDER", raising=False)
     monkeypatch.setenv("ELEVENLABS_API_KEY", "test-eleven-key")
     monkeypatch.setenv("ELEVENLABS_VOICE_ID", "voice-abc123")
@@ -226,7 +268,7 @@ def test_tts_status_reports_katherine_ready_when_elevenlabs_configured(tts_clien
 
 
 def test_tts_status_reports_forced_openai_fallback_reason(tts_client, monkeypatch):
-    monkeypatch.setenv("ORB_TTS_ENABLED", "true")
+    monkeypatch.setattr("services.orb_voice_tts_service.ORB_TTS_ENABLED", True)
     monkeypatch.setenv("ORB_TTS_PROVIDER", "openai")
     monkeypatch.setenv("ELEVENLABS_API_KEY", "test-eleven-key")
     monkeypatch.setenv("ELEVENLABS_VOICE_ID", "voice-abc123")

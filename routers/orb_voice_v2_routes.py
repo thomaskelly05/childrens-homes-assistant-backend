@@ -17,6 +17,12 @@ from auth.orb_residential_dependencies import (
 )
 from services.orb_ai_abuse_guard_service import enforce_daily_ai_call_budget, enforce_transcript_length
 from services.orb_brain_metadata_service import attach_to_payload, build_brain_metadata
+from services.orb_voice_tts_intent_service import (
+    OrbVoiceTtsGateError,
+    gate_orb_voice_tts_request,
+    record_orb_voice_tts_usage,
+    tts_gate_http_exception,
+)
 from services.orb_voice_tts_service import ORBVoiceTTSError
 from services.orb_voice_transcription_service import OrbVoiceTranscriptionError
 from services.orb_voice_v2_service import (
@@ -71,6 +77,14 @@ def _provider_id(current_user: dict) -> int | None:
         return None
 
 
+def _scope_id(current_user: dict, key: str) -> int | None:
+    raw = current_user.get(key)
+    try:
+        return int(raw) if raw is not None else None
+    except (TypeError, ValueError):
+        return None
+
+
 def _resolve_suffix(filename: str | None, content_type: str | None) -> str:
     suffix = (os.path.splitext(filename or "")[1] or "").lower()
     if suffix in VOICE_ALLOWED_AUDIO_SUFFIXES:
@@ -98,8 +112,12 @@ class OrbVoiceV2RespondRequest(BaseModel):
 class OrbVoiceV2SpeakRequest(BaseModel):
     model_config = ConfigDict(extra="ignore")
     text: str = Field(..., min_length=1, max_length=500)
+    source: str = Field(..., min_length=1, max_length=40)
     voice: str | None = Field(default="katherine", max_length=40)
     context: str | None = Field(default="live_voice", max_length=40)
+    expert_depth: str | None = Field(default=None, max_length=40)
+    privacy_mode: bool = False
+    low_sensory_mode: bool = False
 
 
 @router.get("/status")
@@ -141,15 +159,55 @@ async def orb_voice_v2_speak_route(
     payload: OrbVoiceV2SpeakRequest,
     current_user: dict = Depends(require_orb_voice_premium),
 ):
-    _ = current_user
+    user_id = _user_id(current_user)
+    provider_id = _provider_id(current_user)
+    home_id = _scope_id(current_user, "home_id")
+    spoken = (payload.text or "").strip()
+    enforce_daily_ai_call_budget(user_id)
+    enforce_transcript_length(spoken, user_id=user_id)
+
+    try:
+        gate = gate_orb_voice_tts_request(
+            source=payload.source,
+            text=spoken,
+            context=payload.context or "live_voice",
+            expert_depth=payload.expert_depth,
+            privacy_mode=payload.privacy_mode,
+            low_sensory_mode=payload.low_sensory_mode,
+            provider_id=provider_id,
+            home_id=home_id,
+            user_id=user_id,
+            route="POST /orb/voice/v2/speak",
+        )
+    except OrbVoiceTtsGateError as exc:
+        logger.info(
+            "orb_voice_v2_speak_gate_blocked code=%s source=%s user_id=%s text_len=%s",
+            exc.code,
+            (payload.source or "").strip().lower() or "missing",
+            user_id,
+            len(spoken),
+        )
+        raise tts_gate_http_exception(exc) from exc
+
     try:
         result = await voice_v2_speak(
-            text=payload.text,
+            text=gate.redacted_text,
             context=payload.context or "live_voice",
             voice=payload.voice,
         )
     except ORBVoiceTTSError as exc:
         raise HTTPException(status_code=exc.status_code, detail={"error": exc.code, "message": exc.message}) from exc
+
+    record_orb_voice_tts_usage(
+        gate=gate,
+        provider_id=provider_id,
+        home_id=home_id,
+        user_id=user_id,
+        route="POST /orb/voice/v2/speak",
+        provider=str(result.get("provider") or ""),
+        voice_id=payload.voice,
+    )
+
     headers = {
             "X-ORB-TTS-Provider": str(result["provider"]),
             "X-ORB-Voice-Name": str(result["voiceName"]),
