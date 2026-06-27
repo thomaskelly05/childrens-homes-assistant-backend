@@ -69,7 +69,7 @@ Two orderings, never confused:
 All documents are ratified Version 1 (or 1.1 where amended), 2026-06-26.
 
 ### L1 — Constitution
-- `documents/00-constitutional-hierarchy.md` — v1.0 — the spine: structural + value orderings.
+- `documents/00-constitutional-hierarchy.md` — **v1.1** — the spine: structural + value orderings.
 - `documents/C1-indicare-intelligence-constitution.md` — **v1.1** — the supreme document.
 
 ### L2 — Operating Principles
@@ -89,7 +89,7 @@ All documents are ratified Version 1 (or 1.1 where amended), 2026-06-26.
 
 ### L4 — AI / Model Standards
 - `documents/A1-ai-safety-and-boundaries-standard.md` — v1.0 *(NR-1 cross-ref)*
-- `documents/A2-model-provider-prompt-memory-and-routing-governance.md` — v1.0 *(owns NR-1)*
+- `documents/A2-model-provider-prompt-memory-and-routing-governance.md` — **v1.1** *(owns NR-1)*
 
 ### L5 — Product Standards
 - `documents/P1-product-standards.md` — v1.0

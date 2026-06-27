@@ -4,9 +4,9 @@
 |---|---|
 | Document ID | 00 |
 | Layer | L1 — Constitution (the spine all other documents hang from) |
-| Version | 1.0 |
-| Status | **Ratified — Version 1** |
-| Ratified | 2026-06-26 (founder ratification) |
+| Version | 1.1 |
+| Status | **Ratified — Version 1.1** |
+| Ratified | 2026-06-26 (v1.0 founder ratification; v1.1 versioned consistency amendment, same date) |
 | Owner | Founder (Tom Kelly, interim) |
 | Supersedes | The informal ordering implied across `CLAUDE.md`, `ORB_ENGINEERING_PRINCIPLES.md`, and `docs/architecture/` |
 | Evidence base | `constitution/phase-1-discovery/` (approved with conditions) |
@@ -121,10 +121,10 @@ Adults remain responsible for judgement, safeguarding escalation and final recor
 
 Two domains bind **every** structural layer regardless of where a conflict surfaces:
 
-- **Safeguarding** (value-rank #2) — governed by the Safeguarding Charter (O4, not yet
-  written).
-- **Data Protection & Privacy** (value-rank #5) — governed by the Privacy Charter (O5, not
-  yet written).
+- **Safeguarding** (value-rank #2) — governed by the Safeguarding Charter (O4 — ratified
+  binding charter).
+- **Data Protection & Privacy** (value-rank #5) — governed by the Privacy Charter (O5 —
+  ratified binding charter).
 
 **Rule B1.** These charters attach structurally at the Operating layer (L2) but their
 value-authority overrides Product (L5), Engineering (L3), AI/Model (L4), and Commercial
@@ -134,21 +134,26 @@ concerns. No lower tier may dilute them by claiming "that is only an operating d
 
 ## 3. The document set this hierarchy governs
 
-**INFERRED** (from the approved Phase 2 plan, `constitution/phase-2-plan/phase-2-plan.md`).
-The full set is 17 documents across the layers. **Batch 1 (this batch) writes three:** this
-hierarchy (00), the Constitution (C1), and the Operational & Release Governance Standard
-(E3). The remainder are specified but **not yet written** and are listed here as
-**FUTURE VISION** so the map is honest about what exists today.
+**DERIVED** (from the approved Phase 2 plan and the ratified document set). *Updated in v1.1:
+this section was drafted in Batch 1 when only the foundation existed and previously stated a
+total of 17 with the remainder as FUTURE VISION; it now reflects the post-ratification state.*
 
-| Layer | Documents (ID) | Batch | State |
-|---|---|---|---|
-| L1 Constitution | 00 Hierarchy, C1 Constitution | 1 | **Drafted (this batch)** |
-| L2 Operating | O1 Mission & Values, O2 Roles, O3 Commercial, O4 Safeguarding Charter, O5 Privacy Charter | 2 | FUTURE VISION |
-| L3 Engineering | E1 Engineering Principles (ratified), E2 Security & Access, **E3 Release Governance**, E4 Architecture Canon, E5 Contributing & Agent Gov, E6 Quality & Verification | E3 in **Batch 1**; rest Batch 3 | E3 drafted; rest FUTURE VISION |
-| L4 AI / Model | A1 AI Safety & Boundaries, A2 Model & Provider Governance | 3 | FUTURE VISION |
-| L5 Product Standards | P1 Product Standards | 4 | FUTURE VISION |
-| L6 Product Specs | S1 ORB Residential Spec (LifeEcho deferred) | 4 | FUTURE VISION |
-| Cross-cutting | X1 Glossary & Source-of-Truth Index | 4 | FUTURE VISION |
+The constitution comprises **18 documents** across the layers, **all ratified** (Version 1,
+with 00/C1/O4/O5 at Version 1.1) on 2026-06-26. The state column below is current.
+
+| Layer | Documents (ID) | State |
+|---|---|---|
+| L1 Constitution | 00 Hierarchy (v1.1), C1 Constitution (v1.1) | **Ratified** |
+| L2 Operating | O1 Mission & Values, O2 Roles, O3 Commercial, O4 Safeguarding Charter (v1.1, binding), O5 Privacy Charter (v1.1, binding) | **Ratified** |
+| L3 Engineering | E1 Engineering Principles, E2 Security & Access *(NR-1)*, **E3 Release Governance**, E4 Architecture Canon, E5 Contributing & Agent Gov, E6 Quality & Verification *(NR-1)* | **Ratified** |
+| L4 AI / Model | A1 AI Safety & Boundaries *(NR-1)*, A2 Model/Provider/Prompt/Memory/Routing *(owns NR-1)* | **Ratified** |
+| L5 Product Standards | P1 Product Standards | **Ratified** |
+| L6 Product Specs | S1 ORB Residential Spec *(NR-1 caveat; LifeEcho S2 deferred)* | **Ratified** |
+| Cross-cutting | X1 Glossary & Source-of-Truth Index | **Ratified** |
+
+*Supporting (not counted among the 18 governed documents):* `README.md` (index) and
+`CONSTITUTION_CHANGE_CONTROL.md` (ratified v1). **Named Risk NR-1 remains OPEN** (owned by A2)
+regardless of ratification.
 
 ---
 
@@ -203,16 +208,17 @@ Board (Investor lens). Amendment of this hierarchy requires Founder ratification
 ## 6. Current State vs Future Vision
 
 **Current State (VERIFIED / DERIVED).**
-- This hierarchy was established in Phase 2 Batch 1 and **ratified as Version 1 on 2026-06-26**.
-  It remains newly adopted; the document set beneath it is only partially written.
+- This hierarchy was established in Phase 2 Batch 1, **ratified as Version 1 on 2026-06-26**,
+  and amended to **Version 1.1** the same day. The full document set beneath it (18 documents)
+  is now **ratified**; it remains newly adopted and not yet enforced by tooling.
 - Substantial governance *content* already exists, but **distributed** across 463 docs,
   code boundaries, and ADRs with no single ordering — the reason this document exists
   (`repository-discovery.md` §13–14, evidence E37, E40).
 - No automated enforcement of this hierarchy exists in CI today.
 
 **Future Vision (NOT YET BUILT — explicitly not a current claim).**
-- All 17 documents ratified and cross-referenced.
-- Safeguarding Lead and DPO appointed; roles separated in practice, not just on paper.
+- An independent Safeguarding Lead and an independent/external DPO function appointed; roles
+  separated in practice, not just on paper. NR-1 closed (fixed or formally re-verified).
 - Enforcement hooks (e.g. CI checks that a PR touching a higher tier is reviewed against
   this hierarchy) — aspirational; none exist today.
 - The hierarchy referenced from contributor and AI-agent onboarding (E5, future).
@@ -236,3 +242,4 @@ Board (Investor lens). Amendment of this hierarchy requires Founder ratification
 |---|---|---|---|
 | 0.1 | 2026-06-26 | Drafted (Phase 2 Batch 1) | Initial draft presented for founder review. |
 | 1.0 | 2026-06-26 | **Ratified — Version 1** | Ratified by the Founder following Batch 1 review. Any change requires an explicitly proposed, versioned, approved amendment. |
+| 1.1 | 2026-06-26 | **Ratified — Version 1.1** | Versioned consistency amendment following PR review (resolves P2 review comment on §3). Corrected the stale document-set count (was "17" / remainder "FUTURE VISION") to the post-ratification state: **18 documents, all ratified**; refreshed §2c binding-charter references, the §3 table, and the §6 current/future wording. NR-1 remains OPEN. No substance of the hierarchy changed. |

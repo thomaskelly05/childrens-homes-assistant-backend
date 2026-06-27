@@ -4,9 +4,9 @@
 |---|---|
 | Document ID | A2 |
 | Layer | L4 — AI / Model Standards |
-| Version | 1.0 |
-| Status | **Ratified — Version 1 (Named Risk NR-1 remains OPEN)** |
-| Ratified | 2026-06-26 (founder ratification; NR-1 remains an open high-priority pre-launch remediation item) |
+| Version | 1.1 |
+| Status | **Ratified — Version 1.1 (Named Risk NR-1 remains OPEN)** |
+| Ratified | 2026-06-26 (v1.0 founder ratification; v1.1 versioned consistency amendment, same date; NR-1 remains an open high-priority pre-launch remediation item) |
 | Owner | AI Safety Owner (Tom Kelly, interim) |
 | Reads with | `A1` (AI Safety), `O5` (Privacy, binding), `O3` (Commercial cost) |
 | Evidence base | `constitution/phase-1-discovery/` |
@@ -93,12 +93,24 @@ Cross-referenced by: A1 (§5), E2 (§4a), E6 (§4 future verification control).
 ## 2. Governed egress (VERIFIED)
 
 Governed AI egress is provided by **two** modules — `services/ai_gateway_service.py` and
-`services/ai_external_call_governance.py` (the latter used by `assistant/llm_provider.py`) —
-each running a **privacy decision**, **redaction**, **cost/usage** governance before the call.
-**VERIFIED** — `services/ai_gateway_service.py:1-50,197` (E16); cost soft limits and "invoices
-are the source of truth" at `:25-29` (E17); `assistant/llm_provider.py:349,366,378,416`. Data
+`services/ai_external_call_governance.py` (the latter used by `assistant/llm_provider.py`).
+**Precise ordering matters (clarified in v1.1):** on a governed path, the **pre-egress**
+controls are the **privacy/external-call decision** (which can block the call) and
+**redaction** of the messages; the provider call then runs; **usage recording is a
+post-egress audit**, not a pre-egress control. **VERIFIED** — on the primary chat path,
+`assistant/llm_provider.py` `stream_chat` runs `evaluate_external_call` (`:366`) and
+`redact_chat_messages` (`:378`) **before** `chat.completions.create`, and
+`record_model_usage` (`:416`) in the `finally` block **after** the call. The named gateway
+`services/ai_gateway_service.py` (`:1-50,197`) additionally performs cost estimation against
+soft limits before the call (`:25-29`; "invoices are the source of truth", E17). Data
 classification is applied via `schemas/data_protection.py` `DataClassification` (E16; cross-ref
 O5 §2).
+
+**Honest scope of "governed" (do not overstate):** "governed" here means a **pre-egress
+privacy decision + redaction**, with **cost/usage primarily recorded as a post-egress audit**
+(plus a pre-egress soft-limit estimate on the gateway path). It does **not** mean every cost
+control runs before egress, and — per Named Risk NR-1 below — it does **not** mean all AI
+egress is governed.
 
 **This is governance across two modules, not a single chokepoint, and not all paths are
 covered — see Named Risk NR-1 above.** The earlier framing that "all intended AI egress flows
@@ -182,3 +194,4 @@ approved provider can be added without changing call sites; per-feature cost tra
 | 0.1 | 2026-06-26 | Drafted (Phase 2 Batch 3) | Initial draft presented for founder review. Covers prompt / memory / model-routing governance as planned. |
 | 0.2 | 2026-06-26 | Drafted (Batch 3 amendment) | Added **Named Risk NR-1** (AI egress not enforced through a single governed chokepoint) per founder decision, with documented (not implemented) remediation options; corrected §2 to reflect two-module governance and uneven adapter/TTS paths. Still awaiting founder review; not ratified. |
 | 1.0 | 2026-06-26 | **Ratified — Version 1 (NR-1 OPEN)** | Ratified by the Founder. **NR-1 remains OPEN** — high-priority pre-launch remediation; ratification does not resolve the risk. IndiCare Intelligence must not publicly claim all AI egress is governed until NR-1 is fixed or re-verified. Any change requires an explicitly proposed, versioned, approved amendment. |
+| 1.1 | 2026-06-26 | **Ratified — Version 1.1 (NR-1 OPEN)** | Versioned consistency amendment following PR review (resolves P2 review comment on §2). Tightened §2 to state precisely that on a governed path the privacy decision + redaction are **pre-egress**, while usage recording is a **post-egress audit** (`assistant/llm_provider.py:366,378` pre; `:416` post), and added an explicit "honest scope of governed" note. NR-1 remains OPEN; no claim that all AI egress is governed. No other substance changed. |
