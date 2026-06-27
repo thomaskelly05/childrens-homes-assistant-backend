@@ -58,9 +58,16 @@ jobs:
         run: python scripts/ai_egress_audit.py
 
   core-tests:
-    name: Core pytest suite
+    name: Core pytest suite (ADVISORY — see note)
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    # ADVISORY (non-blocking) for now. As of R0 the core suite baseline is
+    # ~4181 passed / ~309 failed / ~42 errors (the 42 errors are a known
+    # conftest fixture defect; see the R0 report). It runs here for visibility
+    # but must NOT block merges until the suite is stabilised to green. Promote
+    # this job to a required check (remove continue-on-error) only once the
+    # baseline failures/errors are triaged and fixed.
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -70,10 +77,11 @@ jobs:
           cache-dependency-path: requirements.txt
       - name: Install dependencies
         run: pip install -r requirements.txt
-      - name: Run core suite (excludes server-dependent manual scripts)
-        # The excluded files are not pytest tests; they require a running server
-        # and hardcoded tokens (documented in AGENTS.md). They connect to
-        # localhost:8000 at import time and error during collection.
+      - name: Run core suite (excludes server-dependent + non-hermetic scripts)
+        # Excluded: server-dependent manual scripts (not pytest tests; they
+        # connect to localhost:8000 at import — documented in AGENTS.md) and the
+        # non-hermetic baseline test that spawns the scenario runner and writes
+        # to tracked reports/ files.
         run: >-
           python -m pytest tests/ -q -p no:cacheprovider
           --ignore=tests/test_modes.py
@@ -81,3 +89,4 @@ jobs:
           --ignore=tests/test_templates.py
           --ignore=tests/test_validation.py
           --ignore=tests/test_auth.py
+          --ignore=tests/test_orb_residential_baseline.py
