@@ -62,7 +62,8 @@ describe('ORB Residential Phase 4E Voice free-flowing Katherine', () => {
   it('companion avoids duplicate voice TTS when station owns speech', () => {
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
     const hook = read('lib/orb/voice-v2/use-orb-voice-v2.ts')
-    assert.match(companion, /!voiceOriginatedSend/)
+    assert.doesNotMatch(companion, /voice\.speak\(/)
+    assert.match(companion, /voiceOriginatedSend/)
     assert.match(hook, /spokenTurnKeysRef/)
     assert.match(hook, /requestOrbVoiceV2Speak/)
   })

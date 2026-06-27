@@ -153,7 +153,7 @@ const SILENCE_TIMEOUT_MS = 12_000
 const MAX_WAKE_RESTART_ATTEMPTS = 6
 
 const DEFAULT_SETTINGS: StandaloneOrbVoiceSettings = {
-  voiceReplies: true,
+  voiceReplies: false,
   autoSend: true,
   britishFemalePreference: true,
   showTranscriptBeforeSend: true,

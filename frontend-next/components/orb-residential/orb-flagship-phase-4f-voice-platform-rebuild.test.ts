@@ -73,7 +73,8 @@ describe('ORB Residential Phase 4F Voice platform rebuild', () => {
   it('companion avoids duplicate voice TTS when station owns speech', () => {
     const companion = read('components/orb-standalone/orb-care-companion.tsx')
     const station = read('components/orb-standalone/orb-voice-station.tsx')
-    assert.match(companion, /!voiceOriginatedSend/)
+    assert.doesNotMatch(companion, /voice\.speak\(/)
+    assert.match(companion, /voiceOriginatedSend/)
     assert.match(station, /useOrbVoiceV2/)
     assert.match(station, /stopOrbAudio/)
   })
