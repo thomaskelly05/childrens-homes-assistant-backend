@@ -27,13 +27,19 @@ def test_comparison_length_limit():
 
 
 def test_daily_ai_call_guard():
-    guard.DAILY_AI_CALLS_PER_USER = 2
-    guard._daily_counter.max_calls = 2
-    guard.enforce_daily_ai_call_budget(99)
-    guard.enforce_daily_ai_call_budget(99)
-    with pytest.raises(HTTPException) as exc:
+    original_limit = guard.DAILY_AI_CALLS_PER_USER
+    original_max_calls = guard._daily_counter.max_calls
+    try:
+        guard.DAILY_AI_CALLS_PER_USER = 2
+        guard._daily_counter.max_calls = 2
         guard.enforce_daily_ai_call_budget(99)
-    assert exc.value.detail["code"] == "daily_ai_limit"
+        guard.enforce_daily_ai_call_budget(99)
+        with pytest.raises(HTTPException) as exc:
+            guard.enforce_daily_ai_call_budget(99)
+        assert exc.value.detail["code"] == "daily_ai_limit"
+    finally:
+        guard.DAILY_AI_CALLS_PER_USER = original_limit
+        guard._daily_counter.max_calls = original_max_calls
 
 
 def test_policy_snapshot_has_limits():

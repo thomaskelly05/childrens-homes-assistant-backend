@@ -8,6 +8,14 @@ from fastapi.testclient import TestClient
 
 from auth.orb_residential_dependencies import require_orb_residential_auth
 from routers.orb_voice_residential_routes import require_orb_voice_premium, router
+from services import orb_ai_abuse_guard_service as orb_ai_abuse_guard
+
+
+@pytest.fixture(autouse=True)
+def _reset_orb_ai_abuse_budget():
+    orb_ai_abuse_guard.reset_daily_counters_for_tests()
+    yield
+    orb_ai_abuse_guard.reset_daily_counters_for_tests()
 
 
 @pytest.fixture

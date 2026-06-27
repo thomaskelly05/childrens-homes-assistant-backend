@@ -18,6 +18,14 @@ from services.orb_voice_tts_intent_service import (
     gate_orb_voice_tts_request,
     validate_tts_source_rules,
 )
+from services import orb_ai_abuse_guard_service as orb_ai_abuse_guard
+
+
+@pytest.fixture(autouse=True)
+def _reset_orb_ai_abuse_budget():
+    orb_ai_abuse_guard.reset_daily_counters_for_tests()
+    yield
+    orb_ai_abuse_guard.reset_daily_counters_for_tests()
 
 
 @pytest.fixture

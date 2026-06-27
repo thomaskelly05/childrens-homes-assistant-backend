@@ -9,6 +9,7 @@ from fastapi.testclient import TestClient
 from auth.orb_residential_dependencies import require_orb_residential_auth
 from routers.orb_voice_tts_routes import require_orb_voice_premium, router
 from schemas.data_protection import AIPrivacyDecision, DataClassification
+from services import orb_ai_abuse_guard_service as orb_ai_abuse_guard
 
 
 def _allowed_decision() -> AIPrivacyDecision:
@@ -28,6 +29,13 @@ def allow_tts_privacy():
         return_value=_allowed_decision(),
     ), patch("routers.orb_voice_tts_routes.is_configured", return_value=True):
         yield
+
+
+@pytest.fixture(autouse=True)
+def _reset_orb_ai_abuse_budget():
+    orb_ai_abuse_guard.reset_daily_counters_for_tests()
+    yield
+    orb_ai_abuse_guard.reset_daily_counters_for_tests()
 
 
 @pytest.fixture
