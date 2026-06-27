@@ -5,8 +5,10 @@
 | Document ID | CC |
 | Layer | Cross-cutting (governs changes to all constitutional documents) |
 | Version | 1.0 |
-| Status | **Drafted — awaiting founder review. Not yet ratified.** |
+| Status | **Ratified — Version 1** |
+| Ratified | 2026-06-26 (founder ratification) |
 | Owner | Founder (Tom Kelly, interim) |
+| Authority | The governing process for all future constitutional amendments, versioning, urgent safety amendments, founder ratification, and future delegated authority. |
 | Reads with | `README.md`, `documents/00-constitutional-hierarchy.md`, `documents/C1` (Article 9) |
 
 This document defines **how the IndiCare Intelligence Constitution may be changed**. Its
@@ -142,4 +144,5 @@ version-history row.
 
 | Version | Date | Status | Notes |
 |---|---|---|---|
-| 1.0 | 2026-06-26 | Drafted — awaiting founder review | Initial change-control document created during limited finalisation; defines amendment, versioning, ratification, urgent safety changes, future delegated authority, and protection of ratified governance and the two referenced files. |
+| 1.0 (draft) | 2026-06-26 | Drafted — awaiting founder review | Initial change-control document created during limited finalisation; defines amendment, versioning, ratification, urgent safety changes, future delegated authority, and protection of ratified governance and the two referenced files. |
+| 1.0 | 2026-06-26 | **Ratified — Version 1** | Ratified by the Founder as the governing process for future constitutional amendments, versioning, urgent safety amendments, founder ratification, and future delegated authority. Any change requires an explicitly proposed, versioned, approved amendment. |
