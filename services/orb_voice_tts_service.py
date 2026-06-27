@@ -337,8 +337,14 @@ def _synthesize_openai_sync(
     if not api_key:
         raise ORBVoiceTTSError("tts_unconfigured", "Premium ORB Voice is not configured.", 503)
 
+    # NR-1 convergence: route TTS egress through the approved sanitised OpenAI
+    # client factory instead of constructing a raw `OpenAI(...)` client, keeping
+    # provider egress on the single approved client path (header sanitisation, no
+    # forwarded request headers) used by the governed routes. Full privacy-decision
+    # gating of TTS is tracked as remaining NR-1 work — see
+    # docs/ai-egress-approved-modules.md and constitution A2 (Named Risk NR-1).
     try:
-        from openai import OpenAI
+        from services.openai_header_sanitisation import create_sync_openai_client
     except ImportError as exc:
         raise ORBVoiceTTSError("tts_provider_unavailable", "TTS provider is unavailable.", 503) from exc
 
@@ -349,7 +355,12 @@ def _synthesize_openai_sync(
 
     started = time.perf_counter()
     model = _resolve_openai_tts_model(context)
-    client = OpenAI(api_key=api_key, timeout=ORB_TTS_TIMEOUT_SECONDS)
+    # The sanitised factory imports the OpenAI SDK lazily; convert a missing SDK
+    # into the existing controlled 503 instead of an unhandled 500.
+    try:
+        client = create_sync_openai_client(api_key=api_key, timeout=ORB_TTS_TIMEOUT_SECONDS)
+    except ImportError as exc:
+        raise ORBVoiceTTSError("tts_provider_unavailable", "TTS provider is unavailable.", 503) from exc
     try:
         response = client.audio.speech.create(
             model=model,

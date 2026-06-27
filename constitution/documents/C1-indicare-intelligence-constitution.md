@@ -4,9 +4,9 @@
 |---|---|
 | Document ID | C1 |
 | Layer | L1 — Constitution (supreme document) |
-| Version | 1.1 |
-| Status | **Ratified — Version 1.1** |
-| Ratified | 2026-06-26 (v1.0 founder ratification; v1.1 versioned consistency amendment, same date) |
+| Version | 1.2 |
+| Status | **Ratified — Version 1.2** |
+| Ratified | 2026-06-26 (v1.0 ratification; v1.1 consistency amendment); 2026-06-27 (v1.2 founder role clarification) |
 | Owner | Founder (Tom Kelly, interim) |
 | Reads with | `00-constitutional-hierarchy.md` (read that first) |
 | Evidence base | `constitution/phase-1-discovery/` |
@@ -122,18 +122,22 @@ person currently holds several. Interim holders:
 | Documentation Owner | Tom Kelly | X1 |
 | Commercial Owner | Tom Kelly | O3 |
 | Release / Operations Owner | Tom Kelly (interim) | E3 |
-| **Safeguarding Lead** | **TBC — not formally filled (current governance gap)** | O4 |
-| Data Protection Owner / ICO-named data protection contact | Tom Kelly (current, interim — **not** an independent DPO) | O5 |
+| Safeguarding accountability (interim) | Tom Kelly (interim accountable holder — **not** an independent Safeguarding Lead) | O4 |
+| Data Protection Owner / ICO-named data protection contact | Tom Kelly (interim — **not** an independent DPO) | O5 |
 
-**Carried-forward gap (honest record).** *Updated in v1.1.* The **Safeguarding Lead** role —
-which owns a *binding charter* — is **unfilled** and recorded as a current governance gap, not
-silently filled (`open-questions.md` Q3). For **data protection**, IndiCare Intelligence is
-**ICO registered** and **Tom Kelly is the ICO-named data protection contact / interim Data
-Protection Owner** (founder-confirmed, founder-attested); this is **not** an independent DPO
-appointment, and independent or external data-protection support remains a future scaling
-priority given the sensitivity of children's social care data (see O5). The concentration of
-roles in one person is a named bus-factor risk. Future Vision: appoint an independent
-Safeguarding Lead and an independent/external DPO function and separate the roles in practice.
+**Carried-forward gap (honest record).** *Updated in v1.2 (founder role clarification,
+2026-06-27).* **All internal governance roles sit with Tom Kelly as the interim accountable
+holder**, including **safeguarding accountability** and **data-protection ownership**. This is
+**not** an independent Safeguarding Lead appointment and **not** an independent DPO arrangement
+— it is the founder-led interim reality, recorded without pretending independent roles exist.
+For data protection, IndiCare Intelligence is **ICO registered** and Tom Kelly is the
+**ICO-named data protection contact** (founder-attested). Independent safeguarding and
+external/independent data-protection support remain **future scaling priorities**, given the
+sensitivity of children's social care data (see O2, O4, O5). The Responsible Individual remains
+**provider-side** and is not assumed by ORB or IndiCare unless IndiCare becomes a registered
+provider. The concentration of roles in one person is a named **bus-factor and independence
+risk**. Future Vision: appoint an independent Safeguarding Lead and an independent/external DPO
+function and separate the roles in practice.
 
 ---
 
@@ -220,3 +224,4 @@ cleanly to LifeEcho and beyond. None of this is claimed as present today.
 | 0.1 | 2026-06-26 | Drafted (Phase 2 Batch 1) | Initial draft presented for founder review. |
 | 1.0 | 2026-06-26 | **Ratified — Version 1** | Ratified by the Founder following Batch 1 review. Any change requires an explicitly proposed, versioned, approved amendment. |
 | 1.1 | 2026-06-26 | **Ratified — Version 1.1** | Versioned consistency amendment following whole-constitution review. Corrected stale Data Protection wording (ICO registered; Tom Kelly is ICO-named data protection contact / interim DP Owner, not an independent DPO; independent/external support is a future scaling priority); Safeguarding Lead remains a recorded unfilled gap; added canonical **NR-1** reference to the sole-egress gap. No other substance changed. |
+| 1.2 | 2026-06-27 | **Ratified — Version 1.2** | Founder role clarification (Article 5) recorded honestly: all internal governance roles sit with Tom Kelly as the interim accountable holder, incl. safeguarding accountability and data-protection ownership; explicitly **not** independent Safeguarding Lead / DPO appointments; independent safeguarding + external/independent DP support are future scaling priorities; concentration is a bus-factor/independence risk; Responsible Individual remains provider-side. No independent roles implied; no other meaning changed. |

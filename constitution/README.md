@@ -70,11 +70,11 @@ All documents are ratified Version 1 (or 1.1 where amended), 2026-06-26.
 
 ### L1 — Constitution
 - `documents/00-constitutional-hierarchy.md` — **v1.1** — the spine: structural + value orderings.
-- `documents/C1-indicare-intelligence-constitution.md` — **v1.1** — the supreme document.
+- `documents/C1-indicare-intelligence-constitution.md` — **v1.2** — the supreme document.
 
 ### L2 — Operating Principles
 - `documents/O1-mission-and-values.md` — v1.0
-- `documents/O2-decision-ownership-and-governance-roles.md` — v1.0
+- `documents/O2-decision-ownership-and-governance-roles.md` — **v1.1**
 - `documents/O3-commercial-sustainability-standard.md` — v1.0
 - `documents/O4-safeguarding-charter.md` — **v1.1** — *binding charter*
 - `documents/O5-data-protection-and-privacy-charter.md` — **v1.1** — *binding charter*
