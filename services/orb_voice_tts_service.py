@@ -355,7 +355,12 @@ def _synthesize_openai_sync(
 
     started = time.perf_counter()
     model = _resolve_openai_tts_model(context)
-    client = create_sync_openai_client(api_key=api_key, timeout=ORB_TTS_TIMEOUT_SECONDS)
+    # The sanitised factory imports the OpenAI SDK lazily; convert a missing SDK
+    # into the existing controlled 503 instead of an unhandled 500.
+    try:
+        client = create_sync_openai_client(api_key=api_key, timeout=ORB_TTS_TIMEOUT_SECONDS)
+    except ImportError as exc:
+        raise ORBVoiceTTSError("tts_provider_unavailable", "TTS provider is unavailable.", 503) from exc
     try:
         response = client.audio.speech.create(
             model=model,
