@@ -271,9 +271,13 @@ def _active_alerts(conn: Any, children: list[dict[str, Any]]) -> list[dict[str, 
         where.append("COALESCE(is_active, true) = true")
     if "status" in cols:
         where.append("COALESCE(status, 'active') <> 'archived'")
+    # Build quoted identifiers / WHERE clause without a backslash inside an f-string
+    # expression (illegal on Python 3.11, the pinned runtime). Output is unchanged.
+    select_sql = ", ".join('"' + col + '"' for col in select_cols)
+    where_sql = " AND ".join(where)
     with conn.cursor() as cur:
         cur.execute(
-            f'SELECT {", ".join([f"\"{col}\"" for col in select_cols])} FROM public."{table}" WHERE {" AND ".join(where)} ORDER BY COALESCE(updated_at, created_at) DESC NULLS LAST LIMIT 100',
+            f'SELECT {select_sql} FROM public."{table}" WHERE {where_sql} ORDER BY COALESCE(updated_at, created_at) DESC NULLS LAST LIMIT 100',
             tuple(params),
         )
         rows = cur.fetchall() or []

@@ -304,7 +304,10 @@ class ExperienceBundleService:
         if not selected:
             selected = list(columns)
         ordered = sorted(selected, key=lambda value: (value != "id", value))
-        return f'SELECT {", ".join(f"\"{column}\"" for column in ordered)} FROM "{table_name}"'
+        # Build quoted identifiers without a backslash inside an f-string expression
+        # (illegal on Python 3.11, the pinned runtime). Output is unchanged.
+        columns_sql = ", ".join('"' + column + '"' for column in ordered)
+        return f'SELECT {columns_sql} FROM "{table_name}"'
 
     def _one_by_id(self, conn: Any, table_name: str, record_id: int | None) -> dict[str, Any]:
         if not record_id:

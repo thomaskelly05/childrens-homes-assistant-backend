@@ -1,0 +1,83 @@
+name: Pre-merge Gate
+
+# A real pre-merge safety gate (Roadmap R0). Runs before changes reach `main`,
+# from which Render auto-deploys. Complements the existing ORB Scenario Quality
+# Gate (which only runs the ORB scenario scripts). This gate adds: dependency
+# install, syntax compile, lint, the AI egress governance guard (NR-1), and the
+# core pytest suite.
+#
+# To make this enforce before deploy, mark the jobs below as required status
+# checks on the `main` branch protection rule (repository settings).
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pre-merge-gate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  static-and-egress:
+    name: Compile + lint + AI egress guard
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: requirements.txt
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Compile all backend Python (catch 3.11 syntax errors)
+        run: |
+          python - <<'PY'
+          import py_compile, os, sys
+          skip = {".git","node_modules","frontend","frontend-next","indicare-frontend-next","indicare-ai","apps","__pycache__",".venv","venv"}
+          bad = []
+          for root, dirs, files in os.walk("."):
+              dirs[:] = [d for d in dirs if d not in skip]
+              for f in files:
+                  if f.endswith(".py"):
+                      p = os.path.join(root, f)
+                      try:
+                          py_compile.compile(p, doraise=True)
+                      except py_compile.PyCompileError as e:
+                          bad.append(p); print("SYNTAX ERROR:", p)
+          sys.exit(1 if bad else 0)
+          PY
+      - name: Ruff lint
+        run: pip install ruff && ruff check .
+      - name: AI egress governance guard (NR-1)
+        run: python scripts/ai_egress_audit.py
+
+  core-tests:
+    name: Core pytest suite
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: requirements.txt
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Run core suite (excludes server-dependent manual scripts)
+        # The excluded files are not pytest tests; they require a running server
+        # and hardcoded tokens (documented in AGENTS.md). They connect to
+        # localhost:8000 at import time and error during collection.
+        run: >-
+          python -m pytest tests/ -q -p no:cacheprovider
+          --ignore=tests/test_modes.py
+          --ignore=tests/test_stream.py
+          --ignore=tests/test_templates.py
+          --ignore=tests/test_validation.py
+          --ignore=tests/test_auth.py
