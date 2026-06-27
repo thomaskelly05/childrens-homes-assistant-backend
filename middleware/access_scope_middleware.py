@@ -9,6 +9,11 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 
 from auth.errors import auth_error_detail
+from auth.sensitive_assistant_gate import (
+    build_sensitive_assistant_gate_response,
+    evaluate_sensitive_assistant_gate,
+    is_sensitive_assistant_gated_path,
+)
 from auth.tokens import decode_session_token
 from routers.auth_routes import settings as auth_settings
 from db.connection import get_db_connection, release_db_connection
@@ -322,5 +327,10 @@ class AccessScopeMiddleware(BaseHTTPMiddleware):
                 if role not in ADMIN_ROLES and resource_id != user_provider_id:
                     return _deny(request, user, "provider_mismatch", resource, resource_id)
                 _log_sensitive(request, user, resource, resource_id)
+
+        if is_sensitive_assistant_gated_path(path, request.method):
+            gate_block = evaluate_sensitive_assistant_gate(request, user)
+            if gate_block is not None:
+                return build_sensitive_assistant_gate_response(request, gate_block)
 
         return await call_next(request)

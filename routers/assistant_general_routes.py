@@ -9,7 +9,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field
 
 from auth.errors import unauthorised
-from auth.permissions import require_assistant_access
+from auth.permissions import require_gated_assistant_access
 from services.assistant_general_service import generate_general_assistant_stream
 from services.assistant_security import normalise_history, safe_int, safe_string
 from services.indicare_ai_orchestrator_service import IndiCareAIOrchestratorService
@@ -140,7 +140,7 @@ def _sse_done() -> str:
 @router.post("/stream")
 async def stream_general_assistant(
     payload: GeneralAssistantRequest,
-    current_user=Depends(require_assistant_access),
+    current_user=Depends(require_gated_assistant_access),
 ):
     user_id = _safe_user_id(current_user)
     history = normalise_history(payload.history, max_items=12, max_chars=2200)

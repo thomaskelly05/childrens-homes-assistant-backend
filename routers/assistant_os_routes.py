@@ -5,7 +5,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException
 
 from auth.errors import forbidden, unauthorised
-from auth.permissions import require_assistant_access
+from auth.permissions import require_assistant_access, require_gated_assistant_access
 from db.connection import get_db
 from routers.assistant_routes import (
     HomeAssistantPayload,
@@ -177,7 +177,7 @@ async def reason_about_child(
 async def ask_young_person_assistant(
     payload: YoungPersonAssistantPayload,
     conn=Depends(get_db),
-    current_user=Depends(require_assistant_access),
+    current_user=Depends(require_gated_assistant_access),
 ):
     _preflight_assistant_request(
         current_user=current_user,
@@ -196,7 +196,7 @@ async def ask_young_person_assistant(
 async def ask_home_assistant(
     payload: HomeAssistantPayload,
     conn=Depends(get_db),
-    current_user=Depends(require_assistant_access),
+    current_user=Depends(require_gated_assistant_access),
 ):
     _preflight_assistant_request(
         current_user=current_user,
@@ -215,7 +215,7 @@ async def ask_home_assistant(
 async def ask_quality_assistant(
     payload: QualityAssistantPayload,
     conn=Depends(get_db),
-    current_user=Depends(require_assistant_access),
+    current_user=Depends(require_gated_assistant_access),
 ):
     _preflight_assistant_request(
         current_user=current_user,

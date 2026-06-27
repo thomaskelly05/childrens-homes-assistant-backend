@@ -287,7 +287,7 @@ def _rotate_post_mfa_session(
     email: str,
 ) -> None:
     remember = bool(request.session.get("remember"))
-    new_token = create_session_token(user_id)
+    new_token = create_session_token(user_id, mfa_verified=True)
     new_csrf = secrets.token_urlsafe(32)
 
     request.session[SESSION_USER_ID_KEY] = int(user_id)
