@@ -47,12 +47,14 @@ describe('ORB voice premium upgrade', () => {
     assert.match(station, /data-orb-voice-speak-again/)
   })
 
-  it('companion uses speech decision for auto speak', () => {
+  it('companion does not auto-speak after typed chat completion', () => {
     const companion = readFileSync(
       join(root, '../../../components/orb-standalone/orb-care-companion.tsx'),
       'utf8'
     )
-    assert.match(companion, /speechDecision\.allowAutoSpeak/)
-    assert.match(companion, /speechDecision\.spokenText/)
+    assert.doesNotMatch(companion, /speechDecision\.allowAutoSpeak/)
+    assert.doesNotMatch(companion, /voice\.speak\(/)
+    assert.match(companion, /speakMessageContent/)
+    assert.match(companion, /voice\.speakAloud/)
   })
 })
