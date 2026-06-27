@@ -361,7 +361,7 @@ export class ORBWebVoiceEngine {
     this.setState('speaking')
     patchOrbVoiceBrowserDiagnostics({ ttsAttempted: true })
     try {
-      const result = await requestOrbPremiumTts({ text: spoken })
+      const result = await requestOrbPremiumTts({ text: spoken, source: 'voice_mode', context: 'live_voice' })
       if (result.ok && result.blob) {
         patchOrbVoiceBrowserDiagnostics({
           ttsStatus: 'success',

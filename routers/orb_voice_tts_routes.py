@@ -12,6 +12,12 @@ from auth.orb_residential_dependencies import (
 )
 from services.orb_ai_abuse_guard_service import enforce_daily_ai_call_budget, enforce_transcript_length
 from services.orb_brain_metadata_service import attach_to_payload, build_brain_metadata
+from services.orb_voice_tts_intent_service import (
+    OrbVoiceTtsGateError,
+    gate_orb_voice_tts_request,
+    record_orb_voice_tts_usage,
+    tts_gate_http_exception,
+)
 from services.orb_voice_tts_service import (
     ORBVoiceTTSError,
     is_configured,
@@ -38,14 +44,26 @@ def _user_id_from(current_user: dict) -> int | None:
         return None
 
 
+def _scope_id(current_user: dict, key: str) -> int | None:
+    raw = current_user.get(key)
+    try:
+        return int(raw) if raw is not None else None
+    except (TypeError, ValueError):
+        return None
+
+
 class ORBVoiceTTSRequest(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
     text: str = Field(..., min_length=1, max_length=500)
+    source: str = Field(..., min_length=1, max_length=40)
     voice_style: str | None = "calm_therapeutic"
     voice_id: str | None = None
     format: str | None = "mp3"
     context: str | None = Field(default=None, max_length=120)
+    expert_depth: str | None = Field(default=None, max_length=40)
+    privacy_mode: bool = False
+    low_sensory_mode: bool = False
 
 
 @router.get("/status")
@@ -62,9 +80,34 @@ async def orb_voice_tts(
     current_user: dict[str, Any] = Depends(require_orb_voice_premium),
 ):
     user_id = _user_id_from(current_user)
+    provider_id = _scope_id(current_user, "provider_id")
+    home_id = _scope_id(current_user, "home_id")
     spoken = (payload.text or "").strip()
     enforce_daily_ai_call_budget(user_id)
     enforce_transcript_length(spoken, user_id=user_id)
+
+    try:
+        gate = gate_orb_voice_tts_request(
+            source=payload.source,
+            text=spoken,
+            context=payload.context,
+            expert_depth=payload.expert_depth,
+            privacy_mode=payload.privacy_mode,
+            low_sensory_mode=payload.low_sensory_mode,
+            provider_id=provider_id,
+            home_id=home_id,
+            user_id=user_id,
+            route="POST /orb/voice/tts",
+        )
+    except OrbVoiceTtsGateError as exc:
+        logger.info(
+            "orb_voice_tts_gate_blocked code=%s source=%s user_id=%s text_len=%s",
+            exc.code,
+            (payload.source or "").strip().lower() or "missing",
+            user_id,
+            len(spoken),
+        )
+        raise tts_gate_http_exception(exc) from exc
 
     if not is_configured():
         raise HTTPException(
@@ -77,7 +120,7 @@ async def orb_voice_tts(
 
     try:
         result = await synthesize_spoken_reply(
-            text=spoken,
+            text=gate.redacted_text,
             voice_id=payload.voice_id,
             voice_style=payload.voice_style,
             audio_format=payload.format or "mp3",
@@ -85,23 +128,36 @@ async def orb_voice_tts(
         )
     except ORBVoiceTTSError as exc:
         logger.info(
-            "orb_voice_tts_request_failed code=%s user_id=%s text_len=%s",
+            "orb_voice_tts_request_failed code=%s source=%s user_id=%s text_len=%s",
             exc.code,
+            gate.source,
             user_id,
-            len(spoken),
+            gate.text_len,
         )
         raise HTTPException(
             status_code=exc.status_code,
             detail={"error": exc.code, "message": exc.message},
         ) from exc
 
+    record_orb_voice_tts_usage(
+        gate=gate,
+        provider_id=provider_id,
+        home_id=home_id,
+        user_id=user_id,
+        route="POST /orb/voice/tts",
+        provider=result.provider,
+        voice_id=result.voice_id,
+    )
+
     logger.info(
-        "orb_voice_tts_request_ok user_id=%s voice_id=%s style=%s text_len=%s bytes=%s",
+        "orb_voice_tts_request_ok source=%s user_id=%s voice_id=%s style=%s text_len=%s bytes=%s redaction=%s",
+        gate.source,
         user_id,
         result.voice_id,
         result.voice_style,
-        len(spoken),
+        gate.text_len,
         len(result.audio_bytes),
+        gate.redaction_applied,
     )
 
     return Response(

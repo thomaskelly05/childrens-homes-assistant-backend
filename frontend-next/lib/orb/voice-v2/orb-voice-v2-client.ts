@@ -1,4 +1,5 @@
 import { authFetchResponse } from '@/lib/auth/api'
+import type { OrbVoiceTtsSource } from '@/lib/orb/voice/orb-voice-client'
 
 import { resolveOrbVoiceV2KatherineStatusMessage } from './orb-voice-v2-permissions.ts'
 import type {
@@ -97,7 +98,12 @@ export async function requestOrbVoiceV2Respond(input: {
 
 export async function requestOrbVoiceV2Speak(
   text: string,
-  options?: { voice?: string; context?: string; tier?: OrbVoiceV2BrainTier | null }
+  options?: {
+    source?: OrbVoiceTtsSource
+    voice?: string
+    context?: string
+    tier?: OrbVoiceV2BrainTier | null
+  }
 ): Promise<OrbVoiceV2SpeakResult> {
   const { hard } = resolveOrbVoiceSpokenCharCaps(options?.tier)
   const speakCap =
@@ -113,6 +119,7 @@ export async function requestOrbVoiceV2Speak(
       },
       body: JSON.stringify({
         text: trimmed,
+        source: options?.source ?? 'voice_mode',
         voice: options?.voice ?? 'katherine',
         context: options?.context ?? 'live_voice'
       })

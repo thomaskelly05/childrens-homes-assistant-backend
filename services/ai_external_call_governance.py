@@ -29,6 +29,7 @@ FEATURE_DICTATE = "dictate"
 FEATURE_DICTATE_EDIT = "dictate_edit"
 FEATURE_VOICE_TRANSCRIPTION = "voice_transcription"
 FEATURE_VOICE_RESPOND = "voice_respond"
+FEATURE_ORB_TTS = "orb_premium_tts"
 FEATURE_KNOWLEDGE_EMBEDDING = "knowledge_embedding"
 FEATURE_LEGACY_STREAMING = "legacy_assistant_stream"
 # Model-router / ORB chat surfaces (provider-agnostic governed egress).

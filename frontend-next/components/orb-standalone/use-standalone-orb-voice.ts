@@ -67,7 +67,7 @@ import {
   resetOrbVoiceTurnTrace
 } from '@/lib/orb/voice/orb-voice-turn-trace'
 import { ORB_VOICE_LIVE_SPOKEN_CAP } from '@/lib/orb/voice/orb-voice-low-latency'
-import { requestOrbPremiumTts, requestOrbVoiceSpeak } from '@/lib/orb/voice/orb-voice-client'
+import { requestOrbPremiumTts, requestOrbVoiceSpeak, type OrbVoiceTtsSource } from '@/lib/orb/voice/orb-voice-client'
 import { requestOrbVoiceProviderSpeak } from '@/lib/orb/voice/orb-voice-provider'
 import {
   appendOrbVoiceFinalTranscriptChunk,
@@ -478,6 +478,14 @@ export function useStandaloneOrbVoice() {
     onSpeakEndRef.current?.()
   }, [cancelSpeaking])
 
+  const resolveTtsSource = (
+    options?: { source?: 'orb_turn' | 'manual' | 'preview' }
+  ): OrbVoiceTtsSource => {
+    if (options?.source === 'preview') return 'settings_preview'
+    if (options?.source === 'orb_turn') return 'voice_mode'
+    return 'manual_speak'
+  }
+
   const runSpeech = useCallback(
     async (
       text: string,
@@ -525,6 +533,7 @@ export function useStandaloneOrbVoice() {
       }
       const premium = await requestOrbPremiumTts({
         text: cappedText,
+        source: resolveTtsSource(options),
         voice_id: profileId,
         voice_style: 'calm_therapeutic',
         context: options?.source === 'orb_turn' ? 'live_voice' : 'summary'
