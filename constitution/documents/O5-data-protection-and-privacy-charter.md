@@ -4,11 +4,11 @@
 |---|---|
 | Document ID | O5 |
 | Layer | L2 — Operating Principles · **Binding charter** (value-rank #5; binds every layer) |
-| Version | 1.0 |
-| Status | **Ratified — Version 1** |
-| Ratified | 2026-06-26 (founder ratification; incorporates founder ownership decisions of the same date) |
+| Version | 1.1 |
+| Status | **Ratified — Version 1.1** |
+| Ratified | 2026-06-26 (v1.0 founder ratification with ownership decisions; v1.1 versioned consistency amendment, same date) |
 | Owner | **Data Protection Owner / ICO-named data protection contact — Tom Kelly (current, interim).** Founder-confirmed: IndiCare Intelligence is ICO registered; Tom Kelly is the ICO-named data protection contact. **Not** an independent DPO arrangement. |
-| Reads with | `00` (§2c), `C1` (Article 4), `docs/security/`, `docs/trust/` |
+| Reads with | `00` (§2c), `C1` (Article 4), `A2` (Named Risk NR-1), `docs/security/`, `docs/trust/` |
 | Evidence base | `constitution/phase-1-discovery/` |
 
 This is a **binding charter**. Its value-authority (privacy, value-rank #5) overrides
@@ -61,6 +61,15 @@ This classification is referenced by the LLM provider and AI gateway (evidence E
 - **Standalone vs embedded scope.** **VERIFIED** — the standalone assistant must not access
   live OS child records (`docs/ai-safety.md`, evidence E32).
 
+**Cross-reference — Named Risk NR-1 (A2) [added in v1.1].** Privacy depends on **consistent
+governed egress**: redaction, the privacy decision, and external-provider governance only
+protect data on routes that actually pass through the governed gateway / governance module.
+Because AI egress is **not yet enforced through a single governed chokepoint** (A2 Named Risk
+NR-1 — e.g. the provider-adapter path and the raw-client ORB Voice TTS path), redaction
+coverage cannot be assumed for every AI call. **NR-1 remains OPEN until fixed or formally
+re-verified**, and is a high-priority pre-launch item before any live provider use involving
+real child, staff, home, or safeguarding information.
+
 ---
 
 ## 4. Retention, deletion, export, subprocessors (VERIFIED existence)
@@ -96,6 +105,7 @@ This classification is referenced by the LLM provider and AI gateway (evidence E
 | Subprocessor register is a draft | VERIFIED | `docs/trust/orb-subprocessors.md` status "Draft"; must be kept accurate per deployment. |
 | No Record of Processing / DPIA evidenced in-repo | UNVERIFIED | Not found in discovery; Future Vision. |
 | Default admin credential shipped | VERIFIED | E43; rotation required (E2, E3 R7). |
+| **AI egress not consistently governed — Named Risk NR-1 (A2)** | OPEN — high-priority pre-launch | Redaction/privacy only protect data on governed routes; adapter and TTS paths uneven/direct. Privacy coverage cannot be assumed for every AI call until NR-1 is fixed/re-verified. |
 
 ---
 
@@ -130,3 +140,4 @@ finalised subprocessor register per deployment; and enforced credential rotation
 |---|---|---|---|
 | 0.1 | 2026-06-26 | Drafted (Phase 2 Batch 2) | Initial draft presented for founder review. Owner seat (DPO) recorded as unfilled. |
 | 1.0 | 2026-06-26 | **Ratified — Version 1** | Ratified by the Founder as a binding charter. Founder-confirmed: IndiCare Intelligence is ICO registered with Tom Kelly as the ICO-named data protection contact / current interim Data Protection Owner (not an independent DPO; independent/external support may be needed as the company scales). Any change requires an explicitly proposed, versioned, approved amendment. |
+| 1.1 | 2026-06-26 | **Ratified — Version 1.1** | Versioned consistency amendment following whole-constitution review. Added canonical cross-reference to **Named Risk NR-1 (A2)**: privacy, redaction and external-provider governance depend on consistent governed egress; NR-1 remains OPEN until fixed or formally re-verified. No other substance changed. |

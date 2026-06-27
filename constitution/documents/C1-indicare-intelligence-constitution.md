@@ -4,9 +4,9 @@
 |---|---|
 | Document ID | C1 |
 | Layer | L1 — Constitution (supreme document) |
-| Version | 1.0 |
-| Status | **Ratified — Version 1** |
-| Ratified | 2026-06-26 (founder ratification) |
+| Version | 1.1 |
+| Status | **Ratified — Version 1.1** |
+| Ratified | 2026-06-26 (v1.0 founder ratification; v1.1 versioned consistency amendment, same date) |
 | Owner | Founder (Tom Kelly, interim) |
 | Reads with | `00-constitutional-hierarchy.md` (read that first) |
 | Evidence base | `constitution/phase-1-discovery/` |
@@ -120,14 +120,20 @@ person currently holds several. Interim holders:
 | Engineering Owner | Tom Kelly | E1, E2, E3, E4, E5, E6 |
 | AI Safety Owner | Tom Kelly | A1, A2 |
 | Documentation Owner | Tom Kelly | X1 |
-| **Safeguarding Lead** | **TBC — current governance gap** | O4 |
-| **Data Protection Officer** | **TBC — current governance gap** | O5 |
+| Commercial Owner | Tom Kelly | O3 |
+| Release / Operations Owner | Tom Kelly (interim) | E3 |
+| **Safeguarding Lead** | **TBC — not formally filled (current governance gap)** | O4 |
+| Data Protection Owner / ICO-named data protection contact | Tom Kelly (current, interim — **not** an independent DPO) | O5 |
 
-**Carried-forward gap (honest record).** The Safeguarding Lead and DPO roles — which own the
-two *binding charters* — are unfilled. This is recorded as a current governance gap, not
-silently filled (`open-questions.md` Q3). The concentration of five roles in one person is a
-named bus-factor risk. Future Vision: appoint a Safeguarding Lead and DPO and separate the
-roles in practice.
+**Carried-forward gap (honest record).** *Updated in v1.1.* The **Safeguarding Lead** role —
+which owns a *binding charter* — is **unfilled** and recorded as a current governance gap, not
+silently filled (`open-questions.md` Q3). For **data protection**, IndiCare Intelligence is
+**ICO registered** and **Tom Kelly is the ICO-named data protection contact / interim Data
+Protection Owner** (founder-confirmed, founder-attested); this is **not** an independent DPO
+appointment, and independent or external data-protection support remains a future scaling
+priority given the sensitivity of children's social care data (see O5). The concentration of
+roles in one person is a named bus-factor risk. Future Vision: appoint an independent
+Safeguarding Lead and an independent/external DPO function and separate the roles in practice.
 
 ---
 
@@ -141,12 +147,12 @@ into a named document (some not yet written — FUTURE VISION) and recorded with
 | `CLAUDE.md` references three missing files (`SAFETY.md`, `ARCHITECTURE.md`, `CONTRIBUTING.md`) | VERIFIED (E37) | E4 fills ARCHITECTURE; E5 fills CONTRIBUTING; O4/A1 the safety content |
 | Auto-deploy from `main` + startup schema-doctor/migrations + narrow CI = no enforced full-test/migration gate before production schema change | INFERRED risk (A1, Q9) | **E3 (this batch)** |
 | Three migration locations, partly manual | VERIFIED (E42) | E3 |
-| Safeguarding Lead / DPO unfilled | UNVERIFIED ownership (Q3) | Article 5; O2/O4/O5 |
+| Safeguarding Lead unfilled; data protection has a named ICO contact (Tom Kelly) but no independent DPO | UNVERIFIED ownership (Q3) | Article 5; O2/O4/O5 |
 | Default admin password in examples | VERIFIED (E43) | E2; noted in E3 |
 | 463 docs, no source-of-truth index | VERIFIED (E40) | X1 |
 | Multi-product monorepo boundary | DERIVED (E7–E12) | E4, X1, S-layer |
 | AI governance boundaries (implemented, not guaranteed) | VERIFIED (E4, E16, E32, E51–E55) | A1, A2 |
-| AI gateway sole-egress unproven | UNVERIFIED (open-questions §E) | A2, E6 |
+| AI gateway sole-egress unproven — **Named Risk NR-1** (AI egress not enforced through a single governed chokepoint) | UNVERIFIED / OPEN (open-questions §E) | A2 (owns NR-1), A1, E2, E6 |
 | Per-router policy enforcement unverified | UNVERIFIED (Q4) | E2 |
 
 This table is the constitution's promise that nothing found in discovery is buried.
@@ -194,15 +200,16 @@ requires an explicitly proposed, versioned, and approved amendment.
 ## Current State vs Future Vision (summary)
 
 **Current State (VERIFIED / DERIVED).** The product's *safety intent is strong and
-encoded* (Articles 2, 4). The *governance layer is newly ratified (Version 1) but still
-incomplete*: two binding-charter owners are unfilled, enforcement is manual, and several
-operational risks (Article 6) are open. Much governance content exists but is distributed
-and unordered.
+encoded* (Articles 2, 4). The *governance layer is ratified but still incomplete*: the
+Safeguarding Lead binding-charter role is unfilled, data protection has a named ICO contact
+(Tom Kelly) but no independent DPO, enforcement is manual, and several operational risks
+(Article 6) are open — including **Named Risk NR-1** (AI egress not enforced through a single
+governed chokepoint; see A2). Much governance content exists but is distributed and unordered.
 
-**Future Vision (NOT YET BUILT).** A fully ratified 17-document constitution; appointed
-Safeguarding Lead and DPO; an enforced release/quality gate; a single source-of-truth index;
-and the multi-product framework extended cleanly to LifeEcho and beyond. None of this is
-claimed as present today.
+**Future Vision (NOT YET BUILT).** A fully ratified constitution (18 documents); an appointed
+independent Safeguarding Lead and an independent/external DPO function; NR-1 closed; an enforced
+release/quality gate; a single source-of-truth index; and the multi-product framework extended
+cleanly to LifeEcho and beyond. None of this is claimed as present today.
 
 ---
 
@@ -212,3 +219,4 @@ claimed as present today.
 |---|---|---|---|
 | 0.1 | 2026-06-26 | Drafted (Phase 2 Batch 1) | Initial draft presented for founder review. |
 | 1.0 | 2026-06-26 | **Ratified — Version 1** | Ratified by the Founder following Batch 1 review. Any change requires an explicitly proposed, versioned, approved amendment. |
+| 1.1 | 2026-06-26 | **Ratified — Version 1.1** | Versioned consistency amendment following whole-constitution review. Corrected stale Data Protection wording (ICO registered; Tom Kelly is ICO-named data protection contact / interim DP Owner, not an independent DPO; independent/external support is a future scaling priority); Safeguarding Lead remains a recorded unfilled gap; added canonical **NR-1** reference to the sole-egress gap. No other substance changed. |

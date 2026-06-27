@@ -4,11 +4,11 @@
 |---|---|
 | Document ID | O4 |
 | Layer | L2 — Operating Principles · **Binding charter** (value-rank #2; binds every layer) |
-| Version | 1.0 |
-| Status | **Ratified — Version 1** |
-| Ratified | 2026-06-26 (founder ratification; incorporates founder ownership decisions of the same date) |
+| Version | 1.1 |
+| Status | **Ratified — Version 1.1** |
+| Ratified | 2026-06-26 (v1.0 founder ratification with ownership decisions; v1.1 versioned consistency amendment, same date) |
 | Owner | **Safeguarding Lead — TBC, not yet formally filled (current governance gap).** The Founder (Tom Kelly) is accountable for safeguarding posture during development; this is **not** an independent Safeguarding Lead appointment. |
-| Reads with | `00` (§2c binding charters), `C1` (Articles 2, 4), `docs/ai-safety.md` |
+| Reads with | `00` (§2c binding charters), `C1` (Articles 2, 4), `A2` (Named Risk NR-1), `docs/ai-safety.md` |
 | Evidence base | `constitution/phase-1-discovery/` |
 
 This is a **binding charter**. Its value-authority (safeguarding, value-rank #2) overrides
@@ -86,6 +86,14 @@ OS assistant may use scoped operational context. **VERIFIED** — `docs/ai-safet
 (evidence E32). This boundary is safeguarding-relevant because it limits the blast radius of
 any error to non-identifiable context in the standalone surface.
 
+**Cross-reference — Named Risk NR-1 (A2) [added in v1.1].** Safeguarding AI boundaries are
+**strongest where calls pass through the governed routes** (the governed chat path and the
+named gateway, where redaction and external-call evaluation run before egress). Because AI
+egress is **not yet enforced through a single governed chokepoint** (A2 Named Risk NR-1 —
+e.g. the provider-adapter and ORB Voice TTS paths), boundary enforcement is only as
+consistent as the route taken. **NR-1 remains OPEN until fixed or formally re-verified**, and
+until then no claim may be made that safeguarding boundaries apply uniformly to every AI call.
+
 ---
 
 ## 5. Verification signals (VERIFIED existence; behaviour not executed here)
@@ -106,7 +114,7 @@ are signals of intent and coverage, not proof of live robustness.
 |---|---|---|
 | **Safeguarding Lead not yet formally filled** | UNVERIFIED ownership (Q3) | This charter's own owner seat is empty. The Founder is accountable for safeguarding posture during development, but this is **not** an independent Safeguarding Lead. The most important independence gap in the constitution; a future priority (founder decision, 2026-06-26). |
 | Cross-home trend aggregation may cross tenancy | OPEN (Q4) | Tenancy scoping exists (`core/provider_context.py`) but trend-aggregation enforcement was not verified at code level. |
-| AI gateway sole-egress unproven | UNVERIFIED (open-questions §E) | If any AI call bypasses the governed gateway, boundary enforcement could be inconsistent. |
+| AI gateway sole-egress unproven — **Named Risk NR-1 (A2)** | UNVERIFIED / OPEN (open-questions §E) | If any AI call bypasses governed routes, boundary enforcement could be inconsistent. Boundaries strongest on governed routes; NR-1 open until fixed/re-verified. |
 | Releases touching safeguarding surfaces lack a required human-review gate | UNVERIFIED (E3 R11) | Carried in E3; not yet enforced. |
 
 ---
@@ -139,3 +147,4 @@ boundary audits with live models.
 |---|---|---|---|
 | 0.1 | 2026-06-26 | Drafted (Phase 2 Batch 2) | Initial draft presented for founder review. Owner seat (Safeguarding Lead) recorded as unfilled. |
 | 1.0 | 2026-06-26 | **Ratified — Version 1** | Ratified by the Founder as a binding charter. Safeguarding Lead remains unfilled (founder-accountable during development, not an independent appointment) and recorded as a current governance gap and future priority. Any change requires an explicitly proposed, versioned, approved amendment. |
+| 1.1 | 2026-06-26 | **Ratified — Version 1.1** | Versioned consistency amendment following whole-constitution review. Added canonical cross-reference to **Named Risk NR-1 (A2)**: safeguarding boundaries are strongest on governed routes; NR-1 remains OPEN until fixed or formally re-verified. No other substance changed. |
