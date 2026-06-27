@@ -10,6 +10,9 @@ GOVERNED_PATHS = {
     "assistant/llm_provider.py",
     "services/ai_providers/openai_provider.py",
     "services/ai_model_router_service.py",
+    # The approved sanitised OpenAI client factory: the single place a raw
+    # OpenAI()/AsyncOpenAI() client may be constructed (NR-1, constitution A2).
+    "services/openai_header_sanitisation.py",
 }
 
 # Legacy paths that may still import OpenAI lazily (not live product routes).
