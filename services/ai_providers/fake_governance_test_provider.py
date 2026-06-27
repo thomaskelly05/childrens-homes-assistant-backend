@@ -13,7 +13,6 @@ from schemas.ai_models import (
     AiProviderRequest,
     AiProviderResponse,
     AiUsageEstimate,
-    AiCostTier,
 )
 from services.ai_providers.base import AiProviderBase
 

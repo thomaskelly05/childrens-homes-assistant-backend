@@ -19,7 +19,7 @@ from schemas.ai_models import (
     AiProviderRequest,
     AiProviderResponse,
 )
-from schemas.data_protection import AIPrivacyDecision, DataClassification
+from schemas.data_protection import AIPrivacyDecision
 from services.ai_external_call_governance import (
     evaluate_external_call,
     record_model_usage,

@@ -6,10 +6,9 @@ import logging
 import os
 from typing import Any
 
-logger = logging.getLogger("indicare.ai_external_call_governance")
-
 from fastapi import HTTPException
 
+from schemas.ai_models import AiProviderGovernanceContext
 from schemas.data_protection import AIPrivacyDecision, DataClassification
 from services.ai_privacy_decision_service import (
     AIPrivacyDecisionRequest,
@@ -18,6 +17,8 @@ from services.ai_privacy_decision_service import (
 from services.ai_redaction_service import ai_redaction_service
 from services.ai_usage_audit_service import ai_usage_audit_service
 from services.openai_header_sanitisation import create_sync_openai_client
+
+logger = logging.getLogger("indicare.ai_external_call_governance")
 
 # Feature keys used by legacy route convergence (allowlisted when external AI is enabled).
 FEATURE_DOCUMENT_GENERATION = "document_generation"
@@ -67,9 +68,7 @@ def build_router_governance_context(
     data_classification: DataClassification | None = None,
     local_fallback_available: bool = False,
     metadata: dict[str, Any] | None = None,
-) -> "AiProviderGovernanceContext":
-    from schemas.ai_models import AiProviderGovernanceContext
-
+) -> AiProviderGovernanceContext:
     ids = governance_ids_from_user(user)
     resolved_role = role
     if not resolved_role and isinstance(user, dict):

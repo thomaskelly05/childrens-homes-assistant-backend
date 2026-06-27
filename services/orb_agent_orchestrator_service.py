@@ -782,7 +782,6 @@ class OrbAgentOrchestratorService:
                     existing_ids.add(key)
             merged = merged[:limit]
             retrieval["document_results"] = merged
-            doc_citations = orb_rag_retrieval_service.build_rag_citations(merged)
             pack_citations = retrieval.get("pack_citations") or []
             merged_citations = orb_rag_retrieval_service.merge_with_source_pack_citations(
                 pack_citations,

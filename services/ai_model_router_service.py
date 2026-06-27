@@ -3,7 +3,6 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
-import re
 import time
 from collections.abc import AsyncIterator
 from typing import Any
@@ -350,7 +349,6 @@ class AiModelRouterService:
             governance=resolved_governance,
         )
 
-        started = time.perf_counter()
         response = await self.complete(provider_request, decision, governance=resolved_governance)
         fallback_used = False
 

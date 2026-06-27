@@ -6,7 +6,6 @@ import logging
 import uuid
 from typing import Any
 
-from schemas.ai_models import AiRoutingRequest
 from schemas.orb_evaluation import OrbEvaluationRequest
 from schemas.orb_operational import (
     OrbOperationalContextSummary,
