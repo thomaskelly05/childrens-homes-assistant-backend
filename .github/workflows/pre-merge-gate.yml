@@ -1,0 +1,122 @@
+name: Pre-merge Gate
+
+# A real pre-merge safety gate (Roadmap R0). Runs before changes reach `main`,
+# from which Render auto-deploys. Complements the existing ORB Scenario Quality
+# Gate (which only runs the ORB scenario scripts).
+#
+# Hard (blocking) checks — things we can verify reliably today:
+#   1. repo-wide py_compile (catches Python 3.11 syntax errors)
+#   2. AI egress governance guard (NR-1) — runs BEFORE lint so it always executes
+#   3. ruff, scoped to the PR's changed Python files only (not the whole repo,
+#      which still carries ~961 pre-existing lint issues — a separate cleanup task)
+# Advisory (non-blocking) check:
+#   - the core pytest suite (not yet green; see the R0 report)
+#
+# To enforce before deploy, mark the hard job as a required status check on the
+# `main` branch protection rule (a repository setting).
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pre-merge-gate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  hard-gate:
+    name: Hard gate — compile + AI egress guard + changed-file lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # full history so we can diff against the PR base
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: requirements.txt
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Compile all backend Python (catch 3.11 syntax errors)
+        run: |
+          python - <<'PY'
+          import py_compile, os, sys
+          skip = {".git","node_modules","frontend","frontend-next","indicare-frontend-next","indicare-ai","apps","__pycache__",".venv","venv"}
+          bad = []
+          for root, dirs, files in os.walk("."):
+              dirs[:] = [d for d in dirs if d not in skip]
+              for f in files:
+                  if f.endswith(".py"):
+                      p = os.path.join(root, f)
+                      try:
+                          py_compile.compile(p, doraise=True)
+                      except py_compile.PyCompileError:
+                          bad.append(p); print("SYNTAX ERROR:", p)
+          sys.exit(1 if bad else 0)
+          PY
+
+      - name: AI egress governance guard (NR-1)
+        # Runs before lint so the NR-1 guard always executes even if lint fails.
+        run: python scripts/ai_egress_audit.py
+
+      - name: Ruff (changed Python files only)
+        # Scoped to files changed in this PR vs the base branch. Does NOT run
+        # repo-wide ruff (the repo still has ~961 pre-existing lint issues; a
+        # repo-wide ruff cleanup is a separate future task). Fails only if a
+        # changed Python file has lint issues.
+        run: |
+          set -euo pipefail
+          base="${{ github.event.pull_request.base.sha }}"
+          if [ -z "${base}" ]; then
+            echo "No PR base (manual run); skipping changed-file lint."
+            exit 0
+          fi
+          files=$(git diff --name-only --diff-filter=ACMR "${base}...HEAD" -- '*.py' || true)
+          if [ -z "${files}" ]; then
+            echo "No changed Python files to lint."
+            exit 0
+          fi
+          echo "Changed Python files:"; echo "${files}"
+          pip install ruff
+          echo "${files}" | xargs ruff check
+
+  core-tests:
+    name: Core pytest suite (ADVISORY — see note)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # ADVISORY (non-blocking) for now. As of R0 the core suite baseline is
+    # ~4181 passed / ~309 failed / ~42 errors (the 42 errors are a known
+    # conftest fixture defect; see the R0 report). It runs here for visibility
+    # but must NOT block merges until the suite is stabilised to green. Promote
+    # this job to a required check (remove continue-on-error) only once the
+    # baseline failures/errors are triaged and fixed.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: requirements.txt
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Run core suite (excludes server-dependent + non-hermetic scripts)
+        # Excluded: server-dependent manual scripts (not pytest tests; they
+        # connect to localhost:8000 at import — documented in AGENTS.md) and the
+        # non-hermetic baseline test that spawns the scenario runner and writes
+        # to tracked reports/ files.
+        run: >-
+          python -m pytest tests/ -q -p no:cacheprovider
+          --ignore=tests/test_modes.py
+          --ignore=tests/test_stream.py
+          --ignore=tests/test_templates.py
+          --ignore=tests/test_validation.py
+          --ignore=tests/test_auth.py
+          --ignore=tests/test_orb_residential_baseline.py
