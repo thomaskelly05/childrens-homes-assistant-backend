@@ -4,8 +4,9 @@
 |---|---|
 | Document ID | P1 |
 | Layer | L5 — Product Standards |
-| Version | 0.1 — Phase 2 Batch 4 draft |
-| Status | **Drafted — awaiting founder review. Not yet ratified.** |
+| Version | 1.0 |
+| Status | **Ratified — Version 1** |
+| Ratified | 2026-06-26 (founder ratification) |
 | Owner | Product Owner (Tom Kelly, interim) |
 | Reads with | `O1` Mission & Values, `O4`/`O5` (binding), `A1`/`A2` (AI), `E1` |
 | Evidence base | `constitution/phase-1-discovery/` |
@@ -108,3 +109,4 @@ guards); NR-1 closed so AI/Voice claims can be made; an independent Product Owne
 | Version | Date | Status | Notes |
 |---|---|---|---|
 | 0.1 | 2026-06-26 | Drafted (Phase 2 Batch 4) | Initial draft presented for founder review. |
+| 1.0 | 2026-06-26 | **Ratified — Version 1** | Ratified by the Founder as the product-layer standard for IndiCare Intelligence products. Any change requires an explicitly proposed, versioned, approved amendment. |

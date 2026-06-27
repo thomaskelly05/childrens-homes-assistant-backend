@@ -4,8 +4,9 @@
 |---|---|
 | Document ID | X1 |
 | Layer | Cross-cutting |
-| Version | 0.1 — Phase 2 Batch 4 draft |
-| Status | **Drafted — awaiting founder review. Not yet ratified.** |
+| Version | 1.0 |
+| Status | **Ratified — Version 1** (a source-of-truth spine, not a claim that all 463 docs are reconciled) |
+| Ratified | 2026-06-26 (founder ratification) |
 | Owner | Documentation Owner (Tom Kelly, interim) |
 | Reads with | All constitutional documents |
 | Evidence base | `constitution/phase-1-discovery/` |
@@ -112,3 +113,4 @@ independent Documentation Owner (O2).
 | Version | Date | Status | Notes |
 |---|---|---|---|
 | 0.1 | 2026-06-26 | Drafted (Phase 2 Batch 4) | Initial draft presented for founder review. |
+| 1.0 | 2026-06-26 | **Ratified — Version 1** | Ratified by the Founder as a source-of-truth spine (not a claim that all 463 docs are reconciled). Q2 decision confirmed: ADRs/trust/security promoted as subordinate standards; remaining docs indexed; nothing deprecated without a per-document decision. Any change requires an explicitly proposed, versioned, approved amendment. |

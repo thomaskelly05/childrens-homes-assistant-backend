@@ -4,8 +4,9 @@
 |---|---|
 | Document ID | S1 |
 | Layer | L6 — Product Specifications |
-| Version | 0.1 — Phase 2 Batch 4 draft |
-| Status | **Drafted — awaiting founder review. Not yet ratified.** |
+| Version | 1.0 |
+| Status | **Ratified — Version 1 (Named Risk NR-1 caveat remains OPEN)** |
+| Ratified | 2026-06-26 (founder ratification; NR-1 caveat remains open — see §4. Surface inventory remains existence-only until behaviour is verified via E6.) |
 | Owner | Product Owner (Tom Kelly, interim) |
 | Inherits | C1, 00, O1–O5, E1–E6, A1–A2, P1 (all higher layers) |
 | Evidence base | `constitution/phase-1-discovery/` |
@@ -134,3 +135,4 @@ specified beneath the same standards.
 | Version | Date | Status | Notes |
 |---|---|---|---|
 | 0.1 | 2026-06-26 | Drafted (Phase 2 Batch 4) | Initial draft presented for founder review. NR-1 kept visible across AI/Voice/Dictate claims. |
+| 1.0 | 2026-06-26 | **Ratified — Version 1 (NR-1 caveat OPEN)** | Ratified by the Founder. Surface inventory remains existence-only until behaviour is verified via E6. ORB Voice TTS remains constrained by NR-1 and must not be used in live provider contexts involving real child/staff/home/safeguarding information until the egress risk is fixed or formally justified. Any change requires an explicitly proposed, versioned, approved amendment. |
