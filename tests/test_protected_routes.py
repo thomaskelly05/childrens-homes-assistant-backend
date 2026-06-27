@@ -47,52 +47,36 @@ def test_auth_me_returns_401_when_not_authenticated(client):
     assert body["code"] in {"authentication_required", "not_authenticated"}
 
 
-def test_assistant_serves_html_shell_when_logged_in_without_mfa(client, fake_state):
+def test_assistant_redirects_to_mfa_setup_when_logged_in_without_mfa(client, fake_state):
     fake_state["accepted_legal"] = True
 
     login_user(client)
 
     response = client.get("/assistant", follow_redirects=False)
-    assert response.status_code == 200
-    assert "text/html" in response.headers.get("content-type", "").lower()
+    assert response.status_code in (302, 307)
+    assert response.headers["location"] == "/mfa-setup"
 
 
-def test_api_route_returns_mfa_setup_required_when_logged_in_without_mfa(client, fake_state):
+def test_auth_me_stays_informational_when_logged_in_without_mfa(client, fake_state):
     fake_state["accepted_legal"] = True
 
     login_user(client)
 
     response = client.get("/auth/me")
-    assert response.status_code in (200, 403)
-    body = auth_error_body(response)
-    if response.status_code == 403:
-        assert body["code"] == "mfa_setup_required"
-    else:
-        assert body["ok"] is True
-        assert body["user"]["mfa_verified"] is False
+    assert response.status_code == 200
+    body = response.json()
+    assert body["ok"] is True
+    assert body["user"]["mfa_verified"] is False
 
 
-def test_assistant_serves_html_shell_when_legal_not_accepted(client):
+def test_assistant_blocks_shell_when_legal_not_accepted(client, fake_state):
+    fake_state["accepted_legal"] = False
     login_user(client)
     enable_mfa(client)
 
     response = client.get("/assistant", follow_redirects=False)
-    assert response.status_code == 200
-    assert "text/html" in response.headers.get("content-type", "").lower()
-
-
-def test_api_route_returns_legal_acceptance_required_when_legal_not_accepted(client):
-    login_user(client)
-    enable_mfa(client)
-
-    response = client.get("/auth/me")
-    assert response.status_code in (200, 403)
-    body = auth_error_body(response)
-    if response.status_code == 403:
-        assert body["code"] == "legal_acceptance_required"
-    else:
-        assert body["ok"] is True
-        assert body["user"]["mfa_verified"] is True
+    assert response.status_code == 403
+    assert "Legal acceptance required" in response.text
 
 
 def test_assistant_loads_when_authenticated_mfa_verified_and_legal_accepted(client, fake_state):
@@ -101,10 +85,9 @@ def test_assistant_loads_when_authenticated_mfa_verified_and_legal_accepted(clie
     login_user(client)
     enable_mfa(client)
 
-    response = client.get("/assistant")
-    assert response.status_code in (200, 401)
-    if response.status_code == 200:
-        assert "text/html" in response.headers.get("content-type", "").lower()
+    response = client.get("/assistant", follow_redirects=False)
+    assert response.status_code == 200
+    assert "text/html" in response.headers.get("content-type", "").lower()
 
 
 def test_auth_me_loads_when_authenticated_mfa_verified_and_legal_accepted(client, fake_state):

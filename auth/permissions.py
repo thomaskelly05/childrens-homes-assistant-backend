@@ -1,10 +1,11 @@
 from collections.abc import Iterable
 from typing import Any
 
-from fastapi import Depends, HTTPException, Path, Query, status
+from fastapi import Depends, HTTPException, Path, Query, Request, status
 
 from auth.current_user import get_current_user
 from auth.errors import forbidden
+from auth.sensitive_assistant_gate import evaluate_sensitive_assistant_gate
 from auth.rbac import (
     StaffRole,
     normalise_role,
@@ -158,6 +159,17 @@ def require_assistant_access(
 ) -> dict[str, Any]:
     if not policy_engine.has_permission(current_user, "assistant:access"):
         raise _forbidden("You do not have permission to use the assistant")
+    return current_user
+
+
+def require_gated_assistant_access(
+    request: Request,
+    current_user: dict[str, Any] = Depends(require_assistant_access),
+) -> dict[str, Any]:
+    """Assistant access with MFA/legal gate for sensitive OS assistant surfaces."""
+    block = evaluate_sensitive_assistant_gate(request, current_user)
+    if block is not None:
+        raise forbidden(block.code, block.message)
     return current_user
 
 

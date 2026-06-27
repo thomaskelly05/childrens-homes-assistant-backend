@@ -21,6 +21,8 @@ import routers.mfa_routes as mfa_routes  # noqa: E402
 import auth.current_user as current_user_module  # noqa: E402
 import auth.passwords as password_module  # noqa: E402
 import auth.legal_acceptance as legal_acceptance_module  # noqa: E402
+import auth.sensitive_assistant_gate as sensitive_assistant_gate_module  # noqa: E402
+import auth.tokens as tokens_module  # noqa: E402
 import core.lifespan as lifespan_module  # noqa: E402
 import db.connection as db_connection_module  # noqa: E402
 import db.legal_acceptance_db as legal_acceptance_db  # noqa: E402
@@ -159,20 +161,21 @@ def client(monkeypatch, fake_state):
     # -----------------------------
     # Token / auth helpers
     # -----------------------------
-    monkeypatch.setattr(
-        auth_routes,
-        "create_session_token",
-        lambda user_id, **_kwargs: f"test-token-{user_id}",
-    )
-    monkeypatch.setattr(
-        mfa_routes,
-        "create_session_token",
-        lambda user_id, **_kwargs: f"test-token-{user_id}",
-    )
+    def fake_create_session_token(user_id, **_kwargs):
+        if "mfa_verified" in _kwargs:
+            fake_state["mfa_verified"] = bool(_kwargs["mfa_verified"])
+        return f"test-token-{user_id}"
+
+    monkeypatch.setattr(auth_routes, "create_session_token", fake_create_session_token)
+    monkeypatch.setattr(mfa_routes, "create_session_token", fake_create_session_token)
+    monkeypatch.setattr(tokens_module, "create_session_token", fake_create_session_token)
 
     def fake_decode_session_token(token):
         if token == f"test-token-{TEST_USER_ID}":
-            return {"sub": str(TEST_USER_ID)}
+            payload = {"sub": str(TEST_USER_ID)}
+            if fake_state.get("mfa_verified"):
+                payload["mfa_verified"] = True
+            return payload
         return None
 
     monkeypatch.setattr(auth_routes, "decode_session_token", fake_decode_session_token)
@@ -180,6 +183,8 @@ def client(monkeypatch, fake_state):
     monkeypatch.setattr(current_user_module, "decode_session_token", fake_decode_session_token)
     monkeypatch.setattr(mfa_routes, "decode_session_token", fake_decode_session_token)
     monkeypatch.setattr(access_scope_module, "decode_session_token", fake_decode_session_token)
+    monkeypatch.setattr(tokens_module, "decode_session_token", fake_decode_session_token)
+    monkeypatch.setattr(sensitive_assistant_gate_module, "decode_session_token", fake_decode_session_token)
 
     # -----------------------------
     # Fake DB dependency for FastAPI Depends(get_db)
@@ -270,6 +275,7 @@ def client(monkeypatch, fake_state):
 
     monkeypatch.setattr(auth_routes, "get_user_mfa", fake_get_user_mfa)
     monkeypatch.setattr(current_user_module, "get_user_mfa", fake_get_user_mfa)
+    monkeypatch.setattr(sensitive_assistant_gate_module, "get_user_mfa", fake_get_user_mfa)
     monkeypatch.setattr(app_module, "user_has_enabled_mfa", lambda user_id: fake_state["mfa_enabled"], raising=False)
 
     monkeypatch.setattr(mfa_routes, "get_user_mfa", fake_get_user_mfa)
@@ -295,6 +301,7 @@ def client(monkeypatch, fake_state):
     monkeypatch.setattr(app_module, "has_user_accepted_version", fake_has_user_accepted_version, raising=False)
     monkeypatch.setattr(legal_acceptance_module, "has_user_accepted_version", fake_has_user_accepted_version)
     monkeypatch.setattr(legal_acceptance_db, "has_user_accepted_version", fake_has_user_accepted_version)
+    monkeypatch.setattr(sensitive_assistant_gate_module, "has_user_accepted_version", fake_has_user_accepted_version)
 
     with TestClient(app_module.app) as test_client:
         yield test_client
