@@ -50,6 +50,8 @@ ROUTER_GROUPS: tuple[RouterGroup, ...] = (
         (
             "routers.ai_routes",
             "routers.assistant_routes",
+            "routers.assistant_general_routes",
+            "routers.assistant_os_routes",
             "routers.assistant_stream_routes",
             "routers.assistant_memory_routes",
             "routers.assistant_mode_routes",
