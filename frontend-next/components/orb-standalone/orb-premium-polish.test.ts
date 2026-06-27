@@ -63,6 +63,7 @@ describe('ORB persistent message actions', () => {
     assert.match(assistant, /dataAttr="speak"/)
     assert.match(assistant, /dataAttr="save"/)
     assert.match(assistant, /dataAttr="more"/)
+    assert.match(assistant, /renderSpeakAction\('speak'\)/)
   })
 })
 

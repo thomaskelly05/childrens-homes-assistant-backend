@@ -715,7 +715,8 @@ export function OrbResponseActionBar({
   isLatest = true,
   minimal = false,
   iconOnly = true,
-  residentialSurface = false
+  residentialSurface = false,
+  speechNotice = null
 }: {
   mode: string
   content: string
@@ -748,6 +749,8 @@ export function OrbResponseActionBar({
   iconOnly?: boolean
   /** Residential web — simplified demo-friendly action row. */
   residentialSurface?: boolean
+  /** Calm notice when manual Speak could not play audio; text reply stays visible. */
+  speechNotice?: string | null
 }) {
   const [moreOpen, setMoreOpen] = useState(false)
   const [copyFeedback, setCopyFeedback] = useState<'idle' | 'copied' | 'failed'>('idle')
@@ -800,11 +803,29 @@ export function OrbResponseActionBar({
             ? `Save to ${ORB_NAV_RECORDS}`
             : 'Save'
 
-  const speakLabel = !synthesisAvailable
-    ? 'Voice unavailable'
-    : speaking
-      ? 'Stop'
-      : 'Speak'
+  const speakLabel = speaking ? 'Stop' : 'Speak'
+  const speakLabelVisible = residentialSurface && !isOrbDeveloperMode()
+
+  const renderSpeakAction = (key: string, menuIconOnly = iconOnly) =>
+    speaking ? (
+      <ActionChip
+        key={key}
+        icon={<Square className="h-3.5 w-3.5" />}
+        label="Stop"
+        onClick={onStop}
+        dataAttr="speak-stop"
+        iconOnly={menuIconOnly && !speakLabelVisible}
+      />
+    ) : (
+      <ActionChip
+        key={key}
+        icon={<Volume2 className="h-3.5 w-3.5" />}
+        label={speakLabel}
+        onClick={onSpeak}
+        dataAttr="speak"
+        iconOnly={menuIconOnly && !speakLabelVisible}
+      />
+    )
 
   const modeKey = mode.trim().toLowerCase()
   const isRecording = modeKey === 'record this properly'
@@ -824,6 +845,7 @@ export function OrbResponseActionBar({
       iconOnly={iconOnly}
     />
   ]
+  primaryActions.push(renderSpeakAction('speak'))
   if (onEdit) {
     primaryActions.push(
       <ActionChip
@@ -848,27 +870,6 @@ export function OrbResponseActionBar({
       />
     )
   }
-  if (!residentialQuietMode) {
-    primaryActions.push(
-      synthesisAvailable ? (
-        speaking ? (
-          <ActionChip key="stop" icon={<Square className="h-3.5 w-3.5" />} label="Stop" onClick={onStop} dataAttr="speak-stop" iconOnly={iconOnly} />
-        ) : (
-          <ActionChip key="speak" icon={<Volume2 className="h-3.5 w-3.5" />} label="Speak" onClick={onSpeak} dataAttr="speak" iconOnly={iconOnly} />
-        )
-      ) : (
-        <ActionChip
-          key="speak-unavailable"
-          icon={<Volume2 className="h-3.5 w-3.5" />}
-          label={speakLabel}
-          onClick={() => {}}
-          disabled
-          dataAttr="speak-unavailable"
-          iconOnly={iconOnly}
-        />
-      )
-    )
-  }
   if (onSave) {
     primaryActions.push(
       <ActionChip
@@ -882,7 +883,7 @@ export function OrbResponseActionBar({
       />
     )
   }
-  if (!residentialQuietMode && onOpenInOrbWrite) {
+  if (onOpenInOrbWrite) {
     primaryActions.push(
       <ActionChip
         key="open-write"
@@ -948,7 +949,53 @@ export function OrbResponseActionBar({
     : []
 
   const moreActions: ReactNode[] = []
-  if (!residentialQuietMode) {
+  if (residentialQuietMode) {
+    moreActions.push(
+      <ActionChip
+        key="copy-more"
+        icon={<Copy className="h-3.5 w-3.5" />}
+        label={copyLabel}
+        onClick={() => void handleCopy()}
+        dataAttr="copy"
+        iconOnly={false}
+      />,
+      renderSpeakAction('speak-more', false)
+    )
+    if (onSave) {
+      moreActions.push(
+        <ActionChip
+          key="save-more"
+          icon={<FileText className="h-3.5 w-3.5" />}
+          label={saveLabel}
+          onClick={onSave}
+          state={saveFeedback === 'saved' || saveFeedback === 'already_saved' ? 'success' : saveFeedback === 'failed' ? 'error' : undefined}
+          dataAttr="save"
+          iconOnly={false}
+        />
+      )
+    }
+    if (onOpenInOrbWrite) {
+      moreActions.push(
+        <ActionChip
+          key="open-write-more"
+          icon={<FileEdit className="h-3.5 w-3.5" />}
+          label="Open in ORB Write"
+          onClick={onOpenInOrbWrite}
+          dataAttr="open-in-orb-write"
+          iconOnly={false}
+        />
+      )
+    }
+    moreActions.push(
+      <ActionChip
+        key="new-q-quiet"
+        icon={<RotateCcw className="h-3 w-3" />}
+        label="New question"
+        onClick={onNewQuestion}
+        iconOnly={false}
+      />
+    )
+  } else {
     if (onEdit) {
       moreActions.push(
         <ActionChip key="edit" icon={<Pencil className="h-3.5 w-3.5" />} label="Edit" onClick={onEdit} dataAttr="edit" iconOnly={iconOnly} />
@@ -959,22 +1006,10 @@ export function OrbResponseActionBar({
         <ActionChip key="regen" icon={<RotateCcw className="h-3.5 w-3.5" />} label="Regenerate" onClick={onRegenerate} dataAttr="regenerate" iconOnly={iconOnly} />
       )
     }
-    moreActions.push(
-      synthesisAvailable ? (
-        speaking ? (
-          <ActionChip key="stop-more" icon={<Square className="h-3.5 w-3.5" />} label="Stop" onClick={onStop} dataAttr="speak-stop" iconOnly={iconOnly} />
-        ) : (
-          <ActionChip key="speak-more" icon={<Volume2 className="h-3.5 w-3.5" />} label="Speak" onClick={onSpeak} dataAttr="speak" iconOnly={iconOnly} />
-        )
-      ) : (
-        <ActionChip key="speak-unavailable-more" icon={<Volume2 className="h-3.5 w-3.5" />} label={speakLabel} onClick={() => {}} disabled dataAttr="speak-unavailable" iconOnly={iconOnly} />
-      )
-    )
-  }
-  if (!residentialQuietMode && !isRecording) {
-    moreActions.push(<ActionChip key="draft-more" icon={<FileText className="h-3 w-3" />} label="Use as draft" onClick={onDraft} />)
-  }
-  if (!residentialQuietMode) {
+    moreActions.push(renderSpeakAction('speak-more'))
+    if (!isRecording) {
+      moreActions.push(<ActionChip key="draft-more" icon={<FileText className="h-3 w-3" />} label="Use as draft" onClick={onDraft} />)
+    }
     for (const item of orbFollowUps) {
       moreActions.push(
         <ActionChip
@@ -985,24 +1020,24 @@ export function OrbResponseActionBar({
         />
       )
     }
+    if (onSaveToProject) moreActions.push(<ActionChip key="project" label="Save to project" onClick={onSaveToProject} />)
+    if (onActionPlan) moreActions.push(<ActionChip key="plan" label="Action plan" onClick={onActionPlan} />)
+    if (onReflection) moreActions.push(<ActionChip key="reflection" label="Save reflection" onClick={onReflection} />)
+    if (!isStaffCoach && onSupervision) {
+      moreActions.push(<ActionChip key="supervision-more" label="Supervision prompts" onClick={onSupervision} />)
+    }
+    if (exportEnabled && onExport) {
+      moreActions.push(<ActionChip key="export" label="Export" onClick={onExport} dataAttr="export" />)
+    }
+    if (!isInspection && onInspectionPrep) {
+      moreActions.push(<ActionChip key="inspection-more" label="Inspection prep" onClick={onInspectionPrep} />)
+    }
+    moreActions.push(<ActionChip key="new-q" icon={<RotateCcw className="h-3 w-3" />} label="New question" onClick={onNewQuestion} />)
   }
-  if (onSaveToProject) moreActions.push(<ActionChip key="project" label="Save to project" onClick={onSaveToProject} />)
-  if (onActionPlan) moreActions.push(<ActionChip key="plan" label="Action plan" onClick={onActionPlan} />)
-  if (onReflection) moreActions.push(<ActionChip key="reflection" label="Save reflection" onClick={onReflection} />)
-  if (!isStaffCoach && onSupervision) {
-    moreActions.push(<ActionChip key="supervision-more" label="Supervision prompts" onClick={onSupervision} />)
-  }
-  if (exportEnabled && onExport) {
-    moreActions.push(<ActionChip key="export" label="Export" onClick={onExport} dataAttr="export" />)
-  }
-  if (!isInspection && onInspectionPrep) {
-    moreActions.push(<ActionChip key="inspection-more" label="Inspection prep" onClick={onInspectionPrep} />)
-  }
-  moreActions.push(<ActionChip key="new-q" icon={<RotateCcw className="h-3 w-3" />} label="New question" onClick={onNewQuestion} />)
 
   return (
     <div
-      className={`orb-response-action-bar orb-response-action-bar--icons flex flex-nowrap items-center gap-0.5 overflow-x-auto opacity-100 transition-opacity sm:gap-1 ${
+      className={`orb-response-action-bar orb-response-action-bar--icons flex flex-wrap items-center gap-0.5 overflow-x-auto opacity-100 transition-opacity sm:gap-1 ${
         residentialQuietMode
           ? 'orb-response-action-bar--quiet mt-2 border-0 pt-0'
           : 'mt-3 border-t border-[var(--orb-line)] pt-2 sm:pt-3'
@@ -1037,6 +1072,15 @@ export function OrbResponseActionBar({
             </div>
           ) : null}
         </div>
+      ) : null}
+      {speechNotice ? (
+        <p
+          className="orb-speech-notice mt-2 w-full basis-full text-[12px] leading-relaxed text-[#64748B]"
+          data-orb-speech-notice
+          role="status"
+        >
+          {speechNotice}
+        </p>
       ) : null}
     </div>
   )

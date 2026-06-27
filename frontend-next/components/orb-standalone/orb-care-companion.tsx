@@ -1320,14 +1320,13 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
 
   const speakMessageContent = useCallback(
     (messageId: string, rawContent: string) => {
-      if (!voice.synthesisAvailable) return
       if (voice.speaking && speakingMessageId && speakingMessageId !== messageId) {
         voice.cancelSpeaking()
       }
       const speechText = stripMarkdownForSpeech(rawContent)
       if (!speechText) return
       setSpeakingMessageId(messageId)
-      voice.speakAloud(speechText, () => setSpeakingMessageId(null))
+      voice.speakAloud(speechText, () => setSpeakingMessageId(null), { source: 'manual' })
     },
     [voice, speakingMessageId]
   )
@@ -4824,6 +4823,9 @@ export function OrbCareCompanion({ residentialSurface = false }: { residentialSu
                                   isLatest={index === visibleMessages.length - 1}
                                   speaking={speakingMessageId === entry.id}
                                   synthesisAvailable={voice.synthesisAvailable}
+                                  speechNotice={
+                                    speakingMessageId === entry.id ? voice.speechPlaybackError : null
+                                  }
                                   saveFeedback={saveFeedbackByMessageId[entry.id] || 'idle'}
                                   onRegenerate={
                                     !minimalTurn && index === visibleMessages.length - 1
