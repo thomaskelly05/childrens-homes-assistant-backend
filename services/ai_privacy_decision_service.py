@@ -134,6 +134,12 @@ class AIPrivacyDecisionService:
                 "orb_text_fallback",
                 "metadata",
                 "orb_chat_stream",
+                "orb_model_router_chat",
+                "orb_model_router_operational",
+                "orb_model_router_agent",
+                "orb_model_router_document",
+                "orb_model_router_action",
+                "orb_model_router_guardrail",
             }
             if feature not in legacy:
                 decision = self._blocked("feature_not_allowlisted", classification, settings, request)

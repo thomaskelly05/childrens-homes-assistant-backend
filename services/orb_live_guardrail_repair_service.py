@@ -34,6 +34,8 @@ async def repair_guardrail_answer(
             mode="Safeguarding Thinking",
             detail_level="detailed",
             surface="orb_live_guardrail_repair",
+            route="orb_live_guardrail_repair_service.repair_guardrail_answer",
+            local_fallback_available=False,
         )
         repaired = str(getattr(response, "text", None) or response or "").strip()
         if repaired:

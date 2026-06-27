@@ -3,7 +3,9 @@ from __future__ import annotations
 from enum import StrEnum
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+
+from schemas.data_protection import DataClassification
 
 
 class AiTaskType(StrEnum):
@@ -79,6 +81,32 @@ class AiModelProfile(BaseModel):
     default_timeout_seconds: float = 45.0
 
 
+class AiProviderGovernanceContext(BaseModel):
+    """Required scope and feature identity for every governed AI provider egress call."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    feature: str
+    surface: str
+    provider_id: int | None = None
+    home_id: int | None = None
+    user_id: int | None = None
+    child_id: int | None = None
+    role: str | None = None
+    route: str | None = None
+    data_classification: DataClassification | None = None
+    local_fallback_available: bool = False
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def _require_feature_and_surface(self) -> "AiProviderGovernanceContext":
+        if not str(self.feature or "").strip():
+            raise ValueError("governance feature is required")
+        if not str(self.surface or "").strip():
+            raise ValueError("governance surface is required")
+        return self
+
+
 class AiRoutingRequest(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
@@ -92,6 +120,7 @@ class AiRoutingRequest(BaseModel):
     retrieval_context: dict[str, Any] | None = None
     surface: str = "standalone_orb_ai"
     voice_mode: bool = False
+    governance: AiProviderGovernanceContext | None = None
 
 
 class AiRoutingDecision(BaseModel):
@@ -129,6 +158,7 @@ class AiProviderRequest(BaseModel):
     max_output_tokens: int = 1200
     timeout_seconds: float = 45.0
     metadata: dict[str, Any] = Field(default_factory=dict)
+    governance: AiProviderGovernanceContext | None = None
 
 
 class AiUsageEstimate(BaseModel):

@@ -169,6 +169,9 @@ class OrbDocumentUnderstandingService:
                 mode=self._mode_label(mode),
                 retrieval_context={"document_results": related, "source_packs": []},
                 detail_level="detailed",
+                surface="orb_document_understanding",
+                route="orb_document_understanding_service.analyse_document",
+                local_fallback_available=True,
             )
             llm_text = _text(response.text)
             model_routing = ai_model_router_service.routing_metadata_for_context(

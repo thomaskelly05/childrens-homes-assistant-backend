@@ -26,7 +26,9 @@ It is referenced by `constitution/audits/post-constitution-system-audit/01-nr-1-
 | `services/ai_gateway_service.py` | Governed gateway (sync) | privacy decision + redaction + cost + usage |
 | `services/ai_external_call_governance.py` | Governed wrappers (embeddings, transcription, draft) | privacy decision + redaction + usage |
 | `assistant/llm_provider.py` | Primary streaming chat path | `evaluate_external_call` + `redact_chat_messages` (pre-egress); `record_model_usage` (post-egress audit) |
-| `services/ai_providers/openai_provider.py` | Approved provider adapter (via `ai_model_router_service`) | **Partial — see NR-1 remaining work**: governance currently depends on caller discipline, not enforced at the adapter |
+| `services/ai_providers/openai_provider.py` | Approved provider adapter (via `AiGovernedEgress` + `ai_model_router_service`) | **Phase 1:** adapter executes only after `AiGovernedEgress` governance passes |
+| `services/ai_governed_egress.py` | Provider-agnostic governed egress chokepoint (NR-1 Phase 1) | `evaluate_external_call` + redaction + allow-listing + usage audit + error sanitisation |
+| `services/ai_provider_adapter_registry.py` | Provider adapter registry | Resolves adapters for governed egress; test adapters require `AI_ALLOW_TEST_PROVIDER=true` |
 | `services/orb_voice_tts_service.py` | ORB Voice TTS | Converged to the sanitised factory (NR-1). **Partial — full privacy-decision gating is remaining work** |
 | `assistant/streaming.py` | Legacy streaming (governance-allow-listed) | `evaluate_external_call` + `redact_chat_messages`; not a live product route |
 
@@ -47,10 +49,12 @@ pre-existing `tests/test_no_direct_external_ai_bypass.py` /
 
 ## Remaining NR-1 work (not yet done — see the remediation report)
 
-- Enforce mandatory privacy-decision / redaction / usage at the **provider-adapter
-  chokepoint** (`openai_provider` / `ai_model_router_service`) so governance does not
-  depend on caller discipline.
 - Add **full privacy-decision gating** (scope-aware) to the **TTS** path, not only the
   sanitised client.
-- Wire the egress guard into **CI** (the quality-gate workflow does not currently run the
+- Extend governed egress to **realtime/WebSocket/browser-direct** paths.
+- Repo-wide guard proving product code cannot call provider adapters or SDK clients directly.
+- Wire the egress guard into **CI** hard gate (the quality-gate workflow does not currently run the
   pytest suite — see constitution E6).
+
+Phase 1 (model-router chokepoint) is documented in
+`constitution/audits/post-constitution-system-audit/02-nr-1-phase-1-report.md`.

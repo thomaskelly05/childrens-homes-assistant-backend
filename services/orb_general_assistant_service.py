@@ -700,6 +700,7 @@ class OrbGeneralAssistantService:
                     retrieval=retrieval,
                     mode=mode,
                     safety_scaffold=safety_scaffold,
+                    user=user,
                 ),
                 timeout=STANDALONE_LLM_TIMEOUT_SECONDS,
             )
@@ -1007,6 +1008,7 @@ class OrbGeneralAssistantService:
         retrieval: dict[str, Any] | None = None,
         mode: str | None = None,
         safety_scaffold: dict[str, Any] | None = None,
+        user: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         retrieval = retrieval or self.prepare_retrieval(message, mode=mode, has_images=bool(image_data_urls))
         user_message = self._query_message(message, raw_user_message=None)
@@ -1038,6 +1040,10 @@ class OrbGeneralAssistantService:
             detail_level=detail,
             research_intent=research_intent,
             voice_mode=voice_mode,
+            surface="standalone_orb_ai",
+            user=user,
+            route="orb_general_assistant_service._llm_answer",
+            local_fallback_available=True,
         )
 
         model_routing = ai_model_router_service.routing_metadata_for_context(
@@ -1351,6 +1357,9 @@ class OrbGeneralAssistantService:
                 detail_level=detail,
                 research_intent=research_intent,
                 voice_mode=voice_mode,
+                surface="standalone_orb_ai",
+                route="orb_general_assistant_service.stream_answer",
+                local_fallback_available=True,
             ):
                 parts.append(delta)
                 decision = routed_decision

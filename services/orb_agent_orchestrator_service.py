@@ -887,6 +887,9 @@ class OrbAgentOrchestratorService:
                     retrieval_context=retrieval,
                     detail_level="detailed" if request.depth != "quick" else "concise",
                     research_intent=research_intent,
+                    surface="orb_agent_orchestrator",
+                    route="orb_agent_orchestrator_service._call_model",
+                    local_fallback_available=True,
                 ),
                 timeout=STANDALONE_LLM_TIMEOUT_SECONDS,
             )

@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 
 from schemas.ai_models import AiProviderName, AiRoutingRequest, AiTaskType
+from services.ai_external_call_governance import build_router_governance_context
 from services.ai_model_router_service import ai_model_router_service
 
 
@@ -49,10 +50,17 @@ def test_route_includes_provider_model_and_tiers():
 @pytest.mark.asyncio
 async def test_complete_with_routing_mock_fallback(monkeypatch):
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.setenv("AI_EXTERNAL_PROCESSING_ENABLED", "true")
+    governance = build_router_governance_context(
+        surface="standalone_orb_ai",
+        route="tests.test_ai_model_router_service",
+        local_fallback_available=True,
+    )
     response, decision, trace = await ai_model_router_service.complete_with_routing(
         message="hello",
         system_prompt="You are ORB.",
         mode="Ask ORB",
+        governance=governance,
     )
     assert response.text
     assert trace.task_type
@@ -63,9 +71,15 @@ async def test_complete_with_routing_mock_fallback(monkeypatch):
 async def test_strict_mode_no_mock_when_openai_missing(monkeypatch):
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
     monkeypatch.setenv("AI_PROVIDER_STRICT", "true")
+    monkeypatch.setenv("AI_EXTERNAL_PROCESSING_ENABLED", "true")
+    governance = build_router_governance_context(
+        surface="standalone_orb_ai",
+        route="tests.test_ai_model_router_service",
+    )
     response, decision, trace = await ai_model_router_service.complete_with_routing(
         message="hello",
         system_prompt="test",
+        governance=governance,
     )
     assert decision.provider == AiProviderName.OPENAI
     assert response.error or not response.text
