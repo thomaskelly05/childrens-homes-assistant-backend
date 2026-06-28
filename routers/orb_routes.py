@@ -190,7 +190,11 @@ async def start_orb_session(
     current_user=Depends(require_assistant_access),
 ):
     try:
-        response = await orb_voice_session_service.start_session(request=payload, current_user=current_user)
+        response = await orb_voice_session_service.start_session(
+            request=payload,
+            current_user=current_user,
+            governed_route="POST /orb/session/start",
+        )
         return {"success": True, "data": response.model_dump()}
     except HTTPException:
         raise

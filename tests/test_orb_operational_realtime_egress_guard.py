@@ -15,7 +15,17 @@ VOICE_SESSION_SERVICE_PATH = REPO_ROOT / "services" / "orb_voice_session_service
 def test_orb_routes_realtime_session_uses_governed_route_flag():
     source = ORB_ROUTES_PATH.read_text(encoding="utf-8")
     assert 'governed_route="POST /orb/realtime/session"' in source
+    assert 'governed_route="POST /orb/session/start"' in source
     assert "issue_orb_operational_conversational_realtime_session" not in source
+
+
+def test_orb_routes_session_start_uses_governed_route_flag():
+    source = ORB_ROUTES_PATH.read_text(encoding="utf-8")
+    assert 'governed_route="POST /orb/session/start"' in source
+    # Legacy alias must not call start_session without governed_route.
+    start_block = source.split('@router.post("/session/start")', 1)[1]
+    start_block = start_block.split("@router.post", 1)[0]
+    assert "governed_route=" in start_block
 
 
 def test_orb_operational_realtime_governance_service_calls_governed_egress():
