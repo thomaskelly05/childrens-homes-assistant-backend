@@ -1,13 +1,13 @@
-from __future__ import annotations
-
 """ORB Residential voice API — browser STT/TTS primary; honest OpenAI Realtime / WebSocket hooks."""
 
+from __future__ import annotations
+
+import logging
 import os
 import shutil
 import uuid
-import logging
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, WebSocket, status
 from pydantic import BaseModel, ConfigDict, Field
 
 from auth.orb_product_bootstrap_dependency import require_orb_product_bootstrap_access
@@ -15,8 +15,6 @@ from auth.orb_residential_dependencies import (
     orb_residential_premium_dependency,
     require_orb_residential_auth,
 )
-
-require_orb_voice_premium = orb_residential_premium_dependency("voice_workflows")
 from schemas.orb_voice_realtime import (
     OrbVoiceOpenAISession,
     OrbVoiceSessionRequest,
@@ -24,35 +22,38 @@ from schemas.orb_voice_realtime import (
     VoiceProviderCapabilities,
 )
 from services.orb_ai_abuse_guard_service import enforce_daily_ai_call_budget, enforce_transcript_length
-from services.orb_realtime_provider_service import orb_realtime_provider_service
+from services.orb_brain_metadata_service import attach_to_payload, build_brain_metadata
 from services.orb_voice_profiles import (
     build_residential_voice_instructions,
     normalise_profile_id,
     resolve_openai_voice,
     resolve_voice_profile_for_session,
 )
-from services.orb_voice_transcription_service import (
-    OrbVoiceTranscriptionError,
-    transcribe_voice_audio,
-)
-from services.orb_voice_respond_service import generate_voice_response
-from services.orb_voice_tts_service import voice_runtime_tts_status_payload
-from services.orb_voice_realtime_config import (
-    _openai_realtime_configured,
-    _provider_has_stt_credentials,
-    _provider_has_tts_credentials,
-    resolve_voice_provider,
-)
-
-DEFAULT_OPENAI_REALTIME_MODEL = os.getenv("ORB_REALTIME_MODEL", "gpt-realtime").strip() or "gpt-realtime"
 from services.orb_voice_provider_service import OrbVoiceSpeakRequest, orb_voice_provider_service
 from services.orb_voice_realtime_beta_service import (
     realtime_beta_status_payload,
     realtime_beta_token_payload,
 )
+from services.orb_voice_realtime_config import (
+    _openai_realtime_configured,
+    _provider_has_stt_credentials,
+    resolve_voice_provider,
+)
+from services.orb_voice_realtime_governance_service import (
+    issue_orb_voice_conversational_realtime_session,
+    issue_orb_voice_transcription_realtime_session,
+)
 from services.orb_voice_realtime_session_store import orb_voice_realtime_session_store
 from services.orb_voice_realtime_ws_handler import orb_voice_realtime_ws_handler
-from services.orb_brain_metadata_service import attach_to_payload, build_brain_metadata
+from services.orb_voice_respond_service import generate_voice_response
+from services.orb_voice_transcription_service import (
+    OrbVoiceTranscriptionError,
+    transcribe_voice_audio,
+)
+from services.orb_voice_tts_service import voice_runtime_tts_status_payload
+
+DEFAULT_OPENAI_REALTIME_MODEL = os.getenv("ORB_REALTIME_MODEL", "gpt-realtime").strip() or "gpt-realtime"
+require_orb_voice_premium = orb_residential_premium_dependency("voice_workflows")
 
 logger = logging.getLogger(__name__)
 
@@ -329,11 +330,12 @@ async def orb_voice_session(
         session_id = f"openai_{os.urandom(8).hex()}"
         instructions = build_residential_voice_instructions(profile_id=profile_id, mode=payload.mode)
         openai_voice = resolve_openai_voice(profile_id)
-        provider_result = await orb_realtime_provider_service.create_ephemeral_session(
+        provider_result = await issue_orb_voice_conversational_realtime_session(
             instructions=instructions,
             voice=openai_voice,
             current_user=current_user,
             orb_session_id=session_id,
+            route="POST /orb/voice/session",
         )
         if provider_result.get("configured") and provider_result.get("session") and not provider_result.get("fallback_text_mode"):
             session_payload = provider_result.get("session") or {}
@@ -499,10 +501,11 @@ async def orb_voice_transcribe_realtime_session(
         }
 
     session_id = f"voice_tx_{uuid.uuid4().hex[:16]}"
-    provider_result = await orb_realtime_provider_service.create_dictate_transcription_session(
+    provider_result = await issue_orb_voice_transcription_realtime_session(
         instructions=VOICE_REALTIME_TRANSCRIPTION_INSTRUCTIONS,
         current_user=_current_user,
         orb_session_id=session_id,
+        route="POST /orb/voice/transcribe/realtime/session",
     )
     if not provider_result.get("configured") or provider_result.get("fallback_text_mode"):
         return {

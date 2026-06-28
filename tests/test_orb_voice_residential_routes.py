@@ -120,7 +120,7 @@ def test_orb_voice_realtime_session_openai_when_configured(voice_client, monkeyp
         }
 
     monkeypatch.setattr(
-        "routers.orb_voice_residential_routes.orb_realtime_provider_service.create_ephemeral_session",
+        "routers.orb_voice_residential_routes.issue_orb_voice_conversational_realtime_session",
         fake_ephemeral,
     )
     response = voice_client.post(
@@ -153,7 +153,7 @@ def test_orb_voice_session_openai_realtime_when_configured(voice_client, monkeyp
         }
 
     monkeypatch.setattr(
-        "routers.orb_voice_residential_routes.orb_realtime_provider_service.create_ephemeral_session",
+        "routers.orb_voice_residential_routes.issue_orb_voice_conversational_realtime_session",
         fake_ephemeral,
     )
 
@@ -282,7 +282,7 @@ def test_orb_voice_session_openai_does_not_expose_api_key(voice_client, monkeypa
         }
 
     monkeypatch.setattr(
-        "routers.orb_voice_residential_routes.orb_realtime_provider_service.create_ephemeral_session",
+        "routers.orb_voice_residential_routes.issue_orb_voice_conversational_realtime_session",
         fake_ephemeral,
     )
 
@@ -338,7 +338,7 @@ def test_orb_voice_session_instructions_include_residential_guidance(voice_clien
         }
 
     monkeypatch.setattr(
-        "routers.orb_voice_residential_routes.orb_realtime_provider_service.create_ephemeral_session",
+        "routers.orb_voice_residential_routes.issue_orb_voice_conversational_realtime_session",
         fake_ephemeral,
     )
 
