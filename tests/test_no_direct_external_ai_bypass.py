@@ -9,6 +9,7 @@ GOVERNED_PATHS = {
     "services/ai_gateway_service.py",
     "assistant/llm_provider.py",
     "services/ai_providers/openai_provider.py",
+    "services/ai_providers/openai_tts_provider.py",
     "services/ai_model_router_service.py",
     # The approved sanitised OpenAI client factory: the single place a raw
     # OpenAI()/AsyncOpenAI() client may be constructed (NR-1, constitution A2).
@@ -38,6 +39,8 @@ CONVERGED_LEGACY_PATHS = {
 
 ADDITIONAL_KNOWN_PATHS = {
     "services/ai_provider_registry.py",
+    "services/ai_provider_adapter_registry.py",
+    "services/ai_tts_provider_adapter_registry.py",
     "services/ai_providers/__init__.py",
     "services/openai_service.py",
     "services/orb_realtime_provider_service.py",

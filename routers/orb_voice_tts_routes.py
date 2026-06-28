@@ -14,6 +14,7 @@ from services.orb_ai_abuse_guard_service import enforce_daily_ai_call_budget, en
 from services.orb_brain_metadata_service import attach_to_payload, build_brain_metadata
 from services.orb_voice_tts_intent_service import (
     OrbVoiceTtsGateError,
+    build_tts_governance_context,
     gate_orb_voice_tts_request,
     record_orb_voice_tts_usage,
     tts_gate_http_exception,
@@ -119,8 +120,20 @@ async def orb_voice_tts(
         )
 
     try:
+        tts_governance = build_tts_governance_context(
+            gate=gate,
+            provider_id=provider_id,
+            home_id=home_id,
+            user_id=user_id,
+            route="POST /orb/voice/tts",
+            voice_id=payload.voice_id,
+            voice_style=payload.voice_style,
+            context=payload.context,
+            expert_depth=payload.expert_depth,
+        )
         result = await synthesize_spoken_reply(
             text=gate.redacted_text,
+            governance=tts_governance,
             voice_id=payload.voice_id,
             voice_style=payload.voice_style,
             audio_format=payload.format or "mp3",

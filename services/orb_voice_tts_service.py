@@ -1,19 +1,29 @@
 """Premium ORB Voice TTS for ORB Residential iOS spoken-reply playback.
 
-Sends short generated text to a configured TTS provider and returns transient audio bytes.
+Orchestrates governed TTS egress (voice profiles, caps, fallback). Provider calls
+run only through AiGovernedEgress and TTS adapters (NR-1 Phase 2B).
 Does not store audio. Does not log spoken text content.
 """
 
 from __future__ import annotations
 
-import asyncio
 import logging
 import os
-import time
 from dataclasses import dataclass
 from typing import Any
 
-import httpx
+from schemas.ai_tts import AiTtsGovernanceContext, AiTtsSynthesisRequest, TtsProviderName
+from services.ai_governed_egress import ai_governed_egress
+from services.orb_voice_tts_profiles import (
+    ALLOWED_STYLES,
+    ORB_TTS_DEFAULT_STYLE,
+    ORB_TTS_DEFAULT_VOICE_ID,
+    VOICE_PROFILES,
+    content_type_for_format,
+    resolve_elevenlabs_voice_id,
+    resolve_openai_voice,
+    resolve_speed,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -25,8 +35,6 @@ ORB_TTS_ENABLED = os.environ.get("ORB_TTS_ENABLED", "false").strip().lower() in 
 }
 ORB_TTS_PROVIDER = (os.environ.get("ORB_TTS_PROVIDER") or "").strip().lower()
 ORB_TTS_FALLBACK_PROVIDER = (os.environ.get("ORB_TTS_FALLBACK_PROVIDER") or "").strip().lower()
-ORB_TTS_DEFAULT_VOICE_ID = (os.environ.get("ORB_TTS_DEFAULT_VOICE_ID") or "orb_british_female").strip()
-ORB_TTS_DEFAULT_STYLE = (os.environ.get("ORB_TTS_DEFAULT_STYLE") or "calm_therapeutic").strip().lower()
 ORB_TTS_MODEL = (os.environ.get("ORB_TTS_MODEL") or "tts-1-hd").strip()
 ORB_TTS_LIVE_MODEL = (os.environ.get("ORB_TTS_LIVE_MODEL") or "tts-1").strip()
 ORB_TTS_LATENCY_MODE = (os.environ.get("ORB_TTS_LATENCY_MODE") or "live").strip().lower()
@@ -34,59 +42,6 @@ ORB_TTS_MAX_TEXT_CHARS = int(os.environ.get("ORB_TTS_MAX_TEXT_CHARS") or "500")
 ORB_TTS_LIVE_MAX_TEXT_CHARS = int(os.environ.get("ORB_TTS_LIVE_MAX_TEXT_CHARS") or "220")
 ORB_TTS_TIMEOUT_SECONDS = float(os.environ.get("ORB_TTS_TIMEOUT_SECONDS") or "20")
 ELEVENLABS_MODEL_ID = (os.environ.get("ELEVENLABS_MODEL_ID") or "eleven_multilingual_v2").strip()
-ELEVENLABS_OUTPUT_FORMAT = (os.environ.get("ELEVENLABS_OUTPUT_FORMAT") or "mp3_44100_128").strip()
-
-ALLOWED_STYLES = {
-    "calm_therapeutic",
-    "clear_professional",
-    "warm_reflective",
-    "short_direct",
-}
-
-VOICE_PROFILES: dict[str, dict[str, Any]] = {
-    "katherine": {
-        "label": "Katherine",
-        "description": "ORB voice: Katherine — British, calm and professional",
-        "openai_voice": "nova",
-        "base_speed": 0.92,
-        "elevenlabs_voice_env": "ELEVENLABS_VOICE_ID",
-    },
-    "orb_british_female": {
-        "label": "ORB British Female",
-        "description": "Calm, confident British-English female delivery.",
-        "openai_voice": "nova",
-        "base_speed": 0.94,
-        "elevenlabs_voice_env": "ELEVENLABS_VOICE_ID",
-    },
-    "orb_british_female_warm": {
-        "label": "ORB British Female (Warm)",
-        "description": "Warm, steady British-English female delivery.",
-        "openai_voice": "shimmer",
-        "base_speed": 0.93,
-        "elevenlabs_voice_env": "ELEVENLABS_VOICE_ID",
-    },
-    "orb_clear_professional": {
-        "label": "ORB Clear Professional",
-        "description": "Clear, professional British-English delivery.",
-        "openai_voice": "onyx",
-        "base_speed": 0.96,
-        "elevenlabs_voice_env": "ELEVENLABS_VOICE_ID_CLEAR",
-    },
-}
-
-STYLE_SPEED_OFFSETS = {
-    "calm_therapeutic": -0.03,
-    "clear_professional": 0.0,
-    "warm_reflective": -0.02,
-    "short_direct": 0.04,
-}
-
-ELEVENLABS_STYLE_SETTINGS = {
-    "calm_therapeutic": {"stability": 0.58, "similarity_boost": 0.82, "style": 0.12},
-    "clear_professional": {"stability": 0.66, "similarity_boost": 0.86, "style": 0.05},
-    "warm_reflective": {"stability": 0.54, "similarity_boost": 0.80, "style": 0.18},
-    "short_direct": {"stability": 0.62, "similarity_boost": 0.84, "style": 0.08},
-}
 
 
 @dataclass(frozen=True)
@@ -276,194 +231,84 @@ def _resolve_style(requested: str | None) -> str:
     return style
 
 
-def _resolve_speed(voice_id: str, voice_style: str) -> float:
-    profile = VOICE_PROFILES.get(voice_id) or VOICE_PROFILES[ORB_TTS_DEFAULT_VOICE_ID]
-    speed = float(profile.get("base_speed") or 0.94)
-    speed += STYLE_SPEED_OFFSETS.get(voice_style, 0.0)
-    return max(0.75, min(1.05, speed))
+def _tts_provider_name(provider: str) -> TtsProviderName:
+    try:
+        return TtsProviderName(provider.strip().lower())
+    except ValueError as exc:
+        raise ORBVoiceTTSError("tts_provider_unsupported", "TTS provider is not supported.", 503) from exc
 
 
-def _content_type_for_format(audio_format: str) -> str:
-    if audio_format == "m4a":
-        return "audio/mp4"
-    return "audio/mpeg"
-
-
-def _resolve_elevenlabs_voice_id(voice_id: str) -> str:
-    profile = VOICE_PROFILES.get(voice_id) or VOICE_PROFILES[ORB_TTS_DEFAULT_VOICE_ID]
-    env_key = str(profile.get("elevenlabs_voice_env") or "ELEVENLABS_VOICE_ID")
-    resolved = (os.environ.get(env_key) or "").strip()
-    if resolved:
-        return resolved
-    return (os.environ.get("ELEVENLABS_VOICE_ID") or "").strip()
-
-
-def generate_speech(
-    *,
-    text: str,
-    voice_id: str,
-    voice_style: str,
-    audio_format: str,
-    provider: str,
-    context: str | None = None,
-) -> ORBVoiceTTSResult:
-    if provider == "openai":
-        return _synthesize_openai_sync(
-            text=text,
-            voice_id=voice_id,
-            voice_style=voice_style,
-            audio_format=audio_format,
-            context=context,
-        )
+def _resolve_tts_model(provider: str, context: str | None) -> str:
     if provider == "elevenlabs":
-        return _synthesize_elevenlabs_sync(
-            text=text,
-            voice_id=voice_id,
-            voice_style=voice_style,
-            audio_format=audio_format,
-        )
-    raise ORBVoiceTTSError("tts_provider_unsupported", "TTS provider is not supported.", 503)
+        return ELEVENLABS_MODEL_ID
+    return _resolve_openai_tts_model(context)
 
 
-def _synthesize_openai_sync(
+def _build_synthesis_request(
     *,
     text: str,
+    provider: str,
     voice_id: str,
     voice_style: str,
     audio_format: str,
-    context: str | None = None,
+    context: str | None,
+) -> AiTtsSynthesisRequest:
+    tts_provider = _tts_provider_name(provider)
+    model = _resolve_tts_model(provider, context)
+    return AiTtsSynthesisRequest(
+        text=text,
+        provider=tts_provider,
+        model=model,
+        voice_id=voice_id,
+        voice_style=voice_style,
+        audio_format=audio_format,
+        speed=resolve_speed(voice_id, voice_style),
+        openai_voice=resolve_openai_voice(voice_id) if tts_provider == TtsProviderName.OPENAI else None,
+        elevenlabs_voice_id=resolve_elevenlabs_voice_id(voice_id)
+        if tts_provider == TtsProviderName.ELEVENLABS
+        else None,
+        timeout_seconds=ORB_TTS_TIMEOUT_SECONDS,
+        context=context,
+    )
+
+
+def _error_code_to_status(code: str | None) -> int:
+    if code in {"empty_text", "text_too_long"}:
+        return 400
+    if code in {"tts_disabled", "tts_unconfigured", "tts_provider_unavailable", "tts_provider_unsupported"}:
+        return 503
+    return 503
+
+
+async def _synthesize_via_governed_egress(
+    *,
+    request: AiTtsSynthesisRequest,
+    governance: AiTtsGovernanceContext,
 ) -> ORBVoiceTTSResult:
-    api_key = (os.environ.get("OPENAI_API_KEY") or "").strip()
-    if not api_key:
-        raise ORBVoiceTTSError("tts_unconfigured", "Premium ORB Voice is not configured.", 503)
-
-    # NR-1 convergence: route TTS egress through the approved sanitised OpenAI
-    # client factory instead of constructing a raw `OpenAI(...)` client, keeping
-    # provider egress on the single approved client path (header sanitisation, no
-    # forwarded request headers) used by the governed routes. Full privacy-decision
-    # gating of TTS is tracked as remaining NR-1 work — see
-    # docs/ai-egress-approved-modules.md and constitution A2 (Named Risk NR-1).
     try:
-        from services.openai_header_sanitisation import create_sync_openai_client
-    except ImportError as exc:
-        raise ORBVoiceTTSError("tts_provider_unavailable", "TTS provider is unavailable.", 503) from exc
-
-    profile = VOICE_PROFILES.get(voice_id) or VOICE_PROFILES[ORB_TTS_DEFAULT_VOICE_ID]
-    provider_voice = str(profile.get("openai_voice") or profile.get("provider_voice") or "nova")
-    speed = _resolve_speed(voice_id, voice_style)
-    response_format = "aac" if audio_format == "m4a" else "mp3"
-
-    started = time.perf_counter()
-    model = _resolve_openai_tts_model(context)
-    # The sanitised factory imports the OpenAI SDK lazily; convert a missing SDK
-    # into the existing controlled 503 instead of an unhandled 500.
-    try:
-        client = create_sync_openai_client(api_key=api_key, timeout=ORB_TTS_TIMEOUT_SECONDS)
-    except ImportError as exc:
-        raise ORBVoiceTTSError("tts_provider_unavailable", "TTS provider is unavailable.", 503) from exc
-    try:
-        response = client.audio.speech.create(
-            model=model,
-            voice=provider_voice,
-            input=text,
-            response_format=response_format,
-            speed=speed,
+        response, _egress = await ai_governed_egress.synthesize_speech(
+            request,
+            governance=governance,
         )
-    except Exception as exc:
-        logger.warning(
-            "orb_voice_tts_openai_failed error=%s latency_ms=%s text_len=%s model=%s",
-            exc.__class__.__name__,
-            int((time.perf_counter() - started) * 1000),
-            len(text),
-            model,
+    except ValueError as exc:
+        raise ORBVoiceTTSError("governance_blocked", "External TTS is blocked by governance.", 403) from exc
+
+    if response.error or not response.audio_bytes:
+        code = response.error_code or "tts_provider_failed"
+        raise ORBVoiceTTSError(
+            code,
+            response.error or "Premium ORB Voice could not be generated.",
+            _error_code_to_status(code),
         )
-        raise ORBVoiceTTSError("tts_provider_failed", "Premium ORB Voice could not be generated.", 503) from exc
 
-    audio_bytes = response.content if hasattr(response, "content") else bytes(response)
-    if not audio_bytes:
-        raise ORBVoiceTTSError("tts_empty_audio", "Premium ORB Voice returned no audio.", 503)
-
-    logger.info(
-        "orb_voice_tts_openai_ok latency_ms=%s text_len=%s bytes=%s model=%s",
-        int((time.perf_counter() - started) * 1000),
-        len(text),
-        len(audio_bytes),
-        model,
-    )
-
+    provider = response.provider.value
     return ORBVoiceTTSResult(
-        audio_bytes=audio_bytes,
-        content_type=_content_type_for_format(audio_format),
-        voice_id=voice_id,
-        voice_style=voice_style,
-        provider="openai",
-        voice_name=_display_voice_name(voice_id, "openai", fallback_used=False),
-        fallback_used=False,
-    )
-
-
-def _synthesize_elevenlabs_sync(*, text: str, voice_id: str, voice_style: str, audio_format: str) -> ORBVoiceTTSResult:
-    api_key = (os.environ.get("ELEVENLABS_API_KEY") or "").strip()
-    elevenlabs_voice_id = _resolve_elevenlabs_voice_id(voice_id)
-    if not api_key or not elevenlabs_voice_id:
-        raise ORBVoiceTTSError("tts_unconfigured", "Premium ORB Voice is not configured.", 503)
-
-    style_settings = ELEVENLABS_STYLE_SETTINGS.get(voice_style) or ELEVENLABS_STYLE_SETTINGS["calm_therapeutic"]
-    output_format = ELEVENLABS_OUTPUT_FORMAT
-    if audio_format == "m4a":
-        output_format = "mp3_44100_128"
-
-    url = f"https://api.elevenlabs.io/v1/text-to-speech/{elevenlabs_voice_id}"
-    payload = {
-        "text": text,
-        "model_id": ELEVENLABS_MODEL_ID,
-        "voice_settings": {
-            **style_settings,
-            "use_speaker_boost": True,
-        },
-    }
-
-    started = time.perf_counter()
-    try:
-        with httpx.Client(timeout=ORB_TTS_TIMEOUT_SECONDS) as client:
-            response = client.post(
-                url,
-                params={"output_format": output_format},
-                headers={
-                    "xi-api-key": api_key,
-                    "Content-Type": "application/json",
-                    "Accept": "audio/mpeg",
-                },
-                json=payload,
-            )
-            response.raise_for_status()
-            audio_bytes = response.content
-    except Exception as exc:
-        logger.warning(
-            "orb_voice_tts_elevenlabs_failed error=%s latency_ms=%s text_len=%s",
-            exc.__class__.__name__,
-            int((time.perf_counter() - started) * 1000),
-            len(text),
-        )
-        raise ORBVoiceTTSError("tts_provider_failed", "Premium ORB Voice could not be generated.", 503) from exc
-
-    if not audio_bytes:
-        raise ORBVoiceTTSError("tts_empty_audio", "Premium ORB Voice returned no audio.", 503)
-
-    logger.info(
-        "orb_voice_tts_elevenlabs_ok latency_ms=%s text_len=%s bytes=%s",
-        int((time.perf_counter() - started) * 1000),
-        len(text),
-        len(audio_bytes),
-    )
-
-    return ORBVoiceTTSResult(
-        audio_bytes=audio_bytes,
-        content_type=_content_type_for_format(audio_format),
-        voice_id=voice_id,
-        voice_style=voice_style,
-        provider="elevenlabs",
-        voice_name=_display_voice_name(voice_id, "elevenlabs", fallback_used=False),
+        audio_bytes=response.audio_bytes,
+        content_type=response.content_type or content_type_for_format(request.audio_format),
+        voice_id=response.voice_id,
+        voice_style=request.voice_style,
+        provider=provider,
+        voice_name=_display_voice_name(response.voice_id, provider, fallback_used=False),
         fallback_used=False,
     )
 
@@ -471,6 +316,7 @@ def _synthesize_elevenlabs_sync(*, text: str, voice_id: str, voice_style: str, a
 async def synthesize_spoken_reply(
     *,
     text: str,
+    governance: AiTtsGovernanceContext,
     voice_id: str | None = None,
     voice_style: str | None = None,
     audio_format: str = "mp3",
@@ -517,19 +363,16 @@ async def synthesize_spoken_reply(
 
     last_error: ORBVoiceTTSError | None = None
     for index, provider in enumerate(providers):
+        request = _build_synthesis_request(
+            text=cleaned,
+            provider=provider,
+            voice_id=resolved_voice,
+            voice_style=resolved_style,
+            audio_format=resolved_format,
+            context=context,
+        )
         try:
-            result = await asyncio.wait_for(
-                asyncio.to_thread(
-                    generate_speech,
-                    text=cleaned,
-                    voice_id=resolved_voice,
-                    voice_style=resolved_style,
-                    audio_format=resolved_format,
-                    provider=provider,
-                    context=context,
-                ),
-                timeout=ORB_TTS_TIMEOUT_SECONDS,
-            )
+            result = await _synthesize_via_governed_egress(request=request, governance=governance)
             unavailable = _elevenlabs_unavailable_reason()
             provider_fallback = index > 0
             katherine_fallback = katherine_requested and result.provider != "elevenlabs"

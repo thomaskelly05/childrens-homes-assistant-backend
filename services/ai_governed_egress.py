@@ -7,6 +7,7 @@ the governance layer itself.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import re
 from collections.abc import AsyncIterator
@@ -19,6 +20,13 @@ from schemas.ai_models import (
     AiProviderRequest,
     AiProviderResponse,
 )
+from schemas.ai_tts import (
+    FEATURE_ORB_PREMIUM_TTS,
+    AiTtsGovernanceContext,
+    AiTtsSynthesisRequest,
+    AiTtsSynthesisResponse,
+    TtsProviderName,
+)
 from schemas.data_protection import AIPrivacyDecision
 from services.ai_external_call_governance import (
     evaluate_external_call,
@@ -27,8 +35,23 @@ from services.ai_external_call_governance import (
 )
 from services.ai_provider_adapter_registry import ai_provider_adapter_registry
 from services.ai_provider_registry import ai_provider_registry
+from services.ai_tts_provider_adapter_registry import ai_tts_provider_adapter_registry
 
 logger = logging.getLogger("indicare.ai_governed_egress")
+
+_TTS_MODEL_ALLOWLIST: dict[str, frozenset[str]] = {
+    TtsProviderName.OPENAI.value: frozenset({"tts-1", "tts-1-hd"}),
+    TtsProviderName.ELEVENLABS.value: frozenset(
+        {
+            "eleven_multilingual_v2",
+            "eleven_turbo_v2",
+            "eleven_turbo_v2_5",
+            "eleven_flash_v2",
+            "eleven_flash_v2_5",
+        }
+    ),
+    TtsProviderName.MOCK.value: frozenset({"mock-tts", "fake-test-tts"}),
+}
 
 _EXTERNAL_PROVIDERS = frozenset(
     {
@@ -62,6 +85,13 @@ class ProviderEgressDecision:
     metadata: dict[str, Any] = field(default_factory=dict)
 
 
+@dataclass
+class TtsEgressDecision(ProviderEgressDecision):
+    provider_selected: str | None = None
+    fallback_used: bool = False
+    audio_bytes_len: int | None = None
+
+
 def _text(value: Any) -> str:
     return str(value or "").strip()
 
@@ -79,6 +109,43 @@ def _sanitize_provider_error(error: str | None, *, error_type: str | None = None
     if error_type and error_type not in cleaned:
         return f"{cleaned} ({error_type})"
     return cleaned
+
+
+def _audit_tts_egress_decision(
+    governance: AiTtsGovernanceContext,
+    egress: TtsEgressDecision,
+    *,
+    provider: TtsProviderName | None = None,
+    model: str | None = None,
+) -> None:
+    try:
+        from services.indicare_ai_governance_event_service import indicare_ai_governance_event_service
+
+        indicare_ai_governance_event_service.record_event(
+            {
+                "surface": governance.surface,
+                "event_type": "governed_egress_decision",
+                "user_id": str(governance.user_id) if governance.user_id is not None else None,
+                "home_id": governance.home_id,
+                "model_provider": provider.value if provider else None,
+                "model_name": model,
+                "metadata": {
+                    "feature": governance.feature,
+                    "governance_surface": governance.surface,
+                    "route": governance.route,
+                    "source": governance.source,
+                    "allowed": egress.allowed,
+                    "blocked_reason": egress.blocked_reason,
+                    "governance_blocked": egress.governance_blocked,
+                    "redaction_applied": egress.redaction_applied,
+                    "provider_selected": egress.provider_selected,
+                    "audio_bytes_len": egress.audio_bytes_len,
+                    "modality": "tts",
+                },
+            }
+        )
+    except Exception:
+        logger.debug("governed tts egress audit event skipped", exc_info=True)
 
 
 def _audit_egress_decision(
@@ -120,8 +187,13 @@ def _audit_egress_decision(
 class AiGovernedEgress:
     """Mandatory governance chokepoint between product callers and provider adapters."""
 
-    def __init__(self, adapter_registry: Any | None = None) -> None:
+    def __init__(
+        self,
+        adapter_registry: Any | None = None,
+        tts_adapter_registry: Any | None = None,
+    ) -> None:
         self._registry = adapter_registry or ai_provider_adapter_registry
+        self._tts_registry = tts_adapter_registry or ai_tts_provider_adapter_registry
 
     def _require_governance(self, governance: AiProviderGovernanceContext | None) -> AiProviderGovernanceContext:
         if governance is None:
@@ -410,6 +482,193 @@ class AiGovernedEgress:
                     "stream": True,
                 },
             )
+
+    def _require_tts_governance(self, governance: AiTtsGovernanceContext | None) -> AiTtsGovernanceContext:
+        if governance is None:
+            raise ValueError("tts_governance_context_required")
+        return governance
+
+    def _evaluate_tts(
+        self,
+        governance: AiTtsGovernanceContext,
+        *,
+        provider: TtsProviderName,
+        model: str,
+    ) -> TtsEgressDecision:
+        privacy = governance.privacy_decision
+        if privacy is None or not privacy.allowed:
+            return TtsEgressDecision(
+                allowed=False,
+                blocked_reason=(privacy.reason if privacy else "external_processing_blocked"),
+                privacy_decision=privacy,
+                governance_blocked=True,
+                feature_blocked=bool(privacy and privacy.reason == "feature_not_allowlisted"),
+            )
+
+        if governance.feature != FEATURE_ORB_PREMIUM_TTS:
+            return TtsEgressDecision(
+                allowed=False,
+                blocked_reason="tts_feature_invalid",
+                privacy_decision=privacy,
+                governance_blocked=True,
+                feature_blocked=True,
+            )
+
+        if not _text(governance.source):
+            return TtsEgressDecision(
+                allowed=False,
+                blocked_reason="tts_source_required",
+                privacy_decision=privacy,
+                governance_blocked=True,
+            )
+
+        allowed_models = _TTS_MODEL_ALLOWLIST.get(provider.value)
+        if allowed_models is not None and model not in allowed_models and provider != TtsProviderName.MOCK:
+            return TtsEgressDecision(
+                allowed=False,
+                blocked_reason="model_not_allowlisted",
+                privacy_decision=privacy,
+                governance_blocked=True,
+                model_blocked=True,
+            )
+
+        adapter = self._tts_registry.get(provider)
+        if adapter is None or not adapter.is_available():
+            if provider == TtsProviderName.MOCK:
+                pass
+            else:
+                return TtsEgressDecision(
+                    allowed=False,
+                    blocked_reason="provider_unavailable",
+                    privacy_decision=privacy,
+                    governance_blocked=True,
+                    provider_blocked=True,
+                )
+
+        return TtsEgressDecision(
+            allowed=True,
+            privacy_decision=privacy,
+            redaction_applied=governance.redaction_applied,
+            provider_selected=provider.value,
+            metadata={"source": governance.source},
+        )
+
+    def _blocked_tts_response(
+        self,
+        request: AiTtsSynthesisRequest,
+        egress: TtsEgressDecision,
+    ) -> AiTtsSynthesisResponse:
+        reason = egress.blocked_reason or "governance_blocked"
+        return AiTtsSynthesisResponse(
+            audio_bytes=b"",
+            content_type="audio/mpeg",
+            provider=request.provider,
+            model=request.model,
+            voice_id=request.voice_id,
+            latency_ms=0,
+            audio_bytes_len=0,
+            error=_sanitize_provider_error(reason),
+            error_code=reason,
+            metadata={
+                "governance_blocked": egress.governance_blocked,
+                "blocked_reason": reason,
+            },
+        )
+
+    async def synthesize_speech(
+        self,
+        request: AiTtsSynthesisRequest,
+        *,
+        governance: AiTtsGovernanceContext | None,
+    ) -> tuple[AiTtsSynthesisResponse, TtsEgressDecision]:
+        """Governed TTS provider chokepoint (defence-in-depth after Phase 2A route gate)."""
+        governance = self._require_tts_governance(governance)
+        text = _text(request.text)
+        text_len = len(text)
+        if not text:
+            blocked = TtsEgressDecision(
+                allowed=False,
+                blocked_reason="empty_text",
+                governance_blocked=True,
+            )
+            return self._blocked_tts_response(request, blocked), blocked
+
+        egress = self._evaluate_tts(governance, provider=request.provider, model=request.model)
+        _audit_tts_egress_decision(governance, egress, provider=request.provider, model=request.model)
+
+        if egress.governance_blocked or not egress.allowed:
+            logger.info(
+                "governed_tts_egress_blocked provider=%s source=%s route=%s reason=%s text_len=%s",
+                request.provider.value,
+                governance.source,
+                governance.route,
+                egress.blocked_reason,
+                governance.text_len,
+            )
+            return self._blocked_tts_response(request, egress), egress
+
+        adapter = self._tts_registry.get(request.provider)
+        if adapter is None or not adapter.is_available():
+            blocked = TtsEgressDecision(
+                allowed=False,
+                blocked_reason="provider_unavailable",
+                governance_blocked=True,
+                provider_blocked=True,
+                privacy_decision=governance.privacy_decision,
+            )
+            return self._blocked_tts_response(request, blocked), blocked
+
+        try:
+            response = await asyncio.to_thread(adapter.synthesize_speech, request)
+        except Exception as exc:
+            logger.warning(
+                "governed_tts_egress_failed provider=%s error_type=%s text_len=%s",
+                request.provider.value,
+                type(exc).__name__,
+                text_len,
+            )
+            blocked = TtsEgressDecision(
+                allowed=False,
+                blocked_reason=_sanitize_provider_error("provider_error", error_type=type(exc).__name__),
+                privacy_decision=governance.privacy_decision,
+                governance_blocked=False,
+                provider_selected=request.provider.value,
+            )
+            return self._blocked_tts_response(request, blocked), blocked
+
+        if response.error:
+            response = response.model_copy(
+                update={
+                    "error": _sanitize_provider_error(
+                        response.error,
+                        error_type=(response.metadata or {}).get("error_type"),
+                    )
+                }
+            )
+            egress.allowed = False
+            egress.blocked_reason = response.error_code or "tts_provider_failed"
+            egress.provider_selected = request.provider.value
+            logger.info(
+                "governed_tts_egress_provider_failed provider=%s code=%s text_len=%s",
+                request.provider.value,
+                response.error_code,
+                text_len,
+            )
+            return response, egress
+
+        egress.allowed = True
+        egress.audio_bytes_len = response.audio_bytes_len
+        egress.provider_selected = request.provider.value
+        logger.info(
+            "governed_tts_egress_ok provider=%s source=%s route=%s text_len=%s bytes=%s latency_ms=%s",
+            request.provider.value,
+            governance.source,
+            governance.route,
+            governance.text_len,
+            response.audio_bytes_len,
+            response.latency_ms,
+        )
+        return response, egress
 
 
 ai_governed_egress = AiGovernedEgress()

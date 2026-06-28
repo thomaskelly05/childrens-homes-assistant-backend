@@ -6,20 +6,48 @@ import os
 import unittest
 from unittest.mock import patch
 
+from schemas.ai_tts import AiTtsSynthesisResponse, TtsProviderName
+from schemas.data_protection import AIPrivacyDecision, DataClassification
+from services.ai_governed_egress import TtsEgressDecision
+from services.orb_voice_tts_intent_service import build_tts_governance_context, gate_orb_voice_tts_request
 from services.orb_voice_tts_service import ORBVoiceTTSResult, synthesize_spoken_reply
 
 
 class OrbVoiceV2TtsFallbackTests(unittest.IsolatedAsyncioTestCase):
     async def test_katherine_with_forced_openai_marks_fallback_true(self) -> None:
-        fake_result = ORBVoiceTTSResult(
-            audio_bytes=b"audio",
-            content_type="audio/mpeg",
-            voice_id="katherine",
-            voice_style="calm_therapeutic",
-            provider="openai",
-            voice_name="Fallback voice (nova)",
-            fallback_used=False,
+        with patch(
+            "services.orb_voice_tts_intent_service.evaluate_external_call",
+            return_value=AIPrivacyDecision(
+                allowed=True,
+                reason="external_ai_allowed_with_governance",
+                mode="external_redacted",
+                redaction_mode="strict",
+                classification=DataClassification.INTERNAL_OPERATIONAL,
+            ),
+        ):
+            gate = gate_orb_voice_tts_request(
+                source="manual_speak",
+                text="I can help you think that through.",
+                route="tests.fallback",
+            )
+        governance = build_tts_governance_context(
+            gate=gate,
+            provider_id=None,
+            home_id=None,
+            user_id=1,
+            route="tests.fallback",
         )
+
+        async def fake_egress(request, governance=None):
+            return AiTtsSynthesisResponse(
+                audio_bytes=b"audio",
+                content_type="audio/mpeg",
+                provider=TtsProviderName.OPENAI,
+                model=request.model,
+                voice_id=request.voice_id,
+                latency_ms=1,
+                audio_bytes_len=5,
+            ), TtsEgressDecision(allowed=True)
 
         with patch.dict(
             os.environ,
@@ -30,14 +58,18 @@ class OrbVoiceV2TtsFallbackTests(unittest.IsolatedAsyncioTestCase):
             },
             clear=False,
         ), patch(
-            "services.orb_voice_tts_service.generate_speech",
-            return_value=fake_result,
+            "services.orb_voice_tts_service.ai_governed_egress.synthesize_speech",
+            side_effect=fake_egress,
         ), patch(
             "services.orb_voice_tts_service._provider_configured",
             return_value=True,
+        ), patch(
+            "services.orb_voice_tts_service.ORB_TTS_ENABLED",
+            True,
         ):
             final = await synthesize_spoken_reply(
-                text="I can help you think that through.",
+                text=gate.redacted_text,
+                governance=governance,
                 voice_id="katherine",
                 context="live_voice",
             )
