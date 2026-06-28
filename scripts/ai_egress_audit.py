@@ -46,7 +46,8 @@ APPROVED_INFERENCE_MODULES = {
     os.path.join("services", "ai_external_call_governance.py"),
     os.path.join("assistant", "llm_provider.py"),
     os.path.join("services", "ai_providers", "openai_provider.py"),
-    os.path.join("services", "orb_voice_tts_service.py"),
+    os.path.join("services", "ai_providers", "openai_tts_provider.py"),
+    os.path.join("services", "ai_providers", "elevenlabs_tts_provider.py"),
     # Governance-allow-listed legacy streaming path (applies evaluate_external_call
     # + redact_chat_messages); documented in tests/test_no_direct_external_ai_bypass.py.
     os.path.join("assistant", "streaming.py"),

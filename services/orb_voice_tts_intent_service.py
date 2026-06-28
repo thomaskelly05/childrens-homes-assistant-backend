@@ -8,6 +8,7 @@ from enum import StrEnum
 
 from fastapi import HTTPException
 
+from schemas.ai_tts import FEATURE_ORB_PREMIUM_TTS, AiTtsGovernanceContext
 from schemas.data_protection import AIPrivacyDecision, DataClassification
 from services.ai_external_call_governance import (
     FEATURE_ORB_TTS,
@@ -216,6 +217,45 @@ def gate_orb_voice_tts_request(
         redacted_text=redacted_text,
         redaction_applied=redaction_applied,
         decision=decision,
+    )
+
+
+def build_tts_governance_context(
+    *,
+    gate: OrbVoiceTtsGateResult,
+    provider_id: int | None,
+    home_id: int | None,
+    user_id: int | None,
+    route: str,
+    surface: str = "orb_residential",
+    voice_id: str | None = None,
+    voice_style: str | None = None,
+    model: str | None = None,
+    provider_preference: str | None = None,
+    context: str | None = None,
+    expert_depth: str | None = None,
+) -> AiTtsGovernanceContext:
+    """Build safe TTS governance context from a Phase 2A gate result."""
+    return AiTtsGovernanceContext(
+        feature=FEATURE_ORB_PREMIUM_TTS,
+        surface=surface,
+        route=route,
+        source=gate.source,
+        provider_id=provider_id,
+        home_id=home_id,
+        user_id=user_id,
+        text_len=gate.text_len,
+        redaction_applied=gate.redaction_applied,
+        privacy_decision=gate.decision,
+        provider_preference=provider_preference,
+        voice_id=voice_id,
+        voice_style=voice_style,
+        model=model,
+        metadata={
+            "context": (context or "").strip().lower() or None,
+            "expert_depth": (expert_depth or "general_light").strip().lower(),
+            "route_gate_passed": True,
+        },
     )
 
 

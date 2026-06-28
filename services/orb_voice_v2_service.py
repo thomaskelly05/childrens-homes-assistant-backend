@@ -6,6 +6,7 @@ import logging
 import re
 from typing import Any
 
+from schemas.ai_tts import AiTtsGovernanceContext
 from services.orb_voice_respond_service import generate_voice_response
 from services.orb_voice_spoken_compression_service import (
     VOICE_TTS_CHAR_HARD_CAP,
@@ -17,7 +18,7 @@ from services.orb_voice_tts_service import (
     synthesize_spoken_reply,
     voice_runtime_tts_status_payload,
 )
-from services.orb_voice_transcription_service import OrbVoiceTranscriptionError, transcribe_voice_audio
+from services.orb_voice_transcription_service import transcribe_voice_audio
 
 logger = logging.getLogger(__name__)
 
@@ -111,7 +112,13 @@ async def voice_v2_respond(
     }
 
 
-async def voice_v2_speak(*, text: str, context: str = "live_voice", voice: str | None = None) -> dict[str, Any]:
+async def voice_v2_speak(
+    *,
+    text: str,
+    governance: AiTtsGovernanceContext,
+    context: str = "live_voice",
+    voice: str | None = None,
+) -> dict[str, Any]:
     spoken, capped = cap_spoken_text(text, context=context)
     if not spoken:
         raise ORBVoiceTTSError("empty_text", "Spoken text is required.", 400)
@@ -120,6 +127,7 @@ async def voice_v2_speak(*, text: str, context: str = "live_voice", voice: str |
         voice_id = "katherine"
     result = await synthesize_spoken_reply(
         text=spoken,
+        governance=governance,
         voice_id=voice_id,
         voice_style="calm_therapeutic",
         audio_format="mp3",

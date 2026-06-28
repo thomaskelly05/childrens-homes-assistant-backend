@@ -8,8 +8,10 @@ from fastapi.testclient import TestClient
 
 from auth.orb_residential_dependencies import require_orb_residential_auth
 from routers.orb_voice_tts_routes import require_orb_voice_premium, router
+from schemas.ai_tts import AiTtsSynthesisResponse, TtsProviderName
 from schemas.data_protection import AIPrivacyDecision, DataClassification
 from services import orb_ai_abuse_guard_service as orb_ai_abuse_guard
+from services.ai_governed_egress import TtsEgressDecision
 
 
 def _allowed_decision() -> AIPrivacyDecision:
@@ -20,6 +22,19 @@ def _allowed_decision() -> AIPrivacyDecision:
         redaction_mode="strict",
         classification=DataClassification.INTERNAL_OPERATIONAL,
     )
+
+
+async def _fake_governed_tts_synthesis(request, governance=None):
+    audio = b"ID3eleven-mp3" if request.provider == TtsProviderName.ELEVENLABS else b"ID3fake-mp3"
+    return AiTtsSynthesisResponse(
+        audio_bytes=audio,
+        content_type="audio/mpeg",
+        provider=request.provider,
+        model=request.model,
+        voice_id=request.voice_id,
+        latency_ms=1,
+        audio_bytes_len=len(audio),
+    ), TtsEgressDecision(allowed=True, provider_selected=request.provider.value)
 
 
 @pytest.fixture
@@ -120,22 +135,10 @@ def test_tts_post_returns_audio_when_configured(tts_client, monkeypatch, allow_t
     monkeypatch.setenv("ORB_TTS_PROVIDER", "openai")
     monkeypatch.setenv("OPENAI_API_KEY", "test-key")
 
-    class FakeSpeech:
-        def create(self, **kwargs):
-            class FakeResponse:
-                content = b"ID3fake-mp3"
-
-            return FakeResponse()
-
-    class FakeAudio:
-        speech = FakeSpeech()
-
-    class FakeOpenAI:
-        def __init__(self, *args, **kwargs):
-            self.audio = FakeAudio()
-
-    with patch("services.openai_header_sanitisation.create_sync_openai_client") as mock_client_factory:
-        mock_client_factory.return_value = FakeOpenAI()
+    with patch(
+        "services.orb_voice_tts_service.ai_governed_egress.synthesize_speech",
+        side_effect=_fake_governed_tts_synthesis,
+    ):
         response = tts_client.post(
             "/orb/voice/tts",
             json={
@@ -156,33 +159,12 @@ def test_tts_post_uses_elevenlabs_when_selected(tts_client, monkeypatch, allow_t
     monkeypatch.setenv("ORB_TTS_PROVIDER", "elevenlabs")
     monkeypatch.setenv("ELEVENLABS_API_KEY", "test-eleven-key")
     monkeypatch.setenv("ELEVENLABS_VOICE_ID", "voice-abc123")
-    monkeypatch.setenv("ELEVENLABS_MODEL_ID", "eleven_multilingual_v2")
-    monkeypatch.setenv("ELEVENLABS_OUTPUT_FORMAT", "mp3_44100_128")
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
 
-    class FakeResponse:
-        content = b"ID3eleven-mp3"
-        status_code = 200
-
-        def raise_for_status(self):
-            return None
-
-    class FakeClient:
-        def __init__(self, *args, **kwargs):
-            pass
-
-        def __enter__(self):
-            return self
-
-        def __exit__(self, *args):
-            return False
-
-        def post(self, url, **kwargs):
-            assert "api.elevenlabs.io" in url
-            assert kwargs["headers"]["xi-api-key"] == "test-eleven-key"
-            assert kwargs["json"]["text"] == "Hello from ORB."
-            return FakeResponse()
-
-    with patch("services.orb_voice_tts_service.httpx.Client", FakeClient):
+    with patch(
+        "services.orb_voice_tts_service.ai_governed_egress.synthesize_speech",
+        side_effect=_fake_governed_tts_synthesis,
+    ), patch("services.orb_voice_tts_service._provider_configured", return_value=True):
         response = tts_client.post(
             "/orb/voice/tts",
             json={
@@ -229,23 +211,11 @@ def test_tts_logs_do_not_include_full_text(tts_client, monkeypatch, caplog, allo
     monkeypatch.setenv("ORB_TTS_PROVIDER", "openai")
     monkeypatch.setenv("OPENAI_API_KEY", "test-key")
 
-    class FakeSpeech:
-        def create(self, **kwargs):
-            class FakeResponse:
-                content = b"ID3fake-mp3"
-
-            return FakeResponse()
-
-    class FakeAudio:
-        speech = FakeSpeech()
-
-    class FakeOpenAI:
-        def __init__(self, *args, **kwargs):
-            self.audio = FakeAudio()
-
     spoken = "Sensitive safeguarding detail should not appear in logs."
-    with patch("services.openai_header_sanitisation.create_sync_openai_client") as mock_client_factory:
-        mock_client_factory.return_value = FakeOpenAI()
+    with patch(
+        "services.orb_voice_tts_service.ai_governed_egress.synthesize_speech",
+        side_effect=_fake_governed_tts_synthesis,
+    ):
         response = tts_client.post(
             "/orb/voice/tts",
             json={
