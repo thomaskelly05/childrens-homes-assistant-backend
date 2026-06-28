@@ -411,6 +411,15 @@ RETIRED_COMPATIBILITY_ROUTERS: frozenset[str] = frozenset(
         "routers.daily_notes_routes",
     )
 )
+# NR-1 Phase 2C PR 6: assistant realtime modules that must not mount without an
+# explicit governance decision. See tests/test_assistant_realtime_router_guard.py.
+UNMOUNTED_DANGEROUS_ASSISTANT_REALTIME_ROUTERS: frozenset[str] = frozenset(
+    (
+        "routers.assistant_realtime_proxy_routes",
+        "routers.assistant_realtime_voice_routes",
+        "routers.indicare_ai_realtime_routes",
+    )
+)
 _LAST_LOAD_REPORT: "RouterLoadReport | None" = None
 
 
