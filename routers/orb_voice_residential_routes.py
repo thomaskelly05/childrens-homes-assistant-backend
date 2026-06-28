@@ -24,7 +24,10 @@ from schemas.orb_voice_realtime import (
     VoiceProviderCapabilities,
 )
 from services.orb_ai_abuse_guard_service import enforce_daily_ai_call_budget, enforce_transcript_length
-from services.orb_realtime_provider_service import orb_realtime_provider_service
+from services.orb_voice_realtime_governance_service import (
+    issue_orb_voice_conversational_realtime_session,
+    issue_orb_voice_transcription_realtime_session,
+)
 from services.orb_voice_profiles import (
     build_residential_voice_instructions,
     normalise_profile_id,
@@ -329,11 +332,12 @@ async def orb_voice_session(
         session_id = f"openai_{os.urandom(8).hex()}"
         instructions = build_residential_voice_instructions(profile_id=profile_id, mode=payload.mode)
         openai_voice = resolve_openai_voice(profile_id)
-        provider_result = await orb_realtime_provider_service.create_ephemeral_session(
+        provider_result = await issue_orb_voice_conversational_realtime_session(
             instructions=instructions,
             voice=openai_voice,
             current_user=current_user,
             orb_session_id=session_id,
+            route="POST /orb/voice/session",
         )
         if provider_result.get("configured") and provider_result.get("session") and not provider_result.get("fallback_text_mode"):
             session_payload = provider_result.get("session") or {}
@@ -499,10 +503,11 @@ async def orb_voice_transcribe_realtime_session(
         }
 
     session_id = f"voice_tx_{uuid.uuid4().hex[:16]}"
-    provider_result = await orb_realtime_provider_service.create_dictate_transcription_session(
+    provider_result = await issue_orb_voice_transcription_realtime_session(
         instructions=VOICE_REALTIME_TRANSCRIPTION_INSTRUCTIONS,
         current_user=_current_user,
         orb_session_id=session_id,
+        route="POST /orb/voice/transcribe/realtime/session",
     )
     if not provider_result.get("configured") or provider_result.get("fallback_text_mode"):
         return {
