@@ -15,9 +15,11 @@ from schemas.ai_tts import (
     TtsProviderName,
 )
 from schemas.data_protection import AIPrivacyDecision, DataClassification
+from schemas.indicare_ai_governance import AiGovernanceEventCreate
 from services.ai_governed_egress import AiGovernedEgress, TtsEgressDecision
 from services.ai_providers.fake_tts_governance_test_provider import FakeTtsGovernanceTestProvider
 from services.ai_tts_provider_adapter_registry import AiTtsProviderAdapterRegistry
+from services.indicare_ai_governance_event_service import indicare_ai_governance_event_service
 
 
 def _allowed_decision() -> AIPrivacyDecision:
@@ -43,7 +45,7 @@ def _denied_decision() -> AIPrivacyDecision:
 def _governance(**overrides) -> AiTtsGovernanceContext:
     base = AiTtsGovernanceContext(
         feature=FEATURE_ORB_PREMIUM_TTS,
-        surface="orb_residential",
+        surface="standalone_orb",
         route="tests.test_ai_governed_tts_egress",
         source="manual_speak",
         text_len=19,
@@ -82,6 +84,79 @@ def fake_tts_registry(monkeypatch):
 def governed_tts_egress(fake_tts_registry):
     registry, _fake = fake_tts_registry
     return AiGovernedEgress(tts_adapter_registry=registry)
+
+
+@pytest.fixture(autouse=True)
+def reset_governance_events():
+    indicare_ai_governance_event_service.reset_for_tests()
+    yield
+    indicare_ai_governance_event_service.reset_for_tests()
+
+
+def test_build_tts_governance_context_uses_allowed_surface():
+    from services.orb_voice_tts_intent_service import build_tts_governance_context, gate_orb_voice_tts_request
+
+    with patch(
+        "services.orb_voice_tts_intent_service.evaluate_external_call",
+        return_value=_allowed_decision(),
+    ):
+        gate = gate_orb_voice_tts_request(
+            source="manual_speak",
+            text="Service check only.",
+            route="tests.surface",
+        )
+    governance = build_tts_governance_context(
+        gate=gate,
+        provider_id=None,
+        home_id=None,
+        user_id=1,
+        route="tests.surface",
+    )
+    assert governance.surface == "standalone_orb"
+    assert governance.feature == FEATURE_ORB_PREMIUM_TTS
+    assert governance.source == "manual_speak"
+
+
+def test_ai_governance_event_create_accepts_tts_egress_surface():
+    event = AiGovernanceEventCreate(
+        surface="standalone_orb",
+        event_type="governed_egress_decision",
+        model_provider="openai",
+        model_name="tts-1",
+        metadata={
+            "feature": FEATURE_ORB_PREMIUM_TTS,
+            "governance_surface": "standalone_orb",
+            "route": "POST /orb/voice/tts",
+            "source": "manual_speak",
+            "modality": "tts",
+        },
+    )
+    assert event.surface == "standalone_orb"
+
+
+def test_orb_residential_is_not_an_allowed_governance_surface():
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError):
+        AiGovernanceEventCreate(
+            surface="orb_residential",  # type: ignore[arg-type]
+            event_type="governed_egress_decision",
+        )
+
+
+@pytest.mark.asyncio
+async def test_governed_tts_egress_ok_persists_governance_event(governed_tts_egress, fake_tts_registry):
+    _registry, _fake = fake_tts_registry
+    await governed_tts_egress.synthesize_speech(
+        _request(provider=TtsProviderName.MOCK, model="mock-tts"),
+        governance=_governance(),
+    )
+    events = indicare_ai_governance_event_service.get_recent_events()
+    assert len(events) == 1
+    assert events[0].surface == "standalone_orb"
+    assert events[0].event_type == "governed_egress_decision"
+    assert events[0].metadata.get("feature") == FEATURE_ORB_PREMIUM_TTS
+    assert events[0].metadata.get("source") == "manual_speak"
 
 
 @pytest.mark.asyncio
@@ -162,7 +237,7 @@ async def test_invalid_feature_blocked(governed_tts_egress, fake_tts_registry):
     _registry, fake = fake_tts_registry
     bad_governance = AiTtsGovernanceContext.model_construct(
         feature="orb_model_router_chat",
-        surface="orb_residential",
+        surface="standalone_orb",
         route="tests.test_ai_governed_tts_egress",
         source="manual_speak",
         text_len=19,
