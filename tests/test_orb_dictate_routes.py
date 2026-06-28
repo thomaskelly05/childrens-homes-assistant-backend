@@ -263,7 +263,7 @@ def test_dictate_realtime_session_returns_client_secret_when_configured(dictate_
         }
 
     monkeypatch.setattr(
-        "routers.orb_dictate_routes.orb_realtime_provider_service.create_dictate_transcription_session",
+        "routers.orb_dictate_routes.issue_orb_dictate_transcription_realtime_session",
         fake_dictate_session,
     )
     response = dictate_client.post("/orb/dictate/realtime/session", json={})

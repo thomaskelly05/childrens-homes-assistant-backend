@@ -35,6 +35,7 @@ It is referenced by `constitution/audits/post-constitution-system-audit/01-nr-1-
 | `services/ai_provider_adapter_registry.py` | Provider adapter registry | Resolves adapters for governed egress; test adapters require `AI_ALLOW_TEST_PROVIDER=true` |
 | `services/ai_tts_provider_adapter_registry.py` | TTS provider adapter registry (NR-1 Phase 2B) | Resolves TTS adapters for `AiGovernedEgress.synthesize_speech()` |
 | `services/orb_voice_realtime_governance_service.py` | ORB Voice realtime session orchestration | Phase 2C governed egress for conversational + transcription realtime sessions (no direct provider calls) |
+| `services/orb_dictate_realtime_governance_service.py` | ORB Dictate realtime session orchestration | Phase 2C governed egress for Dictate transcription realtime sessions (no direct provider calls) |
 | `services/orb_voice_tts_service.py` | ORB Voice TTS orchestration | Phase 2A route gate + Phase 2B governed egress orchestration (no direct provider calls) |
 | `assistant/streaming.py` | Legacy streaming (governance-allow-listed) | `evaluate_external_call` + `redact_chat_messages`; not a live product route |
 
@@ -55,7 +56,6 @@ pre-existing `tests/test_no_direct_external_ai_bypass.py` /
 
 ## Remaining NR-1 work (not yet done — see the remediation report)
 
-- Wire active ORB Dictate realtime **routes** through `AiGovernedEgress.issue_realtime_session()` (Phase 2C PR 3+).
 - Wire remaining ORB realtime routes (`POST /orb/realtime/session`, `/assistant/realtime/*`) through governed egress.
 - Govern browser-direct **WebRTC/media** paths to `api.openai.com/v1/realtime/calls` (Phase 2C follow-up).
 - Repo-wide guard proving product code cannot call provider adapters or SDK clients directly (Phase 2D).
