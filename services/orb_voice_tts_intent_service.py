@@ -227,7 +227,7 @@ def build_tts_governance_context(
     home_id: int | None,
     user_id: int | None,
     route: str,
-    surface: str = "orb_residential",
+    surface: str = "standalone_orb",
     voice_id: str | None = None,
     voice_style: str | None = None,
     model: str | None = None,
