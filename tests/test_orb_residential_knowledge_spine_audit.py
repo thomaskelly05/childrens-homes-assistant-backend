@@ -8,11 +8,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-import pytest
-
 from services.orb_residential_knowledge_spine_audit_service import (
     REQUIRED_CORE_SOURCE_IDS,
-    REQUIRED_CORE_SOURCES,
     SCCIF_JUDGEMENT_AREAS,
     NINE_QUALITY_STANDARDS,
     orb_residential_knowledge_spine_audit_service,
