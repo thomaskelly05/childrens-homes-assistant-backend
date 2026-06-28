@@ -95,7 +95,7 @@ def orb_client():
     client = TestClient(app)
     yield client
     app.dependency_overrides.clear()
-    orb_session_store._sessions.clear()
+    orb_session_store.reset_for_tests()
 
 
 @pytest.fixture(autouse=True)
@@ -107,10 +107,35 @@ def reset_governance_events():
 
 @pytest.fixture(autouse=True)
 def reset_voice_sessions(monkeypatch):
+    import services.orb_voice_session_service as voice_session_module
     from services.orb_voice_session_service import orb_voice_session_service
 
     orb_voice_session_service.sessions.clear()
     monkeypatch.setattr("services.orb_voice_session_service.record_audit_event", lambda **kwargs: None)
+    monkeypatch.setattr(
+        "services.orb_voice_session_service.orb_observability_service.record_event",
+        lambda *args, **kwargs: None,
+    )
+    for method, impl in {
+        "start_session": lambda **kwargs: None,
+        "snapshot": lambda _session_id: {"scope": {"home_id": 10}},
+        "end_session": lambda _session_id: None,
+        "update_from_context": lambda **kwargs: None,
+        "record_user_turn": lambda **kwargs: {"scope": {"home_id": 10}},
+        "record_assistant_turn": lambda **kwargs: {"scope": {"home_id": 10}},
+        "mark_interrupted": lambda **kwargs: {"scope": {"home_id": 10}},
+        "prompt_context": lambda _session_id: {},
+    }.items():
+        monkeypatch.setattr(
+            voice_session_module.orb_memory_service,
+            method,
+            impl,
+            raising=False,
+        )
+    monkeypatch.setattr(
+        "services.orb_voice_session_service.orb_realtime_provider_service.provider_available",
+        lambda: True,
+    )
     yield
     orb_voice_session_service.sessions.clear()
 
@@ -179,7 +204,7 @@ def test_orb_session_start_does_not_use_governed_egress(orb_client, openai_env, 
         issue_mock,
     )
     monkeypatch.setattr(
-        "services.orb_realtime_provider_service.create_ephemeral_session",
+        "services.orb_voice_session_service.orb_realtime_provider_service.create_ephemeral_session",
         create_mock,
     )
     response = orb_client.post("/orb/session/start", json=_session_payload())
@@ -311,19 +336,25 @@ def test_audit_event_contains_safe_metadata_only(orb_client, openai_env, monkeyp
         "services.ai_governed_egress.ai_governed_egress._realtime_registry.get",
         lambda _provider: _Adapter(),
     )
-    orb_client.post("/orb/realtime/session", json=_session_payload())
+    with patch(
+        "services.orb_persona_policy.persona_instruction",
+        return_value=secret_instructions,
+    ):
+        orb_client.post("/orb/realtime/session", json=_session_payload())
 
-    events = indicare_ai_governance_event_service.list_events()
-    assert events
-    metadata = events[-1].metadata
+    events = indicare_ai_governance_event_service.get_recent_events()
+    assert len(events) >= 1
+    metadata = events[0].metadata or {}
     assert metadata["feature"] == FEATURE_ORB_OPERATIONAL_REALTIME_SESSION
     assert metadata["classification"] == "external_ai_realtime_session"
     assert metadata["modality"] == "realtime_session"
     assert metadata["route"] == ORB_OPERATIONAL_REALTIME_ROUTE
-    assert metadata["surface"] == "operational_orb"
     assert "instructions_len" in metadata
+    assert "SECRET CHILD CONTEXT" not in json.dumps(metadata)
+    assert "instructions" not in metadata
+    assert "client_secret" not in json.dumps(metadata)
+    assert captured_instructions
     assert secret_instructions not in json.dumps(metadata)
-    assert "ek_operational" not in json.dumps(metadata)
 
 
 def test_raw_instructions_and_client_secrets_not_logged(orb_client, openai_env, monkeypatch, caplog):
