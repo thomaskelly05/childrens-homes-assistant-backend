@@ -638,6 +638,30 @@ class OrbKnowledgeRetrievalService:
             "simple_standard_contract": is_simple_standard,
         }
 
+    def retrieval_context_from_bundle(
+        self,
+        bundle: dict[str, Any],
+        *,
+        prompt_tier: str | None = None,
+    ) -> dict[str, Any]:
+        """Build general-assistant retrieval context from a route-prepared request bundle."""
+        classification = dict(bundle.get("classification") or {})
+        packs = list(bundle.get("source_packs") or [])
+        effective_tier = _text(prompt_tier) or _text(bundle.get("prompt_tier")) or "fast"
+        return {
+            "classification": classification,
+            "source_packs": packs,
+            "document_results": [],
+            "citations": [],
+            "sources": [],
+            "grounding_context": bundle.get("grounding_context") or "",
+            "research_note": classification.get("research_note"),
+            "routing_hint": classification.get("routing_hint"),
+            "top_source_titles": [p.get("title") for p in packs if p.get("title")],
+            "prompt_tier": effective_tier,
+            "expert_answer_packet": bundle.get("expert_answer_packet") or {"active": False},
+        }
+
     def retrieve_sources(
         self,
         message: str,

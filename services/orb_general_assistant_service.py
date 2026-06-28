@@ -1173,6 +1173,9 @@ class OrbGeneralAssistantService:
         raw_user_message: str | None = None,
         stream_meta: dict[str, Any] | None = None,
         safety_scaffold: dict[str, Any] | None = None,
+        retrieval_bundle: dict[str, Any] | None = None,
+        prompt_tier: str | None = None,
+        retrieval: dict[str, Any] | None = None,
     ) -> AsyncIterator[str]:
         """Stream answer text deltas. Populates stream_meta with final assistant payload fields."""
         meta = stream_meta if stream_meta is not None else {}
@@ -1317,13 +1320,22 @@ class OrbGeneralAssistantService:
                     yield delta
                 return
 
-        retrieval = self.prepare_retrieval(
-            user_message,
-            mode=mode,
-            profile_context=profile_context or profile_block,
-            has_images=bool(images),
-            history=history,
-        )
+        if retrieval is None:
+            if retrieval_bundle is not None and not images:
+                effective_tier = _text(prompt_tier) or _text(retrieval_bundle.get("prompt_tier")) or "fast"
+                if effective_tier == "fast":
+                    retrieval = orb_knowledge_retrieval_service.retrieval_context_from_bundle(
+                        retrieval_bundle,
+                        prompt_tier=effective_tier,
+                    )
+            if retrieval is None:
+                retrieval = self.prepare_retrieval(
+                    user_message,
+                    mode=mode,
+                    profile_context=profile_context or profile_block,
+                    has_images=bool(images),
+                    history=history,
+                )
         system = self._build_llm_system_prompt(
             retrieval=retrieval,
             mode=mode,
