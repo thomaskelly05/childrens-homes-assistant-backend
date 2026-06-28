@@ -55,7 +55,7 @@ def test_provider_timeout_returns_text_fallback_without_raw_prompt_logging(monke
     monkeypatch.setenv("OPENAI_API_KEY", "test-key")
     monkeypatch.setenv("ORB_REALTIME_ENABLED", "true")
     monkeypatch.setenv("ORB_PROVIDER_FAILURE_THRESHOLD", "1")
-    monkeypatch.setattr("services.orb_realtime_provider_service.httpx.AsyncClient", TimeoutClient)
+    monkeypatch.setattr("services.ai_providers.openai_realtime_session_provider.httpx.AsyncClient", TimeoutClient)
     orb_observability_service.reset_for_tests()
     asyncio.run(scenario())
 
@@ -73,7 +73,7 @@ def test_provider_circuit_breaker_prevents_endless_retries(monkeypatch):
     monkeypatch.setenv("OPENAI_API_KEY", "test-key")
     monkeypatch.setenv("ORB_REALTIME_ENABLED", "true")
     monkeypatch.setenv("ORB_PROVIDER_FAILURE_THRESHOLD", "1")
-    monkeypatch.setattr("services.orb_realtime_provider_service.httpx.AsyncClient", TimeoutClient)
+    monkeypatch.setattr("services.ai_providers.openai_realtime_session_provider.httpx.AsyncClient", TimeoutClient)
     asyncio.run(scenario())
 
 
@@ -87,5 +87,5 @@ def test_provider_success_does_not_mark_text_recovery_active(monkeypatch):
 
     monkeypatch.setenv("OPENAI_API_KEY", "test-key")
     monkeypatch.setenv("ORB_REALTIME_ENABLED", "true")
-    monkeypatch.setattr("services.orb_realtime_provider_service.httpx.AsyncClient", SuccessClient)
+    monkeypatch.setattr("services.ai_providers.openai_realtime_session_provider.httpx.AsyncClient", SuccessClient)
     asyncio.run(scenario())
