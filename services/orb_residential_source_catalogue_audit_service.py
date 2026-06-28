@@ -38,6 +38,17 @@ StatutoryStatus = Literal[
     "provider_policy",
 ]
 
+FreshnessStatus = Literal[
+    "stable_legislation",
+    "statutory_guidance_periodic_review",
+    "annual_or_live_guidance",
+    "inspection_framework_live_guidance",
+    "clinical_guidance_review_required",
+    "local_policy_required",
+    "third_sector_periodic_review",
+    "lived_experience_context",
+]
+
 CitationAuthority = Literal[
     "authoritative_statute",
     "authoritative_guidance",
@@ -158,6 +169,19 @@ THIRD_SECTOR_STATUSES: frozenset[str] = frozenset(
     }
 )
 
+FRESHNESS_CATEGORIES: frozenset[str] = frozenset(
+    {
+        "stable_legislation",
+        "statutory_guidance_periodic_review",
+        "annual_or_live_guidance",
+        "inspection_framework_live_guidance",
+        "clinical_guidance_review_required",
+        "local_policy_required",
+        "third_sector_periodic_review",
+        "lived_experience_context",
+    }
+)
+
 FORBIDDEN_COMPLIANCE_PHRASES: tuple[str, ...] = (
     "guarantee compliance",
     "guaranteeing compliance",
@@ -182,6 +206,9 @@ REQUIRED_SOURCE_FIELDS: tuple[str, ...] = (
     "should_cite",
     "quote_allowed_default",
     "last_verified_date",
+    "review_frequency",
+    "source_owner",
+    "freshness_status",
     "update_check_required",
     "related_quality_standards",
     "related_sccif_judgement_areas",
@@ -194,6 +221,7 @@ REQUIRED_SOURCE_FIELDS: tuple[str, ...] = (
     "professional_judgement_boundary",
     "not_to_be_used_for",
     "requires_local_policy",
+    "local_policy_gap_reason",
 )
 
 

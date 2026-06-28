@@ -12,6 +12,39 @@ OUT_PATH = REPO_ROOT / "data" / "orb_source_catalogue" / "catalogue.json"
 
 LAST_VERIFIED = "2026-06-28"
 
+FRESHNESS_CATEGORIES = [
+    "stable_legislation",
+    "statutory_guidance_periodic_review",
+    "annual_or_live_guidance",
+    "inspection_framework_live_guidance",
+    "clinical_guidance_review_required",
+    "local_policy_required",
+    "third_sector_periodic_review",
+    "lived_experience_context",
+]
+
+FRESHNESS_REVIEW_FREQUENCIES = {
+    "stable_legislation": "Amendment-aware review before source-backed use and at least annual catalogue review",
+    "statutory_guidance_periodic_review": "Periodic publisher review and whenever statutory guidance is updated",
+    "annual_or_live_guidance": "Annual/live review; check latest publisher version before source-backed answers",
+    "inspection_framework_live_guidance": "Regular live Ofsted framework review before inspection-facing use",
+    "clinical_guidance_review_required": "Periodic clinical guidance review before health-sensitive use",
+    "local_policy_required": "Requires local upload and local verification before operational use or citation",
+    "third_sector_periodic_review": "Periodic review; keep reflective and non-statutory",
+    "lived_experience_context": "Periodic context review; reflective only and never statutory",
+}
+
+ANNUAL_OR_LIVE_SOURCE_IDS = {
+    "keeping_children_safe_in_education",
+    "safer_recruitment_education",
+    "children_missing_education",
+    "school_attendance_guidance",
+    "exclusions_suspensions_guidance",
+    "ico_children_uk_gdpr",
+    "ico_childrens_code",
+    "ico_subject_access_requests",
+}
+
 QS = {
     "qs1": "qs1_quality_and_purpose",
     "qs2": "qs2_child_voice",
@@ -29,6 +62,49 @@ SCCIF = {
     "protected": "helped_and_protected",
     "leadership": "leadership_management",
 }
+
+
+def _freshness_status(
+    source_id: str,
+    source_type: str,
+    statutory_status: str,
+    publisher: str,
+) -> str:
+    publisher_lower = publisher.lower()
+    if source_type == "provider_policy" or statutory_status == "provider_policy":
+        return "local_policy_required"
+    if source_type == "legislation" or statutory_status in {
+        "primary_legislation",
+        "secondary_legislation",
+    }:
+        return "stable_legislation"
+    if source_id == "ofsted_sccif_childrens_homes" or source_type == "inspection_framework":
+        return "inspection_framework_live_guidance"
+    if source_type == "clinical_guidance" or publisher == "NICE":
+        return "clinical_guidance_review_required"
+    if source_type == "lived_experience":
+        return "lived_experience_context"
+    if source_type == "third_sector" or statutory_status == "third_sector_resource":
+        return "third_sector_periodic_review"
+    if (
+        source_id in ANNUAL_OR_LIVE_SOURCE_IDS
+        or "ico" in publisher_lower
+        or source_type in {"data_protection_guidance", "government_practice_guidance", "professional_guidance"}
+    ):
+        return "annual_or_live_guidance"
+    return "statutory_guidance_periodic_review"
+
+
+def _default_local_policy_gap_reason(requires_local_policy: bool) -> str:
+    if requires_local_policy:
+        return (
+            "Provider-owned or local procedure is absent from the national catalogue; "
+            "upload and verify the current local document before operational use."
+        )
+    return (
+        "National source metadata only; provider policy and local procedures must still be checked "
+        "before specific operational advice."
+    )
 
 
 def src(
@@ -59,7 +135,17 @@ def src(
     requires_local_policy: bool = False,
     duplicate_url_justification: str | None = None,
     jurisdiction: str = "England",
+    review_frequency: str | None = None,
+    source_owner: str | None = None,
+    freshness_status: str | None = None,
+    local_policy_gap_reason: str | None = None,
 ) -> dict[str, Any]:
+    resolved_freshness_status = freshness_status or _freshness_status(
+        source_id,
+        source_type,
+        statutory_status,
+        publisher,
+    )
     default_not_to_be_used_for = [
         "guaranteeing compliance",
         "replacing safeguarding threshold decisions",
@@ -81,6 +167,10 @@ def src(
         "should_cite": should_cite,
         "quote_allowed_default": quote_allowed_default,
         "last_verified_date": LAST_VERIFIED,
+        "review_frequency": review_frequency
+        or FRESHNESS_REVIEW_FREQUENCIES[resolved_freshness_status],
+        "source_owner": source_owner or publisher,
+        "freshness_status": resolved_freshness_status,
         "update_check_required": update_check_required,
         "related_quality_standards": related_quality_standards or [],
         "related_sccif_judgement_areas": related_sccif_judgement_areas or [],
@@ -93,6 +183,8 @@ def src(
         "professional_judgement_boundary": professional_judgement_boundary,
         "not_to_be_used_for": merged_ntb,
         "requires_local_policy": requires_local_policy,
+        "local_policy_gap_reason": local_policy_gap_reason
+        or _default_local_policy_gap_reason(requires_local_policy),
         "duplicate_url_justification": duplicate_url_justification,
     }
 
@@ -1620,6 +1712,224 @@ def apply_catalogue_expansion(sources: list[dict[str, Any]]) -> None:
     )
 
 
+LOCAL_POLICY_GAP_AUDIT = [
+    {
+        "area": "safeguarding_procedures",
+        "workflow_domain": "safeguarding_concern",
+        "local_policy_document_needed": "Provider safeguarding policy plus current LSCP procedures.",
+        "safe_without_local_policy": "Give national safeguarding principles, recording prompts, and remind staff to follow local procedures.",
+        "must_not_decide_without_local_policy": "Do not decide thresholds, referral route, named local contacts, or timescales.",
+        "escalation_prompt": "Escalate to the DSL/manager and follow LSCP procedures; call emergency services for immediate danger.",
+        "manager_oversight_prompt": "Manager confirms threshold, referral route, recording, and follow-up oversight.",
+    },
+    {
+        "area": "lado_allegations",
+        "workflow_domain": "allegations_lado_adult_conduct",
+        "local_policy_document_needed": "Allegations against adults/LADO procedure and HR escalation policy.",
+        "safe_without_local_policy": "Prompt factual recording, child safety, preservation of evidence, and urgent manager review.",
+        "must_not_decide_without_local_policy": "Do not decide LADO referral, suspension, investigation outcome, or staff conduct finding.",
+        "escalation_prompt": "Escalate immediately to the registered manager/senior leader and local LADO route.",
+        "manager_oversight_prompt": "Manager records the LADO decision route, child safety actions, and staff oversight plan.",
+    },
+    {
+        "area": "missing_from_care_protocols",
+        "workflow_domain": "missing_from_care",
+        "local_policy_document_needed": "Missing from care protocol, police compact, return interview process, and escalation thresholds.",
+        "safe_without_local_policy": "Prompt chronology, risk indicators, return conversation, and child-centred follow-up.",
+        "must_not_decide_without_local_policy": "Do not decide police grading, local notification sequence, or return interview arrangements.",
+        "escalation_prompt": "Escalate to manager and police/local authority route according to the local protocol.",
+        "manager_oversight_prompt": "Manager confirms missing episode category, notifications, return interview, and risk plan update.",
+    },
+    {
+        "area": "behaviour_management_policy",
+        "workflow_domain": "behaviour_support",
+        "local_policy_document_needed": "Provider behaviour support/positive relationships policy.",
+        "safe_without_local_policy": "Support therapeutic, non-punitive reflection and what the child may be communicating.",
+        "must_not_decide_without_local_policy": "Do not approve sanctions, incentives, exclusions, or behaviour plans.",
+        "escalation_prompt": "Escalate where behaviour indicates harm, restrictive practice, or placement instability.",
+        "manager_oversight_prompt": "Manager reviews proportionality, the child's plan, patterns, and staff support needs.",
+    },
+    {
+        "area": "restraint_restrictive_practice_policy",
+        "workflow_domain": "physical_intervention",
+        "local_policy_document_needed": "Physical intervention/restraint/restrictive practice policy and training model.",
+        "safe_without_local_policy": "Prompt post-incident recording, debrief, child voice, injury checks, and least-restrictive reflection.",
+        "must_not_decide_without_local_policy": "Do not approve restraint, restriction, deprivation of liberty, or intervention training competence.",
+        "escalation_prompt": "Escalate any restraint, injury, restriction, or deprivation concern to manager and safeguarding route.",
+        "manager_oversight_prompt": "Manager reviews necessity, proportionality, notifications, debriefs, and pattern analysis.",
+    },
+    {
+        "area": "search_confiscation_cctv_surveillance",
+        "workflow_domain": "search_confiscation_privacy_surveillance",
+        "local_policy_document_needed": "Search, confiscation, room checks, CCTV/surveillance, privacy, and prohibited items policy.",
+        "safe_without_local_policy": "Prompt dignity, consent where possible, factual recording, and privacy impact questions.",
+        "must_not_decide_without_local_policy": "Do not approve searches, confiscation, surveillance, monitoring, or room checks.",
+        "escalation_prompt": "Escalate to manager before intrusive action unless immediate safety risk requires emergency response.",
+        "manager_oversight_prompt": "Manager confirms lawful basis, proportionality, recording, child rights impact, and review date.",
+    },
+    {
+        "area": "medication_policy",
+        "workflow_domain": "medication",
+        "local_policy_document_needed": "Medication administration, storage, consent, PRN, controlled drugs, and errors policy.",
+        "safe_without_local_policy": "Prompt factual medication-record checks and escalation to health professionals for clinical questions.",
+        "must_not_decide_without_local_policy": "Do not advise dosage, administration, refusal handling, PRN use, or error classification.",
+        "escalation_prompt": "Escalate medication uncertainty, refusal, error, or side effect concern to manager and health professional.",
+        "manager_oversight_prompt": "Manager confirms MAR audit, error route, health advice, and notification duties.",
+    },
+    {
+        "area": "complaints",
+        "workflow_domain": "statement_of_purpose_admissions",
+        "local_policy_document_needed": "Provider complaints procedure, Children's Guide complaints route, and advocacy details.",
+        "safe_without_local_policy": "Explain that children must know how to complain and be supported to access advocacy.",
+        "must_not_decide_without_local_policy": "Do not decide complaint stage, response deadline, investigator, or outcome.",
+        "escalation_prompt": "Escalate unresolved or safeguarding-related complaints to manager and safeguarding route.",
+        "manager_oversight_prompt": "Manager confirms complaint logging, response route, advocacy offer, and learning actions.",
+    },
+    {
+        "area": "whistleblowing",
+        "workflow_domain": "management_oversight",
+        "local_policy_document_needed": "Whistleblowing/speaking-up policy, protected disclosure route, and responsible contacts.",
+        "safe_without_local_policy": "Encourage speaking up, factual recording, and protection from victimisation.",
+        "must_not_decide_without_local_policy": "Do not decide protected disclosure status, investigation route, or employment action.",
+        "escalation_prompt": "Escalate serious concerns to senior leadership, safeguarding route, regulator, or prescribed body as required.",
+        "manager_oversight_prompt": "Manager confirms confidentiality, non-retaliation, investigation route, and safeguarding interface.",
+    },
+    {
+        "area": "fire_emergency_evacuation",
+        "workflow_domain": "fire_premises_food_health_safety",
+        "local_policy_document_needed": "Fire risk assessment, evacuation plan, PEEPs, drill records, and emergency procedures.",
+        "safe_without_local_policy": "Prompt checks that current fire arrangements and competent-person assessments are followed.",
+        "must_not_decide_without_local_policy": "Do not approve evacuation strategy, PEEP sufficiency, fire risk rating, or premises safety.",
+        "escalation_prompt": "Escalate fire safety uncertainty, equipment faults, or evacuation risk to manager/competent person immediately.",
+        "manager_oversight_prompt": "Manager confirms competent-person advice, action tracking, drills, and child-specific evacuation support.",
+    },
+    {
+        "area": "health_and_safety",
+        "workflow_domain": "fire_premises_food_health_safety",
+        "local_policy_document_needed": "Health and safety policy, risk assessments, COSHH, infection control, food hygiene, and maintenance procedures.",
+        "safe_without_local_policy": "Prompt factual hazard recording and immediate action to reduce obvious risk.",
+        "must_not_decide_without_local_policy": "Do not approve risk assessments, competent-person controls, RIDDOR reporting, or maintenance sign-off.",
+        "escalation_prompt": "Escalate hazards, incidents, illness outbreaks, or premises risk to manager and competent person.",
+        "manager_oversight_prompt": "Manager confirms risk assessment owner, remedial actions, reporting duties, and review date.",
+    },
+    {
+        "area": "transport_community_activities",
+        "workflow_domain": "transport_community_activities",
+        "local_policy_document_needed": "Transport, driving at work, vehicle checks, community activity, and off-site risk assessment policy.",
+        "safe_without_local_policy": "Prompt planning questions about consent, supervision, transport safety, and child-specific risks.",
+        "must_not_decide_without_local_policy": "Do not approve activities, staffing ratios, drivers, vehicles, or off-site risk controls.",
+        "escalation_prompt": "Escalate uncertainty, higher-risk activities, or transport incidents to manager before proceeding.",
+        "manager_oversight_prompt": "Manager confirms activity approval, dynamic risk assessment, vehicle checks, and contingency plan.",
+    },
+    {
+        "area": "internet_device_use",
+        "workflow_domain": "online_safety",
+        "local_policy_document_needed": "Internet, devices, online safety, monitoring, filtering, and acceptable-use policy.",
+        "safe_without_local_policy": "Prompt online safety reflection, child voice, risk indicators, and safeguarding escalation where needed.",
+        "must_not_decide_without_local_policy": "Do not approve device restrictions, monitoring, searches, filtering, or sanctions.",
+        "escalation_prompt": "Escalate exploitation, grooming, harmful content, or image-sharing concerns to safeguarding lead/manager.",
+        "manager_oversight_prompt": "Manager confirms restrictions are proportionate, recorded, reviewed, and linked to the child's plan.",
+    },
+    {
+        "area": "pocket_money_possessions",
+        "workflow_domain": "money_possessions_financial_dignity",
+        "local_policy_document_needed": "Pocket money, possessions, valuables, savings, financial safeguarding, and deductions policy.",
+        "safe_without_local_policy": "Prompt dignity, transparency, child voice, receipts, and avoidance of punitive deductions.",
+        "must_not_decide_without_local_policy": "Do not approve deductions, withholding, searches, disposal, or financial decisions.",
+        "escalation_prompt": "Escalate missing money, suspected exploitation, or disputed possessions to manager.",
+        "manager_oversight_prompt": "Manager confirms records, consent, financial safeguards, and advocacy where disputed.",
+    },
+    {
+        "area": "family_time_contact",
+        "workflow_domain": "family_time",
+        "local_policy_document_needed": "Family time/contact policy, care plan arrangements, supervision requirements, and risk controls.",
+        "safe_without_local_policy": "Prompt child voice, emotional impact, factual contact recording, and plan-review questions.",
+        "must_not_decide_without_local_policy": "Do not approve, restrict, supervise, or cancel family time/contact.",
+        "escalation_prompt": "Escalate distress, safeguarding indicators, or contact-plan conflict to manager/social worker.",
+        "manager_oversight_prompt": "Manager confirms care plan authority, risk controls, records, and child's wishes.",
+    },
+    {
+        "area": "risk_assessment",
+        "workflow_domain": "risk_assessment",
+        "local_policy_document_needed": "Risk assessment, dynamic risk, positive risk-taking, and review policy.",
+        "safe_without_local_policy": "Prompt evidence, protective factors, child voice, and uncertainty without approving the risk.",
+        "must_not_decide_without_local_policy": "Do not approve risk level, controls, staffing, restrictions, or activity decisions.",
+        "escalation_prompt": "Escalate changing, high, or unclear risk to manager and relevant professional network.",
+        "manager_oversight_prompt": "Manager confirms risk rating, controls, proportionality, review date, and multi-agency input.",
+    },
+    {
+        "area": "business_continuity",
+        "workflow_domain": "emergency_planning_business_continuity",
+        "local_policy_document_needed": "Business continuity, emergency relocation, severe weather, IT outage, and major incident plan.",
+        "safe_without_local_policy": "Prompt immediate welfare, continuity questions, and record of actions taken.",
+        "must_not_decide_without_local_policy": "Do not approve relocation, closure, staffing contingency, or communication plan.",
+        "escalation_prompt": "Escalate any continuity risk to responsible manager/senior leader and placing authorities where needed.",
+        "manager_oversight_prompt": "Manager confirms contingency activation, communications, child impact, and recovery actions.",
+    },
+    {
+        "area": "staff_supervision",
+        "workflow_domain": "supervision",
+        "local_policy_document_needed": "Staff supervision, reflective practice, probation, capability, and management oversight policy.",
+        "safe_without_local_policy": "Prompt reflective supervision themes and child-impact questions.",
+        "must_not_decide_without_local_policy": "Do not decide supervision frequency exceptions, capability action, or employment outcome.",
+        "escalation_prompt": "Escalate practice concerns, missed supervision, or safeguarding patterns to manager.",
+        "manager_oversight_prompt": "Manager confirms supervision cadence, reflective actions, training needs, and accountability trail.",
+    },
+    {
+        "area": "lone_working",
+        "workflow_domain": "staff_wellbeing_secondary_trauma",
+        "local_policy_document_needed": "Lone working, staffing levels, on-call, staff safety, and emergency support policy.",
+        "safe_without_local_policy": "Prompt staff safety checks, wellbeing reflection, and escalation where risk is unclear.",
+        "must_not_decide_without_local_policy": "Do not approve lone working, staffing sufficiency, or on-call arrangements.",
+        "escalation_prompt": "Escalate lone-working or staffing safety concerns to manager/on-call leader immediately.",
+        "manager_oversight_prompt": "Manager confirms staffing risk assessment, on-call support, incident review, and staff wellbeing actions.",
+    },
+    {
+        "area": "visitors_contractors",
+        "workflow_domain": "visitors_contractors_professionals",
+        "local_policy_document_needed": "Visitors, contractors, professional visits, ID checks, supervision, and safer access policy.",
+        "safe_without_local_policy": "Prompt identity, purpose, supervision, child privacy, and record-keeping questions.",
+        "must_not_decide_without_local_policy": "Do not approve access, unsupervised presence, contractor work, or visitor restrictions.",
+        "escalation_prompt": "Escalate unknown, disputed, unsafe, or safeguarding-related visits to manager.",
+        "manager_oversight_prompt": "Manager confirms access decision, safeguards, records, and any child-specific restrictions.",
+    },
+    {
+        "area": "data_protection_sars",
+        "workflow_domain": "record_access_care_files_future_reading",
+        "local_policy_document_needed": "Data protection, records access, SAR, retention, redaction, and DPO escalation policy.",
+        "safe_without_local_policy": "Prompt lawful, respectful records practice and remind staff to involve the data protection lead.",
+        "must_not_decide_without_local_policy": "Do not decide disclosure, redaction, withholding, retention, or SAR deadline handling.",
+        "escalation_prompt": "Escalate records access, disclosure, breach, or SAR questions to manager/DPO.",
+        "manager_oversight_prompt": "Manager confirms DPO involvement, child impact, redaction route, timescales, and audit trail.",
+    },
+]
+
+
+def _local_policy_requirements_by_domain() -> dict[str, dict[str, str]]:
+    requirements: dict[str, dict[str, str]] = {}
+    for item in LOCAL_POLICY_GAP_AUDIT:
+        domain = item["workflow_domain"]
+        if domain not in requirements:
+            requirements[domain] = {
+                "local_policy_document_needed": item["local_policy_document_needed"],
+                "safe_without_local_policy": item["safe_without_local_policy"],
+                "must_not_decide_without_local_policy": item["must_not_decide_without_local_policy"],
+                "local_policy_gap_reason": f"{item['area']} requires local policy before operational advice.",
+                "escalation_prompt": item["escalation_prompt"],
+                "manager_oversight_prompt": item["manager_oversight_prompt"],
+            }
+            continue
+        existing = requirements[domain]
+        existing["local_policy_document_needed"] += f" Also: {item['local_policy_document_needed']}"
+        existing["must_not_decide_without_local_policy"] += (
+            f" Also: {item['must_not_decide_without_local_policy']}"
+        )
+        existing["local_policy_gap_reason"] += f" {item['area']} also requires local policy."
+        existing["escalation_prompt"] += f" Also: {item['escalation_prompt']}"
+        existing["manager_oversight_prompt"] += f" Also: {item['manager_oversight_prompt']}"
+    return requirements
+
+
 def build_workflow_behaviours(source_list: list[dict[str, Any]]) -> list[dict[str, Any]]:
     domains_spec = [
         ("daily_recording", "Daily recording", 1, [QS["qs1"], QS["qs2"]], SCCIF["overall"], ["Reg 6", "Reg 7"]),
@@ -1682,17 +1992,44 @@ def build_workflow_behaviours(source_list: list[dict[str, Any]]) -> list[dict[st
             by_domain.setdefault(d, []).append(s["source_id"])
 
     behaviours = []
+    local_policy_requirements = _local_policy_requirements_by_domain()
     for domain_id, display, tier, qs_list, sccif, regs in domains_spec:
         relevant = by_domain.get(domain_id, [])
         if not relevant:
             # fallback to tier-appropriate core sources
             relevant = [s["source_id"] for s in source_list if s["tier"] == tier][:3]
+        local_policy = local_policy_requirements.get(domain_id)
         behaviours.append(
             {
                 "domain": domain_id,
                 "display_name": display,
                 "primary_source_tier": tier,
                 "relevant_sources": sorted(set(relevant)),
+                "requires_local_policy": bool(local_policy),
+                "local_policy_document_needed": (
+                    local_policy["local_policy_document_needed"] if local_policy else ""
+                ),
+                "local_policy_gap_reason": (
+                    local_policy["local_policy_gap_reason"] if local_policy else ""
+                ),
+                "safe_without_local_policy": (
+                    local_policy["safe_without_local_policy"]
+                    if local_policy
+                    else "Use national-source context only; verify provider policy before operational advice."
+                ),
+                "must_not_decide_without_local_policy": (
+                    local_policy["must_not_decide_without_local_policy"] if local_policy else ""
+                ),
+                "escalation_prompt": (
+                    local_policy["escalation_prompt"]
+                    if local_policy
+                    else "Escalate to manager where risk, uncertainty, or safeguarding indicators are present."
+                ),
+                "manager_oversight_prompt": (
+                    local_policy["manager_oversight_prompt"]
+                    if local_policy
+                    else "Manager confirms decisions, notifications, and follow-up where required."
+                ),
                 "quality_standards": qs_list,
                 "sccif_judgement_area": sccif,
                 "regulation_guidance_links": regs,
@@ -1774,6 +2111,8 @@ def main() -> None:
             "4": "Rights, identity, advocacy, family and journey through care",
             "5": "Data protection, records, workforce and ethical AI",
         },
+        "freshness_categories": FRESHNESS_CATEGORIES,
+        "local_policy_gap_audit": LOCAL_POLICY_GAP_AUDIT,
         "update_report": EXPANSION_REPORT,
         "sources": sources,
         "workflow_domain_behaviours": behaviours,
