@@ -179,7 +179,8 @@ async def test_general_stream_fast_path_reuses_bundle_without_prepare_retrieval(
 
     assert prepare_calls == 0
     prepare_retrieval_mock.assert_not_called()
-    assert meta.get("context_used") is not None or meta.get("answer") is not None or True
+    assert meta.get("answer")
+    assert meta.get("context_used")
 
 
 @pytest.mark.asyncio

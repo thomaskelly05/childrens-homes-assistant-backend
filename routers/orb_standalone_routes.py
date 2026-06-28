@@ -58,7 +58,10 @@ from auth.current_user import get_current_user
 from services.orb_recording_contract_service import build_incident_report_prompt_block, is_incident_report_draft_request
 from services.orb_standalone_brain_service import orb_standalone_brain_service
 from services.orb_grounded_answer_style_service import orb_grounded_answer_style_service
-from services.orb_official_source_anchor_service import orb_official_source_anchor_service
+from services.orb_standalone_boundary import (  # noqa: F401
+    FORBIDDEN_STANDALONE_OS_KEYS,
+    reject_standalone_os_ids as _reject_standalone_os_ids,
+)
 from services.shared_institutional_cognition_runtime import shared_institutional_cognition_runtime
 from services.orb_unified_explainability_service import orb_unified_explainability_service
 from services.indicare_intelligence_capability_service import (
@@ -101,8 +104,6 @@ from services.orb_standalone_sources import (
 logger = logging.getLogger("indicare.orb_standalone")
 
 router = APIRouter(prefix="/orb/standalone", tags=["ORB Standalone Assistant"])
-
-from services.orb_standalone_boundary import FORBIDDEN_STANDALONE_OS_KEYS, reject_standalone_os_ids as _reject_standalone_os_ids
 
 
 def _sse_event(event: str, payload: Any) -> str:

@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 """Converged standalone ORB assistant wrapper.
 
 This service is the safe migration layer from the existing standalone ORB
@@ -16,6 +14,8 @@ Instead it:
 
 This gives us a safe runtime convergence path without breaking /orb.
 """
+
+from __future__ import annotations
 
 from collections.abc import AsyncIterator
 from typing import Any
