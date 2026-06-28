@@ -51,7 +51,10 @@ import {
 } from '@/lib/orb/voice/orb-voice-profiles'
 import { ORB_VOICE_MIC_ERROR } from '@/lib/orb/voice/orb-voice-reflective-copy'
 import { resolveTtsVoiceProfileId } from '@/lib/orb/voice/orb-voice-human-conversation'
-import { ORB_VOICE_TTS_SPOKEN_FALLBACK } from '@/lib/orb/voice/orb-voice-speech-loop'
+import {
+  ORB_MANUAL_SPEAK_UNAVAILABLE,
+  ORB_VOICE_TTS_SPOKEN_FALLBACK
+} from '@/lib/orb/voice/orb-voice-speech-loop'
 import { ORB_VOICE_KATHERINE_UNAVAILABLE } from '@/lib/orb/voice/orb-voice-free-flowing-conversation'
 import {
   ORB_VOICE_MIN_SPOKEN_CHARS,
@@ -509,6 +512,7 @@ export function useStandaloneOrbVoice() {
       clearVoicePreparing()
       startSafariKeepAlive()
       setSpeechPlaybackError(null)
+      const isManualSpeak = options?.source === 'manual' || options?.source === undefined
       setVoicePreparing(options?.source === 'orb_turn')
       setVoicePreparingLongWait(false)
       setVoicePreparingSkipAvailable(false)
@@ -542,6 +546,10 @@ export function useStandaloneOrbVoice() {
         clearVoicePreparing()
         return
       }
+      if (!premium.ok && isManualSpeak) {
+        setSpeechPlaybackError(ORB_MANUAL_SPEAK_UNAVAILABLE)
+      }
+
       if (premium.ok) {
         if (premium.fallbackUsed) {
           setSpeechPlaybackError(ORB_VOICE_KATHERINE_UNAVAILABLE)
@@ -597,8 +605,13 @@ export function useStandaloneOrbVoice() {
         patchOrbVoiceBrowserDiagnostics({ ttsStatus: 'skipped_no_synthesis', ttsProvider: null })
         clearVoicePreparing()
         setSpeaking(false)
+        if (isManualSpeak && !premium.ok) {
+          setSpeechPlaybackError(ORB_MANUAL_SPEAK_UNAVAILABLE)
+        }
         setVoiceCaptureState('idle')
         setPhase('idle')
+        onEnd?.()
+        onSpeakEndRef.current?.()
         return
       }
 

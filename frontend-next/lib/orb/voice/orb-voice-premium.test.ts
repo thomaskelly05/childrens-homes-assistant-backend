@@ -56,5 +56,6 @@ describe('ORB voice premium upgrade', () => {
     assert.doesNotMatch(companion, /voice\.speak\(/)
     assert.match(companion, /speakMessageContent/)
     assert.match(companion, /voice\.speakAloud/)
+    assert.match(companion, /source: 'manual'/)
   })
 })

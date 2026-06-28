@@ -31,6 +31,10 @@ export const ORB_VOICE_SPEECH_UNSUPPORTED =
 export const ORB_VOICE_TTS_SPOKEN_FALLBACK =
   'ORB could not speak the response, but the written reply is shown below.' as const
 
+/** Shown when deliberate manual Speak cannot reach server or browser audio. */
+export const ORB_MANUAL_SPEAK_UNAVAILABLE =
+  'Speech is not available right now. You can still read and copy the response.' as const
+
 export const ORB_VOICE_TYPE_INSTEAD_LABEL = 'Type instead' as const
 export const ORB_VOICE_TYPE_INSTEAD_PLACEHOLDER =
   'Type what you wanted to say to ORB…' as const

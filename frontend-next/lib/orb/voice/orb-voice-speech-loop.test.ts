@@ -8,6 +8,7 @@ import {
   ORB_VOICE_NO_SPEECH_DETECTED,
   ORB_VOICE_NO_SPEECH_TIMEOUT_MS,
   ORB_VOICE_SPEECH_UNSUPPORTED,
+  ORB_MANUAL_SPEAK_UNAVAILABLE,
   ORB_VOICE_TTS_SPOKEN_FALLBACK,
   ORB_VOICE_TYPE_INSTEAD_LABEL,
   ORB_VOICE_TYPE_INSTEAD_PLACEHOLDER,
@@ -38,6 +39,7 @@ describe('ORB Voice speech loop runtime', () => {
     assert.match(ORB_VOICE_NO_SPEECH_DETECTED, /No speech was detected/)
     assert.equal(ORB_VOICE_SPEECH_UNSUPPORTED, voiceInputStatusLabel('speech_unsupported'))
     assert.match(ORB_VOICE_TTS_SPOKEN_FALLBACK, /written reply is shown below/)
+    assert.match(ORB_MANUAL_SPEAK_UNAVAILABLE, /Speech is not available right now/)
   })
 
   it('uses sensible auto-submit and no-speech timeouts', () => {
