@@ -42,6 +42,7 @@ FEATURE_ORB_MODEL_ROUTER_GUARDRAIL = "orb_model_router_guardrail"
 FEATURE_ORB_REALTIME_VOICE_SESSION = "orb_realtime_voice_session"
 FEATURE_ORB_REALTIME_TRANSCRIPTION_SESSION = "orb_realtime_transcription_session"
 FEATURE_ORB_DICTATE_REALTIME_SESSION = "orb_dictate_realtime_session"
+FEATURE_ORB_OPERATIONAL_REALTIME_SESSION = "orb_operational_realtime_session"
 
 SURFACE_FEATURE_MAP: dict[str, str] = {
     "standalone_orb_ai": FEATURE_ORB_MODEL_ROUTER_CHAT,

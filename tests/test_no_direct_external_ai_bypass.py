@@ -47,6 +47,7 @@ ADDITIONAL_KNOWN_PATHS = {
     "services/orb_voice_realtime_config.py",
     "services/orb_voice_profiles.py",
     "services/orb_voice_session_service.py",
+    "services/orb_operational_realtime_governance_service.py",
     "services/orb_expert_answer_engine_service.py",
     "assistant/prompt_router.py",
     "routers/orb_routes.py",

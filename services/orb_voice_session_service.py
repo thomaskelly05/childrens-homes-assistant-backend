@@ -372,7 +372,15 @@ class VoiceProvider(Protocol):
     def configured(self) -> bool:
         ...
 
-    async def start_session(self, *, request: OrbSessionStartRequest, decision: OrbModeDecision, current_user: dict[str, Any]) -> dict[str, Any]:
+    async def start_session(
+        self,
+        *,
+        request: OrbSessionStartRequest,
+        decision: OrbModeDecision,
+        current_user: dict[str, Any],
+        governed_route: str | None = None,
+        orb_session_id: str | None = None,
+    ) -> dict[str, Any]:
         ...
 
     async def event(self, *, session_id: str, event: OrbSessionEventRequest) -> dict[str, Any]:
@@ -391,7 +399,15 @@ class MockVoiceProvider:
     def configured(self) -> bool:
         return True
 
-    async def start_session(self, *, request: OrbSessionStartRequest, decision: OrbModeDecision, current_user: dict[str, Any]) -> dict[str, Any]:
+    async def start_session(
+        self,
+        *,
+        request: OrbSessionStartRequest,
+        decision: OrbModeDecision,
+        current_user: dict[str, Any],
+        governed_route: str | None = None,
+        orb_session_id: str | None = None,
+    ) -> dict[str, Any]:
         instructions = "\n\n".join(
             [
                 persona_instruction(decision, request.voice_profile),
@@ -423,17 +439,38 @@ class OpenAIRealtimeVoiceProvider:
     def configured(self) -> bool:
         return orb_realtime_provider_service.configured()
 
-    async def start_session(self, *, request: OrbSessionStartRequest, decision: OrbModeDecision, current_user: dict[str, Any]) -> dict[str, Any]:
+    async def start_session(
+        self,
+        *,
+        request: OrbSessionStartRequest,
+        decision: OrbModeDecision,
+        current_user: dict[str, Any],
+        governed_route: str | None = None,
+        orb_session_id: str | None = None,
+    ) -> dict[str, Any]:
         instructions = "\n\n".join(
             [
                 persona_instruction(decision, request.voice_profile),
                 orb_conversation_policy.provider_instructions(decision=decision, preferences=request.preferences),
             ]
         )
+        if governed_route:
+            from services.orb_operational_realtime_governance_service import (
+                issue_orb_operational_conversational_realtime_session,
+            )
+
+            return await issue_orb_operational_conversational_realtime_session(
+                instructions=instructions,
+                voice=_provider_voice(request.voice_profile),
+                current_user=current_user,
+                orb_session_id=orb_session_id,
+                route=governed_route,
+            )
         return await orb_realtime_provider_service.create_ephemeral_session(
             instructions=instructions,
             voice=_provider_voice(request.voice_profile),
             current_user=current_user,
+            orb_session_id=orb_session_id,
         )
 
     async def event(self, *, session_id: str, event: OrbSessionEventRequest) -> dict[str, Any]:
@@ -814,7 +851,13 @@ class OrbVoiceSessionService:
         self._touch(session)
         return session
 
-    async def start_session(self, *, request: OrbSessionStartRequest, current_user: dict[str, Any]) -> OrbSessionStartResponse:
+    async def start_session(
+        self,
+        *,
+        request: OrbSessionStartRequest,
+        current_user: dict[str, Any],
+        governed_route: str | None = None,
+    ) -> OrbSessionStartResponse:
         self._cleanup_expired_sessions()
         product_mode = self._product_mode_for(request.context, request.workspace_context)
         context = self._context_for_product_mode(request.context, product_mode)
@@ -833,7 +876,13 @@ class OrbVoiceSessionService:
             active_child_id=request.context.selected_young_person_id,
         )
         provider = self._provider(request.provider)
-        provider_session = await provider.start_session(request=request, decision=decision, current_user=current_user)
+        provider_session = await provider.start_session(
+            request=request,
+            decision=decision,
+            current_user=current_user,
+            governed_route=governed_route,
+            orb_session_id=session_id,
+        )
         provider_configured = provider.configured()
         runtime_metadata = self._runtime_metadata(
             product_mode=product_mode,

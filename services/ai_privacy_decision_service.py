@@ -144,6 +144,7 @@ class AIPrivacyDecisionService:
                 "orb_realtime_voice_session",
                 "orb_realtime_transcription_session",
                 "orb_dictate_realtime_session",
+                "orb_operational_realtime_session",
             }
             if feature not in legacy:
                 decision = self._blocked("feature_not_allowlisted", classification, settings, request)
