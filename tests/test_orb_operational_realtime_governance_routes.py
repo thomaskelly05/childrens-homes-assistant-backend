@@ -24,6 +24,7 @@ from services.ai_governed_egress import RealtimeEgressDecision
 from services.indicare_ai_governance_event_service import indicare_ai_governance_event_service
 from services.orb_operational_realtime_governance_service import (
     ORB_OPERATIONAL_PRODUCT_AREA,
+    ORB_OPERATIONAL_REALTIME_LEGACY_ROUTE,
     ORB_OPERATIONAL_REALTIME_ROUTE,
     build_orb_operational_realtime_governance_context,
 )
@@ -189,7 +190,7 @@ def test_orb_realtime_session_uses_governed_egress(orb_client, openai_env, monke
     assert governance.surface == "operational_orb"
 
 
-def test_orb_session_start_does_not_use_governed_egress(orb_client, openai_env, monkeypatch):
+def test_orb_session_start_uses_governed_egress(orb_client, openai_env, monkeypatch):
     issue_mock = AsyncMock(return_value=(_success_response(), _allowed_egress()))
     create_mock = AsyncMock(
         return_value={
@@ -209,8 +210,202 @@ def test_orb_session_start_does_not_use_governed_egress(orb_client, openai_env, 
     )
     response = orb_client.post("/orb/session/start", json=_session_payload())
     assert response.status_code == 200
-    issue_mock.assert_not_awaited()
-    create_mock.assert_awaited_once()
+    data = response.json()
+    assert data["success"] is True
+    payload = data["data"]
+    assert payload["provider"] == "openai_realtime"
+    assert payload["provider_session"]["session"]["client_secret"]["value"] == "ek_operational"
+    issue_mock.assert_awaited_once()
+    create_mock.assert_not_awaited()
+    governance = issue_mock.await_args.kwargs["governance"]
+    assert governance.feature == FEATURE_ORB_OPERATIONAL_REALTIME_SESSION
+    assert governance.route == ORB_OPERATIONAL_REALTIME_LEGACY_ROUTE
+    assert governance.surface == "operational_orb"
+
+
+def test_session_start_allowed_governance_preserves_legacy_response_shape(orb_client, openai_env, monkeypatch):
+    monkeypatch.setattr(
+        "services.ai_governed_egress.provider_data_intelligence_settings_service.get_effective_settings",
+        lambda **_kwargs: _settings(),
+    )
+    monkeypatch.setattr(
+        "services.ai_governed_egress.evaluate_external_call",
+        lambda **_kwargs: _allowed_decision(),
+    )
+    monkeypatch.setattr(
+        "services.ai_governed_egress.ai_governed_egress._realtime_registry.get",
+        lambda _provider: type(
+            "Adapter",
+            (),
+            {
+                "is_available": staticmethod(lambda: True),
+                "issue_session": staticmethod(
+                    AsyncMock(return_value=_success_response())
+                ),
+            },
+        )(),
+    )
+    response = orb_client.post("/orb/session/start", json=_session_payload())
+    assert response.status_code == 200
+    data = response.json()["data"]
+    assert data["session_id"]
+    assert data["provider"] == "openai_realtime"
+    assert data["provider_configured"] is True
+    assert data["provider_session"]["session"]["client_secret"]["value"] == "ek_operational"
+    assert data["realtime"]["transport"] == "webrtc"
+    assert "mode_decision" in data
+    assert "voice_profile" in data
+    assert "preferences" in data
+
+
+def test_session_start_blocked_external_ai_returns_no_client_secret(orb_client, openai_env, monkeypatch):
+    adapter_called = {"value": False}
+
+    class _Adapter:
+        def is_available(self):
+            return True
+
+        async def issue_session(self, _request):
+            adapter_called["value"] = True
+            return _success_response()
+
+    monkeypatch.setattr(
+        "services.ai_governed_egress.provider_data_intelligence_settings_service.get_effective_settings",
+        lambda **_kwargs: _settings(),
+    )
+    monkeypatch.setattr(
+        "services.ai_governed_egress.evaluate_external_call",
+        lambda **_kwargs: _denied_decision(),
+    )
+    monkeypatch.setattr(
+        "services.ai_governed_egress.ai_governed_egress._realtime_registry.get",
+        lambda _provider: _Adapter(),
+    )
+    response = orb_client.post("/orb/session/start", json=_session_payload())
+    assert response.status_code == 200
+    data = response.json()["data"]
+    assert data["provider_session"].get("session") is None
+    assert data["provider_session"]["fallback_text_mode"] is True
+    assert "client_secret" not in response.text
+    assert adapter_called["value"] is False
+
+
+def test_session_start_blocked_realtime_voice_setting_returns_no_client_secret(orb_client, openai_env, monkeypatch):
+    adapter_called = {"value": False}
+
+    class _Adapter:
+        def is_available(self):
+            return True
+
+        async def issue_session(self, _request):
+            adapter_called["value"] = True
+            return _success_response()
+
+    monkeypatch.setattr(
+        "services.ai_governed_egress.provider_data_intelligence_settings_service.get_effective_settings",
+        lambda **_kwargs: _settings(realtime_voice_enabled=False),
+    )
+    monkeypatch.setattr(
+        "services.ai_governed_egress.evaluate_external_call",
+        lambda **_kwargs: _allowed_decision(),
+    )
+    monkeypatch.setattr(
+        "services.ai_governed_egress.ai_governed_egress._realtime_registry.get",
+        lambda _provider: _Adapter(),
+    )
+    response = orb_client.post("/orb/session/start", json=_session_payload())
+    assert response.status_code == 200
+    data = response.json()["data"]
+    assert data["provider_session"].get("session") is None
+    assert data["provider_session"]["fallback_text_mode"] is True
+    assert "client_secret" not in response.text
+    assert adapter_called["value"] is False
+
+
+def test_session_start_audit_event_contains_safe_metadata_only(orb_client, openai_env, monkeypatch):
+    secret_instructions = "SECRET CHILD CONTEXT MUST NOT PERSIST IN AUDIT"
+    captured_instructions: list[str] = []
+
+    class _Adapter:
+        def is_available(self):
+            return True
+
+        async def issue_session(self, request):
+            captured_instructions.append(request.instructions)
+            return _success_response()
+
+    monkeypatch.setattr(
+        "services.ai_governed_egress.provider_data_intelligence_settings_service.get_effective_settings",
+        lambda **_kwargs: _settings(),
+    )
+    monkeypatch.setattr(
+        "services.ai_governed_egress.evaluate_external_call",
+        lambda **_kwargs: _allowed_decision(),
+    )
+    monkeypatch.setattr(
+        "services.ai_governed_egress.ai_governed_egress._realtime_registry.get",
+        lambda _provider: _Adapter(),
+    )
+    with patch(
+        "services.orb_persona_policy.persona_instruction",
+        return_value=secret_instructions,
+    ):
+        orb_client.post("/orb/session/start", json=_session_payload())
+
+    events = indicare_ai_governance_event_service.get_recent_events()
+    assert len(events) >= 1
+    metadata = events[0].metadata or {}
+    assert metadata["feature"] == FEATURE_ORB_OPERATIONAL_REALTIME_SESSION
+    assert metadata["classification"] == "external_ai_realtime_session"
+    assert metadata["modality"] == "realtime_session"
+    assert metadata["route"] == ORB_OPERATIONAL_REALTIME_LEGACY_ROUTE
+    assert "instructions_len" in metadata
+    assert "SECRET CHILD CONTEXT" not in json.dumps(metadata)
+    assert "instructions" not in metadata
+    assert "client_secret" not in json.dumps(metadata)
+    assert captured_instructions
+    assert secret_instructions not in json.dumps(metadata)
+
+
+def test_session_start_raw_instructions_and_client_secrets_not_logged(orb_client, openai_env, monkeypatch, caplog):
+    secret_instructions = "SECRET CHILD CONTEXT MUST NOT APPEAR IN LOGS"
+    issue_mock = AsyncMock(return_value=(_success_response(), _allowed_egress()))
+    monkeypatch.setattr(
+        "services.orb_operational_realtime_governance_service.ai_governed_egress.issue_realtime_session",
+        issue_mock,
+    )
+    with patch(
+        "services.orb_persona_policy.persona_instruction",
+        return_value=secret_instructions,
+    ):
+        with caplog.at_level(logging.INFO):
+            orb_client.post("/orb/session/start", json=_session_payload())
+
+    log_text = "\n".join(record.message for record in caplog.records)
+    assert secret_instructions not in log_text
+    assert "ek_operational" not in log_text
+
+
+def test_assistant_access_dependency_still_required_for_session_start():
+    app = FastAPI()
+    app.include_router(router)
+
+    async def deny_access():
+        raise HTTPException(status_code=403, detail="assistant_access_required")
+
+    app.dependency_overrides[require_assistant_access] = deny_access
+    client = TestClient(app)
+    with patch.dict(
+        os.environ,
+        {
+            "ORB_VOICE_PROVIDER": "openai",
+            "OPENAI_API_KEY": "test-key",
+            "ORB_REALTIME_ENABLED": "true",
+        },
+        clear=False,
+    ):
+        response = client.post("/orb/session/start", json=_session_payload())
+    assert response.status_code == 403
 
 
 def test_allowed_governance_preserves_legacy_response_shape(orb_client, openai_env, monkeypatch):

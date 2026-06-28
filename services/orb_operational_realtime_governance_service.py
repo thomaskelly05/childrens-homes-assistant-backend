@@ -27,6 +27,7 @@ logger = logging.getLogger("indicare.orb_operational_realtime_governance")
 ORB_OPERATIONAL_PRODUCT_AREA = "ORB / ORB Residential"
 ORB_OPERATIONAL_REALTIME_PRODUCT_ACCESS = "assistant:access"
 ORB_OPERATIONAL_REALTIME_ROUTE = "POST /orb/realtime/session"
+ORB_OPERATIONAL_REALTIME_LEGACY_ROUTE = "POST /orb/session/start"
 
 
 def _scope_id(current_user: dict[str, Any] | None, key: str) -> int | None:
