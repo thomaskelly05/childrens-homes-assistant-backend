@@ -1,0 +1,4135 @@
+{
+  "version": "1.0.0",
+  "governance_note": "Mapping-only catalogue for ORB Residential. Does not ingest, scrape, or change runtime routes. NR-1 remains open. Public promise remains blocked.",
+  "last_catalogue_review": "2026-06-28",
+  "tiers": [
+    1,
+    2,
+    3,
+    4,
+    5
+  ],
+  "tier_labels": {
+    "1": "Core statutory and inspection spine",
+    "2": "Safeguarding, risk and child protection",
+    "3": "Whole-child development, health, education and SEND",
+    "4": "Rights, identity, advocacy, family and journey through care",
+    "5": "Data protection, records, workforce and ethical AI"
+  },
+  "sources": [
+    {
+      "source_id": "childrens_homes_regulations_2015",
+      "title": "The Children's Homes (England) Regulations 2015",
+      "official_url": "https://www.legislation.gov.uk/uksi/2015/541/contents",
+      "source_type": "legislation",
+      "tier": 1,
+      "jurisdiction": "England",
+      "publisher": "UK Parliament",
+      "statutory_status": "primary_legislation",
+      "citation_authority": "authoritative_statute",
+      "should_cite": true,
+      "quote_allowed_default": true,
+      "last_verified_date": "2026-06-28",
+      "update_check_required": true,
+      "related_quality_standards": [
+        "qs1_quality_and_purpose",
+        "qs8_leadership",
+        "qs9_care_planning"
+      ],
+      "related_sccif_judgement_areas": [
+        "leadership_management"
+      ],
+      "related_regulations": [
+        "SI 2015/541"
+      ],
+      "related_workflow_domains": [
+        "daily_recording",
+        "management_oversight",
+        "inspection_readiness"
+      ],
+      "escalation_triggers": [],
+      "safer_recording_behaviours": [
+        "cite regulation numbers",
+        "distinguish duty from practice"
+      ],
+      "manager_oversight_triggers": [],
+      "child_voice_prompts": [],
+      "professional_judgement_boundary": "ORB supports professional judgement; adults and managers remain accountable for decisions.",
+      "not_to_be_used_for": [
+        "guaranteeing compliance",
+        "replacing safeguarding threshold decisions",
+        "substituting for local policy or LSCP procedures"
+      ]
+    },
+    {
+      "source_id": "dfe_childrens_homes_regulations_guide",
+      "title": "Guide to the Children's Homes Regulations including the Quality Standards",
+      "official_url": "https://www.gov.uk/government/publications/childrens-homes-regulations-including-quality-standards-guide",
+      "source_type": "statutory_guidance",
+      "tier": 1,
+      "jurisdiction": "England",
+      "publisher": "Department for Education",
+      "statutory_status": "statutory_guidance",
+      "citation_authority": "authoritative_guidance",
+      "should_cite": true,
+      "quote_allowed_default": false,
+      "last_verified_date": "2026-06-28",
+      "update_check_required": true,
+      "related_quality_standards": [
+        "qs1_quality_and_purpose",
+        "qs2_child_voice",
+        "qs3_education",
+        "qs4_enjoyment_achievement",
+        "qs5_health_wellbeing",
+        "qs6_positive_relationships",
+        "qs7_protection",
+        "qs8_leadership",
+        "qs9_care_planning"
+      ],
+      "related_sccif_judgement_areas": [
+        "overall_experiences_progress",
+        "helped_and_protected",
+        "leadership_management"
+      ],
+      "related_regulations": [],
+      "related_workflow_domains": [
+        "daily_recording",
+        "incident_recording",
+        "inspection_readiness",
+        "report_writing"
+      ],
+      "escalation_triggers": [],
+      "safer_recording_behaviours": [],
+      "manager_oversight_triggers": [],
+      "child_voice_prompts": [
+        "What does the guide expect about children's views and participation?"
+      ],
+      "professional_judgement_boundary": "ORB supports professional judgement; adults and managers remain accountable for decisions.",
+      "not_to_be_used_for": [
+        "guaranteeing compliance",
+        "replacing safeguarding threshold decisions",
+        "substituting for local policy or LSCP procedures"
+      ]
+    },
+    {
+      "source_id": "ofsted_sccif_childrens_homes",
+      "title": "Social care common inspection framework (SCCIF): children's homes",
+      "official_url": "https://www.gov.uk/government/publications/social-care-common-inspection-framework-sccif-childrens-homes",
+      "source_type": "inspection_framework",
+      "tier": 1,
+      "jurisdiction": "England",
+      "publisher": "Ofsted",
+      "statutory_status": "inspection_framework",
+      "citation_authority": "authoritative_inspection",
+      "should_cite": true,
+      "quote_allowed_default": false,
+      "last_verified_date": "2026-06-28",
+      "update_check_required": true,
+      "related_quality_standards": [],
+      "related_sccif_judgement_areas": [
+        "overall_experiences_progress",
+        "helped_and_protected",
+        "leadership_management"
+      ],
+      "related_regulations": [],
+      "related_workflow_domains": [
+        "inspection_readiness",
+        "report_writing",
+        "management_oversight"
+      ],
+      "escalation_triggers": [],
+      "safer_recording_behaviours": [],
+      "manager_oversight_triggers": [],
+      "child_voice_prompts": [],
+      "professional_judgement_boundary": "Evidence preparation only; never predict Ofsted judgement.",
+      "not_to_be_used_for": [
+        "predicting inspection grades or outcomes",
+        "guaranteeing compliance",
+        "replacing safeguarding threshold decisions",
+        "substituting for local policy or LSCP procedures"
+      ]
+    },
+    {
+      "source_id": "children_act_1989_vol2_care_planning",
+      "title": "Children Act 1989 guidance and regulations Volume 2: care planning, placement and case review",
+      "official_url": "https://www.gov.uk/government/publications/children-act-1989-care-planning-placement-and-case-review",
+      "source_type": "statutory_guidance",
+      "tier": 1,
+      "jurisdiction": "England",
+      "publisher": "Department for Education",
+      "statutory_status": "statutory_guidance",
+      "citation_authority": "authoritative_guidance",
+      "should_cite": true,
+      "quote_allowed_default": false,
+      "last_verified_date": "2026-06-28",
+      "update_check_required": true,
+      "related_quality_standards": [
+        "qs2_child_voice",
+        "qs9_care_planning"
+      ],
+      "related_sccif_judgement_areas": [],
+      "related_regulations": [],
+      "related_workflow_domains": [
+        "key_work",
+        "leaving_care",
+        "family_time",
+        "report_writing"
+      ],
+      "escalation_triggers": [],
+      "safer_recording_behaviours": [],
+      "manager_oversight_triggers": [],
+      "child_voice_prompts": [
+        "How is the child's plan reviewed and how is their voice recorded?"
+      ],
+      "professional_judgement_boundary": "ORB supports professional judgement; adults and managers remain accountable for decisions.",
+      "not_to_be_used_for": [
+        "guaranteeing compliance",
+        "replacing safeguarding threshold decisions",
+        "substituting for local policy or LSCP procedures"
+      ]
+    },
+    {
+      "source_id": "care_planning_placement_case_review_regs_2010",
+      "title": "The Care Planning, Placement and Case Review (England) Regulations 2010",
+      "official_url": "https://www.legislation.gov.uk/uksi/2010/959/contents",
+      "source_type": "legislation",
+      "tier": 1,
+      "jurisdiction": "England",
+      "publisher": "UK Parliament",
+      "statutory_status": "secondary_legislation",
+      "citation_authority": "authoritative_statute",
+      "should_cite": true,
+      "quote_allowed_default": true,
+      "last_verified_date": "2026-06-28",
+      "update_check_required": true,
+      "related_quality_standards": [
+        "qs9_care_planning"
+      ],
+      "related_sccif_judgement_areas": [],
+      "related_regulations": [],
+      "related_workflow_domains": [
+        "key_work",
+        "leaving_care",
+        "family_time"
+      ],
+      "escalation_triggers": [],
+      "safer_recording_behaviours": [],
+      "manager_oversight_triggers": [],
+      "child_voice_prompts": [],
+      "professional_judgement_boundary": "ORB supports professional judgement; adults and managers remain accountable for decisions.",
+      "not_to_be_used_for": [
+        "guaranteeing compliance",
+        "replacing safeguarding threshold decisions",
+        "substituting for local policy or LSCP procedures"
+      ]
+    },
+    {
+      "source_id": "working_together_safeguarding",
+      "title": "Working Together to Safeguard Children",
+      "official_url": "https://www.gov.uk/government/publications/working-together-to-safeguard-children--2",
+      "source_type": "statutory_guidance",
+      "tier": 1,
+      "jurisdiction": "England",
+      "publisher": "HM Government",
+      "statutory_status": "statutory_guidance",
+      "citation_authority": "authoritative_guidance",
+      "should_cite": true,
+      "quote_allowed_default": false,
+      "last_verified_date": "2026-06-28",
+      "update_check_required": true,
+      "related_quality_standards": [
+        "qs7_protection"
+      ],
+      "related_sccif_judgement_areas": [
+        "helped_and_protected"
+      ],
+      "related_regulations": [],
+      "related_workflow_domains": [
+        "safeguarding_concern",
+        "allegation",
+        "exploitation_concern",
+        "management_oversight"
+      ],
+      "escalation_triggers": [
+        "multi-agency escalation",
+        "LADO route per local procedures"
+      ],
+      "safer_recording_behaviours": [],
+      "manager_oversight_triggers": [],
+      "child_voice_prompts": [],
+      "professional_judgement_boundary": "Support multi-agency thinking; DSL/manager decides thresholds.",
+      "not_to_be_used_for": [
+        "making safeguarding threshold decisions alone",
+        "guaranteeing compliance",
+        "replacing safeguarding threshold decisions",
+        "substituting for local policy or LSCP procedures"
+      ]
+    },
+    {
+      "source_id": "children_social_care_national_framework",
+      "title": "Children's social care: national framework",
+      "official_url": "https://www.gov.uk/government/publications/childrens-social-care-national-framework",
+      "source_type": "government_practice_guidance",
+      "tier": 1,
+      "jurisdiction": "England",
+      "publisher": "Department for Education",
+      "statutory_status": "policy_framework",
+      "citation_authority": "authoritative_guidance",
+      "should_cite": true,
+      "quote_allowed_default": false,
+      "last_verified_date": "2026-06-28",
+      "update_check_required": true,
+      "related_quality_standards": [
+        "qs1_quality_and_purpose",
+        "qs9_care_planning"
+      ],
+      "related_sccif_judgement_areas": [],
+      "related_regulations": [],
+      "related_workflow_domains": [
+        "key_work",
+        "leaving_care",
+        "management_oversight"
+      ],
+      "escalation_triggers": [],
+      "safer_recording_behaviours": [],
+      "manager_oversight_triggers": [],
+      "child_voice_prompts": [],
+      "professional_judgement_boundary": "ORB supports professional judgement; adults and managers remain accountable for decisions.",
+      "not_to_be_used_for": [
+        "guaranteeing compliance",
+        "replacing safeguarding threshold decisions",
+        "substituting for local policy or LSCP procedures"
+      ]
+    },
+    {
+      "source_id": "iro_handbook",
+      "title": "Independent Reviewing Officers' handbook",
+      "official_url": "https://www.gov.uk/government/publications/independent-reviewing-officers-handbook",
+      "source_type": "statutory_guidance",
+      "tier": 1,
+      "jurisdiction": "England",
+      "publisher": "Department for Education",
+      "statutory_status": "statutory_guidance",
+      "citation_authority": "authoritative_guidance",
+      "should_cite": true,
+      "quote_allowed_default": false,
+      "last_verified_date": "2026-06-28",
+      "update_check_required": true,
+      "related_quality_standards": [
+        "qs2_child_voice",
+        "qs9_care_planning"
+      ],
+      "related_sccif_judgement_areas": [],
+      "related_regulations": [],
+      "related_workflow_domains": [
+        "key_work",
+        "leaving_care",
+        "family_time"
+      ],
+      "escalation_triggers": [],
+      "safer_recording_behaviours": [],
+      "manager_oversight_triggers": [],
+      "child_voice_prompts": [
+        "What should the IRO expect to see about the child's voice?"
+      ],
+      "professional_judgement_boundary": "ORB supports professional judgement; adults and managers remain accountable for decisions.",
+      "not_to_be_used_for": [
+        "guaranteeing compliance",
+        "replacing safeguarding threshold decisions",
+        "substituting for local policy or LSCP procedures"
+      ]
+    },
+    {
+      "source_id": "ofsted_serious_incident_notification",
+      "title": "Ofsted: notifying of a serious incident at a children's home",
+      "official_url": "https://www.gov.uk/government/publications/notify-ofsted-of-a-serious-incident-at-a-childrens-home",
+      "source_type": "inspection_framework",
+      "tier": 1,
+      "jurisdiction": "England",
+      "publisher": "Ofsted",
+      "statutory_status": "statutory_guidance",
+      "citation_authority": "authoritative_inspection",
+      "should_cite": true,
+      "quote_allowed_default": false,
+      "last_verified_date": "2026-06-28",
+      "update_check_required": true,
+      "related_quality_standards": [],
+      "related_sccif_judgement_areas": [],
+      "related_regulations": [
+        "Reg 40"
+      ],
+      "related_workflow_domains": [
+        "reg_40_notification",
+        "incident_recording",
+        "allegation"
+      ],
+      "escalation_triggers": [
+        "serious incident notification to Ofsted",
+        "manager sign-off"
+      ],
+      "safer_recording_behaviours": [],
+      "manager_oversight_triggers": [
+        "notification decision",
+        "chronology review"
+      ],
+      "child_voice_prompts": [],
+      "professional_judgement_boundary": "Prompt notification considerations; manager confirms threshold.",
+      "not_to_be_used_for": [
+        "deciding whether an incident is notifiable without manager review",
+        "guaranteeing compliance",
+        "replacing safeguarding threshold decisions",
+        "substituting for local policy or LSCP procedures"
+      ]
+    },
+    {
+      "source_id": "regulation_40_childrens_homes",
+      "title": "Regulation 40 — Notification of serious events (Children's Homes Regulations 2015)",
+      "official_url": "https://www.legislation.gov.uk/uksi/2015/541/regulation/40",
+      "source_type": "legislation",
+      "tier": 1,
+      "jurisdiction": "England",
+      "publisher": "UK Parliament",
+      "statutory_status": "primary_legislation",
+      "citation_authority": "authoritative_statute",
+      "should_cite": true,
+      "quote_allowed_default": true,
+      "last_verified_date": "2026-06-28",
+      "update_check_required": true,
+      "related_quality_standards": [],
+      "related_sccif_judgement_areas": [],
+      "related_regulations": [
+        "Reg 40"
+      ],
+      "related_workflow_domains": [
+        "reg_40_notification",
+        "incident_recording",
+        "allegation"
+      ],
+      "escalation_triggers": [
+        "Ofsted notification",
+        "placing authority"
+      ],
+      "safer_recording_behaviours": [],
+      "manager_oversight_triggers": [
+        "notification decision within required timescales"
+      ],
+      "child_voice_prompts": [],
+      "professional_judgement_boundary": "Clarify duties; manager confirms notifiability.",
+      "not_to_be_used_for": [
+        "guaranteeing compliance",
+        "replacing safeguarding threshold decisions",
+        "substituting for local policy or LSCP procedures"
+      ]
+    },
+    {
+      "source_id": "regulation_44_childrens_homes",
+      "title": "Regulation 44 — Independent visitor (Children's Homes Regulations 2015)",
+      "official_url": "https://www.legislation.gov.uk/uksi/2015/541/regulation/44",
+      "source_type": "legislation",
+      "tier": 1,
+      "jurisdiction": "England",
+      "publisher": "UK Parliament",
+      "statutory_status": "primary_legislation",
+      "citation_authority": "authoritative_statute",
+      "should_cite": true,
+      "quote_allowed_default": true,
+      "last_verified_date": "2026-06-28",
+      "update_check_required": true,
+      "related_quality_standards": [
+        "qs8_leadership"
+      ],
+      "related_sccif_judgement_areas": [],
+      "related_regulations": [
+        "Reg 44"
+      ],
+      "related_workflow_domains": [
+        "reg_44_preparation",
+        "management_oversight",
+        "inspection_readiness"
+      ],
+      "escalation_triggers": [],
+      "safer_recording_behaviours": [],
+      "manager_oversight_triggers": [
+        "Reg 44 visit preparation",
+        "action on visit themes"
+      ],
+      "child_voice_prompts": [],
+      "professional_judgement_boundary": "ORB supports professional judgement; adults and managers remain accountable for decisions.",
+      "not_to_be_used_for": [
+        "guaranteeing compliance",
+        "replacing safeguarding threshold decisions",
+        "substituting for local policy or LSCP procedures"
+      ]
+    },
+    {
+      "source_id": "regulation_45_childrens_homes",
+      "title": "Regulation 45 — Review of quality of care (Children's Homes Regulations 2015)",
+      "official_url": "https://www.legislation.gov.uk/uksi/2015/541/regulation/45",
+      "source_type": "legislation",
+      "tier": 1,
+      "jurisdiction": "England",
+      "publisher": "UK Parliament",
+      "statutory_status": "primary_legislation",
+      "citation_authority": "authoritative_statute",
+      "should_cite": true,
+      "quote_allowed_default": true,
+      "last_verified_date": "2026-06-28",
+      "update_check_required": true,
+      "related_quality_standards": [
+        "qs8_leadership",
+        "qs9_care_planning"
+      ],
+      "related_sccif_judgement_areas": [],
+      "related_regulations": [
+        "Reg 45"
+      ],
+      "related_workflow_domains": [
+        "reg_45_preparation",
+        "management_oversight",
+        "inspection_readiness"
+      ],
+      "escalation_triggers": [],
+      "safer_recording_behaviours": [],
+      "manager_oversight_triggers": [
+        "quarterly quality review",
+        "improvement actions"
+      ],
+      "child_voice_prompts": [],
+      "professional_judgement_boundary": "ORB supports professional judgement; adults and managers remain accountable for decisions.",
+      "not_to_be_used_for": [
+        "guaranteeing compliance",
+        "replacing safeguarding threshold decisions",
+        "substituting for local policy or LSCP procedures"
+      ]
+    },
+    {
+      "source_id": "what_to_do_if_worried_child_abused",
+      "title": "What to do if you're worried a child is being abused",
+      "official_url": "https://www.gov.uk/government/publications/what-to-do-if-youre-worried-a-child-is-being-abused--2",
+      "source_type": "statutory_guidance",
+      "tier": 2,
+      "jurisdiction": "England",
+      "publisher": "Department for Education",
+      "statutory_status": "statutory_guidance",
+      "citation_authority": "authoritative_guidance",
+      "should_cite": true,
+      "quote_allowed_default": false,
+      "last_verified_date": "2026-06-28",
+      "update_check_required": true,
+      "related_quality_standards": [
+        "qs7_protection"
+      ],
+      "related_sccif_judgement_areas": [],
+      "related_regulations": [],
+      "related_workflow_domains": [
+        "safeguarding_concern",
+        "allegation"
+      ],
+      "escalation_triggers": [
+        "DSL contact",
+        "immediate danger — emergency services"
+      ],
+      "safer_recording_behaviours": [],
+      "manager_oversight_triggers": [],
+      "child_voice_prompts": [],
+      "professional_judgement_boundary": "Prompts early help and escalation; does not decide threshold.",
+      "not_to_be_used_for": [
+        "replacing DSL judgement",
+        "guaranteeing compliance",
+        "replacing safeguarding threshold decisions",
+        "substituting for local policy or LSCP procedures"
+      ]
+    },
+    {
+      "source_id": "information_sharing_safeguarding",
+      "title": "Information sharing advice for safeguarding practitioners",
+      "official_url": "https://www.gov.uk/government/publications/information-sharing-advice-for-safeguarding-practitioners",
+      "source_type": "statutory_guidance",
+      "tier": 2,
+      "jurisdiction": "England",
+      "publisher": "HM Government",
+      "statutory_status": "statutory_guidance",
+      "citation_authority": "authoritative_guidance",
+      "should_cite": true,
+      "quote_allowed_default": false,
+      "last_verified_date": "2026-06-28",
+      "update_check_required": true,
+      "related_quality_standards": [],
+      "related_sccif_judgement_areas": [],
+      "related_regulations": [],
+      "related_workflow_domains": [
+        "safeguarding_concern",
+        "allegation",
+        "exploitation_concern"
+      ],
+      "escalation_triggers": [],
+      "safer_recording_behaviours": [
+        "record what was shared, with whom, and lawful basis if known"
+      ],
+      "manager_oversight_triggers": [],
+      "child_voice_prompts": [],
+      "professional_judgement_boundary": "ORB supports professional judgement; adults and managers remain accountable for decisions.",
+      "not_to_be_used_for": [
+        "providing legal advice on data sharing",
+        "guaranteeing compliance",
+        "replacing safeguarding threshold decisions",
+        "substituting for local policy or LSCP procedures"
+      ]
+    },
+    {
+      "source_id": "serious_child_safeguarding_incident_notification",
+      "title": "Child safeguarding practice review and serious incident notification",
+      "official_url": "https://www.gov.uk/government/publications/child-safeguarding-practice-review-and-relevant-agency-notifications",
+      "source_type": "statutory_guidance",
+      "tier": 2,
+      "jurisdiction": "England",
+      "publisher": "Department for Education",
+      "statutory_status": "statutory_guidance",
+      "citation_authority": "authoritative_guidance",
+      "should_cite": true,
+      "quote_allowed_default": false,
+      "last_verified_date": "2026-06-28",
+      "update_check_required": true,
+      "related_quality_standards": [],
+      "related_sccif_judgement_areas": [],
+      "related_regulations": [],
+      "related_workflow_domains": [
+        "safeguarding_concern",
+        "allegation",
+        "management_oversight"
+      ],
+      "escalation_triggers": [
+        "serious incident notification to safeguarding partners"
+      ],
+      "safer_recording_behaviours": [],
+      "manager_oversight_triggers": [
+        "partnership notification decisions"
+      ],
+      "child_voice_prompts": [],
+      "professional_judgement_boundary": "ORB supports professional judgement; adults and managers remain accountable for decisions.",
+      "not_to_be_used_for": [
+        "guaranteeing compliance",
+        "replacing safeguarding threshold decisions",
+        "substituting for local policy or LSCP procedures"
+      ]
+    },
+    {
+      "source_id": "missing_from_care_guidance",
+      "title": "Children who run away or go missing from home or care",
+      "official_url": "https://www.gov.uk/government/publications/children-who-run-away-or-go-missing-from-home-or-care",
+      "source_type": "statutory_guidance",
+      "tier": 2,
+      "jurisdiction": "England",
+      "publisher": "Department for Education",
+      "statutory_status": "statutory_guidance",
+      "citation_authority": "authoritative_guidance",
+      "should_cite": true,
+      "quote_allowed_default": false,
+      "last_verified_date": "2026-06-28",
+      "update_check_required": true,
+      "related_quality_standards": [],
+      "related_sccif_judgement_areas": [],
+      "related_regulations": [],
+      "related_workflow_domains": [
+        "missing_from_care",
+        "exploitation_concern"
+      ],
+      "escalation_triggers": [
+        "police notification per local protocol",
+        "return interview"
+      ],
+      "safer_recording_behaviours": [],
+      "manager_oversight_triggers": [],
+      "child_voice_prompts": [
+        "What did the child say on return?"
+      ],
+      "professional_judgement_boundary": "ORB supports professional judgement; adults and managers remain accountable for decisions.",
+      "not_to_be_used_for": [
+        "guaranteeing compliance",
+        "replacing safeguarding threshold decisions",
+        "substituting for local policy or LSCP procedures"
+      ]
+    },
+    {
+      "source_id": "child_sexual_exploitation_guidance",
+      "title": "Child sexual exploitation: definition and guide for practitioners",
+      "official_url": "https://www.gov.uk/government/publications/child-sexual-exploitation-definition-and-a-guide-for-practitioners",
+      "source_type": "government_practice_guidance",
+      "tier": 2,
+      "jurisdiction": "England",
+      "publisher": "Department for Education",
+      "statutory_status": "practice_guidance",
+      "citation_authority": "informative_practice",
+      "should_cite": true,
+      "quote_allowed_default": false,
+      "last_verified_date": "2026-06-28",
+      "update_check_required": true,
+      "related_quality_standards": [],
+      "related_sccif_judgement_areas": [],
+      "related_regulations": [],
+      "related_workflow_domains": [
+        "exploitation_concern",
+        "safeguarding_concern",
+        "missing_from_care"
+      ],
+      "escalation_triggers": [
+        "DSL",
+        "police where indicators present"
+      ],
+      "safer_recording_behaviours": [],
+      "manager_oversight_triggers": [],
+      "child_voice_prompts": [],
+      "professional_judgement_boundary": "ORB supports professional judgement; adults and managers remain accountable for decisions.",
+      "not_to_be_used_for": [
+        "guaranteeing compliance",
+        "replacing safeguarding threshold decisions",
+        "substituting for local policy or LSCP procedures"
+      ]
+    },
+    {
+      "source_id": "county_lines_criminal_exploitation",
+      "title": "Criminal exploitation of children and vulnerable adults: county lines",
+      "official_url": "https://www.gov.uk/government/publications/criminal-exploitation-of-children-and-vulnerable-adults-county-lines",
+      "source_type": "government_practice_guidance",
+      "tier": 2,
+      "jurisdiction": "England",
+      "publisher": "Home Office",
+      "statutory_status": "practice_guidance",
+      "citation_authority": "informative_practice",
+      "should_cite": true,
+      "quote_allowed_default": false,
+      "last_verified_date": "2026-06-28",
+      "update_check_required": true,
+      "related_quality_standards": [],
+      "related_sccif_judgement_areas": [],
+      "related_regulations": [],
+      "related_workflow_domains": [
+        "exploitation_concern",
+        "safeguarding_concern",
+        "online_safety"
+      ],
+      "escalation_triggers": [
+        "National Referral Mechanism where modern slavery indicators"
+      ],
+      "safer_recording_behaviours": [],
+      "manager_oversight_triggers": [],
+      "child_voice_prompts": [],
+      "professional_judgement_boundary": "ORB supports professional judgement; adults and managers remain accountable for decisions.",
+      "not_to_be_used_for": [
+        "guaranteeing compliance",
+        "replacing safeguarding threshold decisions",
+        "substituting for local policy or LSCP procedures"
+      ]
+    },
+    {
+      "source_id": "modern_slavery_guidance",
+      "title": "Modern slavery: how to identify and support victims",
+      "official_url": "https://www.gov.uk/government/publications/modern-slavery-how-to-identify-and-support-victims",
+      "source_type": "government_practice_guidance",
+      "tier": 2,
+      "jurisdiction": "England",
+      "publisher": "Home Office",
+      "statutory_status": "practice_guidance",
+      "citation_authority": "informative_practice",
+      "should_cite": true,
+      "quote_allowed_default": false,
+      "last_verified_date": "2026-06-28",
+      "update_check_required": true,
+      "related_quality_standards": [],
+      "related_sccif_judgement_areas": [],
+      "related_regulations": [],
+      "related_workflow_domains": [
+        "exploitation_concern",
+        "safeguarding_concern"
+      ],
+      "escalation_triggers": [
+        "NRM referral route",
+        "DSL"
+      ],
+      "safer_recording_behaviours": [],
+      "manager_oversight_triggers": [],
+      "child_voice_prompts": [],
+      "professional_judgement_boundary": "ORB supports professional judgement; adults and managers remain accountable for decisions.",
+      "not_to_be_used_for": [
+        "guaranteeing compliance",
+        "replacing safeguarding threshold decisions",
+        "substituting for local policy or LSCP procedures"
+      ]
+    },
+    {
+      "source_id": "uasc_trafficked_children_guidance",
+      "title": "Care of unaccompanied migrant children and child victims of modern slavery",
+      "official_url": "https://www.gov.uk/government/publications/care-of-unaccompanied-migrant-children-and-child-victims-of-modern-slavery",
+      "source_type": "statutory_guidance",
+      "tier": 2,
+      "jurisdiction": "England",
+      "publisher": "Department for Education",
+      "statutory_status": "statutory_guidance",
+      "citation_authority": "authoritative_guidance",
+      "should_cite": true,
+      "quote_allowed_default": false,
+      "last_verified_date": "2026-06-28",
+      "update_check_required": true,
+      "related_quality_standards": [],
+      "related_sccif_judgement_areas": [],
+      "related_regulations": [],
+      "related_workflow_domains": [
+        "safeguarding_concern",
+        "exploitation_concern",
+        "equality_identity_culture"
+      ],
+      "escalation_triggers": [],
+      "safer_recording_behaviours": [],
+      "manager_oversight_triggers": [],
+      "child_voice_prompts": [
+        "Age assessment and voice — sensitivity to trauma and language needs"
+      ],
+      "professional_judgement_boundary": "ORB supports professional judgement; adults and managers remain accountable for decisions.",
+      "not_to_be_used_for": [
+        "guaranteeing compliance",
+        "replacing safeguarding threshold decisions",
+        "substituting for local policy or LSCP procedures"
+      ]
+    },
+    {
+      "source_id": "domestic_abuse_guidance",
+      "title": "Domestic abuse: how to get help",
+      "official_url": "https://www.gov.uk/guidance/domestic-abuse-how-to-get-help",
+      "source_type": "government_practice_guidance",
+      "tier": 2,
+      "jurisdiction": "England",
+      "publisher": "Home Office",
+      "statutory_status": "practice_guidance",
+      "citation_authority": "informative_practice",
+      "should_cite": true,
+      "quote_allowed_default": false,
+      "last_verified_date": "2026-06-28",
+      "update_check_required": true,
+      "related_quality_standards": [],
+      "related_sccif_judgement_areas": [],
+      "related_regulations": [],
+      "related_workflow_domains": [
+        "safeguarding_concern",
+        "family_time"
+      ],
+      "escalation_triggers": [
+        "DSL where child affected",
+        "MARAC where applicable locally"
+      ],
+      "safer_recording_behaviours": [],
+      "manager_oversight_triggers": [],
+      "child_voice_prompts": [],
+      "professional_judgement_boundary": "ORB supports professional judgement; adults and managers remain accountable for decisions.",
+      "not_to_be_used_for": [
+        "guaranteeing compliance",
+        "replacing safeguarding threshold decisions",
+        "substituting for local policy or LSCP procedures"
+      ]
+    },
+    {
+      "source_id": "deprivation_of_liberty_court_orders",
+      "title": "Deprivation of liberty: children and young people",
+      "official_url": "https://www.gov.uk/government/publications/deprivation-of-liberty-court-orders",
+      "source_type": "statutory_guidance",
+      "tier": 2,
+      "jurisdiction": "England",
+      "publisher": "Department for Education",
+      "statutory_status": "statutory_guidance",
+      "citation_authority": "authoritative_guidance",
+      "should_cite": true,
+      "quote_allowed_default": false,
+      "last_verified_date": "2026-06-28",
+      "update_check_required": true,
+      "related_quality_standards": [],
+      "related_sccif_judgement_areas": [],
+      "related_regulations": [],
+      "related_workflow_domains": [
+        "physical_intervention",
+        "risk_assessment",
+        "health"
+      ],
+      "escalation_triggers": [
+        "legal advice",
+        "court authorisation where required"
+      ],
+      "safer_recording_behaviours": [],
+      "manager_oversight_triggers": [],
+      "child_voice_prompts": [],
+      "professional_judgement_boundary": "ORB supports professional judgement; adults and managers remain accountable for decisions.",
+      "not_to_be_used_for": [
+        "authorising deprivation of liberty without legal review",
+        "guaranteeing compliance",
+        "replacing safeguarding threshold decisions",
+        "substituting for local policy or LSCP procedures"
+      ]
+    },
+    {
+      "source_id": "mental_capacity_act_code_of_practice",
+      "title": "Mental Capacity Act 2005: code of practice",
+      "official_url": "https://www.gov.uk/government/publications/mental-capacity-act-code-of-practice",
+      "source_type": "statutory_guidance",
+      "tier": 2,
+      "jurisdiction": "England",
+      "publisher": "Ministry of Justice",
+      "statutory_status": "statutory_guidance",
+      "citation_authority": "authoritative_guidance",
+      "should_cite": true,
+      "quote_allowed_default": false,
+      "last_verified_date": "2026-06-28",
+      "update_check_required": true,
+      "related_quality_standards": [],
+      "related_sccif_judgement_areas": [],
+      "related_regulations": [],
+      "related_workflow_domains": [
+        "health",
+        "medication",
+        "risk_assessment"
+      ],
+      "escalation_triggers": [],
+      "safer_recording_behaviours": [],
+      "manager_oversight_triggers": [],
+      "child_voice_prompts": [],
+      "professional_judgement_boundary": "Applies to 16+ where relevant; seek legal advice on capacity.",
+      "not_to_be_used_for": [
+        "guaranteeing compliance",
+        "replacing safeguarding threshold decisions",
+        "substituting for local policy or LSCP procedures"
+      ]
+    },
+    {
+      "source_id": "positive_environments_children_flourish",
+      "title": "Positive environments where children can flourish",
+      "official_url": "https://www.gov.uk/government/publications/positive-environments-where-children-can-flourish",
+      "source_type": "statutory_guidance",
+      "tier": 2,
+      "jurisdiction": "England",
+      "publisher": "Department for Education",
+      "statutory_status": "statutory_guidance",
+      "citation_authority": "authoritative_guidance",
+      "should_cite": true,
+      "quote_allowed_default": false,
+      "last_verified_date": "2026-06-28",
+      "update_check_required": true,
+      "related_quality_standards": [
+        "qs1_quality_and_purpose",
+        "qs6_positive_relationships"
+      ],
+      "related_sccif_judgement_areas": [],
+      "related_regulations": [],
+      "related_workflow_domains": [
+        "behaviour_support",
+        "daily_recording",
+        "physical_intervention"
+      ],
+      "escalation_triggers": [],
+      "safer_recording_behaviours": [
+        "therapeutic language",
+        "least restrictive approaches"
+      ],
+      "manager_oversight_triggers": [],
+      "child_voice_prompts": [],
+      "professional_judgement_boundary": "ORB supports professional judgement; adults and managers remain accountable for decisions.",
+      "not_to_be_used_for": [
+        "guaranteeing compliance",
+        "replacing safeguarding threshold decisions",
+        "substituting for local policy or LSCP procedures"
+      ]
+    },
+    {
+      "source_id": "online_safety_ceop",
+      "title": "CEOP Education: online child safety",
+      "official_url": "https://www.ceopeducation.co.uk/",
+      "source_type": "professional_guidance",
+      "tier": 2,
+      "jurisdiction": "England",
+      "publisher": "National Crime Agency / CEOP",
+      "statutory_status": "professional_guidance",
+      "citation_authority": "informative_practice",
+      "should_cite": true,
+      "quote_allowed_default": false,
+      "last_verified_date": "2026-06-28",
+      "update_check_required": true,
+      "related_quality_standards": [],
+      "related_sccif_judgement_areas": [],
+      "related_regulations": [],
+      "related_workflow_domains": [
+        "online_safety",
+        "exploitation_concern",
+        "safeguarding_concern"
+      ],
+      "escalation_triggers": [
+        "Report to CEOP where appropriate",
+        "DSL"
+      ],
+      "safer_recording_behaviours": [],
+      "manager_oversight_triggers": [],
+      "child_voice_prompts": [],
+      "professional_judgement_boundary": "Inform reflective practice only; verify against statutory sources and local policy.",
+      "not_to_be_used_for": [
+        "statutory authority on placement duties",
+        "guaranteeing compliance",
+        "replacing safeguarding threshold decisions",
+        "substituting for local policy or LSCP procedures"
+      ]
+    },
+    {
+      "source_id": "ofcom_online_safety",
+      "title": "Ofcom: protecting children online",
+      "official_url": "https://www.ofcom.org.uk/online-safety/protecting-children/",
+      "source_type": "professional_guidance",
+      "tier": 2,
+      "jurisdiction": "England",
+      "publisher": "Ofcom",
+      "statutory_status": "professional_guidance",
+      "citation_authority": "informative_practice",
+      "should_cite": true,
+      "quote_allowed_default": false,
+      "last_verified_date": "2026-06-28",
+      "update_check_required": true,
+      "related_quality_standards": [],
+      "related_sccif_judgement_areas": [],
+      "related_regulations": [],
+      "related_workflow_domains": [
+        "online_safety"
+      ],
+      "escalation_triggers": [],
+      "safer_recording_behaviours": [],
+      "manager_oversight_triggers": [],
+      "child_voice_prompts": [],
+      "professional_judgement_boundary": "Inform reflective practice only; verify against statutory sources and local policy.",
+      "not_to_be_used_for": [
+        "treated as statutory authority",
+        "guaranteeing compliance",
+        "replacing safeguarding threshold decisions",
+        "substituting for local policy or LSCP procedures"
+      ]
+    },
+    {
+      "source_id": "promoting_health_wellbeing_looked_after",
+      "title": "Promoting the health and well-being of looked-after children",
+      "official_url": "https://www.gov.uk/government/publications/promoting-the-health-and-well-being-of-looked-after-children",
+      "source_type": "statutory_guidance",
+      "tier": 3,
+      "jurisdiction": "England",
+      "publisher": "Department for Education",
+      "statutory_status": "statutory_guidance",
+      "citation_authority": "authoritative_guidance",
+      "should_cite": true,
+      "quote_allowed_default": false,
+      "last_verified_date": "2026-06-28",
+      "update_check_required": true,
+      "related_quality_standards": [],
+      "related_sccif_judgement_areas": [],
+      "related_regulations": [],
+      "related_workflow_domains": [
+        "health",
+        "medication",
+        "mental_health_self_harm"
+      ],
+      "escalation_triggers": [],
+      "safer_recording_behaviours": [],
+      "manager_oversight_triggers": [],
+      "child_voice_prompts": [],
+      "professional_judgement_boundary": "ORB supports professional judgement; adults and managers remain accountable for decisions.",
+      "not_to_be_used_for": [
+        "guaranteeing compliance",
+        "replacing safeguarding threshold decisions",
+        "substituting for local policy or LSCP procedures"
+      ]
+    },
+    {
+      "source_id": "nice_ng205_looked_after_children",
+      "title": "NICE guideline NG205: Looked-after children and young people",
+      "official_url": "https://www.nice.org.uk/guidance/ng205",
+      "source_type": "clinical_guidance",
+      "tier": 3,
+      "jurisdiction": "England",
+      "publisher": "NICE",
+      "statutory_status": "clinical_guidance",
+      "citation_authority": "clinical_guidance",
+      "should_cite": true,
+      "quote_allowed_default": false,
+      "last_verified_date": "2026-06-28",
+      "update_check_required": true,
+      "related_quality_standards": [],
+      "related_sccif_judgement_areas": [],
+      "related_regulations": [],
+      "related_workflow_domains": [
+        "health",
+        "mental_health_self_harm",
+        "key_work"
+      ],
+      "escalation_triggers": [],
+      "safer_recording_behaviours": [],
+      "manager_oversight_triggers": [],
+      "child_voice_prompts": [],
+      "professional_judgement_boundary": "Clinical framing only; ORB does not diagnose or prescribe.",
+      "not_to_be_used_for": [
+        "diagnosis",
+        "guaranteeing compliance",
+        "replacing safeguarding threshold decisions",
+        "substituting for local policy or LSCP procedures"
+      ]
+    },
+    {
+      "source_id": "nice_ng225_self_harm",
+      "title": "NICE guideline NG225: Self-harm",
+      "official_url": "https://www.nice.org.uk/guidance/ng225",
+      "source_type": "clinical_guidance",
+      "tier": 3,
+      "jurisdiction": "England",
+      "publisher": "NICE",
+      "statutory_status": "clinical_guidance",
+      "citation_authority": "clinical_guidance",
+      "should_cite": true,
+      "quote_allowed_default": false,
+      "last_verified_date": "2026-06-28",
+      "update_check_required": true,
+      "related_quality_standards": [],
+      "related_sccif_judgement_areas": [],
+      "related_regulations": [],
+      "related_workflow_domains": [
+        "mental_health_self_harm",
+        "incident_recording"
+      ],
+      "escalation_triggers": [],
+      "safer_recording_behaviours": [],
+      "manager_oversight_triggers": [],
+      "child_voice_prompts": [],
+      "professional_judgement_boundary": "Clinical framing only; ORB does not diagnose or prescribe.",
+      "not_to_be_used_for": [
+        "diagnosis",
+        "guaranteeing compliance",
+        "replacing safeguarding threshold decisions",
+        "substituting for local policy or LSCP procedures"
+      ]
+    },
+    {
+      "source_id": "education_looked_after_children",
+      "title": "Promoting the education of looked-after and previously looked-after children",
+      "official_url": "https://www.gov.uk/government/publications/promoting-the-education-of-looked-after-children",
+      "source_type": "statutory_guidance",
+      "tier": 3,
+      "jurisdiction": "England",
+      "publisher": "Department for Education",
+      "statutory_status": "statutory_guidance",
+      "citation_authority": "authoritative_guidance",
+      "should_cite": true,
+      "quote_allowed_default": false,
+      "last_verified_date": "2026-06-28",
+      "update_check_required": true,
+      "related_quality_standards": [],
+      "related_sccif_judgement_areas": [],
+      "related_regulations": [],
+      "related_workflow_domains": [
+        "education",
+        "key_work"
+      ],
+      "escalation_triggers": [],
+      "safer_recording_behaviours": [],
+      "manager_oversight_triggers": [],
+      "child_voice_prompts": [],
+      "professional_judgement_boundary": "ORB supports professional judgement; adults and managers remain accountable for decisions.",
+      "not_to_be_used_for": [
+        "guaranteeing compliance",
+        "replacing safeguarding threshold decisions",
+        "substituting for local policy or LSCP procedures"
+      ]
+    },
+    {
+      "source_id": "designated_teacher_guidance",
+      "title": "Designated teacher for looked-after and previously looked-after children",
+      "official_url": "https://www.gov.uk/government/publications/designated-teacher-for-looked-after-and-previously-looked-after-children",
+      "source_type": "statutory_guidance",
+      "tier": 3,
+      "jurisdiction": "England",
+      "publisher": "Department for Education",
+      "statutory_status": "statutory_guidance",
+      "citation_authority": "authoritative_guidance",
+      "should_cite": true,
+      "quote_allowed_default": false,
+      "last_verified_date": "2026-06-28",
+      "update_check_required": true,
+      "related_quality_standards": [],
+      "related_sccif_judgement_areas": [],
+      "related_regulations": [],
+      "related_workflow_domains": [
+        "education"
+      ],
+      "escalation_triggers": [],
+      "safer_recording_behaviours": [],
+      "manager_oversight_triggers": [],
+      "child_voice_prompts": [],
+      "professional_judgement_boundary": "ORB supports professional judgement; adults and managers remain accountable for decisions.",
+      "not_to_be_used_for": [
+        "guaranteeing compliance",
+        "replacing safeguarding threshold decisions",
+        "substituting for local policy or LSCP procedures"
+      ]
+    },
+    {
+      "source_id": "keeping_children_safe_in_education",
+      "title": "Keeping children safe in education",
+      "official_url": "https://www.gov.uk/government/publications/keeping-children-safe-in-education--2",
+      "source_type": "statutory_guidance",
+      "tier": 3,
+      "jurisdiction": "England",
+      "publisher": "Department for Education",
+      "statutory_status": "statutory_guidance",
+      "citation_authority": "authoritative_guidance",
+      "should_cite": true,
+      "quote_allowed_default": false,
+      "last_verified_date": "2026-06-28",
+      "update_check_required": true,
+      "related_quality_standards": [],
+      "related_sccif_judgement_areas": [],
+      "related_regulations": [],
+      "related_workflow_domains": [
+        "education",
+        "online_safety",
+        "safeguarding_concern"
+      ],
+      "escalation_triggers": [],
+      "safer_recording_behaviours": [],
+      "manager_oversight_triggers": [],
+      "child_voice_prompts": [],
+      "professional_judgement_boundary": "ORB supports professional judgement; adults and managers remain accountable for decisions.",
+      "not_to_be_used_for": [
+        "guaranteeing compliance",
+        "replacing safeguarding threshold decisions",
+        "substituting for local policy or LSCP procedures"
+      ]
+    },
+    {
+      "source_id": "children_missing_education",
+      "title": "Children missing education",
+      "official_url": "https://www.gov.uk/government/publications/children-missing-education",
+      "source_type": "statutory_guidance",
+      "tier": 3,
+      "jurisdiction": "England",
+      "publisher": "Department for Education",
+      "statutory_status": "statutory_guidance",
+      "citation_authority": "authoritative_guidance",
+      "should_cite": true,
+      "quote_allowed_default": false,
+      "last_verified_date": "2026-06-28",
+      "update_check_required": true,
+      "related_quality_standards": [],
+      "related_sccif_judgement_areas": [],
+      "related_regulations": [],
+      "related_workflow_domains": [
+        "education"
+      ],
+      "escalation_triggers": [],
+      "safer_recording_behaviours": [],
+      "manager_oversight_triggers": [],
+      "child_voice_prompts": [],
+      "professional_judgement_boundary": "ORB supports professional judgement; adults and managers remain accountable for decisions.",
+      "not_to_be_used_for": [
+        "guaranteeing compliance",
+        "replacing safeguarding threshold decisions",
+        "substituting for local policy or LSCP procedures"
+      ]
+    },
+    {
+      "source_id": "school_attendance_guidance",
+      "title": "Working together to improve school attendance",
+      "official_url": "https://www.gov.uk/government/publications/working-together-to-improve-school-attendance",
+      "source_type": "statutory_guidance",
+      "tier": 3,
+      "jurisdiction": "England",
+      "publisher": "Department for Education",
+      "statutory_status": "statutory_guidance",
+      "citation_authority": "authoritative_guidance",
+      "should_cite": true,
+      "quote_allowed_default": false,
+      "last_verified_date": "2026-06-28",
+      "update_check_required": true,
+      "related_quality_standards": [],
+      "related_sccif_judgement_areas": [],
+      "related_regulations": [],
+      "related_workflow_domains": [
+        "education"
+      ],
+      "escalation_triggers": [],
+      "safer_recording_behaviours": [],
+      "manager_oversight_triggers": [],
+      "child_voice_prompts": [],
+      "professional_judgement_boundary": "ORB supports professional judgement; adults and managers remain accountable for decisions.",
+      "not_to_be_used_for": [
+        "guaranteeing compliance",
+        "replacing safeguarding threshold decisions",
+        "substituting for local policy or LSCP procedures"
+      ]
+    },
+    {
+      "source_id": "exclusions_suspensions_guidance",
+      "title": "Suspension and permanent exclusion from maintained schools, academies and pupil referral units",
+      "official_url": "https://www.gov.uk/government/publications/school-exclusion",
+      "source_type": "statutory_guidance",
+      "tier": 3,
+      "jurisdiction": "England",
+      "publisher": "Department for Education",
+      "statutory_status": "statutory_guidance",
+      "citation_authority": "authoritative_guidance",
+      "should_cite": true,
+      "quote_allowed_default": false,
+      "last_verified_date": "2026-06-28",
+      "update_check_required": true,
+      "related_quality_standards": [],
+      "related_sccif_judgement_areas": [],
+      "related_regulations": [],
+      "related_workflow_domains": [
+        "education",
+        "behaviour_support"
+      ],
+      "escalation_triggers": [],
+      "safer_recording_behaviours": [],
+      "manager_oversight_triggers": [],
+      "child_voice_prompts": [],
+      "professional_judgement_boundary": "ORB supports professional judgement; adults and managers remain accountable for decisions.",
+      "not_to_be_used_for": [
+        "guaranteeing compliance",
+        "replacing safeguarding threshold decisions",
+        "substituting for local policy or LSCP procedures"
+      ]
+    },
+    {
+      "source_id": "send_code_of_practice",
+      "title": "Special educational needs and disability code of practice: 0 to 25 years",
+      "official_url": "https://www.gov.uk/government/publications/send-code-of-practice-0-to-25",
+      "source_type": "statutory_guidance",
+      "tier": 3,
+      "jurisdiction": "England",
+      "publisher": "Department for Education",
+      "statutory_status": "statutory_guidance",
+      "citation_authority": "authoritative_guidance",
+      "should_cite": true,
+      "quote_allowed_default": false,
+      "last_verified_date": "2026-06-28",
+      "update_check_required": true,
+      "related_quality_standards": [],
+      "related_sccif_judgement_areas": [],
+      "related_regulations": [],
+      "related_workflow_domains": [
+        "send_disability_autism",
+        "education"
+      ],
+      "escalation_triggers": [],
+      "safer_recording_behaviours": [],
+      "manager_oversight_triggers": [],
+      "child_voice_prompts": [],
+      "professional_judgement_boundary": "ORB supports professional judgement; adults and managers remain accountable for decisions.",
+      "not_to_be_used_for": [
+        "guaranteeing compliance",
+        "replacing safeguarding threshold decisions",
+        "substituting for local policy or LSCP procedures"
+      ]
+    },
+    {
+      "source_id": "equality_act_2010",
+      "title": "Equality Act 2010",
+      "official_url": "https://www.legislation.gov.uk/ukpga/2010/15/contents",
+      "source_type": "legislation",
+      "tier": 3,
+      "jurisdiction": "England",
+      "publisher": "UK Parliament",
+      "statutory_status": "primary_legislation",
+      "citation_authority": "authoritative_statute",
+      "should_cite": true,
+      "quote_allowed_default": false,
+      "last_verified_date": "2026-06-28",
+      "update_check_required": true,
+      "related_quality_standards": [],
+      "related_sccif_judgement_areas": [],
+      "related_regulations": [],
+      "related_workflow_domains": [
+        "equality_identity_culture",
+        "send_disability_autism"
+      ],
+      "escalation_triggers": [],
+      "safer_recording_behaviours": [],
+      "manager_oversight_triggers": [],
+      "child_voice_prompts": [],
+      "professional_judgement_boundary": "ORB supports professional judgement; adults and managers remain accountable for decisions.",
+      "not_to_be_used_for": [
+        "guaranteeing compliance",
+        "replacing safeguarding threshold decisions",
+        "substituting for local policy or LSCP procedures"
+      ]
+    },
+    {
+      "source_id": "children_and_families_act_2014",
+      "title": "Children and Families Act 2014",
+      "official_url": "https://www.legislation.gov.uk/ukpga/2014/6/contents",
+      "source_type": "legislation",
+      "tier": 3,
+      "jurisdiction": "England",
+      "publisher": "UK Parliament",
+      "statutory_status": "primary_legislation",
+      "citation_authority": "authoritative_statute",
+      "should_cite": true,
+      "quote_allowed_default": false,
+      "last_verified_date": "2026-06-28",
+      "update_check_required": true,
+      "related_quality_standards": [],
+      "related_sccif_judgement_areas": [],
+      "related_regulations": [],
+      "related_workflow_domains": [
+        "send_disability_autism",
+        "education",
+        "leaving_care"
+      ],
+      "escalation_triggers": [],
+      "safer_recording_behaviours": [],
+      "manager_oversight_triggers": [],
+      "child_voice_prompts": [],
+      "professional_judgement_boundary": "ORB supports professional judgement; adults and managers remain accountable for decisions.",
+      "not_to_be_used_for": [
+        "guaranteeing compliance",
+        "replacing safeguarding threshold decisions",
+        "substituting for local policy or LSCP procedures"
+      ]
+    },
+    {
+      "source_id": "autism_strategy",
+      "title": "National strategy for autistic children, young people and adults",
+      "official_url": "https://www.gov.uk/government/publications/national-strategy-for-autistic-children-young-people-and-adults-2021-to-2026",
+      "source_type": "statutory_guidance",
+      "tier": 3,
+      "jurisdiction": "England",
+      "publisher": "Department for Education",
+      "statutory_status": "statutory_guidance",
+      "citation_authority": "authoritative_guidance",
+      "should_cite": true,
+      "quote_allowed_default": false,
+      "last_verified_date": "2026-06-28",
+      "update_check_required": true,
+      "related_quality_standards": [],
+      "related_sccif_judgement_areas": [],
+      "related_regulations": [],
+      "related_workflow_domains": [
+        "send_disability_autism",
+        "behaviour_support"
+      ],
+      "escalation_triggers": [],
+      "safer_recording_behaviours": [],
+      "manager_oversight_triggers": [],
+      "child_voice_prompts": [],
+      "professional_judgement_boundary": "ORB supports professional judgement; adults and managers remain accountable for decisions.",
+      "not_to_be_used_for": [
+        "guaranteeing compliance",
+        "replacing safeguarding threshold decisions",
+        "substituting for local policy or LSCP procedures"
+      ]
+    },
+    {
+      "source_id": "advocacy_services_statutory",
+      "title": "Statutory advocacy services for children",
+      "official_url": "https://www.gov.uk/government/publications/statutory-advocacy-services-for-children",
+      "source_type": "government_practice_guidance",
+      "tier": 4,
+      "jurisdiction": "England",
+      "publisher": "Department for Education",
+      "statutory_status": "statutory_guidance",
+      "citation_authority": "authoritative_guidance",
+      "should_cite": true,
+      "quote_allowed_default": false,
+      "last_verified_date": "2026-06-28",
+      "update_check_required": true,
+      "related_quality_standards": [],
+      "related_sccif_judgement_areas": [],
+      "related_regulations": [],
+      "related_workflow_domains": [
+        "leaving_care",
+        "equality_identity_culture",
+        "key_work",
+        "family_time",
+        "life_story_records"
+      ],
+      "escalation_triggers": [],
+      "safer_recording_behaviours": [],
+      "manager_oversight_triggers": [],
+      "child_voice_prompts": [
+        "rights, advocacy and participation"
+      ],
+      "professional_judgement_boundary": "ORB supports professional judgement; adults and managers remain accountable for decisions.",
+      "not_to_be_used_for": [
+        "guaranteeing compliance",
+        "replacing safeguarding threshold decisions",
+        "substituting for local policy or LSCP procedures"
+      ]
+    },
+    {
+      "source_id": "children_social_care_complaints",
+      "title": "Children's social care: getting the best from complaints",
+      "official_url": "https://www.gov.uk/government/publications/childrens-social-care-getting-the-best-from-complaints",
+      "source_type": "statutory_guidance",
+      "tier": 4,
+      "jurisdiction": "England",
+      "publisher": "Department for Education",
+      "statutory_status": "statutory_guidance",
+      "citation_authority": "authoritative_guidance",
+      "should_cite": true,
+      "quote_allowed_default": false,
+      "last_verified_date": "2026-06-28",
+      "update_check_required": true,
+      "related_quality_standards": [],
+      "related_sccif_judgement_areas": [],
+      "related_regulations": [],
+      "related_workflow_domains": [
+        "leaving_care",
+        "equality_identity_culture",
+        "key_work",
+        "family_time",
+        "life_story_records"
+      ],
+      "escalation_triggers": [],
+      "safer_recording_behaviours": [],
+      "manager_oversight_triggers": [],
+      "child_voice_prompts": [
+        "rights, advocacy and participation"
+      ],
+      "professional_judgement_boundary": "ORB supports professional judgement; adults and managers remain accountable for decisions.",
+      "not_to_be_used_for": [
+        "guaranteeing compliance",
+        "replacing safeguarding threshold decisions",
+        "substituting for local policy or LSCP procedures"
+      ]
+    },
+    {
+      "source_id": "childrens_commissioner",
+      "title": "Children's Commissioner for England",
+      "official_url": "https://www.childrenscommissioner.gov.uk/",
+      "source_type": "third_sector",
+      "tier": 4,
+      "jurisdiction": "England",
+      "publisher": "Third sector",
+      "statutory_status": "third_sector_resource",
+      "citation_authority": "reflective_only",
+      "should_cite": true,
+      "quote_allowed_default": false,
+      "last_verified_date": "2026-06-28",
+      "update_check_required": true,
+      "related_quality_standards": [],
+      "related_sccif_judgement_areas": [],
+      "related_regulations": [],
+      "related_workflow_domains": [
+        "leaving_care",
+        "equality_identity_culture",
+        "key_work",
+        "family_time",
+        "life_story_records"
+      ],
+      "escalation_triggers": [],
+      "safer_recording_behaviours": [],
+      "manager_oversight_triggers": [],
+      "child_voice_prompts": [
+        "lived experience and voice"
+      ],
+      "professional_judgement_boundary": "Inform reflective practice only; verify against statutory sources and local policy.",
+      "not_to_be_used_for": [
+        "treated as statutory authority",
+        "guaranteeing compliance",
+        "replacing safeguarding threshold decisions",
+        "substituting for local policy or LSCP procedures"
+      ]
+    },
+    {
+      "source_id": "uncrc",
+      "title": "UN Convention on the Rights of the Child",
+      "official_url": "https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-rights-child",
+      "source_type": "professional_guidance",
+      "tier": 4,
+      "jurisdiction": "England",
+      "publisher": "Department for Education",
+      "statutory_status": "statutory_guidance",
+      "citation_authority": "authoritative_guidance",
+      "should_cite": true,
+      "quote_allowed_default": false,
+      "last_verified_date": "2026-06-28",
+      "update_check_required": true,
+      "related_quality_standards": [],
+      "related_sccif_judgement_areas": [],
+      "related_regulations": [],
+      "related_workflow_domains": [
+        "leaving_care",
+        "equality_identity_culture",
+        "key_work",
+        "family_time",
+        "life_story_records"
+      ],
+      "escalation_triggers": [],
+      "safer_recording_behaviours": [],
+      "manager_oversight_triggers": [],
+      "child_voice_prompts": [
+        "rights, advocacy and participation"
+      ],
+      "professional_judgement_boundary": "ORB supports professional judgement; adults and managers remain accountable for decisions.",
+      "not_to_be_used_for": [
+        "guaranteeing compliance",
+        "replacing safeguarding threshold decisions",
+        "substituting for local policy or LSCP procedures"
+      ]
+    },
+    {
+      "source_id": "human_rights_act_1998",
+      "title": "Human Rights Act 1998",
+      "official_url": "https://www.legislation.gov.uk/ukpga/1998/42/contents",
+      "source_type": "legislation",
+      "tier": 4,
+      "jurisdiction": "England",
+      "publisher": "UK Parliament",
+      "statutory_status": "primary_legislation",
+      "citation_authority": "authoritative_statute",
+      "should_cite": true,
+      "quote_allowed_default": false,
+      "last_verified_date": "2026-06-28",
+      "update_check_required": true,
+      "related_quality_standards": [],
+      "related_sccif_judgement_areas": [],
+      "related_regulations": [],
+      "related_workflow_domains": [
+        "leaving_care",
+        "equality_identity_culture",
+        "key_work",
+        "family_time",
+        "life_story_records"
+      ],
+      "escalation_triggers": [],
+      "safer_recording_behaviours": [],
+      "manager_oversight_triggers": [],
+      "child_voice_prompts": [
+        "rights, advocacy and participation"
+      ],
+      "professional_judgement_boundary": "ORB supports professional judgement; adults and managers remain accountable for decisions.",
+      "not_to_be_used_for": [
+        "guaranteeing compliance",
+        "replacing safeguarding threshold decisions",
+        "substituting for local policy or LSCP procedures"
+      ]
+    },
+    {
+      "source_id": "public_sector_equality_duty",
+      "title": "Public sector equality duty",
+      "official_url": "https://www.equalityhumanrights.com/guidance/public-sector-equality-duty",
+      "source_type": "professional_guidance",
+      "tier": 4,
+      "jurisdiction": "England",
+      "publisher": "Department for Education",
+      "statutory_status": "statutory_guidance",
+      "citation_authority": "authoritative_guidance",
+      "should_cite": true,
+      "quote_allowed_default": false,
+      "last_verified_date": "2026-06-28",
+      "update_check_required": true,
+      "related_quality_standards": [],
+      "related_sccif_judgement_areas": [],
+      "related_regulations": [],
+      "related_workflow_domains": [
+        "leaving_care",
+        "equality_identity_culture",
+        "key_work",
+        "family_time",
+        "life_story_records"
+      ],
+      "escalation_triggers": [],
+      "safer_recording_behaviours": [],
+      "manager_oversight_triggers": [],
+      "child_voice_prompts": [
+        "rights, advocacy and participation"
+      ],
+      "professional_judgement_boundary": "ORB supports professional judgement; adults and managers remain accountable for decisions.",
+      "not_to_be_used_for": [
+        "guaranteeing compliance",
+        "replacing safeguarding threshold decisions",
+        "substituting for local policy or LSCP procedures"
+      ]
+    },
+    {
+      "source_id": "family_friends_care",
+      "title": "Family and friends care: statutory guidance",
+      "official_url": "https://www.gov.uk/government/publications/family-and-friends-care",
+      "source_type": "statutory_guidance",
+      "tier": 4,
+      "jurisdiction": "England",
+      "publisher": "Department for Education",
+      "statutory_status": "statutory_guidance",
+      "citation_authority": "authoritative_guidance",
+      "should_cite": true,
+      "quote_allowed_default": false,
+      "last_verified_date": "2026-06-28",
+      "update_check_required": true,
+      "related_quality_standards": [],
+      "related_sccif_judgement_areas": [],
+      "related_regulations": [],
+      "related_workflow_domains": [
+        "leaving_care",
+        "equality_identity_culture",
+        "key_work",
+        "family_time",
+        "life_story_records"
+      ],
+      "escalation_triggers": [],
+      "safer_recording_behaviours": [],
+      "manager_oversight_triggers": [],
+      "child_voice_prompts": [
+        "rights, advocacy and participation"
+      ],
+      "professional_judgement_boundary": "ORB supports professional judgement; adults and managers remain accountable for decisions.",
+      "not_to_be_used_for": [
+        "guaranteeing compliance",
+        "replacing safeguarding threshold decisions",
+        "substituting for local policy or LSCP procedures"
+      ]
+    },
+    {
+      "source_id": "family_rights_group",
+      "title": "Family Rights Group",
+      "official_url": "https://frg.org.uk/",
+      "source_type": "third_sector",
+      "tier": 4,
+      "jurisdiction": "England",
+      "publisher": "Third sector",
+      "statutory_status": "third_sector_resource",
+      "citation_authority": "reflective_only",
+      "should_cite": false,
+      "quote_allowed_default": false,
+      "last_verified_date": "2026-06-28",
+      "update_check_required": true,
+      "related_quality_standards": [],
+      "related_sccif_judgement_areas": [],
+      "related_regulations": [],
+      "related_workflow_domains": [
+        "leaving_care",
+        "equality_identity_culture",
+        "key_work",
+        "family_time",
+        "life_story_records"
+      ],
+      "escalation_triggers": [],
+      "safer_recording_behaviours": [],
+      "manager_oversight_triggers": [],
+      "child_voice_prompts": [
+        "lived experience and voice"
+      ],
+      "professional_judgement_boundary": "Inform reflective practice only; verify against statutory sources and local policy.",
+      "not_to_be_used_for": [
+        "treated as statutory authority",
+        "guaranteeing compliance",
+        "replacing safeguarding threshold decisions",
+        "substituting for local policy or LSCP procedures"
+      ]
+    },
+    {
+      "source_id": "lifelong_links",
+      "title": "Lifelong Links",
+      "official_url": "https://frg.org.uk/involving-families/lifelong-links/",
+      "source_type": "third_sector",
+      "tier": 4,
+      "jurisdiction": "England",
+      "publisher": "Third sector",
+      "statutory_status": "third_sector_resource",
+      "citation_authority": "reflective_only",
+      "should_cite": false,
+      "quote_allowed_default": false,
+      "last_verified_date": "2026-06-28",
+      "update_check_required": true,
+      "related_quality_standards": [],
+      "related_sccif_judgement_areas": [],
+      "related_regulations": [],
+      "related_workflow_domains": [
+        "leaving_care",
+        "equality_identity_culture",
+        "key_work",
+        "family_time",
+        "life_story_records"
+      ],
+      "escalation_triggers": [],
+      "safer_recording_behaviours": [],
+      "manager_oversight_triggers": [],
+      "child_voice_prompts": [
+        "lived experience and voice"
+      ],
+      "professional_judgement_boundary": "Inform reflective practice only; verify against statutory sources and local policy.",
+      "not_to_be_used_for": [
+        "treated as statutory authority",
+        "guaranteeing compliance",
+        "replacing safeguarding threshold decisions",
+        "substituting for local policy or LSCP procedures"
+      ]
+    },
+    {
+      "source_id": "children_act_1989_vol1_court_orders",
+      "title": "Children Act 1989: court orders",
+      "official_url": "https://www.gov.uk/government/publications/children-act-1989-court-orders",
+      "source_type": "statutory_guidance",
+      "tier": 4,
+      "jurisdiction": "England",
+      "publisher": "Department for Education",
+      "statutory_status": "statutory_guidance",
+      "citation_authority": "authoritative_guidance",
+      "should_cite": true,
+      "quote_allowed_default": false,
+      "last_verified_date": "2026-06-28",
+      "update_check_required": true,
+      "related_quality_standards": [],
+      "related_sccif_judgement_areas": [],
+      "related_regulations": [],
+      "related_workflow_domains": [
+        "leaving_care",
+        "equality_identity_culture",
+        "key_work",
+        "family_time",
+        "life_story_records"
+      ],
+      "escalation_triggers": [],
+      "safer_recording_behaviours": [],
+      "manager_oversight_triggers": [],
+      "child_voice_prompts": [
+        "rights, advocacy and participation"
+      ],
+      "professional_judgement_boundary": "ORB supports professional judgement; adults and managers remain accountable for decisions.",
+      "not_to_be_used_for": [
+        "guaranteeing compliance",
+        "replacing safeguarding threshold decisions",
+        "substituting for local policy or LSCP procedures"
+      ]
+    },
+    {
+      "source_id": "children_act_1989_vol3_transition",
+      "title": "Children Act 1989: transition to adulthood for care leavers",
+      "official_url": "https://www.gov.uk/government/publications/children-act-1989-transition-to-adulthood-for-care-leavers",
+      "source_type": "statutory_guidance",
+      "tier": 4,
+      "jurisdiction": "England",
+      "publisher": "Department for Education",
+      "statutory_status": "statutory_guidance",
+      "citation_authority": "authoritative_guidance",
+      "should_cite": true,
+      "quote_allowed_default": false,
+      "last_verified_date": "2026-06-28",
+      "update_check_required": true,
+      "related_quality_standards": [],
+      "related_sccif_judgement_areas": [],
+      "related_regulations": [],
+      "related_workflow_domains": [
+        "leaving_care",
+        "equality_identity_culture",
+        "key_work",
+        "family_time",
+        "life_story_records"
+      ],
+      "escalation_triggers": [],
+      "safer_recording_behaviours": [],
+      "manager_oversight_triggers": [],
+      "child_voice_prompts": [
+        "rights, advocacy and participation"
+      ],
+      "professional_judgement_boundary": "ORB supports professional judgement; adults and managers remain accountable for decisions.",
+      "not_to_be_used_for": [
+        "guaranteeing compliance",
+        "replacing safeguarding threshold decisions",
+        "substituting for local policy or LSCP procedures"
+      ]
+    },
+    {
+      "source_id": "local_offer_care_leavers",
+      "title": "Local offer for care leavers",
+      "official_url": "https://www.gov.uk/government/publications/local-offer-for-care-leavers",
+      "source_type": "statutory_guidance",
+      "tier": 4,
+      "jurisdiction": "England",
+      "publisher": "Department for Education",
+      "statutory_status": "statutory_guidance",
+      "citation_authority": "authoritative_guidance",
+      "should_cite": true,
+      "quote_allowed_default": false,
+      "last_verified_date": "2026-06-28",
+      "update_check_required": true,
+      "related_quality_standards": [],
+      "related_sccif_judgement_areas": [],
+      "related_regulations": [],
+      "related_workflow_domains": [
+        "leaving_care",
+        "equality_identity_culture",
+        "key_work",
+        "family_time",
+        "life_story_records"
+      ],
+      "escalation_triggers": [],
+      "safer_recording_behaviours": [],
+      "manager_oversight_triggers": [],
+      "child_voice_prompts": [
+        "rights, advocacy and participation"
+      ],
+      "professional_judgement_boundary": "ORB supports professional judgement; adults and managers remain accountable for decisions.",
+      "not_to_be_used_for": [
+        "guaranteeing compliance",
+        "replacing safeguarding threshold decisions",
+        "substituting for local policy or LSCP procedures"
+      ]
+    },
+    {
+      "source_id": "staying_put",
+      "title": "Staying Put: arrangements for care leavers aged 18 and above",
+      "official_url": "https://www.gov.uk/government/publications/staying-put-arrangements-for-care-leavers-aged-18-and-above-to-stay-on-with-their-former-foster-carers",
+      "source_type": "statutory_guidance",
+      "tier": 4,
+      "jurisdiction": "England",
+      "publisher": "Department for Education",
+      "statutory_status": "statutory_guidance",
+      "citation_authority": "authoritative_guidance",
+      "should_cite": true,
+      "quote_allowed_default": false,
+      "last_verified_date": "2026-06-28",
+      "update_check_required": true,
+      "related_quality_standards": [],
+      "related_sccif_judgement_areas": [],
+      "related_regulations": [],
+      "related_workflow_domains": [
+        "leaving_care",
+        "equality_identity_culture",
+        "key_work",
+        "family_time",
+        "life_story_records"
+      ],
+      "escalation_triggers": [],
+      "safer_recording_behaviours": [],
+      "manager_oversight_triggers": [],
+      "child_voice_prompts": [
+        "rights, advocacy and participation"
+      ],
+      "professional_judgement_boundary": "ORB supports professional judgement; adults and managers remain accountable for decisions.",
+      "not_to_be_used_for": [
+        "guaranteeing compliance",
+        "replacing safeguarding threshold decisions",
+        "substituting for local policy or LSCP procedures"
+      ]
+    },
+    {
+      "source_id": "staying_close",
+      "title": "Staying close: staying put for children's homes",
+      "official_url": "https://www.gov.uk/government/publications/staying-close-staying-put-for-childrens-homes",
+      "source_type": "statutory_guidance",
+      "tier": 4,
+      "jurisdiction": "England",
+      "publisher": "Department for Education",
+      "statutory_status": "statutory_guidance",
+      "citation_authority": "authoritative_guidance",
+      "should_cite": true,
+      "quote_allowed_default": false,
+      "last_verified_date": "2026-06-28",
+      "update_check_required": true,
+      "related_quality_standards": [],
+      "related_sccif_judgement_areas": [],
+      "related_regulations": [],
+      "related_workflow_domains": [
+        "leaving_care",
+        "equality_identity_culture",
+        "key_work",
+        "family_time",
+        "life_story_records"
+      ],
+      "escalation_triggers": [],
+      "safer_recording_behaviours": [],
+      "manager_oversight_triggers": [],
+      "child_voice_prompts": [
+        "rights, advocacy and participation"
+      ],
+      "professional_judgement_boundary": "ORB supports professional judgement; adults and managers remain accountable for decisions.",
+      "not_to_be_used_for": [
+        "guaranteeing compliance",
+        "replacing safeguarding threshold decisions",
+        "substituting for local policy or LSCP procedures"
+      ]
+    },
+    {
+      "source_id": "supported_accommodation_regulations",
+      "title": "Supported accommodation (England) regulations 2023",
+      "official_url": "https://www.legislation.gov.uk/uksi/2023/996/contents",
+      "source_type": "legislation",
+      "tier": 4,
+      "jurisdiction": "England",
+      "publisher": "UK Parliament",
+      "statutory_status": "primary_legislation",
+      "citation_authority": "authoritative_statute",
+      "should_cite": true,
+      "quote_allowed_default": false,
+      "last_verified_date": "2026-06-28",
+      "update_check_required": true,
+      "related_quality_standards": [],
+      "related_sccif_judgement_areas": [],
+      "related_regulations": [],
+      "related_workflow_domains": [
+        "leaving_care",
+        "equality_identity_culture",
+        "key_work",
+        "family_time",
+        "life_story_records"
+      ],
+      "escalation_triggers": [],
+      "safer_recording_behaviours": [],
+      "manager_oversight_triggers": [],
+      "child_voice_prompts": [
+        "rights, advocacy and participation"
+      ],
+      "professional_judgement_boundary": "ORB supports professional judgement; adults and managers remain accountable for decisions.",
+      "not_to_be_used_for": [
+        "guaranteeing compliance",
+        "replacing safeguarding threshold decisions",
+        "substituting for local policy or LSCP procedures"
+      ]
+    },
+    {
+      "source_id": "adoption_statutory_guidance",
+      "title": "Adoption statutory guidance",
+      "official_url": "https://www.gov.uk/government/publications/adoption-statutory-guidance",
+      "source_type": "statutory_guidance",
+      "tier": 4,
+      "jurisdiction": "England",
+      "publisher": "Department for Education",
+      "statutory_status": "statutory_guidance",
+      "citation_authority": "authoritative_guidance",
+      "should_cite": true,
+      "quote_allowed_default": false,
+      "last_verified_date": "2026-06-28",
+      "update_check_required": true,
+      "related_quality_standards": [],
+      "related_sccif_judgement_areas": [],
+      "related_regulations": [],
+      "related_workflow_domains": [
+        "leaving_care",
+        "equality_identity_culture",
+        "key_work",
+        "family_time",
+        "life_story_records"
+      ],
+      "escalation_triggers": [],
+      "safer_recording_behaviours": [],
+      "manager_oversight_triggers": [],
+      "child_voice_prompts": [
+        "rights, advocacy and participation"
+      ],
+      "professional_judgement_boundary": "ORB supports professional judgement; adults and managers remain accountable for decisions.",
+      "not_to_be_used_for": [
+        "guaranteeing compliance",
+        "replacing safeguarding threshold decisions",
+        "substituting for local policy or LSCP procedures"
+      ]
+    },
+    {
+      "source_id": "fostering_services_national_minimum_standards",
+      "title": "National minimum standards for fostering services",
+      "official_url": "https://www.gov.uk/government/publications/national-minimum-standards-for-fostering-services",
+      "source_type": "statutory_guidance",
+      "tier": 4,
+      "jurisdiction": "England",
+      "publisher": "Department for Education",
+      "statutory_status": "statutory_guidance",
+      "citation_authority": "authoritative_guidance",
+      "should_cite": true,
+      "quote_allowed_default": false,
+      "last_verified_date": "2026-06-28",
+      "update_check_required": true,
+      "related_quality_standards": [],
+      "related_sccif_judgement_areas": [],
+      "related_regulations": [],
+      "related_workflow_domains": [
+        "leaving_care",
+        "equality_identity_culture",
+        "key_work",
+        "family_time",
+        "life_story_records"
+      ],
+      "escalation_triggers": [],
+      "safer_recording_behaviours": [],
+      "manager_oversight_triggers": [],
+      "child_voice_prompts": [
+        "rights, advocacy and participation"
+      ],
+      "professional_judgement_boundary": "ORB supports professional judgement; adults and managers remain accountable for decisions.",
+      "not_to_be_used_for": [
+        "guaranteeing compliance",
+        "replacing safeguarding threshold decisions",
+        "substituting for local policy or LSCP procedures"
+      ]
+    },
+    {
+      "source_id": "special_guardianship_statutory_guidance",
+      "title": "Special guardianship: statutory guidance",
+      "official_url": "https://www.gov.uk/government/publications/special-guardianship-guidance",
+      "source_type": "statutory_guidance",
+      "tier": 4,
+      "jurisdiction": "England",
+      "publisher": "Department for Education",
+      "statutory_status": "statutory_guidance",
+      "citation_authority": "authoritative_guidance",
+      "should_cite": true,
+      "quote_allowed_default": false,
+      "last_verified_date": "2026-06-28",
+      "update_check_required": true,
+      "related_quality_standards": [],
+      "related_sccif_judgement_areas": [],
+      "related_regulations": [],
+      "related_workflow_domains": [
+        "leaving_care",
+        "equality_identity_culture",
+        "key_work",
+        "family_time",
+        "life_story_records"
+      ],
+      "escalation_triggers": [],
+      "safer_recording_behaviours": [],
+      "manager_oversight_triggers": [],
+      "child_voice_prompts": [
+        "rights, advocacy and participation"
+      ],
+      "professional_judgement_boundary": "ORB supports professional judgement; adults and managers remain accountable for decisions.",
+      "not_to_be_used_for": [
+        "guaranteeing compliance",
+        "replacing safeguarding threshold decisions",
+        "substituting for local policy or LSCP procedures"
+      ]
+    },
+    {
+      "source_id": "ico_children_uk_gdpr",
+      "title": "ICO: Children's information and UK GDPR",
+      "official_url": "https://ico.org.uk/for-organisations/uk-gdpr-guidance-and-resources/childrens-information/",
+      "source_type": "data_protection_guidance",
+      "tier": 5,
+      "jurisdiction": "England",
+      "publisher": "ICO",
+      "statutory_status": "professional_guidance",
+      "citation_authority": "informative_practice",
+      "should_cite": true,
+      "quote_allowed_default": false,
+      "last_verified_date": "2026-06-28",
+      "update_check_required": true,
+      "related_quality_standards": [],
+      "related_sccif_judgement_areas": [],
+      "related_regulations": [],
+      "related_workflow_domains": [
+        "data_protection_ai_safety",
+        "life_story_records",
+        "supervision",
+        "leaving_care",
+        "report_writing"
+      ],
+      "escalation_triggers": [],
+      "safer_recording_behaviours": [],
+      "manager_oversight_triggers": [],
+      "child_voice_prompts": [],
+      "professional_judgement_boundary": "ORB supports professional judgement; adults and managers remain accountable for decisions.",
+      "not_to_be_used_for": [
+        "guaranteeing compliance",
+        "replacing safeguarding threshold decisions",
+        "substituting for local policy or LSCP procedures"
+      ]
+    },
+    {
+      "source_id": "ico_childrens_code",
+      "title": "ICO: Age appropriate design code (Children's Code)",
+      "official_url": "https://ico.org.uk/for-organisations/uk-gdpr-guidance-and-resources/childrens-code-guidance-and-resources/",
+      "source_type": "data_protection_guidance",
+      "tier": 5,
+      "jurisdiction": "England",
+      "publisher": "ICO",
+      "statutory_status": "professional_guidance",
+      "citation_authority": "informative_practice",
+      "should_cite": true,
+      "quote_allowed_default": false,
+      "last_verified_date": "2026-06-28",
+      "update_check_required": true,
+      "related_quality_standards": [],
+      "related_sccif_judgement_areas": [],
+      "related_regulations": [],
+      "related_workflow_domains": [
+        "data_protection_ai_safety",
+        "life_story_records",
+        "supervision",
+        "leaving_care",
+        "report_writing"
+      ],
+      "escalation_triggers": [],
+      "safer_recording_behaviours": [],
+      "manager_oversight_triggers": [],
+      "child_voice_prompts": [],
+      "professional_judgement_boundary": "ORB supports professional judgement; adults and managers remain accountable for decisions.",
+      "not_to_be_used_for": [
+        "guaranteeing compliance",
+        "replacing safeguarding threshold decisions",
+        "substituting for local policy or LSCP procedures"
+      ]
+    },
+    {
+      "source_id": "ico_dpia_guidance",
+      "title": "ICO: Data protection impact assessments",
+      "official_url": "https://ico.org.uk/for-organisations/uk-gdpr-guidance-and-resources/accountability-and-governance/data-protection-impact-assessments-dpias/",
+      "source_type": "data_protection_guidance",
+      "tier": 5,
+      "jurisdiction": "England",
+      "publisher": "ICO",
+      "statutory_status": "professional_guidance",
+      "citation_authority": "informative_practice",
+      "should_cite": true,
+      "quote_allowed_default": false,
+      "last_verified_date": "2026-06-28",
+      "update_check_required": true,
+      "related_quality_standards": [],
+      "related_sccif_judgement_areas": [],
+      "related_regulations": [],
+      "related_workflow_domains": [
+        "data_protection_ai_safety",
+        "life_story_records",
+        "supervision",
+        "leaving_care",
+        "report_writing"
+      ],
+      "escalation_triggers": [],
+      "safer_recording_behaviours": [],
+      "manager_oversight_triggers": [],
+      "child_voice_prompts": [],
+      "professional_judgement_boundary": "ORB supports professional judgement; adults and managers remain accountable for decisions.",
+      "not_to_be_used_for": [
+        "guaranteeing compliance",
+        "replacing safeguarding threshold decisions",
+        "substituting for local policy or LSCP procedures"
+      ]
+    },
+    {
+      "source_id": "ico_ai_data_protection",
+      "title": "ICO: AI and data protection",
+      "official_url": "https://ico.org.uk/for-organisations/uk-gdpr-guidance-and-resources/artificial-intelligence/",
+      "source_type": "data_protection_guidance",
+      "tier": 5,
+      "jurisdiction": "England",
+      "publisher": "ICO",
+      "statutory_status": "professional_guidance",
+      "citation_authority": "informative_practice",
+      "should_cite": true,
+      "quote_allowed_default": false,
+      "last_verified_date": "2026-06-28",
+      "update_check_required": true,
+      "related_quality_standards": [],
+      "related_sccif_judgement_areas": [],
+      "related_regulations": [],
+      "related_workflow_domains": [
+        "data_protection_ai_safety",
+        "life_story_records",
+        "supervision",
+        "leaving_care",
+        "report_writing"
+      ],
+      "escalation_triggers": [],
+      "safer_recording_behaviours": [],
+      "manager_oversight_triggers": [],
+      "child_voice_prompts": [],
+      "professional_judgement_boundary": "ORB supports professional judgement; adults and managers remain accountable for decisions.",
+      "not_to_be_used_for": [
+        "guaranteeing compliance",
+        "replacing safeguarding threshold decisions",
+        "substituting for local policy or LSCP procedures",
+        "unauthorised AI processing decisions"
+      ]
+    },
+    {
+      "source_id": "dfe_data_protection_schools",
+      "title": "Data protection: a toolkit for schools",
+      "official_url": "https://www.gov.uk/government/publications/data-protection-toolkit-for-schools",
+      "source_type": "government_practice_guidance",
+      "tier": 5,
+      "jurisdiction": "England",
+      "publisher": "Department for Education",
+      "statutory_status": "practice_guidance",
+      "citation_authority": "informative_practice",
+      "should_cite": true,
+      "quote_allowed_default": false,
+      "last_verified_date": "2026-06-28",
+      "update_check_required": true,
+      "related_quality_standards": [],
+      "related_sccif_judgement_areas": [],
+      "related_regulations": [],
+      "related_workflow_domains": [
+        "data_protection_ai_safety",
+        "life_story_records",
+        "supervision",
+        "leaving_care",
+        "report_writing"
+      ],
+      "escalation_triggers": [],
+      "safer_recording_behaviours": [],
+      "manager_oversight_triggers": [],
+      "child_voice_prompts": [],
+      "professional_judgement_boundary": "ORB supports professional judgement; adults and managers remain accountable for decisions.",
+      "not_to_be_used_for": [
+        "guaranteeing compliance",
+        "replacing safeguarding threshold decisions",
+        "substituting for local policy or LSCP procedures"
+      ]
+    },
+    {
+      "source_id": "dbs_guidance",
+      "title": "Disclosure and Barring Service: guidance",
+      "official_url": "https://www.gov.uk/government/organisations/disclosure-and-barring-service",
+      "source_type": "government_practice_guidance",
+      "tier": 5,
+      "jurisdiction": "England",
+      "publisher": "Home Office",
+      "statutory_status": "practice_guidance",
+      "citation_authority": "informative_practice",
+      "should_cite": true,
+      "quote_allowed_default": false,
+      "last_verified_date": "2026-06-28",
+      "update_check_required": true,
+      "related_quality_standards": [],
+      "related_sccif_judgement_areas": [],
+      "related_regulations": [],
+      "related_workflow_domains": [
+        "data_protection_ai_safety",
+        "life_story_records",
+        "supervision",
+        "leaving_care",
+        "report_writing"
+      ],
+      "escalation_triggers": [],
+      "safer_recording_behaviours": [],
+      "manager_oversight_triggers": [],
+      "child_voice_prompts": [],
+      "professional_judgement_boundary": "ORB supports professional judgement; adults and managers remain accountable for decisions.",
+      "not_to_be_used_for": [
+        "guaranteeing compliance",
+        "replacing safeguarding threshold decisions",
+        "substituting for local policy or LSCP procedures"
+      ]
+    },
+    {
+      "source_id": "whistleblowing_guidance",
+      "title": "Whistleblowing for employees",
+      "official_url": "https://www.gov.uk/whistleblowing",
+      "source_type": "government_practice_guidance",
+      "tier": 5,
+      "jurisdiction": "England",
+      "publisher": "Department for Business and Trade",
+      "statutory_status": "practice_guidance",
+      "citation_authority": "informative_practice",
+      "should_cite": true,
+      "quote_allowed_default": false,
+      "last_verified_date": "2026-06-28",
+      "update_check_required": true,
+      "related_quality_standards": [],
+      "related_sccif_judgement_areas": [],
+      "related_regulations": [],
+      "related_workflow_domains": [
+        "data_protection_ai_safety",
+        "life_story_records",
+        "supervision",
+        "leaving_care",
+        "report_writing"
+      ],
+      "escalation_triggers": [],
+      "safer_recording_behaviours": [],
+      "manager_oversight_triggers": [],
+      "child_voice_prompts": [],
+      "professional_judgement_boundary": "ORB supports professional judgement; adults and managers remain accountable for decisions.",
+      "not_to_be_used_for": [
+        "guaranteeing compliance",
+        "replacing safeguarding threshold decisions",
+        "substituting for local policy or LSCP procedures"
+      ]
+    },
+    {
+      "source_id": "safer_recruitment_education",
+      "title": "Keeping children safe in education: safer recruitment",
+      "official_url": "https://www.gov.uk/government/publications/keeping-children-safe-in-education--2",
+      "source_type": "statutory_guidance",
+      "tier": 5,
+      "jurisdiction": "England",
+      "publisher": "Department for Education",
+      "statutory_status": "statutory_guidance",
+      "citation_authority": "informative_practice",
+      "should_cite": true,
+      "quote_allowed_default": false,
+      "last_verified_date": "2026-06-28",
+      "update_check_required": true,
+      "related_quality_standards": [],
+      "related_sccif_judgement_areas": [],
+      "related_regulations": [],
+      "related_workflow_domains": [
+        "data_protection_ai_safety",
+        "life_story_records",
+        "supervision",
+        "leaving_care",
+        "report_writing"
+      ],
+      "escalation_triggers": [],
+      "safer_recording_behaviours": [],
+      "manager_oversight_triggers": [],
+      "child_voice_prompts": [],
+      "professional_judgement_boundary": "ORB supports professional judgement; adults and managers remain accountable for decisions.",
+      "not_to_be_used_for": [
+        "guaranteeing compliance",
+        "replacing safeguarding threshold decisions",
+        "substituting for local policy or LSCP procedures"
+      ]
+    },
+    {
+      "source_id": "youth_justice_board_guidance",
+      "title": "Youth Justice Board: practice guidance",
+      "official_url": "https://www.gov.uk/government/organisations/youth-justice-board",
+      "source_type": "government_practice_guidance",
+      "tier": 5,
+      "jurisdiction": "England",
+      "publisher": "Youth Justice Board",
+      "statutory_status": "practice_guidance",
+      "citation_authority": "informative_practice",
+      "should_cite": true,
+      "quote_allowed_default": false,
+      "last_verified_date": "2026-06-28",
+      "update_check_required": true,
+      "related_quality_standards": [],
+      "related_sccif_judgement_areas": [],
+      "related_regulations": [],
+      "related_workflow_domains": [
+        "data_protection_ai_safety",
+        "life_story_records",
+        "supervision",
+        "leaving_care",
+        "report_writing"
+      ],
+      "escalation_triggers": [],
+      "safer_recording_behaviours": [],
+      "manager_oversight_triggers": [],
+      "child_voice_prompts": [],
+      "professional_judgement_boundary": "ORB supports professional judgement; adults and managers remain accountable for decisions.",
+      "not_to_be_used_for": [
+        "guaranteeing compliance",
+        "replacing safeguarding threshold decisions",
+        "substituting for local policy or LSCP procedures"
+      ]
+    },
+    {
+      "source_id": "avoiding_unnecessary_criminalisation",
+      "title": "National protocol on reducing unnecessary criminalisation of looked-after children",
+      "official_url": "https://www.gov.uk/government/publications/national-protocol-on-reducing-unnecessary-criminalisation-of-looked-after-children-and-care-leavers",
+      "source_type": "statutory_guidance",
+      "tier": 5,
+      "jurisdiction": "England",
+      "publisher": "Ministry of Justice",
+      "statutory_status": "statutory_guidance",
+      "citation_authority": "informative_practice",
+      "should_cite": true,
+      "quote_allowed_default": false,
+      "last_verified_date": "2026-06-28",
+      "update_check_required": true,
+      "related_quality_standards": [],
+      "related_sccif_judgement_areas": [],
+      "related_regulations": [],
+      "related_workflow_domains": [
+        "data_protection_ai_safety",
+        "life_story_records",
+        "supervision",
+        "leaving_care",
+        "report_writing"
+      ],
+      "escalation_triggers": [],
+      "safer_recording_behaviours": [],
+      "manager_oversight_triggers": [],
+      "child_voice_prompts": [],
+      "professional_judgement_boundary": "ORB supports professional judgement; adults and managers remain accountable for decisions.",
+      "not_to_be_used_for": [
+        "guaranteeing compliance",
+        "replacing safeguarding threshold decisions",
+        "substituting for local policy or LSCP procedures"
+      ]
+    },
+    {
+      "source_id": "life_story_care_files_guidance",
+      "title": "Guidance on life story work for looked-after children",
+      "official_url": "https://www.gov.uk/government/publications/life-story-work-for-looked-after-children",
+      "source_type": "government_practice_guidance",
+      "tier": 5,
+      "jurisdiction": "England",
+      "publisher": "Department for Education",
+      "statutory_status": "practice_guidance",
+      "citation_authority": "informative_practice",
+      "should_cite": true,
+      "quote_allowed_default": false,
+      "last_verified_date": "2026-06-28",
+      "update_check_required": true,
+      "related_quality_standards": [],
+      "related_sccif_judgement_areas": [],
+      "related_regulations": [],
+      "related_workflow_domains": [
+        "data_protection_ai_safety",
+        "life_story_records",
+        "supervision",
+        "leaving_care",
+        "report_writing"
+      ],
+      "escalation_triggers": [],
+      "safer_recording_behaviours": [],
+      "manager_oversight_triggers": [],
+      "child_voice_prompts": [],
+      "professional_judgement_boundary": "ORB supports professional judgement; adults and managers remain accountable for decisions.",
+      "not_to_be_used_for": [
+        "guaranteeing compliance",
+        "replacing safeguarding threshold decisions",
+        "substituting for local policy or LSCP procedures"
+      ]
+    },
+    {
+      "source_id": "nspcc_learning",
+      "title": "NSPCC Learning",
+      "official_url": "https://learning.nspcc.org.uk/",
+      "source_type": "third_sector",
+      "tier": 5,
+      "jurisdiction": "England",
+      "publisher": "NSPCC",
+      "statutory_status": "third_sector_resource",
+      "citation_authority": "reflective_only",
+      "should_cite": true,
+      "quote_allowed_default": false,
+      "last_verified_date": "2026-06-28",
+      "update_check_required": true,
+      "related_quality_standards": [],
+      "related_sccif_judgement_areas": [],
+      "related_regulations": [],
+      "related_workflow_domains": [
+        "data_protection_ai_safety",
+        "life_story_records",
+        "supervision",
+        "leaving_care",
+        "report_writing"
+      ],
+      "escalation_triggers": [],
+      "safer_recording_behaviours": [],
+      "manager_oversight_triggers": [],
+      "child_voice_prompts": [],
+      "professional_judgement_boundary": "Inform reflective practice only; verify against statutory sources and local policy.",
+      "not_to_be_used_for": [
+        "treated as statutory authority",
+        "guaranteeing compliance",
+        "safeguarding decision-making",
+        "replacing safeguarding threshold decisions",
+        "substituting for local policy or LSCP procedures"
+      ]
+    },
+    {
+      "source_id": "coram_voice",
+      "title": "Coram Voice",
+      "official_url": "https://coramvoice.org.uk/",
+      "source_type": "third_sector",
+      "tier": 5,
+      "jurisdiction": "England",
+      "publisher": "Coram Voice",
+      "statutory_status": "third_sector_resource",
+      "citation_authority": "reflective_only",
+      "should_cite": true,
+      "quote_allowed_default": false,
+      "last_verified_date": "2026-06-28",
+      "update_check_required": true,
+      "related_quality_standards": [],
+      "related_sccif_judgement_areas": [],
+      "related_regulations": [],
+      "related_workflow_domains": [
+        "data_protection_ai_safety",
+        "life_story_records",
+        "supervision",
+        "leaving_care",
+        "report_writing"
+      ],
+      "escalation_triggers": [],
+      "safer_recording_behaviours": [],
+      "manager_oversight_triggers": [],
+      "child_voice_prompts": [],
+      "professional_judgement_boundary": "Inform reflective practice only; verify against statutory sources and local policy.",
+      "not_to_be_used_for": [
+        "treated as statutory authority",
+        "guaranteeing compliance",
+        "safeguarding decision-making",
+        "replacing safeguarding threshold decisions",
+        "substituting for local policy or LSCP procedures"
+      ]
+    },
+    {
+      "source_id": "become_charity",
+      "title": "Become",
+      "official_url": "https://www.becomecharity.org.uk/",
+      "source_type": "lived_experience",
+      "tier": 5,
+      "jurisdiction": "England",
+      "publisher": "Become",
+      "statutory_status": "lived_experience_resource",
+      "citation_authority": "reflective_only",
+      "should_cite": false,
+      "quote_allowed_default": false,
+      "last_verified_date": "2026-06-28",
+      "update_check_required": true,
+      "related_quality_standards": [],
+      "related_sccif_judgement_areas": [],
+      "related_regulations": [],
+      "related_workflow_domains": [
+        "data_protection_ai_safety",
+        "life_story_records",
+        "supervision",
+        "leaving_care",
+        "report_writing"
+      ],
+      "escalation_triggers": [],
+      "safer_recording_behaviours": [],
+      "manager_oversight_triggers": [],
+      "child_voice_prompts": [],
+      "professional_judgement_boundary": "Inform reflective practice only; verify against statutory sources and local policy.",
+      "not_to_be_used_for": [
+        "treated as statutory authority",
+        "guaranteeing compliance",
+        "safeguarding decision-making",
+        "replacing safeguarding threshold decisions",
+        "substituting for local policy or LSCP procedures"
+      ]
+    },
+    {
+      "source_id": "nyas",
+      "title": "NYAS (National Youth Advocacy Service)",
+      "official_url": "https://www.nyas.net/",
+      "source_type": "third_sector",
+      "tier": 5,
+      "jurisdiction": "England",
+      "publisher": "NYAS",
+      "statutory_status": "third_sector_resource",
+      "citation_authority": "reflective_only",
+      "should_cite": false,
+      "quote_allowed_default": false,
+      "last_verified_date": "2026-06-28",
+      "update_check_required": true,
+      "related_quality_standards": [],
+      "related_sccif_judgement_areas": [],
+      "related_regulations": [],
+      "related_workflow_domains": [
+        "data_protection_ai_safety",
+        "life_story_records",
+        "supervision",
+        "leaving_care",
+        "report_writing"
+      ],
+      "escalation_triggers": [],
+      "safer_recording_behaviours": [],
+      "manager_oversight_triggers": [],
+      "child_voice_prompts": [],
+      "professional_judgement_boundary": "Inform reflective practice only; verify against statutory sources and local policy.",
+      "not_to_be_used_for": [
+        "treated as statutory authority",
+        "guaranteeing compliance",
+        "safeguarding decision-making",
+        "replacing safeguarding threshold decisions",
+        "substituting for local policy or LSCP procedures"
+      ]
+    },
+    {
+      "source_id": "article_39",
+      "title": "Article 39",
+      "official_url": "https://article39.org.uk/",
+      "source_type": "third_sector",
+      "tier": 5,
+      "jurisdiction": "England",
+      "publisher": "Article 39",
+      "statutory_status": "third_sector_resource",
+      "citation_authority": "reflective_only",
+      "should_cite": false,
+      "quote_allowed_default": false,
+      "last_verified_date": "2026-06-28",
+      "update_check_required": true,
+      "related_quality_standards": [],
+      "related_sccif_judgement_areas": [],
+      "related_regulations": [],
+      "related_workflow_domains": [
+        "data_protection_ai_safety",
+        "life_story_records",
+        "supervision",
+        "leaving_care",
+        "report_writing"
+      ],
+      "escalation_triggers": [],
+      "safer_recording_behaviours": [],
+      "manager_oversight_triggers": [],
+      "child_voice_prompts": [],
+      "professional_judgement_boundary": "Inform reflective practice only; verify against statutory sources and local policy.",
+      "not_to_be_used_for": [
+        "treated as statutory authority",
+        "guaranteeing compliance",
+        "safeguarding decision-making",
+        "replacing safeguarding threshold decisions",
+        "substituting for local policy or LSCP procedures"
+      ]
+    },
+    {
+      "source_id": "care_leaver_covenant",
+      "title": "Care Leaver Covenant",
+      "official_url": "https://www.mims.gov.uk/care-leaver-covenant",
+      "source_type": "government_practice_guidance",
+      "tier": 5,
+      "jurisdiction": "England",
+      "publisher": "Department for Education",
+      "statutory_status": "practice_guidance",
+      "citation_authority": "informative_practice",
+      "should_cite": true,
+      "quote_allowed_default": false,
+      "last_verified_date": "2026-06-28",
+      "update_check_required": true,
+      "related_quality_standards": [],
+      "related_sccif_judgement_areas": [],
+      "related_regulations": [],
+      "related_workflow_domains": [
+        "data_protection_ai_safety",
+        "life_story_records",
+        "supervision",
+        "leaving_care",
+        "report_writing"
+      ],
+      "escalation_triggers": [],
+      "safer_recording_behaviours": [],
+      "manager_oversight_triggers": [],
+      "child_voice_prompts": [],
+      "professional_judgement_boundary": "ORB supports professional judgement; adults and managers remain accountable for decisions.",
+      "not_to_be_used_for": [
+        "guaranteeing compliance",
+        "replacing safeguarding threshold decisions",
+        "substituting for local policy or LSCP procedures"
+      ]
+    },
+    {
+      "source_id": "rees_foundation",
+      "title": "Rees Foundation",
+      "official_url": "https://reesfoundation.org/",
+      "source_type": "lived_experience",
+      "tier": 5,
+      "jurisdiction": "England",
+      "publisher": "Rees Foundation",
+      "statutory_status": "lived_experience_resource",
+      "citation_authority": "reflective_only",
+      "should_cite": false,
+      "quote_allowed_default": false,
+      "last_verified_date": "2026-06-28",
+      "update_check_required": true,
+      "related_quality_standards": [],
+      "related_sccif_judgement_areas": [],
+      "related_regulations": [],
+      "related_workflow_domains": [
+        "data_protection_ai_safety",
+        "life_story_records",
+        "supervision",
+        "leaving_care",
+        "report_writing"
+      ],
+      "escalation_triggers": [],
+      "safer_recording_behaviours": [],
+      "manager_oversight_triggers": [],
+      "child_voice_prompts": [],
+      "professional_judgement_boundary": "Inform reflective practice only; verify against statutory sources and local policy.",
+      "not_to_be_used_for": [
+        "treated as statutory authority",
+        "guaranteeing compliance",
+        "safeguarding decision-making",
+        "replacing safeguarding threshold decisions",
+        "substituting for local policy or LSCP procedures"
+      ]
+    }
+  ],
+  "workflow_domain_behaviours": [
+    {
+      "domain": "daily_recording",
+      "display_name": "Daily recording",
+      "primary_source_tier": 1,
+      "relevant_sources": [
+        "childrens_homes_regulations_2015",
+        "dfe_childrens_homes_regulations_guide",
+        "positive_environments_children_flourish"
+      ],
+      "quality_standards": [
+        "qs1_quality_and_purpose",
+        "qs2_child_voice"
+      ],
+      "sccif_judgement_area": "overall_experiences_progress",
+      "regulation_guidance_links": [
+        "Reg 6",
+        "Reg 7"
+      ],
+      "evidence_prompts": [
+        "What happened and what was observed?",
+        "What impact on the child?",
+        "What actions were taken and by whom?"
+      ],
+      "safer_recording_prompts": [
+        "Separate observation from interpretation",
+        "Use child-centred, non-punitive language",
+        "Link to plan and follow-up"
+      ],
+      "child_voice_prompts": [
+        "What did the child say or communicate?",
+        "How were their views recorded?"
+      ],
+      "escalation_prompts": [
+        "DSL/manager where safeguarding indicators present",
+        "Check provider policy and local procedures"
+      ],
+      "manager_oversight_prompts": [
+        "Review chronology and actions",
+        "Confirm notifications and multi-agency steps"
+      ],
+      "citation_expectations": "Cite Tier 1 statutory sources where relevant; distinguish law from guidance",
+      "uncertainty_behaviour": "State when source text is not ingested; do not invent citations or guarantees",
+      "answer_style": "calm, factual, warm, child-centred, professional-judgement preserving"
+    },
+    {
+      "domain": "incident_recording",
+      "display_name": "Incident recording",
+      "primary_source_tier": 1,
+      "relevant_sources": [
+        "dfe_childrens_homes_regulations_guide",
+        "nice_ng225_self_harm",
+        "ofsted_serious_incident_notification",
+        "regulation_40_childrens_homes"
+      ],
+      "quality_standards": [
+        "qs7_protection",
+        "qs2_child_voice"
+      ],
+      "sccif_judgement_area": "helped_and_protected",
+      "regulation_guidance_links": [
+        "Reg 12",
+        "Reg 40"
+      ],
+      "evidence_prompts": [
+        "What happened and what was observed?",
+        "What impact on the child?",
+        "What actions were taken and by whom?"
+      ],
+      "safer_recording_prompts": [
+        "Separate observation from interpretation",
+        "Use child-centred, non-punitive language",
+        "Link to plan and follow-up"
+      ],
+      "child_voice_prompts": [
+        "What did the child say or communicate?",
+        "How were their views recorded?"
+      ],
+      "escalation_prompts": [
+        "DSL/manager where safeguarding indicators present",
+        "Check provider policy and local procedures"
+      ],
+      "manager_oversight_prompts": [
+        "Review chronology and actions",
+        "Confirm notifications and multi-agency steps"
+      ],
+      "citation_expectations": "Cite Tier 1 statutory sources where relevant; distinguish law from guidance",
+      "uncertainty_behaviour": "State when source text is not ingested; do not invent citations or guarantees",
+      "answer_style": "calm, factual, warm, child-centred, professional-judgement preserving"
+    },
+    {
+      "domain": "physical_intervention",
+      "display_name": "Physical intervention",
+      "primary_source_tier": 2,
+      "relevant_sources": [
+        "deprivation_of_liberty_court_orders",
+        "positive_environments_children_flourish"
+      ],
+      "quality_standards": [
+        "qs7_protection"
+      ],
+      "sccif_judgement_area": "helped_and_protected",
+      "regulation_guidance_links": [
+        "Reg 12"
+      ],
+      "evidence_prompts": [
+        "What happened and what was observed?",
+        "What impact on the child?",
+        "What actions were taken and by whom?"
+      ],
+      "safer_recording_prompts": [
+        "Separate observation from interpretation",
+        "Use child-centred, non-punitive language",
+        "Link to plan and follow-up"
+      ],
+      "child_voice_prompts": [
+        "What did the child say or communicate?",
+        "How were their views recorded?"
+      ],
+      "escalation_prompts": [
+        "DSL/manager where safeguarding indicators present",
+        "Check provider policy and local procedures"
+      ],
+      "manager_oversight_prompts": [
+        "Review chronology and actions",
+        "Confirm notifications and multi-agency steps"
+      ],
+      "citation_expectations": "Cite Tier 1 statutory sources where relevant; distinguish law from guidance",
+      "uncertainty_behaviour": "State when source text is not ingested; do not invent citations or guarantees",
+      "answer_style": "calm, factual, warm, child-centred, professional-judgement preserving"
+    },
+    {
+      "domain": "missing_from_care",
+      "display_name": "Missing from care",
+      "primary_source_tier": 2,
+      "relevant_sources": [
+        "child_sexual_exploitation_guidance",
+        "missing_from_care_guidance"
+      ],
+      "quality_standards": [
+        "qs7_protection"
+      ],
+      "sccif_judgement_area": "helped_and_protected",
+      "regulation_guidance_links": [
+        "Reg 12",
+        "Reg 40"
+      ],
+      "evidence_prompts": [
+        "What happened and what was observed?",
+        "What impact on the child?",
+        "What actions were taken and by whom?"
+      ],
+      "safer_recording_prompts": [
+        "Separate observation from interpretation",
+        "Use child-centred, non-punitive language",
+        "Link to plan and follow-up"
+      ],
+      "child_voice_prompts": [
+        "What did the child say or communicate?",
+        "How were their views recorded?"
+      ],
+      "escalation_prompts": [
+        "DSL/manager where safeguarding indicators present",
+        "Check provider policy and local procedures"
+      ],
+      "manager_oversight_prompts": [
+        "Review chronology and actions",
+        "Confirm notifications and multi-agency steps"
+      ],
+      "citation_expectations": "Cite Tier 1 statutory sources where relevant; distinguish law from guidance",
+      "uncertainty_behaviour": "State when source text is not ingested; do not invent citations or guarantees",
+      "answer_style": "calm, factual, warm, child-centred, professional-judgement preserving"
+    },
+    {
+      "domain": "safeguarding_concern",
+      "display_name": "Safeguarding concern",
+      "primary_source_tier": 1,
+      "relevant_sources": [
+        "child_sexual_exploitation_guidance",
+        "county_lines_criminal_exploitation",
+        "domestic_abuse_guidance",
+        "information_sharing_safeguarding",
+        "keeping_children_safe_in_education",
+        "modern_slavery_guidance",
+        "online_safety_ceop",
+        "serious_child_safeguarding_incident_notification",
+        "uasc_trafficked_children_guidance",
+        "what_to_do_if_worried_child_abused",
+        "working_together_safeguarding"
+      ],
+      "quality_standards": [
+        "qs7_protection"
+      ],
+      "sccif_judgement_area": "helped_and_protected",
+      "regulation_guidance_links": [
+        "Reg 12"
+      ],
+      "evidence_prompts": [
+        "What happened and what was observed?",
+        "What impact on the child?",
+        "What actions were taken and by whom?"
+      ],
+      "safer_recording_prompts": [
+        "Separate observation from interpretation",
+        "Use child-centred, non-punitive language",
+        "Link to plan and follow-up"
+      ],
+      "child_voice_prompts": [
+        "What did the child say or communicate?",
+        "How were their views recorded?"
+      ],
+      "escalation_prompts": [
+        "DSL/manager where safeguarding indicators present",
+        "Check provider policy and local procedures"
+      ],
+      "manager_oversight_prompts": [
+        "Review chronology and actions",
+        "Confirm notifications and multi-agency steps"
+      ],
+      "citation_expectations": "Cite Tier 1 statutory sources where relevant; distinguish law from guidance",
+      "uncertainty_behaviour": "State when source text is not ingested; do not invent citations or guarantees",
+      "answer_style": "calm, factual, warm, child-centred, professional-judgement preserving"
+    },
+    {
+      "domain": "allegation",
+      "display_name": "Allegation",
+      "primary_source_tier": 1,
+      "relevant_sources": [
+        "information_sharing_safeguarding",
+        "ofsted_serious_incident_notification",
+        "regulation_40_childrens_homes",
+        "serious_child_safeguarding_incident_notification",
+        "what_to_do_if_worried_child_abused",
+        "working_together_safeguarding"
+      ],
+      "quality_standards": [
+        "qs7_protection",
+        "qs8_leadership"
+      ],
+      "sccif_judgement_area": "helped_and_protected",
+      "regulation_guidance_links": [
+        "Reg 12",
+        "Reg 40"
+      ],
+      "evidence_prompts": [
+        "What happened and what was observed?",
+        "What impact on the child?",
+        "What actions were taken and by whom?"
+      ],
+      "safer_recording_prompts": [
+        "Separate observation from interpretation",
+        "Use child-centred, non-punitive language",
+        "Link to plan and follow-up"
+      ],
+      "child_voice_prompts": [
+        "What did the child say or communicate?",
+        "How were their views recorded?"
+      ],
+      "escalation_prompts": [
+        "DSL/manager where safeguarding indicators present",
+        "Check provider policy and local procedures"
+      ],
+      "manager_oversight_prompts": [
+        "Review chronology and actions",
+        "Confirm notifications and multi-agency steps"
+      ],
+      "citation_expectations": "Cite Tier 1 statutory sources where relevant; distinguish law from guidance",
+      "uncertainty_behaviour": "State when source text is not ingested; do not invent citations or guarantees",
+      "answer_style": "calm, factual, warm, child-centred, professional-judgement preserving"
+    },
+    {
+      "domain": "exploitation_concern",
+      "display_name": "Exploitation concern",
+      "primary_source_tier": 2,
+      "relevant_sources": [
+        "child_sexual_exploitation_guidance",
+        "county_lines_criminal_exploitation",
+        "information_sharing_safeguarding",
+        "missing_from_care_guidance",
+        "modern_slavery_guidance",
+        "online_safety_ceop",
+        "uasc_trafficked_children_guidance",
+        "working_together_safeguarding"
+      ],
+      "quality_standards": [
+        "qs7_protection"
+      ],
+      "sccif_judgement_area": "helped_and_protected",
+      "regulation_guidance_links": [],
+      "evidence_prompts": [
+        "What happened and what was observed?",
+        "What impact on the child?",
+        "What actions were taken and by whom?"
+      ],
+      "safer_recording_prompts": [
+        "Separate observation from interpretation",
+        "Use child-centred, non-punitive language",
+        "Link to plan and follow-up"
+      ],
+      "child_voice_prompts": [
+        "What did the child say or communicate?",
+        "How were their views recorded?"
+      ],
+      "escalation_prompts": [
+        "DSL/manager where safeguarding indicators present",
+        "Check provider policy and local procedures"
+      ],
+      "manager_oversight_prompts": [
+        "Review chronology and actions",
+        "Confirm notifications and multi-agency steps"
+      ],
+      "citation_expectations": "Cite Tier 1 statutory sources where relevant; distinguish law from guidance",
+      "uncertainty_behaviour": "State when source text is not ingested; do not invent citations or guarantees",
+      "answer_style": "calm, factual, warm, child-centred, professional-judgement preserving"
+    },
+    {
+      "domain": "family_time",
+      "display_name": "Family time",
+      "primary_source_tier": 1,
+      "relevant_sources": [
+        "adoption_statutory_guidance",
+        "advocacy_services_statutory",
+        "care_planning_placement_case_review_regs_2010",
+        "children_act_1989_vol1_court_orders",
+        "children_act_1989_vol2_care_planning",
+        "children_act_1989_vol3_transition",
+        "children_social_care_complaints",
+        "childrens_commissioner",
+        "domestic_abuse_guidance",
+        "family_friends_care",
+        "family_rights_group",
+        "fostering_services_national_minimum_standards",
+        "human_rights_act_1998",
+        "iro_handbook",
+        "lifelong_links",
+        "local_offer_care_leavers",
+        "public_sector_equality_duty",
+        "special_guardianship_statutory_guidance",
+        "staying_close",
+        "staying_put",
+        "supported_accommodation_regulations",
+        "uncrc"
+      ],
+      "quality_standards": [
+        "qs2_child_voice",
+        "qs6_positive_relationships"
+      ],
+      "sccif_judgement_area": "overall_experiences_progress",
+      "regulation_guidance_links": [
+        "Reg 7",
+        "Reg 14"
+      ],
+      "evidence_prompts": [
+        "What happened and what was observed?",
+        "What impact on the child?",
+        "What actions were taken and by whom?"
+      ],
+      "safer_recording_prompts": [
+        "Separate observation from interpretation",
+        "Use child-centred, non-punitive language",
+        "Link to plan and follow-up"
+      ],
+      "child_voice_prompts": [
+        "What did the child say or communicate?",
+        "How were their views recorded?"
+      ],
+      "escalation_prompts": [
+        "DSL/manager where safeguarding indicators present",
+        "Check provider policy and local procedures"
+      ],
+      "manager_oversight_prompts": [
+        "Review chronology and actions",
+        "Confirm notifications and multi-agency steps"
+      ],
+      "citation_expectations": "Cite Tier 1 statutory sources where relevant; distinguish law from guidance",
+      "uncertainty_behaviour": "State when source text is not ingested; do not invent citations or guarantees",
+      "answer_style": "calm, factual, warm, child-centred, professional-judgement preserving"
+    },
+    {
+      "domain": "education",
+      "display_name": "Education",
+      "primary_source_tier": 3,
+      "relevant_sources": [
+        "children_and_families_act_2014",
+        "children_missing_education",
+        "designated_teacher_guidance",
+        "education_looked_after_children",
+        "exclusions_suspensions_guidance",
+        "keeping_children_safe_in_education",
+        "school_attendance_guidance",
+        "send_code_of_practice"
+      ],
+      "quality_standards": [
+        "qs3_education"
+      ],
+      "sccif_judgement_area": "overall_experiences_progress",
+      "regulation_guidance_links": [
+        "Reg 8"
+      ],
+      "evidence_prompts": [
+        "What happened and what was observed?",
+        "What impact on the child?",
+        "What actions were taken and by whom?"
+      ],
+      "safer_recording_prompts": [
+        "Separate observation from interpretation",
+        "Use child-centred, non-punitive language",
+        "Link to plan and follow-up"
+      ],
+      "child_voice_prompts": [
+        "What did the child say or communicate?",
+        "How were their views recorded?"
+      ],
+      "escalation_prompts": [
+        "DSL/manager where safeguarding indicators present",
+        "Check provider policy and local procedures"
+      ],
+      "manager_oversight_prompts": [
+        "Review chronology and actions",
+        "Confirm notifications and multi-agency steps"
+      ],
+      "citation_expectations": "Cite Tier 1 statutory sources where relevant; distinguish law from guidance",
+      "uncertainty_behaviour": "State when source text is not ingested; do not invent citations or guarantees",
+      "answer_style": "calm, factual, warm, child-centred, professional-judgement preserving"
+    },
+    {
+      "domain": "health",
+      "display_name": "Health",
+      "primary_source_tier": 3,
+      "relevant_sources": [
+        "deprivation_of_liberty_court_orders",
+        "mental_capacity_act_code_of_practice",
+        "nice_ng205_looked_after_children",
+        "promoting_health_wellbeing_looked_after"
+      ],
+      "quality_standards": [
+        "qs5_health_wellbeing"
+      ],
+      "sccif_judgement_area": "overall_experiences_progress",
+      "regulation_guidance_links": [
+        "Reg 10"
+      ],
+      "evidence_prompts": [
+        "What happened and what was observed?",
+        "What impact on the child?",
+        "What actions were taken and by whom?"
+      ],
+      "safer_recording_prompts": [
+        "Separate observation from interpretation",
+        "Use child-centred, non-punitive language",
+        "Link to plan and follow-up"
+      ],
+      "child_voice_prompts": [
+        "What did the child say or communicate?",
+        "How were their views recorded?"
+      ],
+      "escalation_prompts": [
+        "DSL/manager where safeguarding indicators present",
+        "Check provider policy and local procedures"
+      ],
+      "manager_oversight_prompts": [
+        "Review chronology and actions",
+        "Confirm notifications and multi-agency steps"
+      ],
+      "citation_expectations": "Cite Tier 1 statutory sources where relevant; distinguish law from guidance",
+      "uncertainty_behaviour": "State when source text is not ingested; do not invent citations or guarantees",
+      "answer_style": "calm, factual, warm, child-centred, professional-judgement preserving"
+    },
+    {
+      "domain": "medication",
+      "display_name": "Medication",
+      "primary_source_tier": 3,
+      "relevant_sources": [
+        "mental_capacity_act_code_of_practice",
+        "promoting_health_wellbeing_looked_after"
+      ],
+      "quality_standards": [
+        "qs5_health_wellbeing"
+      ],
+      "sccif_judgement_area": "overall_experiences_progress",
+      "regulation_guidance_links": [
+        "Reg 10"
+      ],
+      "evidence_prompts": [
+        "What happened and what was observed?",
+        "What impact on the child?",
+        "What actions were taken and by whom?"
+      ],
+      "safer_recording_prompts": [
+        "Separate observation from interpretation",
+        "Use child-centred, non-punitive language",
+        "Link to plan and follow-up"
+      ],
+      "child_voice_prompts": [
+        "What did the child say or communicate?",
+        "How were their views recorded?"
+      ],
+      "escalation_prompts": [
+        "DSL/manager where safeguarding indicators present",
+        "Check provider policy and local procedures"
+      ],
+      "manager_oversight_prompts": [
+        "Review chronology and actions",
+        "Confirm notifications and multi-agency steps"
+      ],
+      "citation_expectations": "Cite Tier 1 statutory sources where relevant; distinguish law from guidance",
+      "uncertainty_behaviour": "State when source text is not ingested; do not invent citations or guarantees",
+      "answer_style": "calm, factual, warm, child-centred, professional-judgement preserving"
+    },
+    {
+      "domain": "mental_health_self_harm",
+      "display_name": "Mental health and self-harm",
+      "primary_source_tier": 3,
+      "relevant_sources": [
+        "nice_ng205_looked_after_children",
+        "nice_ng225_self_harm",
+        "promoting_health_wellbeing_looked_after"
+      ],
+      "quality_standards": [
+        "qs5_health_wellbeing",
+        "qs7_protection"
+      ],
+      "sccif_judgement_area": "helped_and_protected",
+      "regulation_guidance_links": [
+        "Reg 10",
+        "Reg 12"
+      ],
+      "evidence_prompts": [
+        "What happened and what was observed?",
+        "What impact on the child?",
+        "What actions were taken and by whom?"
+      ],
+      "safer_recording_prompts": [
+        "Separate observation from interpretation",
+        "Use child-centred, non-punitive language",
+        "Link to plan and follow-up"
+      ],
+      "child_voice_prompts": [
+        "What did the child say or communicate?",
+        "How were their views recorded?"
+      ],
+      "escalation_prompts": [
+        "DSL/manager where safeguarding indicators present",
+        "Check provider policy and local procedures"
+      ],
+      "manager_oversight_prompts": [
+        "Review chronology and actions",
+        "Confirm notifications and multi-agency steps"
+      ],
+      "citation_expectations": "Cite Tier 1 statutory sources where relevant; distinguish law from guidance",
+      "uncertainty_behaviour": "State when source text is not ingested; do not invent citations or guarantees",
+      "answer_style": "calm, factual, warm, child-centred, professional-judgement preserving"
+    },
+    {
+      "domain": "send_disability_autism",
+      "display_name": "SEND / disability / autism",
+      "primary_source_tier": 3,
+      "relevant_sources": [
+        "autism_strategy",
+        "children_and_families_act_2014",
+        "equality_act_2010",
+        "send_code_of_practice"
+      ],
+      "quality_standards": [
+        "qs3_education",
+        "qs5_health_wellbeing"
+      ],
+      "sccif_judgement_area": "overall_experiences_progress",
+      "regulation_guidance_links": [
+        "Reg 8",
+        "Reg 10"
+      ],
+      "evidence_prompts": [
+        "What happened and what was observed?",
+        "What impact on the child?",
+        "What actions were taken and by whom?"
+      ],
+      "safer_recording_prompts": [
+        "Separate observation from interpretation",
+        "Use child-centred, non-punitive language",
+        "Link to plan and follow-up"
+      ],
+      "child_voice_prompts": [
+        "What did the child say or communicate?",
+        "How were their views recorded?"
+      ],
+      "escalation_prompts": [
+        "DSL/manager where safeguarding indicators present",
+        "Check provider policy and local procedures"
+      ],
+      "manager_oversight_prompts": [
+        "Review chronology and actions",
+        "Confirm notifications and multi-agency steps"
+      ],
+      "citation_expectations": "Cite Tier 1 statutory sources where relevant; distinguish law from guidance",
+      "uncertainty_behaviour": "State when source text is not ingested; do not invent citations or guarantees",
+      "answer_style": "calm, factual, warm, child-centred, professional-judgement preserving"
+    },
+    {
+      "domain": "online_safety",
+      "display_name": "Online safety",
+      "primary_source_tier": 2,
+      "relevant_sources": [
+        "county_lines_criminal_exploitation",
+        "keeping_children_safe_in_education",
+        "ofcom_online_safety",
+        "online_safety_ceop"
+      ],
+      "quality_standards": [
+        "qs7_protection"
+      ],
+      "sccif_judgement_area": "helped_and_protected",
+      "regulation_guidance_links": [
+        "Reg 12"
+      ],
+      "evidence_prompts": [
+        "What happened and what was observed?",
+        "What impact on the child?",
+        "What actions were taken and by whom?"
+      ],
+      "safer_recording_prompts": [
+        "Separate observation from interpretation",
+        "Use child-centred, non-punitive language",
+        "Link to plan and follow-up"
+      ],
+      "child_voice_prompts": [
+        "What did the child say or communicate?",
+        "How were their views recorded?"
+      ],
+      "escalation_prompts": [
+        "DSL/manager where safeguarding indicators present",
+        "Check provider policy and local procedures"
+      ],
+      "manager_oversight_prompts": [
+        "Review chronology and actions",
+        "Confirm notifications and multi-agency steps"
+      ],
+      "citation_expectations": "Cite Tier 1 statutory sources where relevant; distinguish law from guidance",
+      "uncertainty_behaviour": "State when source text is not ingested; do not invent citations or guarantees",
+      "answer_style": "calm, factual, warm, child-centred, professional-judgement preserving"
+    },
+    {
+      "domain": "equality_identity_culture",
+      "display_name": "Equality / identity / culture",
+      "primary_source_tier": 4,
+      "relevant_sources": [
+        "adoption_statutory_guidance",
+        "advocacy_services_statutory",
+        "children_act_1989_vol1_court_orders",
+        "children_act_1989_vol3_transition",
+        "children_social_care_complaints",
+        "childrens_commissioner",
+        "equality_act_2010",
+        "family_friends_care",
+        "family_rights_group",
+        "fostering_services_national_minimum_standards",
+        "human_rights_act_1998",
+        "lifelong_links",
+        "local_offer_care_leavers",
+        "public_sector_equality_duty",
+        "special_guardianship_statutory_guidance",
+        "staying_close",
+        "staying_put",
+        "supported_accommodation_regulations",
+        "uasc_trafficked_children_guidance",
+        "uncrc"
+      ],
+      "quality_standards": [
+        "qs2_child_voice",
+        "qs6_positive_relationships"
+      ],
+      "sccif_judgement_area": "overall_experiences_progress",
+      "regulation_guidance_links": [],
+      "evidence_prompts": [
+        "What happened and what was observed?",
+        "What impact on the child?",
+        "What actions were taken and by whom?"
+      ],
+      "safer_recording_prompts": [
+        "Separate observation from interpretation",
+        "Use child-centred, non-punitive language",
+        "Link to plan and follow-up"
+      ],
+      "child_voice_prompts": [
+        "What did the child say or communicate?",
+        "How were their views recorded?"
+      ],
+      "escalation_prompts": [
+        "DSL/manager where safeguarding indicators present",
+        "Check provider policy and local procedures"
+      ],
+      "manager_oversight_prompts": [
+        "Review chronology and actions",
+        "Confirm notifications and multi-agency steps"
+      ],
+      "citation_expectations": "Cite Tier 1 statutory sources where relevant; distinguish law from guidance",
+      "uncertainty_behaviour": "State when source text is not ingested; do not invent citations or guarantees",
+      "answer_style": "calm, factual, warm, child-centred, professional-judgement preserving"
+    },
+    {
+      "domain": "key_work",
+      "display_name": "Key-work",
+      "primary_source_tier": 1,
+      "relevant_sources": [
+        "adoption_statutory_guidance",
+        "advocacy_services_statutory",
+        "care_planning_placement_case_review_regs_2010",
+        "children_act_1989_vol1_court_orders",
+        "children_act_1989_vol2_care_planning",
+        "children_act_1989_vol3_transition",
+        "children_social_care_complaints",
+        "children_social_care_national_framework",
+        "childrens_commissioner",
+        "education_looked_after_children",
+        "family_friends_care",
+        "family_rights_group",
+        "fostering_services_national_minimum_standards",
+        "human_rights_act_1998",
+        "iro_handbook",
+        "lifelong_links",
+        "local_offer_care_leavers",
+        "nice_ng205_looked_after_children",
+        "public_sector_equality_duty",
+        "special_guardianship_statutory_guidance",
+        "staying_close",
+        "staying_put",
+        "supported_accommodation_regulations",
+        "uncrc"
+      ],
+      "quality_standards": [
+        "qs2_child_voice",
+        "qs9_care_planning"
+      ],
+      "sccif_judgement_area": "overall_experiences_progress",
+      "regulation_guidance_links": [
+        "Reg 7",
+        "Reg 14"
+      ],
+      "evidence_prompts": [
+        "What happened and what was observed?",
+        "What impact on the child?",
+        "What actions were taken and by whom?"
+      ],
+      "safer_recording_prompts": [
+        "Separate observation from interpretation",
+        "Use child-centred, non-punitive language",
+        "Link to plan and follow-up"
+      ],
+      "child_voice_prompts": [
+        "What did the child say or communicate?",
+        "How were their views recorded?"
+      ],
+      "escalation_prompts": [
+        "DSL/manager where safeguarding indicators present",
+        "Check provider policy and local procedures"
+      ],
+      "manager_oversight_prompts": [
+        "Review chronology and actions",
+        "Confirm notifications and multi-agency steps"
+      ],
+      "citation_expectations": "Cite Tier 1 statutory sources where relevant; distinguish law from guidance",
+      "uncertainty_behaviour": "State when source text is not ingested; do not invent citations or guarantees",
+      "answer_style": "calm, factual, warm, child-centred, professional-judgement preserving"
+    },
+    {
+      "domain": "risk_assessment",
+      "display_name": "Risk assessment",
+      "primary_source_tier": 2,
+      "relevant_sources": [
+        "deprivation_of_liberty_court_orders",
+        "mental_capacity_act_code_of_practice"
+      ],
+      "quality_standards": [
+        "qs7_protection"
+      ],
+      "sccif_judgement_area": "helped_and_protected",
+      "regulation_guidance_links": [
+        "Reg 12"
+      ],
+      "evidence_prompts": [
+        "What happened and what was observed?",
+        "What impact on the child?",
+        "What actions were taken and by whom?"
+      ],
+      "safer_recording_prompts": [
+        "Separate observation from interpretation",
+        "Use child-centred, non-punitive language",
+        "Link to plan and follow-up"
+      ],
+      "child_voice_prompts": [
+        "What did the child say or communicate?",
+        "How were their views recorded?"
+      ],
+      "escalation_prompts": [
+        "DSL/manager where safeguarding indicators present",
+        "Check provider policy and local procedures"
+      ],
+      "manager_oversight_prompts": [
+        "Review chronology and actions",
+        "Confirm notifications and multi-agency steps"
+      ],
+      "citation_expectations": "Cite Tier 1 statutory sources where relevant; distinguish law from guidance",
+      "uncertainty_behaviour": "State when source text is not ingested; do not invent citations or guarantees",
+      "answer_style": "calm, factual, warm, child-centred, professional-judgement preserving"
+    },
+    {
+      "domain": "behaviour_support",
+      "display_name": "Behaviour support",
+      "primary_source_tier": 2,
+      "relevant_sources": [
+        "autism_strategy",
+        "exclusions_suspensions_guidance",
+        "positive_environments_children_flourish"
+      ],
+      "quality_standards": [
+        "qs1_quality_and_purpose",
+        "qs6_positive_relationships"
+      ],
+      "sccif_judgement_area": "overall_experiences_progress",
+      "regulation_guidance_links": [
+        "Reg 6"
+      ],
+      "evidence_prompts": [
+        "What happened and what was observed?",
+        "What impact on the child?",
+        "What actions were taken and by whom?"
+      ],
+      "safer_recording_prompts": [
+        "Separate observation from interpretation",
+        "Use child-centred, non-punitive language",
+        "Link to plan and follow-up"
+      ],
+      "child_voice_prompts": [
+        "What did the child say or communicate?",
+        "How were their views recorded?"
+      ],
+      "escalation_prompts": [
+        "DSL/manager where safeguarding indicators present",
+        "Check provider policy and local procedures"
+      ],
+      "manager_oversight_prompts": [
+        "Review chronology and actions",
+        "Confirm notifications and multi-agency steps"
+      ],
+      "citation_expectations": "Cite Tier 1 statutory sources where relevant; distinguish law from guidance",
+      "uncertainty_behaviour": "State when source text is not ingested; do not invent citations or guarantees",
+      "answer_style": "calm, factual, warm, child-centred, professional-judgement preserving"
+    },
+    {
+      "domain": "supervision",
+      "display_name": "Supervision",
+      "primary_source_tier": 5,
+      "relevant_sources": [
+        "article_39",
+        "avoiding_unnecessary_criminalisation",
+        "become_charity",
+        "care_leaver_covenant",
+        "coram_voice",
+        "dbs_guidance",
+        "dfe_data_protection_schools",
+        "ico_ai_data_protection",
+        "ico_children_uk_gdpr",
+        "ico_childrens_code",
+        "ico_dpia_guidance",
+        "life_story_care_files_guidance",
+        "nspcc_learning",
+        "nyas",
+        "rees_foundation",
+        "safer_recruitment_education",
+        "whistleblowing_guidance",
+        "youth_justice_board_guidance"
+      ],
+      "quality_standards": [
+        "qs8_leadership",
+        "qs6_positive_relationships"
+      ],
+      "sccif_judgement_area": "leadership_management",
+      "regulation_guidance_links": [
+        "Reg 13"
+      ],
+      "evidence_prompts": [
+        "What happened and what was observed?",
+        "What impact on the child?",
+        "What actions were taken and by whom?"
+      ],
+      "safer_recording_prompts": [
+        "Separate observation from interpretation",
+        "Use child-centred, non-punitive language",
+        "Link to plan and follow-up"
+      ],
+      "child_voice_prompts": [
+        "What did the child say or communicate?",
+        "How were their views recorded?"
+      ],
+      "escalation_prompts": [
+        "DSL/manager where safeguarding indicators present",
+        "Check provider policy and local procedures"
+      ],
+      "manager_oversight_prompts": [
+        "Review chronology and actions",
+        "Confirm notifications and multi-agency steps"
+      ],
+      "citation_expectations": "Cite Tier 1 statutory sources where relevant; distinguish law from guidance",
+      "uncertainty_behaviour": "State when source text is not ingested; do not invent citations or guarantees",
+      "answer_style": "calm, factual, warm, child-centred, professional-judgement preserving"
+    },
+    {
+      "domain": "management_oversight",
+      "display_name": "Management oversight",
+      "primary_source_tier": 1,
+      "relevant_sources": [
+        "children_social_care_national_framework",
+        "childrens_homes_regulations_2015",
+        "ofsted_sccif_childrens_homes",
+        "regulation_44_childrens_homes",
+        "regulation_45_childrens_homes",
+        "serious_child_safeguarding_incident_notification",
+        "working_together_safeguarding"
+      ],
+      "quality_standards": [
+        "qs8_leadership"
+      ],
+      "sccif_judgement_area": "leadership_management",
+      "regulation_guidance_links": [
+        "Reg 13"
+      ],
+      "evidence_prompts": [
+        "What happened and what was observed?",
+        "What impact on the child?",
+        "What actions were taken and by whom?"
+      ],
+      "safer_recording_prompts": [
+        "Separate observation from interpretation",
+        "Use child-centred, non-punitive language",
+        "Link to plan and follow-up"
+      ],
+      "child_voice_prompts": [
+        "What did the child say or communicate?",
+        "How were their views recorded?"
+      ],
+      "escalation_prompts": [
+        "DSL/manager where safeguarding indicators present",
+        "Check provider policy and local procedures"
+      ],
+      "manager_oversight_prompts": [
+        "Review chronology and actions",
+        "Confirm notifications and multi-agency steps"
+      ],
+      "citation_expectations": "Cite Tier 1 statutory sources where relevant; distinguish law from guidance",
+      "uncertainty_behaviour": "State when source text is not ingested; do not invent citations or guarantees",
+      "answer_style": "calm, factual, warm, child-centred, professional-judgement preserving"
+    },
+    {
+      "domain": "reg_40_notification",
+      "display_name": "Reg 40 notification consideration",
+      "primary_source_tier": 1,
+      "relevant_sources": [
+        "ofsted_serious_incident_notification",
+        "regulation_40_childrens_homes"
+      ],
+      "quality_standards": [
+        "qs7_protection",
+        "qs8_leadership"
+      ],
+      "sccif_judgement_area": "leadership_management",
+      "regulation_guidance_links": [
+        "Reg 40"
+      ],
+      "evidence_prompts": [
+        "What happened and what was observed?",
+        "What impact on the child?",
+        "What actions were taken and by whom?"
+      ],
+      "safer_recording_prompts": [
+        "Separate observation from interpretation",
+        "Use child-centred, non-punitive language",
+        "Link to plan and follow-up"
+      ],
+      "child_voice_prompts": [
+        "What did the child say or communicate?",
+        "How were their views recorded?"
+      ],
+      "escalation_prompts": [
+        "DSL/manager where safeguarding indicators present",
+        "Check provider policy and local procedures"
+      ],
+      "manager_oversight_prompts": [
+        "Review chronology and actions",
+        "Confirm notifications and multi-agency steps"
+      ],
+      "citation_expectations": "Cite Tier 1 statutory sources where relevant; distinguish law from guidance",
+      "uncertainty_behaviour": "State when source text is not ingested; do not invent citations or guarantees",
+      "answer_style": "calm, factual, warm, child-centred, professional-judgement preserving"
+    },
+    {
+      "domain": "reg_44_preparation",
+      "display_name": "Reg 44 preparation",
+      "primary_source_tier": 1,
+      "relevant_sources": [
+        "regulation_44_childrens_homes"
+      ],
+      "quality_standards": [
+        "qs8_leadership"
+      ],
+      "sccif_judgement_area": "leadership_management",
+      "regulation_guidance_links": [
+        "Reg 44"
+      ],
+      "evidence_prompts": [
+        "What happened and what was observed?",
+        "What impact on the child?",
+        "What actions were taken and by whom?"
+      ],
+      "safer_recording_prompts": [
+        "Separate observation from interpretation",
+        "Use child-centred, non-punitive language",
+        "Link to plan and follow-up"
+      ],
+      "child_voice_prompts": [
+        "What did the child say or communicate?",
+        "How were their views recorded?"
+      ],
+      "escalation_prompts": [
+        "DSL/manager where safeguarding indicators present",
+        "Check provider policy and local procedures"
+      ],
+      "manager_oversight_prompts": [
+        "Review chronology and actions",
+        "Confirm notifications and multi-agency steps"
+      ],
+      "citation_expectations": "Cite Tier 1 statutory sources where relevant; distinguish law from guidance",
+      "uncertainty_behaviour": "State when source text is not ingested; do not invent citations or guarantees",
+      "answer_style": "calm, factual, warm, child-centred, professional-judgement preserving"
+    },
+    {
+      "domain": "reg_45_preparation",
+      "display_name": "Reg 45 preparation",
+      "primary_source_tier": 1,
+      "relevant_sources": [
+        "regulation_45_childrens_homes"
+      ],
+      "quality_standards": [
+        "qs8_leadership",
+        "qs9_care_planning"
+      ],
+      "sccif_judgement_area": "leadership_management",
+      "regulation_guidance_links": [
+        "Reg 45"
+      ],
+      "evidence_prompts": [
+        "What happened and what was observed?",
+        "What impact on the child?",
+        "What actions were taken and by whom?"
+      ],
+      "safer_recording_prompts": [
+        "Separate observation from interpretation",
+        "Use child-centred, non-punitive language",
+        "Link to plan and follow-up"
+      ],
+      "child_voice_prompts": [
+        "What did the child say or communicate?",
+        "How were their views recorded?"
+      ],
+      "escalation_prompts": [
+        "DSL/manager where safeguarding indicators present",
+        "Check provider policy and local procedures"
+      ],
+      "manager_oversight_prompts": [
+        "Review chronology and actions",
+        "Confirm notifications and multi-agency steps"
+      ],
+      "citation_expectations": "Cite Tier 1 statutory sources where relevant; distinguish law from guidance",
+      "uncertainty_behaviour": "State when source text is not ingested; do not invent citations or guarantees",
+      "answer_style": "calm, factual, warm, child-centred, professional-judgement preserving"
+    },
+    {
+      "domain": "inspection_readiness",
+      "display_name": "Inspection readiness",
+      "primary_source_tier": 1,
+      "relevant_sources": [
+        "childrens_homes_regulations_2015",
+        "dfe_childrens_homes_regulations_guide",
+        "ofsted_sccif_childrens_homes",
+        "regulation_44_childrens_homes",
+        "regulation_45_childrens_homes"
+      ],
+      "quality_standards": [
+        "qs1_quality_and_purpose",
+        "qs8_leadership"
+      ],
+      "sccif_judgement_area": "overall_experiences_progress",
+      "regulation_guidance_links": [
+        "Reg 6",
+        "Reg 13"
+      ],
+      "evidence_prompts": [
+        "What happened and what was observed?",
+        "What impact on the child?",
+        "What actions were taken and by whom?"
+      ],
+      "safer_recording_prompts": [
+        "Separate observation from interpretation",
+        "Use child-centred, non-punitive language",
+        "Link to plan and follow-up"
+      ],
+      "child_voice_prompts": [
+        "What did the child say or communicate?",
+        "How were their views recorded?"
+      ],
+      "escalation_prompts": [
+        "DSL/manager where safeguarding indicators present",
+        "Check provider policy and local procedures"
+      ],
+      "manager_oversight_prompts": [
+        "Review chronology and actions",
+        "Confirm notifications and multi-agency steps"
+      ],
+      "citation_expectations": "Cite Tier 1 statutory sources where relevant; distinguish law from guidance",
+      "uncertainty_behaviour": "State when source text is not ingested; do not invent citations or guarantees",
+      "answer_style": "calm, factual, warm, child-centred, professional-judgement preserving"
+    },
+    {
+      "domain": "report_writing",
+      "display_name": "Report writing",
+      "primary_source_tier": 1,
+      "relevant_sources": [
+        "article_39",
+        "avoiding_unnecessary_criminalisation",
+        "become_charity",
+        "care_leaver_covenant",
+        "children_act_1989_vol2_care_planning",
+        "coram_voice",
+        "dbs_guidance",
+        "dfe_childrens_homes_regulations_guide",
+        "dfe_data_protection_schools",
+        "ico_ai_data_protection",
+        "ico_children_uk_gdpr",
+        "ico_childrens_code",
+        "ico_dpia_guidance",
+        "life_story_care_files_guidance",
+        "nspcc_learning",
+        "nyas",
+        "ofsted_sccif_childrens_homes",
+        "rees_foundation",
+        "safer_recruitment_education",
+        "whistleblowing_guidance",
+        "youth_justice_board_guidance"
+      ],
+      "quality_standards": [
+        "qs1_quality_and_purpose",
+        "qs2_child_voice",
+        "qs3_education",
+        "qs4_enjoyment_achievement",
+        "qs5_health_wellbeing",
+        "qs6_positive_relationships",
+        "qs7_protection",
+        "qs8_leadership",
+        "qs9_care_planning"
+      ],
+      "sccif_judgement_area": "overall_experiences_progress",
+      "regulation_guidance_links": [],
+      "evidence_prompts": [
+        "What happened and what was observed?",
+        "What impact on the child?",
+        "What actions were taken and by whom?"
+      ],
+      "safer_recording_prompts": [
+        "Separate observation from interpretation",
+        "Use child-centred, non-punitive language",
+        "Link to plan and follow-up"
+      ],
+      "child_voice_prompts": [
+        "What did the child say or communicate?",
+        "How were their views recorded?"
+      ],
+      "escalation_prompts": [
+        "DSL/manager where safeguarding indicators present",
+        "Check provider policy and local procedures"
+      ],
+      "manager_oversight_prompts": [
+        "Review chronology and actions",
+        "Confirm notifications and multi-agency steps"
+      ],
+      "citation_expectations": "Cite Tier 1 statutory sources where relevant; distinguish law from guidance",
+      "uncertainty_behaviour": "State when source text is not ingested; do not invent citations or guarantees",
+      "answer_style": "calm, factual, warm, child-centred, professional-judgement preserving"
+    },
+    {
+      "domain": "leaving_care",
+      "display_name": "Leaving care",
+      "primary_source_tier": 4,
+      "relevant_sources": [
+        "adoption_statutory_guidance",
+        "advocacy_services_statutory",
+        "article_39",
+        "avoiding_unnecessary_criminalisation",
+        "become_charity",
+        "care_leaver_covenant",
+        "care_planning_placement_case_review_regs_2010",
+        "children_act_1989_vol1_court_orders",
+        "children_act_1989_vol2_care_planning",
+        "children_act_1989_vol3_transition",
+        "children_and_families_act_2014",
+        "children_social_care_complaints",
+        "children_social_care_national_framework",
+        "childrens_commissioner",
+        "coram_voice",
+        "dbs_guidance",
+        "dfe_data_protection_schools",
+        "family_friends_care",
+        "family_rights_group",
+        "fostering_services_national_minimum_standards",
+        "human_rights_act_1998",
+        "ico_ai_data_protection",
+        "ico_children_uk_gdpr",
+        "ico_childrens_code",
+        "ico_dpia_guidance",
+        "iro_handbook",
+        "life_story_care_files_guidance",
+        "lifelong_links",
+        "local_offer_care_leavers",
+        "nspcc_learning",
+        "nyas",
+        "public_sector_equality_duty",
+        "rees_foundation",
+        "safer_recruitment_education",
+        "special_guardianship_statutory_guidance",
+        "staying_close",
+        "staying_put",
+        "supported_accommodation_regulations",
+        "uncrc",
+        "whistleblowing_guidance",
+        "youth_justice_board_guidance"
+      ],
+      "quality_standards": [
+        "qs9_care_planning"
+      ],
+      "sccif_judgement_area": "overall_experiences_progress",
+      "regulation_guidance_links": [],
+      "evidence_prompts": [
+        "What happened and what was observed?",
+        "What impact on the child?",
+        "What actions were taken and by whom?"
+      ],
+      "safer_recording_prompts": [
+        "Separate observation from interpretation",
+        "Use child-centred, non-punitive language",
+        "Link to plan and follow-up"
+      ],
+      "child_voice_prompts": [
+        "What did the child say or communicate?",
+        "How were their views recorded?"
+      ],
+      "escalation_prompts": [
+        "DSL/manager where safeguarding indicators present",
+        "Check provider policy and local procedures"
+      ],
+      "manager_oversight_prompts": [
+        "Review chronology and actions",
+        "Confirm notifications and multi-agency steps"
+      ],
+      "citation_expectations": "Cite Tier 1 statutory sources where relevant; distinguish law from guidance",
+      "uncertainty_behaviour": "State when source text is not ingested; do not invent citations or guarantees",
+      "answer_style": "calm, factual, warm, child-centred, professional-judgement preserving"
+    },
+    {
+      "domain": "life_story_records",
+      "display_name": "Life story / records the child may read later",
+      "primary_source_tier": 5,
+      "relevant_sources": [
+        "adoption_statutory_guidance",
+        "advocacy_services_statutory",
+        "article_39",
+        "avoiding_unnecessary_criminalisation",
+        "become_charity",
+        "care_leaver_covenant",
+        "children_act_1989_vol1_court_orders",
+        "children_act_1989_vol3_transition",
+        "children_social_care_complaints",
+        "childrens_commissioner",
+        "coram_voice",
+        "dbs_guidance",
+        "dfe_data_protection_schools",
+        "family_friends_care",
+        "family_rights_group",
+        "fostering_services_national_minimum_standards",
+        "human_rights_act_1998",
+        "ico_ai_data_protection",
+        "ico_children_uk_gdpr",
+        "ico_childrens_code",
+        "ico_dpia_guidance",
+        "life_story_care_files_guidance",
+        "lifelong_links",
+        "local_offer_care_leavers",
+        "nspcc_learning",
+        "nyas",
+        "public_sector_equality_duty",
+        "rees_foundation",
+        "safer_recruitment_education",
+        "special_guardianship_statutory_guidance",
+        "staying_close",
+        "staying_put",
+        "supported_accommodation_regulations",
+        "uncrc",
+        "whistleblowing_guidance",
+        "youth_justice_board_guidance"
+      ],
+      "quality_standards": [
+        "qs2_child_voice"
+      ],
+      "sccif_judgement_area": "overall_experiences_progress",
+      "regulation_guidance_links": [
+        "Reg 7"
+      ],
+      "evidence_prompts": [
+        "What happened and what was observed?",
+        "What impact on the child?",
+        "What actions were taken and by whom?"
+      ],
+      "safer_recording_prompts": [
+        "Separate observation from interpretation",
+        "Use child-centred, non-punitive language",
+        "Link to plan and follow-up"
+      ],
+      "child_voice_prompts": [
+        "What did the child say or communicate?",
+        "How were their views recorded?"
+      ],
+      "escalation_prompts": [
+        "DSL/manager where safeguarding indicators present",
+        "Check provider policy and local procedures"
+      ],
+      "manager_oversight_prompts": [
+        "Review chronology and actions",
+        "Confirm notifications and multi-agency steps"
+      ],
+      "citation_expectations": "Cite Tier 1 statutory sources where relevant; distinguish law from guidance",
+      "uncertainty_behaviour": "State when source text is not ingested; do not invent citations or guarantees",
+      "answer_style": "calm, factual, warm, child-centred, professional-judgement preserving"
+    },
+    {
+      "domain": "data_protection_ai_safety",
+      "display_name": "Data protection / AI safety",
+      "primary_source_tier": 5,
+      "relevant_sources": [
+        "article_39",
+        "avoiding_unnecessary_criminalisation",
+        "become_charity",
+        "care_leaver_covenant",
+        "coram_voice",
+        "dbs_guidance",
+        "dfe_data_protection_schools",
+        "ico_ai_data_protection",
+        "ico_children_uk_gdpr",
+        "ico_childrens_code",
+        "ico_dpia_guidance",
+        "life_story_care_files_guidance",
+        "nspcc_learning",
+        "nyas",
+        "rees_foundation",
+        "safer_recruitment_education",
+        "whistleblowing_guidance",
+        "youth_justice_board_guidance"
+      ],
+      "quality_standards": [
+        "qs8_leadership"
+      ],
+      "sccif_judgement_area": "leadership_management",
+      "regulation_guidance_links": [],
+      "evidence_prompts": [
+        "What happened and what was observed?",
+        "What impact on the child?",
+        "What actions were taken and by whom?"
+      ],
+      "safer_recording_prompts": [
+        "Separate observation from interpretation",
+        "Use child-centred, non-punitive language",
+        "Link to plan and follow-up"
+      ],
+      "child_voice_prompts": [
+        "What did the child say or communicate?",
+        "How were their views recorded?"
+      ],
+      "escalation_prompts": [
+        "DSL/manager where safeguarding indicators present",
+        "Check provider policy and local procedures"
+      ],
+      "manager_oversight_prompts": [
+        "Review chronology and actions",
+        "Confirm notifications and multi-agency steps"
+      ],
+      "citation_expectations": "Cite Tier 1 statutory sources where relevant; distinguish law from guidance",
+      "uncertainty_behaviour": "State when source text is not ingested; do not invent citations or guarantees",
+      "answer_style": "calm, factual, warm, child-centred, professional-judgement preserving"
+    }
+  ]
+}
