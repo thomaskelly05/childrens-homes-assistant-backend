@@ -7,9 +7,13 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from services.orb_residential_knowledge_spine_audit_service import NINE_QUALITY_STANDARDS
 from services.orb_residential_source_catalogue_audit_service import (
+    EXPANSION_WORKFLOW_DOMAINS_REQUIRED,
     FORBIDDEN_COMPLIANCE_PHRASES,
+    OPERATIONAL_REGULATIONS_REQUIRED,
     REG_NOTIFICATION_SOURCE_IDS,
     REQUIRED_SOURCE_FIELDS,
     STATUTORY_STATUSES,
@@ -100,7 +104,7 @@ def test_third_sector_not_treated_as_statutory_authority():
 def test_every_workflow_domain_maps_to_at_least_one_source():
     service = orb_residential_source_catalogue_audit_service
     assert service.every_workflow_domain_has_sources() is True
-    assert service.workflow_domain_count() == 28
+    assert service.workflow_domain_count() == 52
     for behaviour in service.workflow_domain_behaviours():
         assert behaviour["relevant_sources"], behaviour["domain"]
 
@@ -174,6 +178,122 @@ def test_workflow_behaviours_include_orb_prompt_types():
         assert w["citation_expectations"]
         assert w["uncertainty_behaviour"]
         assert w["answer_style"]
+        assert w["not_to_be_used_for"]
+
+
+def test_update_report_documents_non_duplicate_expansion():
+    report = orb_residential_source_catalogue_audit_service.update_report()
+    assert report["baseline_source_count"] == 75
+    assert len(report["sources_updated"]) == 17
+    assert len(report["new_sources_added"]) == 38
+    assert len(report["duplicates_avoided"]) == 17
+    assert report["uncertain_near_duplicates_requiring_human_review"]
+
+
+def test_duplicate_source_ids_are_not_created():
+    sources = orb_residential_source_catalogue_audit_service.sources()
+    source_ids = [s["source_id"] for s in sources]
+    assert len(source_ids) == len(set(source_ids))
+
+
+def test_duplicate_official_urls_are_explicitly_justified():
+    service = orb_residential_source_catalogue_audit_service
+    duplicates = service.duplicate_official_urls()
+    assert set(duplicates) == {
+        "https://www.gov.uk/government/publications/keeping-children-safe-in-education--2"
+    }
+    by_id = service.source_by_id()
+    for duplicate_ids in duplicates.values():
+        assert any(by_id[source_id].get("duplicate_url_justification") for source_id in duplicate_ids)
+
+
+def test_every_source_has_actual_url_or_local_policy_marker():
+    service = orb_residential_source_catalogue_audit_service
+    assert service.sources_missing_url_without_local_policy_flag() == []
+    for source in service.sources():
+        if source["requires_local_policy"]:
+            assert source["official_url"] == ""
+            assert source["citation_authority"] == "local_policy_required"
+            assert source["should_cite"] is False
+            assert "provider policy" in " ".join(source["not_to_be_used_for"]).lower()
+        else:
+            assert source["official_url"].startswith("https://")
+
+
+def test_regulated_home_operational_governance_sources_represented():
+    by_id = orb_residential_source_catalogue_audit_service.source_by_id()
+    for source_id in (
+        "care_standards_act_2000",
+        "ofsted_register_childrens_home",
+        "ofsted_social_care_compliance_handbook",
+    ):
+        assert source_id in by_id
+        assert "regulated_home_governance" in by_id[source_id]["related_workflow_domains"]
+
+
+def test_statement_of_purpose_childrens_guide_location_assessment_represented():
+    by_id = orb_residential_source_catalogue_audit_service.source_by_id()
+    assert "statement_of_purpose_provider_document" in by_id
+    assert "childrens_guide_provider_document" in by_id
+    for source_id in (
+        "childrens_homes_regulations_2015",
+        "dfe_childrens_homes_regulations_guide",
+        "statement_of_purpose_provider_document",
+    ):
+        assert "statement_of_purpose_admissions" in by_id[source_id]["related_workflow_domains"]
+
+
+def test_operational_childrens_homes_regulations_are_mapped():
+    mapped = orb_residential_source_catalogue_audit_service.operational_regulations_mapped()
+    assert OPERATIONAL_REGULATIONS_REQUIRED <= mapped
+
+
+@pytest.mark.parametrize(
+    ("domain", "required_sources"),
+    [
+        ("allegations_lado_adult_conduct", {"working_together_safeguarding", "keeping_children_safe_in_education"}),
+        ("prevent_radicalisation", {"prevent_duty_guidance", "channel_duty_guidance"}),
+        ("harmful_sexual_behaviour_child_on_child", {"nspcc_harmful_sexual_behaviour", "keeping_children_safe_in_education"}),
+        ("fgm_forced_marriage_honour_based_abuse", {"fgm_statutory_guidance", "forced_marriage_guidance"}),
+        ("bullying_group_living_dynamics", {"dfe_childrens_homes_regulations_guide", "nspcc_learning"}),
+        ("search_confiscation_privacy_surveillance", {"childrens_homes_regulations_2015", "ico_children_uk_gdpr"}),
+        ("fire_premises_food_health_safety", {"regulatory_reform_fire_safety_order_2005", "food_standards_agency_food_hygiene"}),
+        ("transport_community_activities", {"hse_driving_at_work", "child_car_seats_rules"}),
+        ("money_possessions_financial_dignity", {"junior_isa_looked_after_children", "become_charity"}),
+        ("corporate_parenting_sufficiency_matching", {"corporate_parenting_principles", "sufficiency_duty_guidance"}),
+        ("critical_incidents_death_bereavement", {"serious_child_safeguarding_incident_report_guidance", "ofsted_serious_incident_children_home_guidance"}),
+        ("staff_wellbeing_secondary_trauma", {"hse_stress_at_work", "whistleblowing_guidance"}),
+        ("staff_training_qualifications_induction", {"dfe_childrens_homes_regulations_guide", "safer_recruitment_education"}),
+        ("sexual_health_pregnancy_relationships", {"nhs_sexual_health_services", "nice_ng205_looked_after_children"}),
+        ("language_interpreters_communication_access", {"send_code_of_practice", "coram_voice"}),
+        ("children_with_parents_in_prison", {"nicco_children_of_offenders"}),
+        ("parental_substance_misuse_family_trauma", {"working_together_safeguarding", "domestic_abuse_guidance"}),
+        ("emergency_planning_business_continuity", {"cabinet_office_emergency_response_recovery", "childrens_homes_regulations_2015"}),
+        ("visitors_contractors_professionals", {"dbs_guidance", "ico_children_uk_gdpr"}),
+        ("pets_animals_therapy_animals", {"rspca_pets_advice", "childrens_homes_regulations_2015"}),
+        ("ordinary_childhood_belonging_memories", {"coram_voice", "become_charity"}),
+        ("record_access_care_files_future_reading", {"ico_subject_access_requests", "the_care_files"}),
+    ],
+)
+def test_required_expansion_workflow_domains_exist_with_sources(domain, required_sources):
+    behaviours = {
+        b["domain"]: b for b in orb_residential_source_catalogue_audit_service.workflow_domain_behaviours()
+    }
+    assert EXPANSION_WORKFLOW_DOMAINS_REQUIRED <= set(behaviours)
+    assert domain in behaviours
+    assert required_sources <= set(behaviours[domain]["relevant_sources"])
+
+
+def test_every_expansion_workflow_has_required_behaviour_boundaries():
+    behaviours = {
+        b["domain"]: b for b in orb_residential_source_catalogue_audit_service.workflow_domain_behaviours()
+    }
+    for domain in EXPANSION_WORKFLOW_DOMAINS_REQUIRED:
+        behaviour = behaviours[domain]
+        assert behaviour["escalation_prompts"]
+        assert behaviour["child_voice_prompts"]
+        assert behaviour["safer_recording_prompts"]
+        assert behaviour["not_to_be_used_for"]
 
 
 def test_catalogue_does_not_change_trusted_registry_at_runtime():

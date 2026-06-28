@@ -21,6 +21,7 @@ SourceType = Literal[
     "professional_guidance",
     "third_sector",
     "lived_experience",
+    "provider_policy",
 ]
 
 StatutoryStatus = Literal[
@@ -34,6 +35,7 @@ StatutoryStatus = Literal[
     "professional_guidance",
     "third_sector_resource",
     "lived_experience_resource",
+    "provider_policy",
 ]
 
 CitationAuthority = Literal[
@@ -43,7 +45,7 @@ CitationAuthority = Literal[
     "clinical_guidance",
     "informative_practice",
     "reflective_only",
-    "local_policy_check_required",
+    "local_policy_required",
 ]
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -75,6 +77,59 @@ REG_NOTIFICATION_SOURCE_IDS: frozenset[str] = frozenset(
     }
 )
 
+OPERATIONAL_REGULATIONS_REQUIRED: frozenset[str] = frozenset(
+    {
+        "Reg 16",
+        "Reg 17",
+        "Reg 21",
+        "Reg 22",
+        "Reg 23",
+        "Reg 24",
+        "Reg 25",
+        "Reg 31",
+        "Reg 32",
+        "Reg 33",
+        "Reg 34",
+        "Reg 35",
+        "Reg 36",
+        "Reg 37",
+        "Reg 38",
+        "Reg 39",
+        "Reg 40",
+        "Reg 44",
+        "Reg 45",
+    }
+)
+
+EXPANSION_WORKFLOW_DOMAINS_REQUIRED: frozenset[str] = frozenset(
+    {
+        "regulated_home_governance",
+        "statement_of_purpose_admissions",
+        "allegations_lado_adult_conduct",
+        "prevent_radicalisation",
+        "harmful_sexual_behaviour_child_on_child",
+        "fgm_forced_marriage_honour_based_abuse",
+        "bullying_group_living_dynamics",
+        "search_confiscation_privacy_surveillance",
+        "fire_premises_food_health_safety",
+        "transport_community_activities",
+        "money_possessions_financial_dignity",
+        "corporate_parenting_sufficiency_matching",
+        "critical_incidents_death_bereavement",
+        "staff_wellbeing_secondary_trauma",
+        "staff_training_qualifications_induction",
+        "sexual_health_pregnancy_relationships",
+        "language_interpreters_communication_access",
+        "children_with_parents_in_prison",
+        "parental_substance_misuse_family_trauma",
+        "emergency_planning_business_continuity",
+        "visitors_contractors_professionals",
+        "pets_animals_therapy_animals",
+        "ordinary_childhood_belonging_memories",
+        "record_access_care_files_future_reading",
+    }
+)
+
 STATUTORY_STATUSES: frozenset[str] = frozenset(
     {
         "primary_legislation",
@@ -92,6 +147,7 @@ NON_STATUTORY_STATUSES: frozenset[str] = frozenset(
         "professional_guidance",
         "third_sector_resource",
         "lived_experience_resource",
+        "provider_policy",
     }
 )
 
@@ -137,6 +193,7 @@ REQUIRED_SOURCE_FIELDS: tuple[str, ...] = (
     "child_voice_prompts",
     "professional_judgement_boundary",
     "not_to_be_used_for",
+    "requires_local_policy",
 )
 
 
@@ -167,6 +224,9 @@ class OrbResidentialSourceCatalogueAuditService:
 
     def workflow_domain_behaviours(self) -> list[dict[str, Any]]:
         return list(self._catalogue["workflow_domain_behaviours"])
+
+    def update_report(self) -> dict[str, Any]:
+        return dict(self._catalogue["update_report"])
 
     def sources_for_tier(self, tier: int) -> list[dict[str, Any]]:
         return [s for s in self.sources() if s["tier"] == tier]
@@ -268,6 +328,30 @@ class OrbResidentialSourceCatalogueAuditService:
 
     def source_types_represented(self) -> set[str]:
         return {s["source_type"] for s in self.sources()}
+
+    def duplicate_official_urls(self) -> dict[str, list[str]]:
+        urls: dict[str, list[str]] = {}
+        for source in self.sources():
+            official_url = source.get("official_url", "").strip().lower()
+            if not official_url:
+                continue
+            urls.setdefault(official_url, []).append(source["source_id"])
+        return {url: ids for url, ids in urls.items() if len(ids) > 1}
+
+    def sources_missing_url_without_local_policy_flag(self) -> list[str]:
+        return [
+            s["source_id"]
+            for s in self.sources()
+            if not s.get("official_url") and not s.get("requires_local_policy")
+        ]
+
+    def operational_regulations_mapped(self) -> set[str]:
+        mapped: set[str] = set()
+        for source in self.sources():
+            mapped.update(source["related_regulations"])
+        for workflow in self.workflow_domain_behaviours():
+            mapped.update(workflow["regulation_guidance_links"])
+        return mapped
 
 
 orb_residential_source_catalogue_audit_service = OrbResidentialSourceCatalogueAuditService()

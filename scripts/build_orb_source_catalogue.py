@@ -56,6 +56,8 @@ def src(
         "ORB supports professional judgement; adults and managers remain accountable for decisions."
     ),
     not_to_be_used_for: list[str] | None = None,
+    requires_local_policy: bool = False,
+    duplicate_url_justification: str | None = None,
     jurisdiction: str = "England",
 ) -> dict[str, Any]:
     default_not_to_be_used_for = [
@@ -90,6 +92,8 @@ def src(
         "child_voice_prompts": child_voice_prompts or [],
         "professional_judgement_boundary": professional_judgement_boundary,
         "not_to_be_used_for": merged_ntb,
+        "requires_local_policy": requires_local_policy,
+        "duplicate_url_justification": duplicate_url_justification,
     }
 
 
@@ -723,7 +727,897 @@ def build_sources() -> list[dict[str, Any]]:
             )
         )
 
+    apply_catalogue_expansion(sources)
     return sources
+
+
+EXPANSION_REPORT: dict[str, Any] = {}
+
+
+def _add_unique(items: list[str], additions: list[str]) -> None:
+    for item in additions:
+        if item and item not in items:
+            items.append(item)
+
+
+def _find_source(sources: list[dict[str, Any]], source_id: str) -> dict[str, Any]:
+    for source in sources:
+        if source["source_id"] == source_id:
+            return source
+    raise KeyError(source_id)
+
+
+def _extend_source(
+    sources: list[dict[str, Any]],
+    updated_ids: set[str],
+    source_id: str,
+    *,
+    list_updates: dict[str, list[str]] | None = None,
+    scalar_updates: dict[str, Any] | None = None,
+) -> None:
+    source = _find_source(sources, source_id)
+    for field, additions in (list_updates or {}).items():
+        _add_unique(source[field], additions)
+    for field, value in (scalar_updates or {}).items():
+        source[field] = value
+    updated_ids.add(source_id)
+
+
+def _add_or_extend_source(
+    sources: list[dict[str, Any]],
+    updated_ids: set[str],
+    added_ids: set[str],
+    duplicate_avoided_ids: set[str],
+    source: dict[str, Any],
+) -> None:
+    source_id = source["source_id"]
+    official_url = source["official_url"].strip().lower()
+    title = source["title"].strip().lower()
+
+    for existing in sources:
+        same_id = existing["source_id"] == source_id
+        same_url = official_url and existing["official_url"].strip().lower() == official_url
+        same_title = existing["title"].strip().lower() == title
+        if same_id or same_url or same_title:
+            duplicate_avoided_ids.add(existing["source_id"])
+            _extend_source(
+                sources,
+                updated_ids,
+                existing["source_id"],
+                list_updates={
+                    "related_quality_standards": source["related_quality_standards"],
+                    "related_sccif_judgement_areas": source["related_sccif_judgement_areas"],
+                    "related_regulations": source["related_regulations"],
+                    "related_workflow_domains": source["related_workflow_domains"],
+                    "escalation_triggers": source["escalation_triggers"],
+                    "safer_recording_behaviours": source["safer_recording_behaviours"],
+                    "manager_oversight_triggers": source["manager_oversight_triggers"],
+                    "child_voice_prompts": source["child_voice_prompts"],
+                    "not_to_be_used_for": source["not_to_be_used_for"],
+                },
+            )
+            return
+
+    sources.append(source)
+    added_ids.add(source_id)
+
+
+def apply_catalogue_expansion(sources: list[dict[str, Any]]) -> None:
+    """Expand PR #1799 catalogue without duplicating existing source entries."""
+
+    baseline_count = len(sources)
+    updated_ids: set[str] = set()
+    added_ids: set[str] = set()
+    duplicate_avoided_ids: set[str] = set()
+    near_duplicates_for_human_review = [
+        {
+            "source_ids": ["keeping_children_safe_in_education", "safer_recruitment_education"],
+            "reason": "Both intentionally point to the same KCSIE publication; safer recruitment is a subsection.",
+        }
+    ]
+
+    operational_regs = [
+        "Reg 16",
+        "Reg 17",
+        "Reg 21",
+        "Reg 22",
+        "Reg 23",
+        "Reg 24",
+        "Reg 25",
+        "Reg 31",
+        "Reg 32",
+        "Reg 33",
+        "Reg 34",
+        "Reg 35",
+        "Reg 36",
+        "Reg 37",
+        "Reg 38",
+        "Reg 39",
+        "Reg 40",
+        "Reg 44",
+        "Reg 45",
+    ]
+    operational_domains = [
+        "regulated_home_governance",
+        "statement_of_purpose_admissions",
+        "search_confiscation_privacy_surveillance",
+        "fire_premises_food_health_safety",
+        "staff_training_qualifications_induction",
+        "visitors_contractors_professionals",
+        "record_access_care_files_future_reading",
+    ]
+
+    # Extend existing catalogue entries rather than creating duplicate sources.
+    existing_extensions = {
+        "childrens_homes_regulations_2015": {
+            "related_regulations": operational_regs,
+            "related_workflow_domains": operational_domains
+            + [
+                "corporate_parenting_sufficiency_matching",
+                "money_possessions_financial_dignity",
+                "ordinary_childhood_belonging_memories",
+                "emergency_planning_business_continuity",
+                "pets_animals_therapy_animals",
+            ],
+            "manager_oversight_triggers": [
+                "registration compliance boundary",
+                "responsible individual oversight",
+                "restriction of accommodation review",
+                "records and complaints governance",
+            ],
+            "safer_recording_behaviours": [
+                "map operational concern to regulation number without claiming legal certainty",
+                "record policy basis and manager review for restrictive practice",
+            ],
+            "child_voice_prompts": [
+                "How was the child helped to understand the home, records, privacy and complaints routes?",
+            ],
+        },
+        "dfe_childrens_homes_regulations_guide": {
+            "related_regulations": operational_regs,
+            "related_workflow_domains": operational_domains
+            + [
+                "bullying_group_living_dynamics",
+                "staff_wellbeing_secondary_trauma",
+                "staff_training_qualifications_induction",
+                "ordinary_childhood_belonging_memories",
+            ],
+            "escalation_triggers": [
+                "check provider policy and seek regulatory advice where registration or restriction is unclear",
+            ],
+            "manager_oversight_triggers": [
+                "Statement of Purpose fit",
+                "admissions matching and impact on existing children",
+                "staff qualification and induction gap",
+            ],
+            "child_voice_prompts": [
+                "Could this be explained in the Children's Guide in words the child can understand?",
+            ],
+        },
+        "ofsted_sccif_childrens_homes": {
+            "related_workflow_domains": [
+                "regulated_home_governance",
+                "corporate_parenting_sufficiency_matching",
+                "critical_incidents_death_bereavement",
+            ],
+            "manager_oversight_triggers": [
+                "evidence gap before inspection readiness claims",
+                "regulatory risk review without grade prediction",
+            ],
+        },
+        "working_together_safeguarding": {
+            "related_workflow_domains": [
+                "allegations_lado_adult_conduct",
+                "prevent_radicalisation",
+                "fgm_forced_marriage_honour_based_abuse",
+                "critical_incidents_death_bereavement",
+                "parental_substance_misuse_family_trauma",
+                "harmful_sexual_behaviour_child_on_child",
+            ],
+            "escalation_triggers": [
+                "LADO consultation per local procedures",
+                "urgent safeguarding route where FGM, forced marriage or serious harm is suspected",
+            ],
+            "safer_recording_behaviours": [
+                "distinguish concern, indicator, disclosure and conclusion",
+                "avoid investigative findings in residential records",
+            ],
+        },
+        "keeping_children_safe_in_education": {
+            "related_workflow_domains": [
+                "allegations_lado_adult_conduct",
+                "prevent_radicalisation",
+                "harmful_sexual_behaviour_child_on_child",
+                "sexual_health_pregnancy_relationships",
+            ],
+            "escalation_triggers": [
+                "manager/LADO/provider policy for adult conduct concerns",
+                "DSL route for child-on-child harm and Prevent indicators",
+            ],
+            "safer_recording_behaviours": [
+                "distinguish low-level concern, allegation, complaint and safeguarding concern",
+                "avoid victim-blaming and unnecessary criminalising language",
+            ],
+            "not_to_be_used_for": [
+                "deciding allegation outcome",
+                "replacing LADO process",
+                "deciding disciplinary action",
+            ],
+        },
+        "dbs_guidance": {
+            "official_url": "https://www.gov.uk/government/collections/dbs-checking-service-guidance--2",
+            "related_workflow_domains": [
+                "allegations_lado_adult_conduct",
+                "visitors_contractors_professionals",
+            ],
+            "manager_oversight_triggers": ["DBS referral consideration", "safer access review"],
+            "not_to_be_used_for": ["deciding DBS referral outcome"],
+        },
+        "whistleblowing_guidance": {
+            "related_workflow_domains": [
+                "allegations_lado_adult_conduct",
+                "staff_wellbeing_secondary_trauma",
+            ],
+            "escalation_triggers": ["whistleblowing route where normal reporting feels unsafe"],
+        },
+        "online_safety_ceop": {
+            "related_workflow_domains": [
+                "harmful_sexual_behaviour_child_on_child",
+                "prevent_radicalisation",
+            ],
+            "safer_recording_behaviours": [
+                "record online sexual harm concerns factually and preserve dignity",
+            ],
+        },
+        "nspcc_learning": {
+            "related_workflow_domains": [
+                "harmful_sexual_behaviour_child_on_child",
+                "bullying_group_living_dynamics",
+                "fgm_forced_marriage_honour_based_abuse",
+            ],
+            "not_to_be_used_for": ["treated as statutory authority"],
+        },
+        "ico_children_uk_gdpr": {
+            "related_workflow_domains": [
+                "search_confiscation_privacy_surveillance",
+                "record_access_care_files_future_reading",
+                "visitors_contractors_professionals",
+            ],
+            "safer_recording_behaviours": [
+                "record privacy impact and child information rights where relevant",
+            ],
+        },
+        "ico_childrens_code": {
+            "official_url": "https://ico.org.uk/for-organisations/uk-gdpr-guidance-and-resources/childrens-information/childrens-code-guidance-and-resources/",
+            "related_workflow_domains": [
+                "search_confiscation_privacy_surveillance",
+                "online_safety",
+            ],
+        },
+        "nice_ng205_looked_after_children": {
+            "related_workflow_domains": [
+                "sexual_health_pregnancy_relationships",
+                "staff_wellbeing_secondary_trauma",
+            ],
+            "child_voice_prompts": ["What support would the child find dignified, confidential and helpful?"],
+        },
+        "send_code_of_practice": {
+            "related_workflow_domains": ["language_interpreters_communication_access"],
+            "child_voice_prompts": [
+                "Was communication adapted to the child's SEND, disability or communication needs?",
+            ],
+        },
+        "domestic_abuse_guidance": {
+            "related_workflow_domains": ["parental_substance_misuse_family_trauma"],
+            "safer_recording_behaviours": [
+                "record family trauma context without blaming the child or parent",
+            ],
+        },
+        "coram_voice": {
+            "related_workflow_domains": [
+                "language_interpreters_communication_access",
+                "ordinary_childhood_belonging_memories",
+                "record_access_care_files_future_reading",
+            ],
+            "not_to_be_used_for": ["treated as statutory authority"],
+        },
+        "become_charity": {
+            "related_workflow_domains": [
+                "money_possessions_financial_dignity",
+                "ordinary_childhood_belonging_memories",
+                "record_access_care_files_future_reading",
+            ],
+            "not_to_be_used_for": ["treated as statutory authority"],
+        },
+        "safer_recruitment_education": {
+            "duplicate_url_justification": "Same KCSIE publication; this entry is a safer recruitment subsection mapping.",
+            "related_workflow_domains": [
+                "allegations_lado_adult_conduct",
+                "staff_training_qualifications_induction",
+                "visitors_contractors_professionals",
+            ],
+        },
+    }
+    for source_id, updates in existing_extensions.items():
+        list_updates = {k: v for k, v in updates.items() if isinstance(v, list)}
+        scalar_updates = {k: v for k, v in updates.items() if not isinstance(v, list)}
+        _extend_source(
+            sources,
+            updated_ids,
+            source_id,
+            list_updates=list_updates,
+            scalar_updates=scalar_updates,
+        )
+        duplicate_avoided_ids.add(source_id)
+
+    new_sources = [
+        src(
+            "care_standards_act_2000",
+            "Care Standards Act 2000",
+            "https://www.legislation.gov.uk/ukpga/2000/14/contents",
+            "legislation",
+            1,
+            "UK Parliament",
+            "primary_legislation",
+            "authoritative_statute",
+            quote_allowed_default=True,
+            related_workflow_domains=["regulated_home_governance", "management_oversight"],
+            related_regulations=["Care Standards Act 2000"],
+            manager_oversight_triggers=["registered provider duties", "registration boundary"],
+            not_to_be_used_for=[
+                "deciding registration compliance",
+                "predicting Ofsted enforcement outcome",
+                "replacing legal/regulatory advice",
+            ],
+        ),
+        src(
+            "ofsted_register_childrens_home",
+            "Register a children's home",
+            "https://www.gov.uk/government/publications/register-a-childrens-home",
+            "inspection_framework",
+            1,
+            "Ofsted",
+            "inspection_framework",
+            "authoritative_inspection",
+            related_workflow_domains=[
+                "regulated_home_governance",
+                "statement_of_purpose_admissions",
+            ],
+            manager_oversight_triggers=[
+                "registered provider and registered manager fitness",
+                "responsible individual monitoring",
+            ],
+            not_to_be_used_for=[
+                "deciding registration compliance",
+                "replacing legal/regulatory advice",
+            ],
+        ),
+        src(
+            "ofsted_social_care_compliance_handbook",
+            "Social care compliance handbook from September 2023",
+            "https://www.gov.uk/government/publications/social-care-compliance-handbook-from-september-2023",
+            "inspection_framework",
+            1,
+            "Ofsted",
+            "inspection_framework",
+            "authoritative_inspection",
+            related_workflow_domains=["regulated_home_governance", "management_oversight"],
+            escalation_triggers=["seek regulatory advice where enforcement risk is unclear"],
+            manager_oversight_triggers=[
+                "compliance notice boundary",
+                "cancellation or suspension boundary",
+            ],
+            not_to_be_used_for=[
+                "predicting Ofsted enforcement outcome",
+                "deciding registration compliance",
+                "replacing legal/regulatory advice",
+            ],
+        ),
+        src(
+            "statement_of_purpose_provider_document",
+            "Statement of Purpose (provider-owned children's home document)",
+            "",
+            "provider_policy",
+            1,
+            "Provider",
+            "provider_policy",
+            "local_policy_required",
+            should_cite=False,
+            requires_local_policy=True,
+            related_workflow_domains=[
+                "statement_of_purpose_admissions",
+                "regulated_home_governance",
+                "corporate_parenting_sufficiency_matching",
+            ],
+            manager_oversight_triggers=["does this fit the Statement of Purpose?"],
+            child_voice_prompts=["How would the home explain its purpose to this child?"],
+            not_to_be_used_for=[
+                "replacing provider policy or local safeguarding procedures",
+                "approving placement suitability alone",
+            ],
+        ),
+        src(
+            "childrens_guide_provider_document",
+            "Children's Guide (provider-owned children's home document)",
+            "",
+            "provider_policy",
+            1,
+            "Provider",
+            "provider_policy",
+            "local_policy_required",
+            should_cite=False,
+            requires_local_policy=True,
+            related_workflow_domains=[
+                "statement_of_purpose_admissions",
+                "ordinary_childhood_belonging_memories",
+                "language_interpreters_communication_access",
+            ],
+            child_voice_prompts=[
+                "Could the child understand the guide and know how to complain or ask for advocacy?",
+            ],
+            not_to_be_used_for=[
+                "replacing provider policy or local safeguarding procedures",
+                "assuming the child understood without communication support",
+            ],
+        ),
+        src(
+            "prevent_duty_guidance",
+            "Prevent duty guidance",
+            "https://www.gov.uk/government/publications/prevent-duty-guidance",
+            "statutory_guidance",
+            2,
+            "Home Office",
+            "statutory_guidance",
+            "authoritative_guidance",
+            related_workflow_domains=["prevent_radicalisation", "online_safety"],
+            escalation_triggers=["consult safeguarding lead and local Prevent policy"],
+            safer_recording_behaviours=[
+                "record observable facts and context without labelling the child",
+            ],
+            not_to_be_used_for=[
+                "labelling a child as radicalised",
+                "making Prevent referral decisions alone",
+                "profiling based on identity, religion or culture",
+            ],
+        ),
+        src(
+            "channel_duty_guidance",
+            "Channel duty guidance: protecting people susceptible to radicalisation",
+            "https://www.gov.uk/government/publications/channel-duty-guidance-protecting-people-susceptible-to-radicalisation",
+            "statutory_guidance",
+            2,
+            "Home Office",
+            "statutory_guidance",
+            "authoritative_guidance",
+            related_workflow_domains=["prevent_radicalisation"],
+            escalation_triggers=["safeguarding lead and local Channel process"],
+            not_to_be_used_for=[
+                "making Prevent referral decisions alone",
+                "profiling based on identity, religion or culture",
+            ],
+        ),
+        src(
+            "nspcc_harmful_sexual_behaviour",
+            "NSPCC Learning: harmful sexual behaviour",
+            "https://learning.nspcc.org.uk/child-abuse-and-neglect/harmful-sexual-behaviour",
+            "third_sector",
+            2,
+            "NSPCC",
+            "third_sector_resource",
+            "reflective_only",
+            related_workflow_domains=["harmful_sexual_behaviour_child_on_child"],
+            safer_recording_behaviours=[
+                "use dignity-preserving language and avoid victim-blaming",
+            ],
+            not_to_be_used_for=[
+                "determining whether abuse occurred",
+                "replacing safeguarding investigation",
+                "treated as statutory authority",
+            ],
+        ),
+        src(
+            "fgm_statutory_guidance",
+            "Multi-agency statutory guidance on female genital mutilation",
+            "https://www.gov.uk/government/publications/multi-agency-statutory-guidance-on-female-genital-mutilation",
+            "statutory_guidance",
+            2,
+            "HM Government",
+            "statutory_guidance",
+            "authoritative_guidance",
+            related_workflow_domains=["fgm_forced_marriage_honour_based_abuse"],
+            escalation_triggers=["urgent safeguarding escalation where FGM risk indicators present"],
+            safer_recording_behaviours=["record facts with cultural respect and no stereotyping"],
+            not_to_be_used_for=["making risk decisions alone", "profiling families or communities"],
+        ),
+        src(
+            "forced_marriage_guidance",
+            "The right to choose: government guidance on forced marriage",
+            "https://www.gov.uk/government/publications/the-right-to-choose-government-guidance-on-forced-marriage",
+            "statutory_guidance",
+            2,
+            "Foreign, Commonwealth & Development Office",
+            "statutory_guidance",
+            "authoritative_guidance",
+            related_workflow_domains=["fgm_forced_marriage_honour_based_abuse"],
+            escalation_triggers=["urgent safeguarding route; do not alert family if unsafe"],
+            safer_recording_behaviours=["record the child's words and immediate safety concerns"],
+            not_to_be_used_for=["making risk decisions alone", "profiling families or communities"],
+        ),
+        src(
+            "regulatory_reform_fire_safety_order_2005",
+            "Regulatory Reform (Fire Safety) Order 2005",
+            "https://www.legislation.gov.uk/uksi/2005/1541/contents",
+            "legislation",
+            5,
+            "UK Parliament",
+            "secondary_legislation",
+            "authoritative_statute",
+            quote_allowed_default=True,
+            related_workflow_domains=["fire_premises_food_health_safety"],
+            not_to_be_used_for=["replacing fire risk assessment", "replacing competent person risk assessments"],
+        ),
+        src(
+            "fire_safety_sleeping_accommodation",
+            "Fire safety risk assessment: sleeping accommodation",
+            "https://www.gov.uk/government/publications/fire-safety-risk-assessment-sleeping-accommodation",
+            "government_practice_guidance",
+            5,
+            "Home Office",
+            "practice_guidance",
+            "informative_practice",
+            related_workflow_domains=["fire_premises_food_health_safety"],
+            manager_oversight_triggers=["fire risk assessment action and maintenance evidence"],
+            not_to_be_used_for=["replacing fire risk assessment", "replacing competent person risk assessments"],
+        ),
+        src(
+            "health_safety_at_work_act_1974",
+            "Health and Safety at Work etc. Act 1974",
+            "https://www.legislation.gov.uk/ukpga/1974/37/contents",
+            "legislation",
+            5,
+            "UK Parliament",
+            "primary_legislation",
+            "authoritative_statute",
+            related_workflow_domains=["fire_premises_food_health_safety", "staff_wellbeing_secondary_trauma"],
+            not_to_be_used_for=["replacing competent person risk assessments"],
+        ),
+        src(
+            "hse_riddor",
+            "HSE: RIDDOR reporting of injuries, diseases and dangerous occurrences",
+            "https://www.hse.gov.uk/riddor/",
+            "professional_guidance",
+            5,
+            "Health and Safety Executive",
+            "professional_guidance",
+            "informative_practice",
+            related_workflow_domains=["fire_premises_food_health_safety", "critical_incidents_death_bereavement"],
+            manager_oversight_triggers=["accident reporting review"],
+            not_to_be_used_for=["deciding statutory notification alone"],
+        ),
+        src(
+            "hse_coshh",
+            "HSE: Control of Substances Hazardous to Health (COSHH)",
+            "https://www.hse.gov.uk/coshh/",
+            "professional_guidance",
+            5,
+            "Health and Safety Executive",
+            "professional_guidance",
+            "informative_practice",
+            related_workflow_domains=["fire_premises_food_health_safety"],
+            not_to_be_used_for=["replacing competent person risk assessments"],
+        ),
+        src(
+            "hse_first_aid",
+            "HSE: First aid at work",
+            "https://www.hse.gov.uk/firstaid/",
+            "professional_guidance",
+            5,
+            "Health and Safety Executive",
+            "professional_guidance",
+            "informative_practice",
+            related_workflow_domains=["fire_premises_food_health_safety", "health"],
+            not_to_be_used_for=["replacing first aid needs assessment"],
+        ),
+        src(
+            "food_standards_agency_food_hygiene",
+            "Food Standards Agency: food hygiene for your business",
+            "https://www.food.gov.uk/business-guidance/food-hygiene-for-your-business",
+            "professional_guidance",
+            5,
+            "Food Standards Agency",
+            "professional_guidance",
+            "informative_practice",
+            related_workflow_domains=["fire_premises_food_health_safety", "ordinary_childhood_belonging_memories"],
+            not_to_be_used_for=["replacing food safety advice", "replacing competent person risk assessments"],
+        ),
+        src(
+            "hse_manual_handling",
+            "HSE: manual handling at work",
+            "https://www.hse.gov.uk/msd/manual-handling/index.htm",
+            "professional_guidance",
+            5,
+            "Health and Safety Executive",
+            "professional_guidance",
+            "informative_practice",
+            related_workflow_domains=["fire_premises_food_health_safety"],
+            not_to_be_used_for=["replacing competent person risk assessments"],
+        ),
+        src(
+            "hse_legionella",
+            "HSE: Legionnaires' disease",
+            "https://www.hse.gov.uk/legionnaires/",
+            "professional_guidance",
+            5,
+            "Health and Safety Executive",
+            "professional_guidance",
+            "informative_practice",
+            related_workflow_domains=["fire_premises_food_health_safety"],
+            not_to_be_used_for=["replacing competent person risk assessments"],
+        ),
+        src(
+            "hse_electrical_safety",
+            "HSE: electrical safety",
+            "https://www.hse.gov.uk/electricity/",
+            "professional_guidance",
+            5,
+            "Health and Safety Executive",
+            "professional_guidance",
+            "informative_practice",
+            related_workflow_domains=["fire_premises_food_health_safety"],
+            not_to_be_used_for=["replacing competent person risk assessments"],
+        ),
+        src(
+            "hse_driving_at_work",
+            "HSE: driving and riding safely for work",
+            "https://www.hse.gov.uk/roadsafety/",
+            "professional_guidance",
+            5,
+            "Health and Safety Executive",
+            "professional_guidance",
+            "informative_practice",
+            related_workflow_domains=["transport_community_activities"],
+            manager_oversight_triggers=["vehicle checks and transport risk assessment"],
+            not_to_be_used_for=["approving an activity without manager/provider risk assessment"],
+        ),
+        src(
+            "child_car_seats_rules",
+            "Child car seats: the rules",
+            "https://www.gov.uk/child-car-seats-the-rules",
+            "government_practice_guidance",
+            5,
+            "Department for Transport",
+            "practice_guidance",
+            "informative_practice",
+            related_workflow_domains=["transport_community_activities"],
+            not_to_be_used_for=["approving transport without manager/provider risk assessment"],
+        ),
+        src(
+            "think_road_safety",
+            "THINK! road safety",
+            "https://www.think.gov.uk/",
+            "government_practice_guidance",
+            5,
+            "Department for Transport",
+            "practice_guidance",
+            "informative_practice",
+            related_workflow_domains=["transport_community_activities"],
+            not_to_be_used_for=["approving an activity without manager/provider risk assessment"],
+        ),
+        src(
+            "rospa_water_safety",
+            "RoSPA: water safety",
+            "https://www.rospa.com/policy/home-safety/water",
+            "third_sector",
+            5,
+            "RoSPA",
+            "third_sector_resource",
+            "reflective_only",
+            related_workflow_domains=["transport_community_activities"],
+            not_to_be_used_for=[
+                "treated as statutory authority",
+                "approving an activity without manager/provider risk assessment",
+            ],
+        ),
+        src(
+            "junior_isa_looked_after_children",
+            "Junior ISA for looked-after children",
+            "https://www.gov.uk/government/publications/junior-individual-saving-accounts-for-looked-after-children",
+            "government_practice_guidance",
+            4,
+            "Department for Education",
+            "practice_guidance",
+            "informative_practice",
+            related_workflow_domains=["money_possessions_financial_dignity", "leaving_care"],
+            not_to_be_used_for=["deducting money as punishment", "deciding financial safeguarding outcome"],
+        ),
+        src(
+            "corporate_parenting_principles",
+            "Applying corporate parenting principles to looked-after children and care leavers",
+            "https://www.gov.uk/government/publications/applying-corporate-parenting-principles-to-looked-after-children-and-care-leavers",
+            "statutory_guidance",
+            4,
+            "Department for Education",
+            "statutory_guidance",
+            "authoritative_guidance",
+            related_workflow_domains=["corporate_parenting_sufficiency_matching", "leaving_care"],
+            child_voice_prompts=["What would a good parent notice or do here?"],
+            not_to_be_used_for=["approving placement suitability alone"],
+        ),
+        src(
+            "sufficiency_duty_guidance",
+            "Securing sufficient accommodation for looked-after children",
+            "https://www.gov.uk/government/publications/securing-sufficient-accommodation-for-looked-after-children",
+            "statutory_guidance",
+            4,
+            "Department for Education",
+            "statutory_guidance",
+            "authoritative_guidance",
+            related_workflow_domains=["corporate_parenting_sufficiency_matching"],
+            manager_oversight_triggers=["unregistered placement risk", "matching and stability review"],
+            not_to_be_used_for=["approving placement suitability alone", "replacing responsible manager/placing authority decision"],
+        ),
+        src(
+            "serious_child_safeguarding_incident_report_guidance",
+            "Report a serious child safeguarding incident",
+            "https://www.gov.uk/guidance/report-a-serious-child-safeguarding-incident",
+            "statutory_guidance",
+            2,
+            "Department for Education",
+            "statutory_guidance",
+            "authoritative_guidance",
+            related_workflow_domains=["critical_incidents_death_bereavement", "safeguarding_concern"],
+            escalation_triggers=["urgent statutory notification consideration"],
+            not_to_be_used_for=["managing an emergency", "deciding statutory notification alone"],
+        ),
+        src(
+            "child_safeguarding_practice_review_panel",
+            "Child Safeguarding Practice Review Panel",
+            "https://www.gov.uk/government/organisations/child-safeguarding-practice-review-panel",
+            "government_practice_guidance",
+            2,
+            "Child Safeguarding Practice Review Panel",
+            "practice_guidance",
+            "informative_practice",
+            related_workflow_domains=["critical_incidents_death_bereavement"],
+            manager_oversight_triggers=["organisational learning and review themes"],
+            not_to_be_used_for=["deciding statutory notification alone", "replacing safeguarding review process"],
+        ),
+        src(
+            "ofsted_serious_incident_children_home_guidance",
+            "Tell Ofsted about a serious incident in a children's home or secure children's home",
+            "https://www.gov.uk/guidance/tell-ofsted-about-a-serious-incident-in-a-childrens-home-or-secure-childrens-home",
+            "inspection_framework",
+            1,
+            "Ofsted",
+            "inspection_framework",
+            "authoritative_inspection",
+            related_workflow_domains=["critical_incidents_death_bereavement", "reg_40_notification"],
+            escalation_triggers=["Ofsted notification consideration"],
+            not_to_be_used_for=["deciding statutory notification alone", "guaranteeing compliance"],
+        ),
+        src(
+            "hse_stress_at_work",
+            "HSE: work-related stress and mental health",
+            "https://www.hse.gov.uk/stress/",
+            "professional_guidance",
+            5,
+            "Health and Safety Executive",
+            "professional_guidance",
+            "informative_practice",
+            related_workflow_domains=["staff_wellbeing_secondary_trauma"],
+            not_to_be_used_for=["diagnosing staff wellbeing", "replacing supervision"],
+        ),
+        src(
+            "hse_lone_working",
+            "HSE: lone working",
+            "https://www.hse.gov.uk/lone-working/",
+            "professional_guidance",
+            5,
+            "Health and Safety Executive",
+            "professional_guidance",
+            "informative_practice",
+            related_workflow_domains=["staff_wellbeing_secondary_trauma", "emergency_planning_business_continuity"],
+            not_to_be_used_for=["replacing management decision-making"],
+        ),
+        src(
+            "nhs_sexual_health_services",
+            "NHS: sexual health services",
+            "https://www.nhs.uk/live-well/sexual-health/",
+            "professional_guidance",
+            3,
+            "NHS",
+            "professional_guidance",
+            "informative_practice",
+            related_workflow_domains=["sexual_health_pregnancy_relationships"],
+            escalation_triggers=["health professional and safeguarding lead where risk indicators present"],
+            not_to_be_used_for=["giving clinical advice", "making contraception or pregnancy decisions"],
+        ),
+        src(
+            "ico_subject_access_requests",
+            "ICO: subject access requests",
+            "https://ico.org.uk/for-organisations/uk-gdpr-guidance-and-resources/subject-access-requests/",
+            "data_protection_guidance",
+            5,
+            "ICO",
+            "professional_guidance",
+            "informative_practice",
+            related_workflow_domains=["record_access_care_files_future_reading", "data_protection_ai_safety"],
+            not_to_be_used_for=["deciding SAR disclosure", "replacing data protection officer judgement"],
+        ),
+        src(
+            "the_care_files",
+            "The Care Files",
+            "https://www.whocaresscotland.org/care-files/",
+            "lived_experience",
+            5,
+            "Who Cares? Scotland",
+            "lived_experience_resource",
+            "reflective_only",
+            related_workflow_domains=["record_access_care_files_future_reading", "life_story_records"],
+            safer_recording_behaviours=["write records with dignity for the child who may read them later"],
+            not_to_be_used_for=["treated as statutory authority", "deciding SAR disclosure"],
+            jurisdiction="UK lived-experience context",
+        ),
+        src(
+            "nicco_children_of_offenders",
+            "NICCO: National Information Centre on Children of Offenders",
+            "https://www.nicco.org.uk/",
+            "third_sector",
+            4,
+            "Barnardo's / NICCO",
+            "third_sector_resource",
+            "reflective_only",
+            related_workflow_domains=["children_with_parents_in_prison", "family_time"],
+            child_voice_prompts=["How is the child making sense of family imprisonment and stigma?"],
+            not_to_be_used_for=["making contact decisions alone", "treated as statutory authority"],
+        ),
+        src(
+            "cabinet_office_emergency_response_recovery",
+            "Emergency response and recovery",
+            "https://www.gov.uk/government/publications/emergency-response-and-recovery",
+            "government_practice_guidance",
+            5,
+            "Cabinet Office",
+            "practice_guidance",
+            "informative_practice",
+            related_workflow_domains=["emergency_planning_business_continuity"],
+            manager_oversight_triggers=["business continuity and emergency relocation planning"],
+            not_to_be_used_for=["replacing business continuity plan"],
+        ),
+        src(
+            "rspca_pets_advice",
+            "RSPCA: pets advice and welfare",
+            "https://www.rspca.org.uk/adviceandwelfare/pets",
+            "third_sector",
+            5,
+            "RSPCA",
+            "third_sector_resource",
+            "reflective_only",
+            related_workflow_domains=["pets_animals_therapy_animals", "ordinary_childhood_belonging_memories"],
+            child_voice_prompts=["What does the pet or animal relationship mean to the child?"],
+            not_to_be_used_for=["treated as statutory authority", "approving pets without provider risk assessment"],
+        ),
+    ]
+
+    for new_source in new_sources:
+        _add_or_extend_source(
+            sources,
+            updated_ids,
+            added_ids,
+            duplicate_avoided_ids,
+            new_source,
+        )
+
+    EXPANSION_REPORT.clear()
+    EXPANSION_REPORT.update(
+        {
+            "baseline_source_count": baseline_count,
+            "sources_updated": sorted(updated_ids),
+            "new_sources_added": sorted(added_ids),
+            "duplicates_avoided": sorted(duplicate_avoided_ids),
+            "uncertain_near_duplicates_requiring_human_review": near_duplicates_for_human_review,
+        }
+    )
 
 
 def build_workflow_behaviours(source_list: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -756,6 +1650,30 @@ def build_workflow_behaviours(source_list: list[dict[str, Any]]) -> list[dict[st
         ("leaving_care", "Leaving care", 4, [QS["qs9"]], SCCIF["overall"], []),
         ("life_story_records", "Life story / records the child may read later", 5, [QS["qs2"]], SCCIF["overall"], ["Reg 7"]),
         ("data_protection_ai_safety", "Data protection / AI safety", 5, [QS["qs8"]], SCCIF["leadership"], []),
+        ("regulated_home_governance", "Running the regulated children's home", 1, [QS["qs8"]], SCCIF["leadership"], ["Reg 13", "Reg 31", "Reg 44", "Reg 45"]),
+        ("statement_of_purpose_admissions", "Statement of Purpose, Children's Guide and admissions matching", 1, [QS["qs1"], QS["qs2"], QS["qs9"]], SCCIF["overall"], ["Reg 16", "Reg 17"]),
+        ("allegations_lado_adult_conduct", "Allegations, LADO and adult conduct", 1, [QS["qs7"], QS["qs8"]], SCCIF["protected"], ["Reg 12", "Reg 32", "Reg 34", "Reg 40"]),
+        ("prevent_radicalisation", "Prevent, radicalisation and ideological harm", 2, [QS["qs7"], QS["qs2"]], SCCIF["protected"], ["Reg 12"]),
+        ("harmful_sexual_behaviour_child_on_child", "Harmful sexual behaviour and child-on-child harm", 2, [QS["qs7"], QS["qs2"]], SCCIF["protected"], ["Reg 12", "Reg 35"]),
+        ("fgm_forced_marriage_honour_based_abuse", "FGM, forced marriage and honour-based abuse", 2, [QS["qs7"], QS["qs2"]], SCCIF["protected"], ["Reg 12"]),
+        ("bullying_group_living_dynamics", "Bullying, intimidation and group living dynamics", 2, [QS["qs6"], QS["qs7"]], SCCIF["protected"], ["Reg 11", "Reg 12", "Reg 35"]),
+        ("search_confiscation_privacy_surveillance", "Search, confiscation, room checks, surveillance and privacy", 1, [QS["qs2"], QS["qs7"]], SCCIF["protected"], ["Reg 21", "Reg 22", "Reg 24", "Reg 35"]),
+        ("fire_premises_food_health_safety", "Fire, premises, food, infection control and health and safety", 5, [QS["qs5"], QS["qs8"]], SCCIF["leadership"], ["Reg 25", "Reg 13"]),
+        ("transport_community_activities", "Transport, vehicles and community activities", 5, [QS["qs4"], QS["qs7"]], SCCIF["overall"], ["Reg 12"]),
+        ("money_possessions_financial_dignity", "Money, possessions and financial dignity", 4, [QS["qs2"], QS["qs4"]], SCCIF["overall"], ["Reg 7"]),
+        ("corporate_parenting_sufficiency_matching", "Corporate parenting, sufficiency, matching and stability", 4, [QS["qs1"], QS["qs9"]], SCCIF["overall"], ["Reg 14", "Reg 17"]),
+        ("critical_incidents_death_bereavement", "Critical incidents, death, serious harm and bereavement", 1, [QS["qs7"], QS["qs8"]], SCCIF["protected"], ["Reg 40"]),
+        ("staff_wellbeing_secondary_trauma", "Staff wellbeing, supervision and secondary trauma", 5, [QS["qs8"], QS["qs6"]], SCCIF["leadership"], ["Reg 13", "Reg 31"]),
+        ("staff_training_qualifications_induction", "Staff training, qualifications and induction", 1, [QS["qs8"]], SCCIF["leadership"], ["Reg 31", "Reg 32", "Reg 33"]),
+        ("sexual_health_pregnancy_relationships", "Sexual health, contraception, pregnancy and relationships", 3, [QS["qs5"], QS["qs2"]], SCCIF["overall"], ["Reg 10"]),
+        ("language_interpreters_communication_access", "Language, interpreters and communication access", 4, [QS["qs2"], QS["qs3"]], SCCIF["overall"], ["Reg 7"]),
+        ("children_with_parents_in_prison", "Children with parents in prison or family imprisonment", 4, [QS["qs2"], QS["qs6"]], SCCIF["overall"], ["Reg 7"]),
+        ("parental_substance_misuse_family_trauma", "Parental substance misuse, parental mental health and family trauma", 2, [QS["qs6"], QS["qs7"]], SCCIF["protected"], ["Reg 12"]),
+        ("emergency_planning_business_continuity", "Emergency planning and business continuity", 5, [QS["qs8"], QS["qs5"]], SCCIF["leadership"], ["Reg 13", "Reg 23", "Reg 25"]),
+        ("visitors_contractors_professionals", "Visitors, contractors and professionals in the home", 5, [QS["qs7"], QS["qs8"]], SCCIF["protected"], ["Reg 12", "Reg 32"]),
+        ("pets_animals_therapy_animals", "Pets, animals and therapy animals", 5, [QS["qs4"], QS["qs6"]], SCCIF["overall"], ["Reg 9", "Reg 11"]),
+        ("ordinary_childhood_belonging_memories", "Ordinary childhood, belonging and memories", 4, [QS["qs2"], QS["qs4"], QS["qs6"]], SCCIF["overall"], ["Reg 7", "Reg 9", "Reg 11"]),
+        ("record_access_care_files_future_reading", "Record access, care files and future reading", 5, [QS["qs2"], QS["qs8"]], SCCIF["leadership"], ["Reg 36", "Reg 37", "Reg 38", "Reg 39"]),
     ]
 
     by_domain: dict[str, list[str]] = {}
@@ -803,6 +1721,11 @@ def build_workflow_behaviours(source_list: list[dict[str, Any]]) -> list[dict[st
                 "citation_expectations": "Cite Tier 1 statutory sources where relevant; distinguish law from guidance",
                 "uncertainty_behaviour": "State when source text is not ingested; do not invent citations or guarantees",
                 "answer_style": "calm, factual, warm, child-centred, professional-judgement preserving",
+                "not_to_be_used_for": [
+                    "replacing professional judgement",
+                    "guaranteeing compliance",
+                    "substituting for provider policy or local safeguarding procedures",
+                ],
             }
         )
     return behaviours
@@ -831,7 +1754,7 @@ def main() -> None:
     assert tier1_required <= ids
     behaviours = build_workflow_behaviours(sources)
     domain_ids = {b["domain"] for b in behaviours}
-    assert len(behaviours) == 28
+    assert len(behaviours) == 52
     for s in sources:
         for d in s["related_workflow_domains"]:
             assert d in domain_ids, f"unknown domain {d} in {s['source_id']}"
@@ -851,6 +1774,7 @@ def main() -> None:
             "4": "Rights, identity, advocacy, family and journey through care",
             "5": "Data protection, records, workforce and ethical AI",
         },
+        "update_report": EXPANSION_REPORT,
         "sources": sources,
         "workflow_domain_behaviours": behaviours,
     }
