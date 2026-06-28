@@ -202,6 +202,8 @@ class OrbConvergedGeneralAssistantService:
         raw_user_message: str | None = None,
         stream_meta: dict[str, Any] | None = None,
         safety_scaffold: dict[str, Any] | None = None,
+        retrieval_bundle: dict[str, Any] | None = None,
+        prompt_tier: str | None = None,
     ) -> AsyncIterator[str]:
         user_message = _safe_text(raw_user_message) or _safe_text(message)
         supplied_context_types: list[str] = []
@@ -214,16 +216,29 @@ class OrbConvergedGeneralAssistantService:
         if history:
             supplied_context_types.append("conversation_history")
 
-        retrieval_bundle = orb_knowledge_retrieval_service.prepare_request_bundle(
-            user_message,
-            mode=mode,
-            profile_context=profile_context,
-            attachments=["image"] if image_data_urls else None,
-            history=history,
-        )
-        prompt_tier = retrieval_bundle["prompt_tier"]
+        if retrieval_bundle is not None:
+            effective_bundle = retrieval_bundle
+            effective_prompt_tier = _safe_text(prompt_tier) or _safe_text(
+                retrieval_bundle.get("prompt_tier")
+            ) or "fast"
+        else:
+            effective_bundle = orb_knowledge_retrieval_service.prepare_request_bundle(
+                user_message,
+                mode=mode,
+                profile_context=profile_context,
+                attachments=["image"] if image_data_urls else None,
+                history=history,
+            )
+            effective_prompt_tier = effective_bundle["prompt_tier"]
 
-        if prompt_tier == "fast":
+        prebuilt_retrieval = None
+        if retrieval_bundle is not None and effective_prompt_tier == "fast" and not image_data_urls:
+            prebuilt_retrieval = orb_knowledge_retrieval_service.retrieval_context_from_bundle(
+                effective_bundle,
+                prompt_tier=effective_prompt_tier,
+            )
+
+        if effective_prompt_tier == "fast":
             prompt_block = (
                 "ORB Residential standalone (fast path): concise, accurate answers. "
                 "No live IndiCare OS records. Add safeguarding or recording boundaries only if the question requires them.\n"
@@ -258,6 +273,9 @@ class OrbConvergedGeneralAssistantService:
             raw_user_message=user_message,
             stream_meta=inner_meta,
             safety_scaffold=safety_scaffold,
+            retrieval_bundle=retrieval_bundle,
+            prompt_tier=effective_prompt_tier,
+            retrieval=prebuilt_retrieval,
         ):
             yield delta
 
@@ -287,12 +305,12 @@ class OrbConvergedGeneralAssistantService:
             sources=inner_meta.get("sources"),
             citations=inner_meta.get("citations"),
             quality=processed.get("quality"),
-            extra={"premium": True, "prompt_tier": prompt_tier},
+            extra={"premium": True, "prompt_tier": effective_prompt_tier},
         )
         context_used.update(
             {
                 "premium": True,
-                "prompt_tier": prompt_tier,
+                "prompt_tier": effective_prompt_tier,
                 "orb_residential_convergence": {
                     "enabled": True,
                     "surface": "orb_standalone",

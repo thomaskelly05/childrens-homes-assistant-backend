@@ -1786,6 +1786,8 @@ async def standalone_orb_conversation_stream(
                     raw_user_message=user_message,
                     stream_meta=stream_meta,
                     safety_scaffold=safety_scaffold,
+                    retrieval_bundle=retrieval_bundle,
+                    prompt_tier=prompt_tier,
                 ):
                     model_token_count += 1
                     if first_token_ms is None:
