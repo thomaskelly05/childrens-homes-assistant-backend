@@ -203,7 +203,17 @@ async def create_orb_realtime_session(
     payload: OrbSessionStartRequest,
     current_user=Depends(require_assistant_access),
 ):
-    return await start_orb_session(payload=payload, current_user=current_user)
+    try:
+        response = await orb_voice_session_service.start_session(
+            request=payload,
+            current_user=current_user,
+            governed_route="POST /orb/realtime/session",
+        )
+        return {"success": True, "data": response.model_dump()}
+    except HTTPException:
+        raise
+    except Exception:
+        return _error_response(503, "orb_session_start_failed", "Orb session could not be started. Please try again.", {"retryable": True})
 
 
 @router.post("/session/{session_id}/event")

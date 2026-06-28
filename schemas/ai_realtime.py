@@ -19,11 +19,13 @@ class AiRealtimeSessionPurpose(StrEnum):
     ORB_VOICE_CONVERSATIONAL = "orb_voice_conversational"
     ORB_VOICE_TRANSCRIPTION = "orb_voice_transcription"
     ORB_DICTATE_TRANSCRIPTION = "orb_dictate_transcription"
+    ORB_OPERATIONAL_CONVERSATIONAL = "orb_operational_conversational"
 
 
 FEATURE_ORB_REALTIME_VOICE_SESSION = "orb_realtime_voice_session"
 FEATURE_ORB_REALTIME_TRANSCRIPTION_SESSION = "orb_realtime_transcription_session"
 FEATURE_ORB_DICTATE_REALTIME_SESSION = "orb_dictate_realtime_session"
+FEATURE_ORB_OPERATIONAL_REALTIME_SESSION = "orb_operational_realtime_session"
 
 REALTIME_GOVERNANCE_CLASSIFICATION = "external_ai_realtime_session"
 
@@ -32,6 +34,7 @@ ALLOWED_REALTIME_FEATURES = frozenset(
         FEATURE_ORB_REALTIME_VOICE_SESSION,
         FEATURE_ORB_REALTIME_TRANSCRIPTION_SESSION,
         FEATURE_ORB_DICTATE_REALTIME_SESSION,
+        FEATURE_ORB_OPERATIONAL_REALTIME_SESSION,
     }
 )
 
@@ -39,6 +42,7 @@ PURPOSE_TO_FEATURE: dict[str, str] = {
     AiRealtimeSessionPurpose.ORB_VOICE_CONVERSATIONAL.value: FEATURE_ORB_REALTIME_VOICE_SESSION,
     AiRealtimeSessionPurpose.ORB_VOICE_TRANSCRIPTION.value: FEATURE_ORB_REALTIME_TRANSCRIPTION_SESSION,
     AiRealtimeSessionPurpose.ORB_DICTATE_TRANSCRIPTION.value: FEATURE_ORB_DICTATE_REALTIME_SESSION,
+    AiRealtimeSessionPurpose.ORB_OPERATIONAL_CONVERSATIONAL.value: FEATURE_ORB_OPERATIONAL_REALTIME_SESSION,
 }
 
 
