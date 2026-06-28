@@ -141,6 +141,9 @@ class AIPrivacyDecisionService:
                 "orb_model_router_document",
                 "orb_model_router_action",
                 "orb_model_router_guardrail",
+                "orb_realtime_voice_session",
+                "orb_realtime_transcription_session",
+                "orb_dictate_realtime_session",
             }
             if feature not in legacy:
                 decision = self._blocked("feature_not_allowlisted", classification, settings, request)

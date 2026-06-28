@@ -20,6 +20,13 @@ from schemas.ai_models import (
     AiProviderRequest,
     AiProviderResponse,
 )
+from schemas.ai_realtime import (
+    ALLOWED_REALTIME_FEATURES,
+    AiRealtimeGovernanceContext,
+    AiRealtimeSessionRequest,
+    AiRealtimeSessionResponse,
+    RealtimeProviderName,
+)
 from schemas.ai_tts import (
     FEATURE_ORB_PREMIUM_TTS,
     AiTtsGovernanceContext,
@@ -27,7 +34,7 @@ from schemas.ai_tts import (
     AiTtsSynthesisResponse,
     TtsProviderName,
 )
-from schemas.data_protection import AIPrivacyDecision
+from schemas.data_protection import AIPrivacyDecision, DataClassification
 from services.ai_external_call_governance import (
     evaluate_external_call,
     record_model_usage,
@@ -35,9 +42,18 @@ from services.ai_external_call_governance import (
 )
 from services.ai_provider_adapter_registry import ai_provider_adapter_registry
 from services.ai_provider_registry import ai_provider_registry
+from services.ai_realtime_provider_adapter_registry import ai_realtime_provider_adapter_registry
 from services.ai_tts_provider_adapter_registry import ai_tts_provider_adapter_registry
+from services.provider_data_intelligence_settings_service import (
+    provider_data_intelligence_settings_service,
+)
 
 logger = logging.getLogger("indicare.ai_governed_egress")
+
+_REALTIME_MODEL_ALLOWLIST: dict[str, frozenset[str]] = {
+    RealtimeProviderName.OPENAI.value: frozenset({"gpt-realtime", "gpt-4o-realtime-preview"}),
+    RealtimeProviderName.MOCK.value: frozenset({"mock-realtime", "gpt-realtime"}),
+}
 
 _TTS_MODEL_ALLOWLIST: dict[str, frozenset[str]] = {
     TtsProviderName.OPENAI.value: frozenset({"tts-1", "tts-1-hd"}),
@@ -90,6 +106,13 @@ class TtsEgressDecision(ProviderEgressDecision):
     provider_selected: str | None = None
     fallback_used: bool = False
     audio_bytes_len: int | None = None
+
+
+@dataclass
+class RealtimeEgressDecision(ProviderEgressDecision):
+    provider_selected: str | None = None
+    instructions_len: int | None = None
+    purpose: str | None = None
 
 
 def _text(value: Any) -> str:
@@ -148,6 +171,46 @@ def _audit_tts_egress_decision(
         logger.debug("governed tts egress audit event skipped", exc_info=True)
 
 
+def _audit_realtime_egress_decision(
+    governance: AiRealtimeGovernanceContext,
+    egress: RealtimeEgressDecision,
+    *,
+    provider: RealtimeProviderName | None = None,
+    model: str | None = None,
+) -> None:
+    try:
+        from services.indicare_ai_governance_event_service import indicare_ai_governance_event_service
+
+        indicare_ai_governance_event_service.record_event(
+            {
+                # AiGovernanceSurface allow-list; product surface stays in metadata.
+                "surface": "standalone_orb",
+                "event_type": "governed_egress_decision",
+                "user_id": str(governance.user_id) if governance.user_id is not None else None,
+                "home_id": governance.home_id,
+                "model_provider": provider.value if provider else None,
+                "model_name": model,
+                "metadata": {
+                    "feature": governance.feature,
+                    "governance_surface": governance.surface,
+                    "route": governance.route,
+                    "purpose": governance.purpose,
+                    "classification": "external_ai_realtime_session",
+                    "allowed": egress.allowed,
+                    "blocked_reason": egress.blocked_reason,
+                    "governance_blocked": egress.governance_blocked,
+                    "redaction_applied": egress.redaction_applied,
+                    "provider_selected": egress.provider_selected,
+                    "instructions_len": egress.instructions_len,
+                    "orb_session_id": governance.orb_session_id,
+                    "modality": "realtime_session",
+                },
+            }
+        )
+    except Exception:
+        logger.debug("governed realtime egress audit event skipped", exc_info=True)
+
+
 def _audit_egress_decision(
     governance: AiProviderGovernanceContext,
     egress: ProviderEgressDecision,
@@ -191,9 +254,11 @@ class AiGovernedEgress:
         self,
         adapter_registry: Any | None = None,
         tts_adapter_registry: Any | None = None,
+        realtime_adapter_registry: Any | None = None,
     ) -> None:
         self._registry = adapter_registry or ai_provider_adapter_registry
         self._tts_registry = tts_adapter_registry or ai_tts_provider_adapter_registry
+        self._realtime_registry = realtime_adapter_registry or ai_realtime_provider_adapter_registry
 
     def _require_governance(self, governance: AiProviderGovernanceContext | None) -> AiProviderGovernanceContext:
         if governance is None:
@@ -667,6 +732,281 @@ class AiGovernedEgress:
             governance.text_len,
             response.audio_bytes_len,
             response.latency_ms,
+        )
+        return response, egress
+
+    def _require_realtime_governance(
+        self,
+        governance: AiRealtimeGovernanceContext | None,
+    ) -> AiRealtimeGovernanceContext:
+        if governance is None:
+            raise ValueError("realtime_governance_context_required")
+        return governance
+
+    def _evaluate_realtime(
+        self,
+        governance: AiRealtimeGovernanceContext,
+        *,
+        provider: RealtimeProviderName,
+        model: str,
+    ) -> RealtimeEgressDecision:
+        if governance.feature not in ALLOWED_REALTIME_FEATURES:
+            return RealtimeEgressDecision(
+                allowed=False,
+                blocked_reason="realtime_feature_invalid",
+                governance_blocked=True,
+                feature_blocked=True,
+                purpose=governance.purpose,
+                instructions_len=governance.instructions_len,
+            )
+
+        privacy = governance.privacy_decision
+        if privacy is None:
+            privacy = evaluate_external_call(
+                feature=governance.feature,
+                provider_id=governance.provider_id,
+                home_id=governance.home_id,
+                user_id=governance.user_id,
+                data_classification=DataClassification.INTERNAL_OPERATIONAL,
+                metadata={
+                    **(governance.metadata or {}),
+                    "feature": governance.feature,
+                    "surface": governance.surface,
+                    "route": governance.route,
+                    "purpose": governance.purpose,
+                    "classification": "external_ai_realtime_session",
+                    "ai_provider": provider.value,
+                    "ai_model": model,
+                    "instructions_len": governance.instructions_len,
+                },
+                local_fallback_available=False,
+            )
+
+        if not privacy.allowed:
+            return RealtimeEgressDecision(
+                allowed=False,
+                blocked_reason=privacy.reason,
+                privacy_decision=privacy,
+                governance_blocked=True,
+                feature_blocked=privacy.reason == "feature_not_allowlisted",
+                purpose=governance.purpose,
+                instructions_len=governance.instructions_len,
+            )
+
+        settings = provider_data_intelligence_settings_service.get_effective_settings(
+            provider_id=governance.provider_id,
+            home_id=governance.home_id,
+        )
+        if not settings.realtime_voice_enabled:
+            return RealtimeEgressDecision(
+                allowed=False,
+                blocked_reason="realtime_voice_disabled",
+                privacy_decision=privacy,
+                governance_blocked=True,
+                feature_blocked=True,
+                purpose=governance.purpose,
+                instructions_len=governance.instructions_len,
+            )
+
+        allowed_models = _REALTIME_MODEL_ALLOWLIST.get(provider.value)
+        if allowed_models is not None and model not in allowed_models and provider != RealtimeProviderName.MOCK:
+            return RealtimeEgressDecision(
+                allowed=False,
+                blocked_reason="model_not_allowlisted",
+                privacy_decision=privacy,
+                governance_blocked=True,
+                model_blocked=True,
+                purpose=governance.purpose,
+                instructions_len=governance.instructions_len,
+            )
+
+        adapter = self._realtime_registry.get(provider)
+        if adapter is None or not adapter.is_available():
+            if provider == RealtimeProviderName.MOCK:
+                pass
+            else:
+                return RealtimeEgressDecision(
+                    allowed=False,
+                    blocked_reason="provider_unavailable",
+                    privacy_decision=privacy,
+                    governance_blocked=True,
+                    provider_blocked=True,
+                    purpose=governance.purpose,
+                    instructions_len=governance.instructions_len,
+                )
+
+        return RealtimeEgressDecision(
+            allowed=True,
+            privacy_decision=privacy,
+            provider_selected=provider.value,
+            purpose=governance.purpose,
+            instructions_len=governance.instructions_len,
+        )
+
+    def _blocked_realtime_response(
+        self,
+        request: AiRealtimeSessionRequest,
+        egress: RealtimeEgressDecision,
+    ) -> AiRealtimeSessionResponse:
+        reason = egress.blocked_reason or "governance_blocked"
+        return AiRealtimeSessionResponse(
+            configured=False,
+            provider=request.provider,
+            model=request.model,
+            fallback_text_mode=True,
+            error=_sanitize_provider_error(reason),
+            error_code=reason,
+            unavailable_reason="Realtime session could not be started.",
+            metadata={
+                "governance_blocked": egress.governance_blocked,
+                "blocked_reason": reason,
+            },
+        )
+
+    async def issue_realtime_session(
+        self,
+        request: AiRealtimeSessionRequest,
+        *,
+        governance: AiRealtimeGovernanceContext | None,
+    ) -> tuple[AiRealtimeSessionResponse, RealtimeEgressDecision]:
+        """Governed realtime ephemeral session chokepoint (NR-1 Phase 2C)."""
+        governance = self._require_realtime_governance(governance)
+        instructions = _text(request.instructions)
+        instructions_len = len(instructions)
+        if instructions_len < 1:
+            blocked = RealtimeEgressDecision(
+                allowed=False,
+                blocked_reason="instructions_required",
+                governance_blocked=True,
+                purpose=governance.purpose,
+                instructions_len=0,
+            )
+            return self._blocked_realtime_response(request, blocked), blocked
+
+        if governance.instructions_len != instructions_len:
+            governance = governance.model_copy(update={"instructions_len": instructions_len})
+
+        egress = self._evaluate_realtime(
+            governance,
+            provider=request.provider,
+            model=request.model,
+        )
+        _audit_realtime_egress_decision(
+            governance,
+            egress,
+            provider=request.provider,
+            model=request.model,
+        )
+
+        if egress.governance_blocked or not egress.allowed:
+            logger.info(
+                "governed_realtime_egress_blocked provider=%s route=%s reason=%s instructions_len=%s",
+                request.provider.value,
+                governance.route,
+                egress.blocked_reason,
+                instructions_len,
+            )
+            return self._blocked_realtime_response(request, egress), egress
+
+        privacy = egress.privacy_decision
+        redaction_mode = privacy.redaction_mode if privacy else "strict"
+        redacted_instructions, redaction_applied = redact_plain_text(
+            instructions,
+            mode=redaction_mode,
+        )
+        egress.redaction_applied = redaction_applied
+        if not redacted_instructions.strip():
+            blocked = RealtimeEgressDecision(
+                allowed=False,
+                blocked_reason="instructions_redacted_empty",
+                privacy_decision=privacy,
+                governance_blocked=True,
+                purpose=governance.purpose,
+                instructions_len=instructions_len,
+                redaction_applied=redaction_applied,
+            )
+            return self._blocked_realtime_response(request, blocked), blocked
+
+        adapter = self._realtime_registry.get(request.provider)
+        if adapter is None or not adapter.is_available():
+            blocked = RealtimeEgressDecision(
+                allowed=False,
+                blocked_reason="provider_unavailable",
+                privacy_decision=privacy,
+                governance_blocked=True,
+                provider_blocked=True,
+                purpose=governance.purpose,
+                instructions_len=instructions_len,
+            )
+            return self._blocked_realtime_response(request, blocked), blocked
+
+        provider_request = request.model_copy(update={"instructions": redacted_instructions})
+        try:
+            response = await adapter.issue_session(provider_request)
+        except Exception as exc:
+            logger.warning(
+                "governed_realtime_egress_failed provider=%s error_type=%s instructions_len=%s",
+                request.provider.value,
+                type(exc).__name__,
+                instructions_len,
+            )
+            blocked = RealtimeEgressDecision(
+                allowed=False,
+                blocked_reason=_sanitize_provider_error("provider_error", error_type=type(exc).__name__),
+                privacy_decision=privacy,
+                governance_blocked=False,
+                provider_selected=request.provider.value,
+                purpose=governance.purpose,
+                instructions_len=instructions_len,
+                redaction_applied=redaction_applied,
+            )
+            return self._blocked_realtime_response(request, blocked), blocked
+
+        if response.error or response.error_code:
+            response = response.model_copy(
+                update={
+                    "error": _sanitize_provider_error(
+                        response.error or response.error_code,
+                        error_type=response.error_code,
+                    )
+                }
+            )
+            egress.allowed = False
+            egress.blocked_reason = response.error_code or "realtime_session_failed"
+            return response, egress
+
+        if privacy and privacy.allowed and response.configured and response.session:
+            record_model_usage(
+                feature=governance.feature,
+                decision=privacy,
+                provider_id=governance.provider_id,
+                home_id=governance.home_id,
+                user_id=governance.user_id,
+                model=response.model or request.model,
+                input_tokens=max(1, instructions_len // 4),
+                output_tokens=0,
+                redaction_applied=redaction_applied,
+                metadata={
+                    "surface": governance.surface,
+                    "route": governance.route,
+                    "provider": response.provider.value,
+                    "governed_egress": True,
+                    "modality": "realtime_session",
+                    "purpose": governance.purpose,
+                    "classification": "external_ai_realtime_session",
+                    "instructions_len": instructions_len,
+                },
+            )
+
+        egress.allowed = response.configured and bool(response.session) and not response.fallback_text_mode
+        egress.provider_selected = response.provider.value
+        logger.info(
+            "governed_realtime_egress_ok provider=%s route=%s purpose=%s instructions_len=%s latency_ms=%s",
+            response.provider.value,
+            governance.route,
+            governance.purpose,
+            instructions_len,
+            response.provider_latency_ms,
         )
         return response, egress
 

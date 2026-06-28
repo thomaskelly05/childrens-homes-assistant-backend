@@ -53,3 +53,4 @@ def test_governed_egress_module_exists():
     assert "class AiGovernedEgress" in source
     assert "evaluate_external_call" in source
     assert "ProviderEgressDecision" in source
+    assert "issue_realtime_session" in source
