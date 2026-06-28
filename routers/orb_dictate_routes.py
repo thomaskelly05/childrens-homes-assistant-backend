@@ -38,7 +38,9 @@ from services.orb_dictate_service import (
     transcribe_dictate_audio,
 )
 from services.orb_ai_abuse_guard_service import enforce_daily_ai_call_budget, enforce_transcript_length
-from services.orb_realtime_provider_service import orb_realtime_provider_service
+from services.orb_dictate_realtime_governance_service import (
+    issue_orb_dictate_transcription_realtime_session,
+)
 from services.orb_voice_realtime_config import _openai_realtime_configured
 
 router = APIRouter(prefix="/orb/dictate", tags=["ORB Dictate"])
@@ -89,10 +91,11 @@ async def dictate_realtime_session(current_user=Depends(require_orb_dictate_acce
         }
 
     session_id = f"dictate_{uuid.uuid4().hex[:16]}"
-    provider_result = await orb_realtime_provider_service.create_dictate_transcription_session(
+    provider_result = await issue_orb_dictate_transcription_realtime_session(
         instructions=DICTATE_REALTIME_INSTRUCTIONS,
         current_user=current_user,
         orb_session_id=session_id,
+        route="POST /orb/dictate/realtime/session",
     )
     if not provider_result.get("configured") or provider_result.get("fallback_text_mode"):
         return {
