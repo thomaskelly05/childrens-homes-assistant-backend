@@ -12,7 +12,7 @@ from auth.orb_residential_dependencies import require_orb_residential_auth
 from routers.orb_voice_tts_routes import require_orb_voice_premium, router as tts_router
 from routers.orb_voice_v2_routes import require_orb_voice_premium as require_v2_premium, router as v2_router
 from schemas.data_protection import AIPrivacyDecision, DataClassification
-from schemas.ai_tts import AiTtsSynthesisResponse, TtsProviderName
+from schemas.ai_tts import AiTtsSynthesisResponse
 from services.ai_governed_egress import TtsEgressDecision
 from services.orb_voice_tts_intent_service import (
     SETTINGS_PREVIEW_TEST_PHRASE,

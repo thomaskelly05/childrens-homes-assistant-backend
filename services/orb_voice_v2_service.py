@@ -18,7 +18,7 @@ from services.orb_voice_tts_service import (
     synthesize_spoken_reply,
     voice_runtime_tts_status_payload,
 )
-from services.orb_voice_transcription_service import OrbVoiceTranscriptionError, transcribe_voice_audio
+from services.orb_voice_transcription_service import transcribe_voice_audio
 
 logger = logging.getLogger(__name__)
 

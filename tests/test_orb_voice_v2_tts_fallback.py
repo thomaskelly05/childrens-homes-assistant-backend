@@ -10,7 +10,7 @@ from schemas.ai_tts import AiTtsSynthesisResponse, TtsProviderName
 from schemas.data_protection import AIPrivacyDecision, DataClassification
 from services.ai_governed_egress import TtsEgressDecision
 from services.orb_voice_tts_intent_service import build_tts_governance_context, gate_orb_voice_tts_request
-from services.orb_voice_tts_service import ORBVoiceTTSResult, synthesize_spoken_reply
+from services.orb_voice_tts_service import synthesize_spoken_reply
 
 
 class OrbVoiceV2TtsFallbackTests(unittest.IsolatedAsyncioTestCase):
