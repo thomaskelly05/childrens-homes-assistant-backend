@@ -2,7 +2,7 @@
 
 ## Scope
 
-This PR ingests the first Tier 1 governed source only:
+PR #1802 ingested the first Tier 1 governed source only; PR #1803 adds repeatable verification and checksum support for that approved artefact:
 
 - **Guide to the Children's Homes Regulations including the Quality Standards**
 - Source ID: `dfe_childrens_homes_regulations_guide`
