@@ -2,7 +2,7 @@
 
 ## Scope
 
-This PR ingests the first Tier 1 governed source only:
+PR #1802 ingested the first Tier 1 governed source only; PR #1803 adds repeatable verification and checksum support for that approved artefact:
 
 - **Guide to the Children's Homes Regulations including the Quality Standards**
 - Source ID: `dfe_childrens_homes_regulations_guide`
@@ -25,11 +25,33 @@ The Guide is stored as committed, structured chunks in `data/orb_residential_ing
 - Chunks are committed static data curated from the official Department for Education Guide text used for Phase 2a review.
 - The application performs no runtime fetch, scraping, downloading, or uncontrolled website ingestion.
 - The chunk file includes provenance metadata and a `chunk_json_sha256` checksum.
-- Current chunk JSON checksum: `2b18519d5c0cb719156081e5233a1ba900b95a7f0678380a3c2bb888574baaad`.
-- No generation script is committed in this PR; future ingestion phases should add a repeatable controlled build script before scaling to Regulations 2015, SCCIF, or wider catalogue ingestion.
+- Checksum strategy: SHA-256 over normalised canonical JSON, not raw JSON bytes. The canonical form uses sorted keys, compact separators, UTF-8 encoding, `ensure_ascii=False`, and excludes `provenance.chunk_json_sha256` from the digest input.
+- Current expected chunk JSON checksum: `2b18519d5c0cb719156081e5233a1ba900b95a7f0678380a3c2bb888574baaad`.
+- Run `python3 scripts/verify_orb_guide_chunks.py` to verify the committed artefact.
+- A checksum failure means the committed chunk content or metadata no longer matches the accepted Phase 2a artefact. Reviewers should inspect the JSON diff and only update the expected checksum after approving the content change.
+
+## Repeatable verification script
+
+`scripts/verify_orb_guide_chunks.py` verifies:
+
+- the Guide chunk file exists and loads as JSON;
+- source ID, title, official URL, publisher, version and last verified date are present and match the approved Guide source;
+- chunk count remains 371;
+- checksum matches `2b18519d5c0cb719156081e5233a1ba900b95a7f0678380a3c2bb888574baaad`;
+- all chunks include required metadata, retrieval fields and citation fields;
+- all nine Quality Standards are represented;
+- quote-allowed chunks do not use misleading generated paragraph references;
+- quote-allowed chunks have either a verified official paragraph reference or an unambiguous internal chunk ID;
+- internal chunk labels cannot be mistaken for official Guide paragraph numbers;
+- chunks do not claim a compliance guarantee;
+- Regulations 2015 and SCCIF remain excluded as full-text ingested sources;
+- chunk text remains within the accepted Phase 2a size limit.
+
+This covers repeatable audit and checksum validation for the committed Guide artefact. Future work remains a controlled source-to-chunk generation pipeline for any next Tier 1 source, including explicit provenance capture, human review checkpoints, and separate exclusion/citation tests before Regulations 2015, SCCIF or wider catalogue ingestion.
 
 ## What was not ingested
 
+- This follow-up verification PR does not ingest any new source material.
 - The Children's Homes (England) Regulations 2015 were not ingested as a separate full-text source.
 - SCCIF was not ingested as a full-text source.
 - The full 113-source catalogue was not ingested.
