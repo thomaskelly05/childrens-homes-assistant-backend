@@ -1,7 +1,10 @@
 """ORB Residential governed source ingestion preparation.
 
-Read-only planning helpers. This module does not ingest, scrape, download,
-wire runtime retrieval, alter routes, or change frontend behaviour.
+Governance helpers for ORB Residential source ingestion.
+
+Phase 2a adds static, committed Guide chunks. This module still does not
+scrape, download, wire live ORB answers, alter routes, or change frontend
+behaviour at runtime.
 """
 
 from __future__ import annotations
@@ -10,6 +13,10 @@ import json
 from pathlib import Path
 from typing import Any, Literal
 
+from services.orb_residential_guide_ingestion_service import (
+    GUIDE_SOURCE_ID,
+    orb_residential_guide_ingestion_service,
+)
 from services.orb_residential_source_catalogue_audit_service import CATALOGUE_PATH
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -38,13 +45,20 @@ REQUIRED_CHUNK_METADATA_FIELDS: tuple[str, ...] = (
     "last_verified_date",
     "section_heading",
     "paragraph_reference",
-    "regulation_number",
+    "official_paragraph_reference",
+    "internal_chunk_id",
     "quality_standard",
+    "related_regulations",
+    "related_workflow_domains",
+    "regulation_number",
     "sccif_judgement_area",
     "workflow_domains",
     "citation_label",
     "basis_type",
     "quote_allowed",
+    "quote_basis",
+    "source_text_exact",
+    "generated_metadata",
     "retrieval_priority",
     "requires_local_policy",
     "professional_judgement_boundary",
@@ -616,12 +630,32 @@ class OrbResidentialGovernedIngestionPrepService:
         return RUNTIME_WIRING_PHASES
 
     def full_text_ingestion_performed(self) -> bool:
-        return False
+        return True
+
+    def full_text_ingested_source_ids(self) -> set[str]:
+        return orb_residential_guide_ingestion_service.full_text_source_ids()
+
+    def guide_chunks(self) -> list[dict[str, Any]]:
+        return orb_residential_guide_ingestion_service.chunks()
+
+    def guide_chunk_count(self) -> int:
+        return orb_residential_guide_ingestion_service.chunk_count()
+
+    def guide_retrieval_policy(self) -> dict[str, Any]:
+        return orb_residential_guide_ingestion_service.retrieval_policy()
+
+    def retrieve_guide_chunks(self, **kwargs: Any) -> list[dict[str, Any]]:
+        return orb_residential_guide_ingestion_service.retrieve_chunks(**kwargs)
+
+    def guide_source_bundle(self, **kwargs: Any) -> dict[str, Any]:
+        return orb_residential_guide_ingestion_service.source_bundle(**kwargs)
 
     def scraping_or_downloading_performed(self) -> bool:
-        return False
+        return orb_residential_guide_ingestion_service.runtime_scraping_or_downloading_performed()
 
     def exact_citation_allowed(self, chunk: dict[str, Any]) -> bool:
+        if _normalise(chunk.get("source_id")) == GUIDE_SOURCE_ID:
+            return orb_residential_guide_ingestion_service.exact_citation_allowed(chunk)
         if _normalise(chunk.get("basis_type")) != "exact":
             return False
         if _normalise(chunk.get("source_integrity")) == "summary_only":
@@ -734,6 +768,8 @@ class OrbResidentialGovernedIngestionPrepService:
             "cost_control_design_present": True,
             "never_send_all_catalogue_sources_to_llm": True,
             "full_text_ingestion_performed": self.full_text_ingestion_performed(),
+            "full_text_ingested_source_ids": sorted(self.full_text_ingested_source_ids()),
+            "guide_chunk_count": self.guide_chunk_count(),
             "scraping_or_downloading_performed": self.scraping_or_downloading_performed(),
             "runtime_behaviour_changed": False,
             "route_frontend_or_os_assistant_files_changed": False,

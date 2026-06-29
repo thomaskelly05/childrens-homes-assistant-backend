@@ -53,6 +53,22 @@ def test_regulatory_query_includes_ofsted_and_quality_standards(retrieval):
     keys = {p["pack_key"] for p in packs}
     assert "ofsted_sccif" in keys
     assert "quality_standards" in keys
+    assert "orb_knowledge_spine" in keys
+
+
+def test_sccif_and_quality_standard_queries_use_specific_source_packs(retrieval):
+    sccif_keys = {
+        pack["pack_key"]
+        for pack in retrieval.retrieve_sources("Use the SCCIF inspection lens for children's homes")
+    }
+    quality_keys = {
+        pack["pack_key"]
+        for pack in retrieval.retrieve_sources("Which Quality Standards apply to child voice?")
+    }
+    assert "ofsted_sccif" in sccif_keys
+    assert "quality_standards" in sccif_keys
+    assert "quality_standards" in quality_keys
+    assert "residential_childrens_homes" not in quality_keys or "quality_standards" in quality_keys
 
 
 def test_recording_quality_mode_pack(retrieval):

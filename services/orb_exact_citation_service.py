@@ -31,6 +31,55 @@ def _parse_dt(value: Any) -> datetime | None:
 class OrbExactCitationService:
     """Builds exact citation labels and anchors from source/chunk metadata."""
 
+    def exact_citation_allowed(
+        self,
+        chunk: dict[str, Any],
+        source: dict[str, Any] | None = None,
+    ) -> bool:
+        source = source or {}
+        metadata = chunk.get("metadata") or {}
+        basis_type = _text(chunk.get("basis_type") or metadata.get("basis_type"))
+        quote_basis = _text(chunk.get("quote_basis") or metadata.get("quote_basis"))
+        source_integrity = _text(
+            source.get("source_integrity")
+            or chunk.get("source_integrity")
+            or metadata.get("source_integrity")
+        )
+        exact_text = _text(
+            chunk.get("exact_excerpt")
+            or chunk.get("exact_text")
+            or chunk.get("text")
+        )
+        quote_allowed = chunk.get("quote_allowed")
+        if quote_allowed is None:
+            quote_allowed = source.get("quote_allowed")
+        if quote_allowed is None:
+            quote_allowed = source_integrity == "full_document"
+        label = _text(chunk.get("citation_label") or chunk.get("paragraph_number") or chunk.get("section"))
+        generated_metadata = chunk.get("generated_metadata") or metadata.get("generated_metadata")
+        if not isinstance(generated_metadata, dict):
+            generated_metadata = {}
+        generated_reference = bool(
+            chunk.get("generated_reference")
+            or metadata.get("generated_reference")
+            or generated_metadata.get("original_extracted_reference")
+        )
+        has_verified_official_ref = bool(
+            _text(chunk.get("official_paragraph_reference") or metadata.get("official_paragraph_reference"))
+        )
+        has_internal_label = "internal chunk" in label.lower()
+        return bool(
+            basis_type == "exact"
+            and source_integrity == "full_document"
+            and quote_allowed is True
+            and exact_text
+            and label
+            and (chunk.get("source_text_exact") is True or metadata.get("source_text_exact") is True)
+            and quote_basis
+            and (has_verified_official_ref or has_internal_label)
+            and (not generated_reference or has_internal_label)
+        )
+
     def build_citation_anchor(
         self,
         source_id: str,
@@ -169,7 +218,7 @@ class OrbExactCitationService:
             "governance_status": _text(source.get("governance_status")) or _text(chunk.get("governance_status")) or None,
             "warning": warning,
             "excerpt": excerpt,
-            "quote_allowed": _text(source.get("source_integrity")) not in {"summary_only", "unknown"},
+            "quote_allowed": self.exact_citation_allowed(chunk, source),
             "source_id": source.get("id") or chunk.get("source_id"),
             "chunk_index": chunk.get("chunk_index"),
             "document_chunk": True,

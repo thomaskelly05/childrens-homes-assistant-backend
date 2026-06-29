@@ -18,8 +18,8 @@
       "next_review_due": "2027-05-01",
       "citation_required": true,
       "summary_allowed": true,
-      "full_text_allowed": false,
-      "usage_rules": "Frame practice against QS; do not quote exact statutory wording unless exact text stored."
+      "full_text_allowed": true,
+      "usage_rules": "Frame practice against QS; exact citations are allowed only from committed Guide chunks with basis_type exact and source_integrity full_document."
     },
     {
       "source_id": "childrens_homes_regulations_2015",
