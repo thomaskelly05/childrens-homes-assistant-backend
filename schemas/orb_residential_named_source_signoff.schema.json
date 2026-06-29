@@ -1,0 +1,121 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://indicare.co.uk/schemas/orb_residential_named_source_signoff.schema.json",
+  "title": "ORB Residential named source sign-off artefact",
+  "description": "Governed schema for future named human sign-off of ORB Residential offline sources. A template artefact is not valid completed sign-off.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "artefact_kind",
+    "template_only",
+    "not_valid_signoff",
+    "not_sufficient_for_live_wiring",
+    "not_evidence_of_named_review",
+    "signoffs"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "orb-residential-named-source-signoff-v1"
+    },
+    "artefact_kind": {
+      "type": "string",
+      "enum": ["template_only", "completed_named_source_signoff"]
+    },
+    "template_only": {
+      "type": "boolean"
+    },
+    "not_valid_signoff": {
+      "type": "boolean"
+    },
+    "not_sufficient_for_live_wiring": {
+      "type": "boolean"
+    },
+    "not_evidence_of_named_review": {
+      "type": "boolean"
+    },
+    "must_not_be_used_as_completed_signoff": {
+      "type": "boolean"
+    },
+    "description": {
+      "type": "string"
+    },
+    "signoffs": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/signoff_record"
+      }
+    }
+  },
+  "$defs": {
+    "signoff_record": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "source_id",
+        "source_title",
+        "source_type",
+        "reviewer_name",
+        "reviewer_role",
+        "reviewer_organisation",
+        "review_date",
+        "review_scope",
+        "source_checksum_verified",
+        "chunk_checksum_verified",
+        "source_role_approved",
+        "citation_policy_approved",
+        "routing_policy_approved",
+        "unsafe_output_blockers_approved",
+        "boundary_statements_approved",
+        "local_policy_limitation_acknowledged",
+        "professional_judgement_boundary_acknowledged",
+        "no_legal_advice_acknowledged",
+        "no_compliance_guarantee_acknowledged",
+        "synthetic_review_rejected_as_sufficient",
+        "nr_1_controls_confirmed",
+        "public_promise_remains_blocked",
+        "signed_by_named_human",
+        "signature_attestation",
+        "created_at",
+        "provenance"
+      ],
+      "properties": {
+        "source_id": { "type": "string" },
+        "source_title": { "type": "string" },
+        "source_type": {
+          "type": "string",
+          "enum": ["guide", "regulations_2015", "sccif"]
+        },
+        "reviewer_name": { "type": "string" },
+        "reviewer_role": { "type": "string" },
+        "reviewer_organisation": { "type": "string" },
+        "review_date": { "type": "string" },
+        "review_scope": { "type": "string" },
+        "source_checksum_verified": { "type": "boolean" },
+        "chunk_checksum_verified": { "type": "boolean" },
+        "source_role_approved": { "type": "boolean" },
+        "citation_policy_approved": { "type": "boolean" },
+        "routing_policy_approved": { "type": "boolean" },
+        "unsafe_output_blockers_approved": { "type": "boolean" },
+        "boundary_statements_approved": { "type": "boolean" },
+        "local_policy_limitation_acknowledged": { "type": "boolean" },
+        "professional_judgement_boundary_acknowledged": { "type": "boolean" },
+        "no_legal_advice_acknowledged": { "type": "boolean" },
+        "no_compliance_guarantee_acknowledged": { "type": "boolean" },
+        "synthetic_review_rejected_as_sufficient": { "type": "boolean" },
+        "nr_1_controls_confirmed": { "type": "boolean" },
+        "public_promise_remains_blocked": { "type": "boolean" },
+        "signed_by_named_human": { "type": "boolean" },
+        "signature_attestation": { "type": "string" },
+        "created_at": { "type": "string" },
+        "provenance": { "type": "object" },
+        "declared_source_checksum": { "type": "string" },
+        "declared_chunk_checksum": { "type": "string" },
+        "no_ofsted_grade_prediction_acknowledged": { "type": "boolean" },
+        "no_inspection_readiness_decision_acknowledged": { "type": "boolean" },
+        "no_inspection_outcome_guarantee_acknowledged": { "type": "boolean" }
+      }
+    }
+  }
+}
