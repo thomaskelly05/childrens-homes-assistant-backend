@@ -74,6 +74,243 @@ KEY_WORKFLOW_DOMAINS: tuple[str, ...] = (
     "local_policy_required_workflows",
 )
 
+INTERNAL_KNOWLEDGE_BRAIN_FLOW: tuple[dict[str, str], ...] = (
+    {
+        "step": "classify_intent_and_workflow",
+        "purpose": "Determine the workflow domain, risk level, source tier and whether the request is safe to answer directly.",
+    },
+    {
+        "step": "use_deterministic_internal_knowledge",
+        "purpose": "Resolve source eligibility, local-policy dependency, escalation, manager oversight, child voice and citation boundaries before any LLM call.",
+    },
+    {
+        "step": "select_smallest_relevant_source_bundle",
+        "purpose": "Build one workflow-scoped bundle with only the top relevant source IDs, chunks and prompts.",
+    },
+    {
+        "step": "decide_whether_llm_is_needed",
+        "purpose": "Avoid OpenAI where deterministic policy answers the question; use an LLM only for writing, summarising, reasoning or reflective support.",
+    },
+    {
+        "step": "choose_model_tier",
+        "purpose": "Route to deterministic-only, small writing, standard reasoning, high safeguarding review or human-escalation-only handling.",
+    },
+    {
+        "step": "apply_prompt_budget",
+        "purpose": "Keep prompts small, never send the whole catalogue, and include exact chunks only when citation-backed wording is needed.",
+    },
+    {
+        "step": "apply_citation_and_uncertainty_rules",
+        "purpose": "Preserve exact-citation, metadata-only, local-policy, SCCIF, compliance and safeguarding threshold boundaries.",
+    },
+    {
+        "step": "use_cached_templates_and_skeletons",
+        "purpose": "Use deterministic workflow skeletons and standard caveats before asking an LLM to polish or personalise.",
+    },
+    {
+        "step": "escalate_to_human_judgement",
+        "purpose": "Escalate emergency, threshold, legal, clinical, allegation outcome, placement approval and grade prediction requests.",
+    },
+)
+
+DETERMINISTIC_INTERNAL_ANSWER_LAYER: tuple[dict[str, str], ...] = (
+    {"decision": "identify_workflow", "output": "workflow_domain"},
+    {"decision": "identify_relevant_source_tier", "output": "required_source_tier"},
+    {"decision": "identify_regulations_quality_standards_sccif", "output": "regulation_qs_sccif_map"},
+    {"decision": "identify_local_policy_requirement", "output": "requires_local_policy"},
+    {"decision": "identify_professional_judgement_boundary", "output": "professional_judgement_boundary"},
+    {"decision": "identify_escalation_prompts", "output": "escalation_prompt"},
+    {"decision": "identify_manager_oversight_prompts", "output": "manager_oversight_prompt"},
+    {"decision": "identify_child_voice_prompts", "output": "child_voice_prompts"},
+    {"decision": "identify_safer_recording_checks", "output": "safer_recording_checks"},
+    {"decision": "identify_citation_eligibility", "output": "citation_eligibility"},
+    {"decision": "identify_unsafe_direct_answer", "output": "human_escalation_only"},
+    {"decision": "return_structured_policy_bundle", "output": "internal_policy_bundle"},
+)
+
+LLM_DECISION_LAYER: dict[str, Any] = {
+    "use_llm_for": [
+        "drafting",
+        "rewriting",
+        "summarising",
+        "reflective_prompts",
+        "therapeutic_language_improvement",
+        "complex_reasoning",
+        "record_structuring",
+        "user_facing_explanation",
+    ],
+    "do_not_use_llm_for": [
+        "which_workflow_is_this",
+        "does_this_require_local_policy",
+        "which_source_tier_applies",
+        "is_this_source_statutory",
+        "should_this_be_citable",
+        "does_this_require_manager_oversight",
+        "is_this_an_ofsted_grade_prediction_request",
+        "source_ingestion_eligibility",
+        "citation_eligibility",
+        "local_policy_dependency",
+    ],
+    "default_rule": (
+        "Run deterministic policy first; call an LLM only when the user-facing answer needs writing, "
+        "summarising, reasoning or reflective support."
+    ),
+}
+
+MODEL_TIER_POLICY: dict[str, dict[str, Any]] = {
+    "deterministic_only": {
+        "when_to_use": "Classification, source eligibility, local-policy checks, citation eligibility, escalation flags and simple source/workflow mapping.",
+        "maximum_source_bundle_size": {
+            "workflow_bundles": 1,
+            "source_ids": 5,
+            "exact_chunks": 0,
+            "metadata_summaries": 5,
+        },
+        "maximum_prompt_context": "No LLM prompt; return structured internal policy bundle only.",
+        "allowed_source_bundle": "Source IDs, authority labels, workflow metadata and deterministic prompts only.",
+        "citation_expectation": "No generated citation text; report citation eligibility only.",
+        "human_review_required": False,
+        "examples": [
+            "which workflow is this",
+            "does this require local policy",
+            "is SCCIF grade prediction allowed",
+        ],
+    },
+    "small_model_write": {
+        "when_to_use": "Simple rewrite, formatting, short summary, record tidy-up and basic structure.",
+        "maximum_source_bundle_size": {
+            "workflow_bundles": 1,
+            "source_ids": 3,
+            "exact_chunks": 1,
+            "metadata_summaries": 3,
+        },
+        "maximum_prompt_context": "Short workflow bundle plus one answer skeleton; no full catalogue.",
+        "allowed_source_bundle": "Selected workflow bundle, short source summaries and one exact chunk only if needed.",
+        "citation_expectation": "Use citations only where the selected bundle includes an exact chunk or approved source label.",
+        "human_review_required": False,
+        "examples": ["tidy this daily record", "make this incident note clearer"],
+    },
+    "standard_model_reasoning": {
+        "when_to_use": "Normal ORB chat, reflective support, report shaping and moderate complexity practice reasoning.",
+        "maximum_source_bundle_size": {
+            "workflow_bundles": 1,
+            "source_ids": 5,
+            "exact_chunks": 3,
+            "metadata_summaries": 5,
+        },
+        "maximum_prompt_context": "One capped workflow bundle, relevant skeleton and uncertainty/citation rules.",
+        "allowed_source_bundle": "Top relevant statutory/guidance sources, exact chunks only when citation-backed answer is requested.",
+        "citation_expectation": "Distinguish exact, summary and metadata basis; never invent citation text.",
+        "human_review_required": False,
+        "examples": ["reflect on a missing return", "shape a Reg 45 evidence paragraph"],
+    },
+    "high_model_safeguarding_review": {
+        "when_to_use": "Complex safeguarding, allegations, significant incidents, inspection preparation, serious risk, competing factors or high-stakes management reflection.",
+        "maximum_source_bundle_size": {
+            "workflow_bundles": 1,
+            "source_ids": 5,
+            "exact_chunks": 3,
+            "metadata_summaries": 5,
+        },
+        "maximum_prompt_context": "Capped source bundle plus explicit escalation, manager oversight and professional judgement boundaries.",
+        "allowed_source_bundle": "Tier 1/Tier 2 source IDs, exact chunks where available, local-policy warning and escalation block.",
+        "citation_expectation": "Cite only exact chunks or approved source labels; state uncertainty and local-policy gaps.",
+        "human_review_required": True,
+        "examples": ["allegation reflection", "serious incident review", "inspection readiness with safeguarding concerns"],
+    },
+    "human_escalation_only": {
+        "when_to_use": "Emergency risk, safeguarding threshold decision, legal compliance judgement, Ofsted grade prediction, clinical diagnosis, allegation outcome or placement suitability approval.",
+        "maximum_source_bundle_size": {
+            "workflow_bundles": 1,
+            "source_ids": 2,
+            "exact_chunks": 0,
+            "metadata_summaries": 2,
+        },
+        "maximum_prompt_context": "No substantive LLM answer; deterministic safety/escalation guidance only.",
+        "allowed_source_bundle": "Escalation and boundary wording only.",
+        "citation_expectation": "Do not cite as decision authority; direct to manager/professional/local process.",
+        "human_review_required": True,
+        "examples": [
+            "is this a safeguarding referral threshold",
+            "will Ofsted rate us good",
+            "is this placement suitable",
+        ],
+    },
+}
+
+PROMPT_BUDGET_POLICY: dict[str, Any] = {
+    "never_send_all_catalogue_sources_to_llm": True,
+    "maximum_workflow_bundles": 1,
+    "maximum_source_ids": 5,
+    "maximum_exact_chunks": 3,
+    "maximum_reflective_practice_sources": 2,
+    "maximum_metadata_summaries": 5,
+    "maximum_local_policy_warning_blocks": 1,
+    "maximum_escalation_blocks": 1,
+    "maximum_child_voice_blocks": 1,
+    "maximum_manager_oversight_blocks": 1,
+    "rules": [
+        "Send only the selected workflow bundle.",
+        "Send only top relevant sources/chunks.",
+        "Use source IDs and short summaries unless exact citation is needed.",
+        "Use exact chunks only for citation-backed answers.",
+        "Do not repeat static safety text where deterministic policy already enforces it.",
+        "Use cached regulation, Quality Standard and SCCIF mappings.",
+        "Use deterministic answer skeletons before LLM polishing.",
+    ],
+}
+
+SOURCE_BUNDLE_POLICY: dict[str, Any] = {
+    "contains": [
+        "workflow_domain",
+        "selected_source_ids",
+        "source_authority_labels",
+        "relevant_regulation_numbers",
+        "relevant_quality_standards",
+        "relevant_sccif_areas",
+        "local_policy_dependency",
+        "escalation_prompts",
+        "manager_oversight_prompts",
+        "child_voice_prompts",
+        "citation_eligibility",
+        "uncertainty_behaviour",
+        "not_to_be_used_for_boundaries",
+    ],
+    "limits": {
+        "workflow_bundles": 1,
+        "source_ids": 5,
+        "exact_chunks": 3,
+        "reflective_practice_sources": 2,
+        "metadata_summaries": 5,
+    },
+    "never_send_whole_catalogue": True,
+}
+
+CACHE_TEMPLATE_STRATEGY: dict[str, Any] = {
+    "principle": "Use deterministic cached assets first; an LLM may polish or personalise but must not invent the structure.",
+    "cached_assets": [
+        "workflow_templates",
+        "safer_recording_checklists",
+        "escalation_wording",
+        "local_policy_caveats",
+        "child_voice_prompt_sets",
+        "manager_oversight_prompt_sets",
+        "citation_disclaimer_blocks",
+        "uncertainty_wording",
+        "regulation_quality_standard_sccif_mappings",
+    ],
+    "answer_skeletons": [
+        "regulation_40_consideration_skeleton",
+        "reg_44_preparation_skeleton",
+        "reg_45_preparation_skeleton",
+        "incident_reflection_skeleton",
+        "missing_from_care_reflection_skeleton",
+        "daily_record_skeleton",
+        "allegation_recording_skeleton",
+        "medication_record_skeleton",
+    ],
+}
+
 SOURCE_TYPE_RULES: dict[str, dict[str, Any]] = {
     "legislation": {
         "eligibility": "eligible_for_full_text_ingestion",
@@ -258,6 +495,33 @@ class OrbResidentialGovernedIngestionPrepService:
     def source_type_rules(self) -> dict[str, dict[str, Any]]:
         return dict(SOURCE_TYPE_RULES)
 
+    def internal_knowledge_brain_architecture(self) -> tuple[dict[str, str], ...]:
+        return INTERNAL_KNOWLEDGE_BRAIN_FLOW
+
+    def deterministic_internal_answer_layer(self) -> tuple[dict[str, str], ...]:
+        return DETERMINISTIC_INTERNAL_ANSWER_LAYER
+
+    def llm_decision_layer(self) -> dict[str, Any]:
+        return dict(LLM_DECISION_LAYER)
+
+    def model_tier_policy(self) -> dict[str, dict[str, Any]]:
+        return dict(MODEL_TIER_POLICY)
+
+    def prompt_budget_policy(self) -> dict[str, Any]:
+        return dict(PROMPT_BUDGET_POLICY)
+
+    def source_bundle_policy(self) -> dict[str, Any]:
+        return dict(SOURCE_BUNDLE_POLICY)
+
+    def cache_template_strategy(self) -> dict[str, Any]:
+        return dict(CACHE_TEMPLATE_STRATEGY)
+
+    def can_send_full_catalogue_to_llm(self) -> bool:
+        return False
+
+    def no_llm_decisions_supported(self) -> set[str]:
+        return {item["decision"] for item in DETERMINISTIC_INTERNAL_ANSWER_LAYER}
+
     def eligibility_for_source(self, source: dict[str, Any]) -> dict[str, Any]:
         source_type = source["source_type"]
         rule = SOURCE_TYPE_RULES.get(
@@ -382,6 +646,42 @@ class OrbResidentialGovernedIngestionPrepService:
             "authoritative_inspection",
         }
 
+    def source_bundle_for_workflow(self, domain: str) -> dict[str, Any]:
+        workflow_by_domain = {
+            workflow["domain"]: workflow
+            for workflow in self.workflow_domain_behaviours()
+        }
+        workflow = workflow_by_domain[domain]
+        by_id = self.source_by_id()
+        cap = int(PROMPT_BUDGET_POLICY["maximum_source_ids"])
+        selected_source_ids = list(workflow["relevant_sources"])[:cap]
+        authority_labels = {
+            source_id: by_id[source_id]["citation_authority"]
+            for source_id in selected_source_ids
+            if source_id in by_id
+        }
+        selected_sources = [by_id[source_id] for source_id in selected_source_ids if source_id in by_id]
+        return {
+            "workflow_domain": domain,
+            "selected_source_ids": selected_source_ids,
+            "source_authority_labels": authority_labels,
+            "relevant_regulation_numbers": list(workflow["regulation_guidance_links"]),
+            "relevant_quality_standards": list(workflow["quality_standards"]),
+            "relevant_sccif_areas": [workflow["sccif_judgement_area"]],
+            "local_policy_dependency": bool(workflow.get("requires_local_policy")),
+            "escalation_prompts": list(workflow["escalation_prompts"]),
+            "manager_oversight_prompts": list(workflow["manager_oversight_prompts"]),
+            "child_voice_prompts": list(workflow["child_voice_prompts"]),
+            "citation_eligibility": {
+                source["source_id"]: self.eligibility_for_source(source)[
+                    "citation_eligible_after_ingestion"
+                ]
+                for source in selected_sources
+            },
+            "uncertainty_behaviour": workflow["uncertainty_behaviour"],
+            "not_to_be_used_for_boundaries": list(workflow["not_to_be_used_for"]),
+        }
+
     def workflow_answer_policy(self) -> dict[str, dict[str, Any]]:
         workflow_by_domain = {
             workflow["domain"]: workflow
@@ -430,6 +730,9 @@ class OrbResidentialGovernedIngestionPrepService:
             "source_count": len(eligibility),
             "workflow_answer_policy_count": len(self.workflow_answer_policy()),
             "tier_1_ingestion_order": list(FIRST_INGESTION_SOURCE_IDS),
+            "internal_knowledge_brain_design_present": True,
+            "cost_control_design_present": True,
+            "never_send_all_catalogue_sources_to_llm": True,
             "full_text_ingestion_performed": self.full_text_ingestion_performed(),
             "scraping_or_downloading_performed": self.scraping_or_downloading_performed(),
             "runtime_behaviour_changed": False,

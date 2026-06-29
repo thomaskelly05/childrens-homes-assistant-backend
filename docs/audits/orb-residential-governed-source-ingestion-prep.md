@@ -7,7 +7,7 @@
 
 ## Executive summary
 
-This preparation layer defines how ORB Residential should move from metadata-only catalogue coverage to safe full-text retrieval and citation-backed answers. It does not ingest source text, scrape or download documents, wire live retrieval, change routes, alter frontend behaviour, change ORB Voice/Dictate/Write/Communicate/Chat UI, weaken NR-1, or draft the public promise.
+This preparation layer defines how ORB Residential should move from metadata-only catalogue coverage to safe full-text retrieval and citation-backed answers, while also defining the internal deterministic knowledge-brain and cost-control design that should sit before any OpenAI call. It does not ingest source text, scrape or download documents, wire live retrieval, change routes, alter frontend behaviour, change ORB Voice/Dictate/Write/Communicate/Chat UI, weaken NR-1, or draft the public promise.
 
 | Question | Answer |
 |---|---|
@@ -17,6 +17,134 @@ This preparation layer defines how ORB Residential should move from metadata-onl
 | Route/frontend/OS assistant files changed? | **No** |
 | NR-1 governance weakened? | **No** — NR-1 remains open |
 | Public promise drafted or published? | **No** — public promise remains blocked |
+
+## Internal knowledge brain architecture
+
+ORB Residential should use internal deterministic knowledge first, retrieve only the relevant source/context bundle second, and call an LLM only when writing, summarising, reasoning or reflective support is genuinely needed.
+
+Intended flow:
+
+1. Classify intent and workflow.
+2. Use deterministic internal knowledge.
+3. Select the smallest relevant source bundle.
+4. Decide whether an LLM is needed.
+5. Choose model tier.
+6. Apply prompt budget.
+7. Apply citation and uncertainty rules.
+8. Use cached templates/skeletons where possible.
+9. Escalate to human/professional judgement where needed.
+
+This design reduces OpenAI cost, avoids giant prompts, improves consistency and citation safety, reduces hallucination risk, keeps the child central, and preserves adult professional judgement.
+
+## Deterministic internal answer layer
+
+ORB can resolve the following without OpenAI:
+
+- identify workflow;
+- identify relevant source tier;
+- identify relevant regulations, Quality Standards and SCCIF areas;
+- identify whether local policy is required;
+- identify professional judgement boundary;
+- identify escalation prompts;
+- identify manager oversight prompts;
+- identify child voice prompts;
+- identify safer recording checks;
+- identify citation eligibility;
+- identify whether the request is unsafe to answer directly;
+- return a structured internal policy bundle.
+
+These support `deterministic_only` decisions.
+
+## LLM decision layer
+
+Use an LLM for:
+
+- drafting;
+- rewriting;
+- summarising;
+- reflective prompts;
+- therapeutic language improvement;
+- complex reasoning;
+- record structuring;
+- user-facing explanation.
+
+Do not use an LLM where deterministic logic is enough:
+
+- "which workflow is this?";
+- "does this require local policy?";
+- "which source tier applies?";
+- "is this source statutory?";
+- "should this be citable?";
+- "does this require manager oversight?";
+- "is this an Ofsted grade prediction request?";
+- source ingestion eligibility;
+- citation eligibility;
+- local policy dependency.
+
+## Model tier policy
+
+| Tier | Use | Source bundle cap | Prompt context | Citation expectation | Human review | Examples |
+|---|---|---|---|---|---|---|
+| `deterministic_only` | Classification, source eligibility, local-policy checks, citation eligibility, escalation flags and simple mapping | 1 workflow, 5 source IDs, 0 exact chunks | No LLM prompt | Eligibility only; no generated citation text | No | workflow classification, local-policy check |
+| `small_model_write` | Simple rewrite, formatting, short summary, record tidy-up and basic structure | 1 workflow, 3 source IDs, 1 exact chunk | Short workflow bundle plus one skeleton | Cite only if an exact chunk or approved source label is present | No | tidy daily record, clarify incident note |
+| `standard_model_reasoning` | Normal ORB chat, reflective support, report shaping and moderate practice reasoning | 1 workflow, 5 source IDs, 3 exact chunks | Capped workflow bundle plus skeleton and uncertainty rules | Distinguish exact, summary and metadata basis | No | missing return reflection, Reg 45 paragraph |
+| `high_model_safeguarding_review` | Complex safeguarding, allegations, significant incidents, inspection preparation, serious risk or high-stakes management reflection | 1 workflow, 5 source IDs, 3 exact chunks | Capped source bundle with escalation and judgement boundaries | Cite exact chunks or approved labels only; state uncertainty | Yes | allegation reflection, serious incident review |
+| `human_escalation_only` | Emergency risk, threshold decision, legal compliance judgement, Ofsted grade prediction, clinical diagnosis, allegation outcome or placement suitability approval | 1 workflow, 2 source IDs, 0 exact chunks | No substantive LLM answer | Do not cite as decision authority | Yes | safeguarding threshold, grade prediction |
+
+## Prompt budget and source bundle policy
+
+Prompt budget rules:
+
+- never send all 113 catalogue entries to the LLM;
+- send only the selected workflow bundle;
+- send only the top relevant sources/chunks;
+- use source IDs and short summaries unless exact citation is needed;
+- use exact chunks only for citation-backed answers;
+- avoid repeating static safety text where deterministic policy already enforces it;
+- use cached regulation, Quality Standard and SCCIF mappings;
+- use deterministic answer skeletons before LLM polishing.
+
+Initial caps:
+
+| Item | Cap |
+|---|---:|
+| Workflow bundles | 1 |
+| Source IDs | 5 |
+| Exact chunks | 3 |
+| Reflective/practice sources | 2 |
+| Metadata summaries | 5 |
+| Local-policy warning blocks | 1 |
+| Escalation blocks | 1 |
+| Child voice blocks | 1 |
+| Manager oversight blocks | 1 |
+
+Source bundles contain: workflow domain, selected source IDs, source authority labels, regulation numbers, Quality Standards, SCCIF areas, local policy dependency, escalation prompts, manager oversight prompts, child voice prompts, citation eligibility, uncertainty behaviour and `not_to_be_used_for` boundaries.
+
+ORB must not send the whole catalogue to the model.
+
+## Cache and template strategy
+
+Reusable internal assets should reduce LLM calls:
+
+- workflow templates;
+- safer recording checklists;
+- escalation wording;
+- local-policy caveats;
+- child voice prompt sets;
+- manager oversight prompt sets;
+- citation disclaimer blocks;
+- uncertainty wording;
+- cached regulation, Quality Standard and SCCIF mappings;
+- Regulation 40 consideration skeleton;
+- Reg 44 preparation skeleton;
+- Reg 45 preparation skeleton;
+- incident reflection skeleton;
+- missing from care reflection skeleton;
+- daily record skeleton;
+- allegation recording skeleton;
+- medication record skeleton.
+
+The LLM should polish or personalise the skeleton, not invent the structure from scratch.
 
 ## Ingestion eligibility
 

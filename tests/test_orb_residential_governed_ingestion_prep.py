@@ -88,6 +88,150 @@ def test_ingestion_eligibility_exists_for_every_source_and_source_category():
         assert plan["not_to_be_used_for"]
 
 
+def test_internal_knowledge_brain_architecture_exists():
+    flow = orb_residential_governed_ingestion_prep_service.internal_knowledge_brain_architecture()
+    steps = [item["step"] for item in flow]
+    assert steps == [
+        "classify_intent_and_workflow",
+        "use_deterministic_internal_knowledge",
+        "select_smallest_relevant_source_bundle",
+        "decide_whether_llm_is_needed",
+        "choose_model_tier",
+        "apply_prompt_budget",
+        "apply_citation_and_uncertainty_rules",
+        "use_cached_templates_and_skeletons",
+        "escalate_to_human_judgement",
+    ]
+    for item in flow:
+        assert item["purpose"]
+
+
+def test_deterministic_internal_answer_layer_supports_no_llm_decisions():
+    service = orb_residential_governed_ingestion_prep_service
+    decisions = service.no_llm_decisions_supported()
+    assert {
+        "identify_workflow",
+        "identify_relevant_source_tier",
+        "identify_regulations_quality_standards_sccif",
+        "identify_local_policy_requirement",
+        "identify_professional_judgement_boundary",
+        "identify_escalation_prompts",
+        "identify_manager_oversight_prompts",
+        "identify_child_voice_prompts",
+        "identify_safer_recording_checks",
+        "identify_citation_eligibility",
+        "identify_unsafe_direct_answer",
+        "return_structured_policy_bundle",
+    } <= decisions
+
+
+def test_llm_decision_layer_defines_when_to_call_and_not_call_llm():
+    policy = orb_residential_governed_ingestion_prep_service.llm_decision_layer()
+    assert "drafting" in policy["use_llm_for"]
+    assert "summarising" in policy["use_llm_for"]
+    assert "complex_reasoning" in policy["use_llm_for"]
+    assert "which_workflow_is_this" in policy["do_not_use_llm_for"]
+    assert "does_this_require_local_policy" in policy["do_not_use_llm_for"]
+    assert "is_this_an_ofsted_grade_prediction_request" in policy["do_not_use_llm_for"]
+    assert "deterministic policy first" in policy["default_rule"].lower()
+
+
+def test_model_tier_policy_defines_required_tiers_and_boundaries():
+    tiers = orb_residential_governed_ingestion_prep_service.model_tier_policy()
+    assert set(tiers) == {
+        "deterministic_only",
+        "small_model_write",
+        "standard_model_reasoning",
+        "high_model_safeguarding_review",
+        "human_escalation_only",
+    }
+    for tier in tiers.values():
+        assert tier["when_to_use"]
+        assert tier["maximum_source_bundle_size"]
+        assert tier["maximum_prompt_context"]
+        assert tier["allowed_source_bundle"]
+        assert tier["citation_expectation"]
+        assert isinstance(tier["human_review_required"], bool)
+        assert tier["examples"]
+    assert tiers["deterministic_only"]["maximum_source_bundle_size"]["exact_chunks"] == 0
+    assert tiers["human_escalation_only"]["human_review_required"] is True
+    assert tiers["high_model_safeguarding_review"]["human_review_required"] is True
+    assert "No LLM prompt" in tiers["deterministic_only"]["maximum_prompt_context"]
+
+
+def test_prompt_budget_policy_and_source_bundle_caps_prevent_giant_prompts():
+    service = orb_residential_governed_ingestion_prep_service
+    policy = service.prompt_budget_policy()
+    assert policy["never_send_all_catalogue_sources_to_llm"] is True
+    assert service.can_send_full_catalogue_to_llm() is False
+    assert policy["maximum_workflow_bundles"] == 1
+    assert policy["maximum_source_ids"] == 5
+    assert policy["maximum_exact_chunks"] == 3
+    assert policy["maximum_reflective_practice_sources"] == 2
+    assert policy["maximum_local_policy_warning_blocks"] == 1
+    assert any("selected workflow bundle" in rule for rule in policy["rules"])
+    assert any("deterministic answer skeletons" in rule for rule in policy["rules"])
+
+
+def test_cache_template_strategy_exists_for_reusable_internal_assets():
+    strategy = orb_residential_governed_ingestion_prep_service.cache_template_strategy()
+    assert "polish or personalise" in strategy["principle"]
+    for asset in (
+        "workflow_templates",
+        "safer_recording_checklists",
+        "escalation_wording",
+        "local_policy_caveats",
+        "child_voice_prompt_sets",
+        "manager_oversight_prompt_sets",
+        "citation_disclaimer_blocks",
+        "uncertainty_wording",
+    ):
+        assert asset in strategy["cached_assets"]
+    for skeleton in (
+        "regulation_40_consideration_skeleton",
+        "reg_44_preparation_skeleton",
+        "reg_45_preparation_skeleton",
+        "incident_reflection_skeleton",
+        "missing_from_care_reflection_skeleton",
+        "daily_record_skeleton",
+        "allegation_recording_skeleton",
+        "medication_record_skeleton",
+    ):
+        assert skeleton in strategy["answer_skeletons"]
+
+
+def test_source_bundle_policy_defines_structure_and_never_whole_catalogue():
+    service = orb_residential_governed_ingestion_prep_service
+    policy = service.source_bundle_policy()
+    assert policy["never_send_whole_catalogue"] is True
+    assert policy["limits"]["workflow_bundles"] == 1
+    assert policy["limits"]["source_ids"] == 5
+    for field in (
+        "workflow_domain",
+        "selected_source_ids",
+        "source_authority_labels",
+        "relevant_regulation_numbers",
+        "relevant_quality_standards",
+        "relevant_sccif_areas",
+        "local_policy_dependency",
+        "escalation_prompts",
+        "manager_oversight_prompts",
+        "child_voice_prompts",
+        "citation_eligibility",
+        "uncertainty_behaviour",
+        "not_to_be_used_for_boundaries",
+    ):
+        assert field in policy["contains"]
+
+    bundle = service.source_bundle_for_workflow("incident_recording")
+    assert bundle["workflow_domain"] == "incident_recording"
+    assert len(bundle["selected_source_ids"]) <= policy["limits"]["source_ids"]
+    assert bundle["source_authority_labels"]
+    assert bundle["relevant_quality_standards"]
+    assert bundle["escalation_prompts"]
+    assert bundle["not_to_be_used_for_boundaries"]
+
+
 def test_local_policy_required_sources_remain_non_citable_by_default():
     service = orb_residential_governed_ingestion_prep_service
     eligibility = service.ingestion_eligibility_by_source()
