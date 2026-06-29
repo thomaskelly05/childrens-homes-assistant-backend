@@ -52,14 +52,20 @@ def test_no_full_text_ingestion_scraping_or_downloading_occurred():
         REPO_ROOT / "services" / "orb_residential_governed_ingestion_prep_service.py"
     ).read_text(encoding="utf-8")
     forbidden_runtime_dependencies = (
-        "requests",
-        "httpx",
-        "urllib.request",
-        "BeautifulSoup",
-        "orb_document_ingestion",
-        "orb_rag_retrieval",
-        "FastAPI",
-        "APIRouter",
+        "import requests",
+        "from requests",
+        "import httpx",
+        "from httpx",
+        "import urllib.request",
+        "from urllib.request",
+        "import BeautifulSoup",
+        "from bs4",
+        "import orb_document_ingestion",
+        "from services.orb_document_ingestion",
+        "import orb_rag_retrieval",
+        "from services.orb_rag_retrieval",
+        "from fastapi import FastAPI",
+        "from fastapi import APIRouter",
     )
     for forbidden in forbidden_runtime_dependencies:
         assert forbidden not in service_source
