@@ -55,12 +55,13 @@ def test_required_source_metadata_has_title_url_type_status():
         assert entry.get("last_checked")
 
 
-def test_three_core_sources_not_full_text_ingested():
-    """Documents governance: full_text_allowed is false until deliberate ingest."""
+def test_only_guide_core_source_has_phase_2a_full_text_enabled():
+    """Documents Phase 2a: Guide chunks are enabled; Regulations and SCCIF are not."""
     registry = _load_trusted_sources_registry()
     by_id = {s["source_id"]: s for s in registry["sources"]}
-    for source_id in REQUIRED_CORE_SOURCE_IDS:
-        assert by_id[source_id].get("full_text_allowed") is False
+    assert by_id["dfe_childrens_homes_regulations_guide"].get("full_text_allowed") is True
+    assert by_id["childrens_homes_regulations_2015"].get("full_text_allowed") is False
+    assert by_id["ofsted_sccif_childrens_homes"].get("full_text_allowed") is False
 
 
 def test_quality_standards_map_has_nine_standards():

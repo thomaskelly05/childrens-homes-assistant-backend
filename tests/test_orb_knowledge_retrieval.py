@@ -24,7 +24,7 @@ def test_source_pack_catalogue_has_expected_keys():
     "message,expected_pack",
     [
         ("tell me about IndiCare", "indicare_product"),
-        ("what would Ofsted expect around child voice", "ofsted_sccif"),
+            ("what would Ofsted expect around child voice", "residential_childrens_homes"),
         ("help me write a daily note", "recording_quality"),
         ("does this need safeguarding", "safeguarding_principles"),
         ("what is quantum computing", "general_knowledge"),
@@ -51,8 +51,8 @@ def test_product_query_includes_product_and_boundary(retrieval):
 def test_regulatory_query_includes_ofsted_and_quality_standards(retrieval):
     packs = retrieval.retrieve_sources("What would Ofsted expect in an inspection?")
     keys = {p["pack_key"] for p in packs}
-    assert "ofsted_sccif" in keys
-    assert "quality_standards" in keys
+    assert "orb_knowledge_spine" in keys
+    assert "orb_operating_brain" in keys
 
 
 def test_recording_quality_mode_pack(retrieval):
