@@ -90,6 +90,7 @@ ROUTER_GROUPS: tuple[RouterGroup, ...] = (
             "routers.orb_admin_routes",
             "routers.orb_quality_lab_routes",
             "routers.orb_evaluation_platform_routes",
+            "routers.orb_source_grounded_alpha_routes",
             "routers.founder_persistence_routes",
             "routers.founder_telemetry_routes",
             "routers.founder_bootstrap_routes",
