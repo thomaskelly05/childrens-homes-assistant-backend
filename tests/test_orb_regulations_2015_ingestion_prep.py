@@ -9,6 +9,8 @@ from __future__ import annotations
 import copy
 from pathlib import Path
 
+import pytest
+
 from scripts.verify_orb_guide_chunks import (
     EXPECTED_CHUNK_JSON_SHA256,
     GUIDE_CHUNKS_PATH,
@@ -238,6 +240,53 @@ def test_legal_advice_wording_is_rejected():
     assert "must not present ORB as giving legal advice" in errors
 
 
+@pytest.mark.parametrize(
+    "unsafe_text",
+    [
+        "ORB decides statutory compliance; professional judgement remains.",
+        "ORB decides legal compliance with the Regulations.",
+        "ORB decides whether this meets the notification threshold.",
+        "ORB decides whether a Regulation 40 notification is required.",
+        "ORB confirms this is not notifiable.",
+        "ORB replaces registered manager judgement.",
+        "ORB replaces provider judgement.",
+        "ORB replaces responsible individual judgement.",
+        "ORB replaces safeguarding decision-making.",
+        "ORB replaces legal advice.",
+        "ORB gives legal advice on the Regulations.",
+        "ORB guarantees compliance with Regulation 12.",
+        "ORB guarantees the Ofsted outcome.",
+        "ORB predicts the Ofsted judgement.",
+        "ORB decides the home is inspection ready.",
+        "ORB determines the home is compliant.",
+        "ORB determines that the incident does not meet a statutory threshold.",
+    ],
+)
+def test_unsafe_affirmative_boundary_claims_fail_even_with_safe_phrases(unsafe_text: str):
+    chunk = _chunk()
+    chunk["professional_judgement_boundary"] = (
+        f"{unsafe_text} Professional judgement remains; manager judgement remains; "
+        "human review is required and local policy applies."
+    )
+    errors = _chunk_errors(chunk)
+    assert "Regulations 2015 chunks must not" in errors
+
+
+def test_safe_boundary_wording_still_passes():
+    chunk = _chunk()
+    chunk["professional_judgement_boundary"] = (
+        "ORB supports professional thinking, safer recording, and evidence review. "
+        "ORB does not decide statutory compliance. ORB does not decide notification "
+        "thresholds. ORB does not replace Registered Manager, Responsible Individual, "
+        "provider, or safeguarding judgement. Local policy, manager oversight, and "
+        "legal advice may be required. The Registered Manager/provider remains "
+        "responsible for decisions."
+    )
+    chunk["legal_advice_boundary"] = "ORB does not provide legal advice."
+    errors = _chunk_errors(chunk)
+    assert errors == ""
+
+
 def test_embedded_guide_references_are_not_treated_as_regulations_2015_ingestion():
     chunk = _chunk()
     chunk["generated_metadata"]["content_kind"] = "guide_commentary_reference"
@@ -283,6 +332,22 @@ def test_sccif_is_not_ingested_by_regulations_prep():
         / "orb_residential_ingestion"
         / "ofsted_sccif_childrens_homes_chunks.json"
     ).exists()
+
+
+@pytest.mark.parametrize(
+    "confirmation",
+    [
+        "chunk_boundaries_confirmed",
+        "quote_allowed_status_confirmed",
+        "related_quality_standards_mapping_confirmed",
+        "related_workflow_domains_mapping_confirmed",
+    ],
+)
+def test_required_human_review_confirmations_cannot_be_missing(confirmation: str):
+    payload = _payload()
+    del payload["human_review"][confirmation]
+    errors = _payload_errors(payload)
+    assert f"human_review.{confirmation} must be true" in errors
 
 
 def test_guide_chunks_are_unchanged():

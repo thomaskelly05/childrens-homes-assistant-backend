@@ -24,14 +24,82 @@ OFFICIAL_REGULATION_LABEL_RE = re.compile(
     r"\b(?:regulation|reg\.?)\s*\d+[A-Z]?(?:\(\d+\))*\b",
     re.IGNORECASE,
 )
-LEGAL_ADVICE_CLAIM_RE = re.compile(
-    r"\b(?:legal advice|legally advises?|legal opinion|definitive legal view)\b",
-    re.IGNORECASE,
-)
 COMPLIANCE_GUARANTEE_CLAIM_RE = re.compile(
     r"\b(?:guarantees?|guaranteed|guaranteeing|ensures?|ensured|ensuring)\s+"
     r"(?:statutory\s+|legal\s+)?compliance\b",
     re.IGNORECASE,
+)
+UNSAFE_BOUNDARY_CLAIMS: tuple[tuple[re.Pattern[str], str], ...] = (
+    (
+        re.compile(
+            r"\b(?:orb\s+)?decides?\s+(?:statutory|legal)\s+compliance\b",
+            re.IGNORECASE,
+        ),
+        "Regulations 2015 chunks must not say ORB decides statutory or legal compliance.",
+    ),
+    (
+        re.compile(
+            r"\b(?:orb\s+)?decides?\b.{0,80}\b(?:notification|statutory)\s+thresholds?\b",
+            re.IGNORECASE,
+        ),
+        "Regulations 2015 chunks must not say ORB decides notification or statutory thresholds.",
+    ),
+    (
+        re.compile(
+            r"\b(?:orb\s+)?decides?\b.{0,80}\breg(?:ulation)?\.?\s*40\b.{0,80}\bnotification\b.{0,40}\brequired\b",
+            re.IGNORECASE,
+        ),
+        "Regulations 2015 chunks must not say ORB decides whether Regulation 40 notification is required.",
+    ),
+    (
+        re.compile(
+            r"\b(?:orb\s+)?(?:confirms?|decides?|determines?)\b.{0,80}\bnot\s+notifiable\b",
+            re.IGNORECASE,
+        ),
+        "Regulations 2015 chunks must not say ORB confirms something is not notifiable.",
+    ),
+    (
+        re.compile(
+            r"\b(?:orb\s+)?replaces?\b.{0,80}\b(?:registered\s+manager|provider|responsible\s+individual|safeguarding|legal\s+advice)\b",
+            re.IGNORECASE,
+        ),
+        "Regulations 2015 chunks must not say ORB replaces manager, provider, safeguarding, or legal judgement.",
+    ),
+    (
+        re.compile(
+            r"\b(?:orb\s+legal\s+advice|(?:orb\s+)?(?:gives?|provides?)\s+legal\s+advice)\b",
+            re.IGNORECASE,
+        ),
+        "Regulations 2015 chunks must not present ORB as giving legal advice.",
+    ),
+    (
+        re.compile(
+            r"\b(?:orb\s+)?guarantees?\b.{0,80}\b(?:compliance|ofsted\s+outcomes?|ofsted\s+judgements?)\b",
+            re.IGNORECASE,
+        ),
+        "Regulations 2015 chunks must not claim ORB guarantees compliance or Ofsted outcomes.",
+    ),
+    (
+        re.compile(
+            r"\b(?:orb\s+)?predicts?\b.{0,80}\b(?:ofsted\s+)?(?:judgements?|outcomes?|grades?)\b",
+            re.IGNORECASE,
+        ),
+        "Regulations 2015 chunks must not claim ORB predicts Ofsted judgements or outcomes.",
+    ),
+    (
+        re.compile(
+            r"\b(?:orb\s+)?decides?\b.{0,80}\binspection\s+ready\b",
+            re.IGNORECASE,
+        ),
+        "Regulations 2015 chunks must not say ORB decides inspection readiness.",
+    ),
+    (
+        re.compile(
+            r"\b(?:orb\s+)?determines?\b.{0,80}\b(?:home|incident)\b.{0,80}\b(?:compliant|statutory\s+threshold)\b",
+            re.IGNORECASE,
+        ),
+        "Regulations 2015 chunks must not say ORB determines compliance or statutory thresholds.",
+    ),
 )
 
 REQUIRED_MANIFEST_FIELDS: tuple[str, ...] = (
@@ -115,18 +183,26 @@ ALLOWED_QUOTE_BASIS = {
     "none_until_human_review",
 }
 REQUIRED_HUMAN_REVIEW_CONFIRMATIONS: tuple[str, ...] = (
-    "official_source_identity_confirmed",
+    "source_provenance_confirmed",
     "official_url_confirmed",
     "version_date_confirmed",
     "source_file_checksum_confirmed",
+    "regulation_number_confirmed",
+    "part_schedule_mapping_confirmed",
+    "chunk_boundaries_confirmed",
     "regulation_index_confirmed",
-    "part_schedule_index_confirmed",
     "citation_labels_confirmed",
+    "quote_allowed_status_confirmed",
+    "related_quality_standards_mapping_confirmed",
+    "related_workflow_domains_mapping_confirmed",
     "source_text_exactness_confirmed",
     "metadata_separation_confirmed",
     "guide_commentary_separation_confirmed",
+    "local_policy_contamination_checked",
+    "no_overclaiming_confirmed",
     "legal_advice_boundary_confirmed",
     "compliance_guarantee_boundary_confirmed",
+    "checksum_recorded",
 )
 
 
@@ -377,10 +453,14 @@ def _validate_manifest_boundaries(manifest: dict[str, Any]) -> list[str]:
         if fragment not in blocked:
             errors.append(message)
     legal_boundary = _text(manifest.get("legal_advice_boundary")).lower()
-    if "cannot provide legal advice" not in legal_boundary and "not legal advice" not in legal_boundary:
+    if (
+        "cannot provide legal advice" not in legal_boundary
+        and "does not provide legal advice" not in legal_boundary
+        and "not legal advice" not in legal_boundary
+    ):
         errors.append("source.legal_advice_boundary must state that ORB cannot provide legal advice.")
-    judgement_boundary = _text(manifest.get("professional_judgement_boundary")).lower()
-    if "judgement" not in judgement_boundary:
+    judgement_boundary = _text(manifest.get("professional_judgement_boundary"))
+    if not _preserves_professional_responsibility(judgement_boundary):
         errors.append("source.professional_judgement_boundary must preserve professional judgement.")
     return errors
 
@@ -438,8 +518,9 @@ def _validate_chunk_boundaries(chunk: dict[str, Any]) -> list[str]:
             "legal_advice_boundary",
         )
     )
-    if _has_unnegated_match(LEGAL_ADVICE_CLAIM_RE, text_to_check):
-        errors.append("Regulations 2015 chunks must not present ORB as giving legal advice.")
+    for pattern, message in UNSAFE_BOUNDARY_CLAIMS:
+        if _has_unnegated_match(pattern, text_to_check):
+            errors.append(message)
     if _has_unnegated_match(COMPLIANCE_GUARANTEE_CLAIM_RE, text_to_check):
         errors.append("Regulations 2015 chunks must not claim compliance is guaranteed.")
 
@@ -450,10 +531,14 @@ def _validate_chunk_boundaries(chunk: dict[str, Any]) -> list[str]:
         errors.append("chunk.not_to_be_used_for must block compliance guarantees or decisions.")
     if "notification" not in blocked:
         errors.append("chunk.not_to_be_used_for must block notification-threshold decisions.")
-    if "judgement" not in _text(chunk.get("professional_judgement_boundary")).lower():
+    if not _preserves_professional_responsibility(chunk.get("professional_judgement_boundary")):
         errors.append("chunk.professional_judgement_boundary must preserve professional judgement.")
     legal_boundary = _text(chunk.get("legal_advice_boundary")).lower()
-    if "cannot provide legal advice" not in legal_boundary and "not legal advice" not in legal_boundary:
+    if (
+        "cannot provide legal advice" not in legal_boundary
+        and "does not provide legal advice" not in legal_boundary
+        and "not legal advice" not in legal_boundary
+    ):
         errors.append("chunk.legal_advice_boundary must state that ORB cannot provide legal advice.")
     return errors
 
@@ -494,6 +579,11 @@ def _has_unnegated_match(pattern: re.Pattern[str], text: str) -> bool:
             continue
         return True
     return False
+
+
+def _preserves_professional_responsibility(value: Any) -> bool:
+    text = _text(value).lower()
+    return "judgement" in text or "responsible for decision" in text
 
 
 def validate_file(path: Path) -> list[str]:

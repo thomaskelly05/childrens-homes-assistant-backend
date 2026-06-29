@@ -61,6 +61,18 @@ Local policy and manager oversight may still be required.
 
 Human review must approve official source identity, official URL, version/date, source checksum, regulation index, Part/Schedule index, citation labels, exactness of source text, metadata separation, Guide commentary separation, legal advice boundary and compliance guarantee boundary before quote-allowed chunks are accepted as exact citations.
 
+Human review must also confirm chunk boundaries, `quote_allowed` status, related Quality Standards mapping, related workflow domain mapping, no local policy contamination, no overclaiming, and checksum recorded.
+
+Safe boundary wording does not cancel out unsafe claims. The verifier must reject wording that says or implies ORB decides statutory or legal compliance, decides notification thresholds, decides Regulation 40 notification requirements, confirms something is not notifiable, replaces Registered Manager/provider/Responsible Individual/safeguarding/legal judgement, gives legal advice, guarantees compliance or Ofsted outcomes, predicts Ofsted judgements, decides inspection readiness, or determines that a home or incident meets a statutory threshold.
+
+Safe wording may say ORB supports professional thinking, safer recording and evidence review; that ORB does not provide legal advice, decide statutory compliance, decide notification thresholds, or replace professional judgement; and that local policy, manager oversight and legal advice may be required.
+
+## Checksum and provenance
+
+The source file checksum is required before any chunk generation. Future Regulations chunk payload checksums must align with the controlled source-to-chunk pipeline policy: SHA-256 over canonical JSON, with generation timestamps such as `generated_at` excluded from deterministic checksum input.
+
+Checksum recomputation cannot bypass validation failures. A future actual Regulations ingestion PR must include chunk checksum validation, source artefact checksum validation, and reviewer inspection of source/chunk diffs before any checksum change is accepted.
+
 ## Before actual Regulations ingestion
 
 Future ingestion must:
@@ -70,6 +82,7 @@ Future ingestion must:
 - generate regulation-numbered chunks from that artefact;
 - verify Part/Schedule indexing;
 - verify exact source text boundaries;
+- add canonical chunk checksum validation;
 - obtain human review approval;
 - add separate retrieval and answer-policy tests before any live ORB wiring.
 
