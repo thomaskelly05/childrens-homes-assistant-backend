@@ -301,18 +301,9 @@ def test_embedded_guide_references_are_not_treated_as_regulations_2015_ingestion
     assert "Embedded Guide references must not be treated as Regulations 2015 ingestion" in errors
 
 
-def test_no_regulations_2015_source_text_is_ingested_in_this_pr():
+def test_no_regulations_2015_source_text_is_ingested_in_prep_payload_only():
     payload = _payload()
     assert _payload_errors(payload) == ""
-
-    regulations_files = [
-        path
-        for path in (REPO_ROOT / "data" / "orb_residential_ingestion").glob(
-            "*regulations_2015*"
-        )
-        if path.name != "guide_to_childrens_homes_regulations_chunks.json"
-    ]
-    assert regulations_files == []
 
     changed = copy.deepcopy(payload)
     changed["excluded_sources"]["childrens_homes_regulations_2015_full_text_ingested"] = True

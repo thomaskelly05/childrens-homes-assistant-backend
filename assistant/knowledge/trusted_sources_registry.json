@@ -38,7 +38,8 @@
       "citation_required": true,
       "summary_allowed": true,
       "full_text_allowed": false,
-      "usage_rules": "Reference regulation numbers; human approval for any wording change."
+      "structured_chunks_available": true,
+      "usage_rules": "Structured Regulations 2015 chunks are committed offline for governed retrieval tests only; live ORB answers are not wired to them yet. Reference regulation numbers; human approval for any wording change."
     },
     {
       "source_id": "ofsted_sccif_childrens_homes",

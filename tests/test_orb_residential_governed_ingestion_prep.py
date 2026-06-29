@@ -15,6 +15,9 @@ from services.orb_residential_governed_ingestion_prep_service import (
     SOURCE_TYPE_RULES,
     orb_residential_governed_ingestion_prep_service,
 )
+from services.orb_residential_regulations_2015_ingestion_service import (
+    orb_residential_regulations_2015_ingestion_service,
+)
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
@@ -43,13 +46,15 @@ def test_tier_1_sources_are_identified_for_first_ingestion_in_order():
         assert item["freshness_update_handling"]
 
 
-def test_only_phase_2a_guide_full_text_ingestion_occurred_without_runtime_fetching():
+def test_phase_2a_guide_and_phase_2b_regulations_ingestion_without_runtime_fetching():
     service = orb_residential_governed_ingestion_prep_service
     assert service.full_text_ingestion_performed() is True
     assert service.full_text_ingested_source_ids() == {
-        "dfe_childrens_homes_regulations_guide"
+        "dfe_childrens_homes_regulations_guide",
+        "childrens_homes_regulations_2015",
     }
     assert service.guide_chunk_count() == 371
+    assert orb_residential_regulations_2015_ingestion_service.chunk_count() == 100
     assert service.scraping_or_downloading_performed() is False
 
     service_source = (
@@ -443,7 +448,8 @@ def test_phase_2a_guide_retrieval_remains_capped_and_not_live_wired():
 
     summary = service.governance_summary()
     assert summary["full_text_ingested_source_ids"] == [
-        "dfe_childrens_homes_regulations_guide"
+        "childrens_homes_regulations_2015",
+        "dfe_childrens_homes_regulations_guide",
     ]
     assert summary["guide_chunk_count"] == 371
     assert summary["runtime_behaviour_changed"] is False

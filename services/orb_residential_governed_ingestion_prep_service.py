@@ -17,6 +17,10 @@ from services.orb_residential_guide_ingestion_service import (
     GUIDE_SOURCE_ID,
     orb_residential_guide_ingestion_service,
 )
+from services.orb_residential_regulations_2015_ingestion_service import (
+    REGULATIONS_2015_SOURCE_ID,
+    orb_residential_regulations_2015_ingestion_service,
+)
 from services.orb_residential_source_catalogue_audit_service import CATALOGUE_PATH
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -633,7 +637,10 @@ class OrbResidentialGovernedIngestionPrepService:
         return True
 
     def full_text_ingested_source_ids(self) -> set[str]:
-        return orb_residential_guide_ingestion_service.full_text_source_ids()
+        return {
+            *orb_residential_guide_ingestion_service.full_text_source_ids(),
+            *orb_residential_regulations_2015_ingestion_service.full_text_source_ids(),
+        }
 
     def guide_chunks(self) -> list[dict[str, Any]]:
         return orb_residential_guide_ingestion_service.chunks()

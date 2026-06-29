@@ -392,6 +392,9 @@ def validate_regulations_2015_payload(payload: dict[str, Any]) -> list[str]:
     if not isinstance(payload, dict):
         return ["Regulations 2015 prep payload must be an object."]
 
+    schema_version = _text(payload.get("schema_version"))
+    ingestion_complete = schema_version == "orb-regulations-2015-ingestion-v1"
+
     manifest = payload.get("source")
     if not isinstance(manifest, dict):
         return ["payload.source must be a Regulations 2015 manifest object."]
@@ -401,7 +404,11 @@ def validate_regulations_2015_payload(payload: dict[str, Any]) -> list[str]:
     if not isinstance(excluded, dict):
         errors.append("payload.excluded_sources must be an object.")
     else:
-        if excluded.get("childrens_homes_regulations_2015_full_text_ingested") is not False:
+        regulations_flag = excluded.get("childrens_homes_regulations_2015_full_text_ingested")
+        if ingestion_complete:
+            if regulations_flag is not True:
+                errors.append("Regulations 2015 full-text ingestion flag must be true after ingestion.")
+        elif regulations_flag is not False:
             errors.append("Regulations 2015 full-text ingestion flag must remain false.")
         if excluded.get("ofsted_sccif_childrens_homes_full_text_ingested") is not False:
             errors.append("SCCIF full-text ingestion flag must remain false.")
