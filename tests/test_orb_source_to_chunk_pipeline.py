@@ -116,6 +116,11 @@ def _errors_for(payload: dict) -> str:
     return "\n".join(validate_pipeline_payload(payload, expected_chunk_count=1))
 
 
+def _refresh_checksum(payload: dict) -> dict:
+    payload["provenance"]["chunk_json_sha256"] = calculate_canonical_json_sha256(payload)
+    return payload
+
+
 def test_source_manifest_schema_exists():
     schema = source_manifest_schema()
     assert set(REQUIRED_MANIFEST_FIELDS) <= set(schema)
@@ -201,7 +206,84 @@ def test_validation_catches_misleading_citation_labels():
     payload = _payload()
     payload["chunks"][0]["citation_label"] = "Future Tier 1 Reviewed Source, para. 1.2"
     errors = _errors_for(payload)
+    assert "quote-allowed internal citation labels cannot look like official references" in errors
     assert "generated references must not be exposed as official citation labels" in errors
+
+
+def test_generated_false_internal_para_label_is_rejected_after_checksum_recompute():
+    payload = _payload()
+    payload["chunks"][0]["generated_reference"] = False
+    payload["chunks"][0]["citation_label"] = (
+        "Future Tier 1 Reviewed Source, para. 1.2, internal chunk internal:future-tier-1-source:0001"
+    )
+    errors = "\n".join(validate_pipeline_payload(_refresh_checksum(payload), expected_chunk_count=1))
+    assert "quote-allowed internal citation labels cannot look like official references" in errors
+    assert "provenance.chunk_json_sha256 changed" not in errors
+
+
+def test_generated_false_internal_section_label_is_rejected():
+    payload = _payload()
+    payload["chunks"][0]["generated_reference"] = False
+    payload["chunks"][0]["citation_label"] = (
+        "Future Tier 1 Reviewed Source, section 4.1, internal chunk internal:future-tier-1-source:0001"
+    )
+    errors = "\n".join(validate_pipeline_payload(_refresh_checksum(payload), expected_chunk_count=1))
+    assert "quote-allowed internal citation labels cannot look like official references" in errors
+
+
+def test_generated_false_internal_regulation_label_requires_verified_official_reference():
+    payload = _payload()
+    payload["chunks"][0]["generated_reference"] = False
+    payload["chunks"][0]["citation_label"] = (
+        "Future Tier 1 Reviewed Source, regulation 12, internal chunk internal:future-tier-1-source:0001"
+    )
+    errors = "\n".join(validate_pipeline_payload(_refresh_checksum(payload), expected_chunk_count=1))
+    assert "quote-allowed internal citation labels cannot look like official references" in errors
+
+    verified = _payload()
+    verified["chunks"][0]["generated_reference"] = False
+    verified["chunks"][0]["official_reference_present_in_source"] = True
+    verified["chunks"][0]["regulation_number"] = "12"
+    verified["chunks"][0]["citation_label"] = "Future Tier 1 Reviewed Source, regulation 12"
+    errors = "\n".join(validate_pipeline_payload(_refresh_checksum(verified), expected_chunk_count=1))
+    assert "quote-allowed internal citation labels cannot look like official references" not in errors
+    assert "quote-allowed internal chunks need a clear internal chunk label" not in errors
+
+
+def test_unambiguous_internal_label_without_generated_reference_is_accepted():
+    payload = _payload()
+    payload["chunks"][0]["generated_reference"] = False
+    payload["chunks"][0]["internal_chunk_id"] = "guide-qpc-004"
+    payload["chunks"][0]["citation_label"] = "internal chunk guide-qpc-004"
+    errors = "\n".join(validate_pipeline_payload(_refresh_checksum(payload), expected_chunk_count=1))
+    assert errors == ""
+
+
+def test_verified_official_reference_allows_official_reference_label():
+    payload = _payload()
+    payload["chunks"][0]["generated_reference"] = False
+    payload["chunks"][0]["official_reference_present_in_source"] = True
+    payload["chunks"][0]["official_paragraph_reference"] = "1.2"
+    payload["chunks"][0]["paragraph_reference"] = "1.2"
+    payload["chunks"][0]["citation_label"] = "Future Tier 1 Reviewed Source, paragraph 1.2"
+    errors = "\n".join(validate_pipeline_payload(_refresh_checksum(payload), expected_chunk_count=1))
+    assert errors == ""
+
+
+def test_metadata_only_chunk_cannot_become_quote_allowed_with_official_looking_label():
+    payload = _payload()
+    payload["chunks"][0]["generated_reference"] = False
+    payload["chunks"][0]["basis_type"] = "summary"
+    payload["chunks"][0]["source_text_exact"] = False
+    payload["chunks"][0]["quote_basis"] = "generated_metadata"
+    payload["chunks"][0]["citation_label"] = (
+        "Future Tier 1 Reviewed Source, paragraph 1.2, internal chunk internal:future-tier-1-source:0001"
+    )
+    errors = "\n".join(validate_pipeline_payload(_refresh_checksum(payload), expected_chunk_count=1))
+    assert "quote_allowed requires basis_type exact" in errors
+    assert "exact citations require exact source text" in errors
+    assert "metadata cannot be quoteable exact source text" in errors
+    assert "quote-allowed internal citation labels cannot look like official references" in errors
 
 
 def test_validation_catches_compliance_guarantee_language():

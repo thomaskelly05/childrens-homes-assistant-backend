@@ -153,6 +153,12 @@ MISLEADING_OFFICIAL_LABEL = re.compile(
     r"\b(?:official\s+)?(?:paragraph|para\.?|regulation|reg\.?)\s+\d",
     re.IGNORECASE,
 )
+OFFICIAL_LOOKING_REFERENCE_LABEL = re.compile(
+    r"(?:\b(?:official\s+)?(?:para(?:graph)?\.?|section|reg(?:ulation)?\.?|article)\s*"
+    r"\d{1,3}(?:\.\d{1,3}){0,4}[a-z]?(?:\(\d+\))*\b)"
+    r"|(?:^|[,\s])\d{1,3}(?:\.\d{1,3}){0,4}[a-z]?(?:\(\d+\))*\s*(?:$|[,.;:\s])",
+    re.IGNORECASE,
+)
 COMPLIANCE_GUARANTEE_CLAIM = re.compile(
     r"\b(?:guarantees?|guaranteed|guaranteeing|ensures?|ensured|ensuring)\s+(?:legal\s+)?compliance\b",
     re.IGNORECASE,
@@ -510,6 +516,7 @@ def _validate_reference_labels(prefix: str, chunk: dict[str, Any]) -> list[str]:
     lower_label = citation_label.lower()
     internal_chunk_id = _text(chunk.get("internal_chunk_id"))
     generated_reference = bool(chunk.get("generated_reference"))
+    verified_official_ref = has_verified_official_reference(chunk)
 
     if official_ref and chunk.get("official_reference_present_in_source") is not True:
         errors.append(f"{prefix} uses an official reference not confirmed as present in the source.")
@@ -519,16 +526,44 @@ def _validate_reference_labels(prefix: str, chunk: dict[str, Any]) -> list[str]:
         errors.append(f"{prefix} generated references must not be exposed as official citation labels.")
 
     has_clear_internal_id = (
-        internal_chunk_id.startswith(INTERNAL_CHUNK_ID_PREFIX)
+        internal_chunk_id
         and "internal chunk" in lower_label
         and internal_chunk_id in citation_label
     )
+    if (
+        chunk.get("quote_allowed") is True
+        and not verified_official_ref
+        and is_official_looking_reference_label(citation_label)
+    ):
+        errors.append(
+            f"{prefix} quote-allowed internal citation labels cannot look like official references."
+        )
     if generated_reference and not has_clear_internal_id:
         errors.append(f"{prefix} generated splits must use an internal chunk label.")
-    if chunk.get("quote_allowed") is True and not official_ref and not has_clear_internal_id:
+    if chunk.get("quote_allowed") is True and not verified_official_ref and not has_clear_internal_id:
         errors.append(f"{prefix} quote-allowed internal chunks need a clear internal chunk label.")
 
     return errors
+
+
+def has_verified_official_reference(chunk: dict[str, Any]) -> bool:
+    if chunk.get("official_reference_present_in_source") is not True:
+        return False
+    return any(
+        _text(chunk.get(field))
+        for field in (
+            "official_paragraph_reference",
+            "official_regulation_reference",
+            "official_section_reference",
+            "official_article_reference",
+            "official_reference",
+            "regulation_number",
+        )
+    )
+
+
+def is_official_looking_reference_label(label: str) -> bool:
+    return bool(OFFICIAL_LOOKING_REFERENCE_LABEL.search(_text(label)))
 
 
 def _validate_quote_safety(prefix: str, chunk: dict[str, Any], exact_excerpt: str) -> list[str]:
