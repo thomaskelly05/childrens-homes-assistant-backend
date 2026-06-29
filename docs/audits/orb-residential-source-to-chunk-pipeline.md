@@ -109,7 +109,7 @@ The scaffold validates:
 - checksum match;
 - all required mappings where specified.
 
-The current scaffold also guards that Regulations 2015 and SCCIF remain reserved future sources and are not ingested by this PR.
+The current scaffold also guards that Regulations 2015 and SCCIF remain reserved future sources and are not ingested by this PR. Regulations 2015 now has a source-specific validation prep scaffold in `scripts/verify_orb_regulations_2015_manifest.py`; that scaffold validates future manifests and chunk metadata only, not source text ingestion.
 
 ## Human review gate
 
@@ -135,7 +135,7 @@ Without approved review metadata, quote-allowed chunks fail validation.
 
 The next Tier 1 sources remain future work:
 
-- Children's Homes Regulations 2015: use this scaffold with a regulation-number index, schedule-aware chunking, exact statutory text boundaries, and regulation citation labels only where genuinely present.
+- Children's Homes Regulations 2015: use the source-specific prep scaffold with a regulation-number index, schedule-aware chunking, exact statutory text boundaries, and regulation citation labels only where genuinely present.
 - SCCIF children’s homes: use this scaffold with judgement-area tags, evaluation criteria boundaries, evidence framing, and explicit grade-prediction prohibition.
 
 Neither source is ingested in this PR.
@@ -144,7 +144,7 @@ Neither source is ingested in this PR.
 
 - Add a reviewed local source artefact for the next approved source.
 - Generate chunks from that artefact through this scaffold in a separate PR.
-- Add source-specific validation for regulation-number indexing.
+- In a separate PR, ingest Regulations 2015 only after a reviewed local source artefact, checksum, regulation-number index, part/schedule index and human review approval exist.
 - Add source-specific validation for SCCIF judgement-area tagging.
 - Keep exact citation wiring behind separate governed retrieval and answer-policy tests.
 - Keep the public promise blocked until NR-1 and source governance are resolved.
