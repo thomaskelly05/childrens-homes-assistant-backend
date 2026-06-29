@@ -33,6 +33,27 @@ def test_summary_only_warning():
     assert warn and "summary" in warn.lower()
 
 
+def test_exact_citation_allowed_requires_exact_full_document_chunk():
+    exact_source = {"id": "guide", "source_integrity": "full_document", "quote_allowed": True}
+    exact_chunk = {
+        "source_id": "guide",
+        "basis_type": "exact",
+        "source_integrity": "full_document",
+        "quote_allowed": True,
+        "citation_label": "Guide para. 1.7",
+        "exact_excerpt": "This Guide is a statement published pursuant to section 23.",
+    }
+    summary_chunk = {
+        "source_id": "guide",
+        "basis_type": "summary",
+        "source_integrity": "summary_only",
+        "citation_label": "Guide summary",
+        "text": "Summary only.",
+    }
+    assert orb_exact_citation_service.exact_citation_allowed(exact_chunk, exact_source) is True
+    assert orb_exact_citation_service.exact_citation_allowed(summary_chunk) is False
+
+
 def test_expired_warning():
     past = (datetime.now(timezone.utc) - timedelta(days=1)).isoformat()
     source = {"expires_at": past, "governance_status": "approved", "source_integrity": "full_document"}

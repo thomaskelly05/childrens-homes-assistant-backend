@@ -15,7 +15,8 @@ ORB_SOURCE_REGISTRY: list[dict[str, Any]] = [
         "url": "https://www.gov.uk/government/publications/childrens-homes-regulations-including-quality-standards-guide",
         "last_checked": "2026-05-01",
         "applies_to": ["childrens_homes", "quality_standards", "practice", "restraint", "records", "manager_oversight"],
-        "exact_text_available": False,
+        "exact_text_available": True,
+        "exact_chunks_available": True,
         "summary_basis": "DfE guide to regulations and quality standards for children's homes in England.",
         "when_to_cite": [
             "quality standards",
@@ -35,8 +36,8 @@ ORB_SOURCE_REGISTRY: list[dict[str, Any]] = [
         "regulation_numbers": ["Reg 12", "Reg 13", "Reg 44", "Reg 45"],
         "citation_labels": ["Children's Homes Regulations Guide", "Quality Standards"],
         "confidence": "high",
-        "notes": "Use for practice framing; do not quote exact regulation wording unless stored in exact registry.",
-        "must_not_overclaim": "Do not state exact statutory wording unless exact_text_available is true.",
+        "notes": "Use committed Guide chunks for exact Guide citations; do not cite the separate Regulations 2015 as ingested in this PR.",
+        "must_not_overclaim": "Do not guarantee compliance or quote outside committed Guide chunks.",
     },
     {
         "source_id": "childrens_homes_regulations_2015",

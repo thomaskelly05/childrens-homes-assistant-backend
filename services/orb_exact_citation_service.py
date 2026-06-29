@@ -31,6 +31,37 @@ def _parse_dt(value: Any) -> datetime | None:
 class OrbExactCitationService:
     """Builds exact citation labels and anchors from source/chunk metadata."""
 
+    def exact_citation_allowed(
+        self,
+        chunk: dict[str, Any],
+        source: dict[str, Any] | None = None,
+    ) -> bool:
+        source = source or {}
+        metadata = chunk.get("metadata") or {}
+        basis_type = _text(chunk.get("basis_type") or metadata.get("basis_type"))
+        source_integrity = _text(
+            source.get("source_integrity")
+            or chunk.get("source_integrity")
+            or metadata.get("source_integrity")
+        )
+        exact_text = _text(
+            chunk.get("exact_excerpt")
+            or chunk.get("exact_text")
+            or chunk.get("text")
+        )
+        quote_allowed = chunk.get("quote_allowed")
+        if quote_allowed is None:
+            quote_allowed = source.get("quote_allowed")
+        if quote_allowed is None:
+            quote_allowed = source_integrity == "full_document"
+        return bool(
+            basis_type == "exact"
+            and source_integrity == "full_document"
+            and quote_allowed is True
+            and exact_text
+            and _text(chunk.get("citation_label") or chunk.get("paragraph_number") or chunk.get("section"))
+        )
+
     def build_citation_anchor(
         self,
         source_id: str,
@@ -169,7 +200,7 @@ class OrbExactCitationService:
             "governance_status": _text(source.get("governance_status")) or _text(chunk.get("governance_status")) or None,
             "warning": warning,
             "excerpt": excerpt,
-            "quote_allowed": _text(source.get("source_integrity")) not in {"summary_only", "unknown"},
+            "quote_allowed": self.exact_citation_allowed(chunk, source),
             "source_id": source.get("id") or chunk.get("source_id"),
             "chunk_index": chunk.get("chunk_index"),
             "document_chunk": True,
