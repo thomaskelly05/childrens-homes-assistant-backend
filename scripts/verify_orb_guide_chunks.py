@@ -225,13 +225,13 @@ def _validate_excluded_sources(payload: dict[str, Any]) -> list[str]:
     if not isinstance(excluded, dict):
         return ["excluded_sources must be an object."]
     expected_false_flags = {
-        "childrens_homes_regulations_2015_full_text_ingested",
-        "ofsted_sccif_childrens_homes_full_text_ingested",
-        "full_113_source_catalogue_ingested",
+        "childrens_homes_regulations_2015_full_text_ingested": "Regulations 2015",
+        "ofsted_sccif_childrens_homes_full_text_ingested": "SCCIF",
+        "full_113_source_catalogue_ingested": "full 113-source catalogue",
     }
-    for flag in expected_false_flags:
+    for flag, label in expected_false_flags.items():
         if excluded.get(flag) is not False:
-            errors.append(f"excluded_sources.{flag} must remain false.")
+            errors.append(f"{label} full-text ingestion flag must remain false ({flag}).")
     return errors
 
 
