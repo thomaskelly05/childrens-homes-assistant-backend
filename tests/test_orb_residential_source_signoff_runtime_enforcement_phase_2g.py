@@ -60,11 +60,21 @@ def retrieval_gate():
 
 
 def valid_signoff_record(source_type: str) -> dict:
+    from scripts.verify_orb_named_source_signoffs import SOURCE_TYPE_TO_TITLE
+
     base = {
         "source_type": source_type,
-        "named_reviewer": "Named Reviewer",
+        "source_id": {
+            "guide": "dfe_childrens_homes_regulations_guide",
+            "regulations_2015": "childrens_homes_regulations_2015",
+            "sccif": "ofsted_sccif_childrens_homes",
+        }[source_type],
+        "source_title": SOURCE_TYPE_TO_TITLE[source_type],
+        "reviewer_name": "Jordan Williams",
         "reviewer_role": "Registered Manager",
+        "reviewer_organisation": "Example Children's Home Ltd",
         "review_date": "2026-06-29",
+        "review_scope": "Offline verified source artefact and Phase 2e-2h policy gates",
         "source_checksum_verified": True,
         "chunk_checksum_verified": True,
         "source_role_approved": True,
@@ -73,10 +83,20 @@ def valid_signoff_record(source_type: str) -> dict:
         "unsafe_output_blockers_approved": True,
         "boundary_statements_approved": True,
         "local_policy_limitation_acknowledged": True,
-        "no_legal_advice_compliance_guarantee_acknowledged": True,
+        "professional_judgement_boundary_acknowledged": True,
+        "no_legal_advice_acknowledged": True,
+        "no_compliance_guarantee_acknowledged": True,
         "synthetic_review_rejected_as_sufficient": True,
         "nr_1_controls_confirmed": True,
         "public_promise_remains_blocked": True,
+        "signed_by_named_human": True,
+        "signature_attestation": "I confirm named human review of this source for ORB Residential policy gates.",
+        "created_at": "2026-06-29T12:00:00Z",
+        "provenance": {
+            "artefact_kind": "test_fixture_only",
+            "template_only": False,
+            "not_valid_signoff": False,
+        },
     }
     if source_type == "guide":
         base["declared_chunk_checksum"] = EXPECTED_GUIDE_CHUNK_JSON_SHA256
@@ -86,7 +106,9 @@ def valid_signoff_record(source_type: str) -> dict:
     if source_type == "sccif":
         base["declared_source_checksum"] = EXPECTED_SCCIF_SOURCE_SHA256
         base["declared_chunk_checksum"] = EXPECTED_SCCIF_CHUNK_JSON_SHA256
-        base["no_ofsted_grade_inspection_readiness_guarantee_acknowledged"] = True
+        base["no_ofsted_grade_prediction_acknowledged"] = True
+        base["no_inspection_readiness_decision_acknowledged"] = True
+        base["no_inspection_outcome_guarantee_acknowledged"] = True
     return base
 
 
@@ -127,8 +149,8 @@ def test_synthetic_review_is_rejected_for_live_use(signoff_gate):
 
 def test_missing_reviewer_name_fails_signoff(signoff_gate):
     record = valid_signoff_record("guide")
-    record["named_reviewer"] = ""
-    assert any("missing named_reviewer" in error for error in signoff_gate.validate_signoff_record("guide", record))
+    record["reviewer_name"] = ""
+    assert any("missing reviewer_name" in error for error in signoff_gate.validate_signoff_record("guide", record))
 
 
 def test_missing_reviewer_role_fails_signoff(signoff_gate):
