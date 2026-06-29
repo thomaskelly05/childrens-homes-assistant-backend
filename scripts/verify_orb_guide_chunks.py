@@ -410,7 +410,7 @@ def main() -> int:
     print("Guide chunk verification passed.")
     print(f"Path: {args.path}")
     print(f"Chunks: {len(payload['chunks'])}")
-    print(f"Checksum strategy: SHA-256 over normalised canonical JSON excluding provenance.chunk_json_sha256")
+    print("Checksum strategy: SHA-256 over normalised canonical JSON excluding provenance.chunk_json_sha256")
     print(f"Checksum: {calculate_checksum(payload)}")
     return 0
 
