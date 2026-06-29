@@ -1,13 +1,15 @@
-"""ORB Residential founder-only source-grounded alpha — Phase 2l.
+"""ORB Residential founder-only source-grounded alpha — Phase 2l/2m.
 
 Provides a tightly controlled internal alpha path for founder/admin users to
 evaluate source-grounded answer assembly. This does not enable public live
 source-grounded answers, does not bypass named sign-off, NR-1 or public-promise
-controls, and does not call the LLM in Phase 2l.
+controls, and does not call the LLM. Phase 2m strips nested chunk text from API
+responses and hardens denied-attempt audit logging.
 """
 
 from __future__ import annotations
 
+import copy
 import os
 from typing import Any
 
@@ -34,6 +36,66 @@ PROFESSIONAL_JUDGEMENT_REMINDER = (
     "Follow local policy and seek Registered Manager, provider or professional "
     "oversight where required. This output is for internal founder testing only."
 )
+
+_CHUNK_TEXT_FIELDS = frozenset(
+    {
+        "text",
+        "chunk_text",
+        "content",
+        "body",
+        "full_text",
+        "quote",
+        "excerpt",
+        "source_text",
+    }
+)
+
+_CHUNK_REF_FIELDS = (
+    "source_id",
+    "source_type",
+    "chunk_id",
+    "chunk_index",
+    "internal_chunk_id",
+    "citation_label",
+    "regulation_number",
+    "quality_standard",
+    "quality_standard_id",
+    "section_heading",
+    "subsection_heading",
+    "paragraph_reference",
+    "regulation_reference",
+    "related_regulations",
+    "workflow_domains",
+    "related_workflow_domains",
+    "sccif_judgement_area",
+    "evaluation_area",
+    "inspection_evidence_theme",
+    "judgement_area",
+    "basis_type",
+    "quote_allowed",
+)
+
+
+def _chunk_refs_only(chunk: dict[str, Any] | None) -> dict[str, Any] | None:
+    if not isinstance(chunk, dict):
+        return None
+    return {field: chunk[field] for field in _CHUNK_REF_FIELDS if chunk.get(field) is not None}
+
+
+def _strip_chunk_text_value(value: Any) -> Any:
+    if isinstance(value, dict):
+        sanitized: dict[str, Any] = {}
+        for key, item in value.items():
+            if key in _CHUNK_TEXT_FIELDS:
+                continue
+            if key == "chunk":
+                sanitized[key] = _chunk_refs_only(item) if isinstance(item, dict) else None
+                continue
+            sanitized[key] = _strip_chunk_text_value(item)
+        return sanitized
+    if isinstance(value, list):
+        return [_strip_chunk_text_value(item) for item in value]
+    return value
 
 
 def _env_truthy(key: str, *, default: str = "false") -> bool:
@@ -161,6 +223,26 @@ class OrbResidentialSourceGroundedAlphaService:
                 }
             )
         return rows
+
+    def sanitize_assembly_evaluation_for_api(
+        self, assembly_evaluation: dict[str, Any] | None
+    ) -> dict[str, Any] | None:
+        if assembly_evaluation is None:
+            return None
+        sanitized = _strip_chunk_text_value(copy.deepcopy(assembly_evaluation))
+        if isinstance(sanitized, dict):
+            sanitized["chunk_text_stripped_for_api"] = True
+            sanitized["hardening_phase"] = "Phase 2m"
+        return sanitized
+
+    def sanitize_alpha_response_for_api(self, payload: dict[str, Any]) -> dict[str, Any]:
+        sanitized = copy.deepcopy(payload)
+        sanitized["assembly_evaluation"] = self.sanitize_assembly_evaluation_for_api(
+            sanitized.get("assembly_evaluation")
+        )
+        sanitized["hardening_phase"] = "Phase 2m"
+        sanitized["chunk_text_stripped_for_api"] = True
+        return sanitized
 
     def _internal_citation_refs(self, retrieval_bundle_preview: dict[str, Any]) -> list[dict[str, Any]]:
         refs: list[dict[str, Any]] = []
@@ -295,46 +377,48 @@ class OrbResidentialSourceGroundedAlphaService:
             assembly_evaluation=assembly,
         )
 
-        return {
-            "phase": "Phase 2l",
-            "scope": "founder-only internal source-grounded alpha (evaluation only)",
-            "internal_alpha_label": INTERNAL_ALPHA_LABEL,
-            "internal_alpha_access_allowed": True,
-            "internal_alpha_mode_enabled": True,
-            "access_status": access,
-            "feature_flags": flags,
-            "workflow_type": workflow_type,
-            "public_source_grounded_answers_enabled": False,
-            "live_source_grounded_answers_enabled": False,
-            "hard_live_enablement_block_active": True,
-            "source_grounded_assembly_allowed": False,
-            "source_chunks_sent_to_llm": False,
-            "source_citations_returned_to_user": False,
-            "llm_called": False,
-            "sent_to_live_orb_answers": False,
-            "blocked_reason": assembly.get("blocked_reason"),
-            "required_boundary_wording": boundary_wording,
-            "required_internal_boundary_lines": list(REQUIRED_INTERNAL_BOUNDARY_LINES),
-            "professional_judgement_reminder": PROFESSIONAL_JUDGEMENT_REMINDER,
-            "citation_candidates_for_internal_checking": citation_refs,
-            "internal_alpha_answer_text": internal_text,
-            "assembly_evaluation": assembly,
-            "governance_visibility": self.build_governance_visibility(),
-            "audit_logged": True,
-            "claims_not_made": {
-                "legal_advice": False,
-                "statutory_compliance_decision": False,
-                "regulation_40_decision": False,
-                "notification_threshold_decision": False,
-                "ofsted_grade_prediction": False,
-                "inspection_readiness_decision": False,
-                "good_or_outstanding_confirmation": False,
-                "compliance_guarantee": False,
-                "ofsted_ready": False,
-                "independent_signoff_completed": False,
-                "final_source_signoff_completed": False,
-            },
-        }
+        return self.sanitize_alpha_response_for_api(
+            {
+                "phase": "Phase 2l",
+                "scope": "founder-only internal source-grounded alpha (evaluation only)",
+                "internal_alpha_label": INTERNAL_ALPHA_LABEL,
+                "internal_alpha_access_allowed": True,
+                "internal_alpha_mode_enabled": True,
+                "access_status": access,
+                "feature_flags": flags,
+                "workflow_type": workflow_type,
+                "public_source_grounded_answers_enabled": False,
+                "live_source_grounded_answers_enabled": False,
+                "hard_live_enablement_block_active": True,
+                "source_grounded_assembly_allowed": False,
+                "source_chunks_sent_to_llm": False,
+                "source_citations_returned_to_user": False,
+                "llm_called": False,
+                "sent_to_live_orb_answers": False,
+                "blocked_reason": assembly.get("blocked_reason"),
+                "required_boundary_wording": boundary_wording,
+                "required_internal_boundary_lines": list(REQUIRED_INTERNAL_BOUNDARY_LINES),
+                "professional_judgement_reminder": PROFESSIONAL_JUDGEMENT_REMINDER,
+                "citation_candidates_for_internal_checking": citation_refs,
+                "internal_alpha_answer_text": internal_text,
+                "assembly_evaluation": assembly,
+                "governance_visibility": self.build_governance_visibility(),
+                "audit_logged": True,
+                "claims_not_made": {
+                    "legal_advice": False,
+                    "statutory_compliance_decision": False,
+                    "regulation_40_decision": False,
+                    "notification_threshold_decision": False,
+                    "ofsted_grade_prediction": False,
+                    "inspection_readiness_decision": False,
+                    "good_or_outstanding_confirmation": False,
+                    "compliance_guarantee": False,
+                    "ofsted_ready": False,
+                    "independent_signoff_completed": False,
+                    "final_source_signoff_completed": False,
+                },
+            }
+        )
 
     def build_governance_visibility(self) -> dict[str, Any]:
         summary = self._assembly.governance_summary()

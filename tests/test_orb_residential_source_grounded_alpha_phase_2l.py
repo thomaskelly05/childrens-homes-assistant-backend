@@ -8,7 +8,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 import app as app_module
-from auth.current_user import get_current_user
+from auth.current_user import get_current_user, get_optional_current_user
 from middleware.security_middleware import CsrfProtectionMiddleware
 from scripts.verify_orb_guide_chunks import (
     EXPECTED_CHUNK_JSON_SHA256 as EXPECTED_GUIDE_CHUNK_JSON_SHA256,
@@ -66,6 +66,7 @@ def _client_for_role(monkeypatch, role: str):
         return {"id": 10, "role": role, "email": f"{role}@test.com", "home_id": 1}
 
     app_module.app.dependency_overrides[get_current_user] = user
+    app_module.app.dependency_overrides[get_optional_current_user] = user
     client = TestClient(app_module.app)
     yield client
     app_module.app.dependency_overrides.clear()

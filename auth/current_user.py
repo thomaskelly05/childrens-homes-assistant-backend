@@ -12,7 +12,7 @@ from auth.rbac import normalise_role, permissions_for_role
 from auth.tokens import decode_session_token
 from db.billing_db import get_user_billing_by_user_id
 from db.connection import DatabaseUnavailableError, db_connection
-from db.mfa_db import get_user_mfa  # Backwards-compat export for test monkeypatches
+from db.mfa_db import get_user_mfa  # noqa: F401  # Backwards-compat export for test monkeypatches
 from services.session_security_service import is_session_revoked, touch_session
 
 logger = logging.getLogger(__name__)
@@ -337,3 +337,18 @@ def get_current_user(
         "plan_name": plan_name,
         "permissions": sorted(permissions_for_role(role)),
     }
+
+
+def get_optional_current_user(
+    request: Request,
+    bearer_token: str | None = Depends(get_bearer_token),
+) -> dict[str, Any] | None:
+    """Return the authenticated user when a valid session exists, otherwise None."""
+    if not _get_request_token(request, bearer_token):
+        return None
+    try:
+        return get_current_user(request, bearer_token)
+    except HTTPException as exc:
+        if exc.status_code == 401:
+            return None
+        raise
