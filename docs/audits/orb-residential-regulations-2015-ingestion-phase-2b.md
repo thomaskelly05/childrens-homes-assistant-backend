@@ -38,9 +38,25 @@ It does **not**:
 | Source artefact | `data/orb_residential_ingestion/childrens_homes_regulations_2015_source.txt` |
 | Source checksum (SHA-256) | `7bab72781fff7c1ffd1a3a04d1fa90a054e9b9a34017efc608aab5575637b1d5` |
 | Chunk artefact | `data/orb_residential_ingestion/childrens_homes_regulations_2015_chunks.json` |
-| Chunk checksum (SHA-256) | `22002cf90f8ac7db6fa9024600e6cd1794da0d373adf8cbefb4c9eb361e20ece` |
+| Chunk checksum (SHA-256) | `825343995c4013c14fe84190304ce94695b005dcda092336fe063e4a1445d9a5` |
 
 The source artefact was generated offline from the official legislation.gov.uk XML export (`/uksi/2015/541/data.xml`) and committed locally. No runtime scraping or live web fetching occurs in the application.
+
+## SignedSection omission
+
+The legislation.gov.uk XML export includes a short **SignedSection** signature block at the end of the Body (ministerial signature text). This block is **omitted** from the committed source artefact and chunk layer because:
+
+- it is not operative regulatory text used for children's homes duties;
+- it does not affect Regulations 1–57, Parts or Schedules;
+- ORB remains a support tool for professional thinking and safer recording, not a legal advice or compliance-decision service.
+
+Omission of SignedSection does not remove any operative regulation, Part or Schedule content.
+
+## Regulation title indexing
+
+`regulation_title` is populated from official **P1group Title** elements in the legislation.gov.uk XML structure where present (55 of 57 regulations). Regulations **54** and **55** (revocation/consequential provisions) have no P1group title in the official export and remain without a separate title field. Exact quoteable `text` / `exact_excerpt` fields are unchanged.
+
+Title retrieval supports official descriptive titles (for example `protection` → Regulation 12). Regulation-number retrieval remains the primary deterministic index.
 
 ## What was ingested
 

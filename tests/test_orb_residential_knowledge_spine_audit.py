@@ -137,21 +137,40 @@ def test_summary_seeds_exist_for_guide_and_sccif():
     assert "not a substitute" in sccif_seed.read_text(encoding="utf-8").lower()
 
 
-def test_audit_service_reports_no_full_text_ingest():
+def test_audit_service_reports_offline_structured_sources():
     service = orb_residential_knowledge_spine_audit_service
     assert service.sources_present_as_full_text() == []
-    assert len(service.sources_present_as_summary()) == 3
+    assert service.sources_present_as_structured_chunks_offline() == [
+        "childrens_homes_regulations_2015"
+    ]
+    assert len(service.sources_present_as_summary()) == 2
     assert service.can_cite_sources() is True
     assert service.has_quality_standards_mapping() is True
     assert service.has_sccif_mapping() is True
     assert service.has_answer_policy() is True
 
 
+def test_regulations_2015_audit_state_reflects_offline_chunks():
+    by_id = {
+        source["source_id"]: source
+        for source in orb_residential_knowledge_spine_audit_service.required_core_sources()
+    }
+    regulations = by_id["childrens_homes_regulations_2015"]
+    assert regulations["ingestion_status"] == "structured_chunks_offline"
+    assert regulations["chunked"] is True
+    assert regulations["chunk_count_approx"] == 100
+    assert regulations["full_text_allowed"] is False
+    assert regulations["runtime_answer_wiring_enabled"] is False
+    assert regulations["citable_in_answers"] is False
+    assert "legal advice" in regulations["legal_advice_boundary"].lower()
+
+
 def test_knowledge_spine_gaps_documented():
     gaps = orb_residential_knowledge_spine_audit_service.gaps()
     gap_ids = {g["gap"] for g in gaps}
     assert "full_text_ingestion" in gap_ids
-    assert "regulations_2015_no_seed" in gap_ids
+    assert "regulations_2015_live_wiring_blocked" in gap_ids
+    assert "regulations_2015_no_seed" not in gap_ids
 
 
 def test_proposed_spine_design_references_existing_modules():

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import re
 from pathlib import Path
 
 import pytest
@@ -96,6 +95,20 @@ def test_retrieval_by_quality_standard_works(service):
     matches = service.retrieve_chunks(quality_standard="Protection of children")
     assert matches
     assert any("Protection of children" in match["related_quality_standards"] for match in matches)
+
+
+def test_retrieval_by_regulation_title_works(service):
+    matches = service.retrieve_chunks(regulation_title="protection")
+    assert matches
+    assert any(match["regulation_number"] == "12" for match in matches)
+
+
+def test_regulation_titles_populated_from_official_xml_structure(service):
+    regulation_chunks = [chunk for chunk in service.chunks() if chunk.get("regulation_number")]
+    titled = [chunk for chunk in regulation_chunks if chunk.get("regulation_title")]
+    assert len(titled) >= 55
+    reg12 = next(chunk for chunk in regulation_chunks if chunk["regulation_number"] == "12")
+    assert "protection of children" in reg12["regulation_title"].lower()
 
 
 def test_retrieval_cap_is_respected(service):

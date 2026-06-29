@@ -28,7 +28,6 @@ from scripts.verify_orb_guide_chunks import (  # noqa: E402
 )
 from scripts.verify_orb_regulations_2015_manifest import (  # noqa: E402
     REGULATIONS_2015_SOURCE_ID,
-    REQUIRED_HUMAN_REVIEW_CONFIRMATIONS,
     validate_regulations_2015_chunk,
     validate_regulations_2015_manifest,
     validate_regulations_2015_payload,
@@ -45,7 +44,7 @@ EXPECTED_OFFICIAL_URL = "https://www.legislation.gov.uk/uksi/2015/541/contents"
 EXPECTED_PUBLISHER = "UK legislation"
 EXPECTED_VERSION = "SI 2015/541 as published on legislation.gov.uk (verified 2026-06-29)"
 EXPECTED_SOURCE_FILE_SHA256 = "7bab72781fff7c1ffd1a3a04d1fa90a054e9b9a34017efc608aab5575637b1d5"
-EXPECTED_CHUNK_JSON_SHA256 = "22002cf90f8ac7db6fa9024600e6cd1794da0d373adf8cbefb4c9eb361e20ece"
+EXPECTED_CHUNK_JSON_SHA256 = "825343995c4013c14fe84190304ce94695b005dcda092336fe063e4a1445d9a5"
 EXPECTED_CHUNK_COUNT = 100
 MAX_CHUNK_TEXT_CHARS_EXCLUSIVE = 1300
 

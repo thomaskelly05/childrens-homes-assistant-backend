@@ -186,6 +186,17 @@ def _chunk_boundary_fields() -> dict[str, Any]:
     }
 
 
+def _p1group_regulation_title(root: ET.Element, p1: ET.Element) -> str:
+    p1_id = p1.get("id", "")
+    for group in root.iter():
+        if not group.tag.endswith("P1group"):
+            continue
+        for child in group:
+            if child.tag.endswith("P1") and child.get("id") == p1_id:
+                return _text(group.find(f"{{{NS}}}Title"))
+    return ""
+
+
 def parse_legislation_xml(xml_path: Path) -> tuple[list[dict[str, Any]], list[dict[str, Any]], str]:
     tree = ET.parse(xml_path)
     root = tree.getroot()
@@ -202,13 +213,7 @@ def parse_legislation_xml(xml_path: Path) -> tuple[list[dict[str, Any]], list[di
 
         for p1 in part.findall(f".//{{{NS}}}P1"):
             reg_num = _text(p1.find(f"{{{NS}}}Pnumber"))
-            reg_title = ""
-            for title_elem in p1.iter():
-                if title_elem.tag.endswith("Title") and title_elem.find(f"{{{NS}}}Pnumber") is None:
-                    candidate = _text(title_elem)
-                    if candidate and candidate != part_title:
-                        reg_title = candidate
-                        break
+            reg_title = _p1group_regulation_title(root, p1)
             text_parts: list[str] = []
             for p2 in p1.findall(f".//{{{NS}}}P2"):
                 text_parts.append(_text(p2))
@@ -217,8 +222,6 @@ def parse_legislation_xml(xml_path: Path) -> tuple[list[dict[str, Any]], list[di
                 if para is not None:
                     text_parts.append(_text(para))
             full_text = " ".join(part for part in text_parts if part).strip()
-            if reg_title and reg_title not in full_text[:120]:
-                full_text = f"{reg_title} {full_text}".strip()
             source_lines.append(f"Regulation {reg_num} — {reg_title}".strip(" —"))
             source_lines.append(full_text)
             source_lines.append("")
@@ -535,6 +538,31 @@ def build_payload(
     return payload
 
 
+def regulation_titles_by_number(xml_path: Path) -> dict[str, str]:
+    regulation_records, _, _ = parse_legislation_xml(xml_path)
+    return {
+        record["regulation_number"]: record["regulation_title"]
+        for record in regulation_records
+        if record.get("regulation_number")
+    }
+
+
+def enrich_regulation_titles_in_payload(payload: dict[str, Any], xml_path: Path) -> dict[str, Any]:
+    """Populate regulation_title metadata from official XML P1group titles only."""
+
+    titles = regulation_titles_by_number(xml_path)
+    for chunk in payload.get("chunks", []):
+        if not isinstance(chunk, dict):
+            continue
+        reg_num = str(chunk.get("regulation_number") or "").strip()
+        if not reg_num:
+            continue
+        chunk["regulation_title"] = titles.get(reg_num, "")
+    if isinstance(payload.get("provenance"), dict):
+        payload["provenance"]["chunk_json_sha256"] = _sha256_canonical(payload)
+    return payload
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Build Regulations 2015 governed chunks.")
     parser.add_argument(
@@ -553,7 +581,37 @@ def main() -> int:
         action="store_true",
         help="Write the chunks JSON artefact.",
     )
+    parser.add_argument(
+        "--enrich-titles-only",
+        action="store_true",
+        help="Update regulation_title metadata in committed chunks without changing source text.",
+    )
     args = parser.parse_args()
+
+    chunks_path = ROOT / CHUNKS_REL_PATH
+
+    if args.enrich_titles_only:
+        if not args.xml.is_file():
+            print(f"Missing XML source: {args.xml}", file=sys.stderr)
+            return 1
+        if not chunks_path.is_file():
+            print(f"Missing chunks artefact: {chunks_path}", file=sys.stderr)
+            return 1
+        payload = json.loads(chunks_path.read_text(encoding="utf-8"))
+        payload = enrich_regulation_titles_in_payload(payload, args.xml)
+        chunks_path.write_text(
+            json.dumps(payload, indent=2, ensure_ascii=False) + "\n",
+            encoding="utf-8",
+        )
+        titled = sum(
+            1
+            for chunk in payload["chunks"]
+            if chunk.get("regulation_number") and chunk.get("regulation_title")
+        )
+        print(f"Enriched regulation_title metadata in: {chunks_path}")
+        print(f"Regulation chunks with titles: {titled}")
+        print(f"Chunk checksum: {payload['provenance']['chunk_json_sha256']}")
+        return 0
 
     if not args.xml.is_file():
         print(f"Missing XML source: {args.xml}", file=sys.stderr)

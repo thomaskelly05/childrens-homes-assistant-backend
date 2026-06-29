@@ -625,12 +625,25 @@ def main() -> int:
 
     errors = validate_file(args.payload)
     if errors:
-        print("Regulations 2015 ingestion-prep validation failed:")
+        print("Regulations 2015 validation failed:")
         for error in errors:
             print(f"- {error}")
         return 1
-    print("Regulations 2015 ingestion-prep validation passed.")
-    print("No Regulations 2015 source text was ingested by this verifier.")
+
+    try:
+        payload = json.loads(args.payload.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        payload = {}
+
+    schema_version = str(payload.get("schema_version") or "").strip()
+    if schema_version == "orb-regulations-2015-ingestion-v1":
+        print("Regulations 2015 Phase 2b ingestion validation passed.")
+        chunk_count = len(payload.get("chunks") or [])
+        print(f"Validated structured offline ingestion payload ({chunk_count} chunks).")
+        print("Live ORB answer wiring remains disabled.")
+    else:
+        print("Regulations 2015 ingestion-prep validation passed.")
+        print("Validated manifest/prep payload only; no Phase 2b source text ingestion asserted.")
     return 0
 
 

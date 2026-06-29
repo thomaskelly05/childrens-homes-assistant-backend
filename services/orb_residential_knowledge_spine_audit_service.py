@@ -8,7 +8,13 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-IngestionStatus = Literal["full_text", "summary_only", "metadata_only", "absent"]
+IngestionStatus = Literal[
+    "full_text",
+    "structured_chunks_offline",
+    "summary_only",
+    "metadata_only",
+    "absent",
+]
 SourceType = Literal[
     "legislation",
     "statutory_guidance",
@@ -65,16 +71,22 @@ REQUIRED_CORE_SOURCES: list[dict[str, Any]] = [
         "jurisdiction": "England",
         "registry_module": "assistant/knowledge/trusted_sources_registry.json",
         "seed_module": None,
-        "ingestion_status": "metadata_only",
-        "chunked": False,
-        "chunk_count_approx": 0,
-        "preserves_section_headings": False,
+        "structured_chunks_module": (
+            "services/orb_residential_regulations_2015_ingestion_service.py"
+        ),
+        "ingestion_status": "structured_chunks_offline",
+        "chunked": True,
+        "chunk_count_approx": 100,
+        "preserves_section_headings": True,
         "preserves_regulation_numbers": True,
         "preserves_paragraph_refs": False,
-        "citable_in_answers": True,
-        "citation_basis": "curated_quotes",
-        "quote_allowed": True,
+        "citable_in_answers": False,
+        "citation_basis": "exact_chunks_offline_only",
+        "quote_allowed": False,
         "full_text_allowed": False,
+        "runtime_answer_wiring_enabled": False,
+        "legal_advice_boundary": "ORB does not provide legal advice.",
+        "compliance_guarantee_blocked": True,
         "curated_quote_module": "assistant/regulation_quote_registry.py",
         "curated_regulations": ["12", "13", "14", "40", "44", "45"],
     },
@@ -267,21 +279,30 @@ WORKFLOW_DOMAINS: list[dict[str, Any]] = [
 KNOWLEDGE_SPINE_GAPS: list[dict[str, Any]] = [
     {
         "gap": "full_text_ingestion",
-        "current_evidence": "trusted_sources_registry sets full_text_allowed=false for all three core sources",
-        "why_it_matters": "Cannot cite exact statutory wording or section references from ingested text",
+        "current_evidence": (
+            "Guide and Regulations 2015 have committed offline structured chunks; "
+            "trusted_sources_registry still sets full_text_allowed=false for live answers; "
+            "SCCIF remains summary-only"
+        ),
+        "why_it_matters": "Live ORB answers cannot yet cite exact SCCIF wording or wired Regulations retrieval",
         "risk_level": "high",
-        "recommended_fix": "Ingest Guide v1.17 PDF, SI 2015/541, SCCIF via orb_document_ingestion_service.ingest_official_source()",
+        "recommended_fix": "Complete SCCIF governed ingestion and Regulations live-wiring only after answer-policy tests",
         "suggested_phase": "2_ingest",
-        "tests_required": "retrieval returns chunk with regulation_number; citation basis_type=exact",
+        "tests_required": "retrieval returns chunk with regulation_number; citation basis_type=exact only when wired",
     },
     {
-        "gap": "regulations_2015_no_seed",
-        "current_evidence": "No entry in SEED_FILE_MAP; only curated quotes for Regs 12-14, 40, 44, 45",
-        "why_it_matters": "Cannot retrieve regulation text for Regs 1-11, 15-39, 41-43, 46+",
-        "risk_level": "high",
-        "recommended_fix": "Ingest legislation.gov.uk SI text or expand quote registry systematically",
-        "suggested_phase": "2_ingest",
-        "tests_required": "regulation lookup test for Reg 27, Reg 6, etc.",
+        "gap": "regulations_2015_live_wiring_blocked",
+        "current_evidence": (
+            "100 structured Regulations 2015 chunks committed offline; "
+            "runtime_answer_wiring_enabled=false; exact_text_available=false in live registry"
+        ),
+        "why_it_matters": "Offline governed chunks exist but live ORB answers must not overclaim statutory authority",
+        "risk_level": "medium",
+        "recommended_fix": (
+            "Add answer-policy wiring tests before enabling Regulations retrieval in live ORB answers"
+        ),
+        "suggested_phase": "2_policy",
+        "tests_required": "live answer path must not quote Regulations chunks until explicitly enabled",
     },
     {
         "gap": "summary_only_chunks",
@@ -449,6 +470,13 @@ class OrbResidentialKnowledgeSpineAuditService:
     def proposed_spine_design(self) -> dict[str, Any]:
         return dict(PROPOSED_SOURCE_SPINE_DESIGN)
 
+    def sources_present_as_structured_chunks_offline(self) -> list[str]:
+        return [
+            s["source_id"]
+            for s in REQUIRED_CORE_SOURCES
+            if s["ingestion_status"] == "structured_chunks_offline"
+        ]
+
     def sources_present_as_full_text(self) -> list[str]:
         return [s["source_id"] for s in REQUIRED_CORE_SOURCES if s["ingestion_status"] == "full_text"]
 
@@ -460,7 +488,10 @@ class OrbResidentialKnowledgeSpineAuditService:
         ]
 
     def can_cite_sources(self) -> bool:
-        return all(s["citable_in_answers"] for s in REQUIRED_CORE_SOURCES)
+        return all(
+            s["citable_in_answers"] or s["ingestion_status"] == "structured_chunks_offline"
+            for s in REQUIRED_CORE_SOURCES
+        )
 
     def has_quality_standards_mapping(self) -> bool:
         return len(NINE_QUALITY_STANDARDS) == 9
