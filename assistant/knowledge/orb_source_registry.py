@@ -50,13 +50,18 @@ ORB_SOURCE_REGISTRY: list[dict[str, Any]] = [
         "last_checked": "2026-05-01",
         "applies_to": ["statutory_duties", "regulation_numbers", "notifications"],
         "exact_text_available": False,
+        "structured_chunks_available": True,
+        "structured_chunks_module": "services/orb_residential_regulations_2015_ingestion_service.py",
         "summary_basis": "Primary regulations for registered children's homes in England.",
         "when_to_cite": ["regulation reference", "statutory duty", "notification duties"],
         "scenario_families": ["management_governance", "safeguarding", "restraint", "recording_evidence"],
         "regulation_numbers": ["Reg 12", "Reg 13", "Reg 35", "Reg 36", "Reg 44", "Reg 45"],
         "citation_labels": ["Reg 12", "Reg 13", "Reg 44", "Reg 45"],
         "confidence": "high",
-        "must_not_overclaim": "Only cite exact regulation text when stored in regulation quote registry.",
+        "must_not_overclaim": (
+            "Structured Regulations chunks are available offline only; live ORB answers are "
+            "not yet wired to retrieve them. Do not guarantee compliance."
+        ),
     },
     {
         "source_id": "ofsted_sccif_childrens_homes",

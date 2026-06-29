@@ -392,6 +392,9 @@ def validate_regulations_2015_payload(payload: dict[str, Any]) -> list[str]:
     if not isinstance(payload, dict):
         return ["Regulations 2015 prep payload must be an object."]
 
+    schema_version = _text(payload.get("schema_version"))
+    ingestion_complete = schema_version == "orb-regulations-2015-ingestion-v1"
+
     manifest = payload.get("source")
     if not isinstance(manifest, dict):
         return ["payload.source must be a Regulations 2015 manifest object."]
@@ -401,7 +404,11 @@ def validate_regulations_2015_payload(payload: dict[str, Any]) -> list[str]:
     if not isinstance(excluded, dict):
         errors.append("payload.excluded_sources must be an object.")
     else:
-        if excluded.get("childrens_homes_regulations_2015_full_text_ingested") is not False:
+        regulations_flag = excluded.get("childrens_homes_regulations_2015_full_text_ingested")
+        if ingestion_complete:
+            if regulations_flag is not True:
+                errors.append("Regulations 2015 full-text ingestion flag must be true after ingestion.")
+        elif regulations_flag is not False:
             errors.append("Regulations 2015 full-text ingestion flag must remain false.")
         if excluded.get("ofsted_sccif_childrens_homes_full_text_ingested") is not False:
             errors.append("SCCIF full-text ingestion flag must remain false.")
@@ -618,12 +625,25 @@ def main() -> int:
 
     errors = validate_file(args.payload)
     if errors:
-        print("Regulations 2015 ingestion-prep validation failed:")
+        print("Regulations 2015 validation failed:")
         for error in errors:
             print(f"- {error}")
         return 1
-    print("Regulations 2015 ingestion-prep validation passed.")
-    print("No Regulations 2015 source text was ingested by this verifier.")
+
+    try:
+        payload = json.loads(args.payload.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        payload = {}
+
+    schema_version = str(payload.get("schema_version") or "").strip()
+    if schema_version == "orb-regulations-2015-ingestion-v1":
+        print("Regulations 2015 Phase 2b ingestion validation passed.")
+        chunk_count = len(payload.get("chunks") or [])
+        print(f"Validated structured offline ingestion payload ({chunk_count} chunks).")
+        print("Live ORB answer wiring remains disabled.")
+    else:
+        print("Regulations 2015 ingestion-prep validation passed.")
+        print("Validated manifest/prep payload only; no Phase 2b source text ingestion asserted.")
     return 0
 
 
