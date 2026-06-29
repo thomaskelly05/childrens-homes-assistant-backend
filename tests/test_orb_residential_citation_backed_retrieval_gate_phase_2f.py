@@ -64,7 +64,7 @@ def test_gate_imports_and_uses_phase_2e_policy_object(gate, policy):
     assert gate.policy_service() is policy
     source = GATE_PATH.read_text(encoding="utf-8")
     assert "orb_residential_source_answer_policy" in source
-    assert "policy_output" in source
+    assert "preview_only_policy_output" in source
     assert "validate_source_bundle" in source
 
 

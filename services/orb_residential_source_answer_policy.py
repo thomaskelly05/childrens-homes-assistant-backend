@@ -80,6 +80,58 @@ BOUNDARY_STATEMENTS: dict[AnswerBoundaryType, tuple[str, ...]] = {
     ),
 }
 
+CANONICAL_BOUNDARY_STATEMENT_IDS: dict[str, dict[str, Any]] = {
+    "regulatory_support_not_legal_advice": {
+        "boundary_type": "regulatory_legal_sensitive",
+        "canonical_text": BOUNDARY_STATEMENTS["regulatory_legal_sensitive"][0],
+    },
+    "regulatory_rm_provider_judgement": {
+        "boundary_type": "regulatory_legal_sensitive",
+        "canonical_text": BOUNDARY_STATEMENTS["regulatory_legal_sensitive"][1],
+    },
+    "notification_reg40_no_threshold_decision": {
+        "boundary_type": "notification_regulation_40",
+        "canonical_text": BOUNDARY_STATEMENTS["notification_regulation_40"][0],
+    },
+    "notification_rm_provider_review": {
+        "boundary_type": "notification_regulation_40",
+        "canonical_text": BOUNDARY_STATEMENTS["notification_regulation_40"][1],
+    },
+    "ofsted_support_not_grade_prediction": {
+        "boundary_type": "ofsted_sccif",
+        "canonical_text": BOUNDARY_STATEMENTS["ofsted_sccif"][0],
+    },
+    "ofsted_no_inspection_readiness_decision": {
+        "boundary_type": "ofsted_sccif",
+        "canonical_text": BOUNDARY_STATEMENTS["ofsted_sccif"][1],
+    },
+    "safeguarding_local_escalation": {
+        "boundary_type": "safeguarding",
+        "canonical_text": BOUNDARY_STATEMENTS["safeguarding"][0],
+    },
+}
+
+CANONICAL_ESCALATION_PROMPT_IDS: dict[str, str] = {
+    "incident_manager_oversight": (
+        "Apply manager oversight and local policy where incident thresholds or safeguarding concerns arise."
+    ),
+    "reg40_escalate_threshold": (
+        "Escalate threshold and notification decisions to the Registered Manager/provider and local policy."
+    ),
+    "safeguarding_preserve_escalation": (
+        "Preserve safeguarding escalation to the appropriate manager/professional."
+    ),
+}
+
+WORKFLOW_REQUIRED_ESCALATION_PROMPT_IDS: dict[WorkflowAnswerType, tuple[str, ...]] = {
+    "daily_record": (),
+    "incident_reflection": ("incident_manager_oversight",),
+    "reg_40_notification": ("reg40_escalate_threshold",),
+    "ofsted_evidence_preparation": (),
+    "care_planning_risk_safeguarding": ("safeguarding_preserve_escalation",),
+    "reg_44_45_preparation": (),
+}
+
 SOURCE_ROLES: dict[SourceTypeKey, dict[str, Any]] = {
     "guide": {
         "source_id": GUIDE_SOURCE_ID,
@@ -225,12 +277,26 @@ REGULATIONS_UNSAFE_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
 REG_40_UNSAFE_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("decides_notification_threshold", re.compile(r"\bdecides?\b.{0,40}\b(notification|notifiable|regulation 40)\b", re.I)),
     ("confirms_notifiable", re.compile(r"\b(confirms?|is|is not)\b.{0,30}\bnotifiable\b", re.I)),
+    ("confirms_reg40_applies", re.compile(r"\bconfirms?\b.{0,30}\bregulation 40 applies\b", re.I)),
 )
 
 SCCIF_UNSAFE_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
-    ("grade_prediction", re.compile(r"\b(predicts?|will be rated|grade(?:d)? as)\b.{0,30}\b(outstanding|good|requires improvement|inadequate)\b", re.I)),
+    ("grade_prediction", re.compile(r"\b(predicts?|will be rated|grade(?:d)? as|will be judged)\b.{0,30}\b(outstanding|good|requires improvement|inadequate)\b", re.I)),
     ("inspection_readiness_decision", re.compile(r"\bdecides?\b.{0,30}\binspection readiness\b", re.I)),
     ("meets_outstanding_good", re.compile(r"\b(meets?|evidence meets?)\b.{0,30}\b(outstanding|good)\b", re.I)),
+    ("home_inspection_ready", re.compile(r"\bthe home is inspection ready\b", re.I)),
+)
+
+CONTEXTUAL_UNSAFE_OUTPUT_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
+    ("unprefixed_legal_advice", re.compile(r"\bthis is legal advice\b", re.I)),
+    ("unprefixed_reg40_applies", re.compile(r"\bthis confirms regulation 40 applies\b", re.I)),
+    ("unprefixed_not_notifiable", re.compile(r"\bthis is not notifiable\b", re.I)),
+    ("unprefixed_meets_good", re.compile(r"\bthis evidence meets good\b", re.I)),
+    ("unprefixed_meets_outstanding", re.compile(r"\bthis evidence meets outstanding\b", re.I)),
+    ("unprefixed_inspection_ready", re.compile(r"\bthe home is inspection ready\b", re.I)),
+    ("unprefixed_judged_good", re.compile(r"\bthe home will be judged good\b", re.I)),
+    ("unprefixed_rm_no_review", re.compile(r"\bregistered manager does not need to review\b", re.I)),
+    ("unprefixed_no_safeguarding_escalation", re.compile(r"\bno safeguarding escalation is required\b", re.I)),
 )
 
 HUMAN_SIGNOFF_REQUIREMENTS: dict[str, Any] = {
@@ -323,6 +389,33 @@ class OrbResidentialSourceAnswerPolicyService:
 
     def required_boundary_statements(self, boundary_type: AnswerBoundaryType) -> tuple[str, ...]:
         return BOUNDARY_STATEMENTS[boundary_type]
+
+    def canonical_boundary_catalog(self) -> dict[str, dict[str, Any]]:
+        return {key: dict(value) for key, value in CANONICAL_BOUNDARY_STATEMENT_IDS.items()}
+
+    def canonical_boundary_text(self, boundary_id: str) -> str:
+        return str(CANONICAL_BOUNDARY_STATEMENT_IDS[boundary_id]["canonical_text"])
+
+    def required_boundary_statement_ids(self, workflow_type: WorkflowAnswerType) -> tuple[str, ...]:
+        routing = self.workflow_routing(workflow_type)
+        ids: list[str] = []
+        for boundary_type in routing.get("boundary_types", ()):
+            for boundary_id, item in CANONICAL_BOUNDARY_STATEMENT_IDS.items():
+                if item["boundary_type"] == boundary_type:
+                    ids.append(boundary_id)
+        return tuple(ids)
+
+    def escalation_prompt_catalog(self) -> dict[str, str]:
+        return dict(CANONICAL_ESCALATION_PROMPT_IDS)
+
+    def canonical_escalation_text(self, prompt_id: str) -> str:
+        return CANONICAL_ESCALATION_PROMPT_IDS[prompt_id]
+
+    def required_escalation_prompt_ids(self, workflow_type: WorkflowAnswerType) -> tuple[str, ...]:
+        return WORKFLOW_REQUIRED_ESCALATION_PROMPT_IDS[workflow_type]
+
+    def detect_contextual_unsafe_output(self, text: str) -> list[str]:
+        return [code for code, pattern in CONTEXTUAL_UNSAFE_OUTPUT_PATTERNS if pattern.search(text)]
 
     def human_signoff_requirements(self) -> dict[str, Any]:
         return dict(HUMAN_SIGNOFF_REQUIREMENTS)

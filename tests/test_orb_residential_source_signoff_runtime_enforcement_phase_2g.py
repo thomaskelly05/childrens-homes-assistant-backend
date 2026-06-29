@@ -333,7 +333,7 @@ def test_runtime_enforcement_requires_regulatory_boundary_statements(runtime_gat
         answer_text="Safe answer text.",
         boundary_statements_present=boundary_texts("safeguarding"),
     )
-    assert any("missing boundary" in error for error in evaluation["enforcement_errors"])
+    assert any("missing boundary id" in error for error in evaluation["enforcement_errors"])
 
 
 def test_runtime_enforcement_requires_notification_boundary_statements(runtime_gate, retrieval_gate):
@@ -344,7 +344,7 @@ def test_runtime_enforcement_requires_notification_boundary_statements(runtime_g
         answer_text="Safe answer text.",
         boundary_statements_present=boundary_texts("regulatory_legal_sensitive"),
     )
-    assert any("missing boundary" in error for error in evaluation["enforcement_errors"])
+    assert any("missing boundary id" in error for error in evaluation["enforcement_errors"])
 
 
 def test_runtime_enforcement_requires_sccif_boundary_statements(runtime_gate, retrieval_gate):
@@ -355,7 +355,7 @@ def test_runtime_enforcement_requires_sccif_boundary_statements(runtime_gate, re
         answer_text="Safe answer text.",
         boundary_statements_present=[],
     )
-    assert any("missing boundary" in error for error in evaluation["enforcement_errors"])
+    assert any("missing boundary id" in error for error in evaluation["enforcement_errors"])
 
 
 def test_runtime_enforcement_requires_safeguarding_boundary_statements(runtime_gate, retrieval_gate):
@@ -366,7 +366,7 @@ def test_runtime_enforcement_requires_safeguarding_boundary_statements(runtime_g
         answer_text="Safe answer text.",
         boundary_statements_present=[],
     )
-    assert any("missing boundary" in error for error in evaluation["enforcement_errors"])
+    assert any("missing boundary id" in error for error in evaluation["enforcement_errors"])
 
 
 def test_live_source_grounded_answers_remain_disabled(runtime_gate, retrieval_gate, signoff_gate):
@@ -382,7 +382,7 @@ def test_live_source_grounded_answers_remain_disabled(runtime_gate, retrieval_ga
     assert enablement["live_source_grounded_answers_enabled"] is False
     assert runtime_gate.live_source_grounded_answers_enabled() is False
     assert signoff_gate.live_wiring_allowed() is False
-    assert enablement["unmet_conditions"]
+    assert enablement["unmet_future_enablement_conditions"]
 
 
 def test_live_enablement_conditions_are_defined(runtime_gate):
