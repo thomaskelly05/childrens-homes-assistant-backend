@@ -79,6 +79,15 @@ LIVE_WIRING_BLOCKED_REASON = (
     "Synthetic human review is not sufficient for live use."
 )
 
+LIVE_PAYLOAD_BLOCKED_POLICY_FIELDS: frozenset[str] = frozenset(
+    {
+        "policy_output",
+        "preview_only_policy_output",
+        "source_eligibility",
+        "human_signoff_requirements",
+    }
+)
+
 
 class OrbResidentialCitationBackedRetrievalGate:
     """Deterministic retrieval-wiring gate for ORB Residential source bundles."""
@@ -94,6 +103,59 @@ class OrbResidentialCitationBackedRetrievalGate:
 
     def workflow_types(self) -> tuple[WorkflowAnswerType, ...]:
         return self._policy.workflow_types()
+
+    def retrieval_hints_policy_alignment_errors(self) -> list[str]:
+        errors: list[str] = []
+        for workflow_type in self.workflow_types():
+            routing = self._policy.workflow_routing(workflow_type)
+            allowed = set(routing["primary_source_types"]) | set(routing["secondary_source_types"])
+            hints = WORKFLOW_RETRIEVAL_HINTS.get(workflow_type, {})
+            for source_type in hints:
+                if source_type not in allowed:
+                    errors.append(
+                        f"retrieval hint source {source_type} is not allowed by policy routing for {workflow_type}"
+                    )
+            for source_type in routing["primary_source_types"]:
+                if source_type not in hints:
+                    errors.append(
+                        f"missing retrieval hint for primary source {source_type} in {workflow_type}"
+                    )
+            for prompt_id in self._policy.required_escalation_prompt_ids(workflow_type):
+                canonical = self._policy.canonical_escalation_text(prompt_id)
+                routing_prompts = tuple(routing.get("escalation_prompts", ()))
+                if canonical not in routing_prompts:
+                    errors.append(
+                        f"escalation prompt id {prompt_id} does not match policy routing for {workflow_type}"
+                    )
+        return errors
+
+    def preview_only_policy_summary(self, workflow_type: WorkflowAnswerType) -> dict[str, Any]:
+        routing = self._policy.workflow_routing(workflow_type)
+        return {
+            "preview_only": True,
+            "blocked_from_live_payloads": True,
+            "workflow_type": workflow_type,
+            "workflow_display_name": routing["display_name"],
+            "primary_source_types": list(routing["primary_source_types"]),
+            "secondary_source_types": list(routing["secondary_source_types"]),
+            "required_boundary_statement_ids": list(
+                self._policy.required_boundary_statement_ids(workflow_type)
+            ),
+            "required_escalation_prompt_ids": list(
+                self._policy.required_escalation_prompt_ids(workflow_type)
+            ),
+            "live_wiring_allowed": False,
+        }
+
+    def build_live_payload_candidate(self, preview: dict[str, Any]) -> dict[str, Any]:
+        candidate = {
+            key: value
+            for key, value in preview.items()
+            if key not in LIVE_PAYLOAD_BLOCKED_POLICY_FIELDS
+        }
+        candidate["live_answer_wiring_allowed"] = False
+        candidate["preview_mode"] = False
+        return candidate
 
     def live_answer_wiring_allowed(self) -> bool:
         return False
@@ -297,7 +359,7 @@ class OrbResidentialCitationBackedRetrievalGate:
             "workflow_type": workflow_type,
             "workflow_display_name": policy_output["workflow_display_name"],
             "policy_phase": "Phase 2e",
-            "policy_output": policy_output,
+            "preview_only_policy_output": self.preview_only_policy_summary(workflow_type),
             "primary_source_types": primary_types,
             "allowed_secondary_source_types": list(allowed_secondary),
             "included_secondary_source_types": requested_secondary,
