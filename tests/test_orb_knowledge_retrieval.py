@@ -24,7 +24,7 @@ def test_source_pack_catalogue_has_expected_keys():
     "message,expected_pack",
     [
         ("tell me about IndiCare", "indicare_product"),
-            ("what would Ofsted expect around child voice", "residential_childrens_homes"),
+        ("what would Ofsted expect around child voice", "ofsted_sccif"),
         ("help me write a daily note", "recording_quality"),
         ("does this need safeguarding", "safeguarding_principles"),
         ("what is quantum computing", "general_knowledge"),
@@ -51,8 +51,24 @@ def test_product_query_includes_product_and_boundary(retrieval):
 def test_regulatory_query_includes_ofsted_and_quality_standards(retrieval):
     packs = retrieval.retrieve_sources("What would Ofsted expect in an inspection?")
     keys = {p["pack_key"] for p in packs}
+    assert "ofsted_sccif" in keys
+    assert "quality_standards" in keys
     assert "orb_knowledge_spine" in keys
-    assert "orb_operating_brain" in keys
+
+
+def test_sccif_and_quality_standard_queries_use_specific_source_packs(retrieval):
+    sccif_keys = {
+        pack["pack_key"]
+        for pack in retrieval.retrieve_sources("Use the SCCIF inspection lens for children's homes")
+    }
+    quality_keys = {
+        pack["pack_key"]
+        for pack in retrieval.retrieve_sources("Which Quality Standards apply to child voice?")
+    }
+    assert "ofsted_sccif" in sccif_keys
+    assert "quality_standards" in sccif_keys
+    assert "quality_standards" in quality_keys
+    assert "residential_childrens_homes" not in quality_keys or "quality_standards" in quality_keys
 
 
 def test_recording_quality_mode_pack(retrieval):

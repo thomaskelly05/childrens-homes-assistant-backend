@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 from services.orb_residential_guide_ingestion_service import (
@@ -42,6 +43,10 @@ def test_guide_chunks_include_required_metadata_fields():
         assert isinstance(chunk["related_regulations"], list)
         assert isinstance(chunk["related_workflow_domains"], list)
         assert isinstance(chunk["not_to_be_used_for"], list)
+        assert chunk["internal_chunk_id"].startswith("guide-")
+        assert isinstance(chunk["generated_metadata"], dict)
+        assert chunk["source_text_exact"] is True
+        assert chunk["quote_basis"]
 
 
 def test_chunks_map_to_all_nine_quality_standards():
@@ -73,6 +78,72 @@ def test_exact_citation_requires_exact_guide_chunk():
         "quote_allowed": False,
     }
     assert service.metadata_summary_can_be_exact_citation(metadata_only_summary) is False
+
+
+def test_quote_allowed_chunks_do_not_present_generated_refs_as_official_paragraphs():
+    generated_multi_dot = re.compile(r"^\d{1,2}\.\d{1,2}\.\d+")
+    integer_ref = re.compile(r"^\d{1,2}$")
+    for chunk in orb_residential_guide_ingestion_service.chunks():
+        if chunk["quote_allowed"] is not True:
+            continue
+        original = str(chunk.get("original_extracted_reference") or "")
+        paragraph_reference = chunk.get("paragraph_reference")
+        label = chunk["citation_label"].lower()
+
+        assert not (paragraph_reference and generated_multi_dot.match(str(paragraph_reference)))
+        assert not (paragraph_reference and integer_ref.match(str(paragraph_reference)))
+        if generated_multi_dot.match(original) or integer_ref.match(original):
+            assert chunk["official_paragraph_reference"] is None
+            assert paragraph_reference is None
+            assert "internal chunk" in label
+            assert "official guide paragraph" not in label
+
+
+def test_every_quote_allowed_chunk_has_verified_official_or_internal_label():
+    for chunk in orb_residential_guide_ingestion_service.chunks():
+        if chunk["quote_allowed"] is not True:
+            continue
+        label = chunk["citation_label"].lower()
+        has_official = bool(chunk.get("official_paragraph_reference"))
+        has_internal = "internal chunk" in label and chunk["internal_chunk_id"] in chunk["citation_label"]
+        assert has_official or has_internal
+        assert chunk["quote_basis"] in {
+            "exact_guide_text_official_paragraph",
+            "exact_guide_text_official_paragraph_with_embedded_regulation_excerpt",
+            "exact_guide_text_internal_chunk",
+            "exact_guide_text_internal_chunk_with_embedded_regulation_excerpt",
+        }
+
+
+def test_generated_metadata_is_not_quotable_source_text():
+    service = orb_residential_guide_ingestion_service
+    chunk = service.retrieve_chunks(source_id=GUIDE_SOURCE_ID)[0]
+    generated_metadata_as_chunk = {
+        "source_id": GUIDE_SOURCE_ID,
+        "basis_type": "exact",
+        "source_integrity": "full_document",
+        "quote_allowed": True,
+        "source_text_exact": False,
+        "quote_basis": "generated_metadata",
+        "citation_label": f"Generated metadata for {chunk['internal_chunk_id']}",
+        "exact_excerpt": str(chunk["generated_metadata"]),
+        "generated_metadata": chunk["generated_metadata"],
+    }
+    assert service.exact_citation_allowed(generated_metadata_as_chunk) is False
+
+
+def test_embedded_regulation_excerpts_are_labelled_as_guide_chunks_not_regulations_ingestion():
+    embedded = [
+        chunk
+        for chunk in orb_residential_guide_ingestion_service.chunks()
+        if chunk.get("contains_embedded_regulation_excerpt")
+    ]
+    assert embedded
+    for chunk in embedded:
+        label = chunk["citation_label"].lower()
+        assert chunk["source_id"] == GUIDE_SOURCE_ID
+        assert "guide-embedded regulation excerpt" in label
+        assert "not regulations 2015 full-text ingestion" in label
 
 
 def test_guide_chunks_do_not_claim_compliance_guarantee():

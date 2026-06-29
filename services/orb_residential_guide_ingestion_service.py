@@ -93,13 +93,19 @@ class OrbResidentialGuideIngestionService:
         )
 
     def exact_citation_allowed(self, chunk: dict[str, Any]) -> bool:
+        label = _text(chunk.get("citation_label"))
+        has_official_reference = bool(_text(chunk.get("official_paragraph_reference")))
+        has_internal_label = "internal chunk" in label.lower()
         return bool(
             _lower(chunk.get("source_id")) == GUIDE_SOURCE_ID
             and _lower(chunk.get("basis_type")) == "exact"
             and _lower(chunk.get("source_integrity")) == "full_document"
             and chunk.get("quote_allowed") is True
+            and chunk.get("source_text_exact") is True
+            and _text(chunk.get("quote_basis"))
             and _text(chunk.get("exact_excerpt") or chunk.get("text"))
-            and _text(chunk.get("citation_label"))
+            and label
+            and (has_official_reference or has_internal_label)
         )
 
     def metadata_summary_can_be_exact_citation(self, summary: dict[str, Any]) -> bool:

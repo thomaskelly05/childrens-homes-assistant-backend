@@ -40,6 +40,9 @@ def test_exact_citation_allowed_requires_exact_full_document_chunk():
         "basis_type": "exact",
         "source_integrity": "full_document",
         "quote_allowed": True,
+        "source_text_exact": True,
+        "quote_basis": "exact_guide_text_official_paragraph",
+        "official_paragraph_reference": "1.7",
         "citation_label": "Guide para. 1.7",
         "exact_excerpt": "This Guide is a statement published pursuant to section 23.",
     }
@@ -52,6 +55,27 @@ def test_exact_citation_allowed_requires_exact_full_document_chunk():
     }
     assert orb_exact_citation_service.exact_citation_allowed(exact_chunk, exact_source) is True
     assert orb_exact_citation_service.exact_citation_allowed(summary_chunk) is False
+
+
+def test_exact_citation_allows_internal_chunk_only_when_label_is_clear():
+    internal_chunk = {
+        "source_id": "guide",
+        "basis_type": "exact",
+        "source_integrity": "full_document",
+        "quote_allowed": True,
+        "source_text_exact": True,
+        "quote_basis": "exact_guide_text_internal_chunk",
+        "generated_reference": True,
+        "internal_chunk_id": "guide-qpc-004",
+        "citation_label": "Guide to the Children's Homes Regulations, section \"Quality and purpose of care\", internal chunk guide-qpc-004",
+        "exact_excerpt": "Exact Guide text.",
+    }
+    misleading_chunk = {
+        **internal_chunk,
+        "citation_label": "Guide to the Children's Homes Regulations, para. 4.1.2.1",
+    }
+    assert orb_exact_citation_service.exact_citation_allowed(internal_chunk) is True
+    assert orb_exact_citation_service.exact_citation_allowed(misleading_chunk) is False
 
 
 def test_expired_warning():

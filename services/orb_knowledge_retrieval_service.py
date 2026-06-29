@@ -265,6 +265,7 @@ class OrbKnowledgeRetrievalService:
         family_id = detect_contract_family(message)
         family = get_contract_family(family_id) or {}
         is_simple_standard = _qualifies_for_residential_concise_contract(family_id, family, lower)
+        regulatory_framework_intent = self.should_use_regulatory_knowledge(message, mode=mode_name)
         module_cap = 1 if is_simple_standard else 8
         selected_modules = select_relevant_python_knowledge(message, max_modules=module_cap)
         module_sources = build_knowledge_source_summary(selected_modules)
@@ -272,7 +273,7 @@ class OrbKnowledgeRetrievalService:
 
         intents = {
             "product_context": self.should_use_product_knowledge(message, mode=mode_name),
-            "regulatory_framework": False if is_simple_standard else self.should_use_regulatory_knowledge(message, mode=mode_name),
+            "regulatory_framework": regulatory_framework_intent,
             "recording_quality": self.should_use_recording_quality(message, mode=mode_name),
             "safeguarding_principles": False if is_simple_standard else self.should_use_safeguarding_boundary(message, mode=mode_name),
             "therapeutic_practice": self._should_use_therapeutic(message, mode=mode_name) if not is_simple_standard else bool(

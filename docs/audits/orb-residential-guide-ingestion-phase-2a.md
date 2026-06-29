@@ -20,6 +20,14 @@ The Guide is stored as committed, structured chunks in `data/orb_residential_ing
 - Chunks are compact; no chunk is intended to represent the whole Guide.
 - The committed data is static and deterministic.
 
+## Provenance and repeatability
+
+- Chunks are committed static data curated from the official Department for Education Guide text used for Phase 2a review.
+- The application performs no runtime fetch, scraping, downloading, or uncontrolled website ingestion.
+- The chunk file includes provenance metadata and a `chunk_json_sha256` checksum.
+- Current chunk JSON checksum: `2b18519d5c0cb719156081e5233a1ba900b95a7f0678380a3c2bb888574baaad`.
+- No generation script is committed in this PR; future ingestion phases should add a repeatable controlled build script before scaling to Regulations 2015, SCCIF, or wider catalogue ingestion.
+
 ## What was not ingested
 
 - The Children's Homes (England) Regulations 2015 were not ingested as a separate full-text source.
@@ -33,11 +41,13 @@ The Guide is stored as committed, structured chunks in `data/orb_residential_ing
 Each Guide chunk includes:
 
 - `source_id`, `source_title`, `source_type`, `official_url`, `publisher`, `version`, `last_verified_date`
-- `section_heading`, `paragraph_reference`, `quality_standard`
+- `section_heading`, `official_paragraph_reference`, `paragraph_reference`, `internal_chunk_id`, `quality_standard`
 - `related_regulations`, `related_workflow_domains`
-- `citation_label`, `basis_type`, `quote_allowed`, `retrieval_priority`
+- `citation_label`, `basis_type`, `quote_allowed`, `quote_basis`, `retrieval_priority`
 - `requires_local_policy`, `professional_judgement_boundary`, `not_to_be_used_for`
-- `exact_excerpt`, `text`, `content_hash`
+- `source_text_exact`, `generated_metadata`, `exact_excerpt`, `text`, `content_hash`
+
+Only `official_paragraph_reference` values matching the Guide's paragraph pattern are treated as official Guide paragraph references. Internal split chunks use `internal_chunk_id` and citation labels that say `internal chunk`.
 
 ## Quality Standards mapping
 
