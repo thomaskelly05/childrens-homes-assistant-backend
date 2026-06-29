@@ -27,6 +27,14 @@ from assistant.knowledge.residential_safeguarding_terminology import (
 )
 from services.orb_communicate_support_pack_service import orb_communicate_support_pack_service
 from services.orb_recording_contract_service import extract_known_incident_facts
+from services.orb_recording_output_contract_service import (
+    has_recording_contract_sections,
+    is_recording_contract_prompt,
+    sanitize_corrupted_placeholders,
+    strip_unsupported_pathway_language,
+    try_build_recording_contract_answer,
+    find_pathway_drift_issues,
+)
 from services.orb_therapeutic_language_contract_service import (
     apply_deterministic_therapeutic_repairs,
     build_convert_to_recording_scaffold,
@@ -189,6 +197,17 @@ def apply_deterministic_repairs(
     repair_meta: dict[str, Any] = {"therapeutic_repairs": []}
     cleaned = strip_streaming_artifacts_from_answer(answer, fast_opening=fast_opening)
     cleaned, _ = sanitize_placeholders_in_answer(cleaned)
+    cleaned, corrupted_ph = sanitize_corrupted_placeholders(cleaned)
+    if corrupted_ph:
+        repair_meta["placeholder_repairs"] = corrupted_ph
+    cleaned = strip_unsupported_pathway_language(cleaned, message)
+    if is_recording_contract_prompt(message):
+        drift = find_pathway_drift_issues(cleaned, message)
+        if drift or not has_recording_contract_sections(cleaned):
+            rebuilt = try_build_recording_contract_answer(message)
+            if rebuilt:
+                cleaned = rebuilt
+                repair_meta["repair_reason"] = "recording_output_contract"
     cleaned, therapeutic_repairs = apply_deterministic_therapeutic_repairs(cleaned)
     if therapeutic_repairs:
         repair_meta["therapeutic_repairs"] = therapeutic_repairs
@@ -509,6 +528,11 @@ def repair_missing_return_record(answer: str, *, message: str = "") -> str:
 
 def canonical_answer_for_qa(contract_family: str, *, message: str = "") -> str | None:
     """Deterministic canonical answer for offline QA validation."""
+    from services.orb_recording_output_contract_service import try_build_recording_contract_answer
+
+    recording = try_build_recording_contract_answer(message)
+    if recording:
+        return recording
     if contract_family == "accessible_child_support_plan":
         return repair_accessible_child_support_plan("", message=message)
     if contract_family == "convert_to_recording_wording" and is_convert_to_recording_request(message):

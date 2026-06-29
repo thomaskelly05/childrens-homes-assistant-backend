@@ -927,6 +927,21 @@ class OrbExecutionPolicyService:
                     "validation": validation,
                 }
 
+        from services.orb_recording_output_contract_service import try_build_recording_contract_answer
+
+        recording_answer = try_build_recording_contract_answer(message)
+        if recording_answer:
+            family_id = detect_contract_family(message) or "daily_record"
+            validation = validate_contract_answer(recording_answer, family_id=family_id)
+            return {
+                "answer": validation.get("sanitized_answer") or recording_answer,
+                "sources": [],
+                "citations": [],
+                "no_llm": True,
+                "execution_policy": "internal_template_plus_validator",
+                "validation": validation,
+            }
+
         if decision.execution_policy not in {
             "deterministic_only",
             "internal_template_plus_validator",

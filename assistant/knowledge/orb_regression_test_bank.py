@@ -1,8 +1,20 @@
-"""ORB 9 gold regression scenarios — packet-level expectations (not final text only)."""
+"""ORB 9 gold regression scenarios — packet-level expectations (not final text only).
+
+Phase Q1 recording regression scenarios REG-A through REG-D live in
+``quality/orb_scenario_quality_gate_sets.json`` (set ``regression-a-d``) and are
+included in the smoke quality gate.
+"""
 
 from __future__ import annotations
 
 from typing import Any
+
+ORB_Q1_RECORDING_REGRESSION_SCENARIO_IDS: tuple[str, ...] = (
+    "REG-A-daily-record-after-contact",
+    "REG-B-screen-time-incident",
+    "REG-C-context-drift-correction",
+    "REG-D-return-from-missing",
+)
 
 ORB_9_REGRESSION_SCENARIOS: list[dict[str, Any]] = [
     {

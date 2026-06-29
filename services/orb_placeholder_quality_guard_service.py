@@ -5,6 +5,8 @@ from __future__ import annotations
 import re
 from typing import Any
 
+_CORRUPTED_PLACEHOLDER_RE = re.compile(r"\[\[NAME_\d+\]\]|\[NAME_\d+\]", re.I)
+
 # Bracketed placeholders ending with ellipsis (broken/truncated).
 BROKEN_PLACEHOLDER_RE = re.compile(
     r"\[[^\]]*(?:…|\.\.\.)[^\]]*\]",
@@ -82,6 +84,9 @@ def sanitize_placeholders_in_answer(answer: str) -> tuple[str, list[str]]:
     from assistant.knowledge.adult_identity_language import replace_clunky_placeholders
 
     cleaned = replace_clunky_placeholders(cleaned)
+    if _CORRUPTED_PLACEHOLDER_RE.search(cleaned):
+        issues.append("corrupted_name_placeholder")
+        cleaned = _CORRUPTED_PLACEHOLDER_RE.sub("[Young Person]", cleaned)
     issues.extend(placeholder_issues)
     cleaned = re.sub(r"\n{3,}", "\n\n", cleaned).strip()
     return cleaned, issues

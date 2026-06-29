@@ -541,6 +541,8 @@ _DISPROPORTIONATE_SAFETY_OPENING_RES: tuple[re.Pattern[str], ...] = (
 )
 
 _CLUNKY_PLACEHOLDER_REPLACEMENTS: tuple[tuple[re.Pattern[str], str], ...] = (
+    (re.compile(r"\[\[NAME_\d+\]\]"), "[Young Person]"),
+    (re.compile(r"\[NAME_\d+\]"), "[Young Person]"),
     (re.compile(r"\[Young Person'?s Name\]", re.I), "the young person"),
     (re.compile(r"\[Child'?s Name\]", re.I), "the young person"),
     (re.compile(r"\[Name\]", re.I), "the young person"),
