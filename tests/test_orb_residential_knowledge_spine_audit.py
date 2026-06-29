@@ -141,9 +141,10 @@ def test_audit_service_reports_offline_structured_sources():
     service = orb_residential_knowledge_spine_audit_service
     assert service.sources_present_as_full_text() == []
     assert service.sources_present_as_structured_chunks_offline() == [
-        "childrens_homes_regulations_2015"
+        "childrens_homes_regulations_2015",
+        "ofsted_sccif_childrens_homes",
     ]
-    assert len(service.sources_present_as_summary()) == 2
+    assert len(service.sources_present_as_summary()) == 1
     assert service.can_cite_sources() is True
     assert service.has_quality_standards_mapping() is True
     assert service.has_sccif_mapping() is True
@@ -165,11 +166,28 @@ def test_regulations_2015_audit_state_reflects_offline_chunks():
     assert "legal advice" in regulations["legal_advice_boundary"].lower()
 
 
+def test_sccif_audit_state_reflects_offline_chunks():
+    by_id = {
+        source["source_id"]: source
+        for source in orb_residential_knowledge_spine_audit_service.required_core_sources()
+    }
+    sccif = by_id["ofsted_sccif_childrens_homes"]
+    assert sccif["ingestion_status"] == "structured_chunks_offline"
+    assert sccif["chunked"] is True
+    assert sccif["chunk_count_approx"] == 951
+    assert sccif["full_text_allowed"] is False
+    assert sccif["runtime_answer_wiring_enabled"] is False
+    assert sccif["citable_in_answers"] is False
+    assert sccif["grade_prediction_blocked"] is True
+    assert sccif["inspection_readiness_blocked"] is True
+
+
 def test_knowledge_spine_gaps_documented():
     gaps = orb_residential_knowledge_spine_audit_service.gaps()
     gap_ids = {g["gap"] for g in gaps}
     assert "full_text_ingestion" in gap_ids
     assert "regulations_2015_live_wiring_blocked" in gap_ids
+    assert "sccif_live_wiring_blocked" in gap_ids
     assert "regulations_2015_no_seed" not in gap_ids
 
 

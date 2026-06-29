@@ -262,10 +262,19 @@ def test_guide_chunks_are_unchanged():
     assert calculate_guide_checksum(guide_payload) == EXPECTED_GUIDE_CHUNK_JSON_SHA256
 
 
-def test_sccif_is_not_ingested():
+def test_sccif_chunks_remain_available_without_changing_regulations_checksum():
+    from scripts.verify_orb_sccif_children_homes_chunks import (
+        EXPECTED_CHUNK_JSON_SHA256 as EXPECTED_SCCIF_CHUNK_JSON_SHA256,
+        SCCIF_CHUNKS_PATH,
+        calculate_checksum as calculate_sccif_checksum,
+        load_payload as load_sccif_payload,
+    )
+
     payload = service_payload()
+    assert SCCIF_CHUNKS_PATH.is_file()
+    sccif_payload = load_sccif_payload(SCCIF_CHUNKS_PATH)
+    assert calculate_sccif_checksum(sccif_payload) == EXPECTED_SCCIF_CHUNK_JSON_SHA256
     assert payload["excluded_sources"]["ofsted_sccif_childrens_homes_full_text_ingested"] is False
-    assert not (REPO_ROOT / "data" / "orb_residential_ingestion" / "ofsted_sccif_childrens_homes_chunks.json").exists()
 
 
 def test_no_live_runtime_wiring_occurred(service):

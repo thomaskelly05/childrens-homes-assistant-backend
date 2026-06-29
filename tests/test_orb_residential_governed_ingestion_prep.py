@@ -52,9 +52,15 @@ def test_phase_2a_guide_and_phase_2b_regulations_ingestion_without_runtime_fetch
     assert service.full_text_ingested_source_ids() == {
         "dfe_childrens_homes_regulations_guide",
         "childrens_homes_regulations_2015",
+        "ofsted_sccif_childrens_homes",
     }
     assert service.guide_chunk_count() == 371
     assert orb_residential_regulations_2015_ingestion_service.chunk_count() == 100
+    from services.orb_residential_sccif_ingestion_service import (
+        orb_residential_sccif_ingestion_service,
+    )
+
+    assert orb_residential_sccif_ingestion_service.chunk_count() == 951
     assert service.scraping_or_downloading_performed() is False
 
     service_source = (
@@ -450,6 +456,7 @@ def test_phase_2a_guide_retrieval_remains_capped_and_not_live_wired():
     assert summary["full_text_ingested_source_ids"] == [
         "childrens_homes_regulations_2015",
         "dfe_childrens_homes_regulations_guide",
+        "ofsted_sccif_childrens_homes",
     ]
     assert summary["guide_chunk_count"] == 371
     assert summary["runtime_behaviour_changed"] is False

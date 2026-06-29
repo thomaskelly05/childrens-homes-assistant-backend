@@ -21,6 +21,10 @@ OFFICIAL_URL_PREFIX = (
     "https://www.gov.uk/government/publications/"
     "social-care-common-inspection-framework-sccif-childrens-homes"
 )
+OFFICIAL_URL = (
+    OFFICIAL_URL_PREFIX
+    + "/social-care-common-inspection-framework-sccif-childrens-homes"
+)
 CHECKSUM_RE = re.compile(r"^[a-f0-9]{64}$")
 OFFICIAL_SCCIF_LABEL_RE = re.compile(
     r"\b(?:sccif|social care common inspection framework)\b.{0,80}\b(?:section|part|paragraph|para\.?)\s*\d+",
@@ -118,6 +122,13 @@ UNSAFE_BOUNDARY_CLAIMS: tuple[tuple[re.Pattern[str], str], ...] = (
         ),
         "SCCIF chunks must not say ORB decides statutory or legal compliance.",
     ),
+    (
+        re.compile(
+            r"\borb\s+(?:provides?|gives?)\s+legal\s+advice\b",
+            re.IGNORECASE,
+        ),
+        "SCCIF chunks must not present ORB as giving legal advice.",
+    ),
 )
 
 REQUIRED_MANIFEST_FIELDS: tuple[str, ...] = (
@@ -177,6 +188,7 @@ REQUIRED_CHUNK_FIELDS: tuple[str, ...] = (
     "requires_local_policy",
     "professional_judgement_boundary",
     "grade_prediction_boundary",
+    "inspection_readiness_boundary",
     "compliance_guarantee_boundary",
     "not_to_be_used_for",
 )
@@ -226,6 +238,7 @@ REQUIRED_HUMAN_REVIEW_CONFIRMATIONS: tuple[str, ...] = (
     "local_policy_contamination_checked",
     "no_overclaiming_confirmed",
     "grade_prediction_boundary_confirmed",
+    "inspection_readiness_boundary_confirmed",
     "compliance_guarantee_boundary_confirmed",
     "checksum_recorded",
 )
@@ -269,7 +282,7 @@ def sccif_children_homes_manifest_template() -> dict[str, Any]:
     return {
         "source_id": SCCIF_CHILDREN_HOMES_SOURCE_ID,
         "source_title": "Social care common inspection framework (SCCIF): children's homes",
-        "official_url": OFFICIAL_URL_PREFIX,
+        "official_url": OFFICIAL_URL,
         "publisher": "Ofsted",
         "jurisdiction": "England",
         "version": "",
@@ -439,6 +452,9 @@ def validate_sccif_children_homes_payload(payload: dict[str, Any]) -> list[str]:
     if not isinstance(payload, dict):
         return ["SCCIF children's homes prep payload must be an object."]
 
+    schema_version = _text(payload.get("schema_version"))
+    ingestion_complete = schema_version == "orb-sccif-children-homes-ingestion-v1"
+
     manifest = payload.get("source")
     if not isinstance(manifest, dict):
         return ["payload.source must be a SCCIF children's homes manifest object."]
@@ -448,7 +464,11 @@ def validate_sccif_children_homes_payload(payload: dict[str, Any]) -> list[str]:
     if not isinstance(excluded, dict):
         errors.append("payload.excluded_sources must be an object.")
     else:
-        if excluded.get("ofsted_sccif_childrens_homes_full_text_ingested") is not False:
+        sccif_flag = excluded.get("ofsted_sccif_childrens_homes_full_text_ingested")
+        if ingestion_complete:
+            if sccif_flag is not True:
+                errors.append("SCCIF full-text ingestion flag must be true after ingestion.")
+        elif sccif_flag is not False:
             errors.append("SCCIF full-text ingestion flag must remain false.")
 
     chunks = payload.get("chunks", [])
@@ -602,6 +622,7 @@ def _validate_chunk_boundaries(chunk: dict[str, Any]) -> list[str]:
             "citation_label",
             "professional_judgement_boundary",
             "grade_prediction_boundary",
+            "inspection_readiness_boundary",
             "compliance_guarantee_boundary",
         )
     )
@@ -625,6 +646,9 @@ def _validate_chunk_boundaries(chunk: dict[str, Any]) -> list[str]:
     grade_boundary = _text(chunk.get("grade_prediction_boundary")).lower()
     if "does not predict" not in grade_boundary and "not predict" not in grade_boundary:
         errors.append("chunk.grade_prediction_boundary must state that ORB does not predict Ofsted judgements.")
+    readiness_boundary = _text(chunk.get("inspection_readiness_boundary")).lower()
+    if "does not decide" not in readiness_boundary and "not decide" not in readiness_boundary:
+        errors.append("chunk.inspection_readiness_boundary must state that ORB does not decide inspection readiness.")
     compliance_boundary = _text(chunk.get("compliance_guarantee_boundary")).lower()
     if "does not guarantee" not in compliance_boundary and "not guarantee" not in compliance_boundary:
         errors.append("chunk.compliance_guarantee_boundary must state that ORB does not guarantee outcomes.")
@@ -717,8 +741,19 @@ def main() -> int:
             print(f"- {error}")
         return 1
 
-    print("SCCIF children's homes ingestion-prep validation passed.")
-    print("Validated manifest/prep payload only; no SCCIF source text ingestion asserted.")
+    try:
+        payload = json.loads(args.payload.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        payload = {}
+    schema_version = str(payload.get("schema_version") or "").strip()
+    if schema_version == "orb-sccif-children-homes-ingestion-v1":
+        print("SCCIF children's homes Phase 2d ingestion validation passed.")
+        chunk_count = len(payload.get("chunks") or [])
+        print(f"Validated structured offline ingestion payload ({chunk_count} chunks).")
+        print("Live ORB answer wiring remains disabled.")
+    else:
+        print("SCCIF children's homes ingestion-prep validation passed.")
+        print("Validated manifest/prep payload only; no SCCIF source text ingestion asserted.")
     return 0
 
 

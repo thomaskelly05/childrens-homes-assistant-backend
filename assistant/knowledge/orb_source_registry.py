@@ -74,13 +74,18 @@ ORB_SOURCE_REGISTRY: list[dict[str, Any]] = [
         "last_checked": "2026-05-01",
         "applies_to": ["inspection", "child_experience", "leadership_impact", "evidence_of_improvement"],
         "exact_text_available": False,
+        "structured_chunks_available": True,
+        "structured_chunks_module": "services/orb_residential_sccif_ingestion_service.py",
         "summary_basis": "How inspectors evaluate experiences, progress, safety and leadership in children's homes.",
         "when_to_cite": ["ofsted lens", "inspection evidence", "impact of actions", "management grip"],
         "scenario_families": ["management_governance", "recording_evidence", "reg44_reg45"],
         "regulation_numbers": [],
         "citation_labels": ["SCCIF", "Ofsted children's homes framework"],
         "confidence": "high",
-        "must_not_overclaim": "Do not predict inspection grades or outcomes.",
+        "must_not_overclaim": (
+            "Structured SCCIF chunks are available offline only; live ORB answers are "
+            "not yet wired to retrieve them. Do not predict inspection grades or outcomes."
+        ),
     },
     {
         "source_id": "working_together_safeguarding",

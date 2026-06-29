@@ -58,7 +58,8 @@
       "citation_required": true,
       "summary_allowed": true,
       "full_text_allowed": false,
-      "usage_rules": "Never predict inspection grades or outcomes."
+      "structured_chunks_available": true,
+      "usage_rules": "Structured SCCIF chunks are committed offline for governed retrieval tests only; live ORB answers are not wired to them yet. Never predict inspection grades, inspection readiness or outcomes."
     },
     {
       "source_id": "working_together_safeguarding",

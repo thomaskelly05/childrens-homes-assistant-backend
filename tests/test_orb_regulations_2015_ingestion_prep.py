@@ -313,16 +313,8 @@ def test_no_regulations_2015_source_text_is_ingested_in_prep_payload_only():
 
 def test_sccif_is_not_ingested_by_regulations_prep():
     payload = _payload()
-    payload["excluded_sources"]["ofsted_sccif_childrens_homes_full_text_ingested"] = True
-    errors = _payload_errors(payload)
-    assert "SCCIF full-text ingestion flag must remain false" in errors
-
-    assert not (
-        REPO_ROOT
-        / "data"
-        / "orb_residential_ingestion"
-        / "ofsted_sccif_childrens_homes_chunks.json"
-    ).exists()
+    assert payload["schema_version"] == "orb-regulations-2015-ingestion-prep-v1"
+    assert payload["excluded_sources"]["ofsted_sccif_childrens_homes_full_text_ingested"] is False
 
 
 @pytest.mark.parametrize(

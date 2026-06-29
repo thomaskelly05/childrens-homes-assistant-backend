@@ -86,6 +86,7 @@ def _chunk() -> dict:
             "Registered Manager, Responsible Individual and provider judgement remains required."
         ),
         "grade_prediction_boundary": "ORB does not predict Ofsted judgements or grades.",
+        "inspection_readiness_boundary": "ORB does not decide inspection readiness.",
         "compliance_guarantee_boundary": "ORB does not guarantee inspection outcomes.",
         "not_to_be_used_for": [
             "predicting Ofsted judgements or grades",
@@ -295,6 +296,7 @@ def test_safe_sccif_boundary_wording_passes():
         "and provider judgement remain responsible."
     )
     chunk["grade_prediction_boundary"] = "ORB does not predict Ofsted judgements."
+    chunk["inspection_readiness_boundary"] = "ORB does not decide inspection readiness."
     chunk["compliance_guarantee_boundary"] = "ORB does not guarantee outcomes."
     errors = _chunk_errors(chunk)
     assert errors == ""
@@ -329,7 +331,7 @@ def test_regulations_2015_chunks_are_unchanged():
     assert calculate_regulations_checksum(regulations_payload) == EXPECTED_REGULATIONS_CHUNK_JSON_SHA256
 
 
-def test_sccif_source_text_is_not_ingested_in_this_pr():
+def test_sccif_prep_payload_rejects_full_text_ingestion_flag_in_prep_schema():
     payload = _payload()
     assert _payload_errors(payload) == ""
 
@@ -337,11 +339,6 @@ def test_sccif_source_text_is_not_ingested_in_this_pr():
     changed["excluded_sources"]["ofsted_sccif_childrens_homes_full_text_ingested"] = True
     errors = _payload_errors(changed)
     assert "SCCIF full-text ingestion flag must remain false" in errors
-
-    assert not SCCIF_CHUNKS_PATH.exists()
-    assert not (
-        REPO_ROOT / "data" / "orb_residential_ingestion" / "ofsted_sccif_childrens_homes_source.txt"
-    ).exists()
 
 
 def test_no_runtime_frontend_route_or_os_assistant_wiring_occurred():
