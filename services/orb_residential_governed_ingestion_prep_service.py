@@ -20,6 +20,9 @@ from services.orb_residential_guide_ingestion_service import (
 from services.orb_residential_regulations_2015_ingestion_service import (
     orb_residential_regulations_2015_ingestion_service,
 )
+from services.orb_residential_sccif_ingestion_service import (
+    orb_residential_sccif_ingestion_service,
+)
 from services.orb_residential_source_catalogue_audit_service import CATALOGUE_PATH
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -639,6 +642,7 @@ class OrbResidentialGovernedIngestionPrepService:
         return {
             *orb_residential_guide_ingestion_service.full_text_source_ids(),
             *orb_residential_regulations_2015_ingestion_service.full_text_source_ids(),
+            *orb_residential_sccif_ingestion_service.full_text_source_ids(),
         }
 
     def guide_chunks(self) -> list[dict[str, Any]]:
@@ -832,6 +836,11 @@ def _citation_strategy(source_id: str) -> str:
 def _quote_allowed_rules(source_id: str) -> str:
     if source_id == "childrens_homes_regulations_2015":
         return "Short exact statutory quotes allowed only from ingested regulation chunks or curated quotes."
+    if source_id == "ofsted_sccif_childrens_homes":
+        return (
+            "Short exact SCCIF framework quotes allowed only from ingested SCCIF chunks after human review; "
+            "never cite as grade prediction or inspection readiness decision."
+        )
     return "Quotes allowed only after exact full-text chunk ingestion; summary metadata is not quotable."
 
 

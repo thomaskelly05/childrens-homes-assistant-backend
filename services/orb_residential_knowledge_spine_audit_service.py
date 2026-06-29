@@ -99,16 +99,23 @@ REQUIRED_CORE_SOURCES: list[dict[str, Any]] = [
         "jurisdiction": "England",
         "registry_module": "assistant/knowledge/trusted_sources_registry.json",
         "seed_module": "data/orb_knowledge_seed/ofsted_sccif_overview.md",
-        "ingestion_status": "summary_only",
+        "structured_chunks_module": (
+            "services/orb_residential_sccif_ingestion_service.py"
+        ),
+        "ingestion_status": "structured_chunks_offline",
         "chunked": True,
-        "chunk_count_approx": 1,
-        "preserves_section_headings": False,
+        "chunk_count_approx": 951,
+        "preserves_section_headings": True,
         "preserves_regulation_numbers": False,
         "preserves_paragraph_refs": False,
-        "citable_in_answers": True,
-        "citation_basis": "summary",
+        "citable_in_answers": False,
+        "citation_basis": "exact_chunks_offline_only",
         "quote_allowed": False,
         "full_text_allowed": False,
+        "runtime_answer_wiring_enabled": False,
+        "grade_prediction_blocked": True,
+        "inspection_readiness_blocked": True,
+        "compliance_guarantee_blocked": True,
     },
 ]
 
@@ -280,15 +287,28 @@ KNOWLEDGE_SPINE_GAPS: list[dict[str, Any]] = [
     {
         "gap": "full_text_ingestion",
         "current_evidence": (
-            "Guide and Regulations 2015 have committed offline structured chunks; "
-            "trusted_sources_registry still sets full_text_allowed=false for live answers; "
-            "SCCIF remains summary-only"
+            "Guide, Regulations 2015 and SCCIF have committed offline structured chunks; "
+            "trusted_sources_registry still sets full_text_allowed=false for live answers"
         ),
-        "why_it_matters": "Live ORB answers cannot yet cite exact SCCIF wording or wired Regulations retrieval",
+        "why_it_matters": "Live ORB answers cannot yet cite exact SCCIF or Regulations wording via wired retrieval",
         "risk_level": "high",
-        "recommended_fix": "Complete SCCIF governed ingestion and Regulations live-wiring only after answer-policy tests",
+        "recommended_fix": "Enable live answer wiring only after answer-policy tests for each source",
         "suggested_phase": "2_ingest",
         "tests_required": "retrieval returns chunk with regulation_number; citation basis_type=exact only when wired",
+    },
+    {
+        "gap": "sccif_live_wiring_blocked",
+        "current_evidence": (
+            "951 structured SCCIF chunks committed offline; "
+            "runtime_answer_wiring_enabled=false; exact_text_available=false in live registry"
+        ),
+        "why_it_matters": "Offline governed SCCIF chunks exist but live ORB answers must not predict grades or decide inspection readiness",
+        "risk_level": "medium",
+        "recommended_fix": (
+            "Add answer-policy wiring tests before enabling SCCIF retrieval in live ORB answers"
+        ),
+        "suggested_phase": "2_policy",
+        "tests_required": "live answer path must not quote SCCIF chunks or imply inspection outcomes until explicitly enabled",
     },
     {
         "gap": "regulations_2015_live_wiring_blocked",
@@ -306,7 +326,7 @@ KNOWLEDGE_SPINE_GAPS: list[dict[str, Any]] = [
     },
     {
         "gap": "summary_only_chunks",
-        "current_evidence": "quality_standards_overview.md and ofsted_sccif_overview.md are 3-paragraph summaries",
+        "current_evidence": "quality_standards_overview.md remains a 3-paragraph summary; SCCIF overview seed is superseded by offline chunks",
         "why_it_matters": "Retrieval cannot surface section-level guidance for nuanced questions",
         "risk_level": "medium",
         "recommended_fix": "Replace seeds with chunked full documents preserving headings",
