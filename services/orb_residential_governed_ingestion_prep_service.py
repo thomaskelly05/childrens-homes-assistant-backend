@@ -18,7 +18,6 @@ from services.orb_residential_guide_ingestion_service import (
     orb_residential_guide_ingestion_service,
 )
 from services.orb_residential_regulations_2015_ingestion_service import (
-    REGULATIONS_2015_SOURCE_ID,
     orb_residential_regulations_2015_ingestion_service,
 )
 from services.orb_residential_source_catalogue_audit_service import CATALOGUE_PATH
