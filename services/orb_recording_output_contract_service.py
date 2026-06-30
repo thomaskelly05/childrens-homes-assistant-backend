@@ -251,6 +251,88 @@ def has_recording_contract_sections(answer: str) -> bool:
     )
 
 
+_LEGACY_RECORDING_SCAFFOLD_MARKERS: tuple[str, ...] = (
+    "what is known",
+    "what to clarify",
+    "recording wording scaffold",
+)
+
+_LEGACY_RECORDING_CLOSER_RES: tuple[re.Pattern[str], ...] = (
+    re.compile(
+        r"\n+The key is to record the behaviour without blame[\s\S]*$",
+        re.I,
+    ),
+    re.compile(
+        r"\n+I'm treating this as[\s\S]*?(?=\n## Draft record|\Z)",
+        re.I,
+    ),
+)
+
+
+def answer_uses_legacy_recording_scaffold(answer: str) -> bool:
+    """True when the answer still uses pre-Q1 recording scaffold headings."""
+    lower = str(answer or "").lower()
+    return any(marker in lower for marker in _LEGACY_RECORDING_SCAFFOLD_MARKERS)
+
+
+def strip_legacy_recording_closers(answer: str) -> str:
+    """Remove duplicated therapeutic closers from Q1 recording contract answers."""
+    cleaned = str(answer or "").strip()
+    for pattern in _LEGACY_RECORDING_CLOSER_RES:
+        cleaned = pattern.sub("", cleaned).rstrip()
+    if has_recording_contract_sections(cleaned):
+        tail = cleaned.lower()
+        if "the key is to record the behaviour without blame" in tail:
+            idx = tail.rfind("the key is to record the behaviour without blame")
+            if idx > 0 and "why this wording is safer" in tail[:idx]:
+                cleaned = cleaned[:idx].rstrip()
+    return cleaned
+
+
+def enforce_live_recording_contract_answer(
+    answer: str,
+    prompt: str,
+    *,
+    execution_policy: str | None = None,
+    contract_family: str | None = None,
+) -> tuple[str, dict[str, Any]]:
+    """Rebuild live adult-facing answers onto the Q1 three-section recording contract when needed."""
+    meta: dict[str, Any] = {}
+    text = str(prompt or "").strip()
+    if not text or recording_contract_blocked_by_safeguarding(
+        text,
+        execution_policy=execution_policy,
+        contract_family=contract_family,
+    ):
+        return str(answer or ""), meta
+
+    if not is_recording_contract_prompt(
+        text,
+        execution_policy=execution_policy,
+        contract_family=contract_family,
+    ):
+        return str(answer or ""), meta
+
+    current = strip_legacy_recording_closers(str(answer or ""))
+    needs_rebuild = (
+        answer_uses_legacy_recording_scaffold(current)
+        or not has_recording_contract_sections(current)
+    )
+    if not needs_rebuild:
+        return current, meta
+
+    rebuilt = try_build_recording_contract_answer(
+        text,
+        execution_policy=execution_policy,
+        contract_family=contract_family,
+    )
+    if rebuilt:
+        meta["live_recording_contract_enforced"] = True
+        meta["replaced_legacy_scaffold"] = answer_uses_legacy_recording_scaffold(current)
+        return rebuilt, meta
+    return current, meta
+
+
 def _mentions_term_in_removal_context(text: str, term: str) -> bool:
     """True when a forbidden term appears only in audit/removal guidance."""
     term_lower = str(term).lower()
@@ -382,7 +464,7 @@ def build_daily_record_contract_answer(prompt: str) -> str:
         "**Daily record**\n\n"
         + " ".join(narrative_parts)
         + "\n\n"
-        "**[Young Person]'s words (if known):** [Add the young person's exact words — do not invent quotes.]\n\n"
+        "**[Young Person]'s words (if known):** [Add the young person's exact words here if they shared them.]\n\n"
         "**Outcome / follow-up:** [Add how the evening ended, any handover, and whether further support is needed.]"
     )
 
@@ -390,7 +472,8 @@ def build_daily_record_contract_answer(prompt: str) -> str:
         "- The young person's exact words, if known\n"
         "- Time of contact and time of each adult interaction\n"
         "- Outcome — for example whether they later ate, settled, or needed further support\n"
-        "- Who was on shift and any handover for the next adult"
+        "- Who was on shift and any handover for the next adult\n"
+        "- Share with the manager or key worker if this links to a pattern, concern, or agreed support plan"
     )
 
     safer = (
@@ -427,7 +510,9 @@ def build_incident_reflection_contract_answer(prompt: str) -> str:
     if facts.get("safety_check"):
         sequence.append("Staff checked they were safe.")
     if facts.get("restorative_conversation"):
-        sequence.append("Later, staff completed a restorative conversation with [Young Person].")
+        sequence.append(
+            "Later, staff offered [Young Person] the opportunity to talk about what had happened."
+        )
 
     if not sequence:
         sequence.append("[Add the observable sequence using only the facts you provided.]")
@@ -436,7 +521,7 @@ def build_incident_reflection_contract_answer(prompt: str) -> str:
         "**Incident reflection**\n\n"
         + " ".join(sequence)
         + "\n\n"
-        "**[Young Person]'s words (if known):** [Add exact words — do not invent quotes or assume what they shared in the restorative conversation.]\n\n"
+        "**[Young Person]'s words (if known):** [Add the young person's exact words here if they shared them.]\n\n"
         "**Outcome / follow-up:** [Add how the young person presented afterwards and any manager review if needed.]"
     )
 
@@ -672,6 +757,9 @@ orb_recording_output_contract_service = type(
         "has_concrete_recording_facts": staticmethod(has_concrete_recording_facts),
         "is_recording_contract_prompt": staticmethod(is_recording_contract_prompt),
         "has_recording_contract_sections": staticmethod(has_recording_contract_sections),
+        "answer_uses_legacy_recording_scaffold": staticmethod(answer_uses_legacy_recording_scaffold),
+        "strip_legacy_recording_closers": staticmethod(strip_legacy_recording_closers),
+        "enforce_live_recording_contract_answer": staticmethod(enforce_live_recording_contract_answer),
         "find_pathway_drift_issues": staticmethod(find_pathway_drift_issues),
         "sanitize_corrupted_placeholders": staticmethod(sanitize_corrupted_placeholders),
         "strip_unsupported_pathway_language": staticmethod(strip_unsupported_pathway_language),
