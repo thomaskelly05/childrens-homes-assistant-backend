@@ -954,6 +954,24 @@ class OrbExecutionPolicyService:
                     "validation": validation,
                 }
 
+        from services.orb_critical_practice_answer_service import (
+            detect_critical_practice_family,
+            try_build_critical_practice_answer,
+        )
+
+        critical_answer = try_build_critical_practice_answer(message)
+        if critical_answer:
+            family_id = detect_critical_practice_family(message) or "incident_record"
+            validation = validate_contract_answer(critical_answer, family_id=family_id)
+            return {
+                "answer": validation.get("sanitized_answer") or critical_answer,
+                "sources": [],
+                "citations": [],
+                "no_llm": True,
+                "execution_policy": "deterministic_only",
+                "validation": validation,
+            }
+
         if decision.execution_policy not in {
             "deterministic_only",
             "internal_template_plus_validator",
@@ -1212,6 +1230,10 @@ class OrbExecutionPolicyService:
     def _detect_custom_family(self, message: str) -> str | None:
         text = str(message or "").strip()
         if not text:
+            return None
+        from services.orb_critical_practice_answer_service import detect_critical_practice_family
+
+        if detect_critical_practice_family(text):
             return None
         if STRUCTURE_ONLY_PATTERNS["handover"].search(text) or re.search(
             r"\bhandover\b", text, re.I
