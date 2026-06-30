@@ -2,12 +2,12 @@ import type { OrbSuggestedReplyItem } from '@/lib/orb/orb-output-reuse'
 import { searchOrbTemplateTaxonomy, type OrbTemplateTaxonomyEntry } from '@/lib/orb/orb-records-workspace-client'
 import {
   buildDailyRecordHandoffChips,
+  buildIncidentReflectionHandoffChips,
   combinedChipText,
   DAILY_RECORD_TEMPLATE_ID,
-  dailyRecordSaveChip,
-  dailyRecordTemplateChip,
   filterVisibleChatChips,
   isDailyRecordHandoffChipContext,
+  isQ1IncidentRecordingContractAnswer,
   mergeFollowUpsWithTemplateSuggestions,
   shouldSuggestTemplateForRoutineDailyRecord,
   suggestionKey,
@@ -15,12 +15,16 @@ import {
 } from '@/lib/orb/orb-chat-chip-handoff'
 import { convertAnswerToWorkingDocument } from '@/lib/orb/template/orb-template-working-document-client'
 import { saveOrbWriteWorkingDocumentHandoff } from '@/lib/orb/write/orb-write-working-document-handoff'
+import { isDailyRecordRequest } from '@/lib/orb/recording/orb-adult-identity-language'
 
 export type { OrbChatChipContext, OrbChatChipTraceEntry } from '@/lib/orb/orb-chat-chip-handoff'
 export {
   buildDailyRecordHandoffChips,
+  buildIncidentReflectionHandoffChips,
   filterVisibleChatChips,
   isDailyRecordHandoffChipContext,
+  isQ1DailyRecordingContractAnswer,
+  isQ1IncidentRecordingContractAnswer,
   mergeFollowUpsWithTemplateSuggestions,
   suggestionKey
 } from '@/lib/orb/orb-chat-chip-handoff'
@@ -69,6 +73,9 @@ export async function fetchChatTemplateSuggestions(
   }
 ): Promise<OrbSuggestedReplyItem[]> {
   const ctx: OrbChatChipContext = { content, messageHint: opts?.messageHint, ...opts }
+  if (isQ1IncidentRecordingContractAnswer(content, opts?.messageHint)) {
+    return buildIncidentReflectionHandoffChips()
+  }
   if (isDailyRecordHandoffChipContext(ctx)) {
     return buildDailyRecordHandoffChips()
   }
@@ -77,7 +84,9 @@ export async function fetchChatTemplateSuggestions(
   const hints = localTemplateHints(combined)
   const seen = new Set<string>()
   const chips: OrbSuggestedReplyItem[] = []
-  const isDailyRecordAnswer = DAILY_RE.test(combined)
+  const isDailyRecordAnswer =
+    !isQ1IncidentRecordingContractAnswer(content, opts?.messageHint) &&
+    (DAILY_RE.test(combined) || isDailyRecordRequest(opts?.messageHint || ''))
   let dailyTemplateAdded = false
 
   for (const hint of hints) {
