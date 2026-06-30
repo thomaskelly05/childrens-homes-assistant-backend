@@ -6,15 +6,33 @@ import {
   buildResidentialGuidedChatFallback,
   detectResidentialChatSupportType,
   isGenericResidentialSafeguardingEssay,
+  isGuardedPreludeOrSupportOnlyResidentialAnswer,
+  isHighRiskSafeguardingStreamPrompt,
   isQ1RecordingContractAnswer,
   reshapeResidentialChatAnswer,
   shouldApplyResidentialChatGuidance
 } from './orb-residential-chat-response-guide.ts'
 
+const C1_LIGATURE_PROMPT =
+  "A young person said they wanted to die and tried to harm themselves using a ligature. Staff removed the ligature, stayed with them, called the manager and followed the home's safeguarding procedure. Help me write an incident reflection with escalation."
+
 const BREAKFAST_DAILY_PROMPT =
   'Help me write a daily record — calm breakfast, chose toast, watched TV before handover.'
 
 describe('ORB Residential guided chat response guide', () => {
+  it('high-risk safeguarding stream thin answer does not get generic support closer appended', () => {
+    const prelude =
+      "This may involve immediate safety.\nFollow the home's safeguarding procedure, inform the manager/on-call, and keep a clear record while I prepare the full response."
+    const thinBody =
+      'In reflecting on the incident where a young person expressed a desire to die and attempted to harm themselves using a ligature.'
+    const bugAnswer = `${prelude}\n\n${thinBody}`
+    assert.ok(isHighRiskSafeguardingStreamPrompt(C1_LIGATURE_PROMPT))
+    assert.ok(isGuardedPreludeOrSupportOnlyResidentialAnswer(bugAnswer))
+    const reshaped = reshapeResidentialChatAnswer(bugAnswer, C1_LIGATURE_PROMPT, 'Ask ORB')
+    assert.doesNotMatch(reshaped, /turn your notes into/i)
+    assert.doesNotMatch(reshaped, /Before you use this:/i)
+  })
+
   it('detects safeguarding concern support type', () => {
     assert.equal(
       detectResidentialChatSupportType('A child disclosed something worrying yesterday', 'Safeguarding'),

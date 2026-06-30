@@ -30,6 +30,79 @@ export type ResidentialChatSupportType =
   | 'wording_support'
   | 'general'
 
+const HIGH_RISK_SAFEGUARDING_STREAM_RE =
+  /\b(wanted to die|want to die|self[- ]?harm|suicidal|suicide|ligature|tried to harm|disclosed|disclosure|hurt them|hurt me|abused|abuse|allegation)\b/i
+
+const GUARDED_STREAM_PRELUDE_RE =
+  /this may involve immediate safety|prepare the full response|keep a clear record while i prepare/i
+
+const GUARDED_SAFE_ESCALATION_PRELUDE =
+  "This may involve immediate safety.\nFollow the home's safeguarding procedure, inform the manager/on-call, and keep a clear record while I prepare the full response."
+
+const GENERIC_SUPPORT_CLOSER_RE =
+  /before you use this:|i can also help turn your notes into|turn your notes into an incident record/i
+
+const SUBSTANTIVE_SAFEGUARDING_MARKERS: readonly string[] = [
+  'manager',
+  'on-call',
+  'safeguarding',
+  'procedure',
+  'record',
+  'chronology',
+  'notified',
+  'local policy',
+  'professional judgement',
+  'exact words',
+  'child voice',
+  'medical',
+  '999',
+  '111',
+  'welfare',
+  'supervision',
+  'lado',
+  'social worker',
+  'placing authority'
+]
+
+function stripGuardedStreamPreludeBlocks(text: string): string {
+  let result = String(text || '').trim()
+  if (!result) return result
+  const prelude = GUARDED_SAFE_ESCALATION_PRELUDE.trim()
+  while (result.startsWith(prelude)) {
+    result = result.slice(prelude.length).trim()
+  }
+  if (result.startsWith(prelude.split('\n')[0] || '')) {
+    result = result.replace(GUARDED_STREAM_PRELUDE_RE, '').trim()
+  }
+  return result.replace(GUARDED_STREAM_PRELUDE_RE, '').trim()
+}
+
+function substantiveSafeguardingMarkerHits(text: string): number {
+  const lower = String(text || '').toLowerCase()
+  return SUBSTANTIVE_SAFEGUARDING_MARKERS.reduce(
+    (hits, marker) => (lower.includes(marker) ? hits + 1 : hits),
+    0
+  )
+}
+
+/** Mirrors backend recording_contract_blocked_by_safeguarding for stream final-answer persistence. */
+export function isHighRiskSafeguardingStreamPrompt(userMessage: string): boolean {
+  return HIGH_RISK_SAFEGUARDING_STREAM_RE.test(String(userMessage || '').trim())
+}
+
+export function isGuardedPreludeOrSupportOnlyResidentialAnswer(content: string): boolean {
+  const text = String(content || '').trim()
+  if (!text) return true
+  const withoutSupport = text.split(GENERIC_SUPPORT_CLOSER_RE)[0]?.trim() || ''
+  const body = stripGuardedStreamPreludeBlocks(withoutSupport)
+  if (!body) return true
+  const markerHits = substantiveSafeguardingMarkerHits(body)
+  if (body.length < 120 && markerHits < 2) return true
+  if (GUARDED_STREAM_PRELUDE_RE.test(text) && markerHits < 3) return true
+  if (body.length < 220 && markerHits < 3) return true
+  return false
+}
+
 const SAFEGUARDING_RE =
   /\b(safeguard|abuse|disclos|allegat|missing from care|exploit|county lines|self[- ]?harm|suicid|CSE|CCE|LADO|bullying)\b/i
 
@@ -356,6 +429,15 @@ export function reshapeResidentialChatAnswer(
     return text
   }
 
+  if (isHighRiskSafeguardingStreamPrompt(userMessage)) {
+    if (isStrongResidentialBackendAnswer(text) || answerLooksGuidedResidentialChat(text)) {
+      return sanitizeVisibleFinalAnswer(text, userMessage)
+    }
+    if (isGuardedPreludeOrSupportOnlyResidentialAnswer(text) || isLowValueResidentialAnswer(text)) {
+      return sanitizeVisibleFinalAnswer(text, userMessage)
+    }
+  }
+
   if (isResidentialReflectiveChatFallback(text) && isDailyRecordRequest(userMessage)) {
     return (
       preserveDailyRecordChatAnswer('', userMessage) ??
@@ -386,6 +468,10 @@ export function reshapeResidentialChatAnswer(
       )
     }
     return buildResidentialGuidedChatFallback(userMessage, mode)
+  }
+
+  if (isHighRiskSafeguardingStreamPrompt(userMessage)) {
+    return sanitizeVisibleFinalAnswer(text, userMessage)
   }
 
   return sanitizeVisibleFinalAnswer(
