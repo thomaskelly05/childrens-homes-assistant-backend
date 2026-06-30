@@ -42,6 +42,24 @@ _UNSAFE_PATTERNS = [
 ]
 
 
+def _has_diagnosis_violation(text: str) -> bool:
+    """True when answer makes a diagnostic claim — excludes negated safety disclaimers."""
+    lower = str(text or "").lower()
+    if re.search(r"\bnot a diagnos", lower):
+        return False
+    if re.search(r"\bnot diagnostic\b", lower):
+        return False
+    if re.search(r"\bcannot diagnos", lower):
+        return False
+    if re.search(r"\bdon'?t diagnos", lower):
+        return False
+    if re.search(r"\bdo not diagnos", lower):
+        return False
+    if re.search(r"\borb does not (?:provide|make)", lower) and "diagnos" in lower:
+        return False
+    return bool(re.search(r"\b(diagnos(e|is|ed)|adhd confirmed|autism confirmed)\b", lower, re.I))
+
+
 class OrbAnswerQualityGateService:
     def evaluate_packet(
         self,
@@ -62,6 +80,11 @@ class OrbAnswerQualityGateService:
         critical_flags = []
         lower = answer.lower()
         for pattern, label in _UNSAFE_PATTERNS:
+            if label == "diagnosis":
+                if _has_diagnosis_violation(answer):
+                    critical_flags.append(label)
+                    passed = False
+                continue
             if re.search(pattern, lower, re.I):
                 critical_flags.append(label)
                 passed = False
