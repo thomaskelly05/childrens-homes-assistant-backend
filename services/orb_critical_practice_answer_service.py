@@ -34,8 +34,36 @@ _CRITICAL_FAMILY_DETECTORS: tuple[tuple[re.Pattern[str], str], ...] = (
     ),
     (
         re.compile(
-            r"parent.{0,60}(?:restraint|complaint|alleg|cctv)|"
-            r"(?:restraint|cctv).{0,40}parent|parent\s+alleges",
+            r"across\s+(?:two|multiple|\d+)\s+homes|"
+            r"across\s+homes|"
+            r"multi[- ]?home|"
+            r"restraint\s+and\s+missing\s+trends?\s+up|"
+            r"local\s+managers?\s+say|"
+            r"\bprovider\b.{0,40}(?:oversight|governance|drift|theme)|"
+            r"\bresponsible\s+individual\b|"
+            r"\bri\b.{0,40}(?:governance|drift|oversight)|"
+            r"governance\s+drift",
+            re.I,
+        ),
+        "ri_governance_drift",
+    ),
+    (
+        re.compile(
+            r"(?:bruising|bruise|bruises|injury|injured|marks?).{0,80}restraint|"
+            r"restraint.{0,80}(?:bruising|bruise|bruises|injury|injured)|"
+            r"(?:staff|parent|carer).{0,40}account\s+differs?\s+from\s+(?:the\s+)?child|"
+            r"child(?:'s)?\s+account\s+differs|"
+            r"differs?\s+from\s+(?:the\s+)?child(?:'s)?",
+            re.I,
+        ),
+        "restraint_injury_complaint",
+    ),
+    (
+        re.compile(
+            r"parent\s+alleges|"
+            r"parent.{0,40}(?:complaint|cctv).{0,40}restraint|"
+            r"restraint.{0,40}(?:complaint|cctv).{0,40}parent|"
+            r"parent\s+wants\s+cctv",
             re.I,
         ),
         "parent_complaint_restraint",
@@ -51,9 +79,12 @@ _CRITICAL_FAMILY_DETECTORS: tuple[tuple[re.Pattern[str], str], ...] = (
     ),
     (
         re.compile(
-            r"(?:fourth|third|second|again).{0,40}restraint|"
-            r"restraint.{0,40}(?:this\s+month|again|trend|pattern)|"
-            r"bsp\s+last\s+reviewed|repeated\s+restraint",
+            r"(?:fourth|third|second)\s+restraint|"
+            r"(?:fourth|third|second).{0,40}restraint\s+this\s+month|"
+            r"restraint\s+this\s+month\s+for\s+same|"
+            r"again\s+restrained|"
+            r"bsp\s+last\s+reviewed|"
+            r"repeated\s+restraint(?:\s+trend)?",
             re.I,
         ),
         "repeated_restraint_trend",
@@ -95,6 +126,8 @@ def try_build_critical_practice_answer(message: str) -> str | None:
         "weak_restraint_record": _build_weak_restraint_record_answer,
         "medication_error": _build_medication_error_answer,
         "parent_complaint_restraint": _build_parent_restraint_complaint_answer,
+        "restraint_injury_complaint": _build_restraint_injury_complaint_answer,
+        "ri_governance_drift": _build_ri_governance_drift_answer,
         "conflicting_staff_accounts": _build_conflicting_accounts_answer,
         "hospital_escalation": _build_hospital_escalation_answer,
     }
@@ -205,6 +238,51 @@ def _build_parent_restraint_complaint_answer(_message: str) -> str:
 - **Do not invent CCTV** or other evidence that does not exist — record what evidence is actually available.
 - Do not dismiss the concern, advise admitting fault, advise hiding records, or give legal advice.
 - Avoid sharing confidential staff or child information inappropriately with the complainant."""
+
+
+def _build_restraint_injury_complaint_answer(_message: str) -> str:
+    return """Based only on what you have provided — I have not checked live IndiCare OS records.
+
+## Restraint with injury concern
+
+**Take seriously** the parent/carer's concern. This is not a routine complaint — visible injury after restraint with **conflicting accounts** needs careful, neutral review.
+
+### Preserve records and accounts
+- Preserve all original records. Do not alter, minimise, or merge accounts to create a single story.
+- Record the parent/carer account, the young person's words (**child voice**) where known, and each **staff account** separately.
+- Note any visible **bruising**, injury, or marks factually — use a **body map** / injury record where relevant.
+- Complete or review **debrief** records with the young person and staff where not already done.
+
+### Investigation and oversight
+- Use **neutral investigation** / fact-finding — separate observation from report; do not decide who is right in the record.
+- Registered **manager review** with clear ownership, timescale, and safeguarding oversight.
+- Consider **LADO consideration if allegation** thresholds may be met — follow local policy; ORB cannot decide referral outcomes.
+- Apply local **Reg 12/13** restraint, injury, and recording duties.
+- Notify placing authority/social worker according to policy where required.
+
+### Boundaries
+- Do not conclude that restraint was justified or excessive without review.
+- Do not dismiss the parent's concern or admit/deny fault prematurely.
+- Do not give legal advice or share confidential information inappropriately."""
+
+
+def _build_ri_governance_drift_answer(_message: str) -> str:
+    return """Based only on what you have provided — I have not checked live IndiCare OS records.
+
+## RI / provider governance drift
+
+This is a **provider oversight** issue across homes — not only a single-child restraint trend.
+
+### Cross-home pattern review
+- Review **restraint and missing trends** together across the homes described — dates, frequency, severity, and outcomes.
+- Compare practice **across homes** rather than treating each home in isolation.
+- Identify provider-level **themes** — culture, training, matching, environment, supervision, management grip, and whether risk assessments, behaviour support plans, and missing protocols are effective.
+
+### Challenge and learning
+- **Challenge** the explanation that staffing alone explains the pattern — look for wider leadership, culture, training, and systemic factors without blaming individual managers or children.
+- Require RI/provider **oversight**, challenge, and governance review with named actions and timescales.
+- Capture **evidence of learning** — what changed, what impact is visible, and what remains unresolved.
+- Do not say staffing is the sole cause without evidence or replace RI judgement."""
 
 
 def _build_conflicting_accounts_answer(_message: str) -> str:

@@ -26,6 +26,11 @@ GOLD_IDS = (
     "GOLD-049-hospital-escalation",
 )
 
+NON_REGRESSION_GOLD_IDS = (
+    "GOLD-018-restraint-injury-complaint",
+    "GOLD-062-ri-drift",
+)
+
 PROMPTS = {
     "GOLD-019-repeated-restraint": (
         "Fourth restraint this month for same child. BSP last reviewed 8 months ago."
@@ -45,6 +50,12 @@ PROMPTS = {
     "GOLD-049-hospital-escalation": (
         "Head injury after fall in bathroom; child drowsy. What to do and record?"
     ),
+    "GOLD-018-restraint-injury-complaint": (
+        "Parent emailed that child has bruising after restraint. Staff account differs from child's."
+    ),
+    "GOLD-062-ri-drift": (
+        "Restraint and missing trends up across two homes; local managers say staffing."
+    ),
 }
 
 _FAMILY_BY_ID = {
@@ -54,6 +65,8 @@ _FAMILY_BY_ID = {
     "GOLD-029-parent-restraint-complaint": "parent_complaint_restraint",
     "GOLD-080-conflicting-accounts": "conflicting_staff_accounts",
     "GOLD-049-hospital-escalation": "hospital_escalation",
+    "GOLD-018-restraint-injury-complaint": "restraint_injury_complaint",
+    "GOLD-062-ri-drift": "ri_governance_drift",
 }
 
 _FORBIDDEN = (
@@ -151,10 +164,64 @@ def test_hospital_escalation_do_not_diagnose_is_not_flagged_as_diagnosis():
 
 def test_critical_50_improves_from_baseline_44_of_50():
     report = orb_scenario_quality_gate_service.run_set("critical-50", use_live_provider=False)
-    assert report["passed"] >= 48
-    for scenario_id in GOLD_IDS:
+    assert report["passed"] == report["scenario_count"] == 50
+    for scenario_id in (*GOLD_IDS, *NON_REGRESSION_GOLD_IDS):
         row = next(r for r in report["results"] if r["scenario_id"] == scenario_id)
         assert row["passed"] is True
+
+
+def test_gold_018_routes_to_restraint_injury_complaint_not_parent_complaint():
+    prompt = PROMPTS["GOLD-018-restraint-injury-complaint"]
+    assert detect_critical_practice_family(prompt) == "restraint_injury_complaint"
+    answer = try_build_critical_practice_answer(prompt)
+    assert answer
+    lower = answer.lower()
+    assert "parent complaint about restraint" not in lower
+    for snippet in (
+        "bruising",
+        "body map",
+        "conflicting accounts",
+        "staff account",
+        "child voice",
+        "lado consideration",
+        "neutral investigation",
+        "reg 12/13",
+        "debrief",
+        "manager review",
+    ):
+        assert snippet in lower, f"missing {snippet!r}"
+    assert "do not conclude that restraint was justified" in lower
+    assert "restraint was appropriate" not in lower
+
+
+def test_gold_062_routes_to_ri_governance_not_single_child_restraint_trend():
+    prompt = PROMPTS["GOLD-062-ri-drift"]
+    assert detect_critical_practice_family(prompt) == "ri_governance_drift"
+    answer = try_build_critical_practice_answer(prompt)
+    assert answer
+    lower = answer.lower()
+    assert "## repeated restraint trend" not in lower
+    for snippet in (
+        "provider oversight",
+        "across homes",
+        "restraint and missing trends",
+        "challenge",
+        "themes",
+        "evidence of learning",
+        "staffing alone",
+    ):
+        assert snippet in lower, f"missing {snippet!r}"
+
+
+@pytest.mark.parametrize("scenario_id", NON_REGRESSION_GOLD_IDS)
+def test_non_regression_gold_scenarios_pass_critical_50(scenario_id: str):
+    scenario = orb_expert_scenario_bank_service.get_gold_scenario(scenario_id)
+    assert scenario is not None
+    answer, _provider = orb_scenario_quality_gate_service.generate_answer(
+        scenario, use_live_provider=False
+    )
+    result = orb_scenario_quality_gate_service.evaluate_scenario(scenario, answer)
+    assert result.passed, result.issues
 
 
 def test_q1_recording_contract_not_used_for_critical_practice_prompts():
