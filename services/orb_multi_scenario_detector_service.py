@@ -140,9 +140,14 @@ SCENARIO_SIGNATURES: dict[str, tuple[str, ...]] = {
 
 class OrbMultiScenarioDetectorService:
     def detect(self, message: str) -> dict[str, Any]:
+        from services.orb_recording_output_contract_service import prompt_negates_missing_episode
+
         text = str(message or "").lower()
+        negates_missing = prompt_negates_missing_episode(message)
         matched: list[str] = []
         for scenario_type, terms in SCENARIO_SIGNATURES.items():
+            if scenario_type in {"missing_from_home", "missing_return_substance_risk"} and negates_missing:
+                continue
             if any(term in text for term in terms):
                 matched.append(scenario_type)
         multi = len(matched) > 1

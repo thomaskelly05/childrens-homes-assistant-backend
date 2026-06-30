@@ -122,6 +122,26 @@ def extract_recording_prompt_facts(prompt: str) -> dict[str, Any]:
     return facts
 
 
+_NEGATED_MISSING_EPISODE_RE = re.compile(
+    r"\b(?:not|wasn't|was not|isn't|is not|no)\s+(?:a\s+)?missing[- ]from[- ]care\b|"
+    r"\bdid\s+not\s+leave\s+the\s+home\b|"
+    r"\bwas\s+not\s+missing\b|"
+    r"\bnot\s+a\s+missing\s+episode\b|"
+    r"\bthis\s+was\s+not\s+missing[- ]from[- ]care\b",
+    re.I,
+)
+
+
+def prompt_negates_missing_episode(prompt: str) -> bool:
+    """True when the prompt explicitly states this is not a missing-from-care episode."""
+    return bool(_NEGATED_MISSING_EPISODE_RE.search(str(prompt or "")))
+
+
+def is_context_drift_correction_prompt(prompt: str) -> bool:
+    """True for in-home incident pathway-audit / drift-correction prompts."""
+    return bool(_CONTEXT_DRIFT_AUDIT_RE.search(str(prompt or "")))
+
+
 def recording_contract_blocked_by_safeguarding(
     prompt: str,
     *,
@@ -129,6 +149,10 @@ def recording_contract_blocked_by_safeguarding(
     contract_family: str | None = None,
 ) -> bool:
     """True when mandatory safeguarding must win over the deterministic recording contract."""
+    text = str(prompt or "").strip()
+    if is_context_drift_correction_prompt(text):
+        return False
+
     if execution_policy == "openai_mandatory_safeguarding":
         return True
 
@@ -138,7 +162,6 @@ def recording_contract_blocked_by_safeguarding(
         if contract_family in MANDATORY_SAFEGUARDING_FAMILIES:
             return True
 
-    text = str(prompt or "").strip()
     if not text:
         return False
 
@@ -313,12 +336,12 @@ def strip_unsupported_pathway_language(answer: str, prompt: str) -> str:
     kept: list[str] = []
     for line in lines:
         drop = False
-        for pattern, _ in _UNSUPPORTED_MISSING_TERMS:
-            if pattern.search(line):
+        for pattern, label in _UNSUPPORTED_MISSING_TERMS:
+            if pattern.search(line) and not _mentions_term_in_removal_context(line, label):
                 drop = True
                 break
         if not drop and _CONTEXTUAL_EXPLOITATION_RE.search(line):
-            if "pathway audit" not in str(answer or "").lower():
+            if not _mentions_term_in_removal_context(line, "exploitation"):
                 drop = True
         if not drop:
             kept.append(line)
@@ -641,6 +664,8 @@ orb_recording_output_contract_service = type(
         "RECORDING_SECTION_SAFER": RECORDING_SECTION_SAFER,
         "extract_recording_prompt_facts": staticmethod(extract_recording_prompt_facts),
         "prompt_supports_missing_pathway": staticmethod(prompt_supports_missing_pathway),
+        "prompt_negates_missing_episode": staticmethod(prompt_negates_missing_episode),
+        "is_context_drift_correction_prompt": staticmethod(is_context_drift_correction_prompt),
         "recording_contract_blocked_by_safeguarding": staticmethod(
             recording_contract_blocked_by_safeguarding
         ),

@@ -1132,6 +1132,14 @@ def get_family_prompt_char_cap(family_id: str | None) -> int:
 
 
 def _family_match_excluded(family_id: str, text: str) -> bool:
+    from services.orb_recording_output_contract_service import (
+        is_context_drift_correction_prompt,
+        prompt_negates_missing_episode,
+    )
+
+    if family_id == "missing_return_record":
+        if is_context_drift_correction_prompt(text) or prompt_negates_missing_episode(text):
+            return True
     if family_id == "medication_refusal_guidance" and MEDICATION_CRITICAL_RISK_RE.search(text):
         return True
     if family_id == "accessible_child_support_plan" and PLAN_UPDATE_RECORDING_RE.search(text):
@@ -1206,6 +1214,11 @@ def detect_contract_family(
         return "template_generation"
 
     text = (message or "").strip()
+    from services.orb_recording_output_contract_service import is_context_drift_correction_prompt
+
+    if is_context_drift_correction_prompt(text):
+        return "incident_record"
+
     for family_id in _FAMILY_DETECTION_ORDER:
         family = ORB_ANSWER_CONTRACT_FAMILIES.get(family_id) or {}
         patterns: list[Pattern[str]] = list(family.get("trigger_patterns") or [])

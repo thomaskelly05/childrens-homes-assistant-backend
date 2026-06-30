@@ -30,6 +30,7 @@ from services.orb_recording_contract_service import extract_known_incident_facts
 from services.orb_recording_output_contract_service import (
     has_recording_contract_sections,
     is_recording_contract_prompt,
+    recording_contract_blocked_by_safeguarding,
     sanitize_corrupted_placeholders,
     strip_unsupported_pathway_language,
     try_build_recording_contract_answer,
@@ -173,6 +174,29 @@ def _personalise_support_plan_template(message: str) -> str:
     return template
 
 
+def _resolve_recording_policy(message: str) -> Any:
+    from services.orb_execution_policy_service import orb_execution_policy_service
+
+    return orb_execution_policy_service.resolve(message)
+
+
+def _answer_looks_like_generic_recording_stub(answer: str) -> bool:
+    lower = str(answer or "").lower()
+    if has_recording_contract_sections(answer):
+        return False
+    generic_phrases = (
+        "paste what happened",
+        "i can help you draft",
+        "tell me more about",
+        "happy to help",
+        "absolutely — paste",
+        "help me draft a factual incident",
+    )
+    if any(phrase in lower for phrase in generic_phrases):
+        return True
+    return len(str(answer or "").strip()) < 120
+
+
 def repair_accessible_child_support_plan(answer: str, *, message: str = "") -> str:
     """Deterministic rewrite into the canonical child-facing support plan structure."""
     _ = answer
@@ -201,10 +225,28 @@ def apply_deterministic_repairs(
     if corrupted_ph:
         repair_meta["placeholder_repairs"] = corrupted_ph
     cleaned = strip_unsupported_pathway_language(cleaned, message)
-    if is_recording_contract_prompt(message):
+    policy = _resolve_recording_policy(message)
+    recording_allowed = (
+        is_recording_contract_prompt(
+            message,
+            execution_policy=policy.execution_policy,
+            contract_family=policy.selected_contract,
+        )
+        and not recording_contract_blocked_by_safeguarding(
+            message,
+            execution_policy=policy.execution_policy,
+            contract_family=policy.selected_contract,
+        )
+    )
+    if recording_allowed:
         drift = find_pathway_drift_issues(cleaned, message)
-        if drift or not has_recording_contract_sections(cleaned):
-            rebuilt = try_build_recording_contract_answer(message)
+        needs_contract = drift or not has_recording_contract_sections(cleaned)
+        if needs_contract and _answer_looks_like_generic_recording_stub(cleaned):
+            rebuilt = try_build_recording_contract_answer(
+                message,
+                execution_policy=policy.execution_policy,
+                contract_family=policy.selected_contract,
+            )
             if rebuilt:
                 cleaned = rebuilt
                 repair_meta["repair_reason"] = "recording_output_contract"
@@ -353,9 +395,11 @@ def repair_and_validate_final_answer(
     if final_answer != validation["sanitized_answer"]:
         answer_repaired = True
         repair_reason = repair_reason or "live_record_discipline"
+    validation_passed = bool(validation["passed"])
     return final_answer, {
-        "final_answer_validation_passed": validation["passed"],
-        "repair_applied": answer_repaired or not validation["passed"],
+        "final_answer_validation_passed": validation_passed,
+        "validation_failed_but_returned": not validation_passed,
+        "repair_applied": answer_repaired or not validation_passed,
         "answer_repaired": answer_repaired,
         "repair_reason": repair_reason,
         "therapeutic_repairs": repair_meta.get("therapeutic_repairs") or [],

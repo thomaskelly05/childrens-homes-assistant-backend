@@ -194,6 +194,16 @@ const RESIDENTIAL_SCENARIO_MARKERS_RE =
 const GENERIC_ESSAY_OPENERS_RE =
   /\b(it is important to note|in any safeguarding situation|safeguarding is everyone's responsibility|best practice suggests that|safeguarding is a shared responsibility)\b/i
 
+/** Q1 three-section recording contract from backend — must not be reshaped or appended. */
+export function isQ1RecordingContractAnswer(content: string): boolean {
+  const lower = content.toLowerCase()
+  return (
+    lower.includes('draft record') &&
+    lower.includes('what to add before sign-off') &&
+    lower.includes('why this wording is safer')
+  )
+}
+
 /** True when the backend returned no usable answer body. */
 export function isEmptyResidentialChatAnswer(content: string): boolean {
   const text = content.trim()
@@ -214,6 +224,7 @@ export function isResidentialSafetyFallbackAnswer(content: string): boolean {
 /** Detect substantive scenario-specific backend answers that should remain primary. */
 export function isStrongResidentialBackendAnswer(content: string): boolean {
   const text = content.trim()
+  if (isQ1RecordingContractAnswer(text)) return true
   if (text.length < 150) return false
 
   const hasGenericOpen = GENERIC_ESSAY_OPENERS_RE.test(text)
@@ -322,6 +333,9 @@ export function reshapeResidentialChatAnswer(
   mode?: StandaloneOrbMode | string | null
 ): string {
   const text = content.trim()
+  if (isQ1RecordingContractAnswer(text)) {
+    return sanitizeVisibleFinalAnswer(text, userMessage)
+  }
   const dailyRecordAnswer = preserveDailyRecordChatAnswer(text, userMessage)
 
   if (dailyRecordAnswer) {

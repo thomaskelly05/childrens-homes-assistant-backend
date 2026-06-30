@@ -1298,6 +1298,9 @@ async def standalone_orb_conversation(
             message=payload.message,
             mode=mode,
         )
+        from services.orb_placeholder_quality_guard_service import sanitize_placeholders_in_answer
+
+        answer, _placeholder_issues = sanitize_placeholders_in_answer(answer)
         response_sources = list(assistant_data.get("sources") or [])
         response_citations = list(assistant_data.get("citations") or [])
         response_citations.extend(shared_cognition.get("citations") or [])
@@ -1845,6 +1848,9 @@ async def standalone_orb_conversation_stream(
                 message=user_message,
                 mode=mode,
             )
+            from services.orb_placeholder_quality_guard_service import sanitize_placeholders_in_answer
+
+            answer, _placeholder_issues = sanitize_placeholders_in_answer(answer)
             response_sources = list(assistant_data.get("sources") or [])
             response_citations = list(assistant_data.get("citations") or [])
             response_citations.extend(shared_cognition.get("citations") or [])

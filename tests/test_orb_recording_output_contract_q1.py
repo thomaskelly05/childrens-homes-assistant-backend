@@ -21,6 +21,9 @@ from services.orb_recording_output_contract_service import (
     validate_recording_contract_answer,
 )
 from services.orb_scenario_quality_gate_service import orb_scenario_quality_gate_service
+from services.orb_universal_answer_contract_map_service import detect_contract_family
+from services.orb_residential_finalization_service import finalize_orb_residential_answer
+from services.indicare_intelligence_core_service import indicare_intelligence_core_service
 
 REG_A_PROMPT = (
     "A young person became upset after contact and refused to join the evening meal. "
@@ -323,3 +326,127 @@ def test_validate_recording_contract_rejects_pathway_drift():
     result = validate_recording_contract_answer(bad, REG_B_PROMPT)
     assert result["passed"] is False
     assert any("pathway_drift" in i for i in result["issues"])
+
+
+def _adult_facing_answer(prompt: str) -> tuple[str, dict]:
+    policy = orb_execution_policy_service.resolve(prompt)
+    det = orb_execution_policy_service.try_deterministic_answer(prompt, policy=policy)
+    assert det and det.get("answer"), "expected deterministic recording contract answer"
+    packet = indicare_intelligence_core_service.build_intelligence_packet(prompt, mode="Ask ORB")
+    return finalize_orb_residential_answer(
+        str(det["answer"]),
+        user_input=prompt,
+        indicare_intelligence=packet,
+        mode="Ask ORB",
+    )
+
+
+def test_reg_c_not_classified_as_missing_return():
+    family = detect_contract_family(REG_C_PROMPT)
+    policy = orb_execution_policy_service.resolve(REG_C_PROMPT)
+    assert family == "incident_record"
+    assert policy.selected_contract == "incident_record"
+    assert policy.execution_policy != "openai_mandatory_safeguarding"
+
+
+def test_reg_c_live_path_uses_drift_correction_contract():
+    policy = orb_execution_policy_service.resolve(REG_C_PROMPT)
+    det = orb_execution_policy_service.try_deterministic_answer(REG_C_PROMPT, policy=policy)
+    assert det is not None
+    assert "incorrectly introduced" in str(det["answer"]).lower()
+
+
+def test_mock_gate_reg_c_matches_live_deterministic_path():
+    scenario = next(
+        s
+        for s in orb_scenario_quality_gate_service.resolve_set_scenarios("regression-a-d")
+        if s["scenario_id"] == "REG-C-context-drift-correction"
+    )
+    mock_answer, _provider = orb_scenario_quality_gate_service.generate_answer(
+        scenario,
+        use_live_provider=False,
+    )
+    live_det = orb_execution_policy_service.try_deterministic_answer(
+        REG_C_PROMPT,
+        policy=orb_execution_policy_service.resolve(REG_C_PROMPT),
+    )
+    assert live_det is not None
+    assert "incorrectly introduced" in mock_answer.lower()
+    assert "incorrectly introduced" in str(live_det["answer"]).lower()
+
+
+def test_adult_facing_reg_a_preserves_staff_wording():
+    answer, meta = _adult_facing_answer(REG_A_PROMPT)
+    assert "Staff gave" in answer or "staff gave" in answer.lower()
+    assert "the adult gave" not in answer.lower()
+    assert has_recording_contract_sections(answer)
+    assert meta.get("validation_failed_but_returned") is not True or meta.get("final_answer_validation_passed")
+
+
+def test_adult_facing_reg_b_preserves_staff_wording_and_passes_contract():
+    answer, meta = _adult_facing_answer(REG_B_PROMPT)
+    assert "Staff" in answer
+    assert "the adult" not in answer.lower()
+    assert has_recording_contract_sections(answer)
+    result = validate_recording_contract_answer(answer, REG_B_PROMPT)
+    assert result["passed"] is True
+
+
+def test_adult_facing_reg_c_passes_drift_correction_contract():
+    answer, _meta = _adult_facing_answer(REG_C_PROMPT)
+    result = validate_recording_contract_answer(
+        answer,
+        REG_C_PROMPT,
+        contract={
+            "kind": "context_drift_correction",
+            "required_terms": [
+                "incorrectly introduced",
+                "did not leave the home",
+                "remove from guidance",
+                "screen",
+                "chair",
+                "restorative",
+                "draft record",
+            ],
+            "forbidden_terms": [
+                "return home interview",
+                "notify police",
+                "missing procedure",
+                "exploitation",
+            ],
+            "must_acknowledge_drift": True,
+            "forbid_pathway_drift": True,
+        },
+    )
+    assert result["passed"] is True
+
+
+def test_good_specific_answer_not_replaced_by_generic_template():
+    specific = build_incident_reflection_contract_answer(REG_B_PROMPT)
+    repaired, meta = apply_deterministic_repairs(
+        specific,
+        contract_family="incident_record",
+        message=REG_B_PROMPT,
+    )
+    assert meta.get("repair_reason") != "recording_output_contract"
+    assert "chair" in repaired.lower()
+
+
+def test_failed_validation_is_visible_in_metadata():
+    from services.orb_final_answer_repair_service import repair_and_validate_final_answer
+
+    bad = "Absolutely generic — paste what happened."
+    _, meta = repair_and_validate_final_answer(
+        bad,
+        contract_family="incident_record",
+        message=REG_B_PROMPT,
+    )
+    if not meta.get("final_answer_validation_passed"):
+        assert meta.get("validation_failed_but_returned") is True
+
+
+def test_stream_placeholder_sanitisation():
+    raw = "Staff spoke with [[NAME_11]] during the incident."
+    cleaned, _issues = sanitize_placeholders_in_answer(raw)
+    assert "[[NAME_" not in cleaned
+    assert "[Young Person]" in cleaned

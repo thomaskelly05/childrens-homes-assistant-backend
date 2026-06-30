@@ -225,7 +225,17 @@ class OrbScenarioQualityGateService:
 
     def _generate_mock_answer(self, scenario: dict[str, Any]) -> str:
         prompt = str(scenario.get("prompt") or "")
-        contract_answer = try_build_recording_contract_answer(prompt)
+        policy = orb_execution_policy_service.resolve(prompt)
+
+        deterministic = orb_execution_policy_service.try_deterministic_answer(prompt, policy=policy)
+        if deterministic and deterministic.get("answer"):
+            return self._ensure_mock_caveats(str(deterministic["answer"]).strip(), scenario)
+
+        contract_answer = try_build_recording_contract_answer(
+            prompt,
+            execution_policy=policy.execution_policy,
+            contract_family=policy.selected_contract,
+        )
         if contract_answer:
             return self._ensure_mock_caveats(contract_answer, scenario)
         frame = scenario.get("frame") or {}
@@ -234,10 +244,6 @@ class OrbScenarioQualityGateService:
             canonical = canonical_answer_for_qa(str(contract_family), message=prompt)
             if canonical:
                 return self._ensure_mock_caveats(canonical, scenario)
-
-        deterministic = orb_execution_policy_service.try_deterministic_answer(prompt)
-        if deterministic and deterministic.get("answer"):
-            return self._ensure_mock_caveats(str(deterministic["answer"]).strip(), scenario)
 
         if scenario.get("expected_markers") is not None or str(
             scenario.get("scenario_id") or ""
