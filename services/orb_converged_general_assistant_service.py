@@ -204,6 +204,8 @@ class OrbConvergedGeneralAssistantService:
         safety_scaffold: dict[str, Any] | None = None,
         retrieval_bundle: dict[str, Any] | None = None,
         prompt_tier: str | None = None,
+        brain_convergence: dict[str, Any] | None = None,
+        execution_policy: dict[str, Any] | None = None,
     ) -> AsyncIterator[str]:
         user_message = _safe_text(raw_user_message) or _safe_text(message)
         supplied_context_types: list[str] = []
@@ -216,11 +218,20 @@ class OrbConvergedGeneralAssistantService:
         if history:
             supplied_context_types.append("conversation_history")
 
+        policy_name = str((execution_policy or {}).get("execution_policy") or "")
+        skip_heavy_enrichment = policy_name in {
+            "deterministic_only",
+            "internal_template_plus_validator",
+        }
+
         if retrieval_bundle is not None:
             effective_bundle = retrieval_bundle
             effective_prompt_tier = _safe_text(prompt_tier) or _safe_text(
                 retrieval_bundle.get("prompt_tier")
             ) or "fast"
+        elif skip_heavy_enrichment:
+            effective_bundle = {"prompt_tier": "fast", "indicare_intelligence": {}}
+            effective_prompt_tier = "fast"
         else:
             effective_bundle = orb_knowledge_retrieval_service.prepare_request_bundle(
                 user_message,
@@ -273,9 +284,11 @@ class OrbConvergedGeneralAssistantService:
             raw_user_message=user_message,
             stream_meta=inner_meta,
             safety_scaffold=safety_scaffold,
-            retrieval_bundle=retrieval_bundle,
+            retrieval_bundle=retrieval_bundle if retrieval_bundle is not None else effective_bundle,
             prompt_tier=effective_prompt_tier,
             retrieval=prebuilt_retrieval,
+            brain_convergence=brain_convergence,
+            execution_policy=execution_policy,
         ):
             yield delta
 
