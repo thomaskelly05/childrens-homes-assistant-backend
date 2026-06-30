@@ -20,6 +20,10 @@ from services.orb_execution_policy_service import (
 )
 from services.orb_final_answer_repair_service import canonical_answer_for_qa
 from services.orb_multi_scenario_detector_service import orb_multi_scenario_detector_service
+from services.orb_recording_output_contract_service import (
+    try_build_recording_contract_answer,
+    validate_recording_contract_answer,
+)
 from services.orb_universal_answer_contract_map_service import detect_contract_family
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -173,7 +177,7 @@ class OrbScenarioQualityGateService:
                 scenarios.append(dict(custom))
                 seen.add(sid)
 
-        if set_name == "missing-from-care":
+        if set_name in ("missing-from-care", "regression-a-d"):
             for custom in definition.get("custom_scenarios") or []:
                 sid = str(custom["scenario_id"])
                 if sid not in seen:
@@ -221,16 +225,25 @@ class OrbScenarioQualityGateService:
 
     def _generate_mock_answer(self, scenario: dict[str, Any]) -> str:
         prompt = str(scenario.get("prompt") or "")
+        policy = orb_execution_policy_service.resolve(prompt)
+
+        deterministic = orb_execution_policy_service.try_deterministic_answer(prompt, policy=policy)
+        if deterministic and deterministic.get("answer"):
+            return self._ensure_mock_caveats(str(deterministic["answer"]).strip(), scenario)
+
+        contract_answer = try_build_recording_contract_answer(
+            prompt,
+            execution_policy=policy.execution_policy,
+            contract_family=policy.selected_contract,
+        )
+        if contract_answer:
+            return self._ensure_mock_caveats(contract_answer, scenario)
         frame = scenario.get("frame") or {}
         contract_family = frame.get("expected_contract_family")
         if contract_family:
             canonical = canonical_answer_for_qa(str(contract_family), message=prompt)
             if canonical:
                 return self._ensure_mock_caveats(canonical, scenario)
-
-        deterministic = orb_execution_policy_service.try_deterministic_answer(prompt)
-        if deterministic and deterministic.get("answer"):
-            return self._ensure_mock_caveats(str(deterministic["answer"]).strip(), scenario)
 
         if scenario.get("expected_markers") is not None or str(
             scenario.get("scenario_id") or ""
@@ -309,6 +322,10 @@ class OrbScenarioQualityGateService:
             scenario, answer, family
         )
         checks["scenario_frame"] = self._check_scenario_frame(scenario, answer, prompt)
+        if scenario.get("recording_contract"):
+            checks["recording_contract"] = self._check_recording_contract(
+                scenario, answer, prompt
+            )
 
         quality_gate = orb_answer_quality_gate_service.evaluate_text(
             answer,
@@ -825,6 +842,27 @@ class OrbScenarioQualityGateService:
             name="fact_vs_interpretation",
             passed=passed,
             details="Fact vs interpretation guidance present." if passed else "Weak fact/interpretation separation.",
+            issues=issues,
+        )
+
+    def _check_recording_contract(
+        self,
+        scenario: dict[str, Any],
+        answer: str,
+        prompt: str,
+    ) -> QualityGateCheckResult:
+        contract = scenario.get("recording_contract") or {}
+        result = validate_recording_contract_answer(
+            answer,
+            prompt,
+            contract=contract,
+        )
+        issues = list(result.get("issues") or [])
+        passed = bool(result.get("passed"))
+        return QualityGateCheckResult(
+            name="recording_contract",
+            passed=passed,
+            details="Recording contract satisfied." if passed else f"Issues: {', '.join(issues)}.",
             issues=issues,
         )
 

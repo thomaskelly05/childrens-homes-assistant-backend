@@ -541,6 +541,8 @@ _DISPROPORTIONATE_SAFETY_OPENING_RES: tuple[re.Pattern[str], ...] = (
 )
 
 _CLUNKY_PLACEHOLDER_REPLACEMENTS: tuple[tuple[re.Pattern[str], str], ...] = (
+    (re.compile(r"\[\[NAME_\d+\]\]"), "[Young Person]"),
+    (re.compile(r"\[NAME_\d+\]"), "[Young Person]"),
     (re.compile(r"\[Young Person'?s Name\]", re.I), "the young person"),
     (re.compile(r"\[Child'?s Name\]", re.I), "the young person"),
     (re.compile(r"\[Name\]", re.I), "the young person"),
@@ -654,6 +656,12 @@ _STAFF_PHRASE_PROTECTED_RES: tuple[tuple[re.Pattern[str], str], ...] = (
     (re.compile(r"\bstaff observed\b", re.I), "__ORB_STAFF_OBSERVED__"),
     (re.compile(r"\bspecific staff interactions\b", re.I), "__ORB_STAFF_INTERACTIONS__"),
     (re.compile(r"\bstaff interactions\b", re.I), "__ORB_STAFF_INTERACTIONS_PLURAL__"),
+    (re.compile(r"\bstaff gave\b", re.I), "__ORB_STAFF_GAVE__"),
+    (re.compile(r"\bstaff checked\b", re.I), "__ORB_STAFF_CHECKED__"),
+    (re.compile(r"\bstaff completed\b", re.I), "__ORB_STAFF_COMPLETED__"),
+    (re.compile(r"\bstaff stayed\b", re.I), "__ORB_STAFF_STAYED__"),
+    (re.compile(r"\bstaff removed\b", re.I), "__ORB_STAFF_REMOVED__"),
+    (re.compile(r"\bstaff called\b", re.I), "__ORB_STAFF_CALLED__"),
 )
 
 _STAFF_PHRASE_RESTORE: dict[str, str] = {
@@ -666,6 +674,12 @@ _STAFF_PHRASE_RESTORE: dict[str, str] = {
     "__ORB_STAFF_OBSERVED__": "staff observed",
     "__ORB_STAFF_INTERACTIONS__": "specific staff interactions",
     "__ORB_STAFF_INTERACTIONS_PLURAL__": "staff interactions",
+    "__ORB_STAFF_GAVE__": "Staff gave",
+    "__ORB_STAFF_CHECKED__": "Staff checked",
+    "__ORB_STAFF_COMPLETED__": "Staff completed",
+    "__ORB_STAFF_STAYED__": "Staff stayed",
+    "__ORB_STAFF_REMOVED__": "Staff removed",
+    "__ORB_STAFF_CALLED__": "Staff called",
 }
 
 _INTERNAL_PROMPT_LEAKAGE_RES: tuple[re.Pattern[str], ...] = (
@@ -1957,6 +1971,15 @@ def strip_trailing_markdown_artefacts(text: str, *, source_text: str = "") -> st
     return _TRAILING_MD_ARTIFACTS_RE.sub("", result).rstrip()
 
 
+def _has_q1_recording_contract_sections(text: str) -> bool:
+    lower = str(text or "").lower()
+    return (
+        "draft record" in lower
+        and "what to add before sign-off" in lower
+        and "why this wording is safer" in lower
+    )
+
+
 def sanitize_live_record_output(text: str, *, source_text: str = "") -> str:
     """Apply adult identity, terminology, proportionality and observation discipline to record output."""
     cleaned = str(text or "")
@@ -1988,9 +2011,10 @@ def sanitize_live_record_output(text: str, *, source_text: str = "") -> str:
     cleaned = strip_outcome_interpretation(cleaned, source_text=source_text)
     cleaned = sanitize_observation_interpretation_language(cleaned, source_text=source_text)
 
-    # 6. adult identity sanitisation
-    if initials or _STAFF_TO_ADULT_RE.search(cleaned):
-        cleaned = apply_adult_identity_language(cleaned, supplied_initials=initials)
+    # 6. adult identity sanitisation — preserve natural Staff wording in Q1 recording contracts
+    if not _has_q1_recording_contract_sections(cleaned):
+        if initials or _STAFF_TO_ADULT_RE.search(cleaned):
+            cleaned = apply_adult_identity_language(cleaned, supplied_initials=initials)
 
     # 7. daily section simplification
     if is_daily_record_request(source_text) and not has_safeguarding_cue(source_text):

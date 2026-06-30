@@ -6,6 +6,7 @@ import {
   buildResidentialGuidedChatFallback,
   detectResidentialChatSupportType,
   isGenericResidentialSafeguardingEssay,
+  isQ1RecordingContractAnswer,
   reshapeResidentialChatAnswer,
   shouldApplyResidentialChatGuidance
 } from './orb-residential-chat-response-guide.ts'
@@ -124,5 +125,30 @@ To complete before saving:
     const reshaped = reshapeResidentialChatAnswer(draft, BREAKFAST_DAILY_PROMPT, 'Ask ORB')
     assert.doesNotMatch(reshaped, /What do you want to take to supervision/i)
     assert.match(reshaped, /Context \/ routine|What happened/i)
+  })
+
+  it('preserves Q1 three-section recording contract without appending support text', () => {
+    const q1Answer = `## Draft record
+
+**Incident reflection**
+
+After being told they could not have extra screen time, [Young Person] shouted at staff.
+
+## What to add before sign-off
+
+- Exact times and location
+
+## Why this wording is safer
+
+This reflection records the boundary or trigger described without blame.`
+    assert.ok(isQ1RecordingContractAnswer(q1Answer))
+    const reshaped = reshapeResidentialChatAnswer(
+      q1Answer,
+      'Help me write an incident reflection after a screen time boundary.',
+      'Ask ORB'
+    )
+    assert.doesNotMatch(reshaped, /Before you use this/i)
+    assert.match(reshaped, /Draft record/i)
+    assert.match(reshaped, /What to add before sign-off/i)
   })
 })
