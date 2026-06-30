@@ -267,3 +267,60 @@ def test_repeated_restraint_not_generic_incident_template():
     answer = str((result or {}).get("answer") or "").lower()
     assert "paste what happened" not in answer
     assert "trend" in answer
+
+
+NATURAL_LANGUAGE_PROMPTS = {
+    "B2-repeated-restraint-natural": (
+        "This is the fourth time this month that the same young person has been physically "
+        "held during evening routines. Help me reflect on what needs to be reviewed.",
+        "repeated_restraint_trend",
+        ("trend", "bsp review", "child voice", "manager", "debrief", "therapeutic alternative"),
+    ),
+    "B3-medication-error-natural": (
+        "A young person was given their evening medication late and staff are unsure whether "
+        "the dose timing may affect them. Help me think through what needs recording and what "
+        "steps staff should consider.",
+        "medication_error",
+        (
+            "immediate safety",
+            "notify manager",
+            "gp/nhs advice",
+            "incident record",
+            "learning",
+            "mar chart",
+        ),
+    ),
+    "B4-conflicting-accounts-natural": (
+        "Two staff have given different accounts of what happened during an incident, and the "
+        "young person's account is different again. Help me record this safely.",
+        "conflicting_staff_accounts",
+        ("do not pick side", "neutral fact-finding", "child voice", "preserve original records"),
+    ),
+}
+
+
+@pytest.mark.parametrize("case_id", tuple(NATURAL_LANGUAGE_PROMPTS.keys()))
+def test_natural_language_critical_practice_routing(case_id: str):
+    prompt, family_id, _snippets = NATURAL_LANGUAGE_PROMPTS[case_id]
+    assert detect_critical_practice_family(prompt) == family_id
+    policy = orb_execution_policy_service.resolve(prompt)
+    result = orb_execution_policy_service.try_deterministic_answer(prompt, policy=policy)
+    assert result is not None
+    assert result.get("no_llm") is True
+
+
+@pytest.mark.parametrize("case_id", tuple(NATURAL_LANGUAGE_PROMPTS.keys()))
+def test_natural_language_critical_practice_answer_markers(case_id: str):
+    prompt, _family_id, snippets = NATURAL_LANGUAGE_PROMPTS[case_id]
+    answer = try_build_critical_practice_answer(prompt)
+    assert answer
+    lower = answer.lower()
+    for snippet in snippets:
+        assert snippet in lower, f"missing {snippet!r} in {case_id}"
+    for phrase in _FORBIDDEN:
+        assert phrase not in lower
+
+
+def test_natural_language_routing_does_not_capture_routine_daily_medication_log():
+    prompt = "Help me write daily medication log for evening routine."
+    assert detect_critical_practice_family(prompt) is None

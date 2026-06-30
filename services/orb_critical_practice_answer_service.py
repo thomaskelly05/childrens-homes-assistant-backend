@@ -27,7 +27,11 @@ _CRITICAL_FAMILY_DETECTORS: tuple[tuple[re.Pattern[str], str], ...] = (
     (
         re.compile(
             r"wrong\s+child|medication\s+error|wrong\s+(?:dose|medication)|"
-            r"double\s+dose|controlled\s+drug.{0,40}discrepanc",
+            r"double\s+dose|controlled\s+drug.{0,40}discrepanc|"
+            r"medication\s+late|given\s+late|late\s+medication(?:\s+administration)?|"
+            r"missed\s+(?:medication|dose)|dose\s+timing|"
+            r"timing\s+may\s+affect|medication\s+not\s+given\s+at\s+usual\s+time|"
+            r"(?:unsure|uncertain).{0,40}(?:dose\s+timing|timing\s+may\s+affect)",
             re.I,
         ),
         "medication_error",
@@ -71,8 +75,13 @@ _CRITICAL_FAMILY_DETECTORS: tuple[tuple[re.Pattern[str], str], ...] = (
     (
         re.compile(
             r"different\s+(?:restraint\s+)?timeline|conflicting\s+account|"
-            r"staff\s+give\s+different|disagree\s+what\s+happened|"
-            r"accounts?\s+do\s+not\s+align",
+            r"conflicting\s+versions?|"
+            r"staff\s+give\s+different|(?:staff|two\s+staff).{0,60}different\s+accounts?|"
+            r"different\s+accounts?.{0,60}(?:staff|incident|young\s+person|child)|"
+            r"accounts?\s+differ|discrepancy\s+between\s+accounts?|"
+            r"differing\s+recollections|disagree\s+what\s+happened|"
+            r"accounts?\s+do\s+not\s+align|"
+            r"(?:young\s+person|child)(?:'s)?\s+account.{0,40}different",
             re.I,
         ),
         "conflicting_staff_accounts",
@@ -81,8 +90,15 @@ _CRITICAL_FAMILY_DETECTORS: tuple[tuple[re.Pattern[str], str], ...] = (
         re.compile(
             r"(?:fourth|third|second)\s+restraint|"
             r"(?:fourth|third|second).{0,40}restraint\s+this\s+month|"
+            r"(?:fourth|third|second)\s+time\s+this\s+month.{0,120}"
+            r"(?:physically\s+held|physical\s+hold(?:s)?|physical\s+intervention|"
+            r"held\s+by\s+staff|held\s+during)|"
+            r"(?:physically\s+held|physical\s+hold(?:s)?|physical\s+intervention|"
+            r"held\s+by\s+staff).{0,120}(?:fourth|third|second)\s+time\s+this\s+month|"
+            r"same\s+young\s+person.{0,80}(?:fourth|third|second).{0,60}"
+            r"(?:held|restraint|physical\s+hold|physical\s+intervention)|"
             r"restraint\s+this\s+month\s+for\s+same|"
-            r"again\s+restrained|"
+            r"again\s+restrained|again\s+during\s+(?:evening\s+)?routine|"
             r"bsp\s+last\s+reviewed|"
             r"repeated\s+restraint(?:\s+trend)?",
             re.I,
