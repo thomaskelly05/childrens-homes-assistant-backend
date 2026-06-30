@@ -263,7 +263,7 @@ _PRIORITY_CATEGORY_PATTERNS: list[tuple[Pattern[str], str]] = [
 
 _CATEGORY_PATTERNS: list[tuple[Pattern[str], str]] = [
     (re.compile(r"missing from care|absent|awol|late return|whereabouts", re.I), "missing_from_care"),
-    (re.compile(r"self[- ]?harm|suicidal|want to die|blade", re.I), "self_harm_suicide"),
+    (re.compile(r"self[- ]?harm|suicidal|want(?:ed)? to die|tried to harm|blade", re.I), "self_harm_suicide"),
     (re.compile(r"allegation|lado|staff member touched|staff grabbed", re.I), "allegations_lado"),
     (re.compile(r"medication error|wrong dose|double dose", re.I), "medication_error"),
     (re.compile(r"refused medication|medication refusal|will not take.*tablet", re.I), "medication_refusal_support"),
@@ -324,6 +324,10 @@ def detect_playbook_category(
         return "daily_recording"
     for pattern, category_id in _PRIORITY_CATEGORY_PATTERNS:
         if pattern.search(text):
+            return category_id
+    # High-risk safeguarding labels beat broad contract-family mappings such as incident_record.
+    for pattern, category_id in _CATEGORY_PATTERNS:
+        if category_id in _GUARDED_GENERIC_INSTANT_CATEGORIES and pattern.search(text):
             return category_id
     family = contract_family or detect_contract_family(text)
     if family and family in _CONTRACT_TO_CATEGORY:
@@ -404,8 +408,13 @@ def should_skip_instant_lines(
     """Skip only for lightweight general prompts — playbook categories always get instant lines."""
     if message:
         try:
-            from services.orb_recording_output_contract_service import is_recording_contract_prompt
+            from services.orb_recording_output_contract_service import (
+                is_recording_contract_prompt,
+                recording_contract_blocked_by_safeguarding,
+            )
 
+            if recording_contract_blocked_by_safeguarding(message):
+                return True
             if is_recording_contract_prompt(message):
                 return True
         except Exception:
@@ -445,6 +454,20 @@ def guarded_instant_lines_for_message(
     return result
 
 
+def is_answer_only_instant_lines(answer: str, instant_lines: str) -> bool:
+    """True when the visible answer is only the instant prelude (including near-duplicates)."""
+    instant = (instant_lines or "").strip()
+    cleaned = (answer or "").strip()
+    if not cleaned:
+        return False
+    if not instant:
+        return False
+    if _normalize_instant_prefix(cleaned) == _normalize_instant_prefix(instant):
+        return True
+    without_prefix = strip_duplicate_instant_prefix(cleaned, instant).strip()
+    return not without_prefix
+
+
 def merge_instant_lines_with_answer(
     *,
     instant_lines: str,
@@ -456,6 +479,10 @@ def merge_instant_lines_with_answer(
         return answer
     if not answer:
         return instant
+    if is_answer_only_instant_lines(answer, instant):
+        return answer
+    if _normalize_instant_prefix(answer).startswith(_normalize_instant_prefix(instant)):
+        return answer
     return f"{instant}\n\n{answer}"
 
 

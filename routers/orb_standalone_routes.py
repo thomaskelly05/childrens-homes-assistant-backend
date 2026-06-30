@@ -46,6 +46,10 @@ from services.orb_instant_first_lines_service import (
     should_skip_instant_lines,
     strip_duplicate_instant_prefix,
 )
+from services.orb_safeguarding_stream_fallback_service import (
+    apply_safeguarding_stream_fallback,
+    collapse_repeated_instant_blocks,
+)
 from services.orb_stream_status_service import (
     stream_status_payload,
     stream_status_sequence,
@@ -1951,9 +1955,17 @@ async def standalone_orb_conversation_stream(
                 )
                 context_used = merge_intelligence_into_context(context_used, intel_meta)
             if instant_lines_text:
-                answer = strip_duplicate_instant_prefix(answer, instant_lines_text)
-            if not (answer or "").strip() and instant_lines_text:
-                answer = ""
+                answer = collapse_repeated_instant_blocks(
+                    strip_duplicate_instant_prefix(answer, instant_lines_text),
+                    instant_lines_text,
+                )
+            answer, safeguarding_fallback_meta = apply_safeguarding_stream_fallback(
+                answer,
+                message=user_message,
+                instant_lines_text=instant_lines_text,
+            )
+            if safeguarding_fallback_meta.get("safeguarding_stream_fallback_applied"):
+                context_used["safeguarding_stream_fallback"] = safeguarding_fallback_meta
             sanitized_answer, provider_issue = sanitize_user_visible_provider_answer(
                 answer,
                 provider=model_routing.get("provider"),
@@ -1963,6 +1975,13 @@ async def standalone_orb_conversation_stream(
             )
             if provider_issue:
                 answer = sanitized_answer
+            answer, post_sanitize_fallback_meta = apply_safeguarding_stream_fallback(
+                answer,
+                message=user_message,
+                instant_lines_text=instant_lines_text,
+            )
+            if post_sanitize_fallback_meta.get("safeguarding_stream_fallback_applied"):
+                context_used["safeguarding_stream_fallback"] = post_sanitize_fallback_meta
             context_used = _attach_execution_policy_context(
                 context_used,
                 ctx=ctx,
