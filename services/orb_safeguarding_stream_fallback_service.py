@@ -35,6 +35,23 @@ C2_DISCLOSURE_RE = re.compile(
 
 _MIN_SUBSTANTIVE_SAFEGUARDING_LEN = 220
 
+_GUARDED_STREAM_PRELUDE_MARKERS: tuple[str, ...] = (
+    "this may involve immediate safety",
+    "prepare the full response",
+    "keep a clear record while i prepare",
+    "inform the manager/on-call, and keep a clear record",
+)
+
+_GENERIC_SUPPORT_CLOSER_RE = re.compile(
+    r"(?:"
+    r"before you use this:|"
+    r"i can also help turn your notes into|"
+    r"turn your notes into an incident record|"
+    r"turn your notes into a factual"
+    r")",
+    re.I,
+)
+
 _SUBSTANTIVE_SAFEGUARDING_MARKERS: tuple[str, ...] = (
     "manager",
     "on-call",
@@ -108,21 +125,78 @@ def _marker_hits(answer_lower: str) -> int:
     return sum(1 for marker in _SUBSTANTIVE_SAFEGUARDING_MARKERS if marker in answer_lower)
 
 
+def _strip_known_prelude_blocks(answer: str, *prelude_texts: str) -> str:
+    """Remove guarded/instant prelude blocks from a final answer body."""
+    result = (answer or "").strip()
+    for prelude in prelude_texts:
+        instant = (prelude or "").strip()
+        if not instant:
+            continue
+        result = strip_duplicate_instant_prefix(result, instant)
+        result = collapse_repeated_instant_blocks(result, instant)
+    return result.strip()
+
+
+def _strip_generic_support_closer_blocks(answer: str) -> str:
+    """Remove frontend-style support chip wording from a safeguarding answer body."""
+    text = (answer or "").strip()
+    if not text:
+        return text
+    parts = _GENERIC_SUPPORT_CLOSER_RE.split(text, maxsplit=1)
+    if len(parts) > 1:
+        return parts[0].rstrip(" -\n")
+    lines = [line for line in text.splitlines() if not _GENERIC_SUPPORT_CLOSER_RE.search(line)]
+    return "\n".join(lines).strip()
+
+
+def is_guarded_prelude_or_support_only_answer(
+    answer: str,
+    *,
+    message: str,
+    instant_lines_text: str = "",
+    stream_prelude_text: str = "",
+) -> bool:
+    """True when visible content is only guarded prelude and/or generic support wording."""
+    if not requires_safeguarding_stream_fallback(message):
+        return False
+    cleaned = _strip_generic_support_closer_blocks(
+        _strip_known_prelude_blocks(answer, instant_lines_text, stream_prelude_text)
+    )
+    if not cleaned:
+        return True
+    lower = cleaned.lower()
+    if len(cleaned) < 120:
+        return _marker_hits(lower) < 2
+    prelude_hits = sum(1 for marker in _GUARDED_STREAM_PRELUDE_MARKERS if marker in lower)
+    if prelude_hits >= 2 and _marker_hits(lower) < 3:
+        return True
+    if _GENERIC_SUPPORT_CLOSER_RE.search(answer or "") and _marker_hits(lower) < 3:
+        return True
+    return False
+
+
 def is_safeguarding_answer_too_thin(
     answer: str,
     *,
     message: str,
     instant_lines_text: str = "",
+    stream_prelude_text: str = "",
 ) -> bool:
     """True when a high-risk prompt must not ship with only prelude/thin provider text."""
     if not requires_safeguarding_stream_fallback(message):
         return False
 
-    cleaned = collapse_repeated_instant_blocks(
-        strip_duplicate_instant_prefix((answer or "").strip(), instant_lines_text),
-        instant_lines_text,
+    cleaned = _strip_generic_support_closer_blocks(
+        _strip_known_prelude_blocks((answer or "").strip(), instant_lines_text, stream_prelude_text)
     )
     if not cleaned:
+        return True
+    if is_guarded_prelude_or_support_only_answer(
+        answer,
+        message=message,
+        instant_lines_text=instant_lines_text,
+        stream_prelude_text=stream_prelude_text,
+    ):
         return True
     if is_answer_only_instant_lines(cleaned, instant_lines_text):
         return True
@@ -228,6 +302,7 @@ def apply_safeguarding_stream_fallback(
     *,
     message: str,
     instant_lines_text: str = "",
+    stream_prelude_text: str = "",
 ) -> tuple[str, dict[str, Any]]:
     """Replace thin/empty safeguarding stream answers with deterministic fallback text."""
     meta: dict[str, Any] = {
@@ -238,14 +313,14 @@ def apply_safeguarding_stream_fallback(
     if not meta["safeguarding_stream_fallback_checked"]:
         return answer, meta
 
-    cleaned = collapse_repeated_instant_blocks(
-        strip_duplicate_instant_prefix((answer or "").strip(), instant_lines_text),
-        instant_lines_text,
+    cleaned = _strip_generic_support_closer_blocks(
+        _strip_known_prelude_blocks((answer or "").strip(), instant_lines_text, stream_prelude_text)
     )
     if not is_safeguarding_answer_too_thin(
         cleaned,
         message=message,
         instant_lines_text=instant_lines_text,
+        stream_prelude_text=stream_prelude_text,
     ):
         return cleaned or answer, meta
 
@@ -261,11 +336,56 @@ def apply_safeguarding_stream_fallback(
     return fallback, meta
 
 
+def persist_safeguarding_stream_final_answer(
+    answer: str,
+    *,
+    message: str,
+    instant_lines_text: str = "",
+    stream_prelude_text: str = "",
+) -> tuple[str, dict[str, Any]]:
+    """Final stream persistence guard — never ship guarded prelude/support-only as final answer."""
+    if not requires_safeguarding_stream_fallback(message):
+        return answer, {
+            "safeguarding_stream_final_persist_checked": False,
+            "safeguarding_stream_final_persist_applied": False,
+        }
+
+    body = _strip_generic_support_closer_blocks(
+        _strip_known_prelude_blocks((answer or "").strip(), instant_lines_text, stream_prelude_text)
+    )
+    fallback_answer, fallback_meta = apply_safeguarding_stream_fallback(
+        body,
+        message=message,
+        instant_lines_text=instant_lines_text,
+        stream_prelude_text=stream_prelude_text,
+    )
+    meta = {
+        "safeguarding_stream_final_persist_checked": True,
+        "safeguarding_stream_final_persist_applied": bool(
+            fallback_meta.get("safeguarding_stream_fallback_applied")
+        ),
+        "safeguarding_stream_final_persist_reason": (
+            "guarded_prelude_or_support_only"
+            if is_guarded_prelude_or_support_only_answer(
+                answer,
+                message=message,
+                instant_lines_text=instant_lines_text,
+                stream_prelude_text=stream_prelude_text,
+            )
+            else None
+        ),
+    }
+    meta.update(fallback_meta)
+    return fallback_answer, meta
+
+
 __all__ = [
     "apply_safeguarding_stream_fallback",
     "build_safeguarding_stream_fallback",
     "collapse_repeated_instant_blocks",
     "detect_safeguarding_stream_fallback_kind",
+    "is_guarded_prelude_or_support_only_answer",
     "is_safeguarding_answer_too_thin",
+    "persist_safeguarding_stream_final_answer",
     "requires_safeguarding_stream_fallback",
 ]

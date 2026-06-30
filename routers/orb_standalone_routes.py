@@ -49,6 +49,7 @@ from services.orb_instant_first_lines_service import (
 from services.orb_safeguarding_stream_fallback_service import (
     apply_safeguarding_stream_fallback,
     collapse_repeated_instant_blocks,
+    persist_safeguarding_stream_final_answer,
 )
 from services.orb_stream_status_service import (
     stream_status_payload,
@@ -1595,6 +1596,7 @@ async def standalone_orb_conversation_stream(
         )
         instant_lines_emitted = False
         instant_lines_text = ""
+        stream_prelude_text = ""
         if not should_skip_instant_lines(
             expert_depth=quick_depth,
             guarded_stream_delivery=False,
@@ -1692,21 +1694,31 @@ async def standalone_orb_conversation_stream(
                 route="/orb/standalone/conversation/stream",
                 source_surface="orb_standalone",
             )
-            instant_lines_text = instant_result.text
-            if instant_lines_text:
+            skip_guarded_prelude_merge = should_skip_instant_lines(
+                expert_depth=expert_depth,
+                guarded_stream_delivery=True,
+                category_id=instant_result.category_id,
+                message=user_message,
+            )
+            prelude_text = instant_result.text
+            if prelude_text:
                 instant_lines_emitted = True
-                answer_parts.append(f"{instant_lines_text}\n\n")
                 if first_token_ms is None:
                     first_token_ms = int((time.perf_counter() - request_started) * 1000)
                     timing.mark("first_token")
                 yield _sse_event(
                     "prelude",
                     {
-                        "text": instant_lines_text,
+                        "text": prelude_text,
                         "kind": "instant_line",
                         "category": instant_result.category_id,
                     },
                 )
+                if skip_guarded_prelude_merge:
+                    stream_prelude_text = prelude_text
+                else:
+                    instant_lines_text = prelude_text
+                    answer_parts.append(f"{instant_lines_text}\n\n")
 
         if fast_opening and not guarded_stream_delivery and not instant_lines_emitted:
             fast_opening_emitted = True
@@ -1963,6 +1975,7 @@ async def standalone_orb_conversation_stream(
                 answer,
                 message=user_message,
                 instant_lines_text=instant_lines_text,
+                stream_prelude_text=stream_prelude_text,
             )
             if safeguarding_fallback_meta.get("safeguarding_stream_fallback_applied"):
                 context_used["safeguarding_stream_fallback"] = safeguarding_fallback_meta
@@ -1975,13 +1988,16 @@ async def standalone_orb_conversation_stream(
             )
             if provider_issue:
                 answer = sanitized_answer
-            answer, post_sanitize_fallback_meta = apply_safeguarding_stream_fallback(
+            answer, persist_meta = persist_safeguarding_stream_final_answer(
                 answer,
                 message=user_message,
                 instant_lines_text=instant_lines_text,
+                stream_prelude_text=stream_prelude_text,
             )
-            if post_sanitize_fallback_meta.get("safeguarding_stream_fallback_applied"):
-                context_used["safeguarding_stream_fallback"] = post_sanitize_fallback_meta
+            if persist_meta.get("safeguarding_stream_fallback_applied") or persist_meta.get(
+                "safeguarding_stream_final_persist_applied"
+            ):
+                context_used["safeguarding_stream_fallback"] = persist_meta
             context_used = _attach_execution_policy_context(
                 context_used,
                 ctx=ctx,
