@@ -19,6 +19,14 @@ RECORDING_SECTION_DRAFT = "Draft record"
 RECORDING_SECTION_SIGNOFF = "What to add before sign-off"
 RECORDING_SECTION_SAFER = "Why this wording is safer"
 
+_CHILD_VOICE_PLACEHOLDER = "[Add exact words if known.]"
+_OUTCOME_PLACEHOLDER = "[Add outcome or follow-up.]"
+
+_MECHANICAL_YP_SENTENCE_CHAIN_RE = re.compile(
+    r"(?:^|\.\s+)\[Young Person\][^.]+\.\s+\[Young Person\][^.]+\.\s+\[Young Person\]",
+    re.I | re.M,
+)
+
 _CORRUPTED_PLACEHOLDER_RE = re.compile(r"\[\[NAME_\d+\]\]|\[NAME_\d+\]", re.I)
 
 _DAILY_RECORD_WITH_FACTS_RE = re.compile(
@@ -434,26 +442,87 @@ def _section_block(title: str, body: str) -> str:
     return f"## {title}\n\n{body.strip()}"
 
 
-def build_daily_record_contract_answer(prompt: str) -> str:
-    facts = extract_recording_prompt_facts(prompt)
-    narrative_parts: list[str] = []
+def _format_action_list(actions: list[str]) -> str:
+    if not actions:
+        return ""
+    if len(actions) == 1:
+        return actions[0]
+    return ", ".join(actions[:-1]) + f" and {actions[-1]}"
 
+
+def _compose_daily_narrative(facts: dict[str, Any]) -> list[str]:
+    sentences: list[str] = []
+    opening: str | None = None
     if facts.get("after_contact"):
-        narrative_parts.append(
-            "Following family contact, [Young Person] appeared upset."
-        )
+        opening = "Following family contact, [Young Person] appeared upset"
     if facts.get("declined_meal"):
-        narrative_parts.append(
-            "[Young Person] was not ready to join the evening meal at first."
-        )
+        if opening:
+            opening += " and was not ready to join the evening meal at first"
+        else:
+            opening = "[Young Person] was not ready to join the evening meal at first"
+    if opening:
+        sentences.append(f"{opening}.")
+
     if facts.get("staff_gave_space"):
-        narrative_parts.append("Staff gave [Young Person] space.")
+        sentences.append("Staff gave [Young Person] space.")
     if facts.get("calm_check_in"):
-        narrative_parts.append("Staff checked in calmly.")
+        sentences.append("Staff checked in calmly.")
     if facts.get("supported_to_talk"):
-        narrative_parts.append(
+        sentences.append(
             "Later, staff supported [Young Person] to talk about what had happened."
         )
+    return sentences
+
+
+def _compose_incident_narrative(facts: dict[str, Any]) -> list[str]:
+    sentences: list[str] = []
+    yp_actions: list[str] = []
+    if facts.get("shouted"):
+        yp_actions.append("shouted at staff")
+    if facts.get("chair_pushed"):
+        yp_actions.append("pushed a chair over")
+    if facts.get("went_to_bedroom"):
+        yp_actions.append("went to their bedroom")
+
+    if yp_actions:
+        action_text = _format_action_list(yp_actions)
+        if facts.get("screen_time_boundary"):
+            sentences.append(
+                "After being told they could not have extra screen time, "
+                f"[Young Person] {action_text}."
+            )
+        else:
+            sentences.append(f"[Young Person] {action_text}.")
+    elif facts.get("screen_time_boundary"):
+        sentences.append(
+            "After a screen-time boundary was set, [Young Person] became dysregulated."
+        )
+
+    if facts.get("staff_gave_space"):
+        sentences.append("Staff gave [Young Person] space.")
+    if facts.get("safety_check"):
+        sentences.append("Staff checked they were safe.")
+    if facts.get("restorative_conversation"):
+        sentences.append(
+            "Later, staff offered [Young Person] the opportunity to talk about what had happened."
+        )
+    return sentences
+
+
+def answer_has_mechanical_yp_sentence_chain(answer: str) -> bool:
+    """True when three or more consecutive sentences each start with [Young Person]."""
+    draft_match = re.search(
+        r"## Draft record\s*\n+(.*?)(?=\n## What to add before sign-off)",
+        str(answer or ""),
+        re.S | re.I,
+    )
+    draft = draft_match.group(1) if draft_match else str(answer or "")
+    return bool(_MECHANICAL_YP_SENTENCE_CHAIN_RE.search(draft))
+
+
+def build_daily_record_contract_answer(prompt: str) -> str:
+    facts = extract_recording_prompt_facts(prompt)
+    narrative_parts = _compose_daily_narrative(facts)
 
     if not narrative_parts:
         narrative_parts.append(
@@ -464,8 +533,8 @@ def build_daily_record_contract_answer(prompt: str) -> str:
         "**Daily record**\n\n"
         + " ".join(narrative_parts)
         + "\n\n"
-        "**[Young Person]'s words (if known):** [Add the young person's exact words here if they shared them.]\n\n"
-        "**Outcome / follow-up:** [Add how the evening ended, any handover, and whether further support is needed.]"
+        f"**[Young Person]'s words (if known):** {_CHILD_VOICE_PLACEHOLDER}\n\n"
+        f"**Outcome / follow-up:** {_OUTCOME_PLACEHOLDER}"
     )
 
     signoff = (
@@ -493,26 +562,7 @@ def build_daily_record_contract_answer(prompt: str) -> str:
 
 def build_incident_reflection_contract_answer(prompt: str) -> str:
     facts = extract_recording_prompt_facts(prompt)
-    sequence: list[str] = []
-
-    if facts.get("screen_time_boundary"):
-        sequence.append(
-            "After being told they could not have extra screen time,"
-        )
-    if facts.get("shouted"):
-        sequence.append("[Young Person] shouted at staff.")
-    if facts.get("chair_pushed"):
-        sequence.append("[Young Person] pushed a chair over.")
-    if facts.get("went_to_bedroom"):
-        sequence.append("[Young Person] went to their bedroom.")
-    if facts.get("staff_gave_space"):
-        sequence.append("Staff gave [Young Person] space.")
-    if facts.get("safety_check"):
-        sequence.append("Staff checked they were safe.")
-    if facts.get("restorative_conversation"):
-        sequence.append(
-            "Later, staff offered [Young Person] the opportunity to talk about what had happened."
-        )
+    sequence = _compose_incident_narrative(facts)
 
     if not sequence:
         sequence.append("[Add the observable sequence using only the facts you provided.]")
@@ -521,8 +571,8 @@ def build_incident_reflection_contract_answer(prompt: str) -> str:
         "**Incident reflection**\n\n"
         + " ".join(sequence)
         + "\n\n"
-        "**[Young Person]'s words (if known):** [Add the young person's exact words here if they shared them.]\n\n"
-        "**Outcome / follow-up:** [Add how the young person presented afterwards and any manager review if needed.]"
+        f"**[Young Person]'s words (if known):** {_CHILD_VOICE_PLACEHOLDER}\n\n"
+        f"**Outcome / follow-up:** {_OUTCOME_PLACEHOLDER}"
     )
 
     signoff = (

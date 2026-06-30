@@ -7,6 +7,7 @@ import {
   isDailyRecordRequest,
   isStructuredDailyRecordDraft
 } from './recording/orb-adult-identity-language.ts'
+import { isQ1RecordingContractAnswer } from './orb-residential-chat-response-guide.ts'
 
 const DAILY_RE = /\b(daily record|key[- ]?work|shift note|log|handover)\b/i
 const STRUCTURED_DAILY_DRAFT_RE =
@@ -15,6 +16,7 @@ const ACTIVITY_PROMPT_RE = /\b(activity record|football|outing|trip|club|swimmin
 const BEDTIME_PROMPT_RE = /\b(bedtime routine|bedtime|settle at night|sleep routine)\b/i
 
 export const DAILY_RECORD_TEMPLATE_ID = 'daily_record'
+export const INCIDENT_REFLECTION_TEMPLATE_ID = 'incident'
 export const ROUTINE_DAILY_UNRELATED_TEMPLATE_IDS = new Set([
   'activity_record',
   'bedtime_routine_record',
@@ -51,7 +53,29 @@ function isRoutineDailyRecordDraftContext(content: string): boolean {
   return DAILY_RE.test(content) && STRUCTURED_DAILY_DRAFT_RE.test(content)
 }
 
+export function isQ1IncidentRecordingContractAnswer(content: string, messageHint?: string): boolean {
+  if (!isQ1RecordingContractAnswer(content)) return false
+  const hint = String(messageHint || '')
+  const body = String(content || '')
+  if (/\*\*incident reflection\*\*/i.test(body)) return true
+  if (/\b(incident reflection|incident record)\b/i.test(hint)) return true
+  if (/\b(incident reflection|incident record)\b/i.test(body)) return true
+  return /\b(shouted|pushed a chair|screen time|restorative conversation)\b/i.test(
+    `${hint}\n${body}`
+  )
+}
+
+export function isQ1DailyRecordingContractAnswer(content: string, messageHint?: string): boolean {
+  if (!isQ1RecordingContractAnswer(content)) return false
+  if (isQ1IncidentRecordingContractAnswer(content, messageHint)) return false
+  const hint = String(messageHint || '')
+  const body = String(content || '')
+  return /\*\*daily record\*\*/i.test(body) || /\bdaily record\b/i.test(hint)
+}
+
 export function isDailyRecordHandoffChipContext(ctx: OrbChatChipContext): boolean {
+  if (isQ1IncidentRecordingContractAnswer(ctx.content, ctx.messageHint)) return false
+  if (isQ1DailyRecordingContractAnswer(ctx.content, ctx.messageHint)) return true
   if (hasDailyRecordChatMetadata(ctx)) return true
   const content = String(ctx.content || '')
   const hint = String(ctx.messageHint || '')
@@ -80,6 +104,15 @@ export function dailyRecordTemplateChip(): OrbSuggestedReplyItem {
   }
 }
 
+export function incidentReflectionTemplateChip(): OrbSuggestedReplyItem {
+  return {
+    action: 'use_template_in_write',
+    label: 'Open in ORB Write using Incident Reflection template',
+    prefill: 'Open this incident reflection draft in ORB Write:\n\n',
+    template_id: INCIDENT_REFLECTION_TEMPLATE_ID
+  }
+}
+
 export function dailyRecordSaveChip(): OrbSuggestedReplyItem {
   return {
     action: 'save_to_records',
@@ -89,6 +122,10 @@ export function dailyRecordSaveChip(): OrbSuggestedReplyItem {
 
 export function buildDailyRecordHandoffChips(): OrbSuggestedReplyItem[] {
   return [dailyRecordTemplateChip(), dailyRecordSaveChip()]
+}
+
+export function buildIncidentReflectionHandoffChips(): OrbSuggestedReplyItem[] {
+  return [incidentReflectionTemplateChip(), dailyRecordSaveChip()]
 }
 
 export function suggestionKey(item: OrbSuggestedReplyItem): string {
@@ -123,8 +160,24 @@ export function filterVisibleChatChips(
     return handoff.slice(0, maxVisible)
   }
 
+  if (isQ1IncidentRecordingContractAnswer(ctx.content, ctx.messageHint)) {
+    const handoff = buildIncidentReflectionHandoffChips()
+    traceVisibleChatChips(
+      ctx,
+      handoff.map((chip) => ({
+        action: chip.action,
+        label: chip.label,
+        template_id: chip.template_id,
+        source: 'incident_reflection_handoff_override'
+      }))
+    )
+    return handoff.slice(0, maxVisible)
+  }
+
   const combined = combinedChipText(ctx)
-  const suppressRoutineTemplates = DAILY_RE.test(combined) || isDailyRecordRequest(ctx.messageHint || '')
+  const suppressRoutineTemplates =
+    (DAILY_RE.test(combined) || isDailyRecordRequest(ctx.messageHint || '')) &&
+    !isQ1IncidentRecordingContractAnswer(ctx.content, ctx.messageHint)
   const filtered: OrbSuggestedReplyItem[] = []
   const seen = new Set<string>()
 
@@ -182,6 +235,9 @@ export function mergeFollowUpsWithTemplateSuggestions(
 ): OrbSuggestedReplyItem[] {
   if (ctx && isDailyRecordHandoffChipContext(ctx)) {
     return filterVisibleChatChips(buildDailyRecordHandoffChips(), ctx, maxVisible)
+  }
+  if (ctx && isQ1IncidentRecordingContractAnswer(ctx.content, ctx.messageHint)) {
+    return filterVisibleChatChips(buildIncidentReflectionHandoffChips(), ctx, maxVisible)
   }
 
   const merged: OrbSuggestedReplyItem[] = []
