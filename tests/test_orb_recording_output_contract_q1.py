@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import re
-
 import pytest
 
 from services.orb_execution_policy_service import orb_execution_policy_service
@@ -15,7 +13,10 @@ from services.orb_recording_output_contract_service import (
     build_incident_reflection_contract_answer,
     build_missing_return_contract_answer,
     find_pathway_drift_issues,
+    has_concrete_recording_facts,
     has_recording_contract_sections,
+    is_recording_contract_prompt,
+    recording_contract_blocked_by_safeguarding,
     try_build_recording_contract_answer,
     validate_recording_contract_answer,
 )
@@ -47,18 +48,122 @@ REG_D_PROMPT = (
     "how should this be recorded?"
 )
 
+SELF_HARM_WRITE_PROMPT = (
+    "A young person said they wanted to die and tried to harm themselves using a ligature. "
+    "Staff removed the ligature, stayed with them, called the manager and followed the home's "
+    "safeguarding procedure. Help me write an incident reflection with escalation."
+)
+
+DISCLOSURE_WRITE_PROMPT = (
+    "A young person disclosed that an adult hurt them during contact. "
+    "Help me write a safe incident reflection and what staff should do next."
+)
+
+ACTIVE_MISSING_WRITE_PROMPT = (
+    "A young person has left the home and their whereabouts are unknown. "
+    "Help me write an incident record."
+)
+
+
+def test_reg_a_requires_child_voice_and_follow_up_prompts():
+    answer = build_daily_record_contract_answer(REG_A_PROMPT)
+    lower = answer.lower()
+    assert "exact words" in lower
+    assert "outcome" in lower
+    assert "follow-up" in lower
+    issues = find_pathway_drift_issues(answer, REG_A_PROMPT)
+    assert not issues
+    for forbidden in ("missing from care", "lado", "regulation 40"):
+        assert forbidden not in lower
+
+
+def test_reg_b_requires_full_incident_sequence_without_pathway_drift():
+    answer = build_incident_reflection_contract_answer(REG_B_PROMPT)
+    lower = answer.lower()
+    for term in ("screen", "shouted", "chair", "bedroom", "safe", "restorative"):
+        assert term in lower
+    assert "[[NAME_" not in answer
+    assert "[NAME_" not in answer
+    issues = find_pathway_drift_issues(answer, REG_B_PROMPT)
+    assert not issues
+    for forbidden in ("missing from care", "lado", "regulation 40"):
+        assert forbidden not in lower or "only relevant" in lower
+
+
+def test_reg_c_acknowledges_drift_and_lists_removed_pathways():
+    answer = build_context_drift_correction_answer(REG_C_PROMPT)
+    lower = answer.lower()
+    assert "incorrectly introduced" in lower
+    assert "did not leave the home" in lower
+    assert "remove from guidance" in lower
+    for removed in ("police", "return home interview", "missing-from-care", "exploitation"):
+        assert removed in lower
+    issues = find_pathway_drift_issues(answer, REG_C_PROMPT)
+    assert not issues
+
+
+def test_reg_d_requires_welcome_welfare_and_safeguarding_boundaries():
+    answer = build_missing_return_contract_answer(REG_D_PROMPT)
+    lower = answer.lower()
+    for term in (
+        "welcome",
+        "welfare",
+        "injuries",
+        "distress",
+        "intoxication",
+        "hunger",
+        "fatigue",
+        "shame",
+        "blame",
+        "manager",
+        "social worker",
+        "111",
+        "999",
+        "return home interview",
+        "missing",
+        "risk",
+        "placement plan",
+        "lado",
+    ):
+        assert term in lower, f"missing required term: {term}"
+
+
+def test_incident_safer_wording_omits_screen_time_when_not_in_facts():
+    non_screen = (
+        "A young person shouted at staff and went to their bedroom. "
+        "Staff checked they were safe. Help me write an incident reflection."
+    )
+    answer = build_incident_reflection_contract_answer(non_screen)
+    assert "screen-time boundary" not in answer.lower()
+    assert "boundary or trigger" in answer.lower()
+
+    screen_answer = build_incident_reflection_contract_answer(REG_B_PROMPT)
+    assert "screen-time boundary" in screen_answer.lower()
+
 
 @pytest.mark.parametrize(
     "prompt,builder,required_terms",
     [
-        (REG_A_PROMPT, build_daily_record_contract_answer, ("contact", "meal", "space", "calm")),
+        (
+            REG_A_PROMPT,
+            build_daily_record_contract_answer,
+            ("contact", "meal", "space", "calm", "exact words", "outcome"),
+        ),
         (
             REG_B_PROMPT,
             build_incident_reflection_contract_answer,
             ("screen", "shouted", "chair", "bedroom", "restorative"),
         ),
-        (REG_C_PROMPT, build_context_drift_correction_answer, ("incorrectly introduced", "did not leave the home")),
-        (REG_D_PROMPT, build_missing_return_contract_answer, ("welcome", "welfare", "manager")),
+        (
+            REG_C_PROMPT,
+            build_context_drift_correction_answer,
+            ("incorrectly introduced", "did not leave the home", "remove from guidance"),
+        ),
+        (
+            REG_D_PROMPT,
+            build_missing_return_contract_answer,
+            ("welcome", "welfare", "manager", "111", "999"),
+        ),
     ],
 )
 def test_recording_contract_three_section_shape(prompt, builder, required_terms):
@@ -71,29 +176,86 @@ def test_recording_contract_three_section_shape(prompt, builder, required_terms)
         assert term in lower
 
 
-def test_reg_b_does_not_introduce_missing_pathway():
-    answer = build_incident_reflection_contract_answer(REG_B_PROMPT)
-    issues = find_pathway_drift_issues(answer, REG_B_PROMPT)
-    assert not any("missing" in i for i in issues)
-    assert "lado" not in answer.lower() or "only relevant" in answer.lower()
-
-
-def test_reg_c_acknowledges_drift_and_avoids_unsupported_pathway():
-    answer = build_context_drift_correction_answer(REG_C_PROMPT)
-    issues = find_pathway_drift_issues(answer, REG_C_PROMPT)
-    assert "incorrectly introduced" in answer.lower()
-    assert not issues
+def test_concrete_facts_required_for_ordinary_incident_prompts():
+    vague = (
+        "Help me write an incident reflection for something that happened on shift today "
+        "with lots of detail about the young person and staff interactions."
+    )
+    assert not has_concrete_recording_facts(vague)
+    assert not is_recording_contract_prompt(vague)
+    assert try_build_recording_contract_answer(vague) is None
 
 
 def test_placeholder_tokens_sanitised():
     raw = "Staff spoke with [[NAME_11]] about the incident. [NAME_2] checked in."
-    cleaned, issues = sanitize_placeholders_in_answer(raw)
+    cleaned, _issues = sanitize_placeholders_in_answer(raw)
     assert "[[NAME_" not in cleaned
     assert "[NAME_" not in cleaned
     assert "[Young Person]" in cleaned
 
 
-def test_deterministic_execution_policy_uses_recording_contract():
+@pytest.mark.parametrize(
+    "prompt",
+    [SELF_HARM_WRITE_PROMPT, DISCLOSURE_WRITE_PROMPT, ACTIVE_MISSING_WRITE_PROMPT],
+)
+def test_safeguarding_write_prompts_block_recording_contract(prompt: str):
+    policy = orb_execution_policy_service.resolve(prompt)
+    assert recording_contract_blocked_by_safeguarding(
+        prompt,
+        execution_policy=policy.execution_policy,
+        contract_family=policy.selected_contract,
+    )
+    assert not is_recording_contract_prompt(
+        prompt,
+        execution_policy=policy.execution_policy,
+        contract_family=policy.selected_contract,
+    )
+    assert try_build_recording_contract_answer(
+        prompt,
+        execution_policy=policy.execution_policy,
+        contract_family=policy.selected_contract,
+    ) is None
+
+
+def test_self_harm_write_prompt_does_not_use_deterministic_recording_template():
+    policy = orb_execution_policy_service.resolve(SELF_HARM_WRITE_PROMPT)
+    assert recording_contract_blocked_by_safeguarding(
+        SELF_HARM_WRITE_PROMPT,
+        execution_policy=policy.execution_policy,
+        contract_family=policy.selected_contract,
+    )
+    det = orb_execution_policy_service.try_deterministic_answer(
+        SELF_HARM_WRITE_PROMPT,
+        policy=policy,
+    )
+    assert det is None
+
+
+def test_disclosure_write_prompt_does_not_bypass_safeguarding_route():
+    policy = orb_execution_policy_service.resolve(DISCLOSURE_WRITE_PROMPT)
+    det = orb_execution_policy_service.try_deterministic_answer(
+        DISCLOSURE_WRITE_PROMPT,
+        policy=policy,
+    )
+    assert det is None
+    assert recording_contract_blocked_by_safeguarding(
+        DISCLOSURE_WRITE_PROMPT,
+        execution_policy=policy.execution_policy,
+        contract_family=policy.selected_contract,
+    )
+
+
+def test_active_missing_write_prompt_uses_mandatory_safeguarding_not_recording_contract():
+    policy = orb_execution_policy_service.resolve(ACTIVE_MISSING_WRITE_PROMPT)
+    assert policy.execution_policy == "openai_mandatory_safeguarding"
+    det = orb_execution_policy_service.try_deterministic_answer(
+        ACTIVE_MISSING_WRITE_PROMPT,
+        policy=policy,
+    )
+    assert det is None
+
+
+def test_deterministic_execution_policy_uses_recording_contract_for_reg_b():
     result = orb_execution_policy_service.try_deterministic_answer(REG_B_PROMPT)
     assert result is not None
     assert result.get("no_llm") is True
@@ -110,6 +272,17 @@ def test_apply_repairs_rebuilds_generic_incident_with_facts():
     assert meta.get("repair_reason") == "recording_output_contract"
     assert "chair" in repaired.lower()
     assert "screen" in repaired.lower()
+
+
+def test_apply_repairs_do_not_rebuild_safeguarding_write_prompts():
+    generic = "Paste what happened and I can help you draft a record."
+    repaired, meta = apply_deterministic_repairs(
+        generic,
+        contract_family="incident_record",
+        message=SELF_HARM_WRITE_PROMPT,
+    )
+    assert meta.get("repair_reason") != "recording_output_contract"
+    assert not has_recording_contract_sections(repaired)
 
 
 def test_quality_gate_regression_a_d_pass_mock_mode():

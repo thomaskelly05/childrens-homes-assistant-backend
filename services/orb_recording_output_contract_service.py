@@ -66,6 +66,35 @@ _CONTEXTUAL_EXPLOITATION_RE = re.compile(
     re.I,
 )
 
+_MANDATORY_SAFEGUARDING_RISK_RE = re.compile(
+    r"\b(?:"
+    r"wanted to die|self[- ]?harm|suicidal|suicide|ligature|overdose|"
+    r"serious injury|fresh cuts?|disclosed|disclosure|allegation|"
+    r"hurt them|sexual abuse|abused|exploitation|county lines|"
+    r"immediate danger|emergency concern|weapon|assault|"
+    r"whereabouts are unknown|left the home|gone missing|"
+    r"missing from (?:the )?home right now|is missing from care"
+    r")\b",
+    re.I,
+)
+
+_ORDINARY_DAILY_FACT_KEYS: tuple[str, ...] = (
+    "after_contact",
+    "declined_meal",
+    "staff_gave_space",
+    "calm_check_in",
+    "supported_to_talk",
+)
+_ORDINARY_INCIDENT_FACT_KEYS: tuple[str, ...] = (
+    "screen_time_boundary",
+    "shouted",
+    "chair_pushed",
+    "went_to_bedroom",
+    "staff_gave_space",
+    "safety_check",
+    "restorative_conversation",
+)
+
 
 def extract_recording_prompt_facts(prompt: str) -> dict[str, Any]:
     """Parse concrete facts from a record-writing prompt — does not invent."""
@@ -93,6 +122,51 @@ def extract_recording_prompt_facts(prompt: str) -> dict[str, Any]:
     return facts
 
 
+def recording_contract_blocked_by_safeguarding(
+    prompt: str,
+    *,
+    execution_policy: str | None = None,
+    contract_family: str | None = None,
+) -> bool:
+    """True when mandatory safeguarding must win over the deterministic recording contract."""
+    if execution_policy == "openai_mandatory_safeguarding":
+        return True
+
+    if contract_family:
+        from services.orb_execution_policy_service import MANDATORY_SAFEGUARDING_FAMILIES
+
+        if contract_family in MANDATORY_SAFEGUARDING_FAMILIES:
+            return True
+
+    text = str(prompt or "").strip()
+    if not text:
+        return False
+
+    lower = text.lower()
+    if _MANDATORY_SAFEGUARDING_RISK_RE.search(lower):
+        return True
+
+    if re.search(
+        r"\b(?:left the home|whereabouts are unknown|gone missing|is missing)\b",
+        lower,
+    ) and re.search(r"\b(?:incident\s+record|incident\s+reflection)\b", lower):
+        return True
+
+    return False
+
+
+def has_concrete_recording_facts(prompt: str) -> bool:
+    """True when the prompt supplies ordinary, recordable facts for Q1 contract builders."""
+    facts = extract_recording_prompt_facts(prompt)
+    if facts.get("context_drift_audit") or facts.get("missing_return"):
+        return True
+    if sum(1 for key in _ORDINARY_DAILY_FACT_KEYS if facts.get(key)) >= 2:
+        return True
+    if sum(1 for key in _ORDINARY_INCIDENT_FACT_KEYS if facts.get(key)) >= 2:
+        return True
+    return False
+
+
 def prompt_supports_missing_pathway(prompt: str) -> bool:
     """True when facts or explicit request support missing-from-care pathway language."""
     text = str(prompt or "")
@@ -111,19 +185,36 @@ def prompt_supports_missing_pathway(prompt: str) -> bool:
     return False
 
 
-def is_recording_contract_prompt(prompt: str) -> bool:
+def is_recording_contract_prompt(
+    prompt: str,
+    *,
+    execution_policy: str | None = None,
+    contract_family: str | None = None,
+) -> bool:
     text = str(prompt or "").strip()
     if not text:
         return False
+    if recording_contract_blocked_by_safeguarding(
+        text,
+        execution_policy=execution_policy,
+        contract_family=contract_family,
+    ):
+        return False
     if _CONTEXT_DRIFT_AUDIT_RE.search(text):
         return True
-    if _MISSING_RETURN_RE.search(text) and re.search(r"what\s+should\s+staff|how\s+should\s+this\s+be\s+recorded", text, re.I):
+    if _MISSING_RETURN_RE.search(text) and re.search(
+        r"what\s+should\s+staff|how\s+should\s+this\s+be\s+recorded", text, re.I
+    ):
         return True
+    if not has_concrete_recording_facts(text):
+        return False
     if _DAILY_RECORD_WITH_FACTS_RE.search(text) or _INCIDENT_REFLECTION_WITH_FACTS_RE.search(text):
         return True
-    if re.search(r"daily\s+record", text, re.I) and len(text.split()) > 15:
+    if re.search(r"daily\s+record", text, re.I) and extract_recording_prompt_facts(text).get(
+        "after_contact"
+    ):
         return True
-    if re.search(r"incident\s+reflection", text, re.I) and len(text.split()) > 15:
+    if re.search(r"incident\s+reflection", text, re.I) and has_concrete_recording_facts(text):
         return True
     return False
 
@@ -334,11 +425,18 @@ def build_incident_reflection_contract_answer(prompt: str) -> str:
         "- Manager review only if your home procedure requires it for this level of incident"
     )
 
-    safer = (
-        "This reflection records the screen-time boundary, observable behaviour, adult response and "
-        "restorative follow-up without blame, punitive labels, or invented detail about what "
-        "[Young Person] said or felt."
-    )
+    if facts.get("screen_time_boundary"):
+        safer = (
+            "This reflection records the screen-time boundary, observable behaviour, adult response and "
+            "restorative follow-up without blame, punitive labels, or invented detail about what "
+            "[Young Person] said or felt."
+        )
+    else:
+        safer = (
+            "This reflection records the boundary or trigger described, observable behaviour, adult response "
+            "and restorative follow-up without blame, punitive labels, or invented detail about what "
+            "[Young Person] said or felt."
+        )
 
     return "\n\n".join(
         [
@@ -426,10 +524,29 @@ def build_missing_return_contract_answer(prompt: str) -> str:
     )
 
 
-def try_build_recording_contract_answer(prompt: str) -> str | None:
+def try_build_recording_contract_answer(
+    prompt: str,
+    *,
+    execution_policy: str | None = None,
+    contract_family: str | None = None,
+) -> str | None:
     """Build a three-section recording contract answer when the prompt qualifies."""
     text = str(prompt or "").strip()
     if not text:
+        return None
+
+    if recording_contract_blocked_by_safeguarding(
+        text,
+        execution_policy=execution_policy,
+        contract_family=contract_family,
+    ):
+        return None
+
+    if not is_recording_contract_prompt(
+        text,
+        execution_policy=execution_policy,
+        contract_family=contract_family,
+    ):
         return None
 
     if _CONTEXT_DRIFT_AUDIT_RE.search(text):
@@ -441,7 +558,7 @@ def try_build_recording_contract_answer(prompt: str) -> str | None:
         return build_missing_return_contract_answer(text)
 
     if _INCIDENT_REFLECTION_WITH_FACTS_RE.search(text) or (
-        re.search(r"incident\s+reflection", text, re.I) and len(text.split()) > 20
+        re.search(r"incident\s+reflection", text, re.I) and has_concrete_recording_facts(text)
     ):
         return build_incident_reflection_contract_answer(text)
 
@@ -451,12 +568,9 @@ def try_build_recording_contract_answer(prompt: str) -> str | None:
     ):
         return build_daily_record_contract_answer(text)
 
-    if is_recording_contract_prompt(text):
-        if re.search(r"incident", text, re.I):
-            return build_incident_reflection_contract_answer(text)
-        return build_daily_record_contract_answer(text)
-
-    return None
+    if re.search(r"incident", text, re.I):
+        return build_incident_reflection_contract_answer(text)
+    return build_daily_record_contract_answer(text)
 
 
 def validate_recording_contract_answer(
@@ -527,6 +641,10 @@ orb_recording_output_contract_service = type(
         "RECORDING_SECTION_SAFER": RECORDING_SECTION_SAFER,
         "extract_recording_prompt_facts": staticmethod(extract_recording_prompt_facts),
         "prompt_supports_missing_pathway": staticmethod(prompt_supports_missing_pathway),
+        "recording_contract_blocked_by_safeguarding": staticmethod(
+            recording_contract_blocked_by_safeguarding
+        ),
+        "has_concrete_recording_facts": staticmethod(has_concrete_recording_facts),
         "is_recording_contract_prompt": staticmethod(is_recording_contract_prompt),
         "has_recording_contract_sections": staticmethod(has_recording_contract_sections),
         "find_pathway_drift_issues": staticmethod(find_pathway_drift_issues),

@@ -147,13 +147,16 @@
             "manipulative"
           ],
           "requires_safeguarding_escalation": false,
-          "recording_contract": {
+            "recording_contract": {
             "kind": "daily_record",
             "required_terms": [
               "contact",
               "meal",
               "space",
               "calm",
+              "exact words",
+              "outcome",
+              "follow-up",
               "draft record",
               "what to add before sign-off",
               "why this wording is safer"
@@ -161,7 +164,9 @@
             "forbidden_terms": [
               "missing from care",
               "lado",
-              "regulation 40"
+              "regulation 40",
+              "will be inadequate",
+              "inspection-ready"
             ],
             "forbid_pathway_drift": true
           }
@@ -191,6 +196,7 @@
               "bedroom",
               "safe",
               "restorative",
+              "exact words",
               "draft record",
               "what to add before sign-off",
               "why this wording is safer"
@@ -198,7 +204,9 @@
             "forbidden_terms": [
               "missing from care",
               "lado",
-              "return home interview"
+              "return home interview",
+              "regulation 40",
+              "will be inadequate"
             ],
             "forbid_pathway_drift": true
           }
@@ -218,6 +226,7 @@
             "required_terms": [
               "incorrectly introduced",
               "did not leave the home",
+              "remove from guidance",
               "screen",
               "chair",
               "restorative",
@@ -226,7 +235,8 @@
             "forbidden_terms": [
               "return home interview",
               "notify police",
-              "missing procedure"
+              "missing procedure",
+              "exploitation"
             ],
             "must_acknowledge_drift": true,
             "forbid_pathway_drift": true
@@ -256,9 +266,22 @@
             "required_terms": [
               "welcome",
               "welfare",
+              "injuries",
+              "distress",
+              "intoxication",
+              "hunger",
+              "fatigue",
+              "shame",
+              "blame",
               "manager",
-              "record",
               "social worker",
+              "111",
+              "999",
+              "return home interview",
+              "missing",
+              "risk",
+              "placement plan",
+              "record",
               "draft record",
               "lado"
             ],
