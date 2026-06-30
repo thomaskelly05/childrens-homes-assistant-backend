@@ -1269,6 +1269,8 @@ def format_structured_daily_record_draft_for_markdown(text: str) -> str:
 
 def reshape_routine_daily_record_chat_answer(text: str, *, source_text: str = "") -> str:
     """Prefer structured daily record drafts over form templates or one-paragraph compression."""
+    if _has_q1_recording_contract_sections(text):
+        return str(text or "")
     if user_requested_blank_template(source_text) or not is_daily_record_request(source_text):
         return str(text or "")
     if has_safeguarding_cue(source_text):
@@ -1983,6 +1985,10 @@ def _has_q1_recording_contract_sections(text: str) -> bool:
 def sanitize_live_record_output(text: str, *, source_text: str = "") -> str:
     """Apply adult identity, terminology, proportionality and observation discipline to record output."""
     cleaned = str(text or "")
+    if _has_q1_recording_contract_sections(cleaned):
+        from services.orb_recording_output_contract_service import strip_legacy_recording_closers
+
+        return strip_legacy_recording_closers(replace_clunky_placeholders(cleaned, source_text=source_text))
     initials = extract_supplied_adult_initials(source_text)
 
     # 1. record-only stripping
@@ -2043,6 +2049,11 @@ def sanitize_live_record_output(text: str, *, source_text: str = "") -> str:
 
 def sanitize_visible_final_answer(text: str, *, source_text: str = "") -> str:
     """Final user-visible sanitization after repair, fallback, template and output paths."""
+    if _has_q1_recording_contract_sections(text):
+        from services.orb_recording_output_contract_service import strip_legacy_recording_closers
+
+        cleaned = strip_legacy_recording_closers(replace_clunky_placeholders(str(text or ""), source_text=source_text))
+        return re.sub(r"\n{3,}", "\n\n", cleaned).strip()
     cleaned = sanitize_residential_answer_polish(text, source_text=source_text)
     if is_record_generation_request(source_text):
         cleaned = sanitize_live_record_output(cleaned, source_text=source_text)

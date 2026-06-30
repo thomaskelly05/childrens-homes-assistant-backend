@@ -1595,6 +1595,7 @@ async def standalone_orb_conversation_stream(
             expert_depth=quick_depth,
             guarded_stream_delivery=False,
             category_id=instant_result.category_id,
+            message=user_message,
         ):
             instant_lines_text = instant_result.text
             if instant_lines_text:
@@ -1792,6 +1793,8 @@ async def standalone_orb_conversation_stream(
                     safety_scaffold=safety_scaffold,
                     retrieval_bundle=retrieval_bundle,
                     prompt_tier=prompt_tier,
+                    brain_convergence=ctx.get("brain_convergence"),
+                    execution_policy=ctx.get("execution_policy"),
                 ):
                     model_token_count += 1
                     if first_token_ms is None:

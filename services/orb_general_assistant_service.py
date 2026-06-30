@@ -196,6 +196,70 @@ class OrbGeneralAssistantService:
             "cognition_display_labels": ["ORB"],
         }
 
+    def _build_policy_deterministic_result(
+        self,
+        user_message: str,
+        *,
+        mode: str | None = None,
+        brain_convergence: dict[str, Any] | None = None,
+        execution_policy: dict[str, Any] | None = None,
+        started: float | None = None,
+    ) -> dict[str, Any] | None:
+        from services.orb_execution_policy_service import (
+            OrbExecutionPolicyDecision,
+            orb_execution_policy_service,
+        )
+
+        if execution_policy:
+            policy = OrbExecutionPolicyDecision(
+                **{
+                    k: v
+                    for k, v in execution_policy.items()
+                    if k in OrbExecutionPolicyDecision.__dataclass_fields__
+                }
+            )
+        else:
+            policy = orb_execution_policy_service.resolve(
+                user_message,
+                mode=mode,
+                brain_convergence=brain_convergence,
+            )
+        deterministic = orb_execution_policy_service.try_deterministic_answer(
+            user_message,
+            policy=policy,
+        )
+        if deterministic is None:
+            return None
+        started_at = started if started is not None else time.perf_counter()
+        elapsed_ms = int((time.perf_counter() - started_at) * 1000)
+        validation = deterministic.get("validation") or {}
+        telemetry = orb_execution_policy_service.build_execution_telemetry(
+            policy=policy,
+            openai_called=False,
+            embeddings_called=False,
+            scenario_bank_loaded=False,
+            prompt_chars=len(deterministic.get("answer") or ""),
+            total_ms=elapsed_ms,
+            final_answer_validation_passed=validation.get("passed"),
+        )
+        return {
+            "answer": _finalize_standalone_answer(
+                deterministic["answer"], message=user_message, mode=mode
+            ),
+            "sources": deterministic.get("sources") or [],
+            "citations": deterministic.get("citations") or [],
+            "context_used": {
+                **self._fast_path_context_used(mode=mode),
+                "execution_policy": policy.to_dict(),
+                "execution_telemetry": telemetry,
+                "local_template": f"execution_policy:{policy.execution_policy}",
+                "selected_contract": policy.selected_contract,
+            },
+            "tools_used": ["orb_execution_policy_deterministic"],
+            "internal_data_access": False,
+            "no_llm": True,
+        }
+
     def detect_document_intent(
         self,
         message: str,
@@ -491,61 +555,18 @@ class OrbGeneralAssistantService:
                 return result
 
         if not images:
-            from services.orb_execution_policy_service import (
-                OrbExecutionPolicyDecision,
-                orb_execution_policy_service,
-            )
             from services.orb_local_response_service import orb_local_response_service
 
-            if execution_policy:
-                policy = OrbExecutionPolicyDecision(
-                    **{
-                        k: v
-                        for k, v in execution_policy.items()
-                        if k in OrbExecutionPolicyDecision.__dataclass_fields__
-                    }
-                )
-            else:
-                policy = orb_execution_policy_service.resolve(
-                    user_message,
-                    mode=mode,
-                    brain_convergence=brain_convergence,
-                )
-            deterministic = orb_execution_policy_service.try_deterministic_answer(
+            deterministic_result = self._build_policy_deterministic_result(
                 user_message,
-                policy=policy,
+                mode=mode,
+                brain_convergence=brain_convergence,
+                execution_policy=execution_policy,
+                started=started,
             )
-            if deterministic is not None:
-                elapsed_ms = int((time.perf_counter() - started) * 1000)
-                validation = deterministic.get("validation") or {}
-                telemetry = orb_execution_policy_service.build_execution_telemetry(
-                    policy=policy,
-                    openai_called=False,
-                    embeddings_called=False,
-                    scenario_bank_loaded=False,
-                    prompt_chars=len(deterministic.get("answer") or ""),
-                    total_ms=elapsed_ms,
-                    final_answer_validation_passed=validation.get("passed"),
-                )
-                result = {
-                    "answer": _finalize_standalone_answer(
-                        deterministic["answer"], message=user_message, mode=mode
-                    ),
-                    "sources": deterministic.get("sources") or [],
-                    "citations": deterministic.get("citations") or [],
-                    "context_used": {
-                        **self._fast_path_context_used(mode=mode),
-                        "execution_policy": policy.to_dict(),
-                        "execution_telemetry": telemetry,
-                        "local_template": f"execution_policy:{policy.execution_policy}",
-                        "selected_contract": policy.selected_contract,
-                    },
-                    "tools_used": ["orb_execution_policy_deterministic"],
-                    "internal_data_access": False,
-                    "no_llm": True,
-                }
-                _track_standalone_governance(result, message=user_message)
-                return result
+            if deterministic_result is not None:
+                _track_standalone_governance(deterministic_result, message=user_message)
+                return deterministic_result
 
             local = orb_local_response_service.try_local_response(user_message, mode=mode)
             if local is not None:
@@ -1176,6 +1197,8 @@ class OrbGeneralAssistantService:
         retrieval_bundle: dict[str, Any] | None = None,
         prompt_tier: str | None = None,
         retrieval: dict[str, Any] | None = None,
+        brain_convergence: dict[str, Any] | None = None,
+        execution_policy: dict[str, Any] | None = None,
     ) -> AsyncIterator[str]:
         """Stream answer text deltas. Populates stream_meta with final assistant payload fields."""
         meta = stream_meta if stream_meta is not None else {}
@@ -1265,6 +1288,21 @@ class OrbGeneralAssistantService:
                 }
                 meta.update(result)
                 async for delta in self._yield_answer_chunks(str(result.get("answer") or "")):
+                    yield delta
+                return
+
+        if not images:
+            started = time.perf_counter()
+            deterministic_result = self._build_policy_deterministic_result(
+                user_message,
+                mode=mode,
+                brain_convergence=brain_convergence,
+                execution_policy=execution_policy,
+                started=started,
+            )
+            if deterministic_result is not None:
+                meta.update(deterministic_result)
+                async for delta in self._yield_answer_chunks(str(deterministic_result.get("answer") or "")):
                     yield delta
                 return
 

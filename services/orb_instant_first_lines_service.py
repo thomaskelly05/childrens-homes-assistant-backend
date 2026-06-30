@@ -399,8 +399,17 @@ def should_skip_instant_lines(
     expert_depth: str,
     guarded_stream_delivery: bool,
     category_id: str | None = None,
+    message: str | None = None,
 ) -> bool:
     """Skip only for lightweight general prompts — playbook categories always get instant lines."""
+    if message:
+        try:
+            from services.orb_recording_output_contract_service import is_recording_contract_prompt
+
+            if is_recording_contract_prompt(message):
+                return True
+        except Exception:
+            pass
     if guarded_stream_delivery:
         return False
     if category_id and category_id not in {"general", "general_chat", ""}:

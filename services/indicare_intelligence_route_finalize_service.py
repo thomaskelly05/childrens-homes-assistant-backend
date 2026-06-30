@@ -146,6 +146,19 @@ def finalize_standalone_intelligence(
     if not packet:
         return answer, meta
 
+    from services.orb_recording_output_contract_service import enforce_live_recording_contract_answer
+    from services.orb_universal_answer_contract_map_service import detect_contract_family
+
+    resolved_message = message or prompt_text
+    family_id = detect_contract_family(resolved_message)
+    answer, enforce_meta = enforce_live_recording_contract_answer(
+        answer,
+        resolved_message,
+        contract_family=family_id,
+    )
+    if enforce_meta:
+        meta["live_recording_contract"] = enforce_meta
+
     if timing:
         timing.mark("finalise_start")
 

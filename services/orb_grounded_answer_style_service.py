@@ -530,6 +530,16 @@ class OrbGroundedAnswerStyleService:
         text = str(answer or "").strip()
         if not text:
             return text
+        try:
+            from services.orb_recording_output_contract_service import (
+                has_recording_contract_sections,
+                strip_legacy_recording_closers,
+            )
+
+            if has_recording_contract_sections(text):
+                return strip_legacy_recording_closers(text)
+        except Exception:
+            pass
         nvq_learning = orb_academy_nvq_anchor_service.is_nvq_learning_question(message)
         nvq_threshold_ok = orb_academy_nvq_anchor_service.is_safeguarding_threshold_question(message)
         if nvq_learning and not nvq_threshold_ok:
