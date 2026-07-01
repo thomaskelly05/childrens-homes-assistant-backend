@@ -9,6 +9,9 @@ import {
 } from './recording/orb-adult-identity-language.ts'
 import { isQ1RecordingContractAnswer } from './orb-residential-chat-response-guide.ts'
 
+const HIGH_RISK_SAFEGUARDING_STREAM_RE =
+  /\b(wanted to die|want to die|self[- ]?harm|suicidal|suicide|ligature|tried to harm|disclosed|disclosure|hurt them|hurt me|abused|abuse|allegation)\b/i
+
 const DAILY_RE = /\b(daily record|key[- ]?work|shift note|log|handover)\b/i
 const STRUCTURED_DAILY_DRAFT_RE =
   /\b(daily record draft|context \/ routine|what happened|young person's presentation|to complete before saving)\b/i
@@ -17,7 +20,17 @@ const BEDTIME_PROMPT_RE = /\b(bedtime routine|bedtime|settle at night|sleep rout
 
 export const DAILY_RECORD_TEMPLATE_ID = 'daily_record'
 export const INCIDENT_REFLECTION_TEMPLATE_ID = 'incident'
+export const SAFEGUARDING_REFLECTION_TEMPLATE_ID = 'safeguarding_concern_record'
 export const ROUTINE_DAILY_UNRELATED_TEMPLATE_IDS = new Set([
+  'activity_record',
+  'bedtime_routine_record',
+  'morning_routine_record',
+  'child_voice_note'
+])
+
+export const HIGH_RISK_SAFEGUARDING_UNRELATED_TEMPLATE_IDS = new Set([
+  'damage_property_reflection',
+  'de_escalation_reflection',
   'activity_record',
   'bedtime_routine_record',
   'morning_routine_record',
@@ -30,6 +43,16 @@ const ROUTINE_TEMPLATE_LABEL_RES = [
   /use morning routine record template/i,
   /use child voice note template/i
 ]
+
+const HIGH_RISK_SAFEGUARDING_TEMPLATE_LABEL_RES = [
+  /damage to property reflection template/i,
+  /de-escalation reflection template/i,
+  ...ROUTINE_TEMPLATE_LABEL_RES
+]
+
+export function isHighRiskSafeguardingChipContext(ctx: OrbChatChipContext): boolean {
+  return HIGH_RISK_SAFEGUARDING_STREAM_RE.test(combinedChipText(ctx))
+}
 
 export type OrbChatChipContext = {
   content: string
@@ -128,6 +151,31 @@ export function buildIncidentReflectionHandoffChips(): OrbSuggestedReplyItem[] {
   return [incidentReflectionTemplateChip(), dailyRecordSaveChip()]
 }
 
+export function safeguardingReflectionTemplateChip(): OrbSuggestedReplyItem {
+  return {
+    action: 'use_template_in_write',
+    label: 'Open in ORB Write using Safeguarding concern record template',
+    prefill: 'Open this safeguarding reflection draft in ORB Write:\n\n',
+    template_id: SAFEGUARDING_REFLECTION_TEMPLATE_ID
+  }
+}
+
+export function managerOversightChip(): OrbSuggestedReplyItem {
+  return {
+    action: 'manager_oversight',
+    label: 'Manager oversight and escalation checklist'
+  }
+}
+
+export function buildHighRiskSafeguardingHandoffChips(): OrbSuggestedReplyItem[] {
+  return [
+    safeguardingReflectionTemplateChip(),
+    incidentReflectionTemplateChip(),
+    dailyRecordSaveChip(),
+    managerOversightChip()
+  ]
+}
+
 export function suggestionKey(item: OrbSuggestedReplyItem): string {
   return `${item.action}:${item.label.trim().toLowerCase()}`
 }
@@ -174,10 +222,25 @@ export function filterVisibleChatChips(
     return handoff.slice(0, maxVisible)
   }
 
+  if (isHighRiskSafeguardingChipContext(ctx)) {
+    const handoff = buildHighRiskSafeguardingHandoffChips()
+    traceVisibleChatChips(
+      ctx,
+      handoff.map((chip) => ({
+        action: chip.action,
+        label: chip.label,
+        template_id: chip.template_id,
+        source: 'high_risk_safeguarding_handoff_override'
+      }))
+    )
+    return handoff.slice(0, Math.max(maxVisible, 4))
+  }
+
   const combined = combinedChipText(ctx)
   const suppressRoutineTemplates =
     (DAILY_RE.test(combined) || isDailyRecordRequest(ctx.messageHint || '')) &&
     !isQ1IncidentRecordingContractAnswer(ctx.content, ctx.messageHint)
+  const suppressHighRiskSafeguardingTemplates = isHighRiskSafeguardingChipContext(ctx)
   const filtered: OrbSuggestedReplyItem[] = []
   const seen = new Set<string>()
 
@@ -202,6 +265,21 @@ export function filterVisibleChatChips(
                 : 'morning_routine_record',
           combined
         )
+      ) {
+        continue
+      }
+    }
+
+    if (suppressHighRiskSafeguardingTemplates) {
+      if (
+        item.template_id &&
+        HIGH_RISK_SAFEGUARDING_UNRELATED_TEMPLATE_IDS.has(item.template_id)
+      ) {
+        continue
+      }
+      if (
+        !item.template_id &&
+        HIGH_RISK_SAFEGUARDING_TEMPLATE_LABEL_RES.some((pattern) => pattern.test(item.label))
       ) {
         continue
       }
@@ -238,6 +316,9 @@ export function mergeFollowUpsWithTemplateSuggestions(
   }
   if (ctx && isQ1IncidentRecordingContractAnswer(ctx.content, ctx.messageHint)) {
     return filterVisibleChatChips(buildIncidentReflectionHandoffChips(), ctx, maxVisible)
+  }
+  if (ctx && isHighRiskSafeguardingChipContext(ctx)) {
+    return filterVisibleChatChips(buildHighRiskSafeguardingHandoffChips(), ctx, maxVisible)
   }
 
   const merged: OrbSuggestedReplyItem[] = []
