@@ -316,21 +316,33 @@ def apply_safeguarding_stream_fallback(
     cleaned = _strip_generic_support_closer_blocks(
         _strip_known_prelude_blocks((answer or "").strip(), instant_lines_text, stream_prelude_text)
     )
+    from services.orb_safeguarding_content_contract_service import (
+        detect_safeguarding_content_contract_issues,
+    )
+
+    contract_issues = detect_safeguarding_content_contract_issues(cleaned, message=message)
+    if contract_issues:
+        meta["safeguarding_content_contract_issues"] = contract_issues
     if not is_safeguarding_answer_too_thin(
         cleaned,
         message=message,
         instant_lines_text=instant_lines_text,
         stream_prelude_text=stream_prelude_text,
-    ):
+    ) and not contract_issues:
         return cleaned or answer, meta
 
     kind = detect_safeguarding_stream_fallback_kind(message)
     fallback = build_safeguarding_stream_fallback(message, kind=kind)
+    reason = (
+        "content_contract_violation"
+        if contract_issues
+        else "thin_or_instant_only_provider_output"
+    )
     meta.update(
         {
             "safeguarding_stream_fallback_applied": True,
             "safeguarding_stream_fallback_kind": kind,
-            "safeguarding_stream_fallback_reason": "thin_or_instant_only_provider_output",
+            "safeguarding_stream_fallback_reason": reason,
         }
     )
     return fallback, meta
@@ -350,11 +362,36 @@ def persist_safeguarding_stream_final_answer(
             "safeguarding_stream_final_persist_applied": False,
         }
 
-    body = _strip_generic_support_closer_blocks(
-        _strip_known_prelude_blocks((answer or "").strip(), instant_lines_text, stream_prelude_text)
+    from services.orb_safeguarding_content_contract_service import (
+        enforce_safeguarding_content_contract,
     )
+
+    final_answer, contract_meta = enforce_safeguarding_content_contract(
+        answer,
+        message=message,
+        instant_lines_text=instant_lines_text,
+        stream_prelude_text=stream_prelude_text,
+    )
+    if contract_meta.get("safeguarding_content_contract_applied"):
+        meta = {
+            "safeguarding_stream_final_persist_checked": True,
+            "safeguarding_stream_final_persist_applied": True,
+            "safeguarding_stream_final_persist_reason": contract_meta.get(
+                "safeguarding_content_contract_reason"
+            ),
+        }
+        meta.update(contract_meta)
+        meta["safeguarding_stream_fallback_applied"] = True
+        meta["safeguarding_stream_fallback_kind"] = contract_meta.get(
+            "safeguarding_content_contract_kind"
+        )
+        meta["safeguarding_stream_fallback_reason"] = contract_meta.get(
+            "safeguarding_content_contract_reason"
+        )
+        return final_answer, meta
+
     fallback_answer, fallback_meta = apply_safeguarding_stream_fallback(
-        body,
+        final_answer,
         message=message,
         instant_lines_text=instant_lines_text,
         stream_prelude_text=stream_prelude_text,
@@ -372,7 +409,7 @@ def persist_safeguarding_stream_final_answer(
                 instant_lines_text=instant_lines_text,
                 stream_prelude_text=stream_prelude_text,
             )
-            else None
+            else fallback_meta.get("safeguarding_stream_fallback_reason")
         ),
     }
     meta.update(fallback_meta)

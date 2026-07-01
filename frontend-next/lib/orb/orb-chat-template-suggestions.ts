@@ -7,6 +7,7 @@ import {
   DAILY_RECORD_TEMPLATE_ID,
   filterVisibleChatChips,
   isDailyRecordHandoffChipContext,
+  isHighRiskSafeguardingChipContext,
   isQ1IncidentRecordingContractAnswer,
   mergeFollowUpsWithTemplateSuggestions,
   shouldSuggestTemplateForRoutineDailyRecord,
@@ -20,9 +21,11 @@ import { isDailyRecordRequest } from '@/lib/orb/recording/orb-adult-identity-lan
 export type { OrbChatChipContext, OrbChatChipTraceEntry } from '@/lib/orb/orb-chat-chip-handoff'
 export {
   buildDailyRecordHandoffChips,
+  buildHighRiskSafeguardingHandoffChips,
   buildIncidentReflectionHandoffChips,
   filterVisibleChatChips,
   isDailyRecordHandoffChipContext,
+  isHighRiskSafeguardingChipContext,
   isQ1DailyRecordingContractAnswer,
   isQ1IncidentRecordingContractAnswer,
   mergeFollowUpsWithTemplateSuggestions,
@@ -75,6 +78,9 @@ export async function fetchChatTemplateSuggestions(
   const ctx: OrbChatChipContext = { content, messageHint: opts?.messageHint, ...opts }
   if (isQ1IncidentRecordingContractAnswer(content, opts?.messageHint)) {
     return buildIncidentReflectionHandoffChips()
+  }
+  if (isHighRiskSafeguardingChipContext(ctx)) {
+    return buildHighRiskSafeguardingHandoffChips()
   }
   if (isDailyRecordHandoffChipContext(ctx)) {
     return buildDailyRecordHandoffChips()
